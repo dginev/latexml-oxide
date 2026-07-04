@@ -415,6 +415,19 @@ the new output, so it was a parity *fix*).
 
 ## Open tasks (actionable)
 
+### biblatex .bbl TokenLimit loop — 2605.17646 (pre-existing, NOT a PR regression)
+
+A biblatex (apa style) paper whose `.bbl` ends in `\missing{Cowen2021}` hits
+`Fatal:Timeout:TokenLimit` (999M tokens) during .bbl processing under the
+ar5iv profile. Bisect 2026-07-04: **9a679469e1 (run-230 binary) fatals
+identically** under equal local conditions (release, `LATEXML_TOKEN_LIMIT`
+=50M, `--preload=ar5iv.sty`) — run 230's "error" status for this paper was
+fleet nondeterminism, so the July PR branch did not introduce it. Repro:
+`scratchpad fatal5/17646src` (arXiv 2605.17646). Suspect area: biblatex
+runtime binding's refsection/datalist handling with `\missing`. Not a
+July-5 blocker; needs a dedicated session.
+
+
 ### July-5 arXiv run — prep checklist (drafted 2026-07-02, user-approved sequence)
 
 Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
