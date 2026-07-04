@@ -456,32 +456,47 @@ FULL RE-PORT remaining (post-release):
 
 Witness: 2605.00223 (ADS .bib: `{\'\i}`, `~` ties, `\aap`, bare DOIs).
 
-### Verbatim-in-box completeness: breaklines emulation + leading spaces (2026-07-04)
+### Verbatim-in-box completeness (2026-07-04; breaklines LANDED same day)
 
-Two engine gaps behind the last ~1% of the 2605.00468 tcolorbox fidelity
+Engine gaps behind the last ~1% of the 2605.00468 tcolorbox fidelity
 arc (the class fixes — prevdepth glue transparency OXIDIZED #44, NFSS
 family vocabulary #45, and the glowup verbatim contract — are landed):
 
-1. **fancyvrb/fvextra `breaklines` is not emulated**: the engine's
-   digestion emits one line-box per SOURCE line and budgets height
-   accordingly, while real TeX breaks long verbatim lines at `\hsize`
-   (more lines, taller box, no horizontal overflow). Consequence: markup
-   lines can exceed the measured width; the CSS interim renders them
-   `white-space: pre` (1:1 with the budget; long lines may poke right).
-   Fix: break verbatim lines at the measured width during digestion —
-   in both the height budget AND the emitted markup — mirroring
-   fancyvrb's `\FV@ListProcessLine` boxing.
+1. ✅ **fvextra `breaklines` — DONE 2026-07-04**: the blanket
+   `@Break→@NoBreak` line-processor neutralization in `fvextra_sty.rs`
+   was an over-reach; only the `\FV@Break` char-scanner (the
+   PushbackLimit/TokenLimit fatal source) needs relaxing. With the real
+   `\FV@ListProcessLine@Break` running, an over-wide line is re-typeset
+   as fvextra's `\parbox` (plain paragraph machinery our engine wraps
+   natively), so the height budget counts the same wrapped lines
+   pdflatex produces. 2605.00468: 13 boxes poking 4–60px right → **0
+   horizontal, 0 vertical** spills across all 24 pictures (with the
+   glowup breaklines-shape CSS, see ar5iv-css). Witness 2605.01024
+   (breaklines+breakanywhere fatal cluster): unchanged 4 errors, 0
+   fatals. Residual: the engine's wrap estimate is ~19% conservative
+   (visible bottom slack in tall prompt boxes) — refine the paragraph
+   line-break estimator to close the fill gap.
 2. **Leading spaces of verbatim lines are lost in the XML** (witness
-   2605.00468 Prompt 10b: JSON schema indentation flush-left; the CSS
-   `pre` would preserve them if present). Find where line-leading
-   catcode-10 spaces are dropped in the fancyvrb line path and preserve
-   them (likely as U+00A0 or xml:space).
+   2605.00468 Prompt 10a/b: JSON schema indentation flush-left). The
+   drop happens BEFORE fvextra's own `\FV@GetLineIndent` sees the line —
+   real fvextra now runs and its indent boxes come out 0-width, so the
+   eater is in our verbatim line reading. Find and preserve (U+00A0 or
+   xml:space).
+3. **Non-verbatim `\ttfamily` lines in measured boxes don't wrap**
+   (witness 2605.02240 `innercode`: `fontupper=\ttfamily\small` prose
+   with `\\` breaks; pdflatex wraps each segment at the inner box
+   width, our estimator emits one line-box per `\\` segment → 9–31px
+   right pokes, ~2.7%). Same class as breaklines but general: paragraph
+   wrap measurement inside measured boxes. Pre-existing (run-232-era
+   binaries identical); not a July-5 blocker.
 
 CSS side note: verbatim mono capacity is now token-derived
 (`--code-font-advance` beside `--code-font-family`, `--tex-tt-advance`
 constant) with `font-size-adjust: ch-width` upgrade where supported —
 the browser font stays user-configurable; the conversion emits only TeX
-facts (budgets + font-size anchor + abstract family).
+facts (budgets + font-size anchor + abstract family). The breaklines
+parbox shape has dedicated glowup rules (leaf-only `pre`/`pre-wrap`,
+flex hbox rows, nested-picture fill-width exclusion).
 
 ### biblatex .bbl TokenLimit loop — 2605.17646 (pre-existing, NOT a PR regression)
 
