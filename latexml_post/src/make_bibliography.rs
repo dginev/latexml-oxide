@@ -2394,6 +2394,19 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
     let href = node.get_attribute("href");
     let content_text = node.get_content();
 
+    // General rule (user, 2026-07-04): bibliography links are EXTERNAL.
+    // DOIs always resolve via https://doi.org/, and scheme-less hrefs are
+    // an authoring mistake that would resolve relative to the article —
+    // normalize here so every source path (post .bib conversion,
+    // .bbl-borne XML, pre-compiled .bib.xml) gets absolute links.
+    let href = match (&href, scheme.as_str()) {
+      (None, "doi") if !content_text.trim().is_empty() && content_text.contains('/') => {
+        Some(doi_href(&content_text))
+      },
+      (Some(h), "doi") if !h.contains("://") => Some(doi_href(h.trim_start_matches('/'))),
+      (Some(h), _) => Some(force_absolute_url(h)),
+      (None, _) => None,
+    };
     match tag.as_str() {
       "ltx:bib-identifier" | "ltx:bib-review" => {
         if let Some(href) = href {
@@ -2987,134 +3000,74 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> (String,
   (result, true)
 }
 
-/// Decode the standard TeX accent commands and letter macros that appear in
-/// BibTeX field values (`{S{\"o}kmen}` -> "S{ö}kmen", `Hu{\ss}mann` ->
-/// "Hußmann") into Unicode text. Accents are emitted as base char +
-/// combining mark (valid rendered Unicode; no normalization dependency).
-/// Unknown macros are left verbatim so the text degrades exactly as before.
-/// The lightweight post-side .bib converter needs this because it emits
-/// field text as plain strings — it never runs the TeX engine (unlike
-/// Perl's MakeBibliography, which converts the .bib through LaTeXML).
-/// Witness 2605.00223.
-fn decode_tex_accents(s: &str) -> String {
-  fn combining_for(c: char) -> Option<char> {
-    Some(match c {
-      '"' => '\u{0308}',  // dieresis
-      '\'' => '\u{0301}', // acute
-      '`' => '\u{0300}',  // grave
-      '^' => '\u{0302}',  // circumflex
-      '~' => '\u{0303}',  // tilde
-      '=' => '\u{0304}',  // macron
-      '.' => '\u{0307}',  // dot above
-      'u' => '\u{0306}',  // breve
-      'v' => '\u{030C}',  // caron
-      'H' => '\u{030B}',  // double acute
-      'c' => '\u{0327}',  // cedilla
-      'k' => '\u{0328}',  // ogonek
-      'r' => '\u{030A}',  // ring above
-      'b' => '\u{0331}',  // macron below
-      'd' => '\u{0323}',  // dot below
-      _ => return None,
-    })
+/// Interpret a BibTeX field value through the REAL TeX engine — Perl's
+/// `ToString(Digest(Tokenize($x)))` idiom. The post-processor runs in the
+/// same process right after the core conversion, so the engine state is
+/// still live: accents (`{\'\i}`), letter macros (`\ss`), ties (`~` ->
+/// non-breaking space) and — crucially — macros DEFINED BY THE ARTICLE'S
+/// CLASS (`\aap` etc.) all take their true meaning. This replaces a
+/// ~150-line hand-rolled transliterator (user directive 2026-07-04: reuse
+/// our TeX interpretation, no special-case TeX parser). Perl instead spins
+/// a recursive BibTeX.pool session with class/package preloads — the full
+/// re-port is tracked in SYNC_STATUS ("MakeBibliography: convert raw .bib
+/// through the core engine"). Plain strings skip the engine round-trip; on
+/// any engine failure the raw text passes through unchanged (the
+/// pre-decoder behavior).
+fn interpret_tex_text(s: &str) -> String {
+  if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
+    return s.to_string();
   }
-  fn letter_macro(name: &str) -> Option<&'static str> {
-    Some(match name {
-      "ss" => "ß",
-      "o" => "ø",
-      "O" => "Ø",
-      "aa" => "å",
-      "AA" => "Å",
-      "ae" => "æ",
-      "AE" => "Æ",
-      "oe" => "œ",
-      "OE" => "Œ",
-      "l" => "ł",
-      "L" => "Ł",
-      "i" => "ı",
-      "&" => "&",
-      "%" => "%",
-      "$" => "$",
-      "#" => "#",
-      "_" => "_",
-      _ => return None,
-    })
+  // Junk macros in bib fields (`\lt`, `\gt`, ...) must not count errors
+  // against the DOCUMENT — Perl's recursive session keeps its diagnostics
+  // out of the outer document's tally. Reuse the engine's bulk-load
+  // suppression flag for the duration of the digest.
+  let prev = latexml_core::state::lookup_bool("SUPPRESS_UNDEFINED_ERRORS");
+  latexml_core::state::assign_value(
+    "SUPPRESS_UNDEFINED_ERRORS",
+    true,
+    Some(latexml_core::state::Scope::Global),
+  );
+  let interpreted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+    latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).map(|d| d.to_string())
+  }));
+  latexml_core::state::assign_value(
+    "SUPPRESS_UNDEFINED_ERRORS",
+    prev,
+    Some(latexml_core::state::Scope::Global),
+  );
+  match interpreted {
+    Ok(Ok(text)) => text,
+    _ => s.to_string(),
   }
-  // Pull the accent target: `{o}` or a single char; returns (char, rest).
-  fn take_arg(rest: &str) -> Option<(char, &str)> {
-    let rest = rest.trim_start();
-    let mut it = rest.chars();
-    match it.next()? {
-      '{' => {
-        let inner = it.next()?;
-        if it.next()? == '}' {
-          Some((inner, it.as_str()))
-        } else {
-          None
-        }
-      },
-      c if c.is_alphabetic() => Some((c, it.as_str())),
-      _ => None,
+}
+
+/// Percent-encode a DOI into its canonical absolute resolver URL.
+/// Mirrors the engine's `\bib@field@default@doi` (bibtex.rs; Perl
+/// BibTeX.pool L750-756): `[^0-9a-zA-Z./\-+]` chars are %-encoded.
+fn doi_href(doi: &str) -> String {
+  let mut href = String::from("https://doi.org/");
+  for c in doi.trim().chars() {
+    if c.is_ascii_alphanumeric() || matches!(c, '.' | '/' | '-' | '+') {
+      href.push(c);
+    } else {
+      let mut buf = [0u8; 4];
+      for &b in c.encode_utf8(&mut buf).as_bytes() {
+        href.push_str(&format!("%{:02X}", b));
+      }
     }
   }
-  let mut out = String::with_capacity(s.len());
-  let mut rest = s;
-  while let Some(pos) = rest.find('\\') {
-    out.push_str(&rest[..pos]);
-    let after = &rest[pos + 1..];
-    let mut chars = after.chars();
-    match chars.next() {
-      // symbol accents: \"o  \'{e}  etc.
-      Some(sym) if !sym.is_alphanumeric() && combining_for(sym).is_some() => {
-        if let Some((base, tail)) = take_arg(chars.as_str()) {
-          out.push(base);
-          out.push(combining_for(sym).unwrap());
-          rest = tail;
-        } else {
-          out.push('\\');
-          out.push(sym);
-          rest = chars.as_str();
-        }
-      },
-      Some(c) if c.is_alphabetic() => {
-        // letter control word: collect the full name
-        let name_len = after.chars().take_while(|ch| ch.is_alphabetic()).count();
-        let name: String = after.chars().take(name_len).collect();
-        let tail = &after[name.len()..];
-        if let Some(mapped) = letter_macro(&name) {
-          out.push_str(mapped);
-          // TeX eats one space after a control word
-          rest = tail.strip_prefix(' ').unwrap_or(tail);
-        } else if name.len() == 1
-          && let Some(comb) = combining_for(name.chars().next().unwrap())
-          && let Some((base, t2)) = take_arg(tail)
-        {
-          // letter accents \u \v \H \c \k \r \b \d with an argument
-          out.push(base);
-          out.push(comb);
-          rest = t2;
-        } else {
-          out.push('\\');
-          out.push_str(&name);
-          rest = tail;
-        }
-      },
-      Some(other) => {
-        if let Some(mapped) = letter_macro(&other.to_string()) {
-          out.push_str(mapped);
-        } else {
-          out.push('\\');
-          out.push(other);
-        }
-        rest = chars.as_str();
-      },
-      None => {
-        out.push('\\');
-        rest = "";
-      },
-    }
+  href
+}
+
+/// Bibliography links are external: a scheme-less href would resolve
+/// relative to the article. Prepend https:// when no scheme is present.
+fn force_absolute_url(url: &str) -> String {
+  let u = url.trim();
+  if u.is_empty() || u.contains("://") || u.starts_with("mailto:") {
+    u.to_string()
+  } else {
+    format!("https://{}", u)
   }
-  out.push_str(rest);
-  out
 }
 
 /// Strip outer braces from a BibTeX field value.
@@ -3246,7 +3199,14 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
 
     // Process fields into ltx:bib-* elements
     for (field, value) in &entry.fields {
-      let value = &decode_tex_accents(value);
+      // url/doi/eprint are verbatim identifiers — `~` and `\` are literal there.
+      let interpreted;
+      let value = if matches!(field.as_str(), "url" | "doi" | "eprint") {
+        value
+      } else {
+        interpreted = interpret_tex_text(value);
+        &interpreted
+      };
       let clean = strip_braces(value);
       match field.as_str() {
         "author" => {
@@ -3327,15 +3287,23 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
           ));
         },
         "doi" => {
+          // Perl BibTeX.pool L750-756: DOIs are ALWAYS external — emit an
+          // absolute https href (percent-encoding non url-safe chars), never
+          // the bare identifier (which renders as dead text / a relative
+          // link; witness 2605.00223 "External Links: 10.1051/...").
           xml.push_str(&format!(
-            "    <bib-identifier scheme=\"doi\">{}</bib-identifier>\n",
+            "    <bib-identifier scheme=\"doi\" href=\"{}\">{}</bib-identifier>\n",
+            xml_escape(&doi_href(&clean)),
             xml_escape(&clean)
           ));
         },
         "url" => {
+          // Bibliography URLs are external by nature; authors often write
+          // them scheme-less ("www.x.org/...") which the browser then
+          // resolves RELATIVE to the article — force an absolute https://.
           xml.push_str(&format!(
             "    <bib-url href=\"{}\">{}</bib-url>\n",
-            xml_escape(&clean),
+            xml_escape(&force_absolute_url(&clean)),
             xml_escape(&clean)
           ));
         },

@@ -415,6 +415,47 @@ the new output, so it was a parity *fix*).
 
 ## Open tasks (actionable)
 
+### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
+
+Audit 2026-07-04 (agent, both files read end-to-end): `make_bibliography.rs`
+(3,545 lines) vs Perl `MakeBibliography.pm` (818 lines) is a **faithful port
+with one large divergent subsystem**: ~11 of 18 Perl subs are structural
+ports (FMT_SPEC stays table-driven; getBibEntries referrer/suffix logic,
+formatBibEntry, all do_* formatters track Perl), BUT the .bib->XML route
+replaces Perl's 63-line recursive-core-session `convertBibliography` with
+~770 lines (~22% of the file) of hand-rolled string parsing
+(`parse_bibtex`, `read_bib_value`, `parse_bib_authors`, `strip_braces`,
+`is_braced_group`, `convert_bib_file_to_xml`, plus the whole
+metadata-fallback path that exists only because no real bibentry XML is
+produced).
+
+INTERIM (landed 2026-07-04): field VALUES now go through the real engine —
+`interpret_tex_text` = `digest(mouth::tokenize(v)).to_string()` against the
+LIVE in-process state (Perl's `ToString(Digest(Tokenize($x)))`; article-
+class macros like `\aap` expand because aa.cls is loaded); the ~150-line
+`decode_tex_accents` transliterator is DELETED. DOI identifiers emit
+absolute `https://doi.org/` hrefs (percent-encoded, Perl BibTeX.pool
+L750-756) and scheme-less bib URLs are forced absolute — normalized both at
+.bib conversion AND in `format_links` (covers .bbl-borne/pre-compiled XML).
+
+FULL RE-PORT remaining (post-release):
+1. Replace `convert_bib_file_to_xml` with the recursive core conversion
+   (`DigestionMode::BibTeX` + `PreBibTeX` + bibtex.rs already exist):
+   inject from latexml_oxide's post-orchestration (latexml_post cannot
+   depend on the converter); recover class+packages(+options) preloads from
+   the document PIs; isolate/accumulate REPORT counters + log around the
+   recursive session; single combined pass for multiple raw bibs
+   (cross-bib @string sharing); prefer `<name>.bib.xml`; kpsewhich +
+   literaldata inputs. Deletes the string parser + metadata fallback
+   (~770 lines).
+2. Secondary parity gaps from the audit: `unisort` (Unicode collation) vs
+   `Vec::sort()`; citestyle semantics swapped (`AY` should be the
+   abbreviated `[AA+yy]` label, not full author-year); `Formatter::Year`
+   drops the disambiguation `@SUFFIX`; document-global NUMBER across split
+   documents.
+
+Witness: 2605.00223 (ADS .bib: `{\'\i}`, `~` ties, `\aap`, bare DOIs).
+
 ### biblatex .bbl TokenLimit loop — 2605.17646 (pre-existing, NOT a PR regression)
 
 A biblatex (apa style) paper whose `.bbl` ends in `\missing{Cowen2021}` hits
