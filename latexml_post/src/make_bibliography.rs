@@ -3000,6 +3000,14 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> (String,
   (result, true)
 }
 
+thread_local! {
+  // Per-document backstop: after this many failed field digests, stop
+  // interpreting (raw passthrough) instead of flooding the log. Reset at
+  // each .bib conversion.
+  static BIB_INTERPRET_FAILURES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+const MAX_BIB_INTERPRET_FAILURES: usize = 50;
+
 /// Interpret a BibTeX field value through the REAL TeX engine — Perl's
 /// `ToString(Digest(Tokenize($x)))` idiom. The post-processor runs in the
 /// same process right after the core conversion, so the engine state is
@@ -3017,23 +3025,43 @@ fn interpret_tex_text(s: &str) -> String {
   if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
     return s.to_string();
   }
-  // Diagnostic DOWNGRADE around the field digest (user policy 2026-07-04):
-  // junk in a bib field (`\lt`, a stray `^` or `$`) is a REAL problem we
-  // want visible — but as Info, not as document status. Perl's recursive
-  // session prints these at native severity AND MergeStatus'es them into
-  // the document; full suppression (run-233 hotfix) hid them entirely.
-  // The downgrade keeps every line in the log (`downgraded_error:...`)
-  // while a Fatal! inside a digest still aborts just that field (Err ->
-  // raw passthrough) without latching the document's sticky fatal
-  // (run-233 regression: +27 fatals, +599 errors from that leak).
-  let prev = latexml_core::common::error::set_diagnostic_downgrade(true);
+  if BIB_INTERPRET_FAILURES.with(|c| c.get()) > MAX_BIB_INTERPRET_FAILURES {
+    return s.to_string();
+  }
+  // Diagnostic policy (user, 2026-07-04, final form): with live-state
+  // interpretation the diagnostics are trustworthy, so Warn!/Error! from
+  // a field digest report at NATIVE severity and count against the
+  // document — matching Perl's MergeStatus accounting (Common/Error.pm
+  // L669; its recursive session also prints at native severity). ONLY
+  // Fatal! is demoted (to a counted+logged Error): a broken bibliography
+  // must never lose the document. The Err return still aborts just this
+  // field's digest — the raw text passes through below.
+  let prev = latexml_core::common::error::set_demote_fatals(true);
   let interpreted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
     latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).map(|d| d.to_string())
   }));
-  latexml_core::common::error::set_diagnostic_downgrade(prev);
+  latexml_core::common::error::set_demote_fatals(prev);
   match interpreted {
     Ok(Ok(text)) => text,
-    _ => s.to_string(),
+    _ => {
+      let n = BIB_INTERPRET_FAILURES.with(|c| {
+        let n = c.get() + 1;
+        c.set(n);
+        n
+      });
+      if n == MAX_BIB_INTERPRET_FAILURES + 1 {
+        Warn!(
+          "bibliography",
+          "interpret",
+          format!(
+            "Disabling TeX interpretation of bibliography fields after {} failures; \
+             remaining fields pass through raw.",
+            MAX_BIB_INTERPRET_FAILURES
+          )
+        );
+      }
+      s.to_string()
+    },
   }
 }
 
@@ -3168,6 +3196,7 @@ fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
 /// This is a simplified port of Perl's `convertBibliography` that directly parses
 /// BibTeX instead of spawning a full LaTeXML sub-session with BibTeX.pool.
 fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
+  BIB_INTERPRET_FAILURES.with(|c| c.set(0));
   let content = std::fs::read_to_string(bib_path)
     .map_err(|e| format!("Failed to read '{}': {}", bib_path, e))?;
 
@@ -3195,13 +3224,22 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
 
     // Process fields into ltx:bib-* elements
     for (field, value) in &entry.fields {
-      // url/doi/eprint are verbatim identifiers — `~` and `\` are literal there.
+      // Only fields we RENDER reach the TeX interpreter (mirrors Perl,
+      // where only BibTeX.pool's known field constructors digest values).
+      // ADS/Zotero exports carry huge junk-laden fields we never emit —
+      // abstract, annote, keywords, file, mendeley-groups... — and
+      // interpreting those flooded documents with bogus errors
+      // (2605.02213: a .bib with 291 abstract fields -> 500+ errors on an
+      // otherwise-clean paper). url/doi/eprint render but are verbatim
+      // identifiers; isbn/issn are plain digits.
       let interpreted;
-      let value = if matches!(field.as_str(), "url" | "doi" | "eprint") {
-        value
-      } else {
-        interpreted = interpret_tex_text(value);
-        &interpreted
+      let value = match field.as_str() {
+        "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"
+        | "volume" | "number" | "issue" | "pages" | "publisher" | "note" => {
+          interpreted = interpret_tex_text(value);
+          &interpreted
+        },
+        _ => value,
       };
       let clean = strip_braces(value);
       match field.as_str() {

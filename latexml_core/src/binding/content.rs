@@ -506,7 +506,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // A native binding was truly loaded: announce it (Perl loadLTXML
     // "(Loading <path>…)" analog) so CorTeX's `loaded_file` log-parser counts
     // it. Self-contained begin+end note (timing is currently disabled).
-    note_begin(&s!("Loading {filename}"));
+    // Announce under the BINDING's module name — `tcolorbox.sty` →
+    // `tcolorbox_sty.rs`, `aa.cls` → `aa_cls.rs` — mirroring Perl, whose
+    // announcement carries the distinct `.ltxml` path. This keeps the entry
+    // distinguishable from the raw twin's "(Processing definitions <path>…)"
+    // when a binding raw-loads its same-named file, so cortex's loaded_file
+    // stats record two artifacts as two entries instead of double-counting
+    // one file (user, 2026-07-04).
+    let binding_name = if let Some(stem) = filename.strip_suffix(".sty") {
+      s!("{stem}_sty.rs")
+    } else if let Some(stem) = filename.strip_suffix(".cls") {
+      s!("{stem}_cls.rs")
+    } else {
+      filename.clone()
+    };
+    note_begin(&s!("Loading {binding_name}"));
     note_end("");
     // We found and loaded a binding successfully, mark it as such.
     // Perl Package.pm::loadLTXML L2315-2316 sets TWO flags: `$request`_loaded

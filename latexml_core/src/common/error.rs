@@ -47,32 +47,30 @@ pub fn set_suppress_log_output(suppress: bool) -> bool {
   prev
 }
 
-// Thread-local diagnostic DOWNGRADE for auxiliary digestions (bibliography
-// field interpretation). When set, `Warn!`/`Error!`/`Fatal!` still emit
-// their message — visibility is wanted, problems in bib fields are real —
-// but at `Info` severity and counted as Info, so they do not affect the
-// DOCUMENT's status. NOTE the deliberate softening vs Perl: Perl's
-// recursive MakeBibliography session prints at native severity AND
-// `MergeStatus`es the inner tally into the document (Common/Error.pm L669);
-// we keep the lines (as Info) without the status impact — interim policy
-// (user, 2026-07-04) until the full recursive-conversion re-port lands
-// (SYNC_STATUS). `Fatal!`'s control flow (record_last_fatal + Err return)
-// is unchanged.
+// Thread-local FATAL DEMOTION for bibliography post-processing (user
+// policy 2026-07-04): with the live-state field interpretation, Warn!/
+// Error! report at NATIVE severity and count normally (matching Perl's
+// MergeStatus accounting, Common/Error.pm L669) — problems in bib fields
+// are real conversion diagnostics. Only Fatal! is demoted: it notes and
+// logs as an ERROR (`demoted_fatal:` target) instead of latching the
+// document's sticky fatal — a broken bibliography must never lose the
+// document. The Err return is unchanged, so the failing digestion still
+// aborts (its caller degrades gracefully).
 thread_local! {
-  static DOWNGRADE_DIAGNOSTICS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+  static DEMOTE_FATALS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-/// Set or clear the diagnostic-downgrade flag. Returns the previous value.
-pub fn set_diagnostic_downgrade(downgrade: bool) -> bool {
-  DOWNGRADE_DIAGNOSTICS.with(|c| {
+/// Set or clear the fatal-demotion flag. Returns the previous value.
+pub fn set_demote_fatals(demote: bool) -> bool {
+  DEMOTE_FATALS.with(|c| {
     let prev = c.get();
-    c.set(downgrade);
+    c.set(demote);
     prev
   })
 }
 
-/// Returns true if diagnostics are being downgraded to Info.
-pub fn is_diagnostic_downgrade() -> bool { DOWNGRADE_DIAGNOSTICS.with(|c| c.get()) }
+/// Returns true if `Fatal!` is currently demoted to Error.
+pub fn is_demote_fatals() -> bool { DEMOTE_FATALS.with(|c| c.get()) }
 
 /// Returns true if log output is currently suppressed.
 pub fn is_log_output_suppressed() -> bool { SUPPRESS_LOG_OUTPUT.get() }
@@ -519,41 +517,21 @@ macro_rules! Info {
 #[macro_export]
 macro_rules! Warn {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
-    if $crate::common::error::is_diagnostic_downgrade() {
-      $crate::common::error::note_status(
-        $crate::common::error::LogStatus::Info, None);
-      if !$crate::common::error::is_log_output_suppressed() {
-        use log::info;
-        info!(target: &format!("downgraded_warning:{}:{}", $category, $object), "{}",
-          $crate::generate_message!($message))
-      }
-    } else {
-      $crate::common::error::note_status(
-        $crate::common::error::LogStatus::Warning, None);
-      if !$crate::common::error::is_log_output_suppressed() {
-        use log::warn;
-        warn!(target: &format!("{}:{}", $category, $object), "{}",
-          $crate::generate_message!($message))
-      }
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Warning, None);
+    if !$crate::common::error::is_log_output_suppressed() {
+      use log::warn;
+      warn!(target: &format!("{}:{}", $category, $object), "{}",
+        $crate::generate_message!($message))
     }
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-    if $crate::common::error::is_diagnostic_downgrade() {
-      $crate::common::error::note_status(
-        $crate::common::error::LogStatus::Info, None);
-      if !$crate::common::error::is_log_output_suppressed() {
-        use log::info;
-        info!(target: &format!("downgraded_warning:{}:{}", $category, $object), "{}",
-          $crate::generate_message!($message, $($details),*))
-      }
-    } else {
-      $crate::common::error::note_status(
-        $crate::common::error::LogStatus::Warning, None);
-      if !$crate::common::error::is_log_output_suppressed() {
-        use log::warn;
-        warn!(target: &format!("{}:{}", $category, $object), "{}",
-          $crate::generate_message!($message, $($details),*))
-      }
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Warning, None);
+    if !$crate::common::error::is_log_output_suppressed() {
+      use log::warn;
+      warn!(target: &format!("{}:{}", $category, $object), "{}",
+        $crate::generate_message!($message, $($details),*))
     }
   }}
 }
@@ -564,18 +542,6 @@ macro_rules! Error {
     $crate::Error!($category,$object,$message,"")
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-    if $crate::common::error::is_diagnostic_downgrade() {
-      // Auxiliary-digestion downgrade: visible as Info, no Error status,
-      // and no too-many/consecutive-error escalation (an Info-grade
-      // diagnostic must not Fatal the document).
-      $crate::common::error::note_status(
-        $crate::common::error::LogStatus::Info, None);
-      if !$crate::common::error::is_log_output_suppressed() {
-        use log::info;
-        info!(target: &format!("downgraded_error:{}:{}", $category, $object), "{}",
-          $crate::generate_message!($message, $($details),*));
-      }
-    } else {
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Error, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -583,6 +549,13 @@ macro_rules! Error {
       error!(target: &format!("{}:{}", $category, $object), "{}",
         $crate::generate_message!($message, $($details),*));
     }
+    // In the fatal-demotion scope (bibliography post-processing) the
+    // too-many/consecutive-error escalations are SKIPPED: their Fatal!
+    // would demote back into an Error, turning the circuit-breaker into
+    // an error multiplier (run-233 follow-up: 470 self-feeding
+    // "Too many errors" lines on 2605.02213). The bib interpreter has its
+    // own bounded failure latch instead.
+    if !$crate::common::error::is_demote_fatals() {
     // Borrow-safe read: an Error! can be raised from inside a `state_mut()`
     // scope (e.g. push_value's BUG branch, a constructor's after_digest),
     // where a plain `lookup_int` would panic "RefCell already mutably
@@ -632,13 +605,16 @@ macro_rules! Error {
 #[macro_export]
 macro_rules! Fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
-    if $crate::common::error::is_diagnostic_downgrade() {
-      // Downgraded context: count as Info and log visibly, but keep the
-      // control flow — the Err return still aborts the auxiliary digestion.
-      $crate::common::error::note_status($crate::common::error::LogStatus::Info, None);
+    if $crate::common::error::is_demote_fatals() {
+      // Demoted context (bibliography post-processing): count and log as
+      // an ERROR — the problem is real and must be visible/accounted —
+      // but never latch the document's sticky fatal. The Err return below
+      // still aborts the failing digestion; its caller degrades
+      // gracefully. A document must not be lost to a broken bibliography.
+      $crate::common::error::note_status($crate::common::error::LogStatus::Error, None);
       if !$crate::common::error::is_log_output_suppressed() {
-        use log::info;
-        info!(target: "downgraded_fatal", "{}", $message);
+        use log::error;
+        error!(target: "demoted_fatal", "{}", $message);
       }
     } else {
       $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
