@@ -54,4 +54,12 @@ LoadDefinitions!({
   // A&A authors use \orcid for ORCID identifier. Preserve as ltx:note.
   DefMacro!("\\orcid{}",
     "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+
+  // Real aa.cls ends with `\RequirePackage[modulo,mathlines,switch,running,
+  // columnwise,pagewise]{linenoaa}` (the A&A-bundled lineno variant), so
+  // documents call \nolinenumbers / \linenumbers freely (witness
+  // 2605.00223 line 123). Our lineno binding stubs the full macro set —
+  // require it (options irrelevant to the XML stubs). Perl's aa.cls.ltxml
+  // lacks this (\nolinenumbers undefined there); candidate to upstream.
+  RequirePackage!("lineno");
 });
