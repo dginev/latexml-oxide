@@ -439,6 +439,15 @@ Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
    (`~/git/cortex`) — bump/vendor the released CSS in both.
 3. **PR `ar5iv-2606-prep` → `main`** (user: later today, 2026-07-02) — parity
    fixes, perf audit + pin! sweep, fatal-mining fixes, docs consolidation.
+   Then **tag + release latexml-oxide** and point **cortex** at the release
+   (rebuild `cortex_worker` from the tagged main, restart the fleet).
+3b. **ar5iv-editor redeploy** (user, 2026-07-04): once latexml-oxide is
+   tagged/released and cortex uses it, rebuild ar5iv-editor against the
+   latest latexml-oxide and redeploy. Mechanics: the editor path-deps on the
+   sibling checkout and `deploy/Dockerfile` COPYs `~/git/latexml-oxide` into
+   the build context — put the checkout on the tagged main, run
+   `deploy/build-and-push.sh` + `deploy/release.sh`, and verify
+   `/api/version` reports the tagged sha ("powered by latexml-oxide @<sha>").
 4. ~~`f(x)` apply-vs-multiply dedicated session~~ — **CANCELLED 2026-07-02**:
    built, verified vs Perl, then reverted on user review; divergence #18
    (f(x) → function application) re-affirmed and stands. No math-output
