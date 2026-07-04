@@ -1531,6 +1531,17 @@ LoadDefinitions!({
 
   //========================
   ProcessOptions!();
+
+  // Real xcolor v3.02+ (TL2024) processes options as PERSISTENT l3 keys, so
+  // `\usepackage{xcolor}` followed by `\usepackage[table]{xcolor}` raises no
+  // option clash — the repeat load processes the new `table` key and loads
+  // colortbl (`table .code = {\AddToHook{package/xcolor/after}
+  // {\RequirePackage{colortbl}}}`). Classic `\ds@table` is cleared to \relax
+  // by ProcessOptions, so re-assert a durable handler: the loader's
+  // repeat-load recovery (input_definitions, OXIDIZED_DESIGN #43) digests
+  // surviving `\ds@<opt>` handlers for options the first load didn't have.
+  // Witness 2605.00310 (\cellcolor via `[table]` on a second \usepackage).
+  DefMacro!("\\ds@table", "\\RequirePackage{colortbl}");
 });
 
 /// Perl: sub defineColors — define colors from "name=from,name=from,..." pairs

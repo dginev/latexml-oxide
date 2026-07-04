@@ -1638,6 +1638,34 @@ inside `\begin{minipage}{.5\textwidth}` now yields 163.87pt (= 0.95 x 172.5,
 the pdflatex value); the prior 327.75pt golden had the stale full-page
 `\linewidth` baked in (image at double its true width).
 
+### 43. Repeat package loads apply surviving handlers for NEW options (modern-kernel fidelity)
+
+**Decision:** When an already-loaded package is `\usepackage`d/`\RequirePackage`d
+again with options the first load did not have, `input_definitions` digests
+any surviving `\ds@<option>` handler for each new option before skipping the
+load (plus the pre-existing Info diagnostic). Bindings opt IN to durable
+repeat-options by re-asserting the handler after `ProcessOptions!` (classic
+handlers are cleared to `\relax`); the first adopter is xcolor's `table`
+(`\ds@table` -> `\RequirePackage{colortbl}`).
+
+**Why:** Real xcolor v3.02+ (TL2024) processes options as PERSISTENT l3
+key-values: `\usepackage{xcolor}` ... `\usepackage[table]{xcolor}` raises NO
+option clash — the repeat load processes the `table` key and loads colortbl,
+so `\cellcolor` works and such papers build cleanly on arXiv. Both Perl
+LaTeXML and the old Rust behavior drop repeat-load options (classic-options
+semantics), leaving `\cellcolor` undefined — a ~483-paper error cluster in
+sandbox-arxiv-2605 (witness 2605.00310: 0 errors and 133 colored cells after
+the fix; previously mis-classified as "parity option-clash" against the
+obsolete semantics).
+
+**Scope/safety:** only options with a live (non-cleared) handler fire —
+packages that never re-assert handlers behave exactly as before (digesting
+`\relax` is a no-op). `\ds@<opt>` is a global namespace, so a later package
+redeclaring the same option name could in principle leave a stale handler;
+accepted as rare next to the recovered class. Perl divergence: Perl skips
+silently; candidate to upstream alongside a survey of other l3-keyval
+packages whose options should be durable.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

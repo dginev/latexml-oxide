@@ -327,11 +327,56 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         || lookup_bool(&s!("{fkey}_load_attempted"))
     }
   };
+  // Modern-kernel repeat-load option semantics (OXIDIZED_DESIGN #43).
+  // Classic \DeclareOption packages: after ProcessOptions the `\ds@<opt>`
+  // handlers are \relax, so digesting them on a repeat load is a NO-OP —
+  // i.e. LaTeX's own clash-and-drop outcome (and Perl's silent skip; the
+  // Info above is the shared diagnostic). Packages using the key-value
+  // option processor (\ProcessKeyOptions, LaTeX kernel 2022-06+; e.g.
+  // xcolor v3.02 whose `table` key loads colortbl) raise NO clash in real
+  // LaTeX — the repeat load PROCESSES the new keys. A binding models that
+  // by re-asserting a durable `\ds@<opt>` after ProcessOptions! (first
+  // adopter: xcolor's `table`; witness 2605.00310 — \usepackage{xcolor}
+  // then \usepackage[table]{xcolor} builds cleanly under pdflatex, and a
+  // ~483-paper \cellcolor error cluster in sandbox-arxiv-2605). For each
+  // option of a repeat load that the first load did not have, digest the
+  // surviving handler.
+  let apply_new_options_on_reload = |fkey: &str| -> Result<()> {
+    if options.options.is_empty() || !options.handleoptions {
+      return Ok(());
+    }
+    let prev: HashSet<String> =
+      if let Some(Stored::String(prevoptions)) = lookup_value(&s!("{fkey}_loaded_with_options")) {
+        arena::with(prevoptions, |p| {
+          p.split(',').map(|o| o.trim().to_string()).collect()
+        })
+      } else {
+        HashSet::default()
+      };
+    for opt in &options.options {
+      let opt = opt.trim();
+      if opt.is_empty() || prev.contains(opt) {
+        continue;
+      }
+      let handler = T_CS!(s!("\\ds@{}", opt));
+      if lookup_definition(&handler)?.is_some() {
+        Info!(
+          "unexpected",
+          "options",
+          s!("Applying option '{}' from a repeat load of {}", opt, fkey)
+        );
+        digest(Tokens!(handler))?;
+      }
+    }
+    Ok(())
+  };
   if !options.reloadable && already_handled(&filename) {
+    apply_new_options_on_reload(&filename)?;
     return Ok(());
   }
   // Also check without extension (Perl checks name_loaded too)
   if !options.reloadable && name != filename && already_handled(name) {
+    apply_new_options_on_reload(&filename)?;
     return Ok(());
   }
 
