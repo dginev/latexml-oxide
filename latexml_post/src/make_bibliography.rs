@@ -3017,22 +3017,30 @@ fn interpret_tex_text(s: &str) -> String {
   if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
     return s.to_string();
   }
-  // Junk macros in bib fields (`\lt`, `\gt`, ...) must not count errors
-  // against the DOCUMENT — Perl's recursive session keeps its diagnostics
-  // out of the outer document's tally. Reuse the engine's bulk-load
-  // suppression flag for the duration of the digest.
-  let prev = latexml_core::state::lookup_bool("SUPPRESS_UNDEFINED_ERRORS");
+  // FULL diagnostic isolation, like Perl's recursive MakeBibliography
+  // session: junk in a bib field (`\lt`, a stray `^` or `$`, a runaway
+  // group) must neither print Error lines nor count against the DOCUMENT's
+  // status. Suppress the log output AND restore the REPORT tally after the
+  // digest — a `Fatal!` inside digest returns Err (raw text passes
+  // through) but would otherwise latch the sticky REPORT.fatal, marking
+  // the whole paper fatal (run-233 regression: +27 fatals, +599 errors
+  // from exactly this leak).
+  let prev_undef = latexml_core::state::lookup_bool("SUPPRESS_UNDEFINED_ERRORS");
   latexml_core::state::assign_value(
     "SUPPRESS_UNDEFINED_ERRORS",
     true,
     Some(latexml_core::state::Scope::Global),
   );
+  let counts = latexml_core::common::error::snapshot_report_counts();
+  let prev_mute = latexml_core::common::error::set_suppress_log_output(true);
   let interpreted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
     latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).map(|d| d.to_string())
   }));
+  latexml_core::common::error::set_suppress_log_output(prev_mute);
+  latexml_core::common::error::restore_report_counts(counts);
   latexml_core::state::assign_value(
     "SUPPRESS_UNDEFINED_ERRORS",
-    prev,
+    prev_undef,
     Some(latexml_core::state::Scope::Global),
   );
   match interpreted {

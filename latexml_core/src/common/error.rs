@@ -348,6 +348,21 @@ pub fn snapshot_report_counts() -> ReportCounts {
   }
 }
 
+/// Overwrite the current thread's `REPORT` counters with a prior snapshot.
+/// The isolation primitive for RECURSIVE/auxiliary digestions whose
+/// diagnostics must not count against the document (Perl analog: the
+/// recursive MakeBibliography session keeps its tally out of the outer
+/// document). Pair with [`set_suppress_log_output`] so neither the lines
+/// nor the counts leak: snapshot -> suppress -> digest -> restore.
+pub fn restore_report_counts(c: ReportCounts) {
+  let mut r = REPORT.borrow_mut();
+  r.debug = c.debug;
+  r.info = c.info;
+  r.warning = c.warning;
+  r.error = c.error;
+  r.fatal = c.fatal;
+}
+
 /// Add a worker thread's [`ReportCounts`] into the current (main) thread's
 /// `REPORT`. Only the integer counts + the sticky `fatal` flag are merged; the
 /// arena-keyed `undefined`/`missing` maps are NOT (a worker has its own
