@@ -27,12 +27,45 @@ LoadDefinitions!({
     \def\@namedef#1{\expandafter\def\csname #1\endcsname}
     \def\@nameuse#1{\csname #1\endcsname}
     \def\@cons#1#2{\begingroup\let\@elt\relax\xdef#1{#1\@elt #2}\endgroup}
-    \let\@arrayparboxrestore\relax
     \def\@car#1#2\@nil{#1}
     \def\@cdr#1#2\@nil{#2}
     \def\@carcube#1#2#3#4\@nil{#1#2#3}
     \def\nfss@text#1{{\mbox{#1}}}
     \def\@sect#1#2#3#4#5#6[#7]#8{}
+    "
+  );
+
+  // \@arrayparboxrestore — INTENTIONAL DIVERGENCE from Perl (which has
+  // `\let\@arrayparboxrestore\relax`, latex_base L55-64). Raw-loaded packages
+  // (tcolorbox, and every kernel parbox-alike) call \@parboxrestore to reset
+  // the paragraph state inside a box; the load-bearing line for our
+  // sizing-driven picture drawing is `\linewidth\hsize`: tcolorbox sets
+  // \hsize for its content vbox and relies on the kernel restore to copy it
+  // into \linewidth, from which a NESTED tcolorbox takes its default width.
+  // With the Perl stub, the nested box reads the stale page \linewidth and
+  // draws itself full-outer-width, overflowing the parent frame (arXiv
+  // 2605.02240 innercode-in-responsebox; probe: pdflatex INNER
+  // hsize=linewidth=282.40pt vs stub 313.70/345.0). Ported from latex.ltx
+  // \@arrayparboxrestore, minus the pieces LaTeXML manages itself or does
+  // not model: `\let\if@nobreak\iffalse \let\if@noskipsec\iffalse` (if-lets),
+  // `\let\-\@dischyph` and the accent lets `\'\@acci \`\@accii \=\@acciii`
+  // (LaTeXML accent constructors have no saved kernel meanings). See
+  // OXIDIZED_DESIGN.
+  TeX!(
+    r"
+    \def\@arrayparboxrestore{%
+      \let\par\@@par
+      \parindent\z@ \parskip\z@skip
+      \everypar{}%
+      \linewidth\hsize
+      \@totalleftmargin\z@
+      \leftskip\z@skip
+      \rightskip\z@skip
+      \@rightskip\z@skip
+      \parfillskip\@flushglue
+      \lineskip\normallineskip
+      \baselineskip\normalbaselineskip
+      \sloppy}
     "
   );
 

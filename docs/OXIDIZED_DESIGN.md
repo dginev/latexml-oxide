@@ -1600,6 +1600,44 @@ analysis: `docs/ARXIV_PERFORMANCE.md` (Hotspot #4).
 
 ---
 
+### 42. `\linewidth` tracks the reduced text width in boxed contexts (kernel-faithful; Perl leaves it stale)
+
+**Decision:** Three coordinated completions make `\linewidth` inside a
+box reflect the box's text width, as in real LaTeX:
+
+1. The `{minipage}` binding's width assignment (Perl latex_constructs.pool
+   L4787-4789 assigns `\hsize`/`\textwidth`/`\columnwidth`) additionally
+   assigns `\linewidth`.
+2. The `\parbox` raw macro (Perl L4746, same trio) appends
+   `\linewidth\hsize`.
+3. `\@parboxrestore`/`\@arrayparboxrestore` are real macros ported from
+   `latex.ltx` (minus the `\if`-lets and accent `\let`s LaTeXML manages
+   itself) instead of Perl's empty/`\relax` stubs — relevant on the
+   no-dump path; with a format dump the raw `latex.ltx` kernel versions
+   are captured anyway.
+
+**Why:** Real LaTeX's `\@iiiminipage`/`\@iiiparbox` run `\@parboxrestore`,
+whose `\linewidth\hsize` is what raw-loaded packages read back. tcolorbox
+wraps every box's content in `\minipage` (`tcb@lrbox`) and sizes a nested
+`tcolorbox` as `width=\linewidth` — with `\linewidth` stale at the page
+width, an inner box drew itself full-outer-width and overflowed its parent
+frame (arXiv 2605.02240, `innercode` inside `responsebox`). Probe
+(`nested.tex`, outer+inner tcolorbox): pdflatex gives OUTER
+`hsize=linewidth=313.70206pt`, INNER `282.40411pt`; after the fix Rust
+matches **both to the sp**; Perl (and pre-fix Rust) leave `linewidth=345pt`
+at both levels.
+
+**Perl behavior:** shared limitation — Perl's minipage binding assigns only
+the trio, and its `\@parboxrestore` is `Tokens()`. Perl does not draw
+boxes from measured sizes at this fidelity, so the staleness is invisible
+there; in our sizing-driven pgf pipeline it is a visible frame overflow.
+Candidate to upstream.
+
+**Golden churn:** `figure_dual_caption.xml` — `\includegraphics[width=0.95\linewidth]`
+inside `\begin{minipage}{.5\textwidth}` now yields 163.87pt (= 0.95 x 172.5,
+the pdflatex value); the prior 327.75pt golden had the stale full-page
+`\linewidth` baked in (image at double its true width).
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

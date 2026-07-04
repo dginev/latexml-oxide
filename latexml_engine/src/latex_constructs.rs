@@ -8966,9 +8966,13 @@ LoadDefinitions!({
   Let!("\\lx@parboxnewline", "\\lx@newline");
   // NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
   // for height and inner-pos. We're ignoring inner-pos, for now, though.
+  // `\linewidth\hsize` appended to Perl's register trio (L4746) — same
+  // intentional divergence as the {minipage} binding: real LaTeX \@iiiparbox
+  // runs \@parboxrestore, so nested raw-loaded boxes read the reduced
+  // \linewidth. See the minipage after_digest_begin note.
   DefMacro!(
     "\\parbox[] [] [] {Dimension}{}",
-    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup"
+    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup"
   );
   DefConstructor!("\\lx@parbox[][Dimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {
@@ -9059,7 +9063,14 @@ LoadDefinitions!({
       Let!("\\\\", "\\@normalcr");
     }
   );
-  def_macro_noop("\\@parboxrestore")?;
+  // INTENTIONAL DIVERGENCE from Perl (empty stub, latex_constructs.pool
+  // L4767): the kernel's \@parboxrestore = \@arrayparboxrestore (see
+  // latex_base.rs for the ported body and rationale — the load-bearing
+  // effect is `\linewidth\hsize` for nested raw-loaded boxes) followed by
+  // restoring `\\`. We restore `\\` to \@normalcr exactly as the parbox
+  // constructor's before_digest does above (stable against \shortstack's
+  // \lx@newline rebinding; witness 1904.00943).
+  TeX!(r"\def\@parboxrestore{\@arrayparboxrestore\let\\\@normalcr}");
 
   DefConditional!("\\if@minipage");
   def_macro_noop("\\@setminipage")?;
@@ -9102,7 +9113,17 @@ LoadDefinitions!({
         let rv: RegisterValue = dim.into();
         assign_register("\\hsize", rv.clone(), None, Vec::new())?;
         assign_register("\\textwidth", rv.clone(), None, Vec::new())?;
-        assign_register("\\columnwidth", rv, None, Vec::new())?;
+        assign_register("\\columnwidth", rv.clone(), None, Vec::new())?;
+        // INTENTIONAL DIVERGENCE from Perl (which assigns only the trio
+        // above): real LaTeX \@iiiminipage follows `\hsize#3 \textwidth\hsize
+        // \columnwidth\hsize` with \@parboxrestore, whose `\linewidth\hsize`
+        // is what raw-loaded packages read back. tcolorbox wraps box content
+        // in \minipage (tcb@lrbox), and a NESTED tcolorbox takes
+        // `width=\linewidth` — with \linewidth stale at the page width, the
+        // inner box drew itself full-outer-width, overflowing the parent
+        // frame (arXiv 2605.02240; pdflatex INNER linewidth=282.40pt vs
+        // stale 345.0pt). See OXIDIZED_DESIGN.
+        assign_register("\\linewidth", rv, None, Vec::new())?;
         whatsit.set_property("width", Stored::Dimension(dim));
       }
       whatsit.set_property("vattach", Stored::from(vattach.to_string()));
