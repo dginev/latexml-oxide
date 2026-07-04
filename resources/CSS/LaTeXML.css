@@ -493,6 +493,13 @@ foreignObject {
 .ltx_foreignobject_container:has( > .ltx_foreignobject_content > :not(:only-child)) {
     width:calc(1.1 * var(--ltx-fo-width));
 }
+/* A minipage in the content = a measured box's upper part (tcolorbox et al.
+   wrap box content in \minipage; picture labels never do). TeX fills such
+   boxes from the top, so any estimator slack must fall BELOW the text;
+   centering splits it into a fake empty band above (arXiv 2605.02240). */
+.ltx_foreignobject_container:has( > .ltx_foreignobject_content > .ltx_minipage) {
+    align-items:start;
+}
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {
     display:block;
