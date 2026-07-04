@@ -1709,6 +1709,23 @@ serif prose inside frames TeX measured as compact monospace (witness
 upstream candidate. Future refinement: derive family knowledge from `.fd`
 files instead of an enumerated table.
 
+### 46. foreignObject font-size anchor = the font's QUAD, not its point size
+
+**Decision:** the `font-size:<N>pt` appended to a measured box's
+`--ltx-fo-*` style (`tex_box.rs`, Perl TeX_Box.pool L427-430) is emitted
+as `em_width/65536` — the SAME quad the `--ltx-fo-width/height/depth` em
+values were divided by — instead of Perl's `$f->getSize`.
+
+**Why:** the em values only reproduce the TeX dimension if the browser
+multiplies them by the em basis used to divide. Perl divides by
+`emValue` (the quad) but anchors at the point size, so any font whose
+quad ≠ size renders systematically off: cmr7's quad is 7.97pt at size
+7pt, shrinking every 70%-scaled tikz label 12% under TeX truth; cmtt10
+(quad 10.5pt) shrinks typewriter-content boxes 5%. With the quad anchor,
+`em × anchor = TeX pt` holds exactly for every font. Upstream candidate.
+Golden churn: `font-size:7pt` → `font-size:7.97pt` in the tikz suite
+(5 fixtures re-blessed 2026-07-04 after per-diff review).
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

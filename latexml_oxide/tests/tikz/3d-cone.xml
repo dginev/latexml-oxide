@@ -84,7 +84,7 @@
             <svg:path d="M -25.14 86.37 h 14.37 v 8.92 h -14.37 Z" style="stroke:none"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -23.75 89.14)">
-            <svg:foreignObject height="6.15" overflow="visible" style="--ltx-fo-width:0.99em;--ltx-fo-height:0.41em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 4.77)" width="11.6"><Math mode="inline" tex="r_{0}" text="r _ 0" xml:id="p1.pic1.m1">
+            <svg:foreignObject height="6.15" overflow="visible" style="--ltx-fo-width:0.99em;--ltx-fo-height:0.41em;--ltx-fo-depth:0.12em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 4.77)" width="11.6"><Math mode="inline" tex="r_{0}" text="r _ 0" xml:id="p1.pic1.m1">
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -98,7 +98,7 @@
             <svg:path d="M -34.15 99.36 h 14.37 v 8.92 h -14.37 Z" style="stroke:none"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -32.77 102.13)">
-            <svg:foreignObject height="6.15" overflow="visible" style="--ltx-fo-width:0.99em;--ltx-fo-height:0.41em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 4.77)" width="11.6"><Math mode="inline" tex="r_{1}" text="r _ 1" xml:id="p1.pic1.m2">
+            <svg:foreignObject height="6.15" overflow="visible" style="--ltx-fo-width:0.99em;--ltx-fo-height:0.41em;--ltx-fo-depth:0.12em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 4.77)" width="11.6"><Math mode="inline" tex="r_{1}" text="r _ 1" xml:id="p1.pic1.m2">
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -112,7 +112,7 @@
             <svg:path d="M 59.91 33.63 h 9.55 v 10.45 h -9.55 Z" style="stroke:none"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 61.3 35.01)">
-            <svg:foreignObject height="7.69" overflow="visible" style="--ltx-fo-width:0.58em;--ltx-fo-height:0.65em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="6.78"><Math mode="inline" tex="h" text="h" xml:id="p1.pic1.m3">
+            <svg:foreignObject height="7.69" overflow="visible" style="--ltx-fo-width:0.58em;--ltx-fo-height:0.65em;--ltx-fo-depth:0em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.69)" width="6.78"><Math mode="inline" tex="h" text="h" xml:id="p1.pic1.m3">
                 <XMath>
                   <XMTok font="italic" fontsize="80%" role="UNKNOWN">h</XMTok>
                 </XMath>
@@ -168,7 +168,7 @@
           <svg:path d="M 117.48 57.09 M 120.25 57.09 C 120.25 58.61 119.01 59.85 117.48 59.85 C 115.95 59.85 114.71 58.61 114.71 57.09 C 114.71 55.56 115.95 54.32 117.48 54.32 C 119.01 54.32 120.25 55.56 120.25 57.09 Z M 117.48 57.09" style="stroke:none"/>
           <svg:path d="M 145 55.12 M 147.77 55.12 C 147.77 56.65 146.53 57.89 145 57.89 C 143.47 57.89 142.23 56.65 142.23 55.12 C 142.23 53.59 143.47 52.35 145 52.35 C 146.53 52.35 147.77 53.59 147.77 55.12 Z M 145 55.12" style="stroke:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 178.63 67.21)">
-            <svg:foreignObject height="7.32" overflow="visible" style="--ltx-fo-width:1.62em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.32)" width="19.03"><Math mode="inline" tex="i\hbox{$=$}0" text="i = 0" xml:id="p1.pic1.m7">
+            <svg:foreignObject height="7.32" overflow="visible" style="--ltx-fo-width:1.62em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.32)" width="19.03"><Math mode="inline" tex="i\hbox{$=$}0" text="i = 0" xml:id="p1.pic1.m7">
                 <XMath>
                   <XMApp>
                     <XMTok fontsize="80%" meaning="equals" role="RELOP">=</XMTok>
@@ -179,7 +179,7 @@
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 196.58 0.28)">
-            <svg:foreignObject height="7.32" overflow="visible" style="--ltx-fo-width:1.62em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.32)" width="19.03"><Math mode="inline" tex="i\hbox{$=$}1" text="i = 1" xml:id="p1.pic1.m8">
+            <svg:foreignObject height="7.32" overflow="visible" style="--ltx-fo-width:1.62em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.32)" width="19.03"><Math mode="inline" tex="i\hbox{$=$}1" text="i = 1" xml:id="p1.pic1.m8">
                 <XMath>
                   <XMApp>
                     <XMTok fontsize="80%" meaning="equals" role="RELOP">=</XMTok>
@@ -190,14 +190,14 @@
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 102.12 17.61)">
-            <svg:foreignObject height="9.47" overflow="visible" style="--ltx-fo-width:0.46em;--ltx-fo-height:0.62em;--ltx-fo-depth:0.18em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.32)" width="5.39"><Math mode="inline" tex="j" text="j" xml:id="p1.pic1.m9">
+            <svg:foreignObject height="9.47" overflow="visible" style="--ltx-fo-width:0.46em;--ltx-fo-height:0.62em;--ltx-fo-depth:0.18em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.32)" width="5.39"><Math mode="inline" tex="j" text="j" xml:id="p1.pic1.m9">
                 <XMath>
                   <XMTok font="italic" fontsize="80%" role="UNKNOWN">j</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 151.66 15.13)">
-            <svg:foreignObject height="9.47" overflow="visible" style="--ltx-fo-width:1.74em;--ltx-fo-height:0.62em;--ltx-fo-depth:0.18em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.32)" width="20.42"><Math mode="inline" tex="j\hbox{$+$}1" text="j + 1" xml:id="p1.pic1.m10">
+            <svg:foreignObject height="9.47" overflow="visible" style="--ltx-fo-width:1.74em;--ltx-fo-height:0.62em;--ltx-fo-depth:0.18em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.32)" width="20.42"><Math mode="inline" tex="j\hbox{$+$}1" text="j + 1" xml:id="p1.pic1.m10">
                 <XMath>
                   <XMApp>
                     <XMTok fontsize="80%" meaning="plus" role="ADDOP">+</XMTok>
@@ -213,7 +213,7 @@
           </svg:g>
           <svg:path d="M 117.48 57.09 M 107.28 -16.69 M 145 55.12 M 148.58 -19.69" style="stroke:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 107.32 63.36)">
-            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{00}" text="P _ 00" xml:id="p1.pic1.m11">
+            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{00}" text="P _ 00" xml:id="p1.pic1.m11">
                 <XMath>
                   <XMApp color="#000000">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -224,7 +224,7 @@
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 97.12 -29.15)">
-            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{10}" text="P _ 10" xml:id="p1.pic1.m12">
+            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{10}" text="P _ 10" xml:id="p1.pic1.m12">
                 <XMath>
                   <XMApp color="#000000">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -235,7 +235,7 @@
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 134.84 61.39)">
-            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{01}" text="P _ 01" xml:id="p1.pic1.m13">
+            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{01}" text="P _ 01" xml:id="p1.pic1.m13">
                 <XMath>
                   <XMApp color="#000000">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -246,7 +246,7 @@
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 138.42 -32.14)">
-            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{11}" text="P _ 11" xml:id="p1.pic1.m14">
+            <svg:foreignObject height="8.95" overflow="visible" style="--ltx-fo-width:1.73em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.12em;font-size:8.5pt;" transform="matrix(1 0 0 -1 0 7.56)" width="20.33"><Math mode="inline" tex="P_{11}" text="P _ 11" xml:id="p1.pic1.m14">
                 <XMath>
                   <XMApp color="#000000">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>

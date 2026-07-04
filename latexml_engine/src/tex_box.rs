@@ -852,13 +852,16 @@ LoadDefinitions!({
           // (10pt ~= 13.3px), inflating the container ~20% past the drawn
           // frame: tcolorbox content ran through the right border
           // (2605.02240; 509px content in a 440px box).
-          let font_size = whatsit
-            .and_then(|wh| wh.get_font().ok().flatten())
-            .map(|f| f.get_size().unwrap_or(10.0))
-            .unwrap_or(10.0);
+          // The anchor MUST be the SAME em basis the divisions above used:
+          // the font's QUAD (em width), not its point size. cmtt10's quad
+          // is 10.5pt while its size is 10pt — anchoring quad-divided em
+          // values with the point size shrank every typewriter-content box
+          // by quad/size ~ 5% (2605.00468: fo 348.8pt vs its own 366.2pt
+          // lines, uniform 17.4pt deficit poking text past the frame).
+          let font_size = em_width / 65536.0;
           document.set_attribute(node, "style",
             &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;font-size:{}pt;",
-              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em), font_size))?;
+              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em), fmt_em(font_size)))?;
         }
       }
       if !has_dims && !node.has_attribute("overflow") {

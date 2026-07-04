@@ -43,10 +43,10 @@
           </svg:g>
           <svg:path d="M 39.37 137.8 M 157.48 137.8" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 6.32 134.43)">
-            <svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:6.02em;--ltx-fo-height:0.61em;--ltx-fo-depth:0em;font-size:7pt;" transform="matrix(1 0 0 -1 0 6.73)" width="66.4"><text fontsize="70%">Constant flux</text></svg:foreignObject>
+            <svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:6.02em;--ltx-fo-height:0.61em;--ltx-fo-depth:0em;font-size:7.97pt;" transform="matrix(1 0 0 -1 0 6.73)" width="66.4"><text fontsize="70%">Constant flux</text></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 118.73 135.37)">
-            <svg:foreignObject height="8.61" overflow="visible" style="--ltx-fo-width:7.08em;--ltx-fo-height:0.61em;--ltx-fo-depth:0.17em;font-size:7pt;" transform="matrix(1 0 0 -1 0 6.73)" width="78.1"><text fontsize="70%">Field weakening</text></svg:foreignObject>
+            <svg:foreignObject height="8.61" overflow="visible" style="--ltx-fo-width:7.08em;--ltx-fo-height:0.61em;--ltx-fo-depth:0.17em;font-size:7.97pt;" transform="matrix(1 0 0 -1 0 6.73)" width="78.1"><text fontsize="70%">Field weakening</text></svg:foreignObject>
           </svg:g>
           <svg:path d="M 0 0 L 0 156.84" style="fill:none"/>
           <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.32pt" transform="matrix(0.0 1.0 -1.0 0.0 0 156.84)">
