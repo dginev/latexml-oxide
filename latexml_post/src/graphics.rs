@@ -364,8 +364,62 @@ impl Graphics {
         }
       }
     }
+    if best_path.is_some() {
+      return best_path;
+    }
 
-    best_path
+    // kpathsea-parity casefold fallback (`texmf_casefold_search`, default ON
+    // since TL2018): pdflatex finds `images/NLPOptNet.jpg` even when the
+    // file on disk is `images/NLPOPtNet.jpg`, so an author case-typo that
+    // builds fine on arXiv must not lose the figure here (witness
+    // 2605.00260, Figure 1). Like kpathsea, this fires only AFTER every
+    // exact search misses; only the filename component is folded, and an
+    // ambiguous directory (two case-variants) refuses to guess.
+    for sp in std::iter::once(String::new()).chain(search_paths.iter().cloned()) {
+      let cand = if sp.is_empty() {
+        source.clone()
+      } else {
+        format!("{}/{}", sp, source)
+      };
+      if let Some(found) = Self::casefold_resolve(&cand) {
+        Info!(
+          "graphics",
+          "casefold",
+          "Graphic '{}' resolved case-insensitively to '{}' (kpathsea casefold parity)",
+          source,
+          found
+        );
+        return Some(found);
+      }
+    }
+    None
+  }
+
+  /// Case-insensitive filename resolution within the path's directory.
+  /// Returns the unique match, or None when absent or ambiguous.
+  fn casefold_resolve(path: &str) -> Option<String> {
+    let p = Path::new(path);
+    if p.exists() {
+      return Some(path.to_string());
+    }
+    let parent = match p.parent() {
+      Some(d) if !d.as_os_str().is_empty() => d,
+      _ => Path::new("."),
+    };
+    let want = p.file_name()?.to_str()?;
+    let mut hit: Option<String> = None;
+    for entry in std::fs::read_dir(parent).ok()? {
+      let entry = entry.ok()?;
+      let name = entry.file_name();
+      let Some(name) = name.to_str() else { continue };
+      if name.eq_ignore_ascii_case(want) && entry.path().is_file() {
+        if hit.is_some() {
+          return None; // ambiguous — never guess between case-variants
+        }
+        hit = Some(entry.path().to_string_lossy().to_string());
+      }
+    }
+    hit
   }
 
   /// Set the image source attributes on a graphics node.
