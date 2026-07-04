@@ -3017,32 +3017,20 @@ fn interpret_tex_text(s: &str) -> String {
   if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
     return s.to_string();
   }
-  // FULL diagnostic isolation, like Perl's recursive MakeBibliography
-  // session: junk in a bib field (`\lt`, a stray `^` or `$`, a runaway
-  // group) must neither print Error lines nor count against the DOCUMENT's
-  // status. Suppress the log output AND restore the REPORT tally after the
-  // digest — a `Fatal!` inside digest returns Err (raw text passes
-  // through) but would otherwise latch the sticky REPORT.fatal, marking
-  // the whole paper fatal (run-233 regression: +27 fatals, +599 errors
-  // from exactly this leak).
-  let prev_undef = latexml_core::state::lookup_bool("SUPPRESS_UNDEFINED_ERRORS");
-  latexml_core::state::assign_value(
-    "SUPPRESS_UNDEFINED_ERRORS",
-    true,
-    Some(latexml_core::state::Scope::Global),
-  );
-  let counts = latexml_core::common::error::snapshot_report_counts();
-  let prev_mute = latexml_core::common::error::set_suppress_log_output(true);
+  // Diagnostic DOWNGRADE around the field digest (user policy 2026-07-04):
+  // junk in a bib field (`\lt`, a stray `^` or `$`) is a REAL problem we
+  // want visible — but as Info, not as document status. Perl's recursive
+  // session prints these at native severity AND MergeStatus'es them into
+  // the document; full suppression (run-233 hotfix) hid them entirely.
+  // The downgrade keeps every line in the log (`downgraded_error:...`)
+  // while a Fatal! inside a digest still aborts just that field (Err ->
+  // raw passthrough) without latching the document's sticky fatal
+  // (run-233 regression: +27 fatals, +599 errors from that leak).
+  let prev = latexml_core::common::error::set_diagnostic_downgrade(true);
   let interpreted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
     latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).map(|d| d.to_string())
   }));
-  latexml_core::common::error::set_suppress_log_output(prev_mute);
-  latexml_core::common::error::restore_report_counts(counts);
-  latexml_core::state::assign_value(
-    "SUPPRESS_UNDEFINED_ERRORS",
-    prev_undef,
-    Some(latexml_core::state::Scope::Global),
-  );
+  latexml_core::common::error::set_diagnostic_downgrade(prev);
   match interpreted {
     Ok(Ok(text)) => text,
     _ => s.to_string(),

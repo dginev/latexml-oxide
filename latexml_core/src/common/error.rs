@@ -47,6 +47,33 @@ pub fn set_suppress_log_output(suppress: bool) -> bool {
   prev
 }
 
+// Thread-local diagnostic DOWNGRADE for auxiliary digestions (bibliography
+// field interpretation). When set, `Warn!`/`Error!`/`Fatal!` still emit
+// their message — visibility is wanted, problems in bib fields are real —
+// but at `Info` severity and counted as Info, so they do not affect the
+// DOCUMENT's status. NOTE the deliberate softening vs Perl: Perl's
+// recursive MakeBibliography session prints at native severity AND
+// `MergeStatus`es the inner tally into the document (Common/Error.pm L669);
+// we keep the lines (as Info) without the status impact — interim policy
+// (user, 2026-07-04) until the full recursive-conversion re-port lands
+// (SYNC_STATUS). `Fatal!`'s control flow (record_last_fatal + Err return)
+// is unchanged.
+thread_local! {
+  static DOWNGRADE_DIAGNOSTICS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Set or clear the diagnostic-downgrade flag. Returns the previous value.
+pub fn set_diagnostic_downgrade(downgrade: bool) -> bool {
+  DOWNGRADE_DIAGNOSTICS.with(|c| {
+    let prev = c.get();
+    c.set(downgrade);
+    prev
+  })
+}
+
+/// Returns true if diagnostics are being downgraded to Info.
+pub fn is_diagnostic_downgrade() -> bool { DOWNGRADE_DIAGNOSTICS.with(|c| c.get()) }
+
 /// Returns true if log output is currently suppressed.
 pub fn is_log_output_suppressed() -> bool { SUPPRESS_LOG_OUTPUT.get() }
 
@@ -492,21 +519,41 @@ macro_rules! Info {
 #[macro_export]
 macro_rules! Warn {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Warning, None);
-    if !$crate::common::error::is_log_output_suppressed() {
-      use log::warn;
-      warn!(target: &format!("{}:{}", $category, $object), "{}",
-        $crate::generate_message!($message))
+    if $crate::common::error::is_diagnostic_downgrade() {
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Info, None);
+      if !$crate::common::error::is_log_output_suppressed() {
+        use log::info;
+        info!(target: &format!("downgraded_warning:{}:{}", $category, $object), "{}",
+          $crate::generate_message!($message))
+      }
+    } else {
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Warning, None);
+      if !$crate::common::error::is_log_output_suppressed() {
+        use log::warn;
+        warn!(target: &format!("{}:{}", $category, $object), "{}",
+          $crate::generate_message!($message))
+      }
     }
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Warning, None);
-    if !$crate::common::error::is_log_output_suppressed() {
-      use log::warn;
-      warn!(target: &format!("{}:{}", $category, $object), "{}",
-        $crate::generate_message!($message, $($details),*))
+    if $crate::common::error::is_diagnostic_downgrade() {
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Info, None);
+      if !$crate::common::error::is_log_output_suppressed() {
+        use log::info;
+        info!(target: &format!("downgraded_warning:{}:{}", $category, $object), "{}",
+          $crate::generate_message!($message, $($details),*))
+      }
+    } else {
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Warning, None);
+      if !$crate::common::error::is_log_output_suppressed() {
+        use log::warn;
+        warn!(target: &format!("{}:{}", $category, $object), "{}",
+          $crate::generate_message!($message, $($details),*))
+      }
     }
   }}
 }
@@ -517,6 +564,18 @@ macro_rules! Error {
     $crate::Error!($category,$object,$message,"")
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
+    if $crate::common::error::is_diagnostic_downgrade() {
+      // Auxiliary-digestion downgrade: visible as Info, no Error status,
+      // and no too-many/consecutive-error escalation (an Info-grade
+      // diagnostic must not Fatal the document).
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Info, None);
+      if !$crate::common::error::is_log_output_suppressed() {
+        use log::info;
+        info!(target: &format!("downgraded_error:{}:{}", $category, $object), "{}",
+          $crate::generate_message!($message, $($details),*));
+      }
+    } else {
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Error, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -565,6 +624,7 @@ macro_rules! Error {
         )
       );
     }
+    }
   }}
 }
 
@@ -572,7 +632,17 @@ macro_rules! Error {
 #[macro_export]
 macro_rules! Fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
-    $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
+    if $crate::common::error::is_diagnostic_downgrade() {
+      // Downgraded context: count as Info and log visibly, but keep the
+      // control flow — the Err return still aborts the auxiliary digestion.
+      $crate::common::error::note_status($crate::common::error::LogStatus::Info, None);
+      if !$crate::common::error::is_log_output_suppressed() {
+        use log::info;
+        info!(target: "downgraded_fatal", "{}", $message);
+      }
+    } else {
+      $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
+    }
     {
       use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
       let __fatal_err = LatexmlError {
