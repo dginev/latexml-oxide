@@ -938,9 +938,12 @@ LoadDefinitions!({
     // here (rather than a nested `|name| -> Tokens` helper) because
     // `?` only propagates one level up — from a nested closure it
     // would try to early-return from that closure.
-    // Using `Explode!()` for surname/given/lineage strings keeps
-    // tokenization synchronous (no Result), matching Perl's behaviour
-    // of pre-tokenized verbatim characters.
+    // Perl L912-917 runs the name parts through Tokenize() — full
+    // catcode-aware tokenization — so TeX accents in .bib names
+    // (`S\"okmen`, `Hu\ssmann`) become live macros and render as
+    // o-umlaut / sharp-s. Explode!() here (verbatim catcode-Other
+    // chars) leaked the raw `\"okmen` text into the HTML (witness
+    // 2605.00223). mouth::tokenize is synchronous, like Explode.
     let mut body: Vec<Token> = Vec::new();
     body.push(T_CS!("\\bib@@@names"));
     body.push(T_BEGIN!());
@@ -948,17 +951,17 @@ LoadDefinitions!({
       let mut name_tks: Vec<Token> = Vec::new();
       if !name.surname.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@surname"),
-          vec![Tokens::new(Explode!(&name.surname))]);
+          vec![Tokenize!(name.surname.as_str())]);
         name_tks.extend(inv.unlist());
       }
       if !name.given.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@given"),
-          vec![Tokens::new(Explode!(&name.given))]);
+          vec![Tokenize!(name.given.as_str())]);
         name_tks.extend(inv.unlist());
       }
       if !name.lineage.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@lineage"),
-          vec![Tokens::new(Explode!(&name.lineage))]);
+          vec![Tokenize!(name.lineage.as_str())]);
         name_tks.extend(inv.unlist());
       }
       let inv = Invocation!(T_CS!("\\bib@@@name"),
@@ -968,7 +971,7 @@ LoadDefinitions!({
     if parsed.etal {
       // Perl L917: trailing `\bib@surname{others}` as etal marker.
       let others = Invocation!(T_CS!("\\bib@surname"),
-        vec![Tokens::new(Explode!("others"))]);
+        vec![Tokenize!("others")]);
       let inv = Invocation!(T_CS!("\\bib@@@name"),
         vec![field_tokens, others]);
       body.extend(inv.unlist());
@@ -1005,7 +1008,9 @@ LoadDefinitions!({
     let recased = recase_title(&raw, mode);
     // Emit `\bib@@field{tag}{}{<recased>}`. The empty `{}` slot
     // is the OptionalKeyVals arg (absent → no attributes).
-    let recased_tokens = Tokens::new(Explode!(&recased));
+    // Perl L333: Tokenize($recap) — catcode-aware, so TeX macros in
+    // titles stay live (accents, math). Explode leaked them verbatim.
+    let recased_tokens = Tokenize!(recased.as_str());
     let inv = Invocation!(T_CS!("\\bib@@field"),
       vec![tag_tokens, Tokens!(), recased_tokens]);
     Ok(inv)
@@ -1415,7 +1420,7 @@ LoadDefinitions!({
     let mut out_toks: Vec<Token> = Vec::new();
     out_toks.push(T_CS!("\\bib@field@default@date"));
     out_toks.push(T_BEGIN!());
-    out_toks.extend(Explode!(&date));
+    out_toks.extend(Tokenize!(date.as_str()).unlist());
     out_toks.push(T_END!());
     Ok(Tokens::new(out_toks))
   });
@@ -1469,7 +1474,8 @@ LoadDefinitions!({
         normalised.push(c);
       }
     }
-    whatsit.set_property("pages", Stored::Tokens(Tokens::new(Explode!(&normalised))));
+    // Perl L674: Digest(Tokenize($pages)) — tokenize, not explode.
+    whatsit.set_property("pages", Stored::Tokens(Tokenize!(normalised.as_str())));
   });
 
   // Standard BibTeX fields.
@@ -1617,9 +1623,9 @@ LoadDefinitions!({
     if mrnumber.is_none() && mrreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let mr_tks = Tokens::new(Explode!(mrnumber.unwrap_or_default().as_str()));
+    let mr_tks = Tokenize!(mrnumber.unwrap_or_default().as_str());
     let rev_tks = match mrreviewer {
-      Some(r) => Tokens::new(Explode!(r.as_str())),
+      Some(r) => Tokenize!(r.as_str()),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@mr"), vec![mr_tks, rev_tks]);
@@ -1670,9 +1676,9 @@ LoadDefinitions!({
     if zblno.is_none() && zblreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let zbl_tks = Tokens::new(Explode!(zblno.unwrap_or_default().as_str()));
+    let zbl_tks = Tokenize!(zblno.unwrap_or_default().as_str());
     let rev_tks = match zblreviewer {
-      Some(r) => Tokens::new(Explode!(r.as_str())),
+      Some(r) => Tokenize!(r.as_str()),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@zbl"), vec![zbl_tks, rev_tks]);
