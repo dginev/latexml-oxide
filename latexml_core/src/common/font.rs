@@ -1600,6 +1600,24 @@ impl Font {
     // Perl: stack up the multiple lines; mathaxis = size/4.
     let size = self.get_size().unwrap_or_else(defsize) as i64;
     let mathaxis = size * UNITY / 4;
+    static SIZE_TRACE: std::sync::LazyLock<bool> =
+      std::sync::LazyLock::new(|| std::env::var("LXML_SIZE_TRACE").is_ok());
+    if *SIZE_TRACE {
+      eprintln!(
+        "SIZE mode={mode_str} vattach={vattach} baseline={} nboxes={} lines={:?}",
+        baseline as f64 / 65536.0,
+        boxes.len(),
+        lines
+          .iter()
+          .map(|l| [
+            l[0] as f64 / 65536.0,
+            l[1] as f64 / 65536.0,
+            l[2] as f64 / 65536.0,
+            l[3] as f64 / 65536.0
+          ])
+          .collect::<Vec<_>>()
+      );
+    }
     let (mut wd, mut ht, mut dp) = Self::compute_boxes_size_stack(&vattach, mathaxis, &lines);
     // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty).
     if wd != 0 && maxwidth != 0 {

@@ -1726,6 +1726,29 @@ quad ≠ size renders systematically off: cmr7's quad is 7.97pt at size
 Golden churn: `font-size:7pt` → `font-size:7.97pt` in the tikz suite
 (5 fixtures re-blessed 2026-07-04 after per-diff review).
 
+### 47. Typewriter whitespace is never ignorable (verbatim indentation)
+
+**Decision:** whitespace-only TYPEWRITER-font text is inserted rather
+than dropped by the document builder's two ignorable-whitespace gates
+(`open_text`'s initial guard + `open_text_internal`'s Perl-L1146 gate,
+bridged by a `verbatim_space_pending` handoff), and the `ltx:p`
+afterClose edge-trim (i) skips paragraphs whose PARENT font context is
+typewriter and (ii) stops its recursion at `font="typewriter"` text
+wrappers. `ltx:verbatim` itself stays trimmable (Perl trims an inline
+`\verb`'s leading space at a paragraph edge — tokenize/verb.t parity).
+
+**Why:** fancyvrb/fvextra line-map verbatim into ltx:p's, where leading
+spaces ARE code indentation and a space-only line is content; both
+engines' whitespace machinery predates that shape and deleted the
+indentation (2605.00468 JSON schemas flush-left, 15–33px measured-frame
+spills). Line-leading cat-10 SOURCE spaces never reach these gates (the
+mouth's state-N skip eats them at tokenization), so ordinary
+source-formatting whitespace is unaffected. Perl comparison: Perl's own
+`{verbatim}` lands in `ltx:verbatim` (PCDATA-capable, no trim hook) so
+it never faces this; the raw-fancyvrb constructs that do are
+UNCONVERTIBLE by same-host Perl (raw fvextra+breaklines exceeded 7 min
+on a 6-line file) — surpass-Perl scope, user-directed 2026-07-04.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

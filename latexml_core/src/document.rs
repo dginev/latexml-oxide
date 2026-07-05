@@ -104,6 +104,13 @@ pub struct Document {
   reusable_node_buffers:       Vec<Vec<Node>>,
   localized_boxes:             Vec<Option<Digested>>,
   box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
+  /// Transient handoff from `open_text`'s verbatim-space exception to
+  /// `open_text_internal`: whitespace-only TYPEWRITER text (verbatim
+  /// indentation / space-only verbatim lines) must be INSERTED even where
+  /// the current node needs an auto-open to reach a `#PCDATA` context —
+  /// both whitespace gates would otherwise drop it. Consumed (reset) by
+  /// `open_text_internal`.
+  verbatim_space_pending:      bool,
   /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
   /// source range, captured as a plain `Copy` `Locator` at set time so
   /// stamping never re-borrows the box's `RefCell` mid-absorb (which
@@ -156,6 +163,7 @@ impl Document {
       constructed_nodes:           Vec::new(),
       reusable_node_buffers:       Vec::new(),
       box_to_absorb:               None,
+      verbatim_space_pending:      false,
       current_box_locator:         None,
       localized_box_locators:      Vec::new(),
       context:                     None,
@@ -1853,7 +1861,36 @@ impl Document {
         && (node_type == Some(NodeType::DocumentNode)
           || (node_type == Some(NodeType::ElementNode) && !can_contain(&self.node, "#PCDATA")))
       {
-        return Ok(None);
+        // ...EXCEPT whitespace that is verbatim CONTENT rather than ignorable
+        // lexical padding: (a) TYPEWRITER-font spaces — fancyvrb/fvextra map
+        // every verbatim space to a digested space box (`\FV@Space` →
+        // `\FV@SpaceCatTen`, a braced ordinary space), so the line-LEADING
+        // indentation of a code block arrives here at a not-yet-opened
+        // paragraph, and dropping it deleted JSON-schema indentation and
+        // collapsed space-only verbatim lines out of the height budget
+        // (2605.00468 Prompt boxes: flush-left schemas, 15-33px frame
+        // spills); (b) an EXPLICIT control space `\ ` (Box name="space"),
+        // which TeX always typesets. Line-leading cat-10 SOURCE spaces never
+        // reach this point (the mouth's state-N skip eats them), so this
+        // does not resurrect source-formatting whitespace. Same-host Perl
+        // cannot convert the fancyvrb constructs at all (raw
+        // fvextra+breaklines exceeds 7 min on a 6-line file) — surpass-Perl
+        // scope, not a parity break. Fall through: the normal insertion
+        // machinery auto-opens the paragraph and keeps the spaces as text.
+        let explicit_space = node_type == Some(NodeType::ElementNode)
+          && !text.is_empty()
+          && (font.family.as_deref() == Some("typewriter")
+            || self.box_to_absorb.as_ref().is_some_and(|b| {
+              b.get_property("name")
+                .is_some_and(|n| n.to_string() == "space")
+            }));
+        if !explicit_space {
+          return Ok(None);
+        }
+        // open_text_internal has its own whitespace-only gate (mirroring
+        // Perl L1146: insert only if `\S` or direct #PCDATA) — hand it the
+        // decision so the spaces survive the auto-open.
+        self.verbatim_space_pending = true;
       }
     }
     if matches!(&font.family.as_deref(), Some("nullfont")) {
@@ -2120,6 +2157,9 @@ impl Document {
   }
 
   fn open_text_internal(&mut self, text: &str) -> Result<Node> {
+    // Consume the verbatim-space handoff (see `verbatim_space_pending`);
+    // taking it here keeps the flag from leaking into unrelated calls.
+    let force_whitespace = std::mem::take(&mut self.verbatim_space_pending);
     if text.is_empty() {
       return Ok(self.node.clone());
     }
@@ -2129,6 +2169,7 @@ impl Document {
     // so all downstream append_text calls are safe and the output stays
     // well-formed (shared policy with `set_attribute`, see `xml_sanitize`).
     if let Cow::Owned(cleaned) = xml_sanitize(text) {
+      self.verbatim_space_pending = force_whitespace; // re-arm for the recursion
       return self.open_text_internal(&cleaned);
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
@@ -2156,7 +2197,10 @@ impl Document {
     // This avoids libxml text-node merging which would bypass ligature processing.
     else if self.swap_comment_text_if_needed(text)? {
       // Handled by recursive call
-    } else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
+    } else if HAS_NONSPACE_RE.is_match(text)
+      || force_whitespace
+      || can_contain(&self.node, "#PCDATA")
+    {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None)?;
       // Perl L1149-1150: appendNodeBox for autoopened insertion points
@@ -4378,9 +4422,111 @@ impl Document {
     Ok(new)
   }
 
+  /// Whitespace inside an explicit TYPEWRITER text wrapper is verbatim
+  /// CONTENT (code indentation, measured by the sizing pass) — the p-edge
+  /// trim recursion must not descend into it. During construction the
+  /// public `font` attribute may not be written yet, so also decode the
+  /// internal `_font`. `ltx:verbatim` itself is EXEMPT: Perl's edge trim
+  /// descends into an inline `\verb` at a paragraph edge and trims its
+  /// leading space (tokenize/verb.t), and we keep that parity.
+  fn is_typewriter_wrapper(&self, node: &Node) -> bool {
+    if node.get_name() == "verbatim" {
+      return false;
+    }
+    if node
+      .get_attribute("font")
+      .is_some_and(|f| f.contains("typewriter"))
+    {
+      return true;
+    }
+    node
+      .get_attribute("_font")
+      .and_then(|id| self.decode_font(&id))
+      .is_some_and(|f| f.family.as_deref() == Some("typewriter"))
+  }
+
   pub fn trim_node_whitespace(&mut self, node: &Node) -> Result<()> {
-    trim_node_left_whitespace(node)?;
-    trim_node_right_whitespace(node)?;
+    // A paragraph in a typewriter CONTEXT keeps its whitespace: verbatim
+    // content is line-mapped into ltx:p's (fancyvrb et al.), where leading
+    // spaces ARE the code indentation (2605.00468 JSON schemas flush-left)
+    // and a space-only line is real content. Keyed on the PARENT's font
+    // context — NOT on the node's own computed font, which is stamped from
+    // whichever box auto-opened it (a prose paragraph STARTING with inline
+    // \verb reads as typewriter and would wrongly keep its trailing prose
+    // whitespace; tokenize/verb.t). Perl's own {verbatim} lands in
+    // ltx:verbatim (no trim hook) so it never faces this; the raw-fancyvrb
+    // constructs that do cannot be converted by Perl at all (fvextra
+    // breaklines exceeds 7 min on a 6-line file) — surpass-Perl scope.
+    if let Some(parent) = node.get_parent()
+      && self.get_node_font(&parent).family.as_deref() == Some("typewriter")
+    {
+      return Ok(());
+    }
+    self.trim_node_left_whitespace(node)?;
+    self.trim_node_right_whitespace(node)?;
+    Ok(())
+  }
+
+  fn trim_node_left_whitespace(&self, node: &Node) -> Result<()> {
+    if let Some(mut first_child) = node.get_first_child() {
+      match first_child.get_type() {
+        Some(NodeType::TextNode) => {
+          let content = first_child.get_content();
+          // Perl: s/^ +// — only trim ASCII spaces, preserve unicode spaces (nbsp, em-space, etc.)
+          let trimmed_content = content.trim_start_matches(' ');
+          if !content.is_empty() && (trimmed_content != content) {
+            first_child.set_content(trimmed_content)?;
+          }
+        },
+        Some(NodeType::ElementNode) if !self.is_typewriter_wrapper(&first_child) => {
+          self.trim_node_left_whitespace(&first_child)?
+        },
+        _ => {},
+      };
+    }
+    Ok(())
+  }
+
+  fn trim_node_right_whitespace(&self, node: &Node) -> Result<()> {
+    // Skip trailing empty <text> font wrapper elements to find the real last content.
+    // These are artifacts of font change tracking during alignment absorption.
+    let mut candidate = node.get_last_child();
+    while let Some(ref child) = candidate {
+      if child.get_type() == Some(NodeType::ElementNode)
+        && child.get_name() == "text"
+        && child.get_first_child().is_none()
+        && child.has_attribute("_noautoclose")
+      {
+        candidate = child.get_prev_sibling();
+      } else {
+        break;
+      }
+    }
+    if let Some(mut last_child) = candidate {
+      match last_child.get_type() {
+        Some(NodeType::TextNode) => {
+          let content = last_child.get_content();
+          // Perl: s/\s+$// — but we can't trim all Unicode whitespace because some
+          // tests have significant thin spaces (U+2009) from DimensionToSpaces.
+          // Trim: ASCII whitespace, nbsp (U+00A0), em-space (U+2003), en-space (U+2002).
+          let trimmed_content = content.trim_end_matches(|c: char| {
+            c.is_ascii_whitespace() || c == '\u{00A0}' || c == '\u{2003}' || c == '\u{2002}'
+          });
+          if !content.is_empty() && (trimmed_content != content) {
+            if trimmed_content.is_empty() {
+              // Remove the entirely-whitespace text node
+              last_child.unlink();
+            } else {
+              last_child.set_content(trimmed_content)?;
+            }
+          }
+        },
+        Some(NodeType::ElementNode) if !self.is_typewriter_wrapper(&last_child) => {
+          self.trim_node_right_whitespace(&last_child)?
+        },
+        _ => {},
+      };
+    }
     Ok(())
   }
 
@@ -4783,65 +4929,6 @@ fn serialize_attr(string: &str) -> String {
   serialized = serialized.replace('\n', "&#10;");
   serialized = serialized.replace('\t', "&#9;");
   serialized
-}
-
-fn trim_node_left_whitespace(node: &Node) -> Result<()> {
-  if let Some(mut first_child) = node.get_first_child() {
-    match first_child.get_type() {
-      Some(NodeType::TextNode) => {
-        let content = first_child.get_content();
-        // Perl: s/^ +// — only trim ASCII spaces, preserve unicode spaces (nbsp, em-space, etc.)
-        let trimmed_content = content.trim_start_matches(' ');
-        if !content.is_empty() && (trimmed_content != content) {
-          first_child.set_content(trimmed_content)?;
-        }
-      },
-      Some(NodeType::ElementNode) => trim_node_left_whitespace(&first_child)?,
-      _ => {},
-    };
-  }
-  Ok(())
-}
-
-fn trim_node_right_whitespace(node: &Node) -> Result<()> {
-  // Skip trailing empty <text> font wrapper elements to find the real last content.
-  // These are artifacts of font change tracking during alignment absorption.
-  let mut candidate = node.get_last_child();
-  while let Some(ref child) = candidate {
-    if child.get_type() == Some(NodeType::ElementNode)
-      && child.get_name() == "text"
-      && child.get_first_child().is_none()
-      && child.has_attribute("_noautoclose")
-    {
-      candidate = child.get_prev_sibling();
-    } else {
-      break;
-    }
-  }
-  if let Some(mut last_child) = candidate {
-    match last_child.get_type() {
-      Some(NodeType::TextNode) => {
-        let content = last_child.get_content();
-        // Perl: s/\s+$// — but we can't trim all Unicode whitespace because some
-        // tests have significant thin spaces (U+2009) from DimensionToSpaces.
-        // Trim: ASCII whitespace, nbsp (U+00A0), em-space (U+2003), en-space (U+2002).
-        let trimmed_content = content.trim_end_matches(|c: char| {
-          c.is_ascii_whitespace() || c == '\u{00A0}' || c == '\u{2003}' || c == '\u{2002}'
-        });
-        if !content.is_empty() && (trimmed_content != content) {
-          if trimmed_content.is_empty() {
-            // Remove the entirely-whitespace text node
-            last_child.unlink();
-          } else {
-            last_child.set_content(trimmed_content)?;
-          }
-        }
-      },
-      Some(NodeType::ElementNode) => trim_node_right_whitespace(&last_child)?,
-      _ => {},
-    };
-  }
-  Ok(())
 }
 
 pub trait IntoVDQS {
