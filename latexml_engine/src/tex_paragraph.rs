@@ -127,10 +127,15 @@ LoadDefinitions!({
               let class_s = with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
             }
-          } else if qname == pin!("ltx:figure") {
-            // insert breaks in figures, for vertically separating subfigures
-            document.insert_element("ltx:break",Vec::new(), None)?;
           }
+          // NOTE: Perl's \par (\lx@normal@par) does NOT insert figure-separating
+          // breaks — figure row breaks are computed by WIDTH in
+          // `arrange_panels_and_breaks` (ltx:figure afterClose). A prior Rust-only
+          // branch here inserted an <ltx:break> whenever \par fired in an
+          // ltx:figure, which mis-fired for the internal \par that `leaveHorizontal`
+          // triggers after inter-panel glue (\hfill/\quad) — producing one spurious
+          // break per subfigure, so an intended 4-per-row grid collapsed to 1
+          // panel per row (arXiv 2605.00347). Removed; see arrange_panels.
         }
         if !prop_bool!(props, "internal_par") {
           document.maybe_close_element("ltx:para")?;

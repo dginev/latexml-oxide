@@ -1780,6 +1780,14 @@ pub fn after_float(whatsit: &mut Whatsit) {
   // Perl: AssignValue('PREINCREMENTED_' . $type => undef, 'global');
   let prekey = s!("PREINCREMENTED_{captype}");
   remove_value(&prekey);
+  // Perl L3389: $whatsit->setProperty(floatwidth => LookupRegister('\hsize'));
+  // Capture \hsize as it stands at the END of the float's digestion (its
+  // column/textwidth). `arrange_panels` reads this back from the box in the
+  // afterClose hook to size the per-row layout — NOT the ambient \hsize at
+  // construction time, which may have been restored to an unrelated value.
+  if let Ok(Some(hsize)) = lookup_register("\\hsize", Vec::new()) {
+    whatsit.set_property("floatwidth", Stored::from(hsize));
+  }
   rescue_caption_counters(&captype, whatsit);
   assign_value(
     "LAST_FLOATTYPE",
@@ -1787,106 +1795,220 @@ pub fn after_float(whatsit: &mut Whatsit) {
     Some(Scope::Global),
   );
 }
-/// Simplified version of Perl's arrange_panels_and_breaks().
-/// When a figure/table/float has 2+ child figure/table/float elements (panels),
-/// add the ltx_figure_panel class to each panel.
-fn arrange_panels(document: &mut Document, node: &mut Node) -> Result<()> {
-  // Perl: arrange_panels_and_breaks (latex_constructs L3286-3406)
-  // Simplified: we mark panel children with ltx_figure_panel class
-  // but skip the full break-insertion / width-based row-splitting logic.
-  //
-  // panel_break_names (Perl L3302-3307): elements that are NOT panels.
-  // Includes: ltx:break, Caption class (caption, toccaption),
-  // SectionalFrontMatter class (title, toctitle, subtitle, creator, contact, date,
-  // tags, classification, acknowledgements), Meta class (resource, navigation, etc.)
-  let is_panel_break = |qname: SymStr| -> bool {
-    with(qname, |name| {
-      matches!(
-        name,
-        "ltx:break"
-          | "ltx:caption"
-          | "ltx:toccaption"
-          | "ltx:title"
-          | "ltx:toctitle"
-          | "ltx:subtitle"
-          | "ltx:creator"
-          | "ltx:contact"
-          | "ltx:date"
-          | "ltx:tags"
-          | "ltx:classification"
-          | "ltx:acknowledgements"
-          | "ltx:resource"
-          | "ltx:navigation"
-      )
-    })
-  };
+/// Is `qname` a "panel break" element (Perl `figure_panel_break_names`,
+/// L3245-3251) — a break/caption/metadata child that flushes the current row
+/// rather than being a panel itself?
+fn is_panel_break_name(qname: SymStr) -> bool {
+  with(qname, |name| {
+    matches!(
+      name,
+      "ltx:break"
+        | "ltx:caption"
+        | "ltx:toccaption"
+        | "ltx:title"
+        | "ltx:toctitle"
+        | "ltx:subtitle"
+        | "ltx:creator"
+        | "ltx:contact"
+        | "ltx:date"
+        | "ltx:tags"
+        | "ltx:classification"
+        | "ltx:acknowledgements"
+        | "ltx:resource"
+        | "ltx:navigation"
+    )
+  })
+}
+
+/// Perl `%standalone_panel_names` (L3227-3229): block-level elements expected to
+/// sit alone on their own row within a figure.
+fn is_standalone_panel_name(qname: SymStr) -> bool {
+  with(qname, |name| {
+    matches!(
+      name,
+      "ltx:p"
+        | "ltx:listing"
+        | "ltx:math"
+        | "ltx:itemize"
+        | "ltx:enumerate"
+        | "ltx:quote"
+        | "ltx:theorem"
+        | "ltx:proof"
+        | "ltx:description"
+        | "ltx:equation"
+        | "ltx:equationgroup"
+        | "ltx:verbatim"
+    )
+  })
+}
+
+/// Width (in scaled points) of the box that produced `node`, or 0 if unknown.
+/// Perl: `$document->getNodeBox($child)->getWidth->valueOf()`. When the node has
+/// no tracked box width (e.g. a minipage/parbox, whose set width rides on the
+/// element's `width` ATTRIBUTE rather than a box property in our tree), fall back
+/// to that attribute — otherwise the panel reads as zero-width and gets spuriously
+/// merged into its neighbour (figure_grids minipage grids).
+fn panel_width(document: &Document, node: &Node) -> f64 {
+  let box_width = document
+    .get_node_box(node)
+    .and_then(|b| b.get_width(None).ok().flatten())
+    .map(|r| r.value_of() as f64)
+    .unwrap_or(0.0);
+  if box_width > 0.0 {
+    return box_width;
+  }
+  node
+    .get_attribute("width")
+    .and_then(|w| Dimension::spec_to_f64(&w).ok())
+    .unwrap_or(0.0)
+}
+
+/// Insert a `<ltx:break class="ltx_break"/>` immediately before `child`.
+fn insert_break_before(document: &Document, child: &mut Node) -> Result<Node> {
+  let ns = child.get_namespace();
+  let mut break_node = Node::new("break", ns, document.get_document())
+    .map_err(|e| format!("could not create ltx:break node: {e:?}"))?;
+  break_node.set_attribute("class", "ltx_break").ok();
+  child
+    .add_prev_sibling(&mut break_node)
+    .map_err(|e| format!("could not insert ltx:break: {e:?}"))?;
+  Ok(break_node)
+}
+
+/// Perl L3231: `($whatsit->getProperty('floatwidth') || Dimension('345pt'))->valueOf()`.
+/// The row-layout threshold is the float's captured `\hsize` (see `after_float`),
+/// read from the box the afterClose hook receives; 345pt when absent.
+fn float_width_of(whatsit: Option<&Digested>) -> f64 {
+  whatsit
+    .and_then(|w| w.get_property("floatwidth"))
+    .and_then(|s| Option::<RegisterValue>::from(s.as_ref()))
+    .map(|r| r.value_of() as f64)
+    .filter(|w| *w > 0.0)
+    .unwrap_or(345.0 * 65536.0)
+}
+
+/// Faithful port of Perl's `arrange_panels_and_breaks`
+/// (latex_constructs.pool.ltxml L3229-3349): partition a figure/table/float's
+/// children into rows, inserting `<ltx:break>` where the accumulated panel WIDTH
+/// would overflow the float width — mirroring the PDF's per-row arrangement
+/// rather than trusting the source's line/paragraph structure. Author-deposited
+/// breaks and captions/metadata flush the current row. Panels are marked with
+/// `ltx_figure_panel` only when the figure has more than one.
+fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) -> Result<()> {
+  // Perl L3233: 0.03125x min width => at most 32 panels per row.
+  let min_panel_width = 0.03125 * float_width;
+
   let note_qname = pin!("ltx:note");
   let caption_qname = pin!("ltx:caption");
-  let mut panels: Vec<Node> = Vec::new();
-  let mut notes: Vec<Node> = Vec::new();
-  let mut caption: Option<Node> = None;
-  for child in node.get_child_elements() {
-    let qname = document::get_node_qname(&child);
-    if qname == note_qname {
-      notes.push(child);
-    } else if is_panel_break(qname) {
-      if qname == caption_qname {
-        caption = Some(child);
+  let block_qname = pin!("ltx:block");
+
+  let mut current_width: f64 = 0.0;
+  let mut all_panels: Vec<Node> = Vec::new();
+  // Bookkeeping triples for the current row: (node, qname, width).
+  let mut row: Vec<(Node, SymStr, f64)> = Vec::new();
+
+  for mut child in node.get_child_elements() {
+    let child_name = document::get_node_qname(&child);
+
+    // Perl L3260-3267: move a top-level ltx:note to the nearest caption sibling.
+    if child_name == note_qname {
+      let sibling_caption = node
+        .get_child_elements()
+        .into_iter()
+        .find(|c| document::get_node_qname(c) == caption_qname);
+      if let Some(mut cap) = sibling_caption {
+        child.unlink_node();
+        cap.add_child(&mut child).ok();
       }
+      continue;
+    }
+
+    if is_panel_break_name(child_name) {
+      // Perl L3269-3275: a break/caption/meta flushes the current row.
+      current_width = 0.0;
+      row.clear();
+      continue;
+    }
+
+    // Perl L3277-3284: a standalone block on its own row — break first.
+    if is_standalone_panel_name(child_name) && !row.is_empty() {
+      insert_break_before(document, &mut child)?;
+      current_width = 0.0;
+      row.clear();
+    }
+
+    let child_width = panel_width(document, &child);
+
+    if !row.is_empty() && (current_width + child_width > float_width) {
+      // Perl L3287-3295: row overflow — break before this child, start a new row.
+      insert_break_before(document, &mut child)?;
+      document.add_class(&mut child, "ltx_figure_panel")?;
+      all_panels.push(child.clone());
+      row = vec![(child, child_name, child_width)];
+      current_width = child_width;
+    } else if let Some((mut prev_node, prev_name, prev_width0)) = row.pop() {
+      // Perl L3296-3330: try to merge into the previous panel, else append.
+      let prev_width = if prev_width0 > 0.0 {
+        prev_width0
+      } else {
+        panel_width(document, &prev_node)
+      };
+      let big_disparity = prev_width > 0.0
+        && child_width > 0.0
+        && (prev_width.max(child_width) / prev_width.min(child_width) > 8.0);
+      if child_width == 0.0 || big_disparity || (prev_width + child_width < min_panel_width) {
+        // Perl L3312-3325: contain the two pieces in a single ltx:block panel.
+        let merged_width = prev_width + child_width;
+        if prev_name == block_qname {
+          child.unlink_node();
+          prev_node.add_child(&mut child).ok();
+          row.push((prev_node, prev_name, merged_width));
+        } else if child_name == block_qname {
+          prev_node.unlink_node();
+          child.add_child(&mut prev_node).ok();
+          all_panels.push(child.clone());
+          row.push((child, child_name, merged_width));
+        } else if let Some(block) = document.wrap_nodes("ltx:block", vec![prev_node, child])? {
+          all_panels.pop();
+          all_panels.push(block.clone());
+          row.push((block, block_qname, merged_width));
+        }
+      } else {
+        // Perl L3327-3330: keep the previous panel, append this one as a sibling.
+        row.push((prev_node, prev_name, prev_width));
+        all_panels.push(child.clone());
+        row.push((child, child_name, child_width));
+      }
+      current_width += child_width;
     } else {
-      // Perl L3342-3390: non-break children are potential panels
-      // (Perl also checks child_width > 0 at L3390, but we skip width checks)
-      panels.push(child);
-    }
-  }
-  // Perl BuildPanelsAndID L3317-3324: move top-level ltx:note to nearest caption
-  if let Some(mut cap) = caption {
-    for mut note in notes {
-      note.unlink_node();
-      cap.add_child(&mut note).ok();
-    }
-  }
-  // Perl L3403-3405: only add class if >1 panel (complex figure)
-  if panels.len() >= 2 {
-    // Perl: standalone panels get breaks between them.
-    // Perl has width-based row-splitting logic, but without box width tracking,
-    // we use a simpler heuristic: insert break after each "standalone" panel
-    // (p, listing, equation, equationgroup, itemize, enumerate, quote, theorem,
-    // proof, description, verbatim, math) when there are multiple panels.
-    let is_standalone = |p: &Node| -> bool {
-      let qname = document::get_node_qname(p);
-      with(qname, |name| {
-        matches!(
-          name,
-          "ltx:p"
-            | "ltx:listing"
-            | "ltx:math"
-            | "ltx:itemize"
-            | "ltx:enumerate"
-            | "ltx:quote"
-            | "ltx:theorem"
-            | "ltx:proof"
-            | "ltx:description"
-            | "ltx:equation"
-            | "ltx:equationgroup"
-            | "ltx:verbatim"
-        )
-      })
-    };
-    for panel in &mut panels {
-      document.add_class(panel, "ltx_figure_panel")?;
-    }
-    // Insert breaks between panels.
-    // Perl inserts break before a standalone panel (if there are prior panels in the row),
-    // and after standalone panels at the start. We simplify: insert break between consecutive
-    // panels where either the current or next panel is standalone.
-    for i in 0..panels.len().saturating_sub(1) {
-      if is_standalone(&panels[i]) || is_standalone(&panels[i + 1]) {
-        let ns = panels[i].get_namespace();
-        let mut break_node = Node::new("break", ns, document.get_document()).unwrap();
-        let _ = break_node.set_attribute("class", "ltx_break");
-        panels[i].add_next_sibling(&mut break_node)?;
+      // Perl L3331-3333: no previous panel in the row — just add this child.
+      if child_width > 0.0 {
+        all_panels.push(child.clone());
       }
+      if is_standalone_panel_name(child_name) {
+        // Perl L3334-3342: a standalone panel as the sole row content flushes the
+        // row and forces a break before the next sibling (unless that sibling is
+        // itself a break/caption/meta), so subsequent content starts a new row.
+        if let Some(mut trailer) = child.get_next_sibling() {
+          let trailer_name = document::get_node_qname(&trailer);
+          if !is_panel_break_name(trailer_name) {
+            insert_break_before(document, &mut trailer)?;
+          }
+        }
+      } else {
+        row.push((child, child_name, child_width));
+      }
+      // Perl L3343: $current_width += $child_width runs for both sub-branches.
+      // The row is already empty here (so current_width is 0), meaning this just
+      // seeds the accumulator with the child's width — matching Perl's 0 + width.
+      current_width += child_width;
+    }
+  }
+
+  // Perl L3346-3348: only mark panels when the figure is complex (>1 panel).
+  if all_panels.len() > 1 {
+    for panel in &mut all_panels {
+      document.add_class(panel, "ltx_figure_panel")?;
     }
   }
   Ok(())
@@ -7181,19 +7303,19 @@ LoadDefinitions!({
 
   // Note that even without \caption, we'd probably like to have xml:id.
   // Perl: BuildPanelsAndID + collapseFloat (afterClose hooks)
-  Tag!("ltx:figure", after_close => sub[document, node] {
+  Tag!("ltx:figure", after_close => sub[document, node, whatsit] {
     document.generate_id(node, "fig")?;
-    arrange_panels(document, node)?;
+    arrange_panels(document, node, float_width_of(whatsit))?;
     collapse_float(document, node)?;
   });
-  Tag!("ltx:table",  after_close => sub[document, node] {
+  Tag!("ltx:table",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node)?;
+    arrange_panels(document, node, float_width_of(whatsit))?;
     collapse_float(document, node)?;
   });
-  Tag!("ltx:float",  after_close => sub[document, node] {
+  Tag!("ltx:float",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node)?;
+    arrange_panels(document, node, float_width_of(whatsit))?;
     collapse_float(document, node)?;
   });
 
