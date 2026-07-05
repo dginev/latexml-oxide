@@ -466,23 +466,46 @@ family vocabulary #45, and the glowup verbatim contract — are landed):
    `@Break→@NoBreak` line-processor neutralization in `fvextra_sty.rs`
    was an over-reach; only the `\FV@Break` char-scanner (the
    PushbackLimit/TokenLimit fatal source) needs relaxing. With the real
-   `\FV@ListProcessLine@Break` running, an over-wide line is re-typeset
-   as fvextra's `\parbox` (plain paragraph machinery our engine wraps
-   natively), so the height budget counts the same wrapped lines
-   pdflatex produces. 2605.00468: 13 boxes poking 4–60px right → **0
-   horizontal, 0 vertical** spills across all 24 pictures (with the
-   glowup breaklines-shape CSS, see ar5iv-css). Witness 2605.01024
-   (breaklines+breakanywhere fatal cluster): unchanged 4 errors, 0
-   fatals. Residual: the engine's wrap estimate is ~19% conservative
-   (visible bottom slack in tall prompt boxes) — refine the paragraph
-   line-break estimator to close the fill gap.
-2. **Leading spaces of verbatim lines are lost in the XML** (witness
-   2605.00468 Prompt 10a/b: JSON schema indentation flush-left). The
-   drop happens BEFORE fvextra's own `\FV@GetLineIndent` sees the line —
-   real fvextra now runs and its indent boxes come out 0-width, so the
-   eater is in our verbatim line reading. Find and preserve (U+00A0 or
-   xml:space).
-3. **Non-verbatim `\ttfamily` lines in measured boxes don't wrap**
+   `\FV@ListProcessLine@Break` running, every line is re-typeset as
+   fvextra's `\parbox` (BOTH branches parbox — the over-wide one wraps),
+   so the height budget counts the same wrapped lines pdflatex produces.
+   Witness 2605.01024 (breaklines+breakanywhere fatal cluster):
+   unchanged 4 errors, 0 fatals.
+2. ✅ **Whitespace-river / 2× height budget — DONE 2026-07-04**: the
+   `\lx@parbox` sizer was a pre-#2798 hand-rolled estimate
+   (unwrapped-width/width, ceil, × baselineskip) that measured a
+   one-line parbox at 2 baselineskips, inflating every breaklines
+   prompt-box budget ~2×. Replaced with the faithful Perl delegation
+   (sizer '#5' + Box::computeSizeStore: body through computeBoxesSize
+   with the whatsit's width/vattach/totalheight; requested width wins).
+   Also ported Perl's `\parindent\z@\parskip\z@skip` into the `\parbox`
+   macro and the dropped `totalheight` property. 2605.00468 prompt-box
+   fill 55–81% → **86% avg** (budget now line-exact on repro matrix).
+3. ✅ **Leading spaces of verbatim lines — DONE 2026-07-04**: verbatim
+   spaces are `\FV@Space` → `\FV@SpaceCatTen` (a braced ordinary space),
+   eaten by TWO whitespace gates in the document builder (`open_text`'s
+   initial-whitespace guard + `open_text_internal`'s Perl-L1146 gate)
+   when the line's paragraph isn't open yet, plus the `ltx:p` afterClose
+   trim. Fix: typewriter-font whitespace is never ignorable (guard
+   bypass + `verbatim_space_pending` handoff + typewriter skip in
+   `trim_node_whitespace`). JSON-schema indentation now preserved as
+   REAL spaces (copy-paste-safe). Perl parity note: same-host Perl
+   cannot convert these files at all (raw fvextra+breaklines exceeded
+   7 min on a 6-line repro) — surpass-Perl scope.
+4. **`\small`-in-foreignObject size attribution** (the remaining 2
+   spills on 2605.00468, 15/33px on 2/24 boxes): the engine MEASURES
+   `fontsize=\small` verbatim at 9pt metrics but emits no `fontsize`
+   delta on the content spans (the declared-font chain already carries
+   \small, while the CSS anchor resets fo content to the 10pt anchor
+   size), so the browser renders ~11% wide and borderline lines wrap
+   once more than the budget. Class-level fix: fo content must re-derive
+   font deltas against the ANCHOR font, not ambient declared state
+   (font-context boundary at svg:foreignObject).
+5. **Space-only verbatim lines still prune to empty** (blank-gap
+   fidelity vs the PDF; render 0px + budget 0 = consistent, no
+   overflow). Their spaces don't reach absorb (unlike line-leading
+   ones); low priority.
+6. **Non-verbatim `\ttfamily` lines in measured boxes don't wrap**
    (witness 2605.02240 `innercode`: `fontupper=\ttfamily\small` prose
    with `\\` breaks; pdflatex wraps each segment at the inner box
    width, our estimator emits one line-box per `\\` segment → 9–31px

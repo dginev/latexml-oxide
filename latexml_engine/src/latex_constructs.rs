@@ -8972,7 +8972,7 @@ LoadDefinitions!({
   // \linewidth. See the minipage after_digest_begin note.
   DefMacro!(
     "\\parbox[] [] [] {Dimension}{}",
-    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup"
+    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup"
   );
   DefConstructor!("\\lx@parbox[][Dimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {
@@ -8986,65 +8986,48 @@ LoadDefinitions!({
     properties => sub[args] {
       let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
       let width = args[3].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
-      Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
+      let mut props = stored_map!("width" => width, "vattach" => translate_attachment(&attachment));
+      // Perl: totalheight => $_[2] — the optional [height] argument.
+      if let Some(th) = args[1]
+        .as_ref()
+        .and_then(|a| Dimension::spec_to_f64(&a.to_string()).ok())
+      {
+        props.insert("totalheight", Stored::Dimension(Dimension::new_f64(th)));
+      }
+      Ok(props)
     },
-    // Sizer: width from arg #4 (Dimension), height/depth from body (arg #5)
-    // Perl: sizer => '#5' — uses font.computeBoxesSize(body, vattach => ..., width => ...)
-    // which does proper line breaking and vattach transformation.
+    // Perl: sizer => '#5' + Box::computeSizeStore (Box.pm L267-287): size the
+    // BODY through font computeBoxesSize with the whatsit's own sizing
+    // properties riding in the options — `width` drives paragraph
+    // line-breaking, `vattach` the stack split, `totalheight` the final
+    // divide; the REQUESTED width wins while computed height/depth are
+    // adopted. (The previous hand-rolled estimate here — unwrapped-width /
+    // width, ceil, × baselineskip — predated the #2798 computeBoxesSize port
+    // and over-counted: an fvextra breaklines one-liner measured 2
+    // baselineskips, inflating every prompt-box budget ~2× into a bottom
+    // whitespace river, witness 2605.00468.)
     sizer => sub[whatsit] {
-      // Width from the "width" property (arg #4 Dimension)
-      let w = whatsit.get_property("width")
-        .and_then(|s| Dimension::new_f64(Dimension::spec_to_f64(&s.to_string()).ok()?).into())
-        .unwrap_or_default();
-      // Height/depth from body (arg #5 VBoxContents)
+      let w_req: Option<Dimension> = whatsit.get_property("width")
+        .and_then(|s| Dimension::new_f64(Dimension::spec_to_f64(&s.to_string()).ok()?).into());
+      let mut opts: SymHashMap<Stored> = SymHashMap::default();
+      if let Some(w) = w_req {
+        opts.insert("width", Stored::Dimension(w));
+      }
+      if let Some(v) = whatsit.get_property("vattach")
+        && let Stored::String(s) = &*v
+      {
+        opts.insert("vattach", Stored::String(*s));
+      }
+      if let Some(th) = whatsit.get_property("totalheight")
+        && let Stored::Dimension(d) = &*th
+      {
+        opts.insert("totalheight", Stored::Dimension(*d));
+      }
       if let Some(body) = whatsit.get_arg(5) {
-        let w_val = w.value_of();
-        if w_val > 0 {
-          // Approximate paragraph height: measure total unwrapped width,
-          // estimate lines, use \baselineskip for line height.
-          let (body_w, body_h, body_d) = body.compute_size(SymHashMap::default())?;
-          let total_w = body_w.value_of();
-          let (mut ht, mut dp) = if total_w > w_val {
-            // Paragraph wrapping: estimate number of lines
-            let num_lines = ((total_w as f64) / (w_val as f64)).ceil() as i64;
-            // Use \baselineskip (typically 12pt = 786432 sp) for line height
-            let baseline_skip = lookup_dimension("\\baselineskip")
-              .unwrap_or_else(|| Dimension::new(786432)); // 12pt default
-            let line_h = baseline_skip.value_of();
-            let total_h = num_lines * line_h;
-            // Default: top alignment (first line as height)
-            let first_line_h = body_h.value_of().max(line_h * 2 / 3);
-            (first_line_h, total_h - first_line_h)
-          } else {
-            (body_h.value_of(), body_d.value_of())
-          };
-          // Perl Font.pm L793-800: apply vattach transformation
-          let vattach = whatsit.get_property("vattach")
-            .map(|v| v.to_string())
-            .unwrap_or_default();
-          let total = ht + dp;
-          if vattach == "middle" {
-            let font_size = lookup_font()
-              .and_then(|f| f.get_size().map(|s| s as i64))
-              .unwrap_or(10);
-            let hh = total / 2;
-            let c = font_size * UNITY / 4; // math axis ≈ size/4
-            ht = hh + c;
-            dp = hh - c;
-          } else if vattach == "bottom" {
-            // Align to baseline of bottom row
-            let last_line_d = body_d.value_of().min(total);
-            dp = last_line_d;
-            ht = total - dp;
-          }
-          // else: "top"/"baseline" — keep first line as height (default above)
-          Ok((w, Dimension::new(ht), Dimension::new(dp)))
-        } else {
-          let (_, h, d) = body.compute_size(SymHashMap::default())?;
-          Ok((w, h, d))
-        }
+        let (bw, h, d) = body.compute_size(opts)?;
+        Ok((w_req.unwrap_or(bw), h, d))
       } else {
-        Ok((w, Dimension::default(), Dimension::default()))
+        Ok((w_req.unwrap_or_default(), Dimension::default(), Dimension::default()))
       }
     },
     mode => "internal_vertical",
