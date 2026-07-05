@@ -624,12 +624,13 @@ July-5 blocker; needs a dedicated session.
 
 ### July-5 arXiv run — prep checklist (drafted 2026-07-02, user-approved sequence)
 
-**Status 2026-07-05:** items 1, 3, 5 ✅ DONE — ar5iv-css **v0.9.0** released (on
+**Status 2026-07-05:** items 1, 3, 3b, 5 ✅ DONE — ar5iv-css **v0.9.0** released (on
 jsDelivr); PR #273 merged → tag **`0.7.2`** "First public use of latexml-oxide in
 ar5iv 2606" published (6 assets); `cortex_worker` rebuilt from tagged `main` +
-fleet restarted. **Only 3b (ar5iv-editor redeploy) remains** of the cross-repo
-required set; items 6–8 are the run itself (item 2 cortex/ar5iv CSS re-vendor:
-confirm).
+fleet restarted; **ar5iv-editor redeployed to `latexml.rs`** (image
+`20260705-9aafba841f`, public `/api/version` = `9aafba841f`, all services
+healthy). Cross-repo required set is COMPLETE; items 6–8 are the run itself
+(item 2 cortex/ar5iv CSS re-vendor: confirm).
 
 Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
 
@@ -646,10 +647,14 @@ Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
    fixes, docs consolidation. **Tagged + released** as `0.7.2` (`bdda7d4a33`),
    and **cortex** now runs a `cortex_worker` rebuilt from the tagged `main`
    (fleet restarted).
-3b. **ar5iv-editor redeploy** (user, 2026-07-04): once latexml-oxide is
-   tagged/released and cortex uses it, rebuild ar5iv-editor against the
-   latest latexml-oxide AND the latest released ar5iv-css, then redeploy.
-   Mechanics: the editor path-deps on the sibling checkout and
+3b. **ar5iv-editor redeploy** — ✅ DONE 2026-07-05: rebuilt against
+   latexml-oxide `main` @`9aafba841f` + ar5iv-css v0.9.0, pushed
+   `ghcr.io/dginev/ar5iv-editor/{ar5iv-editor,ar5iv-validator}:20260705-9aafba841f`,
+   cut over on `latexml.rs` (`/opt/ar5iv-editor/deploy`, `.env` repin + compose
+   pull/up); public `https://latexml.rs/api/version` reports `9aafba841f`, all
+   services healthy. Procedure + the `JAVA_HOME`=Java-21 vnu.jar gotcha captured
+   in memory `ar5iv-editor-deploy-latexml-rs`.
+   Mechanics (retained for reference): the editor path-deps on the sibling checkout and
    `deploy/Dockerfile` COPYs `~/git/latexml-oxide` into the build context —
    put the checkout on the tagged main, run `deploy/build-and-push.sh` +
    `deploy/release.sh`, and verify `/api/version` reports the tagged sha
