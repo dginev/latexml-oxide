@@ -15,8 +15,34 @@
 
 ## Current status
 
-- `cargo test --tests`: **1506 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
+- `cargo test --tests`: **1527 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
   session" entries below).
+
+### Landed this session (2026-07-05, on `ar5iv-2606-prep`) — author/affiliation frontmatter split (beyond-Perl)
+
+Witness arXiv 2605.00347 (colm2026 class, 13 authors on three `\textbf{…}`
+lines with `$^{1,2,3,*}$` markers). User report: "multiple frontmatter
+duplicate notes"; ground truth = the PDF's author↔affiliation assignment.
+
+Root cause in `\lx@add@authors` (`base_utilities.rs`): the two bold author
+lines are each a whole-line `\textbf{A$^1$, B$^1$, …}` wrapper, so the
+separating commas are brace-hidden. `split_tokens` skips delimiters inside
+`{…}`, collapsing each bold line into ONE creator that then collected every
+`$^1$` marker → 3–5 duplicated "Princeton…" affiliations, only 7 creators
+instead of 13. Perl is broken identically (same-host confirmed) → surpass-Perl,
+user-directed. Two fixes, both in the author arm `split_author_line`:
+* unwrap a whole-line font wrapper (`whole_line_cs_wrapper`), split the inner
+  name list, re-apply the wrapper per author → 13 individual creators, one
+  affiliation each;
+* literal " and " removed from line-level `author_affil_splits` (was shredding
+  "Princeton Language **and** Intelligence"), applied only in the author arm so
+  "Alice and Bob" still splits.
+Result matches the PDF exactly (¹→11, ²→Lu, ³→Yang, \*→3 equal-contributors).
+6 new `author_split_tests` unit tests; suite 1521→1527. Divergence #48 in
+OXIDIZED_DESIGN. NOTE (separate, pre-existing, NOT fixed here): minimal
+2–3 author blocks orphan their annotations and drop the creators in BOTH
+engines (`label=affiliation:N`/`LABEL:N` warnings) — a frontmatter-resolution
+timing quirk unrelated to the split; the real paper resolves fine.
 
 ### Landed this session (2026-07-03, on `ar5iv-2606-prep`) — live-run fatal/error mining round 2 + upstream sync to #2837
 

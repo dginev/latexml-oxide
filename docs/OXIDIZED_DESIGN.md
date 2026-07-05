@@ -1749,6 +1749,41 @@ it never faces this; the raw-fancyvrb constructs that do are
 UNCONVERTIBLE by same-host Perl (raw fvextra+breaklines exceeded 7 min
 on a 6-line file) — surpass-Perl scope, user-directed 2026-07-04.
 
+### 48. Author heuristic splits font-wrapped name lists; affiliation "and" preserved
+
+**Decision:** the superscript-marker author/affiliation heuristic
+(`\lx@add@authors`, Base_Utility.pool) gains two beyond-Perl corrections
+in the "author" arm (`split_author_line`):
+
+1. **Font-wrapped name lists are split per-author.** When a line
+   classified as authors is a single whole-line font wrapper
+   `\textbf{A$^1$, B$^1$, C$^1$}`, the separating commas are
+   brace-hidden, so `SplitTokens` (which skips delimiters inside `{…}`)
+   collapses the wrapper into ONE creator that then hoards every `$^n$`
+   marker as a duplicate affiliation. We detect the whole-line wrapper
+   (`whole_line_cs_wrapper`), split the inner list, and re-apply the
+   wrapper to each name so every author is its own creator with the
+   correct single affiliation.
+2. **Affiliation names keep their "and".** The literal word " and " is
+   removed from the line-level `author_affil_splits` (Perl includes it)
+   and applied only in the author arm. That split runs BEFORE
+   author/affiliation classification, so on the mixed block it shredded
+   institution names — "Princeton Language **and** Intelligence" →
+   "Princeton Language" + "Intelligence, …" rejoined without a space.
+   Authors written "Alice and Bob" still split, because " and " is a
+   name separator inside `split_author_line`. (Mirrors the existing
+   `affil_splits` decision to exclude literal "and".)
+
+**Why:** arXiv 2605.00347 (colm2026 class) lists 13 authors across three
+`\textbf{…}` lines with `$^{1,2,3,*}$` affiliation markers. Perl and the
+pre-fix Rust both lumped the two bold lines into 2 mega-creators, each
+carrying 3–5 copies of the "Princeton…" affiliation, and dropped the
+"and". Post-fix the assignment exactly matches the PDF: ¹→11 authors,
+²→Lu, ³→Yang, \*→the three equal-contributors, one affiliation each.
+Perl is broken the same way (confirmed same-host); surpass-Perl scope,
+user-directed 2026-07-05. Unit tests: `author_split_tests` in
+base_utilities.rs.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

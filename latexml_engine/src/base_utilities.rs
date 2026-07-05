@@ -864,8 +864,9 @@ LoadDefinitions!({
             entries.push((false, line));
           },
           Some(_) => {
-            // Presumably author; but split again on "," JIK
-            for author in split_tokens(line, vec![SplitDelim::Token(T_OTHER!(","))]) {
+            // Marker sits far from the front: an author line. Split it into the
+            // individual creators it names (see split_author_line).
+            for author in split_author_line(line) {
               entries.push((true, author));
             }
           },
@@ -3367,6 +3368,90 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
   items
 }
 
+/// If `tokens` — ignoring leading/trailing spaces — is exactly a single control
+/// sequence applied to one brace group that spans to the end (`\cmd{ … }`),
+/// return `(\cmd, inner)`. Used to see through a whole-line font wrapper when
+/// splitting an author line.
+fn whole_line_cs_wrapper(tokens: &Tokens) -> Option<(Token, Tokens)> {
+  let v = tokens.unlist_ref();
+  let mut start = 0;
+  let mut end = v.len();
+  while start < end && v[start] == T_SPACE!() {
+    start += 1;
+  }
+  while end > start && v[end - 1] == T_SPACE!() {
+    end -= 1;
+  }
+  let s = &v[start..end];
+  // Need at least `\cmd { }` (the group may be empty, but then there is nothing
+  // to split, so the caller's `len > 1` guard makes it a no-op anyway).
+  if s.len() < 3 || s[0].get_catcode() != Catcode::CS || s[1].get_catcode() != Catcode::BEGIN {
+    return None;
+  }
+  let mut level = 0;
+  for (i, t) in s.iter().enumerate().skip(1) {
+    match t.get_catcode() {
+      Catcode::BEGIN => level += 1,
+      Catcode::END => {
+        level -= 1;
+        if level == 0 {
+          // The group must close exactly on the last token for this to be a
+          // whole-line wrapper (no trailing content after `}`).
+          return (i == s.len() - 1).then(|| (s[0], Tokens::new(s[2..i].to_vec())));
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// Second-level split of the author heuristic: divide ONE line that has already
+/// been classified as an *author* line (its superscript marker sits far enough
+/// from the front — `Some(p)` with `p >= 8` in `\lx@add@authors`) into the
+/// individual creators it names.
+///
+/// This is guarded for affiliations by that upstream classification: an
+/// *affiliation* line (marker near the front, `p < 8`) or a continuation line
+/// (no marker) never reaches here — they take the other arms — so name-level
+/// separators are only ever applied to author text, never to institution names.
+/// That is why the literal word " and " is a separator here (it splits "Alice
+/// and Bob") yet is deliberately absent from the line-level `author_affil_splits`
+/// (where it would shred "Language and Intelligence").
+///
+/// The split proceeds by hierarchy:
+///  1. the name separators ("," and " and ") at top level; if that already
+///     yields more than one name we are done;
+///  2. otherwise, if the whole line is a single font wrapper `\cmd{ a, b, c }`
+///     (Perl's `SplitTokens` can't see the brace-hidden separators, so the
+///     wrapper collapses into ONE creator that then hoards every `$^n$` marker
+///     as a duplicate affiliation — arXiv 2605.00347), descend through the
+///     wrapper, split its inner name list, and re-apply `\cmd` to each name so
+///     every author becomes its own creator with the correct affiliation.
+fn split_author_line(line: Tokens) -> Vec<Tokens> {
+  // Name-level separators: comma and the literal word " and " ("Alice and Bob").
+  let name_seps = || vec![SplitDelim::Token(T_OTHER!(",")), literal_and()];
+  let top = split_tokens(line.clone(), name_seps());
+  if top.len() > 1 {
+    return top;
+  }
+  if let Some((cmd, inner)) = whole_line_cs_wrapper(&line) {
+    let inner_split = split_tokens(inner, name_seps());
+    if inner_split.len() > 1 {
+      return inner_split
+        .into_iter()
+        .map(|piece| {
+          let mut v = vec![cmd, T_BEGIN!()];
+          v.extend(piece.unlist());
+          v.push(T_END!());
+          Tokens::new(v)
+        })
+        .collect();
+    }
+  }
+  top
+}
+
 pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
   // Perl: SplitTokens($tokens, T_CS('\and'))
   // Only split on \and. The meaning-based check in split_tokens also matches
@@ -3421,7 +3506,14 @@ fn author_affil_splits() -> Vec<SplitDelim> {
     T_CS!("\\and").into(),
     T_CS!("\\And").into(),
     T_CS!("\\AND").into(),
-    literal_and(),
+    // Beyond-Perl: the literal word " and " is deliberately NOT a line-level
+    // delimiter here (Perl's @authoraffilsplits includes it). This split runs
+    // BEFORE author/affiliation classification, so splitting on " and " shreds
+    // institution names that contain it — "Princeton Language and Intelligence"
+    // → "Princeton Language" + "Intelligence, …" (re-joined without a space).
+    // Authors written "Alice and Bob" still split: literal " and " is applied in
+    // the author arm (comma_split_author_line), AFTER a line is known to be an
+    // author line, so affiliations are never fragmented. Witness 2605.00347.
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
     T_CS!("\\\\").into(),
@@ -3898,5 +3990,69 @@ pub fn escapechar() -> String {
     char_code.to_string()
   } else {
     String::new()
+  }
+}
+
+#[cfg(test)]
+mod author_split_tests {
+  use latexml_core::state::{State, StateOptions, set_state};
+
+  use super::*;
+
+  fn setup() {
+    // T_CS!/T_BEGIN! etc. and tokenize_internal need a thread-local State for
+    // string interning.
+    set_state(State::new(StateOptions::default()));
+  }
+  fn tk(s: &str) -> Tokens { mouth::tokenize_internal(s) }
+
+  #[test]
+  fn whole_line_cs_wrapper_detects_font_wrapper() {
+    setup();
+    let (cmd, inner) = whole_line_cs_wrapper(&tk("\\textbf{A, B}")).expect("is a wrapper");
+    assert_eq!(cmd, T_CS!("\\textbf"));
+    assert!(!inner.is_empty());
+  }
+
+  #[test]
+  fn whole_line_cs_wrapper_rejects_non_wrappers() {
+    setup();
+    // No leading control sequence.
+    assert!(whole_line_cs_wrapper(&tk("A, B")).is_none());
+    // Content trails the group -> not a WHOLE-line wrapper.
+    assert!(whole_line_cs_wrapper(&tk("\\textbf{A}x")).is_none());
+  }
+
+  #[test]
+  fn split_author_line_splits_top_level_commas() {
+    setup();
+    assert_eq!(split_author_line(tk("Alice, Bob, Carol")).len(), 3);
+  }
+
+  #[test]
+  fn split_author_line_splits_literal_and() {
+    setup();
+    assert_eq!(split_author_line(tk("Alice and Bob")).len(), 2);
+  }
+
+  #[test]
+  fn split_author_line_unwraps_font_wrapper_per_author() {
+    setup();
+    // Beyond-Perl: brace-hidden commas would collapse to ONE creator in Perl;
+    // we unwrap and re-apply the wrapper so each name is its own creator.
+    let got = split_author_line(tk("\\textbf{Alice, Bob, Carol}"));
+    assert_eq!(got.len(), 3);
+    for piece in &got {
+      let v = piece.unlist_ref();
+      assert_eq!(v[0], T_CS!("\\textbf"));
+      assert_eq!(v[1].get_catcode(), Catcode::BEGIN);
+    }
+  }
+
+  #[test]
+  fn split_author_line_leaves_single_wrapped_name_intact() {
+    setup();
+    // Only unwrap when there is actually an inner list to split.
+    assert_eq!(split_author_line(tk("\\textbf{Alice}")).len(), 1);
   }
 }
