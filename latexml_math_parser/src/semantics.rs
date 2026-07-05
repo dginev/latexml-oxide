@@ -2295,6 +2295,12 @@ pub fn fence(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   // Collect all non-None args into a flat stuff vector
   let stuff: Vec<XM> = args.into_iter().flatten().collect();
+  if stuff.len() < 2 {
+    // A fence needs at least an open + close delimiter. A degenerate match
+    // (all-None args, or a single surviving delimiter) would panic on
+    // `stuff[0]` / `stuff[len-1]` or underflow `len - 2` — prune this parse.
+    return Err("fence: need at least open + close delimiters".into());
+  }
   let open = &stuff[0];
   let close = &stuff[stuff.len() - 1];
   let o = open.get_value(ctxt.nodes)?;
@@ -2485,6 +2491,18 @@ pub fn postfix_embellished(
   let is_comma = trailer.get_value(ctxt.nodes).ok().is_some_and(|v| v == ",");
   let is_period = trailer.get_value(ctxt.nodes).ok().is_some_and(|v| v == ".");
   let mut ref_arg = create_xmrefs(&mut [&mut arg], ctxt)?;
+  if ref_arg.is_empty() {
+    // create_xmrefs skips ephemeral variants (XMHint etc.), so refs come back
+    // empty when the script content was spacing-only (e.g. `x^{\,,}`). A Dual
+    // with an XMRef to nothing is meaningless and `remove(0)` would panic —
+    // fall back to a bare Wrap, mirroring the `fenced` empty-refs guard
+    // (semantics.rs:2138, hep-ph/9210235).
+    return Ok(Some(XM::Wrap(
+      vec![arg, trailer],
+      XProps::default(),
+      Meta::default(),
+    )));
+  }
   let content = if is_comma || is_period {
     // Perl: trailing comma/period wraps content in list@(ref)
     // Period as separator creates formulae; as trailing punct, still wraps in list.

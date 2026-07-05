@@ -25,7 +25,36 @@ pub fn node_to_grammar_lexemes_from(
   child_nodes: Vec<Node>,
   idx: &mut usize,
 ) -> (Vec<String>, Vec<Node>) {
-  node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, false)
+  let (mut lexemes, nodes) = node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, false);
+  // M4 over-parse pruning: the differential-d grammar branch
+  // (`diffunk/diffid factor_base => diffop_apply`, grammar/builder.rs:814) is the ONLY
+  // place `XDIFFUNK`/`XDIFFID` differ from plain `unknown`/`id` — they are otherwise
+  // identical `factor_base` alternatives (builder.rs:134) with the same speculative-apply
+  // rules (builder.rs:672-673/767-768). And `diffop_apply` (semantics.rs:1726) prunes
+  // EVERY diffop parse unless an `INTOP` node is present in the formula. So for an
+  // INTOP-free formula the diffop branch is dead weight: Marpa still builds it into the
+  // bocage (≈71 and-nodes per `d<var>`) only for the action to reject it. Downgrade
+  // `XDIFFUNK`→`UNKNOWN` / `XDIFFID`→`ID` here so the branch is never built. This is
+  // OUTPUT-NEUTRAL (the same `has_intop` predicate `diffop_apply` uses, over the same
+  // node list that becomes `ctxt.nodes`) and removes the over-parse on every non-integral
+  // `d` (`\frac{dx}{dt}`, `d` as a variable, `d`-subscripts). The differential case
+  // (`\int … dx`) keeps `XDIFFUNK` and is unaffected. Cheap: only formulae that actually
+  // contain a `d` pay the `INTOP` scan.
+  if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
+    let has_intop = nodes
+      .iter()
+      .any(|n| n.get_attribute("role").as_deref() == Some("INTOP"));
+    if !has_intop {
+      for lex in &mut lexemes {
+        if let Some(rest) = lex.strip_prefix("XDIFFUNK:") {
+          *lex = format!("UNKNOWN:{rest}");
+        } else if let Some(rest) = lex.strip_prefix("XDIFFID:") {
+          *lex = format!("ID:{rest}");
+        }
+      }
+    }
+  }
+  (lexemes, nodes)
 }
 
 fn node_to_grammar_lexemes_ctx(
@@ -104,15 +133,22 @@ fn node_to_grammar_lexemes_ctx(
         lexemes.push(lexeme);
         nodes.push(node);
       } else if node.has_attribute("_rewrite") {
-        // Rewrite-created: treat as atomic token with the assigned role.
-        // Don't recurse — the inner structure was pre-parsed, and the role
-        // on this node overrides whatever the children contain.
+        // Rewrite-created or a parse_children replacement: treat as atomic
+        // token with the assigned role. Don't recurse — the inner structure
+        // was pre-parsed, and the role on this node overrides whatever the
+        // children contain. An atomic bigop (e.g. `\mathop{...}` → BIGOP)
+        // must set bigop context so a following script lexes as
+        // BIGOPSUB/BIGOPSUP, same as the plain-token arm below.
         let gram_role = get_grammatical_role(&node);
         let mut text = get_token_meaning(&node);
         if text.is_empty() {
           text = "UNKNOWN".to_string();
         }
         *idx += 1;
+        last_was_bigop = matches!(
+          gram_role.as_str(),
+          "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP"
+        );
         lexemes.push(format!("{gram_role}:{text}:{idx}").replace(' ', ""));
         nodes.push(node);
       } else {
@@ -196,7 +232,7 @@ fn node_to_grammar_lexemes_ctx(
         // pairing of identical bars. Eliminates the VERTBAR-pairing
         // combinatorial explosion in patterns like
         // `\log^+ ∫ \left| f \right|^k dm(z) ≲ ...` (see
-        // docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2) and unlocks task #263's
+        // docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2) and unlocks task #263's
         // norm-fenced grammar rules.
         // Defensive fallback: if `role_side` is missing — legacy DOM
         // input or a path that bypassed `\@left`/`\@right` — keep the
@@ -238,7 +274,7 @@ fn node_to_grammar_lexemes_ctx(
         // "formula separator (with side-condition)" rather than
         // "list-element separator". Tag as WIDE_PUNCT so the grammar
         // can prefer `formulae_apply` over `list_apply` for this
-        // separator unambiguously. See docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
+        // separator unambiguously. See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
         format!("WIDE_PUNCT:,:{idx}")
       } else {
         format!("{role}:{text}:{idx}").replace(' ', "")

@@ -462,7 +462,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\enskip", {
     Tbox::new(
-      pin_static("\u{2002}"),
+      pin!("\u{2002}"),
       None,
       None,
       Tokens!(T_CS!("\\enskip")),
@@ -473,7 +473,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\enspace", {
     Tbox::new(
-      pin_static("\u{2002}"),
+      pin!("\u{2002}"),
       None,
       None,
       Tokens!(T_CS!("\\enspace")),
@@ -484,7 +484,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\quad", {
     Tbox::new(
-      pin_static("\u{2003}"),
+      pin!("\u{2003}"),
       None,
       None,
       Tokens!(T_CS!("\\quad")),
@@ -496,7 +496,7 @@ LoadDefinitions!({
   // Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
   DefPrimitive!("\\qquad", {
     Tbox::new(
-      pin_static("\u{2003}\u{2003}"),
+      pin!("\u{2003}\u{2003}"),
       None,
       None,
       Tokens!(T_CS!("\\qquad")),
@@ -507,7 +507,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\thinspace", {
     Tbox::new(
-      pin_static("\u{2009}"),
+      pin!("\u{2009}"),
       None,
       None,
       Tokens!(T_CS!("\\thinspace")),
@@ -662,7 +662,7 @@ LoadDefinitions!({
   // 1em-wide NBSP Box. Perl: DefPrimitiveI("\\\t", undef, sub { Box(UTF(0xA0), ...) });
   DefPrimitive!("\\\t", {
     Tbox::new(
-      pin_static("\u{00A0}"),
+      pin!("\u{00A0}"),
       None,
       None,
       Tokens!(T_CS!("\\\t")),

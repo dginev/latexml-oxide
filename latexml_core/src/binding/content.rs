@@ -24,6 +24,7 @@ use crate::{
   gullet::do_expand,
   mouth::{Mouth, MouthOptions},
   parameter::{Parameter, Parameters},
+  pin,
   state::{let_i, *},
   stomach::*,
   token::*,
@@ -326,11 +327,56 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         || lookup_bool(&s!("{fkey}_load_attempted"))
     }
   };
+  // Modern-kernel repeat-load option semantics (OXIDIZED_DESIGN #43).
+  // Classic \DeclareOption packages: after ProcessOptions the `\ds@<opt>`
+  // handlers are \relax, so digesting them on a repeat load is a NO-OP —
+  // i.e. LaTeX's own clash-and-drop outcome (and Perl's silent skip; the
+  // Info above is the shared diagnostic). Packages using the key-value
+  // option processor (\ProcessKeyOptions, LaTeX kernel 2022-06+; e.g.
+  // xcolor v3.02 whose `table` key loads colortbl) raise NO clash in real
+  // LaTeX — the repeat load PROCESSES the new keys. A binding models that
+  // by re-asserting a durable `\ds@<opt>` after ProcessOptions! (first
+  // adopter: xcolor's `table`; witness 2605.00310 — \usepackage{xcolor}
+  // then \usepackage[table]{xcolor} builds cleanly under pdflatex, and a
+  // ~483-paper \cellcolor error cluster in sandbox-arxiv-2605). For each
+  // option of a repeat load that the first load did not have, digest the
+  // surviving handler.
+  let apply_new_options_on_reload = |fkey: &str| -> Result<()> {
+    if options.options.is_empty() || !options.handleoptions {
+      return Ok(());
+    }
+    let prev: HashSet<String> =
+      if let Some(Stored::String(prevoptions)) = lookup_value(&s!("{fkey}_loaded_with_options")) {
+        arena::with(prevoptions, |p| {
+          p.split(',').map(|o| o.trim().to_string()).collect()
+        })
+      } else {
+        HashSet::default()
+      };
+    for opt in &options.options {
+      let opt = opt.trim();
+      if opt.is_empty() || prev.contains(opt) {
+        continue;
+      }
+      let handler = T_CS!(s!("\\ds@{}", opt));
+      if lookup_definition(&handler)?.is_some() {
+        Info!(
+          "unexpected",
+          "options",
+          s!("Applying option '{}' from a repeat load of {}", opt, fkey)
+        );
+        digest(Tokens!(handler))?;
+      }
+    }
+    Ok(())
+  };
   if !options.reloadable && already_handled(&filename) {
+    apply_new_options_on_reload(&filename)?;
     return Ok(());
   }
   // Also check without extension (Perl checks name_loaded too)
   if !options.reloadable && name != filename && already_handled(name) {
+    apply_new_options_on_reload(&filename)?;
     return Ok(());
   }
 
@@ -460,7 +506,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // A native binding was truly loaded: announce it (Perl loadLTXML
     // "(Loading <path>…)" analog) so CorTeX's `loaded_file` log-parser counts
     // it. Self-contained begin+end note (timing is currently disabled).
-    note_begin(&s!("Loading {filename}"));
+    // Announce under the BINDING's module name — `tcolorbox.sty` →
+    // `tcolorbox_sty.rs`, `aa.cls` → `aa_cls.rs` — mirroring Perl, whose
+    // announcement carries the distinct `.ltxml` path. This keeps the entry
+    // distinguishable from the raw twin's "(Processing definitions <path>…)"
+    // when a binding raw-loads its same-named file, so cortex's loaded_file
+    // stats record two artifacts as two entries instead of double-counting
+    // one file (user, 2026-07-04).
+    let binding_name = if let Some(stem) = filename.strip_suffix(".sty") {
+      s!("{stem}_sty.rs")
+    } else if let Some(stem) = filename.strip_suffix(".cls") {
+      s!("{stem}_cls.rs")
+    } else {
+      filename.clone()
+    };
+    note_begin(&s!("Loading {binding_name}"));
     note_end("");
     // We found and loaded a binding successfully, mark it as such.
     // Perl Package.pm::loadLTXML L2315-2316 sets TWO flags: `$request`_loaded
@@ -864,7 +924,7 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
           });
         }
       }
-      let _in_progress_guard = InProgressGuard(request_key.clone());
+      let _in_progress_guard = InProgressGuard(request_key);
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
@@ -2371,8 +2431,13 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
   } else if let Some(ref ext) = options.ext_type {
     // Otherwise, it's some kind of "real" file, and we might have to search for it
     // Specific type requested? Search for it.
-    // Add the extension, if it isn't already there.
-    let aux_file = if file.ends_with(ext.as_ref()) {
+    // Add the extension, if it isn't already there. Perl tests with the DOT
+    // (`/\.\Q$type\E$/`): a bare `\bibliography{mybib}` must retry
+    // `mybib.bib` — the dotless ends_with("bib") matched the basename itself
+    // and searched the literal `mybib`, silently disabling the .bib fallback
+    // (PR_READINESS must-fix 6).
+    let dotted = s!(".{}", ext);
+    let aux_file = if file.ends_with(&dotted) {
       file.to_string()
     } else {
       s!("{}.{}", file, ext)
@@ -3004,7 +3069,7 @@ pub fn convert_latex_args(
   if let Some(tks) = optional {
     params.push(
       Parameter {
-        name: arena::pin_static("Optional"),
+        name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
         ..Parameter::default()
@@ -3022,8 +3087,8 @@ pub fn convert_latex_args(
   for _ in 1..=nargs {
     params.push(
       Parameter {
-        name: arena::pin_static("Plain"),
-        spec: arena::pin_static("{}"),
+        name: pin!("Plain"),
+        spec: pin!("{}"),
         ..Parameter::default()
       }
       .init()?,
@@ -3049,7 +3114,7 @@ pub fn convert_twoopt_args(
   if let Some(tks) = opt1 {
     params.push(
       Parameter {
-        name: arena::pin_static("Optional"),
+        name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
         ..Parameter::default()
@@ -3061,7 +3126,7 @@ pub fn convert_twoopt_args(
   if let Some(tks) = opt2 {
     params.push(
       Parameter {
-        name: arena::pin_static("Optional"),
+        name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
         ..Parameter::default()
@@ -3073,8 +3138,8 @@ pub fn convert_twoopt_args(
   for _ in 1..=nargs {
     params.push(
       Parameter {
-        name: arena::pin_static("Plain"),
-        spec: arena::pin_static("{}"),
+        name: pin!("Plain"),
+        spec: pin!("{}"),
         ..Parameter::default()
       }
       .init()?,

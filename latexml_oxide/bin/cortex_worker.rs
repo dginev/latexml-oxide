@@ -60,8 +60,10 @@ struct Cli {
   /// the sink re-validates each returned result's service name against the
   /// task's service id (`src/dispatcher/sink.rs`) — a mismatch silently
   /// discards the result. The CorTeX preview registers this service as
-  /// `oxidized-tex-to-html` (hyphenated), so that is the default.
-  #[arg(long, default_value = "oxidized-tex-to-html")]
+  /// `oxidized_tex_to_html` (underscored — names use underscores consistently,
+  /// matching the `oxidized_tex_to_html.zip` result bundle), so that is the
+  /// default.
+  #[arg(long, default_value = "oxidized_tex_to_html")]
   service: String,
 
   /// Number of parallel worker threads
@@ -384,7 +386,7 @@ impl LatexmlWorker {
     let dest_html_str = dest_html.to_string_lossy().to_string();
 
     // 5. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
-    let html = latexml::post::run_post_processing(&xml, &latexml::post::PostOptions {
+    let post = latexml::post::run_post_processing_logged(&xml, &latexml::post::PostOptions {
       pmml:                      self.profile.pmml,
       // Presentation MathML only — matches Perl LaTeXML's CorTeX `tex_to_html`
       // (whose output carries zero Content MathML) and the ar5iv profile, whose
@@ -413,11 +415,12 @@ impl LatexmlWorker {
       schemadocs:                false,
       // Vector-SVG fast path. 0 = auto-detect: scan the PDF header for
       // `/Subtype /Image` markers; if absent (and the file is at most
-      // 500 KB), route through inkscape→SVG for vector-clean output
-      // and the documented 100×+ speedup over ImageMagick rasterisation
-      // on pgfplots/matplotlib PDFs (PERFORMANCE.md §"Vector-SVG fast
-      // path"). Raster-bearing PDFs detect their image XObject and
-      // stay on the gs/convert path. Override with a positive integer
+      // 500 KB), route through the vector-SVG converters (mutool →
+      // pdftocairo) for vector-clean output and the documented 100×+
+      // speedup over ImageMagick rasterisation on pgfplots/matplotlib
+      // PDFs (PERFORMANCE.md §"Vector-SVG fast path"). Raster-bearing
+      // PDFs detect their image XObject and stay on the gs/convert path.
+      // Override with a positive integer
       // (KB threshold) to force the legacy size-only gate, or set
       // `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` to disable auto-detect
       // entirely. Replaces the prior hard-coded 200 KB cutoff (which
@@ -429,18 +432,37 @@ impl LatexmlWorker {
       whatsout:                  latexml_post::extract::Whatsout::Document,
     });
 
-    // 6. Get log and status (Perl: status line is last line of log)
-    let status_str = format!("Status:conversion:{}", response.status_code);
+    // 6. Get log and status (Perl: status line is last line of log).
+    //
+    // Fold the post-processing status into the verdict — Perl LaTeXML reports `max(core, post)`
+    // (LaTeXML.pm L631-634), so a post-only fatal (a Graphics/MathML/XSLT failure on a cleanly
+    // digested core) marks the document fatal instead of passing as the core's status. The
+    // `PostOutcome.status_code` is already the combined core+post code (the REPORT counter is not
+    // reset between phases); `max()` with the core code is the documented belt-and-suspenders.
+    let status_code = response.status_code.max(post.status_code);
+    let status_str = format!("Status:conversion:{}", status_code);
+    let html = post.html;
     // Emit the total job wall-time as a CorTeX log message so the dispatcher persists it: CorTeX
-    // parses `Info:cortex:runtime_ms <N>` into log_infos (category=cortex, what=runtime_ms,
-    // details=N), giving a per-paper conversion-time handle for ranking the slowest conversions —
-    // captured for graceful conversion-fatals too (TokenLimit/PushbackLimit/… still come through
-    // here). Placed before the Status line, which must remain the last line of the log.
+    // parses `Info:runtime_ms:<N>` into log_infos (category=runtime_ms, what=N, details=empty), so
+    // the conversion time surfaces as its own report category whose drill-down subreport is the
+    // per-value distribution — and still gives a per-paper handle for ranking the slowest
+    // conversions. Captured for graceful conversion-fatals too (TokenLimit/PushbackLimit/… still
+    // come through here). Placed before the Status line, which must remain the last line of the log.
     let runtime_ms = wall_start.elapsed().as_millis();
-    let log = format!(
-      "{}\nInfo:cortex:runtime_ms {runtime_ms}\n{}",
-      response.log, status_str
-    );
+    // Append the post-processing log (Graphics/MathML/XSLT `Info!`/`Warn!`/`post_error` lines,
+    // incl. silent EPS→PNG failures) after the core conversion log so post-phase messages reach
+    // cortex.log and the dashboard reports — the Rust equivalent of Perl LaTeXML's single
+    // `flush_log()` after `convert_post`. Omit the segment (no blank line) when post logged nothing.
+    // Trim trailing newlines before joining so already-terminated segments
+    // don't produce blank separator lines (cosmetic, but the log-noise class
+    // 5f3c4a0566 removed).
+    let core_log = response.log.trim_end_matches('\n');
+    let log = if post.log.is_empty() {
+      format!("{core_log}\nInfo:runtime_ms:{runtime_ms}\n{status_str}")
+    } else {
+      let post_log = post.log.trim_end_matches('\n');
+      format!("{core_log}\n{post_log}\nInfo:runtime_ms:{runtime_ms}\n{status_str}")
+    };
 
     // 7. Finalize per-job telemetry. Phase counters were populated by the converter/post guards;
     //    here we fill in identifiers, wall, and resource peaks before serializing.
@@ -451,12 +473,12 @@ impl LatexmlWorker {
       };
       telemetry::set_paper_id(&arxiv_id);
       telemetry::set_wall_us(wall_start.elapsed().as_micros() as u64);
-      telemetry::set_category(match response.status_code {
+      telemetry::set_category(match status_code {
         0 | 1 => "ok",
         2 => "conversion_error",
         _ => "conversion_fatal",
       });
-      telemetry::set_exit_code(response.status_code as i32);
+      telemetry::set_exit_code(status_code as i32);
       telemetry::set_output_bytes(html.len() as u64);
       telemetry::set_max_rss_kb(read_max_rss_kb_proc());
       let (cu, cs) = read_child_rusage_us_proc();
@@ -1490,10 +1512,22 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   let search_paths = cli.search_paths.clone();
   let (no_pmml, no_mathtex, verbose, quiet) = (cli.no_pmml, cli.no_mathtex, cli.verbose, cli.quiet);
 
+  // Unresponsive-worker watchdog: SIGKILL + respawn any live worker whose CPU
+  // time freezes for longer than this. Set to 2× the per-paper wall-clock
+  // timeout (floor 300s) so it sits safely above a legitimately slow paper
+  // (whose own `Watchdog` aborts the process at `cli.timeout`); it only fires
+  // when that in-process watchdog itself failed to fire — a genuine wedge
+  // (deadlock, uninterruptible D-state I/O, a dead watchdog thread) that
+  // death-driven SIGCHLD supervision cannot see because the process is alive.
+  let unresponsive_timeout = Some(std::time::Duration::from_secs(
+    (cli.timeout as u64).saturating_mul(2).max(300),
+  ));
+
   let config = HarnessConfig {
     workers,
     mem_limit_bytes,
     mem_pressure_floor_bytes,
+    unresponsive_timeout,
     ..Default::default()
   };
 

@@ -1,0 +1,17 @@
+% Reproducer: \hbox HBoxContents predigest -> None -> constructor panic
+% (fleet tex_box.rs:547 / HEAD:644, witness arXiv math-ph/0405041).
+% Requires the paper's vendored LamsTeX inputs (amstexl.tex, lamstex.tex —
+% extract from /data/arxiv/0405/math-ph0405041/math-ph0405041.zip or the
+% arXiv source). All four components are load-bearing: amstexl + lamstex +
+% \list\item + a display with \tag\label. The LamsTeX \item/\tag machinery
+% mode-damages digestion so an internal \hbox body digests to ZERO boxes;
+% Perl's template `#2` of undef renders nothing and completes with errors
+% (same-host Perl 0.8.8: 15 errors, valid XML); pre-fix Rust panicked on
+% `contents_opt.as_ref().unwrap()`. Fixed graceful 2026-07-03.
+\input amstexl
+\input lamstex
+\document
+\list
+\item a
+$$x \tag \label{F}$$
+\enddocument

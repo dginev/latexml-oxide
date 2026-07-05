@@ -4,6 +4,31 @@ Snapshot audits and one-shot worksheets preserved for forensic context.
 Do not drive current planning from these files without revalidating on
 current `HEAD` — class/file layout, definitions, and counts have shifted.
 
+## 2026-07-02 docs consolidation
+
+- `SYNC_SESSIONS_2026-06.md` — completed "Landed this session" logs
+  (2026-06-22 … 2026-07-01), the slowest-100 batch #201–300 triage, the
+  finished upstream-sync U1–U11 mission log, and the mined-out 2026-06
+  cortex-cross-join methodology history — lifted out of the live
+  `../SYNC_STATUS.md` (which keeps only current status + actionable items).
+- `BIBTEX_PORT_PLAN_2026-06-20.md` — the BibTeX port plan; Phases 1–8
+  shipped. Live residuals (Phase 4–5 field-handler tail, B1–B6, deferred
+  native `.bst`) tracked in `../SYNC_STATUS.md` "Other tracks".
+- `MATH_AMBIGUITY_AUDIT_2026-05-21.md` — the original ambiguity sweep;
+  patterns 1/3/4 closed, and its remaining claims were **corrected** by the
+  fresher `../MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` (the live lever doc).
+- `SANDBOX_TRIAGE_2026-05-21.md` — the 10k sandbox triage workflow
+  reference; the judgement now lives in the `canvas-triage` skill
+  (`.claude/skills/canvas-triage/`) and the failure-cluster classes in the
+  per-cluster code comments that cite this file.
+- `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` — the tikz-cd/xy/tcolorbox
+  3-sandbox fatal comparison (Rust ~3.5× better; residual divergences are
+  deep tikz-cd/pgf/babel). Superseded as evidence by the 2026-07 full-arXiv
+  rerun data; the tikz-cd verdict was re-confirmed 2026-07-02 (PARITY).
+- `STARTUP_COST_ANALYSIS_2026-06-21.md` — the ~161 ms startup decomposition
+  and the DECLINED ~50 ms dump-parse lever; outcome carried by
+  `../PERFORMANCE.md` "Closed levers" (do not re-investigate).
+
 ## Resolved diagnostics & completed references (archived 2026-06-18)
 
 - `MEMORY_GUARD_HARDENING_2026-06-09.md` — canvas_3 OOM-cluster root cause +

@@ -8,6 +8,7 @@ use crate::{
   },
   mouth,
   parameter::{Parameter, Parameters},
+  pin,
   token::*,
   tokens::Tokens,
 };
@@ -147,7 +148,7 @@ pub fn parse_parameters(
           parse_parameters(inner_spec, cs, init_flag)?
         };
         Parameter {
-          name: arena::pin_static("Plain"),
+          name: pin!("Plain"),
           spec: arena::pin(format!("{{{inner_spec}}}")),
           inner: inner.map(|ps| ps.into()).unwrap_or_default(),
           ..Parameter::default()
@@ -170,14 +171,14 @@ pub fn parse_parameters(
                 vec![mouth::tokenize_internal(default_str)]
               };
               Parameter {
-                name: arena::pin_static("Optional"),
+                name: pin!("Optional"),
                 spec,
                 extra,
                 ..Parameter::default()
               }
             } else if !inner_spec.is_empty() {
               Parameter {
-                name: arena::pin_static("Optional"),
+                name: pin!("Optional"),
                 spec,
                 inner: parse_parameters(inner_spec, cs, init_flag)?
                   .map(|ps| ps.into())
@@ -186,7 +187,7 @@ pub fn parse_parameters(
               }
             } else {
               Parameter {
-                name: arena::pin_static("Optional"),
+                name: pin!("Optional"),
                 spec,
                 ..Parameter::default()
               }
@@ -229,8 +230,8 @@ pub fn parse_parameters(
                 )?;
                 let ch_token = CharToken!(ch, Catcode::OTHER);
                 Parameter {
-                  name: arena::pin_static("Token"),
-                  spec: arena::pin_static("Token"),
+                  name: pin!("Token"),
+                  spec: pin!("Token"),
                   extra: vec![Tokens::new(vec![ch_token])],
                   ..Parameter::default()
                 }

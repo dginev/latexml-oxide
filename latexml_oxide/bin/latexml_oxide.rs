@@ -115,8 +115,8 @@ struct Cli {
   ///
   /// `0` (default) → **auto-detect**: scan the PDF header for
   /// `/Subtype /Image`; if absent AND the file is at most 500 KB, route
-  /// through inkscape→SVG for vector-clean output. Raster-bearing PDFs
-  /// stay on the gs/convert path.
+  /// through the vector-SVG converters (mutool → pdftocairo) for
+  /// vector-clean output. Raster-bearing PDFs stay on the gs/convert path.
   ///
   /// `N > 0` → explicit size threshold (legacy): try SVG for PDFs at
   /// most `N` KB regardless of content. Use this when the auto-detector

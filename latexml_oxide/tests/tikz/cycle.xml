@@ -13,7 +13,7 @@
         <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,249.53) matrix(1 0 0 -1 0 0) translate(123,0) translate(0,124.77)">
           <svg:path d="M 130.27 0 C 130.27 6.71 124.82 12.16 118.11 12.16 C 111.4 12.16 105.95 6.71 105.95 0 C 105.95 -6.71 111.4 -12.16 118.11 -12.16 C 124.82 -12.16 130.27 -6.71 130.27 0 Z M 118.11 0" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 114.65 -4.46)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="1" text="1" xml:id="p1.pic1.m1">
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="1" text="1" xml:id="p1.pic1.m1">
                 <XMath>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
                 </XMath>
@@ -25,7 +25,7 @@
           </svg:g>
           <svg:path d="M 48.66 112.33 C 48.66 119.04 43.21 124.49 36.5 124.49 C 29.78 124.49 24.34 119.04 24.34 112.33 C 24.34 105.62 29.78 100.17 36.5 100.17 C 43.21 100.17 48.66 105.62 48.66 112.33 Z M 36.5 112.33" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 33.04 107.87)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="2" text="2" xml:id="p1.pic1.m2">
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="2" text="2" xml:id="p1.pic1.m2">
                 <XMath>
                   <XMTok meaning="2" role="NUMBER">2</XMTok>
                 </XMath>
@@ -37,7 +37,7 @@
           </svg:g>
           <svg:path d="M -83.4 69.42 C -83.4 76.14 -88.84 81.58 -95.55 81.58 C -102.27 81.58 -107.71 76.14 -107.71 69.42 C -107.71 62.71 -102.27 57.27 -95.55 57.27 C -88.84 57.27 -83.4 62.71 -83.4 69.42 Z M -95.55 69.42" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -99.01 64.96)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="3" text="3" xml:id="p1.pic1.m3">
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="3" text="3" xml:id="p1.pic1.m3">
                 <XMath>
                   <XMTok meaning="3" role="NUMBER">3</XMTok>
                 </XMath>
@@ -49,7 +49,7 @@
           </svg:g>
           <svg:path d="M -83.4 -69.42 C -83.4 -62.71 -88.84 -57.27 -95.55 -57.27 C -102.27 -57.27 -107.71 -62.71 -107.71 -69.42 C -107.71 -76.14 -102.27 -81.58 -95.55 -81.58 C -88.84 -81.58 -83.4 -76.14 -83.4 -69.42 Z M -95.55 -69.42" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -99.01 -73.88)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="4" text="4" xml:id="p1.pic1.m4">
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="4" text="4" xml:id="p1.pic1.m4">
                 <XMath>
                   <XMTok meaning="4" role="NUMBER">4</XMTok>
                 </XMath>
@@ -61,7 +61,7 @@
           </svg:g>
           <svg:path d="M 48.66 -112.33 C 48.66 -105.62 43.21 -100.17 36.5 -100.17 C 29.78 -100.17 24.34 -105.62 24.34 -112.33 C 24.34 -119.04 29.78 -124.49 36.5 -124.49 C 43.21 -124.49 48.66 -119.04 48.66 -112.33 Z M 36.5 -112.33" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 33.04 -116.79)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="5" text="5" xml:id="p1.pic1.m5">
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92"><Math mode="inline" tex="5" text="5" xml:id="p1.pic1.m5">
                 <XMath>
                   <XMTok meaning="5" role="NUMBER">5</XMTok>
                 </XMath>

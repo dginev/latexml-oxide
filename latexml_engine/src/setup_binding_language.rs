@@ -920,7 +920,7 @@ macro_rules! DefAccent {
       assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
     }
     let plain_param = Some(Parameters::new(vec![Parameter {
-      name: arena::pin_static("Plain"), spec: arena::pin_static("{}"), ..Parameter::default()
+      name: pin!("Plain"), spec: pin!("{}"), ..Parameter::default()
       }.init()?
     ]));
     def_macro(T_CS!($accent), plain_param, ExpansionBody::Tokens(Tokens!(

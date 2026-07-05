@@ -275,7 +275,8 @@ LoadDefinitions!({
   // Acknowledgements — Perl L249-251
   DefConstructor!("\\ack", "<ltx:acknowledgements>");
   DefConstructor!("\\ackn", "<ltx:acknowledgements>");
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
   // Journal abbreviations — Perl L258-343
   def_iop_journal("\\etal", "et al\\/")?;

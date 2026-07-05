@@ -472,7 +472,7 @@ LoadDefinitions!({
   Tag!("ltx:*", after_open_late => sub[document,node] {
     if node.has_attribute("_xmkey") {
       let qname = document::get_node_qname(node);
-      if (qname != pin_static("ltx:XMRef")) &&
+      if (qname != pin!("ltx:XMRef")) &&
         with(qname, |qstr| qstr.starts_with("ltx:XM")) && !node.has_attribute("xml:id") {
         document.generate_id(node, "")?;
       }
@@ -731,7 +731,7 @@ LoadDefinitions!({
   let mut current;
   loop {
     let qn = model::get_node_qname(node_ref);
-    if qn == pin_static("ltx:XMTok") || qn == pin_static("ltx:XMWrap") {
+    if qn == pin!("ltx:XMTok") || qn == pin!("ltx:XMWrap") {
       let r = node_ref.get_attribute("role").unwrap_or_default();
       let f    = document.get_node_font(node_ref);
       let text = node_ref.get_content();
@@ -757,7 +757,7 @@ LoadDefinitions!({
         break;
       }
     // OR if XMHint with 0 <= width <= thickmuskip (5mu == ?)
-    } else if qn == pin_static("ltx:XMHint") {
+    } else if qn == pin!("ltx:XMHint") {
       if let Some(s_name) = node_ref.get_attribute("name") {
         if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()) {
           combined = s_char.to_string() + &combined;
@@ -1005,11 +1005,22 @@ LoadDefinitions!({
       let alignment_rev = {
         let prop = _whatsit.get_property("alignment");
         let mut rev = None;
+        // A broken matrix — e.g. hep-ph9806263's `\matrix` whose
+        // `\lx@end@gen@matrix` fails to close its math-mode-switch frame
+        // ("Attempt to close a group that switched to mode display_math",
+        // already reported as an Error) — can leave the Alignment RefCell
+        // mutably borrowed while reversion re-enters it here, panicking
+        // "already mutably borrowed". Perl has no borrow-checker, so its
+        // `$alignment->revert` is plain re-entrant data access and never
+        // crashes. Use `try_borrow` and fall through to the default
+        // reversion on a re-entrant cycle, mirroring `digested.rs::compute_size`.
         if let Some(cow) = prop.as_ref()
           && let Stored::Digested(alignment) = &**cow
-            && let DigestedData::Alignment(al) = alignment.data() {
-              rev = Some(al.borrow().revert()?);
-            }
+          && let DigestedData::Alignment(al) = alignment.data()
+          && let Ok(al_ref) = al.try_borrow()
+        {
+          rev = Some(al_ref.revert()?);
+        }
         rev.unwrap_or(match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() })
       };
       let cs_name = format!("\\{}", name);
@@ -1556,9 +1567,9 @@ pub fn add_column_to_math_fork(
   cell.unlink_node();
   // Process each child of _Capture_
   let children: Vec<Node> = cell.get_child_nodes();
-  let math_qname = pin_static("ltx:Math");
-  let text_qname = pin_static("ltx:text");
-  let p_qname = pin_static("ltx:p");
+  let math_qname = pin!("ltx:Math");
+  let text_qname = pin!("ltx:text");
+  let p_qname = pin!("ltx:p");
   for node in children {
     let qname = document::get_node_qname(&node);
     if qname == math_qname {
@@ -1566,7 +1577,7 @@ pub fn add_column_to_math_fork(
       if let Some(xmath) = first_child_element(&node) {
         let xmath_children: Vec<Node> = xmath.get_child_elements();
         if !xmath_children.is_empty() {
-          assign_value("ID_SUFFIX", Stored::String(pin_static(".mf")), None);
+          assign_value("ID_SUFFIX", Stored::String(pin!(".mf")), None);
           if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
             document.append_clone(&mut mainfork_xmath, xmath_children)?;
             // Mark all freshly-cloned XMRefs with `_mf_ref="1"` so the
@@ -1591,7 +1602,7 @@ pub fn add_column_to_math_fork(
       if !text_content.is_empty()
         && let Some(mut mainfork_xmath) = first_child_element(mainfork)
       {
-        assign_value("ID_SUFFIX", Stored::String(pin_static(".mf")), None);
+        assign_value("ID_SUFFIX", Stored::String(pin!(".mf")), None);
         let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
         document.append_clone(&mut txt, vec![node.clone()])?;
         document.close_element_at(&mut txt)?;
@@ -1610,7 +1621,7 @@ pub fn add_column_to_math_fork(
       // Skip comments
     } else {
       if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
-        assign_value("ID_SUFFIX", Stored::String(pin_static(".mf")), None);
+        assign_value("ID_SUFFIX", Stored::String(pin!(".mf")), None);
         let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
         document.append_clone(&mut txt, vec![node.clone()])?;
         document.close_element_at(&mut txt)?;
@@ -1878,9 +1889,9 @@ pub fn add_meaning_rec(document: &mut Document, mut node: Node, meaning: &str) -
     return Ok(());
   }
   let qname = document::get_node_qname(&node);
-  if qname == pin_static("ltx:XMArg") {
+  if qname == pin!("ltx:XMArg") {
     // DON'T cross through into arguments
-  } else if qname == pin_static("ltx:XMTok") {
+  } else if qname == pin!("ltx:XMTok") {
     let role = node.get_attribute("role").unwrap_or_default();
     if (role.is_empty() || role == "UNKNOWN") && !node.has_attribute("meaning") {
       document.set_attribute(&mut node, "meaning", meaning)?;

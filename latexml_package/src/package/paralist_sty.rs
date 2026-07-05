@@ -39,7 +39,7 @@ LoadDefinitions!({
   DefRegister!("\\pltopsep", Dimension::new(0));
   DefRegister!("\\plpartopsep", Dimension::new(0));
   DefRegister!("\\plitemsep", Dimension::new(0));
-  DefRegister!("\\plpaarsep", Dimension::new(0));
+  DefRegister!("\\plparsep", Dimension::new(0));
 
   def_macro_noop("\\setdefaultleftmargin{}{}{}{}{}{}")?;
 
@@ -95,7 +95,6 @@ LoadDefinitions!({
           set_enumeration_style(arg.raw_tokens(), None)?;
         }
       },
-      before_digest_end => { Digest!("\\par") },
       locked => true,
       mode => "internal_vertical"
     );
@@ -153,7 +152,6 @@ LoadDefinitions!({
           set_itemization_style(arg.raw_tokens(), None)?;
         }
       },
-      before_digest_end => { Digest!("\\par") },
       locked => true,
       mode => "internal_vertical"
     );

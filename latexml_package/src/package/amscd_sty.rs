@@ -28,7 +28,11 @@ LoadDefinitions!({
   //     (T_CS('@' . ToString($token))); });
   // Implemented as a primitive that reads a token and unreads the appropriate CS.
   DefPrimitive!(T_CS!("\\cd@"), None, {
-    let token = read_token()?.unwrap();
+    // `\cd@` requires a following token to build the `@<token>` connector CS; on
+    // input-exhaustion emit the parity "file ended" error instead of panicking.
+    let Some(token) = read_token_required("\\cd@")? else {
+      return Ok(vec![]);
+    };
     let cs_name = token.with_str(|s| format!("@{s}"));
     unread(Tokens::from(T_CS!(&*cs_name)));
   });
@@ -212,7 +216,7 @@ LoadDefinitions!({
   //       class=>'ltx_horizontally_stretchy',  width => Dimension('30pt')); });
   DefPrimitive!(T_CS!("\\lx@amscd@leftarrow"), None, {
     Tbox::new(
-      pin_static("\u{2190}"),
+      pin!("\u{2190}"),
       None,
       None,
       Tokens!(T_CS!("\\leftarrow")),
@@ -228,7 +232,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@rightarrow"), None, {
     Tbox::new(
-      pin_static("\u{2192}"),
+      pin!("\u{2192}"),
       None,
       None,
       Tokens!(T_CS!("\\rightarrow")),
@@ -244,7 +248,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@leftrightarrow"), None, {
     Tbox::new(
-      pin_static("\u{2194}"),
+      pin!("\u{2194}"),
       None,
       None,
       Tokens!(T_CS!("\\leftrightarrow")),
@@ -260,7 +264,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@equals"), None, {
     Tbox::new(
-      pin_static("="),
+      pin!("="),
       None,
       None,
       Tokens!(T_OTHER!("=")),

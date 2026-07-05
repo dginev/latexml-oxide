@@ -561,37 +561,93 @@ impl PostDocument {
     let xpath = xpath.trim_start_matches('!').trim();
     let mut results = Vec::new();
 
-    // Parse simple patterns: "ltx:elem" or "ltx:elem[@attr='val']" or "ltx:elem/ltx:child"
-    let parts: Vec<&str> = xpath.split('/').collect();
+    // Parse simple patterns: "ltx:elem" or "ltx:elem[@attr='val']" or "ltx:elem/ltx:child".
+    // Split on '/' only at bracket depth 0, so a '/' inside a predicate (e.g. the
+    // `../` in `[not(../ltx:bib-related[@bibrefs])]`) does not fragment the step.
+    let parts: Vec<&str> = split_steps(xpath);
     if parts.is_empty() {
       return results;
     }
 
+    // Split a path into steps on '/' at bracket depth 0.
+    fn split_steps(xpath: &str) -> Vec<&str> {
+      let mut steps = Vec::new();
+      let mut depth = 0i32;
+      let mut start = 0;
+      for (i, b) in xpath.bytes().enumerate() {
+        match b {
+          b'[' => depth += 1,
+          b']' => depth -= 1,
+          b'/' if depth == 0 => {
+            steps.push(&xpath[start..i]);
+            start = i + 1;
+          },
+          _ => {},
+        }
+      }
+      steps.push(&xpath[start..]);
+      steps
+    }
+
+    // Extract the top-level `[...]` predicate bodies from a step, respecting
+    // nested brackets: `[@type][not(../ltx:bib-related[@bibrefs])]`
+    // → ["@type", "not(../ltx:bib-related[@bibrefs])"].
+    fn extract_predicates(s: &str) -> Vec<&str> {
+      let mut preds = Vec::new();
+      let mut depth = 0i32;
+      let mut start = 0;
+      for (i, b) in s.bytes().enumerate() {
+        match b {
+          b'[' => {
+            if depth == 0 {
+              start = i + 1;
+            }
+            depth += 1;
+          },
+          b']' => {
+            depth -= 1;
+            if depth == 0 {
+              preds.push(&s[start..i]);
+            }
+          },
+          _ => {},
+        }
+      }
+      preds
+    }
+
     fn match_element(node: &Node, pattern: &str) -> bool {
       let pattern = pattern.trim().trim_start_matches("ltx:");
-      if let Some(bracket_pos) = pattern.find('[') {
-        let elem_name = &pattern[..bracket_pos];
-        let attr_part = &pattern[bracket_pos + 1..pattern.len() - 1]; // strip [ and ]
-        if node.get_name() != elem_name {
-          return false;
-        }
-        // Parse @attr='value'
-        if let Some(eq_pos) = attr_part.find('=') {
-          let attr_name = attr_part[1..eq_pos].trim(); // skip @
-          let attr_val = attr_part[eq_pos + 1..]
-            .trim()
-            .trim_matches('\'')
-            .trim_matches('"');
-          node
-            .get_attribute(attr_name)
-            .map(|v| v == attr_val)
-            .unwrap_or(false)
-        } else {
-          true
-        }
-      } else {
-        node.get_name() == pattern
+      let bracket_pos = match pattern.find('[') {
+        None => return node.get_name() == pattern,
+        Some(p) => p,
+      };
+      let elem_name = &pattern[..bracket_pos];
+      if node.get_name() != elem_name {
+        return false;
       }
+      // Every top-level predicate must hold. Supported forms: `@attr` (the
+      // attribute must exist) and `@attr='value'` (equality). Function
+      // predicates such as `not(../ltx:bib-related[@bibrefs])` are beyond this
+      // lightweight matcher and are treated as satisfied (best-effort).
+      for pred in extract_predicates(&pattern[bracket_pos..]) {
+        let pred = pred.trim();
+        if pred.contains('(') {
+          continue;
+        }
+        if let Some(attr) = pred.strip_prefix('@') {
+          if let Some(eq) = attr.find('=') {
+            let name = attr[..eq].trim();
+            let val = attr[eq + 1..].trim().trim_matches('\'').trim_matches('"');
+            if node.get_attribute(name).as_deref() != Some(val) {
+              return false;
+            }
+          } else if node.get_attribute(attr.trim()).is_none() {
+            return false;
+          }
+        }
+      }
+      true
     }
 
     fn collect_matching(node: &Node, parts: &[&str], results: &mut Vec<Node>) {

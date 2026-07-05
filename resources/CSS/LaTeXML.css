@@ -427,7 +427,6 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 .ltx_border_B  { border-bottom:1px solid gray; }
 .ltx_border_L  { border-left:1px solid gray; }
 /* Framing */
-.ltx_framed    { padding:3pt; }
 span.ltx_framed       { display:inline-block; text-indent:0; } /* avoid padding/margin collapse */
 .ltx_framed_rectangle { border-style:solid; border-width:1px; }
 .ltx_framed_top       { border-top-style:solid; border-top-width:1px; }
@@ -493,6 +492,13 @@ foreignObject {
    due to font differences. */
 .ltx_foreignobject_container:has( > .ltx_foreignobject_content > :not(:only-child)) {
     width:calc(1.1 * var(--ltx-fo-width));
+}
+/* A minipage in the content = a measured box's upper part (tcolorbox et al.
+   wrap box content in \minipage; picture labels never do). TeX fills such
+   boxes from the top, so any estimator slack must fall BELOW the text;
+   centering splits it into a fake empty band above (arXiv 2605.02240). */
+.ltx_foreignobject_container:has( > .ltx_foreignobject_content > .ltx_minipage) {
+    align-items:start;
 }
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {

@@ -1,7 +1,13 @@
-use std::{borrow::Cow, cell::RefCell, io::Cursor};
+use std::{
+  borrow::Cow,
+  cell::RefCell,
+  collections::HashSet,
+  hash::{Hash, Hasher},
+  io::Cursor,
+};
 
 use latexml_core::{
-  Warn,
+  Error, Fatal, Warn,
   common::{
     arena::{self, SymHashMap},
     error::{Result, note_begin, note_end, note_progress},
@@ -104,7 +110,7 @@ static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT
 // When set, the parser dumps a histogram of semantic-pragma rejection
 // reasons for any formula where 0 trees survive pruning. Used to find
 // over-aggressive pragmas that admit a formula standalone but reject
-// it in document context — see docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md.
+// it in document context — see docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md.
 static PARSE_PRUNE_REASONS: Lazy<bool> =
   Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
 static PARSE_AMBIGUITY_AUDIT: Lazy<bool> =
@@ -412,8 +418,13 @@ pub struct MathParser {
   n_parsed:                  usize,
   /// Grammar tree count from the last successful parse (for \ltx@count@parses)
   pub last_parsetrees_count: usize,
+  /// Hashes of the distinct formula token streams that have already emitted an `ambiguous_math` /
+  /// `unparsed_math` warning in THIS document. Perl LaTeXML warns once per distinct formula per
+  /// document — a formula repeated N times still warns once. The parser is built per document
+  /// (`core_interface`), so this set's lifetime IS the document scope. Hashed (not stored whole) to
+  /// stay O(8 bytes) per formula under the worker fleet.
+  warned_formulas:           HashSet<u64>,
   // strict: bool,
-  // warned: bool,
   // xnode: Option<Node>,
 }
 impl Default for MathParser {
@@ -438,8 +449,8 @@ impl Default for MathParser {
       // idrefs: Vec::new(),
       n_parsed: 0,
       last_parsetrees_count: 0,
+      warned_formulas: HashSet::new(),
       // strict: true,
-      // warned: false,
       // xnode: None,
     }
   }
@@ -466,7 +477,7 @@ impl Default for MathParser {
 /// The target/category structure is reconstructed from the (distinctive,
 /// engine-owned) message prefixes so the caller can `log_fatal()` + abort
 /// math parsing honestly. Witness math0402448 (amsart + xy-pic).
-fn resource_fatal_from_message(msg: &str) -> Option<latexml_core::common::error::Error> {
+fn resource_fatal_from_message(msg: &str) -> Option<Error> {
   use latexml_core::common::error::{Error, ErrorCategory, ErrorTarget};
   let category = if msg.contains("Infinite expansion loop") {
     ErrorCategory::Recursion
@@ -652,7 +663,7 @@ impl MathParser {
 
   pub fn parse_math(&mut self, document: &mut Document) -> Result<()> {
     self.clear();
-    self.cleanup_scripts(document);
+    self.cleanup_scripts(document)?;
     let xmath_selector = "descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]";
     let xmath_nodes = document.findnodes(xmath_selector, None);
 
@@ -723,7 +734,7 @@ impl MathParser {
           && child_elems.iter().any(|ch| ch.get_name() == "XMTok");
         if has_direct_open || has_array_with_tok {
           let mut xm = xmath;
-          self.parse_kludge(&mut xm, document);
+          self.parse_kludge(&mut xm, document)?;
         }
       }
 
@@ -870,7 +881,7 @@ impl MathParser {
   // To solve this, we find & replace all references to such script XMApps by an
   // explicit XMApp with the XMRef refering to the script itself, not the
   // XMApp. (make sense?)
-  pub fn cleanup_scripts(&mut self, document: &mut Document) {
+  pub fn cleanup_scripts(&mut self, document: &mut Document) -> Result<()> {
     // Perl: cleanupScripts — find script XMApp nodes that may be referenced by XMRef,
     // and redirect those references to point at the script content (first child) instead
     // of the XMApp wrapper. This prevents dangling idrefs when the XMApp is consumed
@@ -925,14 +936,30 @@ impl MathParser {
       // Replace each ref with an XMApp containing an XMRef to the script
       for ref_node in refs {
         // Build the replacement: ltx:XMApp{attrs}[ltx:XMRef{idref=script_id}]
-        let mut new_app = Node::new("XMApp", None, &document.document).unwrap();
+        // Allocation can fail under fleet memory pressure (same class as
+        // new_script_node) — degrade loudly and keep the original ref.
+        let Ok(mut new_app) = Node::new("XMApp", None, &document.document) else {
+          Error!(
+            "misc",
+            "allocation",
+            "XML node allocation failed (XMApp); keeping XMRef as-is"
+          );
+          continue;
+        };
         for (name, value) in &attrs {
           let _ = new_app.set_attribute(name, value);
         }
         if let Some(ref ns) = ns {
           let _ = new_app.set_namespace(ns);
         }
-        let mut xmref = Node::new("XMRef", None, &document.document).unwrap();
+        let Ok(mut xmref) = Node::new("XMRef", None, &document.document) else {
+          Error!(
+            "misc",
+            "allocation",
+            "XML node allocation failed (XMRef); keeping XMRef as-is"
+          );
+          continue;
+        };
         let _ = xmref.set_attribute("idref", &script_id);
         if let Some(ref ns) = ns {
           let _ = xmref.set_namespace(ns);
@@ -941,6 +968,7 @@ impl MathParser {
         let _ = document.replace_tree(new_app, ref_node);
       }
     }
+    Ok(())
   }
   // sub cleanupScripts {
   //   my ($self, $document) = @_;
@@ -1112,7 +1140,7 @@ impl MathParser {
     };
 
     if rule == "kludge" {
-      self.parse_kludge(&mut node, document);
+      self.parse_kludge(&mut node, document)?;
       Ok(None)
     } else {
       match self.parse_single(&mut node, document, &rule)? {
@@ -1218,31 +1246,51 @@ impl MathParser {
       if tag == pin!("ltx:XMArg") {
         self.parse_rec(child, "Anything", document)?;
       } else if tag == pin!("ltx:XMWrap") {
-        if child.has_attribute("_rewrite") {
-          // Rewrite-created XMWrap: parse inner structure (subscripts etc.) but
-          // the XMWrap's role overrides whatever the inner parse produces.
-          // Temporarily remove role so parse_rec doesn't emit start_ROLE/end_ROLE
-          // tokens (the grammar only handles script roles).
-          let saved_role = child.get_attribute("role");
-          let mut c = child.clone();
-          if saved_role.is_some() {
-            c.remove_attribute("role").ok();
-          }
-          match self.parse_rec(child, "Anything", document)? {
-            Some(mut result) => {
-              if let Some(ref role) = saved_role {
-                result.set_attribute("role", role).ok();
-              }
-            },
-            _ => {
-              if let Some(ref role) = saved_role {
-                // Parse failed — XMWrap still in DOM, restore role
-                c.set_attribute("role", role).ok();
-              }
-            },
-          }
-        } else {
-          self.parse_rec(child, "Anything", document)?;
+        // The XMWrap's role overrides whatever the inner parse produces, and
+        // must NOT reach the lexer: node_to_grammar_lexemes would emit
+        // start_ROLE/end_ROLE wrapper tokens, and the grammar only consumes
+        // the SCRIPT roles (POSTSUB/POSTSUPER/BIGOPSUB/BIGOPSUP/FLOAT*) — a
+        // non-script role like RELOP guaranteed a failed sub-parse. This bit
+        // rewrite-created XMWraps first (fixed then only for _rewrite); plain
+        // constructor XMWraps (\mathrel{\mathop{=}\limits^{def}} → XMWrap
+        // role=RELOP) failed the same way and fell to the kludge, where Perl
+        // parses the script application and hoists the role (PR_READINESS
+        // F19). Strip any NON-script role for the sub-parse, re-apply after.
+        let saved_role = child.get_attribute("role").filter(|r| {
+          !matches!(
+            r.as_str(),
+            "POSTSUBSCRIPT"
+              | "POSTSUPERSCRIPT"
+              | "BIGOPSUB"
+              | "BIGOPSUP"
+              | "FLOATSUPERSCRIPT"
+              | "FLOATSUBSCRIPT"
+              | "ARROW"
+          )
+        });
+        let mut c = child.clone();
+        if saved_role.is_some() {
+          c.remove_attribute("role").ok();
+        }
+        match self.parse_rec(child, "Anything", document)? {
+          Some(mut result) => {
+            if let Some(ref role) = saved_role {
+              result.set_attribute("role", role).ok();
+              // The replacement is a pre-parsed structure standing in for one
+              // grammatical atom (e.g. XMApp for `\mathop{A}\limits_B`, role
+              // BIGOP). Mark it `_rewrite` so node_to_grammar_lexemes lexes it
+              // as ONE terminal with this role — recursing would emit
+              // start_BIGOP + prefix-form children, which no rule consumes
+              // (nested-\mathop repro: testscripts S0.Ex4).
+              result.set_attribute("_rewrite", "1").ok();
+            }
+          },
+          _ => {
+            if let Some(ref role) = saved_role {
+              // Parse failed — XMWrap still in DOM, restore role
+              c.set_attribute("role", role).ok();
+            }
+          },
         }
       } else if tag == pin!("ltx:XMApp")
         || tag == pin!("ltx:XMArray")
@@ -1266,11 +1314,11 @@ impl MathParser {
   //     unless they're attached to something plausible.
   /// Perl: parse_kludge (MathParser.pm L530-566)
   /// Stack-based matching of OPEN/CLOSE delimiter pairs + script attachment.
-  fn parse_kludge(&self, mathnode: &mut Node, document: &mut Document) {
+  fn parse_kludge(&self, mathnode: &mut Node, document: &mut Document) -> Result<()> {
     use crate::data::get_grammatical_role;
     let children: Vec<Node> = filter_hints(mathnode.get_child_nodes());
     if children.is_empty() {
-      return;
+      return Ok(());
     }
 
     // Build (node, role) pairs — matching Perl's @pairs.
@@ -1303,20 +1351,44 @@ impl MathParser {
             row.push(pair);
           }
           // Perl L546: handle scripts within this fenced group
-          let kludged = kludge_scripts_rec(row, document);
+          let kludged = kludge_scripts_rec(row, document)?;
           // Wrap if > 1 node, give role FENCED
+          let mut kludged = kludged;
           let result = if kludged.len() > 1 {
-            let mut wrap = Node::new("XMWrap", None, document.get_document()).unwrap();
-            for mut n in kludged {
-              n.unlink_node();
-              wrap.add_child(&mut n).ok();
+            match Node::new("XMWrap", None, document.get_document()) {
+              Ok(mut wrap) => {
+                for mut n in kludged {
+                  n.unlink_node();
+                  wrap.add_child(&mut n).ok();
+                }
+                (wrap, "FENCED".to_string())
+              },
+              Err(_) => {
+                // Allocation failure under memory pressure: degrade loudly to
+                // the first kludged node (same class as new_script_node).
+                Error!(
+                  "misc",
+                  "allocation",
+                  "XML node allocation failed (XMWrap); using first node"
+                );
+                (kludged.swap_remove(0), "FENCED".to_string())
+              },
             }
-            (wrap, "FENCED".to_string())
           } else {
-            let node = kludged
-              .into_iter()
-              .next()
-              .unwrap_or_else(|| Node::new_text("", &document.document).unwrap());
+            let node = match kludged.into_iter().next() {
+              Some(n) => n,
+              None => match Node::new_text("", &document.document) {
+                Ok(n) => n,
+                Err(_) => {
+                  Error!(
+                    "misc",
+                    "allocation",
+                    "XML text-node allocation failed; skipping group"
+                  );
+                  continue;
+                },
+              },
+            };
             (node, "FENCED".to_string())
           };
           if stack.is_empty() {
@@ -1334,7 +1406,7 @@ impl MathParser {
 
     // Perl L555: process remaining top-level items through kludge_scripts
     let final_pairs = stack.into_iter().next().unwrap_or_default();
-    let result_nodes = kludge_scripts_rec(final_pairs, document);
+    let result_nodes = kludge_scripts_rec(final_pairs, document)?;
 
     // Perl L558-563: at top level, unwrap top-level XMWraps (extract children).
     // Perl iterates all pairs and extracts children of any array-rep XMWrap.
@@ -1367,6 +1439,7 @@ impl MathParser {
     // `rebuild_idstore_from_dom` is the only recovery path and
     // downstream XMRef lookups can SIGSEGV via stale cache.
     let _ = document.record_node_ids(mathnode);
+    Ok(())
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2027,21 +2100,37 @@ impl MathParser {
     // Use post-dedup count (distinct semantic trees), not raw grammar count
     self.last_parsetrees_count = parses.len();
 
-    if ok_trees + pruned_trees > 10 {
-      // Diagnostic only — high ambiguity isn't a Perl-side Error in
-      // MathParser.pm; the warn target uses a Rust-internal class.
-      log_math_warn!(
-        "ambiguous",
-        "math",
-        "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
-        ok_trees + pruned_trees + deduped,
-        ok_trees + deduped,
-        pruned_trees,
-        deduped,
-        parses.len(),
-        start.elapsed(),
-        input.trim()
-      );
+    // Diagnostic only — neither high ambiguity nor a parse failure is a Perl-side MathParser.pm
+    // Error; the warn target uses a Rust-internal class. One message, two categories:
+    //   * `unparsed_math`  — the formula produced no parse at all (the `Err` returned below), or
+    //   * `ambiguous_math` — the grammar enumerated many derivations (>10).
+    // The `what` field is a structural FOOTPRINT of the token stream (see `token_type_footprint`),
+    // so the dashboard buckets formulas by shape instead of one unique token dump per paper.
+    let diagnostic_category = if parses.is_empty() {
+      Some("unparsed_math")
+    } else if ok_trees + pruned_trees > 10 {
+      Some("ambiguous_math")
+    } else {
+      None
+    };
+    if let Some(category) = diagnostic_category {
+      // Warn once per DISTINCT formula per document (Perl LaTeXML's rule): a formula repeated N
+      // times in one document emits a single warning. Keyed on the exact token stream — true only
+      // the first time this document sees it; repeats are silently skipped.
+      if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+        log_math_warn!(
+          category,
+          token_type_footprint(input.trim()),
+          "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
+          ok_trees + pruned_trees + deduped,
+          ok_trees + deduped,
+          pruned_trees,
+          deduped,
+          parses.len(),
+          start.elapsed(),
+          input.trim()
+        );
+      }
     }
     // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
     // Useful for identifying grammar ambiguity hotspots across the test suite.
@@ -2256,13 +2345,15 @@ impl MathParser {
 /// Takes a list of (Node, role) pairs and attaches scripts to their bases:
 /// - POSTSUPERSCRIPT/POSTSUBSCRIPT → attach to preceding node
 /// - FLOATSUPERSCRIPT/FLOATSUBSCRIPT → pre-script on following node
-fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Vec<Node> {
+// Result-threaded so new_script_node's allocation-failure Error! (whose
+// too-many-errors escalation early-returns an Err) has a path out.
+fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Result<Vec<Node>> {
   use crate::data::get_grammatical_role;
   if pairs.is_empty() {
-    return vec![];
+    return Ok(vec![]);
   }
   if pairs.len() == 1 {
-    return vec![pairs.into_iter().next().unwrap().0];
+    return Ok(vec![pairs.into_iter().next().unwrap().0]);
   }
 
   let mut acc: Vec<Node> = Vec::new();
@@ -2285,19 +2376,21 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
       if is_post_script(&y.1) {
         if !more.is_empty() {
           // Perl L575-576: FLOAT + POST + more → combined pre-sub+super
-          let mut rest = kludge_scripts_rec(more, document);
+          let mut rest = kludge_scripts_rec(more, document)?;
           if let Some(base) = rest.first_mut() {
-            let inner = new_script_node(base.clone(), &y, document);
-            let outer = new_script_node(inner, &x, document);
+            let inner = new_script_node(base.clone(), &y, document)?;
+            let outer = new_script_node(inner, &x, document)?;
             rest[0] = outer;
           }
           acc.extend(rest);
           break;
         } else {
           // Perl L578: FLOAT + POST, no more → floating sub+super on Absent
-          let absent = new_absent_node(document);
-          let inner = new_script_node(absent, &y, document);
-          let outer = new_script_node(inner, &x, document);
+          let Some(absent) = new_absent_node(document)? else {
+            break; // allocation failure already reported; drop the pair
+          };
+          let inner = new_script_node(absent, &y, document)?;
+          let outer = new_script_node(inner, &x, document)?;
           acc.push(outer);
           break;
         }
@@ -2305,9 +2398,9 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
         // Perl L580-581: FLOAT + non-script → prescript on whatever follows
         let mut rest_pairs = vec![y];
         rest_pairs.extend(more);
-        let mut rest = kludge_scripts_rec(rest_pairs, document);
+        let mut rest = kludge_scripts_rec(rest_pairs, document)?;
         if let Some(base) = rest.first_mut() {
-          let scripted = new_script_node(base.clone(), &x, document);
+          let scripted = new_script_node(base.clone(), &x, document)?;
           rest[0] = scripted;
         }
         acc.extend(rest);
@@ -2315,11 +2408,11 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
       }
     } else if is_post_script(&y.1) {
       // Perl L583-584: POST script → attach to preceding, recurse with result
-      let scripted = new_script_node(x.0.clone(), &y, document);
+      let scripted = new_script_node(x.0.clone(), &y, document)?;
       let role = get_grammatical_role(&scripted);
       let mut rest_pairs = vec![(scripted, role)];
       rest_pairs.extend(more);
-      let rest = kludge_scripts_rec(rest_pairs, document);
+      let rest = kludge_scripts_rec(rest_pairs, document)?;
       acc.extend(rest);
       break;
     } else {
@@ -2329,7 +2422,7 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
       iter = more.into_iter();
     }
   }
-  acc
+  Ok(acc)
 }
 
 fn is_float_script(role: &str) -> bool { role == "FLOATSUPERSCRIPT" || role == "FLOATSUBSCRIPT" }
@@ -2338,7 +2431,11 @@ fn is_post_script(role: &str) -> bool { role == "POSTSUPERSCRIPT" || role == "PO
 
 /// Perl: NewScript (MathParser.pm L1597-1644)
 /// Creates XMApp(XMTok[role=SCRIPTOP, scriptpos=...], base, script_content).
-fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Document) -> Node {
+fn new_script_node(
+  base: Node,
+  script_pair: &(Node, String),
+  document: &mut Document,
+) -> Result<Node> {
   let (script_node, script_role) = script_pair;
 
   // Determine SUPER vs SUB from role
@@ -2402,16 +2499,29 @@ fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Docu
   let scriptpos = format!("{x}{l}");
 
   // Create XMTok operator: <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-  let mut op_node = Node::new("XMTok", None, document.get_document()).unwrap();
+  // Node creation only fails on libxml allocation failure (observed under
+  // fleet memory pressure — 2 papers in the 2026-07 full-arXiv run panicked
+  // here via .unwrap()). Degrade: record an Error and return the base node
+  // un-scripted; a genuine OOM then terminates through the designed RSS
+  // watchdog (Fatal:oom:rss) instead of a panic.
+  let (Ok(mut op_node), Ok(mut app_node)) = (
+    Node::new("XMTok", None, document.get_document()),
+    Node::new("XMApp", None, document.get_document()),
+  ) else {
+    Error!(
+      "misc",
+      "allocation",
+      "math script restructuring could not allocate an XML node (out of \
+       memory?); leaving the base expression un-scripted"
+    );
+    return Ok(base);
+  };
   op_node.set_attribute("role", op_role).ok();
   op_node.set_attribute("scriptpos", &scriptpos).ok();
 
   // Extract script content: first child element of the script XMApp
   // Perl: Arg($script, 0) — gets first element child
   let script_content = script_node.get_child_elements().into_iter().next();
-
-  // Create XMApp: <XMApp> op, base, script_content </XMApp>
-  let mut app_node = Node::new("XMApp", None, document.get_document()).unwrap();
 
   // Propagate _font from operator if present
   if let Some(font) = op_node.get_attribute("_font") {
@@ -2451,14 +2561,22 @@ fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Docu
   {
     app_node.set_attribute("rpadding", &rpad).ok();
   }
-  app_node
+  Ok(app_node)
 }
 
-/// Create an XMTok with meaning="absent" (Perl: Absent())
-fn new_absent_node(document: &mut Document) -> Node {
-  let mut tok = Node::new("XMTok", None, document.get_document()).unwrap();
+/// Create an XMTok with meaning="absent" (Perl: Absent()). Allocation can
+/// fail under fleet memory pressure — degrade loudly, caller skips the pair.
+fn new_absent_node(document: &mut Document) -> Result<Option<Node>> {
+  let Ok(mut tok) = Node::new("XMTok", None, document.get_document()) else {
+    Error!(
+      "misc",
+      "allocation",
+      "XML node allocation failed (absent XMTok)"
+    );
+    return Ok(None);
+  };
   tok.set_attribute("meaning", "absent").ok();
-  tok
+  Ok(Some(tok))
 }
 
 fn parse_scriptpos_str(sp: &str) -> (&str, u32) {
@@ -2608,19 +2726,19 @@ fn textrec(
       // emit empty string and continue.
       return String::new();
     };
-    textrec(content, Some(outer_bp), Some(outer_name), document) // Just send out the
-  // semantic form
-  // Fall back to
-  // presentation, if
-  // content has poor
-  // semantics (eg. from
-  // replacement patterns)
-  // TODO
-  // return ($text =~
-  // /^\(*Unknown/ ?
-  // textrec($presentation,
-  // $outer_bp, $outer_name)
-  // : $text); }
+    // Perl MathParser.pm:950-954: emit the semantic (content) form, but fall
+    // back to the presentation form when the content has poor semantics —
+    // `$text =~ /^\(*Unknown/`. This is what makes \lxDeclare replacement /
+    // \WildCard duals (whose content-arm operator is a decl_id-only XMTok with
+    // no meaning) serialize as their presentation (e.g. `x _ n`, `widehat@(x)`)
+    // rather than `Unknown@(...)`.
+    let text = textrec(content, Some(outer_bp), Some(outer_name), document);
+    if text.trim_start_matches('(').starts_with("Unknown")
+      && let Some(presentation) = children.get(1)
+    {
+      return textrec(presentation, Some(outer_bp), Some(outer_name), document);
+    }
+    text
   } else if tag == pin!("ltx:XMTok") {
     let name = match get_token_meaning(&node, document) {
       Some(meaning) => meaning,
@@ -2652,6 +2770,58 @@ fn textrec(
   } else {
     s!("[{}]", p_get_value(&node))
   }
+}
+
+/// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
+/// `unparsed_math` math-parser diagnostics. Joins the token *types* (the segment before the first
+/// `:` of each `TYPE:value:position` triple) with `_`, bounded to fit CorTeX's `what` column, and
+/// appends `_cntd` when the stream is truncated. Space-free, so it slots into CorTeX's
+/// `severity:category:what` log parser as a groupable frequency key — collapsing a per-formula
+/// token dump into a shape signature the dashboard can bucket (the full token stream stays in the
+/// message `details`). E.g. arXiv 0708.2155's `UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 …` →
+/// `UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_…` (truncated with `_cntd` once it would pass the budget).
+/// Records `formula` in the per-document `seen` set and returns whether this is its FIRST sighting
+/// — the gate for Perl LaTeXML's "warn once per distinct formula per document" rule. The token
+/// stream is hashed (SipHash) so the set stays 8 bytes per distinct formula no matter how long the
+/// formula is; a hash collision at worst suppresses one warning, which is harmless.
+fn warn_formula_once(seen: &mut HashSet<u64>, formula: &str) -> bool {
+  let mut hasher = std::collections::hash_map::DefaultHasher::new();
+  formula.hash(&mut hasher);
+  seen.insert(hasher.finish())
+}
+
+fn token_type_footprint(tokens: &str) -> String {
+  // CorTeX's log `what` column is varchar(200) and a btree index key (category, what, task_id), so
+  // bound the footprint to fit by construction: append token types until the next would pass the
+  // budget, then mark the truncation with `_cntd`. Reserving the suffix length keeps a truncated
+  // footprint within 200 chars (195 types + "_cntd"), so the dispatcher's insert never silently
+  // chops the marker.
+  const SUFFIX: &str = "_cntd";
+  const BUDGET: usize = 200 - SUFFIX.len();
+  let mut out = String::new();
+  let mut truncated = false;
+  for token in tokens.split_whitespace() {
+    let ty = token.split(':').next().unwrap_or(token);
+    // First type always lands (a lone >budget type is backstopped by CorTeX's 200-char cap); every
+    // subsequent one must fit the budget WITH its separator, else we stop and mark `_cntd`.
+    if !out.is_empty() && out.len() + 1 + ty.len() > BUDGET {
+      truncated = true;
+      break;
+    }
+    if !out.is_empty() {
+      out.push('_');
+    }
+    out.push_str(ty);
+  }
+  if truncated {
+    out.push_str(SUFFIX);
+  }
+  // A formula with no tokens would yield an empty `what`, which CorTeX's parser can't key on —
+  // emit a placeholder so the line still groups.
+  if out.is_empty() {
+    out.push_str("none");
+  }
+  out
 }
 
 fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document) -> (usize, String) {
@@ -2922,6 +3092,62 @@ mod tests {
   use libxml::parser::Parser as XmlParser;
 
   use super::*;
+
+  #[test]
+  fn token_type_footprint_bounds_to_varchar200_with_cntd() {
+    // arXiv 0708.2155 — a short slice fits whole: just the token TYPES, no suffix.
+    let short = "UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 CLOSE:):4 RELOP:equals:5 \
+                 start_POSTSUBSCRIPT:start:9 NUMBER:0:10";
+    assert_eq!(
+      token_type_footprint(short),
+      "UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_start_POSTSUBSCRIPT_NUMBER"
+    );
+    // The type is the segment before the first `:` (value/position dropped); empty → placeholder.
+    assert_eq!(token_type_footprint("UNKNOWN:x:1 OPEN:(:2"), "UNKNOWN_OPEN");
+    assert_eq!(token_type_footprint(""), "none");
+    // A long formula is bounded to the varchar(200) `what` column and carries the `_cntd` marker;
+    // the result never exceeds 200 chars so the dispatcher insert can't chop the marker.
+    let many = (0..120)
+      .map(|i| format!("UNKNOWN:x{i}:{i}"))
+      .collect::<Vec<_>>()
+      .join(" ");
+    let fp = token_type_footprint(&many);
+    assert!(
+      fp.len() <= 200,
+      "footprint {} exceeds varchar(200)",
+      fp.len()
+    );
+    assert!(
+      fp.ends_with("_cntd"),
+      "a truncated footprint must mark it: {fp}"
+    );
+    assert!(fp.starts_with("UNKNOWN_UNKNOWN"));
+  }
+
+  #[test]
+  fn warns_once_per_distinct_formula_per_document() {
+    // Per-document scope = one `seen` set per document (the parser is built per document).
+    let mut doc = HashSet::new();
+    let f1 = "UNKNOWN:x:1 RELOP:=:2 NUMBER:0:3";
+    let f2 = "UNKNOWN:y:1 ADDOP:+:2 UNKNOWN:z:3";
+    assert!(warn_formula_once(&mut doc, f1), "first sighting warns");
+    assert!(
+      !warn_formula_once(&mut doc, f1),
+      "the same formula repeated is suppressed"
+    );
+    assert!(
+      !warn_formula_once(&mut doc, f1),
+      "still suppressed on the 3rd repeat"
+    );
+    assert!(
+      warn_formula_once(&mut doc, f2),
+      "a DISTINCT formula warns once of its own"
+    );
+    assert!(!warn_formula_once(&mut doc, f2));
+    // A new document (fresh set) warns again for the same formula — dedup is document-scoped.
+    let mut other_doc = HashSet::new();
+    assert!(warn_formula_once(&mut other_doc, f1));
+  }
 
   /// Pin the message↔classifier coupling for the string-fallback path of
   /// resource-fatal recovery (P1-4). The PRIMARY transport is the structured

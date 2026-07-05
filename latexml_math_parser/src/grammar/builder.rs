@@ -29,7 +29,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // `WIDE_PUNCT:,:idx` so the grammar can prefer formulae_apply
   // for the `formula , \quad condition` arXiv idiom without
   // enumerating the `list_apply` alternatives that the pragma
-  // would only reject post-hoc. See docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
+  // would only reject post-hoc. See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
   token!(wide_punct ~ "WIDE_PUNCT");
   token!(addop ~ "ADDOP");
   token!(mulop ~ "MULOP");
@@ -59,7 +59,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // (\vertii, \vertiii, …) where multiple identical bars appear in
   // sequence. `stretchy_vertbar` is the union — used by legacy rules
   // (e.g. eval_at) that don't care which side a stretchy bar came from.
-  // See docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2 (delimiter-pairing) and Task #263.
+  // See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2 (delimiter-pairing) and Task #263.
   token!(left_stretchy_vertbar ~ "LEFT_STRETCHY_VERTBAR");
   token!(right_stretchy_vertbar ~ "RIGHT_STRETCHY_VERTBAR");
   // Fallback for stretchy bars that arrived without a side tag

@@ -1451,17 +1451,15 @@ author plainly intended `$sep->toAttribute ne '3.0pt'` (skip the default).
 framecolor='#000000' framed='rectangle'>x</ltx:text>` (the padding appears even
 though `\fboxsep` is the default 3pt).
 
-**Perl status:** present and unchanged.
+**Perl status:** RESOLVED upstream by PR #2829 (merged 2026-07-02): the
+hand-rolled properties block was replaced by `framedProperties(margin =>
+'\fboxsep', rule => '\fboxrule')`, which compares attribute strings properly
+(`$th_pt ne '0.4pt'` for the border) and emits `padding:` whenever a margin is
+given — the buggy `$sep ne '3.0pt'` guard is gone.
 
-**Rust status (FIXED 2026-06-20, faithful):** an earlier Rust port translated
-the guard as `sep_str != "3.0pt"` (comparing the *attribute* string), which
-implemented the *intent* but DIVERGED from Perl's actual output — Rust dropped
-`cssstyle='padding:3.0pt'` on every default `\fbox`/`\framebox`. Restored Perl's
-behavior (`latex_constructs.rs` `\@framebox` properties): always emit
-`cssstyle='padding:<fboxsep>'`. This is a faithful-translation fix (Perl's
-condition is unconditionally true), not a beneficial divergence — verified
-byte-for-byte against `/usr/local/bin/latexml` (e.g. enum.tex: 6/6 framed boxes
-gain the cssstyle in both engines).
+**Rust status:** tracked Perl throughout — first the faithful mirror of the
+buggy always-true guard (2026-06-20), now the #2829 `framed_properties` port
+(2026-07-02, `tex_box.rs`), byte-identical fixtures both times.
 
 ## 36. OmniBus `\lx@doi` emits a malformed `https:/doi.org/` URL (single slash)
 
@@ -1527,3 +1525,131 @@ All multi-item containers are kept **flat** (the `moreRHS`-analog
 reading, this **eliminates a large grammar-ambiguity over-parse**: on
 `1510.03361` the worst equation fell from the 5000-tree cap (578 ms) to 256
 trees (31 ms, ~19×) and the `math_parse` phase dropped ~12%. Suite 1466/0/0.
+
+## 38. `\marginpar` does not scope font/catcode changes (leaks into body)
+
+**Trigger:**
+```latex
+\marginpar{\Large !} BODYWORD
+```
+**Perl behavior:** `BODYWORD` (and everything after) renders at `\Large` (144%) —
+the `\Large` inside the margin note leaks into the main galley. Verified on Perl
+LaTeXML 0.8.8 (`<text fontsize="144%">BODYWORD`). Real pdflatex typesets the note
+in a separate margin box, so the switch is scoped; the LaTeXML `\marginpar`
+`DefConstructor` (`latex_constructs.pool.ltxml` L3487) is not `bounded`, so its
+argument digests in the enclosing group and the font assignment persists.
+
+**Severity:** can be catastrophic for documents that put a size/style switch in a
+margin note — e.g. the mhchem package manual's `\marginpar{\Large !}` rendered the
+*entire* manual at 144%.
+
+**Rust status — DELIBERATE DIVERGENCE (Rust supersedes).** `\marginpar` now carries
+`bounded => true` (mirrors `\mbox`), scoping the note's font/catcode changes. Output-
+neutral across the suite (1487/0). See `OXIDIZED_DESIGN.md` #39. Candidate to upstream.
+
+## 39. booktabs `\cmidrule` defined via `\cline` → infinite loop under `\let\cline\cmidrule`
+
+`booktabs.sty.ltxml` defines `\cmidrule` to draw its partial rule by expanding to
+`\cline{<cols>}` (`\ltx@cmidrule` / `\ltx@@cmidrule` → `\cline{#2}`/`\cline{#3}`).
+This is a simplification — real booktabs `\cmidrule` draws the rule directly and
+does **not** touch `\cline`.
+
+**Trigger:** a document that does `\let\cline\cmidrule` (a common idiom to make
+`\cline` render as a nicer booktabs-style partial rule). In real LaTeX this is
+harmless because `\cmidrule` is self-contained. In LaTeXML it creates a cycle:
+`\cline` → `\cmidrule` → `\ltx@cmidrule` → `\cline` → `\cmidrule` → … — an infinite
+macro expansion.
+
+**Perl behavior:** Perl LaTeXML **hangs** (confirmed: `latexml --quiet` on
+arXiv 2506.23179 runs to a 90 s+ timeout with no output) — the identical
+`\cmidrule`→`\cline` binding loops with no conditional/expansion guard.
+
+**Rust status — DELIBERATE DIVERGENCE (Rust supersedes).** Rust's gullet has an
+8M-conditional `IfLimit` guard, so it fatals at ~12 s rather than hanging; and the
+booktabs binding now routes `\cmidrule` through a **private saved copy** of `\cline`
+(`\ltx@saved@cline`, captured at package-load before any document `\let`), so the
+cycle never forms — the witnesses convert cleanly (2506.23179 172.9 s→fatal ⇒ **3 s,
+0 errors**; 2511.17056 171.4 s→fatal ⇒ **1 s, 0 errors**). Output-neutral for ordinary
+`\cmidrule` (the saved CS equals `\cline` at load). Guard:
+`06_cluster_regressions.rs::cluster_cmidrule_cline_let`. Candidate to upstream.
+File: `latexml_package/src/package/booktabs_sty.rs`.
+
+## 40. amsfonts binding omits `\dabar@` → author `\xdashrightarrow` copies loop forever
+
+**Trigger:** real `amsfonts.sty` defines
+`\DeclareMathSymbol{\dabar@}{\mathord}{AMSa}{"39}` — the dash piece it
+composes into `\dashrightarrow`/`\dashleftarrow`. Both LaTeXML bindings map the
+arrows directly to `⇢`/`⇠` and omit `\dabar@`. Papers that paste the classic
+extensible dashed-arrow snippet (`\xdashrightarrow`, mathtools-era folklore)
+measure `\sbox4{$\dabar@\m@th$}` and grow a bar chain with
+`\@whiledim\count@\wd4<\dimen@` — with `\dabar@` undefined, box 4 is 0 wide
+and the loop can never terminate. Minimal trigger:
+`docs/reproducers/xdasharrow_dabar_whiledim_loop.tex` (pdflatex compiles it
+fine — the real package defines the glyph).
+
+**Perl behavior:** emits `undefined \dabar@` but *completes* — only because
+Perl computes **all** box widths as 0, so the loop target `\dimen@` is also 0
+and `0 < 0` exits immediately (witness arXiv `1705.09248`: 2 errors, 58 s).
+The escape is accidental, not a guard.
+
+**Rust status — FIXED (2026-07-02), faithful to the real package.** Rust's
+tfm-based label widths make `\dimen@ > 0`, so the same papers ran to
+`Fatal:Timeout:TokenLimit` (31 papers in the 2026-07 full-arXiv run). The
+binding now defines `\dabar@` (`╌`, U+254C) in `amsfonts_sty.rs`, terminating
+the loop exactly as real TeX does. `\symAMSa` remains undefined in both
+engines (same 2-error surface as Perl on the witness). Candidate to upstream.
+
+## 41. PR #2829 `LookupDimension` rewrite loses the macro-body-read path
+
+**Perl source:** `LaTeXML/Package.pm` `LookupDimension` (as of #2829, merged
+2026-07-02)
+```perl
+elsif ((ref $cs eq 'LaTeXML::Core::Token') && ($defn = $STATE->lookupDefinition($cs))
+  && $defn->isRegister) { return $defn->valueOf; }
+elsif (ref $cs eq 'LaTeXML::Core::Tokens') { ... readDimension ... }
+elsif (!$noerror) { Warn('expected', 'register', ...); }
+```
+
+**Symptom:** a document that `\def`s a length into a plain macro (e.g.
+`\def\arraycolsep{5pt}` — real arXiv usage, our eqnarray/numcases cluster
+regressions) now triggers `Warn('expected','register')` and the dimension
+silently degrades to 0. Pre-#2829 Perl read the macro's body as a dimension
+(`readingFromMouth($cs, sub { readDimension })`).
+
+**Root cause:** the #2829 coercion rewrite ("LookupDimension coerces more
+strings, CS, Dimensions") tokenizes a string argument and unwraps a
+single-token result to a `Token` — but the new elsif chain only accepts a
+single Token when its definition **isRegister**; the old defined-but-not-
+register fallback (read the body) was dropped, presumably unintentionally
+(the PR is about framing consistency).
+
+**Minimal example:** `\def\arraycolsep{5pt}\begin{eqnarray}a&=&b\end{eqnarray}`
+→ `expected:register` warning + zero column separation (was: silent, 5pt).
+
+**Perl status:** present as of #2829 (d666adf8). Candidate to upstream.
+
+**Rust status (kept pre-#2829 behavior, deliberate divergence):**
+`state.rs::lookup_dimension_cs` ports the #2829 coercions (obvious-dimension
+strings, register tokens, multi-token read) but RETAINS the macro-body-read
+branch for a single defined-but-not-register token. Covered by the
+`cluster_{eqnarray,numcases}_arraycolsep_macro_no_register_warning` tests.
+
+## 42. `\cfrac[l]`/`\cfrac[r]` optional alignment argument is not consumed
+
+**Perl source:** `LaTeXML/Engine/../Package/amsmath.sty.ltxml` L1110-1125 —
+`\lx@inner@cfrac InFractionStyle InFractionStyle` takes no optional argument.
+
+**Symptom:** real amsmath supports `\cfrac[l]{1}{2}` (numerator alignment);
+LaTeXML reads `[` as the numerator and `l` as the denominator, mangling the
+fraction and leaking `]{1}{2}` into the math.
+
+**Minimal example:** `$\cfrac[l]{1}{2}$`.
+
+**Perl status:** present (the trampoline + inner constructor never declare
+an optional).
+
+**Rust status:** faithful parity as of the #F15 trampoline port
+(2026-07-02, `3b20c4f399`) — NOTE this is a behavior REGRESSION vs the
+pre-audit Rust binding, whose fused `\cfrac[]` constructor tolerated (and
+discarded) the optional. Candidate to fix in BOTH engines by adding `[]`
+to `\lx@inner@cfrac` and passing the alignment through.

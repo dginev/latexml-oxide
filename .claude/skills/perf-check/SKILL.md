@@ -39,7 +39,7 @@ latexml_oxide`.
   declined as too small to justify the dump-pipeline parity re-validation risk.
   Compiling dumps to Rust code (vs gzip-blob embed) cost +10 min compile for zero
   win, abandoned. **Do not optimize the dump load.**
-  (`docs/STARTUP_COST_ANALYSIS_2026-06-21.md`.)
+  (`docs/archive/STARTUP_COST_ANALYSIS_2026-06-21.md`.)
 
 ## Measurement discipline (this is where perf claims go wrong)
 

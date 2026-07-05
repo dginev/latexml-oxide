@@ -1,0 +1,12 @@
+\documentclass{article}
+% Guard for the raw-load of the REAL mhchem.sty (PR_READINESS review): the
+% whole chemistry corpus renders \ce through the raw expl3 pipeline, and a
+% TL/expl3 drift that flattens or errors \ce output would otherwise pass the
+% suite silently. Also pins the implicit dependency on host texmf shipping
+% mhchem.sty — if this test starts erroring with a missing-file, the host
+% install (not the code) changed.
+\usepackage{mhchem}
+\begin{document}
+Water is \ce{H2O}, sulfate is \ce{SO4^2-}, and a reaction:
+\ce{2H2 + O2 -> 2H2O}.
+\end{document}

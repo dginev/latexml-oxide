@@ -446,7 +446,7 @@ LoadDefinitions!({
   // Tokens-into-Option form used by DefConstructor, so assemble Parameter
   // manually and register via DefParameterTypeWO!.
   DefParameterTypeWO!(OptionalAngle, Parameter {
-    name: pin_static("OptionalAngle"),
+    name: pin!("OptionalAngle"),
     optional: true,
     reader: reader!(_inner, _extra, {
       if if_next(T_OTHER!("<"))? {

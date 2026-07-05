@@ -1001,7 +1001,13 @@ impl State {
     let cc = key.get_catcode();
     let name = key.get_sym();
     let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      if name == pin!("") { None } else { Some(name) }
+      // `\special_relax`-family tokens all resolve under the bare `\special_relax`
+      // name (shared `\relax` meaning; identity lives in `noexpand_shadowed`).
+      if name == pin!("") {
+        None
+      } else {
+        Some(meaning_key(key))
+      }
     } else {
       key.get_executable_primitive_name().map(arena::pin)
     };
@@ -1762,52 +1768,67 @@ pub fn lookup_register_quiet(cs: &str) -> Option<RegisterValue> {
   }
 }
 
-/// Faithful port of Perl `LookupDimension` (`Package.pm` L1371-1383).
+/// Faithful port of Perl `LookupDimension` (`Package.pm` L1371-1393, as
+/// widened by upstream PR #2829): try to turn the argument into a Dimension,
+/// recognizing strings, registers, ….
 ///
-/// Distinct from [`lookup_dimension`] (which casts a stored *value*) and from
-/// [`lookup_register`] / [`lookup_register_quiet`]: this resolves a control
-/// sequence's DEFINITION and, crucially, when the CS is **defined but not a
-/// register** — e.g. a document that `\def`s a length like `\arraycolsep` into a
-/// plain macro — reads its body **as a dimension** instead of warning, exactly
-/// as Perl does:
-/// * register  → `$defn->valueOf`                              (easy & proper case)
-/// * macro     → `readingFromMouth($cs, sub { readDimension })` (read the body)
-/// * undefined → `Warn('expected','register')` unless `noerror`, then `Dimension(0)`
+/// * a string that looks like an obvious dimension (`/^[0-9+-.]\w\w+$/`,
+///   e.g. `"3pt"` — but NOT `"0.4pt"`, whose `.` fails `\w`) parses directly;
+/// * otherwise the string is tokenized: a single token that resolves to a
+///   register returns its value ("easy and proper case");
+/// * a multi-token sequence is read as a dimension from a fresh mouth;
+/// * anything else warns (`expected:register`) unless `noerror`, and yields
+///   `None` (Perl returns undef).
 ///
-/// `noerror` mirrors Perl's optional second positional argument (e.g.
-/// `LookupDimension('\baselineskip', 1)`). Used where Perl uses `LookupDimension`
-/// (eqnarray `\arraycolsep`/`\jot`, list `\itemsep`/`\topsep`, …), to avoid the
-/// spurious `expected:register` warnings `lookup_register` emits on a macro-ized
-/// length (Perl is silent there).
-pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Dimension {
-  let cs_token = T_CS!(cs);
-  match lookup_definition(&cs_token) {
-    Ok(Some(defn)) if defn.is_register() => {
-      // Easy (and proper) case.
-      defn
-        .value_of(Vec::new())
-        .map(|rv| Dimension::from(&rv))
-        .unwrap_or_default()
-    },
-    Ok(Some(_defn)) => {
-      // Defined, but not a register: read its body as a dimension (Perl's
-      // `readingFromMouth($cs, sub { readDimension })`). `read_dimension`
-      // already emits the faithful "Missing number (Dimension)" warning and
-      // returns `Dimension(0)` if the body isn't a dimension.
-      gullet::reading_from_mouth(mouth::Mouth::default(), move || {
-        gullet::unread(Tokens::new(vec![cs_token]));
-        gullet::read_dimension()
-      })
-      .unwrap_or_default()
-    },
-    _ => {
-      if !noerror {
-        let message = s!("The control sequence '{}' is not a register", cs);
-        Warn!("expected", "register", message);
-      }
-      Dimension::default()
-    },
+/// NOTE the #2829 semantics change carried over faithfully: a single token
+/// whose definition is a MACRO (e.g. a document that `\def`s `\jot`) no
+/// longer reads its body as a dimension — it now falls through to the warn
+/// branch. (Perl's digested-Box coercion branch has no Rust equivalent here:
+/// all our callers pass strings.)
+pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Option<Dimension> {
+  use std::str::FromStr;
+  // Obvious dimension string? (Perl: /^[0-9\+\-\.]\w\w+$/)
+  let mut chars = cs.chars();
+  let obvious = matches!(chars.next(), Some(c) if c.is_ascii_digit() || matches!(c, '+' | '-' | '.'))
+    && cs.chars().count() >= 3
+    && chars.all(|c| c.is_alphanumeric() || c == '_');
+  if obvious && let Ok(d) = Dimension::from_str(cs) {
+    return Some(d);
   }
+  let tokens = mouth::tokenize_internal(cs);
+  let toks = tokens.unlist();
+  if toks.len() == 1 {
+    match lookup_definition(&toks[0]) {
+      Ok(Some(defn)) if defn.is_register() => {
+        // Easy (and proper) case.
+        return defn.value_of(Vec::new()).map(|rv| Dimension::from(&rv));
+      },
+      // Defined but not a register (a `\def`-ized length): fall through and
+      // read its body as a dimension. NB this is a deliberate DIVERGENCE
+      // from post-#2829 Perl, which unintentionally LOST this path in the
+      // rewrite (a single macro token falls to the warn branch upstream) —
+      // see KNOWN_PERL_ERRORS #41. Real arXiv papers `\def\arraycolsep{...}`
+      // (cluster regressions cover this); pre-#2829 Perl read the body.
+      Ok(Some(_)) => {},
+      // Undefined single token: warn like Perl and yield nothing.
+      _ => {
+        if !noerror {
+          let message = s!("The control sequence '{}' is not a register", cs);
+          Warn!("expected", "register", message);
+        }
+        return None;
+      },
+    }
+  }
+  // Read the token sequence (a defined single CS expands here, exactly like
+  // Perl's readingFromMouth) as a dimension from a fresh mouth; an
+  // unreadable sequence warns Missing-number inside read_dimension and
+  // yields Dimension(0), matching Perl.
+  gullet::reading_from_mouth(mouth::Mouth::default(), move || {
+    gullet::unread(Tokens::new(toks));
+    gullet::read_dimension()
+  })
+  .ok()
 }
 
 pub fn lookup_expandable(
@@ -1828,7 +1849,7 @@ pub fn is_dont_expandable(token: &Token) -> bool {
   // Basically: a CS or Active token that is either not defined, or is expandable
   // (but not \let to a token)
   if token.get_catcode().is_active_or_cs() {
-    let lookupname = token.text;
+    let lookupname = meaning_key(token);
     if lookupname != pin!("") {
       match state!().meaning.get(&lookupname) {
         Some(entry) => {
@@ -2129,9 +2150,27 @@ pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
 /// Get the `Meaning' of a token.  For active control sequences
 /// this may give the definition object (if defined) or another token (if \let) or undef
 /// Any other token is returned as is.
+/// The key under which a token's meaning is stored. **All** `\special_relax`-family
+/// tokens (`\noexpand`'d forms — the bare `\special_relax` and every
+/// `\special_relax\x01<shadowed>`) resolve under the bare `\special_relax` name:
+/// they share its `\relax` meaning, faithful to TeX where a `\noexpand`'d token
+/// has relax meaning regardless of which token it shadows. The shadowed identity
+/// is recovered separately via [`Token::noexpand_shadowed`] (delimited matching
+/// only). Use this anywhere a token's *name* keys a meaning lookup or a
+/// "same control sequence?" comparison. Cheap on the common path: non-CS tokens
+/// short-circuit before any string access.
+#[inline]
+pub fn meaning_key(token: &Token) -> SymStr {
+  if token.is_noexpand_family() {
+    pin!("\\special_relax")
+  } else {
+    token.text
+  }
+}
+
 pub fn lookup_meaning(token: &Token) -> Option<Stored> {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
-    match state!().meaning.get(&token.text) {
+    match state!().meaning.get(&meaning_key(token)) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => None,
         Some(other) => Some(other.clone()),
@@ -2157,7 +2196,7 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
 pub fn with_meaning<R>(token: &Token, f: impl FnOnce(Option<&Stored>) -> R) -> R {
   let state = state!();
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
-    match state.meaning.get(&token.text) {
+    match state.meaning.get(&meaning_key(token)) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => f(None),
         Some(other) => f(Some(other)),
@@ -2220,10 +2259,22 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
   state_mut!().assign_internal(TableName::Meaning, csname_sym, meaning, scope);
 }
 
+/// Remove a token's meaning entirely — the token becomes undefined, as if it
+/// had never been defined, so a later use takes the normal undefined-CS error
+/// path naming the token itself. Bypasses the group-undo journal: intended
+/// ONLY for format-bootstrap time (no user groups open), where a format layer
+/// retracts a definition inherited from a lower layer that the emulated
+/// format must not expose (e.g. plain.tex's `\+` in a LaTeX session — real
+/// LaTeX is INITEX-based and never defines it).
+pub fn remove_meaning_global(token: &Token) {
+  let key = meaning_key(token);
+  state_mut!().meaning.remove(&key);
+}
+
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
-    match state!().meaning.get(&token.text) {
+    match state!().meaning.get(&meaning_key(token)) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => false,
         Some(_) => true,
@@ -2317,7 +2368,8 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
       && lookup_bool_sym(crate::pin!("IN_MATH"))
       && (lookup_mathcode_sym(t_sym).unwrap_or(0) == 0x8000))
   {
-    t_sym
+    // `\special_relax`-family tokens digest under the bare `\special_relax` no-op.
+    meaning_key(token)
   } else {
     // Use cached SymStr from `Catcode::name_sym` instead of re-interning
     // `cc.name()` (a &'static str) on every non-active-or-cs token —
@@ -3081,7 +3133,7 @@ pub fn current_verbosity() -> i32 { state!().verbosity }
 
 pub fn push_pending_resource(value: Resource) { state_mut!().pending_resources.push(value); }
 pub fn take_pending_resources() -> Vec<Resource> {
-  state_mut!().pending_resources.drain(..).collect()
+  std::mem::take(&mut state_mut!().pending_resources)
 }
 pub fn reset_pending_resources() { state_mut!().pending_resources = Vec::new(); }
 pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<SymStr> {

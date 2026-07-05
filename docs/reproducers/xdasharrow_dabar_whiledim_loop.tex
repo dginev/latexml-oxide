@@ -1,0 +1,23 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\makeatletter
+\newcommand*{\xdashrightarrow}[2][]{%
+  \mathrel{\mathpalette{\da@xarrow{#1}{#2}{}\rightarrow{\,}{}}{}}}
+\newcommand*{\da@xarrow}[7]{%
+  \sbox0{$\scriptstyle#5#1#6\m@th$}%
+  \sbox2{$\scriptstyle#5#2#6\m@th$}%
+  \sbox4{$#7\dabar@\m@th$}%
+  \dimen@=\wd0 %
+  \ifdim\wd2 >\dimen@ \dimen@=\wd2 \fi
+  \count@=2 %
+  \def\da@bars{\dabar@\dabar@}%
+  \@whiledim\count@\wd4<\dimen@\do{%
+    \advance\count@\@ne
+    \expandafter\def\expandafter\da@bars\expandafter{\da@bars\dabar@}%
+  }%
+  \mathrel{#3}\mathrel{\mathop{\da@bars}\limits_{\copy0}^{\copy2}}\mathrel{#4}}
+\makeatother
+\begin{document}
+$A \xdashrightarrow{f} B$
+\end{document}

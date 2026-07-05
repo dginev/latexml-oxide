@@ -346,7 +346,7 @@ LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml L190-212
   DefPrimitive!("\\lx@thinmuskip", {
     Tbox::new(
-      pin_static(" "),
+      pin!(" "),
       None,
       None,
       Tokens!(T_CS!("\\,")),
@@ -356,7 +356,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lx@thinspace", {
     Tbox::new(
-      pin_static("\u{2009}"),
+      pin!("\u{2009}"),
       None,
       None,
       Tokens!(T_CS!("\\,")),
@@ -372,7 +372,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\!", {
     Tbox::new(
-      pin_static("\u{200B}"),
+      pin!("\u{200B}"),
       None,
       None,
       Tokens!(T_CS!("\\!")), // zero width space
@@ -389,7 +389,7 @@ LoadDefinitions!({
   // corrects text-mode rendering.
   DefPrimitive!("\\>", {
     Tbox::new(
-      pin_static("\u{2005}"),
+      pin!("\u{2005}"),
       None,
       None,
       Tokens!(T_CS!("\\>")),
@@ -399,7 +399,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\;", {
     Tbox::new(
-      pin_static("\u{2004}"),
+      pin!("\u{2004}"),
       None,
       None,
       Tokens!(T_CS!("\\;")),
@@ -414,7 +414,7 @@ LoadDefinitions!({
   //======================================================================
   // Perl: plain_constructs.pool.ltxml L217-218 — underscore
   DefPrimitive!("\\_", {
-    Tbox::new(pin_static("_"), None, None, Tokens!(T_CS!("\\_")), SymHashMap::default())
+    Tbox::new(pin!("_"), None, None, Tokens!(T_CS!("\\_")), SymHashMap::default())
   });
 
   // Perl: plain_constructs.pool.ltxml L220 — active `~` → `\lx@NBSP`.
@@ -646,7 +646,7 @@ LoadDefinitions!({
       MergeFont!(family => "caligraphic", series => "medium",
         shape => "upright", encoding => "OMS");
     }
-    Tbox::new(pin_static(""), None, None, Tokens::from(T_CS!("\\cal")),
+    Tbox::new(pin!(""), None, None, Tokens::from(T_CS!("\\cal")),
       SymHashMap::default())
   });
   DefPrimitive!("\\allowbreak", None);

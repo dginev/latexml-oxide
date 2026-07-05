@@ -1,0 +1,100 @@
+% REPRODUCER — arXiv:1804.01117 fails ONLY with --preload=ar5iv.sty.
+% =============================================================================
+% ✅ RESOLVED — SURPASS-PERL LANDED 2026-06-28. 1804.01117 now converts FULLY
+% under `--preload=ar5iv.sty` (0 Error/Fatal, ~423 KB HTML, renders cleanly
+% with `--css=ar5iv.css --nodefaultresources --path=~/git/ar5iv-css/css`).
+% Perl LaTeXML still DEGRADES here (`latexml --includestyles` => 26 errors,
+% 459-byte stub) — a genuine beyond-Perl win. The fix is two faithful
+% tex.web get_next/get_x_token §362-365 changes in gullet.rs read_balanced:
+%   (1) CROSS autoclose mouths: on `None` (current mouth exhausted) close the
+%       exhausted autoclose injection and resume the parent instead of breaking
+%       unbalanced. Kills the \xintexprSafeCatcodes \begingroup leak.
+%   (2) COLLAPSE \noexpand'd family tokens to plain when collected into the
+%       result (the \edef-body fidelity fix; see noexpand_edef_collapse.tex).
+% Plus the earlier per-token \special_relax family + transient arg-capture
+% decode + native \Ucharcat. Residual: 112 package-LOAD `Warning:expected:
+% <number>` from xinttrig's \xintdeffloatfunc compilation (deeper xint
+% expression-evaluation misalignment — PARKED; 0 body impact, the paper never
+% evaluates xint). Long-term fidelity follow-up: subfigure + listings reflow.
+% See docs/SYNC_STATUS.md "Deep deferred families", 1804.01117.
+% =============================================================================
+% CORRECTED DIAGNOSIS 2026-06-28 (supersedes the "GENUINE Rust bug / Perl
+% succeeds" framing further down — that was an INVALID comparison: the
+% reference Perl on this host has no ar5iv.sty, so `--preload=ar5iv.sty`
+% silently skipped xint instead of raw-loading it).  THE TRUTH:
+%   * This is a SHARED LaTeXML limitation, NOT a Rust-unique bug.
+%     `latexml --includestyles` (which DOES force the raw-load) hits the
+%     IDENTICAL "readBalanced ran out of input in an unbalanced state" at
+%     xinttrig.sty:350 (26 errors, degraded 459-byte XML, exit 0).
+%   * Cause: xint's \XINT_NewExpr (xintexpr.sty:4721) does
+%     \edef\X{\scantokens{...}} — \scantokens opens an autoclose
+%     "Anonymous String" mouth MID-edef-body, and the \edef's closing } is
+%     in the PARENT file.  readBalanced (gullet.rs `None => break`; Perl
+%     Gullet.pm:466,470-472 is line-for-line identical, same TODO) breaks at
+%     the mouth boundary WITHOUT crossing it.  Real pdflatex succeeds only
+%     because TeX get_x_token/scan_toks (tex.web §362-365) pops exhausted
+%     input levels transparently — which neither LaTeXML does.
+%   * The Rust-specific gap is RECOVERY: Rust leaks the \xintexprSafeCatcodes
+%     \begingroup -> "Attempt to close boxing group" -> Missing-number
+%     cascade -> Fatal:Timeout:TokenLimit, where Perl degrades gracefully.
+%   => 1804.01117 cannot convert cleanly even in Perl; out of scope for the
+%      "clean ar5iv conversion" goal.  Fix options (deferred): (1) parity =
+%      harden post-readBalanced recovery to match Perl's degrade; (2)
+%      surpass-Perl = make read_balanced cross autoclose mouths like
+%      get_x_token (prototyped: kills the readBalanced failure + GD leak,
+%      passes all 1491 tests + dump-identical, but diverges from Perl and
+%      exposes a deeper xint \number loop).
+% =============================================================================
+% --- ORIGINAL (partly-superseded) narrative below; kept for the bisection ---
+% Chain, narrowest first.
+% =============================================================================
+%
+% (1) SMALLEST BUG REPRO — `\xintdeffloatfunc` leaks a group / unbalances:
+%     \documentclass{article}\usepackage{xintexpr}
+%     \makeatletter\xintdeffloatfunc @f(x):=x+1;
+%   Run WITH --preload=ar5iv.sty (INCLUDE_STYLES => raw-load xint as TeX):
+%     => Error:expected:} "Gullet->readBalanced ran out of input in an
+%        unbalanced state" + Error:unexpected:} "Attempt to close boxing group"
+%        ("current frame is non-boxing group due to \begingroup at xinttrig
+%        line 350"). i.e. `\xintdeffloatfunc` runs `\xintexprSafeCatcodes`
+%        (a `\begingroup`), then `\XINT_NewFloatFunc`/`\XINT_NewExpr`
+%        (xintexpr.sty:3871/4672) does a balanced read of the body that goes
+%        UNBALANCED in Rust, so the SafeCatcodes `\begingroup` never closes.
+%        `\currentgrouplevel` is 1 after `\usepackage{xintexpr}` (baseline 0)
+%        — exactly one leaked group. SafeCatcodes keeps {=1 }=2 (NOT a brace
+%        catcode issue). GENUINE RUST BUG, confirmed both ways: real pdflatex
+%        SUCCEEDS (exit 0, PDF, "result: 4" for @f(3)); Perl LaTeXML processes
+%        the SAME xint TeX with no leak (full paper converts in Perl, 32 s).
+%        Only Rust's read_balanced diverges.
+%
+% (2) HOW IT BECOMES THE 1804.01117 FATAL: with the leaked `\begingroup` open,
+%     a later `\usepackage{pgfmath}` raw-load (pgfmath declares its functions via
+%     `\pgfkeys{/pgf/declare function/...}` + a `\pgfmath@local@@functions #1=#2;`
+%     reader) hits the corrupted group/conditional nesting -> stray `\fi`
+%     (conditional.rs:429) -> the reader never sees its `@` terminator ->
+%     infinite expansion -> Error:pushback_limit:Timeout (650000) "loading
+%     binding for 'pgfmath.code.tex'". pgffor/`\foreach` is then left broken, so
+%     the body's tikz `\foreach` floods the digest token_stack -> FINAL
+%     Fatal:Stomach:Recursion (MAXSTACK=200, identical to Perl). See the cascade
+%     repro below.
+%
+% (3) CASCADE REPRO (this file): xintexpr + pgfmath + ar5iv.
+%
+% BISECTION (each verified): needs --preload=ar5iv.sty (raw-load); needs
+% `xintexpr` (plain `xint` / xintfrac / xinttools / xinttrig / xintbinhex are
+% each clean); xintexpr BEFORE pgfmath (reverse order clean). The group leak is
+% in xinttrig.sty's `\xintdeffloatfunc @sind(x):=(x)??{...\ifnum...\fi...};`
+% block (truncating xinttrig before it => GD 0; after => GD 1), loaded inside
+% xintexpr. Catcodes of ; , = x ( e i j are all normal after xintexpr (ruled out).
+%
+% FIX TARGET: Rust gullet `read_balanced` (or the expansion it drives) diverges
+% from TeX when compiling an xint expression-function body under
+% `\xintexprSafeCatcodes`, leaving a `\begingroup` unbalanced. Deep engine fix.
+% 1804.01117 converts CLEANLY without ar5iv (0 errors, 394 KB HTML) — only the
+% ar5iv raw-load path is affected. See docs/SYNC_STATUS.md "Deep deferred families".
+\documentclass{article}
+\usepackage{xintexpr}
+\usepackage{pgfmath}
+\begin{document}
+x
+\end{document}

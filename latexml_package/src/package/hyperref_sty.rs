@@ -360,7 +360,13 @@ LoadDefinitions!({
   // It's slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
   DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
-    let open = read_token()?.unwrap();
+    // `\url` requires a following delimiter/argument token; on input-exhaustion
+    // `read_token_required` emits the parity "file ended while scanning use of
+    // \url" error (real TeX "Emergency stop"). Don't panic — close the
+    // `\begingroup` `\url` opened (see the `\url` def below) and emit nothing.
+    let Some(open) = read_token_required(&cmd.to_string())? else {
+      return Ok(Tokens::new(vec![T_CS!("\\endgroup")]));
+    };
     begin_semiverbatim(Some(&['%']));
     let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
     // URLs are verbatim: any character a shorthand package made ACTIVE must

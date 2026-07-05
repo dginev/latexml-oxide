@@ -472,6 +472,6 @@ Final acceptance numbers:
 | Action closures | [`latexml_math_parser/src/semantics.rs`](../latexml_math_parser/src/semantics.rs) |
 | Pragma definitions | [`latexml_math_parser/src/pragmatics.rs`](../latexml_math_parser/src/pragmatics.rs) |
 | Tiebreaking research notes | [`docs/MATH_PARSER_ASF_TIEBREAKING.md`](MATH_PARSER_ASF_TIEBREAKING.md) |
-| Ambiguity hotspots research | [`docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](MATH_AMBIGUITY_AUDIT_2026-05-21.md) |
+| Ambiguity hotspots research | [`docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md) |
 | marpa-side perf doc | [`~/git/marpa/docs/ASF_PERFORMANCE_FINDINGS.md`](https://github.com/dginev/marpa/blob/master/docs/ASF_PERFORMANCE_FINDINGS.md) |
 | Pre-flight ambiguity oracle | `Parser::ambiguity_metric(tokens)` and `Bocage::ambiguity_metric()` |

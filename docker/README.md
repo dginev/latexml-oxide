@@ -13,7 +13,7 @@ the [pericortex](https://github.com/dginev/cortex-peripherals) `Worker` trait fo
 [CorTeX](https://github.com/dginev/cortex) distributed pipeline, and is the **Rust counterpart of the
 legacy Perl fleet image** ([`LaTeXML-Plugin-CorTeX/Dockerfile`](https://github.com/dginev/LaTeXML-Plugin-CorTeX/blob/master/Dockerfile)):
 same dispatcher, ZMQ ports (`51695`/`51696`), and result-archive contract — different engine and a
-different service name (`oxidized-tex-to-html` vs the Perl `tex_to_html`). One dispatcher can run
+different service name (`oxidized_tex_to_html` vs the Perl `tex_to_html`). One dispatcher can run
 both fleets at once; it leases by `service_id`.
 
 **Build:**
@@ -30,7 +30,7 @@ docker run --network host -v /opt/cortex-scratch:/opt/cortex-scratch --hostname=
 # remote dispatcher:
 docker run -v /opt/cortex-scratch:/opt/cortex-scratch --hostname=$(hostname) cortex-worker DISPATCHER_IP
 
-# positional args:  <dispatcher-host> [ventilator-port=51695] [sink-port=51696] [service=oxidized-tex-to-html]
+# positional args:  <dispatcher-host> [ventilator-port=51695] [sink-port=51696] [service=oxidized_tex_to_html]
 ```
 
 **Tuning (env vars):**

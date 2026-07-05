@@ -7,7 +7,7 @@
   <para xml:id="p1">
     <p>Body text.</p>
   </para>
-  <bibliography citestyle="numbers" xml:id="bib">
+  <bibliography citestyle="numbers" inlist="toc" xml:id="bib">
     <title>References</title>
     <biblist>
       <bibitem key="ref1" xml:id="bib.bib1">

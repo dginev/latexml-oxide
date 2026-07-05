@@ -101,6 +101,32 @@ static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
     "cmbrs" => fontmap!(family => "symbol"),     "ul9"   => fontmap!(family => "typewriter"),
     "txr"   => fontmap!(family => "serif"),      "txss"  => fontmap!(family => "sansserif"),
     "txtt"  => fontmap!(family => "typewriter"),
+    // Modern family codes ABSENT from Perl's %font_family (Common/Font.pm) —
+    // candidate to upstream. Without them, `\fontfamily{\ttdefault}
+    // \selectfont` (fancyvrb's font setup) LOSES the abstract family when a
+    // font package repoints \ttdefault: colm2026_conference loads
+    // `inconsolata` (\ttdefault = zi4), so boxed Verbatim prompts dropped
+    // ltx_font_typewriter and the browser painted full-size serif prose
+    // inside frames TeX measured as \small monospace — border collisions
+    // and text rivers (witness 2605.00468, Prompts 1-7).
+    // Latin Modern:
+    "lmr"   => fontmap!(family => "serif"),      "lmss"  => fontmap!(family => "sansserif"),
+    "lmtt"  => fontmap!(family => "typewriter"), "lmvtt" => fontmap!(family => "typewriter"),
+    // TeX Gyre:
+    "qpl"   => fontmap!(family => "serif"),      "qtm"   => fontmap!(family => "serif"),
+    "qbk"   => fontmap!(family => "serif"),      "qcs"   => fontmap!(family => "serif"),
+    "qhv"   => fontmap!(family => "sansserif"),  "qag"   => fontmap!(family => "sansserif"),
+    "qcr"   => fontmap!(family => "typewriter"), "qzc"   => fontmap!(family => "script"),
+    // inconsolata (zi4), Bera Mono (fvm), Bera Serif/Sans (fve/fvs),
+    // DejaVu Mono (DejaVuSansMono-TLF is fontspec-era; the NFSS code):
+    "zi4"   => fontmap!(family => "typewriter"), "fi4"   => fontmap!(family => "typewriter"),
+    "fvm"   => fontmap!(family => "typewriter"), "fve"   => fontmap!(family => "serif"),
+    "fvs"   => fontmap!(family => "sansserif"),
+    // Source Code/Sans/Serif Pro, Fira:
+    "zsourcecodepro" => fontmap!(family => "typewriter"),
+    "SourceCodePro-TLF" => fontmap!(family => "typewriter"),
+    "FiraMono-TLF" => fontmap!(family => "typewriter"),
+    "FiraSans-TLF" => fontmap!(family => "sansserif"),
     "txsya" => fontmap!(encoding => "AMSa"),     "txsyb" => fontmap!(encoding => "AMSb"),
     "pxr"   => fontmap!(family => "serif"),
     "pxsya" => fontmap!(encoding => "AMSa"),     "pxsyb" => fontmap!(encoding => "AMSb"),
@@ -1528,13 +1554,25 @@ impl Font {
           continue;
         }
         // Perl: single box → one line, with baseline (or -1 for vskip/rule).
+        // DIVERGENCE from Perl #2798 (upstream candidate): Perl folds vskips
+        // and rules into one `-1` flag and RESETS prevdepth for both, so any
+        // glue item between lines silently disables \baselineskip accounting
+        // — a stack of N verbatim lines interleaved with fancyvrb's interline
+        // vspace measures as Σ(h+d) ≈ N×6pt instead of N×\baselineskip
+        // (witness 2605.00468: 49-line Prompt boxes budgeted at half their
+        // TeX height; content spilled through every following box). TeX truth
+        // (tex.web vpack): \prevdepth is TRANSPARENT to glue — only a BOX
+        // updates it (to its depth), and only \hrule disables it (sentinel
+        // \prevdepth = -1000pt). Encode vskip as -1 (transparent) and rule
+        // as -2 (reset) so the stack can honor both.
         let (w, h, d) = self.compute_boxes_size_box(bx)?;
-        let bs =
-          if bx.get_property_bool("isVerticalSpace") || bx.get_property_bool("isHorizontalRule") {
-            -1
-          } else {
-            baseline
-          };
+        let bs = if bx.get_property_bool("isHorizontalRule") {
+          -2
+        } else if bx.get_property_bool("isVerticalSpace") {
+          -1
+        } else {
+          baseline
+        };
         if w != 0 || h != 0 || d != 0 {
           lines.push([bs, w, h, d]);
         }
@@ -1562,6 +1600,24 @@ impl Font {
     // Perl: stack up the multiple lines; mathaxis = size/4.
     let size = self.get_size().unwrap_or_else(defsize) as i64;
     let mathaxis = size * UNITY / 4;
+    static SIZE_TRACE: std::sync::LazyLock<bool> =
+      std::sync::LazyLock::new(|| std::env::var("LXML_SIZE_TRACE").is_ok());
+    if *SIZE_TRACE {
+      eprintln!(
+        "SIZE mode={mode_str} vattach={vattach} baseline={} nboxes={} lines={:?}",
+        baseline as f64 / 65536.0,
+        boxes.len(),
+        lines
+          .iter()
+          .map(|l| [
+            l[0] as f64 / 65536.0,
+            l[1] as f64 / 65536.0,
+            l[2] as f64 / 65536.0,
+            l[3] as f64 / 65536.0
+          ])
+          .collect::<Vec<_>>()
+      );
+    }
     let (mut wd, mut ht, mut dp) = Self::compute_boxes_size_stack(&vattach, mathaxis, &lines);
     // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty).
     if wd != 0 && maxwidth != 0 {
@@ -1806,7 +1862,18 @@ impl Font {
           th += lineskip;
         }
       }
-      prevdepth = if bs >= 0 { d } else { -99999 };
+      // TeX vpack \prevdepth discipline (divergence from Perl #2798 — see
+      // the vertical branch above): boxes set prevdepth to their depth;
+      // glue (bs == -1) is TRANSPARENT (prevdepth unchanged, so the next
+      // box still receives \baselineskip accounting across the skip);
+      // rules (bs == -2) disable it (TeX's \prevdepth = -1000pt sentinel).
+      prevdepth = if bs >= 0 {
+        d
+      } else if bs == -1 {
+        prevdepth
+      } else {
+        -99999
+      };
     }
     let (ht, dp) = match vattach {
       "middle" => (th / 2 + mathaxis, th / 2 - mathaxis),
@@ -1971,7 +2038,7 @@ pub fn decode_str(code: u8, encoding_opt: Option<String>, implicit: bool) -> Opt
   if let Some(c) = decode(code, encoding_opt, implicit) {
     // T1 position 223: "SS" (capital sharp S as two chars)
     if c == '\u{1E9E}' {
-      return Some(arena::pin_static("SS"));
+      return Some(pin!("SS"));
     }
     // For standalone combining characters, prepend NBSP as base character
     // (Perl fontmaps encode these as UTF(0xA0)."\x{combining}")

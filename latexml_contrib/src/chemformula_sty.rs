@@ -5,7 +5,10 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  RequirePackage!("mhchem");
+  // Pass `version=4`: mhchem now raw-loads the real package (2026-06-27), which
+  // emits "You did not specify a 'version' option" if none is given. The old
+  // mhchem stub accepted a bare load silently; the real package does not.
+  RequirePackage!("mhchem", options => vec!["version=4".to_string()]);
   // chemformula 4.x is an expl3 LaTeX3 package; the INCLUDE_STYLES
   // post-binding raw load calls \ProcessKeysPackageOptions at
   // chemformula.sty L481. Without l3keys2e + xparse loaded first,

@@ -1,0 +1,18 @@
+% Regression: fvextra's `breakanywhere` char-level line-breaking recursed
+% infinitely through predigest_box_contents (every character measured by
+% boxing a line-prefix), growing the gullet pushback until the 650000
+% Timeout/PushbackLimit Fatal fired. Perl converts this cleanly.
+% The fvextra binding routes the breaking line-processor to the
+% non-breaking one, so the verbatim completes (font="typewriter" preserved)
+% with browser-handled wrapping — output-faithful to Perl's HTML.
+% Drove 119/121 fatal papers in sandbox-arxiv-2605 (witness 2605.01024).
+\documentclass{article}
+\usepackage{fancyvrb}
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Prompt}{Verbatim}{breaklines=true,breakanywhere=true}
+\begin{document}
+\begin{Prompt}
+You may receive any subset of modalities (video, audio, transcript text).
+This is a deliberately long second line so the break machinery would engage repeatedly without terminating in the unfixed engine.
+\end{Prompt}
+\end{document}

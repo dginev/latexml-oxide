@@ -1,16 +1,10 @@
-# Pinned nightly for reproducible builds.
-#
-# The release's key deliverable is a maximally-performant, smallest binary, and
-# the build-time levers that get us there — PGO and `-Z build-std` — are
-# nightly-feature-sensitive. We hit a live example while evaluating them: the
-# `build-std-features = panic_immediate_abort` flag was renamed to a real
-# `-Cpanic=immediate-abort` strategy on a 2026-06 nightly. A floating nightly
-# would let release-day churn break the build or silently change codegen/perf.
-#
-# Pinned to the toolchain CI is already green on (does not change today's
-# toolchain — only freezes it). Bump deliberately: after a green CI run AND a
-# release dry-run on the new date. See docs/PERFORMANCE.md "Build-pipeline
-# optimization roadmap". (The project requires nightly — see CLAUDE.md.)
+# Floating nightly, deliberately (2026-07-03): we track the latest nightly
+# everywhere — dev, CI, and dependent workspaces (ar5iv-editor) — so fmt/
+# clippy/codegen drift surfaces immediately instead of at release time.
+# (The project requires nightly — latexml_core uses #![feature(thread_local)];
+# see CLAUDE.md.) If release-day reproducibility is ever needed again, pin a
+# dated nightly here and CI follows automatically (workflows run plain
+# `cargo`, resolved through this file).
 [toolchain]
-channel = "nightly-2026-06-10"
+channel = "nightly"
 components = ["rustfmt", "clippy", "rust-src"]

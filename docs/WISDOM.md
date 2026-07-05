@@ -2108,3 +2108,94 @@ remove the issue "in theory" — the cache-clone + deep-sharing reality always
 exceeds a small guard. **Sequencing:** keep 8192 load-bearing until the fork fix
 lands, then delete the guard plumbing. Do NOT lower the guard while the heuristic
 exists (regresses the 16 papers).
+
+## 41. Frontmatter fallback DOM surgery: three construction-time traps
+
+Context: `base_utilities.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title`
+(the beyond-Perl "keep abstract below a hand-formatted title block" ordering fix
+and the "promote a leading centered display block to `<ltx:title>`" heuristic for
+`\title`-less papers, e.g. arXiv 1609.07638). Three traps bite any code that
+manipulates the live document DOM *during construction* (inside a `DefConstructor`
+sub), not at serialize/finalize time:
+
+1. **A RELATIVE-context `findnode`/`findnodes` returns nodes detached for child
+   traversal.** `document.findnode(".//ltx:p", Some(&ctx))` yields a node whose
+   `get_content()` works but whose `get_child_nodes()` is **empty** and on which a
+   further relative XPath finds nothing — a rust-libxml shared-node artifact. An
+   ABSOLUTE query (`/ltx:document/...`, `None` context) returns a live node that
+   traverses correctly. Rule: fetch ONE anchor with an absolute query, then walk
+   the DOM by hand (`get_child_nodes()` recursion) for everything downstream.
+
+2. **The human-readable `fontsize`/`font` attributes do not exist yet at
+   construction time.** The `<ltx:text>` carries `_font` (an interned Font id) +
+   `_fontswitch="true"`; `fontsize="144%"` etc. are derived from `_font` in a
+   later finalize pass (`Font::relative_to`). To test "larger than body" at
+   construction, decode `_font` via `document.decode_font(&id)` → `Font::get_size`
+   and compare to `NOMINAL_FONT_SIZE` (mirroring `font::defsize`): `size >
+   nominal*1.1` is the analogue of `fontsize > 110%`.
+
+3. **Creating a default-namespace LTX element.** `insert_element_before(pt,
+   "ltx:title", None)` emits a stray prefixed `<ltx:title>`. Mirror
+   `open_element_internal`'s default path: create with a BARE tag (`"title"`) then
+   `set_namespace(root.get_namespace())` so it serializes as `<title>` in the
+   document's default namespace. Move children with a true move
+   (`child.unbind(); parent.add_child(&mut child)`) — preserves xml:ids, unlike
+   `append_clone` which clones + remaps.
+
+## 47. Box-sizing estimation: the `\par` repack seam, list padding, and the foreignObject em basis
+
+*(2026-07-03, from the arXiv 2605.02240 tcolorbox arc — frames drawn from our
+measured content `\vbox` were both grossly too tall and clipping their content.)*
+
+tcolorbox (raw-loaded real `.sty`) draws its pgf frame from the dimensions WE
+measure for the content `\vbox`, so every estimator gap becomes a visible
+frame/content mismatch. Three traps, all in the sizing pipeline:
+
+1. **A `\par` digested in an isolated box list repacks NOTHING and defuses
+   later repacks.** `stomach::digest` isolates the box list
+   (`new_local_box_list`), so an extra `Digest!("\par")` in a
+   `before_digest_end` hook sees an empty list AND resets MODE — the real
+   repack seam (`repack_horizontal`, fired by `\par` before_digest or
+   `leave_horizontal_internal`) then never collects the trailing horizontal
+   boxes into a width-carrying `List`. Result: paragraph text is measured as
+   ONE long line (952pt tall boxes from `\hsize`-relative nonsense). Perl has
+   no such hooks on {itemize}/{enumerate}/{description} — they were a
+   Rust-only addition, removed in e0ec51fe87.
+
+2. **Sizing properties ride whatsit properties, and lists carry real glue.**
+   `compute_size_and_cache` (lib.rs BoxOps) adds
+   `padtop`/`padbottom`/`padleft`/`padright` from the whatsit's properties
+   after computing content size. Perl's `beginItemize` returns
+   `padtop = padbottom = \topsep + \parskip + \partopsep` — and the five glue
+   registers (`\topsep` 8pt, `\partopsep` 2pt, `\itemsep`/`\parsep`/
+   `\lx@default@itemsep` 4pt) have REAL defaults in the pool. Zeroed registers
+   or a missing pad ⇒ every list under-measures by ~2×`\topsep`+glue, and
+   `\preitem@par` must be the CURRENT upstream DefMacro (real `\par` +
+   `\vskip\itemsep\vskip\parsep` between items) or each item measures as a
+   single unbroken line. Probe parity is byte-exact when right:
+   `\setbox0=\vbox{...}\typeout{\the\ht0 \the\dp0}` matches reference Perl to
+   the sp.
+
+3. **foreignObject `--ltx-fo-*` em variables need the `font-size:<N>pt` term
+   in the SAME style attribute** (Perl TeX_Box.pool L427-430). Without it the
+   browser resolves the em vars against inherited 16px instead of the TeX em,
+   inflating the CSS container ~20% past the drawn frame (content runs through
+   the border). The size must come from the whatsit's live font — the same
+   source as the em divisor — so `\small` contexts emit 8pt etc.
+
+   **UPDATE (2026-07-05 commit review of #46 `2b1ebe2492`).** The anchor was
+   later moved from `getSize` to the font's TFM *quad* (em value), so the
+   `em × --ltx-fo-*` box geometry is exact for every font. CAVEAT surfaced by
+   the review and NOT yet resolved: that same `font-size` is *inherited by the
+   foreignObject's visible content* (`.ltx_foreignobject_content` sets no
+   own font-size), so text now renders at the quad, not the design size —
+   cmtt10 emits 10.5pt vs 10pt design (~+5%), cmr7 ~+14%. The geometry win and
+   the text-size drift are coupled through one attribute; splitting them
+   (geometry off the quad, text off the design size) is the open follow-up.
+   The "so `\small` contexts emit 8pt" line above describes the *intent* for
+   text size; #46 optimized for geometry, so the two are momentarily at odds.
+
+Debugging recipe: bisect with `\setbox0=\vbox` probes against reference Perl
+(`perl -I LaTeXML/lib LaTeXML/bin/latexml`, `--debug=size-detailed`) AND
+pdflatex ground truth; both engines deliberately over-estimate, so chase
+*divergence from Perl*, not from TeX.

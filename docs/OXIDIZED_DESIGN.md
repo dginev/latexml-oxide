@@ -755,6 +755,21 @@ args). That is a parity bug, NOT a divergence; tracked in SYNC_STATUS
 ("`f(a,b)` multi-arg flattening"). It is scoped to FUNCTION/OPFUNCTION/
 TRIGFUNCTION roles, so it does NOT touch the unknown-`f` apply preserved here.
 
+**Re-affirmed 2026-07-02 — the strongest form of the decision.** The
+toward-Perl flip was green-lit that morning, then FULLY IMPLEMENTED and
+verified (12-formula witness set byte-identical to same-host Perl; ~22
+fixtures re-blessed toward Perl; grammar productions + the
+`FencedLettersAreFunctionArguments` pragma removed) — and then **reverted on
+user review before pushing**: *"f(x) is almost always an application in
+common STEM use."* The application reading is a deliberate beyond-Perl
+quality choice (screen readers say "f of x", not "f times x"; U+2061 vs
+U+2062), and it wins over strict Perl parity here. The reverted
+implementation — including the finding that the pragma is load-bearing (its
+deletion alone leaves `f(x)` unparseable) and the per-fixture toward-Perl
+verification method — is preserved on branch
+`archive/fx-perl-parity-attempt-2026-07-02` (commit `bcf88db280`). Do not
+re-attempt the flip without a fresh explicit user decision.
+
 ---
 
 ### 19. Perl `local` Mechanism — `latexml_core::common::local_assignments`
@@ -1505,7 +1520,269 @@ cannot invalidate any document that validated before, so no existing test can br
 is now empty. Surpass-Perl; candidate to upstream. (mdframed-style framed blocks
 typically lower to `float`/`theorem` too, so they benefit as well.)
 
+### 39. `\marginpar` font/catcode changes are scoped (`bounded`)
+
+**Decision:** `\marginpar[]{}` (`latex_constructs.rs`) now carries `bounded => true`,
+so font/catcode switches inside the margin note are local to the note. Mirrors
+`\mbox`'s `bounded => true`.
+
+**Perl behavior:** upstream Perl LaTeXML's `\marginpar` is NOT bounded, so a
+`\marginpar{\Large …}` **leaks** the `\Large` (or any switch) into the body text that
+follows. Verified parity bug — Perl LaTeXML 0.8.8 reproduces it identically
+(`\marginpar{\Large !} X` renders `X` at 144%); real pdflatex scopes the note to its
+margin box, so the leak is a LaTeXML-engine bug shared by both ports, NOT a Rust
+regression.
+
+**Rationale:** the margin note's content is conceptually a separate box; its size/font
+changes must not affect the main galley. **Witness:** the mhchem manual's
+`\marginpar{\Large !}` (line 120) leaked `\Large` document-wide, rendering the ENTIRE
+manual at 144% (1388 `fontsize="144%"` nodes → 4 after the fix). Output-neutral across
+the suite (1487/0): no golden test relies on the leak. Surpass-Perl; candidate to
+upstream. See `KNOWN_PERL_ERRORS.md`.
+
+### 40. XSLT `head-keywords` index dedup via Muenchian key (O(n²)→O(n), output-neutral)
+
+**Decision:** In the embedded `resources/XSLT/LaTeXML-webpage-xhtml.xsl`, the
+`head-keywords` template (which builds `<meta name="keywords">` from the distinct
+index phrases) selects its distinct set with a hashed `xsl:key`
+(`f:indexphrase-by-value`, the **Muenchian method**:
+`//ltx:indexphrase[generate-id() = generate-id(key('f:indexphrase-by-value',.)[1])]`)
+instead of upstream's `//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]`.
+
+**Perl behavior:** upstream LaTeXML deduplicates by testing each indexphrase
+against the entire `preceding::ltx:indexphrase` axis — O(P²) string comparisons in
+the indexphrase count P, and each `preceding::` traversal is itself O(tree-size).
+On index-bearing math documents (large trees) this is the dominant XSLT cost. Perl
+keeps the O(n²).
+
+**Rationale & neutrality:** the Muenchian key returns, for each distinct
+string-value, the first indexphrase in document order — exactly the set
+`not(.=preceding::)` keeps. The `<xsl:sort>` is unchanged, so the keywords string is
+**identical**. Verified byte-identical via `xsltproc` (full HTML `diff` IDENTICAL on
+arXiv 2208.07515) and a full-pipeline regression guard
+(`08_xslt_head_keywords.rs`); suite unchanged.
+
+**Impact:** the `head-keywords` template went 145 s → 0.04 s on 2208.07515 (560
+indexphrases); cluster-wide the index-bearing arXiv perf survivors dropped 2–5×
+(2208.07515 95 s→33 s, 1802.06435 78 s→17 s, 0807.4838 78 s→13 s). This **supersedes**
+the prior campaign's deferral of the "third XSLT O(n²)" (`docs/ARXIV_PERFORMANCE.md`)
+— head-keywords, not the index-render templates, was the real root. Surpass-Perl;
+candidate to upstream. Local divergence from upstream XSLT only. Full analysis:
+`docs/ARXIV_PERFORMANCE.md` (Hotspot #3).
+
+### 41. XSLT `maketitle` navigation scan memoized to a global variable (O(n²)→O(n), output-neutral)
+
+**Decision:** In the embedded `resources/XSLT/LaTeXML-structure-xhtml.xsl`, the
+`maketitle` template decides whether to emit the title's `\date` block with
+`not($maketitle_has_up_nav)`, where `maketitle_has_up_nav` is a single global
+`<xsl:variable select="boolean(//ltx:navigation/ltx:ref[@rel='up'])"/>` evaluated
+once. Upstream re-evaluates `not(//ltx:navigation/ltx:ref[@rel='up'])` **inline, once
+per title**.
+
+**Perl behavior:** upstream LaTeXML scans `//ltx:navigation` (a full descendant
+traversal from the document root) inside `maketitle`, which runs for every titled
+unit. On a large book with hundreds of titles this is O(titles × tree-size) — Perl
+keeps the O(n²).
+
+**Rationale & neutrality:** `//ltx:navigation` always resolves from the root
+regardless of the current title (the `//` axis resets to the document node), so the
+boolean is document-global and identical for every title. Hoisting it to a global
+variable changes nothing in the output — verified `xsltproc` **byte-identical** HTML
+on the 25 MB Core XML of arXiv 2605.01585, plus a full-pipeline regression guard
+(`09_xslt_maketitle_navscan.rs`, asserting the `\date` still renders for a non-split
+document where the memoized value is `false`).
+
+**Impact:** `maketitle` self-time 22.739 s → 0.004 s; the whole html5 transform
+24.94 s → 2.15 s (11.6×) on 2605.01585 (a 2000+-formula physics book, 512 titles).
+This was the dominant residual XSLT cost on large math books after #2/#3 landed.
+Surpass-Perl; candidate to upstream. Local divergence from upstream XSLT only. Full
+analysis: `docs/ARXIV_PERFORMANCE.md` (Hotspot #4).
+
 ---
+
+### 42. `\linewidth` tracks the reduced text width in boxed contexts (kernel-faithful; Perl leaves it stale)
+
+**Decision:** Three coordinated completions make `\linewidth` inside a
+box reflect the box's text width, as in real LaTeX:
+
+1. The `{minipage}` binding's width assignment (Perl latex_constructs.pool
+   L4787-4789 assigns `\hsize`/`\textwidth`/`\columnwidth`) additionally
+   assigns `\linewidth`.
+2. The `\parbox` raw macro (Perl L4746, same trio) appends
+   `\linewidth\hsize`.
+3. `\@parboxrestore`/`\@arrayparboxrestore` are real macros ported from
+   `latex.ltx` (minus the `\if`-lets and accent `\let`s LaTeXML manages
+   itself) instead of Perl's empty/`\relax` stubs — relevant on the
+   no-dump path; with a format dump the raw `latex.ltx` kernel versions
+   are captured anyway.
+
+**Why:** Real LaTeX's `\@iiiminipage`/`\@iiiparbox` run `\@parboxrestore`,
+whose `\linewidth\hsize` is what raw-loaded packages read back. tcolorbox
+wraps every box's content in `\minipage` (`tcb@lrbox`) and sizes a nested
+`tcolorbox` as `width=\linewidth` — with `\linewidth` stale at the page
+width, an inner box drew itself full-outer-width and overflowed its parent
+frame (arXiv 2605.02240, `innercode` inside `responsebox`). Probe
+(`nested.tex`, outer+inner tcolorbox): pdflatex gives OUTER
+`hsize=linewidth=313.70206pt`, INNER `282.40411pt`; after the fix Rust
+matches **both to the sp**; Perl (and pre-fix Rust) leave `linewidth=345pt`
+at both levels.
+
+**Perl behavior:** shared limitation — Perl's minipage binding assigns only
+the trio, and its `\@parboxrestore` is `Tokens()`. Perl does not draw
+boxes from measured sizes at this fidelity, so the staleness is invisible
+there; in our sizing-driven pgf pipeline it is a visible frame overflow.
+Candidate to upstream.
+
+**Golden churn:** `figure_dual_caption.xml` — `\includegraphics[width=0.95\linewidth]`
+inside `\begin{minipage}{.5\textwidth}` now yields 163.87pt (= 0.95 x 172.5,
+the pdflatex value); the prior 327.75pt golden had the stale full-page
+`\linewidth` baked in (image at double its true width).
+
+### 43. Repeat package loads apply surviving handlers for NEW options (modern-kernel fidelity)
+
+**Decision:** When an already-loaded package is `\usepackage`d/`\RequirePackage`d
+again with options the first load did not have, `input_definitions` digests
+any surviving `\ds@<option>` handler for each new option before skipping the
+load (plus the pre-existing Info diagnostic). Bindings opt IN to durable
+repeat-options by re-asserting the handler after `ProcessOptions!` (classic
+handlers are cleared to `\relax`); the first adopter is xcolor's `table`
+(`\ds@table` -> `\RequirePackage{colortbl}`).
+
+**Why:** Real xcolor v3.02+ (TL2024) processes options as PERSISTENT l3
+key-values: `\usepackage{xcolor}` ... `\usepackage[table]{xcolor}` raises NO
+option clash — the repeat load processes the `table` key and loads colortbl,
+so `\cellcolor` works and such papers build cleanly on arXiv. Both Perl
+LaTeXML and the old Rust behavior drop repeat-load options (classic-options
+semantics), leaving `\cellcolor` undefined — a ~483-paper error cluster in
+sandbox-arxiv-2605 (witness 2605.00310: 0 errors and 133 colored cells after
+the fix; previously mis-classified as "parity option-clash" against the
+obsolete semantics).
+
+**Scope/safety:** only options with a live (non-cleared) handler fire —
+packages that never re-assert handlers behave exactly as before (digesting
+`\relax` is a no-op). `\ds@<opt>` is a global namespace, so a later package
+redeclaring the same option name could in principle leave a stale handler;
+accepted as rare next to the recovered class. Perl divergence: Perl skips
+silently; candidate to upstream alongside a survey of other l3-keyval
+packages whose options should be durable.
+
+### 44. Vertical stacking: `\prevdepth` is transparent to glue (TeX vpack discipline; Perl #2798 resets it)
+
+**Decision:** In `compute_boxes_size_stack` (the height estimator for every
+vertical list: `\vbox`/`\vtop`, minipage, `p{}` cells, tcolorbox content),
+vertical glue entries are TRANSPARENT to `\prevdepth` — only a box updates
+it (to its depth), and only a rule disables it (TeX's `\prevdepth=-1000pt`
+sentinel). Encoded as per-line flags: box = its baseline, `-1` = glue
+(transparent), `-2` = rule (reset).
+
+**Why:** the ported Perl #2798 algorithm folds vskips and rules into one
+`-1` flag and resets prevdepth for both, so ANY glue item between lines
+silently disables `\baselineskip` accounting for the following line.
+Content shaped "box, glue, box, glue, ..." (fancyvrb interlines, list
+`\itemsep`, author `\vspace`) is systematically under-measured — up to
+exactly 2x for strict alternation. Witness 2605.00468: 49-line verbatim
+Prompt boxes budgeted 292.6pt vs the TeX-true ~588pt; content spilled
+through every following box. After the fix the budget lands at 58.3em vs
+TeX's ~58.8em. tex.web vpack is the ground truth; upstream candidate
+against Perl's Common/Font.pm.
+
+**Perl parity note:** vskip-interleaved stacks now measure TALLER than
+Perl (which keeps the flawed reset) — e.g. the itemize-in-vbox probe that
+previously matched Perl to the sp. Deliberate: truer to TeX, and the safe
+direction for frame/content agreement.
+
+### 45. NFSS family-code vocabulary extended to modern font packages
+
+**Decision:** `FONT_FAMILY` (Common/Font.pm `%font_family` port) gains the
+family codes of the dominant modern font packages: inconsolata (`zi4`,
+`fi4`), TeX Gyre (`qcr`/`qpl`/`qtm`/`qbk`/`qcs`/`qhv`/`qag`/`qzc`), Latin
+Modern (`lmr`/`lmss`/`lmtt`/`lmvtt`), Bera (`fvm`/`fve`/`fvs`), Source
+Code Pro / Fira Mono codes.
+
+**Why:** raw `\fontfamily{<code>}\selectfont` (fancyvrb's font setup, and
+any package that repoints `\ttdefault` et al.) decodes the code through
+this table to recover the ABSTRACT family; unknown codes silently lose it.
+colm2026_conference loads inconsolata (`\ttdefault`=zi4), so boxed
+Verbatim dropped `ltx_font_typewriter` — the browser painted full-size
+serif prose inside frames TeX measured as compact monospace (witness
+2605.00468). Perl's table has the same gap (frozen at ~2005-era fonts);
+upstream candidate. Future refinement: derive family knowledge from `.fd`
+files instead of an enumerated table.
+
+### 46. foreignObject font-size anchor = the font's QUAD, not its point size
+
+**Decision:** the `font-size:<N>pt` appended to a measured box's
+`--ltx-fo-*` style (`tex_box.rs`, Perl TeX_Box.pool L427-430) is emitted
+as `em_width/65536` — the SAME quad the `--ltx-fo-width/height/depth` em
+values were divided by — instead of Perl's `$f->getSize`.
+
+**Why:** the em values only reproduce the TeX dimension if the browser
+multiplies them by the em basis used to divide. Perl divides by
+`emValue` (the quad) but anchors at the point size, so any font whose
+quad ≠ size renders systematically off: cmr7's quad is 7.97pt at size
+7pt, shrinking every 70%-scaled tikz label 12% under TeX truth; cmtt10
+(quad 10.5pt) shrinks typewriter-content boxes 5%. With the quad anchor,
+`em × anchor = TeX pt` holds exactly for every font. Upstream candidate.
+Golden churn: `font-size:7pt` → `font-size:7.97pt` in the tikz suite
+(5 fixtures re-blessed 2026-07-04 after per-diff review).
+
+### 47. Typewriter whitespace is never ignorable (verbatim indentation)
+
+**Decision:** whitespace-only TYPEWRITER-font text is inserted rather
+than dropped by the document builder's two ignorable-whitespace gates
+(`open_text`'s initial guard + `open_text_internal`'s Perl-L1146 gate,
+bridged by a `verbatim_space_pending` handoff), and the `ltx:p`
+afterClose edge-trim (i) skips paragraphs whose PARENT font context is
+typewriter and (ii) stops its recursion at `font="typewriter"` text
+wrappers. `ltx:verbatim` itself stays trimmable (Perl trims an inline
+`\verb`'s leading space at a paragraph edge — tokenize/verb.t parity).
+
+**Why:** fancyvrb/fvextra line-map verbatim into ltx:p's, where leading
+spaces ARE code indentation and a space-only line is content; both
+engines' whitespace machinery predates that shape and deleted the
+indentation (2605.00468 JSON schemas flush-left, 15–33px measured-frame
+spills). Line-leading cat-10 SOURCE spaces never reach these gates (the
+mouth's state-N skip eats them at tokenization), so ordinary
+source-formatting whitespace is unaffected. Perl comparison: Perl's own
+`{verbatim}` lands in `ltx:verbatim` (PCDATA-capable, no trim hook) so
+it never faces this; the raw-fancyvrb constructs that do are
+UNCONVERTIBLE by same-host Perl (raw fvextra+breaklines exceeded 7 min
+on a 6-line file) — surpass-Perl scope, user-directed 2026-07-04.
+
+### 48. Author heuristic splits font-wrapped name lists; affiliation "and" preserved
+
+**Decision:** the superscript-marker author/affiliation heuristic
+(`\lx@add@authors`, Base_Utility.pool) gains two beyond-Perl corrections
+in the "author" arm (`split_author_line`):
+
+1. **Font-wrapped name lists are split per-author.** When a line
+   classified as authors is a single whole-line font wrapper
+   `\textbf{A$^1$, B$^1$, C$^1$}`, the separating commas are
+   brace-hidden, so `SplitTokens` (which skips delimiters inside `{…}`)
+   collapses the wrapper into ONE creator that then hoards every `$^n$`
+   marker as a duplicate affiliation. We detect the whole-line wrapper
+   (`whole_line_cs_wrapper`), split the inner list, and re-apply the
+   wrapper to each name so every author is its own creator with the
+   correct single affiliation.
+2. **Affiliation names keep their "and".** The literal word " and " is
+   removed from the line-level `author_affil_splits` (Perl includes it)
+   and applied only in the author arm. That split runs BEFORE
+   author/affiliation classification, so on the mixed block it shredded
+   institution names — "Princeton Language **and** Intelligence" →
+   "Princeton Language" + "Intelligence, …" rejoined without a space.
+   Authors written "Alice and Bob" still split, because " and " is a
+   name separator inside `split_author_line`. (Mirrors the existing
+   `affil_splits` decision to exclude literal "and".)
+
+**Why:** arXiv 2605.00347 (colm2026 class) lists 13 authors across three
+`\textbf{…}` lines with `$^{1,2,3,*}$` affiliation markers. Perl and the
+pre-fix Rust both lumped the two bold lines into 2 mega-creators, each
+carrying 3–5 copies of the "Princeton…" affiliation, and dropped the
+"and". Post-fix the assignment exactly matches the PDF: ¹→11 authors,
+²→Lu, ³→Yang, \*→the three equal-contributors, one affiliation each.
+Perl is broken the same way (confirmed same-host); surpass-Perl scope,
+user-directed 2026-07-05. Unit tests: `author_split_tests` in
+base_utilities.rs.
 
 ## Future Work (Beyond Perl Parity)
 

@@ -724,7 +724,7 @@ LoadDefinitions!({
     let parent = document.get_node().clone();
     let kids = parent.get_child_elements();
     if kids.len() >= 2 {
-      let xmtok_sym = pin_static("ltx:XMTok");
+      let xmtok_sym = pin!("ltx:XMTok");
       let n1 = kids[kids.len() - 2].clone();
       let n2 = kids[kids.len() - 1].clone();
       let qn1 = document::get_node_qname(&n1);

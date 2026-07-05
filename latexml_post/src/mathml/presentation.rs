@@ -22,6 +22,18 @@ use crate::document::{NodeData, PostDocument, element_children, element_children
 // When false, U+2062 is replaced with U+200B (zero-width space).
 thread_local! {
   static INVISIBLE_TIMES: Cell<bool> = const { Cell::new(true) };
+  /// Inherited style context (Perl `pmml_top` L278-285 binds
+  /// $LaTeXML::MathML::FONT/COLOR/BGCOLOR/OPACITY from the XMath node's
+  /// ancestor chain; `pmml` L332-335 locally rebinds them from each node on
+  /// the way down). A token missing its own attribute styles from context —
+  /// e.g. `{\color{red}$a+b$}` colors every token. (audit F8b; the SIZE/
+  /// DESIRED_SIZE half is deliberately NOT ported: our engine stamps
+  /// absolute fontsize on tokens, which the mathsize context gate already
+  /// compensates.)
+  static CTX_FONT: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+  static CTX_COLOR: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+  static CTX_BGCOLOR: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+  static CTX_OPACITY: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
   /// Current math style context, tracking Perl's `$LaTeXML::MathML::STYLE` /
   /// `$LaTeXML::MathML::SIZE`. Stepped down inside sub/superscripts (`pmml_scriptsize`)
   /// and fraction parts (`pmml_smaller`); its `size_percent()` is the contextual size a
@@ -78,6 +90,218 @@ impl MathStyle {
       MathStyle::ScriptScript => "50%",
     }
   }
+
+  /// Parse a source `mathstyle` attribute (Perl gates on `$stylestep{$style}`,
+  /// so only the four canonical names count).
+  pub fn from_attr(s: &str) -> Option<Self> {
+    match s {
+      "display" => Some(MathStyle::Display),
+      "text" => Some(MathStyle::Text),
+      "script" => Some(MathStyle::Script),
+      "scriptscript" => Some(MathStyle::ScriptScript),
+      _ => None,
+    }
+  }
+}
+
+/// m:mstyle attributes for a mathstyle transition.
+///
+/// Port of Perl `%stylemap` (`needs`=true: something below cares about
+/// displaystyle) and `%stylemap2` (`needs`=false: only a fontsize context is
+/// required), MathML.pm L240-268. Same-style transitions yield nothing.
+fn stylemap_attrs(
+  ostyle: MathStyle,
+  nstyle: MathStyle,
+  needs: bool,
+) -> &'static [(&'static str, &'static str)] {
+  use MathStyle::*;
+  match (ostyle, nstyle, needs) {
+    (Display, Text, true) => &[("displaystyle", "false")],
+    (Display, Script, true) => &[("displaystyle", "false"), ("scriptlevel", "+1")],
+    (Display, ScriptScript, true) => &[("displaystyle", "false"), ("scriptlevel", "+2")],
+    (Text, Display, true) => &[("displaystyle", "true")],
+    (Display, Script, false) | (Text, Script, _) => &[("scriptlevel", "+1")],
+    (Display, ScriptScript, false) | (Text, ScriptScript, _) => &[("scriptlevel", "+2")],
+    (Script, Display, _) => &[("displaystyle", "true"), ("scriptlevel", "-1")],
+    (Script, Text, _) => &[("scriptlevel", "-1")],
+    (Script, ScriptScript, _) => &[("scriptlevel", "+1")],
+    (ScriptScript, Display, _) => &[("displaystyle", "true"), ("scriptlevel", "-2")],
+    (ScriptScript, Text, _) => &[("scriptlevel", "-2")],
+    (ScriptScript, Script, _) => &[("scriptlevel", "-1")],
+    _ => &[],
+  }
+}
+
+/// Does this subtree contain something whose rendering depends on
+/// displaystyle? Port of Perl `needsMathstyle` (MathML.pm L512-523):
+/// m:mfrac → yes; `_largeop` → yes; an m:mstyle that already pins
+/// displaystyle shields its subtree.
+fn needs_mathstyle(node: &NodeData) -> bool {
+  if let NodeData::Element { tag, attributes, children } = node {
+    if tag == "m:mfrac" {
+      return true;
+    }
+    if let Some(attrs) = attributes {
+      if attrs.contains_key("_largeop") {
+        return true;
+      }
+      if tag == "m:mstyle" && attrs.contains_key("displaystyle") {
+        return false;
+      }
+    }
+    return children.iter().any(needs_mathstyle);
+  }
+  false
+}
+
+/// Wrap `result` in m:mstyle for an ostyle→nstyle transition, when the
+/// transition table says the wrap carries information (Perl MathML.pm
+/// L421-427 / L487-491).
+fn maybe_style_wrap(result: NodeData, ostyle: MathStyle, nstyle: Option<MathStyle>) -> NodeData {
+  let Some(nstyle) = nstyle else { return result };
+  let style_attrs = stylemap_attrs(ostyle, nstyle, needs_mathstyle(&result));
+  if style_attrs.is_empty() {
+    return result;
+  }
+  NodeData::Element {
+    tag:        "m:mstyle".to_string(),
+    attributes: Some(HashMap::from_iter(
+      style_attrs
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string())),
+    )),
+    children:   vec![result],
+  }
+}
+
+/// Wrap `result` in m:mpadded / frame it, when the source node (or its
+/// containing XMDual) carries sizing attributes.
+///
+/// Port of Perl `pmml_maybe_resize` (MathML.pm L525-575): stretchy-ARROW
+/// width → m:mover + m:mspace; width/height/depth/xoffset/yoffset →
+/// m:mpadded (reusing an existing mpadded/mrow); framed/framecolor →
+/// ltx_framed_* class + border-color style.
+fn pmml_maybe_resize(doc: &PostDocument, node: &Node, result: NodeData) -> NodeData {
+  // Relevant attributes MAY sit on a containing XMDual (Perl L529-531).
+  let parent = node.get_parent().filter(|p| doc.is_qname(p, "ltx:XMDual"));
+  let getattr = |name: &str| {
+    node
+      .get_attribute(name)
+      .or_else(|| parent.as_ref().and_then(|p| p.get_attribute(name)))
+  };
+  let width = getattr("width");
+  let height = getattr("height");
+  let depth = getattr("depth");
+  let xoff = getattr("xoffset");
+  let yoff = getattr("yoffset");
+  let role = getattr("role");
+  let class = getattr("class");
+
+  let mut result = result;
+  if let Some(ref w) = width
+    && role.as_deref() == Some("ARROW")
+    && class.as_deref().is_some_and(|c| {
+      c.split_ascii_whitespace()
+        .any(|w| w == "ltx_horizontally_stretchy")
+    })
+  {
+    // Special-case hack for stretchy arrows with a specified width;
+    // stretchiness (currently) only has effect within munder/mover (Perl L543-545).
+    result = NodeData::Element {
+      tag:        "m:mover".to_string(),
+      attributes: None,
+      children:   vec![result, NodeData::Element {
+        tag:        "m:mspace".to_string(),
+        attributes: Some(HashMap::from_iter([("width".to_string(), w.clone())])),
+        children:   vec![],
+      }],
+    };
+  } else if width.is_some()
+    || height.is_some()
+    || depth.is_some()
+    || xoff.is_some()
+    || yoff.is_some()
+  {
+    // Reuse an m:mpadded, convert an m:mrow, else wrap (Perl L547-552).
+    let needs_wrap = !matches!(&result,
+      NodeData::Element { tag, .. } if tag == "m:mpadded" || tag == "m:mrow");
+    if needs_wrap {
+      result = NodeData::Element {
+        tag:        "m:mpadded".to_string(),
+        attributes: None,
+        children:   vec![result],
+      };
+    }
+    if let NodeData::Element { tag, attributes, .. } = &mut result {
+      if tag == "m:mrow" {
+        *tag = "m:mpadded".to_string();
+      }
+      let attrs = attributes.get_or_insert_with(Default::default);
+      for (key, val) in [
+        ("width", width),
+        ("height", height),
+        ("depth", depth),
+        ("lspace", xoff),
+        ("voffset", yoff),
+      ] {
+        if let Some(v) = val {
+          attrs.insert(key.to_string(), v);
+        }
+      }
+    }
+  }
+
+  // framed/framecolor come from the node itself only (Perl L566-574).
+  if let Some(frame) = node.get_attribute("framed")
+    && let NodeData::Element { attributes, .. } = &mut result
+  {
+    let attrs = attributes.get_or_insert_with(Default::default);
+    let frame_class = format!("ltx_framed_{frame}");
+    let merged = match attrs.get("class") {
+      Some(c) if !c.is_empty() => format!("{c} {frame_class}"),
+      _ => frame_class,
+    };
+    attrs.insert("class".to_string(), merged);
+    if let Some(color) = node.get_attribute("framecolor") {
+      let style = format!("border-color: {color}");
+      let merged = match attrs.get("style") {
+        Some(s) if !s.is_empty() => format!("{s}; {style}"),
+        _ => style,
+      };
+      attrs.insert("style".to_string(), merged);
+    }
+  }
+  result
+}
+
+fn ctx_get(
+  cell: &'static std::thread::LocalKey<std::cell::RefCell<Option<String>>>,
+) -> Option<String> {
+  cell.with(|c| c.borrow().clone())
+}
+
+/// Rebind a context cell to the node's attribute (if present) for a scope;
+/// returns the saved value for restore. Perl's `local $CTX = attr || $CTX`.
+fn ctx_rebind(
+  cell: &'static std::thread::LocalKey<std::cell::RefCell<Option<String>>>,
+  attr: Option<String>,
+) -> Option<String> {
+  // Perl-falsy: an empty attribute value keeps the inherited context.
+  let attr = attr.filter(|v| !v.is_empty());
+  cell.with(|c| {
+    let old = c.borrow().clone();
+    if attr.is_some() {
+      *c.borrow_mut() = attr;
+    }
+    old
+  })
+}
+
+fn ctx_set(
+  cell: &'static std::thread::LocalKey<std::cell::RefCell<Option<String>>>,
+  val: Option<String>,
+) {
+  cell.with(|c| *c.borrow_mut() = val);
 }
 
 /// Embellishing roles (scripts/accents applied to operators).
@@ -120,9 +344,40 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
 /// Entry point for Presentation MathML conversion.
 /// Port of `MathML::Presentation::convertNode` + `pmml_top`.
 pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
-  // Reset the math-style context for each formula (display/inline are both 100% size, so
-  // Display is the right baseline; nested scripts/fractions step it down from here).
-  CURRENT_STYLE.with(|s| s.set(MathStyle::Display));
+  // Perl Presentation.pm `convertNode` L20-21 + `pmml_top`: display-mode math
+  // starts in displaystyle, everything else in textstyle. Both are 100% size,
+  // but the mathstyle transitions (m:mstyle wraps for \tfrac/\dfrac/
+  // \displaystyle, audit F7) key off this baseline.
+  let mode_is_display = xmath
+    .get_parent()
+    .and_then(|p| p.get_attribute("mode"))
+    .is_some_and(|m| m == "display");
+  CURRENT_STYLE.with(|s| {
+    s.set(if mode_is_display {
+      MathStyle::Display
+    } else {
+      MathStyle::Text
+    })
+  });
+  // Perl pmml_top L278-285: bind the inherited style context from the XMath
+  // node's ancestor chain, so tokens without their own attributes pick up
+  // the surrounding font/color ({\color{red}$a+b$}).
+  ctx_set(
+    &CTX_FONT,
+    super::find_inherited_attribute(doc, xmath, "font"),
+  );
+  ctx_set(
+    &CTX_COLOR,
+    super::find_inherited_attribute(doc, xmath, "color"),
+  );
+  ctx_set(
+    &CTX_BGCOLOR,
+    super::find_inherited_attribute(doc, xmath, "backgroundcolor"),
+  );
+  ctx_set(
+    &CTX_OPACITY,
+    super::find_inherited_attribute(doc, xmath, "opacity"),
+  );
   let children = element_children(xmath);
   let results: Vec<NodeData> = children.iter().map(|c| pmml(doc, c)).collect();
   let mut result = if results.len() == 1 {
@@ -137,10 +392,156 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   result
 }
 
+/// Presentation conversion of a node for use as ci CONTENT by the content
+/// side (Perl `cmml_decoratedSymbol` L1403 calls pmml($item)).
+pub(super) fn pmml_for_ci(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
+
+/// Bind the top-level conversion context for the CONTENT pipeline.
+///
+/// Port of Perl `cmml_top` (MathML.pm L1290-1300): content conversion runs
+/// under STYLE='text' with the same inherited FONT/COLOR/BGCOLOR/OPACITY
+/// bindings as `pmml_top` — the pmml subtrees embedded in content (ci
+/// interiors via `cmml_decoratedSymbol`) and `stylize_ci_content`'s font
+/// fallback depend on them. Without this the content path ran at whatever
+/// the previous conversion left (audit should-fix 11).
+pub(super) fn bind_cmml_top_context(doc: &PostDocument, xmath: &Node) {
+  CURRENT_STYLE.with(|s| s.set(MathStyle::Text));
+  ctx_set(
+    &CTX_FONT,
+    super::find_inherited_attribute(doc, xmath, "font"),
+  );
+  ctx_set(
+    &CTX_COLOR,
+    super::find_inherited_attribute(doc, xmath, "color"),
+  );
+  ctx_set(
+    &CTX_BGCOLOR,
+    super::find_inherited_attribute(doc, xmath, "backgroundcolor"),
+  );
+  ctx_set(
+    &CTX_OPACITY,
+    super::find_inherited_attribute(doc, xmath, "opacity"),
+  );
+}
+
+/// The inherited font context, for the content side's ci stylization
+/// (Perl stylizeContent's `|| $LaTeXML::MathML::FONT` fallback).
+pub(super) fn ctx_font() -> Option<String> { ctx_get(&CTX_FONT) }
+
 /// Core dispatch: convert a single XMath node to Presentation MathML.
 ///
 /// Port of `pmml` + `pmml_internal`.
 fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
+  // Perl L332-335: rebind the color/background/opacity context from this
+  // node for the subtree, so styles inherit downward.
+  let saved_color = ctx_rebind(&CTX_COLOR, node.get_attribute("color"));
+  let saved_bg = ctx_rebind(&CTX_BGCOLOR, node.get_attribute("backgroundcolor"));
+  let saved_op = ctx_rebind(&CTX_OPACITY, node.get_attribute("opacity"));
+  let mut result = pmml_inner(doc, node);
+  ctx_set(&CTX_COLOR, saved_color);
+  ctx_set(&CTX_BGCOLOR, saved_bg);
+  ctx_set(&CTX_OPACITY, saved_op);
+  // Perl MathML.pm L339-341: wrap in m:menclose if the source node carries an
+  // `enclose` attribute (e.g. \boxed puts enclose="box" on the whole XMApp).
+  if let Some(enclose) = node.get_attribute("enclose").filter(|e| !e.is_empty()) {
+    let mut attrs = HashMap::default();
+    attrs.insert("notation".to_string(), enclose);
+    result = NodeData::Element {
+      tag:        "m:menclose".to_string(),
+      attributes: Some(attrs),
+      children:   vec![result],
+    };
+  }
+  // Port of Perl MathML.pm L344-348: attach author spacing (lpadding/rpadding,
+  // e.g. from `~` ties or collapsed XMHints — `{\rm number~of~…}`) as the
+  // internal `_lpadding`/`_rpadding` attributes the space_walk consumes.
+  // Perl's `_getspace($refr, $node, …)` SUMS the referring XMRef's padding
+  // with the target's; here the XMRef branch of `pmml_inner` recurses through
+  // this wrapper for the target, and the XMRef's own padding is then added on
+  // top — same sum. Without this attachment the spacewalk sees zero author
+  // padding and `~`-separated words render jammed together (witness
+  // astro-ph0001001 S9.Ex4.m1). Same recursion argument covers enclose /
+  // class / _role below, with refr-preference falling out of the outer level
+  // overwriting (_role) or appending (class) the inner one; sole corner
+  // divergence: an XMRef AND its target both carrying `enclose` would nest
+  // two m:menclose where Perl picks the XMRef's one.
+  if doc.is_qname(node, "ltx:XMRef") {
+    // XMRef level: SUM the referring node's padding onto the target's
+    // (Perl `_getspace` refr+node).
+    add_source_padding(node, &mut result);
+  } else {
+    // Ordinary level: the node's padding ASSIGNS (an XMDual over a padded
+    // presentation child must not double-count — Perl overwrites).
+    attach_source_padding(node, &mut result);
+  }
+  if let NodeData::Element { ref mut attributes, .. } = result {
+    // Perl L350-352: merge the source node's class onto the result.
+    if let Some(cl) = node.get_attribute("class")
+      && !cl.is_empty()
+    {
+      let attrs = attributes.get_or_insert_with(Default::default);
+      match attrs.get("class") {
+        Some(ocl) if !ocl.is_empty() && *ocl != cl => {
+          let merged = format!("{ocl} {cl}");
+          attrs.insert("class".to_string(), merged);
+        },
+        _ => {
+          attrs.insert("class".to_string(), cl);
+        },
+      }
+    }
+    // Perl L354-355: record the source role so the spacewalk can atom-type
+    // composite results (XMApp/XMDual with role=RELOP etc., not just tokens).
+    if let Some(role) = node.get_attribute("role") {
+      let attrs = attributes.get_or_insert_with(Default::default);
+      attrs.insert("_role".to_string(), role);
+    }
+  }
+  result
+}
+
+/// Add `node`'s lpadding/rpadding (converted to em) onto `result`'s internal
+/// `_lpadding`/`_rpadding`, summing with any value already present.
+fn attach_source_padding(node: &Node, result: &mut NodeData) {
+  // Perl ASSIGNS (`$$result[1]{_lpadding} = $l if $l`) — the outer node's
+  // padding wins over whatever the inner conversion set (an XMDual whose
+  // presentation child also carries padding must not double-count). The
+  // XMRef branch separately ADDS the referring node's padding on top,
+  // reproducing Perl's `_getspace` refr+node SUM (see `pmml_inner`).
+  for (src, dst) in [("lpadding", "_lpadding"), ("rpadding", "_rpadding")] {
+    if let Some(v) = node.get_attribute(src) {
+      let em = super::get_xm_hint_spacing(&v);
+      if em != 0.0
+        && let NodeData::Element { ref mut attributes, .. } = *result
+      {
+        let attrs = attributes.get_or_insert_with(Default::default);
+        attrs.insert(dst.to_string(), fmt_em(em));
+      }
+    }
+  }
+}
+
+/// ADD `node`'s padding onto the result (XMRef-over-target: Perl `_getspace`
+/// SUMS the referring node's padding with the target's).
+fn add_source_padding(node: &Node, result: &mut NodeData) {
+  for (src, dst) in [("lpadding", "_lpadding"), ("rpadding", "_rpadding")] {
+    if let Some(v) = node.get_attribute(src) {
+      let em = super::get_xm_hint_spacing(&v);
+      if em != 0.0
+        && let NodeData::Element { ref mut attributes, .. } = *result
+      {
+        let attrs = attributes.get_or_insert_with(Default::default);
+        let prior = attrs
+          .get(dst)
+          .and_then(|s| s.trim_end_matches("em").parse::<f64>().ok())
+          .unwrap_or(0.0);
+        attrs.insert(dst.to_string(), fmt_em(prior + em));
+      }
+    }
+  }
+}
+
+fn pmml_inner(doc: &PostDocument, node: &Node) -> NodeData {
   // Fast-path dispatch: all tags we recognize live in the ltx namespace.
   // Compare localname directly and check namespace prefix separately to
   // avoid the `format!("{}:{}", prefix, localname)` allocation inside
@@ -178,8 +579,9 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
         };
       },
       "XMWrap" | "XMArg" => {
+        // Perl L400-401: only present when parsing failed; resizable.
         let results: Vec<NodeData> = element_children_iter(node).map(|c| pmml(doc, &c)).collect();
-        return pmml_row(results);
+        return pmml_maybe_resize(doc, node, pmml_row(results));
       },
       "XMApp" => return pmml_apply(doc, node),
       "XMTok" => return pmml_token(doc, node),
@@ -196,7 +598,7 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
             current = c.get_next_sibling();
           }
         }
-        return pmml_row(children);
+        return pmml_maybe_resize(doc, node, pmml_row(children));
       },
       _ => {},
     }
@@ -261,18 +663,61 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
   let op_role = get_operator_role(doc, &rop).unwrap_or_default();
   let meaning = rop.get_attribute("meaning").unwrap_or_default();
 
+  // Perl MathML.pm L413-427: the operator's `mathstyle` switches the current
+  // style for the conversion of this application, and the result is wrapped
+  // in m:mstyle per the transition tables (\tfrac in display math →
+  // <mstyle displaystyle="false">, \dfrac in text → displaystyle="true").
+  let style_attr = rop
+    .get_attribute("mathstyle")
+    .or_else(|| op.get_attribute("mathstyle"));
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  let nstyle = style_attr.as_deref().and_then(MathStyle::from_attr);
+  if let Some(n) = nstyle {
+    CURRENT_STYLE.with(|s| s.set(n));
+  }
+  let result = pmml_apply_dispatch(doc, op, &rop, args, &op_role, &meaning);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
+  // Perl L421: resize BEFORE the mstyle wrap.
+  let result = pmml_maybe_resize(doc, node, result);
+  maybe_style_wrap(result, ostyle, nstyle)
+}
+
+/// Role/meaning dispatch for an XMApp (the body of Perl's
+/// `lookupPresenter('Apply',…)` call in `pmml_internal`).
+fn pmml_apply_dispatch(
+  doc: &PostDocument,
+  op: &Node,
+  rop: &Node,
+  args: &[Node],
+  op_role: &str,
+  meaning: &str,
+) -> NodeData {
   // Dispatch by role
-  match op_role.as_str() {
+  match op_role {
     "SUPERSCRIPTOP" | "SUBSCRIPTOP" if args.len() >= 2 => {
       pmml_script_full(doc, op, &args[0], &args[1])
     },
     "FRACOP" if args.len() >= 2 => {
-      let thickness = rop.get_attribute("thickness");
+      // Perl MathML.pm L1597-1605 `Apply:FRACOP:?`: linethickness passes
+      // through VERBATIM whenever defined (\binom → "0pt", \genfrac 2pt →
+      // "2.0pt"); mathcolor from the op's color OR the inherited context
+      // ({\color{red}$\frac{a}{b}$} colors the fraction bar, Perl L1600);
+      // bevelled fractions carry class="ltx_bevelled" → bevelled="true".
       let mut attrs = HashMap::default();
-      if let Some(ref t) = thickness {
-        if t == "0" || t == "0pt" {
-          attrs.insert("linethickness".to_string(), "0".to_string());
-        }
+      if let Some(t) = rop.get_attribute("thickness") {
+        attrs.insert("linethickness".to_string(), t);
+      }
+      if let Some(c) = rop
+        .get_attribute("color")
+        .filter(|c| !c.is_empty())
+        .or_else(|| ctx_get(&CTX_COLOR))
+      {
+        attrs.insert("mathcolor".to_string(), c);
+      }
+      if let Some(cl) = rop.get_attribute("class")
+        && cl.split_ascii_whitespace().any(|c| c == "ltx_bevelled")
+      {
+        attrs.insert("bevelled".to_string(), "true".to_string());
       }
       NodeData::Element {
         tag:        "m:mfrac".to_string(),
@@ -359,9 +804,45 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       // base renders as <m:mo>. (Witness: `\partial f` → ∂f, not ∂⁡f.)
       pmml_summation(doc, op, args)
     },
-    "OPEN" | "CLOSE" | "ENCLOSE" if !args.is_empty() => {
+    "OPEN" | "CLOSE" if !args.is_empty() => {
       // Fenced: (args)
       pmml_parenthesize(doc, op, args)
+    },
+    "ENCLOSE" if !args.is_empty() => {
+      // Perl MathML.pm L1507-1513 `Apply:ENCLOSE:?`: m:menclose with the
+      // operator's `enclose` attribute as notation (e.g. \cancel →
+      // updiagonalstrike); if the op (or the inherited context) carries a
+      // color, the enclosure gets it as mathcolor and the base is reset via
+      // m:mstyle to the context color (default black).
+      let mut attrs = HashMap::default();
+      if let Some(notation) = rop.get_attribute("enclose").filter(|n| !n.is_empty()) {
+        attrs.insert("notation".to_string(), notation);
+      }
+      let color = rop
+        .get_attribute("color")
+        .filter(|c| !c.is_empty())
+        .or_else(|| ctx_get(&CTX_COLOR));
+      let base = pmml(doc, &args[0]);
+      let inner = if let Some(ref c) = color {
+        attrs.insert("mathcolor".to_string(), c.clone());
+        // Perl: ['m:mstyle', { mathcolor => $COLOR || 'black' }, …] — reset
+        // the base to the CONTEXT color so only the enclosure is tinted.
+        NodeData::Element {
+          tag:        "m:mstyle".to_string(),
+          attributes: Some(HashMap::from_iter([(
+            "mathcolor".to_string(),
+            ctx_get(&CTX_COLOR).unwrap_or_else(|| "black".to_string()),
+          )])),
+          children:   vec![base],
+        }
+      } else {
+        base
+      };
+      NodeData::Element {
+        tag:        "m:menclose".to_string(),
+        attributes: if attrs.is_empty() { None } else { Some(attrs) },
+        children:   vec![inner],
+      }
     },
     _ if meaning == "multirelation" => {
       // Multirelation: a = b = c (interleaved args and operators)
@@ -398,18 +879,29 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
           pmml(doc, &args[1]),
         ])
       } else if meaning == "square-root" && !args.is_empty() {
+        // Perl L1639-1642: mathcolor from the op's color or the context.
         NodeData::Element {
           tag:        "m:msqrt".to_string(),
-          attributes: None,
+          attributes: rop
+            .get_attribute("color")
+            .or_else(|| ctx_get(&CTX_COLOR))
+            .map(|c| HashMap::from_iter([("mathcolor".to_string(), c)])),
           children:   vec![pmml(doc, &args[0])],
         }
       } else if meaning == "continued-fraction" && args.len() >= 2 {
         pmml_cfrac(doc, op, &args[0], &args[1])
       } else if meaning == "nth-root" && args.len() >= 2 {
+        // Perl L1644-1647: `['m:mroot', …, pmml($_[2]), pmml_scriptsize($_[1])]`
+        // — args are (degree, radicand) in BOTH engines' XMath; m:mroot takes
+        // the base first, then the scriptsized degree. (Previously swapped:
+        // degree rendered as the base, radicand shrunk.)
         NodeData::Element {
           tag:        "m:mroot".to_string(),
-          attributes: None,
-          children:   vec![pmml(doc, &args[0]), pmml_scriptsize(doc, &args[1])],
+          attributes: rop
+            .get_attribute("color")
+            .or_else(|| ctx_get(&CTX_COLOR))
+            .map(|c| HashMap::from_iter([("mathcolor".to_string(), c)])),
+          children:   vec![pmml(doc, &args[1]), pmml_scriptsize(doc, &args[0])],
         }
       } else {
         // Generic application: op(arg1, arg2, ...). Insert FUNCTION APPLICATION
@@ -435,11 +927,76 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
 /// Convert an XMTok to the appropriate Presentation MathML token.
 ///
 /// Port of `stylizeContent` + token converter.
-fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
+fn pmml_token(doc: &PostDocument, node: &Node) -> NodeData {
+  // Perl `pmml_bigop` (MathML.pm L847-856): a SUMOP/INTOP/BIGOP token whose
+  // recorded `mathstyle` differs from the current style converts under the
+  // switched style and wraps in m:mstyle via %stylemap (the displaystyle-
+  // carrying table, unconditionally) — e.g. `\displaystyle\sum` in inline
+  // math keeps its large rendering. Token:LIMITOP is plain pmml_mo in Perl.
+  let nstyle = match node.get_attribute("role").as_deref() {
+    Some("SUMOP" | "INTOP" | "BIGOP") => node
+      .get_attribute("mathstyle")
+      .as_deref()
+      .and_then(MathStyle::from_attr),
+    _ => None,
+  };
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  if let Some(n) = nstyle {
+    CURRENT_STYLE.with(|s| s.set(n));
+  }
+  let result = pmml_token_inner(doc, node);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
+  match nstyle {
+    Some(n) if n != ostyle => {
+      let style_attrs = stylemap_attrs(ostyle, n, true);
+      if style_attrs.is_empty() {
+        result
+      } else {
+        NodeData::Element {
+          tag:        "m:mstyle".to_string(),
+          attributes: Some(HashMap::from_iter(
+            style_attrs
+              .iter()
+              .map(|(k, v)| (k.to_string(), v.to_string())),
+          )),
+          children:   vec![result],
+        }
+      }
+    },
+    _ => result,
+  }
+}
+
+/// Resolve a token's explicit fontsize for emission (Perl `stylizeContent`
+/// L782-792): a %-size in script context is re-expressed relative to the
+/// script style's nominal size, then any %-size is converted to em ("safari
+/// apparently ignores %").
+fn resolve_token_size(mut s: String) -> String {
+  if let Some(req) = s.strip_suffix('%') {
+    let ctx = current_context_size().trim_end_matches('%');
+    if matches!(
+      CURRENT_STYLE.with(|c| c.get()),
+      MathStyle::Script | MathStyle::ScriptScript
+    ) && let (Ok(req), Ok(ex)) = (req.parse::<f64>(), ctx.parse::<f64>())
+      && ex != 0.0
+    {
+      s = format!("{}%", (100.0 * req / ex) as i32);
+    }
+    if let Some(pct) = s.strip_suffix('%')
+      && let Ok(pct) = pct.parse::<f64>()
+    {
+      s = fmt_em(pct / 100.0);
+    }
+  }
+  s
+}
+
+fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
   let role = node
     .get_attribute("role")
     .unwrap_or_else(|| "UNKNOWN".to_string());
-  let font = node.get_attribute("font");
+  // Perl stylizeContent L678: token attribute, else the inherited context.
+  let font = node.get_attribute("font").or_else(|| ctx_get(&CTX_FONT));
   let mut text = node.get_content();
   let meaning = node.get_attribute("meaning");
 
@@ -497,6 +1054,15 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
 
   let mut attrs = HashMap::default();
 
+  // Perl L747-748: text consisting only of Format characters (invisible
+  // times/apply/separator, ZWSP, …) gets NO visual styling attributes —
+  // without this, context color would paint invisible operators.
+  // (Approximates \p{Format} with the Cf codepoints that occur in math.)
+  let is_format_only = text.chars().all(|c| {
+    matches!(c,
+      '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')
+  });
+
   // Perl: zero-width space <mo> needs lspace/rspace="0em" to prevent browser
   // default operator spacing that creates visible gaps between letters.
   if is_replaced_invisible_times && tag == "m:mo" {
@@ -506,7 +1072,7 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
 
   // Math variant from font — with Plane 1 Unicode conversion.
   // Port of Perl stylizeContent lines 689-756.
-  {
+  if !is_format_only {
     use crate::unicode;
     let mut variant: Option<&str> = font.as_deref().map(unicode::unicode_mathvariant);
 
@@ -607,40 +1173,122 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     }
   }
 
-  // Operator-specific attributes
-  if tag == "m:mo" {
-    // Check the XMTok's stretchy attribute
-    let stretchy_attr = node.get_attribute("stretchy");
+  // Perl emits mathsize for ALL token types, not just m:mo (witness:
+  // smallmatrix cells get mathsize="0.700em"). The context gate compensates
+  // for our engine stamping absolute fontsize="70%" on script tokens where
+  // Perl's leaves them bare — a matching size must NOT be re-emitted.
+  if tag != "m:mo"
+    && let Some(size) = node.get_attribute("fontsize")
+    && size != current_context_size()
+  {
+    attrs.insert("mathsize".to_string(), resolve_token_size(size));
+  }
 
-    // Handle size attribute. Port of Perl `stylizeContent` L777: emit `mathsize` only when
-    // the token's own size differs from the current contextual size. Inside a sub/superscript
-    // the context is already scriptsize (70%/50%), so an operator at that size — e.g. the `-`
-    // in `10^{-21}` or the `*` in `x^{\ast}` — must NOT get a spurious `mathsize="70%"` (the
-    // <msup>/<msub> structure already shrinks it; the redundant attribute double-shrinks it).
-    if let Some(size) = node.get_attribute("fontsize") {
-      if size != current_context_size() {
+  // Operator-specific attributes: the mo half of Perl `stylizeContent`
+  // (L697-827) — operator-dictionary xor-emission, size/stretchy interplay,
+  // largeop/movablelimits/symmetric. (audit F8)
+  if tag == "m:mo" {
+    let props = operator_dictionary::opdict_lookup(&text, &role);
+    // Perl L697-704: implied attributes.
+    let mut stretchy = node.get_attribute("stretchy").as_deref() == Some("true");
+    let is_fence = matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE");
+    let is_sep = role == "PUNCT";
+    let is_largeop = matches!(role.as_str(), "SUMOP" | "INTOP");
+    let is_moveop = matches!(role.as_str(), "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP"); // Not DIFFOP
+    let is_symm = is_largeop || text == "/"; // WANTS to be symmetric
+    let pos = node
+      .get_attribute("scriptpos")
+      .unwrap_or_else(|| "post".to_string());
+
+    // Perl L774-778: ignore size when stretching; invisible operators get
+    // neither size nor stretchiness.
+    let mut size = node.get_attribute("fontsize");
+    if stretchy {
+      size = None;
+    }
+    // Include U+200B: under --noinvisibletimes the ⁢ was already replaced by
+    // ZWSP above, and its size/stretchiness must still be cleared (Perl runs
+    // this check on the ORIGINAL text before replacing).
+    let is_invisible = !text.is_empty()
+      && text
+        .chars()
+        .all(|c| matches!(c, '\u{2061}'..='\u{2063}' | '\u{200B}'));
+    if is_invisible {
+      stretchy = false;
+      size = None;
+    }
+
+    // Perl L779-798: size resolution. Emit only when the token's size
+    // differs from the current contextual size (inside a script the msup/
+    // msub structure already shrinks it — a matching "70%" must NOT be
+    // re-emitted); a differing %-size in script context is re-expressed
+    // relative to the script's nominal size, then converted to em ("safari
+    // apparently ignores %"). Symmetric-wanting delimiters at explicit
+    // sizes use the minsize/maxsize stretchyhack ("Thanks Peter
+    // Krautzberger") instead of mathsize.
+    let mut props_stretchy = props.stretchy;
+    let mut stretchyhack = false;
+    let resolved_size = size
+      .filter(|s| s != current_context_size())
+      .map(resolve_token_size);
+    if let Some(size) = resolved_size {
+      if is_symm || props.symmetric {
+        stretchyhack = true;
+        // Force the attribute to avoid browser bugs (esp "|").
+        if !matches!(text.as_str(), "(" | ")" | "[" | "]" | "{" | "}") {
+          props_stretchy = false;
+        }
+        stretchy = true; // pretend we asked for stretchy
+        attrs.insert("minsize".to_string(), size.clone());
+        attrs.insert("maxsize".to_string(), size);
+      } else {
+        stretchy = false; // size specifically set → don't stretch it
         attrs.insert("mathsize".to_string(), size);
       }
     }
+    let _ = stretchyhack;
 
-    // Copy stretchy attribute from source XMTok only when it differs from MathML defaults.
-    // Port of Perl's `($stretchy xor $props{stretchy}) ? (stretchy => ...) : ()`.
-    // In MathML, OPEN/CLOSE/MIDDLE operators are stretchy by default.
-    // We only need to emit stretchy="false" for fences (to override default),
-    // or stretchy="true" for non-fence operators.
-    let is_fence = matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE");
-    if let Some(ref stretchy) = stretchy_attr {
-      if is_fence && stretchy == "false" {
-        attrs.insert("stretchy".to_string(), "false".to_string());
-      } else if !is_fence && stretchy == "true" {
-        attrs.insert("stretchy".to_string(), "true".to_string());
-      }
+    // Perl L811-826: emit operator-dictionary attributes only where the
+    // wanted value differs from what the dictionary already implies (xor).
+    if stretchy != props_stretchy {
+      attrs.insert(
+        "stretchy".to_string(),
+        (if stretchy { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_fence != props.fence {
+      attrs.insert(
+        "fence".to_string(),
+        (if is_fence { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_sep != props.separator {
+      attrs.insert(
+        "separator".to_string(),
+        (if is_sep { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_largeop != props.largeop {
+      attrs.insert(
+        "largeop".to_string(),
+        (if is_largeop { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_largeop {
+      attrs.insert("_largeop".to_string(), "1".to_string()); // For needsMathstyle
+    }
+    if is_symm && !props.symmetric && (stretchy || props_stretchy) {
+      attrs.insert("symmetric".to_string(), "true".to_string());
+    }
+    // If an operator has specifically located its scripts, don't let MathML
+    // move them. (Perl also honors $NOMOVABLELIMITS from script layout —
+    // unported, audit F17.)
+    if is_moveop && pos.contains("mid") {
+      attrs.insert("movablelimits".to_string(), "false".to_string());
     }
 
-    // Store internal spacing attributes for adjust_spacing.
-    // Port of Perl's `stylizeContent` lines 821-826.
+    // Store internal spacing attributes for adjust_spacing (Perl L821-824).
     attrs.insert("_role".to_string(), role.clone());
-    let props = operator_dictionary::opdict_lookup(&text, &role);
     if props.lspace > 0.0 {
       attrs.insert("_lspace".to_string(), fmt_em(props.lspace));
     }
@@ -649,9 +1297,31 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     }
   }
 
-  // Color
-  if let Some(color) = node.get_attribute("color") {
-    attrs.insert("mathcolor".to_string(), color);
+  // Color / background / opacity (Perl L680-687 fallback to the inherited
+  // context; L761-762 opacity → css style; the Format suppression above).
+  if !is_format_only {
+    if let Some(color) = node.get_attribute("color").or_else(|| ctx_get(&CTX_COLOR)) {
+      attrs.insert("mathcolor".to_string(), color);
+    }
+    // NB Perl's `$attr{backgroundcolor} && $item->getAttribute(…) || $BGCOLOR`
+    // (L683-684) means a token's OWN backgroundcolor attribute is never
+    // consulted on this path — only the context. Mirrored faithfully.
+    if let Some(bg) = ctx_get(&CTX_BGCOLOR) {
+      attrs.insert("mathbackground".to_string(), bg);
+    }
+    let cssstyle = node.get_attribute("cssstyle").unwrap_or_default();
+    let opacity = node
+      .get_attribute("opacity")
+      .or_else(|| ctx_get(&CTX_OPACITY));
+    let style = match (cssstyle.is_empty(), opacity) {
+      (true, None) => String::new(),
+      (true, Some(op)) => format!("opacity:{op}"),
+      (false, None) => cssstyle,
+      (false, Some(op)) => format!("{cssstyle};opacity:{op}"),
+    };
+    if !style.is_empty() {
+      attrs.insert("style".to_string(), style);
+    }
   }
 
   // Href
@@ -674,28 +1344,55 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     attrs.insert("data-sourcepos".to_string(), sp);
   }
 
-  NodeData::Element {
+  // Perl pmml_mi/pmml_mn/pmml_mo (L830-845) all pass the token through
+  // pmml_maybe_resize (raised/framed/phantom-sized tokens).
+  pmml_maybe_resize(doc, node, NodeData::Element {
     tag:        tag.to_string(),
     attributes: if attrs.is_empty() { None } else { Some(attrs) },
     children:   vec![NodeData::Text(text)],
-  }
+  })
 }
 
 /// Convert an XMHint to MathML.
 ///
 /// Port of Hint handler.
 fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
-  let width = node.get_attribute("width");
-  if let Some(w) = width {
-    // Convert width to mspace
-    NodeData::Element {
-      tag:        "m:mspace".to_string(),
-      attributes: Some(HashMap::from_iter([("width".to_string(), w)])),
-      children:   vec![],
-    }
+  // Perl `Hint:?:?` (MathML.pm L1479-1483): the width is normalized through
+  // getXMHintSpacing to em (so `\qquad` → width="2em", not the raw "20pt");
+  // zero-width hints still MUST return a node, marked `_ignorable` so
+  // filter_row drops them from rows.
+  let w = node
+    .get_attribute("width")
+    .map(|w| super::get_xm_hint_spacing(&w))
+    .unwrap_or(0.0);
+  let attrs = if w != 0.0 {
+    // Perl appends 'em' to the raw number ($w . 'em'), NOT fmt_em — emulate
+    // Perl's default %.15g stringification.
+    HashMap::from_iter([("width".to_string(), format!("{}em", perl_num(w)))])
   } else {
-    // Empty hint
-    NodeData::Text(String::new())
+    HashMap::from_iter([("_ignorable".to_string(), "1".to_string())])
+  };
+  NodeData::Element {
+    tag:        "m:mspace".to_string(),
+    attributes: Some(attrs),
+    children:   vec![],
+  }
+}
+
+/// Format a float the way Perl stringifies numbers (%.15g): 15 SIGNIFICANT
+/// digits, no trailing zeros. (The previous {v:.15} was 15 DECIMALS — wrong
+/// for |v| < 0.1 or >= 10; PR_READINESS batch-14 fix.)
+fn perl_num(v: f64) -> String {
+  if v == 0.0 {
+    return "0".to_string();
+  }
+  let magnitude = v.abs().log10().floor() as i32;
+  let decimals = (14 - magnitude).clamp(0, 17) as usize;
+  let s = format!("{v:.decimals$}");
+  if s.contains('.') {
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
+  } else {
+    s
   }
 }
 
@@ -703,6 +1400,27 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
 ///
 /// Port of `pmml_internal` XMArray branch (`MathML.pm` L432-486).
 fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
+  // Perl `pmml_internal` XMArray branch (L432-506): the array's `mathstyle`
+  // switches the current style for the cell conversions; the mtable gets
+  // displaystyle="true" when that style is display ("Mozilla seems to need
+  // some encouragement?"), and the whole result wraps in m:mstyle per the
+  // transition tables.
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  let nstyle = node
+    .get_attribute("mathstyle")
+    .as_deref()
+    .and_then(MathStyle::from_attr);
+  if let Some(n) = nstyle {
+    CURRENT_STYLE.with(|s| s.set(n));
+  }
+  let result = pmml_array_inner(doc, node);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
+  // Perl L492-506: XMArray resizes AFTER the mstyle wrap (XMApp: before).
+  let result = maybe_style_wrap(result, ostyle, nstyle);
+  pmml_maybe_resize(doc, node, result)
+}
+
+fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
   let mut rows = Vec::new();
   let width = node.get_attribute("width");
   let vattach = node
@@ -748,7 +1466,8 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
       let cell_content = if cell_children.is_empty() {
         vec![]
       } else {
-        cell_children.iter().map(|c| pmml(doc, c)).collect()
+        // Perl L468: cells filter _ignorable items too.
+        filter_row(cell_children.iter().map(|c| pmml(doc, c)).collect())
       };
 
       cols.push(NodeData::Element {
@@ -788,6 +1507,10 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
   }
   if let Some(w) = width {
     table_attrs.insert("width".to_string(), w);
+  }
+  // Perl L484-485: "Mozilla seems to need some encouragement?"
+  if CURRENT_STYLE.with(|s| s.get()) == MathStyle::Display {
+    table_attrs.insert("displaystyle".to_string(), "true".to_string());
   }
 
   NodeData::Element {
@@ -963,14 +1686,43 @@ fn pmml_script_full(doc: &PostDocument, op: &Node, base: &Node, script: &Node) -
   let (inner_base, pre_scripts, mid_scripts, post_scripts) =
     pmml_script_decipher(doc, op, base, script);
 
-  // Convert the inner base
+  // Perl `pmml_script` (L876-891) + `pmml_script_mid_layout` (L899-906):
+  // the inner base converts under ITS recorded mathstyle (blocking a nested
+  // m:mstyle from the token/apply paths), and when that style differs from
+  // the context the whole script layout gets one m:mstyle displaystyle wrap
+  // — mstyle doesn't nest well inside scripts.
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  let bstyle = inner_base
+    .get_attribute("mathstyle")
+    .as_deref()
+    .and_then(MathStyle::from_attr);
+  if let Some(b) = bstyle {
+    CURRENT_STYLE.with(|s| s.set(b));
+  }
   let base_mml = pmml(doc, &inner_base);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
 
   // Apply mid scripts (under/over)
   let base_mml = apply_mid_scripts(doc, base_mml, &mid_scripts);
 
   // Apply pre/post scripts
-  apply_multi_scripts(doc, base_mml, &pre_scripts, &post_scripts)
+  let layout = apply_multi_scripts(doc, base_mml, &pre_scripts, &post_scripts);
+  match bstyle {
+    Some(b) if b != ostyle => NodeData::Element {
+      tag:        "m:mstyle".to_string(),
+      attributes: Some(HashMap::from_iter([(
+        "displaystyle".to_string(),
+        (if b == MathStyle::Display {
+          "true"
+        } else {
+          "false"
+        })
+        .to_string(),
+      )])),
+      children:   vec![layout],
+    },
+    _ => layout,
+  }
 }
 
 /// Decipher nested script applications into pre/mid/post groups.
@@ -1258,14 +2010,89 @@ fn apply_multi_scripts(
 /// Handle continued fraction rendering.
 ///
 /// Port of `Apply:?:continued-fraction` + `do_cfrac`.
-fn pmml_cfrac(doc: &PostDocument, _op: &Node, numer: &Node, denom: &Node) -> NodeData {
-  // Simplified: just produce mfrac
-  // Full version unrolls nested continued fractions and pulls \cdots up
+fn pmml_cfrac(doc: &PostDocument, op: &Node, numer: &Node, denom: &Node) -> NodeData {
+  // Perl registration (L1954-1960): only the `cfrac-inline` variant unrolls
+  // via do_cfrac; display cfrac is a plain (recursively converted) mfrac.
+  if op.get_attribute("name").as_deref() == Some("cfrac-inline") {
+    return pmml_row(do_cfrac(doc, numer, denom));
+  }
   NodeData::Element {
     tag:        "m:mfrac".to_string(),
     attributes: None,
     children:   vec![pmml_smaller(doc, numer), pmml_smaller(doc, denom)],
   }
+}
+
+/// Port of Perl `do_cfrac` (L1930-1951): unroll an inline continued fraction —
+/// when the denominator is a sum (or \cdots) its LAST summand is pulled up to
+/// the top level (a trailing \cdots, a nested cfrac unrolled recursively, or
+/// an invisible-times of \cdots and a factor), leaving the current fraction
+/// with the trailing operator inside its denominator row.
+fn do_cfrac(doc: &PostDocument, numer: &Node, denom: &Node) -> Vec<NodeData> {
+  if doc.is_qname(denom, "ltx:XMApp") {
+    let dchildren = element_children(denom);
+    if dchildren.len() >= 2 {
+      let denomop = &dchildren[0];
+      let denomargs = &dchildren[1..];
+      if denomop.get_attribute("role").as_deref() == Some("ADDOP")
+        || denomop.get_content() == "\u{22EF}"
+      {
+        let (rest, last) = denomargs.split_at(denomargs.len() - 1);
+        let last = &last[0];
+        if !rest.is_empty() {
+          let curr = NodeData::Element {
+            tag:        "m:mfrac".to_string(),
+            attributes: None,
+            children:   vec![pmml_smaller(doc, numer), NodeData::Element {
+              tag:        "m:mrow".to_string(),
+              attributes: None,
+              children:   vec![
+                if rest.len() > 1 {
+                  pmml_infix(doc, denomop, rest)
+                } else {
+                  pmml_smaller(doc, &rest[0])
+                },
+                pmml_smaller(doc, denomop),
+              ],
+            }],
+          };
+          if last.get_content() == "\u{22EF}" {
+            // Denominator ends with \cdots: bring the dots up to toplevel.
+            return vec![curr, pmml_smaller(doc, last)];
+          } else if doc.is_qname(last, "ltx:XMApp") {
+            let lchildren = element_children(last);
+            if lchildren.len() >= 2 {
+              let lastop = &lchildren[0];
+              let lastargs = &lchildren[1..];
+              if lastop.get_attribute("meaning").as_deref() == Some("continued-fraction")
+                && lastargs.len() >= 2
+              {
+                // Denominator ends with a cfrac: unroll it to toplevel.
+                let mut out = vec![curr];
+                out.extend(do_cfrac(doc, &lastargs[0], &lastargs[1]));
+                return out;
+              } else if lastop.get_content() == "\u{2062}"
+                && lastargs.len() == 2
+                && lastargs[0].get_content() == "\u{22EF}"
+              {
+                // Denominator ends with (invisible-times of) \cdots · factor.
+                return vec![
+                  curr,
+                  pmml_smaller(doc, &lastargs[0]),
+                  pmml_smaller(doc, &lastargs[1]),
+                ];
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  vec![NodeData::Element {
+    tag:        "m:mfrac".to_string(),
+    attributes: None,
+    children:   vec![pmml_smaller(doc, numer), pmml_smaller(doc, denom)],
+  }]
 }
 
 // ======================================================================
@@ -1288,9 +2115,19 @@ fn op_base_is_mo(node: &NodeData) -> bool {
     }
     // Perl regex `^m:(?:msub|msup|munder|mover|mprescripts)` — a prefix match,
     // so it also covers msubsup/munderover; descend to the base (first child).
+    // m:mstyle: the F7 mathstyle wrap (e.g. `\displaystyle\sum`) is transparent
+    // embellishment too — Perl's summation never re-examines it (it never
+    // emits ⁡ at all, L1796-1798).
     if matches!(
       tag.as_str(),
-      "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover" | "m:mprescripts"
+      "m:msub"
+        | "m:msup"
+        | "m:msubsup"
+        | "m:munder"
+        | "m:mover"
+        | "m:munderover"
+        | "m:mprescripts"
+        | "m:mstyle"
     ) {
       match children.first() {
         Some(child) => cur = child,
@@ -1302,7 +2139,19 @@ fn op_base_is_mo(node: &NodeData) -> bool {
   }
 }
 
+/// Port of Perl `filter_row` (L577-579): drop `_ignorable` items.
+fn filter_row(items: Vec<NodeData>) -> Vec<NodeData> {
+  items
+    .into_iter()
+    .filter(|i| {
+      !matches!(i, NodeData::Element { attributes: Some(a), .. } if a.contains_key("_ignorable"))
+    })
+    .collect()
+}
+
 fn pmml_row(children: Vec<NodeData>) -> NodeData {
+  // Perl `pmml_row` (L581-584) filters `_ignorable` items (zero-width hints).
+  let children = filter_row(children);
   if children.len() == 1 {
     children.into_iter().next().unwrap()
   } else {
@@ -1359,6 +2208,9 @@ const TEX_SPACING: [f64; 4] = [0.0, 0.167, 0.222, 0.2778];
 /// Spacing epsilon — ignore differences below this (em)
 const SPACING_EPSILON: f64 = 0.01;
 
+/// Don't complain if we can't adjust less than this (em) — Perl `$fudge`.
+const SPACING_FUDGE: f64 = 0.3;
+
 /// Map LaTeXML role to TeX atom type.
 fn role_to_atom_type(role: &str) -> &'static str {
   match role {
@@ -1409,7 +2261,8 @@ fn atompair_spacing(left: &str, right: &str) -> i32 {
     | ("Punct", "Close")
     | ("Punct", "Punct")
     | ("Punct", "Inner")
-    | ("Inner", "Ord") => -1,
+    | ("Inner", "Ord")
+    | ("Inner", "Punct") => -1,
     ("Inner", "Op") => 1,
     _ => 0,
   }
@@ -1449,14 +2302,15 @@ fn is_invisible_op(text: &str) -> bool {
       .all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
 }
 
-/// Format em value.
+/// Format em value. Port of Perl `fmt_em` (MathML.pm L1285):
+/// `sprintf("%.3fem")` — trailing zeros are KEPT ("0.330em", "1.200em"),
+/// matching Perl byte-for-byte; zero (Perl false-y) → "0em". (audit F4)
 fn fmt_em(val: f64) -> String {
-  if val.abs() < SPACING_EPSILON {
-    return "0em".to_string();
+  if val == 0.0 {
+    "0em".to_string()
+  } else {
+    format!("{val:.3}em")
   }
-  let s = format!("{:.3}", val);
-  let s = s.trim_end_matches('0').trim_end_matches('.');
-  format!("{}em", s)
 }
 
 /// Get role from a NodeData, following embellished operators.
@@ -1522,6 +2376,13 @@ fn set_node_attr(node: &mut NodeData, key: &str, value: &str) {
   }
 }
 
+fn get_node_attr(node: &NodeData, key: &str) -> Option<String> {
+  match node {
+    NodeData::Element { attributes, .. } => attributes.as_ref().and_then(|a| a.get(key)).cloned(),
+    _ => None,
+  }
+}
+
 fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
   match node {
     NodeData::Element { attributes, .. } => attributes
@@ -1534,113 +2395,325 @@ fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
   }
 }
 
-/// Adjust spacing between two adjacent nodes.
-fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
-  let prev_role_s = get_node_role(prev);
-  let next_role_s = get_node_role(next);
-  let prev_role = if prev_role_s.is_empty() {
-    "ATOM"
-  } else {
-    &prev_role_s
-  };
-  let next_role = if next_role_s.is_empty() {
-    "ATOM"
-  } else {
-    &next_role_s
-  };
+/// Perl `%tag_arg_pattern` (MathML.pm L1084-1088): how a tag participates in
+/// the spacing walk.
+#[derive(PartialEq, Clone, Copy)]
+enum WalkType {
+  Atom,
+  Mrow,
+  Other,
+}
+fn walk_type(tag: &str) -> WalkType {
+  match tag {
+    "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext" => WalkType::Atom,
+    "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd" => {
+      WalkType::Mrow
+    },
+    _ => WalkType::Other,
+  }
+}
 
-  let prev_type = m_atom_type(get_node_tag(prev)).unwrap_or_else(|| role_to_atom_type(prev_role));
-  let next_type = m_atom_type(get_node_tag(next)).unwrap_or_else(|| role_to_atom_type(next_role));
+/// Resolve a child-index path from the walk root. The walk mutates only
+/// attributes and rewraps nodes in place (sibling indices stay stable), so
+/// queued paths never dangle.
+fn node_at<'a>(root: &'a NodeData, path: &[usize]) -> &'a NodeData {
+  let mut cur = root;
+  for &i in path {
+    match cur {
+      NodeData::Element { children, .. } => cur = &children[i],
+      _ => unreachable!("spacewalk path into non-element"),
+    }
+  }
+  cur
+}
 
+fn node_at_mut<'a>(root: &'a mut NodeData, path: &[usize]) -> &'a mut NodeData {
+  let mut cur = root;
+  for &i in path {
+    match cur {
+      NodeData::Element { children, .. } => cur = &mut children[i],
+      _ => unreachable!("spacewalk path into non-element"),
+    }
+  }
+  cur
+}
+
+fn child_path(path: &[usize], i: usize) -> Vec<usize> {
+  let mut p = path.to_vec();
+  p.push(i);
+  p
+}
+
+/// Descend through embellished operators (scripts) to the inner operator,
+/// for role/opdict-spacing reads (Perl adjust_pair L1225-1227).
+fn descend_embellishers(root: &NodeData, mut path: Vec<usize>) -> Vec<usize> {
+  loop {
+    match node_at(root, &path) {
+      NodeData::Element { tag, children, .. }
+        if is_embellisher_tag(tag) && !children.is_empty() =>
+      {
+        path.push(0);
+      },
+      _ => return path,
+    }
+  }
+}
+
+/// Walk the MathML tree and adjust spacing. Port of Perl `adjust_spacing` /
+/// `space_walk` (MathML.pm L1079-1133): resolves the difference between
+/// TeX's inter-atom spacing and MathML's operator-dictionary spacing.
+pub fn adjust_spacing(node: &mut NodeData) { space_walk(node, Vec::new()); }
+
+/// Port of Perl `space_walk`: pairs VISUALLY adjacent items by unwinding
+/// nested mrows into the pair stream, streaming script bases (TeX attaches
+/// scripts without affecting inter-atom spacing) while recursing on the
+/// scripts themselves, and carrying invisible operators between a pair as
+/// the preferred place to materialize an adjustment.
+fn space_walk(root: &mut NodeData, path: Vec<usize>) {
+  use std::collections::VecDeque;
+  let (wt, nch) = match node_at(root, &path) {
+    NodeData::Element { tag, children, .. } => (walk_type(tag), children.len()),
+    _ => return,
+  };
+  match wt {
+    WalkType::Atom => {},
+    WalkType::Other => {
+      for i in 0..nch {
+        space_walk(root, child_path(&path, i));
+      }
+    },
+    WalkType::Mrow => {
+      let mut queue: VecDeque<Vec<usize>> = (0..nch).map(|i| child_path(&path, i)).collect();
+      // First prev: unwrap leading nested mrows (Perl L1105-1108).
+      let mut first = None;
+      while let Some(p) = queue.pop_front() {
+        let unwrap = match node_at(root, &p) {
+          NodeData::Element { tag, children, .. } if tag == "m:mrow" => Some(children.len()),
+          _ => None,
+        };
+        match unwrap {
+          Some(n) => {
+            for i in (0..n).rev() {
+              queue.push_front(child_path(&p, i));
+            }
+          },
+          None => {
+            first = Some(p);
+            break;
+          },
+        }
+      }
+      let Some(mut prev) = first else { return };
+      space_walk(root, prev.clone());
+      while let Some(popped) = queue.pop_front() {
+        let mut next = popped;
+        // Save an invisible operator as the potential target for lspace
+        // (Perl L1111-1114).
+        let mut invisop: Option<Vec<usize>> = None;
+        {
+          let n = node_at(root, &next);
+          if get_node_tag(n) == "m:mo" && is_node_text_invisible_op(n) {
+            invisop = Some(next);
+            match queue.pop_front() {
+              Some(p) => next = p,
+              None => break,
+            }
+          }
+        }
+        enum Kind {
+          Mrow(usize),
+          Script(usize),
+          Plain,
+        }
+        let kind = match node_at(root, &next) {
+          NodeData::Element { tag, children, .. } => {
+            if tag == "m:mrow" {
+              Kind::Mrow(children.len())
+            } else if !children.is_empty()
+              && (tag.starts_with("m:msup")
+                || tag.starts_with("m:msub")
+                || tag.starts_with("m:munder")
+                || tag.starts_with("m:mover")
+                || tag.starts_with("m:mmultiscripts"))
+            {
+              // Prefix match like Perl's regex — covers msubsup/munderover.
+              // A CHILDLESS script element (malformed input) is treated as
+              // Plain — streaming its base would index children[0] (Perl's
+              // undef-shift exits silently).
+              Kind::Script(children.len())
+            } else {
+              Kind::Plain
+            }
+          },
+          _ => Kind::Plain,
+        };
+        match kind {
+          Kind::Mrow(n) => {
+            // Unwrap into the stream; the invisible op goes back in front.
+            for i in (0..n).rev() {
+              queue.push_front(child_path(&next, i));
+            }
+            if let Some(iv) = invisop {
+              queue.push_front(iv);
+            }
+            continue;
+          },
+          Kind::Script(n) => {
+            // Stream the base; recurse on the scripts (Perl L1121-1128).
+            for i in 1..n {
+              space_walk(root, child_path(&next, i));
+            }
+            queue.push_front(child_path(&next, 0));
+            if let Some(iv) = invisop {
+              queue.push_front(iv);
+            }
+            continue;
+          },
+          Kind::Plain => {},
+        }
+        space_walk(root, next.clone());
+        adjust_pair(root, &prev, &next, invisop.as_deref());
+        prev = next;
+      }
+    },
+  }
+}
+
+/// Adjust the spacing between a visually adjacent pair. Port of Perl
+/// `adjust_pair` (MathML.pm L1220-1284), all branches.
+fn adjust_pair(root: &mut NodeData, prev: &[usize], next: &[usize], invisop: Option<&[usize]>) {
+  let iprev = descend_embellishers(root, prev.to_vec());
+  let inext = descend_embellishers(root, next.to_vec());
+
+  // Author spacing (in em) reads from the OUTER pair; role/opdict spacing
+  // from the inner (possibly embellished) operator.
+  let prev_req_right = get_node_attr_f64(node_at(root, prev), "_rpadding");
+  let next_req_left = get_node_attr_f64(node_at(root, next), "_lpadding");
+  let (iprev_tag, prev_role, prev_dict_right) = {
+    let n = node_at(root, &iprev);
+    (
+      get_node_tag(n).to_string(),
+      get_node_attr(n, "_role").unwrap_or_else(|| "ATOM".to_string()),
+      get_node_attr_f64(n, "_rspace"),
+    )
+  };
+  let (inext_tag, next_role, next_dict_left) = {
+    let n = node_at(root, &inext);
+    (
+      get_node_tag(n).to_string(),
+      get_node_attr(n, "_role").unwrap_or_else(|| "ATOM".to_string()),
+      get_node_attr_f64(n, "_lspace"),
+    )
+  };
+  let prev_type = m_atom_type(&iprev_tag).unwrap_or_else(|| role_to_atom_type(&prev_role));
+  let next_type = m_atom_type(&inext_tag).unwrap_or_else(|| role_to_atom_type(&next_role));
   let tex_code = atompair_spacing(prev_type, next_type);
   let tex_space = TEX_SPACING[tex_code.unsigned_abs() as usize];
-
-  let prev_dict_right = get_node_attr_f64(prev, "_rspace");
-  let next_dict_left = get_node_attr_f64(next, "_lspace");
+  let target = prev_req_right + next_req_left + tex_space;
   let default = prev_dict_right + next_dict_left;
-  let target = tex_space;
-
   if (target - default).abs() <= SPACING_EPSILON {
     return;
   }
 
-  let prev_is_mo = get_node_tag(prev) == "m:mo";
-  let next_is_mo = get_node_tag(next) == "m:mo";
-
-  if prev_is_mo && next_is_mo {
+  let prev_tag = get_node_tag(node_at(root, prev)).to_string();
+  let next_tag = get_node_tag(node_at(root, next)).to_string();
+  // In MathML Core neither mspace nor mpadded may have negative width, and
+  // relative +/- widths are unsupported — so a NEGATIVE target rewraps prev
+  // in an m:mpadded with an ADJUSTED absolute width (Perl L1252-1260,
+  // compute_size L1135-1145: atoms only, string metrics of the default math
+  // font, with the ridiculous-but-Perl minimum-10pt hack for mathscript).
+  if target < 0.0 {
+    let sizeable = match node_at(root, prev) {
+      NodeData::Element { tag, attributes, .. } if walk_type(tag) == WalkType::Atom => Some(
+        attributes
+          .as_ref()
+          .and_then(|a| a.get("class"))
+          .cloned()
+          .unwrap_or_default(),
+      ),
+      _ => None,
+    };
+    if let Some(class) = sizeable {
+      let text = get_node_text(node_at(root, prev));
+      let font = latexml_core::common::font::Font::math_default();
+      let (w, _h, _d) = font.compute_string_size(&text, Default::default());
+      let mut w_sp = w.0;
+      // Perl L1140-1141: minimum of 10pt for mathscript — Dimension(10*65535)
+      // (Perl's constant, one sp shy of 10pt), applied regardless of width
+      // (Perl's $w is an always-truthy Dimension object).
+      if class.contains("mathscript") {
+        w_sp = w_sp.max(10 * 65535);
+      }
+      let mut reqw = (w_sp as f64 / 65536.0) / 10.0 + target;
+      if reqw < 0.0 {
+        reqw = 0.0;
+      }
+      let slot = node_at_mut(root, prev);
+      let old = std::mem::replace(slot, NodeData::Text(String::new()));
+      *slot = NodeData::Element {
+        tag:        "m:mpadded".to_string(),
+        attributes: Some(HashMap::from_iter([("width".to_string(), fmt_em(reqw))])),
+        children:   vec![old],
+      };
+    }
+  } else if prev_tag == "m:mspace" || next_tag == "m:mspace" {
+    // Merge into the mspace's existing width (Perl L1261-1262).
+    let target_path = if prev_tag == "m:mspace" { prev } else { next };
+    let n = node_at_mut(root, target_path);
+    let old_w = match n {
+      NodeData::Element { attributes, .. } => attributes
+        .as_ref()
+        .and_then(|a| a.get("width"))
+        .map(|w| super::get_xm_hint_spacing(w))
+        .unwrap_or(0.0),
+      _ => 0.0,
+    };
+    set_node_attr(n, "width", &fmt_em(target + old_w));
+  } else if let Some(iv) = invisop {
+    set_node_attr(node_at_mut(root, iv), "lspace", &fmt_em(target));
+  } else if prev_tag == "m:mo" && next_tag == "m:mo" {
+    // BOTH are mo: account for each one's dictionary spacing (Perl L1264-1275).
+    let p = prev_dict_right;
     let n = next_dict_left;
     let rem = target - n;
     if rem >= 0.0 {
-      set_node_attr(
-        prev,
-        "rspace",
-        &fmt_em(if rem > SPACING_EPSILON { rem } else { 0.0 }),
-      );
+      let v = if rem > SPACING_EPSILON { rem } else { 0.0 };
+      set_node_attr(node_at_mut(root, prev), "rspace", &fmt_em(v));
     } else {
-      let p = prev_dict_right;
-      let rem2 = target - p;
-      if rem2 >= 0.0 {
-        set_node_attr(
-          next,
-          "lspace",
-          &fmt_em(if rem2 > SPACING_EPSILON { rem2 } else { 0.0 }),
-        );
-      }
-    }
-  } else if prev_is_mo {
-    set_node_attr(prev, "rspace", &fmt_em(target));
-  } else if next_is_mo {
-    set_node_attr(next, "lspace", &fmt_em(target));
-  }
-}
-
-/// Walk the MathML tree and adjust spacing.
-pub fn adjust_spacing(node: &mut NodeData) {
-  // Fast-path leaf check on a borrowed &str — avoids a per-node String allocation.
-  let tag_ref = get_node_tag(node);
-  if matches!(tag_ref, "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") {
-    return;
-  }
-  let is_mrow = is_mrow_like(tag_ref);
-
-  if is_mrow {
-    if let NodeData::Element { children, .. } = node {
-      for child in children.iter_mut() {
-        adjust_spacing(child);
-      }
-      let len = children.len();
-      if len >= 2 {
-        let mut i = 0;
-        while i + 1 < len {
-          let j = i + 1;
-          // Skip invisible operators
-          if j + 1 < len
-            && get_node_tag(&children[j]) == "m:mo"
-            && is_node_text_invisible_op(&children[j])
-          {
-            if j + 1 < len {
-              let (left, right) = children.split_at_mut(j + 1);
-              if let Some(next) = right.first_mut() {
-                adjust_pair(&mut left[i], next);
-              }
-            }
-            i = j + 1;
-          } else {
-            let (left, right) = children.split_at_mut(j);
-            if let Some(next) = right.first_mut() {
-              adjust_pair(&mut left[i], next);
-            }
-            i = j;
-          }
+      let rem = target - p;
+      if rem >= 0.0 {
+        let v = if rem > SPACING_EPSILON { rem } else { 0.0 };
+        set_node_attr(node_at_mut(root, next), "lspace", &fmt_em(v));
+      } else {
+        // Split the difference; Perl concatenates the raw number here
+        // (`$rem . 'em'`), NOT fmt_em.
+        let rem = target / 2.0;
+        if rem != p {
+          set_node_attr(
+            node_at_mut(root, prev),
+            "rspace",
+            &format!("{}em", perl_num(rem)),
+          );
+        }
+        if rem != n {
+          set_node_attr(
+            node_at_mut(root, next),
+            "lspace",
+            &format!("{}em", perl_num(rem)),
+          );
         }
       }
     }
-  } else {
-    if let NodeData::Element { children, .. } = node {
-      for child in children.iter_mut() {
-        adjust_spacing(child);
-      }
-    }
+  } else if prev_tag == "m:mo" {
+    set_node_attr(node_at_mut(root, prev), "rspace", &fmt_em(target));
+  } else if next_tag == "m:mo" {
+    set_node_attr(node_at_mut(root, next), "lspace", &fmt_em(target));
+  } else if (target - default).abs() > SPACING_FUDGE {
+    Info!(
+      "ignored",
+      "spacing",
+      "No place to set spacing to {target} (default {default})"
+    );
   }
 }
 
@@ -1654,6 +2727,7 @@ pub fn clean_internal_attrs(node: &mut NodeData) {
       attrs.remove("_largeop");
       attrs.remove("_lpadding");
       attrs.remove("_rpadding");
+      attrs.remove("_ignorable");
       if attrs.is_empty() {
         *attributes = None;
       }
@@ -1816,5 +2890,51 @@ mod tests {
       NodeData::Text(s) => assert_eq!(s, "x"),
       _ => panic!("expected text untouched"),
     }
+  }
+  #[test]
+  fn test_role_to_atom_type() {
+    // Perl MathML.pm $role_atomtype (L1150)
+    assert_eq!(role_to_atom_type("ID"), "Ord");
+    assert_eq!(role_to_atom_type("NUMBER"), "Ord");
+    assert_eq!(role_to_atom_type("ADDOP"), "Bin");
+    assert_eq!(role_to_atom_type("RELOP"), "Rel");
+    assert_eq!(role_to_atom_type("OPEN"), "Open");
+    assert_eq!(role_to_atom_type("CLOSE"), "Close");
+    assert_eq!(role_to_atom_type("SUMOP"), "Op");
+    assert_eq!(role_to_atom_type("PUNCT"), "Punct");
+    assert_eq!(role_to_atom_type("ARRAY"), "Inner");
+    assert_eq!(role_to_atom_type("no-such-role"), "Ord");
+  }
+
+  #[test]
+  fn test_atompair_spacing() {
+    // Perl MathML.pm $atompair_spacing (L1196): negative = display/text-style only
+    assert_eq!(atompair_spacing("Ord", "Op"), 1);
+    assert_eq!(atompair_spacing("Ord", "Bin"), -2);
+    assert_eq!(atompair_spacing("Rel", "Ord"), -3);
+    assert_eq!(atompair_spacing("Open", "Ord"), 0);
+    assert_eq!(atompair_spacing("Open", "Open"), 0);
+    assert_eq!(atompair_spacing("Punct", "Bin"), 0);
+    // The full Inner row (Perl L1207) — the (Inner, Punct) cell was MISSING
+    // until 2026-07-02 (PR_READINESS review): matrix-then-comma lost its
+    // thin space.
+    assert_eq!(atompair_spacing("Inner", "Ord"), -1);
+    assert_eq!(atompair_spacing("Inner", "Op"), 1);
+    assert_eq!(atompair_spacing("Inner", "Bin"), -2);
+    assert_eq!(atompair_spacing("Inner", "Rel"), -3);
+    assert_eq!(atompair_spacing("Inner", "Open"), -1);
+    assert_eq!(atompair_spacing("Inner", "Close"), 0);
+    assert_eq!(atompair_spacing("Inner", "Punct"), -1);
+    assert_eq!(atompair_spacing("Inner", "Inner"), -1);
+  }
+
+  #[test]
+  fn test_fmt_em() {
+    // Perl fmt_em (L1285) byte-parity: %.3f keeps trailing zeros (audit F4).
+    assert_eq!(fmt_em(0.0), "0em");
+    assert_eq!(fmt_em(1.0), "1.000em");
+    assert_eq!(fmt_em(0.167), "0.167em");
+    assert_eq!(fmt_em(0.33), "0.330em");
+    assert_eq!(fmt_em(1.2), "1.200em");
   }
 }

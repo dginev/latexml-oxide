@@ -3,6 +3,27 @@ use crate::{
   prelude::*,
 };
 
+/// Perl subcaption.sty.ltxml L66/76/86/96: `properties => sub { (width => $_[2]) }`.
+/// Perl sets this on ALL four sub-float envs ({subfigure}, {subfigure*},
+/// {subtable}, {subtable*}); the Rust-only {subcaptionblock}/{subcaptionblock*}
+/// aliases inherit the same semantics. Records the sub-float's `{Dimension}`
+/// argument (args[1]) as the box's `width` property, so
+/// `arrange_panels_and_breaks` can compute the per-row layout from actual panel
+/// widths (without it, a panel reports its natural content width — the full
+/// float width — and every panel starts its own row; arXiv 2605.00347). Mirrors
+/// Perl storing the digested Dimension object.
+fn subcaption_width_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored>> {
+  let mut props: SymHashMap<Stored> = SymHashMap::default();
+  if let Some(w) = args
+    .get(1)
+    .and_then(|a| a.as_ref())
+    .and_then(|a| Dimension::spec_to_f64(&a.to_string()).ok())
+  {
+    props.insert("width", Stored::Dimension(Dimension::new_f64(w)));
+  }
+  Ok(props)
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: subcaption.sty.ltxml
@@ -77,6 +98,7 @@ LoadDefinitions!({
       #body\
     </ltx:figure>",
     mode => "internal_vertical",
+    properties => sub[args] { subcaption_width_props(args) },
     before_digest => { before_float("subfigure", Some("figure")); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -89,6 +111,7 @@ LoadDefinitions!({
       #body\
     </ltx:figure>",
     mode => "internal_vertical",
+    properties => sub[args] { subcaption_width_props(args) },
     before_digest => { before_float_ex("subfigure", Some("figure"), true); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -102,6 +125,7 @@ LoadDefinitions!({
       #body\
     </ltx:figure>",
     mode => "internal_vertical",
+    properties => sub[args] { subcaption_width_props(args) },
     before_digest => { before_float("subfigure", Some("figure")); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -111,6 +135,7 @@ LoadDefinitions!({
       #body\
     </ltx:figure>",
     mode => "internal_vertical",
+    properties => sub[args] { subcaption_width_props(args) },
     before_digest => { before_float_ex("subfigure", Some("figure"), true); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -121,6 +146,7 @@ LoadDefinitions!({
       #body\
     </ltx:table>",
     mode => "internal_vertical",
+    properties => sub[args] { subcaption_width_props(args) },
     before_digest => { before_float("subtable", Some("table")); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -132,6 +158,7 @@ LoadDefinitions!({
       #body\
     </ltx:table>",
     mode => "internal_vertical",
+    properties => sub[args] { subcaption_width_props(args) },
     before_digest => { before_float_ex("subtable", Some("table"), true); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );

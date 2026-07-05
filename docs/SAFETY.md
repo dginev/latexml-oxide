@@ -120,7 +120,7 @@ rusage capture, signal-handler debugging).
 
 `latexml_post/src/graphics.rs` + `latexml_post/src/graphics_cache.rs` —
 process-group control is needed because subprocess rasterizers (`gs`,
-`pdftocairo`, `mutool draw`, `inkscape`, `convert`) can spawn grandchildren,
+`pdftocairo`, `mutool draw`, `ps2pdf`, `convert`) can spawn grandchildren,
 and a plain `Child::kill()` does not reap those.
 
 | Call | Why |

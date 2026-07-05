@@ -539,6 +539,9 @@ impl Converter {
     &'preplifetime mut self,
     _opts: &'preplifetime Config,
   ) -> Result<()> {
+    // Per-conversion cache hygiene: a persistent worker converts many papers
+    // per thread; cwd-relative kpsewhich results must not leak across them.
+    latexml_core::util::pathname::clear_kpsewhich_memo();
     if !self.ready {
       self.initialize_session()?
     }

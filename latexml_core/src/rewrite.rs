@@ -10,6 +10,8 @@ use crate::{
   tokens::Tokens,
 };
 
+pub mod declare;
+
 pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
 /// Test closure: Perl signature is ($document, $node) → $nnodes (0/undef = skip).
 pub type RewriteTestClosure = Rc<dyn Fn(&mut Document, &Node) -> Result<usize>>;
@@ -42,6 +44,11 @@ pub struct RewriteOptions {
   pub select_count:   Option<usize>,
   pub is_math:        bool,
   pub wildcard_paths: Option<Vec<WildPath>>,
+  /// Declare-side structural filter for \lxDeclare rules — the compiled
+  /// [`declare::DeclarePattern`] whose broad XPath needs Rust-side
+  /// verification (`declare::declare_node_matches`) on every Select match.
+  /// Set by BOTH attribute and replace registrations.
+  pub declare_filter: Option<declare::DeclarePattern>,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -211,7 +218,7 @@ impl Rewrite {
   }
 
   pub fn compile_clauses(&mut self, document: &mut Document) {
-    let current_clauses: Vec<RewriteClause> = self.clauses.drain(..).collect();
+    let current_clauses: Vec<RewriteClause> = std::mem::take(&mut self.clauses);
     let mut new_clauses: Vec<RewriteClause> = Vec::new();
     for clause in current_clauses {
       if !clause.compiled {
@@ -428,45 +435,11 @@ impl Rewrite {
             } else {
               None
             };
-            // Get declare pattern metadata for Rust-side filtering
-            // Only apply on content Selects, not scope Selects
-            let declare_type = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_type"))
-                .cloned()
-            } else {
-              None
-            };
-            let declare_base = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_base"))
-                .cloned()
-            } else {
-              None
-            };
-            let declare_sub = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_sub"))
-                .cloned()
-            } else {
-              None
-            };
-            let declare_accent = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_accent"))
-                .cloned()
+            // Declare-side structural filter (content Selects only, not
+            // scope Selects): verify each broad-XPath match against the
+            // compiled pattern.
+            let pattern_filter = if is_content_select {
+              self.options.declare_filter.as_ref()
             } else {
               None
             };
@@ -474,19 +447,10 @@ impl Rewrite {
               if node.has_attribute("_matched") {
                 continue;
               }
-              // Rust-side filtering for declare pattern types (content Selects only)
-              if let Some(ref dtype) = declare_type {
-                let passes = declare_node_matches(
-                  document,
-                  &node,
-                  dtype,
-                  declare_base.as_deref(),
-                  declare_sub.as_deref(),
-                  declare_accent.as_deref(),
-                );
-                if !passes {
-                  continue;
-                }
+              if let Some(pat) = pattern_filter
+                && !declare::declare_node_matches(document, &node, pat)
+              {
+                continue;
               }
               let marked = if let Some(ref wpaths) = wilds {
                 mark_wildcards(&node, wpaths)
@@ -1128,20 +1092,18 @@ pub fn set_attributes_wild(
     return Ok(());
   }
 
-  // Collect wildcard IDs from the nodes BEFORE wrapping.
-  let mut wild_ids = Vec::new();
-  for n in &nodes {
-    wild_ids.extend(set_wildcard_ids(document, n));
-  }
-
-  // Wrap matched nodes in XMDual.
-  // NOTE: Perl wraps presentation nodes in XMWrap first (L206), then in XMDual (L208),
-  // producing XMDual[XMApp(content), XMWrap(presentation)]. In Rust, reparenting
-  // children to create XMWrap causes libxml2 memory corruption. We keep the
-  // presentation nodes as direct children: XMDual[XMApp(content), node1, node2, ...]
-  // This is a known R11 gap. The math parser handles both structures correctly.
-  let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
-  let Some(mut dual_node) = wrapper else {
+  // Perl L205-216: wrap the presentation nodes in an XMWrap, collect the
+  // wildcard ids, wrap that in an XMDual, then build the content arm
+  // XMApp(op-with-attrs, XMRef per wildcard) BEFORE the XMWrap. An XMDual
+  // has EXACTLY two children (content, presentation) — the earlier "flat"
+  // variant (presentation nodes as direct dual children) was destroyed
+  // downstream, silently dropping the matched span (gee-one repro:
+  // `g(a)` collapsed to a bare `)` carrying the declaration's role).
+  let Some(wrap_node) = document.wrap_nodes("ltx:XMWrap", nodes)? else {
+    return Ok(());
+  };
+  let wild_ids = set_wildcard_ids(document, &wrap_node);
+  let Some(mut dual_node) = document.wrap_nodes("ltx:XMDual", vec![wrap_node.clone()])? else {
     return Ok(());
   };
 
@@ -1166,131 +1128,10 @@ pub fn set_attributes_wild(
     content_app.add_child(&mut xmref)?;
   }
 
-  // Insert content arm as first child (before presentation nodes)
-  match dual_node.get_first_child() {
-    Some(mut first_child) => {
-      first_child.add_prev_sibling(&mut content_app)?;
-    },
-    _ => {
-      dual_node.add_child(&mut content_app)?;
-    },
-  }
-
-  // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
-  // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have
-  // XMWrap, we do the POSTSUBSCRIPT→SUBSCRIPTOP conversion here instead.
-  restructure_scripts_in_dual(&dual_node, document)?;
-
-  mark_seen_rec(&dual_node);
-  Ok(())
-}
-
-/// Convert POSTSUBSCRIPT/POSTSUPERSCRIPT siblings into 3-child XMApp form
-/// inside XMDual's presentation children.
-///
-/// Before: `<base/><XMApp role="POSTSUBSCRIPT"><sub_content/></XMApp>`
-/// After: `<XMApp><SUBSCRIPTOP/><base/><sub_content/></XMApp>`
-///
-/// This matches Perl where the math parser's kludge_scripts processes
-/// the XMWrap presentation arm and restructures scripts.
-fn restructure_scripts_in_dual(dual: &Node, document: &mut Document) -> Result<()> {
-  // Clone the XmlDoc handle (Rc-cheap) so the &mut Document isn't
-  // borrowed across Node::new(…, &doc) calls — we need the mut borrow
-  // live at `document.safe_unlink(script_node)` below.
-  let doc = document.get_document().clone();
-  // Iterate over presentation children (skip first child = content arm)
-  let children: Vec<Node> = dual
-    .get_child_nodes()
-    .into_iter()
-    .filter(|n| n.get_type() == Some(libxml::tree::NodeType::ElementNode))
-    .collect();
-  if children.len() < 2 {
-    return Ok(());
-  } // Need at least content + 1 presentation node
-
-  // Look for base + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling pairs
-  let pres_children: Vec<Node> = children.into_iter().skip(1).collect(); // skip content arm
-  let mut i = 0;
-  while i < pres_children.len() {
-    let node = &pres_children[i];
-    if i + 1 < pres_children.len() {
-      let next = &pres_children[i + 1];
-      let next_role = next.get_property("role").unwrap_or_default();
-      if (next_role == "POSTSUBSCRIPT" || next_role == "POSTSUPERSCRIPT")
-        && next.get_name() == "XMApp"
-      {
-        let scriptop = if next_role == "POSTSUBSCRIPT" {
-          "SUBSCRIPTOP"
-        } else {
-          "SUPERSCRIPTOP"
-        };
-
-        // Create new XMApp to hold the restructured script
-        let mut new_app = Node::new("XMApp", None, &doc)?;
-        // Create SUBSCRIPTOP/SUPERSCRIPTOP token (Perl uses "post1" scriptpos)
-        let mut scriptop_tok = Node::new("XMTok", None, &doc)?;
-        let _ = scriptop_tok.set_attribute("role", scriptop);
-        let _ = scriptop_tok.set_attribute("scriptpos", "post1");
-        new_app.add_child(&mut scriptop_tok)?;
-
-        // Move base node into new_app
-        let mut base = node.clone();
-        base.unlink();
-        new_app.add_child(&mut base)?;
-
-        // Move content from POSTSUBSCRIPT/POSTSUPERSCRIPT into new_app
-        let mut script_node = next.clone();
-        for mut child in script_node.get_child_nodes() {
-          child.unlink();
-          // Unwrap XMArg if present (Perl doesn't use XMArg in the parsed form)
-          if child.get_name() == "XMArg" {
-            // Transfer xml:id from XMArg to its single element child (wildcard ID).
-            // NOTE: `get_property("xml:id")` always returns None (xml:id is
-            // ns-stored as local "id"; see docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md),
-            // so this transfer is effectively a NO-OP. That is INTENTIONALLY left
-            // as-is: "correcting" the accessor makes the wildcard `1`/`n` tokens
-            // acquire ids that Perl does NOT emit (Perl `f _ 1`, no id on the
-            // `1`), diverging from `simplemath.xml`/`declare.xml`. The masked
-            // behaviour is closer to Perl here; a real fix needs dedicated
-            // analysis of the wildcard/XMRef content path, not an accessor swap.
-            let xmarg_id = child.get_property("xml:id");
-            let xmarg_children: Vec<Node> = child.get_child_nodes();
-            if xmarg_children.len() == 1 {
-              let mut inner = xmarg_children[0].clone();
-              inner.unlink();
-              if let Some(ref id) = xmarg_id
-                && !inner.has_attribute("xml:id")
-              {
-                let _ = inner.set_attribute("xml:id", id);
-              }
-              new_app.add_child(&mut inner)?;
-            } else {
-              for mut grandchild in xmarg_children {
-                grandchild.unlink();
-                new_app.add_child(&mut grandchild)?;
-              }
-            }
-          } else {
-            new_app.add_child(&mut child)?;
-          }
-        }
-
-        // Replace the POSTSUBSCRIPT node with the new XMApp. The
-        // POSTSUBSCRIPT wrapper's own xml:id (if any) is now unrecorded
-        // proactively via `safe_unlink`, so the idstore no longer leaks
-        // a dangling entry that `mark_xmnode_visibility` could later
-        // deref via XMRef lookup. SYNC_STATUS.md D3b migration (replaces
-        // the session-128 rebuild-at-finalize workaround with a
-        // source-level guardian for this specific call path).
-        script_node.add_prev_sibling(&mut new_app)?;
-        document.safe_unlink(script_node);
-
-        i += 2; // Skip both base and script
-        continue;
-      }
-    }
-    i += 1;
-  }
+  // Insert content arm before the presentation XMWrap (Perl removes the
+  // wrapper, opens the XMApp, then re-appends the wrapper — same order).
+  let mut wrap_mut = wrap_node;
+  wrap_mut.add_prev_sibling(&mut content_app)?;
   Ok(())
 }
 
@@ -1318,144 +1159,5 @@ fn mark_seen_rec(node: &Node) {
     if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
       mark_seen_rec(&child);
     }
-  }
-}
-
-/// Rust-side filtering for \lxDeclare pattern matching.
-/// XPath matches are broad (to avoid nested predicate bugs); this function
-/// verifies the matched node's children match the specific pattern.
-///
-/// Pattern types:
-/// - "subscript": node is XMApp[@role='POSTSUBSCRIPT'], check base text + optional sub text
-/// - "prime": node is XMApp[@role='POSTSUPERSCRIPT'], check base text
-/// - "accent": node is XMApp, check accent name in first child, optional base text
-/// - "simple": no extra filtering needed (XPath is specific enough)
-fn declare_node_matches(
-  document: &Document,
-  node: &Node,
-  pattern_type: &str,
-  base_text: Option<&str>,
-  sub_text: Option<&str>,
-  accent_name: Option<&str>,
-) -> bool {
-  let children = node.get_child_nodes();
-  match pattern_type {
-    "literal_subscript" => {
-      // Matched node is the BASE XMTok. Check that next sibling is POSTSUBSCRIPT
-      // with specific subscript content.
-      let next_sib = node.get_next_sibling();
-      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
-      if next_role.as_deref() != Some("POSTSUBSCRIPT") {
-        return false;
-      }
-      // Check subscript content text
-      if let Some(sub) = sub_text {
-        let sub_content = next_sib
-          .as_ref()
-          .map(|s| s.get_content())
-          .unwrap_or_default();
-        if sub_content.trim() != sub {
-          return false;
-        }
-      }
-      true
-    },
-    "subscript" => {
-      // Wildcard subscript: matched node is BASE XMTok.
-      // Check that next sibling is POSTSUBSCRIPT.
-      let next_sib = node.get_next_sibling();
-      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
-      next_role.as_deref() == Some("POSTSUBSCRIPT")
-    },
-    "prime" => {
-      // Matched node is BASE XMTok. Check that next sibling is POSTSUPERSCRIPT
-      // with prime content.
-      let next_sib = node.get_next_sibling();
-      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
-      if next_role.as_deref() != Some("POSTSUPERSCRIPT") {
-        return false;
-      }
-      // Check prime content
-      let sup_content = next_sib
-        .as_ref()
-        .map(|s| s.get_content())
-        .unwrap_or_default();
-      sup_content.contains('′')
-    },
-    "accent" => {
-      // XMApp with children: [accent_op, base_content]
-      if children.len() < 2 {
-        return false;
-      }
-      // Check accent name on first child
-      if let Some(accent) = accent_name {
-        let first_name = children[0]
-          .get_property("name")
-          .or_else(|| children[0].get_property("meaning"));
-        if first_name.as_deref() != Some(accent) {
-          return false;
-        }
-        // Accent ops should have OVERACCENT or UNDERACCENT role
-        let role = children[0].get_property("role");
-        let is_accent = role
-          .as_deref()
-          .map(|r| r.contains("ACCENT"))
-          .unwrap_or(false);
-        if !is_accent {
-          return false;
-        }
-      }
-      // Check base content text if specified
-      if let Some(base) = base_text
-        && !declare_base_matches(&children[1], base)
-      {
-        return false;
-      }
-      true
-    },
-    "simple" => {
-      // Font check: plain declarations (e.g. $x$) should NOT match tokens with
-      // non-default fonts (bold, caligraphic, typewriter).
-      // Perl: font_match_xpaths generates XPath predicates from _font attribute.
-      let font = document.get_node_font(node);
-      if let Some(series) = font.get_series()
-        && series.as_ref() == "bold"
-      {
-        return false;
-      }
-      if let Some(family) = font.get_family() {
-        let fam = family.as_ref();
-        if fam == "caligraphic" || fam == "typewriter" {
-          return false;
-        }
-      }
-      true
-    },
-    _ => true, // Unknown type: pass through
-  }
-}
-
-/// Check if a node matches a base text specification.
-/// Handles both plain text (e.g. "x") and command names (e.g. "\varepsilon").
-fn declare_base_matches(node: &Node, base_spec: &str) -> bool {
-  if base_spec.starts_with('\\') {
-    // Command base: match by meaning or name attribute
-    let cmd = base_spec.trim_start_matches('\\');
-    // Handle \mathcal{X} → check font=caligraphic + text=X
-    if let Some(inner) = cmd
-      .strip_prefix("mathcal{")
-      .and_then(|s| s.strip_suffix('}'))
-    {
-      let font = node.get_property("font").unwrap_or_default();
-      let text = node.get_content();
-      return font == "caligraphic" && text.trim() == inner;
-    }
-    // General command: check meaning attribute
-    let meaning = node.get_property("meaning").unwrap_or_default();
-    meaning == cmd
-  } else {
-    // Plain text base: match node text content
-    let text = node.get_content();
-    text.trim() == base_spec
   }
 }

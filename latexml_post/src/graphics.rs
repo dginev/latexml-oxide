@@ -18,6 +18,27 @@ use crate::{
   processor::{ProcessResult, Processor},
 };
 
+thread_local! {
+  /// The most recent converter-subprocess diagnostic on this thread: the program
+  /// name plus its captured stderr (or the spawn error). Surfaced into the
+  /// `imageprocessing:failed_to_convert` Error so an ENVIRONMENT failure is
+  /// self-explaining in the log instead of needing a strace — e.g. `gs` not
+  /// installed (`could not start … No such file or directory`), an AppArmor
+  /// denial (`gs: … /undefinedfilename …` while gs exits 0), or an ImageMagick
+  /// policy block. Set by `run_with_timeout`, cleared per node in `process`'s
+  /// worker loop, read+cleared at the Error site. Worker-thread-local — it rides
+  /// the same `logger::capture`/`replay_captured` fold to the main thread as the
+  /// Error itself.
+  static LAST_CONVERTER_DIAG: std::cell::RefCell<Option<String>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+/// Record (overwrite) the latest converter diagnostic on this thread.
+fn record_converter_diag(msg: String) { LAST_CONVERTER_DIAG.with(|c| *c.borrow_mut() = Some(msg)); }
+
+/// Take (read + clear) this thread's latest converter diagnostic.
+fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borrow_mut().take()) }
+
 // Diagnostic emission: `Error!` (and friends) live in
 // `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
 // diag;` in `lib.rs`. They emit harness-compatible structured Error
@@ -27,10 +48,10 @@ use crate::{
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 // Parsed-and-validated at init: only positive integer values are
 // honored; everything else (unset, empty, "0", malformed) leaves
-// `INKSCAPE_TIMEOUT_SECS` at None and the caller falls back to the
-// 15-second default in `inkscape_timeout_secs`.
-static INKSCAPE_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
-  std::env::var("LATEXML_INKSCAPE_TIMEOUT_SECS")
+// `SVG_CONVERT_TIMEOUT_SECS` at None and the caller falls back to the
+// 15-second default in `svg_convert_timeout_secs`.
+static SVG_CONVERT_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
+  std::env::var("LATEXML_SVG_CONVERT_TIMEOUT_SECS")
     .ok()
     .and_then(|s| s.parse::<u64>().ok())
     .filter(|&n| n > 0)
@@ -38,7 +59,7 @@ static INKSCAPE_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
 
 /// Wall-clock timeout for the `convert` (ImageMagick / gs) subprocess.
 /// Defaults to 60 s; override via `LATEXML_CONVERT_TIMEOUT_SECS`. Same
-/// pattern as `INKSCAPE_TIMEOUT_SECS` — see WISDOM #56.
+/// pattern as `SVG_CONVERT_TIMEOUT_SECS` — see WISDOM #56.
 static CONVERT_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
   std::env::var("LATEXML_CONVERT_TIMEOUT_SECS")
     .ok()
@@ -103,8 +124,9 @@ pub struct Graphics {
   type_properties:  HashMap<String, TypeProperties>,
   background:       String,
   /// Opt-in vector-SVG path for PDF graphics. When > 0, PDFs under this
-  /// many KB are first attempted via `inkscape`; fall back to ImageMagick
-  /// `convert` on failure or timeout. 0 disables the path entirely.
+  /// many KB are first attempted via the vector converters (mutool, then
+  /// pdftocairo); fall back to the raster (`convert`/`gs` → PNG) path on
+  /// failure or timeout. 0 disables the path entirely.
   /// Tracks upstream brucemiller/LaTeXML#902.
   svg_threshold_kb: u32,
 }
@@ -342,8 +364,62 @@ impl Graphics {
         }
       }
     }
+    if best_path.is_some() {
+      return best_path;
+    }
 
-    best_path
+    // kpathsea-parity casefold fallback (`texmf_casefold_search`, default ON
+    // since TL2018): pdflatex finds `images/NLPOptNet.jpg` even when the
+    // file on disk is `images/NLPOPtNet.jpg`, so an author case-typo that
+    // builds fine on arXiv must not lose the figure here (witness
+    // 2605.00260, Figure 1). Like kpathsea, this fires only AFTER every
+    // exact search misses; only the filename component is folded, and an
+    // ambiguous directory (two case-variants) refuses to guess.
+    for sp in std::iter::once(String::new()).chain(search_paths.iter().cloned()) {
+      let cand = if sp.is_empty() {
+        source.clone()
+      } else {
+        format!("{}/{}", sp, source)
+      };
+      if let Some(found) = Self::casefold_resolve(&cand) {
+        Info!(
+          "graphics",
+          "casefold",
+          "Graphic '{}' resolved case-insensitively to '{}' (kpathsea casefold parity)",
+          source,
+          found
+        );
+        return Some(found);
+      }
+    }
+    None
+  }
+
+  /// Case-insensitive filename resolution within the path's directory.
+  /// Returns the unique match, or None when absent or ambiguous.
+  fn casefold_resolve(path: &str) -> Option<String> {
+    let p = Path::new(path);
+    if p.exists() {
+      return Some(path.to_string());
+    }
+    let parent = match p.parent() {
+      Some(d) if !d.as_os_str().is_empty() => d,
+      _ => Path::new("."),
+    };
+    let want = p.file_name()?.to_str()?;
+    let mut hit: Option<String> = None;
+    for entry in std::fs::read_dir(parent).ok()? {
+      let entry = entry.ok()?;
+      let name = entry.file_name();
+      let Some(name) = name.to_str() else { continue };
+      if name.eq_ignore_ascii_case(want) && entry.path().is_file() {
+        if hit.is_some() {
+          return None; // ambiguous — never guess between case-variants
+        }
+        hit = Some(entry.path().to_string_lossy().to_string());
+      }
+    }
+    hit
   }
 
   /// Set the image source attributes on a graphics node.
@@ -674,84 +750,47 @@ impl Graphics {
     None
   }
 
-  /// Try to convert a PDF to plain SVG via `inkscape`, preserving vector
-  /// content. Returns `true` on success. Tracks upstream
-  /// brucemiller/LaTeXML#902.
+  /// Try to convert a PDF to plain SVG, preserving vector content. Returns
+  /// `true` on success. Tracks upstream brucemiller/LaTeXML#902.
   ///
   /// Caller decides when to attempt this — typically only for PDF sources
-  /// below a file-size threshold, because inkscape on raster-embedded PDFs
-  /// produces massive output (>100 MB) and can take 40+ seconds
-  /// (measured: Fade.pdf 1.7 MB → 46 s / 102 MB SVG vs `convert` 1.4 s /
-  /// 61 KB PNG).
+  /// below a file-size threshold (`should_try_svg_path`), because vector
+  /// converters on raster-embedded PDFs produce massive output (>100 MB).
+  /// On any failure the function returns `false` and the worker falls back
+  /// to the raster (PNG) path — so a PDF that no vector tool can handle is
+  /// never lost, just rasterized instead.
   ///
-  /// `page` is 1-based (graphicx convention); converted to 0-based for
-  /// inkscape's `--pdf-page`.
+  /// `page` is 1-based (graphicx convention).
   ///
-  /// Guarded by a **hard timeout** (15 s default; see
-  /// `inkscape_timeout_secs`). Pathological small-PDF cases have been
-  /// observed — if inkscape is still running after the deadline we SIGKILL
-  /// it and return `false` so the caller falls back to ImageMagick. The
-  /// timeout is generous enough (15 s) for all well-behaved small vector
-  /// plots and strict enough to prevent the 46 s+ runaway behaviour seen
-  /// on Fade.pdf-class inputs.
+  /// Each converter is guarded by a **hard timeout** (15 s default; see
+  /// `svg_convert_timeout_secs`) and an output-size cap
+  /// (`MAX_SVG_OUTPUT_BYTES`): a converter still running after the deadline
+  /// is SIGKILLed, and oversized output is discarded — either way we fall
+  /// through to the next converter, then to raster.
   fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
-    // Try fast vector rasterizers in order of measured speed +
+    // Try the two fast vector converters in order of measured speed +
     // gzip-compressibility on the canvas slow-tail. Each is gated by
     // `MAX_SVG_OUTPUT_BYTES`; pathological vector-heavy PDFs (e.g.
-    // R-Graphics `W.pdf`) can emit >100 MB SVG which we discard so
-    // the caller falls back to raster.
+    // R-Graphics `W.pdf`) can emit >100 MB SVG which we discard so the
+    // caller falls back to raster.
     //
     // Order (subprocess; library license doesn't propagate):
     //   1. mutool (MuPDF CLI) — fastest, plus ~4× more gzip-compressible SVG output than pdftocairo
     //      (1.5 MB vs 6.0 MB gz on matplotlib scatter).
-    //   2. pdftocairo (poppler) — universally available with TeX Live. 20-40× faster than inkscape
-    //      on benign vector PDFs.
-    //   3. inkscape — last vector resort. Some PDFs that fail poppler still render via inkscape
-    //      (but it can time out).
+    //   2. pdftocairo (poppler) — universally available with TeX Live; parses vector PDFs directly,
+    //      so it's fast even on the inputs that make ImageMagick/gs rasterization crawl.
+    //
+    // A heavyweight third resort (inkscape) was removed deliberately: it
+    // pulls a GTK/X11 stack, is 20-40× slower, and is timeout-prone, while
+    // adding no real coverage — when both converters above fail, the worker
+    // rasterizes to PNG anyway.
     if Self::convert_image_svg_mutool(source, dest, page) {
       return true;
     }
     if Self::convert_image_svg_pdftocairo(source, dest, page) {
       return true;
     }
-    let mut cmd = std::process::Command::new("inkscape");
-    cmd
-      .arg("--export-type=svg")
-      .arg("--export-plain-svg")
-      .arg(format!("--export-filename={}", dest));
-    if let Some(p) = page {
-      cmd.arg(format!("--pdf-page={}", p.saturating_sub(1)));
-    }
-    cmd.arg(source);
-    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
-    match Self::run_with_timeout(cmd, timeout) {
-      Some(status) => {
-        if !(status.success() && Path::new(dest).exists()) {
-          return false;
-        }
-        // Reject pathological inkscape output that explodes to >100 MB
-        // — keep the dest hole open so the worker falls back to raster.
-        if Self::svg_output_too_large(dest) {
-          let _ = std::fs::remove_file(dest);
-          return false;
-        }
-        true
-      },
-      None => {
-        // Subprocess wall-clock timeout; class=`shell` mirrors Perl
-        // LaTeXImages.pm:293 `Error('shell', $cmd, …)`.
-        Warn!(
-          "shell",
-          "inkscape",
-          "Graphics: inkscape SVG conversion for {} exceeded {} s — killed",
-          source,
-          timeout.as_secs()
-        );
-        // Best-effort cleanup of a partial output.
-        let _ = std::fs::remove_file(dest);
-        false
-      },
-    }
+    false
   }
 
   /// Maximum acceptable SVG output size from a vector conversion. Above
@@ -807,7 +846,7 @@ impl Graphics {
       .arg(&tmp_pattern_str)
       .arg(source)
       .arg(p1.to_string());
-    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    let timeout = std::time::Duration::from_secs(Self::svg_convert_timeout_secs());
     let ok = Self::run_with_timeout(cmd, timeout)
       .map(|status| status.success())
       .unwrap_or(false)
@@ -833,10 +872,10 @@ impl Graphics {
   }
 
   /// `pdftocairo -svg` rasterizes the page's vector content to SVG via
-  /// poppler/cairo. Much faster than inkscape on the kind of vector PDFs
-  /// matplotlib/pgfplots produce. Returns true ONLY if the output is
-  /// reasonably-sized; otherwise we discard and let the caller try
-  /// inkscape (which sometimes simplifies further).
+  /// poppler/cairo — the second-choice vector converter after mutool, and
+  /// universally available with TeX Live. Returns true ONLY if the output
+  /// is reasonably-sized; otherwise we discard it and the caller falls
+  /// through to the raster (PNG) path.
   fn convert_image_svg_pdftocairo(source: &str, dest: &str, page: Option<u32>) -> bool {
     let mut cmd = std::process::Command::new("pdftocairo");
     cmd.arg("-svg");
@@ -851,7 +890,7 @@ impl Graphics {
       cmd.arg("-f").arg("1").arg("-l").arg("1");
     }
     cmd.arg(source).arg(dest);
-    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    let timeout = std::time::Duration::from_secs(Self::svg_convert_timeout_secs());
     match Self::run_with_timeout(cmd, timeout) {
       Some(status) => {
         if !(status.success() && Path::new(dest).exists()) {
@@ -871,12 +910,12 @@ impl Graphics {
     }
   }
 
-  /// Hard timeout (seconds) for the `inkscape` subprocess. Overridable via
-  /// the `LATEXML_INKSCAPE_TIMEOUT_SECS` environment variable for
-  /// debugging; defaults to 15 s — enough for all benign vector-authored
-  /// plots we've measured (< 1 s typical), strict enough to cut off the
-  /// Fade.pdf-class 40 s+ runaway cases.
-  fn inkscape_timeout_secs() -> u64 { INKSCAPE_TIMEOUT_SECS.unwrap_or(15) }
+  /// Hard timeout (seconds) for a vector-SVG converter subprocess (mutool /
+  /// pdftocairo). Overridable via the `LATEXML_SVG_CONVERT_TIMEOUT_SECS`
+  /// environment variable for debugging; defaults to 15 s — enough for all
+  /// benign vector-authored plots we've measured (< 1 s typical), strict
+  /// enough to cut off the Fade.pdf-class 40 s+ runaway cases.
+  fn svg_convert_timeout_secs() -> u64 { SVG_CONVERT_TIMEOUT_SECS.unwrap_or(15) }
 
   /// Run `cmd` and enforce a wall-clock timeout. Returns `Some(status)` on
   /// clean exit, `None` if the child was killed on timeout or spawn
@@ -887,15 +926,20 @@ impl Graphics {
   /// Without that, ImageMagick's `convert` was spawning `gs` and dying
   /// on SIGKILL while leaving gs orphaned — those gs processes held on
   /// for 10+ minutes per pathological PDF and stalled large sandbox
-  /// runs. The same hardening protects inkscape / pdftocairo / ps2pdf.
+  /// runs. The same hardening protects mutool / pdftocairo / ps2pdf.
   fn run_with_timeout(
     mut cmd: std::process::Command,
     timeout: std::time::Duration,
   ) -> Option<std::process::ExitStatus> {
-    // Redirect stdio so a slow inkscape doesn't block on a full pipe.
+    // Capture the program name for the failure diagnostic before `cmd` is moved.
+    let prog = cmd.get_program().to_string_lossy().into_owned();
+    // stdout is uninteresting (null); stderr is PIPED so a converter's error text
+    // (gs `/undefinedfilename`, an ImageMagick policy block, a missing delegate)
+    // can be surfaced into the failed_to_convert Error. A draining reader thread
+    // (below) keeps the child from blocking on a full stderr pipe.
     cmd
       .stdout(std::process::Stdio::null())
-      .stderr(std::process::Stdio::null());
+      .stderr(std::process::Stdio::piped());
     #[cfg(unix)]
     {
       use std::os::unix::process::CommandExt;
@@ -912,7 +956,7 @@ impl Graphics {
           // process group, so if the process running `run_with_timeout` is
           // itself killed (e.g. the LSP server SIGKILLs a preempted body
           // child mid-post-processing), nothing would ever time out or kill
-          // a runaway gs/inkscape — the exact orphan pathology this
+          // a runaway gs/convert — the exact orphan pathology this
           // function's group-kill solves, reintroduced one level up.
           // PR_SET_PDEATHSIG makes the kernel SIGKILL the converter when its
           // spawning thread dies; it survives execve, so setting it here
@@ -932,7 +976,46 @@ impl Graphics {
         });
       }
     }
-    let mut child = cmd.spawn().ok()?;
+    let mut child = match cmd.spawn() {
+      Ok(c) => c,
+      Err(e) => {
+        // Spawn failure is the "converter not installed / not on PATH" case
+        // (e.g. `gs` absent in a minimal image): record it so the Error names
+        // the missing tool instead of a bare "failed to convert".
+        record_converter_diag(format!("could not start `{prog}`: {e}"));
+        return None;
+      },
+    };
+    // Drain stderr concurrently into a bounded (8 KiB) buffer so the child never
+    // blocks on a full pipe; joined after it exits.
+    // The drained text comes back over a channel so the parent can WAIT
+    // BOUNDED: a converter descendant that survives the kill while holding
+    // stderr open must not hang the worker past the timeout (the reader
+    // thread is simply abandoned; it exits at pipe EOF).
+    let (stderr_tx, stderr_rx) = std::sync::mpsc::channel::<String>();
+    let stderr_reader = child.stderr.take().map(|mut se| {
+      std::thread::spawn(move || {
+        use std::io::Read;
+        let mut kept: Vec<u8> = Vec::new();
+        let mut chunk = [0u8; 4096];
+        loop {
+          match se.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => {
+              if kept.len() < 8192 {
+                let room = 8192 - kept.len();
+                kept.extend_from_slice(&chunk[..n.min(room)]);
+              }
+            },
+            // EINTR is not EOF — treating it as terminal stopped the drain
+            // and let a chatty converter block on the full pipe.
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(_) => break,
+          }
+        }
+        let _ = stderr_tx.send(String::from_utf8_lossy(&kept).trim().to_string());
+      })
+    });
     let pid = child.id() as i32;
     let kill_group = || {
       #[cfg(unix)]
@@ -959,15 +1042,15 @@ impl Graphics {
       }
     };
     let start = std::time::Instant::now();
-    loop {
+    let status = loop {
       match child.try_wait() {
-        Ok(Some(status)) => return Some(status),
+        Ok(Some(status)) => break Some(status),
         Ok(None) => {
           if start.elapsed() >= timeout {
             kill_group();
             let _ = child.kill();
             let _ = child.wait();
-            return None;
+            break None;
           }
           std::thread::sleep(std::time::Duration::from_millis(50));
         },
@@ -975,10 +1058,39 @@ impl Graphics {
           kill_group();
           let _ = child.kill();
           let _ = child.wait();
-          return None;
+          break None;
         },
       }
+    };
+    // Join the stderr drainer and record a diagnostic. gs can print a fatal
+    // error (e.g. `/undefinedfilename` under an AppArmor denial) to stderr yet
+    // still exit 0, so a non-empty stderr is always worth surfacing — not only
+    // on a non-zero exit.
+    let stderr_text = if stderr_reader.is_some() {
+      // Exited child → EOF imminent; killed child → give the drain a short
+      // grace, then abandon the reader rather than hang the worker.
+      let grace = if status.is_some() {
+        std::time::Duration::from_secs(10)
+      } else {
+        std::time::Duration::from_secs(2)
+      };
+      stderr_rx.recv_timeout(grace).unwrap_or_default()
+    } else {
+      String::new()
+    };
+    if !stderr_text.is_empty() {
+      // Flatten newlines: gs prints `Error: ...` at column 0 mid-diagnostic,
+      // which would inflate line-anchored ^Error: log counts.
+      let flat = stderr_text.replace('\n', "; ");
+      record_converter_diag(format!("`{prog}`: {flat}"));
+    } else if status.map(|s| !s.success()).unwrap_or(true) {
+      let how = match status {
+        Some(s) => format!("exited {s}"),
+        None => format!("timed out after {}s / killed", timeout.as_secs()),
+      };
+      record_converter_diag(format!("`{prog}`: {how}, no stderr"));
     }
+    status
   }
 
   /// Parse SVG viewBox ("minX minY width height") and return (width, height).
@@ -1056,9 +1168,9 @@ impl Graphics {
   /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` (auto-detect only — leaves
   /// the explicit-threshold path active).
   ///
-  /// Safety net: any false positive falls back to ImageMagick when
-  /// inkscape emits >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG, so a misread
-  /// raster PDF degrades to "tried SVG, got too-big output, used
+  /// Safety net: any false positive falls back to the raster path when a
+  /// vector converter emits >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG, so a
+  /// misread raster PDF degrades to "tried SVG, got too-big output, used
   /// convert" instead of a stuck pipeline.
   fn should_try_svg_path(source: &str, threshold_kb: u32) -> bool {
     if !source.to_lowercase().ends_with(".pdf") {
@@ -1081,7 +1193,7 @@ impl Graphics {
     };
     // Hard upper bound: even if the detector misses an image
     // somewhere deeper in the file, a 500 KB cap keeps the
-    // worst-case wasted inkscape work bounded (~1-2 s before the
+    // worst-case wasted vector-conversion work bounded (~1-2 s before the
     // 8 MB output cap kicks in or the conversion finishes anyway).
     const AUTO_MAX_BYTES: u64 = 500 * 1024;
     if len > AUTO_MAX_BYTES {
@@ -1217,7 +1329,7 @@ impl Graphics {
   /// `-f`/`-l` page selector. Empirical: for vector-heavy PDFs (e.g.
   /// R-Graphics output) `pdftocairo` rasterizes 25× faster than
   /// ImageMagick-via-Ghostscript and produces a clean PNG, where the
-  /// inkscape SVG path explodes to >100 MB and `convert`/`gs` runs into
+  /// vector-SVG path explodes to >100 MB and `convert`/`gs` runs into
   /// tens of seconds on a single page.
   fn should_try_pdf_cairo_path(source: &str) -> bool { source.to_lowercase().ends_with(".pdf") }
 
@@ -1599,7 +1711,7 @@ impl Graphics {
     }
     // Wall-clock timeout to bound `gs`-via-`convert` runaways on
     // pathological PDFs (raster-heavy or with broken xref tables).
-    // Matches the inkscape path's defensive bound; without this, an
+    // Matches the vector-SVG path's defensive bound; without this, an
     // arbitrary `convert` invocation could run for minutes and stall
     // the entire post-processing phase. 60 s is enough for any
     // reasonably-sized graphic; tune via `LATEXML_CONVERT_TIMEOUT_SECS`.
@@ -1618,10 +1730,22 @@ impl Graphics {
       .arg(dest);
     let timeout = std::time::Duration::from_secs(Self::convert_timeout_secs());
     match Self::run_with_timeout(cmd, timeout) {
-      // Mirror the original `cmd.output()` semantics: report success based
-      // on exit status alone, not on whether `dest` was actually written.
-      // (The fake-convert test fixture exits 0 without producing a file.)
-      Some(status) => status.success(),
+      Some(status) => {
+        // A clean exit is NOT sufficient: ImageMagick `convert` (and the `gs`
+        // it drives) exits 0 on some corrupt/unrenderable inputs while writing
+        // no file. Require an actual non-empty output so a genuine "no image"
+        // failure surfaces (returns false → the caller's imageprocessing
+        // Error) instead of being mistaken for success and emitting a
+        // broken/empty <img>. The fast PDF/EPS paths already verify their
+        // output (mutool/pdftocairo check `dest.exists()`); this brings the
+        // final `convert` fallback in line.
+        if status.success() && Self::produced_output(dest) {
+          true
+        } else {
+          let _ = std::fs::remove_file(dest); // drop any partial/empty output
+          false
+        }
+      },
       None => {
         Warn!(
           "shell",
@@ -1636,8 +1760,18 @@ impl Graphics {
     }
   }
 
+  /// True iff `dest` was actually written as a usable (non-empty) file. Used to
+  /// validate a subprocess conversion whose exit code alone is unreliable
+  /// (`convert`/`gs` can exit 0 having produced nothing). A 0-byte file counts
+  /// as failure — it would render as a broken image.
+  fn produced_output(dest: &str) -> bool {
+    std::fs::metadata(dest)
+      .map(|m| m.len() > 0)
+      .unwrap_or(false)
+  }
+
   /// Hard timeout (seconds) for the `convert` subprocess. Mirrors
-  /// `inkscape_timeout_secs`; default 60 s. Override via
+  /// `svg_convert_timeout_secs`; default 60 s. Override via
   /// `LATEXML_CONVERT_TIMEOUT_SECS` for debugging.
   fn convert_timeout_secs() -> u64 { CONVERT_TIMEOUT_SECS.unwrap_or(60) }
 }
@@ -1861,9 +1995,9 @@ impl Processor for Graphics {
       rel_dest:     String,
       abs_dest_str: String,
       /// `Some((rel_svg, abs_svg_str))` when the worker should
-      /// first attempt the inkscape-SVG path and only fall back
-      /// to `convert` on failure. `None` means the classic
-      /// raster-only path.
+      /// first attempt the vector-SVG path and only fall back
+      /// to the raster `convert` path on failure. `None` means
+      /// the classic raster-only path.
       svg_paths:    Option<(String, String)>,
     }
     struct ConvertOutcome {
@@ -1962,7 +2096,7 @@ impl Processor for Graphics {
           convert_source_counts.insert(source.clone(), prior_source_jobs + 1);
           // Vector-SVG path: opt-in for small PDFs only. We prepare an
           // alternate `.svg` destination path alongside the normal raster
-          // destination so the worker can try inkscape first, then fall
+          // destination so the worker can try the vector-SVG path first, then fall
           // back. The file-size heuristic gates this — see
           // `should_try_svg_path`.
           let try_svg = Self::should_try_svg_path(&source, self.svg_threshold_kb);
@@ -2052,131 +2186,162 @@ impl Processor for Graphics {
       // workers pick up the remaining jobs via the shared `next`
       // counter. If every spawn fails, run all jobs on the current
       // thread instead of crashing.
-      let worker_outcomes: Vec<Vec<ConvertOutcome>> = std::thread::scope(|s| {
+      type WorkerResult = (
+        Vec<ConvertOutcome>,
+        latexml_core::util::logger::CapturedDiagnostics,
+      );
+      let worker_outcomes: Vec<WorkerResult> = std::thread::scope(|s| {
         let handles: Vec<_> = (0..n_workers)
           .filter_map(|_| {
             std::thread::Builder::new()
               .stack_size(2 * 1024 * 1024)
               .spawn_scoped(s, || {
-                let mut local = Vec::<ConvertOutcome>::new();
-                loop {
-                  let i = next.fetch_add(1, Ordering::Relaxed);
-                  if i >= jobs.len() {
-                    break;
-                  }
-                  let ConvertJob {
-                    job_id,
-                    source,
-                    page,
-                    rel_dest,
-                    abs_dest_str,
-                    svg_paths,
-                  } = jobs[i];
-                  // Try vector-SVG path first if requested for this source.
-                  // The cache layer (graphics_cache) hardlinks/copies a
-                  // matching cached output before any subprocess fires and
-                  // round-trips the dimensions through a .dims sidecar so
-                  // hits skip the `read_*_dimensions` re-measure too.
-                  // Misses fall through to the real conversion + measure
-                  // and write back on success. Disable via
-                  // LATEXML_GRAPHICS_CACHE_OFF=1.
-                  let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
-                    let svg_key = crate::graphics_cache::RenderKey {
-                      page:    *page,
-                      density: 0,
-                      ext:     "svg",
-                    };
-                    let svg_res = crate::graphics_cache::with_cache_dims(
-                      source,
-                      abs_svg,
-                      svg_key,
-                      || {
-                        subproc_ref.fetch_add(1, Ordering::Relaxed);
-                        Self::convert_image_svg(source, abs_svg, *page)
-                      },
-                      || {
-                        Self::read_svg_dimensions(abs_svg)
-                          .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h })
-                      },
-                    );
-                    match svg_res {
-                      crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
-                        job_id:   *job_id,
-                        imagesrc: Some(rel_svg.clone()),
-                        raw_dims: dims.map(|d| (d.width, d.height)),
-                      }),
-                      crate::graphics_cache::ConvertResult::Failed => {
-                        Warn!(
-                          "shell",
-                          "inkscape",
-                          "Graphics: inkscape SVG path failed for {}, falling back to convert",
-                          source
-                        );
-                        None
-                      },
+                // Capture this worker's diagnostics and hand them back on join.
+                // LOG_BUFFER + REPORT are #[thread_local], so an Error!/Warn! a
+                // conversion raises on this worker would otherwise be lost from
+                // cortex.log AND from status_code. The main thread replays them
+                // (text + count deltas) in worker order after the scope joins.
+                latexml_core::util::logger::capture(|| {
+                  let mut local = Vec::<ConvertOutcome>::new();
+                  loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    if i >= jobs.len() {
+                      break;
                     }
-                  } else {
-                    None
-                  };
-                  let raster_res = if svg_outcome.is_none() {
-                    let raster_key = crate::graphics_cache::RenderKey {
-                      page:    *page,
-                      density: Self::raster_density_for_source(source),
-                      ext:     ext_from_path(abs_dest_str),
-                    };
-                    crate::graphics_cache::with_cache_dims(
+                    let ConvertJob {
+                      job_id,
                       source,
+                      page,
+                      rel_dest,
                       abs_dest_str,
-                      raster_key,
-                      || {
-                        subproc_ref.fetch_add(1, Ordering::Relaxed);
-                        Self::convert_image(source, abs_dest_str, dpi, *page)
-                      },
-                      || {
-                        Self::read_image_dimensions(abs_dest_str)
-                          .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h })
-                      },
-                    )
-                  } else {
-                    crate::graphics_cache::ConvertResult::Failed
-                  };
-                  let outcome = if let Some(o) = svg_outcome {
-                    o
-                  } else if raster_res.is_ok() {
-                    ConvertOutcome {
-                      job_id:   *job_id,
-                      imagesrc: Some(rel_dest.clone()),
-                      raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
-                    }
-                  } else {
-                    // Final-failure: every conversion path exhausted. Mirror
-                    // Perl Graphics.pm L324-329 (Error + `return` with NO
-                    // imagesrc) — do NOT fall back to copying the raw source.
-                    // A raw .eps/.ps/.pdf is never usable on the web; copying it
-                    // would emit a broken `<img src="fig.eps">`. Leaving
-                    // @imagesrc unset makes the HTML5 XSLT
-                    // (LaTeXML-misc-xhtml.xsl L154) render the node as
-                    // `class="ltx_missing ltx_missing_image"` (empty src) — the
-                    // correct "couldn't render" signal. (User directive
-                    // 2026-06-22; raw .eps/.pdf are never web-native.)
-                    // Error class/object mirror Perl Graphics.pm:274 so the
-                    // harness aggregates with engine/package emissions.
-                    Error!(
-                      "imageprocessing",
-                      source,
-                      "Graphics: Failed to convert {} to {}",
-                      source,
-                      abs_dest_str
-                    );
-                    ConvertOutcome {
-                      job_id:   *job_id,
-                      imagesrc: None,
-                      raw_dims: None,
-                    }
-                  };
-                  local.push(outcome);
-                }
-                local
+                      svg_paths,
+                    } = jobs[i];
+                    // Fresh converter-diagnostic slate for this node, so the
+                    // failed_to_convert Error (if it fires) reports THIS asset's
+                    // converter error, not a previous job's.
+                    take_converter_diag();
+                    // Try vector-SVG path first if requested for this source.
+                    // The cache layer (graphics_cache) hardlinks/copies a
+                    // matching cached output before any subprocess fires and
+                    // round-trips the dimensions through a .dims sidecar so
+                    // hits skip the `read_*_dimensions` re-measure too.
+                    // Misses fall through to the real conversion + measure
+                    // and write back on success. Disable via
+                    // LATEXML_GRAPHICS_CACHE_OFF=1.
+                    let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
+                      let svg_key = crate::graphics_cache::RenderKey {
+                        page:    *page,
+                        density: 0,
+                        ext:     "svg",
+                      };
+                      let svg_res = crate::graphics_cache::with_cache_dims(
+                        source,
+                        abs_svg,
+                        svg_key,
+                        || {
+                          subproc_ref.fetch_add(1, Ordering::Relaxed);
+                          Self::convert_image_svg(source, abs_svg, *page)
+                        },
+                        || {
+                          Self::read_svg_dimensions(abs_svg).map(|(w, h)| {
+                            crate::graphics_cache::CachedDims { width: w, height: h }
+                          })
+                        },
+                      );
+                      match svg_res {
+                        crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
+                          job_id:   *job_id,
+                          imagesrc: Some(rel_svg.clone()),
+                          raw_dims: dims.map(|d| (d.width, d.height)),
+                        }),
+                        crate::graphics_cache::ConvertResult::Failed => {
+                          Warn!(
+                            "shell",
+                            "svg",
+                            "Graphics: vector-SVG path failed for {}, falling back to raster",
+                            source
+                          );
+                          None
+                        },
+                      }
+                    } else {
+                      None
+                    };
+                    let raster_res = if svg_outcome.is_none() {
+                      let raster_key = crate::graphics_cache::RenderKey {
+                        page:    *page,
+                        density: Self::raster_density_for_source(source),
+                        ext:     ext_from_path(abs_dest_str),
+                      };
+                      crate::graphics_cache::with_cache_dims(
+                        source,
+                        abs_dest_str,
+                        raster_key,
+                        || {
+                          subproc_ref.fetch_add(1, Ordering::Relaxed);
+                          Self::convert_image(source, abs_dest_str, dpi, *page)
+                        },
+                        || {
+                          Self::read_image_dimensions(abs_dest_str).map(|(w, h)| {
+                            crate::graphics_cache::CachedDims { width: w, height: h }
+                          })
+                        },
+                      )
+                    } else {
+                      crate::graphics_cache::ConvertResult::Failed
+                    };
+                    let outcome = if let Some(o) = svg_outcome {
+                      o
+                    } else if raster_res.is_ok() {
+                      ConvertOutcome {
+                        job_id:   *job_id,
+                        imagesrc: Some(rel_dest.clone()),
+                        raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
+                      }
+                    } else {
+                      // Final-failure: every conversion path exhausted. Mirror
+                      // Perl Graphics.pm L324-329 (Error + `return` with NO
+                      // imagesrc) — do NOT fall back to copying the raw source.
+                      // A raw .eps/.ps/.pdf is never usable on the web; copying it
+                      // would emit a broken `<img src="fig.eps">`. Leaving
+                      // @imagesrc unset makes the HTML5 XSLT
+                      // (LaTeXML-misc-xhtml.xsl L154) render the node as
+                      // `class="ltx_missing ltx_missing_image"` (empty src) — the
+                      // correct "couldn't render" signal. (User directive
+                      // 2026-06-22; raw .eps/.pdf are never web-native.)
+                      // Error class/object mirror Perl Graphics.pm:274 so the
+                      // harness aggregates with engine/package emissions.
+                      // Object is the failure TYPE (not the filename) so the
+                      // harness can aggregate by failure mode. The message marks
+                      // the SOURCE asset (the input that failed) as the subject —
+                      // NOT the target — so the log clearly identifies which
+                      // input could not be rendered; the intended target is
+                      // secondary context.
+                      // Surface the last converter's stderr / spawn error so an
+                      // environment failure (gs not installed, AppArmor denial,
+                      // ImageMagick policy block) is self-diagnosing in the log.
+                      let why = take_converter_diag()
+                        .unwrap_or_else(|| "no converter diagnostic captured".to_string());
+                      Error!(
+                        "imageprocessing",
+                        "failed_to_convert",
+                        "Graphics: failed to convert source asset {} — every converter \
+                         failed, no usable image produced (intended target {}); last \
+                         converter error: {}",
+                        source,
+                        abs_dest_str,
+                        why
+                      );
+                      ConvertOutcome {
+                        job_id:   *job_id,
+                        imagesrc: None,
+                        raw_dims: None,
+                      }
+                    };
+                    local.push(outcome);
+                  }
+                  local
+                })
               })
               .ok()
           })
@@ -2187,10 +2352,43 @@ impl Processor for Graphics {
         // and losing the entire conversion. Surviving workers always
         // race for the same `next` counter, so a single survivor is
         // enough to complete all jobs.
-        handles.into_iter().map(|h| h.join().unwrap()).collect()
+        //
+        // The same degradation policy applies to a worker that PANICS
+        // mid-run (observed under fleet memory pressure: 15 papers in
+        // the 2026-07 full-arXiv run, where join().unwrap() escalated
+        // a thread panic into a whole-conversion Fatal). Surface the
+        // payload as a conversion Error and keep the survivors'
+        // outcomes — a casualty's unfinished job stays unconverted
+        // (the outcomes_by_job lookups below tolerate missing ids).
+        handles
+          .into_iter()
+          .filter_map(|h| match h.join() {
+            Ok(res) => Some(res),
+            Err(payload) => {
+              let msg = payload
+                .downcast_ref::<&'static str>()
+                .map(|s| (*s).to_string())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "opaque panic payload".to_string());
+              Error!(
+                "imageprocessing",
+                "worker_panicked",
+                "Graphics: a conversion worker thread panicked ({}); its \
+                 unfinished jobs are skipped and their graphics left \
+                 unconverted",
+                msg
+              );
+              None
+            },
+          })
+          .collect()
       });
-      for v in worker_outcomes {
+      // Merge each worker's outcomes AND replay its captured diagnostics on the
+      // main thread (in worker order), so any conversion Error!/Warn! reaches the
+      // bound cortex.log and registers in the main REPORT / status_code.
+      for (v, diags) in worker_outcomes {
         outcomes.extend(v);
+        latexml_core::util::logger::replay_captured(diags);
       }
       outcomes.sort_by_key(|o| o.job_id);
       latexml_core::telemetry::add_graphics_subprocess(subproc_count.load(Ordering::Relaxed));
@@ -2357,7 +2555,7 @@ mod tests {
 
   /// `run_with_timeout` kills the child and returns `None` when the
   /// process exceeds the deadline. Uses `sleep` as a stand-in for any
-  /// runaway subprocess (inkscape, convert, …).
+  /// runaway subprocess (convert, gs, mutool, …).
   #[test]
   fn run_with_timeout_kills_slow_child() {
     let start = std::time::Instant::now();
@@ -2575,9 +2773,12 @@ endobj
     std::fs::write(&source, "%!PS-Adobe-3.0\n%%BoundingBox: 0 0 100 100\n").unwrap();
     let log = tmp.join("convert.log");
     let fake_convert = tmp.join("convert");
+    // Log the args AND write a non-empty file at the dest (the last positional
+    // arg) — `convert_image` now requires actual output, not just exit 0.
     std::fs::write(
       &fake_convert,
-      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$LATEXML_FAKE_CONVERT_LOG\"\nexit 0\n",
+      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$LATEXML_FAKE_CONVERT_LOG\"\n\
+       for a in \"$@\"; do d=\"$a\"; done\nprintf x > \"$d\"\nexit 0\n",
     )
     .unwrap();
     let mut perms = std::fs::metadata(&fake_convert).unwrap().permissions();
@@ -2617,5 +2818,131 @@ endobj
     assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
 
     std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  /// A post-processing diagnostic raised on a WORKER THREAD must reach the MAIN
+  /// thread's bound log AND register in the main `REPORT` status counters — both
+  /// `LOG_BUFFER` and `REPORT` are `#[thread_local]`, so a worker's `Error!`
+  /// would otherwise be lost from cortex.log and from `status_code`. This
+  /// exercises the exact "thread join + fold" the graphics pool uses: each
+  /// worker returns its [`CapturedDiagnostics`] from `logger::capture`, and the
+  /// main thread folds them in via `replay_captured` after join — no shared
+  /// writeable state, no lock, no env mutation. (Companion: the real pipeline is
+  /// validated end-to-end by converting a document with an unconvertible image;
+  /// see docs and the manual `--preload`/`--dest` smoke.)
+  #[test]
+  fn worker_diagnostics_fold_into_main_thread_on_join() {
+    // The `log` macros are inert until a logger + level are installed (the
+    // CLI/cortex do this at startup). `init` is process-global + idempotent
+    // across tests; force the level since `init` skips it if already installed.
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+    log::set_max_level(log::LevelFilter::Info);
+
+    latexml_core::util::logger::bind_log();
+    let before = latexml_core::common::error::snapshot_report_counts();
+
+    // Two workers, each emitting a post Error! under capture (so the diagnostic
+    // lands in the worker's own thread-local buffer + REPORT), returning their
+    // CapturedDiagnostics on join — exactly the graphics pool's pattern.
+    let captured: Vec<latexml_core::util::logger::CapturedDiagnostics> = std::thread::scope(|s| {
+      (0..2)
+        .map(|i| {
+          s.spawn(move || {
+            latexml_core::util::logger::capture(|| {
+              Error!(
+                "imageprocessing",
+                "failed_to_convert",
+                "Graphics: Failed to convert {} to {}",
+                format!("w{i}.pdf"),
+                format!("w{i}.png")
+              );
+            })
+            .1
+          })
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|h| h.join().unwrap())
+        .collect()
+    });
+
+    // Fold the per-worker diagnostics into the main thread.
+    for diags in captured {
+      latexml_core::util::logger::replay_captured(diags);
+    }
+
+    let after = latexml_core::common::error::snapshot_report_counts();
+    let log = latexml_core::util::logger::flush_log();
+
+    assert!(
+      log.contains("imageprocessing:failed_to_convert") && log.contains("Failed to convert"),
+      "worker Error! must reach the main-thread log; got: {log:?}"
+    );
+    assert_eq!(
+      after.error,
+      before.error + 2,
+      "both workers' Error! must increment the main REPORT error count via the fold"
+    );
+  }
+
+  /// `produced_output` is the guard that turns a `convert`/`gs` exit-0-but-no-file
+  /// into a reported failure: a usable conversion is a non-empty file, not just a
+  /// clean exit. Missing OR empty (0-byte) => not output.
+  #[test]
+  fn produced_output_requires_a_nonempty_file() {
+    let tmp = std::env::temp_dir().join(format!("latexml_produced_{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).unwrap();
+    let missing = tmp.join("missing.png");
+    let empty = tmp.join("empty.png");
+    let real = tmp.join("real.png");
+    std::fs::write(&empty, b"").unwrap();
+    std::fs::write(&real, b"\x89PNG").unwrap();
+    assert!(
+      !Graphics::produced_output(&missing.to_string_lossy()),
+      "a missing file is not usable output"
+    );
+    assert!(
+      !Graphics::produced_output(&empty.to_string_lossy()),
+      "a 0-byte file is not usable output (would render as a broken image)"
+    );
+    assert!(
+      Graphics::produced_output(&real.to_string_lossy()),
+      "a non-empty file is usable output"
+    );
+    std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  /// A converter that fails must leave its stderr in the thread-local diagnostic,
+  /// so the failed_to_convert Error can name WHY (e.g. gs `/undefinedfilename`).
+  #[test]
+  fn run_with_timeout_captures_stderr_into_diag() {
+    take_converter_diag(); // clear
+    let mut cmd = std::process::Command::new("sh");
+    cmd.arg("-c").arg("echo 'boom on stderr' >&2; exit 3");
+    let status = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
+    assert!(
+      status.map(|s| !s.success()).unwrap_or(false),
+      "command should report failure"
+    );
+    let diag = take_converter_diag().expect("a diagnostic must be recorded");
+    assert!(
+      diag.contains("boom on stderr") && diag.contains("sh"),
+      "diag should name the program + its stderr; got: {diag}"
+    );
+  }
+
+  /// A converter that can't be spawned (not installed / not on PATH — e.g. `gs`
+  /// missing in a minimal image) must record a "could not start" diagnostic.
+  #[test]
+  fn run_with_timeout_records_spawn_failure() {
+    take_converter_diag();
+    let cmd = std::process::Command::new("definitely_not_a_real_binary_xyz_123");
+    let status = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
+    assert!(status.is_none(), "spawn failure returns None");
+    let diag = take_converter_diag().expect("a spawn diagnostic must be recorded");
+    assert!(
+      diag.contains("could not start") && diag.contains("definitely_not_a_real_binary_xyz_123"),
+      "diag should name the missing tool; got: {diag}"
+    );
   }
 }

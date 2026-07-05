@@ -66,7 +66,8 @@ LoadDefinitions!({
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
   // Perl L64: explicit autoClose so a stray paragraph or sectioning command
   // can flush an unclosed `\acknowledgments` block (no \endacknowledgments).
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
   // Perl L67-76: Misc macros.
   // \hash: Perl `DefPrimitiveI('\hash', undef, '#')` emits "#" text.

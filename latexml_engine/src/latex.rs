@@ -115,6 +115,31 @@ LoadDefinitions!({
     InnerPool!(latex_base);
   }
 
+  // Format-layering rule: real LaTeX (INITEX-based) never defines plain.tex's
+  // tabbing shorthand `\+` (= `\tabalign`), but our latex format is layered
+  // on the plain layer (dump record or raw plain.tex), which does. A stray
+  // `\+` in a LaTeX document (author typo, e.g. `\!+\+` for `\!+\!`) then
+  // expanded into \tabalign's \halign and detonated the mode-mismatch runaway
+  // (102-error TooManyErrors fatal; witness cond-mat0001412 in the 2026-07
+  // full-arXiv run) — where pdflatex gives a single undefined-CS error
+  // (latex209.def compat: `\let\+\@empty`) and Perl LaTeXML, which never
+  // defines `\+` in its TeX.pool, likewise reports one undefined macro.
+  // Retract the inherited definition here, at the "latex kernel layer
+  // complete" seam (covers both the dump and raw-base branches; skipped in
+  // INI_MODE by the early return above, so dump generation is unaffected).
+  // Guarded on the body still being plain's bare `\tabalign`, so a user's
+  // own pre-\documentclass `\def\+` survives the lazy pool load.
+  if let Ok(Some(defn)) = lookup_definition(&T_CS!("\\+"))
+    && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    && body.len() == 1
+    && body
+      .unlist_ref()
+      .first()
+      .is_some_and(|t| t.text == pin!("\\tabalign"))
+  {
+    remove_meaning_global(&T_CS!("\\+"));
+  }
+
   InnerPool!(latex_constructs);
 
   // Rust-only overrides — loaded LAST so they can patch CSes set up by

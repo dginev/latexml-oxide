@@ -212,7 +212,7 @@ LoadDefinitions!({
   DefPrimitive!("\\hfil", {
     enter_horizontal();
     Tbox::new(
-      pin_static(" "),
+      pin!(" "),
       None,
       None,
       Tokens!(T_CS!("\\hfil")),
@@ -222,7 +222,7 @@ LoadDefinitions!({
   DefPrimitive!("\\hfill", {
     enter_horizontal();
     Tbox::new(
-      pin_static(" "),
+      pin!(" "),
       None,
       None,
       Tokens!(T_CS!("\\hfill")),

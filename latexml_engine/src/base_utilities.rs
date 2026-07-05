@@ -89,7 +89,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L44-45
   DefPrimitive!("\\lx@endash", {
     Tbox::new(
-      pin_static("\u{2013}"),
+      pin!("\u{2013}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@endash")),
@@ -99,7 +99,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L46-47
   DefPrimitive!("\\lx@emdash", {
     Tbox::new(
-      pin_static("\u{2014}"),
+      pin!("\u{2014}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@emdash")),
@@ -109,7 +109,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L50-52: stand-in for T_ACTIVE('~').
   DefPrimitive!("\\lx@NBSP", {
     Tbox::new(
-      pin_static("\u{00A0}"),
+      pin!("\u{00A0}"),
       None,
       None,
       Tokens!(T_ACTIVE!('~')),
@@ -119,7 +119,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L53-55
   DefPrimitive!("\\lx@nobreakspace", {
     Tbox::new(
-      pin_static("\u{00A0}"),
+      pin!("\u{00A0}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@nobreakspace")),
@@ -659,8 +659,15 @@ LoadDefinitions!({
   // frontmatter so that the annotation inherits it as label (!!)
   // Typically would \let\label to this so that a \ref within a parent frontmatter
   // will get an annotation with corresponding \label will be attached.
-  DefPrimitive!("\\lx@set@frontmatter@label Semiverbatim", sub[(label)] {
-    let label = clean_frontmatter_labels(&label.to_string(), "LABEL").into_iter().next();
+  DefPrimitive!("\\lx@set@frontmatter@label [] Semiverbatim", sub[(prefix, label)] {
+    // Optional prefix (default "LABEL"). The superscript heuristic passes the
+    // role ("affiliation") so the label exactly matches the corresponding
+    // \lx@request@frontmatter@annotation[affiliation] on the author; otherwise
+    // relocate_annotations falls back to prefix-stripped matching and conflates
+    // it with the creator's own "author:N" sequence label (double-attach).
+    let prefix = prefix.as_ref().map(ToString::to_string)
+      .filter(|p| !p.is_empty()).unwrap_or_else(|| "LABEL".to_string());
+    let label = clean_frontmatter_labels(&label.to_string(), &prefix).into_iter().next();
     with_pending_entry_attr(move |attr| {
       match label {
         Some(label) => {
@@ -857,8 +864,9 @@ LoadDefinitions!({
             entries.push((false, line));
           },
           Some(_) => {
-            // Presumably author; but split again on "," JIK
-            for author in split_tokens(line, vec![SplitDelim::Token(T_OTHER!(","))]) {
+            // Marker sits far from the front: an author line. Split it into the
+            // individual creators it names (see split_author_line).
+            for author in split_author_line(line) {
               entries.push((true, author));
             }
           },
@@ -896,13 +904,27 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   });
 
+  // Superscript markers in author/affiliation blocks carry the affiliation
+  // number. Both sides use the "affiliation" prefix so the author's requested
+  // annotation ("affiliation:N") exactly matches the affiliation's label
+  // ("affiliation:N") in relocate_annotations -- avoiding the prefix-stripped
+  // fallback that would otherwise conflate them with a creator's own "author:N"
+  // sequence label and double-attach.
+  DefMacro!(
+    "\\lx@sup@request@affiliation",
+    "\\lx@request@frontmatter@annotation[affiliation]"
+  );
+  DefMacro!(
+    "\\lx@sup@setlabel@affiliation",
+    "\\lx@set@frontmatter@label[affiliation]"
+  );
   DefMacro!(
     "\\lx@author@withsup{}",
-    "\\bgroup\\let^\\lx@request@frontmatter@annotation\\let\\textsuperscript\\lx@request@frontmatter@annotation#1\\egroup"
+    "\\bgroup\\let^\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"
   );
   DefMacro!(
     "\\lx@affiliation@withsup{}",
-    "\\bgroup\\let^\\lx@set@frontmatter@label\\let\\textsuperscript\\lx@set@frontmatter@label#1\\egroup"
+    "\\bgroup\\let^\\lx@sup@setlabel@affiliation\\let\\textsuperscript\\lx@sup@setlabel@affiliation#1\\egroup"
   );
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
@@ -910,10 +932,20 @@ LoadDefinitions!({
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
     let with_sup = position_of(&stuff, &authorsup_markers()).is_some();
     for line in split_tokens(stuff, affil_splits()) {
+      // Skip empty segments (e.g. a trailing \\ or a line that was wholly
+      // consumed by an \email/\url) so they don't become blank affiliations.
+      // Mirrors \lx@add@authors.
+      if line.is_empty() {
+        continue;
+      }
       if with_sup {
+        // The superscript markers ARE the affiliation labels here, so drop any
+        // caller-supplied labelseq: applying both double-labels each affiliation
+        // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
+        // which likewise passes no attr in its with-superscript branch.
         let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
         calls.extend(
-          Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr.clone(), Some(withsup)]).unlist());
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
       } else {
         calls.extend(
           Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr.clone(), Some(line)]).unlist());
@@ -992,6 +1024,30 @@ LoadDefinitions!({
 
   // Same, but put it at the beginning of document, but after any ltx:resources
   DefConstructor!("\\lx@frontmatter@fallback", sub[document,_args] {
+    // Rationalized ordering (beyond-Perl divergence): the fallback flushes queued
+    // frontmatter when there is no \maketitle (triggered by the first \section via
+    // \@startsection@hook, or at document end). Perl (post PR#2767 Frontmatter API)
+    // always inserts it at the document TOP (after ltx:resource). Scope the rescue to
+    // the ABSTRACT-ONLY case — exactly the case `insert_frontmatter` already flags for
+    // deferral (see the "defer until abstract's document location" branch below): a
+    // manual \begin{center} "title" block preceding \begin{abstract} with no
+    // \maketitle (arXiv 1609.07638) deposits the title as ordinary body BEFORE the
+    // abstract is queued, so flushing at the top floats the abstract ABOVE the title.
+    // Insert the abstract at the CURRENT position instead, keeping the preceding body
+    // in place. Title/author/date frontmatter (e.g. a preamble \title with no
+    // \maketitle — tests/digestion/rebox) was registered before any body and keeps the
+    // original top-of-document insertion; and for a plain abstract with no preceding
+    // body the current position IS the top, so that case is unchanged too.
+    let abstract_only = with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frnt)) => frnt.len() == 1 && frnt.contains_key("ltx:abstract"),
+      _ => false,
+    });
+    if abstract_only {
+      // No \title/\author/\maketitle but a leading hand-formatted display block
+      // may BE the title (arXiv 1609.07638) — promote it to <ltx:title> first.
+      maybe_promote_leading_title(document)?;
+      insert_frontmatter(document)?;
+    } else {
     let savenode = document.get_node().clone();
     // Perl: findnode('ltx:document/ltx:resource[last()]') — relative to the
     // DOCUMENT node (Perl's default xpath context). The Rust cached XPath
@@ -1013,6 +1069,7 @@ LoadDefinitions!({
       insert_frontmatter(document)?;
       document.unwrap_nodes(wrapper)?;
       document.set_node(&savenode);
+    }
     }
   },
   after_digest => {
@@ -1692,6 +1749,173 @@ pub fn digest_front_matter() -> Result<()> {
   Ok(())
 }
 
+/// First `<ltx:p align="center">` in document order at/under `root` (manual DFS —
+/// see the shared-node caveat in `maybe_promote_leading_title`).
+fn first_centered_paragraph(root: &Node) -> Option<Node> {
+  let is_centered_p = with(document::get_node_qname(root), |q| q == "ltx:p")
+    && root.get_attribute("align").as_deref() == Some("center");
+  if is_centered_p {
+    return Some(root.clone());
+  }
+  for child in root.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode)
+      && let Some(found) = first_centered_paragraph(&child)
+    {
+      return Some(found);
+    }
+  }
+  None
+}
+
+/// True if `root` or any descendant is set in a font larger than the body size —
+/// the display-title signal. During construction the human-readable `fontsize`
+/// attribute does not exist yet (it is derived from `_font` in a later finalize
+/// pass); read the interned `_font` id and decode it here instead. `nominal` is
+/// the document body size (NOMINAL_FONT_SIZE, mirroring font::defsize), so
+/// `size > nominal * 1.1` is the construction-time analogue of `fontsize` > 110%.
+fn descendant_has_display_font(document: &Document, root: &Node, nominal: f64) -> bool {
+  if let Some(fontid) = root.get_attribute("_font")
+    && document
+      .decode_font(&fontid)
+      .and_then(Font::get_size)
+      .is_some_and(|size| size > nominal * 1.1)
+  {
+    return true;
+  }
+  root.get_child_nodes().iter().any(|c| {
+    c.get_type() == Some(NodeType::ElementNode) && descendant_has_display_font(document, c, nominal)
+  })
+}
+
+/// True if `node` has at least one element child.
+fn has_element_child(node: &Node) -> bool {
+  node
+    .get_child_nodes()
+    .iter()
+    .any(|c| c.get_type() == Some(NodeType::ElementNode))
+}
+
+/// Beyond-Perl heuristic: recover a document title from a hand-formatted leading
+/// block when the author never used `\title`/`\maketitle`.
+///
+/// Many papers set their title as a plain `\begin{center}{\Large ...}\end{center}`
+/// block instead of the frontmatter machinery, then declare only an abstract (e.g.
+/// arXiv 1609.07638). With no `\title` there is no `ltx:title` frontmatter to
+/// flush, so the document renders titleless. This promotes that first block — gated
+/// conservatively so it does not fire on epigraphs, dedications, centered figures or
+/// "draft" notices — into a real `<ltx:title>` at the document top.
+///
+/// Called only from the ABSTRACT-ONLY `\lx@frontmatter@fallback` branch: reaching it
+/// already means no `\title`/`\author`/`\maketitle` were used yet the paper carries
+/// frontmatter (an abstract) — the strongest signal a leading display block is the
+/// title. It fires only when no `<ltx:title>` exists yet, the first non-resource body
+/// element holds a leading centered `<ltx:p>` set in a larger-than-body font, and
+/// that paragraph has non-whitespace text. On a match the paragraph's inline children
+/// are MOVED into a fresh `<ltx:title>` after the resources, pruning empty wrappers.
+fn maybe_promote_leading_title(document: &mut Document) -> Result<()> {
+  // Never override an existing (real) title.
+  if document.findnode("/ltx:document/ltx:title", None).is_some() {
+    return Ok(());
+  }
+  // The first non-resource body element (the candidate title block). Fetch it
+  // with an ABSOLUTE query: nodes returned from a RELATIVE-context findnode are
+  // detached for child traversal (a rust-libxml shared-node artifact —
+  // get_content works but get_child_nodes is empty), so every step below walks
+  // the live DOM by hand from this anchor.
+  let Some(first_body) = document.findnode("/ltx:document/*[not(self::ltx:resource)][1]", None)
+  else {
+    return Ok(());
+  };
+  // Never DESCEND INTO SECTIONAL content: on the second fallback pass (fired
+  // at the next \section) the first body element can be the COMPLETED first
+  // section, and an unconstrained DFS would steal a centered display-font
+  // paragraph from inside it (e.g. a "Dedicated to ..." block) as the paper
+  // title. A hand-formatted title block is a plain para/quote at document
+  // level — reject sectional anchors outright (PR_READINESS must-fix 3).
+  let anchor_q = document::get_node_qname(&first_body);
+  let is_sectional = with(anchor_q, |q| {
+    matches!(
+      q,
+      "ltx:section"
+        | "ltx:subsection"
+        | "ltx:subsubsection"
+        | "ltx:paragraph"
+        | "ltx:subparagraph"
+        | "ltx:chapter"
+        | "ltx:part"
+        | "ltx:appendix"
+        | "ltx:bibliography"
+        | "ltx:index"
+        | "ltx:glossary"
+    )
+  });
+  if is_sectional {
+    return Ok(());
+  }
+  // First centered <ltx:p> in document order within the block; it must be set in
+  // a larger-than-body font (the display-title signal) and hold real text.
+  let Some(title_p) = first_centered_paragraph(&first_body) else {
+    return Ok(());
+  };
+  let nominal = {
+    let v = lookup_int("NOMINAL_FONT_SIZE");
+    if v > 0 { v as f64 } else { 10.0 }
+  };
+  if title_p.get_content().trim().is_empty()
+    || !descendant_has_display_font(document, &title_p, nominal)
+  {
+    return Ok(());
+  }
+  // Create <ltx:title> at the document top (after the last resource), mirroring
+  // the frontmatter fallback's placement.
+  let mut point = document.findnode("/ltx:document/ltx:resource[last()]", None);
+  if let Some(p) = point.take() {
+    point = p.get_next_sibling();
+  }
+  // No resources (or resource is the last child): insert before the first
+  // body element instead of silently declining (review corner-case).
+  let point = point.unwrap_or_else(|| first_body.clone());
+  // Create with a BARE tag + bind the root (default LaTeXML) namespace, so it
+  // serializes as <title> like a real frontmatter title — a prefixed "ltx:title"
+  // qname would emit a stray <ltx:title>. Mirrors open_element_internal's
+  // default-namespace path.
+  let mut title = document.insert_element_before(&point, "title", None)?;
+  if let Some(rns) = document
+    .get_document()
+    .get_root_element()
+    .and_then(|r| r.get_namespace())
+  {
+    let _ = title.set_namespace(&rns);
+  }
+  // MOVE the paragraph's inline children into the title (a true move preserves
+  // xml:ids, so any footnotes/marks carry over rather than being cloned+orphaned).
+  for mut child in title_p.get_child_nodes() {
+    child.unbind();
+    title.add_child(&mut child)?;
+  }
+  // Drop the now-empty paragraph, and any wrapper ancestor it leaves empty
+  // (para → logical-block), so we don't strand empty blocks above the abstract.
+  let mut victim = title_p;
+  loop {
+    let parent = victim.get_parent();
+    document.remove_node(victim);
+    match parent {
+      Some(p) if !has_element_child(&p) => {
+        let is_wrapper = with(document::get_node_qname(&p), |name| {
+          name == "ltx:para" || name == "ltx:logical-block"
+        });
+        if is_wrapper {
+          victim = p;
+          continue;
+        }
+      },
+      _ => {},
+    }
+    break;
+  }
+  Ok(())
+}
+
 /// Insert FrontMatter into document, if not already added
 /// Perl: insertFrontMatter($document).
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
@@ -2053,7 +2277,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
         let extra = Tokens::new(delim);
         params.push(
           Parameter {
-            name: pin_static("Until"),
+            name: pin!("Until"),
             spec: pin(format!("Until:{extra}")),
             extra: vec![extra],
             ..Parameter::default()
@@ -2081,7 +2305,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
       let expected = Tokens::new(lit);
       params.push(
         Parameter {
-          name: pin_static("Match"),
+          name: pin!("Match"),
           spec: pin(s!("Match:{expected}")),
           extra: vec![expected],
           novalue: true,
@@ -2387,7 +2611,7 @@ fn repack_horizontal_in_list(item: &mut Digested) {
 fn make_horizontal_list(para: Vec<Digested>) -> List {
   let mut list = List::new(para);
   list.mode = Some(TexMode::Text);
-  list.set_property("mode", Stored::String(pin_static("horizontal")));
+  list.set_property("mode", Stored::String(pin!("horizontal")));
   if let Some(hsize) = lookup_dimension("\\hsize") {
     list.set_property("width", Stored::Dimension(hsize));
   }
@@ -2545,6 +2769,14 @@ pub fn insert_block(
   contents: &Digested,
   block_attr: HashMap<String, String>,
 ) -> Result<Vec<Node>> {
+  // Perl #2829 (TeX_Box.pool insertBlock L449-456): callers may (sloppily)
+  // pass ALL Whatsit properties, but only SOME are intended as attributes.
+  // Filter out non-attributes, based on what ltx:figure accepts — a maximal
+  // set of the attributes for candidate containers.
+  let block_attr: HashMap<String, String> = block_attr
+    .into_iter()
+    .filter(|(k, _)| document::can_have_attribute("ltx:figure", k))
+    .collect();
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
   let context_opt = document.get_element(); // Where we originally start inserting.
@@ -3136,6 +3368,90 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
   items
 }
 
+/// If `tokens` — ignoring leading/trailing spaces — is exactly a single control
+/// sequence applied to one brace group that spans to the end (`\cmd{ … }`),
+/// return `(\cmd, inner)`. Used to see through a whole-line font wrapper when
+/// splitting an author line.
+fn whole_line_cs_wrapper(tokens: &Tokens) -> Option<(Token, Tokens)> {
+  let v = tokens.unlist_ref();
+  let mut start = 0;
+  let mut end = v.len();
+  while start < end && v[start] == T_SPACE!() {
+    start += 1;
+  }
+  while end > start && v[end - 1] == T_SPACE!() {
+    end -= 1;
+  }
+  let s = &v[start..end];
+  // Need at least `\cmd { }` (the group may be empty, but then there is nothing
+  // to split, so the caller's `len > 1` guard makes it a no-op anyway).
+  if s.len() < 3 || s[0].get_catcode() != Catcode::CS || s[1].get_catcode() != Catcode::BEGIN {
+    return None;
+  }
+  let mut level = 0;
+  for (i, t) in s.iter().enumerate().skip(1) {
+    match t.get_catcode() {
+      Catcode::BEGIN => level += 1,
+      Catcode::END => {
+        level -= 1;
+        if level == 0 {
+          // The group must close exactly on the last token for this to be a
+          // whole-line wrapper (no trailing content after `}`).
+          return (i == s.len() - 1).then(|| (s[0], Tokens::new(s[2..i].to_vec())));
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// Second-level split of the author heuristic: divide ONE line that has already
+/// been classified as an *author* line (its superscript marker sits far enough
+/// from the front — `Some(p)` with `p >= 8` in `\lx@add@authors`) into the
+/// individual creators it names.
+///
+/// This is guarded for affiliations by that upstream classification: an
+/// *affiliation* line (marker near the front, `p < 8`) or a continuation line
+/// (no marker) never reaches here — they take the other arms — so name-level
+/// separators are only ever applied to author text, never to institution names.
+/// That is why the literal word " and " is a separator here (it splits "Alice
+/// and Bob") yet is deliberately absent from the line-level `author_affil_splits`
+/// (where it would shred "Language and Intelligence").
+///
+/// The split proceeds by hierarchy:
+///  1. the name separators ("," and " and ") at top level; if that already
+///     yields more than one name we are done;
+///  2. otherwise, if the whole line is a single font wrapper `\cmd{ a, b, c }`
+///     (Perl's `SplitTokens` can't see the brace-hidden separators, so the
+///     wrapper collapses into ONE creator that then hoards every `$^n$` marker
+///     as a duplicate affiliation — arXiv 2605.00347), descend through the
+///     wrapper, split its inner name list, and re-apply `\cmd` to each name so
+///     every author becomes its own creator with the correct affiliation.
+fn split_author_line(line: Tokens) -> Vec<Tokens> {
+  // Name-level separators: comma and the literal word " and " ("Alice and Bob").
+  let name_seps = || vec![SplitDelim::Token(T_OTHER!(",")), literal_and()];
+  let top = split_tokens(line.clone(), name_seps());
+  if top.len() > 1 {
+    return top;
+  }
+  if let Some((cmd, inner)) = whole_line_cs_wrapper(&line) {
+    let inner_split = split_tokens(inner, name_seps());
+    if inner_split.len() > 1 {
+      return inner_split
+        .into_iter()
+        .map(|piece| {
+          let mut v = vec![cmd, T_BEGIN!()];
+          v.extend(piece.unlist());
+          v.push(T_END!());
+          Tokens::new(v)
+        })
+        .collect();
+    }
+  }
+  top
+}
+
 pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
   // Perl: SplitTokens($tokens, T_CS('\and'))
   // Only split on \and. The meaning-based check in split_tokens also matches
@@ -3190,7 +3506,14 @@ fn author_affil_splits() -> Vec<SplitDelim> {
     T_CS!("\\and").into(),
     T_CS!("\\And").into(),
     T_CS!("\\AND").into(),
-    literal_and(),
+    // Beyond-Perl: the literal word " and " is deliberately NOT a line-level
+    // delimiter here (Perl's @authoraffilsplits includes it). This split runs
+    // BEFORE author/affiliation classification, so splitting on " and " shreds
+    // institution names that contain it — "Princeton Language and Intelligence"
+    // → "Princeton Language" + "Intelligence, …" (re-joined without a space).
+    // Authors written "Alice and Bob" still split: literal " and " is applied in
+    // the author arm (comma_split_author_line), AFTER a line is known to be an
+    // author line, so affiliations are never fragmented. Witness 2605.00347.
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
     T_CS!("\\\\").into(),
@@ -3198,6 +3521,16 @@ fn author_affil_splits() -> Vec<SplitDelim> {
 }
 fn affil_splits() -> Vec<SplitDelim> {
   vec![
+    // The \and CONTROL-SEQUENCE family is added (vs upstream, which splits
+    // affiliations only on \quad/\qquad/\\): it lets the shared affiliation
+    // parser handle \and-separated institute/affiliation lists (e.g. LNCS
+    // \institute{A \and B}). NOTE: the literal word " and " is deliberately NOT
+    // included (unlike author_affil_splits) — institution names routinely
+    // contain "and" ("Electrical and Computer Engineering"), so splitting on it
+    // wrongly fragments them. Affiliations never use ',' as a separator either.
+    T_CS!("\\and").into(),
+    T_CS!("\\And").into(),
+    T_CS!("\\AND").into(),
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
     T_CS!("\\\\").into(),
@@ -3417,12 +3750,12 @@ pub fn set_align_or_class(
   class: &str,
 ) -> Result<()> {
   let qname = model::get_node_qname(node);
-  if qname == pin_static("ltx:tag") {
+  if qname == pin!("ltx:tag") {
   }
   // HACK
-  else if !align.is_empty() && model::can_have_attribute(qname, pin_static("align")) {
+  else if !align.is_empty() && model::can_have_attribute(qname, pin!("align")) {
     node.set_attribute("align", align)?;
-  } else if !class.is_empty() && model::can_have_attribute(qname, pin_static("class")) {
+  } else if !class.is_empty() && model::can_have_attribute(qname, pin!("class")) {
     document.add_class(node, class)?;
   }
   Ok(())
@@ -3657,5 +3990,69 @@ pub fn escapechar() -> String {
     char_code.to_string()
   } else {
     String::new()
+  }
+}
+
+#[cfg(test)]
+mod author_split_tests {
+  use latexml_core::state::{State, StateOptions, set_state};
+
+  use super::*;
+
+  fn setup() {
+    // T_CS!/T_BEGIN! etc. and tokenize_internal need a thread-local State for
+    // string interning.
+    set_state(State::new(StateOptions::default()));
+  }
+  fn tk(s: &str) -> Tokens { mouth::tokenize_internal(s) }
+
+  #[test]
+  fn whole_line_cs_wrapper_detects_font_wrapper() {
+    setup();
+    let (cmd, inner) = whole_line_cs_wrapper(&tk("\\textbf{A, B}")).expect("is a wrapper");
+    assert_eq!(cmd, T_CS!("\\textbf"));
+    assert!(!inner.is_empty());
+  }
+
+  #[test]
+  fn whole_line_cs_wrapper_rejects_non_wrappers() {
+    setup();
+    // No leading control sequence.
+    assert!(whole_line_cs_wrapper(&tk("A, B")).is_none());
+    // Content trails the group -> not a WHOLE-line wrapper.
+    assert!(whole_line_cs_wrapper(&tk("\\textbf{A}x")).is_none());
+  }
+
+  #[test]
+  fn split_author_line_splits_top_level_commas() {
+    setup();
+    assert_eq!(split_author_line(tk("Alice, Bob, Carol")).len(), 3);
+  }
+
+  #[test]
+  fn split_author_line_splits_literal_and() {
+    setup();
+    assert_eq!(split_author_line(tk("Alice and Bob")).len(), 2);
+  }
+
+  #[test]
+  fn split_author_line_unwraps_font_wrapper_per_author() {
+    setup();
+    // Beyond-Perl: brace-hidden commas would collapse to ONE creator in Perl;
+    // we unwrap and re-apply the wrapper so each name is its own creator.
+    let got = split_author_line(tk("\\textbf{Alice, Bob, Carol}"));
+    assert_eq!(got.len(), 3);
+    for piece in &got {
+      let v = piece.unlist_ref();
+      assert_eq!(v[0], T_CS!("\\textbf"));
+      assert_eq!(v[1].get_catcode(), Catcode::BEGIN);
+    }
+  }
+
+  #[test]
+  fn split_author_line_leaves_single_wrapped_name_intact() {
+    setup();
+    // Only unwrap when there is actually an inner list to split.
+    assert_eq!(split_author_line(tk("\\textbf{Alice}")).len(), 1);
   }
 }

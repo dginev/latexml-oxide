@@ -274,7 +274,23 @@ impl Object for Digested {
       TBox(ref b) => b.borrow().revert(),
       List(ref l) => l.borrow().revert(),
       Whatsit(ref w) => w.borrow().revert(),
-      Alignment(ref w) => w.borrow().revert(),
+      // Re-entrant guard: a broken alignment (e.g. a `\matrix`/`\pmatrix` left
+      // mid-mutation by a failed mode-group close) can re-enter its own RefCell
+      // during reversion → "already mutably borrowed" panic. Perl has no
+      // borrow-checker, so its `$alignment->revert` is plain re-entrant data
+      // access. `try_borrow` + an empty reversion on the re-entrant cycle,
+      // mirroring the base_xmath fix (75c452843d) and `compute_size`/`with_properties`.
+      Alignment(ref w) => match w.try_borrow() {
+        Ok(al) => al.revert(),
+        Err(_) => {
+          Error!(
+            "unexpected",
+            "self_referential_alignment",
+            "Reverting a re-entrant alignment to empty tokens (source text is lost)"
+          );
+          Ok(Tokens::default())
+        },
+      },
       Postponed(ref t) => Ok(t.clone()),
       KeyVals(ref kvs) => kvs.revert(),
       Comment(ref c) => c.revert(),
@@ -312,7 +328,23 @@ impl BoxOps for Digested {
       List(l) => l.borrow().be_absorbed(document),
       Comment(c) => c.be_absorbed(document),
       Whatsit(w) => w.borrow().be_absorbed(document),
-      Alignment(w) => w.borrow_mut().be_absorbed_mut(document),
+      // Re-entrant guard: a broken alignment mid-`be_absorbed_mut` (which holds
+      // an exclusive borrow) can be re-absorbed by recursive document
+      // construction → "already borrowed" panic. Absorb nothing on the
+      // re-entrant cycle (the alignment is mid-mutation; producing no nodes is
+      // the safe degradation, like `Postponed`). Mirrors `with_properties` /
+      // `compute_size` / the base_xmath fix (75c452843d).
+      Alignment(w) => match w.try_borrow_mut() {
+        Ok(mut al) => al.be_absorbed_mut(document),
+        Err(_) => {
+          Error!(
+            "unexpected",
+            "self_referential_alignment",
+            "Skipping absorption of a re-entrant alignment (its cells are lost)"
+          );
+          Ok(Vec::new())
+        },
+      },
       KeyVals(kvs) => kvs.be_absorbed(document),
       Postponed(_) => Ok(Vec::new()), // Postponed items absorbed silently
       RegisterValue(_rv) => Ok(Vec::new()), // Register values not absorbable
@@ -439,15 +471,32 @@ impl BoxOps for Digested {
   /// but when called on the concrete types it will always compute sizes fresh.
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     use DigestedData::*;
+    // A self-referential box (its size computation recurses into the SAME
+    // RefCell — e.g. a box that transitively contains itself) would re-enter
+    // `borrow_mut` and panic ("already borrowed"). The other traversals on
+    // `Digested` (fingerprint, serialization) already guard with `try_borrow`;
+    // do the same here and treat a re-entrant cycle as zero-size to break it.
+    // Witness: astro-ph0310145 (panicked at digested.rs Alignment arm).
+    let zero = (Dimension::new(0), Dimension::new(0), Dimension::new(0));
     match *self.0 {
-      TBox(ref b) => b.borrow_mut().compute_size_and_cache(options),
-      List(ref l) => l.borrow_mut().compute_size_and_cache(options),
-      KeyVals(ref kvs) => kvs.compute_size(options),
-      Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Postponed(_) | RegisterValue(_) | Comment(_) => {
-        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
+      TBox(ref b) => match b.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
       },
+      List(ref l) => match l.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
+      },
+      KeyVals(ref kvs) => kvs.compute_size(options),
+      Whatsit(ref w) => match w.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
+      },
+      Alignment(ref w) => match w.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
+      },
+      Postponed(_) | RegisterValue(_) | Comment(_) => Ok(zero),
     }
   }
 }

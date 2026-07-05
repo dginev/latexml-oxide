@@ -1,0 +1,17 @@
+\documentclass{article}
+% Beyond-Perl heuristic: a paper that hand-formats its title as a leading
+% \begin{center}{\Large ...} block and declares only an abstract (no \title,
+% no \author, no \maketitle) should still get a real <ltx:title>, promoted
+% from that first centered display-size paragraph (cf. arXiv 1609.07638).
+\begin{document}
+\begin{center}
+{\Large A Hand-Formatted Title}
+
+An Author
+\end{center}
+\begin{abstract}
+The abstract text.
+\end{abstract}
+\section{Introduction}
+Body text.
+\end{document}

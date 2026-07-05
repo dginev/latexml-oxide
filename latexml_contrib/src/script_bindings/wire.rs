@@ -2,6 +2,8 @@
 //! into a native definition via the shared core builders, plus the hook
 //! trampolines and per-options-struct scalar mappers.
 
+use latexml_core::pin;
+
 use super::*;
 
 /// Install one `DefMacro` registration as a native expandable definition.
@@ -820,8 +822,8 @@ pub(super) fn def_accent_impl(
   latexml_core::state::assign_mapping(map, standalone, Some(combining.to_string()));
   let plain_param = Some(Parameters::new(vec![
     Parameter {
-      name: arena::pin_static("Plain"),
-      spec: arena::pin_static("{}"),
+      name: pin!("Plain"),
+      spec: pin!("{}"),
       ..Parameter::default()
     }
     .init()?,

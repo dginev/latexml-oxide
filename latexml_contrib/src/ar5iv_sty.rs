@@ -15,12 +15,29 @@ LoadDefinitions!({
   // but the Rust port hits both ceilings on real ar5iv-profile papers
   // (witness arXiv:2605.16752v1). Empirical bisect (2026-05-22) on that
   // witness pinned the actual minima at: pushback ≈ 630000, iflimit
-  // ≈ 8000000. We pick 650000 / 8000000 with a small safety margin over
-  // the minimum-pass bracket. The gap to Perl's defaults suggests our
-  // pushback / conditional accounting is roughly 1.1× Perl's (pushback)
-  // and 2× Perl's (iflimit) on heavily macro-driven IEEEtran + tikz +
-  // pgfplots input; root-causing those is tracked as a follow-up but
-  // would let us tighten the constants back toward the Perl defaults.
+  // ≈ 8000000.
+  //
+  // ROOT-CAUSED 2026-06-30: the iflimit gap to Perl is NOT a bug to
+  // "tighten away" — it is *deliberate, more-comprehensive runaway
+  // counting*. Rust defines `\ifx`/`\ifcsname` (and the other low-level
+  // TeX conditionals) as real `DefConditional`s that increment the global
+  // `if_count` runaway guard; Perl does NOT count `\ifx`/`\ifcsname` toward
+  // its `if_count` at all. On pgfkeys-driven tikz/pgfplots input (both
+  // engines raw-load the real `pgfkeys.code.tex` — Perl's native pgfkeys
+  // override is `__END__`-disabled), the gap is enormous: a controlled
+  // 2-plot pgfplots figure that BOTH engines render identically (≈86 vs 87
+  // graphic nodes) counts **148,078** conditionals in Rust vs **<200** in
+  // Perl (≈740×), dominated by `\ifx` (63%) + `\ifcsname` (15%) inside the
+  // pgfkeys key-dispatch. Counting these is *correct* — it is exactly what
+  // the guard is for (a `\ifx`/`\ifcsname` runaway is invisible to Perl's
+  // counter). So the right response is to raise the limit, not to count
+  // less. Real *finite* heavy docs (multi-figure pgfplots papers) measure
+  // ≈10–15M conditionals and complete in ≈24–43 s; a genuine runaway is
+  // still caught well before the worker wall-clock lease (≈350k cond/s ⇒
+  // 16M in ≈46 s ≪ the 180 s lease) and by the RSS fuse. **iflimit raised
+  // 8M → 16M (4× Perl's 3,999,999)** to recover coverage on the ≈17-paper
+  // `\tikz@dashphase` Timeout cluster that Perl cannot convert at all
+  // (Perl chokes on these papers' expl3 first). Pre-approved 2026-06-30.
   //
   // tokenlimit RECALIBRATED 2026-06-10 (PR #249 review P1-2): the gullet
   // read checkpoints now count in all three reader loops (was: read_token
@@ -39,7 +56,7 @@ LoadDefinitions!({
     s!("magnify=1.2"),
     s!("zoomout=1.2"),
     s!("tokenlimit=999999999"),
-    s!("iflimit=8000000"),
+    s!("iflimit=16000000"),
     s!("absorblimit=1299999"),
     s!("pushbacklimit=650000"),
   ])?;

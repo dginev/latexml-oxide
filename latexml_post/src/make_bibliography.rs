@@ -1213,47 +1213,10 @@ impl MakeBibliography {
       }
     }
 
-    // META_BLOCK: Note and External Links
-    if let Some(ref bibentry) = entry.bibentry {
-      // Note block
-      if !PostDocument::findnodes_foreign("ltx:bib-note", bibentry).is_empty() {
-        let notes = PostDocument::findnodes_foreign("ltx:bib-note", bibentry);
-        let content: Vec<NodeData> = notes
-          .iter()
-          .map(|n| NodeData::Text(n.get_content()))
-          .collect();
-        if !content.is_empty() {
-          let mut items = vec![NodeData::Text("Note: ".to_string())];
-          items.push(NodeData::Element {
-            tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from_iter([(
-              "class".to_string(),
-              "ltx_bib_note".to_string(),
-            )])),
-            children:   content,
-          });
-          blocks.push(make_bibblock("", &items));
-        }
-      }
-      // External Links block
-      let links_xpath = "ltx:bib-links | ltx:bib-review | ltx:bib-identifier | ltx:bib-url";
-      let link_nodes = PostDocument::findnodes_foreign(links_xpath, bibentry);
-      if !link_nodes.is_empty() {
-        let link_items = format_links(doc, &link_nodes);
-        if !link_items.is_empty() {
-          let mut items = vec![NodeData::Text("External Links: ".to_string())];
-          items.push(NodeData::Element {
-            tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from_iter([(
-              "class".to_string(),
-              "ltx_bib_links".to_string(),
-            )])),
-            children:   link_items,
-          });
-          blocks.push(make_bibblock("", &items));
-        }
-      }
-    }
+    // Note + External Links are part of every type's FMT_SPEC via the
+    // `meta_block` appended in get_fmt_spec, so the loop above already emits
+    // them. (A second, hard-coded copy here previously duplicated every
+    // entry's final Note/External-Links bibblock.)
 
     blocks
   }
@@ -2431,6 +2394,19 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
     let href = node.get_attribute("href");
     let content_text = node.get_content();
 
+    // General rule (user, 2026-07-04): bibliography links are EXTERNAL.
+    // DOIs always resolve via https://doi.org/, and scheme-less hrefs are
+    // an authoring mistake that would resolve relative to the article —
+    // normalize here so every source path (post .bib conversion,
+    // .bbl-borne XML, pre-compiled .bib.xml) gets absolute links.
+    let href = match (&href, scheme.as_str()) {
+      (None, "doi") if !content_text.trim().is_empty() && content_text.contains('/') => {
+        Some(doi_href(&content_text))
+      },
+      (Some(h), "doi") if !h.contains("://") => Some(doi_href(h.trim_start_matches('/'))),
+      (Some(h), _) => Some(force_absolute_url(h)),
+      (None, _) => None,
+    };
     match tag.as_str() {
       "ltx:bib-identifier" | "ltx:bib-review" => {
         if let Some(href) = href {
@@ -2855,6 +2831,18 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
       if i >= len || chars[i] == close_ch {
         break;
       }
+      // An entry-level unbalance (missing final close) would otherwise feed
+      // the NEXT entry's `@` into the field-name reader and swallow it —
+      // resync at the boundary instead (BibTeX-style), loudly.
+      if chars[i] == '@' {
+        crate::Warn!(
+          "bibtex",
+          "unbalanced",
+          "Entry '{}' not closed before the next '@'; resyncing",
+          key
+        );
+        break;
+      }
 
       // Read field name
       let fname_start = i;
@@ -2876,9 +2864,21 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
       }
 
       // Read field value
-      let value = read_bib_value(&chars, &mut i, close_ch);
+      let (value, balanced) = read_bib_value(&chars, &mut i, close_ch);
       if !fname.is_empty() {
-        fields.push((fname, value));
+        fields.push((fname.clone(), value));
+      }
+      if !balanced {
+        // BibTeX errors and resyncs at the next entry; mirror that loudly
+        // instead of silently swallowing every later entry.
+        crate::Warn!(
+          "bibtex",
+          "unbalanced",
+          "Unbalanced braces in field '{}' of entry '{}'; resyncing at the next '@'",
+          fname,
+          key
+        );
+        break;
       }
 
       // Skip trailing comma
@@ -2904,7 +2904,9 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
 }
 
 /// Read a BibTeX field value (braced, quoted, or bare number/string).
-fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
+/// The bool is false when a braced value ran unbalanced to EOF or to the
+/// next entry boundary (`@` at line start) — BibTeX-style error resync.
+fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> (String, bool) {
   let len = chars.len();
   let mut result = String::new();
 
@@ -2917,7 +2919,9 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
     }
 
     if chars[*i] == '{' {
-      // Braced value — handle nested braces
+      // Braced value — handle nested braces. An unbalanced value must not
+      // silently swallow every later entry: stop at the next entry boundary
+      // (`@` at line start, BibTeX's own resync point) and report it.
       *i += 1;
       let mut depth = 1;
       while *i < len && depth > 0 {
@@ -2929,16 +2933,25 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
             *i += 1;
             break;
           }
+        } else if chars[*i] == '@' && *i > 0 && chars[*i - 1] == '\n' {
+          return (result, false); // leave *i AT the '@' for resync
         }
         result.push(chars[*i]);
         *i += 1;
+      }
+      if depth > 0 {
+        return (result, false); // ran to EOF unbalanced
       }
     } else if chars[*i] == '"' {
       // Quoted value
       *i += 1;
       while *i < len && chars[*i] != '"' {
         if chars[*i] == '{' {
-          // Nested braces in quoted strings
+          // Nested braces in quoted strings: a `"` inside them is literal.
+          // KEEP the braces — BibTeX treats them as grouping that stays
+          // significant for name splitting (`author = "{W3C Group}"` must
+          // still read as a corporate author).
+          result.push('{');
           *i += 1;
           let mut depth = 1;
           while *i < len && depth > 0 {
@@ -2947,6 +2960,7 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
             } else if chars[*i] == '}' {
               depth -= 1;
               if depth == 0 {
+                result.push('}');
                 *i += 1;
                 break;
               }
@@ -2983,7 +2997,101 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
     break;
   }
 
-  result
+  (result, true)
+}
+
+thread_local! {
+  // Per-document backstop: after this many failed field digests, stop
+  // interpreting (raw passthrough) instead of flooding the log. Reset at
+  // each .bib conversion.
+  static BIB_INTERPRET_FAILURES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+const MAX_BIB_INTERPRET_FAILURES: usize = 50;
+
+/// Interpret a BibTeX field value through the REAL TeX engine — Perl's
+/// `ToString(Digest(Tokenize($x)))` idiom. The post-processor runs in the
+/// same process right after the core conversion, so the engine state is
+/// still live: accents (`{\'\i}`), letter macros (`\ss`), ties (`~` ->
+/// non-breaking space) and — crucially — macros DEFINED BY THE ARTICLE'S
+/// CLASS (`\aap` etc.) all take their true meaning. This replaces a
+/// ~150-line hand-rolled transliterator (user directive 2026-07-04: reuse
+/// our TeX interpretation, no special-case TeX parser). Perl instead spins
+/// a recursive BibTeX.pool session with class/package preloads — the full
+/// re-port is tracked in SYNC_STATUS ("MakeBibliography: convert raw .bib
+/// through the core engine"). Plain strings skip the engine round-trip; on
+/// any engine failure the raw text passes through unchanged (the
+/// pre-decoder behavior).
+fn interpret_tex_text(s: &str) -> String {
+  if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
+    return s.to_string();
+  }
+  if BIB_INTERPRET_FAILURES.with(|c| c.get()) > MAX_BIB_INTERPRET_FAILURES {
+    return s.to_string();
+  }
+  // Diagnostic policy (user, 2026-07-04, final form): with live-state
+  // interpretation the diagnostics are trustworthy, so Warn!/Error! from
+  // a field digest report at NATIVE severity and count against the
+  // document — matching Perl's MergeStatus accounting (Common/Error.pm
+  // L669; its recursive session also prints at native severity). ONLY
+  // Fatal! is demoted (to a counted+logged Error): a broken bibliography
+  // must never lose the document. The Err return still aborts just this
+  // field's digest — the raw text passes through below.
+  let prev = latexml_core::common::error::set_demote_fatals(true);
+  let interpreted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+    latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).map(|d| d.to_string())
+  }));
+  latexml_core::common::error::set_demote_fatals(prev);
+  match interpreted {
+    Ok(Ok(text)) => text,
+    _ => {
+      let n = BIB_INTERPRET_FAILURES.with(|c| {
+        let n = c.get() + 1;
+        c.set(n);
+        n
+      });
+      if n == MAX_BIB_INTERPRET_FAILURES + 1 {
+        Warn!(
+          "bibliography",
+          "interpret",
+          format!(
+            "Disabling TeX interpretation of bibliography fields after {} failures; \
+             remaining fields pass through raw.",
+            MAX_BIB_INTERPRET_FAILURES
+          )
+        );
+      }
+      s.to_string()
+    },
+  }
+}
+
+/// Percent-encode a DOI into its canonical absolute resolver URL.
+/// Mirrors the engine's `\bib@field@default@doi` (bibtex.rs; Perl
+/// BibTeX.pool L750-756): `[^0-9a-zA-Z./\-+]` chars are %-encoded.
+fn doi_href(doi: &str) -> String {
+  let mut href = String::from("https://doi.org/");
+  for c in doi.trim().chars() {
+    if c.is_ascii_alphanumeric() || matches!(c, '.' | '/' | '-' | '+') {
+      href.push(c);
+    } else {
+      let mut buf = [0u8; 4];
+      for &b in c.encode_utf8(&mut buf).as_bytes() {
+        href.push_str(&format!("%{:02X}", b));
+      }
+    }
+  }
+  href
+}
+
+/// Bibliography links are external: a scheme-less href would resolve
+/// relative to the article. Prepend https:// when no scheme is present.
+fn force_absolute_url(url: &str) -> String {
+  let u = url.trim();
+  if u.is_empty() || u.contains("://") || u.starts_with("mailto:") {
+    u.to_string()
+  } else {
+    format!("https://{}", u)
+  }
 }
 
 /// Strip outer braces from a BibTeX field value.
@@ -2998,15 +3106,71 @@ fn strip_braces(s: &str) -> String {
   result
 }
 
+/// True if `s` is a single brace group wrapping its entire content, e.g.
+/// `{W3C Math Working Group}` — i.e. the opening brace's match is the final
+/// character. Used to detect brace-protected corporate author names.
+fn is_braced_group(s: &str) -> bool {
+  let s = s.trim();
+  if s.len() < 2 || !s.starts_with('{') || !s.ends_with('}') {
+    return false;
+  }
+  let mut depth = 0i32;
+  for (i, b) in s.bytes().enumerate() {
+    match b {
+      b'{' => depth += 1,
+      b'}' => {
+        depth -= 1;
+        if depth == 0 {
+          return i == s.len() - 1;
+        }
+      },
+      _ => {},
+    }
+  }
+  false
+}
+
 /// Parse BibTeX author field into individual author names.
 /// "Lastname, Firstname and Lastname2, Firstname2" → vec of (surname, givenname)
 fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
   let mut result = Vec::new();
-  // Split on " and " (case insensitive)
-  let parts: Vec<&str> = authors_str.split(" and ").collect();
-  for part in parts {
+  // Perl processBibNameList (BibTeX.pool.ltxml L872+): names split on the
+  // STANDALONE word "and" (case-insensitive, any whitespace incl. newlines),
+  // over brace-respecting words — `{Barnes and Noble}` is ONE author, and a
+  // line-wrapped "...Smith and\nJones..." still splits.
+  let mut parts: Vec<String> = Vec::new();
+  let mut cur = String::new();
+  let mut depth: usize = 0;
+  for tok in authors_str.split_whitespace() {
+    if depth == 0 && tok.eq_ignore_ascii_case("and") {
+      parts.push(std::mem::take(&mut cur));
+      continue;
+    }
+    if !cur.is_empty() {
+      cur.push(' ');
+    }
+    cur.push_str(tok);
+    for c in tok.chars() {
+      match c {
+        '{' => depth += 1,
+        '}' => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+    }
+  }
+  parts.push(cur);
+  for part in &parts {
     let part = part.trim();
     if part.is_empty() {
+      continue;
+    }
+    // Corporate/institutional author wrapped in braces, e.g.
+    // `{W3C Math Working Group}`. BibTeX treats a fully brace-protected name as
+    // a single unit (a "last" name with no first/von parts), so keep it verbatim
+    // as the surname instead of splitting "last word = surname" (which produced
+    // "W. M. W. Group"). Witness 2605.16562.
+    if is_braced_group(part) {
+      result.push((strip_braces(part).trim().to_string(), String::new()));
       continue;
     }
     let clean = strip_braces(part);
@@ -3032,6 +3196,7 @@ fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
 /// This is a simplified port of Perl's `convertBibliography` that directly parses
 /// BibTeX instead of spawning a full LaTeXML sub-session with BibTeX.pool.
 fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
+  BIB_INTERPRET_FAILURES.with(|c| c.set(0));
   let content = std::fs::read_to_string(bib_path)
     .map_err(|e| format!("Failed to read '{}': {}", bib_path, e))?;
 
@@ -3059,6 +3224,27 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
 
     // Process fields into ltx:bib-* elements
     for (field, value) in &entry.fields {
+      // FIRST STAGE toward Perl parity — NOT yet a faithful match. Perl's
+      // BibTeX.pool.ltxml has ~28 `\bib@field@default@*` constructors that
+      // digest their values with live catcodes, INCLUDING abstract (L708),
+      // keywords (L732), annote (L680), series, institution, ... So Perl DOES
+      // raise the undefined-macro errors these fields carry and MergeStatus'es
+      // them into the document; this 13-field whitelist deliberately under-
+      // reports vs Perl for now, to avoid the junk-field error floods of
+      // ADS/Zotero exports (2605.02213: a .bib with 291 abstract fields ->
+      // 500+ errors on an otherwise-clean paper). Widening this set to Perl's
+      // full rendering-field coverage is an open parity task (SYNC_STATUS,
+      // "bibliography field-interpretation parity"). url/doi/eprint render but
+      // are verbatim identifiers; isbn/issn are plain digits.
+      let interpreted;
+      let value = match field.as_str() {
+        "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"
+        | "volume" | "number" | "issue" | "pages" | "publisher" | "note" => {
+          interpreted = interpret_tex_text(value);
+          &interpreted
+        },
+        _ => value,
+      };
       let clean = strip_braces(value);
       match field.as_str() {
         "author" => {
@@ -3139,15 +3325,23 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
           ));
         },
         "doi" => {
+          // Perl BibTeX.pool L750-756: DOIs are ALWAYS external — emit an
+          // absolute https href (percent-encoding non url-safe chars), never
+          // the bare identifier (which renders as dead text / a relative
+          // link; witness 2605.00223 "External Links: 10.1051/...").
           xml.push_str(&format!(
-            "    <bib-identifier scheme=\"doi\">{}</bib-identifier>\n",
+            "    <bib-identifier scheme=\"doi\" href=\"{}\">{}</bib-identifier>\n",
+            xml_escape(&doi_href(&clean)),
             xml_escape(&clean)
           ));
         },
         "url" => {
+          // Bibliography URLs are external by nature; authors often write
+          // them scheme-less ("www.x.org/...") which the browser then
+          // resolves RELATIVE to the article — force an absolute https://.
           xml.push_str(&format!(
             "    <bib-url href=\"{}\">{}</bib-url>\n",
-            xml_escape(&clean),
+            xml_escape(&force_absolute_url(&clean)),
             xml_escape(&clean)
           ));
         },
@@ -3262,5 +3456,56 @@ mod tests {
         fmt
       );
     }
+  }
+}
+
+#[cfg(test)]
+mod bib_parse_tests {
+  use super::*;
+
+  #[test]
+  fn corporate_author_brace_protected() {
+    // Braced groups protect the inner "and" and read as single corporate names.
+    let a = parse_bib_authors("{Barnes and Noble} and Smith, John");
+    assert_eq!(a.len(), 2);
+    assert_eq!(a[0].0, "Barnes and Noble");
+    assert_eq!(a[1].0, "Smith");
+  }
+
+  #[test]
+  fn newline_wrapped_and_splits() {
+    let a = parse_bib_authors("Smith, John and\nJones, Mary");
+    assert_eq!(a.len(), 2);
+  }
+
+  #[test]
+  fn quoted_field_keeps_braces() {
+    let entries = parse_bibtex("@article{k, author = \"{W3C Math Working Group}\", title={T}}");
+    assert_eq!(entries.len(), 1);
+    let author = &entries[0]
+      .fields
+      .iter()
+      .find(|(n, _)| n == "author")
+      .unwrap()
+      .1;
+    assert!(
+      author.starts_with('{') && author.ends_with('}'),
+      "braces kept: {author}"
+    );
+    let names = parse_bib_authors(author);
+    assert_eq!(names.len(), 1);
+    assert_eq!(names[0].0, "W3C Math Working Group");
+  }
+
+  #[test]
+  fn unbalanced_entry_resyncs_at_next_at() {
+    let src = "@article{bad, title = {unclosed\n}\n@article{good, title={ok}, author={A}}";
+    let entries = parse_bibtex(src);
+    // The good entry must survive the bad one's unbalanced brace.
+    assert!(
+      entries.iter().any(|e| e.key == "good"),
+      "entries: {:?}",
+      entries.iter().map(|e| e.key.clone()).collect::<Vec<_>>()
+    );
   }
 }

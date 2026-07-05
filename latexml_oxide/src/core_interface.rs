@@ -17,6 +17,7 @@ use latexml_core::{
   document::Document,
   gullet,
   list::List,
+  pin,
   rewrite::{Rewrite, RewriteOptions},
   state::{self, Scope},
   stomach,
@@ -350,7 +351,7 @@ impl DigestionAPI for Core {
         .collect::<Vec<&str>>();
       let default_model_load = model::with_schema_data(|schema_opt| match schema_opt {
         None => true,
-        Some(v) => v.last() == Some(&arena::pin_static("LaTeXML")),
+        Some(v) => v.last() == Some(&pin!("LaTeXML")),
       });
       if default_model_load {
         // Compile-time load of model AND indirect model. Single
@@ -843,32 +844,16 @@ fn load_latexml_file(path: &str) -> Result<()> {
     // The .latexml match strings use the same format as \lxDeclare body_text:
     //   'f' (simple), 'f_D' (literal subscript), 'f_\WildCard' (wildcard),
     //   '\hat{f}' (accent), "x^{\prime}" (prime).
-    let pat = latexml_package::package::latexml_sty::compile_declare_pattern_pub(&match_str);
+    let pat = latexml_core::rewrite::declare::compile_declare_pattern(&match_str);
     if pat.xpath.is_empty() {
       continue; // Unrecognized pattern, skip
-    }
-
-    // Add declare metadata for Rust-side filtering
-    attrs.insert("_declare_type".to_string(), pat.pattern_type.to_string());
-    if let Some(ref b) = pat.base_text {
-      attrs.insert("_declare_base".to_string(), b.clone());
-    }
-    if let Some(ref s) = pat.sub_text {
-      attrs.insert("_declare_sub".to_string(), s.clone());
-    }
-    if let Some(ref a) = pat.accent_name {
-      attrs.insert("_declare_accent".to_string(), a.clone());
     }
 
     // For math mode, append visibility check to XPath
     let xpath = format!("{}[@_pvis and @_cvis]", pat.xpath);
 
     // Determine select_count based on pattern type
-    let select_count = match pat.pattern_type {
-      "literal_subscript" | "prime" | "subscript" => Some(2usize),
-      "accent" => Some(1usize),
-      _ => Some(1usize),
-    };
+    let select_count = pat.select_count().or(Some(1usize));
 
     // Build the rewrite rule
     let mut clauses = Vec::new();
@@ -898,7 +883,8 @@ fn load_latexml_file(path: &str) -> Result<()> {
         attributes_map: Some(attrs),
         is_math: true,
         select_count,
-        wildcard_paths: pat.wildcard_paths,
+        wildcard_paths: pat.wildcard_paths.clone(),
+        declare_filter: Some(pat),
         ..RewriteOptions::default()
       },
       clauses,
@@ -922,11 +908,18 @@ fn apply_lx_declarations(document: &mut Document) {
     return;
   }
 
-  // Parse declarations: "token_text\trole\tname\tmeaning\tdecl_id" per line
-  let declarations: Vec<(&str, &str, &str, &str, &str)> = decls_str
+  // Parse declarations:
+  // "token_text\trole\tname\tmeaning\tdecl_id\tmatch_font\tscope_prefix".
+  // match_font (font_attribute_string of the digested pattern, e.g.
+  // "italic"/"bold") makes matching font-aware: a plain italic `$x$` declaration
+  // must not annotate a bold `\mathbf{x}` — different fonts denote different
+  // meanings; empty when the pattern carried no distinguishing font.
+  // scope_prefix carries the section gate for scope=section declarations
+  // (INCLUDING untagged ones, which have no decl_id to infer it from).
+  let declarations: Vec<(&str, &str, &str, &str, &str, &str, &str)> = decls_str
     .lines()
     .filter_map(|line| {
-      let parts: Vec<&str> = line.splitn(5, '\t').collect();
+      let parts: Vec<&str> = line.splitn(7, '\t').collect();
       if parts.len() >= 4 {
         Some((
           parts[0],
@@ -934,6 +927,8 @@ fn apply_lx_declarations(document: &mut Document) {
           parts[2],
           parts[3],
           *parts.get(4).unwrap_or(&""),
+          *parts.get(5).unwrap_or(&""),
+          *parts.get(6).unwrap_or(&""),
         ))
       } else {
         None
@@ -972,18 +967,54 @@ fn apply_lx_declarations(document: &mut Document) {
       scope
     };
 
-    for &(pattern, role, name, meaning, decl_id) in &declarations {
+    for &(pattern, role, name, meaning, decl_id, match_font, scope_prefix) in &declarations {
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
         || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
       if matches {
-        // Check scope: if decl_id has a section prefix (e.g. "S1" from "S1.XMD1"),
-        // only apply to tokens within that section
-        if !decl_id.is_empty()
-          && let Some(section_prefix) = decl_id.split('.').next()
-          && !section_prefix.is_empty()
+        // Font-class check (mirrors declare_node_matches in the rewrite path):
+        // discriminate only on the meaningful font *classes* — bold vs not,
+        // caligraphic/typewriter family — NOT on an exact font-string match.
+        // Exact equality is wrong here because the declaration's digested frame
+        // font (e.g. "italic") differs from an upright operator token's font
+        // even when they should match (e.g. `$*$` → the ∗ COMPOSEOP token).
+        // A plain/italic declaration rejects bold/caligraphic/typewriter tokens
+        // (so italic `$x$` skips bold `\mathbf{x}`); a declaration that is
+        // itself bold/caligraphic/typewriter requires the token to share it.
+        {
+          let tf = document.get_node_font(&tok);
+          let tok_bold = tf
+            .get_series()
+            .map(|s| s.as_ref() == "bold")
+            .unwrap_or(false);
+          let tok_fam = tf.get_family();
+          let tok_cal = tok_fam
+            .as_ref()
+            .map(|f| f.as_ref() == "caligraphic")
+            .unwrap_or(false);
+          let tok_tt = tok_fam
+            .as_ref()
+            .map(|f| f.as_ref() == "typewriter")
+            .unwrap_or(false);
+          let decl_bold = match_font.contains("bold");
+          let decl_cal = match_font.contains("caligraphic");
+          let decl_tt = match_font.contains("typewriter");
+          if tok_bold != decl_bold || tok_cal != decl_cal || tok_tt != decl_tt {
+            continue;
+          }
+        }
+        // Scope gate: the explicit scope_prefix (covers UNTAGGED
+        // scope=section declarations), falling back to the decl_id's section
+        // prefix for older/tagged lines.
+        let gate = if !scope_prefix.is_empty() {
+          scope_prefix
+        } else {
+          decl_id.split('.').next().unwrap_or("")
+        };
+        if (!decl_id.is_empty() || !scope_prefix.is_empty())
+          && !gate.is_empty()
           && !tok_scope.is_empty()
-          && tok_scope != section_prefix
+          && tok_scope != gate
         {
           continue; // Wrong section — skip this declaration
         }

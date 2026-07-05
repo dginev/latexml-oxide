@@ -15,15 +15,14 @@
     <picture class="ltx_figure_panel" height="127.22" width="127.22" xml:id="S0.F1.pic1">
       <svg:svg height="127.22" overflow="visible" version="1.1" viewBox="0 0 127.22 127.22" width="127.22">
         <svg:g color="#000000" fill="#000000" fill-opacity="1" stroke="#000000" stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="1" stroke-width="0.4pt" transform="translate(0,127.22) matrix(1 0 0 -1 0 0) translate(63.61,0) translate(0,63.61) matrix(1.0 0.0 0.0 1.0 -59 -59)">
-          <svg:foreignObject height="118" overflow="visible" style="--ltx-fo-width:8.53em;--ltx-fo-height:8.53em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 118)" width="118"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="height=85.35826pt,keepaspectratio=true" xml:id="S0.F1.pic1.g1"/></svg:foreignObject>
+          <svg:foreignObject height="118" overflow="visible" style="--ltx-fo-width:8.53em;--ltx-fo-height:8.53em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 118)" width="118"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="height=85.35826pt,keepaspectratio=true" xml:id="S0.F1.pic1.g1"/></svg:foreignObject>
         </svg:g>
       </svg:svg>
     </picture>
-    <break/>
     <picture class="ltx_figure_panel" height="127.22" width="127.22" xml:id="S0.F1.pic2">
       <svg:svg height="127.22" overflow="visible" version="1.1" viewBox="0 0 127.22 127.22" width="127.22">
         <svg:g color="#000000" fill="#000000" fill-opacity="1" stroke="#000000" stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="1" stroke-width="0.4pt" transform="translate(0,127.22) matrix(1 0 0 -1 0 0) translate(63.61,0) translate(0,63.61) matrix(1.0 0.0 0.0 1.0 -59 -59)">
-          <svg:foreignObject height="118" overflow="visible" style="--ltx-fo-width:8.53em;--ltx-fo-height:8.53em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 118)" width="118"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="height=85.35826pt,keepaspectratio=true" xml:id="S0.F1.pic2.g1"/></svg:foreignObject>
+          <svg:foreignObject height="118" overflow="visible" style="--ltx-fo-width:8.53em;--ltx-fo-height:8.53em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 118)" width="118"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="height=85.35826pt,keepaspectratio=true" xml:id="S0.F1.pic2.g1"/></svg:foreignObject>
         </svg:g>
       </svg:svg>
     </picture>

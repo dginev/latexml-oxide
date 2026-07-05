@@ -11,6 +11,10 @@ fn convert_clean(source: &str) {
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
     format: OutputFormat::HTML5,
+    // Same contrib dispatcher the binaries install — without it,
+    // contrib-provided bindings (mhchem, chemformula, …) resolve to
+    // nothing in the test environment while working in production.
+    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
     ..Config::default()
   };
   let mut c = Converter::from_config(cfg);
@@ -80,6 +84,61 @@ fn cluster_setdec_dec() { convert_clean("tests/cluster_regressions/setdec_dec.te
 
 #[test]
 fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppercase.tex"); }
+
+/// `\let\cline\cmidrule` (a common booktabs idiom) must NOT create a
+/// `\cmidrule`->`\cline`->`\cmidrule` infinite expansion. LaTeXML's booktabs
+/// binding defines `\cmidrule` via `\cline`, so the `\let` would loop until the
+/// 8M-conditional IfLimit fatal unless `\cmidrule` routes through a private
+/// saved `\cline` (`booktabs_sty.rs` `\ltx@saved@cline`). Shared with Perl
+/// LaTeXML (which hangs); Rust surpasses. Witnesses: arXiv 2506.23179, 2511.17056.
+#[test]
+fn cluster_cmidrule_cline_let() {
+  convert_clean("tests/cluster_regressions/cmidrule_cline_let.tex");
+}
+
+/// fvextra's `breakanywhere=true` installs a recursive char-by-char break
+/// scanner that measures every character by boxing a line-prefix. In our
+/// engine that recursed through `predigest_box_contents_in_mode` and grew the
+/// gullet pushback until the 650000 `Timeout/PushbackLimit` Fatal — where Perl
+/// converts cleanly. The `fvextra_sty` binding routes the breaking
+/// line-processor to the non-breaking one (line wrapping is a PDF-visual
+/// concern with no HTML semantics), so the verbatim completes with the
+/// `font="typewriter"` styling preserved. Drove 119/121 fatal papers in the
+/// sandbox-arxiv-2605 corpus (witness arXiv 2605.01024).
+#[test]
+fn cluster_fvextra_breakanywhere() {
+  convert_clean("tests/cluster_regressions/fvextra_breakanywhere.tex");
+}
+
+/// An unbound class (->OmniBus) whose `.bbl` `\bibitem[\protect\citeauthoryear…]`
+/// side-loads natbib must not leave a body `\citep` looping. The side-load runs
+/// inside the `thebibliography` group, so natbib's `\citep` would be popped on
+/// `\end{thebibliography}` and revert to its (now `sty_loaded`) `def_autoload`
+/// trigger, whose already-loaded re-emit then loops to the token limit. Fixed by
+/// hoisting the side-loaded package's defs to global (`\lx@late@usepackage`,
+/// omnibus_cls.rs). Witness: arXiv 2209.11799 (200s TokenLimit fatal -> 1s/0err).
+#[test]
+fn cluster_omnibus_natbib_bbl_sideload() {
+  convert_clean("tests/cluster_regressions/omnibus_natbib_bbl_sideload.tex");
+}
+
+/// A bare `\url` at end-of-input previously panicked: `\url`'s reader did
+/// `read_token()?.unwrap()` and the `None` (input exhausted) hit the `.unwrap()`.
+/// Real TeX raises a clean "Emergency stop" ("File ended while scanning use of
+/// \url"); now `read_token_required` emits that parity Error and the macro
+/// degrades (closes its group) instead of crashing. Guards the whole
+/// `read_token_required` family (hyperref/url.sty `\url`, `\path`, amscd `\cd@`,
+/// `\textfont`). Witnesses: 1401.5000, 1502.05051, 2204.10457. `convert_to_xml`
+/// panics if the conversion produced no result — i.e. it catches a regressed
+/// panic — while tolerating the one intentional `expected` Error.
+#[test]
+fn cluster_url_at_eof_no_panic() {
+  let xml = convert_to_xml("tests/cluster_regressions/url_eof_no_panic.tex");
+  assert!(
+    !xml.is_empty(),
+    "url-at-EOF conversion produced empty output"
+  );
+}
 
 /// Twemoji-style csname construction with accent macros (`\'`, `\^`, `\~`)
 /// and `\textquoteright` apostrophe — must produce 0 errors after the
@@ -393,6 +452,14 @@ fn cluster_mhchem_cf_author_macro() {
   convert_clean("tests/cluster_regressions/mhchem_cf_author_macro.tex");
 }
 
+/// The flagship raw-load guard: \ce{H2O}/\ce{SO4^2-} must convert cleanly
+/// through the real mhchem.sty + expl3 pipeline (PR_READINESS review — the
+/// chemistry corpus had no fixture at all).
+#[test]
+fn cluster_mhchem_ce_subscripts() {
+  convert_clean("tests/cluster_regressions/mhchem_ce_subscripts.tex");
+}
+
 /// Multi-level `theindex` (`\item`/`\subitem`/`\subsubitem`) must build nested
 /// `<ltx:indexlist>`/`<ltx:indexentry>` cleanly. Requires (1) `Tag('ltx:indexentry',
 /// autoClose=>1)` — Perl `latex_constructs.pool.ltxml` L4477 — so a new entry
@@ -405,4 +472,201 @@ fn cluster_mhchem_cf_author_macro() {
 #[test]
 fn cluster_theindex_nested_autoclose() {
   convert_clean("tests/cluster_regressions/theindex_nested_autoclose.tex");
+}
+
+/// Convert with the ar5iv profile preloaded — the production route that sets
+/// `bibconfig=bbl,bib` PROGRAMMATICALLY (`ar5iv_sty.rs`). It cannot be set
+/// from TeX source: `\usepackage[bibconfig={bbl,bib}]{latexml}` naive-splits
+/// at the comma in BOTH engines (Perl `TrimmedCommaList` is not brace-aware),
+/// leaving `['bbl']`.
+fn convert_to_xml_ar5iv(source: &str) -> String {
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    preload: Some(vec!["ar5iv.sty".to_string()]),
+    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+    ..Config::default()
+  };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(source.to_string());
+  r.result
+    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
+}
+
+/// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
+/// decision seam behind `\bibliography`. The clauses are arbitrary tokens, so
+/// marker text pins WHICH phase was chosen without running the full BibTeX
+/// pipeline. Covers the cb8b648784 fallback (bbl-first config + no .bbl on
+/// disk → use the real .bib) and Perl's first-phase-only rule.
+#[test]
+fn cluster_bbl_bib_precedence() {
+  // Default config ['bib','bbl']: refs.bib AND <jobname>.bbl both exist —
+  // the bib phase is first and all bibs exist → BIB wins.
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/both.tex");
+  assert!(
+    x.contains("BIBCHOSEN") && !x.contains("BBLCHOSEN"),
+    "default config with both files should choose bib, got:\n{x}"
+  );
+  // Default config, requested norefs.bib is MISSING but <jobname>.bbl exists
+  // → falls to the bbl clause (Perl: "Couldn't find all bib files").
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblwins.tex");
+  assert!(
+    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "default config with missing .bib should choose bbl, got:\n{x}"
+  );
+  // nobibtex config ['bbl'] with <jobname>.bbl on disk → BBL wins,
+  // even though refs.bib also exists.
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblfirst.tex");
+  assert!(
+    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "nobibtex config with .bbl present should choose bbl, got:\n{x}"
+  );
+  // nobibtex config ['bbl'] and NO <jobname>.bbl: Perl's first-phase-only
+  // rule — no 'bib' phase configured, so NEITHER clause fires (empty +
+  // Info:expected:bbl), not a spurious empty bibliography.
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblnone.tex");
+  assert!(
+    !x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "nobibtex config without .bbl should choose neither, got:\n{x}"
+  );
+  // ar5iv profile (bibconfig=bbl,bib) but NO <jobname>.bbl: falls through to
+  // the configured bib phase because refs.bib exists (cb8b648784; witness
+  // 2605.16562 — refs.bib and no .bbl under the ar5iv fleet profile).
+  let x = convert_to_xml_ar5iv("tests/cluster_regressions/bblbib/bblfallback.tex");
+  assert!(
+    x.contains("BIBCHOSEN") && !x.contains("BBLCHOSEN"),
+    "ar5iv bbl-first config without .bbl should fall back to bib, got:\n{x}"
+  );
+}
+
+/// Convert with the contrib bindings dispatched (biblatex lives in
+/// latexml_contrib) and return the serialized XML.
+fn convert_to_xml_contrib(source: &str) -> String {
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+    ..Config::default()
+  };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(source.to_string());
+  r.result
+    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
+}
+
+/// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
+/// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
+/// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the
+/// three citation families; style=numeric documents keep sequential
+/// labels, core [ ] brackets, and plain-\cite fallbacks (multicite keys
+/// comma-joined).
+#[test]
+fn cluster_biblatex_authoryear() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/ay.tex");
+  // Structured tags with author/year roles (single-author, 2-author "&",
+  // 3+-author "et al." short form vs full list, prefix-name surname).
+  assert!(
+    x.contains(r#"<tag role="year">2020</tag>"#),
+    "year tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Smith</tag>"#),
+    "authors tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="refnum">Smith (2020)</tag>"#),
+    "refnum tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Jones &amp; Brown</tag>"#),
+    "2-author tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Adams et al.</tag>"#),
+    "et-al short form missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="fullauthors">Adams, Baker &amp; Clark</tag>"#),
+    "fullauthors missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Berg</tag>"#),
+    "prefix-name surname missing:\n{x}"
+  );
+  // Citation families: parenthetical vs textual vs bare, with show= specs.
+  assert!(
+    x.contains("citemacro_citep"),
+    "parenthetical cite class missing:\n{x}"
+  );
+  assert!(
+    x.contains("citemacro_citet"),
+    "textual cite class missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"show="Authors Phrase1YearPhrase2""#),
+    "textual show spec missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"show="FullAuthorsPhrase1Year""#),
+    "starred full-author show missing:\n{x}"
+  );
+  // Multicite: two bibrefs inside one cite, "; "-joined.
+  assert!(
+    x.contains(r#"bibrefs="smith2020""#) && x.contains(r#"bibrefs="jones2019""#),
+    "multicite per-group bibrefs missing:\n{x}"
+  );
+  // arxiv-readability#10 / ar5iv-bindings#4: \parencite[see][]{key} — a
+  // present-but-EMPTY second optional must NOT demote the prenote to a
+  // postnote ("(see Smith, 2020)", never "(Smith, 2020, see)").
+  assert!(
+    x.matches("(see ").count() >= 2,
+    "issue-4 prenote missing:\n{x}"
+  );
+  assert!(
+    !x.contains(", see)"),
+    "issue-4 prenote demoted to postnote:\n{x}"
+  );
+
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/num.tex");
+  // Numeric style: sequential labels, NO author-year relabeling, and the
+  // fallback \cite path (keys preserved; multicite keys comma-joined).
+  assert!(
+    x.contains(r#"bibrefs="smith2020""#),
+    "numeric fallback lost keys:\n{x}"
+  );
+  assert!(
+    x.contains(r#"bibrefs="smith2020,jones2019""#),
+    "numeric multicite keys not comma-joined:\n{x}"
+  );
+  assert!(
+    !x.contains("Smith, 2020"),
+    "numeric doc must not get author-year labels:\n{x}"
+  );
+  assert!(
+    !x.contains(r#"role="fullauthors""#),
+    "numeric doc must not get author-year tags:\n{x}"
+  );
+}
+
+/// Upstream LaTeXML #2837: `\hdotsfor[]{N}` spans N alignment columns (the
+/// dots row gets N cells, `\hdots & … & \hdots`), instead of piling N
+/// `\hdots` into one cell. 3+3+3 cells in the first matrix + 2+2 in the
+/// second = 13 mtds, 5 of them dots. The optional spacing arg is consumed
+/// and ignored, matching upstream.
+#[test]
+fn cluster_hdotsfor_columns() {
+  let x = convert_to_xml("tests/cluster_regressions/hdotsfor.tex");
+  // The harness returns the pre-XSLT XML, so count XMath cells.
+  let cells = x.matches("<XMCell").count() + x.matches("<mtd").count();
+  assert_eq!(
+    cells, 13,
+    "\\hdotsfor must span its column count (9 + 4 cells), got:\n{x}"
+  );
+  assert_eq!(
+    x.matches('\u{2026}').count(),
+    5,
+    "expected 3 + 2 dots cells, got:\n{x}"
+  );
 }

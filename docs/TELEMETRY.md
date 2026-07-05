@@ -55,7 +55,7 @@ For each job, record both:
 
 ### 2.3 Subprocess time — counted in BOTH phase wall and child rusage
 
-`graphics` phase wall includes the wait for `convert`/`gs`/`inkscape`.
+`graphics` phase wall includes the wait for `mutool`/`pdftocairo`/`convert`/`gs`.
 Child rusage (`child_user_us`, `child_sys_us`) also accounts for
 those processes. This is *intentional*, not double-count: phase
 wall measures wall time, child rusage measures CPU work done in

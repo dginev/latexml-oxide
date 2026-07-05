@@ -43,6 +43,75 @@ pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
 /// Flush and return the captured log output, stopping capture (Perl: flush_log).
 pub fn flush_log() -> String { LOG_BUFFER.borrow_mut().take().unwrap_or_default() }
 
+/// Diagnostics captured from a worker thread by [`capture`], for the main thread
+/// to fold back in via [`replay_captured`]. Carries both the already-formatted
+/// log text AND the `REPORT` count deltas — `LOG_BUFFER` and `REPORT` are BOTH
+/// `#[thread_local]`, so forwarding only the text would still leave
+/// `status_code` blind to a worker's failures.
+pub struct CapturedDiagnostics {
+  pub log:    String,
+  pub counts: crate::common::error::ReportCounts,
+}
+
+/// Run `f` on the CURRENT (worker) thread with diagnostic capture. Binds a fresh
+/// thread-local log buffer for the duration so any `Error!`/`Warn!`/`Info!` `f`
+/// emits (directly or deep inside a conversion helper) is recorded instead of
+/// lost, and snapshots the worker's `REPORT` counters afterward. The returned
+/// [`CapturedDiagnostics`] is replayed on the main thread by [`replay_captured`]
+/// after the worker is joined, so the messages reach the bound `cortex.log` and
+/// the failures register in `status_code`.
+///
+/// Assumes the worker thread has no pre-bound buffer (the spawned post-processing
+/// pool threads start clean); it does not save/restore a prior binding.
+///
+/// INVARIANTS (unenforced by types; guard the fleet's canonical signal):
+/// - one `capture` per thread lifetime — `bind_log()` CLOBBERS any pre-bound
+///   buffer, and `snapshot_report_counts` does not reset, so reusing capture
+///   on a pooled thread would drop earlier text and double-merge counts;
+/// - callers must `replay_captured` the result on the MAIN thread exactly
+///   once (a panicking worker never returns, losing its pre-panic capture —
+///   the real-time stderr echo retains it, and the caller's worker_panicked
+///   Error keeps status from reading clean).
+pub fn capture<R>(f: impl FnOnce() -> R) -> (R, CapturedDiagnostics) {
+  debug_assert!(
+    LOG_BUFFER
+      .try_borrow()
+      .map(|b| b.is_none())
+      .unwrap_or(false),
+    "logger::capture on a thread with a pre-bound buffer — pooled-thread reuse?"
+  );
+  bind_log();
+  let result = f();
+  let log = flush_log();
+  let counts = crate::common::error::snapshot_report_counts();
+  (result, CapturedDiagnostics { log, counts })
+}
+
+/// Fold worker-thread diagnostics (from [`capture`]) into the main thread: append
+/// the captured log text to the bound `LOG_BUFFER` and merge the count deltas
+/// into the main `REPORT`. Call on the MAIN thread, in a deterministic order
+/// (e.g. worker/job order), after the workers join. The worker already echoed
+/// each line to the shared stderr fd in real time, so this does NOT re-print to
+/// stderr — it only repairs the captured log + status tally.
+pub fn replay_captured(d: CapturedDiagnostics) {
+  debug_assert!(
+    LOG_BUFFER.try_borrow().is_ok(),
+    "replay_captured: LOG_BUFFER contended — captured text would be dropped"
+  );
+  if !d.log.is_empty()
+    && let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
+    && let Some(ref mut log) = *buf
+  {
+    // The captured text is already per-record newline-terminated; just make
+    // sure it starts on a fresh line so it can't glue onto an in-flight note.
+    if !log.is_empty() && !log.ends_with('\n') {
+      log.push('\n');
+    }
+    log.push_str(&d.log);
+  }
+  crate::common::error::merge_report_counts(d.counts);
+}
+
 /// Strip ANSI escape sequences from a string for log file output.
 fn strip_ansi(s: &str) -> String {
   // Match ESC[ ... m sequences
@@ -60,6 +129,24 @@ fn strip_ansi(s: &str) -> String {
     }
   }
   result
+}
+
+/// Append a progress note to the capture buffer as INLINE flowing text — the
+/// faithful Perl LaTeXML / tex.web terminal-progress format. `note_begin`
+/// carries a leading '\n' so each stage opens on a fresh line; `note_end`
+/// (` )`) and `note_progress` (`[1][2]…`, `N formulae …`) append inline so a
+/// load's closing paren and the page markers stay on the SAME line as their
+/// opener, and nested closes chain (`… 0.00 sec) 0.05 sec)`). A leading '\n'
+/// is collapsed against an existing trailing '\n' (or buffer start) so we never
+/// emit a blank line. Replaces the old unconditional `push('\n')` per note,
+/// which put every `)` on its own line and doubled newlines into blank lines
+/// (the reported `.latexml.log` noise on corpora.latexml.rs).
+fn append_note(buf: &mut String, note: &str) {
+  if note.starts_with('\n') && (buf.is_empty() || buf.ends_with('\n')) {
+    buf.push_str(&note[1..]);
+  } else {
+    buf.push_str(note);
+  }
 }
 
 /// prints a single line to STDERR
@@ -95,16 +182,17 @@ impl log::Log for LatexmlLogger {
       let details = record.args();
       if record_target == "note" {
         let note = details.to_string();
-        // A note (e.g. `(Loading foo.sty… )`) is a live stderr progress indicator — but when a
-        // capture buffer is active it must ALSO land there (on its own line), so it reaches the
-        // flushed `cortex.log` and CorTeX's `loaded_file` parser, which anchors on `^(Loading …`.
-        // Its own line both lets that `^`-anchored regex match and keeps the note from gluing onto a
-        // following `Info:/Warning:` line (which would break that line's own anchor).
+        // A note (e.g. `(Loading foo.sty… )`) is a live progress indicator — but when a capture
+        // buffer is active it must ALSO land there so it reaches the flushed `cortex.log` and
+        // CorTeX's `loaded_file` parser, which anchors on `^(Loading …`. `append_note` keeps it
+        // INLINE (Perl-faithful: `(Loading X… )` on one line, `[1][2]…` chained) while preserving
+        // the `^(Loading` anchor — every `note_begin` carries a leading '\n', so each load still
+        // opens at line start. The following `Info:/Warning:` record re-asserts its own line break
+        // (see the diagnostic-record path below), so the note can't glue onto its anchor.
         if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
           && let Some(ref mut log) = *buf
         {
-          log.push_str(&strip_ansi(&note));
-          log.push('\n');
+          append_note(log, &strip_ansi(&note));
         }
         print_stderr!("{}", note);
         return;
@@ -145,12 +233,25 @@ impl log::Log for LatexmlLogger {
         _ => paint(ANSI_WHITE, &message),
       } + &details.to_string();
 
-      // Capture to log buffer if active (strip ANSI for clean log text)
+      // Capture to log buffer if active (strip ANSI for clean log text).
+      // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
+      // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)
+      // matches and the record never glues onto an in-flight progress note
+      // (notes no longer force a trailing newline — see append_note).
       if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
         && let Some(ref mut log) = *buf
       {
+        if !log.is_empty() && !log.ends_with('\n') {
+          log.push('\n');
+        }
         log.push_str(&strip_ansi(&painted_message));
-        log.push('\n');
+        // Exactly one trailing newline — a multi-detail message (e.g.
+        // `Info:…loaded …\n\tat …\n\tIn …`) already ends with '\n', so an
+        // unconditional push would double it into a blank line before the next
+        // `(Loading …` note.
+        if !log.ends_with('\n') {
+          log.push('\n');
+        }
       }
 
       // Use `\n` (not `\r`) to guarantee each log line starts on a fresh
@@ -194,6 +295,27 @@ pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn append_note_inline_and_no_blank_lines() {
+    // note_begin opens a fresh line; note_end / note_progress stay inline.
+    let mut b = String::new();
+    append_note(&mut b, "\n(Loading keyval.sty..."); // note_begin (buffer empty: no leading blank)
+    append_note(&mut b, " )"); // note_end inline
+    assert_eq!(b, "(Loading keyval.sty... )");
+    append_note(&mut b, "\n(Loading graphics.sty..."); // mid-line: keep the break
+    append_note(&mut b, " )");
+    assert_eq!(b, "(Loading keyval.sty... )\n(Loading graphics.sty... )");
+    // page markers chain inline
+    append_note(&mut b, "\n410 formulae ...");
+    append_note(&mut b, "[1]");
+    append_note(&mut b, "[2]");
+    assert!(b.ends_with("410 formulae ...[1][2]"));
+    // a leading '\n' note after a buffer already at line-start collapses (no blank line)
+    let mut c = String::from("Info:foo\n");
+    append_note(&mut c, "\n(Building...");
+    assert_eq!(c, "Info:foo\n(Building...");
+  }
 
   #[test]
   fn strip_ansi_removes_color_codes() {

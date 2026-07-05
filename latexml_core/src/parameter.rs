@@ -75,7 +75,7 @@ impl Default for Parameter {
       novalue:            false,
       semiverbatim:       None,
       optional:           false,
-      name:               arena::pin_static("parameter_default"),
+      name:               pin!("parameter_default"),
       spec:               pin!(""),
       extra:              Vec::new(),
       inner:              None,
@@ -144,17 +144,14 @@ impl Parameter {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    let mut descriptor: Option<Rc<Parameter>> = with_mapping_sym(
-      arena::pin_static("PARAMETER_TYPES"),
-      self.name,
-      |looked_up_mapping| {
+    let mut descriptor: Option<Rc<Parameter>> =
+      with_mapping_sym(pin!("PARAMETER_TYPES"), self.name, |looked_up_mapping| {
         if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
           Some(Rc::clone(d_lookup))
         } else {
           None
         }
-      },
-    );
+      });
     if descriptor.is_none() {
       // TODO: see discussion on line 168
       let basetype_opt = arena::with(self.name, |name| {
@@ -164,10 +161,8 @@ impl Parameter {
       })
       .map(arena::pin);
       if let Some(basetype) = basetype_opt {
-        descriptor = with_mapping_sym(
-          arena::pin_static("PARAMETER_TYPES"),
-          basetype,
-          |basetype_param_opt| match basetype_param_opt {
+        descriptor = with_mapping_sym(pin!("PARAMETER_TYPES"), basetype, |basetype_param_opt| {
+          match basetype_param_opt {
             Some(Stored::Parameter(d_lookup)) => Ok(Some(d_lookup.clone())),
             _ => match Parameter::check_reader_function(&arena::with(self.name, |name| {
               s!("Read{name}")
@@ -193,8 +188,8 @@ impl Parameter {
                 ),
               },
             },
-          },
-        )?;
+          }
+        })?;
         self.optional = true;
       } else {
         // TODO: This looks like a code smell. Do we need a new arena method?
@@ -210,10 +205,8 @@ impl Parameter {
         })
         .map(arena::pin);
         if let Some(basetype) = basetype_opt {
-          descriptor = with_mapping_sym(
-            arena::pin_static("PARAMETER_TYPES"),
-            basetype,
-            |basetype_param_opt| match basetype_param_opt {
+          descriptor = with_mapping_sym(pin!("PARAMETER_TYPES"), basetype, |basetype_param_opt| {
+            match basetype_param_opt {
               Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
               _ => match arena::with(self.name, |name| Parameter::check_reader_function(name)) {
                 Some(reader) => Some(Rc::new(Parameter {
@@ -234,8 +227,8 @@ impl Parameter {
                   })
                 }),
               },
-            },
-          );
+            }
+          });
           if let Some(ref _desc) = descriptor {
             self.novalue = true;
             self.optional = true;

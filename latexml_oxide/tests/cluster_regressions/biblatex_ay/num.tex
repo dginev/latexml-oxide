@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage[style=numeric]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Bare: \cite{smith2020}.
+Paren postnote: \parencite[p.~5]{jones2019}.
+Textual: \textcite{smith2020}.
+Multi: \parencites{smith2020}{jones2019}.
+\printbibliography
+\end{document}

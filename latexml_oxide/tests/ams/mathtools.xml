@@ -1090,45 +1090,49 @@ Then a switch of tag forms.</p>
     <title><tag close=" ">3</tag>Arrows</title>
     <para xml:id="S3.p1">
       <equation xml:id="S3.Ex17">
-        <Math mode="display" tex="A\xLeftarrow[under]{over}B\xRightarrow[under]{over}C" text="A u@n@d@e@r@(o@v@e@r@(xLeftarrow)) B u@n@d@e@r@(o@v@e@r@(xRightarrow)) C" xml:id="S3.Ex17.m1">
+        <Math mode="display" tex="A\xLeftarrow[under]{over}B\xRightarrow[under]{over}C" text="A (u * n * d * e * r)@((o * v * e * r)@(xLeftarrow)) B (u * n * d * e * r)@((o * v * e * r)@(xRightarrow)) C" xml:id="S3.Ex17.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
               <XMTok font="italic" role="UNKNOWN">A</XMTok>
               <XMApp role="ARROW">
-                <XMWrap role="UNDERACCENT">
+                <XMApp role="UNDERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMApp>
-                  <XMWrap role="OVERACCENT">
+                  <XMApp role="OVERACCENT">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">v</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                  </XMWrap>
+                  </XMApp>
                   <XMTok font="italic" name="xLeftarrow" role="ARROW" stretchy="true">⇐</XMTok>
                 </XMApp>
               </XMApp>
               <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMApp role="ARROW">
-                <XMWrap role="UNDERACCENT">
+                <XMApp role="UNDERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMApp>
-                  <XMWrap role="OVERACCENT">
+                  <XMApp role="OVERACCENT">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">v</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                  </XMWrap>
+                  </XMApp>
                   <XMTok font="italic" name="xRightarrow" role="ARROW" stretchy="true">⇒</XMTok>
                 </XMApp>
               </XMApp>
@@ -1138,19 +1142,21 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex18">
-        <Math mode="display" tex="x\xleftrightarrow[under]{overlooooooong}y\xLeftrightarrow[underloooooooong]{over}z" text="x u@n@d@e@r@(o@v@e@r@l@o@o@o@o@o@o@o@n@g@(xleftrightarrow)) y u@n@d@e@r@l@o@o@o@o@o@o@o@o@n@g@(o@v@e@r@(xLeftrightarrow)) z" xml:id="S3.Ex18.m1">
+        <Math mode="display" tex="x\xleftrightarrow[under]{overlooooooong}y\xLeftrightarrow[underloooooooong]{over}z" text="x (u * n * d * e * r)@((o * v * e * r * l * o * o * o * o * o * o * o * n * g)@(xleftrightarrow)) y (u * n * d * e * r * l * o * o * o * o * o * o * o * o * n * g)@((o * v * e * r)@(xLeftrightarrow)) z" xml:id="S3.Ex18.m1">
           <XMath>
             <XMApp>
               <XMApp role="METARELOP">
-                <XMWrap role="UNDERACCENT">
+                <XMApp role="UNDERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMApp>
-                  <XMWrap role="OVERACCENT">
+                  <XMApp role="OVERACCENT">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">v</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
@@ -1165,14 +1171,15 @@ Then a switch of tag forms.</p>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
-                  </XMWrap>
+                  </XMApp>
                   <XMTok font="italic" name="xleftrightarrow" role="METARELOP" stretchy="true">↔</XMTok>
                 </XMApp>
               </XMApp>
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
               <XMApp>
                 <XMApp role="ARROW">
-                  <XMWrap role="UNDERACCENT">
+                  <XMApp role="UNDERACCENT">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
@@ -1189,14 +1196,15 @@ Then a switch of tag forms.</p>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
-                  </XMWrap>
+                  </XMApp>
                   <XMApp>
-                    <XMWrap role="OVERACCENT">
+                    <XMApp role="OVERACCENT">
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">v</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                    </XMWrap>
+                    </XMApp>
                     <XMTok font="italic" name="xLeftrightarrow" role="ARROW" stretchy="true">⇔</XMTok>
                   </XMApp>
                 </XMApp>
@@ -1208,29 +1216,32 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex19">
-        <Math mode="display" tex="x\xhookleftarrow[bar]{foo}y\xhookrightarrow[bluuuuuuuuub]{baz}t\xmapsto{heeereee}k" text="x b@a@r@(f@o@o@(xhookleftarrow)) y b@l@u@u@u@u@u@u@u@u@u@b@(b@a@z@(xhookrightarrow)) t h@e@e@e@r@e@e@e@(xmapsto) k" xml:id="S3.Ex19.m1">
+        <Math mode="display" tex="x\xhookleftarrow[bar]{foo}y\xhookrightarrow[bluuuuuuuuub]{baz}t\xmapsto{heeereee}k" text="x (b * a * r)@((f * o * o)@(xhookleftarrow)) y (b * l * u * u * u * u * u * u * u * u * u * b)@((b * a * z)@(xhookrightarrow)) t (h * e * e * e * r * e * e * e)@(xmapsto) k" xml:id="S3.Ex19.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
               <XMApp role="ARROW">
-                <XMWrap role="UNDERACCENT">
+                <XMApp role="UNDERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMApp>
-                  <XMWrap role="OVERACCENT">
+                  <XMApp role="OVERACCENT">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
-                  </XMWrap>
+                  </XMApp>
                   <XMTok font="italic" name="xhookleftarrow" role="ARROW" stretchy="true">↩</XMTok>
                 </XMApp>
               </XMApp>
               <XMTok font="italic" role="UNKNOWN">y</XMTok>
               <XMApp role="ARROW">
-                <XMWrap role="UNDERACCENT">
+                <XMApp role="UNDERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">l</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
@@ -1243,19 +1254,21 @@ Then a switch of tag forms.</p>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMApp>
-                  <XMWrap role="OVERACCENT">
+                  <XMApp role="OVERACCENT">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok>
-                  </XMWrap>
+                  </XMApp>
                   <XMTok font="italic" name="xhookrightarrow" role="ARROW" stretchy="true">↪</XMTok>
                 </XMApp>
               </XMApp>
               <XMTok font="italic" role="UNKNOWN">t</XMTok>
               <XMApp role="ARROW">
-                <XMWrap role="OVERACCENT">
+                <XMApp role="OVERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
@@ -1264,7 +1277,7 @@ Then a switch of tag forms.</p>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMTok font="italic" name="xmapsto" role="ARROW" stretchy="true">↦</XMTok>
               </XMApp>
               <XMTok font="italic" role="UNKNOWN">k</XMTok>
@@ -1319,13 +1332,14 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex21">
-        <Math mode="display" tex="x\xrightleftharpoons{bluuuuub}y\xleftrightharpoons[blaaaaaab]{}z" text="x b@l@u@u@u@u@u@b@(xrightleftharpoons) y b@l@a@a@a@a@a@a@b@(absent@(xleftrightharpoons)) z" xml:id="S3.Ex21.m1">
+        <Math mode="display" tex="x\xrightleftharpoons{bluuuuub}y\xleftrightharpoons[blaaaaaab]{}z" text="x (b * l * u * u * u * u * u * b)@(xrightleftharpoons) y (b * l * a * a * a * a * a * a * b)@(absent@(xleftrightharpoons)) z" xml:id="S3.Ex21.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
               <XMApp role="METARELOP">
-                <XMWrap role="OVERACCENT">
+                <XMApp role="OVERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">l</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
@@ -1334,12 +1348,13 @@ Then a switch of tag forms.</p>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMTok font="italic" name="xrightleftharpoons" role="METARELOP" stretchy="true">⇌</XMTok>
               </XMApp>
               <XMTok font="italic" role="UNKNOWN">y</XMTok>
               <XMApp role="METARELOP">
-                <XMWrap role="UNDERACCENT">
+                <XMApp role="UNDERACCENT">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">l</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
@@ -1349,7 +1364,7 @@ Then a switch of tag forms.</p>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
-                </XMWrap>
+                </XMApp>
                 <XMApp>
                   <XMTok meaning="absent" role="OVERACCENT"/>
                   <XMTok font="italic" name="xleftrightharpoons" role="METARELOP" stretchy="true">⇋</XMTok>
@@ -3073,12 +3088,12 @@ Then a switch of tag forms.</p>
                   <XMArray name="gathered" vattach="top">
                     <XMRow>
                       <XMCell align="center">
-                        <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt" xml:id="S6.Ex46.m1.1">first</XMText>
+                        <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt" xml:id="S6.Ex46.m1.1">first</XMText>
                       </XMCell>
                     </XMRow>
                     <XMRow>
                       <XMCell align="center">
-                        <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt" xml:id="S6.Ex46.m1.2">last</XMText>
+                        <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt" xml:id="S6.Ex46.m1.2">last</XMText>
                       </XMCell>
                     </XMRow>
                   </XMArray>
@@ -6849,7 +6864,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="left">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP" xml:id="S10.Ex80.m1.3">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.4">L</XMTok>
@@ -6860,7 +6875,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="right">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.8">R</XMTok>
@@ -6872,7 +6887,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="left">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.13">L</XMTok>
@@ -6883,7 +6898,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="right">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.17">R</XMTok>
@@ -7096,10 +7111,10 @@ Then a switch of tag forms.</p>
       <equationgroup class="ltx_eqn_align" xml:id="S12.EGx10">
         <equation xml:id="S12.Ex83">
           <MathFork>
-            <text class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="284.5pt">Part 1</text>
+            <text align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="284.5pt">Part 1</text>
             <MathBranch>
               <td/>
-              <td align="left"><text class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="284.5pt">Part 1</text></td>
+              <td align="left"><text align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="284.5pt">Part 1</text></td>
             </MathBranch>
           </MathFork>
         </equation>
@@ -7110,7 +7125,7 @@ Then a switch of tag forms.</p>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMTok meaning="absent"/>
-                  <XMText class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="227.6pt">2nd line</XMText>
+                  <XMText align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="227.6pt">2nd line</XMText>
                 </XMApp>
               </XMath>
             </Math>
@@ -7120,7 +7135,7 @@ Then a switch of tag forms.</p>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><text class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="227.6pt">2nd line</text></td>
+              <td align="left"><text align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="227.6pt">2nd line</text></td>
             </MathBranch>
           </MathFork>
         </equation>
@@ -7131,7 +7146,7 @@ Then a switch of tag forms.</p>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok meaning="19" role="NUMBER">19</XMTok>
-                  <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt"> last part</XMText>
+                  <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt"> last part</XMText>
                 </XMApp>
               </XMath>
             </Math>
@@ -7145,7 +7160,7 @@ Then a switch of tag forms.</p>
                   <XMath>
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt"> last part</XMText>
+                      <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="113.8pt"> last part</XMText>
                     </XMApp>
                   </XMath>
                 </Math></td>
@@ -7166,19 +7181,19 @@ Then a switch of tag forms.</p>
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMText class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">1</XMText>
-                  <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="85.4pt">2</XMText>
+                  <XMText align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">1</XMText>
+                  <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="85.4pt">2</XMText>
                 </XMApp>
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><text class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">1</text></td>
+              <td align="right"><text align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">1</text></td>
               <td align="left"><Math mode="inline" tex="\displaystyle=\framebox[85.35826pt]{2}" text="absent = [2]" xml:id="S12.E27.m2">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                       <XMTok meaning="absent"/>
-                      <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="85.4pt">2</XMText>
+                      <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="85.4pt">2</XMText>
                     </XMApp>
                   </XMath>
                 </Math></td>
@@ -7195,19 +7210,19 @@ Then a switch of tag forms.</p>
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMText class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">3</XMText>
-                  <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="56.9pt">4</XMText>
+                  <XMText align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">3</XMText>
+                  <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="56.9pt">4</XMText>
                 </XMApp>
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><text class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">3</text></td>
+              <td align="right"><text align="center" class="ltx_markedasmath" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="42.7pt">3</text></td>
               <td align="left"><Math mode="inline" tex="\displaystyle=\framebox[56.9055pt]{4}" text="absent = [4]" xml:id="S12.E28.m2">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                       <XMTok meaning="absent"/>
-                      <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="56.9pt">4</XMText>
+                      <XMText align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="56.9pt">4</XMText>
                     </XMApp>
                   </XMath>
                 </Math></td>

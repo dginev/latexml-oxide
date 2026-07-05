@@ -83,6 +83,7 @@
       <toccaption><tag close=" ">(a)</tag></toccaption>
       <caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption>
     </figure>
+    <break class="ltx_break"/>
     <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig2" xml:id="S0.F1.sf2">
       <tags>
         <tag><text fontsize="90%">(b)</text></tag>
@@ -163,7 +164,6 @@
       <block class="ltx_figure_panel ltx_minipage" vattach="top" width="138.0pt">
         <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=55.1983pt,keepaspectratio=true" xml:id="S0.F3.g2"/>
       </block>
-      <break class="ltx_break"/>
       <break/>
       <itemize class="ltx_centering ltx_figure_panel" xml:id="S0.I1">
         <item xml:id="S0.I1.i1">
@@ -236,7 +236,6 @@
       <break class="ltx_break"/>
       <p class="ltx_figure_panel">.</p>
       <break class="ltx_break"/>
-      <break/>
       <enumerate class="ltx_figure_panel" xml:id="S0.I3">
         <item xml:id="S0.I3.i1">
           <tags>
@@ -263,7 +262,6 @@
           </XMath>
         </Math></p>
       <break class="ltx_break"/>
-      <break/>
       <equation class="ltx_figure_panel" xml:id="S0.Ex2">
         <Math mode="display" tex="E=mc^{2}" text="E = m * c ^ 2" xml:id="S0.Ex2.m1">
           <XMath>
@@ -284,10 +282,8 @@
         </Math>
       </equation>
       <break class="ltx_break"/>
-      <break/>
       <p class="ltx_figure_panel">Some paragraph text</p>
       <break class="ltx_break"/>
-      <break/>
       <equationgroup class="ltx_eqn_eqnarray ltx_figure_panel" xml:id="S0.EGx1">
         <equation xml:id="S0.Ex3">
           <MathFork>
@@ -379,7 +375,6 @@
         </equation>
       </equationgroup>
       <break class="ltx_break"/>
-      <break/>
       <quote class="ltx_figure_panel">
         <p>Quote me later</p>
       </quote>

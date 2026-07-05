@@ -267,7 +267,18 @@ impl Alignment {
       return Ok(None);
     }
     self.current_column += 1;
-    let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
+    // `current_row` index is Some (guarded above), but it can point past
+    // `self.rows` if that row was never materialised — degrade to "no next
+    // column" instead of panicking, LOUDLY (the sibling extra-& path errors
+    // too; fail-toward-flagging). Witness: 1809.10756.
+    let Some(current_row) = self.rows.get_mut(self.current_row.unwrap()) else {
+      Error!(
+        "unexpected",
+        "alignment_row",
+        "Alignment row index points past the materialised rows; dropping the cell"
+      );
+      return Ok(None);
+    };
     if current_row.get_column_mut(self.current_column).is_some() {
       Ok(current_row.get_column_mut(self.current_column))
     } else {
@@ -309,6 +320,11 @@ impl Alignment {
   pub fn current_row_number(&self) -> usize {
     self.rows.iter().filter(|row| !row.is_pseudo()).count()
   }
+
+  /// The alignment's `name` XML attribute (e.g. `multline`, `gathered`), set
+  /// via the container bindings. Perl reads `$$alignment{properties}{attributes}
+  /// {name}`; here it lives in `xml_attributes`. Used by amsmath's `\shove*`.
+  pub fn get_name(&self) -> Option<&str> { self.xml_attributes.get("name").map(String::as_str) }
 
   pub fn current_column(&mut self) -> Option<&mut Cell> {
     self

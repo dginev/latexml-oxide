@@ -168,11 +168,12 @@ arXiv corpus."""
 depends = "$auto, imagemagick, mupdf-tools, texlive-latex-base, texlive-latex-extra, texlive-science"
 # Secondary graphics/PDF helpers are SHELLED OUT at runtime (not linked) and only
 # needed for specific source content, so they stay in Recommends: pdftocairo
-# (poppler-utils), gs/ps2pdf (ghostscript), dvipng.
+# (poppler-utils — also the second-choice vector-SVG converter), gs/ps2pdf
+# (ghostscript), dvipng.
 recommends = "poppler-utils, ghostscript, dvipng"
-# inkscape (SVG conversion) is optional and pulls a large GTK stack — keep it a
-# soft suggestion rather than a recommend.
-suggests = "inkscape"
+# NOTE: no inkscape suggestion. The vector-SVG path uses only mutool → pdftocairo;
+# a heavyweight GTK-stack inkscape fallback was deliberately dropped (raster PNG
+# is the fallback instead).
 section = "tex"
 priority = "optional"
 assets = [

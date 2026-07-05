@@ -353,29 +353,32 @@ impl XM {
           }
         },
       },
-      XM::Apply(op, args, ..) => Cow::Owned(format!(
-        "{}{}",
-        op.0.get_value(nodes)?,
-        args
+      // Propagate a bad-lexeme-id lookup failure with `?` instead of
+      // `.expect()`-panicking — these recursive arms must match the top-level
+      // arm's graceful Err (a `lookup_lex_node` miss on adversarial input is
+      // recoverable; the caller prunes the parse).
+      XM::Apply(op, args, ..) => {
+        let head = op.0.get_value(nodes)?;
+        let parts = args
           .trees()
           .iter()
-          .map(|t| t.get_value(nodes).expect("inner"))
-          .collect::<Vec<_>>()
-          .join("")
-      )),
+          .map(|t| t.get_value(nodes))
+          .collect::<Result<Vec<_>, _>>()?;
+        Cow::Owned(format!("{head}{}", parts.join("")))
+      },
       // Choices/Arg don't carry a serialized value — return empty for safety;
       // callers treat Ref similarly (see the XM::Ref arm below).
       XM::Choices(_) | XM::Arg(_) => Cow::Borrowed(""),
       XM::Dual(content, pres, ..) => Cow::Owned(format!(
         "{}{}",
-        content.get_value(nodes).expect("inner"),
-        pres.get_value(nodes).expect("inner")
+        content.get_value(nodes)?,
+        pres.get_value(nodes)?
       )),
       XM::Wrap(args, ..) => Cow::Owned(
         args
           .iter()
-          .map(|a| a.get_value(nodes).expect("oof"))
-          .collect::<Vec<_>>()
+          .map(|a| a.get_value(nodes))
+          .collect::<Result<Vec<_>, _>>()?
           .join(""),
       ),
       XM::Ref(_) => Cow::Borrowed(""),
@@ -1179,33 +1182,32 @@ impl XM {
           | "quantum-operator-product"
       )
     }
-    fn walk(node: &XM, ancestor_fence: Option<String>) -> usize {
-      let meaning_of = |op: &XM| -> Option<String> {
+    // The ancestor fence is threaded as a borrowed `Option<&str>` (Copy):
+    // the per-node `Option<String>` clones + the per-Apply `String::from`
+    // this walk used to pay showed up in the clippy redundant-clone sweep
+    // (2026-07-02 perf audit) — pure scoring, output-identical.
+    fn walk<'a>(node: &'a XM, ancestor_fence: Option<&'a str>) -> usize {
+      let meaning_of = |op: &'a XM| -> Option<&'a str> {
         match op {
-          XM::Token(p, _) => p.meaning.as_deref().map(String::from),
+          XM::Token(p, _) => p.meaning.as_deref(),
           _ => None,
         }
       };
       match node {
         XM::Apply(op, args, ..) => {
           let my_meaning = meaning_of(&op.0);
-          let here = match (&my_meaning, &ancestor_fence) {
+          let here = match (my_meaning, ancestor_fence) {
             (Some(m), Some(a)) if m == a && is_fence_meaning(m) => 1,
             _ => 0,
           };
           // Pass current meaning as ancestor if it's a fence; otherwise
           // keep the existing ancestor (so we detect nesting across
           // intermediate non-fence Applies like `times`).
-          let new_anc = match &my_meaning {
-            Some(m) if is_fence_meaning(m) => Some(m.clone()),
-            _ => ancestor_fence.clone(),
+          let new_anc = match my_meaning {
+            Some(m) if is_fence_meaning(m) => Some(m),
+            _ => ancestor_fence,
           };
-          here
-            + args
-              .trees()
-              .iter()
-              .map(|a| walk(a, new_anc.clone()))
-              .sum::<usize>()
+          here + args.trees().iter().map(|a| walk(a, new_anc)).sum::<usize>()
         },
         XM::Dual(c, p, ..) => {
           // If the Dual's content is a fence-Apply, propagate that
@@ -1214,21 +1216,17 @@ impl XM {
           // inside the Ref-pointing content.
           let dual_fence = match &**c {
             XM::Apply(op_inner, ..) => match &*op_inner.0 {
-              XM::Token(p_inner, _) => p_inner
-                .meaning
-                .as_deref()
-                .filter(|m| is_fence_meaning(m))
-                .map(String::from),
+              XM::Token(p_inner, _) => p_inner.meaning.as_deref().filter(|m| is_fence_meaning(m)),
               _ => None,
             },
             _ => None,
           };
-          let pres_anc = dual_fence.clone().or_else(|| ancestor_fence.clone());
-          walk(c, ancestor_fence.clone()) + walk(p, pres_anc)
+          let pres_anc = dual_fence.or(ancestor_fence);
+          walk(c, ancestor_fence) + walk(p, pres_anc)
         },
-        XM::Wrap(items, ..) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
-        XM::Choices(trees) => trees.iter().map(|t| walk(t, ancestor_fence.clone())).sum(),
-        XM::Arg(items) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
+        XM::Wrap(items, ..) => items.iter().map(|i| walk(i, ancestor_fence)).sum(),
+        XM::Choices(trees) => trees.iter().map(|t| walk(t, ancestor_fence)).sum(),
+        XM::Arg(items) => items.iter().map(|i| walk(i, ancestor_fence)).sum(),
         XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
       }
     }

@@ -33,7 +33,7 @@ the phases of the trial</caption>
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -44.28 -2.77)">
-                      <svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
+                      <svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
                           <p/>
                           <p><text font="sansserif" fontsize="80%">Referred (n=173)</text></p>
                         </inline-block></svg:foreignObject>
@@ -44,7 +44,7 @@ the phases of the trial</caption>
                       <svg:path d="M -96.86 -38.74 h 193.72 v 77.49 h -193.72 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.14)">
-                      <svg:foreignObject height="60.88" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                      <svg:foreignObject height="60.88" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:4.75em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Excluded (n=17):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">a) Did not wish to participate (n=9)</text></p>
@@ -60,7 +60,7 @@ the phases of the trial</caption>
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -44.28 5.84)">
-                      <svg:foreignObject height="27.06" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
+                      <svg:foreignObject height="27.06" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.75em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
                           <p/>
                           <p><text font="sansserif" fontsize="80%">Assessed for eligibility (n=156)</text></p>
                         </inline-block></svg:foreignObject>
@@ -71,7 +71,7 @@ the phases of the trial</caption>
                       <svg:path d="M -96.86 -63.65 h 193.72 v 127.3 h -193.72 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 47.05)">
-                      <svg:foreignObject height="110.7" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:9.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                      <svg:foreignObject height="110.7" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:9.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Excluded (n=54):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">a) Inclusion criteria not met (n=22)</text></p>
@@ -90,7 +90,7 @@ the phases of the trial</caption>
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -44.28 5.84)">
-                      <svg:foreignObject height="27.06" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
+                      <svg:foreignObject height="27.06" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.75em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
                           <p/>
                           <p><text font="sansserif" fontsize="80%">Randomised (n=102)</text></p>
                         </inline-block></svg:foreignObject>
@@ -99,13 +99,13 @@ the phases of the trial</caption>
                 </svg:g>
                 <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 296.43)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1 0 0 -1 5.17 0) translate(103.32,0) matrix(1.0 0.0 0.0 1.0 -99.63 -2.77)">
-                    <svg:foreignObject height="9.84" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 7.69)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                    <svg:foreignObject height="9.84" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                         <p/>
                         <p><text font="sansserif" fontsize="80%">Intervention group</text></p>
                       </inline-block></svg:foreignObject>
                   </svg:g>
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1 0 0 -1 222.13 0) translate(123,0) matrix(1.0 0.0 0.0 1.0 -99.63 -2.77)">
-                    <svg:foreignObject height="9.84" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 7.69)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                    <svg:foreignObject height="9.84" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                         <p/>
                         <p><text font="sansserif" fontsize="80%">Wait-list control group</text></p>
                       </inline-block></svg:foreignObject>
@@ -117,7 +117,7 @@ the phases of the trial</caption>
                       <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 30.44)">
-                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Allocated to intervention (n=51):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Received intervention (n=49)</text></p>
@@ -132,7 +132,7 @@ the phases of the trial</caption>
                       <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 30.44)">
-                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Allocated to wait-list (n=51):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Stayed on wait-list (n=48)</text></p>
@@ -149,7 +149,7 @@ the phases of the trial</caption>
                       <svg:path d="M -96.86 -38.44 h 193.72 v 76.87 h -193.72 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.45)">
-                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Post-intervention measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=5,</text></p>
@@ -163,7 +163,7 @@ the phases of the trial</caption>
                       <svg:path d="M -96.86 -38.44 h 193.72 v 76.87 h -193.72 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.45)">
-                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Post-wait-list measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=6,</text></p>
@@ -179,7 +179,7 @@ the phases of the trial</caption>
                       <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 30.44)">
-                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Allocated to intervention (n=48):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Received intervention (n=46)</text></p>
@@ -196,7 +196,7 @@ the phases of the trial</caption>
                       <svg:path d="M -96.86 -30.13 h 193.72 v 60.27 h -193.72 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 14.14)">
-                      <svg:foreignObject height="43.66" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.25em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                      <svg:foreignObject height="43.66" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">3-months follow-up measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=9,</text></p>
@@ -209,7 +209,7 @@ the phases of the trial</caption>
                       <svg:path d="M -96.86 -38.44 h 193.72 v 76.87 h -193.72 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.45)">
-                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Post-intervention measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=5,</text></p>
@@ -225,7 +225,7 @@ the phases of the trial</caption>
                       <svg:path d="M -96.86 -30.13 h 193.72 v 60.27 h -193.72 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 14.14)">
-                      <svg:foreignObject height="43.66" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.25em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                      <svg:foreignObject height="43.66" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">3-months follow-up measurement</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=2,</text></p>
@@ -240,7 +240,7 @@ the phases of the trial</caption>
                       <svg:path d="M -107.93 -16.6 h 215.86 v 33.21 h -215.86 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 -2.77)">
-                      <svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                      <svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Analysed (n=51)</text></p>
                         </inline-block></svg:foreignObject>
@@ -251,7 +251,7 @@ the phases of the trial</caption>
                       <svg:path d="M -107.93 -16.6 h 215.86 v 33.21 h -215.86 Z"/>
                     </svg:g>
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 -2.77)">
-                      <svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                      <svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;font-size:8pt;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Analysed (n=51)</text></p>
                         </inline-block></svg:foreignObject>

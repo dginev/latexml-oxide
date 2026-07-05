@@ -28,6 +28,7 @@ use crate::{
   document::Document,
   gullet, mouth,
   parameter::{Parameter, Parameters},
+  pin,
   state::*,
   stomach::*,
   tbox::Tbox,
@@ -654,7 +655,7 @@ pub fn def_math_primitive(
         // The Tbox records the CURRENT digestion mode so that Box::isMath
         // (mode =~ /math$/) returns false inside \text{} (restricted_horizontal),
         // making `?#isMath` template fall through to the text branch.
-        let cur_mode = lookup_string_from_sym(arena::pin_static("MODE"));
+        let cur_mode = lookup_string_from_sym(pin!("MODE"));
         let mode_static: &'static str = match cur_mode.as_str() {
           "math" => "math",
           "display_math" => "display_math",
@@ -1231,8 +1232,8 @@ pub fn def_environment(
     Some(ref pl) if pl.get_num_args() > 0 => {
       let skip_spaces_param = Parameter {
         novalue: true,
-        name: arena::pin_static("SkipSpaces"),
-        spec: arena::pin_static("SkipSpaces"),
+        name: pin!("SkipSpaces"),
+        spec: pin!("SkipSpaces"),
         reader: Rc::new(|_inner, _extra| {
           gullet::skip_spaces()?;
           Ok(ArgWrap::None)

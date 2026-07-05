@@ -19,6 +19,15 @@ LoadDefinitions!({
   RegisterNamespace!("data" => "http://dlmf.nist.gov/LaTeXML/data");
   // Needed for ARIA accessibility attributes
   RegisterNamespace!("aria" => "http://www.w3.org/ns/wai-aria");
+  // Document-level prefixes for the same two: the schema declares both
+  // (LaTeXML-common.rnc: ARIA.attributes + the data/foreign wildcard, and
+  // the precompiled model carries the aria:* attribute tables), and Perl
+  // derives the output prefixes from the schema. Rust registers them
+  // explicitly so any binding can emit aria:*/data:* attributes without
+  // a per-binding RegisterDocumentNamespace (arXiv-fork a11y capability;
+  // acmart's \Description was the first consumer).
+  RegisterDocumentNamespace!("data", "http://dlmf.nist.gov/LaTeXML/data");
+  RegisterDocumentNamespace!("aria", "http://www.w3.org/ns/wai-aria");
 
   // This is used for plain TeX, but needs to be undone for LaTeX (or...)!
   RelaxNGSchema!("LaTeXML");

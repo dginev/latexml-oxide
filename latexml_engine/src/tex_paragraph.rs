@@ -64,7 +64,7 @@ LoadDefinitions!({
   DefConstructor!("\\indent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
-      let para_tag = pin_static("ltx:para");
+      let para_tag = pin!("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
       } else if document::sym_can_contain_somehow(tag, para_tag).is_some() {
@@ -88,7 +88,7 @@ LoadDefinitions!({
   DefConstructor!("\\noindent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
-      let para_tag = pin_static("ltx:para");
+      let para_tag = pin!("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_noindent")?;
       } else if document::sym_can_contain_somehow(tag, para_tag ).is_some() {
@@ -121,16 +121,21 @@ LoadDefinitions!({
         if let Some(mut node) = element {
           let qname = document::get_node_qname(&node);
           // Only set on the para about to close, if unknown!
-          if qname == pin_static("ltx:para") && node.get_attribute("class").is_none() {
+          if qname == pin!("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
             if class_sym != pin!("") {
               let class_s = with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
             }
-          } else if qname == pin_static("ltx:figure") {
-            // insert breaks in figures, for vertically separating subfigures
-            document.insert_element("ltx:break",Vec::new(), None)?;
           }
+          // NOTE: Perl's \par (\lx@normal@par) does NOT insert figure-separating
+          // breaks — figure row breaks are computed by WIDTH in
+          // `arrange_panels_and_breaks` (ltx:figure afterClose). A prior Rust-only
+          // branch here inserted an <ltx:break> whenever \par fired in an
+          // ltx:figure, which mis-fired for the internal \par that `leaveHorizontal`
+          // triggers after inter-panel glue (\hfill/\quad) — producing one spurious
+          // break per subfigure, so an intended 4-per-row grid collapsed to 1
+          // panel per row (arXiv 2605.00347). Removed; see arrange_panels.
         }
         if !prop_bool!(props, "internal_par") {
           document.maybe_close_element("ltx:para")?;
@@ -169,7 +174,9 @@ LoadDefinitions!({
         // Per eTeX spec, \interlinepenalties (like \parshape) is reset after each paragraph.
         { assign_value("interlinepenalties", Stored::None, None); }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
-        if lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
+        // `\parindent` is normally defined; if it isn't (None), don't assume zero
+        // and force noindent — skip the override. Witness: 1502.07281.
+        if lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0) {
           // respect \parindent if no overrides are given
           { assign_value("next_para_class", "ltx_noindent", None); }
         }

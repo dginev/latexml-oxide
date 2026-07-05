@@ -130,9 +130,24 @@ pub fn ensure_libxml_init() { libxml::init_parser(); }
 /// It does **not** reclaim libxml2's process-global C state (parser
 /// dictionaries) — that residual (~24 MB/test) is left as-is rather than
 /// risk the global `xmlCleanupParser`.
+///
+/// THREAD-LIFECYCLE CONTRACT (PR_READINESS review): several SymStr-holding
+/// statics are NOT reset here — `pin!` call-site OnceCells (no registry;
+/// unresettable by design), gullet `DEFERRED_COMMANDS`, dump-reader
+/// `CURRENT_LOAD_CTX`, package-local caches. They are safe only because no
+/// thread READS a pre-reset SymStr after `arena::reset()`: libtest runs one
+/// test per thread, and the persistent cortex_worker never resets. Any
+/// future daemon/thread-pool that resets AND reuses a thread resurrects the
+/// phantom-symbol-aliasing bug class (see the REPORT-map fix, 7b64a48ad1)
+/// in an unfixable form — redesign the pin! cache before doing that.
 pub fn reset_thread_engine() {
   state::reset_thread_state();
   common::arena::reset();
+  // The error REPORT's `undefined`/`missing` maps are keyed by arena `SymStr`s,
+  // so they MUST be cleared together with the arena — otherwise a stale key
+  // resolves, in the renumbered arena, to a different string (phantom undefined).
+  // (`reset_arena_keyed_reports` is in scope via `pub use crate::common::error::*`.)
+  reset_arena_keyed_reports();
 }
 
 pub use crate::common::error::*;

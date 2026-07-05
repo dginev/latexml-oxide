@@ -267,6 +267,86 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
   Ok(())
 }
 
+/// Options for [`framed_properties`] (Perl `framedProperties(%options)`,
+/// TeX_Box.pool.ltxml #2829).
+#[derive(Default)]
+pub struct FramedOptions {
+  /// the frame kind (default "rectangle")
+  pub frame:           Option<String>,
+  /// the margin separation, e.g. `margin => '\fboxsep'`
+  pub margin:          Option<String>,
+  /// the rule thickness
+  pub rule:            Option<String>,
+  /// the rule color (default, the current font color)
+  pub color:           Option<String>,
+  /// the background color (default, NONE)
+  pub backgroundcolor: Option<String>,
+}
+
+/// Compute the properties required for a framed something.
+///
+/// Port of Perl `framedProperties` (TeX_Box.pool.ltxml L69-89, #2829):
+/// consistent `framed`/`framecolor`/`backgroundcolor`/`cssstyle` attributes,
+/// plus `padtop`/`padbottom`/`padleft`/`padright` Dimension properties
+/// (margin + rule per side) that feed the whatsit size computation.
+/// `cssstyle` carries `padding:` whenever a margin is given, and
+/// `border-width:` only when the rule differs from the 0.4pt default.
+pub fn framed_properties(options: FramedOptions) -> SymHashMap<Stored> {
+  // Perl `$options{margin} && LookupDimension(...)`: an absent OR empty
+  // option is falsy and skips the lookup entirely.
+  let sep = options
+    .margin
+    .as_deref()
+    .filter(|m| !m.is_empty())
+    .and_then(|m| lookup_dimension_cs(m, false));
+  let th = options
+    .rule
+    .as_deref()
+    .filter(|r| !r.is_empty())
+    .and_then(|r| lookup_dimension_cs(r, false));
+  let pad = match (sep, th) {
+    (Some(s), Some(t)) => Some(Dimension::new(s.value_of() + t.value_of())),
+    (s, t) => s.or(t),
+  };
+  let th_pt = th.map(|t| t.to_attribute());
+  let mut style_parts: Vec<String> = Vec::new();
+  if let Some(s) = sep {
+    style_parts.push(s!("padding:{}", s.to_attribute()));
+  }
+  if let (Some(t), Some(tp)) = (th, th_pt.as_deref())
+    && tp != "0.4pt"
+  {
+    style_parts.push(s!("border-width:{}", t.to_attribute()));
+  }
+  let style = style_parts.join(";");
+
+  let mut props: SymHashMap<Stored> = SymHashMap::default();
+  props.insert(
+    "framed",
+    Stored::from(options.frame.unwrap_or_else(|| "rectangle".to_string())),
+  );
+  // Perl `LookupValue('font')->getColor` always yields a color (default
+  // Black), so framecolor is always present.
+  let framecolor = options
+    .color
+    .or_else(|| lookup_font().and_then(|f| f.get_color().map(|c| c.to_attribute())))
+    .unwrap_or_else(|| s!("#000000"));
+  props.insert("framecolor", Stored::from(framecolor));
+  if let Some(bg) = options.backgroundcolor {
+    props.insert("backgroundcolor", Stored::from(bg));
+  }
+  if !style.is_empty() {
+    props.insert("cssstyle", Stored::from(style));
+  }
+  if let Some(p) = pad {
+    props.insert("padtop", Stored::Dimension(p));
+    props.insert("padbottom", Stored::Dimension(p));
+    props.insert("padleft", Stored::Dimension(p));
+    props.insert("padright", Stored::Dimension(p));
+  }
+  props
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box Family of primitive control sequences
@@ -377,18 +457,35 @@ LoadDefinitions!({
     r"\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi"
   );
 
-  // Perl: enterHorizontal => 1
-  // properties => { frame => sub { ToString($_[1] || 'rectangle'); }}
+  // Perl TeX_Box.pool.ltxml L61-90 (#2829): `\lx@framed` takes keyvals to
+  // specify framing parameters; framedProperties massages them into
+  // consistent attributes + padding properties for size calculations.
+  DefKeyVal!("framed", "margin", "Dimension");
+  DefKeyVal!("framed", "rule", "Dimension");
   DefConstructor!(
-    "\\lx@framed[]{}",
-    "<ltx:text framed='#frame'>#2</ltx:text>",
+    "\\lx@framed OptionalKeyVals:framed {}",
+    "<ltx:text framed='#framed' framecolor='#framecolor' cssstyle='#cssstyle' \
+  _noautoclose='1'>#2</ltx:text>",
     enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let frame = whatsit.get_arg(1)
-        .map(|a| a.to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "rectangle".to_string());
-      whatsit.set_property("frame", Stored::from(frame));
+    sizer => "#2",
+    properties => sub[args] {
+      let mut opts = FramedOptions::default();
+      // The OptionalKeyVals arg arrives already digested in a properties
+      // closure — read its data directly (be_digested would panic here).
+      if let Some(kv) = args[0].as_ref()
+        && let DigestedData::KeyVals(dkv) = kv.data()
+      {
+        // Perl passes the whole getHash through; framedProperties reads
+        // margin/rule (declared Dimension keyvals) plus any of its other
+        // recognized options.
+        let hash = dkv.get_hash_digested();
+        opts.margin = hash.get("margin").cloned();
+        opts.rule = hash.get("rule").cloned();
+        opts.frame = hash.get("frame").cloned();
+        opts.color = hash.get("color").cloned();
+        opts.backgroundcolor = hash.get("backgroundcolor").cloned();
+      }
+      Ok(framed_properties(opts))
     }
   );
   // Perl: enterHorizontal => 1
@@ -544,7 +641,16 @@ LoadDefinitions!({
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props] {
     // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
     unpack_opt_ref!(args => _spec_opt, contents_opt);
-    let contents = contents_opt.as_ref().unwrap();
+    // HBoxContents can legitimately be None: the predigest returns None when
+    // the box body digested to zero boxes (a malformed \hbox after mode
+    // damage — witness math-ph/0405041, LamsTeX `\list\item` +
+    // `$$…\tag\label{…}$$`). Perl's template `#2` of undef renders nothing
+    // and the conversion completes with errors; mirror that, don't panic.
+    let contents_opt = contents_opt.as_ref();
+    if contents_opt.is_none() {
+      Info!("empty", "hbox",
+        "\\hbox contents digested to nothing; emitting an empty box");
+    }
     let current_opt = document.get_element();
 
     // Perl: $tag eq 'ltx:_CaptureBlock_' — detect if going into insertBlock
@@ -570,7 +676,9 @@ LoadDefinitions!({
     };
     let node = document.open_element(newtag,
       Some(string_map!("_noautoclose" => "true", "width" => width)), None)?;
-    document.absorb(contents, None)?;
+    if let Some(contents) = contents_opt {
+      document.absorb(contents, None)?;
+    }
     // Perl L318-321: cleanup auto-opened svg:g/svg:svg (only when NOT in SVG),
     // then always close the specific node we opened.
     if !is_svg {
@@ -602,11 +710,16 @@ LoadDefinitions!({
       if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
         Some((*w).into())
       } else if let Some(ArgWrap::Dimension(s_num_ref)) = GetKeyVal!(spec, "spread") {
+        // The contents arg (and its width) can be absent for a degenerate
+        // \hbox (see the None-contents note in the constructor above) —
+        // skip the spread adjustment rather than panic.
         let s_num = *s_num_ref;
-        let tbox = whatsit.get_arg_mut(2).unwrap();
-        let current_w = tbox.get_width(None)?.unwrap();
-        let new_w = current_w.add(s_num);
-        Some( new_w )
+        if let Some(tbox) = whatsit.get_arg_mut(2)
+          && let Some(current_w) = tbox.get_width(None)? {
+            Some(current_w.add(s_num))
+          } else {
+            None
+          }
       } else {
         None
       }
@@ -733,9 +846,22 @@ LoadDefinitions!({
             if r == r.floor() { format!("{}", r as i64) }
             else { format!("{:.2}", r).trim_end_matches('0').to_string() }
           };
+          // Perl TeX_Box.pool L427-430 also appends `font-size:<size>pt` —
+          // WITHOUT it the em-valued --ltx-fo-* vars resolve against the
+          // browser's inherited font-size (16px) instead of the TeX em
+          // (10pt ~= 13.3px), inflating the container ~20% past the drawn
+          // frame: tcolorbox content ran through the right border
+          // (2605.02240; 509px content in a 440px box).
+          // The anchor MUST be the SAME em basis the divisions above used:
+          // the font's QUAD (em width), not its point size. cmtt10's quad
+          // is 10.5pt while its size is 10pt — anchoring quad-divided em
+          // values with the point size shrank every typewriter-content box
+          // by quad/size ~ 5% (2605.00468: fo 348.8pt vs its own 366.2pt
+          // lines, uniform 17.4pt deficit poking text past the frame).
+          let font_size = em_width / 65536.0;
           document.set_attribute(node, "style",
-            &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;",
-              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em)))?;
+            &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;font-size:{}pt;",
+              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em), fmt_em(font_size)))?;
         }
       }
       if !has_dims && !node.has_attribute("overflow") {
@@ -745,12 +871,15 @@ LoadDefinitions!({
   );
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props] {
-      let contents = args[1].as_ref().unwrap();
-      // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
-      if contents.get_property_bool("is_vbox") {
-        document.absorb(contents, None)?;
-      } else {
-        insert_block(document, contents, string_map!("vattach" => "bottom"))?;
+      // None contents is unreachable today (the vertical-mode predigest always
+      // builds a List), but guard like \hbox rather than panic if that changes.
+      if let Some(contents) = args[1].as_ref() {
+        // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
+        if contents.get_property_bool("is_vbox") {
+          document.absorb(contents, None)?;
+        } else {
+          insert_block(document, contents, string_map!("vattach" => "bottom"))?;
+        }
       }
     },
     sizer       => "#2",
@@ -767,12 +896,14 @@ LoadDefinitions!({
   );
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, _props] {
-      let contents = args[1].as_ref().unwrap();
-      // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
-      if contents.get_property_bool("is_vbox") {
-        document.absorb(contents, None)?;
-      } else {
-        insert_block(document, contents, string_map!("vattach" => "top"))?;
+      // None contents is unreachable today — see the \vbox note above.
+      if let Some(contents) = args[1].as_ref() {
+        // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
+        if contents.get_property_bool("is_vbox") {
+          document.absorb(contents, None)?;
+        } else {
+          insert_block(document, contents, string_map!("vattach" => "top"))?;
+        }
       }
     },
     sizer       => "#2",

@@ -100,28 +100,26 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
     },
     "wave" => {
       let lambda = comps.first().copied().unwrap_or(500.0);
-      let h;
-      let bb;
-      if lambda < 440.0 {
-        h = 4.0 + ((lambda - 440.0) / (-60.0)).clamp(0.0, 1.0);
+      let h = if lambda < 440.0 {
+        4.0 + ((lambda - 440.0) / (-60.0)).clamp(0.0, 1.0)
       } else if lambda < 490.0 {
-        h = 4.0 - ((lambda - 440.0) / 50.0).clamp(0.0, 1.0);
+        4.0 - ((lambda - 440.0) / 50.0).clamp(0.0, 1.0)
       } else if lambda < 510.0 {
-        h = 2.0 + ((lambda - 510.0) / (-20.0)).clamp(0.0, 1.0);
+        2.0 + ((lambda - 510.0) / (-20.0)).clamp(0.0, 1.0)
       } else if lambda < 580.0 {
-        h = 2.0 - ((lambda - 510.0) / 70.0).clamp(0.0, 1.0);
+        2.0 - ((lambda - 510.0) / 70.0).clamp(0.0, 1.0)
       } else if lambda < 645.0 {
-        h = ((lambda - 645.0) / (-65.0)).clamp(0.0, 1.0);
+        ((lambda - 645.0) / (-65.0)).clamp(0.0, 1.0)
       } else {
-        h = 0.0;
-      }
-      if lambda < 420.0 {
-        bb = (0.3 + 0.7 * (lambda - 380.0) / 40.0).clamp(0.0, 1.0);
+        0.0
+      };
+      let bb = if lambda < 420.0 {
+        (0.3 + 0.7 * (lambda - 380.0) / 40.0).clamp(0.0, 1.0)
       } else if lambda < 700.0 {
-        bb = 1.0;
+        1.0
       } else {
-        bb = (0.3 + 0.7 * (lambda - 780.0) / (-80.0)).clamp(0.0, 1.0);
-      }
+        (0.3 + 0.7 * (lambda - 780.0) / (-80.0)).clamp(0.0, 1.0)
+      };
       Color::Hsb(h / 6.0, 1.0, bb).to_rgb()
     },
     _ => color_from_model_spec(model, spec),
@@ -1533,6 +1531,17 @@ LoadDefinitions!({
 
   //========================
   ProcessOptions!();
+
+  // Real xcolor v3.02+ (TL2024) processes options as PERSISTENT l3 keys, so
+  // `\usepackage{xcolor}` followed by `\usepackage[table]{xcolor}` raises no
+  // option clash — the repeat load processes the new `table` key and loads
+  // colortbl (`table .code = {\AddToHook{package/xcolor/after}
+  // {\RequirePackage{colortbl}}}`). Classic `\ds@table` is cleared to \relax
+  // by ProcessOptions, so re-assert a durable handler: the loader's
+  // repeat-load recovery (input_definitions, OXIDIZED_DESIGN #43) digests
+  // surviving `\ds@<opt>` handlers for options the first load didn't have.
+  // Witness 2605.00310 (\cellcolor via `[table]` on a second \usepackage).
+  DefMacro!("\\ds@table", "\\RequirePackage{colortbl}");
 });
 
 /// Perl: sub defineColors — define colors from "name=from,name=from,..." pairs

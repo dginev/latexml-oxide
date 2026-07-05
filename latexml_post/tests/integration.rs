@@ -151,27 +151,42 @@ fn test_namespace_registration() {
   );
 }
 
+/// True if a vector-SVG converter (`mutool` or `pdftocairo`) is on PATH.
+/// The Graphics vector-SVG path tries mutool first, then pdftocairo; if
+/// neither is installed the path can't fire and these tests self-skip.
+///
+/// Presence is detected by whether the binary *spawns* (`output().is_ok()`),
+/// NOT by exit status: unlike inkscape, `mutool`/`pdftocairo` exit non-zero
+/// on `--version` (unknown/usage), so a `status.success()` gate would
+/// silently skip even when the tool is installed — a false-negative that
+/// would mask the coverage entirely.
+fn svg_converter_available() -> bool {
+  ["mutool", "pdftocairo"].iter().any(|tool| {
+    std::process::Command::new(tool)
+      .arg("--version")
+      .output()
+      .is_ok()
+  })
+}
+
 /// Regression test for the vector-SVG graphics path (opt-in via
 /// `--graphics-svg-threshold-kb N`). Uses the cifar10 plot PDF from the
 /// upstream [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
-/// thread — a 41 KB vector-authored matplotlib chart that's the canonical
-/// "inkscape preserves vectors better than ImageMagick" example.
+/// thread — a 41 KB vector-authored matplotlib chart exercising the
+/// vector-SVG converters (mutool → pdftocairo) that preserve vectors
+/// rather than rasterizing via ImageMagick.
 ///
 /// Test behaviour:
-/// - If `inkscape` is missing from PATH, the test exits silently. This keeps the suite green on
-///   minimal runners; CI installs inkscape so the branch is covered on GH Actions.
-/// - If `inkscape` is present, exercise the Graphics processor with `svg_threshold_kb = 200` and
-///   assert the output is a real SVG file.
+/// - If no vector converter (mutool/pdftocairo) is on PATH, the test exits silently. This keeps the
+///   suite green on minimal runners; CI installs poppler/mupdf so the branch is covered on GH Actions.
+/// - Otherwise, exercise the Graphics processor with `svg_threshold_kb = 200` and assert the output
+///   is a real SVG file.
 #[test]
 fn test_vector_svg_graphics_path() {
-  if std::process::Command::new("inkscape")
-    .arg("--version")
-    .output()
-    .ok()
-    .filter(|o| o.status.success())
-    .is_none()
-  {
-    eprintln!("inkscape not installed; skipping vector-SVG regression test");
+  if !svg_converter_available() {
+    eprintln!(
+      "no vector-SVG converter (mutool/pdftocairo) on PATH; skipping vector-SVG regression test"
+    );
     return;
   }
 
@@ -213,7 +228,7 @@ fn test_vector_svg_graphics_path() {
   let svg_path = work.join("cifar10_vector.svg");
   assert!(
     svg_path.exists(),
-    "expected SVG at {} — inkscape path should have fired for a 41 KB vector PDF",
+    "expected SVG at {} — the vector-SVG path should have fired for a 41 KB vector PDF",
     svg_path.display()
   );
   let svg_bytes = std::fs::read(&svg_path).expect("read svg");
@@ -221,9 +236,9 @@ fn test_vector_svg_graphics_path() {
     svg_bytes.windows(4).any(|w| w == b"<svg"),
     "SVG root element not found in output"
   );
-  // Upper bound sanity — inkscape on a vector-authored plot produces tens
-  // of KB, not hundreds of MB. Raster-embedded PDFs blow up to 100+ MB —
-  // that's the case the file-size heuristic must exclude upstream.
+  // Upper bound sanity — a vector converter on a vector-authored plot
+  // produces tens of KB, not hundreds of MB. Raster-embedded PDFs blow up
+  // to 100+ MB — that's the case the file-size heuristic must exclude.
   assert!(
     svg_bytes.len() < 2 * 1024 * 1024,
     "SVG is {} bytes — vector-authored PDFs should yield <2 MB SVG",
@@ -239,22 +254,19 @@ fn test_vector_svg_graphics_path() {
 /// [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
 /// and called out from arxiv:1807.01606) is a 41 KB vector-authored PDF
 /// that triggers a 30+ second rasterisation in `convert` via ghostscript.
-/// Inkscape parses the same PDF directly and emits SVG in ~250 ms —
-/// measured 130× speedup on the round-17 dev machine.
+/// mutool/pdftocairo parse the same PDF's vectors directly and emit SVG in
+/// well under a second — the same direct-vector advantage, without a
+/// heavyweight GTK dependency.
 ///
-/// This test asserts the inkscape path *completes* (doesn't time out)
-/// and does NOT exercise the slow convert path (would blow the suite
-/// runtime). Silent skip if inkscape is missing.
+/// This test asserts the vector-SVG path *completes* fast (doesn't time
+/// out) and does NOT exercise the slow convert path (would blow the suite
+/// runtime). Silent skip if no vector converter is installed.
 #[test]
 fn test_vector_svg_pathological_convert_case() {
-  if std::process::Command::new("inkscape")
-    .arg("--version")
-    .output()
-    .ok()
-    .filter(|o| o.status.success())
-    .is_none()
-  {
-    eprintln!("inkscape not installed; skipping pathological-PDF regression test");
+  if !svg_converter_available() {
+    eprintln!(
+      "no vector-SVG converter (mutool/pdftocairo) on PATH; skipping pathological-PDF regression test"
+    );
     return;
   }
 
@@ -299,16 +311,16 @@ fn test_vector_svg_pathological_convert_case() {
   let svg_path = work.join("pathological_vector.svg");
   assert!(
     svg_path.exists(),
-    "expected SVG at {} — inkscape should succeed on this pathological-for-convert PDF",
+    "expected SVG at {} — a vector converter should succeed on this pathological-for-convert PDF",
     svg_path.display()
   );
-  // Upper bound: inkscape SVG of a 41 KB vector-authored PDF is ~100 KB
-  // and completes in well under a second on any machine. Give generous
-  // CI slack (5 s) — convert takes 30+ s, so there's no way a 5 s bound
-  // accidentally masks a fallback to the raster path.
+  // Upper bound: a vector converter's SVG of a 41 KB vector-authored PDF is
+  // ~100 KB and completes in well under a second on any machine. Give
+  // generous CI slack (5 s) — convert takes 30+ s, so there's no way a 5 s
+  // bound accidentally masks a fallback to the raster path.
   assert!(
     elapsed < std::time::Duration::from_secs(5),
-    "inkscape path on fig8.pdf took {:?} — should be <1 s, way under the 30s+ convert path",
+    "vector-SVG path on fig8.pdf took {:?} — should be <1 s, way under the 30s+ convert path",
     elapsed
   );
 

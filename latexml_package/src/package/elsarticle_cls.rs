@@ -58,13 +58,11 @@ LoadDefinitions!({
   DefEnvironment!("{enumerate}[]",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     mode => "internal_vertical", locked => true,
-    properties => { begin_itemize("enumerate", Some("enum"), BeginItemizeOptions::default())? },
-    before_digest_end => { Digest!("\\par")?; });
+    properties => { begin_itemize("enumerate", Some("enum"), BeginItemizeOptions::default())? });
   DefEnvironment!("{itemize}[]",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     mode => "internal_vertical", locked => true,
-    properties => { begin_itemize("itemize", Some("enum"), BeginItemizeOptions::default())? },
-    before_digest_end => { Digest!("\\par")?; });
+    properties => { begin_itemize("itemize", Some("enum"), BeginItemizeOptions::default())? });
 
   // Newer elsarticle.cls (2018+) added {graphicalabstract} and {highlights}
   // for Elsevier journal submissions. Real templates wrap a TikZ figure or

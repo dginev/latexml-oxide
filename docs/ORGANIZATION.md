@@ -6,7 +6,7 @@ relate to the Perl files in `LaTeXML/lib/LaTeXML/Engine/`.
 **Counts (2026-05-15):** 40 Perl `.pool.ltxml` files, 47 Rust `.rs`
 files. 38 of the 40 Perl pools have direct 1:1 Rust counterparts;
 2 are partial ports (AmSTeX skeleton, BibTeX skeleton — see
-[`BIBTEX_PORT_PLAN.md`](BIBTEX_PORT_PLAN.md)). The Rust side has
+[`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](archive/BIBTEX_PORT_PLAN_2026-06-20.md)). The Rust side has
 8 additional files for Rust-specific concerns (module
 infrastructure, dump-path/embedded-dump support, the dump-runtime
 loader pair, and a Rust-only constructs supplement) — listed below.
@@ -175,7 +175,7 @@ definitions organized by Lamport chapter with section comment headers.
 | Perl file | Rust file | Status |
 |---|---|---|
 | `AmSTeX.pool.ltxml` | `amstex.rs` | Skeleton + a few definitions ported; plain-TeX-style format, rare in arxiv corpora |
-| `BibTeX.pool.ltxml` | `bibtex.rs` (2217 lines) + `pre_bibtex.rs` (935 lines) | Phases 1-8 of `docs/BIBTEX_PORT_PLAN.md` shipped (end-to-end `.bib → .xml`); long-tail of MR-Zbl field synthesis polish remains. Skip via `--nobibtex` in production |
+| `BibTeX.pool.ltxml` | `bibtex.rs` (2217 lines) + `pre_bibtex.rs` (935 lines) | Phases 1-8 of `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md` shipped (end-to-end `.bib → .xml`); long-tail of MR-Zbl field synthesis polish remains. Skip via `--nobibtex` in production |
 
 ### Rust-only files (no Perl `.pool.ltxml` equivalent)
 

@@ -75,6 +75,26 @@ LoadDefinitions!({
   DefRegister!("\\pdfpageresources" => Tokens!());
   DefRegister!("\\pdfpkmode"        => Tokens!());
 
+  // \Ucharcat <charcode> <catcode> — XeTeX/LuaTeX Unicode-engine primitive that
+  // builds a single char token of the given Unicode scalar + catcode. LaTeXML is
+  // Unicode-native, so we provide it (real pdfTeX lacks it). Defining it flips
+  // expl3's `\char_generate` (`\if_cs_exist:N \tex_Ucharcat:D`, expl3-code.tex
+  // L9210) from the 8-bit `\lowercase{\noexpand~}` active-char trick — which our
+  // `\special_relax`/`\noexpand` representation cannot store faithfully (it drops
+  // the shadowed char, baking 246 bare `\special_relax` into the dump, e.g.
+  // l3text's `\c__text_purify_*` accent tables, and breaking `\codepoint_generate`
+  // for combining marks like U+0300) — to the direct charcode+catcode path.
+  // Blast radius is tiny: `\Ucharcat` appears only in `\char_generate` across all
+  // of expl3 (3 mentions, all there).
+  DefMacro!(T_CS!("\\Ucharcat"), None, {
+    let charcode = read_number()?.value_of();
+    let catcode = read_number()?.value_of();
+    match char::from_u32(charcode as u32) {
+      Some(ch) => vec![CharToken!(ch, Catcode::from(catcode as u8))],
+      None => Vec::new(),
+    }
+  });
+
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
   def_macro_noop("\\pdftexbanner")?;

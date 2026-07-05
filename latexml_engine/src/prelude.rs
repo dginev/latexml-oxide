@@ -94,15 +94,18 @@ pub use rustc_hash::FxHashMap as HashMap;
 // Export the engine-level API. After the latexml_engine extraction, the
 // `engine` module is the crate itself — paths shorten by one hop.
 pub use crate::base_utilities::*;
-pub use crate::latex_constructs::{
-  begin_appendices, end_appendices, make_note_tags, only_preamble, relocate_footnote,
-  start_appendices, tabular_bindings,
-};
 // Perl `DefAutoload($trigger, '<pkg>.sty.ltxml')` — the canonical lazy
 // package-autoload primitive (clear-trigger-globally → load → hoist
 // new defs to global → re-emit). Shared so bindings like `OmniBus.cls`
 // route through the same loop-safe path instead of hand-rolling it.
 pub use crate::tex::def_autoload;
+pub use crate::{
+  latex_constructs::{
+    begin_appendices, end_appendices, make_note_tags, only_preamble, relocate_footnote,
+    start_appendices, tabular_bindings,
+  },
+  tex_box::{FramedOptions, framed_properties},
+};
 // Note: `pub use crate::package::*` was here when the prelude lived in
 // latexml_package; it doesn't apply at the engine layer (engine has zero
 // references to package). The latexml_package prelude re-exports

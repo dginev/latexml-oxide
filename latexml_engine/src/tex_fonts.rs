@@ -23,7 +23,10 @@ LoadDefinitions!({
   // Perl: FontDef param type — for \textfont/\scriptfont/\scriptscriptfont, reads family
   // number and looks up the stored font CS token.  For \font, returns current_FontDef.
   DefParameterType!(FontToken, sub[_inner, _extra] {
-    let token = read_token()?.unwrap();
+    // \textfont/\scriptfont/\scriptscriptfont/\font require a following token; on
+    // input-exhaustion emit the parity "file ended" error and fall back to the
+    // default font CS (which flows through the `else` arm below) rather than panic.
+    let token = read_token_required("\\font")?.unwrap_or_else(|| T_CS!("\\lx@default@font"));
     if let Some(font_type) = token.with_str(|ts| {
       if ts.starts_with("\\textfont") && ts == "\\textfont" { Some("textfont") }
       else if ts.starts_with("\\scriptscriptfont") && ts == "\\scriptscriptfont" { Some("scriptscriptfont") }
@@ -553,7 +556,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\@@endash", {
     Tbox::new(
-      pin_static("\u{2013}"),
+      pin!("\u{2013}"),
       None,
       None,
       Tokens!(T_CS!("\\@@endash")),
@@ -562,7 +565,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\@@emdash", {
     Tbox::new(
-      pin_static("\u{2014}"),
+      pin!("\u{2014}"),
       None,
       None,
       Tokens!(T_CS!("\\@@emdash")),

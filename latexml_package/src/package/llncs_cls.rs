@@ -14,6 +14,12 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
+  // Real llncs.cls L244 sets secnumdepth to 2, so subsubsections are NOT
+  // numbered. Both the Perl llncs.cls.ltxml and this port previously omitted it
+  // and inherited article's default of 3, giving a plain \subsubsection a
+  // printed number ("7.0.1") that the PDF never shows. Witness 2605.16562
+  // ("Author contributions.").
+  SetCounter!("secnumdepth", Number::new(2));
 
   RequirePackage!("multicol");
   // LLNCS authors routinely use \boldsymbol (amsbsy) and \mathbb / \mathfrak
@@ -34,13 +40,37 @@ LoadDefinitions!({
   DefMacro!("\\mailname",  "\\textit{Correspondence to}:");
 
   // Single \author, with multiple authors separated by \and  (Perl PR #2767)
-  // \inst{labels} can be used within each author to identify which affiliations apply
+  // \inst{labels} can be used within each author to identify which affiliations apply.
+  // IMPROVEMENT over upstream: also split on \\ -- authors commonly use a manual
+  // row break in place of \and ("A\inst{1} \\ B\inst{2}"), which upstream merges
+  // into a single creator (witness 2606.19939: "Hiuyi Cheng \\ Dezhi Peng").
   DefMacro!("\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}");
-  // Single \institute, with multiple institutions separated by \and
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,\\\\}{#1}");
+  // Single \institute, with multiple institutions separated by \and.
   // The n-th institution is attached to the author which has that n in its \inst labels.
+  //
+  // Two shapes occur in the wild and need different splitting:
+  //  (a) Well-formed: institutions separated by \and, each possibly with an
+  //      internal "\\" line break between its name and its \email/\url
+  //      (witness 2605.16562). Here we MUST split on \and ONLY -- splitting on
+  //      "\\" too would break each institution into name + email as separate
+  //      affiliations and mis-align the labelseq with \inst{N}, scrambling which
+  //      author gets which affiliation/email. \email inside an affiliation
+  //      inherits that affiliation's label, so it attaches to the right authors.
+  //  (b) Lazy: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
+  //      (witness 2606.19939). Upstream makes a single affiliation = the whole
+  //      block attached to every \inst{1} author (duplicating it) while \inst{2}+
+  //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). The shared
+  //      \lx@add@affiliations parser handles this: it splits on \quad/\qquad/\\
+  //      and extracts each superscript as the affiliation label \inst{N} links to.
+  // So: branch on whether \and is present.
   DefMacro!("\\institute{}",
-    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}");
+    "\\in@{\\and}{#1}\\ifin@\
+       \\lx@clear@frontmatter{ltx:contact}[role=affiliation]\
+       \\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}\
+     \\else\
+       \\lx@add@affiliations[labelseq={affiliation}]{#1}\
+     \\fi");
   DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
   DefMacro!("\\inst{}",                 "\\lx@request@frontmatter@annotation[affiliation]{#1}");
   // \orcidID should be used within each author in \author
@@ -61,7 +91,8 @@ LoadDefinitions!({
   DefMacro!("\\acknowledgement", "\\acknowledgements");
   DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");
   DefConstructor!("\\endacknowledgement", "</ltx:acknowledgements>");
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
   DefConstructor!("\\url Semiverbatim", "<ltx:ref href='#1'>#1</ltx:ref>");
 

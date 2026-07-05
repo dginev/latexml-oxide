@@ -9,9 +9,7 @@ latexml_core/src/document.rs	let to_has_id = to.has_attribute("xml:id")
 latexml_core/src/rewrite.rs	|| n.get_attribute("xml:id").as_deref() == Some(&target_id)
 latexml_core/src/rewrite.rs	.get_property("xml:id")
 latexml_core/src/rewrite.rs	.get_property("xml:id")
-latexml_core/src/rewrite.rs	&& !inner.has_attribute("xml:id")
 latexml_core/src/rewrite.rs	let id = tree.get_attribute("xml:id").unwrap_or_default();
-latexml_core/src/rewrite.rs	let xmarg_id = child.get_property("xml:id");
 latexml_engine/src/base_xmath.rs	.get_attribute("xml:id")
 latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"))
 latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"))
@@ -37,7 +35,7 @@ latexml_oxide/src/core_interface.rs	let _ = node.remove_attribute("xml:id");
 latexml_oxide/src/core_interface.rs	let _ = node.remove_attribute("xml:id");
 latexml_oxide/src/core_interface.rs	.or_else(|| p.get_attribute("xml:id"))
 latexml_package/src/package/amsmath_sty.rs	.or_else(|| node.get_attribute("xml:id"))
-latexml_package/src/package/latexml_sty.rs	if let Some(id) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
+latexml_package/src/package/latexml_sty/declare.rs	.get_property("xml:id")
 latexml_post/src/collector.rs	let root_id = root.get_attribute("xml:id").unwrap_or_default();
 latexml_post/src/document.rs	if let Some(id) = idd.get_attribute("xml:id") {
 latexml_post/src/document.rs	if let Some(id) = n.get_attribute("xml:id") {

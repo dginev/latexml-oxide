@@ -47,7 +47,8 @@ LoadDefinitions!({
         digest(T_CS!("\\acknowledgmentsname"))?))
     });
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
   // Conditionals — Perl L62-65
   DefConditional!("\\ifaffil");

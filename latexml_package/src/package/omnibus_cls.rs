@@ -74,7 +74,20 @@ LoadDefinitions!({
   // argument uses \protect\citeauthoryear.
   Let!("\\lx@OmniBus@saved@bibitem", "\\bibitem");
   DefPrimitive!("\\lx@late@usepackage Semiverbatim", sub[(pkg)] {
+    // This fires from inside `\bibitem` processing — i.e. inside the
+    // `thebibliography` group. Package definitions installed at that frame are
+    // popped on `\end{thebibliography}`, so natbib's real `\citep`/`\citet`
+    // would vanish and `\citep` reverts to its (still-installed, now
+    // `*.sty_loaded`-true) `def_autoload` trigger; a later body `\citep` then
+    // re-fires the trigger's already-loaded early-return, re-emits `\citep`, and
+    // loops to the token limit. Mirror `def_autoload`: snapshot the calling
+    // frame's meanings, load, then hoist natbib's freshly-installed defs to
+    // GLOBAL so they survive the group pop (matching a top-level
+    // `\usepackage{natbib}`). Witness: 2209.11799 (sn-jnl, `\citep` after a
+    // `\citeauthoryear` `\bibitem`-triggered natbib load).
+    let pre_keys = snapshot_top_frame_meaning_keys();
     require_package(&pkg.to_string(), RequireOptions::default())?;
+    hoist_top_frame_meaning_delta(&pre_keys);
   });
   DefMacro!("\\bibitem",
     "\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}");

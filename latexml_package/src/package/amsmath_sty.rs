@@ -24,8 +24,12 @@ fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String
   // `properties` — only `xml_attributes` reach the openContainer callback. Use
   // LookupDimension (lookup_dimension_cs) so a `\def`-ized `\jot` reads silently.
   if !xml_attributes.contains_key("rowsep") {
-    let cur_jot = lookup_dimension_cs("\\jot", false);
-    if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+    let cur_jot = lookup_dimension_cs("\\jot", false).unwrap_or_default();
+    if cur_jot.value_of()
+      != lookup_dimension_cs("\\lx@default@jot", false)
+        .unwrap_or_default()
+        .value_of()
+    {
       xml_attributes.insert(String::from("rowsep"), cur_jot.to_string());
     }
   }
@@ -57,8 +61,12 @@ fn ams_rearrangeable_bindings(
   // equationgroup's rowsep attribute. (Was missing entirely — Rust emitted no
   // rowsep on align/gather, diverging from Perl.)
   if !xml_attributes.contains_key("rowsep") {
-    let cur_jot = lookup_dimension_cs("\\jot", false);
-    if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+    let cur_jot = lookup_dimension_cs("\\jot", false).unwrap_or_default();
+    if cur_jot.value_of()
+      != lookup_dimension_cs("\\lx@default@jot", false)
+        .unwrap_or_default()
+        .value_of()
+    {
       xml_attributes.insert(String::from("rowsep"), cur_jot.to_string());
     }
   }
@@ -272,6 +280,12 @@ LoadDefinitions!({
   DeclareOption!("alignedleftspaceyes", None);
   DeclareOption!("alignedleftspaceno", None);
   DeclareOption!("alignedleftspaceyesifneg", None);
+
+  // Perl L53 (#2835): defined here, before ProcessOptions, so the `fleqn`
+  // option below can `\Let` it to `\iftrue`. Drives multline's default row
+  // alignment (center normally, left under fleqn).
+  DefConditional!("\\if@fleqn");
+
   DeclareOption!("reqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::None));
   });
@@ -280,6 +294,7 @@ LoadDefinitions!({
   });
   DeclareOption!("fleqn", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", Some(Stored::Bool(true)));
+    Let!("\\if@fleqn", "\\iftrue");
   });
 
   Let!("\\@xp", "\\expandafter");
@@ -461,15 +476,20 @@ LoadDefinitions!({
   def_macro_noop("\\DOTSX")?;
   Let!("\\hdots", "\\lx@ldots");
 
-  // Perl amsmath.sty.ltxml L844: `DefMacro('\hdotsfor Number', sub { (map
-  // { T_CS('\hdots') } 1..$_[1]->valueOf) })` — a gullet-level macro
-  // expanding to N `\hdots` tokens. Matching Perl's DefMacro kind (was
-  // DefPrimitive with gullet::unread; observationally similar but the
-  // macro form means `\edef\x{\hdotsfor{3}}` fully resolves, whereas a
-  // primitive would leave `\hdotsfor` unexpanded).
-  DefMacro!("\\hdotsfor Number", sub[(n)] {
+  // Perl amsmath.sty.ltxml (upstream #2837): `\hdotsfor[]{Number}` spans N
+  // alignment columns — expand to N `\hdots` separated by alignment tabs so
+  // the dots occupy N cells (previously N `\hdots` piled into ONE cell).
+  // The optional argument (visual dot spacing) is ignored, as upstream.
+  // Still a gullet-level DefMacro (not a primitive) so `\edef` resolves it.
+  DefMacro!("\\hdotsfor [] {Number}", sub[(_opt, n)] {
     let count = n.value_of().max(1) as usize;
-    let toks: Vec<Token> = (0..count).flat_map(|_| vec![T_CS!("\\hdots")]).collect();
+    let mut toks: Vec<Token> = Vec::with_capacity(2 * count - 1);
+    for i in 0..count {
+      if i > 0 {
+        toks.push(T_ALIGN!());
+      }
+      toks.push(T_CS!("\\hdots"));
+    }
     Ok(Tokens::new(toks))
   });
 
@@ -1172,8 +1192,25 @@ LoadDefinitions!({
   properties => { ref_step_counter("equation", false) },
   before_digest => { bgroup(); },
   after_digest => sub[whatsit] {
+    // Perl #2835: multline rows center by default (left under fleqn); the
+    // first row is left-aligned and the last row right-aligned.
+    let default_align =
+      if if_condition(&T_CS!("\\if@fleqn")).ok().flatten().unwrap_or(false) {
+        "left"
+      } else {
+        "center"
+      };
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    // #2835: snapshot the \shove* row overrides accumulated during THIS body's
+    // digestion onto the whatsit — afterConstruct is deferred past sibling
+    // multlines, so the shared global map cannot be read there.
+    let shoves = take_ams_shove_rows();
+    if !shoves.is_empty() {
+      whatsit
+        .set_property("MULTIROW_SHOVE_ROWS", Stored::HashString(shoves.into_iter().collect()));
+    }
     // Perl: setBody(getArg(1)->unlist, undef) — sets body for tex= generation
     if let Some(arg) = whatsit.get_arg(1) {
       let mut body = arg.unlist();
@@ -1202,8 +1239,25 @@ LoadDefinitions!({
   mode => "display_math",
   before_digest => { bgroup(); },
   after_digest => sub[whatsit] {
+    // Perl #2835: multline rows center by default (left under fleqn); the
+    // first row is left-aligned and the last row right-aligned.
+    let default_align =
+      if if_condition(&T_CS!("\\if@fleqn")).ok().flatten().unwrap_or(false) {
+        "left"
+      } else {
+        "center"
+      };
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    // #2835: snapshot the \shove* row overrides accumulated during THIS body's
+    // digestion onto the whatsit — afterConstruct is deferred past sibling
+    // multlines, so the shared global map cannot be read there.
+    let shoves = take_ams_shove_rows();
+    if !shoves.is_empty() {
+      whatsit
+        .set_property("MULTIROW_SHOVE_ROWS", Stored::HashString(shoves.into_iter().collect()));
+    }
     if let Some(arg) = whatsit.get_arg(1) {
       let mut body = arg.unlist();
       body.push(Digested::default());
@@ -1249,8 +1303,25 @@ LoadDefinitions!({
   mode => "display_math",
   before_digest => { bgroup(); },
   after_digest => sub[whatsit] {
+    // Perl #2835: multline rows center by default (left under fleqn); the
+    // first row is left-aligned and the last row right-aligned.
+    let default_align =
+      if if_condition(&T_CS!("\\if@fleqn")).ok().flatten().unwrap_or(false) {
+        "left"
+      } else {
+        "center"
+      };
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    // #2835: snapshot the \shove* row overrides accumulated during THIS body's
+    // digestion onto the whatsit — afterConstruct is deferred past sibling
+    // multlines, so the shared global map cannot be read there.
+    let shoves = take_ams_shove_rows();
+    if !shoves.is_empty() {
+      whatsit
+        .set_property("MULTIROW_SHOVE_ROWS", Stored::HashString(shoves.into_iter().collect()));
+    }
     if let Some(arg) = whatsit.get_arg(1) {
       let mut body = arg.unlist();
       body.push(Digested::default());
@@ -1588,8 +1659,18 @@ LoadDefinitions!({
   def_macro_noop("\\mintagsep")?;
   DefMacro!("\\minalignsep", "10pt");
   def_macro_noop("\\primfrac{}")?;
-  DefMacro!("\\shoveleft{}", "#1");
-  DefMacro!("\\shoveright{}", "#1");
+  // Perl #2835: \shoveleft/\shoveright shove a multline row left/right. The
+  // internal \lx@ams@shove* record the override (amsShove) then pass the body
+  // through; the reversion is just the body (Perl omits the \shove* reversion —
+  // it is invalid outside multline and breaks mathtex/mathimages).
+  DefConstructor!("\\lx@ams@shoveleft{}", "#1",
+    before_digest => { ams_shove("left"); },
+    reversion => "#1");
+  DefConstructor!("\\lx@ams@shoveright{}", "#1",
+    before_digest => { ams_shove("right"); },
+    reversion => "#1");
+  Let!("\\shoveleft", "\\lx@ams@shoveleft");
+  Let!("\\shoveright", "\\lx@ams@shoveright");
   // Perl: amsmath.sty.ltxml L1313-1314
   DefRegister!("\\multlinegap" => Glue::new(Dimension!("10pt").0));
   DefRegister!("\\multlinetaggap" => Glue::new(Dimension!("10pt").0));
@@ -1634,32 +1715,61 @@ LoadDefinitions!({
     </ltx:XMApp>"
   );
 
-  // Section 4.12: Continued fractions — Perl amsmath.sty.ltxml L1102-1125
-  // is structurally a DefMacro trampoline (`\cfrac` Lets itself to
-  // `\lx@inner@cfrac` and calls `\lx@inner@cfrac`) plus a
-  // DefConstructor implementing the XML emit. The Let-self-rebind is
-  // how Perl captures the mathstyle *once* on first invocation while
-  // subsequent nested `\cfrac`s reuse the captured style without
-  // another save. Rust fuses the trampoline-and-constructor into a
-  // single `\cfrac[]` DefConstructor + a CFRACSTYLE global that
-  // replaces the Let-self-rebind trick — the mathstyle attribute
-  // tells the MathML renderer which fraction style to use in both
-  // forms. Intentional DefMacro → DefConstructor kind divergence
-  // (WISDOM #44) — observable XML identical; the Let-rebind is a
-  // Perl-only stateful shortcut that Rust achieves via a scope-
-  // bounded global.
+  // Section 4.12: Continued fractions — Perl amsmath.sty.ltxml L1106-1125,
+  // ported structurally. The `\cfrac` trampoline captures the SURROUNDING
+  // mathstyle ONCE (\lx@savecfrac@mathstyle), then \let-rebinds `\cfrac` to
+  // `\lx@inner@cfrac` so nested `\cfrac`s inside the arguments reuse the
+  // captured style instead of re-capturing their (by then script-sized)
+  // context. The arguments digest UNDER the captured style (bgroup +
+  // MergeFont), so nested continued fractions do NOT compound down to
+  // scriptscript sizes; `name` records the CFRACSTYLE choice
+  // (\cfracstyle{inline} → name='cfrac-inline', which the pmml
+  // continued-fraction handler unrolls via do_cfrac). The previous fused
+  // single-DefConstructor version hardcoded mathstyle='display', never
+  // emitted cfrac-inline, and compounded nested sizes (50%) — all three
+  // observable divergences from Perl on the same input.
   assign_value(
     "CFRACSTYLE",
     Stored::String(pin("display")),
     Some(Scope::Global),
   );
+  DefMacro!(
+    "\\cfrac",
+    "\\lx@savecfrac@mathstyle\\let\\cfrac=\\lx@inner@cfrac\\lx@inner@cfrac"
+  );
+  DefPrimitive!("\\lx@savecfrac@mathstyle", {
+    let style = lookup_font()
+      .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.to_string()))
+      .unwrap_or_else(|| "text".to_string());
+    assign_value("cfracmathstyle", Stored::String(pin(style)), None);
+  });
   DefConstructor!(
-    "\\cfrac[] InFractionStyle InFractionStyle",
+    "\\lx@inner@cfrac InFractionStyle InFractionStyle",
     "<ltx:XMApp>\
-      <ltx:XMTok name='cfrac' meaning='continued-fraction' mathstyle='display'/>\
+      <ltx:XMTok name='#name' mathstyle='#mathstyle' meaning='continued-fraction'/>\
+      <ltx:XMArg>#1</ltx:XMArg>\
       <ltx:XMArg>#2</ltx:XMArg>\
-      <ltx:XMArg>#3</ltx:XMArg>\
-    </ltx:XMApp>"
+    </ltx:XMApp>",
+    alias => "\\cfrac",
+    before_digest => {
+      bgroup();
+      if let Some(Stored::String(s)) = lookup_value("cfracmathstyle") {
+        merge_font(Font {
+          mathstyle: Some(Cow::Owned(to_string(s))),
+          ..Font::default()
+        });
+      }
+    },
+    after_digest => sub[whatsit] {
+      egroup()?;
+      let inline = matches!(lookup_value("CFRACSTYLE"),
+        Some(Stored::String(s)) if with(s, |v| v == "inline"));
+      whatsit.set_property("name", if inline { "cfrac-inline" } else { "cfrac" });
+      if let Some(Stored::String(s)) = lookup_value("cfracmathstyle") {
+        whatsit.set_property("mathstyle", to_string(s));
+      }
+      Ok(Vec::new())
+    }
   );
   DefConstructor!("\\cfracstyle{}", "",
   after_digest => sub[whatsit] {
@@ -1707,7 +1817,8 @@ LoadDefinitions!({
   // Conditionals (always false sentinels — Perl L58-68)
   DefConditional!("\\ifmeasuring@");
   DefConditional!("\\iftagsleft@");
-  DefConditional!("\\if@fleqn");
+  // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
+  // `fleqn` option can `\Let` it to `\iftrue`.
 });
 
 use latexml_core::document;
@@ -1734,7 +1845,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
   let children = element_nodes(&math_first);
   // The first element child of Math's first element should be the XMArray
   // (possibly after XMath wrapper)
-  let array = if document::get_node_qname(&math_first) == pin_static("ltx:XMath") {
+  let array = if document::get_node_qname(&math_first) == pin!("ltx:XMath") {
     let xmath_children = element_nodes(&math_first);
     if xmath_children.len() != 1 {
       return Ok(());
@@ -1745,7 +1856,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
   } else {
     return Ok(());
   };
-  if document::get_node_qname(&array) != pin_static("ltx:XMArray") {
+  if document::get_node_qname(&array) != pin!("ltx:XMArray") {
     return Ok(());
   }
   if array.get_attribute("name").as_deref() != Some("aligned") {
@@ -1871,26 +1982,96 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
   Ok(())
 }
 
+/// Perl #2835 `amsShove`: record a per-row alignment override for the current
+/// multline row. `\shoveleft`/`\shoveright` set (currentRowNumber-1) => dir in
+/// the global `AMS_SHOVE_ROWS` map, which the enclosing multline layers on top
+/// of its base rule (so a shove wins). Perl mutates the `MULTIROW_ALIGNMENT_RULE`
+/// hashref in place; Rust keeps the base rule in whatsit properties (set in
+/// afterDigest, unreachable mid-body), so the shoves ride a separate global
+/// state map instead. Only fires inside a `multline`/`multlined` alignment
+/// (Perl's `name =~ /^multline/`), so shoves in align/gather are ignored.
+fn ams_shove(shove_dir: &str) {
+  use latexml_core::{
+    digested::DigestedData,
+    state::{assign_value, lookup_alignment, lookup_value},
+  };
+  let Some(alignment) = lookup_alignment() else {
+    return;
+  };
+  let DigestedData::Alignment(cell) = alignment.data() else {
+    return;
+  };
+  let row = {
+    let cell = cell.borrow();
+    match cell.get_name() {
+      Some(name) if name.starts_with("multline") => cell.current_row_number().saturating_sub(1),
+      _ => return,
+    }
+  };
+  let mut map = match lookup_value("AMS_SHOVE_ROWS") {
+    Some(Stored::HashString(m)) => m,
+    _ => HashMap::default(),
+  };
+  map.insert(row.to_string(), shove_dir.to_string());
+  assign_value(
+    "AMS_SHOVE_ROWS",
+    Stored::HashString(map),
+    Some(Scope::Global),
+  );
+}
+
+/// Read and clear the `\shove*` row overrides accumulated during the current
+/// multline body, as `(row, dir)` pairs to append to the base alignment rule.
+/// Called from the multline constructors' afterDigest (here and mathtools'
+/// `\@@multlined`) to snapshot the shoves onto the whatsit.
+pub(crate) fn take_ams_shove_rows() -> Vec<(String, String)> {
+  use latexml_core::state::{assign_value, lookup_value};
+  match lookup_value("AMS_SHOVE_ROWS") {
+    Some(Stored::HashString(m)) if !m.is_empty() => {
+      assign_value(
+        "AMS_SHOVE_ROWS",
+        Stored::HashString(HashMap::default()),
+        Some(Scope::Global),
+      );
+      m.into_iter().collect()
+    },
+    _ => Vec::new(),
+  }
+}
+
 /// Extract the alignment rule from whatsit properties.
 /// Perl stores as hash {0 => 'left', -1 => 'right', default => ...}
 /// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST,
 /// etc.
 pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
+  // Perl applies `default` to every row first, then the remaining keys in
+  // `sort` order: string-sorted, `-1` (last) precedes `0`, so the first-row
+  // rule is applied LAST and wins when they collide on a single-row multline
+  // (rearrangeAMSMultirow, amsmath.sty.ltxml). Emit DEFAULT, LAST, 0 to match.
   let mut rules = Vec::new();
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_DEFAULT")
     && let Stored::String(s) = &*val
   {
     rules.push(("default".to_string(), to_string(*s)));
   }
+  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_LAST")
+    && let Stored::String(s) = &*val
+  {
+    rules.push(("last".to_string(), to_string(*s)));
+  }
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_0")
     && let Stored::String(s) = &*val
   {
     rules.push(("0".to_string(), to_string(*s)));
   }
-  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_LAST")
-    && let Stored::String(s) = &*val
+  // #2835 \shove* per-row overrides, applied LAST so they win over the base
+  // rule (Perl mutates the same MULTIROW_ALIGNMENT_RULE hash in place).
+  if let Some(val) = whatsit.get_property("MULTIROW_SHOVE_ROWS")
+    && let Stored::HashString(m) = &*val
   {
-    rules.push(("last".to_string(), to_string(*s)));
+    for (row, dir) in m.iter() {
+      rules.push((row.clone(), dir.clone()));
+    }
   }
   rules
 }
@@ -1900,8 +2081,8 @@ pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
 /// Strips leading/trailing XMHint, deduplicates operators at row boundaries.
 fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
   use latexml_core::common::xml::element_nodes;
-  let xmhint_sym = pin_static("ltx:XMHint");
-  let xmtok_sym = pin_static("ltx:XMTok");
+  let xmhint_sym = pin!("ltx:XMHint");
+  let xmtok_sym = pin!("ltx:XMTok");
   let mut contents: Vec<Node> = Vec::new();
   let rows = element_nodes(array);
   for row in rows.iter() {
@@ -1916,7 +2097,7 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
       let arg_nodes: Vec<Node> = {
         let first = &cell_children[0];
         let qname = document::get_node_qname(first);
-        if qname == pin_static("ltx:XMArg") {
+        if qname == pin!("ltx:XMArg") {
           element_nodes(first)
         } else {
           cell_children
@@ -1990,7 +2171,7 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
 
   // Perl: prefilterMath runs on each XMCell, converting XMHint spacing to lpadding.
   // Process cells: convert XMHint → lpadding on next sibling, then remove XMHint.
-  let xmhint_sym = pin_static("ltx:XMHint");
+  let xmhint_sym = pin!("ltx:XMHint");
   let mut i = 0;
   while i < cells.len() {
     let qname = document::get_node_qname(&cells[i]);
@@ -2145,7 +2326,7 @@ pub fn rearrange_ams_gather(document: &mut Document, equationgroup: &mut Node) -
     let children: Vec<Node> = equation.get_child_elements();
     for child in children {
       let qname = document::get_node_qname(&child);
-      if qname == pin_static("ltx:_Capture_") {
+      if qname == pin!("ltx:_Capture_") {
         document.unwrap_nodes(child)?;
       }
     }

@@ -21,7 +21,7 @@ LoadDefinitions!({
     // Perl: Box($glyph, $font, ...) — undef glyph produces empty box
     let sym = match glyph {
       Some(ch) => pin(ch.to_string()),
-      None => pin_static(""),
+      None => pin!(""),
     };
     Ok(Digested::from(Tbox::new(
       sym,
@@ -45,7 +45,7 @@ LoadDefinitions!({
     // Perl: Box($glyph, $font, ...) — undef glyph produces empty box
     let sym = match glyph {
       Some(ch) => pin(ch.to_string()),
-      None => pin_static(""),
+      None => pin!(""),
     };
     Ok(Digested::from(Tbox::new(
       sym,

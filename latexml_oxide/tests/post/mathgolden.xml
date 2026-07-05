@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,xcolor,cancel"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>Style transitions: <Math mode="inline" tex="\tfrac{a}{b}" text="a / b" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\dfrac{a}{b}" text="a / b" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\displaystyle\sum_{i=1}^{n}x_{i}" text="((sum _ (i = 1)) ^ n)@(x _ i)" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>.</p>
+    <equation xml:id="S0.Ex1">
+      <Math mode="display" tex="\tfrac{a}{b}+\frac{\sum_{i=1}^{n}x_{i}}{2}" text="a / b + ((sum _ (i = 1)) ^ n)@(x _ i) / 2" xml:id="S0.Ex1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                    <XMApp>
+                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <p>Colored: <Math mode="inline" tex="\frac{a}{b}" text="a / b" xml:id="p1.m4">
+        <XMath>
+          <XMApp color="#FF0000">
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math><text color="#FF0000"> and <Math mode="inline" tex="\cancel{x}" text="cancel@(x)" xml:id="p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok enclose="updiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> and <Math mode="inline" tex="\sqrt{y}" text="square-root@(y)" xml:id="p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="square-root"/>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> and <Math mode="inline" tex="a+b" text="a + b" xml:id="p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></text>.
+Boxes: <Math mode="inline" tex="\boxed{x+y}" text="x + y" xml:id="p1.m8">
+        <XMath>
+          <XMApp enclose="box">
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>, sizes <Math mode="inline" tex="\bigl(x\bigr)" text="x" xml:id="p1.m9">
+        <XMath>
+          <XMDual>
+            <XMRef idref="p1.m9.1"/>
+            <XMWrap>
+              <XMTok fontsize="120%" role="OPEN" stretchy="false">(</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m9.1">x</XMTok>
+              <XMTok fontsize="120%" role="CLOSE" stretchy="false">)</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math>, spacing <Math mode="inline" tex="a\,b" text="a * b" xml:id="p1.m10">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> and <Math mode="inline" tex="a\!b" text="a * b" xml:id="p1.m11">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok font="italic" role="UNKNOWN" rpadding="-1.7pt">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> and <Math mode="inline" tex="a\qquad b" text="fragments@(a, b)" xml:id="p1.m12">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="fragments"/>
+              <XMRef idref="p1.m12.1"/>
+              <XMRef idref="p1.m12.2"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m12.1">a</XMTok>
+              <XMHint name="qquad" role="PUNCT" width="20pt"/>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m12.2">b</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math>.
+Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text="list@(Array[[a], [b]], x)" xml:id="p1.m13">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="list"/>
+              <XMRef idref="p1.m13.1"/>
+              <XMRef idref="p1.m13.2"/>
+            </XMApp>
+            <XMWrap>
+              <XMArray role="ARRAY" vattach="middle" xml:id="p1.m13.1">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell align="center">
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m13.2">x</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math> and limits <Math mode="inline" tex="\lim_{x\to 0}f" text="(limit _ (x to 0))@(f)" xml:id="p1.m14">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok meaning="limit" role="LIMITOP" scriptpos="post">lim</XMTok>
+              <XMApp>
+                <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+              </XMApp>
+            </XMApp>
+            <XMTok font="italic" role="UNKNOWN">f</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> and <Math mode="inline" tex="\sum_{i=1}^{n}x_{i}" text="((sum _ (i = 1)) ^ n)@(x _ i)" xml:id="p1.m15">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>.
+Continued: <Math mode="inline" tex="\cfrac{1}{2+\cfrac{3}{4+\cdots}}" text="continued-fraction@(1, 2 + continued-fraction@(3, 4 + cdots))" xml:id="p1.m16">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="continued-fraction" name="cfrac"/>
+            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+            <XMApp>
+              <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="continued-fraction" name="cfrac"/>
+                <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                  <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                  <XMTok fontsize="70%" name="cdots" role="ELIDEOP">⋯</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> and roots <Math mode="inline" tex="\sqrt[3]{x}" text="nth-root@(3, x)" xml:id="p1.m17">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="nth-root"/>
+            <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> and frames <text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">boxed</text>.</p>
+  </para>
+</document>

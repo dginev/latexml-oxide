@@ -47,6 +47,31 @@ pub fn set_suppress_log_output(suppress: bool) -> bool {
   prev
 }
 
+// Thread-local FATAL DEMOTION for bibliography post-processing (user
+// policy 2026-07-04): with the live-state field interpretation, Warn!/
+// Error! report at NATIVE severity and count normally (matching Perl's
+// MergeStatus accounting, Common/Error.pm L669) — problems in bib fields
+// are real conversion diagnostics. Only Fatal! is demoted: it notes and
+// logs as an ERROR (`demoted_fatal:` target) instead of latching the
+// document's sticky fatal — a broken bibliography must never lose the
+// document. The Err return is unchanged, so the failing digestion still
+// aborts (its caller degrades gracefully).
+thread_local! {
+  static DEMOTE_FATALS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Set or clear the fatal-demotion flag. Returns the previous value.
+pub fn set_demote_fatals(demote: bool) -> bool {
+  DEMOTE_FATALS.with(|c| {
+    let prev = c.get();
+    c.set(demote);
+    prev
+  })
+}
+
+/// Returns true if `Fatal!` is currently demoted to Error.
+pub fn is_demote_fatals() -> bool { DEMOTE_FATALS.with(|c| c.get()) }
+
 /// Returns true if log output is currently suppressed.
 pub fn is_log_output_suppressed() -> bool { SUPPRESS_LOG_OUTPUT.get() }
 
@@ -137,14 +162,17 @@ pub fn note_status(status: LogStatus, what: Option<&str>) {
       report.fatal = true;
     },
     Undefined => {
-      let entry = report
-        .undefined
-        .entry(what.unwrap_or_default())
-        .or_insert(0);
+      // `what` may borrow the arena buffer; `entry` re-interns via `arena::pin`,
+      // which can REALLOCATE that buffer and invalidate `what` mid-read, then
+      // intern whatever bytes now occupy the slot (e.g. a freshly-interned
+      // `\special_relax` family-token name → phantom undefined). Copy out first.
+      let key = what.unwrap_or_default().to_string();
+      let entry = report.undefined.entry(&key).or_insert(0);
       *entry += 1;
     },
     Missing => {
-      let entry = report.missing.entry(what.unwrap_or_default()).or_insert(0);
+      let key = what.unwrap_or_default().to_string();
+      let entry = report.missing.entry(&key).or_insert(0);
       *entry += 1;
     },
   }
@@ -185,6 +213,17 @@ pub fn initialize_report() {
   *report = LogState::default();
   reset_consecutive_error_tracker();
   LAST_RESOURCE_FATAL.with(|c| *c.borrow_mut() = None);
+}
+
+/// Clear the arena-`SymStr`-keyed report maps (`undefined`, `missing`). MUST be
+/// called whenever the arena is reset (see `crate::reset_thread_engine`): their
+/// keys are arena interner ids, so after `arena::reset()` a stale key resolves to
+/// whatever string now occupies that id — e.g. a `\special_relax` family-token
+/// name — producing phantom "undefined macro" reports across conversions.
+pub fn reset_arena_keyed_reports() {
+  let mut report = REPORT.borrow_mut();
+  report.undefined = Default::default();
+  report.missing = Default::default();
 }
 
 thread_local! {
@@ -303,6 +342,63 @@ pub fn get_status_code() -> usize {
   } else {
     0
   }
+}
+
+/// A thread-portable snapshot of the `REPORT`'s integer status counters
+/// (everything EXCEPT the arena-`SymStr`-keyed `undefined`/`missing` maps,
+/// whose keys are interner ids local to one thread's arena). Used to forward a
+/// worker thread's diagnostic tally back to the main thread: `REPORT` is
+/// `#[thread_local]`, so an `Error!`/`Warn!` raised on a spawned post-processing
+/// worker increments only that worker's counters and is invisible to the
+/// main-thread `status_code` unless merged here. See
+/// [`crate::util::logger::capture`] / [`crate::util::logger::replay_captured`].
+#[derive(Default, Clone, Copy)]
+pub struct ReportCounts {
+  pub debug:   usize,
+  pub info:    usize,
+  pub warning: usize,
+  pub error:   usize,
+  pub fatal:   bool,
+}
+
+/// Snapshot the current thread's `REPORT` integer counters.
+pub fn snapshot_report_counts() -> ReportCounts {
+  let r = REPORT.borrow();
+  ReportCounts {
+    debug:   r.debug,
+    info:    r.info,
+    warning: r.warning,
+    error:   r.error,
+    fatal:   r.fatal,
+  }
+}
+
+/// Overwrite the current thread's `REPORT` counters with a prior snapshot.
+/// The isolation primitive for RECURSIVE/auxiliary digestions whose
+/// diagnostics must not count against the document (Perl analog: the
+/// recursive MakeBibliography session keeps its tally out of the outer
+/// document). Pair with [`set_suppress_log_output`] so neither the lines
+/// nor the counts leak: snapshot -> suppress -> digest -> restore.
+pub fn restore_report_counts(c: ReportCounts) {
+  let mut r = REPORT.borrow_mut();
+  r.debug = c.debug;
+  r.info = c.info;
+  r.warning = c.warning;
+  r.error = c.error;
+  r.fatal = c.fatal;
+}
+
+/// Add a worker thread's [`ReportCounts`] into the current (main) thread's
+/// `REPORT`. Only the integer counts + the sticky `fatal` flag are merged; the
+/// arena-keyed `undefined`/`missing` maps are NOT (a worker has its own
+/// thread-local arena, so those keys are not portable).
+pub fn merge_report_counts(c: ReportCounts) {
+  let mut r = REPORT.borrow_mut();
+  r.debug += c.debug;
+  r.info += c.info;
+  r.warning += c.warning;
+  r.error += c.error;
+  r.fatal |= c.fatal;
 }
 
 //======================================================================
@@ -453,6 +549,13 @@ macro_rules! Error {
       error!(target: &format!("{}:{}", $category, $object), "{}",
         $crate::generate_message!($message, $($details),*));
     }
+    // In the fatal-demotion scope (bibliography post-processing) the
+    // too-many/consecutive-error escalations are SKIPPED: their Fatal!
+    // would demote back into an Error, turning the circuit-breaker into
+    // an error multiplier (run-233 follow-up: 470 self-feeding
+    // "Too many errors" lines on 2605.02213). The bib interpreter has its
+    // own bounded failure latch instead.
+    if !$crate::common::error::is_demote_fatals() {
     // Borrow-safe read: an Error! can be raised from inside a `state_mut()`
     // scope (e.g. push_value's BUG branch, a constructor's after_digest),
     // where a plain `lookup_int` would panic "RefCell already mutably
@@ -494,6 +597,7 @@ macro_rules! Error {
         )
       );
     }
+    }
   }}
 }
 
@@ -501,7 +605,20 @@ macro_rules! Error {
 #[macro_export]
 macro_rules! Fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
-    $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
+    if $crate::common::error::is_demote_fatals() {
+      // Demoted context (bibliography post-processing): count and log as
+      // an ERROR — the problem is real and must be visible/accounted —
+      // but never latch the document's sticky fatal. The Err return below
+      // still aborts the failing digestion; its caller degrades
+      // gracefully. A document must not be lost to a broken bibliography.
+      $crate::common::error::note_status($crate::common::error::LogStatus::Error, None);
+      if !$crate::common::error::is_log_output_suppressed() {
+        use log::error;
+        error!(target: "demoted_fatal", "{}", $message);
+      }
+    } else {
+      $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
+    }
     {
       use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
       let __fatal_err = LatexmlError {

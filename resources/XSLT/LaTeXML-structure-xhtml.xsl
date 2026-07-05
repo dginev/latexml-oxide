@@ -336,6 +336,16 @@
                 select="f:if(//ltx:chapter | //ltx:appendix/ltx:section,
                              $seclev_chapter, $seclev_section)"/>
 
+  <!-- Whether the document carries a navigation "up" ref (added by post-processing
+       for split / multi-page output). This is document-global (//ltx:navigation
+       resolves from the root regardless of context), so memoize it ONCE here rather
+       than re-scanning the whole tree from inside every maketitle. Without this, a
+       large book (hundreds of titled units) does O(titles × tree-size) descendant
+       scans — the dominant XSLT cost on big documents (2605.01585: 22.7 s of 24.9 s).
+       Output-neutral. -->
+  <xsl:variable name="maketitle_has_up_nav"
+                select="boolean(//ltx:navigation/ltx:ref[@rel='up'])"/>
+
   <func:function name="f:seclev-aux">
     <xsl:param name="name"/>
     <func:result>
@@ -454,7 +464,7 @@
       <xsl:call-template name="authors">
         <xsl:with-param name="context" select="$context"/>
       </xsl:call-template>
-      <xsl:if test="not(//ltx:navigation/ltx:ref[@rel='up'])">
+      <xsl:if test="not($maketitle_has_up_nav)">
         <xsl:call-template name="dates">
           <xsl:with-param name="context" select="$context"/>
           <xsl:with-param name="dates" select="../ltx:date"/>

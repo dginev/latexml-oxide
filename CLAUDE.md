@@ -2,30 +2,37 @@
 
 > **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
 
-## Active priority (refreshed 2026-05-19): strict-Perl parity
+## Active priorities (refreshed 2026-07-02): faithful parity + beyond-Perl arXiv runs
 
-Strict Perl parity at the format/dump and package-loading boundary is
-the current top priority, followed by sandbox long-tail cleanup.
-Current local verification in `docs/SYNC_STATUS.md`: `cargo test
---tests` is **1454/0/0** and `cargo clippy --workspace --all-targets
--- -D warnings` is **clean (0 warnings)** — the edition-2024 migration's
-let-chain `collapsible_if` fallout was cleared (652 collapses), formatting was
-reapplied tree-wide under `style_edition = "2024"` + import grouping, and the
-lint policy now lives in `[workspace.lints]` (curated `dbg_macro`/`todo`/
-`unimplemented` + `unused_qualifications` hardening), gated by CI's `lint` job
-and the auto-installed pre-push hook (`latexml_oxide/build.rs` sets
-`core.hooksPath`). The latest sandbox result for
-the 100k `next_warning_papers` corpus is ~99.4% OK; the latest 10k
-stage v3 ranges 97.4–99.5%. Working docs:
-[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md),
-[`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md). The strict-`LoadFormat`
-dump-parity mission is **complete** (zero-error inits, dumps match Perl);
-its audit is archived at
-[`docs/archive/PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md),
-with the one live residual (~72-CS Perl-only long tail) tracked in
-`SYNC_STATUS.md` "Engine file open gaps (MINOR)".
+Two co-equal targets drive current work:
 
-Concretely:
+1. **Faithful translation of the original Perl LaTeXML.** Strict parity at
+   the format/dump and package-loading boundary is maintained (the
+   strict-`LoadFormat` dump-parity mission is **complete** — zero-error
+   inits, dumps match Perl; audit archived at
+   [`docs/archive/PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md),
+   the ~72-CS Perl-only long-tail residual tracked in `SYNC_STATUS.md`
+   "Engine file open gaps"). Ongoing parity work = corpus-driven: mine
+   fatal/error clusters from live runs, classify vs same-host Perl
+   (`canvas-triage` skill), fix GENUINE-RUST-ONLY divergences faithfully.
+   Worklist: [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
+2. **Beyond-Perl improvement runs over arXiv.** The production `cortex_worker`
+   fleet converts the full ~2.8M-doc arXiv corpus (2026-07 rerun in flight;
+   next: the July-5 run, built from a fresh binary with the week's fixes).
+   Beyond-Perl levers: performance (17% math over-parse, tikz-cd digest —
+   [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) /
+   [`docs/ARXIV_PERFORMANCE.md`](docs/ARXIV_PERFORMANCE.md)), reliability
+   ([`docs/STABILITY_WITNESSES.md`](docs/STABILITY_WITNESSES.md)), and the
+   source-provenance showcase (issues #47/#92,
+   [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md)).
+
+Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
+**1505/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
+(policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
+`latexml_oxide/build.rs` sets `core.hooksPath`). The 2026-07 full-arXiv rerun
+runs at ~44k docs/hr, avg 4.06 s/doc, fatal rate 0.78%.
+
+Durable parity rules (the dump/format boundary):
 
 1. **Strict `LoadFormat` mutual exclusivity** (Perl
    `Package.pm:LoadFormat` L2734-2752). `tex.rs` and `latex.rs`
@@ -111,60 +118,54 @@ Supporting directories:
 ## Internal Documentation
 
 All active docs live in `docs/`. This is the authoritative index — keep it
-current when adding, renaming, merging, or archiving a doc. Grouped by role:
+current when adding, renaming, merging, or archiving a doc. Grouped by the two
+mission targets (docs serving both come first):
 
-**Status & mission (start here when resuming work):**
-- **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master engine-sync log: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings, cluster worklists, and the roadmap to full parity. **Start here.**
-- **[`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract, kept *separate* from the parity log: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy, and the source-provenance / VSCode-synced-preview product track (issues #47/#92).
-- **[`docs/ISSUE_AUDIT.md`](docs/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation, so offline agents don't lose tracker context. **Refresh before milestone planning.** (Note: issue numbers here are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
-- **[`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md)** — Design for the prioritized beyond-Perl showcase: live source ↔ preview over a shared locator substrate, two clients (the **ar5iv-editor** CodeMirror web UI and a **VSCode extension**), plus accurate linting (#47) and Rust-grade author error messages (#92) off the same substrate. Why Perl (LaTeXML#101) stalled and why Rust breaks the deadlock. Locators are opt-in (`--source-map`), off by default.
-  (The `--server` editor-LSP docs are landed-and-archived, kept out of the top-level index to preserve parity focus: [`docs/archive/LSP_SERVER.md`](docs/archive/LSP_SERVER.md) — design/status/review records/known gaps — and [`docs/archive/LSP_MULTIFILE_PLAN.md`](docs/archive/LSP_MULTIFILE_PLAN.md) — the landed multi-file root/overlay model. Live smoke: `tools/lsp_smoke.py`.)
+**Worklists & contracts (start here when resuming work):**
+- **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — The BRIEF ACTIONABLE worklist for both targets: current status, the in-flight session entry, open tasks, deferred families, stable reference. Completed session logs are lifted to `docs/archive/SYNC_SESSIONS_*.md`. **Start here.**
+- **[`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy.
+- **[`docs/PR_READINESS.md`](docs/PR_READINESS.md)** — Critical review of the `ar5iv-2606-prep` branch before the PR to main / July-5 rebuild (2026-07-02): 105-commit risk filter + 3-agent cluster findings + ranked fix list. Snapshot — date+archive when the branch merges.
+- **[`docs/ISSUE_AUDIT.md`](docs/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation (refreshed 2026-07-02; 8 open). **Refresh before milestone planning.** (Issue numbers are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
 
-**Architecture & design (canonical, living):**
-- **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, intentional Perl divergences, type system improvements, tactical insights. Read this to check if a translation difference was a marked intentional divergence.
+**Target 1 — faithful Perl translation (parity):**
+- **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, **intentional Perl divergences**, type-system improvements. Read this to check if a translation difference was a marked intentional divergence.
 - **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Loading hierarchy and LaTeX chapter structure.
-- **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals from specialized debugging (compile-time vs runtime token packing, Font::merge/specialize, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore). Check here to avoid re-introducing known bugs.
-- **[`docs/SCHEMA_DOCUMENTATION.md`](docs/SCHEMA_DOCUMENTATION.md)** — How a RelaxNG Compact schema becomes a rustdoc-styled HTML doc site (relevant to issue #199, the HTML-dialect schema).
-- **[`docs/BINDING_DSL_ARCHITECTURE.md`](docs/BINDING_DSL_ARCHITECTURE.md)** — Decision record for the binding-definition DSL: one shared `ConstructorBuilder` lowering spine in `latexml_core`, with thin syntax front-ends (compile-time `macro_rules!` for native `.pool` ports + runtime Rhai for contributed bindings), kept in sync by conformance tests. Subsumes issues #93 (declarative dialect) and #171 (XML-replacement parser).
-- **[`docs/script_bindings_plan.md`](docs/script_bindings_plan.md)** — The runtime (Rhai) `script-bindings` front-end: design, dialect reference, progress log, post-PoC critical re-eval. The runtime half of the architecture above. OFF by default (`script-bindings` feature).
+- **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals from specialized debugging. Check here to avoid re-introducing known bugs.
+- **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (40 entries). Check here first when investigating a test failure; when a shared bug is simple, fix in Rust and record it here (candidate to upstream).
+- **[`docs/DUMP_DESIGN.md`](docs/DUMP_DESIGN.md)** — Design record for the kernel dump precompilation (strict-Perl LoadFormat mutual exclusivity, unconditional apply) — the live architecture behind the per-TL-year release dumps. NOTE the format-layering nuance: the latex format sits on the REAL-plain.tex layer (Perl's is hand-curated), so plain-only macros can leak into latex sessions (the `\+` class, retracted at the `latex.rs` seam; audit in SYNC_STATUS 2026-07-02).
+- **[`docs/BINDING_DSL_ARCHITECTURE.md`](docs/BINDING_DSL_ARCHITECTURE.md)** — Decision record for the binding-definition DSL: one shared `ConstructorBuilder` lowering spine, compile-time `macro_rules!` + runtime Rhai front-ends. Subsumes closed issues #93/#171.
+- **[`docs/script_bindings_plan.md`](docs/script_bindings_plan.md)** — The runtime (Rhai) `script-bindings` front-end reference. OFF by default (`script-bindings` feature).
 
-**Parity references:**
-- **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (`packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders`). Check here first when investigating a test failure.
-- **[`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md)** — `BibTeX.pool.ltxml` port plan; Phases 1–8 landed, remaining B1–B6 / Phase 4–5 polish.
+**Target 2 — beyond-Perl improvement runs over arXiv:**
+- **[`docs/ARXIV_PERFORMANCE.md`](docs/ARXIV_PERFORMANCE.md)** — Living empirical performance campaign over arXiv: slowest-100 testbed, corpus-wide profiles, phase rollups, optimization log; records settled dead-ends.
+- **[`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)** — Timeless optimization principles, open/closed lever state, and the dated **Audit log** of periodic perf passes.
+- **[`docs/STABILITY_WITNESSES.md`](docs/STABILITY_WITNESSES.md)** — Living worklist of reliability witness papers (timeout/OOM/peak-RSS/hang) with current-binary + Perl baselines. Distinct from `SYNC_STATUS.md` (correctness errors).
+- **[`docs/CORTEX_WORKER_HARNESS.md`](docs/CORTEX_WORKER_HARNESS.md)** — `cortex_worker --harness` fleet orchestration: one-conversion-per-process, five-layer memory guards, crash-loop backoff, production deployment recommendation. Companion to pericortex `docs/HARNESS.md` and CorTeX `MANUAL.md` §7.
+- **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` runs.
+- **[`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md)** — Design for the prioritized beyond-Perl showcase: live source ↔ preview over a shared locator substrate (ar5iv-editor + VSCode clients), accurate linting (#47) and Rust-grade author errors (#92). Locators opt-in (`--source-map`). (The landed-but-deprioritized `--server` LSP docs: [`docs/archive/LSP_SERVER.md`](docs/archive/LSP_SERVER.md), [`docs/archive/LSP_MULTIFILE_PLAN.md`](docs/archive/LSP_MULTIFILE_PLAN.md); smoke `tools/lsp_smoke.py`.)
+- **[`docs/RELEASING.md`](docs/RELEASING.md)** — Tag-driven release procedure; the self-contained-binary requirement.
+- **[`docs/SAFETY.md`](docs/SAFETY.md)** — Threat model and `unsafe` inventory (distribution posture in `RELEASE_CRITERIA.md` §6).
+- **[`docs/SCHEMA_DOCUMENTATION.md`](docs/SCHEMA_DOCUMENTATION.md)** — RelaxNG Compact schema → rustdoc-styled HTML doc site (supported the closed #199 HTML-dialect schema).
 
-  (The strict-`LoadFormat` dump-parity audit is complete and archived at `docs/archive/PERL_LOADFORMAT_AUDIT.md`; its one live residual is in `SYNC_STATUS.md` "Engine file open gaps (MINOR)".)
-
-**Math parser:**
-- **[`docs/MATH_PARSER_AND_ASF.md`](docs/MATH_PARSER_AND_ASF.md)** — Canonical: the three-stage ambiguity pipeline vs the Marpa ASF traversal paradigm. Read before touching `latexml_math_parser/src/parser.rs::parse_string` or `semantics.rs::Actions`. Companion to [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md) on the fork's `asf-completion` branch.
+**Math parser (serves both targets):**
+- **[`docs/MATH_PARSER_AND_ASF.md`](docs/MATH_PARSER_AND_ASF.md)** — Canonical: the three-stage ambiguity pipeline vs the Marpa ASF traversal paradigm. Read before touching `latexml_math_parser/src/parser.rs::parse_string` or `semantics.rs::Actions`. Companion to [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md).
 - **[`docs/MATH_PARSER_ASF_TIEBREAKING.md`](docs/MATH_PARSER_ASF_TIEBREAKING.md)** — ASF tie-breaking rules detail.
 - **[`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`](docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md)** — Design rationale for the Marpa grammar.
+- **[`docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)** — Measured and-node counts per ambiguity pattern; ranked open levers (`f(x)` apply-vs-multiply, bare-`|x|` pre-lexer, integral Step 2). The top `math_parse` lever for the arXiv runs; supersedes the archived 2026-05-21 ambiguity audit.
 
-**Dump / precompilation:**
-- **[`docs/DUMP_DESIGN.md`](docs/DUMP_DESIGN.md)** — Canonical design record for the (now complete) kernel dump precompilation mission (strict-Perl LoadFormat mutual exclusivity, unconditional apply).
+**Open dated diagnostics** (point-in-time studies with pending halves — see naming rule):
+- **[`docs/COMMIT_REVIEW_2026-07-05.md`](docs/COMMIT_REVIEW_2026-07-05.md)** — adversarial overconfidence audit of the 79 code commits from July 1–5 (6 parallel passes): disposition table (pgfmath int-leak FIXED, bibliography whitelist re-documented as first-stage-toward-Perl, F8b/#46 doc corrections) + open follow-ups (lxDeclare font fidelity, gullet locking test, fo geometry-vs-text anchor). Snapshot — archive at branch merge.
+- **[`docs/ARXIV_FORK_AUDIT_2026-07-03.md`](docs/ARXIV_FORK_AUDIT_2026-07-03.md)** — due-diligence survey of the arXiv/LaTeXML "velocity fork" (57 commits): what's already translated (pgfmath core, usebbl, calc params, hyperxmp, acmart ARIA) vs the ranked residual candidates (abstract-in-TOC inlist, pgfmath string results, graphicx actualtext).
+- **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: container-id half landed; content-branch/MathFork reconciliation still pending.
+- **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted.
 
-**Release & operations:**
-- **[`docs/RELEASING.md`](docs/RELEASING.md)** — Tag-driven release procedure; what ships in a release; the self-contained-binary requirement.
-- **[`docs/CORTEX_WORKER_HARNESS.md`](docs/CORTEX_WORKER_HARNESS.md)** — `cortex_worker --harness` fleet orchestration: the self-supervising one-conversion-per-process model (drives `pericortex::harness`) with **deliberate over-commit**, the five-layer memory guards (stomach byte budget → polled RSS → alloc hook → per-child `RLIMIT_AS` → fleet memory-pressure governor that sheds the largest worker under aggregate pressure), crash-loop backoff / SIGCHLD respawn / `PR_SET_PDEATHSIG`, the address-space-vs-RSS caveat with mimalloc, and the production deployment recommendation. Companion to pericortex's `docs/HARNESS.md` (mechanism) and CorTeX `MANUAL.md` §7 (operator how-to).
-- **[`docs/SAFETY.md`](docs/SAFETY.md)** — Threat model and `unsafe` inventory (local-CLI posture; distribution posture is tracked in `RELEASE_CRITERIA.md` §6).
-- **[`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)** — Average-wall performance bands and Perl-parity baselines (always-on optimization principles).
-- **[`docs/ARXIV_PERFORMANCE.md`](docs/ARXIV_PERFORMANCE.md)** — Living empirical performance campaign: a fixed testbed of the 100 slowest-but-completing arXiv papers, with baseline wall-times, phase rollups, hotspot analysis, and an optimization log. Aimed at the P1 math-parser/large-doc lever; records the settled dead-ends (PGO/target-cpu, startup dump-parse).
-- **[`docs/STABILITY_WITNESSES.md`](docs/STABILITY_WITNESSES.md)** — Living worklist of reliability/performance witness papers (timeout/OOM/peak-RSS/hang), with current-binary + Perl baselines and root-cause notes. Distinct from `SYNC_STATUS.md` (correctness errors).
-- **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` benchmark runs.
-
-**Dated diagnostic snapshots** (point-in-time studies — see naming rule):
-- **[`docs/STARTUP_COST_ANALYSIS_2026-06-21.md`](docs/STARTUP_COST_ANALYSIS_2026-06-21.md)** — per-process startup floor (~161 ms) decomposed: latex dump load ~85 ms (60% text-parse), `_constructs` ~80 ms; a ~50 ms (~30%) dump-parse lever exists (binary format / parallel-parse) but was **measured and declined** as too small for the release-critical risk. Records the decision so it isn't re-investigated.
-- **[`docs/PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md`](docs/PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md)** — tikz-cd/xy/tcolorbox sandbox: Rust beats Perl ~3.5× on fatals (861 vs 3,011); 743/861 Rust-fatals are *also* Perl-fatal (parity); only ~14 genuine Rust-worse divergences, all tracing to deep tikz-cd/pgf/babel binding gaps. Identifies the top future lever.
-- **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: Phase-0 trace complete and the container-id (xml:id accessor) half landed; content-branch/MathFork reconciliation still pending.
-- **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted, plus the separate sibling missing-dump codepoint-data root cause. (Issue #217's macOS probe is resolved and archived at [`docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md).)
-- **[`docs/SANDBOX_TRIAGE_2026-05-21.md`](docs/SANDBOX_TRIAGE_2026-05-21.md)** — 10k sandbox triage workflow reference and failure-cluster classes.
-- **[`docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md)** — Math-parser ambiguity sweep; patterns 1/3/4 closed, pattern 2 (VERTBAR-modulus) open. (Code in `latexml_math_parser/*` points here for the open pattern.)
-
-  (Resolved/superseded snapshots have moved to `docs/archive/`: the canvas_3
-  OOM-guard hardening, the pgf line–arc bisection study, the `xml:id`
-  accessor-discipline audit, and the Perl `Dumper.pm` on-disk-format reading —
-  see [`docs/archive/README.md`](docs/archive/README.md).)
-
-Completed/historical audits live in `docs/archive/` (see `docs/archive/README.md`). Single-paper reproducers/out-of-scope cases live in `docs/reproducers/`, `docs/out-of-scope/`, `docs/known_crashes/`.
+Completed/superseded snapshots live in `docs/archive/` (see
+[`docs/archive/README.md`](docs/archive/README.md) — most recently, the
+2026-07-02 consolidation archived the 2026-06 session logs, the BibTeX port
+plan, the 2026-05-21 ambiguity audit + sandbox-triage workflow, the 3-sandbox
+fatal analysis, and the startup-cost study). Single-paper reproducers /
+out-of-scope cases live in `docs/reproducers/`, `docs/out-of-scope/`,
+`docs/known_crashes/`.
 
 **Rules for these docs:**
 - `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
@@ -317,7 +318,7 @@ truth for macro-expanded diagnostics.
   as a failure to investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
-- **Active work**: the strict-Perl dump-parity mission is complete (see above). Remaining sub-tasks — including the ~72-CS Perl-only long tail — are tracked in `docs/SYNC_STATUS.md`; the completed audit is at `docs/archive/PERL_LOADFORMAT_AUDIT.md`.
+- **Active work**: the two targets in "Active priorities" above — corpus-driven parity mining plus the beyond-Perl arXiv-run levers. The actionable list lives in `docs/SYNC_STATUS.md`; completed missions (dump parity, upstream-sync U1–U11, …) are archived under `docs/archive/`.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
 When a **session is completed**: continue working, until:

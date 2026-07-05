@@ -94,10 +94,15 @@ but adapted for Rust bindings.
 
 Example for Ubuntu:
 ```
-$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkpathsea-dev libkpathsea6 mold \
+$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick ghostscript libkpathsea-dev libkpathsea6 mold \
                    texlive texlive-latex-extra texlive-science \
                    texlive-bibtex-extra texlive-publishers poppler-utils
 ```
+
+`ghostscript` (`gs`) is listed explicitly: it is the EPS/PS rasterizer and
+ImageMagick's PS/EPS/PDF delegate, so every EPS/PS figure needs it. It is only a
+*Recommends* of `imagemagick`, so a host configured with `APT::Install-Recommends
+"false"` would silently omit it and fail every EPS/PS conversion.
 
 Example for macOS (Apple Silicon / arm64; the full test suite runs on macOS CI):
 
@@ -136,31 +141,29 @@ PDF, mutool runs in 0.48 s vs pdftocairo's 0.86 s, and its SVG
 output is ~4× more gzip-compressible. Falls through to `pdftocairo`
 if `mutool` is not on PATH — install is optional.
 
-#### Optional: inkscape fallback for vector-preserving PDF → SVG
+#### Graphics delegate chain
 
-For the opt-in `--graphics-svg-threshold-kb N` flag (see
-[docs/SYNC_STATUS.md](docs/SYNC_STATUS.md) and upstream
-[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)):
+`\includegraphics` figures are converted by external delegates, tried
+fastest-first with fallback:
 
-```
-$ sudo apt install inkscape
-```
+- **EPS / PS → PNG** — `gs` (Ghostscript), the primary rasterizer, then `convert` (ImageMagick). Landscape PS routes via `ps2pdf` → `pdftocairo` to keep page rotation.
+- **PDF → PNG** — `mutool draw` (MuPDF, fastest) → `pdftocairo` (poppler, ships with TeX Live) → `convert` (ImageMagick).
+- **PDF → SVG** — opt-in vector path for small PDFs (`--graphics-svg-threshold-kb N`): `mutool convert` → `pdftocairo -svg`, falling back to PDF→PNG so a figure is never lost.
 
-`inkscape` is used as the **last-resort** SVG converter when both
-`mutool` and `pdftocairo` fail. The path is disabled by default; if
-the flag is enabled but inkscape is missing at runtime, the pipeline
-silently falls back to raster `convert`.
+`gs` is the most load-bearing delegate (the whole EPS/PS branch plus ImageMagick's
+PS/EPS/PDF delegate), hence the explicit `ghostscript` above.
 
 ### Build profiles (Rust best practice)
 
-Four named profiles in `Cargo.toml`, each tuned for one purpose:
+Five named profiles in `Cargo.toml` (plus a profiling-only `bench`), each tuned for one purpose:
 
 | Profile | When | Goal |
 |---------|------|------|
 | **`test`** (default for `cargo test`) | day-to-day development | Maximum debug info (`debug = "full"`, `debug-assertions`, `overflow-checks`), incremental rebuilds, `-O1` for tolerable test runtime. Use as much local RAM/CPU as needed. |
 | **`ci`**   | GitHub Actions only      | Lowest possible RAM (16 GB runner budget) and fastest compile (`opt-level = 0`, `codegen-units = 256`, no LTO). Just enough to prove tests pass. |
 | **`release`** | local sandbox canvas / perf measurement | Laptop-throughput release: `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Strong runtime optimization while using the 20-thread local machine during release builds. |
-| **`maxperf`** | distribution / published release artifact | Smallest, fastest binary: `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, stripped. Slowest build; used by `tools/make_release.sh` for the shipped binaries. |
+| **`maxperf`** | distribution / published release artifact (the standalone `latexml_oxide` / `latexmlmath_oxide` CLIs) | Smallest, fastest binary: `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, stripped. Slowest build; used by `tools/make_release.sh` for the shipped binaries. |
+| **`maxperf-cortex`** | distribution build of the `cortex_worker` fleet binary (the `docker/cortex-worker.dockerfile` image) | The same fat-LTO / `codegen-units = 1` levers as `maxperf`, but keeps `panic = "unwind"`: the worker relies on `std::panic::catch_unwind` to isolate per-paper panics across a long-lived fleet, which `panic = "abort"` would silently turn into a no-op. |
 
 ### Sample use
 

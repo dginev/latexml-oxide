@@ -24,6 +24,29 @@ fn lookup_color_hex(name: &str) -> String {
   })
 }
 
+/// Perl #2829: the framed.sty environments pass ALL whatsit properties to
+/// `insertBlock`, which filters to the attributes `ltx:figure` accepts.
+/// Stringify the attribute-capable Stored values for the block-attr map.
+fn props_to_attrs(props: &SymHashMap<Stored>) -> HashMap<String, String> {
+  let mut attrs: HashMap<String, String> = HashMap::default();
+  for (k, v) in props {
+    let key = to_string(*k);
+    match v {
+      Stored::String(s) => {
+        attrs.insert(key, to_string(*s));
+      },
+      Stored::Dimension(d) => {
+        attrs.insert(key, d.to_attribute());
+      },
+      Stored::Int(i) => {
+        attrs.insert(key, i.to_string());
+      },
+      _ => {}, // body (Digested) and other non-attribute payloads
+    }
+  }
+  attrs
+}
+
 LoadDefinitions!({
   // Intentional divergence (WISDOM #44 class: structural-adaptation, applies
   // to the {shaded}/{shaded*}/{snugshade}/{snugshade*}/{titled-frame} envs
@@ -40,155 +63,115 @@ LoadDefinitions!({
   // the rationale from scratch.
 
   // {framed} Normal framed block-level box
-  // Perl: framed.sty.ltxml lines 21-30
+  // Perl (#2829): framed.sty.ltxml L21-29
   DefEnvironment!("{framed}",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let framecolor = props.get("framecolor").map(|v| v.to_string()).unwrap_or_default();
-      let cssstyle = props.get("cssstyle").map(|v| v.to_string()).unwrap_or_default();
-      let mut attr = string_map!("framed" => "rectangle");
-      if !framecolor.is_empty() { attr.insert(s!("framecolor"), framecolor); }
-      if !cssstyle.is_empty() { attr.insert(s!("cssstyle"), cssstyle); }
+      // Perl #2829: pass ALL properties; insertBlock filters to attributes.
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        let attrs = props_to_attrs(props);
+        insert_block(document, body, attrs)?;
       }
       Ok(())
     },
     properties => sub[_args] {
-      let margin = match LookupRegisterOrDefault!("\\FrameSep") {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 9.0,
-      };
-      let border = match LookupRegisterOrDefault!("\\FrameRule") {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 0.4,
-      };
-      let css = s!("padding:{}pt;border-width:{}pt", margin, border);
-      Ok(stored_map!(
-        "framecolor" => color::BLACK.to_attribute(),
-        "cssstyle" => css
-      ))
+      Ok(framed_properties(FramedOptions {
+        color: Some(color::BLACK.to_attribute()),
+        margin: Some("\\FrameSep".to_string()),
+        rule: Some("\\FrameRule".to_string()),
+        ..FramedOptions::default()
+      }))
     }
   );
 
   // {oframed} "open" framed box — same as framed for our purposes
-  // Perl: framed.sty.ltxml lines 34-43
+  // Perl (#2829): framed.sty.ltxml L31-39
   DefEnvironment!("{oframed}",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let framecolor = props.get("framecolor").map(|v| v.to_string()).unwrap_or_default();
-      let cssstyle = props.get("cssstyle").map(|v| v.to_string()).unwrap_or_default();
-      let mut attr = string_map!("framed" => "rectangle");
-      if !framecolor.is_empty() { attr.insert(s!("framecolor"), framecolor); }
-      if !cssstyle.is_empty() { attr.insert(s!("cssstyle"), cssstyle); }
+      // Perl #2829: pass ALL properties; insertBlock filters to attributes.
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        let attrs = props_to_attrs(props);
+        insert_block(document, body, attrs)?;
       }
       Ok(())
     },
     properties => sub[_args] {
-      let margin = match LookupRegisterOrDefault!("\\FrameSep") {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 9.0,
-      };
-      let border = match LookupRegisterOrDefault!("\\FrameRule") {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 0.4,
-      };
-      let css = s!("padding:{}pt;border-width:{}pt", margin, border);
-      Ok(stored_map!(
-        "framecolor" => color::BLACK.to_attribute(),
-        "cssstyle" => css
-      ))
+      Ok(framed_properties(FramedOptions {
+        color: Some(color::BLACK.to_attribute()),
+        margin: Some("\\FrameSep".to_string()),
+        rule: Some("\\FrameRule".to_string()),
+        ..FramedOptions::default()
+      }))
     }
   );
 
   // {shaded} a shaded box; uses "shadecolor" for background color
-  // Perl: framed.sty.ltxml lines 50-59
+  // Perl (#2829): framed.sty.ltxml L42-49
   DefEnvironment!("{shaded}",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let bg = props.get("backgroundcolor").map(|v| v.to_string()).unwrap_or_default();
-      let cssstyle = props.get("cssstyle").map(|v| v.to_string()).unwrap_or_default();
-      let mut attr = string_map!();
-      if !bg.is_empty() { attr.insert(s!("backgroundcolor"), bg); }
-      if !cssstyle.is_empty() { attr.insert(s!("cssstyle"), cssstyle); }
+      // Perl #2829: pass ALL properties; insertBlock filters to attributes.
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        let attrs = props_to_attrs(props);
+        insert_block(document, body, attrs)?;
       }
       Ok(())
     },
     properties => sub[_args] {
-      // Look up shadecolor directly instead of going through font merge
-      // (font merge creates <text backgroundcolor> wrappers we don't want)
-      let bg = lookup_color_hex("shadecolor");
-      let margin = match LookupRegisterOrDefault!("\\FrameSep") {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 9.0,
-      };
-      let css = s!("padding:{}pt", margin);
-      Ok(stored_map!(
-        "backgroundcolor" => bg,
-        "cssstyle" => css
-      ))
+      // Rust divergence (documented above): shadecolor looked up directly
+      // instead of the beforeDigest MergeFont pipeline.
+      Ok(framed_properties(FramedOptions {
+        backgroundcolor: Some(lookup_color_hex("shadecolor")),
+        margin: Some("\\FrameSep".to_string()),
+        ..FramedOptions::default()
+      }))
     }
   );
 
   // {shaded*} Same as {shaded}
-  // Perl: framed.sty.ltxml lines 62-72
+  // Perl (#2829): framed.sty.ltxml L52-60
   DefEnvironment!("{shaded*}",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let bg = props.get("backgroundcolor").map(|v| v.to_string()).unwrap_or_default();
-      let cssstyle = props.get("cssstyle").map(|v| v.to_string()).unwrap_or_default();
-      let mut attr = string_map!();
-      if !bg.is_empty() { attr.insert(s!("backgroundcolor"), bg); }
-      if !cssstyle.is_empty() { attr.insert(s!("cssstyle"), cssstyle); }
+      // Perl #2829: pass ALL properties; insertBlock filters to attributes.
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        let attrs = props_to_attrs(props);
+        insert_block(document, body, attrs)?;
       }
       Ok(())
     },
     properties => sub[_args] {
-      let bg = lookup_color_hex("shadecolor");
-      let margin = match LookupRegisterOrDefault!("\\FrameSep") {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 9.0,
-      };
-      let css = s!("padding:{}pt", margin);
-      Ok(stored_map!(
-        "backgroundcolor" => bg,
-        "cssstyle" => css
-      ))
+      // Rust divergence (documented above): shadecolor looked up directly
+      // instead of the beforeDigest MergeFont pipeline.
+      Ok(framed_properties(FramedOptions {
+        backgroundcolor: Some(lookup_color_hex("shadecolor")),
+        margin: Some("\\FrameSep".to_string()),
+        ..FramedOptions::default()
+      }))
     }
   );
 
-  // {snugshade} — tighter shading, uses \fboxsep not \FrameSep
-  // Perl: framed.sty.ltxml lines 75-84
+  // {snugshade} Same as {shaded} — #2829 switched it to \FrameSep too
+  // Perl (#2829): framed.sty.ltxml L63-71
   DefEnvironment!("{snugshade}",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let bg = props.get("backgroundcolor").map(|v| v.to_string()).unwrap_or_default();
-      let cssstyle = props.get("cssstyle").map(|v| v.to_string()).unwrap_or_default();
-      let mut attr = string_map!();
-      if !bg.is_empty() { attr.insert(s!("backgroundcolor"), bg); }
-      if !cssstyle.is_empty() { attr.insert(s!("cssstyle"), cssstyle); }
+      // Perl #2829: pass ALL properties; insertBlock filters to attributes.
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        let attrs = props_to_attrs(props);
+        insert_block(document, body, attrs)?;
       }
       Ok(())
     },
     properties => sub[_args] {
-      let bg = lookup_color_hex("shadecolor");
-      let margin = match LookupRegisterOrDefault!("\\fboxsep") {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 3.0,
-      };
-      let css = s!("padding:{}pt", margin);
-      Ok(stored_map!(
-        "backgroundcolor" => bg,
-        "cssstyle" => css
-      ))
+      // Rust divergence (documented above): shadecolor looked up directly
+      // instead of the beforeDigest MergeFont pipeline.
+      Ok(framed_properties(FramedOptions {
+        backgroundcolor: Some(lookup_color_hex("shadecolor")),
+        margin: Some("\\FrameSep".to_string()),
+        ..FramedOptions::default()
+      }))
     }
   );
 
@@ -222,23 +205,28 @@ LoadDefinitions!({
   );
 
   // {leftbar}
-  // Perl: framed.sty.ltxml lines 95-100
+  // Perl (#2829): framed.sty.ltxml L74-80 — direct properties, NOT
+  // framedProperties ("Don't overgeneralize framed {leftbar}"): framed=left,
+  // color=Black (filtered out by insertBlock — ltx:figure has no `color`
+  // attribute, matching the updated Perl fixture), explicit cssstyle, and a
+  // padleft Dimension for size computation.
   DefEnvironment!("{leftbar}",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let framecolor = props.get("framecolor").map(|v| v.to_string()).unwrap_or_default();
-      let mut attr = string_map!(
-        "framed" => "left",
-        "cssstyle" => "border-width:3pt;padding-left:10pt"
-      );
-      if !framecolor.is_empty() { attr.insert(s!("framecolor"), framecolor); }
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        let attrs = props_to_attrs(props);
+        insert_block(document, body, attrs)?;
       }
       Ok(())
     },
     properties => sub[_args] {
-      Ok(stored_map!("framecolor" => color::BLACK.to_attribute()))
+      let mut props = stored_map!(
+        "framed" => "left",
+        "color" => color::BLACK.to_attribute(),
+        "cssstyle" => "padding-left:10pt; border-left-width:3pt"
+      );
+      props.insert("padleft", Stored::Dimension(Dimension!("13pt")));
+      Ok(props)
     }
   );
 
@@ -247,16 +235,10 @@ LoadDefinitions!({
   DefEnvironment!("{titled-frame} Undigested",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let framecolor = props.get("framecolor").map(|v| v.to_string()).unwrap_or_default();
-      let bg = props.get("backgroundcolor").map(|v| v.to_string()).unwrap_or_default();
-      let mut attr = string_map!(
-        "framed" => "rectangle",
-        "cssstyle" => "padding:8pt;border-width:2pt"
-      );
-      if !framecolor.is_empty() { attr.insert(s!("framecolor"), framecolor); }
-      if !bg.is_empty() { attr.insert(s!("backgroundcolor"), bg); }
+      // Perl #2829: pass ALL properties; insertBlock filters to attributes.
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        let attrs = props_to_attrs(props);
+        insert_block(document, body, attrs)?;
       }
       Ok(())
     },
@@ -273,9 +255,15 @@ LoadDefinitions!({
       }
     },
     properties => sub[_args] {
-      let framecolor = lookup_color_hex("TFFrameColor");
-      let bg = current_background_hex();
-      Ok(stored_map!("framecolor" => framecolor, "backgroundcolor" => bg))
+      // Perl (#2829): framedProperties(color=>TFFrameColor, backgroundcolor,
+      // margin=>'0pt', rule=>'2pt') → padding:0.0pt;border-width:2.0pt.
+      Ok(framed_properties(FramedOptions {
+        color: Some(lookup_color_hex("TFFrameColor")),
+        backgroundcolor: Some(current_background_hex()),
+        margin: Some("0pt".to_string()),
+        rule: Some("2pt".to_string()),
+        ..FramedOptions::default()
+      }))
     }
   );
   DefMacro!(
