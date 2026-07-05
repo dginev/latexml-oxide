@@ -624,21 +624,28 @@ July-5 blocker; needs a dedicated session.
 
 ### July-5 arXiv run — prep checklist (drafted 2026-07-02, user-approved sequence)
 
+**Status 2026-07-05:** items 1, 3, 5 ✅ DONE — ar5iv-css **v0.9.0** released (on
+jsDelivr); PR #273 merged → tag **`0.7.2`** "First public use of latexml-oxide in
+ar5iv 2606" published (6 assets); `cortex_worker` rebuilt from tagged `main` +
+fleet restarted. **Only 3b (ar5iv-editor redeploy) remains** of the cross-repo
+required set; items 6–8 are the run itself (item 2 cortex/ar5iv CSS re-vendor:
+confirm).
+
 Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
 
-1. **ar5iv-css `glowup`**: merge the `glowup` branch (currently checked out at
-   `~/git/ar5iv-css`, HEAD `3542c57` "ship committed lightningcss min bundles +
-   automate the release") and **release a new ar5iv-css version**.
+1. **ar5iv-css `glowup`** — ✅ DONE 2026-07-05 (**v0.9.0** released, on jsDelivr):
+   merged the `glowup` branch and **released a new ar5iv-css version**.
 2. **Propagate ar5iv-css** to **ar5iv** (`~/git/ar5iv`) and **cortex**
    (`~/git/cortex`) — bump/vendor the released CSS in both (user, 2026-07-04:
    both should track the latest ar5iv-css whenever a release is available;
    cortex currently serves the glowup RC from `public/css/` — after the
    release, refresh those files from the released build, or point the
    preview template back at the released CDN tag).
-3. **PR `ar5iv-2606-prep` → `main`** (user: later today, 2026-07-02) — parity
-   fixes, perf audit + pin! sweep, fatal-mining fixes, docs consolidation.
-   Then **tag + release latexml-oxide** and point **cortex** at the release
-   (rebuild `cortex_worker` from the tagged main, restart the fleet).
+3. **PR `ar5iv-2606-prep` → `main`** — ✅ DONE 2026-07-05: merged as **#273**
+   (`8d9189f7e4`, squash) — parity fixes, perf audit + pin! sweep, fatal-mining
+   fixes, docs consolidation. **Tagged + released** as `0.7.2` (`bdda7d4a33`),
+   and **cortex** now runs a `cortex_worker` rebuilt from the tagged `main`
+   (fleet restarted).
 3b. **ar5iv-editor redeploy** (user, 2026-07-04): once latexml-oxide is
    tagged/released and cortex uses it, rebuild ar5iv-editor against the
    latest latexml-oxide AND the latest released ar5iv-css, then redeploy.
@@ -661,14 +668,17 @@ Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
    change ships in the July-5 binary from this item.
 5. **After the current full-arXiv run finishes (~2026-07-04)**: rebuild
    `target/maxperf-cortex/cortex_worker` from merged `main` (fleet binary was
-   deliberately NOT swapped mid-run).
+   deliberately NOT swapped mid-run). — ✅ DONE (folded into item 3's fleet
+   rebuild from tagged `main`).
 6. **Smoke canvas** on the new binary (a few hundred mixed papers via
    `tools/benchmark_canvas.sh`; verify fatal classes vs the known list, spot
    HTML with the new CSS).
 7. **Corpus/service setup** for the July-5 (2606) run; verify the harness
    watchdog + memory-governor settings match `CORTEX_WORKER_HARNESS.md`.
 8. Post-run: idle standing-corpus perf re-baseline (PERFORMANCE.md audit-log
-   follow-up), then **tag 0.7.0** from post-run `main` (decided 2026-07-02).
+   follow-up) — still OPEN — then ~~tag 0.7.0~~ **✅ tagged `0.7.2`** 2026-07-05
+   (the release was cut now for the ar5iv 2606 first-public-use run rather than
+   post-run; `0.7.0` rolled forward into `0.7.2`).
 
 ### Large arXiv corpus troubleshooting (2026-06-30, user-requested) — IN PROGRESS
 **User directive 2026-06-30:** after the 2605 (10k/sandbox) troubleshooting, also troubleshoot
@@ -784,12 +794,14 @@ for `XMTok` in any inline element's model, so a speculative change risks an
 unfaithful divergence. Repro + full notes:
 `docs/reproducers/glossaryref_math_xmtok.tex`.
 
-### 2. 0.7.0 release — release-prep LANDED; tag AFTER the July-5 run (user, 2026-07-02)
+### 2. Release — ✅ `0.7.2` RELEASED 2026-07-05 (superseded the planned `0.7.0`)
 Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/README
-done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
-`dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
-**Timing decided:** tag from post-run `main`, folding the fatal-mining + perf
-fixes and the July-5 run's validation into the release.
+done. **Shipped:** tag **`0.7.2`** on `main` (`bdda7d4a33`, "First public use of
+latexml-oxide in ar5iv 2606") → `release.yml` ran the TL-window `dumps` + macOS
+arm64 leg + publish (each first-exercised on that tag); **6 assets live** —
+Linux + macOS-arm64 tarballs and the `.deb`, each with a `.sha256`. The planned
+`0.7.0` was rolled forward into `0.7.2` to fold the July-1–5 parity/perf/stability
+fixes.
 
 ### 3. Speed: residual XSLT cost on large math books — ✅ FIXED 2026-06-29 (3rd O(n²) found)
 After the seclev (`1172569034`) and head-keywords (`da74f6ecfe`) O(n²) XSLT fixes, the
