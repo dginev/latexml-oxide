@@ -18,6 +18,42 @@
 - `cargo test --tests`: **1527 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
   session" entries below).
 
+### Landed this session (2026-07-05, on `ar5iv-2606-prep`) — faithful width-based figure-panel arrangement (2605.00347)
+
+Same witness (2605.00347), Appendix F "maria" subfigure grids. User report:
+Rust broke the subfigures 1-per-row where ar5iv shows 4-per-row in 2 rows.
+Rewrote the simplified Rust-only `arrange_panels` into a faithful port of Perl
+`arrange_panels_and_breaks` (`latex_constructs.pool.ltxml` L3229-3349) —
+computing per-row breaks from actual panel box WIDTHS. A first-principles review
+vs the Perl source surfaced three corrections (commit `8482891f55`):
+* **floatwidth source.** `after_float` was missing Perl L3389's
+  `$whatsit->setProperty(floatwidth => LookupRegister('\hsize'))`; arrange then
+  fell back to the ambient `\hsize` at construction time (wrong for figure*,
+  nested subfigures). Now captured on the whatsit and read back via
+  `float_width_of` from the box the afterClose hook receives (Perl L3231).
+* **standalone trailer break** (Perl L3334-3342) ported — a standalone panel as
+  sole row content forces a break before the next sibling.
+* `@all_contents` is **dead in Perl** (BuildPanelsAndID never uses the return) —
+  correctly omitted.
+Plus: `subcaption_width_props` records the `{Dimension}` arg as a `width`
+property on ALL sub-float envs (Perl subcaption.sty L66/76/86/96; Rust-only
+`subcaptionblock` aliases inherit it); `panel_width` falls back to the emitted
+`width` attribute when a node has no tracked box width (minipage/parbox).
+**Validated: output now matches the live Perl ar5iv EXACTLY** — 41
+`ltx_figure_panel` / 41 `ltx_flex_cell` / 7 `ltx_flex_figure`, flex-size
+12 break / 5 size_1 / 20 size_2 / 16 size_4 (pre-fix binary was 35/33). Goldens
+re-blessed to Perl-matching output (figures/figure_mixed_content/tikz_figure).
+Suite 1527/0.
+
+**Latent divergence noted (NOT fixed — no current incorrectness):** `\framebox`,
+`\parbox`, `\rule` store their `width` PROPERTY as a `Stored::String`
+(`.to_attribute()`) rather than a `Stored::Dimension` as Perl does, so
+`getNodeBox->getWidth` reads `None` for them; `panel_width`'s `width`-attribute
+fallback covers the panel-arrangement path. `minipage`/`makebox` are faithful
+(Dimension); `includegraphics` is parity (no width property, size via the
+`image_graphicx_sizer` `cached_width`). Fix if a future path reads box width
+without the attribute fallback.
+
 ### Landed this session (2026-07-05, on `ar5iv-2606-prep`) — author/affiliation frontmatter split (beyond-Perl)
 
 Witness arXiv 2605.00347 (colm2026 class, 13 authors on three `\textbf{…}`
