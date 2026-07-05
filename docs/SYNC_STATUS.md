@@ -492,15 +492,23 @@ family vocabulary #45, and the glowup verbatim contract — are landed):
    REAL spaces (copy-paste-safe). Perl parity note: same-host Perl
    cannot convert these files at all (raw fvextra+breaklines exceeded
    7 min on a 6-line repro) — surpass-Perl scope.
-4. **`\small`-in-foreignObject size attribution** (the remaining 2
-   spills on 2605.00468, 15/33px on 2/24 boxes): the engine MEASURES
-   `fontsize=\small` verbatim at 9pt metrics but emits no `fontsize`
-   delta on the content spans (the declared-font chain already carries
-   \small, while the CSS anchor resets fo content to the 10pt anchor
-   size), so the browser renders ~11% wide and borderline lines wrap
-   once more than the budget. Class-level fix: fo content must re-derive
-   font deltas against the ANCHOR font, not ambient declared state
-   (font-context boundary at svg:foreignObject).
+4. **Prompt 1/6 budget undercounts wraps — paper-preamble-specific**
+   (the remaining 2 spills on 2605.00468, 15/33px on 2/24 boxes,
+   user-flagged 2026-07-05). CORRECTED diagnosis after bisection: NOT a
+   `\small` attribution gap — in the paper the declared font at the fo
+   AND its content block is serif-10 (traced), no size deltas exist to
+   lose, and the budget counts NO wrapped lines for these boxes
+   (~15 blocks × 12pt) while the browser wraps 6 borderline lines
+   (383pt natural vs 345pt parbox width) → 19 rendered lines. The
+   isolated repro chain does NOT reproduce (plain / breakable /
+   breakable+title+colors all budget wraps correctly and emit `\small`
+   deltas) — the trigger needs the paper's fuller preamble, prime
+   suspect the colm class's inconsolata (`\ttdefault`=zi4) metrics vs
+   cmtt in the line-width estimate (zi4 advance ≠ 0.525em → sub-list
+   width/measure disagreement). Needs a preamble-bisection session with
+   `LXML_SIZE_TRACE`; the speculative "anchor = declared fo font"
+   change was built, traced, and REVERTED (no measurable effect — fo
+   declared font equals the whatsit font in every observed case).
 5. **Space-only verbatim lines still prune to empty** (blank-gap
    fidelity vs the PDF; render 0px + budget 0 = consistent, no
    overflow). Their spaces don't reach absorb (unlike line-leading
