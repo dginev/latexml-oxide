@@ -1,6 +1,39 @@
 # Change Log
 
-## [0.7.2] (libxml 0.3.14: eliminate spurious "shared Node" conversion errors)
+## [0.7.2] (first public ar5iv 2606 run: upstream sync, MathML-post audit, live-run parity + stability)
+
+  The release used for the first public latexml-oxide conversion of an arXiv
+  monthly (ar5iv 2606). Highlights across the cycle (see the git log and
+  GitHub's auto-generated per-PR notes for the full detail):
+
+  - **Upstream LaTeXML sync** (PRs #2767 → #2837): amsmath `multline` centering
+    + `\shoveleft`/`\shoveright` + `\if@fleqn` (#2835), the "Framing" package
+    set (#2829), `\lxDeclare` `replace=` and wildcard declarations, paralist,
+    and more.
+  - **MathML post-processing faithfulness audit** (`docs/MATHML_POST_LINE_AUDIT.md`):
+    operator-dictionary + atom-pair spacing tables regenerated from the Perl
+    source, faithful spacewalk / `\cfrac` / n-th-root argument order, and
+    inherited color/style context threading.
+  - **Live-run parity, mined from full-arXiv conversions**: natbib autoload
+    loop, fvextra `breaklines`, tabularray colspec, runaway-guard tuning, and
+    graceful degradation of former panics (graphics worker thread, XML-node
+    allocation) into reported errors rather than crashes.
+  - **Frontmatter & figure fidelity**: font-wrapped author/affiliation
+    splitting, and a width-based figure-panel arrangement so subfigure grids
+    follow the PDF/Perl row layout.
+  - **Bibliography**: `.bib` field values interpreted through the real TeX
+    engine; absolute DOI/URL links. (Field-interpretation coverage is a first
+    stage toward Perl's full set — see `docs/SYNC_STATUS.md`.)
+  - **Box-sizing & verbatim** (tcolorbox arc, OXIDIZED_DESIGN #42–#47): TeX
+    vpack `\prevdepth` discipline, NFSS family codes, foreignObject em basis,
+    fvextra line-breaking.
+  - **Performance**: eliminated several O(n²) XSLT hotspots (sectioning,
+    head-keywords, maketitle), memoized `kpsewhich` lookups, arena `pin!` sweep.
+  - **Distribution hardening**: guarded NULL-over-FFI SIGSEGV classes in the
+    rust-libxml fork; the `cortex_worker --harness` fleet (one-conversion-per-
+    process with layered memory guards).
+
+  Reliability & distribution:
 
   - **Upgraded to `libxml` 0.3.14.** Its `Node::node_ptr_mut` now guards mutable
     access with `RefCell::try_borrow_mut` instead of an `Rc::strong_count`
