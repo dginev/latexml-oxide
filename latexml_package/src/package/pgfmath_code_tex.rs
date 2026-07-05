@@ -760,10 +760,15 @@ mod pgfmath_grammar {
         Some(b'+') => {
           bump(i, 1);
           result += term(i)?;
+          // Arithmetic yields a real: `2+(1<2)` → "3.0", NOT the integer a bare
+          // comparison produces (pgfmath ground truth). A comparison anywhere in
+          // an operand set int_result; combining it arithmetically clears that.
+          i.state.int_result = false;
         },
         Some(b'-') => {
           bump(i, 1);
           result -= term(i)?;
+          i.state.int_result = false;
         },
         _ => break,
       }
@@ -780,10 +785,14 @@ mod pgfmath_grammar {
         Some(b'*') => {
           bump(i, 1);
           result *= factor(i)?;
+          // See expr(): arithmetic demotes a comparison's integer to a real
+          // (`2*(1<2)` → "2.0", not "2").
+          i.state.int_result = false;
         },
         Some(b'/') => {
           bump(i, 1);
           result /= pgfmath_divisor(factor(i)?);
+          i.state.int_result = false;
         },
         _ => break,
       }
@@ -797,6 +806,7 @@ mod pgfmath_grammar {
     sb(i);
     if eat(i, b'^') {
       let exp = simplefactor(i)?;
+      i.state.int_result = false; // exponentiation yields a real
       return Ok(base.powf(exp));
     }
     let mut result = base;
@@ -1794,5 +1804,30 @@ mod pgfmath_golden_tests {
         "non-finite {expr} must format as 0.0, not the literal NaN/inf"
       );
     }
+  }
+
+  /// A comparison yields an INTEGER string, but arithmetic that consumes a
+  /// comparison yields a REAL — `int_result` must be scoped to the actual
+  /// result, not left globally set by a nested comparison. Ground truth from
+  /// real pgfmath (`\pgfmathparse` + `\pgfmathresult`, TeX Live): `2==2`→1,
+  /// `(1<2)`→1 (parens preserve), but `2*(1<2)`→2.0 and `2+(1<2)`→3.0.
+  /// Regression guard for the arXiv-fork c52d3cf6 comparison port, which set a
+  /// stream-global flag so `2*(1<2)` wrongly truncated to "2".
+  #[test]
+  fn comparison_int_result_is_scoped_not_global() {
+    latexml_core::state::set_state(latexml_core::state::State::new(
+      latexml_core::state::StateOptions::default(),
+    ));
+    // Bare / parenthesised comparison → integer.
+    assert_eq!(super::pgfmathparse_eval("2==2"), "1");
+    assert_eq!(super::pgfmathparse_eval("1<2"), "1");
+    assert_eq!(super::pgfmathparse_eval("(1<2)"), "1");
+    // Arithmetic over a comparison → real (the leak this guards against).
+    assert_eq!(super::pgfmathparse_eval("2*(1<2)"), "2.0");
+    assert_eq!(super::pgfmathparse_eval("2+(1<2)"), "3.0");
+    // A comparison that evaluates false, then multiplied, is still a real.
+    assert_eq!(super::pgfmathparse_eval("5*(3<2)"), "0.0");
+    // Plain arithmetic is unaffected (no comparison anywhere).
+    assert_eq!(super::pgfmathparse_eval("1+1"), "2.0");
   }
 }
