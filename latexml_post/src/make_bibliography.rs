@@ -3224,14 +3224,18 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
 
     // Process fields into ltx:bib-* elements
     for (field, value) in &entry.fields {
-      // Only fields we RENDER reach the TeX interpreter (mirrors Perl,
-      // where only BibTeX.pool's known field constructors digest values).
-      // ADS/Zotero exports carry huge junk-laden fields we never emit —
-      // abstract, annote, keywords, file, mendeley-groups... — and
-      // interpreting those flooded documents with bogus errors
-      // (2605.02213: a .bib with 291 abstract fields -> 500+ errors on an
-      // otherwise-clean paper). url/doi/eprint render but are verbatim
-      // identifiers; isbn/issn are plain digits.
+      // FIRST STAGE toward Perl parity — NOT yet a faithful match. Perl's
+      // BibTeX.pool.ltxml has ~28 `\bib@field@default@*` constructors that
+      // digest their values with live catcodes, INCLUDING abstract (L708),
+      // keywords (L732), annote (L680), series, institution, ... So Perl DOES
+      // raise the undefined-macro errors these fields carry and MergeStatus'es
+      // them into the document; this 13-field whitelist deliberately under-
+      // reports vs Perl for now, to avoid the junk-field error floods of
+      // ADS/Zotero exports (2605.02213: a .bib with 291 abstract fields ->
+      // 500+ errors on an otherwise-clean paper). Widening this set to Perl's
+      // full rendering-field coverage is an open parity task (SYNC_STATUS,
+      // "bibliography field-interpretation parity"). url/doi/eprint render but
+      // are verbatim identifiers; isbn/issn are plain digits.
       let interpreted;
       let value = match field.as_str() {
         "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"

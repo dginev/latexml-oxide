@@ -2183,6 +2183,18 @@ frame/content mismatch. Three traps, all in the sizing pipeline:
    the border). The size must come from the whatsit's live font — the same
    source as the em divisor — so `\small` contexts emit 8pt etc.
 
+   **UPDATE (2026-07-05 commit review of #46 `2b1ebe2492`).** The anchor was
+   later moved from `getSize` to the font's TFM *quad* (em value), so the
+   `em × --ltx-fo-*` box geometry is exact for every font. CAVEAT surfaced by
+   the review and NOT yet resolved: that same `font-size` is *inherited by the
+   foreignObject's visible content* (`.ltx_foreignobject_content` sets no
+   own font-size), so text now renders at the quad, not the design size —
+   cmtt10 emits 10.5pt vs 10pt design (~+5%), cmr7 ~+14%. The geometry win and
+   the text-size drift are coupled through one attribute; splitting them
+   (geometry off the quad, text off the design size) is the open follow-up.
+   The "so `\small` contexts emit 8pt" line above describes the *intent* for
+   text size; #46 optimized for geometry, so the two are momentarily at odds.
+
 Debugging recipe: bisect with `\setbox0=\vbox` probes against reference Perl
 (`perl -I LaTeXML/lib LaTeXML/bin/latexml`, `--debug=size-detailed`) AND
 pdflatex ground truth; both engines deliberately over-estimate, so chase

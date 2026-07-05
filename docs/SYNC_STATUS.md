@@ -515,6 +515,24 @@ FULL RE-PORT remaining (post-release):
    abbreviated `[AA+yy]` label, not full author-year); `Formatter::Year`
    drops the disambiguation `@SUFFIX`; document-global NUMBER across split
    documents.
+3. **Field-interpretation whitelist (first stage, not yet Perl-faithful)** —
+   flagged by the 2026-07-05 commit review of `ede2bdcc2c`. The `.bib`→XML
+   path (`make_bibliography.rs`) only digests 13 fields
+   (author/editor/title/year/journal/journaltitle/booktitle/volume/number/
+   issue/pages/publisher/note). Perl's `BibTeX.pool.ltxml` has ~28
+   `\bib@field@default@*` constructors that DO digest — incl. `abstract`
+   (L708), `keywords` (L732), `annote` (L680), `series`, `institution`,
+   `organization`, `school`, `edition`, `chapter`, `howpublished`,
+   `translator`, `subtitle`, `type` — so Perl raises (and MergeStatus'es) the
+   undefined-macro errors those fields carry, while Rust currently does NOT.
+   The commit's original "mirrors Perl" comment was factually inverted
+   (corrected in-code 2026-07-05). Decision (user, 2026-07-05): keep the
+   narrow set FOR NOW as a first stage — it suppresses the junk-field error
+   floods of ADS/Zotero exports — but the eventual target is Perl's full
+   rendering-field set. Bounded blast radius: this path only fires for raw
+   `.bib` inputs WITHOUT a `.bbl`. Widen when the full re-port (item 1) lands
+   the recursive core session, which digests fields the Perl way by
+   construction.
 
 Witness: 2605.00223 (ADS .bib: `{\'\i}`, `~` ties, `\aap`, bare DOIs).
 

@@ -142,8 +142,16 @@ Verified-and-landed items move to the ✅ list at the bottom.
   ancestor chain (Perl pmml_top L278-285), rebound per node down the
   recursion (pmml L332-335), consumed in the token path (color→mathcolor,
   context-only mathbackground mirroring Perl's L683 `&&` quirk,
-  opacity→style, font fallback) and the ENCLOSE/FRACOP/sqrt/mroot color
-  fallbacks; Perl's Format-char styling suppression (L747-748) added so
+  opacity→style, font fallback) and the sqrt/mroot color fallbacks.
+  **CORRECTION (2026-07-05 commit review):** the original commit `ff87a841e5`
+  message claimed the ENCLOSE/FRACOP color fallbacks too, but its diff only
+  touched sqrt/mroot + the token path — the FRACOP/ENCLOSE hunks were lost
+  when the edit script aborted mid-run and the stale comments masked the gap
+  (the lone witness has no fraction/enclose, so it couldn't expose it). Those
+  two arms actually landed later in `cb1ad27a61` (PR_READINESS must-fix 2),
+  caught by the branch's live A/B. Net state is correct; the claim was ahead
+  of the code by one commit. Perl's Format-char styling suppression (L747-748)
+  added so
   invisible operators stay unstyled. Witness `{\color{red}$a+b$}`: every
   token now `mathcolor="#FF0000"` byte-identical (was: colored math rendered
   black — a visible arXiv bug class). Bonus: fixed a latent FFI crash in
