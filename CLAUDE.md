@@ -124,7 +124,6 @@ mission targets (docs serving both come first):
 **Worklists & contracts (start here when resuming work):**
 - **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — The BRIEF ACTIONABLE worklist for both targets: current status, the in-flight session entry, open tasks, deferred families, stable reference. Completed session logs are lifted to `docs/archive/SYNC_SESSIONS_*.md`. **Start here.**
 - **[`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy.
-- **[`docs/PR_READINESS.md`](docs/PR_READINESS.md)** — Critical review of the `ar5iv-2606-prep` branch before the PR to main / July-5 rebuild (2026-07-02): 105-commit risk filter + 3-agent cluster findings + ranked fix list. Snapshot — date+archive when the branch merges.
 - **[`docs/ISSUE_AUDIT.md`](docs/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation (refreshed 2026-07-02; 8 open). **Refresh before milestone planning.** (Issue numbers are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
 
 **Target 1 — faithful Perl translation (parity):**
@@ -154,7 +153,6 @@ mission targets (docs serving both come first):
 - **[`docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)** — Measured and-node counts per ambiguity pattern; ranked open levers (`f(x)` apply-vs-multiply, bare-`|x|` pre-lexer, integral Step 2). The top `math_parse` lever for the arXiv runs; supersedes the archived 2026-05-21 ambiguity audit.
 
 **Open dated diagnostics** (point-in-time studies with pending halves — see naming rule):
-- **[`docs/COMMIT_REVIEW_2026-07-05.md`](docs/COMMIT_REVIEW_2026-07-05.md)** — adversarial overconfidence audit of the 79 code commits from July 1–5 (6 parallel passes): disposition table (pgfmath int-leak FIXED, bibliography whitelist re-documented as first-stage-toward-Perl, F8b/#46 doc corrections) + open follow-ups (lxDeclare font fidelity, gullet locking test, fo geometry-vs-text anchor). Snapshot — archive at branch merge.
 - **[`docs/ARXIV_FORK_AUDIT_2026-07-03.md`](docs/ARXIV_FORK_AUDIT_2026-07-03.md)** — due-diligence survey of the arXiv/LaTeXML "velocity fork" (57 commits): what's already translated (pgfmath core, usebbl, calc params, hyperxmp, acmart ARIA) vs the ranked residual candidates (abstract-in-TOC inlist, pgfmath string results, graphicx actualtext).
 - **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: container-id half landed; content-branch/MathFork reconciliation still pending.
 - **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted.

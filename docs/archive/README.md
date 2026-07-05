@@ -4,6 +4,23 @@ Snapshot audits and one-shot worksheets preserved for forensic context.
 Do not drive current planning from these files without revalidating on
 current `HEAD` — class/file layout, definitions, and counts have shifted.
 
+## 2026-07-05 `ar5iv-2606-prep` branch merge (PR #273, tag 0.7.2)
+
+The branch merged to `main` and shipped as release 0.7.2 ("First public use
+of latexml-oxide in ar5iv 2606"). Its two pre-merge review snapshots are
+frozen here; live residuals were lifted into `../SYNC_STATUS.md`.
+
+- `PR_READINESS_2026-07-05.md` — critical pre-PR review of the branch
+  (105-commit risk filter + 3-agent cluster findings + ranked fix list).
+- `COMMIT_REVIEW_2026-07-05.md` — adversarial overconfidence audit of the 79
+  code commits from July 1–5 (6 parallel passes; disposition table). Its
+  open follow-ups (lxDeclare font fidelity, gullet `read_balanced` locking
+  test, foreignObject geometry-vs-text anchor split, bibliography
+  field-interpretation parity) are tracked in `../SYNC_STATUS.md`. NOTE: it
+  cites pre-squash commit SHAs — those resolve while the `ar5iv-2606-prep`
+  branch ref survives; after the squash merge they are not on `main`'s
+  first-parent history.
+
 ## 2026-07-02 docs consolidation
 
 - `SYNC_SESSIONS_2026-06.md` — completed "Landed this session" logs
