@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/util.rs`."><title>util.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/</div>util.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{borrow::Cow, error::Error};
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/util.rs`."><title>util.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (c397dae80 2026-07-02)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/</div>util.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{borrow::Cow, error::Error};
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>latexml_core::binding::def::dialect::get_xmarg_id;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>libxml::tree::{Node, NodeType};
@@ -25,614 +25,657 @@
 <a href=#25 id=25 data-nosnippet>25</a>  child_nodes: Vec&lt;Node&gt;,
 <a href=#26 id=26 data-nosnippet>26</a>  idx: <span class="kw-2">&amp;mut </span>usize,
 <a href=#27 id=27 data-nosnippet>27</a>) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;) {
-<a href=#28 id=28 data-nosnippet>28</a>  node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, <span class="bool-val">false</span>)
-<a href=#29 id=29 data-nosnippet>29</a>}
-<a href=#30 id=30 data-nosnippet>30</a>
-<a href=#31 id=31 data-nosnippet>31</a><span class="kw">fn </span>node_to_grammar_lexemes_ctx(
-<a href=#32 id=32 data-nosnippet>32</a>  mathnode: <span class="kw-2">&amp;</span>Node,
-<a href=#33 id=33 data-nosnippet>33</a>  child_nodes: Vec&lt;Node&gt;,
-<a href=#34 id=34 data-nosnippet>34</a>  idx: <span class="kw-2">&amp;mut </span>usize,
-<a href=#35 id=35 data-nosnippet>35</a>  bigop_context: bool,
-<a href=#36 id=36 data-nosnippet>36</a>) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;) {
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="kw">let </span><span class="kw-2">mut </span>lexemes = Vec::new();
-<a href=#38 id=38 data-nosnippet>38</a>  <span class="kw">let </span><span class="kw-2">mut </span>nodes = Vec::new();
-<a href=#39 id=39 data-nosnippet>39</a>  <span class="kw">let </span>top_role_opt = mathnode.get_attribute(<span class="string">"role"</span>);
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>top_role) = top_role_opt {
-<a href=#41 id=41 data-nosnippet>41</a>    <span class="kw-2">*</span>idx += <span class="number">1</span>;
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="comment">// When in bigop context, emit BIGOPSUB/BIGOPSUP instead of POSTSUBSCRIPT/POSTSUPERSCRIPT
-<a href=#43 id=43 data-nosnippet>43</a>    </span><span class="kw">let </span>mapped_role = <span class="kw">if </span>bigop_context {
-<a href=#44 id=44 data-nosnippet>44</a>      <span class="kw">match </span>top_role.as_str() {
-<a href=#45 id=45 data-nosnippet>45</a>        <span class="string">"POSTSUBSCRIPT" </span>=&gt; <span class="string">"BIGOPSUB"</span>.to_string(),
-<a href=#46 id=46 data-nosnippet>46</a>        <span class="string">"POSTSUPERSCRIPT" </span>=&gt; <span class="string">"BIGOPSUP"</span>.to_string(),
-<a href=#47 id=47 data-nosnippet>47</a>        <span class="kw">_ </span>=&gt; top_role.clone(),
-<a href=#48 id=48 data-nosnippet>48</a>      }
-<a href=#49 id=49 data-nosnippet>49</a>    } <span class="kw">else </span>{
-<a href=#50 id=50 data-nosnippet>50</a>      top_role.clone()
-<a href=#51 id=51 data-nosnippet>51</a>    };
-<a href=#52 id=52 data-nosnippet>52</a>    lexemes.push(<span class="macro">format!</span>(<span class="string">"start_{mapped_role}:start:{idx}"</span>));
-<a href=#53 id=53 data-nosnippet>53</a>    nodes.push(mathnode.clone());
-<a href=#54 id=54 data-nosnippet>54</a>  }
-<a href=#55 id=55 data-nosnippet>55</a>  <span class="comment">// Track whether the last emitted token was a bigop (SUMOP/INTOP/etc.)
-<a href=#56 id=56 data-nosnippet>56</a>  // so we can emit bigop-specific script tokens to reduce earley chart ambiguity.
-<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>last_was_bigop = <span class="bool-val">false</span>;
-<a href=#58 id=58 data-nosnippet>58</a>  <span class="kw">for </span>node <span class="kw">in </span>child_nodes.into_iter() {
-<a href=#59 id=59 data-nosnippet>59</a>    <span class="comment">// For XMRef nodes: resolve to get the target's role/meaning for lexing,
-<a href=#60 id=60 data-nosnippet>60</a>    // but keep the ORIGINAL XMRef node in the output so the parse tree
-<a href=#61 id=61 data-nosnippet>61</a>    // preserves XMRef indirection (matching Perl behavior).
-<a href=#62 id=62 data-nosnippet>62</a>    // The get_grammatical_role/get_token_meaning functions already resolve XMRef
-<a href=#63 id=63 data-nosnippet>63</a>    // internally, so we just need to handle the case where the target is a
-<a href=#64 id=64 data-nosnippet>64</a>    // compound node (XMApp without role) — these need flattening.
-<a href=#65 id=65 data-nosnippet>65</a>    // Note: we do NOT replace the node variable — we keep the XMRef.
-<a href=#66 id=66 data-nosnippet>66</a>
-<a href=#67 id=67 data-nosnippet>67</a>    </span><span class="kw">if </span>node.get_name() == <span class="string">"XMApp" </span>&amp;&amp; node.get_attribute(<span class="string">"role"</span>).is_some() {
-<a href=#68 id=68 data-nosnippet>68</a>      <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap();
-<a href=#69 id=69 data-nosnippet>69</a>      <span class="comment">// A complete operator that has been decorated or scripted is still a
-<a href=#70 id=70 data-nosnippet>70</a>      // single grammatical operator and must lex as ONE atomic terminal:
-<a href=#71 id=71 data-nosnippet>71</a>      //   - ARROW/METARELOP: decorated arrows (\xrightarrow{over},
-<a href=#72 id=72 data-nosnippet>72</a>      //     \xleftrightarrow[under]{over}).
-<a href=#73 id=73 data-nosnippet>73</a>      //   - RELOP: a scripted relation (\stackrel{?}{=}, \overset/\underset over
-<a href=#74 id=74 data-nosnippet>74</a>      //     a relation) — `=^?` is an `&lt;XMApp role=RELOP&gt;` whose recursion would
-<a href=#75 id=75 data-nosnippet>75</a>      //     emit `start_RELOP SUPERSCRIPTOP RELOP:= UNKNOWN:? end_RELOP`, a
-<a href=#76 id=76 data-nosnippet>76</a>      //     sequence no grammar rule consumes, so the relation failed to parse as
-<a href=#77 id=77 data-nosnippet>77</a>      //     a standalone item (e.g. `a \quad \stackrel{?}{=} \quad b` →
-<a href=#78 id=78 data-nosnippet>78</a>      //     ltx_math_unparsed). Perl recurses with start_/end_ markers its Marpa
-<a href=#79 id=79 data-nosnippet>79</a>      //     grammar handles; the Rust grammar treats decorated operators as
-<a href=#80 id=80 data-nosnippet>80</a>      //     atomic terminals instead (the whole node is preserved as the
-<a href=#81 id=81 data-nosnippet>81</a>      //     terminal's value, so rendering still shows the script). The lexeme
-<a href=#82 id=82 data-nosnippet>82</a>      //     keys on the inner base operator's meaning, so `=^?` lexes like `=`.
-<a href=#83 id=83 data-nosnippet>83</a>      </span><span class="kw">if </span>role == <span class="string">"ARROW" </span>|| role == <span class="string">"METARELOP" </span>|| role == <span class="string">"RELOP" </span>{
-<a href=#84 id=84 data-nosnippet>84</a>        <span class="kw">let </span>op_meaning = node
-<a href=#85 id=85 data-nosnippet>85</a>          .get_child_elements()
-<a href=#86 id=86 data-nosnippet>86</a>          .into_iter()
-<a href=#87 id=87 data-nosnippet>87</a>          .find(|ch| {
-<a href=#88 id=88 data-nosnippet>88</a>            <span class="kw">let </span>cr = ch.get_attribute(<span class="string">"role"</span>);
-<a href=#89 id=89 data-nosnippet>89</a>            <span class="kw">match </span>role.as_str() {
-<a href=#90 id=90 data-nosnippet>90</a>              <span class="comment">// A scripted relation's base is a RELOP leaf.
-<a href=#91 id=91 data-nosnippet>91</a>              </span><span class="string">"RELOP" </span>=&gt; cr.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"RELOP"</span>),
-<a href=#92 id=92 data-nosnippet>92</a>              <span class="comment">// Decorated arrows may carry either an ARROW or METARELOP base.
-<a href=#93 id=93 data-nosnippet>93</a>              </span><span class="kw">_ </span>=&gt; cr.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"ARROW"</span>) || cr.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"METARELOP"</span>),
-<a href=#94 id=94 data-nosnippet>94</a>            }
-<a href=#95 id=95 data-nosnippet>95</a>          })
-<a href=#96 id=96 data-nosnippet>96</a>          .and_then(|ch| {
-<a href=#97 id=97 data-nosnippet>97</a>            ch.get_attribute(<span class="string">"meaning"</span>)
-<a href=#98 id=98 data-nosnippet>98</a>              .or_else(|| ch.get_attribute(<span class="string">"name"</span>))
-<a href=#99 id=99 data-nosnippet>99</a>              .or_else(|| <span class="prelude-val">Some</span>(ch.get_content()))
-<a href=#100 id=100 data-nosnippet>100</a>          })
-<a href=#101 id=101 data-nosnippet>101</a>          .unwrap_or_else(|| role.to_string());
-<a href=#102 id=102 data-nosnippet>102</a>        <span class="kw-2">*</span>idx += <span class="number">1</span>;
-<a href=#103 id=103 data-nosnippet>103</a>        <span class="kw">let </span>lexeme = <span class="macro">format!</span>(<span class="string">"{role}:{op_meaning}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>);
-<a href=#104 id=104 data-nosnippet>104</a>        lexemes.push(lexeme);
-<a href=#105 id=105 data-nosnippet>105</a>        nodes.push(node);
-<a href=#106 id=106 data-nosnippet>106</a>      } <span class="kw">else if </span>node.has_attribute(<span class="string">"_rewrite"</span>) {
-<a href=#107 id=107 data-nosnippet>107</a>        <span class="comment">// Rewrite-created: treat as atomic token with the assigned role.
-<a href=#108 id=108 data-nosnippet>108</a>        // Don't recurse — the inner structure was pre-parsed, and the role
-<a href=#109 id=109 data-nosnippet>109</a>        // on this node overrides whatever the children contain.
-<a href=#110 id=110 data-nosnippet>110</a>        </span><span class="kw">let </span>gram_role = get_grammatical_role(<span class="kw-2">&amp;</span>node);
-<a href=#111 id=111 data-nosnippet>111</a>        <span class="kw">let </span><span class="kw-2">mut </span>text = get_token_meaning(<span class="kw-2">&amp;</span>node);
-<a href=#112 id=112 data-nosnippet>112</a>        <span class="kw">if </span>text.is_empty() {
-<a href=#113 id=113 data-nosnippet>113</a>          text = <span class="string">"UNKNOWN"</span>.to_string();
-<a href=#114 id=114 data-nosnippet>114</a>        }
-<a href=#115 id=115 data-nosnippet>115</a>        <span class="kw-2">*</span>idx += <span class="number">1</span>;
-<a href=#116 id=116 data-nosnippet>116</a>        lexemes.push(<span class="macro">format!</span>(<span class="string">"{gram_role}:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>));
-<a href=#117 id=117 data-nosnippet>117</a>        nodes.push(node);
-<a href=#118 id=118 data-nosnippet>118</a>      } <span class="kw">else </span>{
-<a href=#119 id=119 data-nosnippet>119</a>        <span class="comment">// Only recurse into XMApp nodes that have a role (scripts, etc.)
-<a href=#120 id=120 data-nosnippet>120</a>        // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.
-<a href=#121 id=121 data-nosnippet>121</a>        // Pass bigop_context for POSTSUBSCRIPT/POSTSUPERSCRIPT following a bigop
-<a href=#122 id=122 data-nosnippet>122</a>        </span><span class="kw">let </span>is_script = <span class="macro">matches!</span>(role.as_str(), <span class="string">"POSTSUBSCRIPT" </span>| <span class="string">"POSTSUPERSCRIPT"</span>);
-<a href=#123 id=123 data-nosnippet>123</a>        <span class="kw">let </span>ctx = last_was_bigop &amp;&amp; is_script;
-<a href=#124 id=124 data-nosnippet>124</a>        <span class="kw">let </span>children = filter_hints(node.get_child_nodes());
-<a href=#125 id=125 data-nosnippet>125</a>        <span class="kw">let </span>(<span class="kw-2">mut </span>inner_lexes, <span class="kw-2">mut </span>inner_nodes) =
-<a href=#126 id=126 data-nosnippet>126</a>          node_to_grammar_lexemes_ctx(<span class="kw-2">&amp;</span>node, children, idx, ctx);
-<a href=#127 id=127 data-nosnippet>127</a>        <span class="kw">for </span>(inner_lex, inner_node) <span class="kw">in </span>inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
-<a href=#128 id=128 data-nosnippet>128</a>          lexemes.push(inner_lex);
-<a href=#129 id=129 data-nosnippet>129</a>          nodes.push(inner_node);
-<a href=#130 id=130 data-nosnippet>130</a>        }
-<a href=#131 id=131 data-nosnippet>131</a>        <span class="comment">// Script following a bigop is still "bigop context" for the next script
-<a href=#132 id=132 data-nosnippet>132</a>        </span><span class="kw">if </span>!is_script {
-<a href=#133 id=133 data-nosnippet>133</a>          last_was_bigop = <span class="bool-val">false</span>;
-<a href=#134 id=134 data-nosnippet>134</a>        }
-<a href=#135 id=135 data-nosnippet>135</a>      }
-<a href=#136 id=136 data-nosnippet>136</a>    } <span class="kw">else if </span>node.get_name() == <span class="string">"XMArg" </span>{
-<a href=#137 id=137 data-nosnippet>137</a>      <span class="comment">// XMArg is a transparent wrapper (e.g. from \lx@post@subscript).
-<a href=#138 id=138 data-nosnippet>138</a>      // Recurse into its children so the grammar can parse them individually.
-<a href=#139 id=139 data-nosnippet>139</a>      // E.g. _{ij} should emit UNKNOWN:i + UNKNOWN:j, not ATOM:ij.
-<a href=#140 id=140 data-nosnippet>140</a>      </span><span class="kw">let </span>arg_children = filter_hints(node.get_child_nodes());
-<a href=#141 id=141 data-nosnippet>141</a>      <span class="kw">let </span>(<span class="kw-2">mut </span>inner_lexes, <span class="kw-2">mut </span>inner_nodes) =
-<a href=#142 id=142 data-nosnippet>142</a>        node_to_grammar_lexemes_ctx(<span class="kw-2">&amp;</span>node, arg_children, idx, <span class="bool-val">false</span>);
-<a href=#143 id=143 data-nosnippet>143</a>      <span class="kw">for </span>(inner_lex, inner_node) <span class="kw">in </span>inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
-<a href=#144 id=144 data-nosnippet>144</a>        lexemes.push(inner_lex);
-<a href=#145 id=145 data-nosnippet>145</a>        nodes.push(inner_node);
-<a href=#146 id=146 data-nosnippet>146</a>      }
-<a href=#147 id=147 data-nosnippet>147</a>    } <span class="kw">else </span>{
-<a href=#148 id=148 data-nosnippet>148</a>      <span class="kw">let </span>role = get_grammatical_role(<span class="kw-2">&amp;</span>node);
-<a href=#149 id=149 data-nosnippet>149</a>      <span class="kw">let </span><span class="kw-2">mut </span>text = get_token_meaning(<span class="kw-2">&amp;</span>node);
-<a href=#150 id=150 data-nosnippet>150</a>      <span class="kw">if </span>text.is_empty() {
-<a href=#151 id=151 data-nosnippet>151</a>        text = <span class="string">"UNKNOWN"</span>.to_string();
-<a href=#152 id=152 data-nosnippet>152</a>      }
-<a href=#153 id=153 data-nosnippet>153</a>      <span class="kw-2">*</span>idx += <span class="number">1</span>;
-<a href=#154 id=154 data-nosnippet>154</a>      <span class="comment">// Track bigop tokens for bigop-specific script token emission
-<a href=#155 id=155 data-nosnippet>155</a>      </span><span class="kw">let </span>is_bigop = <span class="macro">matches!</span>(
-<a href=#156 id=156 data-nosnippet>156</a>        role.as_str(),
-<a href=#157 id=157 data-nosnippet>157</a>        <span class="string">"SUMOP" </span>| <span class="string">"INTOP" </span>| <span class="string">"LIMITOP" </span>| <span class="string">"DIFFOP" </span>| <span class="string">"BIGOP"
-<a href=#158 id=158 data-nosnippet>158</a>      </span>);
-<a href=#159 id=159 data-nosnippet>159</a>      last_was_bigop = is_bigop;
-<a href=#160 id=160 data-nosnippet>160</a>      <span class="comment">// Normalize langle/rangle meaning for consistent grammar matching.
-<a href=#161 id=161 data-nosnippet>161</a>      // Do NOT remap to parentheses — langle_open/rangle_close tokens need
-<a href=#162 id=162 data-nosnippet>162</a>      // distinct identity for QM bra-ket rules vs conditional probability.
-<a href=#163 id=163 data-nosnippet>163</a>      //
-<a href=#164 id=164 data-nosnippet>164</a>      // Perf: Split generic OPEN/CLOSE into OTHER_OPEN/OTHER_CLOSE for delimiters
-<a href=#165 id=165 data-nosnippet>165</a>      // OTHER than parens/brackets/braces/langle. This prevents the grammar's
-<a href=#166 id=166 data-nosnippet>166</a>      // generic `open ~ "OPEN"` prefix match from ALSO matching the specific
-<a href=#167 id=167 data-nosnippet>167</a>      // `lparen = "OPEN:("`, etc. — which was producing 2× duplicate grammar
-<a href=#168 id=168 data-nosnippet>168</a>      // derivations for every `(x)`, `[x]`, `{x}` expression.
-<a href=#169 id=169 data-nosnippet>169</a>      </span><span class="kw">let </span>lexeme = <span class="kw">if </span>role == <span class="string">"OPEN" </span>&amp;&amp; (text == <span class="string">"⟨" </span>|| text == <span class="string">"langle"</span>) {
-<a href=#170 id=170 data-nosnippet>170</a>        <span class="macro">format!</span>(<span class="string">"OPEN:langle:{idx}"</span>)
-<a href=#171 id=171 data-nosnippet>171</a>      } <span class="kw">else if </span>role == <span class="string">"CLOSE" </span>&amp;&amp; (text == <span class="string">"⟩" </span>|| text == <span class="string">"rangle"</span>) {
-<a href=#172 id=172 data-nosnippet>172</a>        <span class="macro">format!</span>(<span class="string">"CLOSE:rangle:{idx}"</span>)
-<a href=#173 id=173 data-nosnippet>173</a>      } <span class="kw">else if </span>role == <span class="string">"OPEN" </span>&amp;&amp; !<span class="macro">matches!</span>(text.as_str(), <span class="string">"(" </span>| <span class="string">"[" </span>| <span class="string">"{"</span>) {
-<a href=#174 id=174 data-nosnippet>174</a>        <span class="macro">format!</span>(<span class="string">"OTHER_OPEN:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>)
-<a href=#175 id=175 data-nosnippet>175</a>      } <span class="kw">else if </span>role == <span class="string">"CLOSE" </span>&amp;&amp; !<span class="macro">matches!</span>(text.as_str(), <span class="string">")" </span>| <span class="string">"]" </span>| <span class="string">"}"</span>) {
-<a href=#176 id=176 data-nosnippet>176</a>        <span class="macro">format!</span>(<span class="string">"OTHER_CLOSE:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>)
-<a href=#177 id=177 data-nosnippet>177</a>      } <span class="kw">else if </span>role == <span class="string">"UNKNOWN" </span>&amp;&amp; text == <span class="string">"d" </span>{
-<a href=#178 id=178 data-nosnippet>178</a>        <span class="comment">// M4: Emit XDIFFUNK for possible differential-d tokens.
-<a href=#179 id=179 data-nosnippet>179</a>        // Only "d" tokens can be diffops; other unknowns skip the diffop rule.
-<a href=#180 id=180 data-nosnippet>180</a>        </span><span class="macro">format!</span>(<span class="string">"XDIFFUNK:{text}:{idx}"</span>)
-<a href=#181 id=181 data-nosnippet>181</a>      } <span class="kw">else if </span>role == <span class="string">"ID" </span>&amp;&amp; text == <span class="string">"d" </span>{
-<a href=#182 id=182 data-nosnippet>182</a>        <span class="macro">format!</span>(<span class="string">"XDIFFID:{text}:{idx}"</span>)
-<a href=#183 id=183 data-nosnippet>183</a>      } <span class="kw">else if </span>role == <span class="string">"VERTBAR"
-<a href=#184 id=184 data-nosnippet>184</a>        </span>&amp;&amp; text == <span class="string">"|"
-<a href=#185 id=185 data-nosnippet>185</a>        </span>&amp;&amp; node.get_attribute(<span class="string">"stretchy"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"true"</span>)
-<a href=#186 id=186 data-nosnippet>186</a>      {
-<a href=#187 id=187 data-nosnippet>187</a>        <span class="comment">// `\left|...\right|` produces a balanced pair of VERTBAR tokens
-<a href=#188 id=188 data-nosnippet>188</a>        // with `stretchy="true"` (whereas bare `|x|` is `stretchy="false"`).
-<a href=#189 id=189 data-nosnippet>189</a>        // Further distinguish by side: the `\@left` constructor tags
-<a href=#190 id=190 data-nosnippet>190</a>        // the emitted XMTok with `role_side="left"`, `\@right` with
-<a href=#191 id=191 data-nosnippet>191</a>        // `role_side="right"` (tex_math.rs). This refines the `role`
-<a href=#192 id=192 data-nosnippet>192</a>        // attribute (delimiter direction) without changing it, so
-<a href=#193 id=193 data-nosnippet>193</a>        // the grammar can use distinct LEFT_STRETCHY_VERTBAR /
-<a href=#194 id=194 data-nosnippet>194</a>        // RIGHT_STRETCHY_VERTBAR tokens. The kerned-stack norm rules
-<a href=#195 id=195 data-nosnippet>195</a>        // (\vertii, \vertiii, …) then don't have to enumerate every
-<a href=#196 id=196 data-nosnippet>196</a>        // pairing of identical bars. Eliminates the VERTBAR-pairing
-<a href=#197 id=197 data-nosnippet>197</a>        // combinatorial explosion in patterns like
-<a href=#198 id=198 data-nosnippet>198</a>        // `\log^+ ∫ \left| f \right|^k dm(z) ≲ ...` (see
-<a href=#199 id=199 data-nosnippet>199</a>        // docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2) and unlocks task #263's
-<a href=#200 id=200 data-nosnippet>200</a>        // norm-fenced grammar rules.
-<a href=#201 id=201 data-nosnippet>201</a>        // Defensive fallback: if `role_side` is missing — legacy DOM
-<a href=#202 id=202 data-nosnippet>202</a>        // input or a path that bypassed `\@left`/`\@right` — keep the
-<a href=#203 id=203 data-nosnippet>203</a>        // old undirected STRETCHY_VERTBAR lexeme so legacy rules
-<a href=#204 id=204 data-nosnippet>204</a>        // (eval_at, modulus fence) still work.
-<a href=#205 id=205 data-nosnippet>205</a>        </span><span class="kw">match </span>node.get_attribute(<span class="string">"role_side"</span>).as_deref() {
-<a href=#206 id=206 data-nosnippet>206</a>          <span class="prelude-val">Some</span>(<span class="string">"left"</span>) =&gt; <span class="macro">format!</span>(<span class="string">"LEFT_STRETCHY_VERTBAR:|:{idx}"</span>),
-<a href=#207 id=207 data-nosnippet>207</a>          <span class="prelude-val">Some</span>(<span class="string">"right"</span>) =&gt; <span class="macro">format!</span>(<span class="string">"RIGHT_STRETCHY_VERTBAR:|:{idx}"</span>),
-<a href=#208 id=208 data-nosnippet>208</a>          <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"STRETCHY_VERTBAR:|:{idx}"</span>),
-<a href=#209 id=209 data-nosnippet>209</a>        }
-<a href=#210 id=210 data-nosnippet>210</a>      } <span class="kw">else if </span>role == <span class="string">"VERTBAR" </span>&amp;&amp; (text == <span class="string">"mid" </span>|| text == <span class="string">"\u{2223}"</span>) {
-<a href=#211 id=211 data-nosnippet>211</a>        <span class="comment">// Canonicalize the single "divides / such-that / given" bar to one
-<a href=#212 id=212 data-nosnippet>212</a>        // grammar token. `\mid` (∣ U+2223), bare `|` (U+007C) and `\vert`
-<a href=#213 id=213 data-nosnippet>213</a>        // (`\Let` to `|`) are all the SAME bar grammatically, but they reach
-<a href=#214 id=214 data-nosnippet>214</a>        // the lexer with different content: `|`/`\vert` carry "|" while `\mid`
-<a href=#215 id=215 data-nosnippet>215</a>        // carries either the glyph ∣ or the CS name "mid" — the latter because
-<a href=#216 id=216 data-nosnippet>216</a>        // `def_math` infers a name from the CS (`binding/def/dialect.rs`)
-<a href=#217 id=217 data-nosnippet>217</a>        // whereas Perl's `DefMathI('\mid', undef, "\x{2223}", role=&gt;'VERTBAR')`
-<a href=#218 id=218 data-nosnippet>218</a>        // (math_common.pool.ltxml:290) leaves the name undef. Either way the
-<a href=#219 id=219 data-nosnippet>219</a>        // lexeme came out as `VERTBAR:mid` / `VERTBAR:∣`, NOT `VERTBAR:|`.
-<a href=#220 id=220 data-nosnippet>220</a>        // Every divides-bar grammar rule (modulus `|x|`, conditional `(a|b)`,
-<a href=#221 id=221 data-nosnippet>221</a>        // set-builder `{x|P}`, Dirac bra/ket/braket) keys on the exact
-<a href=#222 id=222 data-nosnippet>222</a>        // `singlevertbar = VERTBAR:|` terminal, so `\mid` inside any fence
-<a href=#223 id=223 data-nosnippet>223</a>        // failed to parse (→ ltx_math_unparsed) even though `|` did — breaking
-<a href=#224 id=224 data-nosnippet>224</a>        // ubiquitous notation: conditional probability `P(A\mid B)`,
-<a href=#225 id=225 data-nosnippet>225</a>        // set-builder `\{x\mid x&gt;0\}`, Dirac `\langle a\mid b\rangle`.
-<a href=#226 id=226 data-nosnippet>226</a>        // Perl's grammar terminal is content-agnostic (`/VERTBAR:\S*:\d+/`,
-<a href=#227 id=227 data-nosnippet>227</a>        // MathGrammar:797), so Perl parses all of these; Rust's is
-<a href=#228 id=228 data-nosnippet>228</a>        // glyph-specific, so we canonicalize here instead. The rendered glyph
-<a href=#229 id=229 data-nosnippet>229</a>        // is unaffected — the XMTok node keeps its ∣ content; the lexeme is a
-<a href=#230 id=230 data-nosnippet>230</a>        // parallel grammar-only view looked up by idx. (Doubled bars
-<a href=#231 id=231 data-nosnippet>231</a>        // `\|`/`\Vert` → `VERTBAR:||` and `\parallel` → `VERTBAR:parallel-to`
-<a href=#232 id=232 data-nosnippet>232</a>        // are NOT single divides bars; they keep their content for the
-<a href=#233 id=233 data-nosnippet>233</a>        // norm / parallel rules.)
-<a href=#234 id=234 data-nosnippet>234</a>        </span><span class="macro">format!</span>(<span class="string">"VERTBAR:|:{idx}"</span>)
-<a href=#235 id=235 data-nosnippet>235</a>      } <span class="kw">else if </span>role == <span class="string">"PUNCT" </span>&amp;&amp; punct_followed_by_wide_space(<span class="kw-2">&amp;</span>node) {
-<a href=#236 id=236 data-nosnippet>236</a>        <span class="comment">// PUNCT followed by `\quad` / `\qquad` etc. carries an `rpadding`
-<a href=#237 id=237 data-nosnippet>237</a>        // attribute. This wide spacing is a strong arXiv idiom for
-<a href=#238 id=238 data-nosnippet>238</a>        // "formula separator (with side-condition)" rather than
-<a href=#239 id=239 data-nosnippet>239</a>        // "list-element separator". Tag as WIDE_PUNCT so the grammar
-<a href=#240 id=240 data-nosnippet>240</a>        // can prefer `formulae_apply` over `list_apply` for this
-<a href=#241 id=241 data-nosnippet>241</a>        // separator unambiguously. See docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
-<a href=#242 id=242 data-nosnippet>242</a>        </span><span class="macro">format!</span>(<span class="string">"WIDE_PUNCT:,:{idx}"</span>)
-<a href=#243 id=243 data-nosnippet>243</a>      } <span class="kw">else </span>{
-<a href=#244 id=244 data-nosnippet>244</a>        <span class="macro">format!</span>(<span class="string">"{role}:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>)
-<a href=#245 id=245 data-nosnippet>245</a>      };
-<a href=#246 id=246 data-nosnippet>246</a>      lexemes.push(lexeme);
-<a href=#247 id=247 data-nosnippet>247</a>      nodes.push(node);
-<a href=#248 id=248 data-nosnippet>248</a>    }
-<a href=#249 id=249 data-nosnippet>249</a>  }
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>top_role) = top_role_opt {
-<a href=#251 id=251 data-nosnippet>251</a>    <span class="kw-2">*</span>idx += <span class="number">1</span>;
-<a href=#252 id=252 data-nosnippet>252</a>    <span class="kw">let </span>mapped_end = <span class="kw">if </span>bigop_context {
-<a href=#253 id=253 data-nosnippet>253</a>      <span class="kw">match </span>top_role.as_str() {
-<a href=#254 id=254 data-nosnippet>254</a>        <span class="string">"POSTSUBSCRIPT" </span>=&gt; <span class="string">"BIGOPSUB"</span>.to_string(),
-<a href=#255 id=255 data-nosnippet>255</a>        <span class="string">"POSTSUPERSCRIPT" </span>=&gt; <span class="string">"BIGOPSUP"</span>.to_string(),
-<a href=#256 id=256 data-nosnippet>256</a>        <span class="kw">_ </span>=&gt; top_role.clone(),
-<a href=#257 id=257 data-nosnippet>257</a>      }
-<a href=#258 id=258 data-nosnippet>258</a>    } <span class="kw">else </span>{
-<a href=#259 id=259 data-nosnippet>259</a>      top_role.clone()
-<a href=#260 id=260 data-nosnippet>260</a>    };
-<a href=#261 id=261 data-nosnippet>261</a>    lexemes.push(<span class="macro">format!</span>(<span class="string">"end_{mapped_end}:end:{idx}"</span>));
-<a href=#262 id=262 data-nosnippet>262</a>    nodes.push(mathnode.clone());
-<a href=#263 id=263 data-nosnippet>263</a>  }
-<a href=#264 id=264 data-nosnippet>264</a>  (lexemes, nodes)
-<a href=#265 id=265 data-nosnippet>265</a>}
-<a href=#266 id=266 data-nosnippet>266</a>
-<a href=#267 id=267 data-nosnippet>267</a><span class="doccomment">/// Auxiliary separator for ROLE:style-lexeme into ("ROLE:style", '-', lexeme)
-<a href=#268 id=268 data-nosnippet>268</a></span><span class="kw">pub fn </span>distill_lexeme(name: <span class="kw-2">&amp;</span>str) -&gt; (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) {
-<a href=#269 id=269 data-nosnippet>269</a>  <span class="comment">// dash separates styles, colons separate grammatical roles, and we are
-<a href=#270 id=270 data-nosnippet>270</a>  // only trying to distill the last pure lexeme
-<a href=#271 id=271 data-nosnippet>271</a>  // note that we are only trying to do this reasonably for letter-based names (UNKNOWN:italic-x),
-<a href=#272 id=272 data-nosnippet>272</a>  // since some of the content symbols contain dashes themselves (e.g.
-<a href=#273 id=273 data-nosnippet>273</a>  // OPERATOR:partial-differential)
-<a href=#274 id=274 data-nosnippet>274</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(position) = name.rfind(<span class="string">'-'</span>) {
-<a href=#275 id=275 data-nosnippet>275</a>    <span class="kw">let </span>(base, trailer) = name.split_at(position);
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="kw">let </span>(sep, lexeme) = trailer.split_at(<span class="number">1</span>);
-<a href=#277 id=277 data-nosnippet>277</a>    (base, sep, lexeme)
-<a href=#278 id=278 data-nosnippet>278</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(position) = name.rfind(<span class="string">':'</span>) {
-<a href=#279 id=279 data-nosnippet>279</a>    <span class="kw">let </span>(base, trailer) = name.split_at(position);
-<a href=#280 id=280 data-nosnippet>280</a>    <span class="kw">let </span>(sep, lexeme) = trailer.split_at(<span class="number">1</span>);
-<a href=#281 id=281 data-nosnippet>281</a>    (base, sep, lexeme)
-<a href=#282 id=282 data-nosnippet>282</a>  } <span class="kw">else </span>{
-<a href=#283 id=283 data-nosnippet>283</a>    (<span class="string">""</span>, <span class="string">""</span>, name)
-<a href=#284 id=284 data-nosnippet>284</a>  }
-<a href=#285 id=285 data-nosnippet>285</a>}
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a><span class="doccomment">/// Parse an XMHint `width` attribute string to points.
-<a href=#288 id=288 data-nosnippet>288</a>/// `pub(crate)` so semantics.rs can re-use the same parser when
-<a href=#289 id=289 data-nosnippet>289</a>/// inspecting `rpadding` (task #263 stretchy_norm_fenced guards).
-<a href=#290 id=290 data-nosnippet>290</a>/// Supports "3.0mu" (mu → pt by dividing by 1.8) and "1.667pt"/"0.16667em".
-<a href=#291 id=291 data-nosnippet>291</a>/// Handles glue specs like "2.77pt plus 2.77pt" by extracting base dimension.
-<a href=#292 id=292 data-nosnippet>292</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_xmhint_spacing(width: <span class="kw-2">&amp;</span>str) -&gt; f64 {
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="kw">let </span>width = width.trim();
-<a href=#294 id=294 data-nosnippet>294</a>  <span class="kw">if </span>width.is_empty() {
-<a href=#295 id=295 data-nosnippet>295</a>    <span class="kw">return </span><span class="number">0.0</span>;
-<a href=#296 id=296 data-nosnippet>296</a>  }
-<a href=#297 id=297 data-nosnippet>297</a>  <span class="comment">// Strip glue stretch/shrink: "2.77pt plus 2.77pt" → "2.77pt"
-<a href=#298 id=298 data-nosnippet>298</a>  </span><span class="kw">let </span>base = width
-<a href=#299 id=299 data-nosnippet>299</a>    .split_once(<span class="string">" plus"</span>)
-<a href=#300 id=300 data-nosnippet>300</a>    .or_else(|| width.split_once(<span class="string">" minus"</span>))
-<a href=#301 id=301 data-nosnippet>301</a>    .map_or(width, |(base, <span class="kw">_</span>)| base)
-<a href=#302 id=302 data-nosnippet>302</a>    .trim();
-<a href=#303 id=303 data-nosnippet>303</a>  <span class="kw">let </span>unit_start = base.find(|c: char| c.is_alphabetic()).unwrap_or(base.len());
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="kw">let </span>(number_str, unit) = base.split_at(unit_start);
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="kw">let </span>number: f64 = number_str.trim().parse().unwrap_or(<span class="number">0.0</span>);
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="kw">match </span>unit.trim() {
-<a href=#307 id=307 data-nosnippet>307</a>    <span class="string">"mu" </span>=&gt; number / <span class="number">1.8</span>,
-<a href=#308 id=308 data-nosnippet>308</a>    <span class="string">"pt" </span>=&gt; number,
-<a href=#309 id=309 data-nosnippet>309</a>    <span class="string">"em" </span>=&gt; number * <span class="number">10.0</span>, <span class="comment">// assume 10pt font size
-<a href=#310 id=310 data-nosnippet>310</a>    </span><span class="kw">_ </span>=&gt; <span class="number">0.0</span>,
-<a href=#311 id=311 data-nosnippet>311</a>  }
-<a href=#312 id=312 data-nosnippet>312</a>}
-<a href=#313 id=313 data-nosnippet>313</a>
-<a href=#314 id=314 data-nosnippet>314</a><span class="doccomment">/// True iff the given PUNCT-like XMTok carries an `rpadding` attribute
-<a href=#315 id=315 data-nosnippet>315</a>/// large enough to indicate a `\quad`-class spacing — TeX's idiom for
-<a href=#316 id=316 data-nosnippet>316</a>/// separating a main formula from a side-condition (e.g.
-<a href=#317 id=317 data-nosnippet>317</a>/// `A = B, \quad r \notin E`). Threshold of ≥5pt ignores `\,`/`\;`
-<a href=#318 id=318 data-nosnippet>318</a>/// thin-space touch-ups while catching `\quad` (10pt) and `\qquad`.
-<a href=#319 id=319 data-nosnippet>319</a>/// Used by `node_to_grammar_lexemes_ctx` to emit a `WIDE_PUNCT` token
-<a href=#320 id=320 data-nosnippet>320</a>/// the grammar can route through `formulae_apply` unambiguously.
-<a href=#321 id=321 data-nosnippet>321</a></span><span class="kw">fn </span>punct_followed_by_wide_space(node: <span class="kw-2">&amp;</span>Node) -&gt; bool {
-<a href=#322 id=322 data-nosnippet>322</a>  <span class="kw">match </span>node.get_attribute(<span class="string">"rpadding"</span>) {
-<a href=#323 id=323 data-nosnippet>323</a>    <span class="prelude-val">Some</span>(s) =&gt; get_xmhint_spacing(<span class="kw-2">&amp;</span>s) &gt;= <span class="number">5.0</span>,
-<a href=#324 id=324 data-nosnippet>324</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
-<a href=#325 id=325 data-nosnippet>325</a>  }
-<a href=#326 id=326 data-nosnippet>326</a>}
-<a href=#327 id=327 data-nosnippet>327</a>
-<a href=#328 id=328 data-nosnippet>328</a><span class="doccomment">/// Filter XMHint nodes from a list of child nodes, transferring their spacing
-<a href=#329 id=329 data-nosnippet>329</a>/// info to adjacent tokens as `lpadding`/`rpadding` attributes (matching Perl).
-<a href=#330 id=330 data-nosnippet>330</a>/// XMHints are also unlinked from the XML tree so they won't be seen again.
-<a href=#331 id=331 data-nosnippet>331</a>/// Large spacings (≥10pt, e.g. \quad) become virtual PUNCT nodes (Perl MathParser.pm L483-490).
-<a href=#332 id=332 data-nosnippet>332</a></span><span class="kw">pub fn </span>filter_hints(nodes: Vec&lt;Node&gt;) -&gt; Vec&lt;Node&gt; {
-<a href=#333 id=333 data-nosnippet>333</a>  <span class="kw">const </span>HINT_PUNCT_THRESHOLD: f64 = <span class="number">10.0</span>;
-<a href=#334 id=334 data-nosnippet>334</a>  <span class="kw">let </span><span class="kw-2">mut </span>prefiltered: Vec&lt;Node&gt; = Vec::new();
-<a href=#335 id=335 data-nosnippet>335</a>  <span class="kw">let </span><span class="kw-2">mut </span>pending_space: f64 = <span class="number">0.0</span>;
-<a href=#336 id=336 data-nosnippet>336</a>  <span class="comment">// Save hint nodes that contributed to _space, for possible PUNCT reuse
-<a href=#337 id=337 data-nosnippet>337</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>last_hint_for: Vec&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; = Vec::new(); <span class="comment">// parallel to prefiltered
-<a href=#338 id=338 data-nosnippet>338</a>
-<a href=#339 id=339 data-nosnippet>339</a>  </span><span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>nodes {
-<a href=#340 id=340 data-nosnippet>340</a>    <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#341 id=341 data-nosnippet>341</a>      <span class="kw">continue</span>;
-<a href=#342 id=342 data-nosnippet>342</a>    }
-<a href=#343 id=343 data-nosnippet>343</a>    <span class="kw">if </span>node.get_name() == <span class="string">"XMHint" </span>{
-<a href=#344 id=344 data-nosnippet>344</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(width_str) = node.get_attribute(<span class="string">"width"</span>) {
-<a href=#345 id=345 data-nosnippet>345</a>        <span class="kw">let </span>pts = get_xmhint_spacing(<span class="kw-2">&amp;</span>width_str);
-<a href=#346 id=346 data-nosnippet>346</a>        <span class="kw">if </span>pts != <span class="number">0.0 </span>{
-<a href=#347 id=347 data-nosnippet>347</a>          <span class="kw">let </span>prev_role = prefiltered.last().and_then(|n| n.get_attribute(<span class="string">"role"</span>));
-<a href=#348 id=348 data-nosnippet>348</a>          <span class="kw">if </span>prefiltered.last().is_some() &amp;&amp; prev_role.as_deref() != <span class="prelude-val">Some</span>(<span class="string">"OPEN"</span>) {
-<a href=#349 id=349 data-nosnippet>349</a>            <span class="kw">let </span>prev = prefiltered.last_mut().unwrap();
-<a href=#350 id=350 data-nosnippet>350</a>            <span class="kw">let </span>s: f64 = prev
-<a href=#351 id=351 data-nosnippet>351</a>              .get_attribute(<span class="string">"_space"</span>)
-<a href=#352 id=352 data-nosnippet>352</a>              .and_then(|v| v.parse().ok())
-<a href=#353 id=353 data-nosnippet>353</a>              .unwrap_or(<span class="number">0.0</span>);
-<a href=#354 id=354 data-nosnippet>354</a>            <span class="kw">let _ </span>= prev.set_attribute(<span class="string">"_space"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, s + pts));
-<a href=#355 id=355 data-nosnippet>355</a>            <span class="comment">// Save this hint node for potential PUNCT reuse
-<a href=#356 id=356 data-nosnippet>356</a>            </span><span class="kw">let </span>idx = prefiltered.len() - <span class="number">1</span>;
-<a href=#357 id=357 data-nosnippet>357</a>            <span class="kw">if </span>idx &lt; last_hint_for.len() {
-<a href=#358 id=358 data-nosnippet>358</a>              last_hint_for[idx] = <span class="prelude-val">Some</span>(node.clone());
-<a href=#359 id=359 data-nosnippet>359</a>            }
-<a href=#360 id=360 data-nosnippet>360</a>          } <span class="kw">else </span>{
-<a href=#361 id=361 data-nosnippet>361</a>            pending_space += pts;
-<a href=#362 id=362 data-nosnippet>362</a>          }
-<a href=#363 id=363 data-nosnippet>363</a>        }
-<a href=#364 id=364 data-nosnippet>364</a>      }
-<a href=#365 id=365 data-nosnippet>365</a>      <span class="comment">// Unlink from the XML tree; XMHints are ephemeral
-<a href=#366 id=366 data-nosnippet>366</a>      </span>node.unlink();
-<a href=#367 id=367 data-nosnippet>367</a>    } <span class="kw">else </span>{
-<a href=#368 id=368 data-nosnippet>368</a>      <span class="kw">if </span>pending_space &gt; <span class="number">0.0 </span>{
-<a href=#369 id=369 data-nosnippet>369</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"lpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, pending_space));
-<a href=#370 id=370 data-nosnippet>370</a>        pending_space = <span class="number">0.0</span>;
-<a href=#371 id=371 data-nosnippet>371</a>      }
-<a href=#372 id=372 data-nosnippet>372</a>      prefiltered.push(node);
-<a href=#373 id=373 data-nosnippet>373</a>      last_hint_for.push(<span class="prelude-val">None</span>);
-<a href=#374 id=374 data-nosnippet>374</a>    }
-<a href=#375 id=375 data-nosnippet>375</a>  }
-<a href=#376 id=376 data-nosnippet>376</a>
-<a href=#377 id=377 data-nosnippet>377</a>  <span class="comment">// Second pass: convert _space to rpadding (or PUNCT XMHint if above threshold)
-<a href=#378 id=378 data-nosnippet>378</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>filtered: Vec&lt;Node&gt; = Vec::new();
-<a href=#379 id=379 data-nosnippet>379</a>  <span class="kw">for </span>(i, <span class="kw-2">mut </span>node) <span class="kw">in </span>prefiltered.into_iter().enumerate() {
-<a href=#380 id=380 data-nosnippet>380</a>    filtered.push(node.clone());
-<a href=#381 id=381 data-nosnippet>381</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(s_str) = node.get_attribute(<span class="string">"_space"</span>) {
-<a href=#382 id=382 data-nosnippet>382</a>      <span class="kw">let _ </span>= node.remove_attribute(<span class="string">"_space"</span>);
-<a href=#383 id=383 data-nosnippet>383</a>      <span class="kw">let </span>s: f64 = s_str.parse().unwrap_or(<span class="number">0.0</span>);
-<a href=#384 id=384 data-nosnippet>384</a>      <span class="kw">if </span>s &gt;= HINT_PUNCT_THRESHOLD &amp;&amp; node.get_attribute(<span class="string">"role"</span>).as_deref() != <span class="prelude-val">Some</span>(<span class="string">"PUNCT"</span>) {
-<a href=#385 id=385 data-nosnippet>385</a>        <span class="comment">// Perl MathParser.pm L487: create virtual PUNCT XMHint
-<a href=#386 id=386 data-nosnippet>386</a>        // Reuse the saved hint node, setting role="PUNCT"
-<a href=#387 id=387 data-nosnippet>387</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">mut </span>hint)) = last_hint_for.get(i).cloned() {
-<a href=#388 id=388 data-nosnippet>388</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"role"</span>, <span class="string">"PUNCT"</span>);
-<a href=#389 id=389 data-nosnippet>389</a>          <span class="comment">// Clean width: round to integer if close, matching Perl format
-<a href=#390 id=390 data-nosnippet>390</a>          </span><span class="kw">let </span>s_rounded = <span class="kw">if </span>(s - s.round()).abs() &lt; <span class="number">0.01 </span>{
-<a href=#391 id=391 data-nosnippet>391</a>            s.round()
-<a href=#392 id=392 data-nosnippet>392</a>          } <span class="kw">else </span>{
-<a href=#393 id=393 data-nosnippet>393</a>            s
-<a href=#394 id=394 data-nosnippet>394</a>          };
-<a href=#395 id=395 data-nosnippet>395</a>          <span class="kw">let </span>width = <span class="macro">format!</span>(<span class="string">"{}pt"</span>, s_rounded);
-<a href=#396 id=396 data-nosnippet>396</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"width"</span>, <span class="kw-2">&amp;</span>width);
-<a href=#397 id=397 data-nosnippet>397</a>          <span class="comment">// Remove extraneous attributes from the reused hint node
-<a href=#398 id=398 data-nosnippet>398</a>          </span><span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"depth"</span>);
-<a href=#399 id=399 data-nosnippet>399</a>          <span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"height"</span>);
-<a href=#400 id=400 data-nosnippet>400</a>          <span class="kw">let </span>quads = <span class="string">"q"</span>.repeat((s / <span class="number">10.0</span>) <span class="kw">as </span>usize);
-<a href=#401 id=401 data-nosnippet>401</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"name"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{quads}uad"</span>));
-<a href=#402 id=402 data-nosnippet>402</a>          filtered.push(hint);
-<a href=#403 id=403 data-nosnippet>403</a>        }
-<a href=#404 id=404 data-nosnippet>404</a>      } <span class="kw">else </span>{
-<a href=#405 id=405 data-nosnippet>405</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"rpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, s));
-<a href=#406 id=406 data-nosnippet>406</a>      }
-<a href=#407 id=407 data-nosnippet>407</a>    }
-<a href=#408 id=408 data-nosnippet>408</a>  }
-<a href=#409 id=409 data-nosnippet>409</a>  filtered
-<a href=#410 id=410 data-nosnippet>410</a>}
-<a href=#411 id=411 data-nosnippet>411</a>
-<a href=#412 id=412 data-nosnippet>412</a><span class="doccomment">/// Given a list of XML nodes (either libxml nodes, or array representations)
-<a href=#413 id=413 data-nosnippet>413</a>/// return a list of XMRef's referring to those nodes;
-<a href=#414 id=414 data-nosnippet>414</a>/// ensure each source node has an ID (if already instanciated as XML)
-<a href=#415 id=415 data-nosnippet>415</a>/// or _xmkey if still in array rep. since it will get an ID later, and the connection re-made)
-<a href=#416 id=416 data-nosnippet>416</a>/// Note that ltx:XMHint nodes are ephemeral and shouldn't be ref'd!
-<a href=#417 id=417 data-nosnippet>417</a>/// likewise, we avoid creating XMRefs to XMRefs
-<a href=#418 id=418 data-nosnippet>418</a></span><span class="kw">pub fn </span>create_xmrefs(args: <span class="kw-2">&amp;mut </span>[<span class="kw-2">&amp;mut </span>XM], ctxt: ActionContext) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;XM&gt;, Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="kw">let </span>nodes = ctxt.nodes;
-<a href=#420 id=420 data-nosnippet>420</a>  <span class="kw">let </span>document = ctxt.document;
-<a href=#421 id=421 data-nosnippet>421</a>  <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::with_capacity(args.len());
-<a href=#422 id=422 data-nosnippet>422</a>  <span class="kw">for </span>arg <span class="kw">in </span>args {
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="kw">match </span>arg {
-<a href=#424 id=424 data-nosnippet>424</a>      XM::Token(props, _meta) =&gt; {
-<a href=#425 id=425 data-nosnippet>425</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-<a href=#426 id=426 data-nosnippet>426</a>          refs.push(XM::Ref(XProps {
-<a href=#427 id=427 data-nosnippet>427</a>            id: <span class="prelude-val">Some</span>(id.clone()),
-<a href=#428 id=428 data-nosnippet>428</a>            ..XProps::default()
-<a href=#429 id=429 data-nosnippet>429</a>          }));
-<a href=#430 id=430 data-nosnippet>430</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
-<a href=#431 id=431 data-nosnippet>431</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
-<a href=#432 id=432 data-nosnippet>432</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
-<a href=#433 id=433 data-nosnippet>433</a>          </span>refs.push(XM::Ref(XProps {
-<a href=#434 id=434 data-nosnippet>434</a>            xmkey: <span class="prelude-val">Some</span>(existing),
-<a href=#435 id=435 data-nosnippet>435</a>            ..XProps::default()
-<a href=#436 id=436 data-nosnippet>436</a>          }));
-<a href=#437 id=437 data-nosnippet>437</a>        } <span class="kw">else </span>{
-<a href=#438 id=438 data-nosnippet>438</a>          <span class="comment">// Parser-created token without id — use _xmkey for deferred resolution
-<a href=#439 id=439 data-nosnippet>439</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
-<a href=#440 id=440 data-nosnippet>440</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
-<a href=#441 id=441 data-nosnippet>441</a>          refs.push(XM::Ref(XProps {
-<a href=#442 id=442 data-nosnippet>442</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
-<a href=#443 id=443 data-nosnippet>443</a>            ..XProps::default()
-<a href=#444 id=444 data-nosnippet>444</a>          }));
-<a href=#445 id=445 data-nosnippet>445</a>        }
-<a href=#446 id=446 data-nosnippet>446</a>      },
-<a href=#447 id=447 data-nosnippet>447</a>      XM::Lexeme(lex, <span class="kw">_</span>) =&gt; {
-<a href=#448 id=448 data-nosnippet>448</a>        <span class="comment">// If arg is already XML, it's too late to get automatic ID's.
-<a href=#449 id=449 data-nosnippet>449</a>        // lookup_lex_node now returns Err for malformed lex strings instead
-<a href=#450 id=450 data-nosnippet>450</a>        // of panicking; skip the arg on failure rather than abort the whole
-<a href=#451 id=451 data-nosnippet>451</a>        // ref-building pass.
-<a href=#452 id=452 data-nosnippet>452</a>        </span><span class="kw">let </span>node = <span class="kw">match </span>lookup_lex_node(lex, nodes) {
-<a href=#453 id=453 data-nosnippet>453</a>          <span class="prelude-val">Ok</span>(n) =&gt; n,
-<a href=#454 id=454 data-nosnippet>454</a>          <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#455 id=455 data-nosnippet>455</a>            <span class="comment">// Perl MathParser.pm:151 — Error('expected', 'id', undef,
-<a href=#456 id=456 data-nosnippet>456</a>            //   "Cannot find a node with xml:id='$idref'", ...)
-<a href=#457 id=457 data-nosnippet>457</a>            // We don't always have an idref string at this layer; the
-<a href=#458 id=458 data-nosnippet>458</a>            // lookup error itself carries enough context.
-<a href=#459 id=459 data-nosnippet>459</a>            </span><span class="macro">log_math_error!</span>(
-<a href=#460 id=460 data-nosnippet>460</a>              <span class="string">"expected"</span>,
-<a href=#461 id=461 data-nosnippet>461</a>              <span class="string">"id"</span>,
-<a href=#462 id=462 data-nosnippet>462</a>              <span class="string">"create_xmrefs: skipping lexeme with invalid node lookup: {}"</span>,
-<a href=#463 id=463 data-nosnippet>463</a>              e
-<a href=#464 id=464 data-nosnippet>464</a>            );
-<a href=#465 id=465 data-nosnippet>465</a>            <span class="kw">continue</span>;
-<a href=#466 id=466 data-nosnippet>466</a>          },
-<a href=#467 id=467 data-nosnippet>467</a>        };
-<a href=#468 id=468 data-nosnippet>468</a>
-<a href=#469 id=469 data-nosnippet>469</a>        <span class="kw">match </span>node.get_attribute(<span class="string">"xml:id"</span>) {
-<a href=#470 id=470 data-nosnippet>470</a>          <span class="comment">//  already has id, so refer to it.
-<a href=#471 id=471 data-nosnippet>471</a>          </span><span class="prelude-val">Some</span>(id) =&gt; refs.push(XM::Ref(XProps {
-<a href=#472 id=472 data-nosnippet>472</a>            id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
-<a href=#473 id=473 data-nosnippet>473</a>            ..XProps::default()
-<a href=#474 id=474 data-nosnippet>474</a>          })),
-<a href=#475 id=475 data-nosnippet>475</a>          <span class="prelude-val">None </span>=&gt; {
-<a href=#476 id=476 data-nosnippet>476</a>            <span class="comment">// Generate xml:id for this node so we can reference it
-<a href=#477 id=477 data-nosnippet>477</a>            </span>document.generate_id(<span class="kw-2">&amp;mut </span>node.clone(), <span class="string">""</span>)<span class="question-mark">?</span>;
-<a href=#478 id=478 data-nosnippet>478</a>            <span class="kw">let </span>generated_id = node
-<a href=#479 id=479 data-nosnippet>479</a>              .get_attribute(<span class="string">"xml:id"</span>)
-<a href=#480 id=480 data-nosnippet>480</a>              .or_else(|| node.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>))
-<a href=#481 id=481 data-nosnippet>481</a>              .or_else(|| node.get_attribute(<span class="string">"id"</span>));
-<a href=#482 id=482 data-nosnippet>482</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = generated_id {
-<a href=#483 id=483 data-nosnippet>483</a>              refs.push(XM::Ref(XProps {
-<a href=#484 id=484 data-nosnippet>484</a>                id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
-<a href=#485 id=485 data-nosnippet>485</a>                ..XProps::default()
-<a href=#486 id=486 data-nosnippet>486</a>              }));
-<a href=#487 id=487 data-nosnippet>487</a>            }
-<a href=#488 id=488 data-nosnippet>488</a>          },
-<a href=#489 id=489 data-nosnippet>489</a>        }
-<a href=#490 id=490 data-nosnippet>490</a>      },
-<a href=#491 id=491 data-nosnippet>491</a>      XM::Apply(_op, _args, props, _meta) =&gt; {
-<a href=#492 id=492 data-nosnippet>492</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-<a href=#493 id=493 data-nosnippet>493</a>          refs.push(XM::Ref(XProps {
-<a href=#494 id=494 data-nosnippet>494</a>            id: <span class="prelude-val">Some</span>(id.clone()),
-<a href=#495 id=495 data-nosnippet>495</a>            ..XProps::default()
-<a href=#496 id=496 data-nosnippet>496</a>          }));
-<a href=#497 id=497 data-nosnippet>497</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
-<a href=#498 id=498 data-nosnippet>498</a>          <span class="comment">// PRESERVE an existing _xmkey. Faithful to Perl `createXMRefs`
-<a href=#499 id=499 data-nosnippet>499</a>          // (Package.pm:1527): it `GenerateID`s an XML arg but NEVER clobbers
-<a href=#500 id=500 data-nosnippet>500</a>          // its `_xmkey`, so a node that is ALREADY an arg of an outer
-<a href=#501 id=501 data-nosnippet>501</a>          // package XMDual (via `\lx@xmarg`, e.g. braket `\braket{a|op|c}`)
-<a href=#502 id=502 data-nosnippet>502</a>          // keeps that key while also being referenced by THIS (grammar) dual
-<a href=#503 id=503 data-nosnippet>503</a>          // — both content XMRefs resolve to the same shared node. Overwriting
-<a href=#504 id=504 data-nosnippet>504</a>          // the key (as before) dangled the package's XMRef →
-<a href=#505 id=505 data-nosnippet>505</a>          // `expected:id Cannot find a node` (compound op; witness 2205.06843).
-<a href=#506 id=506 data-nosnippet>506</a>          </span>refs.push(XM::Ref(XProps {
-<a href=#507 id=507 data-nosnippet>507</a>            xmkey: <span class="prelude-val">Some</span>(existing),
-<a href=#508 id=508 data-nosnippet>508</a>            ..XProps::default()
-<a href=#509 id=509 data-nosnippet>509</a>          }));
-<a href=#510 id=510 data-nosnippet>510</a>        } <span class="kw">else </span>{
-<a href=#511 id=511 data-nosnippet>511</a>          <span class="comment">// not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
-<a href=#512 id=512 data-nosnippet>512</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
-<a href=#513 id=513 data-nosnippet>513</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
-<a href=#514 id=514 data-nosnippet>514</a>          refs.push(XM::Ref(XProps {
-<a href=#515 id=515 data-nosnippet>515</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="kw">let </span>(<span class="kw-2">mut </span>lexemes, nodes) = node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, <span class="bool-val">false</span>);
+<a href=#29 id=29 data-nosnippet>29</a>  <span class="comment">// M4 over-parse pruning: the differential-d grammar branch
+<a href=#30 id=30 data-nosnippet>30</a>  // (`diffunk/diffid factor_base =&gt; diffop_apply`, grammar/builder.rs:814) is the ONLY
+<a href=#31 id=31 data-nosnippet>31</a>  // place `XDIFFUNK`/`XDIFFID` differ from plain `unknown`/`id` — they are otherwise
+<a href=#32 id=32 data-nosnippet>32</a>  // identical `factor_base` alternatives (builder.rs:134) with the same speculative-apply
+<a href=#33 id=33 data-nosnippet>33</a>  // rules (builder.rs:672-673/767-768). And `diffop_apply` (semantics.rs:1726) prunes
+<a href=#34 id=34 data-nosnippet>34</a>  // EVERY diffop parse unless an `INTOP` node is present in the formula. So for an
+<a href=#35 id=35 data-nosnippet>35</a>  // INTOP-free formula the diffop branch is dead weight: Marpa still builds it into the
+<a href=#36 id=36 data-nosnippet>36</a>  // bocage (≈71 and-nodes per `d&lt;var&gt;`) only for the action to reject it. Downgrade
+<a href=#37 id=37 data-nosnippet>37</a>  // `XDIFFUNK`→`UNKNOWN` / `XDIFFID`→`ID` here so the branch is never built. This is
+<a href=#38 id=38 data-nosnippet>38</a>  // OUTPUT-NEUTRAL (the same `has_intop` predicate `diffop_apply` uses, over the same
+<a href=#39 id=39 data-nosnippet>39</a>  // node list that becomes `ctxt.nodes`) and removes the over-parse on every non-integral
+<a href=#40 id=40 data-nosnippet>40</a>  // `d` (`\frac{dx}{dt}`, `d` as a variable, `d`-subscripts). The differential case
+<a href=#41 id=41 data-nosnippet>41</a>  // (`\int … dx`) keeps `XDIFFUNK` and is unaffected. Cheap: only formulae that actually
+<a href=#42 id=42 data-nosnippet>42</a>  // contain a `d` pay the `INTOP` scan.
+<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="kw">if </span>lexemes.iter().any(|l| l.starts_with(<span class="string">"XDIFF"</span>)) {
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="kw">let </span>has_intop = nodes
+<a href=#45 id=45 data-nosnippet>45</a>      .iter()
+<a href=#46 id=46 data-nosnippet>46</a>      .any(|n| n.get_attribute(<span class="string">"role"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"INTOP"</span>));
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="kw">if </span>!has_intop {
+<a href=#48 id=48 data-nosnippet>48</a>      <span class="kw">for </span>lex <span class="kw">in </span><span class="kw-2">&amp;mut </span>lexemes {
+<a href=#49 id=49 data-nosnippet>49</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(rest) = lex.strip_prefix(<span class="string">"XDIFFUNK:"</span>) {
+<a href=#50 id=50 data-nosnippet>50</a>          <span class="kw-2">*</span>lex = <span class="macro">format!</span>(<span class="string">"UNKNOWN:{rest}"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(rest) = lex.strip_prefix(<span class="string">"XDIFFID:"</span>) {
+<a href=#52 id=52 data-nosnippet>52</a>          <span class="kw-2">*</span>lex = <span class="macro">format!</span>(<span class="string">"ID:{rest}"</span>);
+<a href=#53 id=53 data-nosnippet>53</a>        }
+<a href=#54 id=54 data-nosnippet>54</a>      }
+<a href=#55 id=55 data-nosnippet>55</a>    }
+<a href=#56 id=56 data-nosnippet>56</a>  }
+<a href=#57 id=57 data-nosnippet>57</a>  (lexemes, nodes)
+<a href=#58 id=58 data-nosnippet>58</a>}
+<a href=#59 id=59 data-nosnippet>59</a>
+<a href=#60 id=60 data-nosnippet>60</a><span class="kw">fn </span>node_to_grammar_lexemes_ctx(
+<a href=#61 id=61 data-nosnippet>61</a>  mathnode: <span class="kw-2">&amp;</span>Node,
+<a href=#62 id=62 data-nosnippet>62</a>  child_nodes: Vec&lt;Node&gt;,
+<a href=#63 id=63 data-nosnippet>63</a>  idx: <span class="kw-2">&amp;mut </span>usize,
+<a href=#64 id=64 data-nosnippet>64</a>  bigop_context: bool,
+<a href=#65 id=65 data-nosnippet>65</a>) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;) {
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="kw">let </span><span class="kw-2">mut </span>lexemes = Vec::new();
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="kw">let </span><span class="kw-2">mut </span>nodes = Vec::new();
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="kw">let </span>top_role_opt = mathnode.get_attribute(<span class="string">"role"</span>);
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>top_role) = top_role_opt {
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw-2">*</span>idx += <span class="number">1</span>;
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="comment">// When in bigop context, emit BIGOPSUB/BIGOPSUP instead of POSTSUBSCRIPT/POSTSUPERSCRIPT
+<a href=#72 id=72 data-nosnippet>72</a>    </span><span class="kw">let </span>mapped_role = <span class="kw">if </span>bigop_context {
+<a href=#73 id=73 data-nosnippet>73</a>      <span class="kw">match </span>top_role.as_str() {
+<a href=#74 id=74 data-nosnippet>74</a>        <span class="string">"POSTSUBSCRIPT" </span>=&gt; <span class="string">"BIGOPSUB"</span>.to_string(),
+<a href=#75 id=75 data-nosnippet>75</a>        <span class="string">"POSTSUPERSCRIPT" </span>=&gt; <span class="string">"BIGOPSUP"</span>.to_string(),
+<a href=#76 id=76 data-nosnippet>76</a>        <span class="kw">_ </span>=&gt; top_role.clone(),
+<a href=#77 id=77 data-nosnippet>77</a>      }
+<a href=#78 id=78 data-nosnippet>78</a>    } <span class="kw">else </span>{
+<a href=#79 id=79 data-nosnippet>79</a>      top_role.clone()
+<a href=#80 id=80 data-nosnippet>80</a>    };
+<a href=#81 id=81 data-nosnippet>81</a>    lexemes.push(<span class="macro">format!</span>(<span class="string">"start_{mapped_role}:start:{idx}"</span>));
+<a href=#82 id=82 data-nosnippet>82</a>    nodes.push(mathnode.clone());
+<a href=#83 id=83 data-nosnippet>83</a>  }
+<a href=#84 id=84 data-nosnippet>84</a>  <span class="comment">// Track whether the last emitted token was a bigop (SUMOP/INTOP/etc.)
+<a href=#85 id=85 data-nosnippet>85</a>  // so we can emit bigop-specific script tokens to reduce earley chart ambiguity.
+<a href=#86 id=86 data-nosnippet>86</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>last_was_bigop = <span class="bool-val">false</span>;
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="kw">for </span>node <span class="kw">in </span>child_nodes.into_iter() {
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="comment">// For XMRef nodes: resolve to get the target's role/meaning for lexing,
+<a href=#89 id=89 data-nosnippet>89</a>    // but keep the ORIGINAL XMRef node in the output so the parse tree
+<a href=#90 id=90 data-nosnippet>90</a>    // preserves XMRef indirection (matching Perl behavior).
+<a href=#91 id=91 data-nosnippet>91</a>    // The get_grammatical_role/get_token_meaning functions already resolve XMRef
+<a href=#92 id=92 data-nosnippet>92</a>    // internally, so we just need to handle the case where the target is a
+<a href=#93 id=93 data-nosnippet>93</a>    // compound node (XMApp without role) — these need flattening.
+<a href=#94 id=94 data-nosnippet>94</a>    // Note: we do NOT replace the node variable — we keep the XMRef.
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a>    </span><span class="kw">if </span>node.get_name() == <span class="string">"XMApp" </span>&amp;&amp; node.get_attribute(<span class="string">"role"</span>).is_some() {
+<a href=#97 id=97 data-nosnippet>97</a>      <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap();
+<a href=#98 id=98 data-nosnippet>98</a>      <span class="comment">// A complete operator that has been decorated or scripted is still a
+<a href=#99 id=99 data-nosnippet>99</a>      // single grammatical operator and must lex as ONE atomic terminal:
+<a href=#100 id=100 data-nosnippet>100</a>      //   - ARROW/METARELOP: decorated arrows (\xrightarrow{over},
+<a href=#101 id=101 data-nosnippet>101</a>      //     \xleftrightarrow[under]{over}).
+<a href=#102 id=102 data-nosnippet>102</a>      //   - RELOP: a scripted relation (\stackrel{?}{=}, \overset/\underset over
+<a href=#103 id=103 data-nosnippet>103</a>      //     a relation) — `=^?` is an `&lt;XMApp role=RELOP&gt;` whose recursion would
+<a href=#104 id=104 data-nosnippet>104</a>      //     emit `start_RELOP SUPERSCRIPTOP RELOP:= UNKNOWN:? end_RELOP`, a
+<a href=#105 id=105 data-nosnippet>105</a>      //     sequence no grammar rule consumes, so the relation failed to parse as
+<a href=#106 id=106 data-nosnippet>106</a>      //     a standalone item (e.g. `a \quad \stackrel{?}{=} \quad b` →
+<a href=#107 id=107 data-nosnippet>107</a>      //     ltx_math_unparsed). Perl recurses with start_/end_ markers its Marpa
+<a href=#108 id=108 data-nosnippet>108</a>      //     grammar handles; the Rust grammar treats decorated operators as
+<a href=#109 id=109 data-nosnippet>109</a>      //     atomic terminals instead (the whole node is preserved as the
+<a href=#110 id=110 data-nosnippet>110</a>      //     terminal's value, so rendering still shows the script). The lexeme
+<a href=#111 id=111 data-nosnippet>111</a>      //     keys on the inner base operator's meaning, so `=^?` lexes like `=`.
+<a href=#112 id=112 data-nosnippet>112</a>      </span><span class="kw">if </span>role == <span class="string">"ARROW" </span>|| role == <span class="string">"METARELOP" </span>|| role == <span class="string">"RELOP" </span>{
+<a href=#113 id=113 data-nosnippet>113</a>        <span class="kw">let </span>op_meaning = node
+<a href=#114 id=114 data-nosnippet>114</a>          .get_child_elements()
+<a href=#115 id=115 data-nosnippet>115</a>          .into_iter()
+<a href=#116 id=116 data-nosnippet>116</a>          .find(|ch| {
+<a href=#117 id=117 data-nosnippet>117</a>            <span class="kw">let </span>cr = ch.get_attribute(<span class="string">"role"</span>);
+<a href=#118 id=118 data-nosnippet>118</a>            <span class="kw">match </span>role.as_str() {
+<a href=#119 id=119 data-nosnippet>119</a>              <span class="comment">// A scripted relation's base is a RELOP leaf.
+<a href=#120 id=120 data-nosnippet>120</a>              </span><span class="string">"RELOP" </span>=&gt; cr.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"RELOP"</span>),
+<a href=#121 id=121 data-nosnippet>121</a>              <span class="comment">// Decorated arrows may carry either an ARROW or METARELOP base.
+<a href=#122 id=122 data-nosnippet>122</a>              </span><span class="kw">_ </span>=&gt; cr.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"ARROW"</span>) || cr.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"METARELOP"</span>),
+<a href=#123 id=123 data-nosnippet>123</a>            }
+<a href=#124 id=124 data-nosnippet>124</a>          })
+<a href=#125 id=125 data-nosnippet>125</a>          .and_then(|ch| {
+<a href=#126 id=126 data-nosnippet>126</a>            ch.get_attribute(<span class="string">"meaning"</span>)
+<a href=#127 id=127 data-nosnippet>127</a>              .or_else(|| ch.get_attribute(<span class="string">"name"</span>))
+<a href=#128 id=128 data-nosnippet>128</a>              .or_else(|| <span class="prelude-val">Some</span>(ch.get_content()))
+<a href=#129 id=129 data-nosnippet>129</a>          })
+<a href=#130 id=130 data-nosnippet>130</a>          .unwrap_or_else(|| role.to_string());
+<a href=#131 id=131 data-nosnippet>131</a>        <span class="kw-2">*</span>idx += <span class="number">1</span>;
+<a href=#132 id=132 data-nosnippet>132</a>        <span class="kw">let </span>lexeme = <span class="macro">format!</span>(<span class="string">"{role}:{op_meaning}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>);
+<a href=#133 id=133 data-nosnippet>133</a>        lexemes.push(lexeme);
+<a href=#134 id=134 data-nosnippet>134</a>        nodes.push(node);
+<a href=#135 id=135 data-nosnippet>135</a>      } <span class="kw">else if </span>node.has_attribute(<span class="string">"_rewrite"</span>) {
+<a href=#136 id=136 data-nosnippet>136</a>        <span class="comment">// Rewrite-created or a parse_children replacement: treat as atomic
+<a href=#137 id=137 data-nosnippet>137</a>        // token with the assigned role. Don't recurse — the inner structure
+<a href=#138 id=138 data-nosnippet>138</a>        // was pre-parsed, and the role on this node overrides whatever the
+<a href=#139 id=139 data-nosnippet>139</a>        // children contain. An atomic bigop (e.g. `\mathop{...}` → BIGOP)
+<a href=#140 id=140 data-nosnippet>140</a>        // must set bigop context so a following script lexes as
+<a href=#141 id=141 data-nosnippet>141</a>        // BIGOPSUB/BIGOPSUP, same as the plain-token arm below.
+<a href=#142 id=142 data-nosnippet>142</a>        </span><span class="kw">let </span>gram_role = get_grammatical_role(<span class="kw-2">&amp;</span>node);
+<a href=#143 id=143 data-nosnippet>143</a>        <span class="kw">let </span><span class="kw-2">mut </span>text = get_token_meaning(<span class="kw-2">&amp;</span>node);
+<a href=#144 id=144 data-nosnippet>144</a>        <span class="kw">if </span>text.is_empty() {
+<a href=#145 id=145 data-nosnippet>145</a>          text = <span class="string">"UNKNOWN"</span>.to_string();
+<a href=#146 id=146 data-nosnippet>146</a>        }
+<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw-2">*</span>idx += <span class="number">1</span>;
+<a href=#148 id=148 data-nosnippet>148</a>        last_was_bigop = <span class="macro">matches!</span>(
+<a href=#149 id=149 data-nosnippet>149</a>          gram_role.as_str(),
+<a href=#150 id=150 data-nosnippet>150</a>          <span class="string">"SUMOP" </span>| <span class="string">"INTOP" </span>| <span class="string">"LIMITOP" </span>| <span class="string">"DIFFOP" </span>| <span class="string">"BIGOP"
+<a href=#151 id=151 data-nosnippet>151</a>        </span>);
+<a href=#152 id=152 data-nosnippet>152</a>        lexemes.push(<span class="macro">format!</span>(<span class="string">"{gram_role}:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>));
+<a href=#153 id=153 data-nosnippet>153</a>        nodes.push(node);
+<a href=#154 id=154 data-nosnippet>154</a>      } <span class="kw">else </span>{
+<a href=#155 id=155 data-nosnippet>155</a>        <span class="comment">// Only recurse into XMApp nodes that have a role (scripts, etc.)
+<a href=#156 id=156 data-nosnippet>156</a>        // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.
+<a href=#157 id=157 data-nosnippet>157</a>        // Pass bigop_context for POSTSUBSCRIPT/POSTSUPERSCRIPT following a bigop
+<a href=#158 id=158 data-nosnippet>158</a>        </span><span class="kw">let </span>is_script = <span class="macro">matches!</span>(role.as_str(), <span class="string">"POSTSUBSCRIPT" </span>| <span class="string">"POSTSUPERSCRIPT"</span>);
+<a href=#159 id=159 data-nosnippet>159</a>        <span class="kw">let </span>ctx = last_was_bigop &amp;&amp; is_script;
+<a href=#160 id=160 data-nosnippet>160</a>        <span class="kw">let </span>children = filter_hints(node.get_child_nodes());
+<a href=#161 id=161 data-nosnippet>161</a>        <span class="kw">let </span>(<span class="kw-2">mut </span>inner_lexes, <span class="kw-2">mut </span>inner_nodes) =
+<a href=#162 id=162 data-nosnippet>162</a>          node_to_grammar_lexemes_ctx(<span class="kw-2">&amp;</span>node, children, idx, ctx);
+<a href=#163 id=163 data-nosnippet>163</a>        <span class="kw">for </span>(inner_lex, inner_node) <span class="kw">in </span>inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
+<a href=#164 id=164 data-nosnippet>164</a>          lexemes.push(inner_lex);
+<a href=#165 id=165 data-nosnippet>165</a>          nodes.push(inner_node);
+<a href=#166 id=166 data-nosnippet>166</a>        }
+<a href=#167 id=167 data-nosnippet>167</a>        <span class="comment">// Script following a bigop is still "bigop context" for the next script
+<a href=#168 id=168 data-nosnippet>168</a>        </span><span class="kw">if </span>!is_script {
+<a href=#169 id=169 data-nosnippet>169</a>          last_was_bigop = <span class="bool-val">false</span>;
+<a href=#170 id=170 data-nosnippet>170</a>        }
+<a href=#171 id=171 data-nosnippet>171</a>      }
+<a href=#172 id=172 data-nosnippet>172</a>    } <span class="kw">else if </span>node.get_name() == <span class="string">"XMArg" </span>{
+<a href=#173 id=173 data-nosnippet>173</a>      <span class="comment">// XMArg is a transparent wrapper (e.g. from \lx@post@subscript).
+<a href=#174 id=174 data-nosnippet>174</a>      // Recurse into its children so the grammar can parse them individually.
+<a href=#175 id=175 data-nosnippet>175</a>      // E.g. _{ij} should emit UNKNOWN:i + UNKNOWN:j, not ATOM:ij.
+<a href=#176 id=176 data-nosnippet>176</a>      </span><span class="kw">let </span>arg_children = filter_hints(node.get_child_nodes());
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">let </span>(<span class="kw-2">mut </span>inner_lexes, <span class="kw-2">mut </span>inner_nodes) =
+<a href=#178 id=178 data-nosnippet>178</a>        node_to_grammar_lexemes_ctx(<span class="kw-2">&amp;</span>node, arg_children, idx, <span class="bool-val">false</span>);
+<a href=#179 id=179 data-nosnippet>179</a>      <span class="kw">for </span>(inner_lex, inner_node) <span class="kw">in </span>inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
+<a href=#180 id=180 data-nosnippet>180</a>        lexemes.push(inner_lex);
+<a href=#181 id=181 data-nosnippet>181</a>        nodes.push(inner_node);
+<a href=#182 id=182 data-nosnippet>182</a>      }
+<a href=#183 id=183 data-nosnippet>183</a>    } <span class="kw">else </span>{
+<a href=#184 id=184 data-nosnippet>184</a>      <span class="kw">let </span>role = get_grammatical_role(<span class="kw-2">&amp;</span>node);
+<a href=#185 id=185 data-nosnippet>185</a>      <span class="kw">let </span><span class="kw-2">mut </span>text = get_token_meaning(<span class="kw-2">&amp;</span>node);
+<a href=#186 id=186 data-nosnippet>186</a>      <span class="kw">if </span>text.is_empty() {
+<a href=#187 id=187 data-nosnippet>187</a>        text = <span class="string">"UNKNOWN"</span>.to_string();
+<a href=#188 id=188 data-nosnippet>188</a>      }
+<a href=#189 id=189 data-nosnippet>189</a>      <span class="kw-2">*</span>idx += <span class="number">1</span>;
+<a href=#190 id=190 data-nosnippet>190</a>      <span class="comment">// Track bigop tokens for bigop-specific script token emission
+<a href=#191 id=191 data-nosnippet>191</a>      </span><span class="kw">let </span>is_bigop = <span class="macro">matches!</span>(
+<a href=#192 id=192 data-nosnippet>192</a>        role.as_str(),
+<a href=#193 id=193 data-nosnippet>193</a>        <span class="string">"SUMOP" </span>| <span class="string">"INTOP" </span>| <span class="string">"LIMITOP" </span>| <span class="string">"DIFFOP" </span>| <span class="string">"BIGOP"
+<a href=#194 id=194 data-nosnippet>194</a>      </span>);
+<a href=#195 id=195 data-nosnippet>195</a>      last_was_bigop = is_bigop;
+<a href=#196 id=196 data-nosnippet>196</a>      <span class="comment">// Normalize langle/rangle meaning for consistent grammar matching.
+<a href=#197 id=197 data-nosnippet>197</a>      // Do NOT remap to parentheses — langle_open/rangle_close tokens need
+<a href=#198 id=198 data-nosnippet>198</a>      // distinct identity for QM bra-ket rules vs conditional probability.
+<a href=#199 id=199 data-nosnippet>199</a>      //
+<a href=#200 id=200 data-nosnippet>200</a>      // Perf: Split generic OPEN/CLOSE into OTHER_OPEN/OTHER_CLOSE for delimiters
+<a href=#201 id=201 data-nosnippet>201</a>      // OTHER than parens/brackets/braces/langle. This prevents the grammar's
+<a href=#202 id=202 data-nosnippet>202</a>      // generic `open ~ "OPEN"` prefix match from ALSO matching the specific
+<a href=#203 id=203 data-nosnippet>203</a>      // `lparen = "OPEN:("`, etc. — which was producing 2× duplicate grammar
+<a href=#204 id=204 data-nosnippet>204</a>      // derivations for every `(x)`, `[x]`, `{x}` expression.
+<a href=#205 id=205 data-nosnippet>205</a>      </span><span class="kw">let </span>lexeme = <span class="kw">if </span>role == <span class="string">"OPEN" </span>&amp;&amp; (text == <span class="string">"⟨" </span>|| text == <span class="string">"langle"</span>) {
+<a href=#206 id=206 data-nosnippet>206</a>        <span class="macro">format!</span>(<span class="string">"OPEN:langle:{idx}"</span>)
+<a href=#207 id=207 data-nosnippet>207</a>      } <span class="kw">else if </span>role == <span class="string">"CLOSE" </span>&amp;&amp; (text == <span class="string">"⟩" </span>|| text == <span class="string">"rangle"</span>) {
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="macro">format!</span>(<span class="string">"CLOSE:rangle:{idx}"</span>)
+<a href=#209 id=209 data-nosnippet>209</a>      } <span class="kw">else if </span>role == <span class="string">"OPEN" </span>&amp;&amp; !<span class="macro">matches!</span>(text.as_str(), <span class="string">"(" </span>| <span class="string">"[" </span>| <span class="string">"{"</span>) {
+<a href=#210 id=210 data-nosnippet>210</a>        <span class="macro">format!</span>(<span class="string">"OTHER_OPEN:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>)
+<a href=#211 id=211 data-nosnippet>211</a>      } <span class="kw">else if </span>role == <span class="string">"CLOSE" </span>&amp;&amp; !<span class="macro">matches!</span>(text.as_str(), <span class="string">")" </span>| <span class="string">"]" </span>| <span class="string">"}"</span>) {
+<a href=#212 id=212 data-nosnippet>212</a>        <span class="macro">format!</span>(<span class="string">"OTHER_CLOSE:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>)
+<a href=#213 id=213 data-nosnippet>213</a>      } <span class="kw">else if </span>role == <span class="string">"UNKNOWN" </span>&amp;&amp; text == <span class="string">"d" </span>{
+<a href=#214 id=214 data-nosnippet>214</a>        <span class="comment">// M4: Emit XDIFFUNK for possible differential-d tokens.
+<a href=#215 id=215 data-nosnippet>215</a>        // Only "d" tokens can be diffops; other unknowns skip the diffop rule.
+<a href=#216 id=216 data-nosnippet>216</a>        </span><span class="macro">format!</span>(<span class="string">"XDIFFUNK:{text}:{idx}"</span>)
+<a href=#217 id=217 data-nosnippet>217</a>      } <span class="kw">else if </span>role == <span class="string">"ID" </span>&amp;&amp; text == <span class="string">"d" </span>{
+<a href=#218 id=218 data-nosnippet>218</a>        <span class="macro">format!</span>(<span class="string">"XDIFFID:{text}:{idx}"</span>)
+<a href=#219 id=219 data-nosnippet>219</a>      } <span class="kw">else if </span>role == <span class="string">"VERTBAR"
+<a href=#220 id=220 data-nosnippet>220</a>        </span>&amp;&amp; text == <span class="string">"|"
+<a href=#221 id=221 data-nosnippet>221</a>        </span>&amp;&amp; node.get_attribute(<span class="string">"stretchy"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"true"</span>)
+<a href=#222 id=222 data-nosnippet>222</a>      {
+<a href=#223 id=223 data-nosnippet>223</a>        <span class="comment">// `\left|...\right|` produces a balanced pair of VERTBAR tokens
+<a href=#224 id=224 data-nosnippet>224</a>        // with `stretchy="true"` (whereas bare `|x|` is `stretchy="false"`).
+<a href=#225 id=225 data-nosnippet>225</a>        // Further distinguish by side: the `\@left` constructor tags
+<a href=#226 id=226 data-nosnippet>226</a>        // the emitted XMTok with `role_side="left"`, `\@right` with
+<a href=#227 id=227 data-nosnippet>227</a>        // `role_side="right"` (tex_math.rs). This refines the `role`
+<a href=#228 id=228 data-nosnippet>228</a>        // attribute (delimiter direction) without changing it, so
+<a href=#229 id=229 data-nosnippet>229</a>        // the grammar can use distinct LEFT_STRETCHY_VERTBAR /
+<a href=#230 id=230 data-nosnippet>230</a>        // RIGHT_STRETCHY_VERTBAR tokens. The kerned-stack norm rules
+<a href=#231 id=231 data-nosnippet>231</a>        // (\vertii, \vertiii, …) then don't have to enumerate every
+<a href=#232 id=232 data-nosnippet>232</a>        // pairing of identical bars. Eliminates the VERTBAR-pairing
+<a href=#233 id=233 data-nosnippet>233</a>        // combinatorial explosion in patterns like
+<a href=#234 id=234 data-nosnippet>234</a>        // `\log^+ ∫ \left| f \right|^k dm(z) ≲ ...` (see
+<a href=#235 id=235 data-nosnippet>235</a>        // docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2) and unlocks task #263's
+<a href=#236 id=236 data-nosnippet>236</a>        // norm-fenced grammar rules.
+<a href=#237 id=237 data-nosnippet>237</a>        // Defensive fallback: if `role_side` is missing — legacy DOM
+<a href=#238 id=238 data-nosnippet>238</a>        // input or a path that bypassed `\@left`/`\@right` — keep the
+<a href=#239 id=239 data-nosnippet>239</a>        // old undirected STRETCHY_VERTBAR lexeme so legacy rules
+<a href=#240 id=240 data-nosnippet>240</a>        // (eval_at, modulus fence) still work.
+<a href=#241 id=241 data-nosnippet>241</a>        </span><span class="kw">match </span>node.get_attribute(<span class="string">"role_side"</span>).as_deref() {
+<a href=#242 id=242 data-nosnippet>242</a>          <span class="prelude-val">Some</span>(<span class="string">"left"</span>) =&gt; <span class="macro">format!</span>(<span class="string">"LEFT_STRETCHY_VERTBAR:|:{idx}"</span>),
+<a href=#243 id=243 data-nosnippet>243</a>          <span class="prelude-val">Some</span>(<span class="string">"right"</span>) =&gt; <span class="macro">format!</span>(<span class="string">"RIGHT_STRETCHY_VERTBAR:|:{idx}"</span>),
+<a href=#244 id=244 data-nosnippet>244</a>          <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"STRETCHY_VERTBAR:|:{idx}"</span>),
+<a href=#245 id=245 data-nosnippet>245</a>        }
+<a href=#246 id=246 data-nosnippet>246</a>      } <span class="kw">else if </span>role == <span class="string">"VERTBAR" </span>&amp;&amp; (text == <span class="string">"mid" </span>|| text == <span class="string">"\u{2223}"</span>) {
+<a href=#247 id=247 data-nosnippet>247</a>        <span class="comment">// Canonicalize the single "divides / such-that / given" bar to one
+<a href=#248 id=248 data-nosnippet>248</a>        // grammar token. `\mid` (∣ U+2223), bare `|` (U+007C) and `\vert`
+<a href=#249 id=249 data-nosnippet>249</a>        // (`\Let` to `|`) are all the SAME bar grammatically, but they reach
+<a href=#250 id=250 data-nosnippet>250</a>        // the lexer with different content: `|`/`\vert` carry "|" while `\mid`
+<a href=#251 id=251 data-nosnippet>251</a>        // carries either the glyph ∣ or the CS name "mid" — the latter because
+<a href=#252 id=252 data-nosnippet>252</a>        // `def_math` infers a name from the CS (`binding/def/dialect.rs`)
+<a href=#253 id=253 data-nosnippet>253</a>        // whereas Perl's `DefMathI('\mid', undef, "\x{2223}", role=&gt;'VERTBAR')`
+<a href=#254 id=254 data-nosnippet>254</a>        // (math_common.pool.ltxml:290) leaves the name undef. Either way the
+<a href=#255 id=255 data-nosnippet>255</a>        // lexeme came out as `VERTBAR:mid` / `VERTBAR:∣`, NOT `VERTBAR:|`.
+<a href=#256 id=256 data-nosnippet>256</a>        // Every divides-bar grammar rule (modulus `|x|`, conditional `(a|b)`,
+<a href=#257 id=257 data-nosnippet>257</a>        // set-builder `{x|P}`, Dirac bra/ket/braket) keys on the exact
+<a href=#258 id=258 data-nosnippet>258</a>        // `singlevertbar = VERTBAR:|` terminal, so `\mid` inside any fence
+<a href=#259 id=259 data-nosnippet>259</a>        // failed to parse (→ ltx_math_unparsed) even though `|` did — breaking
+<a href=#260 id=260 data-nosnippet>260</a>        // ubiquitous notation: conditional probability `P(A\mid B)`,
+<a href=#261 id=261 data-nosnippet>261</a>        // set-builder `\{x\mid x&gt;0\}`, Dirac `\langle a\mid b\rangle`.
+<a href=#262 id=262 data-nosnippet>262</a>        // Perl's grammar terminal is content-agnostic (`/VERTBAR:\S*:\d+/`,
+<a href=#263 id=263 data-nosnippet>263</a>        // MathGrammar:797), so Perl parses all of these; Rust's is
+<a href=#264 id=264 data-nosnippet>264</a>        // glyph-specific, so we canonicalize here instead. The rendered glyph
+<a href=#265 id=265 data-nosnippet>265</a>        // is unaffected — the XMTok node keeps its ∣ content; the lexeme is a
+<a href=#266 id=266 data-nosnippet>266</a>        // parallel grammar-only view looked up by idx. (Doubled bars
+<a href=#267 id=267 data-nosnippet>267</a>        // `\|`/`\Vert` → `VERTBAR:||` and `\parallel` → `VERTBAR:parallel-to`
+<a href=#268 id=268 data-nosnippet>268</a>        // are NOT single divides bars; they keep their content for the
+<a href=#269 id=269 data-nosnippet>269</a>        // norm / parallel rules.)
+<a href=#270 id=270 data-nosnippet>270</a>        </span><span class="macro">format!</span>(<span class="string">"VERTBAR:|:{idx}"</span>)
+<a href=#271 id=271 data-nosnippet>271</a>      } <span class="kw">else if </span>role == <span class="string">"PUNCT" </span>&amp;&amp; punct_followed_by_wide_space(<span class="kw-2">&amp;</span>node) {
+<a href=#272 id=272 data-nosnippet>272</a>        <span class="comment">// PUNCT followed by `\quad` / `\qquad` etc. carries an `rpadding`
+<a href=#273 id=273 data-nosnippet>273</a>        // attribute. This wide spacing is a strong arXiv idiom for
+<a href=#274 id=274 data-nosnippet>274</a>        // "formula separator (with side-condition)" rather than
+<a href=#275 id=275 data-nosnippet>275</a>        // "list-element separator". Tag as WIDE_PUNCT so the grammar
+<a href=#276 id=276 data-nosnippet>276</a>        // can prefer `formulae_apply` over `list_apply` for this
+<a href=#277 id=277 data-nosnippet>277</a>        // separator unambiguously. See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
+<a href=#278 id=278 data-nosnippet>278</a>        </span><span class="macro">format!</span>(<span class="string">"WIDE_PUNCT:,:{idx}"</span>)
+<a href=#279 id=279 data-nosnippet>279</a>      } <span class="kw">else </span>{
+<a href=#280 id=280 data-nosnippet>280</a>        <span class="macro">format!</span>(<span class="string">"{role}:{text}:{idx}"</span>).replace(<span class="string">' '</span>, <span class="string">""</span>)
+<a href=#281 id=281 data-nosnippet>281</a>      };
+<a href=#282 id=282 data-nosnippet>282</a>      lexemes.push(lexeme);
+<a href=#283 id=283 data-nosnippet>283</a>      nodes.push(node);
+<a href=#284 id=284 data-nosnippet>284</a>    }
+<a href=#285 id=285 data-nosnippet>285</a>  }
+<a href=#286 id=286 data-nosnippet>286</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>top_role) = top_role_opt {
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="kw-2">*</span>idx += <span class="number">1</span>;
+<a href=#288 id=288 data-nosnippet>288</a>    <span class="kw">let </span>mapped_end = <span class="kw">if </span>bigop_context {
+<a href=#289 id=289 data-nosnippet>289</a>      <span class="kw">match </span>top_role.as_str() {
+<a href=#290 id=290 data-nosnippet>290</a>        <span class="string">"POSTSUBSCRIPT" </span>=&gt; <span class="string">"BIGOPSUB"</span>.to_string(),
+<a href=#291 id=291 data-nosnippet>291</a>        <span class="string">"POSTSUPERSCRIPT" </span>=&gt; <span class="string">"BIGOPSUP"</span>.to_string(),
+<a href=#292 id=292 data-nosnippet>292</a>        <span class="kw">_ </span>=&gt; top_role.clone(),
+<a href=#293 id=293 data-nosnippet>293</a>      }
+<a href=#294 id=294 data-nosnippet>294</a>    } <span class="kw">else </span>{
+<a href=#295 id=295 data-nosnippet>295</a>      top_role.clone()
+<a href=#296 id=296 data-nosnippet>296</a>    };
+<a href=#297 id=297 data-nosnippet>297</a>    lexemes.push(<span class="macro">format!</span>(<span class="string">"end_{mapped_end}:end:{idx}"</span>));
+<a href=#298 id=298 data-nosnippet>298</a>    nodes.push(mathnode.clone());
+<a href=#299 id=299 data-nosnippet>299</a>  }
+<a href=#300 id=300 data-nosnippet>300</a>  (lexemes, nodes)
+<a href=#301 id=301 data-nosnippet>301</a>}
+<a href=#302 id=302 data-nosnippet>302</a>
+<a href=#303 id=303 data-nosnippet>303</a><span class="doccomment">/// Auxiliary separator for ROLE:style-lexeme into ("ROLE:style", '-', lexeme)
+<a href=#304 id=304 data-nosnippet>304</a></span><span class="kw">pub fn </span>distill_lexeme(name: <span class="kw-2">&amp;</span>str) -&gt; (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) {
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="comment">// dash separates styles, colons separate grammatical roles, and we are
+<a href=#306 id=306 data-nosnippet>306</a>  // only trying to distill the last pure lexeme
+<a href=#307 id=307 data-nosnippet>307</a>  // note that we are only trying to do this reasonably for letter-based names (UNKNOWN:italic-x),
+<a href=#308 id=308 data-nosnippet>308</a>  // since some of the content symbols contain dashes themselves (e.g.
+<a href=#309 id=309 data-nosnippet>309</a>  // OPERATOR:partial-differential)
+<a href=#310 id=310 data-nosnippet>310</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(position) = name.rfind(<span class="string">'-'</span>) {
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="kw">let </span>(base, trailer) = name.split_at(position);
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="kw">let </span>(sep, lexeme) = trailer.split_at(<span class="number">1</span>);
+<a href=#313 id=313 data-nosnippet>313</a>    (base, sep, lexeme)
+<a href=#314 id=314 data-nosnippet>314</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(position) = name.rfind(<span class="string">':'</span>) {
+<a href=#315 id=315 data-nosnippet>315</a>    <span class="kw">let </span>(base, trailer) = name.split_at(position);
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="kw">let </span>(sep, lexeme) = trailer.split_at(<span class="number">1</span>);
+<a href=#317 id=317 data-nosnippet>317</a>    (base, sep, lexeme)
+<a href=#318 id=318 data-nosnippet>318</a>  } <span class="kw">else </span>{
+<a href=#319 id=319 data-nosnippet>319</a>    (<span class="string">""</span>, <span class="string">""</span>, name)
+<a href=#320 id=320 data-nosnippet>320</a>  }
+<a href=#321 id=321 data-nosnippet>321</a>}
+<a href=#322 id=322 data-nosnippet>322</a>
+<a href=#323 id=323 data-nosnippet>323</a><span class="doccomment">/// Parse an XMHint `width` attribute string to points.
+<a href=#324 id=324 data-nosnippet>324</a>/// `pub(crate)` so semantics.rs can re-use the same parser when
+<a href=#325 id=325 data-nosnippet>325</a>/// inspecting `rpadding` (task #263 stretchy_norm_fenced guards).
+<a href=#326 id=326 data-nosnippet>326</a>/// Supports "3.0mu" (mu → pt by dividing by 1.8) and "1.667pt"/"0.16667em".
+<a href=#327 id=327 data-nosnippet>327</a>/// Handles glue specs like "2.77pt plus 2.77pt" by extracting base dimension.
+<a href=#328 id=328 data-nosnippet>328</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_xmhint_spacing(width: <span class="kw-2">&amp;</span>str) -&gt; f64 {
+<a href=#329 id=329 data-nosnippet>329</a>  <span class="kw">let </span>width = width.trim();
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="kw">if </span>width.is_empty() {
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">return </span><span class="number">0.0</span>;
+<a href=#332 id=332 data-nosnippet>332</a>  }
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="comment">// Strip glue stretch/shrink: "2.77pt plus 2.77pt" → "2.77pt"
+<a href=#334 id=334 data-nosnippet>334</a>  </span><span class="kw">let </span>base = width
+<a href=#335 id=335 data-nosnippet>335</a>    .split_once(<span class="string">" plus"</span>)
+<a href=#336 id=336 data-nosnippet>336</a>    .or_else(|| width.split_once(<span class="string">" minus"</span>))
+<a href=#337 id=337 data-nosnippet>337</a>    .map_or(width, |(base, <span class="kw">_</span>)| base)
+<a href=#338 id=338 data-nosnippet>338</a>    .trim();
+<a href=#339 id=339 data-nosnippet>339</a>  <span class="kw">let </span>unit_start = base.find(|c: char| c.is_alphabetic()).unwrap_or(base.len());
+<a href=#340 id=340 data-nosnippet>340</a>  <span class="kw">let </span>(number_str, unit) = base.split_at(unit_start);
+<a href=#341 id=341 data-nosnippet>341</a>  <span class="kw">let </span>number: f64 = number_str.trim().parse().unwrap_or(<span class="number">0.0</span>);
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="kw">match </span>unit.trim() {
+<a href=#343 id=343 data-nosnippet>343</a>    <span class="string">"mu" </span>=&gt; number / <span class="number">1.8</span>,
+<a href=#344 id=344 data-nosnippet>344</a>    <span class="string">"pt" </span>=&gt; number,
+<a href=#345 id=345 data-nosnippet>345</a>    <span class="string">"em" </span>=&gt; number * <span class="number">10.0</span>, <span class="comment">// assume 10pt font size
+<a href=#346 id=346 data-nosnippet>346</a>    </span><span class="kw">_ </span>=&gt; <span class="number">0.0</span>,
+<a href=#347 id=347 data-nosnippet>347</a>  }
+<a href=#348 id=348 data-nosnippet>348</a>}
+<a href=#349 id=349 data-nosnippet>349</a>
+<a href=#350 id=350 data-nosnippet>350</a><span class="doccomment">/// True iff the given PUNCT-like XMTok carries an `rpadding` attribute
+<a href=#351 id=351 data-nosnippet>351</a>/// large enough to indicate a `\quad`-class spacing — TeX's idiom for
+<a href=#352 id=352 data-nosnippet>352</a>/// separating a main formula from a side-condition (e.g.
+<a href=#353 id=353 data-nosnippet>353</a>/// `A = B, \quad r \notin E`). Threshold of ≥10pt catches `\quad` (10pt)
+<a href=#354 id=354 data-nosnippet>354</a>/// and `\qquad` (20pt) while EXCLUDING the interword control space `\ `
+<a href=#355 id=355 data-nosnippet>355</a>/// (exactly 5pt) and thin-space touch-ups (`\,`/`\;`/`\:`). This matches
+<a href=#356 id=356 data-nosnippet>356</a>/// `filter_hints`'s own `HINT_PUNCT_THRESHOLD` (10pt). An earlier ≥5pt
+<a href=#357 id=357 data-nosnippet>357</a>/// threshold mis-tagged `\ ` as a separator, so a comma-list element with
+<a href=#358 id=358 data-nosnippet>358</a>/// an interword space before a signed/`±` term — e.g. `(3,\ -5)` or
+<a href=#359 id=359 data-nosnippet>359</a>/// `\textit{Held\_For}\;(300,\ -50,\ +50)` (witness 1506.03557) — became a
+<a href=#360 id=360 data-nosnippet>360</a>/// fenced WIDE_PUNCT routed through `formulae_apply`, which doesn't apply
+<a href=#361 id=361 data-nosnippet>361</a>/// inside a fence, so the whole formula fell to `ltx_math_unparsed`.
+<a href=#362 id=362 data-nosnippet>362</a>/// Used by `node_to_grammar_lexemes_ctx` to emit a `WIDE_PUNCT` token
+<a href=#363 id=363 data-nosnippet>363</a>/// the grammar can route through `formulae_apply` unambiguously.
+<a href=#364 id=364 data-nosnippet>364</a></span><span class="kw">fn </span>punct_followed_by_wide_space(node: <span class="kw-2">&amp;</span>Node) -&gt; bool {
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="kw">match </span>node.get_attribute(<span class="string">"rpadding"</span>) {
+<a href=#366 id=366 data-nosnippet>366</a>    <span class="prelude-val">Some</span>(s) =&gt; get_xmhint_spacing(<span class="kw-2">&amp;</span>s) &gt;= <span class="number">10.0</span>,
+<a href=#367 id=367 data-nosnippet>367</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
+<a href=#368 id=368 data-nosnippet>368</a>  }
+<a href=#369 id=369 data-nosnippet>369</a>}
+<a href=#370 id=370 data-nosnippet>370</a>
+<a href=#371 id=371 data-nosnippet>371</a><span class="doccomment">/// Filter XMHint nodes from a list of child nodes, transferring their spacing
+<a href=#372 id=372 data-nosnippet>372</a>/// info to adjacent tokens as `lpadding`/`rpadding` attributes (matching Perl).
+<a href=#373 id=373 data-nosnippet>373</a>/// XMHints are also unlinked from the XML tree so they won't be seen again.
+<a href=#374 id=374 data-nosnippet>374</a>/// Large spacings (≥10pt, e.g. \quad) become virtual PUNCT nodes (Perl MathParser.pm L483-490).
+<a href=#375 id=375 data-nosnippet>375</a></span><span class="kw">pub fn </span>filter_hints(nodes: Vec&lt;Node&gt;) -&gt; Vec&lt;Node&gt; {
+<a href=#376 id=376 data-nosnippet>376</a>  <span class="kw">const </span>HINT_PUNCT_THRESHOLD: f64 = <span class="number">10.0</span>;
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="kw">let </span><span class="kw-2">mut </span>prefiltered: Vec&lt;Node&gt; = Vec::new();
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="kw">let </span><span class="kw-2">mut </span>pending_space: f64 = <span class="number">0.0</span>;
+<a href=#379 id=379 data-nosnippet>379</a>  <span class="comment">// Save hint nodes that contributed to _space, for possible PUNCT reuse
+<a href=#380 id=380 data-nosnippet>380</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>last_hint_for: Vec&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; = Vec::new(); <span class="comment">// parallel to prefiltered
+<a href=#381 id=381 data-nosnippet>381</a>
+<a href=#382 id=382 data-nosnippet>382</a>  </span><span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>nodes {
+<a href=#383 id=383 data-nosnippet>383</a>    <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#384 id=384 data-nosnippet>384</a>      <span class="kw">continue</span>;
+<a href=#385 id=385 data-nosnippet>385</a>    }
+<a href=#386 id=386 data-nosnippet>386</a>    <span class="kw">if </span>node.get_name() == <span class="string">"XMHint" </span>{
+<a href=#387 id=387 data-nosnippet>387</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(width_str) = node.get_attribute(<span class="string">"width"</span>) {
+<a href=#388 id=388 data-nosnippet>388</a>        <span class="kw">let </span>pts = get_xmhint_spacing(<span class="kw-2">&amp;</span>width_str);
+<a href=#389 id=389 data-nosnippet>389</a>        <span class="kw">if </span>pts != <span class="number">0.0 </span>{
+<a href=#390 id=390 data-nosnippet>390</a>          <span class="kw">let </span>prev_role = prefiltered.last().and_then(|n| n.get_attribute(<span class="string">"role"</span>));
+<a href=#391 id=391 data-nosnippet>391</a>          <span class="kw">if </span>prefiltered.last().is_some() &amp;&amp; prev_role.as_deref() != <span class="prelude-val">Some</span>(<span class="string">"OPEN"</span>) {
+<a href=#392 id=392 data-nosnippet>392</a>            <span class="kw">let </span>prev = prefiltered.last_mut().unwrap();
+<a href=#393 id=393 data-nosnippet>393</a>            <span class="kw">let </span>s: f64 = prev
+<a href=#394 id=394 data-nosnippet>394</a>              .get_attribute(<span class="string">"_space"</span>)
+<a href=#395 id=395 data-nosnippet>395</a>              .and_then(|v| v.parse().ok())
+<a href=#396 id=396 data-nosnippet>396</a>              .unwrap_or(<span class="number">0.0</span>);
+<a href=#397 id=397 data-nosnippet>397</a>            <span class="kw">let _ </span>= prev.set_attribute(<span class="string">"_space"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, s + pts));
+<a href=#398 id=398 data-nosnippet>398</a>            <span class="comment">// Save this hint node for potential PUNCT reuse
+<a href=#399 id=399 data-nosnippet>399</a>            </span><span class="kw">let </span>idx = prefiltered.len() - <span class="number">1</span>;
+<a href=#400 id=400 data-nosnippet>400</a>            <span class="kw">if </span>idx &lt; last_hint_for.len() {
+<a href=#401 id=401 data-nosnippet>401</a>              last_hint_for[idx] = <span class="prelude-val">Some</span>(node.clone());
+<a href=#402 id=402 data-nosnippet>402</a>            }
+<a href=#403 id=403 data-nosnippet>403</a>          } <span class="kw">else </span>{
+<a href=#404 id=404 data-nosnippet>404</a>            pending_space += pts;
+<a href=#405 id=405 data-nosnippet>405</a>          }
+<a href=#406 id=406 data-nosnippet>406</a>        }
+<a href=#407 id=407 data-nosnippet>407</a>      }
+<a href=#408 id=408 data-nosnippet>408</a>      <span class="comment">// Unlink from the XML tree; XMHints are ephemeral
+<a href=#409 id=409 data-nosnippet>409</a>      </span>node.unlink();
+<a href=#410 id=410 data-nosnippet>410</a>    } <span class="kw">else </span>{
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="kw">if </span>pending_space &gt; <span class="number">0.0 </span>{
+<a href=#412 id=412 data-nosnippet>412</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"lpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, pending_space));
+<a href=#413 id=413 data-nosnippet>413</a>        pending_space = <span class="number">0.0</span>;
+<a href=#414 id=414 data-nosnippet>414</a>      }
+<a href=#415 id=415 data-nosnippet>415</a>      prefiltered.push(node);
+<a href=#416 id=416 data-nosnippet>416</a>      last_hint_for.push(<span class="prelude-val">None</span>);
+<a href=#417 id=417 data-nosnippet>417</a>    }
+<a href=#418 id=418 data-nosnippet>418</a>  }
+<a href=#419 id=419 data-nosnippet>419</a>
+<a href=#420 id=420 data-nosnippet>420</a>  <span class="comment">// Second pass: convert _space to rpadding (or PUNCT XMHint if above threshold)
+<a href=#421 id=421 data-nosnippet>421</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>filtered: Vec&lt;Node&gt; = Vec::new();
+<a href=#422 id=422 data-nosnippet>422</a>  <span class="kw">for </span>(i, <span class="kw-2">mut </span>node) <span class="kw">in </span>prefiltered.into_iter().enumerate() {
+<a href=#423 id=423 data-nosnippet>423</a>    filtered.push(node.clone());
+<a href=#424 id=424 data-nosnippet>424</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(s_str) = node.get_attribute(<span class="string">"_space"</span>) {
+<a href=#425 id=425 data-nosnippet>425</a>      <span class="kw">let _ </span>= node.remove_attribute(<span class="string">"_space"</span>);
+<a href=#426 id=426 data-nosnippet>426</a>      <span class="kw">let </span>s: f64 = s_str.parse().unwrap_or(<span class="number">0.0</span>);
+<a href=#427 id=427 data-nosnippet>427</a>      <span class="kw">if </span>s &gt;= HINT_PUNCT_THRESHOLD &amp;&amp; node.get_attribute(<span class="string">"role"</span>).as_deref() != <span class="prelude-val">Some</span>(<span class="string">"PUNCT"</span>) {
+<a href=#428 id=428 data-nosnippet>428</a>        <span class="comment">// Perl MathParser.pm L487: create virtual PUNCT XMHint
+<a href=#429 id=429 data-nosnippet>429</a>        // Reuse the saved hint node, setting role="PUNCT"
+<a href=#430 id=430 data-nosnippet>430</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">mut </span>hint)) = last_hint_for.get(i).cloned() {
+<a href=#431 id=431 data-nosnippet>431</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"role"</span>, <span class="string">"PUNCT"</span>);
+<a href=#432 id=432 data-nosnippet>432</a>          <span class="comment">// Clean width: round to integer if close, matching Perl format
+<a href=#433 id=433 data-nosnippet>433</a>          </span><span class="kw">let </span>s_rounded = <span class="kw">if </span>(s - s.round()).abs() &lt; <span class="number">0.01 </span>{
+<a href=#434 id=434 data-nosnippet>434</a>            s.round()
+<a href=#435 id=435 data-nosnippet>435</a>          } <span class="kw">else </span>{
+<a href=#436 id=436 data-nosnippet>436</a>            s
+<a href=#437 id=437 data-nosnippet>437</a>          };
+<a href=#438 id=438 data-nosnippet>438</a>          <span class="kw">let </span>width = <span class="macro">format!</span>(<span class="string">"{}pt"</span>, s_rounded);
+<a href=#439 id=439 data-nosnippet>439</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"width"</span>, <span class="kw-2">&amp;</span>width);
+<a href=#440 id=440 data-nosnippet>440</a>          <span class="comment">// Remove extraneous attributes from the reused hint node
+<a href=#441 id=441 data-nosnippet>441</a>          </span><span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"depth"</span>);
+<a href=#442 id=442 data-nosnippet>442</a>          <span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"height"</span>);
+<a href=#443 id=443 data-nosnippet>443</a>          <span class="kw">let </span>quads = <span class="string">"q"</span>.repeat((s / <span class="number">10.0</span>) <span class="kw">as </span>usize);
+<a href=#444 id=444 data-nosnippet>444</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"name"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{quads}uad"</span>));
+<a href=#445 id=445 data-nosnippet>445</a>          filtered.push(hint);
+<a href=#446 id=446 data-nosnippet>446</a>        }
+<a href=#447 id=447 data-nosnippet>447</a>      } <span class="kw">else </span>{
+<a href=#448 id=448 data-nosnippet>448</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"rpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, s));
+<a href=#449 id=449 data-nosnippet>449</a>      }
+<a href=#450 id=450 data-nosnippet>450</a>    }
+<a href=#451 id=451 data-nosnippet>451</a>  }
+<a href=#452 id=452 data-nosnippet>452</a>  filtered
+<a href=#453 id=453 data-nosnippet>453</a>}
+<a href=#454 id=454 data-nosnippet>454</a>
+<a href=#455 id=455 data-nosnippet>455</a><span class="doccomment">/// Given a list of XML nodes (either libxml nodes, or array representations)
+<a href=#456 id=456 data-nosnippet>456</a>/// return a list of XMRef's referring to those nodes;
+<a href=#457 id=457 data-nosnippet>457</a>/// ensure each source node has an ID (if already instanciated as XML)
+<a href=#458 id=458 data-nosnippet>458</a>/// or _xmkey if still in array rep. since it will get an ID later, and the connection re-made)
+<a href=#459 id=459 data-nosnippet>459</a>/// Note that ltx:XMHint nodes are ephemeral and shouldn't be ref'd!
+<a href=#460 id=460 data-nosnippet>460</a>/// likewise, we avoid creating XMRefs to XMRefs
+<a href=#461 id=461 data-nosnippet>461</a></span><span class="kw">pub fn </span>create_xmrefs(args: <span class="kw-2">&amp;mut </span>[<span class="kw-2">&amp;mut </span>XM], ctxt: ActionContext) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;XM&gt;, Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
+<a href=#462 id=462 data-nosnippet>462</a>  <span class="kw">let </span>nodes = ctxt.nodes;
+<a href=#463 id=463 data-nosnippet>463</a>  <span class="kw">let </span>document = ctxt.document;
+<a href=#464 id=464 data-nosnippet>464</a>  <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::with_capacity(args.len());
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="kw">for </span>arg <span class="kw">in </span>args {
+<a href=#466 id=466 data-nosnippet>466</a>    <span class="kw">match </span>arg {
+<a href=#467 id=467 data-nosnippet>467</a>      XM::Token(props, _meta) =&gt; {
+<a href=#468 id=468 data-nosnippet>468</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
+<a href=#469 id=469 data-nosnippet>469</a>          refs.push(XM::Ref(XProps {
+<a href=#470 id=470 data-nosnippet>470</a>            id: <span class="prelude-val">Some</span>(id.clone()),
+<a href=#471 id=471 data-nosnippet>471</a>            ..XProps::default()
+<a href=#472 id=472 data-nosnippet>472</a>          }));
+<a href=#473 id=473 data-nosnippet>473</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
+<a href=#474 id=474 data-nosnippet>474</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
+<a href=#475 id=475 data-nosnippet>475</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
+<a href=#476 id=476 data-nosnippet>476</a>          </span>refs.push(XM::Ref(XProps {
+<a href=#477 id=477 data-nosnippet>477</a>            xmkey: <span class="prelude-val">Some</span>(existing),
+<a href=#478 id=478 data-nosnippet>478</a>            ..XProps::default()
+<a href=#479 id=479 data-nosnippet>479</a>          }));
+<a href=#480 id=480 data-nosnippet>480</a>        } <span class="kw">else </span>{
+<a href=#481 id=481 data-nosnippet>481</a>          <span class="comment">// Parser-created token without id — use _xmkey for deferred resolution
+<a href=#482 id=482 data-nosnippet>482</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
+<a href=#483 id=483 data-nosnippet>483</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
+<a href=#484 id=484 data-nosnippet>484</a>          refs.push(XM::Ref(XProps {
+<a href=#485 id=485 data-nosnippet>485</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+<a href=#486 id=486 data-nosnippet>486</a>            ..XProps::default()
+<a href=#487 id=487 data-nosnippet>487</a>          }));
+<a href=#488 id=488 data-nosnippet>488</a>        }
+<a href=#489 id=489 data-nosnippet>489</a>      },
+<a href=#490 id=490 data-nosnippet>490</a>      XM::Lexeme(lex, <span class="kw">_</span>) =&gt; {
+<a href=#491 id=491 data-nosnippet>491</a>        <span class="comment">// If arg is already XML, it's too late to get automatic ID's.
+<a href=#492 id=492 data-nosnippet>492</a>        // lookup_lex_node now returns Err for malformed lex strings instead
+<a href=#493 id=493 data-nosnippet>493</a>        // of panicking; skip the arg on failure rather than abort the whole
+<a href=#494 id=494 data-nosnippet>494</a>        // ref-building pass.
+<a href=#495 id=495 data-nosnippet>495</a>        </span><span class="kw">let </span>node = <span class="kw">match </span>lookup_lex_node(lex, nodes) {
+<a href=#496 id=496 data-nosnippet>496</a>          <span class="prelude-val">Ok</span>(n) =&gt; n,
+<a href=#497 id=497 data-nosnippet>497</a>          <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#498 id=498 data-nosnippet>498</a>            <span class="comment">// Perl MathParser.pm:151 — Error('expected', 'id', undef,
+<a href=#499 id=499 data-nosnippet>499</a>            //   "Cannot find a node with xml:id='$idref'", ...)
+<a href=#500 id=500 data-nosnippet>500</a>            // We don't always have an idref string at this layer; the
+<a href=#501 id=501 data-nosnippet>501</a>            // lookup error itself carries enough context.
+<a href=#502 id=502 data-nosnippet>502</a>            </span><span class="macro">log_math_error!</span>(
+<a href=#503 id=503 data-nosnippet>503</a>              <span class="string">"expected"</span>,
+<a href=#504 id=504 data-nosnippet>504</a>              <span class="string">"id"</span>,
+<a href=#505 id=505 data-nosnippet>505</a>              <span class="string">"create_xmrefs: skipping lexeme with invalid node lookup: {}"</span>,
+<a href=#506 id=506 data-nosnippet>506</a>              e
+<a href=#507 id=507 data-nosnippet>507</a>            );
+<a href=#508 id=508 data-nosnippet>508</a>            <span class="kw">continue</span>;
+<a href=#509 id=509 data-nosnippet>509</a>          },
+<a href=#510 id=510 data-nosnippet>510</a>        };
+<a href=#511 id=511 data-nosnippet>511</a>
+<a href=#512 id=512 data-nosnippet>512</a>        <span class="kw">match </span>node.get_attribute(<span class="string">"xml:id"</span>) {
+<a href=#513 id=513 data-nosnippet>513</a>          <span class="comment">//  already has id, so refer to it.
+<a href=#514 id=514 data-nosnippet>514</a>          </span><span class="prelude-val">Some</span>(id) =&gt; refs.push(XM::Ref(XProps {
+<a href=#515 id=515 data-nosnippet>515</a>            id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
 <a href=#516 id=516 data-nosnippet>516</a>            ..XProps::default()
-<a href=#517 id=517 data-nosnippet>517</a>          }));
-<a href=#518 id=518 data-nosnippet>518</a>        }
-<a href=#519 id=519 data-nosnippet>519</a>      },
-<a href=#520 id=520 data-nosnippet>520</a>      <span class="comment">// clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef
-<a href=#521 id=521 data-nosnippet>521</a>      </span>XM::Ref(props) =&gt; {
-<a href=#522 id=522 data-nosnippet>522</a>        refs.push(XM::Ref(props.clone()));
-<a href=#523 id=523 data-nosnippet>523</a>      },
-<a href=#524 id=524 data-nosnippet>524</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, props, <span class="kw">_</span>) | XM::Wrap(<span class="kw">_</span>, props, <span class="kw">_</span>) =&gt; {
-<a href=#525 id=525 data-nosnippet>525</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-<a href=#526 id=526 data-nosnippet>526</a>          refs.push(XM::Ref(XProps {
-<a href=#527 id=527 data-nosnippet>527</a>            id: <span class="prelude-val">Some</span>(id.clone()),
-<a href=#528 id=528 data-nosnippet>528</a>            ..XProps::default()
-<a href=#529 id=529 data-nosnippet>529</a>          }));
-<a href=#530 id=530 data-nosnippet>530</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
-<a href=#531 id=531 data-nosnippet>531</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
-<a href=#532 id=532 data-nosnippet>532</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
-<a href=#533 id=533 data-nosnippet>533</a>          </span>refs.push(XM::Ref(XProps {
-<a href=#534 id=534 data-nosnippet>534</a>            xmkey: <span class="prelude-val">Some</span>(existing),
-<a href=#535 id=535 data-nosnippet>535</a>            ..XProps::default()
-<a href=#536 id=536 data-nosnippet>536</a>          }));
-<a href=#537 id=537 data-nosnippet>537</a>        } <span class="kw">else </span>{
-<a href=#538 id=538 data-nosnippet>538</a>          <span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
-<a href=#539 id=539 data-nosnippet>539</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
-<a href=#540 id=540 data-nosnippet>540</a>          refs.push(XM::Ref(XProps {
-<a href=#541 id=541 data-nosnippet>541</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
-<a href=#542 id=542 data-nosnippet>542</a>            ..XProps::default()
-<a href=#543 id=543 data-nosnippet>543</a>          }));
-<a href=#544 id=544 data-nosnippet>544</a>        }
-<a href=#545 id=545 data-nosnippet>545</a>      },
-<a href=#546 id=546 data-nosnippet>546</a>      <span class="kw">_ </span>=&gt; {
-<a href=#547 id=547 data-nosnippet>547</a>        <span class="comment">// XMHint's are ephemeral — clone without id
-<a href=#548 id=548 data-nosnippet>548</a>        // Other variants: skip with warning
-<a href=#549 id=549 data-nosnippet>549</a>      </span>},
-<a href=#550 id=550 data-nosnippet>550</a>    }
-<a href=#551 id=551 data-nosnippet>551</a>  }
-<a href=#552 id=552 data-nosnippet>552</a>  <span class="prelude-val">Ok</span>(refs)
-<a href=#553 id=553 data-nosnippet>553</a>}
-<a href=#554 id=554 data-nosnippet>554</a>
-<a href=#555 id=555 data-nosnippet>555</a><span class="attr">#[cfg(test)]
-<a href=#556 id=556 data-nosnippet>556</a></span><span class="kw">mod </span>tests {
-<a href=#557 id=557 data-nosnippet>557</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#558 id=558 data-nosnippet>558</a>
-<a href=#559 id=559 data-nosnippet>559</a>  <span class="attr">#[test]
-<a href=#560 id=560 data-nosnippet>560</a>  </span><span class="kw">fn </span>distill_lexeme_dash_separator() {
-<a href=#561 id=561 data-nosnippet>561</a>    <span class="comment">// Dash takes precedence over colon.
-<a href=#562 id=562 data-nosnippet>562</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"UNKNOWN:italic-x"</span>);
-<a href=#563 id=563 data-nosnippet>563</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"UNKNOWN:italic"</span>);
-<a href=#564 id=564 data-nosnippet>564</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
-<a href=#565 id=565 data-nosnippet>565</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"x"</span>);
-<a href=#566 id=566 data-nosnippet>566</a>  }
-<a href=#567 id=567 data-nosnippet>567</a>
-<a href=#568 id=568 data-nosnippet>568</a>  <span class="attr">#[test]
-<a href=#569 id=569 data-nosnippet>569</a>  </span><span class="kw">fn </span>distill_lexeme_colon_only() {
-<a href=#570 id=570 data-nosnippet>570</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"ROLE:foo"</span>);
-<a href=#571 id=571 data-nosnippet>571</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"ROLE"</span>);
-<a href=#572 id=572 data-nosnippet>572</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">":"</span>);
-<a href=#573 id=573 data-nosnippet>573</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"foo"</span>);
-<a href=#574 id=574 data-nosnippet>574</a>  }
-<a href=#575 id=575 data-nosnippet>575</a>
-<a href=#576 id=576 data-nosnippet>576</a>  <span class="attr">#[test]
-<a href=#577 id=577 data-nosnippet>577</a>  </span><span class="kw">fn </span>distill_lexeme_no_separator() {
-<a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"bare"</span>);
-<a href=#579 id=579 data-nosnippet>579</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
-<a href=#581 id=581 data-nosnippet>581</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"bare"</span>);
-<a href=#582 id=582 data-nosnippet>582</a>  }
-<a href=#583 id=583 data-nosnippet>583</a>
-<a href=#584 id=584 data-nosnippet>584</a>  <span class="attr">#[test]
-<a href=#585 id=585 data-nosnippet>585</a>  </span><span class="kw">fn </span>distill_lexeme_empty() {
-<a href=#586 id=586 data-nosnippet>586</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">""</span>);
-<a href=#587 id=587 data-nosnippet>587</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
-<a href=#588 id=588 data-nosnippet>588</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
-<a href=#589 id=589 data-nosnippet>589</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
-<a href=#590 id=590 data-nosnippet>590</a>  }
-<a href=#591 id=591 data-nosnippet>591</a>
-<a href=#592 id=592 data-nosnippet>592</a>  <span class="attr">#[test]
-<a href=#593 id=593 data-nosnippet>593</a>  </span><span class="kw">fn </span>distill_lexeme_trailing_dash() {
-<a href=#594 id=594 data-nosnippet>594</a>    <span class="comment">// Edge: last-dash splits after the last hyphen even when the tail is empty.
-<a href=#595 id=595 data-nosnippet>595</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"foo-"</span>);
-<a href=#596 id=596 data-nosnippet>596</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"foo"</span>);
-<a href=#597 id=597 data-nosnippet>597</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
-<a href=#598 id=598 data-nosnippet>598</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
-<a href=#599 id=599 data-nosnippet>599</a>  }
-<a href=#600 id=600 data-nosnippet>600</a>
-<a href=#601 id=601 data-nosnippet>601</a>  <span class="attr">#[test]
-<a href=#602 id=602 data-nosnippet>602</a>  </span><span class="kw">fn </span>get_xmhint_spacing_mu_divides_by_1_8() {
-<a href=#603 id=603 data-nosnippet>603</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.8mu"</span>) - <span class="number">1.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#604 id=604 data-nosnippet>604</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"3.6mu"</span>) - <span class="number">2.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#605 id=605 data-nosnippet>605</a>  }
-<a href=#606 id=606 data-nosnippet>606</a>
-<a href=#607 id=607 data-nosnippet>607</a>  <span class="attr">#[test]
-<a href=#608 id=608 data-nosnippet>608</a>  </span><span class="kw">fn </span>get_xmhint_spacing_pt_passes_through() {
-<a href=#609 id=609 data-nosnippet>609</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.667pt"</span>) - <span class="number">1.667</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#610 id=610 data-nosnippet>610</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"10pt"</span>) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#611 id=611 data-nosnippet>611</a>  }
-<a href=#612 id=612 data-nosnippet>612</a>
-<a href=#613 id=613 data-nosnippet>613</a>  <span class="attr">#[test]
-<a href=#614 id=614 data-nosnippet>614</a>  </span><span class="kw">fn </span>get_xmhint_spacing_em_times_ten() {
-<a href=#615 id=615 data-nosnippet>615</a>    <span class="comment">// em assumes 10pt font.
-<a href=#616 id=616 data-nosnippet>616</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"0.5em"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#517 id=517 data-nosnippet>517</a>          })),
+<a href=#518 id=518 data-nosnippet>518</a>          <span class="prelude-val">None </span>=&gt; {
+<a href=#519 id=519 data-nosnippet>519</a>            <span class="comment">// Generate xml:id for this node so we can reference it
+<a href=#520 id=520 data-nosnippet>520</a>            </span>document.generate_id(<span class="kw-2">&amp;mut </span>node.clone(), <span class="string">""</span>)<span class="question-mark">?</span>;
+<a href=#521 id=521 data-nosnippet>521</a>            <span class="kw">let </span>generated_id = node
+<a href=#522 id=522 data-nosnippet>522</a>              .get_attribute(<span class="string">"xml:id"</span>)
+<a href=#523 id=523 data-nosnippet>523</a>              .or_else(|| node.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>))
+<a href=#524 id=524 data-nosnippet>524</a>              .or_else(|| node.get_attribute(<span class="string">"id"</span>));
+<a href=#525 id=525 data-nosnippet>525</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = generated_id {
+<a href=#526 id=526 data-nosnippet>526</a>              refs.push(XM::Ref(XProps {
+<a href=#527 id=527 data-nosnippet>527</a>                id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
+<a href=#528 id=528 data-nosnippet>528</a>                ..XProps::default()
+<a href=#529 id=529 data-nosnippet>529</a>              }));
+<a href=#530 id=530 data-nosnippet>530</a>            }
+<a href=#531 id=531 data-nosnippet>531</a>          },
+<a href=#532 id=532 data-nosnippet>532</a>        }
+<a href=#533 id=533 data-nosnippet>533</a>      },
+<a href=#534 id=534 data-nosnippet>534</a>      XM::Apply(_op, _args, props, _meta) =&gt; {
+<a href=#535 id=535 data-nosnippet>535</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
+<a href=#536 id=536 data-nosnippet>536</a>          refs.push(XM::Ref(XProps {
+<a href=#537 id=537 data-nosnippet>537</a>            id: <span class="prelude-val">Some</span>(id.clone()),
+<a href=#538 id=538 data-nosnippet>538</a>            ..XProps::default()
+<a href=#539 id=539 data-nosnippet>539</a>          }));
+<a href=#540 id=540 data-nosnippet>540</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
+<a href=#541 id=541 data-nosnippet>541</a>          <span class="comment">// PRESERVE an existing _xmkey. Faithful to Perl `createXMRefs`
+<a href=#542 id=542 data-nosnippet>542</a>          // (Package.pm:1527): it `GenerateID`s an XML arg but NEVER clobbers
+<a href=#543 id=543 data-nosnippet>543</a>          // its `_xmkey`, so a node that is ALREADY an arg of an outer
+<a href=#544 id=544 data-nosnippet>544</a>          // package XMDual (via `\lx@xmarg`, e.g. braket `\braket{a|op|c}`)
+<a href=#545 id=545 data-nosnippet>545</a>          // keeps that key while also being referenced by THIS (grammar) dual
+<a href=#546 id=546 data-nosnippet>546</a>          // — both content XMRefs resolve to the same shared node. Overwriting
+<a href=#547 id=547 data-nosnippet>547</a>          // the key (as before) dangled the package's XMRef →
+<a href=#548 id=548 data-nosnippet>548</a>          // `expected:id Cannot find a node` (compound op; witness 2205.06843).
+<a href=#549 id=549 data-nosnippet>549</a>          </span>refs.push(XM::Ref(XProps {
+<a href=#550 id=550 data-nosnippet>550</a>            xmkey: <span class="prelude-val">Some</span>(existing),
+<a href=#551 id=551 data-nosnippet>551</a>            ..XProps::default()
+<a href=#552 id=552 data-nosnippet>552</a>          }));
+<a href=#553 id=553 data-nosnippet>553</a>        } <span class="kw">else </span>{
+<a href=#554 id=554 data-nosnippet>554</a>          <span class="comment">// not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
+<a href=#555 id=555 data-nosnippet>555</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
+<a href=#556 id=556 data-nosnippet>556</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
+<a href=#557 id=557 data-nosnippet>557</a>          refs.push(XM::Ref(XProps {
+<a href=#558 id=558 data-nosnippet>558</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+<a href=#559 id=559 data-nosnippet>559</a>            ..XProps::default()
+<a href=#560 id=560 data-nosnippet>560</a>          }));
+<a href=#561 id=561 data-nosnippet>561</a>        }
+<a href=#562 id=562 data-nosnippet>562</a>      },
+<a href=#563 id=563 data-nosnippet>563</a>      <span class="comment">// clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef
+<a href=#564 id=564 data-nosnippet>564</a>      </span>XM::Ref(props) =&gt; {
+<a href=#565 id=565 data-nosnippet>565</a>        refs.push(XM::Ref(props.clone()));
+<a href=#566 id=566 data-nosnippet>566</a>      },
+<a href=#567 id=567 data-nosnippet>567</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, props, <span class="kw">_</span>) | XM::Wrap(<span class="kw">_</span>, props, <span class="kw">_</span>) =&gt; {
+<a href=#568 id=568 data-nosnippet>568</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
+<a href=#569 id=569 data-nosnippet>569</a>          refs.push(XM::Ref(XProps {
+<a href=#570 id=570 data-nosnippet>570</a>            id: <span class="prelude-val">Some</span>(id.clone()),
+<a href=#571 id=571 data-nosnippet>571</a>            ..XProps::default()
+<a href=#572 id=572 data-nosnippet>572</a>          }));
+<a href=#573 id=573 data-nosnippet>573</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
+<a href=#574 id=574 data-nosnippet>574</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
+<a href=#575 id=575 data-nosnippet>575</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
+<a href=#576 id=576 data-nosnippet>576</a>          </span>refs.push(XM::Ref(XProps {
+<a href=#577 id=577 data-nosnippet>577</a>            xmkey: <span class="prelude-val">Some</span>(existing),
+<a href=#578 id=578 data-nosnippet>578</a>            ..XProps::default()
+<a href=#579 id=579 data-nosnippet>579</a>          }));
+<a href=#580 id=580 data-nosnippet>580</a>        } <span class="kw">else </span>{
+<a href=#581 id=581 data-nosnippet>581</a>          <span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
+<a href=#582 id=582 data-nosnippet>582</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
+<a href=#583 id=583 data-nosnippet>583</a>          refs.push(XM::Ref(XProps {
+<a href=#584 id=584 data-nosnippet>584</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+<a href=#585 id=585 data-nosnippet>585</a>            ..XProps::default()
+<a href=#586 id=586 data-nosnippet>586</a>          }));
+<a href=#587 id=587 data-nosnippet>587</a>        }
+<a href=#588 id=588 data-nosnippet>588</a>      },
+<a href=#589 id=589 data-nosnippet>589</a>      <span class="kw">_ </span>=&gt; {
+<a href=#590 id=590 data-nosnippet>590</a>        <span class="comment">// XMHint's are ephemeral — clone without id
+<a href=#591 id=591 data-nosnippet>591</a>        // Other variants: skip with warning
+<a href=#592 id=592 data-nosnippet>592</a>      </span>},
+<a href=#593 id=593 data-nosnippet>593</a>    }
+<a href=#594 id=594 data-nosnippet>594</a>  }
+<a href=#595 id=595 data-nosnippet>595</a>  <span class="prelude-val">Ok</span>(refs)
+<a href=#596 id=596 data-nosnippet>596</a>}
+<a href=#597 id=597 data-nosnippet>597</a>
+<a href=#598 id=598 data-nosnippet>598</a><span class="attr">#[cfg(test)]
+<a href=#599 id=599 data-nosnippet>599</a></span><span class="kw">mod </span>tests {
+<a href=#600 id=600 data-nosnippet>600</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#601 id=601 data-nosnippet>601</a>
+<a href=#602 id=602 data-nosnippet>602</a>  <span class="attr">#[test]
+<a href=#603 id=603 data-nosnippet>603</a>  </span><span class="kw">fn </span>distill_lexeme_dash_separator() {
+<a href=#604 id=604 data-nosnippet>604</a>    <span class="comment">// Dash takes precedence over colon.
+<a href=#605 id=605 data-nosnippet>605</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"UNKNOWN:italic-x"</span>);
+<a href=#606 id=606 data-nosnippet>606</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"UNKNOWN:italic"</span>);
+<a href=#607 id=607 data-nosnippet>607</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
+<a href=#608 id=608 data-nosnippet>608</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"x"</span>);
+<a href=#609 id=609 data-nosnippet>609</a>  }
+<a href=#610 id=610 data-nosnippet>610</a>
+<a href=#611 id=611 data-nosnippet>611</a>  <span class="attr">#[test]
+<a href=#612 id=612 data-nosnippet>612</a>  </span><span class="kw">fn </span>distill_lexeme_colon_only() {
+<a href=#613 id=613 data-nosnippet>613</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"ROLE:foo"</span>);
+<a href=#614 id=614 data-nosnippet>614</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"ROLE"</span>);
+<a href=#615 id=615 data-nosnippet>615</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">":"</span>);
+<a href=#616 id=616 data-nosnippet>616</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"foo"</span>);
 <a href=#617 id=617 data-nosnippet>617</a>  }
 <a href=#618 id=618 data-nosnippet>618</a>
 <a href=#619 id=619 data-nosnippet>619</a>  <span class="attr">#[test]
-<a href=#620 id=620 data-nosnippet>620</a>  </span><span class="kw">fn </span>get_xmhint_spacing_strips_plus_glue() {
-<a href=#621 id=621 data-nosnippet>621</a>    <span class="comment">// "2.77pt plus 2.77pt" extracts base "2.77pt".
-<a href=#622 id=622 data-nosnippet>622</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"2.77pt plus 2.77pt"</span>) - <span class="number">2.77</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#623 id=623 data-nosnippet>623</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"5pt minus 1pt"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#624 id=624 data-nosnippet>624</a>  }
-<a href=#625 id=625 data-nosnippet>625</a>
-<a href=#626 id=626 data-nosnippet>626</a>  <span class="attr">#[test]
-<a href=#627 id=627 data-nosnippet>627</a>  </span><span class="kw">fn </span>get_xmhint_spacing_empty_is_zero() {
-<a href=#628 id=628 data-nosnippet>628</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">""</span>), <span class="number">0.0</span>);
-<a href=#629 id=629 data-nosnippet>629</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"  "</span>), <span class="number">0.0</span>);
-<a href=#630 id=630 data-nosnippet>630</a>  }
-<a href=#631 id=631 data-nosnippet>631</a>
-<a href=#632 id=632 data-nosnippet>632</a>  <span class="attr">#[test]
-<a href=#633 id=633 data-nosnippet>633</a>  </span><span class="kw">fn </span>get_xmhint_spacing_unknown_unit_is_zero() {
-<a href=#634 id=634 data-nosnippet>634</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"5cm"</span>), <span class="number">0.0</span>);
-<a href=#635 id=635 data-nosnippet>635</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"garbage"</span>), <span class="number">0.0</span>);
-<a href=#636 id=636 data-nosnippet>636</a>  }
-<a href=#637 id=637 data-nosnippet>637</a>}
+<a href=#620 id=620 data-nosnippet>620</a>  </span><span class="kw">fn </span>distill_lexeme_no_separator() {
+<a href=#621 id=621 data-nosnippet>621</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"bare"</span>);
+<a href=#622 id=622 data-nosnippet>622</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
+<a href=#623 id=623 data-nosnippet>623</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
+<a href=#624 id=624 data-nosnippet>624</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"bare"</span>);
+<a href=#625 id=625 data-nosnippet>625</a>  }
+<a href=#626 id=626 data-nosnippet>626</a>
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="attr">#[test]
+<a href=#628 id=628 data-nosnippet>628</a>  </span><span class="kw">fn </span>distill_lexeme_empty() {
+<a href=#629 id=629 data-nosnippet>629</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">""</span>);
+<a href=#630 id=630 data-nosnippet>630</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
+<a href=#631 id=631 data-nosnippet>631</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
+<a href=#632 id=632 data-nosnippet>632</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
+<a href=#633 id=633 data-nosnippet>633</a>  }
+<a href=#634 id=634 data-nosnippet>634</a>
+<a href=#635 id=635 data-nosnippet>635</a>  <span class="attr">#[test]
+<a href=#636 id=636 data-nosnippet>636</a>  </span><span class="kw">fn </span>distill_lexeme_trailing_dash() {
+<a href=#637 id=637 data-nosnippet>637</a>    <span class="comment">// Edge: last-dash splits after the last hyphen even when the tail is empty.
+<a href=#638 id=638 data-nosnippet>638</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"foo-"</span>);
+<a href=#639 id=639 data-nosnippet>639</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"foo"</span>);
+<a href=#640 id=640 data-nosnippet>640</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
+<a href=#641 id=641 data-nosnippet>641</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
+<a href=#642 id=642 data-nosnippet>642</a>  }
+<a href=#643 id=643 data-nosnippet>643</a>
+<a href=#644 id=644 data-nosnippet>644</a>  <span class="attr">#[test]
+<a href=#645 id=645 data-nosnippet>645</a>  </span><span class="kw">fn </span>get_xmhint_spacing_mu_divides_by_1_8() {
+<a href=#646 id=646 data-nosnippet>646</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.8mu"</span>) - <span class="number">1.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#647 id=647 data-nosnippet>647</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"3.6mu"</span>) - <span class="number">2.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#648 id=648 data-nosnippet>648</a>  }
+<a href=#649 id=649 data-nosnippet>649</a>
+<a href=#650 id=650 data-nosnippet>650</a>  <span class="attr">#[test]
+<a href=#651 id=651 data-nosnippet>651</a>  </span><span class="kw">fn </span>get_xmhint_spacing_pt_passes_through() {
+<a href=#652 id=652 data-nosnippet>652</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.667pt"</span>) - <span class="number">1.667</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#653 id=653 data-nosnippet>653</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"10pt"</span>) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#654 id=654 data-nosnippet>654</a>  }
+<a href=#655 id=655 data-nosnippet>655</a>
+<a href=#656 id=656 data-nosnippet>656</a>  <span class="attr">#[test]
+<a href=#657 id=657 data-nosnippet>657</a>  </span><span class="kw">fn </span>get_xmhint_spacing_em_times_ten() {
+<a href=#658 id=658 data-nosnippet>658</a>    <span class="comment">// em assumes 10pt font.
+<a href=#659 id=659 data-nosnippet>659</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"0.5em"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#660 id=660 data-nosnippet>660</a>  }
+<a href=#661 id=661 data-nosnippet>661</a>
+<a href=#662 id=662 data-nosnippet>662</a>  <span class="attr">#[test]
+<a href=#663 id=663 data-nosnippet>663</a>  </span><span class="kw">fn </span>get_xmhint_spacing_strips_plus_glue() {
+<a href=#664 id=664 data-nosnippet>664</a>    <span class="comment">// "2.77pt plus 2.77pt" extracts base "2.77pt".
+<a href=#665 id=665 data-nosnippet>665</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"2.77pt plus 2.77pt"</span>) - <span class="number">2.77</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#666 id=666 data-nosnippet>666</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"5pt minus 1pt"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#667 id=667 data-nosnippet>667</a>  }
+<a href=#668 id=668 data-nosnippet>668</a>
+<a href=#669 id=669 data-nosnippet>669</a>  <span class="attr">#[test]
+<a href=#670 id=670 data-nosnippet>670</a>  </span><span class="kw">fn </span>get_xmhint_spacing_empty_is_zero() {
+<a href=#671 id=671 data-nosnippet>671</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">""</span>), <span class="number">0.0</span>);
+<a href=#672 id=672 data-nosnippet>672</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"  "</span>), <span class="number">0.0</span>);
+<a href=#673 id=673 data-nosnippet>673</a>  }
+<a href=#674 id=674 data-nosnippet>674</a>
+<a href=#675 id=675 data-nosnippet>675</a>  <span class="attr">#[test]
+<a href=#676 id=676 data-nosnippet>676</a>  </span><span class="kw">fn </span>get_xmhint_spacing_unknown_unit_is_zero() {
+<a href=#677 id=677 data-nosnippet>677</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"5cm"</span>), <span class="number">0.0</span>);
+<a href=#678 id=678 data-nosnippet>678</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"garbage"</span>), <span class="number">0.0</span>);
+<a href=#679 id=679 data-nosnippet>679</a>  }
+<a href=#680 id=680 data-nosnippet>680</a>}
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/model.rs`."><title>model.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>model.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/model.rs`."><title>model.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (c397dae80 2026-07-02)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>model.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{
 <a href=#2 id=2 data-nosnippet>2</a>  cell::RefCell,
 <a href=#3 id=3 data-nosnippet>3</a>  fs::File,
 <a href=#4 id=4 data-nosnippet>4</a>  io::{BufRead, BufReader},
@@ -335,310 +335,310 @@
 <a href=#335 id=335 data-nosnippet>335</a>        <span class="string">"BackMatter"</span>,
 <a href=#336 id=336 data-nosnippet>336</a>      ]);
 <a href=#337 id=337 data-nosnippet>337</a>      <span class="kw">let </span>cb_entry = <span class="self">self</span>.tagprop.entry(<span class="string">"ltx:_CaptureBlock_"</span>).or_default();
-<a href=#338 id=338 data-nosnippet>338</a>      cb_entry.model.insert(arena::pin_static(<span class="string">"svg:g"</span>));
-<a href=#339 id=339 data-nosnippet>339</a>      cb_entry
-<a href=#340 id=340 data-nosnippet>340</a>        .model
-<a href=#341 id=341 data-nosnippet>341</a>        .insert(arena::pin_static(<span class="string">"svg:foreignObject"</span>));
-<a href=#342 id=342 data-nosnippet>342</a>    }
-<a href=#343 id=343 data-nosnippet>343</a>  }
-<a href=#344 id=344 data-nosnippet>344</a>
-<a href=#345 id=345 data-nosnippet>345</a>  <span class="doccomment">/// Clone the tagprop's (allowed content &amp; attributes) of @other to $tag
-<a href=#346 id=346 data-nosnippet>346</a>  </span><span class="kw">fn </span>synthesize_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, others: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) {
-<a href=#347 id=347 data-nosnippet>347</a>    <span class="kw">let </span><span class="kw-2">mut </span>to_add_in_model = Vec::new();
-<a href=#348 id=348 data-nosnippet>348</a>    <span class="kw">let </span><span class="kw-2">mut </span>to_add_in_attrs = Vec::new();
-<a href=#349 id=349 data-nosnippet>349</a>    <span class="kw">for </span>other <span class="kw">in </span>others {
-<a href=#350 id=350 data-nosnippet>350</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = <span class="self">self</span>.schema_class.get(other) {
-<a href=#351 id=351 data-nosnippet>351</a>        <span class="kw">for </span>child <span class="kw">in </span>content {
-<a href=#352 id=352 data-nosnippet>352</a>          to_add_in_model.push(<span class="kw-2">*</span>child);
-<a href=#353 id=353 data-nosnippet>353</a>        }
-<a href=#354 id=354 data-nosnippet>354</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.tagprop.get(other) {
-<a href=#355 id=355 data-nosnippet>355</a>        <span class="kw">for </span>child <span class="kw">in </span><span class="kw-2">&amp;</span>entry.model {
-<a href=#356 id=356 data-nosnippet>356</a>          to_add_in_model.push(<span class="kw-2">*</span>child);
-<a href=#357 id=357 data-nosnippet>357</a>        }
-<a href=#358 id=358 data-nosnippet>358</a>        <span class="kw">for </span>attr <span class="kw">in </span><span class="kw-2">&amp;</span>entry.attributes {
-<a href=#359 id=359 data-nosnippet>359</a>          to_add_in_attrs.push(<span class="kw-2">*</span>attr);
-<a href=#360 id=360 data-nosnippet>360</a>        }
-<a href=#361 id=361 data-nosnippet>361</a>      }
-<a href=#362 id=362 data-nosnippet>362</a>    }
-<a href=#363 id=363 data-nosnippet>363</a>    <span class="kw">let </span>capture = <span class="self">self</span>.tagprop.entry(tag).or_default();
-<a href=#364 id=364 data-nosnippet>364</a>    <span class="kw">for </span>child <span class="kw">in </span>to_add_in_model {
-<a href=#365 id=365 data-nosnippet>365</a>      capture.model.insert(child);
-<a href=#366 id=366 data-nosnippet>366</a>    }
-<a href=#367 id=367 data-nosnippet>367</a>    <span class="kw">for </span>attr <span class="kw">in </span>to_add_in_attrs {
-<a href=#368 id=368 data-nosnippet>368</a>      capture.attributes.insert(attr);
-<a href=#369 id=369 data-nosnippet>369</a>    }
-<a href=#370 id=370 data-nosnippet>370</a>  }
-<a href=#371 id=371 data-nosnippet>371</a>}
-<a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a><span class="kw">pub fn </span>set_relaxng_schema(schema: <span class="kw-2">&amp;</span>str) { <span class="macro">model_mut!</span>().set_relaxng_schema(schema) }
-<a href=#374 id=374 data-nosnippet>374</a><span class="kw">pub fn </span>add_schema_declaration(document: <span class="kw-2">&amp;mut </span>Document) {
-<a href=#375 id=375 data-nosnippet>375</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>schema) = <span class="macro">model!</span>().schema {
-<a href=#376 id=376 data-nosnippet>376</a>    schema.add_schema_declaration(document);
-<a href=#377 id=377 data-nosnippet>377</a>  }
-<a href=#378 id=378 data-nosnippet>378</a>}
-<a href=#379 id=379 data-nosnippet>379</a>
-<a href=#380 id=380 data-nosnippet>380</a><span class="kw">pub fn </span>load_schema(search_paths: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#381 id=381 data-nosnippet>381</a>  <span class="comment">// Only load once
-<a href=#382 id=382 data-nosnippet>382</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
-<a href=#383 id=383 data-nosnippet>383</a>  <span class="kw">if </span>model.schema.is_some() {
-<a href=#384 id=384 data-nosnippet>384</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#385 id=385 data-nosnippet>385</a>  }
-<a href=#386 id=386 data-nosnippet>386</a>  <span class="kw">let </span><span class="kw-2">mut </span>name = String::new();
-<a href=#387 id=387 data-nosnippet>387</a>  <span class="kw">if </span>model.schema_data.is_none() {
-<a href=#388 id=388 data-nosnippet>388</a>    <span class="comment">// TODO: Return this code path to normal once we properly load schemas
-<a href=#389 id=389 data-nosnippet>389</a>    </span><span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;model&gt;"</span>, <span class="string">"TODO"</span>);
-<a href=#390 id=390 data-nosnippet>390</a>    <span class="comment">// Warn('expected', '&lt;model&gt;', undef, "No Schema Model has been declared; assuming LaTeXML");
-<a href=#391 id=391 data-nosnippet>391</a>    // // article ??? or what ? undef gives problems!
-<a href=#392 id=392 data-nosnippet>392</a>
-<a href=#393 id=393 data-nosnippet>393</a>    </span>model.register_document_namespace(<span class="string">"ltx"</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
-<a href=#394 id=394 data-nosnippet>394</a>    model.set_relaxng_schema(<span class="string">"LaTeXML"</span>);
-<a href=#395 id=395 data-nosnippet>395</a>    model.register_namespace(<span class="string">"ltx"</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
-<a href=#396 id=396 data-nosnippet>396</a>    model.register_namespace(<span class="string">"svg"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/2000/svg"</span>));
-<a href=#397 id=397 data-nosnippet>397</a>    model.register_namespace(<span class="string">"xlink"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1999/xlink"</span>)); <span class="comment">// Needed for SVG
-<a href=#398 id=398 data-nosnippet>398</a>    </span>model.register_namespace(<span class="string">"m"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1998/Math/MathML"</span>));
-<a href=#399 id=399 data-nosnippet>399</a>    model.register_namespace(<span class="string">"xhtml"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1999/xhtml"</span>));
-<a href=#400 id=400 data-nosnippet>400</a>    model.permissive = <span class="bool-val">true</span>;
-<a href=#401 id=401 data-nosnippet>401</a>  } <span class="comment">// Actually, they could have declared all sorts of Tags....
-<a href=#402 id=402 data-nosnippet>402</a>  // Only RelaxNG schemas are supported (DTD support removed from Rust port)
-<a href=#403 id=403 data-nosnippet>403</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) = model.schema_data {
-<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw">if </span>data[<span class="number">0</span>] == <span class="macro">pin!</span>(<span class="string">"RelaxNG"</span>) {
-<a href=#405 id=405 data-nosnippet>405</a>      name = arena::to_string(data[<span class="number">1</span>]);
-<a href=#406 id=406 data-nosnippet>406</a>      model.schema = <span class="prelude-val">Some</span>(Relaxng {
-<a href=#407 id=407 data-nosnippet>407</a>        name: name.clone(),
-<a href=#408 id=408 data-nosnippet>408</a>        ..Relaxng::default()
-<a href=#409 id=409 data-nosnippet>409</a>      });
-<a href=#410 id=410 data-nosnippet>410</a>    } <span class="kw">else </span>{
-<a href=#411 id=411 data-nosnippet>411</a>      <span class="kw">let </span>message = arena::with(data[<span class="number">0</span>], |schema_type_str| {
-<a href=#412 id=412 data-nosnippet>412</a>        <span class="macro">s!</span>(<span class="string">"Can't load a schema of type {schema_type_str:?}"</span>)
-<a href=#413 id=413 data-nosnippet>413</a>      });
-<a href=#414 id=414 data-nosnippet>414</a>      <span class="macro">Error!</span>(<span class="string">"unknown"</span>, <span class="string">"schematype"</span>, message)
-<a href=#415 id=415 data-nosnippet>415</a>    }
-<a href=#416 id=416 data-nosnippet>416</a>  }
-<a href=#417 id=417 data-nosnippet>417</a>
-<a href=#418 id=418 data-nosnippet>418</a>  <span class="kw">if </span>!model.no_compiled &amp;&amp; model.schema.is_some() {
-<a href=#419 id=419 data-nosnippet>419</a>    <span class="kw">let </span>paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt; = <span class="kw">if </span>search_paths.is_empty() {
-<a href=#420 id=420 data-nosnippet>420</a>      <span class="prelude-val">None
-<a href=#421 id=421 data-nosnippet>421</a>    </span>} <span class="kw">else </span>{
-<a href=#422 id=422 data-nosnippet>422</a>      <span class="prelude-val">Some</span>(search_paths.iter().map(ToString::to_string).collect())
-<a href=#423 id=423 data-nosnippet>423</a>    };
-<a href=#424 id=424 data-nosnippet>424</a>    <span class="kw">let </span>pathname_opt = pathname::find(<span class="kw-2">&amp;</span>name, pathname::PathnameFindOptions {
-<a href=#425 id=425 data-nosnippet>425</a>      paths,
-<a href=#426 id=426 data-nosnippet>426</a>      extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"model"</span>)]),
-<a href=#427 id=427 data-nosnippet>427</a>      installation_subdir: <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"resources/RelaxNG"</span>)),
-<a href=#428 id=428 data-nosnippet>428</a>    });
-<a href=#429 id=429 data-nosnippet>429</a>
-<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">match </span>pathname_opt {
-<a href=#431 id=431 data-nosnippet>431</a>      <span class="prelude-val">Some</span>(compiled_path) =&gt; model.load_compiled_schema(<span class="kw-2">&amp;</span>compiled_path),
-<a href=#432 id=432 data-nosnippet>432</a>      <span class="prelude-val">None </span>=&gt; {
-<a href=#433 id=433 data-nosnippet>433</a>        <span class="comment">// No `.model` on the searchpath. Try the embedded RelaxNG
-<a href=#434 id=434 data-nosnippet>434</a>        // table for a same-named compiled schema first (the
-<a href=#435 id=435 data-nosnippet>435</a>        // distribution path — binary running outside the source
-<a href=#436 id=436 data-nosnippet>436</a>        // tree); fall through to raw `.rng` parsing if that misses
-<a href=#437 id=437 data-nosnippet>437</a>        // too.
-<a href=#438 id=438 data-nosnippet>438</a>        </span><span class="kw">let </span>embed_key = <span class="macro">format!</span>(<span class="string">"{}.model"</span>, name);
-<a href=#439 id=439 data-nosnippet>439</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = <span class="kw">crate</span>::common::relaxng::embedded::lookup(<span class="kw-2">&amp;</span>embed_key) {
-<a href=#440 id=440 data-nosnippet>440</a>          model.load_compiled_schema_str(content, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;embedded&gt;/{embed_key}"</span>));
-<a href=#441 id=441 data-nosnippet>441</a>        } <span class="kw">else </span>{
-<a href=#442 id=442 data-nosnippet>442</a>          <span class="kw">let </span>paths: Vec&lt;<span class="kw-2">&amp;</span>std::path::Path&gt; =
-<a href=#443 id=443 data-nosnippet>443</a>            search_paths.iter().map(std::path::Path::new).collect();
-<a href=#444 id=444 data-nosnippet>444</a>          <span class="kw">let </span>schema = model.schema.as_mut().unwrap();
-<a href=#445 id=445 data-nosnippet>445</a>          <span class="kw">let </span>schema_name = schema.name.clone();
-<a href=#446 id=446 data-nosnippet>446</a>          <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = schema.load_schema(<span class="kw-2">&amp;</span>schema_name, <span class="kw-2">&amp;</span>paths) {
-<a href=#447 id=447 data-nosnippet>447</a>            <span class="kw">let </span>msg = <span class="macro">format!</span>(<span class="string">"load_schema failed for {}: {}"</span>, schema_name, err);
-<a href=#448 id=448 data-nosnippet>448</a>            <span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"RelaxNG"</span>, msg);
-<a href=#449 id=449 data-nosnippet>449</a>          }
-<a href=#450 id=450 data-nosnippet>450</a>        }
-<a href=#451 id=451 data-nosnippet>451</a>      },
-<a href=#452 id=452 data-nosnippet>452</a>    };
-<a href=#453 id=453 data-nosnippet>453</a>  }
-<a href=#454 id=454 data-nosnippet>454</a>  model.load_internal_extensions();
-<a href=#455 id=455 data-nosnippet>455</a>  <span class="kw">if </span>model.debug_mode {
-<a href=#456 id=456 data-nosnippet>456</a>    model.describe_model()
-<a href=#457 id=457 data-nosnippet>457</a>  }
-<a href=#458 id=458 data-nosnippet>458</a>
-<a href=#459 id=459 data-nosnippet>459</a>  <span class="prelude-val">Ok</span>(())
-<a href=#460 id=460 data-nosnippet>460</a>}
-<a href=#461 id=461 data-nosnippet>461</a>
-<a href=#462 id=462 data-nosnippet>462</a><span class="kw">pub fn </span>get_document_namespace_prefix(
-<a href=#463 id=463 data-nosnippet>463</a>  namespace: <span class="kw-2">&amp;</span>str,
-<a href=#464 id=464 data-nosnippet>464</a>  forattribute: bool,
-<a href=#465 id=465 data-nosnippet>465</a>  probe: bool,
-<a href=#466 id=466 data-nosnippet>466</a>) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
-<a href=#467 id=467 data-nosnippet>467</a>  <span class="comment">// Get the prefix associated with the namespace url, noting that for elements, it might by
-<a href=#468 id=468 data-nosnippet>468</a>  // "#default", but for attributes would never be.
-<a href=#469 id=469 data-nosnippet>469</a>  // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
-<a href=#470 id=470 data-nosnippet>470</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>docprefix = <span class="kw">if </span>!forattribute {
-<a href=#471 id=471 data-nosnippet>471</a>    <span class="macro">model!</span>()
-<a href=#472 id=472 data-nosnippet>472</a>      .document_namespace_prefixes
-<a href=#473 id=473 data-nosnippet>473</a>      .get(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"DEFAULT#{namespace}"</span>))
-<a href=#474 id=474 data-nosnippet>474</a>      .copied()
-<a href=#475 id=475 data-nosnippet>475</a>  } <span class="kw">else </span>{
-<a href=#476 id=476 data-nosnippet>476</a>    <span class="prelude-val">None
-<a href=#477 id=477 data-nosnippet>477</a>  </span>};
-<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">let </span>ns_sym = arena::pin(namespace);
-<a href=#479 id=479 data-nosnippet>479</a>  <span class="kw">if </span>docprefix.is_none() {
-<a href=#480 id=480 data-nosnippet>480</a>    docprefix = <span class="macro">model!</span>()
-<a href=#481 id=481 data-nosnippet>481</a>      .document_namespace_prefixes
-<a href=#482 id=482 data-nosnippet>482</a>      .get_sym(ns_sym)
-<a href=#483 id=483 data-nosnippet>483</a>      .copied();
-<a href=#484 id=484 data-nosnippet>484</a>  }
-<a href=#485 id=485 data-nosnippet>485</a>
-<a href=#486 id=486 data-nosnippet>486</a>  <span class="kw">if </span>docprefix.is_none() &amp;&amp; !probe {
-<a href=#487 id=487 data-nosnippet>487</a>    {
-<a href=#488 id=488 data-nosnippet>488</a>      <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>;
-<a href=#489 id=489 data-nosnippet>489</a>    }
-<a href=#490 id=490 data-nosnippet>490</a>    <span class="kw">let </span>ns_err = <span class="macro">s!</span>(<span class="string">"namespace{}"</span>, <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string());
-<a href=#491 id=491 data-nosnippet>491</a>    docprefix = <span class="prelude-val">Some</span>(arena::pin(<span class="kw-2">&amp;</span>ns_err));
-<a href=#492 id=492 data-nosnippet>492</a>    {
-<a href=#493 id=493 data-nosnippet>493</a>      <span class="macro">model_mut!</span>().register_document_namespace(<span class="kw-2">&amp;</span>ns_err, <span class="prelude-val">Some</span>(namespace));
-<a href=#494 id=494 data-nosnippet>494</a>    }
-<a href=#495 id=495 data-nosnippet>495</a>    <span class="kw">let </span>message2 = <span class="kw">if let </span><span class="prelude-val">Some</span>(dp) = docprefix {
-<a href=#496 id=496 data-nosnippet>496</a>      arena::with(dp, |dp_str| <span class="macro">s!</span>(<span class="string">"Using '{dp_str}' instead"</span>))
-<a href=#497 id=497 data-nosnippet>497</a>    } <span class="kw">else </span>{
-<a href=#498 id=498 data-nosnippet>498</a>      String::from(<span class="string">"No prefix to fall back on."</span>)
-<a href=#499 id=499 data-nosnippet>499</a>    };
-<a href=#500 id=500 data-nosnippet>500</a>    <span class="macro">Warn!</span>(
-<a href=#501 id=501 data-nosnippet>501</a>      <span class="string">"malformed"</span>,
-<a href=#502 id=502 data-nosnippet>502</a>      namespace,
-<a href=#503 id=503 data-nosnippet>503</a>      <span class="string">"No prefix has been registered for namespace (in document)"</span>,
-<a href=#504 id=504 data-nosnippet>504</a>      message2
-<a href=#505 id=505 data-nosnippet>505</a>    );
-<a href=#506 id=506 data-nosnippet>506</a>  }
-<a href=#507 id=507 data-nosnippet>507</a>  <span class="kw">let </span>default_sym = <span class="macro">pin!</span>(<span class="string">"#default"</span>);
-<a href=#508 id=508 data-nosnippet>508</a>  docprefix.filter(|p| p != <span class="kw-2">&amp;</span>default_sym)
-<a href=#509 id=509 data-nosnippet>509</a>}
-<a href=#510 id=510 data-nosnippet>510</a>
-<a href=#511 id=511 data-nosnippet>511</a><span class="kw">pub fn </span>get_document_namespace(docprefix: <span class="kw-2">&amp;</span>str, probe: bool) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#512 id=512 data-nosnippet>512</a>  <span class="kw">let </span>h_default_sym = <span class="macro">pin!</span>(<span class="string">"#default"</span>);
-<a href=#513 id=513 data-nosnippet>513</a>  <span class="kw">let </span>docprefix_sym = <span class="kw">if </span>docprefix.is_empty() {
-<a href=#514 id=514 data-nosnippet>514</a>    h_default_sym
-<a href=#515 id=515 data-nosnippet>515</a>  } <span class="kw">else </span>{
-<a href=#516 id=516 data-nosnippet>516</a>    arena::pin(docprefix)
-<a href=#517 id=517 data-nosnippet>517</a>  };
-<a href=#518 id=518 data-nosnippet>518</a>  <span class="kw">let </span>ns_str = <span class="kw">match </span><span class="macro">model!</span>().document_namespaces.get_sym(docprefix_sym) {
-<a href=#519 id=519 data-nosnippet>519</a>    <span class="prelude-val">None </span>=&gt; String::new(),
-<a href=#520 id=520 data-nosnippet>520</a>    <span class="prelude-val">Some</span>(sym) =&gt; arena::with(<span class="kw-2">*</span>sym, |s| {
-<a href=#521 id=521 data-nosnippet>521</a>      <span class="kw">if </span>s.starts_with(<span class="string">"DEFAULT#"</span>) {
-<a href=#522 id=522 data-nosnippet>522</a>        s.replacen(<span class="string">"DEFAULT#"</span>, <span class="string">""</span>, <span class="number">1</span>)
-<a href=#523 id=523 data-nosnippet>523</a>      } <span class="kw">else </span>{
-<a href=#524 id=524 data-nosnippet>524</a>        s.to_string()
-<a href=#525 id=525 data-nosnippet>525</a>      }
-<a href=#526 id=526 data-nosnippet>526</a>    }),
-<a href=#527 id=527 data-nosnippet>527</a>  };
-<a href=#528 id=528 data-nosnippet>528</a>
-<a href=#529 id=529 data-nosnippet>529</a>  <span class="kw">if </span>docprefix_sym != h_default_sym &amp;&amp; ns_str.is_empty() &amp;&amp; !probe {
-<a href=#530 id=530 data-nosnippet>530</a>    {
-<a href=#531 id=531 data-nosnippet>531</a>      <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>;
-<a href=#532 id=532 data-nosnippet>532</a>    }
-<a href=#533 id=533 data-nosnippet>533</a>    <span class="kw">let </span>ns_error = <span class="macro">s!</span>(
-<a href=#534 id=534 data-nosnippet>534</a>      <span class="string">"http://example.com/namespace{}"</span>,
-<a href=#535 id=535 data-nosnippet>535</a>      <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string()
-<a href=#536 id=536 data-nosnippet>536</a>    );
-<a href=#537 id=537 data-nosnippet>537</a>    {
-<a href=#538 id=538 data-nosnippet>538</a>      <span class="macro">model_mut!</span>().register_document_namespace(docprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ns_error));
-<a href=#539 id=539 data-nosnippet>539</a>    }
-<a href=#540 id=540 data-nosnippet>540</a>    <span class="kw">let </span>msg1 = arena::with(docprefix_sym, |dp_str| {
-<a href=#541 id=541 data-nosnippet>541</a>      <span class="macro">s!</span>(<span class="string">"No namespace has been registered for prefix '{dp_str}' (in document)"</span>)
-<a href=#542 id=542 data-nosnippet>542</a>    });
-<a href=#543 id=543 data-nosnippet>543</a>    <span class="kw">let </span>msg2 = <span class="macro">s!</span>(<span class="string">"Using '{ns_str}' instead"</span>);
-<a href=#544 id=544 data-nosnippet>544</a>    <span class="kw">let </span>err = || {
-<a href=#545 id=545 data-nosnippet>545</a>      <span class="macro">Error!</span>(<span class="string">"malformed"</span>, docprefix, msg1, msg2);
-<a href=#546 id=546 data-nosnippet>546</a>      <span class="prelude-val">Ok</span>(())
-<a href=#547 id=547 data-nosnippet>547</a>    };
-<a href=#548 id=548 data-nosnippet>548</a>    err().ok();
-<a href=#549 id=549 data-nosnippet>549</a>  }
-<a href=#550 id=550 data-nosnippet>550</a>  <span class="kw">if </span>ns_str.is_empty() {
-<a href=#551 id=551 data-nosnippet>551</a>    <span class="prelude-val">None
-<a href=#552 id=552 data-nosnippet>552</a>  </span>} <span class="kw">else </span>{
-<a href=#553 id=553 data-nosnippet>553</a>    <span class="prelude-val">Some</span>(ns_str)
-<a href=#554 id=554 data-nosnippet>554</a>  }
-<a href=#555 id=555 data-nosnippet>555</a>}
-<a href=#556 id=556 data-nosnippet>556</a>
-<a href=#557 id=557 data-nosnippet>557</a><span class="doccomment">/// Get the (code) prefix associated with $namespace,
-<a href=#558 id=558 data-nosnippet>558</a>/// creating a dummy prefix and signalling an error if none has been registered.
-<a href=#559 id=559 data-nosnippet>559</a>///
-<a href=#560 id=560 data-nosnippet>560</a>/// In the following:
-<a href=#561 id=561 data-nosnippet>561</a>/// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
-<a href=#562 id=562 data-nosnippet>562</a>/// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
-<a href=#563 id=563 data-nosnippet>563</a>/// if missing.
-<a href=#564 id=564 data-nosnippet>564</a></span><span class="kw">pub fn </span>get_namespace_prefix(namespace: <span class="kw-2">&amp;</span>str, _forattribute: bool, probe: bool) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
-<a href=#565 id=565 data-nosnippet>565</a>  <span class="kw">let </span><span class="kw-2">mut </span>codeprefix: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = <span class="prelude-val">None</span>;
-<a href=#566 id=566 data-nosnippet>566</a>  <span class="kw">let </span>ns_sym = arena::pin(namespace);
-<a href=#567 id=567 data-nosnippet>567</a>  <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
-<a href=#568 id=568 data-nosnippet>568</a>  <span class="kw">if </span>!namespace.is_empty() {
-<a href=#569 id=569 data-nosnippet>569</a>    codeprefix = model.code_namespace_prefixes.get_sym(ns_sym).copied();
-<a href=#570 id=570 data-nosnippet>570</a>
-<a href=#571 id=571 data-nosnippet>571</a>    <span class="kw">if </span>codeprefix.is_some() &amp;&amp; !probe {
-<a href=#572 id=572 data-nosnippet>572</a>      {
-<a href=#573 id=573 data-nosnippet>573</a>        <span class="kw">let </span>docprefix = model.document_namespace_prefixes.get_sym(ns_sym);
-<a href=#574 id=574 data-nosnippet>574</a>        <span class="comment">// if there's a doc prefix and it's NOT already used in code namespace mapping
-<a href=#575 id=575 data-nosnippet>575</a>        </span><span class="kw">if </span>docprefix.is_some() &amp;&amp; !model.code_namespaces.contains_key_sym(docprefix.unwrap()) {
-<a href=#576 id=576 data-nosnippet>576</a>          codeprefix = docprefix.copied();
-<a href=#577 id=577 data-nosnippet>577</a>        }
-<a href=#578 id=578 data-nosnippet>578</a>      }
-<a href=#579 id=579 data-nosnippet>579</a>    } <span class="kw">else </span>{
-<a href=#580 id=580 data-nosnippet>580</a>      <span class="comment">// Else synthesize one
-<a href=#581 id=581 data-nosnippet>581</a>      </span>model.namespace_errors += <span class="number">1</span>;
-<a href=#582 id=582 data-nosnippet>582</a>      <span class="kw">let </span>auto_prefix = arena::pin(<span class="macro">s!</span>(<span class="string">"namespace{}"</span>, <span class="kw-2">&amp;</span>model.namespace_errors.to_string()));
-<a href=#583 id=583 data-nosnippet>583</a>      codeprefix = <span class="prelude-val">Some</span>(auto_prefix);
-<a href=#584 id=584 data-nosnippet>584</a>    }
-<a href=#585 id=585 data-nosnippet>585</a>    model.register_namespace_sym(codeprefix.unwrap(), <span class="prelude-val">Some</span>(arena::pin(namespace)));
-<a href=#586 id=586 data-nosnippet>586</a>    <span class="comment">// Warn!('malformed', $namespace, undef,
-<a href=#587 id=587 data-nosnippet>587</a>    //   "No prefix has been registered for namespace '$namespace' (in code)",
-<a href=#588 id=588 data-nosnippet>588</a>    //   "Using '$codeprefix' instead"); }
-<a href=#589 id=589 data-nosnippet>589</a>  </span>}
-<a href=#590 id=590 data-nosnippet>590</a>
-<a href=#591 id=591 data-nosnippet>591</a>  codeprefix
-<a href=#592 id=592 data-nosnippet>592</a>}
-<a href=#593 id=593 data-nosnippet>593</a>
-<a href=#594 id=594 data-nosnippet>594</a><span class="kw">pub fn </span>get_namespace(codeprefix: <span class="kw-2">&amp;</span>str, probe: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
-<a href=#595 id=595 data-nosnippet>595</a>  <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
-<a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">let </span><span class="kw-2">mut </span>ns: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = model.code_namespaces.get(codeprefix).copied();
-<a href=#597 id=597 data-nosnippet>597</a>  <span class="kw">if </span>ns.is_none() &amp;&amp; !probe {
-<a href=#598 id=598 data-nosnippet>598</a>    model.namespace_errors += <span class="number">1</span>;
-<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">let </span>example_namespace = <span class="macro">s!</span>(
-<a href=#600 id=600 data-nosnippet>600</a>      <span class="string">"http://example.com/namespace{}"</span>,
-<a href=#601 id=601 data-nosnippet>601</a>      <span class="kw-2">&amp;</span>model.namespace_errors.to_string()
-<a href=#602 id=602 data-nosnippet>602</a>    );
-<a href=#603 id=603 data-nosnippet>603</a>    ns = <span class="prelude-val">Some</span>(arena::pin(<span class="kw-2">&amp;</span>example_namespace));
-<a href=#604 id=604 data-nosnippet>604</a>    model.register_namespace(codeprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>example_namespace));
-<a href=#605 id=605 data-nosnippet>605</a>    <span class="macro">Error!</span>(
-<a href=#606 id=606 data-nosnippet>606</a>      <span class="string">"malformed"</span>,
-<a href=#607 id=607 data-nosnippet>607</a>      codeprefix,
-<a href=#608 id=608 data-nosnippet>608</a>      <span class="macro">s!</span>(<span class="string">"No namespace has been registered for prefix '{codeprefix}' (in code)"</span>),
-<a href=#609 id=609 data-nosnippet>609</a>      <span class="macro">s!</span>(<span class="string">"Using '{example_namespace}' instead"</span>)
-<a href=#610 id=610 data-nosnippet>610</a>    );
-<a href=#611 id=611 data-nosnippet>611</a>  }
-<a href=#612 id=612 data-nosnippet>612</a>  <span class="prelude-val">Ok</span>(ns)
-<a href=#613 id=613 data-nosnippet>613</a>}
-<a href=#614 id=614 data-nosnippet>614</a>
-<a href=#615 id=615 data-nosnippet>615</a><span class="doccomment">/// Get the node's qualified name in standard form
-<a href=#616 id=616 data-nosnippet>616</a>/// Ie. using the registered (code) prefix for that namespace.
-<a href=#617 id=617 data-nosnippet>617</a>/// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
-<a href=#618 id=618 data-nosnippet>618</a>/// Build a `prefix:local` qname with one exact-capacity allocation, avoiding the
-<a href=#619 id=619 data-nosnippet>619</a>/// `format!` machinery (`s!`) that showed up under `get_node_qname` in profiles —
-<a href=#620 id=620 data-nosnippet>620</a>/// this runs on every model check / serialization step.
-<a href=#621 id=621 data-nosnippet>621</a></span><span class="attr">#[inline]
-<a href=#622 id=622 data-nosnippet>622</a></span><span class="kw">fn </span>prefixed_qname(prefix: <span class="kw-2">&amp;</span>str, local: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#623 id=623 data-nosnippet>623</a>  <span class="kw">let </span><span class="kw-2">mut </span>q = String::with_capacity(prefix.len() + <span class="number">1 </span>+ local.len());
-<a href=#624 id=624 data-nosnippet>624</a>  q.push_str(prefix);
-<a href=#625 id=625 data-nosnippet>625</a>  q.push(<span class="string">':'</span>);
-<a href=#626 id=626 data-nosnippet>626</a>  q.push_str(local);
-<a href=#627 id=627 data-nosnippet>627</a>  q
-<a href=#628 id=628 data-nosnippet>628</a>}
-<a href=#629 id=629 data-nosnippet>629</a>
-<a href=#630 id=630 data-nosnippet>630</a><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr {
-<a href=#631 id=631 data-nosnippet>631</a>  <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
-<a href=#632 id=632 data-nosnippet>632</a>  <span class="kw">let </span>node_type = node.get_type();
-<a href=#633 id=633 data-nosnippet>633</a>  <span class="kw">if </span>node_type.is_none() {
-<a href=#634 id=634 data-nosnippet>634</a>    <span class="kw">return </span>arena::pin_static(<span class="string">"#BrokenNode"</span>);
-<a href=#635 id=635 data-nosnippet>635</a>  }
-<a href=#636 id=636 data-nosnippet>636</a>  <span class="kw">match </span>node_type.unwrap() {
-<a href=#637 id=637 data-nosnippet>637</a>    TextNode =&gt; arena::pin_static(<span class="string">"#PCDATA"</span>),
-<a href=#638 id=638 data-nosnippet>638</a>    DocumentNode =&gt; arena::pin_static(<span class="string">"#Document"</span>),
-<a href=#639 id=639 data-nosnippet>639</a>    CommentNode =&gt; arena::pin_static(<span class="string">"#Comment"</span>),
-<a href=#640 id=640 data-nosnippet>640</a>    PiNode =&gt; arena::pin_static(<span class="string">"#ProcessingInstruction"</span>),
-<a href=#641 id=641 data-nosnippet>641</a>    DTDNode =&gt; arena::pin_static(<span class="string">"#DTD"</span>),
+<a href=#338 id=338 data-nosnippet>338</a>      cb_entry.model.insert(<span class="macro">pin!</span>(<span class="string">"svg:g"</span>));
+<a href=#339 id=339 data-nosnippet>339</a>      cb_entry.model.insert(<span class="macro">pin!</span>(<span class="string">"svg:foreignObject"</span>));
+<a href=#340 id=340 data-nosnippet>340</a>    }
+<a href=#341 id=341 data-nosnippet>341</a>  }
+<a href=#342 id=342 data-nosnippet>342</a>
+<a href=#343 id=343 data-nosnippet>343</a>  <span class="doccomment">/// Clone the tagprop's (allowed content &amp; attributes) of @other to $tag
+<a href=#344 id=344 data-nosnippet>344</a>  </span><span class="kw">fn </span>synthesize_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, others: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) {
+<a href=#345 id=345 data-nosnippet>345</a>    <span class="kw">let </span><span class="kw-2">mut </span>to_add_in_model = Vec::new();
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="kw">let </span><span class="kw-2">mut </span>to_add_in_attrs = Vec::new();
+<a href=#347 id=347 data-nosnippet>347</a>    <span class="kw">for </span>other <span class="kw">in </span>others {
+<a href=#348 id=348 data-nosnippet>348</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = <span class="self">self</span>.schema_class.get(other) {
+<a href=#349 id=349 data-nosnippet>349</a>        <span class="kw">for </span>child <span class="kw">in </span>content {
+<a href=#350 id=350 data-nosnippet>350</a>          to_add_in_model.push(<span class="kw-2">*</span>child);
+<a href=#351 id=351 data-nosnippet>351</a>        }
+<a href=#352 id=352 data-nosnippet>352</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.tagprop.get(other) {
+<a href=#353 id=353 data-nosnippet>353</a>        <span class="kw">for </span>child <span class="kw">in </span><span class="kw-2">&amp;</span>entry.model {
+<a href=#354 id=354 data-nosnippet>354</a>          to_add_in_model.push(<span class="kw-2">*</span>child);
+<a href=#355 id=355 data-nosnippet>355</a>        }
+<a href=#356 id=356 data-nosnippet>356</a>        <span class="kw">for </span>attr <span class="kw">in </span><span class="kw-2">&amp;</span>entry.attributes {
+<a href=#357 id=357 data-nosnippet>357</a>          to_add_in_attrs.push(<span class="kw-2">*</span>attr);
+<a href=#358 id=358 data-nosnippet>358</a>        }
+<a href=#359 id=359 data-nosnippet>359</a>      }
+<a href=#360 id=360 data-nosnippet>360</a>    }
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="kw">let </span>capture = <span class="self">self</span>.tagprop.entry(tag).or_default();
+<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">for </span>child <span class="kw">in </span>to_add_in_model {
+<a href=#363 id=363 data-nosnippet>363</a>      capture.model.insert(child);
+<a href=#364 id=364 data-nosnippet>364</a>    }
+<a href=#365 id=365 data-nosnippet>365</a>    <span class="kw">for </span>attr <span class="kw">in </span>to_add_in_attrs {
+<a href=#366 id=366 data-nosnippet>366</a>      capture.attributes.insert(attr);
+<a href=#367 id=367 data-nosnippet>367</a>    }
+<a href=#368 id=368 data-nosnippet>368</a>  }
+<a href=#369 id=369 data-nosnippet>369</a>}
+<a href=#370 id=370 data-nosnippet>370</a>
+<a href=#371 id=371 data-nosnippet>371</a><span class="kw">pub fn </span>set_relaxng_schema(schema: <span class="kw-2">&amp;</span>str) { <span class="macro">model_mut!</span>().set_relaxng_schema(schema) }
+<a href=#372 id=372 data-nosnippet>372</a><span class="kw">pub fn </span>add_schema_declaration(document: <span class="kw-2">&amp;mut </span>Document) {
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>schema) = <span class="macro">model!</span>().schema {
+<a href=#374 id=374 data-nosnippet>374</a>    schema.add_schema_declaration(document);
+<a href=#375 id=375 data-nosnippet>375</a>  }
+<a href=#376 id=376 data-nosnippet>376</a>}
+<a href=#377 id=377 data-nosnippet>377</a>
+<a href=#378 id=378 data-nosnippet>378</a><span class="kw">pub fn </span>load_schema(search_paths: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#379 id=379 data-nosnippet>379</a>  <span class="comment">// Only load once
+<a href=#380 id=380 data-nosnippet>380</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
+<a href=#381 id=381 data-nosnippet>381</a>  <span class="kw">if </span>model.schema.is_some() {
+<a href=#382 id=382 data-nosnippet>382</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#383 id=383 data-nosnippet>383</a>  }
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="kw">let </span><span class="kw-2">mut </span>name = String::new();
+<a href=#385 id=385 data-nosnippet>385</a>  <span class="kw">if </span>model.schema_data.is_none() {
+<a href=#386 id=386 data-nosnippet>386</a>    <span class="comment">// TODO: Return this code path to normal once we properly load schemas
+<a href=#387 id=387 data-nosnippet>387</a>    </span><span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;model&gt;"</span>, <span class="string">"TODO"</span>);
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="comment">// Warn('expected', '&lt;model&gt;', undef, "No Schema Model has been declared; assuming LaTeXML");
+<a href=#389 id=389 data-nosnippet>389</a>    // // article ??? or what ? undef gives problems!
+<a href=#390 id=390 data-nosnippet>390</a>
+<a href=#391 id=391 data-nosnippet>391</a>    </span>model.register_document_namespace(<span class="string">"ltx"</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
+<a href=#392 id=392 data-nosnippet>392</a>    model.set_relaxng_schema(<span class="string">"LaTeXML"</span>);
+<a href=#393 id=393 data-nosnippet>393</a>    model.register_namespace(<span class="string">"ltx"</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
+<a href=#394 id=394 data-nosnippet>394</a>    model.register_namespace(<span class="string">"svg"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/2000/svg"</span>));
+<a href=#395 id=395 data-nosnippet>395</a>    model.register_namespace(<span class="string">"xlink"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1999/xlink"</span>)); <span class="comment">// Needed for SVG
+<a href=#396 id=396 data-nosnippet>396</a>    </span>model.register_namespace(<span class="string">"m"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1998/Math/MathML"</span>));
+<a href=#397 id=397 data-nosnippet>397</a>    model.register_namespace(<span class="string">"xhtml"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1999/xhtml"</span>));
+<a href=#398 id=398 data-nosnippet>398</a>    model.permissive = <span class="bool-val">true</span>;
+<a href=#399 id=399 data-nosnippet>399</a>  } <span class="comment">// Actually, they could have declared all sorts of Tags....
+<a href=#400 id=400 data-nosnippet>400</a>  // Only RelaxNG schemas are supported (DTD support removed from Rust port)
+<a href=#401 id=401 data-nosnippet>401</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) = model.schema_data {
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">if </span>data[<span class="number">0</span>] == <span class="macro">pin!</span>(<span class="string">"RelaxNG"</span>) {
+<a href=#403 id=403 data-nosnippet>403</a>      name = arena::to_string(data[<span class="number">1</span>]);
+<a href=#404 id=404 data-nosnippet>404</a>      model.schema = <span class="prelude-val">Some</span>(Relaxng {
+<a href=#405 id=405 data-nosnippet>405</a>        name: name.clone(),
+<a href=#406 id=406 data-nosnippet>406</a>        ..Relaxng::default()
+<a href=#407 id=407 data-nosnippet>407</a>      });
+<a href=#408 id=408 data-nosnippet>408</a>    } <span class="kw">else </span>{
+<a href=#409 id=409 data-nosnippet>409</a>      <span class="kw">let </span>message = arena::with(data[<span class="number">0</span>], |schema_type_str| {
+<a href=#410 id=410 data-nosnippet>410</a>        <span class="macro">s!</span>(<span class="string">"Can't load a schema of type {schema_type_str:?}"</span>)
+<a href=#411 id=411 data-nosnippet>411</a>      });
+<a href=#412 id=412 data-nosnippet>412</a>      <span class="macro">Error!</span>(<span class="string">"unknown"</span>, <span class="string">"schematype"</span>, message)
+<a href=#413 id=413 data-nosnippet>413</a>    }
+<a href=#414 id=414 data-nosnippet>414</a>  }
+<a href=#415 id=415 data-nosnippet>415</a>
+<a href=#416 id=416 data-nosnippet>416</a>  <span class="kw">if </span>!model.no_compiled &amp;&amp; model.schema.is_some() {
+<a href=#417 id=417 data-nosnippet>417</a>    <span class="kw">let </span>paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt; = <span class="kw">if </span>search_paths.is_empty() {
+<a href=#418 id=418 data-nosnippet>418</a>      <span class="prelude-val">None
+<a href=#419 id=419 data-nosnippet>419</a>    </span>} <span class="kw">else </span>{
+<a href=#420 id=420 data-nosnippet>420</a>      <span class="prelude-val">Some</span>(search_paths.iter().map(ToString::to_string).collect())
+<a href=#421 id=421 data-nosnippet>421</a>    };
+<a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">let </span>pathname_opt = pathname::find(<span class="kw-2">&amp;</span>name, pathname::PathnameFindOptions {
+<a href=#423 id=423 data-nosnippet>423</a>      paths,
+<a href=#424 id=424 data-nosnippet>424</a>      extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"model"</span>)]),
+<a href=#425 id=425 data-nosnippet>425</a>      installation_subdir: <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"resources/RelaxNG"</span>)),
+<a href=#426 id=426 data-nosnippet>426</a>    });
+<a href=#427 id=427 data-nosnippet>427</a>
+<a href=#428 id=428 data-nosnippet>428</a>    <span class="kw">match </span>pathname_opt {
+<a href=#429 id=429 data-nosnippet>429</a>      <span class="prelude-val">Some</span>(compiled_path) =&gt; model.load_compiled_schema(<span class="kw-2">&amp;</span>compiled_path),
+<a href=#430 id=430 data-nosnippet>430</a>      <span class="prelude-val">None </span>=&gt; {
+<a href=#431 id=431 data-nosnippet>431</a>        <span class="comment">// No `.model` on the searchpath. Try the embedded RelaxNG
+<a href=#432 id=432 data-nosnippet>432</a>        // table for a same-named compiled schema first (the
+<a href=#433 id=433 data-nosnippet>433</a>        // distribution path — binary running outside the source
+<a href=#434 id=434 data-nosnippet>434</a>        // tree); fall through to raw `.rng` parsing if that misses
+<a href=#435 id=435 data-nosnippet>435</a>        // too.
+<a href=#436 id=436 data-nosnippet>436</a>        </span><span class="kw">let </span>embed_key = <span class="macro">format!</span>(<span class="string">"{}.model"</span>, name);
+<a href=#437 id=437 data-nosnippet>437</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = <span class="kw">crate</span>::common::relaxng::embedded::lookup(<span class="kw-2">&amp;</span>embed_key) {
+<a href=#438 id=438 data-nosnippet>438</a>          model.load_compiled_schema_str(content, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;embedded&gt;/{embed_key}"</span>));
+<a href=#439 id=439 data-nosnippet>439</a>        } <span class="kw">else </span>{
+<a href=#440 id=440 data-nosnippet>440</a>          <span class="kw">let </span>paths: Vec&lt;<span class="kw-2">&amp;</span>std::path::Path&gt; =
+<a href=#441 id=441 data-nosnippet>441</a>            search_paths.iter().map(std::path::Path::new).collect();
+<a href=#442 id=442 data-nosnippet>442</a>          <span class="kw">let </span>schema = model.schema.as_mut().unwrap();
+<a href=#443 id=443 data-nosnippet>443</a>          <span class="kw">let </span>schema_name = schema.name.clone();
+<a href=#444 id=444 data-nosnippet>444</a>          <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = schema.load_schema(<span class="kw-2">&amp;</span>schema_name, <span class="kw-2">&amp;</span>paths) {
+<a href=#445 id=445 data-nosnippet>445</a>            <span class="kw">let </span>msg = <span class="macro">format!</span>(<span class="string">"load_schema failed for {}: {}"</span>, schema_name, err);
+<a href=#446 id=446 data-nosnippet>446</a>            <span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"RelaxNG"</span>, msg);
+<a href=#447 id=447 data-nosnippet>447</a>          }
+<a href=#448 id=448 data-nosnippet>448</a>        }
+<a href=#449 id=449 data-nosnippet>449</a>      },
+<a href=#450 id=450 data-nosnippet>450</a>    };
+<a href=#451 id=451 data-nosnippet>451</a>  }
+<a href=#452 id=452 data-nosnippet>452</a>  model.load_internal_extensions();
+<a href=#453 id=453 data-nosnippet>453</a>  <span class="kw">if </span>model.debug_mode {
+<a href=#454 id=454 data-nosnippet>454</a>    model.describe_model()
+<a href=#455 id=455 data-nosnippet>455</a>  }
+<a href=#456 id=456 data-nosnippet>456</a>
+<a href=#457 id=457 data-nosnippet>457</a>  <span class="prelude-val">Ok</span>(())
+<a href=#458 id=458 data-nosnippet>458</a>}
+<a href=#459 id=459 data-nosnippet>459</a>
+<a href=#460 id=460 data-nosnippet>460</a><span class="kw">pub fn </span>get_document_namespace_prefix(
+<a href=#461 id=461 data-nosnippet>461</a>  namespace: <span class="kw-2">&amp;</span>str,
+<a href=#462 id=462 data-nosnippet>462</a>  forattribute: bool,
+<a href=#463 id=463 data-nosnippet>463</a>  probe: bool,
+<a href=#464 id=464 data-nosnippet>464</a>) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="comment">// Get the prefix associated with the namespace url, noting that for elements, it might by
+<a href=#466 id=466 data-nosnippet>466</a>  // "#default", but for attributes would never be.
+<a href=#467 id=467 data-nosnippet>467</a>  // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
+<a href=#468 id=468 data-nosnippet>468</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>docprefix = <span class="kw">if </span>!forattribute {
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="macro">model!</span>()
+<a href=#470 id=470 data-nosnippet>470</a>      .document_namespace_prefixes
+<a href=#471 id=471 data-nosnippet>471</a>      .get(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"DEFAULT#{namespace}"</span>))
+<a href=#472 id=472 data-nosnippet>472</a>      .copied()
+<a href=#473 id=473 data-nosnippet>473</a>  } <span class="kw">else </span>{
+<a href=#474 id=474 data-nosnippet>474</a>    <span class="prelude-val">None
+<a href=#475 id=475 data-nosnippet>475</a>  </span>};
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="kw">let </span>ns_sym = arena::pin(namespace);
+<a href=#477 id=477 data-nosnippet>477</a>  <span class="kw">if </span>docprefix.is_none() {
+<a href=#478 id=478 data-nosnippet>478</a>    docprefix = <span class="macro">model!</span>()
+<a href=#479 id=479 data-nosnippet>479</a>      .document_namespace_prefixes
+<a href=#480 id=480 data-nosnippet>480</a>      .get_sym(ns_sym)
+<a href=#481 id=481 data-nosnippet>481</a>      .copied();
+<a href=#482 id=482 data-nosnippet>482</a>  }
+<a href=#483 id=483 data-nosnippet>483</a>
+<a href=#484 id=484 data-nosnippet>484</a>  <span class="kw">if </span>docprefix.is_none() &amp;&amp; !probe {
+<a href=#485 id=485 data-nosnippet>485</a>    {
+<a href=#486 id=486 data-nosnippet>486</a>      <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>;
+<a href=#487 id=487 data-nosnippet>487</a>    }
+<a href=#488 id=488 data-nosnippet>488</a>    <span class="kw">let </span>ns_err = <span class="macro">s!</span>(<span class="string">"namespace{}"</span>, <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string());
+<a href=#489 id=489 data-nosnippet>489</a>    docprefix = <span class="prelude-val">Some</span>(arena::pin(<span class="kw-2">&amp;</span>ns_err));
+<a href=#490 id=490 data-nosnippet>490</a>    {
+<a href=#491 id=491 data-nosnippet>491</a>      <span class="macro">model_mut!</span>().register_document_namespace(<span class="kw-2">&amp;</span>ns_err, <span class="prelude-val">Some</span>(namespace));
+<a href=#492 id=492 data-nosnippet>492</a>    }
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">let </span>message2 = <span class="kw">if let </span><span class="prelude-val">Some</span>(dp) = docprefix {
+<a href=#494 id=494 data-nosnippet>494</a>      arena::with(dp, |dp_str| <span class="macro">s!</span>(<span class="string">"Using '{dp_str}' instead"</span>))
+<a href=#495 id=495 data-nosnippet>495</a>    } <span class="kw">else </span>{
+<a href=#496 id=496 data-nosnippet>496</a>      String::from(<span class="string">"No prefix to fall back on."</span>)
+<a href=#497 id=497 data-nosnippet>497</a>    };
+<a href=#498 id=498 data-nosnippet>498</a>    <span class="macro">Warn!</span>(
+<a href=#499 id=499 data-nosnippet>499</a>      <span class="string">"malformed"</span>,
+<a href=#500 id=500 data-nosnippet>500</a>      namespace,
+<a href=#501 id=501 data-nosnippet>501</a>      <span class="string">"No prefix has been registered for namespace (in document)"</span>,
+<a href=#502 id=502 data-nosnippet>502</a>      message2
+<a href=#503 id=503 data-nosnippet>503</a>    );
+<a href=#504 id=504 data-nosnippet>504</a>  }
+<a href=#505 id=505 data-nosnippet>505</a>  <span class="kw">let </span>default_sym = <span class="macro">pin!</span>(<span class="string">"#default"</span>);
+<a href=#506 id=506 data-nosnippet>506</a>  docprefix.filter(|p| p != <span class="kw-2">&amp;</span>default_sym)
+<a href=#507 id=507 data-nosnippet>507</a>}
+<a href=#508 id=508 data-nosnippet>508</a>
+<a href=#509 id=509 data-nosnippet>509</a><span class="kw">pub fn </span>get_document_namespace(docprefix: <span class="kw-2">&amp;</span>str, probe: bool) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#510 id=510 data-nosnippet>510</a>  <span class="kw">let </span>h_default_sym = <span class="macro">pin!</span>(<span class="string">"#default"</span>);
+<a href=#511 id=511 data-nosnippet>511</a>  <span class="kw">let </span>docprefix_sym = <span class="kw">if </span>docprefix.is_empty() {
+<a href=#512 id=512 data-nosnippet>512</a>    h_default_sym
+<a href=#513 id=513 data-nosnippet>513</a>  } <span class="kw">else </span>{
+<a href=#514 id=514 data-nosnippet>514</a>    arena::pin(docprefix)
+<a href=#515 id=515 data-nosnippet>515</a>  };
+<a href=#516 id=516 data-nosnippet>516</a>  <span class="kw">let </span>ns_str = <span class="kw">match </span><span class="macro">model!</span>().document_namespaces.get_sym(docprefix_sym) {
+<a href=#517 id=517 data-nosnippet>517</a>    <span class="prelude-val">None </span>=&gt; String::new(),
+<a href=#518 id=518 data-nosnippet>518</a>    <span class="prelude-val">Some</span>(sym) =&gt; arena::with(<span class="kw-2">*</span>sym, |s| {
+<a href=#519 id=519 data-nosnippet>519</a>      <span class="kw">if </span>s.starts_with(<span class="string">"DEFAULT#"</span>) {
+<a href=#520 id=520 data-nosnippet>520</a>        s.replacen(<span class="string">"DEFAULT#"</span>, <span class="string">""</span>, <span class="number">1</span>)
+<a href=#521 id=521 data-nosnippet>521</a>      } <span class="kw">else </span>{
+<a href=#522 id=522 data-nosnippet>522</a>        s.to_string()
+<a href=#523 id=523 data-nosnippet>523</a>      }
+<a href=#524 id=524 data-nosnippet>524</a>    }),
+<a href=#525 id=525 data-nosnippet>525</a>  };
+<a href=#526 id=526 data-nosnippet>526</a>
+<a href=#527 id=527 data-nosnippet>527</a>  <span class="kw">if </span>docprefix_sym != h_default_sym &amp;&amp; ns_str.is_empty() &amp;&amp; !probe {
+<a href=#528 id=528 data-nosnippet>528</a>    {
+<a href=#529 id=529 data-nosnippet>529</a>      <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>;
+<a href=#530 id=530 data-nosnippet>530</a>    }
+<a href=#531 id=531 data-nosnippet>531</a>    <span class="kw">let </span>ns_error = <span class="macro">s!</span>(
+<a href=#532 id=532 data-nosnippet>532</a>      <span class="string">"http://example.com/namespace{}"</span>,
+<a href=#533 id=533 data-nosnippet>533</a>      <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string()
+<a href=#534 id=534 data-nosnippet>534</a>    );
+<a href=#535 id=535 data-nosnippet>535</a>    {
+<a href=#536 id=536 data-nosnippet>536</a>      <span class="macro">model_mut!</span>().register_document_namespace(docprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ns_error));
+<a href=#537 id=537 data-nosnippet>537</a>    }
+<a href=#538 id=538 data-nosnippet>538</a>    <span class="kw">let </span>msg1 = arena::with(docprefix_sym, |dp_str| {
+<a href=#539 id=539 data-nosnippet>539</a>      <span class="macro">s!</span>(<span class="string">"No namespace has been registered for prefix '{dp_str}' (in document)"</span>)
+<a href=#540 id=540 data-nosnippet>540</a>    });
+<a href=#541 id=541 data-nosnippet>541</a>    <span class="kw">let </span>msg2 = <span class="macro">s!</span>(<span class="string">"Using '{ns_str}' instead"</span>);
+<a href=#542 id=542 data-nosnippet>542</a>    <span class="kw">let </span>err = || {
+<a href=#543 id=543 data-nosnippet>543</a>      <span class="macro">Error!</span>(<span class="string">"malformed"</span>, docprefix, msg1, msg2);
+<a href=#544 id=544 data-nosnippet>544</a>      <span class="prelude-val">Ok</span>(())
+<a href=#545 id=545 data-nosnippet>545</a>    };
+<a href=#546 id=546 data-nosnippet>546</a>    err().ok();
+<a href=#547 id=547 data-nosnippet>547</a>  }
+<a href=#548 id=548 data-nosnippet>548</a>  <span class="kw">if </span>ns_str.is_empty() {
+<a href=#549 id=549 data-nosnippet>549</a>    <span class="prelude-val">None
+<a href=#550 id=550 data-nosnippet>550</a>  </span>} <span class="kw">else </span>{
+<a href=#551 id=551 data-nosnippet>551</a>    <span class="prelude-val">Some</span>(ns_str)
+<a href=#552 id=552 data-nosnippet>552</a>  }
+<a href=#553 id=553 data-nosnippet>553</a>}
+<a href=#554 id=554 data-nosnippet>554</a>
+<a href=#555 id=555 data-nosnippet>555</a><span class="doccomment">/// Get the (code) prefix associated with $namespace,
+<a href=#556 id=556 data-nosnippet>556</a>/// creating a dummy prefix and signalling an error if none has been registered.
+<a href=#557 id=557 data-nosnippet>557</a>///
+<a href=#558 id=558 data-nosnippet>558</a>/// In the following:
+<a href=#559 id=559 data-nosnippet>559</a>/// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
+<a href=#560 id=560 data-nosnippet>560</a>/// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
+<a href=#561 id=561 data-nosnippet>561</a>/// if missing.
+<a href=#562 id=562 data-nosnippet>562</a></span><span class="kw">pub fn </span>get_namespace_prefix(namespace: <span class="kw-2">&amp;</span>str, _forattribute: bool, probe: bool) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
+<a href=#563 id=563 data-nosnippet>563</a>  <span class="kw">let </span><span class="kw-2">mut </span>codeprefix: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = <span class="prelude-val">None</span>;
+<a href=#564 id=564 data-nosnippet>564</a>  <span class="kw">let </span>ns_sym = arena::pin(namespace);
+<a href=#565 id=565 data-nosnippet>565</a>  <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
+<a href=#566 id=566 data-nosnippet>566</a>  <span class="kw">if </span>!namespace.is_empty() {
+<a href=#567 id=567 data-nosnippet>567</a>    codeprefix = model.code_namespace_prefixes.get_sym(ns_sym).copied();
+<a href=#568 id=568 data-nosnippet>568</a>
+<a href=#569 id=569 data-nosnippet>569</a>    <span class="kw">if </span>codeprefix.is_some() &amp;&amp; !probe {
+<a href=#570 id=570 data-nosnippet>570</a>      {
+<a href=#571 id=571 data-nosnippet>571</a>        <span class="kw">let </span>docprefix = model.document_namespace_prefixes.get_sym(ns_sym);
+<a href=#572 id=572 data-nosnippet>572</a>        <span class="comment">// if there's a doc prefix and it's NOT already used in code namespace mapping
+<a href=#573 id=573 data-nosnippet>573</a>        </span><span class="kw">if </span>docprefix.is_some() &amp;&amp; !model.code_namespaces.contains_key_sym(docprefix.unwrap()) {
+<a href=#574 id=574 data-nosnippet>574</a>          codeprefix = docprefix.copied();
+<a href=#575 id=575 data-nosnippet>575</a>        }
+<a href=#576 id=576 data-nosnippet>576</a>      }
+<a href=#577 id=577 data-nosnippet>577</a>    } <span class="kw">else </span>{
+<a href=#578 id=578 data-nosnippet>578</a>      <span class="comment">// Else synthesize one
+<a href=#579 id=579 data-nosnippet>579</a>      </span>model.namespace_errors += <span class="number">1</span>;
+<a href=#580 id=580 data-nosnippet>580</a>      <span class="kw">let </span>auto_prefix = arena::pin(<span class="macro">s!</span>(<span class="string">"namespace{}"</span>, <span class="kw-2">&amp;</span>model.namespace_errors.to_string()));
+<a href=#581 id=581 data-nosnippet>581</a>      codeprefix = <span class="prelude-val">Some</span>(auto_prefix);
+<a href=#582 id=582 data-nosnippet>582</a>    }
+<a href=#583 id=583 data-nosnippet>583</a>    model.register_namespace_sym(codeprefix.unwrap(), <span class="prelude-val">Some</span>(arena::pin(namespace)));
+<a href=#584 id=584 data-nosnippet>584</a>    <span class="comment">// Warn!('malformed', $namespace, undef,
+<a href=#585 id=585 data-nosnippet>585</a>    //   "No prefix has been registered for namespace '$namespace' (in code)",
+<a href=#586 id=586 data-nosnippet>586</a>    //   "Using '$codeprefix' instead"); }
+<a href=#587 id=587 data-nosnippet>587</a>  </span>}
+<a href=#588 id=588 data-nosnippet>588</a>
+<a href=#589 id=589 data-nosnippet>589</a>  codeprefix
+<a href=#590 id=590 data-nosnippet>590</a>}
+<a href=#591 id=591 data-nosnippet>591</a>
+<a href=#592 id=592 data-nosnippet>592</a><span class="kw">pub fn </span>get_namespace(codeprefix: <span class="kw-2">&amp;</span>str, probe: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
+<a href=#593 id=593 data-nosnippet>593</a>  <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
+<a href=#594 id=594 data-nosnippet>594</a>  <span class="kw">let </span><span class="kw-2">mut </span>ns: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = model.code_namespaces.get(codeprefix).copied();
+<a href=#595 id=595 data-nosnippet>595</a>  <span class="kw">if </span>ns.is_none() &amp;&amp; !probe {
+<a href=#596 id=596 data-nosnippet>596</a>    model.namespace_errors += <span class="number">1</span>;
+<a href=#597 id=597 data-nosnippet>597</a>    <span class="kw">let </span>example_namespace = <span class="macro">s!</span>(
+<a href=#598 id=598 data-nosnippet>598</a>      <span class="string">"http://example.com/namespace{}"</span>,
+<a href=#599 id=599 data-nosnippet>599</a>      <span class="kw-2">&amp;</span>model.namespace_errors.to_string()
+<a href=#600 id=600 data-nosnippet>600</a>    );
+<a href=#601 id=601 data-nosnippet>601</a>    ns = <span class="prelude-val">Some</span>(arena::pin(<span class="kw-2">&amp;</span>example_namespace));
+<a href=#602 id=602 data-nosnippet>602</a>    model.register_namespace(codeprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>example_namespace));
+<a href=#603 id=603 data-nosnippet>603</a>    <span class="macro">Error!</span>(
+<a href=#604 id=604 data-nosnippet>604</a>      <span class="string">"malformed"</span>,
+<a href=#605 id=605 data-nosnippet>605</a>      codeprefix,
+<a href=#606 id=606 data-nosnippet>606</a>      <span class="macro">s!</span>(<span class="string">"No namespace has been registered for prefix '{codeprefix}' (in code)"</span>),
+<a href=#607 id=607 data-nosnippet>607</a>      <span class="macro">s!</span>(<span class="string">"Using '{example_namespace}' instead"</span>)
+<a href=#608 id=608 data-nosnippet>608</a>    );
+<a href=#609 id=609 data-nosnippet>609</a>  }
+<a href=#610 id=610 data-nosnippet>610</a>  <span class="prelude-val">Ok</span>(ns)
+<a href=#611 id=611 data-nosnippet>611</a>}
+<a href=#612 id=612 data-nosnippet>612</a>
+<a href=#613 id=613 data-nosnippet>613</a><span class="doccomment">/// Get the node's qualified name in standard form
+<a href=#614 id=614 data-nosnippet>614</a>/// Ie. using the registered (code) prefix for that namespace.
+<a href=#615 id=615 data-nosnippet>615</a>/// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
+<a href=#616 id=616 data-nosnippet>616</a>/// Build a `prefix:local` qname with one exact-capacity allocation, avoiding the
+<a href=#617 id=617 data-nosnippet>617</a>/// `format!` machinery (`s!`) that showed up under `get_node_qname` in profiles —
+<a href=#618 id=618 data-nosnippet>618</a>/// this runs on every model check / serialization step.
+<a href=#619 id=619 data-nosnippet>619</a></span><span class="attr">#[inline]
+<a href=#620 id=620 data-nosnippet>620</a></span><span class="kw">fn </span>prefixed_qname(prefix: <span class="kw-2">&amp;</span>str, local: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#621 id=621 data-nosnippet>621</a>  <span class="kw">let </span><span class="kw-2">mut </span>q = String::with_capacity(prefix.len() + <span class="number">1 </span>+ local.len());
+<a href=#622 id=622 data-nosnippet>622</a>  q.push_str(prefix);
+<a href=#623 id=623 data-nosnippet>623</a>  q.push(<span class="string">':'</span>);
+<a href=#624 id=624 data-nosnippet>624</a>  q.push_str(local);
+<a href=#625 id=625 data-nosnippet>625</a>  q
+<a href=#626 id=626 data-nosnippet>626</a>}
+<a href=#627 id=627 data-nosnippet>627</a>
+<a href=#628 id=628 data-nosnippet>628</a><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr {
+<a href=#629 id=629 data-nosnippet>629</a>  <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
+<a href=#630 id=630 data-nosnippet>630</a>  <span class="kw">let </span>node_type = node.get_type();
+<a href=#631 id=631 data-nosnippet>631</a>  <span class="kw">if </span>node_type.is_none() {
+<a href=#632 id=632 data-nosnippet>632</a>    <span class="kw">return </span><span class="macro">pin!</span>(<span class="string">"#BrokenNode"</span>);
+<a href=#633 id=633 data-nosnippet>633</a>  }
+<a href=#634 id=634 data-nosnippet>634</a>  <span class="comment">// per-node hot path: the literal branches use the call-site-cached `pin!`
+<a href=#635 id=635 data-nosnippet>635</a>  // (branch+load) rather than a per-call `pin_static` arena probe.
+<a href=#636 id=636 data-nosnippet>636</a>  </span><span class="kw">match </span>node_type.unwrap() {
+<a href=#637 id=637 data-nosnippet>637</a>    TextNode =&gt; <span class="macro">pin!</span>(<span class="string">"#PCDATA"</span>),
+<a href=#638 id=638 data-nosnippet>638</a>    DocumentNode =&gt; <span class="macro">pin!</span>(<span class="string">"#Document"</span>),
+<a href=#639 id=639 data-nosnippet>639</a>    CommentNode =&gt; <span class="macro">pin!</span>(<span class="string">"#Comment"</span>),
+<a href=#640 id=640 data-nosnippet>640</a>    PiNode =&gt; <span class="macro">pin!</span>(<span class="string">"#ProcessingInstruction"</span>),
+<a href=#641 id=641 data-nosnippet>641</a>    DTDNode =&gt; <span class="macro">pin!</span>(<span class="string">"#DTD"</span>),
 <a href=#642 id=642 data-nosnippet>642</a>    NamespaceDecl =&gt; {
 <a href=#643 id=643 data-nosnippet>643</a>      <span class="comment">// match node.declared_uri() {
 <a href=#644 id=644 data-nosnippet>644</a>      //   Some(ns) =&gt; match self.get_namespace_prefix(ns, false, true) {
@@ -647,7 +647,7 @@
 <a href=#647 id=647 data-nosnippet>647</a>      //   },
 <a href=#648 id=648 data-nosnippet>648</a>      //   None =&gt; s!("xmlns")
 <a href=#649 id=649 data-nosnippet>649</a>      // }
-<a href=#650 id=650 data-nosnippet>650</a>      </span>arena::pin_static(<span class="string">"xmlns"</span>)
+<a href=#650 id=650 data-nosnippet>650</a>      </span><span class="macro">pin!</span>(<span class="string">"xmlns"</span>)
 <a href=#651 id=651 data-nosnippet>651</a>    },
 <a href=#652 id=652 data-nosnippet>652</a>    ElementNode | AttributeNode =&gt; {
 <a href=#653 id=653 data-nosnippet>653</a>      <span class="kw">let </span>name_str = node.get_name();
@@ -680,7 +680,7 @@
 <a href=#680 id=680 data-nosnippet>680</a>      // original hard `panic!`. LaTeXML never builds such nodes, so on a
 <a href=#681 id=681 data-nosnippet>681</a>      // healthy tree this arm is unreachable; it exists only so a stray
 <a href=#682 id=682 data-nosnippet>682</a>      // corrupt/foreign node can never crash qname resolution.
-<a href=#683 id=683 data-nosnippet>683</a>      </span>arena::pin_static(<span class="string">"#BrokenNode"</span>)
+<a href=#683 id=683 data-nosnippet>683</a>      </span><span class="macro">pin!</span>(<span class="string">"#BrokenNode"</span>)
 <a href=#684 id=684 data-nosnippet>684</a>    },
 <a href=#685 id=685 data-nosnippet>685</a>  }
 <a href=#686 id=686 data-nosnippet>686</a>}
@@ -696,22 +696,22 @@
 <a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
 <a href=#697 id=697 data-nosnippet>697</a>  <span class="kw">let </span>node_type = node.get_type();
 <a href=#698 id=698 data-nosnippet>698</a>  <span class="kw">if </span>node_type.is_none() {
-<a href=#699 id=699 data-nosnippet>699</a>    <span class="kw">return </span>arena::pin_static(<span class="string">"#BrokenNode"</span>);
+<a href=#699 id=699 data-nosnippet>699</a>    <span class="kw">return </span><span class="macro">pin!</span>(<span class="string">"#BrokenNode"</span>);
 <a href=#700 id=700 data-nosnippet>700</a>  }
 <a href=#701 id=701 data-nosnippet>701</a>
 <a href=#702 id=702 data-nosnippet>702</a>  <span class="kw">match </span>node_type.unwrap() {
-<a href=#703 id=703 data-nosnippet>703</a>    TextNode =&gt; arena::pin_static(<span class="string">"#PCDATA"</span>),
-<a href=#704 id=704 data-nosnippet>704</a>    DocumentNode =&gt; arena::pin_static(<span class="string">"#Document"</span>),
-<a href=#705 id=705 data-nosnippet>705</a>    CommentNode =&gt; arena::pin_static(<span class="string">"#Comment"</span>),
-<a href=#706 id=706 data-nosnippet>706</a>    PiNode =&gt; arena::pin_static(<span class="string">"#ProcessingInstruction"</span>),
-<a href=#707 id=707 data-nosnippet>707</a>    DTDNode =&gt; arena::pin_static(<span class="string">"#DTD"</span>),
+<a href=#703 id=703 data-nosnippet>703</a>    TextNode =&gt; <span class="macro">pin!</span>(<span class="string">"#PCDATA"</span>),
+<a href=#704 id=704 data-nosnippet>704</a>    DocumentNode =&gt; <span class="macro">pin!</span>(<span class="string">"#Document"</span>),
+<a href=#705 id=705 data-nosnippet>705</a>    CommentNode =&gt; <span class="macro">pin!</span>(<span class="string">"#Comment"</span>),
+<a href=#706 id=706 data-nosnippet>706</a>    PiNode =&gt; <span class="macro">pin!</span>(<span class="string">"#ProcessingInstruction"</span>),
+<a href=#707 id=707 data-nosnippet>707</a>    DTDNode =&gt; <span class="macro">pin!</span>(<span class="string">"#DTD"</span>),
 <a href=#708 id=708 data-nosnippet>708</a>
 <a href=#709 id=709 data-nosnippet>709</a>    <span class="comment">// TODO
 <a href=#710 id=710 data-nosnippet>710</a>    // elsif ($type == XML_NAMESPACE_DECL) {
 <a href=#711 id=711 data-nosnippet>711</a>    //   my $ns = $node-&gt;declaredURI;
 <a href=#712 id=712 data-nosnippet>712</a>    //   my $prefix = $ns &amp;&amp; $self-&gt;getDocumentNamespacePrefix($ns, 0, 1);
 <a href=#713 id=713 data-nosnippet>713</a>    //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
-<a href=#714 id=714 data-nosnippet>714</a>    </span>NamespaceDecl =&gt; arena::pin_static(<span class="string">"xmlns"</span>),
+<a href=#714 id=714 data-nosnippet>714</a>    </span>NamespaceDecl =&gt; <span class="macro">pin!</span>(<span class="string">"xmlns"</span>),
 <a href=#715 id=715 data-nosnippet>715</a>
 <a href=#716 id=716 data-nosnippet>716</a>    ElementNode | AttributeNode =&gt; {
 <a href=#717 id=717 data-nosnippet>717</a>      <span class="kw">let </span>empty_sym = <span class="macro">pin!</span>(<span class="string">""</span>);

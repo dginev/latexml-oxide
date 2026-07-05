@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/iopart_support_sty.rs`."><title>iopart_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>iopart_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! iopart_support.sty — IOP Publishing journal support
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/iopart_support_sty.rs`."><title>iopart_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (c397dae80 2026-07-02)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>iopart_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! iopart_support.sty — IOP Publishing journal support
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: iopart_support.sty.ltxml — 345 lines
 <a href=#3 id=3 data-nosnippet>3</a>//! Used by Journal of Physics, Classical and Quantum Gravity, etc.
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -275,93 +275,94 @@
 <a href=#275 id=275 data-nosnippet>275</a>  <span class="comment">// Acknowledgements — Perl L249-251
 <a href=#276 id=276 data-nosnippet>276</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\ack"</span>, <span class="string">"&lt;ltx:acknowledgements&gt;"</span>);
 <a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ackn"</span>, <span class="string">"&lt;ltx:acknowledgements&gt;"</span>);
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:acknowledgements"</span>, auto_close =&gt; <span class="bool-val">true</span>);
-<a href=#279 id=279 data-nosnippet>279</a>
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="comment">// Journal abbreviations — Perl L258-343
-<a href=#281 id=281 data-nosnippet>281</a>  </span>def_iop_journal(<span class="string">"\\etal"</span>, <span class="string">"et al\\/"</span>)<span class="question-mark">?</span>;
-<a href=#282 id=282 data-nosnippet>282</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dash"</span>, <span class="string">"-----"</span>);
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="comment">// Journal abbreviations — ALL from Perl L258-331
-<a href=#284 id=284 data-nosnippet>284</a>  </span>def_iop_journal(<span class="string">"\\CQG"</span>, <span class="string">"Class. Quantum Grav."</span>)<span class="question-mark">?</span>;
-<a href=#285 id=285 data-nosnippet>285</a>  def_iop_journal(<span class="string">"\\CTM"</span>, <span class="string">"Combust. Theory Modelling\\/"</span>)<span class="question-mark">?</span>;
-<a href=#286 id=286 data-nosnippet>286</a>  def_iop_journal(<span class="string">"\\DSE"</span>, <span class="string">"Distrib. Syst. Engng\\/"</span>)<span class="question-mark">?</span>;
-<a href=#287 id=287 data-nosnippet>287</a>  def_iop_journal(<span class="string">"\\EJP"</span>, <span class="string">"Eur. J. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#288 id=288 data-nosnippet>288</a>  def_iop_journal(<span class="string">"\\HPP"</span>, <span class="string">"High Perform. Polym."</span>)<span class="question-mark">?</span>;
-<a href=#289 id=289 data-nosnippet>289</a>  def_iop_journal(<span class="string">"\\IP"</span>, <span class="string">"Inverse Problems\\/"</span>)<span class="question-mark">?</span>;
-<a href=#290 id=290 data-nosnippet>290</a>  def_iop_journal(<span class="string">"\\JHM"</span>, <span class="string">"J. Hard Mater."</span>)<span class="question-mark">?</span>;
-<a href=#291 id=291 data-nosnippet>291</a>  def_iop_journal(<span class="string">"\\JO"</span>, <span class="string">"J. Opt."</span>)<span class="question-mark">?</span>;
-<a href=#292 id=292 data-nosnippet>292</a>  def_iop_journal(<span class="string">"\\JOA"</span>, <span class="string">"J. Opt. A: Pure Appl. Opt."</span>)<span class="question-mark">?</span>;
-<a href=#293 id=293 data-nosnippet>293</a>  def_iop_journal(<span class="string">"\\JOB"</span>, <span class="string">"J. Opt. B: Quantum Semiclass. Opt."</span>)<span class="question-mark">?</span>;
-<a href=#294 id=294 data-nosnippet>294</a>  def_iop_journal(<span class="string">"\\JPA"</span>, <span class="string">"J. Phys. A: Math. Gen."</span>)<span class="question-mark">?</span>;
-<a href=#295 id=295 data-nosnippet>295</a>  def_iop_journal(<span class="string">"\\JPB"</span>, <span class="string">"J. Phys. B: At. Mol. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#296 id=296 data-nosnippet>296</a>  def_iop_journal(<span class="string">"\\jpb"</span>, <span class="string">"J. Phys. B: At. Mol. Opt. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#297 id=297 data-nosnippet>297</a>  def_iop_journal(<span class="string">"\\JPC"</span>, <span class="string">"J. Phys. C: Solid State Phys."</span>)<span class="question-mark">?</span>;
-<a href=#298 id=298 data-nosnippet>298</a>  def_iop_journal(<span class="string">"\\JPCM"</span>, <span class="string">"J. Phys.: Condens. Matter\\/"</span>)<span class="question-mark">?</span>;
-<a href=#299 id=299 data-nosnippet>299</a>  def_iop_journal(<span class="string">"\\JPD"</span>, <span class="string">"J. Phys. D: Appl. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#300 id=300 data-nosnippet>300</a>  def_iop_journal(<span class="string">"\\JPE"</span>, <span class="string">"J. Phys. E: Sci. Instrum."</span>)<span class="question-mark">?</span>;
-<a href=#301 id=301 data-nosnippet>301</a>  def_iop_journal(<span class="string">"\\JPF"</span>, <span class="string">"J. Phys. F: Met. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#302 id=302 data-nosnippet>302</a>  def_iop_journal(<span class="string">"\\JPG"</span>, <span class="string">"J. Phys. G: Nucl. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#303 id=303 data-nosnippet>303</a>  def_iop_journal(<span class="string">"\\jpg"</span>, <span class="string">"J. Phys. G: Nucl. Part. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#304 id=304 data-nosnippet>304</a>  def_iop_journal(<span class="string">"\\MSMSE"</span>, <span class="string">"Modelling Simulation Mater. Sci. Eng."</span>)<span class="question-mark">?</span>;
-<a href=#305 id=305 data-nosnippet>305</a>  def_iop_journal(<span class="string">"\\MST"</span>, <span class="string">"Meas. Sci. Technol."</span>)<span class="question-mark">?</span>;
-<a href=#306 id=306 data-nosnippet>306</a>  def_iop_journal(<span class="string">"\\NET"</span>, <span class="string">"Network: Comput. Neural Syst."</span>)<span class="question-mark">?</span>;
-<a href=#307 id=307 data-nosnippet>307</a>  def_iop_journal(<span class="string">"\\NJP"</span>, <span class="string">"New J. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#308 id=308 data-nosnippet>308</a>  def_iop_journal(<span class="string">"\\NL"</span>, <span class="string">"Nonlinearity\\/"</span>)<span class="question-mark">?</span>;
-<a href=#309 id=309 data-nosnippet>309</a>  def_iop_journal(<span class="string">"\\NT"</span>, <span class="string">"Nanotechnology"</span>)<span class="question-mark">?</span>;
-<a href=#310 id=310 data-nosnippet>310</a>  def_iop_journal(<span class="string">"\\PAO"</span>, <span class="string">"Pure Appl. Optics\\/"</span>)<span class="question-mark">?</span>;
-<a href=#311 id=311 data-nosnippet>311</a>  def_iop_journal(<span class="string">"\\PM"</span>, <span class="string">"Physiol. Meas."</span>)<span class="question-mark">?</span>;
-<a href=#312 id=312 data-nosnippet>312</a>  def_iop_journal(<span class="string">"\\PMB"</span>, <span class="string">"Phys. Med. Biol."</span>)<span class="question-mark">?</span>;
-<a href=#313 id=313 data-nosnippet>313</a>  def_iop_journal(<span class="string">"\\PPCF"</span>, <span class="string">"Plasma Phys. Control. Fusion\\/"</span>)<span class="question-mark">?</span>;
-<a href=#314 id=314 data-nosnippet>314</a>  def_iop_journal(<span class="string">"\\PSST"</span>, <span class="string">"Plasma Sources Sci. Technol."</span>)<span class="question-mark">?</span>;
-<a href=#315 id=315 data-nosnippet>315</a>  def_iop_journal(<span class="string">"\\PUS"</span>, <span class="string">"Public Understand. Sci."</span>)<span class="question-mark">?</span>;
-<a href=#316 id=316 data-nosnippet>316</a>  def_iop_journal(<span class="string">"\\QO"</span>, <span class="string">"Quantum Opt."</span>)<span class="question-mark">?</span>;
-<a href=#317 id=317 data-nosnippet>317</a>  def_iop_journal(<span class="string">"\\QSO"</span>, <span class="string">"Quantum Semiclass. Opt."</span>)<span class="question-mark">?</span>;
-<a href=#318 id=318 data-nosnippet>318</a>  def_iop_journal(<span class="string">"\\RPP"</span>, <span class="string">"Rep. Prog. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#319 id=319 data-nosnippet>319</a>  def_iop_journal(<span class="string">"\\SLC"</span>, <span class="string">"Sov. Lightwave Commun."</span>)<span class="question-mark">?</span>;
-<a href=#320 id=320 data-nosnippet>320</a>  def_iop_journal(<span class="string">"\\SST"</span>, <span class="string">"Semicond. Sci. Technol."</span>)<span class="question-mark">?</span>;
-<a href=#321 id=321 data-nosnippet>321</a>  def_iop_journal(<span class="string">"\\SUST"</span>, <span class="string">"Supercond. Sci. Technol."</span>)<span class="question-mark">?</span>;
-<a href=#322 id=322 data-nosnippet>322</a>  def_iop_journal(<span class="string">"\\WRM"</span>, <span class="string">"Waves Random Media\\/"</span>)<span class="question-mark">?</span>;
-<a href=#323 id=323 data-nosnippet>323</a>  def_iop_journal(<span class="string">"\\JMM"</span>, <span class="string">"J. of Michromech. and Microeng.\\/"</span>)<span class="question-mark">?</span>;
-<a href=#324 id=324 data-nosnippet>324</a>  def_iop_journal(<span class="string">"\\AC"</span>, <span class="string">"Acta Crystallogr."</span>)<span class="question-mark">?</span>;
-<a href=#325 id=325 data-nosnippet>325</a>  def_iop_journal(<span class="string">"\\AM"</span>, <span class="string">"Acta Metall."</span>)<span class="question-mark">?</span>;
-<a href=#326 id=326 data-nosnippet>326</a>  def_iop_journal(<span class="string">"\\AP"</span>, <span class="string">"Ann. Phys., Lpz."</span>)<span class="question-mark">?</span>;
-<a href=#327 id=327 data-nosnippet>327</a>  def_iop_journal(<span class="string">"\\APNY"</span>, <span class="string">"Ann. Phys., NY\\/"</span>)<span class="question-mark">?</span>;
-<a href=#328 id=328 data-nosnippet>328</a>  def_iop_journal(<span class="string">"\\APP"</span>, <span class="string">"Ann. Phys., Paris\\/"</span>)<span class="question-mark">?</span>;
-<a href=#329 id=329 data-nosnippet>329</a>  def_iop_journal(<span class="string">"\\CJP"</span>, <span class="string">"Can. J. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#330 id=330 data-nosnippet>330</a>  def_iop_journal(<span class="string">"\\JAP"</span>, <span class="string">"J. Appl. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#331 id=331 data-nosnippet>331</a>  def_iop_journal(<span class="string">"\\JCP"</span>, <span class="string">"J. Chem. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#332 id=332 data-nosnippet>332</a>  def_iop_journal(<span class="string">"\\JJAP"</span>, <span class="string">"Japan. J. Appl. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#333 id=333 data-nosnippet>333</a>  def_iop_journal(<span class="string">"\\JP"</span>, <span class="string">"J. Physique\\/"</span>)<span class="question-mark">?</span>;
-<a href=#334 id=334 data-nosnippet>334</a>  def_iop_journal(<span class="string">"\\JPhCh"</span>, <span class="string">"J. Phys. Chem."</span>)<span class="question-mark">?</span>;
-<a href=#335 id=335 data-nosnippet>335</a>  def_iop_journal(<span class="string">"\\JMMM"</span>, <span class="string">"J. Magn. Magn. Mater."</span>)<span class="question-mark">?</span>;
-<a href=#336 id=336 data-nosnippet>336</a>  def_iop_journal(<span class="string">"\\JMP"</span>, <span class="string">"J. Math. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#337 id=337 data-nosnippet>337</a>  def_iop_journal(<span class="string">"\\JOSA"</span>, <span class="string">"J. Opt. Soc. Am."</span>)<span class="question-mark">?</span>;
-<a href=#338 id=338 data-nosnippet>338</a>  def_iop_journal(<span class="string">"\\JPSJ"</span>, <span class="string">"J. Phys. Soc. Japan\\/"</span>)<span class="question-mark">?</span>;
-<a href=#339 id=339 data-nosnippet>339</a>  def_iop_journal(<span class="string">"\\JQSRT"</span>, <span class="string">"J. Quant. Spectrosc. Radiat. Transfer\\/"</span>)<span class="question-mark">?</span>;
-<a href=#340 id=340 data-nosnippet>340</a>  def_iop_journal(<span class="string">"\\NC"</span>, <span class="string">"Nuovo Cimento\\/"</span>)<span class="question-mark">?</span>;
-<a href=#341 id=341 data-nosnippet>341</a>  def_iop_journal(<span class="string">"\\NIM"</span>, <span class="string">"Nucl. Instrum. Methods\\/"</span>)<span class="question-mark">?</span>;
-<a href=#342 id=342 data-nosnippet>342</a>  def_iop_journal(<span class="string">"\\NP"</span>, <span class="string">"Nucl. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#343 id=343 data-nosnippet>343</a>  def_iop_journal(<span class="string">"\\PL"</span>, <span class="string">"Phys. Lett."</span>)<span class="question-mark">?</span>;
-<a href=#344 id=344 data-nosnippet>344</a>  def_iop_journal(<span class="string">"\\PR"</span>, <span class="string">"Phys. Rev."</span>)<span class="question-mark">?</span>;
-<a href=#345 id=345 data-nosnippet>345</a>  def_iop_journal(<span class="string">"\\PRL"</span>, <span class="string">"Phys. Rev. Lett."</span>)<span class="question-mark">?</span>;
-<a href=#346 id=346 data-nosnippet>346</a>  def_iop_journal(<span class="string">"\\PRS"</span>, <span class="string">"Proc. R. Soc."</span>)<span class="question-mark">?</span>;
-<a href=#347 id=347 data-nosnippet>347</a>  def_iop_journal(<span class="string">"\\PS"</span>, <span class="string">"Phys. Scr."</span>)<span class="question-mark">?</span>;
-<a href=#348 id=348 data-nosnippet>348</a>  def_iop_journal(<span class="string">"\\PSS"</span>, <span class="string">"Phys. Status Solidi\\/"</span>)<span class="question-mark">?</span>;
-<a href=#349 id=349 data-nosnippet>349</a>  def_iop_journal(<span class="string">"\\PTRS"</span>, <span class="string">"Phil. Trans. R. Soc."</span>)<span class="question-mark">?</span>;
-<a href=#350 id=350 data-nosnippet>350</a>  def_iop_journal(<span class="string">"\\RMP"</span>, <span class="string">"Rev. Mod. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#351 id=351 data-nosnippet>351</a>  def_iop_journal(<span class="string">"\\RSI"</span>, <span class="string">"Rev. Sci. Instrum."</span>)<span class="question-mark">?</span>;
-<a href=#352 id=352 data-nosnippet>352</a>  def_iop_journal(<span class="string">"\\SSC"</span>, <span class="string">"Solid State Commun."</span>)<span class="question-mark">?</span>;
-<a href=#353 id=353 data-nosnippet>353</a>  def_iop_journal(<span class="string">"\\ZP"</span>, <span class="string">" Z. Phys."</span>)<span class="question-mark">?</span>;
-<a href=#354 id=354 data-nosnippet>354</a>  def_iop_journal(<span class="string">"\\JNE"</span>, <span class="string">"J. Neural Eng."</span>)<span class="question-mark">?</span>;
-<a href=#355 id=355 data-nosnippet>355</a>  def_iop_journal(<span class="string">"\\PB"</span>, <span class="string">"Phys. Biol."</span>)<span class="question-mark">?</span>;
-<a href=#356 id=356 data-nosnippet>356</a>  def_iop_journal(<span class="string">"\\SMS"</span>, <span class="string">"Smart Mater. Struct."</span>)<span class="question-mark">?</span>;
-<a href=#357 id=357 data-nosnippet>357</a>
-<a href=#358 id=358 data-nosnippet>358</a>  <span class="comment">// Mystery items — Perl L335-343
-<a href=#359 id=359 data-nosnippet>359</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tqs"</span>, <span class="string">"\\hspace*{25pt}"</span>);
-<a href=#360 id=360 data-nosnippet>360</a>  def_macro_noop(<span class="string">"\\nosections"</span>)<span class="question-mark">?</span>;
-<a href=#361 id=361 data-nosnippet>361</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\indented"</span>, <span class="string">"\\itemize"</span>);
-<a href=#362 id=362 data-nosnippet>362</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endindented"</span>, <span class="string">"\\enditemize"</span>);
-<a href=#363 id=363 data-nosnippet>363</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\varindent"</span>, <span class="string">"\\itemize"</span>);
-<a href=#364 id=364 data-nosnippet>364</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endvarindent"</span>, <span class="string">"\\enditemize"</span>);
-<a href=#365 id=365 data-nosnippet>365</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nonum"</span>, <span class="string">"\\par"</span>);
-<a href=#366 id=366 data-nosnippet>366</a>});
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="comment">// ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+<a href=#279 id=279 data-nosnippet>279</a>  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
+<a href=#280 id=280 data-nosnippet>280</a>
+<a href=#281 id=281 data-nosnippet>281</a>  // Journal abbreviations — Perl L258-343
+<a href=#282 id=282 data-nosnippet>282</a>  </span>def_iop_journal(<span class="string">"\\etal"</span>, <span class="string">"et al\\/"</span>)<span class="question-mark">?</span>;
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dash"</span>, <span class="string">"-----"</span>);
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="comment">// Journal abbreviations — ALL from Perl L258-331
+<a href=#285 id=285 data-nosnippet>285</a>  </span>def_iop_journal(<span class="string">"\\CQG"</span>, <span class="string">"Class. Quantum Grav."</span>)<span class="question-mark">?</span>;
+<a href=#286 id=286 data-nosnippet>286</a>  def_iop_journal(<span class="string">"\\CTM"</span>, <span class="string">"Combust. Theory Modelling\\/"</span>)<span class="question-mark">?</span>;
+<a href=#287 id=287 data-nosnippet>287</a>  def_iop_journal(<span class="string">"\\DSE"</span>, <span class="string">"Distrib. Syst. Engng\\/"</span>)<span class="question-mark">?</span>;
+<a href=#288 id=288 data-nosnippet>288</a>  def_iop_journal(<span class="string">"\\EJP"</span>, <span class="string">"Eur. J. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#289 id=289 data-nosnippet>289</a>  def_iop_journal(<span class="string">"\\HPP"</span>, <span class="string">"High Perform. Polym."</span>)<span class="question-mark">?</span>;
+<a href=#290 id=290 data-nosnippet>290</a>  def_iop_journal(<span class="string">"\\IP"</span>, <span class="string">"Inverse Problems\\/"</span>)<span class="question-mark">?</span>;
+<a href=#291 id=291 data-nosnippet>291</a>  def_iop_journal(<span class="string">"\\JHM"</span>, <span class="string">"J. Hard Mater."</span>)<span class="question-mark">?</span>;
+<a href=#292 id=292 data-nosnippet>292</a>  def_iop_journal(<span class="string">"\\JO"</span>, <span class="string">"J. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#293 id=293 data-nosnippet>293</a>  def_iop_journal(<span class="string">"\\JOA"</span>, <span class="string">"J. Opt. A: Pure Appl. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#294 id=294 data-nosnippet>294</a>  def_iop_journal(<span class="string">"\\JOB"</span>, <span class="string">"J. Opt. B: Quantum Semiclass. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#295 id=295 data-nosnippet>295</a>  def_iop_journal(<span class="string">"\\JPA"</span>, <span class="string">"J. Phys. A: Math. Gen."</span>)<span class="question-mark">?</span>;
+<a href=#296 id=296 data-nosnippet>296</a>  def_iop_journal(<span class="string">"\\JPB"</span>, <span class="string">"J. Phys. B: At. Mol. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#297 id=297 data-nosnippet>297</a>  def_iop_journal(<span class="string">"\\jpb"</span>, <span class="string">"J. Phys. B: At. Mol. Opt. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#298 id=298 data-nosnippet>298</a>  def_iop_journal(<span class="string">"\\JPC"</span>, <span class="string">"J. Phys. C: Solid State Phys."</span>)<span class="question-mark">?</span>;
+<a href=#299 id=299 data-nosnippet>299</a>  def_iop_journal(<span class="string">"\\JPCM"</span>, <span class="string">"J. Phys.: Condens. Matter\\/"</span>)<span class="question-mark">?</span>;
+<a href=#300 id=300 data-nosnippet>300</a>  def_iop_journal(<span class="string">"\\JPD"</span>, <span class="string">"J. Phys. D: Appl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#301 id=301 data-nosnippet>301</a>  def_iop_journal(<span class="string">"\\JPE"</span>, <span class="string">"J. Phys. E: Sci. Instrum."</span>)<span class="question-mark">?</span>;
+<a href=#302 id=302 data-nosnippet>302</a>  def_iop_journal(<span class="string">"\\JPF"</span>, <span class="string">"J. Phys. F: Met. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#303 id=303 data-nosnippet>303</a>  def_iop_journal(<span class="string">"\\JPG"</span>, <span class="string">"J. Phys. G: Nucl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#304 id=304 data-nosnippet>304</a>  def_iop_journal(<span class="string">"\\jpg"</span>, <span class="string">"J. Phys. G: Nucl. Part. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#305 id=305 data-nosnippet>305</a>  def_iop_journal(<span class="string">"\\MSMSE"</span>, <span class="string">"Modelling Simulation Mater. Sci. Eng."</span>)<span class="question-mark">?</span>;
+<a href=#306 id=306 data-nosnippet>306</a>  def_iop_journal(<span class="string">"\\MST"</span>, <span class="string">"Meas. Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#307 id=307 data-nosnippet>307</a>  def_iop_journal(<span class="string">"\\NET"</span>, <span class="string">"Network: Comput. Neural Syst."</span>)<span class="question-mark">?</span>;
+<a href=#308 id=308 data-nosnippet>308</a>  def_iop_journal(<span class="string">"\\NJP"</span>, <span class="string">"New J. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#309 id=309 data-nosnippet>309</a>  def_iop_journal(<span class="string">"\\NL"</span>, <span class="string">"Nonlinearity\\/"</span>)<span class="question-mark">?</span>;
+<a href=#310 id=310 data-nosnippet>310</a>  def_iop_journal(<span class="string">"\\NT"</span>, <span class="string">"Nanotechnology"</span>)<span class="question-mark">?</span>;
+<a href=#311 id=311 data-nosnippet>311</a>  def_iop_journal(<span class="string">"\\PAO"</span>, <span class="string">"Pure Appl. Optics\\/"</span>)<span class="question-mark">?</span>;
+<a href=#312 id=312 data-nosnippet>312</a>  def_iop_journal(<span class="string">"\\PM"</span>, <span class="string">"Physiol. Meas."</span>)<span class="question-mark">?</span>;
+<a href=#313 id=313 data-nosnippet>313</a>  def_iop_journal(<span class="string">"\\PMB"</span>, <span class="string">"Phys. Med. Biol."</span>)<span class="question-mark">?</span>;
+<a href=#314 id=314 data-nosnippet>314</a>  def_iop_journal(<span class="string">"\\PPCF"</span>, <span class="string">"Plasma Phys. Control. Fusion\\/"</span>)<span class="question-mark">?</span>;
+<a href=#315 id=315 data-nosnippet>315</a>  def_iop_journal(<span class="string">"\\PSST"</span>, <span class="string">"Plasma Sources Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#316 id=316 data-nosnippet>316</a>  def_iop_journal(<span class="string">"\\PUS"</span>, <span class="string">"Public Understand. Sci."</span>)<span class="question-mark">?</span>;
+<a href=#317 id=317 data-nosnippet>317</a>  def_iop_journal(<span class="string">"\\QO"</span>, <span class="string">"Quantum Opt."</span>)<span class="question-mark">?</span>;
+<a href=#318 id=318 data-nosnippet>318</a>  def_iop_journal(<span class="string">"\\QSO"</span>, <span class="string">"Quantum Semiclass. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#319 id=319 data-nosnippet>319</a>  def_iop_journal(<span class="string">"\\RPP"</span>, <span class="string">"Rep. Prog. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#320 id=320 data-nosnippet>320</a>  def_iop_journal(<span class="string">"\\SLC"</span>, <span class="string">"Sov. Lightwave Commun."</span>)<span class="question-mark">?</span>;
+<a href=#321 id=321 data-nosnippet>321</a>  def_iop_journal(<span class="string">"\\SST"</span>, <span class="string">"Semicond. Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#322 id=322 data-nosnippet>322</a>  def_iop_journal(<span class="string">"\\SUST"</span>, <span class="string">"Supercond. Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#323 id=323 data-nosnippet>323</a>  def_iop_journal(<span class="string">"\\WRM"</span>, <span class="string">"Waves Random Media\\/"</span>)<span class="question-mark">?</span>;
+<a href=#324 id=324 data-nosnippet>324</a>  def_iop_journal(<span class="string">"\\JMM"</span>, <span class="string">"J. of Michromech. and Microeng.\\/"</span>)<span class="question-mark">?</span>;
+<a href=#325 id=325 data-nosnippet>325</a>  def_iop_journal(<span class="string">"\\AC"</span>, <span class="string">"Acta Crystallogr."</span>)<span class="question-mark">?</span>;
+<a href=#326 id=326 data-nosnippet>326</a>  def_iop_journal(<span class="string">"\\AM"</span>, <span class="string">"Acta Metall."</span>)<span class="question-mark">?</span>;
+<a href=#327 id=327 data-nosnippet>327</a>  def_iop_journal(<span class="string">"\\AP"</span>, <span class="string">"Ann. Phys., Lpz."</span>)<span class="question-mark">?</span>;
+<a href=#328 id=328 data-nosnippet>328</a>  def_iop_journal(<span class="string">"\\APNY"</span>, <span class="string">"Ann. Phys., NY\\/"</span>)<span class="question-mark">?</span>;
+<a href=#329 id=329 data-nosnippet>329</a>  def_iop_journal(<span class="string">"\\APP"</span>, <span class="string">"Ann. Phys., Paris\\/"</span>)<span class="question-mark">?</span>;
+<a href=#330 id=330 data-nosnippet>330</a>  def_iop_journal(<span class="string">"\\CJP"</span>, <span class="string">"Can. J. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#331 id=331 data-nosnippet>331</a>  def_iop_journal(<span class="string">"\\JAP"</span>, <span class="string">"J. Appl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#332 id=332 data-nosnippet>332</a>  def_iop_journal(<span class="string">"\\JCP"</span>, <span class="string">"J. Chem. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#333 id=333 data-nosnippet>333</a>  def_iop_journal(<span class="string">"\\JJAP"</span>, <span class="string">"Japan. J. Appl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#334 id=334 data-nosnippet>334</a>  def_iop_journal(<span class="string">"\\JP"</span>, <span class="string">"J. Physique\\/"</span>)<span class="question-mark">?</span>;
+<a href=#335 id=335 data-nosnippet>335</a>  def_iop_journal(<span class="string">"\\JPhCh"</span>, <span class="string">"J. Phys. Chem."</span>)<span class="question-mark">?</span>;
+<a href=#336 id=336 data-nosnippet>336</a>  def_iop_journal(<span class="string">"\\JMMM"</span>, <span class="string">"J. Magn. Magn. Mater."</span>)<span class="question-mark">?</span>;
+<a href=#337 id=337 data-nosnippet>337</a>  def_iop_journal(<span class="string">"\\JMP"</span>, <span class="string">"J. Math. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#338 id=338 data-nosnippet>338</a>  def_iop_journal(<span class="string">"\\JOSA"</span>, <span class="string">"J. Opt. Soc. Am."</span>)<span class="question-mark">?</span>;
+<a href=#339 id=339 data-nosnippet>339</a>  def_iop_journal(<span class="string">"\\JPSJ"</span>, <span class="string">"J. Phys. Soc. Japan\\/"</span>)<span class="question-mark">?</span>;
+<a href=#340 id=340 data-nosnippet>340</a>  def_iop_journal(<span class="string">"\\JQSRT"</span>, <span class="string">"J. Quant. Spectrosc. Radiat. Transfer\\/"</span>)<span class="question-mark">?</span>;
+<a href=#341 id=341 data-nosnippet>341</a>  def_iop_journal(<span class="string">"\\NC"</span>, <span class="string">"Nuovo Cimento\\/"</span>)<span class="question-mark">?</span>;
+<a href=#342 id=342 data-nosnippet>342</a>  def_iop_journal(<span class="string">"\\NIM"</span>, <span class="string">"Nucl. Instrum. Methods\\/"</span>)<span class="question-mark">?</span>;
+<a href=#343 id=343 data-nosnippet>343</a>  def_iop_journal(<span class="string">"\\NP"</span>, <span class="string">"Nucl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#344 id=344 data-nosnippet>344</a>  def_iop_journal(<span class="string">"\\PL"</span>, <span class="string">"Phys. Lett."</span>)<span class="question-mark">?</span>;
+<a href=#345 id=345 data-nosnippet>345</a>  def_iop_journal(<span class="string">"\\PR"</span>, <span class="string">"Phys. Rev."</span>)<span class="question-mark">?</span>;
+<a href=#346 id=346 data-nosnippet>346</a>  def_iop_journal(<span class="string">"\\PRL"</span>, <span class="string">"Phys. Rev. Lett."</span>)<span class="question-mark">?</span>;
+<a href=#347 id=347 data-nosnippet>347</a>  def_iop_journal(<span class="string">"\\PRS"</span>, <span class="string">"Proc. R. Soc."</span>)<span class="question-mark">?</span>;
+<a href=#348 id=348 data-nosnippet>348</a>  def_iop_journal(<span class="string">"\\PS"</span>, <span class="string">"Phys. Scr."</span>)<span class="question-mark">?</span>;
+<a href=#349 id=349 data-nosnippet>349</a>  def_iop_journal(<span class="string">"\\PSS"</span>, <span class="string">"Phys. Status Solidi\\/"</span>)<span class="question-mark">?</span>;
+<a href=#350 id=350 data-nosnippet>350</a>  def_iop_journal(<span class="string">"\\PTRS"</span>, <span class="string">"Phil. Trans. R. Soc."</span>)<span class="question-mark">?</span>;
+<a href=#351 id=351 data-nosnippet>351</a>  def_iop_journal(<span class="string">"\\RMP"</span>, <span class="string">"Rev. Mod. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#352 id=352 data-nosnippet>352</a>  def_iop_journal(<span class="string">"\\RSI"</span>, <span class="string">"Rev. Sci. Instrum."</span>)<span class="question-mark">?</span>;
+<a href=#353 id=353 data-nosnippet>353</a>  def_iop_journal(<span class="string">"\\SSC"</span>, <span class="string">"Solid State Commun."</span>)<span class="question-mark">?</span>;
+<a href=#354 id=354 data-nosnippet>354</a>  def_iop_journal(<span class="string">"\\ZP"</span>, <span class="string">" Z. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#355 id=355 data-nosnippet>355</a>  def_iop_journal(<span class="string">"\\JNE"</span>, <span class="string">"J. Neural Eng."</span>)<span class="question-mark">?</span>;
+<a href=#356 id=356 data-nosnippet>356</a>  def_iop_journal(<span class="string">"\\PB"</span>, <span class="string">"Phys. Biol."</span>)<span class="question-mark">?</span>;
+<a href=#357 id=357 data-nosnippet>357</a>  def_iop_journal(<span class="string">"\\SMS"</span>, <span class="string">"Smart Mater. Struct."</span>)<span class="question-mark">?</span>;
+<a href=#358 id=358 data-nosnippet>358</a>
+<a href=#359 id=359 data-nosnippet>359</a>  <span class="comment">// Mystery items — Perl L335-343
+<a href=#360 id=360 data-nosnippet>360</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tqs"</span>, <span class="string">"\\hspace*{25pt}"</span>);
+<a href=#361 id=361 data-nosnippet>361</a>  def_macro_noop(<span class="string">"\\nosections"</span>)<span class="question-mark">?</span>;
+<a href=#362 id=362 data-nosnippet>362</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\indented"</span>, <span class="string">"\\itemize"</span>);
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endindented"</span>, <span class="string">"\\enditemize"</span>);
+<a href=#364 id=364 data-nosnippet>364</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\varindent"</span>, <span class="string">"\\itemize"</span>);
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endvarindent"</span>, <span class="string">"\\enditemize"</span>);
+<a href=#366 id=366 data-nosnippet>366</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nonum"</span>, <span class="string">"\\par"</span>);
+<a href=#367 id=367 data-nosnippet>367</a>});
 </code></pre></div></section></main></body></html>

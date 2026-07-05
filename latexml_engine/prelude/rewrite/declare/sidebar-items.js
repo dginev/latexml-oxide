@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DeclarePatternType"],"fn":["compile_declare_pattern","declare_node_matches"],"struct":["DeclarePattern"]};

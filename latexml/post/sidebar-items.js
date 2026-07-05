@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["run_post_processing"],"struct":["PostOptions"]};
+window.SIDEBAR_ITEMS = {"fn":["run_post_processing","run_post_processing_logged"],"struct":["PostOptions","PostOutcome"]};

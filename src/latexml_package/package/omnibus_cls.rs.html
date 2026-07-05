@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/omnibus_cls.rs`."><title>omnibus_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>omnibus_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! OmniBus.cls — fallback class for documents with unknown document classes.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/omnibus_cls.rs`."><title>omnibus_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (c397dae80 2026-07-02)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>omnibus_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! OmniBus.cls — fallback class for documents with unknown document classes.
 <a href=#2 id=2 data-nosnippet>2</a>//! Port of LaTeXML/Package/OmniBus.cls.ltxml (312 lines).
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! Defines common frontmatter commands, theorem environments, natbib autoloads,
@@ -46,591 +46,599 @@
 <a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
 <a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">RequirePackage!</span>(<span class="string">"aas_macros"</span>);
 <a href=#48 id=48 data-nosnippet>48</a>
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// Perl L48-51: natbib autoloads — load natbib when any of its macros is used
-<a href=#50 id=50 data-nosnippet>50</a>  </span><span class="kw">for </span>trigger <span class="kw">in </span>[
-<a href=#51 id=51 data-nosnippet>51</a>    <span class="string">"\\citet"</span>, <span class="string">"\\citep"</span>, <span class="string">"\\citealt"</span>, <span class="string">"\\citealp"</span>, <span class="string">"\\citenum"</span>,
-<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">"\\citeauthor"</span>, <span class="string">"\\citefullauthor"</span>, <span class="string">"\\citeyear"</span>, <span class="string">"\\citeyearpar"</span>,
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"\\citeauthoryear"</span>, <span class="string">"\\setcitestyle"</span>, <span class="string">"\\bibpunct"</span>,
-<a href=#54 id=54 data-nosnippet>54</a>  ] {
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(trigger);
-<a href=#56 id=56 data-nosnippet>56</a>    <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) {
-<a href=#57 id=57 data-nosnippet>57</a>      <span class="kw">let </span>cs_clone = cs;
-<a href=#58 id=58 data-nosnippet>58</a>      <span class="comment">// Lazy-load natbib on first use of any cite trigger. After
-<a href=#59 id=59 data-nosnippet>59</a>      // require_package returns, natbib's own DefMacro for \citet etc.
-<a href=#60 id=60 data-nosnippet>60</a>      // is in scope, but the closure persists at OmniBus's load
-<a href=#61 id=61 data-nosnippet>61</a>      // frame so re-emitting cs_clone could fire THIS closure again
-<a href=#62 id=62 data-nosnippet>62</a>      // (infinite loop on every \citet — witness 2207.14344 timeout
-<a href=#63 id=63 data-nosnippet>63</a>      // with 8K+ require_package(natbib) calls). Clear the closure
-<a href=#64 id=64 data-nosnippet>64</a>      // GLOBALLY before re-emitting so the next lookup of cs_clone
-<a href=#65 id=65 data-nosnippet>65</a>      // finds natbib's binding-loaded def, not us. Task #260.
-<a href=#66 id=66 data-nosnippet>66</a>      </span>def_macro(cs, <span class="prelude-val">None</span>,
-<a href=#67 id=67 data-nosnippet>67</a>        ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#68 id=68 data-nosnippet>68</a>          require_package(<span class="string">"natbib"</span>, RequireOptions::default())<span class="question-mark">?</span>;
-<a href=#69 id=69 data-nosnippet>69</a>          <span class="comment">// After require_package, natbib's LoadDefinitions has overlaid
-<a href=#70 id=70 data-nosnippet>70</a>          // `\citep`/`\citet`/etc. at LOCAL scope on the current frame
-<a href=#71 id=71 data-nosnippet>71</a>          // stack — so a fresh lookup of `cs_clone` will resolve to
-<a href=#72 id=72 data-nosnippet>72</a>          // natbib's real def (the local overlay sits ABOVE this
-<a href=#73 id=73 data-nosnippet>73</a>          // closure on the meaning stack). No need to "clear" the
-<a href=#74 id=74 data-nosnippet>74</a>          // closure; just re-emit. If we cleared with Global scope
-<a href=#75 id=75 data-nosnippet>75</a>          // (previous behavior), assign_internal walks down to the
-<a href=#76 id=76 data-nosnippet>76</a>          // locked frame and removes ALL overlays of `cs_clone` —
-<a href=#77 id=77 data-nosnippet>77</a>          // including natbib's freshly-installed local def — leaving
-<a href=#78 id=78 data-nosnippet>78</a>          // `\citep` undefined after the load. Witness: 1403.6801
-<a href=#79 id=79 data-nosnippet>79</a>          // (paper-class wlpeerj.cls → OmniBus fallback → user calls
-<a href=#80 id=80 data-nosnippet>80</a>          // `\citep{foo}` → natbib loads, but `\citep` immediately
-<a href=#81 id=81 data-nosnippet>81</a>          // reverts to undefined → 101 errors + fatal). The recursion
-<a href=#82 id=82 data-nosnippet>82</a>          // concern (cited in original comment: 2207.14344 with 8K
-<a href=#83 id=83 data-nosnippet>83</a>          // require_package(natbib) calls) is moot when natbib's
-<a href=#84 id=84 data-nosnippet>84</a>          // local def shadows this closure correctly — re-emission
-<a href=#85 id=85 data-nosnippet>85</a>          // resolves to natbib's def, not back to here.
-<a href=#86 id=86 data-nosnippet>86</a>          </span><span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[cs_clone]))
-<a href=#87 id=87 data-nosnippet>87</a>        })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#88 id=88 data-nosnippet>88</a>    }
-<a href=#89 id=89 data-nosnippet>89</a>  }
-<a href=#90 id=90 data-nosnippet>90</a>
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// Perl L52-57: save original \bibitem; redefine to auto-load natbib if the
-<a href=#92 id=92 data-nosnippet>92</a>  // argument uses \protect\citeauthoryear.
-<a href=#93 id=93 data-nosnippet>93</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@OmniBus@saved@bibitem"</span>, <span class="string">"\\bibitem"</span>);
-<a href=#94 id=94 data-nosnippet>94</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@late@usepackage Semiverbatim"</span>, sub[(pkg)] {
-<a href=#95 id=95 data-nosnippet>95</a>    require_package(<span class="kw-2">&amp;</span>pkg.to_string(), RequireOptions::default())<span class="question-mark">?</span>;
-<a href=#96 id=96 data-nosnippet>96</a>  });
-<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibitem"</span>,
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}"</span>);
-<a href=#99 id=99 data-nosnippet>99</a>
-<a href=#100 id=100 data-nosnippet>100</a>  <span class="comment">// Perl L58-60: frontmatter section environments
-<a href=#101 id=101 data-nosnippet>101</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{frontmatter}"</span>, <span class="string">"#body"</span>);
-<a href=#102 id=102 data-nosnippet>102</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{mainmatter}"</span>,  <span class="string">"#body"</span>);
-<a href=#103 id=103 data-nosnippet>103</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{backmatter}"</span>,  <span class="string">"#body"</span>);
-<a href=#104 id=104 data-nosnippet>104</a>  <span class="comment">// Override the bare-`\frontmatter` / `\mainmatter` / `\backmatter`
-<a href=#105 id=105 data-nosnippet>105</a>  // macros to noops AFTER the DefEnvironment registration. Modern
-<a href=#106 id=106 data-nosnippet>106</a>  // book.cls-style papers (e.g. memo-l / amsmemo "Memoirs" templates
-<a href=#107 id=107 data-nosnippet>107</a>  // — paper-bundled, no binding) call bare `\frontmatter` as a
-<a href=#108 id=108 data-nosnippet>108</a>  // noop marker (book.cls semantics: sets page numbering style,
-<a href=#109 id=109 data-nosnippet>109</a>  // increments chapter counter style). Our DefEnvironment binds
-<a href=#110 id=110 data-nosnippet>110</a>  // `\frontmatter` to the env-opener, which pushes a structural
-<a href=#111 id=111 data-nosnippet>111</a>  // frame that blocks subsequent display math (`$$...$$` triggers
-<a href=#112 id=112 data-nosnippet>112</a>  // "Script _ can only appear in math mode" cascades; witness
-<a href=#113 id=113 data-nosnippet>113</a>  // 1102.3639 — book-style paper using memo-l). LaTeX's
-<a href=#114 id=114 data-nosnippet>114</a>  // `\begin{frontmatter}` / `\end{frontmatter}` env-bracket
-<a href=#115 id=115 data-nosnippet>115</a>  // tracking still functions when the opener is a noop, so
-<a href=#116 id=116 data-nosnippet>116</a>  // elsart/JHEP-style `\begin{frontmatter}...\end{frontmatter}`
-<a href=#117 id=117 data-nosnippet>117</a>  // usage continues to work (env body flows as plain text).
-<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="macro">Let!</span>(<span class="string">"\\frontmatter"</span>, <span class="string">"\\@empty"</span>);
-<a href=#119 id=119 data-nosnippet>119</a>  <span class="macro">Let!</span>(<span class="string">"\\mainmatter"</span>,  <span class="string">"\\@empty"</span>);
-<a href=#120 id=120 data-nosnippet>120</a>  <span class="macro">Let!</span>(<span class="string">"\\backmatter"</span>,  <span class="string">"\\@empty"</span>);
-<a href=#121 id=121 data-nosnippet>121</a>
-<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// Perl L62-63
-<a href=#123 id=123 data-nosnippet>123</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\shorttitle{}"</span>, <span class="string">"\\lx@add@toctitle{#1}"</span>);
-<a href=#124 id=124 data-nosnippet>124</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subtitle{}"</span>,   <span class="string">"\\lx@add@subtitle{#1}"</span>);
-<a href=#125 id=125 data-nosnippet>125</a>
-<a href=#126 id=126 data-nosnippet>126</a>  <span class="comment">// Perl L65-76: ignored/running title/author variants
-<a href=#127 id=127 data-nosnippet>127</a>  </span>def_macro_noop(<span class="string">"\\shortauthor{}"</span>)<span class="question-mark">?</span>;
-<a href=#128 id=128 data-nosnippet>128</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\titlerunning"</span>,  <span class="macro">Tokens!</span>());
-<a href=#129 id=129 data-nosnippet>129</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\authorrunning"</span>, <span class="macro">Tokens!</span>());
-<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">Let!</span>(<span class="string">"\\runningauthor"</span>, <span class="string">"\\authorrunning"</span>);
-<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">Let!</span>(<span class="string">"\\runauthor"</span>,     <span class="string">"\\authorrunning"</span>);
-<a href=#132 id=132 data-nosnippet>132</a>  <span class="comment">// Running title / short authors — author metadata; preserve.
-<a href=#133 id=133 data-nosnippet>133</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\runningtitle{}"</span>,
-<a href=#134 id=134 data-nosnippet>134</a>    <span class="string">"\\lx@add@toctitle{#1}"</span>);
-<a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">Let!</span>(<span class="string">"\\runninghead"</span>, <span class="string">"\\runningtitle"</span>);
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="comment">// Perl `OmniBus.cls.ltxml` L75: `DefMacro('\shortauthors{}', Tokens())` —
-<a href=#137 id=137 data-nosnippet>137</a>  // gobble (redundant running head). Match Perl; preserving it errored on a
-<a href=#138 id=138 data-nosnippet>138</a>  // literal `&amp;` in the running head. See 0709.4236 and aas_support_sty.rs.
-<a href=#139 id=139 data-nosnippet>139</a>  </span>def_macro_noop(<span class="string">"\\shortauthors{}"</span>)<span class="question-mark">?</span>;
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// \authors{author list} — alternative to \author; preserve as
-<a href=#141 id=141 data-nosnippet>141</a>  // author list note.
-<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\authors{}"</span>,
-<a href=#143 id=143 data-nosnippet>143</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=authors]{#1}"</span>);
-<a href=#144 id=144 data-nosnippet>144</a>  def_macro_noop(<span class="string">"\\alignauthor"</span>)<span class="question-mark">?</span>;
-<a href=#145 id=145 data-nosnippet>145</a>  <span class="comment">// \correspondingauthor{name/email} — common journal-class CS used
-<a href=#146 id=146 data-nosnippet>146</a>  // inside author lists (AAS / AGU / AMS / many journals). aas_support
-<a href=#147 id=147 data-nosnippet>147</a>  // routes it to ltx:contact[role=correspondent]. Provide the same in
-<a href=#148 id=148 data-nosnippet>148</a>  // OmniBus so unbound classes (e.g. ametsocV5) which use the CS
-<a href=#149 id=149 data-nosnippet>149</a>  // directly inside `\authors{...}` don't trip Error:undefined.
-<a href=#150 id=150 data-nosnippet>150</a>  // Witness 2110.11200 (ametsocV5 fallback to OmniBus).
-<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\correspondingauthor{}"</span>, <span class="string">"\\lx@add@contact[role=correspondent]{#1}"</span>);
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="comment">// \datastatement — ametsocV5.cls L992:
-<a href=#153 id=153 data-nosnippet>153</a>  // `\def\datastatement{\paragraph*{Data availability statement.}}`.
-<a href=#154 id=154 data-nosnippet>154</a>  // Used as a no-arg standalone heading marker. Witness 2203.02657.
-<a href=#155 id=155 data-nosnippet>155</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\datastatement"</span>, <span class="string">"\\paragraph*{Data availability statement.}"</span>);
-<a href=#156 id=156 data-nosnippet>156</a>
-<a href=#157 id=157 data-nosnippet>157</a>  <span class="comment">// Perl (PR #2767): email / speaker
-<a href=#158 id=158 data-nosnippet>158</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\email{}"</span>,     <span class="string">"\\lx@add@email{#1}"</span>);
-<a href=#159 id=159 data-nosnippet>159</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\emailaddr{}"</span>, <span class="string">"\\lx@add@email{#1}"</span>);
-<a href=#160 id=160 data-nosnippet>160</a>  <span class="comment">// Perl PR #2767 has `\lx@add@email{#2}` here — `#2` is the trailing
-<a href=#161 id=161 data-nosnippet>161</a>  // OPTIONAL, so `\ead{user@example.org}` would emit an empty email and
-<a href=#162 id=162 data-nosnippet>162</a>  // drop the address. Upstream typo for `#1`; see KNOWN_PERL_ERRORS #29.
-<a href=#163 id=163 data-nosnippet>163</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ead{}[]"</span>,     <span class="string">"\\lx@add@email{#1}"</span>);
-<a href=#164 id=164 data-nosnippet>164</a>
-<a href=#165 id=165 data-nosnippet>165</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\emailname"</span>, <span class="string">"E-mail"</span>);
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\speaker{}"</span>, <span class="string">"\\lx@add@creator[role=speaker]{#1}"</span>);
-<a href=#167 id=167 data-nosnippet>167</a>
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="comment">// Perl (PR #2767): affiliations, like from aas
-<a href=#169 id=169 data-nosnippet>169</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\altaffilmark Semiverbatim"</span>,
-<a href=#170 id=170 data-nosnippet>170</a>    <span class="string">"\\lx@request@frontmatter@annotation[altaffil]{#1}"</span>);
-<a href=#171 id=171 data-nosnippet>171</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\altaffiltext Semiverbatim {}"</span>,
-<a href=#172 id=172 data-nosnippet>172</a>    <span class="string">"\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}"</span>);
-<a href=#173 id=173 data-nosnippet>173</a>
-<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\address[]{}"</span>, <span class="string">"\\lx@add@address{#2}"</span>);
-<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">Let!</span>(<span class="string">"\\affaddr"</span>, <span class="string">"\\address"</span>);
-<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affil{}"</span>,       <span class="string">"\\lx@add@affiliation{#1}"</span>);
-<a href=#177 id=177 data-nosnippet>177</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affiliation{}"</span>, <span class="string">"\\lx@add@affiliation{#1}"</span>);
-<a href=#178 id=178 data-nosnippet>178</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\affilskip" </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#179 id=179 data-nosnippet>179</a>
-<a href=#180 id=180 data-nosnippet>180</a>  <span class="comment">// Perl L104-123: misc name macros, mostly no-ops
-<a href=#181 id=181 data-nosnippet>181</a>  </span>def_macro_identity(<span class="string">"\\prefix{}"</span>)<span class="question-mark">?</span>;
-<a href=#182 id=182 data-nosnippet>182</a>  def_macro_identity(<span class="string">"\\suffix{}"</span>)<span class="question-mark">?</span>;
-<a href=#183 id=183 data-nosnippet>183</a>  def_macro_identity(<span class="string">"\\fnms{}"</span>)<span class="question-mark">?</span>;
-<a href=#184 id=184 data-nosnippet>184</a>  def_macro_identity(<span class="string">"\\snm{}"</span>)<span class="question-mark">?</span>;
-<a href=#185 id=185 data-nosnippet>185</a>  def_macro_identity(<span class="string">"\\inits{}"</span>)<span class="question-mark">?</span>;
-<a href=#186 id=186 data-nosnippet>186</a>  def_macro_identity(<span class="string">"\\printaddresses{}"</span>)<span class="question-mark">?</span>;
-<a href=#187 id=187 data-nosnippet>187</a>  <span class="comment">// \printead{email} — printed email address; preserve as contact.
-<a href=#188 id=188 data-nosnippet>188</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printead{}"</span>,
-<a href=#189 id=189 data-nosnippet>189</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=email]{#1}"</span>);
-<a href=#190 id=190 data-nosnippet>190</a>  <span class="comment">// Page numbers — author metadata; preserve as ltx:note.
-<a href=#191 id=191 data-nosnippet>191</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\firstpage{}"</span>,       <span class="string">"\\lx@add@frontmatter{ltx:note}[role=firstpage]{#1}"</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lastpage{}"</span>,        <span class="string">"\\lx@add@frontmatter{ltx:note}[role=lastpage]{#1}"</span>);
-<a href=#193 id=193 data-nosnippet>193</a>  <span class="comment">// \runauthor / \runtitle are running-header SHORT forms, layout-only and
-<a href=#194 id=194 data-nosnippet>194</a>  // redundant with \author/\title. Perl OmniBus.cls.ltxml L114-115 GOBBLES both
-<a href=#195 id=195 data-nosnippet>195</a>  // (`DefMacro('\runauthor{}', Tokens())`); preserving them digests the
-<a href=#196 id=196 data-nosnippet>196</a>  // running-head content and errors on author typos (stray `\` before a name →
-<a href=#197 id=197 data-nosnippet>197</a>  // undefined CS). Gobble to match Perl; \author/\title keep the real content.
-<a href=#198 id=198 data-nosnippet>198</a>  </span>def_macro_noop(<span class="string">"\\runauthor{}"</span>)<span class="question-mark">?</span>;
-<a href=#199 id=199 data-nosnippet>199</a>  def_macro_noop(<span class="string">"\\runtitle{}"</span>)<span class="question-mark">?</span>;
-<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">// \corref{label} — marker for corresponding author. Preserve as note.
-<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\corref{}"</span>,          <span class="string">"\\lx@add@frontmatter{ltx:note}[role=corref]{#1}"</span>);
-<a href=#202 id=202 data-nosnippet>202</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\listofauthors{}"</span>,   <span class="string">"\\lx@add@frontmatter{ltx:note}[role=listofauthors]{#1}"</span>);
-<a href=#203 id=203 data-nosnippet>203</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\indexauthor{}"</span>,     <span class="string">"\\lx@add@frontmatter{ltx:note}[role=indexauthor]{#1}"</span>);
-<a href=#204 id=204 data-nosnippet>204</a>  def_macro_noop(<span class="string">"\\preface"</span>)<span class="question-mark">?</span>;
-<a href=#205 id=205 data-nosnippet>205</a>  def_macro_noop(<span class="string">"\\thankstext"</span>)<span class="question-mark">?</span>;
-<a href=#206 id=206 data-nosnippet>206</a>  def_macro_noop(<span class="string">"\\numberofauthors{}"</span>)<span class="question-mark">?</span>;
-<a href=#207 id=207 data-nosnippet>207</a>  <span class="comment">// \equalcontrib / \equalcont are defined kernel-level in
-<a href=#208 id=208 data-nosnippet>208</a>  // latex_constructs.rs — needed for ALL classes (not only OmniBus
-<a href=#209 id=209 data-nosnippet>209</a>  // fallback) because aaai22.sty etc. ride on \documentclass{article}.
-<a href=#210 id=210 data-nosnippet>210</a>  // Springer Nature `sn-jnl.cls` style author-name and org-address parts
-<a href=#211 id=211 data-nosnippet>211</a>  // (cls L519-525, L599-606). The cls defines them as low-level `\def`s
-<a href=#212 id=212 data-nosnippet>212</a>  // wrapped in `\leavevmode\hbox{...}`, but our raw-class load path skips
-<a href=#213 id=213 data-nosnippet>213</a>  // class .cls files by default (INCLUDE_CLASSES=false unless rawclasses
-<a href=#214 id=214 data-nosnippet>214</a>  // option is passed), so the user's `\author{\fnm{First} \sur{Last}}` hits
-<a href=#215 id=215 data-nosnippet>215</a>  // undefined CS. Stub at OmniBus level as passthrough — for unknown
-<a href=#216 id=216 data-nosnippet>216</a>  // Springer-style classes that fall through to OmniBus, the author name
-<a href=#217 id=217 data-nosnippet>217</a>  // renders as plain text in &lt;ltx:personname&gt;. Doesn't affect papers
-<a href=#218 id=218 data-nosnippet>218</a>  // where the cls binding IS loaded (those override). Driver: 2403.18604,
-<a href=#219 id=219 data-nosnippet>219</a>  // 2110.04544, ~40 sn-jnl papers in canvas pool.
-<a href=#220 id=220 data-nosnippet>220</a>  </span>def_macro_identity(<span class="string">"\\fnm{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// first name
-<a href=#221 id=221 data-nosnippet>221</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sur{}"</span>,   <span class="string">" #1"</span>);     <span class="comment">// surname (cls inserts ~)
-<a href=#222 id=222 data-nosnippet>222</a>  </span>def_macro_identity(<span class="string">"\\spfx{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// surname prefix (e.g. "van")
-<a href=#223 id=223 data-nosnippet>223</a>  </span>def_macro_identity(<span class="string">"\\pfx{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// name prefix (e.g. "Dr.")
-<a href=#224 id=224 data-nosnippet>224</a>  </span>def_macro_identity(<span class="string">"\\sfx{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// name suffix
-<a href=#225 id=225 data-nosnippet>225</a>  </span>def_macro_identity(<span class="string">"\\tanm{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// title-as-name
-<a href=#226 id=226 data-nosnippet>226</a>  // `\dgr` (Springer sn-jnl "degree", 1-arg) CONFLICTS with the common
-<a href=#227 id=227 data-nosnippet>227</a>  // physics-paper convention `\newcommand{\dgr}{\dagger}` (0-arg). Defining
-<a href=#228 id=228 data-nosnippet>228</a>  // it eagerly here blocks the user's `\newcommand` (already-defined) so a
-<a href=#229 id=229 data-nosnippet>229</a>  // later `c_i^\dgr c_j` consumed the following `c` as `\dgr`'s argument →
-<a href=#230 id=230 data-nosnippet>230</a>  // `c_i^{c}_j` → spurious `Double subscript` (witness 1603.02507, ×23; Perl
-<a href=#231 id=231 data-nosnippet>231</a>  // rc=0 — Perl's OmniBus never defines `\dgr`). Defer to \AtBeginDocument
-<a href=#232 id=232 data-nosnippet>232</a>  // with \providecommand so a user preamble definition wins, while the
-<a href=#233 id=233 data-nosnippet>233</a>  // Springer `\author{… \dgr{…} …}` (expanded at \maketitle, after
-<a href=#234 id=234 data-nosnippet>234</a>  // begin-document) still gets the 1-arg fallback. `##1` doubles for the hook.
-<a href=#235 id=235 data-nosnippet>235</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\AtBeginDocument{\providecommand{\dgr}[1]{##1}}"</span>);
-<a href=#236 id=236 data-nosnippet>236</a>  def_macro_identity(<span class="string">"\\orgdiv{}"</span>)<span class="question-mark">?</span>;
-<a href=#237 id=237 data-nosnippet>237</a>  def_macro_identity(<span class="string">"\\orgname{}"</span>)<span class="question-mark">?</span>;
-<a href=#238 id=238 data-nosnippet>238</a>  def_macro_identity(<span class="string">"\\orgaddress{}"</span>)<span class="question-mark">?</span>;
-<a href=#239 id=239 data-nosnippet>239</a>  def_macro_identity(<span class="string">"\\street{}"</span>)<span class="question-mark">?</span>;
-<a href=#240 id=240 data-nosnippet>240</a>  def_macro_identity(<span class="string">"\\postcode{}"</span>)<span class="question-mark">?</span>;
-<a href=#241 id=241 data-nosnippet>241</a>  def_macro_identity(<span class="string">"\\city{}"</span>)<span class="question-mark">?</span>;
-<a href=#242 id=242 data-nosnippet>242</a>  def_macro_identity(<span class="string">"\\country{}"</span>)<span class="question-mark">?</span>;
-<a href=#243 id=243 data-nosnippet>243</a>  <span class="comment">// `\state` is a TeX 4-token `\count` register inside many classes (article
-<a href=#244 id=244 data-nosnippet>244</a>  // declares it as `\newcount` for some configurations). We do NOT stub it
-<a href=#245 id=245 data-nosnippet>245</a>  // here — overlapping with the kernel register would break papers that
-<a href=#246 id=246 data-nosnippet>246</a>  // expect the integer. The few sn-jnl papers using `\state{...}` for
-<a href=#247 id=247 data-nosnippet>247</a>  // address components will keep that error; all the OTHER fields above
-<a href=#248 id=248 data-nosnippet>248</a>  // are non-conflicting. Same caution for `\affil` — already overloaded
-<a href=#249 id=249 data-nosnippet>249</a>  // by amsart and other classes; leaving it to specific class bindings.
-<a href=#250 id=250 data-nosnippet>250</a>  </span>def_macro_noop(<span class="string">"\\bibcommenthead"</span>)<span class="question-mark">?</span>;
-<a href=#251 id=251 data-nosnippet>251</a>  def_macro_noop(<span class="string">"\\jyear[]"</span>)<span class="question-mark">?</span>;
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\resumen{}"</span>,         <span class="string">"\\lx@add@abstract{#1}"</span>);
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ion{}{}"</span>,           <span class="string">"{#1 \\textsc{#2}}"</span>);
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">Let!</span>(<span class="string">"\\fulladdresses"</span>, <span class="string">"\\address"</span>);
-<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\smonth{}"</span>, <span class="string">"\\month=#1\\relax"</span>);
-<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\syear{}"</span>,  <span class="string">"\\year=#1\\relax"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// Perl L48-51: natbib autoloads — `DefAutoload($trigger, 'natbib.sty.ltxml')`
+<a href=#50 id=50 data-nosnippet>50</a>  // for every obvious natbib macro. Route through the canonical, loop-safe
+<a href=#51 id=51 data-nosnippet>51</a>  // `def_autoload` (the same primitive TeX.pool uses for `\mathbb`→amssymb):
+<a href=#52 id=52 data-nosnippet>52</a>  // it clears the trigger GLOBALLY *before* loading natbib, then hoists
+<a href=#53 id=53 data-nosnippet>53</a>  // natbib's freshly-installed defs to global and re-emits the CS so the
+<a href=#54 id=54 data-nosnippet>54</a>  // re-try resolves to natbib's real def, not back to this stub.
+<a href=#55 id=55 data-nosnippet>55</a>  //
+<a href=#56 id=56 data-nosnippet>56</a>  // The earlier hand-rolled version (require_package → re-emit, with no
+<a href=#57 id=57 data-nosnippet>57</a>  // clear) re-fired the stub on every re-emit because natbib's local def
+<a href=#58 id=58 data-nosnippet>58</a>  // did NOT shadow it through the locked class frame — fully re-loading
+<a href=#59 id=59 data-nosnippet>59</a>  // natbib each iteration until the wall-clock watchdog (witness:
+<a href=#60 id=60 data-nosnippet>60</a>  // sn-jnl.cls → OmniBus → frontmatter `\citeyear` / body `\citep` →
+<a href=#61 id=61 data-nosnippet>61</a>  // 60s+ digest hang; 2603.06884 and the broad sn-jnl/omnibus-fallback
+<a href=#62 id=62 data-nosnippet>62</a>  // cluster). Clearing *after* the load (the even-earlier attempt) wiped
+<a href=#63 id=63 data-nosnippet>63</a>  // natbib's fresh def → 1403.6801 undefined-`\citep` cascade. `def_autoload`
+<a href=#64 id=64 data-nosnippet>64</a>  // clears *before* the load, which is correct for both. Task #260.
+<a href=#65 id=65 data-nosnippet>65</a>  </span><span class="kw">for </span>trigger <span class="kw">in </span>[
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="string">"\\citet"</span>, <span class="string">"\\citep"</span>, <span class="string">"\\citealt"</span>, <span class="string">"\\citealp"</span>, <span class="string">"\\citenum"</span>,
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="string">"\\citeauthor"</span>, <span class="string">"\\citefullauthor"</span>, <span class="string">"\\citeyear"</span>, <span class="string">"\\citeyearpar"</span>,
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"\\citeauthoryear"</span>, <span class="string">"\\setcitestyle"</span>, <span class="string">"\\bibpunct"</span>,
+<a href=#69 id=69 data-nosnippet>69</a>  ] {
+<a href=#70 id=70 data-nosnippet>70</a>    def_autoload(trigger, <span class="string">"natbib"</span>)<span class="question-mark">?</span>;
+<a href=#71 id=71 data-nosnippet>71</a>  }
+<a href=#72 id=72 data-nosnippet>72</a>
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="comment">// Perl L52-57: save original \bibitem; redefine to auto-load natbib if the
+<a href=#74 id=74 data-nosnippet>74</a>  // argument uses \protect\citeauthoryear.
+<a href=#75 id=75 data-nosnippet>75</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@OmniBus@saved@bibitem"</span>, <span class="string">"\\bibitem"</span>);
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@late@usepackage Semiverbatim"</span>, sub[(pkg)] {
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="comment">// This fires from inside `\bibitem` processing — i.e. inside the
+<a href=#78 id=78 data-nosnippet>78</a>    // `thebibliography` group. Package definitions installed at that frame are
+<a href=#79 id=79 data-nosnippet>79</a>    // popped on `\end{thebibliography}`, so natbib's real `\citep`/`\citet`
+<a href=#80 id=80 data-nosnippet>80</a>    // would vanish and `\citep` reverts to its (still-installed, now
+<a href=#81 id=81 data-nosnippet>81</a>    // `*.sty_loaded`-true) `def_autoload` trigger; a later body `\citep` then
+<a href=#82 id=82 data-nosnippet>82</a>    // re-fires the trigger's already-loaded early-return, re-emits `\citep`, and
+<a href=#83 id=83 data-nosnippet>83</a>    // loops to the token limit. Mirror `def_autoload`: snapshot the calling
+<a href=#84 id=84 data-nosnippet>84</a>    // frame's meanings, load, then hoist natbib's freshly-installed defs to
+<a href=#85 id=85 data-nosnippet>85</a>    // GLOBAL so they survive the group pop (matching a top-level
+<a href=#86 id=86 data-nosnippet>86</a>    // `\usepackage{natbib}`). Witness: 2209.11799 (sn-jnl, `\citep` after a
+<a href=#87 id=87 data-nosnippet>87</a>    // `\citeauthoryear` `\bibitem`-triggered natbib load).
+<a href=#88 id=88 data-nosnippet>88</a>    </span><span class="kw">let </span>pre_keys = snapshot_top_frame_meaning_keys();
+<a href=#89 id=89 data-nosnippet>89</a>    require_package(<span class="kw-2">&amp;</span>pkg.to_string(), RequireOptions::default())<span class="question-mark">?</span>;
+<a href=#90 id=90 data-nosnippet>90</a>    hoist_top_frame_meaning_delta(<span class="kw-2">&amp;</span>pre_keys);
+<a href=#91 id=91 data-nosnippet>91</a>  });
+<a href=#92 id=92 data-nosnippet>92</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibitem"</span>,
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="string">"\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}"</span>);
+<a href=#94 id=94 data-nosnippet>94</a>
+<a href=#95 id=95 data-nosnippet>95</a>  <span class="comment">// Perl L58-60: frontmatter section environments
+<a href=#96 id=96 data-nosnippet>96</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{frontmatter}"</span>, <span class="string">"#body"</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{mainmatter}"</span>,  <span class="string">"#body"</span>);
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{backmatter}"</span>,  <span class="string">"#body"</span>);
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="comment">// Override the bare-`\frontmatter` / `\mainmatter` / `\backmatter`
+<a href=#100 id=100 data-nosnippet>100</a>  // macros to noops AFTER the DefEnvironment registration. Modern
+<a href=#101 id=101 data-nosnippet>101</a>  // book.cls-style papers (e.g. memo-l / amsmemo "Memoirs" templates
+<a href=#102 id=102 data-nosnippet>102</a>  // — paper-bundled, no binding) call bare `\frontmatter` as a
+<a href=#103 id=103 data-nosnippet>103</a>  // noop marker (book.cls semantics: sets page numbering style,
+<a href=#104 id=104 data-nosnippet>104</a>  // increments chapter counter style). Our DefEnvironment binds
+<a href=#105 id=105 data-nosnippet>105</a>  // `\frontmatter` to the env-opener, which pushes a structural
+<a href=#106 id=106 data-nosnippet>106</a>  // frame that blocks subsequent display math (`$$...$$` triggers
+<a href=#107 id=107 data-nosnippet>107</a>  // "Script _ can only appear in math mode" cascades; witness
+<a href=#108 id=108 data-nosnippet>108</a>  // 1102.3639 — book-style paper using memo-l). LaTeX's
+<a href=#109 id=109 data-nosnippet>109</a>  // `\begin{frontmatter}` / `\end{frontmatter}` env-bracket
+<a href=#110 id=110 data-nosnippet>110</a>  // tracking still functions when the opener is a noop, so
+<a href=#111 id=111 data-nosnippet>111</a>  // elsart/JHEP-style `\begin{frontmatter}...\end{frontmatter}`
+<a href=#112 id=112 data-nosnippet>112</a>  // usage continues to work (env body flows as plain text).
+<a href=#113 id=113 data-nosnippet>113</a>  </span><span class="macro">Let!</span>(<span class="string">"\\frontmatter"</span>, <span class="string">"\\@empty"</span>);
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="macro">Let!</span>(<span class="string">"\\mainmatter"</span>,  <span class="string">"\\@empty"</span>);
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="macro">Let!</span>(<span class="string">"\\backmatter"</span>,  <span class="string">"\\@empty"</span>);
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// Perl L62-63
+<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\shorttitle{}"</span>, <span class="string">"\\lx@add@toctitle{#1}"</span>);
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subtitle{}"</span>,   <span class="string">"\\lx@add@subtitle{#1}"</span>);
+<a href=#120 id=120 data-nosnippet>120</a>
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">// Perl L65-76: ignored/running title/author variants
+<a href=#122 id=122 data-nosnippet>122</a>  </span>def_macro_noop(<span class="string">"\\shortauthor{}"</span>)<span class="question-mark">?</span>;
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\titlerunning"</span>,  <span class="macro">Tokens!</span>());
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\authorrunning"</span>, <span class="macro">Tokens!</span>());
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="macro">Let!</span>(<span class="string">"\\runningauthor"</span>, <span class="string">"\\authorrunning"</span>);
+<a href=#126 id=126 data-nosnippet>126</a>  <span class="macro">Let!</span>(<span class="string">"\\runauthor"</span>,     <span class="string">"\\authorrunning"</span>);
+<a href=#127 id=127 data-nosnippet>127</a>  <span class="comment">// Running title / short authors — author metadata; preserve.
+<a href=#128 id=128 data-nosnippet>128</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\runningtitle{}"</span>,
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="string">"\\lx@add@toctitle{#1}"</span>);
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">Let!</span>(<span class="string">"\\runninghead"</span>, <span class="string">"\\runningtitle"</span>);
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="comment">// Perl `OmniBus.cls.ltxml` L75: `DefMacro('\shortauthors{}', Tokens())` —
+<a href=#132 id=132 data-nosnippet>132</a>  // gobble (redundant running head). Match Perl; preserving it errored on a
+<a href=#133 id=133 data-nosnippet>133</a>  // literal `&amp;` in the running head. See 0709.4236 and aas_support_sty.rs.
+<a href=#134 id=134 data-nosnippet>134</a>  </span>def_macro_noop(<span class="string">"\\shortauthors{}"</span>)<span class="question-mark">?</span>;
+<a href=#135 id=135 data-nosnippet>135</a>  <span class="comment">// \authors{author list} — alternative to \author; preserve as
+<a href=#136 id=136 data-nosnippet>136</a>  // author list note.
+<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\authors{}"</span>,
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=authors]{#1}"</span>);
+<a href=#139 id=139 data-nosnippet>139</a>  def_macro_noop(<span class="string">"\\alignauthor"</span>)<span class="question-mark">?</span>;
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// \correspondingauthor{name/email} — common journal-class CS used
+<a href=#141 id=141 data-nosnippet>141</a>  // inside author lists (AAS / AGU / AMS / many journals). aas_support
+<a href=#142 id=142 data-nosnippet>142</a>  // routes it to ltx:contact[role=correspondent]. Provide the same in
+<a href=#143 id=143 data-nosnippet>143</a>  // OmniBus so unbound classes (e.g. ametsocV5) which use the CS
+<a href=#144 id=144 data-nosnippet>144</a>  // directly inside `\authors{...}` don't trip Error:undefined.
+<a href=#145 id=145 data-nosnippet>145</a>  // Witness 2110.11200 (ametsocV5 fallback to OmniBus).
+<a href=#146 id=146 data-nosnippet>146</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\correspondingauthor{}"</span>, <span class="string">"\\lx@add@contact[role=correspondent]{#1}"</span>);
+<a href=#147 id=147 data-nosnippet>147</a>  <span class="comment">// \datastatement — ametsocV5.cls L992:
+<a href=#148 id=148 data-nosnippet>148</a>  // `\def\datastatement{\paragraph*{Data availability statement.}}`.
+<a href=#149 id=149 data-nosnippet>149</a>  // Used as a no-arg standalone heading marker. Witness 2203.02657.
+<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\datastatement"</span>, <span class="string">"\\paragraph*{Data availability statement.}"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="comment">// Perl (PR #2767): email / speaker
+<a href=#153 id=153 data-nosnippet>153</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\email{}"</span>,     <span class="string">"\\lx@add@email{#1}"</span>);
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\emailaddr{}"</span>, <span class="string">"\\lx@add@email{#1}"</span>);
+<a href=#155 id=155 data-nosnippet>155</a>  <span class="comment">// Perl PR #2767 has `\lx@add@email{#2}` here — `#2` is the trailing
+<a href=#156 id=156 data-nosnippet>156</a>  // OPTIONAL, so `\ead{user@example.org}` would emit an empty email and
+<a href=#157 id=157 data-nosnippet>157</a>  // drop the address. Upstream typo for `#1`; see KNOWN_PERL_ERRORS #29.
+<a href=#158 id=158 data-nosnippet>158</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ead{}[]"</span>,     <span class="string">"\\lx@add@email{#1}"</span>);
+<a href=#159 id=159 data-nosnippet>159</a>
+<a href=#160 id=160 data-nosnippet>160</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\emailname"</span>, <span class="string">"E-mail"</span>);
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\speaker{}"</span>, <span class="string">"\\lx@add@creator[role=speaker]{#1}"</span>);
+<a href=#162 id=162 data-nosnippet>162</a>
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="comment">// Perl (PR #2767): affiliations, like from aas
+<a href=#164 id=164 data-nosnippet>164</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\altaffilmark Semiverbatim"</span>,
+<a href=#165 id=165 data-nosnippet>165</a>    <span class="string">"\\lx@request@frontmatter@annotation[altaffil]{#1}"</span>);
+<a href=#166 id=166 data-nosnippet>166</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\altaffiltext Semiverbatim {}"</span>,
+<a href=#167 id=167 data-nosnippet>167</a>    <span class="string">"\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}"</span>);
+<a href=#168 id=168 data-nosnippet>168</a>
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\address[]{}"</span>, <span class="string">"\\lx@add@address{#2}"</span>);
+<a href=#170 id=170 data-nosnippet>170</a>  <span class="macro">Let!</span>(<span class="string">"\\affaddr"</span>, <span class="string">"\\address"</span>);
+<a href=#171 id=171 data-nosnippet>171</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affil{}"</span>,       <span class="string">"\\lx@add@affiliation{#1}"</span>);
+<a href=#172 id=172 data-nosnippet>172</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affiliation{}"</span>, <span class="string">"\\lx@add@affiliation{#1}"</span>);
+<a href=#173 id=173 data-nosnippet>173</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\affilskip" </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#174 id=174 data-nosnippet>174</a>
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="comment">// Perl L104-123: misc name macros, mostly no-ops
+<a href=#176 id=176 data-nosnippet>176</a>  </span>def_macro_identity(<span class="string">"\\prefix{}"</span>)<span class="question-mark">?</span>;
+<a href=#177 id=177 data-nosnippet>177</a>  def_macro_identity(<span class="string">"\\suffix{}"</span>)<span class="question-mark">?</span>;
+<a href=#178 id=178 data-nosnippet>178</a>  def_macro_identity(<span class="string">"\\fnms{}"</span>)<span class="question-mark">?</span>;
+<a href=#179 id=179 data-nosnippet>179</a>  def_macro_identity(<span class="string">"\\snm{}"</span>)<span class="question-mark">?</span>;
+<a href=#180 id=180 data-nosnippet>180</a>  def_macro_identity(<span class="string">"\\inits{}"</span>)<span class="question-mark">?</span>;
+<a href=#181 id=181 data-nosnippet>181</a>  def_macro_identity(<span class="string">"\\printaddresses{}"</span>)<span class="question-mark">?</span>;
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="comment">// \printead{email} — printed email address; preserve as contact.
+<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printead{}"</span>,
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=email]{#1}"</span>);
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="comment">// Page numbers — author metadata; preserve as ltx:note.
+<a href=#186 id=186 data-nosnippet>186</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\firstpage{}"</span>,       <span class="string">"\\lx@add@frontmatter{ltx:note}[role=firstpage]{#1}"</span>);
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lastpage{}"</span>,        <span class="string">"\\lx@add@frontmatter{ltx:note}[role=lastpage]{#1}"</span>);
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// \runauthor / \runtitle are running-header SHORT forms, layout-only and
+<a href=#189 id=189 data-nosnippet>189</a>  // redundant with \author/\title. Perl OmniBus.cls.ltxml L114-115 GOBBLES both
+<a href=#190 id=190 data-nosnippet>190</a>  // (`DefMacro('\runauthor{}', Tokens())`); preserving them digests the
+<a href=#191 id=191 data-nosnippet>191</a>  // running-head content and errors on author typos (stray `\` before a name →
+<a href=#192 id=192 data-nosnippet>192</a>  // undefined CS). Gobble to match Perl; \author/\title keep the real content.
+<a href=#193 id=193 data-nosnippet>193</a>  </span>def_macro_noop(<span class="string">"\\runauthor{}"</span>)<span class="question-mark">?</span>;
+<a href=#194 id=194 data-nosnippet>194</a>  def_macro_noop(<span class="string">"\\runtitle{}"</span>)<span class="question-mark">?</span>;
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// \corref{label} — marker for corresponding author. Preserve as note.
+<a href=#196 id=196 data-nosnippet>196</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\corref{}"</span>,          <span class="string">"\\lx@add@frontmatter{ltx:note}[role=corref]{#1}"</span>);
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\listofauthors{}"</span>,   <span class="string">"\\lx@add@frontmatter{ltx:note}[role=listofauthors]{#1}"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\indexauthor{}"</span>,     <span class="string">"\\lx@add@frontmatter{ltx:note}[role=indexauthor]{#1}"</span>);
+<a href=#199 id=199 data-nosnippet>199</a>  def_macro_noop(<span class="string">"\\preface"</span>)<span class="question-mark">?</span>;
+<a href=#200 id=200 data-nosnippet>200</a>  def_macro_noop(<span class="string">"\\thankstext"</span>)<span class="question-mark">?</span>;
+<a href=#201 id=201 data-nosnippet>201</a>  def_macro_noop(<span class="string">"\\numberofauthors{}"</span>)<span class="question-mark">?</span>;
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// \equalcontrib / \equalcont are defined kernel-level in
+<a href=#203 id=203 data-nosnippet>203</a>  // latex_constructs.rs — needed for ALL classes (not only OmniBus
+<a href=#204 id=204 data-nosnippet>204</a>  // fallback) because aaai22.sty etc. ride on \documentclass{article}.
+<a href=#205 id=205 data-nosnippet>205</a>  // Springer Nature `sn-jnl.cls` style author-name and org-address parts
+<a href=#206 id=206 data-nosnippet>206</a>  // (cls L519-525, L599-606). The cls defines them as low-level `\def`s
+<a href=#207 id=207 data-nosnippet>207</a>  // wrapped in `\leavevmode\hbox{...}`, but our raw-class load path skips
+<a href=#208 id=208 data-nosnippet>208</a>  // class .cls files by default (INCLUDE_CLASSES=false unless rawclasses
+<a href=#209 id=209 data-nosnippet>209</a>  // option is passed), so the user's `\author{\fnm{First} \sur{Last}}` hits
+<a href=#210 id=210 data-nosnippet>210</a>  // undefined CS. Stub at OmniBus level as passthrough — for unknown
+<a href=#211 id=211 data-nosnippet>211</a>  // Springer-style classes that fall through to OmniBus, the author name
+<a href=#212 id=212 data-nosnippet>212</a>  // renders as plain text in &lt;ltx:personname&gt;. Doesn't affect papers
+<a href=#213 id=213 data-nosnippet>213</a>  // where the cls binding IS loaded (those override). Driver: 2403.18604,
+<a href=#214 id=214 data-nosnippet>214</a>  // 2110.04544, ~40 sn-jnl papers in canvas pool.
+<a href=#215 id=215 data-nosnippet>215</a>  </span>def_macro_identity(<span class="string">"\\fnm{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// first name
+<a href=#216 id=216 data-nosnippet>216</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sur{}"</span>,   <span class="string">" #1"</span>);     <span class="comment">// surname (cls inserts ~)
+<a href=#217 id=217 data-nosnippet>217</a>  </span>def_macro_identity(<span class="string">"\\spfx{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// surname prefix (e.g. "van")
+<a href=#218 id=218 data-nosnippet>218</a>  </span>def_macro_identity(<span class="string">"\\pfx{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// name prefix (e.g. "Dr.")
+<a href=#219 id=219 data-nosnippet>219</a>  </span>def_macro_identity(<span class="string">"\\sfx{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// name suffix
+<a href=#220 id=220 data-nosnippet>220</a>  </span>def_macro_identity(<span class="string">"\\tanm{}"</span>)<span class="question-mark">?</span>;      <span class="comment">// title-as-name
+<a href=#221 id=221 data-nosnippet>221</a>  // `\dgr` (Springer sn-jnl "degree", 1-arg) CONFLICTS with the common
+<a href=#222 id=222 data-nosnippet>222</a>  // physics-paper convention `\newcommand{\dgr}{\dagger}` (0-arg). Defining
+<a href=#223 id=223 data-nosnippet>223</a>  // it eagerly here blocks the user's `\newcommand` (already-defined) so a
+<a href=#224 id=224 data-nosnippet>224</a>  // later `c_i^\dgr c_j` consumed the following `c` as `\dgr`'s argument →
+<a href=#225 id=225 data-nosnippet>225</a>  // `c_i^{c}_j` → spurious `Double subscript` (witness 1603.02507, ×23; Perl
+<a href=#226 id=226 data-nosnippet>226</a>  // rc=0 — Perl's OmniBus never defines `\dgr`). Defer to \AtBeginDocument
+<a href=#227 id=227 data-nosnippet>227</a>  // with \providecommand so a user preamble definition wins, while the
+<a href=#228 id=228 data-nosnippet>228</a>  // Springer `\author{… \dgr{…} …}` (expanded at \maketitle, after
+<a href=#229 id=229 data-nosnippet>229</a>  // begin-document) still gets the 1-arg fallback. `##1` doubles for the hook.
+<a href=#230 id=230 data-nosnippet>230</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\AtBeginDocument{\providecommand{\dgr}[1]{##1}}"</span>);
+<a href=#231 id=231 data-nosnippet>231</a>  def_macro_identity(<span class="string">"\\orgdiv{}"</span>)<span class="question-mark">?</span>;
+<a href=#232 id=232 data-nosnippet>232</a>  def_macro_identity(<span class="string">"\\orgname{}"</span>)<span class="question-mark">?</span>;
+<a href=#233 id=233 data-nosnippet>233</a>  def_macro_identity(<span class="string">"\\orgaddress{}"</span>)<span class="question-mark">?</span>;
+<a href=#234 id=234 data-nosnippet>234</a>  def_macro_identity(<span class="string">"\\street{}"</span>)<span class="question-mark">?</span>;
+<a href=#235 id=235 data-nosnippet>235</a>  def_macro_identity(<span class="string">"\\postcode{}"</span>)<span class="question-mark">?</span>;
+<a href=#236 id=236 data-nosnippet>236</a>  def_macro_identity(<span class="string">"\\city{}"</span>)<span class="question-mark">?</span>;
+<a href=#237 id=237 data-nosnippet>237</a>  def_macro_identity(<span class="string">"\\country{}"</span>)<span class="question-mark">?</span>;
+<a href=#238 id=238 data-nosnippet>238</a>  <span class="comment">// `\state` is a TeX 4-token `\count` register inside many classes (article
+<a href=#239 id=239 data-nosnippet>239</a>  // declares it as `\newcount` for some configurations). We do NOT stub it
+<a href=#240 id=240 data-nosnippet>240</a>  // here — overlapping with the kernel register would break papers that
+<a href=#241 id=241 data-nosnippet>241</a>  // expect the integer. The few sn-jnl papers using `\state{...}` for
+<a href=#242 id=242 data-nosnippet>242</a>  // address components will keep that error; all the OTHER fields above
+<a href=#243 id=243 data-nosnippet>243</a>  // are non-conflicting. Same caution for `\affil` — already overloaded
+<a href=#244 id=244 data-nosnippet>244</a>  // by amsart and other classes; leaving it to specific class bindings.
+<a href=#245 id=245 data-nosnippet>245</a>  </span>def_macro_noop(<span class="string">"\\bibcommenthead"</span>)<span class="question-mark">?</span>;
+<a href=#246 id=246 data-nosnippet>246</a>  def_macro_noop(<span class="string">"\\jyear[]"</span>)<span class="question-mark">?</span>;
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\resumen{}"</span>,         <span class="string">"\\lx@add@abstract{#1}"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ion{}{}"</span>,           <span class="string">"{#1 \\textsc{#2}}"</span>);
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">Let!</span>(<span class="string">"\\fulladdresses"</span>, <span class="string">"\\address"</span>);
+<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\smonth{}"</span>, <span class="string">"\\month=#1\\relax"</span>);
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\syear{}"</span>,  <span class="string">"\\year=#1\\relax"</span>);
+<a href=#252 id=252 data-nosnippet>252</a>
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="comment">// Perl (PR #2767): keyword macros
+<a href=#254 id=254 data-nosnippet>254</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\lx@add@keywords{#1}"</span>);
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\kword{}"</span>,    <span class="string">"\\lx@add@keywords{#1}"</span>);
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\kwd[]{}"</span>,    <span class="string">"\\lx@add@keywords{#2, }"</span>);
 <a href=#257 id=257 data-nosnippet>257</a>
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="comment">// Perl (PR #2767): keyword macros
-<a href=#259 id=259 data-nosnippet>259</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\lx@add@keywords{#1}"</span>);
-<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\kword{}"</span>,    <span class="string">"\\lx@add@keywords{#1}"</span>);
-<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\kwd[]{}"</span>,    <span class="string">"\\lx@add@keywords{#2, }"</span>);
-<a href=#262 id=262 data-nosnippet>262</a>
-<a href=#263 id=263 data-nosnippet>263</a>  <span class="comment">// Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
-<a href=#264 id=264 data-nosnippet>264</a>  // via `\keywords` that can be used as a section-like bare macro.
-<a href=#265 id=265 data-nosnippet>265</a>  // Push the digested body directly into the frontmatter map under
-<a href=#266 id=266 data-nosnippet>266</a>  // `ltx:classification[scheme=keywords]`, matching Perl's
-<a href=#267 id=267 data-nosnippet>267</a>  // after_digest_keywords (OmniBus.cls.ltxml:after_digest_keywords)
-<a href=#268 id=268 data-nosnippet>268</a>  // which does `push(@{ $$frontmatter{'ltx:classification'} }, [tag, attrs, @LaTeXML::LIST])`.
-<a href=#269 id=269 data-nosnippet>269</a>  //
-<a href=#270 id=270 data-nosnippet>270</a>  // History: the previous Rust binding called
-<a href=#271 id=271 data-nosnippet>271</a>  //   stomach::raw_tex("\\lx@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")
-<a href=#272 id=272 data-nosnippet>272</a>  // which silently misused `#body` (a Constructor template placeholder
-<a href=#273 id=273 data-nosnippet>273</a>  // only valid inside a DefConstructor template string) inside a
-<a href=#274 id=274 data-nosnippet>274</a>  // raw_tex literal. The `#` was tokenized as PARAM and reached the
-<a href=#275 id=275 data-nosnippet>275</a>  // stomach — emitting `Error:misdefined:#` and dumping the literal
-<a href=#276 id=276 data-nosnippet>276</a>  // string `#body` as the classification element's text content.
-<a href=#277 id=277 data-nosnippet>277</a>  // Witness: ifacconf-class papers (2305.08080, 2305.09991 — 84 wp4
-<a href=#278 id=278 data-nosnippet>278</a>  // entries with `Error:misdefined:#` first-errors).
-<a href=#279 id=279 data-nosnippet>279</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{keyword}"</span>, <span class="string">""</span>,
-<a href=#280 id=280 data-nosnippet>280</a>    after_digest_body =&gt; sub[whatsit] {
-<a href=#281 id=281 data-nosnippet>281</a>      push_keyword_body_to_frontmatter(whatsit)
-<a href=#282 id=282 data-nosnippet>282</a>    });
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{keywords}"</span>, <span class="string">""</span>,
-<a href=#284 id=284 data-nosnippet>284</a>    after_digest_body =&gt; sub[whatsit] {
-<a href=#285 id=285 data-nosnippet>285</a>      push_keyword_body_to_frontmatter(whatsit)
-<a href=#286 id=286 data-nosnippet>286</a>    });
-<a href=#287 id=287 data-nosnippet>287</a>  <span class="comment">// Perl L143: Let('\lx@begin@keywords', '\keywords'); — saved before overload
-<a href=#288 id=288 data-nosnippet>288</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@begin@keywords"</span>, <span class="string">"\\keywords"</span>);
-<a href=#289 id=289 data-nosnippet>289</a>  <span class="comment">// Perl OmniBus.cls.ltxml L154. We differ from Perl's
-<a href=#290 id=290 data-nosnippet>290</a>  // `\begin{keywords}#1\end{keywords}` path because our `{keywords}` env
-<a href=#291 id=291 data-nosnippet>291</a>  // currently emits &lt;ltx:classification&gt; inline (a content-model error in
-<a href=#292 id=292 data-nosnippet>292</a>  // contexts like &lt;ltx:abstract&gt;). Routing directly through
-<a href=#293 id=293 data-nosnippet>293</a>  // `\@add@frontmatter` matches Perl's net effect — its after_digest_keywords
-<a href=#294 id=294 data-nosnippet>294</a>  // pushes the body into `frontmatter`{ltx:classification} — without the
-<a href=#295 id=295 data-nosnippet>295</a>  // inline detour that confuses the schema.
-<a href=#296 id=296 data-nosnippet>296</a>  // NOTE: unlike Perl L154 we do NOT append `\let\endkeyword\relax
-<a href=#297 id=297 data-nosnippet>297</a>  // \let\endkeywords\relax` here. Those `\let`s exist in Perl to neutralise the
-<a href=#298 id=298 data-nosnippet>298</a>  // ENV ending after its `\begin{keywords}#1\end{keywords}` one-shot. We route
-<a href=#299 id=299 data-nosnippet>299</a>  // through `\@add@frontmatter` (no env opened, see comment above), so the
-<a href=#300 id=300 data-nosnippet>300</a>  // `\let`s are vestigial — and harmful: a later BARE `\keywords text` opens a
-<a href=#301 id=301 data-nosnippet>301</a>  // classification whose auto-close hook is `\maybe@end@keywords`→`\endkeywords`,
-<a href=#302 id=302 data-nosnippet>302</a>  // and a persisted `\endkeywords=\relax` made that close a no-op, so the
-<a href=#303 id=303 data-nosnippet>303</a>  // classification stayed open and the following `\section` nested inside it
-<a href=#304 id=304 data-nosnippet>304</a>  // ("ltx:section isn't allowed in ltx:classification"). This bites whenever a
-<a href=#305 id=305 data-nosnippet>305</a>  // braced `\keywords{}` precedes a bare one — e.g. `\category{a}{b}{c}` expands
-<a href=#306 id=306 data-nosnippet>306</a>  // to `…\keywords{#4}` (empty #4) THEN the document's own `\keywords …`.
-<a href=#307 id=307 data-nosnippet>307</a>  // Witness 1601.07962 (sig-alternate, \category + bare \terms/\keywords).
-<a href=#308 id=308 data-nosnippet>308</a>  // Deliberate divergence from post-PR-2767 Perl (which uses
-<a href=#309 id=309 data-nosnippet>309</a>  // `\begin{keywords}#1\end{keywords}\let\endkeywords\relax`): the trailing
-<a href=#310 id=310 data-nosnippet>310</a>  // \lets persist and break a later bare `\keywords` (witness 1601.07962,
-<a href=#311 id=311 data-nosnippet>311</a>  // see the comment above). Keep the no-env direct call, expressed in the
-<a href=#312 id=312 data-nosnippet>312</a>  // new frontmatter API.
-<a href=#313 id=313 data-nosnippet>313</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords@onearg{}"</span>,
-<a href=#314 id=314 data-nosnippet>314</a>    <span class="string">"\\lx@add@classification[scheme=keywords]{#1}"</span>);
-<a href=#315 id=315 data-nosnippet>315</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@keywords"</span>,
-<a href=#316 id=316 data-nosnippet>316</a>    <span class="string">"\\endkeywords\\let\\maybe@end@keywords\\relax"</span>);
-<a href=#317 id=317 data-nosnippet>317</a>  <span class="comment">// Perl L145-153: `\keyword` / `\keywords` overloaded: with {...} arg, run
-<a href=#318 id=318 data-nosnippet>318</a>  // \keywords@onearg; otherwise hook a pending \endkeywords via the section-
-<a href=#319 id=319 data-nosnippet>319</a>  // start hook so `\keyword foo \section{bar}` auto-closes the keywords env.
-<a href=#320 id=320 data-nosnippet>320</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keyword"</span>, sub[_args] {
-<a href=#321 id=321 data-nosnippet>321</a>    <span class="kw">let </span>next = read_token()<span class="question-mark">?</span>;
-<a href=#322 id=322 data-nosnippet>322</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) = next {
-<a href=#323 id=323 data-nosnippet>323</a>      unread(<span class="macro">Tokens!</span>(<span class="kw-2">*</span>t));
-<a href=#324 id=324 data-nosnippet>324</a>      <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
-<a href=#325 id=325 data-nosnippet>325</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\keywords@onearg"</span>)));
-<a href=#326 id=326 data-nosnippet>326</a>      }
-<a href=#327 id=327 data-nosnippet>327</a>    }
-<a href=#328 id=328 data-nosnippet>328</a>    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[
-<a href=#329 id=329 data-nosnippet>329</a>      <span class="macro">T_CS!</span>(<span class="string">"\\g@addto@macro"</span>),
-<a href=#330 id=330 data-nosnippet>330</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@startsection@hook"</span>),
-<a href=#331 id=331 data-nosnippet>331</a>      <span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@keywords"</span>),
-<a href=#332 id=332 data-nosnippet>332</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@keywords"</span>),
-<a href=#333 id=333 data-nosnippet>333</a>    ]))
-<a href=#334 id=334 data-nosnippet>334</a>  });
-<a href=#335 id=335 data-nosnippet>335</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords"</span>, sub[_args] {
-<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">let </span>next = read_token()<span class="question-mark">?</span>;
-<a href=#337 id=337 data-nosnippet>337</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) = next {
-<a href=#338 id=338 data-nosnippet>338</a>      unread(<span class="macro">Tokens!</span>(<span class="kw-2">*</span>t));
-<a href=#339 id=339 data-nosnippet>339</a>      <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
-<a href=#340 id=340 data-nosnippet>340</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\keywords@onearg"</span>)));
-<a href=#341 id=341 data-nosnippet>341</a>      }
-<a href=#342 id=342 data-nosnippet>342</a>    }
-<a href=#343 id=343 data-nosnippet>343</a>    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[
-<a href=#344 id=344 data-nosnippet>344</a>      <span class="macro">T_CS!</span>(<span class="string">"\\g@addto@macro"</span>),
-<a href=#345 id=345 data-nosnippet>345</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@startsection@hook"</span>),
-<a href=#346 id=346 data-nosnippet>346</a>      <span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@keywords"</span>),
-<a href=#347 id=347 data-nosnippet>347</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@keywords"</span>),
-<a href=#348 id=348 data-nosnippet>348</a>    ]))
-<a href=#349 id=349 data-nosnippet>349</a>  });
-<a href=#350 id=350 data-nosnippet>350</a>  <span class="macro">Let!</span>(<span class="string">"\\addto@keywords@list"</span>, <span class="string">"\\keyword"</span>);
-<a href=#351 id=351 data-nosnippet>351</a>
-<a href=#352 id=352 data-nosnippet>352</a>  <span class="comment">// Perl (PR #2767): classifications
-<a href=#353 id=353 data-nosnippet>353</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\classification{}"</span>, <span class="string">"\\lx@add@classification{#1}"</span>);
-<a href=#354 id=354 data-nosnippet>354</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pacs{}"</span>,
-<a href=#355 id=355 data-nosnippet>355</a>    <span class="string">"\\lx@add@classification[scheme=pacs]{#1}"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#356 id=356 data-nosnippet>356</a>  <span class="comment">// \doi — frontmatter in preamble, url-like in body.
-<a href=#357 id=357 data-nosnippet>357</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\doi{}"</span>,
-<a href=#358 id=358 data-nosnippet>358</a>    <span class="string">"\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\
-<a href=#359 id=359 data-nosnippet>359</a>     \\else\\lx@doi{#1}\\fi"</span>);
-<a href=#360 id=360 data-nosnippet>360</a>  <span class="comment">// INTENTIONAL DIVERGENCE (Rust supersedes): Perl OmniBus.cls.ltxml:157 has a
-<a href=#361 id=361 data-nosnippet>361</a>  // typo — `href="https:/doi.org/#1"` (single slash) — producing a broken DOI
-<a href=#362 id=362 data-nosnippet>362</a>  // link. We emit the valid `https://`. A DOI href is a functional link, so per
-<a href=#363 id=363 data-nosnippet>363</a>  // "fix simple Perl bugs in Rust" we keep the working URL. See
-<a href=#364 id=364 data-nosnippet>364</a>  // KNOWN_PERL_ERRORS.md #36. (Do NOT revert to the single-slash form.)
-<a href=#365 id=365 data-nosnippet>365</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@doi{}"</span>,
-<a href=#366 id=366 data-nosnippet>366</a>    <span class="string">"&lt;ltx:ref href='https://doi.org/#1'&gt;#1&lt;/ltx:ref&gt;"</span>,
-<a href=#367 id=367 data-nosnippet>367</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#368 id=368 data-nosnippet>368</a>
-<a href=#369 id=369 data-nosnippet>369</a>  <span class="comment">// Perl L167: \category (acm)
-<a href=#370 id=370 data-nosnippet>370</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\category{}{}{}[]"</span>,
-<a href=#371 id=371 data-nosnippet>371</a>    <span class="string">"\\lx@add@classification[scheme=category]{#1 #2 #3}\\keywords{#4}"</span>);
-<a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="comment">// Perl L169-219: theorem env autoloads — if a common theorem env name is
-<a href=#374 id=374 data-nosnippet>374</a>  // used without being declared, load amsthm and define a standard set.
-<a href=#375 id=375 data-nosnippet>375</a>  </span><span class="kw">let </span>theorem_preload = <span class="macro">concat!</span>(
-<a href=#376 id=376 data-nosnippet>376</a>    <span class="string">"\\newtheorem{theorem}{Theorem}[section]"</span>,
-<a href=#377 id=377 data-nosnippet>377</a>    <span class="string">"\\newtheorem{conjecture}[theorem]{Conjecture}"</span>,
-<a href=#378 id=378 data-nosnippet>378</a>    <span class="string">"\\newtheorem{proposition}[theorem]{Proposition}"</span>,
-<a href=#379 id=379 data-nosnippet>379</a>    <span class="string">"\\newtheorem{proof}[theorem]{Proof}"</span>,
-<a href=#380 id=380 data-nosnippet>380</a>    <span class="string">"\\newtheorem{lemma}[theorem]{Lemma}"</span>,
-<a href=#381 id=381 data-nosnippet>381</a>    <span class="string">"\\newtheorem{corollary}[theorem]{Corollary}"</span>,
-<a href=#382 id=382 data-nosnippet>382</a>    <span class="string">"\\newtheorem{example}[theorem]{Example}"</span>,
-<a href=#383 id=383 data-nosnippet>383</a>    <span class="string">"\\newtheorem{exercise}[theorem]{Exercise}"</span>,
-<a href=#384 id=384 data-nosnippet>384</a>    <span class="string">"\\newtheorem{definition}[theorem]{Definition}"</span>,
-<a href=#385 id=385 data-nosnippet>385</a>    <span class="string">"\\newtheorem{problem}[theorem]{Problem}"</span>,
-<a href=#386 id=386 data-nosnippet>386</a>    <span class="string">"\\newtheorem{question}[theorem]{Question}"</span>,
-<a href=#387 id=387 data-nosnippet>387</a>    <span class="string">"\\newtheorem{remark}[theorem]{Remark}"</span>,
-<a href=#388 id=388 data-nosnippet>388</a>    <span class="string">"\\newtheorem{solution}[theorem]{Solution}"</span>,
-<a href=#389 id=389 data-nosnippet>389</a>    <span class="string">"\\newtheorem{step}[theorem]{Step}"</span>,
-<a href=#390 id=390 data-nosnippet>390</a>    <span class="string">"\\newtheorem{note}[theorem]{Note}"</span>,
-<a href=#391 id=391 data-nosnippet>391</a>    <span class="string">"\\newtheorem{thm}{Theorem}"</span>,
-<a href=#392 id=392 data-nosnippet>392</a>    <span class="string">"\\newtheorem{cor}[thm]{Corollary}"</span>,
-<a href=#393 id=393 data-nosnippet>393</a>    <span class="string">"\\newtheorem{lem}[thm]{Lemma}"</span>,
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="string">"\\newtheorem{claim}[thm]{Claim}"</span>,
-<a href=#395 id=395 data-nosnippet>395</a>    <span class="string">"\\newtheorem{axiom}[thm]{Axiom}"</span>,
-<a href=#396 id=396 data-nosnippet>396</a>    <span class="string">"\\newtheorem{conj}[thm]{Conjecture}"</span>,
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="string">"\\newtheorem{fact}[thm]{Fact}"</span>,
-<a href=#398 id=398 data-nosnippet>398</a>    <span class="string">"\\newtheorem{hypo}[thm]{Hypothesis}"</span>,
-<a href=#399 id=399 data-nosnippet>399</a>    <span class="string">"\\newtheorem{assum}[thm]{Assumption}"</span>,
-<a href=#400 id=400 data-nosnippet>400</a>    <span class="string">"\\newtheorem{prop}[thm]{Proposition}"</span>,
-<a href=#401 id=401 data-nosnippet>401</a>    <span class="string">"\\newtheorem{crit}[thm]{Criterion}"</span>,
-<a href=#402 id=402 data-nosnippet>402</a>    <span class="comment">// Guard `\theoremstyle{definition}` with `\@ifundefined` so the
-<a href=#403 id=403 data-nosnippet>403</a>    // stub does NOT error when the document deliberately undefined
-<a href=#404 id=404 data-nosnippet>404</a>    // `\theoremstyle` (e.g. `\let\theoremstyle\@undefined` followed
-<a href=#405 id=405 data-nosnippet>405</a>    // by `\usepackage{amsthm}`-as-no-op-because-already-loaded). The
-<a href=#406 id=406 data-nosnippet>406</a>    // stub is a *fallback* for env auto-loading; if the document
-<a href=#407 id=407 data-nosnippet>407</a>    // chose to disable `\theoremstyle`, respect that choice instead
-<a href=#408 id=408 data-nosnippet>408</a>    // of resurrecting an undefined-error. Witness: arXiv:2603.11260,
-<a href=#409 id=409 data-nosnippet>409</a>    // 2603.11265 (ifacconf.cls -&gt; theorem.sty -&gt; amsthm pre-loaded,
-<a href=#410 id=410 data-nosnippet>410</a>    // then user `\let\theoremstyle\@undefined`).
-<a href=#411 id=411 data-nosnippet>411</a>    </span><span class="string">"\\@ifundefined{theoremstyle}{}{\\theoremstyle{definition}}"</span>,
-<a href=#412 id=412 data-nosnippet>412</a>    <span class="string">"\\newtheorem{defn}[thm]{Definition}"</span>,
-<a href=#413 id=413 data-nosnippet>413</a>    <span class="string">"\\newtheorem{exmp}[thm]{Example}"</span>,
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="string">"\\newtheorem{rem}[thm]{Remark}"</span>,
-<a href=#415 id=415 data-nosnippet>415</a>    <span class="string">"\\newtheorem{prob}[thm]{Problem}"</span>,
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="string">"\\newtheorem{prin}[thm]{Principle}"</span>,
-<a href=#417 id=417 data-nosnippet>417</a>    <span class="string">"\\newtheorem{alg}{Algorithm}"</span>,
-<a href=#418 id=418 data-nosnippet>418</a>  );
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="comment">// Only install autoload stubs for CSes that aren't already defined. If
-<a href=#420 id=420 data-nosnippet>420</a>  // amsthm was pre-loaded (e.g. via dep-scan of a local .cls that
-<a href=#421 id=421 data-nosnippet>421</a>  // `\RequirePackage{amsthm}`), its own `\theoremstyle`/`\newtheorem`
-<a href=#422 id=422 data-nosnippet>422</a>  // definitions are already in place. Overwriting with our stub would
-<a href=#423 id=423 data-nosnippet>423</a>  // create an infinite loop:
-<a href=#424 id=424 data-nosnippet>424</a>  //   stub invokes → require_package('amsthm') no-ops (already loaded)
-<a href=#425 id=425 data-nosnippet>425</a>  //   → re-emits `\theoremstyle` → stub invokes again …
-<a href=#426 id=426 data-nosnippet>426</a>  // Observed in arxiv 0906.1883 where birkmult.cls's dep-scan pre-loaded
-<a href=#427 id=427 data-nosnippet>427</a>  // amsthm, and the resulting 163M-iteration pin loop blew the arena
-<a href=#428 id=428 data-nosnippet>428</a>  // past `u32::MAX` offset (SymStr wraparound → garbled error text).
-<a href=#429 id=429 data-nosnippet>429</a>  </span><span class="kw">for </span>env <span class="kw">in </span>[
-<a href=#430 id=430 data-nosnippet>430</a>    <span class="string">"conjecture"</span>, <span class="string">"theorem"</span>, <span class="string">"corollary"</span>, <span class="string">"definition"</span>, <span class="string">"example"</span>, <span class="string">"exercise"</span>,
-<a href=#431 id=431 data-nosnippet>431</a>    <span class="string">"lemma"</span>, <span class="string">"note"</span>, <span class="string">"problem"</span>, <span class="string">"proof"</span>, <span class="string">"proposition"</span>, <span class="string">"question"</span>, <span class="string">"remark"</span>,
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="string">"solution"</span>,
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="string">"thm"</span>, <span class="string">"cor"</span>, <span class="string">"lem"</span>, <span class="string">"claim"</span>, <span class="string">"axiom"</span>, <span class="string">"conj"</span>, <span class="string">"fact"</span>, <span class="string">"hypo"</span>, <span class="string">"assum"</span>,
-<a href=#434 id=434 data-nosnippet>434</a>    <span class="string">"prop"</span>, <span class="string">"crit"</span>, <span class="string">"defn"</span>, <span class="string">"exmp"</span>, <span class="string">"rem"</span>, <span class="string">"prob"</span>, <span class="string">"prin"</span>, <span class="string">"alg"</span>,
-<a href=#435 id=435 data-nosnippet>435</a>  ] {
-<a href=#436 id=436 data-nosnippet>436</a>    <span class="kw">let </span>beginenv = <span class="macro">s!</span>(<span class="string">"\\begin{{{env}}}"</span>);
-<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>beginenv);
-<a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) { <span class="kw">continue</span>; }
-<a href=#439 id=439 data-nosnippet>439</a>    <span class="kw">let </span>beginenv_clone = beginenv.clone();
-<a href=#440 id=440 data-nosnippet>440</a>    <span class="kw">let </span>preload = theorem_preload.to_string();
-<a href=#441 id=441 data-nosnippet>441</a>    def_macro(cs, <span class="prelude-val">None</span>,
-<a href=#442 id=442 data-nosnippet>442</a>      ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#443 id=443 data-nosnippet>443</a>        require_package(<span class="string">"amsthm"</span>, RequireOptions::default())<span class="question-mark">?</span>;
-<a href=#444 id=444 data-nosnippet>444</a>        <span class="kw">let </span><span class="kw-2">mut </span>expanded = preload.clone();
-<a href=#445 id=445 data-nosnippet>445</a>        expanded.push_str(<span class="kw-2">&amp;</span>beginenv_clone);
-<a href=#446 id=446 data-nosnippet>446</a>        <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expanded))
-<a href=#447 id=447 data-nosnippet>447</a>      })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#448 id=448 data-nosnippet>448</a>  }
-<a href=#449 id=449 data-nosnippet>449</a>  <span class="comment">// Perl L216-219: newtheorem aliases auto-load amsthm
-<a href=#450 id=450 data-nosnippet>450</a>  </span><span class="kw">for </span>alias <span class="kw">in </span>[<span class="string">"\\newproclaim"</span>, <span class="string">"\\newdef"</span>, <span class="string">"\\newremark"</span>] {
-<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(alias);
-<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) { <span class="kw">continue</span>; }
-<a href=#453 id=453 data-nosnippet>453</a>    def_macro(cs, <span class="prelude-val">None</span>,
-<a href=#454 id=454 data-nosnippet>454</a>      ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#455 id=455 data-nosnippet>455</a>        require_package(<span class="string">"amsthm"</span>, RequireOptions::default())<span class="question-mark">?</span>;
-<a href=#456 id=456 data-nosnippet>456</a>        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\newtheorem"</span>)))
-<a href=#457 id=457 data-nosnippet>457</a>      })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#458 id=458 data-nosnippet>458</a>  }
-<a href=#459 id=459 data-nosnippet>459</a>  <span class="comment">// Perl L220: \theoremstyle autoloads amsthm
-<a href=#460 id=460 data-nosnippet>460</a>  </span>{
-<a href=#461 id=461 data-nosnippet>461</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="string">"\\theoremstyle"</span>);
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) {
-<a href=#463 id=463 data-nosnippet>463</a>      def_macro(cs, <span class="prelude-val">None</span>,
-<a href=#464 id=464 data-nosnippet>464</a>        ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#465 id=465 data-nosnippet>465</a>          require_package(<span class="string">"amsthm"</span>, RequireOptions::default())<span class="question-mark">?</span>;
-<a href=#466 id=466 data-nosnippet>466</a>          <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\theoremstyle"</span>)))
-<a href=#467 id=467 data-nosnippet>467</a>        })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#468 id=468 data-nosnippet>468</a>    }
-<a href=#469 id=469 data-nosnippet>469</a>  }
-<a href=#470 id=470 data-nosnippet>470</a>
-<a href=#471 id=471 data-nosnippet>471</a>  <span class="comment">// Perl L222-223: abstract aliases
-<a href=#472 id=472 data-nosnippet>472</a>  </span><span class="macro">Let!</span>(<span class="string">"\\abstracts"</span>, <span class="string">"\\abstract"</span>);
-<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">Let!</span>(<span class="string">"\\abst"</span>,      <span class="string">"\\abstract"</span>);
-<a href=#474 id=474 data-nosnippet>474</a>
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="comment">// Perl L226-235: acknowledgments
-<a href=#476 id=476 data-nosnippet>476</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acknowledgments"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
-<a href=#477 id=477 data-nosnippet>477</a>    properties =&gt; {
-<a href=#478 id=478 data-nosnippet>478</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; digest(<span class="macro">T_CS!</span>(<span class="string">"\\acknowledgmentsname"</span>))<span class="question-mark">?</span>))
-<a href=#479 id=479 data-nosnippet>479</a>    });
-<a href=#480 id=480 data-nosnippet>480</a>  <span class="comment">// \endacknowledgments — tolerant close. A common pattern is
-<a href=#481 id=481 data-nosnippet>481</a>  //   \begin{acknowledgments} ... \bibliography{...} \end{acknowledgments}
-<a href=#482 id=482 data-nosnippet>482</a>  // where \bibliography opens &lt;ltx:bibliography&gt;; the auto_close on
-<a href=#483 id=483 data-nosnippet>483</a>  // &lt;ltx:acknowledgements&gt; below cascades shut at that point, so the
-<a href=#484 id=484 data-nosnippet>484</a>  // explicit \end{acknowledgments} would otherwise hit a malformed-close
-<a href=#485 id=485 data-nosnippet>485</a>  // error. Check current node first; only emit &lt;/ltx:acknowledgements&gt;
-<a href=#486 id=486 data-nosnippet>486</a>  // when one is actually open. Driver: 2202.04803 R=1 → R=0; ~9 papers
-<a href=#487 id=487 data-nosnippet>487</a>  // in this cluster.
-<a href=#488 id=488 data-nosnippet>488</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\endacknowledgments"</span>, sub[document, _whatsit, _props] {
-<a href=#489 id=489 data-nosnippet>489</a>    <span class="kw">let </span>cur = document.get_node().clone();
-<a href=#490 id=490 data-nosnippet>490</a>    <span class="kw">let </span>has_open = document.findnode(<span class="string">"ancestor-or-self::ltx:acknowledgements"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cur)).is_some();
-<a href=#491 id=491 data-nosnippet>491</a>    <span class="kw">if </span>has_open {
-<a href=#492 id=492 data-nosnippet>492</a>      document.close_element(<span class="string">"ltx:acknowledgements"</span>)<span class="question-mark">?</span>;
-<a href=#493 id=493 data-nosnippet>493</a>    }
-<a href=#494 id=494 data-nosnippet>494</a>  });
-<a href=#495 id=495 data-nosnippet>495</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:acknowledgements"</span>, auto_close =&gt; <span class="bool-val">true</span>);
-<a href=#496 id=496 data-nosnippet>496</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgmentsname"</span>, <span class="string">"Acknowledgements"</span>);
-<a href=#497 id=497 data-nosnippet>497</a>  <span class="macro">Let!</span>(<span class="string">"\\acknowledgements"</span>,      <span class="string">"\\acknowledgments"</span>);
-<a href=#498 id=498 data-nosnippet>498</a>  <span class="macro">Let!</span>(<span class="string">"\\endacknowledgements"</span>,   <span class="string">"\\endacknowledgments"</span>);
-<a href=#499 id=499 data-nosnippet>499</a>  <span class="macro">Let!</span>(<span class="string">"\\theacknowledgments"</span>,    <span class="string">"\\acknowledgments"</span>);
-<a href=#500 id=500 data-nosnippet>500</a>  <span class="macro">Let!</span>(<span class="string">"\\endtheacknowledgments"</span>, <span class="string">"\\endacknowledgments"</span>);
-<a href=#501 id=501 data-nosnippet>501</a>
-<a href=#502 id=502 data-nosnippet>502</a>  <span class="comment">// Perl (PR #2767): editorial metadata
-<a href=#503 id=503 data-nosnippet>503</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\editors{}"</span>,          <span class="string">"\\lx@add@editor{#1}"</span>);
-<a href=#504 id=504 data-nosnippet>504</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>,         <span class="string">"\\lx@add@date[role=received]{#1}"</span>);
-<a href=#505 id=505 data-nosnippet>505</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>,          <span class="string">"\\lx@add@date[role=revised]{#1}"</span>);
-<a href=#506 id=506 data-nosnippet>506</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>,         <span class="string">"\\lx@add@date[role=accepted]{#1}"</span>);
-<a href=#507 id=507 data-nosnippet>507</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pubyear{}"</span>,          <span class="string">"\\lx@add@date[role=publication]{#1}"</span>);
-<a href=#508 id=508 data-nosnippet>508</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\copyrightyear{}"</span>,    <span class="string">"\\lx@add@copyrightyear{#1}"</span>);
-<a href=#509 id=509 data-nosnippet>509</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\communicated{}"</span>,     <span class="string">"\\lx@add@date[role=communicated]{#1}"</span>);
-<a href=#510 id=510 data-nosnippet>510</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\preprint{}"</span>,         <span class="string">"\\lx@add@pubnote[role=preprint]{#1}"</span>);
-<a href=#511 id=511 data-nosnippet>511</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dedicated{}"</span>,        <span class="string">"\\lx@add@pubnote[role=dedication]{#1}"</span>);
-<a href=#512 id=512 data-nosnippet>512</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\presented{}"</span>,        <span class="string">"\\lx@add@date[role=presented]{#1}"</span>);
-<a href=#513 id=513 data-nosnippet>513</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\articletype{}"</span>,      <span class="string">"\\lx@add@pubnote[role=type]{#1}"</span>);
-<a href=#514 id=514 data-nosnippet>514</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\issue{}"</span>,            <span class="string">"\\lx@add@pubnote[role=issue]{#1}"</span>);
-<a href=#515 id=515 data-nosnippet>515</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\journal{}"</span>,          <span class="string">"\\lx@add@pubnote[role=journal]{#1}"</span>);
-<a href=#516 id=516 data-nosnippet>516</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jname{}"</span>,            <span class="string">"\\lx@add@pubnote[role=journal]{#1}"</span>);
-<a href=#517 id=517 data-nosnippet>517</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\volume{}"</span>,           <span class="string">"\\lx@add@pubnote[role=volume]{#1}"</span>);
-<a href=#518 id=518 data-nosnippet>518</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlenote{}"</span>,        <span class="string">"\\lx@add@pubnote[role=note]{#1}"</span>);
-<a href=#519 id=519 data-nosnippet>519</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\terms{}"</span>,            <span class="string">"\\lx@add@keywords{#1}"</span>);
-<a href=#520 id=520 data-nosnippet>520</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\conferenceinfo{}{}"</span>, <span class="string">"\\lx@add@pubnote[role=conference]{#1 #2}"</span>);
-<a href=#521 id=521 data-nosnippet>521</a>
-<a href=#522 id=522 data-nosnippet>522</a>  <span class="comment">// Perl L257 gobbles to Tokens(); we surpass by rendering as
-<a href=#523 id=523 data-nosnippet>523</a>  // superscript (matches latex_constructs kernel-level treatment
-<a href=#524 id=524 data-nosnippet>524</a>  // and IEEE \IEEEauthorrefmark).
-<a href=#525 id=525 data-nosnippet>525</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thanksref{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
-<a href=#526 id=526 data-nosnippet>526</a>
-<a href=#527 id=527 data-nosnippet>527</a>  <span class="comment">// Perl L260-264: ACM variants
-<a href=#528 id=528 data-nosnippet>528</a>  </span><span class="macro">Let!</span>(<span class="string">"\\CopyrightYear"</span>, <span class="string">"\\copyrightyear"</span>);
-<a href=#529 id=529 data-nosnippet>529</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\confinfo"     </span>=&gt; <span class="macro">Tokens!</span>());
-<a href=#530 id=530 data-nosnippet>530</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\acmcopyr"     </span>=&gt; <span class="macro">Tokens!</span>());
-<a href=#531 id=531 data-nosnippet>531</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\copyrightetc" </span>=&gt; <span class="macro">Tokens!</span>());
-<a href=#532 id=532 data-nosnippet>532</a>  <span class="macro">Let!</span>(<span class="string">"\\crdata"</span>, <span class="string">"\\acmcopyr"</span>);
-<a href=#533 id=533 data-nosnippet>533</a>
-<a href=#534 id=534 data-nosnippet>534</a>  <span class="comment">// Perl L266-280: \references constructor (works as env or bare macro).
-<a href=#535 id=535 data-nosnippet>535</a>  // Full port — `before_digest_bibliography`/`begin_bibliography` are public
-<a href=#536 id=536 data-nosnippet>536</a>  // (latex_constructs.rs), so the constructor sets the bibliography title
-<a href=#537 id=537 data-nosnippet>537</a>  // (`\refname`), xml:id and bib/cite-style exactly like Perl's
-<a href=#538 id=538 data-nosnippet>538</a>  // `beforeDigestBibliography`/`beginBibliography`, instead of a stub that
-<a href=#539 id=539 data-nosnippet>539</a>  // emitted a bare `&lt;bibliography&gt;` (no &lt;title&gt;, no id → ugly auto-id
-<a href=#540 id=540 data-nosnippet>540</a>  // `X-at-lx-at-bibliography0.bibN`). This OmniBus binding shadows
-<a href=#541 id=541 data-nosnippet>541</a>  // revtex4_support's identical `\references` on the `\documentstyle{revtex}`
-<a href=#542 id=542 data-nosnippet>542</a>  // path (where OmniBus is also loaded), so a REVTeX-3.x `\begin{references}`
-<a href=#543 id=543 data-nosnippet>543</a>  // now matches Perl. Witnesses: cond-mat9805405, hep-ex0007011.
-<a href=#544 id=544 data-nosnippet>544</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\references"</span>,
-<a href=#545 id=545 data-nosnippet>545</a>    <span class="string">"&lt;ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'&gt;&lt;ltx:title font='#titlefont' _force_font='true'&gt;#title&lt;/ltx:title&gt;&lt;ltx:biblist&gt;"</span>,
-<a href=#546 id=546 data-nosnippet>546</a>    before_digest =&gt; {
-<a href=#547 id=547 data-nosnippet>547</a>      engine::latex_constructs::before_digest_bibliography()
-<a href=#548 id=548 data-nosnippet>548</a>    },
-<a href=#549 id=549 data-nosnippet>549</a>    after_digest =&gt; sub[whatsit] {
-<a href=#550 id=550 data-nosnippet>550</a>      engine::latex_constructs::begin_bibliography(whatsit)<span class="question-mark">?</span>;
-<a href=#551 id=551 data-nosnippet>551</a>    });
-<a href=#552 id=552 data-nosnippet>552</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endreferences"</span>, sub[document] {
-<a href=#553 id=553 data-nosnippet>553</a>    <span class="kw">let _ </span>= document.maybe_close_element(<span class="string">"ltx:biblist"</span>);
-<a href=#554 id=554 data-nosnippet>554</a>    <span class="kw">let _ </span>= document.maybe_close_element(<span class="string">"ltx:bibliography"</span>);
-<a href=#555 id=555 data-nosnippet>555</a>  });
-<a href=#556 id=556 data-nosnippet>556</a>  <span class="macro">Let!</span>(<span class="string">"\\reference"</span>, <span class="string">"\\bibitem"</span>);
-<a href=#557 id=557 data-nosnippet>557</a>
-<a href=#558 id=558 data-nosnippet>558</a>  <span class="comment">// Perl L282-284
-<a href=#559 id=559 data-nosnippet>559</a>  </span>def_macro_noop(<span class="string">"\\comment{}"</span>)<span class="question-mark">?</span>;
-<a href=#560 id=560 data-nosnippet>560</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\etal"</span>,         <span class="string">"\\textit{et al.}"</span>);
-<a href=#561 id=561 data-nosnippet>561</a>  def_macro_noop(<span class="string">"\\firstsection"</span>)<span class="question-mark">?</span>;
-<a href=#562 id=562 data-nosnippet>562</a>
-<a href=#563 id=563 data-nosnippet>563</a>  <span class="comment">// Perl L286-297: math/package autoloads — when a trigger CS is used and
-<a href=#564 id=564 data-nosnippet>564</a>  // not yet defined, require the specified package/class and re-trigger.
-<a href=#565 id=565 data-nosnippet>565</a>  // The Perl `DefAutoload` macro registers this semantic; we implement it
-<a href=#566 id=566 data-nosnippet>566</a>  // inline. Perl encodes the target via the `.sty.ltxml` / `.cls.ltxml`
-<a href=#567 id=567 data-nosnippet>567</a>  // suffix; we mirror that by carrying an explicit "sty" / "cls" kind
-<a href=#568 id=568 data-nosnippet>568</a>  // alongside the bare name.
-<a href=#569 id=569 data-nosnippet>569</a>  //
-<a href=#570 id=570 data-nosnippet>570</a>  // Why the kind matters: `\thechapter` autoloads `book.cls.ltxml` in Perl,
-<a href=#571 id=571 data-nosnippet>571</a>  // not `book.sty`. Routing through `require_package("book")` instead
-<a href=#572 id=572 data-nosnippet>572</a>  // finds the obsolete `book.sty` shim (TL's 2.09-compat file) which
-<a href=#573 id=573 data-nosnippet>573</a>  // immediately fires `\LoadClass{book}` from inside the body — past the
-<a href=#574 id=574 data-nosnippet>574</a>  // preamble — and errors with "\LoadClass can only appear in the preamble".
-<a href=#575 id=575 data-nosnippet>575</a>  // Witness: arXiv:2602.10407 (`\documentclass{saunders}` + `\chapter` in
-<a href=#576 id=576 data-nosnippet>576</a>  // an `\include`'d chapter; saunders.cls is unbound so OmniBus takes over,
-<a href=#577 id=577 data-nosnippet>577</a>  // and the chapter trigger hits `\thechapter`). Perl handles it cleanly
-<a href=#578 id=578 data-nosnippet>578</a>  // by autoloading the class binding instead of the obsolete sty.
-<a href=#579 id=579 data-nosnippet>579</a>  </span><span class="kw">for </span>(trigger, name, ext) <span class="kw">in </span>[
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="comment">// env triggers: `\begin{align}` etc. In Rust, we only dispatch on the
-<a href=#581 id=581 data-nosnippet>581</a>    // bare CS name of the trigger — works for control sequences like
-<a href=#582 id=582 data-nosnippet>582</a>    // `\multline`, `\numberwithin`, `\mathfrak`, `\mathbb`, `\deluxetable`,
-<a href=#583 id=583 data-nosnippet>583</a>    // `\curraddr`, `\subjclass`, `\thechapter`. For envs, autoload key is
-<a href=#584 id=584 data-nosnippet>584</a>    // `\begin{env}` which is a CS token.
-<a href=#585 id=585 data-nosnippet>585</a>    </span>(<span class="string">"\\begin{align}"</span>,                <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
-<a href=#586 id=586 data-nosnippet>586</a>    (<span class="string">"\\begin{subequations}"</span>,         <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
-<a href=#587 id=587 data-nosnippet>587</a>    (<span class="string">"\\begin{split}"</span>,                <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
-<a href=#588 id=588 data-nosnippet>588</a>    (<span class="string">"\\multline"</span>,                    <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
-<a href=#589 id=589 data-nosnippet>589</a>    (<span class="string">"\\csname multline*\\endcsname"</span>, <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
-<a href=#590 id=590 data-nosnippet>590</a>    (<span class="string">"\\numberwithin"</span>,                <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
-<a href=#591 id=591 data-nosnippet>591</a>    (<span class="string">"\\mathfrak"</span>,                    <span class="string">"amsfonts"</span>,     <span class="string">"sty"</span>),
-<a href=#592 id=592 data-nosnippet>592</a>    (<span class="string">"\\mathbb"</span>,                      <span class="string">"amsfonts"</span>,     <span class="string">"sty"</span>),
-<a href=#593 id=593 data-nosnippet>593</a>    (<span class="string">"\\begin{deluxetable}"</span>,          <span class="string">"deluxetable"</span>,  <span class="string">"sty"</span>),
-<a href=#594 id=594 data-nosnippet>594</a>    (<span class="string">"\\curraddr"</span>,                    <span class="string">"ams_support"</span>,  <span class="string">"sty"</span>),
-<a href=#595 id=595 data-nosnippet>595</a>    (<span class="string">"\\subjclass"</span>,                   <span class="string">"ams_support"</span>,  <span class="string">"sty"</span>),
-<a href=#596 id=596 data-nosnippet>596</a>    (<span class="string">"\\thechapter"</span>,                  <span class="string">"book"</span>,         <span class="string">"cls"</span>),
-<a href=#597 id=597 data-nosnippet>597</a>  ] {
-<a href=#598 id=598 data-nosnippet>598</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(trigger);
-<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) {
-<a href=#600 id=600 data-nosnippet>600</a>      <span class="kw">let </span>cs_clone = cs;
-<a href=#601 id=601 data-nosnippet>601</a>      <span class="kw">let </span>name_str = name.to_string();
-<a href=#602 id=602 data-nosnippet>602</a>      <span class="kw">let </span>trigger_str = trigger.to_string();
-<a href=#603 id=603 data-nosnippet>603</a>      <span class="kw">let </span>is_cls = ext == <span class="string">"cls"</span>;
-<a href=#604 id=604 data-nosnippet>604</a>      def_macro(cs, <span class="prelude-val">None</span>,
-<a href=#605 id=605 data-nosnippet>605</a>        ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#606 id=606 data-nosnippet>606</a>          <span class="comment">// Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm:
-<a href=#607 id=607 data-nosnippet>607</a>          // clear this autoload CS before loading, then re-emit the trigger as
-<a href=#608 id=608 data-nosnippet>608</a>          // tokenized text. Re-tokenizing is important for `\begin{env}` triggers
-<a href=#609 id=609 data-nosnippet>609</a>          // — amsmath defines `\split` (not `\begin{split}`), so the raw single-CS
-<a href=#610 id=610 data-nosnippet>610</a>          // token would look undefined after clearing. Tokenizing expands into
-<a href=#611 id=611 data-nosnippet>611</a>          // `\begin` + `{env}` which the standard `\begin{}` dispatcher resolves.
-<a href=#612 id=612 data-nosnippet>612</a>          </span>assign_meaning(
-<a href=#613 id=613 data-nosnippet>613</a>            <span class="kw-2">&amp;</span>cs_clone, Stored::None,
-<a href=#614 id=614 data-nosnippet>614</a>            <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#615 id=615 data-nosnippet>615</a>          <span class="kw">if </span>is_cls {
-<a href=#616 id=616 data-nosnippet>616</a>            load_class(
-<a href=#617 id=617 data-nosnippet>617</a>              <span class="kw-2">&amp;</span>name_str, Vec::new(), Tokens::default())<span class="question-mark">?</span>;
-<a href=#618 id=618 data-nosnippet>618</a>          } <span class="kw">else </span>{
-<a href=#619 id=619 data-nosnippet>619</a>            require_package(<span class="kw-2">&amp;</span>name_str, RequireOptions::default())<span class="question-mark">?</span>;
-<a href=#620 id=620 data-nosnippet>620</a>          }
-<a href=#621 id=621 data-nosnippet>621</a>          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>trigger_str))
-<a href=#622 id=622 data-nosnippet>622</a>        })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#623 id=623 data-nosnippet>623</a>    }
-<a href=#624 id=624 data-nosnippet>624</a>  }
-<a href=#625 id=625 data-nosnippet>625</a>
-<a href=#626 id=626 data-nosnippet>626</a>  <span class="comment">// Perl L302-307: old-style Section/Subsection aliases
-<a href=#627 id=627 data-nosnippet>627</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Section"</span>,       <span class="string">"\\@startsection{section}{1}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#628 id=628 data-nosnippet>628</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Subsection"</span>,    <span class="string">"\\@startsection{subsection}{2}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#629 id=629 data-nosnippet>629</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Subsubsection"</span>, <span class="string">"\\@startsection{subsubsection}{3}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#630 id=630 data-nosnippet>630</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Paragraph"</span>,     <span class="string">"\\@startsection{paragraph}{4}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#631 id=631 data-nosnippet>631</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Subparagraph"</span>,  <span class="string">"\\@startsection{subparagraph}{5}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#632 id=632 data-nosnippet>632</a>
-<a href=#633 id=633 data-nosnippet>633</a>  <span class="comment">// Perl L310: author block env
-<a href=#634 id=634 data-nosnippet>634</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{aug}"</span>, <span class="string">"#body"</span>);
-<a href=#635 id=635 data-nosnippet>635</a>});
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="comment">// Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
+<a href=#259 id=259 data-nosnippet>259</a>  // via `\keywords` that can be used as a section-like bare macro.
+<a href=#260 id=260 data-nosnippet>260</a>  // Push the digested body directly into the frontmatter map under
+<a href=#261 id=261 data-nosnippet>261</a>  // `ltx:classification[scheme=keywords]`, matching Perl's
+<a href=#262 id=262 data-nosnippet>262</a>  // after_digest_keywords (OmniBus.cls.ltxml:after_digest_keywords)
+<a href=#263 id=263 data-nosnippet>263</a>  // which does `push(@{ $$frontmatter{'ltx:classification'} }, [tag, attrs, @LaTeXML::LIST])`.
+<a href=#264 id=264 data-nosnippet>264</a>  //
+<a href=#265 id=265 data-nosnippet>265</a>  // History: the previous Rust binding called
+<a href=#266 id=266 data-nosnippet>266</a>  //   stomach::raw_tex("\\lx@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")
+<a href=#267 id=267 data-nosnippet>267</a>  // which silently misused `#body` (a Constructor template placeholder
+<a href=#268 id=268 data-nosnippet>268</a>  // only valid inside a DefConstructor template string) inside a
+<a href=#269 id=269 data-nosnippet>269</a>  // raw_tex literal. The `#` was tokenized as PARAM and reached the
+<a href=#270 id=270 data-nosnippet>270</a>  // stomach — emitting `Error:misdefined:#` and dumping the literal
+<a href=#271 id=271 data-nosnippet>271</a>  // string `#body` as the classification element's text content.
+<a href=#272 id=272 data-nosnippet>272</a>  // Witness: ifacconf-class papers (2305.08080, 2305.09991 — 84 wp4
+<a href=#273 id=273 data-nosnippet>273</a>  // entries with `Error:misdefined:#` first-errors).
+<a href=#274 id=274 data-nosnippet>274</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{keyword}"</span>, <span class="string">""</span>,
+<a href=#275 id=275 data-nosnippet>275</a>    after_digest_body =&gt; sub[whatsit] {
+<a href=#276 id=276 data-nosnippet>276</a>      push_keyword_body_to_frontmatter(whatsit)
+<a href=#277 id=277 data-nosnippet>277</a>    });
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{keywords}"</span>, <span class="string">""</span>,
+<a href=#279 id=279 data-nosnippet>279</a>    after_digest_body =&gt; sub[whatsit] {
+<a href=#280 id=280 data-nosnippet>280</a>      push_keyword_body_to_frontmatter(whatsit)
+<a href=#281 id=281 data-nosnippet>281</a>    });
+<a href=#282 id=282 data-nosnippet>282</a>  <span class="comment">// Perl L143: Let('\lx@begin@keywords', '\keywords'); — saved before overload
+<a href=#283 id=283 data-nosnippet>283</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@begin@keywords"</span>, <span class="string">"\\keywords"</span>);
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="comment">// Perl OmniBus.cls.ltxml L154. We differ from Perl's
+<a href=#285 id=285 data-nosnippet>285</a>  // `\begin{keywords}#1\end{keywords}` path because our `{keywords}` env
+<a href=#286 id=286 data-nosnippet>286</a>  // currently emits &lt;ltx:classification&gt; inline (a content-model error in
+<a href=#287 id=287 data-nosnippet>287</a>  // contexts like &lt;ltx:abstract&gt;). Routing directly through
+<a href=#288 id=288 data-nosnippet>288</a>  // `\@add@frontmatter` matches Perl's net effect — its after_digest_keywords
+<a href=#289 id=289 data-nosnippet>289</a>  // pushes the body into `frontmatter`{ltx:classification} — without the
+<a href=#290 id=290 data-nosnippet>290</a>  // inline detour that confuses the schema.
+<a href=#291 id=291 data-nosnippet>291</a>  // NOTE: unlike Perl L154 we do NOT append `\let\endkeyword\relax
+<a href=#292 id=292 data-nosnippet>292</a>  // \let\endkeywords\relax` here. Those `\let`s exist in Perl to neutralise the
+<a href=#293 id=293 data-nosnippet>293</a>  // ENV ending after its `\begin{keywords}#1\end{keywords}` one-shot. We route
+<a href=#294 id=294 data-nosnippet>294</a>  // through `\@add@frontmatter` (no env opened, see comment above), so the
+<a href=#295 id=295 data-nosnippet>295</a>  // `\let`s are vestigial — and harmful: a later BARE `\keywords text` opens a
+<a href=#296 id=296 data-nosnippet>296</a>  // classification whose auto-close hook is `\maybe@end@keywords`→`\endkeywords`,
+<a href=#297 id=297 data-nosnippet>297</a>  // and a persisted `\endkeywords=\relax` made that close a no-op, so the
+<a href=#298 id=298 data-nosnippet>298</a>  // classification stayed open and the following `\section` nested inside it
+<a href=#299 id=299 data-nosnippet>299</a>  // ("ltx:section isn't allowed in ltx:classification"). This bites whenever a
+<a href=#300 id=300 data-nosnippet>300</a>  // braced `\keywords{}` precedes a bare one — e.g. `\category{a}{b}{c}` expands
+<a href=#301 id=301 data-nosnippet>301</a>  // to `…\keywords{#4}` (empty #4) THEN the document's own `\keywords …`.
+<a href=#302 id=302 data-nosnippet>302</a>  // Witness 1601.07962 (sig-alternate, \category + bare \terms/\keywords).
+<a href=#303 id=303 data-nosnippet>303</a>  // Deliberate divergence from post-PR-2767 Perl (which uses
+<a href=#304 id=304 data-nosnippet>304</a>  // `\begin{keywords}#1\end{keywords}\let\endkeywords\relax`): the trailing
+<a href=#305 id=305 data-nosnippet>305</a>  // \lets persist and break a later bare `\keywords` (witness 1601.07962,
+<a href=#306 id=306 data-nosnippet>306</a>  // see the comment above). Keep the no-env direct call, expressed in the
+<a href=#307 id=307 data-nosnippet>307</a>  // new frontmatter API.
+<a href=#308 id=308 data-nosnippet>308</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords@onearg{}"</span>,
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="string">"\\lx@add@classification[scheme=keywords]{#1}"</span>);
+<a href=#310 id=310 data-nosnippet>310</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@keywords"</span>,
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="string">"\\endkeywords\\let\\maybe@end@keywords\\relax"</span>);
+<a href=#312 id=312 data-nosnippet>312</a>  <span class="comment">// Perl L145-153: `\keyword` / `\keywords` overloaded: with {...} arg, run
+<a href=#313 id=313 data-nosnippet>313</a>  // \keywords@onearg; otherwise hook a pending \endkeywords via the section-
+<a href=#314 id=314 data-nosnippet>314</a>  // start hook so `\keyword foo \section{bar}` auto-closes the keywords env.
+<a href=#315 id=315 data-nosnippet>315</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keyword"</span>, sub[_args] {
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="kw">let </span>next = read_token()<span class="question-mark">?</span>;
+<a href=#317 id=317 data-nosnippet>317</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) = next {
+<a href=#318 id=318 data-nosnippet>318</a>      unread(<span class="macro">Tokens!</span>(<span class="kw-2">*</span>t));
+<a href=#319 id=319 data-nosnippet>319</a>      <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
+<a href=#320 id=320 data-nosnippet>320</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\keywords@onearg"</span>)));
+<a href=#321 id=321 data-nosnippet>321</a>      }
+<a href=#322 id=322 data-nosnippet>322</a>    }
+<a href=#323 id=323 data-nosnippet>323</a>    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[
+<a href=#324 id=324 data-nosnippet>324</a>      <span class="macro">T_CS!</span>(<span class="string">"\\g@addto@macro"</span>),
+<a href=#325 id=325 data-nosnippet>325</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@startsection@hook"</span>),
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@keywords"</span>),
+<a href=#327 id=327 data-nosnippet>327</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@keywords"</span>),
+<a href=#328 id=328 data-nosnippet>328</a>    ]))
+<a href=#329 id=329 data-nosnippet>329</a>  });
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords"</span>, sub[_args] {
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">let </span>next = read_token()<span class="question-mark">?</span>;
+<a href=#332 id=332 data-nosnippet>332</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) = next {
+<a href=#333 id=333 data-nosnippet>333</a>      unread(<span class="macro">Tokens!</span>(<span class="kw-2">*</span>t));
+<a href=#334 id=334 data-nosnippet>334</a>      <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
+<a href=#335 id=335 data-nosnippet>335</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\keywords@onearg"</span>)));
+<a href=#336 id=336 data-nosnippet>336</a>      }
+<a href=#337 id=337 data-nosnippet>337</a>    }
+<a href=#338 id=338 data-nosnippet>338</a>    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[
+<a href=#339 id=339 data-nosnippet>339</a>      <span class="macro">T_CS!</span>(<span class="string">"\\g@addto@macro"</span>),
+<a href=#340 id=340 data-nosnippet>340</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@startsection@hook"</span>),
+<a href=#341 id=341 data-nosnippet>341</a>      <span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@keywords"</span>),
+<a href=#342 id=342 data-nosnippet>342</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@keywords"</span>),
+<a href=#343 id=343 data-nosnippet>343</a>    ]))
+<a href=#344 id=344 data-nosnippet>344</a>  });
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="macro">Let!</span>(<span class="string">"\\addto@keywords@list"</span>, <span class="string">"\\keyword"</span>);
+<a href=#346 id=346 data-nosnippet>346</a>
+<a href=#347 id=347 data-nosnippet>347</a>  <span class="comment">// Perl (PR #2767): classifications
+<a href=#348 id=348 data-nosnippet>348</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\classification{}"</span>, <span class="string">"\\lx@add@classification{#1}"</span>);
+<a href=#349 id=349 data-nosnippet>349</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pacs{}"</span>,
+<a href=#350 id=350 data-nosnippet>350</a>    <span class="string">"\\lx@add@classification[scheme=pacs]{#1}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#351 id=351 data-nosnippet>351</a>  <span class="comment">// \doi — frontmatter in preamble, url-like in body.
+<a href=#352 id=352 data-nosnippet>352</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\doi{}"</span>,
+<a href=#353 id=353 data-nosnippet>353</a>    <span class="string">"\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\
+<a href=#354 id=354 data-nosnippet>354</a>     \\else\\lx@doi{#1}\\fi"</span>);
+<a href=#355 id=355 data-nosnippet>355</a>  <span class="comment">// INTENTIONAL DIVERGENCE (Rust supersedes): Perl OmniBus.cls.ltxml:157 has a
+<a href=#356 id=356 data-nosnippet>356</a>  // typo — `href="https:/doi.org/#1"` (single slash) — producing a broken DOI
+<a href=#357 id=357 data-nosnippet>357</a>  // link. We emit the valid `https://`. A DOI href is a functional link, so per
+<a href=#358 id=358 data-nosnippet>358</a>  // "fix simple Perl bugs in Rust" we keep the working URL. See
+<a href=#359 id=359 data-nosnippet>359</a>  // KNOWN_PERL_ERRORS.md #36. (Do NOT revert to the single-slash form.)
+<a href=#360 id=360 data-nosnippet>360</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@doi{}"</span>,
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="string">"&lt;ltx:ref href='https://doi.org/#1'&gt;#1&lt;/ltx:ref&gt;"</span>,
+<a href=#362 id=362 data-nosnippet>362</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#363 id=363 data-nosnippet>363</a>
+<a href=#364 id=364 data-nosnippet>364</a>  <span class="comment">// Perl L167: \category (acm)
+<a href=#365 id=365 data-nosnippet>365</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\category{}{}{}[]"</span>,
+<a href=#366 id=366 data-nosnippet>366</a>    <span class="string">"\\lx@add@classification[scheme=category]{#1 #2 #3}\\keywords{#4}"</span>);
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a>  <span class="comment">// Perl L169-219: theorem env autoloads — if a common theorem env name is
+<a href=#369 id=369 data-nosnippet>369</a>  // used without being declared, load amsthm and define a standard set.
+<a href=#370 id=370 data-nosnippet>370</a>  </span><span class="kw">let </span>theorem_preload = <span class="macro">concat!</span>(
+<a href=#371 id=371 data-nosnippet>371</a>    <span class="string">"\\newtheorem{theorem}{Theorem}[section]"</span>,
+<a href=#372 id=372 data-nosnippet>372</a>    <span class="string">"\\newtheorem{conjecture}[theorem]{Conjecture}"</span>,
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="string">"\\newtheorem{proposition}[theorem]{Proposition}"</span>,
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="string">"\\newtheorem{proof}[theorem]{Proof}"</span>,
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="string">"\\newtheorem{lemma}[theorem]{Lemma}"</span>,
+<a href=#376 id=376 data-nosnippet>376</a>    <span class="string">"\\newtheorem{corollary}[theorem]{Corollary}"</span>,
+<a href=#377 id=377 data-nosnippet>377</a>    <span class="string">"\\newtheorem{example}[theorem]{Example}"</span>,
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="string">"\\newtheorem{exercise}[theorem]{Exercise}"</span>,
+<a href=#379 id=379 data-nosnippet>379</a>    <span class="string">"\\newtheorem{definition}[theorem]{Definition}"</span>,
+<a href=#380 id=380 data-nosnippet>380</a>    <span class="string">"\\newtheorem{problem}[theorem]{Problem}"</span>,
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="string">"\\newtheorem{question}[theorem]{Question}"</span>,
+<a href=#382 id=382 data-nosnippet>382</a>    <span class="string">"\\newtheorem{remark}[theorem]{Remark}"</span>,
+<a href=#383 id=383 data-nosnippet>383</a>    <span class="string">"\\newtheorem{solution}[theorem]{Solution}"</span>,
+<a href=#384 id=384 data-nosnippet>384</a>    <span class="string">"\\newtheorem{step}[theorem]{Step}"</span>,
+<a href=#385 id=385 data-nosnippet>385</a>    <span class="string">"\\newtheorem{note}[theorem]{Note}"</span>,
+<a href=#386 id=386 data-nosnippet>386</a>    <span class="string">"\\newtheorem{thm}{Theorem}"</span>,
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="string">"\\newtheorem{cor}[thm]{Corollary}"</span>,
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="string">"\\newtheorem{lem}[thm]{Lemma}"</span>,
+<a href=#389 id=389 data-nosnippet>389</a>    <span class="string">"\\newtheorem{claim}[thm]{Claim}"</span>,
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="string">"\\newtheorem{axiom}[thm]{Axiom}"</span>,
+<a href=#391 id=391 data-nosnippet>391</a>    <span class="string">"\\newtheorem{conj}[thm]{Conjecture}"</span>,
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="string">"\\newtheorem{fact}[thm]{Fact}"</span>,
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="string">"\\newtheorem{hypo}[thm]{Hypothesis}"</span>,
+<a href=#394 id=394 data-nosnippet>394</a>    <span class="string">"\\newtheorem{assum}[thm]{Assumption}"</span>,
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="string">"\\newtheorem{prop}[thm]{Proposition}"</span>,
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="string">"\\newtheorem{crit}[thm]{Criterion}"</span>,
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="comment">// Guard `\theoremstyle{definition}` with `\@ifundefined` so the
+<a href=#398 id=398 data-nosnippet>398</a>    // stub does NOT error when the document deliberately undefined
+<a href=#399 id=399 data-nosnippet>399</a>    // `\theoremstyle` (e.g. `\let\theoremstyle\@undefined` followed
+<a href=#400 id=400 data-nosnippet>400</a>    // by `\usepackage{amsthm}`-as-no-op-because-already-loaded). The
+<a href=#401 id=401 data-nosnippet>401</a>    // stub is a *fallback* for env auto-loading; if the document
+<a href=#402 id=402 data-nosnippet>402</a>    // chose to disable `\theoremstyle`, respect that choice instead
+<a href=#403 id=403 data-nosnippet>403</a>    // of resurrecting an undefined-error. Witness: arXiv:2603.11260,
+<a href=#404 id=404 data-nosnippet>404</a>    // 2603.11265 (ifacconf.cls -&gt; theorem.sty -&gt; amsthm pre-loaded,
+<a href=#405 id=405 data-nosnippet>405</a>    // then user `\let\theoremstyle\@undefined`).
+<a href=#406 id=406 data-nosnippet>406</a>    </span><span class="string">"\\@ifundefined{theoremstyle}{}{\\theoremstyle{definition}}"</span>,
+<a href=#407 id=407 data-nosnippet>407</a>    <span class="string">"\\newtheorem{defn}[thm]{Definition}"</span>,
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="string">"\\newtheorem{exmp}[thm]{Example}"</span>,
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="string">"\\newtheorem{rem}[thm]{Remark}"</span>,
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="string">"\\newtheorem{prob}[thm]{Problem}"</span>,
+<a href=#411 id=411 data-nosnippet>411</a>    <span class="string">"\\newtheorem{prin}[thm]{Principle}"</span>,
+<a href=#412 id=412 data-nosnippet>412</a>    <span class="string">"\\newtheorem{alg}{Algorithm}"</span>,
+<a href=#413 id=413 data-nosnippet>413</a>  );
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="comment">// Only install autoload stubs for CSes that aren't already defined. If
+<a href=#415 id=415 data-nosnippet>415</a>  // amsthm was pre-loaded (e.g. via dep-scan of a local .cls that
+<a href=#416 id=416 data-nosnippet>416</a>  // `\RequirePackage{amsthm}`), its own `\theoremstyle`/`\newtheorem`
+<a href=#417 id=417 data-nosnippet>417</a>  // definitions are already in place. Overwriting with our stub would
+<a href=#418 id=418 data-nosnippet>418</a>  // create an infinite loop:
+<a href=#419 id=419 data-nosnippet>419</a>  //   stub invokes → require_package('amsthm') no-ops (already loaded)
+<a href=#420 id=420 data-nosnippet>420</a>  //   → re-emits `\theoremstyle` → stub invokes again …
+<a href=#421 id=421 data-nosnippet>421</a>  // Observed in arxiv 0906.1883 where birkmult.cls's dep-scan pre-loaded
+<a href=#422 id=422 data-nosnippet>422</a>  // amsthm, and the resulting 163M-iteration pin loop blew the arena
+<a href=#423 id=423 data-nosnippet>423</a>  // past `u32::MAX` offset (SymStr wraparound → garbled error text).
+<a href=#424 id=424 data-nosnippet>424</a>  //
+<a href=#425 id=425 data-nosnippet>425</a>  // NB (2026-06-27 audit): these amsthm stubs intentionally keep the raw
+<a href=#426 id=426 data-nosnippet>426</a>  // require_package+re-emit closure (NOT the canonical `def_autoload` the
+<a href=#427 id=427 data-nosnippet>427</a>  // natbib triggers above now use). They are safe because they fire in
+<a href=#428 id=428 data-nosnippet>428</a>  // PREAMBLE / block context (`\theoremstyle`/`\newtheorem`/`\begin{thm}`),
+<a href=#429 id=429 data-nosnippet>429</a>  // where amsthm's freshly-loaded def DOES override the stub on re-emit — so
+<a href=#430 id=430 data-nosnippet>430</a>  // there is no clear-before-load + hoist needed. The natbib triggers needed
+<a href=#431 id=431 data-nosnippet>431</a>  // `def_autoload` precisely because cite CSes fire mid-body INSIDE math /
+<a href=#432 id=432 data-nosnippet>432</a>  // the locked frontmatter frame, where the stub shadowed natbib's def and
+<a href=#433 id=433 data-nosnippet>433</a>  // re-loaded on every re-emit. Verified: an unbound-class doc exercising all
+<a href=#434 id=434 data-nosnippet>434</a>  // three amsthm triggers loads amsthm exactly once, 0 errors. (And the
+<a href=#435 id=435 data-nosnippet>435</a>  // re-emit here differs from `def_autoload`'s — it prepends `theorem_preload`
+<a href=#436 id=436 data-nosnippet>436</a>  // — so `def_autoload` is not a drop-in anyway.)
+<a href=#437 id=437 data-nosnippet>437</a>  </span><span class="kw">for </span>env <span class="kw">in </span>[
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="string">"conjecture"</span>, <span class="string">"theorem"</span>, <span class="string">"corollary"</span>, <span class="string">"definition"</span>, <span class="string">"example"</span>, <span class="string">"exercise"</span>,
+<a href=#439 id=439 data-nosnippet>439</a>    <span class="string">"lemma"</span>, <span class="string">"note"</span>, <span class="string">"problem"</span>, <span class="string">"proof"</span>, <span class="string">"proposition"</span>, <span class="string">"question"</span>, <span class="string">"remark"</span>,
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="string">"solution"</span>,
+<a href=#441 id=441 data-nosnippet>441</a>    <span class="string">"thm"</span>, <span class="string">"cor"</span>, <span class="string">"lem"</span>, <span class="string">"claim"</span>, <span class="string">"axiom"</span>, <span class="string">"conj"</span>, <span class="string">"fact"</span>, <span class="string">"hypo"</span>, <span class="string">"assum"</span>,
+<a href=#442 id=442 data-nosnippet>442</a>    <span class="string">"prop"</span>, <span class="string">"crit"</span>, <span class="string">"defn"</span>, <span class="string">"exmp"</span>, <span class="string">"rem"</span>, <span class="string">"prob"</span>, <span class="string">"prin"</span>, <span class="string">"alg"</span>,
+<a href=#443 id=443 data-nosnippet>443</a>  ] {
+<a href=#444 id=444 data-nosnippet>444</a>    <span class="kw">let </span>beginenv = <span class="macro">s!</span>(<span class="string">"\\begin{{{env}}}"</span>);
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>beginenv);
+<a href=#446 id=446 data-nosnippet>446</a>    <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) { <span class="kw">continue</span>; }
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">let </span>beginenv_clone = beginenv.clone();
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">let </span>preload = theorem_preload.to_string();
+<a href=#449 id=449 data-nosnippet>449</a>    def_macro(cs, <span class="prelude-val">None</span>,
+<a href=#450 id=450 data-nosnippet>450</a>      ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#451 id=451 data-nosnippet>451</a>        require_package(<span class="string">"amsthm"</span>, RequireOptions::default())<span class="question-mark">?</span>;
+<a href=#452 id=452 data-nosnippet>452</a>        <span class="kw">let </span><span class="kw-2">mut </span>expanded = preload.clone();
+<a href=#453 id=453 data-nosnippet>453</a>        expanded.push_str(<span class="kw-2">&amp;</span>beginenv_clone);
+<a href=#454 id=454 data-nosnippet>454</a>        <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expanded))
+<a href=#455 id=455 data-nosnippet>455</a>      })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#456 id=456 data-nosnippet>456</a>  }
+<a href=#457 id=457 data-nosnippet>457</a>  <span class="comment">// Perl L216-219: newtheorem aliases auto-load amsthm
+<a href=#458 id=458 data-nosnippet>458</a>  </span><span class="kw">for </span>alias <span class="kw">in </span>[<span class="string">"\\newproclaim"</span>, <span class="string">"\\newdef"</span>, <span class="string">"\\newremark"</span>] {
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(alias);
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) { <span class="kw">continue</span>; }
+<a href=#461 id=461 data-nosnippet>461</a>    def_macro(cs, <span class="prelude-val">None</span>,
+<a href=#462 id=462 data-nosnippet>462</a>      ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#463 id=463 data-nosnippet>463</a>        require_package(<span class="string">"amsthm"</span>, RequireOptions::default())<span class="question-mark">?</span>;
+<a href=#464 id=464 data-nosnippet>464</a>        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\newtheorem"</span>)))
+<a href=#465 id=465 data-nosnippet>465</a>      })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#466 id=466 data-nosnippet>466</a>  }
+<a href=#467 id=467 data-nosnippet>467</a>  <span class="comment">// Perl L220: \theoremstyle autoloads amsthm
+<a href=#468 id=468 data-nosnippet>468</a>  </span>{
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="string">"\\theoremstyle"</span>);
+<a href=#470 id=470 data-nosnippet>470</a>    <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) {
+<a href=#471 id=471 data-nosnippet>471</a>      def_macro(cs, <span class="prelude-val">None</span>,
+<a href=#472 id=472 data-nosnippet>472</a>        ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#473 id=473 data-nosnippet>473</a>          require_package(<span class="string">"amsthm"</span>, RequireOptions::default())<span class="question-mark">?</span>;
+<a href=#474 id=474 data-nosnippet>474</a>          <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\theoremstyle"</span>)))
+<a href=#475 id=475 data-nosnippet>475</a>        })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#476 id=476 data-nosnippet>476</a>    }
+<a href=#477 id=477 data-nosnippet>477</a>  }
+<a href=#478 id=478 data-nosnippet>478</a>
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="comment">// Perl L222-223: abstract aliases
+<a href=#480 id=480 data-nosnippet>480</a>  </span><span class="macro">Let!</span>(<span class="string">"\\abstracts"</span>, <span class="string">"\\abstract"</span>);
+<a href=#481 id=481 data-nosnippet>481</a>  <span class="macro">Let!</span>(<span class="string">"\\abst"</span>,      <span class="string">"\\abstract"</span>);
+<a href=#482 id=482 data-nosnippet>482</a>
+<a href=#483 id=483 data-nosnippet>483</a>  <span class="comment">// Perl L226-235: acknowledgments
+<a href=#484 id=484 data-nosnippet>484</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acknowledgments"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
+<a href=#485 id=485 data-nosnippet>485</a>    properties =&gt; {
+<a href=#486 id=486 data-nosnippet>486</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; digest(<span class="macro">T_CS!</span>(<span class="string">"\\acknowledgmentsname"</span>))<span class="question-mark">?</span>))
+<a href=#487 id=487 data-nosnippet>487</a>    });
+<a href=#488 id=488 data-nosnippet>488</a>  <span class="comment">// \endacknowledgments — tolerant close. A common pattern is
+<a href=#489 id=489 data-nosnippet>489</a>  //   \begin{acknowledgments} ... \bibliography{...} \end{acknowledgments}
+<a href=#490 id=490 data-nosnippet>490</a>  // where \bibliography opens &lt;ltx:bibliography&gt;; the auto_close on
+<a href=#491 id=491 data-nosnippet>491</a>  // &lt;ltx:acknowledgements&gt; below cascades shut at that point, so the
+<a href=#492 id=492 data-nosnippet>492</a>  // explicit \end{acknowledgments} would otherwise hit a malformed-close
+<a href=#493 id=493 data-nosnippet>493</a>  // error. Check current node first; only emit &lt;/ltx:acknowledgements&gt;
+<a href=#494 id=494 data-nosnippet>494</a>  // when one is actually open. Driver: 2202.04803 R=1 → R=0; ~9 papers
+<a href=#495 id=495 data-nosnippet>495</a>  // in this cluster.
+<a href=#496 id=496 data-nosnippet>496</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\endacknowledgments"</span>, sub[document, _whatsit, _props] {
+<a href=#497 id=497 data-nosnippet>497</a>    <span class="kw">let </span>cur = document.get_node().clone();
+<a href=#498 id=498 data-nosnippet>498</a>    <span class="kw">let </span>has_open = document.findnode(<span class="string">"ancestor-or-self::ltx:acknowledgements"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cur)).is_some();
+<a href=#499 id=499 data-nosnippet>499</a>    <span class="kw">if </span>has_open {
+<a href=#500 id=500 data-nosnippet>500</a>      document.close_element(<span class="string">"ltx:acknowledgements"</span>)<span class="question-mark">?</span>;
+<a href=#501 id=501 data-nosnippet>501</a>    }
+<a href=#502 id=502 data-nosnippet>502</a>  });
+<a href=#503 id=503 data-nosnippet>503</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:acknowledgements"</span>, auto_close =&gt; <span class="bool-val">true</span>);
+<a href=#504 id=504 data-nosnippet>504</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgmentsname"</span>, <span class="string">"Acknowledgements"</span>);
+<a href=#505 id=505 data-nosnippet>505</a>  <span class="macro">Let!</span>(<span class="string">"\\acknowledgements"</span>,      <span class="string">"\\acknowledgments"</span>);
+<a href=#506 id=506 data-nosnippet>506</a>  <span class="macro">Let!</span>(<span class="string">"\\endacknowledgements"</span>,   <span class="string">"\\endacknowledgments"</span>);
+<a href=#507 id=507 data-nosnippet>507</a>  <span class="macro">Let!</span>(<span class="string">"\\theacknowledgments"</span>,    <span class="string">"\\acknowledgments"</span>);
+<a href=#508 id=508 data-nosnippet>508</a>  <span class="macro">Let!</span>(<span class="string">"\\endtheacknowledgments"</span>, <span class="string">"\\endacknowledgments"</span>);
+<a href=#509 id=509 data-nosnippet>509</a>
+<a href=#510 id=510 data-nosnippet>510</a>  <span class="comment">// Perl (PR #2767): editorial metadata
+<a href=#511 id=511 data-nosnippet>511</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\editors{}"</span>,          <span class="string">"\\lx@add@editor{#1}"</span>);
+<a href=#512 id=512 data-nosnippet>512</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>,         <span class="string">"\\lx@add@date[role=received]{#1}"</span>);
+<a href=#513 id=513 data-nosnippet>513</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>,          <span class="string">"\\lx@add@date[role=revised]{#1}"</span>);
+<a href=#514 id=514 data-nosnippet>514</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>,         <span class="string">"\\lx@add@date[role=accepted]{#1}"</span>);
+<a href=#515 id=515 data-nosnippet>515</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pubyear{}"</span>,          <span class="string">"\\lx@add@date[role=publication]{#1}"</span>);
+<a href=#516 id=516 data-nosnippet>516</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\copyrightyear{}"</span>,    <span class="string">"\\lx@add@copyrightyear{#1}"</span>);
+<a href=#517 id=517 data-nosnippet>517</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\communicated{}"</span>,     <span class="string">"\\lx@add@date[role=communicated]{#1}"</span>);
+<a href=#518 id=518 data-nosnippet>518</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\preprint{}"</span>,         <span class="string">"\\lx@add@pubnote[role=preprint]{#1}"</span>);
+<a href=#519 id=519 data-nosnippet>519</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dedicated{}"</span>,        <span class="string">"\\lx@add@pubnote[role=dedication]{#1}"</span>);
+<a href=#520 id=520 data-nosnippet>520</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\presented{}"</span>,        <span class="string">"\\lx@add@date[role=presented]{#1}"</span>);
+<a href=#521 id=521 data-nosnippet>521</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\articletype{}"</span>,      <span class="string">"\\lx@add@pubnote[role=type]{#1}"</span>);
+<a href=#522 id=522 data-nosnippet>522</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\issue{}"</span>,            <span class="string">"\\lx@add@pubnote[role=issue]{#1}"</span>);
+<a href=#523 id=523 data-nosnippet>523</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\journal{}"</span>,          <span class="string">"\\lx@add@pubnote[role=journal]{#1}"</span>);
+<a href=#524 id=524 data-nosnippet>524</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jname{}"</span>,            <span class="string">"\\lx@add@pubnote[role=journal]{#1}"</span>);
+<a href=#525 id=525 data-nosnippet>525</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\volume{}"</span>,           <span class="string">"\\lx@add@pubnote[role=volume]{#1}"</span>);
+<a href=#526 id=526 data-nosnippet>526</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlenote{}"</span>,        <span class="string">"\\lx@add@pubnote[role=note]{#1}"</span>);
+<a href=#527 id=527 data-nosnippet>527</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\terms{}"</span>,            <span class="string">"\\lx@add@keywords{#1}"</span>);
+<a href=#528 id=528 data-nosnippet>528</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\conferenceinfo{}{}"</span>, <span class="string">"\\lx@add@pubnote[role=conference]{#1 #2}"</span>);
+<a href=#529 id=529 data-nosnippet>529</a>
+<a href=#530 id=530 data-nosnippet>530</a>  <span class="comment">// Perl L257 gobbles to Tokens(); we surpass by rendering as
+<a href=#531 id=531 data-nosnippet>531</a>  // superscript (matches latex_constructs kernel-level treatment
+<a href=#532 id=532 data-nosnippet>532</a>  // and IEEE \IEEEauthorrefmark).
+<a href=#533 id=533 data-nosnippet>533</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thanksref{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#534 id=534 data-nosnippet>534</a>
+<a href=#535 id=535 data-nosnippet>535</a>  <span class="comment">// Perl L260-264: ACM variants
+<a href=#536 id=536 data-nosnippet>536</a>  </span><span class="macro">Let!</span>(<span class="string">"\\CopyrightYear"</span>, <span class="string">"\\copyrightyear"</span>);
+<a href=#537 id=537 data-nosnippet>537</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\confinfo"     </span>=&gt; <span class="macro">Tokens!</span>());
+<a href=#538 id=538 data-nosnippet>538</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\acmcopyr"     </span>=&gt; <span class="macro">Tokens!</span>());
+<a href=#539 id=539 data-nosnippet>539</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\copyrightetc" </span>=&gt; <span class="macro">Tokens!</span>());
+<a href=#540 id=540 data-nosnippet>540</a>  <span class="macro">Let!</span>(<span class="string">"\\crdata"</span>, <span class="string">"\\acmcopyr"</span>);
+<a href=#541 id=541 data-nosnippet>541</a>
+<a href=#542 id=542 data-nosnippet>542</a>  <span class="comment">// Perl L266-280: \references constructor (works as env or bare macro).
+<a href=#543 id=543 data-nosnippet>543</a>  // Full port — `before_digest_bibliography`/`begin_bibliography` are public
+<a href=#544 id=544 data-nosnippet>544</a>  // (latex_constructs.rs), so the constructor sets the bibliography title
+<a href=#545 id=545 data-nosnippet>545</a>  // (`\refname`), xml:id and bib/cite-style exactly like Perl's
+<a href=#546 id=546 data-nosnippet>546</a>  // `beforeDigestBibliography`/`beginBibliography`, instead of a stub that
+<a href=#547 id=547 data-nosnippet>547</a>  // emitted a bare `&lt;bibliography&gt;` (no &lt;title&gt;, no id → ugly auto-id
+<a href=#548 id=548 data-nosnippet>548</a>  // `X-at-lx-at-bibliography0.bibN`). This OmniBus binding shadows
+<a href=#549 id=549 data-nosnippet>549</a>  // revtex4_support's identical `\references` on the `\documentstyle{revtex}`
+<a href=#550 id=550 data-nosnippet>550</a>  // path (where OmniBus is also loaded), so a REVTeX-3.x `\begin{references}`
+<a href=#551 id=551 data-nosnippet>551</a>  // now matches Perl. Witnesses: cond-mat9805405, hep-ex0007011.
+<a href=#552 id=552 data-nosnippet>552</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\references"</span>,
+<a href=#553 id=553 data-nosnippet>553</a>    <span class="string">"&lt;ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'&gt;&lt;ltx:title font='#titlefont' _force_font='true'&gt;#title&lt;/ltx:title&gt;&lt;ltx:biblist&gt;"</span>,
+<a href=#554 id=554 data-nosnippet>554</a>    before_digest =&gt; {
+<a href=#555 id=555 data-nosnippet>555</a>      engine::latex_constructs::before_digest_bibliography()
+<a href=#556 id=556 data-nosnippet>556</a>    },
+<a href=#557 id=557 data-nosnippet>557</a>    after_digest =&gt; sub[whatsit] {
+<a href=#558 id=558 data-nosnippet>558</a>      engine::latex_constructs::begin_bibliography(whatsit)<span class="question-mark">?</span>;
+<a href=#559 id=559 data-nosnippet>559</a>    });
+<a href=#560 id=560 data-nosnippet>560</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endreferences"</span>, sub[document] {
+<a href=#561 id=561 data-nosnippet>561</a>    <span class="kw">let _ </span>= document.maybe_close_element(<span class="string">"ltx:biblist"</span>);
+<a href=#562 id=562 data-nosnippet>562</a>    <span class="kw">let _ </span>= document.maybe_close_element(<span class="string">"ltx:bibliography"</span>);
+<a href=#563 id=563 data-nosnippet>563</a>  });
+<a href=#564 id=564 data-nosnippet>564</a>  <span class="macro">Let!</span>(<span class="string">"\\reference"</span>, <span class="string">"\\bibitem"</span>);
+<a href=#565 id=565 data-nosnippet>565</a>
+<a href=#566 id=566 data-nosnippet>566</a>  <span class="comment">// Perl L282-284
+<a href=#567 id=567 data-nosnippet>567</a>  </span>def_macro_noop(<span class="string">"\\comment{}"</span>)<span class="question-mark">?</span>;
+<a href=#568 id=568 data-nosnippet>568</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\etal"</span>,         <span class="string">"\\textit{et al.}"</span>);
+<a href=#569 id=569 data-nosnippet>569</a>  def_macro_noop(<span class="string">"\\firstsection"</span>)<span class="question-mark">?</span>;
+<a href=#570 id=570 data-nosnippet>570</a>
+<a href=#571 id=571 data-nosnippet>571</a>  <span class="comment">// Perl L286-297: math/package autoloads — when a trigger CS is used and
+<a href=#572 id=572 data-nosnippet>572</a>  // not yet defined, require the specified package/class and re-trigger.
+<a href=#573 id=573 data-nosnippet>573</a>  // The Perl `DefAutoload` macro registers this semantic; we implement it
+<a href=#574 id=574 data-nosnippet>574</a>  // inline. Perl encodes the target via the `.sty.ltxml` / `.cls.ltxml`
+<a href=#575 id=575 data-nosnippet>575</a>  // suffix; we mirror that by carrying an explicit "sty" / "cls" kind
+<a href=#576 id=576 data-nosnippet>576</a>  // alongside the bare name.
+<a href=#577 id=577 data-nosnippet>577</a>  //
+<a href=#578 id=578 data-nosnippet>578</a>  // Why the kind matters: `\thechapter` autoloads `book.cls.ltxml` in Perl,
+<a href=#579 id=579 data-nosnippet>579</a>  // not `book.sty`. Routing through `require_package("book")` instead
+<a href=#580 id=580 data-nosnippet>580</a>  // finds the obsolete `book.sty` shim (TL's 2.09-compat file) which
+<a href=#581 id=581 data-nosnippet>581</a>  // immediately fires `\LoadClass{book}` from inside the body — past the
+<a href=#582 id=582 data-nosnippet>582</a>  // preamble — and errors with "\LoadClass can only appear in the preamble".
+<a href=#583 id=583 data-nosnippet>583</a>  // Witness: arXiv:2602.10407 (`\documentclass{saunders}` + `\chapter` in
+<a href=#584 id=584 data-nosnippet>584</a>  // an `\include`'d chapter; saunders.cls is unbound so OmniBus takes over,
+<a href=#585 id=585 data-nosnippet>585</a>  // and the chapter trigger hits `\thechapter`). Perl handles it cleanly
+<a href=#586 id=586 data-nosnippet>586</a>  // by autoloading the class binding instead of the obsolete sty.
+<a href=#587 id=587 data-nosnippet>587</a>  </span><span class="kw">for </span>(trigger, name, ext) <span class="kw">in </span>[
+<a href=#588 id=588 data-nosnippet>588</a>    <span class="comment">// env triggers: `\begin{align}` etc. In Rust, we only dispatch on the
+<a href=#589 id=589 data-nosnippet>589</a>    // bare CS name of the trigger — works for control sequences like
+<a href=#590 id=590 data-nosnippet>590</a>    // `\multline`, `\numberwithin`, `\mathfrak`, `\mathbb`, `\deluxetable`,
+<a href=#591 id=591 data-nosnippet>591</a>    // `\curraddr`, `\subjclass`, `\thechapter`. For envs, autoload key is
+<a href=#592 id=592 data-nosnippet>592</a>    // `\begin{env}` which is a CS token.
+<a href=#593 id=593 data-nosnippet>593</a>    </span>(<span class="string">"\\begin{align}"</span>,                <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
+<a href=#594 id=594 data-nosnippet>594</a>    (<span class="string">"\\begin{subequations}"</span>,         <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
+<a href=#595 id=595 data-nosnippet>595</a>    (<span class="string">"\\begin{split}"</span>,                <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
+<a href=#596 id=596 data-nosnippet>596</a>    (<span class="string">"\\multline"</span>,                    <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
+<a href=#597 id=597 data-nosnippet>597</a>    (<span class="string">"\\csname multline*\\endcsname"</span>, <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
+<a href=#598 id=598 data-nosnippet>598</a>    (<span class="string">"\\numberwithin"</span>,                <span class="string">"amsmath"</span>,      <span class="string">"sty"</span>),
+<a href=#599 id=599 data-nosnippet>599</a>    (<span class="string">"\\mathfrak"</span>,                    <span class="string">"amsfonts"</span>,     <span class="string">"sty"</span>),
+<a href=#600 id=600 data-nosnippet>600</a>    (<span class="string">"\\mathbb"</span>,                      <span class="string">"amsfonts"</span>,     <span class="string">"sty"</span>),
+<a href=#601 id=601 data-nosnippet>601</a>    (<span class="string">"\\begin{deluxetable}"</span>,          <span class="string">"deluxetable"</span>,  <span class="string">"sty"</span>),
+<a href=#602 id=602 data-nosnippet>602</a>    (<span class="string">"\\curraddr"</span>,                    <span class="string">"ams_support"</span>,  <span class="string">"sty"</span>),
+<a href=#603 id=603 data-nosnippet>603</a>    (<span class="string">"\\subjclass"</span>,                   <span class="string">"ams_support"</span>,  <span class="string">"sty"</span>),
+<a href=#604 id=604 data-nosnippet>604</a>    (<span class="string">"\\thechapter"</span>,                  <span class="string">"book"</span>,         <span class="string">"cls"</span>),
+<a href=#605 id=605 data-nosnippet>605</a>  ] {
+<a href=#606 id=606 data-nosnippet>606</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(trigger);
+<a href=#607 id=607 data-nosnippet>607</a>    <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) {
+<a href=#608 id=608 data-nosnippet>608</a>      <span class="kw">let </span>cs_clone = cs;
+<a href=#609 id=609 data-nosnippet>609</a>      <span class="kw">let </span>name_str = name.to_string();
+<a href=#610 id=610 data-nosnippet>610</a>      <span class="kw">let </span>trigger_str = trigger.to_string();
+<a href=#611 id=611 data-nosnippet>611</a>      <span class="kw">let </span>is_cls = ext == <span class="string">"cls"</span>;
+<a href=#612 id=612 data-nosnippet>612</a>      def_macro(cs, <span class="prelude-val">None</span>,
+<a href=#613 id=613 data-nosnippet>613</a>        ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#614 id=614 data-nosnippet>614</a>          <span class="comment">// Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm:
+<a href=#615 id=615 data-nosnippet>615</a>          // clear this autoload CS before loading, then re-emit the trigger as
+<a href=#616 id=616 data-nosnippet>616</a>          // tokenized text. Re-tokenizing is important for `\begin{env}` triggers
+<a href=#617 id=617 data-nosnippet>617</a>          // — amsmath defines `\split` (not `\begin{split}`), so the raw single-CS
+<a href=#618 id=618 data-nosnippet>618</a>          // token would look undefined after clearing. Tokenizing expands into
+<a href=#619 id=619 data-nosnippet>619</a>          // `\begin` + `{env}` which the standard `\begin{}` dispatcher resolves.
+<a href=#620 id=620 data-nosnippet>620</a>          </span>assign_meaning(
+<a href=#621 id=621 data-nosnippet>621</a>            <span class="kw-2">&amp;</span>cs_clone, Stored::None,
+<a href=#622 id=622 data-nosnippet>622</a>            <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#623 id=623 data-nosnippet>623</a>          <span class="kw">if </span>is_cls {
+<a href=#624 id=624 data-nosnippet>624</a>            load_class(
+<a href=#625 id=625 data-nosnippet>625</a>              <span class="kw-2">&amp;</span>name_str, Vec::new(), Tokens::default())<span class="question-mark">?</span>;
+<a href=#626 id=626 data-nosnippet>626</a>          } <span class="kw">else </span>{
+<a href=#627 id=627 data-nosnippet>627</a>            require_package(<span class="kw-2">&amp;</span>name_str, RequireOptions::default())<span class="question-mark">?</span>;
+<a href=#628 id=628 data-nosnippet>628</a>          }
+<a href=#629 id=629 data-nosnippet>629</a>          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>trigger_str))
+<a href=#630 id=630 data-nosnippet>630</a>        })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#631 id=631 data-nosnippet>631</a>    }
+<a href=#632 id=632 data-nosnippet>632</a>  }
+<a href=#633 id=633 data-nosnippet>633</a>
+<a href=#634 id=634 data-nosnippet>634</a>  <span class="comment">// Perl L302-307: old-style Section/Subsection aliases
+<a href=#635 id=635 data-nosnippet>635</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Section"</span>,       <span class="string">"\\@startsection{section}{1}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#636 id=636 data-nosnippet>636</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Subsection"</span>,    <span class="string">"\\@startsection{subsection}{2}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#637 id=637 data-nosnippet>637</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Subsubsection"</span>, <span class="string">"\\@startsection{subsubsection}{3}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#638 id=638 data-nosnippet>638</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Paragraph"</span>,     <span class="string">"\\@startsection{paragraph}{4}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#639 id=639 data-nosnippet>639</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Subparagraph"</span>,  <span class="string">"\\@startsection{subparagraph}{5}{}{}{}{}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#640 id=640 data-nosnippet>640</a>
+<a href=#641 id=641 data-nosnippet>641</a>  <span class="comment">// Perl L310: author block env
+<a href=#642 id=642 data-nosnippet>642</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{aug}"</span>, <span class="string">"#body"</span>);
+<a href=#643 id=643 data-nosnippet>643</a>});
 </code></pre></div></section></main></body></html>

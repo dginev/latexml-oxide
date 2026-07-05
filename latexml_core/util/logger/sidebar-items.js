@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["bind_log","flush_log","init"]};
+window.SIDEBAR_ITEMS = {"fn":["bind_log","capture","flush_log","init","replay_captured"],"struct":["CapturedDiagnostics"]};

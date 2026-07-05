@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/elsart_support_core_sty.rs`."><title>elsart_support_core_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>elsart_support_core_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! elsart_support_core.sty — Elsevier journal article support (core)
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/elsart_support_core_sty.rs`."><title>elsart_support_core_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (c397dae80 2026-07-02)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>elsart_support_core_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! elsart_support_core.sty — Elsevier journal article support (core)
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: elsart_support_core.sty.ltxml — 191 lines
 <a href=#3 id=3 data-nosnippet>3</a>//! Shared by elsart.cls and elsarticle.cls
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -142,202 +142,203 @@
 <a href=#142 id=142 data-nosnippet>142</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endack"</span>, <span class="string">"&lt;/ltx:acknowledgements&gt;"</span>);
 <a href=#143 id=143 data-nosnippet>143</a>
 <a href=#144 id=144 data-nosnippet>144</a>  <span class="comment">// Acknowledgements tag — Perl L125
-<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="macro">Tag!</span>(<span class="string">"ltx:acknowledgements"</span>, auto_close =&gt; <span class="bool-val">true</span>);
-<a href=#146 id=146 data-nosnippet>146</a>
-<a href=#147 id=147 data-nosnippet>147</a>  <span class="comment">// Keywords — Perl L130-153
-<a href=#148 id=148 data-nosnippet>148</a>  // keyword environment and macros with XUntil pattern
-<a href=#149 id=149 data-nosnippet>149</a>  // Perl L135-152: \begin{keyword}/\end{keyword} use DefMacroI with begingroup/endgroup,
-<a href=#150 id=150 data-nosnippet>150</a>  // NOT DefEnvironment!, to properly scope the XUntil delimiter reading.
-<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{keyword}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\begingroup\\@keyword"</span>);
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{keyword}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\@keyword@cut\\endgroup"</span>);
-<a href=#153 id=153 data-nosnippet>153</a>  <span class="comment">// Perl elsart_support_core.sty.ltxml L138-141: `\keyword{...}` (1-arg
-<a href=#154 id=154 data-nosnippet>154</a>  // form) reads a balanced group and wraps with `\@keyword &lt;arg&gt;
-<a href=#155 id=155 data-nosnippet>155</a>  // \@keyword@cut` so XUntil terminates at the inserted token.
-<a href=#156 id=156 data-nosnippet>156</a>  //
-<a href=#157 id=157 data-nosnippet>157</a>  // History — DO NOT switch this back to `read_balanced(_, _, false)`:
-<a href=#158 id=158 data-nosnippet>158</a>  // commit 09bc60c2 ("\keyword absorbs trailing unbalanced }") tried to
-<a href=#159 id=159 data-nosnippet>159</a>  // mirror Perl's `$gullet-&gt;readBalanced` with no args (require_open=
-<a href=#160 id=160 data-nosnippet>160</a>  // false → level starts at 1) to absorb the legacy unbalanced-`}`
-<a href=#161 id=161 data-nosnippet>161</a>  // idiom from arXiv:1710.03688 / hep-ph0702114, where the abstract
-<a href=#162 id=162 data-nosnippet>162</a>  // ends:
-<a href=#163 id=163 data-nosnippet>163</a>  //     \keyword{Keyword1; ...} \vskip ...\noindent{...e3}}
-<a href=#164 id=164 data-nosnippet>164</a>  // (a trailing literal `}` past the keyword arg). For that input
-<a href=#165 id=165 data-nosnippet>165</a>  // alone, `require_open=false` correctly consumes `{...} }` and stops.
-<a href=#166 id=166 data-nosnippet>166</a>  //
-<a href=#167 id=167 data-nosnippet>167</a>  // BUT for the common balanced form — `\keyword{Higgs; Boson}` with
-<a href=#168 id=168 data-nosnippet>168</a>  // no trailing extra `}` (the test fixture
-<a href=#169 id=169 data-nosnippet>169</a>  // `tests/babel/elsart_keyword_brace_form.tex` and the vast majority
-<a href=#170 id=170 data-nosnippet>170</a>  // of real-world usage) — `require_open=false` reads past the
-<a href=#171 id=171 data-nosnippet>171</a>  // matching `}`, walks through `\end{abstract}` (raw `\end` is a CS
-<a href=#172 id=172 data-nosnippet>172</a>  // and CC_END count is unchanged across that expansion), then
-<a href=#173 id=173 data-nosnippet>173</a>  // `\end{frontmatter}`, … all the way to EOF. The reader's pushback
-<a href=#174 id=174 data-nosnippet>174</a>  // grows unboundedly on the way; in CI we observed a single
-<a href=#175 id=175 data-nosnippet>175</a>  // `memory allocation of 21743271936 bytes failed` (21 GB) → SIGABRT
-<a href=#176 id=176 data-nosnippet>176</a>  // before the test could even report. The cost of one paper's
-<a href=#177 id=177 data-nosnippet>177</a>  // 1-error reduction is the entire test suite OOM-aborting at
-<a href=#178 id=178 data-nosnippet>178</a>  // `81_babel::elsart_keyword_brace_form_test`.
-<a href=#179 id=179 data-nosnippet>179</a>  //
-<a href=#180 id=180 data-nosnippet>180</a>  // RESOLVED 2026-05-30 via the design note's first suggestion: keep the
-<a href=#181 id=181 data-nosnippet>181</a>  // strict balanced read of the keyword argument, then peek past spaces and
-<a href=#182 id=182 data-nosnippet>182</a>  // gobble an OPTIONAL trailing `}` (catcode END). This reproduces Perl's
-<a href=#183 id=183 data-nosnippet>183</a>  // lenient `readBalanced` *result* (it absorbs the legacy unbalanced `}`)
-<a href=#184 id=184 data-nosnippet>184</a>  // for the trailing-`}` idiom — abstract bodies that end
-<a href=#185 id=185 data-nosnippet>185</a>  //     \keyword{Kw1; Kw2; …}   &lt;comments/spaces&gt;   }   \end{abstract}
-<a href=#186 id=186 data-nosnippet>186</a>  // (the stray `}` is the orphaned close of a commented-out brace group;
-<a href=#187 id=187 data-nosnippet>187</a>  // witness 1601.01227, also 1710.03688 / hep-ph0702114) — WITHOUT the
-<a href=#188 id=188 data-nosnippet>188</a>  // speculative read-to-EOF that OOM'd the balanced fixture: for the common
-<a href=#189 id=189 data-nosnippet>189</a>  // `\keyword{Higgs; Boson}\end{abstract}` form the token after the strict
-<a href=#190 id=190 data-nosnippet>190</a>  // read is `\end` (a CS, not `}`), so nothing is gobbled. The peek is
-<a href=#191 id=191 data-nosnippet>191</a>  // bounded to one token, never crossing `\end`.
-<a href=#192 id=192 data-nosnippet>192</a>  // Skip leading spaces and blank-line `\par`s, then gobble a single trailing
-<a href=#193 id=193 data-nosnippet>193</a>  // `}` (catcode END) if one is there — Perl's `readBalanced` reads straight
-<a href=#194 id=194 data-nosnippet>194</a>  // through the `\par` from a blank line before the stray brace (witness
-<a href=#195 id=195 data-nosnippet>195</a>  // 1705.01354 separates `\keyword{…}` and the orphaned `}` by a blank line).
-<a href=#196 id=196 data-nosnippet>196</a>  // The skipped whitespace/`\par` tokens are buffered and FULLY RESTORED when
-<a href=#197 id=197 data-nosnippet>197</a>  // no trailing `}` follows, so the common `\keyword{…}\end{abstract}` form
-<a href=#198 id=198 data-nosnippet>198</a>  // (and `\keyword{…}&lt;blank&gt;\end{abstract}`) is left byte-for-byte untouched.
-<a href=#199 id=199 data-nosnippet>199</a>  // Bounded: stops at the first non-space, non-`\par` token; never crosses
-<a href=#200 id=200 data-nosnippet>200</a>  // `\end`.
-<a href=#201 id=201 data-nosnippet>201</a>  // Perl's `readBalanced` (L140) reads tokens up to the next UNMATCHED `}`
-<a href=#202 id=202 data-nosnippet>202</a>  // (tracking brace depth), absorbing that stray `}` as its terminator —
-<a href=#203 id=203 data-nosnippet>203</a>  // regardless of what non-brace material (spaces, `\par`, `\vskip &lt;dimen&gt;`,
-<a href=#204 id=204 data-nosnippet>204</a>  // `\noindent`, …) sits between `\keyword{…}` and the orphaned brace. The
-<a href=#205 id=205 data-nosnippet>205</a>  // earlier version only skipped spaces/`\par`s, so it stopped at the first
-<a href=#206 id=206 data-nosnippet>206</a>  // real token (e.g. `\vskip`) and left the stray `}` to hit the abstract's
-<a href=#207 id=207 data-nosnippet>207</a>  // mode-switch frame (`ltx:para`-free `}` → "close a group that switched to
-<a href=#208 id=208 data-nosnippet>208</a>  // mode internal_vertical"; witness 1604.00855:
-<a href=#209 id=209 data-nosnippet>209</a>  // `\keyword{…} \vskip 0.5\baselineskip}`).
-<a href=#210 id=210 data-nosnippet>210</a>  //
-<a href=#211 id=211 data-nosnippet>211</a>  // Walk forward tracking brace depth: an unmatched `}` (depth 0) is the
-<a href=#212 id=212 data-nosnippet>212</a>  // stray terminator — DROP it, re-inject everything else (so the `\vskip`
-<a href=#213 id=213 data-nosnippet>213</a>  // etc. still render, content-preserving). Bound the scan at `\end` (depth
-<a href=#214 id=214 data-nosnippet>214</a>  // 0) — the env terminator — and a hard token cap, so the common
-<a href=#215 id=215 data-nosnippet>215</a>  // `\keyword{Higgs; Boson}\end{abstract}` form (no stray `}`) reads one
-<a href=#216 id=216 data-nosnippet>216</a>  // token (`\end`), restores it, and is left untouched (this is also what
-<a href=#217 id=217 data-nosnippet>217</a>  // averts the read-to-EOF OOM a naive `readBalanced` hit). Witnesses:
-<a href=#218 id=218 data-nosnippet>218</a>  // 1604.00855, 1601.01227, 1705.01354, 1710.03688, hep-ph0702114.
-<a href=#219 id=219 data-nosnippet>219</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@elsart@gobble@optbrace"</span>, {
-<a href=#220 id=220 data-nosnippet>220</a>    <span class="kw">let </span><span class="kw-2">mut </span>skipped: Vec&lt;Token&gt; = Vec::new();
-<a href=#221 id=221 data-nosnippet>221</a>    <span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
-<a href=#222 id=222 data-nosnippet>222</a>    <span class="kw">let </span><span class="kw-2">mut </span>count: usize = <span class="number">0</span>;
-<a href=#223 id=223 data-nosnippet>223</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = read_token()<span class="question-mark">? </span>{
-<a href=#224 id=224 data-nosnippet>224</a>      count += <span class="number">1</span>;
-<a href=#225 id=225 data-nosnippet>225</a>      <span class="kw">if </span>count &gt; <span class="number">4096 </span>{
-<a href=#226 id=226 data-nosnippet>226</a>        skipped.push(tok); <span class="comment">// safety cap: restore everything, gobble nothing
-<a href=#227 id=227 data-nosnippet>227</a>        </span><span class="kw">break</span>;
-<a href=#228 id=228 data-nosnippet>228</a>      }
-<a href=#229 id=229 data-nosnippet>229</a>      <span class="kw">let </span>cc = tok.get_catcode();
-<a href=#230 id=230 data-nosnippet>230</a>      <span class="kw">if </span>cc == Catcode::BEGIN {
-<a href=#231 id=231 data-nosnippet>231</a>        depth += <span class="number">1</span>;
-<a href=#232 id=232 data-nosnippet>232</a>        skipped.push(tok);
-<a href=#233 id=233 data-nosnippet>233</a>      } <span class="kw">else if </span>cc == Catcode::END {
-<a href=#234 id=234 data-nosnippet>234</a>        <span class="kw">if </span>depth == <span class="number">0 </span>{
-<a href=#235 id=235 data-nosnippet>235</a>          <span class="kw">break</span>; <span class="comment">// unmatched stray `}` — drop it (absorbed, like readBalanced)
-<a href=#236 id=236 data-nosnippet>236</a>        </span>}
-<a href=#237 id=237 data-nosnippet>237</a>        depth -= <span class="number">1</span>;
-<a href=#238 id=238 data-nosnippet>238</a>        skipped.push(tok);
-<a href=#239 id=239 data-nosnippet>239</a>      } <span class="kw">else if </span>depth == <span class="number">0 </span>&amp;&amp; tok == <span class="macro">T_CS!</span>(<span class="string">"\\end"</span>) {
-<a href=#240 id=240 data-nosnippet>240</a>        skipped.push(tok); <span class="comment">// env end reached before any stray `}` — restore all
-<a href=#241 id=241 data-nosnippet>241</a>        </span><span class="kw">break</span>;
-<a href=#242 id=242 data-nosnippet>242</a>      } <span class="kw">else </span>{
-<a href=#243 id=243 data-nosnippet>243</a>        skipped.push(tok);
-<a href=#244 id=244 data-nosnippet>244</a>      }
-<a href=#245 id=245 data-nosnippet>245</a>    }
-<a href=#246 id=246 data-nosnippet>246</a>    <span class="comment">// Re-inject everything we buffered, in order. The only token ever removed
-<a href=#247 id=247 data-nosnippet>247</a>    // is the stray `}` (which is never pushed onto `skipped`).
-<a href=#248 id=248 data-nosnippet>248</a>    </span><span class="kw">for </span>tok <span class="kw">in </span>skipped.into_iter().rev() {
-<a href=#249 id=249 data-nosnippet>249</a>      unread_one(tok);
-<a href=#250 id=250 data-nosnippet>250</a>    }
-<a href=#251 id=251 data-nosnippet>251</a>  });
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keyword{}"</span>, <span class="string">"\\@keyword #1 \\@keyword@cut\\lx@elsart@gobble@optbrace"</span>);
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endkeyword"</span>, <span class="string">"\\@keyword@cut"</span>);
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PACS"</span>, <span class="string">"\\@keyword@cut\\@PACS"</span>);
-<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MSC[]"</span>, <span class="string">"\\@keyword@cut\\@MSC{#1}"</span>);
-<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JEL"</span>, <span class="string">"\\@keyword@cut\\@JEL"</span>);
-<a href=#257 id=257 data-nosnippet>257</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UK"</span>, <span class="string">"\\@keyword@cut\\@UK"</span>);
-<a href=#258 id=258 data-nosnippet>258</a>
-<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// Perl L148-152: @keyword reads until @keyword@cut delimiter using XUntil.
-<a href=#260 id=260 data-nosnippet>260</a>  // XUntil expands tokens while reading, so \end{keyword} → \@keyword@cut is found.
-<a href=#261 id=261 data-nosnippet>261</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@keyword@cut"</span>, <span class="string">""</span>);
-<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@keyword XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@keywords{#1}"</span>);
-<a href=#263 id=263 data-nosnippet>263</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@PACS XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme=PACS,name={PACS:~}]{#1}"</span>);
-<a href=#264 id=264 data-nosnippet>264</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@MSC{} XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme={#1 MSC},name={MSC:~}]{#2}"</span>);
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@JEL XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme=JEL,name={JEL:~}]{#1}"</span>);
-<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@UK XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme=UK,name={UK:~}]{#1}"</span>);
-<a href=#267 id=267 data-nosnippet>267</a>
-<a href=#268 id=268 data-nosnippet>268</a>  <span class="comment">// Document structure — Perl L158-163
-<a href=#269 id=269 data-nosnippet>269</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theparagraph"</span>, <span class="string">"\\thesubsubsection.\\arabic{paragraph}"</span>);
-<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thesubparagraph"</span>, <span class="string">"\\theparagraph.\\arabic{subparagraph}"</span>);
-<a href=#271 id=271 data-nosnippet>271</a>
-<a href=#272 id=272 data-nosnippet>272</a>  <span class="comment">// Per-section equation numbering — Perl L161-163.
-<a href=#273 id=273 data-nosnippet>273</a>  // Emit `\@addtoreset{equation}{section}` + per-section
-<a href=#274 id=274 data-nosnippet>274</a>  // `\theequation` when the `seceqn` class option is active.
-<a href=#275 id=275 data-nosnippet>275</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"@seceqn"</span>) {
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\@addtoreset{equation}{section}"</span>);
-<a href=#277 id=277 data-nosnippet>277</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\theequation"</span>, <span class="string">"\\thesection.\\arabic{equation}"</span>);
-<a href=#278 id=278 data-nosnippet>278</a>  }
-<a href=#279 id=279 data-nosnippet>279</a>
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="comment">// Theorems — Perl elsart_support_core.sty.ltxml L168-175.
-<a href=#281 id=281 data-nosnippet>281</a>  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
-<a href=#282 id=282 data-nosnippet>282</a>  // class option):
-<a href=#283 id=283 data-nosnippet>283</a>  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
-<a href=#284 id=284 data-nosnippet>284</a>  //   else      :  `\newtheorem{thm}{Theorem}`
-<a href=#285 id=285 data-nosnippet>285</a>  // Then aliases `\newdefinition` and `\newproof` to `\newtheorem`
-<a href=#286 id=286 data-nosnippet>286</a>  // (elsdoc §7).
-<a href=#287 id=287 data-nosnippet>287</a>  // The base `\newtheorem{thm}` declaration was missing in the prior
-<a href=#288 id=288 data-nosnippet>288</a>  // Rust port — every `\begin{thm}` in elsart papers reported
-<a href=#289 id=289 data-nosnippet>289</a>  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
-<a href=#290 id=290 data-nosnippet>290</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"@seceqn"</span>) {
-<a href=#291 id=291 data-nosnippet>291</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}"</span>);
-<a href=#292 id=292 data-nosnippet>292</a>  } <span class="kw">else </span>{
-<a href=#293 id=293 data-nosnippet>293</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{thm}{Theorem}"</span>);
-<a href=#294 id=294 data-nosnippet>294</a>  }
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">Let!</span>(<span class="string">"\\newdefinition"</span>, <span class="string">"\\newtheorem"</span>);
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">Let!</span>(<span class="string">"\\newproof"</span>, <span class="string">"\\newtheorem"</span>);
-<a href=#297 id=297 data-nosnippet>297</a>
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="comment">// Registers — Perl L180-183
-<a href=#299 id=299 data-nosnippet>299</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\eqnarraycolsep" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1pt"</span>));
-<a href=#300 id=300 data-nosnippet>300</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\eqnbaselineskip" </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"14pt"</span>));
-<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\eqnlineskip" </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"2pt"</span>));
-<a href=#302 id=302 data-nosnippet>302</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\eqntopsep" </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12pt"</span>));
-<a href=#303 id=303 data-nosnippet>303</a>
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="comment">// Figures — Perl L186-191
-<a href=#305 id=305 data-nosnippet>305</a>  </span>def_macro_noop(<span class="string">"\\printfigures{}"</span>)<span class="question-mark">?</span>;
-<a href=#306 id=306 data-nosnippet>306</a>  def_macro_noop(<span class="string">"\\printtables{}"</span>)<span class="question-mark">?</span>;
-<a href=#307 id=307 data-nosnippet>307</a>  def_macro_noop(<span class="string">"\\MARK{}"</span>)<span class="question-mark">?</span>;
-<a href=#308 id=308 data-nosnippet>308</a>  def_macro_noop(<span class="string">"\\mpfootnotemark"</span>)<span class="question-mark">?</span>;
-<a href=#309 id=309 data-nosnippet>309</a>
-<a href=#310 id=310 data-nosnippet>310</a>  <span class="comment">// Perl elsart_support_core.sty.ltxml L189:
-<a href=#311 id=311 data-nosnippet>311</a>  //   DefMacro('\note{}', "&lt;ltx:note&gt;#1&lt;/ltx:note&gt;");    # ?
-<a href=#312 id=312 data-nosnippet>312</a>  // This is a *DefMacro* (token expansion), NOT a DefConstructor — so the
-<a href=#313 id=313 data-nosnippet>313</a>  // body tokenises to LITERAL TEXT (`&lt;`, `&gt;` are catcode-OTHER): `\note{X}`
-<a href=#314 id=314 data-nosnippet>314</a>  // expands to the characters `&lt;ltx:note&gt;` + X + `&lt;/ltx:note&gt;`, NOT a real
-<a href=#315 id=315 data-nosnippet>315</a>  // &lt;ltx:note&gt; element. Perl's own `# ?` flags it as questionable, but it is
-<a href=#316 id=316 data-nosnippet>316</a>  // the ground truth and crucially is ERROR-FREE: a block argument such as
-<a href=#317 id=317 data-nosnippet>317</a>  // `\note{\begin{remark}…\end{remark}}` (a `\newtheorem`-based environment)
-<a href=#318 id=318 data-nosnippet>318</a>  // renders the remark as a normal &lt;ltx:theorem&gt; bracketed by stray literal
-<a href=#319 id=319 data-nosnippet>319</a>  // text, with no content-model violation. Porting it as a DefConstructor
-<a href=#320 id=320 data-nosnippet>320</a>  // (real &lt;ltx:note&gt;) instead made `ltx:theorem isn't allowed in &lt;ltx:note&gt;`
-<a href=#321 id=321 data-nosnippet>321</a>  // — papers that wrap a theorem-like env in `\note{…}` (common with a
-<a href=#322 id=322 data-nosnippet>322</a>  // user `\newcommand\note[1]{…}` that LaTeX/Perl *ignore* because elsart
-<a href=#323 id=323 data-nosnippet>323</a>  // already defined `\note`) then failed. Match Perl: use DefMacro.
-<a href=#324 id=324 data-nosnippet>324</a>  // Witness 2006.06087 (elsarticle, `\note{\begin{remark}…}`): 1 error → 0.
-<a href=#325 id=325 data-nosnippet>325</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\note{}"</span>, <span class="string">"&lt;ltx:note&gt;#1&lt;/ltx:note&gt;"</span>);
-<a href=#326 id=326 data-nosnippet>326</a>
-<a href=#327 id=327 data-nosnippet>327</a>  <span class="comment">// Float environment
-<a href=#328 id=328 data-nosnippet>328</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{esmark}"</span>,  <span class="string">"#body"</span>);
-<a href=#329 id=329 data-nosnippet>329</a>  def_macro_noop(<span class="string">"\\figmark{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#330 id=330 data-nosnippet>330</a>  def_macro_noop(<span class="string">"\\tabmark{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#331 id=331 data-nosnippet>331</a>
-<a href=#332 id=332 data-nosnippet>332</a>  <span class="comment">// \qed (proof end-of-proof marker). Previously only in elsart_support
-<a href=#333 id=333 data-nosnippet>333</a>  // (NOT loaded by elsarticle.cls — only by elsart.cls), so plain
-<a href=#334 id=334 data-nosnippet>334</a>  // elsarticle papers using \qed got `Error:undefined:\qed`. Move the
-<a href=#335 id=335 data-nosnippet>335</a>  // def here so all elsart_*-loading classes (elsarticle + elsart)
-<a href=#336 id=336 data-nosnippet>336</a>  // have it. Witness 2306.02411 (elsarticle Pfaffian paper).
-<a href=#337 id=337 data-nosnippet>337</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\qed"</span>, <span class="string">"\\ltx@qed"</span>);
-<a href=#338 id=338 data-nosnippet>338</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@qed"</span>,
-<a href=#339 id=339 data-nosnippet>339</a>    <span class="string">"?#isMath(&lt;ltx:XMTok role='PUNCT'&gt;\u{220E}&lt;/ltx:XMTok&gt;)(\u{220E})"</span>,
-<a href=#340 id=340 data-nosnippet>340</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#341 id=341 data-nosnippet>341</a>    reversion =&gt; <span class="string">"\\qed"</span>);
-<a href=#342 id=342 data-nosnippet>342</a>});
+<a href=#145 id=145 data-nosnippet>145</a>  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+<a href=#146 id=146 data-nosnippet>146</a>  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
+<a href=#147 id=147 data-nosnippet>147</a>
+<a href=#148 id=148 data-nosnippet>148</a>  // Keywords — Perl L130-153
+<a href=#149 id=149 data-nosnippet>149</a>  // keyword environment and macros with XUntil pattern
+<a href=#150 id=150 data-nosnippet>150</a>  // Perl L135-152: \begin{keyword}/\end{keyword} use DefMacroI with begingroup/endgroup,
+<a href=#151 id=151 data-nosnippet>151</a>  // NOT DefEnvironment!, to properly scope the XUntil delimiter reading.
+<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{keyword}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\begingroup\\@keyword"</span>);
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{keyword}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\@keyword@cut\\endgroup"</span>);
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="comment">// Perl elsart_support_core.sty.ltxml L138-141: `\keyword{...}` (1-arg
+<a href=#155 id=155 data-nosnippet>155</a>  // form) reads a balanced group and wraps with `\@keyword &lt;arg&gt;
+<a href=#156 id=156 data-nosnippet>156</a>  // \@keyword@cut` so XUntil terminates at the inserted token.
+<a href=#157 id=157 data-nosnippet>157</a>  //
+<a href=#158 id=158 data-nosnippet>158</a>  // History — DO NOT switch this back to `read_balanced(_, _, false)`:
+<a href=#159 id=159 data-nosnippet>159</a>  // commit 09bc60c2 ("\keyword absorbs trailing unbalanced }") tried to
+<a href=#160 id=160 data-nosnippet>160</a>  // mirror Perl's `$gullet-&gt;readBalanced` with no args (require_open=
+<a href=#161 id=161 data-nosnippet>161</a>  // false → level starts at 1) to absorb the legacy unbalanced-`}`
+<a href=#162 id=162 data-nosnippet>162</a>  // idiom from arXiv:1710.03688 / hep-ph0702114, where the abstract
+<a href=#163 id=163 data-nosnippet>163</a>  // ends:
+<a href=#164 id=164 data-nosnippet>164</a>  //     \keyword{Keyword1; ...} \vskip ...\noindent{...e3}}
+<a href=#165 id=165 data-nosnippet>165</a>  // (a trailing literal `}` past the keyword arg). For that input
+<a href=#166 id=166 data-nosnippet>166</a>  // alone, `require_open=false` correctly consumes `{...} }` and stops.
+<a href=#167 id=167 data-nosnippet>167</a>  //
+<a href=#168 id=168 data-nosnippet>168</a>  // BUT for the common balanced form — `\keyword{Higgs; Boson}` with
+<a href=#169 id=169 data-nosnippet>169</a>  // no trailing extra `}` (the test fixture
+<a href=#170 id=170 data-nosnippet>170</a>  // `tests/babel/elsart_keyword_brace_form.tex` and the vast majority
+<a href=#171 id=171 data-nosnippet>171</a>  // of real-world usage) — `require_open=false` reads past the
+<a href=#172 id=172 data-nosnippet>172</a>  // matching `}`, walks through `\end{abstract}` (raw `\end` is a CS
+<a href=#173 id=173 data-nosnippet>173</a>  // and CC_END count is unchanged across that expansion), then
+<a href=#174 id=174 data-nosnippet>174</a>  // `\end{frontmatter}`, … all the way to EOF. The reader's pushback
+<a href=#175 id=175 data-nosnippet>175</a>  // grows unboundedly on the way; in CI we observed a single
+<a href=#176 id=176 data-nosnippet>176</a>  // `memory allocation of 21743271936 bytes failed` (21 GB) → SIGABRT
+<a href=#177 id=177 data-nosnippet>177</a>  // before the test could even report. The cost of one paper's
+<a href=#178 id=178 data-nosnippet>178</a>  // 1-error reduction is the entire test suite OOM-aborting at
+<a href=#179 id=179 data-nosnippet>179</a>  // `81_babel::elsart_keyword_brace_form_test`.
+<a href=#180 id=180 data-nosnippet>180</a>  //
+<a href=#181 id=181 data-nosnippet>181</a>  // RESOLVED 2026-05-30 via the design note's first suggestion: keep the
+<a href=#182 id=182 data-nosnippet>182</a>  // strict balanced read of the keyword argument, then peek past spaces and
+<a href=#183 id=183 data-nosnippet>183</a>  // gobble an OPTIONAL trailing `}` (catcode END). This reproduces Perl's
+<a href=#184 id=184 data-nosnippet>184</a>  // lenient `readBalanced` *result* (it absorbs the legacy unbalanced `}`)
+<a href=#185 id=185 data-nosnippet>185</a>  // for the trailing-`}` idiom — abstract bodies that end
+<a href=#186 id=186 data-nosnippet>186</a>  //     \keyword{Kw1; Kw2; …}   &lt;comments/spaces&gt;   }   \end{abstract}
+<a href=#187 id=187 data-nosnippet>187</a>  // (the stray `}` is the orphaned close of a commented-out brace group;
+<a href=#188 id=188 data-nosnippet>188</a>  // witness 1601.01227, also 1710.03688 / hep-ph0702114) — WITHOUT the
+<a href=#189 id=189 data-nosnippet>189</a>  // speculative read-to-EOF that OOM'd the balanced fixture: for the common
+<a href=#190 id=190 data-nosnippet>190</a>  // `\keyword{Higgs; Boson}\end{abstract}` form the token after the strict
+<a href=#191 id=191 data-nosnippet>191</a>  // read is `\end` (a CS, not `}`), so nothing is gobbled. The peek is
+<a href=#192 id=192 data-nosnippet>192</a>  // bounded to one token, never crossing `\end`.
+<a href=#193 id=193 data-nosnippet>193</a>  // Skip leading spaces and blank-line `\par`s, then gobble a single trailing
+<a href=#194 id=194 data-nosnippet>194</a>  // `}` (catcode END) if one is there — Perl's `readBalanced` reads straight
+<a href=#195 id=195 data-nosnippet>195</a>  // through the `\par` from a blank line before the stray brace (witness
+<a href=#196 id=196 data-nosnippet>196</a>  // 1705.01354 separates `\keyword{…}` and the orphaned `}` by a blank line).
+<a href=#197 id=197 data-nosnippet>197</a>  // The skipped whitespace/`\par` tokens are buffered and FULLY RESTORED when
+<a href=#198 id=198 data-nosnippet>198</a>  // no trailing `}` follows, so the common `\keyword{…}\end{abstract}` form
+<a href=#199 id=199 data-nosnippet>199</a>  // (and `\keyword{…}&lt;blank&gt;\end{abstract}`) is left byte-for-byte untouched.
+<a href=#200 id=200 data-nosnippet>200</a>  // Bounded: stops at the first non-space, non-`\par` token; never crosses
+<a href=#201 id=201 data-nosnippet>201</a>  // `\end`.
+<a href=#202 id=202 data-nosnippet>202</a>  // Perl's `readBalanced` (L140) reads tokens up to the next UNMATCHED `}`
+<a href=#203 id=203 data-nosnippet>203</a>  // (tracking brace depth), absorbing that stray `}` as its terminator —
+<a href=#204 id=204 data-nosnippet>204</a>  // regardless of what non-brace material (spaces, `\par`, `\vskip &lt;dimen&gt;`,
+<a href=#205 id=205 data-nosnippet>205</a>  // `\noindent`, …) sits between `\keyword{…}` and the orphaned brace. The
+<a href=#206 id=206 data-nosnippet>206</a>  // earlier version only skipped spaces/`\par`s, so it stopped at the first
+<a href=#207 id=207 data-nosnippet>207</a>  // real token (e.g. `\vskip`) and left the stray `}` to hit the abstract's
+<a href=#208 id=208 data-nosnippet>208</a>  // mode-switch frame (`ltx:para`-free `}` → "close a group that switched to
+<a href=#209 id=209 data-nosnippet>209</a>  // mode internal_vertical"; witness 1604.00855:
+<a href=#210 id=210 data-nosnippet>210</a>  // `\keyword{…} \vskip 0.5\baselineskip}`).
+<a href=#211 id=211 data-nosnippet>211</a>  //
+<a href=#212 id=212 data-nosnippet>212</a>  // Walk forward tracking brace depth: an unmatched `}` (depth 0) is the
+<a href=#213 id=213 data-nosnippet>213</a>  // stray terminator — DROP it, re-inject everything else (so the `\vskip`
+<a href=#214 id=214 data-nosnippet>214</a>  // etc. still render, content-preserving). Bound the scan at `\end` (depth
+<a href=#215 id=215 data-nosnippet>215</a>  // 0) — the env terminator — and a hard token cap, so the common
+<a href=#216 id=216 data-nosnippet>216</a>  // `\keyword{Higgs; Boson}\end{abstract}` form (no stray `}`) reads one
+<a href=#217 id=217 data-nosnippet>217</a>  // token (`\end`), restores it, and is left untouched (this is also what
+<a href=#218 id=218 data-nosnippet>218</a>  // averts the read-to-EOF OOM a naive `readBalanced` hit). Witnesses:
+<a href=#219 id=219 data-nosnippet>219</a>  // 1604.00855, 1601.01227, 1705.01354, 1710.03688, hep-ph0702114.
+<a href=#220 id=220 data-nosnippet>220</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@elsart@gobble@optbrace"</span>, {
+<a href=#221 id=221 data-nosnippet>221</a>    <span class="kw">let </span><span class="kw-2">mut </span>skipped: Vec&lt;Token&gt; = Vec::new();
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="kw">let </span><span class="kw-2">mut </span>count: usize = <span class="number">0</span>;
+<a href=#224 id=224 data-nosnippet>224</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = read_token()<span class="question-mark">? </span>{
+<a href=#225 id=225 data-nosnippet>225</a>      count += <span class="number">1</span>;
+<a href=#226 id=226 data-nosnippet>226</a>      <span class="kw">if </span>count &gt; <span class="number">4096 </span>{
+<a href=#227 id=227 data-nosnippet>227</a>        skipped.push(tok); <span class="comment">// safety cap: restore everything, gobble nothing
+<a href=#228 id=228 data-nosnippet>228</a>        </span><span class="kw">break</span>;
+<a href=#229 id=229 data-nosnippet>229</a>      }
+<a href=#230 id=230 data-nosnippet>230</a>      <span class="kw">let </span>cc = tok.get_catcode();
+<a href=#231 id=231 data-nosnippet>231</a>      <span class="kw">if </span>cc == Catcode::BEGIN {
+<a href=#232 id=232 data-nosnippet>232</a>        depth += <span class="number">1</span>;
+<a href=#233 id=233 data-nosnippet>233</a>        skipped.push(tok);
+<a href=#234 id=234 data-nosnippet>234</a>      } <span class="kw">else if </span>cc == Catcode::END {
+<a href=#235 id=235 data-nosnippet>235</a>        <span class="kw">if </span>depth == <span class="number">0 </span>{
+<a href=#236 id=236 data-nosnippet>236</a>          <span class="kw">break</span>; <span class="comment">// unmatched stray `}` — drop it (absorbed, like readBalanced)
+<a href=#237 id=237 data-nosnippet>237</a>        </span>}
+<a href=#238 id=238 data-nosnippet>238</a>        depth -= <span class="number">1</span>;
+<a href=#239 id=239 data-nosnippet>239</a>        skipped.push(tok);
+<a href=#240 id=240 data-nosnippet>240</a>      } <span class="kw">else if </span>depth == <span class="number">0 </span>&amp;&amp; tok == <span class="macro">T_CS!</span>(<span class="string">"\\end"</span>) {
+<a href=#241 id=241 data-nosnippet>241</a>        skipped.push(tok); <span class="comment">// env end reached before any stray `}` — restore all
+<a href=#242 id=242 data-nosnippet>242</a>        </span><span class="kw">break</span>;
+<a href=#243 id=243 data-nosnippet>243</a>      } <span class="kw">else </span>{
+<a href=#244 id=244 data-nosnippet>244</a>        skipped.push(tok);
+<a href=#245 id=245 data-nosnippet>245</a>      }
+<a href=#246 id=246 data-nosnippet>246</a>    }
+<a href=#247 id=247 data-nosnippet>247</a>    <span class="comment">// Re-inject everything we buffered, in order. The only token ever removed
+<a href=#248 id=248 data-nosnippet>248</a>    // is the stray `}` (which is never pushed onto `skipped`).
+<a href=#249 id=249 data-nosnippet>249</a>    </span><span class="kw">for </span>tok <span class="kw">in </span>skipped.into_iter().rev() {
+<a href=#250 id=250 data-nosnippet>250</a>      unread_one(tok);
+<a href=#251 id=251 data-nosnippet>251</a>    }
+<a href=#252 id=252 data-nosnippet>252</a>  });
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keyword{}"</span>, <span class="string">"\\@keyword #1 \\@keyword@cut\\lx@elsart@gobble@optbrace"</span>);
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endkeyword"</span>, <span class="string">"\\@keyword@cut"</span>);
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PACS"</span>, <span class="string">"\\@keyword@cut\\@PACS"</span>);
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MSC[]"</span>, <span class="string">"\\@keyword@cut\\@MSC{#1}"</span>);
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JEL"</span>, <span class="string">"\\@keyword@cut\\@JEL"</span>);
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UK"</span>, <span class="string">"\\@keyword@cut\\@UK"</span>);
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>  <span class="comment">// Perl L148-152: @keyword reads until @keyword@cut delimiter using XUntil.
+<a href=#261 id=261 data-nosnippet>261</a>  // XUntil expands tokens while reading, so \end{keyword} → \@keyword@cut is found.
+<a href=#262 id=262 data-nosnippet>262</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@keyword@cut"</span>, <span class="string">""</span>);
+<a href=#263 id=263 data-nosnippet>263</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@keyword XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@keywords{#1}"</span>);
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@PACS XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme=PACS,name={PACS:~}]{#1}"</span>);
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@MSC{} XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme={#1 MSC},name={MSC:~}]{#2}"</span>);
+<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@JEL XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme=JEL,name={JEL:~}]{#1}"</span>);
+<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@UK XUntil:\\@keyword@cut"</span>, <span class="string">"\\lx@add@classification[scheme=UK,name={UK:~}]{#1}"</span>);
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="comment">// Document structure — Perl L158-163
+<a href=#270 id=270 data-nosnippet>270</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theparagraph"</span>, <span class="string">"\\thesubsubsection.\\arabic{paragraph}"</span>);
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thesubparagraph"</span>, <span class="string">"\\theparagraph.\\arabic{subparagraph}"</span>);
+<a href=#272 id=272 data-nosnippet>272</a>
+<a href=#273 id=273 data-nosnippet>273</a>  <span class="comment">// Per-section equation numbering — Perl L161-163.
+<a href=#274 id=274 data-nosnippet>274</a>  // Emit `\@addtoreset{equation}{section}` + per-section
+<a href=#275 id=275 data-nosnippet>275</a>  // `\theequation` when the `seceqn` class option is active.
+<a href=#276 id=276 data-nosnippet>276</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"@seceqn"</span>) {
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\@addtoreset{equation}{section}"</span>);
+<a href=#278 id=278 data-nosnippet>278</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\theequation"</span>, <span class="string">"\\thesection.\\arabic{equation}"</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  }
+<a href=#280 id=280 data-nosnippet>280</a>
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="comment">// Theorems — Perl elsart_support_core.sty.ltxml L168-175.
+<a href=#282 id=282 data-nosnippet>282</a>  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
+<a href=#283 id=283 data-nosnippet>283</a>  // class option):
+<a href=#284 id=284 data-nosnippet>284</a>  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
+<a href=#285 id=285 data-nosnippet>285</a>  //   else      :  `\newtheorem{thm}{Theorem}`
+<a href=#286 id=286 data-nosnippet>286</a>  // Then aliases `\newdefinition` and `\newproof` to `\newtheorem`
+<a href=#287 id=287 data-nosnippet>287</a>  // (elsdoc §7).
+<a href=#288 id=288 data-nosnippet>288</a>  // The base `\newtheorem{thm}` declaration was missing in the prior
+<a href=#289 id=289 data-nosnippet>289</a>  // Rust port — every `\begin{thm}` in elsart papers reported
+<a href=#290 id=290 data-nosnippet>290</a>  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
+<a href=#291 id=291 data-nosnippet>291</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"@seceqn"</span>) {
+<a href=#292 id=292 data-nosnippet>292</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}"</span>);
+<a href=#293 id=293 data-nosnippet>293</a>  } <span class="kw">else </span>{
+<a href=#294 id=294 data-nosnippet>294</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{thm}{Theorem}"</span>);
+<a href=#295 id=295 data-nosnippet>295</a>  }
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">Let!</span>(<span class="string">"\\newdefinition"</span>, <span class="string">"\\newtheorem"</span>);
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">Let!</span>(<span class="string">"\\newproof"</span>, <span class="string">"\\newtheorem"</span>);
+<a href=#298 id=298 data-nosnippet>298</a>
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// Registers — Perl L180-183
+<a href=#300 id=300 data-nosnippet>300</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\eqnarraycolsep" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1pt"</span>));
+<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\eqnbaselineskip" </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"14pt"</span>));
+<a href=#302 id=302 data-nosnippet>302</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\eqnlineskip" </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"2pt"</span>));
+<a href=#303 id=303 data-nosnippet>303</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\eqntopsep" </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12pt"</span>));
+<a href=#304 id=304 data-nosnippet>304</a>
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="comment">// Figures — Perl L186-191
+<a href=#306 id=306 data-nosnippet>306</a>  </span>def_macro_noop(<span class="string">"\\printfigures{}"</span>)<span class="question-mark">?</span>;
+<a href=#307 id=307 data-nosnippet>307</a>  def_macro_noop(<span class="string">"\\printtables{}"</span>)<span class="question-mark">?</span>;
+<a href=#308 id=308 data-nosnippet>308</a>  def_macro_noop(<span class="string">"\\MARK{}"</span>)<span class="question-mark">?</span>;
+<a href=#309 id=309 data-nosnippet>309</a>  def_macro_noop(<span class="string">"\\mpfootnotemark"</span>)<span class="question-mark">?</span>;
+<a href=#310 id=310 data-nosnippet>310</a>
+<a href=#311 id=311 data-nosnippet>311</a>  <span class="comment">// Perl elsart_support_core.sty.ltxml L189:
+<a href=#312 id=312 data-nosnippet>312</a>  //   DefMacro('\note{}', "&lt;ltx:note&gt;#1&lt;/ltx:note&gt;");    # ?
+<a href=#313 id=313 data-nosnippet>313</a>  // This is a *DefMacro* (token expansion), NOT a DefConstructor — so the
+<a href=#314 id=314 data-nosnippet>314</a>  // body tokenises to LITERAL TEXT (`&lt;`, `&gt;` are catcode-OTHER): `\note{X}`
+<a href=#315 id=315 data-nosnippet>315</a>  // expands to the characters `&lt;ltx:note&gt;` + X + `&lt;/ltx:note&gt;`, NOT a real
+<a href=#316 id=316 data-nosnippet>316</a>  // &lt;ltx:note&gt; element. Perl's own `# ?` flags it as questionable, but it is
+<a href=#317 id=317 data-nosnippet>317</a>  // the ground truth and crucially is ERROR-FREE: a block argument such as
+<a href=#318 id=318 data-nosnippet>318</a>  // `\note{\begin{remark}…\end{remark}}` (a `\newtheorem`-based environment)
+<a href=#319 id=319 data-nosnippet>319</a>  // renders the remark as a normal &lt;ltx:theorem&gt; bracketed by stray literal
+<a href=#320 id=320 data-nosnippet>320</a>  // text, with no content-model violation. Porting it as a DefConstructor
+<a href=#321 id=321 data-nosnippet>321</a>  // (real &lt;ltx:note&gt;) instead made `ltx:theorem isn't allowed in &lt;ltx:note&gt;`
+<a href=#322 id=322 data-nosnippet>322</a>  // — papers that wrap a theorem-like env in `\note{…}` (common with a
+<a href=#323 id=323 data-nosnippet>323</a>  // user `\newcommand\note[1]{…}` that LaTeX/Perl *ignore* because elsart
+<a href=#324 id=324 data-nosnippet>324</a>  // already defined `\note`) then failed. Match Perl: use DefMacro.
+<a href=#325 id=325 data-nosnippet>325</a>  // Witness 2006.06087 (elsarticle, `\note{\begin{remark}…}`): 1 error → 0.
+<a href=#326 id=326 data-nosnippet>326</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\note{}"</span>, <span class="string">"&lt;ltx:note&gt;#1&lt;/ltx:note&gt;"</span>);
+<a href=#327 id=327 data-nosnippet>327</a>
+<a href=#328 id=328 data-nosnippet>328</a>  <span class="comment">// Float environment
+<a href=#329 id=329 data-nosnippet>329</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{esmark}"</span>,  <span class="string">"#body"</span>);
+<a href=#330 id=330 data-nosnippet>330</a>  def_macro_noop(<span class="string">"\\figmark{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#331 id=331 data-nosnippet>331</a>  def_macro_noop(<span class="string">"\\tabmark{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#332 id=332 data-nosnippet>332</a>
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="comment">// \qed (proof end-of-proof marker). Previously only in elsart_support
+<a href=#334 id=334 data-nosnippet>334</a>  // (NOT loaded by elsarticle.cls — only by elsart.cls), so plain
+<a href=#335 id=335 data-nosnippet>335</a>  // elsarticle papers using \qed got `Error:undefined:\qed`. Move the
+<a href=#336 id=336 data-nosnippet>336</a>  // def here so all elsart_*-loading classes (elsarticle + elsart)
+<a href=#337 id=337 data-nosnippet>337</a>  // have it. Witness 2306.02411 (elsarticle Pfaffian paper).
+<a href=#338 id=338 data-nosnippet>338</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\qed"</span>, <span class="string">"\\ltx@qed"</span>);
+<a href=#339 id=339 data-nosnippet>339</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@qed"</span>,
+<a href=#340 id=340 data-nosnippet>340</a>    <span class="string">"?#isMath(&lt;ltx:XMTok role='PUNCT'&gt;\u{220E}&lt;/ltx:XMTok&gt;)(\u{220E})"</span>,
+<a href=#341 id=341 data-nosnippet>341</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#342 id=342 data-nosnippet>342</a>    reversion =&gt; <span class="string">"\\qed"</span>);
+<a href=#343 id=343 data-nosnippet>343</a>});
 </code></pre></div></section></main></body></html>

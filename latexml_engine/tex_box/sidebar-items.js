@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["framed_properties","load_definitions","read_box_contents"],"struct":["FramedOptions"]};
