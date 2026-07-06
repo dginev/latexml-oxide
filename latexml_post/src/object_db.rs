@@ -315,6 +315,17 @@ impl ObjectDB {
     keys
   }
 
+  /// Number of registered entries. O(1); avoids `get_keys().len()`'s
+  /// sort + allocation when only the count is needed.
+  pub fn len(&self) -> usize { self.objects.len() }
+
+  /// True when no entries are registered.
+  pub fn is_empty(&self) -> bool { self.objects.is_empty() }
+
+  /// Iterate keys in arbitrary order without allocating/sorting. Use when
+  /// the traversal order does not matter (e.g. per-node fill-ins).
+  pub fn keys_iter(&self) -> impl Iterator<Item = &String> { self.objects.keys() }
+
   /// Return a status string.
   ///
   /// Port of `ObjectDB::status`.

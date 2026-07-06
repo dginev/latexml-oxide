@@ -1009,6 +1009,15 @@ impl PostDocument {
   /// Port of `Post::Document::findNodeByID`.
   pub fn find_node_by_id(&self, id: &str) -> Option<&Node> { self.idcache.get(id) }
 
+  /// Number of id-bearing nodes registered in this document's idcache.
+  /// This is exactly the node set Perl's `//@xml:id` iterates.
+  pub fn idcache_len(&self) -> usize { self.idcache.len() }
+
+  /// Iterate `(id, node)` for every id-bearing node in this document, in
+  /// arbitrary order. Mirrors Perl's `//@xml:id` traversal (per-document,
+  /// so bounded by the page size rather than the global ObjectDB).
+  pub fn idcache_iter(&self) -> impl Iterator<Item = (&String, &Node)> { self.idcache.iter() }
+
   /// Generate a unique ID based on `baseid`, optionally applying a suffix.
   ///
   /// If the resulting ID is already used (and not marked reusable),
