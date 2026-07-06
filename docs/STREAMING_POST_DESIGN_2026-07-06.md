@@ -1,7 +1,14 @@
 # Streaming post-processing for very large split documents — design + staged plan
 
 **Date:** 2026-07-06
-**Status:** foundation landed; the two-pass streaming split is the pending half.
+**Status:** foundation landed, **and the eager path's time bottleneck is now
+fixed** (CrossRef O(n²)→O(n), commit `4ec2587993`): a full `index.xml` run
+dropped **42 min 50 s → 2 min 18 s**. The two-pass streaming split is **deferred
+indefinitely** (user decision 2026-07-06): keep the simplicity of eager
+whole-DOM loading for as long as we can — the reporter's target has >64 GB RAM,
+so the ~21.6 GB peak is a non-issue for now, and the run is now fast as well as
+correct. **Revisit only if a <64 GB target appears.** The rest of this doc is
+the preserved design for that eventual work.
 **Supersedes the resume half of** the original `HANDOFF.md` (large-index-database
 hardening). Companion to `docs/reproducers/` witness `~/scratch/nasser/index.xml`
 (614 MB, ~7M nodes, 40 000 one-equation sections, `--splitat=section`).
@@ -11,11 +18,12 @@ hardening). Companion to `docs/reproducers/` witness `~/scratch/nasser/index.xml
 ## 1. Problem
 
 Post-processing a very large *split* document (the reporter's `index.xml`:
-614 MB → a ~7 GB libxml2 DOM, split into 40 201 pages) peaks at **~15.6 GB**
-resident and blows the default wall-clock timeout. Perl `latexmlpost` OOMs
-outright (and hits libxml2's XPath nodeset ceiling first). The fundamental cost:
-the whole DOM is built, then split into 40 k page-DOMs that are **all held
-simultaneously** from Split through Scan/CrossRef/MathML/XSLT/write.
+614 MB → a ~7 GB libxml2 DOM, split into 40 201 pages) peaks at **~21.6 GB**
+resident (measured, uncapped) and blows the default wall-clock timeout. Perl
+`latexmlpost` OOMs outright (and hits libxml2's XPath nodeset ceiling first).
+The fundamental cost: the whole DOM is built, then split into 40 k page-DOMs
+that are **all held simultaneously** from Split through
+Scan/CrossRef/MathML/XSLT/write.
 
 ## 2. What landed (the correctness + foundation floor — DONE, verified)
 
@@ -48,10 +56,24 @@ parse streamed from file. Landed on branch `harden-post-large-index`:
      subset), `expand()` (borrowed `RoNode`) and **`expand_to_document()`** (an
      owned, namespace-reconciled `Document` copy — the unit XSLT/serialize
      consume). Unit-tested for namespace reconciliation + lifetime safety.
+4. **CrossRef O(n²)→O(n)** (`latexml_post`, commit `4ec2587993`). Making split
+   fire exposed a latent quadratic: `CrossRef::process` runs once per page, and
+   two per-page passes scanned *global* state — `fill_in_frags` iterated the
+   whole ObjectDB per page (an inversion tuned for single math-heavy docs), and
+   `fill_in_relations`→`get_child_page_ids` rebuilt+scanned a parent's full
+   child-page list per sibling. On `index.xml` this was **40 min 47 s (95 % of
+   wall time)**. Fixed faithfully to Perl semantics: restore Perl's `//@xml:id`
+   page-node walk in `fill_in_frags` (inverted loop kept only when a page has
+   more id-nodes than the DB has entries), and memoize `get_child_page_ids` +
+   record sibling positions so `find_previous/next_page_id` are O(1). Result:
+   CrossRef **40 min 47 s → 6.1 s**, whole run **42 min 50 s → 2 min 18 s**,
+   byte-identical output over all 40 201 pages. The eager path is now time-
+   viable, so the streaming split below is a **memory-only** concern.
 
-> **Note on peak RSS:** the floor makes the run *correct*, not *lean* — split
-> succeeding means all 40 k page-DOMs are now resident (~15.6 GB, up from the
-> old ~7 GB one-unsplit-DOM). Lean-RSS is the pending streaming split below.
+> **Note on peak RSS:** the floor makes the run *correct* and (after item 4)
+> *fast*, but not *lean* — split succeeding means all 40 k page-DOMs are
+> resident (~21.6 GB, up from the old ~7 GB one-unsplit-DOM). Lean-RSS is the
+> pending streaming split below; peak RSS was untouched by the CrossRef fix.
 
 ## 3. Pending half — two-pass streaming split
 

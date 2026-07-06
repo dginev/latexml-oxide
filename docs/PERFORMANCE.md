@@ -243,6 +243,28 @@ floor for graphics packages is raised to `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M`
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
+
+Post-processing the 40 201-page `index.xml` witness (see
+`docs/STREAMING_POST_DESIGN_2026-07-06.md`) was dominated by **CrossRef at
+40 min 47 s = 95 % of a 42 min 50 s run**. `CrossRef::process` runs once per
+split page, and two per-page passes scanned *global* state — a latent
+quadratic exposed only once split fires at 40 k-page scale (huge docs used to
+collapse to one page):
+- `fill_in_frags` iterated the **whole ObjectDB per page** (an inversion tuned
+  for single math-heavy docs). Restored Perl's `//@xml:id` page-node walk,
+  keeping the inverted loop only when a page has more id-nodes than the DB.
+- `fill_in_relations`→`get_child_page_ids` **rebuilt+scanned a parent's full
+  child-page list per sibling**. Memoized it (ObjectDB is read-only for the
+  pass) with a position index, so `find_previous/next_page_id` are O(1).
+
+Result (commit `4ec2587993`): CrossRef **40 min 47 s → 6.1 s**, whole run
+**42 min 50 s → 2 min 18 s (18.6×)**, **byte-identical** output over all 40 201
+pages (`diff -rq` clean) + synthetic 2K/4K docs (SHA-256 match); CrossRef now
+scales linearly (67→145 ms for 2× pages). process_chain (per-page
+XSLT+MathML+serialize+write, ~2 ms/page, linear) is now the long pole at ~85 s;
+peak RSS (~21.6 GB) is unchanged — a memory concern tracked separately.
+
 ### 2026-07-02 — fleet-concurrent audit (idle re-baseline deferred)
 
 Run **while the full-arXiv fleet occupied the box** (72 workers, load ~85), so
