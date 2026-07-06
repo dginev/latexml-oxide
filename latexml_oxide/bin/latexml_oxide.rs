@@ -601,7 +601,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   }
 
   let mut converter = Converter::from_config(opts.clone());
-  if let Err(e) = converter.prepare_session(&opts) {
+  // Skip engine init for already-converted XML input: post-processing is pure
+  // libxml2 and never touches the TeX engine or its dump, so loading
+  // TeX.pool/latex + the format dump (~85–160 ms and a chunk of RSS) is wasted
+  // work. Init mode (`--init`) and every real TeX conversion still need it.
+  if (cli.init.is_some() || !is_xml_input(&source))
+    && let Err(e) = converter.prepare_session(&opts)
+  {
     eprintln!("Could not prepare converter session: {}", e);
     process::exit(1);
   }
@@ -670,17 +676,17 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // `latexmlpost_oxide` did as a separate binary (per the
     // retirement plan in `docs/SYNC_STATUS.md`).
     let response = if is_xml_input(&source) {
-      match std::fs::read_to_string(&source) {
-        Ok(xml) => latexml::converter::ConversionResponse {
-          result:      Some(xml),
-          log:         String::new(),
-          status:      String::from("Status:conversion:0"),
-          status_code: 0,
-        },
-        Err(e) => {
-          eprintln!("Failed to read XML source '{}': {}", source, e);
-          process::exit(1);
-        },
+      // Do NOT slurp the file into a String — a large already-converted
+      // document (the reporter's index.xml is 614 MB) would sit resident on
+      // top of the ~11× libxml2 DOM. Post-processing streams it from disk via
+      // `PostDocument::new_from_file` (see the `run_post_processing_from_file*`
+      // call below). We only need a non-empty `result` sentinel so the post
+      // gate fires; the real input is the source path.
+      latexml::converter::ConversionResponse {
+        result:      Some(String::new()),
+        log:         String::new(),
+        status:      String::from("Status:conversion:0"),
+        status_code: 0,
       }
     } else {
       converter.convert(source)
@@ -840,7 +846,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // does something useful out of the box.
         let default_pmml_for_xml_input =
           xml_input_mode && !cli.pmml && effective_stylesheet.is_none();
-        let post = latexml::post::run_post_processing_logged(&xml, &PostOptions {
+        let post_opts = PostOptions {
           pmml: cli.pmml || cli.post || is_html_format || default_pmml_for_xml_input,
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
@@ -861,7 +867,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
           whatsout: whatsout_mode,
-        });
+        };
+        // XML-input mode parses the (possibly huge) source straight from disk
+        // via the streaming file reader; TeX-conversion output is already in
+        // memory as `xml`.
+        let post = if xml_input_mode {
+          latexml::post::run_post_processing_from_file_logged(&source_for_post, &post_opts)
+        } else {
+          latexml::post::run_post_processing_logged(&xml, &post_opts)
+        };
         let output = post.html;
         post_log = post.log;
         if let Some(zip_dest) = zip_dest {
