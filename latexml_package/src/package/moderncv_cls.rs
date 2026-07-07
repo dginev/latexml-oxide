@@ -24,7 +24,12 @@ LoadDefinitions!({
 
   RequireResource!("ltx-cv.css");
 
-  TeX!(r"\lx@add@frontmatter{ltx:creator}[role=cv]{}");
+  // Open an empty cv <ltx:creator> to anchor the contacts added lazily below
+  // (\firstname / \familyname / \email / \mobile / \address / \homepage each
+  // annotate the most-recent creator). Perl abuses `\lx@add@frontmatter{...}{}`
+  // with empty content for this; we use the intention-revealing container form
+  // so the general \lx@add@frontmatter empty-guard stays clean (OXIDIZED_DESIGN #51).
+  TeX!(r"\lx@add@frontmatter@container{ltx:creator}[role=cv]");
 
   DefMacro!("\\address{}{}", "\\lx@add@address{#1\\newline #2}");
 

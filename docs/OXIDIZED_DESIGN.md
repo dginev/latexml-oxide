@@ -1874,6 +1874,48 @@ makes the class establish it by default, as the real class does. Verified: full
 2405.17739 (0 errors, paper `¡`/`¿` count 1/1→0/0), `acm_aria` + `elsart` fixtures
 unchanged, full suite green.
 
+### 51. `\lx@add@frontmatter` is a no-op on empty arguments (no empty frontmatter elements)
+
+**Decision:** `\lx@add@frontmatter [keys]{tag}[attrs]{content}`
+(`base_utilities.rs`) early-quits — emitting nothing — when its **tag** or
+**content** argument is empty (empty or whitespace-only). A general
+defensive principle for the frontmatter API: any add with an empty string is
+void.
+
+**Why:** Perl's `\lx@add@frontmatter` (Base_Utility.pool.ltxml L354-358) queues
+the entry **unconditionally**, so a binding that funnels an empty argument
+through it yields a stray empty element. Concretely, ICML's
+`\printAffiliationsAndNotice{}` — empty braces are the *sanctioned* "no notice"
+form (icml2026.sty L511-512) — maps to
+`\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}` with an empty `#1`,
+producing an empty `<ltx:note role="affiliationnotice">` that renders as a bare
+"affiliationnotice:" footnote marker (witness arXiv:2606.00309). The affiliation
+*list* is unaffected — it is fed separately via `\icmlaffiliation` →
+`\lx@add@contact`.
+
+**Scope:** guards the shared primitive once, so **every** frontmatter binding
+(icml notice, `\keywords`, `\firstpage`, contacts, …) is covered rather than
+patched one `\ifx.#1.` at a time. Divergence from Perl (which would emit the
+empty element — a shared latent bug); a beyond-Perl robustness improvement, per
+the user's frontmatter-hardening directive (2026-07-07). No legitimate
+frontmatter element carries empty content, so nothing real is dropped (full
+suite green; witness 2606.00309: empty note count 1→0, affiliations preserved).
+
+**Escape hatch — `\lx@add@frontmatter@container[keys]{tag}[attrs]`:** the one
+legitimate empty-content case is a *deliberate* container element that exists
+only to anchor later annotations. moderncv opens an empty cv `<ltx:creator>`
+so its lazily-added contacts (`\firstname` / `\familyname` / `\email` /
+`\mobile` / `\address` / `\homepage`, each annotating the most-recent creator)
+have a parent. Perl smuggles this through the same primitive with empty
+content — `\lx@add@frontmatter{ltx:creator}[role=cv]{}` (moderncv.cls.ltxml
+L27). Rather than exempt one tag from the guard (a per-tag carve-out is the
+same code smell moved into the engine), we add an **intention-revealing
+container primitive** that queues the entry unconditionally. moderncv (and any
+future binding that genuinely needs an empty anchor) calls it explicitly; the
+general `\lx@add@frontmatter` guard stays carve-out-free. Both primitives share
+the `queue_add_frontmatter_now` lowering helper, so their queueing is
+byte-identical.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

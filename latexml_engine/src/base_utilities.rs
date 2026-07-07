@@ -326,26 +326,33 @@ LoadDefinitions!({
   //   ifnew   (only add if no previous entry)
   DefPrimitive!("\\lx@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
     sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
-    // Perl: queueFrontMatter($stomach, $tag, $attr,
-    //   Invocation(T_CS('\lx@add@frontmatter@now'), $keys, $tag, $attr, $tokens))
-    let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@add@frontmatter@now")];
-    if let Some(ref keys) = keys_opt {
-      inv_tokens.push(T_OTHER!("["));
-      inv_tokens.extend(keys.revert()?.unlist());
-      inv_tokens.push(T_OTHER!("]"));
+    // Beyond-Perl hardening (OXIDIZED_DESIGN #51; general frontmatter principle,
+    // user-directed 2026-07-07): a frontmatter entry with an empty tag or empty
+    // content is VOID — early-quit, emit nothing. Perl's `\lx@add@frontmatter`
+    // queues unconditionally (L354-358), so a binding fed an empty argument
+    // yields a stray empty element: e.g. icml's `\printAffiliationsAndNotice{}`
+    // (empty braces = the ICML-sanctioned "no notice") -> an empty
+    // `<ltx:note role="affiliationnotice">` rendering as a bare "affiliationnotice:"
+    // marker (witness arXiv:2606.00309). The affiliation list itself survives —
+    // it is fed separately via `\icmlaffiliation`.
+    if tag_tks.to_string().trim().is_empty() || tokens.to_string().trim().is_empty() {
+      return Ok(Vec::new());
     }
-    inv_tokens.push(T_BEGIN!());
-    inv_tokens.extend(tag_tks.unlist_ref().iter().copied());
-    inv_tokens.push(T_END!());
-    if let Some(ref attrs) = attrs_opt {
-      inv_tokens.push(T_OTHER!("["));
-      inv_tokens.extend(attrs.revert()?.unlist());
-      inv_tokens.push(T_OTHER!("]"));
-    }
-    inv_tokens.push(T_BEGIN!());
-    inv_tokens.extend(tokens.unlist());
-    inv_tokens.push(T_END!());
-    queue_front_matter(&tag_tks.to_string(), attrs_opt.as_ref(), Tokens::new(inv_tokens));
+    queue_add_frontmatter_now(keys_opt.as_ref(), &tag_tks, attrs_opt.as_ref(), Some(&tokens))?;
+  });
+
+  // Beyond-Perl best-practice API (OXIDIZED_DESIGN #51): open an *empty*
+  // frontmatter container element as a deliberate anchor for later annotations
+  // — the intention-revealing counterpart to `\lx@add@frontmatter`, which is now
+  // a no-op on empty content. A few bindings legitimately need an empty
+  // container: moderncv's cv `<ltx:creator>` exists only to receive the
+  // \firstname/\familyname/\email/... contacts that annotate the most-recent
+  // creator. (Perl abuses `\lx@add@frontmatter{ltx:creator}[role=cv]{}` for
+  // this; we name the intent instead of smuggling it through empty content.)
+  // \lx@add@frontmatter@container[keys]{tag}[attributes]
+  DefPrimitive!("\\lx@add@frontmatter@container OptionalKeyVals {} OptionalKeyVals",
+    sub[(keys_opt,tag_tks,attrs_opt)] {
+    queue_add_frontmatter_now(keys_opt.as_ref(), &tag_tks, attrs_opt.as_ref(), None)?;
   });
 
   DefPrimitive!("\\lx@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals:Frontmatter {}",
@@ -1471,6 +1478,41 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       queue.push((tag.to_string(), attr_hash, command));
     }
   });
+}
+
+/// Build and queue the deferred `\lx@add@frontmatter@now` invocation for a
+/// frontmatter entry `<tag attrs>content</tag>`. Shared by `\lx@add@frontmatter`
+/// (content present) and `\lx@add@frontmatter@container` (content = None — a
+/// deliberate empty container element that anchors later annotations).
+/// Perl: queueFrontMatter($stomach, $tag, $attr,
+///   Invocation(T_CS('\lx@add@frontmatter@now'), $keys, $tag, $attr, $tokens)).
+fn queue_add_frontmatter_now(
+  keys_opt: Option<&KeyVals>,
+  tag_tks: &Tokens,
+  attrs_opt: Option<&KeyVals>,
+  content: Option<&Tokens>,
+) -> Result<()> {
+  let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@add@frontmatter@now")];
+  if let Some(keys) = keys_opt {
+    inv_tokens.push(T_OTHER!("["));
+    inv_tokens.extend(keys.revert()?.unlist());
+    inv_tokens.push(T_OTHER!("]"));
+  }
+  inv_tokens.push(T_BEGIN!());
+  inv_tokens.extend(tag_tks.unlist_ref().iter().copied());
+  inv_tokens.push(T_END!());
+  if let Some(attrs) = attrs_opt {
+    inv_tokens.push(T_OTHER!("["));
+    inv_tokens.extend(attrs.revert()?.unlist());
+    inv_tokens.push(T_OTHER!("]"));
+  }
+  inv_tokens.push(T_BEGIN!());
+  if let Some(content) = content {
+    inv_tokens.extend(content.unlist_ref().iter().copied());
+  }
+  inv_tokens.push(T_END!());
+  queue_front_matter(&tag_tks.to_string(), attrs_opt, Tokens::new(inv_tokens));
+  Ok(())
 }
 
 /// This removes previously stored (but deferred) frontmatter that is being overridden.
