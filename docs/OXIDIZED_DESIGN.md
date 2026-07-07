@@ -1823,6 +1823,36 @@ rebind through these hooks is disturbed). Root-cause fix chosen over a
 frontmatter-only neutralization (user-directed 2026-07-07) precisely because it is
 general (protects every locked macro) and more faithful (recovers the Perl class).
 
+### 50. acmart establishes T1 font encoding (`<`/`>` literal, not OT1 `¡`/`¿`)
+
+**Decision:** The `acmart.cls` binding (`acmart_cls.rs`) loads
+`\RequirePackage[T1]{fontenc}` right after the `amsart` base class, so acmart
+documents digest under the **T1** font map. Under T1 the ASCII special-char
+slots — `<` `>` `|` `\` `{` `}` `_` `"` — map to their **literal** glyphs, as in
+the acmart PDF.
+
+**Why:** Real `acmart.cls` (L867-881) loads `libertine` and, in its type1 branch,
+`\RequirePackage[T1]{fontenc}`; libertine forces T1/LY1. LaTeXML's default text
+font map is **OT1**, where the non-typewriter `<` slot is `¡` (U+00A1) and `>` is
+`¿` (U+00BF) — genuinely correct OT1 TeX behavior, but *wrong* for a T1 class.
+Neither LaTeXML binding modeled acmart's encoding, so both rendered `num < 0 &&
+num > 0` as `num ¡ 0 && num ¿ 0` (witness arXiv:2405.17739, html_feedback issue).
+
+**Ground truth:** pdflatex (acmart → T1 via libertine) renders `<`/`>` **literal**.
+Perl LaTeXML AND pre-fix Rust both render `¡`/`¿` — a SHARED LaTeXML limitation vs
+pdflatex (verified same-host: identical `num ¡ 0 && num ¿ 0` from both engines).
+
+**Impact / scope:** Post-fix Rust renders literal `<`/`>` (and the other T1 slots)
+for **all** acmart documents, matching the PDF and SURPASSING Perl (Perl stays at
+OT1 `¡`/`¿`). Divergence from Perl, per the user's standing rule for the
+Rust==Perl-but-wrong-vs-pdflatex pattern (2026-07-07). Blast radius is narrow —
+OT1 and T1 agree on all letters/digits/common punctuation; they differ only in the
+eight special-char slots above, which T1 makes literal (the faithful acmart
+behavior). Rust already honored an explicit `\usepackage[T1]{fontenc}`; this only
+makes acmart establish it by default, as the real class does. Verified: full
+2405.17739 (0 errors, paper `¡`/`¿` count 1/1→0/0), `acm_aria` fixture unchanged,
+full suite green.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

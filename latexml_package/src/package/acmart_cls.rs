@@ -10,6 +10,14 @@ LoadDefinitions!({
   // Perl: LoadClass('amsart', withoptions => 1)
   load_class_with_options("amsart", Tokens!())?;
 
+  // Beyond-Perl fidelity (OXIDIZED_DESIGN "acmart establishes T1 font
+  // encoding"): real acmart.cls loads libertine + `\RequirePackage[T1]{fontenc}`
+  // (acmart.cls L867-881), so `<`/`>`/`|`/`\`/`{`/`}`/`_`/`"` are LITERAL in the
+  // PDF. Neither LaTeXML binding modeled this, so both defaulted to OT1 where
+  // `<`->¡, `>`->¿ (witness arXiv:2405.17739 `num < 0 && num > 0`). Perl leaves
+  // it at OT1; we honor acmart's real T1 to match the PDF. Divergence from Perl.
+  RequirePackage!("fontenc", options => vec!["T1".to_string()]);
+
   RequirePackage!("fancyhdr");
   RequirePackage!("geometry");
   RequirePackage!("comment");
