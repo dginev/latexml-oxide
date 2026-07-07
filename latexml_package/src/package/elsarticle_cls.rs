@@ -39,6 +39,11 @@ LoadDefinitions!({
 
   ProcessOptions!();
   LoadClass!("article");
+  // Beyond-Perl fidelity (OXIDIZED_DESIGN #50): real elsarticle.cls L47 does an
+  // unconditional `\RequirePackage[T1]{fontenc}`, so `<`/`>`/etc. are literal in
+  // the PDF. Establish T1 so we don't fall back to OT1 (`<`->¡, `>`->¿). Perl
+  // leaves it at OT1; divergence from Perl.
+  RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("elsart_support_core");
   RequirePackage!("fleqn");
   RequirePackage!("graphicx");

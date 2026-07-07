@@ -7,6 +7,12 @@ LoadDefinitions!({
   // Perl: LoadClass('article');
   load_class("article", Vec::new(), Tokens!())?;
 
+  // Beyond-Perl fidelity (OXIDIZED_DESIGN #50): real moderncv.cls L124-125 loads
+  // `\RequirePackage[T1]{fontenc}` under `\ifpdftex` (which we emulate), so
+  // `<`/`>`/etc. are literal in the PDF. Establish T1 rather than falling back to
+  // OT1 (`<`->¡, `>`->¿). Perl leaves it at OT1; divergence from Perl.
+  RequirePackage!("fontenc", options => vec!["T1".to_string()]);
+
   RequirePackage!("calc");
   RequirePackage!("ifthen");
   RequirePackage!("url");
