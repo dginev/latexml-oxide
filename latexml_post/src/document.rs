@@ -39,6 +39,155 @@ pub fn get_xml_id(node: &Node) -> Option<String> {
 /// The LaTeXML namespace URI.
 pub const LTX_NSURI: &str = "http://dlmf.nist.gov/LaTeXML";
 
+/// True when `node` is an element in the LaTeXML (`ltx:`) namespace.
+///
+/// The namespace lookup wraps a `Namespace`, so callers should gate it behind a
+/// cheaper localname check on the hot path (see [`collect_split_pages`]).
+fn is_ltx(node: &Node) -> bool {
+  node
+    .get_namespace()
+    .map(|ns| ns.get_href() == LTX_NSURI)
+    .unwrap_or(false)
+}
+
+/// Limit-safe pre-order walk collecting every element's `xml:id` and every
+/// `latexml` PI, in document order. Pass the *document* node so PIs preceding
+/// the root element are visited too.
+///
+/// This is the "limit-safe" pattern the post-processing queries share: a
+/// full-document `//X` (or `//X[pred]`) XPath makes libxml2 materialize
+/// `descendant-or-self::node()`, which past 10M nodes overflows the hardcoded
+/// `XPATH_MAX_NODESET_LENGTH`, returns NULL, and — formerly silently — yields an
+/// empty result. A direct DOM walk has no node-set and no such ceiling.
+fn scan_ids_and_pis(node: &Node, ids: &mut Vec<(String, Node)>, pis: &mut Vec<String>) {
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    match c.get_type() {
+      Some(NodeType::ElementNode) => {
+        if let Some(id) = get_xml_id(&c) {
+          ids.push((id, c.clone()));
+        }
+        scan_ids_and_pis(&c, ids, pis);
+      },
+      Some(NodeType::PiNode) if c.get_name() == "latexml" => {
+        pis.push(c.get_content());
+      },
+      _ => {},
+    }
+    child = c.get_next_sibling();
+  }
+}
+
+/// One arm of a `--splitat` page union: an `ltx:` element localname plus an
+/// optional disjunctive predicate. Mirrors the arms `make_splitpaths` emits.
+struct SplitArm {
+  /// `ltx:` element localname (e.g. `"section"`, `"index"`).
+  element: String,
+  /// Disjunction of conditions; empty ⇒ the element is unconditionally a page.
+  any_of:  Vec<SplitCond>,
+}
+
+/// A single predicate condition inside a [`SplitArm`] — the only two forms
+/// `make_splitpaths` ever generates.
+enum SplitCond {
+  /// `preceding-sibling::ltx:NAME`
+  PrecedingSibling(String),
+  /// `parent::ltx:NAME`
+  Parent(String),
+}
+
+/// Parse the `make_splitpaths` union (`//ltx:X | //ltx:Y[preceding-sibling::…
+/// or parent::…] | …`) into structured arms. Returns `None` if any arm is
+/// outside this narrow grammar, so the caller can fall back to raw XPath for a
+/// custom `--splitpaths` (which only matters on small documents, where XPath is
+/// limit-safe anyway).
+fn parse_split_union(union_xpath: &str) -> Option<Vec<SplitArm>> {
+  let mut arms = Vec::new();
+  for raw in union_xpath.split('|') {
+    let arm = raw.trim();
+    let rest = arm.strip_prefix("//ltx:")?;
+    let (name, pred) = match rest.split_once('[') {
+      Some((n, p)) => (n.trim(), Some(p.strip_suffix(']')?.trim())),
+      None => (rest.trim(), None),
+    };
+    if name.is_empty()
+      || !name
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
+    {
+      return None;
+    }
+    let mut any_of = Vec::new();
+    if let Some(pred) = pred {
+      for cond in pred.split(" or ") {
+        let cond = cond.trim();
+        if let Some(n) = cond.strip_prefix("preceding-sibling::ltx:") {
+          any_of.push(SplitCond::PrecedingSibling(n.trim().to_string()));
+        } else {
+          // Only `parent::ltx:NAME` remains in the make_splitpaths grammar;
+          // any other predicate is unsupported, so `?` returns `None` here and
+          // the caller falls back to raw XPath.
+          let n = cond.strip_prefix("parent::ltx:")?;
+          any_of.push(SplitCond::Parent(n.trim().to_string()));
+        }
+      }
+    }
+    arms.push(SplitArm {
+      element: name.to_string(),
+      any_of,
+    });
+  }
+  if arms.is_empty() { None } else { Some(arms) }
+}
+
+/// Evaluate one predicate condition against `node` (Rust equivalent of the
+/// `preceding-sibling::ltx:NAME` / `parent::ltx:NAME` XPath primitives).
+fn cond_matches(cond: &SplitCond, node: &Node) -> bool {
+  match cond {
+    SplitCond::PrecedingSibling(name) => {
+      let mut sib = node.get_prev_sibling();
+      while let Some(s) = sib {
+        if s.get_type() == Some(NodeType::ElementNode) && s.get_name() == *name && is_ltx(&s) {
+          return true;
+        }
+        sib = s.get_prev_sibling();
+      }
+      false
+    },
+    SplitCond::Parent(name) => node
+      .get_parent()
+      .map(|p| p.get_name() == *name && is_ltx(&p))
+      .unwrap_or(false),
+  }
+}
+
+/// True when `node` satisfies `arm` (an unconditional arm always matches).
+fn arm_matches(arm: &SplitArm, node: &Node) -> bool {
+  arm.any_of.is_empty() || arm.any_of.iter().any(|c| cond_matches(c, node))
+}
+
+/// Limit-safe pre-order walk collecting the page nodes selected by `arms`, in
+/// document order (no duplicates: each element is tested and pushed at most
+/// once). Replaces XPath evaluation of the split union.
+fn collect_split_pages(node: &Node, arms: &[SplitArm], out: &mut Vec<Node>) {
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    if c.get_type() == Some(NodeType::ElementNode) {
+      let name = c.get_name();
+      // Cheap localname gate first; only confirm the `ltx:` namespace and run
+      // the (rare) predicate checks for elements that could actually be pages.
+      if arms.iter().any(|a| a.element == name)
+        && is_ltx(&c)
+        && arms.iter().any(|a| a.element == name && arm_matches(a, &c))
+      {
+        out.push(c.clone());
+      }
+      collect_split_pages(&c, arms, out);
+    }
+    child = c.get_next_sibling();
+  }
+}
+
 /// Post-processing document: wraps an XML document with ID management,
 /// namespace tracking, XPath helpers, and a persistent cache.
 ///
@@ -196,12 +345,19 @@ impl PostDocument {
 
   /// Initialize document internals: scan IDs, extract namespaces and PIs.
   fn set_document_internal(&mut self) {
-    // Record all xml:id's
-    for node in self.findnodes("//*[@xml:id]") {
-      if let Some(id) = get_xml_id(&node) {
-        self.idcache.insert(id, node);
-      }
+    // Record every `xml:id` and `<?latexml …?>` PI in one limit-safe walk (see
+    // `scan_ids_and_pis`), replacing the `//*[@xml:id]` and
+    // `.//processing-instruction('latexml')` queries that returned NULL past the
+    // 10M node-set ceiling — silently building an empty idcache (breaking every
+    // cross-reference) and dropping the searchpath PIs. Walk from the document
+    // node so PIs preceding the root are caught.
+    let mut ids: Vec<(String, Node)> = Vec::new();
+    let mut pis: Vec<String> = Vec::new();
+    scan_ids_and_pis(&self.document.as_node(), &mut ids, &mut pis);
+    for (id, node) in ids {
+      self.idcache.insert(id, node);
     }
+    self.processing_instructions = pis;
 
     // Extract namespaces from root element
     if let Some(root) = self.document.get_root_element() {
@@ -218,10 +374,6 @@ impl PostDocument {
         }
       }
     }
-
-    // Extract processing instructions
-    let pis = self.findnodes(".//processing-instruction('latexml')");
-    self.processing_instructions = pis.iter().map(|pi| pi.get_content()).collect();
 
     // Extract search paths from PIs
     let sp_re = Regex::new(r#"^\s*searchpaths\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
@@ -467,6 +619,17 @@ impl PostDocument {
   /// Serialize the document to an XML string.
   pub fn to_xml_string(&self) -> String { self.document.to_string() }
 
+  /// Serialize a single node (and its subtree) to an XML string. Used to
+  /// re-derive raw-string features (e.g. SVG-fragment extraction) from the DOM
+  /// for file-parsed input without ever materializing the whole document.
+  pub fn node_to_string(&self, node: &Node) -> String { self.document.node_to_string(node) }
+
+  /// The `<?latexml …?>` processing instructions collected at parse time
+  /// (searchpaths, loaded packages/classes, RelaxNG schema, …). Used to
+  /// re-derive package-presence sniffs (e.g. `package="ar5iv"`) from the parsed
+  /// document when the raw XML string is not held in memory.
+  pub fn processing_instructions(&self) -> &[String] { &self.processing_instructions }
+
   pub fn stringify(&self) -> String {
     format!(
       "Post::Document[{}]",
@@ -496,16 +659,53 @@ impl PostDocument {
       let _ = ctx.register_namespace(prefix, uri);
     }
 
+    // *_checked so a NULL result — libxml2 aborting, typically a `//X[pred]`
+    // query overflowing the 10M node-set ceiling on a huge document — is logged
+    // instead of silently becoming an empty `vec![]` that corrupts downstream
+    // passes. An empty match set is still `Ok`, so this fires only on a real
+    // abort (CLAUDE.md: fail toward flagging errors).
     let result = if let Some(node) = context_node {
-      ctx.node_evaluate(xpath, node)
+      ctx.node_evaluate_checked(xpath, node)
     } else {
-      ctx.evaluate(xpath)
+      ctx.evaluate_checked(xpath)
     };
 
     match result {
       Ok(obj) => obj.get_nodes_as_vec(),
-      Err(_) => vec![],
+      Err(e) => {
+        Warn!(
+          "post",
+          "xpath",
+          "XPath evaluation failed for `{}`: {} — treating as no matches",
+          xpath,
+          e
+        );
+        vec![]
+      },
     }
+  }
+
+  /// Limit-safe evaluation of a `--splitat` page union.
+  ///
+  /// `make_splitpaths` emits `//ltx:X` and
+  /// `//ltx:X[preceding-sibling::ltx:Y or parent::ltx:Z]` arms. As XPath on a
+  /// huge document the predicated arms overflow the 10M node-set ceiling (see
+  /// [`scan_ids_and_pis`]), the union returns NULL, and nothing splits — the
+  /// whole document stays one page and the downstream XSLT then dies on the same
+  /// ceiling. Instead we parse the arms and select pages with one limit-safe
+  /// walk, applying the predicates in Rust: same nodes, document order, no
+  /// duplicates, as an XPath union.
+  ///
+  /// Falls back to raw XPath for unions outside that grammar (custom
+  /// `--splitpaths`), which only run on small, limit-safe documents.
+  pub fn find_split_pages(&self, union_xpath: &str) -> Vec<Node> {
+    let arms = match parse_split_union(union_xpath) {
+      Some(a) => a,
+      None => return self.findnodes(union_xpath),
+    };
+    let mut pages = Vec::new();
+    collect_split_pages(&self.document.as_node(), &arms, &mut pages);
+    pages
   }
 
   /// Find the first node matching an XPath expression.
@@ -794,6 +994,15 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::findNodeByID`.
   pub fn find_node_by_id(&self, id: &str) -> Option<&Node> { self.idcache.get(id) }
+
+  /// Number of id-bearing nodes registered in this document's idcache.
+  /// This is exactly the node set Perl's `//@xml:id` iterates.
+  pub fn idcache_len(&self) -> usize { self.idcache.len() }
+
+  /// Iterate `(id, node)` for every id-bearing node in this document, in
+  /// arbitrary order. Mirrors Perl's `//@xml:id` traversal (per-document,
+  /// so bounded by the page size rather than the global ObjectDB).
+  pub fn idcache_iter(&self) -> impl Iterator<Item = (&String, &Node)> { self.idcache.iter() }
 
   /// Generate a unique ID based on `baseid`, optionally applying a suffix.
   ///
@@ -1676,6 +1885,92 @@ mod tests {
     );
     let sections = doc.findnodes("//ltx:section");
     assert_eq!(sections.len(), 2);
+  }
+
+  /// The exact `--splitat=section` union `make_splitpaths` emits (the shape the
+  /// limit-safe `find_split_pages` walk must reproduce).
+  const SECTION_UNION: &str = "//ltx:section | \
+    //ltx:bibliography[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
+    //ltx:appendix[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
+    //ltx:index[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
+    //ltx:part | \
+    //ltx:bibliography[preceding-sibling::ltx:part] | \
+    //ltx:appendix[preceding-sibling::ltx:part] | \
+    //ltx:index[preceding-sibling::ltx:part] | \
+    //ltx:chapter | \
+    //ltx:bibliography[preceding-sibling::ltx:chapter or parent::ltx:part] | \
+    //ltx:appendix[preceding-sibling::ltx:chapter or parent::ltx:part] | \
+    //ltx:index[preceding-sibling::ltx:chapter or parent::ltx:part]";
+
+  fn split_doc() -> PostDocument {
+    make_test_doc(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
+         <part xml:id='P1'>\
+           <chapter xml:id='C1'>\
+             <section xml:id='S1'/>\
+             <section xml:id='S2'/>\
+             <index xml:id='I1'/>\
+           </chapter>\
+           <bibliography xml:id='B1'/>\
+         </part>\
+         <section xml:id='S3'/>\
+         <index xml:id='I2'/>\
+       </document>",
+    )
+  }
+
+  /// The limit-safe DOM walk must select exactly the nodes (and order) the raw
+  /// XPath union selects on a small document where XPath is limit-safe.
+  #[test]
+  fn test_find_split_pages_matches_xpath() {
+    let doc = split_doc();
+    let ids = |nodes: Vec<Node>| -> Vec<String> { nodes.iter().filter_map(get_xml_id).collect() };
+    let via_walk = ids(doc.find_split_pages(SECTION_UNION));
+    let via_xpath = ids(doc.findnodes(SECTION_UNION));
+    assert_eq!(
+      via_walk,
+      vec!["P1", "C1", "S1", "S2", "I1", "B1", "S3", "I2"],
+      "walk selected the wrong pages / order"
+    );
+    assert_eq!(via_walk, via_xpath, "walk diverged from XPath union");
+  }
+
+  /// A union outside the recognized grammar falls back to raw XPath (unchanged
+  /// behavior for custom `--splitpaths`).
+  #[test]
+  fn test_find_split_pages_fallback() {
+    let doc = split_doc();
+    // `descendant::` is not in the make_splitpaths grammar → fallback path.
+    let via = doc.find_split_pages("//ltx:chapter/descendant::ltx:section");
+    let ids: Vec<String> = via.iter().filter_map(get_xml_id).collect();
+    assert_eq!(ids, vec!["S1", "S2"]);
+  }
+
+  /// The id scan must populate the idcache for every `xml:id` (the walk replaces
+  /// the `//*[@xml:id]` query that overflows libxml2 on huge documents).
+  #[test]
+  fn test_scan_ids_populates_idcache() {
+    let doc = split_doc();
+    for id in ["P1", "C1", "S1", "S2", "I1", "B1", "S3", "I2"] {
+      assert!(
+        doc.find_node_by_id(id).is_some(),
+        "missing id {id} in idcache"
+      );
+    }
+    assert!(doc.find_node_by_id("nope").is_none());
+  }
+
+  /// A document-level `<?latexml searchpaths=…?>` PI (a sibling of the root
+  /// element) must still be collected by the walk and its searchpaths applied.
+  #[test]
+  fn test_scan_collects_doclevel_pi_searchpaths() {
+    let doc = make_test_doc(
+      "<?latexml searchpaths=\"alpha,beta\"?>\
+       <document xmlns='http://dlmf.nist.gov/LaTeXML'><section xml:id='s1'/></document>",
+    );
+    let paths = doc.get_search_paths();
+    assert!(paths.iter().any(|p| p == "alpha"), "searchpaths: {paths:?}");
+    assert!(paths.iter().any(|p| p == "beta"), "searchpaths: {paths:?}");
   }
 
   #[test]

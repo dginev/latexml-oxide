@@ -5,6 +5,8 @@
 //! referenced IDs in the ObjectDB and filling in the reference text,
 //! titles, and navigation links.
 
+use std::{cell::RefCell, rc::Rc};
+
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -13,6 +15,15 @@ use crate::{
   object_db::{ObjectDB, Value},
   processor::{ProcessResult, Processor},
 };
+
+/// Memoized result of `get_child_page_ids` for one ObjectDB entry: the
+/// distinct descendant page ids, plus a position index so
+/// `find_previous_page_id`/`find_next_page_id` can locate a sibling in O(1)
+/// instead of the Perl pop/shift scan.
+struct ChildPages {
+  ids:      Vec<String>,
+  index_of: HashMap<String, usize>,
+}
 
 /// Sectional element types that appear in TOCs.
 const NORMAL_TOC_TYPES: &[&str] = &[
@@ -78,6 +89,12 @@ pub struct CrossRef {
   navigation_toc: Option<String>,
   /// Track missing references for reporting.
   missing:        HashMap<String, HashMap<String, HashMap<String, u32>>>,
+  /// Memoized `get_child_page_ids` results, keyed by entry id. The ObjectDB
+  /// is read-only for the whole CrossRef pass, so a given entry's child pages
+  /// never change — caching them across all split pages turns the per-page
+  /// O(siblings) recomputation (Perl's unpruned `getChildPages`) into O(1)
+  /// lookups, eliminating the `fill_in_relations` O(n²).
+  child_pages:    RefCell<HashMap<String, Rc<ChildPages>>>,
 }
 
 impl CrossRef {
@@ -97,6 +114,7 @@ impl CrossRef {
       ref_join: " \u{2023} ".to_string(), // TRIANGULAR BULLET
       navigation_toc: None,
       missing: HashMap::default(),
+      child_pages: RefCell::new(HashMap::default()),
     }
   }
 
@@ -562,9 +580,32 @@ impl CrossRef {
     Some(parent_entry.get_string("pageid")?.to_string())
   }
 
+  /// Memoized `get_child_page_ids`. The ObjectDB is immutable for the whole
+  /// CrossRef pass, so a given entry's child-page list is stable and shared
+  /// across every page (see the `child_pages` field). Also records each id's
+  /// position so the sibling finders skip the Perl pop/shift scan.
+  fn child_pages(&self, entry_id: &str) -> Rc<ChildPages> {
+    if let Some(cached) = self.child_pages.borrow().get(entry_id) {
+      return cached.clone();
+    }
+    let ids = self.compute_child_page_ids(entry_id);
+    let mut index_of = HashMap::default();
+    // Last occurrence wins, matching the Perl scan that peels from the end.
+    for (i, id) in ids.iter().enumerate() {
+      index_of.insert(id.clone(), i);
+    }
+    let rc = Rc::new(ChildPages { ids, index_of });
+    self
+      .child_pages
+      .borrow_mut()
+      .insert(entry_id.to_string(), rc.clone());
+    rc
+  }
+
   /// Recursively collect distinct child page ids under `entry_id`.
-  /// Port of Perl `CrossRef::getChildPages`.
-  fn get_child_page_ids(&self, entry_id: &str) -> Vec<String> {
+  /// Port of Perl `CrossRef::getChildPages` (the uncached recursion body;
+  /// recursion reuses the cache via [`child_pages`](Self::child_pages)).
+  fn compute_child_page_ids(&self, entry_id: &str) -> Vec<String> {
     let entry = match self.db.lookup(&format!("ID:{}", entry_id)) {
       Some(e) => e,
       None => return Vec::new(),
@@ -584,7 +625,7 @@ impl CrossRef {
       if here_pageid.as_deref() != Some(&ch_pageid) {
         out.push(ch_pageid);
       } else {
-        out.extend(self.get_child_page_ids(&ch));
+        out.extend(self.child_pages(&ch).ids.iter().cloned());
       }
     }
     out
@@ -595,22 +636,21 @@ impl CrossRef {
   /// sibling if any, drilled into rightmost descendant.
   fn find_previous_page_id(&self, page_id: &str) -> Option<String> {
     let parent_id = self.get_parent_page_id(page_id)?;
-    let mut sibs = self.get_child_page_ids(&parent_id);
-    // Drop following sibs (rightward) until we hit ourselves.
-    while sibs.last().map(|s| s.as_str()) != Some(page_id) {
-      sibs.pop()?;
-    }
-    sibs.pop(); // remove ourselves
-    sibs.retain(|s| self.is_primary_page(s));
-    let mut current = sibs.pop()?;
+    let siblings = self.child_pages(&parent_id);
+    // Our position among the parent's child pages (None = "broken database").
+    let pos = *siblings.index_of.get(page_id)?;
+    // Nearest primary sibling strictly before us (Perl: peel following sibs,
+    // drop self, keep primaries, take the last one).
+    let mut current = siblings.ids[..pos]
+      .iter()
+      .rev()
+      .find(|s| self.is_primary_page(s))?
+      .clone();
+    // Drill into the rightmost primary descendant.
     loop {
-      let deepest = self
-        .get_child_page_ids(&current)
-        .into_iter()
-        .rev()
-        .find(|s| self.is_primary_page(s));
-      match deepest {
-        Some(deepest) => current = deepest,
+      let kids = self.child_pages(&current);
+      match kids.ids.iter().rev().find(|s| self.is_primary_page(s)) {
+        Some(deepest) => current = deepest.clone(),
         None => break,
       }
     }
@@ -621,26 +661,27 @@ impl CrossRef {
   /// `primary` pages. Port of Perl `CrossRef::findNextPage`: first child,
   /// else walk up to find next sibling at progressively higher levels.
   fn find_next_page_id(&self, page_id: &str) -> Option<String> {
+    // First primary child page, if any.
     if let Some(first) = self
-      .get_child_page_ids(page_id)
-      .into_iter()
+      .child_pages(page_id)
+      .ids
+      .iter()
       .find(|s| self.is_primary_page(s))
     {
-      return Some(first);
+      return Some(first.clone());
     }
     let mut current = page_id.to_string();
     loop {
       let parent = self.get_parent_page_id(&current)?;
-      let mut sibs = self.get_child_page_ids(&parent);
-      while sibs.first().map(|s| s.as_str()) != Some(&current) {
-        if sibs.is_empty() {
-          return None;
-        }
-        sibs.remove(0);
-      }
-      sibs.remove(0); // drop ourselves
-      if let Some(first) = sibs.into_iter().find(|s| self.is_primary_page(s)) {
-        return Some(first);
+      let siblings = self.child_pages(&parent);
+      // Our position among the parent's child pages (None = "broken database").
+      let pos = *siblings.index_of.get(&current)?;
+      // First primary sibling strictly after us.
+      if let Some(first) = siblings.ids[pos + 1..]
+        .iter()
+        .find(|s| self.is_primary_page(s))
+      {
+        return Some(first.clone());
       }
       current = parent;
     }
@@ -759,31 +800,45 @@ impl CrossRef {
   }
 
   fn fill_in_frags(&self, doc: &PostDocument) {
-    // Invert loop: iterate DB entries (~1K on arXiv:0705.0790) and look up
-    // each node via the idcache, instead of iterating every xml:id-bearing
-    // node in the DOM (60K+ on math-heavy papers, ~98% of which map to
-    // XM* descendants with no DB entry). This avoids the XPath `//*[@xml:id]`
-    // result-set clone and 60K hashmap misses per paper.
-    //
-    // Correctness: fragids are only assigned to nodes that have a DB entry;
-    // the old DOM-iteration variant early-exited on `lookup` miss for every
-    // non-DB node, so the outputs match exactly.
-    for key in self.db.get_keys() {
-      let id = match key.strip_prefix("ID:") {
-        Some(rest) => rest,
-        None => continue,
-      };
-      let entry = match self.db.lookup(key) {
-        Some(e) => e,
-        None => continue,
-      };
-      let fragid = match entry.get_string("fragid") {
-        Some(f) => f,
-        None => continue,
-      };
-      if let Some(node) = doc.find_node_by_id(id) {
-        let mut n = node.clone();
-        n.set_attribute("fragid", fragid).ok();
+    // Perl (CrossRef.pm L312-324) walks the page's own `//@xml:id` nodes and
+    // sets `fragid` on any that have a DB entry. Iterating the ObjectDB
+    // instead (one lookup per DB key) wins ONLY when a single page has far
+    // more id-nodes than the DB has entries (math-heavy single documents:
+    // ~60K XM* ids vs ~1K DB entries). On a *split* document the DB holds
+    // every page's entries (tens of thousands) while each page has a handful
+    // of id-nodes, so that inverted loop is O(db_keys) per page = O(n²)
+    // overall. Pick whichever loop is bounded by the smaller set — both
+    // assign fragids to exactly the same nodes, so the output is identical.
+    if doc.idcache_len() <= self.db.len() {
+      // Perl semantics: iterate the page's id-nodes (bounded by page size).
+      for (id, node) in doc.idcache_iter() {
+        if let Some(entry) = self.db.lookup(&format!("ID:{}", id)) {
+          if let Some(fragid) = entry.get_string("fragid") {
+            let mut n = node.clone();
+            n.set_attribute("fragid", fragid).ok();
+          }
+        }
+      }
+    } else {
+      // Inverted loop: fewer DB entries than page id-nodes. `find_node_by_id`
+      // restricts to this page's nodes, so only page-local fragids are set.
+      for key in self.db.keys_iter() {
+        let id = match key.strip_prefix("ID:") {
+          Some(rest) => rest,
+          None => continue,
+        };
+        let entry = match self.db.lookup(key) {
+          Some(e) => e,
+          None => continue,
+        };
+        let fragid = match entry.get_string("fragid") {
+          Some(f) => f,
+          None => continue,
+        };
+        if let Some(node) = doc.find_node_by_id(id) {
+          let mut n = node.clone();
+          n.set_attribute("fragid", fragid).ok();
+        }
       }
     }
   }

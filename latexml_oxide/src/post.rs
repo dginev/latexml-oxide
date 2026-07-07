@@ -99,17 +99,50 @@ pub struct PostOutcome {
 /// consumers; this is the Rust equivalent, shared by the `latexml_oxide` and
 /// `cortex_worker` binaries so their logs reach parity. See SYNC_STATUS task 5.
 pub fn run_post_processing_logged(xml: &str, opts: &PostOptions) -> PostOutcome {
+  run_post_processing_impl_logged(PostInput::Xml(xml), opts)
+}
+
+/// File-input variant of [`run_post_processing_logged`]: parses the XML from
+/// disk via libxml2's streaming reader rather than from an in-memory `String`.
+/// Used for already-converted `.xml` inputs, where slurping the file would keep
+/// a whole extra copy of a multi-hundred-MB document resident alongside the DOM.
+pub fn run_post_processing_from_file_logged(path: &str, opts: &PostOptions) -> PostOutcome {
+  run_post_processing_impl_logged(PostInput::File(path), opts)
+}
+
+fn run_post_processing_impl_logged(input: PostInput, opts: &PostOptions) -> PostOutcome {
   latexml_core::util::logger::bind_log();
-  let html = run_post_processing(xml, opts);
+  let html = run_post_processing_impl(input, opts);
   let log = latexml_core::util::logger::flush_log();
   let status_code = latexml_core::common::error::get_status_code();
   PostOutcome { html, log, status_code }
 }
 
-/// Run the post-processing pipeline on XML output.
+/// Where the post-pipeline reads its already-converted LaTeXML XML from.
+#[derive(Clone, Copy)]
+enum PostInput<'a> {
+  /// XML already resident in memory (the TeX→XML conversion result). The common
+  /// path — the 2.8M-doc arXiv fleet and every TeX conversion feed this.
+  Xml(&'a str),
+  /// A path to an XML file, parsed via libxml2's streaming file reader
+  /// (`xmlReadIO`). Avoids vivifying a very large document as a Rust `String`
+  /// on top of the ~11× DOM it becomes.
+  File(&'a str),
+}
+
+/// Run the post-processing pipeline on in-memory XML output.
 ///
-/// Executes: Scan → MakeBibliography → CrossRef → Graphics → Split → MathML → XSLT → HTML5 fixups.
+/// Executes: Split → Scan → MakeBibliography → CrossRef → Graphics → MathML → XSLT → HTML5 fixups.
 pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
+  run_post_processing_impl(PostInput::Xml(xml), opts)
+}
+
+/// File-input variant of [`run_post_processing`].
+pub fn run_post_processing_from_file(path: &str, opts: &PostOptions) -> String {
+  run_post_processing_impl(PostInput::File(path), opts)
+}
+
+fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   let PostOptions {
     pmml,
     cmml,
@@ -159,36 +192,66 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   };
 
   telemetry::phase_enter(Phase::PostXmlParse);
-  let t_parse = audit_start("PostDocument::new_from_string");
-  // Perl LaTeXML.pm L330-336: a completely empty core-conversion result
-  // (e.g. after a Fatal abort) is still post-processed — Perl sets a bare
-  // <document/> root first, "important for utility features such as
-  // packing .zip archives for output". Mirror that for the empty-string
-  // serialization instead of failing the parse with a libxml "Got a Null
-  // pointer" and echoing the empty input through (witness: cortex_worker
-  // on any Fatal paper produced a 0-byte .html).
-  let xml = if xml.trim().is_empty() {
-    "<document/>"
-  } else {
-    xml
+  let t_parse = audit_start("PostDocument parse");
+  // `raw_xml` holds the in-memory serialization — `Some` only for `Xml` input.
+  // `File` input streams from disk and never holds it, so `raw_xml` is `None`
+  // and the three raw-string features (empty-doc substitution, SVG extraction,
+  // ar5iv sniff) plus the on-failure echo are re-derived from the parsed doc.
+  //
+  // Perl LaTeXML.pm L330-336: an empty core result (e.g. after a Fatal) is still
+  // post-processed against a bare <document/> root ("important for utility
+  // features such as packing .zip archives"). Mirror that for empty in-memory
+  // input; a File is never empty (an empty file simply errors on parse below).
+  let raw_xml: Option<&str> = match input {
+    PostInput::Xml(xml) if xml.trim().is_empty() => Some("<document/>"),
+    PostInput::Xml(xml) => Some(xml),
+    PostInput::File(_) => None,
   };
-  let doc = match PostDocument::new_from_string(xml, doc_opts) {
+  // Best-effort output when a phase bails: echo the original XML for in-memory
+  // input; for File input the source is on disk (and a failure here is itself
+  // the case we are hardening against), so return empty and rely on the logged
+  // Error + status code.
+  let fallback = || raw_xml.map(str::to_string).unwrap_or_default();
+
+  let parsed = match input {
+    // `raw_xml` is `Some` for `Xml` input (the two arms above), so the default
+    // is dead — kept only to avoid an `unwrap`.
+    PostInput::Xml(_) => PostDocument::new_from_string(raw_xml.unwrap_or("<document/>"), doc_opts),
+    PostInput::File(path) => PostDocument::new_from_file(path, doc_opts),
+  };
+  let doc = match parsed {
     Ok(d) => d,
     Err(e) => {
       post_error("parse", &format!("failed to parse XML: {e}"));
       telemetry::phase_exit();
-      return xml.to_string();
+      return fallback();
     },
   };
   audit_end(t_parse);
   telemetry::phase_exit();
 
-  // SVG extraction reads the pre-post XML before any in-tree mutation;
-  // do it once up-front so the regex-based fragment table is valid for
-  // every split sub-document below.
+  // SVG extraction reads the pre-post XML before any in-tree mutation; do it
+  // once up-front so the regex-based fragment table is valid for every split
+  // sub-document below. In-memory input scans the string; File input locates
+  // pictures via a limit-safe `//ltx:picture` DOM query and serializes only
+  // those (never the whole file) — most large documents have none.
   let t_svg = audit_start("SVG extraction");
-  let svg_fragments = extract_svg_fragments(xml);
+  let svg_fragments = match raw_xml {
+    Some(xml) => extract_svg_fragments(xml),
+    None => extract_svg_fragments_from_doc(&doc),
+  };
   audit_end(t_svg);
+
+  // ar5iv sniff: the ar5iv package emits literal-intent MathML. In-memory input
+  // checks the raw string; file input checks the parsed doc's `<?latexml
+  // package="ar5iv"?>` PI. Computed here — before Split moves `doc` into `docs`.
+  let intent_literal = match raw_xml {
+    Some(xml) => xml.contains("package=\"ar5iv"),
+    None => doc
+      .processing_instructions()
+      .iter()
+      .any(|pi| pi.contains("package=\"ar5iv")),
+  };
 
   // Perl-faithful pipeline order (latexmlpost L223-242):
   //   Split → Scan → MakeBibliography → CrossRef → Graphics → ...
@@ -236,7 +299,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     telemetry::phase_exit();
     match result {
       Ok(ds) => ds,
-      Err(()) => return xml.to_string(),
+      Err(()) => return fallback(),
     }
   } else {
     vec![doc]
@@ -280,7 +343,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(d) => d,
     Err(()) => {
       telemetry::phase_exit();
-      return xml.to_string();
+      return fallback();
     },
   };
   audit_end(t_scan);
@@ -299,7 +362,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(d) => d,
     Err(()) => {
       telemetry::phase_exit();
-      return xml.to_string();
+      return fallback();
     },
   };
   audit_end(t_idx);
@@ -313,7 +376,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(d) => d,
     Err(()) => {
       telemetry::phase_exit();
-      return xml.to_string();
+      return fallback();
     },
   };
   audit_end(t_bib);
@@ -334,7 +397,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(d) => d,
     Err(()) => {
       telemetry::phase_exit();
-      return xml.to_string();
+      return fallback();
     },
   };
   audit_end(t_xref);
@@ -349,7 +412,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(d) => d,
     Err(()) => {
       telemetry::phase_exit();
-      return xml.to_string();
+      return fallback();
     },
   };
   audit_end(t_gfx);
@@ -359,7 +422,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let mut post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
 
-  let intent_literal = xml.contains("package=\"ar5iv");
+  // `intent_literal` was computed up-front (before Split consumed `doc`).
 
   // Parallel P+C markup: when both formats are requested, the Content-MathML
   // processor is a *secondary* of the Presentation primary, folded into one
@@ -485,7 +548,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(r) => r,
     Err(e) => {
       post_error("convert", &format!("Post-processing failed: {e}"));
-      return xml.to_string();
+      return fallback();
     },
   };
 
@@ -537,7 +600,25 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     let _ = n;
   }
 
-  main_output.unwrap_or_else(|| xml.to_string())
+  main_output.unwrap_or_else(fallback)
+}
+
+/// Re-derive SVG fragments from a parsed document (the file-input equivalent of
+/// [`extract_svg_fragments`]).
+///
+/// `//ltx:picture` is a *typed* descendant query, which libxml2 evaluates
+/// without materializing `descendant-or-self::node()` — so it stays under the
+/// 10M node-set ceiling even on a 600 MB document. Most large documents have no
+/// pictures at all (the fast, zero-serialization path); when they do, only the
+/// picture subtrees are serialized and handed to the shared string extractor,
+/// never the whole file.
+fn extract_svg_fragments_from_doc(doc: &PostDocument) -> Vec<(String, String)> {
+  let pictures = doc.findnodes("//ltx:picture");
+  if pictures.is_empty() {
+    return Vec::new();
+  }
+  let joined: String = pictures.iter().map(|p| doc.node_to_string(p)).collect();
+  extract_svg_fragments(&joined)
 }
 
 /// Apply HTML5 cleanup (XML prolog strip, void-element fixes) and inject SVG
