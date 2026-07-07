@@ -102,25 +102,16 @@ LoadDefinitions!({
   DefRegister!("\\tocauthor" => Tokens!());
   DefRegister!("\\titrun" => Tokens!());
   DefRegister!("\\titlerunning" => Tokens!());
-  // Perl llncs.cls.ltxml L73: `DefRegister('\toctitle{}' => Tokens())`
-  // — a Tokens-valued register with a `{}` proto, meaning the register
-  // is read/written via an argument. Rust's DefRegister! doesn't accept
-  // a `{}` proto (the macro only handles name-only register shapes).
-  //
-  // Was: DefMacro!("\\toctitle{}", "") — but this swallows the FOLLOWING
-  // TOKEN whenever `\toctitle` appears bare-name. Driver: 2112.13058
-  // user wrote `\tocauthor\toctitle\maketitle` (the sample llncs
-  // template). `\toctitle{}` ate `\maketitle` as its required arg,
-  // skipping the frontmatter-emitting \maketitle and producing
-  // "Can't close environment abstract" because abstract was processed
-  // without an open document-frontmatter slot.
-  //
-  // Fix: drop the `{}` proto; treat `\toctitle` as a no-op CS that
-  // accepts no arg. User code `\toctitle{TOC text}` will leave the
-  // `{TOC text}` as a balanced group that gets digested as empty
-  // text in the surrounding context — same observable output as the
-  // discarding-macro path.
-  def_macro_noop("\\toctitle")?;
+  // Perl llncs.cls.ltxml L73: `DefRegister('\toctitle' => Tokens())` — a plain
+  // Tokens register, like its siblings above. Upstream #2847 (brucemiller/LaTeXML,
+  // fixes #2253) removed a `{}` typo in the prototype (`'\toctitle{}'`) that had
+  // made the register consume a following token: the sample llncs template
+  // `\tocauthor\toctitle\maketitle` (arXiv:2112.13058) then ate `\maketitle`,
+  // skipping frontmatter emission ("Can't close environment abstract"). We had
+  // worked around the typo with a `def_macro_noop`; now we match the corrected
+  // upstream register form — which behaves exactly like the `\tocauthor` register
+  // above, so it never swallows a following token.
+  DefRegister!("\\toctitle" => Tokens!());
 
   DefRegister!("\\tocchpnum" => Dimension::new(0));
   DefRegister!("\\tocsecnum" => Dimension!("15pt"));
