@@ -1,0 +1,33 @@
+% Minimal reproducer: frontmatter title double-creation when a class/style
+% redefines \maketitle (and/or \@maketitle) to VISUALLY reconstruct the title.
+%
+% A raw \def of \maketitle inside \AtBeginDocument is allowed by both engines
+% (state is unlocked during begin-document hooks, by design), so the redefined
+% *visual* \maketitle runs AND LaTeXML separately emits the SEMANTIC <title>
+% captured by \title{} -> \lx@add@title. Result: the title appears twice.
+%
+% Three-way ground truth (title text "DUPTITLE" occurrences):
+%   pdflatex .............. 1   (correct — no separate semantic frontmatter)
+%   Perl latexml .......... 2   (shared LaTeXML bug vs pdflatex)
+%   Rust latexml-oxide .... 1   (FIXED: begin-document hooks digest RE-LOCKED)
+%
+% The acl.sty case (arXiv:2606.00012) is the same bug; there Perl's \maketitle
+% lock happens to hold because acl registers the redef from a RAW-loaded .sty,
+% but that is incidental — this inline pure-.tex form shows both engines double.
+% Fix: latexml_engine/src/latex_constructs.rs \begin{document} after-digest
+% re-locks the state while digesting @document@preamble@atend / @at@begin@document,
+% so a raw \def of the binding-locked \maketitle is refused and LaTeXML's own
+% (semantic, single-emission) \maketitle runs. See OXIDIZED_DESIGN.md.
+\documentclass{article}
+\makeatletter
+\AtBeginDocument{%
+  \def\maketitle{\@maketitle}%
+  \def\@maketitle{\begin{center}{\Large\bfseries \@title \par}\end{center}}%
+}
+\makeatother
+\title{DUPTITLE}
+\author{SomeAuthor}
+\begin{document}
+\maketitle
+Body paragraph.
+\end{document}

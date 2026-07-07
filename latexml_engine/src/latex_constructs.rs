@@ -3280,11 +3280,34 @@ LoadDefinitions!({
       assign_register("\\linewidth", textwidth, None, Vec::new())?;
     }
     let mut boxes = Vec::new();
-    if let Some(ops) = lookup_tokens("@document@preamble@atend") {
-      boxes.push(digest(ops)?);
-    }
-    if let Some(ops) = lookup_tokens("@at@begin@document") {
-      boxes.push(digest(ops)?);
+    // Rust-only divergence (OXIDIZED_DESIGN "Frontmatter / locked-macro protection
+    // at begin-document"; reproducer docs/reproducers/frontmatter_maketitle_double.tex):
+    // digest the begin-document hook lists (\AtBeginDocument via @at@begin@document,
+    // and @document@preamble@atend) with the state RE-LOCKED.
+    //
+    // These hooks carry RAW document/package TeX. A constructor's after-digest runs
+    // state-UNLOCKED (execute_after_digest, definition.rs) so bindings can rebind/load
+    // within their own before/after methods — but that unlock leaks into this nested
+    // raw-TeX digest, letting a raw `\def`/`\let` of a binding-LOCKED macro (e.g.
+    // `\AtBeginDocument{\def\maketitle{...}}`) silently win. LaTeXML deliberately owns
+    // `\maketitle` (locked) so that `\title`/`\author` produce SEMANTIC frontmatter and
+    // the class's visual `\@maketitle` reconstruction is suppressed; when a class's raw
+    // redefinition slips the lock, the title is emitted twice (once semantic, once
+    // visual). Perl shares this bug on an inline `\AtBeginDocument` (both engines double
+    // vs pdflatex's single); it only escapes on acl.sty because its lock incidentally
+    // holds for a raw-loaded `.sty`. Re-locking here enforces the intended rule — a
+    // binding-locked macro is never redefined from the raw TeX layer — generally, for
+    // every begin-document hook, so LaTeXML's own `\maketitle` runs and the frontmatter
+    // is emitted exactly once (matching Perl's acl output, incl. `ltx_authors_1line`,
+    // and surpassing Perl on the inline case). Scope is narrow: only these two nested
+    // hook digests, not the general before/after-digest unlock.
+    for key in ["@document@preamble@atend", "@at@begin@document"] {
+      if let Some(ops) = lookup_tokens(key) {
+        local_state_unlocked(false);
+        let r = digest(ops);
+        expire_state_unlocked();
+        boxes.push(r?);
+      }
     }
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:

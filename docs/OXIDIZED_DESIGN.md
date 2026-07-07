@@ -1784,6 +1784,45 @@ Perl is broken the same way (confirmed same-host); surpass-Perl scope,
 user-directed 2026-07-05. Unit tests: `author_split_tests` in
 base_utilities.rs.
 
+### 49. Begin-document hooks digest with the state RE-LOCKED (locked binding macros survive raw redefinition)
+
+**Decision:** In `\begin{document}`'s after-digest (`latex_constructs.rs`), the
+begin-document hook lists — `@document@preamble@atend` and `@at@begin@document`
+(where `\AtBeginDocument{…}` bodies land) — are digested with the state
+**re-locked** (`local_state_unlocked(false)` around each `digest`). So a raw
+`\def`/`\let`/`\renewcommand` of a binding-**locked** macro inside
+`\AtBeginDocument` is refused, exactly as a preamble-level one already is.
+
+**Why:** A constructor's before/after-digest runs state-**unlocked**
+(`definition.rs::execute_after_digest`, a faithful port of Perl
+`Primitive.pm::executeAfterDigest`'s `local $UNLOCKED=1`) so bindings can
+rebind/load *within their own* before/after methods. That unlock unintentionally
+**leaks into the nested raw-TeX digest** of the begin-document hooks: a raw
+`\AtBeginDocument{\def\maketitle{…}}` then slips past `\maketitle:locked` and
+overrides LaTeXML's semantic `\maketitle`. Because `\title`/`\author` also emit
+SEMANTIC frontmatter (`\lx@add@title`/`\lx@add@authors`), the class's *visual*
+`\maketitle`/`\@maketitle` reconstruction then renders the title/authors a
+**second** time (a duplicate title + author block after the abstract).
+
+**Ground truth** (reproducer `docs/reproducers/frontmatter_maketitle_double.tex`,
+an inline pure-`.tex` `\AtBeginDocument{\def\maketitle{\@maketitle}}`):
+pdflatex emits the title **once**; Perl AND pre-fix Rust emit it **twice** — a
+SHARED LaTeXML bug vs pdflatex. Perl only escapes on acl.sty (arXiv:2606.00012)
+because its `\maketitle` lock incidentally holds for a **raw-loaded `.sty`**;
+with an inline hook Perl doubles too. (I could not locate the exact Perl
+mechanism that discriminates raw-`.sty` from inline under the same structural
+unlock, so this is achieved by a Rust-specific relock, not a literal Perl port.)
+
+**Impact / scope:** Post-fix Rust emits the title **once** everywhere. On acl.sty
+this MATCHES Perl (LaTeXML's own `\maketitle` runs, so `\ltx@authors@oneline`
+fires → `class="ltx_authors_1line"`, identical to Perl); on the inline case it
+SURPASSES Perl (Rust 1, Perl 2). The relock is narrow — only these two nested
+hook digests, never the general before/after-digest unlock — so binding-internal
+rebinding is unaffected. Full suite 1532/0 (no binding pushing a *locked*-macro
+rebind through these hooks is disturbed). Root-cause fix chosen over a
+frontmatter-only neutralization (user-directed 2026-07-07) precisely because it is
+general (protects every locked macro) and more faithful (recovers the Perl class).
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML
