@@ -350,12 +350,12 @@ LoadDefinitions!({
   // \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
   // starred (*) = unnumbered = flag=Some
   engine::latex_constructs::define_new_theorem(
-    Some(Tokens!(T_OTHER!("*"))),      // starred
-    Tokenize!("proof"),                // environment name
-    None,                              // no shared counter
-    Some(Tokenize!("Proof")),          // display title
-    None,                              // no 'within' counter
-    Some(Tokenize!("\\rmfamily")),     // bodyfont: upright (Perl proof bodyfont)
+    Some(Tokens!(T_OTHER!("*"))),  // starred
+    Tokenize!("proof"),            // environment name
+    None,                          // no shared counter
+    Some(Tokenize!("Proof")),      // display title
+    None,                          // no 'within' counter
+    Some(Tokenize!("\\rmfamily")), // bodyfont: upright (Perl proof bodyfont)
   )?;
 
   // \thankstext{label}{text} — sn-jnl / EPJ-style title-page footnote
