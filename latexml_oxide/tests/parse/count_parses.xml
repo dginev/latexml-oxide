@@ -4,7 +4,6 @@
 <?latexml package="amsmath"?>
 <?latexml package="mathtools"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
-<?latexml package="graphicx"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>

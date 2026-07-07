@@ -3320,21 +3320,27 @@ LoadDefinitions!({
     // is emitted exactly once (matching Perl's acl output, incl. `ltx_authors_1line`,
     // and surpassing Perl on the inline case). Scope is narrow: only these two nested
     // hook digests, not the general before/after-digest unlock.
-    for key in ["@document@preamble@atend", "@at@begin@document"] {
-      if let Some(ops) = lookup_tokens(key) {
-        local_state_unlocked(false);
-        let r = digest(ops);
-        expire_state_unlocked();
-        boxes.push(r?);
-      }
+    // Perl (#2846, brucemiller/LaTeXML "Leave preamble at right place", fixes
+    // #2754): the preamble is left AFTER @document@preamble@atend (etoolbox's
+    // \AtEndPreamble) AND the pre-init begindocument/before hook — both are still
+    // preamble — but BEFORE @at@begin@document / begindocument (\AtBeginDocument),
+    // which then run with inPreamble=0. The inPreamble=0 assignment therefore sits
+    // just below, after the begindocument/before dispatch.
+    if let Some(ops) = lookup_tokens("@document@preamble@atend") {
+      local_state_unlocked(false);
+      let r = digest(ops);
+      expire_state_unlocked();
+      boxes.push(r?);
     }
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
-    //   1. \hook_use:n {begindocument/before}  — pre-init hook
-    //   2. (selectfont, prepare counters, etc.)
-    //   3. \hook_use:n {begindocument}         — user-registered AtBeginDocument
-    // This fires hooks registered via \AtBeginDocument / \AddToHook{begindocument/before}{…}
-    // when expl3 has redefined them to use the modern hook system.
+    //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
+    //   2. leave the preamble  (inPreamble=0, #2846)
+    //   3. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument
+    // begindocument/before therefore fires while inPreamble=1: it carries
+    // last-minute preamble setup (deferred `\RequirePackage`, translations.sty's
+    // language initialiser) that must precede leaving the preamble — firing it
+    // after inPreamble=0 wrongly rejects a deferred `\RequirePackage`.
     // Driver for begindocument/before: translations.sty L73-85 wraps its
     //   `\def\@trnslt@current@language{\languagename}` initialiser in
     //   `\AddToHook{begindocument/before}{…}`. Without this dispatch the
@@ -3374,6 +3380,15 @@ LoadDefinitions!({
         T_LETTER!("e"),
         T_END!()
       ))?);
+    }
+    // Now leave the preamble (#2846): AFTER begindocument/before (still preamble)
+    // but BEFORE @at@begin@document / begindocument (which see inPreamble=0).
+    assign_value("inPreamble", false, None);
+    if let Some(ops) = lookup_tokens("@at@begin@document") {
+      local_state_unlocked(false);
+      let r = digest(ops);
+      expire_state_unlocked();
+      boxes.push(r?);
     }
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       // Build the Tokens explicitly: `Tokenize!` runs at the runtime
@@ -3418,7 +3433,8 @@ LoadDefinitions!({
     if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
     }
-    assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
+    // (inPreamble was set to false above, after begindocument/before but before
+    // @at@begin@document / begindocument — #2846.)
     if let Some(ops) = lookup_tokens("@document@preamble@afterend") {
       boxes.push(digest(ops)?);
     }
