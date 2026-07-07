@@ -5,7 +5,7 @@ LoadDefinitions!({
   #[rustfmt::skip]
   DeclareFontMap!("AMSa", mixrc![
     // 0x00-0x07
-    '\u{22A1}', '\u{229E}', '\u{22A0}', '\u{25A1}', '\u{25A0}', '\u{2219}', '\u{25C7}', '\u{25C6}',
+    '\u{22A1}', '\u{229E}', '\u{22A0}', '\u{25A1}', '\u{25A0}', '\u{2219}', '\u{25CA}', '\u{29EB}', // slots 6,7: lozenge/blacklozenge (Perl #2845, was 25C7/25C6)
     // 0x08-0x0F
     '\u{21BB}', '\u{21BA}', '\u{21CC}', '\u{21CB}', '\u{229F}', '\u{22A9}', '\u{22AA}', '\u{22A8}',
     // 0x10-0x17
