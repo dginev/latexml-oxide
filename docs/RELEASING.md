@@ -27,13 +27,22 @@ What this means concretely:
   the `build-macos` job). We do *not* cross-compile: each leg source-builds
   its own PIC static libxml2/libxslt/libkpathsea for the native toolchain
   (ELF vs Mach-O) and statically links them in.
-- **macOS = Apple Silicon (arm64) only, for now.** That's the arch the
-  CI suite validates (`CI.yml` macOS job runs on arm64 `macos-15`, #217).
-  An arm64 binary will **not** run on an Intel Mac (Rosetta only
-  translates the other direction). Adding Intel means either a separate
-  `x86_64-apple-darwin` tarball or a `lipo` universal binary — both
-  require a `macos-13` (Intel) build leg to validate, deferred until
-  there's demand.
+- **macOS = Apple Silicon (arm64) + Intel (x86_64), as separate tarballs.**
+  arm64 is the arch the CI suite validates (`CI.yml` macOS job runs on arm64
+  `macos-15`, #217). An arm64 binary will **not** run on an Intel Mac (Rosetta
+  only translates the other direction), so Intel gets its own native leg
+  (`build-macos-intel`) rather than a cross-compile or `lipo` universal binary.
+  - **Intel runner:** `macos-15-intel`. GitHub retired the `macos-13` Intel
+    image on 2025-12-04; `macos-15-intel` is the **last free-tier x86_64 macOS
+    image**, available until ~Fall 2027, after which GitHub Actions drops Intel
+    macOS entirely. **When that lands, revisit:** switch to a `lipo` universal
+    binary built by cross-compiling x86_64 on the arm64 runner (the static C
+    deps would need `-arch x86_64` in their `CFLAGS`/`--host`), or a
+    self-hosted Intel Mac.
+  - **Deployment target:** the Intel leg pins `MACOSX_DEPLOYMENT_TARGET=10.13`
+    so the binary runs on older Intel Macs (e.g. a 2018 MacBook Air, which
+    shipped with 10.14 and tops out at Sonoma 14) even though the runner's SDK
+    is macOS 15.
 - **Distribution linkage (self-contained):** the CLI assets STATICALLY link
   libxml2 + libxslt + libexslt (source-built PIC,
   `tools/build_static_libxml.sh`) and — on Linux — libkpathsea
@@ -50,8 +59,9 @@ What this means concretely:
 - **Editor-distributed binary:** the stricter "no host libxml2/libxslt" bar
   (`RELEASE_CRITERIA.md` §11) is now MET by these same CLI assets, so a VSCode
   extension can ship the binary directly.
-- **Deferred matrix rungs:** `aarch64-unknown-linux-gnu`, a macOS
-  universal/Intel slice, then Windows/musl (`RELEASE_CRITERIA.md` §3).
+- **Deferred matrix rungs:** `aarch64-unknown-linux-gnu`, a macOS `lipo`
+  universal binary (folding the two macOS tarballs into one — see the Intel
+  runner sunset note above), then Windows/musl (`RELEASE_CRITERIA.md` §3).
   Each new triple is one more native build leg in `release.yml` plus a
   `RELEASE_TARGET=<triple>` invocation of `tools/make_release.sh`.
 

@@ -190,7 +190,24 @@ brew install texlive
 # …or MacTeX / BasicTeX, served via the subprocess-kpsewhich fallback.
 \`\`\`
 
-> Apple Silicon (arm64) only. Intel Macs are not yet a published target.
+EOF
+  fi
+
+  if [[ -n "${RELEASE_MACOS_INTEL_TARBALL:-}" ]]; then
+    cat <<EOF
+### macOS (Intel)
+
+For Intel Macs (built with a macOS 10.13 deployment target, so it runs on
+older Intel machines up to the latest Sonoma):
+
+\`\`\`
+curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_MACOS_INTEL_TARBALL}
+tar xzf ${RELEASE_MACOS_INTEL_TARBALL}
+sudo cp latexml-oxide-${version}-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
+\`\`\`
+
+> Pick the tarball matching your Mac: \`aarch64\` for Apple Silicon (M1/M2/M3…),
+> \`x86_64\` for Intel. \`uname -m\` prints \`arm64\` or \`x86_64\`.
 
 EOF
   fi
