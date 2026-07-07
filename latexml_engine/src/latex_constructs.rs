@@ -1297,6 +1297,12 @@ pub fn define_new_theorem(
   otherthmset: Option<Tokens>,
   typ: Option<Tokens>,
   within: Option<Tokens>,
+  // Perl `\spnewtheorem` (llncs/sv) carries a per-theorem body font
+  // (`afterDigestBegin => sub { Digest($bodyfont); }`, llncs.cls.ltxml L144):
+  // e.g. `proof`/`case`/`example` pass `\rmfamily` = upright, overriding the
+  // amsthm default `\thm@bodyfont` (`\itshape`). `\newtheorem`/thmtools pass
+  // `None` (their body font comes from `\theoremstyle`).
+  bodyfont: Option<Tokens>,
 ) -> Result<()> {
   let thmset_str = thmset.to_string();
   let classname = clean_class_name(&thmset_str);
@@ -1381,6 +1387,19 @@ pub fn define_new_theorem(
       let tokens = match reg {
         RegisterValue::Tokens(t) => t,
         _ => Tokens!(),
+      };
+      // Perl `\spnewtheorem`'s `afterDigestBegin => Digest($bodyfont)` applies
+      // a per-theorem body font that overrides the amsthm default. Stage it
+      // into the saved `\thm@bodyfont` so `use_theorem_style` restores it at
+      // body-digest start (proof/case/... => `\rmfamily` = upright).
+      let tokens = if key == "\\thm@bodyfont" {
+        bodyfont
+          .as_ref()
+          .filter(|t| !t.is_empty())
+          .cloned()
+          .unwrap_or(tokens)
+      } else {
+        tokens
       };
       saved_params.push((key.clone(), Stored::Tokens(tokens)));
     } else {
@@ -6971,6 +6990,7 @@ LoadDefinitions!({
       otherthmset.filter(|t| !t.is_empty()),
       if typ.is_empty() { None } else { Some(typ) },
       reset.filter(|t| !t.is_empty()),
+      None, // \newtheorem body font comes from \theoremstyle, not a per-theorem arg
     )?;
     // Reset these!
     assign_register("\\thm@prework",
