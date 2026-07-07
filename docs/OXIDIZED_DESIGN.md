@@ -1916,6 +1916,81 @@ general `\lx@add@frontmatter` guard stays carve-out-free. Both primitives share
 the `queue_add_frontmatter_now` lowering helper, so their queueing is
 byte-identical.
 
+### 52. Structured author↔affiliation recovery from abused frontmatter idioms
+
+**Decision:** Two beyond-Perl hardenings of `\lx@add@authors` / `\lx@add@thanks`
+(`base_utilities.rs`) that recover *structured* author/affiliation metadata from
+two idioms arXiv authors routinely abuse, where both Perl LaTeXML and a literal
+port emit garbage. Both are **surpass-Perl divergences** (same-host Perl
+reproduces the bad output — witnesses below), authorized under the
+PDF-fidelity/beyond-Perl policy.
+
+**(a) `\thanks`-abuse → affiliations.** `\thanks` is semantically an
+acknowledgement footnote, but authors smuggle affiliations into it, linked to
+authors by a leading superscript mark:
+`\thanks{$^{1}$Univ. Bordeaux… $^{2}$School… $^{3}$Instituto…}`. Because
+`\lx@add@thanks` reads its content **Semiverbatim** (faithful to Perl
+`Base_Utility.pool.ltxml:661` — it protects `~ # % &` in URL/email-bearing
+notes), `$^{1}$` freezes to catcode-*other* and surfaces as a literal `$^1$` in
+one opaque `role="thanks"` blob (witness arXiv:2606.00313). The fix keys off a
+**leading NUMERIC superscript mark as the abuse signature**
+(`starts_with_affiliation_mark` — content begins with `$^1…`/`$^{1}…`/
+`\textsuperscript{1}…`): affiliation linking is by *number*, so a digit mark is
+the reliable signal. Crucially this **excludes footnote-symbol marks**
+(`$^*$`, `$^\dagger$`, `$^\ddagger$`, `$^\S$`) and lettered marks — those head
+*legitimate* acknowledgements (corresponding-author, equal-contribution,
+present-address notes) that must stay `role=thanks`; re-routing them would
+create an affiliation that fails to link and could be discarded, silently losing
+the note (an early "any superscript" heuristic did exactly this — caught in
+review). When the numeric signature fires we re-tokenize with normal catcodes,
+split the blob at each embedded mark (`split_before_affiliation_marks` — the
+marks, not `\\`, delimit the entries; a mark is only a boundary when preceded by
+whitespace, so a superscript *inside* an institution name like "Center for
+R$^2$ Studies" does not split it), and feed each segment through the existing
+`\lx@affiliation@withsup` machinery, which sets the `affiliation:N` label that
+the authors' own marks *already* request (`relocate_annotations` then links
+author↔affiliation). Every non-numeric-mark `\thanks` stays the parity-faithful
+Semiverbatim contact, byte-identical. This detects the abuse without a class
+allow-list — the numeric mark generalizes across `ieeeconf`, generic `article`,
+springer, etc.
+
+**(b) NeurIPS comma-address → fake authors/emails.** The no-marker author
+heuristic split author *groups* on `author_splits()`, which (like Perl's
+`@authorsplits`, `Base_Utility.pool.ltxml:679`) **includes the comma**. A
+multi-part address then shreds at its commas into fake authors —
+`\author{… Nam Q. Le \\ Johns Hopkins…, Laurel, MD 20723 \\ \texttt{…@jhuapl.edu} \and …}`
+produced personnames "Laurel", "MD 20723" and mislabeled the email as an
+affiliation (witness arXiv:2606.00315). The fix splits groups on the `\and`
+family / `\quad` only (`author_group_splits()` — comma excluded); within a group
+the first `\\`-line is the name list (comma/" and "-split by `split_author_line`,
+so "Alice, Bob" still separates) and each remaining `\\`-line is an affiliation
+attached to the group's last author. A bare `user@host` line (visible text has
+`@` and no whitespace — institution names always have spaces; `line_is_email`)
+is relabeled `role="email"`. Simple shapes (`A \and B`, `A, B, C`, `A, B \\ MIT`)
+are unchanged; an empty `\\`-leading name list keeps a single empty author so its
+affiliations are not dropped. `author_affil_splits()` already carried the comment
+"NO comma in affiliations!!!"; this extends that discipline to the no-marker arm.
+
+**Scope/limits:**
+- The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
+  labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`
+  (2606.00313's first two authors stay unlinked — strictly better than the
+  former literal blob, no regression).
+- Dropping the comma from group-level splitting makes one previously-handled
+  shape worse: `\author{Alice\\MIT, Bob\\CMU}` (comma separating two
+  author+affiliation groups, where the standard idiom is `\and`) now yields a
+  single author *Alice* with affiliations "MIT, Bob" and "CMU" — *Bob* is folded
+  into affiliation text and lost. This is the unavoidable dual of fixing the
+  common address case: "MIT, Bob" (affil, author) and "…Laboratory, Laurel"
+  (address parts) are structurally identical, so no heuristic separates them.
+  Multi-author docs overwhelmingly use `\and`, so this is rare; the frequent
+  address-shredding it trades against is the right call.
+- A numeric abuse-mark note that fails to link to any author is shown as a
+  `role=affiliation` contact attached to the last creator (mislabeled, but not
+  lost). Email relabeling is applied in the no-marker author arm only.
+
+Full suite green (1532/0); clippy clean.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML
