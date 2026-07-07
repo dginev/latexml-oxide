@@ -51,14 +51,14 @@ fn is_ltx(node: &Node) -> bool {
 }
 
 /// Limit-safe pre-order walk collecting every element's `xml:id` and every
-/// `latexml` processing instruction, in document order.
+/// `latexml` PI, in document order. Pass the *document* node so PIs preceding
+/// the root element are visited too.
 ///
-/// Replaces the `//*[@xml:id]` / `.//processing-instruction('latexml')` XPath
-/// queries, which overflow libxml2's 10M `XPATH_MAX_NODESET_LENGTH` on very
-/// large documents (see [`PostDocument::set_document_internal`]). Walking the
-/// live tree needs no node-set materialization. `node` is expected to be the
-/// document node so that document-level PIs (siblings of the root element) are
-/// visited alongside in-tree ones.
+/// This is the "limit-safe" pattern the post-processing queries share: a
+/// full-document `//X` (or `//X[pred]`) XPath makes libxml2 materialize
+/// `descendant-or-self::node()`, which past 10M nodes overflows the hardcoded
+/// `XPATH_MAX_NODESET_LENGTH`, returns NULL, and — formerly silently — yields an
+/// empty result. A direct DOM walk has no node-set and no such ceiling.
 fn scan_ids_and_pis(node: &Node, ids: &mut Vec<(String, Node)>, pis: &mut Vec<String>) {
   let mut child = node.get_first_child();
   while let Some(c) = child {
@@ -345,20 +345,12 @@ impl PostDocument {
 
   /// Initialize document internals: scan IDs, extract namespaces and PIs.
   fn set_document_internal(&mut self) {
-    // Record all xml:id's AND the `<?latexml …?>` processing instructions in a
-    // single limit-safe pre-order DOM walk.
-    //
-    // Previously these were two `//` XPath queries — `//*[@xml:id]` and
-    // `.//processing-instruction('latexml')`. libxml2 evaluates any such
-    // full-document query by first materializing `descendant-or-self::node()`;
-    // on a very large document (>10M nodes) that overflows the hardcoded 10M
-    // `XPATH_MAX_NODESET_LENGTH` ("growing nodeset hit limit"), the evaluation
-    // returns NULL, and the (formerly silent) empty result built an EMPTY
-    // idcache — breaking every cross-reference — and dropped the searchpath
-    // PIs. Walking the DOM directly needs no node-set materialization and so
-    // has no such ceiling. We start from the *document node* (`as_node()`), not
-    // the root element, to match the original `.//` context: document-level
-    // PIs that precede the root element are children of the document node.
+    // Record every `xml:id` and `<?latexml …?>` PI in one limit-safe walk (see
+    // `scan_ids_and_pis`), replacing the `//*[@xml:id]` and
+    // `.//processing-instruction('latexml')` queries that returned NULL past the
+    // 10M node-set ceiling — silently building an empty idcache (breaking every
+    // cross-reference) and dropping the searchpath PIs. Walk from the document
+    // node so PIs preceding the root are caught.
     let mut ids: Vec<(String, Node)> = Vec::new();
     let mut pis: Vec<String> = Vec::new();
     scan_ids_and_pis(&self.document.as_node(), &mut ids, &mut pis);
@@ -667,14 +659,11 @@ impl PostDocument {
       let _ = ctx.register_namespace(prefix, uri);
     }
 
-    // Use the *_checked variants so a NULL result carries libxml2's structured
-    // error. The dominant real failure is the 10M XPATH_MAX_NODESET_LENGTH
-    // "growing nodeset hit limit" a `//X[predicate]` query hits on a very large
-    // document — which used to be swallowed as an empty `vec![]`, silently
-    // corrupting downstream passes (idcache built empty, split not triggering).
-    // Surface it loudly instead (CLAUDE.md: fail toward flagging errors). An
-    // *empty* result set is still `Ok` with zero nodes, so this only fires on a
-    // genuine evaluation abort — no log spam on ordinary no-match queries.
+    // *_checked so a NULL result — libxml2 aborting, typically a `//X[pred]`
+    // query overflowing the 10M node-set ceiling on a huge document — is logged
+    // instead of silently becoming an empty `vec![]` that corrupts downstream
+    // passes. An empty match set is still `Ok`, so this fires only on a real
+    // abort (CLAUDE.md: fail toward flagging errors).
     let result = if let Some(node) = context_node {
       ctx.node_evaluate_checked(xpath, node)
     } else {
@@ -698,20 +687,17 @@ impl PostDocument {
 
   /// Limit-safe evaluation of a `--splitat` page union.
   ///
-  /// The union `make_splitpaths` produces is a set of `//ltx:X` and
-  /// `//ltx:X[preceding-sibling::ltx:Y or parent::ltx:Z …]` arms. Evaluated as
-  /// XPath on a very large document, the predicated arms overflow libxml2's 10M
-  /// `XPATH_MAX_NODESET_LENGTH` (materializing `descendant-or-self::node()`),
-  /// the whole union returns NULL, and — silently — nothing splits (the entire
-  /// 600 MB document then stays one page and the downstream XSLT hits the same
-  /// ceiling and dies). Instead we parse the arms and select pages with a
-  /// single limit-safe pre-order DOM walk, applying the `preceding-sibling::` /
-  /// `parent::` predicates in Rust. Results are in document order with no
-  /// duplicates, exactly as an XPath union would return them.
+  /// `make_splitpaths` emits `//ltx:X` and
+  /// `//ltx:X[preceding-sibling::ltx:Y or parent::ltx:Z]` arms. As XPath on a
+  /// huge document the predicated arms overflow the 10M node-set ceiling (see
+  /// [`scan_ids_and_pis`]), the union returns NULL, and nothing splits — the
+  /// whole document stays one page and the downstream XSLT then dies on the same
+  /// ceiling. Instead we parse the arms and select pages with one limit-safe
+  /// walk, applying the predicates in Rust: same nodes, document order, no
+  /// duplicates, as an XPath union.
   ///
-  /// Falls back to raw XPath for any union whose shape is outside that grammar
-  /// (e.g. a custom `--splitpaths`); those only ever run on small documents,
-  /// where XPath is limit-safe anyway.
+  /// Falls back to raw XPath for unions outside that grammar (custom
+  /// `--splitpaths`), which only run on small, limit-safe documents.
   pub fn find_split_pages(&self, union_xpath: &str) -> Vec<Node> {
     let arms = match parse_split_union(union_xpath) {
       Some(a) => a,

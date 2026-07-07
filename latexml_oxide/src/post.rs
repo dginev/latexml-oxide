@@ -193,17 +193,15 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
 
   telemetry::phase_enter(Phase::PostXmlParse);
   let t_parse = audit_start("PostDocument parse");
-  // `raw_xml` is the in-memory serialization — `Some(..)` only for `Xml` input.
-  // The `File` path streams the document from disk and never holds it as a
-  // String, so `raw_xml` is `None` there and the three raw-string features
-  // (empty-doc substitution, SVG extraction, ar5iv sniff) plus the
-  // echo-input-on-failure fallbacks are re-derived from the parsed Document.
+  // `raw_xml` holds the in-memory serialization — `Some` only for `Xml` input.
+  // `File` input streams from disk and never holds it, so `raw_xml` is `None`
+  // and the three raw-string features (empty-doc substitution, SVG extraction,
+  // ar5iv sniff) plus the on-failure echo are re-derived from the parsed doc.
   //
-  // Perl LaTeXML.pm L330-336: a completely empty core-conversion result (e.g.
-  // after a Fatal abort) is still post-processed — Perl sets a bare <document/>
-  // root first, "important for utility features such as packing .zip archives
-  // for output". Mirror that for the empty in-memory case (a File input is
-  // never empty — a parse of an empty file simply errors below).
+  // Perl LaTeXML.pm L330-336: an empty core result (e.g. after a Fatal) is still
+  // post-processed against a bare <document/> root ("important for utility
+  // features such as packing .zip archives"). Mirror that for empty in-memory
+  // input; a File is never empty (an empty file simply errors on parse below).
   let raw_xml: Option<&str> = match input {
     PostInput::Xml(xml) if xml.trim().is_empty() => Some("<document/>"),
     PostInput::Xml(xml) => Some(xml),

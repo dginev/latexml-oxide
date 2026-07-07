@@ -63,12 +63,9 @@ impl Split {
     }
   }
 
-  /// Get the nodes that will become separate pages.
-  ///
-  /// Uses [`PostDocument::find_split_pages`], a limit-safe DOM walk, rather than
-  /// evaluating the union as XPath — the predicated arms would overflow
-  /// libxml2's 10M node-set ceiling on very large documents and silently split
-  /// nothing.
+  /// Get the nodes that will become separate pages, via the limit-safe
+  /// [`PostDocument::find_split_pages`] walk (not XPath, which silently splits
+  /// nothing on very large documents).
   fn get_pages(&self, doc: &PostDocument) -> Vec<Node> { doc.find_split_pages(&self.split_xpath) }
 
   /// Generate a name for an unnamed page.
