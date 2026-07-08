@@ -649,7 +649,24 @@ impl PostDocument {
 
   /// Find nodes matching an XPath expression, relative to a given context node.
   pub fn findnodes_at(&self, xpath: &str, context_node: Option<&Node>) -> Vec<Node> {
-    let ctx = match XPathContext::new(&self.document) {
+    // Bind the XPath context to the CONTEXT NODE's own document when one is
+    // given — matching XML::LibXML's `XPathContext->findnodes($xpath, $refnode)`,
+    // which resets `ctx->doc = refnode->doc` and so evaluates in the refnode's
+    // document. rust-libxml's `xmlXPathNodeEval` instead REQUIRES
+    // `node->doc == ctx->doc` and returns NULL otherwise (via `xmlXPathSetContextNode`),
+    // so a context node from a *different* document — e.g. an `ltx:bibentry`
+    // loaded from an external `.bib.xml` in MakeBibliography — made
+    // `node_evaluate_checked` report a spurious "XPath evaluation failed" for
+    // every `ltx:bib-name[...]/ltx:surname` probe: a post:xpath warning flood,
+    // *and* the surnames were never matched (the old plain-eval path silently
+    // swallowed the NULL as no-match). `Context::from_node` evaluates in the
+    // node's own document, exactly as Perl does. Same-document callers are
+    // unaffected (from_node then binds to self.document).
+    let ctx = match context_node {
+      Some(node) => XPathContext::from_node(node),
+      None => XPathContext::new(&self.document),
+    };
+    let ctx = match ctx {
       Ok(c) => c,
       Err(_) => return vec![],
     };
