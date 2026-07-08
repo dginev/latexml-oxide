@@ -182,13 +182,22 @@ bundled on any platform.
     git push origin X.Y.Z
     ```
 
-5. **Watch the workflow.** `Release` on the Actions tab. It runs three
-   jobs: `dumps` (TL-window generation) → `build-macos` (Apple Silicon
-   tarball) ‖ `release` (Linux tarball + `.deb`, then collects the macOS
-   artifact and publishes all six assets). Typical duration: 15–25 min
-   cold (the macOS leg's fat-LTO `maxperf` build on the 7 GB `macos-15`
-   runner is the long pole), faster warm. On success the new release
-   appears at <https://github.com/dginev/latexml-oxide/releases/tag/X.Y.Z>.
+5. **Watch the workflow.** `Release` on the Actions tab. It runs four
+   jobs: `dumps` (TL-window generation) → `build-macos` (Apple Silicon,
+   `macos-15`) ‖ `build-macos-intel` (Intel, `macos-15-intel`) → `release`
+   (Linux tarball + `.deb`, then collects both macOS artifacts and attaches
+   all **eight** assets). The Intel-macOS leg's fat-LTO `maxperf` build on the
+   slower `macos-15-intel` runner is the long pole (up to ~120 min budget).
+
+6. **Publish the draft.** The workflow attaches the assets to a **draft**
+   Release (not public — see `release.yml` `draft: true`). Open it under
+   *Releases* → download and sanity-check each tarball on its target hardware
+   **before** publishing. In particular the **Intel-macOS** asset
+   (`…-x86_64-apple-darwin.tar.gz`) is built on a different runner than the
+   arm64 leg — verify `latexml_oxide --version` and a real conversion run on an
+   actual Intel Mac. When satisfied, click **Publish release**. (Flip
+   `release.yml` back to `draft: false` for a target once it's proven, if you
+   prefer auto-publish.)
 
 ## Failure recovery
 

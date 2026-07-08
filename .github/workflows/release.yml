@@ -358,7 +358,15 @@ jobs:
           name: macos-intel-tarball
           path: target/release-artifacts/
 
-      - name: publish GitHub release
+      # Publish as a DRAFT: the build stays tied to a release tag (no
+      # workflow_dispatch, no "random" builds), but the assets land on a draft
+      # Release you review BEFORE it goes public. Download the per-arch tarballs
+      # — especially the Intel-macOS one (x86_64-apple-darwin), whose runner
+      # differs from the arm64 leg — verify they run on the target hardware, then
+      # click "Publish release". If an asset is broken, delete the draft + tag,
+      # bump to X.Y.(Z+1), and re-tag (RELEASING.md troubleshooting). Flip
+      # `draft: false` once a target is proven if you prefer auto-publish.
+      - name: publish GitHub release (draft — review, then publish)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -378,6 +386,6 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz.sha256
-          draft: false
+          draft: true
           prerelease: false
           fail_on_unmatched_files: true
