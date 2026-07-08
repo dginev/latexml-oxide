@@ -15,12 +15,14 @@ review. Corrected positions are stated, not the original where it was wrong
 
 ## 1. Gates
 
-Numbers are verified current state (2026-05-24) unless marked TODO.
+Numbers are verified current state (2026-05-24) unless marked TODO. The
+`cargo test` / `cargo clippy` rows were re-verified 2026-07-08 (release 0.7.3
+prep); the remaining rows still carry their 2026-05-24 values.
 
 | Gate | Current | Target |
 |---|---|---|
-| `cargo test --tests` | 1334/0/0 | green |
-| `cargo clippy --all-targets` | 14 (all `latexml_math_parser`) | 0 |
+| `cargo test --tests` | 1532/0/0 | green |
+| `cargo clippy --all-targets` | 0 | 0 |
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)) | P50/P90/P99 dashboard; "no unbounded growth" gate — §5 |
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — §2 |
