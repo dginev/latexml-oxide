@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/sv_support_sty.rs`."><title>sv_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (c4af71034 2026-07-06)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>sv_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/sv_support_sty.rs`."><title>sv_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (f10db292a 2026-07-07)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>sv_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
 <a href=#4 id=4 data-nosnippet>4</a>  <span class="comment">// Perl: sv_support.sty.ltxml
@@ -206,158 +206,163 @@
 <a href=#206 id=206 data-nosnippet>206</a>  });
 <a href=#207 id=207 data-nosnippet>207</a>
 <a href=#208 id=208 data-nosnippet>208</a>  <span class="comment">// \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
-<a href=#209 id=209 data-nosnippet>209</a>  // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
-<a href=#210 id=210 data-nosnippet>210</a>  // DP-flag: Perl DefMacro (sub body), Rust DefPrimitive — WISDOM #44.
-<a href=#211 id=211 data-nosnippet>211</a>  // Safe: `\spnewtheorem` is a preamble-level declaration, never observed
-<a href=#212 id=212 data-nosnippet>212</a>  // through `\edef`/`\ifx`/`\expandafter` (verified 2026-04-23 across
-<a href=#213 id=213 data-nosnippet>213</a>  // LaTeXML/lib + ar5iv-bindings).
-<a href=#214 id=214 data-nosnippet>214</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}"</span>, sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
-<a href=#215 id=215 data-nosnippet>215</a>    engine::latex_constructs::define_new_theorem(
-<a href=#216 id=216 data-nosnippet>216</a>      flag.filter(|f| !f.is_empty()),
-<a href=#217 id=217 data-nosnippet>217</a>      thmset,
-<a href=#218 id=218 data-nosnippet>218</a>      otherthmset.filter(|t| !t.is_empty()),
-<a href=#219 id=219 data-nosnippet>219</a>      <span class="kw">if </span>typ.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(typ) },
-<a href=#220 id=220 data-nosnippet>220</a>      reset.filter(|t| !t.is_empty()),
-<a href=#221 id=221 data-nosnippet>221</a>    )<span class="question-mark">?</span>;
-<a href=#222 id=222 data-nosnippet>222</a>  });
-<a href=#223 id=223 data-nosnippet>223</a>  <span class="macro">Let!</span>(<span class="string">"\\spdefaulttheorem"</span>, <span class="string">"\\spnewtheorem"</span>);
-<a href=#224 id=224 data-nosnippet>224</a>
-<a href=#225 id=225 data-nosnippet>225</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\spthmsep"</span>, <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
-<a href=#226 id=226 data-nosnippet>226</a>
-<a href=#227 id=227 data-nosnippet>227</a>  <span class="comment">// Pre-define theorem environments — Perl L189-223
-<a href=#228 id=228 data-nosnippet>228</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theoremname"</span>, <span class="string">"Theorem"</span>);
-<a href=#229 id=229 data-nosnippet>229</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\claimname"</span>, <span class="string">"Claim"</span>);
-<a href=#230 id=230 data-nosnippet>230</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\proofname"</span>, <span class="string">"Proof"</span>);
-<a href=#231 id=231 data-nosnippet>231</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\conjecturename"</span>, <span class="string">"Conjecture"</span>);
-<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\corollaryname"</span>, <span class="string">"Corollary"</span>);
-<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\definitionname"</span>, <span class="string">"Definition"</span>);
-<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\examplename"</span>, <span class="string">"Example"</span>);
-<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\exercisename"</span>, <span class="string">"Exercise"</span>);
-<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lemmaname"</span>, <span class="string">"Lemma"</span>);
-<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\notename"</span>, <span class="string">"Note"</span>);
-<a href=#238 id=238 data-nosnippet>238</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\problemname"</span>, <span class="string">"Problem"</span>);
-<a href=#239 id=239 data-nosnippet>239</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\propertyname"</span>, <span class="string">"Property"</span>);
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\propositionname"</span>, <span class="string">"Proposition"</span>);
-<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\questionname"</span>, <span class="string">"Question"</span>);
-<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\solutionname"</span>, <span class="string">"Solution"</span>);
-<a href=#243 id=243 data-nosnippet>243</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\remarkname"</span>, <span class="string">"Remark"</span>);
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}"</span>);
-<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{claim}{\\newtheorem*{claim}{Claim}}{}"</span>);
-<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{conjecture}{\\newtheorem{conjecture}{Conjecture}}{}"</span>);
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{corollary}{\\newtheorem{corollary}{Corollary}}{}"</span>);
-<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{definition}{\\newtheorem{definition}{Definition}}{}"</span>);
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{example}{\\newtheorem{example}{Example}}{}"</span>);
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{exercise}{\\newtheorem{exercise}{Exercise}}{}"</span>);
-<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{lemma}{\\newtheorem{lemma}{Lemma}}{}"</span>);
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{note}{\\newtheorem{note}{Note}}{}"</span>);
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{problem}{\\newtheorem{problem}{Problem}}{}"</span>);
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{property}{\\newtheorem{property}{Property}}{}"</span>);
-<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{proposition}{\\newtheorem{proposition}{Proposition}}{}"</span>);
-<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{question}{\\newtheorem{question}{Question}}{}"</span>);
-<a href=#257 id=257 data-nosnippet>257</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{solution}{\\newtheorem{solution}{Solution}}{}"</span>);
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{remark}{\\newtheorem{remark}{Remark}}{}"</span>);
-<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// Perl sv_support L196: `\spnewtheorem{case}{Case}{\itshape}{\rmfamily}`
-<a href=#260 id=260 data-nosnippet>260</a>  // ships {case} as a preloaded theorem. Mirror so svjour3 authors who
-<a href=#261 id=261 data-nosnippet>261</a>  // use \begin{case} without declaring it (or comment out the declaration)
-<a href=#262 id=262 data-nosnippet>262</a>  // don't trip Error:undefined. Witness 2112.14105.
-<a href=#263 id=263 data-nosnippet>263</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{case}{\\newtheorem{case}{Case}}{}"</span>);
-<a href=#264 id=264 data-nosnippet>264</a>
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="comment">// Theorem environments — Perl L225-228
-<a href=#266 id=266 data-nosnippet>266</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{theopargself*}"</span>, <span class="string">"#body"</span>);
-<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{theopargself}"</span>, <span class="string">"#body"</span>);
-<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DefEnvironment!</span>(
-<a href=#269 id=269 data-nosnippet>269</a>    <span class="string">"{translation}{}"</span>,
-<a href=#270 id=270 data-nosnippet>270</a>    <span class="string">"&lt;ltx:quote role='translation' lang='#1'&gt;#body&lt;/ltx:quote&gt;"
-<a href=#271 id=271 data-nosnippet>271</a>  </span>);
-<a href=#272 id=272 data-nosnippet>272</a>
-<a href=#273 id=273 data-nosnippet>273</a>  <span class="comment">//======================================================================
-<a href=#274 id=274 data-nosnippet>274</a>  // QED — Perl sv_support.sty.ltxml has `enterHorizontal=&gt;1` (matches
-<a href=#275 id=275 data-nosnippet>275</a>  // amsthm L141). Without it, `\qed` at end of proof in vertical mode
-<a href=#276 id=276 data-nosnippet>276</a>  // emits the U+220E text node outside any &lt;ltx:p&gt;.
-<a href=#277 id=277 data-nosnippet>277</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\qed"</span>, <span class="string">"\\ltx@qed"</span>);
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@qed"</span>,
-<a href=#279 id=279 data-nosnippet>279</a>    <span class="string">"?#isMath(&lt;ltx:XMTok role='PUNCT'&gt;\u{220E}&lt;/ltx:XMTok&gt;)(\u{220E})"</span>,
-<a href=#280 id=280 data-nosnippet>280</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#281 id=281 data-nosnippet>281</a>    reversion =&gt; <span class="string">"\\qed"</span>);
-<a href=#282 id=282 data-nosnippet>282</a>  <span class="macro">Let!</span>(<span class="string">"\\smartqed"</span>, <span class="string">"\\qed"</span>);
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">Let!</span>(<span class="string">"\\squareforqed"</span>, <span class="string">"\\qed"</span>);
-<a href=#284 id=284 data-nosnippet>284</a>
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tens{}"</span>, <span class="string">"\\ensuremath{\\mathsf{#1}}"</span>);
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a>  <span class="comment">//======================================================================
-<a href=#288 id=288 data-nosnippet>288</a>  // Random text
-<a href=#289 id=289 data-nosnippet>289</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\andname"</span>, <span class="string">"and"</span>);
-<a href=#290 id=290 data-nosnippet>290</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\chaptername"</span>, <span class="string">"Chapter"</span>);
-<a href=#291 id=291 data-nosnippet>291</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\contriblistname"</span>, <span class="string">"List of Contributors"</span>);
-<a href=#292 id=292 data-nosnippet>292</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lastandname"</span>, <span class="string">", and"</span>);
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\seename"</span>, <span class="string">"see"</span>);
-<a href=#294 id=294 data-nosnippet>294</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\etal"</span>, <span class="string">"et al."</span>);
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\notused"</span>, <span class="string">"~"</span>);
-<a href=#296 id=296 data-nosnippet>296</a>
-<a href=#297 id=297 data-nosnippet>297</a>  <span class="comment">//======================================================================
-<a href=#298 id=298 data-nosnippet>298</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\aftertext"</span>, <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\betweenumberspace"</span>, <span class="macro">Dimension!</span>(<span class="string">"3.33pt"</span>));
-<a href=#300 id=300 data-nosnippet>300</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\headerboxheight"</span>, <span class="macro">Dimension!</span>(<span class="string">"180pt"</span>));
-<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\headlineindent"</span>, <span class="macro">Dimension!</span>(<span class="string">"33pt"</span>)); <span class="comment">// ~1.166cm
-<a href=#302 id=302 data-nosnippet>302</a>
-<a href=#303 id=303 data-nosnippet>303</a>  </span>def_macro_noop(<span class="string">"\\runinend"</span>)<span class="question-mark">?</span>;
-<a href=#304 id=304 data-nosnippet>304</a>  def_macro_noop(<span class="string">"\\floatcounterend"</span>)<span class="question-mark">?</span>;
-<a href=#305 id=305 data-nosnippet>305</a>  def_macro_noop(<span class="string">"\\sectcounterend"</span>)<span class="question-mark">?</span>;
+<a href=#209 id=209 data-nosnippet>209</a>  // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont. The
+<a href=#210 id=210 data-nosnippet>210</a>  // per-theorem `bodyfont` is honored (Perl `afterDigestBegin =&gt; Digest($bodyfont)`):
+<a href=#211 id=211 data-nosnippet>211</a>  // e.g. `proof`/`case` pass `\rmfamily` = upright body, overriding the amsthm
+<a href=#212 id=212 data-nosnippet>212</a>  // default `\itshape`. `capfont` (the title font) is still ignored.
+<a href=#213 id=213 data-nosnippet>213</a>  // DP-flag: Perl DefMacro (sub body), Rust DefPrimitive — WISDOM #44.
+<a href=#214 id=214 data-nosnippet>214</a>  // Safe: `\spnewtheorem` is a preamble-level declaration, never observed
+<a href=#215 id=215 data-nosnippet>215</a>  // through `\edef`/`\ifx`/`\expandafter` (verified 2026-04-23 across
+<a href=#216 id=216 data-nosnippet>216</a>  // LaTeXML/lib + ar5iv-bindings).
+<a href=#217 id=217 data-nosnippet>217</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}"</span>, sub[(flag, thmset, otherthmset, typ, reset, _capfont, bodyfont)] {
+<a href=#218 id=218 data-nosnippet>218</a>    engine::latex_constructs::define_new_theorem(
+<a href=#219 id=219 data-nosnippet>219</a>      flag.filter(|f| !f.is_empty()),
+<a href=#220 id=220 data-nosnippet>220</a>      thmset,
+<a href=#221 id=221 data-nosnippet>221</a>      otherthmset.filter(|t| !t.is_empty()),
+<a href=#222 id=222 data-nosnippet>222</a>      <span class="kw">if </span>typ.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(typ) },
+<a href=#223 id=223 data-nosnippet>223</a>      reset.filter(|t| !t.is_empty()),
+<a href=#224 id=224 data-nosnippet>224</a>      <span class="prelude-val">Some</span>(bodyfont).filter(|t| !t.is_empty()),
+<a href=#225 id=225 data-nosnippet>225</a>    )<span class="question-mark">?</span>;
+<a href=#226 id=226 data-nosnippet>226</a>  });
+<a href=#227 id=227 data-nosnippet>227</a>  <span class="macro">Let!</span>(<span class="string">"\\spdefaulttheorem"</span>, <span class="string">"\\spnewtheorem"</span>);
+<a href=#228 id=228 data-nosnippet>228</a>
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\spthmsep"</span>, <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
+<a href=#230 id=230 data-nosnippet>230</a>
+<a href=#231 id=231 data-nosnippet>231</a>  <span class="comment">// Pre-define theorem environments — Perl L189-223
+<a href=#232 id=232 data-nosnippet>232</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theoremname"</span>, <span class="string">"Theorem"</span>);
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\claimname"</span>, <span class="string">"Claim"</span>);
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\proofname"</span>, <span class="string">"Proof"</span>);
+<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\conjecturename"</span>, <span class="string">"Conjecture"</span>);
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\corollaryname"</span>, <span class="string">"Corollary"</span>);
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\definitionname"</span>, <span class="string">"Definition"</span>);
+<a href=#238 id=238 data-nosnippet>238</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\examplename"</span>, <span class="string">"Example"</span>);
+<a href=#239 id=239 data-nosnippet>239</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\exercisename"</span>, <span class="string">"Exercise"</span>);
+<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lemmaname"</span>, <span class="string">"Lemma"</span>);
+<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\notename"</span>, <span class="string">"Note"</span>);
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\problemname"</span>, <span class="string">"Problem"</span>);
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\propertyname"</span>, <span class="string">"Property"</span>);
+<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\propositionname"</span>, <span class="string">"Proposition"</span>);
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\questionname"</span>, <span class="string">"Question"</span>);
+<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\solutionname"</span>, <span class="string">"Solution"</span>);
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\remarkname"</span>, <span class="string">"Remark"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}"</span>);
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{claim}{\\newtheorem*{claim}{Claim}}{}"</span>);
+<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{conjecture}{\\newtheorem{conjecture}{Conjecture}}{}"</span>);
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{corollary}{\\newtheorem{corollary}{Corollary}}{}"</span>);
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{definition}{\\newtheorem{definition}{Definition}}{}"</span>);
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{example}{\\newtheorem{example}{Example}}{}"</span>);
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{exercise}{\\newtheorem{exercise}{Exercise}}{}"</span>);
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{lemma}{\\newtheorem{lemma}{Lemma}}{}"</span>);
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{note}{\\newtheorem{note}{Note}}{}"</span>);
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{problem}{\\newtheorem{problem}{Problem}}{}"</span>);
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{property}{\\newtheorem{property}{Property}}{}"</span>);
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{proposition}{\\newtheorem{proposition}{Proposition}}{}"</span>);
+<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{question}{\\newtheorem{question}{Question}}{}"</span>);
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{solution}{\\newtheorem{solution}{Solution}}{}"</span>);
+<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{remark}{\\newtheorem{remark}{Remark}}{}"</span>);
+<a href=#263 id=263 data-nosnippet>263</a>  <span class="comment">// Perl sv_support L196: `\spnewtheorem{case}{Case}{\itshape}{\rmfamily}`
+<a href=#264 id=264 data-nosnippet>264</a>  // ships {case} as a preloaded theorem. Mirror so svjour3 authors who
+<a href=#265 id=265 data-nosnippet>265</a>  // use \begin{case} without declaring it (or comment out the declaration)
+<a href=#266 id=266 data-nosnippet>266</a>  // don't trip Error:undefined. Witness 2112.14105.
+<a href=#267 id=267 data-nosnippet>267</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\@ifundefined{case}{\\newtheorem{case}{Case}}{}"</span>);
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="comment">// Theorem environments — Perl L225-228
+<a href=#270 id=270 data-nosnippet>270</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{theopargself*}"</span>, <span class="string">"#body"</span>);
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{theopargself}"</span>, <span class="string">"#body"</span>);
+<a href=#272 id=272 data-nosnippet>272</a>  <span class="macro">DefEnvironment!</span>(
+<a href=#273 id=273 data-nosnippet>273</a>    <span class="string">"{translation}{}"</span>,
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="string">"&lt;ltx:quote role='translation' lang='#1'&gt;#body&lt;/ltx:quote&gt;"
+<a href=#275 id=275 data-nosnippet>275</a>  </span>);
+<a href=#276 id=276 data-nosnippet>276</a>
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="comment">//======================================================================
+<a href=#278 id=278 data-nosnippet>278</a>  // QED — Perl sv_support.sty.ltxml has `enterHorizontal=&gt;1` (matches
+<a href=#279 id=279 data-nosnippet>279</a>  // amsthm L141). Without it, `\qed` at end of proof in vertical mode
+<a href=#280 id=280 data-nosnippet>280</a>  // emits the U+220E text node outside any &lt;ltx:p&gt;.
+<a href=#281 id=281 data-nosnippet>281</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\qed"</span>, <span class="string">"\\ltx@qed"</span>);
+<a href=#282 id=282 data-nosnippet>282</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@qed"</span>,
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="string">"?#isMath(&lt;ltx:XMTok role='PUNCT'&gt;\u{220E}&lt;/ltx:XMTok&gt;)(\u{220E})"</span>,
+<a href=#284 id=284 data-nosnippet>284</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#285 id=285 data-nosnippet>285</a>    reversion =&gt; <span class="string">"\\qed"</span>);
+<a href=#286 id=286 data-nosnippet>286</a>  <span class="macro">Let!</span>(<span class="string">"\\smartqed"</span>, <span class="string">"\\qed"</span>);
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="macro">Let!</span>(<span class="string">"\\squareforqed"</span>, <span class="string">"\\qed"</span>);
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tens{}"</span>, <span class="string">"\\ensuremath{\\mathsf{#1}}"</span>);
+<a href=#290 id=290 data-nosnippet>290</a>
+<a href=#291 id=291 data-nosnippet>291</a>  <span class="comment">//======================================================================
+<a href=#292 id=292 data-nosnippet>292</a>  // Random text
+<a href=#293 id=293 data-nosnippet>293</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\andname"</span>, <span class="string">"and"</span>);
+<a href=#294 id=294 data-nosnippet>294</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\chaptername"</span>, <span class="string">"Chapter"</span>);
+<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\contriblistname"</span>, <span class="string">"List of Contributors"</span>);
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lastandname"</span>, <span class="string">", and"</span>);
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\seename"</span>, <span class="string">"see"</span>);
+<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\etal"</span>, <span class="string">"et al."</span>);
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\notused"</span>, <span class="string">"~"</span>);
+<a href=#300 id=300 data-nosnippet>300</a>
+<a href=#301 id=301 data-nosnippet>301</a>  <span class="comment">//======================================================================
+<a href=#302 id=302 data-nosnippet>302</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\aftertext"</span>, <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
+<a href=#303 id=303 data-nosnippet>303</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\betweenumberspace"</span>, <span class="macro">Dimension!</span>(<span class="string">"3.33pt"</span>));
+<a href=#304 id=304 data-nosnippet>304</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\headerboxheight"</span>, <span class="macro">Dimension!</span>(<span class="string">"180pt"</span>));
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\headlineindent"</span>, <span class="macro">Dimension!</span>(<span class="string">"33pt"</span>)); <span class="comment">// ~1.166cm
 <a href=#306 id=306 data-nosnippet>306</a>
-<a href=#307 id=307 data-nosnippet>307</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\columncase"</span>, <span class="string">"\\makeatletter\\twocolteset"</span>);
-<a href=#308 id=308 data-nosnippet>308</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\twocoltest{}{}"</span>, <span class="string">"#1\\makeatother"</span>);
-<a href=#309 id=309 data-nosnippet>309</a>
-<a href=#310 id=310 data-nosnippet>310</a>  <span class="macro">NewCounter!</span>(<span class="string">"lastpage"</span>);
-<a href=#311 id=311 data-nosnippet>311</a>  def_macro_noop(<span class="string">"\\getlastpagenumber"</span>)<span class="question-mark">?</span>;
-<a href=#312 id=312 data-nosnippet>312</a>  def_macro_noop(<span class="string">"\\islastpageeven"</span>)<span class="question-mark">?</span>;
+<a href=#307 id=307 data-nosnippet>307</a>  </span>def_macro_noop(<span class="string">"\\runinend"</span>)<span class="question-mark">?</span>;
+<a href=#308 id=308 data-nosnippet>308</a>  def_macro_noop(<span class="string">"\\floatcounterend"</span>)<span class="question-mark">?</span>;
+<a href=#309 id=309 data-nosnippet>309</a>  def_macro_noop(<span class="string">"\\sectcounterend"</span>)<span class="question-mark">?</span>;
+<a href=#310 id=310 data-nosnippet>310</a>
+<a href=#311 id=311 data-nosnippet>311</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\columncase"</span>, <span class="string">"\\makeatletter\\twocolteset"</span>);
+<a href=#312 id=312 data-nosnippet>312</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\twocoltest{}{}"</span>, <span class="string">"#1\\makeatother"</span>);
 <a href=#313 id=313 data-nosnippet>313</a>
-<a href=#314 id=314 data-nosnippet>314</a>  def_macro_noop(<span class="string">"\\makesectrule"</span>)<span class="question-mark">?</span>;
-<a href=#315 id=315 data-nosnippet>315</a>  def_macro_noop(<span class="string">"\\makesectruleori"</span>)<span class="question-mark">?</span>;
-<a href=#316 id=316 data-nosnippet>316</a>  def_macro_noop(<span class="string">"\\nosectrule"</span>)<span class="question-mark">?</span>;
-<a href=#317 id=317 data-nosnippet>317</a>  def_macro_noop(<span class="string">"\\restoresectrule"</span>)<span class="question-mark">?</span>;
-<a href=#318 id=318 data-nosnippet>318</a>  def_macro_noop(<span class="string">"\\nothanksmarks"</span>)<span class="question-mark">?</span>;
-<a href=#319 id=319 data-nosnippet>319</a>  def_macro_noop(<span class="string">"\\setitemindent{}"</span>)<span class="question-mark">?</span>;
-<a href=#320 id=320 data-nosnippet>320</a>  def_macro_noop(<span class="string">"\\setitemitemindent{}"</span>)<span class="question-mark">?</span>;
-<a href=#321 id=321 data-nosnippet>321</a>  def_macro_noop(<span class="string">"\\thisbottomragged"</span>)<span class="question-mark">?</span>;
-<a href=#322 id=322 data-nosnippet>322</a>
-<a href=#323 id=323 data-nosnippet>323</a>  def_macro_noop(<span class="string">"\\rubric"</span>)<span class="question-mark">?</span>;
-<a href=#324 id=324 data-nosnippet>324</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\rubricwidth"</span>, Dimension::new(<span class="number">0</span>));
-<a href=#325 id=325 data-nosnippet>325</a>  def_macro_noop(<span class="string">"\\strich"</span>)<span class="question-mark">?</span>;
-<a href=#326 id=326 data-nosnippet>326</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\logodepth"</span>, <span class="macro">Dimension!</span>(<span class="string">"36pt"</span>)); <span class="comment">// ~1.2cm
-<a href=#327 id=327 data-nosnippet>327</a>  </span>def_macro_noop(<span class="string">"\\lastevenhead"</span>)<span class="question-mark">?</span>;
-<a href=#328 id=328 data-nosnippet>328</a>
-<a href=#329 id=329 data-nosnippet>329</a>  <span class="comment">//======================================================================
-<a href=#330 id=330 data-nosnippet>330</a>  // description environment with optional arg.
-<a href=#331 id=331 data-nosnippet>331</a>  // Perl sv_support.sty.ltxml L286-289 sets `locked =&gt; 1` so a downstream
-<a href=#332 id=332 data-nosnippet>332</a>  // class that re-loads sv_support's description (e.g. a sibling Springer
-<a href=#333 id=333 data-nosnippet>333</a>  // template that defines its own `\renewenvironment{description}{}{}`)
-<a href=#334 id=334 data-nosnippet>334</a>  // can't quietly drop the optional-arg-aware variant. Without locked,
-<a href=#335 id=335 data-nosnippet>335</a>  // the optional `[&lt;label-template&gt;]` becomes invisible to the env's
-<a href=#336 id=336 data-nosnippet>336</a>  // properties closure and itemization machinery sees a bare description.
-<a href=#337 id=337 data-nosnippet>337</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{description}[]"</span>,
-<a href=#338 id=338 data-nosnippet>338</a>  <span class="string">"&lt;ltx:description xml:id='#id'&gt;#body&lt;/ltx:description&gt;"</span>,
-<a href=#339 id=339 data-nosnippet>339</a>  properties =&gt; sub[_args] {
-<a href=#340 id=340 data-nosnippet>340</a>    begin_itemize(<span class="string">"description"</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default())
-<a href=#341 id=341 data-nosnippet>341</a>  },
-<a href=#342 id=342 data-nosnippet>342</a>  locked =&gt; <span class="bool-val">true</span>);
-<a href=#343 id=343 data-nosnippet>343</a>
-<a href=#344 id=344 data-nosnippet>344</a>  <span class="comment">// Perl sv_support.sty.ltxml L194-195: proof environment
-<a href=#345 id=345 data-nosnippet>345</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\proofname"</span>, <span class="string">"Proof"</span>);
-<a href=#346 id=346 data-nosnippet>346</a>  <span class="comment">// \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
-<a href=#347 id=347 data-nosnippet>347</a>  // starred (*) = unnumbered = flag=Some
-<a href=#348 id=348 data-nosnippet>348</a>  </span>engine::latex_constructs::define_new_theorem(
-<a href=#349 id=349 data-nosnippet>349</a>    <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>))), <span class="comment">// starred
-<a href=#350 id=350 data-nosnippet>350</a>    </span><span class="macro">Tokenize!</span>(<span class="string">"proof"</span>),           <span class="comment">// environment name
-<a href=#351 id=351 data-nosnippet>351</a>    </span><span class="prelude-val">None</span>,                         <span class="comment">// no shared counter
-<a href=#352 id=352 data-nosnippet>352</a>    </span><span class="prelude-val">Some</span>(<span class="macro">Tokenize!</span>(<span class="string">"Proof"</span>)),     <span class="comment">// display title
-<a href=#353 id=353 data-nosnippet>353</a>    </span><span class="prelude-val">None</span>,                         <span class="comment">// no 'within' counter
-<a href=#354 id=354 data-nosnippet>354</a>  </span>)<span class="question-mark">?</span>;
-<a href=#355 id=355 data-nosnippet>355</a>
-<a href=#356 id=356 data-nosnippet>356</a>  <span class="comment">// \thankstext{label}{text} — sn-jnl / EPJ-style title-page footnote
-<a href=#357 id=357 data-nosnippet>357</a>  // (svjour3 derivatives). Render as a regular footnote.
-<a href=#358 id=358 data-nosnippet>358</a>  // Witnesses 2406.12029, 2406.12545.
-<a href=#359 id=359 data-nosnippet>359</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thankstext{}{}"</span>, <span class="string">"\\footnote{#2}"</span>);
-<a href=#360 id=360 data-nosnippet>360</a>  <span class="comment">// \thanksref{label} — footnote-style marker; render as superscript.
-<a href=#361 id=361 data-nosnippet>361</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thanksref{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
-<a href=#362 id=362 data-nosnippet>362</a>});
+<a href=#314 id=314 data-nosnippet>314</a>  <span class="macro">NewCounter!</span>(<span class="string">"lastpage"</span>);
+<a href=#315 id=315 data-nosnippet>315</a>  def_macro_noop(<span class="string">"\\getlastpagenumber"</span>)<span class="question-mark">?</span>;
+<a href=#316 id=316 data-nosnippet>316</a>  def_macro_noop(<span class="string">"\\islastpageeven"</span>)<span class="question-mark">?</span>;
+<a href=#317 id=317 data-nosnippet>317</a>
+<a href=#318 id=318 data-nosnippet>318</a>  def_macro_noop(<span class="string">"\\makesectrule"</span>)<span class="question-mark">?</span>;
+<a href=#319 id=319 data-nosnippet>319</a>  def_macro_noop(<span class="string">"\\makesectruleori"</span>)<span class="question-mark">?</span>;
+<a href=#320 id=320 data-nosnippet>320</a>  def_macro_noop(<span class="string">"\\nosectrule"</span>)<span class="question-mark">?</span>;
+<a href=#321 id=321 data-nosnippet>321</a>  def_macro_noop(<span class="string">"\\restoresectrule"</span>)<span class="question-mark">?</span>;
+<a href=#322 id=322 data-nosnippet>322</a>  def_macro_noop(<span class="string">"\\nothanksmarks"</span>)<span class="question-mark">?</span>;
+<a href=#323 id=323 data-nosnippet>323</a>  def_macro_noop(<span class="string">"\\setitemindent{}"</span>)<span class="question-mark">?</span>;
+<a href=#324 id=324 data-nosnippet>324</a>  def_macro_noop(<span class="string">"\\setitemitemindent{}"</span>)<span class="question-mark">?</span>;
+<a href=#325 id=325 data-nosnippet>325</a>  def_macro_noop(<span class="string">"\\thisbottomragged"</span>)<span class="question-mark">?</span>;
+<a href=#326 id=326 data-nosnippet>326</a>
+<a href=#327 id=327 data-nosnippet>327</a>  def_macro_noop(<span class="string">"\\rubric"</span>)<span class="question-mark">?</span>;
+<a href=#328 id=328 data-nosnippet>328</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\rubricwidth"</span>, Dimension::new(<span class="number">0</span>));
+<a href=#329 id=329 data-nosnippet>329</a>  def_macro_noop(<span class="string">"\\strich"</span>)<span class="question-mark">?</span>;
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\logodepth"</span>, <span class="macro">Dimension!</span>(<span class="string">"36pt"</span>)); <span class="comment">// ~1.2cm
+<a href=#331 id=331 data-nosnippet>331</a>  </span>def_macro_noop(<span class="string">"\\lastevenhead"</span>)<span class="question-mark">?</span>;
+<a href=#332 id=332 data-nosnippet>332</a>
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="comment">//======================================================================
+<a href=#334 id=334 data-nosnippet>334</a>  // description environment with optional arg.
+<a href=#335 id=335 data-nosnippet>335</a>  // Perl sv_support.sty.ltxml L286-289 sets `locked =&gt; 1` so a downstream
+<a href=#336 id=336 data-nosnippet>336</a>  // class that re-loads sv_support's description (e.g. a sibling Springer
+<a href=#337 id=337 data-nosnippet>337</a>  // template that defines its own `\renewenvironment{description}{}{}`)
+<a href=#338 id=338 data-nosnippet>338</a>  // can't quietly drop the optional-arg-aware variant. Without locked,
+<a href=#339 id=339 data-nosnippet>339</a>  // the optional `[&lt;label-template&gt;]` becomes invisible to the env's
+<a href=#340 id=340 data-nosnippet>340</a>  // properties closure and itemization machinery sees a bare description.
+<a href=#341 id=341 data-nosnippet>341</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{description}[]"</span>,
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="string">"&lt;ltx:description xml:id='#id'&gt;#body&lt;/ltx:description&gt;"</span>,
+<a href=#343 id=343 data-nosnippet>343</a>  properties =&gt; sub[_args] {
+<a href=#344 id=344 data-nosnippet>344</a>    begin_itemize(<span class="string">"description"</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default())
+<a href=#345 id=345 data-nosnippet>345</a>  },
+<a href=#346 id=346 data-nosnippet>346</a>  locked =&gt; <span class="bool-val">true</span>);
+<a href=#347 id=347 data-nosnippet>347</a>
+<a href=#348 id=348 data-nosnippet>348</a>  <span class="comment">// Perl sv_support.sty.ltxml L194-195: proof environment
+<a href=#349 id=349 data-nosnippet>349</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\proofname"</span>, <span class="string">"Proof"</span>);
+<a href=#350 id=350 data-nosnippet>350</a>  <span class="comment">// \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
+<a href=#351 id=351 data-nosnippet>351</a>  // starred (*) = unnumbered = flag=Some
+<a href=#352 id=352 data-nosnippet>352</a>  </span>engine::latex_constructs::define_new_theorem(
+<a href=#353 id=353 data-nosnippet>353</a>    <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>))),  <span class="comment">// starred
+<a href=#354 id=354 data-nosnippet>354</a>    </span><span class="macro">Tokenize!</span>(<span class="string">"proof"</span>),            <span class="comment">// environment name
+<a href=#355 id=355 data-nosnippet>355</a>    </span><span class="prelude-val">None</span>,                          <span class="comment">// no shared counter
+<a href=#356 id=356 data-nosnippet>356</a>    </span><span class="prelude-val">Some</span>(<span class="macro">Tokenize!</span>(<span class="string">"Proof"</span>)),      <span class="comment">// display title
+<a href=#357 id=357 data-nosnippet>357</a>    </span><span class="prelude-val">None</span>,                          <span class="comment">// no 'within' counter
+<a href=#358 id=358 data-nosnippet>358</a>    </span><span class="prelude-val">Some</span>(<span class="macro">Tokenize!</span>(<span class="string">"\\rmfamily"</span>)), <span class="comment">// bodyfont: upright (Perl proof bodyfont)
+<a href=#359 id=359 data-nosnippet>359</a>  </span>)<span class="question-mark">?</span>;
+<a href=#360 id=360 data-nosnippet>360</a>
+<a href=#361 id=361 data-nosnippet>361</a>  <span class="comment">// \thankstext{label}{text} — sn-jnl / EPJ-style title-page footnote
+<a href=#362 id=362 data-nosnippet>362</a>  // (svjour3 derivatives). Render as a regular footnote.
+<a href=#363 id=363 data-nosnippet>363</a>  // Witnesses 2406.12029, 2406.12545.
+<a href=#364 id=364 data-nosnippet>364</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thankstext{}{}"</span>, <span class="string">"\\footnote{#2}"</span>);
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="comment">// \thanksref{label} — footnote-style marker; render as superscript.
+<a href=#366 id=366 data-nosnippet>366</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thanksref{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#367 id=367 data-nosnippet>367</a>});
 </code></pre></div></section></main></body></html>
