@@ -1653,3 +1653,47 @@ an optional).
 pre-audit Rust binding, whose fused `\cfrac[]` constructor tolerated (and
 discarded) the optional. Candidate to fix in BOTH engines by adding `[]`
 to `\lx@inner@cfrac` and passing the alignment through.
+
+## 43. PR #2846 leaves the preamble too early → `\RequirePackage`/`\usepackage` in `\AtBeginDocument` wrongly errors
+
+**Perl source:** `LaTeXML/Engine/latex_constructs.pool.ltxml`, `\begin{document}`
+`afterDigest` (as of PR #2846 "Leave preamble at right place", fixes #2754).
+
+**Symptom:** a package deferred to the begin-document hook —
+`\AtBeginDocument{\RequirePackage{xcolor}}` (real-world: `inconsolata.sty` does
+`\AtBeginDocument{...\usepackage{upquote}}`) — triggers
+`Error:unexpected:\RequirePackage The current command '\RequirePackage' can only
+appear in the preamble`. Ground truth (same host): **pdflatex → 0 errors**;
+**pre-#2846 Perl 0.8.8 → 0 errors**. Corpus witnesses: arXiv:2605.00022,
+arXiv:2605.00119.
+
+**Minimal example** (`docs/reproducers/atbegindocument_requirepackage.tex`):
+```tex
+\documentclass{article}
+\AtBeginDocument{\RequirePackage{xcolor}}
+\begin{document} Hello \end{document}
+```
+
+**Root cause:** PR #2846 **moved** `AssignValue(inPreamble => 0)` from AFTER
+`@at@begin@document` (pre-#2846: comment `# atbegin is still (sorta) preamble`)
+to just BEFORE it (post-#2846: comment `# We're now leaving the preamble (!?)`).
+So `@at@begin@document` (which digests `\AtBeginDocument` code) now runs with
+`inPreamble=0`, and `\RequirePackage`/`\usepackage`'s `onlyPreamble` guard fires.
+Real `latex.ltx` `\document` disables the `\@onlypreamble` commands
+(`\@preamblecmds`, L54) only AFTER firing the begindocument hook (L44), so the
+deferred load is legal — #2846 contradicts the kernel. The `(!?)` in the moved
+comment is the author's own doubt.
+
+**Perl status:** REGRESSION introduced by #2846 (verified: vendored post-#2846
+`latexml` rev 51fea96a errors on the reproducer; installed pre-#2846 0.8.8 does
+not). Candidate to upstream (restore the assignment to after `@at@begin@document`).
+
+**Rust status (fixed, pre-#2846 placement restored — `2fe9fd76fa` +
+follow-up):** our original #2846 port (`3ebf6e1a3d`) faithfully copied the
+post-#2846 placement and inherited the bug. `latex_constructs.rs`
+`\begin{document}` now keeps `inPreamble=1` across `@at@begin@document` + the
+begindocument L3 hook and clears it only afterward — matching pre-#2846 Perl,
+`latex.ltx`, and pdflatex. (No state-mechanism issue: `assign_value` faithfully
+mirrors Perl `assignValue`, both default `local`; the divergence was purely the
+assignment's position.) Covered by the reproducer + a body-level `\RequirePackage`
+still erroring (parity).

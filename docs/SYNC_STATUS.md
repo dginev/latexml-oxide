@@ -40,30 +40,36 @@ Ground truth, **same host**: `pdflatex` → exit 0; Perl `latexml` → exit 0
 appear in the preamble`. A body-level (not hook) `\RequirePackage` **must still
 error** — all three engines do (that IS `\@onlypreamble`; kept as parity).
 
-**Root cause = our own port of PR #2846, not upstream.** Real `latex.ltx`
-`\document` fires the begindocument hook (L44) and only THEN runs
-`\@preamblecmds` to disable the `\@onlypreamble` commands (L54) — so
-`\RequirePackage`/`\usepackage` inside `\AtBeginDocument` is legal. Pre-#2846,
-our Rust code set `inPreamble=false` AFTER digesting `@at@begin@document`
-(`// atbegin is still (sorta) preamble`) — correct. The #2846 port (commit
-`3ebf6e1a3d`) **moved** `assign_value("inPreamble", false)` to just BEFORE
-`@at@begin@document`, mirroring Perl `latex_constructs.pool` L328. Perl has the
-same source placement yet **never observably enforces `onlyPreamble` in that
-hook** (its guard doesn't fire), so upstream #2846 is clean in Perl; our port
-manifested the latent ordering as a hard error because our `only_preamble`
-guard *does* fire. **⟵ REVERIFY against
-<https://github.com/brucemiller/LaTeXML/pull/2846/changes>: confirm the PR moves
-`inPreamble=0` to before `@at@begin@document` (Perl side) and that Perl's guard
-is genuinely inert there.**
+**Root cause = upstream PR #2846 regression, faithfully inherited by our port
+(RESOLVED — no scoping subtlety).** Real `latex.ltx` `\document` fires the
+begindocument hook (L44) and only THEN runs `\@preamblecmds` to disable the
+`\@onlypreamble` commands (L54) — so `\RequirePackage`/`\usepackage` inside
+`\AtBeginDocument` is legal. **PR #2846 moved `AssignValue(inPreamble => 0)`
+from AFTER `@at@begin@document` (pre-#2846: `# atbegin is still (sorta)
+preamble`) to just BEFORE it (`# ...leaving the preamble (!?)`).** That is a
+regression *in Perl itself* — **verified**: the vendored post-#2846 `latexml`
+(rev 51fea96a) errors on the reproducer, while installed pre-#2846 Perl 0.8.8
+does not. Our #2846 port (`3ebf6e1a3d`) copied the post-#2846 placement and
+inherited the same error.
 
-**Fix.** Restore the correct point: keep `inPreamble=1` across `@at@begin@document`
-+ the begindocument L3 hook, and clear it immediately afterward (latex_constructs.rs,
-`\begin{document}` constructor). Divergence from Perl's *source* placement is
-intentional and documented (it matches latex.ltx + pdflatex + Perl's *behavior*);
-supersedes the narrower mathtools `\lx@mathtools@require@graphicx` workaround (that
-unguarded-primitive patch is now redundant but harmless). 2605.00022 → 0 errors;
-2605.00119 → only an unrelated babel/fontspec `bidi=default` LuaLaTeX/XeLaTeX error
-remains.
+> **Correction to an earlier wrong theory in this note:** there is **no
+> scoping / frame-topology subtlety**, and `assign_value` is NOT broken — it
+> faithfully mirrors Perl `assignValue` (both default `local`, both revert on
+> frame-pop; verified `state.rs:801-808` ≡ `State.pm:152`). The apparent
+> paradox ("source sets 0 before the hook, yet the hook probe reads 1") was a
+> **version mismatch**: the probe ran the *installed pre-#2846* binary (0 set
+> after the hook) while the source read was the *vendored post-#2846* copy (0
+> set before). Recorded as an upstream bug in `KNOWN_PERL_ERRORS.md` #43.
+
+**Fix (`2fe9fd76fa` + doc/comment correction).** Restore the pre-#2846 point:
+keep `inPreamble=1` across `@at@begin@document` + the begindocument L3 hook, and
+clear it immediately afterward (`latex_constructs.rs`, `\begin{document}`
+constructor). This matches latex.ltx + pdflatex + pre-#2846 Perl 0.8.8, and
+*surpasses* the current buggy upstream (the #2754 `\AtEndPreamble` goal is still
+met — `@document@preamble@atend` runs before the clear). Supersedes the narrower
+mathtools `\lx@mathtools@require@graphicx` workaround (now redundant, harmless).
+2605.00022 → 0 errors; 2605.00119 → only an unrelated babel/fontspec
+`bidi=default` LuaLaTeX/XeLaTeX error remains.
 
 ### Landed this session (2026-07-05, on `ar5iv-2606-prep`) — faithful width-based figure-panel arrangement (2605.00347)
 

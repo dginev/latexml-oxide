@@ -3320,14 +3320,18 @@ LoadDefinitions!({
     // is emitted exactly once (matching Perl's acl output, incl. `ltx_authors_1line`,
     // and surpassing Perl on the inline case). Scope is narrow: only these two nested
     // hook digests, not the general before/after-digest unlock.
-    // Perl (#2846, brucemiller/LaTeXML "Leave preamble at right place", fixes
-    // #2754): the preamble is left AFTER @document@preamble@atend (etoolbox's
-    // \AtEndPreamble) AND the pre-init begindocument/before hook — both still
-    // preamble. Unlike Perl (which nominally clears inPreamble just BEFORE
-    // @at@begin@document but never enforces the guard in that hook), we keep
+    // The preamble is left AFTER @document@preamble@atend (etoolbox's
+    // \AtEndPreamble) AND the begin-document hooks — all still preamble. We keep
     // inPreamble=1 across @at@begin@document + the begindocument hook and clear
-    // it only afterward, matching latex.ltx's real disable point (see the
-    // detailed note at the inPreamble=0 assignment below).
+    // it only afterward, matching latex.ltx's real disable point AND Perl 0.8.8
+    // (pre-#2846) — see the detailed note at the inPreamble=0 assignment below.
+    // NB: upstream PR #2846 ("Leave preamble at right place", fixes #2754)
+    // MOVED `AssignValue(inPreamble => 0)` to just BEFORE @at@begin@document —
+    // a regression: the post-#2846 Perl errors on `\AtBeginDocument{\Require-
+    // Package{...}}` just as our #2846 port did (KNOWN_PERL_ERRORS.md). We keep
+    // the pre-#2846 / latex.ltx placement; the #2754 goal (deferred
+    // \RequirePackage in \AtEndPreamble) is still satisfied — @document@preamble@-
+    // atend runs before inPreamble=0 below.
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -3394,12 +3398,16 @@ LoadDefinitions!({
     // witnesses arXiv:2605.00022 / 2605.00119, whose inconsolata.sty does
     // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's top-level
     // `\RequirePackage{textcomp}`). We therefore keep inPreamble=1 across both
-    // hooks and clear it just below, once they complete. Perl's
-    // latex_constructs.pool L328 nominally sets inPreamble=0 just BEFORE
-    // @at@begin@document, but does not observably enforce onlyPreamble there
-    // (its guard never fires in the hook); we follow latex.ltx's actual disable
-    // point so the guard matches real LaTeX — same observable behaviour as Perl.
-    // Regression history + reverify-vs-#2846 note: SYNC_STATUS.md 2026-07-08.
+    // hooks and clear it just below, once they complete — this is the pre-#2846
+    // Perl 0.8.8 placement (`AssignValue(inPreamble => 0)` AFTER @at@begin@-
+    // document, comment "atbegin is still (sorta) preamble"). Upstream PR #2846
+    // moved that assignment to just BEFORE @at@begin@document, which regressed
+    // Perl itself (post-#2846 latexml errors on the reproducer, verified same
+    // host); our original #2846 port copied that placement and inherited the
+    // bug. There is no scoping subtlety — assign_value mirrors Perl assignValue
+    // (both default `local`); the earlier "guard never fires in the hook" note
+    // was wrong (it conflated pre-#2846 installed Perl with post-#2846 source).
+    // Full write-up: KNOWN_PERL_ERRORS.md + SYNC_STATUS.md 2026-07-08.
     if let Some(ops) = lookup_tokens("@at@begin@document") {
       local_state_unlocked(false);
       let r = digest(ops);
