@@ -12,10 +12,13 @@
 % whose inconsolata.sty does \AtBeginDocument{...\usepackage{upquote}} → upquote.sty's
 % top-level \RequirePackage{textcomp}, firing the guard at begin-document.
 %
-% Regression origin: the Rust port of upstream LaTeXML PR #2846 (commit 3ebf6e1a3d)
-% moved `inPreamble=0` to BEFORE @at@begin@document; the correct point (restored) is
-% AFTER @at@begin@document + the begindocument hook. Body-level \RequirePackage must
-% STILL error (that IS onlypreamble; parity with pdflatex+Perl).
+% Regression origin: upstream LaTeXML PR #2846 fixed #2754 (see
+% atbegindocument_paragraph_break.tex) by clearing `inPreamble` BEFORE the hook, but
+% `inPreamble` also gates the onlyPreamble guard, so it disabled \RequirePackage too
+% early. Direction B decouples the guard onto its own `inBeginDocumentHook` signal:
+% inPreamble clears before the hook (keeps #2754 fixed) while the guard stays
+% satisfied through the hook window. Body-level \RequirePackage must STILL error
+% (that IS onlypreamble; parity with pdflatex+Perl).
 \documentclass{article}
 \AtBeginDocument{\RequirePackage{xcolor}}
 \begin{document}

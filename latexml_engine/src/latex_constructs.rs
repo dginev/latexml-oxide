@@ -332,7 +332,16 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
-  if !lookup_bool_sym(pin!("inPreamble")) {
+  // Legal in the preamble, AND while the begindocument hooks run: real latex.ltx
+  // (`\document`) disables the \@onlypreamble commands (`\@preamblecmds`, L9522)
+  // only AFTER firing the begindocument hook (L9512), so a deferred
+  // `\RequirePackage`/`\usepackage` inside `\AtBeginDocument` is legal. The two
+  // states are distinct transitions latex.ltx runs at different points — LaTeXML
+  // fused both onto `inPreamble`, so we give the onlyPreamble guard its own signal
+  // (`inBeginDocumentHook`, set across the hooks in `\begin{document}`) rather than
+  // holding `inPreamble=1` through the hook (which would suppress paragraph breaks
+  // in \AtBeginDocument — upstream #2754 vs #2846; KNOWN_PERL_ERRORS #43).
+  if !lookup_bool_sym(pin!("inPreamble")) && !lookup_bool_sym(pin!("inBeginDocumentHook")) {
     Error!(
       "unexpected",
       cs,
@@ -3320,24 +3329,35 @@ LoadDefinitions!({
     // is emitted exactly once (matching Perl's acl output, incl. `ltx_authors_1line`,
     // and surpassing Perl on the inline case). Scope is narrow: only these two nested
     // hook digests, not the general before/after-digest unlock.
-    // The preamble is left AFTER @document@preamble@atend (etoolbox's
-    // \AtEndPreamble) AND the begin-document hooks — all still preamble. We keep
-    // inPreamble=1 across @at@begin@document + the begindocument hook and clear
-    // it only afterward, matching latex.ltx's real disable point AND Perl 0.8.8
-    // (pre-#2846) — see the detailed note at the inPreamble=0 assignment below.
-    // NB: upstream PR #2846 ("Leave preamble at right place", fixes #2754)
-    // MOVED `AssignValue(inPreamble => 0)` to just BEFORE @at@begin@document —
-    // a regression: the post-#2846 Perl errors on `\AtBeginDocument{\Require-
-    // Package{...}}` just as our #2846 port did (KNOWN_PERL_ERRORS.md). We keep
-    // the pre-#2846 / latex.ltx placement; the #2754 goal (deferred
-    // \RequirePackage in \AtEndPreamble) is still satisfied — @document@preamble@-
-    // atend runs before inPreamble=0 below.
+    // DECOUPLE the two preamble transitions latex.ltx runs at different points
+    // (LaTeXML historically fused both onto `inPreamble`; see #2754 vs #2846):
+    //   (A) body typesetting begins  → governs `\par` (must break paragraphs
+    //       inside \AtBeginDocument). We leave the preamble (`inPreamble=0`) BEFORE
+    //       @at@begin@document, matching latex.ltx (body typesetting is live at the
+    //       hook) and upstream #2846. Setting inPreamble=0 AFTER the hook instead
+    //       makes `\par` a no-op in \AtBeginDocument (blank line fails to split —
+    //       upstream #2754).
+    //   (B) \@onlypreamble commands get disabled (`\@preamblecmds`, latex.ltx
+    //       L9522) → governs the onlyPreamble guard. This happens AFTER the
+    //       begindocument hook (L9512), so `\RequirePackage`/`\usepackage` deferred
+    //       to \AtBeginDocument stay legal. We track (B) with `inBeginDocumentHook`
+    //       (set here, cleared after the begindocument hook), so the guard passes
+    //       through the hook window independently of `inPreamble`.
+    // Ground truth: pdflatex AND same-host Perl accept both a paragraph-splitting
+    // and a `\RequirePackage`-loading \AtBeginDocument (reproducers
+    // atbegindocument_requirepackage.tex + the #2754 book example; corpus witnesses
+    // arXiv:2605.00022 / 2605.00119). KNOWN_PERL_ERRORS #43.
+    assign_value("inBeginDocumentHook", true, Some(Scope::Global));
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
       local_state_unlocked(false);
       let r = digest(ops);
       expire_state_unlocked();
       boxes.push(r?);
     }
+    // (A) Leave the preamble now — BEFORE @at@begin@document (upstream #2846 /
+    // latex.ltx placement) — so `\par` closes paragraphs inside \AtBeginDocument.
+    // The onlyPreamble guard stays satisfied via `inBeginDocumentHook` above.
+    assign_value("inPreamble", false, None);
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
     //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
@@ -3388,26 +3408,14 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
-    // @at@begin@document (\AtBeginDocument) + the begindocument hook run while
-    // STILL in the preamble. Real latex.ltx disables the \@onlypreamble commands
-    // (\@preamblecmds, `\document` L54) AFTER firing the begindocument hook
-    // (L44) — so a deferred `\RequirePackage`/`\usepackage` inside
-    // \AtBeginDocument is legal. Verified ground truth: pdflatex AND same-host
-    // Perl both accept `\AtBeginDocument{\RequirePackage{xcolor}}` with no error
-    // (reproducer docs/reproducers/atbegindocument_requirepackage.tex; corpus
-    // witnesses arXiv:2605.00022 / 2605.00119, whose inconsolata.sty does
-    // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's top-level
-    // `\RequirePackage{textcomp}`). We therefore keep inPreamble=1 across both
-    // hooks and clear it just below, once they complete — this is the pre-#2846
-    // Perl 0.8.8 placement (`AssignValue(inPreamble => 0)` AFTER @at@begin@-
-    // document, comment "atbegin is still (sorta) preamble"). Upstream PR #2846
-    // moved that assignment to just BEFORE @at@begin@document, which regressed
-    // Perl itself (post-#2846 latexml errors on the reproducer, verified same
-    // host); our original #2846 port copied that placement and inherited the
-    // bug. There is no scoping subtlety — assign_value mirrors Perl assignValue
-    // (both default `local`); the earlier "guard never fires in the hook" note
-    // was wrong (it conflated pre-#2846 installed Perl with post-#2846 source).
-    // Full write-up: KNOWN_PERL_ERRORS.md + SYNC_STATUS.md 2026-07-08.
+    // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
+    // is already 0 here (transition A, above), so `\par` closes paragraphs and a
+    // blank line inside \AtBeginDocument splits them (fixes #2754). The onlyPreamble
+    // guard stays satisfied through the hook via `inBeginDocumentHook` (transition
+    // B), so a deferred `\RequirePackage`/`\usepackage` here is still legal (corpus
+    // witnesses arXiv:2605.00022 / 2605.00119: inconsolata.sty →
+    // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's `\RequirePackage
+    // {textcomp}`). Both hold simultaneously — the two states are decoupled above.
     if let Some(ops) = lookup_tokens("@at@begin@document") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -3438,10 +3446,12 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
-    // Now leave the preamble: AFTER @at@begin@document + the begindocument hook
-    // (both still preamble), matching latex.ltx `\document` — begindocument hook
-    // at L44, then `\@preamblecmds` disables the \@onlypreamble commands at L54.
-    assign_value("inPreamble", false, None);
+    // (B) The `\@preamblecmds` point (latex.ltx L9522, AFTER the begindocument
+    // hook): the \@onlypreamble commands are now disabled. Close the hook window —
+    // from here the onlyPreamble guard rejects body-level `\RequirePackage`/
+    // `\usepackage` (matching pdflatex + Perl). `inPreamble` is already 0 (set
+    // before @at@begin@document, above).
+    assign_value("inBeginDocumentHook", false, Some(Scope::Global));
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
     // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
@@ -3461,8 +3471,9 @@ LoadDefinitions!({
     if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
     }
-    // (inPreamble was set to false above, after @at@begin@document and the
-    // begindocument hook — matching latex.ltx's post-hook \@preamblecmds.)
+    // @document@preamble@afterend runs after the \@preamblecmds point (both
+    // inPreamble=0 and the hook window closed above), so onlyPreamble commands
+    // here are already disabled — matching latex.ltx's begindocument/end.
     if let Some(ops) = lookup_tokens("@document@preamble@afterend") {
       boxes.push(digest(ops)?);
     }

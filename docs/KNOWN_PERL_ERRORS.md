@@ -1688,12 +1688,26 @@ comment is the author's own doubt.
 `latexml` rev 51fea96a errors on the reproducer; installed pre-#2846 0.8.8 does
 not). Candidate to upstream (restore the assignment to after `@at@begin@document`).
 
-**Rust status (fixed, pre-#2846 placement restored — `2fe9fd76fa` +
-follow-up):** our original #2846 port (`3ebf6e1a3d`) faithfully copied the
-post-#2846 placement and inherited the bug. `latex_constructs.rs`
-`\begin{document}` now keeps `inPreamble=1` across `@at@begin@document` + the
-begindocument L3 hook and clears it only afterward — matching pre-#2846 Perl,
-`latex.ltx`, and pdflatex. (No state-mechanism issue: `assign_value` faithfully
-mirrors Perl `assignValue`, both default `local`; the divergence was purely the
-assignment's position.) Covered by the reproducer + a body-level `\RequirePackage`
-still erroring (parity).
+**The two are one overloaded flag.** `inPreamble` gates BOTH transitions
+`latex.ltx` `\document` performs at different points: (A) body typesetting begins
+— governs `\par` — which runs BEFORE the begindocument hook (`\UseOneTimeHook`,
+L9512); and (B) `\@preamblecmds` disables the `\@onlypreamble` commands — governs
+this guard — which runs AFTER it (L9522). Clearing `inPreamble` before the hook
+(so `\par` breaks paragraphs, #2846/#2754) disables the guard too early; holding
+it across the hook (so the guard passes, our first fix) makes `\par` a no-op and
+REGRESSES #2754 (the blank line stops splitting paragraphs —
+`docs/reproducers/atbegindocument_paragraph_break.tex`). A single flag cannot
+serve both.
+
+**Rust status (fixed — Direction B, guard decoupled):** the earlier "hold
+`inPreamble=1` across the hook" fix (`2fe9fd76fa`) fixed `\RequirePackage` but
+silently reintroduced #2754. `latex_constructs.rs` now DECOUPLES the two: it clears
+`inPreamble` BEFORE `@at@begin@document` (transition A — #2846/`latex.ltx`
+placement, so `\par` splits paragraphs) and tracks transition B with a dedicated
+`inBeginDocumentHook` flag (global scope, set across the hook digests, cleared at
+the `\@preamblecmds` point). `only_preamble` passes when `inPreamble ||
+inBeginDocumentHook`, so both hold simultaneously. Blast radius is one line of the
+guard — `\par` and the `inPreamble` timing are untouched. Covered by both
+reproducers (paragraph-break + `\RequirePackage`) with a body-level
+`\RequirePackage` still erroring (parity). The upstream Perl fix mirrors this on
+branch `in-begin-document-hook` (follow-up to #2846).
