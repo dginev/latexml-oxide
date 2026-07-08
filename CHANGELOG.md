@@ -1,47 +1,17 @@
 # Change Log
 
-## [0.7.3] (Intel-macOS release asset + PDF-fidelity pass, upstream sync #2845–#2847)
+## [0.7.3] (Intel-macOS asset + PDF-fidelity pass)
 
-  A fidelity-focused cycle mined from live arXiv runs (sandbox-arxiv-2605 /
-  2606), plus a new published platform target. See the git log / GitHub's
-  per-PR notes for full detail.
-
-  - **New release target: Intel macOS (`x86_64-apple-darwin`).** A published
-    tarball for Intel Macs (e.g. a 2018 MacBook Air), built natively on the
-    `macos-15-intel` runner with `MACOSX_DEPLOYMENT_TARGET=10.13`, alongside the
-    existing Linux + Apple-Silicon assets. Releases now publish as a **draft**
-    (review the per-arch assets on real hardware, then publish — see
-    `docs/RELEASING.md`).
-  - **Upstream LaTeXML sync (#2845–#2847):** correct lozenge/diamond codepoints
-    (`\lozenge` 25CA, `\blacklozenge` 29EB, `\opendiamond` 25C7; #2845); `\toctitle`
-    is a plain `Tokens` register in llncs (#2847).
-  - **`\AtBeginDocument` regression fixed — identified as an upstream #2846 bug.**
-    `\RequirePackage`/`\usepackage` deferred to `\AtBeginDocument` (e.g.
-    `inconsolata.sty` → `upquote`) wrongly errored "can only appear in the
-    preamble". Root cause: upstream PR #2846 moved `inPreamble => 0` to *before*
-    `@at@begin@document`; real `latex.ltx` disables `\@onlypreamble` only *after*
-    the begindocument hook. Restored the pre-#2846 placement (matches pdflatex +
-    pre-#2846 Perl). Recorded in `docs/KNOWN_PERL_ERRORS.md` #43; reproducer in
-    `docs/reproducers/`.
-  - **Bibliography (post-processing):** the author-year refnum
-    (`ltx_bib_author-year`) now renders the **full** author list via
-    `do_authors`→`do_names` (initials-first, "et al." only for a literal BibTeX
-    "others") — matching Perl `MakeBibliography.pm`, byte-identical on witnesses.
-    Also: `findnodes_at` now evaluates node-relative XPath in the context node's
-    *own* document (`Context::from_node`), fixing a cross-document (external
-    `.bib.xml`) `post:xpath` warning flood **and** a silent author-year →
-    numeric-`[1]` parity regression.
-  - **Frontmatter fidelity:** stop double-emitting the title when a class raw-
-    redefines `\maketitle` (OXIDIZED_DESIGN #49); recover author↔affiliation from
-    abused frontmatter idioms; inst-style `\author[marks]{name}` keeps the name
-    and accumulates all authors (surpass-Perl, OXIDIZED_DESIGN #53); ignore empty
-    `\lx@add@frontmatter` tags.
-  - **Font encoding:** establish `T1` font encoding for acmart / elsarticle /
-    moderncv (real classes set T1; `<`/`>` render literally, not OT1 ¡/¿).
-  - **Theorem fidelity:** llncs proof/theorem bodies honor the per-theorem
-    `\spnewtheorem` body font (proof body upright), each with its own counter.
-  - **Docs:** `OXIDIZED_DESIGN.md` split into a slim index + a themed family
-    (divergences, math, types, future-work).
+  - **New target: Intel macOS** (`x86_64-apple-darwin`). Releases now publish as
+    a reviewable draft.
+  - **Upstream sync #2845–#2847** — lozenge/diamond codepoints, `\toctitle` register.
+  - **Fixed `\AtBeginDocument{\RequirePackage …}`** wrongly erroring — traced to
+    upstream bug #2846 (`KNOWN_PERL_ERRORS.md` #43).
+  - **Bibliography** — author-year labels show the full author list; cross-document
+    XPath fix.
+  - **Frontmatter & fonts** — title / author-affiliation fidelity; T1 encoding for
+    acmart / elsarticle / moderncv; llncs theorem body fonts.
+  - **Docs** — `OXIDIZED_DESIGN` split; 2026-07 session logs archived.
 
 ## [0.7.2] (first public ar5iv 2606 run: upstream sync, MathML-post audit, live-run parity + stability)
 
