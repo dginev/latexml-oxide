@@ -1,0 +1,23 @@
+% Minimal reproducer: a package deferred to \AtBeginDocument must still be
+% loadable — real latex.ltx disables the \@onlypreamble commands (\@preamblecmds,
+% \document L54) AFTER firing the begindocument hook (L44), so \RequirePackage /
+% \usepackage inside \AtBeginDocument is LEGAL.
+%
+% Ground truth (same host):
+%   pdflatex  -> exit 0, no error
+%   latexml (Perl, /usr/local/bin) -> exit 0, "No obvious problems"
+%   latexml_oxide (pre-fix)        -> Error: '\RequirePackage' can only appear in the preamble
+%
+% Corpus witnesses: arXiv:2605.00022, arXiv:2605.00119 — both \usepackage{inconsolata},
+% whose inconsolata.sty does \AtBeginDocument{...\usepackage{upquote}} → upquote.sty's
+% top-level \RequirePackage{textcomp}, firing the guard at begin-document.
+%
+% Regression origin: the Rust port of upstream LaTeXML PR #2846 (commit 3ebf6e1a3d)
+% moved `inPreamble=0` to BEFORE @at@begin@document; the correct point (restored) is
+% AFTER @at@begin@document + the begindocument hook. Body-level \RequirePackage must
+% STILL error (that IS onlypreamble; parity with pdflatex+Perl).
+\documentclass{article}
+\AtBeginDocument{\RequirePackage{xcolor}}
+\begin{document}
+Hello
+\end{document}

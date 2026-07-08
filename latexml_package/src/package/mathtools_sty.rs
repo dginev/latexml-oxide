@@ -19,8 +19,19 @@ LoadDefinitions!({
   // RequirePackage!("mhsetup");
   // Perl L43: RequirePackage('amsmath', withoptions => 1)
   require_package_with_options("amsmath")?;
-  // Perl: AtBeginDocument(sub { RequirePackage('graphicx'); });
-  at_begin_document(TokenizeInternal!(r"\RequirePackage{graphicx}"))?;
+  // Perl L44-45: AtBeginDocument(sub { RequirePackage('graphicx'); }).
+  // Perl's binding-level `RequirePackage` *function* is NOT preamble-guarded —
+  // only the TeX-level `\RequirePackage` control sequence is (via onlyPreamble,
+  // latex_constructs `before_digest`). Since #2846 runs `@at@begin@document` with
+  // inPreamble=0, queuing the guarded `\RequirePackage` CS would wrongly raise
+  // "\RequirePackage can only appear in the preamble" at \begin{document}. Match
+  // Perl's unguarded sub: queue an internal primitive that calls the unguarded
+  // `require_package` directly. (Idempotent — a no-op if the user already loaded
+  // graphicx explicitly, letting that driver-options load win, as in Perl.)
+  DefPrimitive!("\\lx@mathtools@require@graphicx", {
+    RequirePackage!("graphicx");
+  });
+  at_begin_document(TokenizeInternal!(r"\lx@mathtools@require@graphicx"))?;
 
   //======================================================================
   // 3 — Macros

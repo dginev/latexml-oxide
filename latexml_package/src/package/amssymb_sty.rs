@@ -62,7 +62,7 @@ LoadDefinitions!({
   def_math_sym("\\blacktriangle", "\u{25B2}", None, None)?;
   def_math_sym("\\blacktriangledown", "\u{25BC}", None, None)?;
   def_math_sym("\\blacksquare", "\u{25A0}", None, None)?;
-  def_math_sym("\\blacklozenge", "\u{25C6}", None, None)?;
+  def_math_sym("\\blacklozenge", "\u{29EB}", None, None)?; // BLACK LOZENGE (Perl #2845, was 25C6 diamond)
   def_math_sym("\\bigstar", "\u{2605}", None, None)?;
   def_math_sym("\\sphericalangle", "\u{2222}", None, None)?;
   DefMath!("\\complement", "\u{2201}", meaning => "complement");

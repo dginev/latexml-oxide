@@ -326,26 +326,33 @@ LoadDefinitions!({
   //   ifnew   (only add if no previous entry)
   DefPrimitive!("\\lx@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
     sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
-    // Perl: queueFrontMatter($stomach, $tag, $attr,
-    //   Invocation(T_CS('\lx@add@frontmatter@now'), $keys, $tag, $attr, $tokens))
-    let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@add@frontmatter@now")];
-    if let Some(ref keys) = keys_opt {
-      inv_tokens.push(T_OTHER!("["));
-      inv_tokens.extend(keys.revert()?.unlist());
-      inv_tokens.push(T_OTHER!("]"));
+    // Beyond-Perl hardening (OXIDIZED_DESIGN #51; general frontmatter principle,
+    // user-directed 2026-07-07): a frontmatter entry with an empty tag or empty
+    // content is VOID — early-quit, emit nothing. Perl's `\lx@add@frontmatter`
+    // queues unconditionally (L354-358), so a binding fed an empty argument
+    // yields a stray empty element: e.g. icml's `\printAffiliationsAndNotice{}`
+    // (empty braces = the ICML-sanctioned "no notice") -> an empty
+    // `<ltx:note role="affiliationnotice">` rendering as a bare "affiliationnotice:"
+    // marker (witness arXiv:2606.00309). The affiliation list itself survives —
+    // it is fed separately via `\icmlaffiliation`.
+    if tag_tks.to_string().trim().is_empty() || tokens.to_string().trim().is_empty() {
+      return Ok(Vec::new());
     }
-    inv_tokens.push(T_BEGIN!());
-    inv_tokens.extend(tag_tks.unlist_ref().iter().copied());
-    inv_tokens.push(T_END!());
-    if let Some(ref attrs) = attrs_opt {
-      inv_tokens.push(T_OTHER!("["));
-      inv_tokens.extend(attrs.revert()?.unlist());
-      inv_tokens.push(T_OTHER!("]"));
-    }
-    inv_tokens.push(T_BEGIN!());
-    inv_tokens.extend(tokens.unlist());
-    inv_tokens.push(T_END!());
-    queue_front_matter(&tag_tks.to_string(), attrs_opt.as_ref(), Tokens::new(inv_tokens));
+    queue_add_frontmatter_now(keys_opt.as_ref(), &tag_tks, attrs_opt.as_ref(), Some(&tokens))?;
+  });
+
+  // Beyond-Perl best-practice API (OXIDIZED_DESIGN #51): open an *empty*
+  // frontmatter container element as a deliberate anchor for later annotations
+  // — the intention-revealing counterpart to `\lx@add@frontmatter`, which is now
+  // a no-op on empty content. A few bindings legitimately need an empty
+  // container: moderncv's cv `<ltx:creator>` exists only to receive the
+  // \firstname/\familyname/\email/... contacts that annotate the most-recent
+  // creator. (Perl abuses `\lx@add@frontmatter{ltx:creator}[role=cv]{}` for
+  // this; we name the intent instead of smuggling it through empty content.)
+  // \lx@add@frontmatter@container[keys]{tag}[attributes]
+  DefPrimitive!("\\lx@add@frontmatter@container OptionalKeyVals {} OptionalKeyVals",
+    sub[(keys_opt,tag_tks,attrs_opt)] {
+    queue_add_frontmatter_now(keys_opt.as_ref(), &tag_tks, attrs_opt.as_ref(), None)?;
   });
 
   DefPrimitive!("\\lx@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals:Frontmatter {}",
@@ -810,10 +817,44 @@ LoadDefinitions!({
     "\\lx@add@orcid [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{#2}"
   );
-  DefMacro!(
-    "\\lx@add@thanks [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}"
-  );
+  // Beyond-Perl (OXIDIZED_DESIGN #52): the arXiv "\thanks abuse" idiom smuggles
+  // affiliations into an author \thanks{...}, linking them to authors by a
+  // leading superscript mark ($^{n}$ / \textsuperscript{n}). \thanks is
+  // semantically an acknowledgement, so we re-route ONLY when the content BEGINS
+  // with such a mark (the abuse signature — a genuine acknowledgement never
+  // starts with a bare superscript); every other \thanks stays the parity-
+  // faithful Semiverbatim role=thanks contact. When detected we re-tokenize (the
+  // Semiverbatim read froze $/^ to catcode-other) and feed each $^{n}$-delimited
+  // segment through \lx@affiliation@withsup, which sets the affiliation:N label
+  // that the authors' own marks already request (relocate_annotations then links
+  // author<->affiliation). Witness arXiv:2606.00313.
+  DefMacro!("\\lx@add@thanks [] Semiverbatim", sub[(attr, content)] {
+    if starts_with_affiliation_mark(&content) {
+      let retok = mouth::tokenize_internal(&content.to_string());
+      let mut calls: Vec<Token> = Vec::new();
+      for seg in split_before_affiliation_marks(retok) {
+        if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+          continue;
+        }
+        let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(seg)]);
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
+      }
+      Ok(Tokens::new(calls))
+    } else {
+      // Unchanged: the parity-faithful role=thanks contact, exactly as the
+      // former template `\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}`.
+      let mut opts = mouth::tokenize_internal("role=thanks").unlist();
+      if let Some(a) = &attr {
+        opts.push(T_OTHER!(","));
+        opts.extend(a.unlist_ref().iter().copied());
+      }
+      Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
+        vec![Some(mouth::tokenize_internal("ltx:creator")),
+             Some(mouth::tokenize_internal("ltx:contact")),
+             Some(Tokens::new(opts)), Some(content)]))
+    }
+  });
   DefMacro!(
     "\\lx@add@note [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=note,#1]{#2}"
@@ -884,21 +925,47 @@ LoadDefinitions!({
         }
       }
     } else {
-      for block in split_tokens(stuff, author_splits()) {
+      // No superscript markers. Split into author GROUPS on the \and family /
+      // \quad only — NOT comma (author_group_splits). Within a group, the first
+      // \\-delimited line is the author-name list (comma / " and "-split via
+      // split_author_line); each remaining \\-line is an affiliation, attached to
+      // the group's LAST author (the "affiliation follows the name(s) before \\"
+      // convention). Splitting groups on comma shredded multi-part addresses
+      // ("…Laboratory, Laurel, MD 20723") into fake authors and mislabeled the
+      // trailing \email line as an affiliation. OXIDIZED_DESIGN #52 (surpass-Perl,
+      // Perl's @authorsplits shares the comma); witness arXiv:2606.00315.
+      for block in split_tokens(stuff, author_group_splits()) {
         if block.is_empty() {
           continue;
         }
         let mut pieces = split_tokens(block, vec![SplitDelim::Token(T_CS!("\\\\"))]).into_iter();
-        let author = pieces.next().unwrap_or_default();
-        let mut body: Vec<Token> = author.unlist();
-        for line in pieces {
-          if !line.is_empty() {
-            body.extend(
-              Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(line)]).unlist());
-          }
+        let names_line = pieces.next().unwrap_or_default();
+        let affils: Vec<Tokens> = pieces.filter(|l| !l.is_empty()).collect();
+        // A `\\`-leading block (`\author{\\ MIT}`) has an empty name list; keep a
+        // single (empty) author so its affiliations are still emitted rather than
+        // silently dropped (matches the pre-#52 `unwrap_or_default()` behaviour).
+        let mut names = split_author_line(names_line);
+        if names.is_empty() {
+          names.push(Tokens::default());
         }
-        calls.extend(
-          Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(Tokens::new(body))]).unlist());
+        let last = names.len() - 1;
+        for (i, name) in names.into_iter().enumerate() {
+          let mut body: Vec<Token> = name.unlist();
+          if i == last {
+            for line in &affils {
+              // A bare email line (\texttt{user@host}) is an email, not an
+              // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315).
+              let cs = if line_is_email(line) {
+                T_CS!("\\lx@add@email")
+              } else {
+                T_CS!("\\lx@add@affiliation")
+              };
+              body.extend(Invocation!(cs, vec![None, Some(line.clone())]).unlist());
+            }
+          }
+          calls.extend(
+            Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(Tokens::new(body))]).unlist());
+        }
       }
     }
     Ok(Tokens::new(calls))
@@ -1471,6 +1538,41 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       queue.push((tag.to_string(), attr_hash, command));
     }
   });
+}
+
+/// Build and queue the deferred `\lx@add@frontmatter@now` invocation for a
+/// frontmatter entry `<tag attrs>content</tag>`. Shared by `\lx@add@frontmatter`
+/// (content present) and `\lx@add@frontmatter@container` (content = None — a
+/// deliberate empty container element that anchors later annotations).
+/// Perl: queueFrontMatter($stomach, $tag, $attr,
+///   Invocation(T_CS('\lx@add@frontmatter@now'), $keys, $tag, $attr, $tokens)).
+fn queue_add_frontmatter_now(
+  keys_opt: Option<&KeyVals>,
+  tag_tks: &Tokens,
+  attrs_opt: Option<&KeyVals>,
+  content: Option<&Tokens>,
+) -> Result<()> {
+  let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@add@frontmatter@now")];
+  if let Some(keys) = keys_opt {
+    inv_tokens.push(T_OTHER!("["));
+    inv_tokens.extend(keys.revert()?.unlist());
+    inv_tokens.push(T_OTHER!("]"));
+  }
+  inv_tokens.push(T_BEGIN!());
+  inv_tokens.extend(tag_tks.unlist_ref().iter().copied());
+  inv_tokens.push(T_END!());
+  if let Some(attrs) = attrs_opt {
+    inv_tokens.push(T_OTHER!("["));
+    inv_tokens.extend(attrs.revert()?.unlist());
+    inv_tokens.push(T_OTHER!("]"));
+  }
+  inv_tokens.push(T_BEGIN!());
+  if let Some(content) = content {
+    inv_tokens.extend(content.unlist_ref().iter().copied());
+  }
+  inv_tokens.push(T_END!());
+  queue_front_matter(&tag_tks.to_string(), attrs_opt, Tokens::new(inv_tokens));
+  Ok(())
 }
 
 /// This removes previously stored (but deferred) frontmatter that is being overridden.
@@ -3489,13 +3591,22 @@ fn literal_and() -> SplitDelim {
   tks.push(T_SPACE!());
   SplitDelim::Tokens(Tokens::new(tks))
 }
-fn author_splits() -> Vec<SplitDelim> {
+// GROUP-level separators for the no-marker author heuristic (OXIDIZED_DESIGN
+// #52): the \and family plus \quad/\qquad, but NOT the comma and NOT the literal
+// " and ". A comma separates NAMES within one author line ("Alice, Bob") and the
+// tokens WITHIN a multi-part address ("Laurel, MD 20723") — so splitting author
+// *groups* on it shreds addresses into fake authors and turns the following
+// \email line into a bogus affiliation (witness arXiv:2606.00315, NeurIPS
+// idiom). Perl's @authorsplits (Base_Utility.pool.ltxml L679) includes the comma
+// and shares this mis-split; excluding it here is a deliberate surpass-Perl
+// divergence. Name-level comma/" and " splitting still happens, but only AFTER a
+// line is known to be author names — via split_author_line — never across
+// address text. (Compare author_affil_splits(): "NO comma in affiliations!!!".)
+fn author_group_splits() -> Vec<SplitDelim> {
   vec![
     T_CS!("\\and").into(),
     T_CS!("\\And").into(),
     T_CS!("\\AND").into(),
-    T_OTHER!(",").into(),
-    literal_and(),
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
   ]
@@ -3537,6 +3648,92 @@ fn affil_splits() -> Vec<SplitDelim> {
   ]
 }
 fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
+
+/// Does this token list *begin* with a NUMERIC affiliation superscript mark
+/// (`$^{1}…` / `$^1…` / `\textsuperscript{1}…`)? This is the signature of the
+/// arXiv "`\thanks` abuse" idiom (affiliations smuggled into an author
+/// `\thanks{...}` and linked to authors by a leading mark).
+///
+/// The mark must be a **digit**: affiliation linking is by number, so a numeric
+/// mark is the reliable abuse signal. Crucially, footnote-SYMBOL marks
+/// (`$^*$`, `$^\dagger$`, `$^\ddagger$`, `$^\S$`) and lettered marks head
+/// *legitimate* acknowledgements — corresponding-author / equal-contribution /
+/// present-address notes — which must stay `role=thanks`. Requiring a digit
+/// excludes them, so those notes are never re-routed into an affiliation that
+/// fails to link and is then discarded (i.e. no silent note loss). Operates on
+/// the string form so it is agnostic to the Semiverbatim catcode-freeze on
+/// `$`/`^`. (user-directed, 2026-07-07; reviewer-hardened.)
+fn starts_with_affiliation_mark(content: &Tokens) -> bool {
+  let s = content.to_string();
+  let st = s.trim_start();
+  let after_opener = match st
+    .strip_prefix("$^")
+    .or_else(|| st.strip_prefix("\\textsuperscript"))
+  {
+    Some(rest) => rest,
+    None => return false,
+  };
+  // The superscript content may be braced (`{1}`) or bare (`1`); either way the
+  // first content character must be an ASCII digit.
+  let content_start = after_opener.strip_prefix('{').unwrap_or(after_opener);
+  content_start
+    .chars()
+    .next()
+    .is_some_and(|c| c.is_ascii_digit())
+}
+
+/// Split an affiliation blob at each embedded superscript mark (`$^{n}$` /
+/// `\textsuperscript{n}`), keeping the mark at the head of the following
+/// segment. The abuse idiom packs several affiliations onto ONE line delimited
+/// only by their marks (no `\\`), so `affil_splits()` (which splits on `\\`)
+/// cannot separate them. Each returned segment then flows through
+/// `\lx@affiliation@withsup`, which turns its leading mark into the
+/// `affiliation:N` label that the authors' own marks already request
+/// (`relocate_annotations` links them).
+fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
+  let toks = tokens.unlist();
+  let mut segments: Vec<Tokens> = Vec::new();
+  let mut current: Vec<Token> = Vec::new();
+  for (i, t) in toks.iter().enumerate() {
+    let dollar_super = *t == T_MATH!() && toks.get(i + 1).is_some_and(|n| *n == T_SUPER!());
+    let is_mark_start = dollar_super || *t == T_CS!("\\textsuperscript");
+    // Only treat a mark as an affiliation boundary when it is preceded by
+    // whitespace (institutions are space-separated). A mark glued to the
+    // preceding text — e.g. a superscript INSIDE an institution name,
+    // "Center for R$^2$ Studies" — is not a boundary, so the name is not
+    // wrongly split (reviewer-flagged). The first mark (current empty) always
+    // opens segment 0.
+    if is_mark_start && current.last() == Some(&T_SPACE!()) {
+      segments.push(Tokens::new(std::mem::take(&mut current)));
+    }
+    current.push(*t);
+  }
+  if !current.is_empty() {
+    segments.push(Tokens::new(current));
+  }
+  segments
+}
+
+/// A `\\`-delimited line in a no-marker author block is really an EMAIL, not an
+/// affiliation, when its visible text is a single bare address: it contains `@`
+/// and NO whitespace. Institution names always contain spaces, so this is
+/// conservative by construction (near-zero false positives). Relabels the
+/// trailing `\texttt{user@host}` line of the NeurIPS idiom, which would
+/// otherwise become a bogus `role="affiliation"` (OXIDIZED_DESIGN #52; witness
+/// arXiv:2606.00315). Visible text = letters/other chars only; control sequences
+/// (`\texttt`, `\textit`, `\{`, `\}`) and grouping are skipped.
+fn line_is_email(line: &Tokens) -> bool {
+  let mut visible = String::new();
+  for t in line.unlist_ref() {
+    if t.code == Catcode::LETTER || t.code == Catcode::OTHER {
+      t.with_str(|s| visible.push_str(s));
+    } else if t.code == Catcode::SPACE {
+      visible.push(' ');
+    }
+  }
+  let v = visible.trim();
+  !v.is_empty() && v.contains('@') && !v.chars().any(|c| c.is_whitespace())
+}
 
 /// Converts tokens to a string in the fashion of \message and others
 ///

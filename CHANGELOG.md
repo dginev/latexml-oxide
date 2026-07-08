@@ -1,5 +1,18 @@
 # Change Log
 
+## [0.7.3] (Intel-macOS asset + PDF-fidelity pass)
+
+  - **New target: Intel macOS** (`x86_64-apple-darwin`). Releases now publish as
+    a reviewable draft.
+  - **Upstream sync #2845–#2847** — lozenge/diamond codepoints, `\toctitle` register.
+  - **Fixed `\AtBeginDocument{\RequirePackage …}`** wrongly erroring — traced to
+    upstream bug #2846 (`KNOWN_PERL_ERRORS.md` #43).
+  - **Bibliography** — author-year labels show the full author list; cross-document
+    XPath fix.
+  - **Frontmatter & fonts** — title / author-affiliation fidelity; T1 encoding for
+    acmart / elsarticle / moderncv; llncs theorem body fonts.
+  - **Docs** — `OXIDIZED_DESIGN` split; 2026-07 session logs archived.
+
 ## [0.7.2] (first public ar5iv 2606 run: upstream sync, MathML-post audit, live-run parity + stability)
 
   The release used for the first public latexml-oxide conversion of an arXiv

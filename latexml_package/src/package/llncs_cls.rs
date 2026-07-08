@@ -102,25 +102,16 @@ LoadDefinitions!({
   DefRegister!("\\tocauthor" => Tokens!());
   DefRegister!("\\titrun" => Tokens!());
   DefRegister!("\\titlerunning" => Tokens!());
-  // Perl llncs.cls.ltxml L73: `DefRegister('\toctitle{}' => Tokens())`
-  // — a Tokens-valued register with a `{}` proto, meaning the register
-  // is read/written via an argument. Rust's DefRegister! doesn't accept
-  // a `{}` proto (the macro only handles name-only register shapes).
-  //
-  // Was: DefMacro!("\\toctitle{}", "") — but this swallows the FOLLOWING
-  // TOKEN whenever `\toctitle` appears bare-name. Driver: 2112.13058
-  // user wrote `\tocauthor\toctitle\maketitle` (the sample llncs
-  // template). `\toctitle{}` ate `\maketitle` as its required arg,
-  // skipping the frontmatter-emitting \maketitle and producing
-  // "Can't close environment abstract" because abstract was processed
-  // without an open document-frontmatter slot.
-  //
-  // Fix: drop the `{}` proto; treat `\toctitle` as a no-op CS that
-  // accepts no arg. User code `\toctitle{TOC text}` will leave the
-  // `{TOC text}` as a balanced group that gets digested as empty
-  // text in the surrounding context — same observable output as the
-  // discarding-macro path.
-  def_macro_noop("\\toctitle")?;
+  // Perl llncs.cls.ltxml L73: `DefRegister('\toctitle' => Tokens())` — a plain
+  // Tokens register, like its siblings above. Upstream #2847 (brucemiller/LaTeXML,
+  // fixes #2253) removed a `{}` typo in the prototype (`'\toctitle{}'`) that had
+  // made the register consume a following token: the sample llncs template
+  // `\tocauthor\toctitle\maketitle` (arXiv:2112.13058) then ate `\maketitle`,
+  // skipping frontmatter emission ("Can't close environment abstract"). We had
+  // worked around the typo with a `def_macro_noop`; now we match the corrected
+  // upstream register form — which behaves exactly like the `\tocauthor` register
+  // above, so it never swallows a following token.
+  DefRegister!("\\toctitle" => Tokens!());
 
   DefRegister!("\\tocchpnum" => Dimension::new(0));
   DefRegister!("\\tocsecnum" => Dimension!("15pt"));
@@ -146,8 +137,9 @@ LoadDefinitions!({
   def_macro_noop("\\chaptermark{}")?;
 
   // Theorem-family \xxxname definitions. The \spnewtheorem primitive itself
-  // is ported further below (L133+) via define_new_theorem; capfont/bodyfont
-  // are ignored per Perl precedent since visual styling isn't modeled.
+  // is ported further below via define_new_theorem, and the theorem
+  // environments are installed there with their per-theorem bodyfont honored
+  // (capfont/title font is still ignored).
   RawTeX!(r#"\def\theoremname{Theorem}
 \def\claimname{Claim}
 \def\proofname{Proof}
@@ -165,24 +157,11 @@ LoadDefinitions!({
 \def\solutionname{Solution}
 \def\remarkname{Remark}"#);
 
-  // Pre-define theorem environments — Perl uses \spnewtheorem with capfont/bodyfont
-  RawTeX!("\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}");
-  RawTeX!("\\@ifundefined{claim}{\\newtheorem*{claim}{Claim}}{}");
-  RawTeX!("\\@ifundefined{proof}{\\newtheorem*{proof}{Proof}}{}");
-  RawTeX!("\\@ifundefined{case}{\\newtheorem*{case}{Case}}{}");
-  RawTeX!("\\@ifundefined{conjecture}{\\newtheorem{conjecture}[theorem]{Conjecture}}{}");
-  RawTeX!("\\@ifundefined{corollary}{\\newtheorem{corollary}[theorem]{Corollary}}{}");
-  RawTeX!("\\@ifundefined{definition}{\\newtheorem{definition}[theorem]{Definition}}{}");
-  RawTeX!("\\@ifundefined{example}{\\newtheorem{example}[theorem]{Example}}{}");
-  RawTeX!("\\@ifundefined{exercise}{\\newtheorem{exercise}[theorem]{Exercise}}{}");
-  RawTeX!("\\@ifundefined{lemma}{\\newtheorem{lemma}[theorem]{Lemma}}{}");
-  RawTeX!("\\@ifundefined{note}{\\newtheorem{note}[theorem]{Note}}{}");
-  RawTeX!("\\@ifundefined{problem}{\\newtheorem{problem}[theorem]{Problem}}{}");
-  RawTeX!("\\@ifundefined{property}{\\newtheorem{property}[theorem]{Property}}{}");
-  RawTeX!("\\@ifundefined{proposition}{\\newtheorem{proposition}[theorem]{Proposition}}{}");
-  RawTeX!("\\@ifundefined{question}{\\newtheorem{question}[theorem]{Question}}{}");
-  RawTeX!("\\@ifundefined{solution}{\\newtheorem{solution}[theorem]{Solution}}{}");
-  RawTeX!("\\@ifundefined{remark}{\\newtheorem{remark}[theorem]{Remark}}{}");
+  // The theorem environments themselves are installed with `\spnewtheorem`
+  // (below, after the primitive is defined) to faithfully mirror Perl
+  // llncs.cls.ltxml L170-202 — each env its OWN counter and its per-theorem
+  // bodyfont (proof/case/... = `\rmfamily` upright). See the block after
+  // `\spnewtheorem`.
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
   // Perl llncs.cls.ltxml L101-157 is `DefMacro('\spnewtheorem ...', sub
@@ -192,19 +171,47 @@ LoadDefinitions!({
   // needs to happen at digest-stable time so subsequent uses of the
   // new `{env}` work. WISDOM #44: kind flip is intentional —
   // `\spnewtheorem` is a preamble-declaration macro only, never
-  // captured by `\edef`/`\ifx`. capfont/bodyfont are TeX font
-  // commands (e.g. \bfseries, \itshape) — ignored in LaTeXML (both
-  // Perl and Rust do the same).
-  DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
+  // captured by `\edef`/`\ifx`. The per-theorem `bodyfont` is honored
+  // (Perl L144 `afterDigestBegin => sub { Digest($bodyfont); }`): e.g.
+  // `proof`/`case` pass `\rmfamily` = upright body, overriding the amsthm
+  // default `\itshape`. `capfont` (the title font) is still ignored.
+  DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, bodyfont)] {
     engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
       otherthmset.filter(|t| !t.is_empty()),
       if typ.is_empty() { None } else { Some(typ) },
       reset.filter(|t| !t.is_empty()),
+      Some(bodyfont).filter(|t| !t.is_empty()),
     )?;
   });
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
+
+  // Install the theorem environments — faithful mirror of Perl
+  // llncs.cls.ltxml L170-202 (which itself tracks real llncs.cls L1142-1174).
+  // Each environment gets its OWN counter (the class default — the shared
+  // `theorem` counter only applies under the `envcntsame` option) and its
+  // per-theorem capfont/bodyfont. The `\@ifundefined` guards are a Rust-only
+  // defensive keep (skip if a preloaded package already defined the env);
+  // in a plain `\documentclass{llncs}` load nothing pre-defines them, so this
+  // matches Perl's unconditional definitions.
+  RawTeX!(r#"\@ifundefined{theorem}{\spnewtheorem{theorem}{Theorem}[section]{\bfseries}{\itshape}}{}
+\@ifundefined{claim}{\spnewtheorem*{claim}{Claim}{\itshape}{\rmfamily}}{}
+\@ifundefined{proof}{\spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}}{}
+\@ifundefined{case}{\spnewtheorem{case}{Case}{\itshape}{\rmfamily}}{}
+\@ifundefined{conjecture}{\spnewtheorem{conjecture}{Conjecture}{\itshape}{\rmfamily}}{}
+\@ifundefined{corollary}{\spnewtheorem{corollary}{Corollary}{\bfseries}{\itshape}}{}
+\@ifundefined{definition}{\spnewtheorem{definition}{Definition}{\bfseries}{\rmfamily}}{}
+\@ifundefined{example}{\spnewtheorem{example}{Example}{\itshape}{\rmfamily}}{}
+\@ifundefined{exercise}{\spnewtheorem{exercise}{Exercise}{\bfseries}{\rmfamily}}{}
+\@ifundefined{lemma}{\spnewtheorem{lemma}{Lemma}{\bfseries}{\itshape}}{}
+\@ifundefined{note}{\spnewtheorem{note}{Note}{\itshape}{\rmfamily}}{}
+\@ifundefined{problem}{\spnewtheorem{problem}{Problem}{\bfseries}{\rmfamily}}{}
+\@ifundefined{property}{\spnewtheorem{property}{Property}{\itshape}{\rmfamily}}{}
+\@ifundefined{proposition}{\spnewtheorem{proposition}{Proposition}{\bfseries}{\itshape}}{}
+\@ifundefined{question}{\spnewtheorem{question}{Question}{\itshape}{\rmfamily}}{}
+\@ifundefined{solution}{\spnewtheorem{solution}{Solution}{\bfseries}{\rmfamily}}{}
+\@ifundefined{remark}{\spnewtheorem{remark}{Remark}{\itshape}{\rmfamily}}{}"#);
 
   //======================================================================
   // Blackboard bold letters.

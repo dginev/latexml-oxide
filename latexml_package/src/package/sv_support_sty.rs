@@ -206,18 +206,22 @@ LoadDefinitions!({
   });
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
-  // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
+  // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont. The
+  // per-theorem `bodyfont` is honored (Perl `afterDigestBegin => Digest($bodyfont)`):
+  // e.g. `proof`/`case` pass `\rmfamily` = upright body, overriding the amsthm
+  // default `\itshape`. `capfont` (the title font) is still ignored.
   // DP-flag: Perl DefMacro (sub body), Rust DefPrimitive — WISDOM #44.
   // Safe: `\spnewtheorem` is a preamble-level declaration, never observed
   // through `\edef`/`\ifx`/`\expandafter` (verified 2026-04-23 across
   // LaTeXML/lib + ar5iv-bindings).
-  DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
+  DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, bodyfont)] {
     engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
       otherthmset.filter(|t| !t.is_empty()),
       if typ.is_empty() { None } else { Some(typ) },
       reset.filter(|t| !t.is_empty()),
+      Some(bodyfont).filter(|t| !t.is_empty()),
     )?;
   });
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
@@ -346,11 +350,12 @@ LoadDefinitions!({
   // \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
   // starred (*) = unnumbered = flag=Some
   engine::latex_constructs::define_new_theorem(
-    Some(Tokens!(T_OTHER!("*"))), // starred
-    Tokenize!("proof"),           // environment name
-    None,                         // no shared counter
-    Some(Tokenize!("Proof")),     // display title
-    None,                         // no 'within' counter
+    Some(Tokens!(T_OTHER!("*"))),  // starred
+    Tokenize!("proof"),            // environment name
+    None,                          // no shared counter
+    Some(Tokenize!("Proof")),      // display title
+    None,                          // no 'within' counter
+    Some(Tokenize!("\\rmfamily")), // bodyfont: upright (Perl proof bodyfont)
   )?;
 
   // \thankstext{label}{text} — sn-jnl / EPJ-style title-page footnote

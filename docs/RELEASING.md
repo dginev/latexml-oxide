@@ -27,13 +27,22 @@ What this means concretely:
   the `build-macos` job). We do *not* cross-compile: each leg source-builds
   its own PIC static libxml2/libxslt/libkpathsea for the native toolchain
   (ELF vs Mach-O) and statically links them in.
-- **macOS = Apple Silicon (arm64) only, for now.** That's the arch the
-  CI suite validates (`CI.yml` macOS job runs on arm64 `macos-15`, #217).
-  An arm64 binary will **not** run on an Intel Mac (Rosetta only
-  translates the other direction). Adding Intel means either a separate
-  `x86_64-apple-darwin` tarball or a `lipo` universal binary — both
-  require a `macos-13` (Intel) build leg to validate, deferred until
-  there's demand.
+- **macOS = Apple Silicon (arm64) + Intel (x86_64), as separate tarballs.**
+  arm64 is the arch the CI suite validates (`CI.yml` macOS job runs on arm64
+  `macos-15`, #217). An arm64 binary will **not** run on an Intel Mac (Rosetta
+  only translates the other direction), so Intel gets its own native leg
+  (`build-macos-intel`) rather than a cross-compile or `lipo` universal binary.
+  - **Intel runner:** `macos-15-intel`. GitHub retired the `macos-13` Intel
+    image on 2025-12-04; `macos-15-intel` is the **last free-tier x86_64 macOS
+    image**, available until ~Fall 2027, after which GitHub Actions drops Intel
+    macOS entirely. **When that lands, revisit:** switch to a `lipo` universal
+    binary built by cross-compiling x86_64 on the arm64 runner (the static C
+    deps would need `-arch x86_64` in their `CFLAGS`/`--host`), or a
+    self-hosted Intel Mac.
+  - **Deployment target:** the Intel leg pins `MACOSX_DEPLOYMENT_TARGET=10.13`
+    so the binary runs on older Intel Macs (e.g. a 2018 MacBook Air, which
+    shipped with 10.14 and tops out at Sonoma 14) even though the runner's SDK
+    is macOS 15.
 - **Distribution linkage (self-contained):** the CLI assets STATICALLY link
   libxml2 + libxslt + libexslt (source-built PIC,
   `tools/build_static_libxml.sh`) and — on Linux — libkpathsea
@@ -50,8 +59,9 @@ What this means concretely:
 - **Editor-distributed binary:** the stricter "no host libxml2/libxslt" bar
   (`RELEASE_CRITERIA.md` §11) is now MET by these same CLI assets, so a VSCode
   extension can ship the binary directly.
-- **Deferred matrix rungs:** `aarch64-unknown-linux-gnu`, a macOS
-  universal/Intel slice, then Windows/musl (`RELEASE_CRITERIA.md` §3).
+- **Deferred matrix rungs:** `aarch64-unknown-linux-gnu`, a macOS `lipo`
+  universal binary (folding the two macOS tarballs into one — see the Intel
+  runner sunset note above), then Windows/musl (`RELEASE_CRITERIA.md` §3).
   Each new triple is one more native build leg in `release.yml` plus a
   `RELEASE_TARGET=<triple>` invocation of `tools/make_release.sh`.
 
@@ -172,13 +182,22 @@ bundled on any platform.
     git push origin X.Y.Z
     ```
 
-5. **Watch the workflow.** `Release` on the Actions tab. It runs three
-   jobs: `dumps` (TL-window generation) → `build-macos` (Apple Silicon
-   tarball) ‖ `release` (Linux tarball + `.deb`, then collects the macOS
-   artifact and publishes all six assets). Typical duration: 15–25 min
-   cold (the macOS leg's fat-LTO `maxperf` build on the 7 GB `macos-15`
-   runner is the long pole), faster warm. On success the new release
-   appears at <https://github.com/dginev/latexml-oxide/releases/tag/X.Y.Z>.
+5. **Watch the workflow.** `Release` on the Actions tab. It runs four
+   jobs: `dumps` (TL-window generation) → `build-macos` (Apple Silicon,
+   `macos-15`) ‖ `build-macos-intel` (Intel, `macos-15-intel`) → `release`
+   (Linux tarball + `.deb`, then collects both macOS artifacts and attaches
+   all **eight** assets). The Intel-macOS leg's fat-LTO `maxperf` build on the
+   slower `macos-15-intel` runner is the long pole (up to ~120 min budget).
+
+6. **Publish the draft.** The workflow attaches the assets to a **draft**
+   Release (not public — see `release.yml` `draft: true`). Open it under
+   *Releases* → download and sanity-check each tarball on its target hardware
+   **before** publishing. In particular the **Intel-macOS** asset
+   (`…-x86_64-apple-darwin.tar.gz`) is built on a different runner than the
+   arm64 leg — verify `latexml_oxide --version` and a real conversion run on an
+   actual Intel Mac. When satisfied, click **Publish release**. (Flip
+   `release.yml` back to `draft: false` for a target once it's proven, if you
+   prefer auto-publish.)
 
 ## Failure recovery
 

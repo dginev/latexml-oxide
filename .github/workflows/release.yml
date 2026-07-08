@@ -132,11 +132,97 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
           if-no-files-found: error
 
+  # macOS (Intel / x86_64) release tarball — for Intel Macs (e.g. the 2018
+  # MacBook Air). A separate NATIVE leg from build-macos (arm64): a native
+  # binary is never cross-arch here (we do not cross-compile the static C
+  # deps), so x86_64 gets its own runner. GitHub retired the `macos-13` Intel
+  # image on 2025-12-04; `macos-15-intel` is the last free-tier x86_64 macOS
+  # image, available until ~Fall 2027, after which GitHub Actions drops Intel
+  # macOS entirely (revisit then — universal/lipo or a self-hosted Intel Mac).
+  # MACOSX_DEPLOYMENT_TARGET=10.13 keeps the binary runnable on OLDER Intel
+  # Macs even though the runner's SDK is macOS 15: the 2018 Air shipped with
+  # 10.14 and tops out at Sonoma 14 (it cannot run Sequoia 15).
+  build-macos-intel:
+    name: Build macOS x86_64 ${{ github.ref_name }}
+    runs-on: macos-15-intel
+    # Intel runners are slower than Apple Silicon; give fat-LTO generous
+    # wall-clock (build-macos uses 90 on arm64).
+    timeout-minutes: 120
+    needs: dumps
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "10.13"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: install dependencies
+        run: |
+          command -v pkg-config >/dev/null || brew install pkgconf
+          brew install libxml2 libxslt
+      - name: surface keg-only pkg-config paths
+        run: |
+          echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: release-maxperf-macos-intel
+
+      # Same TL-window dumps as the other legs (OS/arch-agnostic gzipped text).
+      - name: collect TL-window dumps
+        uses: actions/download-artifact@v6
+        with:
+          pattern: dumps-*
+          path: resources/dumps/
+          merge-multiple: true
+      - name: verify dump window completeness
+        run: |
+          ls -la resources/dumps/
+          for year in 2022 2023 2024 2025; do
+            for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
+              if [ ! -s "resources/dumps/$f" ]; then
+                echo "::error::release dump window incomplete: missing resources/dumps/$f"
+                exit 1
+              fi
+            done
+          done
+
+      - name: build static libkpathsea from source
+        run: bash tools/build_static_kpathsea.sh
+      - name: build static libxml2 + libxslt from source
+        run: bash tools/build_static_libxml.sh
+
+      - name: build macOS release tarball
+        run: bash tools/make_release.sh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RELEASE_TARGET: x86_64-apple-darwin
+
+      - name: verify self-contained binary
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          echo "checking $bin"; otool -L "$bin"
+          if otool -L "$bin" | grep -Eiq 'libxml2|libxslt|libexslt|libkpathsea'; then
+            echo "::error::release binary dynamically links a library that must be static"; exit 1
+          fi
+          echo "OK: no dynamic libxml2/libxslt/kpathsea"
+
+      - name: upload macOS Intel artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: macos-intel-tarball
+          path: |
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz.sha256
+          if-no-files-found: error
+
   release:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: [dumps, build-macos]
+    needs: [dumps, build-macos, build-macos-intel]
 
     steps:
       - uses: actions/checkout@v6
@@ -224,11 +310,12 @@ jobs:
           # make_release.sh verifies this matches the Cargo.toml version
           # and refuses to build on mismatch.
           GITHUB_REF_NAME: ${{ github.ref_name }}
-          # Include the macOS install section in the shared release body. The
-          # tarball file itself is collected from the build-macos artifact in
-          # the next step — make_release.sh wipes target/release-artifacts/ at
-          # start, so the download MUST follow it.
+          # Include the macOS install sections in the shared release body. The
+          # tarball files themselves are collected from the build-macos /
+          # build-macos-intel artifacts in a later step — make_release.sh wipes
+          # target/release-artifacts/ at start, so the downloads MUST follow it.
           RELEASE_MACOS_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+          RELEASE_MACOS_INTEL_TARBALL: latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
 
       # Fail the release if the Linux binary still dynamically links a C library we
       # bundle — the point is a glibc-only, SONAME-independent artifact. Runs before
@@ -265,7 +352,21 @@ jobs:
           name: macos-tarball
           path: target/release-artifacts/
 
-      - name: publish GitHub release
+      - name: collect macOS Intel tarball
+        uses: actions/download-artifact@v6
+        with:
+          name: macos-intel-tarball
+          path: target/release-artifacts/
+
+      # Publish as a DRAFT: the build stays tied to a release tag (no
+      # workflow_dispatch, no "random" builds), but the assets land on a draft
+      # Release you review BEFORE it goes public. Download the per-arch tarballs
+      # — especially the Intel-macOS one (x86_64-apple-darwin), whose runner
+      # differs from the arm64 leg — verify they run on the target hardware, then
+      # click "Publish release". If an asset is broken, delete the draft + tag,
+      # bump to X.Y.(Z+1), and re-tag (RELEASING.md troubleshooting). Flip
+      # `draft: false` once a target is proven if you prefer auto-publish.
+      - name: publish GitHub release (draft — review, then publish)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -283,6 +384,8 @@ jobs:
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_amd64.deb.sha256
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
-          draft: false
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz.sha256
+          draft: true
           prerelease: false
           fail_on_unmatched_files: true

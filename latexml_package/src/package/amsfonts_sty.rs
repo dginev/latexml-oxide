@@ -42,7 +42,7 @@ LoadDefinitions!({
   DefMath!("\\dabar@", "\u{254C}"); // ╌ (dash piece of the dashed arrows)
 
   DefMath!("\\square", "\u{25A1}"); // WHITE SQUARE
-  DefMath!("\\lozenge", "\u{25C6}"); // WHITE DIAMOND
+  DefMath!("\\lozenge", "\u{25CA}"); // WHITE LOZENGE (Perl #2845, was 25C6 diamond)
 
   DefMath!("\\vartriangleright", "\u{22B3}"); // CONTAINS AS NORMAL SUBGROUP (\rhd)
   DefMath!("\\vartriangleleft", "\u{22B2}"); // NORMAL SUBGROUP OF (\lhd)

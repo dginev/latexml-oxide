@@ -7,6 +7,12 @@ LoadDefinitions!({
   // Perl: LoadClass('article');
   load_class("article", Vec::new(), Tokens!())?;
 
+  // Beyond-Perl fidelity (OXIDIZED_DESIGN #50): real moderncv.cls L124-125 loads
+  // `\RequirePackage[T1]{fontenc}` under `\ifpdftex` (which we emulate), so
+  // `<`/`>`/etc. are literal in the PDF. Establish T1 rather than falling back to
+  // OT1 (`<`->¡, `>`->¿). Perl leaves it at OT1; divergence from Perl.
+  RequirePackage!("fontenc", options => vec!["T1".to_string()]);
+
   RequirePackage!("calc");
   RequirePackage!("ifthen");
   RequirePackage!("url");
@@ -18,7 +24,12 @@ LoadDefinitions!({
 
   RequireResource!("ltx-cv.css");
 
-  TeX!(r"\lx@add@frontmatter{ltx:creator}[role=cv]{}");
+  // Open an empty cv <ltx:creator> to anchor the contacts added lazily below
+  // (\firstname / \familyname / \email / \mobile / \address / \homepage each
+  // annotate the most-recent creator). Perl abuses `\lx@add@frontmatter{...}{}`
+  // with empty content for this; we use the intention-revealing container form
+  // so the general \lx@add@frontmatter empty-guard stays clean (OXIDIZED_DESIGN #51).
+  TeX!(r"\lx@add@frontmatter@container{ltx:creator}[role=cv]");
 
   DefMacro!("\\address{}{}", "\\lx@add@address{#1\\newline #2}");
 

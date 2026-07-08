@@ -4,6 +4,18 @@ Snapshot audits and one-shot worksheets preserved for forensic context.
 Do not drive current planning from these files without revalidating on
 current `HEAD` — class/file layout, definitions, and counts have shifted.
 
+## 2026-07-08 docs consolidation (release 0.7.3 prep)
+
+- `SYNC_SESSIONS_2026-07.md` — completed "Landed this session" logs for the
+  2026-07-02 … 07-08 window (the `ar5iv-2606-prep` tail + the
+  `fidelity-improvements-072026` PDF-fidelity/upstream-sync branch): upstream
+  PR #2829 "Framing", the MathML-post exhaustive line audit (waves 1+2),
+  live-run fatal/error mining rounds, the author/affiliation frontmatter
+  split, width-based figure-panel arrangement, and the
+  `\AtBeginDocument`/`\RequirePackage` #2846-port regression fix — lifted out
+  of the live `../SYNC_STATUS.md`, which keeps only current status + actionable
+  items.
+
 ## 2026-07-05 `ar5iv-2606-prep` branch merge (PR #273, tag 0.7.2)
 
 The branch merged to `main` and shipped as release 0.7.2 ("First public use

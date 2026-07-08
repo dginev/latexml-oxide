@@ -231,7 +231,7 @@ LoadDefinitions!({
   DefPrimitive!("\\opensquare", "\u{25A1}");
   DefPrimitive!("\\opentriangle", "\u{25B3}");
   DefPrimitive!("\\opentriangledown", "\u{25BD}");
-  DefPrimitive!("\\opendiamond", "\u{25C6}");
+  DefPrimitive!("\\opendiamond", "\u{25C7}"); // WHITE DIAMOND (Perl #2845, was 25C6 black)
   DefPrimitive!("\\fullcircle", "\u{25CF}");
   DefPrimitive!("\\fullsquare", "\u{25A0}");
 

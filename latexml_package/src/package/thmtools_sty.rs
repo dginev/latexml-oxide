@@ -129,7 +129,9 @@ LoadDefinitions!({
         Tokens::new(ExplodeText!(plural)), None)?;
     }
 
-    define_new_theorem(flag, thmset, other, type_tokens, within)?;
+    // thmtools' `bodyfont=` keyval is applied via \thm@bodyfont before this
+    // call, so no per-theorem override is threaded here.
+    define_new_theorem(flag, thmset, other, type_tokens, within, None)?;
   });
 
   // \declaretheoremstyle [keyvals] {name}

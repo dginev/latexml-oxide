@@ -1297,6 +1297,12 @@ pub fn define_new_theorem(
   otherthmset: Option<Tokens>,
   typ: Option<Tokens>,
   within: Option<Tokens>,
+  // Perl `\spnewtheorem` (llncs/sv) carries a per-theorem body font
+  // (`afterDigestBegin => sub { Digest($bodyfont); }`, llncs.cls.ltxml L144):
+  // e.g. `proof`/`case`/`example` pass `\rmfamily` = upright, overriding the
+  // amsthm default `\thm@bodyfont` (`\itshape`). `\newtheorem`/thmtools pass
+  // `None` (their body font comes from `\theoremstyle`).
+  bodyfont: Option<Tokens>,
 ) -> Result<()> {
   let thmset_str = thmset.to_string();
   let classname = clean_class_name(&thmset_str);
@@ -1381,6 +1387,19 @@ pub fn define_new_theorem(
       let tokens = match reg {
         RegisterValue::Tokens(t) => t,
         _ => Tokens!(),
+      };
+      // Perl `\spnewtheorem`'s `afterDigestBegin => Digest($bodyfont)` applies
+      // a per-theorem body font that overrides the amsthm default. Stage it
+      // into the saved `\thm@bodyfont` so `use_theorem_style` restores it at
+      // body-digest start (proof/case/... => `\rmfamily` = upright).
+      let tokens = if key == "\\thm@bodyfont" {
+        bodyfont
+          .as_ref()
+          .filter(|t| !t.is_empty())
+          .cloned()
+          .unwrap_or(tokens)
+      } else {
+        tokens
       };
       saved_params.push((key.clone(), Stored::Tokens(tokens)));
     } else {
@@ -3280,19 +3299,55 @@ LoadDefinitions!({
       assign_register("\\linewidth", textwidth, None, Vec::new())?;
     }
     let mut boxes = Vec::new();
+    // Rust-only divergence (OXIDIZED_DESIGN "Frontmatter / locked-macro protection
+    // at begin-document"; reproducer docs/reproducers/frontmatter_maketitle_double.tex):
+    // digest the begin-document hook lists (\AtBeginDocument via @at@begin@document,
+    // and @document@preamble@atend) with the state RE-LOCKED.
+    //
+    // These hooks carry RAW document/package TeX. A constructor's after-digest runs
+    // state-UNLOCKED (execute_after_digest, definition.rs) so bindings can rebind/load
+    // within their own before/after methods — but that unlock leaks into this nested
+    // raw-TeX digest, letting a raw `\def`/`\let` of a binding-LOCKED macro (e.g.
+    // `\AtBeginDocument{\def\maketitle{...}}`) silently win. LaTeXML deliberately owns
+    // `\maketitle` (locked) so that `\title`/`\author` produce SEMANTIC frontmatter and
+    // the class's visual `\@maketitle` reconstruction is suppressed; when a class's raw
+    // redefinition slips the lock, the title is emitted twice (once semantic, once
+    // visual). Perl shares this bug on an inline `\AtBeginDocument` (both engines double
+    // vs pdflatex's single); it only escapes on acl.sty because its lock incidentally
+    // holds for a raw-loaded `.sty`. Re-locking here enforces the intended rule — a
+    // binding-locked macro is never redefined from the raw TeX layer — generally, for
+    // every begin-document hook, so LaTeXML's own `\maketitle` runs and the frontmatter
+    // is emitted exactly once (matching Perl's acl output, incl. `ltx_authors_1line`,
+    // and surpassing Perl on the inline case). Scope is narrow: only these two nested
+    // hook digests, not the general before/after-digest unlock.
+    // The preamble is left AFTER @document@preamble@atend (etoolbox's
+    // \AtEndPreamble) AND the begin-document hooks — all still preamble. We keep
+    // inPreamble=1 across @at@begin@document + the begindocument hook and clear
+    // it only afterward, matching latex.ltx's real disable point AND Perl 0.8.8
+    // (pre-#2846) — see the detailed note at the inPreamble=0 assignment below.
+    // NB: upstream PR #2846 ("Leave preamble at right place", fixes #2754)
+    // MOVED `AssignValue(inPreamble => 0)` to just BEFORE @at@begin@document —
+    // a regression: the post-#2846 Perl errors on `\AtBeginDocument{\Require-
+    // Package{...}}` just as our #2846 port did (KNOWN_PERL_ERRORS.md). We keep
+    // the pre-#2846 / latex.ltx placement; the #2754 goal (deferred
+    // \RequirePackage in \AtEndPreamble) is still satisfied — @document@preamble@-
+    // atend runs before inPreamble=0 below.
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
-      boxes.push(digest(ops)?);
-    }
-    if let Some(ops) = lookup_tokens("@at@begin@document") {
-      boxes.push(digest(ops)?);
+      local_state_unlocked(false);
+      let r = digest(ops);
+      expire_state_unlocked();
+      boxes.push(r?);
     }
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
-    //   1. \hook_use:n {begindocument/before}  — pre-init hook
-    //   2. (selectfont, prepare counters, etc.)
-    //   3. \hook_use:n {begindocument}         — user-registered AtBeginDocument
-    // This fires hooks registered via \AtBeginDocument / \AddToHook{begindocument/before}{…}
-    // when expl3 has redefined them to use the modern hook system.
+    //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
+    //   2. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument,
+    //      STILL preamble (latex.ltx disables \@onlypreamble only afterwards)
+    //   3. leave the preamble  (inPreamble=0)
+    // begindocument/before therefore fires while inPreamble=1: it carries
+    // last-minute preamble setup (deferred `\RequirePackage`, translations.sty's
+    // language initialiser) that must precede leaving the preamble — firing it
+    // after inPreamble=0 wrongly rejects a deferred `\RequirePackage`.
     // Driver for begindocument/before: translations.sty L73-85 wraps its
     //   `\def\@trnslt@current@language{\languagename}` initialiser in
     //   `\AddToHook{begindocument/before}{…}`. Without this dispatch the
@@ -3333,6 +3388,32 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
+    // @at@begin@document (\AtBeginDocument) + the begindocument hook run while
+    // STILL in the preamble. Real latex.ltx disables the \@onlypreamble commands
+    // (\@preamblecmds, `\document` L54) AFTER firing the begindocument hook
+    // (L44) — so a deferred `\RequirePackage`/`\usepackage` inside
+    // \AtBeginDocument is legal. Verified ground truth: pdflatex AND same-host
+    // Perl both accept `\AtBeginDocument{\RequirePackage{xcolor}}` with no error
+    // (reproducer docs/reproducers/atbegindocument_requirepackage.tex; corpus
+    // witnesses arXiv:2605.00022 / 2605.00119, whose inconsolata.sty does
+    // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's top-level
+    // `\RequirePackage{textcomp}`). We therefore keep inPreamble=1 across both
+    // hooks and clear it just below, once they complete — this is the pre-#2846
+    // Perl 0.8.8 placement (`AssignValue(inPreamble => 0)` AFTER @at@begin@-
+    // document, comment "atbegin is still (sorta) preamble"). Upstream PR #2846
+    // moved that assignment to just BEFORE @at@begin@document, which regressed
+    // Perl itself (post-#2846 latexml errors on the reproducer, verified same
+    // host); our original #2846 port copied that placement and inherited the
+    // bug. There is no scoping subtlety — assign_value mirrors Perl assignValue
+    // (both default `local`); the earlier "guard never fires in the hook" note
+    // was wrong (it conflated pre-#2846 installed Perl with post-#2846 source).
+    // Full write-up: KNOWN_PERL_ERRORS.md + SYNC_STATUS.md 2026-07-08.
+    if let Some(ops) = lookup_tokens("@at@begin@document") {
+      local_state_unlocked(false);
+      let r = digest(ops);
+      expire_state_unlocked();
+      boxes.push(r?);
+    }
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       // Build the Tokens explicitly: `Tokenize!` runs at the runtime
       // catcode regime where `:` is OTHER (not LETTER), which would
@@ -3357,6 +3438,10 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
+    // Now leave the preamble: AFTER @at@begin@document + the begindocument hook
+    // (both still preamble), matching latex.ltx `\document` — begindocument hook
+    // at L44, then `\@preamblecmds` disables the \@onlypreamble commands at L54.
+    assign_value("inPreamble", false, None);
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
     // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
@@ -3376,7 +3461,8 @@ LoadDefinitions!({
     if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
     }
-    assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
+    // (inPreamble was set to false above, after @at@begin@document and the
+    // begindocument hook — matching latex.ltx's post-hook \@preamblecmds.)
     if let Some(ops) = lookup_tokens("@document@preamble@afterend") {
       boxes.push(digest(ops)?);
     }
@@ -6948,6 +7034,7 @@ LoadDefinitions!({
       otherthmset.filter(|t| !t.is_empty()),
       if typ.is_empty() { None } else { Some(typ) },
       reset.filter(|t| !t.is_empty()),
+      None, // \newtheorem body font comes from \theoremstyle, not a per-theorem arg
     )?;
     // Reset these!
     assign_register("\\thm@prework",
