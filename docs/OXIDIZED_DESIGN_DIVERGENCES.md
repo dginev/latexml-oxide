@@ -1381,6 +1381,36 @@ affiliations are not dropped. `author_affil_splits()` already carried the commen
 
 Full suite green (1532/0); clippy clean.
 
+### 53. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
+
+**Decision:** `inst_support.sty`'s `\author` (used by classes following the
+`\inst` institution convention — the fallthrough for a raw-loaded `ifacconf.cls`
+via OmniBus, and historically aa/llncs/sv) is redefined from Perl's
+`DefMacro('\author{}', …)` to `DefMacro('\author[]{}', …)`. This is a
+**surpass-Perl divergence** authorized under the PDF-fidelity policy: same-host
+Perl reproduces the bad output.
+
+**The shared bug.** Perl `inst_support.sty.ltxml:33` documents `\author[marks]{author}`
+in its own comment but defines a **single-argument** `\author{}` whose body is
+`\lx@clear@creators[role=author]\lx@splitting{\lx@add@author}{\and\And,}{#1}`.
+A class that calls `\author` **once per author with a label** —
+ifacconf's `\author[First]{Eryn Vaid}` (four such calls) — then (a) reads the
+literal `[` of `[First]` as the single mandatory argument, so the personname
+becomes `[`, and (b) `\lx@clear@creators` wipes the prior author on every call,
+so only the last survives. Result: one `<ltx:personname>[</ltx:personname>`.
+Perl and Rust emit the identical garbage. Witness arXiv:2605.00004, whose
+pdflatex PDF lists all four authors (Vaid, Chiri, Guglielmi, Notomista).
+
+**The fix** (`inst_support_sty.rs`): accept the optional `[marks]` (so `[` is
+never mistaken for the name), take the name from `#2`, and **drop the per-call
+`\lx@clear@creators`** so successive `\author` calls **accumulate**. Dropping the
+clear is safe: it is a no-op on the first `\author` call, so single-`\author`
+classes are unaffected — and aa/llncs/sv define their own `\author` regardless.
+The `[marks]` (the author↔affiliation label) are dropped exactly as Perl's
+single-arg form dropped them; wiring them to the affiliation annotation (à la
+`\inst`) is a separate follow-up. Verified: 2605.00004 now yields all four
+personnames; full suite 1532/0.
+
 ---
 
 ## Known Upstream Perl Issues (brief)
