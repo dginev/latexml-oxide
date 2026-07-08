@@ -768,23 +768,58 @@ impl MakeBibliography {
         });
       },
       CitationStyle::AuthorYear => {
-        // Author-Year style: "Author (Year)" — skip first block (redundant)
+        // Author-year refnum — Perl MakeBibliography.pm else-branch (L505-517):
+        // the ltx_bib_author-year label is the FULL author list via
+        // do_authors→do_names (every author, initials-first do_name, ", "/" "
+        // separators with "and " before the last, "et al." only for a literal
+        // BibTeX "and others"), followed by " (year)". NOT the abbreviated
+        // inline "X et al." form — that is the separate role="authors" tag.
         skip_first_block = true;
         let suffix = entry.suffix.as_deref().unwrap_or("");
-        let author_text = if !entry.authors_short.is_empty() {
-          entry.authors_short.clone()
+        let mut refnum_children: Vec<NodeData> = if let Some(ref bibentry) = entry.bibentry {
+          let authors = PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
+          if !authors.is_empty() {
+            do_names(authors)
+          } else {
+            let editors = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
+            if !editors.is_empty() {
+              do_editors_a(editors)
+            } else {
+              // Perl: $keytag->childNodes.
+              let key = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+                .into_iter()
+                .next()
+                .map(|k| k.get_content())
+                .unwrap_or_else(|| entry.bib_key.clone());
+              vec![NodeData::Text(key)]
+            }
+          }
         } else {
-          entry.bib_key.clone()
+          // No bibentry XML (ObjectDB path): the pre-computed full-authors
+          // string, else the abbreviated string, else the key.
+          let s = if !entry.authors_full.is_empty() {
+            entry.authors_full.clone()
+          } else if !entry.authors_short.is_empty() {
+            entry.authors_short.clone()
+          } else {
+            entry.bib_key.clone()
+          };
+          vec![NodeData::Text(s)]
         };
+        // Perl always wraps the year part in " ( … )": @year+suffix, else the
+        // type tag (the L482 style guard guarantees one of them is present).
         let year_text = if !entry.year.is_empty() {
           format!("{}{}", entry.year, suffix)
+        } else if let Some(ref bibentry) = entry.bibentry {
+          PostDocument::findnodes_foreign("ltx:bib-type", bibentry)
+            .into_iter()
+            .next()
+            .map(|t| t.get_content())
+            .unwrap_or_default()
         } else {
           String::new()
         };
-        let mut refnum_children = vec![NodeData::Text(author_text)];
-        if !year_text.is_empty() {
-          refnum_children.push(NodeData::Text(format!(" ({})", year_text)));
-        }
+        refnum_children.push(NodeData::Text(format!(" ({})", year_text)));
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from_iter([
@@ -2534,6 +2569,92 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
 
   let full_names = surnames.join(", ");
   (sort_names, short_names, full_names)
+}
+
+/// Perl MakeBibliography `do_name` (L555-566): the given-name rendered as
+/// initials followed by the surname text — e.g. givenname "Aaron D." + surname
+/// "Ames" → "A. D. Ames". Each whitespace-split given-name word already ending
+/// in "." is kept verbatim (+ space); otherwise its first char + ". " is used.
+/// (We flatten the surname to text, consistent with the rest of this file's
+/// name handling; Perl clones the surname's child nodes to preserve any markup,
+/// which bibliography surnames essentially never carry.)
+fn do_name_text(namenode: &Node) -> String {
+  let mut out = String::new();
+  if let Some(given) = PostDocument::findnodes_foreign("ltx:givenname", namenode)
+    .into_iter()
+    .next()
+  {
+    for word in given.get_content().split_whitespace() {
+      if word.ends_with('.') {
+        out.push_str(word);
+        out.push(' ');
+      } else if let Some(c) = word.chars().next() {
+        out.push(c);
+        out.push_str(". ");
+      }
+    }
+  }
+  if let Some(surname) = PostDocument::findnodes_foreign("ltx:surname", namenode)
+    .into_iter()
+    .next()
+  {
+    out.push_str(&surname.get_content());
+  }
+  out
+}
+
+/// Perl MakeBibliography `do_names` (L568-584) / `do_authors` (L595-597): the
+/// full author list for the author-year refnum. Each name is rendered via
+/// `do_name` (initials + surname) and joined with ", " (>2 names) or " " (≤2),
+/// with "and " before the last; a trailing BibTeX "others" (from "and others")
+/// collapses to a trailing "et al." span instead.
+fn do_names(mut names: Vec<Node>) -> Vec<NodeData> {
+  let sep = if names.len() > 2 { ", " } else { " " };
+  let mut etal = false;
+  if names
+    .last()
+    .map(|n| n.get_content().trim() == "others")
+    .unwrap_or(false)
+  {
+    names.pop();
+    etal = true;
+  }
+  let last = names.len().saturating_sub(1);
+  let mut out: Vec<NodeData> = Vec::new();
+  for (i, name) in names.iter().enumerate() {
+    if !out.is_empty() {
+      out.push(NodeData::Text(sep.to_string()));
+      if !etal && i == last {
+        out.push(NodeData::Text("and ".to_string()));
+      }
+    }
+    out.push(NodeData::Text(do_name_text(name)));
+  }
+  if etal {
+    out.push(NodeData::Text(sep.to_string()));
+    out.push(NodeData::Element {
+      tag:        "ltx:text".to_string(),
+      attributes: Some(HashMap::from_iter([(
+        "class".to_string(),
+        "ltx_bib_etal".to_string(),
+      )])),
+      children:   vec![NodeData::Text("et al.".to_string())],
+    });
+  }
+  out
+}
+
+/// Perl MakeBibliography `do_editorsA` (L599-604): `do_names` plus a trailing
+/// " (Eds.)" (more than one editor) or " (Ed.)" (a single editor).
+fn do_editors_a(names: Vec<Node>) -> Vec<NodeData> {
+  let n = names.len();
+  let mut out = do_names(names);
+  if n > 1 {
+    out.push(NodeData::Text(" (Eds.)".to_string()));
+  } else if n == 1 {
+    out.push(NodeData::Text(" (Ed.)".to_string()));
+  }
+  out
 }
 
 /// Get sort-friendly name text from a bib-name node.
