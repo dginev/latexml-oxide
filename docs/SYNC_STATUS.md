@@ -18,6 +18,53 @@
 - `cargo test --tests`: **1527 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
   session" entries below).
 
+### Landed this session (2026-07-08, on `fidelity-improvements-072026`) — `\RequirePackage` in `\AtBeginDocument` (self-inflicted #2846-port regression)
+
+**Symptom.** `error/unexpected/\RequirePackage` — "The current command
+'\RequirePackage' can only appear in the preamble" — fired at begin-document.
+Corpus witnesses: **arXiv:2605.00022, arXiv:2605.00119** (both
+`\usepackage{inconsolata}`, whose `inconsolata.sty` does
+`\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's top-level
+`\RequirePackage{textcomp}` under ar5iv INCLUDE_STYLES raw-load).
+
+**Minimal reproducer** (`docs/reproducers/atbegindocument_requirepackage.tex`):
+```tex
+\documentclass{article}
+\AtBeginDocument{\RequirePackage{xcolor}}
+\begin{document}
+Hello
+\end{document}
+```
+Ground truth, **same host**: `pdflatex` → exit 0; Perl `latexml` → exit 0
+("No obvious problems"); Rust (pre-fix) → `Error: '\RequirePackage' can only
+appear in the preamble`. A body-level (not hook) `\RequirePackage` **must still
+error** — all three engines do (that IS `\@onlypreamble`; kept as parity).
+
+**Root cause = our own port of PR #2846, not upstream.** Real `latex.ltx`
+`\document` fires the begindocument hook (L44) and only THEN runs
+`\@preamblecmds` to disable the `\@onlypreamble` commands (L54) — so
+`\RequirePackage`/`\usepackage` inside `\AtBeginDocument` is legal. Pre-#2846,
+our Rust code set `inPreamble=false` AFTER digesting `@at@begin@document`
+(`// atbegin is still (sorta) preamble`) — correct. The #2846 port (commit
+`3ebf6e1a3d`) **moved** `assign_value("inPreamble", false)` to just BEFORE
+`@at@begin@document`, mirroring Perl `latex_constructs.pool` L328. Perl has the
+same source placement yet **never observably enforces `onlyPreamble` in that
+hook** (its guard doesn't fire), so upstream #2846 is clean in Perl; our port
+manifested the latent ordering as a hard error because our `only_preamble`
+guard *does* fire. **⟵ REVERIFY against
+<https://github.com/brucemiller/LaTeXML/pull/2846/changes>: confirm the PR moves
+`inPreamble=0` to before `@at@begin@document` (Perl side) and that Perl's guard
+is genuinely inert there.**
+
+**Fix.** Restore the correct point: keep `inPreamble=1` across `@at@begin@document`
++ the begindocument L3 hook, and clear it immediately afterward (latex_constructs.rs,
+`\begin{document}` constructor). Divergence from Perl's *source* placement is
+intentional and documented (it matches latex.ltx + pdflatex + Perl's *behavior*);
+supersedes the narrower mathtools `\lx@mathtools@require@graphicx` workaround (that
+unguarded-primitive patch is now redundant but harmless). 2605.00022 → 0 errors;
+2605.00119 → only an unrelated babel/fontspec `bidi=default` LuaLaTeX/XeLaTeX error
+remains.
+
 ### Landed this session (2026-07-05, on `ar5iv-2606-prep`) — faithful width-based figure-panel arrangement (2605.00347)
 
 Same witness (2605.00347), Appendix F "maria" subfigure grids. User report:

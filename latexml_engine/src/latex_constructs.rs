@@ -3322,10 +3322,12 @@ LoadDefinitions!({
     // hook digests, not the general before/after-digest unlock.
     // Perl (#2846, brucemiller/LaTeXML "Leave preamble at right place", fixes
     // #2754): the preamble is left AFTER @document@preamble@atend (etoolbox's
-    // \AtEndPreamble) AND the pre-init begindocument/before hook — both are still
-    // preamble — but BEFORE @at@begin@document / begindocument (\AtBeginDocument),
-    // which then run with inPreamble=0. The inPreamble=0 assignment therefore sits
-    // just below, after the begindocument/before dispatch.
+    // \AtEndPreamble) AND the pre-init begindocument/before hook — both still
+    // preamble. Unlike Perl (which nominally clears inPreamble just BEFORE
+    // @at@begin@document but never enforces the guard in that hook), we keep
+    // inPreamble=1 across @at@begin@document + the begindocument hook and clear
+    // it only afterward, matching latex.ltx's real disable point (see the
+    // detailed note at the inPreamble=0 assignment below).
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -3335,8 +3337,9 @@ LoadDefinitions!({
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
     //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
-    //   2. leave the preamble  (inPreamble=0, #2846)
-    //   3. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument
+    //   2. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument,
+    //      STILL preamble (latex.ltx disables \@onlypreamble only afterwards)
+    //   3. leave the preamble  (inPreamble=0)
     // begindocument/before therefore fires while inPreamble=1: it carries
     // last-minute preamble setup (deferred `\RequirePackage`, translations.sty's
     // language initialiser) that must precede leaving the preamble — firing it
@@ -3381,9 +3384,22 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
-    // Now leave the preamble (#2846): AFTER begindocument/before (still preamble)
-    // but BEFORE @at@begin@document / begindocument (which see inPreamble=0).
-    assign_value("inPreamble", false, None);
+    // @at@begin@document (\AtBeginDocument) + the begindocument hook run while
+    // STILL in the preamble. Real latex.ltx disables the \@onlypreamble commands
+    // (\@preamblecmds, `\document` L54) AFTER firing the begindocument hook
+    // (L44) — so a deferred `\RequirePackage`/`\usepackage` inside
+    // \AtBeginDocument is legal. Verified ground truth: pdflatex AND same-host
+    // Perl both accept `\AtBeginDocument{\RequirePackage{xcolor}}` with no error
+    // (reproducer docs/reproducers/atbegindocument_requirepackage.tex; corpus
+    // witnesses arXiv:2605.00022 / 2605.00119, whose inconsolata.sty does
+    // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's top-level
+    // `\RequirePackage{textcomp}`). We therefore keep inPreamble=1 across both
+    // hooks and clear it just below, once they complete. Perl's
+    // latex_constructs.pool L328 nominally sets inPreamble=0 just BEFORE
+    // @at@begin@document, but does not observably enforce onlyPreamble there
+    // (its guard never fires in the hook); we follow latex.ltx's actual disable
+    // point so the guard matches real LaTeX — same observable behaviour as Perl.
+    // Regression history + reverify-vs-#2846 note: SYNC_STATUS.md 2026-07-08.
     if let Some(ops) = lookup_tokens("@at@begin@document") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -3414,6 +3430,10 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
+    // Now leave the preamble: AFTER @at@begin@document + the begindocument hook
+    // (both still preamble), matching latex.ltx `\document` — begindocument hook
+    // at L44, then `\@preamblecmds` disables the \@onlypreamble commands at L54.
+    assign_value("inPreamble", false, None);
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
     // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
@@ -3433,8 +3453,8 @@ LoadDefinitions!({
     if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
     }
-    // (inPreamble was set to false above, after begindocument/before but before
-    // @at@begin@document / begindocument — #2846.)
+    // (inPreamble was set to false above, after @at@begin@document and the
+    // begindocument hook — matching latex.ltx's post-hook \@preamblecmds.)
     if let Some(ops) = lookup_tokens("@document@preamble@afterend") {
       boxes.push(digest(ops)?);
     }
