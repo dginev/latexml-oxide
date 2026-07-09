@@ -23,10 +23,19 @@ scales to new targets without renaming.
 What this means concretely:
 
 - **Per-triple build legs, not cross-compilation.** Each platform builds
-  on its own native runner (`release.yml`: the Linux `release` job +
-  the `build-macos` job). We do *not* cross-compile: each leg source-builds
-  its own PIC static libxml2/libxslt/libkpathsea for the native toolchain
-  (ELF vs Mach-O) and statically links them in.
+  on its own native runner (`release.yml`: the Linux `release` job, the
+  `build-linux-arm64` job, and the `build-macos` / `build-macos-intel` jobs).
+  We do *not* cross-compile: each leg source-builds its own PIC static
+  libxml2/libxslt/libkpathsea for the native toolchain (ELF vs Mach-O) and
+  statically links them in.
+- **Linux = x86_64 + aarch64, as both a tarball and a `.deb` each.** The
+  arm64 leg (`build-linux-arm64`, `ubuntu-22.04-arm`) is a full build+gate
+  peer of the x86_64 `release` leg — same static linkage, `ldd`
+  self-contained check, conversion + embedded-resource smokes, and 64 MB size
+  budget — for AWS Graviton / Ampere / Raspberry Pi OS 64-bit / Apple-Silicon
+  Linux VMs. `cargo deb` derives the control-file `Architecture:` from the
+  native host; `make_release.sh` labels the filename `arm64` (vs `amd64`) from
+  `RELEASE_TARGET`.
 - **macOS = Apple Silicon (arm64) + Intel (x86_64), as separate tarballs.**
   arm64 is the arch the CI suite validates (`CI.yml` macOS job runs on arm64
   `macos-15`, #217). An arm64 binary will **not** run on an Intel Mac (Rosetta
@@ -59,24 +68,34 @@ What this means concretely:
 - **Editor-distributed binary:** the stricter "no host libxml2/libxslt" bar
   (`RELEASE_CRITERIA.md` §11) is now MET by these same CLI assets, so a VSCode
   extension can ship the binary directly.
-- **Deferred matrix rungs:** `aarch64-unknown-linux-gnu`, a macOS `lipo`
-  universal binary (folding the two macOS tarballs into one — see the Intel
-  runner sunset note above), then Windows/musl (`RELEASE_CRITERIA.md` §3).
-  Each new triple is one more native build leg in `release.yml` plus a
-  `RELEASE_TARGET=<triple>` invocation of `tools/make_release.sh`.
+- **Deferred matrix rungs:** a macOS `lipo` universal binary (folding the two
+  macOS tarballs into one — see the Intel runner sunset note above), then
+  Windows/musl (`RELEASE_CRITERIA.md` §3). (`aarch64-unknown-linux-gnu`
+  landed 2026-07-09 as the `build-linux-arm64` leg.) Each new triple is one
+  more native build leg in `release.yml` plus a `RELEASE_TARGET=<triple>`
+  invocation of `tools/make_release.sh`.
 
 ## What ships in a release
 
-Six files attached to each `X.Y.Z` GitHub Release:
+Assets attached to each `X.Y.Z` GitHub Release — four platform builds (two
+Linux, two macOS), each a tarball (+ `.sha256`), plus a `.deb` (+ `.sha256`)
+for each Linux arch, plus the aggregate `THIRD-PARTY-NOTICES`:
 
 | Asset | Purpose |
 |---|---|
-| `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz` | Portable Linux archive: stripped `latexml_oxide` binary, `README.md`, `CHANGELOG.md`, `LICENSE`. |
+| `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz` | Portable Linux (x86_64) archive: stripped `latexml_oxide` binary, `README.md`, `CHANGELOG.md`, `LICENSE`, `THIRD-PARTY-NOTICES`. |
 | `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz.sha256` | SHA-256 sidecar (ripgrep-style). |
-| `latexml-oxide_X.Y.Z-1_amd64.deb` | Debian package. With libxml2/libxslt/kpathsea statically linked, `$auto` resolves to just the glibc family — `Depends:` carries NO libxml2/libxslt SONAME, only `imagemagick`, `mupdf-tools`, `texlive-latex-{base,extra}`, `texlive-science`. |
+| `latexml-oxide_X.Y.Z-1_amd64.deb` | Debian package (x86_64). With libxml2/libxslt/kpathsea statically linked, `$auto` resolves to just the glibc family — `Depends:` carries NO libxml2/libxslt SONAME, only the graphics/TeX tools (`imagemagick`, `mupdf-tools`, `poppler-utils`, `ghostscript`, `dvipng`, `dvisvgm`, `texlive-latex-{base,extra}`, `texlive-science`). |
 | `latexml-oxide_X.Y.Z-1_amd64.deb.sha256` | SHA-256 sidecar. |
+| `latexml-oxide-X.Y.Z-aarch64-unknown-linux-gnu.tar.gz` | Portable Linux (aarch64 / arm64) archive: same contents + self-contained linkage as the x86_64 tarball. For AWS Graviton, Ampere, Raspberry Pi OS 64-bit, Apple-Silicon Linux VMs. |
+| `latexml-oxide-X.Y.Z-aarch64-unknown-linux-gnu.tar.gz.sha256` | SHA-256 sidecar. |
+| `latexml-oxide_X.Y.Z-1_arm64.deb` | Debian package (aarch64). Same `Depends:` as the amd64 `.deb`; `cargo deb` sets `Architecture: arm64` from the native arm64 build host. |
+| `latexml-oxide_X.Y.Z-1_arm64.deb.sha256` | SHA-256 sidecar. |
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz` | Portable macOS (Apple Silicon) archive: same contents as the Linux tarball. No `.deb` on macOS (a Homebrew tap is the natural future analogue). |
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
+| `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz` | Portable macOS (Intel) archive: built with a macOS 10.13 deployment target so it runs on older Intel Macs. |
+| `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
+| `THIRD-PARTY-NOTICES` | Aggregate license notices (hand-authored §1–4 + the cargo-about Rust-crate appendix). |
 
 The shipped `latexml_oxide` binary is fully self-contained — XSLT
 stylesheets, CSS, JavaScript, and the RelaxNG schema tree are
@@ -87,12 +106,12 @@ are also embedded. They are NOT in git: `release.yml` first calls
 `{plain,latex}.YYYY.dump.txt` + `texlive.YYYY.version` inside a pinned
 TL-year container (`ghcr.io/tkw1536/texlive-docker:YYYY` — the image
 family behind Perl LaTeXML's CI) under a strict zero-error `--init`
-gate, then **both** the Linux `release` job and the `build-macos` job
-download the full window into `resources/dumps/` and verify completeness
-before building. The dumps are OS-agnostic gzipped text, so the macOS
-binary embeds the exact same bytes. Both legs build with `--profile
-maxperf` (`release.yml`), so each platform's download is one optimized,
-self-contained artifact.
+gate, then **every** build leg (Linux x86_64 + aarch64, macOS arm64 +
+Intel) downloads the full window into `resources/dumps/` and verifies
+completeness before building. The dumps are OS/arch-agnostic gzipped text,
+so all four binaries embed the exact same bytes. Every leg builds with
+`--profile maxperf` (`release.yml`), so each platform's download is one
+optimized, self-contained artifact.
 
 **Design requirement — portability.** A conversion must not *read* any of
 latexml_oxide's *own* resources from disk during its main operation: the

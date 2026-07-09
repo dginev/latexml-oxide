@@ -218,11 +218,145 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz.sha256
           if-no-files-found: error
 
+  # aarch64 (arm64) Linux release tarball + .deb — for ARM Linux (AWS Graviton,
+  # Ampere, Raspberry Pi OS 64-bit, Apple Silicon Linux VMs). A separate NATIVE
+  # leg: an arm64 ELF is never cross-compiled here (the static C deps build
+  # natively), so it gets its own arm64 runner. `ubuntu-22.04-arm` ships glibc
+  # 2.35 for the same broad-compatibility reason as the x86_64 leg (see header).
+  # A full build+gate peer of the publishing `release` job below — same static
+  # linkage, self-contained ldd check, conversion + embedded-resource smokes,
+  # and size budget — minus the publish (its assets are collected there).
+  build-linux-arm64:
+    name: Build Linux arm64 ${{ github.ref_name }}
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 90
+    needs: dumps
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # Same build-time + smoke-test apt set as the x86_64 `release` leg (TeX
+      # Live is needed for the conversion smoke below).
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
+            mold \
+            dpkg-dev \
+            texlive texlive-latex-extra texlive-science \
+            texlive-bibtex-extra texlive-publishers \
+            poppler-utils
+
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: release-maxperf-linux-arm64
+
+      # Built from source (not a prebuilt binary) for the same glibc reason as
+      # the x86_64 leg — the arm64 runner is ubuntu-22.04 (glibc 2.35).
+      - name: install cargo-deb
+        run: cargo install cargo-deb --locked
+
+      - name: collect TL-window dumps
+        uses: actions/download-artifact@v6
+        with:
+          pattern: dumps-*
+          path: resources/dumps/
+          merge-multiple: true
+      - name: verify dump window completeness
+        run: |
+          ls -la resources/dumps/
+          for year in 2022 2023 2024 2025; do
+            for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
+              if [ ! -s "resources/dumps/$f" ]; then
+                echo "::error::release dump window incomplete: missing resources/dumps/$f"
+                exit 1
+              fi
+            done
+          done
+
+      - name: build static libkpathsea from source
+        run: bash tools/build_static_kpathsea.sh
+      - name: build static libxml2 + libxslt from source
+        run: bash tools/build_static_libxml.sh
+
+      # cargo-deb derives `Architecture: arm64` from the native host; make_release
+      # labels the FILENAME arm64 from RELEASE_TARGET. Produces the tarball + .deb.
+      - name: build release artifacts
+        run: bash tools/make_release.sh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RELEASE_TARGET: aarch64-unknown-linux-gnu
+
+      - name: binary size budget
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          size=$(stat -c%s "$bin"); mb=$(( size / 1024 / 1024 ))
+          echo "latexml_oxide (stripped, arm64): ${mb} MB (${size} bytes)"
+          budget=64
+          if [ "$mb" -gt "$budget" ]; then
+            echo "::error::binary ${mb} MB exceeds ${budget} MB budget (RELEASE_CRITERIA §2)"; exit 1
+          fi
+          echo "OK: within ${budget} MB size budget"
+
+      # Structural (no bundled C lib stays dynamic) + functional (a real
+      # conversion exercises the RelaxNG/XPath/XSLT paths through our static
+      # libxml2/libxslt on arm64 — catches a mis-trimmed static config that
+      # links but fails at runtime).
+      - name: verify self-contained binary
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          echo "checking $bin"; ldd "$bin" || true
+          if ldd "$bin" | grep -Eiq 'libxml2|libxslt|libexslt|libkpathsea'; then
+            echo "::error::release binary dynamically links a library that must be static"; exit 1
+          fi
+          echo "OK: glibc-only (no dynamic libxml2/libxslt/kpathsea)"
+          out="$(mktemp -d)"
+          "$bin" --destination="$out/hello.html" latexml_oxide/tests/hello/hello.tex 2>"$out/log" \
+            || { echo "::error::release binary failed to run a conversion"; cat "$out/log"; exit 1; }
+          errs=$(sed 's/\x1b\[[0-9;]*m//g' "$out/log" | grep -acE '^(Error|Fatal):' || true)
+          if [ "$errs" != "0" ] || [ ! -s "$out/hello.html" ]; then
+            echo "::error::conversion smoke: $errs Error/Fatal, $(wc -c <"$out/hello.html" 2>/dev/null || echo 0) bytes out"
+            sed 's/\x1b\[[0-9;]*m//g' "$out/log" | grep -E '^(Error|Fatal):' | head; exit 1
+          fi
+          echo "OK: hello.tex converts clean on arm64 ($(wc -c <"$out/hello.html") bytes, 0 errors)"
+
+      - name: embedded-resource smoke (no own-resource disk read)
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          mv resources resources.hidden
+          out="$(mktemp -d)"; set +e
+          "$bin" --destination="$out/hello.html" latexml_oxide/tests/hello/hello.tex 2>"$out/log"
+          rc=$?; set -e
+          mv resources.hidden resources
+          if [ "$rc" -ne 0 ] || [ ! -s "$out/hello.html" ]; then
+            echo "::error::conversion failed with resources/ removed — self-containment regression"
+            cat "$out/log"; exit 1
+          fi
+          if ! grep -q 'ltx_' "$out/hello.html"; then
+            echo "::error::output missing ltx_ classes — embedded CSS/XSLT not applied"; exit 1
+          fi
+          echo "OK: converts with resources/ removed (fully self-contained)"
+
+      - name: upload Linux arm64 artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: linux-arm64-artifacts
+          path: |
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz.sha256
+            target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_arm64.deb
+            target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_arm64.deb.sha256
+          if-no-files-found: error
+
   release:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: [dumps, build-macos, build-macos-intel]
+    needs: [dumps, build-macos, build-macos-intel, build-linux-arm64]
 
     steps:
       - uses: actions/checkout@v6
@@ -328,6 +462,7 @@ jobs:
           # target/release-artifacts/ at start, so the downloads MUST follow it.
           RELEASE_MACOS_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
           RELEASE_MACOS_INTEL_TARBALL: latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
+          RELEASE_LINUX_ARM64_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz
 
       # Artifact-property gate (RELEASE_CRITERIA §2/§7): fail the release if the
       # stripped binary blows the size budget (a runaway-growth alarm), and stage
@@ -407,6 +542,15 @@ jobs:
           name: macos-intel-tarball
           path: target/release-artifacts/
 
+      # Pull the arm64 Linux tarball + .deb (+ sidecars) built by
+      # build-linux-arm64 into the staging dir so they publish alongside the
+      # x86_64 Linux + macOS assets.
+      - name: collect Linux arm64 artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: linux-arm64-artifacts
+          path: target/release-artifacts/
+
       # Publish as a DRAFT: the build stays tied to a release tag (no
       # workflow_dispatch, no "random" builds), but the assets land on a draft
       # Release you review BEFORE it goes public. Download the per-arch tarballs
@@ -431,6 +575,10 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz.sha256
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_amd64.deb
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_amd64.deb.sha256
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz.sha256
+            target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_arm64.deb
+            target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_arm64.deb.sha256
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz

@@ -28,10 +28,10 @@ their 2026-05-24 values.
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)) | P50/P90/P99 dashboard; "no unbounded growth" gate — §5 |
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
-| OS/arch | `x86_64-linux-gnu` + `aarch64-apple-darwin` + `x86_64-apple-darwin` | staged ladder — §3 (next rung: aarch64-linux) |
+| OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` | staged ladder — §3 (aarch64-linux DONE 2026-07-09; next rung: container image) |
 | Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
 | License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; only cortex-only F1 remains, non-blocking) |
-| Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); URI-passthrough posture documented | remaining §6 items (CSP/sandboxing/`--hardened`) |
+| Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); URI-passthrough posture documented | remaining §6 items (CSP/sandboxing/`--hardened`) — **1.0-scoped, not a 0.7.4 blocker** |
 
 ## 2. Binary size (issue #101)
 
@@ -51,9 +51,10 @@ fails on budget breach (§7).
 
 ## 3. Portability staging (issues #217, #143)
 
-Current: **two** self-contained published artifacts — `x86_64-linux-gnu`
-(Ubuntu 22.04 / glibc 2.35) and `aarch64-apple-darwin` (macOS Apple
-Silicon) — each embedding our XSLT/CSS/JS/schema/dumps, host TeX Live +
+Current: **four** self-contained published artifacts — `x86_64-linux-gnu`
+and `aarch64-unknown-linux-gnu` (both Ubuntu 22.04 / glibc 2.35),
+`aarch64-apple-darwin` (macOS Apple Silicon), and `x86_64-apple-darwin`
+(macOS Intel) — each embedding our XSLT/CSS/JS/schema/dumps, host TeX Live +
 system libs ([`RELEASING.md`](RELEASING.md) → "Release asset strategy").
 A native binary is never cross-OS (ELF vs Mach-O), so it is one artifact
 per `(OS, arch)` triple, built on its own native runner — not
@@ -61,7 +62,11 @@ cross-compiled. Ladder — each stage needs a smoke corpus + size gate +
 dependency check:
 
 1. Debian/Ubuntu x86_64 (current).
-2. aarch64 Linux.
+2. aarch64 Linux — **DONE 2026-07-09**: `release.yml`'s `build-linux-arm64`
+   leg (`ubuntu-22.04-arm`) publishes a tarball + `arm64` `.deb`, a full
+   build+gate peer of the x86_64 leg (static libxml2/libxslt/kpathsea, `ldd`
+   self-contained check, conversion + embedded-resource smokes, 64 MB size
+   budget).
 3. Container image (reproducible TeX Live + graphics).
 4. macOS (#217) — **DONE 2026-06-08**
    ([`archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](archive/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
@@ -79,9 +84,11 @@ dependency check:
    `aarch64-apple-darwin` tarball natively on `macos-15` (subprocess-
    `kpsewhich`, host brew libxml2/libxslt, same embedded TL-window dumps)
    and the Linux `release` job publishes it alongside the Linux assets.
-   *Not yet published:* Intel macOS (`x86_64-apple-darwin`) — needs a
-   `macos-13` leg or a `lipo` universal; arm64 binaries don't run on
-   Intel.
+   **Intel macOS (`x86_64-apple-darwin`) published** via the
+   `build-macos-intel` leg (`macos-15-intel`, `MACOSX_DEPLOYMENT_TARGET=10.13`
+   for older Intel Macs) — arm64 binaries don't run on Intel, so it is a
+   separate native leg (not a cross-compile / `lipo` universal, which is
+   revisited only when GitHub sunsets the Intel runner ~Fall 2027).
 5. Windows / musl — deferred. Known blockers: `libmarpa-sys`
    `./configure && make` (needs a cc-crate port; tarball is vendored),
    `lsp_server` unix sockets, `graphics*.rs` cfg(unix) paths,

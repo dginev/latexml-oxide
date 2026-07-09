@@ -29,8 +29,9 @@ Design goals:
 ### Install (prebuilt binaries)
 
 Every tagged release on the [Releases page](https://github.com/dginev/latexml-oxide/releases)
-ships prebuilt binaries for **Linux x86-64** (`.deb` + portable tarball) and
-**macOS** (Apple Silicon and Intel tarballs). The binary is fully self-contained — all XSLT
+ships prebuilt binaries for **Linux** (x86-64 and aarch64/arm64, `.deb` +
+portable tarball each) and **macOS** (Apple Silicon and Intel tarballs). The
+binary is fully self-contained — all XSLT
 stylesheets, CSS, JS, and RelaxNG schemas are embedded at build time and served
 from memory, so no `resources/` tree is needed alongside it (a deliberate design
 goal — see [docs/OXIDIZED_DESIGN.md](docs/OXIDIZED_DESIGN.md)). A working TeX Live
@@ -65,20 +66,34 @@ $ sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvis
                    texlive-latex-base texlive-latex-extra texlive-science
 ```
 
-#### macOS (Apple Silicon / arm64 only)
+On **64-bit ARM** (AWS Graviton, Ampere, Raspberry Pi OS 64-bit) swap `amd64` →
+`arm64` in the `.deb` name and `x86_64-unknown-linux-gnu` → `aarch64-unknown-linux-gnu`
+in the tarball name; everything else is identical. `uname -m` prints `x86_64` or
+`aarch64`.
+
+#### macOS (Apple Silicon / arm64 + Intel / x86_64)
+
+Pick the tarball matching your Mac — `aarch64` for Apple Silicon (M1/M2/M3…),
+`x86_64` for Intel (`uname -m` prints `arm64` or `x86_64`):
 
 ```
+# Apple Silicon
 $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
 $ tar xzf latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
 $ sudo cp latexml-oxide-$VERSION-aarch64-apple-darwin/latexml_oxide /usr/local/bin/
+
+# Intel (built with a macOS 10.13 deployment target, so it runs on older Intel Macs)
+$ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
+$ tar xzf latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
+$ sudo cp latexml-oxide-$VERSION-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
+
 $ brew install imagemagick mupdf-tools poppler ghostscript
 $ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng/dvisvgm)
 ```
 
 Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instead
 resolves TeX files through your distribution's `kpsewhich` executable (ensure
-`/Library/TeX/texbin` is on `PATH`). Intel Macs are not yet a published target —
-see [docs/RELEASING.md](docs/RELEASING.md) for the platform roadmap.
+`/Library/TeX/texbin` is on `PATH`).
 
 ### System dependencies
 
