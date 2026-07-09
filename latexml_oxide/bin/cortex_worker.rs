@@ -429,6 +429,10 @@ impl LatexmlWorker {
       // was strictly looser — would attempt SVG on 200 KB raster PDFs
       // even when their image XObject was visible in the header).
       graphics_svg_threshold_kb: 0,
+      // Canvas-bulk path: always convert graphics; no favicon/timestamp.
+      graphicimages:             true,
+      timestamp:                 None,
+      icon:                      None,
       // cortex_worker is the canvas-bulk path — always emit the full
       // document, never the fragment / math extraction variants.
       whatsout:                  latexml_post::extract::Whatsout::Document,

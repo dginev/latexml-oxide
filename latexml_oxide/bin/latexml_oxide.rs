@@ -156,6 +156,13 @@ struct Cli {
   #[arg(long, alias = "nosectionnumbers")]
   nonumbersections: bool,
 
+  /// Enable section numbering — the positive complement of
+  /// `--nonumbersections` (Perl `numbersections!`, default on). Restores the
+  /// default if a profile/package turned it off; `--nonumbersections` wins if
+  /// both are given.
+  #[arg(long)]
+  numbersections: bool,
+
   /// Vector-SVG fast path control for PDF graphics.
   ///
   /// `0` (default) → **auto-detect**: scan the PDF header for
@@ -176,6 +183,17 @@ struct Cli {
     default_value = "0"
   )]
   graphics_svg_threshold_kb: u32,
+
+  /// Convert `\includegraphics` figures to web images — the default (Perl
+  /// `graphicimages!`). Accepted for CLI parity; `--nographicimages` overrides.
+  #[arg(long)]
+  graphicimages: bool,
+
+  /// Skip converting `\includegraphics` figures to images: leave the raw
+  /// `<ltx:graphics>` references in the output (Perl `--nographicimages`).
+  /// Useful for faster runs or hosts without the image tools installed.
+  #[arg(long)]
+  nographicimages: bool,
 
   /// Output chunk to pack (Perl Pack.pm `whatsout`):
   ///   `document` (default) → full post-processed HTML;
@@ -236,6 +254,19 @@ struct Cli {
   /// Navigation TOC style (e.g. "context")
   #[arg(long, alias = "navtoc", value_name = "STYLE")]
   navigationtoc: Option<String>,
+
+  /// Favicon resource for the generated site: emitted as a `<link rel="icon">`
+  /// and copied to the destination (Perl `--icon`, XSLT `ICON` param).
+  #[arg(long, value_name = "FILE")]
+  icon: Option<String>,
+
+  /// Timestamp string embedded in the generated page (Perl `--timestamp`,
+  /// XSLT `TIMESTAMP` param), e.g. a build date shown in the footer.
+  /// `--timestamp=0` omits it. Unlike Perl (which defaults to the current
+  /// time), omitting the flag emits no timestamp — keeping output
+  /// deterministic.
+  #[arg(long, value_name = "STRING")]
+  timestamp: Option<String>,
 
   /// Apply scholarly-schema doc-specific post-processing: kind chips
   /// on definitions, pretty-printed structural content models, and a
@@ -697,6 +728,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       true,
       Some(latexml_core::state::Scope::Global),
     );
+  } else if cli.numbersections {
+    // Positive complement (Perl `numbersections!`, default on): explicitly
+    // restore section numbering if a profile/package turned it off.
+    latexml_core::state::assign_value(
+      "no_number_sections",
+      false,
+      Some(latexml_core::state::Scope::Global),
+    );
   }
   // Perl Core.pm L48: DOCUMENTID value
   if let Some(ref docid) = cli.documentid {
@@ -951,6 +990,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           split_naming: cli.splitnaming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
+          graphicimages: cli.graphicimages || !cli.nographicimages,
+          // Perl `if ($timestamp)`: "0" (and empty) means "omit the timestamp".
+          timestamp: cli
+            .timestamp
+            .as_deref()
+            .filter(|t| !t.is_empty() && *t != "0"),
+          icon: cli.icon.as_deref(),
           whatsout: whatsout_mode,
         };
         // XML-input mode parses the (possibly huge) source straight from disk

@@ -66,6 +66,9 @@ fn html_from(xml: &str) -> String {
     split_naming:              None,
     xslt_parameters:           &[],
     graphics_svg_threshold_kb: 0,
+    graphicimages:             true,
+    timestamp:                 None,
+    icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
   };
   latexml::post::run_post_processing(xml, &opts)
