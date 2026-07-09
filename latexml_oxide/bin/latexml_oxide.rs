@@ -104,9 +104,21 @@ struct Cli {
   #[arg(long)]
   noinvisibletimes: bool,
 
+  /// Keep invisible-times operators — the positive complement of
+  /// `--noinvisibletimes` (Perl `invisibletimes!`, default on).
+  /// `--noinvisibletimes` wins if both are given.
+  #[arg(long)]
+  invisibletimes: bool,
+
   /// Suppress default CSS/JS resources
   #[arg(long)]
   nodefaultresources: bool,
+
+  /// Include the default CSS/JS resources — the positive complement of
+  /// `--nodefaultresources` (Perl `defaultresources!`, default on).
+  /// `--nodefaultresources` wins if both are given.
+  #[arg(long)]
+  defaultresources: bool,
 
   /// Omit XML comments from output
   #[arg(long)]
@@ -142,6 +154,12 @@ struct Cli {
   /// Disable math parsing
   #[arg(long, alias = "noparse")]
   nomathparse: bool,
+
+  /// Enable math parsing — the positive complement of `--nomathparse`
+  /// (default on). Restores parsing if a profile/package disabled it;
+  /// `--nomathparse` wins if both are given.
+  #[arg(long)]
+  mathparse: bool,
 
   /// Emit source locators: track each construct's source range and stamp
   /// it onto the output as a `data-sourcepos` attribute (and a document-level
@@ -671,7 +689,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Perl Core.pm L43: STRICT; L55-57: INCLUDE_STYLES/INCLUDE_CLASSES.
     strict: if cli.strict { Some(true) } else { None },
     include_styles: if cli.includestyles { Some(true) } else { None },
-    nomathparse: if cli.nomathparse { Some(true) } else { None },
+    // `--nomathparse` disables; `--mathparse` explicitly enables (the default).
+    nomathparse: if cli.nomathparse {
+      Some(true)
+    } else if cli.mathparse {
+      Some(false)
+    } else {
+      None
+    },
     // `--source-map` flag OR `LATEXML_SOURCE_MAP` env enables locator
     // tracking + emission; otherwise leave unset (off). The env reads
     // once here, off the hot path. See `docs/SOURCE_PROVENANCE.md`.
@@ -978,10 +1003,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
           search_paths: &cli.search_paths,
-          nodefaultresources: cli.nodefaultresources,
+          nodefaultresources: cli.nodefaultresources && !cli.defaultresources,
           css_files: &cli.css_files,
           js_files: &cli.js_files,
-          noinvisibletimes: cli.noinvisibletimes,
+          noinvisibletimes: cli.noinvisibletimes && !cli.invisibletimes,
           mathtex: cli.mathtex && !cli.nomathtex,
           navigationtoc: cli.navigationtoc.as_deref(),
           schemadocs: cli.schemadocs,
