@@ -35,9 +35,9 @@ jobs:
   # cross-OS — Linux emits ELF, macOS emits Mach-O — so the macOS asset is
   # built on its own runner, NOT cross-compiled from the Linux leg. We build
   # natively on the arm64 `macos-15` runner (the same arch the CI.yml macOS
-  # job validates, #217). Apple Silicon only; Intel macOS (x86_64-apple-darwin)
-  # is not yet a published target — see docs/RELEASING.md "Release asset
-  # strategy". The TL-window dumps are OS-agnostic gzipped text, so this leg
+  # job validates, #217). Intel macOS (x86_64-apple-darwin) is published from a
+  # separate native `build-macos-intel` leg below — see docs/RELEASING.md
+  # "Release asset strategy". The TL-window dumps are OS-agnostic gzipped text, so this leg
   # embeds the exact bytes the `dumps` job produced for the Linux leg.
   build-macos:
     name: Build macOS arm64 ${{ github.ref_name }}
