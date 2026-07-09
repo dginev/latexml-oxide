@@ -774,7 +774,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         .format
         .clone()
         // `--xml` is Perl's shortcut for `--format=xml` (Config.pm L59).
-        .or(if cli.xml { Some("xml".to_string()) } else { None })
+        .or(if cli.xml {
+          Some("xml".to_string())
+        } else {
+          None
+        })
         .or_else(|| {
           target.as_ref().and_then(|dest| {
             Path::new(dest)

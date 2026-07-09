@@ -56,7 +56,9 @@ fn missing_tool_hint(prog: &str) -> Option<&'static str> {
     "convert" | "magick" => {
       "install ImageMagick (apt `imagemagick`, brew `imagemagick`) for raster image conversion"
     },
-    "dvisvgm" => "install dvisvgm (apt `dvisvgm`, brew `texlive`) for vector-SVG LaTeX-image output",
+    "dvisvgm" => {
+      "install dvisvgm (apt `dvisvgm`, brew `texlive`) for vector-SVG LaTeX-image output"
+    },
     "dvipng" => "install dvipng (apt `dvipng`, brew `texlive`) for raster LaTeX-image output",
     "latex" | "pdflatex" | "kpsewhich" | "tftopl" => {
       "install TeX Live (apt `texlive-latex-base`, brew `texlive` / MacTeX) — the TeX ecosystem \
@@ -2989,10 +2991,18 @@ endobj
   #[test]
   fn missing_tool_hint_names_packages() {
     assert!(missing_tool_hint("mutool").unwrap().contains("mupdf-tools"));
-    assert!(missing_tool_hint("pdftocairo").unwrap().contains("poppler-utils"));
+    assert!(
+      missing_tool_hint("pdftocairo")
+        .unwrap()
+        .contains("poppler-utils")
+    );
     assert!(missing_tool_hint("gs").unwrap().contains("ghostscript"));
     assert!(missing_tool_hint("ps2pdf").unwrap().contains("ghostscript"));
-    assert!(missing_tool_hint("convert").unwrap().contains("imagemagick"));
+    assert!(
+      missing_tool_hint("convert")
+        .unwrap()
+        .contains("imagemagick")
+    );
     assert!(missing_tool_hint("dvisvgm").unwrap().contains("dvisvgm"));
     assert!(missing_tool_hint("dvipng").unwrap().contains("dvipng"));
     assert!(missing_tool_hint("kpsewhich").unwrap().contains("TeX Live"));
