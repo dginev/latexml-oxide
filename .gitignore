@@ -61,6 +61,12 @@ html/
 __pycache__/
 *.pyc
 
+# Generated license notices (tools/gen_notices.sh assembles these for release
+# packaging from THIRD-PARTY-NOTICES + a cargo-about appendix; the appendix
+# tracks the gitignored Cargo.lock, so the assembled output is not committed).
+/THIRD-PARTY-NOTICES.dist
+/THIRD-PARTY-RUST.txt
+
 # Reference / read-only mirror trees (Perl LaTeXML upstream sources,
 # community ar5iv-bindings .ltxml, TeXbook + tex.web). These live
 # alongside the repo for cross-reference during the Perl→Rust port

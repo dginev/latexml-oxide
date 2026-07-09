@@ -28,7 +28,7 @@ prep); the remaining rows still carry their 2026-05-24 values.
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — §2 |
 | OS/arch | `x86_64-linux-gnu` + `aarch64-apple-darwin` | staged ladder — §3 |
 | Toolchain | **nightly** (`#![feature(thread_local)]`) | pin nightly; track stabilization (#143) |
-| License inventory | crates `CC0`; embedded assets uninventoried | blocker — §4 |
+| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README landed | release-workflow wiring (F4) — §4/§7 |
 | Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)) | + distribution profile — §6 |
 
 ## 2. Binary size (issue #101)
@@ -120,14 +120,30 @@ bar — and the editor distribution model it gates — is §11.
 
 ## 4. License audit (blocker)
 
-Crates are `CC0`, but the binary ships more. Before any public-domain claim:
-- **Embedded-asset inventory** (origin + license): XSLT, RelaxNG schema,
-  CSS/JS, and the sharp edge — `resources/dumps/`.
-- **Dumps are TeX-Live-derived** (`tools/make_formats.sh`) → *not*
-  automatically CC0; needs a written position.
-- Rust dep license report (`cargo deny`/`cargo about`).
-- Confirm GPL/AGPL graphics tools stay subprocess-only (never linked).
-- CI checks release-artifact contents against the inventory.
+Crates are `CC0`, but the binary ships more. Full inventory:
+[`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md) (living). **Analysis complete
+2026-07-09**; posture is clean, three outward-facing items remain:
+
+- **Rust deps — DONE (gated).** `deny.toml` allow-list + cargo-deny CI;
+  `cargo deny --all-features check licenses` → *licenses ok*. Distributed
+  feature set clean too (the `pericortex` no-license warning is cortex-only,
+  absent from the shipped binary — inventory F1).
+- **Embedded assets — DONE.** CSS/XSLT/RelaxNG/DTD/Profiles + one JS are Perl
+  LaTeXML (NIST public domain ≈ CC0); the other JS is ours (CC0). No notice
+  burden.
+- **Graphics tools — DONE (confirmed subprocess-only).** `gs`/`mutool`/
+  `pdftocairo`/`convert` are `Command::new` only, never linked → their (A)GPL
+  does not propagate.
+- **Dumps (TeX-Live-derived) — POSITION APPROVED + LANDED 2026-07-09.**
+  Gitignored (repo ships none); embedded in the release binary at build time,
+  derived from LaTeX kernel (LPPL 1.3c) + plain TeX (Knuth). Owner-approved:
+  CC0 scoped to our source; `THIRD-PARTY-NOTICES` (assembled by
+  `tools/gen_notices.sh` = hand-authored §1-4 + cargo-about §5) attributes the
+  kernel/plain-TeX + linked libs + Rust crates; README License section scopes
+  the claim (inventory §C).
+- **Remaining:** wire `tools/gen_notices.sh` into the release workflow so the
+  artifact ships the assembled notices, + the CI asset-inventory gate (F4 → §7);
+  `pericortex` upstream `license` field (F1, cortex-only, non-blocking).
 
 ## 5. Tail latency & RSS
 

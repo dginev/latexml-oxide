@@ -124,6 +124,7 @@ mission targets (docs serving both come first):
 **Worklists & contracts (start here when resuming work):**
 - **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — The BRIEF ACTIONABLE worklist for both targets: current status, the in-flight session entry, open tasks, deferred families, stable reference. Completed session logs are lifted to `docs/archive/SYNC_SESSIONS_*.md`. **Start here.**
 - **[`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy.
+- **[`docs/LICENSE_INVENTORY.md`](docs/LICENSE_INVENTORY.md)** — Living license inventory for the redistributable binary (the RELEASE_CRITERIA §4 deliverable): Rust deps (cargo-deny-gated), embedded assets, the TeX-Live-derived dumps position, linked syslibs, subprocess-only graphics tools. Scopes the CC0 claim.
 - **[`docs/ISSUE_AUDIT.md`](docs/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation (refreshed 2026-07-02; 8 open). **Refresh before milestone planning.** (Issue numbers are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
 
 **Target 1 — faithful Perl translation (parity):**

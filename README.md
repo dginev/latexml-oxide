@@ -211,3 +211,16 @@ $ cargo doc --workspace --no-deps --open
 
 **IMPORTANT:** There is a compile-time plugin that collects the files in the test suite. 
 This means that when adding a new test `[name].tex` and `[name].xml` pair of files, you may need to manually execute `cargo clean` to rediscover the entry.
+
+### License
+
+latexml-oxide's source code and original resources are dedicated to the public
+domain under [CC0 1.0 Universal](LICENSE).
+
+The release binary also embeds and links third-party material that keeps its own
+license — most notably compiled TeX format dumps derived from TeX Live (the
+LaTeX kernel, LPPL 1.3c; plain TeX, Knuth) and the system libxml2/libxslt
+libraries (MIT). These are attributed in [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES),
+which is bundled with every release. The public-domain dedication above applies
+to the latexml-oxide source and original resources, **not** to that embedded or
+linked third-party material. Full breakdown: [`docs/LICENSE_INVENTORY.md`](docs/LICENSE_INVENTORY.md).
