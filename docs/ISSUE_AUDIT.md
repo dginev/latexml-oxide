@@ -19,7 +19,7 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 |---|---|---|---|
 | **47** | [Feature] Accurate latex linting | enhancement | **Prioritized beyond-Perl showcase.** Live source ↔ preview over a shared locator substrate, two clients: the **ar5iv-editor** (CodeMirror web UI) and a **VSCode extension** (webview). Accurate linting falls out of the same substrate. Design: [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md). *Not* purely post-1.0 — Tier A is near-term and parity-neutral. |
 | **92** | Superior debugging and error-reporting for document authors | enhancement | Same source-provenance substrate as #47 ([`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md)): construct-start + macro-origin locators give Rust-compiler-grade author errors, fixing TeX's "error points at the end of the environment". |
-| **191** | Add support for original command-line options | enhancement | **PARTIAL — not closeable.** `clap` 4 derive is adopted (the issue's suggestion) and core options work, but coverage is **~47 flags vs ~95 in the Perl omni set** (`Common/Config.pm`). Audited 2026-05-24 — gaps below. |
+| **191** | Add support for original command-line options | enhancement | **PARTIAL — not closeable.** `clap` 4 derive is adopted (the issue's suggestion). 2026-07-09: wired every flag whose engine feature already exists (`--strict`, `--includestyles`, `--comments`, `--xml`, `--embed`, `--nopost`, `--nosplit`, `--nopmml`/`--nocmml`/`--nomathtex`/`--noxmath`, `--navtoc`). Remaining = `--profile` (+`--mode`) and deferred-feature flags (SVG/daemon/crossref/index/bib), kept as hard parse errors per option C. Detail below. |
 | **143** | Switch to rust stable, when `#[thread_local]` is stabilized | enhancement, performance | Toolchain-longevity risk for a public-domain tool. Pin a known-good nightly; track stabilization. [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §3. |
 | **94** | Document model: RelaxNG vs Rust data-type trade-offs | enhancement, question, documentation | Doc debt; relates to the (closed) #199 HTML-dialect schema and [`SCHEMA_DOCUMENTATION.md`](SCHEMA_DOCUMENTATION.md). |
 | **192** | Compile-time string interning? | enhancement, performance | Perf nice-to-have. The arena/interner is already the hottest read site (see [`SAFETY.md`](SAFETY.md) §B); the 2026-07-02 audit settled the related pin!/pin_static policy ([`PERFORMANCE.md`](PERFORMANCE.md) Principle 1). Measure before investing. Backlog. |
@@ -39,26 +39,44 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 | **171** | 2026-06-16 | XML-replacement parser — resolved as a component of #247 (`ReplacementOp` AST + winnow, decision recorded in [`BINDING_DSL_ARCHITECTURE.md`](BINDING_DSL_ARCHITECTURE.md)). |
 | **127** | 2026-06-18 | 64-bit numbers — fixed by exact `xn_over_d`-style fixed-point unit conversion (`numeric_ops::fixpoint_unit`), bit-exact vs pdftex. The storage was never the bug; f64 unit *conversion* was. |
 
-## #191 — CLI option-coverage detail (audited 2026-05-24)
+## #191 — CLI option-coverage detail (audited 2026-05-24; refreshed 2026-07-09)
 
-Our binary has ~47 `#[arg]` flags vs ~95 in Perl `Common/Config.pm` (the
-`latexmlc` omni union). Existing Perl-name aliases: `--destination`,
-`--noparse`, `--presentationmathml`, `--contentmathml`, `--xmath`.
+Authoritative Perl spec = `getopt_specification` in `Common/Config.pm`
+(~82 canonical omni options; the `latexmlc` union). Existing Perl-name
+aliases: `--destination`, `--noparse`, `--presentationmathml`,
+`--contentmathml`, `--xmath`, and (2026-07-09) `--nopresentationmathml`,
+`--nocontentmathml`, `--nokeepXMath`, `--navtoc`.
 
-- **Cheap parity gaps (map to existing/near features):** `--profile`
+**Landed 2026-07-09** — every flag whose engine feature already exists is now
+wired (option C: wire real features, keep the parser strict — see below):
+`--strict` (State `STRICT`), `--includestyles` (State
+`INCLUDE_STYLES`/`INCLUDE_CLASSES`), `--comments` (positive of `--nocomments`),
+`--xml` (= `--format=xml`), `--embed` (= `--whatsout=fragment`), `--nopost`,
+`--nosplit`, the math-rep negations `--nopmml`/`--nocmml`/`--nomathtex`/
+`--noxmath`, and the `--navtoc` alias. `--debug` already existed.
+
+- **Remaining cheap gaps (feature exists / near):** `--profile`
   (biggest — `fragment`/`math`/`article`/…; planned as **TOML** profiles
   deserialized into the clap option struct, not Perl `.opt` — design in
-  [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) "Future Work"), `--strict`,
-  `--includestyles`,
-  `--validate`/`--novalidate`, `--mode`, `--debug`, `--navtoc` (alias),
-  `--mathml`.
-- **Feature gaps (option absent because the feature is):** `--mathimages` /
-  `--mathsvg` / `--svg` (SVG deferred), `--jats` / `--html4` /
-  `--tex` / `--box` output, `--crossref` / `--bibliography` / `--index` /
-  `--permutedindex` / `--splitbibliography`, daemon mode (`--port`,
-  `--expire`, `--cache_key`, `--address`, `--autoflush`, `--exist`,
-  `--count`, `--name`).
+  [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) "Future Work") + its `--mode`
+  alias, `--validate`/`--novalidate` (runtime RelaxNG toggle), `--mathml`.
+- **Feature gaps (flag absent because the feature is) — kept as hard parse
+  errors, NOT stubbed:** `--mathimages` / `--mathsvg` / `--svg` (SVG deferred),
+  `--jats` / `--html4` / `--tex` / `--box` output, `--crossref` /
+  `--bibliography` / `--index` / `--permutedindex` / `--splitbibliography`,
+  `--openmath` / `--unicodemath` / `--plane1` / `--hackplane1` /
+  `--parallelmath` / `--linelength` / `--mathimagemagnification`,
+  `--scan` / `--prescan` / `--dbfile` / `--urlstyle` / `--icon` / `--base` /
+  `--timestamp` / `--omitdoctype` (no DTD), daemon mode (`--port`, `--expire`,
+  `--cache_key`, `--address`, `--autoflush`).
 - **Intentional non-goals:** `--output` (we keep `--destination` / `--dest`).
+
+**Design decision (2026-07-09, option C).** Deferred-feature flags are
+*deliberately left as clap "unexpected argument" errors* rather than
+accept-and-warn stubs — a strict parser never silently accepts a flag whose
+feature is absent (no misleading success). Revisit per-flag as each feature
+lands. The parser-library question the issue raised (clap vs alternatives) is
+settled: clap 4 derive, adopted.
 
 ## Reading
 
@@ -66,6 +84,9 @@ Our binary has ~47 `#[arg]` flags vs ~95 in Perl `Common/Config.pm` (the
   substrate ([`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md)).
 * **Release gates:** #143 (toolchain pin), plus the license + safety items in
   [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) that have no issue number.
-* **Partial parity (open):** #191 — clap landed + core options, but ~47/95
-  omni flags; `--profile` and a long tail still missing (detail above).
+* **Partial parity (open):** #191 — clap landed + core options; 2026-07-09
+  wired every flag whose feature already exists (`--strict`, `--includestyles`,
+  `--xml`, `--embed`, `--nopost`/`--nosplit`, math-rep negations, `--navtoc`).
+  Remaining = `--profile` (+ `--mode`) and deferred-feature flags kept as hard
+  parse errors (detail above).
 * **Backlog / exploratory:** #192, #94, #82, #80.

@@ -46,6 +46,11 @@ struct Cli {
   #[arg(long)]
   format: Option<String>,
 
+  /// Shortcut for `--format=xml`: emit the intermediate LaTeXML XML without
+  /// HTML post-processing (Perl `--xml`).
+  #[arg(long)]
+  xml: bool,
+
   /// XSLT stylesheet path
   #[arg(long)]
   stylesheet: Option<String>,
@@ -55,22 +60,45 @@ struct Cli {
   #[arg(long)]
   post: bool,
 
+  /// Skip post-processing entirely, emitting the raw LaTeXML XML (negates the
+  /// auto-enabled post phase; Perl `--nopost`).
+  #[arg(long)]
+  nopost: bool,
+
   /// Generate Presentation MathML
   #[arg(long, alias = "presentationmathml")]
   pmml: bool,
 
+  /// Suppress Presentation MathML even when a format would default it on
+  /// (Perl `--nopmml`/`--nopresentationmathml`).
+  #[arg(long, alias = "nopresentationmathml")]
+  nopmml: bool,
+
   /// Generate Content MathML
   #[arg(long, alias = "contentmathml")]
   cmml: bool,
+
+  /// Suppress Content MathML (Perl `--nocmml`/`--nocontentmathml`).
+  #[arg(long, alias = "nocontentmathml")]
+  nocmml: bool,
 
   /// Keep XMath in output alongside MathML
   #[arg(long, alias = "xmath")]
   #[arg(name = "keepXMath")]
   keep_xmath: bool,
 
+  /// Drop the XMath representation from the output (Perl
+  /// `--noxmath`/`--nokeepXMath`).
+  #[arg(long, alias = "nokeepXMath")]
+  noxmath: bool,
+
   /// Wrap MathML in semantics with TeX annotation
   #[arg(long)]
   mathtex: bool,
+
+  /// Suppress the TeX annotation on MathML (Perl `--nomathtex`).
+  #[arg(long)]
+  nomathtex: bool,
 
   /// Replace invisible times with zero-width space
   #[arg(long)]
@@ -83,6 +111,23 @@ struct Cli {
   /// Omit XML comments from output
   #[arg(long)]
   nocomments: bool,
+
+  /// Preserve source `%` comments in the XML output (Perl default; the Rust
+  /// binary defaults them OFF — see OXIDIZED_DESIGN #2). `--nocomments` still
+  /// wins if both are given.
+  #[arg(long)]
+  comments: bool,
+
+  /// Strict error-reporting: treat selected recoverable conditions as errors,
+  /// like Perl `--strict` (State `STRICT`, Perl Core.pm L43).
+  #[arg(long)]
+  strict: bool,
+
+  /// Raw-load `.sty`/`.cls` sources from the search path instead of relying
+  /// solely on LaTeXML bindings (Perl `--includestyles`; State
+  /// `INCLUDE_STYLES`/`INCLUDE_CLASSES`, Core.pm L55-57).
+  #[arg(long)]
+  includestyles: bool,
 
   /// Use .bbl file instead of running BibTeX (for arXiv-like builds)
   #[arg(long)]
@@ -149,6 +194,11 @@ struct Cli {
   #[arg(long, value_name = "TYPE")]
   whatsout: Option<String>,
 
+  /// Shortcut for `--whatsout=fragment`: emit an embeddable inline snippet
+  /// (Perl `--embed`).
+  #[arg(long)]
+  embed: bool,
+
   // === Repeatable flags ===
   /// CSS files to inject (repeatable)
   #[arg(long = "css", value_name = "URL")]
@@ -184,7 +234,7 @@ struct Cli {
   token_limit: Option<usize>,
 
   /// Navigation TOC style (e.g. "context")
-  #[arg(long, value_name = "STYLE")]
+  #[arg(long, alias = "navtoc", value_name = "STYLE")]
   navigationtoc: Option<String>,
 
   /// Apply scholarly-schema doc-specific post-processing: kind chips
@@ -236,6 +286,11 @@ struct Cli {
   /// Enable document splitting
   #[arg(long)]
   split: bool,
+
+  /// Force document splitting off even when `--splitat`/`--splitpath` would
+  /// otherwise enable it (Perl `--nosplit`).
+  #[arg(long)]
+  nosplit: bool,
 
   /// Section level to split at (default: section)
   #[arg(long, value_name = "LEVEL")]
@@ -454,6 +509,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let whatsout_mode = match cli.whatsout.as_deref() {
     Some(s) => latexml_post::extract::Whatsout::from_cli(s).unwrap_or_default(),
     None if dest_ext_is_zip => latexml_post::extract::Whatsout::Archive,
+    // `--embed` is Perl's shortcut for `--whatsout=fragment` (Config.pm L72).
+    None if cli.embed => latexml_post::extract::Whatsout::Fragment,
     None => latexml_post::extract::Whatsout::Document,
   };
   let is_archive_out = whatsout_mode.is_archive();
@@ -571,7 +628,18 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     preload,
     search_paths,
-    include_comments: if cli.nocomments { Some(false) } else { None },
+    // Perl Core.pm L45: INCLUDE_COMMENTS. `--nocomments` wins over `--comments`;
+    // otherwise leave unset so the Rust default (OFF — OXIDIZED_DESIGN #2) holds.
+    include_comments: if cli.nocomments {
+      Some(false)
+    } else if cli.comments {
+      Some(true)
+    } else {
+      None
+    },
+    // Perl Core.pm L43: STRICT; L55-57: INCLUDE_STYLES/INCLUDE_CLASSES.
+    strict: if cli.strict { Some(true) } else { None },
+    include_styles: if cli.includestyles { Some(true) } else { None },
     nomathparse: if cli.nomathparse { Some(true) } else { None },
     // `--source-map` flag OR `LATEXML_SOURCE_MAP` env enables locator
     // tracking + emission; otherwise leave unset (off). The env reads
@@ -705,6 +773,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       let inferred_format: Option<String> = cli
         .format
         .clone()
+        // `--xml` is Perl's shortcut for `--format=xml` (Config.pm L59).
+        .or(if cli.xml { Some("xml".to_string()) } else { None })
         .or_else(|| {
           target.as_ref().and_then(|dest| {
             Path::new(dest)
@@ -758,20 +828,28 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // Matches the always-on post-processing behaviour of the now-
       // retired `latexmlpost_oxide` binary.
       let xml_input_mode = is_xml_input(&source_for_post);
-      let do_post = cli.post
-        || cli.pmml
-        || cli.cmml
-        || effective_stylesheet.is_some()
-        || is_html_format
-        || cli.split
-        || cli.splitat.is_some()
-        || xml_input_mode
-        // Perl Config.pm L454: any non-`document` whatsout forces post.
-        || whatsout_mode.requires_post();
+      // `--nopost` (Perl `post!` negated) force-skips post-processing so the
+      // raw LaTeXML XML is emitted even for an HTML-implying destination.
+      let do_post = !cli.nopost
+        && (cli.post
+          || cli.pmml
+          || cli.cmml
+          || effective_stylesheet.is_some()
+          || is_html_format
+          || cli.split
+          || cli.splitat.is_some()
+          || xml_input_mode
+          // Perl Config.pm L454: any non-`document` whatsout forces post.
+          || whatsout_mode.requires_post());
 
       // Build split XPath from --splitat
-      let split_enabled =
-        cli.split || cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some();
+      // `--nosplit` (Perl `split!` negated) forces splitting off even when a
+      // `--splitat`/`--splitpath`/`--splitnaming` would otherwise enable it.
+      let split_enabled = !cli.nosplit
+        && (cli.split
+          || cli.splitat.is_some()
+          || cli.splitnaming.is_some()
+          || cli.splitpath.is_some());
       let split_xpath = if split_enabled {
         cli.splitpath.clone().or_else(|| {
           let splitat = cli.splitat.as_deref().unwrap_or("section");
@@ -847,9 +925,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         let default_pmml_for_xml_input =
           xml_input_mode && !cli.pmml && effective_stylesheet.is_none();
         let post_opts = PostOptions {
-          pmml: cli.pmml || cli.post || is_html_format || default_pmml_for_xml_input,
-          cmml: cli.cmml,
-          keep_xmath: cli.keep_xmath,
+          // The `no*` forms (Perl `removeMathFormat`) suppress a rep that a
+          // format would otherwise default on.
+          pmml: (cli.pmml || cli.post || is_html_format || default_pmml_for_xml_input)
+            && !cli.nopmml,
+          cmml: cli.cmml && !cli.nocmml,
+          keep_xmath: cli.keep_xmath && !cli.noxmath,
           stylesheet: effective_stylesheet.as_deref(),
           destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
@@ -858,7 +939,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           css_files: &cli.css_files,
           js_files: &cli.js_files,
           noinvisibletimes: cli.noinvisibletimes,
-          mathtex: cli.mathtex,
+          mathtex: cli.mathtex && !cli.nomathtex,
           navigationtoc: cli.navigationtoc.as_deref(),
           schemadocs: cli.schemadocs,
           split: split_enabled,

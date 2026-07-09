@@ -114,6 +114,8 @@ impl Converter {
     let core = Core::new(CoreOptions {
       verbosity: Some(opts.verbosity),
       include_comments: opts.include_comments.or(Some(false)),
+      strict: opts.strict,
+      include_styles: opts.include_styles,
       preload: opts.preload.clone(),
       search_paths: opts.search_paths.clone(),
       nomathparse: opts.nomathparse,

@@ -181,6 +181,8 @@ pub(crate) fn make_config(uri: &str) -> Config {
       Some(search_paths)
     },
     include_comments:        None,
+    strict:                  None,
+    include_styles:          None,
     // Math parsing is always ON in the server: the parsed MathML (and its
     // source-mapped tokens) is one of the features this preview showcases, so
     // we deliberately do not expose a disable knob here.

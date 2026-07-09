@@ -618,6 +618,12 @@ impl State {
     if let Some(strict) = options.strict {
       state.assign_value("STRICT", strict, Some(Scope::Global));
     }
+    // Perl Core.pm L55-57: INCLUDE_STYLES / INCLUDE_CLASSES (both default 0).
+    // `--includestyles` raw-loads .sty AND .cls sources from the search path.
+    if let Some(include_styles) = options.include_styles {
+      state.assign_value("INCLUDE_STYLES", include_styles, Some(Scope::Global));
+      state.assign_value("INCLUDE_CLASSES", include_styles, Some(Scope::Global));
+    }
     // Perl Core.pm L62: NOMATHPARSE
     state.assign_value("NOMATHPARSE", nomathparse, Some(Scope::Global));
     // Perl Core.pm L61: PERL_INPUT_ENCODING (default utf-8)

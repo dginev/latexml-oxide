@@ -358,6 +358,8 @@ impl LatexmlWorker {
       preload:                 Some(self.profile.preloads.clone()),
       search_paths:            Some(search_paths),
       include_comments:        Some(false),
+      strict:                  None,
+      include_styles:          None,
       nomathparse:             None,
       // Corpus/parity sweeps never emit locators — keep the zero-cost path.
       source_map:              None,
@@ -1520,7 +1522,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   // (deadlock, uninterruptible D-state I/O, a dead watchdog thread) that
   // death-driven SIGCHLD supervision cannot see because the process is alive.
   let unresponsive_timeout = Some(std::time::Duration::from_secs(
-    (cli.timeout as u64).saturating_mul(2).max(300),
+    cli.timeout.saturating_mul(2).max(300),
   ));
 
   let config = HarnessConfig {

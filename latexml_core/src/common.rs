@@ -101,6 +101,11 @@ pub struct Config {
   pub search_paths:            Option<Vec<String>>,
   /// Whether to include XML comments in output (--nocomments sets false)
   pub include_comments:        Option<bool>,
+  /// Strict error-reporting (`--strict`; State `STRICT`, Perl Core.pm L43)
+  pub strict:                  Option<bool>,
+  /// Raw-load `.sty`/`.cls` sources (`--includestyles`; State
+  /// `INCLUDE_STYLES`/`INCLUDE_CLASSES`, Perl Core.pm L55-57)
+  pub include_styles:          Option<bool>,
   /// Whether to skip math parsing (--nomathparse)
   pub nomathparse:             Option<bool>,
   /// Whether to track + emit source locators (`--source-map`). Off by
@@ -123,6 +128,8 @@ impl Default for Config {
       preload:                 None,
       search_paths:            None,
       include_comments:        None,
+      strict:                  None,
+      include_styles:          None,
       nomathparse:             None,
       source_map:              None,
     }
