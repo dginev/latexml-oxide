@@ -16,20 +16,22 @@ review. Corrected positions are stated, not the original where it was wrong
 ## 1. Gates
 
 Numbers are verified current state (2026-05-24) unless marked TODO. The
-`cargo test` / `cargo clippy` rows were re-verified 2026-07-08 (release 0.7.3
-prep); the remaining rows still carry their 2026-05-24 values.
+`cargo test` / `cargo clippy` rows were re-verified 2026-07-09
+(`public-release-prep-week`); the OS/arch, toolchain, license, and safety rows
+were also refreshed then. The corpus / tail-latency / size rows still carry
+their 2026-05-24 values.
 
 | Gate | Current | Target |
 |---|---|---|
-| `cargo test --tests` | 1532/0/0 | green |
+| `cargo test --tests` | 1533/0/0 | green |
 | `cargo clippy --all-targets` | 0 | 0 |
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)) | P50/P90/P99 dashboard; "no unbounded growth" gate — §5 |
-| Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — §2 |
-| OS/arch | `x86_64-linux-gnu` + `aarch64-apple-darwin` | staged ladder — §3 |
-| Toolchain | **nightly** (`#![feature(thread_local)]`) | pin nightly; track stabilization (#143) |
-| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README landed | release-workflow wiring (F4) — §4/§7 |
-| Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)) | + distribution profile — §6 |
+| Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
+| OS/arch | `x86_64-linux-gnu` + `aarch64-apple-darwin` + `x86_64-apple-darwin` | staged ladder — §3 (next rung: aarch64-linux) |
+| Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
+| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; only cortex-only F1 remains, non-blocking) |
+| Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); URI-passthrough posture documented | remaining §6 items (CSP/sandboxing/`--hardened`) |
 
 ## 2. Binary size (issue #101)
 
@@ -240,13 +242,16 @@ validation contract.
 
 ## 10. Corrections to the codex pass
 
-- **#191 (CLI) is PARTIAL, not done** (audited 2026-05-24) — `clap` is
-  adopted and core options work, but only ~47 of ~95 Perl omni flags exist.
-  Missing routing/parity options (`--profile`, `--strict`, `--includestyles`,
-  `--validate`, `--mode`, `--debug`, `--navtoc`, `--mathml`) and a
-  feature-tied long tail (mathimages/svg, jats, crossref/index, daemon mode).
-  `--output` is an intentional non-goal. Detail in
-  [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md). (Earlier "essentially done" was wrong.)
+- **#191 (CLI) is PARTIAL, not closeable** — `clap` 4 derive adopted; 2026-07-09
+  wired every flag whose engine feature already works (`--strict`,
+  `--includestyles`, `--debug`, `--navtoc`, plus batch 2: `--timestamp`,
+  `--icon`, `--nographicimages`, `--numbersections`, `--mathparse` +
+  `--invisibletimes`/`--defaultresources`). `--validate` postponed to the next
+  release (gated on a rust-libxml RelaxNG publish). Remaining = `--profile`
+  (+`--mode`) and the feature-tied long tail (mathimages, svg, jats,
+  crossref/index, daemon) — kept as **hard parse errors, not stubbed** (option C).
+  `--output` is an intentional non-goal. Full detail in
+  [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md).
 - **Single-binary smoke test exists** (`tests/001_single_binary_smoke.rs`) —
   §7 is promote/extend, not create.
 - **BibTeX is ported** (Phases 1–8, [`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](archive/BIBTEX_PORT_PLAN_2026-06-20.md));
