@@ -87,25 +87,25 @@ dependency check:
    already removes the kpathsea blocker (MiKTeX's kpsewhich.exe
    delegates to MiKTeX's own resolver — better than linking could do).
 
-**v0.7.1 target — self-contained libxml2/libxslt (the SONAME-portability
-completion).** 0.7.0 dynamically links the build host's libxml2/libxslt
-SONAME (`libxml2.so.2` on the ubuntu-22.04 runner). That binary loads on
-every libxml2-2.x system (Ubuntu 22.04/24.04 LTS, Debian 12 — ~20 years
-of a stable `.so.2`) but **NOT** on libxml2 ≥ 2.14, which bumped its
-SONAME to `libxml2.so.16`. A SONAME change is, by the rules of shared
-libraries, the loader's "not ABI-compatible" token — so no symlink
-bridges `.so.2` ↔ `.so.16` by design; that's the mechanism working, not
-failing. Fix = static-link libxml2 + libxslt + libexslt into the binary
-(the kpathsea playbook: PIC static `.a`, needed because the proc-macro
-cdylib links libxml via `latexml_core`; `libxml2-dev` ships `libxml2.a`
-but `libxslt`/`libexslt` have no packaged `.a` → source-build; transitive
-`-lz`/`-lgcrypt` stay dynamic — stable SONAMEs, no churn). After kpathsea
-(done) + these three, the only dynamic deps left are the glibc family +
-zlib + libgcrypt — all stable-SONAME, so the binary becomes "any
-glibc-2.35+ Linux, any libxml/libxslt version." **Test bed: this dev box
-runs libxml2.so.16 (2.15.2)** — the 0.7.0 `.so.2` binary fails to load
-here, so a successful `latexml_oxide --version` on the dev box is the
-portability gate for the static-linked build.
+**Self-contained libxml2/libxslt — DONE (shipped 0.7.1).** 0.7.0 dynamically
+linked the build host's libxml2/libxslt SONAME (`libxml2.so.2` on the
+ubuntu-22.04 runner), which loads on libxml2-2.x systems but **NOT** on
+libxml2 ≥ 2.14 (SONAME bumped `.so.2` → `.so.16`). 0.7.1 **static-links
+libxml2 + libxslt + libexslt** (PIC, source-built) on top of libkpathsea —
+the kpathsea playbook: `tools/build_static_libxml.sh` +
+`tools/build_static_kpathsea.sh` build the PIC `.a` archives (libxml2-dev's
+`libxml2.a` plus source-built `libxslt`/`libexslt`, which ship no packaged
+`.a`), and the `LIBXML2_STATIC` / `LIBXSLT_STATIC` build.rs branches in the
+`libxml`/`libxslt` forks emit the `static=` link. `release.yml` runs both
+scripts on the Linux and macOS legs, and a CI step asserts the binary carries
+**no** dynamic libxml2/libxslt/kpathsea; transitive `-lz`/`-lgcrypt` stay
+dynamic (stable SONAMEs). Net: only the glibc family + zlib + libgcrypt remain
+dynamic → "any glibc-2.35+ Linux, any libxml/libxslt version," and the `.deb`
+declares no libxml2 SONAME dependency (RELEASING.md). **Portability gate** (a
+static `latexml_oxide --version` running on this dev box, which is on
+libxml2.so.16 / 2.15.2 where a 0.7.0 `.so.2` binary fails to load): met by the
+0.7.1 release build. The **default dev build stays dynamic** (`cargo build`
+with no static env) — static is the release-only path.
 
 **Nightly (#143):** required (`thread_local`). For a long-lived tool, a
 reproducibility risk — pin a known-good nightly, track stabilization.

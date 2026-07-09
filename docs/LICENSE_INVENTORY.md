@@ -15,7 +15,8 @@ latexml-oxide's **own source code and original resources are CC0-1.0**
 claim does **NOT** extend to third-party material the binary embeds, links, or
 derives from — each retains its upstream license, enumerated below. The two
 that matter for a distribution notice: the **build-time-embedded TeX-Live
-dumps** (§C) and, once statically linked (§3), **libxml2/libxslt** (§D).
+dumps** (§C) and the **statically-linked libxml2/libxslt** (§D; static since
+0.7.1).
 
 ## A. Rust dependencies — GATED
 
@@ -100,21 +101,24 @@ without claiming CC0 over them. Landed: [`THIRD-PARTY-NOTICES`](../THIRD-PARTY-N
 `ldd` on the built binary (host TeX Live ecosystem is out of scope per
 CLAUDE.md; these are standard OS libraries):
 
-| Library | SONAME (dev box) | License | Linkage |
-|---|---|---|---|
-| libxml2 | `.so.16` (2.15.2) | MIT | dynamic (→ static in §3) |
-| libxslt | `.so.1` | MIT | dynamic (→ static in §3) |
-| libexslt | `.so.0` | MIT | dynamic (→ static in §3) |
-| libgcrypt | `.so.20` | LGPL-2.1 | dynamic (transitive via libxslt) — **keep dynamic** |
-| libgpg-error | `.so.0` | LGPL-2.1 | dynamic (transitive via libgcrypt) — keep dynamic |
-| zlib | `.so.1` | Zlib | dynamic |
+| Library | License | Linkage (release / dev) |
+|---|---|---|
+| libxml2 | MIT | **static** (0.7.1, PIC source-built) / dynamic in `cargo build` |
+| libxslt | MIT | **static** (0.7.1) / dynamic in `cargo build` |
+| libexslt | MIT | **static** (0.7.1) / dynamic in `cargo build` |
+| libgcrypt | LGPL-2.1 | dynamic (transitive via libxslt) — **keep dynamic** |
+| libgpg-error | LGPL-2.1 | dynamic (transitive via libgcrypt) — keep dynamic |
+| zlib | Zlib | dynamic |
 
-MIT requires a copyright notice **when statically linked** → §3's static-link
-work adds libxml2/libxslt/libexslt to `THIRD-PARTY-NOTICES` (F2). LGPL-2.1
-(libgcrypt/libgpg-error) is satisfied by dynamic linking; the §3 plan
-deliberately keeps `-lgcrypt`/`-lz` dynamic.
+The release binary statically links libxml2/libxslt/libexslt (§3, shipped
+0.7.1); MIT requires their copyright notice when statically linked → covered in
+`THIRD-PARTY-NOTICES` §3. LGPL-2.1 (libgcrypt/libgpg-error) is satisfied by
+dynamic linking; the build deliberately keeps `-lgcrypt`/`-lz` dynamic. The
+default dev build (`cargo build`) links all of these dynamically against the
+host.
 
-Re-verify: `ldd target/<profile>/latexml_oxide`
+Re-verify: `ldd target/<profile>/latexml_oxide` (dev) or the release-artifact
+no-dynamic-clib CI assertion (release).
 
 ## E. Subprocess-only tools (never linked → no license propagation)
 
@@ -137,8 +141,8 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   clears the cargo-deny warning). Not distribution-blocking.
 - **F2** *(landed 2026-07-09)* — **`THIRD-PARTY-NOTICES`** (hand-authored §1-4 +
   cargo-about §5): LaTeX kernel (LPPL 1.3c) + plain TeX (Knuth) for the embedded
-  dumps (§C); Perl-LaTeXML assets; libxml2/libxslt/libexslt (MIT); Rust crates.
-  Assembled by `tools/gen_notices.sh`.
+  dumps (§C); Perl-LaTeXML assets; the statically-linked libxml2/libxslt/libexslt
+  (MIT, since 0.7.1); Rust crates. Assembled by `tools/gen_notices.sh`.
 - **F3** *(landed 2026-07-09)* — **README License section** scoping the CC0 claim
   to our source + original resources (§C wording).
 - **F4** *(open)* — **CI release-time gate** (RELEASE_CRITERIA §7): run
