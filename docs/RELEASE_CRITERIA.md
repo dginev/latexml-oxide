@@ -171,13 +171,34 @@ what's safe where:
 
 ## 7. CI must prove artifact properties
 
-`CI.yml` is RAM-bounded for the test suite (correct). `release.yml` only
-proves "it built." Add (release or beefier scheduled runner): size budget
-gate (§2); embedded-resource smoke — *promote/extend* existing
-`tests/001_single_binary_smoke.rs` + the "rename `resources/` away" check;
-`strace` no-own-disk-read assertion; license-inventory check (§4); corpus
-smoke + telemetry upload; graphics-tool matrix (pdftocairo / mutool /
-gs present-or-not); `cargo clippy --all-targets`.
+`CI.yml` is RAM-bounded for the test suite (correct). Release-artifact
+properties are proven in `release.yml` (release-only, so per-PR CI cost is
+unaffected). Status:
+
+**Landed (`release.yml`, Linux job):**
+- **Size budget** (§2) — `binary size budget` step, 64 MB cap, runaway-growth
+  alarm.
+- **Embedded-resource smoke** — `embedded-resource smoke` step re-runs a
+  conversion with `resources/` renamed away (dumps/XSLT/RelaxNG/CSS must come
+  from the embedded tables); complements `tests/001_single_binary_smoke.rs`
+  (which only isolates cwd) and the functional conversion smoke inside `verify
+  self-contained binary`.
+- **License / notices** (§4 F4) — `assemble THIRD-PARTY-NOTICES` runs
+  `tools/gen_notices.sh`; the notices are bundled in the tarball + `.deb`
+  (`/usr/share/doc`) and published as a release asset.
+- **No dynamic C-lib** — `verify self-contained binary` (`ldd` gate, since
+  0.7.1).
+
+**Already in `CI.yml` `lint` job (per-PR, cheap):** `cargo clippy
+--all-targets`; `cargo-deny` (license allow-list + RUSTSEC advisories).
+
+**Deferred / out of scope:**
+- `strace` no-own-disk-read — the rename-`resources/` smoke covers the
+  functional equivalent; the structural `strace` proof is lower-value, deferred.
+- Graphics-tool matrix (with/without `gs`/`mutool`/`pdftocairo`, asserting
+  graceful degradation via the missing-tool hint) — future.
+- **Corpus smoke + telemetry — OUT OF SCOPE for CI** (too expensive, decided
+  2026-07-09). Run out-of-band on the sandbox fleet, not the release workflow.
 
 ## 8. Surpass-Perl policy
 

@@ -113,6 +113,15 @@ cp "${bin_path}" "${stage_dir}/latexml_oxide"
 cp README.md "${stage_dir}/README.md"
 cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
 cp LICENSE "${stage_dir}/LICENSE"
+# THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
+# sections 1-4 + the cargo-about Rust-crate appendix produced by
+# tools/gen_notices.sh); fall back to the committed hand-authored file so a
+# local `make_release.sh` without cargo-about still ships notices.
+if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+  cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
+else
+  cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
+fi
 
 # --- build tarball ----------------------------------------------------------
 tarball="latexml-oxide-${version}-${target_triple}.tar.gz"

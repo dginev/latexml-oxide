@@ -181,4 +181,5 @@ assets = [
   ["../README.md", "usr/share/doc/latexml-oxide/README", "644"],
   ["../CHANGELOG.md", "usr/share/doc/latexml-oxide/CHANGELOG", "644"],
   ["../LICENSE", "usr/share/doc/latexml-oxide/copyright", "644"],
+  ["../THIRD-PARTY-NOTICES", "usr/share/doc/latexml-oxide/THIRD-PARTY-NOTICES", "644"],
 ]
