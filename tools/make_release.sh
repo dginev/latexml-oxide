@@ -167,7 +167,8 @@ The binary bundles libxml2/libxslt/kpathsea, so tarball users only need a TeX
 Live installation (read from your texmf tree) plus graphics tools:
 
 \`\`\`
-sudo apt install texlive-latex-base texlive-latex-extra texlive-science imagemagick
+sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
+                 texlive-latex-base texlive-latex-extra texlive-science
 \`\`\`
 
 EOF

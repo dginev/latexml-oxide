@@ -46,7 +46,7 @@ RUN set -ex && apt-get update -qq && apt-get install -qy --no-install-recommends
       texlive-bibtex-extra texlive-science texlive-pictures texlive-pstricks \
       texlive-publishers \
       libxml2 libxslt1.1 libkpathsea6 \
-      imagemagick mupdf-tools poppler-utils ghostscript \
+      imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 

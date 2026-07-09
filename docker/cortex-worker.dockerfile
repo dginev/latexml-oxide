@@ -82,7 +82,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       texlive-bibtex-extra texlive-science texlive-pictures texlive-pstricks \
       texlive-publishers \
       libxml2 libxslt1.1 libkpathsea6 libzmq5 \
-      ghostscript imagemagick poppler-utils mupdf-tools \
+      ghostscript imagemagick poppler-utils mupdf-tools dvipng dvisvgm \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 # ghostscript → `gs`, the EPS/PS rasterizer (convert_eps_via_gs) AND ImageMagick's

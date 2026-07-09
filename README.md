@@ -46,7 +46,7 @@ Every asset has a `<name>.sha256` sidecar for integrity checking.
 Set the version once (use the latest from the Releases page):
 
 ```
-$ VERSION=0.7.0
+$ VERSION=0.7.3
 ```
 
 #### Ubuntu / Debian
@@ -60,13 +60,14 @@ $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/la
 $ sudo apt install ./latexml-oxide_${VERSION}-1_amd64.deb
 ```
 
-Prefer the portable tarball? Install the runtime dependencies yourself:
+Prefer the portable tarball? The binary is statically linked against
+libxml2/libxslt/libkpathsea, so you only need the external tools + TeX Live:
 
 ```
 $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
 $ tar xzf latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
 $ sudo cp latexml-oxide-$VERSION-x86_64-unknown-linux-gnu/latexml_oxide /usr/local/bin/
-$ sudo apt install libxml2 libxslt1.1 libkpathsea6 imagemagick mupdf-tools \
+$ sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
                    texlive-latex-base texlive-latex-extra texlive-science
 ```
 
@@ -76,14 +77,33 @@ $ sudo apt install libxml2 libxslt1.1 libkpathsea6 imagemagick mupdf-tools \
 $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
 $ tar xzf latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
 $ sudo cp latexml-oxide-$VERSION-aarch64-apple-darwin/latexml_oxide /usr/local/bin/
-$ brew install libxml2 libxslt imagemagick mupdf-tools
-$ brew install texlive          # or install MacTeX / BasicTeX
+$ brew install imagemagick mupdf-tools poppler ghostscript
+$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng/dvisvgm)
 ```
 
 Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instead
 resolves TeX files through your distribution's `kpsewhich` executable (ensure
 `/Library/TeX/texbin` is on `PATH`). Intel Macs are not yet a published target —
 see [docs/RELEASING.md](docs/RELEASING.md) for the platform roadmap.
+
+### System dependencies
+
+The binary is self-contained (libxml2/libxslt/kpathsea are linked in), but at
+runtime it **shells out** to external tools for graphics conversion and reads
+TeX assets from your TeX Live tree. None are bundled — install the ones your
+documents need. When a required tool is missing, the conversion log names it
+**and the package to install**. The `.deb` declares all of these, so
+`apt install ./latexml-oxide_*.deb` pulls them automatically.
+
+| Tool (`command`) | apt package | Homebrew | Used for |
+|---|---|---|---|
+| `convert` | `imagemagick` | `imagemagick` | raster image conversion |
+| `mutool` | `mupdf-tools` | `mupdf-tools` | primary PDF graphics (fast) |
+| `pdftocairo` | `poppler-utils` | `poppler` | vector-SVG from PDF |
+| `gs`, `ps2pdf` | `ghostscript` | `ghostscript` | PDF/PostScript conversion |
+| `dvipng` | `dvipng` | TeX Live | raster LaTeX-image output |
+| `dvisvgm` | `dvisvgm` | TeX Live | vector-SVG LaTeX-image output |
+| `kpsewhich`, `latex`, `pdflatex`, `tftopl` | `texlive-latex-base` (+`-extra`, `-science`) | `texlive` / MacTeX | TeX package/class/font resolution |
 
 ### Build from source
 

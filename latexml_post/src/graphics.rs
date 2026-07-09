@@ -39,6 +39,33 @@ fn record_converter_diag(msg: String) { LAST_CONVERTER_DIAG.with(|c| *c.borrow_m
 /// Take (read + clear) this thread's latest converter diagnostic.
 fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borrow_mut().take()) }
 
+/// Map a graphics-converter executable to a "what to install" hint, so a
+/// "not installed" diagnostic tells the user how to fix it rather than just
+/// naming a missing binary. Covers the optional tools the graphics cascade
+/// shells out to — none are bundled; the host TeX/graphics ecosystem provides
+/// them. Returns `None` for an unrecognized program (no hint appended).
+fn missing_tool_hint(prog: &str) -> Option<&'static str> {
+  Some(match prog {
+    "gs" | "ps2pdf" => {
+      "install Ghostscript (apt `ghostscript`, brew `ghostscript`) for PDF/PostScript conversion"
+    },
+    "mutool" => "install MuPDF (apt `mupdf-tools`, brew `mupdf-tools`) for fast PDF rendering",
+    "pdftocairo" | "pdftoppm" => {
+      "install Poppler (apt `poppler-utils`, brew `poppler`) for vector-SVG PDF conversion"
+    },
+    "convert" | "magick" => {
+      "install ImageMagick (apt `imagemagick`, brew `imagemagick`) for raster image conversion"
+    },
+    "dvisvgm" => "install dvisvgm (apt `dvisvgm`, brew `texlive`) for vector-SVG LaTeX-image output",
+    "dvipng" => "install dvipng (apt `dvipng`, brew `texlive`) for raster LaTeX-image output",
+    "latex" | "pdflatex" | "kpsewhich" | "tftopl" => {
+      "install TeX Live (apt `texlive-latex-base`, brew `texlive` / MacTeX) — the TeX ecosystem \
+       must be present at runtime"
+    },
+    _ => return None,
+  })
+}
+
 // Diagnostic emission: `Error!` (and friends) live in
 // `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
 // diag;` in `lib.rs`. They emit harness-compatible structured Error
@@ -981,8 +1008,18 @@ impl Graphics {
       Err(e) => {
         // Spawn failure is the "converter not installed / not on PATH" case
         // (e.g. `gs` absent in a minimal image): record it so the Error names
-        // the missing tool instead of a bare "failed to convert".
-        record_converter_diag(format!("could not start `{prog}`: {e}"));
+        // the missing tool instead of a bare "failed to convert". When the
+        // binary is simply absent, append the package/install hint so the user
+        // learns which dependency to install (these tools are NOT bundled — the
+        // host provides them).
+        let mut msg = format!("could not start `{prog}`: {e}");
+        if e.kind() == std::io::ErrorKind::NotFound {
+          if let Some(hint) = missing_tool_hint(&prog) {
+            msg.push_str(" — ");
+            msg.push_str(hint);
+          }
+        }
+        record_converter_diag(msg);
         return None;
       },
     };
@@ -2944,5 +2981,21 @@ endobj
       diag.contains("could not start") && diag.contains("definitely_not_a_real_binary_xyz_123"),
       "diag should name the missing tool; got: {diag}"
     );
+  }
+
+  /// Every graphics/image tool the cascade shells out to maps to an install
+  /// hint that names the OS package, so a missing-dependency diagnostic is
+  /// self-fixing; an unknown program yields no hint.
+  #[test]
+  fn missing_tool_hint_names_packages() {
+    assert!(missing_tool_hint("mutool").unwrap().contains("mupdf-tools"));
+    assert!(missing_tool_hint("pdftocairo").unwrap().contains("poppler-utils"));
+    assert!(missing_tool_hint("gs").unwrap().contains("ghostscript"));
+    assert!(missing_tool_hint("ps2pdf").unwrap().contains("ghostscript"));
+    assert!(missing_tool_hint("convert").unwrap().contains("imagemagick"));
+    assert!(missing_tool_hint("dvisvgm").unwrap().contains("dvisvgm"));
+    assert!(missing_tool_hint("dvipng").unwrap().contains("dvipng"));
+    assert!(missing_tool_hint("kpsewhich").unwrap().contains("TeX Live"));
+    assert!(missing_tool_hint("some_unknown_tool").is_none());
   }
 }
