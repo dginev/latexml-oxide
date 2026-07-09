@@ -68,9 +68,14 @@ missing features stay hard parse errors.
 ### Deferred — feature genuinely NOT supported (do NOT stub)
 - `--parse=STRATEGY` — grammar selection unsupported (one Marpa grammar);
   `--nomathparse` / `--mathparse` is the real interface. (Attempted + removed.)
-- `--svg` / `--nosvg`, `--pictureimages` / `--nopictureimages` — `svg.rs` +
-  `picture_images.rs` exist but are **not wired into the post pipeline** (no
-  callers); wiring + correctness is its own effort.
+- `--svg` / `--nosvg` — **deferred (verified 2026-07-09):** the HTML5 XSLT
+  already renders `<ltx:picture>` as inline `<svg>` by default, so the standalone
+  `svg.rs` post-processor (`impl Processor for SVG`, unwired) is redundant and
+  produces divergent, unverified output (25 vs 27 `<svg>` on `tests/graphics/
+  picture.tex`). Wiring it was built + reverted.
+- `--pictureimages` / `--nopictureimages` — `picture_images.rs` delegates to the
+  **unwired LaTeXImages latex+dvipng pipeline** (`latex_images.rs`); same
+  category/effort as `--mathimages`.
 - `--openmath|om` — no OpenMath serializer. (User: defer.)
 - daemon net (`--port` / `--address` / `--expire` / `--autoflush` / `--cache_key`)
   — socket-daemon model; we ship `--server` (stdio LSP). (User: defer.)

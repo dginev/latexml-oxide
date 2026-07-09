@@ -19,7 +19,7 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 |---|---|---|---|
 | **47** | [Feature] Accurate latex linting | enhancement | **Prioritized beyond-Perl showcase.** Live source ↔ preview over a shared locator substrate, two clients: the **ar5iv-editor** (CodeMirror web UI) and a **VSCode extension** (webview). Accurate linting falls out of the same substrate. Design: [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md). *Not* purely post-1.0 — Tier A is near-term and parity-neutral. |
 | **92** | Superior debugging and error-reporting for document authors | enhancement | Same source-provenance substrate as #47 ([`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md)): construct-start + macro-origin locators give Rust-compiler-grade author errors, fixing TeX's "error points at the end of the environment". |
-| **191** | Add support for original command-line options | enhancement | **PARTIAL — not closeable.** `clap` 4 derive is adopted (the issue's suggestion). 2026-07-09: wired every flag whose engine feature already exists (`--strict`, `--includestyles`, `--comments`, `--xml`, `--embed`, `--nopost`, `--nosplit`, `--nopmml`/`--nocmml`/`--nomathtex`/`--noxmath`, `--navtoc`). Remaining = `--profile` (+`--mode`) and deferred-feature flags (SVG/daemon/crossref/index/bib), kept as hard parse errors per option C. Detail below. |
+| **191** | Add support for original command-line options | enhancement | **PARTIAL — not closeable.** `clap` 4 derive is adopted (the issue's suggestion). 2026-07-09: wired every flag whose engine feature already exists — batch 1 (`--strict`, `--includestyles`, `--comments`, `--xml`, `--embed`, `--nopost`, `--nosplit`, `--nopmml`/`--nocmml`/`--nomathtex`/`--noxmath`, `--navtoc`) + batch 2 (`--timestamp`, `--icon`, `--nographicimages`, `--numbersections`, `--mathparse`, `--invisibletimes`, `--defaultresources`). `--validate` postponed to next release (needs a rust-libxml RelaxNG publish). Remaining = `--profile` (+`--mode`) and deferred-feature flags (SVG/daemon/crossref/index/bib), kept as hard parse errors per option C. Detail below. |
 | **143** | Switch to rust stable, when `#[thread_local]` is stabilized | enhancement, performance | Toolchain-longevity risk for a public-domain tool. Pin a known-good nightly; track stabilization. [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §3. |
 | **94** | Document model: RelaxNG vs Rust data-type trade-offs | enhancement, question, documentation | Doc debt; relates to the (closed) #199 HTML-dialect schema and [`SCHEMA_DOCUMENTATION.md`](SCHEMA_DOCUMENTATION.md). |
 | **192** | Compile-time string interning? | enhancement, performance | Perf nice-to-have. The arena/interner is already the hottest read site (see [`SAFETY.md`](SAFETY.md) §B); the 2026-07-02 audit settled the related pin!/pin_static policy ([`PERFORMANCE.md`](PERFORMANCE.md) Principle 1). Measure before investing. Backlog. |
@@ -48,27 +48,39 @@ aliases: `--destination`, `--noparse`, `--presentationmathml`,
 `--nocontentmathml`, `--nokeepXMath`, `--navtoc`.
 
 **Landed 2026-07-09** — every flag whose engine feature already exists is now
-wired (option C: wire real features, keep the parser strict — see below):
-`--strict` (State `STRICT`), `--includestyles` (State
-`INCLUDE_STYLES`/`INCLUDE_CLASSES`), `--comments` (positive of `--nocomments`),
-`--xml` (= `--format=xml`), `--embed` (= `--whatsout=fragment`), `--nopost`,
-`--nosplit`, the math-rep negations `--nopmml`/`--nocmml`/`--nomathtex`/
-`--noxmath`, and the `--navtoc` alias. `--debug` already existed.
+wired (option C: wire real features, keep the parser strict — see below).
+- *Batch 1:* `--strict` (State `STRICT`), `--includestyles` (State
+  `INCLUDE_STYLES`/`INCLUDE_CLASSES`), `--comments` (positive of `--nocomments`),
+  `--xml` (= `--format=xml`), `--embed` (= `--whatsout=fragment`), `--nopost`,
+  `--nosplit`, the math-rep negations `--nopmml`/`--nocmml`/`--nomathtex`/
+  `--noxmath`, the `--navtoc` alias. `--debug` already existed.
+- *Batch 2:* `--timestamp` (`=0` omits; XSLT `TIMESTAMP` footer param),
+  `--icon` (XSLT `ICON` param + favicon copy), `--nographicimages`/
+  `--graphicimages` (gate the Graphics post-phase), and the positive-complement
+  parity flags `--numbersections`, `--mathparse`, `--invisibletimes`,
+  `--defaultresources`.
 
+- **Postponed to next release:** `--validate`/`--novalidate` — real RelaxNG
+  validation is gated on the rust-libxml fork providing a safe RelaxNG interface
+  (published as `libxml 0.3.16`); `Post::Document::validate()` is a stub today.
+  Plan in [`SYNC_STATUS.md`](SYNC_STATUS.md).
 - **Remaining cheap gaps (feature exists / near):** `--profile`
   (biggest — `fragment`/`math`/`article`/…; planned as **TOML** profiles
   deserialized into the clap option struct, not Perl `.opt` — design in
-  [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) "Future Work") + its `--mode`
-  alias, `--validate`/`--novalidate` (runtime RelaxNG toggle), `--mathml`.
+  [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) "Future Work") + its `--mode` alias.
 - **Feature gaps (flag absent because the feature is) — kept as hard parse
-  errors, NOT stubbed:** `--mathimages` / `--mathsvg` / `--svg` (SVG deferred),
-  `--jats` / `--html4` / `--tex` / `--box` output, `--crossref` /
-  `--bibliography` / `--index` / `--permutedindex` / `--splitbibliography`,
-  `--openmath` / `--unicodemath` / `--plane1` / `--hackplane1` /
-  `--parallelmath` / `--linelength` / `--mathimagemagnification`,
-  `--scan` / `--prescan` / `--dbfile` / `--urlstyle` / `--icon` / `--base` /
-  `--timestamp` / `--omitdoctype` (no DTD), daemon mode (`--port`, `--expire`,
-  `--cache_key`, `--address`, `--autoflush`).
+  errors, NOT stubbed:** `--mathimages` / `--mathsvg` / `--pictureimages`
+  (need the unwired LaTeXImages latex+dvipng pipeline), `--svg` (**deferred**:
+  the HTML5 XSLT already renders `<ltx:picture>` as inline `<svg>` by default,
+  so the standalone `svg.rs` post-processor is redundant + produces divergent,
+  unverified output — verified 2026-07-09), `--jats` / `--html4` / `--tex` /
+  `--box` output, `--crossref` / `--bibliography` / `--index` /
+  `--permutedindex` / `--splitbibliography`, `--openmath` / `--unicodemath` /
+  `--plane1` / `--hackplane1` / `--parallelmath` / `--linelength` /
+  `--mathimagemagnification`, `--scan`/`--noscan` (Scan IS wired as post Phase 2
+  but the off-switch is parked with the crossref cluster) / `--prescan` /
+  `--dbfile` / `--urlstyle` / `--base` / `--omitdoctype` (no DTD), daemon mode
+  (`--port`, `--expire`, `--cache_key`, `--address`, `--autoflush`).
 - **Intentional non-goals:** `--output` (we keep `--destination` / `--dest`).
 
 **Design decision (2026-07-09, option C).** Deferred-feature flags are
@@ -85,8 +97,9 @@ settled: clap 4 derive, adopted.
 * **Release gates:** #143 (toolchain pin), plus the license + safety items in
   [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) that have no issue number.
 * **Partial parity (open):** #191 — clap landed + core options; 2026-07-09
-  wired every flag whose feature already exists (`--strict`, `--includestyles`,
-  `--xml`, `--embed`, `--nopost`/`--nosplit`, math-rep negations, `--navtoc`).
-  Remaining = `--profile` (+ `--mode`) and deferred-feature flags kept as hard
-  parse errors (detail above).
+  wired two batches of real-feature flags (batch 1: `--strict`/`--includestyles`/
+  `--xml`/`--embed`/`--nopost`/`--nosplit`/math-rep negations/`--navtoc`;
+  batch 2: `--timestamp`/`--icon`/`--nographicimages`/`--numbersections` +
+  complements). `--validate` postponed to next release; remaining = `--profile`
+  (+ `--mode`) and deferred-feature flags kept as hard parse errors (detail above).
 * **Backlog / exploratory:** #192, #94, #82, #80.
