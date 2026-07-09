@@ -183,6 +183,25 @@ structures — always cross-check the affected fixture against Perl before
 assuming a regression (the norm rule "regressed" physics_test, but Perl matched
 the new output, so it was a parity *fix*).
 
+### Archived-audit residuals (2026-07-09 docs compaction)
+
+Two completed diagnostic snapshots were dated + archived; their still-open
+residuals stay here so the live worklist keeps them visible:
+
+- **MathML-post line audit** (sweep complete; →
+  `archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`). Open feature-gaps: **F5**
+  Linebreaker (full feature gap — the sketch used the wrong strategy), **F11**
+  Hint width normalization, **F14** multirelation + lt-or-approx cMML, **F15**
+  continued-fraction, **F16** OperatorDictionary Cat A/B data holes + U+2A50
+  misclassification + fence U+0331, **F17** formulae pMML arm, plus PARTIAL
+  inherited-context bindings on `pmml_top`/`pmml_parenthesize`/`stylizeContent`.
+  (Content-MathML items obey the defer-to-a-dedicated-session directive above.)
+- **arXiv velocity-fork audit** (items 1–4 landed 2026-07-03; →
+  `archive/ARXIV_FORK_AUDIT_2026-07-03.md`). Sole residual: **item G** —
+  `readBalanced` drops comment tokens (fork `4e1578d1`); Rust `read_balanced`
+  still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
+  (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
+
 ## Open tasks (actionable)
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)

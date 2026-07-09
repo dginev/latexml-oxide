@@ -1,5 +1,10 @@
 # MathML post-processors — line audit (exhaustive-port verification)
 
+> **ARCHIVED 2026-07-09** — the sweep is complete; open feature-gap residuals
+> (F5/F11/F14–F17 + partial inherited-context bindings) were lifted to
+> `../SYNC_STATUS.md` ("Archived-audit residuals"). Frozen snapshot; revalidate
+> against current HEAD before acting.
+
 > **Living worklist** (opened 2026-07-02, user-commissioned: "the Rust
 > translation wants to be an exhaustive port"). Walk every Perl sub AND every
 > `DefMathML` registration in the MathML post-processing stack, verdict each
