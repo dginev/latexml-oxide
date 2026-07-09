@@ -48,6 +48,90 @@ Recipe: `GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categori
 `GET /api/corpus/<corpus>/tex_to_html/document/<id>` for Perl status — a Rust-only
 win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
 `sandbox-arxiv-10k-shuffle`. URL-encode `\`→`%5C`, `^`→`%5E`.
+
+## CLI options (#191) + `validate()` implementation — ACTIVE (public-release-prep-week)
+
+Completing issue #191 "support the original latexmlc/latexmlpost options" under
+the **option-C policy**: wire only options whose engine feature genuinely works
+end-to-end; keep the clap parser **strict** (no accept-and-warn stubs); deferred/
+missing features stay hard parse errors.
+
+### Landed this session (real features, verified + committed)
+- `--timestamp=STR` (`--timestamp=0` omits) → XSLT `TIMESTAMP` footer param;
+  deterministic no-timestamp default (divergence from Perl's localtime).
+- `--icon=FILE` → XSLT `ICON` param + favicon resource copy.
+- `--nographicimages` / `--graphicimages` → gate the Graphics post-phase.
+- `--numbersections`, `--mathparse`, `--invisibletimes`, `--defaultresources`
+  → positive complements of existing negative-only flags (verbatim Perl-CLI
+  parity; the negative wins if both are given).
+
+### Deferred — feature genuinely NOT supported (do NOT stub)
+- `--parse=STRATEGY` — grammar selection unsupported (one Marpa grammar);
+  `--nomathparse` / `--mathparse` is the real interface. (Attempted + removed.)
+- `--svg` / `--nosvg`, `--pictureimages` / `--nopictureimages` — `svg.rs` +
+  `picture_images.rs` exist but are **not wired into the post pipeline** (no
+  callers); wiring + correctness is its own effort.
+- `--openmath|om` — no OpenMath serializer. (User: defer.)
+- daemon net (`--port` / `--address` / `--expire` / `--autoflush` / `--cache_key`)
+  — socket-daemon model; we ship `--server` (stdio LSP). (User: defer.)
+- `--mode` (= alias for `--profile`); `--profile=NAME` — needs a preset registry.
+- `--mathimages` / `--mathsvg` / `--mathimagemagnification` — needs a
+  latex+dvipng math-render pipeline.
+- `--unicodemath` / `--plane1` / `--hackplane1` / `--linelength` — plain/unicode
+  math output modes.
+- crossref cluster (`--crossref` / `--scan` / `--noscan` / `--urlstyle` /
+  `--prescan` / `--dbfile` / `--bibliography` / `--splitbibliography`) + index
+  cluster (`--index` / `--permutedindex` / `--splitindex`) — multi-doc site-DB
+  features. (Scan IS wired as post Phase 2, so `--noscan` is a real-but-risky
+  off-switch; parked with the cluster.)
+- `--tex` / `--box` — intermediate box/tex serializers absent.
+- `--omitdoctype` — DTD-only in Perl; Rust has no DTD (moot).
+
+### `validate()` / `--validate` — POSTPONED to the NEXT release (decided 2026-07-09)
+Today `Post::Document::validate()` (`latexml_post/src/document.rs:1717`) is a
+STUB: it logs "Would validate against RelaxNG schema" and returns `Ok(())`.
+Real RelaxNG validation is wanted, but is **deferred to the next release** because
+it is gated on a `rust-libxml` crates.io publish (see below). Reference: Perl
+`LaTeXML/lib/LaTeXML/Common/XML/RelaxNG.pm` + `LaTeXML/lib/LaTeXML/Post.pm`.
+
+**Architecture decision (owner, 2026-07-09): `rust-libxml` provides the public,
+safe Rust RelaxNG interface; `latexml-oxide` is a pure consumer.** All libxml2
+`unsafe`/FFI stays in the fork — the alternative (raw `xmlRelaxNG*` FFI inline in
+`latexml_post`, which would compile against the shipped crates.io `libxml 0.3.15`
+with no publish) was **rejected**. So this feature cannot fully land until the
+fork's RelaxNG module is published as `libxml 0.3.16`.
+
+Constraint: the schema is **modular** (`LaTeXML.rng` `<include>`s
+`LaTeXML-common.rng`, `-structure`, `-math`, …) and the binary is
+**self-contained** — no on-disk schema. Includes MUST resolve through the
+embedded table (`latexml_core::common::relaxng::embedded::lookup`), served via
+the fork's existing `libxml::io::register_input_callback` (built for exactly this
+— "bundles RNG schemas via include_bytes! … RelaxNG `<include>` via
+`xmlRelaxNGParse`"), NOT disk.
+
+Steps (next-release session):
+1. **rust-libxml fork — add a safe `relaxng` module.** The fork's `schemas`
+   module is **XSD-only** (`xmlSchema*`). Mirror it: `relaxng/{parser,schema,
+   validation}.rs` wrapping `xmlRelaxNGNewParserCtxt`(URL — so relative includes
+   resolve through the callback) / `xmlRelaxNGNewMemParserCtxt` + `xmlRelaxNGParse`
+   (→ `RelaxNGSchema`) and `xmlRelaxNGNewValidCtxt` + `xmlRelaxNGValidateDoc`
+   (→ `RelaxNGValidationContext`), with `xmlRelaxNGSetValidStructuredErrors`
+   capture. Fork unit test (valid + invalid doc). **Publish `libxml 0.3.16`.**
+2. **Embedded-include resolution** via `libxml::io::register_input_callback`
+   (`embed:///RelaxNG/LaTeXML-*.rng` → `embedded::lookup`); verify with the
+   renamed-`resources/` smoke that no schema is read from disk.
+3. **Consume in workspace** — bump the `libxml` dep `0.3.15` → `0.3.16`; `cargo test`.
+4. **Flesh out `validate()`** — parse+cache the schema once; run `validate_doc`;
+   map each captured `StructuredError` to a `Warn!` / `post_error` in the project
+   logging convention (Perl reports schema violations).
+5. **Wire `--validate` / `--novalidate`** — CLI flags + `PostOptions.validate`;
+   call `validate()` in `run_post_processing_impl` when enabled. DEFAULT
+   decision: Perl defaults ON; propose **opt-in** in Rust (validation cost +
+   corpus warning noise) as a documented divergence — confirm with owner before
+   flipping the default on.
+6. **Tests** — a valid fixture validates clean; an intentionally schema-invalid
+   doc reports the expected violation; `--novalidate` skips.
+
 ## Math-parser / content-MathML gaps — DEFERRED to a dedicated session
 
 > **User directive 2026-06-20: defer ALL content-MathML items to a dedicated
