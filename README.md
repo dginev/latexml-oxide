@@ -1,25 +1,19 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.7.0-orange.svg) 
-[![ported tests](https://img.shields.io/badge/ported%20tests%20-%201454%2F0%2F0-%20%2332a852?style=flat)
-](https://github.com/dginev/latexml-oxide/issues/30)
+[![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml)
+[![release](https://img.shields.io/github/v/release/dginev/latexml-oxide?color=orange)](https://github.com/dginev/latexml-oxide/releases)
+[![license: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-blue.svg)](LICENSE)
+[![ported tests](https://img.shields.io/badge/ported%20tests-1533%2F0%2F0-32a852?style=flat)](https://github.com/dginev/latexml-oxide/issues/30)
 
 This project is in active **beta**, approaching mainline LaTeXML parity. The full
 conversion pipeline already works end-to-end —
 `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML
 with cross-references, citations, MathML, and XSLT — but treat the output as
-not-yet-production-grade until parity is declared.
-
-**Status:** strict-Perl dump/format parity is complete; remaining work is
-sandbox long-tail cleanup (see [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)).
-Local verification: `cargo test --tests` **1454/0/0**; the latest 100k-paper
-warning-subset sandbox run is **~99.4% OK**. Release-profile wall time on the
-[1910.01256](https://arxiv.org/abs/1910.01256) mini-benchmark is **0.71 s**
-(vs ~1.11 s pdflatex idle).
+not-yet-production-grade until parity is declared. Strict-Perl dump/format parity
+is complete; remaining work is sandbox long-tail cleanup, tracked in
+[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
 
 ### Why?
-
-The three main reasons:
 
   * LaTeXML is **too slow** for large-scale production use.
   * Perl 5's ecosystem and tooling have **aged out of the mainstream**.
@@ -36,7 +30,7 @@ Design goals:
 
 Every tagged release on the [Releases page](https://github.com/dginev/latexml-oxide/releases)
 ships prebuilt binaries for **Linux x86-64** (`.deb` + portable tarball) and
-**macOS Apple Silicon** (tarball). The binary is fully self-contained — all XSLT
+**macOS** (Apple Silicon and Intel tarballs). The binary is fully self-contained — all XSLT
 stylesheets, CSS, JS, and RelaxNG schemas are embedded at build time and served
 from memory, so no `resources/` tree is needed alongside it (a deliberate design
 goal — see [docs/OXIDIZED_DESIGN.md](docs/OXIDIZED_DESIGN.md)). A working TeX Live
@@ -145,45 +139,18 @@ TeX files through your distribution's own `kpsewhich` executable
 this up). Same conversions, slightly slower cold file lookups. You
 still need `brew install libxml2 libxslt` either way.
 
-`poppler-utils` provides `pdftocairo`, used as the default fast PDF →
-PNG/SVG rasterizer (≈25× faster than ImageMagick `convert` on
-vector-heavy PDFs).
+`mutool` (MuPDF) and `pdftocairo` (poppler-utils) are optional but recommended:
+they convert PDF figures faster than ImageMagick. latexml-oxide tries the
+available delegates fastest-first and falls back through the chain, so a figure is
+never lost when a tool is missing.
 
-#### Optional but recommended: MuPDF tools (≈2× faster PDF conversion)
+### Build profiles
 
-```
-$ sudo apt install mupdf-tools
-```
-
-`mutool draw` (MuPDF) is tried **before** `pdftocairo` for PDF →
-PNG/SVG conversion. Measured 2026-05-12: on a matplotlib scatter
-PDF, mutool runs in 0.48 s vs pdftocairo's 0.86 s, and its SVG
-output is ~4× more gzip-compressible. Falls through to `pdftocairo`
-if `mutool` is not on PATH — install is optional.
-
-#### Graphics delegate chain
-
-`\includegraphics` figures are converted by external delegates, tried
-fastest-first with fallback:
-
-- **EPS / PS → PNG** — `gs` (Ghostscript), the primary rasterizer, then `convert` (ImageMagick). Landscape PS routes via `ps2pdf` → `pdftocairo` to keep page rotation.
-- **PDF → PNG** — `mutool draw` (MuPDF, fastest) → `pdftocairo` (poppler, ships with TeX Live) → `convert` (ImageMagick).
-- **PDF → SVG** — opt-in vector path for small PDFs (`--graphics-svg-threshold-kb N`): `mutool convert` → `pdftocairo -svg`, falling back to PDF→PNG so a figure is never lost.
-
-`gs` is the most load-bearing delegate (the whole EPS/PS branch plus ImageMagick's
-PS/EPS/PDF delegate), hence the explicit `ghostscript` above.
-
-### Build profiles (Rust best practice)
-
-Five named profiles in `Cargo.toml` (plus a profiling-only `bench`), each tuned for one purpose:
-
-| Profile | When | Goal |
-|---------|------|------|
-| **`test`** (default for `cargo test`) | day-to-day development | Maximum debug info (`debug = "full"`, `debug-assertions`, `overflow-checks`), incremental rebuilds, `-O1` for tolerable test runtime. Use as much local RAM/CPU as needed. |
-| **`ci`**   | GitHub Actions only      | Lowest possible RAM (16 GB runner budget) and fastest compile (`opt-level = 0`, `codegen-units = 256`, no LTO). Just enough to prove tests pass. |
-| **`release`** | local sandbox canvas / perf measurement | Laptop-throughput release: `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Strong runtime optimization while using the 20-thread local machine during release builds. |
-| **`maxperf`** | distribution / published release artifact (the standalone `latexml_oxide` / `latexmlmath_oxide` CLIs) | Smallest, fastest binary: `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, stripped. Slowest build; used by `tools/make_release.sh` for the shipped binaries. |
-| **`maxperf-cortex`** | distribution build of the `cortex_worker` fleet binary (the `docker/cortex-worker.dockerfile` image) | The same fat-LTO / `codegen-units = 1` levers as `maxperf`, but keeps `panic = "unwind"`: the worker relies on `std::panic::catch_unwind` to isolate per-paper panics across a long-lived fleet, which `panic = "abort"` would silently turn into a no-op. |
+`Cargo.toml` defines named profiles for day-to-day development (`test`), the
+RAM-bounded CI runner (`ci`), local perf measurement (`release`), and the shipped
+distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile
+(`cargo build` / `cargo test`, no flag) for everyday work; see
+[CLAUDE.md](CLAUDE.md) for the full profile table.
 
 ### Sample use
 
@@ -217,12 +184,9 @@ $ rustup component add clippy --toolchain nightly
 $ git config --local core.hooksPath .githooks/
 ```
 
-This workspace is heavy for rust-analyzer because of large proc-macro
-definition bodies. The checked-in `.vscode/settings.json` uses a
-stability profile: proc-macro expansion and cache priming are disabled,
-RA uses `target/rust-analyzer`, and large/generated directories are
-excluded from file watching. Terminal `cargo build` / `cargo test`
-still compile proc macros normally.
+This workspace is heavy for rust-analyzer (large proc-macro bodies); the
+checked-in `.vscode/settings.json` ships a stability profile that keeps the IDE
+responsive. Terminal `cargo build` / `cargo test` are unaffected.
 
 To generate the project documentation locally, run:
 ```bash
