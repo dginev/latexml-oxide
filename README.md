@@ -95,6 +95,20 @@ Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instea
 resolves TeX files through your distribution's `kpsewhich` executable (ensure
 `/Library/TeX/texbin` is on `PATH`).
 
+#### Docker
+
+A batteries-included image (`latexml_oxide` + a reproducible TeX Live + the
+graphics tools) is published to the GitHub Container Registry for both amd64 and
+arm64. No local TeX Live needed — bind-mount your document tree and convert:
+
+```
+$ docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide:$VERSION paper.tex
+```
+
+`:latest` tracks the most recent release. The container builds its own binary
+against the image's TeX Live, so the embedded kernel dumps match the bundled
+texmf tree exactly.
+
 ### System dependencies
 
 The binary is self-contained (libxml2/libxslt/kpathsea are linked in), but at

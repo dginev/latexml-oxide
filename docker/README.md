@@ -1,25 +1,47 @@
 # Docker Images for latexml-oxide
 
-This directory contains Dockerfiles for building and deploying latexml-oxide services.
+Both published images build from a **single, unified Dockerfile** at the repo
+root (`../Dockerfile`), selected with `--target`. Dependencies (TeX Live,
+graphics tools, build toolchain) are declared once in shared `texbase` +
+`toolchain` stages; only the per-binary build command and entrypoint differ.
+This directory holds the worker entrypoint script.
 
-## Images
+`.github/workflows/docker.yml` builds + pushes both to GHCR on `release: published`
+(CLI multi-arch amd64+arm64; worker amd64).
 
-### cortex-worker
+## `cli` — general-purpose CLI · `ghcr.io/dginev/latexml-oxide`
 
-**File:** `cortex-worker.dockerfile` · **Entrypoint:** `cortex-worker-entrypoint.sh`
+The plain `latexml_oxide` CLI plus a reproducible TeX Live + graphics
+environment. The image builds its own binary and **embeds** the kernel dumps
+(self-contained: nothing read from its own resources at convert time). No local
+TeX Live needed.
 
-A turnkey CorTeX worker fleet that converts TeX documents to HTML using latexml-oxide. It implements
-the [pericortex](https://github.com/dginev/cortex-peripherals) `Worker` trait for the
-[CorTeX](https://github.com/dginev/cortex) distributed pipeline, and is the **Rust counterpart of the
-legacy Perl fleet image** ([`LaTeXML-Plugin-CorTeX/Dockerfile`](https://github.com/dginev/LaTeXML-Plugin-CorTeX/blob/master/Dockerfile)):
-same dispatcher, ZMQ ports (`51695`/`51696`), and result-archive contract — different engine and a
-different service name (`oxidized_tex_to_html` vs the Perl `tex_to_html`). One dispatcher can run
-both fleets at once; it leases by `service_id`.
+```bash
+# build (default target)
+docker build --target cli -t ghcr.io/dginev/latexml-oxide .
+
+# convert — bind-mount your document tree
+docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide paper.tex
+```
+
+## `worker` — CorTeX fleet · `ghcr.io/dginev/latexml-oxide/cortex-worker`
+
+**Entrypoint:** `cortex-worker-entrypoint.sh`
+
+A turnkey CorTeX worker fleet that converts TeX to HTML with latexml-oxide. It
+implements the [pericortex](https://github.com/dginev/cortex-peripherals)
+`Worker` trait for the [CorTeX](https://github.com/dginev/cortex) distributed
+pipeline, and is the **Rust counterpart of the legacy Perl fleet image**
+([`LaTeXML-Plugin-CorTeX/Dockerfile`](https://github.com/dginev/LaTeXML-Plugin-CorTeX/blob/master/Dockerfile)):
+same dispatcher, ZMQ ports (`51695`/`51696`), and result-archive contract —
+different engine and a different service name (`oxidized_tex_to_html` vs the
+Perl `tex_to_html`). One dispatcher can run both fleets at once; it leases by
+`service_id`.
 
 **Build:**
 ```bash
 export HOSTTIME=$(date -Iminute)
-docker build -f docker/cortex-worker.dockerfile --build-arg HOSTTIME=$HOSTTIME -t cortex-worker:latest .
+docker build --target worker --build-arg HOSTTIME=$HOSTTIME -t cortex-worker:latest .
 ```
 
 **Run the fleet (turnkey — pass just the dispatcher host; `--harness` self-supervises and auto-sizes the box):**

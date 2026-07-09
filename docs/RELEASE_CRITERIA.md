@@ -28,7 +28,7 @@ their 2026-05-24 values.
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)) | P50/P90/P99 dashboard; "no unbounded growth" gate — §5 |
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
-| OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` | staged ladder — §3 (aarch64-linux DONE 2026-07-09; next rung: container image) |
+| OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; next rung: Windows/musl) |
 | Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
 | License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; only cortex-only F1 remains, non-blocking) |
 | Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); URI-passthrough posture documented | remaining §6 items (CSP/sandboxing/`--hardened`) — **1.0-scoped, not a 0.7.4 blocker** |
@@ -67,7 +67,14 @@ dependency check:
    build+gate peer of the x86_64 leg (static libxml2/libxslt/kpathsea, `ldd`
    self-contained check, conversion + embedded-resource smokes, 64 MB size
    budget).
-3. Container image (reproducible TeX Live + graphics).
+3. Container image (reproducible TeX Live + graphics) — **DONE 2026-07-09**:
+   `.github/workflows/docker.yml` publishes two images from ONE unified root
+   `Dockerfile` (`--target cli`/`--target worker`, DRY shared deps): the
+   general-purpose CLI `ghcr.io/dginev/latexml-oxide` (multi-arch amd64+arm64,
+   native runners) and the CorTeX fleet worker
+   `ghcr.io/dginev/latexml-oxide/cortex-worker` (amd64), on `release: published`.
+   Each BUILDS its own binary + regenerates dumps against its own TeX Live; the
+   CLI embeds them behind a runtime-stage self-test.
 4. macOS (#217) — **DONE 2026-06-08**
    ([`archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](archive/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
    the full `cargo test --tests --workspace` suite is **green on `macos-15`

@@ -1,0 +1,153 @@
+# Build + push the latexml-oxide container images to GHCR from the unified
+# root Dockerfile (--target cli / --target worker). Both images BUILD their own
+# binary from source and regenerate the kernel dumps against their own TeX Live —
+# no dependency on the release .tar.gz/.deb assets.
+#
+#   cli    → ghcr.io/dginev/latexml-oxide                 (plain latexml_oxide CLI)
+#   worker → ghcr.io/dginev/latexml-oxide/cortex-worker   (CorTeX fleet harness)
+#
+# Fires when a release is PUBLISHED (i.e. after you review the draft the release
+# workflow created and click "Publish"), so the containers track a reviewed tag —
+# never a draft. Also dispatchable to (re)build a given tag.
+#
+# CLI is multi-arch (amd64 + arm64) via NATIVE runners — each arch compiles on
+# its own runner (no QEMU emulation of a fat-LTO build) — then a merge job
+# stitches the per-arch digests into one manifest list. The worker is a x86_64
+# fleet image, so it is amd64-only. First push of each package creates it private;
+# make it public once in the repo's package settings.
+
+name: Publish container images
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag/ref to build (e.g. 0.7.4)'
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  CLI_IMAGE: ghcr.io/${{ github.repository }}
+  WORKER_IMAGE: ghcr.io/${{ github.repository }}/cortex-worker
+
+jobs:
+  # ---- CLI image: multi-arch (amd64 + arm64) on native runners ----
+  cli:
+    name: CLI ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.ref || github.event.release.tag_name }}
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: build + push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: cli
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=${{ env.CLI_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+      - name: export digest
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.build.outputs.digest }}" > "/tmp/digests/${{ matrix.arch }}"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: cli-digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  cli-merge:
+    name: CLI manifest
+    runs-on: ubuntu-22.04
+    needs: cli
+    steps:
+      - name: resolve tag
+        id: tag
+        run: |
+          t="${{ github.event.inputs.ref || github.event.release.tag_name }}"
+          if [ -z "$t" ]; then echo "::error::no tag resolved"; exit 1; fi
+          echo "tag=$t" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: cli-digest-*
+          path: /tmp/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: create + push manifest list
+        run: |
+          t="${{ steps.tag.outputs.tag }}"
+          refs=""
+          for f in /tmp/digests/*; do refs="$refs ${CLI_IMAGE}@$(cat "$f")"; done
+          docker buildx imagetools create \
+            --tag "${CLI_IMAGE}:${t}" \
+            --tag "${CLI_IMAGE}:latest" \
+            $refs
+          docker buildx imagetools inspect "${CLI_IMAGE}:${t}"
+
+  # ---- CorTeX fleet worker: amd64 only (x86_64 fleet) ----
+  worker:
+    name: cortex-worker (amd64)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.ref || github.event.release.tag_name }}
+          fetch-depth: 0
+      - name: resolve tag
+        id: tag
+        run: |
+          t="${{ github.event.inputs.ref || github.event.release.tag_name }}"
+          if [ -z "$t" ]; then echo "::error::no tag resolved"; exit 1; fi
+          echo "tag=$t" >> "$GITHUB_OUTPUT"
+      - name: build timestamp
+        id: ts
+        run: echo "hosttime=$(date -u +%Y-%m-%dT%H:%MZ)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: worker
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            HOSTTIME=${{ steps.ts.outputs.hosttime }}
+          tags: |
+            ${{ env.WORKER_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.WORKER_IMAGE }}:latest

@@ -141,6 +141,39 @@ core runtime stays dynamic:
 TeX Live (`kpsewhich`, `pdflatex`) is required at runtime and not
 bundled on any platform.
 
+## Container images (GHCR)
+
+Two images ship from a **single, unified root `Dockerfile`** selected with
+`--target` (DRY: TeX Live, graphics tools, and the build toolchain are declared
+once in shared `texbase` + `toolchain` stages; only the per-binary build command
+and entrypoint differ):
+
+- **`--target cli` → `ghcr.io/dginev/latexml-oxide`** — the plain `latexml_oxide`
+  entrypoint plus a reproducible TeX Live + graphics environment, so a user
+  needs no local TeX Live:
+  ```
+  docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide:X.Y.Z paper.tex
+  ```
+- **`--target worker` → `ghcr.io/dginev/latexml-oxide/cortex-worker`** — the
+  turnkey CorTeX fleet harness (ZMQ, `cortex-worker-entrypoint.sh`; see
+  `docker/README.md`).
+
+Unlike the tarball/.deb (a prebuilt static binary), each image **builds its own**
+binary from source and regenerates the kernel dumps against its own TeX Live. The
+CLI **embeds** them (a runtime-stage self-test converts a document with no repo
+tree present, proving self-containment before push); the worker reads them from
+disk via `LATEXML_DUMP_DIR`. Both link the system libxml2/libxslt/kpathsea
+dynamically — static linkage is only for the portable tarball/.deb; inside a
+fixed image the dynamic libs are always present.
+
+`.github/workflows/docker.yml` builds + pushes both on `release: published` (so
+the containers track a reviewed tag, never a draft; also `workflow_dispatch`-able
+for a given tag). The CLI is multi-arch (amd64 + arm64) on **native runners** — no
+QEMU emulation of the fat-LTO compile — merged into one manifest list tagged
+`:X.Y.Z` + `:latest`; the worker is amd64-only (x86_64 fleet). The first push of
+each package creates it private — make it public once in the repo's package
+settings.
+
 ## Release procedure
 
 1. **Bump the version** in `latexml_oxide/Cargo.toml`:
