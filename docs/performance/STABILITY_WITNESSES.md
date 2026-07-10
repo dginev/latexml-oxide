@@ -417,16 +417,19 @@ needing a faithful per-mechanism fix, not a blunt early-abort:
    `too_many_errors` cap). Overlaps the deferred *read_balanced unbalanced-group leak*
    family ([[ar5iv-only-failure-xint-readbalanced-group-leak]]).
 2. **`\halign`-in-math cascade** (2605.23849; the clean Perl-completes regression).
+   **OPEN — HIGH difficulty, post-release.** Detailed record + minimal reproducer:
+   [`../known_crashes/kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
    `\kbordermatrix`'s `\ialign` cells are wrapped in `$…$`; the inline-math frame
    (`\lx@begin@inline@math`) collides with the `\halign`/alignment group close →
    `Error:unexpected:\halign Attempt to close a group that switched to mode math`
    (stomach.rs egroup, `Main.tex:647`) → cascade → IfLimit. Perl instead just emits
-   the undefined-`\@arstrut`/`\\` errors and recovers. Deep alignment + math-mode
-   (the `\lx@begin@alignment` family; cf. the full-arXiv 12.1k `\lx@begin@alignment`
-   cluster). **Investigated 2026-07-10** (perl-port): a minimal `\lastbox`/`\unhbox`
-   box-peel repro turned out to be a *different* hbox loop and misled toward an
-   orthogonal fix — see the hbox-marker note below. The witness's real failure is the
-   `\halign`-in-math cascade above, still OPEN.
+   the undefined-`\@arstrut`/`\\` errors and recovers (0.4s). Deep alignment +
+   math-mode (the `\lx@begin@alignment` family; cf. the full-arXiv 12.1k
+   `\lx@begin@alignment` cluster). **Investigated 2026-07-10** (perl-port): a minimal
+   `\lastbox`/`\unhbox` box-peel repro turned out to be a *different* hbox loop that
+   **also loops in Perl** (SHARED, not this bug) and misled toward an orthogonal fix
+   — see the hbox-marker note below. The witness's real failure is the
+   `\halign`-in-math cascade above.
 3. **undefined-cascade → IfLimit** (2605.21013). Same "error-recovery loops instead
    of advancing" theme as (1) but via `\ifX` not tokens.
 

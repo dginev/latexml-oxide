@@ -1,5 +1,18 @@
 # Known Rust-side crashes reproducible with small/medium .tex inputs
 
+## 🔴 OPEN (HIGH difficulty, post-release): `\kbordermatrix` `\halign`-in-math IfLimit loop — 2605.23849
+
+`\kbordermatrix{…}` (per-cell `$##$` math in an `\ialign`) inside an `equation`
+raises `\halign Attempt to close a group that switched to mode math` → cascades to
+`Fatal:Timeout:IfLimit`. **Perl completes the same input in ~0.4s** → GENUINE-RUST-ONLY.
+Root-caused to the alignment × math-mode frame accounting (`stomach.rs::egroup`);
+NOT fixed. Minimal reproducer + full analysis + reduction map + an orthogonal
+"red herring" side finding:
+[`kbordermatrix_halign_math/`](kbordermatrix_halign_math/README.md). One instance
+of the broad `\lx@begin@alignment` family (~12.1k full-arXiv fatals).
+
+---
+
 ## ✅ RESOLVED: 1804.01117 — xint raw-load stack overflow (SIGABRT), ar5iv profile (fixed 2026-06-20)
 
 Runaway native recursion (number-arg-macro chain, ~25 000 deep) overflowed the
