@@ -47,9 +47,10 @@ budget. Details per cluster below + in the Hotspot log.
 ## Corpus-wide phase budget (2026-07-10, 60k-doc 2605+2606 run via cortex telemetry)
 
 Mined all **60,469** per-job `telemetry.json` records from the containerized-worker
-2605+2606 reruns (17-phase `phase_us`; extractor+analysis
-`tools/mine_telemetry.py` — `extract` reads every result ZIP's `telemetry.json`
-in parallel to a JSONL, `analyze` prints the budget/tail/RSS/driver breakdown).
+2605+2606 reruns (17-phase `phase_us`). The budget/tail/RSS/driver breakdown is now
+a **live capability of the cortex telemetry dashboard** — `GET /telemetry/<corpus>/<service>`
+(HTML screen) and `/api/telemetry/<corpus>/<service>` (JSON twin), served over the
+completed run's result archives (e.g. `sandbox-arxiv-2605`/`oxidized_tex_to_html`).
 Total **89.8 core-hours**. Where the wall goes:
 
 | phase | % of total wall |
