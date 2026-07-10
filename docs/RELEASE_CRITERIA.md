@@ -187,6 +187,17 @@ phase-attribution rollup [`tools/perf_phase_summary.py`](../tools/perf_phase_sum
 (`--update-baseline`), commit it, and wire `--gate --baseline` into the release
 job. The absolute red lines already gate today without a baseline.
 
+**Live aggregation view — hosted in cortex (2026-07-10).** The standalone
+`telemetry_dashboard.py` is the CI/release *gate*; the *live monitoring* twin
+now lives in the cortex frontend (its natural home), reading each run's
+`telemetry.json` straight out of the persisted result archives: `GET
+/telemetry/<corpus>/<service>` (+ `/api/telemetry/...`) — outcome mix, wall/RSS
+P50/P90/P99/max, per-phase P99, and slowest/highest-RSS witnesses (cortex PR
+#399). Fed by the containerized worker built from the unified `Dockerfile`
+(`--target worker`); validated 2026-07-10 over the sandbox-arxiv-2605/2606
+reruns (baked dumps drop the bootstrap phase P99 to 0; math_parse + digest are
+the phase tails).
+
 ## 6. Safety: distribution profile
 
 [`SAFETY.md`](SAFETY.md)'s local-CLI batch-compiler model is honest but not
