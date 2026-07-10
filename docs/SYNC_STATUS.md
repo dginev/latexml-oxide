@@ -311,7 +311,96 @@ residuals stay here so the live worklist keeps them visible:
 
 ## Open tasks (actionable)
 
-### Beyond-Perl performance levers — from the 2026-07-10 60k-doc telemetry (NEW, user-directed)
+### Release-week stabilization (2026-07-10, user-directed) — THE LENS FOR THIS WEEK
+
+**Public release is ~1 week out (branch `public-release-prep-week`). The bias is
+STABILIZE, not add capability.** A regression introduced in release week is far
+costlier than a feature deferred. So the actionable list below is re-ordered by
+*risk*, not by *ambition*: the safe, landed-or-verification work leads; every
+hot-path / broad-diff / deep-engine item is explicitly demoted to POST-RELEASE.
+
+**SAFE — do in release week (low risk, high stabilization value):**
+
+1. **Verify the already-landed >500 MB `index.xml` path on the release binary**
+   (see the investigation note directly below). The foundation is **already in the
+   release** — PR **#274** (`b0cc70f319`, squash-merged 2026-07-07): limit-safe
+   DOM-walk queries so split fires + loud XPath errors, stream-the-file/skip engine
+   init, CrossRef O(n²)→O(n) (42m50s→2m18s). So there is **nothing to land** (an
+   earlier "not in the release branch" read was an ancestry-check error — #274 was
+   squash-merged, so the branch SHAs aren't ancestors even though the content is).
+   It fixes a **silent-failure class** (any doc large enough to cross libxml2's 10M-
+   nodeset ceiling → NULL nodeset → swallowed → `[not split]`) and converts a
+   document **Perl LaTeXML cannot** (Perl `latexmlpost` fatals at the nodeset
+   ceiling in 8.67s). The release-week action is a **confidence check**: run the
+   614 MB witness on the `maxperf`/release binary and confirm `Split into 40201
+   pages` + byte-identical HTML (design-doc baseline 2m18s, ~21.6 GB peak; a 32 GB
+   box handles it — watch RAM contention). *Excludes* the deferred two-pass
+   streaming split (task #44 / `STREAMING_POST_DESIGN`) — that risky memory-only
+   half is NOT needed for release.
+2. **Full regression + smoke gate on the release binary** — the release
+   discipline, pure risk reduction. `cargo test --tests --no-fail-fast` (expect
+   ~1534/0), `cargo clippy --workspace --all-targets -- -D warnings`, then a
+   `tools/benchmark_canvas.sh` smoke of a few hundred mixed papers on the
+   `maxperf` binary, checking fatal classes against the known list + spot-checking
+   HTML with the shipped CSS. (Mirrors the July-5 prep item 6.)
+3. **Confirm the graceful-abort safety floors still fire** — these, NOT the deep
+   loop fixes, are the release's real stability guarantee: the 4500 MB RSS fuse
+   (Cluster A/D/E), IfLimit 16M / TokenLimit 1B (Cluster H), the 12k expand-depth
+   guard + stack guard (Cluster F). All landed; this is verification only (a
+   pathological paper must Fatal cleanly, never hang/segfault/OOM the process).
+
+**DEFER to POST-RELEASE — do NOT start in release week (risk > reward now):**
+
+- **All BP-1…BP-6 beyond-Perl perf levers** (below) — hot-path, output-neutrality
+  gated, ambitious (rayon math parse, XSLT transpile, document-builder rewrite).
+  A regression here is a release-killer; the 60k telemetry that motivates them
+  keeps. **First post-release work, not release-week work.**
+- **Cluster H deep runaway-loop fixes** (`STABILITY_WITNESSES.md`: `\kbordermatrix`
+  box-peel, `\IfFileExists`-before-`\documentclass` readBalanced-past-EOF,
+  undefined-cascade IfLimit). Genuine Rust bugs, but the fixes are deep
+  gullet/box-register surgery with broad blast radius — AND current behavior is
+  already SAFE (graceful Fatal via an existing limit ~100s in, bounded, no
+  crash/corruption), so they are fidelity/perf gaps, NOT release-blocking
+  stability risks. The one clean regression (`2605.23849`, Perl completes) is a
+  real fidelity loss whose fix is still deep. Post-release.
+- **`ltx_env_<name>` class enhancement** (below) — churns nearly every golden
+  XML; running it in release week would swamp the regression baseline and mask
+  real regressions. Isolated branch, post-release (as already noted).
+- **MakeBibliography full re-port** (below) — already marked post-release.
+- **`validate()` / `--validate`** (above) — already postponed to the next release
+  (gated on the `rust-libxml` RelaxNG publish).
+- **Verbatim-in-box items 4–6, biblatex `.bbl` `2605.17646`** (below) — low-value
+  fidelity / graceful-fatal; not blockers.
+
+*(Deliberately conservative: no contained "quick-win" bug fix in the current list
+clears the risk/reward bar for release week — the parity long-tail is graceful
+already. If a NEW same-host-confirmed GENUINE-RUST-ONLY regression surfaces from
+the smoke sweep, that jumps the queue; nothing currently open does.)*
+
+### >500 MB `index.xml` (Nasser) — INVESTIGATED 2026-07-10
+
+Witness `~/scratch/nasser/index.xml`: 614 MB, ~7M nodes, **40 000 one-equation
+sections** (`solving_ODE` auto-generated notes), `--splitat=section`. Findings:
+
+- **Perl LaTeXML cannot convert it.** The reporter's own `index.latexmlpost.log`:
+  `latexmlpost` (0.8.8) dies `Fatal:perl:die … growing nodeset hit limit`
+  (`XPath.pm:36`) in **8.67s** — libxml2's `XPATH_MAX_NODESET_LENGTH`. Perl's
+  *core* also took **52m 7s** just to emit the XML (40000 formulae / 1577s math).
+- **latexml-oxide CAN, and the fix is ALREADY in the release** (PR **#274**,
+  `b0cc70f319`, squash-merged 2026-07-07 → ancestor of `public-release-prep-week`).
+  With the foundation it converts fully: `Split into 40201 pages`, ~2m18s, peak
+  ~21.6 GB, byte-identical across all pages (measured;
+  `STREAMING_POST_DESIGN_2026-07-06`). A genuine **beyond-Perl** win (Perl outright
+  fatals). Without the fix, `//*[@xml:id]` would overflow the 10M-nodeset ceiling →
+  NULL → swallowed → `[not split]`, silently reproducing Perl's failure class — but
+  that landed in #274, so the release-week action is only the confidence check in
+  SAFE step #1, not a merge.
+- **The lean-RSS half stays deferred (task #44).** Two-pass streaming split
+  (21.6 GB → <1 GB) is unneeded for release (reporter has >64 GB RAM; eager path
+  is correct + fast). Revisit only if a <64 GB target appears. Design preserved in
+  `STREAMING_POST_DESIGN_2026-07-06.md`.
+
+### Beyond-Perl performance levers — from the 2026-07-10 60k-doc telemetry (POST-RELEASE — deferred out of release week per the stabilization review above)
 
 The 2605+2606 reruns (60,469 docs, containerized worker, per-job `telemetry.json`
 mined in `docs/ARXIV_PERFORMANCE.md` "Corpus-wide phase budget 2026-07-10")
@@ -401,12 +490,14 @@ is algorithmic (profile the hot macros with the sampled `EXP_TRACE` histogram, c
 redundant re-tokenization / re-expansion). Track separately from the parallelism
 BPs above.
 
-Suggested order (revised 2026-07-10 after BP-4 was retired): **BP-2 Step 1** (cheap
-XSLT profile+amortize — the cleanest, divergence-free win) → **BP-3 graphics batch**
-→ **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each lands on a feature
-branch, gated by the isolated before/after output-neutrality harness + Perl parity +
-`cargo test`. Separately, the Cluster H runaway-loop bugs (ex-BP-4) are Target-1
-parity work tracked in `STABILITY_WITNESSES.md`.
+Suggested order (revised 2026-07-10 after BP-4 was retired) — **all POST-RELEASE per
+the release-week stabilization review above; first work after the tag ships:**
+**BP-2 Step 1** (cheap XSLT profile+amortize — the cleanest, divergence-free win) →
+**BP-3 graphics batch** → **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each
+lands on a feature branch, gated by the isolated before/after output-neutrality
+harness + Perl parity + `cargo test`. Separately, the Cluster H runaway-loop bugs
+(ex-BP-4) are Target-1 parity work tracked in `STABILITY_WITNESSES.md` (also
+post-release — deep engine surgery, not release-week work).
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 
