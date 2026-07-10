@@ -3,6 +3,6 @@
 # `target/` and the `.git/` history would be uploaded as build context and baked
 # into the build (huge, slow, stale).
 target/
-.git/
+.git
 *.latexml.log
 **/*.bak

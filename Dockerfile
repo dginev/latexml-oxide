@@ -104,6 +104,12 @@ WORKDIR /src
 # --init of its own); it rides the same profile / target dir / dep graph.
 FROM toolchain AS build-worker
 COPY . .
+# Deterministic telemetry/version provenance: the build context excludes `.git`
+# (see `.dockerignore`), so build.rs can't derive the sha itself — stamp it via a
+# build-arg that build.rs reads first (`LATEXML_GIT_SHA_OVERRIDE`). `unknown` is the
+# honest default for a bare `docker build`; CI passes the real short sha.
+ARG GITSHA=unknown
+ENV LATEXML_GIT_SHA_OVERRIDE=${GITSHA}
 RUN cargo build --profile maxperf-cortex --no-default-features --features cortex \
       --bin cortex_worker --bin latexml_oxide
 
@@ -144,6 +150,9 @@ ENTRYPOINT ["cortex-worker-entrypoint.sh"]
 # single-file binary is self-contained — nothing read from our own resources.
 FROM toolchain AS build-cli
 COPY . .
+# Deterministic provenance (see build-worker) — `.git` is out of context.
+ARG GITSHA=unknown
+ENV LATEXML_GIT_SHA_OVERRIDE=${GITSHA}
 RUN set -ex \
  && tools/make_formats.sh \
  && cargo build --no-default-features --features runtime-bindings \
