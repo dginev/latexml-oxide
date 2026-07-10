@@ -12,7 +12,7 @@
 # optional regression check against a committed baseline.
 #
 # Pure stdlib (json + gzip + statistics) — no pandas/numpy, runnable on any
-# stock Python 3. Shares the record format with docs/TELEMETRY.md and
+# stock Python 3. Shares the record format with docs/performance/TELEMETRY.md and
 # latexml_core/src/telemetry.rs (`Telemetry::to_json_line`).
 #
 # Usage:

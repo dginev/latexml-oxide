@@ -284,7 +284,7 @@ for the native `BINDINGS` table.
 
 The M0 spike, the M1/M2–M4 progress log, the `\footnote`/DefEnvironment
 landing notes, and the two dated critical re-evaluations are archived at
-[`docs/archive/SCRIPT_BINDINGS_LOG_2026-06.md`](archive/SCRIPT_BINDINGS_LOG_2026-06.md).
+[`docs/archive/SCRIPT_BINDINGS_LOG_2026-06.md`](../archive/SCRIPT_BINDINGS_LOG_2026-06.md).
 Net result carried forward: the mechanism is validated end-to-end (reliability
 risk retired), re-entrancy + caching + error-boundary discipline hold, and the
 surface below is what landed.

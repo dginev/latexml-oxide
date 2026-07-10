@@ -170,7 +170,7 @@ struct Cli {
   /// tag→file table). Off by default — a normal conversion pays nothing
   /// for tracking or markup. Powers the editor/preview sync and accurate
   /// linting (issues #47/#92). Also enabled via `LATEXML_SOURCE_MAP=1`.
-  /// See `docs/SOURCE_PROVENANCE.md`.
+  /// See `docs/performance/SOURCE_PROVENANCE.md`.
   #[arg(long = "source-map")]
   source_map: bool,
 
@@ -406,7 +406,7 @@ struct Cli {
   /// Write per-job telemetry as a single-line JSON record to this file.
   /// Falls back to env `LATEXML_TELEMETRY_OUT` if not set. Emitted only
   /// on the successful conversion path; codegen / dump-model exits skip it.
-  /// See `docs/TELEMETRY.md`.
+  /// See `docs/performance/TELEMETRY.md`.
   #[arg(long, value_name = "PATH")]
   telemetry_out: Option<String>,
 
@@ -703,7 +703,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     },
     // `--source-map` flag OR `LATEXML_SOURCE_MAP` env enables locator
     // tracking + emission; otherwise leave unset (off). The env reads
-    // once here, off the hot path. See `docs/SOURCE_PROVENANCE.md`.
+    // once here, off the hot path. See `docs/performance/SOURCE_PROVENANCE.md`.
     source_map: if cli.source_map || std::env::var_os("LATEXML_SOURCE_MAP").is_some() {
       Some(true)
     } else {

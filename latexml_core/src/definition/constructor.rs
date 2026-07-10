@@ -20,7 +20,7 @@ use crate::{
 
 /// A `--source-map` construct's source extent: the union (first `from` → last
 /// `to`) of its children's spans, or `None` if none carries a position (the
-/// caller then falls back to the gullet locator). docs/SOURCE_PROVENANCE.md §3.1.
+/// caller then falls back to the gullet locator). docs/performance/SOURCE_PROVENANCE.md §3.1.
 fn assemble_locator(args: &[Option<Digested>]) -> Option<Locator> {
   args
     .iter()
@@ -56,7 +56,7 @@ pub fn child_span(d: &Digested) -> Option<Locator> {
     // the content-exact span of its real arguments. Fall back to the inherited
     // origins only when nothing genuine was recovered — that is the
     // origin-less expansion case (`\today`), where the invocation point is the
-    // only source position there is. See docs/SOURCE_PROVENANCE.md §3.1.3.
+    // only source position there is. See docs/performance/SOURCE_PROVENANCE.md §3.1.3.
     let span = |it: &mut dyn Iterator<Item = &crate::token::TokenStart>| {
       it.map(|o| {
         crate::common::arena::with(o.source, |s| Locator::new(s, o.line, o.col, o.line, o.col))

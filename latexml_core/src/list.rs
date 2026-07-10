@@ -152,7 +152,7 @@ impl List {
     // Under the `token-locators` precision build we instead want the run's full
     // *extent* — the span from the first contributing box's start to the last
     // box's end — so a text run carries its true `(from..to)` range
-    // (docs/SOURCE_PROVENANCE.md §3.1.1, Tbox consumer). Boxes are in source
+    // (docs/performance/SOURCE_PROVENANCE.md §3.1.1, Tbox consumer). Boxes are in source
     // order, so folding `new_range` keeps the first `from` and extends to the
     // latest `to`. Gated at *compile time* (not the runtime `source_map`
     // switch): `List::new` runs deep in digestion where `State` is already

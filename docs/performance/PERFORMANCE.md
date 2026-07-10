@@ -166,9 +166,9 @@ The phase bands above set priority. Current open work:
 
 Every math-heavy witness is now `math_parse`-bound (the `build` quadratic was
 fixed — see Closed). The over-parse rate is the lever; see **Principle 4**,
-[`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)
+[`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)
 (current measured and-node counts + ranked levers) and
-[`MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md).
+[`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
 
 **LANDED 2026-06-30 — differential-`d` lexer gating (output-neutral).** The lexer
 emitted `XDIFFUNK`/`XDIFFID` (the diffop-competing branch) for *every* `d`
@@ -246,7 +246,7 @@ floor for graphics packages is raised to `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M`
 ### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
 
 Post-processing the 40 201-page `index.xml` witness (see
-`docs/STREAMING_POST_DESIGN_2026-07-06.md`) was dominated by **CrossRef at
+`docs/performance/STREAMING_POST_DESIGN_2026-07-06.md`) was dominated by **CrossRef at
 40 min 47 s = 95 % of a 42 min 50 s run**. `CrossRef::process` runs once per
 split page, and two per-page passes scanned *global* state — a latent
 quadratic exposed only once split fires at 40 k-page scale (huge docs used to

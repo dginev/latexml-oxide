@@ -24,7 +24,7 @@ const CONVERTER_IDENTITY: &str = "latexml_oxide (v0.5.0)";
 /// not TeX-tree resources (and probing kpsewhich for a non-existent `.rhai`
 /// on every package load would be wasteful). Returns `None` when no such file
 /// exists, so the caller falls through to the compiled dispatchers.
-/// See `docs/script_bindings_plan.md` §7.
+/// See `docs/parity/script_bindings_plan.md` §7.
 #[cfg(feature = "runtime-bindings")]
 fn rhai_dispatch(request: &str) -> Option<Result<()>> {
   use latexml_core::{

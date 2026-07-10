@@ -288,7 +288,7 @@ pub fn get_locator() -> Locator {
   }
 }
 
-/// `get_locator`'s accurate-start sibling (§1, docs/SOURCE_PROVENANCE.md): same
+/// `get_locator`'s accurate-start sibling (§1, docs/performance/SOURCE_PROVENANCE.md): same
 /// mouthstack walk, but reads the mouth's `get_locator_from_start` (`from` = the
 /// last token's captured start) instead of the heuristic `from`. Used for the
 /// construct-START snapshot at constructor digest under `--source-map`.

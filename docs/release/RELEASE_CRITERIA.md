@@ -1,7 +1,7 @@
 # Release Criteria — what must be true before a public 1.0
 
 The externally-readable "what must be true before we ship" contract, kept
-*separate* from [`SYNC_STATUS.md`](SYNC_STATUS.md) (the engine-sync /
+*separate* from [`SYNC_STATUS.md`](../SYNC_STATUS.md) (the engine-sync /
 parity log). Two non-competing missions:
 
 - **Parity** (SYNC_STATUS): match Perl on the arXiv corpus, no
@@ -26,7 +26,7 @@ their 2026-05-24 values.
 | `cargo test --tests` | 1533/0/0 | green |
 | `cargo clippy --all-targets` | 0 | 0 |
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
-| Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)); **P50/P90/P99 + RSS dashboard + growth gate built** (`tools/telemetry_dashboard.py`) | §5 — capture a fleet baseline + wire `--gate` into release (absolute red lines gate today) |
+| Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](../performance/PERFORMANCE.md)); **P50/P90/P99 + RSS dashboard + growth gate built** (`tools/telemetry_dashboard.py`) | §5 — capture a fleet baseline + wire `--gate` into release (absolute red lines gate today) |
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
 | OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; next rung: Windows/musl) |
 | Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
@@ -76,7 +76,7 @@ dependency check:
    Each BUILDS its own binary + regenerates dumps against its own TeX Live; the
    CLI embeds them behind a runtime-stage self-test.
 4. macOS (#217) — **DONE 2026-06-08**
-   ([`archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](archive/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
+   ([`archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](../archive/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
    the full `cargo test --tests --workspace` suite is **green on `macos-15`
    arm64** (brew-texlive gating leg: 1390 passed / 0 failed / 0 crashes,
    43 binaries). MacTeX ships NO libkpathsea → covered by **kpathsea 0.3.0
@@ -165,15 +165,15 @@ Crates are `CC0`, but the binary ships more. Full inventory:
 
 The public-quality risk is outliers, not the mean: 60s+ timeout/fatal tail;
 math-bocage ambiguity explosions
-([`archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md));
+([`archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](../archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md));
 4 GiB alloc failures; high-RSS package loads; ar5iv limit creep hiding
 over-evaluation. Build a rolling dashboard from `telemetry.jsonl.gz`
-(schema exists, [`TELEMETRY.md`](TELEMETRY.md)): P50/P90/P99 wall+RSS, top
+(schema exists, [`TELEMETRY.md`](../performance/TELEMETRY.md)): P50/P90/P99 wall+RSS, top
 fatal/timeout/ambiguity witnesses. Gate "no unbounded growth" *separately*
 from "mean beats Perl."
 
 **Status (2026-07-09) — dashboard + gate BUILT.**
-[`tools/telemetry_dashboard.py`](../tools/telemetry_dashboard.py) reads a
+[`tools/telemetry_dashboard.py`](../../tools/telemetry_dashboard.py) reads a
 `telemetry.jsonl.gz` (or a dir of output ZIPs) and reports P50/P90/P99/max
 wall + peak-RSS, the phase that drives the P99, and the top slowest / highest-RSS
 / fatal-timeout-error / math-ambiguity witnesses. `--gate` enforces the
@@ -182,7 +182,7 @@ alloc wall via `--rss-redline-mb`; P99 wall → the timeout via
 `--wall-redline-frac`; any hard-timeout job) plus an **optional regression check**
 vs a committed baseline (`--baseline`, `--update-baseline`, `--tolerance`) — and
 it is deliberately independent of any mean/Perl comparison. Complements the
-phase-attribution rollup [`tools/perf_phase_summary.py`](../tools/perf_phase_summary.py).
+phase-attribution rollup [`tools/perf_phase_summary.py`](../../tools/perf_phase_summary.py).
 **Remaining:** capture a representative fleet-run baseline
 (`--update-baseline`), commit it, and wire `--gate --baseline` into the release
 job. The absolute red lines already gate today without a baseline.
@@ -262,7 +262,7 @@ Many open clusters are *shared* failures, not Rust regressions. Rule:
   parameter type without harming valid content → documented **surpass-Perl**
   fix allowed.
 - Visible output-shape change beyond error recovery → needs an
-  [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) entry + witness comparison.
+  [`OXIDIZED_DESIGN.md`](../parity/OXIDIZED_DESIGN.md) entry + witness comparison.
 - Report the opportunity upstream where practical.
 
 "Do not downgrade errors" stays non-negotiable. Existing cases:
@@ -271,7 +271,7 @@ Many open clusters are *shared* failures, not Rust regressions. Rule:
 ## 9. Source provenance — the beyond-Perl showcase (issues #47, #92)
 
 **Prioritized showcase**, designed in
-[`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md). Live source ↔ preview over a
+[`SOURCE_PROVENANCE.md`](../performance/SOURCE_PROVENANCE.md). Live source ↔ preview over a
 shared locator substrate, with **two clients**: the **ar5iv-editor**
 (CodeMirror + live HTML preview web UI) and a **VSCode extension** (webview
 preview), both syncing identically on every edit. The same substrate gives
@@ -306,7 +306,7 @@ validation contract.
   [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md).
 - **Single-binary smoke test exists** (`tests/001_single_binary_smoke.rs`) —
   §7 is promote/extend, not create.
-- **BibTeX is ported** (Phases 1–8, [`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](archive/BIBTEX_PORT_PLAN_2026-06-20.md));
+- **BibTeX is ported** (Phases 1–8, [`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](../archive/BIBTEX_PORT_PLAN_2026-06-20.md));
   the stale SYNC_STATUS "unported" line is fixed. B1–B6 / Phase 4–5 polish is
   product correctness; `--nobibtex` is not the default escape hatch.
 - **#47 is not purely post-1.0** — Tier A is near-term.

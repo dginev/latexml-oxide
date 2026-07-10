@@ -445,7 +445,7 @@ workflow."
 > macro, and definition must faithfully reproduce the original Perl
 > semantics, control flow, and edge-case behavior. The Perl source
 > (`LaTeXML/` directory) is the ground truth. Only diverge when
-> explicitly documented in `docs/OXIDIZED_DESIGN.md`.
+> explicitly documented in `docs/parity/OXIDIZED_DESIGN.md`.
 
 ## Mission (2026-04-26 pivot — STRICT-PERL DUMP PARITY)
 
@@ -1435,7 +1435,7 @@ state.
 ## Math parser — open ambiguity hotspots
 
 Live audit via `LATEXML_PARSE_AUDIT=1`; design context in
-`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`.
+`docs/math/MATH_GRAMMAR_FIRST_PRINCIPLES.md`.
 
 1. `\sin[XY]` chain — 1022 trees / 10 unique (real semantic
    ambiguity)

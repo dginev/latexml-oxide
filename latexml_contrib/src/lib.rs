@@ -11,7 +11,7 @@ extern crate latexml_package;
 extern crate latexml_codegen;
 use latexml_core::common::error::*;
 
-// Runtime script bindings (docs/script_bindings_plan.md). Feature-gated; OFF by
+// Runtime script bindings (docs/parity/script_bindings_plan.md). Feature-gated; OFF by
 // default. The ONLY module that embeds Rhai.
 #[cfg(feature = "runtime-bindings")]
 pub mod script_bindings;

@@ -20,7 +20,7 @@ dumps** (§C) and the **statically-linked libxml2/libxslt** (§D; static since
 
 ## A. Rust dependencies — GATED
 
-Vetted allow-list in [`deny.toml`](../deny.toml); the CI `lint` job runs
+Vetted allow-list in [`deny.toml`](../../deny.toml); the CI `lint` job runs
 `cargo-deny` with `--all-features`, so an unlisted license fails the build.
 Allowed set: `CC0-1.0`, `MIT`, `Apache-2.0` (+ LLVM-exception), `BSD-2/3-Clause`,
 `ISC`, `Zlib`, `Unicode-3.0`, `MPL-2.0` (weak per-file copyleft — safe for a CC0
@@ -33,8 +33,8 @@ binary).
   MPL-2.0 (1), Unicode-3.0 (1), Zlib (1).
 - **Attribution:** the per-crate license *texts* for the shipped binary are
   auto-generated into `THIRD-PARTY-NOTICES` §5 by `cargo about` — config
-  [`about.toml`](../about.toml) + template [`about.hbs`](../about.hbs), assembled
-  with the hand-authored §1-4 by [`tools/gen_notices.sh`](../tools/gen_notices.sh).
+  [`about.toml`](../../about.toml) + template [`about.hbs`](../../about.hbs), assembled
+  with the hand-authored §1-4 by [`tools/gen_notices.sh`](../../tools/gen_notices.sh).
   Generated from the (gitignored) lockfile at release time, not committed.
 - **Known warning (not distribution-blocking):** `pericortex` (our own
   `dginev/cortex-peripherals`, git source) has no `license` field. It is pulled
@@ -93,7 +93,7 @@ Key facts:
 > original resources," excluding the embedded dumps.
 
 This mirrors how the binary already relies on system libxml2/libxslt (§D)
-without claiming CC0 over them. Landed: [`THIRD-PARTY-NOTICES`](../THIRD-PARTY-NOTICES)
+without claiming CC0 over them. Landed: [`THIRD-PARTY-NOTICES`](../../THIRD-PARTY-NOTICES)
 §1 + the README License section (F2/F3 below).
 
 ## D. Dynamically-linked system libraries

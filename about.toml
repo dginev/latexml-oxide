@@ -5,9 +5,9 @@
 #     about.hbs -o THIRD-PARTY-RUST.txt
 #
 # The distributed binary is built `--no-default-features --features
-# runtime-bindings` (docs/RELEASE_CRITERIA.md, CLAUDE.md), so generate with the
+# runtime-bindings` (docs/release/RELEASE_CRITERIA.md, CLAUDE.md), so generate with the
 # same features to attribute exactly the crates that ship. The accepted set
-# mirrors deny.toml's [licenses].allow (docs/LICENSE_INVENTORY.md §A).
+# mirrors deny.toml's [licenses].allow (docs/release/LICENSE_INVENTORY.md §A).
 
 accepted = [
     "CC0-1.0",

@@ -10,7 +10,7 @@
 #   exclude Ubuntu 22.04 LTS users, who are still on the most widespread
 #   long-term release.
 #
-# Manual release procedure: see docs/RELEASING.md.
+# Manual release procedure: see docs/release/RELEASING.md.
 
 name: Release
 
@@ -36,7 +36,7 @@ jobs:
   # built on its own runner, NOT cross-compiled from the Linux leg. We build
   # natively on the arm64 `macos-15` runner (the same arch the CI.yml macOS
   # job validates, #217). Intel macOS (x86_64-apple-darwin) is published from a
-  # separate native `build-macos-intel` leg below — see docs/RELEASING.md
+  # separate native `build-macos-intel` leg below — see docs/release/RELEASING.md
   # "Release asset strategy". The TL-window dumps are OS-agnostic gzipped text, so this leg
   # embeds the exact bytes the `dumps` job produced for the Linux leg.
   build-macos:
@@ -446,7 +446,7 @@ jobs:
       # Assemble the complete THIRD-PARTY-NOTICES (hand-authored sections 1-4 +
       # cargo-about's per-crate licenses for the shipped feature set) so
       # make_release.sh bundles it into the tarball/.deb and it publishes as an
-      # asset. See docs/LICENSE_INVENTORY.md §A / RELEASE_CRITERIA §4 (F4).
+      # asset. See docs/release/LICENSE_INVENTORY.md §A / RELEASE_CRITERIA §4 (F4).
       - name: assemble THIRD-PARTY-NOTICES
         run: bash tools/gen_notices.sh THIRD-PARTY-NOTICES.dist
 

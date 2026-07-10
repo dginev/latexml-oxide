@@ -53,7 +53,7 @@ fi
 # matching runner (no `--target` cross-compile step), so RELEASE_TARGET is the
 # *label* the host arch produces and MUST match the runner's architecture.
 # Native binaries are never cross-OS (ELF vs Mach-O) — there is one artifact
-# per (OS, arch); see docs/RELEASING.md "Release asset strategy".
+# per (OS, arch); see docs/release/RELEASING.md "Release asset strategy".
 target_triple="${RELEASE_TARGET:-x86_64-unknown-linux-gnu}"
 case "${target_triple}" in
   *-linux-*)      os_family="linux" ;;

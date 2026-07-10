@@ -61,7 +61,7 @@ docker run -v /opt/cortex-scratch:/opt/cortex-scratch --hostname=$(hostname) cor
   (e.g. 72 on a 64-physical box). Unset = the harness CPU-derived default (sizes to *logical* cores,
   a deliberate over-commit). Per-child memory caps, the recycle threshold, the memory-pressure
   governor, and the per-document timeout stay at the binary's validated defaults — see
-  [`docs/CORTEX_WORKER_HARNESS.md`](../docs/CORTEX_WORKER_HARNESS.md).
+  [`docs/performance/CORTEX_WORKER_HARNESS.md`](../docs/performance/CORTEX_WORKER_HARNESS.md).
 
 **Advanced — standalone (pass cortex_worker flags straight through):**
 ```bash

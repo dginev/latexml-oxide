@@ -1479,7 +1479,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   // 0 disables.
   //
   // Why 25% (=2048 MiB at the default 8 GiB ceiling) and not 50%: a full-corpus 10k sweep at the
-  // CPU-optimal 72 workers (see docs/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
+  // CPU-optimal 72 workers (see docs/performance/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
   // vs ~188 GB at 50% on a 247 GiB box — and the 50% peak drops MemAvailable below the
   // mem-pressure governor's floor, triggering ~25 worker sheds whose re-leased tasks can exhaust
   // their retry budget and surface as `cortex:never_completed_with_retries` Fatals. 25% recycles

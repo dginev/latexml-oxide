@@ -975,7 +975,7 @@ impl Document {
   /// #47/#92). The range comes from the construct currently being absorbed
   /// (`box_to_absorb`); the integer file `tag` is resolved through the
   /// document-level `sources` table (`state::source_tag`) so no path is
-  /// inlined. See `docs/SOURCE_PROVENANCE.md` §0/§2.
+  /// inlined. See `docs/performance/SOURCE_PROVENANCE.md` §0/§2.
   ///
   /// Math is kept **opaque** per the MVP scope: the `ltx:Math` wrapper is
   /// stamped, but its `ltx:XM*` MathML internals are skipped (the Marpa
@@ -4369,7 +4369,7 @@ impl Document {
       // registration). Missing this stranded the equation refnum id across
       // `rearrange_lone_ams_aligned`'s equation→equationgroup rename, leaving
       // the group with a generic paragraph id and dangling intra-math XMRefs
-      // (witness 2311.01600; see docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
+      // (witness 2311.01600; see docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
       if key == "xml:id" || key == "id" {
         id = Some(value);
         continue;
@@ -4720,7 +4720,7 @@ impl Document {
   /// since those elements are opened *before* their content's `box_to_absorb`
   /// is set. Transient: each cell overwrites it and the enclosing
   /// `expire_box_to_absorb` (the Alignment absorb frame) restores the prior
-  /// value. See docs/SOURCE_PROVENANCE.md §3.1.3.
+  /// value. See docs/performance/SOURCE_PROVENANCE.md §3.1.3.
   #[cfg(feature = "token-locators")]
   pub fn set_current_box_locator(&mut self, loc: Option<Locator>) {
     self.current_box_locator = loc;

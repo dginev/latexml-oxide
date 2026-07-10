@@ -1,7 +1,7 @@
 # Telemetry Foundation
 
 Per-job structured telemetry for `cortex_worker` benchmark runs.
-Required by [`docs/PERFORMANCE.md`](PERFORMANCE.md) §P0:
+Required by [`docs/performance/PERFORMANCE.md`](PERFORMANCE.md) §P0:
 
 > *"the 100k run can be sorted by any phase without reading `.log`
 > files, and the sum of phase timings explains most of wall time."*
@@ -326,7 +326,7 @@ Pure stdlib + `gzip` + `json`. No pandas dep.
 `tools/perf_compare.py <baseline.jsonl.gz> <new.jsonl.gz>` — paired
 join on `paper_id`, reports per-paper `Δwall`, `Δphase_us`,
 `Δerrors`. Used after every perf-affecting commit per the
-`docs/PERFORMANCE.md` Optimization Acceptance Checklist.
+`docs/performance/PERFORMANCE.md` Optimization Acceptance Checklist.
 
 ---
 
@@ -351,7 +351,7 @@ join on `paper_id`, reports per-paper `Δwall`, `Δphase_us`,
 4. ✅ 100-paper sample run produces gzipped JSONL + extended TSV.
 5. ✅ `tools/perf_phase_summary.py` runs end-to-end; sum-of-phase / wall
    median ≥ 0.92 across the 100 papers.
-6. ✅ `docs/PERFORMANCE.md` updated to reference this doc and the
+6. ✅ `docs/performance/PERFORMANCE.md` updated to reference this doc and the
    first telemetry-driven findings.
 
 ---
@@ -387,14 +387,14 @@ All originally-deferred follow-ups have landed:
   (commit `72cd018f54`).
 
 The foundation is complete and ready for telemetry-driven
-optimization work in `docs/PERFORMANCE.md` Tier 1.
+optimization work in `docs/performance/PERFORMANCE.md` Tier 1.
 
 ---
 
 ## 8. After landing
 
 Telemetry unblocks the next round of optimizations from
-`docs/PERFORMANCE.md`:
+`docs/performance/PERFORMANCE.md`:
 
 1. **Graphics conversion cache + within-doc dedup** — guided by
    `graphics_us` vs `graphics_subprocess_count` correlation.

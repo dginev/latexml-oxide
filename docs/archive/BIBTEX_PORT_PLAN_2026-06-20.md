@@ -250,7 +250,7 @@ Per phase:
 - **Phase 2-3:** A minimal amsrefs paper with one `\bib{key}{article}{
   author={X}, title={Y}, journal={Z}, year={2020}}` produces the
   same `<ltx:bibentry>` XML as Perl LaTeXML (up to known XML
-  divergences in `docs/OXIDIZED_DESIGN.md`).
+  divergences in `docs/parity/OXIDIZED_DESIGN.md`).
 - **Phase 4-5:** All 16 entry types + MR/Zbl synthesis produce
   Perl-equivalent XML. Port the Perl end-to-end tests
   `LaTeXML/t/structure/{bibsect,natbib,crazybib}.tex+.xml`

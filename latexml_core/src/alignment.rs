@@ -51,7 +51,7 @@ use crate::{
 /// token-locators: source span of an alignment cell (its content's locator).
 /// `tabular`/`tr`/`td` are opened before their content's `box_to_absorb` is set,
 /// so the absorb explicitly stamps each with its cell/row/table span via
-/// `Document::set_current_box_locator`. See docs/SOURCE_PROVENANCE.md §3.1.3.
+/// `Document::set_current_box_locator`. See docs/performance/SOURCE_PROVENANCE.md §3.1.3.
 #[cfg(feature = "token-locators")]
 fn cell_loc(cell: &Cell) -> Option<crate::common::locator::Locator> {
   cell

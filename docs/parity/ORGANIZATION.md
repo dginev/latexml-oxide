@@ -6,7 +6,7 @@ relate to the Perl files in `LaTeXML/lib/LaTeXML/Engine/`.
 **Counts (2026-05-15):** 40 Perl `.pool.ltxml` files, 47 Rust `.rs`
 files. 38 of the 40 Perl pools have direct 1:1 Rust counterparts;
 2 are partial ports (AmSTeX skeleton, BibTeX skeleton — see
-[`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](archive/BIBTEX_PORT_PLAN_2026-06-20.md)). The Rust side has
+[`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](../archive/BIBTEX_PORT_PLAN_2026-06-20.md)). The Rust side has
 8 additional files for Rust-specific concerns (module
 infrastructure, dump-path/embedded-dump support, the dump-runtime
 loader pair, and a Rust-only constructs supplement) — listed below.
@@ -75,7 +75,7 @@ latex.rs                   (≈ LaTeX.pool)
 ```
 
 Mirrors Perl `Package.pm:LoadFormat` L2734-2752 exactly. See
-[`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) for the
+[`PERL_LOADFORMAT_AUDIT.md`](../archive/PERL_LOADFORMAT_AUDIT.md) for the
 parity audit.
 
 Dump-build snapshots are taken by the init/dump-generation path

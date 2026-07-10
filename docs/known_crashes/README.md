@@ -10,7 +10,7 @@ the paper now exits 124 (graceful wall-clock timeout) like Perl's fail-soft empt
 doc, full suite 1459/0. Robustness win, not coverage (paper still doesn't convert
 in either engine). Full gdb backtrace + analysis:
 [`1804.01117_xint_stack_overflow_2026-06-20.md`](1804.01117_xint_stack_overflow_2026-06-20.md);
-`docs/STABILITY_WITNESSES.md` Cluster F.
+`docs/performance/STABILITY_WITNESSES.md` Cluster F.
 
 ---
 

@@ -4,7 +4,7 @@
 > the top remaining `math_parse` lever (17% of corpus wall, 17% over-parse).
 > All and-node counts **freshly measured on the release binary** (method below),
 > which **corrects stale claims** in `archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`.
-> Companion to [`PERFORMANCE.md`](PERFORMANCE.md) §P1-math and
+> Companion to [`PERFORMANCE.md`](../performance/PERFORMANCE.md) §P1-math and
 > [`MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md).
 
 ## Method

@@ -5,7 +5,7 @@
 //! `publishDiagnostics`, `shutdown`, `exit`) **plus** a custom
 //! `latexml/convert` request that returns `{html, log, diagnostics, sources,
 //! status, statusCode}` — the response shape the `ar5iv-editor` client
-//! consumes for its live source↔preview loop (see `docs/SOURCE_PROVENANCE.md`).
+//! consumes for its live source↔preview loop (see `docs/performance/SOURCE_PROVENANCE.md`).
 //!
 //! Performance model: the preamble (everything up to and including
 //! `\begin{document}`) is digested once and cached in this (parent) process.

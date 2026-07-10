@@ -6,7 +6,7 @@
 # (libc waitpid/poll/fork in the LSP server, kpathsea, libxml2/libxslt via
 # dlsym, getrusage, signal handlers) — Miri CANNOT execute extern "C" calls,
 # so a blanket `cargo miri test` aborts on the first FFI call. See
-# docs/SAFETY.md for the full `unsafe` inventory and which category each site
+# docs/release/SAFETY.md for the full `unsafe` inventory and which category each site
 # is in. The categories with genuine UB potential that Miri *can* check are:
 #  (1) the string-interner / arena (`latexml_core/src/common/arena.rs`): unchecked
 #      `resolve_unchecked` bounds-skips (cat. B) and the re-entrant `&mut *ptr`

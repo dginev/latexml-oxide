@@ -139,7 +139,7 @@ runtime template interpreter are the connective tissue that now relates them.
 - Runtime layer detail + dialect reference: [`script_bindings_plan.md`](script_bindings_plan.md).
 - Tracking issue: **#247** (Interpreted runtime bindings). Related: #93 (the
   declarative-dialect umbrella, closed → #247), #171 (the shared template-parser
-  component) — see [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md).
+  component) — see [`ISSUE_AUDIT.md`](../release/ISSUE_AUDIT.md).
 
 ---
 

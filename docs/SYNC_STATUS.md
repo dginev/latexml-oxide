@@ -403,7 +403,7 @@ sections** (`solving_ODE` auto-generated notes), `--splitat=section`. Findings:
 ### Beyond-Perl performance levers — from the 2026-07-10 60k-doc telemetry (POST-RELEASE — deferred out of release week per the stabilization review above)
 
 The 2605+2606 reruns (60,469 docs, containerized worker, per-job `telemetry.json`
-mined in `docs/ARXIV_PERFORMANCE.md` "Corpus-wide phase budget 2026-07-10")
+mined in `docs/performance/ARXIV_PERFORMANCE.md` "Corpus-wide phase budget 2026-07-10")
 re-point the perf campaign. **Wall time is broad, not math-dominated:** digest
 19.7% · math_parse 19.2% · build 18.1% · **xslt 13.2%** · graphics 8.9% ·
 mathml_pres 4.5%. Concentration is only moderate (slowest 1% = 10% of wall), so

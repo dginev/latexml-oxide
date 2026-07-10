@@ -8,7 +8,7 @@
 # Always pass `--all-features` locally to match CI.
 #
 # Rationale: latexml-oxide ships a self-contained, redistributable binary
-# (docs/RELEASE_CRITERIA.md §license audit), so every transitive dependency's
+# (docs/release/RELEASE_CRITERIA.md §license audit), so every transitive dependency's
 # license must be one we have vetted for that posture, and we want RUSTSEC
 # advisories to fail the build rather than ship silently.
 

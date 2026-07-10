@@ -1001,8 +1001,8 @@ and is parity-neutral, so it can proceed alongside the corpus mission.
 Build order: locator substrate (Tier A + `--source-map`) → warm-state
 conversion server (full-doc reconvert MVP) → the two clients (ar5iv-editor
 web UI and VSCode extension) over the shared locator contract. Cross-refs:
-[`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §9 (gates/context),
-[`ISSUE_AUDIT.md`](ISSUE_AUDIT.md) #47/#92. Issue #199 (HTML-dialect
+[`RELEASE_CRITERIA.md`](../release/RELEASE_CRITERIA.md) §9 (gates/context),
+[`ISSUE_AUDIT.md`](../release/ISSUE_AUDIT.md) #47/#92. Issue #199 (HTML-dialect
 RelaxNG) gives the preview a validation contract.
 
 **As-built — ar5iv-editor source→preview scroll MVP (2026-05-24).** The first

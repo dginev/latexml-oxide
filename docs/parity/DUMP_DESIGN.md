@@ -2,8 +2,8 @@
 
 > **Canonical design record (refreshed 2026-04-30)**: the strict-Perl
 > dump-parity mission this design backs is **complete** (see
-> [`SYNC_STATUS.md`](SYNC_STATUS.md) and the archived
-> [`archive/PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md));
+> [`SYNC_STATUS.md`](../SYNC_STATUS.md) and the archived
+> [`archive/PERL_LOADFORMAT_AUDIT.md`](../archive/PERL_LOADFORMAT_AUDIT.md));
 > this doc preserves the architecture rationale. The dump is a faithful
 > translation of Perl's `make formats` output — mutual-exclusivity in
 > `LoadFormat`, unconditional apply in `dump_reader.rs`, same-file
@@ -35,7 +35,7 @@ resources/dumps/
                            # `kpsewhich --version` is NOT a reliable year
                            # discriminator (same string on TL2023+TL2025);
                            # `kpsewhich -var-value=SELFAUTOPARENT` is the
-                           # right source. See `docs/WISDOM.md` #54.
+                           # right source. See `docs/parity/WISDOM.md` #54.
 ```
 
 `build.rs` cannot invoke `cargo run` (nested cargo is forbidden), so
@@ -101,7 +101,7 @@ LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 Reader / writer share `parse_token` / `parse_token_list` so catcoded
 delimiter tokens round-trip cleanly. Parameter sub-lines (indented
 with `\t`) carry structured `(name, spec, extra)` triples — see
-[`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
+[`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](../archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
 the v3 design and Perl correspondence.
 
 `IA` records (commit `81176ba689`, 2026-05-15) collapse expl3's
@@ -247,7 +247,7 @@ filename match. The stamp check remains useful for the in-year case
 
 ## See also
 
-* [`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) —
+* [`PERL_LOADFORMAT_AUDIT.md`](../archive/PERL_LOADFORMAT_AUDIT.md) —
   file-by-file Rust-vs-Perl divergence audit.
-* [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) —
+* [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](../archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) —
   on-disk record format and Perl `Dumper.pm` correspondence.

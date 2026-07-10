@@ -222,7 +222,7 @@ fn cluster_jhep_href_semiverbatim() {
 /// `apply(probability)` with no operand (silent content-MathML corruption).
 /// The operand-protection guard keeps the ref (dangling rather than dropped,
 /// closer to Perl which resolves it). See
-/// docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o).
+/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o).
 /// A comma-list LEFT of a conditional bar parses with `|` binding to the LAST
 /// item (Perl): `a,b|c` → `list@(a, conditional@(b, c))`, `a,b,c|d` →
 /// `list@(a, b, conditional@(c, d))`, `x|y,z` → `conditional@(x, list@(y, z))`.
@@ -251,7 +251,7 @@ fn cluster_comma_list_conditional() {
 /// keyless bare `<XMRef/>` when a further `\quad` formula extends it. This was the
 /// dominant `expected:id` "Missing idref" cluster (~370 papers). The Wrap-
 /// presentation guard on the formulae/list extend paths fixes it. See
-/// docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26v).
+/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26v).
 #[test]
 fn cluster_formulae_distribute_no_bare_ref() {
   let xml = convert_to_xml("tests/cluster_regressions/formulae_distribute_no_bare_ref.tex");
@@ -414,7 +414,7 @@ fn cluster_feynmp_fmf() { convert_clean("tests/cluster_regressions/feynmp_fmf.te
 /// through the canonical loop-safe `def_autoload` (clear trigger globally BEFORE
 /// the load, hoist natbib's fresh defs to global, then re-emit) fixes the hang
 /// while keeping `\citep` defined — the 1403.6801 (wlpeerj) regression that the
-/// clear-AFTER-load attempt broke. See docs/ARXIV_PERFORMANCE.md.
+/// clear-AFTER-load attempt broke. See docs/performance/ARXIV_PERFORMANCE.md.
 #[test]
 fn cluster_omnibus_natbib_autoload_no_reload_loop() {
   let src = "tests/cluster_regressions/omnibus_natbib_autoload.tex";

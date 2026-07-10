@@ -43,8 +43,8 @@ this yields ~25-level nesting in MathML (witness
 focuses on fence-pairing rules that mirror TeX's `\left`/`\right`
 matching and does not attempt to detect kerned-stack idioms. The
 Rust port's math layer is built on a more expressive Marpa-based
-grammar (see [`MATH_GRAMMAR_FIRST_PRINCIPLES.md`](MATH_GRAMMAR_FIRST_PRINCIPLES.md)
-and [`MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md)), giving us
+grammar (see [`MATH_GRAMMAR_FIRST_PRINCIPLES.md`](../math/MATH_GRAMMAR_FIRST_PRINCIPLES.md)
+and [`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md)), giving us
 the option to produce **well-structured MathML Core** that follows
 the XMath taxonomy: a single `<mrow intent=":Frobenius-norm">` or a
 proper U+2016 `‖` / U+2AF4 `⫴` delimiter, instead of token-level
@@ -125,4 +125,4 @@ the compat reader isn't worth the surface area.)
 (`include_str!`/`include_dir!`) per the self-contained-binary principle,
 with a disk override (`<NAME>.toml`); keep `$LATEXMLINPUTS` expansion in
 `path`; keep `--mode` as an alias for `--profile`.
-Tracked under issue #191 in [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md).
+Tracked under issue #191 in [`ISSUE_AUDIT.md`](../release/ISSUE_AUDIT.md).

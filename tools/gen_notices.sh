@@ -11,7 +11,7 @@
 # Usage:  tools/gen_notices.sh [OUTPUT]     (default: ./THIRD-PARTY-NOTICES.dist)
 # Requires: cargo-about  (cargo install cargo-about --features cli)
 #
-# See docs/LICENSE_INVENTORY.md (the audit) and docs/RELEASE_CRITERIA.md §4.
+# See docs/release/LICENSE_INVENTORY.md (the audit) and docs/release/RELEASE_CRITERIA.md §4.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -2,7 +2,7 @@
 # Standing perf corpus runner — unzips each Tier A paper + complex/si.tex
 # into a tmpdir, converts with the release binary, records wall-clock and
 # exit code. Idle-serial (no parallelism) — use for regression triage
-# against the baseline in docs/PERFORMANCE.md.
+# against the baseline in docs/performance/PERFORMANCE.md.
 #
 # Usage:
 #   tools/run_perf_corpus.sh               # full corpus, serial

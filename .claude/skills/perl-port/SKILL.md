@@ -29,7 +29,7 @@ Quote the Perl line range in a comment next to the Rust port (the codebase does
 this consistently, e.g. `// Perl L2734-2752`) so the next reader can diff against
 the source.
 
-## 2 — Find the Rust home: `docs/ORGANIZATION.md`
+## 2 — Find the Rust home: `docs/parity/ORGANIZATION.md`
 
 It maps each Perl `.pool.ltxml` → `latexml_engine/src/<file>.rs` (38 of 40 are
 1:1). **Same-file rule:** every `\foo` defined in
@@ -52,14 +52,14 @@ CLAUDE.md "Key Concepts Mapping".
 
 ## 4 — Check three docs BEFORE finalizing
 
-1. **`docs/WISDOM.md`** — known internal traps. Don't re-introduce a fixed bug
+1. **`docs/parity/WISDOM.md`** — known internal traps. Don't re-introduce a fixed bug
    (compile-time vs runtime token packing, `Font::merge`/`specialize`, catcode CS
    vs ESCAPE, `RegisterType` `PartialEq` trap, `at_letter` restore, the libxml
    shared-Node `try_borrow_mut` guard, …).
-2. **`docs/KNOWN_PERL_ERRORS.md`** — is the behavior you're "fixing" actually an
+2. **`docs/parity/KNOWN_PERL_ERRORS.md`** — is the behavior you're "fixing" actually an
    upstream Perl bug? If so, keep parity (don't out-correct it) and record it
    there with a minimal trigger.
-3. **`docs/OXIDIZED_DESIGN.md`** — is the difference a *sanctioned* divergence
+3. **`docs/parity/OXIDIZED_DESIGN.md`** — is the difference a *sanctioned* divergence
    (e.g. `%\n` not emitted, comments off by default, `\cdots` ELIDEOP, color
    visual-equivalence, no `tex=` on `<picture>`)? If not, you must match Perl.
 

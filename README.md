@@ -34,7 +34,7 @@ portable tarball each) and **macOS** (Apple Silicon and Intel tarballs). The
 binary is fully self-contained — all XSLT
 stylesheets, CSS, JS, and RelaxNG schemas are embedded at build time and served
 from memory, so no `resources/` tree is needed alongside it (a deliberate design
-goal — see [docs/OXIDIZED_DESIGN.md](docs/OXIDIZED_DESIGN.md)). A working TeX Live
+goal — see [docs/parity/OXIDIZED_DESIGN.md](docs/parity/OXIDIZED_DESIGN.md)). A working TeX Live
 installation is still required at runtime for TeX package/class/font resolution.
 Every asset has a `<name>.sha256` sidecar for integrity checking.
 
@@ -198,7 +198,7 @@ distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile
     $ cargo run --release --bin latexml_oxide latexml_oxide/tests/structure/article.tex
     ```
 
-4. Generate a rustdoc-styled HTML5 site for a RelaxNG (`.rnc`) schema — see [docs/SCHEMA_DOCUMENTATION.md](docs/SCHEMA_DOCUMENTATION.md).
+4. Generate a rustdoc-styled HTML5 site for a RelaxNG (`.rnc`) schema — see [docs/performance/SCHEMA_DOCUMENTATION.md](docs/performance/SCHEMA_DOCUMENTATION.md).
 
 CI runs `cargo test --profile ci --tests` automatically; you should never
 need to invoke that profile by hand. For local performance benchmarking
@@ -236,4 +236,4 @@ LaTeX kernel, LPPL 1.3c; plain TeX, Knuth) and the system libxml2/libxslt
 libraries (MIT). These are attributed in [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES),
 which is bundled with every release. The public-domain dedication above applies
 to the latexml-oxide source and original resources, **not** to that embedded or
-linked third-party material. Full breakdown: [`docs/LICENSE_INVENTORY.md`](docs/LICENSE_INVENTORY.md).
+linked third-party material. Full breakdown: [`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md).

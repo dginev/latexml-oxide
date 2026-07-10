@@ -33,7 +33,7 @@ kpathsea = ["dep:kpathsea"]
 # from the runtime binary's dependency graph. Audit DEP-14 (2026-05-18).
 codegen = ["dep:proc-macro2", "dep:quote"]
 
-# Opt-in source-map precision build (docs/SOURCE_PROVENANCE.md §3.1.1): widen
+# Opt-in source-map precision build (docs/performance/SOURCE_PROVENANCE.md §3.1.1): widen
 # `Token` with a `u32` origin handle so each token carries its exact source start
 # through expansion to digestion. OFF by default — `Token` stays 8 bytes for every
 # normal/corpus/parity/distribution build; only this build pays 8→12. Declared in

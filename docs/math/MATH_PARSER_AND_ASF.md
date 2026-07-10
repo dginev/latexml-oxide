@@ -58,7 +58,7 @@ prune semantically. The pipeline:
 
 ### Stage 1 — grammar categories
 
-**File**: [`latexml_math_parser/src/grammar/builder.rs`](../latexml_math_parser/src/grammar/builder.rs).
+**File**: [`latexml_math_parser/src/grammar/builder.rs`](../../latexml_math_parser/src/grammar/builder.rs).
 
 A highly-ambiguous CFG over lexeme categories: `factor`, `tight_term`,
 `statement`, `formula`, `statements`, `formulae`, plus the
@@ -74,9 +74,9 @@ input.
 
 ### Stage 2 — early semantic pruning in actions
 
-**File**: [`latexml_math_parser/src/semantics.rs`](../latexml_math_parser/src/semantics.rs).
-Entry point [`Actions::get_tree`](../latexml_math_parser/src/semantics.rs#L78)
-→ recursive [`translate_node`](../latexml_math_parser/src/semantics.rs#L89)
+**File**: [`latexml_math_parser/src/semantics.rs`](../../latexml_math_parser/src/semantics.rs).
+Entry point [`Actions::get_tree`](../../latexml_math_parser/src/semantics.rs#L78)
+→ recursive [`translate_node`](../../latexml_math_parser/src/semantics.rs#L89)
 → per-rule action closures.
 
 Each rule's action is a closure with this contract:
@@ -116,10 +116,10 @@ node.
 
 ### Stage 3 — late semantic pruning in pragmas
 
-**File**: [`latexml_math_parser/src/semantics/tree.rs`](../latexml_math_parser/src/semantics/tree.rs)
+**File**: [`latexml_math_parser/src/semantics/tree.rs`](../../latexml_math_parser/src/semantics/tree.rs)
 `XM::soft_prune_choices` — driven by the
 `ValidationPragmatics` list at
-[`latexml_math_parser/src/pragmatics.rs`](../latexml_math_parser/src/pragmatics.rs).
+[`latexml_math_parser/src/pragmatics.rs`](../../latexml_math_parser/src/pragmatics.rs).
 
 Called *after* the recognizer + tree iterator has accumulated the
 shortlist of `Choices(N)`. Each pragma partitions the trees into
@@ -225,7 +225,7 @@ fleshed out. See the target Rust API sketch in `ASF_STATUS.md` § Target.
 This is the awkward one. Some pragmas are glade-local in disguise;
 others are genuinely cross-tree.
 
-**Look at [`pragmatics.rs`](../latexml_math_parser/src/pragmatics.rs)
+**Look at [`pragmatics.rs`](../../latexml_math_parser/src/pragmatics.rs)
 to classify each pragma:**
 
 | Pragma | Decision boundary | ASF fit |
@@ -291,7 +291,7 @@ selectively promote pragmas to glade-local where they fit cleanly.
 
 Originally drafted 2026-05-17; closed in successive commits through
 2026-05-19. The detailed step list is preserved in git history
-(`git log -p docs/MATH_PARSER_AND_ASF.md`); current state below.
+(`git log -p docs/math/MATH_PARSER_AND_ASF.md`); current state below.
 
 1. ✅ **Marpa side (ASF_STATUS Steps 2-6)** — `compute_symches`,
    Glade query API, recursive `ASF::traverse` with memoization, and
@@ -458,7 +458,7 @@ Final acceptance numbers:
   wp4 telemetry): HYBRID **+0.5 %** vs LEGACY on n=98 both-OK,
   zero OOM aborts (without the 500-and-node cap the HYBRID path
   OOM-aborted 19/100). See
-  [`docs/PERFORMANCE.md`](PERFORMANCE.md) for the per-paper
+  [`docs/performance/PERFORMANCE.md`](../performance/PERFORMANCE.md) for the per-paper
   breakdown.
 
 ---
@@ -467,11 +467,11 @@ Final acceptance numbers:
 
 | For… | See… |
 |---|---|
-| Current routing implementation | [`latexml_math_parser/src/parser.rs::parse_marpa`](../latexml_math_parser/src/parser.rs) |
-| Per-glade callback (ambiguous path) | [`latexml_math_parser/src/asf_traverser.rs`](../latexml_math_parser/src/asf_traverser.rs) |
-| Action closures | [`latexml_math_parser/src/semantics.rs`](../latexml_math_parser/src/semantics.rs) |
-| Pragma definitions | [`latexml_math_parser/src/pragmatics.rs`](../latexml_math_parser/src/pragmatics.rs) |
-| Tiebreaking research notes | [`docs/MATH_PARSER_ASF_TIEBREAKING.md`](MATH_PARSER_ASF_TIEBREAKING.md) |
-| Ambiguity hotspots research | [`docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md) |
+| Current routing implementation | [`latexml_math_parser/src/parser.rs::parse_marpa`](../../latexml_math_parser/src/parser.rs) |
+| Per-glade callback (ambiguous path) | [`latexml_math_parser/src/asf_traverser.rs`](../../latexml_math_parser/src/asf_traverser.rs) |
+| Action closures | [`latexml_math_parser/src/semantics.rs`](../../latexml_math_parser/src/semantics.rs) |
+| Pragma definitions | [`latexml_math_parser/src/pragmatics.rs`](../../latexml_math_parser/src/pragmatics.rs) |
+| Tiebreaking research notes | [`docs/math/MATH_PARSER_ASF_TIEBREAKING.md`](MATH_PARSER_ASF_TIEBREAKING.md) |
+| Ambiguity hotspots research | [`docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](../archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md) |
 | marpa-side perf doc | [`~/git/marpa/docs/ASF_PERFORMANCE_FINDINGS.md`](https://github.com/dginev/marpa/blob/master/docs/ASF_PERFORMANCE_FINDINGS.md) |
 | Pre-flight ambiguity oracle | `Parser::ambiguity_metric(tokens)` and `Bocage::ambiguity_metric()` |

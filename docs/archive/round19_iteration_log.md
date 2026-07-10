@@ -34,7 +34,7 @@ isolated edge cases.
 all-clean trajectory holds at 500-paper scale.
 
 **2026-05-03 Telemetry foundation landed** — 8/8 steps from
-[`docs/TELEMETRY.md`](TELEMETRY.md). Per-job phase wall + counts
+[`docs/performance/TELEMETRY.md`](TELEMETRY.md). Per-job phase wall + counts
 flow from `latexml_core::telemetry` through `cortex_worker` into
 `telemetry.json` ZIP members; `tools/benchmark_canvas.sh` aggregates
 to `telemetry.jsonl.gz`; `tools/perf_phase_summary.py` and

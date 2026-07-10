@@ -1,6 +1,6 @@
 // Source-locator (`--source-map`) MVP — issues #47/#92.
 //
-// Engine substrate (see `docs/SOURCE_PROVENANCE.md` + the "Source-locator
+// Engine substrate (see `docs/performance/SOURCE_PROVENANCE.md` + the "Source-locator
 // MVP" section of `docs/SYNC_STATUS.md`), OFF by default. With the switch on,
 // `Document::open_element_at` stamps each element with its construct's source
 // range in LaTeXML's `data:` namespace as `data:sourcepos="tag:l:c[-tag:l:c]"`
@@ -196,7 +196,7 @@ fn source_map_pins_key_structural_locators() {
 // so finalize declares `xmlns:data` on the root and the `data:sourcepos`
 // attributes resolve into it. The post XSLT's `copy_foreign_attributes` then
 // converts `data:sourcepos` → HTML5 `data-sourcepos` — no XSLT change, same
-// path `aria:` already uses. See `docs/SOURCE_PROVENANCE.md` §7 A.5.
+// path `aria:` already uses. See `docs/performance/SOURCE_PROVENANCE.md` §7 A.5.
 #[test]
 fn source_map_passes_through_xslt_to_html() {
   let html_off = html_from(&convert_xml(false));
@@ -218,7 +218,7 @@ fn source_map_passes_through_xslt_to_html() {
 /// filename — so the output stays anonymisable for a consumer that lacks the
 /// source files. In-process embedders (the ar5iv-editor server) read the same
 /// table programmatically via `state::source_table_snapshot()`. See
-/// `docs/SOURCE_PROVENANCE.md` §0.1.
+/// `docs/performance/SOURCE_PROVENANCE.md` §0.1.
 #[test]
 fn source_map_table_goes_to_log_not_output() {
   // Install the capture logger so the `.log` buffer receives Info records
@@ -275,7 +275,7 @@ fn convert_path_xml(path: &str) -> String {
 
 /// token-locators precision build: content-exact spans through reprocessing
 /// (sectioning revert/re-digest, `\caption`-in-float) and the alignment path
-/// (`tabular`/`tr`/`td`). Guards docs/SOURCE_PROVENANCE.md §3.1.1-§3.1.3.
+/// (`tabular`/`tr`/`td`). Guards docs/performance/SOURCE_PROVENANCE.md §3.1.1-§3.1.3.
 /// Runs only under `--features token-locators`.
 #[cfg(feature = "token-locators")]
 #[test]
@@ -287,7 +287,7 @@ fn source_map_token_locators_content_exact() {
   // (Macro-expansion origin inheritance attributes `\section`'s structural body
   // to its call site; the section Whatsit's locator path carries that through,
   // so the title spans command->content rather than just the "Intro" arg. This
-  // is the accepted design — see docs/SOURCE_PROVENANCE.md §3.1.3.)
+  // is the accepted design — see docs/performance/SOURCE_PROVENANCE.md §3.1.3.)
   let sec = regex::Regex::new(r#"<section\b[^>]*\bdata:sourcepos="([^"]+)""#).unwrap();
   let sec_val = sec
     .captures(&xml)
@@ -355,7 +355,7 @@ fn source_map_frontmatter_title_located() {
 /// overwritten). `\date{\today}` is on line 4, `\today` at col 7, so the date —
 /// emitted out-of-source-order by `\maketitle` via `insert_frontmatter` — lands
 /// at the point `0:4:7-0:4:7`. Was: NO locator (clients fell back to the whole
-/// document). See docs/SOURCE_PROVENANCE.md §3.1.3.
+/// document). See docs/performance/SOURCE_PROVENANCE.md §3.1.3.
 #[cfg(feature = "token-locators")]
 #[test]
 fn source_map_today_macro_located() {

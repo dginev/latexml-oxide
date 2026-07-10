@@ -41,7 +41,7 @@ sha2 = { version = "0.11", default-features = false }
 zip = { version = "8", default-features = false, features = ["deflate-flate2", "time"] }
 flate2 = "1"
 # Telemetry-only — used in process_chain to attribute time to the
-# correct Phase based on each processor's get_name(). See docs/TELEMETRY.md.
+# correct Phase based on each processor's get_name(). See docs/performance/TELEMETRY.md.
 latexml_core = {path = "../latexml_core"}
 
 # setsid + killpg in graphics.rs `run_with_timeout` — kills convert's gs

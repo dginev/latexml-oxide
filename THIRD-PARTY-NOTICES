@@ -9,7 +9,7 @@ tarball.
 
 For the licenses of the Rust crates statically linked into the binary, see the
 appended "RUST DEPENDENCY LICENSES" section (generated from the lockfile at
-release time via `cargo about`; see docs/LICENSE_INVENTORY.md §A).
+release time via `cargo about`; see docs/release/LICENSE_INVENTORY.md §A).
 
 --------------------------------------------------------------------------------
 1. Embedded TeX format dumps  (resources/dumps/*.dump.txt)
@@ -54,7 +54,7 @@ No notice is legally required; attribution is provided in gratitude.
 --------------------------------------------------------------------------------
 
 The binary is built against the following C libraries (statically linked where
-noted per docs/RELEASE_CRITERIA.md §3; otherwise dynamically linked against the
+noted per docs/release/RELEASE_CRITERIA.md §3; otherwise dynamically linked against the
 host system libraries):
 
   * libxml2, libxslt, libexslt

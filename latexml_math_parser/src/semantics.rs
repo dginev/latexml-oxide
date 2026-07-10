@@ -220,7 +220,7 @@ pub fn list_apply(
   //    `\quad`-list is a flat `formulae@(…)` whose items may be of ANY kind
   //    (relational or not), e.g. `a\op b \quad a\rel b \quad …`. (Perl emits a
   //    right-NESTED `formulae@(a, formulae@(b, …))`; we keep it FLAT — an
-  //    intentional, user-directed divergence; see docs/KNOWN_PERL_ERRORS.md.)
+  //    intentional, user-directed divergence; see docs/parity/KNOWN_PERL_ERRORS.md.)
   //  * a plain comma separates a `list@(…)`. A MIXED comma-list — a relational
   //    item plus plain items — IS a valid list: a bare (unparenthesized)
   //    comma-list is a top-level list, and a relation is a legitimate item. So
@@ -747,7 +747,7 @@ pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
       // right-nest them here (`formulae@(f1, formulae@(f2, …))`) to mirror
       // Perl's `moreRHS`/`maybeColRHS`, but a flat `formulae@(f1, f2, …)` is the
       // correct shape — an intentional, user-directed divergence from Perl (see
-      // docs/KNOWN_PERL_ERRORS.md).
+      // docs/parity/KNOWN_PERL_ERRORS.md).
     },
     XM::Choices(choices) => {
       for choice in choices.iter_mut() {
@@ -1577,7 +1577,7 @@ pub fn annotated_punct_fenced_modifier(
 /// multiplication. The Rust Marpa grammar directly produces the function application
 /// parse `f@(x)`, which is the semantically superior interpretation — it avoids an
 /// artificial invisible MULOP token that was a crutch for Parse::RecDescent's
-/// backtracking parser. See docs/OXIDIZED_DESIGN.md.
+/// backtracking parser. See docs/parity/OXIDIZED_DESIGN.md.
 pub fn speculative_prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,

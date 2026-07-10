@@ -2,7 +2,7 @@
 
 [← OXIDIZED_DESIGN.md](OXIDIZED_DESIGN.md) · Deliberate breaks with Perl behavior, numbered. Code comments reference these as `OXIDIZED_DESIGN #N`.
 
-> **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
+> **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 
 ---
 
@@ -469,7 +469,7 @@ expensive subprocess + file-write side-effects are coalesced.
 **Impact:** Output bundles for graphics-heavy papers shrink
 proportionally to their duplicate rate. The graphics phase wall time
 drops by the same ratio because subprocess fork-exec is the dominant
-cost (see `docs/PERFORMANCE.md` §5). HTML output still has the
+cost (see `docs/performance/PERFORMANCE.md` §5). HTML output still has the
 correct number of `<img>` tags — only the underlying file count is
 deduplicated.
 
@@ -883,7 +883,7 @@ arXiv 2404.12418 `diff`s IDENTICAL pre/post; full suite 1480/0 unchanged).
 arXiv perf-testbed papers (formerly 176–179 s timeouts) now complete. This is a
 **surpass-Perl** perf win (Perl keeps the O(n²); Rust @99k is now 5.3 s vs Perl
 8.7 s on the same stylesheet) and a candidate to upstream. Local divergence from
-upstream XSLT only. Full analysis: `docs/ARXIV_PERFORMANCE.md` (Hotspot #2).
+upstream XSLT only. Full analysis: `docs/performance/ARXIV_PERFORMANCE.md` (Hotspot #2).
 
 ### 38. `theorem`/`proof` allowed inside `figure`/`table`/`float` (schema expansion)
 
@@ -955,10 +955,10 @@ arXiv 2208.07515) and a full-pipeline regression guard
 **Impact:** the `head-keywords` template went 145 s → 0.04 s on 2208.07515 (560
 indexphrases); cluster-wide the index-bearing arXiv perf survivors dropped 2–5×
 (2208.07515 95 s→33 s, 1802.06435 78 s→17 s, 0807.4838 78 s→13 s). This **supersedes**
-the prior campaign's deferral of the "third XSLT O(n²)" (`docs/ARXIV_PERFORMANCE.md`)
+the prior campaign's deferral of the "third XSLT O(n²)" (`docs/performance/ARXIV_PERFORMANCE.md`)
 — head-keywords, not the index-render templates, was the real root. Surpass-Perl;
 candidate to upstream. Local divergence from upstream XSLT only. Full analysis:
-`docs/ARXIV_PERFORMANCE.md` (Hotspot #3).
+`docs/performance/ARXIV_PERFORMANCE.md` (Hotspot #3).
 
 ### 41. XSLT `maketitle` navigation scan memoized to a global variable (O(n²)→O(n), output-neutral)
 
@@ -986,7 +986,7 @@ document where the memoized value is `false`).
 24.94 s → 2.15 s (11.6×) on 2605.01585 (a 2000+-formula physics book, 512 titles).
 This was the dominant residual XSLT cost on large math books after #2/#3 landed.
 Surpass-Perl; candidate to upstream. Local divergence from upstream XSLT only. Full
-analysis: `docs/ARXIV_PERFORMANCE.md` (Hotspot #4).
+analysis: `docs/performance/ARXIV_PERFORMANCE.md` (Hotspot #4).
 
 ---
 

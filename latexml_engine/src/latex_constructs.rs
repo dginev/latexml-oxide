@@ -2284,7 +2284,7 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
           // leading group (Perl's behavior for un-braced titles). This
           // realizes the Perl author's own "take balanced beginning" note
           // and drops trailing page/font junk LaTeXML never renders. See
-          // docs/OXIDIZED_DESIGN.md (bib-section title = leading group).
+          // docs/parity/OXIDIZED_DESIGN.md (bib-section title = leading group).
           let title_toks = if tokens[0].get_catcode() == Catcode::BEGIN {
             let mut depth = 0i32;
             let mut end = tokens.len();
@@ -6528,7 +6528,7 @@ LoadDefinitions!({
   // NOTE: this does NOT fix the SHARED hyperref hang on 2004.08143
   // (`pdfauthor={…Mar{\'\i}n…}`) — there the font encoding is "ASCII" (set by
   // `beginSemiverbatim`), not None, so the OT1 fallback never triggers; that
-  // loop reproduces in Perl too (see docs/KNOWN_PERL_ERRORS.md, "text-symbol
+  // loop reproduces in Perl too (see docs/parity/KNOWN_PERL_ERRORS.md, "text-symbol
   // CS in a Semiverbatim option").
   DefMacro!("\\f@encoding", {
     ExplodeText!(

@@ -124,7 +124,7 @@ from the embedded dumps. The host **TeX Live ecosystem is out of scope** —
 reading `.sty`/`.cls`/`.tfm` from the user's texmf tree via `kpathsea` is
 allowed and expected (see the runtime-dependency note below). See the
 "Self-contained, portable binary" principle in
-[`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md).
+[`OXIDIZED_DESIGN.md`](../parity/OXIDIZED_DESIGN.md).
 
 The churn-prone C libraries are STATICALLY linked, so only the platform's
 core runtime stays dynamic:

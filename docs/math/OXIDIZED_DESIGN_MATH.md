@@ -1,8 +1,8 @@
 # Oxidized Design — Math Parser & Grammar
 
-[← OXIDIZED_DESIGN.md](OXIDIZED_DESIGN.md) · Marpa-style ambiguous grammar design + the numbered grammar-rule divergences.
+[← OXIDIZED_DESIGN.md](../parity/OXIDIZED_DESIGN.md) · Marpa-style ambiguous grammar design + the numbered grammar-rule divergences.
 
-> **Numbering note:** these `### N` numbers (`#16`, and the grammar cluster `#7–#18`) are a SEPARATE sequence from the divergences in [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) and collide with them by value — kept verbatim because code refers to them (notably `#18` = "Speculative function application", the f(x)→apply decision). See also divergence #4 (Marpa parser) and #15 (improved parses) in the divergences file.
+> **Numbering note:** these `### N` numbers (`#16`, and the grammar cluster `#7–#18`) are a SEPARATE sequence from the divergences in [OXIDIZED_DESIGN_DIVERGENCES.md](../parity/OXIDIZED_DESIGN_DIVERGENCES.md) and collide with them by value — kept verbatim because code refers to them (notably `#18` = "Speculative function application", the f(x)→apply decision). See also divergence #4 (Marpa parser) and #15 (improved parses) in the divergences file.
 
 ---
 

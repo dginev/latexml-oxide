@@ -27,7 +27,7 @@ SINK="${3:-51696}"
 SERVICE="${4:-oxidized_tex_to_html}"
 
 # Optional explicit worker count (else the harness sizes itself); keep memory/timeout guards at the
-# binary's validated defaults — see docs/CORTEX_WORKER_HARNESS.md.
+# binary's validated defaults — see docs/performance/CORTEX_WORKER_HARNESS.md.
 WORKERS_FLAG=""
 [ -n "${WORKERS:-}" ] && WORKERS_FLAG="--workers ${WORKERS}"
 
