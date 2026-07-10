@@ -25,7 +25,7 @@ libxslt = "0.1.4"
 log = "0.4"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 unicode-normalization = "0.1.25"
-imagesize = "0.14"
+imagesize = "0.15"
 rustc-hash = "2.0.0"
 # Content-addressed graphics cache (see src/graphics_cache.rs). SHA-256
 # fingerprints (source bytes + render opts). Only `Digest`+`Sha256` are
