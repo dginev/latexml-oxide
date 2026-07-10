@@ -1746,3 +1746,41 @@ its own `apxproof`/`proofatend` environments, unused here). Fixing this also
 required a core catcode fix (option values stored with LETTER catcode — see
 WISDOM #61) so apxproof's `\ifthenelse{\equal{\axp@bibliography}{common}}`
 validation succeeds. Regression fixture: `tests/keyval_options/optcatcode*`.
+
+## 45. IEEEeqnarray raw `\halign`: a row starting with an empty cell breaks the alignment
+
+**Perl source:** none — LaTeXML ships no `IEEEtrantools.sty.ltxml`; it binds the
+IEEEeqnarray family only inside `IEEEtran.cls.ltxml` (L242-332,
+`DefMacroI('\IEEEeqnarray', '{}', '\eqnarray')`). So `article` +
+`\usepackage{IEEEtrantools}` raw-loads IEEEtrantools.sty and uses its raw
+`\halign`.
+
+**Symptom:** an IEEEeqnarray row that BEGINS with an empty cell (a leading `&`,
+e.g. `\nonumber\\ & & +\beta\ldots`) raises
+`Error:unexpected:\halign Attempt to end mode restricted_horizontal`, then a
+cascade of `_`/`^ can only appear in math mode` as the body leaks out of math
+mode; the equation is mangled (the rest of the document still converts).
+Reduction: a single row or two FULL rows are fine; only a leading-empty-cell row
+triggers it; `{}` before the `&` is the author-side workaround. Ground truth
+(same host): **pdflatex typesets it fine**; **Perl LaTeXML fails the same way**
+(shared raw-`\halign` limitation — LaTeXML's alignment model, both engines,
+mishandles the empty first cell; the code even flags it "mostly Wrong … not
+there yet", `tex_tables.rs::digest_alignment_column` region).
+
+**Minimal example** (`docs/reproducers/ieeeeqnarray_leading_empty_cell.tex`, run
+with `--includestyles`):
+```tex
+\documentclass{article}\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+a & = & b \\
+& = & d
+\end{IEEEeqnarray}
+\end{document}
+```
+
+**Rust status:** SURPASSES Perl via a native `IEEEtrantools.sty` binding
+(`latexml_package/src/package/ieeetrantools_sty.rs`) that maps the IEEEeqnarray
+family onto native `\eqnarray` (which handles leading-empty cells), instead of
+the raw `\halign`. The underlying raw-`\halign` empty-first-cell limitation
+remains for other raw alignments (the broader `\lx@begin@alignment` family).
