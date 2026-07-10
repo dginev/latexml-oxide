@@ -103,8 +103,9 @@ pub struct Config {
   pub include_comments:        Option<bool>,
   /// Strict error-reporting (`--strict`; State `STRICT`, Perl Core.pm L43)
   pub strict:                  Option<bool>,
-  /// Raw-load `.sty`/`.cls` sources (`--includestyles`; State
-  /// `INCLUDE_STYLES`/`INCLUDE_CLASSES`, Perl Core.pm L55-57)
+  /// Raw-load `.sty` AND `.cls` sources (`--includestyles`). WARNING: one flag
+  /// enables raw TeX loading of both packages and classes — it sets State
+  /// `INCLUDE_STYLES` and `INCLUDE_CLASSES` together (Perl Core.pm L55-57).
   pub include_styles:          Option<bool>,
   /// Whether to skip math parsing (--nomathparse)
   pub nomathparse:             Option<bool>,

@@ -618,8 +618,11 @@ impl State {
     if let Some(strict) = options.strict {
       state.assign_value("STRICT", strict, Some(Scope::Global));
     }
-    // Perl Core.pm L55-57: INCLUDE_STYLES / INCLUDE_CLASSES (both default 0).
-    // `--includestyles` raw-loads .sty AND .cls sources from the search path.
+    // Perl Core.pm L55-57: `--includestyles` fans out to BOTH INCLUDE_STYLES
+    // and INCLUDE_CLASSES (both default 0), so it raw-loads .sty packages AND
+    // .cls classes from the search path. Faithful to Perl — its own
+    // `# … accept both classes and styles?` hedge notwithstanding, the code
+    // sets both, and INCLUDE_CLASSES is what unlocks raw .cls in LoadClass.
     if let Some(include_styles) = options.include_styles {
       state.assign_value("INCLUDE_STYLES", include_styles, Some(Scope::Global));
       state.assign_value("INCLUDE_CLASSES", include_styles, Some(Scope::Global));

@@ -135,9 +135,13 @@ struct Cli {
   #[arg(long)]
   strict: bool,
 
-  /// Raw-load `.sty`/`.cls` sources from the search path instead of relying
-  /// solely on LaTeXML bindings (Perl `--includestyles`; State
-  /// `INCLUDE_STYLES`/`INCLUDE_CLASSES`, Core.pm L55-57).
+  /// Raw-load `.sty` and `.cls` sources from the search path instead of
+  /// relying solely on LaTeXML bindings.
+  ///
+  /// WARNING: this raw-loads BOTH packages (`.sty`) AND classes (`.cls`) — one
+  /// `--includestyles` sets INCLUDE_STYLES and INCLUDE_CLASSES together
+  /// (faithful to Perl `--includestyles`, Core.pm L55-57), so document classes
+  /// get raw TeX loading too, not just packages.
   #[arg(long)]
   includestyles: bool,
 
