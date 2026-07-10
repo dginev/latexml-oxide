@@ -2199,3 +2199,32 @@ Debugging recipe: bisect with `\setbox0=\vbox` probes against reference Perl
 (`perl -I LaTeXML/lib LaTeXML/bin/latexml`, `--debug=size-detailed`) AND
 pdflatex ground truth; both engines deliberately over-estimate, so chase
 *divergence from Perl*, not from TeX.
+
+## #61 `\usepackage[...]` option values must be stored with LETTER catcode — kvoptions `\equal`/`\ifx` validation is catcode-sensitive
+
+`\opt@<name>.<ext>` (the stored `\usepackage[opt=val]` option list, read back by
+kvoptions/keyval `\ProcessKeyvalOptions` → `\setkeys`) was built with
+`Explode!` in `latexml_core/src/binding/content.rs::before_input_handle_options`
+(the `\opt@…` `def_macro`). `Explode!` emits every char as `CharToken` = OTHER
+(catcode 12). Real LaTeX keeps the option tokens as read, so alphabetic chars are
+LETTER (catcode 11). The divergence is invisible until a package **compares** a
+`\DeclareStringOption` value: `ifthen`'s `\equal` (and a bare `\ifx`) compare
+replacement text *including catcodes*, so `\equal{\axp@bibliography}{common}`
+returned FALSE for a catcode-12 "common" vs the source's catcode-11 "common" —
+even though `\meaning` shows an identical `macro:->common`, and even though a
+plain `\def\x{common}` compares equal.
+
+**Fix:** use `ExplodeText!` (alphabetic → LETTER, others → OTHER) for the
+`\opt@…` body — the exact same fix already applied a few lines up to
+`\@currname`/`\@currext` (which broke kvoptions's `\ifx\@currext\@pkgextension`
+the same way; witnesses cond-mat/9611206, math/9904040). One-liner, but broad
+reach: every package that validates a string option via `\equal`/`\ifx`.
+
+**Diagnosis recipe** when a package spuriously rejects a *passed* option while
+its *defaults* work: the tell is "default value → `\equal` YES, passed value →
+`\equal` NO". Confirm with `\edef\x{\detokenize{val}}\ifthenelse{\equal{\x}{val}}`
+— if that is NO, the comparison is catcode-sensitive and the stored value is
+catcode-12. Do NOT "fix" `\equal` (it is faithfully catcode-sensitive, matching
+pdflatex); fix the value's catcode at the storage site. Witness: apxproof
+`bibliography=common` (gdsm.tex, KNOWN_PERL_ERRORS #44); regression fixture
+`tests/keyval_options/optcatcode*`.
