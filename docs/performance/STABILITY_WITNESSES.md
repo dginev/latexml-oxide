@@ -399,7 +399,7 @@ is NOT one bug, and NOT a watchdog opportunity:
 
 | Witness | Perl (same host) | Rust root cause | Verdict |
 |---|---|---|---|
-| `2605.23849` | **completes 46s, 0 fatal** | `\kbordermatrix` (bundled sty) `\loop … \ifhbox3 … \repeat` box-peel via `\lastbox`/`\unhbox` never terminates → `Fatal:Timeout:IfLimit` (16M) at 107s | **GENUINE-RUST-ONLY** — must fix |
+| `2605.23849` | **completes 46s, 0 fatal** (recovers from undefined `\@arstrut`/`\\`) | `\kbordermatrix`'s `\ialign` (Main.tex line 647) has `$…##…$` cells; Rust's `\lx@begin@inline@math` opens a math-mode frame that collides with the `\halign` group close → `Error:unexpected:\halign Attempt to close a group that switched to mode math` → error cascade → `Fatal:Timeout:IfLimit` (16M) at ~95–107s. **`\halign`-in-math**, NOT the `\lastbox` box-peel (that was a red herring from an unfaithful synthetic repro — see below) | **GENUINE-RUST-ONLY** — deep alignment+math-mode |
 | `2606.21610` | too_many_errors, **1.2s** | `\IfFileExists{sn-jnl.cls}{…}{…}` used to *conditionally pick* `\documentclass` (Overleaf/Springer pattern) → called in **plain-TeX context before the LaTeX-format dump loads** → undefined → expansion reads past EOF unbalanced → `Fatal:Timeout:TokenLimit` (1B) at 106s | both fatal; Rust **loops where Perl caps** |
 | `2605.21013` | too_many_errors, **2.0s** | undefined-macro cascade (bundled `arxiv.cls`: `\usetikzlibrary`/`\pgfplotsset`/…) → `Fatal:Timeout:IfLimit` at 107s | both fatal; Rust **loops where Perl caps** |
 | `2606.13482` | **times out >250s** | fatal at 99s (Rust fails *faster* than Perl) | **PARITY** (both pathological) |
@@ -416,10 +416,34 @@ needing a faithful per-mechanism fix, not a blunt early-abort:
    in a recovery state instead of terminating (Perl keeps emitting bounded errors →
    `too_many_errors` cap). Overlaps the deferred *read_balanced unbalanced-group leak*
    family ([[ar5iv-only-failure-xint-readbalanced-group-leak]]).
-2. **`\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop** (2605.23849). Deep
-   box-register handling; the one clean Perl-completes regression.
+2. **`\halign`-in-math cascade** (2605.23849; the clean Perl-completes regression).
+   `\kbordermatrix`'s `\ialign` cells are wrapped in `$…$`; the inline-math frame
+   (`\lx@begin@inline@math`) collides with the `\halign`/alignment group close →
+   `Error:unexpected:\halign Attempt to close a group that switched to mode math`
+   (stomach.rs egroup, `Main.tex:647`) → cascade → IfLimit. Perl instead just emits
+   the undefined-`\@arstrut`/`\\` errors and recovers. Deep alignment + math-mode
+   (the `\lx@begin@alignment` family; cf. the full-arXiv 12.1k `\lx@begin@alignment`
+   cluster). **Investigated 2026-07-10** (perl-port): a minimal `\lastbox`/`\unhbox`
+   box-peel repro turned out to be a *different* hbox loop and misled toward an
+   orthogonal fix — see the hbox-marker note below. The witness's real failure is the
+   `\halign`-in-math cascade above, still OPEN.
 3. **undefined-cascade → IfLimit** (2605.21013). Same "error-recovery loops instead
    of advancing" theme as (1) but via `\ifX` not tokens.
+
+**Side finding (2026-07-10, NOT the witness fix, unshipped).** Chasing 2605.23849 via
+a synthetic `\lastbox` box-peel repro surfaced a *real but orthogonal* faithfulness
+divergence: Rust's **hbox** content carries spurious `{`/`}` brace-marker `Box`es that
+Perl's `readBoxContents` (TeX_Box.pool.ltxml L181-183) does not — the horizontal path
+in `predigest_box_contents_in_mode` shortcuts through `invoke_token(T_BEGIN)` → the `{`
+primitive → `digest_next_body`, which invokes the closing `}` and appends its `isEmpty`
+T_END marker box, whereas the *vertical* path (and Perl) STOP at `T_END` without
+invoking it. **VBox was already migrated off this** (VBoxContents carries a `{}`
+`reversion` to compensate); HBox was not. A parallel fix (route horizontal through the
+explicit stop-at-`T_END` loop + add the HBoxContents reversion) makes hbox content
+byte-match Perl and passes local box tests, but it does **not** fix 2605.23849 (the
+witness fails earlier, in `\halign`-in-math) and is a hot-path change needing corpus
+output-neutrality validation — so it was **reverted, not shipped**. Recorded here as a
+candidate future consistency fix.
 Re-measure with the current binary first (sweep records go stale).
 
 ## Method notes
