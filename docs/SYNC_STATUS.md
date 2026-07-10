@@ -363,16 +363,22 @@ pool (no `Send` barrier; the tractable, high-feasibility half). MathML
 presentation per formula is independent pure computation → parallelize on BP-1's
 enabling work. Perl runs both serially.
 
-**BP-4 — Live digest-progress watchdog** (reclaims the ~100s runaway-fatal tail:
-`2605.23849` 149s, `2606.21610` 128s, `2605.21013`, `2606.13482` — 100s+ in digest,
-**0 formulae**, then fatal; see STABILITY_WITNESSES Cluster H). The **new per-phase
-telemetry** enables a *live* watchdog: if digest exceeds a budget with **zero
-document/formula progress**, abort early with a fatal. *Lever Perl lacks:* Perl
-only has blunt global `iflimit` counters; a phase-aware *no-progress* signal is
-finer. Gate on progress (0 boxes/formulae added in N s), NOT raw wall, to avoid
-false-aborting legit-slow-but-progressing papers. *Feasibility:* high; reliability
-+ throughput; directly leverages the telemetry we just built. Cross-ref the
-`\lx@begin@alignment` / runaway family.
+**BP-4 — Live digest-progress watchdog — RETIRED 2026-07-10 (triage overturned the
+premise).** The Cluster H "digest-runaway fatals" were triaged against same-host
+Perl (`STABILITY_WITNESSES.md` Cluster H): they are **not** a clean beyond-Perl
+watchdog opportunity but a heterogeneous set of **genuine Rust runaway-loop bugs**,
+and a no-progress abort would **regress `2605.23849`, which Perl converts cleanly**
+(46s, 0 fatal). Reclassified as Target-1 parity work — three distinct root causes:
+(a) `\IfFileExists`-before-`\documentclass` → expansion spins past EOF → TokenLimit
+(2606.21610; likely broad — conditional-`\documentclass` templates + the readBalanced/
+`\lx@begin@alignment` families; overlaps the deferred read_balanced unbalanced-group
+leak); (b) `\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop → IfLimit (2605.23849;
+the clean must-fix regression); (c) undefined-macro cascade → IfLimit (2605.21013).
+Each trips an *existing* high limit ~100s in (safety net present but late) and needs
+a faithful per-mechanism fix, NOT a blunt early-abort. The unifying theme in (a)+(c):
+Rust error-recovery *loops* where Perl keeps *advancing* (emitting bounded errors →
+`too_many_errors` cap, which Rust also has but never reaches because the loop emits
+none). Do not build the watchdog.
 
 **BP-5 — Content-addressed formula memoization** (math_parse 19% + mathml 4.5% on
 matrix/table/aligned-system-heavy papers, which repeat identical sub-formulae).
@@ -395,11 +401,12 @@ is algorithmic (profile the hot macros with the sampled `EXP_TRACE` histogram, c
 redundant re-tokenization / re-expansion). Track separately from the parallelism
 BPs above.
 
-Suggested order: **BP-4** (highest feasibility × reliability, uses the new
-telemetry) → **BP-2 Step 1** (cheap XSLT profile+amortize) → **BP-3 graphics
-batch** → **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each lands on a
-feature branch, gated by the isolated before/after output-neutrality harness +
-Perl parity + `cargo test`.
+Suggested order (revised 2026-07-10 after BP-4 was retired): **BP-2 Step 1** (cheap
+XSLT profile+amortize — the cleanest, divergence-free win) → **BP-3 graphics batch**
+→ **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each lands on a feature
+branch, gated by the isolated before/after output-neutrality harness + Perl parity +
+`cargo test`. Separately, the Cluster H runaway-loop bugs (ex-BP-4) are Target-1
+parity work tracked in `STABILITY_WITNESSES.md`.
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 

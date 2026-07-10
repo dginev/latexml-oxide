@@ -392,20 +392,35 @@ cluster, not a perf one.** Four of the top-8 slowest papers spend 100s+ in the
 digestion loop that burns ~100s before dying (fatal `mean_wall` 13s vs `no_problem`
 4.5s; fatal P99 wall 98s, driven entirely by this population).
 
-**Witnesses** (current containerized worker, git ~`d28b6dc`/HEAD):
-- `2605.23849` — 149.0s, digest-dominated, 0 formulae, **fatal**
-- `2606.21610` — 127.8s, digest-dominated, 0 formulae, **fatal**
-- `2605.21013` — 125.8s, digest-dominated, 0 formulae, **fatal**
-- `2606.13482` — 117.2s, digest-dominated, 0 formulae, **fatal**
+**TRIAGED 2026-07-10** (current `--release` binary + same-host Perl 0.8.8, ar5iv
+preload, per `canvas-triage`). The four witnesses share the *signature*
+(digest-runaway → fatal, 0 formulae) but have **three distinct root causes** — this
+is NOT one bug, and NOT a watchdog opportunity:
 
-**Not yet root-caused** (needs same-host Perl triage per `canvas-triage`): likely
-the runaway / `\lx@begin@alignment` family (cf. full-arXiv `\lx@begin@alignment`
-12.1k cluster). **Two tracks:** (1) triage each witness → is the fatal PARITY
-(Perl also runaways/caps) or GENUINE-RUST-ONLY? (2) regardless of verdict, the
-**BP-4 live digest-progress watchdog** (`SYNC_STATUS.md`) reclaims the ~100s waste
-by aborting a *no-progress* digest early — a throughput + reliability win that does
-not depend on the per-paper root cause. Re-measure with the current binary first
-(sweep records go stale).
+| Witness | Perl (same host) | Rust root cause | Verdict |
+|---|---|---|---|
+| `2605.23849` | **completes 46s, 0 fatal** | `\kbordermatrix` (bundled sty) `\loop … \ifhbox3 … \repeat` box-peel via `\lastbox`/`\unhbox` never terminates → `Fatal:Timeout:IfLimit` (16M) at 107s | **GENUINE-RUST-ONLY** — must fix |
+| `2606.21610` | too_many_errors, **1.2s** | `\IfFileExists{sn-jnl.cls}{…}{…}` used to *conditionally pick* `\documentclass` (Overleaf/Springer pattern) → called in **plain-TeX context before the LaTeX-format dump loads** → undefined → expansion reads past EOF unbalanced → `Fatal:Timeout:TokenLimit` (1B) at 106s | both fatal; Rust **loops where Perl caps** |
+| `2605.21013` | too_many_errors, **2.0s** | undefined-macro cascade (bundled `arxiv.cls`: `\usetikzlibrary`/`\pgfplotsset`/…) → `Fatal:Timeout:IfLimit` at 107s | both fatal; Rust **loops where Perl caps** |
+| `2606.13482` | **times out >250s** | fatal at 99s (Rust fails *faster* than Perl) | **PARITY** (both pathological) |
+
+**Verdict — BP-4 (no-progress watchdog) is RETIRED as a "beyond-Perl perf win."** It
+would abort `2605.23849`, which **Perl converts cleanly** → a strict regression. The
+three genuine issues are Rust runaway-loop bugs (all trip an *existing* high limit —
+16M IfLimit / 1B TokenLimit — ~100s in, so the safety net exists but late), each
+needing a faithful per-mechanism fix, not a blunt early-abort:
+1. **`\IfFileExists`-before-`\documentclass` → readBalanced/expansion spin past EOF**
+   (2606.21610). Likely broad (conditional-`\documentclass` templates + the
+   full-arXiv readBalanced/`\lx@begin@alignment` families). The genuine gap:
+   after an undefined-macro error, the main expansion loop spins reading past EOF
+   in a recovery state instead of terminating (Perl keeps emitting bounded errors →
+   `too_many_errors` cap). Overlaps the deferred *read_balanced unbalanced-group leak*
+   family ([[ar5iv-only-failure-xint-readbalanced-group-leak]]).
+2. **`\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop** (2605.23849). Deep
+   box-register handling; the one clean Perl-completes regression.
+3. **undefined-cascade → IfLimit** (2605.21013). Same "error-recovery loops instead
+   of advancing" theme as (1) but via `\ifX` not tokens.
+Re-measure with the current binary first (sweep records go stale).
 
 ## Method notes
 
