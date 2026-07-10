@@ -107,15 +107,23 @@ LoadDefinitions!({
 
   // Remember; \par _closes_, not opens, paragraphs!
   // Here, we want to close both an open p and para (if either are open).
-  // NOTE Also that the whole inPreamble bit is, I think, overused.
-  // For example, \par should be a NOOP in vertical mode, and that would generally make it
-  // ignored in the preamble.
+  // \par is a NOOP only in the RAW preamble; everywhere else it closes the paragraph
+  // being built (the exact rule + rationale are in after_digest, where the `noop`
+  // property is set). This is the pragmatic realization of Perl's note ("\par should
+  // be a NOOP in vertical mode ... if we can be sure we're tracking modes correctly"):
+  // we can't rely on mode (LaTeXML stays vertical after display math), so we key on
+  // CONTEXT — whether `\begin{document}` has opened the document environment — instead.
+  // The old code gated the no-op purely on the latexml-only `inPreamble` flag, which
+  // made a blank line inside `\AtBeginDocument` a no-op and failed to split paragraphs
+  // (upstream #2754). So #2846's early `inPreamble=0` — and its `\@onlypreamble`
+  // collateral (#2848) — are unnecessary: `\begin{document}` leaves the preamble AFTER
+  // the hooks again, keeping a deferred `\RequirePackage`/`\usepackage` legal.
   let mut skippable_props: SymHashMap<Stored> = SymHashMap::default();
   skippable_props.insert("alignmentSkippable", Stored::Bool(true));
 
   DefConstructor!("\\lx@normal@par",
     sub[document, _args, props] {
-      if !prop_bool!(props, "inPreamble") {
+      if !prop_bool!(props, "noop") {
         document.maybe_close_element("ltx:p")?;
         let element = document.get_element();
         if let Some(mut node) = element {
@@ -161,9 +169,42 @@ LoadDefinitions!({
         whatsit.set_property("internal_par", true);
         whatsit.set_property("reversion", Tokens!());
       }
-      let in_preamble = LookupBool!("inPreamble");
-      if in_preamble {
-        whatsit.set_property("inPreamble", true);
+      // \par is a NOOP only in the RAW preamble — before `\begin{document}` opens the
+      // document environment (package loading, stray `\str_lowercase` output in the
+      // preamble, …). Everywhere else it closes the paragraph being built. Two signals,
+      // both existing state, no mode test:
+      //   * `inPreamble` is set from the preamble start until we leave it (AFTER the
+      //     begindocument hooks — see `\begin{document}`); and
+      //   * `current_environment` gains `document` at the START of `\begin{document}`
+      //     (before any hook), so it is on the stack throughout the hooks and the body.
+      // NOOP iff `inPreamble && document NOT on the env stack`. That is exactly the raw
+      // preamble — so a blank line inside `\AtBeginDocument` (which runs inside the
+      // `document` env while `inPreamble` is still set) splits paragraphs (upstream
+      // #2754), while a deferred `\RequirePackage`/`\usepackage` stays legal (inPreamble
+      // still 1 → onlyPreamble guard passes). Because this no-op no longer hinges on
+      // clearing `inPreamble` before the hooks, upstream #2846's early `inPreamble=0`
+      // and the `inBeginDocumentHook` guard-decouple it forced (#2848) are unnecessary.
+      //
+      // Why NOT the Perl note's literal "no-op in vertical mode"? LaTeXML's mode
+      // tracking isn't faithful enough (it stays vertical after a display equation, so a
+      // mode test would drop the blank line between `$$…$$` groups — spacing.xml,
+      // verb.xml; and raw-preamble text is horizontal, so mode can't tell it from a hook
+      // `\par` — expl3 str/text-case fixtures). Context (are we in the document?), not
+      // mode, is the stable discriminator.
+      //
+      // We check the whole env STACK (Perl `grep {…} lookupStackedValues`), not just the
+      // current env, so a hook that opens a nested environment (e.g.
+      // `\AtBeginDocument{\begin{center}…}`) still counts as "in document". The stack
+      // walk only runs when `inPreamble` is set (a tiny window) — `&&` short-circuits in
+      // the body, where `\par` is hot.
+      let in_document = with_stacked_values("current_environment", |envs| {
+        envs
+          .iter()
+          .any(|v| matches!(&**v, Stored::String(s) if with(*s, |e| e == "document")))
+      });
+      let noop = LookupBool!("inPreamble") && !in_document;
+      if noop {
+        whatsit.set_property("noop", true);
         Ok(Vec::new())
       } else {
         if let Some(c) = lookup_value("next_para_class") {

@@ -1686,28 +1686,38 @@ comment is the author's own doubt.
 
 **Perl status:** REGRESSION introduced by #2846 (verified: vendored post-#2846
 `latexml` rev 51fea96a errors on the reproducer; installed pre-#2846 0.8.8 does
-not). Candidate to upstream (restore the assignment to after `@at@begin@document`).
+not). **Fixed in both Rust and Perl here** (revert #2846 + make `\par` context-aware
+— see below); candidate to upstream as the #2846 follow-up.
 
-**The two are one overloaded flag.** `inPreamble` gates BOTH transitions
-`latex.ltx` `\document` performs at different points: (A) body typesetting begins
-— governs `\par` — which runs BEFORE the begindocument hook (`\UseOneTimeHook`,
-L9512); and (B) `\@preamblecmds` disables the `\@onlypreamble` commands — governs
-this guard — which runs AFTER it (L9522). Clearing `inPreamble` before the hook
-(so `\par` breaks paragraphs, #2846/#2754) disables the guard too early; holding
-it across the hook (so the guard passes, our first fix) makes `\par` a no-op and
-REGRESSES #2754 (the blank line stops splitting paragraphs —
-`docs/reproducers/atbegindocument_paragraph_break.tex`). A single flag cannot
-serve both.
+**#2846 tried to overload `inPreamble` for two transitions.** `latex.ltx`
+`\document` performs two things at different points: (A) body typesetting begins —
+governs `\par` — BEFORE the begindocument hook (`\UseOneTimeHook`, L9512); and (B)
+`\@preamblecmds` disables the `\@onlypreamble` commands — governs this guard —
+AFTER it (L9522). #2846 cleared `inPreamble` before the hook to get (A), but
+`inPreamble` also gates (B), so it disabled the guard too early. The resolution is
+NOT a second flag, but to stop routing `\par` through `inPreamble` at all.
 
-**Rust status (fixed — Direction B, guard decoupled):** the earlier "hold
-`inPreamble=1` across the hook" fix (`2fe9fd76fa`) fixed `\RequirePackage` but
-silently reintroduced #2754. `latex_constructs.rs` now DECOUPLES the two: it clears
-`inPreamble` BEFORE `@at@begin@document` (transition A — #2846/`latex.ltx`
-placement, so `\par` splits paragraphs) and tracks transition B with a dedicated
-`inBeginDocumentHook` flag (global scope, set across the hook digests, cleared at
-the `\@preamblecmds` point). `only_preamble` passes when `inPreamble ||
-inBeginDocumentHook`, so both hold simultaneously. Blast radius is one line of the
-guard — `\par` and the `inPreamble` timing are untouched. Covered by both
-reproducers (paragraph-break + `\RequirePackage`) with a body-level
-`\RequirePackage` still erroring (parity). The upstream Perl fix mirrors this on
-branch `in-begin-document-hook` (follow-up to #2846).
+**The fix (both engines — `\par` made context-aware; #2846 reverted).**
+`\begin{document}` restores the pre-#2846 placement (`inPreamble=0` AFTER the hooks
+— so a deferred `\RequirePackage`/`\usepackage` stays legal; the onlyPreamble guard
+is a plain `inPreamble` check again, no `inBeginDocumentHook`). `\lx@normal@par` is a
+no-op **only in the RAW preamble** — `inPreamble` set AND `document` NOT on the env
+stack. Everywhere else it closes the paragraph being built. Signals used (both are
+existing state in Perl and Rust): `inPreamble`; and `current_environment`, which
+`\begin{document}` sets to `document` at its START (Perl L316 / Rust
+`latex_constructs.rs`), so it is on the stack throughout the hooks and the body.
+Hence a blank line inside `\AtBeginDocument` (which runs in the document env) splits
+paragraphs (#2754), while `\RequirePackage` there stays legal (inPreamble still 1).
+
+Why *context*, not the note's literal "no-op in vertical mode"? LaTeXML's mode
+tracking isn't faithful enough: it stays `vertical` after a display equation (a mode
+test would drop the blank line between `$$…$$` groups — `spacing.xml`, `verb.xml`,
+AND `\AtBeginDocument{\[x\]\n\ntext}`), and raw-preamble text is `horizontal` yet
+must stay merged (expl3 case fixtures) — mode can't tell it from a hook `\par`. The
+env-**stack** check (Perl `grep {…} lookupStackedValues('current_environment')` /
+Rust `with_stacked_values`) also keeps a hook that opens a nested environment
+(`\AtBeginDocument{\begin{center}…}`) counting as "in document"; the walk only runs
+while `inPreamble` is set (`&&` short-circuits in the hot body path). Covered by both
+reproducers (`docs/reproducers/atbegindocument_paragraph_break.tex` +
+`atbegindocument_requirepackage.tex`, wired as `tests/structure/atbegindocument_*`),
+with a body-level `\RequirePackage` still erroring (parity).

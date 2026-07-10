@@ -1,0 +1,11 @@
+% Upstream #2754 / #2846 counterpart: a package deferred to \AtBeginDocument must
+% stay loadable. The hooks run with inPreamble still set (we leave the preamble only
+% after them), so \RequirePackage/\usepackage remains legal — real latex.ltx disables
+% the \@onlypreamble commands only AFTER the begindocument hook. xcolor loads and its
+% \color is usable in the body. A body-level \RequirePackage would still error (parity).
+% See docs/KNOWN_PERL_ERRORS.md #43.
+\documentclass{article}
+\AtBeginDocument{\RequirePackage{xcolor}}
+\begin{document}
+And {\color{red} red}.
+\end{document}

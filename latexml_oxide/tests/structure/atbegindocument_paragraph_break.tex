@@ -1,0 +1,14 @@
+% Upstream #2754 / #2846: a blank line inside \AtBeginDocument must break a
+% paragraph. The hook runs during \begin{document} (current_environment=document)
+% while inPreamble is still set, so \par is active in horizontal mode:
+% "Paragraph 1." and "Paragraph 2." are two separate <ltx:p>. See
+% docs/KNOWN_PERL_ERRORS.md #43 and tex_paragraph.rs \lx@normal@par.
+\documentclass{book}
+\AtBeginDocument{
+  Paragraph 1.
+
+  Paragraph 2.
+}
+\begin{document}
+  Text.
+\end{document}

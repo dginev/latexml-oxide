@@ -332,16 +332,15 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
-  // Legal in the preamble, AND while the begindocument hooks run: real latex.ltx
-  // (`\document`) disables the \@onlypreamble commands (`\@preamblecmds`, L9522)
-  // only AFTER firing the begindocument hook (L9512), so a deferred
-  // `\RequirePackage`/`\usepackage` inside `\AtBeginDocument` is legal. The two
-  // states are distinct transitions latex.ltx runs at different points — LaTeXML
-  // fused both onto `inPreamble`, so we give the onlyPreamble guard its own signal
-  // (`inBeginDocumentHook`, set across the hooks in `\begin{document}`) rather than
-  // holding `inPreamble=1` through the hook (which would suppress paragraph breaks
-  // in \AtBeginDocument — upstream #2754 vs #2846; KNOWN_PERL_ERRORS #43).
-  if !lookup_bool_sym(pin!("inPreamble")) && !lookup_bool_sym(pin!("inBeginDocumentHook")) {
+  // Legal while `inPreamble`. `\begin{document}` keeps `inPreamble=1` through the
+  // begindocument hooks and only clears it AFTER them (matching real latex.ltx,
+  // which disables the \@onlypreamble commands via `\@preamblecmds` (L9522) only
+  // after firing the begindocument hook (L9512)), so a `\RequirePackage`/
+  // `\usepackage` deferred to `\AtBeginDocument` is still legal — no separate hook
+  // flag needed. Paragraph-breaking inside `\AtBeginDocument` (upstream #2754) is
+  // handled independently by `\par`'s no-op-in-vertical-mode rule, NOT by clearing
+  // `inPreamble` early (upstream #2846 is thus unnecessary; KNOWN_PERL_ERRORS #43).
+  if !lookup_bool_sym(pin!("inPreamble")) {
     Error!(
       "unexpected",
       cs,
@@ -3329,41 +3328,34 @@ LoadDefinitions!({
     // is emitted exactly once (matching Perl's acl output, incl. `ltx_authors_1line`,
     // and surpassing Perl on the inline case). Scope is narrow: only these two nested
     // hook digests, not the general before/after-digest unlock.
-    // DECOUPLE the two preamble transitions latex.ltx runs at different points
-    // (LaTeXML historically fused both onto `inPreamble`; see #2754 vs #2846):
-    //   (A) body typesetting begins  → governs `\par` (must break paragraphs
-    //       inside \AtBeginDocument). We leave the preamble (`inPreamble=0`) BEFORE
-    //       @at@begin@document, matching latex.ltx (body typesetting is live at the
-    //       hook) and upstream #2846. Setting inPreamble=0 AFTER the hook instead
-    //       makes `\par` a no-op in \AtBeginDocument (blank line fails to split —
-    //       upstream #2754).
-    //   (B) \@onlypreamble commands get disabled (`\@preamblecmds`, latex.ltx
-    //       L9522) → governs the onlyPreamble guard. This happens AFTER the
-    //       begindocument hook (L9512), so `\RequirePackage`/`\usepackage` deferred
-    //       to \AtBeginDocument stay legal. We track (B) with `inBeginDocumentHook`
-    //       (set here, cleared after the begindocument hook), so the guard passes
-    //       through the hook window independently of `inPreamble`.
-    // Ground truth: pdflatex AND same-host Perl accept both a paragraph-splitting
-    // and a `\RequirePackage`-loading \AtBeginDocument (reproducers
-    // atbegindocument_requirepackage.tex + the #2754 book example; corpus witnesses
-    // arXiv:2605.00022 / 2605.00119). KNOWN_PERL_ERRORS #43.
-    assign_value("inBeginDocumentHook", true, Some(Scope::Global));
+    // Leave the preamble (`inPreamble=0`) only AFTER the begindocument hooks below —
+    // the pre-#2846 latex.ltx placement (`\@preamblecmds` disables the \@onlypreamble
+    // commands at L9522, AFTER firing the begindocument hook at L9512). So
+    // `\RequirePackage`/`\usepackage` deferred to \AtBeginDocument runs while still
+    // `inPreamble=1` and stays legal. Paragraph-breaking inside \AtBeginDocument
+    // (upstream #2754) does NOT depend on this timing: `\par` (tex_paragraph.rs) closes
+    // a paragraph whenever one is being built in the `document` environment — the hooks
+    // run with `current_environment=document` — so a blank line after some
+    // \AtBeginDocument text (horizontal mode) breaks a paragraph even while
+    // `inPreamble=1`. That makes upstream #2846's early clear — and the
+    // `inBeginDocumentHook` guard-decouple it forced (#2848) — unnecessary; one flag,
+    // one transition. Ground truth: pdflatex
+    // AND same-host Perl accept both a paragraph-splitting and a `\RequirePackage`-
+    // loading \AtBeginDocument (reproducers atbegindocument_requirepackage.tex + the
+    // #2754 book example; corpus witnesses arXiv:2605.00022 / 2605.00119).
+    // KNOWN_PERL_ERRORS #43.
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
       local_state_unlocked(false);
       let r = digest(ops);
       expire_state_unlocked();
       boxes.push(r?);
     }
-    // (A) Leave the preamble now — BEFORE @at@begin@document (upstream #2846 /
-    // latex.ltx placement) — so `\par` closes paragraphs inside \AtBeginDocument.
-    // The onlyPreamble guard stays satisfied via `inBeginDocumentHook` above.
-    assign_value("inPreamble", false, None);
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
     //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
     //   2. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument,
     //      STILL preamble (latex.ltx disables \@onlypreamble only afterwards)
-    //   3. leave the preamble  (inPreamble=0)
+    //   3. leave the preamble  (inPreamble=0, AFTER the hooks — see below)
     // begindocument/before therefore fires while inPreamble=1: it carries
     // last-minute preamble setup (deferred `\RequirePackage`, translations.sty's
     // language initialiser) that must precede leaving the preamble — firing it
@@ -3409,13 +3401,14 @@ LoadDefinitions!({
       ))?);
     }
     // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
-    // is already 0 here (transition A, above), so `\par` closes paragraphs and a
-    // blank line inside \AtBeginDocument splits them (fixes #2754). The onlyPreamble
-    // guard stays satisfied through the hook via `inBeginDocumentHook` (transition
-    // B), so a deferred `\RequirePackage`/`\usepackage` here is still legal (corpus
-    // witnesses arXiv:2605.00022 / 2605.00119: inconsolata.sty →
+    // is STILL 1 here (we leave the preamble only after this block), so a deferred
+    // `\RequirePackage`/`\usepackage` remains legal (corpus witnesses
+    // arXiv:2605.00022 / 2605.00119: inconsolata.sty →
     // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's `\RequirePackage
-    // {textcomp}`). Both hold simultaneously — the two states are decoupled above.
+    // {textcomp}`). A blank line here still splits paragraphs (fixes #2754): the hooks
+    // run inside the `document` environment, so `\par` is active (only the RAW preamble,
+    // where `document` is not yet on the env stack, no-ops it) regardless of
+    // `inPreamble` (tex_paragraph.rs).
     if let Some(ops) = lookup_tokens("@at@begin@document") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -3446,12 +3439,13 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
-    // (B) The `\@preamblecmds` point (latex.ltx L9522, AFTER the begindocument
-    // hook): the \@onlypreamble commands are now disabled. Close the hook window —
-    // from here the onlyPreamble guard rejects body-level `\RequirePackage`/
-    // `\usepackage` (matching pdflatex + Perl). `inPreamble` is already 0 (set
-    // before @at@begin@document, above).
-    assign_value("inBeginDocumentHook", false, Some(Scope::Global));
+    // Leave the preamble now — AFTER the begindocument hooks (the `\@preamblecmds`
+    // point, latex.ltx L9522). This single transition both (a) disables the
+    // \@onlypreamble commands, so from here the onlyPreamble guard rejects body-level
+    // `\RequirePackage`/`\usepackage` (matching pdflatex + Perl), and (b) restores the
+    // pre-#2846 placement — `\AtBeginDocument` above ran while still `inPreamble=1`.
+    // `\par` paragraph-breaking is governed by mode + the `document` env, not this flag.
+    assign_value("inPreamble", false, None);
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
     // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —

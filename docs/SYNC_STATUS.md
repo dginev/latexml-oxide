@@ -15,8 +15,26 @@
 
 ## Current status
 
-- `cargo test --tests`: **1532 / 0 / 0** (on `fidelity-improvements-072026`; the
+- `cargo test --tests`: **1534 / 0 / 0** (on `fidelity-improvements-072026`; the
   completed 2026-07 session logs are archived — see the pointer below).
+
+- **2026-07-09 — `\AtBeginDocument` #2754/#2846 re-done via context-aware `\par`
+  (Direction B retired; ported to Perl too).** The earlier `inBeginDocumentHook`
+  guard-decouple is reverted: `\begin{document}` restores the pre-#2846
+  `inPreamble=0`-after-hooks placement and `only_preamble` is a plain `inPreamble`
+  check again (no second flag). `\lx@normal@par` is a no-op **only in the raw
+  preamble** — `inPreamble` set AND `document` NOT on the `current_environment`
+  stack; everywhere else it closes the paragraph being built. So a blank line in
+  `\AtBeginDocument` (runs in the document env) splits paragraphs (#2754) while a
+  deferred `\RequirePackage`/`\usepackage` stays legal (inPreamble still 1). NOT the
+  note's literal "no-op in vertical mode": LaTeXML's mode tracking isn't faithful
+  (stays vertical after display math — would also mis-merge `\AtBeginDocument{\[x\]…}`;
+  raw-preamble text is horizontal yet must merge — expl3 case fixtures), so CONTEXT
+  (are we in the document env) is the stable signal; the env-**stack** check also
+  handles nested envs inside hooks. Applied identically in Perl
+  (`LaTeXML/lib/.../latex_constructs.pool.ltxml` + `TeX_Paragraph.pool.ltxml`,
+  `lookupStackedValues`). New regression tests: `tests/structure/atbegindocument_*`.
+  See `KNOWN_PERL_ERRORS.md` #43. Candidate to upstream as the #2846 follow-up.
 
 ### Session logs (2026-06-22 … 2026-07-08) — ARCHIVED
 
