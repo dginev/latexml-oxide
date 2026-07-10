@@ -1721,3 +1721,28 @@ while `inPreamble` is set (`&&` short-circuits in the hot body path). Covered by
 reproducers (`docs/reproducers/atbegindocument_paragraph_break.tex` +
 `atbegindocument_requirepackage.tex`, wired as `tests/structure/atbegindocument_*`),
 with a body-level `\RequirePackage` still erroring (parity).
+
+## 44. apxproof + kvoptions: `\ProcessLocalKeyvalOptions*` aborts the bibliography
+
+**Perl source:** none — LaTeXML ships no `apxproof.sty.ltxml` (neither upstream
+nor ar5iv-bindings), so Perl relies on raw-loading `apxproof.sty` under
+`--includestyles`.
+
+**Symptom (Perl, verbose, same host):** apxproof.sty L58 `\ProcessLocalKeyvalOptions*`
+trips Perl's kvoptions handling —
+`Package kvoptions Error: \ProcessLocalKeyvalOptions is intended for packages only`
+— which then cascades to `Error: unsupported option bibliography=common for package
+apxproof`. Net result: the `biblatex` citation wiring never runs and the document
+renders **0 bibliography entries**. Ground truth (same host): **pdflatex → full
+bibliography**. Witness: `/home/deyan/Downloads/bib_bug/gdsm.tex` (biblatex +
+`\usepackage[bibliography=common]{apxproof}`, 24 cited entries).
+
+**Rust status:** SURPASSES Perl. A `latexml_contrib/src/apxproof_sty.rs` binding
+force-raw-loads `apxproof.sty` in every config (bare / `--includestyles` / ar5iv),
+and Rust's kvoptions raw-load handles `\ProcessLocalKeyvalOptions*` — so apxproof's
+setup runs, biblatex reads the `.bib`, all 24 citations link, and the 6 `proof`
+environments keep LaTeXML's usual amsthm `ltx_proof` markup (apxproof defers only
+its own `apxproof`/`proofatend` environments, unused here). Fixing this also
+required a core catcode fix (option values stored with LETTER catcode — see
+WISDOM #61) so apxproof's `\ifthenelse{\equal{\axp@bibliography}{common}}`
+validation succeeds. Regression fixture: `tests/keyval_options/optcatcode*`.

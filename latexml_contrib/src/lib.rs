@@ -41,6 +41,7 @@ pub mod alegreyasans_sty;
 pub mod aliascnt_sty;
 pub mod aomart_cls;
 pub mod apacite_sty;
+pub mod apxproof_sty;
 pub mod ar5iv_sty;
 pub mod arxbj_cls;
 pub mod arydshln_sty;
@@ -257,6 +258,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // ar5iv-bindings ports
   ("aistats2026", "sty", aistats2026_sty::load_definitions),
   ("aliascnt", "sty", aliascnt_sty::load_definitions),
+  // No Perl binding; force-raw-load apxproof.sty in all configs so its
+  // biblatex citation wiring runs even in bare mode (see apxproof_sty.rs).
+  ("apxproof", "sty", apxproof_sty::load_definitions),
   ("ascmac", "sty", ascmac_sty::load_definitions),
   ("atableau", "sty", atableau_sty::load_definitions),
   ("bussproofs", "sty", bussproofs_sty::load_definitions),

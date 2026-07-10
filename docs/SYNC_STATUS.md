@@ -54,6 +54,20 @@ history now live in the dated session archives:
 (Upstream-sync catalog also at
 [`archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md`](archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md).)
 
+### apxproof bibliography + option-value catcode (LANDED 2026-07-10)
+Rust Error Fix. `gdsm.tex` (biblatex + `\usepackage[bibliography=common]{apxproof}`)
+now converts error-free in every config (bare / `--includestyles` / ar5iv): 24
+linked bibitems, 6 `ltx_proof` (amsthm markup, correctly inline — apxproof defers
+only its own `apxproof`/`proofatend` envs). Two parts:
+1. **`latexml_contrib/src/apxproof_sty.rs`** — force-raw-loads `apxproof.sty` in
+   all configs (no Perl binding exists; Perl aborts the bib on kvoptions
+   `\ProcessLocalKeyvalOptions*`). Surpass-Perl; see KNOWN_PERL_ERRORS #44.
+2. **Core catcode fix** (`binding/content.rs`): `\opt@<name>.<ext>` now built with
+   `ExplodeText!` (LETTER catcode) not `Explode!` (OTHER), so kvoptions/keyval
+   `\setkeys` values pass catcode-sensitive `\equal`/`\ifx` validation. Broad
+   reach (every `\DeclareStringOption` validator). See WISDOM #61; regression
+   fixture `tests/keyval_options/optcatcode*`. Full suite 1538/0.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail
