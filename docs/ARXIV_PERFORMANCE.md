@@ -44,6 +44,53 @@ survivors (math0607481 84 s, 1802.06435 70 s) complete comfortably under cortex'
 only ever hit the artificially-low 60 s *local* `--timeout` default, not the real
 budget. Details per cluster below + in the Hotspot log.
 
+## Corpus-wide phase budget (2026-07-10, 60k-doc 2605+2606 run via cortex telemetry)
+
+Mined all **60,469** per-job `telemetry.json` records from the containerized-worker
+2605+2606 reruns (17-phase `phase_us`; extractor+analysis
+`tools/mine_telemetry.py` — `extract` reads every result ZIP's `telemetry.json`
+in parallel to a JSONL, `analyze` prints the budget/tail/RSS/driver breakdown).
+Total **89.8 core-hours**. Where the wall goes:
+
+| phase | % of total wall |
+|---|---|
+| digest | 19.7% |
+| math_parse | 19.2% |
+| build | 18.1% |
+| **xslt** | **13.2%** |
+| graphics | 8.9% |
+| mathml_pres | 4.5% |
+| crossref / rewrite / post_xml_parse / serialize / … | each ≤2.6% |
+| (sum of instrumented phases) | 94.4% (rest = harness/IO) |
+| `bootstrap` | ~0% (baked dumps confirmed) |
+
+**Headline: wall time is broad, not math-dominated.** digest+math_parse+build+xslt
+≈ 70%, each 13–20%. The campaign narrative has centered on math over-parse (19.2%,
+ambiguity **1.33 candidate parses/formula** corpus-wide — modest average,
+concentrated in the math-dense tail), but **XSLT at 13.2% is the single most
+under-exploited lever** (only the 3 `O(n²)` template fixes below touched it), and
+digest+build (38%) is the sequential-engine cost.
+
+**Tail + RSS are release-healthy** (fed into `RELEASE_CRITERIA.md` §5): wall median
+3.07s / P99 34.9s / max 149s — **zero timeouts across 60k docs**; only 120 (0.20%)
+exceed 60s, 4 exceed 120s. Peak RSS median 0.94 / P99 2.05 / max 4.52 GiB —
+**exactly one** doc over 4 GiB, 53 (0.09%) over 3 GiB. Concentration moderate:
+slowest 1% of papers hold only 10% of wall (5% hold 27%) → the *median path*
+matters, not just the tail.
+
+**The slow tail is two distinct populations** (different fixes): (a) **digest-
+runaway fatals** — `2605.23849` 149s, `2606.21610` 128s, `2605.21013`, `2606.13482`:
+100s+ in digest, **0 formulae**, then fatal → reliability, `STABILITY_WITNESSES.md`
+Cluster H + the BP-4 watchdog; (b) **legitimately math-dense** — `2605.16382`
+(4136 formulae, 116s, 3.0 GiB), `2605.20736`, `2605.14423` → the genuine math
+lever (BP-1/BP-5). Fatals are bimodal: most fail fast (median 3.0s, healthy) but a
+slow-runaway subset (P99 98s) wastes ~100s before dying = population (a).
+
+**Beyond-Perl improvement plan** derived from this budget: `SYNC_STATUS.md` →
+"Beyond-Perl performance levers" (BP-1…BP-6: parallel per-formula parse, XSLT
+amortize→transpile, concurrent graphics, digest watchdog, formula memoization,
+native construction tree).
+
 ## Corpus-wide profile + the inkscape→gs question (2026-07-02)
 
 The 2026-06-27 campaign optimized the *slowest-100 tail*. This section records a

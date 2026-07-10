@@ -311,6 +311,96 @@ residuals stay here so the live worklist keeps them visible:
 
 ## Open tasks (actionable)
 
+### Beyond-Perl performance levers — from the 2026-07-10 60k-doc telemetry (NEW, user-directed)
+
+The 2605+2606 reruns (60,469 docs, containerized worker, per-job `telemetry.json`
+mined in `docs/ARXIV_PERFORMANCE.md` "Corpus-wide phase budget 2026-07-10")
+re-point the perf campaign. **Wall time is broad, not math-dominated:** digest
+19.7% · math_parse 19.2% · build 18.1% · **xslt 13.2%** · graphics 8.9% ·
+mathml_pres 4.5%. Concentration is only moderate (slowest 1% = 10% of wall), so
+median-path wins pay off as broadly as tail-chasing. These are **Target-2
+beyond-Perl** tasks: Perl LaTeXML is single-threaded (thread-local State
+singleton) and libxslt/`XML::LibXML`-bound; Rust affords levers it cannot.
+
+**Architectural constraints that shape feasibility (respect these):**
+- State is a thread-local global singleton → the **digest phase is sequential**;
+  no parallelism lever there, only algorithmic.
+- rust-libxml nodes are **not `Send`/`Sync`** (libxml2 FFI) → cannot naively
+  parallelize DOM mutation. The tractable pattern is **parallelize the pure,
+  `Send`-able computation (Marpa parse, MathML *structure*), keep the DOM graft
+  sequential.**
+- one-conversion-per-process harness (memory isolation) → amortize *within* a
+  conversion (fork/threads), not across docs.
+- **Output-neutrality gate is non-negotiable** (`ARXIV_PERFORMANCE.md`): every
+  lever must be byte-identical on the isolated before/after harness + keep Perl
+  parity. A perf change that alters output is a separate, authorized decision.
+
+**BP-1 — Parallel per-formula math parsing** (attacks math_parse 19.2%; the
+math-dense slow tail — `2605.16382` 4136 formulae/116s, `2605.20736`, `2605.14423`).
+Each `<XMath>` Marpa parse is independent and operates on a token/box IR (data,
+not libxml). *Lever Perl lacks:* Parse::RecDescent + single thread. *Approach:*
+collect formula IRs during digest; parse them in a rayon pool (each thread gets
+its own thread-local SymStr arena — verify the parser is arena-isolatable and
+free of cross-formula shared mutable state); graft XMDual/parse results into the
+DOM sequentially in original order. *Feasibility:* medium (arena-per-thread +
+parser-purity audit). Output-neutral by construction (same parses, same order).
+
+**BP-2 — XSLT amortization → native transpilation** (attacks xslt 13.2%, the
+single most under-exploited phase — only the 3 `O(n²)` template fixes touched it).
+13% is libxslt *interpreting our own fixed, embedded stylesheets*, re-parsed per
+one-doc process. *Step 1 (cheap, do first):* `xsltproc --profile` split of xslt
+into stylesheet-COMPILE (fixed/doc) vs APPLY (scales with doc); if compile-heavy,
+embed a **pre-parsed/precompiled stylesheet** (the XSLT analog of the kernel-dump
+precompilation we already ship). *Step 2 (ambitious, beyond-Perl):* transpile the
+hottest templates the profile flags into **native Rust DOM transforms**, bypassing
+libxslt entirely for them (Perl is libxslt-bound and cannot). *Feasibility:* Step1
+low-risk/moderate win; Step2 high-effort/high-win.
+
+**BP-3 — Concurrent graphics + parallel MathML structure** (graphics 8.9% +
+mathml_pres 4.5% ≈ 13%). Graphics conversions are independent *subprocesses*
+(gs/dvisvgm/inkscape) run **serially** today — fork them in a bounded concurrent
+pool (no `Send` barrier; the tractable, high-feasibility half). MathML
+presentation per formula is independent pure computation → parallelize on BP-1's
+enabling work. Perl runs both serially.
+
+**BP-4 — Live digest-progress watchdog** (reclaims the ~100s runaway-fatal tail:
+`2605.23849` 149s, `2606.21610` 128s, `2605.21013`, `2606.13482` — 100s+ in digest,
+**0 formulae**, then fatal; see STABILITY_WITNESSES Cluster H). The **new per-phase
+telemetry** enables a *live* watchdog: if digest exceeds a budget with **zero
+document/formula progress**, abort early with a fatal. *Lever Perl lacks:* Perl
+only has blunt global `iflimit` counters; a phase-aware *no-progress* signal is
+finer. Gate on progress (0 boxes/formulae added in N s), NOT raw wall, to avoid
+false-aborting legit-slow-but-progressing papers. *Feasibility:* high; reliability
++ throughput; directly leverages the telemetry we just built. Cross-ref the
+`\lx@begin@alignment` / runaway family.
+
+**BP-5 — Content-addressed formula memoization** (math_parse 19% + mathml 4.5% on
+matrix/table/aligned-system-heavy papers, which repeat identical sub-formulae).
+Hash the normalized formula token-stream (FxHashMap + interner — cheap in Rust)
+and memoize parse→XMDual→MathML. *Lever Perl lacks.* **Correctness crux:** the key
+must capture every parse-affecting context (font, mode, catcodes, math-style);
+mis-keying silently corrupts output, so gate hard on the output-neutrality diff.
+*Feasibility:* medium; large win on table/matrix-dense papers.
+
+**BP-6 (stretch/experiment) — Native construction tree, defer libxml FFI**
+(attacks build 18.1% = per-node rust-libxml FFI during construction). Build a
+native arena tree during construction, convert to libxml once at the end (or emit
+HTML directly on the non-`--validate` path). Perl is also `XML::LibXML`-FFI-bound,
+so this is a structural beyond-Perl bet. *Feasibility:* low-medium, HIGH effort
+(rewrites the document builder core) — park as an experiment, measure the FFI
+share first.
+
+**Digest (19.7%) note:** sequential TeX engine — **no** parallelism lever; the win
+is algorithmic (profile the hot macros with the sampled `EXP_TRACE` histogram, cut
+redundant re-tokenization / re-expansion). Track separately from the parallelism
+BPs above.
+
+Suggested order: **BP-4** (highest feasibility × reliability, uses the new
+telemetry) → **BP-2 Step 1** (cheap XSLT profile+amortize) → **BP-3 graphics
+batch** → **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each lands on a
+feature branch, gated by the isolated before/after output-neutrality harness +
+Perl parity + `cargo test`.
+
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 
 Audit 2026-07-04 (agent, both files read end-to-end): `make_bibliography.rs`

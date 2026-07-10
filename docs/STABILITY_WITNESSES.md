@@ -383,6 +383,30 @@ port — now viable — is what fixes the p{} block-content correctness bug 1510
 regressions, the content-shape gate that re-broke Cluster G) are in git history.
 
 
+## Cluster H — digest-runaway → fatal after ~100s, 0 formulae (2026-07-10, from 60k telemetry)
+
+Surfaced by mining the 2605+2606 `telemetry.json` (`ARXIV_PERFORMANCE.md`
+"Corpus-wide phase budget 2026-07-10"): the **worst wall-time tail is a reliability
+cluster, not a perf one.** Four of the top-8 slowest papers spend 100s+ in the
+**digest** phase, emit **zero formulae**, then terminate **fatal** — a pathological
+digestion loop that burns ~100s before dying (fatal `mean_wall` 13s vs `no_problem`
+4.5s; fatal P99 wall 98s, driven entirely by this population).
+
+**Witnesses** (current containerized worker, git ~`d28b6dc`/HEAD):
+- `2605.23849` — 149.0s, digest-dominated, 0 formulae, **fatal**
+- `2606.21610` — 127.8s, digest-dominated, 0 formulae, **fatal**
+- `2605.21013` — 125.8s, digest-dominated, 0 formulae, **fatal**
+- `2606.13482` — 117.2s, digest-dominated, 0 formulae, **fatal**
+
+**Not yet root-caused** (needs same-host Perl triage per `canvas-triage`): likely
+the runaway / `\lx@begin@alignment` family (cf. full-arXiv `\lx@begin@alignment`
+12.1k cluster). **Two tracks:** (1) triage each witness → is the fatal PARITY
+(Perl also runaways/caps) or GENUINE-RUST-ONLY? (2) regardless of verdict, the
+**BP-4 live digest-progress watchdog** (`SYNC_STATUS.md`) reclaims the ~100s waste
+by aborting a *no-progress* digest early — a throughput + reliability win that does
+not depend on the per-paper root cause. Re-measure with the current binary first
+(sweep records go stale).
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.

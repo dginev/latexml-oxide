@@ -198,6 +198,18 @@ P50/P90/P99/max, per-phase P99, and slowest/highest-RSS witnesses (cortex PR
 reruns (baked dumps drop the bootstrap phase P99 to 0; math_parse + digest are
 the phase tails).
 
+**Empirical "no unbounded growth" evidence (2026-07-10, 60,469 docs).** The §5
+worry — the 60s+ timeout tail and the 4 GiB alloc wall — is **measured, not
+assumed**, and controlled: **zero timeouts across 60k docs** (wall median 3.07s,
+P99 34.9s, max 149s; only 120 papers / 0.20% over 60s, 4 over 120s, none at
+180s), and **peak RSS median 0.94 / P99 2.05 / max 4.52 GiB — exactly one doc
+over 4 GiB**, 53 (0.09%) over 3 GiB. The residual worst-case tail is a *reliability*
+cluster (digest-runaway fatals, `STABILITY_WITNESSES.md` Cluster H), not
+unbounded growth. This is direct go-signal evidence for the release gate; capture
+it as the committed `--gate --baseline` snapshot (the "Remaining" item above).
+Full phase budget + tail analysis: `ARXIV_PERFORMANCE.md` "Corpus-wide phase
+budget 2026-07-10".
+
 ## 6. Safety: distribution profile
 
 [`SAFETY.md`](SAFETY.md)'s local-CLI batch-compiler model is honest but not
