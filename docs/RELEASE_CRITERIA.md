@@ -26,7 +26,7 @@ their 2026-05-24 values.
 | `cargo test --tests` | 1533/0/0 | green |
 | `cargo clippy --all-targets` | 0 | 0 |
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
-| Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)) | P50/P90/P99 dashboard; "no unbounded growth" gate — §5 |
+| Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)); **P50/P90/P99 + RSS dashboard + growth gate built** (`tools/telemetry_dashboard.py`) | §5 — capture a fleet baseline + wire `--gate` into release (absolute red lines gate today) |
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
 | OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; next rung: Windows/musl) |
 | Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
@@ -171,6 +171,21 @@ over-evaluation. Build a rolling dashboard from `telemetry.jsonl.gz`
 (schema exists, [`TELEMETRY.md`](TELEMETRY.md)): P50/P90/P99 wall+RSS, top
 fatal/timeout/ambiguity witnesses. Gate "no unbounded growth" *separately*
 from "mean beats Perl."
+
+**Status (2026-07-09) — dashboard + gate BUILT.**
+[`tools/telemetry_dashboard.py`](../tools/telemetry_dashboard.py) reads a
+`telemetry.jsonl.gz` (or a dir of output ZIPs) and reports P50/P90/P99/max
+wall + peak-RSS, the phase that drives the P99, and the top slowest / highest-RSS
+/ fatal-timeout-error / math-ambiguity witnesses. `--gate` enforces the
+"no unbounded growth" contract — **absolute red lines** (peak RSS → the 4 GiB
+alloc wall via `--rss-redline-mb`; P99 wall → the timeout via
+`--wall-redline-frac`; any hard-timeout job) plus an **optional regression check**
+vs a committed baseline (`--baseline`, `--update-baseline`, `--tolerance`) — and
+it is deliberately independent of any mean/Perl comparison. Complements the
+phase-attribution rollup [`tools/perf_phase_summary.py`](../tools/perf_phase_summary.py).
+**Remaining:** capture a representative fleet-run baseline
+(`--update-baseline`), commit it, and wire `--gate --baseline` into the release
+job. The absolute red lines already gate today without a baseline.
 
 ## 6. Safety: distribution profile
 

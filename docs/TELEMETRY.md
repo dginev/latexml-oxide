@@ -97,23 +97,34 @@ no-telemetry baseline — useful for "before" comparison.
 
 ## 3. Schema
 
-### 3.1 Phase enum (11 values)
+### 3.1 Phase enum (17 values)
+
+> Canonical order lives in `latexml_core/src/telemetry.rs` (`Phase`) and the
+> `PHASES` list in `tools/perf_phase_summary.py` + `tools/telemetry_dashboard.py`
+> — keep all three in sync. Grew from the original 11 as the post-processing
+> pipeline was split into finer phases; `phase_us` is a `[u64; 17]` indexed in
+> this order.
 
 ```rust
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Phase {
-  Bootstrap,    // engine + kernel-dump init, package preload
-  Digest,       // Mouth → Gullet → Stomach → Box list
-  Build,        // Document XML tree assembly
-  Rewrite,      // pre-math XML rewrites (lexer, etc.)
-  MathParse,    // Marpa parses on <XMath> candidates
-  PostScan,     // citation/ref resolution, ID renumber, MathRewrite
-  Graphics,     // includegraphics dispatch (waits for child procs)
-  MathmlPres,   // Presentation MathML conversion
-  MathmlCont,   // Content MathML conversion
-  Xslt,         // XSLT transform
-  Serialize,    // final HTML/XML byte write
+  Bootstrap,     // engine + kernel-dump init, package preload
+  Digest,        // Mouth → Gullet → Stomach → Box list
+  Build,         // Document XML tree assembly
+  Rewrite,       // pre-math XML rewrites (lexer, etc.)
+  MathParse,     // Marpa parses on <XMath> candidates
+  PostXmlParse,  // re-parse the core XML for post-processing
+  PostScan,      // citation/ref resolution, ID renumber, MathRewrite
+  Bibliography,  // bibliography resolution
+  Crossref,      // cross-reference resolution
+  Graphics,      // includegraphics dispatch (waits for child procs)
+  MathImages,    // math-image generation (latex/dvipng path)
+  MathmlPres,    // Presentation MathML conversion
+  MathmlCont,    // Content MathML conversion
+  Split,         // document splitting
+  Xslt,          // XSLT transform
+  Html5Fixups,   // HTML5 dialect fixups
+  Serialize,     // final HTML/XML byte write
 }
 ```
 
