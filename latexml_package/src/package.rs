@@ -220,6 +220,7 @@ pub mod icml_sty;
 pub mod icml_support_sty;
 pub mod ieeeconf_cls;
 pub mod ieeetran_cls;
+pub mod ieeetrantools_sty;
 pub mod ifblk_fontmap;
 pub mod ifclk_fontmap;
 pub mod ifdraft_sty;

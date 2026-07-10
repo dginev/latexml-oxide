@@ -480,6 +480,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ifdraft", "sty", package::ifdraft_sty::load_definitions),
   ("ieeeconf", "cls", package::ieeeconf_cls::load_definitions),
   ("IEEEtran", "cls", package::ieeetran_cls::load_definitions),
+  // No Perl IEEEtrantools.sty.ltxml exists (Perl binds IEEEeqnarray only in the
+  // .cls); this surpass-Perl binding maps the family to native \eqnarray so
+  // `article`+`\usepackage{IEEEtrantools}` converts (see ieeetrantools_sty.rs).
+  (
+    "IEEEtrantools",
+    "sty",
+    package::ieeetrantools_sty::load_definitions,
+  ),
   ("import", "sty", package::import_sty::load_definitions),
   ("iopart", "cls", package::iopart_cls::load_definitions),
   (
