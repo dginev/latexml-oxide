@@ -68,6 +68,23 @@ only its own `apxproof`/`proofatend` envs). Two parts:
    reach (every `\DeclareStringOption` validator). See WISDOM #61; regression
    fixture `tests/keyval_options/optcatcode*`. Full suite 1538/0.
 
+### Figure panels of unmeasurable images wrapped by filename length (LANDED 2026-07-10)
+Rust Error Fix (fidelity). A float of bare `\includegraphics` with no explicit
+`\\` is partitioned into rows by `arrange_panels_and_breaks`, using each panel's
+MEASURED box width. `read_image_dimensions` reads PNG/JPEG/EPS only (like Perl's
+`imgsize`), so for **PDF/SVG** it early-returned with no `cached_width`;
+`compute_size` then summed the whatsit's argument boxes — including the
+Semiverbatim **path string** — so panels wrapped by *filename length*.
+arXiv:2409.16471 fig 2 (12 uniform `0.245\textwidth` PDF panels) split 3/3/2/3/1
+instead of 3 rows of 4. **Fix** (`latexml_core/src/util/image.rs`): on an
+unmeasured image, honor the explicit `width=`/`height=` from options as the
+cached box size (else 0), and always set `cached_width` so the filename is never
+summed. Reproduces Perl-WITH-ImageMagick (the optional dep this host lacks →
+Perl-without-IM instead merges all panels into one row) and the PDF, with no
+ImageMagick runtime dep. Corpus-wide reach; golden suite untouched (every test
+graphic is a measurable `.png`/`.jpg`). See WISDOM #62. Verified fig 2 → uniform
+84.52pt → breaks after g4/g8 → 3 rows of 4, 0 errors.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail

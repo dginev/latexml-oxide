@@ -198,6 +198,36 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   }
 
   if img_w <= 0.0 || img_h <= 0.0 {
+    // The natural image dimensions couldn't be read (e.g. a PDF/SVG, which the
+    // narrow `read_image_dimensions` — like Perl's `imgsize` — can't measure).
+    // Perl's `image_graphicx_size` also bails here (Util::Image.pm L226) and the
+    // sizer returns `Dimension(0)` (L272) UNLESS ImageMagick is installed to
+    // measure the PDF. To reproduce Perl-WITH-ImageMagick (and the PDF) without
+    // that optional dependency, honor an EXPLICIT `width=`/`height=` request from
+    // the options — the very display size LaTeXML already emits on the element —
+    // as the cached box size; fall back to 0 (Perl-without-ImageMagick parity)
+    // when no dimension is requested.
+    //
+    // Crucially, we must set `cached_width` on BOTH paths: without it,
+    // `compute_size` later falls through to summing the whatsit's ARGUMENT boxes,
+    // which for `\includegraphics` is the *filename string* — so a bare
+    // `arrange_panels` wraps figure rows by path length rather than image width
+    // (arXiv:2409.16471 fig 2: 12 uniform 0.245\textwidth panels split 3/3/2/3/1).
+    let mut ew: Option<Dimension> = None;
+    let mut eh: Option<Dimension> = None;
+    for opt in options.split(',') {
+      let opt = opt.trim();
+      if let Some(val) = opt.strip_prefix("width=") {
+        ew = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+      } else if let Some(val) = opt.strip_prefix("height=") {
+        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+      } else if let Some(val) = opt.strip_prefix("totalheight=") {
+        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+      }
+    }
+    whatsit.set_property("cached_width", Stored::Dimension(ew.unwrap_or_default()));
+    whatsit.set_property("cached_height", Stored::Dimension(eh.unwrap_or_default()));
+    whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
     return;
   }
 

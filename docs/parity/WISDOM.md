@@ -2228,3 +2228,40 @@ catcode-12. Do NOT "fix" `\equal` (it is faithfully catcode-sensitive, matching
 pdflatex); fix the value's catcode at the storage site. Witness: apxproof
 `bibliography=common` (gdsm.tex, KNOWN_PERL_ERRORS #44); regression fixture
 `tests/keyval_options/optcatcode*`.
+
+## #62 A figure of bare `\includegraphics` that can't be measured wraps its rows by FILENAME LENGTH — the unmeasured graphics box falls back to summing its argument boxes (the path string)
+
+`arrange_panels_and_breaks` (latex_constructs) partitions a multi-image float
+into rows by inserting `<ltx:break>` when the accumulated panel WIDTH exceeds the
+float width — a faithful port that reproduces the PDF's per-row arrangement when
+the source gives no explicit `\\`. The per-panel width is
+`getNodeBox($child)->getWidth` — the **measured** graphics box, NOT the requested
+`width=` on the element.
+
+The trap: `image_graphicx_sizer` (`latexml_core/src/util/image.rs`) measures the
+image file via `read_image_dimensions`, which — like Perl's `imgsize` — reads
+PNG/JPEG/EPS only, **not PDF/SVG**. On a miss it early-returned WITHOUT setting
+`cached_width`. `Whatsit::get_width` then fell through to `compute_size`, which
+for a `\includegraphics` whatsit sums its ARGUMENT boxes — and the Semiverbatim
+path argument is one of them, so the box width became the **rendered width of the
+filename string**. A figure of 12 uniform `width=0.245\textwidth` PDF panels then
+wrapped 3/3/2/3/1 (widths tracked `figures/WPO1d_J.pdf`=99pt …
+`figures/WPO10d_w0density.pdf`=141pt — monotonic in path length). Witness
+arXiv:2409.16471 fig 2.
+
+Same-host Perl is NOT a useful oracle here: Perl measures PDFs via **ImageMagick**
+(`Util::Image::image_size`, `pdf:use-cropbox`), which is an OPTIONAL dep. Without
+`Image::Magick` installed (this host), Perl's `image_graphicx_size` bails at
+`return unless $w && $h` (L226) and the sizer returns `Dimension(0)` (L272) → all
+panels width-0 → the `$child_width == 0` heuristic MERGES them into one
+`<ltx:block>` → a single row. So the three outcomes were: pdflatex/Perl-with-IM =
+3 rows of 4; Perl-without-IM = one merged row; Rust = filename-length garbage.
+
+**Fix** (image.rs early-return): when the natural image can't be measured, honor
+an EXPLICIT `width=`/`height=`/`totalheight=` from the options as the cached box
+size (falling back to 0 when none is requested), and ALWAYS set `cached_width` so
+`compute_size` never sums the filename. This reproduces Perl-WITH-ImageMagick
+(and the PDF) with no ImageMagick runtime dep — a portability + fidelity win, not
+just parity. Reach is corpus-wide (every unmeasurable-image figure), but the
+golden test suite is untouched: every test graphic is a measurable `.png`/`.jpg`.
+Verified: fig 2's 12 panels → uniform 84.52pt → breaks after g4/g8 → 3 rows of 4.
