@@ -2257,11 +2257,27 @@ panels width-0 → the `$child_width == 0` heuristic MERGES them into one
 `<ltx:block>` → a single row. So the three outcomes were: pdflatex/Perl-with-IM =
 3 rows of 4; Perl-without-IM = one merged row; Rust = filename-length garbage.
 
-**Fix** (image.rs early-return): when the natural image can't be measured, honor
-an EXPLICIT `width=`/`height=`/`totalheight=` from the options as the cached box
-size (falling back to 0 when none is requested), and ALWAYS set `cached_width` so
-`compute_size` never sums the filename. This reproduces Perl-WITH-ImageMagick
-(and the PDF) with no ImageMagick runtime dep — a portability + fidelity win, not
-just parity. Reach is corpus-wide (every unmeasurable-image figure), but the
-golden test suite is untouched: every test graphic is a measurable `.png`/`.jpg`.
-Verified: fig 2's 12 panels → uniform 84.52pt → breaks after g4/g8 → 3 rows of 4.
+**Fix** — emulate pdfTeX, NOT Perl. pdfTeX's built-in reader takes a PDF's
+CropBox (its default, verified against `pdftex.def` + `\the\wd` under pdflatex)
+or MediaBox, and an SVG's viewBox — with no external tool. `image_graphicx_sizer`
+does the same in pure Rust: on a raster-reader miss it calls `natural_size_pt`
+(shared reader `read_pdf_page_box` = CropBox→MediaBox, also used by
+`LaTeXML::Post::Graphics`; `read_svg_size_pt` = width/height/viewBox), then
+applies the graphicx transform IN POINTS (`graphicx_box_pt`). Measured pdflatex
+truth that this matches: with an explicit `width=`, the box width IS the request
+(`0.245\textwidth → 84.52332pt`) and the natural size only fills in the height
+via the aspect ratio; only bare / `scale=` / `height=`-only inclusions actually
+need the file read. When even the byte reader can't see the box (page dict
+compressed into an object stream — where pdfTeX's full parser still would), fall
+back to the requested `width=` (else 0), and ALWAYS set `cached_width` so
+`compute_size` never sums the filename.
+
+This reproduces pdfTeX / Perl-WITH-ImageMagick (and the PDF) with no ImageMagick
+runtime dep — a portability + fidelity win. Reach is corpus-wide but NARROW:
+`width=` figures get an identical box width either way, so only no-explicit-width
+PDF/SVG figures change; the golden suite is untouched (every test graphic is a
+measurable `.png`/`.jpg`). Regression tests: `figure_panel_native` (native
+CropBox path) + `figure_panel_unmeasured` (the `width=` fallback / filename-bug
+guard). Verified: fig 2's 12 panels → uniform 84.52pt → breaks after g4/g8 → 3
+rows of 4; a bare full-size PDF → one panel per row; `scale=0.16` → wraps by the
+scaled natural size.

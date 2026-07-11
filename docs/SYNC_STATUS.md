@@ -76,14 +76,23 @@ MEASURED box width. `read_image_dimensions` reads PNG/JPEG/EPS only (like Perl's
 `compute_size` then summed the whatsit's argument boxes — including the
 Semiverbatim **path string** — so panels wrapped by *filename length*.
 arXiv:2409.16471 fig 2 (12 uniform `0.245\textwidth` PDF panels) split 3/3/2/3/1
-instead of 3 rows of 4. **Fix** (`latexml_core/src/util/image.rs`): on an
-unmeasured image, honor the explicit `width=`/`height=` from options as the
-cached box size (else 0), and always set `cached_width` so the filename is never
-summed. Reproduces Perl-WITH-ImageMagick (the optional dep this host lacks →
-Perl-without-IM instead merges all panels into one row) and the PDF, with no
-ImageMagick runtime dep. Corpus-wide reach; golden suite untouched (every test
-graphic is a measurable `.png`/`.jpg`). See WISDOM #62. Verified fig 2 → uniform
-84.52pt → breaks after g4/g8 → 3 rows of 4, 0 errors.
+instead of 3 rows of 4. **Fix** (`latexml_core/src/util/image.rs`) emulates
+pdfTeX, not Perl: on a raster-reader miss, read the natural size from the file
+itself — a PDF's CropBox→MediaBox (pdfTeX's default, shared with
+`LaTeXML::Post::Graphics::read_pdf_page_box`) or an SVG's viewBox — and apply the
+graphicx transform in points. Only when the page box is hidden in a compressed
+object stream do we fall back to the requested `width=` (else 0); `cached_width`
+is always set so the filename is never summed. No ImageMagick dep (that is a
+Perl-only workaround for Image::Size's lack of PDF support; even it forces
+`use-cropbox` to match pdfTeX). Verified against `\the\wd` under pdflatex:
+`width=` → the request outright; bare/`scale=`/`height=` → the natural box.
+Corpus-wide reach but NARROW — `width=` figures get an identical box width either
+way, so only no-explicit-width PDF/SVG figures change; a 260-paper before/after
+sample (142 with PDF figures) showed 0 error/fatal/exit-code regressions, and the
+2 layout changes were previously-merged multi-panel figures now wrapping into
+rows (e.g. 8 panels → 2 rows of 4). Golden suite untouched (all-PNG/JPEG).
+Regression tests `figure_panel_native` + `figure_panel_unmeasured`. See WISDOM
+#62. Fig 2 → uniform 84.52pt → 3 rows of 4, 0 errors.
 
 ## Methodology & the cortex cross-join
 

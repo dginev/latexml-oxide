@@ -96,20 +96,6 @@ static CONVERT_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
     .filter(|&n| n > 0)
 });
 
-static PDF_CROP_BOX_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-  regex::Regex::new(
-    r"/CropBox\s*\[\s*([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))",
-  )
-  .unwrap()
-});
-
-static PDF_MEDIA_BOX_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-  regex::Regex::new(
-    r"/MediaBox\s*\[\s*([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))",
-  )
-  .unwrap()
-});
-
 /// Properties for a graphics file type.
 #[derive(Debug, Clone)]
 pub struct TypeProperties {
@@ -1299,7 +1285,7 @@ impl Graphics {
     let page_box = if is_postscript {
       read_postscript_bounding_box(source)
     } else if is_pdf {
-      read_pdf_page_box(source)
+      latexml_core::util::image::read_pdf_page_box(Path::new(source))
     } else {
       None
     };
@@ -1915,50 +1901,6 @@ fn parse_bbox_quadruple(s: &str) -> Option<(f64, f64, f64, f64)> {
 /// need to translate the content to PS origin (0, 0).
 fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
   read_postscript_bounding_box_full(source).map(|(_, _, w, h)| (w, h))
-}
-
-fn read_pdf_page_box(source: &str) -> Option<(f64, f64)> {
-  let bytes = std::fs::read(source).ok()?;
-  // Fast-fail: most modern PDFs (matplotlib, pgfplots, …) compress
-  // their page dictionary inside an object stream, so `/MediaBox` and
-  // `/CropBox` never appear as raw bytes. Skip the UTF-8 conversion
-  // (which iterates Utf8Chunks across the entire file) when no
-  // candidate token is present. Measured 2026-05-12 on 1910.01256:
-  // ~10 ms saved across the 5-PDF graphics phase.
-  let has_crop = memchr_find(&bytes, b"/CropBox").is_some();
-  let has_media = memchr_find(&bytes, b"/MediaBox").is_some();
-  if !has_crop && !has_media {
-    return None;
-  }
-  let content = String::from_utf8_lossy(&bytes);
-  parse_pdf_page_box(&content, &PDF_CROP_BOX_RE)
-    .or_else(|| parse_pdf_page_box(&content, &PDF_MEDIA_BOX_RE))
-}
-
-/// Byte-level substring search (no UTF-8 conversion). Std-only —
-/// avoids pulling in `memchr` for one call site.
-fn memchr_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-  if needle.is_empty() || needle.len() > haystack.len() {
-    return None;
-  }
-  let first = needle[0];
-  let mut i = 0;
-  while i + needle.len() <= haystack.len() {
-    if haystack[i] == first && &haystack[i..i + needle.len()] == needle {
-      return Some(i);
-    }
-    i += 1;
-  }
-  None
-}
-
-fn parse_pdf_page_box(content: &str, re: &regex::Regex) -> Option<(f64, f64)> {
-  let captures = re.captures(content)?;
-  let x0 = captures.get(1)?.as_str().parse::<f64>().ok()?;
-  let y0 = captures.get(2)?.as_str().parse::<f64>().ok()?;
-  let x1 = captures.get(3)?.as_str().parse::<f64>().ok()?;
-  let y1 = captures.get(4)?.as_str().parse::<f64>().ok()?;
-  Some(((x1 - x0).abs(), (y1 - y0).abs()))
 }
 
 impl Processor for Graphics {
@@ -2755,7 +2697,7 @@ endobj
     .unwrap();
 
     assert_eq!(
-      read_pdf_page_box(tmp.to_str().unwrap()),
+      latexml_core::util::image::read_pdf_page_box(Path::new(tmp.to_str().unwrap())),
       Some((4218.0, 2437.0))
     );
     assert_eq!(

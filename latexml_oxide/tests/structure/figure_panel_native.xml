@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="graphicx"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <figure inlist="lof" labels="LABEL:fig:native" xml:id="S0.F1">
+    <tags>
+      <tag>Figure 1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">Figure 1</tag>
+    </tags>
+    <graphics candidates="../graphics/colors.pdf" class="ltx_centering ltx_figure_panel" graphic="../graphics/colors.pdf" options="scale=0.16" xml:id="S0.F1.g1"/>
+    <graphics candidates="../graphics/colors.pdf" class="ltx_centering ltx_figure_panel" graphic="../graphics/colors.pdf" options="scale=0.16" xml:id="S0.F1.g2"/>
+    <graphics candidates="../graphics/colors.pdf" class="ltx_centering ltx_figure_panel" graphic="../graphics/colors.pdf" options="scale=0.16" xml:id="S0.F1.g3"/>
+    <break class="ltx_break"/>
+    <graphics candidates="../graphics/colors.pdf" class="ltx_centering ltx_figure_panel" graphic="../graphics/colors.pdf" options="scale=0.16" xml:id="S0.F1.g4"/>
+    <toccaption class="ltx_centering"><tag close=" ">1</tag>Four scale-sized panels, three per row via native PDF sizing.</toccaption>
+    <caption class="ltx_centering"><tag close=": ">Figure 1</tag>Four scale-sized panels, three per row via native PDF sizing.</caption>
+  </figure>
+</document>
