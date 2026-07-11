@@ -1784,3 +1784,49 @@ a & = & b \\
 family onto native `\eqnarray` (which handles leading-empty cells), instead of
 the raw `\halign`. The underlying raw-`\halign` empty-first-cell limitation
 remains for other raw alignments (the broader `\lx@begin@alignment` family).
+
+---
+
+## 46. `rearrangeEqnarray`: `label` vs `labels` typo drops numbers on distinctly-labelled continuation rows
+
+**Perl source:** `LaTeXML/lib/LaTeXML/Engine/latex_constructs.pool.ltxml`
+`rearrangeEqnarray` (L2299-2389), specifically the row scan L2310
+(`labelled => $rownode->hasAttribute('label')`) and the R-column classifier
+L2360-2362.
+
+**Symptom:** an `eqnarray` (or anything mapped onto it, e.g. IEEEeqnarray) whose
+continuation rows — empty first *and* second column, only the RHS filled — each
+carry BOTH an automatic number and their own `\label` collapse onto a SINGLE
+number instead of numbering separately. Concretely, four constraint rows that
+should be `(a),(b),(c),(d)` render as only `(a)` and `(d)`; the middle labels
+`(b),(c)` pile onto the last row's `labels` attribute and never render a number.
+Witness: arXiv Problem-𝒫1 `IEEEeqnarray` (`ieee_eqn_bug/main_arXiv.tex` L554-591).
+
+**Root cause:** `rearrangeEqnarray` merges continuation rows into the previous
+equation, but the author added a safeguard — *"Separately numbered AND labeled?
+… must keep separate, but weird!"* — gated on `$$row{labelled}`. That field is
+set from `$rownode->hasAttribute('label')` (**singular**), yet LaTeXML only ever
+emits the **plural** `labels` attribute (`LaTeXML-common.rnc` L134; there is no
+singular `label` attribute in the schema). So `labelled` is **always false**,
+the safeguard is dead code, and every such row is merged.
+
+**Minimal example** (`latexml_oxide/tests/structure/eqnarray_labelled_rows.tex`):
+```tex
+\begin{subequations}\begin{eqnarray}
+\operatorname{minimize}\; & & f(x) + g(x) \nonumber\\
+& & {} +\, h(x) \label{eq:obj}\\
+\text{s.t.}\; & & a(x) \leq 0 \label{eq:ca}\\
+& & b(x) \leq 0 \label{eq:cb}\\
+& & c(x) = 0 \label{eq:cc}
+\end{eqnarray}\end{subequations}
+```
+Ground truth (same host): **pdfTeX numbers all four** `(a),(b),(c),(d)`; **Perl
+LaTeXML collapses to `(a),(d)`** (dead-code safeguard).
+
+**Rust status:** SURPASSES Perl (standing PDF-fidelity authorization; honors the
+Perl author's documented intent). `rearrange_eqnarray`
+(`latexml_engine/src/latex_constructs.rs` L1085) reads the real `labels`
+attribute, so distinctly-numbered-and-labelled continuation rows stay separate
+and match pdfTeX. Candidate to upstream (one-char fix). Strictly monotone: the
+change can only *split* a merged equation whose row was numbered AND `\label`-ed;
+it never merges. Marked `OXIDIZED_DESIGN divergence` at the call site.

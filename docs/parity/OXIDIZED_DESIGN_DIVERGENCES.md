@@ -1413,6 +1413,39 @@ personnames; full suite 1532/0.
 
 ---
 
+### 54. `eqnarray` keeps distinctly-`\label`-ed continuation rows separately numbered
+
+**Decision:** `rearrange_eqnarray` (`latexml_engine/src/latex_constructs.rs`
+L1085) reads the real **plural `labels`** attribute when deciding whether a
+continuation row is "labelled". Perl's `rearrangeEqnarray` checks
+`hasAttribute('label')` (**singular**) — an attribute LaTeXML never sets
+(`LaTeXML-common.rnc` L134 defines only `labels`) — so its own documented
+safeguard *"Separately numbered AND labeled? … must keep separate"* is dead code.
+This is a **surpass-Perl divergence** under the PDF-fidelity policy that honors
+the Perl author's stated intent.
+
+**The shared bug.** An `eqnarray` (or any environment mapped onto it, e.g.
+IEEEeqnarray) merges continuation rows — empty first *and* second column — into
+the previous equation. When several such rows each carry their **own** automatic
+number **and** their own `\label`, they should stay separate; the safeguard that
+would keep them separate never fires because of the `label`/`labels` typo, so they
+collapse onto one number and the middle labels pile onto the last row's `labels`
+attribute (rendering no number). Witness arXiv Problem-𝒫1 (`ieee_eqn_bug`): four
+constraint rows render `(28a),(28d)` instead of `(28a),(28b),(28c),(28d)`;
+pdfTeX numbers all four. Perl and Rust-before emit the identical collapse.
+
+**The fix** reads `labels` (not `label`), so the R-column classifier's
+`numbered && row.numbered && row.labelled` → keep-separate branch fires as
+intended. Strictly monotone — it can only *split* a merged equation whose row
+was both numbered and `\label`-ed, never merge — so `\nonumber` continuations and
+unlabelled multi-line RHSs are untouched (`subnumcases`/`ncases` builds its own
+alignment and is unaffected). Regression fixture
+`latexml_oxide/tests/structure/eqnarray_labelled_rows.tex`; full record in
+[`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) #46. Verified: 𝒫1 now numbers all
+four; full suite 1541/0.
+
+---
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

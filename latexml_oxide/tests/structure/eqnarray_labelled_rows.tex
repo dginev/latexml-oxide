@@ -1,0 +1,22 @@
+\documentclass{article}
+% Regression guard for eqnarray equation numbering (KNOWN_PERL_ERRORS).
+% rearrangeEqnarray merges continuation rows (empty first column) into the
+% previous equation. Perl guards this with "keep separate if separately
+% numbered AND labelled", but the guard checks hasAttribute('label')
+% (singular) while LaTeXML only sets the plural 'labels' attribute, so it is
+% dead code in Perl and the rows collapse onto one number. We honor the intent
+% (matching pdfTeX): the three constraint rows below each carry their own
+% \label with no \nonumber, so they must remain FOUR separately numbered
+% equations (a, b, c, d) -- not collapse to (a) and (d).
+\begin{document}
+\begin{subequations}
+\begin{eqnarray}
+\operatorname{minimize}\; & & f(x) + g(x)
+\nonumber\\
+& & {} +\, h(x) \label{eq:obj}\\
+\text{s.t.}\; & & a(x) \leq 0 \label{eq:ca}\\
+& & b(x) \leq 0 \label{eq:cb}\\
+& & c(x) = 0 \label{eq:cc}
+\end{eqnarray}
+\end{subequations}
+\end{document}

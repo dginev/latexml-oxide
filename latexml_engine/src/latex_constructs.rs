@@ -1086,13 +1086,13 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
   use crate::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
 
   struct EqRow {
-    node:      Node,
-    cols:      Vec<Node>,
-    has_l:     bool,
-    has_m:     bool,
-    has_r:     bool,
-    numbered:  bool,
-    _labelled: bool,
+    node:     Node,
+    cols:     Vec<Node>,
+    has_l:    bool,
+    has_m:    bool,
+    has_r:    bool,
+    numbered: bool,
+    labelled: bool,
   }
 
   // Scan the equations (rows)
@@ -1104,7 +1104,13 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     let has_m = cells.get(1).is_some_and(|c| c.get_first_child().is_some());
     let has_r = cells.get(2).is_some_and(|c| c.get_first_child().is_some());
     let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
-    let labelled = rownode.get_attribute("label").is_some();
+    // OXIDIZED_DESIGN #54: Perl checks hasAttribute('label') (singular), but
+    // LaTeXML only ever sets the plural 'labels' attribute (LaTeXML-common.rnc
+    // L134) — so the author's documented "Separately numbered AND labeled? must
+    // keep separate" safeguard below is dead code in Perl, collapsing distinctly
+    // \label-ed continuation rows onto one number. We honor the intent (and match
+    // pdfTeX) by reading the real 'labels' attribute. See KNOWN_PERL_ERRORS #46.
+    let labelled = rownode.get_attribute("labels").is_some();
     rows.push(EqRow {
       node: rownode,
       cols: cells,
@@ -1112,7 +1118,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       has_m,
       has_r,
       numbered,
-      _labelled: labelled,
+      labelled,
     });
   }
 
@@ -1185,7 +1191,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
         class = "continue";
       }
     } else if row.has_r {
-      if eqs.is_empty() || (numbered && row.numbered && row._labelled) {
+      if eqs.is_empty() || (numbered && row.numbered && row.labelled) {
         class = "odd";
       } else {
         class = "continue";
