@@ -234,6 +234,29 @@ The three native C dependencies, in increasing order of difficulty:
 
 ## Phase 3 — make `cargo test --release` (and `--profile ci`) PASS on Windows
 
+**Build-cost finding (2026-07-12, first Windows suite attempt):** a plain
+`cargo test --release --tests --workspace` is dominated by `[profile.release]
+lto = "thin"` — every one of the ~60 test executables (48 integration-test
+files in `latexml_oxide/tests` alone, plus per-crate unit-test binaries)
+re-runs thin-LTO over the whole statically-linked workspace (~55 MB each,
+~2 min per binary → ~2 h wall on a 16C/32T Threadripper; interrupted before
+any test executed). This is profile physics, not a Windows defect — Linux
+pays the same LTO cost. **Supported way to run the release suite:**
+
+```
+CARGO_PROFILE_RELEASE_LTO=false cargo test --release --tests --workspace
+```
+
+LTO is a distribution-artifact optimization (`maxperf`); test correctness is
+unaffected. The future windows CI job must use the same override (or the `ci`
+profile, which CI uses everywhere anyway). Committed build-speed help:
+`.cargo/config.toml` now mirrors the Linux `-Zthreads=8` parallel-frontend
+flags for `x86_64-pc-windows-msvc` (no mold equivalent; a machine-local
+config can compose `-Clinker=lld-link` on top, since cargo merges rustflags
+arrays across config files). Also recommended on Windows dev boxes: a
+Windows Defender real-time-scanning exclusion for the checkout + cargo dirs
+(user action, not automated — it's a security setting).
+
 1. **Dump generation without bash.** Port `tools/make_formats.sh` to
    PowerShell (`tools/make_formats.ps1`), same contract: build, detect TL year
    (kpsewhich SELFAUTOPARENT → `pdflatex --version` fallback, plus the MiKTeX

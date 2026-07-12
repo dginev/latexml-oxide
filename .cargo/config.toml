@@ -27,3 +27,15 @@ RUST_MIN_STACK = "16777216"
 # normal flag instead of erroring as unknown.
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-Clink-arg=-fuse-ld=mold", "-Zthreads=8", "-Zunstable-options"]
+
+# Windows/MSVC mirror of the Linux tuning above: the parallel rustc
+# frontend is platform-neutral, so carry it over. No mold equivalent
+# exists on Windows; the default link.exe is used unless a machine-local
+# config adds `-Clinker=lld-link` (LLVM's linker — worthwhile, but not
+# committed here because LLVM isn't a required toolchain component;
+# rustflags arrays from parent-directory configs MERGE with this one, so
+# a local override composes cleanly). See
+# docs/WINDOWS_COMPATIBILITY_PLAN.md for the full Windows build-speed
+# notes, including why `cargo test --release` should disable LTO.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-Zthreads=8", "-Zunstable-options"]
