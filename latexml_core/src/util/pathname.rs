@@ -262,6 +262,20 @@ pub fn canonical(pathname: &str) -> String {
     pathname.to_string()
   };
 
+  // Windows: the whole string-pathname layer speaks `/`, faithful to Perl
+  // (whose Windows pathname_canonical likewise sees mostly `/`; kpsewhich
+  // on TL-Windows returns `C:/texlive/...`). OS-originated strings
+  // (std::env::temp_dir, current_dir, PathBuf displays) arrive
+  // `\`-separated, so normalize here — the single choke point every
+  // pathname_* helper funnels through. Unix is untouched: `\` is a legal
+  // filename byte there.
+  #[cfg(windows)]
+  {
+    if pathname.contains('\\') {
+      pathname = pathname.replace('\\', "/");
+    }
+  }
+
   // Handle URL prefix: strip protocol://host before normalizing path
   let url_prefix = if let Some(caps) = CANONICAL_URL_RE.captures(&pathname) {
     let prefix = caps.get(1).unwrap().as_str().to_string();
@@ -344,9 +358,11 @@ pub fn concat(dir: &str, file: &str) -> String {
   } else if file.is_empty() || file == "." {
     dir.to_owned()
   } else {
-    let mut path = PathBuf::from(dir);
-    path.push(file);
-    canonical(&path.to_string_lossy())
+    // Join with a literal '/', as Perl's pathname_concat does — the
+    // string-pathname layer is '/'-separated on every platform. (The
+    // previous PathBuf::push produced '\' on Windows, which the
+    // Perl-faithful string logic in `canonical` cannot normalize.)
+    canonical(&format!("{dir}/{file}"))
   }
 }
 

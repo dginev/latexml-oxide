@@ -293,6 +293,22 @@ Windows Defender real-time-scanning exclusion for the checkout + cargo dirs
    target-conditional; if it errors, the simplest fix is accepting `packed`
    semantics everywhere or documenting a Windows-local override).
 
+**First full-suite triage (2026-07-12, ~1350 tests, 9 failures):** all
+failures fell into predicted buckets. FIXED same-day: `overlay` mtime test
+(read-only handle + `set_modified` — Windows needs write access),
+`pathname::concat` (was `PathBuf::push` → `\`; now joins with `/` like
+Perl's `pathname_concat`, plus `canonical()` normalizes `\`→`/` on Windows
+at the single choke point), `pack` zip entry names (zip spec mandates `/`).
+OPEN, reclassified as **ambient-TL-2026 drift suspects, not Windows bugs**
+(this box runs TL 2026; Linux CI runs Ubuntu's older TL — verify on
+Linux+TL2026 before treating as platform divergence): `greek_test`
+(babel's new `locale/invalid/` deprecation shim for `polutonikogreek`
+fires; `\text`/`\acc*` undefined downstream) and 86_tikz
+`ac_drive_components_test` (SVG coordinate drift 12.4 → 12.68, pgf
+version-scented). OPEN, environment: 4 × `90_latexmlpost` need `xmllint`
+(no Windows source: TL doesn't ship it, vcpkg's libxml2 port skips tools)
+— the Phase 3.3 Rust-native comparison rewrite is the fix.
+
 ## Phase 4 — CI: `windows-latest` job as a required leg
 
 1. Promote the bring-up workflow into `CI.yml` as a `windows` job mirroring the
