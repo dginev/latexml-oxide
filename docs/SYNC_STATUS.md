@@ -417,6 +417,71 @@ clears the risk/reward bar for release week — the parity long-tail is graceful
 already. If a NEW same-host-confirmed GENUINE-RUST-ONLY regression surfaces from
 the smoke sweep, that jumps the queue; nothing currently open does.)*
 
+### Frontmatter-fidelity pass over the arXiv `html_feedback` reports — LANDED 2026-07-12
+
+Drove the ~280 arXiv "front matter" `html_feedback` reports to clean, structured
+frontmatter (branch `public-release-prep-week`). Method: convert each reported
+paper to standalone HTML on the ar5iv config, then **Playwright red/green** DOM
+checks (`.ltx_personname`/`.ltx_authors`/`.ltx_bibitem` counts + raw-macro-leak
+regex). Two commits landed the class bindings: `12ccebefc1`/`537aac9e50` (20
+classes), `3bc8a3342d` (JMLR structured author blocks + Wiley `MRM.cls`). See
+[[frontmatter-class-bindings-2026-07-12]] memory for the binding patterns.
+
+- **JMLR** (`jmlr_cls.rs`): `\Name`/`\Email`/`\addr` now digest **directly** into
+  structured creators (name → personname, email/affiliation → contacts) instead
+  of the generic `\and`/comma splitter, which crammed every author into one
+  `<personname>` and split the affiliation's commas into phantom authors; `\nametag`
+  no longer leaks. (Answers a user question on maximizing structured markup —
+  beyond-Perl, Perl ships no jmlr binding.)
+- **MRM.cls** (Wiley "Magnetic Resonance in Medicine", new `mrm_cls.rs`):
+  `\author[idx]{name}{orcid}`, `\address`, `\corres`, `\finfo`, `\authormark`,
+  `\state` (deliberately absent from OmniBus), plus own dep loads for ORCID/math/cites.
+
+**Harness note (signal integrity):** the arXiv-source main-`.tex` detector must
+skip `*-backup.tex` / `template/*` / `Rebuttal.tex` / `*_preprint.tex` /
+versioned-subdir mains and *bonus* the file that carries the bibliography — an
+early detector picked wrong mains and produced ~5 false "no authors / no
+bibliography" reds (e.g. `2511.04594` = `Rebuttal.tex`). Corrected detector +
+re-convert cleared them.
+
+**Residual reds — all PARITY or already-beyond-Perl (NOT release-blocking):**
+`2402.09505` (aa `\href`-in-name, parity/cosmetic), `2601.05137` (author `\def\name`
+in a redefined `\@maketitle`, KPE #47 parity), `2403.07832` (minor `\footnotesize`
+in a `\thanks`, no minimal repro); `2306.06628`/`2512.16391`/`2605.23904` (no
+`\author` in source); `2508.20929` (atlasdoc author list `\input` in the body);
+`2405.13705` (iidtp `\makeiidtp` `titlepage` suppresses the document title block —
+**shared Perl XSLT rule**, and Perl *times out* entirely — authors show via the
+titlepage ORCID links); `2505.13921` (neurips: Perl *times out*; Rust produces the
+full doc with authors preserved in `<ltx:creator>` metadata, but the visible title
+block doesn't render — a `\maketitle`-expandability interaction). The last two are
+**beyond-Perl already** (Perl produces nothing).
+
+### Bibliography "missing references" — NEXT-TARGET list (surveyed 2026-07-12)
+
+Per the user follow-up ("detect docs where References are entirely missing … the
+next target for beyond-Perl bibliography work"). Playwright scan over all 297
+reported papers (correct mains) → only **4** genuinely lack a rendered
+bibliography, and the dominant root cause is **NOT** bibliography markup — it is a
+**mid-body digestion error that truncates the document** before the (end-of-doc)
+bibliography, which is then collateral damage:
+
+- `2507.21938` (ICML): document tree **truncates** mid-section-2 (empty table
+  cells + empty figure); `\bibliography{example_paper}` + co-located
+  `example_paper.bbl` never reached. Body-truncation bug.
+- `2508.13557` (IEEEtran): undefined `\node` (tikz outside a picture) corrupts
+  `display_math` mode → `\lx@end@display@math` cascade → **truncation** before the
+  bibliography. `main.bbl` *is* input (the `\jobname.bbl` fallback works). Body-error bug.
+- `2510.25135`: **source path-doubling** — main is `submissio-v0/main.tex` and
+  `\bibliography{submissio-v0/mypub,submissio-v0/ref}` resolves relative to that
+  dir → `submissio-v0/submissio-v0/…`. Source quirk (assumes top-level compile).
+- `2606.25280`: **source filename case/extension quirk** —
+  `\bibliography{EvoFlock.bib}` vs the shipped `Evoflock.bib` (fails only on a
+  case-sensitive FS; parity with Perl on Linux).
+
+So the real beyond-Perl lever is **body-error resilience** (2 papers where a
+mid-body digestion error truncates the tail); the other 2 are source quirks/parity.
+Post-release (release-week bias is stabilize, and these are deep digestion work).
+
 ### >500 MB `index.xml` (Nasser) — INVESTIGATED 2026-07-10
 
 Witness `~/scratch/nasser/index.xml`: 614 MB, ~7M nodes, **40 000 one-equation
