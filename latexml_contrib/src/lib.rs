@@ -160,6 +160,7 @@ pub mod mhchem_sty;
 pub mod minted_sty;
 pub mod mnsymbol_sty;
 pub mod morefloats_sty;
+pub mod mrm_cls;
 pub mod mssymb_tex;
 pub mod nag_sty;
 pub mod nature_pre_cls;
@@ -475,6 +476,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("Interspeech", "cls", interspeech_cls::load_definitions),
   ("ieeetj", "cls", ieeetj_cls::load_definitions),
   ("atlasdoc", "cls", atlasdoc_cls::load_definitions),
+  ("MRM", "cls", mrm_cls::load_definitions),
   ("nic-series", "cls", nicseries_cls::load_definitions),
   ("czipreprint", "cls", czipreprint_cls::load_definitions),
   ("spconf", "sty", spconf_sty::load_definitions),

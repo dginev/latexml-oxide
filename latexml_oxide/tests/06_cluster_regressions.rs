@@ -800,3 +800,66 @@ fn frontmatter_atlasdoc_title() {
   );
   assert!(x.contains("Aad"), "AtlasOrcid author name missing:\n{x}");
 }
+
+/// jmlr.cls `\author{ \Name{N} \Email{E} \\ ... \addr Affiliation }`: the
+/// structured sub-macros must build one clean creator per `\Name` (name →
+/// personname, `\Email` → contact[email], the trailing `\addr` block →
+/// contact[affiliation]), not cram everything into one personname or split the
+/// affiliation's commas into phantom "Foo"/"FL" authors. `\nametag` must not
+/// leak. Witness 2410.16138.
+#[test]
+fn frontmatter_jmlr_structured_author() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_jmlr_name.tex");
+  assert!(
+    x.contains("<personname>Alice Smith</personname>"),
+    "jmlr author 1 not a clean personname:\n{x}"
+  );
+  assert!(
+    x.contains("<personname>Bob Jones</personname>"),
+    "jmlr author 2 not a clean personname:\n{x}"
+  );
+  assert!(
+    !x.contains("\\Name") && !x.contains("\\nametag") && !x.contains("\\addr"),
+    "jmlr author sub-macro leaked as raw text:\n{x}"
+  );
+  assert!(
+    x.contains("role=\"email\"") && x.contains("alice@example.edu"),
+    "jmlr email not structured:\n{x}"
+  );
+  assert!(
+    x.contains("role=\"affiliation\"") && x.contains("Department of Computer Science"),
+    "jmlr affiliation not structured:\n{x}"
+  );
+  assert!(
+    !x.contains("<personname>Foo") && !x.contains("<personname>FL"),
+    "jmlr affiliation commas mis-split into phantom authors:\n{x}"
+  );
+}
+
+/// MRM.cls (Wiley `\author[idx]{name}{orcid}` family): the author name renders,
+/// the ORCID becomes a linked contact, `\address`/`\state`/`\country` don't leak
+/// (`\state` is deliberately absent from OmniBus), and `\corres`/`\finfo` are
+/// preserved as notes. Witness 2509.13644.
+#[test]
+fn frontmatter_mrm_author() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_mrm_author.tex");
+  assert!(
+    x.contains("<personname>Jakob Asslander*</personname>"),
+    "MRM author name missing/unstructured:\n{x}"
+  );
+  assert!(
+    !x.contains("\\state")
+      && !x.contains("\\orcid")
+      && !x.contains("\\corres")
+      && !x.contains("\\authormark"),
+    "MRM frontmatter macro leaked as raw text:\n{x}"
+  );
+  assert!(
+    x.contains("role=\"orcid\"") && x.contains("0000-0003-2288-038X"),
+    "MRM ORCID not a structured contact:\n{x}"
+  );
+  assert!(
+    x.contains("Center for Biomedical Imaging"),
+    "MRM affiliation content missing:\n{x}"
+  );
+}
