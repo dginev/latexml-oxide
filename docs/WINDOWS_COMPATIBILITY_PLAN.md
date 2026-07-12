@@ -234,9 +234,9 @@ The three native C dependencies, in increasing order of difficulty:
    |---|---|---|
    | `latex`, `dvips`, `ps2pdf`, `kpsewhich`, `pdflatex` | TeX Live bin/windows | ✅ installed |
    | `dvipng` | `tlmgr install dvipng` (not in scheme-medium) | ✅ installed |
-   | Ghostscript | winget `ArtifexSoftware.GhostScript` (`gswin64c`); TL-Windows also bundles it behind `rungs.exe` (now in `gs_program()`'s probe list); MiKTeX: `mgs.exe` | ✅ installed |
-   | ImageMagick 7 | winget `ImageMagick.ImageMagick` (`magick`) | ✅ installed |
-   | MuPDF (`mutool`) | no winget package; ships as zip from mupdf.com — optional (chain falls through to pdftocairo/convert) | ⬜ not installed |
+   | Ghostscript | TL-Windows bundles it behind `rungs.exe` (in `gs_program()`'s probe list) — no separate install needed on a TL box; dedicated: winget `ArtifexSoftware.GhostScript` (needs UAC), MiKTeX: `mgs.exe` | ✅ via TL `rungs` |
+   | ImageMagick 7 | **portable 7z from GitHub releases** (`ImageMagick/ImageMagick` release assets, extract, put `magick.exe` on PATH) — the winget installer needs a UAC accept, portable does not | ✅ portable at `C:\claude\tools\imagemagick` |
+   | MuPDF (`mutool`) | zip from GitHub `ArtifexSoftware/mupdf-downloads` release assets | ✅ portable at `C:\claude\tools\mupdf` (1.28.0) |
    | poppler (`pdftocairo`) | NOT in TL-Windows; scoop/choco `poppler` or vcpkg `poppler[cairo]` — optional middle of the PDF chain | ⬜ not installed |
    | `xmllint` | NOT in TL-Windows; vcpkg's libxml2 port skips tools | ⬜ absent — Phase 3.3 removes the need |
    | MiKTeX (second TeX distro) | miktex.org installer | ⬜ deferred until the Phase 2 distro matrix (PATH ordering vs TL needs care) |
