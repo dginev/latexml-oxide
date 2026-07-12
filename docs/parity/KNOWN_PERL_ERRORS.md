@@ -1830,3 +1830,27 @@ attribute, so distinctly-numbered-and-labelled continuation rows stay separate
 and match pdfTeX. Candidate to upstream (one-char fix). Strictly monotone: the
 change can only *split* a merged equation whose row was numbered AND `\label`-ed;
 it never merges. Marked `OXIDIZED_DESIGN divergence` at the call site.
+
+## 47. Author-local `\def\name`/`\email`/`\addr` inside a redefined `\@maketitle` never take effect
+
+A JMLR-style `article` paper redefines `\@maketitle` to *locally* `\def\name`,
+`\def\email`, `\def\addr` (as font switches) and then expand `\@author` in that
+group:
+
+```tex
+\def\@maketitle{\vbox{ … {\def\addr{\small\it}\def\email{\hfill\small\tt}%
+  \def\name{\normalsize\bf}\@startauthor \@author \@endauthor}}}
+\author{\name Knut Vanderbush \email{knutv@stanford.edu}\\ \addr{Stanford University} …}
+```
+
+LaTeXML (both Perl and Rust) uses its own structural `\maketitle`/frontmatter
+machinery and never runs the paper's redefined `\@maketitle`, so `\name`,
+`\email`, `\addr` are undefined when the `\author` argument is digested and leak
+as literal text (`\name Knut Vanderbush \email …`).
+
+**Ground truth (same host):** Perl LaTeXML emits `Error:undefined:\name`
+/`\email`/`\addr` and renders `<ERROR class="undefined">\name</ERROR>Knut
+Vanderbush …` — **identical** to Rust. This is **PARITY**, not a Rust
+regression. Reproduces on `/usr/local/bin/latexml main.tex` (witness
+arXiv:2601.05137). Faithfully emulating an arbitrary user `\@maketitle`
+redefinition is out of scope; left at parity.
