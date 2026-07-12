@@ -1,14 +1,15 @@
-# Windows bring-up probe — docs/WINDOWS_COMPATIBILITY_PLAN.md.
+# Windows bring-up — docs/WINDOWS_COMPATIBILITY_PLAN.md.
 #
-# NOT part of required CI. This workflow is an opt-in, staged compile probe
-# for the x86_64-pc-windows-msvc port: each stage reports its own outcome so
-# the plan's Phase 1 blockers (libxml2/libxslt vcpkg wiring, the libmarpa
-# cc-port) can be watched falling one by one. Stages are EXPECTED to fail
-# until their corresponding plan phase lands — that is the point of the
-# probe; `continue-on-error` keeps later stages informative.
+# NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
+# three dependency PRs merge and the suite is stably green). Opt-in:
+# workflow_dispatch + pushes to the windows-compatibility branch.
 #
-# Promote into CI.yml as a required `windows` job (mirroring the `macos`
-# job: TeX Live install, make_formats, full test suite) only at Phase 4.
+# Mirrors the macos job's flow (deps → dumps → build → test) with the
+# Windows specifics learned during local bring-up (2026-07-12):
+#   * vcpkg static libxml2/libxslt, triplet x64-windows-static-md
+#   * TeX Live via setup-texlive-action (collections mirror the apt list)
+#   * dump generation via tools/make_formats.ps1 (no bash)
+#   * `ci` profile (no LTO — release-profile LTO costs ~2 min per test exe)
 on:
   workflow_dispatch:
   push:
@@ -21,18 +22,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  compile-probe:
-    name: compile probe (x86_64-pc-windows-msvc)
+  test:
+    name: build + test (x86_64-pc-windows-msvc)
     runs-on: windows-latest
     timeout-minutes: 120
     env:
+      CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
-      # Static C libraries + dynamic CRT: the plan's chosen triplet. Static
-      # CRT (`x64-windows-static`) is all-or-nothing across every C dep;
-      # dynamic libs would break the turnkey single-exe goal.
+      # Static C libraries + dynamic CRT (see plan Phase 1.1).
       VCPKG_TRIPLET: x64-windows-static-md
+      VCPKGRS_TRIPLET: x64-windows-static-md
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
@@ -41,49 +42,76 @@ jobs:
           cache-on-failure: true
           key: windows-bringup
 
-      # windows-latest runners ship vcpkg preinstalled at
-      # VCPKG_INSTALLATION_ROOT. Cache the installed tree — libxml2/libxslt
-      # build from source otherwise (~10 min).
+      # TEMPORARY until the three dependency PRs merge (then delete this
+      # step): redirect marpa/libxml/libxslt at their windows-compatibility
+      # branches. Appended here rather than committed in Cargo.toml so the
+      # repo manifest stays pointed at the published upstreams.
+      #   marpa:    dginev/marpa#5
+      #   libxml:   KWARC/rust-libxml#209
+      #   libxslt:  KWARC/rust-libxslt#9
+      - name: patch dependencies at PR branches (pre-merge bridge)
+        shell: pwsh
+        run: |
+          Add-Content Cargo.toml @'
+
+          [patch."https://github.com/dginev/marpa"]
+          marpa = { git = "https://github.com/dginev/marpa", branch = "windows-compatibility" }
+          [patch.crates-io]
+          libxml = { git = "https://github.com/KWARC/rust-libxml", branch = "windows-compatibility" }
+          libxslt = { git = "https://github.com/KWARC/rust-libxslt", branch = "windows-compatibility" }
+          '@
+
       - name: cache vcpkg installed tree
         uses: actions/cache@v4
         with:
           path: ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
           key: vcpkg-${{ env.VCPKG_TRIPLET }}-libxml2-libxslt-v1
-
       - name: vcpkg install libxml2 + libxslt (static)
         run: |
           & "$env:VCPKG_INSTALLATION_ROOT\vcpkg" install `
             "libxml2:$env:VCPKG_TRIPLET" "libxslt:$env:VCPKG_TRIPLET"
+      - name: export vcpkg root
+        run: '"VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV'
 
-      # Surface the vcpkg libs to the libxml/libxslt crate build scripts.
-      # Exact env-var wiring is a Phase 1 work item (plan §1.1-1.2); these
-      # are the crates' currently-documented knobs and may need upstream PRs.
-      - name: export native-lib locations
+      # Collections mirror the ubuntu job's apt list (texlive, latex-extra,
+      # science, bibtex-extra, publishers, lang de/fr/el/ru) — see plan
+      # Phase 4.1. dvipng is NOT in any of these collections (local finding).
+      - name: install TeX Live
+        uses: teatimeguest/setup-texlive-action@v3
+        with:
+          packages: >-
+            scheme-medium
+            collection-latexextra
+            collection-mathscience
+            collection-bibtexextra
+            collection-publishers
+            collection-fontsextra
+            collection-langgerman
+            collection-langfrench
+            collection-langgreek
+            collection-langcyrillic
+            dvipng
+
+      - name: TeX Live fingerprint (dump cache key)
+        id: tlfp
+        shell: pwsh
         run: |
-          $prefix = "$env:VCPKG_INSTALLATION_ROOT\installed\$env:VCPKG_TRIPLET"
-          "LIBXML2=$prefix\lib\libxml2.lib" >> $env:GITHUB_ENV
-          "PKG_CONFIG_PATH=$prefix\lib\pkgconfig" >> $env:GITHUB_ENV
-          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
-          "VCPKGRS_TRIPLET=$env:VCPKG_TRIPLET" >> $env:GITHUB_ENV
+          $banner = pdflatex --version | Select-Object -First 1
+          if ("$banner" -match 'TeX Live ([0-9]{4})') { "year=$($Matches[1])" >> $env:GITHUB_OUTPUT }
+      - name: cache engine dumps
+        id: dumps
+        uses: actions/cache@v4
+        with:
+          path: resources/dumps
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+      - name: make formats
+        if: steps.dumps.outputs.cache-hit != 'true'
+        shell: pwsh
+        env:
+          PROFILE: ci
+        run: tools/make_formats.ps1
 
-      # Stage 1 — pure-Rust proc-macro crate; no C deps. Should pass today.
-      - name: "stage 1: cargo check -p latexml_codegen"
-        continue-on-error: true
-        run: cargo check -p latexml_codegen --profile ci
-
-      # Stage 2 — first C-dep frontier: libxml2 + the libmarpa-sys
-      # `./configure && make` build (plan Phase 1.3 — the long pole).
-      - name: "stage 2: cargo check -p latexml_core"
-        continue-on-error: true
-        run: cargo check -p latexml_core --profile ci
-
-      # Stage 3 — whole workspace, all targets (adds libxslt via
-      # latexml_post, plus every test/bin target).
-      - name: "stage 3: cargo check --workspace --all-targets"
-        continue-on-error: true
-        run: cargo check --workspace --all-targets --profile ci
-
-      # Stage 4 — the turnkey artifact itself.
-      - name: "stage 4: cargo build --release --bin latexml_oxide"
-        continue-on-error: true
-        run: cargo build --release --bin latexml_oxide
+      - name: build test binaries
+        run: cargo test --profile ci --tests --workspace --no-run
+      - name: run tests
+        run: cargo test --profile ci --tests --workspace -- --test-threads=2
