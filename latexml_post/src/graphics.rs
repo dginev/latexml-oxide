@@ -39,6 +39,50 @@ fn record_converter_diag(msg: String) { LAST_CONVERTER_DIAG.with(|c| *c.borrow_m
 /// Take (read + clear) this thread's latest converter diagnostic.
 fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borrow_mut().take()) }
 
+/// True iff `<program>.exe` exists in some `PATH` directory. Windows-oriented
+/// (used to pick among Ghostscript's per-platform binary names); on Unix the
+/// delegate names are fixed and this is never consulted.
+fn program_on_path(program: &str) -> bool {
+  let Some(paths) = std::env::var_os("PATH") else {
+    return false;
+  };
+  let exe = format!("{program}.exe");
+  std::env::split_paths(&paths).any(|dir| dir.join(&exe).is_file())
+}
+
+/// Program name for the ImageMagick CLI delegate. On Windows, `convert.exe`
+/// is the system FAT→NTFS conversion utility in `System32`, which shadows
+/// ImageMagick's legacy name — invoking bare `convert` there runs the wrong
+/// program. ImageMagick 7's unified `magick` front-end accepts the same
+/// argument syntax, so use it on Windows. Unix keeps `convert` (matching
+/// Perl's Image::Magick-era delegate chain and ImageMagick 6 installs).
+fn im_convert_program() -> &'static str {
+  if cfg!(windows) {
+    "magick"
+  } else {
+    "convert"
+  }
+}
+
+/// Program name for the Ghostscript CLI delegate. Unix installs `gs`.
+/// Windows Ghostscript ships the console binary as `gswin64c.exe`
+/// (32-bit: `gswin32c.exe`) and MiKTeX bundles its own as `mgs.exe`;
+/// probed once per process, in that order, falling back to `gs` so a
+/// failure surfaces as the usual could-not-start converter diagnostic.
+fn gs_program() -> &'static str {
+  if cfg!(windows) {
+    static GS: LazyLock<&'static str> = LazyLock::new(|| {
+      ["gswin64c", "gswin32c", "mgs"]
+        .into_iter()
+        .find(|candidate| program_on_path(candidate))
+        .unwrap_or("gs")
+    });
+    *GS
+  } else {
+    "gs"
+  }
+}
+
 // Diagnostic emission: `Error!` (and friends) live in
 // `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
 // diag;` in `lib.rs`. They emit harness-compatible structured Error
@@ -685,7 +729,7 @@ impl Graphics {
       .map(|d| d.as_nanos())
       .unwrap_or(0);
     let tmp = parent.join(format!(".{}.{}.rotated", stem, unique));
-    let mut cmd = std::process::Command::new("convert");
+    let mut cmd = std::process::Command::new(im_convert_program());
     cmd
       .arg(dest)
       .arg("-rotate")
@@ -1551,7 +1595,7 @@ impl Graphics {
       "pngalpha"
     };
 
-    let mut cmd = std::process::Command::new("gs");
+    let mut cmd = std::process::Command::new(gs_program());
     cmd
       .arg("-q")
       .arg("-dNOPAUSE")
@@ -1720,7 +1764,7 @@ impl Graphics {
     // group via setsid+pre_exec (Unix), so killing convert on timeout
     // also kills the gs grandchild. Without that, gs orphaned by a
     // dying convert kept running 10+ min and stalled the sandbox.
-    let mut cmd = std::process::Command::new("convert");
+    let mut cmd = std::process::Command::new(im_convert_program());
     cmd
       .arg("-define")
       .arg("pdf:use-cropbox=true")

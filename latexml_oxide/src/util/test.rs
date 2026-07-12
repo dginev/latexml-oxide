@@ -141,14 +141,17 @@ fn install_sigsegv_handler() {
     // Capture context synchronously and persist to a per-pid file —
     // cargo test buffers/discards stderr from binaries that exit by
     // signal, so eprintln!() never reaches the user. Writing to
-    // `/tmp/latexml_sigsegv_<pid>.txt` survives the kill.
+    // `<temp_dir>/latexml_sigsegv_<pid>.txt` survives the kill.
     let tid = std::thread::current().id();
     let name = std::thread::current()
       .name()
       .unwrap_or("<unnamed>")
       .to_string();
     let pid = std::process::id();
-    let path = format!("/tmp/latexml_sigsegv_{pid}.txt");
+    let path = std::env::temp_dir()
+      .join(format!("latexml_sigsegv_{pid}.txt"))
+      .display()
+      .to_string();
     let bt = std::backtrace::Backtrace::force_capture();
     let exe = std::env::current_exe()
       .map(|p| p.display().to_string())
@@ -515,11 +518,18 @@ fn process_xmlfile<'a>(xml_path: &'a str, _name: &'a str) -> Vec<String> {
 fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
   let doc_str = doc.serialize_to_string();
   if *SAVE_ACTUAL {
-    let path = format!("/tmp/latexml_actual_{name}.xml");
+    let tmp = std::env::temp_dir();
+    let path = tmp
+      .join(format!("latexml_actual_{name}.xml"))
+      .display()
+      .to_string();
     std::fs::write(&path, &doc_str).ok();
     eprintln!("Saved actual XML to {path}");
     // Also save using libxml's built-in serializer for comparison
-    let path2 = format!("/tmp/latexml_actual_{name}_libxml.xml");
+    let path2 = tmp
+      .join(format!("latexml_actual_{name}_libxml.xml"))
+      .display()
+      .to_string();
     let libxml_str = doc
       .document
       .to_string_with_options(libxml::tree::SaveOptions {

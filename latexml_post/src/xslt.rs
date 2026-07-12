@@ -45,16 +45,24 @@ fn set_xslt_max_depth() {
     // platform's own C-symbol decoration, so it works on ELF and Mach-O
     // alike. If the symbol is ever absent (NULL), we skip the write:
     // libxslt's built-in default cap of 3000 still bounds recursion.
+    #[cfg(unix)]
     unsafe {
       let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
       if !sym.is_null() {
         *(sym as *mut std::os::raw::c_int) = 1000;
       }
     }
+    // Non-Unix (Windows): no dlsym/RTLD_DEFAULT, and `libc` is a
+    // cfg(unix)-only dependency of this crate. Interim: skip the write —
+    // libxslt's built-in default cap of 3000 still bounds recursion, just
+    // above Perl's 1000. Restoring exact parity via a direct
+    // `extern "C" { static mut xsltMaxDepth }` declaration (undecorated on
+    // x64 COFF, resolvable against the vcpkg-static libxslt) is Phase 2.3
+    // of docs/WINDOWS_COMPATIBILITY_PLAN.md.
   });
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod max_depth_tests {
   /// The dlsym write must actually land: after `set_xslt_max_depth`,
   /// reading the global back through the same runtime resolution path
