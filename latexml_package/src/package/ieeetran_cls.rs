@@ -188,11 +188,44 @@ LoadDefinitions!({
   // content; preserve.
   DefMacro!("\\IEEEspecialpapernotice{}",
     "\\lx@add@frontmatter{ltx:note}[role=papernotice]{#1}");
-  // \IEEEmembership{text} — membership label after author name
-  // (e.g. "Member, IEEE"). Render inline in italic; do NOT drop.
-  DefMacro!("\\IEEEmembership{}", ",\\space\\textit{#1}");
-  DefMacro!("\\IEEEauthorblockN{}", "#1");
+  // \IEEEmembership{text} — membership grade after an author name (e.g.
+  // "Senior Member, IEEE"). Perl drops it (''). An earlier Rust rendering,
+  // ",\space\textit{#1}", injected a top-level comma INTO the `\author` list;
+  // the author-splitter (`\lx@add@authors`) then split that comma and turned
+  // the membership grade into a phantom "Senior Member, IEEE" creator (witness
+  // 2508.00603, whose flat `\author{A, B, \IEEEmembership{...}, and C}` yielded
+  // 6 creators). The grade cannot be re-attached to the preceding name after a
+  // comma split, so match Perl and drop it — a clean author list beats a
+  // phantom author.
+  DefMacro!("\\IEEEmembership{}", "");
+  // `\author{\IEEEauthorblockN{Name}\IEEEauthorblockA{Affil}\and …}` is the
+  // conference-mode author block. Perl maps `\IEEEauthorblockN{}`→`#1` (plain
+  // text) and relies on `\author`→`\lx@add@authors` to split; but our beyond-Perl
+  // author-splitter (OXIDIZED_DESIGN #52) misreads the ordinal `1\textsuperscript
+  // {st}` prefixes as affiliation markers and drops every author (witness
+  // 2602.05517 → 0 creators). Because the author block carries EXPLICIT
+  // structure, bind each `\IEEEauthorblockN` to a creator directly and each
+  // `\IEEEauthorblockA` to that creator's affiliation, then have `\author` run
+  // the block body verbatim (below) instead of guessing.
+  DefMacro!("\\IEEEauthorblockN{}", "\\lx@add@creator[role=author]{#1}");
   DefMacro!("\\IEEEauthorblockA{}", "\\lx@add@affiliation{#1}");
+  // Run an explicit author-block body: `\and` merely separates blocks here (each
+  // block already emits its own creator), so neutralise it.
+  DefMacro!("\\lx@IEEE@author@blocks{}",
+    "\\def\\@author{#1}\\begingroup\\def\\and{}#1\\endgroup");
+  DefMacro!("\\lx@IEEE@author@plain{}",
+    "\\def\\@shortauthor{}\\gdef\\shortauthor{}\\def\\@author{#1}\\lx@add@authors{#1}");
+  // Override `\author`: dispatch to explicit-block handling when the body uses
+  // `\IEEEauthorblockN`, else to the standard name-splitter. `\author` is locked
+  // in the kernel; re-lock so a user `\renewcommand` can't shadow this.
+  DefMacro!("\\author[]{}", sub[(_short, body)] {
+    let target = if body.to_string().contains("authorblockN") {
+      T_CS!("\\lx@IEEE@author@blocks")
+    } else {
+      T_CS!("\\lx@IEEE@author@plain")
+    };
+    Ok(Invocation!(target, vec![Some(body)]))
+  }, locked => true);
 
   // IEEEkeywords environment (Perl PR #2767: digestion-based capture)
   DefMacro!("\\IEEEkeywords", "\\lx@begin@keywords[name={\\IEEEkeywordsname:~}]");
@@ -215,7 +248,12 @@ LoadDefinitions!({
   DefMacro!("\\IEEEPARstart{}{}", "#1#2");
   DefMacro!("\\IEEEcompsocitemizethanks{}", "\\thanks{#1}");
   def_macro_noop("\\IEEEcompsocthanksitem[]")?;
-  def_macro_noop("\\IEEEauthorrefmark")?;
+  // \IEEEauthorrefmark{n} — a superscript affiliation/footnote marker after an
+  // author name. Perl binds `\IEEEauthorrefmark` with NO argument (''), so a
+  // real `\IEEEauthorrefmark{2}` leaks its `{2}` as literal text ("Lei Chen2",
+  // witness 2404.07847). Take the argument and render it as a superscript
+  // (beyond-Perl): "Lei Chen²", matching pdfTeX and preserving the marker.
+  DefMacro!("\\IEEEauthorrefmark{}", "\\textsuperscript{#1}");
   def_macro_noop("\\IEEEtriggeratref{}")?;
   DefMacro!("\\IEEEpubid{}", "\\lx@add@pubnote[role=pubid]{pubid: #1}");
   def_macro_noop("\\IEEEpubidadjcol")?;

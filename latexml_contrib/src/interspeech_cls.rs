@@ -27,8 +27,18 @@ LoadDefinitions!({
   // adjustment, semantically irrelevant for our XML output. Witness
   // 2312.05730.
   def_macro_noop("\\ninept")?;
-  // \name carries the author name in Interspeech templates.
-  DefMacro!("\\name{}", "\\author{#1}");
+  // Modern ISCA Interspeech.cls (2023–2025, and the Interspeech20YY variants
+  // that resolve here by version-suffix stripping) redefines \name with the
+  // keyval signature `\newcommand{\name}[3][]` — one author per call:
+  //   `\name[affiliation={1,*}]{First}{Last}`
+  // splitting the name into First/Last and carrying a superscript affiliation
+  // marker. (The old single-argument `\def\name#1` is commented out in the
+  // shipped class.) Bind that shape to a structured "First Last" creator; a
+  // single-arg `\name{}` would grab `[` and drop every author (witness
+  // 2406.11727 → `[ [ [ …`). The optional `affiliation={…}` markers are numeric
+  // cross-references into the `\address` block, which is preserved below, so we
+  // drop the marker rather than smuggle its keyval text into the name.
+  DefMacro!("\\name [] {} {}", "\\lx@add@creator[role=author]{#2 #3}");
   DefMacro!(
     "\\address{}",
     "\\@add@frontmatter{ltx:note}[role=address]{#1}"

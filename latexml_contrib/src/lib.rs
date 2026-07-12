@@ -124,6 +124,8 @@ pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
 pub mod ifacconf_cls;
 // ifdraft_sty: consolidated into latexml_package (Perl Package/ifdraft.sty.ltxml)
+pub mod czipreprint_cls;
+pub mod ieeetj_cls;
 pub mod imsart_cls;
 pub mod informs_cls;
 pub mod interact_cls;
@@ -163,6 +165,7 @@ pub mod nature_pre_cls;
 pub mod needspace_sty;
 pub mod newpxmath_sty;
 pub mod nicematrix_sty;
+pub mod nicseries_cls;
 pub mod oldgerm_sty;
 pub mod oldlfont_sty;
 pub mod optica_article_cls;
@@ -188,6 +191,7 @@ pub mod scrpage2_sty;
 pub mod scrpage_sty;
 pub mod scrreprt_cls;
 pub mod sourcecodepro_sty;
+pub mod spconf_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
 pub mod tgpagella_sty;
@@ -466,7 +470,16 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
   ("interact", "cls", interact_cls::load_definitions),
+  // Interspeech20YY.cls resolve here by version-suffix stripping (find_file_fallback).
   ("Interspeech", "cls", interspeech_cls::load_definitions),
+  ("ieeetj", "cls", ieeetj_cls::load_definitions),
+  ("nic-series", "cls", nicseries_cls::load_definitions),
+  ("czipreprint", "cls", czipreprint_cls::load_definitions),
+  ("spconf", "sty", spconf_sty::load_definitions),
+  ("paspconf", "sty", spconf_sty::load_definitions),
+  ("INTERSPEECH2021", "sty", spconf_sty::load_definitions),
+  ("INTERSPEECH2022", "sty", spconf_sty::load_definitions),
+  ("INTERSPEECH2023", "sty", spconf_sty::load_definitions),
   ("clear2025", "cls", jmlr_cls::load_definitions),
   ("jabbrv", "sty", jabbrv_sty::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),

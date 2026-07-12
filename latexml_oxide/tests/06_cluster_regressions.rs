@@ -670,3 +670,114 @@ fn cluster_hdotsfor_columns() {
     "expected 3 + 2 dots cells, got:\n{x}"
   );
 }
+
+// ── Frontmatter class-binding fixtures ──────────────────────────────────────
+// Structured, well-rendered author blocks across conference/journal classes.
+// Witnesses are open arXiv HTML "front matter" reports; each fix is described
+// in its binding. `<personname>` counts use the default-namespace serialization
+// (bare tag names).
+
+/// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
+/// (optional running-head short name + full name). The name must render, and
+/// the `[F. Poli]` optarg must NOT leak as a `[` creator. Witness 2405.08372.
+#[test]
+fn frontmatter_acmart_author_optarg() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_acmart_author_optarg.tex");
+  assert!(
+    x.contains("Federico Poli"),
+    "acmart author name missing:\n{x}"
+  );
+  assert!(
+    !x.contains("<personname>[") && !x.contains("<personname> ["),
+    "acmart `[short]` optarg leaked as a bracket creator:\n{x}"
+  );
+}
+
+/// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
+/// block is one creator; the `1\textsuperscript{st}` ordinals must not be
+/// misread as affiliation markers and drop every author. Witness 2602.05517.
+#[test]
+fn frontmatter_ieee_authorblock() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_authorblock.tex");
+  assert!(
+    x.contains("Alice Smith"),
+    "IEEE authorblock author 1 missing:\n{x}"
+  );
+  assert!(
+    x.contains("Bob Jones"),
+    "IEEE authorblock author 2 missing:\n{x}"
+  );
+  assert!(
+    x.matches("<personname>").count() >= 2,
+    "IEEE authorblock must yield >=2 creators, got {}:\n{x}",
+    x.matches("<personname>").count()
+  );
+}
+
+/// IEEEtran `\IEEEmembership{Senior Member, IEEE}` inside a flat comma author
+/// list must not become a phantom "Senior Member, IEEE" creator. Witness
+/// 2508.00603.
+#[test]
+fn frontmatter_ieee_membership_no_phantom() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_membership.tex");
+  assert!(
+    x.contains("Alice Smith") && x.contains("Bob Jones"),
+    "IEEE authors missing:\n{x}"
+  );
+  assert!(
+    !x.contains("<personname>Senior Member") && !x.contains("<personname>Member, IEEE"),
+    "IEEEmembership leaked as a phantom creator:\n{x}"
+  );
+}
+
+/// Modern Interspeech.cls `\name[affiliation={1,*}]{First}{Last}` (2-arg): the
+/// author renders as "First Last"; the `[affiliation=…]` optarg must not leak a
+/// `[` creator or `\name`. Interspeech2024 resolves here by version-stripping.
+/// Witness 2406.11727.
+#[test]
+fn frontmatter_interspeech2024_name() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_interspeech2024_name.tex");
+  assert!(
+    x.contains("Alice Smith"),
+    "Interspeech author 1 missing:\n{x}"
+  );
+  assert!(
+    x.contains("Bob Jones"),
+    "Interspeech author 2 missing:\n{x}"
+  );
+  assert!(!x.contains("\\name"), "Interspeech `\\name` leaked:\n{x}");
+  assert!(
+    !x.contains("<personname>["),
+    "Interspeech optarg leaked as bracket:\n{x}"
+  );
+}
+
+/// czipreprint `\author[1]{…}` / `\author*[1,2]{…}` (starred = corresponding):
+/// the star must be peeked via `\@ifstar`, not baked into the signature (which
+/// would break the plain form → `]Name` leak). Witness 2508.00826.
+#[test]
+fn frontmatter_czipreprint_author_star() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_czipreprint_author.tex");
+  assert!(
+    x.contains("Alice Smith"),
+    "czipreprint plain author missing:\n{x}"
+  );
+  assert!(
+    x.contains("Bob Jones"),
+    "czipreprint starred author missing:\n{x}"
+  );
+  assert!(
+    !x.contains("<personname>]"),
+    "czipreprint `[n]` optarg leaked a `]`:\n{x}"
+  );
+}
+
+/// spconf.sty / INTERSPEECH2021.sty single-arg `\name{Author1$^1$, Author2$^2$}`
+/// on `\documentclass{article}`: the name list becomes structured creators
+/// rather than being stashed and dropped. Witness 2309.14838, 2405.13379.
+#[test]
+fn frontmatter_spconf_name() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_spconf_name.tex");
+  assert!(x.contains("Alice Smith"), "spconf author 1 missing:\n{x}");
+  assert!(x.contains("Bob Jones"), "spconf author 2 missing:\n{x}");
+}
