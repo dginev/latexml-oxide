@@ -373,6 +373,26 @@ list) and resolves files with forward slashes, like TL-Windows.
 
 ## Phase 5 — release artifact
 
+**Prototype validated locally (2026-07-12).** The full Windows distribution
+recipe, end to end:
+
+```
+KPATHSEA_NO_LINK=1 cargo build --no-default-features \
+  --features runtime-bindings --profile maxperf --bin latexml_oxide
+```
+
+Results on the bring-up box: 46.9 MB exe (vs 58.9 MB release-profile);
+`dumpbin /DEPENDENTS` shows ONLY OS DLLs + VC runtime (`VCRUNTIME140*`,
+UCRT `api-ms-win-crt-*` — the `-md` dynamic-CRT triplet choice; both ship
+with Windows 10+/every VC redist); converts on a MiKTeX-only PATH and
+produces full HTML5 + CSS on TL; embedded dumps verified by renaming
+`resources/dumps` away (no degraded-mode warning). Packaged as
+`latexml-oxide-<version>-x86_64-pc-windows-msvc.zip` + `.sha256` sidecar
+(Compress-Archive + Get-FileHash), matching the existing asset naming.
+Remaining for the real release leg: wire this into `release.yml`
+(vcpkg + setup-texlive as in windows-bringup.yml, dumps from
+release-dumps.yml embed unchanged) and the README platform table.
+
 1. Extend `release.yml` with a `x86_64-pc-windows-msvc` leg: `maxperf` profile,
    `--no-default-features --features runtime-bindings` (same recipe as
    `tools/make_release.sh`), vcpkg static libs, embedded 5-year dump window
