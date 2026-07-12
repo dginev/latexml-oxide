@@ -17,6 +17,28 @@ locked in with the maintainer (2026-07-12):
 | CI | `windows-latest` job running the test suite is a first-class deliverable. |
 | Release | Zipped self-contained `latexml_oxide.exe` artifact alongside the Linux/macOS assets. |
 
+## Approach principle: prefer portable ecosystem helpers over hand-rolled platform code
+
+Where a well-maintained crate (or a `std` API) already solves a
+cross-platform problem, use it instead of writing `cfg(windows)` branches by
+hand — less code to audit per-platform, and the edge cases (UNC prefixes,
+`PATHEXT`, per-user dirs) are someone else's regression suite. Concretely:
+
+| Problem | Use | Status |
+|---|---|---|
+| Temp files/dirs | `std::env::temp_dir()` for fixed-name scratch; **`tempfile`** (already a dep of `latexml_post` + `latexml_oxide`) for unique/auto-cleaned files — prefer it over hand-built `SystemTime`-suffixed siblings when touching that code | in use; extend opportunistically |
+| Locating delegate executables on `PATH` | **`which`** crate — handles `PATHEXT` (`.exe`/`.bat`/`.cmd`), canonical result paths; replaces the hand-rolled `program_on_path` probe in `graphics.rs` | adopt in Phase 2.4 |
+| Home directory | **`home`** crate (the cargo team's own; correct `USERPROFILE`/`HOME` semantics) — replaces the env-var fallback in `pathname.rs::HOME_PATH` | adopt in Phase 2.1 |
+| `fs::canonicalize` returning `\\?\C:\…` verbatim paths (break string-level code and subprocess args) | **`dunce`** — canonicalizes to legacy drive-letter form when safe | adopt in Phase 2.1 |
+| `Path` → `/`-separated string at the pathname-layer boundary | **`path-slash`** (or a 5-line local helper if the dep isn't warranted) | decide in Phase 2.1 |
+| `PATH` splitting/joining | `std::env::split_paths` / `join_paths` — never split on `:`/`;` manually | in use (Phase 0) |
+
+Rules: new deps go through the existing gates (`deny.toml` licenses/advisories,
+`cargo machete`); Phase-0 groundwork deliberately stayed `std`-only because it
+landed without a compiling Windows toolchain to verify new deps against —
+swap-ins happen in the phase where they're compile-tested. This mirrors the
+project's existing choices (`tempfile`, `glob`) rather than a new policy.
+
 The kpathsea story is already Windows-shaped: the `kpathsea` crate's
 subprocess-`kpsewhich` backend (see `latexml_core/Cargo.toml` and
 `latexml_core/src/util/pathname.rs`) removes the libkpathsea link requirement —
