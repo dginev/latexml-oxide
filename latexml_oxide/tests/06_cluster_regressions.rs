@@ -781,3 +781,22 @@ fn frontmatter_spconf_name() {
   assert!(x.contains("Alice Smith"), "spconf author 1 missing:\n{x}");
   assert!(x.contains("Bob Jones"), "spconf author 2 missing:\n{x}");
 }
+
+/// atlasdoc `\AtlasTitle{…}` / `\AtlasAbstract{…}` / `\AtlasOrcid[orcid]{Name}`:
+/// the frontmatter macros of the (very large, unbound) ATLAS class must not leak
+/// as literal text — the title/abstract render and the collaboration author
+/// names show. Witness 2508.20929. (Full author-list-as-creators is out of scope
+/// for this minimal frontmatter binding — the list is `\input` in the body.)
+#[test]
+fn frontmatter_atlasdoc_title() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_atlasdoc_title.tex");
+  assert!(
+    x.contains("heavy neutral leptons"),
+    "AtlasTitle text missing:\n{x}"
+  );
+  assert!(
+    !x.contains("\\AtlasTitle") && !x.contains("\\AtlasAbstract") && !x.contains("\\AtlasOrcid"),
+    "Atlas frontmatter macro leaked as raw text:\n{x}"
+  );
+  assert!(x.contains("Aad"), "AtlasOrcid author name missing:\n{x}");
+}

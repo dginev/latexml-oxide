@@ -124,6 +124,7 @@ pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
 pub mod ifacconf_cls;
 // ifdraft_sty: consolidated into latexml_package (Perl Package/ifdraft.sty.ltxml)
+pub mod atlasdoc_cls;
 pub mod czipreprint_cls;
 pub mod ieeetj_cls;
 pub mod imsart_cls;
@@ -473,6 +474,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // Interspeech20YY.cls resolve here by version-suffix stripping (find_file_fallback).
   ("Interspeech", "cls", interspeech_cls::load_definitions),
   ("ieeetj", "cls", ieeetj_cls::load_definitions),
+  ("atlasdoc", "cls", atlasdoc_cls::load_definitions),
   ("nic-series", "cls", nicseries_cls::load_definitions),
   ("czipreprint", "cls", czipreprint_cls::load_definitions),
   ("spconf", "sty", spconf_sty::load_definitions),
