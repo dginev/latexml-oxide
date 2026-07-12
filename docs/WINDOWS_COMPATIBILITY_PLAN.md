@@ -318,9 +318,18 @@ Linux+TL2026 before treating as platform divergence): `greek_test`
 (babel's new `locale/invalid/` deprecation shim for `polutonikogreek`
 fires; `\text`/`\acc*` undefined downstream) and 86_tikz
 `ac_drive_components_test` (SVG coordinate drift 12.4 → 12.68, pgf
-version-scented). OPEN, environment: 4 × `90_latexmlpost` need `xmllint`
-(no Windows source: TL doesn't ship it, vcpkg's libxml2 port skips tools)
-— the Phase 3.3 Rust-native comparison rewrite is the fix.
+version-scented). FIXED same-day: 4 × `90_latexmlpost` — the Phase 3.3 rewrite landed:
+comparison now parses both sides in-process with the already-linked libxml2
+(`no_blanks` parse + `format: true` serialization = exactly `xmllint
+--format`) and line-diffs via the `similar` crate (LCS, same counts as
+GNU diff `<`/`>` lines). No bash/xmllint/diff/grep/wc on ANY platform now,
+and a missing/malformed file panics instead of vacuously passing.
+
+**Suite status after day one: 1524 passed / 2 failed** — the two
+ambient-TL-2026 drift suspects above (`greek_test`, tikz
+`ac_drive_components_test`), which need a Linux + TL2026 cross-check to
+classify (if they fail there too, they're TL-drift work items for the main
+parity mission, not Windows blockers).
 
 ## Phase 4 — CI: `windows-latest` job as a required leg
 

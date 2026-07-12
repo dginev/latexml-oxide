@@ -135,6 +135,13 @@ dhat = { version = "0.3", optional = true }
 # needs. Used for the mimalloc-vs-jemalloc A/B and the recommended harness build.
 tikv-jemallocator = { version = "0.7", optional = true }
 
+[dev-dependencies]
+# Line-diff engine for tests/90_latexmlpost.rs's golden comparison — the
+# in-process replacement for the old `bash -c "diff <(xmllint --format …)"`
+# pipeline (which required a Unix userland and silently vacuous-passed when
+# xmllint was missing). LCS-based, so counts match GNU diff's `<`/`>` lines.
+similar = "2"
+
 # Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
 # Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.
 # Runtime apt dependencies match the README's "Build from source" recipe minus
