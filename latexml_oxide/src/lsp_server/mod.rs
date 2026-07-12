@@ -22,14 +22,24 @@
 //! it. Keeping it single-threaded is also what makes the `fork()` safe: there
 //! is no second thread that could hold the allocator lock at fork time.
 
+// The full feature set (fork preamble-cache, dep snapshots, project roots,
+// supersession) is wired only into the unix transport; `generic.rs` drives a
+// simpler blocking subset. The shared modules stay compiled on every
+// platform (their unit tests run everywhere), so on non-unix the
+// unix-only consumers read as dead code — silence exactly that, there.
 mod diagnostics;
+#[cfg_attr(not(unix), allow(dead_code))]
 mod document;
 #[cfg(not(unix))]
 mod generic;
 mod json;
+#[cfg_attr(not(unix), allow(dead_code))]
 mod overlay;
+#[cfg_attr(not(unix), allow(dead_code))]
 mod project;
+#[cfg_attr(not(unix), allow(dead_code))]
 mod protocol;
+#[cfg_attr(not(unix), allow(dead_code))]
 mod server;
 #[cfg(unix)]
 mod unix;

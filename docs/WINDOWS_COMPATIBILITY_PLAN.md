@@ -351,6 +351,26 @@ parity mission, not Windows blockers).
 4. Only after the job is stably green: mark it required, update the README
    badge/platform table.
 
+**Self-containedness landmine (found 2026-07-12, MiKTeX smoke):** a Windows
+build made with TeX Live on PATH silently LINKS TL's `kpathsealibw64.dll`
+(kpathsea_sys's `try_windows_dll` probe), producing a binary that won't even
+LAUNCH unless TL's bin dir is on PATH — with only MiKTeX installed it dies at
+load time with "error while loading shared libraries". The Windows
+**distribution** build must therefore set `KPATHSEA_NO_LINK=1` (subprocess
+`kpsewhich` backend, works against both TL and MiKTeX) — the exact Windows
+analogue of the Linux release-dumps' "kpathsea-UNLINKED dumper binary"
+pattern. Local dev builds with TL on PATH may keep the in-process link (it's
+faster); only the shipped artifact and the MiKTeX test leg need the unlinked
+variant. `dumpbin /DEPENDENTS` in Phase 5.2 is the regression gate.
+
+**MiKTeX runtime findings (Phase 2.2, same probe):** `kpsewhich
+-var-value=SELFAUTOPARENT` returns EMPTY on MiKTeX (plus an update-nag line
+on stderr), and no banner anywhere mentions a TL year — so
+`detect_ambient_texlive_year` gained a MiKTeX arm mapping the rolling
+`MiKTeX YY.MM` version stamp to `20YY` (25.12 → 2025; nearest-dump fallback
+covers the rest). MiKTeX ships `mgs.exe` (already in `gs_program()`'s probe
+list) and resolves files with forward slashes, like TL-Windows.
+
 ## Phase 5 — release artifact
 
 1. Extend `release.yml` with a `x86_64-pc-windows-msvc` leg: `maxperf` profile,

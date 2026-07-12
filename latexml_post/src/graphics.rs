@@ -56,13 +56,7 @@ fn program_on_path(program: &str) -> bool {
 /// program. ImageMagick 7's unified `magick` front-end accepts the same
 /// argument syntax, so use it on Windows. Unix keeps `convert` (matching
 /// Perl's Image::Magick-era delegate chain and ImageMagick 6 installs).
-fn im_convert_program() -> &'static str {
-  if cfg!(windows) {
-    "magick"
-  } else {
-    "convert"
-  }
-}
+fn im_convert_program() -> &'static str { if cfg!(windows) { "magick" } else { "convert" } }
 
 /// Program name for the Ghostscript CLI delegate. Unix installs `gs`.
 /// Windows Ghostscript ships the console binary as `gswin64c.exe`
@@ -1082,9 +1076,22 @@ impl Graphics {
           libc::killpg(pid, libc::SIGKILL);
         }
       }
-      #[cfg(not(unix))]
+      #[cfg(windows)]
       {
-        // Non-Unix platforms: best-effort PID kill only.
+        // Windows analogue of the killpg group-kill: `taskkill /T` walks
+        // the child-process tree from the given PID, so a timed-out
+        // `magick` also takes down the `gs` it spawned (the exact orphan
+        // scenario the Unix setsid+killpg design exists for). /F because
+        // there is no SIGTERM-style graceful tier on Windows consoles
+        // without a console-event dance; the subsequent child.kill() is
+        // then a no-op backstop.
+        let _ = std::process::Command::new("taskkill")
+          .args(["/PID", &pid.to_string(), "/T", "/F"])
+          .output();
+      }
+      #[cfg(not(any(unix, windows)))]
+      {
+        // Other platforms: best-effort PID kill only (child.kill() below).
         let _ = pid;
       }
     };

@@ -31,13 +31,10 @@ fn xmllint_format(path: &str) -> String {
   // whose stored indentation differs (compact vs indented) diff on pure
   // whitespace despite identical XML.
   let doc = libxml::parser::Parser::default()
-    .parse_file_with_options(
-      path,
-      libxml::parser::ParserOptions {
-        no_blanks: true,
-        ..libxml::parser::ParserOptions::default()
-      },
-    )
+    .parse_file_with_options(path, libxml::parser::ParserOptions {
+      no_blanks: true,
+      ..libxml::parser::ParserOptions::default()
+    })
     .unwrap_or_else(|e| panic!("Failed to parse {path} for normalized comparison: {e:?}"));
   doc.to_string_with_options(libxml::tree::SaveOptions {
     format: true,

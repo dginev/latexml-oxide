@@ -30,12 +30,13 @@ static LITERAL_PROTOCOL: &str = "literal:";
 static HOME_TILDE: &str = "~";
 // `HOME` first (Unix, and set by some Windows shells), then Windows'
 // native `USERPROFILE`, so `~` expansion works on both platforms.
-static HOME_PATH: Lazy<String> = Lazy::new(|| {
-  match env::var_os("HOME").or_else(|| env::var_os("USERPROFILE")) {
-    Some(val) => val.to_string_lossy().into_owned(),
-    _ => s!("~"),
-  }
-});
+static HOME_PATH: Lazy<String> =
+  Lazy::new(
+    || match env::var_os("HOME").or_else(|| env::var_os("USERPROFILE")) {
+      Some(val) => val.to_string_lossy().into_owned(),
+      _ => s!("~"),
+    },
+  );
 static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());
 // Match Perl LaTeXML's permissive filename behavior: filenames may
 // contain commas, parens, ampersands, etc. that some user paths legitimately

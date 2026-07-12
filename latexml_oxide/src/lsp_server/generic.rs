@@ -2,7 +2,7 @@
 //! preemption). Functional fallback so the binary works everywhere;
 //! the performance model lives in `unix.rs`.
 
-use std::io::{BufRead, Read};
+use std::io::BufRead;
 
 use serde_json::Value;
 
@@ -22,12 +22,11 @@ fn read_message(reader: &mut impl BufRead) -> Option<String> {
     if trimmed.is_empty() {
       break;
     }
-    if trimmed.to_lowercase().starts_with("content-length:") {
-      if let Some(v) = trimmed.split(':').nth(1) {
-        if let Ok(n) = v.trim().parse::<usize>() {
-          content_length = n;
-        }
-      }
+    if trimmed.to_lowercase().starts_with("content-length:")
+      && let Some(v) = trimmed.split(':').nth(1)
+      && let Ok(n) = v.trim().parse::<usize>()
+    {
+      content_length = n;
     }
   }
   if content_length == 0 {
