@@ -115,6 +115,26 @@ re-shape the phase:
   `kpsewhich` probe, even TL-Windows `kpathsealibw64.dll` detection. Building
   before a TeX distro is on PATH requires `KPATHSEA_SKIP_TOOLCHAIN_CHECK=1`.
 
+**Progress 2026-07-12, later the same session — `cargo check --workspace
+--all-targets` PASSES on Windows.** Two more upstream one-liners were needed
+beyond the marpa port:
+
+- **rust-libxml** (`windows-compatibility` branch, `8e40ba00`): the vcpkg arm
+  must emit `cargo:rustc-link-lib=bcrypt` (+`ws2_32`) — vcpkg links port
+  libraries but not Windows SDK system libs, and libxml2 ≥ 2.12 calls
+  `BCryptGenRandom` from `xmlInitRandom` (LNK2019 first surfaces in
+  latexml_codegen's proc-macro dylib link, since `cargo check` of rlibs
+  never links).
+- **rust-libxslt** (`windows-compatibility` branch, `9fa9a6d8`): new
+  vcpkg-resolution arm in build.rs mirroring rust-libxml's.
+
+Machine-local wiring (documented so the CI job can replicate it): vcpkg
+triplet `x64-windows-static-md` with `VCPKG_ROOT`/`VCPKGRS_TRIPLET`, plus
+`LIBCLANG_PATH` for bindgen — set via a parent-dir `.cargo/config.toml`
+`[env]` block outside the repo. TL-Windows validation: `kpsewhich
+-var-value=SELFAUTOPARENT` returns forward-slashed `C:/texlive/2026`, so
+year detection and the `/`-normalization strategy hold.
+
 The three native C dependencies, in increasing order of difficulty:
 
 1. **libxml2 via vcpkg** (`vcpkg install libxml2:x64-windows-static-md`).
