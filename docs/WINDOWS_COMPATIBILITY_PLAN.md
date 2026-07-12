@@ -103,7 +103,13 @@ re-shape the phase:
 - **`libxslt 0.1.4` has NO Windows path** (pkg-config, else bare
   `cargo:rustc-link-lib=dylib=xslt`+`exslt`). The bare fallback may resolve
   against vcpkg's lib dir if a link-search is already in scope from libxml2;
-  otherwise upstream a small vcpkg arm (it's this project's own crate).
+  otherwise upstream a small vcpkg arm.
+- **Dependency policy (maintainer, 2026-07-12):** `rust-libxml`,
+  `rust-libxslt`, `rust-kpathsea`, and `rust-marpa` are all maintained by
+  this project's author. Windows-compatibility issues in them are fixed
+  **cleanly upstream in the crate** (branch + `[patch]` while iterating,
+  then merge/publish and re-point), never with workspace-side workarounds,
+  vendored forks, or env-var hacks. The libmarpa cc-port above is the model.
 - **`kpathsea 0.3`/`kpathsea_sys 0.2.1` are already Windows-aware**: graceful
   no-link fallback to the subprocess backend, `which`-based PATHEXT-correct
   `kpsewhich` probe, even TL-Windows `kpathsealibw64.dll` detection. Building
