@@ -227,6 +227,19 @@ The three native C dependencies, in increasing order of difficulty:
    `setsid`/`killpg` design).
 5. **`latex_images.rs` pipeline** (`latex` + `dvips`/`dvipng` delegates):
    verify on both distros; MiKTeX names match.
+
+   **Windows delegate availability matrix (2026-07-12 inventory):**
+
+   | Delegate | Windows source | Status on bring-up box |
+   |---|---|---|
+   | `latex`, `dvips`, `ps2pdf`, `kpsewhich`, `pdflatex` | TeX Live bin/windows | ✅ installed |
+   | `dvipng` | `tlmgr install dvipng` (not in scheme-medium) | ✅ installed |
+   | Ghostscript | winget `ArtifexSoftware.GhostScript` (`gswin64c`); TL-Windows also bundles it behind `rungs.exe` (now in `gs_program()`'s probe list); MiKTeX: `mgs.exe` | ✅ installed |
+   | ImageMagick 7 | winget `ImageMagick.ImageMagick` (`magick`) | ✅ installed |
+   | MuPDF (`mutool`) | no winget package; ships as zip from mupdf.com — optional (chain falls through to pdftocairo/convert) | ⬜ not installed |
+   | poppler (`pdftocairo`) | NOT in TL-Windows; scoop/choco `poppler` or vcpkg `poppler[cairo]` — optional middle of the PDF chain | ⬜ not installed |
+   | `xmllint` | NOT in TL-Windows; vcpkg's libxml2 port skips tools | ⬜ absent — Phase 3.3 removes the need |
+   | MiKTeX (second TeX distro) | miktex.org installer | ⬜ deferred until the Phase 2 distro matrix (PATH ordering vs TL needs care) |
 6. **Smoke matrix:** `latexml_oxide --format=html5 --dest=paper.html paper.tex`
    on (TeX Live, MiKTeX) × (plain doc, math-heavy doc, EPS/PDF graphics doc),
    diffed against Linux output. Divergences triaged per `canvas-triage` rules

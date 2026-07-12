@@ -66,13 +66,16 @@ fn im_convert_program() -> &'static str {
 
 /// Program name for the Ghostscript CLI delegate. Unix installs `gs`.
 /// Windows Ghostscript ships the console binary as `gswin64c.exe`
-/// (32-bit: `gswin32c.exe`) and MiKTeX bundles its own as `mgs.exe`;
-/// probed once per process, in that order, falling back to `gs` so a
+/// (32-bit: `gswin32c.exe`), MiKTeX bundles its own as `mgs.exe`, and
+/// TeX Live for Windows bundles one behind the `rungs.exe` wrapper
+/// (`tlpkg/tlgs`, same CLI) on the same bin dir as `kpsewhich` — so a
+/// TL-only box still gets a working EPS/PS chain with no extra install.
+/// Probed once per process, in that order, falling back to `gs` so a
 /// failure surfaces as the usual could-not-start converter diagnostic.
 fn gs_program() -> &'static str {
   if cfg!(windows) {
     static GS: LazyLock<&'static str> = LazyLock::new(|| {
-      ["gswin64c", "gswin32c", "mgs"]
+      ["gswin64c", "gswin32c", "mgs", "rungs"]
         .into_iter()
         .find(|candidate| program_on_path(candidate))
         .unwrap_or("gs")
