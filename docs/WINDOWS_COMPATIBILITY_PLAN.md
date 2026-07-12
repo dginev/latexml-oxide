@@ -84,6 +84,31 @@ These are cross-platform-neutral fixes validated by the existing Linux/macOS CI:
 
 ## Phase 1 — make the workspace COMPILE on `x86_64-pc-windows-msvc`
 
+**Progress 2026-07-12 (local bring-up box):** rustup nightly-msvc, VS 2022
+Build Tools (VCTools), LLVM (libclang for bindgen — a toolchain requirement
+this plan originally missed), and vcpkg are installed. Findings that
+re-shape the phase:
+
+- **libmarpa cc-port: DONE and validated.** The dist tarball ships all
+  generated sources, and of `config.h.in`'s macro set the code only reads
+  `MARPA_LIB_{MAJOR,MINOR,MICRO}_VERSION` — so `build.rs` now synthesizes a
+  3-line `config.h` from `LIB_VERSION` and compiles the `Makefile.am` source
+  list (6 files) via `cc::Build`. Landed on `dginev/marpa` branch
+  `windows-compatibility` (commit `64c045c`); the **entire marpa test suite
+  passes on Windows MSVC**. The workspace consumes it via the `[patch]`
+  mechanism until the marpa PR merges. The presumed long pole fell first.
+- **`libxml 0.3.15` already has first-class vcpkg support** on windows-msvc
+  (`vcpkg::find_package("libxml2")` + bindgen on the vcpkg headers). No
+  upstream PR needed — just `VCPKG_ROOT` + `VCPKGRS_TRIPLET=x64-windows-static-md`.
+- **`libxslt 0.1.4` has NO Windows path** (pkg-config, else bare
+  `cargo:rustc-link-lib=dylib=xslt`+`exslt`). The bare fallback may resolve
+  against vcpkg's lib dir if a link-search is already in scope from libxml2;
+  otherwise upstream a small vcpkg arm (it's this project's own crate).
+- **`kpathsea 0.3`/`kpathsea_sys 0.2.1` are already Windows-aware**: graceful
+  no-link fallback to the subprocess backend, `which`-based PATHEXT-correct
+  `kpsewhich` probe, even TL-Windows `kpathsealibw64.dll` detection. Building
+  before a TeX distro is on PATH requires `KPATHSEA_SKIP_TOOLCHAIN_CHECK=1`.
+
 The three native C dependencies, in increasing order of difficulty:
 
 1. **libxml2 via vcpkg** (`vcpkg install libxml2:x64-windows-static-md`).
