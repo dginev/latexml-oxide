@@ -86,7 +86,7 @@ These are cross-platform-neutral fixes validated by the existing Linux/macOS CI:
 - [x] **`/tmp` hardcodes → `std::env::temp_dir()`** in
   `latexml_oxide/src/util/test.rs` (SIGSEGV-handler dump file,
   `LATEXML_SAVE_ACTUAL` outputs).
-- [x] **Opt-in CI bring-up workflow** `.github/workflows/windows-bringup.yml`
+- [x] **Opt-in CI workflow** `.github/workflows/windows-ci-manual-trigger.yml`
   (`workflow_dispatch` + pushes to `windows-compatibility`), staged so each step
   reports its own failure. It is *expected* to fail in early phases — it exists
   to give every subsequent phase a live Windows probe without turning main CI red.
@@ -350,7 +350,7 @@ a code divergence. Full reasoning in the "tikz `ac_drive_components`" entry in
 ## Phase 4 — CI: `windows-latest` job as a required leg
 
 > **Resolved (2026-07-13): the `Repository access blocked` failure was a dead
-> action, not billing.** windows-bringup's early runs aborted at "Getting action
+> action, not billing.** the Windows CI job's early runs aborted at "Getting action
 > download info" because `teatimeguest/setup-texlive-action@v3` — the TeX Live
 > setup action — had its entire GitHub account go **404** (moved to the
 > `TeX-Live` org). GitHub reports an un-fetchable action as `Repository access
@@ -477,7 +477,7 @@ produces full HTML5 + CSS on TL; embedded dumps verified by renaming
 `latexml-oxide-<version>-x86_64-pc-windows-msvc.zip` + `.sha256` sidecar
 (Compress-Archive + Get-FileHash), matching the existing asset naming.
 Remaining for the real release leg: wire this into `release.yml`
-(vcpkg + setup-texlive as in windows-bringup.yml, dumps from
+(vcpkg + setup-texlive as in windows-ci-manual-trigger.yml, dumps from
 release-dumps.yml embed unchanged) and the README platform table.
 
 1. Extend `release.yml` with a `x86_64-pc-windows-msvc` leg: `maxperf` profile,
