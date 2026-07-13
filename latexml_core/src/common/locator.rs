@@ -204,7 +204,7 @@ impl Locator {
   /// `tag:line:col-tag:line:col` for a range, `tag:line:col` for a point.
   ///
   /// This is the source-map feature's serialiser (issues #47/#92) — the
-  /// brief, sibling-aligned form documented in `docs/SOURCE_PROVENANCE.md`
+  /// brief, sibling-aligned form documented in `docs/performance/SOURCE_PROVENANCE.md`
   /// §0/§0.1, deliberately *not* the XPointer `to_attribute()` above
   /// (which has zero web-platform support and is latent in the port).
   ///

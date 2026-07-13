@@ -332,6 +332,14 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
+  // Legal while `inPreamble`. `\begin{document}` keeps `inPreamble=1` through the
+  // begindocument hooks and only clears it AFTER them (matching real latex.ltx,
+  // which disables the \@onlypreamble commands via `\@preamblecmds` (L9522) only
+  // after firing the begindocument hook (L9512)), so a `\RequirePackage`/
+  // `\usepackage` deferred to `\AtBeginDocument` is still legal — no separate hook
+  // flag needed. Paragraph-breaking inside `\AtBeginDocument` (upstream #2754) is
+  // handled independently by `\par`'s no-op-in-vertical-mode rule, NOT by clearing
+  // `inPreamble` early (upstream #2846 is thus unnecessary; KNOWN_PERL_ERRORS #43).
   if !lookup_bool_sym(pin!("inPreamble")) {
     Error!(
       "unexpected",
@@ -1078,13 +1086,13 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
   use crate::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
 
   struct EqRow {
-    node:      Node,
-    cols:      Vec<Node>,
-    has_l:     bool,
-    has_m:     bool,
-    has_r:     bool,
-    numbered:  bool,
-    _labelled: bool,
+    node:     Node,
+    cols:     Vec<Node>,
+    has_l:    bool,
+    has_m:    bool,
+    has_r:    bool,
+    numbered: bool,
+    labelled: bool,
   }
 
   // Scan the equations (rows)
@@ -1096,7 +1104,13 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     let has_m = cells.get(1).is_some_and(|c| c.get_first_child().is_some());
     let has_r = cells.get(2).is_some_and(|c| c.get_first_child().is_some());
     let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
-    let labelled = rownode.get_attribute("label").is_some();
+    // OXIDIZED_DESIGN #54: Perl checks hasAttribute('label') (singular), but
+    // LaTeXML only ever sets the plural 'labels' attribute (LaTeXML-common.rnc
+    // L134) — so the author's documented "Separately numbered AND labeled? must
+    // keep separate" safeguard below is dead code in Perl, collapsing distinctly
+    // \label-ed continuation rows onto one number. We honor the intent (and match
+    // pdfTeX) by reading the real 'labels' attribute. See KNOWN_PERL_ERRORS #46.
+    let labelled = rownode.get_attribute("labels").is_some();
     rows.push(EqRow {
       node: rownode,
       cols: cells,
@@ -1104,7 +1118,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       has_m,
       has_r,
       numbered,
-      _labelled: labelled,
+      labelled,
     });
   }
 
@@ -1177,7 +1191,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
         class = "continue";
       }
     } else if row.has_r {
-      if eqs.is_empty() || (numbered && row.numbered && row._labelled) {
+      if eqs.is_empty() || (numbered && row.numbered && row.labelled) {
         class = "odd";
       } else {
         class = "continue";
@@ -2276,7 +2290,7 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
           // leading group (Perl's behavior for un-braced titles). This
           // realizes the Perl author's own "take balanced beginning" note
           // and drops trailing page/font junk LaTeXML never renders. See
-          // docs/OXIDIZED_DESIGN.md (bib-section title = leading group).
+          // docs/parity/OXIDIZED_DESIGN.md (bib-section title = leading group).
           let title_toks = if tokens[0].get_catcode() == Catcode::BEGIN {
             let mut depth = 0i32;
             let mut end = tokens.len();
@@ -3320,18 +3334,22 @@ LoadDefinitions!({
     // is emitted exactly once (matching Perl's acl output, incl. `ltx_authors_1line`,
     // and surpassing Perl on the inline case). Scope is narrow: only these two nested
     // hook digests, not the general before/after-digest unlock.
-    // The preamble is left AFTER @document@preamble@atend (etoolbox's
-    // \AtEndPreamble) AND the begin-document hooks — all still preamble. We keep
-    // inPreamble=1 across @at@begin@document + the begindocument hook and clear
-    // it only afterward, matching latex.ltx's real disable point AND Perl 0.8.8
-    // (pre-#2846) — see the detailed note at the inPreamble=0 assignment below.
-    // NB: upstream PR #2846 ("Leave preamble at right place", fixes #2754)
-    // MOVED `AssignValue(inPreamble => 0)` to just BEFORE @at@begin@document —
-    // a regression: the post-#2846 Perl errors on `\AtBeginDocument{\Require-
-    // Package{...}}` just as our #2846 port did (KNOWN_PERL_ERRORS.md). We keep
-    // the pre-#2846 / latex.ltx placement; the #2754 goal (deferred
-    // \RequirePackage in \AtEndPreamble) is still satisfied — @document@preamble@-
-    // atend runs before inPreamble=0 below.
+    // Leave the preamble (`inPreamble=0`) only AFTER the begindocument hooks below —
+    // the pre-#2846 latex.ltx placement (`\@preamblecmds` disables the \@onlypreamble
+    // commands at L9522, AFTER firing the begindocument hook at L9512). So
+    // `\RequirePackage`/`\usepackage` deferred to \AtBeginDocument runs while still
+    // `inPreamble=1` and stays legal. Paragraph-breaking inside \AtBeginDocument
+    // (upstream #2754) does NOT depend on this timing: `\par` (tex_paragraph.rs) closes
+    // a paragraph whenever one is being built in the `document` environment — the hooks
+    // run with `current_environment=document` — so a blank line after some
+    // \AtBeginDocument text (horizontal mode) breaks a paragraph even while
+    // `inPreamble=1`. That makes upstream #2846's early clear — and the
+    // `inBeginDocumentHook` guard-decouple it forced (#2848) — unnecessary; one flag,
+    // one transition. Ground truth: pdflatex
+    // AND same-host Perl accept both a paragraph-splitting and a `\RequirePackage`-
+    // loading \AtBeginDocument (reproducers atbegindocument_requirepackage.tex + the
+    // #2754 book example; corpus witnesses arXiv:2605.00022 / 2605.00119).
+    // KNOWN_PERL_ERRORS #43.
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -3343,7 +3361,7 @@ LoadDefinitions!({
     //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
     //   2. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument,
     //      STILL preamble (latex.ltx disables \@onlypreamble only afterwards)
-    //   3. leave the preamble  (inPreamble=0)
+    //   3. leave the preamble  (inPreamble=0, AFTER the hooks — see below)
     // begindocument/before therefore fires while inPreamble=1: it carries
     // last-minute preamble setup (deferred `\RequirePackage`, translations.sty's
     // language initialiser) that must precede leaving the preamble — firing it
@@ -3388,26 +3406,15 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
-    // @at@begin@document (\AtBeginDocument) + the begindocument hook run while
-    // STILL in the preamble. Real latex.ltx disables the \@onlypreamble commands
-    // (\@preamblecmds, `\document` L54) AFTER firing the begindocument hook
-    // (L44) — so a deferred `\RequirePackage`/`\usepackage` inside
-    // \AtBeginDocument is legal. Verified ground truth: pdflatex AND same-host
-    // Perl both accept `\AtBeginDocument{\RequirePackage{xcolor}}` with no error
-    // (reproducer docs/reproducers/atbegindocument_requirepackage.tex; corpus
-    // witnesses arXiv:2605.00022 / 2605.00119, whose inconsolata.sty does
-    // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's top-level
-    // `\RequirePackage{textcomp}`). We therefore keep inPreamble=1 across both
-    // hooks and clear it just below, once they complete — this is the pre-#2846
-    // Perl 0.8.8 placement (`AssignValue(inPreamble => 0)` AFTER @at@begin@-
-    // document, comment "atbegin is still (sorta) preamble"). Upstream PR #2846
-    // moved that assignment to just BEFORE @at@begin@document, which regressed
-    // Perl itself (post-#2846 latexml errors on the reproducer, verified same
-    // host); our original #2846 port copied that placement and inherited the
-    // bug. There is no scoping subtlety — assign_value mirrors Perl assignValue
-    // (both default `local`); the earlier "guard never fires in the hook" note
-    // was wrong (it conflated pre-#2846 installed Perl with post-#2846 source).
-    // Full write-up: KNOWN_PERL_ERRORS.md + SYNC_STATUS.md 2026-07-08.
+    // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
+    // is STILL 1 here (we leave the preamble only after this block), so a deferred
+    // `\RequirePackage`/`\usepackage` remains legal (corpus witnesses
+    // arXiv:2605.00022 / 2605.00119: inconsolata.sty →
+    // `\AtBeginDocument{...\usepackage{upquote}}` → upquote.sty's `\RequirePackage
+    // {textcomp}`). A blank line here still splits paragraphs (fixes #2754): the hooks
+    // run inside the `document` environment, so `\par` is active (only the RAW preamble,
+    // where `document` is not yet on the env stack, no-ops it) regardless of
+    // `inPreamble` (tex_paragraph.rs).
     if let Some(ops) = lookup_tokens("@at@begin@document") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -3438,9 +3445,12 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
-    // Now leave the preamble: AFTER @at@begin@document + the begindocument hook
-    // (both still preamble), matching latex.ltx `\document` — begindocument hook
-    // at L44, then `\@preamblecmds` disables the \@onlypreamble commands at L54.
+    // Leave the preamble now — AFTER the begindocument hooks (the `\@preamblecmds`
+    // point, latex.ltx L9522). This single transition both (a) disables the
+    // \@onlypreamble commands, so from here the onlyPreamble guard rejects body-level
+    // `\RequirePackage`/`\usepackage` (matching pdflatex + Perl), and (b) restores the
+    // pre-#2846 placement — `\AtBeginDocument` above ran while still `inPreamble=1`.
+    // `\par` paragraph-breaking is governed by mode + the `document` env, not this flag.
     assign_value("inPreamble", false, None);
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
@@ -3461,8 +3471,9 @@ LoadDefinitions!({
     if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
     }
-    // (inPreamble was set to false above, after @at@begin@document and the
-    // begindocument hook — matching latex.ltx's post-hook \@preamblecmds.)
+    // @document@preamble@afterend runs after the \@preamblecmds point (both
+    // inPreamble=0 and the hook window closed above), so onlyPreamble commands
+    // here are already disabled — matching latex.ltx's begindocument/end.
     if let Some(ops) = lookup_tokens("@document@preamble@afterend") {
       boxes.push(digest(ops)?);
     }
@@ -6523,7 +6534,7 @@ LoadDefinitions!({
   // NOTE: this does NOT fix the SHARED hyperref hang on 2004.08143
   // (`pdfauthor={…Mar{\'\i}n…}`) — there the font encoding is "ASCII" (set by
   // `beginSemiverbatim`), not None, so the OT1 fallback never triggers; that
-  // loop reproduces in Perl too (see docs/KNOWN_PERL_ERRORS.md, "text-symbol
+  // loop reproduces in Perl too (see docs/parity/KNOWN_PERL_ERRORS.md, "text-symbol
   // CS in a Semiverbatim option").
   DefMacro!("\\f@encoding", {
     ExplodeText!(

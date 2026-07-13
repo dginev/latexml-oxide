@@ -39,6 +39,35 @@ fn record_converter_diag(msg: String) { LAST_CONVERTER_DIAG.with(|c| *c.borrow_m
 /// Take (read + clear) this thread's latest converter diagnostic.
 fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borrow_mut().take()) }
 
+/// Map a graphics-converter executable to a "what to install" hint, so a
+/// "not installed" diagnostic tells the user how to fix it rather than just
+/// naming a missing binary. Covers the optional tools the graphics cascade
+/// shells out to — none are bundled; the host TeX/graphics ecosystem provides
+/// them. Returns `None` for an unrecognized program (no hint appended).
+fn missing_tool_hint(prog: &str) -> Option<&'static str> {
+  Some(match prog {
+    "gs" | "ps2pdf" => {
+      "install Ghostscript (apt `ghostscript`, brew `ghostscript`) for PDF/PostScript conversion"
+    },
+    "mutool" => "install MuPDF (apt `mupdf-tools`, brew `mupdf-tools`) for fast PDF rendering",
+    "pdftocairo" | "pdftoppm" => {
+      "install Poppler (apt `poppler-utils`, brew `poppler`) for vector-SVG PDF conversion"
+    },
+    "convert" | "magick" => {
+      "install ImageMagick (apt `imagemagick`, brew `imagemagick`) for raster image conversion"
+    },
+    "dvisvgm" => {
+      "install dvisvgm (apt `dvisvgm`, brew `texlive`) for vector-SVG LaTeX-image output"
+    },
+    "dvipng" => "install dvipng (apt `dvipng`, brew `texlive`) for raster LaTeX-image output",
+    "latex" | "pdflatex" | "kpsewhich" | "tftopl" => {
+      "install TeX Live (apt `texlive-latex-base`, brew `texlive` / MacTeX) — the TeX ecosystem \
+       must be present at runtime"
+    },
+    _ => return None,
+  })
+}
+
 // Diagnostic emission: `Error!` (and friends) live in
 // `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
 // diag;` in `lib.rs`. They emit harness-compatible structured Error
@@ -65,20 +94,6 @@ static CONVERT_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
     .ok()
     .and_then(|s| s.parse::<u64>().ok())
     .filter(|&n| n > 0)
-});
-
-static PDF_CROP_BOX_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-  regex::Regex::new(
-    r"/CropBox\s*\[\s*([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))",
-  )
-  .unwrap()
-});
-
-static PDF_MEDIA_BOX_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-  regex::Regex::new(
-    r"/MediaBox\s*\[\s*([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))",
-  )
-  .unwrap()
 });
 
 /// Properties for a graphics file type.
@@ -981,8 +996,18 @@ impl Graphics {
       Err(e) => {
         // Spawn failure is the "converter not installed / not on PATH" case
         // (e.g. `gs` absent in a minimal image): record it so the Error names
-        // the missing tool instead of a bare "failed to convert".
-        record_converter_diag(format!("could not start `{prog}`: {e}"));
+        // the missing tool instead of a bare "failed to convert". When the
+        // binary is simply absent, append the package/install hint so the user
+        // learns which dependency to install (these tools are NOT bundled — the
+        // host provides them).
+        let mut msg = format!("could not start `{prog}`: {e}");
+        if e.kind() == std::io::ErrorKind::NotFound {
+          if let Some(hint) = missing_tool_hint(&prog) {
+            msg.push_str(" — ");
+            msg.push_str(hint);
+          }
+        }
+        record_converter_diag(msg);
         return None;
       },
     };
@@ -1260,7 +1285,7 @@ impl Graphics {
     let page_box = if is_postscript {
       read_postscript_bounding_box(source)
     } else if is_pdf {
-      read_pdf_page_box(source)
+      latexml_core::util::image::read_pdf_page_box(Path::new(source))
     } else {
       None
     };
@@ -1876,50 +1901,6 @@ fn parse_bbox_quadruple(s: &str) -> Option<(f64, f64, f64, f64)> {
 /// need to translate the content to PS origin (0, 0).
 fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
   read_postscript_bounding_box_full(source).map(|(_, _, w, h)| (w, h))
-}
-
-fn read_pdf_page_box(source: &str) -> Option<(f64, f64)> {
-  let bytes = std::fs::read(source).ok()?;
-  // Fast-fail: most modern PDFs (matplotlib, pgfplots, …) compress
-  // their page dictionary inside an object stream, so `/MediaBox` and
-  // `/CropBox` never appear as raw bytes. Skip the UTF-8 conversion
-  // (which iterates Utf8Chunks across the entire file) when no
-  // candidate token is present. Measured 2026-05-12 on 1910.01256:
-  // ~10 ms saved across the 5-PDF graphics phase.
-  let has_crop = memchr_find(&bytes, b"/CropBox").is_some();
-  let has_media = memchr_find(&bytes, b"/MediaBox").is_some();
-  if !has_crop && !has_media {
-    return None;
-  }
-  let content = String::from_utf8_lossy(&bytes);
-  parse_pdf_page_box(&content, &PDF_CROP_BOX_RE)
-    .or_else(|| parse_pdf_page_box(&content, &PDF_MEDIA_BOX_RE))
-}
-
-/// Byte-level substring search (no UTF-8 conversion). Std-only —
-/// avoids pulling in `memchr` for one call site.
-fn memchr_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-  if needle.is_empty() || needle.len() > haystack.len() {
-    return None;
-  }
-  let first = needle[0];
-  let mut i = 0;
-  while i + needle.len() <= haystack.len() {
-    if haystack[i] == first && &haystack[i..i + needle.len()] == needle {
-      return Some(i);
-    }
-    i += 1;
-  }
-  None
-}
-
-fn parse_pdf_page_box(content: &str, re: &regex::Regex) -> Option<(f64, f64)> {
-  let captures = re.captures(content)?;
-  let x0 = captures.get(1)?.as_str().parse::<f64>().ok()?;
-  let y0 = captures.get(2)?.as_str().parse::<f64>().ok()?;
-  let x1 = captures.get(3)?.as_str().parse::<f64>().ok()?;
-  let y1 = captures.get(4)?.as_str().parse::<f64>().ok()?;
-  Some(((x1 - x0).abs(), (y1 - y0).abs()))
 }
 
 impl Processor for Graphics {
@@ -2716,7 +2697,7 @@ endobj
     .unwrap();
 
     assert_eq!(
-      read_pdf_page_box(tmp.to_str().unwrap()),
+      latexml_core::util::image::read_pdf_page_box(Path::new(tmp.to_str().unwrap())),
       Some((4218.0, 2437.0))
     );
     assert_eq!(
@@ -2944,5 +2925,29 @@ endobj
       diag.contains("could not start") && diag.contains("definitely_not_a_real_binary_xyz_123"),
       "diag should name the missing tool; got: {diag}"
     );
+  }
+
+  /// Every graphics/image tool the cascade shells out to maps to an install
+  /// hint that names the OS package, so a missing-dependency diagnostic is
+  /// self-fixing; an unknown program yields no hint.
+  #[test]
+  fn missing_tool_hint_names_packages() {
+    assert!(missing_tool_hint("mutool").unwrap().contains("mupdf-tools"));
+    assert!(
+      missing_tool_hint("pdftocairo")
+        .unwrap()
+        .contains("poppler-utils")
+    );
+    assert!(missing_tool_hint("gs").unwrap().contains("ghostscript"));
+    assert!(missing_tool_hint("ps2pdf").unwrap().contains("ghostscript"));
+    assert!(
+      missing_tool_hint("convert")
+        .unwrap()
+        .contains("imagemagick")
+    );
+    assert!(missing_tool_hint("dvisvgm").unwrap().contains("dvisvgm"));
+    assert!(missing_tool_hint("dvipng").unwrap().contains("dvipng"));
+    assert!(missing_tool_hint("kpsewhich").unwrap().contains("TeX Live"));
+    assert!(missing_tool_hint("some_unknown_tool").is_none());
   }
 }

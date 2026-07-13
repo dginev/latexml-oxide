@@ -34,8 +34,8 @@
    in Perl prefixes empty fields too (a doubled/trailing comma or empty keyval
    yields a contentless `prefix:` label). We treat that as a Perl buglet and
    **drop fields with no real content** (Appendix B.2). When implemented, record it
-   in `docs/OXIDIZED_DESIGN.md` (intentional divergence) and note the Perl origin in
-   `docs/KNOWN_PERL_ERRORS.md`.
+   in `docs/parity/OXIDIZED_DESIGN.md` (intentional divergence) and note the Perl origin in
+   `docs/parity/KNOWN_PERL_ERRORS.md`.
 
 ### Outcome (2026-06-04, post-review remediation)
 How each decision landed on `feature/frontmatter-refactor`:

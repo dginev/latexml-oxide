@@ -181,7 +181,7 @@ LoadDefinitions!({
   // a paper bundling aastex62.cls + `\floattable` saw it undefined. Witness
   // 1909.08916 (`\documentclass{aastex62}`, `\floattable` before tables):
   // 1 error → 0. (Perl ALSO errors here — its aas_support binding has the same
-  // gap; see docs/KNOWN_PERL_ERRORS.md.)
+  // gap; see docs/parity/KNOWN_PERL_ERRORS.md.)
   def_macro_noop("\\floattable")?;
   NewCounter!("plate");
   DefMacro!("\\platename", "Plate");

@@ -1,0 +1,20 @@
+% Minimal faithful reproducer for the \halign-in-math IfLimit loop.
+% Reduced from arXiv:2605.23849 (Main.tex line 647). Needs the bundled
+% kbordermatrix.sty (NOT in TeX Live). See the sibling .md for the analysis.
+%
+% Rust: Error:unexpected:\halign Attempt to close a group that switched to
+%       mode math  ->  Fatal:Timeout:IfLimit (16M) at ~25s (loops).
+% Perl: completes in ~0.4s (2 errors: undefined \@arstrut, \\).
+%
+%   latexml_oxide --includestyles --path=<this dir> --timeout=25 kbm.tex
+%   latexml       --includestyles --path=<this dir>               kbm.tex
+\documentclass{article}
+\usepackage{kbordermatrix}
+\begin{document}
+\begin{equation}
+\kbordermatrix{
+   & a & b \\
+ 1 & x & y \\
+}
+\end{equation}
+\end{document}

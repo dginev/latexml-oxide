@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # perf_phase_summary.py — read per-job telemetry JSONL, print rollups.
 #
-# See docs/TELEMETRY.md §4 Step 6. Pure stdlib (json + gzip + statistics).
+# See docs/performance/TELEMETRY.md §4 Step 6. Pure stdlib (json + gzip + statistics).
 # Pandas / numpy intentionally avoided — keeps this runnable on any
 # stock Python 3 install.
 #
@@ -181,7 +181,7 @@ def main(argv: list[str]) -> int:
     above_92 = sum(1 for x in ratios if x >= 0.92)
     print(
       f"  {above_92}/{len(ratios)} jobs ({fmt_pct(above_92, len(ratios)).strip()}) "
-      f"meet the docs/TELEMETRY.md §6 acceptance ratio of >=0.92"
+      f"meet the docs/performance/TELEMETRY.md §6 acceptance ratio of >=0.92"
     )
 
   return 0

@@ -567,7 +567,7 @@ impl Processor for XSLT {
     // Perl) instead of growing the C call stack until SIGSEGV/OOM on
     // pathological input. `xsltMaxDepth` is a process-global libxslt static
     // read when each transform context is created, so setting it once is
-    // sufficient. See docs/STABILITY_WITNESSES.md (Cluster A, hypothesis 3).
+    // sufficient. See docs/performance/STABILITY_WITNESSES.md (Cluster A, hypothesis 3).
     set_xslt_max_depth();
 
     // Hand the source tree to libxslt WITHOUT a deep copy. `transform()`
@@ -576,7 +576,7 @@ impl Processor for XSLT {
     // this PostDocument's own tree alive. On a large-math document the DOM is
     // multi-GB, and that deep copy TRANSIENTLY DOUBLES peak RSS during the
     // transform — the dominant driver of post-processing OOM on the canvas
-    // sweep (docs/STABILITY_WITNESSES.md, Cluster A / hypothesis 1).
+    // sweep (docs/performance/STABILITY_WITNESSES.md, Cluster A / hypothesis 1).
     //
     // `libxml::Document` is `Rc<RefCell<_Document>>` and the underlying
     // `xmlDoc` is freed only when the LAST handle drops, so an Rc `clone()`

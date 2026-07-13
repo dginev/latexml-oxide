@@ -145,6 +145,9 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
     split_naming:              None,
     xslt_parameters:           &[],
     graphics_svg_threshold_kb: 0,
+    graphicimages:             true,
+    timestamp:                 None,
+    icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::Document,
   })
 }
@@ -181,6 +184,8 @@ pub(crate) fn make_config(uri: &str) -> Config {
       Some(search_paths)
     },
     include_comments:        None,
+    strict:                  None,
+    include_styles:          None,
     // Math parsing is always ON in the server: the parsed MathML (and its
     // source-mapped tokens) is one of the features this preview showcases, so
     // we deliberately do not expose a disable knob here.

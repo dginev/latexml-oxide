@@ -198,6 +198,58 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   }
 
   if img_w <= 0.0 || img_h <= 0.0 {
+    // The raster readers (PNG/JPEG/EPS, like Perl's `imgsize`) couldn't measure
+    // the asset. Before giving up, emulate pdfTeX: read the natural size from the
+    // file itself. pdfTeX's built-in reader takes a PDF's CropBox (its default)
+    // or MediaBox, and an SVG's viewBox — with NO external tool. (Perl-LaTeXML
+    // instead shells out to ImageMagick precisely because Image::Size can't read
+    // PDF; even then it forces `pdf:use-cropbox` to match pdfTeX. So the faithful,
+    // self-contained move is pdfTeX's, not Perl's.) `natural_size_pt` shares the
+    // same CropBox→MediaBox reader as `LaTeXML::Post::Graphics`.
+    //
+    // Whatever we decide, we MUST set `cached_width`: without it, `compute_size`
+    // falls through to summing the whatsit's ARGUMENT boxes — and one of them is
+    // the Semiverbatim *filename* — so a bare `arrange_panels` would wrap figure
+    // rows by path length (arXiv:2409.16471 fig 2: 12 uniform 0.245\textwidth
+    // panels split 3/3/2/3/1 by filename, not 3 rows of 4).
+    let source_dir = state::lookup_string("SOURCEDIRECTORY");
+    let natural = candidates.split(',').find_map(|candidate| {
+      let candidate = candidate.trim();
+      if candidate.is_empty() {
+        return None;
+      }
+      natural_size_pt(&resolve_candidate(candidate, &source_dir))
+    });
+    if let Some((nw_pt, nh_pt)) = natural {
+      // pdfTeX/graphics.sty box sizing in pt (verified against `\the\wd` under
+      // pdflatex): with an explicit `width=`, the box width IS the request and
+      // the natural size only fills in the height via the aspect ratio.
+      let (bw, bh) = graphicx_box_pt(nw_pt, nh_pt, &options);
+      whatsit.set_property("cached_width", Stored::Dimension(bw));
+      whatsit.set_property("cached_height", Stored::Dimension(bh));
+      whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
+      return;
+    }
+    // Last resort — a PDF whose page box is buried in a compressed object stream
+    // (where pdfTeX's full parser would still succeed but our byte reader can't),
+    // or an unreadable SVG. Honor an EXPLICIT `width=`/`height=` request (the
+    // display size LaTeXML already emits), else 0 (Perl-without-ImageMagick
+    // parity). Still set `cached_width` so the filename is never summed.
+    let mut ew: Option<Dimension> = None;
+    let mut eh: Option<Dimension> = None;
+    for opt in options.split(',') {
+      let opt = opt.trim();
+      if let Some(val) = opt.strip_prefix("width=") {
+        ew = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+      } else if let Some(val) = opt.strip_prefix("height=") {
+        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+      } else if let Some(val) = opt.strip_prefix("totalheight=") {
+        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+      }
+    }
+    whatsit.set_property("cached_width", Stored::Dimension(ew.unwrap_or_default()));
+    whatsit.set_property("cached_height", Stored::Dimension(eh.unwrap_or_default()));
+    whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
     return;
   }
 
@@ -413,4 +465,186 @@ pub fn parse_bbox(rest: &str) -> Option<(f64, f64, f64, f64)> {
   let urx = it.next()?.parse::<f64>().ok()?;
   let ury = it.next()?.parse::<f64>().ok()?;
   Some((llx, lly, urx, ury))
+}
+
+/// Resolve an `image_candidates` entry to a filesystem path, relative to the
+/// document's `SOURCEDIRECTORY` when the candidate isn't already absolute.
+fn resolve_candidate(candidate: &str, source_dir: &str) -> PathBuf {
+  if Path::new(candidate).is_absolute() {
+    PathBuf::from(candidate)
+  } else if !source_dir.is_empty() {
+    PathBuf::from(source_dir).join(candidate)
+  } else {
+    PathBuf::from(candidate)
+  }
+}
+
+/// Natural (unscaled) size of a graphic in TeX points, read the way pdfTeX
+/// reads it — with no external tool: a PDF's CropBox (default) / MediaBox, or an
+/// SVG's width/height / viewBox. `None` for formats the raster readers already
+/// handle, or when the geometry can't be recovered (e.g. a PDF whose page box is
+/// hidden inside a compressed object stream).
+fn natural_size_pt(path: &Path) -> Option<(f64, f64)> {
+  if let Some((w_bp, h_bp)) = read_pdf_page_box(path) {
+    return Some((bp_to_pt(w_bp), bp_to_pt(h_bp)));
+  }
+  read_svg_size_pt(path)
+}
+
+/// bp (PostScript big point, 1/72") → TeX pt (1/72.27").
+fn bp_to_pt(bp: f64) -> f64 { bp * 72.27 / 72.0 }
+
+/// pt (f64) → `Dimension` (scaled points).
+fn pt_to_dim(pt: f64) -> Dimension { Dimension::new((pt * 65536.0).round() as i64) }
+
+/// Apply graphicx `width`/`height`/`totalheight`/`scale`/`keepaspectratio` to a
+/// natural (pt) size, matching pdfTeX/graphics.sty box sizing. Verified against
+/// `\the\wd` under pdflatex: an explicit `width=` sets the box width outright,
+/// the natural size only supplying the missing dimension via the aspect ratio.
+fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
+  let dim_pt = |v: &str| {
+    <Dimension as std::str::FromStr>::from_str(v.trim())
+      .ok()
+      .map(|d| d.value_of() as f64 / 65536.0)
+  };
+  let (mut w_opt, mut h_opt, mut scale, mut keep) = (None, None, None, false);
+  for opt in options.split(',') {
+    let opt = opt.trim();
+    if let Some(v) = opt.strip_prefix("width=") {
+      w_opt = dim_pt(v);
+    } else if let Some(v) = opt.strip_prefix("height=") {
+      h_opt = dim_pt(v);
+    } else if let Some(v) = opt.strip_prefix("totalheight=") {
+      h_opt = dim_pt(v);
+    } else if let Some(v) = opt.strip_prefix("scale=") {
+      scale = v.trim().parse::<f64>().ok();
+    } else if opt.starts_with("keepaspectratio") {
+      keep = true;
+    }
+  }
+  let (bw, bh) = match (w_opt, h_opt) {
+    (Some(w), Some(h)) => {
+      // Both requested: `keepaspectratio` fits within the box, dropping the more
+      // extreme request (Perl `image_graphicx_size` scale-to, a3 branch).
+      if keep && nw > 0.0 && nh > 0.0 {
+        if w / nw < h / nh {
+          (w, nh * w / nw)
+        } else {
+          (nw * h / nh, h)
+        }
+      } else {
+        (w, h)
+      }
+    },
+    (Some(w), None) => (w, if nw > 0.0 { nh * w / nw } else { 0.0 }),
+    (None, Some(h)) => (if nh > 0.0 { nw * h / nh } else { 0.0 }, h),
+    (None, None) => match scale {
+      Some(s) => (nw * s, nh * s),
+      None => (nw, nh),
+    },
+  };
+  (pt_to_dim(bw), pt_to_dim(bh))
+}
+
+/// Read a PDF's page box (width, height) in bp — CropBox (pdfTeX's default),
+/// else MediaBox. Pure Rust, no external tool (this is what pdfTeX's built-in
+/// reader does). Shared with `LaTeXML::Post::Graphics`. `None` when neither box
+/// appears as raw bytes (e.g. compressed into an object stream).
+pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
+  let bytes = std::fs::read(path).ok()?;
+  // Fast-fail before the (whole-file) UTF-8 conversion: modern PDFs often
+  // compress the page dictionary into an object stream, so the box tokens never
+  // appear as raw bytes.
+  if byte_find(&bytes, b"/CropBox").is_none() && byte_find(&bytes, b"/MediaBox").is_none() {
+    return None;
+  }
+  let content = String::from_utf8_lossy(&bytes);
+  parse_pdf_box(&content, "/CropBox").or_else(|| parse_pdf_box(&content, "/MediaBox"))
+}
+
+/// Parse `TOKEN [ llx lly urx ury ]` from PDF content, returning `(w, h)`.
+fn parse_pdf_box(content: &str, token: &str) -> Option<(f64, f64)> {
+  let start = content.find(token)? + token.len();
+  let rest = &content[start..];
+  let lb = rest.find('[')?;
+  let rb = rest[lb..].find(']')? + lb;
+  let mut it = rest[lb + 1..rb]
+    .split_whitespace()
+    .filter_map(|s| s.parse::<f64>().ok());
+  let (x0, y0, x1, y1) = (it.next()?, it.next()?, it.next()?, it.next()?);
+  Some(((x1 - x0).abs(), (y1 - y0).abs()))
+}
+
+/// Byte-level substring search — avoids a UTF-8 conversion for the fast-fail.
+fn byte_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+  if needle.is_empty() || needle.len() > haystack.len() {
+    return None;
+  }
+  haystack.windows(needle.len()).position(|w| w == needle)
+}
+
+/// Natural SVG size in pt, from the root `<svg>` element: prefer absolute
+/// `width`/`height` lengths, else fall back to the `viewBox` (user units treated
+/// as CSS px). Gives at least a correct aspect ratio, which is all a `width=`-ed
+/// inclusion needs. `None` if the file isn't an SVG or has no usable geometry.
+fn read_svg_size_pt(path: &Path) -> Option<(f64, f64)> {
+  use std::io::Read;
+  let mut file = std::fs::File::open(path).ok()?;
+  let mut buf = [0u8; 8192];
+  let n = file.read(&mut buf).ok()?;
+  let head = String::from_utf8_lossy(&buf[..n]);
+  let svg_at = head.find("<svg")?;
+  let tag_end = head[svg_at..].find('>')? + svg_at;
+  let tag = &head[svg_at..tag_end];
+  if let (Some(w), Some(h)) = (
+    svg_attr_len_pt(tag, "width"),
+    svg_attr_len_pt(tag, "height"),
+  ) {
+    return Some((w, h));
+  }
+  let vb = svg_attr_value(tag, "viewBox")?;
+  let mut it = vb
+    .split(|c: char| c.is_whitespace() || c == ',')
+    .filter(|s| !s.is_empty());
+  let (_x, _y) = (it.next()?, it.next()?);
+  let vw = it.next()?.parse::<f64>().ok()?;
+  let vh = it.next()?.parse::<f64>().ok()?;
+  // viewBox user units ≈ CSS px (1/96"); convert to pt for a plausible scale.
+  Some((vw * 72.27 / 96.0, vh * 72.27 / 96.0))
+}
+
+/// Value of `name="…"` in an XML start tag.
+fn svg_attr_value<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+  let key = tag.find(name)?;
+  let after = &tag[key + name.len()..];
+  let after = after.trim_start();
+  let after = after.strip_prefix('=')?.trim_start();
+  let quote = after.chars().next()?;
+  if quote != '"' && quote != '\'' {
+    return None;
+  }
+  let body = &after[1..];
+  let end = body.find(quote)?;
+  Some(&body[..end])
+}
+
+/// An SVG length attribute converted to pt, iff it carries an absolute unit.
+/// Unitless/`%` values return `None` (the caller falls back to the viewBox).
+fn svg_attr_len_pt(tag: &str, name: &str) -> Option<f64> {
+  let raw = svg_attr_value(tag, name)?.trim();
+  let (num, unit) = raw.split_at(
+    raw
+      .find(|c: char| c.is_alphabetic() || c == '%')
+      .unwrap_or(raw.len()),
+  );
+  let v = num.trim().parse::<f64>().ok()?;
+  match unit.trim() {
+    "pt" => Some(v),
+    "px" => Some(v * 72.27 / 96.0),
+    "in" => Some(v * 72.27),
+    "cm" => Some(v * 72.27 / 2.54),
+    "mm" => Some(v * 72.27 / 25.4),
+    "pc" => Some(v * 12.0),
+    _ => None, // unitless, %, em, ex, … → fall back to the viewBox
+  }
 }

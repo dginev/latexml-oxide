@@ -568,7 +568,7 @@ impl Tokens {
           // raw load). We DO raw-load such packages, so erroring+dropping broke
           // the error-free target for the common halign-in-macro idiom. Preserve
           // both tokens and log at Info (non-counted) instead. Documented as a
-          // beneficial divergence in docs/KNOWN_PERL_ERRORS.md item 1. Witness
+          // beneficial divergence in docs/parity/KNOWN_PERL_ERRORS.md item 1. Witness
           // 2006.02269 (easyeqn.sty `{MATRIX}` env → `$\mathstrut##$` template;
           // 2 errors → 0).
           Info!(
@@ -723,7 +723,7 @@ impl ToTokens for Token {
           text: latexml_core::common::arena::pin_static(#text),
           code: #code,
           // Emitted into the consumer crate; the cfg resolves there (the feature
-          // propagates from latexml_oxide). See docs/SOURCE_PROVENANCE.md §3.1.1.
+          // propagates from latexml_oxide). See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
           #[cfg(feature = "token-locators")]
           loc: 0u32
         }

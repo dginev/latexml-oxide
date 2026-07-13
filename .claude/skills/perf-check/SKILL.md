@@ -31,7 +31,7 @@ latexml_oxide`.
   and the hot path (branchy catcode/macro dispatch) is neither SIMD-amenable nor
   statically branch-skewed. Ship the portable `x86-64` baseline. Do not
   re-attempt without a major engine-architecture change.
-  (`pgo-isa-no-gain-2026-06-21` memory; `docs/PERFORMANCE.md`.)
+  (`pgo-isa-no-gain-2026-06-21` memory; `docs/performance/PERFORMANCE.md`.)
 - **Startup floor (~161 ms): the ~50 ms dump-parse lever was declined.**
   Decomposed: proc init ~6 ms, bootstrap ~9 ms, **latex dump load ~85 ms**
   (60% text-parse), `_constructs`+digest+build+serialize ~80 ms. The clean lever
@@ -51,8 +51,8 @@ latexml_oxide`.
 - Tools: `tools/perf_compare.py` (paired A/B of two telemetry corpus runs:
   Δwall, Δphase_us), `tools/perf_phase_summary.py` (per-phase rollups),
   `tools/run_perf_corpus.sh` (Tier-A serial regression baseline). Full
-  methodology + Perl-parity baselines: `docs/PERFORMANCE.md`. Witness papers for
-  timeout/OOM/peak-RSS/hang regressions: `docs/STABILITY_WITNESSES.md`.
+  methodology + Perl-parity baselines: `docs/performance/PERFORMANCE.md`. Witness papers for
+  timeout/OOM/peak-RSS/hang regressions: `docs/performance/STABILITY_WITNESSES.md`.
 
 ## Test-suite gotcha: `MemoryBudget` cascade ≠ code bug
 
@@ -76,4 +76,4 @@ runtime — dumps, RelaxNG schema, XSLT/CSS/JS are embedded and served from memo
 New code that adds a runtime read of an owned resource must `include_bytes!`/
 `include_str!` it instead. (Reading the host texmf tree via kpathsea is allowed.)
 Verify by renaming `resources/dumps/` away and converting, or `strace` for the
-XSLT. Rationale: `docs/OXIDIZED_DESIGN.md` → Guiding Principles.
+XSLT. Rationale: `docs/parity/OXIDIZED_DESIGN.md` → Guiding Principles.

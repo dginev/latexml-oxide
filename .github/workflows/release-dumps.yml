@@ -1,5 +1,5 @@
 # Kernel-dump generation for the release binary (issue #217 follow-up;
-# docs/DUMP_DESIGN.md, docs/RELEASING.md).
+# docs/parity/DUMP_DESIGN.md, docs/release/RELEASING.md).
 #
 # Generates {plain,latex}.YYYY.dump.txt + texlive.YYYY.version for the
 # 5-year moving TeX Live window (currently 2022-2026), each inside a

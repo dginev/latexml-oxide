@@ -46,7 +46,7 @@ changes suite-green (**1503/0**), clippy + fmt clean, `--release` re-validated.
   downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when the formula has no `INTOP` (same
   predicate + node list `diffop_apply` uses → **byte-identical output**), killing the
   over-parse on every non-integral `d` (high volume — differentials are everywhere).
-  Full ranked lever list in `docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` (which also
+  Full ranked lever list in `docs/math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` (which also
   corrects stale `MATH_AMBIGUITY_AUDIT` claims: `\Pi^N(p,q,r)` and simple `|x|≤|y|`
   are now unambiguous).
 - **Stability — process-crash surface hardening (defensive, output-neutral).**
@@ -91,7 +91,7 @@ changes suite-green (**1503/0**), clippy + fmt clean, `--release` re-validated.
   natbib autoload re-loaded natbib on every cite-CS re-emit. Routed through the
   canonical loop-safe `def_autoload` (clear-trigger-globally-before-load + hoist).
   2603.06884: 90 s→fatal ⇒ **0.5 s, 0 errors**. Regression witnesses 1403.6801 +
-  2207.14344 both green. Full root-cause + breadth in `docs/ARXIV_PERFORMANCE.md`.
+  2207.14344 both green. Full root-cause + breadth in `docs/performance/ARXIV_PERFORMANCE.md`.
 - **PERF (2026-06-27): XSLT `f:seclev-aux` O(n²) — FIXED (output-neutral).** The
   second arXiv perf cluster (14 XSLT-dominated papers, ~133–167 s in XSLT) was an
   O(headings × tree-size) heading-level computation in
@@ -99,8 +99,8 @@ changes suite-green (**1503/0**), clippy + fmt clean, `--release` re-validated.
   per `ltx:title`). Memoized to per-name global `<xsl:variable>`s (O(n)).
   2404.12418: 179 s fatal ⇒ **34.7 s**; XSLT @99k 21.2 s → 5.3 s (below Perl's 8.7 s
   — Perl keeps the O(n²)). Byte-identical output, suite 1480/0. Shared upstream XSLT
-  issue (candidate to upstream); see `docs/OXIDIZED_DESIGN.md` #37 +
-  `docs/ARXIV_PERFORMANCE.md` Hotspot #2.
+  issue (candidate to upstream); see `docs/parity/OXIDIZED_DESIGN.md` #37 +
+  `docs/performance/ARXIV_PERFORMANCE.md` Hotspot #2.
 - **PERF (2026-06-28): XSLT `head-keywords` index-dedup O(n²) — FIXED (output-neutral).**
   The slowest-100 follow-up batch (#201–300) re-run on HEAD was 81/100 already <5 s
   (natbib fix) but left an XSLT survivor tier; root-caused via `xsltproc --profile`
@@ -479,7 +479,7 @@ survivors at 13–95 s. Triaged into 4 clusters (the last 4 investigated in para
 Methodology: in-zip `telemetry.json` phase split (`scratchpad/triage_slow.py`) → re-run
 on HEAD (`rerun.sh`, `--preload=ar5iv.sty`) → for survivors, `xsltproc --profile` +
 gdb worker-thread sampling + (Cluster D) Perl-parity check. Full analysis in
-`docs/ARXIV_PERFORMANCE.md` (Hotspot #3).
+`docs/performance/ARXIV_PERFORMANCE.md` (Hotspot #3).
 
 ### Cluster A — OmniBus/natbib digest (≈77 papers) — ✅ CLEARED
 Unbound journal classes → OmniBus → natbib (sn-jnl ×52, Wiley/sagej/ws-procs/lmcs/oup/

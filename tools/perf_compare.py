@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # perf_compare.py — paired A/B comparison of two telemetry corpus runs.
 #
-# See docs/TELEMETRY.md §4 Step 8. Used after perf-affecting commits per
-# the docs/PERFORMANCE.md Optimization Acceptance Checklist.
+# See docs/performance/TELEMETRY.md §4 Step 8. Used after perf-affecting commits per
+# the docs/performance/PERFORMANCE.md Optimization Acceptance Checklist.
 #
 # Usage:
 #   tools/perf_compare.py <baseline> <new>

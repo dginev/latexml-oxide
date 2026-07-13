@@ -130,7 +130,7 @@
     `cortex_worker` emits `telemetry.json` into output ZIPs;
     `tools/benchmark_canvas.sh` aggregates to
     `telemetry.jsonl.gz`; `tools/perf_phase_summary.py` and
-    `tools/perf_compare.py` consume. See `docs/TELEMETRY.md`.
+    `tools/perf_compare.py` consume. See `docs/performance/TELEMETRY.md`.
   - **Cluster fixes** (recovers user-visible papers vs Perl):
     - `\lx@NBSP` / `\lx@nobreakspace` / `\nobreakspace` soft-expand
       inside `\csname...\endcsname` (commit `75a5a42877`) — recovers

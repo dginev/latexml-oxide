@@ -1,7 +1,7 @@
 //! Two compile-time tasks:
 //!
 //! 1. Bake the current git SHA into `LATEXML_GIT_SHA` so the telemetry module can include it in
-//!    every per-job record. See `docs/TELEMETRY.md` §4 Step 5.
+//!    every per-job record. See `docs/performance/TELEMETRY.md` §4 Step 5.
 //!
 //! 2. Walk `resources/RelaxNG/` and emit an `embedded_relaxng.rs` manifest in `OUT_DIR` that lists
 //!    every schema file (.rng/.rnc/ .model + the svg/ subtree) as `(relative_path,

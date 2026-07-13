@@ -270,7 +270,13 @@ impl CrossRef {
     // pick up ids stored in the xml namespace (Scan's default placement)
     // as well as the bare "xml:id" attribute form.
     if let Some(docid) = doc.get_document_element().as_ref().and_then(get_xml_id) {
-      let title = self.generate_title(doc, &docid, "toctitle");
+      // Perl `generateDocumentTile` (CrossRef.pm L809) calls
+      // `generateTitle($doc, $docid)` with NO `$shown` arg → `$shown=''`. Passing
+      // "toctitle" here is WRONG: `generate_title`'s dup test is `shown.contains("title")`
+      // (Perl `$shown =~ /title/`), and "toctitle" contains "title", so the page's OWN
+      // (deepest) title is falsely flagged a duplicate and dropped — every split section
+      // page's <title> collapsed to "In <parent>" instead of "<section> ‣ <ancestors>".
+      let title = self.generate_title(doc, &docid, "");
       if title.as_ref().map(|t| !t.is_empty()).unwrap_or(false) {
         return title;
       }

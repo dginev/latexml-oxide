@@ -62,7 +62,7 @@ LoadDefinitions!({
   // Perl elsart_support_core.sty.ltxml: body is `\author{#1}` but in
   // the `OptionalMatch:* {}` signature `#1` is the star flag and `#2` is
   // the content — the author name is silently dropped. Documented as a
-  // Perl bug in docs/KNOWN_PERL_ERRORS.md #16 (same root cause as
+  // Perl bug in docs/parity/KNOWN_PERL_ERRORS.md #16 (same root cause as
   // aipproc.cls.ltxml's \tablenote). Rust deliberately uses `#2` so the
   // author content reaches \author correctly.
   DefMacro!("\\collab OptionalMatch:* {}", "\\author{#2}");

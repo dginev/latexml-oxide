@@ -1,0 +1,25 @@
+% Minimal reproducer (upstream #2754): a blank line inside \AtBeginDocument must
+% break a paragraph. Body typesetting is already live when the begindocument hook
+% fires (real latex.ltx enters the body BEFORE \UseOneTimeHook{begindocument},
+% L9512), so \par is NOT a no-op there — "Paragraph 1." and "Paragraph 2." are two
+% separate paragraphs.
+%
+% Ground truth (same host):
+%   pdflatex  -> two paragraphs
+%   latexml (Perl, post-#2846 /usr/local/bin) -> two <ltx:p>
+%   latexml_oxide (pre-Direction-B)           -> ONE <ltx:p> (blank line dropped)
+%
+% This is the counterpart to atbegindocument_requirepackage.tex. Both must hold at
+% once: the blank line splits paragraphs AND a deferred \RequirePackage stays legal.
+% Holding inPreamble=1 across the hook (to keep the onlyPreamble guard happy) makes
+% \par a no-op here and REGRESSES this case — which is why the guard is decoupled
+% onto its own `inBeginDocumentHook` signal instead. See KNOWN_PERL_ERRORS #43.
+\documentclass{book}
+\AtBeginDocument{
+  Paragraph 1.
+
+  Paragraph 2.
+}
+\begin{document}
+  Text.
+\end{document}

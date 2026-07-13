@@ -82,7 +82,7 @@ with `/<name>` or let it surface by description.
 - **`perf_phase_summary.py`** — per-phase rollups from telemetry JSONL.
 - **`run_perf_corpus.sh`** — Tier A serial regression baseline runner.
 
-See `docs/PERFORMANCE.md` for the full perf-track methodology.
+See `docs/performance/PERFORMANCE.md` for the full perf-track methodology.
 
 ### CI parity
 

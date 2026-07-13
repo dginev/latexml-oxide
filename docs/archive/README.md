@@ -4,6 +4,20 @@ Snapshot audits and one-shot worksheets preserved for forensic context.
 Do not drive current planning from these files without revalidating on
 current `HEAD` — class/file layout, definitions, and counts have shifted.
 
+## 2026-07-09 docs compaction (public-release prep)
+
+Two completed diagnostic snapshots dated + archived; their open residuals were
+lifted into `../SYNC_STATUS.md` ("Archived-audit residuals"):
+
+- `MATHML_POST_LINE_AUDIT_2026-07-05.md` — the exhaustive MathML-post line audit
+  (every `MathML.pm` sub + all 197 `DefMathML` registrations vs the Rust port).
+  Sweep complete; waves 1+2 fixes already logged in `SYNC_SESSIONS_2026-07.md`.
+  Open feature-gaps (F5 Linebreaker, F11/F14–F17, partial context bindings)
+  tracked in SYNC_STATUS.
+- `ARXIV_FORK_AUDIT_2026-07-03.md` — due-diligence survey of the arXiv/LaTeXML
+  velocity fork (57 commits). Ranked items 1–4 landed 2026-07-03; sole residual
+  (item G, `readBalanced` comment-token drop) deferred to a gullet-seam session.
+
 ## 2026-07-08 docs consolidation (release 0.7.3 prep)
 
 - `SYNC_SESSIONS_2026-07.md` — completed "Landed this session" logs for the
@@ -135,7 +149,7 @@ Each ran to completion and the actionable findings landed as commits.
 
 - `SCRIPT_BINDINGS_LOG_2026-06.md` — the M0 spike, M1/M2-M4 progress
   log, `\footnote`/DefEnvironment landing notes, and the two dated
-  critical re-evaluations, archived from `docs/script_bindings_plan.md`
+  critical re-evaluations, archived from `docs/parity/script_bindings_plan.md`
   (the live doc keeps the current surface reference).
 
 ## `--server` editor LSP (beyond-Perl; landed, deprioritized)

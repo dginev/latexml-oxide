@@ -49,6 +49,20 @@ pub struct PostOptions<'a> {
   /// back to the raster ImageMagick `convert`/`gs` → PNG path on failure
   /// or timeout. Tracks upstream brucemiller/LaTeXML#902.
   pub graphics_svg_threshold_kb: u32,
+  /// Convert `\includegraphics` figures to web images (Perl `graphicimages!`
+  /// → `dographics`, default on). When `false` (`--nographicimages`) the
+  /// Graphics post-phase is skipped entirely: the output keeps the raw
+  /// `<ltx:graphics>` references untouched — useful for faster runs or hosts
+  /// without the image tools.
+  pub graphicimages:             bool,
+  /// Timestamp string embedded in the generated page (Perl `--timestamp`,
+  /// XSLT `TIMESTAMP` param). `None` → no timestamp emitted (the deterministic
+  /// default; Perl instead defaults to the current time). Perl's
+  /// `--timestamp=0` "omit" case is normalized to `None` by the caller.
+  pub timestamp:                 Option<&'a str>,
+  /// Favicon resource for the generated site (Perl `--icon`, XSLT `ICON`
+  /// param): emitted as a `<link rel="icon">` and copied to the destination.
+  pub icon:                      Option<&'a str>,
   /// Output extraction mode (Perl `LaTeXML::Util::Pack::whatsout`).
   /// `Document` (default) → serialize the full post-processed
   /// document; `Fragment` → embeddable HTML snippet via
@@ -163,6 +177,9 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     split_naming,
     xslt_parameters,
     graphics_svg_threshold_kb,
+    graphicimages,
+    timestamp,
+    icon,
     whatsout,
   } = *opts;
 
@@ -403,20 +420,24 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   audit_end(t_xref);
   telemetry::phase_exit();
 
-  // Phase 5: Graphics
-  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
-    .with_svg_threshold_kb(graphics_svg_threshold_kb);
-  telemetry::phase_enter(Phase::Graphics);
-  let t_gfx = audit_start("Graphics");
-  docs = match run_phase(docs, &mut graphics_proc, "Graphics") {
-    Ok(d) => d,
-    Err(()) => {
-      telemetry::phase_exit();
-      return fallback();
-    },
-  };
-  audit_end(t_gfx);
-  telemetry::phase_exit();
+  // Phase 5: Graphics (Perl `graphicimages!` → `dographics`, default on).
+  // `--nographicimages` skips the phase wholesale, leaving the raw
+  // `<ltx:graphics>` references in the output untouched.
+  if graphicimages {
+    let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
+      .with_svg_threshold_kb(graphics_svg_threshold_kb);
+    telemetry::phase_enter(Phase::Graphics);
+    let t_gfx = audit_start("Graphics");
+    docs = match run_phase(docs, &mut graphics_proc, "Graphics") {
+      Ok(d) => d,
+      Err(()) => {
+        telemetry::phase_exit();
+        return fallback();
+      },
+    };
+    audit_end(t_gfx);
+    telemetry::phase_exit();
+  }
 
   // Phase 3: MathML + XSLT
   let mut post = latexml_post::Post::new();
@@ -512,6 +533,12 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     }
     if let Some(navtoc) = navigationtoc {
       xslt_params.insert("NAVIGATIONTOC".to_string(), format!("\"{}\"", navtoc));
+    }
+    if let Some(ts) = timestamp {
+      xslt_params.insert("TIMESTAMP".to_string(), format!("\"{}\"", ts));
+    }
+    if let Some(icon) = icon {
+      xslt_params.insert("ICON".to_string(), format!("\"{}\"", icon));
     }
     for param in xslt_parameters {
       if let Some((key, value)) = param.split_once('=') {
