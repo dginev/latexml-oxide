@@ -32,15 +32,14 @@
 name: Release dumps
 
 on:
+  # Release-only: invoked by release.yml on a tag push (workflow_call), or
+  # run by hand to validate an edit to this file (workflow_dispatch).
+  # A former `push: paths: [this file]` self-test trigger was removed —
+  # it fired the full (expensive) dump build on ANY change, including
+  # comment-only edits, e.g. an unrelated PR merge that carried a doc-path
+  # comment fix. Validate a change to this pipeline via workflow_dispatch.
   workflow_call:
   workflow_dispatch:
-  # Self-testing trigger: runs when this workflow file itself changes on a
-  # branch push, so the dump pipeline is CI-validated before any tag uses
-  # it (workflow_dispatch only works once the file is on the default
-  # branch). Quiet otherwise.
-  push:
-    paths:
-      - '.github/workflows/release-dumps.yml'
 
 jobs:
   build-dumper:
