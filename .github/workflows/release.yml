@@ -467,6 +467,19 @@ jobs:
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
           RELEASE_TARGET: x86_64-pc-windows-msvc
+          # Subprocess-`kpsewhich` backend for the shipped `.exe`: it resolves
+          # TeX files via the user's `kpsewhich` (TeX Live / MiKTeX on PATH) at
+          # runtime, so this build must NOT link libkpathsea.
+          #   * KPATHSEA_NO_LINK=1 — force the unlinked (subprocess) backend.
+          #     Without it, kpathsea_sys would try to link TL's
+          #     kpathsealibw64.dll, and a TL-linked `.exe` won't even launch on
+          #     a MiKTeX-only host (WINDOWS_COMPATIBILITY_PLAN Phase 2 landmine).
+          #   * KPATHSEA_SKIP_TOOLCHAIN_CHECK=1 — this runner has no TeX, so
+          #     bypass the build-time `kpsewhich`-presence check (the exact
+          #     build-here-deploy-there escape hatch kpathsea documents). This
+          #     is why the RC build failed: "kpathsea: no usable TeX backend".
+          KPATHSEA_NO_LINK: "1"
+          KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
 
       # Launch smoke: prove the `.exe` runs on the runner (static-link / vcpkg
       # sanity). Conversion paths aren't exercised here (no TeX Live on this leg);
