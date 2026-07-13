@@ -30,7 +30,7 @@ their 2026-05-24 values.
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
 | OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; next rung: Windows/musl) |
 | Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
-| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; only cortex-only F1 remains, non-blocking) |
+| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; F1 pericortex relicensed CC0-1.0, 2026-07-13) |
 | Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); URI-passthrough posture documented | remaining §6 items (CSP/sandboxing/`--hardened`) — **1.0-scoped, not a 0.7.4 blocker** |
 
 ## 2. Binary size (issue #101)
@@ -138,12 +138,13 @@ bar — and the editor distribution model it gates — is §11.
 
 Crates are `CC0`, but the binary ships more. Full inventory:
 [`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md) (living). **Analysis complete
-2026-07-09**; posture is clean, three outward-facing items remain:
+2026-07-09**; posture is clean, all outward-facing items now landed (F1/F4
+closed 2026-07-13):
 
 - **Rust deps — DONE (gated).** `deny.toml` allow-list + cargo-deny CI;
   `cargo deny --all-features check licenses` → *licenses ok*. Distributed
-  feature set clean too (the `pericortex` no-license warning is cortex-only,
-  absent from the shipped binary — inventory F1).
+  feature set clean too (the `pericortex` no-license warning is **resolved
+  2026-07-13** — pericortex now declares `license = "CC0-1.0"` upstream, inventory F1).
 - **Embedded assets — DONE.** CSS/XSLT/RelaxNG/DTD/Profiles + one JS are Perl
   LaTeXML (NIST public domain ≈ CC0); the other JS is ours (CC0). No notice
   burden.
@@ -157,9 +158,9 @@ Crates are `CC0`, but the binary ships more. Full inventory:
   `tools/gen_notices.sh` = hand-authored §1-4 + cargo-about §5) attributes the
   kernel/plain-TeX + linked libs + Rust crates; README License section scopes
   the claim (inventory §C).
-- **Remaining:** wire `tools/gen_notices.sh` into the release workflow so the
-  artifact ships the assembled notices, + the CI asset-inventory gate (F4 → §7);
-  `pericortex` upstream `license` field (F1, cortex-only, non-blocking).
+- **Remaining: none outward-facing.** F4 (gen_notices wired into `release.yml`'s
+  `assemble THIRD-PARTY-NOTICES` step + the asset-inventory gate, §7) and F1
+  (`pericortex` relicensed MIT → CC0-1.0, 2026-07-13) are both landed.
 
 ## 5. Tail latency & RSS
 

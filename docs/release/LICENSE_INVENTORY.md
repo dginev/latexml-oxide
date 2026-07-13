@@ -36,10 +36,13 @@ binary).
   [`about.toml`](../../about.toml) + template [`about.hbs`](../../about.hbs), assembled
   with the hand-authored §1-4 by [`tools/gen_notices.sh`](../../tools/gen_notices.sh).
   Generated from the (gitignored) lockfile at release time, not committed.
-- **Known warning (not distribution-blocking):** `pericortex` (our own
-  `dginev/cortex-peripherals`, git source) has no `license` field. It is pulled
-  in **only** under the `cortex` feature — absent from the shipped binary.
-  *Open item F1:* add `license = "CC0-1.0"` upstream to clear the warning.
+- **~~Known warning~~ RESOLVED 2026-07-13:** `pericortex` (our own
+  `dginev/cortex-peripherals`, git source) previously had no `license` field. It
+  is pulled in **only** under the `cortex` feature — absent from the shipped
+  binary. *F1 closed:* pericortex was relicensed MIT → `CC0-1.0` upstream
+  (`license = "CC0-1.0"` in its `Cargo.toml` + CC0 `LICENSE` text), clearing the
+  cargo-deny/cargo-about warning; a fresh build resolves the branch HEAD that
+  carries it.
 
 Re-verify: `cargo deny --all-features check licenses`
 
@@ -137,8 +140,9 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
 
 ## F. Open items (the remaining audit work)
 
-- **F1** *(open)* — add `license` field to `pericortex` upstream (cortex-only;
-  clears the cargo-deny warning). Not distribution-blocking.
+- **F1** *(closed 2026-07-13)* — `pericortex` relicensed MIT → `CC0-1.0`
+  upstream (`license` field + CC0 `LICENSE`); clears the cargo-deny/cargo-about
+  warning. Was cortex-only, never distribution-blocking.
 - **F2** *(landed 2026-07-09)* — **`THIRD-PARTY-NOTICES`** (hand-authored §1-4 +
   cargo-about §5): LaTeX kernel (LPPL 1.3c) + plain TeX (Knuth) for the embedded
   dumps (§C); Perl-LaTeXML assets; the statically-linked libxml2/libxslt/libexslt
