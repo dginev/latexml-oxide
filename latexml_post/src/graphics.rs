@@ -39,17 +39,6 @@ fn record_converter_diag(msg: String) { LAST_CONVERTER_DIAG.with(|c| *c.borrow_m
 /// Take (read + clear) this thread's latest converter diagnostic.
 fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borrow_mut().take()) }
 
-/// True iff `<program>.exe` exists in some `PATH` directory. Windows-oriented
-/// (used to pick among Ghostscript's per-platform binary names); on Unix the
-/// delegate names are fixed and this is never consulted.
-fn program_on_path(program: &str) -> bool {
-  let Some(paths) = std::env::var_os("PATH") else {
-    return false;
-  };
-  let exe = format!("{program}.exe");
-  std::env::split_paths(&paths).any(|dir| dir.join(&exe).is_file())
-}
-
 /// Program name for the ImageMagick CLI delegate. On Windows, `convert.exe`
 /// is the system FAT→NTFS conversion utility in `System32`, which shadows
 /// ImageMagick's legacy name — invoking bare `convert` there runs the wrong
@@ -68,10 +57,13 @@ fn im_convert_program() -> &'static str { if cfg!(windows) { "magick" } else { "
 /// failure surfaces as the usual could-not-start converter diagnostic.
 fn gs_program() -> &'static str {
   if cfg!(windows) {
+    // `which` applies the platform's own lookup rules (PATHEXT, so `.exe`/
+    // `.bat`/`.cmd` all resolve) — the same crate + semantics the kpathsea
+    // backend uses to find `kpsewhich`.
     static GS: LazyLock<&'static str> = LazyLock::new(|| {
       ["gswin64c", "gswin32c", "mgs", "rungs"]
         .into_iter()
-        .find(|candidate| program_on_path(candidate))
+        .find(|candidate| which::which(candidate).is_ok())
         .unwrap_or("gs")
     });
     *GS
