@@ -77,7 +77,13 @@ static INIT_TEST_RSS_CAP: Once = Once::new();
 /// documents (a false `MemoryBudget` cascade on article/book/report …). So the
 /// harness — not the production default — raises the cap, once, here. An
 /// explicit `LATEXML_RSS_CAP_BYTES` (or `--test-threads=N`) still wins.
-fn init_test_rss_cap() {
+///
+/// `pub` so hand-written integration suites (e.g. `06_cluster_regressions.rs`)
+/// that drive `Converter` directly — bypassing `latexml_test_single` — can opt
+/// into the same raised cap. Otherwise their conversions run under the low
+/// production default and trip a false `MemoryBudget` cascade at
+/// `--test-threads=2` once the file accumulates enough in-flight RSS.
+pub fn init_test_rss_cap() {
   INIT_TEST_RSS_CAP.call_once(|| {
     if std::env::var_os("LATEXML_RSS_CAP_BYTES").is_none() {
       // SAFETY: set exactly once under `Once`, at the very top of every

@@ -8,6 +8,12 @@ use latexml::converter::Converter;
 use latexml_core::common::{Config, OutputFormat};
 
 fn convert_clean(source: &str) {
+  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
+  // drive `Converter` directly, bypassing `latexml_test_single`, so without
+  // this they run under the low production default and a full-file
+  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
+  // conversions are in flight. See util::test::init_test_rss_cap.
+  latexml::util::test::init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
     format: OutputFormat::HTML5,
@@ -43,6 +49,12 @@ fn convert_clean(source: &str) {
 /// Convert and return the serialized XML (for structural assertions that the
 /// 0-error `convert_clean` cannot express).
 fn convert_to_xml(source: &str) -> String {
+  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
+  // drive `Converter` directly, bypassing `latexml_test_single`, so without
+  // this they run under the low production default and a full-file
+  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
+  // conversions are in flight. See util::test::init_test_rss_cap.
+  latexml::util::test::init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
     format: OutputFormat::HTML5,
@@ -58,6 +70,12 @@ fn convert_to_xml(source: &str) -> String {
 /// Convert and return the conversion log (for asserting the ABSENCE of a
 /// Rust-only warning that `convert_clean` — which only counts `Error:` — misses).
 fn convert_log(source: &str) -> String {
+  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
+  // drive `Converter` directly, bypassing `latexml_test_single`, so without
+  // this they run under the low production default and a full-file
+  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
+  // conversions are in flight. See util::test::init_test_rss_cap.
+  latexml::util::test::init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
     format: OutputFormat::HTML5,
@@ -480,6 +498,12 @@ fn cluster_theindex_nested_autoclose() {
 /// at the comma in BOTH engines (Perl `TrimmedCommaList` is not brace-aware),
 /// leaving `['bbl']`.
 fn convert_to_xml_ar5iv(source: &str) -> String {
+  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
+  // drive `Converter` directly, bypassing `latexml_test_single`, so without
+  // this they run under the low production default and a full-file
+  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
+  // conversions are in flight. See util::test::init_test_rss_cap.
+  latexml::util::test::init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
     format: OutputFormat::HTML5,
@@ -543,6 +567,12 @@ fn cluster_bbl_bib_precedence() {
 /// Convert with the contrib bindings dispatched (biblatex lives in
 /// latexml_contrib) and return the serialized XML.
 fn convert_to_xml_contrib(source: &str) -> String {
+  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
+  // drive `Converter` directly, bypassing `latexml_test_single`, so without
+  // this they run under the low production default and a full-file
+  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
+  // conversions are in flight. See util::test::init_test_rss_cap.
+  latexml::util::test::init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
     format: OutputFormat::HTML5,
@@ -861,5 +891,28 @@ fn frontmatter_mrm_author() {
   assert!(
     x.contains("Center for Biomedical Imaging"),
     "MRM affiliation content missing:\n{x}"
+  );
+}
+
+/// Brace-less `\hphantom` immediately followed by `\endminipage` (the low-level
+/// minipage primitive, no braces): upstream #2783's `\hphantom{}` grabs `#1`
+/// unconditionally, so it would swallow `\endminipage` into the phantom's
+/// `restricted_horizontal` frame — the minipage never closes and every element
+/// after it (the "After" section and the bibliography) is absorbed and LOST.
+/// The brace-guard (`\@ifnextchar\bgroup`) emits an empty phantom that consumes
+/// nothing, so `\endminipage` closes its minipage in the ambient mode.
+/// Witness 2004.10048 (`\minipage…\hphantom\endminipage`).
+#[test]
+fn hphantom_braceless_minipage_does_not_swallow_endminipage() {
+  let x = convert_to_xml("tests/cluster_regressions/hphantom_braceless_minipage.tex");
+  // Content after the figure survived => the minipage closed.
+  assert!(
+    x.contains("must survive"),
+    "brace-less \\hphantom swallowed \\endminipage; content after the minipage was lost:\n{x}"
+  );
+  // The bibliography (last thing in the document) is present => no truncation.
+  assert!(
+    x.contains("<bibitem") && x.contains("representative title"),
+    "bibliography lost — the minipage leaked and truncated the document:\n{x}"
   );
 }

@@ -1,0 +1,19 @@
+\documentclass{article}
+\begin{document}
+\section{Intro}
+Intro paragraph.
+\begin{figure}
+\minipage{0.05\textwidth}
+\hphantom
+\endminipage\hfill
+\minipage{0.9\textwidth}%
+Panel caption content.
+\endminipage
+\end{figure}
+\section{After}
+Content after the figure must survive; the minipage must close even though
+\verb|\hphantom| is immediately followed by \verb|\endminipage| with no braces.
+\begin{thebibliography}{9}
+\bibitem{ref-a} A.~Author, A representative title, 2020.
+\end{thebibliography}
+\end{document}
