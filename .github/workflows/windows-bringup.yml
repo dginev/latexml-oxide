@@ -42,25 +42,6 @@ jobs:
           cache-on-failure: true
           key: windows-bringup
 
-      # TEMPORARY until the three dependency PRs merge (then delete this
-      # step): redirect marpa/libxml/libxslt at their windows-compatibility
-      # branches. Appended here rather than committed in Cargo.toml so the
-      # repo manifest stays pointed at the published upstreams.
-      #   marpa:    dginev/marpa#5
-      #   libxml:   KWARC/rust-libxml#209
-      #   libxslt:  KWARC/rust-libxslt#9
-      - name: patch dependencies at PR branches (pre-merge bridge)
-        shell: pwsh
-        run: |
-          Add-Content Cargo.toml @'
-
-          [patch."https://github.com/dginev/marpa"]
-          marpa = { git = "https://github.com/dginev/marpa", branch = "windows-compatibility" }
-          [patch.crates-io]
-          libxml = { git = "https://github.com/KWARC/rust-libxml", branch = "windows-compatibility" }
-          libxslt = { git = "https://github.com/KWARC/rust-libxslt", branch = "windows-compatibility" }
-          '@
-
       - name: cache vcpkg installed tree
         uses: actions/cache@v4
         with:
