@@ -141,6 +141,116 @@ core runtime stays dynamic:
 TeX Live (`kpsewhich`, `pdflatex`) is required at runtime and not
 bundled on any platform.
 
+## macOS Gatekeeper & code signing
+
+**Decision (2026-07-13): ripgrep-style — ad-hoc signature only, NOT
+notarized.** We deliberately do *not* enroll in the Apple Developer Program
+or notarize the macOS tarballs. This matches ripgrep and the vast majority
+of open-source Rust CLIs, and it is correct because of how Gatekeeper
+actually works:
+
+- **The "unidentified developer" prompt fires only on files carrying the
+  `com.apple.quarantine` xattr**, which is set by *quarantine-aware* apps
+  (browsers, Mail, AirDrop) — **not** by `curl`, `git`, or Homebrew. Our
+  install instructions (`make_release.sh` release body) use `curl`, so the
+  downloaded binary has no quarantine bit and Gatekeeper never prompts. A
+  user who instead downloads the tarball *in a browser* will see the prompt;
+  they clear it once with `xattr -d com.apple.quarantine <file>` or
+  right-click → Open.
+- **Code signing ≠ notarization.** A Developer ID signature alone no longer
+  clears Gatekeeper for quarantined files (since Catalina); *notarization*
+  (uploading to Apple's notary service) is what removes the browser-download
+  warning. Both require the $99/yr program. We do neither.
+- **arm64 needs *a* signature just to execute.** Apple Silicon kills any
+  arm64 Mach-O without at least an ad-hoc signature. Because our macOS legs
+  build **natively** (`macos-15` / `macos-15-intel`), the linker ad-hoc-signs
+  automatically — but `strip` can invalidate that. So `make_release.sh`
+  **re-applies an ad-hoc signature after strip** (`codesign --sign - --force`,
+  dash = ad-hoc, no cert), and both macOS legs gate on
+  `codesign --verify` (`verify code signature present` step). This costs
+  nothing and prevents a `Killed: 9` regression.
+
+**Primary macOS channel = Homebrew** (like ripgrep's homebrew-core). `brew`
+strips quarantine, so a tap install is warning-free by construction — no
+Apple Developer account, no notarization, aligned with the CC0 / public-domain
+posture (a paid Apple identity would contradict the no-strings ethos, and
+Homebrew removes the warning on the channel Mac users actually reach for). Not
+yet published; the per-release `.sha256` sidecars make an auto-bump trivial.
+
+The bigger win: for a LaTeX converter the real setup friction is **TeX + the
+graphics toolchain**, not the executable. The formula encodes the small
+always-needed graphics tools as `depends_on`, so `brew install …` sets up the
+whole runtime in one command, and caveats the (large, sometimes
+already-present via MacTeX) TeX distribution rather than force-installing a
+redundant copy. A tap lives in its own `dginev/homebrew-tap` repo as
+`Formula/latexml-oxide.rb`:
+
+```ruby
+class LatexmlOxide < Formula
+  desc "Rust port of LaTeXML — LaTeX to HTML/XML/MathML"
+  homepage "https://github.com/dginev/latexml-oxide"
+  version "0.7.3"                       # bump per release
+  license "CC0-1.0"
+  # 1:1 with the .deb's graphics Depends (imagemagick, mupdf-tools,
+  # poppler-utils, ghostscript, dvisvgm) — all are real homebrew-core formulae.
+  # `dvipng` (a .deb Depends) has NO standalone brew formula; on macOS it ships
+  # only inside TeX Live / MacTeX, so it is covered via the TeX distribution
+  # (caveats below), not a `depends_on` line.
+  depends_on "dvisvgm"
+  depends_on "ghostscript"
+  depends_on "imagemagick"
+  depends_on "mupdf-tools"
+  depends_on "poppler"
+  on_macos do
+    on_arm do
+      url "https://github.com/dginev/latexml-oxide/releases/download/#{version}/latexml-oxide-#{version}-aarch64-apple-darwin.tar.gz"
+      sha256 "…"                        # from the .tar.gz.sha256 sidecar
+    end
+    on_intel do
+      url "https://github.com/dginev/latexml-oxide/releases/download/#{version}/latexml-oxide-#{version}-x86_64-apple-darwin.tar.gz"
+      sha256 "…"
+    end
+  end
+  def install
+    bin.install "latexml_oxide"
+  end
+  # TeX Live is the one heavy runtime dep. Caveat rather than `depends_on
+  # "texlive"` so users with MacTeX/BasicTeX aren't forced into a redundant
+  # ~5 GB brew copy. (Swap to `depends_on "texlive"` if you'd rather the
+  # zero-TeX audience get a truly one-command setup.)
+  def caveats
+    <<~EOS
+      latexml-oxide needs a TeX distribution at runtime (kpsewhich, pdflatex,
+      and dvipng — TeX Live bundles dvipng, which has no standalone brew formula).
+      Install one of:
+        brew install texlive                 # Homebrew's (~5 GB, full TeX Live)
+        # …or MacTeX / BasicTeX: https://tug.org/mactex/
+      With MacTeX/BasicTeX, put /Library/TeX/texbin on PATH.
+    EOS
+  end
+  test do
+    # Runs the binary — also proves the (ad-hoc) code signature is valid,
+    # since an unsigned/broken arm64 Mach-O is killed at exec.
+    assert_match version.to_s, shell_output("#{bin}/latexml_oxide --version")
+  end
+end
+```
+
+`brew install dginev/tap/latexml-oxide` then gives Mac users a warning-free,
+on-PATH, auto-upgradeable install with the graphics runtime already wired up —
+the "easy start" the plain tarball can't match. Path to the front door
+(`brew install latexml-oxide`, no tap): submit to **homebrew-core** once the
+project clears its notability bar; until then the personal tap is the
+pragmatic channel and README should lead with it on macOS.
+
+**If browser downloads ever become a support burden**, the upgrade is a
+Developer ID sign + `xcrun notarytool submit --wait` job (needs the $99/yr
+program + 5 GitHub secrets: base64 `.p12` cert, cert password, sign identity,
+App Store Connect key/issuer). Note a **bare CLI binary cannot be
+`stapler staple`d** (only `.app`/`.dmg`/`.pkg`), so notarization would rely on
+Gatekeeper's *online* check unless wrapped in a `.pkg`. Not currently
+warranted.
+
 ## Container images (GHCR)
 
 Two images ship from a **single, unified root `Dockerfile`** selected with

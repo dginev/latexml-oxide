@@ -123,6 +123,17 @@ jobs:
           fi
           echo "OK: no dynamic libxml2/libxslt/kpathsea"
 
+      # Ad-hoc signature gate. make_release.sh re-signs the binary after `strip`
+      # (dash = ad-hoc, no Apple Developer cert); an arm64 Mach-O with a broken
+      # signature is killed at exec. This asserts the signature survived. NOT
+      # notarization — ripgrep-style posture, see RELEASING.md "macOS Gatekeeper".
+      - name: verify code signature present
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          codesign --verify --verbose "$bin" \
+            && echo "OK: valid (ad-hoc) code signature" \
+            || { echo "::error::macOS binary has no valid code signature — would be Killed:9 on arm64"; exit 1; }
+
       - name: upload macOS artifact
         uses: actions/upload-artifact@v5
         with:
@@ -208,6 +219,16 @@ jobs:
             echo "::error::release binary dynamically links a library that must be static"; exit 1
           fi
           echo "OK: no dynamic libxml2/libxslt/kpathsea"
+
+      # Ad-hoc signature gate (see build-macos leg). x86_64 does not require a
+      # signature to run the way arm64 does, but make_release.sh re-signs both
+      # legs uniformly; assert it here too for parity.
+      - name: verify code signature present
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          codesign --verify --verbose "$bin" \
+            && echo "OK: valid (ad-hoc) code signature" \
+            || { echo "::error::macOS binary has no valid code signature"; exit 1; }
 
       - name: upload macOS Intel artifact
         uses: actions/upload-artifact@v5

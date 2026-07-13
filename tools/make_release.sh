@@ -113,6 +113,16 @@ fi
 # (Mach-O) strip has no such flag, so use -x there (best-effort).
 if [[ "${os_family}" == "macos" ]]; then
   strip -x "${bin_path}" 2>/dev/null || true
+  # Re-apply a valid ad-hoc signature. Apple's linker ad-hoc-signs arm64
+  # Mach-O at link time, but the `strip` above mutates the binary and can
+  # invalidate that signature — an arm64 binary with a broken signature is
+  # killed at exec (`Killed: 9`). `codesign --sign -` (dash = ad-hoc, no
+  # Apple Developer cert needed) restores a valid signature. This is the
+  # ripgrep-style posture: no notarization, but the binary always runs, and
+  # `curl`-installed tarballs stay Gatekeeper-warning-free (no quarantine
+  # xattr on terminal downloads). See docs/release/RELEASING.md "macOS
+  # Gatekeeper & code signing".
+  codesign --sign - --force "${bin_path}" 2>/dev/null || true
 else
   strip --strip-all "${bin_path}" 2>/dev/null || true
 fi
