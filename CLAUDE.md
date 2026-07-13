@@ -324,6 +324,7 @@ truth for macro-expanded diagnostics.
   both the ANSI and ANSI-free binaries, matching `Status:conversion:3`. When in doubt, count it
   as a failure to investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
+- **Never delete a witness article (arXiv id) from a code comment; always carry existing witnesses into any new/edited comment and add the new one.** Witnesses are the concrete reproducer a past decision hinged on — they are very valuable. Before landing a change to a construct whose comment names a witness, **re-convert that witness and confirm it still succeeds** (the test suite can miss it). Example: the `\hphantom` comment's `2004.10048` witness caught a lateral regression (the naive quantikz2 fix dropped 2004.10048's bibliography) that no test guarded.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - **Active work**: the two targets in "Active priorities" above — corpus-driven parity mining plus the beyond-Perl arXiv-run levers. The actionable list lives in `docs/SYNC_STATUS.md`; completed missions (dump parity, upstream-sync U1–U11, …) are archived under `docs/archive/`.
 - When a test failure traces to an upstream Perl issue, document it in `docs/parity/KNOWN_PERL_ERRORS.md`.
