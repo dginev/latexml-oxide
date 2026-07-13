@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/parser.rs`."><title>parser.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (af3d95584 2026-07-09)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/</div>parser.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/parser.rs`."><title>parser.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (77cf889bc 2026-07-12)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/</div>parser.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{
 <a href=#2 id=2 data-nosnippet>2</a>  borrow::Cow,
 <a href=#3 id=3 data-nosnippet>3</a>  cell::RefCell,
 <a href=#4 id=4 data-nosnippet>4</a>  collections::HashSet,
@@ -118,7 +118,7 @@
 <a href=#118 id=118 data-nosnippet>118</a><span class="kw">static </span>PARSE_HYBRID_AUDIT_PARITY: Lazy&lt;bool&gt; =
 <a href=#119 id=119 data-nosnippet>119</a>  Lazy::new(|| std::env::var(<span class="string">"LATEXML_MARPA_HYBRID_AUDIT_PARITY"</span>).is_ok());
 <a href=#120 id=120 data-nosnippet>120</a><span class="comment">// Route `parse_marpa` through one of three paths. See
-<a href=#121 id=121 data-nosnippet>121</a>// docs/MATH_PARSER_AND_ASF.md and marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
+<a href=#121 id=121 data-nosnippet>121</a>// docs/math/MATH_PARSER_AND_ASF.md and marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
 <a href=#122 id=122 data-nosnippet>122</a>//
 <a href=#123 id=123 data-nosnippet>123</a>// **HYBRID is now the default** (2026-05-17). Hybrid reads the tokens
 <a href=#124 id=124 data-nosnippet>124</a>// once, builds the bocage once, then checks Marpa's raw
@@ -151,7 +151,7 @@
 <a href=#151 id=151 data-nosnippet>151</a>// allocate the entire Rust-side glade/factoring view up front; on
 <a href=#152 id=152 data-nosnippet>152</a>// math-bound papers with high-cardinality ambiguous forests this
 <a href=#153 id=153 data-nosnippet>153</a>// blew through the 8 GB ulimit (19/100 OOMs on the math-bound
-<a href=#154 id=154 data-nosnippet>154</a>// sample — see docs/PERFORMANCE.md "HYBRID at scale" addendum).
+<a href=#154 id=154 data-nosnippet>154</a>// sample — see docs/performance/PERFORMANCE.md "HYBRID at scale" addendum).
 <a href=#155 id=155 data-nosnippet>155</a>//
 <a href=#156 id=156 data-nosnippet>156</a>// Default 500: downstream consumers (pragmatics selection, XMath
 <a href=#157 id=157 data-nosnippet>157</a>// builders) can't usefully process more than a handful of distinct
@@ -682,7 +682,7 @@
 <a href=#682 id=682 data-nosnippet>682</a>        <span class="kw">let </span>math_ref = math.clone();
 <a href=#683 id=683 data-nosnippet>683</a>        <span class="comment">// Per-formula timing feeds the math_parse_buckets histogram in
 <a href=#684 id=684 data-nosnippet>684</a>        // telemetry. ~20 ns Instant cost per formula is negligible vs Marpa.
-<a href=#685 id=685 data-nosnippet>685</a>        // See docs/TELEMETRY.md.
+<a href=#685 id=685 data-nosnippet>685</a>        // See docs/performance/TELEMETRY.md.
 <a href=#686 id=686 data-nosnippet>686</a>        </span><span class="kw">let </span>t0 = std::time::Instant::now();
 <a href=#687 id=687 data-nosnippet>687</a>        <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="self">self</span>.parse(math, document) {
 <a href=#688 id=688 data-nosnippet>688</a>          <span class="comment">// Aborting math parsing (a propagated resource fatal — P1-4):
@@ -1886,7 +1886,7 @@
 <a href=#1886 id=1886 data-nosnippet>1886</a>      // (including any pragmas-pruned ones counted as `pruned_count`)
 <a href=#1887 id=1887 data-nosnippet>1887</a>      // in a single sweep; no Tree-iteration loop, no convergence
 <a href=#1888 id=1888 data-nosnippet>1888</a>      // bandages. See `latexml_math_parser/src/asf_traverser.rs` and
-<a href=#1889 id=1889 data-nosnippet>1889</a>      // docs/MATH_PARSER_AND_ASF.md.
+<a href=#1889 id=1889 data-nosnippet>1889</a>      // docs/math/MATH_PARSER_AND_ASF.md.
 <a href=#1890 id=1890 data-nosnippet>1890</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>traverser = <span class="kw">crate</span>::asf_traverser::MathTraverser {
 <a href=#1891 id=1891 data-nosnippet>1891</a>        actions: <span class="kw-2">&amp;</span><span class="self">self</span>.actions,
 <a href=#1892 id=1892 data-nosnippet>1892</a>        pragmas: <span class="self">self</span>.expert_pragmatics.as_slice(),
@@ -1987,7 +1987,7 @@
 <a href=#1987 id=1987 data-nosnippet>1987</a>      // For the production-path concern (long-time tree-iteration
 <a href=#1988 id=1988 data-nosnippet>1988</a>      // cost), HYBRID's `metric == 2 → ASF` routing already
 <a href=#1989 id=1989 data-nosnippet>1989</a>      // sidesteps these caps via per-glade memoization. See
-<a href=#1990 id=1990 data-nosnippet>1990</a>      // docs/MATH_PARSER_AND_ASF.md.
+<a href=#1990 id=1990 data-nosnippet>1990</a>      // docs/math/MATH_PARSER_AND_ASF.md.
 <a href=#1991 id=1991 data-nosnippet>1991</a>      </span><span class="kw">let </span>max_trees = <span class="number">5000</span>; <span class="comment">// Hard limit on parse tree enumeration
 <a href=#1992 id=1992 data-nosnippet>1992</a>      </span><span class="kw">let </span>max_time = std::time::Duration::from_secs(<span class="number">30</span>); <span class="comment">// 30 second timeout
 <a href=#1993 id=1993 data-nosnippet>1993</a>      // Convergence: if we've seen enough consecutive duplicates without
@@ -2209,7 +2209,7 @@
 <a href=#2209 id=2209 data-nosnippet>2209</a>        // the pragma left `cargo test --tests` = 1328/0/0 on both
 <a href=#2210 id=2210 data-nosnippet>2210</a>        // HYBRID and ASF — the pragma is structurally redundant.
 <a href=#2211 id=2211 data-nosnippet>2211</a>        // See commit history (the new commit) and
-<a href=#2212 id=2212 data-nosnippet>2212</a>        // `docs/MATH_PARSER_ASF_TIEBREAKING.md`.
+<a href=#2212 id=2212 data-nosnippet>2212</a>        // `docs/math/MATH_PARSER_ASF_TIEBREAKING.md`.
 <a href=#2213 id=2213 data-nosnippet>2213</a>
 <a href=#2214 id=2214 data-nosnippet>2214</a>        // Multi-tree pragma: a *specific* QM semantic
 <a href=#2215 id=2215 data-nosnippet>2215</a>        // (`quantum-operator-product@(a, f, b)`, `inner-product@(a, b)`)
@@ -2234,7 +2234,7 @@
 <a href=#2234 id=2234 data-nosnippet>2234</a>        // chains. Fires only when at least one candidate has a
 <a href=#2235 id=2235 data-nosnippet>2235</a>        // `delimited-X` Apply AND another has fewer/zero. Resolves
 <a href=#2236 id=2236 data-nosnippet>2236</a>        // `2&lt;x,y&gt;=z`, `0&lt;&lt;a,b&gt;&gt;1`, and bra-ket-style angle fences.
-<a href=#2237 id=2237 data-nosnippet>2237</a>        // See docs/MATH_PARSER_ASF_TIEBREAKING.md § "What landed".
+<a href=#2237 id=2237 data-nosnippet>2237</a>        // See docs/math/MATH_PARSER_ASF_TIEBREAKING.md § "What landed".
 <a href=#2238 id=2238 data-nosnippet>2238</a>        </span>reduced_forest = reduced_forest.prefer_more_delimited_wrappers();
 <a href=#2239 id=2239 data-nosnippet>2239</a>
 <a href=#2240 id=2240 data-nosnippet>2240</a>        <span class="comment">// Multi-tree pragma: prefer candidates with MORE
@@ -2272,7 +2272,7 @@
 <a href=#2272 id=2272 data-nosnippet>2272</a>        // `prefer_smaller_tree`) exist on `XM` but are
 <a href=#2273 id=2273 data-nosnippet>2273</a>        // **deliberately not wired in by default**. Both proved
 <a href=#2274 id=2274 data-nosnippet>2274</a>        // too coarse to apply universally — see
-<a href=#2275 id=2275 data-nosnippet>2275</a>        // docs/MATH_PARSER_ASF_TIEBREAKING.md § "Empirical results":
+<a href=#2275 id=2275 data-nosnippet>2275</a>        // docs/math/MATH_PARSER_ASF_TIEBREAKING.md § "Empirical results":
 <a href=#2276 id=2276 data-nosnippet>2276</a>        //
 <a href=#2277 id=2277 data-nosnippet>2277</a>        // * `prefer_fewer_absent`: on the legacy path it is essentially neutral (1300/1 vs 1301
 <a href=#2278 id=2278 data-nosnippet>2278</a>        //   baseline), but on the ASF path it costs 9 tests because ASF surfaces absent-free parses
@@ -2995,7 +2995,7 @@
 <a href=#2995 id=2995 data-nosnippet>2995</a>    // c + dc + d", regressing choose/declare/sampler): callers here rely on
 <a href=#2996 id=2996 data-nosnippet>2996</a>    // an unresolved ref returning the XMRef itself. The warnings are benign
 <a href=#2997 id=2997 data-nosnippet>2997</a>    // (WARN-level, targets resolve in the final tree); do not "fix" them by
-<a href=#2998 id=2998 data-nosnippet>2998</a>    // swapping the resolver. See docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
+<a href=#2998 id=2998 data-nosnippet>2998</a>    // swapping the resolver. See docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
 <a href=#2999 id=2999 data-nosnippet>2999</a>    // Can it happen that the target is itself an XMRef? Then recurse.
 <a href=#3000 id=3000 data-nosnippet>3000</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(realnode) = document.lookup_id(<span class="kw-2">&amp;</span>idref) {
 <a href=#3001 id=3001 data-nosnippet>3001</a>      <span class="kw">return </span>Cow::Borrowed(realnode);
@@ -3012,7 +3012,7 @@
 <a href=#3012 id=3012 data-nosnippet>3012</a>    // Callers rely on an unresolved ref returning the XMRef itself; do NOT "fix"
 <a href=#3013 id=3013 data-nosnippet>3013</a>    // by swapping in `resolve_xmref` — that DUPLICATES content (\choose →
 <a href=#3014 id=3014 data-nosnippet>3014</a>    // "a + ba + b binomial c + dc + d"; regresses choose/declare/sampler). See
-<a href=#3015 id=3015 data-nosnippet>3015</a>    // docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
+<a href=#3015 id=3015 data-nosnippet>3015</a>    // docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
 <a href=#3016 id=3016 data-nosnippet>3016</a>    // The AUTHORITATIVE dangling-ref check is the faithful post-processing pass
 <a href=#3017 id=3017 data-nosnippet>3017</a>    // (Perl Post.pm:1444/1456 → latexml_post `realize_xm_node` /
 <a href=#3018 id=3018 data-nosnippet>3018</a>    // `mark_xm_node_visibility_aux`, Error severity) plus core

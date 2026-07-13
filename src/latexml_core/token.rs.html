@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/token.rs`."><title>token.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (af3d95584 2026-07-09)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>token.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{borrow::Cow, fmt, fmt::Display, rc::Rc};
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/token.rs`."><title>token.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (77cf889bc 2026-07-12)" data-channel="nightly" data-search-js="search-9944d736.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>token.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{borrow::Cow, fmt, fmt::Display, rc::Rc};
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>once_cell::sync::Lazy;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -295,7 +295,7 @@
 <a href=#295 id=295 data-nosnippet>295</a>  /// (the opt-in source-map precision build); `Token` stays 8 bytes otherwise.
 <a href=#296 id=296 data-nosnippet>296</a>  /// Set in `read_token`; carried through expansion so a digested run can recover
 <a href=#297 id=297 data-nosnippet>297</a>  /// its exact source span. **Excluded from `PartialEq`** (tokens compare by
-<a href=#298 id=298 data-nosnippet>298</a>  /// meaning, not origin — see `impl PartialEq`). See docs/SOURCE_PROVENANCE.md
+<a href=#298 id=298 data-nosnippet>298</a>  /// meaning, not origin — see `impl PartialEq`). See docs/performance/SOURCE_PROVENANCE.md
 <a href=#299 id=299 data-nosnippet>299</a>  /// §3.1.1.
 <a href=#300 id=300 data-nosnippet>300</a>  </span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
 <a href=#301 id=301 data-nosnippet>301</a>  </span><span class="kw">pub </span>loc:  u32,
@@ -1108,7 +1108,7 @@
 <a href=#1108 id=1108 data-nosnippet>1108</a>// captured source start. Tokens carry only the u32 handle (Token stays 12 bytes);
 <a href=#1109 id=1109 data-nosnippet>1109</a>// this holds the (source, line, col). Appended in `read_token`, read by the
 <a href=#1110 id=1110 data-nosnippet>1110</a>// digestion consumer to give a text run its true span. Cleared per conversion.
-<a href=#1111 id=1111 data-nosnippet>1111</a>// See docs/SOURCE_PROVENANCE.md §3.1.1.
+<a href=#1111 id=1111 data-nosnippet>1111</a>// See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
 <a href=#1112 id=1112 data-nosnippet>1112</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
 <a href=#1113 id=1113 data-nosnippet>1113</a>#[derive(Clone, Copy, Debug)]
 <a href=#1114 id=1114 data-nosnippet>1114</a></span><span class="kw">pub struct </span>TokenStart {
@@ -1122,7 +1122,7 @@
 <a href=#1122 id=1122 data-nosnippet>1122</a>  /// prefers genuine (read-from-source) origins and only falls back to
 <a href=#1123 id=1123 data-nosnippet>1123</a>  /// inherited ones, so a `\section{Intro}`'s structural body literals — now
 <a href=#1124 id=1124 data-nosnippet>1124</a>  /// carrying an inherited origin — never widen the title's content-exact
-<a href=#1125 id=1125 data-nosnippet>1125</a>  /// span. See docs/SOURCE_PROVENANCE.md §3.1.3.
+<a href=#1125 id=1125 data-nosnippet>1125</a>  /// span. See docs/performance/SOURCE_PROVENANCE.md §3.1.3.
 <a href=#1126 id=1126 data-nosnippet>1126</a>  </span><span class="kw">pub </span>inherited: bool,
 <a href=#1127 id=1127 data-nosnippet>1127</a>}
 <a href=#1128 id=1128 data-nosnippet>1128</a>
@@ -1152,7 +1152,7 @@
 <a href=#1152 id=1152 data-nosnippet>1152</a>/// invocation token's start, push a copy flagged `inherited`, and return its
 <a href=#1153 id=1153 data-nosnippet>1153</a>/// new handle (`0` if `handle` is the no-origin sentinel or out of range). One
 <a href=#1154 id=1154 data-nosnippet>1154</a>/// call per macro expansion; the returned handle is shared by every synthesized
-<a href=#1155 id=1155 data-nosnippet>1155</a>/// result token. See `push_token_origin` and docs/SOURCE_PROVENANCE.md §3.1.3.
+<a href=#1155 id=1155 data-nosnippet>1155</a>/// result token. See `push_token_origin` and docs/performance/SOURCE_PROVENANCE.md §3.1.3.
 <a href=#1156 id=1156 data-nosnippet>1156</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
 <a href=#1157 id=1157 data-nosnippet>1157</a></span><span class="kw">pub fn </span>push_inherited_origin(handle: u32) -&gt; u32 {
 <a href=#1158 id=1158 data-nosnippet>1158</a>  <span class="kw">if </span>handle == <span class="number">0 </span>{
@@ -1187,7 +1187,7 @@
 <a href=#1187 id=1187 data-nosnippet>1187</a></span><span class="kw">mod </span>tests {
 <a href=#1188 id=1188 data-nosnippet>1188</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
 <a href=#1189 id=1189 data-nosnippet>1189</a>
-<a href=#1190 id=1190 data-nosnippet>1190</a>  <span class="doccomment">/// `Token` size invariant (docs/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
+<a href=#1190 id=1190 data-nosnippet>1190</a>  <span class="doccomment">/// `Token` size invariant (docs/performance/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
 <a href=#1191 id=1191 data-nosnippet>1191</a>  /// default (`SymStr` + `Catcode`), 12 only under the `token-locators`
 <a href=#1192 id=1192 data-nosnippet>1192</a>  /// precision build (+ the `u32` origin handle). Guards the corpus/parity/
 <a href=#1193 id=1193 data-nosnippet>1193</a>  /// distribution builds against an accidental widening.
@@ -1211,7 +1211,7 @@
 <a href=#1211 id=1211 data-nosnippet>1211</a>  /// mouth carries a handle resolving to its exact (line, col). This is the leaf
 <a href=#1212 id=1212 data-nosnippet>1212</a>  /// accuracy that mouth-snapshot (Experiments 1–2) and digested-child assembly
 <a href=#1213 id=1213 data-nosnippet>1213</a>  /// (Experiment 3) could not provide — the position now travels *with the
-<a href=#1214 id=1214 data-nosnippet>1214</a>  /// token*. See docs/SOURCE_PROVENANCE.md §3.1.1.
+<a href=#1214 id=1214 data-nosnippet>1214</a>  /// token*. See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
 <a href=#1215 id=1215 data-nosnippet>1215</a>  </span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
 <a href=#1216 id=1216 data-nosnippet>1216</a>  #[test]
 <a href=#1217 id=1217 data-nosnippet>1217</a>  </span><span class="kw">fn </span>token_origin_capture() {
