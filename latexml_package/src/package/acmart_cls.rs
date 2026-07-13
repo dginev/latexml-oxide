@@ -198,12 +198,57 @@ LoadDefinitions!({
 
   //======================================================================
   // Float environments
+  //
+  // teaserfigure — real acmart DEFERS the teaser: `\newenvironment{teaserfigure}
+  // {\Collect@Body\@saveteaser}{}` (cls L2202) stashes the body into
+  // `\@teaserfigures`, and `\maketitle` renders it via `\@mkteasers` (cls L2240,
+  // L2899) as the last part of the top-matter box — so in the PDF the teaser
+  // appears AFTER the title+authors and BEFORE the abstract, not where the
+  // environment is written (typically before `\maketitle`). Perl LaTeXML has no
+  // teaserfigure binding at all, so any handling here is beyond-Perl.
+  //
+  // We DIGEST + CONSTRUCT the teaser in place (below) so `\label`/`\ref`,
+  // `\caption` numbering, `xml:id` and `inlist` all resolve exactly as for a
+  // normal float — the teaser in arXiv 2606.22880 is `\ref`-ed 6+ times, so the
+  // figure node must own the label. The prior inline result merely landed in the
+  // wrong PLACE (first `<document>` child, ahead of the title, because the env is
+  // written before `\maketitle`). The `\lx@relocate@teaser` DOCUMENT_REWRITE rule
+  // registered just below moves the finished node to just before the abstract
+  // (user-directed 2026-07-13 — timing/position of `\maketitle`, no frontmatter
+  // markup added over the figure).
   DefEnvironment!("{teaserfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
     before_digest => { before_float("figure", None); },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
+  // Relocate the constructed teaser to acmart's top-matter position: immediately
+  // before the abstract (PDF order: title, authors, teaser, abstract). Runs as a
+  // post-construction DOM rewrite so the figure keeps its id/label/number — only
+  // its position changes.
+  //
+  // We anchor on the ABSTRACT, not the teaser: the rewrite `replace` engine
+  // unbinds the matched node AND every FOLLOWING sibling (re-appending them after
+  // the closure), so matching the teaser — the first `<document>` child — would
+  // detach the whole frontmatter and leave the teaser stuck at the front. The
+  // abstract's PRECEDING siblings (the teaser, title, creators) stay bound, so we
+  // move the still-bound teaser to just before the re-attached abstract. The
+  // xpath predicate gates the rule to teaser-bearing documents only, so a plain
+  // acmart abstract is untouched.
+  DefRewrite!(
+    xpath => "//ltx:abstract[//ltx:figure[contains(@class,'ltx_teaserfigure')]]",
+    replace => sub[document, nodes] {
+      let abs = nodes.pop().unwrap();
+      // Re-attach the abstract at its original parent (the rewrite engine set the
+      // current node to that parent before calling us).
+      document.get_node_mut().add_child(abs)?;
+      // Move the still-bound teaser to just before the abstract.
+      let teasers =
+        document.findnodes("//ltx:figure[contains(@class,'ltx_teaserfigure')]", None);
+      if let Some(mut teaser) = teasers.into_iter().next() {
+        abs.add_prev_sibling(&mut teaser)?;
+      }
+    });
 
   DefEnvironment!("{marginfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",

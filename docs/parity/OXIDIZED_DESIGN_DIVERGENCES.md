@@ -1481,6 +1481,50 @@ figures in the witness now resolve.
 
 ---
 
+### 56. acmart `teaserfigure` is relocated to the top-matter position
+
+**Decision:** the acmart `teaserfigure` environment
+(`latexml_package/src/package/acmart_cls.rs`) is digested and constructed **in
+place** as a normal `<ltx:figure class="ltx_teaserfigure">`, then a
+`DOCUMENT_REWRITE` rule moves the finished node to immediately **before the
+abstract** — matching acmart's PDF top-matter order (title, authors, teaser,
+abstract). Perl LaTeXML has **no** `teaserfigure` binding at all, so this is a
+beyond-Perl behavior throughout.
+
+**The shared bug.** Real `acmart.cls` defers the teaser:
+`\newenvironment{teaserfigure}{\Collect@Body\@saveteaser}{}` (cls L2202) stashes
+the body into `\@teaserfigures`, and `\maketitle` renders it via `\@mkteasers`
+(cls L2240, L2899) as the last part of the top-matter box — so the teaser always
+appears after the title+authors regardless of where the environment is written.
+Papers write `\begin{teaserfigure}…\end{teaserfigure}` **before** `\maketitle`
+(it is declared next to `\title`/`\author`). LaTeXML digests the environment at
+its source position, so the emitted `<ltx:figure>` became the **first**
+`<document>` child — ahead of the title. Witness arXiv **2606.22880** ("DJM:
+Compact Base Meshes…", acmart): the teaser rendered at the very top of the HTML,
+before the paper title, and is `\ref`-ed 6+ times ("Fig~\ref{fig:teaser}d").
+
+**Why construct-then-relocate (not defer-digestion).** The figure must own its
+`\label` so the 6+ `\ref{fig:teaser}` resolve to "Figure 1"; a label only
+attaches to the enclosing float **while that float is the open element during
+digestion**. Deferring the *digestion* to `\maketitle` (e.g. via the frontmatter
+`…@until` hook) digests the body as detached content, stranding the label on
+`<document>` and breaking every reference. So the float is built normally (label,
+caption number, `xml:id`, `inlist` all correct) and only its **position** is
+changed, post-construction.
+
+**The relocation** is a `DefRewrite` anchored on the **abstract**, not the
+teaser: the rewrite `replace` engine unbinds the matched node *and every
+following sibling*, so matching the teaser (the first child) would detach the
+whole frontmatter. Anchoring on the abstract keeps the teaser (a *preceding*
+sibling) bound, and the still-bound teaser is moved to just before the
+re-attached abstract. The xpath predicate
+`//ltx:abstract[//ltx:figure[contains(@class,'ltx_teaserfigure')]]` gates the
+rule to teaser-bearing documents, so a plain acmart abstract is untouched.
+Verified: 2606.22880's teaser now renders between the authors and the abstract,
+its `\ref`s read "Figure 1", and a teaser-free acmart document is unchanged.
+
+---
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
