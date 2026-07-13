@@ -74,6 +74,11 @@ pub fn image_candidates(path: &str) -> String {
   };
 
   for dir in &search_dirs {
+    // Strip surrounding double-quotes from the search directory, symmetric to
+    // the `path.trim_matches('"')` above. A quoted `\graphicspath{{"./dir"}}`
+    // (or `\svgpath` / `--graphicspaths`) otherwise joins to a `"…"` path that
+    // never resolves. See OXIDIZED_DESIGN #55.
+    let dir = dir.trim().trim_matches('"');
     let base = PathBuf::from(dir).join(path);
     if has_extension {
       if base.exists() {

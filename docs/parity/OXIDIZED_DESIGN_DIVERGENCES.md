@@ -1446,6 +1446,41 @@ four; full suite 1541/0.
 
 ---
 
+### 55. Quoted `\graphicspath` directories are unquoted before lookup
+
+**Decision:** the `\graphicspath` constructor
+(`latexml_package/src/package/graphics_sty.rs` L459) strips a surrounding pair
+of double-quotes from each directory entry before it is made absolute and pushed
+onto `GRAPHICSPATHS`, and `image_candidates`
+(`latexml_core/src/util/image.rs` L76) strips them defensively at the
+consumption site too. This is a **surpass-Perl divergence** under the
+PDF-fidelity policy: pdflatex/kpathsea both tolerate quoted paths, so a document
+that renders under pdflatex keeps its figures under LaTeXML.
+
+**The shared bug.** A `\graphicspath{{"./figures"}}` — the MiKTeX/Windows idiom
+where the quotes guard embedded spaces — is accepted by pdflatex, which strips
+the quotes before any filesystem lookup. Perl LaTeXML's `DirectoryList`
+parameter type keeps the literal quotes (it strips them only later, and only for
+`\special{psfile="…"}` in `\lx@special@graphics`, never for `\graphicspath`), so
+the stored search directory becomes `<sourcedir>/"./figures"` — a path that can
+never match the real `figures/` directory. Every `\includegraphics` then fails
+to resolve and emits `Warning:expected:source`, and the HTML carries an empty
+`<img src="" class="ltx_graphics ltx_missing_image">`. Perl and Rust-before emit
+the identical loss. Witness: arXiv **2606.22880** ("DJM: Compact Base Meshes for
+Displacement Mapping", acmart) declares `\graphicspath{{"./figures"}}` and loses
+**all 8** of its `\includegraphics` figures under both engines.
+
+**The fix** removes the surrounding quotes (`trim_matches('"')`), mirroring the
+quote strip already applied to the `\includegraphics` FILENAME side
+(`image.rs:53`). Strictly monotone — it can only *resolve* an image that a quoted
+path had hidden, never hide one: an unquoted directory contains no leading/
+trailing `"` for `trim_matches` to remove, and a real directory path never
+legitimately begins or ends with a double-quote. Covers quoted directories from
+`\graphicspath`, `\svgpath`, and the `--graphicspaths` CLI option alike. All 8
+figures in the witness now resolve.
+
+---
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
