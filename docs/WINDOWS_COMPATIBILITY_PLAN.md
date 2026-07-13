@@ -345,14 +345,18 @@ and a bleeding-edge dev box shows one benign diff; see the "tikz
 
 ## Phase 4 — CI: `windows-latest` job as a required leg
 
-> **Blocker (2026-07-13): private-repo Windows-minutes budget.** This repo is
-> private, so Actions minutes are metered for every runner and Windows bills at
-> **2×**. An auto-on-push Windows job hit `Repository access blocked` once the
-> account budget was reached (while the same push's Linux/macOS jobs still ran).
-> `windows-bringup.yml` is therefore **`workflow_dispatch`-only** for now — run
-> it manually when spending the Windows minutes is intended. Promoting it to a
-> required per-PR job (below) needs the repo to go public (Actions free) or a
-> Windows minute budget provisioned first.
+> **Resolved (2026-07-13): the `Repository access blocked` failure was a dead
+> action, not billing.** windows-bringup's early runs aborted at "Getting action
+> download info" because `teatimeguest/setup-texlive-action@v3` — the TeX Live
+> setup action — had its entire GitHub account go **404** (moved to the
+> `TeX-Live` org). GitHub reports an un-fetchable action as `Repository access
+> blocked`, which *looked* like a Windows-runner billing block but was not (the
+> account runs metered jobs fine — the macOS 10× leg proves it; the Actions
+> budget had headroom). Fixed by switching to `TeX-Live/setup-texlive-action@v4`
+> (identical inputs). The workflow is kept **`workflow_dispatch`-only by
+> choice** — deliberate manual runs to control this private repo's 2× Windows
+> minutes — not because of any access block. Restore the on-push trigger any
+> time before promoting it into `CI.yml` (below).
 
 1. Promote the bring-up workflow into `CI.yml` as a `windows` job mirroring the
    `macos` job structure: rustup nightly (MSVC host default), vcpkg install
