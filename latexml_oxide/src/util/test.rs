@@ -314,40 +314,12 @@ fn validate_requirements(_dirpath: &str, _requires: Option<&phf::Map<&str, &str>
 // fn latexml_ok(tex_path: &str, xml_path: &str, name: &str) { latexml_ok_internal(tex_path,
 // xml_path, name, None) }
 
-/// Resolve a TL-vintage-specific golden variant: `foo.tl2026.xml` next to
-/// `foo.xml` wins when the ambient TeX Live year matches; otherwise the
-/// unversioned golden is used. The exact per-TL-year pattern of the kernel
-/// dumps (`dump_paths`), applied to the rare fixture whose faithful output
-/// legitimately differs across TL vintages because an upstream package
-/// changed its drawing/behavior between releases (first case: circuitikz
-/// 1.8.0's path-logic rewrite lengthens drawn capacitor plates —
-/// tests/tikz/ac-drive-components — while anchors are unchanged; verified
-/// against real pdflatex output on both vintages). A variant never creates
-/// a new test: discovery pairs `[name].tex` with `[name].xml` only.
-fn resolve_versioned_golden(xml_path: &str) -> String {
-  static AMBIENT_TL_YEAR: Lazy<Option<u32>> =
-    Lazy::new(latexml_engine::dump_paths::detect_ambient_texlive_year);
-  if let Some(year) = *AMBIENT_TL_YEAR
-    && let Some(stem) = xml_path.strip_suffix(".xml")
-  {
-    let candidate = format!("{stem}.tl{year}.xml");
-    if std::path::Path::new(&candidate).is_file() {
-      return candidate;
-    }
-  }
-  xml_path.to_string()
-}
-
 fn latexml_ok_internal(
   tex_path: &str,
   xml_path: &str,
   name: &str,
   extra_bindings_dispatcher: Option<BindingDispatcher>,
 ) {
-  // TL-vintage golden variants apply to comparison AND bless alike, so a
-  // re-bless on a TL2026 host updates the tl2026 variant, not the shared
-  // unversioned golden.
-  let xml_path = &resolve_versioned_golden(xml_path);
   let tex_strings = process_texfile(tex_path, name, extra_bindings_dispatcher);
   // Bless / regenerate mode (Perl `tools/maketests` equivalent): overwrite the
   // golden with the actual output instead of comparing. Git is the backup.

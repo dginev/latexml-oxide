@@ -233,17 +233,22 @@ ubuntu TL is older) — both root-caused and fixed TL-independently:
    so ignoring these matches the `ignoredDefinition` policy. **Perl has no
    handler either — same cascade expected there on TL2023+; candidate
    upstream.**
-2. **TL-versioned golden variants** (`util/test.rs::resolve_versioned_golden`):
-   `foo.tl<year>.xml` beside `foo.xml` wins when the ambient TL year matches
-   — the kernel-dump per-TL-year pattern applied to fixtures whose faithful
-   output legitimately differs across TL vintages. First case:
-   `tikz/ac-drive-components.tl2026.xml` — circuitikz 1.8.0's path-logic
-   rewrite lengthens drawn capacitor plates (12.4 → 12.68 in our SVG space;
-   anchors unchanged; verified proportionally against real pdflatex output
-   on BOTH circuitikz vintages, and 1.4.6/1.7.2 pinning confirmed the old
-   geometry). Note: fixture-side `circuitikz-X.Y.Z` pinning is NOT possible —
-   both Perl (`FindFile_fallback` `[vV]?[-_.\d]+` suffix rule) and Rust
-   version-strip to the current binding, faithfully.
+2. **tikz `ac_drive_components`: base golden RETAINED — no versioned variant.**
+   A first attempt keyed a `tl2026.xml` golden variant on the ambient TL year
+   (circuitikz 1.8.0's path-logic rewrite lengthens drawn capacitor plates,
+   12.4 → 12.68 in our SVG space). **That was the wrong abstraction and
+   regressed macOS CI**: the drift is at *circuitikz* version granularity, not
+   TL-year — the macOS runner (`texlive/20260301`, i.e. TL2026) ships an
+   OLDER circuitikz that still emits 12.4, so it (correctly) matched the base
+   golden until the `.tl2026.xml` variant hijacked it and diffed 12.4-vs-12.68.
+   The base golden (12.4) is what every CI environment produces, so it is the
+   committed value and the variant + `resolve_versioned_golden` mechanism were
+   reverted. A dev box with a bleeding-edge circuitikz (e.g. a fresh TL2026
+   `install-tl`) will show this one benign 12.4-vs-12.68 diff locally — an
+   environment-ahead artifact, not a code defect; the project does not chase
+   rolling-package drift. Fixture-side `circuitikz-X.Y.Z` pinning is NOT
+   possible (both Perl `FindFile_fallback` `[vV]?[-_.\d]+` and Rust
+   version-strip to the current binding).
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 

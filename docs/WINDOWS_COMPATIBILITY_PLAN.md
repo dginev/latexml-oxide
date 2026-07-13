@@ -334,13 +334,14 @@ comparison now parses both sides in-process with the already-linked libxml2
 GNU diff `<`/`>` lines). No bash/xmllint/diff/grep/wc on ANY platform now,
 and a missing/malformed file panics instead of vacuously passing.
 
-**Suite status after day one: 1524 passed / 2 failed**, and the two
-ambient-TL-2026 drift suspects (`greek_test`, tikz
-`ac_drive_components_test`) were both root-caused and FIXED
-TL-independently the next session — see the "TL2026 ambient-drift fixes"
-entry in `SYNC_STATUS.md` (native `\Declare*caseMapping` handlers;
-TL-versioned golden variants mirroring the per-TL-year dump pattern).
-**Suite fully green on Windows + TL2026.**
+**Suite status after day one: 1524 passed / 2 failed** — two ambient-TL-2026
+drift suspects (`greek_test`, tikz `ac_drive_components_test`). `greek_test`
+was root-caused and FIXED TL-independently via native `\Declare*caseMapping`
+handlers (engine, cross-platform — verified on macOS CI too). The tikz one
+turned out to be **circuitikz-version** drift (my fresh TL2026 install has a
+newer circuitikz than CI's), NOT a code defect — the base golden is retained
+and a bleeding-edge dev box shows one benign diff; see the "tikz
+`ac_drive_components`" entry in `SYNC_STATUS.md`.
 
 ## Phase 4 — CI: `windows-latest` job as a required leg
 
