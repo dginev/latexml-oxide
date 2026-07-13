@@ -1,8 +1,15 @@
 # Windows bring-up — docs/WINDOWS_COMPATIBILITY_PLAN.md.
 #
 # NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
-# three dependency PRs merge and the suite is stably green). Opt-in:
-# workflow_dispatch + pushes to the windows-compatibility branch.
+# repo can run Windows Actions and the job is stably green).
+#
+# MANUAL-ONLY (`workflow_dispatch`). This repo is PRIVATE, so Actions
+# minutes are metered for every runner type and Windows bills at 2× — an
+# auto-run-on-push Windows job hits `Repository access blocked` once the
+# account's minute/spending budget is reached, adding a persistent red ✗
+# to every PR. Run it deliberately from the Actions tab when you want to
+# spend the Windows minutes; drop back to on-push only if/when this repo
+# goes public (Actions free) or a Windows budget is provisioned.
 #
 # Mirrors the macos job's flow (deps → dumps → build → test) with the
 # Windows specifics learned during local bring-up (2026-07-12):
@@ -12,8 +19,6 @@
 #   * `ci` profile (no LTO — release-profile LTO costs ~2 min per test exe)
 on:
   workflow_dispatch:
-  push:
-    branches: [windows-compatibility]
 
 name: windows-bringup
 

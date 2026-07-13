@@ -345,6 +345,15 @@ and a bleeding-edge dev box shows one benign diff; see the "tikz
 
 ## Phase 4 — CI: `windows-latest` job as a required leg
 
+> **Blocker (2026-07-13): private-repo Windows-minutes budget.** This repo is
+> private, so Actions minutes are metered for every runner and Windows bills at
+> **2×**. An auto-on-push Windows job hit `Repository access blocked` once the
+> account budget was reached (while the same push's Linux/macOS jobs still ran).
+> `windows-bringup.yml` is therefore **`workflow_dispatch`-only** for now — run
+> it manually when spending the Windows minutes is intended. Promoting it to a
+> required per-PR job (below) needs the repo to go public (Actions free) or a
+> Windows minute budget provisioned first.
+
 1. Promote the bring-up workflow into `CI.yml` as a `windows` job mirroring the
    `macos` job structure: rustup nightly (MSVC host default), vcpkg install
    (with `actions/cache` on the vcpkg tree keyed by vcpkg baseline + triplet),
