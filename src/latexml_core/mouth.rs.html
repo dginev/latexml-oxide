@@ -1077,4 +1077,31 @@
 <a href=#1077 id=1077 data-nosnippet>1077</a>  use_main_state();
 <a href=#1078 id=1078 data-nosnippet>1078</a>  result
 <a href=#1079 id=1079 data-nosnippet>1079</a>}
+<a href=#1080 id=1080 data-nosnippet>1080</a>
+<a href=#1081 id=1081 data-nosnippet>1081</a><span class="attr">#[cfg(test)]
+<a href=#1082 id=1082 data-nosnippet>1082</a></span><span class="kw">mod </span>newline_tests {
+<a href=#1083 id=1083 data-nosnippet>1083</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#1084 id=1084 data-nosnippet>1084</a>
+<a href=#1085 id=1085 data-nosnippet>1085</a>  <span class="doccomment">/// CRLF-input regression guard (WINDOWS_COMPATIBILITY_PLAN risk #5): a
+<a href=#1086 id=1086 data-nosnippet>1086</a>  /// document saved with Windows line endings must tokenize identically to
+<a href=#1087 id=1087 data-nosnippet>1087</a>  /// its LF twin — split_raw_lines implements TeX's universal end-of-line
+<a href=#1088 id=1088 data-nosnippet>1088</a>  /// (\r\n, \r, and \n all terminate a line, and the terminator itself
+<a href=#1089 id=1089 data-nosnippet>1089</a>  /// never reaches the catcode machinery).
+<a href=#1090 id=1090 data-nosnippet>1090</a>  </span><span class="attr">#[test]
+<a href=#1091 id=1091 data-nosnippet>1091</a>  </span><span class="kw">fn </span>split_raw_lines_universal_newlines() {
+<a href=#1092 id=1092 data-nosnippet>1092</a>    <span class="kw">let </span>lf = Mouth::split_raw_lines(<span class="string">b"a\nb\nc"</span>);
+<a href=#1093 id=1093 data-nosnippet>1093</a>    <span class="kw">let </span>crlf = Mouth::split_raw_lines(<span class="string">b"a\r\nb\r\nc"</span>);
+<a href=#1094 id=1094 data-nosnippet>1094</a>    <span class="kw">let </span>cr = Mouth::split_raw_lines(<span class="string">b"a\rb\rc"</span>);
+<a href=#1095 id=1095 data-nosnippet>1095</a>    <span class="macro">assert_eq!</span>(lf, crlf, <span class="string">"CRLF must split identically to LF"</span>);
+<a href=#1096 id=1096 data-nosnippet>1096</a>    <span class="macro">assert_eq!</span>(lf, cr, <span class="string">"bare CR must split identically to LF"</span>);
+<a href=#1097 id=1097 data-nosnippet>1097</a>    <span class="macro">assert_eq!</span>(lf.len(), <span class="number">3</span>);
+<a href=#1098 id=1098 data-nosnippet>1098</a>    <span class="macro">assert_eq!</span>(lf[<span class="number">0</span>], <span class="string">b"a"</span>);
+<a href=#1099 id=1099 data-nosnippet>1099</a>    <span class="comment">// A lone \r inside the terminator pair is consumed, not leaked into
+<a href=#1100 id=1100 data-nosnippet>1100</a>    // the following line.
+<a href=#1101 id=1101 data-nosnippet>1101</a>    </span><span class="macro">assert!</span>(
+<a href=#1102 id=1102 data-nosnippet>1102</a>      crlf.iter().all(|line| !line.contains(<span class="kw-2">&amp;</span><span class="string">b'\r'</span>)),
+<a href=#1103 id=1103 data-nosnippet>1103</a>      <span class="string">"no line may retain a raw CR byte"
+<a href=#1104 id=1104 data-nosnippet>1104</a>    </span>);
+<a href=#1105 id=1105 data-nosnippet>1105</a>  }
+<a href=#1106 id=1106 data-nosnippet>1106</a>}
 </code></pre></div></section></main></body></html>
