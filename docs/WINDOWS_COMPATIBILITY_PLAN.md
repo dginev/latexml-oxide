@@ -376,6 +376,64 @@ and a bleeding-edge dev box shows one benign diff; see the "tikz
 4. Only after the job is stably green: mark it required, update the README
    badge/platform table.
 
+### Fast TeX-ecosystem CI install (design record — DEFERRED, 2026-07-13)
+
+Goal: make the TeX install in the Windows CI jobs **extremely quick and
+deterministic**. The cold `TeX-Live/setup-texlive-action` download of
+`scheme-medium` + 6 collections + language packs (~1–2 GB) is the slowest
+step. Not changing it today; capturing the design so we implement the right
+thing rather than react.
+
+**Two constraints that rule the choice:**
+- **Determinism / no golden churn (load-bearing).** The 1531/0 suite is
+  validated against a specific package-version universe (TL2026). *Any* distro
+  or version whose package files differ can shift package-version-sensitive
+  fixtures (tikz metrics, `.tfm` fonts, babel) — exactly the circuitikz
+  1.8.0 drift we already hit. So the fast install must be **pinned to the
+  validated TL year**, not "whatever's latest." This is why a blind swap to
+  MiKTeX (a different package universe) is risky: it trades install speed for
+  a golden-triage tax, and LaTeXML's own Windows workflow warns MiKTeX-in-CI
+  cost them "too many hours."
+- **Per-job TeX footprint differs**, so one size need not fit all:
+  - *release smoke* (`hello.tex`): trivial — a minimal scheme, or skip TeX
+    and build with `KPATHSEA_SKIP_TOOLCHAIN_CHECK=1`.
+  - *dump generation* (`make_formats`): only the kernel layer (plain.tex,
+    latex.ltx, expl3, base fonts) — a small, stable set.
+  - *test suite*: the union of packages the fixtures touch — broad, but
+    **finite and knowable**.
+
+**Options, ranked:**
+1. **Pinned, cached, minimal texmf snapshot (recommended target).** Instrument
+   one full test run to capture the exact `kpsewhich`-resolved file set, build
+   a minimal texmf tree containing only those (pinned to the validated TL
+   year), store it as a content-hash-keyed artifact/cache, and restore it in
+   CI (download + extract = seconds). Fastest *and* deterministic *and*
+   golden-stable — decouples CI speed from any distro's install machinery.
+   Cost: a one-time tool to capture the file set + a refresh step when the
+   suite's package footprint changes. Generalizes to the Linux/macOS legs too
+   (they currently apt/brew-install a broad TL, also slow).
+2. **`setup-texlive-action` cache + trimmed package set (low-effort interim).**
+   The action already caches by default (cold run slow, warm runs fast), so
+   most of the pain is one-time; trimming the collections to only what the
+   suite needs shrinks the cold download. No golden risk (still TL). Smallest
+   change if we want relief before (1) lands. Caveat: GitHub cache is 10 GB/
+   repo with 7-day idle eviction, so a large TL tree can thrash the cache.
+3. **MiKTeX via choco + cached `C:\miktex-repo` + on-the-fly install (Perl's
+   approach).** Fetches only used packages; the Perl-specific `execsilent`/
+   `LATEXML_KPSEWHICH*` glue is NOT needed for us (our subprocess-`kpsewhich`
+   backend reads stdout and ignores MiKTeX's stderr nags — verified on a local
+   `hello.tex`). But it's a different package universe → golden churn (see
+   constraint above), plus the maintainers' own "too many hours" caution. Best
+   reserved for a **separate, non-golden MiKTeX smoke leg** (Phase 4.3), not
+   the golden-comparing suite.
+4. **Self-hosted Windows runner with TeX pre-installed / a pre-baked runner
+   image.** Zero install time; needs infra and interacts with the private-repo
+   minute economics. Overkill unless CI volume grows.
+
+**Decision:** target option (1) for the golden-comparing suite (fast +
+deterministic), keep option (3) for the deliberately-non-golden MiKTeX smoke
+leg. Consider (2) as a stopgap. Deferred — no CI change today.
+
 **Self-containedness landmine (found 2026-07-12, MiKTeX smoke):** a Windows
 build made with TeX Live on PATH silently LINKS TL's `kpathsealibw64.dll`
 (kpathsea_sys's `try_windows_dll` probe), producing a binary that won't even
