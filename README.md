@@ -95,6 +95,17 @@ Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instea
 resolves TeX files through your distribution's `kpsewhich` executable (ensure
 `/Library/TeX/texbin` is on `PATH`).
 
+> **Gatekeeper / "unidentified developer" (browser downloads).** The `curl` +
+> `tar xzf` install above is warning-free: terminal downloads and command-line
+> `tar` don't set macOS's `com.apple.quarantine` flag. If you instead download
+> the tarball in a **browser** and unpack it by double-clicking in Finder, macOS
+> may refuse to run the binary as "from an unidentified developer" — the
+> binaries are ad-hoc signed, not Apple-notarized. Clear it once, either way:
+> unpack in Terminal with `tar xzf …`, **or** after copying the binary run
+> `xattr -d com.apple.quarantine /usr/local/bin/latexml_oxide` (equivalently,
+> right-click it in Finder → **Open**). Installing via Homebrew avoids this
+> entirely, since `brew` strips the quarantine flag.
+
 #### Docker
 
 A batteries-included image (`latexml_oxide` + a reproducible TeX Live + the

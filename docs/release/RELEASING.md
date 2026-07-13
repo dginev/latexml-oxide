@@ -277,8 +277,9 @@ dynamically — static linkage is only for the portable tarball/.deb; inside a
 fixed image the dynamic libs are always present.
 
 `.github/workflows/docker.yml` builds + pushes both on `release: published` (so
-the containers track a reviewed tag, never a draft; also `workflow_dispatch`-able
-for a given tag). The CLI is multi-arch (amd64 + arm64) on **native runners** — no
+the containers track a published tag, never a draft; since the `Release`
+workflow now auto-publishes, this fires automatically on each release; also
+`workflow_dispatch`-able for a given tag). The CLI is multi-arch (amd64 + arm64) on **native runners** — no
 QEMU emulation of the fat-LTO compile — merged into one manifest list tagged
 `:X.Y.Z` + `:latest`; the worker is amd64-only (x86_64 fleet). The first push of
 each package creates it private — make it public once in the repo's package
@@ -351,15 +352,20 @@ settings.
    all **eight** assets). The Intel-macOS leg's fat-LTO `maxperf` build on the
    slower `macos-15-intel` runner is the long pole (up to ~120 min budget).
 
-6. **Publish the draft.** The workflow attaches the assets to a **draft**
-   Release (not public — see `release.yml` `draft: true`). Open it under
-   *Releases* → download and sanity-check each tarball on its target hardware
-   **before** publishing. In particular the **Intel-macOS** asset
-   (`…-x86_64-apple-darwin.tar.gz`) is built on a different runner than the
-   arm64 leg — verify `latexml_oxide --version` and a real conversion run on an
-   actual Intel Mac. When satisfied, click **Publish release**. (Flip
-   `release.yml` back to `draft: false` for a target once it's proven, if you
-   prefer auto-publish.)
+6. **Nothing — it auto-publishes.** The workflow publishes a **public**
+   Release directly (`release.yml` `draft: false`), so a tag push is the last
+   manual step. This is safe because every asset is gated in-CI before publish:
+   static-linkage checks (`ldd`/`otool`), the size budget, a real conversion
+   smoke on the Linux legs, and a code-signature + `--version` launch smoke on
+   both macOS legs — plus CI.yml's macOS test job covers arm64 conversion paths
+   on the same arch. If a published asset is later found broken, use *Failure
+   recovery* below. (To re-add a human review gate, set `draft: true` and
+   publish manually.)
+
+   > Coverage note: the **Intel-macOS** asset (`…-x86_64-apple-darwin.tar.gz`)
+   > is built on `macos-15-intel`, which no CI test job exercises — its only
+   > automated gate is the launch/signature smoke. If you have an Intel Mac,
+   > a periodic spot-check of a real conversion there is worthwhile.
 
 ## Failure recovery
 
