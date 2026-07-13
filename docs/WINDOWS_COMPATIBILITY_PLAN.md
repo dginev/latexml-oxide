@@ -337,11 +337,15 @@ and a missing/malformed file panics instead of vacuously passing.
 **Suite status after day one: 1524 passed / 2 failed** — two ambient-TL-2026
 drift suspects (`greek_test`, tikz `ac_drive_components_test`). `greek_test`
 was root-caused and FIXED TL-independently via native `\Declare*caseMapping`
-handlers (engine, cross-platform — verified on macOS CI too). The tikz one
-turned out to be **circuitikz-version** drift (my fresh TL2026 install has a
-newer circuitikz than CI's), NOT a code defect — the base golden is retained
-and a bleeding-edge dev box shows one benign diff; see the "tikz
-`ac_drive_components`" entry in `SYNC_STATUS.md`.
+handlers (engine, cross-platform — verified on macOS CI too). The tikz one was
+**circuitikz-version** drift, NOT a code defect: the drawn-plate coordinate
+(12.4 → 12.68) tracks circuitikz's version, which is unpinnable and differs by
+the platform's TeX (Linux/macOS apt/brew = older = 12.4 = golden; Windows CI
+net-install + fresh `install-tl` = newest = 12.68). It's **compared on
+Linux/macOS and skipped on Windows** (a `#[cfg(windows)]` `WINDOWS_GOLDEN_SKIP`
+guard in `latexml_test_single`) — a Linux↔Windows portability difference, not
+a code divergence. Full reasoning in the "tikz `ac_drive_components`" entry in
+`SYNC_STATUS.md`.
 
 ## Phase 4 — CI: `windows-latest` job as a required leg
 

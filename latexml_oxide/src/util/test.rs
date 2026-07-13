@@ -282,6 +282,28 @@ pub fn latexml_test_single(
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
+  // Platform-skipped golden fixtures: kept live (and compared) on the
+  // platforms whose TeX distribution matches the committed golden, but
+  // skipped where an UNPINNABLE upstream package version differs. This is
+  // a Linux↔Windows portability difference, not a code divergence — the
+  // engine faithfully renders whatever the package emits. See SYNC_STATUS.md.
+  #[cfg(windows)]
+  {
+    // circuitikz ≥ 1.8.0 lengthens drawn capacitor plates (12.4 → 12.68 in
+    // our SVG space). The Windows TeX (setup-texlive net-install / a fresh
+    // `install-tl`) ships the NEWEST circuitikz; Linux/macOS apt/brew ship
+    // an older one that matches the golden. circuitikz can't be version-
+    // pinned in the fixture (Perl/Rust both version-strip the request), so
+    // skip on Windows only; Linux + macOS still run and compare it.
+    const WINDOWS_GOLDEN_SKIP: &[&str] = &["ac-drive-components"];
+    if WINDOWS_GOLDEN_SKIP.contains(&name) {
+      eprintln!(
+        "SKIP (Windows): {name} — circuitikz-version-nondeterministic golden; \
+         kept live on Linux/macOS. See docs/SYNC_STATUS.md."
+      );
+      return;
+    }
+  }
   // Suppress log output for any test expected to emit errors (both categories)
   // so single-test runs stay readable; the gate still counts + classifies them.
   let suppress = INTENTIONALLY_FAILING.iter().any(|(n, ..)| *n == name)

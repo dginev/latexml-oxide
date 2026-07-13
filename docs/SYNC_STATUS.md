@@ -233,22 +233,27 @@ ubuntu TL is older) — both root-caused and fixed TL-independently:
    so ignoring these matches the `ignoredDefinition` policy. **Perl has no
    handler either — same cascade expected there on TL2023+; candidate
    upstream.**
-2. **tikz `ac_drive_components`: base golden RETAINED — no versioned variant.**
-   A first attempt keyed a `tl2026.xml` golden variant on the ambient TL year
-   (circuitikz 1.8.0's path-logic rewrite lengthens drawn capacitor plates,
-   12.4 → 12.68 in our SVG space). **That was the wrong abstraction and
-   regressed macOS CI**: the drift is at *circuitikz* version granularity, not
-   TL-year — the macOS runner (`texlive/20260301`, i.e. TL2026) ships an
-   OLDER circuitikz that still emits 12.4, so it (correctly) matched the base
-   golden until the `.tl2026.xml` variant hijacked it and diffed 12.4-vs-12.68.
-   The base golden (12.4) is what every CI environment produces, so it is the
-   committed value and the variant + `resolve_versioned_golden` mechanism were
-   reverted. A dev box with a bleeding-edge circuitikz (e.g. a fresh TL2026
-   `install-tl`) will show this one benign 12.4-vs-12.68 diff locally — an
-   environment-ahead artifact, not a code defect; the project does not chase
-   rolling-package drift. Fixture-side `circuitikz-X.Y.Z` pinning is NOT
-   possible (both Perl `FindFile_fallback` `[vV]?[-_.\d]+` and Rust
-   version-strip to the current binding).
+2. **tikz `ac_drive_components`: SKIPPED ON WINDOWS ONLY, kept live on
+   Linux/macOS.** circuitikz 1.8.0 rewrote its path logic, lengthening drawn
+   capacitor plates (12.4 → 12.68 in our SVG space). This coordinate tracks
+   the exact circuitikz version, which is NOT pinnable (both Perl
+   `FindFile_fallback` `[vV]?[-_.\d]+` and Rust version-strip a
+   `circuitikz-X.Y.Z` request to the current binding) and **differs by the
+   platform's TeX distribution**: Linux (apt texlive) and macOS (Homebrew
+   texlive) ship an OLDER circuitikz → 12.4 = the committed golden; the
+   Windows CI's `setup-texlive` net-install and any fresh `install-tl` get
+   the NEWEST → 12.68. So the fixture is **compared on Linux/macOS (where the
+   golden is deterministic) and skipped on Windows** via a `#[cfg(windows)]`
+   `WINDOWS_GOLDEN_SKIP` guard in `latexml_test_single` — a Linux↔Windows
+   portability difference, NOT a code divergence (the engine faithfully
+   renders whatever circuitikz emits — it was testing circuitikz's version,
+   not our code). Not TL-year-keyable (macOS and Windows are both TL2026 with
+   different circuitikz — a `tl2026.xml` variant attempt regressed macOS CI
+   and was reverted). `INTENTIONALLY_FAILING`/`ERROR_DEBT` don't apply (they
+   gate error *counts*, not golden *diffs*). Discovered via Windows CI run
+   `29219528633` (which fail-fast-stopped at 86_tikz; the complete tail came
+   from a local `--no-fail-fast` run on a newest-circuitikz box — a faithful
+   Windows-CI proxy — confirming 1530/0 with this one fixture out).
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 
