@@ -73,8 +73,23 @@ in the tarball name; everything else is identical. `uname -m` prints `x86_64` or
 
 #### macOS (Apple Silicon / arm64 + Intel / x86_64)
 
-Pick the tarball matching your Mac — `aarch64` for Apple Silicon (M1/M2/M3…),
-`x86_64` for Intel (`uname -m` prints `arm64` or `x86_64`):
+**Recommended — Homebrew.** Installs the right binary for your Mac, pulls the
+graphics tools it needs, and (because `brew` strips macOS's quarantine flag) runs
+with no Gatekeeper "unidentified developer" warning:
+
+```
+$ brew install dginev/tap/latexml-oxide
+```
+
+You still need a TeX distribution (`brew info latexml-oxide` repeats this):
+
+```
+$ brew install texlive          # Homebrew's full TeX Live (~5 GB)
+# …or MacTeX / BasicTeX — https://tug.org/mactex/  (put /Library/TeX/texbin on PATH)
+```
+
+**Alternative — download the tarball directly.** Pick the one matching your Mac
+(`uname -m` prints `arm64` or `x86_64`):
 
 ```
 # Apple Silicon
@@ -87,24 +102,24 @@ $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/la
 $ tar xzf latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
 $ sudo cp latexml-oxide-$VERSION-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
 
-$ brew install imagemagick mupdf-tools poppler ghostscript
-$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng/dvisvgm)
+$ brew install imagemagick mupdf-tools poppler ghostscript dvisvgm
+$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng)
 ```
 
 Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instead
 resolves TeX files through your distribution's `kpsewhich` executable (ensure
 `/Library/TeX/texbin` is on `PATH`).
 
-> **Gatekeeper / "unidentified developer" (browser downloads).** The `curl` +
-> `tar xzf` install above is warning-free: terminal downloads and command-line
-> `tar` don't set macOS's `com.apple.quarantine` flag. If you instead download
-> the tarball in a **browser** and unpack it by double-clicking in Finder, macOS
-> may refuse to run the binary as "from an unidentified developer" — the
-> binaries are ad-hoc signed, not Apple-notarized. Clear it once, either way:
-> unpack in Terminal with `tar xzf …`, **or** after copying the binary run
-> `xattr -d com.apple.quarantine /usr/local/bin/latexml_oxide` (equivalently,
-> right-click it in Finder → **Open**). Installing via Homebrew avoids this
-> entirely, since `brew` strips the quarantine flag.
+> **Gatekeeper / "unidentified developer" (tarball, browser downloads).** The
+> `curl` + `tar xzf` install above is warning-free: terminal downloads and
+> command-line `tar` don't set macOS's `com.apple.quarantine` flag. If you
+> instead download the tarball in a **browser** and unpack it by double-clicking
+> in Finder, macOS may refuse to run the binary as "from an unidentified
+> developer" — the binaries are ad-hoc signed, not Apple-notarized. Clear it
+> once, either way: unpack in Terminal with `tar xzf …`, **or** after copying the
+> binary run `xattr -d com.apple.quarantine /usr/local/bin/latexml_oxide`
+> (equivalently, right-click it in Finder → **Open**). The **Homebrew install
+> above avoids this entirely**, since `brew` strips the quarantine flag.
 
 #### Docker
 
