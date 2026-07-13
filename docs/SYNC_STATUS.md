@@ -185,6 +185,38 @@ the new output, so it was a parity *fix*).
 
 ## Open tasks (actionable)
 
+### TL2026 `latex.ltx` dump init is NOT release-gate-clean — expl3 catcode gap (2026-07-12) — OPEN
+
+Blocks adding **2026** to the release dump window (`release-dumps.yml`,
+currently 2022–2025; see also the container blocker TODO(#217) — the two are
+independent). Measured on a full local TL2026 install (`x86_64-pc-windows-msvc`,
+but Linux-equivalent — this is the raw-load path, not a platform issue), using
+the exact release gate (`LATEXML_INIT_DEBUG=1 ./latexml_oxide --init=<init>`,
+ANSI-strip, `grep -acE '^(Error|Fatal):'`):
+
+- `--init=plain.tex` → exit 0, **0 errors** (release-clean). ✓
+- `--init=latex.ltx` → exit 0, **137 errors** → would FAIL the gate:
+  - 90 × `Error:unexpected:_ Script _ can only appear in math mode`
+  - 29 × `Error:misdefined:# … catcode PARAM … should never reach Stomach`
+  - ~18 × undefined l3 **case-change** internals (`\DeclareUppercaseExclusions`,
+    `\DeclareCaseChangeEquivalent`, `\CaseSwitch`, `\@@text@case@aux`,
+    `\NoCaseChange`, `\AddToNoCaseChangeList`, `\keys`/`\tl`/`\str`/`\clist`…).
+
+Root cause: the **known deep raw-load expl3 catcode gap**
+(`EXPL3_CATCODE_GAP_2026-06-08.md`; "four attempted fixes all regressed and
+were reverted"), newly triggered by TL2026's expanded l3 `text-case` module,
+which older TL (2022–2025, all gate-clean) did not exercise during init.
+Distinct from the `\Declare*caseMapping` no-ops landed above (those are
+different macros; that fix does not touch this). **NOT introduced by the
+Windows branch** — pre-existing, surfaced only because that branch is the
+first to run a full TL2026.
+
+Note the two-bars distinction that hid this: `tools/make_formats*` write the
+dump *despite* init errors (24,333 valid latex entries still land), and the
+test fixtures don't exercise the affected macros — so `cargo test` is 1531/0
+and everyday TL2026 conversion works, while the strict release gate would
+still reject a TL2026 latex dump. "Usable dump" ≠ "gate-clean dump."
+
 ### TL2026 ambient-drift fixes (2026-07-12, windows-compatibility branch) — LANDED
 
 Two suite failures surfaced by running against TL 2026 (bleeding-edge; CI's

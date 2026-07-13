@@ -48,6 +48,15 @@ self-contained-binary design (embedded dumps/XSLT/CSS/schema,
 embedded-dump disk cache already uses `std::env::temp_dir()`
 (`latexml_engine/src/embedded_dumps.rs`).
 
+> **TL2026 release-dump caveat (2026-07-12):** this branch's full TL2026
+> install proved the *plain* dump is release-gate-clean but surfaced that
+> `--init=latex.ltx` on TL2026 hits **137 raw-load expl3-catcode-gap errors**
+> — so 2026 cannot join the release dump window until that (deep, pre-existing,
+> Linux-equivalent) gap is closed, independently of the unpublished
+> texlive-docker:2026 container. Details + measurements in `SYNC_STATUS.md`
+> ("TL2026 `latex.ltx` dump init is NOT release-gate-clean"). Windows test-suite
+> green (1531/0) does NOT imply 2026 release-readiness — different bars.
+
 ---
 
 ## Phase 0 — groundwork that needs no Windows toolchain (LANDED on this branch)
