@@ -6497,6 +6497,26 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None, locked => true);
   DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
 
+  // TL2023+ kernel per-codepoint case-mapping declarations (ltmiscen:
+  // `\DeclareUppercaseMapping{"0390}{\accdialytikatonos{\textiota}}` etc.)
+  // — fine-tuning hints for `\MakeUppercase`/`\MakeLowercase`. LaTeXML
+  // does Unicode-aware casing internally, so these are ignored exactly
+  // like the `DeclareText*` font-slot family above (Perl has no handler
+  // either — candidate upstream). The override matters beyond fidelity:
+  // the kernel's own definitions ARE captured in the latex dump, so
+  // without a native handler here the `\ifdefined` guards in e.g.
+  // greek-fontenc's `lgrenc.def` pass and the raw expl3 kernel bodies
+  // execute — hitting the raw-load expl3 catcode gap
+  // (docs/EXPL3_CATCODE_GAP_2026-06-08.md) and spraying `Script _` +
+  // undefined-accent errors at load time (witness: 81_babel greek_test
+  // on TL2026, 87 errors → 0). Constructs load AFTER the dump applies
+  // (strict-LoadFormat order), so these natively supersede the dumped
+  // kernel macros. Args are read unexpanded, which also keeps babel's
+  // active `"` shorthand inert inside the `{"03B0}` codepoint groups.
+  DefPrimitive!("\\DeclareUppercaseMapping{}{}", None, locked => true);
+  DefPrimitive!("\\DeclareLowercaseMapping{}{}", None, locked => true);
+  DefPrimitive!("\\DeclareTitlecaseMapping{}{}", None, locked => true);
+
   DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
   // Perl `latex_constructs.pool.ltxml:27-28`:
   //   DefMacroI('\f@encoding',  undef, sub { ExplodeText(LookupValue('font')->getEncoding); });

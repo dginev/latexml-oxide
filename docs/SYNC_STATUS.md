@@ -185,6 +185,34 @@ the new output, so it was a parity *fix*).
 
 ## Open tasks (actionable)
 
+### TL2026 ambient-drift fixes (2026-07-12, windows-compatibility branch) — LANDED
+
+Two suite failures surfaced by running against TL 2026 (bleeding-edge; CI's
+ubuntu TL is older) — both root-caused and fixed TL-independently:
+
+1. **`\Declare{Upper,Lower,Title}caseMapping` native no-op handlers**
+   (`latex_constructs.rs`, next to the `DeclareText*` family). The TL2023+
+   kernel case-mapping declarations ARE captured in the latex dump, so
+   `\ifdefined` guards (greek-fontenc `lgrenc.def`) passed and the dumped
+   expl3 kernel bodies executed — hitting the raw-load expl3 catcode gap
+   (`EXPL3_CATCODE_GAP_2026-06-08.md`) and spraying `Script _` + undefined
+   `\acc*` errors (81_babel `greek_test`: 87 errors → 0; real pdflatex is
+   error-clean on the same fixture). LaTeXML cases via Unicode internally,
+   so ignoring these matches the `ignoredDefinition` policy. **Perl has no
+   handler either — same cascade expected there on TL2023+; candidate
+   upstream.**
+2. **TL-versioned golden variants** (`util/test.rs::resolve_versioned_golden`):
+   `foo.tl<year>.xml` beside `foo.xml` wins when the ambient TL year matches
+   — the kernel-dump per-TL-year pattern applied to fixtures whose faithful
+   output legitimately differs across TL vintages. First case:
+   `tikz/ac-drive-components.tl2026.xml` — circuitikz 1.8.0's path-logic
+   rewrite lengthens drawn capacitor plates (12.4 → 12.68 in our SVG space;
+   anchors unchanged; verified proportionally against real pdflatex output
+   on BOTH circuitikz vintages, and 1.4.6/1.7.2 pinning confirmed the old
+   geometry). Note: fixture-side `circuitikz-X.Y.Z` pinning is NOT possible —
+   both Perl (`FindFile_fallback` `[vV]?[-_.\d]+` suffix rule) and Rust
+   version-strip to the current binding, faithfully.
+
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 
 Audit 2026-07-04 (agent, both files read end-to-end): `make_bibliography.rs`
