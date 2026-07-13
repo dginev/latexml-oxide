@@ -14,8 +14,6 @@
 //! 6. Format each entry into ltx:bibitem with ltx:tags + ltx:bibblock sections
 //! 7. Optionally split by initial letter
 
-use std::path::Path;
-
 use libxml::tree::Node;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -2830,17 +2828,23 @@ fn make_bibblock(class: &str, content: &[NodeData]) -> NodeData {
 }
 
 /// Find a file in the given search paths.
+/// Resolve a bibliography source file (`.bib`/`.bbl`/`.bib.xml`).
+///
+/// Delegates to the core `pathname::find`, the faithful translation of Perl's
+/// `pathname_find` (`LaTeXML/Util/Pathname.pm`): a strict-case search over `.`
+/// plus the search paths, falling back to a CASE-INSENSITIVE directory scan when
+/// no strict match exists (Perl's `return @paths ? @paths : @nocase_paths`).
+/// The bibliography path previously used a bespoke case-SENSITIVE lookup, so an
+/// author on a case-insensitive filesystem citing `\bibliography{EvoFlock.bib}`
+/// against an on-disk `Evoflock.bib` (arXiv:2606.25280) lost the ENTIRE
+/// reference list on Linux — a parity gap, since Perl's `pathname_find` resolves
+/// it. Delegating restores parity (Perl resolves it silently too; no warning,
+/// matching how the engine already resolves e.g. `PASJ95.STY`).
 fn find_file(name: &str, search_paths: &[String]) -> Option<String> {
-  if Path::new(name).is_file() {
-    return Some(name.to_string());
-  }
-  for sp in search_paths {
-    let p = format!("{}/{}", sp, name);
-    if Path::new(&p).is_file() {
-      return Some(p);
-    }
-  }
-  None
+  latexml_core::util::pathname::find(name, latexml_core::util::pathname::PathnameFindOptions {
+    paths: Some(search_paths.to_vec()),
+    ..Default::default()
+  })
 }
 
 // ================================================================================
@@ -3527,6 +3531,32 @@ mod tests {
     );
     assert_eq!(extract_four_digit_year("99"), "99");
     assert_eq!(extract_four_digit_year(""), "");
+  }
+
+  #[test]
+  fn test_find_file_case_insensitive_bib() {
+    // An author on a case-insensitive filesystem cites `\bibliography{EvoFlock.bib}`
+    // but the file on disk is `Evoflock.bib` (arXiv:2606.25280). `find_file`
+    // delegates to the core pathname resolver, which mirrors Perl's
+    // case-insensitive fallback, so the reference list is recovered on
+    // case-sensitive Linux too — a parity fix (Perl's pathname_find resolves it).
+    let dir = std::env::temp_dir().join("lxo_bib_case_test");
+    let _ = std::fs::create_dir_all(&dir);
+    let on_disk = dir.join("Evoflock.bib");
+    std::fs::write(&on_disk, "@article{k, title={T}}\n").unwrap();
+    let dirs = vec![dir.to_str().unwrap().to_string()];
+    // Exact-case still resolves.
+    assert!(find_file("Evoflock.bib", &dirs).is_some());
+    // Case-mismatched request resolves via the pathname fallback.
+    let hit = find_file("EvoFlock.bib", &dirs);
+    assert!(
+      hit.is_some(),
+      "case-mismatched bib filename should resolve via the pathname fallback"
+    );
+    assert!(hit.unwrap().to_lowercase().ends_with("evoflock.bib"));
+    // A genuinely-absent file still returns None (no phantom match).
+    assert!(find_file("NoSuchBib.bib", &dirs).is_none());
+    let _ = std::fs::remove_dir_all(&dir);
   }
 
   #[test]
