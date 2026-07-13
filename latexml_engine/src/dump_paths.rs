@@ -60,13 +60,38 @@ fn year_from_pdflatex_version() -> Option<u32> {
     return None;
   }
   let s = String::from_utf8(out.stdout).ok()?;
-  // Look for "TeX Live YYYY" in the first few lines.
+  parse_year_from_version_banner(&s)
+}
+
+/// Extract a TL-equivalent year from a `pdflatex --version` banner.
+///
+///   - TeX Live: first lines contain `(TeX Live YYYY)`.
+///   - MiKTeX: no TL year exists anywhere (and `SELFAUTOPARENT` is EMPTY on
+///     MiKTeX, so detection lands here). The banner reads
+///     `MiKTeX-pdfTeX 4.23 (MiKTeX 25.12)`; MiKTeX is a rolling release
+///     whose `YY.MM` package snapshot tracks the same-year TeX Live, so map
+///     `MiKTeX YY.*` → `20YY` and let dump resolution do its usual
+///     nearest/most-recent fallback if that exact year isn't bundled.
+fn parse_year_from_version_banner(s: &str) -> Option<u32> {
   for line in s.lines().take(3) {
     if let Some(idx) = line.find("TeX Live ") {
       let tail = &line[idx + "TeX Live ".len()..];
       let candidate: String = tail.chars().take(4).collect();
       if let Some(y) = parse_year_str(&candidate) {
         return Some(y);
+      }
+    }
+    // Match the parenthesized distro stamp, not the product prefix: the
+    // banner starts `MiKTeX-pdfTeX 4.23 (MiKTeX 25.12)` and only the
+    // second occurrence carries the version.
+    if let Some(idx) = line.find("MiKTeX ") {
+      let tail = &line[idx + "MiKTeX ".len()..];
+      let digits: String = tail.chars().take_while(char::is_ascii_digit).collect();
+      if digits.len() == 2
+        && let Ok(yy) = digits.parse::<u32>()
+        && (20..=99).contains(&yy)
+      {
+        return Some(2000 + yy);
       }
     }
   }
@@ -189,7 +214,40 @@ pub fn stamp_path_for_dump(dump_path: &Path, year: u32) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod year_parse_tests {
-  use super::parse_year_str;
+  use super::{parse_year_from_version_banner, parse_year_str};
+
+  #[test]
+  fn texlive_banner() {
+    assert_eq!(
+      parse_year_from_version_banner("pdfTeX 3.141592653-2.6-1.40.29 (TeX Live 2026)"),
+      Some(2026)
+    );
+    // Homebrew stamp variant.
+    assert_eq!(
+      parse_year_from_version_banner("pdfTeX 3.14 (TeX Live 2026/Homebrew)"),
+      Some(2026)
+    );
+  }
+
+  #[test]
+  fn miktex_banner_maps_rolling_version_to_year() {
+    // Verbatim from MiKTeX 25.12 on Windows (probe 2026-07-12); note
+    // SELFAUTOPARENT is empty on MiKTeX, so this arm is the only signal.
+    assert_eq!(
+      parse_year_from_version_banner("MiKTeX-pdfTeX 4.23 (MiKTeX 25.12)"),
+      Some(2025)
+    );
+  }
+
+  #[test]
+  fn unknown_banner_rejected() {
+    assert_eq!(
+      parse_year_from_version_banner("pdfTeX 3.14 (Web2C 2026)"),
+      None
+    );
+    // A hypothetical 3-digit MiKTeX version must not parse as a year.
+    assert_eq!(parse_year_from_version_banner("(MiKTeX 125.1)"), None);
+  }
 
   #[test]
   fn vanilla_tl_year() {

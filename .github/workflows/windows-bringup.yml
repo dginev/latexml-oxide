@@ -1,0 +1,108 @@
+# Windows bring-up — docs/release/WINDOWS_COMPATIBILITY_PLAN.md.
+#
+# NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
+# job is stably green).
+#
+# MANUAL-ONLY (`workflow_dispatch`) by choice: this private repo meters
+# Windows Actions minutes at 2×, so the job is run deliberately from the
+# Actions tab rather than on every push. (It is NOT dispatch-only because
+# of any access block — the earlier `Repository access blocked` failures
+# were GitHub failing to fetch the dead `teatimeguest/setup-texlive-action`,
+# whose account went 404; fixed below by moving to the TeX-Live org. The
+# account runs metered jobs fine — the macOS 10× CI leg proves it.) Restore
+# the on-push trigger any time; kept manual to control Windows spend.
+#
+# Mirrors the macos job's flow (deps → dumps → build → test) with the
+# Windows specifics learned during local bring-up (2026-07-12):
+#   * vcpkg static libxml2/libxslt, triplet x64-windows-static-md
+#   * TeX Live via setup-texlive-action (collections mirror the apt list)
+#   * dump generation via tools/make_formats.ps1 (no bash)
+#   * `ci` profile (no LTO — release-profile LTO costs ~2 min per test exe)
+on:
+  workflow_dispatch:
+
+name: windows-bringup
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: build + test (x86_64-pc-windows-msvc)
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+      # Static C libraries + dynamic CRT (see plan Phase 1.1).
+      VCPKG_TRIPLET: x64-windows-static-md
+      VCPKGRS_TRIPLET: x64-windows-static-md
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: windows-bringup
+
+      - name: cache vcpkg installed tree
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
+          key: vcpkg-${{ env.VCPKG_TRIPLET }}-libxml2-libxslt-v1
+      - name: vcpkg install libxml2 + libxslt (static)
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg" install `
+            "libxml2:$env:VCPKG_TRIPLET" "libxslt:$env:VCPKG_TRIPLET"
+      - name: export vcpkg root
+        run: '"VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV'
+
+      # Collections mirror the ubuntu job's apt list (texlive, latex-extra,
+      # science, bibtex-extra, publishers, lang de/fr/el/ru) — see plan
+      # Phase 4.1. dvipng is NOT in any of these collections (local finding).
+      - name: install TeX Live
+        # `teatimeguest/setup-texlive-action` was the original home; that whole
+        # account is now 404, which made GitHub abort the job at "Getting action
+        # download info" with `Repository access blocked`. The action moved to
+        # the TeX-Live org — same inputs (`packages`/`cache`).
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          packages: >-
+            scheme-medium
+            collection-latexextra
+            collection-mathscience
+            collection-bibtexextra
+            collection-publishers
+            collection-fontsextra
+            collection-langgerman
+            collection-langfrench
+            collection-langgreek
+            collection-langcyrillic
+            dvipng
+
+      - name: TeX Live fingerprint (dump cache key)
+        id: tlfp
+        shell: pwsh
+        run: |
+          $banner = pdflatex --version | Select-Object -First 1
+          if ("$banner" -match 'TeX Live ([0-9]{4})') { "year=$($Matches[1])" >> $env:GITHUB_OUTPUT }
+      - name: cache engine dumps
+        id: dumps
+        uses: actions/cache@v4
+        with:
+          path: resources/dumps
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+      - name: make formats
+        if: steps.dumps.outputs.cache-hit != 'true'
+        shell: pwsh
+        env:
+          PROFILE: ci
+        run: tools/make_formats.ps1
+
+      - name: build test binaries
+        run: cargo test --profile ci --tests --workspace --no-run
+      - name: run tests
+        run: cargo test --profile ci --tests --workspace -- --test-threads=2

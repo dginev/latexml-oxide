@@ -28,10 +28,15 @@ pub struct PathnameFindOptions {
 
 static LITERAL_PROTOCOL: &str = "literal:";
 static HOME_TILDE: &str = "~";
-static HOME_PATH: Lazy<String> = Lazy::new(|| match env::var_os("HOME") {
-  Some(val) => val.to_string_lossy().into_owned(),
-  _ => s!("~"),
-});
+// `HOME` first (Unix, and set by some Windows shells), then Windows'
+// native `USERPROFILE`, so `~` expansion works on both platforms.
+static HOME_PATH: Lazy<String> =
+  Lazy::new(
+    || match env::var_os("HOME").or_else(|| env::var_os("USERPROFILE")) {
+      Some(val) => val.to_string_lossy().into_owned(),
+      _ => s!("~"),
+    },
+  );
 static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());
 // Match Perl LaTeXML's permissive filename behavior: filenames may
 // contain commas, parens, ampersands, etc. that some user paths legitimately
@@ -258,6 +263,20 @@ pub fn canonical(pathname: &str) -> String {
     pathname.to_string()
   };
 
+  // Windows: the whole string-pathname layer speaks `/`, faithful to Perl
+  // (whose Windows pathname_canonical likewise sees mostly `/`; kpsewhich
+  // on TL-Windows returns `C:/texlive/...`). OS-originated strings
+  // (std::env::temp_dir, current_dir, PathBuf displays) arrive
+  // `\`-separated, so normalize here — the single choke point every
+  // pathname_* helper funnels through. Unix is untouched: `\` is a legal
+  // filename byte there.
+  #[cfg(windows)]
+  {
+    if pathname.contains('\\') {
+      pathname = pathname.replace('\\', "/");
+    }
+  }
+
   // Handle URL prefix: strip protocol://host before normalizing path
   let url_prefix = if let Some(caps) = CANONICAL_URL_RE.captures(&pathname) {
     let prefix = caps.get(1).unwrap().as_str().to_string();
@@ -340,9 +359,11 @@ pub fn concat(dir: &str, file: &str) -> String {
   } else if file.is_empty() || file == "." {
     dir.to_owned()
   } else {
-    let mut path = PathBuf::from(dir);
-    path.push(file);
-    canonical(&path.to_string_lossy())
+    // Join with a literal '/', as Perl's pathname_concat does — the
+    // string-pathname layer is '/'-separated on every platform. (The
+    // previous PathBuf::push produced '\' on Windows, which the
+    // Perl-faithful string logic in `canonical` cannot normalize.)
+    canonical(&format!("{dir}/{file}"))
   }
 }
 

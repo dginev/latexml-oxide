@@ -49,7 +49,14 @@ jobs:
         # The action's default arguments inject `--all-features`, so this audits
         # feature-gated trees too (e.g. the off-by-default `cortex` worker deps).
         # Reproduce locally with: cargo deny --all-features check
-        uses: EmbarkStudios/cargo-deny-action@v2
+        #
+        # PINNED to v2.0.20 (2026-05-28): the floating `@v2` tag was re-tagged
+        # 2026-07-13 to v2.1.0/v2.1.1, which bundle cargo-deny 0.20.2 and inject
+        # a global `--log-level warn` that 0.20.2 no longer accepts (the flag was
+        # removed) — so every run failed with `unrecognized subcommand 'warn'`.
+        # Not a policy violation and not repo-specific: it broke main too on its
+        # next run. Revisit/unpin once the action ships a fix.
+        uses: EmbarkStudios/cargo-deny-action@v2.0.20
         with:
           command: check
       - name: install cargo-machete
