@@ -58,8 +58,13 @@ target_triple="${RELEASE_TARGET:-x86_64-unknown-linux-gnu}"
 case "${target_triple}" in
   *-linux-*)      os_family="linux" ;;
   *-apple-darwin) os_family="macos" ;;
+  *-pc-windows-*) os_family="windows" ;;
   *) echo "make_release: unsupported RELEASE_TARGET='${target_triple}'" >&2; exit 1 ;;
 esac
+
+# Windows executables carry a `.exe` suffix. Empty elsewhere.
+bin_suffix=""
+[[ "${os_family}" == "windows" ]] && bin_suffix=".exe"
 
 # Debian architecture label for the .deb FILENAME (Linux only). cargo-deb
 # derives the control-file `Architecture:` from the native build host itself;
@@ -101,8 +106,9 @@ mkdir -p "${stage_dir}"
 echo "make_release: cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide"
 cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide
 
-bin_path="target/maxperf/latexml_oxide"
-if [[ ! -x "${bin_path}" ]]; then
+bin_path="target/maxperf/latexml_oxide${bin_suffix}"
+# -f not -x: Git Bash on Windows doesn't report a .exe as `-x`.
+if [[ ! -f "${bin_path}" ]]; then
   echo "make_release: build did not produce ${bin_path}" >&2
   exit 1
 fi
@@ -123,29 +129,47 @@ if [[ "${os_family}" == "macos" ]]; then
   # xattr on terminal downloads). See docs/release/RELEASING.md "macOS
   # Gatekeeper & code signing".
   codesign --sign - --force "${bin_path}" 2>/dev/null || true
+elif [[ "${os_family}" == "windows" ]]; then
+  # No external `strip` on MSVC: debug info lives in a separate `.pdb`, so the
+  # linked `.exe` is already lean (the maxperf profile's `strip = "symbols"`
+  # covers what little remains). Nothing to do here.
+  :
 else
   strip --strip-all "${bin_path}" 2>/dev/null || true
 fi
 
-# --- stage tarball contents -------------------------------------------------
-cp "${bin_path}" "${stage_dir}/latexml_oxide"
-cp README.md "${stage_dir}/README.md"
-cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
-cp LICENSE "${stage_dir}/LICENSE"
-# THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
-# sections 1-4 + the cargo-about Rust-crate appendix produced by
-# tools/gen_notices.sh); fall back to the committed hand-authored file so a
-# local `make_release.sh` without cargo-about still ships notices.
-if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
-  cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
+# Windows ships a SINGLE self-contained `.exe` (the user runs it directly), not a
+# tarball — so its packaging diverges from the Linux/macOS tarball flow. Static
+# libxml2/libxslt (vcpkg, x64-windows-static-md) + the ubiquitous dynamic MSVC
+# runtime; kpathsea is resolved via subprocess `kpsewhich`, never linked.
+tarball=""
+exe_asset=""
+if [[ "${os_family}" == "windows" ]]; then
+  exe_asset="latexml-oxide-${version}-${target_triple}.exe"
+  cp "${bin_path}" "${artifacts_dir}/${exe_asset}"
+  ( cd "${artifacts_dir}" && sha256_sidecar "${exe_asset}" )
+  echo "make_release: Windows single-exe asset ${exe_asset}"
 else
-  cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
-fi
+  # --- stage tarball contents -----------------------------------------------
+  cp "${bin_path}" "${stage_dir}/latexml_oxide"
+  cp README.md "${stage_dir}/README.md"
+  cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
+  cp LICENSE "${stage_dir}/LICENSE"
+  # THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
+  # sections 1-4 + the cargo-about Rust-crate appendix produced by
+  # tools/gen_notices.sh); fall back to the committed hand-authored file so a
+  # local `make_release.sh` without cargo-about still ships notices.
+  if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+    cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
+  else
+    cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
+  fi
 
-# --- build tarball ----------------------------------------------------------
-tarball="latexml-oxide-${version}-${target_triple}.tar.gz"
-( cd "${artifacts_dir}" && tar -czf "${tarball}" "${stage_dir_name}" )
-( cd "${artifacts_dir}" && sha256_sidecar "${tarball}" )
+  # --- build tarball --------------------------------------------------------
+  tarball="latexml-oxide-${version}-${target_triple}.tar.gz"
+  ( cd "${artifacts_dir}" && tar -czf "${tarball}" "${stage_dir_name}" )
+  ( cd "${artifacts_dir}" && sha256_sidecar "${tarball}" )
+fi
 
 # --- build .deb (Debian-family targets only) --------------------------------
 # macOS has no .deb equivalent in this pipeline (a Homebrew tap is the natural
@@ -265,6 +289,23 @@ sudo cp latexml-oxide-${version}-aarch64-unknown-linux-gnu/latexml_oxide /usr/lo
 EOF
   fi
 
+  if [[ -n "${RELEASE_WINDOWS_EXE:-}" ]]; then
+    cat <<EOF
+### Windows (x86_64)
+
+A single self-contained \`.exe\` — download it and run it directly (no installer,
+no tarball). Static libxml2/libxslt are baked in; it needs only the standard
+Microsoft Visual C++ runtime (present on modern Windows / the VC++ redistributable)
+and a TeX distribution (MiKTeX or TeX Live) on \`PATH\`, resolved via \`kpsewhich\`.
+
+\`\`\`powershell
+curl.exe -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_WINDOWS_EXE}
+.\\${RELEASE_WINDOWS_EXE} --version
+\`\`\`
+
+EOF
+  fi
+
   # Slice the CHANGELOG section for this version. CHANGELOG entries use
   # `## [VERSION]` headers (CommonMark task-list style — see CHANGELOG.md
   # for shape). Extract from the matching header up to the next `## `.
@@ -290,7 +331,12 @@ echo "make_release: artifacts in ${artifacts_dir}/"
 ls -la "${artifacts_dir}"
 echo
 echo "make_release: SHA-256 sidecars"
-cat "${artifacts_dir}/${tarball}.sha256"
+if [[ -n "${tarball}" ]]; then
+  cat "${artifacts_dir}/${tarball}.sha256"
+fi
+if [[ -n "${exe_asset}" ]]; then
+  cat "${artifacts_dir}/${exe_asset}.sha256"
+fi
 if [[ -n "${deb_path}" ]]; then
   cat "${artifacts_dir}/$(basename "${deb_path}").sha256"
 fi

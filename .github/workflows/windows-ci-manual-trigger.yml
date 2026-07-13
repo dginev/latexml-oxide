@@ -1,4 +1,7 @@
-# Windows bring-up — docs/release/WINDOWS_COMPATIBILITY_PLAN.md.
+# Windows CI (manual trigger) — build + full test suite on windows-latest.
+# Tracks docs/release/WINDOWS_COMPATIBILITY_PLAN.md. (The RELEASE artifact —
+# the single .exe — is built by release.yml's build-windows leg, which reuses
+# this file's vcpkg/static recipe.)
 #
 # NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
 # job is stably green).
@@ -21,7 +24,7 @@
 on:
   workflow_dispatch:
 
-name: windows-bringup
+name: Windows CI (manual)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -46,7 +49,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-          key: windows-bringup
+          key: windows-ci-manual
 
       - name: cache vcpkg installed tree
         uses: actions/cache@v4

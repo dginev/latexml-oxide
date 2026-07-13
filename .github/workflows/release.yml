@@ -18,7 +18,13 @@ on:
   push:
     tags:
       # Bare X.Y.Z — matches the repo's existing tag history (no v-prefix).
+      # Auto-publishes a public release (see the publish step).
       - '[0-9]+.[0-9]+.[0-9]+'
+      # Pre-release / RC tags, e.g. 0.7.4-rc1 (a valid semver pre-release, so it
+      # matches the Cargo.toml version — make_release.sh's version check passes
+      # and the artifacts are named `…-0.7.4-rc1-…`). Published as a DRAFT
+      # prerelease for cross-OS testing, not a public release (publish step).
+      - '[0-9]+.[0-9]+.[0-9]+-*'
 
 permissions:
   # softprops/action-gh-release needs to write the Release object.
@@ -385,11 +391,108 @@ jobs:
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_arm64.deb.sha256
           if-no-files-found: error
 
+  # Windows (x86_64-pc-windows-msvc) — a SINGLE self-contained `.exe`. Uses the
+  # proven windows-ci-manual-trigger.yml recipe (vcpkg static libxml2/libxslt,
+  # triplet x64-windows-static-md) but builds the publish-grade `maxperf` binary
+  # and packages the bare `.exe` (+ `.sha256`) — no tarball/.deb, the user runs
+  # the `.exe` directly. `kpathsea` is NOT linked on Windows: TeX paths resolve
+  # through the subprocess `kpsewhich` (MiKTeX/TeX Live on PATH). The `.exe` needs
+  # only the ubiquitous MSVC runtime (static-md = static C libs + dynamic CRT).
+  # The TL-window dumps are OS-agnostic gzipped text, embedded at build time like
+  # the other legs (no TeX Live needed on THIS leg — dumps come from `dumps`).
+  build-windows:
+    name: Build Windows x86_64 ${{ github.ref_name }}
+    runs-on: windows-latest
+    # First-ever Windows release artifact; maxperf (fat-LTO) is heavier than the
+    # bring-up job's `ci` profile — give generous wall-clock. Windows Actions
+    # minutes are metered 2x on this private repo (see windows-ci-manual-trigger).
+    timeout-minutes: 120
+    needs: dumps
+    env:
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+      # Static C libraries + dynamic CRT (plan Phase 1.1). The MSVC runtime is a
+      # standard system component (VC++ redist), so the `.exe` is effectively
+      # single-file.
+      VCPKG_TRIPLET: x64-windows-static-md
+      VCPKGRS_TRIPLET: x64-windows-static-md
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: release-maxperf-windows
+
+      - name: cache vcpkg installed tree
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
+          key: vcpkg-${{ env.VCPKG_TRIPLET }}-libxml2-libxslt-v1
+      - name: vcpkg install libxml2 + libxslt (static)
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg" install `
+            "libxml2:$env:VCPKG_TRIPLET" "libxslt:$env:VCPKG_TRIPLET"
+      - name: export vcpkg root
+        run: '"VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV'
+
+      # Same TL-window dumps as the other legs (OS-agnostic gzipped text).
+      - name: collect TL-window dumps
+        uses: actions/download-artifact@v6
+        with:
+          pattern: dumps-*
+          path: resources/dumps/
+          merge-multiple: true
+      - name: verify dump window completeness
+        shell: bash
+        run: |
+          ls -la resources/dumps/
+          for year in 2022 2023 2024 2025; do
+            for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
+              if [ ! -s "resources/dumps/$f" ]; then
+                echo "::error::release dump window incomplete: missing resources/dumps/$f"
+                exit 1
+              fi
+            done
+          done
+
+      # make_release.sh runs under Git Bash (present on windows-latest); its
+      # os_family=windows branch builds maxperf and packages the single `.exe`.
+      # libxml2/libxslt are discovered from the vcpkg env set above.
+      - name: build Windows release .exe
+        shell: bash
+        run: bash tools/make_release.sh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RELEASE_TARGET: x86_64-pc-windows-msvc
+
+      # Launch smoke: prove the `.exe` runs on the runner (static-link / vcpkg
+      # sanity). Conversion paths aren't exercised here (no TeX Live on this leg);
+      # windows-ci-manual-trigger.yml runs the full suite with TeX Live.
+      - name: launch smoke
+        shell: bash
+        run: |
+          exe=$(find target/release-artifacts -name '*.exe' -type f | head -1)
+          echo "checking $exe"
+          "$exe" --version || { echo "::error::Windows .exe failed to launch (--version)"; exit 1; }
+          echo "OK: the Windows .exe launches"
+
+      - name: upload Windows artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: windows-exe
+          path: |
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe.sha256
+          if-no-files-found: error
+
   release:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: [dumps, build-macos, build-macos-intel, build-linux-arm64]
+    needs: [dumps, build-macos, build-macos-intel, build-linux-arm64, build-windows]
 
     steps:
       - uses: actions/checkout@v6
@@ -496,6 +599,7 @@ jobs:
           RELEASE_MACOS_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
           RELEASE_MACOS_INTEL_TARBALL: latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
           RELEASE_LINUX_ARM64_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz
+          RELEASE_WINDOWS_EXE: latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
 
       # Artifact-property gate (RELEASE_CRITERIA §2/§7): fail the release if the
       # stripped binary blows the size budget (a runaway-growth alarm), and stage
@@ -584,16 +688,24 @@ jobs:
           name: linux-arm64-artifacts
           path: target/release-artifacts/
 
-      # AUTO-PUBLISH (draft: false): a tag push produces a public Release with
-      # zero manual steps. This is safe because every asset is gated before it
-      # gets here: each build leg verifies static linkage (ldd/otool), runs a
+      # Pull the single Windows .exe (+ sidecar) built by build-windows.
+      - name: collect Windows .exe
+        uses: actions/download-artifact@v6
+        with:
+          name: windows-exe
+          path: target/release-artifacts/
+
+      # PUBLISH. Behaviour is chosen by the tag shape (see draft/prerelease below):
+      #   * Final tag  X.Y.Z      -> a PUBLIC release, zero manual steps.
+      #   * RC tag     X.Y.Z-rcN  -> a DRAFT prerelease for cross-OS testing.
+      # Auto-publishing a final tag is safe because every asset is gated before
+      # it gets here: each build leg verifies static linkage (ldd/otool), runs a
       # real conversion smoke (Linux legs) or a launch smoke + code-signature
-      # check (macOS legs), and enforces the size budget; macOS conversion paths
-      # are additionally covered by CI.yml's macOS test job on the same arch.
-      # The build stays tied to a release tag (no workflow_dispatch, no "random"
-      # builds). If a published asset is ever found broken, delete the Release +
-      # tag, bump to X.Y.(Z+1), and re-tag (RELEASING.md "Failure recovery").
-      # (To re-introduce a human review gate, set `draft: true`.)
+      # check (macOS legs) or a launch smoke (Windows leg), and enforces the size
+      # budget; macOS conversion paths are additionally covered by CI.yml's macOS
+      # test job. The build stays tied to a release tag (no workflow_dispatch, no
+      # "random" builds). If a published asset is ever found broken, delete the
+      # Release + tag, bump the patch, and re-tag (RELEASING.md "Failure recovery").
       - name: publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -618,7 +730,13 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz.sha256
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe.sha256
             target/release-artifacts/THIRD-PARTY-NOTICES
-          draft: false
-          prerelease: false
+          # RC / pre-release tags (containing a '-', e.g. 0.7.4-rc1) publish as a
+          # DRAFT prerelease — a maintainer tests the attached executables on each
+          # OS, then clicks Publish (or deletes the draft). Final tags (bare
+          # X.Y.Z) auto-publish a public release.
+          draft: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
