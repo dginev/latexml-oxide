@@ -797,7 +797,7 @@ LoadDefinitions!({
       // column template (witness 1907.04219: `\halign{...\raise1pt\copy\strutbox
       // \lower1pt\copy\strutbox...}` × ~50 rows → 100+ errors → FATAL_3 abort,
       // where Perl completes; both engines share the spurious error, real TeX
-      // emits none — see docs/KNOWN_PERL_ERRORS.md).
+      // emits none — see docs/parity/KNOWN_PERL_ERRORS.md).
       let is_box_register_op = token.get_catcode() == Catcode::CS
         && token.with_str(|s| matches!(s, "\\box" | "\\copy" | "\\lastbox"));
       if !is_box_register_op {
@@ -843,7 +843,7 @@ LoadDefinitions!({
   // Perl PR#2596: TeXDelimiter parameter type for \left, \right, \big, \bigl, etc.
   // Reads a balanced {}-arg via read_arg, reverts WITHOUT braces.
   //
-  // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/WISDOM.md #41
+  // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/parity/WISDOM.md #41
   // for the full enhancement plan. Current impl works for
   // \big/\Big/\bigg/\Bigg (math_common.rs:962-964) but \left/\lx@right
   // plus revsymb's \biglb family fall back to DefMacro workarounds.

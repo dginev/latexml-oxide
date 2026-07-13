@@ -266,13 +266,13 @@ pub struct State {
   /// flag enabling source-locator (`--source-map`) tracking + emission.
   /// Off by default; gates BOTH the per-token start capture and the
   /// per-element `data-sourcepos` stamping so a normal conversion pays
-  /// nothing. See `docs/SOURCE_PROVENANCE.md`.
+  /// nothing. See `docs/performance/SOURCE_PROVENANCE.md`.
   pub source_map:              bool,
   /// Document-level `sources` table for the source-map feature: ordered
   /// list of source files seen, index = the integer `tag` emitted in
   /// `data-sourcepos` (Source-Map-v3 `sources` style — never an inlined
   /// path). Populated lazily via `source_tag()` only when `source_map` is
-  /// on. See `docs/SOURCE_PROVENANCE.md` §0.1.
+  /// on. See `docs/performance/SOURCE_PROVENANCE.md` §0.1.
   pub source_table:            Vec<SymStr>,
   /// Read-log of every *named* source opened through `Mouth::create`
   /// (file paths and cached-content names; literal/anonymous mouths are
@@ -617,6 +617,15 @@ impl State {
     // Perl Core.pm L43: STRICT (default false)
     if let Some(strict) = options.strict {
       state.assign_value("STRICT", strict, Some(Scope::Global));
+    }
+    // Perl Core.pm L55-57: `--includestyles` fans out to BOTH INCLUDE_STYLES
+    // and INCLUDE_CLASSES (both default 0), so it raw-loads .sty packages AND
+    // .cls classes from the search path. Faithful to Perl — its own
+    // `# … accept both classes and styles?` hedge notwithstanding, the code
+    // sets both, and INCLUDE_CLASSES is what unlocks raw .cls in LoadClass.
+    if let Some(include_styles) = options.include_styles {
+      state.assign_value("INCLUDE_STYLES", include_styles, Some(Scope::Global));
+      state.assign_value("INCLUDE_CLASSES", include_styles, Some(Scope::Global));
     }
     // Perl Core.pm L62: NOMATHPARSE
     state.assign_value("NOMATHPARSE", nomathparse, Some(Scope::Global));
@@ -3093,7 +3102,7 @@ pub fn set_nomathparse_flag(val: bool) {
 /// Whether source-locator (`--source-map`) tracking + emission is on.
 /// Read by the source-provenance machinery (mouth token-start capture,
 /// `Document::absorb` `data-sourcepos` stamping) to stay zero-cost when off.
-/// See `docs/SOURCE_PROVENANCE.md`.
+/// See `docs/performance/SOURCE_PROVENANCE.md`.
 pub fn source_map_enabled() -> bool { state!().source_map }
 pub fn set_source_map_flag(val: bool) {
   let mut state = state_mut!();
@@ -3104,7 +3113,7 @@ pub fn set_source_map_flag(val: bool) {
 /// returning its integer `tag` (index). The per-element `data-sourcepos`
 /// attribute carries this compact integer rather than a path — the
 /// Source-Map-v3 `sources` convention (compact + anonymisable). Only
-/// called on the source-map path. See `docs/SOURCE_PROVENANCE.md` §0.1.
+/// called on the source-map path. See `docs/performance/SOURCE_PROVENANCE.md` §0.1.
 pub fn source_tag(source: SymStr) -> u32 {
   let mut state = state_mut!();
   if let Some(idx) = state.source_table.iter().position(|s| *s == source) {

@@ -1,5 +1,5 @@
 //! End-to-end validation of runtime Rhai script bindings through a real
-//! conversion (docs/script_bindings_plan.md, milestone M4).
+//! conversion (docs/parity/script_bindings_plan.md, milestone M4).
 //!
 //! A sample binding (one `DefMacro`, one `DefConstructor`) is authored in Rhai
 //! and loaded at runtime via the *extra* binding dispatcher when the document

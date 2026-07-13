@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Portability probe — Phase 0 of the portability ladder (issue #217,
-# docs/RELEASE_CRITERIA.md §3).
+# docs/release/RELEASE_CRITERIA.md §3).
 #
 # Purpose: turn "may work on macOS" claims into measured facts. Reports
 # the state of every native dependency latexml-oxide links against:

@@ -20,11 +20,11 @@ Two co-equal targets drive current work:
    fleet converts the full ~2.8M-doc arXiv corpus (2026-07 rerun in flight;
    next: the July-5 run, built from a fresh binary with the week's fixes).
    Beyond-Perl levers: performance (17% math over-parse, tikz-cd digest —
-   [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) /
-   [`docs/ARXIV_PERFORMANCE.md`](docs/ARXIV_PERFORMANCE.md)), reliability
-   ([`docs/STABILITY_WITNESSES.md`](docs/STABILITY_WITNESSES.md)), and the
+   [`docs/performance/PERFORMANCE.md`](docs/performance/PERFORMANCE.md) /
+   [`docs/performance/ARXIV_PERFORMANCE.md`](docs/performance/ARXIV_PERFORMANCE.md)), reliability
+   ([`docs/performance/STABILITY_WITNESSES.md`](docs/performance/STABILITY_WITNESSES.md)), and the
    source-provenance showcase (issues #47/#92,
-   [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md)).
+   [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
 **1505/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
@@ -117,47 +117,55 @@ Supporting directories:
 
 ## Internal Documentation
 
-All active docs live in `docs/`. This is the authoritative index — keep it
-current when adding, renaming, merging, or archiving a doc. Grouped by the two
-mission targets (docs serving both come first):
+All active docs live in `docs/`, grouped into themed subdirectories that mirror
+the two mission targets: **[`docs/README.md`](docs/README.md)** is the
+navigational front door (multi-level TOC), and this section is the authoritative
+per-file index with the placement rules. The layout: `docs/SYNC_STATUS.md` (the
+start-here worklist) stays at the root; **`docs/parity/`** (Target 1 faithful
+translation, `+ diagnostics/`), **`docs/math/`** (Marpa math parser),
+**`docs/performance/`** (Target 2 beyond-Perl / arXiv), **`docs/release/`** (ship
+contracts); reference collections `docs/{archive,reproducers,out-of-scope,known_crashes,examples}/`
+are unchanged. Keep BOTH this index and `docs/README.md` current when adding,
+renaming, merging, or archiving a doc. Grouped by the two mission targets (docs
+serving both come first):
 
 **Worklists & contracts (start here when resuming work):**
 - **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — The BRIEF ACTIONABLE worklist for both targets: current status, the in-flight session entry, open tasks, deferred families, stable reference. Completed session logs are lifted to `docs/archive/SYNC_SESSIONS_*.md`. **Start here.**
-- **[`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy.
-- **[`docs/ISSUE_AUDIT.md`](docs/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation (refreshed 2026-07-02; 8 open). **Refresh before milestone planning.** (Issue numbers are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
-- **[`docs/WINDOWS_COMPATIBILITY_PLAN.md`](docs/WINDOWS_COMPATIBILITY_PLAN.md)** — Living worklist for the Windows port (`windows-compatibility` branch): MSVC + vcpkg-static toolchain, TeX Live + MiKTeX runtime, phased plan from compile blockers (libmarpa cc-port, libxml2/libxslt vcpkg) through `cargo test --release` green on `windows-latest` CI to a zipped `.exe` release artifact. Operationalizes RELEASE_CRITERIA portability rung 5.
+- **[`docs/release/RELEASE_CRITERIA.md`](docs/release/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy.
+- **[`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md)** — Living license inventory for the redistributable binary (the RELEASE_CRITERIA §4 deliverable): Rust deps (cargo-deny-gated), embedded assets, the TeX-Live-derived dumps position, linked syslibs, subprocess-only graphics tools. Scopes the CC0 claim.
+- **[`docs/release/ISSUE_AUDIT.md`](docs/release/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation (refreshed 2026-07-02; 8 open). **Refresh before milestone planning.** (Issue numbers are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
+- **[`docs/release/WINDOWS_COMPATIBILITY_PLAN.md`](docs/release/WINDOWS_COMPATIBILITY_PLAN.md)** — Living worklist for the Windows port (`windows-compatibility` branch): MSVC + vcpkg-static toolchain, TeX Live + MiKTeX runtime, phased plan from compile blockers (libmarpa cc-port, libxml2/libxslt vcpkg) through `cargo test --release` green on `windows-latest` CI to a zipped `.exe` release artifact. Operationalizes RELEASE_CRITERIA portability rung 5.
 
 **Target 1 — faithful Perl translation (parity):**
-- **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design **index + overview** (guiding principles, architecture). Detail lives in a themed family it links to: **[`OXIDIZED_DESIGN_DIVERGENCES.md`](docs/OXIDIZED_DESIGN_DIVERGENCES.md)** (the numbered **intentional Perl divergences** that `.rs` comments cite as `OXIDIZED_DESIGN #N`), **[`OXIDIZED_DESIGN_MATH.md`](docs/OXIDIZED_DESIGN_MATH.md)** (Marpa math-parser + grammar rules), **[`OXIDIZED_DESIGN_TYPES.md`](docs/OXIDIZED_DESIGN_TYPES.md)** (type-system improvements + tactical pitfalls), **[`OXIDIZED_DESIGN_FUTURE_WORK.md`](docs/OXIDIZED_DESIGN_FUTURE_WORK.md)**. Read the divergences file to check if a translation difference was a marked intentional divergence. (Divergence `#N` numbers are load-bearing and kept verbatim; note the pre-existing collision between divergence `#7–#18` and the math cluster `#7–#18` — the index explains which file owns each.)
-- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Loading hierarchy and LaTeX chapter structure.
-- **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals from specialized debugging. Check here to avoid re-introducing known bugs.
-- **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (40 entries). Check here first when investigating a test failure; when a shared bug is simple, fix in Rust and record it here (candidate to upstream).
-- **[`docs/DUMP_DESIGN.md`](docs/DUMP_DESIGN.md)** — Design record for the kernel dump precompilation (strict-Perl LoadFormat mutual exclusivity, unconditional apply) — the live architecture behind the per-TL-year release dumps. NOTE the format-layering nuance: the latex format sits on the REAL-plain.tex layer (Perl's is hand-curated), so plain-only macros can leak into latex sessions (the `\+` class, retracted at the `latex.rs` seam; audit in SYNC_STATUS 2026-07-02).
-- **[`docs/BINDING_DSL_ARCHITECTURE.md`](docs/BINDING_DSL_ARCHITECTURE.md)** — Decision record for the binding-definition DSL: one shared `ConstructorBuilder` lowering spine, compile-time `macro_rules!` + runtime Rhai front-ends. Subsumes closed issues #93/#171.
-- **[`docs/script_bindings_plan.md`](docs/script_bindings_plan.md)** — The runtime (Rhai) `script-bindings` front-end reference. OFF by default (`script-bindings` feature).
+- **[`docs/parity/OXIDIZED_DESIGN.md`](docs/parity/OXIDIZED_DESIGN.md)** — Public-facing design **index + overview** (guiding principles, architecture). Detail lives in a themed family it links to: **[`OXIDIZED_DESIGN_DIVERGENCES.md`](docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md)** (the numbered **intentional Perl divergences** that `.rs` comments cite as `OXIDIZED_DESIGN #N`), **[`OXIDIZED_DESIGN_MATH.md`](docs/math/OXIDIZED_DESIGN_MATH.md)** (Marpa math-parser + grammar rules), **[`OXIDIZED_DESIGN_TYPES.md`](docs/parity/OXIDIZED_DESIGN_TYPES.md)** (type-system improvements + tactical pitfalls), **[`OXIDIZED_DESIGN_FUTURE_WORK.md`](docs/parity/OXIDIZED_DESIGN_FUTURE_WORK.md)**. Read the divergences file to check if a translation difference was a marked intentional divergence. (Divergence `#N` numbers are load-bearing and kept verbatim; note the pre-existing collision between divergence `#7–#18` and the math cluster `#7–#18` — the index explains which file owns each.)
+- **[`docs/parity/ORGANIZATION.md`](docs/parity/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Loading hierarchy and LaTeX chapter structure.
+- **[`docs/parity/WISDOM.md`](docs/parity/WISDOM.md)** — Tactical insights about system internals from specialized debugging. Check here to avoid re-introducing known bugs.
+- **[`docs/parity/KNOWN_PERL_ERRORS.md`](docs/parity/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (40 entries). Check here first when investigating a test failure; when a shared bug is simple, fix in Rust and record it here (candidate to upstream).
+- **[`docs/parity/DUMP_DESIGN.md`](docs/parity/DUMP_DESIGN.md)** — Design record for the kernel dump precompilation (strict-Perl LoadFormat mutual exclusivity, unconditional apply) — the live architecture behind the per-TL-year release dumps. NOTE the format-layering nuance: the latex format sits on the REAL-plain.tex layer (Perl's is hand-curated), so plain-only macros can leak into latex sessions (the `\+` class, retracted at the `latex.rs` seam; audit in SYNC_STATUS 2026-07-02).
+- **[`docs/parity/BINDING_DSL_ARCHITECTURE.md`](docs/parity/BINDING_DSL_ARCHITECTURE.md)** — Decision record for the binding-definition DSL: one shared `ConstructorBuilder` lowering spine, compile-time `macro_rules!` + runtime Rhai front-ends. Subsumes closed issues #93/#171.
+- **[`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md)** — The runtime (Rhai) `script-bindings` front-end reference. OFF by default (`script-bindings` feature).
 
 **Target 2 — beyond-Perl improvement runs over arXiv:**
-- **[`docs/ARXIV_PERFORMANCE.md`](docs/ARXIV_PERFORMANCE.md)** — Living empirical performance campaign over arXiv: slowest-100 testbed, corpus-wide profiles, phase rollups, optimization log; records settled dead-ends.
-- **[`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)** — Timeless optimization principles, open/closed lever state, and the dated **Audit log** of periodic perf passes.
-- **[`docs/STABILITY_WITNESSES.md`](docs/STABILITY_WITNESSES.md)** — Living worklist of reliability witness papers (timeout/OOM/peak-RSS/hang) with current-binary + Perl baselines. Distinct from `SYNC_STATUS.md` (correctness errors).
-- **[`docs/CORTEX_WORKER_HARNESS.md`](docs/CORTEX_WORKER_HARNESS.md)** — `cortex_worker --harness` fleet orchestration: one-conversion-per-process, five-layer memory guards, crash-loop backoff, production deployment recommendation. Companion to pericortex `docs/HARNESS.md` and CorTeX `MANUAL.md` §7.
-- **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` runs.
-- **[`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md)** — Design for the prioritized beyond-Perl showcase: live source ↔ preview over a shared locator substrate (ar5iv-editor + VSCode clients), accurate linting (#47) and Rust-grade author errors (#92). Locators opt-in (`--source-map`). (The landed-but-deprioritized `--server` LSP docs: [`docs/archive/LSP_SERVER.md`](docs/archive/LSP_SERVER.md), [`docs/archive/LSP_MULTIFILE_PLAN.md`](docs/archive/LSP_MULTIFILE_PLAN.md); smoke `tools/lsp_smoke.py`.)
-- **[`docs/RELEASING.md`](docs/RELEASING.md)** — Tag-driven release procedure; the self-contained-binary requirement.
-- **[`docs/SAFETY.md`](docs/SAFETY.md)** — Threat model and `unsafe` inventory (distribution posture in `RELEASE_CRITERIA.md` §6).
-- **[`docs/SCHEMA_DOCUMENTATION.md`](docs/SCHEMA_DOCUMENTATION.md)** — RelaxNG Compact schema → rustdoc-styled HTML doc site (supported the closed #199 HTML-dialect schema).
+- **[`docs/performance/ARXIV_PERFORMANCE.md`](docs/performance/ARXIV_PERFORMANCE.md)** — Living empirical performance campaign over arXiv: slowest-100 testbed, corpus-wide profiles, phase rollups, optimization log; records settled dead-ends.
+- **[`docs/performance/PERFORMANCE.md`](docs/performance/PERFORMANCE.md)** — Timeless optimization principles, open/closed lever state, and the dated **Audit log** of periodic perf passes.
+- **[`docs/performance/STABILITY_WITNESSES.md`](docs/performance/STABILITY_WITNESSES.md)** — Living worklist of reliability witness papers (timeout/OOM/peak-RSS/hang) with current-binary + Perl baselines. Distinct from `SYNC_STATUS.md` (correctness errors).
+- **[`docs/performance/CORTEX_WORKER_HARNESS.md`](docs/performance/CORTEX_WORKER_HARNESS.md)** — `cortex_worker --harness` fleet orchestration: one-conversion-per-process, five-layer memory guards, crash-loop backoff, production deployment recommendation. Companion to pericortex `docs/HARNESS.md` and CorTeX `MANUAL.md` §7.
+- **[`docs/performance/TELEMETRY.md`](docs/performance/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` runs.
+- **[`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)** — Design for the prioritized beyond-Perl showcase: live source ↔ preview over a shared locator substrate (ar5iv-editor + VSCode clients), accurate linting (#47) and Rust-grade author errors (#92). Locators opt-in (`--source-map`). (The landed-but-deprioritized `--server` LSP docs: [`docs/archive/LSP_SERVER.md`](docs/archive/LSP_SERVER.md), [`docs/archive/LSP_MULTIFILE_PLAN.md`](docs/archive/LSP_MULTIFILE_PLAN.md); smoke `tools/lsp_smoke.py`.)
+- **[`docs/release/RELEASING.md`](docs/release/RELEASING.md)** — Tag-driven release procedure; the self-contained-binary requirement.
+- **[`docs/release/SAFETY.md`](docs/release/SAFETY.md)** — Threat model and `unsafe` inventory (distribution posture in `RELEASE_CRITERIA.md` §6).
+- **[`docs/performance/SCHEMA_DOCUMENTATION.md`](docs/performance/SCHEMA_DOCUMENTATION.md)** — RelaxNG Compact schema → rustdoc-styled HTML doc site (supported the closed #199 HTML-dialect schema).
 
 **Math parser (serves both targets):**
-- **[`docs/MATH_PARSER_AND_ASF.md`](docs/MATH_PARSER_AND_ASF.md)** — Canonical: the three-stage ambiguity pipeline vs the Marpa ASF traversal paradigm. Read before touching `latexml_math_parser/src/parser.rs::parse_string` or `semantics.rs::Actions`. Companion to [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md).
-- **[`docs/MATH_PARSER_ASF_TIEBREAKING.md`](docs/MATH_PARSER_ASF_TIEBREAKING.md)** — ASF tie-breaking rules detail.
-- **[`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`](docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md)** — Design rationale for the Marpa grammar.
-- **[`docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)** — Measured and-node counts per ambiguity pattern; ranked open levers (`f(x)` apply-vs-multiply, bare-`|x|` pre-lexer, integral Step 2). The top `math_parse` lever for the arXiv runs; supersedes the archived 2026-05-21 ambiguity audit.
+- **[`docs/math/MATH_PARSER_AND_ASF.md`](docs/math/MATH_PARSER_AND_ASF.md)** — Canonical: the three-stage ambiguity pipeline vs the Marpa ASF traversal paradigm. Read before touching `latexml_math_parser/src/parser.rs::parse_string` or `semantics.rs::Actions`. Companion to [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md).
+- **[`docs/math/MATH_PARSER_ASF_TIEBREAKING.md`](docs/math/MATH_PARSER_ASF_TIEBREAKING.md)** — ASF tie-breaking rules detail.
+- **[`docs/math/MATH_GRAMMAR_FIRST_PRINCIPLES.md`](docs/math/MATH_GRAMMAR_FIRST_PRINCIPLES.md)** — Design rationale for the Marpa grammar.
+- **[`docs/math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](docs/math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)** — Measured and-node counts per ambiguity pattern; ranked open levers (`f(x)` apply-vs-multiply, bare-`|x|` pre-lexer, integral Step 2). The top `math_parse` lever for the arXiv runs; supersedes the archived 2026-05-21 ambiguity audit.
 
 **Open dated diagnostics** (point-in-time studies with pending halves — see naming rule):
-- **[`docs/ARXIV_FORK_AUDIT_2026-07-03.md`](docs/ARXIV_FORK_AUDIT_2026-07-03.md)** — due-diligence survey of the arXiv/LaTeXML "velocity fork" (57 commits): what's already translated (pgfmath core, usebbl, calc params, hyperxmp, acmart ARIA) vs the ranked residual candidates (abstract-in-TOC inlist, pgfmath string results, graphicx actualtext).
-- **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: container-id half landed; content-branch/MathFork reconciliation still pending.
-- **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted.
-- **[`docs/STREAMING_POST_DESIGN_2026-07-06.md`](docs/STREAMING_POST_DESIGN_2026-07-06.md)** — very-large split-document post-processing: the correctness+foundation floor is landed (limit-safe queries so split fires on the 614 MB `index.xml`, stream-from-file, rust-libxml `TextReader`/checked-XPath); the **two-pass streaming split** to cut peak RSS 15.6 GB → <1 GB is the pending, parity-gated half. New resume point for that work (was `HANDOFF.md`).
+- **[`docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: container-id half landed; content-branch/MathFork reconciliation still pending.
+- **[`docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted.
+- **[`docs/performance/STREAMING_POST_DESIGN_2026-07-06.md`](docs/performance/STREAMING_POST_DESIGN_2026-07-06.md)** — very-large split-document post-processing: the correctness+foundation floor is landed (limit-safe queries so split fires on the 614 MB `index.xml`, stream-from-file, rust-libxml `TextReader`/checked-XPath); the **two-pass streaming split** to cut peak RSS 15.6 GB → <1 GB is the pending, parity-gated half. New resume point for that work (was `HANDOFF.md`).
 
 Completed/superseded snapshots live in `docs/archive/` (see
 [`docs/archive/README.md`](docs/archive/README.md) — most recently, the
@@ -211,7 +219,7 @@ We follow Rust best practice with four named profiles in `Cargo.toml`:
 
 **Sandbox runs**: build `cortex_worker` in the default profile and pass that path to `tools/benchmark_canvas.sh` via `--worker-bin`, OR build with `--release` once if you specifically need a publish-grade canvas measurement.
 
-**Publish-grade measurement** (matching against Perl LaTeXML, baseline updates in `docs/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
+**Publish-grade measurement** (matching against Perl LaTeXML, baseline updates in `docs/performance/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
 
 **Distribution build** (shipping the binary to users): use `--profile maxperf --no-default-features --features runtime-bindings` for the smallest, fastest artifact that still ships the Rhai script-bindings capability. Example: `cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide`. The `--no-default-features` flag drops the `test-utils` feature (removing `phf` + `glob` and 4 transitive crates), while `--features runtime-bindings` keeps the runtime contributed-bindings front-end — runtime opt-in, so default conversions are unaffected (this is the recipe `tools/make_release.sh` uses). The `maxperf` profile uses `panic = "abort"` — production-only since canvas sweeps depend on `catch_unwind` for per-paper panic isolation.
 
@@ -272,7 +280,7 @@ truth for macro-expanded diagnostics.
 - TeX macro definitions can be compiled at compile-time via proc macros in `latexml_codegen`
 - **No DTD support** — the Rust port only supports RelaxNG schemas. DTD-based document tests (namespace ns1–ns5, xii) are permanently ignored. The `DocType!` macro has been removed; `RegisterDocumentNamespaces!` handles namespace registration only.
 - The port aims to be **faithful to the Perl original** while using idiomatic Rust where possible
-- **Self-contained, portable binary** (design requirement): a conversion must not *read* latexml_oxide's *own* resources from disk during its main operation. Engine dumps, the RelaxNG schema, and XSLT/CSS/JS are embedded and served from memory (verified: XSLT via `strace`, dumps by renaming the dev-tree `resources/dumps/` away and still converting). *Writing* outputs — including auxiliary files — into the **destination** directory is fine. New code that adds a runtime read of an *owned* resource must instead embed it (`include_bytes!` / `include_str!`). The host **TeX Live ecosystem is out of scope**: reading `.sty`/`.cls`/`.tfm` from the user's texmf tree via `kpathsea` is allowed and expected. Official releases ship the `maxperf` binary as a GitHub Release Asset, runnable with no `resources/` tree. Full rationale in [`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md) → Guiding Principles.
+- **Self-contained, portable binary** (design requirement): a conversion must not *read* latexml_oxide's *own* resources from disk during its main operation. Engine dumps, the RelaxNG schema, and XSLT/CSS/JS are embedded and served from memory (verified: XSLT via `strace`, dumps by renaming the dev-tree `resources/dumps/` away and still converting). *Writing* outputs — including auxiliary files — into the **destination** directory is fine. New code that adds a runtime read of an *owned* resource must instead embed it (`include_bytes!` / `include_str!`). The host **TeX Live ecosystem is out of scope**: reading `.sty`/`.cls`/`.tfm` from the user's texmf tree via `kpathsea` is allowed and expected. Official releases ship the `maxperf` binary as a GitHub Release Asset, runnable with no `resources/` tree. Full rationale in [`docs/parity/OXIDIZED_DESIGN.md`](docs/parity/OXIDIZED_DESIGN.md) → Guiding Principles.
 - Test files (`.t` extension) mirror the original LaTeXML Perl test suite; `.rs` files are the Rust equivalents
 - most tests are regression-oriented. They contain a complete TeX input, and can experience failures in many different intermediate stages.
 - we are interested in finding meaningful Rust types for the previously untyped Perl.
@@ -317,9 +325,10 @@ truth for macro-expanded diagnostics.
   both the ANSI and ANSI-free binaries, matching `Status:conversion:3`. When in doubt, count it
   as a failure to investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
+- **Never delete a witness article (arXiv id) from a code comment; always carry existing witnesses into any new/edited comment and add the new one.** Witnesses are the concrete reproducer a past decision hinged on — they are very valuable. Before landing a change to a construct whose comment names a witness, **re-convert that witness and confirm it still succeeds** (the test suite can miss it). Example: the `\hphantom` comment's `2004.10048` witness caught a lateral regression (the naive quantikz2 fix dropped 2004.10048's bibliography) that no test guarded.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - **Active work**: the two targets in "Active priorities" above — corpus-driven parity mining plus the beyond-Perl arXiv-run levers. The actionable list lives in `docs/SYNC_STATUS.md`; completed missions (dump parity, upstream-sync U1–U11, …) are archived under `docs/archive/`.
-- When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
+- When a test failure traces to an upstream Perl issue, document it in `docs/parity/KNOWN_PERL_ERRORS.md`.
 
 When a **session is completed**: continue working, until:
 - all tests pass
@@ -343,4 +352,4 @@ Do **not** stop early.
 
 ---
 
-> **Reminder:** This is a faithful Perl-to-Rust translation. When porting any Perl code, preserve the original semantics, control flow, edge cases, and naming conventions. Read the Perl source first, translate precisely, and only diverge when documented in `docs/OXIDIZED_DESIGN.md`.
+> **Reminder:** This is a faithful Perl-to-Rust translation. When porting any Perl code, preserve the original semantics, control flow, edge cases, and naming conventions. Read the Perl source first, translate precisely, and only diverge when documented in `docs/parity/OXIDIZED_DESIGN.md`.

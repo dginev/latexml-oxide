@@ -1,6 +1,6 @@
 # Script-bindings (Rhai) — historical progress log & re-evaluations
 
-Archived from `docs/script_bindings_plan.md` on 2026-06-09 (kept the live doc
+Archived from `docs/parity/script_bindings_plan.md` on 2026-06-09 (kept the live doc
 lean). The plan's current state — surface reference, not-yet-covered list,
 builder spine — lives in the main doc.
 

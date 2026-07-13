@@ -104,7 +104,12 @@ LoadDefinitions!({
   // Use \author for EACH author, follow with \orcid, \affiliation, \email as needed.
   // Note that \affiliation can apply to all preceding authors without one
   // (Perl PR #2767)
-  DefMacro!("\\author{}",                "\\lx@add@creator[role=author]{#1}");
+  // Real acmart is \renewcommand\author[2][]: optional [short-name] (running
+  // head only) + mandatory full name. Perl binds only \author{}, so a real
+  // \author[F. Poli]{Federico Poli} leaks '[' and drops the name; accept the
+  // optional short-name and drop it (beyond-Perl; the short name is a derived
+  // running-head abbreviation, not new information).
+  DefMacro!("\\author[]{}",              "\\lx@add@creator[role=author]{#2}");
   DefMacro!("\\editor{}",                "\\lx@add@creator[role=editor]{#1}");
   DefMacro!("\\affiliation{}",           "\\lx@add@contact[role=affiliation,annotate=new]{#1}");
   DefMacro!("\\additionalaffiliation{}", "\\lx@add@contact[role=altaffiliation]{#1}");

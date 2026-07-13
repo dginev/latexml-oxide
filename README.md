@@ -1,25 +1,19 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.7.0-orange.svg) 
-[![ported tests](https://img.shields.io/badge/ported%20tests%20-%201454%2F0%2F0-%20%2332a852?style=flat)
-](https://github.com/dginev/latexml-oxide/issues/30)
+[![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml)
+[![release](https://img.shields.io/github/v/release/dginev/latexml-oxide?color=orange)](https://github.com/dginev/latexml-oxide/releases)
+[![license: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-blue.svg)](LICENSE)
+[![ported tests](https://img.shields.io/badge/ported%20tests-1533%2F0%2F0-32a852?style=flat)](https://github.com/dginev/latexml-oxide/issues/30)
 
 This project is in active **beta**, approaching mainline LaTeXML parity. The full
 conversion pipeline already works end-to-end —
 `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML
 with cross-references, citations, MathML, and XSLT — but treat the output as
-not-yet-production-grade until parity is declared.
-
-**Status:** strict-Perl dump/format parity is complete; remaining work is
-sandbox long-tail cleanup (see [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)).
-Local verification: `cargo test --tests` **1454/0/0**; the latest 100k-paper
-warning-subset sandbox run is **~99.4% OK**. Release-profile wall time on the
-[1910.01256](https://arxiv.org/abs/1910.01256) mini-benchmark is **0.71 s**
-(vs ~1.11 s pdflatex idle).
+not-yet-production-grade until parity is declared. Strict-Perl dump/format parity
+is complete; remaining work is sandbox long-tail cleanup, tracked in
+[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
 
 ### Why?
-
-The three main reasons:
 
   * LaTeXML is **too slow** for large-scale production use.
   * Perl 5's ecosystem and tooling have **aged out of the mainstream**.
@@ -35,18 +29,19 @@ Design goals:
 ### Install (prebuilt binaries)
 
 Every tagged release on the [Releases page](https://github.com/dginev/latexml-oxide/releases)
-ships prebuilt binaries for **Linux x86-64** (`.deb` + portable tarball) and
-**macOS Apple Silicon** (tarball). The binary is fully self-contained — all XSLT
+ships prebuilt binaries for **Linux** (x86-64 and aarch64/arm64, `.deb` +
+portable tarball each) and **macOS** (Apple Silicon and Intel tarballs). The
+binary is fully self-contained — all XSLT
 stylesheets, CSS, JS, and RelaxNG schemas are embedded at build time and served
 from memory, so no `resources/` tree is needed alongside it (a deliberate design
-goal — see [docs/OXIDIZED_DESIGN.md](docs/OXIDIZED_DESIGN.md)). A working TeX Live
+goal — see [docs/parity/OXIDIZED_DESIGN.md](docs/parity/OXIDIZED_DESIGN.md)). A working TeX Live
 installation is still required at runtime for TeX package/class/font resolution.
 Every asset has a `<name>.sha256` sidecar for integrity checking.
 
 Set the version once (use the latest from the Releases page):
 
 ```
-$ VERSION=0.7.0
+$ VERSION=0.7.3
 ```
 
 #### Ubuntu / Debian
@@ -60,30 +55,78 @@ $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/la
 $ sudo apt install ./latexml-oxide_${VERSION}-1_amd64.deb
 ```
 
-Prefer the portable tarball? Install the runtime dependencies yourself:
+Prefer the portable tarball? The binary is statically linked against
+libxml2/libxslt/libkpathsea, so you only need the external tools + TeX Live:
 
 ```
 $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
 $ tar xzf latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
 $ sudo cp latexml-oxide-$VERSION-x86_64-unknown-linux-gnu/latexml_oxide /usr/local/bin/
-$ sudo apt install libxml2 libxslt1.1 libkpathsea6 imagemagick mupdf-tools \
+$ sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
                    texlive-latex-base texlive-latex-extra texlive-science
 ```
 
-#### macOS (Apple Silicon / arm64 only)
+On **64-bit ARM** (AWS Graviton, Ampere, Raspberry Pi OS 64-bit) swap `amd64` →
+`arm64` in the `.deb` name and `x86_64-unknown-linux-gnu` → `aarch64-unknown-linux-gnu`
+in the tarball name; everything else is identical. `uname -m` prints `x86_64` or
+`aarch64`.
+
+#### macOS (Apple Silicon / arm64 + Intel / x86_64)
+
+Pick the tarball matching your Mac — `aarch64` for Apple Silicon (M1/M2/M3…),
+`x86_64` for Intel (`uname -m` prints `arm64` or `x86_64`):
 
 ```
+# Apple Silicon
 $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
 $ tar xzf latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
 $ sudo cp latexml-oxide-$VERSION-aarch64-apple-darwin/latexml_oxide /usr/local/bin/
-$ brew install libxml2 libxslt imagemagick mupdf-tools
-$ brew install texlive          # or install MacTeX / BasicTeX
+
+# Intel (built with a macOS 10.13 deployment target, so it runs on older Intel Macs)
+$ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
+$ tar xzf latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
+$ sudo cp latexml-oxide-$VERSION-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
+
+$ brew install imagemagick mupdf-tools poppler ghostscript
+$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng/dvisvgm)
 ```
 
 Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instead
 resolves TeX files through your distribution's `kpsewhich` executable (ensure
-`/Library/TeX/texbin` is on `PATH`). Intel Macs are not yet a published target —
-see [docs/RELEASING.md](docs/RELEASING.md) for the platform roadmap.
+`/Library/TeX/texbin` is on `PATH`).
+
+#### Docker
+
+A batteries-included image (`latexml_oxide` + a reproducible TeX Live + the
+graphics tools) is published to the GitHub Container Registry for both amd64 and
+arm64. No local TeX Live needed — bind-mount your document tree and convert:
+
+```
+$ docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide:$VERSION paper.tex
+```
+
+`:latest` tracks the most recent release. The container builds its own binary
+against the image's TeX Live, so the embedded kernel dumps match the bundled
+texmf tree exactly.
+
+### System dependencies
+
+The binary is self-contained (libxml2/libxslt/kpathsea are linked in), but at
+runtime it **shells out** to external tools for graphics conversion and reads
+TeX assets from your TeX Live tree. None are bundled — install the ones your
+documents need. When a required tool is missing, the conversion log names it
+**and the package to install**. The `.deb` declares all of these, so
+`apt install ./latexml-oxide_*.deb` pulls them automatically.
+
+| Tool (`command`) | apt package | Homebrew | Used for |
+|---|---|---|---|
+| `convert` | `imagemagick` | `imagemagick` | raster image conversion |
+| `mutool` | `mupdf-tools` | `mupdf-tools` | primary PDF graphics (fast) |
+| `pdftocairo` | `poppler-utils` | `poppler` | vector-SVG from PDF |
+| `gs`, `ps2pdf` | `ghostscript` | `ghostscript` | PDF/PostScript conversion |
+| `dvipng` | `dvipng` | TeX Live | raster LaTeX-image output |
+| `dvisvgm` | `dvisvgm` | TeX Live | vector-SVG LaTeX-image output |
+| `kpsewhich`, `latex`, `pdflatex`, `tftopl` | `texlive-latex-base` (+`-extra`, `-science`) | `texlive` / MacTeX | TeX package/class/font resolution |
 
 ### Build from source
 
@@ -125,45 +168,18 @@ TeX files through your distribution's own `kpsewhich` executable
 this up). Same conversions, slightly slower cold file lookups. You
 still need `brew install libxml2 libxslt` either way.
 
-`poppler-utils` provides `pdftocairo`, used as the default fast PDF →
-PNG/SVG rasterizer (≈25× faster than ImageMagick `convert` on
-vector-heavy PDFs).
+`mutool` (MuPDF) and `pdftocairo` (poppler-utils) are optional but recommended:
+they convert PDF figures faster than ImageMagick. latexml-oxide tries the
+available delegates fastest-first and falls back through the chain, so a figure is
+never lost when a tool is missing.
 
-#### Optional but recommended: MuPDF tools (≈2× faster PDF conversion)
+### Build profiles
 
-```
-$ sudo apt install mupdf-tools
-```
-
-`mutool draw` (MuPDF) is tried **before** `pdftocairo` for PDF →
-PNG/SVG conversion. Measured 2026-05-12: on a matplotlib scatter
-PDF, mutool runs in 0.48 s vs pdftocairo's 0.86 s, and its SVG
-output is ~4× more gzip-compressible. Falls through to `pdftocairo`
-if `mutool` is not on PATH — install is optional.
-
-#### Graphics delegate chain
-
-`\includegraphics` figures are converted by external delegates, tried
-fastest-first with fallback:
-
-- **EPS / PS → PNG** — `gs` (Ghostscript), the primary rasterizer, then `convert` (ImageMagick). Landscape PS routes via `ps2pdf` → `pdftocairo` to keep page rotation.
-- **PDF → PNG** — `mutool draw` (MuPDF, fastest) → `pdftocairo` (poppler, ships with TeX Live) → `convert` (ImageMagick).
-- **PDF → SVG** — opt-in vector path for small PDFs (`--graphics-svg-threshold-kb N`): `mutool convert` → `pdftocairo -svg`, falling back to PDF→PNG so a figure is never lost.
-
-`gs` is the most load-bearing delegate (the whole EPS/PS branch plus ImageMagick's
-PS/EPS/PDF delegate), hence the explicit `ghostscript` above.
-
-### Build profiles (Rust best practice)
-
-Five named profiles in `Cargo.toml` (plus a profiling-only `bench`), each tuned for one purpose:
-
-| Profile | When | Goal |
-|---------|------|------|
-| **`test`** (default for `cargo test`) | day-to-day development | Maximum debug info (`debug = "full"`, `debug-assertions`, `overflow-checks`), incremental rebuilds, `-O1` for tolerable test runtime. Use as much local RAM/CPU as needed. |
-| **`ci`**   | GitHub Actions only      | Lowest possible RAM (16 GB runner budget) and fastest compile (`opt-level = 0`, `codegen-units = 256`, no LTO). Just enough to prove tests pass. |
-| **`release`** | local sandbox canvas / perf measurement | Laptop-throughput release: `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Strong runtime optimization while using the 20-thread local machine during release builds. |
-| **`maxperf`** | distribution / published release artifact (the standalone `latexml_oxide` / `latexmlmath_oxide` CLIs) | Smallest, fastest binary: `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, stripped. Slowest build; used by `tools/make_release.sh` for the shipped binaries. |
-| **`maxperf-cortex`** | distribution build of the `cortex_worker` fleet binary (the `docker/cortex-worker.dockerfile` image) | The same fat-LTO / `codegen-units = 1` levers as `maxperf`, but keeps `panic = "unwind"`: the worker relies on `std::panic::catch_unwind` to isolate per-paper panics across a long-lived fleet, which `panic = "abort"` would silently turn into a no-op. |
+`Cargo.toml` defines named profiles for day-to-day development (`test`), the
+RAM-bounded CI runner (`ci`), local perf measurement (`release`), and the shipped
+distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile
+(`cargo build` / `cargo test`, no flag) for everyday work; see
+[CLAUDE.md](CLAUDE.md) for the full profile table.
 
 ### Sample use
 
@@ -182,7 +198,7 @@ Five named profiles in `Cargo.toml` (plus a profiling-only `bench`), each tuned 
     $ cargo run --release --bin latexml_oxide latexml_oxide/tests/structure/article.tex
     ```
 
-4. Generate a rustdoc-styled HTML5 site for a RelaxNG (`.rnc`) schema — see [docs/SCHEMA_DOCUMENTATION.md](docs/SCHEMA_DOCUMENTATION.md).
+4. Generate a rustdoc-styled HTML5 site for a RelaxNG (`.rnc`) schema — see [docs/performance/SCHEMA_DOCUMENTATION.md](docs/performance/SCHEMA_DOCUMENTATION.md).
 
 CI runs `cargo test --profile ci --tests` automatically; you should never
 need to invoke that profile by hand. For local performance benchmarking
@@ -197,12 +213,9 @@ $ rustup component add clippy --toolchain nightly
 $ git config --local core.hooksPath .githooks/
 ```
 
-This workspace is heavy for rust-analyzer because of large proc-macro
-definition bodies. The checked-in `.vscode/settings.json` uses a
-stability profile: proc-macro expansion and cache priming are disabled,
-RA uses `target/rust-analyzer`, and large/generated directories are
-excluded from file watching. Terminal `cargo build` / `cargo test`
-still compile proc macros normally.
+This workspace is heavy for rust-analyzer (large proc-macro bodies); the
+checked-in `.vscode/settings.json` ships a stability profile that keeps the IDE
+responsive. Terminal `cargo build` / `cargo test` are unaffected.
 
 To generate the project documentation locally, run:
 ```bash
@@ -211,3 +224,16 @@ $ cargo doc --workspace --no-deps --open
 
 **IMPORTANT:** There is a compile-time plugin that collects the files in the test suite. 
 This means that when adding a new test `[name].tex` and `[name].xml` pair of files, you may need to manually execute `cargo clean` to rediscover the entry.
+
+### License
+
+latexml-oxide's source code and original resources are dedicated to the public
+domain under [CC0 1.0 Universal](LICENSE).
+
+The release binary also embeds and links third-party material that keeps its own
+license — most notably compiled TeX format dumps derived from TeX Live (the
+LaTeX kernel, LPPL 1.3c; plain TeX, Knuth) and the system libxml2/libxslt
+libraries (MIT). These are attributed in [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES),
+which is bundled with every release. The public-domain dedication above applies
+to the latexml-oxide source and original resources, **not** to that embedded or
+linked third-party material. Full breakdown: [`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md).

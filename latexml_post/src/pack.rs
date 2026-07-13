@@ -58,7 +58,7 @@ pub struct PackOptions<'a> {
   /// Optional per-job telemetry JSON line. When `Some`, written as
   /// `telemetry.json` inside the zip. Used by `cortex_worker` canvas
   /// runs; `benchmark_canvas.sh` extracts this member and appends to
-  /// `<output_dir>/telemetry.jsonl`. See `docs/TELEMETRY.md`.
+  /// `<output_dir>/telemetry.jsonl`. See `docs/performance/TELEMETRY.md`.
   pub telemetry_json:    Option<&'a str>,
   /// `SOURCE_DATE_EPOCH` (Unix seconds, UTC). When `Some`, every zip
   /// member's last-modified time is pinned to it for reproducible

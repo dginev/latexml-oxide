@@ -1,4 +1,4 @@
-# Windows bring-up — docs/WINDOWS_COMPATIBILITY_PLAN.md.
+# Windows bring-up — docs/release/WINDOWS_COMPATIBILITY_PLAN.md.
 #
 # NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
 # job is stably green).

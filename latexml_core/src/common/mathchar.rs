@@ -982,7 +982,7 @@ pub fn decode_math_char_for_stomach(mathcode: u16, meaning: Token) -> Result<Opt
   // token-locators: carry the math char's own source origin (matching the text
   // path in `invoke_token_simple`), so math content boxes are located — the
   // basis for a `$…$`-range `ltx:Math` wrapper and in-equation provenance.
-  // docs/SOURCE_PROVENANCE.md §3.1.3 / §7 A.3. `None` → falls back to the gullet
+  // docs/performance/SOURCE_PROVENANCE.md §3.1.3 / §7 A.3. `None` → falls back to the gullet
   // locator (feature-off identical).
   #[cfg(feature = "token-locators")]
   let origin_loc: Option<crate::common::locator::Locator> =

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="graphicx"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <figure inlist="lof" labels="LABEL:fig:panels" xml:id="S0.F1">
+    <tags>
+      <tag>Figure 1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">Figure 1</tag>
+    </tags>
+    <graphics class="ltx_centering ltx_figure_panel" graphic="a.pdf" options="width=103.50105pt,keepaspectratio=true" xml:id="S0.F1.g1"/>
+    <graphics class="ltx_centering ltx_figure_panel" graphic="bb.pdf" options="width=103.50105pt,keepaspectratio=true" xml:id="S0.F1.g2"/>
+    <graphics class="ltx_centering ltx_figure_panel" graphic="ccc.pdf" options="width=103.50105pt,keepaspectratio=true" xml:id="S0.F1.g3"/>
+    <break class="ltx_break"/>
+    <graphics class="ltx_centering ltx_figure_panel" graphic="dddddddddddddd.pdf" options="width=103.50105pt,keepaspectratio=true" xml:id="S0.F1.g4"/>
+    <graphics class="ltx_centering ltx_figure_panel" graphic="eeeeeeeeeeeeeeeeeeee.pdf" options="width=103.50105pt,keepaspectratio=true" xml:id="S0.F1.g5"/>
+    <graphics class="ltx_centering ltx_figure_panel" graphic="ffffffffffffffffffffffffff.pdf" options="width=103.50105pt,keepaspectratio=true" xml:id="S0.F1.g6"/>
+    <toccaption class="ltx_centering"><tag close=" ">1</tag>Six equal-width panels, three per row.</toccaption>
+    <caption class="ltx_centering"><tag close=": ">Figure 1</tag>Six equal-width panels, three per row.</caption>
+  </figure>
+</document>

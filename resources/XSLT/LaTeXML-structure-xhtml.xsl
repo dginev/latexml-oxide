@@ -309,7 +309,7 @@
   `xsltValueOf → xmlXPathNextDescendant`). Precompute each level ONCE as a global
   variable; f:seclev-aux just selects the matching one. OUTPUT-NEUTRAL (identical
   values, evaluated once instead of per-heading). Candidate for upstreaming to
-  Perl LaTeXML, which has the identical O(n²). See docs/ARXIV_PERFORMANCE.md.
+  Perl LaTeXML, which has the identical O(n²). See docs/performance/ARXIV_PERFORMANCE.md.
 -->
   <xsl:variable name="seclev_document" select="1"/>
   <xsl:variable name="seclev_part"

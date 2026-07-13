@@ -15,8 +15,26 @@
 
 ## Current status
 
-- `cargo test --tests`: **1532 / 0 / 0** (on `fidelity-improvements-072026`; the
+- `cargo test --tests`: **1534 / 0 / 0** (on `fidelity-improvements-072026`; the
   completed 2026-07 session logs are archived — see the pointer below).
+
+- **2026-07-09 — `\AtBeginDocument` #2754/#2846 re-done via context-aware `\par`
+  (Direction B retired; ported to Perl too).** The earlier `inBeginDocumentHook`
+  guard-decouple is reverted: `\begin{document}` restores the pre-#2846
+  `inPreamble=0`-after-hooks placement and `only_preamble` is a plain `inPreamble`
+  check again (no second flag). `\lx@normal@par` is a no-op **only in the raw
+  preamble** — `inPreamble` set AND `document` NOT on the `current_environment`
+  stack; everywhere else it closes the paragraph being built. So a blank line in
+  `\AtBeginDocument` (runs in the document env) splits paragraphs (#2754) while a
+  deferred `\RequirePackage`/`\usepackage` stays legal (inPreamble still 1). NOT the
+  note's literal "no-op in vertical mode": LaTeXML's mode tracking isn't faithful
+  (stays vertical after display math — would also mis-merge `\AtBeginDocument{\[x\]…}`;
+  raw-preamble text is horizontal yet must merge — expl3 case fixtures), so CONTEXT
+  (are we in the document env) is the stable signal; the env-**stack** check also
+  handles nested envs inside hooks. Applied identically in Perl
+  (`LaTeXML/lib/.../latex_constructs.pool.ltxml` + `TeX_Paragraph.pool.ltxml`,
+  `lookupStackedValues`). New regression tests: `tests/structure/atbegindocument_*`.
+  See `KNOWN_PERL_ERRORS.md` #43. Candidate to upstream as the #2846 follow-up.
 
 ### Session logs (2026-06-22 … 2026-07-08) — ARCHIVED
 
@@ -36,6 +54,46 @@ history now live in the dated session archives:
 (Upstream-sync catalog also at
 [`archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md`](archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md).)
 
+### apxproof bibliography + option-value catcode (LANDED 2026-07-10)
+Rust Error Fix. `gdsm.tex` (biblatex + `\usepackage[bibliography=common]{apxproof}`)
+now converts error-free in every config (bare / `--includestyles` / ar5iv): 24
+linked bibitems, 6 `ltx_proof` (amsthm markup, correctly inline — apxproof defers
+only its own `apxproof`/`proofatend` envs). Two parts:
+1. **`latexml_contrib/src/apxproof_sty.rs`** — force-raw-loads `apxproof.sty` in
+   all configs (no Perl binding exists; Perl aborts the bib on kvoptions
+   `\ProcessLocalKeyvalOptions*`). Surpass-Perl; see KNOWN_PERL_ERRORS #44.
+2. **Core catcode fix** (`binding/content.rs`): `\opt@<name>.<ext>` now built with
+   `ExplodeText!` (LETTER catcode) not `Explode!` (OTHER), so kvoptions/keyval
+   `\setkeys` values pass catcode-sensitive `\equal`/`\ifx` validation. Broad
+   reach (every `\DeclareStringOption` validator). See WISDOM #61; regression
+   fixture `tests/keyval_options/optcatcode*`. Full suite 1538/0.
+
+### Figure panels of unmeasurable images wrapped by filename length (LANDED 2026-07-10)
+Rust Error Fix (fidelity). A float of bare `\includegraphics` with no explicit
+`\\` is partitioned into rows by `arrange_panels_and_breaks`, using each panel's
+MEASURED box width. `read_image_dimensions` reads PNG/JPEG/EPS only (like Perl's
+`imgsize`), so for **PDF/SVG** it early-returned with no `cached_width`;
+`compute_size` then summed the whatsit's argument boxes — including the
+Semiverbatim **path string** — so panels wrapped by *filename length*.
+arXiv:2409.16471 fig 2 (12 uniform `0.245\textwidth` PDF panels) split 3/3/2/3/1
+instead of 3 rows of 4. **Fix** (`latexml_core/src/util/image.rs`) emulates
+pdfTeX, not Perl: on a raster-reader miss, read the natural size from the file
+itself — a PDF's CropBox→MediaBox (pdfTeX's default, shared with
+`LaTeXML::Post::Graphics::read_pdf_page_box`) or an SVG's viewBox — and apply the
+graphicx transform in points. Only when the page box is hidden in a compressed
+object stream do we fall back to the requested `width=` (else 0); `cached_width`
+is always set so the filename is never summed. No ImageMagick dep (that is a
+Perl-only workaround for Image::Size's lack of PDF support; even it forces
+`use-cropbox` to match pdfTeX). Verified against `\the\wd` under pdflatex:
+`width=` → the request outright; bare/`scale=`/`height=` → the natural box.
+Corpus-wide reach but NARROW — `width=` figures get an identical box width either
+way, so only no-explicit-width PDF/SVG figures change; a 260-paper before/after
+sample (142 with PDF figures) showed 0 error/fatal/exit-code regressions, and the
+2 layout changes were previously-merged multi-panel figures now wrapping into
+rows (e.g. 8 panels → 2 rows of 4). Golden suite untouched (all-PNG/JPEG).
+Regression tests `figure_panel_native` + `figure_panel_unmeasured`. See WISDOM
+#62. Fig 2 → uniform 84.52pt → 3 rows of 4, 0 errors.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail
@@ -48,6 +106,95 @@ Recipe: `GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categori
 `GET /api/corpus/<corpus>/tex_to_html/document/<id>` for Perl status — a Rust-only
 win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
 `sandbox-arxiv-10k-shuffle`. URL-encode `\`→`%5C`, `^`→`%5E`.
+
+## CLI options (#191) + `validate()` implementation — ACTIVE (public-release-prep-week)
+
+Completing issue #191 "support the original latexmlc/latexmlpost options" under
+the **option-C policy**: wire only options whose engine feature genuinely works
+end-to-end; keep the clap parser **strict** (no accept-and-warn stubs); deferred/
+missing features stay hard parse errors.
+
+### Landed this session (real features, verified + committed)
+- `--timestamp=STR` (`--timestamp=0` omits) → XSLT `TIMESTAMP` footer param;
+  deterministic no-timestamp default (divergence from Perl's localtime).
+- `--icon=FILE` → XSLT `ICON` param + favicon resource copy.
+- `--nographicimages` / `--graphicimages` → gate the Graphics post-phase.
+- `--numbersections`, `--mathparse`, `--invisibletimes`, `--defaultresources`
+  → positive complements of existing negative-only flags (verbatim Perl-CLI
+  parity; the negative wins if both are given).
+
+### Deferred — feature genuinely NOT supported (do NOT stub)
+- `--parse=STRATEGY` — grammar selection unsupported (one Marpa grammar);
+  `--nomathparse` / `--mathparse` is the real interface. (Attempted + removed.)
+- `--svg` / `--nosvg` — **deferred (verified 2026-07-09):** the HTML5 XSLT
+  already renders `<ltx:picture>` as inline `<svg>` by default, so the standalone
+  `svg.rs` post-processor (`impl Processor for SVG`, unwired) is redundant and
+  produces divergent, unverified output (25 vs 27 `<svg>` on `tests/graphics/
+  picture.tex`). Wiring it was built + reverted.
+- `--pictureimages` / `--nopictureimages` — `picture_images.rs` delegates to the
+  **unwired LaTeXImages latex+dvipng pipeline** (`latex_images.rs`); same
+  category/effort as `--mathimages`.
+- `--openmath|om` — no OpenMath serializer. (User: defer.)
+- daemon net (`--port` / `--address` / `--expire` / `--autoflush` / `--cache_key`)
+  — socket-daemon model; we ship `--server` (stdio LSP). (User: defer.)
+- `--mode` (= alias for `--profile`); `--profile=NAME` — needs a preset registry.
+- `--mathimages` / `--mathsvg` / `--mathimagemagnification` — needs a
+  latex+dvipng math-render pipeline.
+- `--unicodemath` / `--plane1` / `--hackplane1` / `--linelength` — plain/unicode
+  math output modes.
+- crossref cluster (`--crossref` / `--scan` / `--noscan` / `--urlstyle` /
+  `--prescan` / `--dbfile` / `--bibliography` / `--splitbibliography`) + index
+  cluster (`--index` / `--permutedindex` / `--splitindex`) — multi-doc site-DB
+  features. (Scan IS wired as post Phase 2, so `--noscan` is a real-but-risky
+  off-switch; parked with the cluster.)
+- `--tex` / `--box` — intermediate box/tex serializers absent.
+- `--omitdoctype` — DTD-only in Perl; Rust has no DTD (moot).
+
+### `validate()` / `--validate` — POSTPONED to the NEXT release (decided 2026-07-09)
+Today `Post::Document::validate()` (`latexml_post/src/document.rs:1717`) is a
+STUB: it logs "Would validate against RelaxNG schema" and returns `Ok(())`.
+Real RelaxNG validation is wanted, but is **deferred to the next release** because
+it is gated on a `rust-libxml` crates.io publish (see below). Reference: Perl
+`LaTeXML/lib/LaTeXML/Common/XML/RelaxNG.pm` + `LaTeXML/lib/LaTeXML/Post.pm`.
+
+**Architecture decision (owner, 2026-07-09): `rust-libxml` provides the public,
+safe Rust RelaxNG interface; `latexml-oxide` is a pure consumer.** All libxml2
+`unsafe`/FFI stays in the fork — the alternative (raw `xmlRelaxNG*` FFI inline in
+`latexml_post`, which would compile against the shipped crates.io `libxml 0.3.15`
+with no publish) was **rejected**. So this feature cannot fully land until the
+fork's RelaxNG module is published as `libxml 0.3.16`.
+
+Constraint: the schema is **modular** (`LaTeXML.rng` `<include>`s
+`LaTeXML-common.rng`, `-structure`, `-math`, …) and the binary is
+**self-contained** — no on-disk schema. Includes MUST resolve through the
+embedded table (`latexml_core::common::relaxng::embedded::lookup`), served via
+the fork's existing `libxml::io::register_input_callback` (built for exactly this
+— "bundles RNG schemas via include_bytes! … RelaxNG `<include>` via
+`xmlRelaxNGParse`"), NOT disk.
+
+Steps (next-release session):
+1. **rust-libxml fork — add a safe `relaxng` module.** The fork's `schemas`
+   module is **XSD-only** (`xmlSchema*`). Mirror it: `relaxng/{parser,schema,
+   validation}.rs` wrapping `xmlRelaxNGNewParserCtxt`(URL — so relative includes
+   resolve through the callback) / `xmlRelaxNGNewMemParserCtxt` + `xmlRelaxNGParse`
+   (→ `RelaxNGSchema`) and `xmlRelaxNGNewValidCtxt` + `xmlRelaxNGValidateDoc`
+   (→ `RelaxNGValidationContext`), with `xmlRelaxNGSetValidStructuredErrors`
+   capture. Fork unit test (valid + invalid doc). **Publish `libxml 0.3.16`.**
+2. **Embedded-include resolution** via `libxml::io::register_input_callback`
+   (`embed:///RelaxNG/LaTeXML-*.rng` → `embedded::lookup`); verify with the
+   renamed-`resources/` smoke that no schema is read from disk.
+3. **Consume in workspace** — bump the `libxml` dep `0.3.15` → `0.3.16`; `cargo test`.
+4. **Flesh out `validate()`** — parse+cache the schema once; run `validate_doc`;
+   map each captured `StructuredError` to a `Warn!` / `post_error` in the project
+   logging convention (Perl reports schema violations).
+5. **Wire `--validate` / `--novalidate`** — CLI flags + `PostOptions.validate`;
+   call `validate()` in `run_post_processing_impl` when enabled. DEFAULT
+   decision: Perl defaults ON; propose **opt-in** in Rust (validation cost +
+   corpus warning noise) as a documented divergence — confirm with owner before
+   flipping the default on.
+6. **Tests** — a valid fixture validates clean; an intentionally schema-invalid
+   doc reports the expected violation; `--novalidate` skips.
+
 ## Math-parser / content-MathML gaps — DEFERRED to a dedicated session
 
 > **User directive 2026-06-20: defer ALL content-MathML items to a dedicated
@@ -183,6 +330,25 @@ structures — always cross-check the affected fixture against Perl before
 assuming a regression (the norm rule "regressed" physics_test, but Perl matched
 the new output, so it was a parity *fix*).
 
+### Archived-audit residuals (2026-07-09 docs compaction)
+
+Two completed diagnostic snapshots were dated + archived; their still-open
+residuals stay here so the live worklist keeps them visible:
+
+- **MathML-post line audit** (sweep complete; →
+  `archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`). Open feature-gaps: **F5**
+  Linebreaker (full feature gap — the sketch used the wrong strategy), **F11**
+  Hint width normalization, **F14** multirelation + lt-or-approx cMML, **F15**
+  continued-fraction, **F16** OperatorDictionary Cat A/B data holes + U+2A50
+  misclassification + fence U+0331, **F17** formulae pMML arm, plus PARTIAL
+  inherited-context bindings on `pmml_top`/`pmml_parenthesize`/`stylizeContent`.
+  (Content-MathML items obey the defer-to-a-dedicated-session directive above.)
+- **arXiv velocity-fork audit** (items 1–4 landed 2026-07-03; →
+  `archive/ARXIV_FORK_AUDIT_2026-07-03.md`). Sole residual: **item G** —
+  `readBalanced` drops comment tokens (fork `4e1578d1`); Rust `read_balanced`
+  still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
+  (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
+
 ## Open tasks (actionable)
 
 ### TL2026 `latex.ltx` dump init is NOT release-gate-clean — expl3 catcode gap (2026-07-12) — OPEN
@@ -254,6 +420,259 @@ ubuntu TL is older) — both root-caused and fixed TL-independently:
    `29219528633` (which fail-fast-stopped at 86_tikz; the complete tail came
    from a local `--no-fail-fast` run on a newest-circuitikz box — a faithful
    Windows-CI proxy — confirming 1530/0 with this one fixture out).
+
+### Release-week stabilization (2026-07-10, user-directed) — THE LENS FOR THIS WEEK
+
+**Public release is ~1 week out (branch `public-release-prep-week`). The bias is
+STABILIZE, not add capability.** A regression introduced in release week is far
+costlier than a feature deferred. So the actionable list below is re-ordered by
+*risk*, not by *ambition*: the safe, landed-or-verification work leads; every
+hot-path / broad-diff / deep-engine item is explicitly demoted to POST-RELEASE.
+
+**SAFE — do in release week (low risk, high stabilization value):**
+
+1. **Verify the already-landed >500 MB `index.xml` path on the release binary**
+   (see the investigation note directly below). The foundation is **already in the
+   release** — PR **#274** (`b0cc70f319`, squash-merged 2026-07-07): limit-safe
+   DOM-walk queries so split fires + loud XPath errors, stream-the-file/skip engine
+   init, CrossRef O(n²)→O(n) (42m50s→2m18s). So there is **nothing to land** (an
+   earlier "not in the release branch" read was an ancestry-check error — #274 was
+   squash-merged, so the branch SHAs aren't ancestors even though the content is).
+   It fixes a **silent-failure class** (any doc large enough to cross libxml2's 10M-
+   nodeset ceiling → NULL nodeset → swallowed → `[not split]`) and converts a
+   document **Perl LaTeXML cannot** (Perl `latexmlpost` fatals at the nodeset
+   ceiling in 8.67s). The release-week action is a **confidence check**: run the
+   614 MB witness on the `maxperf`/release binary and confirm `Split into 40201
+   pages` + byte-identical HTML (design-doc baseline 2m18s, ~21.6 GB peak; a 32 GB
+   box handles it — watch RAM contention). *Excludes* the deferred two-pass
+   streaming split (task #44 / `STREAMING_POST_DESIGN`) — that risky memory-only
+   half is NOT needed for release.
+2. **Full regression + smoke gate on the release binary** — the release
+   discipline, pure risk reduction. `cargo test --tests --no-fail-fast` (expect
+   ~1534/0), `cargo clippy --workspace --all-targets -- -D warnings`, then a
+   `tools/benchmark_canvas.sh` smoke of a few hundred mixed papers on the
+   `maxperf` binary, checking fatal classes against the known list + spot-checking
+   HTML with the shipped CSS. (Mirrors the July-5 prep item 6.)
+3. **Confirm the graceful-abort safety floors still fire** — these, NOT the deep
+   loop fixes, are the release's real stability guarantee: the 4500 MB RSS fuse
+   (Cluster A/D/E), IfLimit 16M / TokenLimit 1B (Cluster H), the 12k expand-depth
+   guard + stack guard (Cluster F). All landed; this is verification only (a
+   pathological paper must Fatal cleanly, never hang/segfault/OOM the process).
+
+**DEFER to POST-RELEASE — do NOT start in release week (risk > reward now):**
+
+- **All BP-1…BP-6 beyond-Perl perf levers** (below) — hot-path, output-neutrality
+  gated, ambitious (rayon math parse, XSLT transpile, document-builder rewrite).
+  A regression here is a release-killer; the 60k telemetry that motivates them
+  keeps. **First post-release work, not release-week work.**
+- **Cluster H deep runaway-loop fixes** (`STABILITY_WITNESSES.md`: `\kbordermatrix`
+  box-peel, `\IfFileExists`-before-`\documentclass` readBalanced-past-EOF,
+  undefined-cascade IfLimit). Genuine Rust bugs, but the fixes are deep
+  gullet/box-register surgery with broad blast radius — AND current behavior is
+  already SAFE (graceful Fatal via an existing limit ~100s in, bounded, no
+  crash/corruption), so they are fidelity/perf gaps, NOT release-blocking
+  stability risks. The one clean regression (`2605.23849`, Perl completes) is a
+  real fidelity loss whose fix is still deep. Post-release.
+- **`ltx_env_<name>` class enhancement** (below) — churns nearly every golden
+  XML; running it in release week would swamp the regression baseline and mask
+  real regressions. Isolated branch, post-release (as already noted).
+- **MakeBibliography full re-port** (below) — already marked post-release.
+- **`validate()` / `--validate`** (above) — already postponed to the next release
+  (gated on the `rust-libxml` RelaxNG publish).
+- **Verbatim-in-box items 4–6, biblatex `.bbl` `2605.17646`** (below) — low-value
+  fidelity / graceful-fatal; not blockers.
+
+*(Deliberately conservative: no contained "quick-win" bug fix in the current list
+clears the risk/reward bar for release week — the parity long-tail is graceful
+already. If a NEW same-host-confirmed GENUINE-RUST-ONLY regression surfaces from
+the smoke sweep, that jumps the queue; nothing currently open does.)*
+
+### Frontmatter-fidelity pass over the arXiv `html_feedback` reports — LANDED 2026-07-12
+
+Drove the ~280 arXiv "front matter" `html_feedback` reports to clean, structured
+frontmatter (branch `public-release-prep-week`). Method: convert each reported
+paper to standalone HTML on the ar5iv config, then **Playwright red/green** DOM
+checks (`.ltx_personname`/`.ltx_authors`/`.ltx_bibitem` counts + raw-macro-leak
+regex). Two commits landed the class bindings: `12ccebefc1`/`537aac9e50` (20
+classes), `3bc8a3342d` (JMLR structured author blocks + Wiley `MRM.cls`). See
+[[frontmatter-class-bindings-2026-07-12]] memory for the binding patterns.
+
+- **JMLR** (`jmlr_cls.rs`): `\Name`/`\Email`/`\addr` now digest **directly** into
+  structured creators (name → personname, email/affiliation → contacts) instead
+  of the generic `\and`/comma splitter, which crammed every author into one
+  `<personname>` and split the affiliation's commas into phantom authors; `\nametag`
+  no longer leaks. (Answers a user question on maximizing structured markup —
+  beyond-Perl, Perl ships no jmlr binding.)
+- **MRM.cls** (Wiley "Magnetic Resonance in Medicine", new `mrm_cls.rs`):
+  `\author[idx]{name}{orcid}`, `\address`, `\corres`, `\finfo`, `\authormark`,
+  `\state` (deliberately absent from OmniBus), plus own dep loads for ORCID/math/cites.
+
+**Harness note (signal integrity):** the arXiv-source main-`.tex` detector must
+skip `*-backup.tex` / `template/*` / `Rebuttal.tex` / `*_preprint.tex` /
+versioned-subdir mains and *bonus* the file that carries the bibliography — an
+early detector picked wrong mains and produced ~5 false "no authors / no
+bibliography" reds (e.g. `2511.04594` = `Rebuttal.tex`). Corrected detector +
+re-convert cleared them.
+
+**Residual reds — all PARITY or already-beyond-Perl (NOT release-blocking):**
+`2402.09505` (aa `\href`-in-name, parity/cosmetic), `2601.05137` (author `\def\name`
+in a redefined `\@maketitle`, KPE #47 parity), `2403.07832` (minor `\footnotesize`
+in a `\thanks`, no minimal repro); `2306.06628`/`2512.16391`/`2605.23904` (no
+`\author` in source); `2508.20929` (atlasdoc author list `\input` in the body);
+`2405.13705` (iidtp `\makeiidtp` `titlepage` suppresses the document title block —
+**shared Perl XSLT rule**, and Perl *times out* entirely — authors show via the
+titlepage ORCID links); `2505.13921` (neurips: Perl *times out*; Rust produces the
+full doc with authors preserved in `<ltx:creator>` metadata, but the visible title
+block doesn't render — a `\maketitle`-expandability interaction). The last two are
+**beyond-Perl already** (Perl produces nothing).
+
+### Bibliography "missing references" — NEXT-TARGET list (surveyed 2026-07-12)
+
+Per the user follow-up ("detect docs where References are entirely missing … the
+next target for beyond-Perl bibliography work"). Playwright scan over all 297
+reported papers (correct mains) → only **4** genuinely lack a rendered
+bibliography, and the dominant root cause is **NOT** bibliography markup — it is a
+**mid-body digestion error that truncates the document** before the (end-of-doc)
+bibliography, which is then collateral damage:
+
+- `2507.21938` (ICML): document tree **truncates** mid-section-2 (empty table
+  cells + empty figure); `\bibliography{example_paper}` + co-located
+  `example_paper.bbl` never reached. Body-truncation bug.
+- `2508.13557` (IEEEtran): undefined `\node` (tikz outside a picture) corrupts
+  `display_math` mode → `\lx@end@display@math` cascade → **truncation** before the
+  bibliography. `main.bbl` *is* input (the `\jobname.bbl` fallback works). Body-error bug.
+- `2510.25135`: **source path-doubling** — main is `submissio-v0/main.tex` and
+  `\bibliography{submissio-v0/mypub,submissio-v0/ref}` resolves relative to that
+  dir → `submissio-v0/submissio-v0/…`. Source quirk (assumes top-level compile).
+- `2606.25280`: **source filename case/extension quirk** —
+  `\bibliography{EvoFlock.bib}` vs the shipped `Evoflock.bib` (fails only on a
+  case-sensitive FS; parity with Perl on Linux).
+
+So the real beyond-Perl lever is **body-error resilience** (2 papers where a
+mid-body digestion error truncates the tail); the other 2 are source quirks/parity.
+Post-release (release-week bias is stabilize, and these are deep digestion work).
+
+### >500 MB `index.xml` (Nasser) — INVESTIGATED 2026-07-10
+
+Witness `~/scratch/nasser/index.xml`: 614 MB, ~7M nodes, **40 000 one-equation
+sections** (`solving_ODE` auto-generated notes), `--splitat=section`. Findings:
+
+- **Perl LaTeXML cannot convert it.** The reporter's own `index.latexmlpost.log`:
+  `latexmlpost` (0.8.8) dies `Fatal:perl:die … growing nodeset hit limit`
+  (`XPath.pm:36`) in **8.67s** — libxml2's `XPATH_MAX_NODESET_LENGTH`. Perl's
+  *core* also took **52m 7s** just to emit the XML (40000 formulae / 1577s math).
+- **latexml-oxide CAN, and the fix is ALREADY in the release** (PR **#274**,
+  `b0cc70f319`, squash-merged 2026-07-07 → ancestor of `public-release-prep-week`).
+  With the foundation it converts fully: `Split into 40201 pages`, ~2m18s, peak
+  ~21.6 GB, byte-identical across all pages (measured;
+  `STREAMING_POST_DESIGN_2026-07-06`). A genuine **beyond-Perl** win (Perl outright
+  fatals). Without the fix, `//*[@xml:id]` would overflow the 10M-nodeset ceiling →
+  NULL → swallowed → `[not split]`, silently reproducing Perl's failure class — but
+  that landed in #274, so the release-week action is only the confidence check in
+  SAFE step #1, not a merge.
+- **The lean-RSS half stays deferred (task #44).** Two-pass streaming split
+  (21.6 GB → <1 GB) is unneeded for release (reporter has >64 GB RAM; eager path
+  is correct + fast). Revisit only if a <64 GB target appears. Design preserved in
+  `STREAMING_POST_DESIGN_2026-07-06.md`.
+
+### Beyond-Perl performance levers — from the 2026-07-10 60k-doc telemetry (POST-RELEASE — deferred out of release week per the stabilization review above)
+
+The 2605+2606 reruns (60,469 docs, containerized worker, per-job `telemetry.json`
+mined in `docs/performance/ARXIV_PERFORMANCE.md` "Corpus-wide phase budget 2026-07-10")
+re-point the perf campaign. **Wall time is broad, not math-dominated:** digest
+19.7% · math_parse 19.2% · build 18.1% · **xslt 13.2%** · graphics 8.9% ·
+mathml_pres 4.5%. Concentration is only moderate (slowest 1% = 10% of wall), so
+median-path wins pay off as broadly as tail-chasing. These are **Target-2
+beyond-Perl** tasks: Perl LaTeXML is single-threaded (thread-local State
+singleton) and libxslt/`XML::LibXML`-bound; Rust affords levers it cannot.
+
+**Architectural constraints that shape feasibility (respect these):**
+- State is a thread-local global singleton → the **digest phase is sequential**;
+  no parallelism lever there, only algorithmic.
+- rust-libxml nodes are **not `Send`/`Sync`** (libxml2 FFI) → cannot naively
+  parallelize DOM mutation. The tractable pattern is **parallelize the pure,
+  `Send`-able computation (Marpa parse, MathML *structure*), keep the DOM graft
+  sequential.**
+- one-conversion-per-process harness (memory isolation) → amortize *within* a
+  conversion (fork/threads), not across docs.
+- **Output-neutrality gate is non-negotiable** (`ARXIV_PERFORMANCE.md`): every
+  lever must be byte-identical on the isolated before/after harness + keep Perl
+  parity. A perf change that alters output is a separate, authorized decision.
+
+**BP-1 — Parallel per-formula math parsing** (attacks math_parse 19.2%; the
+math-dense slow tail — `2605.16382` 4136 formulae/116s, `2605.20736`, `2605.14423`).
+Each `<XMath>` Marpa parse is independent and operates on a token/box IR (data,
+not libxml). *Lever Perl lacks:* Parse::RecDescent + single thread. *Approach:*
+collect formula IRs during digest; parse them in a rayon pool (each thread gets
+its own thread-local SymStr arena — verify the parser is arena-isolatable and
+free of cross-formula shared mutable state); graft XMDual/parse results into the
+DOM sequentially in original order. *Feasibility:* medium (arena-per-thread +
+parser-purity audit). Output-neutral by construction (same parses, same order).
+
+**BP-2 — XSLT amortization → native transpilation** (attacks xslt 13.2%, the
+single most under-exploited phase — only the 3 `O(n²)` template fixes touched it).
+13% is libxslt *interpreting our own fixed, embedded stylesheets*, re-parsed per
+one-doc process. *Step 1 (cheap, do first):* `xsltproc --profile` split of xslt
+into stylesheet-COMPILE (fixed/doc) vs APPLY (scales with doc); if compile-heavy,
+embed a **pre-parsed/precompiled stylesheet** (the XSLT analog of the kernel-dump
+precompilation we already ship). *Step 2 (ambitious, beyond-Perl):* transpile the
+hottest templates the profile flags into **native Rust DOM transforms**, bypassing
+libxslt entirely for them (Perl is libxslt-bound and cannot). *Feasibility:* Step1
+low-risk/moderate win; Step2 high-effort/high-win.
+
+**BP-3 — Concurrent graphics + parallel MathML structure** (graphics 8.9% +
+mathml_pres 4.5% ≈ 13%). Graphics conversions are independent *subprocesses*
+(gs/dvisvgm/inkscape) run **serially** today — fork them in a bounded concurrent
+pool (no `Send` barrier; the tractable, high-feasibility half). MathML
+presentation per formula is independent pure computation → parallelize on BP-1's
+enabling work. Perl runs both serially.
+
+**BP-4 — Live digest-progress watchdog — RETIRED 2026-07-10 (triage overturned the
+premise).** The Cluster H "digest-runaway fatals" were triaged against same-host
+Perl (`STABILITY_WITNESSES.md` Cluster H): they are **not** a clean beyond-Perl
+watchdog opportunity but a heterogeneous set of **genuine Rust runaway-loop bugs**,
+and a no-progress abort would **regress `2605.23849`, which Perl converts cleanly**
+(46s, 0 fatal). Reclassified as Target-1 parity work — three distinct root causes:
+(a) `\IfFileExists`-before-`\documentclass` → expansion spins past EOF → TokenLimit
+(2606.21610; likely broad — conditional-`\documentclass` templates + the readBalanced/
+`\lx@begin@alignment` families; overlaps the deferred read_balanced unbalanced-group
+leak); (b) `\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop → IfLimit (2605.23849;
+the clean must-fix regression); (c) undefined-macro cascade → IfLimit (2605.21013).
+Each trips an *existing* high limit ~100s in (safety net present but late) and needs
+a faithful per-mechanism fix, NOT a blunt early-abort. The unifying theme in (a)+(c):
+Rust error-recovery *loops* where Perl keeps *advancing* (emitting bounded errors →
+`too_many_errors` cap, which Rust also has but never reaches because the loop emits
+none). Do not build the watchdog.
+
+**BP-5 — Content-addressed formula memoization** (math_parse 19% + mathml 4.5% on
+matrix/table/aligned-system-heavy papers, which repeat identical sub-formulae).
+Hash the normalized formula token-stream (FxHashMap + interner — cheap in Rust)
+and memoize parse→XMDual→MathML. *Lever Perl lacks.* **Correctness crux:** the key
+must capture every parse-affecting context (font, mode, catcodes, math-style);
+mis-keying silently corrupts output, so gate hard on the output-neutrality diff.
+*Feasibility:* medium; large win on table/matrix-dense papers.
+
+**BP-6 (stretch/experiment) — Native construction tree, defer libxml FFI**
+(attacks build 18.1% = per-node rust-libxml FFI during construction). Build a
+native arena tree during construction, convert to libxml once at the end (or emit
+HTML directly on the non-`--validate` path). Perl is also `XML::LibXML`-FFI-bound,
+so this is a structural beyond-Perl bet. *Feasibility:* low-medium, HIGH effort
+(rewrites the document builder core) — park as an experiment, measure the FFI
+share first.
+
+**Digest (19.7%) note:** sequential TeX engine — **no** parallelism lever; the win
+is algorithmic (profile the hot macros with the sampled `EXP_TRACE` histogram, cut
+redundant re-tokenization / re-expansion). Track separately from the parallelism
+BPs above.
+
+Suggested order (revised 2026-07-10 after BP-4 was retired) — **all POST-RELEASE per
+the release-week stabilization review above; first work after the tag ships:**
+**BP-2 Step 1** (cheap XSLT profile+amortize — the cleanest, divergence-free win) →
+**BP-3 graphics batch** → **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each
+lands on a feature branch, gated by the isolated before/after output-neutrality
+harness + Perl parity + `cargo test`. Separately, the Cluster H runaway-loop bugs
+(ex-BP-4) are Target-1 parity work tracked in `STABILITY_WITNESSES.md` (also
+post-release — deep engine surgery, not release-week work).
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 

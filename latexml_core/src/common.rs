@@ -101,11 +101,17 @@ pub struct Config {
   pub search_paths:            Option<Vec<String>>,
   /// Whether to include XML comments in output (--nocomments sets false)
   pub include_comments:        Option<bool>,
+  /// Strict error-reporting (`--strict`; State `STRICT`, Perl Core.pm L43)
+  pub strict:                  Option<bool>,
+  /// Raw-load `.sty` AND `.cls` sources (`--includestyles`). WARNING: one flag
+  /// enables raw TeX loading of both packages and classes — it sets State
+  /// `INCLUDE_STYLES` and `INCLUDE_CLASSES` together (Perl Core.pm L55-57).
+  pub include_styles:          Option<bool>,
   /// Whether to skip math parsing (--nomathparse)
   pub nomathparse:             Option<bool>,
   /// Whether to track + emit source locators (`--source-map`). Off by
   /// default; gates both per-token start capture and per-element
-  /// `data-sourcepos` stamping. See `docs/SOURCE_PROVENANCE.md`.
+  /// `data-sourcepos` stamping. See `docs/performance/SOURCE_PROVENANCE.md`.
   pub source_map:              Option<bool>,
 }
 impl Default for Config {
@@ -123,6 +129,8 @@ impl Default for Config {
       preload:                 None,
       search_paths:            None,
       include_comments:        None,
+      strict:                  None,
+      include_styles:          None,
       nomathparse:             None,
       source_map:              None,
     }

@@ -358,6 +358,8 @@ impl LatexmlWorker {
       preload:                 Some(self.profile.preloads.clone()),
       search_paths:            Some(search_paths),
       include_comments:        Some(false),
+      strict:                  None,
+      include_styles:          None,
       nomathparse:             None,
       // Corpus/parity sweeps never emit locators — keep the zero-cost path.
       source_map:              None,
@@ -427,6 +429,10 @@ impl LatexmlWorker {
       // was strictly looser — would attempt SVG on 200 KB raster PDFs
       // even when their image XObject was visible in the header).
       graphics_svg_threshold_kb: 0,
+      // Canvas-bulk path: always convert graphics; no favicon/timestamp.
+      graphicimages:             true,
+      timestamp:                 None,
+      icon:                      None,
       // cortex_worker is the canvas-bulk path — always emit the full
       // document, never the fragment / math extraction variants.
       whatsout:                  latexml_post::extract::Whatsout::Document,
@@ -1473,7 +1479,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   // 0 disables.
   //
   // Why 25% (=2048 MiB at the default 8 GiB ceiling) and not 50%: a full-corpus 10k sweep at the
-  // CPU-optimal 72 workers (see docs/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
+  // CPU-optimal 72 workers (see docs/performance/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
   // vs ~188 GB at 50% on a 247 GiB box — and the 50% peak drops MemAvailable below the
   // mem-pressure governor's floor, triggering ~25 worker sheds whose re-leased tasks can exhaust
   // their retry budget and surface as `cortex:never_completed_with_retries` Fatals. 25% recycles
@@ -1520,7 +1526,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   // (deadlock, uninterruptible D-state I/O, a dead watchdog thread) that
   // death-driven SIGCHLD supervision cannot see because the process is alive.
   let unresponsive_timeout = Some(std::time::Duration::from_secs(
-    (cli.timeout as u64).saturating_mul(2).max(300),
+    cli.timeout.saturating_mul(2).max(300),
   ));
 
   let config = HarnessConfig {

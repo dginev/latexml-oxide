@@ -1,0 +1,22 @@
+\documentclass{article}
+\usepackage{graphicx}
+% Regression guard for NATIVE PDF sizing (WISDOM #62): panels with no explicit
+% width= must be sized from the PDF's own page box (CropBox->MediaBox, the way
+% pdfTeX reads it — no ImageMagick), NOT collapsed to zero (which would merge
+% every panel into one row) nor sized by the filename string.
+%
+% colors.pdf is a US-letter page (MediaBox 612x792bp -> natural width 614.3pt).
+% At scale=0.16 each panel is ~98pt, so three fit in the ~345pt float and the
+% fourth wraps -> exactly one break, after the third. If native sizing regressed
+% to the width= fallback these would all be zero-width and merge into one row.
+\begin{document}
+\begin{figure}
+\centering
+\includegraphics[scale=0.16]{../graphics/colors.pdf}
+\includegraphics[scale=0.16]{../graphics/colors.pdf}
+\includegraphics[scale=0.16]{../graphics/colors.pdf}
+\includegraphics[scale=0.16]{../graphics/colors.pdf}
+\caption{Four scale-sized panels, three per row via native PDF sizing.}
+\label{fig:native}
+\end{figure}
+\end{document}

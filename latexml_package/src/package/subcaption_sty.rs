@@ -92,16 +92,48 @@ LoadDefinitions!({
   //======================================================================
   // Subfigure environments
   // Perl: beforeFloat('subfigure', preincrement => 'figure') / afterFloat
-  DefEnvironment!("{subfigure}[]{Dimension}",
-    "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
-      #tags\
-      #body\
-    </ltx:figure>",
-    mode => "internal_vertical",
-    properties => sub[args] { subcaption_width_props(args) },
-    before_digest => { before_float("subfigure", Some("figure")); },
-    after_digest => sub[whatsit] { after_float(whatsit); }
-  );
+  //
+  // EMULATE LaTeX's `\newenvironment` "already defined" guard. subcaption and
+  // the (unsupported) subfigure package are officially INCOMPATIBLE: both want
+  // to own `\subfigure`/`\subtable`. subfigure.sty binds them as
+  // `\subfigure[][]{}` / `\subtable[][]{}` MACROS (self-contained, one
+  // mandatory body); subcaption binds them as `{subfigure}[]{Dimension}` /
+  // `{subtable}[]{Dimension}` ENVIRONMENTS. In real LaTeX, subcaption declares
+  // these via `\newenvironment{subfigure}`, which REFUSES to redefine an
+  // already-defined `\subfigure` (it raises "Command \subfigure already defined"
+  // and keeps subfigure.sty's macro); our `DefEnvironment!` is unconditional
+  // (like `\def`, not `\newenvironment`), so it used to CLOBBER the macro.
+  // Then a `\subfigure[]{\includegraphics{...}}` (subfigure.sty's macro syntax)
+  // reparsed as `\begin{subfigure}` with `{\includegraphics{...}}` read as the
+  // `{Dimension}` (→ "Missing number", treated as zero) and the environment
+  // opened with no matching `\end{subfigure}` in the source, leaking an
+  // internal_vertical group that swallowed the rest of the document (figures,
+  // sections, bibliography). Vendored Perl clobbers the same way and *times out*
+  // on the witness — upstream candidate (KNOWN_PERL_ERRORS #48). So mirror the
+  // `\newenvironment` guard: only bind these two envs when the colliding command
+  // is not already defined, and Warn about the package conflict when it is.
+  // (`{subfigure*}`/`{subtable*}`/`{subcaptionblock}` names don't collide with
+  // subfigure.sty and stay unconditional.) Witness 2507.21938.
+  let subfigure_predefined = has_meaning(&T_CS!("\\subfigure"));
+  let subtable_predefined = has_meaning(&T_CS!("\\subtable"));
+  if subfigure_predefined {
+    Warn!("unexpected", "subcaption",
+      "subcaption is incompatible with the subfigure package: \\subfigure is \
+       already defined (by subfigure.sty), so subcaption's {subfigure} \
+       environment is not installed (mirrors \\newenvironment's guard); \
+       subfigure.sty's \\subfigure macro is kept");
+  } else {
+    DefEnvironment!("{subfigure}[]{Dimension}",
+      "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+        #tags\
+        #body\
+      </ltx:figure>",
+      mode => "internal_vertical",
+      properties => sub[args] { subcaption_width_props(args) },
+      before_digest => { before_float("subfigure", Some("figure")); },
+      after_digest => sub[whatsit] { after_float(whatsit); }
+    );
+  }
 
   // Perl L77: `{subfigure*}` passes double => 1, widening \hsize to
   // \textwidth for two-column spans (vs \columnwidth).
@@ -140,16 +172,26 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
-  DefEnvironment!("{subtable}[]{Dimension}",
-    "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
-      #tags\
-      #body\
-    </ltx:table>",
-    mode => "internal_vertical",
-    properties => sub[args] { subcaption_width_props(args) },
-    before_digest => { before_float("subtable", Some("table")); },
-    after_digest => sub[whatsit] { after_float(whatsit); }
-  );
+  // Same `\newenvironment` guard for `\subtable` (subfigure.sty's `\subtable`
+  // macro), for the same reason as `\subfigure` above.
+  if subtable_predefined {
+    Warn!("unexpected", "subcaption",
+      "subcaption is incompatible with the subfigure package: \\subtable is \
+       already defined (by subfigure.sty), so subcaption's {subtable} \
+       environment is not installed (mirrors \\newenvironment's guard); \
+       subfigure.sty's \\subtable macro is kept");
+  } else {
+    DefEnvironment!("{subtable}[]{Dimension}",
+      "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+        #tags\
+        #body\
+      </ltx:table>",
+      mode => "internal_vertical",
+      properties => sub[args] { subcaption_width_props(args) },
+      before_digest => { before_float("subtable", Some("table")); },
+      after_digest => sub[whatsit] { after_float(whatsit); }
+    );
+  }
 
   // Perl L97: `{subtable*}` passes double => 1 (see {subfigure*} above).
   DefEnvironment!("{subtable*}[]{Dimension}",

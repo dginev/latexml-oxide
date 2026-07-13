@@ -118,7 +118,7 @@ static PARSE_AMBIGUITY_AUDIT: Lazy<bool> =
 static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
   Lazy::new(|| std::env::var("LATEXML_MARPA_HYBRID_AUDIT_PARITY").is_ok());
 // Route `parse_marpa` through one of three paths. See
-// docs/MATH_PARSER_AND_ASF.md and marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
+// docs/math/MATH_PARSER_AND_ASF.md and marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
 //
 // **HYBRID is now the default** (2026-05-17). Hybrid reads the tokens
 // once, builds the bocage once, then checks Marpa's raw
@@ -151,7 +151,7 @@ static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE
 // allocate the entire Rust-side glade/factoring view up front; on
 // math-bound papers with high-cardinality ambiguous forests this
 // blew through the 8 GB ulimit (19/100 OOMs on the math-bound
-// sample — see docs/PERFORMANCE.md "HYBRID at scale" addendum).
+// sample — see docs/performance/PERFORMANCE.md "HYBRID at scale" addendum).
 //
 // Default 500: downstream consumers (pragmatics selection, XMath
 // builders) can't usefully process more than a handful of distinct
@@ -682,7 +682,7 @@ impl MathParser {
         let math_ref = math.clone();
         // Per-formula timing feeds the math_parse_buckets histogram in
         // telemetry. ~20 ns Instant cost per formula is negligible vs Marpa.
-        // See docs/TELEMETRY.md.
+        // See docs/performance/TELEMETRY.md.
         let t0 = std::time::Instant::now();
         if let Err(e) = self.parse(math, document) {
           // Aborting math parsing (a propagated resource fatal — P1-4):
@@ -1886,7 +1886,7 @@ impl MathParser {
       // (including any pragmas-pruned ones counted as `pruned_count`)
       // in a single sweep; no Tree-iteration loop, no convergence
       // bandages. See `latexml_math_parser/src/asf_traverser.rs` and
-      // docs/MATH_PARSER_AND_ASF.md.
+      // docs/math/MATH_PARSER_AND_ASF.md.
       let mut traverser = crate::asf_traverser::MathTraverser {
         actions: &self.actions,
         pragmas: self.expert_pragmatics.as_slice(),
@@ -1987,7 +1987,7 @@ impl MathParser {
       // For the production-path concern (long-time tree-iteration
       // cost), HYBRID's `metric == 2 → ASF` routing already
       // sidesteps these caps via per-glade memoization. See
-      // docs/MATH_PARSER_AND_ASF.md.
+      // docs/math/MATH_PARSER_AND_ASF.md.
       let max_trees = 5000; // Hard limit on parse tree enumeration
       let max_time = std::time::Duration::from_secs(30); // 30 second timeout
       // Convergence: if we've seen enough consecutive duplicates without
@@ -2209,7 +2209,7 @@ impl MathParser {
         // the pragma left `cargo test --tests` = 1328/0/0 on both
         // HYBRID and ASF — the pragma is structurally redundant.
         // See commit history (the new commit) and
-        // `docs/MATH_PARSER_ASF_TIEBREAKING.md`.
+        // `docs/math/MATH_PARSER_ASF_TIEBREAKING.md`.
 
         // Multi-tree pragma: a *specific* QM semantic
         // (`quantum-operator-product@(a, f, b)`, `inner-product@(a, b)`)
@@ -2234,7 +2234,7 @@ impl MathParser {
         // chains. Fires only when at least one candidate has a
         // `delimited-X` Apply AND another has fewer/zero. Resolves
         // `2<x,y>=z`, `0<<a,b>>1`, and bra-ket-style angle fences.
-        // See docs/MATH_PARSER_ASF_TIEBREAKING.md § "What landed".
+        // See docs/math/MATH_PARSER_ASF_TIEBREAKING.md § "What landed".
         reduced_forest = reduced_forest.prefer_more_delimited_wrappers();
 
         // Multi-tree pragma: prefer candidates with MORE
@@ -2272,7 +2272,7 @@ impl MathParser {
         // `prefer_smaller_tree`) exist on `XM` but are
         // **deliberately not wired in by default**. Both proved
         // too coarse to apply universally — see
-        // docs/MATH_PARSER_ASF_TIEBREAKING.md § "Empirical results":
+        // docs/math/MATH_PARSER_ASF_TIEBREAKING.md § "Empirical results":
         //
         // * `prefer_fewer_absent`: on the legacy path it is essentially neutral (1300/1 vs 1301
         //   baseline), but on the ASF path it costs 9 tests because ASF surfaces absent-free parses
@@ -2995,7 +2995,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     // c + dc + d", regressing choose/declare/sampler): callers here rely on
     // an unresolved ref returning the XMRef itself. The warnings are benign
     // (WARN-level, targets resolve in the final tree); do not "fix" them by
-    // swapping the resolver. See docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
+    // swapping the resolver. See docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
     // Can it happen that the target is itself an XMRef? Then recurse.
     if let Some(realnode) = document.lookup_id(&idref) {
       return Cow::Borrowed(realnode);
@@ -3012,7 +3012,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     // Callers rely on an unresolved ref returning the XMRef itself; do NOT "fix"
     // by swapping in `resolve_xmref` — that DUPLICATES content (\choose →
     // "a + ba + b binomial c + dc + d"; regresses choose/declare/sampler). See
-    // docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
+    // docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
     // The AUTHORITATIVE dangling-ref check is the faithful post-processing pass
     // (Perl Post.pm:1444/1456 → latexml_post `realize_xm_node` /
     // `mark_xm_node_visibility_aux`, Error severity) plus core

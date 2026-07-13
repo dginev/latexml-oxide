@@ -21,7 +21,7 @@ flate2 = "1"
 [features]
 # Source-map precision build — propagates to latexml_core so the token-origin
 # field resolves in this crate's token-macro expansions. Enable via
-# `latexml_oxide/token-locators`. See docs/SOURCE_PROVENANCE.md §3.1.1.
+# `latexml_oxide/token-locators`. See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
 token-locators = ["latexml_core/token-locators"]
 
 [dependencies]

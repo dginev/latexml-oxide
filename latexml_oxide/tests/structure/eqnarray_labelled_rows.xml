@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <equationgroup xml:id="S0.E1">
+      <tags>
+        <tag>(1)</tag>
+        <tag role="refnum">1</tag>
+      </tags>
+      <equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx1">
+        <equation labels="LABEL:eq:obj" xml:id="S0.E1.1">
+          <tags>
+            <tag>(1a)</tag>
+            <tag role="refnum">1a</tag>
+          </tags>
+          <MathFork>
+            <Math tex="\displaystyle\operatorname{minimize}\;f(x)+g(x){}+\,h(x)" text="minimize@(f@(x)) + g@(x) + h@(x)" xml:id="S0.E1.1.m2">
+              <XMath>
+                <XMApp>
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMApp>
+                    <XMTok role="OPFUNCTION" rpadding="2.8pt" scriptpos="post">minimize</XMTok>
+                    <XMApp>
+                      <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                      <XMDual>
+                        <XMRef idref="S0.E1.1.m2.1"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">(</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.1.m2.1">x</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMApp>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMDual>
+                      <XMRef idref="S0.E1.1.m2.2"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.1.m2.2">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                    <XMDual>
+                      <XMRef idref="S0.E1.1.m2.3"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.1.m2.3">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                </XMApp>
+              </XMath>
+            </Math>
+            <MathBranch>
+              <tr>
+                <td align="right"><Math mode="inline" tex="\displaystyle\operatorname{minimize}\;" text="minimize" xml:id="S0.E1.x1.m1">
+                    <XMath>
+                      <XMTok role="OPFUNCTION" rpadding="2.8pt" scriptpos="post">minimize</XMTok>
+                    </XMath>
+                  </Math></td>
+                <td/>
+                <td align="left"><Math mode="inline" tex="\displaystyle f(x)+g(x)" text="f@(x) + g@(x)" xml:id="S0.E1.x1.m2">
+                    <XMath>
+                      <XMApp>
+                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                          <XMDual>
+                            <XMRef idref="S0.E1.x1.m2.1"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.x1.m2.1">x</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                          <XMDual>
+                            <XMRef idref="S0.E1.x1.m2.2"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.x1.m2.2">x</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                      </XMApp>
+                    </XMath>
+                  </Math></td>
+              </tr>
+              <tr>
+                <td/>
+                <td/>
+                <td align="left"><Math mode="inline" tex="\displaystyle{}+\,h(x)" text="+ h@(x)" xml:id="S0.E1.1.m1">
+                    <XMath>
+                      <XMApp>
+                        <XMTok meaning="plus" role="ADDOP" rpadding="1.7pt">+</XMTok>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMDual>
+                            <XMRef idref="S0.E1.1.m1.1"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.1.m1.1">x</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                      </XMApp>
+                    </XMath>
+                  </Math></td>
+              </tr>
+            </MathBranch>
+          </MathFork>
+        </equation>
+        <equation labels="LABEL:eq:ca" xml:id="S0.E1.2">
+          <tags>
+            <tag>(1b)</tag>
+            <tag role="refnum">1b</tag>
+          </tags>
+          <MathFork>
+            <Math tex="\displaystyle\mbox{s.t.}a(x)\leq 0" text="[s.t.] * a * x &lt;= 0" xml:id="S0.E1.2.m4">
+              <XMath>
+                <XMApp>
+                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMText class="ltx_markedasmath">s.t.</XMText>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMDual>
+                      <XMRef idref="S0.E1.2.m4.1"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.2.m4.1">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+              </XMath>
+            </Math>
+            <MathBranch>
+              <tr>
+                <td align="right"><text class="ltx_markedasmath">s.t.</text> </td>
+                <td/>
+                <td align="left"><Math mode="inline" tex="\displaystyle a(x)\leq 0" text="a@(x) &lt;= 0" xml:id="S0.E1.2.m2">
+                    <XMath>
+                      <XMApp>
+                        <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                          <XMDual>
+                            <XMRef idref="S0.E1.2.m2.1"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.2.m2.1">x</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                      </XMApp>
+                    </XMath>
+                  </Math></td>
+              </tr>
+            </MathBranch>
+          </MathFork>
+        </equation>
+        <equation labels="LABEL:eq:cb" xml:id="S0.E1.3">
+          <tags>
+            <tag>(1c)</tag>
+            <tag role="refnum">1c</tag>
+          </tags>
+          <MathFork>
+            <Math tex="\displaystyle b(x)\leq 0" text="b@(x) &lt;= 0" xml:id="S0.E1.3.m4">
+              <XMath>
+                <XMApp>
+                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMDual>
+                      <XMRef idref="S0.E1.3.m4.1"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.3.m4.1">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+              </XMath>
+            </Math>
+            <MathBranch>
+              <tr>
+                <td/>
+                <td/>
+                <td align="left"><Math mode="inline" tex="\displaystyle b(x)\leq 0" text="b@(x) &lt;= 0" xml:id="S0.E1.3.m1">
+                    <XMath>
+                      <XMApp>
+                        <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                          <XMDual>
+                            <XMRef idref="S0.E1.3.m1.1"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.3.m1.1">x</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                      </XMApp>
+                    </XMath>
+                  </Math></td>
+              </tr>
+            </MathBranch>
+          </MathFork>
+        </equation>
+        <equation labels="LABEL:eq:cc" xml:id="S0.E1.4">
+          <tags>
+            <tag>(1d)</tag>
+            <tag role="refnum">1d</tag>
+          </tags>
+          <MathFork>
+            <Math tex="\displaystyle c(x)=0" text="c@(x) = 0" xml:id="S0.E1.4.m4">
+              <XMath>
+                <XMApp>
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMDual>
+                      <XMRef idref="S0.E1.4.m4.1"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.4.m4.1">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+              </XMath>
+            </Math>
+            <MathBranch>
+              <tr>
+                <td/>
+                <td/>
+                <td align="left"><Math mode="inline" tex="\displaystyle c(x)=0" text="c@(x) = 0" xml:id="S0.E1.4.m1">
+                    <XMath>
+                      <XMApp>
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                          <XMDual>
+                            <XMRef idref="S0.E1.4.m1.1"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.4.m1.1">x</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                      </XMApp>
+                    </XMath>
+                  </Math></td>
+              </tr>
+            </MathBranch>
+          </MathFork>
+        </equation>
+      </equationgroup>
+    </equationgroup>
+  </para>
+</document>

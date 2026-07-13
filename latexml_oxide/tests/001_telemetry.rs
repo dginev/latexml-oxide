@@ -1,4 +1,4 @@
-//! Integration test for telemetry foundation (docs/TELEMETRY.md §6 acceptance).
+//! Integration test for telemetry foundation (docs/performance/TELEMETRY.md §6 acceptance).
 //!
 //! Runs a real Converter conversion on hello.tex and verifies:
 //! 1. The telemetry struct is populated with non-zero phase totals where applicable.
@@ -57,7 +57,7 @@ fn telemetry_populates_on_hello_conversion() {
   // concurrent `cargo test` load inflates wall far above phase work for a
   // tiny doc (observed 0.49 vs the old 0.5 bound — flaky, not a regression).
   // Production phase-coverage (≥0.92) is measured out-of-process on real
-  // papers; see docs/TELEMETRY.md §6.5.
+  // papers; see docs/performance/TELEMETRY.md §6.5.
   let sum_phase: u64 = phase_us.iter().sum();
   assert!(
     sum_phase > 0,

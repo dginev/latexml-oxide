@@ -115,7 +115,7 @@ LoadDefinitions!({
   DefMacro!("\\tablehead{}{}{}{}", "\\multicolumn{#1}{#2}{\\parbox{#3}{#4}}");
   // Perl aipproc.cls.ltxml L101 body references `#1` (the OptionalMatch:*
   // star flag), silently dropping the note content. See
-  // docs/KNOWN_PERL_ERRORS.md #16. Rust deliberately indexes `#2` (the
+  // docs/parity/KNOWN_PERL_ERRORS.md #16. Rust deliberately indexes `#2` (the
   // content) to match the documented sibling convention from physics.sty.
   DefMacro!("\\tablenote OptionalMatch:* {}", "\\footnote{#2}");
 

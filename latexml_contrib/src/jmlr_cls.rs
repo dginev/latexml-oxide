@@ -15,18 +15,41 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
 
-  // Author-block primitives (jmlr.cls L335-342, L374-445).
-  def_macro_noop("\\addr")?;
-  DefMacro!("\\Name[]{}", "#2");
-  // \Email{addr} — author email; preserve as ltx:creator/ltx:contact.
+  // Author block. jmlr.cls L259/374-449:
+  //   \author[short]{ \Name{N1} \Email{E1} \\ \Name{N2} \Email{E2}
+  //                    \\ \addr Affiliation }
+  // The `\Name`/`\Email`/`\addr` sub-macros carry the structure. The generic
+  // \and/comma author splitter mis-reads it — it crams every \Name into a
+  // single <personname> and splits the affiliation's commas into phantom
+  // authors ("Oxford", "UK"). So when the body uses \Name, digest it directly
+  // into structured creators (each \Name → ltx:creator/ltx:personname, \Email →
+  // ltx:contact[role=email], the trailing \addr block → ltx:contact
+  // [role=affiliation]); otherwise fall back to the standard \author splitter.
+  // Beyond-Perl (Perl ships no jmlr binding). Witness 2410.16138, 2409.07012.
+  let_i(&T_CS!("\\lx@jmlr@core@author"), &T_CS!("\\author"), None);
+  DefMacro!("\\author[]{}", sub[(short, body)] {
+    if body.to_string().contains("\\Name") {
+      Ok(Invocation!(T_CS!("\\lx@jmlr@structauthor"), vec![Some(body)]))
+    } else {
+      Ok(Invocation!(T_CS!("\\lx@jmlr@core@author"), vec![short, Some(body)]))
+    }
+  });
+  // Digest the structured body in a group so the row separators (\\, \and, \AND)
+  // collapse to spaces; a sentinel is appended so a trailing \addr can capture
+  // the (shared) affiliation up to it.
   DefMacro!(
-    "\\Email{}",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{email}{#1}}"
+    "\\lx@jmlr@structauthor{}",
+    "\\begingroup\\def\\\\{ }\\def\\and{ }\\def\\AND{ }#1\\lx@jmlr@endaddr\\endgroup"
   );
-  DefConstructor!(
-    "\\@@@email{}{}",
-    "^ <ltx:contact role='#1'>#2</ltx:contact>"
-  );
+  DefMacro!("\\Name[]{}", "\\lx@add@creator[role=author]{#2}");
+  DefMacro!("\\Email{}", "\\lx@add@email{#1}");
+  DefMacro!("\\addr Until:\\lx@jmlr@endaddr", "\\lx@add@affiliation{#1}");
+  def_macro_noop("\\lx@jmlr@endaddr")?;
+  // jmlr.cls \nametag{tag} appends a marker (typically a \thanks) next to an
+  // author name inside \Name{... \nametag{\thanks{...}}}. Render its content
+  // inline so the wrapped \thanks becomes a note; without this the control
+  // word leaks as literal `\nametag`. Witness 2410.16138.
+  DefMacro!("\\nametag{}", "#1");
   // \IncludeName{firstname}{lastname} — author name parts in JMLR
   // bibliography. Preserve as ltx:note (rare in main paper body).
   DefMacro!(

@@ -70,7 +70,7 @@ mod runtime_bindings_reentrancy_model;
 /// A TeX-like digested Box
 pub mod tbox;
 /// Per-job structured telemetry: phase wall times, counts, resource peaks.
-/// See `docs/TELEMETRY.md` for the design contract.
+/// See `docs/performance/TELEMETRY.md` for the design contract.
 pub mod telemetry;
 /// Auxilary utilities that do not participate in the main conversion abstraction
 pub mod util;
@@ -190,7 +190,7 @@ pub struct CoreOptions {
   /// disable math parsing (enabled by default)
   pub nomathparse:      Option<bool>,
   /// enable source-locator (`--source-map`) tracking + emission (off by
-  /// default). See `docs/SOURCE_PROVENANCE.md`.
+  /// default). See `docs/performance/SOURCE_PROVENANCE.md`.
   pub source_map:       Option<bool>,
   /// an optional, fixed id prefix for all xml:id attributes
   pub documentid:       Option<String>,

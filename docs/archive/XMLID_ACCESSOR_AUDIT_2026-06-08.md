@@ -1,7 +1,7 @@
 # `xml:id` accessor audit — libxml string-API footgun
 
 > **Status:** AUDIT (2026-06-08). Triggered by the `expected:id` Class-B
-> investigation (`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`), which surfaced two
+> investigation (`docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`), which surfaced two
 > real bugs rooted in the same cause. Empirically grounded against
 > `libxml 0.3.12`.
 

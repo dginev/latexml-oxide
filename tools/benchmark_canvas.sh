@@ -148,7 +148,7 @@ fi
 RESULTS_TSV="$OUTPUT_DIR/results.tsv"
 # Per-job telemetry JSONL accumulator (cortex_worker writes telemetry.json
 # inside each output ZIP; we extract & append here). End of run: gzip.
-# See docs/TELEMETRY.md.
+# See docs/performance/TELEMETRY.md.
 TELEMETRY_JSONL="$OUTPUT_DIR/telemetry.jsonl"
 
 # ─── Validate environment ────────────────────────────────────────────────────

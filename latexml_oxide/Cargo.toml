@@ -61,7 +61,7 @@ dhat-heap = ["dep:dhat"]
 # cost of `phf` + `phf_macros` (proc-macro) + their `phf_generator` /
 # `phf_shared` build-deps, plus a small `.text` footprint.
 test-utils = ["dep:glob", "dep:phf"]
-# Source-map precision build (docs/SOURCE_PROVENANCE.md §3.1.1): widen `Token`
+# Source-map precision build (docs/performance/SOURCE_PROVENANCE.md §3.1.1): widen `Token`
 # with a per-token origin handle (8→12) so each token carries its exact source
 # start through expansion to digestion. OFF by default. Propagates to every
 # token-constructing crate so the cfg resolves consistently inside their
@@ -73,7 +73,7 @@ token-locators = [
   "latexml_contrib/token-locators",
   "latexml_math_parser/token-locators",
 ]
-# Runtime (Rhai) script bindings (docs/script_bindings_plan.md) — propagates
+# Runtime (Rhai) script bindings (docs/parity/script_bindings_plan.md) — propagates
 # to latexml_contrib (the only crate that embeds Rhai). ON by default:
 # downstream consumers of the single-file binary customize bindings without
 # recompiling. Distribution builds use `--no-default-features --features
@@ -166,18 +166,18 @@ arXiv corpus."""
 # package carries NO versioned libxml2/libxslt SONAME dependency (so it installs
 # on any libxml2 era — .so.2 and .so.16 alike). The remaining entries are
 # appended manually — they are runtime data/tools, not linked libraries:
-#   * imagemagick — our PRIMARY graphics processor (`convert`, the most-invoked
-#     graphics tool).
-#   * mupdf-tools — `mutool`, our PDF graphics processor.
-#     Both are promoted to hard Depends so graphics handling works out of the
-#     box rather than silently degrading.
-#   * texlive-* — the texmf trees kpsewhich resolves against.
-depends = "$auto, imagemagick, mupdf-tools, texlive-latex-base, texlive-latex-extra, texlive-science"
-# Secondary graphics/PDF helpers are SHELLED OUT at runtime (not linked) and only
-# needed for specific source content, so they stay in Recommends: pdftocairo
-# (poppler-utils — also the second-choice vector-SVG converter), gs/ps2pdf
-# (ghostscript), dvipng.
-recommends = "poppler-utils, ghostscript, dvipng"
+# The external tools the binary shells out to (audited from every `Command::new`
+# in the workspace) are ALL hard Depends — none are bundled, and each covers a
+# distinct branch of the graphics / LaTeX-image / TeX-resolution pipeline, so the
+# tool works out of the box rather than silently degrading:
+#   * imagemagick — `convert` (raster image conversion).
+#   * mupdf-tools — `mutool` (primary PDF graphics processor).
+#   * poppler-utils — `pdftocairo`/`pdftoppm` (vector-SVG PDF conversion).
+#   * ghostscript — `gs`/`ps2pdf` (PDF/PostScript conversion).
+#   * dvipng, dvisvgm — the `--mathimages`/LaTeX-image raster + vector paths.
+#   * texlive-* — the texmf trees + `kpsewhich`/`pdflatex`/`latex`/`tftopl` the
+#     engine resolves against.
+depends = "$auto, imagemagick, mupdf-tools, poppler-utils, ghostscript, dvipng, dvisvgm, texlive-latex-base, texlive-latex-extra, texlive-science"
 # NOTE: no inkscape suggestion. The vector-SVG path uses only mutool → pdftocairo;
 # a heavyweight GTK-stack inkscape fallback was deliberately dropped (raster PNG
 # is the fallback instead).
@@ -188,4 +188,5 @@ assets = [
   ["../README.md", "usr/share/doc/latexml-oxide/README", "644"],
   ["../CHANGELOG.md", "usr/share/doc/latexml-oxide/CHANGELOG", "644"],
   ["../LICENSE", "usr/share/doc/latexml-oxide/copyright", "644"],
+  ["../THIRD-PARTY-NOTICES", "usr/share/doc/latexml-oxide/THIRD-PARTY-NOTICES", "644"],
 ]

@@ -1026,7 +1026,7 @@ LoadDefinitions!({
   // (\start@align reads the count later), which is why eccv works there. We
   // mirror that structure: parameterless \alignat -> \lx@alignat@col, with the
   // count read by the helper. Surpasses a shared Perl bug (Perl defines
-  // `\alignat{}` arg-taking too) — see docs/KNOWN_PERL_ERRORS.md.
+  // `\alignat{}` arg-taking too) — see docs/parity/KNOWN_PERL_ERRORS.md.
   DefMacro!("\\alignat", "\\lx@alignat@col");
   DefMacro!(
     "\\lx@alignat@col{}",

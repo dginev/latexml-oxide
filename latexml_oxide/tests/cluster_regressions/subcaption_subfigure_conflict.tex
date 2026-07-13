@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{caption}
+\usepackage{subcaption}
+\begin{document}
+\section{Intro}
+\begin{figure}
+\subfigure[]{\includegraphics[width=0.3\textwidth]{panel-a}}
+\subfigure[]{\includegraphics[width=0.3\textwidth]{panel-b}}
+\caption{A figure with subfigure.sty panels.}
+\end{figure}
+\section{After}
+Content after the figure must survive. When subcaption is loaded after
+subfigure.sty, its \verb|{subfigure}| environment must not clobber
+subfigure.sty's self-contained \verb|\subfigure| macro, or the macro-form call
+above reparses as an unclosed environment and swallows the rest of the document.
+\begin{thebibliography}{9}
+\bibitem{ref-a} A.~Author, A representative title, 2021.
+\end{thebibliography}
+\end{document}

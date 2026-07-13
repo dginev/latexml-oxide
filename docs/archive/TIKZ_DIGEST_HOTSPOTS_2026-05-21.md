@@ -2,7 +2,7 @@
 
 Profiling study of where wall time is spent during digestion of
 TikZ/pgfplots-heavy papers. Driven by Win #5 of the 2026-05-16
-performance sprint (see `docs/PERFORMANCE.md`). **This document is
+performance sprint (see `docs/performance/PERFORMANCE.md`). **This document is
 research-only**; no engine edits land here. The findings are a punch
 list for a follow-up macro-engine sweep.
 

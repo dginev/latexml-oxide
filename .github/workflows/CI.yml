@@ -68,7 +68,7 @@ jobs:
 
   # Miri (UB detector) over the FFI-FREE pure-Rust `unsafe` — the string
   # interner / arena bounds-skip (resolve_unchecked) + re-entrant `&mut *ptr`
-  # sites (docs/SAFETY.md categories B/C), the only `unsafe` here with genuine
+  # sites (docs/release/SAFETY.md categories B/C), the only `unsafe` here with genuine
   # UB potential that Miri can execute. The FFI-bearing unsafe (libc / kpathsea
   # / libxml2 / libxslt dlsym / getrusage / signal) CANNOT run under Miri, so
   # coverage is deliberately scoped via tools/miri_check.sh. Build scripts

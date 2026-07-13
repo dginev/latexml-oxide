@@ -1,5 +1,5 @@
 // Example runtime script binding (Rhai) for latexml-oxide.
-// See docs/script_bindings_plan.md. The `runtime-bindings` feature is ON by
+// See docs/parity/script_bindings_plan.md. The `runtime-bindings` feature is ON by
 // default: name this file `<pkg>.sty.rhai` next to your document (or on the
 // search path) and `\usepackage{<pkg>}` discovers and loads it — no
 // recompilation. This file doubles as the surface tour and is load-tested in

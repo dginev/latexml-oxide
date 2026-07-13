@@ -347,7 +347,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // path with the same effect; here we keep Perl's semantic
       // outcome.
       //
-      // See `docs/MATH_PARSER_ASF_TIEBREAKING.md` (commit
+      // See `docs/math/MATH_PARSER_ASF_TIEBREAKING.md` (commit
       // 5cde377610) for the proposal context.
       modified_term = tight_term relop expression => infix_relation;
       // Phase 1: only the all-modified-terms variants. Mixed-content

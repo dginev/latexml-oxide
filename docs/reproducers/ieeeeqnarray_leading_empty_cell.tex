@@ -1,0 +1,32 @@
+% Minimal reproducer: an IEEEeqnarray (IEEEtrantools) row that BEGINS with an
+% empty cell (a leading `&`) raises
+%   Error:unexpected:\halign Attempt to end mode restricted_horizontal
+% then a cascade of `_`/`^` "can only appear in math mode" as the equation body
+% leaks out of math mode. The equation is mangled; the rest of the document
+% still converts (content past it is preserved).
+%
+% REQUIRES --includestyles: there is no IEEEtrantools.sty.ltxml binding (neither
+% upstream Perl LaTeXML nor ar5iv), so IEEEeqnarray comes from raw-loading
+% IEEEtrantools.sty, whose raw `\halign` machinery is what breaks.
+%
+% Reduction (all --includestyles):
+%   a & = & b                 (single row)      -> OK
+%   a & = & b \\ c & = & d    (two FULL rows)   -> OK
+%   a & = & b \\ {} & = & d   (leading `{}`)    -> OK   (user-side workaround)
+%   a & = & b \\ & = & d      (leading empty)   -> FAILS  <-- this file
+%   a & = & b \\ & & d        (two empty lead)  -> FAILS
+%
+% Ground truth (same host):
+%   pdflatex        -> exit 0 (typesets fine)
+%   latexml (Perl)  -> ALSO fails badly (shared raw-`\halign` limitation)
+% So a Rust fix here SURPASSES Perl. Full witness:
+% /home/deyan/Downloads/ieee_eqn_bug (main_arXiv.tex — the problem-P1 objective
+% IEEEeqnarray at L554, whose 2nd row starts `& & +\beta ...`).
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+a & = & b \\
+& = & d
+\end{IEEEeqnarray}
+\end{document}

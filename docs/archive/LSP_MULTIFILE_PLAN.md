@@ -5,7 +5,7 @@
 > the plan). Live-verified end-to-end by `tools/lsp_smoke.py multifile`:
 > chapter-buffer convert resolves to the detected root, the preview uses
 > the UNSAVED buffer over the disk file, diagnostics attribute to
-> `sections/ch2.tex`. Companion docs: `docs/SOURCE_PROVENANCE.md`
+> `sections/ch2.tex`. Companion docs: `docs/performance/SOURCE_PROVENANCE.md`
 > (product track), [`LSP_SERVER.md`](LSP_SERVER.md) (the server's
 > design/status/known-gaps doc). Both archived 2026-06-05 — landed
 > work, moved out of top-level `docs/` to keep focus on parity.
@@ -192,7 +192,7 @@ and Phase 1 already kills failure (1) — the worst user-facing lie.
   cold.
 * **Security posture unchanged**: the overlay narrows to the project
   root; `\input` of absolute paths outside the root behaves exactly as
-  the CLI does today (local-tool posture, `docs/SAFETY.md`). Any
+  the CLI does today (local-tool posture, `docs/release/SAFETY.md`). Any
   multi-tenant web deployment still requires jailing — tracked in
   `SOURCE_PROVENANCE.md`.
 * **Perl parity**: none of this touches conversion semantics; it is

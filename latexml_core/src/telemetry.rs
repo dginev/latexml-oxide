@@ -1,6 +1,6 @@
 //! Per-job telemetry: phase wall times, counts, and resource peaks.
 //!
-//! See `docs/TELEMETRY.md` for the design contract.
+//! See `docs/performance/TELEMETRY.md` for the design contract.
 //!
 //! Default-on instrumentation. Coarse phase wrappers cost ~20ns each
 //! (one `Instant::now()` call); the math-parse histogram update is

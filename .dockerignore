@@ -1,7 +1,8 @@
-# Keep the cortex-worker Docker build context small + clean.
-# `docker/cortex-worker.dockerfile` does `COPY . .`; without this, the 4.6 GB `target/` and the
-# `.git/` history would be uploaded as build context and baked into the build (huge, slow, stale).
+# Keep the Docker build context small + clean. The unified `Dockerfile` does
+# `COPY . .` (both the `cli` and `worker` targets); without this, the multi-GB
+# `target/` and the `.git/` history would be uploaded as build context and baked
+# into the build (huge, slow, stale).
 target/
-.git/
+.git
 *.latexml.log
 **/*.bak

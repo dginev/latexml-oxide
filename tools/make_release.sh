@@ -5,8 +5,8 @@
 #
 #   latexml-oxide-<version>-x86_64-unknown-linux-gnu.tar.gz       — portable archive
 #   latexml-oxide-<version>-x86_64-unknown-linux-gnu.tar.gz.sha256 — SHA-256 sidecar (ripgrep format)
-#   latexml-oxide_<version>-1_amd64.deb                            — Debian package
-#   latexml-oxide_<version>-1_amd64.deb.sha256                     — SHA-256 sidecar
+#   latexml-oxide_<version>-1_<arch>.deb                           — Debian package (arch = amd64 | arm64, from RELEASE_TARGET)
+#   latexml-oxide_<version>-1_<arch>.deb.sha256                    — SHA-256 sidecar
 #   RELEASE_BODY.md                                                — GitHub release notes (install + CHANGELOG slice)
 #
 # Single source of truth: `latexml_oxide/Cargo.toml`'s `version = "X.Y.Z"`.
@@ -53,12 +53,21 @@ fi
 # matching runner (no `--target` cross-compile step), so RELEASE_TARGET is the
 # *label* the host arch produces and MUST match the runner's architecture.
 # Native binaries are never cross-OS (ELF vs Mach-O) — there is one artifact
-# per (OS, arch); see docs/RELEASING.md "Release asset strategy".
+# per (OS, arch); see docs/release/RELEASING.md "Release asset strategy".
 target_triple="${RELEASE_TARGET:-x86_64-unknown-linux-gnu}"
 case "${target_triple}" in
   *-linux-*)      os_family="linux" ;;
   *-apple-darwin) os_family="macos" ;;
   *) echo "make_release: unsupported RELEASE_TARGET='${target_triple}'" >&2; exit 1 ;;
+esac
+
+# Debian architecture label for the .deb FILENAME (Linux only). cargo-deb
+# derives the control-file `Architecture:` from the native build host itself;
+# we only need the filename to match. amd64 is the default, so the x86_64
+# asset name is byte-identical to before — the aarch64 leg gets `arm64`.
+case "${target_triple}" in
+  aarch64-*-linux-*) deb_arch="arm64" ;;
+  *)                 deb_arch="amd64" ;;
 esac
 
 # SHA-256 sidecar helper: GNU coreutils `sha256sum` on Linux, BSD `shasum`
@@ -113,6 +122,15 @@ cp "${bin_path}" "${stage_dir}/latexml_oxide"
 cp README.md "${stage_dir}/README.md"
 cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
 cp LICENSE "${stage_dir}/LICENSE"
+# THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
+# sections 1-4 + the cargo-about Rust-crate appendix produced by
+# tools/gen_notices.sh); fall back to the committed hand-authored file so a
+# local `make_release.sh` without cargo-about still ships notices.
+if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+  cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
+else
+  cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
+fi
 
 # --- build tarball ----------------------------------------------------------
 tarball="latexml-oxide-${version}-${target_triple}.tar.gz"
@@ -126,10 +144,10 @@ deb_path=""
 if [[ "${os_family}" == "linux" ]]; then
   # `cargo deb` requires the package name (`-p latexml`, not the binary name).
   # `--no-build` reuses the maxperf target/maxperf/latexml_oxide we just built.
-  echo "make_release: cargo deb --no-build --profile maxperf -p latexml"
-  cargo deb --no-build --profile maxperf -p latexml --output "${artifacts_dir}/latexml-oxide_${version}-1_amd64.deb"
+  echo "make_release: cargo deb --no-build --profile maxperf -p latexml (${deb_arch})"
+  cargo deb --no-build --profile maxperf -p latexml --output "${artifacts_dir}/latexml-oxide_${version}-1_${deb_arch}.deb"
 
-  deb_path="${artifacts_dir}/latexml-oxide_${version}-1_amd64.deb"
+  deb_path="${artifacts_dir}/latexml-oxide_${version}-1_${deb_arch}.deb"
   if [[ ! -f "${deb_path}" ]]; then
     echo "make_release: cargo deb did not produce ${deb_path}" >&2
     exit 1
@@ -167,7 +185,8 @@ The binary bundles libxml2/libxslt/kpathsea, so tarball users only need a TeX
 Live installation (read from your texmf tree) plus graphics tools:
 
 \`\`\`
-sudo apt install texlive-latex-base texlive-latex-extra texlive-science imagemagick
+sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
+                 texlive-latex-base texlive-latex-extra texlive-science
 \`\`\`
 
 EOF
@@ -208,6 +227,30 @@ sudo cp latexml-oxide-${version}-x86_64-apple-darwin/latexml_oxide /usr/local/bi
 
 > Pick the tarball matching your Mac: \`aarch64\` for Apple Silicon (M1/M2/M3…),
 > \`x86_64\` for Intel. \`uname -m\` prints \`arm64\` or \`x86_64\`.
+
+EOF
+  fi
+
+  if [[ -n "${RELEASE_LINUX_ARM64_TARBALL:-}" ]]; then
+    cat <<EOF
+### Linux (aarch64 / arm64)
+
+For 64-bit ARM Linux — AWS Graviton, Ampere, Raspberry Pi OS (64-bit), Apple
+Silicon Linux VMs. Same self-contained binary as the x86_64 Linux assets.
+
+\`\`\`
+# Debian / Ubuntu (.deb)
+curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/latexml-oxide_${version}-1_arm64.deb
+sudo apt install ./latexml-oxide_${version}-1_arm64.deb
+
+# …or the portable tarball
+curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_LINUX_ARM64_TARBALL}
+tar xzf ${RELEASE_LINUX_ARM64_TARBALL}
+sudo cp latexml-oxide-${version}-aarch64-unknown-linux-gnu/latexml_oxide /usr/local/bin/
+\`\`\`
+
+> Pick the asset matching your machine: \`x86_64\` for Intel/AMD, \`aarch64\`
+> for ARM. \`uname -m\` prints \`x86_64\` or \`aarch64\`.
 
 EOF
   fi

@@ -1,0 +1,17 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{optcatcode}[2026/07/10 option-value catcode regression]
+\RequirePackage{kvoptions}
+\RequirePackage{ifthen}
+\SetupKeyvalOptions{family=occ,prefix=occ@}
+\DeclareStringOption[separate]{mode}
+\ProcessKeyvalOptions*
+% Validate the passed value with the catcode-SENSITIVE ifthen \equal, exactly
+% as apxproof.sty does. If \usepackage stores the option value with OTHER
+% (catcode 12) letters, \equal{\occ@mode}{common} fails and this prints
+% "Unsupported mode"; the faithful catcode-11 (LETTER) storage prints
+% "Mode is common". Regression guard for \opt@<name>.<ext> letter-catcode.
+\newcommand{\scenario}{%
+  \ifthenelse{\equal{\occ@mode}{common}}{Mode is common.}{%
+    \ifthenelse{\equal{\occ@mode}{separate}}{Mode is separate.}{%
+      Unsupported mode.}}%
+}

@@ -3,13 +3,13 @@
 > **Living doc** for the editor/preview server (the `--server` LSP):
 > architecture, review records, and the known-gaps worklist. Moved out
 > of `SYNC_STATUS.md` 2026-06-05 — the server is *beyond-Perl* product
-> work (issues #47/#92, `docs/SOURCE_PROVENANCE.md`), not Perl parity,
+> work (issues #47/#92, `docs/performance/SOURCE_PROVENANCE.md`), not Perl parity,
 > so it does not belong in the parity log. Archived 2026-06-05 (with
 > its companion plan) to keep top-level `docs/` on the parity mission —
 > the content describes the SHIPPED `--server` code, it is not stale.
 > Companions: [`LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) (the
 > landed multi-file root/overlay design),
-> [`SOURCE_PROVENANCE.md`](../SOURCE_PROVENANCE.md) (product track).
+> [`SOURCE_PROVENANCE.md`](../performance/SOURCE_PROVENANCE.md) (product track).
 > Live smoke: `tools/lsp_smoke.py <binary>` (basic/preempt/multifile/
 > staledep).
 

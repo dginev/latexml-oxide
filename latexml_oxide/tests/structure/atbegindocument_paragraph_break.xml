@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="book"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-book.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>Paragraph 1.</p>
+  </para>
+  <para xml:id="p2">
+    <p>Paragraph 2.
+Text.</p>
+  </para>
+</document>

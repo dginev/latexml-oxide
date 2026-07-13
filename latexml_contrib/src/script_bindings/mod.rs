@@ -1,4 +1,4 @@
-//! Runtime script bindings via embedded **Rhai** (see `docs/script_bindings_plan.md`).
+//! Runtime script bindings via embedded **Rhai** (see `docs/parity/script_bindings_plan.md`).
 //!
 //! Feature-gated behind `runtime-bindings` (ON by default for the dev/test
 //! profile and the documented distribution build — downstream single-binary
@@ -75,7 +75,7 @@ use latexml_core::{
 use latexml_core::{Fatal, fatal};
 use rhai::{AST, Dynamic, Engine, EvalAltResult, FnPtr, Map};
 
-// Sandbox limits (docs/script_bindings_plan.md §6).
+// Sandbox limits (docs/parity/script_bindings_plan.md §6).
 const MAX_OPERATIONS: u64 = 50_000_000;
 const MAX_CALL_LEVELS: usize = 128;
 const MAX_STRING_SIZE: usize = 4 * 1024 * 1024;

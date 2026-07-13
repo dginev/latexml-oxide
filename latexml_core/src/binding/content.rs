@@ -1064,10 +1064,20 @@ fn before_input_handle_options(
     },
     None => String::new(),
   });
+  // Use letter-catcode (`ExplodeText`) for the stored option list, same
+  // reason as `\@currname`/`\@currext` above: real LaTeX stores the
+  // `\usepackage[...]` option tokens with alphabetic chars as LETTER
+  // (catcode 11). kvoptions/keyval `\setkeys` then binds a `\DeclareString-
+  // Option` value (e.g. `\axp@bibliography`) from these tokens, and packages
+  // validate it with the catcode-SENSITIVE `ifthen` `\equal` (or `\ifx`).
+  // The previous `Explode!` produced OTHER (catcode 12) letters, so
+  // `\equal{\axp@bibliography}{common}` spuriously failed and apxproof
+  // raised `unsupported option bibliography=common`. Witness:
+  // docs/known_crashes — gdsm.tex (apxproof + biblatex).
   def_macro(
     T_CS!(s!("\\opt@{}.{}", name, as_type)),
     None,
-    Tokens!(Explode!(current_opt_val)),
+    Tokens!(ExplodeText!(current_opt_val)),
     None,
   )?;
   Ok(())

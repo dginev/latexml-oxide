@@ -1,0 +1,26 @@
+\documentclass{article}
+\usepackage{graphicx}
+% Regression guard for the "figure panels wrapped by FILENAME LENGTH" bug
+% (WISDOM #62; witness arXiv:2409.16471 fig 2).
+%
+% A float of bare \includegraphics with no explicit \\ is partitioned into rows
+% by arrange_panels_and_breaks using each panel's MEASURED box width. These
+% images cannot be measured (no PDF/SVG reader — like Perl's imgsize), so the
+% sizer must fall back to the requested width=; it must NOT sum the whatsit's
+% argument boxes (which include the Semiverbatim filename), or rows wrap by path
+% LENGTH. All six panels request 0.3\textwidth, so exactly three fit per row and
+% there must be a single break after the third panel — regardless of the wildly
+% different filename lengths below.
+\begin{document}
+\begin{figure}
+\centering
+\includegraphics[width=0.3\textwidth]{a.pdf}
+\includegraphics[width=0.3\textwidth]{bb.pdf}
+\includegraphics[width=0.3\textwidth]{ccc.pdf}
+\includegraphics[width=0.3\textwidth]{dddddddddddddd.pdf}
+\includegraphics[width=0.3\textwidth]{eeeeeeeeeeeeeeeeeeee.pdf}
+\includegraphics[width=0.3\textwidth]{ffffffffffffffffffffffffff.pdf}
+\caption{Six equal-width panels, three per row.}
+\label{fig:panels}
+\end{figure}
+\end{document}

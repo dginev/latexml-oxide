@@ -117,7 +117,7 @@ impl Post {
     let audit = *POST_AUDIT;
 
     for processor in processors.iter_mut() {
-      // Map processor names to telemetry phases. See docs/TELEMETRY.md.
+      // Map processor names to telemetry phases. See docs/performance/TELEMETRY.md.
       // Names come from each Processor's get_name() — same bracket-
       // classifier shape as XSLT (`XSLT[using ...]`): MathML uses
       // `MathML[Presentation]` / `MathML[Content]`. Anything

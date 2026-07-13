@@ -295,7 +295,7 @@ pub struct Token {
   /// (the opt-in source-map precision build); `Token` stays 8 bytes otherwise.
   /// Set in `read_token`; carried through expansion so a digested run can recover
   /// its exact source span. **Excluded from `PartialEq`** (tokens compare by
-  /// meaning, not origin — see `impl PartialEq`). See docs/SOURCE_PROVENANCE.md
+  /// meaning, not origin — see `impl PartialEq`). See docs/performance/SOURCE_PROVENANCE.md
   /// §3.1.1.
   #[cfg(feature = "token-locators")]
   pub loc:  u32,
@@ -1108,7 +1108,7 @@ impl From<&str> for Token {
 // captured source start. Tokens carry only the u32 handle (Token stays 12 bytes);
 // this holds the (source, line, col). Appended in `read_token`, read by the
 // digestion consumer to give a text run its true span. Cleared per conversion.
-// See docs/SOURCE_PROVENANCE.md §3.1.1.
+// See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
 #[cfg(feature = "token-locators")]
 #[derive(Clone, Copy, Debug)]
 pub struct TokenStart {
@@ -1122,7 +1122,7 @@ pub struct TokenStart {
   /// prefers genuine (read-from-source) origins and only falls back to
   /// inherited ones, so a `\section{Intro}`'s structural body literals — now
   /// carrying an inherited origin — never widen the title's content-exact
-  /// span. See docs/SOURCE_PROVENANCE.md §3.1.3.
+  /// span. See docs/performance/SOURCE_PROVENANCE.md §3.1.3.
   pub inherited: bool,
 }
 
@@ -1152,7 +1152,7 @@ pub fn push_token_origin(source: SymStr, line: u32, col: u32) -> u32 {
 /// invocation token's start, push a copy flagged `inherited`, and return its
 /// new handle (`0` if `handle` is the no-origin sentinel or out of range). One
 /// call per macro expansion; the returned handle is shared by every synthesized
-/// result token. See `push_token_origin` and docs/SOURCE_PROVENANCE.md §3.1.3.
+/// result token. See `push_token_origin` and docs/performance/SOURCE_PROVENANCE.md §3.1.3.
 #[cfg(feature = "token-locators")]
 pub fn push_inherited_origin(handle: u32) -> u32 {
   if handle == 0 {
@@ -1187,7 +1187,7 @@ pub fn clear_token_origins() { TOKEN_ORIGINS.with(|o| o.borrow_mut().clear()); }
 mod tests {
   use super::*;
 
-  /// `Token` size invariant (docs/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
+  /// `Token` size invariant (docs/performance/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
   /// default (`SymStr` + `Catcode`), 12 only under the `token-locators`
   /// precision build (+ the `u32` origin handle). Guards the corpus/parity/
   /// distribution builds against an accidental widening.
@@ -1211,7 +1211,7 @@ mod tests {
   /// mouth carries a handle resolving to its exact (line, col). This is the leaf
   /// accuracy that mouth-snapshot (Experiments 1–2) and digested-child assembly
   /// (Experiment 3) could not provide — the position now travels *with the
-  /// token*. See docs/SOURCE_PROVENANCE.md §3.1.1.
+  /// token*. See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
   #[cfg(feature = "token-locators")]
   #[test]
   fn token_origin_capture() {

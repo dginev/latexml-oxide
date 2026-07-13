@@ -1034,29 +1034,67 @@ LoadDefinitions!({
       }
     });
 
-  // Faithful to Perl `\hphantom{}` (math_common.pool.ltxml:655): a plain
-  // DefConstructor with an `afterDigest` sizer and NO mode wrapping —
-  // exactly like sibling `\phantom`/`\vphantom`.
+  // Upstream #2783 (math_common.pool.ltxml L655-678) split `\hphantom` into a
+  // mode-DISPATCHING macro. In TeX `\hphantom` always typesets its argument in an
+  // `\hbox`, so display math can't leak out of it; a plain text-mode
+  // DefConstructor did NOT reproduce that, and a TikZ library like quantikz2
+  // expanding `\hphantom` around circuit cells lets the `$…$`/`$$…$$` inside
+  // switch the ambient group to `display_math` and never restore — cascading
+  // `Attempt to end mode display_math` over the WHOLE rest of the document
+  // (truncating everything after the figure, including the bibliography).
+  // Witness 2508.13557 (`\usetikzlibrary{quantikz2}`).
   //
-  // A prior Rust-only divergence added a `before_digest` that, in text mode,
-  // did `begin_mode("restricted_horizontal")` to stop display math `$$…$$`
-  // leaking out of a text-mode `\hphantom{…}` (porting a NEWER upstream Perl
-  // commit, 09fb2e6f, that our installed ground-truth Perl predates). But the
-  // mode-switch frame it pushed made the strict mode-end check
-  // (stomach.rs end_mode_opt, mirroring Perl Stomach.pm L527-528) FATAL for a
-  // common malformed-but-harmless idiom: `\minipage…\hphantom\endminipage`
-  // (no braces on `\hphantom`, so its single-token argument is the *next*
-  // control word, `\endminipage`). The `\endminipage` then ran inside the
-  // phantom's `restricted_horizontal` frame and tried to end the minipage's
-  // `internal_vertical` → "Attempt to end mode internal_vertical in
-  // restricted_horizontal". Installed Perl (no wrapping) digests the argument
-  // in the ambient mode, so `\endminipage` closes the minipage cleanly.
-  // Driver: 2004.10048. The `$$`-leak case errors in installed Perl too, so
-  // dropping the wrapping introduces no Rust-only regression.
+  //   * math mode → `\lx@math@hphantom`: keep the ambient mode (correct font
+  //     metrics), emit the sizer XMHint. No leak risk in pure math.
+  //   * text mode → `\lx@text@hphantom`: wrap a BRACED argument in
+  //     `restricted_horizontal` (the `\hbox`), which contains the leak. The
+  //     DefConstructor SCOPED `mode =>` attribute (bgroup/egroup-paired) is used,
+  //     NOT the earlier manual `before_digest begin_mode` frame that was reverted
+  //     (UPSTREAM_SYNC_2767_to_2833 U9) for FATALing the case below.
+  //
+  // But `\hphantom` must ALSO dispatch on the argument SHAPE, because upstream
+  // #2783's `\hphantom{}` grabs `#1` unconditionally: a MALFORMED brace-less
+  // `\hphantom` immediately followed by a control word — witness 2004.10048's
+  // `\minipage…\hphantom\endminipage` — then swallows that token and digests it
+  // in the phantom's `restricted_horizontal` frame instead of the minipage's
+  // `internal_vertical`, so the minipage never closes and every following element
+  // (the rest of the figures, sections, and the bibliography) is absorbed and
+  // LOST. Confirmed: the unconditional port drops 2004.10048's bibliography
+  // (24 bibitems → 0), so newer Perl regresses it too. So peek for `{`
+  // (`\@ifnextchar\bgroup`, the `\input` idiom) and, absent one, emit an empty
+  // (zero-width) phantom that consumes nothing, letting the trailing
+  // `\endminipage` close its minipage in the ambient mode.
+  //
+  // DIVERGENCE (OXIDIZED_DESIGN): the brace-guard is beyond #2783 — it keeps BOTH
+  // the quantikz2 leak fix (witness 2508.13557) and the malformed-minipage case
+  // (witness 2004.10048) correct, a reliability surpass over newer Perl.
+  DefMacro!(
+    "\\hphantom",
+    "\\@ifnextchar\\bgroup\\lx@hphantom@braced\\lx@hphantom@empty"
+  );
+  DefMacro!(
+    "\\lx@hphantom@braced{}",
+    "\\ifmmode\\lx@math@hphantom{#1}\\else\\lx@text@hphantom{#1}\\fi"
+  );
+  def_macro_noop("\\lx@hphantom@empty")?;
   DefConstructor!(
-    "\\hphantom{}",
-    "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    "\\lx@math@hphantom{}",
+    "<ltx:XMHint width='#width' name='hphantom'/>",
+    alias => "\\hphantom",
+    properties => { stored_map!("isSpace" => true) },
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg_mut(1) {
+        let (w, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(w));
+        whatsit.set_property("height", Stored::Dimension(h));
+        whatsit.set_property("depth", Stored::Dimension(d));
+      }
+    });
+  DefConstructor!(
+    "\\lx@text@hphantom{}",
+    "<ltx:text class='ltx_phantom'>#1</ltx:text>",
+    alias => "\\hphantom",
+    mode => "restricted_horizontal",
     properties => { stored_map!("isSpace" => true) },
     after_digest => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg_mut(1) {
