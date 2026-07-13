@@ -894,6 +894,31 @@ fn frontmatter_mrm_author() {
   );
 }
 
+/// subcaption loaded AFTER subfigure.sty must not clobber subfigure.sty's
+/// self-contained `\subfigure[][]{}` macro with its own `{subfigure}[]{Dimension}`
+/// environment. The two have incompatible contracts: the macro consumes a
+/// balanced body and closes itself; the environment reads a `{Dimension}` and
+/// opens a group closed only by `\end{subfigure}`. A document using the macro
+/// form (`\subfigure[]{\includegraphics{...}}`) would then reparse it as an
+/// environment — the `{\includegraphics{...}}` misread as a Dimension and the
+/// group left open — swallowing the rest of the document (figures, sections,
+/// bibliography). Real LaTeX's `\newenvironment` refuses to redefine an existing
+/// `\subfigure`; we mirror that guard. Witness 2507.21938 (Perl times out on it).
+#[test]
+fn subcaption_does_not_clobber_subfigure_macro() {
+  let x = convert_to_xml("tests/cluster_regressions/subcaption_subfigure_conflict.tex");
+  // Content after the figure survived => no leaked, unclosed group.
+  assert!(
+    x.contains("must survive"),
+    "subcaption clobbered subfigure.sty's \\subfigure; content after the figure was lost:\n{x}"
+  );
+  // The bibliography (document tail) is present => no truncation.
+  assert!(
+    x.contains("<bibitem") && x.contains("representative title"),
+    "bibliography lost — the subfigure/subcaption clash leaked a group and truncated the document:\n{x}"
+  );
+}
+
 /// Brace-less `\hphantom` immediately followed by `\endminipage` (the low-level
 /// minipage primitive, no braces): upstream #2783's `\hphantom{}` grabs `#1`
 /// unconditionally, so it would swallow `\endminipage` into the phantom's

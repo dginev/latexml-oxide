@@ -1854,3 +1854,45 @@ Vanderbush …` — **identical** to Rust. This is **PARITY**, not a Rust
 regression. Reproduces on `/usr/local/bin/latexml main.tex` (witness
 arXiv:2601.05137). Faithfully emulating an arbitrary user `\@maketitle`
 redefinition is out of scope; left at parity.
+
+## 48. subcaption clobbers subfigure's `\subfigure`/`\subtable` (unconditional `DefEnvironment`) → unclosed group swallows the document
+
+A document loads the (unsupported) `subfigure` package and then `subcaption`
+(arXiv:2507.21938 loads `subfigure`, `caption`, `subcaption`, `subfigure` in
+that order):
+
+```tex
+\usepackage{subfigure}\usepackage{caption}\usepackage{subcaption}
+...
+\subfigure[]{\includegraphics[width=0.35\textwidth]{plot1.pdf}}
+```
+
+The two packages have INCOMPATIBLE contracts for `\subfigure`: subfigure.sty
+binds a self-contained MACRO `\subfigure[][]{}` (mandatory arg = the figure
+body); subcaption binds an ENVIRONMENT `{subfigure}[]{Dimension}` (mandatory arg
+= a length; opens a group closed only by `\end{subfigure}`). Perl's
+`subcaption.sty.ltxml` declares the environment with an **unconditional**
+`DefEnvironment('{subfigure}[]{Dimension}')`, which CLOBBERS the already-defined
+`\subfigure` macro. The macro-form call above then reparses as
+`\begin{subfigure}` with `{\includegraphics{…}}` misread as the `{Dimension}`
+(→ *Missing number, treated as zero*) and the environment opened with no
+matching `\end{subfigure}` — leaking an internal-vertical group that absorbs the
+rest of the document (figures, sections, bibliography).
+
+**Ground truth (same host):** reference Perl LaTeXML (0.8.8) **times out**
+(>300 s, exit 124, zero output) on arXiv:2507.21938. Rust previously truncated
+mid-body (2 sections, 0 bibitems). Real LaTeX avoids this because subcaption
+declares the environment via `\newenvironment{subfigure}`, which REFUSES to
+redefine an already-defined `\subfigure` (raising "Command \subfigure already
+defined" and keeping subfigure.sty's macro), and because the two packages are
+officially declared incompatible.
+
+**Fixed in Rust** (`latexml_package/src/package/subcaption_sty.rs`): the
+`{subfigure}` / `{subtable}` `DefEnvironment`s are now guarded by
+`has_meaning(\subfigure)` / `has_meaning(\subtable)` — mirroring
+`\newenvironment`'s "already defined" guard — and emit a `Warn!` naming the
+package incompatibility when the guard fires. subfigure.sty's macro is kept, so
+2507.21938 now converts fully (7 sections, 36 bibitems, 0 errors). Beyond-Perl
+reliability win + upstream candidate (Perl should apply the same guard). Witness
+arXiv:2507.21938; regression fixture
+`subcaption_subfigure_conflict.tex`.
