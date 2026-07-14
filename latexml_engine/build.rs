@@ -226,19 +226,27 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
 
 fn compare_stamp_to_ambient(stamp: &str) {{
   // Reuse the process-memoized `kpsewhich --version` banner (shared with
-  // ambient-year detection) so the stamp check does NOT spawn a second
-  // kpsewhich — a global-env value is probed once per process (~340ms saved
-  // on MiKTeX). First line is the version banner proper.
+  // ambient-year detection AND kpathsea backend selection) so the stamp check
+  // does NOT spawn its own kpsewhich. First line is the version banner proper.
   let Some(ambient) = crate::dump_paths::ambient_kpsewhich_version()
     .and_then(|b| b.lines().next()) else {{ return; }};
-  if stamp.trim() != ambient.trim() {{
+  let ambient = ambient.trim();
+  // The dump stamp is a TeX Live `kpathsea version X.Y.Z` string. Only compare
+  // against another such string: MiKTeX's banner is `MiKTeX YY.MM` (a different
+  // format, not a kpathsea version), so a mismatch there is expected-by-design
+  // — the embedded dump is intentionally TeX-Live-based — and must NOT warn (it
+  // would fire on every MiKTeX run and read as a spurious error).
+  if !ambient.starts_with("kpathsea version") {{
+    return;
+  }}
+  if stamp.trim() != ambient {{
     latexml_core::Warn!("latex_dump", "mismatch",
       latexml_core::s!("TeXLive MISMATCH — dump stamped `{{}}`, ambient \
         kpsewhich `{{}}`. The dump may reference macros unknown to the \
         current TeXLive (or vice versa). Run `tools/make_formats.sh` \
         to regenerate against ambient texlive. Silence with \
         LATEXML_SKIP_DUMP_STAMP_CHECK=1.",
-        stamp.trim(), ambient.trim()));
+        stamp.trim(), ambient));
   }}
 }}
 

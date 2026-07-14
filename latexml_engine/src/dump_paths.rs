@@ -70,27 +70,14 @@ pub fn detect_ambient_texlive_year() -> Option<u32> {
   })
 }
 
-/// The ambient `kpsewhich --version` banner (full stdout), memoized for the
-/// process. It is a global property of the host TeX install, and TWO consumers
-/// read it — ambient-year detection ([`year_from_kpsewhich_version_banner`])
-/// and the latex-dump staleness stamp check (`compare_stamp_to_ambient` in the
-/// build.rs-generated loader) — so spawning `kpsewhich` once and sharing the
-/// result saves a full subprocess (~340ms on MiKTeX). Returns `None` if
-/// kpsewhich is absent or the call fails.
+/// The ambient `kpsewhich --version` banner, memoized ONCE per process in
+/// `latexml_core` — the lowest crate that spawns kpsewhich, shared with the
+/// kpathsea backend selection (`select_kpaths`), so the whole process spawns
+/// `kpsewhich --version` at most once across backend-choice, year detection,
+/// and the stamp check. Thin re-export for this crate's consumers. Returns
+/// `None` if kpsewhich is absent or the call fails.
 pub fn ambient_kpsewhich_version() -> Option<&'static str> {
-  static BANNER: OnceLock<Option<String>> = OnceLock::new();
-  BANNER
-    .get_or_init(|| {
-      let out = std::process::Command::new("kpsewhich")
-        .arg("--version")
-        .output()
-        .ok()?;
-      if !out.status.success() {
-        return None;
-      }
-      String::from_utf8(out.stdout).ok()
-    })
-    .as_deref()
+  latexml_core::util::pathname::ambient_kpsewhich_version()
 }
 
 /// Year from the memoized `kpsewhich --version` banner. Only MiKTeX carries a
