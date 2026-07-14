@@ -1083,3 +1083,26 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
     "an ltx:bibentry survived unconverted:\n{x}"
   );
 }
+
+/// Loading `bibunits` — even without ever opening a `bibunit` environment —
+/// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
+/// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the
+/// document's one `\bibliography` registers its bibitems under the default
+/// `bibliography` list, and CrossRef searched the unit list ONLY. Witness
+/// 2303.06077 (revtex4-2 + bibunits): 93 bibitems rendered, 93 keys dangling,
+/// 0 links. Deleting the single `\usepackage{bibunits}` line resolves the cite,
+/// which is the whole defect in one bisect.
+#[test]
+fn bibunits_cite_resolves_against_the_main_bibliography() {
+  let x = convert_and_post("tests/cluster_regressions/bibunits_cite.tex");
+  // The entry reaches the References either way — the defect is the LINK.
+  assert!(
+    x.contains("<bibitem"),
+    "bibunits: the bibliography itself is missing:\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_missing_citation"),
+    "bibunits: \\cite{{Smith2020}} dangles — CrossRef only searched the `bu0` \
+     unit list and never fell back to the main `bibliography` list:\n{x}"
+  );
+}

@@ -1954,3 +1954,52 @@ no inline entries, so the scan is a no-op for them. All 40 corpus papers went
 from 0 rendered references to 1,482 with zero dangling citations. **Upstream
 candidate** — the upstream fix is one extra source document in the
 `getBibEntries` loop.
+
+## 50. Loading `bibunits`/`chapterbib` dangles EVERY citation (`Scan` and `CrossRef` disagree on the list chain)
+
+Merely loading `bibunits` — without ever opening a `bibunit` environment — makes
+every `\cite` in an otherwise ordinary document render as `ltx_missing_citation`,
+while the References list itself renders perfectly. Witness arXiv:2303.06077
+(revtex4-2 + `bibunits`): **93 bibitems, 93 dangling keys, 0 links.**
+
+Six-line reproducer — deleting the one `\usepackage` line resolves the cite:
+
+```tex
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+See \cite{Smith2020} for details.
+\bibliography{refs}
+\end{document}
+```
+
+The chain:
+
+* `bibunits.sty.ltxml` L32-41 redefines `\cite` so **every** citation runs
+  `\lx@bibunits@resetglobal`, which sets `CITE_UNIT` to `\bu@unitname` = `bu0`.
+  The bibref is therefore emitted as `inlist='bu0'` just because the package is
+  loaded.
+* The document's single `\bibliography` has no unit, so `\lx@bibliography`'s
+  `lists='#1'` is empty and its bibitems register under the default list
+  (`Scan.pm` L465: `... || 'bibliography'`).
+* `CrossRef.pm` L515 then looks **only** in the bibref's own list:
+  `my @lists = split(/\s+/, $bibref->getAttribute('inlist') || 'bibliography');`
+  → searches `BIBLABEL:bu0:<key>` alone, which has no `id`, and reports
+  `Warning:expected:ids Missing Entry for citation: <key>`.
+
+Upstream disagrees with itself: **`Scan.pm` L379-380 registers the reference
+under the unit lists PLUS `'bibliography'`** — commented *"Citation specifies
+main 'bibliography', as well as any specific others (eg. per chapter)"* — but
+`CrossRef.pm` never consults that main list. Scan records two lists; CrossRef
+reads one.
+
+Confirmed on same-host installed Perl 0.8.8 with the reproducer above: 1
+bibitem, 1 `ltx_missing_citation`, 0 links, plus the `expected:ids` warning.
+(2303.06077 itself gives no Perl verdict — Perl `Fatal:timeout` /
+`Status:conversion:3` on it, where Rust converts in ~2 min.)
+
+**Fixed in Rust** (OXIDIZED_DESIGN #57): `CrossRef` appends `bibliography` to the
+searched lists, following `Scan.pm`'s own convention; unit lists are still
+searched first, so a real per-chapter bibliography keeps priority. 2303.06077 →
+93 bibitems / 0 dangling / 179 resolved links. **Upstream candidate** — the fix
+is one line in `CrossRef.pm` L515 to mirror `Scan.pm` L379-380.

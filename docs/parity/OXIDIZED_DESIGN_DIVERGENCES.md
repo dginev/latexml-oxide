@@ -1516,6 +1516,38 @@ inside `latexml_post::make_bibliography`, which has been deleted in favour of
 the faithful `pre_bibtex` port; the resync moved here so the single shared
 parser keeps both the faithful grammar and the BibTeX-grade error recovery.
 
+### 57. A citation also searches the main `bibliography` list, not just its bibunit
+
+**Decision:** `CrossRef::fill_in_bibrefs` (`latexml_post/src/crossref.rs`) searches
+the bibref's `inlist` units **and then the main `bibliography` list**. Perl
+`CrossRef.pm` L515 reads `inlist || 'bibliography'` — an *exclusive* choice that
+searches the unit list alone whenever `inlist` is set.
+
+**Why.** `bibunits`/`chapterbib` stamp `CITE_UNIT` onto every `\cite` (bibunits'
+`\lx@bibunits@resetglobal`, `bibunits.sty.ltxml` L39-41), so a bibref carries
+`inlist='bu0'` **merely because the package is loaded** — even when the document
+never opens a `bibunit` environment and has exactly one ordinary
+`\bibliography`. That bibliography registers its bibitems under the default
+`bibliography` list (`MakeBibliography`, mirroring `Scan.pm` L465), so the
+unit-only lookup can never match and **every** citation dangles.
+
+Perl's own `Scan.pm` L379-380 spells the intended chain — the unit lists **plus**
+the main one, commented *"Citation specifies main 'bibliography', as well as any
+specific others (eg. per chapter)"* — and registers the reference under both. So
+upstream already disagrees with itself: Scan records two lists, CrossRef reads
+one. We follow Scan's convention in both places.
+
+**Specificity is preserved.** The unit lists are searched first and the scan
+breaks on the first list yielding an `id`, so a genuine per-chapter bibliography
+still wins over the global one; the main list is only ever a fallback.
+
+**PARITY with same-host Perl** — fixed here rather than reproduced
+(KNOWN_PERL_ERRORS #50). Witness 2303.06077 (revtex4-2 + `bibunits`): 93
+bibitems rendered, 93 keys dangling, 0 links → now 93 / 0 / 179 links. The
+minimal reproducer is 6 lines (`tests/cluster_regressions/bibunits_cite.tex`):
+deleting the single `\usepackage{bibunits}` line resolves the cite. Perl on that
+same reproducer: 1 bibitem, 1 dangling, 0 links.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
