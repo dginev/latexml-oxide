@@ -1133,3 +1133,25 @@ fn non_utf8_bib_file_still_yields_a_bibliography() {
     "cp1252 .bib: the accented surname did not survive the decode:\n{x}"
   );
 }
+
+/// Witness 2605.11619: `\end{lstlisting}` preceded by content on the same line
+/// (`</body></html> \end{lstlisting}`). Perl anchors the terminator regex at the
+/// line start (listings.sty.ltxml L316), so the reader ran to EOF and swallowed
+/// the rest of the document — Conclusion, `\bibliography` and appendix — with NO
+/// error at all. Real `listings` terminates there (pdflatex renders the leading
+/// text as the final listing line and continues), so both LaTeXML engines were
+/// wrong vs the PDF. OXIDIZED_DESIGN #59 / KNOWN_PERL_ERRORS #51.
+#[test]
+fn inline_end_lstlisting_does_not_swallow_the_document() {
+  let x = convert_to_xml("tests/cluster_regressions/lstlisting_inline_end.tex");
+  assert!(
+    x.contains("AFTER-THE-LISTING-MARKER"),
+    "inline \\end{{lstlisting}}: the rest of the document was swallowed:\n{x}"
+  );
+  // The text before the terminator is still the listing's last line (pdflatex
+  // renders exactly "hello world" there).
+  assert!(
+    x.contains("hello") && x.contains("world"),
+    "inline \\end{{lstlisting}}: the listing body was lost:\n{x}"
+  );
+}

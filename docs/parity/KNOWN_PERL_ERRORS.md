@@ -2003,3 +2003,49 @@ searched lists, following `Scan.pm`'s own convention; unit lists are still
 searched first, so a real per-chapter bibliography keeps priority. 2303.06077 →
 93 bibitems / 0 dangling / 179 resolved links. **Upstream candidate** — the fix
 is one line in `CrossRef.pm` L515 to mirror `Scan.pm` L379-380.
+
+## 51. `\end{lstlisting}` with content before it on the same line silently swallows the rest of the document
+
+`listings.sty.ltxml` L316 (`listingsReadRawLines`) anchors the terminator at the
+start of the line:
+
+```perl
+if ($line =~ /^\s*\\end\{\Q$environment\E\}(.*?)$/) {
+```
+
+A line that carries content *before* the terminator therefore never matches, and
+the reader consumes every remaining line — `\end{document}` included. The
+document ends wherever the input does. **Nothing is reported**: from the reader's
+point of view the environment is not unterminated, it merely ran out of file. The
+whole tail of the paper (sections, `\bibliography`, appendices) is lost with zero
+`Error:`.
+
+Real `listings` terminates there — this is not an author error. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+Before the listing.
+\begin{lstlisting}
+hello world \end{lstlisting}
+AFTER-THE-LISTING-MARKER
+\end{document}
+```
+
+Ground truth `pdflatex`: compiles cleanly (rc=0, no errors), renders `hello world`
+as the listing's last line, then typesets `AFTER-THE-LISTING-MARKER` normally.
+
+Same-host Perl 0.8.8 on that file: `Conversion complete: No obvious problems`,
+but the marker is **absent** from the XML and the base64 `data` attribute of the
+`<listing>` literally contains `hello world \end{lstlisting}\nAFTER-THE-LISTING-MARKER\n\end{document}`
+— i.e. the environment ate the document. Rust behaved identically before the fix.
+
+Witness `2605.11619`: a complete 54 KB paper whose listing body ends
+`</body></html> \end{lstlisting}` silently lost its Conclusion, `\bibliography`
+and appendix — 1.3 MB of HTML, 0 errors, 0 references.
+
+**Fixed in Rust** (OXIDIZED_DESIGN #59): match `\end{<env>}` anywhere in the line;
+text before it becomes the listing's final line, text after it is unread (as Perl
+already does for the trailing part). **Upstream candidate** — the change is the
+one regex on L316.

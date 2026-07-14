@@ -1604,6 +1604,41 @@ but making such a cite *link* needs key normalisation at the
 `bibtex:unbalanced`; they lose no cited keys — the #56 resync recovers the next
 entry — so it is log noise, not data loss.
 
+### 59. `\end{lstlisting}` terminates the listing anywhere on the line, not only at its start
+
+Perl `listings.sty.ltxml` L316 (`listingsReadRawLines`) anchors the terminator:
+
+```perl
+if ($line =~ /^\s*\\end\{\Q$environment\E\}(.*?)$/) {
+```
+
+so a line that carries content *before* the terminator —
+`</body></html> \end{lstlisting}` — never matches. The reader then consumes every
+remaining line, `\end{document}` included, and the document simply ends where the
+input does. Nothing is reported: the environment is not "unterminated" from the
+reader's point of view, it just ran out of file. **The entire tail of the paper is
+lost with zero `Error:`.**
+
+Real `listings` terminates there. Ground truth (pdflatex on the minimal repro
+`hello world \end{lstlisting}`): compiles cleanly, renders `hello world` as the
+listing's last line, and typesets the following text normally.
+
+We therefore search for `\end{<env>}` **anywhere** in the line: text before it
+becomes the listing's final line (whitespace-only before → no line, preserving
+the ordinary terminator-on-its-own-line case), text after it is unread — which is
+what Perl already does for the trailing part.
+
+This is a **shared upstream bug**, not a Rust regression: same-host Perl loses the
+tail identically and reports `Conversion complete: No obvious problems`. See
+KNOWN_PERL_ERRORS #51 — candidate to upstream.
+
+Witness **2605.11619**: a complete 54 KB paper silently lost its Conclusion,
+`\bibliography` and appendix (1.3 MB of HTML, 0 errors, 0 references). After:
+Conclusion + appendix restored and **32 references, 0 dangling**. Breadth: 7 of
+the 169 truncated papers in the 2026-07-14 empty-References sweep, 3 of them in
+the silent (no-`Error:`) subset. Regression test:
+`06_cluster_regressions::inline_end_lstlisting_does_not_swallow_the_document`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

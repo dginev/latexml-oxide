@@ -524,8 +524,24 @@ The math-desync + alignment families together are ~66/169 (39%) and look like on
 root family: a group/mode nesting break around inline math. **11 of the 169 are
 the known mhchem `\ce`-in-`align` parity limit** (`2605.12696`: `\ce{CO2(aq) +
 H2O &<=> H2CO3}` inside `align` — identical in same-host Perl, investigated
-2026-06-27, NOT a Rust gap). The remaining ~147 are unexplored and are the
-concrete next target for body-error resilience.
+2026-06-27, NOT a Rust gap). The remaining ~147 are the concrete next target for
+body-error resilience.
+
+**One TRUNCATED sub-cluster is now FIXED — inline `\end{lstlisting}`** (7 of the
+169, 3 of them in the silent subset). See OXIDIZED_DESIGN #59 /
+KNOWN_PERL_ERRORS #51: Perl anchors the terminator regex at the line start, so
+`</body></html> \end{lstlisting}` never terminates and the reader eats the rest
+of the file, `\end{document}` included — **zero `Error:`**. pdflatex accepts the
+same input and renders the leading text as the listing's last line, so both
+LaTeXML engines were wrong vs the PDF (same-host Perl: "No obvious problems", tail
+gone). Fix = match `\end{<env>}` anywhere in the line. 5 of the 7 witnesses
+recover: `2605.11619` 0 → 32 refs (Conclusion + appendix restored), `2605.29675`
+107, `2605.21677` 66, `2605.29786` 42, `2605.07451` 28 — **275 references**. The
+other 2 (`2605.08378`, `2605.08915`) have unrelated causes.
+
+**This is why the "17 silent" subset is the highest-value slice**: no `Error:`
+means no cortex signal, so these never surface in any severity report — the only
+way to find them is a rendering sweep like this one.
 
 Within EMPTY-SECTION the one clean, landed win was the **non-UTF-8 `.bib`**
 cluster (below). Remaining EMPTY-SECTION sub-clusters, not yet triaged:
