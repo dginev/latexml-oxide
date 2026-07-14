@@ -451,6 +451,12 @@ pub fn concat(dir: &str, file: &str) -> String {
 /// tree cannot be read.
 fn expand_recursive_dirs(base: &str) -> Vec<String> {
   let mut out = vec![base.to_string()];
+  // Cycle guard: a symlinked directory can point back at an ancestor. Dedupe on
+  // the CANONICAL path so a symlink loop can't make the walk run forever.
+  let mut visited = std::collections::HashSet::new();
+  if let Ok(canon) = std::fs::canonicalize(base) {
+    visited.insert(canon);
+  }
   let mut queue = std::collections::VecDeque::from([PathBuf::from(base)]);
   while let Some(dir) = queue.pop_front() {
     let Ok(entries) = std::fs::read_dir(&dir) else {
@@ -469,6 +475,12 @@ fn expand_recursive_dirs(base: &str) -> Vec<String> {
       .collect();
     children.sort();
     for child in children {
+      // Skip any directory (reached directly or via symlink) already walked.
+      if let Ok(canon) = std::fs::canonicalize(&child)
+        && !visited.insert(canon)
+      {
+        continue;
+      }
       if let Some(s) = child.to_str() {
         // Keep the `/`-separator convention the pathname layer speaks.
         out.push(s.replace('\\', "/"));
