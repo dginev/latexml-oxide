@@ -42,14 +42,6 @@ unused_qualifications = "warn"
 # [patch."https://github.com/dginev/marpa"]
 # marpa = { path = "/home/deyan/git/marpa/marpa" }
 
-# kpathsea with the `build-from-source` feature (static in-process libkpathsea on
-# windows-msvc, rust-kpathsea#21) plus the MiKTeX on-the-fly-installer suppression
-# (#22, 0.3.2). TEMPORARY: until kpathsea 0.3.2 / kpathsea_sys 0.2.2 are published,
-# consume from the #22 branch (based on master, so it includes #21). Replace with
-# the published version once available.
-[patch.crates-io]
-kpathsea = { git = "https://github.com/dginev/rust-kpathsea", branch = "miktex-disable-installer" }
-
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries

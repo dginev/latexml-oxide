@@ -63,7 +63,9 @@ libxml = "0.3.16"
 # 0.3: backend-dispatched — in-process libkpathsea when linked at build
 # time, subprocess-kpsewhich fallback otherwise (MacTeX ships no
 # libkpathsea at all; see docs/PORTABILITY_MACOS_PROBE_2026-06-07.md).
-kpathsea = { version = "0.3", optional = true }
+# 0.3.2: in-process build_from_source (Windows/MSVC + Unix) + MiKTeX on-the-fly
+# installer suppression. See docs/release/WINDOWS_COMPATIBILITY_PLAN.md.
+kpathsea = { version = "0.3.2", optional = true }
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }
