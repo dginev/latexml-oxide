@@ -76,7 +76,40 @@ static URL_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https|http|ftp
 /// `feedback_no_mutex_use_thread_local` in user memory for the
 /// general rule.
 #[cfg(feature = "kpathsea")]
-static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
+static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(select_kpaths()));
+
+/// Pick the kpathsea backend that can actually resolve host files, so the
+/// shipped binary works out of the box on **both** TeX Live and MiKTeX.
+///
+/// The in-process (statically linked `build_from_source`) backend is the fast
+/// path: it resolves against the host `ls-R` cache with no subprocess per
+/// lookup (~0.5s/conversion saved vs subprocess). BUT a statically-linked
+/// libkpathsea cannot read MiKTeX's MPM file database — MiKTeX ships no `ls-R`
+/// — so on a MiKTeX host every in-process lookup returns `None` (host
+/// `.sty`/`.cls`/`.tfm` become unresolvable). Detect that with one
+/// universal-sentinel probe (`cmr10.tfm` is present in every TeX distribution,
+/// and the probe returns `None` fast on MiKTeX — no directory walk) and fall
+/// back to the subprocess backend, which delegates to the host's own
+/// `kpsewhich` and resolves on MiKTeX and TeX Live alike. Net: TeX Live keeps
+/// the in-process speed; MiKTeX works with no configuration; one binary.
+///
+/// A non-linked build already returns the subprocess backend from
+/// `Kpaths::new()` (`is_in_process()` is false), so the probe and the fallback
+/// are both skipped there — the selection only does work on a linked binary.
+#[cfg(feature = "kpathsea")]
+fn select_kpaths() -> Option<Kpaths> {
+  let kpse = Kpaths::new().ok()?;
+  if kpse.is_in_process() && kpse.find_file("cmr10.tfm").is_none() {
+    // The linked libkpathsea can't see the host tree (e.g. MiKTeX's fndb).
+    // Re-resolve through the host `kpsewhich` instead. `new_subprocess()` is
+    // pure Rust (no C-side re-init), so this second construction is safe next
+    // to the Mutex carve-out documented above.
+    if let Ok(subprocess) = Kpaths::new_subprocess() {
+      return Some(subprocess);
+    }
+  }
+  Some(kpse)
+}
 
 /// Force-initialize the kpathsea global state and warm up the per-
 /// format suffix tables.
@@ -704,6 +737,33 @@ pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The backend chosen by [`select_kpaths`] must resolve a universal host
+  /// file on whatever distribution is ambient — proving the shipped binary
+  /// works out of the box on both TeX Live (in-process) and MiKTeX (subprocess
+  /// fallback, since the linked libkpathsea can't read MiKTeX's fndb). Asks
+  /// through the process-global `KPSE` handle (never constructs a second
+  /// `Kpaths` — see the carve-out note). Skips cleanly when no TeX toolchain is
+  /// present (e.g. a bare CI runner), so it can't spuriously fail there.
+  #[cfg(feature = "kpathsea")]
+  #[test]
+  fn selected_backend_resolves_host_files() {
+    let cmr = kpsewhich(&["cmr10.tfm"]);
+    if cmr.is_none() && kpsewhich(&["article.cls"]).is_none() {
+      return; // no TeX toolchain in this environment — nothing to assert
+    }
+    let in_process = KPSE
+      .lock()
+      .unwrap()
+      .as_ref()
+      .map(|k| k.is_in_process())
+      .unwrap_or(false);
+    assert!(
+      cmr.is_some(),
+      "selected kpathsea backend failed to resolve the universal cmr10.tfm \
+       (in_process={in_process}); a MiKTeX host must fall back to subprocess"
+    );
+  }
 
   #[test]
   fn is_url_schemes() {
