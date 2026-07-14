@@ -1,9 +1,9 @@
 #[cfg(feature = "kpathsea")]
 use std::sync::Mutex;
-use std::sync::OnceLock;
 use std::{
   env,
   path::{Path, PathBuf},
+  sync::OnceLock,
 };
 
 #[cfg(feature = "kpathsea")]

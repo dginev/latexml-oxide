@@ -22,8 +22,10 @@
 //! bundle multiple TL years into a single binary (see
 //! [`embedded_dumps`](crate::embedded_dumps)).
 
-use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::{
+  path::{Path, PathBuf},
+  sync::OnceLock,
+};
 
 /// Detect the ambient TeXLive release year. Returns `None` if no TeXLive
 /// is installed (or detection fails for some other reason).
