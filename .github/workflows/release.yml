@@ -392,12 +392,13 @@ jobs:
           if-no-files-found: error
 
   # Windows (x86_64-pc-windows-msvc) — a SINGLE self-contained `.exe`. Uses the
-  # proven windows-ci-manual-trigger.yml recipe (vcpkg static libxml2/libxslt,
-  # triplet x64-windows-static-md) but builds the publish-grade `maxperf` binary
-  # and packages the bare `.exe` (+ `.sha256`) — no tarball/.deb, the user runs
-  # the `.exe` directly. `kpathsea` is NOT linked on Windows: TeX paths resolve
-  # through the subprocess `kpsewhich` (MiKTeX/TeX Live on PATH). The `.exe` needs
-  # only the ubiquitous MSVC runtime (static-md = static C libs + dynamic CRT).
+  # proven windows-ci-manual-trigger.yml recipe (vcpkg static libxml2/libxslt)
+  # but builds the publish-grade `maxperf` binary and packages the bare `.exe`
+  # (+ `.sha256`) — no tarball/.deb, the user runs the `.exe` directly.
+  # `kpathsea` is NOT linked on Windows: TeX paths resolve through the subprocess
+  # `kpsewhich` (MiKTeX/TeX Live on PATH). The `.exe` is FULLY STATIC — static C
+  # libs (x64-windows-static) + static CRT (+crt-static) — so it imports only
+  # core OS DLLs and runs on any Windows with no VC++ redistributable.
   # The TL-window dumps are OS-agnostic gzipped text, embedded at build time like
   # the other legs (no TeX Live needed on THIS leg — dumps come from `dumps`).
   build-windows:
@@ -411,11 +412,16 @@ jobs:
     env:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
-      # Static C libraries + dynamic CRT (plan Phase 1.1). The MSVC runtime is a
-      # standard system component (VC++ redist), so the `.exe` is effectively
-      # single-file.
-      VCPKG_TRIPLET: x64-windows-static-md
-      VCPKGRS_TRIPLET: x64-windows-static-md
+      # Fully static: static C libraries AND static CRT. `x64-windows-static`
+      # builds libxml2/libxslt against the static CRT (/MT), matching the
+      # `-C target-feature=+crt-static` Rust flag on the build step below — the
+      # whole image is one CRT model. Result: the `.exe` imports NO
+      # VCRUNTIME140.dll and runs on ANY Windows with no VC++ redistributable
+      # (ripgrep's posture; unlike the earlier static-md = dynamic-CRT build,
+      # which needed the redist). Flipping the triplet also rotates the vcpkg
+      # cache key below, forcing a fresh static-CRT build of the C libs.
+      VCPKG_TRIPLET: x64-windows-static
+      VCPKGRS_TRIPLET: x64-windows-static
     steps:
       - uses: actions/checkout@v6
         with:
@@ -485,17 +491,40 @@ jobs:
           # (drops VCRUNTIME140) for a fully-static, redistributable `.exe`.
           RELEASE_EXTRA_FEATURES: kpathsea-build-from-source
           KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
+          # Static CRT: statically link the VC runtime + UCRT so the shipped
+          # `.exe` has NO VCRUNTIME140.dll dependency and launches on a clean
+          # Windows with no VC++ redistributable. MUST pair with the
+          # x64-windows-static vcpkg triplet above (one CRT model across Rust
+          # std + the C libs; mixing /MT and /MD is unsupported). RUSTFLAGS env
+          # REPLACES `.cargo/config.toml` rustflags, so re-list the
+          # frontend-parallelism flags to keep them.
+          RUSTFLAGS: "-Zthreads=8 -Zunstable-options -C target-feature=+crt-static"
 
-      # Launch smoke: prove the `.exe` runs on the runner (static-link / vcpkg
-      # sanity). Conversion paths aren't exercised here (no TeX Live on this leg);
+      # Launch smoke + self-containment guard. `--version` alone is NOT enough:
+      # the runner has the VC++ redist, so even a dynamic-CRT `.exe` would launch
+      # here. So we ALSO assert (via dumpbin) that the import table carries no
+      # VCRUNTIME — the actual property that lets the `.exe` run on a clean
+      # Windows. Conversion paths aren't exercised (no TeX Live on this leg);
       # windows-ci-manual-trigger.yml runs the full suite with TeX Live.
-      - name: launch smoke
+      - name: launch smoke + no-VCRUNTIME guard
         shell: bash
         run: |
+          set -euo pipefail
           exe=$(find target/release-artifacts -name '*.exe' -type f | head -1)
           echo "checking $exe"
           "$exe" --version || { echo "::error::Windows .exe failed to launch (--version)"; exit 1; }
           echo "OK: the Windows .exe launches"
+          # Locate dumpbin via vswhere (fixed path on windows runners).
+          vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+          vsroot=$("$vswhere" -latest -property installationPath)
+          dumpbin=$(find "$vsroot/VC/Tools/MSVC" -name dumpbin.exe -ipath '*hostx64*x64*' | head -1)
+          deps=$("$dumpbin" //DEPENDENTS "$exe")
+          if echo "$deps" | grep -qi 'vcruntime'; then
+            echo "$deps"
+            echo "::error::the .exe imports VCRUNTIME — +crt-static did not take effect (check the vcpkg triplet is x64-windows-static)"
+            exit 1
+          fi
+          echo "OK: no VCRUNTIME import — fully static, runs on any Windows"
 
       - name: upload Windows artifact
         uses: actions/upload-artifact@v5

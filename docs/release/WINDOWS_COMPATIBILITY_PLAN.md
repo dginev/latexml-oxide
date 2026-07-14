@@ -469,9 +469,12 @@ KPATHSEA_NO_LINK=1 cargo build --no-default-features \
 ```
 
 Results on the bring-up box: 46.9 MB exe (vs 58.9 MB release-profile);
-`dumpbin /DEPENDENTS` shows ONLY OS DLLs + VC runtime (`VCRUNTIME140*`,
-UCRT `api-ms-win-crt-*` — the `-md` dynamic-CRT triplet choice; both ship
-with Windows 10+/every VC redist); converts on a MiKTeX-only PATH and
+`dumpbin /DEPENDENTS` shows OS DLLs + the VC runtime (`VCRUNTIME140*`) +
+UCRT (`api-ms-win-crt-*`) — the `-md` dynamic-CRT triplet choice. **Caveat
+(corrected 2026-07-14, see Phase 5.1): only the UCRT ships with Windows
+10+; `VCRUNTIME140.dll`/`VCRUNTIME140_1.dll` are the VC++ *redistributable*,
+NOT part of Windows** — so this `-md` build is not truly self-contained on a
+clean box. Converts on a MiKTeX-only PATH and
 produces full HTML5 + CSS on TL; embedded dumps verified by renaming
 `resources/dumps` away (no degraded-mode warning). Packaged as
 `latexml-oxide-<version>-x86_64-pc-windows-msvc.zip` + `.sha256` sidecar
@@ -497,13 +500,65 @@ release-dumps.yml embed unchanged) and the README platform table.
 4. Update `RELEASE_CRITERIA.md` portability ladder (rung 5 → in progress → done)
    and `RELEASING.md` platform matrix.
 
+## Phase 5.1 — fully-static `.exe` (static CRT) — LANDED 2026-07-14
+
+**Problem.** The RC 0.7.4-rc1 `.exe` (the `-md` triplet) dynamically links
+`VCRUNTIME140.dll` + `VCRUNTIME140_1.dll` (the MSVC C++ runtime). Those are **not**
+part of a clean Windows install — they ship with the VC++ Redistributable — so
+on a machine without it, the `.exe` fails to *launch* (`ERROR_BAD_EXE_FORMAT` /
+missing-DLL) before `main`. It only ran on dev boxes because the VS toolchain put
+`VCRUNTIME140.dll` there. (First-principles: a distributable `.exe`'s entire
+transitive import closure must resolve to DLLs guaranteed present on the target;
+the UCRT `api-ms-win-crt-*` set qualifies on Win10+, the VC runtime does not.)
+
+**Fix (ripgrep's posture).** `-C target-feature=+crt-static` statically links the
+VC runtime **and** the UCRT → the import closure collapses to core OS DLLs only
+(`kernel32`, `ntdll`, `api-ms-win-core-*`), so the `.exe` runs on any Windows,
+no redistributable. Verified locally: with `+crt-static`, `dumpbin /DEPENDENTS`
+drops every `VCRUNTIME*` and `api-ms-win-crt-*` entry.
+
+**The C-dependency wrinkle (why it's not a one-line `.cargo/config.toml` change
+like ripgrep).** ripgrep is ~pure Rust, so `crt-static` is free. We link C
+(`libxml2`/`libxslt` via vcpkg; `libmarpa` via `cc`), and the CRT model must be
+**uniform** across the whole image — `/MT` (static) and `/MD` (dynamic) cannot mix
+(two heaps → corruption). So `+crt-static` (Rust `/MT`) requires the vcpkg libs
+built `/MT` too: triplet **`x64-windows-static`**, NOT `x64-windows-static-md`
+(the `-md` = dynamic CRT, chosen originally to match Rust's default `/MD`). `cc`
+auto-selects `/MT` under `crt-static`, so `libmarpa` follows automatically.
+
+**Scoped to the release leg, not project-wide.** Because flipping the triplet
+forces every build that inherits it onto the static-CRT vcpkg libs, `+crt-static`
++ `x64-windows-static` live **only** in `release.yml`'s `build-windows` leg (env
+`RUSTFLAGS` + `VCPKG*_TRIPLET`), leaving daily dev / `cargo test` / the dispatch
+`windows-ci-manual-trigger.yml` on the fast, already-working `-md` setup. The CRT
+model is invisible to test *logic*, and the release leg self-validates the link.
+
+**CI guard.** `--version` on the runner passes even for a non-portable `.exe` (the
+runner has the redist), so the release leg now also asserts, via `dumpbin
+/DEPENDENTS` (dumpbin located through `vswhere`), that the shipped `.exe` imports
+**no** `VCRUNTIME` — the property that actually guarantees clean-Windows launch.
+
+**Perf footnote (the "slow as debug" report).** Not a build-flags issue — the
+binary is full `maxperf`; warm conversions are ~80 ms. The ~300 ms *first-run*
+cost is Windows Defender scanning the ~47 MB binary on first execution (confirmed:
+every fresh copy pays it; repeat runs ~80 ms), amplified by the embedded 5-year
+dump window's size. Mitigations: Defender exclusion (dev), code-signing
+(distribution), or trimming the dump window; and for a fair Linux-vs-Windows
+benchmark, discard the cold run.
+
 ## Explicitly out of scope (Windows)
 
 - `cortex_worker` / the `cortex` feature (zmq fleet — production runs are Linux).
 - The unix-socket LSP transport (`lsp_server/unix.rs`) — `generic.rs` is the
   Windows path; feature-completeness check is a Phase 3 nice-to-have.
-- In-process libkpathsea linking (subprocess `kpsewhich` is the permanent
-  Windows backend).
+- In-process libkpathsea linking — subprocess `kpsewhich` is the shipped Windows
+  backend for now, BUT no longer "permanent": a static, in-process MSVC build was
+  prototyped and implemented as an opt-in `vendored` feature in `rust-kpathsea`
+  (branch `msvc-static-scope`, `docs/MSVC_STATIC_LINK_SCOPE.md`). It composes with
+  Phase 5.1's `+crt-static` into a single `.exe` importing only core OS DLLs +
+  in-process lookups. Deferred: publish `kpathsea_sys`/`kpathsea` (or a git dep),
+  then flip the release leg. Gains perf on lookup-heavy documents (Windows process
+  spawn is costly); the subprocess backend stays the zero-skew fallback.
 - ARM64 Windows, `x86_64-pc-windows-gnu`, code signing.
 
 ## Risks / open questions
