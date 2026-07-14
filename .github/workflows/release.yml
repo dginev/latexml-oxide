@@ -487,8 +487,8 @@ jobs:
           #   * RELEASE_EXTRA_FEATURES → make_release.sh appends the feature.
           #   * KPATHSEA_SKIP_TOOLCHAIN_CHECK=1 — this runner has no TeX; a linked
           #     (in-process) build needs no build-time `kpsewhich`.
-          # NOTE: pair with the `+crt-static` / x64-windows-static leg config
-          # (drops VCRUNTIME140) for a fully-static, redistributable `.exe`.
+          # Combined with the `+crt-static` / x64-windows-static leg config below
+          # (drops VCRUNTIME140), this yields a fully-static, redistributable `.exe`.
           RELEASE_EXTRA_FEATURES: kpathsea-build-from-source
           KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
           # Static CRT: statically link the VC runtime + UCRT so the shipped
@@ -506,7 +506,7 @@ jobs:
       # VCRUNTIME — the actual property that lets the `.exe` run on a clean
       # Windows. Conversion paths aren't exercised (no TeX Live on this leg);
       # windows-ci-manual-trigger.yml runs the full suite with TeX Live.
-      - name: launch smoke + no-VCRUNTIME guard
+      - name: launch smoke + self-containment guard
         shell: bash
         run: |
           set -euo pipefail
@@ -514,17 +514,22 @@ jobs:
           echo "checking $exe"
           "$exe" --version || { echo "::error::Windows .exe failed to launch (--version)"; exit 1; }
           echo "OK: the Windows .exe launches"
-          # Locate dumpbin via vswhere (fixed path on windows runners).
+          # `--version` alone is NOT enough: the runner has the VC++ redist + TeX
+          # nowhere near, so even a non-portable exe launches. Assert (via dumpbin,
+          # located through vswhere) that the import table carries NONE of the
+          # things that would tie the exe to this machine: the VC runtime
+          # (+crt-static), kpathsea's DLL (build_from_source static, not the
+          # dynamic kpathsealibw64.dll path), or libxml2/libxslt (vcpkg static).
           vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
           vsroot=$("$vswhere" -latest -property installationPath)
           dumpbin=$(find "$vsroot/VC/Tools/MSVC" -name dumpbin.exe -ipath '*hostx64*x64*' | head -1)
           deps=$("$dumpbin" //DEPENDENTS "$exe")
-          if echo "$deps" | grep -qi 'vcruntime'; then
+          if echo "$deps" | grep -qiE 'vcruntime|kpathsea|libxml|libxslt'; then
             echo "$deps"
-            echo "::error::the .exe imports VCRUNTIME — +crt-static did not take effect (check the vcpkg triplet is x64-windows-static)"
+            echo "::error::the .exe imports a non-OS DLL (VCRUNTIME / kpathsea / libxml*) — it is not fully static (check +crt-static, x64-windows-static, and kpathsea-build-from-source all took effect)"
             exit 1
           fi
-          echo "OK: no VCRUNTIME import — fully static, runs on any Windows"
+          echo "OK: imports only core OS DLLs — fully static, runs on any Windows / any TeX distro"
 
       - name: upload Windows artifact
         uses: actions/upload-artifact@v5
