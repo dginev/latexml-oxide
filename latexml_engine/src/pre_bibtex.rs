@@ -33,6 +33,8 @@
 //! - `skip_junk` is greedy: everything up to the next `@` is discarded (Perl L335-346: "anything
 //!   until @ as an implied comment").
 
+use std::collections::VecDeque;
+
 use latexml_core::s;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -116,7 +118,12 @@ type BibFieldList = Vec<(String, String)>;
 pub struct PreBibTeX {
   pub source:     Option<String>,
   pub file_label: String,
-  lines:          Vec<String>,
+  /// The unread tail, popped from the FRONT one physical line at a time.
+  /// A `VecDeque` (not a `Vec`) because `Vec::remove(0)` shifts the whole
+  /// remainder per line, making a `.bib` parse O(lines²): a 16k-entry file
+  /// took 1.42 s, 15× the per-entry cost of a 1k-entry one. `pop_front` is
+  /// O(1) and makes it linear.
+  lines:          VecDeque<String>,
   line:           String,
   lineno:         usize,
   pub preamble:   Vec<String>,
@@ -169,12 +176,8 @@ pub enum BibParseError {
 impl PreBibTeX {
   /// Perl `newFromString` (L77-86).
   pub fn new_from_string(s: &str) -> Self {
-    let mut lines: Vec<String> = s.split('\n').map(String::from).collect();
-    let first = if lines.is_empty() {
-      String::new()
-    } else {
-      lines.remove(0)
-    };
+    let mut lines: VecDeque<String> = s.split('\n').map(String::from).collect();
+    let first = lines.pop_front().unwrap_or_default();
     Self {
       source: None,
       file_label: s!("<anonymous>"),
@@ -508,7 +511,10 @@ impl PreBibTeX {
     if self.lines.is_empty() {
       return Ok(false);
     }
-    let next = self.lines.remove(0);
+    let next = match self.lines.pop_front() {
+      Some(n) => n,
+      None => return Ok(false),
+    };
     // Perl `<$BIB>` lines keep the trailing newline; `split /\n/` on a
     // string does not. Re-insert one to preserve line semantics so
     // that a `%`-comment inside a continued value still terminates on
@@ -588,7 +594,7 @@ impl PreBibTeX {
       if self.lines.is_empty() {
         return false;
       }
-      self.line = self.lines.remove(0);
+      self.line = self.lines.pop_front().unwrap_or_default();
       self.lineno += 1;
     }
   }
@@ -617,7 +623,7 @@ impl PreBibTeX {
       if self.lines.is_empty() {
         return false;
       }
-      self.line = self.lines.remove(0);
+      self.line = self.lines.pop_front().unwrap_or_default();
       self.lineno += 1;
     }
   }
