@@ -522,13 +522,19 @@ impl State {
     let nomathparse = options.nomathparse.unwrap_or(false);
     let source_map = options.source_map.unwrap_or(false);
 
-    let search_paths = match options.search_paths {
-      None => VecDeque::new(),
-      Some(paths) => paths
-        .iter()
-        .map(|p| pathname::absolute(&pathname::canonical(p)))
-        .collect(),
-    };
+    // Perl Core.pm L50-52: `SEARCHPATHS => [map { pathname_absolute(...) } '.',
+    // @searchpaths]` — the current working directory is ALWAYS searched, and
+    // FIRST (it takes precedence over the `--path` dirs). A `--path` entry
+    // ending in `//` is the kpsewhich recursive-search marker; preserve it
+    // across canonicalization (strip it, canonicalize the base, re-append) so
+    // `candidate_pathnames` can expand the marker to the whole subtree.
+    let search_paths: VecDeque<String> = std::iter::once(String::from("."))
+      .chain(options.search_paths.into_iter().flatten())
+      .map(|p| match p.strip_suffix("//") {
+        Some(base) => format!("{}//", pathname::absolute(&pathname::canonical(base))),
+        None => pathname::absolute(&pathname::canonical(&p)),
+      })
+      .collect();
     let graphics_paths = match options.graphics_paths {
       None => VecDeque::new(),
       Some(paths) => paths

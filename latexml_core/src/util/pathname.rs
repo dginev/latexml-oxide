@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use std::{
   env,
   path::{Path, PathBuf},
+  sync::OnceLock,
 };
 
 #[cfg(feature = "kpathsea")]
@@ -76,7 +77,82 @@ static URL_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https|http|ftp
 /// `feedback_no_mutex_use_thread_local` in user memory for the
 /// general rule.
 #[cfg(feature = "kpathsea")]
-static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
+static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(select_kpaths()));
+
+/// Pick the kpathsea backend that can actually resolve host files, so the
+/// shipped binary works out of the box on **both** TeX Live and MiKTeX.
+///
+/// The in-process (statically linked `build_from_source`) backend is the fast
+/// path: it resolves against the host `ls-R` cache with no subprocess per
+/// lookup (~0.5s/conversion saved vs subprocess). BUT a statically-linked
+/// libkpathsea cannot read MiKTeX's MPM file database — MiKTeX ships no `ls-R`
+/// — so on a MiKTeX host every in-process lookup returns `None` (host
+/// `.sty`/`.cls`/`.tfm` become unresolvable). Detect that with one
+/// universal-sentinel probe (`cmr10.tfm` is present in every TeX distribution,
+/// and the probe returns `None` fast on MiKTeX — no directory walk) and fall
+/// back to the subprocess backend, which delegates to the host's own
+/// `kpsewhich` and resolves on MiKTeX and TeX Live alike. Net: TeX Live keeps
+/// the in-process speed; MiKTeX works with no configuration; one binary.
+///
+/// A non-linked build already returns the subprocess backend from
+/// `Kpaths::new()` (`is_in_process()` is false), so the probe and the fallback
+/// are both skipped there — the selection only does work on a linked binary.
+#[cfg(feature = "kpathsea")]
+fn select_kpaths() -> Option<Kpaths> {
+  // MiKTeX stores its file database in an MPM `fndb` that a statically-linked
+  // libkpathsea cannot read (MiKTeX ships no `ls-R`), so the in-process backend
+  // resolves nothing on a MiKTeX host. Detect MiKTeX up front from its
+  // `kpsewhich --version` banner and go straight to the subprocess backend.
+  // Doing this BEFORE any `Kpaths::new()` also avoids the in-process C library's
+  // "configuration file texmf.cnf not found" warning, which it would print to
+  // stderr while trying (and failing) to anchor on the MiKTeX tree.
+  if ambient_kpsewhich_version().is_some_and(|b| b.contains("MiKTeX"))
+    && let Ok(subprocess) = Kpaths::new_subprocess()
+  {
+    return Some(subprocess);
+  }
+  // TeX Live (or no TeX at all): prefer the in-process backend (fast). A sentinel
+  // backstop covers any OTHER distro whose tree the linked lib can't read — if a
+  // universal file (`cmr10.tfm`, in every TeX install) is unresolvable
+  // in-process, fall back to the subprocess backend. `new_subprocess()` is pure
+  // Rust (no C-side re-init), so this second construction is safe next to the
+  // Mutex carve-out documented above.
+  let kpse = Kpaths::new().ok()?;
+  if kpse.is_in_process()
+    && kpse.find_file("cmr10.tfm").is_none()
+    && let Ok(subprocess) = Kpaths::new_subprocess()
+  {
+    return Some(subprocess);
+  }
+  Some(kpse)
+}
+
+/// The ambient `kpsewhich --version` banner (full stdout), memoized for the
+/// process. It is a global property of the host TeX install, and several
+/// consumers read it — kpathsea backend selection ([`select_kpaths`]),
+/// ambient-year detection, and the latex-dump stamp check (both in
+/// `latexml_engine`) — so `kpsewhich` is spawned at most once. Returns `None`
+/// if kpsewhich is absent or the call fails.
+///
+/// NOT gated on the `kpathsea` feature: it is a plain subprocess probe (no C
+/// library), so the year/stamp logic can share it even in the host-side codegen
+/// build. Lives here — the lowest crate that constructs `Kpaths` — so both the
+/// backend choice and `latexml_engine` resolve the same single spawn.
+pub fn ambient_kpsewhich_version() -> Option<&'static str> {
+  static BANNER: OnceLock<Option<String>> = OnceLock::new();
+  BANNER
+    .get_or_init(|| {
+      let out = std::process::Command::new("kpsewhich")
+        .arg("--version")
+        .output()
+        .ok()?;
+      if !out.status.success() {
+        return None;
+      }
+      String::from_utf8(out.stdout).ok()
+    })
+    .as_deref()
+}
 
 /// Force-initialize the kpathsea global state and warm up the per-
 /// format suffix tables.
@@ -367,6 +443,54 @@ pub fn concat(dir: &str, file: &str) -> String {
   }
 }
 
+/// Expand a directory for the kpsewhich `//` recursive-search convention: the
+/// directory itself, followed by every subdirectory beneath it. Traversal is
+/// breadth-first and each level is sorted, so shallower directories take search
+/// precedence and the result is deterministic. Hidden (dot-prefixed)
+/// subdirectories are skipped, as kpsewhich does. Returns just `[base]` if the
+/// tree cannot be read.
+fn expand_recursive_dirs(base: &str) -> Vec<String> {
+  let mut out = vec![base.to_string()];
+  // Cycle guard: a symlinked directory can point back at an ancestor. Dedupe on
+  // the CANONICAL path so a symlink loop can't make the walk run forever.
+  let mut visited = std::collections::HashSet::new();
+  if let Ok(canon) = std::fs::canonicalize(base) {
+    visited.insert(canon);
+  }
+  let mut queue = std::collections::VecDeque::from([PathBuf::from(base)]);
+  while let Some(dir) = queue.pop_front() {
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+      continue;
+    };
+    let mut children: Vec<PathBuf> = entries
+      .flatten()
+      .map(|e| e.path())
+      .filter(|p| p.is_dir())
+      .filter(|p| {
+        // Skip hidden dot-directories (.git, .svn, …), matching kpsewhich.
+        p.file_name()
+          .and_then(|n| n.to_str())
+          .is_none_or(|n| !n.starts_with('.'))
+      })
+      .collect();
+    children.sort();
+    for child in children {
+      // Skip any directory (reached directly or via symlink) already walked.
+      if let Ok(canon) = std::fs::canonicalize(&child)
+        && !visited.insert(canon)
+      {
+        continue;
+      }
+      if let Some(s) = child.to_str() {
+        // Keep the `/`-separator convention the pathname layer speaks.
+        out.push(s.replace('\\', "/"));
+        queue.push_back(child);
+      }
+    }
+  }
+  out
+}
+
 /// It's presumably cheep to concatinate all the pathnames,
 /// relative to the cost of testing for files,
 /// and this simplifies overall.
@@ -394,16 +518,32 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
     dirs.push(pathdir.clone());
   } else if let Some(paths) = options.paths {
     for p in paths {
-      // Complete the search paths by prepending current dir to relative paths,
-      let pp_base = if is_absolute(&p) {
-        canonical(&p)
-      } else {
-        concat(&cwd, &p)
+      // kpsewhich convention: a search path ending in `//` is searched
+      // RECURSIVELY (the directory and its whole subtree). Split the marker off
+      // first, then resolve the base to an absolute directory.
+      let (base, recursive) = match p.strip_suffix("//") {
+        Some(b) => (b.trim_end_matches('/'), true),
+        None => (p.as_str(), false),
       };
-      let pp = concat(&pp_base, &pathdir);
-      // but only include each dir ONCE
-      if !dirs.contains(&pp) {
-        dirs.push(pp);
+      // Complete the search paths by prepending current dir to relative paths,
+      let pp_base = if is_absolute(base) {
+        canonical(base)
+      } else {
+        concat(&cwd, base)
+      };
+      // Expand the recursive marker to `[base, ...every subdirectory]`; a plain
+      // path stays a single directory.
+      let roots = if recursive {
+        expand_recursive_dirs(&pp_base)
+      } else {
+        vec![pp_base]
+      };
+      for root in roots {
+        let pp = concat(&root, &pathdir);
+        // but only include each dir ONCE
+        if !dirs.contains(&pp) {
+          dirs.push(pp);
+        }
       }
     }
   }
@@ -704,6 +844,89 @@ pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The backend chosen by [`select_kpaths`] must resolve a universal host
+  /// file on whatever distribution is ambient — proving the shipped binary
+  /// works out of the box on both TeX Live (in-process) and MiKTeX (subprocess
+  /// fallback, since the linked libkpathsea can't read MiKTeX's fndb). Asks
+  /// through the process-global `KPSE` handle (never constructs a second
+  /// `Kpaths` — see the carve-out note). Skips cleanly when no TeX toolchain is
+  /// present (e.g. a bare CI runner), so it can't spuriously fail there.
+  #[cfg(feature = "kpathsea")]
+  #[test]
+  fn selected_backend_resolves_host_files() {
+    let cmr = kpsewhich(&["cmr10.tfm"]);
+    if cmr.is_none() && kpsewhich(&["article.cls"]).is_none() {
+      return; // no TeX toolchain in this environment — nothing to assert
+    }
+    let in_process = KPSE
+      .lock()
+      .unwrap()
+      .as_ref()
+      .map(|k| k.is_in_process())
+      .unwrap_or(false);
+    assert!(
+      cmr.is_some(),
+      "selected kpathsea backend failed to resolve the universal cmr10.tfm \
+       (in_process={in_process}); a MiKTeX host must fall back to subprocess"
+    );
+  }
+
+  fn pathsearch_tmproot(tag: &str) -> PathBuf {
+    let mut d = env::temp_dir();
+    d.push(format!("lxo_pathsearch_{}_{}", std::process::id(), tag));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    d
+  }
+
+  /// A `--path` ending in `//` searches the directory tree RECURSIVELY
+  /// (kpsewhich convention); a plain path searches only that directory.
+  #[test]
+  fn recursive_double_slash_descends_into_subdirs() {
+    let root = pathsearch_tmproot("rec");
+    let deep = root.join("a").join("b");
+    std::fs::create_dir_all(&deep).unwrap();
+    std::fs::write(deep.join("target.tex"), "x").unwrap();
+    let root_s = root.to_str().unwrap().replace('\\', "/");
+
+    let found = find("target.tex", PathnameFindOptions {
+      paths: Some(vec![format!("{root_s}//")]),
+      ..Default::default()
+    });
+    assert!(
+      found.as_deref().is_some_and(|p| p.ends_with("target.tex")),
+      "recursive `//` should find the nested target.tex, got {found:?}"
+    );
+
+    let flat = find("target.tex", PathnameFindOptions {
+      paths: Some(vec![root_s]),
+      ..Default::default()
+    });
+    assert!(
+      flat.is_none(),
+      "a plain (non-`//`) path must NOT descend into subdirectories, got {flat:?}"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  /// The directory named directly by a `--path` (no `//`) is still searched —
+  /// recursion is opt-in, not a regression of the flat case.
+  #[test]
+  fn plain_path_finds_file_in_that_dir() {
+    let root = pathsearch_tmproot("flat");
+    std::fs::write(root.join("here.tex"), "x").unwrap();
+    let root_s = root.to_str().unwrap().replace('\\', "/");
+    let found = find("here.tex", PathnameFindOptions {
+      paths: Some(vec![root_s]),
+      ..Default::default()
+    });
+    assert!(
+      found.as_deref().is_some_and(|p| p.ends_with("here.tex")),
+      "plain path should find a file directly in it, got {found:?}"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+  }
 
   #[test]
   fn is_url_schemes() {
