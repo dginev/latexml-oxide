@@ -140,7 +140,7 @@ tikv-jemallocator = { version = "0.7", optional = true }
 # in-process replacement for the old `bash -c "diff <(xmllint --format …)"`
 # pipeline (which required a Unix userland and silently vacuous-passed when
 # xmllint was missing). LCS-based, so counts match GNU diff's `<`/`>` lines.
-similar = "2"
+similar = "3"
 
 # Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
 # Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.
