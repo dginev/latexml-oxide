@@ -1896,3 +1896,61 @@ package incompatibility when the guard fires. subfigure.sty's macro is kept, so
 reliability win + upstream candidate (Perl should apply the same guard). Witness
 arXiv:2507.21938; regression fixture
 `subcaption_subfigure_conflict.tex`.
+
+## 49. amsrefs inline bibliographies are dropped whole by `MakeBibliography` (empty References, every `\cite` dangling)
+
+`amsrefs` writes the bibliography **into the document** rather than into an
+external `.bib` (arXiv:2605.01646 `AIPFa.tex`, and 40 papers across sandboxes
+2605+2606):
+
+```tex
+\usepackage[lite,abbrev,msc-links,alphabetic]{amsrefs}
+...
+\begin{bibdiv}\begin{biblist}
+\bib{Bei87}{article}{ author={Be\u{\i}linson, A.}, title={Height pairing between algebraic cycles}, }
+\end{biblist}\end{bibdiv}
+```
+
+The engine digests this correctly — `Package/amsrefs.sty.ltxml` turns each `\bib`
+into an `ltx:bibentry` inside `ltx:biblist`. The loss happens in
+**post-processing**:
+
+* `MakeBibliography::getBibEntries` collects entries only from
+  `foreach my $bibdoc ($self->getBibliographies($doc))`.
+* `getBibliographies` resolves names from the command line or from
+  `//ltx:bibliography/@files`. An amsrefs bibliography has **no `@files`** (its
+  entries are already inline), so it returns an **empty list** and
+  `getBibEntries` collects nothing.
+* `process` then runs its unconditional
+  `$doc->removeNodes($doc->findnodes('//ltx:bibentry'))` — *"Remove any
+  bibentry's (these should have been converted to bibitems)"* — deleting every
+  entry that nothing ever converted.
+
+Result: an **empty `<ul class="ltx_biblist"></ul>`**, every `\cite` rendered as
+`ltx_missing_citation`, and **no error is reported** — only
+`Warning:expected:bibkeys Missing bibkeys ...`. Silent, total data loss for a
+supported package.
+
+Reproducer (both engines produce `ltx_bibitem: 0`, one `ltx_missing_citation`):
+
+```tex
+\documentclass{article}
+\usepackage{amsrefs}
+\begin{document}
+Cite: \cite{Smith2020}.
+\begin{bibdiv}\begin{biblist}
+\bib{Smith2020}{article}{ author={John Smith}, title={On Examples}, journal={JMP}, year={2020} }
+\end{biblist}\end{bibdiv}
+\end{document}
+```
+
+Confirmed on the installed Perl 0.8.8 **and** the vendored tree
+(`perl -I LaTeXML/blib/lib`, rev `51fea96a`) — not a version skew. On
+arXiv:2605.01646 Perl yields 0 bibitems and 81 dangling citations.
+
+**Fixed in Rust** (OXIDIZED_DESIGN #55): `get_bib_entries` also scans the main
+document for inline `ltx:bibentry`. Papers with an external `.bib`/`.bbl` carry
+no inline entries, so the scan is a no-op for them. All 40 corpus papers went
+from 0 rendered references to 1,482 with zero dangling citations. **Upstream
+candidate** — the upstream fix is one extra source document in the
+`getBibEntries` loop.

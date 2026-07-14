@@ -245,6 +245,50 @@ impl MakeBibliography {
   /// Scans BIBLABEL:* entries in ObjectDB, resolves to ID:* entries,
   /// extracts author/year/title, transitively includes cited-from-cited entries,
   /// assigns suffixes for duplicate author+year pairs.
+  /// Fold every `ltx:bibentry` of one source document into `entries`, keyed by
+  /// the lowercased bibkey. Later sources win for a repeated key, matching the
+  /// upstream `getBibEntries` loop.
+  fn scan_bibentries(entries: &mut HashMap<String, BibEntryData>, srcdoc: &PostDocument) {
+    for bibentry in srcdoc.findnodes("//ltx:bibentry") {
+      let bibkey = match bibentry.get_attribute("key") {
+        Some(k) => k,
+        None => continue,
+      };
+      let lc_key = bibkey.to_lowercase();
+      // Extract citations from within this bibentry
+      let citations: Vec<String> = srcdoc
+        .findnodes_at(".//@bibrefs", Some(&bibentry))
+        .iter()
+        .filter_map(|n| {
+          let val = n.get_content();
+          if val.is_empty() { None } else { Some(val) }
+        })
+        .flat_map(|s| s.split(',').map(String::from).collect::<Vec<_>>())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+      entries.insert(lc_key, BibEntryData {
+        bib_key: bibkey,
+        cited_key: None,
+        sort_key: String::new(),
+        initial: String::new(),
+        author_year: String::new(),
+        suffix: None,
+        authors_short: String::new(),
+        authors_full: String::new(),
+        sort_names: String::new(),
+        year: String::new(),
+        title: String::new(),
+        entry_type: String::new(),
+        number: 0,
+        referrers: HashSet::default(),
+        bibreferrers: HashSet::default(),
+        citations,
+        bibentry: Some(bibentry.clone()),
+      });
+    }
+  }
+
   fn get_bib_entries(
     &self,
     doc: &PostDocument,
@@ -262,47 +306,23 @@ impl MakeBibliography {
     let mut entries: HashMap<String, BibEntryData> = HashMap::default();
     let bib_docs = self.get_bibliographies(doc);
     for bibdoc in &bib_docs {
-      for bibentry in bibdoc.findnodes("//ltx:bibentry") {
-        let bibkey = match bibentry.get_attribute("key") {
-          Some(k) => k,
-          None => continue,
-        };
-        let lc_key = bibkey.to_lowercase();
-        // Extract citations from within this bibentry
-        let citations: Vec<String> = bibdoc
-          .findnodes_at(".//@bibrefs", Some(&bibentry))
-          .iter()
-          .filter_map(|n| {
-            let val = n.get_content();
-            if val.is_empty() { None } else { Some(val) }
-          })
-          .flat_map(|s| s.split(',').map(String::from).collect::<Vec<_>>())
-          .filter(|s| !s.is_empty())
-          .collect();
-
-        let imported = bibentry.clone();
-
-        entries.insert(lc_key, BibEntryData {
-          bib_key: bibkey,
-          cited_key: None,
-          sort_key: String::new(),
-          initial: String::new(),
-          author_year: String::new(),
-          suffix: None,
-          authors_short: String::new(),
-          authors_full: String::new(),
-          sort_names: String::new(),
-          year: String::new(),
-          title: String::new(),
-          entry_type: String::new(),
-          number: 0,
-          referrers: HashSet::default(),
-          bibreferrers: HashSet::default(),
-          citations,
-          bibentry: Some(imported),
-        });
-      }
+      Self::scan_bibentries(&mut entries, bibdoc);
     }
+    // Also scan the MAIN document for INLINE `ltx:bibentry` elements.
+    // OXIDIZED_DESIGN #55 (beyond-Perl). amsrefs writes its bibliography
+    // straight into the document — `\begin{bibdiv}\begin{biblist}
+    // \bib{key}{article}{...}` — instead of into an external `.bib`, so the
+    // entries are already children of `ltx:biblist` and there is no `@files`
+    // for `getBibliographies` to resolve. Upstream `getBibEntries` only ever
+    // scans `getBibliographies()`, and `process` then deletes every
+    // `//ltx:bibentry`, so an amsrefs bibliography is silently dropped WHOLE:
+    // empty References plus every `\cite` left dangling, with zero errors
+    // reported. Confirmed identical on installed AND vendored Perl 0.8.8
+    // (rev 51fea96a) — a shared upstream bug (KNOWN_PERL_ERRORS #49), fixed
+    // here rather than reproduced. Papers with an external `.bib` carry no
+    // inline `ltx:bibentry`, so this scan is a no-op for them.
+    // Witness 2605.01646 (AIPFa.tex, 23 entries), 2605.00783, 2605.03852.
+    Self::scan_bibentries(&mut entries, doc);
 
     // Step 2: Collect all cited bibliography keys from BIBLABEL entries in ObjectDB.
     // Note referrers (from outside the bibliography).

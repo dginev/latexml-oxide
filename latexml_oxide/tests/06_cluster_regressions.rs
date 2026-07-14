@@ -67,6 +67,43 @@ fn convert_to_xml(source: &str) -> String {
     .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
 }
 
+/// Convert AND run the post-processing pipeline, returning the post-processed
+/// XML. `convert_to_xml` stops at the engine, so it cannot see anything
+/// MakeBibliography/CrossRef do — a `<bibitem>` in its output came straight from
+/// `\begin{thebibliography}`, not from an `ltx:bibentry` conversion. Use this
+/// helper for post-stage regressions.
+fn convert_and_post(source: &str) -> String {
+  let xml = convert_to_xml(source);
+  // No `stylesheet`: the assertions are about MakeBibliography, so stop at the
+  // post-processed ltx XML rather than running XSLT into HTML.
+  let opts = latexml::post::PostOptions {
+    pmml:                      false,
+    cmml:                      false,
+    keep_xmath:                false,
+    stylesheet:                None,
+    destination:               None,
+    source_directory:          Some("tests/cluster_regressions"),
+    search_paths:              &[],
+    nodefaultresources:        true,
+    css_files:                 &[],
+    js_files:                  &[],
+    noinvisibletimes:          false,
+    mathtex:                   false,
+    navigationtoc:             None,
+    schemadocs:                false,
+    split:                     false,
+    split_xpath:               None,
+    split_naming:              None,
+    xslt_parameters:           &[],
+    graphics_svg_threshold_kb: 0,
+    graphicimages:             false,
+    timestamp:                 None,
+    icon:                      None,
+    whatsout:                  latexml_post::extract::Whatsout::default(),
+  };
+  latexml::post::run_post_processing(&xml, &opts)
+}
+
 /// Convert and return the conversion log (for asserting the ABSENCE of a
 /// Rust-only warning that `convert_clean` — which only counts `Error:` — misses).
 fn convert_log(source: &str) -> String {
@@ -1002,5 +1039,47 @@ fn sn_jnl_natbib_two_optional_cite_keeps_its_keys() {
   assert!(
     x.contains("Zhang2021"),
     "`\\cite[see][chap.~2]{{Zhang2021}}` lost its key:\n{x}"
+  );
+}
+
+/// amsrefs writes the bibliography INTO the document —
+/// `\begin{bibdiv}\begin{biblist}\bib{key}{article}{...}` — instead of into an
+/// external `.bib`. The engine digests that correctly into
+/// `ltx:biblist`/`ltx:bibentry` (see the `amsrefs_basic` structure test), but
+/// upstream `MakeBibliography::getBibEntries` collects entries ONLY from
+/// `getBibliographies()`, which resolves `//ltx:bibliography/@files` — an
+/// amsrefs bibliography has no `@files`, so nothing is collected, and `process`
+/// then executes its unconditional `removeNodes(//ltx:bibentry)`, deleting every
+/// entry it never converted. The whole bibliography vanishes with ZERO errors:
+/// empty References plus every `\cite` dangling.
+///
+/// PARITY with installed AND vendored Perl 0.8.8 (rev 51fea96a) — fixed here
+/// rather than reproduced (OXIDIZED_DESIGN #55, KNOWN_PERL_ERRORS #49).
+/// Witness 2605.01646 (AIPFa.tex; Perl: 0 bibitems / 81 dangling citations,
+/// Rust now 23 / 0), 2605.00783, 2605.03852.
+///
+/// NOTE the structure test `amsrefs_basic` asserts only on the ENGINE's XML and
+/// so never exercised MakeBibliography — which is exactly how this stayed
+/// silent. This test runs the full pipeline.
+#[test]
+fn amsrefs_inline_bibliography_is_not_dropped() {
+  let x = convert_and_post("tests/cluster_regressions/amsrefs_inline_bibliography.tex");
+  // The inline entries became real bibitems (post ran and collected them).
+  assert!(
+    x.contains("<bibitem"),
+    "amsrefs inline bibliography was dropped whole — no bibitem survived:\n{x}"
+  );
+  // Both entries, with their content, are present. NB amsrefs sentence-cases
+  // titles ("On Examples" -> "On examples"), as `amsrefs_basic.xml` records.
+  for needle in ["Beilinson", "Height pairing", "On examples", "Smith"] {
+    assert!(
+      x.contains(needle),
+      "amsrefs entry content `{needle}` missing from the References:\n{x}"
+    );
+  }
+  // No leftover uncollected bibentry (they were converted, not deleted).
+  assert!(
+    !x.contains("<bibentry"),
+    "an ltx:bibentry survived unconverted:\n{x}"
   );
 }

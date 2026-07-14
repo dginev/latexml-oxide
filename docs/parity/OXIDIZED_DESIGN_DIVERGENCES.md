@@ -1446,6 +1446,50 @@ four; full suite 1541/0.
 
 ---
 
+### 55. amsrefs inline bibliographies are collected (upstream drops them whole)
+
+**Decision:** `MakeBibliography::get_bib_entries`
+(`latexml_post/src/make_bibliography.rs`) scans the **main document** for inline
+`ltx:bibentry` elements in addition to the external bibliography documents
+returned by `get_bibliographies`. Perl's `getBibEntries`
+(`LaTeXML/lib/LaTeXML/Post/MakeBibliography.pm`) only ever iterates
+`getBibliographies($doc)`. This is a **surpass-Perl divergence** under the
+PDF-fidelity policy: the references are unambiguously present in the source and
+in the author's PDF.
+
+**The shared bug.** `amsrefs` writes the bibliography *into the document* —
+
+```latex
+\begin{bibdiv}\begin{biblist}
+\bib{Bei87}{article}{ author={Be\u{\i}linson, A.}, title={Height pairing...}, }
+\end{biblist}\end{bibdiv}
+```
+
+— rather than into an external `.bib`. The engine digests this correctly into
+`ltx:biblist`/`ltx:bibentry` (our `amsrefs_basic` structure test covers exactly
+that, and passes). But there is no `@files` attribute for `getBibliographies` to
+resolve, so it returns an empty list, `getBibEntries` collects **nothing**, and
+`process` then executes its unconditional
+`$doc->removeNodes($doc->findnodes('//ltx:bibentry'))` — deleting every entry it
+never collected. The result is a **silently empty References section with every
+`\cite` left dangling, and zero errors reported**.
+
+Confirmed identical on the installed **and** the vendored Perl 0.8.8
+(rev `51fea96a`): witness 2605.01646 (`AIPFa.tex`) gives Perl `ltx_bibitem: 0` /
+`ltx_missing_citation: 81`. Recorded upstream as KNOWN_PERL_ERRORS #49.
+
+**Why this is safe.** A paper with an external `.bib`/`.bbl` carries no inline
+`ltx:bibentry` in the main document at this point in the pipeline, so the extra
+scan contributes nothing and the entry map is byte-identical. The scan runs
+*after* the external documents, so a key defined both externally and inline
+resolves to the inline one — matching upstream's own last-source-wins loop.
+
+**Measured.** All 40 amsrefs papers in sandboxes 2605+2606 went from 0 rendered
+references (100% loss, every citation dangling) to **1,482 references rendered
+with zero dangling citations**. Witness 2605.01646 (23 entries), 2605.00783,
+2605.03852.
+
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
