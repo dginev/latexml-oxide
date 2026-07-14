@@ -6,10 +6,13 @@ artifacts and publishes them to a new GitHub Release. The Linux assets
 build on `ubuntu-22.04` (glibc 2.35, broadest binary compatibility); the
 macOS asset builds natively on `macos-15` (Apple Silicon).
 
-Currently published platforms: **`x86_64-unknown-linux-gnu`** and
-**`aarch64-apple-darwin`** (macOS Apple Silicon). Intel macOS
-(`x86_64-apple-darwin`), `aarch64` Linux, Windows, and musl are
-out of scope for now — see "Release asset strategy" below.
+Currently published platforms: **`x86_64-unknown-linux-gnu`**,
+**`aarch64-unknown-linux-gnu`**, **`aarch64-apple-darwin`** (macOS Apple
+Silicon), and **`x86_64-apple-darwin`** (macOS Intel). **`x86_64-pc-windows-msvc`**
+joins at **`0.7.4`** as a single self-contained `.exe` (validating as the
+`0.7.4-rc2` RC draft; see
+[`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md)). Only musl
+remains out of scope for now — see "Release asset strategy" below.
 
 ## Release asset strategy
 
@@ -54,32 +57,40 @@ What this means concretely:
     is macOS 15.
 - **Distribution linkage (self-contained):** the CLI assets STATICALLY link
   libxml2 + libxslt + libexslt (source-built PIC,
-  `tools/build_static_libxml.sh`) and — on Linux — libkpathsea
-  (`tools/build_static_kpathsea.sh`, in-process lookups). The binary carries
-  NO versioned libxml2/libxslt SONAME dependency, so it is independent of the
-  host's libxml2 era: libxml2 2.14 bumped the SONAME `.so.2` → `.so.16`, and a
-  dynamically-linked binary loads on only one side of that split. On macOS,
-  kpathsea stays the **subprocess-`kpsewhich` backend** of `kpathsea` 0.3 —
-  mandatory on MacTeX (ships no libkpathsea). Only the glibc/libSystem family
-  remains dynamic. Our *own* resources (XSLT/CSS/JS/schema/dumps) are always
-  embedded; see the portability note below. A `release.yml` step
-  `ldd`/`otool`-asserts the absence of dynamic libxml2/libxslt/kpathsea and
+  `tools/build_static_libxml.sh`) and — on Linux and (as of 0.7.4) Windows —
+  libkpathsea (Linux `tools/build_static_kpathsea.sh`; Windows `kpathsea_sys`
+  `build_from_source` — both in-process lookups). The binary carries NO versioned
+  libxml2/libxslt SONAME dependency, so it is independent of the host's libxml2
+  era (libxml2 2.14 bumped the SONAME `.so.2` → `.so.16`; a dynamically-linked
+  binary loads on only one side of that split). kpathsea falls back to the
+  **subprocess-`kpsewhich` backend** where a static link can't serve — macOS
+  (MacTeX ships no libkpathsea) and MiKTeX (whose fndb a static libkpathsea can't
+  read; `select_kpaths` picks per-host at runtime). Only the glibc/libSystem
+  family remains dynamic — and on Windows even the CRT is static (`+crt-static`),
+  so the `.exe` imports only core OS DLLs. (libkpathsea is LGPL-2.1: the static
+  link carries a §6 relink obligation — see `LICENSE_INVENTORY.md` §D/F5.) Our
+  *own* resources (XSLT/CSS/JS/schema/dumps) are always embedded; see the
+  portability note below. A `release.yml` step `ldd`/`otool`/`dumpbin`-asserts the
+  absence of dynamic libxml2/libxslt/kpathsea (and, on Windows, VCRUNTIME) and
   fails the release otherwise.
 - **Editor-distributed binary:** the stricter "no host libxml2/libxslt" bar
   (`RELEASE_CRITERIA.md` §11) is now MET by these same CLI assets, so a VSCode
   extension can ship the binary directly.
 - **Deferred matrix rungs:** a macOS `lipo` universal binary (folding the two
-  macOS tarballs into one — see the Intel runner sunset note above), then
-  Windows/musl (`RELEASE_CRITERIA.md` §3). (`aarch64-unknown-linux-gnu`
-  landed 2026-07-09 as the `build-linux-arm64` leg.) Each new triple is one
-  more native build leg in `release.yml` plus a `RELEASE_TARGET=<triple>`
-  invocation of `tools/make_release.sh`.
+  macOS tarballs into one — see the Intel runner sunset note above), then musl
+  (`RELEASE_CRITERIA.md` §3). (`aarch64-unknown-linux-gnu` landed 2026-07-09 as
+  `build-linux-arm64`; `x86_64-pc-windows-msvc` landed 2026-07-14 as
+  `build-windows` — a single fully-static `.exe`.) Each new triple is one more
+  native build leg in `release.yml` plus a `RELEASE_TARGET=<triple>` invocation
+  of `tools/make_release.sh`.
 
 ## What ships in a release
 
-Assets attached to each `X.Y.Z` GitHub Release — four platform builds (two
-Linux, two macOS), each a tarball (+ `.sha256`), plus a `.deb` (+ `.sha256`)
-for each Linux arch, plus the aggregate `THIRD-PARTY-NOTICES`:
+Assets attached to each `X.Y.Z` GitHub Release — five platform builds (two
+Linux, two macOS, one Windows). Linux/macOS ship a tarball (+ `.sha256`);
+Windows ships a bare `.exe` (+ `.sha256`) — no tarball/`.deb`, the user runs the
+`.exe` directly. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
+aggregate `THIRD-PARTY-NOTICES`:
 
 | Asset | Purpose |
 |---|---|
@@ -95,6 +106,8 @@ for each Linux arch, plus the aggregate `THIRD-PARTY-NOTICES`:
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz` | Portable macOS (Intel) archive: built with a macOS 10.13 deployment target so it runs on older Intel Macs. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
+| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.exe` | Windows (x86_64) — a single fully-static `.exe` (`+crt-static`; static libxml2/libxslt/libkpathsea via `build_from_source`): imports only core OS DLLs, no VC++ redistributable. Run directly; TeX Live or MiKTeX on PATH for host TeX resolution. |
+| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.exe.sha256` | SHA-256 sidecar. |
 | `THIRD-PARTY-NOTICES` | Aggregate license notices (hand-authored §1–4 + the cargo-about Rust-crate appendix). |
 
 The shipped `latexml_oxide` binary is fully self-contained — XSLT
@@ -107,9 +120,9 @@ are also embedded. They are NOT in git: `release.yml` first calls
 TL-year container (`ghcr.io/tkw1536/texlive-docker:YYYY` — the image
 family behind Perl LaTeXML's CI) under a strict zero-error `--init`
 gate, then **every** build leg (Linux x86_64 + aarch64, macOS arm64 +
-Intel) downloads the full window into `resources/dumps/` and verifies
-completeness before building. The dumps are OS/arch-agnostic gzipped text,
-so all four binaries embed the exact same bytes. Every leg builds with
+Intel, Windows x86_64) downloads the full window into `resources/dumps/` and
+verifies completeness before building. The dumps are OS/arch-agnostic gzipped
+text, so all five binaries embed the exact same bytes. Every leg builds with
 `--profile maxperf` (`release.yml`), so each platform's download is one
 optimized, self-contained artifact.
 

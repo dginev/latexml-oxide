@@ -30,12 +30,14 @@ Design goals:
 
 Every tagged release on the [Releases page](https://github.com/dginev/latexml-oxide/releases)
 ships prebuilt binaries for **Linux** (x86-64 and aarch64/arm64, `.deb` +
-portable tarball each) and **macOS** (Apple Silicon and Intel tarballs). The
+portable tarball each), **macOS** (Apple Silicon and Intel tarballs), and
+**Windows** (x86-64, a single self-contained `.exe` — from 0.7.4). The
 binary is fully self-contained — all XSLT
 stylesheets, CSS, JS, and RelaxNG schemas are embedded at build time and served
 from memory, so no `resources/` tree is needed alongside it (a deliberate design
-goal — see [docs/parity/OXIDIZED_DESIGN.md](docs/parity/OXIDIZED_DESIGN.md)). A working TeX Live
-installation is still required at runtime for TeX package/class/font resolution.
+goal — see [docs/parity/OXIDIZED_DESIGN.md](docs/parity/OXIDIZED_DESIGN.md)). A working TeX
+installation — **TeX Live or MiKTeX** — is still required at runtime for TeX
+package/class/font resolution.
 Every asset has a `<name>.sha256` sidecar for integrity checking.
 
 Set the version once (use the latest from the Releases page):
@@ -120,6 +122,24 @@ resolves TeX files through your distribution's `kpsewhich` executable (ensure
 > binary run `xattr -d com.apple.quarantine /usr/local/bin/latexml_oxide`
 > (equivalently, right-click it in Finder → **Open**). The **Homebrew install
 > above avoids this entirely**, since `brew` strips the quarantine flag.
+
+#### Windows (x86_64)
+
+*(From `0.7.4`.)* A single self-contained `.exe` — no installer, no runtime DLLs
+(fully static: no VC++ redistributable needed). In PowerShell:
+
+```
+> $VERSION = "0.7.4"
+> curl.exe -LO "https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-pc-windows-msvc.exe"
+> .\latexml-oxide-$VERSION-x86_64-pc-windows-msvc.exe --version
+```
+
+Rename it to `latexml_oxide.exe` and put it on your `PATH`. A TeX distribution —
+**TeX Live for Windows or MiKTeX** — must be on `PATH` for host TeX resolution;
+the binary auto-selects the fast in-process backend on TeX Live and falls back to
+subprocess `kpsewhich` on MiKTeX. ImageMagick (`magick`), Ghostscript
+(`gswin64c` / MiKTeX `mgs`), and MuPDF (`mutool`) on `PATH` are optional, for
+figure conversion.
 
 #### Docker
 
