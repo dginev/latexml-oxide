@@ -3097,8 +3097,12 @@ fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
 /// BibTeX instead of spawning a full LaTeXML sub-session with BibTeX.pool.
 fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
   BIB_INTERPRET_FAILURES.with(|c| c.set(0));
-  let content = std::fs::read_to_string(bib_path)
-    .map_err(|e| format!("Failed to read '{}': {}", bib_path, e))?;
+  // Decode rather than `read_to_string`: see `mouth::decode_input_bytes` —
+  // a strict UTF-8 read drops the whole bibliography on the first stray
+  // Cp1252 byte (witness 2605.00490).
+  let content = latexml_core::mouth::decode_input_bytes(
+    &std::fs::read(bib_path).map_err(|e| format!("Failed to read '{}': {}", bib_path, e))?,
+  );
 
   let entries = parse_bibtex(&content);
   Info!(

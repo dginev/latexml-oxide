@@ -1106,3 +1106,30 @@ fn bibunits_cite_resolves_against_the_main_bibliography() {
      unit list and never fell back to the main `bibliography` list:\n{x}"
   );
 }
+
+/// Witness 2605.00490: a JabRef `.bib` self-declaring `% Encoding: Cp1252`.
+/// MakeBibliography read it with `read_to_string`, which hard-errors on the
+/// first non-UTF-8 byte, so the whole bibliography was dropped and the paper
+/// rendered an empty References section with NO `Error:` — a silent, total
+/// loss. Real `bibtex` 0.99d is 8-bit clean and Perl passes raw bytes through
+/// (`Mouth.pm` L75-80).
+///
+/// This exercises the POST path (`convert_bib_file_to_xml`), which is where
+/// the production failure actually happened; `pre_bibtex`'s own
+/// `non_utf8_bib_file_is_read_not_rejected` covers the engine-side reader.
+#[test]
+fn non_utf8_bib_file_still_yields_a_bibliography() {
+  let x = convert_and_post("tests/cluster_regressions/cp1252_bib.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "cp1252 .bib: the whole bibliography was dropped on a non-UTF-8 byte:\n{x}"
+  );
+  // The Latin-1 fallback is lossless byte -> char, so the accent survives to
+  // the rendered entry rather than collapsing to U+FFFD. Only the SURNAME is
+  // asserted: the fixture's `author = {Café, André}` is BibTeX's `Last, First`
+  // form, so the style abbreviates the given name to `A.` ("A. Café").
+  assert!(
+    x.contains("Café"),
+    "cp1252 .bib: the accented surname did not survive the decode:\n{x}"
+  );
+}

@@ -195,8 +195,13 @@ impl PreBibTeX {
   /// Perl `newFromFile` (L60-75). Reads the file at `path` directly;
   /// search-path resolution is the caller's responsibility (we do not
   /// reach into `state` here so the parser stays unit-testable).
+  ///
+  /// Decoded via `decode_input_bytes`, not `read_to_string`: a `.bib` has no
+  /// `\inputencoding` to declare, real `bibtex` is 8-bit clean, and a strict
+  /// UTF-8 read turns one stray Cp1252 byte into a lost bibliography
+  /// (witness 2605.00490).
   pub fn new_from_file(path: &str) -> std::io::Result<Self> {
-    let content = std::fs::read_to_string(path)?;
+    let content = latexml_core::mouth::decode_input_bytes(&std::fs::read(path)?);
     let mut me = Self::new_from_string(&content);
     me.source = Some(path.to_string());
     me.file_label = path.to_string();
@@ -1237,5 +1242,71 @@ value} }
     assert_eq!(find_balanced_brace_end(r"{a\}b}"), Some(4));
     assert_eq!(find_balanced_brace_end("{abc"), None);
     assert_eq!(find_balanced_brace_end("noleadingbrace"), None);
+  }
+
+  /// Witness 2605.00490: a JabRef `.bib` self-declaring `% Encoding: Cp1252`.
+  /// `read_to_string` rejected the whole file ("stream did not contain valid
+  /// UTF-8"), so the paper rendered a References section with zero entries and
+  /// NO error — a silent, total loss. Real `bibtex` 0.99d is 8-bit clean, and
+  /// Perl passes the raw bytes through (`Mouth.pm` L75-80).
+  #[test]
+  fn non_utf8_bib_file_is_read_not_rejected() {
+    // `\xe9` is `é` in Cp1252/Latin-1 — a lone continuation byte that is
+    // invalid UTF-8, exactly what a JabRef-era file carries in an author name.
+    let mut bytes = b"@article{Cafe2020,\n  author = {Caf".to_vec();
+    bytes.push(0xe9);
+    bytes.extend_from_slice(b" and R\xe9mi},\n  year = {2020}\n}\n");
+
+    let path = std::env::temp_dir().join("latexml_oxide_cp1252_witness.bib");
+    std::fs::write(&path, &bytes).expect("write fixture");
+    let mut p = PreBibTeX::new_from_file(path.to_str().unwrap()).expect("non-UTF-8 .bib must read");
+    p.parse_top_level().expect("parse_top_level");
+    let _ = std::fs::remove_file(&path);
+
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["Cafe2020"], "entries: {keys:?}");
+    // The accented bytes survive as the Latin-1 characters they encode,
+    // rather than being replaced or dropped.
+    let author = p.entries[0]
+      .fields
+      .iter()
+      .find(|(n, _)| n == "author")
+      .map(|(_, v)| v.as_str())
+      .unwrap_or_default();
+    assert_eq!(author, "Café and Rémi", "author: {author:?}");
+  }
+
+  /// The Latin-1 fallback is per LINE, so one stray byte in a mostly-UTF-8
+  /// `.bib` must not mojibake the correctly-encoded names around it.
+  #[test]
+  fn one_bad_byte_does_not_mojibake_the_rest_of_the_file() {
+    let mut bytes = b"@article{Mixed2021,\n  author = {Zo\xebe},\n".to_vec();
+    // A properly UTF-8-encoded name on its own line: it must survive verbatim.
+    bytes.extend_from_slice("  title = {Ünicode Bewahren},\n  year = {2021}\n}\n".as_bytes());
+
+    let path = std::env::temp_dir().join("latexml_oxide_mixed_encoding_witness.bib");
+    std::fs::write(&path, &bytes).expect("write fixture");
+    let mut p = PreBibTeX::new_from_file(path.to_str().unwrap()).expect("mixed-encoding .bib");
+    p.parse_top_level().expect("parse_top_level");
+    let _ = std::fs::remove_file(&path);
+
+    let field = |n: &str| {
+      p.entries[0]
+        .fields
+        .iter()
+        .find(|(f, _)| f == n)
+        .map(|(_, v)| v.clone())
+        .unwrap_or_default()
+    };
+    // The bad line decodes as Latin-1 ...
+    assert_eq!(field("author"), "Zoëe", "author: {:?}", field("author"));
+    // ... while the valid-UTF-8 line is untouched (a whole-buffer Latin-1
+    // fallback would have turned this into "Ãnicode").
+    assert_eq!(
+      field("title"),
+      "Ünicode Bewahren",
+      "title: {:?}",
+      field("title")
+    );
   }
 }
