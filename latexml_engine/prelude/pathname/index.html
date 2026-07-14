@@ -4,7 +4,12 @@ Mirrors Perl <code>LaTeXML::Util::Pathname::pathname_find</code>’s named-arg o
 kpsewhich-fallback is NOT one of them — that lives in higher-level
 <code>LaTeXML::Package::FindFile_aux</code>, which calls <code>pathname_kpsewhich</code> after
 <code>pathname_find</code> returns empty. Keep this struct directory-search-only
-for parity.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.absolute.html" title="fn latexml_engine::prelude::pathname::absolute">absolute</a></dt><dd>convert a (possibly relative) file path to an absolute one</dd><dt><a class="fn" href="fn.candidate_pathnames.html" title="fn latexml_engine::prelude::pathname::candidate_pathnames">candidate_<wbr>pathnames</a></dt><dd>It’s presumably cheep to concatinate all the pathnames,
+for parity.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.absolute.html" title="fn latexml_engine::prelude::pathname::absolute">absolute</a></dt><dd>convert a (possibly relative) file path to an absolute one</dd><dt><a class="fn" href="fn.ambient_kpsewhich_version.html" title="fn latexml_engine::prelude::pathname::ambient_kpsewhich_version">ambient_<wbr>kpsewhich_<wbr>version</a></dt><dd>The ambient <code>kpsewhich --version</code> banner (full stdout), memoized for the
+process. It is a global property of the host TeX install, and several
+consumers read it — kpathsea backend selection ([<code>select_kpaths</code>]),
+ambient-year detection, and the latex-dump stamp check (both in
+<code>latexml_engine</code>) — so <code>kpsewhich</code> is spawned at most once. Returns <code>None</code>
+if kpsewhich is absent or the call fails.</dd><dt><a class="fn" href="fn.candidate_pathnames.html" title="fn latexml_engine::prelude::pathname::candidate_pathnames">candidate_<wbr>pathnames</a></dt><dd>It’s presumably cheep to concatinate all the pathnames,
 relative to the cost of testing for files,
 and this simplifies overall.</dd><dt><a class="fn" href="fn.canonical.html" title="fn latexml_engine::prelude::pathname::canonical">canonical</a></dt><dd>Canonicalize a pathname by simplifying redundant separators, <code>.</code> and <code>..</code> components.
 Matches Perl’s pathname_canonical from Pathname.pm.</dd><dt><a class="fn" href="fn.clear_kpsewhich_memo.html" title="fn latexml_engine::prelude::pathname::clear_kpsewhich_memo">clear_<wbr>kpsewhich_<wbr>memo</a></dt><dd>Clear the per-thread kpsewhich memo. Called at the start of every
