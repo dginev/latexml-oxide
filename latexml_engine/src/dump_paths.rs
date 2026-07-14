@@ -9,10 +9,11 @@
 //! resources/dumps/texlive.2025.version
 //! ```
 //!
-//! At runtime we detect the ambient year (via `kpsewhich
-//! -var-value=SELFAUTOPARENT`, with `pdflatex --version` as fallback) and
-//! pick the matching dump. If no exact match exists — or no TeXLive is
-//! installed at all — we fall back to the most-recent year present.
+//! At runtime we detect the ambient year (via the `kpsewhich --version` /
+//! `kpsewhich -var-value=SELFAUTOPARENT` banners, with `pdflatex --version`
+//! as fallback — see [`detect_ambient_texlive_year`]) and pick the matching
+//! dump. If no exact match exists — or no TeXLive is installed at all — we
+//! fall back to the most-recent year present.
 //!
 //! Why versioned: `latex.dump.txt` content reflects whatever raw `latex.ltx`
 //! / `expl3-code.tex` shipped with the ambient TeXLive at `--init` time.
@@ -22,19 +23,84 @@
 //! [`embedded_dumps`](crate::embedded_dumps)).
 
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 /// Detect the ambient TeXLive release year. Returns `None` if no TeXLive
 /// is installed (or detection fails for some other reason).
 ///
-/// Strategy:
-///   1. `kpsewhich -var-value=SELFAUTOPARENT` → e.g. `/usr/local/texlive/2025`. Last path
+/// Strategy (ordered for one-subprocess-per-distro; see the body for the
+/// spawn-cost rationale):
+///   1. `kpsewhich --version` → MiKTeX prints `MiKTeX YY.MM` → `20YY` (TeX Live
+///      has no year here and falls through).
+///   2. `kpsewhich -var-value=SELFAUTOPARENT` → e.g. `/usr/local/texlive/2025`. Last path
 ///      component, if it parses as a 4-digit year (2000..=2099), wins.
-///   2. `pdflatex --version` → first line typically contains `(TeX Live YYYY)`.
+///   3. `pdflatex --version` → first line typically contains `(TeX Live YYYY)`.
 pub fn detect_ambient_texlive_year() -> Option<u32> {
-  if let Some(year) = year_from_kpsewhich_selfautoparent() {
-    return Some(year);
-  }
-  year_from_pdflatex_version()
+  // Process-global memo. The ambient TeX year is a constant property of the
+  // installed distribution — it cannot change mid-process — but detection is
+  // called from several sites per conversion (plain/latex dump load, ini), and
+  // each site spawns a probe subprocess. On MiKTeX those subprocesses are
+  // ~340ms EACH (~10-25x TeX Live's), so an unmemoized detect cost ~0.7s PER
+  // call site — the dominant Windows/MiKTeX slowdown (the "load" before the
+  // first dump_reader log). Detect once. Thread-safe: the year is
+  // process-level, not per-thread State.
+  static AMBIENT_TEXLIVE_YEAR: OnceLock<Option<u32>> = OnceLock::new();
+  *AMBIENT_TEXLIVE_YEAR.get_or_init(|| {
+    // Probe order is chosen so EACH distribution resolves in a single
+    // subprocess (the spawn is the whole cost — ~340ms on MiKTeX):
+    //   1. `kpsewhich --version` banner. MiKTeX prints `MiKTeX YY.MM` on stdout
+    //      → `20YY`, and this is MiKTeX's ONLY single-spawn year signal
+    //      (SELFAUTOPARENT is empty there, so step 2 can't help it). Resolving
+    //      here saves MiKTeX the extra `pdflatex --version` spawn. TeX Live's
+    //      banner is `kpathsea version 6.4.x` (no year) so it returns None — but
+    //      only costs ~28ms on TeX Live, so the extra probe is effectively free.
+    //   2. `kpsewhich -var-value=SELFAUTOPARENT` → `.../texlive/2026`: TeX Live's
+    //      fast path (MiKTeX already exited at step 1).
+    //   3. `pdflatex --version`: last-resort fallback for exotic setups where
+    //      neither kpsewhich signal carries a year.
+    // Answer-identical to a SELFAUTOPARENT-first order on both distros; just
+    // fewer spawns (MiKTeX: 2 → 1).
+    if let Some(year) = year_from_kpsewhich_version_banner() {
+      return Some(year);
+    }
+    if let Some(year) = year_from_kpsewhich_selfautoparent() {
+      return Some(year);
+    }
+    year_from_pdflatex_version()
+  })
+}
+
+/// The ambient `kpsewhich --version` banner (full stdout), memoized for the
+/// process. It is a global property of the host TeX install, and TWO consumers
+/// read it — ambient-year detection ([`year_from_kpsewhich_version_banner`])
+/// and the latex-dump staleness stamp check (`compare_stamp_to_ambient` in the
+/// build.rs-generated loader) — so spawning `kpsewhich` once and sharing the
+/// result saves a full subprocess (~340ms on MiKTeX). Returns `None` if
+/// kpsewhich is absent or the call fails.
+pub fn ambient_kpsewhich_version() -> Option<&'static str> {
+  static BANNER: OnceLock<Option<String>> = OnceLock::new();
+  BANNER
+    .get_or_init(|| {
+      let out = std::process::Command::new("kpsewhich")
+        .arg("--version")
+        .output()
+        .ok()?;
+      if !out.status.success() {
+        return None;
+      }
+      String::from_utf8(out.stdout).ok()
+    })
+    .as_deref()
+}
+
+/// Year from the memoized `kpsewhich --version` banner. Only MiKTeX carries a
+/// year here (`MiKTeX YY.MM` on stdout, e.g. `MiKTeX 25.12` → 2025); TeX Live
+/// prints `kpathsea version 6.4.x` (no year) and so returns `None`, deferring
+/// to SELFAUTOPARENT. Reuses [`parse_year_from_version_banner`] — the same
+/// extractor as the `pdflatex --version` fallback, which also handles a
+/// leading MiKTeX "check for updates" warning line without a false match.
+fn year_from_kpsewhich_version_banner() -> Option<u32> {
+  parse_year_from_version_banner(ambient_kpsewhich_version()?)
 }
 
 fn year_from_kpsewhich_selfautoparent() -> Option<u32> {
