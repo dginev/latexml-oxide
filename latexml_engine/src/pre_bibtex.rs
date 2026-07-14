@@ -279,15 +279,19 @@ impl PreBibTeX {
         _ => self.parse_entry(&typ),
       };
       if let Err(e) = outcome {
-        // Loud, never silent: the entry IS lost, and the reader must know.
-        let detail = s!("{:?}", e);
+        // Loud, never silent: the entry IS lost, and the reader must know
+        // WHICH one. NB `Warn!` takes a pre-formatted message and appends any
+        // further args as separate detail LINES — it does NOT interpolate
+        // `{}`, so the message must be built with `s!` first.
         latexml_core::Warn!(
           "bibtex",
           "unbalanced",
-          "{} line {}: {}; resyncing at the next '@'",
-          self.to_string_label(),
-          self.lineno,
-          detail
+          s!(
+            "{} line {}: {:?}; resyncing at the next '@'",
+            self.to_string_label(),
+            self.lineno,
+            e
+          )
         );
       }
     }
@@ -314,10 +318,20 @@ impl PreBibTeX {
     Ok(())
   }
 
-  /// Perl `parseComment` (L177-181). The value is parsed and
-  /// discarded.
+  /// Perl `parseComment` (L177-181). The value is parsed and discarded.
+  ///
+  /// An **undelimited** `@Comment` is not an error: BibTeX simply ignores
+  /// everything after `@comment` up to the next entry (`bibtex.web` never
+  /// scans it), and `.bib` files in the wild use bare separator banners like
+  /// `@Comment ------AAAAAA------`. Perl demands a delimited string here and
+  /// errors out; we discard the junk and carry on, which `skip_junk` in the
+  /// caller does anyway. OXIDIZED_DESIGN #58, witness 2605.06974 (26 such
+  /// banners, each costing the entry that followed it).
   fn parse_comment(&mut self) -> Result<(), BibParseError> {
-    let _ = self.parse_string()?;
+    self.skip_white();
+    if self.line.starts_with('"') || self.line.starts_with('{') {
+      let _ = self.parse_string()?;
+    }
     Ok(())
   }
 
@@ -701,6 +715,19 @@ fn is_bib_name_or_noise(c: char) -> bool {
   if c.is_ascii_alphanumeric() {
     return true;
   }
+  // ...plus any non-ASCII. Perl's class is the literal `a-zA-Z0-9`
+  // (`BibTeX.pm` L221), so it stops dead at the first accent — a Zotero-style
+  // key like `alvarado-leañosLasing2022` yields `Expected ","` and the entry
+  // is lost. BibTeX itself is byte-oriented and accepts such keys (verified:
+  // `bibtex` 0.99d cites `alvarado-leañosLasing2022` with only a benign
+  // "empty journal" warning), and the `\cite` in the .tex carries the same
+  // bytes, so the two match. Non-ASCII is never a BibTeX *delimiter*, so
+  // admitting it here cannot swallow structure.
+  // OXIDIZED_DESIGN #58. Witnesses 2605.28695 (`ñ`), 2605.00121 (a stray
+  // U+FE0F VARIATION SELECTOR-16 the author typed into the key).
+  if !c.is_ascii() {
+    return true;
+  }
   // BIBNOISE: . + - * / ^ _ : ; @ ` ? ! ~ | < > $ [ ]
   matches!(
     c,
@@ -758,23 +785,27 @@ fn consumed_diff(before: &str, after: &str) -> String {
 /// `{`-prefixed balanced-brace group in `s`. Returns `None` if no
 /// balanced close exists in `s`.
 ///
-/// Honors backslash-escaped `\{` and `\}` as a single token, matching
-/// the Perl `Text::Balanced::extract_bracketed($s, '{}')` semantics
-/// for the simple pair specification.
+/// Braces are counted **literally**: a backslash does NOT escape them.
+/// This is BibTeX's own rule (`bibtex.web`'s brace-depth scan knows
+/// nothing about `\`), and it is deliberately NOT Perl's — Perl uses
+/// `Text::Balanced::extract_bracketed($line, '{}')`, which treats `\}`
+/// as escaped and so returns undef for a title like
+/// `"...boldsymbol\{Q\}..."`. Perl then extends line after line to EOF
+/// and abandons the whole file, losing every remaining entry.
+///
+/// Ground truth is the real tool: `bibtex` 0.99d parses that same entry
+/// with only a benign "empty journal" warning, so the references exist
+/// in the author's PDF. OXIDIZED_DESIGN #58, KNOWN_PERL_ERRORS #51.
+/// Witness 2605.00264 (`\{Q\}` in `chen2017ucb`): 1144/1169 entries
+/// parsed before, 1169 after.
 fn find_balanced_brace_end(s: &str) -> Option<usize> {
   let bytes = s.as_bytes();
   if bytes.first() != Some(&b'{') {
     return None;
   }
   let mut depth: i32 = 0;
-  let mut i = 0;
-  while i < bytes.len() {
-    match bytes[i] {
-      b'\\' if i + 1 < bytes.len() => {
-        // Skip the escaped char
-        i += 2;
-        continue;
-      },
+  for (i, b) in bytes.iter().enumerate() {
+    match b {
       b'{' => depth += 1,
       b'}' => {
         depth -= 1;
@@ -784,7 +815,6 @@ fn find_balanced_brace_end(s: &str) -> Option<usize> {
       },
       _ => {},
     }
-    i += 1;
   }
   None
 }
@@ -827,6 +857,65 @@ mod tests {
         .map(|(_, v)| v.as_str()),
       Some("Müller and Sons\n    and More")
     );
+  }
+
+  /// `\{`/`\}` inside a value do NOT escape the brace count — BibTeX's own
+  /// rule. Perl's `Text::Balanced` disagrees, fails to extract, extends to
+  /// EOF and abandons the rest of the file; real `bibtex` 0.99d parses this
+  /// entry fine (only "empty journal"), so the reference is in the PDF.
+  /// Witness 2605.00264 `chen2017ucb` — 25 entries were lost this way.
+  #[test]
+  fn escaped_braces_do_not_escape_the_brace_count() {
+    let p = parse(concat!(
+      "@article{chen2017ucb,\n",
+      "    title = \"{UCB} via {\\textdollar}{\\textbackslash}boldsymbol\\{Q\\}{\\textdollar}-Ensembles\"\n",
+      "}\n\n",
+      "@article{after2018,\n  title = \"An entry that follows\"\n}\n"
+    ));
+    // BOTH entries survive: the escaped-brace title parses, and nothing ran
+    // away to EOF and swallowed its successor.
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["chen2017ucb", "after2018"], "entries: {keys:?}");
+  }
+
+  /// A non-ASCII cite key (Zotero writes these constantly) must not end the
+  /// key. Perl's class is the literal `a-zA-Z0-9`, so it stops at the accent
+  /// and reports `Expected ","`; real `bibtex` 0.99d accepts the key, and the
+  /// `\cite` carries the same bytes. Witness 2605.28695.
+  #[test]
+  fn non_ascii_cite_key_is_not_truncated() {
+    let p = parse(concat!(
+      "@article{alvarado-lea\u{f1}osLasing2022,\n  title = {Lasing},\n  year = {2022}\n}\n\n",
+      "@article{after2018,\n  title = {Follows}\n}\n"
+    ));
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(
+      keys,
+      vec!["alvarado-lea\u{f1}osLasing2022", "after2018"],
+      "entries: {keys:?}"
+    );
+  }
+
+  /// A bare `@Comment` banner (no braces/quotes) is legal junk that BibTeX
+  /// ignores. Demanding a delimited string made it an Err, which
+  /// `parse_top_level` then reported as `bibtex:unbalanced ... resyncing` —
+  /// a warning that claims an entry was LOST when none was (`skip_junk`
+  /// recovers the next `@` regardless). Witness 2605.06974: 26 banners, 26
+  /// false alarms, 0 real losses.
+  ///
+  /// Asserted at the `parse_comment` layer because that is exactly what
+  /// changed: at the `parse_top_level` layer the resync masks it, so an
+  /// entries-based assertion would pass either way (it did).
+  #[test]
+  fn undelimited_comment_banner_is_not_an_error() {
+    let mut p = PreBibTeX::new_from_string(" -----------AAAAAAA-------------\n");
+    assert!(
+      p.parse_comment().is_ok(),
+      "a bare `@Comment` banner must not raise a parse error"
+    );
+    // A properly delimited comment still parses (and is discarded).
+    let mut q = PreBibTeX::new_from_string(" {a delimited comment}\n");
+    assert!(q.parse_comment().is_ok());
   }
 
   /// The same defect without the panic: on an all-ASCII wrapped value
@@ -1072,7 +1161,10 @@ value} }
   fn balanced_brace_finder() {
     assert_eq!(find_balanced_brace_end("{abc}xyz"), Some(5));
     assert_eq!(find_balanced_brace_end("{a{b}c}d"), Some(7));
-    assert_eq!(find_balanced_brace_end(r"{a\}b}"), Some(6));
+    // A backslash does NOT escape the brace count (BibTeX's rule), so the
+    // group closes at the FIRST `}` — this asserted Some(6) while we mirrored
+    // Perl's Text::Balanced, which is what lost real entries (#58).
+    assert_eq!(find_balanced_brace_end(r"{a\}b}"), Some(4));
     assert_eq!(find_balanced_brace_end("{abc"), None);
     assert_eq!(find_balanced_brace_end("noleadingbrace"), None);
   }

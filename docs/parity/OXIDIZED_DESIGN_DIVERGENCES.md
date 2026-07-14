@@ -1548,6 +1548,46 @@ minimal reproducer is 6 lines (`tests/cluster_regressions/bibunits_cite.tex`):
 deleting the single `\usepackage{bibunits}` line resolves the cite. Perl on that
 same reproducer: 1 bibitem, 1 dangling, 0 links.
 
+### 58. `.bib` scanning follows BibTeX, not `Text::Balanced` (escaped braces, non-ASCII keys, bare `@Comment`)
+
+**Decision:** `pre_bibtex` parses `.bib` the way **BibTeX itself** does on three
+points where Perl's `Pre/BibTeX.pm` diverges from the real tool:
+
+1. **Braces count literally.** `\{` / `\}` do NOT escape the brace depth
+   (`find_balanced_brace_end`). Perl uses
+   `Text::Balanced::extract_bracketed($line, '{}')`, which treats them as
+   escaped, returns `undef` for a title like
+   `"…{\textbackslash}boldsymbol\{Q\}…"`, then extends line-by-line to EOF and
+   abandons the file.
+2. **Non-ASCII is a name character** (`is_bib_name_or_noise`). Perl's class is
+   the literal `a-zA-Z0-9` (L221), so a Zotero-style key
+   `alvarado-leañosLasing2022` truncates at the accent → `Expected ","`.
+   Non-ASCII is never a BibTeX delimiter, so admitting it cannot swallow
+   structure.
+3. **A bare `@Comment` banner is not an error** (`parse_comment`). BibTeX
+   ignores everything after `@comment`; Perl demands a delimited string.
+
+**Why — ground truth is the real tool.** All three inputs are accepted by
+`bibtex` 0.99d (TeX Live 2025) with at most a benign *"empty journal"* warning,
+so the references exist in the author's PDF. Perl LaTeXML loses them: on the
+escaped-brace reproducer it emits **0 bibitems and 2 dangling citations**
+(it abandons the whole file), where `bibtex` emits both entries. This is the
+authorized surpass-Perl case — Rust == Perl but both wrong vs the PDF.
+
+**Measured.** These were exposed by routing post-side `.bib` parsing through
+this port (#56): `bibtex/unbalanced` went 19 → 593 papers in sandbox 2605
+because the deleted bespoke parser had been permissive on exactly these points.
+On a 24-paper sample of the affected set: **0/24 clean → 22/24 clean**
+(brace fix alone: 7/24). Witness 2605.00264 (`\{Q\}` in `chen2017ucb`):
+1144/1169 entries parsed → **1170**, 18 dangling citations → **0**.
+Witnesses 2605.28695 (`ñ` key), 2605.00121 (stray U+FE0F in the key),
+2605.06974 (26 `@Comment` banners).
+
+**Residual (not fixed):** ~2/24 sampled papers still warn `bibtex:unbalanced`
+from other malformed-entry shapes (`Expected ","` / `Expected "}"`); they lose
+no keys — the #56 resync recovers the next entry — so it is log noise, not data
+loss. Witnesses 2605.14212, 2605.06974.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
