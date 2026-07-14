@@ -395,10 +395,13 @@ jobs:
   # proven windows-ci-manual-trigger.yml recipe (vcpkg static libxml2/libxslt)
   # but builds the publish-grade `maxperf` binary and packages the bare `.exe`
   # (+ `.sha256`) — no tarball/.deb, the user runs the `.exe` directly.
-  # `kpathsea` is NOT linked on Windows: TeX paths resolve through the subprocess
-  # `kpsewhich` (MiKTeX/TeX Live on PATH). The `.exe` is FULLY STATIC — static C
-  # libs (x64-windows-static) + static CRT (+crt-static) — so it imports only
-  # core OS DLLs and runs on any Windows with no VC++ redistributable.
+  # `kpathsea` is linked IN-PROCESS via a STATIC libkpathsea built from source
+  # (`kpathsea-build-from-source`; see the build step) — no runtime
+  # `kpathsealibw64.dll`. At runtime `select_kpaths` keeps the fast in-process
+  # backend on TeX Live and falls back to subprocess `kpsewhich` on MiKTeX (whose
+  # MPM fndb a static libkpathsea can't read). The `.exe` is FULLY STATIC —
+  # static C libs (x64-windows-static) + static CRT (+crt-static) — so it imports
+  # only core OS DLLs and runs on any Windows with no VC++ redistributable.
   # The TL-window dumps are OS-agnostic gzipped text, embedded at build time like
   # the other legs (no TeX Live needed on THIS leg — dumps come from `dumps`).
   build-windows:
