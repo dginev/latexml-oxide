@@ -1490,6 +1490,32 @@ with zero dangling citations**. Witness 2605.01646 (23 entries), 2605.00783,
 2605.03852.
 
 
+### 56. A malformed `.bib` entry resyncs at the next `@` (upstream abandons the file)
+
+**Decision:** `PreBibTeX::parse_top_level` (`latexml_engine/src/pre_bibtex.rs`)
+reports a malformed entry and **continues at the next `@`**. Perl's
+`parseTopLevel` lets the first parse error propagate out, abandoning every
+LATER entry.
+
+**Why.** Real BibTeX does not abandon the file: on *"I was expecting a `,' or a
+`}'"* it reports the error and skips to the next entry (`bibtex.web`), which is
+the behaviour authors' `.bib`/`.bbl` files are written against — a single
+unbalanced `{` costs its own entry, not the rest of the bibliography. Under
+Perl's rule one stray brace silently deletes the whole tail of the References.
+`skip_junk` already *is* the resync, so the loop simply keeps going; the
+malformed entry itself is dropped, exactly as BibTeX drops it.
+
+**Loud, never silent.** Each resync emits
+`Warning:bibtex:unbalanced <label> line N: <error>; resyncing at the next '@'`,
+so the lost entry is always visible in the log (CLAUDE.md's
+fail-safe-toward-flagging-failure rule). The corpus carries 19 papers /
+298 messages in this category.
+
+**History.** This robustness previously lived in a bespoke second BibTeX parser
+inside `latexml_post::make_bibliography`, which has been deleted in favour of
+the faithful `pre_bibtex` port; the resync moved here so the single shared
+parser keeps both the faithful grammar and the BibTeX-grade error recovery.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

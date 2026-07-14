@@ -244,17 +244,40 @@ impl PreBibTeX {
   // ---- top-level parse ------------------------------------------------------
 
   /// Perl `parseTopLevel` (L138-151).
+  ///
+  /// DIVERGENCE (OXIDIZED_DESIGN #56): a malformed entry is reported and
+  /// **resynced at the next `@`** instead of aborting the file. Perl lets the
+  /// first parse error propagate out of `parseTopLevel`, so a single unbalanced
+  /// `{` anywhere in a `.bib` silently costs every LATER entry — the tail of the
+  /// bibliography just disappears. Real BibTeX does not: on "I was expecting a
+  /// `,' or a `}'" it reports the error and skips to the next entry
+  /// (`bibtex.web`), which is the behaviour authors' `.bbl` files are built
+  /// against. `skip_junk` is already exactly that resync, so the loop simply
+  /// keeps going. The malformed entry itself is dropped (as BibTeX drops it).
+  /// Corpus: 19 papers / 298 messages carry `bibtex:unbalanced`.
   pub fn parse_top_level(&mut self) -> Result<(), BibParseError> {
     while self.skip_junk() {
       let typ = match self.parse_entry_type() {
         Some(t) => t,
         None => continue,
       };
-      match typ.as_str() {
-        "preamble" => self.parse_preamble()?,
-        "string" => self.parse_macro()?,
-        "comment" => self.parse_comment()?,
-        _ => self.parse_entry(&typ)?,
+      let outcome = match typ.as_str() {
+        "preamble" => self.parse_preamble(),
+        "string" => self.parse_macro(),
+        "comment" => self.parse_comment(),
+        _ => self.parse_entry(&typ),
+      };
+      if let Err(e) = outcome {
+        // Loud, never silent: the entry IS lost, and the reader must know.
+        let detail = s!("{:?}", e);
+        latexml_core::Warn!(
+          "bibtex",
+          "unbalanced",
+          "{} line {}: {}; resyncing at the next '@'",
+          self.to_string_label(),
+          self.lineno,
+          detail
+        );
       }
     }
     self.parsed = true;

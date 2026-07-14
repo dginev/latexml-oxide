@@ -2871,278 +2871,33 @@ fn find_file(name: &str, search_paths: &[String]) -> Option<String> {
 // BibTeX → XML conversion
 // ================================================================================
 
-/// A parsed BibTeX entry.
-struct BibEntry {
-  entry_type: String,
-  key:        String,
-  fields:     Vec<(String, String)>,
-}
+/// A parsed BibTeX entry — the faithful `LaTeXML::Pre::BibTeX` port's own type.
+type BibEntry = latexml_engine::pre_bibtex::ParsedEntry;
 
 /// Parse a raw `.bib` file into BibTeX entries.
 ///
-/// Handles `@type{key, field = {value}, field = "value", field = number}`.
-/// Supports nested braces in values and string concatenation with `#`.
+/// Delegates to `latexml_engine::pre_bibtex`, the faithful translation of Perl's
+/// `LaTeXML::Pre::BibTeX` (`newFromString` + `parseTopLevel`). This used to be a
+/// bespoke second parser living here, which quietly diverged from BibTeX: it read
+/// the entry type straight after `@` with no `skipWhite`, so `@ ARTICLE{key,` —
+/// which real BibTeX 0.99d and Perl's `parseEntryType` (which calls `skipWhite`)
+/// both accept — produced an EMPTY type, failed the following `{`-check and hit
+/// `continue`, dropping the entry SILENTLY. Witness 2606.26367: 361 of its 374
+/// entries vanished, taking 287 citations with them.
+///
+/// Reusing the port also inherits `@string` macro expansion, `@preamble`/
+/// `@comment` handling and the paren-delimited `@article(...)` form for free,
+/// and keeps a single BibTeX grammar in the tree. Same anti-pattern, same fix as
+/// the bespoke `find_file` that shadowed `pathname::find`.
 fn parse_bibtex(input: &str) -> Vec<BibEntry> {
-  let mut entries = Vec::new();
-  let chars: Vec<char> = input.chars().collect();
-  let len = chars.len();
-  let mut i = 0;
-
-  while i < len {
-    // Skip to next @
-    if chars[i] != '@' {
-      i += 1;
-      continue;
-    }
-    i += 1; // skip @
-
-    // Read entry type
-    let type_start = i;
-    while i < len && chars[i].is_alphanumeric() {
-      i += 1;
-    }
-    let entry_type = chars[type_start..i]
-      .iter()
-      .collect::<String>()
-      .to_lowercase();
-
-    // Skip @string, @preamble, @comment
-    if entry_type == "string" || entry_type == "preamble" || entry_type == "comment" {
-      // Skip to matching brace
-      while i < len && chars[i] != '{' && chars[i] != '(' {
-        i += 1;
-      }
-      if i < len {
-        i += 1;
-        let open = if chars[i - 1] == '{' { '{' } else { '(' };
-        let close = if open == '{' { '}' } else { ')' };
-        let mut depth = 1;
-        while i < len && depth > 0 {
-          if chars[i] == open {
-            depth += 1;
-          }
-          if chars[i] == close {
-            depth -= 1;
-          }
-          i += 1;
-        }
-      }
-      continue;
-    }
-
-    // Skip whitespace
-    while i < len && chars[i].is_whitespace() {
-      i += 1;
-    }
-
-    // Opening brace or paren
-    if i >= len || (chars[i] != '{' && chars[i] != '(') {
-      continue;
-    }
-    let close_ch = if chars[i] == '{' { '}' } else { ')' };
-    i += 1;
-
-    // Skip whitespace
-    while i < len && chars[i].is_whitespace() {
-      i += 1;
-    }
-
-    // Read citation key (until comma or whitespace)
-    let key_start = i;
-    while i < len && chars[i] != ',' && chars[i] != close_ch && !chars[i].is_whitespace() {
-      i += 1;
-    }
-    let key = chars[key_start..i]
-      .iter()
-      .collect::<String>()
-      .trim()
-      .to_string();
-
-    // Skip to comma
-    while i < len && chars[i] != ',' && chars[i] != close_ch {
-      i += 1;
-    }
-    if i < len && chars[i] == ',' {
-      i += 1;
-    }
-
-    // Read fields
-    let mut fields = Vec::new();
-    loop {
-      // Skip whitespace and commas
-      while i < len && (chars[i].is_whitespace() || chars[i] == ',') {
-        i += 1;
-      }
-      if i >= len || chars[i] == close_ch {
-        break;
-      }
-      // An entry-level unbalance (missing final close) would otherwise feed
-      // the NEXT entry's `@` into the field-name reader and swallow it —
-      // resync at the boundary instead (BibTeX-style), loudly.
-      if chars[i] == '@' {
-        crate::Warn!(
-          "bibtex",
-          "unbalanced",
-          "Entry '{}' not closed before the next '@'; resyncing",
-          key
-        );
-        break;
-      }
-
-      // Read field name
-      let fname_start = i;
-      while i < len && chars[i] != '=' && !chars[i].is_whitespace() && chars[i] != close_ch {
-        i += 1;
-      }
-      let fname = chars[fname_start..i]
-        .iter()
-        .collect::<String>()
-        .trim()
-        .to_lowercase();
-
-      // Skip whitespace and =
-      while i < len && (chars[i].is_whitespace() || chars[i] == '=') {
-        i += 1;
-      }
-      if i >= len || chars[i] == close_ch {
-        break;
-      }
-
-      // Read field value
-      let (value, balanced) = read_bib_value(&chars, &mut i, close_ch);
-      if !fname.is_empty() {
-        fields.push((fname.clone(), value));
-      }
-      if !balanced {
-        // BibTeX errors and resyncs at the next entry; mirror that loudly
-        // instead of silently swallowing every later entry.
-        crate::Warn!(
-          "bibtex",
-          "unbalanced",
-          "Unbalanced braces in field '{}' of entry '{}'; resyncing at the next '@'",
-          fname,
-          key
-        );
-        break;
-      }
-
-      // Skip trailing comma
-      while i < len && chars[i].is_whitespace() {
-        i += 1;
-      }
-      if i < len && chars[i] == ',' {
-        i += 1;
-      }
-    }
-
-    // Skip closing brace
-    if i < len && chars[i] == close_ch {
-      i += 1;
-    }
-
-    if !key.is_empty() {
-      entries.push(BibEntry { entry_type, key, fields });
-    }
+  let mut bib = latexml_engine::pre_bibtex::PreBibTeX::new_from_string(input);
+  if let Err(e) = bib.parse_top_level() {
+    // Perl's parser calls Error(...) (recoverable) and keeps whatever it read;
+    // mirror that — surface the problem but return the entries parsed so far
+    // rather than dropping the whole bibliography.
+    Warn!("bibtex", "parse", "BibTeX parse error: {:?}", e);
   }
-
-  entries
-}
-
-/// Read a BibTeX field value (braced, quoted, or bare number/string).
-/// The bool is false when a braced value ran unbalanced to EOF or to the
-/// next entry boundary (`@` at line start) — BibTeX-style error resync.
-fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> (String, bool) {
-  let len = chars.len();
-  let mut result = String::new();
-
-  loop {
-    while *i < len && chars[*i].is_whitespace() {
-      *i += 1;
-    }
-    if *i >= len {
-      break;
-    }
-
-    if chars[*i] == '{' {
-      // Braced value — handle nested braces. An unbalanced value must not
-      // silently swallow every later entry: stop at the next entry boundary
-      // (`@` at line start, BibTeX's own resync point) and report it.
-      *i += 1;
-      let mut depth = 1;
-      while *i < len && depth > 0 {
-        if chars[*i] == '{' {
-          depth += 1;
-        } else if chars[*i] == '}' {
-          depth -= 1;
-          if depth == 0 {
-            *i += 1;
-            break;
-          }
-        } else if chars[*i] == '@' && *i > 0 && chars[*i - 1] == '\n' {
-          return (result, false); // leave *i AT the '@' for resync
-        }
-        result.push(chars[*i]);
-        *i += 1;
-      }
-      if depth > 0 {
-        return (result, false); // ran to EOF unbalanced
-      }
-    } else if chars[*i] == '"' {
-      // Quoted value
-      *i += 1;
-      while *i < len && chars[*i] != '"' {
-        if chars[*i] == '{' {
-          // Nested braces in quoted strings: a `"` inside them is literal.
-          // KEEP the braces — BibTeX treats them as grouping that stays
-          // significant for name splitting (`author = "{W3C Group}"` must
-          // still read as a corporate author).
-          result.push('{');
-          *i += 1;
-          let mut depth = 1;
-          while *i < len && depth > 0 {
-            if chars[*i] == '{' {
-              depth += 1;
-            } else if chars[*i] == '}' {
-              depth -= 1;
-              if depth == 0 {
-                result.push('}');
-                *i += 1;
-                break;
-              }
-            }
-            result.push(chars[*i]);
-            *i += 1;
-          }
-        } else {
-          result.push(chars[*i]);
-          *i += 1;
-        }
-      }
-      if *i < len && chars[*i] == '"' {
-        *i += 1;
-      }
-    } else if chars[*i].is_alphanumeric() {
-      // Bare word or number
-      while *i < len && (chars[*i].is_alphanumeric() || chars[*i] == '-' || chars[*i] == '_') {
-        result.push(chars[*i]);
-        *i += 1;
-      }
-    } else {
-      break;
-    }
-
-    // Check for # concatenation
-    while *i < len && chars[*i].is_whitespace() {
-      *i += 1;
-    }
-    if *i < len && chars[*i] == '#' {
-      *i += 1;
-      continue;
-    }
-    break;
-  }
-
-  (result, true)
+  bib.entries
 }
 
 thread_local! {
@@ -3647,6 +3402,30 @@ mod bib_parse_tests {
   fn newline_wrapped_and_splits() {
     let a = parse_bib_authors("Smith, John and\nJones, Mary");
     assert_eq!(a.len(), 2);
+  }
+
+  /// BibTeX allows whitespace between `@` and the entry type — real BibTeX
+  /// 0.99d accepts `@ ARTICLE{k,` silently, and Perl's `parseEntryType` calls
+  /// `skipWhite` before reading the type. The bespoke parser that used to live
+  /// here did not: it read the type straight after `@`, got an EMPTY type,
+  /// failed its `{`-check and `continue`d — dropping the entry with no
+  /// diagnostic. Witness 2606.26367, whose `.bib` writes 361 of its 374 entries
+  /// as `@ BOOK{`/`@ ARTICLE{`: only 13 parsed, 287 citations dangled and the
+  /// References were all but empty. Delegating to `latexml_engine::pre_bibtex`
+  /// fixes it (375 parsed, 315 rendered, 0 dangling).
+  #[test]
+  fn entry_type_may_be_separated_from_at_by_whitespace() {
+    let entries = parse_bibtex(
+      "@ARTICLE{tight, title={T1}}\n@ ARTICLE{spaced, title={T2}}\n@  BOOK{extra, title={T3}}\n",
+    );
+    let keys: Vec<&str> = entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(
+      keys,
+      vec!["tight", "spaced", "extra"],
+      "`@ TYPE{{` entries were dropped; real BibTeX and Perl both accept them"
+    );
+    assert_eq!(entries[1].entry_type, "article");
+    assert_eq!(entries[2].entry_type, "book");
   }
 
   #[test]
