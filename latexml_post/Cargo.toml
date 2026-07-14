@@ -20,8 +20,8 @@ name = "latexml_post"
 crate-type = ["lib"]
 
 [dependencies]
-libxml = "0.3.15"
-libxslt = "0.1.4"
+libxml = "0.3.16"
+libxslt = "0.1.5"
 log = "0.4"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 unicode-normalization = "0.1.25"
@@ -40,6 +40,10 @@ sha2 = { version = "0.11", default-features = false }
 # the routing inside zip itself).
 zip = { version = "8", default-features = false, features = ["deflate-flate2", "time"] }
 flate2 = "1"
+# PATHEXT-aware executable lookup for the Windows Ghostscript delegate probe
+# (graphics.rs `gs_program`). Same crate the kpathsea backend uses to resolve
+# `kpsewhich`, already in the workspace tree — no new crate pulled.
+which = "8"
 # Telemetry-only — used in process_chain to attribute time to the
 # correct Phase based on each processor's get_name(). See docs/performance/TELEMETRY.md.
 latexml_core = {path = "../latexml_core"}

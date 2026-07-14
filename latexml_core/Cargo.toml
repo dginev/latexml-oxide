@@ -25,6 +25,13 @@ crate-type = ["lib"]
 default = ["kpathsea"]
 kpathsea = ["dep:kpathsea"]
 
+# Static in-process libkpathsea on windows-msvc: forwards to the kpathsea crate's
+# `build-from-source` (fetch + compile a static libkpathsea → in-process,
+# self-contained, no runtime kpathsealibw64.dll). Inert off windows-msvc. Off by
+# default — the shipped default is the subprocess/DLL backend; distribution
+# opts in. Removes the subprocess `ls-R`-cache-build cost (~0.5 s/conversion).
+kpathsea-build-from-source = ["kpathsea", "kpathsea/build-from-source"]
+
 # Activated by `latexml_codegen` (host-side proc-macro) to enable the
 # `impl ToTokens for Tokens / Catcode / Token / Parameters / Parameter`
 # blocks. Resolver v2 isolates proc-macro feature unification, so the
@@ -49,14 +56,18 @@ regex = { version = "1.7.1", default-features = false, features = ["std", "perf"
 log = "0.4"
 quote = { version = "1.0", optional = true }
 proc-macro2 = { version = "1.0", optional = true }
-libxml = "0.3.15"
+libxml = "0.3.16"
 # (replaced `dirs` 2026-05-17 — its single use was `dirs::home_dir()`,
 # which on Linux is exactly `std::env::var_os("HOME")`. On Windows
 # dirs falls back to `SHGetKnownFolderPath`; not relevant for us.)
 # 0.3: backend-dispatched — in-process libkpathsea when linked at build
 # time, subprocess-kpsewhich fallback otherwise (MacTeX ships no
 # libkpathsea at all; see docs/PORTABILITY_MACOS_PROBE_2026-06-07.md).
-kpathsea = { version = "0.3", optional = true }
+# 0.3.2: in-process build_from_source (Windows/MSVC + Unix) + MiKTeX on-the-fly
+# installer suppression. See docs/release/WINDOWS_COMPATIBILITY_PLAN.md.
+# 0.3.3: build_from_source fix for the `_stat64i32` LNK2005 collision under
+# +crt-static + fat-LTO (the Windows release link). kpathsea_sys 0.2.3.
+kpathsea = { version = "0.3.3", optional = true }
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }

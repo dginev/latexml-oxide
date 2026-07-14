@@ -34,6 +34,13 @@ use crate::{
 // into an unused-global.
 static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
 
+// Perl `\ensuremathfollows` already-math test (latex_constructs.pool.ltxml
+// L2083/L2098): `$MATHENVS = 'displaymath|equation*?|eqnarray*?'` and the guard
+// `$csname !~ /^Math|\(|\[|(?:$MATHENVS)/o`. Kept verbatim (not hand-expanded)
+// so the automath wrapper matches Perl exactly.
+static AUTOMATH_ALREADY_MATH: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^Math|\\\(|\\\[|(?:displaymath|equation*?|eqnarray*?)").unwrap());
+
 // Perl `\documentclass` (latex_constructs.pool.ltxml L78) wraps the
 // raw option string in `TrimmedCommaList(...)` — i.e. comma-split AND
 // strip whitespace from EACH element including the first/last.
@@ -6121,11 +6128,61 @@ LoadDefinitions!({
     }
   });
 
-  // Perl: latex_constructs.pool.ltxml L2142-2163 — automath wrapping
-  // Simplified: \ensuremathfollows checks if next content is already math,
-  // if not wraps with \( ... \). Used by equation labels / alt text.
-  def_macro_noop("\\ensuremathfollows")?; // stub — automath needs gullet lookahead
-  def_macro_noop("\\ensuremathpreceeds")?; // stub — pairs with ensuremathfollows
+  // Perl: latex_constructs.pool.ltxml L2085-2107 — automath wrapping.
+  // The pair brackets a fragment (used by `--whatsin=math`, i.e. the
+  // `latexmlmath`-style CLI mode, and by alt/label math): if the content
+  // isn't ALREADY explicit math, `\ensuremathfollows` opens `\(` and
+  // `\ensuremathpreceeds` closes `\)`. Perl `$MATHENVS`:
+  //   displaymath|equation*?|eqnarray*?
+  DefMacro!("\\ensuremathfollows", {
+    // The preamble mouth (`literal:\begin{document}\ensuremathfollows`) is
+    // exhausted at this point; cross into the mouth holding the actual
+    // fragment so `read_token` peeks the real content. Perl:
+    // `$gullet->closeMouth unless ($gullet->getMouth->hasMoreInput)`.
+    if !has_more_input() {
+      close_mouth(false)?;
+    }
+    let mut expansion = Tokens!();
+    if let Some(tok) = read_token()? {
+      // Perl `$tok->getCSName`: the CS name for a control sequence, else undef.
+      let mut csname = if tok.get_catcode() == Catcode::CS {
+        Some(tok.with_str(|s| s.to_string()))
+      } else {
+        None
+      };
+      if csname.as_deref() == Some("\\begin") {
+        // Peek the environment name to test against the math envs, then put
+        // the `{env}` group back exactly as read. Perl:
+        // `unread(T_BEGIN, $arg->unlist, T_END)`.
+        let arg = read_arg(ExpansionLevel::Off)?;
+        csname = Some(arg.to_string());
+        let mut group = vec![T_BEGIN!()];
+        group.extend(arg.unlist());
+        group.push(T_END!());
+        unread(Tokens::new(group));
+      }
+      unread_one(tok);
+      // Perl: `$csname !~ /^Math|\(|\[|(?:$MATHENVS)/` — already-explicit math.
+      // undef csname (a non-CS first token) is a non-match, so it DOES wrap.
+      let already_math = csname
+        .as_deref()
+        .is_some_and(|c| AUTOMATH_ALREADY_MATH.is_match(c));
+      if !already_math {
+        assign_value("automath_triggered", true, Some(Scope::Global));
+        expansion = Tokens!(T_CS!("\\("));
+      }
+    }
+    Ok(expansion)
+  });
+
+  DefMacro!("\\ensuremathpreceeds", {
+    let triggered = matches!(lookup_value("automath_triggered"), Some(Stored::Bool(true)));
+    Ok(if triggered {
+      Tokens!(T_CS!("\\)"))
+    } else {
+      Tokens!()
+    })
+  });
 
   // Perl: latex_constructs.pool.ltxml L2166
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
@@ -6507,6 +6564,26 @@ LoadDefinitions!({
   //------------------------------------------------------------
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None, locked => true);
   DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
+
+  // TL2023+ kernel per-codepoint case-mapping declarations (ltmiscen:
+  // `\DeclareUppercaseMapping{"0390}{\accdialytikatonos{\textiota}}` etc.)
+  // — fine-tuning hints for `\MakeUppercase`/`\MakeLowercase`. LaTeXML
+  // does Unicode-aware casing internally, so these are ignored exactly
+  // like the `DeclareText*` font-slot family above (Perl has no handler
+  // either — candidate upstream). The override matters beyond fidelity:
+  // the kernel's own definitions ARE captured in the latex dump, so
+  // without a native handler here the `\ifdefined` guards in e.g.
+  // greek-fontenc's `lgrenc.def` pass and the raw expl3 kernel bodies
+  // execute — hitting the raw-load expl3 catcode gap
+  // (docs/EXPL3_CATCODE_GAP_2026-06-08.md) and spraying `Script _` +
+  // undefined-accent errors at load time (witness: 81_babel greek_test
+  // on TL2026, 87 errors → 0). Constructs load AFTER the dump applies
+  // (strict-LoadFormat order), so these natively supersede the dumped
+  // kernel macros. Args are read unexpanded, which also keeps babel's
+  // active `"` shorthand inert inside the `{"03B0}` codepoint groups.
+  DefPrimitive!("\\DeclareUppercaseMapping{}{}", None, locked => true);
+  DefPrimitive!("\\DeclareLowercaseMapping{}{}", None, locked => true);
+  DefPrimitive!("\\DeclareTitlecaseMapping{}{}", None, locked => true);
 
   DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
   // Perl `latex_constructs.pool.ltxml:27-28`:

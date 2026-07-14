@@ -1054,7 +1054,7 @@ fn sn_jnl_natbib_two_optional_cite_keeps_its_keys() {
 /// empty References plus every `\cite` dangling.
 ///
 /// PARITY with installed AND vendored Perl 0.8.8 (rev 51fea96a) — fixed here
-/// rather than reproduced (OXIDIZED_DESIGN #55, KNOWN_PERL_ERRORS #49).
+/// rather than reproduced (OXIDIZED_DESIGN #57, KNOWN_PERL_ERRORS #49).
 /// Witness 2605.01646 (AIPFa.tex; Perl: 0 bibitems / 81 dangling citations,
 /// Rust now 23 / 0), 2605.00783, 2605.03852.
 ///
@@ -1140,7 +1140,7 @@ fn non_utf8_bib_file_still_yields_a_bibliography() {
 /// the rest of the document — Conclusion, `\bibliography` and appendix — with NO
 /// error at all. Real `listings` terminates there (pdflatex renders the leading
 /// text as the final listing line and continues), so both LaTeXML engines were
-/// wrong vs the PDF. OXIDIZED_DESIGN #59 / KNOWN_PERL_ERRORS #51.
+/// wrong vs the PDF. OXIDIZED_DESIGN #61 / KNOWN_PERL_ERRORS #51.
 #[test]
 fn inline_end_lstlisting_does_not_swallow_the_document() {
   let x = convert_to_xml("tests/cluster_regressions/lstlisting_inline_end.tex");

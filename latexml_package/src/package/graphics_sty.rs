@@ -457,7 +457,18 @@ LoadDefinitions!({
       |v| v.map(|s| s.to_string()).unwrap_or_default());
     let mut collected: Vec<String> = Vec::new();
     for dir in arg.split('}') {
-      let dir = dir.trim_start_matches('{').trim();
+      // Beyond-Perl (OXIDIZED_DESIGN #55): strip surrounding double-quotes
+      // from each directory entry. pdflatex/kpathsea tolerate quoted paths
+      // such as `\graphicspath{{"./figures"}}` — the quotes guard embedded
+      // spaces and are removed before any filesystem lookup. Perl LaTeXML
+      // keeps the literal quotes here (it strips them only in
+      // `\lx@special@graphics`), so the quoted directory joins to
+      // `<root>/"./figures"` and no `\includegraphics` ever resolves —
+      // every one emits `expected:source`. This mirrors the existing quote
+      // strip on the includegraphics FILENAME side (`image_candidates`,
+      // `image.rs:53` `path.trim_matches('"')`). Witness: arXiv 2606.22880
+      // (acmart, 9 figures, all lost under both Perl and Rust-before).
+      let dir = dir.trim_start_matches('{').trim().trim_matches('"').trim();
       if !dir.is_empty() {
         // Perl: pathname_absolute(pathname_canonical($dir), $root)
         let path = if root.is_empty() || dir.starts_with('/') {

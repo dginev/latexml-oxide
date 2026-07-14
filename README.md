@@ -30,12 +30,14 @@ Design goals:
 
 Every tagged release on the [Releases page](https://github.com/dginev/latexml-oxide/releases)
 ships prebuilt binaries for **Linux** (x86-64 and aarch64/arm64, `.deb` +
-portable tarball each) and **macOS** (Apple Silicon and Intel tarballs). The
+portable tarball each), **macOS** (Apple Silicon and Intel tarballs), and
+**Windows** (x86-64, a single self-contained `.exe` — from 0.7.4). The
 binary is fully self-contained — all XSLT
 stylesheets, CSS, JS, and RelaxNG schemas are embedded at build time and served
 from memory, so no `resources/` tree is needed alongside it (a deliberate design
-goal — see [docs/parity/OXIDIZED_DESIGN.md](docs/parity/OXIDIZED_DESIGN.md)). A working TeX Live
-installation is still required at runtime for TeX package/class/font resolution.
+goal — see [docs/parity/OXIDIZED_DESIGN.md](docs/parity/OXIDIZED_DESIGN.md)). A working TeX
+installation — **TeX Live or MiKTeX** — is still required at runtime for TeX
+package/class/font resolution.
 Every asset has a `<name>.sha256` sidecar for integrity checking.
 
 Set the version once (use the latest from the Releases page):
@@ -73,8 +75,23 @@ in the tarball name; everything else is identical. `uname -m` prints `x86_64` or
 
 #### macOS (Apple Silicon / arm64 + Intel / x86_64)
 
-Pick the tarball matching your Mac — `aarch64` for Apple Silicon (M1/M2/M3…),
-`x86_64` for Intel (`uname -m` prints `arm64` or `x86_64`):
+**Recommended — Homebrew.** Installs the right binary for your Mac, pulls the
+graphics tools it needs, and (because `brew` strips macOS's quarantine flag) runs
+with no Gatekeeper "unidentified developer" warning:
+
+```
+$ brew install dginev/tap/latexml-oxide
+```
+
+You still need a TeX distribution (`brew info latexml-oxide` repeats this):
+
+```
+$ brew install texlive          # Homebrew's full TeX Live (~5 GB)
+# …or MacTeX / BasicTeX — https://tug.org/mactex/  (put /Library/TeX/texbin on PATH)
+```
+
+**Alternative — download the tarball directly.** Pick the one matching your Mac
+(`uname -m` prints `arm64` or `x86_64`):
 
 ```
 # Apple Silicon
@@ -87,13 +104,42 @@ $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/la
 $ tar xzf latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
 $ sudo cp latexml-oxide-$VERSION-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
 
-$ brew install imagemagick mupdf-tools poppler ghostscript
-$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng/dvisvgm)
+$ brew install imagemagick mupdf-tools poppler ghostscript dvisvgm
+$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng)
 ```
 
 Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instead
 resolves TeX files through your distribution's `kpsewhich` executable (ensure
 `/Library/TeX/texbin` is on `PATH`).
+
+> **Gatekeeper / "unidentified developer" (tarball, browser downloads).** The
+> `curl` + `tar xzf` install above is warning-free: terminal downloads and
+> command-line `tar` don't set macOS's `com.apple.quarantine` flag. If you
+> instead download the tarball in a **browser** and unpack it by double-clicking
+> in Finder, macOS may refuse to run the binary as "from an unidentified
+> developer" — the binaries are ad-hoc signed, not Apple-notarized. Clear it
+> once, either way: unpack in Terminal with `tar xzf …`, **or** after copying the
+> binary run `xattr -d com.apple.quarantine /usr/local/bin/latexml_oxide`
+> (equivalently, right-click it in Finder → **Open**). The **Homebrew install
+> above avoids this entirely**, since `brew` strips the quarantine flag.
+
+#### Windows (x86_64)
+
+*(From `0.7.4`.)* A single self-contained `.exe` — no installer, no runtime DLLs
+(fully static: no VC++ redistributable needed). In PowerShell:
+
+```
+> $VERSION = "0.7.4"
+> curl.exe -LO "https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-pc-windows-msvc.exe"
+> .\latexml-oxide-$VERSION-x86_64-pc-windows-msvc.exe --version
+```
+
+Rename it to `latexml_oxide.exe` and put it on your `PATH`. A TeX distribution —
+**TeX Live for Windows or MiKTeX** — must be on `PATH` for host TeX resolution;
+the binary auto-selects the fast in-process backend on TeX Live and falls back to
+subprocess `kpsewhich` on MiKTeX. ImageMagick (`magick`), Ghostscript
+(`gswin64c` / MiKTeX `mgs`), and MuPDF (`mutool`) on `PATH` are optional, for
+figure conversion.
 
 #### Docker
 

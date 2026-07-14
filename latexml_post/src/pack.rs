@@ -155,7 +155,13 @@ fn add_dir_to_zip<W: Write + io::Seek>(
     let entry = entry?;
     let path = entry.path();
     let rel = path.strip_prefix(base).unwrap_or(&path);
-    let name = rel.to_string_lossy().to_string();
+    // Zip entry names use '/' by spec (APPNOTE 4.4.17.1); Path on Windows
+    // yields '\'. Replace only the platform separator: on Unix that's a
+    // no-op ('/'→'/') that leaves a literal '\' — a legal Unix filename
+    // byte — untouched; on Windows it rewrites '\'→'/'.
+    let name = rel
+      .to_string_lossy()
+      .replace(std::path::MAIN_SEPARATOR, "/");
     let basename = entry.file_name().to_string_lossy().to_string();
 
     if path.is_dir() {

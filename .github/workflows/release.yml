@@ -18,7 +18,13 @@ on:
   push:
     tags:
       # Bare X.Y.Z — matches the repo's existing tag history (no v-prefix).
+      # Auto-publishes a public release (see the publish step).
       - '[0-9]+.[0-9]+.[0-9]+'
+      # Pre-release / RC tags, e.g. 0.7.4-rc1 (a valid semver pre-release, so it
+      # matches the Cargo.toml version — make_release.sh's version check passes
+      # and the artifacts are named `…-0.7.4-rc1-…`). Published as a DRAFT
+      # prerelease for cross-OS testing, not a public release (publish step).
+      - '[0-9]+.[0-9]+.[0-9]+-*'
 
 permissions:
   # softprops/action-gh-release needs to write the Release object.
@@ -123,6 +129,25 @@ jobs:
           fi
           echo "OK: no dynamic libxml2/libxslt/kpathsea"
 
+      # Ad-hoc signature gate + launch smoke. make_release.sh re-signs the binary
+      # after `strip` (dash = ad-hoc, no Apple Developer cert); an arm64 Mach-O
+      # with a broken signature is killed at exec. `codesign --verify` asserts
+      # the signature survived, and actually running `--version` proves the
+      # binary launches on this arch end-to-end (the real Killed:9 gate — this
+      # is what lets the release auto-publish, below, without a manual "download
+      # and confirm it runs" step). Conversion paths (static libxml2/libxslt,
+      # XSLT, RelaxNG) are covered by CI.yml's macOS test job on the same arch.
+      # NOT notarization — ripgrep-style posture, see RELEASING.md "macOS
+      # Gatekeeper & code signing".
+      - name: verify code signature + launch smoke
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          codesign --verify --verbose "$bin" \
+            || { echo "::error::macOS binary has no valid code signature — would be Killed:9 on arm64"; exit 1; }
+          "$bin" --version \
+            || { echo "::error::macOS binary failed to launch (--version) — un-runnable artifact"; exit 1; }
+          echo "OK: valid (ad-hoc) signature and the binary launches"
+
       - name: upload macOS artifact
         uses: actions/upload-artifact@v5
         with:
@@ -208,6 +233,20 @@ jobs:
             echo "::error::release binary dynamically links a library that must be static"; exit 1
           fi
           echo "OK: no dynamic libxml2/libxslt/kpathsea"
+
+      # Ad-hoc signature gate + launch smoke (see build-macos leg). x86_64 does
+      # not require a signature to run the way arm64 does, but make_release.sh
+      # re-signs both legs uniformly; assert it here too, and run `--version` so
+      # this Intel artifact — the one NOT covered by CI.yml's arm64 macOS test
+      # job — is at least proven to launch before it auto-publishes.
+      - name: verify code signature + launch smoke
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          codesign --verify --verbose "$bin" \
+            || { echo "::error::macOS binary has no valid code signature"; exit 1; }
+          "$bin" --version \
+            || { echo "::error::macOS Intel binary failed to launch (--version) — un-runnable artifact"; exit 1; }
+          echo "OK: valid (ad-hoc) signature and the binary launches"
 
       - name: upload macOS Intel artifact
         uses: actions/upload-artifact@v5
@@ -352,11 +391,163 @@ jobs:
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_arm64.deb.sha256
           if-no-files-found: error
 
+  # Windows (x86_64-pc-windows-msvc) — a SINGLE self-contained `.exe`. Uses the
+  # proven windows-ci-manual-trigger.yml recipe (vcpkg static libxml2/libxslt)
+  # but builds the publish-grade `maxperf` binary and packages the bare `.exe`
+  # (+ `.sha256`) — no tarball/.deb, the user runs the `.exe` directly.
+  # `kpathsea` is linked IN-PROCESS via a STATIC libkpathsea built from source
+  # (`kpathsea-build-from-source`; see the build step) — no runtime
+  # `kpathsealibw64.dll`. At runtime `select_kpaths` keeps the fast in-process
+  # backend on TeX Live and falls back to subprocess `kpsewhich` on MiKTeX (whose
+  # MPM fndb a static libkpathsea can't read). The `.exe` is FULLY STATIC —
+  # static C libs (x64-windows-static) + static CRT (+crt-static) — so it imports
+  # only core OS DLLs and runs on any Windows with no VC++ redistributable.
+  # The TL-window dumps are OS-agnostic gzipped text, embedded at build time like
+  # the other legs (no TeX Live needed on THIS leg — dumps come from `dumps`).
+  build-windows:
+    name: Build Windows x86_64 ${{ github.ref_name }}
+    runs-on: windows-latest
+    # First-ever Windows release artifact; maxperf (fat-LTO) is heavier than the
+    # bring-up job's `ci` profile — give generous wall-clock. Windows Actions
+    # minutes are metered 2x on this private repo (see windows-ci-manual-trigger).
+    timeout-minutes: 120
+    needs: dumps
+    env:
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+      # Fully static: static C libraries AND static CRT. `x64-windows-static`
+      # builds libxml2/libxslt against the static CRT (/MT), matching the
+      # `-C target-feature=+crt-static` Rust flag on the build step below — the
+      # whole image is one CRT model. Result: the `.exe` imports NO
+      # VCRUNTIME140.dll and runs on ANY Windows with no VC++ redistributable
+      # (ripgrep's posture; unlike the earlier static-md = dynamic-CRT build,
+      # which needed the redist). Flipping the triplet also rotates the vcpkg
+      # cache key below, forcing a fresh static-CRT build of the C libs.
+      VCPKG_TRIPLET: x64-windows-static
+      VCPKGRS_TRIPLET: x64-windows-static
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: release-maxperf-windows
+
+      - name: cache vcpkg installed tree
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
+          key: vcpkg-${{ env.VCPKG_TRIPLET }}-libxml2-libxslt-v1
+      - name: vcpkg install libxml2 + libxslt (static)
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg" install `
+            "libxml2:$env:VCPKG_TRIPLET" "libxslt:$env:VCPKG_TRIPLET"
+      - name: export vcpkg root
+        run: '"VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV'
+
+      # Same TL-window dumps as the other legs (OS-agnostic gzipped text).
+      - name: collect TL-window dumps
+        uses: actions/download-artifact@v6
+        with:
+          pattern: dumps-*
+          path: resources/dumps/
+          merge-multiple: true
+      - name: verify dump window completeness
+        shell: bash
+        run: |
+          ls -la resources/dumps/
+          for year in 2022 2023 2024 2025; do
+            for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
+              if [ ! -s "resources/dumps/$f" ]; then
+                echo "::error::release dump window incomplete: missing resources/dumps/$f"
+                exit 1
+              fi
+            done
+          done
+
+      # make_release.sh runs under Git Bash (present on windows-latest); its
+      # os_family=windows branch builds maxperf and packages the single `.exe`.
+      # libxml2/libxslt are discovered from the vcpkg env set above.
+      - name: build Windows release .exe
+        shell: bash
+        run: bash tools/make_release.sh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RELEASE_TARGET: x86_64-pc-windows-msvc
+          # IN-PROCESS kpathsea via a STATIC libkpathsea built from source
+          # (`kpathsea-build-from-source`). This removes the subprocess
+          # `ls-R`-cache-build cost (~0.5 s/conversion — the RC's dominant
+          # Windows overhead on simple docs; WINDOWS_COMPATIBILITY_PLAN Phase 5.1)
+          # AND stays self-contained: a STATIC link has no runtime
+          # `kpathsealibw64.dll` dependency, so it launches on any Windows / any
+          # TeX distro — unlike the dynamic-DLL path (the Phase-2 launch landmine)
+          # that the old `KPATHSEA_NO_LINK=1` subprocess backend avoided at a perf
+          # cost. `kpathsea_sys` fetches the pinned kpathsea source at build time
+          # (git on the runner; LGPL — see THIRD-PARTY-NOTICES, same posture as the
+          # Linux/macOS `build_static_kpathsea.sh` legs).
+          #   * RELEASE_EXTRA_FEATURES → make_release.sh appends the feature.
+          #   * KPATHSEA_SKIP_TOOLCHAIN_CHECK=1 — this runner has no TeX; a linked
+          #     (in-process) build needs no build-time `kpsewhich`.
+          # Combined with the `+crt-static` / x64-windows-static leg config below
+          # (drops VCRUNTIME140), this yields a fully-static, redistributable `.exe`.
+          RELEASE_EXTRA_FEATURES: kpathsea-build-from-source
+          KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
+          # Static CRT: statically link the VC runtime + UCRT so the shipped
+          # `.exe` has NO VCRUNTIME140.dll dependency and launches on a clean
+          # Windows with no VC++ redistributable. MUST pair with the
+          # x64-windows-static vcpkg triplet above (one CRT model across Rust
+          # std + the C libs; mixing /MT and /MD is unsupported). RUSTFLAGS env
+          # REPLACES `.cargo/config.toml` rustflags, so re-list the
+          # frontend-parallelism flags to keep them.
+          RUSTFLAGS: "-Zthreads=8 -Zunstable-options -C target-feature=+crt-static"
+
+      # Launch smoke + self-containment guard. `--version` alone is NOT enough:
+      # the runner has the VC++ redist, so even a dynamic-CRT `.exe` would launch
+      # here. So we ALSO assert (via dumpbin) that the import table carries no
+      # VCRUNTIME — the actual property that lets the `.exe` run on a clean
+      # Windows. Conversion paths aren't exercised (no TeX Live on this leg);
+      # windows-ci-manual-trigger.yml runs the full suite with TeX Live.
+      - name: launch smoke + self-containment guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe=$(find target/release-artifacts -name '*.exe' -type f | head -1)
+          echo "checking $exe"
+          "$exe" --version || { echo "::error::Windows .exe failed to launch (--version)"; exit 1; }
+          echo "OK: the Windows .exe launches"
+          # `--version` alone is NOT enough: the runner has the VC++ redist + TeX
+          # nowhere near, so even a non-portable exe launches. Assert (via dumpbin,
+          # located through vswhere) that the import table carries NONE of the
+          # things that would tie the exe to this machine: the VC runtime
+          # (+crt-static), kpathsea's DLL (build_from_source static, not the
+          # dynamic kpathsealibw64.dll path), or libxml2/libxslt (vcpkg static).
+          vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+          vsroot=$("$vswhere" -latest -property installationPath)
+          dumpbin=$(find "$vsroot/VC/Tools/MSVC" -name dumpbin.exe -ipath '*hostx64*x64*' | head -1)
+          deps=$("$dumpbin" //DEPENDENTS "$exe")
+          if echo "$deps" | grep -qiE 'vcruntime|kpathsea|libxml|libxslt'; then
+            echo "$deps"
+            echo "::error::the .exe imports a non-OS DLL (VCRUNTIME / kpathsea / libxml*) — it is not fully static (check +crt-static, x64-windows-static, and kpathsea-build-from-source all took effect)"
+            exit 1
+          fi
+          echo "OK: imports only core OS DLLs — fully static, runs on any Windows / any TeX distro"
+
+      - name: upload Windows artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: windows-exe
+          path: |
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe.sha256
+          if-no-files-found: error
+
   release:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: [dumps, build-macos, build-macos-intel, build-linux-arm64]
+    needs: [dumps, build-macos, build-macos-intel, build-linux-arm64, build-windows]
 
     steps:
       - uses: actions/checkout@v6
@@ -463,6 +654,7 @@ jobs:
           RELEASE_MACOS_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
           RELEASE_MACOS_INTEL_TARBALL: latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
           RELEASE_LINUX_ARM64_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz
+          RELEASE_WINDOWS_EXE: latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
 
       # Artifact-property gate (RELEASE_CRITERIA §2/§7): fail the release if the
       # stripped binary blows the size budget (a runaway-growth alarm), and stage
@@ -551,15 +743,25 @@ jobs:
           name: linux-arm64-artifacts
           path: target/release-artifacts/
 
-      # Publish as a DRAFT: the build stays tied to a release tag (no
-      # workflow_dispatch, no "random" builds), but the assets land on a draft
-      # Release you review BEFORE it goes public. Download the per-arch tarballs
-      # — especially the Intel-macOS one (x86_64-apple-darwin), whose runner
-      # differs from the arm64 leg — verify they run on the target hardware, then
-      # click "Publish release". If an asset is broken, delete the draft + tag,
-      # bump to X.Y.(Z+1), and re-tag (RELEASING.md troubleshooting). Flip
-      # `draft: false` once a target is proven if you prefer auto-publish.
-      - name: publish GitHub release (draft — review, then publish)
+      # Pull the single Windows .exe (+ sidecar) built by build-windows.
+      - name: collect Windows .exe
+        uses: actions/download-artifact@v6
+        with:
+          name: windows-exe
+          path: target/release-artifacts/
+
+      # PUBLISH. Behaviour is chosen by the tag shape (see draft/prerelease below):
+      #   * Final tag  X.Y.Z      -> a PUBLIC release, zero manual steps.
+      #   * RC tag     X.Y.Z-rcN  -> a DRAFT prerelease for cross-OS testing.
+      # Auto-publishing a final tag is safe because every asset is gated before
+      # it gets here: each build leg verifies static linkage (ldd/otool), runs a
+      # real conversion smoke (Linux legs) or a launch smoke + code-signature
+      # check (macOS legs) or a launch smoke (Windows leg), and enforces the size
+      # budget; macOS conversion paths are additionally covered by CI.yml's macOS
+      # test job. The build stays tied to a release tag (no workflow_dispatch, no
+      # "random" builds). If a published asset is ever found broken, delete the
+      # Release + tag, bump the patch, and re-tag (RELEASING.md "Failure recovery").
+      - name: publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -583,7 +785,13 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz.sha256
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe.sha256
             target/release-artifacts/THIRD-PARTY-NOTICES
-          draft: true
-          prerelease: false
+          # RC / pre-release tags (containing a '-', e.g. 0.7.4-rc1) publish as a
+          # DRAFT prerelease — a maintainer tests the attached executables on each
+          # OS, then clicks Publish (or deletes the draft). Final tags (bare
+          # X.Y.Z) auto-publish a public release.
+          draft: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true

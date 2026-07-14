@@ -72,7 +72,7 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 
 /// Perl: listingsReadRawLines — read raw lines until \end{$environment}
 ///
-/// OXIDIZED_DESIGN #59: the terminator is matched ANYWHERE in the line, not
+/// OXIDIZED_DESIGN #61: the terminator is matched ANYWHERE in the line, not
 /// only at its start. Perl (`listings.sty.ltxml` L316) anchors the regex —
 /// `/^\s*\\end\{\Q$environment\E\}(.*?)$/` — so a line like
 /// `  </body></html> \end{lstlisting}` never terminates the environment and the

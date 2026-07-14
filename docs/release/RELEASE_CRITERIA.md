@@ -28,9 +28,9 @@ their 2026-05-24 values.
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](../performance/PERFORMANCE.md)); **P50/P90/P99 + RSS dashboard + growth gate built** (`tools/telemetry_dashboard.py`) | §5 — capture a fleet baseline + wire `--gate` into release (absolute red lines gate today) |
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
-| OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; next rung: Windows/musl) |
+| OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **`x86_64-pc-windows-msvc`** + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; Windows DONE 2026-07-14; next rung: musl) |
 | Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
-| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; only cortex-only F1 remains, non-blocking) |
+| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; F1 pericortex relicensed CC0-1.0, 2026-07-13) |
 | Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); URI-passthrough posture documented | remaining §6 items (CSP/sandboxing/`--hardened`) — **1.0-scoped, not a 0.7.4 blocker** |
 
 ## 2. Binary size (issue #101)
@@ -96,12 +96,14 @@ dependency check:
    for older Intel Macs) — arm64 binaries don't run on Intel, so it is a
    separate native leg (not a cross-compile / `lipo` universal, which is
    revisited only when GitHub sunsets the Intel runner ~Fall 2027).
-5. Windows / musl — deferred. Known blockers: `libmarpa-sys`
-   `./configure && make` (needs a cc-crate port; tarball is vendored),
-   `lsp_server` unix sockets, `graphics*.rs` cfg(unix) paths,
-   vcpkg-sourced libxml2/libxslt. The subprocess-`kpsewhich` fallback
-   already removes the kpathsea blocker (MiKTeX's kpsewhich.exe
-   delegates to MiKTeX's own resolver — better than linking could do).
+5. **Windows — DONE (0.7.4, 2026-07-14).** `x86_64-pc-windows-msvc`, a single
+   fully-static `.exe`: in-process `build_from_source` libkpathsea + `+crt-static`
+   (imports only core OS DLLs), with `select_kpaths` picking the in-process
+   backend on TeX Live and subprocess `kpsewhich` on MiKTeX at runtime. All
+   former blockers cleared — the `libmarpa-sys` cc-crate port, vcpkg-static
+   libxml2/libxslt, and the `graphics*.rs` cfg(unix) delegate paths. Full record:
+   [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md). **musl**
+   remains deferred.
 
 **Self-contained libxml2/libxslt — DONE (shipped 0.7.1).** 0.7.0 dynamically
 linked the build host's libxml2/libxslt SONAME (`libxml2.so.2` on the
@@ -138,12 +140,13 @@ bar — and the editor distribution model it gates — is §11.
 
 Crates are `CC0`, but the binary ships more. Full inventory:
 [`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md) (living). **Analysis complete
-2026-07-09**; posture is clean, three outward-facing items remain:
+2026-07-09**; posture is clean, all outward-facing items now landed (F1/F4
+closed 2026-07-13):
 
 - **Rust deps — DONE (gated).** `deny.toml` allow-list + cargo-deny CI;
   `cargo deny --all-features check licenses` → *licenses ok*. Distributed
-  feature set clean too (the `pericortex` no-license warning is cortex-only,
-  absent from the shipped binary — inventory F1).
+  feature set clean too (the `pericortex` no-license warning is **resolved
+  2026-07-13** — pericortex now declares `license = "CC0-1.0"` upstream, inventory F1).
 - **Embedded assets — DONE.** CSS/XSLT/RelaxNG/DTD/Profiles + one JS are Perl
   LaTeXML (NIST public domain ≈ CC0); the other JS is ours (CC0). No notice
   burden.
@@ -157,9 +160,9 @@ Crates are `CC0`, but the binary ships more. Full inventory:
   `tools/gen_notices.sh` = hand-authored §1-4 + cargo-about §5) attributes the
   kernel/plain-TeX + linked libs + Rust crates; README License section scopes
   the claim (inventory §C).
-- **Remaining:** wire `tools/gen_notices.sh` into the release workflow so the
-  artifact ships the assembled notices, + the CI asset-inventory gate (F4 → §7);
-  `pericortex` upstream `license` field (F1, cortex-only, non-blocking).
+- **Remaining: none outward-facing.** F4 (gen_notices wired into `release.yml`'s
+  `assemble THIRD-PARTY-NOTICES` step + the asset-inventory gate, §7) and F1
+  (`pericortex` relicensed MIT → CC0-1.0, 2026-07-13) are both landed.
 
 ## 5. Tail latency & RSS
 

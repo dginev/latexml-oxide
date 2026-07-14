@@ -15,8 +15,11 @@ latexml-oxide's **own source code and original resources are CC0-1.0**
 claim does **NOT** extend to third-party material the binary embeds, links, or
 derives from — each retains its upstream license, enumerated below. The two
 that matter for a distribution notice: the **build-time-embedded TeX-Live
-dumps** (§C) and the **statically-linked libxml2/libxslt** (§D; static since
-0.7.1).
+dumps** (§C), the **statically-linked libxml2/libxslt** (§D; static since
+0.7.1), and — the sharpest, newly universal in 0.7.4 — the **statically-linked
+LGPL-2.1 libkpathsea** (§D). A static LGPL link triggers the §6 relink
+obligation (unlike the MIT static libs and the dynamic LGPL ones); see the §D
+note.
 
 ## A. Rust dependencies — GATED
 
@@ -36,10 +39,13 @@ binary).
   [`about.toml`](../../about.toml) + template [`about.hbs`](../../about.hbs), assembled
   with the hand-authored §1-4 by [`tools/gen_notices.sh`](../../tools/gen_notices.sh).
   Generated from the (gitignored) lockfile at release time, not committed.
-- **Known warning (not distribution-blocking):** `pericortex` (our own
-  `dginev/cortex-peripherals`, git source) has no `license` field. It is pulled
-  in **only** under the `cortex` feature — absent from the shipped binary.
-  *Open item F1:* add `license = "CC0-1.0"` upstream to clear the warning.
+- **~~Known warning~~ RESOLVED 2026-07-13:** `pericortex` (our own
+  `dginev/cortex-peripherals`, git source) previously had no `license` field. It
+  is pulled in **only** under the `cortex` feature — absent from the shipped
+  binary. *F1 closed:* pericortex was relicensed MIT → `CC0-1.0` upstream
+  (`license = "CC0-1.0"` in its `Cargo.toml` + CC0 `LICENSE` text), clearing the
+  cargo-deny/cargo-about warning; a fresh build resolves the branch HEAD that
+  carries it.
 
 Re-verify: `cargo deny --all-features check licenses`
 
@@ -109,6 +115,7 @@ CLAUDE.md; these are standard OS libraries):
 | libgcrypt | LGPL-2.1 | dynamic (transitive via libxslt) — **keep dynamic** |
 | libgpg-error | LGPL-2.1 | dynamic (transitive via libgcrypt) — keep dynamic |
 | zlib | Zlib | dynamic |
+| **libkpathsea** | **LGPL-2.1** | **static** where linked — Linux (`tools/build_static_kpathsea.sh`), Windows 0.7.4 (`kpathsea_sys` `build_from_source`); subprocess `kpsewhich` otherwise (macOS/MacTeX ships no lib; MiKTeX fallback). See the §6 note below. |
 
 The release binary statically links libxml2/libxslt/libexslt (§3, shipped
 0.7.1); MIT requires their copyright notice when statically linked → covered in
@@ -116,6 +123,19 @@ The release binary statically links libxml2/libxslt/libexslt (§3, shipped
 dynamic linking; the build deliberately keeps `-lgcrypt`/`-lz` dynamic. The
 default dev build (`cargo build`) links all of these dynamically against the
 host.
+
+**libkpathsea is the one STATIC LGPL link** (the LGPL libs above are kept
+dynamic precisely to avoid this). LGPL-2.1 §6 permits static linking but obliges
+the distributor to let a user relink against a modified libkpathsea. Here both
+sides are open, so relinking is possible: latexml-oxide's own source is CC0, and
+the kpathsea source is public and **pinned** — `kpathsea_sys` `build_from_source`
+fetches it at a recorded commit (`KPSE_REF`), and the Linux/macOS
+`build_static_kpathsea.sh` pins the same. What §6 still requires in the shipped
+artifact is the LGPL-2.1 license **text** + the kpathsea copyright + a pointer to
+that pinned source — currently **MISSING** from `THIRD-PARTY-NOTICES` (its
+hand-authored §1–4 carry no kpathsea entry). Tracked as **F5**. (This obligation
+is not new to 0.7.4 — the Linux legs have static-linked kpathsea since the
+`build_static_kpathsea.sh` legs; 0.7.4 makes it universal by adding Windows.)
 
 Re-verify: `ldd target/<profile>/latexml_oxide` (dev) or the release-artifact
 no-dynamic-clib CI assertion (release).
@@ -137,8 +157,9 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
 
 ## F. Open items (the remaining audit work)
 
-- **F1** *(open)* — add `license` field to `pericortex` upstream (cortex-only;
-  clears the cargo-deny warning). Not distribution-blocking.
+- **F1** *(closed 2026-07-13)* — `pericortex` relicensed MIT → `CC0-1.0`
+  upstream (`license` field + CC0 `LICENSE`); clears the cargo-deny/cargo-about
+  warning. Was cortex-only, never distribution-blocking.
 - **F2** *(landed 2026-07-09)* — **`THIRD-PARTY-NOTICES`** (hand-authored §1-4 +
   cargo-about §5): LaTeX kernel (LPPL 1.3c) + plain TeX (Knuth) for the embedded
   dumps (§C); Perl-LaTeXML assets; the statically-linked libxml2/libxslt/libexslt
@@ -149,3 +170,11 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   `tools/gen_notices.sh` in the release workflow, bundle the assembled notices in
   the artifact, and verify the artifact's embedded resources match §B/§C.
   Complements the existing cargo-deny (§A) gate. Tracked with #51.
+- **F5** *(open, 2026-07-14)* — **`THIRD-PARTY-NOTICES` missing libkpathsea
+  (LGPL-2.1 static link).** kpathsea is statically linked on Linux
+  (`build_static_kpathsea.sh`) and, as of 0.7.4, Windows (`build_from_source`),
+  but the hand-authored §1–4 carry no kpathsea entry and no LGPL-2.1 §6 relink
+  note. Add the LGPL-2.1 license text + the kpathsea copyright + a pointer to the
+  pinned source (`KPSE_REF`) so a user can relink; both sides are open so relink
+  is possible. **Owner to confirm** this source-availability posture satisfies §6
+  for the static link (vs. shipping object files / a written offer).

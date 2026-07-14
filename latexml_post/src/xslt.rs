@@ -45,16 +45,54 @@ fn set_xslt_max_depth() {
     // platform's own C-symbol decoration, so it works on ELF and Mach-O
     // alike. If the symbol is ever absent (NULL), we skip the write:
     // libxslt's built-in default cap of 3000 still bounds recursion.
+    #[cfg(unix)]
     unsafe {
       let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
       if !sym.is_null() {
         *(sym as *mut std::os::raw::c_int) = 1000;
       }
     }
+    // Windows (MSVC): no dlsym/RTLD_DEFAULT, and `libc` is a cfg(unix)-only
+    // dependency of this crate — but none of that machinery is needed. The
+    // vcpkg-static libxslt is linked into this very image, and x64 COFF C
+    // symbols carry no decoration, so a direct extern declaration links
+    // (GetProcAddress would NOT work here: it only sees DLL exports, not
+    // statically linked globals). See WINDOWS_COMPATIBILITY_PLAN Phase 2.3.
+    #[cfg(windows)]
+    unsafe {
+      #[allow(non_upper_case_globals)]
+      unsafe extern "C" {
+        static mut xsltMaxDepth: std::os::raw::c_int;
+      }
+      xsltMaxDepth = 1000;
+    }
+    // Any other platform: skip the write; libxslt's built-in default cap
+    // of 3000 still bounds recursion, just above Perl's 1000.
   });
 }
 
-#[cfg(test)]
+/// Windows twin of the unix dlsym read-back below: the write must land in
+/// the linked-in libxslt's global. Reads the same extern static the setter
+/// writes — both resolve to the one `xsltMaxDepth` in the image.
+#[cfg(all(test, windows))]
+mod max_depth_tests {
+  #[test]
+  fn extern_static_sets_perl_parity_cap() {
+    super::set_xslt_max_depth();
+    // SAFETY: single-threaded read of the process-global int after the
+    // Once-guarded write; the extern declaration matches libxslt's C type.
+    let val = unsafe {
+      #[allow(non_upper_case_globals)]
+      unsafe extern "C" {
+        static xsltMaxDepth: std::os::raw::c_int;
+      }
+      xsltMaxDepth
+    };
+    assert_eq!(val, 1000);
+  }
+}
+
+#[cfg(all(test, unix))]
 mod max_depth_tests {
   /// The dlsym write must actually land: after `set_xslt_max_depth`,
   /// reading the global back through the same runtime resolution path

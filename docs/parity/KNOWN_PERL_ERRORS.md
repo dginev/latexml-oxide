@@ -1948,7 +1948,7 @@ Confirmed on the installed Perl 0.8.8 **and** the vendored tree
 (`perl -I LaTeXML/blib/lib`, rev `51fea96a`) — not a version skew. On
 arXiv:2605.01646 Perl yields 0 bibitems and 81 dangling citations.
 
-**Fixed in Rust** (OXIDIZED_DESIGN #55): `get_bib_entries` also scans the main
+**Fixed in Rust** (OXIDIZED_DESIGN #57): `get_bib_entries` also scans the main
 document for inline `ltx:bibentry`. Papers with an external `.bib`/`.bbl` carry
 no inline entries, so the scan is a no-op for them. All 40 corpus papers went
 from 0 rendered references to 1,482 with zero dangling citations. **Upstream
@@ -1998,7 +1998,7 @@ bibitem, 1 `ltx_missing_citation`, 0 links, plus the `expected:ids` warning.
 (2303.06077 itself gives no Perl verdict — Perl `Fatal:timeout` /
 `Status:conversion:3` on it, where Rust converts in ~2 min.)
 
-**Fixed in Rust** (OXIDIZED_DESIGN #57): `CrossRef` appends `bibliography` to the
+**Fixed in Rust** (OXIDIZED_DESIGN #59): `CrossRef` appends `bibliography` to the
 searched lists, following `Scan.pm`'s own convention; unit lists are still
 searched first, so a real per-chapter bibliography keeps priority. 2303.06077 →
 93 bibitems / 0 dangling / 179 resolved links. **Upstream candidate** — the fix
@@ -2045,7 +2045,7 @@ Witness `2605.11619`: a complete 54 KB paper whose listing body ends
 `</body></html> \end{lstlisting}` silently lost its Conclusion, `\bibliography`
 and appendix — 1.3 MB of HTML, 0 errors, 0 references.
 
-**Fixed in Rust** (OXIDIZED_DESIGN #59): match `\end{<env>}` anywhere in the line;
+**Fixed in Rust** (OXIDIZED_DESIGN #61): match `\end{<env>}` anywhere in the line;
 text before it becomes the listing's final line, text after it is unread (as Perl
 already does for the trailing part). **Upstream candidate** — the change is the
 one regex on L316.

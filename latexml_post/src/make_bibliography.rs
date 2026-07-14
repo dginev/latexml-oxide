@@ -309,7 +309,7 @@ impl MakeBibliography {
       Self::scan_bibentries(&mut entries, bibdoc);
     }
     // Also scan the MAIN document for INLINE `ltx:bibentry` elements.
-    // OXIDIZED_DESIGN #55 (beyond-Perl). amsrefs writes its bibliography
+    // OXIDIZED_DESIGN #57 (beyond-Perl). amsrefs writes its bibliography
     // straight into the document — `\begin{bibdiv}\begin{biblist}
     // \bib{key}{article}{...}` — instead of into an external `.bib`, so the
     // entries are already children of `ltx:biblist` and there is no `@files`

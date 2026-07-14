@@ -351,6 +351,76 @@ residuals stay here so the live worklist keeps them visible:
 
 ## Open tasks (actionable)
 
+### TL2026 `latex.ltx` dump init is NOT release-gate-clean — expl3 catcode gap (2026-07-12) — OPEN
+
+Blocks adding **2026** to the release dump window (`release-dumps.yml`,
+currently 2022–2025; see also the container blocker TODO(#217) — the two are
+independent). Measured on a full local TL2026 install (`x86_64-pc-windows-msvc`,
+but Linux-equivalent — this is the raw-load path, not a platform issue), using
+the exact release gate (`LATEXML_INIT_DEBUG=1 ./latexml_oxide --init=<init>`,
+ANSI-strip, `grep -acE '^(Error|Fatal):'`):
+
+- `--init=plain.tex` → exit 0, **0 errors** (release-clean). ✓
+- `--init=latex.ltx` → exit 0, **137 errors** → would FAIL the gate:
+  - 90 × `Error:unexpected:_ Script _ can only appear in math mode`
+  - 29 × `Error:misdefined:# … catcode PARAM … should never reach Stomach`
+  - ~18 × undefined l3 **case-change** internals (`\DeclareUppercaseExclusions`,
+    `\DeclareCaseChangeEquivalent`, `\CaseSwitch`, `\@@text@case@aux`,
+    `\NoCaseChange`, `\AddToNoCaseChangeList`, `\keys`/`\tl`/`\str`/`\clist`…).
+
+Root cause: the **known deep raw-load expl3 catcode gap**
+(`EXPL3_CATCODE_GAP_2026-06-08.md`; "four attempted fixes all regressed and
+were reverted"), newly triggered by TL2026's expanded l3 `text-case` module,
+which older TL (2022–2025, all gate-clean) did not exercise during init.
+Distinct from the `\Declare*caseMapping` no-ops landed above (those are
+different macros; that fix does not touch this). **NOT introduced by the
+Windows branch** — pre-existing, surfaced only because that branch is the
+first to run a full TL2026.
+
+Note the two-bars distinction that hid this: `tools/make_formats*` write the
+dump *despite* init errors (24,333 valid latex entries still land), and the
+test fixtures don't exercise the affected macros — so `cargo test` is 1531/0
+and everyday TL2026 conversion works, while the strict release gate would
+still reject a TL2026 latex dump. "Usable dump" ≠ "gate-clean dump."
+
+### TL2026 ambient-drift fixes (2026-07-12, windows-compatibility branch) — LANDED
+
+Two suite failures surfaced by running against TL 2026 (bleeding-edge; CI's
+ubuntu TL is older) — both root-caused and fixed TL-independently:
+
+1. **`\Declare{Upper,Lower,Title}caseMapping` native no-op handlers**
+   (`latex_constructs.rs`, next to the `DeclareText*` family). The TL2023+
+   kernel case-mapping declarations ARE captured in the latex dump, so
+   `\ifdefined` guards (greek-fontenc `lgrenc.def`) passed and the dumped
+   expl3 kernel bodies executed — hitting the raw-load expl3 catcode gap
+   (`EXPL3_CATCODE_GAP_2026-06-08.md`) and spraying `Script _` + undefined
+   `\acc*` errors (81_babel `greek_test`: 87 errors → 0; real pdflatex is
+   error-clean on the same fixture). LaTeXML cases via Unicode internally,
+   so ignoring these matches the `ignoredDefinition` policy. **Perl has no
+   handler either — same cascade expected there on TL2023+; candidate
+   upstream.**
+2. **tikz `ac_drive_components`: SKIPPED ON WINDOWS ONLY, kept live on
+   Linux/macOS.** circuitikz 1.8.0 rewrote its path logic, lengthening drawn
+   capacitor plates (12.4 → 12.68 in our SVG space). This coordinate tracks
+   the exact circuitikz version, which is NOT pinnable (both Perl
+   `FindFile_fallback` `[vV]?[-_.\d]+` and Rust version-strip a
+   `circuitikz-X.Y.Z` request to the current binding) and **differs by the
+   platform's TeX distribution**: Linux (apt texlive) and macOS (Homebrew
+   texlive) ship an OLDER circuitikz → 12.4 = the committed golden; the
+   Windows CI's `setup-texlive` net-install and any fresh `install-tl` get
+   the NEWEST → 12.68. So the fixture is **compared on Linux/macOS (where the
+   golden is deterministic) and skipped on Windows** via a `#[cfg(windows)]`
+   `WINDOWS_GOLDEN_SKIP` guard in `latexml_test_single` — a Linux↔Windows
+   portability difference, NOT a code divergence (the engine faithfully
+   renders whatever circuitikz emits — it was testing circuitikz's version,
+   not our code). Not TL-year-keyable (macOS and Windows are both TL2026 with
+   different circuitikz — a `tl2026.xml` variant attempt regressed macOS CI
+   and was reverted). `INTENTIONALLY_FAILING`/`ERROR_DEBT` don't apply (they
+   gate error *counts*, not golden *diffs*). Discovered via Windows CI run
+   `29219528633` (which fail-fast-stopped at 86_tikz; the complete tail came
+   from a local `--no-fail-fast` run on a newest-circuitikz box — a faithful
+   Windows-CI proxy — confirming 1530/0 with this one fixture out).
+
 ### Release-week stabilization (2026-07-10, user-directed) — THE LENS FOR THIS WEEK
 
 **Public release is ~1 week out (branch `public-release-prep-week`). The bias is
@@ -528,7 +598,7 @@ H2O &<=> H2CO3}` inside `align` — identical in same-host Perl, investigated
 body-error resilience.
 
 **One TRUNCATED sub-cluster is now FIXED — inline `\end{lstlisting}`** (7 of the
-169, 3 of them in the silent subset). See OXIDIZED_DESIGN #59 /
+169, 3 of them in the silent subset). See OXIDIZED_DESIGN #61 /
 KNOWN_PERL_ERRORS #51: Perl anchors the terminator regex at the line start, so
 `</body></html> \end{lstlisting}` never terminates and the reader eats the rest
 of the file, `\end{document}` included — **zero `Error:`**. pdflatex accepts the

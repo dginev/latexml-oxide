@@ -261,7 +261,7 @@ impl PreBibTeX {
 
   /// Perl `parseTopLevel` (L138-151).
   ///
-  /// DIVERGENCE (OXIDIZED_DESIGN #56): a malformed entry is reported and
+  /// DIVERGENCE (OXIDIZED_DESIGN #58): a malformed entry is reported and
   /// **resynced at the next `@`** instead of aborting the file. Perl lets the
   /// first parse error propagate out of `parseTopLevel`, so a single unbalanced
   /// `{` anywhere in a `.bib` silently costs every LATER entry — the tail of the
@@ -330,7 +330,7 @@ impl PreBibTeX {
   /// scans it), and `.bib` files in the wild use bare separator banners like
   /// `@Comment ------AAAAAA------`. Perl demands a delimited string here and
   /// errors out; we discard the junk and carry on, which `skip_junk` in the
-  /// caller does anyway. OXIDIZED_DESIGN #58, witness 2605.06974 (26 such
+  /// caller does anyway. OXIDIZED_DESIGN #60, witness 2605.06974 (26 such
   /// banners, each costing the entry that followed it).
   fn parse_comment(&mut self) -> Result<(), BibParseError> {
     self.skip_white();
@@ -731,7 +731,7 @@ fn is_bib_name_or_noise(c: char) -> bool {
   // the same: the key is matched byte-for-byte against the `\cite`, which
   // carries the identical bytes, and an unknown field name is simply never
   // consumed by any downstream handler.
-  // OXIDIZED_DESIGN #58. Witnesses 2605.14212 (`apple\_rl`), 2605.06974
+  // OXIDIZED_DESIGN #60. Witnesses 2605.14212 (`apple\_rl`), 2605.06974
   // (`\author=`/`\title=` field names).
   if c == '\\' {
     return true;
@@ -744,7 +744,7 @@ fn is_bib_name_or_noise(c: char) -> bool {
   // "empty journal" warning), and the `\cite` in the .tex carries the same
   // bytes, so the two match. Non-ASCII is never a BibTeX *delimiter*, so
   // admitting it here cannot swallow structure.
-  // OXIDIZED_DESIGN #58. Witnesses 2605.28695 (`ñ`), 2605.00121 (a stray
+  // OXIDIZED_DESIGN #60. Witnesses 2605.28695 (`ñ`), 2605.00121 (a stray
   // U+FE0F VARIATION SELECTOR-16 the author typed into the key).
   if !c.is_ascii() {
     return true;
@@ -816,7 +816,7 @@ fn consumed_diff(before: &str, after: &str) -> String {
 ///
 /// Ground truth is the real tool: `bibtex` 0.99d parses that same entry
 /// with only a benign "empty journal" warning, so the references exist
-/// in the author's PDF. OXIDIZED_DESIGN #58, KNOWN_PERL_ERRORS #51.
+/// in the author's PDF. OXIDIZED_DESIGN #60, KNOWN_PERL_ERRORS #51.
 /// Witness 2605.00264 (`\{Q\}` in `chen2017ucb`): 1144/1169 entries
 /// parsed before, 1169 after.
 fn find_balanced_brace_end(s: &str) -> Option<usize> {

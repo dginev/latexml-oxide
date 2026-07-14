@@ -54,6 +54,34 @@ fn whatsout_document_is_full_page() {
 }
 
 #[test]
+fn whatsin_math_wraps_literal_as_mathml() {
+  // `--whatsin=math` must digest the literal AS math (Perl LaTeXML.pm:166-168
+  // wraps it `\begin{document}\ensuremathfollows … \ensuremathpreceeds\end{document}`,
+  // and those macros open/close `\(…\)`). Before the automath port, the wrapper
+  // macros were no-ops, so `\sqrt{x}` became a bare `<ltx:XMApp>` outside any
+  // `<ltx:Math>` container → `malformed:ltx:XMApp isn't allowed` → no MathML.
+  let work = tempfile::tempdir().expect("tempdir");
+  let out = run(work.path(), &[
+    "literal:\\sqrt{x}",
+    "--whatsin=math",
+    "--format=html5",
+    "--dest",
+    "m.html",
+  ]);
+  assert!(
+    out.status.success(),
+    "status {:?}\nstderr:\n{}",
+    out.status.code(),
+    stderr_of(&out)
+  );
+  let html = std::fs::read_to_string(work.path().join("m.html")).expect("read m.html");
+  assert!(
+    html.contains("msqrt"),
+    "expected MathML <msqrt> from `--whatsin=math`:\n{html}"
+  );
+}
+
+#[test]
 fn whatsout_fragment_strips_page_chrome() {
   let work = tempfile::tempdir().expect("tempdir");
   std::fs::write(work.path().join("hello.tex"), HELLO_TEX).unwrap();

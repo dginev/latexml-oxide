@@ -345,7 +345,12 @@ mod tests {
     // Edit the binding (new content + a distinct mtime): the warm cache,
     // gated on `deps_still_current`, must now miss and re-digest the preamble.
     std::fs::write(&rhai, "DefMacro(\"\\\\foo\", || \"BAR\");\n").unwrap();
-    std::fs::File::open(&rhai)
+    // Windows refuses set_modified on a read-only handle (needs
+    // FILE_WRITE_ATTRIBUTES), so open for writing; futimens on Unix is
+    // indifferent.
+    std::fs::OpenOptions::new()
+      .write(true)
+      .open(&rhai)
       .unwrap()
       .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000_000))
       .unwrap();

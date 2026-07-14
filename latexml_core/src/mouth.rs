@@ -1111,3 +1111,30 @@ pub fn tokenize_internal(text: &str) -> Tokens {
   use_main_state();
   result
 }
+
+#[cfg(test)]
+mod newline_tests {
+  use super::*;
+
+  /// CRLF-input regression guard (WINDOWS_COMPATIBILITY_PLAN risk #5): a
+  /// document saved with Windows line endings must tokenize identically to
+  /// its LF twin — split_raw_lines implements TeX's universal end-of-line
+  /// (\r\n, \r, and \n all terminate a line, and the terminator itself
+  /// never reaches the catcode machinery).
+  #[test]
+  fn split_raw_lines_universal_newlines() {
+    let lf = Mouth::split_raw_lines(b"a\nb\nc");
+    let crlf = Mouth::split_raw_lines(b"a\r\nb\r\nc");
+    let cr = Mouth::split_raw_lines(b"a\rb\rc");
+    assert_eq!(lf, crlf, "CRLF must split identically to LF");
+    assert_eq!(lf, cr, "bare CR must split identically to LF");
+    assert_eq!(lf.len(), 3);
+    assert_eq!(lf[0], b"a");
+    // A lone \r inside the terminator pair is consumed, not leaked into
+    // the following line.
+    assert!(
+      crlf.iter().all(|line| !line.contains(&b'\r')),
+      "no line may retain a raw CR byte"
+    );
+  }
+}

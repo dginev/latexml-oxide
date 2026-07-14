@@ -39,14 +39,49 @@ fn record_converter_diag(msg: String) { LAST_CONVERTER_DIAG.with(|c| *c.borrow_m
 /// Take (read + clear) this thread's latest converter diagnostic.
 fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borrow_mut().take()) }
 
+/// Program name for the ImageMagick CLI delegate. On Windows, `convert.exe`
+/// is the system FAT→NTFS conversion utility in `System32`, which shadows
+/// ImageMagick's legacy name — invoking bare `convert` there runs the wrong
+/// program. ImageMagick 7's unified `magick` front-end accepts the same
+/// argument syntax, so use it on Windows. Unix keeps `convert` (matching
+/// Perl's Image::Magick-era delegate chain and ImageMagick 6 installs).
+fn im_convert_program() -> &'static str { if cfg!(windows) { "magick" } else { "convert" } }
+
+/// Program name for the Ghostscript CLI delegate. Unix installs `gs`.
+/// Windows Ghostscript ships the console binary as `gswin64c.exe`
+/// (32-bit: `gswin32c.exe`), MiKTeX bundles its own as `mgs.exe`, and
+/// TeX Live for Windows bundles one behind the `rungs.exe` wrapper
+/// (`tlpkg/tlgs`, same CLI) on the same bin dir as `kpsewhich` — so a
+/// TL-only box still gets a working EPS/PS chain with no extra install.
+/// Probed once per process, in that order, falling back to `gs` so a
+/// failure surfaces as the usual could-not-start converter diagnostic.
+fn gs_program() -> &'static str {
+  if cfg!(windows) {
+    // `which` applies the platform's own lookup rules (PATHEXT, so `.exe`/
+    // `.bat`/`.cmd` all resolve) — the same crate + semantics the kpathsea
+    // backend uses to find `kpsewhich`.
+    static GS: LazyLock<&'static str> = LazyLock::new(|| {
+      ["gswin64c", "gswin32c", "mgs", "rungs"]
+        .into_iter()
+        .find(|candidate| which::which(candidate).is_ok())
+        .unwrap_or("gs")
+    });
+    *GS
+  } else {
+    "gs"
+  }
+}
+
 /// Map a graphics-converter executable to a "what to install" hint, so a
 /// "not installed" diagnostic tells the user how to fix it rather than just
 /// naming a missing binary. Covers the optional tools the graphics cascade
 /// shells out to — none are bundled; the host TeX/graphics ecosystem provides
 /// them. Returns `None` for an unrecognized program (no hint appended).
+/// The Windows Ghostscript aliases (`gswin64c`/`gswin32c`/`mgs`/`rungs`, from
+/// `gs_program`) map to the same Ghostscript hint.
 fn missing_tool_hint(prog: &str) -> Option<&'static str> {
   Some(match prog {
-    "gs" | "ps2pdf" => {
+    "gs" | "gswin64c" | "gswin32c" | "mgs" | "rungs" | "ps2pdf" => {
       "install Ghostscript (apt `ghostscript`, brew `ghostscript`) for PDF/PostScript conversion"
     },
     "mutool" => "install MuPDF (apt `mupdf-tools`, brew `mupdf-tools`) for fast PDF rendering",
@@ -700,7 +735,7 @@ impl Graphics {
       .map(|d| d.as_nanos())
       .unwrap_or(0);
     let tmp = parent.join(format!(".{}.{}.rotated", stem, unique));
-    let mut cmd = std::process::Command::new("convert");
+    let mut cmd = std::process::Command::new(im_convert_program());
     cmd
       .arg(dest)
       .arg("-rotate")
@@ -1060,9 +1095,22 @@ impl Graphics {
           libc::killpg(pid, libc::SIGKILL);
         }
       }
-      #[cfg(not(unix))]
+      #[cfg(windows)]
       {
-        // Non-Unix platforms: best-effort PID kill only.
+        // Windows analogue of the killpg group-kill: `taskkill /T` walks
+        // the child-process tree from the given PID, so a timed-out
+        // `magick` also takes down the `gs` it spawned (the exact orphan
+        // scenario the Unix setsid+killpg design exists for). /F because
+        // there is no SIGTERM-style graceful tier on Windows consoles
+        // without a console-event dance; the subsequent child.kill() is
+        // then a no-op backstop.
+        let _ = std::process::Command::new("taskkill")
+          .args(["/PID", &pid.to_string(), "/T", "/F"])
+          .output();
+      }
+      #[cfg(not(any(unix, windows)))]
+      {
+        // Other platforms: best-effort PID kill only (child.kill() below).
         let _ = pid;
       }
     };
@@ -1576,7 +1624,7 @@ impl Graphics {
       "pngalpha"
     };
 
-    let mut cmd = std::process::Command::new("gs");
+    let mut cmd = std::process::Command::new(gs_program());
     cmd
       .arg("-q")
       .arg("-dNOPAUSE")
@@ -1745,7 +1793,7 @@ impl Graphics {
     // group via setsid+pre_exec (Unix), so killing convert on timeout
     // also kills the gs grandchild. Without that, gs orphaned by a
     // dying convert kept running 10+ min and stalled the sandbox.
-    let mut cmd = std::process::Command::new("convert");
+    let mut cmd = std::process::Command::new(im_convert_program());
     cmd
       .arg("-define")
       .arg("pdf:use-cropbox=true")

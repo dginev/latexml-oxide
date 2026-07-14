@@ -967,7 +967,7 @@ impl CrossRef {
       // any specific others (eg. per chapter)") — and registers the reference
       // under both. We follow Scan's convention here so the two agree; the unit
       // list still wins, since the search breaks on the first list that yields
-      // an id. OXIDIZED_DESIGN #57, KNOWN_PERL_ERRORS #50.
+      // an id. OXIDIZED_DESIGN #59, KNOWN_PERL_ERRORS #50.
       let inlist = bibref.get_attribute("inlist").unwrap_or_default();
       let mut lists: Vec<&str> = inlist.split_whitespace().collect();
       if !lists.contains(&"bibliography") {
