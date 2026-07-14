@@ -61,16 +61,13 @@ fn whatsin_math_wraps_literal_as_mathml() {
   // macros were no-ops, so `\sqrt{x}` became a bare `<ltx:XMApp>` outside any
   // `<ltx:Math>` container → `malformed:ltx:XMApp isn't allowed` → no MathML.
   let work = tempfile::tempdir().expect("tempdir");
-  let out = run(
-    work.path(),
-    &[
-      "literal:\\sqrt{x}",
-      "--whatsin=math",
-      "--format=html5",
-      "--dest",
-      "m.html",
-    ],
-  );
+  let out = run(work.path(), &[
+    "literal:\\sqrt{x}",
+    "--whatsin=math",
+    "--format=html5",
+    "--dest",
+    "m.html",
+  ]);
   assert!(
     out.status.success(),
     "status {:?}\nstderr:\n{}",
