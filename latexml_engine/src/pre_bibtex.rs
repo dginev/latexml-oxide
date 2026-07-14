@@ -123,6 +123,13 @@ pub struct PreBibTeX {
   pub entries:    Vec<ParsedEntry>,
   macros:         HashMap<String, String>,
   parsed:         bool,
+  /// Raw-source witness for `parse_value`. When `Some`, it holds the
+  /// value's starting `line` plus every continuation `extend_line`
+  /// has appended since — so `line` stays a true *suffix* of it, and
+  /// the consumed span is `witness[..witness.len() - line.len()]`.
+  /// Without this, a value spanning physical lines made `line` longer
+  /// than (and unrelated to) the snapshot it was diffed against.
+  raw_witness:    Option<String>,
 }
 
 /// One parsed entry. Mirrors Perl `LaTeXML::Pre::BibTeX::Entry` (only
@@ -178,6 +185,7 @@ impl PreBibTeX {
       entries: Vec::new(),
       macros: default_macros(),
       parsed: false,
+      raw_witness: None,
     }
   }
 
@@ -508,6 +516,12 @@ impl PreBibTeX {
     // comment but other downstream digesters might).
     self.line.push('\n');
     self.line.push_str(&next);
+    // Mirror the append into the raw witness so `line` remains a suffix
+    // of it across a multi-line value (see `raw_witness`).
+    if let Some(w) = self.raw_witness.as_mut() {
+      w.push('\n');
+      w.push_str(&next);
+    }
     self.lineno += 1;
     Ok(true)
   }
@@ -528,9 +542,10 @@ impl PreBibTeX {
         // Pull the raw form *before* macro expansion (parse_string
         // strips delimiters; for the raw side we want the actual
         // source bytes, delimiters and all).
-        let raw_start_line = self.line.clone();
+        self.raw_witness = Some(self.line.clone());
         let s = self.parse_string()?;
-        let raw_consumed = consumed_diff(&raw_start_line, &self.line);
+        let witness = self.raw_witness.take().unwrap_or_default();
+        let raw_consumed = consumed_diff(&witness, &self.line);
         raw.push_str(&raw_consumed);
         value.push_str(&s);
       } else if let Some(name) = self.parse_field_name() {
@@ -709,11 +724,28 @@ fn is_bib_name_or_noise(c: char) -> bool {
 /// Compute the byte-slice that was consumed from `before` to produce
 /// `after`. Used by `parse_value` to recover the raw source of a
 /// just-parsed string without re-parsing.
+///
+/// `after` must be a *suffix* of `before` — the parser only ever pops
+/// a prefix off `line`, and `raw_witness` mirrors `extend_line`'s
+/// appends so that holds across multi-line values too. Slicing at
+/// `before.len() - after.len()` is then a char boundary by
+/// construction. Callers that break the suffix invariant get an empty
+/// raw rather than a panic or a torn string: byte arithmetic on
+/// unrelated strings used to slice mid-codepoint and panic on any
+/// non-ASCII `.bib` (witnesses 2605.02644, 2605.15313).
 fn consumed_diff(before: &str, after: &str) -> String {
-  if before.len() < after.len() {
-    return String::new();
+  match before.len().checked_sub(after.len()) {
+    Some(idx) if before.is_char_boundary(idx) && &before[idx..] == after => {
+      before[..idx].to_string()
+    },
+    _ => {
+      debug_assert!(
+        false,
+        "consumed_diff: {after:?} is not a suffix of {before:?}"
+      );
+      String::new()
+    },
   }
-  before[..before.len() - after.len()].to_string()
 }
 
 /// Find the byte index immediately after the closing brace of a
@@ -762,6 +794,45 @@ mod tests {
     let mut p = PreBibTeX::new_from_string(s);
     p.parse_top_level().expect("parse_top_level");
     p
+  }
+
+  fn raw_field<'a>(e: &'a ParsedEntry, name: &str) -> &'a str {
+    e.raw_fields
+      .iter()
+      .find(|(n, _)| n == name)
+      .map(|(_, v)| v.as_str())
+      .unwrap_or_else(|| panic!("no raw field {name:?} in {:?}", e.raw_fields))
+  }
+
+  /// A value spanning physical lines whose first line holds a
+  /// multi-byte char used to slice mid-codepoint and panic:
+  /// `end byte index 3 is not a char boundary` — every non-ASCII
+  /// `.bib` with a wrapped field. Witnesses: 2605.02644, 2605.15313
+  /// (21 papers in the 2605 rerun).
+  #[test]
+  fn multiline_value_with_utf8_does_not_panic() {
+    let p = parse("@article{k,\n  title = {Müller and Sons\n    and More}, year = {20},\n}\n");
+    assert_eq!(p.entries.len(), 1);
+    let e = &p.entries[0];
+    assert_eq!(
+      e.fields
+        .iter()
+        .find(|(n, _)| n == "title")
+        .map(|(_, v)| v.as_str()),
+      Some("Müller and Sons\n    and More")
+    );
+  }
+
+  /// The same defect without the panic: on an all-ASCII wrapped value
+  /// the bogus arithmetic still landed on a char boundary and silently
+  /// returned a *truncated* raw. Guards the torn-string half.
+  #[test]
+  fn multiline_value_raw_keeps_the_whole_consumed_span() {
+    let p = parse("@article{k,\n  title = {A title that\n    wraps},\n}\n");
+    assert_eq!(
+      raw_field(&p.entries[0], "title"),
+      "{A title that\n    wraps}"
+    );
   }
 
   #[test]
