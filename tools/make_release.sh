@@ -197,118 +197,41 @@ fi
 # The shared release body is emitted by the publishing (Linux) leg only. The
 # macOS leg uploads its tarball as a CI artifact that the Linux `release` job
 # collects before publishing; set RELEASE_MACOS_TARBALL to that filename to
-# include its install section here.
+# list it among the downloadable assets here. Step-by-step install commands
+# live in the README (linked from the notes), not on the release page.
 release_body="${artifacts_dir}/RELEASE_BODY.md"
 if [[ "${os_family}" == "linux" ]]; then
 {
   cat <<EOF
-## Install
+## Installation
 
-### Debian / Ubuntu (.deb)
+These are **self-contained** binaries — libxml2, libxslt, and kpathsea are baked
+in, so the only runtime requirement is a **TeX distribution** (TeX Live, MacTeX,
+or MiKTeX) on your \`PATH\`. Graphics tools (ImageMagick, Ghostscript, MuPDF,
+dvipng, dvisvgm) are optional — used for figure conversion when present.
 
-\`\`\`
-curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/latexml-oxide_${version}-1_amd64.deb
-sudo apt install ./latexml-oxide_${version}-1_amd64.deb
-\`\`\`
+**Step-by-step, per-platform install instructions live in the [README
+Installation guide](https://github.com/dginev/latexml-oxide#install-prebuilt-binaries).**
+This page lists only the assets, so the commands stay in one place.
 
-### Portable tarball (x86_64 Linux)
+Download the asset for your platform (each has a matching \`.sha256\` sidecar):
 
-\`\`\`
-curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/latexml-oxide-${version}-${target_triple}.tar.gz
-tar xzf latexml-oxide-${version}-${target_triple}.tar.gz
-sudo cp latexml-oxide-${version}-${target_triple}/latexml_oxide /usr/local/bin/
-\`\`\`
-
-The binary bundles libxml2/libxslt/kpathsea, so tarball users only need a TeX
-Live installation (read from your texmf tree) plus graphics tools:
-
-\`\`\`
-sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
-                 texlive-latex-base texlive-latex-extra texlive-science
-\`\`\`
-
+- **Linux (x86-64)** — \`latexml-oxide_${version}-1_amd64.deb\`, or the portable \`latexml-oxide-${version}-${target_triple}.tar.gz\`
 EOF
-
-  if [[ -n "${RELEASE_MACOS_TARBALL:-}" ]]; then
-    cat <<EOF
-### macOS (Apple Silicon)
-
-\`\`\`
-curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_MACOS_TARBALL}
-tar xzf ${RELEASE_MACOS_TARBALL}
-sudo cp latexml-oxide-${version}-aarch64-apple-darwin/latexml_oxide /usr/local/bin/
-\`\`\`
-
-The binary bundles libxml2/libxslt, so macOS users only need a TeX distribution:
-
-\`\`\`
-# TeX Live — either Homebrew's:
-brew install texlive
-# …or MacTeX / BasicTeX, served via the subprocess-kpsewhich fallback.
-\`\`\`
-
-EOF
-  fi
-
-  if [[ -n "${RELEASE_MACOS_INTEL_TARBALL:-}" ]]; then
-    cat <<EOF
-### macOS (Intel)
-
-For Intel Macs (built with a macOS 10.13 deployment target, so it runs on
-older Intel machines up to the latest Sonoma):
-
-\`\`\`
-curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_MACOS_INTEL_TARBALL}
-tar xzf ${RELEASE_MACOS_INTEL_TARBALL}
-sudo cp latexml-oxide-${version}-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
-\`\`\`
-
-> Pick the tarball matching your Mac: \`aarch64\` for Apple Silicon (M1/M2/M3…),
-> \`x86_64\` for Intel. \`uname -m\` prints \`arm64\` or \`x86_64\`.
-
-EOF
-  fi
 
   if [[ -n "${RELEASE_LINUX_ARM64_TARBALL:-}" ]]; then
-    cat <<EOF
-### Linux (aarch64 / arm64)
-
-For 64-bit ARM Linux — AWS Graviton, Ampere, Raspberry Pi OS (64-bit), Apple
-Silicon Linux VMs. Same self-contained binary as the x86_64 Linux assets.
-
-\`\`\`
-# Debian / Ubuntu (.deb)
-curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/latexml-oxide_${version}-1_arm64.deb
-sudo apt install ./latexml-oxide_${version}-1_arm64.deb
-
-# …or the portable tarball
-curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_LINUX_ARM64_TARBALL}
-tar xzf ${RELEASE_LINUX_ARM64_TARBALL}
-sudo cp latexml-oxide-${version}-aarch64-unknown-linux-gnu/latexml_oxide /usr/local/bin/
-\`\`\`
-
-> Pick the asset matching your machine: \`x86_64\` for Intel/AMD, \`aarch64\`
-> for ARM. \`uname -m\` prints \`x86_64\` or \`aarch64\`.
-
-EOF
+    echo "- **Linux (aarch64 / arm64)** — \`latexml-oxide_${version}-1_arm64.deb\`, or the portable \`${RELEASE_LINUX_ARM64_TARBALL}\`"
   fi
-
+  if [[ -n "${RELEASE_MACOS_TARBALL:-}" ]]; then
+    echo "- **macOS (Apple Silicon)** — \`${RELEASE_MACOS_TARBALL}\`"
+  fi
+  if [[ -n "${RELEASE_MACOS_INTEL_TARBALL:-}" ]]; then
+    echo "- **macOS (Intel)** — \`${RELEASE_MACOS_INTEL_TARBALL}\`"
+  fi
   if [[ -n "${RELEASE_WINDOWS_EXE:-}" ]]; then
-    cat <<EOF
-### Windows (x86_64)
-
-A single self-contained \`.exe\` — download it and run it directly (no installer,
-no tarball). Static libxml2/libxslt are baked in; it needs only the standard
-Microsoft Visual C++ runtime (present on modern Windows / the VC++ redistributable)
-and a TeX distribution (MiKTeX or TeX Live) on \`PATH\`, resolved via \`kpsewhich\`.
-
-\`\`\`powershell
-curl.exe -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_WINDOWS_EXE}
-.\\${RELEASE_WINDOWS_EXE} --version
-\`\`\`
-
-EOF
+    echo "- **Windows (x86-64)** — \`${RELEASE_WINDOWS_EXE}\` (a single self-contained \`.exe\`, no installer)"
   fi
+  echo
 
   # Slice the CHANGELOG section for this version. CHANGELOG entries use
   # `## [VERSION]` headers (CommonMark task-list style — see CHANGELOG.md

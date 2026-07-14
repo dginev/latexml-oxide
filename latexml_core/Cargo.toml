@@ -65,7 +65,9 @@ libxml = "0.3.16"
 # libkpathsea at all; see docs/PORTABILITY_MACOS_PROBE_2026-06-07.md).
 # 0.3.2: in-process build_from_source (Windows/MSVC + Unix) + MiKTeX on-the-fly
 # installer suppression. See docs/release/WINDOWS_COMPATIBILITY_PLAN.md.
-kpathsea = { version = "0.3.2", optional = true }
+# 0.3.3: build_from_source fix for the `_stat64i32` LNK2005 collision under
+# +crt-static + fat-LTO (the Windows release link). kpathsea_sys 0.2.3.
+kpathsea = { version = "0.3.3", optional = true }
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }
