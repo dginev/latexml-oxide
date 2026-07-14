@@ -1654,11 +1654,12 @@ escaped-brace reproducer it emits **0 bibitems and 2 dangling citations**
 authorized surpass-Perl case — Rust == Perl but both wrong vs the PDF.
 
 **Measured.** These were exposed by routing post-side `.bib` parsing through
-this port (#56): `bibtex/unbalanced` went 19 → 593 papers in sandbox 2605
+this port (#58): `bibtex/unbalanced` went 19 → 593 papers in sandbox 2605
 because the deleted bespoke parser had been permissive on exactly these points.
 On a 24-paper sample of the affected set: **0/24 clean → 22/24 clean**
 (brace fix alone: 7/24). Witness 2605.00264 (`\{Q\}` in `chen2017ucb`):
-1144/1169 entries parsed → **1170**, 18 dangling citations → **0**.
+1144 of the file's 1170 entries parsed → **all 1170**, 18 dangling
+citations → **0**.
 Witnesses 2605.28695 (`ñ` key), 2605.00121 (stray U+FE0F in the key),
 2605.06974 (26 `@Comment` banners).
 
@@ -1680,7 +1681,7 @@ but making such a cite *link* needs key normalisation at the
 `\ProcessBibTeXEntry` seam — not done here.
 
 **Residual (not fixed):** a small tail of malformed-entry shapes still warns
-`bibtex:unbalanced`; they lose no cited keys — the #56 resync recovers the next
+`bibtex:unbalanced`; they lose no cited keys — the #58 resync recovers the next
 entry — so it is log noise, not data loss.
 
 ### 61. `\end{lstlisting}` terminates the listing anywhere on the line, not only at its start
@@ -1717,6 +1718,47 @@ Conclusion + appendix restored and **32 references, 0 dangling**. Breadth: 7 of
 the 169 truncated papers in the 2026-07-14 empty-References sweep, 3 of them in
 the silent (no-`Error:`) subset. Regression test:
 `06_cluster_regressions::inline_end_lstlisting_does_not_swallow_the_document`.
+
+### 62. The biblatex binding announces itself as `Info`, not an unconditional `Warn`
+
+**Decision:** `latexml_contrib/src/biblatex_sty.rs` opens with
+
+```rust
+Info!("bibliography", "biblatex",
+  "biblatex.sty is provided by a native binding, not interpreted raw.");
+```
+
+where the ar5iv-bindings Perl original emits a **`Warn`** under `missing_file`:
+*"biblatex.sty is only minimally stubbed and will not be interpreted raw"*.
+
+**Why.** Both halves of the Perl message had become false. Nothing is *missing* —
+`biblatex.sty` is deliberately not raw-loaded precisely because this binding
+stands in for it; and "minimally stubbed" stopped being true once the binding
+grew author-year cite families, biber `.bbl` handling, `\printbibliography`,
+`maxbibnames` and structured `\name` parts. It also fired **unconditionally at
+load**, so it carried no information about the paper in hand. A biblatex feature
+we actually get wrong reports itself through its own error, where it happens.
+
+**Severity impact — read this before quoting corpus deltas.** This warning was the
+**#1 `missing_file` "what" in the corpus: 1,167 papers** across sandboxes
+2605+2606 (second only to arydshln). Because cortex ranks a task by its worst
+message, the unconditional `Warn` **downgraded every biblatex paper from
+`no_problem` to `warning`** regardless of how well it converted. Retiring it
+therefore moves a population of papers into `no_problem` **for a logging reason,
+not a conversion improvement**.
+
+Any `no_problem` delta measured across this change is **confounded**: it mixes
+recovered bibliographies with papers that were always clean but mis-ranked. A
+run-over-run comparison is only attributable to engine fixes if **both** runs sit
+on the same side of this commit (`14dd3345be`, 2026-07-14). The 2026-07-14
+`sandbox-13` rerun is the first on the `Info` side; comparisons against it must
+either be from another `Info`-side run or state the confound explicitly.
+
+**Not a severity-downgrade cheat.** CLAUDE.md forbids emitting fewer `Error:`s
+than Perl to flatter a signal. This is a `Warning` → `Info` on a *load-time
+banner* that describes the binding rather than the document; no per-paper
+diagnostic is suppressed, and the genuinely useful fact (this is an
+approximation, not the real package) is retained under an accurate category.
 
 ## Known Upstream Perl Issues (brief)
 

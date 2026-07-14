@@ -712,6 +712,10 @@ LoadDefinitions!({
   // Keep the one genuinely useful fact — this is an approximation, not the real
   // package — as an Info, under an accurate category. A biblatex feature we get
   // wrong reports itself through its own error where it happens.
+  //
+  // OXIDIZED_DESIGN #62 — which also records the measurement trap: retiring this
+  // moves ~1,167 papers out of `warning` for a LOGGING reason, so any corpus
+  // `no_problem` delta straddling this commit is confounded.
   Info!("bibliography", "biblatex",
     "biblatex.sty is provided by a native binding, not interpreted raw.");
 

@@ -816,9 +816,9 @@ fn consumed_diff(before: &str, after: &str) -> String {
 ///
 /// Ground truth is the real tool: `bibtex` 0.99d parses that same entry
 /// with only a benign "empty journal" warning, so the references exist
-/// in the author's PDF. OXIDIZED_DESIGN #60, KNOWN_PERL_ERRORS #51.
-/// Witness 2605.00264 (`\{Q\}` in `chen2017ucb`): 1144/1169 entries
-/// parsed before, 1169 after.
+/// in the author's PDF. OXIDIZED_DESIGN #60, KNOWN_PERL_ERRORS #52.
+/// Witness 2605.00264 (`\{Q\}` in `chen2017ucb`): of the file's 1170
+/// entries, 1144 parsed before, all 1170 after.
 fn find_balanced_brace_end(s: &str) -> Option<usize> {
   let bytes = s.as_bytes();
   if bytes.first() != Some(&b'{') {
@@ -1238,7 +1238,7 @@ value} }
     assert_eq!(find_balanced_brace_end("{a{b}c}d"), Some(7));
     // A backslash does NOT escape the brace count (BibTeX's rule), so the
     // group closes at the FIRST `}` — this asserted Some(6) while we mirrored
-    // Perl's Text::Balanced, which is what lost real entries (#58).
+    // Perl's Text::Balanced, which is what lost real entries (#60).
     assert_eq!(find_balanced_brace_end(r"{a\}b}"), Some(4));
     assert_eq!(find_balanced_brace_end("{abc"), None);
     assert_eq!(find_balanced_brace_end("noleadingbrace"), None);
@@ -1248,7 +1248,11 @@ value} }
   /// `read_to_string` rejected the whole file ("stream did not contain valid
   /// UTF-8"), so the paper rendered a References section with zero entries and
   /// NO error — a silent, total loss. Real `bibtex` 0.99d is 8-bit clean, and
-  /// Perl passes the raw bytes through (`Mouth.pm` L75-80).
+  /// Perl cannot lose the file either: its `.bib` reader (`Pre/BibTeX.pm`
+  /// L70-71) is a bare `open` + `[<$BIB>]` byte slurp with no encoding layer,
+  /// so a stray byte simply passes through. It never routes a `.bib` through
+  /// the Mouth, and the per-line fallback below is ours, not Perl's — Perl has
+  /// no such rule. What we match is the outcome: the read cannot fail.
   #[test]
   fn non_utf8_bib_file_is_read_not_rejected() {
     // `\xe9` is `é` in Cp1252/Latin-1 — a lone continuation byte that is

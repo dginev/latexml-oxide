@@ -15,8 +15,9 @@
 
 ## Current status
 
-- `cargo test --tests`: **1568 / 0 / 0** (on `public-release-prep-week`; the
-  completed 2026-07 session logs are archived — see the pointer below).
+- `cargo test --tests`: **1577 / 0 / 0** (on `public-release-prep-week` after
+  merging `origin/main`'s Windows release hardening; the completed 2026-07
+  session logs are archived — see the pointer below).
 
 - **2026-07-09 — `\AtBeginDocument` #2754/#2846 re-done via context-aware `\par`
   (Direction B retired; ported to Perl too).** The earlier `inBeginDocumentHook`

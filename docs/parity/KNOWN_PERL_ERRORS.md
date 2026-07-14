@@ -2049,3 +2049,56 @@ and appendix — 1.3 MB of HTML, 0 errors, 0 references.
 text before it becomes the listing's final line, text after it is unread (as Perl
 already does for the trailing part). **Upstream candidate** — the change is the
 one regex on L316.
+
+## 52. `Text::Balanced` reads `.bib` braces as escaped → one `\{` abandons every later entry
+
+`Pre/BibTeX.pm` parses a brace-delimited value with `Text::Balanced`
+(L19, L282):
+
+```perl
+while ((!defined($string = extract_bracketed($$self{line}, '{}'))) && $self->extendLine) { }
+```
+
+`extract_bracketed` honours `\` as an escape, so a value containing `\{Q\}`
+never balances. The loop then keeps calling `extendLine` — swallowing line after
+line to EOF — and the resulting parse error propagates out of `parseTopLevel`,
+so **every remaining entry in the file is lost**, not just the offending one.
+
+Real `bibtex` 0.99d knows nothing about `\` when scanning brace depth
+(`bibtex.web`): it parses the same entry with at most a benign *"empty journal"*
+warning, so the references exist in the author's PDF.
+
+The same routine also excludes `\` from name characters, deliberately (L216):
+
+> *"Especially `\`, which BibTeX allows, but it throws us off (semiverbatim vs
+> verbatim) when we store the bibentries before digesting the key!"*
+
+That does not dodge the hazard, it just loses the entry a different way: the key
+in `@misc{apple\_rl,` ends at the backslash, and the bogus `\author={...}` field
+name that follows kills its entry outright. BibTeX takes `apple\_rl` verbatim
+and treats `\author` as an unknown field, keeping the entry.
+
+Minimal trigger:
+
+```bibtex
+@article{chen2017,
+  title = {Bounds on $\boldsymbol{\{Q\}}$},
+  author = {Chen, A.},
+}
+@article{later2018, title = {This entry is lost too}, author = {Roe, B.} }
+```
+
+Perl LaTeXML on the escaped-brace reproducer: **0 bibitems, 2 dangling
+citations** — it abandons the whole file. `bibtex` emits both entries.
+
+Witness `2605.00264` (`\{Q\}` in `chen2017ucb`): 1144 of the file's 1170 entries
+parsed, 18 dangling citations. Further witnesses: `2605.28695` (`ñ` in the key),
+`2605.00121` (stray U+FE0F in the key), `2605.06974` (26 bare `@Comment`
+banners), `2605.14212` (`\` in the key).
+
+**Fixed in Rust** (OXIDIZED_DESIGN #60, and #58 for the resync): scan brace depth
+the way `bibtex.web` does, ignoring `\`; admit `\` as a name character; resync at
+the next `@` rather than abandoning the file. On 2605.00264 that is all 1170
+entries and 0 dangling citations. **Upstream candidate** — but it is a rewrite of the
+scanner, not a one-line change, since `Text::Balanced` cannot express
+BibTeX's rule.

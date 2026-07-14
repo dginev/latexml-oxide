@@ -27,7 +27,7 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1505/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
+**1577/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
 (policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
 `latexml_oxide/build.rs` sets `core.hooksPath`). The 2026-07 full-arXiv rerun
 runs at ~44k docs/hr, avg 4.06 s/doc, fatal rate 0.78%.
