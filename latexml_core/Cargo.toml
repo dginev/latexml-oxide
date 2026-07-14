@@ -25,6 +25,13 @@ crate-type = ["lib"]
 default = ["kpathsea"]
 kpathsea = ["dep:kpathsea"]
 
+# Static in-process libkpathsea on windows-msvc: forwards to the kpathsea crate's
+# `build-from-source` (fetch + compile a static libkpathsea → in-process,
+# self-contained, no runtime kpathsealibw64.dll). Inert off windows-msvc. Off by
+# default — the shipped default is the subprocess/DLL backend; distribution
+# opts in. Removes the subprocess `ls-R`-cache-build cost (~0.5 s/conversion).
+kpathsea-build-from-source = ["kpathsea", "kpathsea/build-from-source"]
+
 # Activated by `latexml_codegen` (host-side proc-macro) to enable the
 # `impl ToTokens for Tokens / Catcode / Token / Parameters / Parameter`
 # blocks. Resolver v2 isolates proc-macro feature unification, so the

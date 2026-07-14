@@ -103,8 +103,12 @@ mkdir -p "${stage_dir}"
 # bindings without recompiling — runtime opt-in, so default conversions are
 # unchanged), on the publish-grade profile (fat LTO, panic=abort,
 # codegen-units=1).
-echo "make_release: cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide"
-cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide
+# Per-target extra features (e.g. the Windows leg opts into
+# `kpathsea-build-from-source` for a static in-process libkpathsea). Empty
+# elsewhere, so the recipe is unchanged on Linux/macOS.
+features="runtime-bindings${RELEASE_EXTRA_FEATURES:+,${RELEASE_EXTRA_FEATURES}}"
+echo "make_release: cargo build --no-default-features --features ${features} --profile maxperf --bin latexml_oxide"
+cargo build --no-default-features --features "${features}" --profile maxperf --bin latexml_oxide
 
 bin_path="target/maxperf/latexml_oxide${bin_suffix}"
 # -f not -x: Git Bash on Windows doesn't report a .exe as `-x`.

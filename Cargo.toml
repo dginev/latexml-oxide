@@ -42,6 +42,13 @@ unused_qualifications = "warn"
 # [patch."https://github.com/dginev/marpa"]
 # marpa = { path = "/home/deyan/git/marpa/marpa" }
 
+# kpathsea with the `build-from-source` feature (static in-process libkpathsea on
+# windows-msvc). TEMPORARY: until rust-kpathsea#21 (kpathsea_sys 0.2.2 /
+# build_from_source) is merged + published, consume it from the branch. Replace
+# with the published version once available.
+[patch.crates-io]
+kpathsea = { git = "https://github.com/dginev/rust-kpathsea", branch = "msvc-static-scope" }
+
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
