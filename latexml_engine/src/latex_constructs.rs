@@ -34,6 +34,13 @@ use crate::{
 // into an unused-global.
 static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
 
+// Perl `\ensuremathfollows` already-math test (latex_constructs.pool.ltxml
+// L2083/L2098): `$MATHENVS = 'displaymath|equation*?|eqnarray*?'` and the guard
+// `$csname !~ /^Math|\(|\[|(?:$MATHENVS)/o`. Kept verbatim (not hand-expanded)
+// so the automath wrapper matches Perl exactly.
+static AUTOMATH_ALREADY_MATH: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^Math|\\\(|\\\[|(?:displaymath|equation*?|eqnarray*?)").unwrap());
+
 // Perl `\documentclass` (latex_constructs.pool.ltxml L78) wraps the
 // raw option string in `TrimmedCommaList(...)` — i.e. comma-split AND
 // strip whitespace from EACH element including the first/last.
@@ -6121,11 +6128,61 @@ LoadDefinitions!({
     }
   });
 
-  // Perl: latex_constructs.pool.ltxml L2142-2163 — automath wrapping
-  // Simplified: \ensuremathfollows checks if next content is already math,
-  // if not wraps with \( ... \). Used by equation labels / alt text.
-  def_macro_noop("\\ensuremathfollows")?; // stub — automath needs gullet lookahead
-  def_macro_noop("\\ensuremathpreceeds")?; // stub — pairs with ensuremathfollows
+  // Perl: latex_constructs.pool.ltxml L2085-2107 — automath wrapping.
+  // The pair brackets a fragment (used by `--whatsin=math`, i.e. the
+  // `latexmlmath`-style CLI mode, and by alt/label math): if the content
+  // isn't ALREADY explicit math, `\ensuremathfollows` opens `\(` and
+  // `\ensuremathpreceeds` closes `\)`. Perl `$MATHENVS`:
+  //   displaymath|equation*?|eqnarray*?
+  DefMacro!("\\ensuremathfollows", {
+    // The preamble mouth (`literal:\begin{document}\ensuremathfollows`) is
+    // exhausted at this point; cross into the mouth holding the actual
+    // fragment so `read_token` peeks the real content. Perl:
+    // `$gullet->closeMouth unless ($gullet->getMouth->hasMoreInput)`.
+    if !has_more_input() {
+      close_mouth(false)?;
+    }
+    let mut expansion = Tokens!();
+    if let Some(tok) = read_token()? {
+      // Perl `$tok->getCSName`: the CS name for a control sequence, else undef.
+      let mut csname = if tok.get_catcode() == Catcode::CS {
+        Some(tok.with_str(|s| s.to_string()))
+      } else {
+        None
+      };
+      if csname.as_deref() == Some("\\begin") {
+        // Peek the environment name to test against the math envs, then put
+        // the `{env}` group back exactly as read. Perl:
+        // `unread(T_BEGIN, $arg->unlist, T_END)`.
+        let arg = read_arg(ExpansionLevel::Off)?;
+        csname = Some(arg.to_string());
+        let mut group = vec![T_BEGIN!()];
+        group.extend(arg.unlist());
+        group.push(T_END!());
+        unread(Tokens::new(group));
+      }
+      unread_one(tok);
+      // Perl: `$csname !~ /^Math|\(|\[|(?:$MATHENVS)/` — already-explicit math.
+      // undef csname (a non-CS first token) is a non-match, so it DOES wrap.
+      let already_math = csname
+        .as_deref()
+        .is_some_and(|c| AUTOMATH_ALREADY_MATH.is_match(c));
+      if !already_math {
+        assign_value("automath_triggered", true, Some(Scope::Global));
+        expansion = Tokens!(T_CS!("\\("));
+      }
+    }
+    Ok(expansion)
+  });
+
+  DefMacro!("\\ensuremathpreceeds", {
+    let triggered = matches!(lookup_value("automath_triggered"), Some(Stored::Bool(true)));
+    Ok(if triggered {
+      Tokens!(T_CS!("\\)"))
+    } else {
+      Tokens!()
+    })
+  });
 
   // Perl: latex_constructs.pool.ltxml L2166
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
