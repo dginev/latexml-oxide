@@ -1,0 +1,14 @@
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+% apacite's angle-bracket pre-note: \cite<pre>[post]{keys}.
+An idealized feature model of an ACC zonal jet \cite<see>{Gangopadhyay02,Ferris25}.
+% The pre-note is ABSENT here, and a later `>` must NOT be swallowed:
+% an OptionalUntil:>-style read would eat the cite and the math and
+% report the key as `b`.
+A plain cite \citeA{Gangopadhyay02} and math $a > b$ afterwards.
+% natbib bracket spellings must keep working unchanged.
+One bracket \cite[p.~5]{Ferris25}, two brackets \cite[see][p.~5]{Ferris25}.
+\bibliographystyle{apacite}
+\bibliography{refs}
+\end{document}

@@ -941,3 +941,37 @@ fn hphantom_braceless_minipage_does_not_swallow_endminipage() {
     "bibliography lost — the minipage leaked and truncated the document:\n{x}"
   );
 }
+
+/// apacite spells its citation pre-note in ANGLE brackets:
+/// `\cite<pre-note>[post-note]{key-list}` (apacite.sty L259-311 dispatch
+/// `\@ifnextchar< {\@cite} {\@cite<>}`, L313-327 `\def\@cite<#1>`). Without that
+/// form the kernel/natbib `\cite` takes the single token `<` as its whole key
+/// list: the citation renders as a dangling `[<]`, the REAL keys are never cited
+/// (so they are silently absent from the References) and `see>` leaks into the
+/// body text. Witness 2605.10951 (`\cite<see>{Gangopadhyay02,Ferris25}`,
+/// agujournal2019), 2606.16518, 2606.19048, 2606.21531, 2606.24563.
+///
+/// Guards BOTH halves of the fix: the pre-note form resolves its keys, AND the
+/// pre-note-ABSENT case does not swallow a later `>`. The latter is why this
+/// uses the real `OptionalAngled` parameter type rather than
+/// `OptionalMatch:< OptionalUntil:>` — `Until` never checks for the OPENING
+/// delimiter, so with no `<` it scanned to the next `>` anywhere downstream and
+/// `\citeA{Gangopadhyay02} and $a > b$` reported the key as `b`.
+#[test]
+fn apacite_angled_prenote_cites_keys_and_does_not_swallow_gt() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/cite_angled_prenote/ap.tex");
+  // `\cite<see>{Gangopadhyay02,Ferris25}` cites BOTH real keys, not `<`.
+  assert!(
+    x.contains("Gangopadhyay02,Ferris25"),
+    "\\cite<see>{{...}} lost its keys (apacite angle-bracket pre-note):\n{x}"
+  );
+  assert!(
+    !x.contains(r#"bibrefs="&lt;""#) && !x.contains(r#"bibrefs="<""#),
+    "`<` was parsed as the citation key list:\n{x}"
+  );
+  // Pre-note absent + a later `>`: the cite keeps its key and the math survives.
+  assert!(
+    !x.contains(r#"bibrefs="b""#),
+    "an absent angle pre-note swallowed the cite and the following `$a > b$`:\n{x}"
+  );
+}

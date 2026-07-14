@@ -1843,11 +1843,42 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
 /// Note that this returns an empty array if `[]` is present,
 /// i.e. `[contents]` in TeX will lead to `Tokens(contents)`, otherwise returns `None`
 pub fn read_optional(default: Option<Tokens>) -> Result<Option<Tokens>> {
+  read_optional_delimited(T_OTHER!("["), T_OTHER!("]"), default)
+}
+
+/// The angle-bracket twin of [`read_optional`].
+///
+/// Perl `beamer.cls.ltxml` L50-57 `readBeamerAngled` (backing its
+/// `BeamerAngled` / `OptionalBeamerAngled` parameter types) does exactly this.
+/// The angle-bracket optional is not beamer-specific — apacite spells its
+/// citation pre-note that way (`\cite<see>[p.5]{key}`, apacite.sty L313
+/// `\def\@cite<#1>`), so it lives here beside `read_optional`.
+pub fn read_optional_angled(default: Option<Tokens>) -> Result<Option<Tokens>> {
+  read_optional_delimited(T_OTHER!("<"), T_OTHER!(">"), default)
+}
+
+/// Shared core of [`read_optional`] / [`read_optional_angled`]: if the next
+/// non-space token is the `open` delimiter, read up to (and consuming) `close`;
+/// otherwise unread the token and yield `default`.
+///
+/// The peek/unread contract is the whole point, and is why an optional
+/// delimited argument must NOT be spelled `OptionalMatch:x OptionalUntil:y`:
+/// `Until` never checks for the OPENING delimiter, so when the argument is
+/// absent it scans to the next `y` ANYWHERE downstream (`\citeA{Smith} and
+/// $a > b$` swallows the cite and the math, yielding the key `b`).
+fn read_optional_delimited(
+  open: Token,
+  close: Token,
+  default: Option<Tokens>,
+) -> Result<Option<Tokens>> {
   match read_non_space()? {
     None => Ok(None),
+    // `Token`'s `PartialEq` compares catcode + text (and deliberately NOT the
+    // token-locators origin handle), so this is the catcode-and-symbol match
+    // the delimiters need.
     Some(t) => {
-      if t.get_catcode() == Catcode::OTHER && t.get_sym() == pin!("[") {
-        Ok(Some(read_until(&Tokens!(T_OTHER!("]")))?))
+      if t == open {
+        Ok(Some(read_until(&Tokens!(close))?))
       } else {
         unread_one(t);
         Ok(default)
