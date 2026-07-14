@@ -975,3 +975,32 @@ fn apacite_angled_prenote_cites_keys_and_does_not_swallow_gt() {
     "an absent angle pre-note swallowed the cite and the following `$a > b$`:\n{x}"
   );
 }
+
+/// Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/…:
+/// `\usepackage[numbers,sort&compress]{natbib}` / `\usepackage[authoryear]{natbib}`),
+/// but our binding `LoadClass!("OmniBus")`es — which short-circuits the
+/// unbound-class dependency scan — and OmniBus only `def_autoload`s natbib off
+/// `\citet`/`\citep`/`\citeyear`/…, deliberately NOT off `\cite` (the kernel
+/// already defines it). So a paper citing solely via natbib's TWO-optional
+/// `\cite[pre][post]{keys}` never triggered the autoload and the kernel's
+/// single-optional `\cite[] Semiverbatim` read `[` as the whole key list — the
+/// real keys were dropped (silently absent from the References) and `]{keys}`
+/// leaked as body text. Witness 2605.23484 (sn-mathphys-num), 2606.10002
+/// (sn-basic), 2606.10215, 2606.11534.
+#[test]
+fn sn_jnl_natbib_two_optional_cite_keeps_its_keys() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/sn_jnl_cite/sn.tex");
+  assert!(
+    x.contains("Melrose1980"),
+    "sn-jnl `\\cite[e.g.][]{{Melrose1980}}` lost its key (natbib not loaded):\n{x}"
+  );
+  assert!(
+    !x.contains(r#"bibrefs="[""#) && !x.contains(r#"bibrefs="&#91;""#),
+    "`[` was parsed as the citation key list — natbib's two-optional \
+     \\cite[pre][post]{{keys}} did not parse:\n{x}"
+  );
+  assert!(
+    x.contains("Zhang2021"),
+    "`\\cite[see][chap.~2]{{Zhang2021}}` lost its key:\n{x}"
+  );
+}
