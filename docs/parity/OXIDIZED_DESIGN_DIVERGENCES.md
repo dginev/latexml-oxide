@@ -1583,10 +1583,26 @@ On a 24-paper sample of the affected set: **0/24 clean → 22/24 clean**
 Witnesses 2605.28695 (`ñ` key), 2605.00121 (stray U+FE0F in the key),
 2605.06974 (26 `@Comment` banners).
 
-**Residual (not fixed):** ~2/24 sampled papers still warn `bibtex:unbalanced`
-from other malformed-entry shapes (`Expected ","` / `Expected "}"`); they lose
-no keys — the #56 resync recovers the next entry — so it is log noise, not data
-loss. Witnesses 2605.14212, 2605.06974.
+4. **`\` is a name character.** Perl excludes it *on purpose* (L215-217:
+   *"Especially `\`, which BibTeX allows, but it throws us off (semiverbatim vs
+   verbatim) when we store the bibentries before digesting the key!"*) — but
+   excluding it does not dodge the hazard, it just loses the entry: the key in
+   `@misc{apple\_rl,` ends at the backslash, and a bogus `\author={...}` field
+   name kills its entry outright. BibTeX takes `apple\_rl` as the key verbatim
+   and treats `\author` as an *unknown field* (hence its "empty author"
+   warning), keeping the entry. Witnesses 2605.14212, 2605.06974.
+
+**Known limit of (4) — Perl's warning is accurate downstream.** Admitting `\`
+makes the entry *parse*, and the `\author=` case then resolves end-to-end. But a
+`\cite{apple\_rl}` is **digested** to `bibrefs="apple_rl"` while the entry keeps
+the verbatim key `apple\_rl`, so that citation still dangles
+(`Missing bibkeys: apple_rl`). This is strictly better than dropping the entry,
+but making such a cite *link* needs key normalisation at the
+`\ProcessBibTeXEntry` seam — not done here.
+
+**Residual (not fixed):** a small tail of malformed-entry shapes still warns
+`bibtex:unbalanced`; they lose no cited keys — the #56 resync recovers the next
+entry — so it is log noise, not data loss.
 
 ## Known Upstream Perl Issues (brief)
 

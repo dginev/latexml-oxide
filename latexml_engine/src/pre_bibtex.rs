@@ -715,6 +715,22 @@ fn is_bib_name_or_noise(c: char) -> bool {
   if c.is_ascii_alphanumeric() {
     return true;
   }
+  // ...plus `\`. Perl excludes it ON PURPOSE (`BibTeX.pm` L215-217: "Especially
+  // \", which BibTeX allows, but it throws us off (semiverbatim vs verbatim)
+  // when we store the bibentries before digesting the key!"). But excluding it
+  // does not avoid the hazard, it just loses the entry: `@misc{apple\_rl,`
+  // ends the key at the backslash and the whole entry is dropped, and a bogus
+  // `\author={...}` field name kills its entry outright. BibTeX accepts both —
+  // it takes `apple\_rl` as the key verbatim, and treats `\author` as an
+  // unknown field (hence its "empty author" warning), keeping the entry. We do
+  // the same: the key is matched byte-for-byte against the `\cite`, which
+  // carries the identical bytes, and an unknown field name is simply never
+  // consumed by any downstream handler.
+  // OXIDIZED_DESIGN #58. Witnesses 2605.14212 (`apple\_rl`), 2605.06974
+  // (`\author=`/`\title=` field names).
+  if c == '\\' {
+    return true;
+  }
   // ...plus any non-ASCII. Perl's class is the literal `a-zA-Z0-9`
   // (`BibTeX.pm` L221), so it stops dead at the first accent — a Zotero-style
   // key like `alvarado-leañosLasing2022` yields `Expected ","` and the entry
@@ -893,6 +909,60 @@ mod tests {
       keys,
       vec!["alvarado-lea\u{f1}osLasing2022", "after2018"],
       "entries: {keys:?}"
+    );
+  }
+
+  /// A backslash inside a cite key must not end the key: `bibtex` 0.99d emits
+  /// `\bibitem{apple\_rl}`, so the entry exists. Perl excludes `\` from the
+  /// name class deliberately, which merely loses the entry instead.
+  ///
+  /// SCOPE — this pins the PARSER only. Perl's stated worry
+  /// (`BibTeX.pm` L215-217, "semiverbatim vs verbatim ... before digesting the
+  /// key") is REAL and still unresolved downstream: `\cite{apple\_rl}` digests
+  /// to `bibrefs="apple_rl"` while the entry keeps the verbatim key
+  /// `apple\_rl`, so the citation still dangles (`Missing bibkeys: apple_rl`).
+  /// Admitting `\` is still strictly better — the entry survives rather than
+  /// being dropped, and the sibling `\author=` case (below) resolves fully —
+  /// but making such a cite LINK needs key normalisation at the
+  /// `\ProcessBibTeXEntry` seam. Witness 2605.14212.
+  #[test]
+  fn backslash_in_cite_key_is_not_truncated() {
+    let p = parse(concat!(
+      "@misc{apple\\_rl,\n  title={Reinforcement Learning},\n  year={2024}\n}\n\n",
+      "@article{after2018,\n  title = {Follows}\n}\n"
+    ));
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["apple\\_rl", "after2018"], "entries: {keys:?}");
+  }
+
+  /// A bogus `\author={...}` field name must not cost the whole entry.
+  /// `bibtex` 0.99d keeps `DrmotaTichy2006` and merely warns "empty author
+  /// and editor" — i.e. the unrecognised field is ignored, the entry stands.
+  /// Witness 2605.06974.
+  #[test]
+  fn backslash_field_name_does_not_drop_the_entry() {
+    let p = parse(concat!(
+      "@book {DrmotaTichy2006,\n",
+      "\\author={Drmota, M.},\n",
+      "\\title={Sequences and applications},\n",
+      "year={2006}\n}\n"
+    ));
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["DrmotaTichy2006"], "entries: {keys:?}");
+    // `year` still lands as a real field; the bogus ones do not masquerade
+    // as `author`/`title` (bibtex reports those as EMPTY).
+    let e = &p.entries[0];
+    assert_eq!(
+      e.fields
+        .iter()
+        .find(|(n, _)| n == "year")
+        .map(|(_, v)| v.as_str()),
+      Some("2006")
+    );
+    assert!(
+      e.fields.iter().all(|(n, _)| n != "author" && n != "title"),
+      "a `\\author=` field must not be read as `author`: {:?}",
+      e.fields
     );
   }
 
