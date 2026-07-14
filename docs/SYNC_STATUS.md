@@ -501,9 +501,31 @@ first pass that lumps them together mis-ranks the work:
 
 So **truncation, not bibliography code, is the dominant cause of a missing
 References section** (169 vs 63) — the 2026-07-12 hypothesis, now quantified.
-Body-error resilience remains the top lever. Within TRUNCATED the error
-signatures are a long tail (largest named cluster: `\lx@tag@intags` ×5, below);
-**17 have no `Error:` at all** — silent content loss, the worst kind.
+Body-error resilience remains the top lever.
+
+**TRUNCATED (169) is REAL, not a stale-ZIP artifact** — spot-checked 4 witnesses
+of the largest sub-cluster on the current binary: 3 still truncate
+(`2605.00025` 455 errors, `2605.09913` 91, `2605.12696` 14; only `2605.09761`
+recovered). Contrast the EMPTY-SECTION side, where stale ZIPs DO dominate
+(`2605.02024` shows 38 bibitems / 0 dangling on the current binary) — so
+**re-convert before chasing any EMPTY-SECTION paper**.
+
+Dominant TRUNCATED trigger (first error, not the cascade):
+
+| trigger | n | note |
+|---|---|---|
+| `unexpected:\lx@end@inline@math` | 25 | math-mode desync |
+| `unexpected:\lx@begin@alignment` | 19 | alignment opened inside inline math |
+| *no errors at all* | 17 | **silent** content loss — worst kind |
+| `unexpected:_` / `^` | ~37 | sub/superscript outside math (same family) |
+| `unexpected:\lx@tag@intags` | 4 | the `\fnum@figure` cascade above |
+
+The math-desync + alignment families together are ~66/169 (39%) and look like one
+root family: a group/mode nesting break around inline math. **11 of the 169 are
+the known mhchem `\ce`-in-`align` parity limit** (`2605.12696`: `\ce{CO2(aq) +
+H2O &<=> H2CO3}` inside `align` — identical in same-host Perl, investigated
+2026-06-27, NOT a Rust gap). The remaining ~147 are unexplored and are the
+concrete next target for body-error resilience.
 
 Within EMPTY-SECTION the one clean, landed win was the **non-UTF-8 `.bib`**
 cluster (below). Remaining EMPTY-SECTION sub-clusters, not yet triaged:
