@@ -9,9 +9,10 @@ macOS asset builds natively on `macos-15` (Apple Silicon).
 Currently published platforms: **`x86_64-unknown-linux-gnu`**,
 **`aarch64-unknown-linux-gnu`**, **`aarch64-apple-darwin`** (macOS Apple
 Silicon), and **`x86_64-apple-darwin`** (macOS Intel). **`x86_64-pc-windows-msvc`**
-joins at **`0.7.4`** as a single self-contained `.exe` (validating as the
-`0.7.4-rc2` RC draft; see
-[`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md)). Only musl
+joins at **`0.7.4`** as a single self-contained `.exe`, shipped in a `.zip`. The
+`.exe` itself validated in the `0.7.4-rc2` RC draft; the `.zip` packaging around it
+is new in 0.7.4 and **first exercised at the next RC tag** — no RC has published
+one yet. See [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md). Only musl
 remains out of scope for now — see "Release asset strategy" below.
 
 ## Release asset strategy
@@ -57,18 +58,18 @@ What this means concretely:
     is macOS 15.
 - **Distribution linkage (self-contained):** the CLI assets STATICALLY link
   libxml2 + libxslt + libexslt (source-built PIC,
-  `tools/build_static_libxml.sh`) and — on Linux and (as of 0.7.4) Windows —
-  libkpathsea (Linux `tools/build_static_kpathsea.sh`; Windows `kpathsea_sys`
-  `build_from_source` — both in-process lookups). The binary carries NO versioned
+  `tools/build_static_libxml.sh`) and libkpathsea on **every** leg (Linux + macOS
+  `tools/build_static_kpathsea.sh`; Windows `kpathsea_sys` `build_from_source` —
+  all in-process lookups). The binary carries NO versioned
   libxml2/libxslt SONAME dependency, so it is independent of the host's libxml2
   era (libxml2 2.14 bumped the SONAME `.so.2` → `.so.16`; a dynamically-linked
-  binary loads on only one side of that split). kpathsea falls back to the
-  **subprocess-`kpsewhich` backend** where a static link can't serve — macOS
-  (MacTeX ships no libkpathsea) and MiKTeX (whose fndb a static libkpathsea can't
-  read; `select_kpaths` picks per-host at runtime). Only the glibc/libSystem
+  binary loads on only one side of that split). At *runtime* `select_kpaths` may still fall back to the
+  **subprocess-`kpsewhich` backend** where the linked-in kpathsea can't serve the
+  host (e.g. MiKTeX, whose fndb a static libkpathsea can't read) — a runtime
+  choice, which does **not** change the fact that the library is linked in. Only the glibc/libSystem
   family remains dynamic — and on Windows even the CRT is static (`+crt-static`),
-  so the `.exe` imports only core OS DLLs. (libkpathsea is LGPL-2.1: the static
-  link carries a §6 relink obligation — see `LICENSE_INVENTORY.md` §D/F5.) Our
+  so the `.exe` imports only core OS DLLs. (libkpathsea is LGPL-2.1, so **every** published binary carries the §6 relink
+  obligation — discharged per `LICENSE_INVENTORY.md` §D.3 + `THIRD-PARTY-NOTICES` §7.) Our
   *own* resources (XSLT/CSS/JS/schema/dumps) are always embedded; see the
   portability note below. A `release.yml` step `ldd`/`otool`/`dumpbin`-asserts the
   absence of dynamic libxml2/libxslt/kpathsea (and, on Windows, VCRUNTIME) and
@@ -88,9 +89,10 @@ What this means concretely:
 
 Assets attached to each `X.Y.Z` GitHub Release — five platform builds (two
 Linux, two macOS, one Windows). Linux/macOS ship a tarball (+ `.sha256`);
-Windows ships a bare `.exe` (+ `.sha256`) — no tarball/`.deb`, the user runs the
-`.exe` directly. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
-aggregate `THIRD-PARTY-NOTICES`:
+Windows ships a `.zip` (+ `.sha256`) — no `.deb` equivalent. Every archive
+carries the binary plus `THIRD-PARTY-NOTICES`, `LICENSE`, `README.md` and
+`CHANGELOG.md`. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
+aggregate `THIRD-PARTY-NOTICES` as a standalone asset:
 
 | Asset | Purpose |
 |---|---|
@@ -106,9 +108,9 @@ aggregate `THIRD-PARTY-NOTICES`:
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz` | Portable macOS (Intel) archive: built with a macOS 10.13 deployment target so it runs on older Intel Macs. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
-| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.exe` | Windows (x86_64) — a single fully-static `.exe` (`+crt-static`; static libxml2/libxslt/libkpathsea via `build_from_source`): imports only core OS DLLs, no VC++ redistributable. Run directly; TeX Live or MiKTeX on PATH for host TeX resolution. |
-| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.exe.sha256` | SHA-256 sidecar. |
-| `THIRD-PARTY-NOTICES` | Aggregate license notices (hand-authored §1–4 + the cargo-about Rust-crate appendix). |
+| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.zip` | Windows (x86_64) archive: a single fully-static `latexml_oxide.exe` (`+crt-static`; static libxml2/libxslt/libkpathsea via `build_from_source`) — imports only core OS DLLs, no VC++ redistributable — plus the same `README.md`/`CHANGELOG.md`/`LICENSE`/`THIRD-PARTY-NOTICES` as the tarballs. Unzip and run; TeX Live or MiKTeX on PATH for host TeX resolution. |
+| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.zip.sha256` | SHA-256 sidecar. |
+| `THIRD-PARTY-NOTICES` | Aggregate license notices: hand-authored §1–4 (embedded TeX dumps; Perl-LaTeXML assets; the linked native libs incl. the vendored libmarpa/mimalloc and static-LGPL kpathsea) + the cargo-about Rust-crate appendix (§5) + the verbatim copyleft texts (§6) + the per-artifact source provenance for LGPL relinking (§7). Assembled once by the `notices` job and bundled byte-identically into every archive **and both `.deb`s** (the `.deb` gets it via `make_release.sh` swapping the path `cargo deb` reads, then reading the notices back out of the built package to prove it). The **container images** carry their own copy, generated by the Dockerfile's `notices` stage per-image — the CLI and cortex-worker link different feature graphs, so their §5 differs. |
 
 The shipped `latexml_oxide` binary is fully self-contained — XSLT
 stylesheets, CSS, JavaScript, and the RelaxNG schema tree are

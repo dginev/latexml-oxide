@@ -142,34 +142,61 @@ else
   strip --strip-all "${bin_path}" 2>/dev/null || true
 fi
 
-# Windows ships a SINGLE self-contained `.exe` (the user runs it directly), not a
-# tarball — so its packaging diverges from the Linux/macOS tarball flow. Static
-# libxml2/libxslt (vcpkg, x64-windows-static-md) + the ubiquitous dynamic MSVC
-# runtime; kpathsea is resolved via subprocess `kpsewhich`, never linked.
-tarball=""
-exe_asset=""
+# --- stage the payload (identical on every platform) -------------------------
+# The binary is self-contained everywhere; the archive around it exists so the
+# binary always travels WITH its license notices. Windows used to publish a bare
+# `.exe`, which made it the one download whose recipient got no notices at all
+# (LICENSE_INVENTORY F7) — it now ships the same payload as a `.zip`.
 if [[ "${os_family}" == "windows" ]]; then
-  exe_asset="latexml-oxide-${version}-${target_triple}.exe"
-  cp "${bin_path}" "${artifacts_dir}/${exe_asset}"
-  ( cd "${artifacts_dir}" && sha256_sidecar "${exe_asset}" )
-  echo "make_release: Windows single-exe asset ${exe_asset}"
+  cp "${bin_path}" "${stage_dir}/latexml_oxide.exe"
 else
-  # --- stage tarball contents -----------------------------------------------
   cp "${bin_path}" "${stage_dir}/latexml_oxide"
-  cp README.md "${stage_dir}/README.md"
-  cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
-  cp LICENSE "${stage_dir}/LICENSE"
-  # THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
-  # sections 1-4 + the cargo-about Rust-crate appendix produced by
-  # tools/gen_notices.sh); fall back to the committed hand-authored file so a
-  # local `make_release.sh` without cargo-about still ships notices.
-  if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
-    cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
-  else
-    cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
-  fi
+fi
+cp README.md "${stage_dir}/README.md"
+cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
+cp LICENSE "${stage_dir}/LICENSE"
+# THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
+# sections 1-4 + the cargo-about Rust-crate appendix + the section 6 copyleft
+# texts, produced by tools/gen_notices.sh); fall back to the committed
+# hand-authored file so a local `make_release.sh` without cargo-about still
+# ships notices. In CI the `notices` job hands every leg the assembled file.
+if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+  cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
+else
+  echo "make_release: WARNING — no THIRD-PARTY-NOTICES.dist; falling back to the" >&2
+  echo "  committed hand-authored file (no Rust-crate appendix, no copyleft texts)." >&2
+  cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
+fi
 
-  # --- build tarball --------------------------------------------------------
+# --- package -----------------------------------------------------------------
+# Windows gets a `.zip` (the native format there, and Explorer opens it without
+# extra tooling); everything else gets a `.tar.gz`.
+tarball=""
+zip_asset=""
+if [[ "${os_family}" == "windows" ]]; then
+  zip_asset="latexml-oxide-${version}-${target_triple}.zip"
+  (
+    cd "${artifacts_dir}"
+    rm -f "${zip_asset}"
+    # 7-Zip is present on GitHub's windows-latest image; `zip` covers Git-Bash
+    # hosts that have it (and lets this path be exercised off-Windows);
+    # Compress-Archive is the always-there PowerShell fallback. Fail loudly
+    # rather than publish a Windows asset with no archive around it.
+    if command -v 7z >/dev/null 2>&1; then
+      7z a -tzip -mx=9 "${zip_asset}" "${stage_dir_name}" >/dev/null
+    elif command -v zip >/dev/null 2>&1; then
+      zip -q -9 -r "${zip_asset}" "${stage_dir_name}"
+    elif command -v powershell >/dev/null 2>&1; then
+      powershell -NoProfile -NonInteractive -Command \
+        "Compress-Archive -Path '${stage_dir_name}' -DestinationPath '${zip_asset}' -Force"
+    else
+      echo "make_release: no zip tool found (tried 7z, zip, powershell)" >&2
+      exit 1
+    fi
+  )
+  ( cd "${artifacts_dir}" && sha256_sidecar "${zip_asset}" )
+  echo "make_release: Windows zip asset ${zip_asset}"
+else
   tarball="latexml-oxide-${version}-${target_triple}.tar.gz"
   ( cd "${artifacts_dir}" && tar -czf "${tarball}" "${stage_dir_name}" )
   ( cd "${artifacts_dir}" && sha256_sidecar "${tarball}" )
@@ -180,16 +207,89 @@ fi
 # future analogue); the tarball above is the macOS deliverable.
 deb_path=""
 if [[ "${os_family}" == "linux" ]]; then
+  # The .deb does NOT get its notices from ${stage_dir}: cargo-deb builds its
+  # payload from the asset list in latexml_oxide/Cargo.toml, which points at
+  # `../THIRD-PARTY-NOTICES` -- the COMMITTED repo-root file (hand-authored
+  # sections 1-4 only). Staging the assembled file into ${stage_dir} above does
+  # nothing for it, so the .deb -- the install path the README calls the easiest
+  # way in -- would ship with no Rust-crate appendix (§5), none of the copyleft
+  # texts the static libkpathsea/libmarpa links oblige (§6), and no relink
+  # provenance (§7). Point the path cargo-deb actually reads at the assembled
+  # file for the duration of the build, then put the committed file back so a
+  # local run leaves no dirty tree.
+  notices_backup=""
+  restore_notices() {
+    if [[ -n "${notices_backup}" && -f "${notices_backup}" ]]; then
+      # cp, not mv: mv would move mktemp's 0600 mode onto the tracked file. cp onto an
+      # existing file keeps the destination's mode, so the working tree is untouched.
+      cp "${notices_backup}" THIRD-PARTY-NOTICES
+      rm -f "${notices_backup}"
+      notices_backup=""
+    fi
+  }
+  if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+    # Refuse to swap onto an ALREADY-swapped file. The restore below is an EXIT trap,
+    # so SIGKILL (a CI timeout, the OOM killer) during the minutes-long `cargo deb`
+    # leaves the assembled content sitting in this tracked path. Without this guard the
+    # damage compounds silently: the next run would back up the CLOBBERED file and
+    # "restore" that, so the tree never heals, and gen_notices.sh would append a SECOND
+    # copy of sections 5/6/7 -- which every gate passes, because they all test for a
+    # marker's PRESENCE and a line-count FLOOR. Duplication makes them pass harder.
+    if grep -qF "5. RUST DEPENDENCY LICENSES" THIRD-PARTY-NOTICES; then
+      echo "make_release: THIRD-PARTY-NOTICES already holds assembled content." >&2
+      echo "  It must contain ONLY the hand-authored sections 1-4. A killed release" >&2
+      echo "  run can leave the assembled file here. Restore it with:" >&2
+      echo "    git checkout -- THIRD-PARTY-NOTICES" >&2
+      exit 1
+    fi
+    notices_backup="$(mktemp)"
+    cp THIRD-PARTY-NOTICES "${notices_backup}"
+    # INT/TERM/HUP as well as EXIT: a Ctrl-C mid-build must not leave the tracked file
+    # holding the assembled notices. (SIGKILL cannot be trapped -- the guard above is
+    # what covers that case.)
+    trap restore_notices INT TERM HUP EXIT
+    cp THIRD-PARTY-NOTICES.dist THIRD-PARTY-NOTICES
+    echo "make_release: .deb notices <- THIRD-PARTY-NOTICES.dist ($(wc -l < THIRD-PARTY-NOTICES) lines)"
+  else
+    # The tarball path warns here; this one used to fall through in silence and build a
+    # .deb carrying only sections 1-4 -- the exact bug F9 fixed.
+    echo "make_release: WARNING — no THIRD-PARTY-NOTICES.dist; the .deb will ship the" >&2
+    echo "  committed hand-authored file (no Rust-crate appendix, no copyleft texts)." >&2
+  fi
+
   # `cargo deb` requires the package name (`-p latexml`, not the binary name).
   # `--no-build` reuses the maxperf target/maxperf/latexml_oxide we just built.
   echo "make_release: cargo deb --no-build --profile maxperf -p latexml (${deb_arch})"
   cargo deb --no-build --profile maxperf -p latexml --output "${artifacts_dir}/latexml-oxide_${version}-1_${deb_arch}.deb"
 
   deb_path="${artifacts_dir}/latexml-oxide_${version}-1_${deb_arch}.deb"
+
+  restore_notices
+  trap - INT TERM HUP EXIT
+
   if [[ ! -f "${deb_path}" ]]; then
     echo "make_release: cargo deb did not produce ${deb_path}" >&2
     exit 1
   fi
+
+  # Prove it rather than assume it: read the notices back OUT of the built .deb.
+  # This is the artifact users install, and the failure mode it guards (shipping
+  # the committed 1-4 file) is invisible from the outside -- the .deb builds and
+  # installs fine either way.
+  if [[ -f THIRD-PARTY-NOTICES.dist ]] && command -v dpkg-deb >/dev/null 2>&1; then
+    deb_notices="$(dpkg-deb --fsys-tarfile "${deb_path}" 2>/dev/null \
+      | tar -xO ./usr/share/doc/latexml-oxide/THIRD-PARTY-NOTICES 2>/dev/null || true)"
+    for needle in "5. RUST DEPENDENCY LICENSES" "6. COPYLEFT LICENSE TEXTS" "7. SOURCE PROVENANCE"; do
+      if ! grep -qF "${needle}" <<<"${deb_notices}"; then
+        echo "make_release: the .deb's THIRD-PARTY-NOTICES is missing '${needle}'." >&2
+        echo "  cargo-deb reads latexml_oxide/Cargo.toml's asset list (../THIRD-PARTY-NOTICES);" >&2
+        echo "  it must see the assembled file, not the committed sections 1-4." >&2
+        exit 1
+      fi
+    done
+    echo "make_release: verified the .deb ships the assembled notices ($(wc -l <<<"${deb_notices}") lines)"
+  fi
+
   ( cd "${artifacts_dir}" && sha256_sidecar "$(basename "${deb_path}")" )
 fi
 
@@ -228,8 +328,8 @@ EOF
   if [[ -n "${RELEASE_MACOS_INTEL_TARBALL:-}" ]]; then
     echo "- **macOS (Intel)** — \`${RELEASE_MACOS_INTEL_TARBALL}\`"
   fi
-  if [[ -n "${RELEASE_WINDOWS_EXE:-}" ]]; then
-    echo "- **Windows (x86-64)** — \`${RELEASE_WINDOWS_EXE}\` (a single self-contained \`.exe\`, no installer)"
+  if [[ -n "${RELEASE_WINDOWS_ZIP:-}" ]]; then
+    echo "- **Windows (x86-64)** — \`${RELEASE_WINDOWS_ZIP}\` (unzip; a single self-contained \`latexml_oxide.exe\`, no installer)"
   fi
   echo
 
@@ -261,8 +361,8 @@ echo "make_release: SHA-256 sidecars"
 if [[ -n "${tarball}" ]]; then
   cat "${artifacts_dir}/${tarball}.sha256"
 fi
-if [[ -n "${exe_asset}" ]]; then
-  cat "${artifacts_dir}/${exe_asset}.sha256"
+if [[ -n "${zip_asset}" ]]; then
+  cat "${artifacts_dir}/${zip_asset}.sha256"
 fi
 if [[ -n "${deb_path}" ]]; then
   cat "${artifacts_dir}/$(basename "${deb_path}").sha256"

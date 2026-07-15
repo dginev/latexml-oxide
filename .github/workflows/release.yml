@@ -37,6 +37,101 @@ jobs:
   dumps:
     uses: ./.github/workflows/release-dumps.yml
 
+  # Assemble THIRD-PARTY-NOTICES ONCE, here, and hand it to every packaging leg
+  # as an artifact (F7 in docs/release/LICENSE_INVENTORY.md). Previously only the
+  # `release` job ran gen_notices.sh, so the macOS/arm64-linux tarballs fell back
+  # to the committed hand-authored sections 1-4 and shipped with NO Rust-crate
+  # license texts at all.
+  #
+  # One file is valid for every target: about.toml sets no `targets`, and krates
+  # treats an empty target filter as include_all_targets — so the generated
+  # section 5 is the union over all platforms, not the host's subset. (Verified
+  # in krates' builder.rs: `include_all_targets = target_filters.is_empty()`.)
+  # Do NOT add a `targets` key to about.toml without re-checking this job.
+  notices:
+    name: Assemble THIRD-PARTY-NOTICES
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      # cargo-about only reads cargo metadata + crate files; it never compiles
+      # the workspace, so this leg needs no libxml2/TeX/system deps.
+      - name: install cargo-about
+        run: cargo install cargo-about --features cli
+
+      # Re-run the blind-spot audit here, not just in CI's `lint` job: CI.yml
+      # triggers on `push: [main]` + `pull_request`, so a TAG push never runs it.
+      # Without this, a release could ship a newly-vendored native library that
+      # no gate ever looked at. Cheap (seconds) and every release passes through
+      # this job.
+      - name: audit vendored native code + embedded resources
+        run: python3 tools/audit_vendored_natives.py --verbose
+
+      - name: assemble notices
+        run: bash tools/gen_notices.sh THIRD-PARTY-NOTICES.dist
+
+      # Fail loudly rather than ship a truncated notice. Guards the three
+      # hand-authored things that have silently gone missing before: the vendored
+      # native libs (section 3.3/3.4), the generated Rust appendix (section 5),
+      # and the copyleft texts the static LGPL links require (section 6).
+      - name: verify assembled notices are complete
+        run: |
+          set -euo pipefail
+          f=THIRD-PARTY-NOTICES.dist
+          for needle in \
+            "2.2 SVG 1.1 RELAX NG schema" \
+            "World Wide Web Consortium" \
+            "3.2 libkpathsea" \
+            "3.3 libmarpa" \
+            "3.4 mimalloc" \
+            "5. RUST DEPENDENCY LICENSES" \
+            "6. COPYLEFT LICENSE TEXTS" \
+            "7. SOURCE PROVENANCE" \
+            "This License Agreement applies to any software library or other" \
+            "0. Additional Definitions." \
+            "16. Limitation of Liability."; do
+            grep -qF "$needle" "$f" || { echo "::error::THIRD-PARTY-NOTICES is missing: $needle"; exit 1; }
+          done
+          # The last three needles are sentences from the BODIES of LGPL-2.1, LGPL-3.0
+          # and GPL-3.0 respectively, each unique to its own file (verified). They used
+          # to be the section titles "GNU LESSER GENERAL PUBLIC LICENSE v2.1" etc --
+          # strings that appear in NO license text and match only the title gen_notices.sh
+          # echoes above each one. Three 0-byte files in licenses/ therefore passed this
+          # gate while shipping no license text at all. Grep the text, not the scaffolding.
+          # Section 7's relink pointer must name real commits: an unresolved revision
+          # means we shipped a promise (3.5) we cannot keep. `commit: unknown` is the
+          # same failure wearing a different word -- it is what gen_notices.sh writes
+          # when `git rev-parse` cannot answer. Scoped to the section-7 lines so a
+          # future crate's license text containing "unresolved" cannot fail a release.
+          if sed -n '/^7\. SOURCE PROVENANCE/,$p' "$f" | grep -qE "unresolved|commit: unknown"; then
+            echo "::error::THIRD-PARTY-NOTICES section 7 has an unresolved source revision"
+            exit 1
+          fi
+          # Section 5 must actually ATTRIBUTE CRATES, not merely carry its heading.
+          # This replaces a whole-file `wc -l < 1000` floor that could never fire: the
+          # section 6 license texts alone are 1341 lines, so a notices file attributing
+          # ZERO of the ~66 shipped crates still measured ~1706 lines and passed. The
+          # heading needle above cannot cover it either -- about.hbs emits
+          # "5. RUST DEPENDENCY LICENSES" as literal template text, outside {{#each}},
+          # so it proves the template ran, not that it rendered anything. Count the
+          # per-crate "Applies to:" lines inside section 5's own range instead.
+          # Floor 50 vs ~66 today: a legitimate drop below it should stop a release and
+          # make a human look, which is the point.
+          crates="$(sed -n '/^5\. RUST DEPENDENCY LICENSES/,/^6\. COPYLEFT LICENSE TEXTS/p' "$f" \
+                    | grep -c '^Applies to:' || true)"
+          if [ "${crates:-0}" -lt 50 ]; then
+            echo "::error::THIRD-PARTY-NOTICES section 5 attributes only ${crates:-0} crates (expected ~66) — cargo-about emitted little or nothing"
+            exit 1
+          fi
+          echo "OK: notices complete ($(wc -l < "$f") lines, section 5 attributes ${crates} crates)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: third-party-notices
+          path: THIRD-PARTY-NOTICES.dist
+          if-no-files-found: error
+
   # macOS (Apple Silicon) release tarball. Native binaries are never
   # cross-OS — Linux emits ELF, macOS emits Mach-O — so the macOS asset is
   # built on its own runner, NOT cross-compiled from the Linux leg. We build
@@ -53,7 +148,7 @@ jobs:
     # wall-clock. If the LTO link OOMs on 7 GB, the documented mitigation is a
     # larger runner or relaxing the macOS leg's codegen-units (RELEASING.md).
     timeout-minutes: 90
-    needs: dumps
+    needs: [dumps, notices]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -111,6 +206,13 @@ jobs:
       # supersedes the brew libxml2/libxslt above (kept only as a fallback).
       - name: build static libxml2 + libxslt from source
         run: bash tools/build_static_libxml.sh
+
+      # make_release.sh bundles THIRD-PARTY-NOTICES.dist when present, else it
+      # silently falls back to the committed sections 1-4 (no Rust appendix).
+      - name: fetch assembled THIRD-PARTY-NOTICES
+        uses: actions/download-artifact@v4
+        with:
+          name: third-party-notices
 
       - name: build macOS release tarball
         run: bash tools/make_release.sh
@@ -173,7 +275,7 @@ jobs:
     # Intel runners are slower than Apple Silicon; give fat-LTO generous
     # wall-clock (build-macos uses 90 on arm64).
     timeout-minutes: 120
-    needs: dumps
+    needs: [dumps, notices]
     env:
       MACOSX_DEPLOYMENT_TARGET: "10.13"
     steps:
@@ -218,6 +320,13 @@ jobs:
         run: bash tools/build_static_kpathsea.sh
       - name: build static libxml2 + libxslt from source
         run: bash tools/build_static_libxml.sh
+
+      # make_release.sh bundles THIRD-PARTY-NOTICES.dist when present, else it
+      # silently falls back to the committed sections 1-4 (no Rust appendix).
+      - name: fetch assembled THIRD-PARTY-NOTICES
+        uses: actions/download-artifact@v4
+        with:
+          name: third-party-notices
 
       - name: build macOS release tarball
         run: bash tools/make_release.sh
@@ -269,7 +378,7 @@ jobs:
     name: Build Linux arm64 ${{ github.ref_name }}
     runs-on: ubuntu-22.04-arm
     timeout-minutes: 90
-    needs: dumps
+    needs: [dumps, notices]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -321,6 +430,13 @@ jobs:
         run: bash tools/build_static_kpathsea.sh
       - name: build static libxml2 + libxslt from source
         run: bash tools/build_static_libxml.sh
+
+      # make_release.sh bundles THIRD-PARTY-NOTICES.dist when present, else it
+      # silently falls back to the committed sections 1-4 (no Rust appendix).
+      - name: fetch assembled THIRD-PARTY-NOTICES
+        uses: actions/download-artifact@v4
+        with:
+          name: third-party-notices
 
       # cargo-deb derives `Architecture: arm64` from the native host; make_release
       # labels the FILENAME arm64 from RELEASE_TARGET. Produces the tarball + .deb.
@@ -391,10 +507,13 @@ jobs:
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_arm64.deb.sha256
           if-no-files-found: error
 
-  # Windows (x86_64-pc-windows-msvc) — a SINGLE self-contained `.exe`. Uses the
-  # proven windows-ci-manual-trigger.yml recipe (vcpkg static libxml2/libxslt)
-  # but builds the publish-grade `maxperf` binary and packages the bare `.exe`
-  # (+ `.sha256`) — no tarball/.deb, the user runs the `.exe` directly.
+  # Windows (x86_64-pc-windows-msvc) — a single self-contained `latexml_oxide.exe`,
+  # shipped in a `.zip` (+ `.sha256`) so the binary travels with its license
+  # notices; there is no .deb equivalent. Uses the proven
+  # windows-ci-manual-trigger.yml recipe (vcpkg static libxml2/libxslt) but builds
+  # the publish-grade `maxperf` binary. (It was a bare `.exe` through 0.7.4-rc3,
+  # which made it the one download carrying no THIRD-PARTY-NOTICES — see
+  # LICENSE_INVENTORY F7.)
   # `kpathsea` is linked IN-PROCESS via a STATIC libkpathsea built from source
   # (`kpathsea-build-from-source`; see the build step) — no runtime
   # `kpathsealibw64.dll`. At runtime `select_kpaths` keeps the fast in-process
@@ -411,7 +530,7 @@ jobs:
     # bring-up job's `ci` profile — give generous wall-clock. Windows Actions
     # minutes are metered 2x on this private repo (see windows-ci-manual-trigger).
     timeout-minutes: 120
-    needs: dumps
+    needs: [dumps, notices]
     env:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
@@ -467,10 +586,18 @@ jobs:
             done
           done
 
+      # make_release.sh bundles THIRD-PARTY-NOTICES.dist when present, else it
+      # silently falls back to the committed sections 1-4 (no Rust appendix).
+      - name: fetch assembled THIRD-PARTY-NOTICES
+        uses: actions/download-artifact@v4
+        with:
+          name: third-party-notices
+
       # make_release.sh runs under Git Bash (present on windows-latest); its
-      # os_family=windows branch builds maxperf and packages the single `.exe`.
+      # os_family=windows branch builds maxperf and packages latexml_oxide.exe
+      # into a `.zip` alongside the notices.
       # libxml2/libxslt are discovered from the vcpkg env set above.
-      - name: build Windows release .exe
+      - name: build Windows release .zip
         shell: bash
         run: bash tools/make_release.sh
         env:
@@ -537,17 +664,17 @@ jobs:
       - name: upload Windows artifact
         uses: actions/upload-artifact@v5
         with:
-          name: windows-exe
+          name: windows-zip
           path: |
-            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
-            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe.sha256
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip.sha256
           if-no-files-found: error
 
   release:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: [dumps, build-macos, build-macos-intel, build-linux-arm64, build-windows]
+    needs: [dumps, notices, build-macos, build-macos-intel, build-linux-arm64, build-windows]
 
     steps:
       - uses: actions/checkout@v6
@@ -587,11 +714,6 @@ jobs:
       # glibc. rust-cache keeps the cargo registry warm across re-runs.
       - name: install cargo-deb
         run: cargo install cargo-deb --locked
-
-      # For the THIRD-PARTY-NOTICES Rust-crate appendix (tools/gen_notices.sh).
-      # The `cli` feature is required for the `cargo about` subcommand binary.
-      - name: install cargo-about
-        run: cargo install cargo-about --features cli
 
       # Collect the TL-window dumps generated by the `dumps` job into
       # resources/dumps/ so the maxperf build embeds all of them
@@ -634,12 +756,16 @@ jobs:
       - name: build static libxml2 + libxslt from source
         run: bash tools/build_static_libxml.sh
 
-      # Assemble the complete THIRD-PARTY-NOTICES (hand-authored sections 1-4 +
-      # cargo-about's per-crate licenses for the shipped feature set) so
-      # make_release.sh bundles it into the tarball/.deb and it publishes as an
-      # asset. See docs/release/LICENSE_INVENTORY.md §A / RELEASE_CRITERIA §4 (F4).
-      - name: assemble THIRD-PARTY-NOTICES
-        run: bash tools/gen_notices.sh THIRD-PARTY-NOTICES.dist
+      # The complete THIRD-PARTY-NOTICES (hand-authored sections 1-4 +
+      # cargo-about's per-crate licenses + the section 6 copyleft texts) is
+      # assembled ONCE by the `notices` job and shared with every packaging leg,
+      # so all platforms ship byte-identical notices. make_release.sh bundles it
+      # into the tarball/.deb, and it publishes as a standalone asset below.
+      # See docs/release/LICENSE_INVENTORY.md §A / RELEASE_CRITERIA §4 (F4/F7).
+      - name: fetch assembled THIRD-PARTY-NOTICES
+        uses: actions/download-artifact@v4
+        with:
+          name: third-party-notices
 
       - name: build release artifacts
         run: bash tools/make_release.sh
@@ -654,7 +780,7 @@ jobs:
           RELEASE_MACOS_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
           RELEASE_MACOS_INTEL_TARBALL: latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
           RELEASE_LINUX_ARM64_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz
-          RELEASE_WINDOWS_EXE: latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
+          RELEASE_WINDOWS_ZIP: latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip
 
       # Artifact-property gate (RELEASE_CRITERIA §2/§7): fail the release if the
       # stripped binary blows the size budget (a runaway-growth alarm), and stage
@@ -744,10 +870,10 @@ jobs:
           path: target/release-artifacts/
 
       # Pull the single Windows .exe (+ sidecar) built by build-windows.
-      - name: collect Windows .exe
+      - name: collect Windows .zip
         uses: actions/download-artifact@v6
         with:
-          name: windows-exe
+          name: windows-zip
           path: target/release-artifacts/
 
       # PUBLISH. Behaviour is chosen by the tag shape (see draft/prerelease below):
@@ -785,8 +911,8 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz.sha256
-            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe
-            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe.sha256
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip.sha256
             target/release-artifacts/THIRD-PARTY-NOTICES
           # RC / pre-release tags (containing a '-', e.g. 0.7.4-rc1) publish as a
           # DRAFT prerelease — a maintainer tests the attached executables on each

@@ -141,8 +141,9 @@ Windows graphics-delegate names:
   the import table carries no `vcruntime`/`kpathsea`/`libxml`/`libxslt` — the
   property that actually guarantees clean-Windows launch (`--version` alone
   passes on the redist-equipped runner). Published as
-  `latexml-oxide-<ver>-x86_64-pc-windows-msvc.exe` (+ `.sha256`); RC tags
-  publish a draft prerelease.
+  `latexml-oxide-<ver>-x86_64-pc-windows-msvc.zip` (+ `.sha256`) — the `.exe`
+  ships inside a `.zip` so it travels with its `THIRD-PARTY-NOTICES`/`LICENSE`
+  (see `LICENSE_INVENTORY.md` F7); RC tags publish a draft prerelease.
 - [x] **Verified locally:** 61.6 MB (release-profile), OS-DLLs-only, converts
   under no-TeX / MiKTeX / TeX Live; embedded dumps confirmed by renaming
   `resources/dumps` away (no degraded-mode warning).

@@ -2,13 +2,18 @@
 #
 # Unified Dockerfile for BOTH published latexml-oxide images — select with --target:
 #
+# GITSHA is REQUIRED: .git is out of context (.dockerignore), so it is the only way
+# THIRD-PARTY-NOTICES section 7 can name the commit its relink pointer promises. The
+# notices stage refuses to build without it rather than ship "commit: unknown".
+#
 #   # general-purpose CLI  →  ghcr.io/dginev/latexml-oxide  (DEFAULT target)
-#   docker build --target cli -t ghcr.io/dginev/latexml-oxide .
+#   docker build --target cli --build-arg GITSHA=$(git rev-parse HEAD) -t ghcr.io/dginev/latexml-oxide .
 #   docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide paper.tex
 #
 #   # CorTeX fleet worker  →  ghcr.io/dginev/latexml-oxide/cortex-worker
 #   export HOSTTIME=$(date -Iminute)
-#   docker build --target worker --build-arg HOSTTIME=$HOSTTIME -t cortex-worker .
+#   docker build --target worker --build-arg HOSTTIME=$HOSTTIME \
+#     --build-arg GITSHA=$(git rev-parse HEAD) -t cortex-worker .
 #   docker run --network host -v /opt/cortex-scratch:/opt/cortex-scratch \
 #     --hostname="$(hostname)" cortex-worker 127.0.0.1
 #
@@ -91,6 +96,59 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 WORKDIR /src
 
 # ===========================================================================
+# notices — the THIRD-PARTY-NOTICES both images ship.
+# ===========================================================================
+# These images are a DISTRIBUTION CHANNEL: docker.yml pushes them to GHCR on
+# release-publish, so each one hands a user the binary with statically linked LGPL
+# code in it (libkpathsea; libmarpa's libavl/obstack files) and, in the worker, the
+# W3C/Mozilla SVG schemas whose license requires their notice travel with every
+# copy. They shipped neither the notices nor even our own LICENSE until 0.7.4.
+#
+# The lesson F7 (the bare Windows .exe) and F9 (the .deb, assembled by cargo-deb)
+# taught twice: an artifact built by a DIFFERENT tool does not inherit the staging
+# done for the others. `tools/make_release.sh` never runs here, so this stage is
+# where the container's notices have to come from.
+#
+# Generated ONCE for both targets: this stage shares `toolchain` + `COPY . .` with
+# build-cli/build-worker, so the context layer is cached, and cargo-about is built
+# once rather than in each build stage. The two images link DIFFERENT graphs
+# (`runtime-bindings` vs `cortex` — the worker adds zmq/pericortex), so section 5
+# is generated per-target rather than shared: one file each, attributing exactly
+# what that image contains.
+FROM toolchain AS notices
+COPY . .
+RUN cargo install cargo-about --locked --features cli
+# .git is out of context (see .dockerignore), so gen_notices.sh cannot resolve our
+# own commit for section 7's relink pointer; docker.yml passes the real sha here.
+ARG GITSHA=unknown
+ENV LATEXML_SELF_REV=${GITSHA}
+RUN set -ex \
+ && tools/gen_notices.sh /tmp/THIRD-PARTY-NOTICES.cli \
+ && NOTICES_CARGO_FEATURES="--no-default-features --features cortex" \
+      tools/gen_notices.sh /tmp/THIRD-PARTY-NOTICES.worker
+# Prove it rather than assume it -- the same readback make_release.sh does on the
+# .deb. A truncated notice is invisible from outside: the image runs fine either way.
+# This mirrors release.yml's gate and must stay in step with it: it was weaker on
+# both counts that matter, and a gate that is quietly the weaker copy is how the
+# thing it guards ships broken. The last three needles are sentences from the LGPL/GPL
+# BODIES (each unique to one file), not the titles gen_notices.sh echoes -- title
+# needles pass over three 0-byte license texts. The crate count catches a section 5
+# that rendered nothing, which no line-count floor can (section 6 alone is 1341 lines).
+RUN set -ex; for f in /tmp/THIRD-PARTY-NOTICES.cli /tmp/THIRD-PARTY-NOTICES.worker; do \
+      for needle in "3.2 libkpathsea" "3.3 libmarpa" "5. RUST DEPENDENCY LICENSES" \
+                    "6. COPYLEFT LICENSE TEXTS" "7. SOURCE PROVENANCE" \
+                    "This License Agreement applies to any software library or other" \
+                    "0. Additional Definitions." "16. Limitation of Liability."; do \
+        grep -qF "$needle" "$f" || { echo "$f is missing: $needle" >&2; exit 1; }; \
+      done; \
+      if sed -n '/^7\. SOURCE PROVENANCE/,$p' "$f" | grep -qE "unresolved|commit: unknown"; then \
+        echo "$f section 7 has an unresolved source revision (pass --build-arg GITSHA=\$(git rev-parse HEAD))" >&2; exit 1; \
+      fi; \
+      c="$(sed -n '/^5\. RUST DEPENDENCY LICENSES/,/^6\. COPYLEFT LICENSE TEXTS/p' "$f" | grep -c '^Applies to:' || true)"; \
+      [ "$c" -ge 50 ] || { echo "$f section 5 attributes only $c crates" >&2; exit 1; }; \
+    done
+
+# ===========================================================================
 # CorTeX fleet worker (--target worker)
 # ===========================================================================
 # build-worker: cortex_worker carries `required-features = ["cortex"]`, so the
@@ -121,6 +179,11 @@ ENV DOCKER_BUILD_TIME=$HOSTTIME
 COPY --from=build-worker /src/target/maxperf-cortex/cortex_worker /usr/local/bin/
 COPY --from=build-worker /src/target/maxperf-cortex/latexml_oxide /usr/local/bin/
 COPY --from=build-worker /src/resources/ /usr/local/share/latexml-oxide/resources/
+# Redistributing the binary (and, via resources/, the W3C/Mozilla SVG schemas)
+# obliges us to carry their terms with them. Generated for THIS image's feature set.
+COPY --from=build-worker /src/LICENSE /usr/local/share/doc/latexml-oxide/LICENSE
+COPY --from=notices /tmp/THIRD-PARTY-NOTICES.worker \
+     /usr/local/share/doc/latexml-oxide/THIRD-PARTY-NOTICES
 # Bake the ambient-year TeX kernel dumps into the image (the Rust analog of the
 # Perl image's `make formats`). `.gitignore`/`.dockerignore` ship no dumps, so
 # without this every one-conversion child re-bootstraps the kernel (~2 s/paper).
@@ -162,6 +225,12 @@ RUN set -ex \
 
 FROM texbase AS cli
 COPY --from=build-cli /usr/local/bin/latexml_oxide /usr/local/bin/latexml_oxide
+# This image redistributes the binary, so it carries the binary's terms: our CC0
+# LICENSE plus the third-party notices (incl. the section 6 copyleft texts the
+# statically linked LGPL code obliges and the section 7 relink pointer).
+COPY --from=build-cli /src/LICENSE /usr/local/share/doc/latexml-oxide/LICENSE
+COPY --from=notices /tmp/THIRD-PARTY-NOTICES.cli \
+     /usr/local/share/doc/latexml-oxide/THIRD-PARTY-NOTICES
 # Build-time self-test: this stage carries NO repo/resources tree, so a
 # successful HTML5 conversion proves the shipped binary is self-contained —
 # embedded kernel dump + embedded XSLT/CSS/schema — and resolves article.cls from
