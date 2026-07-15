@@ -40,115 +40,133 @@
 <a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">RequirePackage!</span>(<span class="string">"mathrsfs"</span>);
 <a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">RequirePackage!</span>(<span class="string">"rotating"</span>);
 <a href=#42 id=42 data-nosnippet>42</a>
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">// sn-jnl frontmatter — gobble layout-only / preserve author text.
-<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bmhead{}"</span>, <span class="string">"\\subsubsection*{#1}"</span>);
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bmsection{}"</span>, <span class="string">"\\section*{#1}"</span>);
-<a href=#46 id=46 data-nosnippet>46</a>  <span class="comment">// \sectiontitle{text} carries an author-typed section title used in
-<a href=#47 id=47 data-nosnippet>47</a>  // sn-jnl's TOC/running-head pipeline. Preserve as ltx:note rather
-<a href=#48 id=48 data-nosnippet>48</a>  // than silently dropping the words. Content-preserving.
-<a href=#49 id=49 data-nosnippet>49</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="string">"\\sectiontitle{}"</span>,
-<a href=#51 id=51 data-nosnippet>51</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}"
-<a href=#52 id=52 data-nosnippet>52</a>  </span>);
-<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// \headtype{...} / \extralength{...} are layout knobs (no author body).
-<a href=#54 id=54 data-nosnippet>54</a>  </span>def_macro_noop(<span class="string">"\\headtype{}"</span>)<span class="question-mark">?</span>;
-<a href=#55 id=55 data-nosnippet>55</a>  def_macro_noop(<span class="string">"\\extralength{}"</span>)<span class="question-mark">?</span>;
-<a href=#56 id=56 data-nosnippet>56</a>  <span class="comment">// \theHfigure / \theHtable are hyperref H-counter overrides (no body).
-<a href=#57 id=57 data-nosnippet>57</a>  </span>def_macro_noop(<span class="string">"\\theHfigure{}"</span>)<span class="question-mark">?</span>;
-<a href=#58 id=58 data-nosnippet>58</a>  def_macro_noop(<span class="string">"\\theHtable{}"</span>)<span class="question-mark">?</span>;
-<a href=#59 id=59 data-nosnippet>59</a>
-<a href=#60 id=60 data-nosnippet>60</a>  <span class="comment">// Author-block — preserve author-supplied affiliation / equalcont /
-<a href=#61 id=61 data-nosnippet>61</a>  // presentaddress content as ltx:note frontmatter.
-<a href=#62 id=62 data-nosnippet>62</a>  //
-<a href=#63 id=63 data-nosnippet>63</a>  // sn-jnl.cls defines `\author` to dispatch on `\@ifstar` to either
-<a href=#64 id=64 data-nosnippet>64</a>  // `\@@corrauthor` (corresponding author) or `\@@author` (regular).
-<a href=#65 id=65 data-nosnippet>65</a>  // We collapse both to the core `\author{#name}` semantics — we don't
-<a href=#66 id=66 data-nosnippet>66</a>  // distinguish corresponding from regular in the output.
-<a href=#67 id=67 data-nosnippet>67</a>  //
-<a href=#68 id=68 data-nosnippet>68</a>  // CAVEAT (root-cause for 2306.11901): our DefMacro prototype parser
-<a href=#69 id=69 data-nosnippet>69</a>  // treats the `*` immediately after `\author` as a Token parameter
-<a href=#70 id=70 data-nosnippet>70</a>  // (literal star), NOT as a CS suffix. So a naive
-<a href=#71 id=71 data-nosnippet>71</a>  //   `DefMacro!("\\author*[]{}", "\\author{#2}")`
-<a href=#72 id=72 data-nosnippet>72</a>  // overrides `\author` to *require* a literal star and then the body
-<a href=#73 id=73 data-nosnippet>73</a>  // `\author{#2}` calls itself with the empty optional `#2`, recursing
-<a href=#74 id=74 data-nosnippet>74</a>  // forever on `\author{X}` (which has no star and no [opt]). Use
-<a href=#75 id=75 data-nosnippet>75</a>  // `OptionalMatch:*` so the star is optional, save the core `\author`
-<a href=#76 id=76 data-nosnippet>76</a>  // first, and forward to it with the full `[opt]{name}` shape so the
-<a href=#77 id=77 data-nosnippet>77</a>  // body never re-enters this stub.
-<a href=#78 id=78 data-nosnippet>78</a>  </span>let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@sn@core@author"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\author"</span>), <span class="prelude-val">None</span>);
-<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefMacro!</span>(
-<a href=#80 id=80 data-nosnippet>80</a>    <span class="string">"\\author OptionalMatch:* []{}"</span>,
-<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"\\lx@sn@core@author[#2]{#3}"
-<a href=#82 id=82 data-nosnippet>82</a>  </span>);
-<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="string">"\\affil OptionalMatch:* []{}"</span>,
-<a href=#85 id=85 data-nosnippet>85</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliation]{#3}"
-<a href=#86 id=86 data-nosnippet>86</a>  </span>);
-<a href=#87 id=87 data-nosnippet>87</a>  <span class="macro">DefMacro!</span>(
-<a href=#88 id=88 data-nosnippet>88</a>    <span class="string">"\\equalcont{}"</span>,
-<a href=#89 id=89 data-nosnippet>89</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
-<a href=#90 id=90 data-nosnippet>90</a>  </span>);
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="macro">DefMacro!</span>(
-<a href=#92 id=92 data-nosnippet>92</a>    <span class="string">"\\presentaddress{}"</span>,
-<a href=#93 id=93 data-nosnippet>93</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=present-address]{#1}"
-<a href=#94 id=94 data-nosnippet>94</a>  </span>);
-<a href=#95 id=95 data-nosnippet>95</a>  <span class="comment">// sn-jnl.cls L1788: \gdef\orcid#1{\href{#1}{\orcidlogo}} (ORCID-logo
-<a href=#96 id=96 data-nosnippet>96</a>  // hyperlink, used INLINE inside \author{...\orcid{id}}). Render as an inline
-<a href=#97 id=97 data-nosnippet>97</a>  // ORCID link showing the id (content-preserving: the id stays in the output,
-<a href=#98 id=98 data-nosnippet>98</a>  // both as visible text and the proper orcid.org href; the real cls's logo
-<a href=#99 id=99 data-nosnippet>99</a>  // image Orcidlogo.eps isn't shipped). A frontmatter note does NOT work here —
-<a href=#100 id=100 data-nosnippet>100</a>  // it fires inside the author-name digestion and is dropped. Was undefined →
-<a href=#101 id=101 data-nosnippet>101</a>  // error (Perl defines it). Witness 2211.09693.
-<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\href{https://orcid.org/#1}{#1}"</span>);
-<a href=#103 id=103 data-nosnippet>103</a>  <span class="comment">// \sep — elsarticle-family keyword separator (`\def\sep{\unskip, }`). sn-jnl
-<a href=#104 id=104 data-nosnippet>104</a>  // papers use it in keyword lists (`kw1 \sep kw2 \sep ...`); the sn-jnl cls
-<a href=#105 id=105 data-nosnippet>105</a>  // doesn't define it but Perl provides it (elsarticle convention). Render as a
-<a href=#106 id=106 data-nosnippet>106</a>  // comma separator. Was undefined → error. Witness 2309.06763.
-<a href=#107 id=107 data-nosnippet>107</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sep"</span>, <span class="string">"\\unskip, "</span>);
-<a href=#108 id=108 data-nosnippet>108</a>  <span class="comment">// Name part helpers (first-name, surname) — emit inline.
-<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fnm{}"</span>, <span class="string">"#1"</span>);
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sur{}"</span>, <span class="string">"#1"</span>);
-<a href=#111 id=111 data-nosnippet>111</a>  <span class="comment">// sn-jnl.cls L599-606: \orgdiv / \orgname / \orgaddress / \street /
-<a href=#112 id=112 data-nosnippet>112</a>  // \postcode / \city / \state / \country — affiliation-element helpers
-<a href=#113 id=113 data-nosnippet>113</a>  // that pass through their argument as inline text. The paper-bundled
-<a href=#114 id=114 data-nosnippet>114</a>  // class file defines all of them as `\newcommand{\foo}[1]{#1}` (plain
-<a href=#115 id=115 data-nosnippet>115</a>  // pass-through). Our raw-load path doesn't always invoke them, so
-<a href=#116 id=116 data-nosnippet>116</a>  // bind explicitly. Without these stubs, papers using the standard
-<a href=#117 id=117 data-nosnippet>117</a>  // sn-jnl `\affil*[1]{\orgdiv{...}, \orgname{...}, \orgaddress{...}}`
-<a href=#118 id=118 data-nosnippet>118</a>  // pattern report undefined CS cascade. Witness 2311.09249, 2311.08387.
-<a href=#119 id=119 data-nosnippet>119</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orgdiv{}"</span>, <span class="string">"#1"</span>);
-<a href=#120 id=120 data-nosnippet>120</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgname{}"</span>, <span class="string">"#1"</span>);
-<a href=#121 id=121 data-nosnippet>121</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgaddress{}"</span>, <span class="string">"#1"</span>);
-<a href=#122 id=122 data-nosnippet>122</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\street{}"</span>, <span class="string">"#1"</span>);
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>, <span class="string">"#1"</span>);
-<a href=#124 id=124 data-nosnippet>124</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\city{}"</span>, <span class="string">"#1"</span>);
-<a href=#125 id=125 data-nosnippet>125</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>, <span class="string">"#1"</span>);
-<a href=#126 id=126 data-nosnippet>126</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>, <span class="string">"#1"</span>);
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="comment">// sn-jnl.cls defines \botrule as a bottom-rule table separator
-<a href=#128 id=128 data-nosnippet>128</a>  // (similar shape to \toprule / \midrule from booktabs). Authors use
-<a href=#129 id=129 data-nosnippet>129</a>  // it inside \begin{tabular}...\end{tabular} for Springer-Nature
-<a href=#130 id=130 data-nosnippet>130</a>  // bottom rules. Map to \hline so the table still renders.
-<a href=#131 id=131 data-nosnippet>131</a>  // Witness 2402.17342.
-<a href=#132 id=132 data-nosnippet>132</a>  </span><span class="macro">Let!</span>(<span class="string">"\\botrule"</span>, <span class="string">"\\hline"</span>);
-<a href=#133 id=133 data-nosnippet>133</a>
-<a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// Frontmatter envs — internal_vertical mode for multi-paragraph
-<a href=#135 id=135 data-nosnippet>135</a>  // bodies (declarations especially carries author prose with \par
-<a href=#136 id=136 data-nosnippet>136</a>  // separators). Without explicit mode, restricted_horizontal default
-<a href=#137 id=137 data-nosnippet>137</a>  // trips Endgroup mismatch on \par-containing bodies.
-<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">"&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;"</span>,
-<a href=#139 id=139 data-nosnippet>139</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// Real sn-jnl.cls defines `\abstract{...}` as a *macro* form (not the
-<a href=#141 id=141 data-nosnippet>141</a>  // standard env). Without this stub, our environment binding's
-<a href=#142 id=142 data-nosnippet>142</a>  // auto-created `\abstract` token (which expects a matching
-<a href=#143 id=143 data-nosnippet>143</a>  // `\endabstract`) eats every subsequent `\title`/`\author`/`\maketitle`
-<a href=#144 id=144 data-nosnippet>144</a>  // /`\section` into the still-open `&lt;ltx:abstract&gt;`, producing a
-<a href=#145 id=145 data-nosnippet>145</a>  // cascade of `Error:malformed:ltx:* isn't allowed in &lt;ltx:abstract&gt;`.
-<a href=#146 id=146 data-nosnippet>146</a>  // Forward to the env so the body is wrapped *and* properly closed.
-<a href=#147 id=147 data-nosnippet>147</a>  // Witness 2306.11901.
-<a href=#148 id=148 data-nosnippet>148</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\abstract{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
-<a href=#149 id=149 data-nosnippet>149</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{declarations}"</span>, <span class="string">"&lt;ltx:acknowledgements name='declarations'&gt;#body&lt;/ltx:acknowledgements&gt;"</span>,
-<a href=#150 id=150 data-nosnippet>150</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#151 id=151 data-nosnippet>151</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{appendices}"</span>, <span class="string">"&lt;ltx:appendix&gt;#body&lt;/ltx:appendix&gt;"</span>,
-<a href=#152 id=152 data-nosnippet>152</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#153 id=153 data-nosnippet>153</a>});
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">// Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/
+<a href=#44 id=44 data-nosnippet>44</a>  // 1669/1677: `\usepackage[numbers,sort&amp;compress]{natbib}` for the numeric
+<a href=#45 id=45 data-nosnippet>45</a>  // styles, `\usepackage[authoryear]{natbib}` for the author-year ones).
+<a href=#46 id=46 data-nosnippet>46</a>  // OmniBus only `def_autoload`s natbib off `\citet`/`\citep`/`\citeyear`/…
+<a href=#47 id=47 data-nosnippet>47</a>  // — deliberately NOT off `\cite`, which the kernel already defines. So a
+<a href=#48 id=48 data-nosnippet>48</a>  // paper that cites solely via natbib's TWO-optional `\cite[pre][post]{keys}`
+<a href=#49 id=49 data-nosnippet>49</a>  // never triggers the autoload, and the kernel's single-optional
+<a href=#50 id=50 data-nosnippet>50</a>  // `\cite[] Semiverbatim` reads `[` as the whole key list: the real keys are
+<a href=#51 id=51 data-nosnippet>51</a>  // dropped (never cited, silently absent from the References) and `]{keys}`
+<a href=#52 id=52 data-nosnippet>52</a>  // leaks as body text. Requiring natbib here mirrors the real class and also
+<a href=#53 id=53 data-nosnippet>53</a>  // spares these papers the autoload dance. Options are left at natbib's
+<a href=#54 id=54 data-nosnippet>54</a>  // default (numbers) — same as what the autoload path already produced, so
+<a href=#55 id=55 data-nosnippet>55</a>  // no rendering change for papers that did trigger it; the per-refstyle
+<a href=#56 id=56 data-nosnippet>56</a>  // numbers-vs-authoryear mapping needs class-option processing this stub
+<a href=#57 id=57 data-nosnippet>57</a>  // doesn't do yet. Witness 2605.23484 (sn-mathphys-num), 2606.10002
+<a href=#58 id=58 data-nosnippet>58</a>  // (sn-basic), 2606.10215, 2606.11534.
+<a href=#59 id=59 data-nosnippet>59</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>);
+<a href=#60 id=60 data-nosnippet>60</a>
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="comment">// sn-jnl frontmatter — gobble layout-only / preserve author text.
+<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bmhead{}"</span>, <span class="string">"\\subsubsection*{#1}"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bmsection{}"</span>, <span class="string">"\\section*{#1}"</span>);
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// \sectiontitle{text} carries an author-typed section title used in
+<a href=#65 id=65 data-nosnippet>65</a>  // sn-jnl's TOC/running-head pipeline. Preserve as ltx:note rather
+<a href=#66 id=66 data-nosnippet>66</a>  // than silently dropping the words. Content-preserving.
+<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"\\sectiontitle{}"</span>,
+<a href=#69 id=69 data-nosnippet>69</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}"
+<a href=#70 id=70 data-nosnippet>70</a>  </span>);
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="comment">// \headtype{...} / \extralength{...} are layout knobs (no author body).
+<a href=#72 id=72 data-nosnippet>72</a>  </span>def_macro_noop(<span class="string">"\\headtype{}"</span>)<span class="question-mark">?</span>;
+<a href=#73 id=73 data-nosnippet>73</a>  def_macro_noop(<span class="string">"\\extralength{}"</span>)<span class="question-mark">?</span>;
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="comment">// \theHfigure / \theHtable are hyperref H-counter overrides (no body).
+<a href=#75 id=75 data-nosnippet>75</a>  </span>def_macro_noop(<span class="string">"\\theHfigure{}"</span>)<span class="question-mark">?</span>;
+<a href=#76 id=76 data-nosnippet>76</a>  def_macro_noop(<span class="string">"\\theHtable{}"</span>)<span class="question-mark">?</span>;
+<a href=#77 id=77 data-nosnippet>77</a>
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="comment">// Author-block — preserve author-supplied affiliation / equalcont /
+<a href=#79 id=79 data-nosnippet>79</a>  // presentaddress content as ltx:note frontmatter.
+<a href=#80 id=80 data-nosnippet>80</a>  //
+<a href=#81 id=81 data-nosnippet>81</a>  // sn-jnl.cls defines `\author` to dispatch on `\@ifstar` to either
+<a href=#82 id=82 data-nosnippet>82</a>  // `\@@corrauthor` (corresponding author) or `\@@author` (regular).
+<a href=#83 id=83 data-nosnippet>83</a>  // We collapse both to the core `\author{#name}` semantics — we don't
+<a href=#84 id=84 data-nosnippet>84</a>  // distinguish corresponding from regular in the output.
+<a href=#85 id=85 data-nosnippet>85</a>  //
+<a href=#86 id=86 data-nosnippet>86</a>  // CAVEAT (root-cause for 2306.11901): our DefMacro prototype parser
+<a href=#87 id=87 data-nosnippet>87</a>  // treats the `*` immediately after `\author` as a Token parameter
+<a href=#88 id=88 data-nosnippet>88</a>  // (literal star), NOT as a CS suffix. So a naive
+<a href=#89 id=89 data-nosnippet>89</a>  //   `DefMacro!("\\author*[]{}", "\\author{#2}")`
+<a href=#90 id=90 data-nosnippet>90</a>  // overrides `\author` to *require* a literal star and then the body
+<a href=#91 id=91 data-nosnippet>91</a>  // `\author{#2}` calls itself with the empty optional `#2`, recursing
+<a href=#92 id=92 data-nosnippet>92</a>  // forever on `\author{X}` (which has no star and no [opt]). Use
+<a href=#93 id=93 data-nosnippet>93</a>  // `OptionalMatch:*` so the star is optional, save the core `\author`
+<a href=#94 id=94 data-nosnippet>94</a>  // first, and forward to it with the full `[opt]{name}` shape so the
+<a href=#95 id=95 data-nosnippet>95</a>  // body never re-enters this stub.
+<a href=#96 id=96 data-nosnippet>96</a>  </span>let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@sn@core@author"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\author"</span>), <span class="prelude-val">None</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">DefMacro!</span>(
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"\\author OptionalMatch:* []{}"</span>,
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="string">"\\lx@sn@core@author[#2]{#3}"
+<a href=#100 id=100 data-nosnippet>100</a>  </span>);
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="macro">DefMacro!</span>(
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="string">"\\affil OptionalMatch:* []{}"</span>,
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliation]{#3}"
+<a href=#104 id=104 data-nosnippet>104</a>  </span>);
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="macro">DefMacro!</span>(
+<a href=#106 id=106 data-nosnippet>106</a>    <span class="string">"\\equalcont{}"</span>,
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
+<a href=#108 id=108 data-nosnippet>108</a>  </span>);
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="macro">DefMacro!</span>(
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="string">"\\presentaddress{}"</span>,
+<a href=#111 id=111 data-nosnippet>111</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=present-address]{#1}"
+<a href=#112 id=112 data-nosnippet>112</a>  </span>);
+<a href=#113 id=113 data-nosnippet>113</a>  <span class="comment">// sn-jnl.cls L1788: \gdef\orcid#1{\href{#1}{\orcidlogo}} (ORCID-logo
+<a href=#114 id=114 data-nosnippet>114</a>  // hyperlink, used INLINE inside \author{...\orcid{id}}). Render as an inline
+<a href=#115 id=115 data-nosnippet>115</a>  // ORCID link showing the id (content-preserving: the id stays in the output,
+<a href=#116 id=116 data-nosnippet>116</a>  // both as visible text and the proper orcid.org href; the real cls's logo
+<a href=#117 id=117 data-nosnippet>117</a>  // image Orcidlogo.eps isn't shipped). A frontmatter note does NOT work here —
+<a href=#118 id=118 data-nosnippet>118</a>  // it fires inside the author-name digestion and is dropped. Was undefined →
+<a href=#119 id=119 data-nosnippet>119</a>  // error (Perl defines it). Witness 2211.09693.
+<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\href{https://orcid.org/#1}{#1}"</span>);
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">// \sep — elsarticle-family keyword separator (`\def\sep{\unskip, }`). sn-jnl
+<a href=#122 id=122 data-nosnippet>122</a>  // papers use it in keyword lists (`kw1 \sep kw2 \sep ...`); the sn-jnl cls
+<a href=#123 id=123 data-nosnippet>123</a>  // doesn't define it but Perl provides it (elsarticle convention). Render as a
+<a href=#124 id=124 data-nosnippet>124</a>  // comma separator. Was undefined → error. Witness 2309.06763.
+<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sep"</span>, <span class="string">"\\unskip, "</span>);
+<a href=#126 id=126 data-nosnippet>126</a>  <span class="comment">// Name part helpers (first-name, surname) — emit inline.
+<a href=#127 id=127 data-nosnippet>127</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fnm{}"</span>, <span class="string">"#1"</span>);
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sur{}"</span>, <span class="string">"#1"</span>);
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="comment">// sn-jnl.cls L599-606: \orgdiv / \orgname / \orgaddress / \street /
+<a href=#130 id=130 data-nosnippet>130</a>  // \postcode / \city / \state / \country — affiliation-element helpers
+<a href=#131 id=131 data-nosnippet>131</a>  // that pass through their argument as inline text. The paper-bundled
+<a href=#132 id=132 data-nosnippet>132</a>  // class file defines all of them as `\newcommand{\foo}[1]{#1}` (plain
+<a href=#133 id=133 data-nosnippet>133</a>  // pass-through). Our raw-load path doesn't always invoke them, so
+<a href=#134 id=134 data-nosnippet>134</a>  // bind explicitly. Without these stubs, papers using the standard
+<a href=#135 id=135 data-nosnippet>135</a>  // sn-jnl `\affil*[1]{\orgdiv{...}, \orgname{...}, \orgaddress{...}}`
+<a href=#136 id=136 data-nosnippet>136</a>  // pattern report undefined CS cascade. Witness 2311.09249, 2311.08387.
+<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orgdiv{}"</span>, <span class="string">"#1"</span>);
+<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgname{}"</span>, <span class="string">"#1"</span>);
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgaddress{}"</span>, <span class="string">"#1"</span>);
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\street{}"</span>, <span class="string">"#1"</span>);
+<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>, <span class="string">"#1"</span>);
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\city{}"</span>, <span class="string">"#1"</span>);
+<a href=#143 id=143 data-nosnippet>143</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>, <span class="string">"#1"</span>);
+<a href=#144 id=144 data-nosnippet>144</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>, <span class="string">"#1"</span>);
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="comment">// sn-jnl.cls defines \botrule as a bottom-rule table separator
+<a href=#146 id=146 data-nosnippet>146</a>  // (similar shape to \toprule / \midrule from booktabs). Authors use
+<a href=#147 id=147 data-nosnippet>147</a>  // it inside \begin{tabular}...\end{tabular} for Springer-Nature
+<a href=#148 id=148 data-nosnippet>148</a>  // bottom rules. Map to \hline so the table still renders.
+<a href=#149 id=149 data-nosnippet>149</a>  // Witness 2402.17342.
+<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="macro">Let!</span>(<span class="string">"\\botrule"</span>, <span class="string">"\\hline"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="comment">// Frontmatter envs — internal_vertical mode for multi-paragraph
+<a href=#153 id=153 data-nosnippet>153</a>  // bodies (declarations especially carries author prose with \par
+<a href=#154 id=154 data-nosnippet>154</a>  // separators). Without explicit mode, restricted_horizontal default
+<a href=#155 id=155 data-nosnippet>155</a>  // trips Endgroup mismatch on \par-containing bodies.
+<a href=#156 id=156 data-nosnippet>156</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">"&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;"</span>,
+<a href=#157 id=157 data-nosnippet>157</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="comment">// Real sn-jnl.cls defines `\abstract{...}` as a *macro* form (not the
+<a href=#159 id=159 data-nosnippet>159</a>  // standard env). Without this stub, our environment binding's
+<a href=#160 id=160 data-nosnippet>160</a>  // auto-created `\abstract` token (which expects a matching
+<a href=#161 id=161 data-nosnippet>161</a>  // `\endabstract`) eats every subsequent `\title`/`\author`/`\maketitle`
+<a href=#162 id=162 data-nosnippet>162</a>  // /`\section` into the still-open `&lt;ltx:abstract&gt;`, producing a
+<a href=#163 id=163 data-nosnippet>163</a>  // cascade of `Error:malformed:ltx:* isn't allowed in &lt;ltx:abstract&gt;`.
+<a href=#164 id=164 data-nosnippet>164</a>  // Forward to the env so the body is wrapped *and* properly closed.
+<a href=#165 id=165 data-nosnippet>165</a>  // Witness 2306.11901.
+<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\abstract{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
+<a href=#167 id=167 data-nosnippet>167</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{declarations}"</span>, <span class="string">"&lt;ltx:acknowledgements name='declarations'&gt;#body&lt;/ltx:acknowledgements&gt;"</span>,
+<a href=#168 id=168 data-nosnippet>168</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{appendices}"</span>, <span class="string">"&lt;ltx:appendix&gt;#body&lt;/ltx:appendix&gt;"</span>,
+<a href=#170 id=170 data-nosnippet>170</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#171 id=171 data-nosnippet>171</a>});
 </code></pre></div></section></main></body></html>

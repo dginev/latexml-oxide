@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["FoodType"],"fn":["tokenize","tokenize_internal"],"struct":["Mouth","MouthOptions"]};
+window.SIDEBAR_ITEMS = {"enum":["FoodType"],"fn":["decode_input_bytes","tokenize","tokenize_internal"],"struct":["Mouth","MouthOptions"]};
