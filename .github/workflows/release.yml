@@ -60,6 +60,14 @@ jobs:
       - name: install cargo-about
         run: cargo install cargo-about --features cli
 
+      # Re-run the blind-spot audit here, not just in CI's `lint` job: CI.yml
+      # triggers on `push: [main]` + `pull_request`, so a TAG push never runs it.
+      # Without this, a release could ship a newly-vendored native library that
+      # no gate ever looked at. Cheap (seconds) and every release passes through
+      # this job.
+      - name: audit vendored native code + embedded resources
+        run: python3 tools/audit_vendored_natives.py --verbose
+
       - name: assemble notices
         run: bash tools/gen_notices.sh THIRD-PARTY-NOTICES.dist
 
