@@ -224,6 +224,15 @@ states this and points at the sources; §6 now ships the verbatim LGPL-2.1,
 LGPL-3.0 and GPL-3.0 texts (LGPL-3.0 is additional permissions on top of
 GPL-3.0, so it is **not** self-contained — both texts are required).
 
+Each artifact now **names its own inputs**: `THIRD-PARTY-NOTICES` §7 (generated
+by `gen_notices.sh` at release time) records the exact latexml-oxide commit, the
+marpa commit resolved from `Cargo.lock`, and `KPSE_REF`. This closes a real hole
+in the earlier "everything is version-pinned" wording: kpathsea *is* pinned
+in-repo, but the `marpa` git dep carries no `rev =`, so the built revision lived
+only in the **gitignored** lockfile — a user rebuilding would have resolved
+branch HEAD instead. Relinking is now reproducible rather than theoretical, and
+the generator refuses to emit an unresolved pointer.
+
 **Owner to confirm** this source-availability posture satisfies the relink
 obligation for the static links, vs. the heavier alternatives (shipping
 prelinkable object files, or a written offer). See F5.
@@ -275,14 +284,17 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   §B row corrected; `audit_vendored_natives.py` now guards the class. Found by
   asking the §D.2 question one level up — *what does this claim actually cover?*
   — rather than by any tool. Nothing else under `resources/` is third-party.
-- **F5** *(attribution landed 2026-07-14; posture call still OPEN)* —
+- **F5** *(attribution + provenance landed 2026-07-14; posture call still OPEN)* —
   **libkpathsea (LGPL-2.1 static link).** kpathsea is statically linked on Linux
   (`build_static_kpathsea.sh`) and, as of 0.7.4, Windows (`build_from_source`).
   `THIRD-PARTY-NOTICES` now carries the kpathsea copyright (§3.2), the relink
-  note + pinned-source pointer (§3.5), and the verbatim LGPL-2.1 text (§6, via
-  `tools/gen_notices.sh` + `licenses/`). **Still owner-to-confirm:** that
-  source-availability satisfies the §6 relink obligation, vs. shipping
-  prelinkable object files or a written offer. Same call covers libmarpa (F6).
+  note (§3.5), the verbatim LGPL-2.1 text (§6), and the **exact commit each
+  artifact was built from** (§7) — all via `tools/gen_notices.sh` + `licenses/`.
+  **Still owner-to-confirm:** that source-availability satisfies the §6 relink
+  obligation, vs. shipping prelinkable object files or a written offer. This is a
+  legal judgement about *how* we discharge the duty, not *whether* we may
+  release — everything engineering can do for it is done. Same call covers
+  libmarpa (F6).
 - **F6** *(attribution landed 2026-07-14)* — **vendored native libs were absent
   from every notice: libmarpa + mimalloc.** Found by auditing what `-sys`
   `build.rs` files actually compile, rather than trusting manifest `license =`
