@@ -1525,6 +1525,199 @@ its `\ref`s read "Figure 1", and a teaser-free acmart document is unchanged.
 
 ---
 
+### 57. amsrefs inline bibliographies are collected (upstream drops them whole)
+
+**Decision:** `MakeBibliography::get_bib_entries`
+(`latexml_post/src/make_bibliography.rs`) scans the **main document** for inline
+`ltx:bibentry` elements in addition to the external bibliography documents
+returned by `get_bibliographies`. Perl's `getBibEntries`
+(`LaTeXML/lib/LaTeXML/Post/MakeBibliography.pm`) only ever iterates
+`getBibliographies($doc)`. This is a **surpass-Perl divergence** under the
+PDF-fidelity policy: the references are unambiguously present in the source and
+in the author's PDF.
+
+**The shared bug.** `amsrefs` writes the bibliography *into the document* —
+
+```latex
+\begin{bibdiv}\begin{biblist}
+\bib{Bei87}{article}{ author={Be\u{\i}linson, A.}, title={Height pairing...}, }
+\end{biblist}\end{bibdiv}
+```
+
+— rather than into an external `.bib`. The engine digests this correctly into
+`ltx:biblist`/`ltx:bibentry` (our `amsrefs_basic` structure test covers exactly
+that, and passes). But there is no `@files` attribute for `getBibliographies` to
+resolve, so it returns an empty list, `getBibEntries` collects **nothing**, and
+`process` then executes its unconditional
+`$doc->removeNodes($doc->findnodes('//ltx:bibentry'))` — deleting every entry it
+never collected. The result is a **silently empty References section with every
+`\cite` left dangling, and zero errors reported**.
+
+Confirmed identical on the installed **and** the vendored Perl 0.8.8
+(rev `51fea96a`): witness 2605.01646 (`AIPFa.tex`) gives Perl `ltx_bibitem: 0` /
+`ltx_missing_citation: 81`. Recorded upstream as KNOWN_PERL_ERRORS #49.
+
+**Why this is safe.** A paper with an external `.bib`/`.bbl` carries no inline
+`ltx:bibentry` in the main document at this point in the pipeline, so the extra
+scan contributes nothing and the entry map is byte-identical. The scan runs
+*after* the external documents, so a key defined both externally and inline
+resolves to the inline one — matching upstream's own last-source-wins loop.
+
+**Measured.** All 40 amsrefs papers in sandboxes 2605+2606 went from 0 rendered
+references (100% loss, every citation dangling) to **1,482 references rendered
+with zero dangling citations**. Witness 2605.01646 (23 entries), 2605.00783,
+2605.03852.
+
+
+### 58. A malformed `.bib` entry resyncs at the next `@` (upstream abandons the file)
+
+**Decision:** `PreBibTeX::parse_top_level` (`latexml_engine/src/pre_bibtex.rs`)
+reports a malformed entry and **continues at the next `@`**. Perl's
+`parseTopLevel` lets the first parse error propagate out, abandoning every
+LATER entry.
+
+**Why.** Real BibTeX does not abandon the file: on *"I was expecting a `,' or a
+`}'"* it reports the error and skips to the next entry (`bibtex.web`), which is
+the behaviour authors' `.bib`/`.bbl` files are written against — a single
+unbalanced `{` costs its own entry, not the rest of the bibliography. Under
+Perl's rule one stray brace silently deletes the whole tail of the References.
+`skip_junk` already *is* the resync, so the loop simply keeps going; the
+malformed entry itself is dropped, exactly as BibTeX drops it.
+
+**Loud, never silent.** Each resync emits
+`Warning:bibtex:unbalanced <label> line N: <error>; resyncing at the next '@'`,
+so the lost entry is always visible in the log (CLAUDE.md's
+fail-safe-toward-flagging-failure rule). The corpus carries 19 papers /
+298 messages in this category.
+
+**History.** This robustness previously lived in a bespoke second BibTeX parser
+inside `latexml_post::make_bibliography`, which has been deleted in favour of
+the faithful `pre_bibtex` port; the resync moved here so the single shared
+parser keeps both the faithful grammar and the BibTeX-grade error recovery.
+
+### 59. A citation also searches the main `bibliography` list, not just its bibunit
+
+**Decision:** `CrossRef::fill_in_bibrefs` (`latexml_post/src/crossref.rs`) searches
+the bibref's `inlist` units **and then the main `bibliography` list**. Perl
+`CrossRef.pm` L515 reads `inlist || 'bibliography'` — an *exclusive* choice that
+searches the unit list alone whenever `inlist` is set.
+
+**Why.** `bibunits`/`chapterbib` stamp `CITE_UNIT` onto every `\cite` (bibunits'
+`\lx@bibunits@resetglobal`, `bibunits.sty.ltxml` L39-41), so a bibref carries
+`inlist='bu0'` **merely because the package is loaded** — even when the document
+never opens a `bibunit` environment and has exactly one ordinary
+`\bibliography`. That bibliography registers its bibitems under the default
+`bibliography` list (`MakeBibliography`, mirroring `Scan.pm` L465), so the
+unit-only lookup can never match and **every** citation dangles.
+
+Perl's own `Scan.pm` L379-380 spells the intended chain — the unit lists **plus**
+the main one, commented *"Citation specifies main 'bibliography', as well as any
+specific others (eg. per chapter)"* — and registers the reference under both. So
+upstream already disagrees with itself: Scan records two lists, CrossRef reads
+one. We follow Scan's convention in both places.
+
+**Specificity is preserved.** The unit lists are searched first and the scan
+breaks on the first list yielding an `id`, so a genuine per-chapter bibliography
+still wins over the global one; the main list is only ever a fallback.
+
+**PARITY with same-host Perl** — fixed here rather than reproduced
+(KNOWN_PERL_ERRORS #50). Witness 2303.06077 (revtex4-2 + `bibunits`): 93
+bibitems rendered, 93 keys dangling, 0 links → now 93 / 0 / 179 links. The
+minimal reproducer is 6 lines (`tests/cluster_regressions/bibunits_cite.tex`):
+deleting the single `\usepackage{bibunits}` line resolves the cite. Perl on that
+same reproducer: 1 bibitem, 1 dangling, 0 links.
+
+### 60. `.bib` scanning follows BibTeX, not `Text::Balanced` (escaped braces, non-ASCII keys, bare `@Comment`)
+
+**Decision:** `pre_bibtex` parses `.bib` the way **BibTeX itself** does on three
+points where Perl's `Pre/BibTeX.pm` diverges from the real tool:
+
+1. **Braces count literally.** `\{` / `\}` do NOT escape the brace depth
+   (`find_balanced_brace_end`). Perl uses
+   `Text::Balanced::extract_bracketed($line, '{}')`, which treats them as
+   escaped, returns `undef` for a title like
+   `"…{\textbackslash}boldsymbol\{Q\}…"`, then extends line-by-line to EOF and
+   abandons the file.
+2. **Non-ASCII is a name character** (`is_bib_name_or_noise`). Perl's class is
+   the literal `a-zA-Z0-9` (L221), so a Zotero-style key
+   `alvarado-leañosLasing2022` truncates at the accent → `Expected ","`.
+   Non-ASCII is never a BibTeX delimiter, so admitting it cannot swallow
+   structure.
+3. **A bare `@Comment` banner is not an error** (`parse_comment`). BibTeX
+   ignores everything after `@comment`; Perl demands a delimited string.
+
+**Why — ground truth is the real tool.** All three inputs are accepted by
+`bibtex` 0.99d (TeX Live 2025) with at most a benign *"empty journal"* warning,
+so the references exist in the author's PDF. Perl LaTeXML loses them: on the
+escaped-brace reproducer it emits **0 bibitems and 2 dangling citations**
+(it abandons the whole file), where `bibtex` emits both entries. This is the
+authorized surpass-Perl case — Rust == Perl but both wrong vs the PDF.
+
+**Measured.** These were exposed by routing post-side `.bib` parsing through
+this port (#56): `bibtex/unbalanced` went 19 → 593 papers in sandbox 2605
+because the deleted bespoke parser had been permissive on exactly these points.
+On a 24-paper sample of the affected set: **0/24 clean → 22/24 clean**
+(brace fix alone: 7/24). Witness 2605.00264 (`\{Q\}` in `chen2017ucb`):
+1144/1169 entries parsed → **1170**, 18 dangling citations → **0**.
+Witnesses 2605.28695 (`ñ` key), 2605.00121 (stray U+FE0F in the key),
+2605.06974 (26 `@Comment` banners).
+
+4. **`\` is a name character.** Perl excludes it *on purpose* (L215-217:
+   *"Especially `\`, which BibTeX allows, but it throws us off (semiverbatim vs
+   verbatim) when we store the bibentries before digesting the key!"*) — but
+   excluding it does not dodge the hazard, it just loses the entry: the key in
+   `@misc{apple\_rl,` ends at the backslash, and a bogus `\author={...}` field
+   name kills its entry outright. BibTeX takes `apple\_rl` as the key verbatim
+   and treats `\author` as an *unknown field* (hence its "empty author"
+   warning), keeping the entry. Witnesses 2605.14212, 2605.06974.
+
+**Known limit of (4) — Perl's warning is accurate downstream.** Admitting `\`
+makes the entry *parse*, and the `\author=` case then resolves end-to-end. But a
+`\cite{apple\_rl}` is **digested** to `bibrefs="apple_rl"` while the entry keeps
+the verbatim key `apple\_rl`, so that citation still dangles
+(`Missing bibkeys: apple_rl`). This is strictly better than dropping the entry,
+but making such a cite *link* needs key normalisation at the
+`\ProcessBibTeXEntry` seam — not done here.
+
+**Residual (not fixed):** a small tail of malformed-entry shapes still warns
+`bibtex:unbalanced`; they lose no cited keys — the #56 resync recovers the next
+entry — so it is log noise, not data loss.
+
+### 61. `\end{lstlisting}` terminates the listing anywhere on the line, not only at its start
+
+Perl `listings.sty.ltxml` L316 (`listingsReadRawLines`) anchors the terminator:
+
+```perl
+if ($line =~ /^\s*\\end\{\Q$environment\E\}(.*?)$/) {
+```
+
+so a line that carries content *before* the terminator —
+`</body></html> \end{lstlisting}` — never matches. The reader then consumes every
+remaining line, `\end{document}` included, and the document simply ends where the
+input does. Nothing is reported: the environment is not "unterminated" from the
+reader's point of view, it just ran out of file. **The entire tail of the paper is
+lost with zero `Error:`.**
+
+Real `listings` terminates there. Ground truth (pdflatex on the minimal repro
+`hello world \end{lstlisting}`): compiles cleanly, renders `hello world` as the
+listing's last line, and typesets the following text normally.
+
+We therefore search for `\end{<env>}` **anywhere** in the line: text before it
+becomes the listing's final line (whitespace-only before → no line, preserving
+the ordinary terminator-on-its-own-line case), text after it is unread — which is
+what Perl already does for the trailing part.
+
+This is a **shared upstream bug**, not a Rust regression: same-host Perl loses the
+tail identically and reports `Conversion complete: No obvious problems`. See
+KNOWN_PERL_ERRORS #51 — candidate to upstream.
+
+Witness **2605.11619**: a complete 54 KB paper silently lost its Conclusion,
+`\bibliography` and appendix (1.3 MB of HTML, 0 errors, 0 references). After:
+Conclusion + appendix restored and **32 references, 0 dangling**. Breadth: 7 of
+the 169 truncated papers in the 2026-07-14 empty-References sweep, 3 of them in
+the silent (no-`Error:`) subset. Regression test:
+`06_cluster_regressions::inline_end_lstlisting_does_not_swallow_the_document`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

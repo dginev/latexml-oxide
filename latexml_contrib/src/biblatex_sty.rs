@@ -692,9 +692,28 @@ LoadDefinitions!({
   //   * maxbibnames= package option now wired (opt@ scan), closing the
   //     earlier limitation.
 
-  // Perl L14-15: Warn that biblatex.sty is only minimally stubbed.
-  Warn!("missing_file", "biblatex.sty",
-    "biblatex.sty is only minimally stubbed and will not be interpreted raw.");
+  // ar5iv-bindings biblatex.sty.ltxml L14-15 opens with
+  //   Warn('missing_file', 'biblatex.sty',
+  //        'biblatex.sty is only minimally stubbed and will not be interpreted raw.')
+  // which this binding faithfully carried. That message is now doubly wrong,
+  // and expensively so:
+  //   * `missing_file` is inaccurate — nothing is missing. biblatex.sty is
+  //     deliberately NOT raw-loaded because this binding stands in for it. The
+  //     warning made biblatex.sty the #1 `missing_file` "what" in the corpus
+  //     (1,167 papers across sandboxes 2605+2606, second only to arydshln),
+  //     drowning genuinely missing files in bibliography surveys.
+  //   * "only minimally stubbed" stopped being true across audit cycles 1-4
+  //     above: author-year cite families, biber .bbl as ground truth,
+  //     \printbibliography, maxbibnames, structured \name parts.
+  // It also fires UNCONDITIONALLY at load, so it says nothing about the paper
+  // in hand — no diagnostic value, yet it downgraded every biblatex paper from
+  // `no_problem` to `warning`.
+  //
+  // Keep the one genuinely useful fact — this is an approximation, not the real
+  // package — as an Info, under an accurate category. A biblatex feature we get
+  // wrong reports itself through its own error where it happens.
+  Info!("bibliography", "biblatex",
+    "biblatex.sty is provided by a native binding, not interpreted raw.");
 
   // Perl option processing: maxbibnames, style/citestyle keyvals, ignore
   // the rest. Perl wires these through DefKeyVal `code` callbacks; here we

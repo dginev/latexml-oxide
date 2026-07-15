@@ -33,6 +33,8 @@
 //! - `skip_junk` is greedy: everything up to the next `@` is discarded (Perl L335-346: "anything
 //!   until @ as an implied comment").
 
+use std::collections::VecDeque;
+
 use latexml_core::s;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -116,13 +118,25 @@ type BibFieldList = Vec<(String, String)>;
 pub struct PreBibTeX {
   pub source:     Option<String>,
   pub file_label: String,
-  lines:          Vec<String>,
+  /// The unread tail, popped from the FRONT one physical line at a time.
+  /// A `VecDeque` (not a `Vec`) because `Vec::remove(0)` shifts the whole
+  /// remainder per line, making a `.bib` parse O(lines²): a 16k-entry file
+  /// took 1.42 s, 15× the per-entry cost of a 1k-entry one. `pop_front` is
+  /// O(1) and makes it linear.
+  lines:          VecDeque<String>,
   line:           String,
   lineno:         usize,
   pub preamble:   Vec<String>,
   pub entries:    Vec<ParsedEntry>,
   macros:         HashMap<String, String>,
   parsed:         bool,
+  /// Raw-source witness for `parse_value`. When `Some`, it holds the
+  /// value's starting `line` plus every continuation `extend_line`
+  /// has appended since — so `line` stays a true *suffix* of it, and
+  /// the consumed span is `witness[..witness.len() - line.len()]`.
+  /// Without this, a value spanning physical lines made `line` longer
+  /// than (and unrelated to) the snapshot it was diffed against.
+  raw_witness:    Option<String>,
 }
 
 /// One parsed entry. Mirrors Perl `LaTeXML::Pre::BibTeX::Entry` (only
@@ -162,12 +176,8 @@ pub enum BibParseError {
 impl PreBibTeX {
   /// Perl `newFromString` (L77-86).
   pub fn new_from_string(s: &str) -> Self {
-    let mut lines: Vec<String> = s.split('\n').map(String::from).collect();
-    let first = if lines.is_empty() {
-      String::new()
-    } else {
-      lines.remove(0)
-    };
+    let mut lines: VecDeque<String> = s.split('\n').map(String::from).collect();
+    let first = lines.pop_front().unwrap_or_default();
     Self {
       source: None,
       file_label: s!("<anonymous>"),
@@ -178,14 +188,20 @@ impl PreBibTeX {
       entries: Vec::new(),
       macros: default_macros(),
       parsed: false,
+      raw_witness: None,
     }
   }
 
   /// Perl `newFromFile` (L60-75). Reads the file at `path` directly;
   /// search-path resolution is the caller's responsibility (we do not
   /// reach into `state` here so the parser stays unit-testable).
+  ///
+  /// Decoded via `decode_input_bytes`, not `read_to_string`: a `.bib` has no
+  /// `\inputencoding` to declare, real `bibtex` is 8-bit clean, and a strict
+  /// UTF-8 read turns one stray Cp1252 byte into a lost bibliography
+  /// (witness 2605.00490).
   pub fn new_from_file(path: &str) -> std::io::Result<Self> {
-    let content = std::fs::read_to_string(path)?;
+    let content = latexml_core::mouth::decode_input_bytes(&std::fs::read(path)?);
     let mut me = Self::new_from_string(&content);
     me.source = Some(path.to_string());
     me.file_label = path.to_string();
@@ -244,17 +260,44 @@ impl PreBibTeX {
   // ---- top-level parse ------------------------------------------------------
 
   /// Perl `parseTopLevel` (L138-151).
+  ///
+  /// DIVERGENCE (OXIDIZED_DESIGN #58): a malformed entry is reported and
+  /// **resynced at the next `@`** instead of aborting the file. Perl lets the
+  /// first parse error propagate out of `parseTopLevel`, so a single unbalanced
+  /// `{` anywhere in a `.bib` silently costs every LATER entry — the tail of the
+  /// bibliography just disappears. Real BibTeX does not: on "I was expecting a
+  /// `,' or a `}'" it reports the error and skips to the next entry
+  /// (`bibtex.web`), which is the behaviour authors' `.bbl` files are built
+  /// against. `skip_junk` is already exactly that resync, so the loop simply
+  /// keeps going. The malformed entry itself is dropped (as BibTeX drops it).
+  /// Corpus: 19 papers / 298 messages carry `bibtex:unbalanced`.
   pub fn parse_top_level(&mut self) -> Result<(), BibParseError> {
     while self.skip_junk() {
       let typ = match self.parse_entry_type() {
         Some(t) => t,
         None => continue,
       };
-      match typ.as_str() {
-        "preamble" => self.parse_preamble()?,
-        "string" => self.parse_macro()?,
-        "comment" => self.parse_comment()?,
-        _ => self.parse_entry(&typ)?,
+      let outcome = match typ.as_str() {
+        "preamble" => self.parse_preamble(),
+        "string" => self.parse_macro(),
+        "comment" => self.parse_comment(),
+        _ => self.parse_entry(&typ),
+      };
+      if let Err(e) = outcome {
+        // Loud, never silent: the entry IS lost, and the reader must know
+        // WHICH one. NB `Warn!` takes a pre-formatted message and appends any
+        // further args as separate detail LINES — it does NOT interpolate
+        // `{}`, so the message must be built with `s!` first.
+        latexml_core::Warn!(
+          "bibtex",
+          "unbalanced",
+          s!(
+            "{} line {}: {:?}; resyncing at the next '@'",
+            self.to_string_label(),
+            self.lineno,
+            e
+          )
+        );
       }
     }
     self.parsed = true;
@@ -280,10 +323,20 @@ impl PreBibTeX {
     Ok(())
   }
 
-  /// Perl `parseComment` (L177-181). The value is parsed and
-  /// discarded.
+  /// Perl `parseComment` (L177-181). The value is parsed and discarded.
+  ///
+  /// An **undelimited** `@Comment` is not an error: BibTeX simply ignores
+  /// everything after `@comment` up to the next entry (`bibtex.web` never
+  /// scans it), and `.bib` files in the wild use bare separator banners like
+  /// `@Comment ------AAAAAA------`. Perl demands a delimited string here and
+  /// errors out; we discard the junk and carry on, which `skip_junk` in the
+  /// caller does anyway. OXIDIZED_DESIGN #60, witness 2605.06974 (26 such
+  /// banners, each costing the entry that followed it).
   fn parse_comment(&mut self) -> Result<(), BibParseError> {
-    let _ = self.parse_string()?;
+    self.skip_white();
+    if self.line.starts_with('"') || self.line.starts_with('{') {
+      let _ = self.parse_string()?;
+    }
     Ok(())
   }
 
@@ -477,7 +530,10 @@ impl PreBibTeX {
     if self.lines.is_empty() {
       return Ok(false);
     }
-    let next = self.lines.remove(0);
+    let next = match self.lines.pop_front() {
+      Some(n) => n,
+      None => return Ok(false),
+    };
     // Perl `<$BIB>` lines keep the trailing newline; `split /\n/` on a
     // string does not. Re-insert one to preserve line semantics so
     // that a `%`-comment inside a continued value still terminates on
@@ -485,6 +541,12 @@ impl PreBibTeX {
     // comment but other downstream digesters might).
     self.line.push('\n');
     self.line.push_str(&next);
+    // Mirror the append into the raw witness so `line` remains a suffix
+    // of it across a multi-line value (see `raw_witness`).
+    if let Some(w) = self.raw_witness.as_mut() {
+      w.push('\n');
+      w.push_str(&next);
+    }
     self.lineno += 1;
     Ok(true)
   }
@@ -505,9 +567,10 @@ impl PreBibTeX {
         // Pull the raw form *before* macro expansion (parse_string
         // strips delimiters; for the raw side we want the actual
         // source bytes, delimiters and all).
-        let raw_start_line = self.line.clone();
+        self.raw_witness = Some(self.line.clone());
         let s = self.parse_string()?;
-        let raw_consumed = consumed_diff(&raw_start_line, &self.line);
+        let witness = self.raw_witness.take().unwrap_or_default();
+        let raw_consumed = consumed_diff(&witness, &self.line);
         raw.push_str(&raw_consumed);
         value.push_str(&s);
       } else if let Some(name) = self.parse_field_name() {
@@ -550,7 +613,7 @@ impl PreBibTeX {
       if self.lines.is_empty() {
         return false;
       }
-      self.line = self.lines.remove(0);
+      self.line = self.lines.pop_front().unwrap_or_default();
       self.lineno += 1;
     }
   }
@@ -579,7 +642,7 @@ impl PreBibTeX {
       if self.lines.is_empty() {
         return false;
       }
-      self.line = self.lines.remove(0);
+      self.line = self.lines.pop_front().unwrap_or_default();
       self.lineno += 1;
     }
   }
@@ -657,6 +720,35 @@ fn is_bib_name_or_noise(c: char) -> bool {
   if c.is_ascii_alphanumeric() {
     return true;
   }
+  // ...plus `\`. Perl excludes it ON PURPOSE (`BibTeX.pm` L215-217: "Especially
+  // \", which BibTeX allows, but it throws us off (semiverbatim vs verbatim)
+  // when we store the bibentries before digesting the key!"). But excluding it
+  // does not avoid the hazard, it just loses the entry: `@misc{apple\_rl,`
+  // ends the key at the backslash and the whole entry is dropped, and a bogus
+  // `\author={...}` field name kills its entry outright. BibTeX accepts both —
+  // it takes `apple\_rl` as the key verbatim, and treats `\author` as an
+  // unknown field (hence its "empty author" warning), keeping the entry. We do
+  // the same: the key is matched byte-for-byte against the `\cite`, which
+  // carries the identical bytes, and an unknown field name is simply never
+  // consumed by any downstream handler.
+  // OXIDIZED_DESIGN #60. Witnesses 2605.14212 (`apple\_rl`), 2605.06974
+  // (`\author=`/`\title=` field names).
+  if c == '\\' {
+    return true;
+  }
+  // ...plus any non-ASCII. Perl's class is the literal `a-zA-Z0-9`
+  // (`BibTeX.pm` L221), so it stops dead at the first accent — a Zotero-style
+  // key like `alvarado-leañosLasing2022` yields `Expected ","` and the entry
+  // is lost. BibTeX itself is byte-oriented and accepts such keys (verified:
+  // `bibtex` 0.99d cites `alvarado-leañosLasing2022` with only a benign
+  // "empty journal" warning), and the `\cite` in the .tex carries the same
+  // bytes, so the two match. Non-ASCII is never a BibTeX *delimiter*, so
+  // admitting it here cannot swallow structure.
+  // OXIDIZED_DESIGN #60. Witnesses 2605.28695 (`ñ`), 2605.00121 (a stray
+  // U+FE0F VARIATION SELECTOR-16 the author typed into the key).
+  if !c.is_ascii() {
+    return true;
+  }
   // BIBNOISE: . + - * / ^ _ : ; @ ` ? ! ~ | < > $ [ ]
   matches!(
     c,
@@ -686,34 +778,55 @@ fn is_bib_name_or_noise(c: char) -> bool {
 /// Compute the byte-slice that was consumed from `before` to produce
 /// `after`. Used by `parse_value` to recover the raw source of a
 /// just-parsed string without re-parsing.
+///
+/// `after` must be a *suffix* of `before` — the parser only ever pops
+/// a prefix off `line`, and `raw_witness` mirrors `extend_line`'s
+/// appends so that holds across multi-line values too. Slicing at
+/// `before.len() - after.len()` is then a char boundary by
+/// construction. Callers that break the suffix invariant get an empty
+/// raw rather than a panic or a torn string: byte arithmetic on
+/// unrelated strings used to slice mid-codepoint and panic on any
+/// non-ASCII `.bib` (witnesses 2605.02644, 2605.15313).
 fn consumed_diff(before: &str, after: &str) -> String {
-  if before.len() < after.len() {
-    return String::new();
+  match before.len().checked_sub(after.len()) {
+    Some(idx) if before.is_char_boundary(idx) && &before[idx..] == after => {
+      before[..idx].to_string()
+    },
+    _ => {
+      debug_assert!(
+        false,
+        "consumed_diff: {after:?} is not a suffix of {before:?}"
+      );
+      String::new()
+    },
   }
-  before[..before.len() - after.len()].to_string()
 }
 
 /// Find the byte index immediately after the closing brace of a
 /// `{`-prefixed balanced-brace group in `s`. Returns `None` if no
 /// balanced close exists in `s`.
 ///
-/// Honors backslash-escaped `\{` and `\}` as a single token, matching
-/// the Perl `Text::Balanced::extract_bracketed($s, '{}')` semantics
-/// for the simple pair specification.
+/// Braces are counted **literally**: a backslash does NOT escape them.
+/// This is BibTeX's own rule (`bibtex.web`'s brace-depth scan knows
+/// nothing about `\`), and it is deliberately NOT Perl's — Perl uses
+/// `Text::Balanced::extract_bracketed($line, '{}')`, which treats `\}`
+/// as escaped and so returns undef for a title like
+/// `"...boldsymbol\{Q\}..."`. Perl then extends line after line to EOF
+/// and abandons the whole file, losing every remaining entry.
+///
+/// Ground truth is the real tool: `bibtex` 0.99d parses that same entry
+/// with only a benign "empty journal" warning, so the references exist
+/// in the author's PDF. OXIDIZED_DESIGN #60, KNOWN_PERL_ERRORS #51.
+/// Witness 2605.00264 (`\{Q\}` in `chen2017ucb`): 1144/1169 entries
+/// parsed before, 1169 after.
 fn find_balanced_brace_end(s: &str) -> Option<usize> {
   let bytes = s.as_bytes();
   if bytes.first() != Some(&b'{') {
     return None;
   }
   let mut depth: i32 = 0;
-  let mut i = 0;
-  while i < bytes.len() {
-    match bytes[i] {
-      b'\\' if i + 1 < bytes.len() => {
-        // Skip the escaped char
-        i += 2;
-        continue;
-      },
+  for (i, b) in bytes.iter().enumerate() {
+    match b {
       b'{' => depth += 1,
       b'}' => {
         depth -= 1;
@@ -723,7 +836,6 @@ fn find_balanced_brace_end(s: &str) -> Option<usize> {
       },
       _ => {},
     }
-    i += 1;
   }
   None
 }
@@ -739,6 +851,158 @@ mod tests {
     let mut p = PreBibTeX::new_from_string(s);
     p.parse_top_level().expect("parse_top_level");
     p
+  }
+
+  fn raw_field<'a>(e: &'a ParsedEntry, name: &str) -> &'a str {
+    e.raw_fields
+      .iter()
+      .find(|(n, _)| n == name)
+      .map(|(_, v)| v.as_str())
+      .unwrap_or_else(|| panic!("no raw field {name:?} in {:?}", e.raw_fields))
+  }
+
+  /// A value spanning physical lines whose first line holds a
+  /// multi-byte char used to slice mid-codepoint and panic:
+  /// `end byte index 3 is not a char boundary` — every non-ASCII
+  /// `.bib` with a wrapped field. Witnesses: 2605.02644, 2605.15313
+  /// (21 papers in the 2605 rerun).
+  #[test]
+  fn multiline_value_with_utf8_does_not_panic() {
+    let p = parse("@article{k,\n  title = {Müller and Sons\n    and More}, year = {20},\n}\n");
+    assert_eq!(p.entries.len(), 1);
+    let e = &p.entries[0];
+    assert_eq!(
+      e.fields
+        .iter()
+        .find(|(n, _)| n == "title")
+        .map(|(_, v)| v.as_str()),
+      Some("Müller and Sons\n    and More")
+    );
+  }
+
+  /// `\{`/`\}` inside a value do NOT escape the brace count — BibTeX's own
+  /// rule. Perl's `Text::Balanced` disagrees, fails to extract, extends to
+  /// EOF and abandons the rest of the file; real `bibtex` 0.99d parses this
+  /// entry fine (only "empty journal"), so the reference is in the PDF.
+  /// Witness 2605.00264 `chen2017ucb` — 25 entries were lost this way.
+  #[test]
+  fn escaped_braces_do_not_escape_the_brace_count() {
+    let p = parse(concat!(
+      "@article{chen2017ucb,\n",
+      "    title = \"{UCB} via {\\textdollar}{\\textbackslash}boldsymbol\\{Q\\}{\\textdollar}-Ensembles\"\n",
+      "}\n\n",
+      "@article{after2018,\n  title = \"An entry that follows\"\n}\n"
+    ));
+    // BOTH entries survive: the escaped-brace title parses, and nothing ran
+    // away to EOF and swallowed its successor.
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["chen2017ucb", "after2018"], "entries: {keys:?}");
+  }
+
+  /// A non-ASCII cite key (Zotero writes these constantly) must not end the
+  /// key. Perl's class is the literal `a-zA-Z0-9`, so it stops at the accent
+  /// and reports `Expected ","`; real `bibtex` 0.99d accepts the key, and the
+  /// `\cite` carries the same bytes. Witness 2605.28695.
+  #[test]
+  fn non_ascii_cite_key_is_not_truncated() {
+    let p = parse(concat!(
+      "@article{alvarado-lea\u{f1}osLasing2022,\n  title = {Lasing},\n  year = {2022}\n}\n\n",
+      "@article{after2018,\n  title = {Follows}\n}\n"
+    ));
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(
+      keys,
+      vec!["alvarado-lea\u{f1}osLasing2022", "after2018"],
+      "entries: {keys:?}"
+    );
+  }
+
+  /// A backslash inside a cite key must not end the key: `bibtex` 0.99d emits
+  /// `\bibitem{apple\_rl}`, so the entry exists. Perl excludes `\` from the
+  /// name class deliberately, which merely loses the entry instead.
+  ///
+  /// SCOPE — this pins the PARSER only. Perl's stated worry
+  /// (`BibTeX.pm` L215-217, "semiverbatim vs verbatim ... before digesting the
+  /// key") is REAL and still unresolved downstream: `\cite{apple\_rl}` digests
+  /// to `bibrefs="apple_rl"` while the entry keeps the verbatim key
+  /// `apple\_rl`, so the citation still dangles (`Missing bibkeys: apple_rl`).
+  /// Admitting `\` is still strictly better — the entry survives rather than
+  /// being dropped, and the sibling `\author=` case (below) resolves fully —
+  /// but making such a cite LINK needs key normalisation at the
+  /// `\ProcessBibTeXEntry` seam. Witness 2605.14212.
+  #[test]
+  fn backslash_in_cite_key_is_not_truncated() {
+    let p = parse(concat!(
+      "@misc{apple\\_rl,\n  title={Reinforcement Learning},\n  year={2024}\n}\n\n",
+      "@article{after2018,\n  title = {Follows}\n}\n"
+    ));
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["apple\\_rl", "after2018"], "entries: {keys:?}");
+  }
+
+  /// A bogus `\author={...}` field name must not cost the whole entry.
+  /// `bibtex` 0.99d keeps `DrmotaTichy2006` and merely warns "empty author
+  /// and editor" — i.e. the unrecognised field is ignored, the entry stands.
+  /// Witness 2605.06974.
+  #[test]
+  fn backslash_field_name_does_not_drop_the_entry() {
+    let p = parse(concat!(
+      "@book {DrmotaTichy2006,\n",
+      "\\author={Drmota, M.},\n",
+      "\\title={Sequences and applications},\n",
+      "year={2006}\n}\n"
+    ));
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["DrmotaTichy2006"], "entries: {keys:?}");
+    // `year` still lands as a real field; the bogus ones do not masquerade
+    // as `author`/`title` (bibtex reports those as EMPTY).
+    let e = &p.entries[0];
+    assert_eq!(
+      e.fields
+        .iter()
+        .find(|(n, _)| n == "year")
+        .map(|(_, v)| v.as_str()),
+      Some("2006")
+    );
+    assert!(
+      e.fields.iter().all(|(n, _)| n != "author" && n != "title"),
+      "a `\\author=` field must not be read as `author`: {:?}",
+      e.fields
+    );
+  }
+
+  /// A bare `@Comment` banner (no braces/quotes) is legal junk that BibTeX
+  /// ignores. Demanding a delimited string made it an Err, which
+  /// `parse_top_level` then reported as `bibtex:unbalanced ... resyncing` —
+  /// a warning that claims an entry was LOST when none was (`skip_junk`
+  /// recovers the next `@` regardless). Witness 2605.06974: 26 banners, 26
+  /// false alarms, 0 real losses.
+  ///
+  /// Asserted at the `parse_comment` layer because that is exactly what
+  /// changed: at the `parse_top_level` layer the resync masks it, so an
+  /// entries-based assertion would pass either way (it did).
+  #[test]
+  fn undelimited_comment_banner_is_not_an_error() {
+    let mut p = PreBibTeX::new_from_string(" -----------AAAAAAA-------------\n");
+    assert!(
+      p.parse_comment().is_ok(),
+      "a bare `@Comment` banner must not raise a parse error"
+    );
+    // A properly delimited comment still parses (and is discarded).
+    let mut q = PreBibTeX::new_from_string(" {a delimited comment}\n");
+    assert!(q.parse_comment().is_ok());
+  }
+
+  /// The same defect without the panic: on an all-ASCII wrapped value
+  /// the bogus arithmetic still landed on a char boundary and silently
+  /// returned a *truncated* raw. Guards the torn-string half.
+  #[test]
+  fn multiline_value_raw_keeps_the_whole_consumed_span() {
+    let p = parse("@article{k,\n  title = {A title that\n    wraps},\n}\n");
+    assert_eq!(
+      raw_field(&p.entries[0], "title"),
+      "{A title that\n    wraps}"
+    );
   }
 
   #[test]
@@ -972,8 +1236,77 @@ value} }
   fn balanced_brace_finder() {
     assert_eq!(find_balanced_brace_end("{abc}xyz"), Some(5));
     assert_eq!(find_balanced_brace_end("{a{b}c}d"), Some(7));
-    assert_eq!(find_balanced_brace_end(r"{a\}b}"), Some(6));
+    // A backslash does NOT escape the brace count (BibTeX's rule), so the
+    // group closes at the FIRST `}` — this asserted Some(6) while we mirrored
+    // Perl's Text::Balanced, which is what lost real entries (#58).
+    assert_eq!(find_balanced_brace_end(r"{a\}b}"), Some(4));
     assert_eq!(find_balanced_brace_end("{abc"), None);
     assert_eq!(find_balanced_brace_end("noleadingbrace"), None);
+  }
+
+  /// Witness 2605.00490: a JabRef `.bib` self-declaring `% Encoding: Cp1252`.
+  /// `read_to_string` rejected the whole file ("stream did not contain valid
+  /// UTF-8"), so the paper rendered a References section with zero entries and
+  /// NO error — a silent, total loss. Real `bibtex` 0.99d is 8-bit clean, and
+  /// Perl passes the raw bytes through (`Mouth.pm` L75-80).
+  #[test]
+  fn non_utf8_bib_file_is_read_not_rejected() {
+    // `\xe9` is `é` in Cp1252/Latin-1 — a lone continuation byte that is
+    // invalid UTF-8, exactly what a JabRef-era file carries in an author name.
+    let mut bytes = b"@article{Cafe2020,\n  author = {Caf".to_vec();
+    bytes.push(0xe9);
+    bytes.extend_from_slice(b" and R\xe9mi},\n  year = {2020}\n}\n");
+
+    let path = std::env::temp_dir().join("latexml_oxide_cp1252_witness.bib");
+    std::fs::write(&path, &bytes).expect("write fixture");
+    let mut p = PreBibTeX::new_from_file(path.to_str().unwrap()).expect("non-UTF-8 .bib must read");
+    p.parse_top_level().expect("parse_top_level");
+    let _ = std::fs::remove_file(&path);
+
+    let keys: Vec<&str> = p.entries.iter().map(|e| e.key.as_str()).collect();
+    assert_eq!(keys, vec!["Cafe2020"], "entries: {keys:?}");
+    // The accented bytes survive as the Latin-1 characters they encode,
+    // rather than being replaced or dropped.
+    let author = p.entries[0]
+      .fields
+      .iter()
+      .find(|(n, _)| n == "author")
+      .map(|(_, v)| v.as_str())
+      .unwrap_or_default();
+    assert_eq!(author, "Café and Rémi", "author: {author:?}");
+  }
+
+  /// The Latin-1 fallback is per LINE, so one stray byte in a mostly-UTF-8
+  /// `.bib` must not mojibake the correctly-encoded names around it.
+  #[test]
+  fn one_bad_byte_does_not_mojibake_the_rest_of_the_file() {
+    let mut bytes = b"@article{Mixed2021,\n  author = {Zo\xebe},\n".to_vec();
+    // A properly UTF-8-encoded name on its own line: it must survive verbatim.
+    bytes.extend_from_slice("  title = {Ünicode Bewahren},\n  year = {2021}\n}\n".as_bytes());
+
+    let path = std::env::temp_dir().join("latexml_oxide_mixed_encoding_witness.bib");
+    std::fs::write(&path, &bytes).expect("write fixture");
+    let mut p = PreBibTeX::new_from_file(path.to_str().unwrap()).expect("mixed-encoding .bib");
+    p.parse_top_level().expect("parse_top_level");
+    let _ = std::fs::remove_file(&path);
+
+    let field = |n: &str| {
+      p.entries[0]
+        .fields
+        .iter()
+        .find(|(f, _)| f == n)
+        .map(|(_, v)| v.clone())
+        .unwrap_or_default()
+    };
+    // The bad line decodes as Latin-1 ...
+    assert_eq!(field("author"), "Zoëe", "author: {:?}", field("author"));
+    // ... while the valid-UTF-8 line is untouched (a whole-buffer Latin-1
+    // fallback would have turned this into "Ãnicode").
+    assert_eq!(
+      field("title"),
+      "Ünicode Bewahren",
+      "title: {:?}",
+      field("title")
+    );
   }
 }

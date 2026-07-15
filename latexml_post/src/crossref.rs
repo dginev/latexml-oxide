@@ -954,10 +954,25 @@ impl CrossRef {
       let sep = bibref
         .get_attribute("separator")
         .unwrap_or_else(|| ",".to_string());
-      let lists_str = bibref
-        .get_attribute("inlist")
-        .unwrap_or_else(|| "bibliography".to_string());
-      let lists: Vec<&str> = lists_str.split_whitespace().collect();
+      // The lists to search, most-specific first. Perl CrossRef.pm L515 reads
+      // `inlist || 'bibliography'` — an *exclusive* choice, which strands every
+      // citation of a document that loads `bibunits`/`chapterbib` but keeps a
+      // single main `\bibliography`: `\cite` stamps CITE_UNIT=bu0 onto the
+      // bibref, while the bibitems register under the default `bibliography`
+      // list, so the unit-only lookup never matches (witness 2303.06077: 93
+      // bibitems, 93 dangling keys, 0 links).
+      //
+      // Perl's own Scan.pm L379-380 spells the intended chain — unit lists
+      // PLUS the main one ("Citation specifies main 'bibliography', as well as
+      // any specific others (eg. per chapter)") — and registers the reference
+      // under both. We follow Scan's convention here so the two agree; the unit
+      // list still wins, since the search breaks on the first list that yields
+      // an id. OXIDIZED_DESIGN #59, KNOWN_PERL_ERRORS #50.
+      let inlist = bibref.get_attribute("inlist").unwrap_or_default();
+      let mut lists: Vec<&str> = inlist.split_whitespace().collect();
+      if !lists.contains(&"bibliography") {
+        lists.push("bibliography");
+      }
 
       let mut refs: Vec<NodeData> = Vec::new();
       for key in keys_str.split(',').filter(|k| !k.is_empty()) {

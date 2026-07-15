@@ -15,7 +15,7 @@
 
 ## Current status
 
-- `cargo test --tests`: **1534 / 0 / 0** (on `fidelity-improvements-072026`; the
+- `cargo test --tests`: **1568 / 0 / 0** (on `public-release-prep-week`; the
   completed 2026-07 session logs are archived — see the pointer below).
 
 - **2026-07-09 — `\AtBeginDocument` #2754/#2846 re-done via context-aware `\par`
@@ -551,6 +551,154 @@ bibliography, which is then collateral damage:
 So the real beyond-Perl lever is **body-error resilience** (2 papers where a
 mid-body digestion error truncates the tail); the other 2 are source quirks/parity.
 Post-release (release-week bias is stabilize, and these are deep digestion work).
+
+#### Corpus-scale confirmation (swept 2026-07-14, sandbox-2605, 30,058 result ZIPs)
+
+The 297-paper scan above is confirmed at corpus scale, and the split is now
+measured. Detection is a **rendering** property, not a cortex category (there is
+no "empty References" category): read the produced HTML out of each result ZIP
+and count `ltx_bibitem`. Baseline (pre-fix run): **ok 29,308 (97.5%) / EMPTY 324
+(1.1%) / no-bib 359 / no-html 67**.
+
+The EMPTY bucket is NOT one defect — decomposing it is the whole point, and a
+first pass that lumps them together mis-ranks the work:
+
+| class | n | what it is |
+|---|---|---|
+| **TRUNCATED** | 169 | citations rendered but **no bibliography element at all** — the document died before reaching `\bibliography`. NOT a bibliography bug. |
+| **NO-CITES** | 92 | a literal "References" heading but no citations/bibliography markup — mostly author-hand-rolled lists; largely parity. |
+| **EMPTY-SECTION** | 63 | bibliography element present, **zero entries** — the genuine bibliography defect. |
+
+So **truncation, not bibliography code, is the dominant cause of a missing
+References section** (169 vs 63) — the 2026-07-12 hypothesis, now quantified.
+Body-error resilience remains the top lever.
+
+**TRUNCATED (169) is REAL, not a stale-ZIP artifact** — spot-checked 4 witnesses
+of the largest sub-cluster on the current binary: 3 still truncate
+(`2605.00025` 455 errors, `2605.09913` 91, `2605.12696` 14; only `2605.09761`
+recovered). Contrast the EMPTY-SECTION side, where stale ZIPs DO dominate
+(`2605.02024` shows 38 bibitems / 0 dangling on the current binary) — so
+**re-convert before chasing any EMPTY-SECTION paper**.
+
+Dominant TRUNCATED trigger (first error, not the cascade):
+
+| trigger | n | note |
+|---|---|---|
+| `unexpected:\lx@end@inline@math` | 25 | math-mode desync |
+| `unexpected:\lx@begin@alignment` | 19 | alignment opened inside inline math |
+| *no errors at all* | 17 | **silent** content loss — worst kind |
+| `unexpected:_` / `^` | ~37 | sub/superscript outside math (same family) |
+| `unexpected:\lx@tag@intags` | 4 | the `\fnum@figure` cascade above |
+
+The math-desync + alignment families together are ~66/169 (39%) and look like one
+root family: a group/mode nesting break around inline math. **11 of the 169 are
+the known mhchem `\ce`-in-`align` parity limit** (`2605.12696`: `\ce{CO2(aq) +
+H2O &<=> H2CO3}` inside `align` — identical in same-host Perl, investigated
+2026-06-27, NOT a Rust gap). The remaining ~147 are the concrete next target for
+body-error resilience.
+
+**One TRUNCATED sub-cluster is now FIXED — inline `\end{lstlisting}`** (7 of the
+169, 3 of them in the silent subset). See OXIDIZED_DESIGN #61 /
+KNOWN_PERL_ERRORS #51: Perl anchors the terminator regex at the line start, so
+`</body></html> \end{lstlisting}` never terminates and the reader eats the rest
+of the file, `\end{document}` included — **zero `Error:`**. pdflatex accepts the
+same input and renders the leading text as the listing's last line, so both
+LaTeXML engines were wrong vs the PDF (same-host Perl: "No obvious problems", tail
+gone). Fix = match `\end{<env>}` anywhere in the line. 5 of the 7 witnesses
+recover: `2605.11619` 0 → 32 refs (Conclusion + appendix restored), `2605.29675`
+107, `2605.21677` 66, `2605.29786` 42, `2605.07451` 28 — **275 references**. The
+other 2 (`2605.08378`, `2605.08915`) have unrelated causes.
+
+**This is why the "17 silent" subset is the highest-value slice**: no `Error:`
+means no cortex signal, so these never surface in any severity report — the only
+way to find them is a rendering sweep like this one.
+
+Within EMPTY-SECTION the one clean, landed win was the **non-UTF-8 `.bib`**
+cluster (below). Remaining EMPTY-SECTION sub-clusters, not yet triaged:
+`undefined:\affiliations/\emails` (7), `post:convert` (8), a revtex4-2 +
+bibunits `bu1.bbl`/`bu2.bbl` group (7).
+
+**Trap (hit and corrected):** the classifier's citation needle must be real
+citation markup (`ltx_cite`/`ltx_bibref`/`ltx_missing_citation`) — `ltx_ref`
+also matches `\ref` to a figure, which over-counted TRUNCATED 231 → 169.
+Second trap: **pick the main file cortex picked** (`Processing content …` in
+the log). A `grep -rl '\begin{document}'` harness picks the first match, which
+for `2605.30360` was the decoy `proof.tex`, not `polyhist.tex` — that alone
+manufactured a false "still broken" verdict.
+
+#### `\renewcommand*{\fnum@figure}[1]` truncates the document — ANALYSED 2026-07-14, NOT fixed (needs a decision)
+
+Witness `2605.01731` (cas-sc): 18 figures × 3 errors
+(`\lx@tag@intags`/`\lx@tag`/`\end{figure}` "Attempt to end mode
+restricted_horizontal") → body collapses to ONE section, 19 `<bibref>` survive
+but **no `<bibliography>` element at all**. Breadth: **18 papers corpus-wide**
+(`grep 'lx@tag@intags'`), 5 of them in the EMPTY set.
+
+Root cause is a real-world author hack that pdflatex tolerates:
+
+```tex
+% Change Fig. 1: to Fig. 1.
+\makeatletter
+\renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+\makeatother
+```
+
+Real `\fnum@figure` takes **no** argument. In LaTeX, `\@caption` passes it to
+`\@makecaption{\csname fnum@\@captype\endcsname}{…}`, whose body is
+`\sbox\@tempboxa{#1: #2}` — so the author's 1-arg version **eats the `:`**,
+which is exactly their stated intent. It works in pdflatex.
+
+LaTeXML has no `:` token to eat: `\format@title@figure` is
+`\lx@tag[][: ]{\lx@fnum@@{figure}}#1` — the separator is a **tag attribute**, not
+a token. So `\csname fnum@figure\endcsname` (Base_Utility L1041-1043) grabs the
+group's closing `}` instead, wrecking the caption and cascading.
+
+This is **PARITY** — Perl's `\lx@fnum@@` is identical — so fixing it is a
+surpass-Perl divergence, and both engines are wrong vs the PDF. Candidate fix:
+expand as `\csname fnum@#1\endcsname{}` so an arg-taking `\fnum@<type>` eats a
+harmless empty group (reproducing pdflatex's result) while a normal 0-arg one
+just gains an empty group. **Not done**: `\lx@fnum@@` formats every figure/table
+caption in every document — blast radius far out of proportion to 18 papers, and
+release-week bias is stabilize. Needs a user decision + a full-suite diff.
+
+Minimal repro (article + subfigure + the `\renewcommand*` above) reproduces the
+exact 3-error signature; `cas-sc` is NOT implicated (it was the first
+hypothesis and it was wrong — plain `article` reproduces).
+
+#### Non-UTF-8 `.bib` silently dropped the whole bibliography — LANDED 2026-07-14
+
+`std::fs::read_to_string` hard-errors on the first non-UTF-8 byte, so a legacy
+`.bib` lost **every** entry and rendered an empty References section with **no
+`Error:`** — a silent, total loss. Witness `2605.00490`: a JabRef file
+self-declaring `% Encoding: Cp1252`. Real `bibtex` 0.99d is 8-bit clean, and
+Perl never fails here (`Mouth.pm` L75-80: decode with `Encode::FB_DEFAULT`, or
+pass the raw bytes through when `PERL_INPUT_ENCODING` is undef) — so this was
+**GENUINE-RUST-ONLY**, not parity.
+
+Fix: both `.bib` read sites (`pre_bibtex::new_from_file` engine-side,
+`make_bibliography::convert_bib_file_to_xml` post-side) now decode via the new
+shared `latexml_core::mouth::decode_input_bytes` — UTF-8, else a **Latin-1
+passthrough** (lossless byte → char, so accented names survive intact instead of
+collapsing to U+FFFD; legacy `.bib` files are overwhelmingly Latin-1/Cp1252).
+The Mouth's own no-encoding branch now calls the same helper, so there is one
+implementation rather than three (the "bespoke duplicate shadowing a faithful
+port" anti-pattern has already bitten twice here).
+
+Breadth: 17 papers corpus-wide, 10 of them EMPTY. All 10 recovered: **0 → 336
+references** (7/15/5/22/57/25/39/48/108/10), 0 dangling.
+
+Red/green tests: `pre_bibtex::tests::non_utf8_bib_file_is_read_not_rejected`
+(engine reader) **and** `06_cluster_regressions::non_utf8_bib_file_still_yields_a_bibliography`
+(post path — where the production failure actually was; the engine-side test
+alone would NOT have guarded it). Fixture `cluster_regressions/cp1252_refs.bib`
+carries a raw `0xe9`; it is asserted non-UTF-8 so the test cannot go vacuous.
+Note when asserting on rendered author names: `author = {Café, André}` is
+BibTeX's `Last, First`, so the style abbreviates the given name — the entry
+renders `A. Café`, and only the SURNAME is a safe needle.
+
+Third test: `one_bad_byte_does_not_mojibake_the_rest_of_the_file` pins the
+per-line granularity (a whole-buffer fallback turns a valid-UTF-8 `Ü` into
+`Ã\u{9c}` — verified by reverting).
 
 ### >500 MB `index.xml` (Nasser) — INVESTIGATED 2026-07-10
 

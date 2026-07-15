@@ -1,0 +1,25 @@
+\documentclass{article}
+\usepackage[lite,abbrev,msc-links,alphabetic]{amsrefs}
+\begin{document}
+Cited inline: \cite{Bei87} and \cite{Smith2020}.
+% amsrefs writes the bibliography INTO the document (no external .bib, and so
+% no @files for getBibliographies to resolve). Upstream collects entries only
+% from external bib documents and then deletes every //ltx:bibentry, dropping
+% the whole bibliography silently. Witness 2605.01646.
+\begin{bibdiv}
+\begin{biblist}
+\bib{Bei87}{article}{
+   author={Beilinson, A.},
+   title={Height pairing between algebraic cycles},
+   journal={Contemp. Math.},
+   date={1987},
+}
+\bib{Smith2020}{article}{
+   author={John Smith},
+   title={On Examples},
+   journal={JMP},
+   date={2020},
+}
+\end{biblist}
+\end{bibdiv}
+\end{document}

@@ -169,6 +169,49 @@ impl Object for Mouth {
   }
 }
 
+/// Decode raw input bytes as text when no encoding has been declared:
+/// valid UTF-8 is taken as-is, anything else is a Latin-1 passthrough
+/// (byte → char).
+///
+/// Mirrors Perl `Mouth.pm` L75-80: when `PERL_INPUT_ENCODING` is undef Perl
+/// never decodes, so the bytes pass through untouched and the read cannot
+/// fail. The point is that a non-UTF-8 file is **never lost** — only decoded
+/// conservatively. `std::fs::read_to_string` gives the opposite behaviour
+/// (hard error on the first stray byte), which silently cost witness
+/// 2605.00490 its entire bibliography: a JabRef-written `.bib` self-declaring
+/// `% Encoding: Cp1252`. Real `bibtex` 0.99d is 8-bit clean and reads it fine.
+///
+/// Latin-1 (rather than `from_utf8_lossy`) is the better fallback here
+/// because it is lossless byte → char: legacy `.bib` files are overwhelmingly
+/// Latin-1/Cp1252, whose accented names survive intact instead of collapsing
+/// to U+FFFD.
+///
+/// The fallback is applied **per line**, not per buffer. `raw` is a single
+/// line when the Mouth calls this, but a whole file when a `.bib` reader does,
+/// and decoding a whole file as Latin-1 because of one stray byte would
+/// mojibake every correctly-UTF-8-encoded name in it (`é` → `Ã©`). Per-line
+/// keeps the damage to the offending line and matches the Mouth's own
+/// granularity. The all-valid-UTF-8 case (the overwhelming majority) still
+/// costs exactly one `from_utf8` SIMD validation of the whole buffer.
+pub fn decode_input_bytes(raw: &[u8]) -> String {
+  match str::from_utf8(raw) {
+    Ok(s) => s.to_string(),
+    Err(_) => {
+      let mut out = String::with_capacity(raw.len());
+      for (i, line) in raw.split(|&b| b == b'\n').enumerate() {
+        if i > 0 {
+          out.push('\n');
+        }
+        match str::from_utf8(line) {
+          Ok(s) => out.push_str(s),
+          Err(_) => out.extend(line.iter().map(|&b| b as char)),
+        }
+      }
+      out
+    },
+  }
+}
+
 impl Mouth {
   // Factory method;
   // Create an appropriate Mouth
@@ -503,20 +546,11 @@ impl Mouth {
         file_str
       }
     } else {
-      // No encoding set — interpret as UTF-8, with fallback.
-      // For non-UTF-8 bytes, we keep them as raw Latin-1 chars.
-      // This matches Perl which passes raw bytes through when
-      // PERL_INPUT_ENCODING is undef (disabled by inputenc).
-      match str::from_utf8(raw_line) {
-        Ok(s) => s.to_string(),
-        Err(_) => {
-          // When no encoding is set but bytes aren't valid UTF-8,
-          // treat as raw bytes (Latin-1 passthrough).
-          // This happens after inputenc disables PERL_INPUT_ENCODING
-          // and the remaining file lines contain high bytes.
-          raw_line.iter().map(|&b| b as char).collect::<String>()
-        },
-      }
+      // No encoding set — interpret as UTF-8, falling back to a Latin-1
+      // passthrough for non-UTF-8 bytes. This happens after inputenc
+      // disables PERL_INPUT_ENCODING and the remaining file lines contain
+      // high bytes.
+      decode_input_bytes(raw_line)
     }
   }
 

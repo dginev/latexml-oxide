@@ -1,0 +1,11 @@
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+\begin{document}
+% Real sn-jnl.cls loads natbib for every reference style, so natbib's
+% TWO-optional \cite[pre][post]{keys} must parse. Without natbib the kernel's
+% single-optional \cite reads `[` as the whole key list.
+Bursts via the plasma emission process \cite[e.g.][]{Melrose1980}.
+A second natbib spelling \cite[see][chap.~2]{Zhang2021}, and a plain
+\cite{Melrose1980}.
+\bibliographystyle{sn-mathphys-num}
+\bibliography{refs}
+\end{document}

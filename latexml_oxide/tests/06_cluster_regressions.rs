@@ -67,6 +67,43 @@ fn convert_to_xml(source: &str) -> String {
     .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
 }
 
+/// Convert AND run the post-processing pipeline, returning the post-processed
+/// XML. `convert_to_xml` stops at the engine, so it cannot see anything
+/// MakeBibliography/CrossRef do — a `<bibitem>` in its output came straight from
+/// `\begin{thebibliography}`, not from an `ltx:bibentry` conversion. Use this
+/// helper for post-stage regressions.
+fn convert_and_post(source: &str) -> String {
+  let xml = convert_to_xml(source);
+  // No `stylesheet`: the assertions are about MakeBibliography, so stop at the
+  // post-processed ltx XML rather than running XSLT into HTML.
+  let opts = latexml::post::PostOptions {
+    pmml:                      false,
+    cmml:                      false,
+    keep_xmath:                false,
+    stylesheet:                None,
+    destination:               None,
+    source_directory:          Some("tests/cluster_regressions"),
+    search_paths:              &[],
+    nodefaultresources:        true,
+    css_files:                 &[],
+    js_files:                  &[],
+    noinvisibletimes:          false,
+    mathtex:                   false,
+    navigationtoc:             None,
+    schemadocs:                false,
+    split:                     false,
+    split_xpath:               None,
+    split_naming:              None,
+    xslt_parameters:           &[],
+    graphics_svg_threshold_kb: 0,
+    graphicimages:             false,
+    timestamp:                 None,
+    icon:                      None,
+    whatsout:                  latexml_post::extract::Whatsout::default(),
+  };
+  latexml::post::run_post_processing(&xml, &opts)
+}
+
 /// Convert and return the conversion log (for asserting the ABSENCE of a
 /// Rust-only warning that `convert_clean` — which only counts `Error:` — misses).
 fn convert_log(source: &str) -> String {
@@ -939,5 +976,182 @@ fn hphantom_braceless_minipage_does_not_swallow_endminipage() {
   assert!(
     x.contains("<bibitem") && x.contains("representative title"),
     "bibliography lost — the minipage leaked and truncated the document:\n{x}"
+  );
+}
+
+/// apacite spells its citation pre-note in ANGLE brackets:
+/// `\cite<pre-note>[post-note]{key-list}` (apacite.sty L259-311 dispatch
+/// `\@ifnextchar< {\@cite} {\@cite<>}`, L313-327 `\def\@cite<#1>`). Without that
+/// form the kernel/natbib `\cite` takes the single token `<` as its whole key
+/// list: the citation renders as a dangling `[<]`, the REAL keys are never cited
+/// (so they are silently absent from the References) and `see>` leaks into the
+/// body text. Witness 2605.10951 (`\cite<see>{Gangopadhyay02,Ferris25}`,
+/// agujournal2019), 2606.16518, 2606.19048, 2606.21531, 2606.24563.
+///
+/// Guards BOTH halves of the fix: the pre-note form resolves its keys, AND the
+/// pre-note-ABSENT case does not swallow a later `>`. The latter is why this
+/// uses the real `OptionalAngled` parameter type rather than
+/// `OptionalMatch:< OptionalUntil:>` — `Until` never checks for the OPENING
+/// delimiter, so with no `<` it scanned to the next `>` anywhere downstream and
+/// `\citeA{Gangopadhyay02} and $a > b$` reported the key as `b`.
+#[test]
+fn apacite_angled_prenote_cites_keys_and_does_not_swallow_gt() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/cite_angled_prenote/ap.tex");
+  // `\cite<see>{Gangopadhyay02,Ferris25}` cites BOTH real keys, not `<`.
+  assert!(
+    x.contains("Gangopadhyay02,Ferris25"),
+    "\\cite<see>{{...}} lost its keys (apacite angle-bracket pre-note):\n{x}"
+  );
+  assert!(
+    !x.contains(r#"bibrefs="&lt;""#) && !x.contains(r#"bibrefs="<""#),
+    "`<` was parsed as the citation key list:\n{x}"
+  );
+  // Pre-note absent + a later `>`: the cite keeps its key and the math survives.
+  assert!(
+    !x.contains(r#"bibrefs="b""#),
+    "an absent angle pre-note swallowed the cite and the following `$a > b$`:\n{x}"
+  );
+}
+
+/// Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/…:
+/// `\usepackage[numbers,sort&compress]{natbib}` / `\usepackage[authoryear]{natbib}`),
+/// but our binding `LoadClass!("OmniBus")`es — which short-circuits the
+/// unbound-class dependency scan — and OmniBus only `def_autoload`s natbib off
+/// `\citet`/`\citep`/`\citeyear`/…, deliberately NOT off `\cite` (the kernel
+/// already defines it). So a paper citing solely via natbib's TWO-optional
+/// `\cite[pre][post]{keys}` never triggered the autoload and the kernel's
+/// single-optional `\cite[] Semiverbatim` read `[` as the whole key list — the
+/// real keys were dropped (silently absent from the References) and `]{keys}`
+/// leaked as body text. Witness 2605.23484 (sn-mathphys-num), 2606.10002
+/// (sn-basic), 2606.10215, 2606.11534.
+#[test]
+fn sn_jnl_natbib_two_optional_cite_keeps_its_keys() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/sn_jnl_cite/sn.tex");
+  assert!(
+    x.contains("Melrose1980"),
+    "sn-jnl `\\cite[e.g.][]{{Melrose1980}}` lost its key (natbib not loaded):\n{x}"
+  );
+  assert!(
+    !x.contains(r#"bibrefs="[""#) && !x.contains(r#"bibrefs="&#91;""#),
+    "`[` was parsed as the citation key list — natbib's two-optional \
+     \\cite[pre][post]{{keys}} did not parse:\n{x}"
+  );
+  assert!(
+    x.contains("Zhang2021"),
+    "`\\cite[see][chap.~2]{{Zhang2021}}` lost its key:\n{x}"
+  );
+}
+
+/// amsrefs writes the bibliography INTO the document —
+/// `\begin{bibdiv}\begin{biblist}\bib{key}{article}{...}` — instead of into an
+/// external `.bib`. The engine digests that correctly into
+/// `ltx:biblist`/`ltx:bibentry` (see the `amsrefs_basic` structure test), but
+/// upstream `MakeBibliography::getBibEntries` collects entries ONLY from
+/// `getBibliographies()`, which resolves `//ltx:bibliography/@files` — an
+/// amsrefs bibliography has no `@files`, so nothing is collected, and `process`
+/// then executes its unconditional `removeNodes(//ltx:bibentry)`, deleting every
+/// entry it never converted. The whole bibliography vanishes with ZERO errors:
+/// empty References plus every `\cite` dangling.
+///
+/// PARITY with installed AND vendored Perl 0.8.8 (rev 51fea96a) — fixed here
+/// rather than reproduced (OXIDIZED_DESIGN #57, KNOWN_PERL_ERRORS #49).
+/// Witness 2605.01646 (AIPFa.tex; Perl: 0 bibitems / 81 dangling citations,
+/// Rust now 23 / 0), 2605.00783, 2605.03852.
+///
+/// NOTE the structure test `amsrefs_basic` asserts only on the ENGINE's XML and
+/// so never exercised MakeBibliography — which is exactly how this stayed
+/// silent. This test runs the full pipeline.
+#[test]
+fn amsrefs_inline_bibliography_is_not_dropped() {
+  let x = convert_and_post("tests/cluster_regressions/amsrefs_inline_bibliography.tex");
+  // The inline entries became real bibitems (post ran and collected them).
+  assert!(
+    x.contains("<bibitem"),
+    "amsrefs inline bibliography was dropped whole — no bibitem survived:\n{x}"
+  );
+  // Both entries, with their content, are present. NB amsrefs sentence-cases
+  // titles ("On Examples" -> "On examples"), as `amsrefs_basic.xml` records.
+  for needle in ["Beilinson", "Height pairing", "On examples", "Smith"] {
+    assert!(
+      x.contains(needle),
+      "amsrefs entry content `{needle}` missing from the References:\n{x}"
+    );
+  }
+  // No leftover uncollected bibentry (they were converted, not deleted).
+  assert!(
+    !x.contains("<bibentry"),
+    "an ltx:bibentry survived unconverted:\n{x}"
+  );
+}
+
+/// Loading `bibunits` — even without ever opening a `bibunit` environment —
+/// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
+/// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the
+/// document's one `\bibliography` registers its bibitems under the default
+/// `bibliography` list, and CrossRef searched the unit list ONLY. Witness
+/// 2303.06077 (revtex4-2 + bibunits): 93 bibitems rendered, 93 keys dangling,
+/// 0 links. Deleting the single `\usepackage{bibunits}` line resolves the cite,
+/// which is the whole defect in one bisect.
+#[test]
+fn bibunits_cite_resolves_against_the_main_bibliography() {
+  let x = convert_and_post("tests/cluster_regressions/bibunits_cite.tex");
+  // The entry reaches the References either way — the defect is the LINK.
+  assert!(
+    x.contains("<bibitem"),
+    "bibunits: the bibliography itself is missing:\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_missing_citation"),
+    "bibunits: \\cite{{Smith2020}} dangles — CrossRef only searched the `bu0` \
+     unit list and never fell back to the main `bibliography` list:\n{x}"
+  );
+}
+
+/// Witness 2605.00490: a JabRef `.bib` self-declaring `% Encoding: Cp1252`.
+/// MakeBibliography read it with `read_to_string`, which hard-errors on the
+/// first non-UTF-8 byte, so the whole bibliography was dropped and the paper
+/// rendered an empty References section with NO `Error:` — a silent, total
+/// loss. Real `bibtex` 0.99d is 8-bit clean and Perl passes raw bytes through
+/// (`Mouth.pm` L75-80).
+///
+/// This exercises the POST path (`convert_bib_file_to_xml`), which is where
+/// the production failure actually happened; `pre_bibtex`'s own
+/// `non_utf8_bib_file_is_read_not_rejected` covers the engine-side reader.
+#[test]
+fn non_utf8_bib_file_still_yields_a_bibliography() {
+  let x = convert_and_post("tests/cluster_regressions/cp1252_bib.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "cp1252 .bib: the whole bibliography was dropped on a non-UTF-8 byte:\n{x}"
+  );
+  // The Latin-1 fallback is lossless byte -> char, so the accent survives to
+  // the rendered entry rather than collapsing to U+FFFD. Only the SURNAME is
+  // asserted: the fixture's `author = {Café, André}` is BibTeX's `Last, First`
+  // form, so the style abbreviates the given name to `A.` ("A. Café").
+  assert!(
+    x.contains("Café"),
+    "cp1252 .bib: the accented surname did not survive the decode:\n{x}"
+  );
+}
+
+/// Witness 2605.11619: `\end{lstlisting}` preceded by content on the same line
+/// (`</body></html> \end{lstlisting}`). Perl anchors the terminator regex at the
+/// line start (listings.sty.ltxml L316), so the reader ran to EOF and swallowed
+/// the rest of the document — Conclusion, `\bibliography` and appendix — with NO
+/// error at all. Real `listings` terminates there (pdflatex renders the leading
+/// text as the final listing line and continues), so both LaTeXML engines were
+/// wrong vs the PDF. OXIDIZED_DESIGN #61 / KNOWN_PERL_ERRORS #51.
+#[test]
+fn inline_end_lstlisting_does_not_swallow_the_document() {
+  let x = convert_to_xml("tests/cluster_regressions/lstlisting_inline_end.tex");
+  assert!(
+    x.contains("AFTER-THE-LISTING-MARKER"),
+    "inline \\end{{lstlisting}}: the rest of the document was swallowed:\n{x}"
+  );
+  // The text before the terminator is still the listing's last line (pdflatex
+  // renders exactly "hello world" there).
+  assert!(
+    x.contains("hello") && x.contains("world"),
+    "inline \\end{{lstlisting}}: the listing body was lost:\n{x}"
   );
 }

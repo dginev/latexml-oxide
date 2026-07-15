@@ -40,6 +40,24 @@ LoadDefinitions!({
   RequirePackage!("mathrsfs");
   RequirePackage!("rotating");
 
+  // Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/
+  // 1669/1677: `\usepackage[numbers,sort&compress]{natbib}` for the numeric
+  // styles, `\usepackage[authoryear]{natbib}` for the author-year ones).
+  // OmniBus only `def_autoload`s natbib off `\citet`/`\citep`/`\citeyear`/…
+  // — deliberately NOT off `\cite`, which the kernel already defines. So a
+  // paper that cites solely via natbib's TWO-optional `\cite[pre][post]{keys}`
+  // never triggers the autoload, and the kernel's single-optional
+  // `\cite[] Semiverbatim` reads `[` as the whole key list: the real keys are
+  // dropped (never cited, silently absent from the References) and `]{keys}`
+  // leaks as body text. Requiring natbib here mirrors the real class and also
+  // spares these papers the autoload dance. Options are left at natbib's
+  // default (numbers) — same as what the autoload path already produced, so
+  // no rendering change for papers that did trigger it; the per-refstyle
+  // numbers-vs-authoryear mapping needs class-option processing this stub
+  // doesn't do yet. Witness 2605.23484 (sn-mathphys-num), 2606.10002
+  // (sn-basic), 2606.10215, 2606.11534.
+  RequirePackage!("natbib");
+
   // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");
   DefMacro!("\\bmsection{}", "\\section*{#1}");

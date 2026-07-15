@@ -4,6 +4,53 @@
 
 use crate::prelude::*;
 
+/// Shared reader body of the `Optional` / `OptionalAngled` parameter types:
+/// fold a (possibly absent) delimited `value` into the default / `inner`-reparse
+/// contract. The delimiters themselves are the caller's business — see
+/// `gullet::read_optional` / `read_optional_angled`.
+fn optional_arg_value(
+  value: Option<Tokens>,
+  inner: Option<&Parameters>,
+  default: &[Tokens],
+) -> Result<ArgWrap> {
+  if value.is_none() && !default.is_empty() {
+    // TODO: Is the default really multiple Vec<Tokens> ? Or just a single Tokens?
+    //       the default[0] is suspicious, compared to the original perl "$default"
+    Ok(ArgWrap::Tokens(default[0].clone()))
+  } else if let Some(inner_ps) = inner {
+    let mut reparsed = inner_ps.reparse_argument(value.into())?;
+    Ok(if reparsed.is_empty() {
+      ArgWrap::None
+    } else {
+      reparsed.remove(0)
+    })
+  } else {
+    Ok(value.into())
+  }
+}
+
+/// Shared reversion of the `Optional` / `OptionalAngled` parameter types:
+/// re-wrap a read argument in the `open`/`close` delimiters it came in.
+fn optional_arg_reversion(
+  arg: Vec<Token>,
+  inner: Option<&Parameters>,
+  open: Token,
+  close: Token,
+) -> Result<Tokens> {
+  // TODO: Same question for the type of "arg": should this be a single
+  //  `Tokens` rather than a `Vec<Token>`?
+  if arg.is_empty() {
+    return Ok(Tokens!());
+  }
+  let mut read_tokens: Vec<Token> = vec![open];
+  read_tokens.extend(match inner {
+    None => arg.into_iter().map(Token::revert).collect(),
+    Some(inner_ps) => inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?,
+  });
+  read_tokens.push(close);
+  Ok(Tokens::new(read_tokens))
+}
+
 // ======================================================================
 // Define parsers for standard parameter types.
 LoadDefinitions!({
@@ -48,37 +95,29 @@ LoadDefinitions!({
   });
 
   DefParameterType!(Optional, sub[inner, default] {
-    let value = read_optional(None)?;
-    if value.is_none() && !default.is_empty() {
-      // TODO: Is the default really multiple Vec<Tokens> ? Or just a single Tokens?
-      //       the default[0] is suspicious, compared to the original perl "$default"
-      ArgWrap::Tokens(default[0].clone())
-    } else if let Some(inner_ps) = inner {
-      let mut reparsed = inner_ps.reparse_argument( value.into())?;
-      if !reparsed.is_empty() {
-        reparsed.remove(0)
-      } else {
-        ArgWrap::None
-      }
-    } else {
-      value.into()
-    }
+    optional_arg_value(read_optional(None)?, inner, default)?
   },
   optional => true,
   reversion => sub[arg, inner, _extra] {
-    // TODO: Same question for the type of "arg" as the one above "default" above:
-    //  should this be a single `Tokens` rather than a `Vec<Token>`?
-    if !arg.is_empty() {
-      let mut read_tokens: Vec<Token> = vec![T_OTHER!("[")];
-      read_tokens.extend(match inner {
-        None => arg.into_iter().map(Token::revert).collect(),
-        Some(inner_ps) => inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?,
-      });
-      read_tokens.push(T_OTHER!("]"));
-      Ok(Tokens::new(read_tokens))
-    } else {
-      Ok(Tokens!())
-    }
+    optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
+  });
+
+  // The angle-bracket twin of `Optional`, mirroring Perl beamer.cls.ltxml
+  // L46-57 (`OptionalBeamerAngled` / `readBeamerAngled`). Not beamer-specific:
+  // apacite spells its citation pre-note this way — `\cite<see>[p.5]{key}`,
+  // apacite.sty L313 `\def\@cite<#1>` — so it belongs beside `Optional`.
+  //
+  // This MUST be a genuine optional type rather than the `OptionalMatch:<
+  // OptionalUntil:>` spelling: `Until` never checks for the OPENING delimiter,
+  // so when the argument is absent it scans to the next `>` ANYWHERE
+  // downstream (`\citeA{Smith} and $a > b$` swallowed the cite and the math,
+  // yielding the key `b`). `read_optional_angled` peeks and unreads instead.
+  DefParameterType!(OptionalAngled, sub[inner, default] {
+    optional_arg_value(read_optional_angled(None)?, inner, default)?
+  },
+  optional => true,
+  reversion => sub[arg, inner, _extra] {
+    optional_arg_reversion(arg, inner, T_OTHER!("<"), T_OTHER!(">"))
   });
 
   // This is a peculiar type of argument of the form

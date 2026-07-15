@@ -64,16 +64,61 @@ LoadDefinitions!({
   def_macro_noop("\\APACrefauthstyle{}")?;
   def_macro_noop("\\APACbibcite{}")?;
 
-  // apacite citation forms (apacite.sty L328+). Delegate to natbib's
-  // \cite which we wrapped in natbib_sty.rs. Forms:
-  //   \citeA[pre][post]{key} — author-only ("Smith")
-  //   \citeauthor[pre][post]{key} — author-only (alternate spelling)
-  //   \citeNP[pre][post]{key} — citation without parens
-  //   \citeyearNP[pre][post]{key} — year-only without parens
+  // apacite citation forms (apacite.sty L328+). Delegate to natbib's \cite
+  // which we wrapped in natbib_sty.rs. Forms:
+  //   \citeA<pre>[post]{key}      — author-only ("Smith")
+  //   \citeNP<pre>[post]{key}     — citation without parens
+  //   \citeyearNP<pre>[post]{key} — year-only without parens
   // Witness 2407.14158, 2407.18402, 2407.16770 (apacite-using papers).
-  DefMacro!("\\citeA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
-  DefMacro!("\\citeNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
-  DefMacro!("\\citeyearNP[][] Semiverbatim", "\\citeyear[#1][#2]{#3}");
+  //
+  // apacite's ANGLE-BRACKET pre-note. apacite.sty L259-311 gives every classic
+  // cite form the dispatch `\@ifnextchar< {\@cite} {\@cite<>}`, and L313-327
+  // `\def\@cite<#1>{... \@ifnextchar[ {\@@cite<#1>} {\@@cite<#1>[]}}` — so the
+  // full apacite citation syntax is
+  //   \cite<pre-note>[post-note]{key-list}
+  // Without the `<...>` form the kernel/natbib `\cite` takes the single token
+  // `<` as its key list: the citation renders as a dangling `[<]`, the REAL
+  // keys are never cited (so they are silently absent from the References) and
+  // `see>` leaks into the body text. Witness 2605.10951
+  // (`\cite<see>{Gangopadhyay02,Ferris25}`, agujournal2019), 2606.16518,
+  // 2606.19048, 2606.21531, 2606.24563.
+  //
+  // `OptionalAngled` (NOT `OptionalMatch:< OptionalUntil:>`): `Until` never
+  // checks for the OPENING delimiter, so when no `<` is present it scans to the
+  // next `>` anywhere downstream — `\citeA{Smith} and $a > b$` swallowed the
+  // cite and the math and reported the key as `b`.
+  // The signature `[pre1] OptionalAngled [post]` is UNAMBIGUOUS and so serves
+  // both spellings with one prototype: natbib's `[pre][post]` can only ever
+  // match `[pre1]…[post]` (the angled slot peeks, sees `[`, and yields nothing),
+  // and apacite's `<pre>[post]` can only ever match `OptionalAngled [post]`
+  // (the `[pre1]` slot peeks, sees `<`, and yields nothing). The two pre-note
+  // slots are therefore mutually exclusive, so `[#1#2]` simply concatenates
+  // whichever one fired — no conditional needed. `\citeA[a][b]{k}` /
+  // `\citeA[a]{k}` keep emitting exactly what they did before this change.
+  DefMacro!(
+    "\\citeA [] OptionalAngled [] Semiverbatim",
+    "\\citet[#1#2][#3]{#4}"
+  );
+  DefMacro!(
+    "\\citeNP [] OptionalAngled [] Semiverbatim",
+    "\\citealp[#1#2][#3]{#4}"
+  );
+  DefMacro!(
+    "\\citeyearNP [] OptionalAngled [] Semiverbatim",
+    "\\citeyear[#1#2][#3]{#4}"
+  );
+
+  // `\cite` keeps natbib's meaning on the no-`<` path (apacite's `\cite` is
+  // parenthetical, but re-pointing it at `\citep` would change rendering for
+  // every apacite paper — out of scope here); it only gains the pre-note form.
+  // Re-emitting `[#1#2][#3]` is behaviour-preserving for the bracket spellings:
+  // natbib's `swap_pre_post` keys off a NON-EMPTY post, so `\cite[a]{k}` →
+  // `[a][]` still swaps to post=a exactly as the bare `\cite[a]{k}` does.
+  Let!("\\lx@apac@core@cite", "\\cite");
+  DefMacro!(
+    "\\cite [] OptionalAngled [] Semiverbatim",
+    "\\lx@apac@core@cite[#1#2][#3]{#4}"
+  );
   // apacite "short" cite family (apacite.sty L277-401, the CLASSIC block —
   // distinct from the `\citet`/`\citep` defined only under the `natbibemu`
   // option at L587+). These are abbreviated-author variants of

@@ -71,17 +71,35 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 }
 
 /// Perl: listingsReadRawLines — read raw lines until \end{$environment}
+///
+/// OXIDIZED_DESIGN #61: the terminator is matched ANYWHERE in the line, not
+/// only at its start. Perl (`listings.sty.ltxml` L316) anchors the regex —
+/// `/^\s*\\end\{\Q$environment\E\}(.*?)$/` — so a line like
+/// `  </body></html> \end{lstlisting}` never terminates the environment and the
+/// reader runs to EOF, swallowing the rest of the document (its `\end{document}`
+/// included) with NO error at all. Witness 2605.11619: a complete 54 KB paper
+/// silently lost its Conclusion, `\bibliography` and appendix — 1.3 MB of HTML,
+/// zero `Error:`, zero references. Same-host Perl reports "No obvious problems"
+/// and loses the tail identically, so this is a shared upstream bug
+/// (KNOWN_PERL_ERRORS #51, candidate to upstream), not a Rust regression.
+///
+/// Real `listings` (ground truth: pdflatex) accepts it — it renders `hello world`
+/// as the final listing line and continues with the document. So the text BEFORE
+/// the terminator becomes the last line, and the text AFTER is unread, exactly
+/// as Perl already does for the trailing part.
 pub fn listings_read_raw_lines(environment: &str) -> String {
   let mut lines = Vec::new();
   read_raw_line(); // Ignore 1st line (following \begin{...})
-  let end_re = Regex::new(&format!(
-    "^\\s*\\\\end\\{{{}\\}}(.*?)$",
-    regex::escape(environment)
-  ))
-  .unwrap();
+  let end_re = Regex::new(&format!("\\\\end\\{{{}\\}}", regex::escape(environment))).unwrap();
   while let Some(line) = read_raw_line() {
-    if let Some(caps) = end_re.captures(&line) {
-      let rest = caps.get(1).map_or("", |m| m.as_str()).to_string();
+    if let Some(m) = end_re.find(&line) {
+      // Whitespace-only text before the terminator is the ordinary
+      // `\end{lstlisting}`-on-its-own-line case: contributes no listing line.
+      let before = &line[..m.start()];
+      if !before.trim().is_empty() {
+        lines.push(before.to_string());
+      }
+      let rest = line[m.end()..].to_string();
       if !rest.is_empty() {
         unread(Tokenize!(&rest));
         unread(Tokens::new(vec![T_CR!()]));
