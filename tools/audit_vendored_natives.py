@@ -99,12 +99,21 @@ def shipped_packages():
 
 
 def package_dirs():
-    """name -> package dir, via cargo metadata (handles registry AND git checkouts).
+    """(name, version) -> (package dir, links), plus the set of OUR workspace package ids.
 
     Resolving by manifest_path rather than guessing a registry directory name is what
     makes git-sourced crates like libmarpa-sys (a checkout hash path, not
     `<name>-<version>/`) visible at all -- a find(1)-by-dirname sweep silently misses
     them, which is its own way to lose a library.
+
+    Workspace membership comes from cargo's own `workspace_members` ids, NOT from
+    matching path prefixes. Prefix matching is a false-negative machine here: the
+    workspace root's *parent* is `~/git`, so `startswith` would silently skip every
+    crate checked out beside us -- including `~/git/marpa` when a developer enables the
+    local `[patch]` that this repo's own Cargo.toml documents. That skipped libmarpa
+    (the LGPL library) while the audit exited 0, and then reported it as a "stale" entry
+    inviting someone to delete its attribution. Exactly the bug this script exists to
+    catch, so it does not get to make it.
     """
     meta = json.loads(run(["cargo", "metadata", "--format-version", "1", *SHIPPED_FEATURES]))
     dirs = {}
@@ -112,8 +121,9 @@ def package_dirs():
         dirs[(pkg["name"], pkg["version"])] = (
             Path(pkg["manifest_path"]).parent,
             pkg.get("links"),
+            pkg["id"],
         )
-    return dirs, {Path(m).parent for m in [meta["workspace_root"]]}
+    return dirs, set(meta["workspace_members"])
 
 
 def native_evidence(pkg_dir, links):
@@ -209,21 +219,32 @@ def audit_resources(verbose):
 
 def main():
     verbose = "--verbose" in sys.argv
-    dirs, workspace_roots = package_dirs()
+    dirs, workspace_ids = package_dirs()
     shipped = shipped_packages()
 
-    found = {}
+    found, unresolved = {}, []
     for name, version in sorted(shipped):
         entry = dirs.get((name, version))
         if entry is None:
+            # A shipped crate cargo metadata could not place. Never shrug this off:
+            # an unplaceable crate is an unaudited crate.
+            unresolved.append(f"{name} v{version}")
             continue
-        pkg_dir, links = entry
-        # Skip our own workspace crates: they are CC0 and audited by definition.
-        if any(str(pkg_dir).startswith(str(root)) for root in workspace_roots):
+        pkg_dir, links, pkg_id = entry
+        # Skip only OUR OWN workspace crates (CC0, audited by definition), identified
+        # by cargo's package ids -- not by path shape. See package_dirs().
+        if pkg_id in workspace_ids:
             continue
         why = native_evidence(pkg_dir, links)
         if why:
             found[name] = (version, why)
+
+    if unresolved:
+        print("ERROR: shipped crate(s) that cargo metadata could not locate:")
+        for u in unresolved:
+            print(f"  {u}")
+        print("\nCannot audit what cannot be found; failing rather than passing blind.")
+        return 1
 
     unaudited = {n: v for n, v in found.items() if n not in AUDITED}
     stale = [n for n in AUDITED if n not in found]
@@ -238,10 +259,21 @@ def main():
         print()
 
     if stale:
-        print("NOTE: audited crates no longer in the shipped tree (prune from AUDITED")
-        print("      and LICENSE_INVENTORY.md D.2 if they are gone for good):")
+        # Deliberately NOT phrased as "prune these". An earlier version of this script
+        # skipped crates by path prefix, which made libmarpa-sys vanish from the tree
+        # and surface here -- so the note was cheerfully inviting someone to delete the
+        # attribution of a library that was still very much being linked in. Removing
+        # an entry is only safe once you have confirmed the crate is genuinely gone.
+        print("NOTE: audited crate(s) not seen in the shipped tree this run:")
         for n in stale:
             print(f"  - {n}")
+        print()
+        print("  Do NOT prune them from AUDITED on this basis alone. First confirm the")
+        print("  crate is really gone (`cargo tree -e normal | grep <name>`) rather than")
+        print("  merely unresolved -- a crate that is still linked but went unseen is a")
+        print("  silently unattributed library, which is the failure this script exists")
+        print("  to prevent. If it is genuinely gone, drop it here and from")
+        print("  LICENSE_INVENTORY.md §D.2 together.")
         print()
 
     if unaudited:
