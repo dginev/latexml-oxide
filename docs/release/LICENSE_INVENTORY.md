@@ -47,8 +47,11 @@ binary).
 - **Status:** `cargo deny --all-features check licenses` → **licenses ok**.
 - **Distributed artifact** (`--no-default-features --features runtime-bindings`)
   → **licenses ok** with no warnings. Shipped-crate license breakdown:
-  MIT (127), CC0-1.0 (9, our workspace crates), BSD-3-Clause (1, unidecode),
-  MPL-2.0 (1), Unicode-3.0 (1), Zlib (1).
+  MIT (127), CC0-1.0 (9 — our **8** workspace crates *plus* `tiny-keccak`, which
+  is third-party CC0 and not ours; the count matching is not the same as the
+  attribution matching), BSD-3-Clause (1, `unidecode` — but see §D.4: its
+  manifest does not describe its embedded data), MPL-2.0 (1), Unicode-3.0 (1),
+  Zlib (1).
 - **Attribution:** the per-crate license *texts* for the shipped binary are
   auto-generated into `THIRD-PARTY-NOTICES` §5 by `cargo about` — config
   [`about.toml`](../../about.toml) + template [`about.hbs`](../../about.hbs), assembled
@@ -77,11 +80,41 @@ binary).
 
 Re-verify: `cargo deny --all-features check licenses`
 
+### Scope of `THIRD-PARTY-NOTICES` itself (settled 2026-07-15)
+
+One file ships with every artifact, so **it is the union over the artifacts, with
+per-entry scope markers** — not a description of `latexml_oxide` alone. That was
+already true before anyone said so (`zlib`/`libiconv` are Windows-`.exe`-only
+entries), but the file's opening line still read "The distributed binary",
+singular, which stopped being true once the `cortex-worker` image began shipping
+`cortex_worker` (the only executable of ours that links libzmq).
+
+The alternative — a file whose meaning silently depends on which download you
+got — is worse than a union that says so. So the header now declares the scope,
+and any entry not present in every artifact states its own. **§5 is the sole
+exception**: it is generated per artifact from that artifact's own dependency
+graph, which is why the two container images get different §5s (measured: 5
+worker-only crates, incl. `zmq`/`zmq-sys`).
+
+What we actually publish, for the record:
+
+| Artifact | Executables it carries |
+|---|---|
+| tarballs (×4), Windows `.zip`, both `.deb`s | `latexml_oxide` only |
+| `ghcr.io/dginev/latexml-oxide` | `latexml_oxide` only |
+| `ghcr.io/dginev/latexml-oxide/cortex-worker` | `cortex_worker` **+** `latexml_oxide` |
+
+`latexmlmath_oxide` and `genschema_oxide` are declared `[[bin]]` targets but are
+**not shipped in any artifact** — nothing in `make_release.sh`, the cargo-deb
+asset list, or the Dockerfile stages them. If that ever changes, re-check this
+table and the notices' scope paragraph together.
+
 ## B. Embedded resources (`resources/`, `include_str!`/`include_bytes!` at build)
 
 | Asset group | Count | Origin | License |
 |---|---|---|---|
-| `CSS/` | 14 | Perl LaTeXML + our schema-docs theme | PD (NIST) / CC0 |
+| `CSS/` | 13 | Perl LaTeXML | PD (NIST) ≈ CC0 |
+| `CSS/relaxng-schema-rustdoc-theme.css` | 1 | **ours, except its `data-theme="ayu"` colour values — taken from rustdoc's Ayu theme** | CC0, except that palette: MIT (rustdoc, © The Rust Project Contributors; itself crediting Ayu, © 2016 Ike Kurghinyan) — **notice given, §2.3** |
 | `XSLT/` | 20 | Perl LaTeXML | PD (NIST) ≈ CC0 |
 | `RelaxNG/*` (top level) | 25 | Perl LaTeXML schema | PD (NIST) ≈ CC0 |
 | **`RelaxNG/svg/`** | **83** | **W3C SVG 1.1 RELAX NG schema, modified by Mozilla** | **W3C/Mozilla permissive — notice required** |
@@ -96,9 +129,12 @@ burden. `LaTeXML-maybeMathjax.js` only *conditionally loads* MathJax from a CDN;
 it does **not** bundle MathJax, so no MathJax (Apache-2.0) redistribution
 occurs.
 
-**`RelaxNG/svg/` is the exception — the one embedded resource that is NOT public
-domain** (found 2026-07-14; this table previously called all 108 RelaxNG files
-"PD (NIST)"). It is the W3C's SVG 1.1 RELAX NG schema (© 2001, 2002 W3C —
+**`RelaxNG/svg/` is the largest exception** (found 2026-07-14; this table
+previously called all 108 RelaxNG files "PD (NIST)"). It was called "the *one*
+embedded resource that is not public domain" until 2026-07-15, when the Ayu
+palette in `CSS/relaxng-schema-rustdoc-theme.css` turned out to be a second —
+the same over-broad-claim reflex this section exists to catch. It is the W3C's
+SVG 1.1 RELAX NG schema (© 2001, 2002 W3C —
 MIT/INRIA/Keio) with modifications © 2007 Mozilla Foundation. `latexml_core/build.rs`
 walks the whole RelaxNG tree with **no filtering** and `include_str!`s each file,
 so all 83 ship verbatim inside the binary. The grant is permissive
@@ -161,9 +197,11 @@ CLAUDE.md; these are standard OS libraries):
 | libxml2 | MIT | **static** (0.7.1, PIC source-built) / dynamic in `cargo build` |
 | libxslt | MIT | **static** (0.7.1) / dynamic in `cargo build` |
 | libexslt | MIT | **static** (0.7.1) / dynamic in `cargo build` |
-| libgcrypt | LGPL-2.1 | dynamic (transitive via libxslt) — **keep dynamic** |
-| libgpg-error | LGPL-2.1 | dynamic (transitive via libgcrypt) — keep dynamic |
-| zlib | Zlib | dynamic |
+| libgcrypt | LGPL-2.1 | **not linked at all** — `build_static_libxml.sh` builds libxslt `--without-crypto` (#261). Was previously listed as "dynamic, keep dynamic"; dropping that flag would pull an LGPL library into the *static* link, so it is a §D.3 decision, not a build tweak. |
+| libgpg-error | LGPL-2.1 | **not linked at all** (transitive via libgcrypt, which is gone) |
+| zlib / liblzma / ICU | Zlib / … | **Linux+macOS: not linked at all** — libxml2 is built `--without-zlib --without-lzma --without-icu`. No `libz-sys`/`lzma-sys` in the lock either (flate2 → pure-Rust miniz_oxide). **Windows: zlib IS statically linked** — vcpkg's libxml2 port default-features are `["iconv","zlib"]` and `release.yml` installs with no feature spec (F13). liblzma/ICU are not (no `lzma` feature in the port; `icu` is non-default). |
+| **GNU libiconv** | **LGPL-2.1+** | **Windows: STATIC** (vcpkg `iconv` default feature → F13) — a third static LGPL link, covered by the same §D.3 posture; `THIRD-PARTY-NOTICES` §3.1/§3.5/§7. **Linux: not linked** (iconv is in glibc). **macOS: dynamic** against the host system libiconv. |
+| libzmq | MPL-2.0 (+MIT, LGPL-2.0+ parts) | **cortex-worker container image only**, dynamic against the image's own `libzmq5` package — not in any binary download. Reached via `zmq-sys` (`links = "zmq"`, declares `MIT/Apache-2.0` — the binding's licence, not libzmq's: the §D.2 pattern again). Only the `cortex` feature pulls it, which `SHIPPED_FEATURES` excludes, so the audit never sees it. Noted in `THIRD-PARTY-NOTICES` §3.1; the image also carries `/usr/share/doc/libzmq5/copyright`. |
 | **libkpathsea** | **LGPL-2.1** | **static on every release leg** — Linux + **macOS** (`tools/build_static_kpathsea.sh`; both macOS legs run it, `release.yml` build-macos/build-macos-intel), Windows 0.7.4 (`kpathsea_sys` `build_from_source`). The subprocess-`kpsewhich` backend is a **runtime** fallback (MiKTeX; a host with no libkpathsea), not a build-time one — it does **not** avoid the static link. See §D.3. |
 
 The release binary statically links libxml2/libxslt/libexslt (§3, shipped
@@ -182,9 +220,11 @@ and **pinned** — `kpathsea_sys` `build_from_source` fetches it at a recorded
 commit (`KPSE_REF`), and the Linux/macOS `build_static_kpathsea.sh` pins the
 same. The LGPL-2.1 **text** + the kpathsea copyright + the relink pointer + the
 per-artifact commit are now shipped (`THIRD-PARTY-NOTICES` §3.2/§3.5/§6/§7) —
-**F5 is closed**; the posture is settled in §D.3. (The obligation is not new to
-0.7.4 — the Linux legs have static-linked kpathsea since
-`build_static_kpathsea.sh`; 0.7.4 makes it universal by adding Windows.)
+**F5 is closed**; the posture is settled in §D.3. (The obligation is **older than
+0.7.4 and was never partial**: `46502fb90c` added `build_static_kpathsea.sh` to
+the Linux *and* macOS legs together, and Windows had no release before 0.7.4 — so
+every leg we have ever published already carried the static LGPL link. 0.7.4 adds
+no obligation; it is the first release to *disclose* the one already there.)
 
 Re-verify: `ldd target/<profile>/latexml_oxide` (dev) or the release-artifact
 no-dynamic-clib CI assertion (release).
@@ -195,6 +235,13 @@ Statically compiled into the binary by a `-sys` crate's `build.rs`. In each row
 the **crate manifest's license is not the license of the code that ships**, so
 none of these are catchable by cargo-deny (§A) — they are audited by hand here
 and attributed in `THIRD-PARTY-NOTICES` §3.2-§3.5.
+
+Note the framing "vendored **native**" understates the class: the defining trait
+is *a manifest that does not describe the material shipped*, and C is merely its
+commonest form. `unidecode` (§D.4) is the same failure in pure Rust. Two crates
+here — `libxml`/`libxslt` — are also not "vendored" at all: they link a system
+library via pkg-config, which is why they tripped none of the audit's original
+five signals despite being the largest native surface in the binary.
 
 | Native lib | Carrier crate | Crate declares | What actually links in | Notice |
 |---|---|---|---|---|
@@ -262,11 +309,50 @@ Revisit if the binary ever links an LGPL library whose source is *not* public an
 pinned, or if latexml-oxide's own source ceases to be CC0 — either would break
 the premise this rests on.
 
+### D.4 Embedded third-party *data* — the same blind spot, in pure Rust
+
+`unidecode 0.3.0` (reached from `latexml_core/src/common/cleaners.rs`) ships a
+~1.9 MB Unicode→ASCII `MAPPING` table in `src/data.rs`, headed *"File
+autogenerated with /scripts/generate_map.pl"*. That script converts the data set
+from Sean M. Burke's Perl `Text::Unidecode`; the crate's own README says as much.
+
+| | Declares | What actually ships |
+|---|---|---|
+| `unidecode` | BSD-3-Clause, © 2015 Amit Chowdhury | the Rust code — accurate |
+| its `data.rs` table | *(nothing separate)* | data generated from `Text::Unidecode`, © 2001, 2014, 2015, 2016 **Sean M. Burke**, "same terms as Perl" = Artistic-1.0-Perl OR GPL-1.0-or-later |
+
+Why no tool catches it: `cargo-deny` and `cargo-about` read the manifest (which
+is not wrong about the code it covers); `audit_vendored_natives.py` looks for
+*native* code and for third-party notices under `resources/`, and this is neither.
+`deny.toml` allows neither Artistic nor GPL-1.0 — it passes **only** because the
+manifest says BSD-3, so the "explicit review before it enters the distribution"
+that the allow-list comment promises had never actually happened for this crate.
+
+**Position (owner-approved 2026-07-15).** Attribute Burke by name and record the
+ambiguity (`THIRD-PARTY-NOTICES` §3.6). We treat the mapping table as
+**uncopyrightable data** rather than a creative work — it is a factual mapping,
+and Burke notes much of it derives from the Unicode Consortium's own data — so no
+copyleft obligation attaches, and no Artistic/GPL text ships in §6. This is a
+judgement, not a certainty; it is written down precisely so it can be revisited
+rather than silently inherited from a manifest. Attribution is owed under either
+reading, and is given. Revisit if the table is ever used as more than a lookup, or
+if upstream asserts otherwise.
+
 ## E. Subprocess-only tools (never linked → no license propagation)
 
 All graphics helpers are invoked via `std::process::Command` in
 `latexml_post/src/graphics.rs`, never linked — so their (A)GPL licenses do not
-propagate to our binary. The host TeX Live ecosystem provides them.
+propagate to our binary. For the binary downloads, the host TeX Live ecosystem
+provides them.
+
+**Except in the container images** (F10): those `apt-get install` ghostscript,
+imagemagick, poppler-utils and mupdf-tools (and all of TeX Live) **into** the
+image, so there we *redistribute* them rather than borrow them from the host.
+"Never linked" still holds and is what matters — they remain separate programs
+merely aggregated alongside latexml-oxide, which does not place latexml-oxide
+under their terms — and each arrives with its own Ubuntu copyright file under
+`/usr/share/doc`. Worth stating because "the host provides them" was written for
+the tarball and quietly assumed to hold everywhere.
 
 | Tool | Package | License | Call sites |
 |---|---|---|---|
@@ -309,8 +395,10 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   §B row corrected; `audit_vendored_natives.py` now guards the class. Found by
   asking the §D.2 question one level up — *what does this claim actually cover?*
   — rather than by any tool. Nothing else under `resources/` is third-party.
-- **F5** *(CLOSED 2026-07-14)* — **libkpathsea (LGPL-2.1 static link).** kpathsea is statically linked on Linux
-  (`build_static_kpathsea.sh`) and, as of 0.7.4, Windows (`build_from_source`).
+- **F5** *(CLOSED 2026-07-14)* — **libkpathsea (LGPL-2.1 static link).** kpathsea is statically linked on
+  **every release leg**: Linux **and macOS** via `build_static_kpathsea.sh`, and,
+  as of 0.7.4, Windows via `build_from_source`. (This line said "Linux … and
+  Windows" until 2026-07-15, contradicting §D.1 two hundred lines above it.)
   `THIRD-PARTY-NOTICES` now carries the kpathsea copyright (§3.2), the relink
   note (§3.5), the verbatim LGPL-2.1 text (§6), and the **exact commit each
   artifact was built from** (§7) — all via `tools/gen_notices.sh` + `licenses/`.
@@ -334,6 +422,65 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   is misled, and an "honest" combined field would trip our own `deny.toml` (LGPL
   is not in the allow list) for no real gain. **The control is §3.3 + the CI
   audit, not the manifest** — which is precisely why the audit exists.
+- **F13** *(landed 2026-07-15)* — **the Windows `.exe` statically links zlib and GNU
+  libiconv (LGPL-2.1+), via a vcpkg default nobody chose.** `release.yml` runs `vcpkg
+  install libxml2:x64-windows-static` with **no feature spec** and there is no
+  `vcpkg.json` manifest, so the port's `default-features` — `["iconv","zlib"]` — apply.
+  On a fully-static triplet both land inside the `.exe`. So the Windows artifact carries
+  a **third** static LGPL link, undisclosed, on the platform we are shipping for the
+  first time. Found by asking what the *other* build path does: `build_static_libxml.sh`
+  governs Linux and macOS only, and a §3.1 claim written from it ("nothing else C is
+  linked in") was silently a five-platform claim sourced from a two-platform script —
+  this PR's own bug class, committed while fixing this PR's own bug class.
+  **Decided 2026-07-15 (owner):** keep the features and attribute. Dropping to
+  `libxml2[core]` would remove both, but libxml2 without iconv handles only
+  UTF-8/Latin-1/ASCII internally, which risks regressing `\inputencoding` documents on a
+  platform we cannot test locally before the tag. libiconv now appears in
+  `THIRD-PARTY-NOTICES` §3.1 (Windows-only static), §3.5's relink list, and §7's
+  provenance; zlib is attributed too, though its licence only *invites* acknowledgement.
+  Same §D.3 posture discharges the relink duty: the vcpkg port and GNU upstream are both
+  public and versioned. **No gate covers this class** — `audit_vendored_natives.py`
+  reasons over the cargo graph, and a vcpkg feature default is invisible to it.
+- **F10** *(landed 2026-07-15)* — **the container images shipped no notices, and no
+  LICENSE.** `docker.yml` pushes `ghcr.io/dginev/latexml-oxide` and `.../cortex-worker`
+  to GHCR on release-publish, so both are a distribution channel — each hands a user the
+  binary with statically linked LGPL in it (libkpathsea; libmarpa's libavl/obstack), and
+  the worker additionally copies `resources/` in, carrying the 83 W3C/Mozilla SVG schemas
+  whose licence requires the notice travel with every copy. `grep -c 'LICENSE|THIRD-PARTY'
+  Dockerfile` → **0**. Same lesson as F7 and F9 for the **third** time: an artifact
+  assembled by a different tool inherits none of the staging — and this time the tool was
+  one nobody had enumerated as a channel at all. `make_release.sh` never runs for a
+  container, so the Dockerfile now has its own `notices` stage that generates the file
+  (per-image: the CLI and worker link **different** feature graphs, so §5 differs),
+  content-gates it, and copies it plus `LICENSE` into both runtime images under
+  `/usr/local/share/doc/latexml-oxide/`. §4 was also corrected: "provided by the user's
+  system" is false for these images, which `apt-get install` ghostscript/imagemagick/
+  poppler/mupdf **into** the image (aggregation, so latexml-oxide's terms are unaffected,
+  and each keeps its own Ubuntu copyright file).
+- **F11** *(landed 2026-07-15)* — **`unidecode`: the blind spot is not limited to C.**
+  The crate embeds a ~1.9 MB transliteration table machine-generated from Sean M. Burke's
+  Perl `Text::Unidecode`; its `LICENSE` is BSD-3-Clause © 2015 Amit Chowdhury, while
+  upstream is © 2001–2016 Burke under "the same terms as Perl" (Artistic-1.0-Perl OR
+  GPL-1.0-or-later). Structurally identical to the mimalloc case in §D.2 — a manifest
+  naming a different holder than the material shipped — but in a **pure-Rust** crate, so
+  neither `cargo-deny` nor `audit_vendored_natives.py` (not native, not under
+  `resources/`) can see it, and the notices' own "-sys crates compile third-party C"
+  caveat did not reach it. `deny.toml` allows neither Artistic nor GPL-1.0: it passes
+  **only** because the manifest says BSD-3. **Decided 2026-07-15 (owner):** attribute
+  Burke and record the ambiguity (`THIRD-PARTY-NOTICES` §3.6); we treat the mapping table
+  as uncopyrightable data — a factual mapping, much of it derived from the Unicode
+  Consortium's own — so no copyleft attaches and no Artistic/GPL text ships in §6. A
+  judgement, written down rather than asserted away. See §D.4.
+- **F12** *(landed 2026-07-15)* — **the schema-docs Ayu palette came from rustdoc.**
+  `resources/CSS/relaxng-schema-rustdoc-theme.css` is ours, but its `data-theme="ayu"`
+  colour values are rustdoc's (11/11 verbatim; its light/dark palettes are original), and
+  rustdoc itself credits Dempfi's Ayu. §B booked the file as "ours/CC0" and called
+  `RelaxNG/svg/` "the one embedded resource that is not public domain". Legally thin —
+  colour values are arguably facts — but it fails **our own** stated standard: §2.1
+  attributes NIST PD where "no notice is legally required; attribution is provided in
+  gratitude." Attributed in `THIRD-PARTY-NOTICES` §2.3; §B row corrected. Note the
+  resource gate cannot catch this class: it flags files that *announce* themselves, and
+  all 16 embedded CSS/JS files carry no notice at all — they clear by **silence**.
 - **F9** *(landed 2026-07-14)* — **the `.deb` shipped the committed notices, not the
   assembled ones.** Found by the PR's own code review, not by any gate. F7 fixed the
   tarballs and the `.zip` but missed the `.deb` entirely: `cargo deb` builds its payload

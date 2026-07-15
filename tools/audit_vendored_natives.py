@@ -30,9 +30,36 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Everything here is anchored to the repo, never to the cwd. Both halves of this
+# script have now been caught trusting the cwd, and both times the result was a
+# confident green over a subset of the truth:
+#   * RESOURCE_ROOTS was relative, so from any other directory rglob yielded nothing
+#     and the script printed "ok resources/RelaxNG/svg/ (0 file(s))" -- exit 0 having
+#     scanned no files at all.
+#   * `cargo tree`/`cargo metadata` inherited the cwd, so running one directory down
+#     resolved a DIFFERENT manifest: libmimalloc-sys (whose vendored C is (c) Microsoft
+#     while its wrapper LICENSE.txt names Octavian Oncescu -- the exact case NOTICES 3.4
+#     exists for) dropped out of the tree, the gate printed "OK: all 4 native-code crates
+#     are audited", exited 0, and listed the disappearance as a "stale" entry inviting
+#     someone to delete its attribution.
+# That second one is the libmarpa path-prefix bug reincarnated. The lesson both times:
+# a gate that reports success for work it never did is worse than no gate.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+MANIFEST_ARGS = ["--manifest-path", str(REPO_ROOT / "Cargo.toml")]
+
 # The feature set the distributed binary ships (CLAUDE.md, RELEASE_CRITERIA 4).
 # Audit exactly what we ship -- no more, no less.
-SHIPPED_FEATURES = ["--no-default-features", "--features", "runtime-bindings"]
+#
+# RELEASE_EXTRA_FEATURES (release.yml passes `kpathsea-build-from-source` on the
+# Windows leg) is folded in rather than ignored: it is part of what we publish, and a
+# per-target feature that pulled in a native crate would otherwise be invisible here.
+# It adds no crates today (verified: same graph with and without) -- the point is that
+# it cannot start to without this gate noticing.
+SHIPPED_FEATURES = [
+    "--no-default-features",
+    "--features",
+    "runtime-bindings,kpathsea-build-from-source",
+]
 
 # The triples we actually publish (docs/release/RELEASING.md "What ships in a release";
 # the build legs in .github/workflows/release.yml). KEEP IN SYNC when a target is added.
@@ -77,10 +104,24 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "psm": ("0.1.31", 
-        "Compiles its own portable stack-manipulation asm shims. Own copyright, "
-        "covered by the crate's own MIT OR Apache-2.0 -- no third-party native code, "
-        "so cargo-about's per-crate text is accurate. No separate notice owed."
+    "libxml": ("0.3.16",
+        "Binds libxml2 -- (c) Daniel Veillard, MIT -- which the crate's own "
+        "'MIT OR Apache-2.0' does not name. Linked via pkg-config + rustc-link-lib "
+        "rather than compiled here, and STATIC on every release leg "
+        "(tools/build_static_libxml.sh, built --without-zlib/lzma/icu so nothing else "
+        "comes with it). Permissive, so no relink duty. Attributed in NOTICES 3.1."
+    ),
+    "libxslt": ("0.1.5",
+        "Binds libxslt/libexslt -- (c) Daniel Veillard, MIT -- same shape as libxml "
+        "above, same static link, built --without-crypto so libgcrypt (LGPL-2.1) stays "
+        "OUT of the closure. If that flag is ever dropped, an LGPL library enters the "
+        "static link and 3.5's relink note must cover it. Attributed in NOTICES 3.1."
+    ),
+    "psm": ("0.1.31",
+        "Compiles its own portable stack-manipulation asm shims, and ships a prebuilt "
+        "wasm32.o (a target we do not release). Own copyright, covered by the crate's "
+        "own MIT OR Apache-2.0 -- no third-party native code, so cargo-about's "
+        "per-crate text is accurate. No separate notice owed."
     ),
     "stacker": ("0.1.24", 
         "Compiles its own small C shim (src/arch/windows.c -> GetCurrentFiber). Own "
@@ -91,11 +132,23 @@ AUDITED = {
 # Signals that a crate brings native code into the binary. Deliberately broad: a false
 # positive costs one line in AUDITED, a false negative costs an unattributed library.
 VENDORED_ARCHIVE_SUFFIXES = (".tar.gz", ".tgz", ".tar.xz", ".tar.bz2", ".zip")
-NATIVE_SOURCE_SUFFIXES = (".c", ".cc", ".cpp", ".cxx", ".S", ".s", ".asm")
+# .m/.mm: ObjC -- two of our five release triples are macOS. .o: a prebuilt object,
+# as psm ships for wasm32.
+NATIVE_SOURCE_SUFFIXES = (".c", ".cc", ".cpp", ".cxx", ".S", ".s", ".asm", ".m", ".mm", ".cu")
 # A crate can ship a PREBUILT library and link it with no build.rs, no `links`,
 # and no sources -- native code with none of the other four signals.
-PREBUILT_LIB_SUFFIXES = (".a", ".lib", ".so", ".dylib", ".dll")
-BUILD_RS_NATIVE_RE = re.compile(r"cc::Build|cmake::|Build::new\(\)|\.compile\(")
+PREBUILT_LIB_SUFFIXES = (".a", ".lib", ".so", ".dylib", ".dll", ".o", ".obj")
+# libfoo.so.1 / libfoo.so.0.0.0 -- versioned sonames that no suffix test catches.
+PREBUILT_SO_RE = re.compile(r"\.so(\.\d+)+$")
+# `rustc-link-lib` / pkg_config: the shape libxml/libxslt use -- link a system library
+# with NO links key, NO cc::Build, NO vendored sources. They are the largest native
+# surface in the binary (and static in release), and matched none of the other four
+# signals, so the gate cheerfully reported "all N native-code crates audited" with the
+# two biggest ones not in N. bindgen alone is NOT enough: it generates Rust bindings
+# and implies nothing about linking.
+BUILD_RS_NATIVE_RE = re.compile(
+    r"cc::Build|cmake::|Build::new\(\)|\.compile\(|rustc-link-lib|pkg_config|pkg-config"
+)
 
 
 def run(cmd):
@@ -112,7 +165,8 @@ def shipped_packages():
     build.rs compiles C is itself a normal dep -- that is what we want to catch.
     """
     out = run(
-        ["cargo", "tree", *SHIPPED_FEATURES, "-e", "normal", "--prefix", "none", *TARGET_ARGS]
+        ["cargo", "tree", *MANIFEST_ARGS, *SHIPPED_FEATURES,
+         "-e", "normal", "--prefix", "none", *TARGET_ARGS]
     )
     pkgs = set()
     for line in out.splitlines():
@@ -148,28 +202,40 @@ def package_dirs():
     inviting someone to delete its attribution. Exactly the bug this script exists to
     catch, so it does not get to make it.
     """
-    meta = json.loads(run(["cargo", "metadata", "--format-version", "1", *SHIPPED_FEATURES]))
+    meta = json.loads(
+        run(["cargo", "metadata", "--format-version", "1", *MANIFEST_ARGS, *SHIPPED_FEATURES])
+    )
     dirs = {}
     for pkg in meta["packages"]:
+        build_script = next(
+            (Path(t["src_path"]) for t in pkg.get("targets", []) if "custom-build" in t.get("kind", [])),
+            None,
+        )
         dirs[(pkg["name"], pkg["version"])] = (
             Path(pkg["manifest_path"]).parent,
             pkg.get("links"),
             pkg["id"],
+            build_script,
         )
     return dirs, set(meta["workspace_members"])
 
 
-def native_evidence(pkg_dir, links):
+def native_evidence(pkg_dir, links, build_script=None):
     """Why we think this crate brings in native code. Empty list = it doesn't."""
     why = []
     if links:
         why.append(f"links = \"{links}\"")
 
-    build_rs = pkg_dir / "build.rs"
+    # From cargo metadata's custom-build target, NOT a hardcoded `build.rs`: Cargo
+    # honours `build = "build/main.rs"`, and rustversion in this very tree uses
+    # build/build.rs -- so the hardcoded path was already reading nothing there. A
+    # crate that fetches its sources at build time (the kpathsea_sys shape) with a
+    # custom build-script path and no `links` key would evade every other signal.
+    build_rs = build_script if build_script is not None else pkg_dir / "build.rs"
     if build_rs.is_file():
         try:
             if BUILD_RS_NATIVE_RE.search(build_rs.read_text(errors="ignore")):
-                why.append("build.rs compiles native code (cc/cmake)")
+                why.append(f"{build_rs.name} builds/links native code")
         except OSError:
             pass
 
@@ -177,11 +243,13 @@ def native_evidence(pkg_dir, links):
     for p in pkg_dir.rglob("*"):
         if not p.is_file():
             continue
+        # endswith, not `.suffix`: a versioned shared object (libfoo.so.1) has
+        # suffix ".1", so a suffix test silently misses ordinary library packaging.
         if p.name.endswith(VENDORED_ARCHIVE_SUFFIXES):
             archives.append(p.name)
-        elif p.suffix in NATIVE_SOURCE_SUFFIXES:
+        elif p.name.endswith(NATIVE_SOURCE_SUFFIXES):
             sources += 1
-        elif p.suffix in PREBUILT_LIB_SUFFIXES:
+        elif p.name.endswith(PREBUILT_LIB_SUFFIXES) or PREBUILT_SO_RE.search(p.name):
             prebuilt.append(p.name)
     if archives:
         why.append(f"vendored archive(s): {', '.join(sorted(archives)[:3])}")
@@ -200,11 +268,7 @@ def native_evidence(pkg_dir, links):
 # until resources/RelaxNG/svg/ turned out to be W3C + Mozilla. Markers, not counts:
 # a count gate fails on every legitimate new schema file (noise), while what actually
 # matters is a NEW third-party copyright holder appearing among the embedded assets.
-REPO_ROOT = Path(__file__).resolve().parent.parent
-# Anchored to the repo, NOT the cwd. A relative "resources" makes rglob yield nothing
-# from any other directory -- and rglob on a missing dir raises nothing, so the audit
-# printed "ok resources/RelaxNG/svg/ (0 file(s))" and exited 0 having scanned no files.
-# A gate that reports success for work it never did is worse than no gate.
+# Anchored to REPO_ROOT, never the cwd -- see the note there.
 RESOURCE_ROOTS = [REPO_ROOT / "resources"]
 # Broad on purpose. The previous six fixed phrases missed "Copyright (c) 2024 Foo Inc"
 # (a real notice with no license keyword) and, live in this repo,
@@ -222,16 +286,12 @@ THIRD_PARTY_MARKER_RE = re.compile(
     re.IGNORECASE,
 )
 
-# A file carrying Perl LaTeXML's NIST public-domain notice is PD by that very notice
-# (§2.1) -- 43 files do. Clearing them by NOTICE rather than by path is what keeps this
-# gate meaningful: allowlisting `resources/XSLT/` wholesale would wave through a genuinely
-# third-party stylesheet dropped in beside them, which is the case we care about. It also
-# needs no upkeep when upstream adds a file.
-NIST_PD_NOTICE_RE = re.compile(
-    r"not subject to copyright in the US|"
-    r"employees of the U\.?S\.? Federal Government",
-    re.IGNORECASE,
-)
+# There is deliberately NO "clear it if it carries the NIST public-domain notice" escape
+# hatch. 43 embedded files do carry that notice, but none of them trips the marker regex
+# above, so such a rule would be dead code -- dead code that could only ever ACT by
+# clearing a genuinely third-party file that happened to quote the NIST phrase. If an
+# upstream Perl-LaTeXML file ever grows a copyright header, the right outcome is that
+# this gate flags it and a human looks, which is what happens with no rule at all.
 
 # Embedded subtrees whose third-party origin is recorded. Prefixes are used ONLY where
 # the whole subtree has one known upstream, never as a blanket for a mixed directory.
@@ -253,7 +313,7 @@ AUDITED_RESOURCES = {
 
 def audit_resources(verbose):
     """Flag embedded resources carrying an unaudited third-party copyright."""
-    hits, nist_pd = [], []
+    hits = []
     for root in RESOURCE_ROOTS:
         if not root.is_dir():
             print(f"ERROR: resource root missing: {root}")
@@ -267,11 +327,7 @@ def audit_resources(verbose):
                 continue
             if not THIRD_PARTY_MARKER_RE.search(text):
                 continue
-            rel = p.relative_to(REPO_ROOT).as_posix()
-            if NIST_PD_NOTICE_RE.search(text):
-                nist_pd.append(rel)   # cleared by its own notice (§2.1)
-                continue
-            hits.append(rel)
+            hits.append(p.relative_to(REPO_ROOT).as_posix())
 
     unaudited = [h for h in hits if not any(h.startswith(k) for k in AUDITED_RESOURCES)]
     if verbose:
@@ -279,7 +335,6 @@ def audit_resources(verbose):
         for prefix in AUDITED_RESOURCES:
             n = sum(1 for h in hits if h.startswith(prefix))
             print(f"  ok  {prefix} ({n} file(s))")
-        print(f"  ok  {len(nist_pd)} file(s) cleared by the NIST public-domain notice (§2.1)")
         print()
 
     if unaudited:
@@ -311,14 +366,18 @@ def main():
             # an unplaceable crate is an unaudited crate.
             unresolved.append(f"{name} v{version}")
             continue
-        pkg_dir, links, pkg_id = entry
+        pkg_dir, links, pkg_id, build_script = entry
         # Skip only OUR OWN workspace crates (CC0, audited by definition), identified
         # by cargo's package ids -- not by path shape. See package_dirs().
         if pkg_id in workspace_ids:
             continue
-        why = native_evidence(pkg_dir, links)
+        why = native_evidence(pkg_dir, links, build_script)
         if why:
-            found[name] = (version, why)
+            # Keyed by (name, version), matching AUDITED. Keying by name alone silently
+            # drops all but the last version of a crate shipped at two versions -- live
+            # here today (getrandom x3, hashbrown x2). Two versions of one native crate
+            # can vendor two different libraries.
+            found[(name, version)] = why
 
     if unresolved:
         print("ERROR: shipped crate(s) that cargo metadata could not locate:")
@@ -327,22 +386,24 @@ def main():
         print("\nCannot audit what cannot be found; failing rather than passing blind.")
         return 1
 
-    # Match on (name, version), not name. AUDITED's text pins what a specific version
+    # Match on (name, version), not name. AUDITED's text pins what a SPECIFIC version
     # vendors ("libmarpa 8.6.2"); a bump can change the vendored library wholesale, so
     # inheriting the old verdict by name is how a stale "ok" outlives the thing it
     # described. A bump is cheap to clear -- re-check and edit one line.
-    unaudited = {n: v for n, v in found.items() if n not in AUDITED}
+    unaudited = {k: v for k, v in found.items() if k[0] not in AUDITED}
     rebumped = {
-        n: (v[0], AUDITED[n][0]) for n, v in found.items() if n in AUDITED and v[0] != AUDITED[n][0]
+        k: AUDITED[k[0]][0]
+        for k in found
+        if k[0] in AUDITED and k[1] != AUDITED[k[0]][0]
     }
-    stale = [n for n in AUDITED if n not in found]
+    stale = [n for n in AUDITED if n not in {k[0] for k in found}]
 
     if rebumped:
         print("ERROR: audited crate(s) changed version — the recorded verdict may no longer hold:")
         print()
-        for n, (got, was) in sorted(rebumped.items()):
-            print(f"  {n}: audited at v{was}, tree has v{got}")
-            print(f"      recorded: {AUDITED[n][1][:100]}...")
+        for (name, got), was in sorted(rebumped.items()):
+            print(f"  {name}: audited at v{was}, tree has v{got}")
+            print(f"      recorded: {AUDITED[name][1][:100]}...")
         print()
         print("A version bump can swap the vendored library (and its license) entirely.")
         print("Re-check what this version compiles, then update AUDITED + LICENSE_INVENTORY §D.2.")
@@ -350,8 +411,8 @@ def main():
 
     if verbose or unaudited:
         print("Shipped crates that compile or link native code:\n")
-        for name, (version, why) in sorted(found.items()):
-            mark = "NEW " if name in unaudited else "ok  "
+        for (name, version), why in sorted(found.items()):
+            mark = "NEW " if (name, version) in unaudited else "ok  "
             print(f"  {mark}{name} v{version}")
             for w in why:
                 print(f"        - {w}")
@@ -378,7 +439,7 @@ def main():
     if unaudited:
         print("ERROR: unaudited crate(s) bring native code into the shipped binary:")
         print()
-        for name, (version, _) in sorted(unaudited.items()):
+        for name, version in sorted(unaudited):
             print(f"  {name} v{version}")
         print()
         print("cargo-deny/cargo-about CANNOT catch this: they read the crate manifest,")

@@ -93,9 +93,12 @@ jobs:
             "GNU GENERAL PUBLIC LICENSE v3.0"; do
             grep -qF "$needle" "$f" || { echo "::error::THIRD-PARTY-NOTICES is missing: $needle"; exit 1; }
           done
-          # Section 7's relink pointer must name real commits: an "unresolved" here
-          # means we shipped a promise (3.5) we cannot keep.
-          if grep -q "unresolved" "$f"; then
+          # Section 7's relink pointer must name real commits: an unresolved revision
+          # means we shipped a promise (3.5) we cannot keep. `commit: unknown` is the
+          # same failure wearing a different word -- it is what gen_notices.sh writes
+          # when `git rev-parse` cannot answer. Scoped to the section-7 lines so a
+          # future crate's license text containing "unresolved" cannot fail a release.
+          if sed -n '/^7\. SOURCE PROVENANCE/,$p' "$f" | grep -qE "unresolved|commit: unknown"; then
             echo "::error::THIRD-PARTY-NOTICES section 7 has an unresolved source revision"
             exit 1
           fi

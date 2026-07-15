@@ -4,11 +4,16 @@
 # assets, linked syslibs, subprocess tools) plus the auto-generated section 5
 # (Rust dependency licenses, from the actual lockfile).
 #
-# The Rust section is generated with the SAME feature set the distributed binary
-# ships (`--no-default-features --features runtime-bindings`), so it attributes
-# exactly the crates that are linked in — no more, no less.
+# The Rust section is generated with the SAME feature set the artifact being
+# packaged ships, so it attributes exactly the crates linked in — no more, no
+# less. Default = the release binary's set; the cortex-worker container links a
+# different graph, so it overrides via NOTICES_CARGO_FEATURES.
 #
 # Usage:  tools/gen_notices.sh [OUTPUT]     (default: ./THIRD-PARTY-NOTICES.dist)
+# Env:    NOTICES_CARGO_FEATURES  cargo feature flags for section 5's graph
+#                                 (default: --no-default-features --features runtime-bindings)
+#         LATEXML_SELF_REV        our own commit for section 7, when `git` cannot
+#                                 answer (the container build excludes .git)
 # Requires: cargo-about  (cargo install cargo-about --features cli)
 #
 # See docs/release/LICENSE_INVENTORY.md (the audit) and docs/release/RELEASE_CRITERIA.md §4.
@@ -18,6 +23,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 out="${1:-THIRD-PARTY-NOTICES.dist}"
+read -r -a cargo_features <<<"${NOTICES_CARGO_FEATURES:---no-default-features --features runtime-bindings}"
 
 if ! command -v cargo-about >/dev/null 2>&1; then
   echo "error: cargo-about not found. Install with:" >&2
@@ -25,12 +31,26 @@ if ! command -v cargo-about >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Generating Rust dependency license section (shipped feature set)..." >&2
+# The input MUST be the hand-authored sections 1-4 and nothing more. If it already
+# carries a section 5, this is a re-run over a previously assembled file and `cat`
+# below would append a SECOND copy of sections 5/6/7 -- which every downstream gate
+# would happily pass, since they all test for the PRESENCE of a marker and a line
+# count FLOOR. Duplication makes them *more* likely to pass. That state is reachable:
+# make_release.sh swaps this file for the .deb build, so a SIGKILL mid-build leaves
+# the assembled content sitting in the tracked path. Refuse rather than compound it.
+if grep -qF "5. RUST DEPENDENCY LICENSES" THIRD-PARTY-NOTICES; then
+  echo "error: THIRD-PARTY-NOTICES already contains an assembled section 5." >&2
+  echo "  This file must hold ONLY the hand-authored sections 1-4; appending to it" >&2
+  echo "  would emit sections 5/6/7 twice, and no gate checks for duplicates." >&2
+  echo "  A killed 'make_release.sh' can leave the assembled file in this path." >&2
+  echo "  Restore it with:  git checkout -- THIRD-PARTY-NOTICES" >&2
+  exit 1
+fi
+
+echo "Generating Rust dependency license section (${cargo_features[*]})..." >&2
 rust_section="$(mktemp)"
 trap 'rm -f "$rust_section"' EXIT
-cargo about generate \
-  --no-default-features --features runtime-bindings \
-  about.hbs -o "$rust_section"
+cargo about generate "${cargo_features[@]}" about.hbs -o "$rust_section"
 
 # hand-authored sections 1-4  +  generated section 5  +  section 6 (copyleft texts)
 #
@@ -80,7 +100,11 @@ marpa_rev="$(sed -n 's|^source = "git+https://github.com/dginev/marpa#\(.*\)"$|\
   Cargo.lock 2>/dev/null | head -1)"
 kpse_ref="$(sed -n 's|^KPSE_REF="${KPSE_REF:-\(.*\)}"$|\1|p' \
   tools/build_static_kpathsea.sh 2>/dev/null | head -1)"
-self_rev="$(git rev-parse HEAD 2>/dev/null || echo "unknown")"
+# LATEXML_SELF_REV first: the container build has no .git in its context (see
+# .dockerignore), so `git rev-parse` there answers nothing and section 7 would name
+# no commit for the very application whose CC0 source discharges the relink promise.
+# docker.yml passes the real sha through the GITSHA build-arg.
+self_rev="${LATEXML_SELF_REV:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}"
 
 {
   echo "--------------------------------------------------------------------------------"
@@ -104,9 +128,16 @@ self_rev="$(git rev-parse HEAD 2>/dev/null || echo "unknown")"
   echo "      https://github.com/TeX-Live/texlive-source (texk/kpathsea)"
   echo "      commit: ${kpse_ref:-unresolved}"
   echo
-  echo "To relink: clone latexml-oxide at the commit above, point the marpa/kpathsea"
-  echo "dependency at your modified library, and rebuild. latexml-oxide's own source"
-  echo "is CC0, so nothing restricts you from doing so."
+  echo "  GNU libiconv -- LGPL-2.1-or-later (sec 3.1) -- WINDOWS .exe ONLY"
+  echo "      Statically linked there via libxml2's vcpkg 'iconv' default feature;"
+  echo "      on Linux/macOS iconv is a dynamically linked host system library and"
+  echo "      no libiconv code is in the binary."
+  echo "      https://www.gnu.org/software/libiconv/  (recipe: vcpkg ports/libiconv)"
+  echo
+  echo "To relink: clone latexml-oxide at the commit above, point the relevant dependency"
+  echo "at your modified library -- the marpa/kpathsea crate, or (for libiconv) the vcpkg"
+  echo "port the Windows leg installs -- and rebuild. latexml-oxide's own source is CC0,"
+  echo "so nothing in our terms restricts you from doing so."
   echo
 } > "$provenance_section"
 

@@ -116,8 +116,10 @@ the kpathsea playbook: `tools/build_static_libxml.sh` +
 `.a`), and the `LIBXML2_STATIC` / `LIBXSLT_STATIC` build.rs branches in the
 `libxml`/`libxslt` forks emit the `static=` link. `release.yml` runs both
 scripts on the Linux and macOS legs, and a CI step asserts the binary carries
-**no** dynamic libxml2/libxslt/kpathsea; transitive `-lz`/`-lgcrypt` stay
-dynamic (stable SONAMEs). Net: only the glibc family + zlib + libgcrypt remain
+**no** dynamic libxml2/libxslt/kpathsea. Since #261 the transitive `-lz`/`-lgcrypt`
+are not linked *at all* rather than left dynamic: libxml2 is built
+`--without-zlib --without-lzma --without-icu` and libxslt `--without-crypto`, so
+the net closure is libm (plus libiconv on macOS). Net: only the glibc family remains
 dynamic → "any glibc-2.35+ Linux, any libxml/libxslt version," and the `.deb`
 declares no libxml2 SONAME dependency (RELEASING.md). **Portability gate** (a
 static `latexml_oxide --version` running on this dev box, which is on

@@ -2,35 +2,52 @@ THIRD-PARTY NOTICES
 ===================
 
 latexml-oxide's own source code and original resources are dedicated to the
-public domain under CC0 1.0 Universal (see LICENSE). The distributed binary
-additionally embeds, links, or derives from third-party material that retains
-its own license, attributed below. This file is bundled with every release
-archive (tarball / .zip) and published as a standalone release asset.
+public domain under CC0 1.0 Universal (see LICENSE). What we ship additionally
+embeds, links, or derives from third-party material that retains its own license,
+attributed below.
+
+SCOPE. One file covers everything we publish, so it is the UNION over our
+artifacts, and anything that is not in all of them says so on its own line. The
+artifacts are: the tarballs, the Windows .zip and both .deb packages (each
+carrying the `latexml_oxide` binary and nothing else); the `latexml-oxide`
+container image (same binary); and the `cortex-worker` container image (which
+additionally carries `cortex_worker`, the only executable of ours that links
+libzmq — see 3.1). This file is bundled with every one of them (containers: under
+/usr/local/share/doc/latexml-oxide) and is published as a standalone release
+asset. Section 5 is the exception to the union: it is generated per artifact from
+that artifact's own dependency graph.
 
 
 AT A GLANCE
 -----------
 
-What the shipped binary is made of, and under what terms:
+What we ship is made of, and under what terms. Unless a line says otherwise, it
+applies to every artifact:
 
-  latexml-oxide's own code + original resources ......... CC0-1.0 (public domain)
-  Embedded TeX format dumps (LaTeX kernel / plain TeX) .. LPPL-1.3c / TeX  (sec 1)
-  Embedded XSLT, CSS, RelaxNG, Profiles, JS ............. public domain  (sec 2.1)
-  Embedded SVG 1.1 RELAX NG schema ...................... W3C + Mozilla  (sec 2.2)
-  libxml2 / libxslt / libexslt .......................... MIT           (sec 3.1)
-  libkpathsea .......................................... LGPL-2.1+      (sec 3.2)
-  libmarpa ............................................. MIT + LGPL     (sec 3.3)
-  mimalloc ............................................. MIT           (sec 3.4)
-  Rust crates .......................................... MIT / Apache-2.0 /
-                                                          BSD / ISC / …  (sec 5)
+  latexml-oxide's own code + original resources ........ CC0-1.0 (public domain)
+  Embedded TeX format dumps (LaTeX kernel / plain TeX) . LPPL-1.3c / TeX         (sec 1)
+  Embedded XSLT, CSS, RelaxNG, Profiles, JS ............ public domain           (sec 2.1)
+  Embedded SVG 1.1 RELAX NG schema ..................... W3C + Mozilla           (sec 2.2)
+  Schema-docs Ayu colour palette ....................... MIT (rustdoc)           (sec 2.3)
+  libxml2 / libxslt / libexslt ......................... MIT                     (sec 3.1)
+  zlib + GNU libiconv — Windows .exe only .............. Zlib + LGPL-2.1+        (sec 3.1)
+  libzmq — cortex-worker image only .................... MPL-2.0                 (sec 3.1)
+  libkpathsea .......................................... LGPL-2.1+               (sec 3.2)
+  libmarpa ............................................. MIT + LGPL              (sec 3.3)
+  mimalloc ............................................. MIT                     (sec 3.4)
+  unidecode's transliteration data ..................... BSD-3 / Perl            (sec 3.6)
+  Rust crates .......................................... MIT / CC0 / BSD-3 /     (sec 5)
+                                                          MPL-2.0 / Unicode-3.0 / Zlib
 
 The CC0 dedication covers ONLY the first line. Everything else keeps its own
 license — this file is where those are stated.
 
-Two of the linked libraries are copyleft (LGPL) and are statically linked; the
-LGPL permits that, and the relink condition it attaches is discharged by the
-fact that all of the sources involved are public and version-pinned. See
-section 3.5 for how, and section 6 for the license texts.
+Some of the linked libraries are copyleft (LGPL) and statically linked: libkpathsea
+and parts of libmarpa in every binary we release, plus GNU libiconv in the Windows
+.exe. The LGPL permits that, on the condition that you can relink against a modified
+version. Section 3.5 explains how that is discharged, section 7 records the exact
+version of each source that went into the artifact you have, and section 6 carries
+the license texts.
 
 Nothing here restricts USING latexml-oxide, for any purpose, commercial or
 otherwise. These terms concern REDISTRIBUTION of the binary.
@@ -43,10 +60,11 @@ For the licenses of the Rust crates statically linked into the binary, see the
 appended "RUST DEPENDENCY LICENSES" section (generated from the lockfile at
 release time via `cargo about`; see docs/release/LICENSE_INVENTORY.md §A).
 
-Note that the Rust section attributes each *crate* as its manifest declares it.
-Several `-sys` crates compile third-party C code that carries a different
-copyright holder and license than the Rust wrapper around it; those native
-libraries are attributed by name in section 3 below, not in section 5.
+That section attributes each *crate* as its manifest declares it, which is not
+the whole story: several `-sys` crates compile third-party C carrying a different
+holder and license than their Rust wrapper, and one pure-Rust crate embeds a data
+table generated from a Perl module under other terms. A manifest cannot express
+that, so those are named in section 3 as well as section 5.
 
 The full texts of the copyleft licenses referenced from section 3 are appended
 in section 6 ("COPYLEFT LICENSE TEXTS").
@@ -126,38 +144,79 @@ only condition is that the notice above accompany all copies — which this
 section, plus the verbatim comment headers carried inside each embedded file,
 satisfies.
 
+2.3 Schema-docs theme: the Ayu palette  (resources/CSS/)
+--------------------------------------------------------
+
+`relaxng-schema-rustdoc-theme.css` is ours, except its `data-theme="ayu"` colour
+values, taken from rustdoc's Ayu theme:
+
+  * rustdoc  —  Copyright (c) The Rust Project Contributors.
+      MIT OR Apache-2.0.  https://github.com/rust-lang/rust
+    which itself credits:
+  * the Ayu theme  —  Copyright (c) 2016 Ike Kurghinyan (Dempfi).
+      MIT.  https://github.com/dempfi/ayu
+
+Colour values are arguably facts and may attract no copyright at all, but rustdoc
+carried Ayu's credit forward and we took the values from rustdoc, so we carry
+both — in gratitude, as in 2.1. The rest of the file is ours and CC0.
+
 --------------------------------------------------------------------------------
-3. Linked native (C) libraries
+3. Linked native (C) libraries, and embedded third-party data
 --------------------------------------------------------------------------------
 
 3.1 System libraries
 --------------------
 
-The binary is built against the following C libraries (statically linked where
-noted per docs/release/RELEASE_CRITERIA.md §3; otherwise dynamically linked against the
-host system libraries):
+The XML/XSLT stack, statically linked into every released binary
+(tools/build_static_libxml.sh; docs/release/RELEASE_CRITERIA.md §3):
 
   * libxml2, libxslt, libexslt
       Copyright Daniel Veillard and contributors.
       Licensed under the MIT License.
       https://gitlab.gnome.org/GNOME/libxml2  /  libxslt
 
+On Linux and macOS these are built `--without-zlib --without-lzma --without-icu
+--without-crypto`, which keeps zlib, liblzma, ICU and libgcrypt/libgpg-error out
+of the link entirely; the net closure is libm (plus the host's own libiconv on
+macOS, dynamically).
+
+Windows gets libxml2/libxslt from vcpkg instead, at its port defaults, so two
+more libraries are statically linked into `latexml_oxide.exe` and nowhere else:
+
   * zlib
       Copyright Jean-loup Gailly and Mark Adler.
-      Licensed under the zlib License.
+      Licensed under the zlib License. https://zlib.net/
+      (Its terms ask only that the origin not be misrepresented; an
+      acknowledgement is "appreciated but is not required" — given here anyway.)
 
-  * libgcrypt, libgpg-error  (transitive, via libxslt's EXSLT crypto module)
-      Copyright Free Software Foundation and contributors.
-      Licensed under the GNU LGPL v2.1 (dynamically linked).
+  * GNU libiconv  (character-set conversion, via libxml2's `iconv` feature)
+      Copyright Free Software Foundation, Inc.
+      Licensed under the GNU LGPL v2.1 or later — full text in section 6.
+      https://www.gnu.org/software/libiconv/
+      Statically linked, so the relinking note in 3.5 covers it too. On Linux
+      iconv comes from glibc and on macOS from the host system library, in both
+      cases dynamically — this is a Windows-only static link.
 
-3.2 libkpathsea  (statically linked where available)
-----------------------------------------------------
+One more that is NOT in `latexml_oxide` at all: `cortex_worker` — shipped only in
+the cortex-worker container image, never in a binary download — links libzmq
+DYNAMICALLY, against the `libzmq5` package that image installs from Ubuntu.
 
-TeX file-path resolution. Statically linked on Linux
-(tools/build_static_kpathsea.sh) and, from 0.7.4, on Windows (the `kpathsea_sys`
-crate's `build_from_source`). On platforms where no library is available
-(notably macOS/MacTeX, and MiKTeX hosts) the binary instead calls the host's
-`kpsewhich` executable as a subprocess, and no kpathsea code is linked in.
+  * libzmq (ZeroMQ)
+      Copyright the ZeroMQ authors and contributors.
+      MPL-2.0, with MIT and LGPL-2.0+ parts. https://zeromq.org/
+      The `zmq-sys` crate declares "MIT/Apache-2.0", which covers its Rust
+      binding, not libzmq. Dynamically linked against the image's own package,
+      whose copyright file travels with it at /usr/share/doc/libzmq5/.
+
+3.2 libkpathsea  (statically linked into every released binary)
+--------------------------------------------------------------
+
+TeX file-path resolution. STATICALLY LINKED into every binary we release: Linux
+and macOS build it from source (tools/build_static_kpathsea.sh), Windows via the
+`kpathsea_sys` crate's `build_from_source`. If you got a binary from us, it has
+kpathsea's LGPL code in it and the relinking note in 3.5 applies to you.
+(latexml-oxide can also find TeX files by running the host's `kpsewhich` as a
+subprocess — a runtime fallback that does not remove the static link.)
 
       Copyright Karl Berry, Olaf Weber and contributors.
       Part of the TeX Live distribution.
@@ -213,17 +272,22 @@ vendored mimalloc C sources that are actually linked in.
 3.5 Relinking the LGPL components (LGPL-2.1 §6 / LGPL-3.0 §4)
 -------------------------------------------------------------
 
-libkpathsea (3.2) and parts of libmarpa (3.3) are LGPL and are STATICALLY
-linked into the distributed binary. Both licenses permit this on the condition
-that a recipient can relink the work against a modified version of the LGPL
-library. Every input needed to do so is public, and the exact commit of each one
-that went into THIS artifact is recorded in section 7:
+libkpathsea (3.2), parts of libmarpa (3.3), and — on Windows only — GNU libiconv
+(3.1) are LGPL and are STATICALLY linked into the distributed binary. Those
+licenses permit this on the condition that a recipient can relink the work
+against a modified version of the LGPL library. Every input needed to do so is
+public, and the exact version of each one that went into THIS artifact is
+recorded in section 7:
 
   * latexml-oxide's own source is CC0-1.0 — https://github.com/dginev/latexml-oxide
   * libmarpa 8.6.2 sources are vendored verbatim in the `libmarpa-sys` crate
     (libmarpa-8.6.2.tar.gz) at https://github.com/dginev/marpa
   * kpathsea is fetched at a recorded commit (`KPSE_REF`, pinned by
-    tools/build_static_kpathsea.sh)
+    tools/build_static_kpathsea.sh on the Linux/macOS legs, and by the
+    `kpathsea_sys` crate's own KPSE_REF on Windows)
+  * GNU libiconv (Windows) comes from the vcpkg `libiconv` port, whose recipe and
+    pinned version are public at https://github.com/microsoft/vcpkg
+    (ports/libiconv); upstream https://ftp.gnu.org/pub/gnu/libiconv/
 
 Rebuilding from those sources with a modified LGPL library reproduces the
 binary. Because latexml-oxide's own source is CC0, nothing in our terms
@@ -231,11 +295,41 @@ restricts you from doing so.
 
 Requests for the corresponding sources: https://github.com/dginev/latexml-oxide/issues
 
+3.6 unidecode — transliteration data from Text::Unidecode
+---------------------------------------------------------
+
+Not a C library, but listed here for the same reason: the manifest names a
+different holder than the material shipped. The `unidecode` crate embeds a ~1.9 MB
+Unicode→ASCII mapping table machine-generated from Sean M. Burke's Perl
+`Text::Unidecode` (its README says so; `src/data.rs` is headed "File autogenerated
+with /scripts/generate_map.pl").
+
+      The Rust crate:  Copyright (c) 2015 Amit Chowdhury.
+          BSD 3-Clause, as its manifest declares — attributed in section 5.
+
+      The mapping data:  Copyright (c) 2001, 2014, 2015, 2016 Sean M. Burke.
+          "Under the same terms as Perl itself" — Artistic-1.0-Perl OR
+          GPL-1.0-or-later.  https://metacpan.org/pod/Text::Unidecode
+
+The crate's BSD-3-Clause covers its Rust code and does not, on its face, account
+for the upstream data's terms. We treat the table as uncopyrightable data — a
+factual mapping, much of it derived from the Unicode Consortium's own — so no
+copyleft attaches and no Artistic/GPL text ships in section 6. That is a
+judgement, not a certainty; hence writing it down. Burke's attribution is owed
+either way, and given.
+
 --------------------------------------------------------------------------------
-4. Graphics tools — NOT bundled, invoked as subprocesses
+4. Graphics tools — invoked as subprocesses, never linked
 --------------------------------------------------------------------------------
 
 Graphics conversion optionally shells out to Ghostscript (`gs`, AGPL-3.0),
 MuPDF (`mutool`, AGPL-3.0), Poppler (`pdftocairo`, GPL-2.0), and ImageMagick
-(`convert`). These are provided by the user's system, invoked only as separate
-processes (never linked), so their copyleft terms do not extend to this binary.
+(`convert`). In the binary downloads these come from the user's own system and
+are invoked only as separate processes (never linked), so their copyleft terms
+do not extend to this binary.
+
+Exception: our container images `apt-get install` these tools (and TeX Live)
+INTO the image, so there they are redistributed, not borrowed. They stay
+separate programs merely aggregated alongside latexml-oxide — which does not
+place latexml-oxide under their terms — and each carries its own Ubuntu
+copyright file under /usr/share/doc.

@@ -220,16 +220,41 @@ if [[ "${os_family}" == "linux" ]]; then
   notices_backup=""
   restore_notices() {
     if [[ -n "${notices_backup}" && -f "${notices_backup}" ]]; then
-      mv -f "${notices_backup}" THIRD-PARTY-NOTICES
+      # cp, not mv: mv would move mktemp's 0600 mode onto the tracked file. cp onto an
+      # existing file keeps the destination's mode, so the working tree is untouched.
+      cp "${notices_backup}" THIRD-PARTY-NOTICES
+      rm -f "${notices_backup}"
       notices_backup=""
     fi
   }
   if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+    # Refuse to swap onto an ALREADY-swapped file. The restore below is an EXIT trap,
+    # so SIGKILL (a CI timeout, the OOM killer) during the minutes-long `cargo deb`
+    # leaves the assembled content sitting in this tracked path. Without this guard the
+    # damage compounds silently: the next run would back up the CLOBBERED file and
+    # "restore" that, so the tree never heals, and gen_notices.sh would append a SECOND
+    # copy of sections 5/6/7 -- which every gate passes, because they all test for a
+    # marker's PRESENCE and a line-count FLOOR. Duplication makes them pass harder.
+    if grep -qF "5. RUST DEPENDENCY LICENSES" THIRD-PARTY-NOTICES; then
+      echo "make_release: THIRD-PARTY-NOTICES already holds assembled content." >&2
+      echo "  It must contain ONLY the hand-authored sections 1-4. A killed release" >&2
+      echo "  run can leave the assembled file here. Restore it with:" >&2
+      echo "    git checkout -- THIRD-PARTY-NOTICES" >&2
+      exit 1
+    fi
     notices_backup="$(mktemp)"
     cp THIRD-PARTY-NOTICES "${notices_backup}"
-    trap restore_notices EXIT
+    # INT/TERM/HUP as well as EXIT: a Ctrl-C mid-build must not leave the tracked file
+    # holding the assembled notices. (SIGKILL cannot be trapped -- the guard above is
+    # what covers that case.)
+    trap restore_notices INT TERM HUP EXIT
     cp THIRD-PARTY-NOTICES.dist THIRD-PARTY-NOTICES
     echo "make_release: .deb notices <- THIRD-PARTY-NOTICES.dist ($(wc -l < THIRD-PARTY-NOTICES) lines)"
+  else
+    # The tarball path warns here; this one used to fall through in silence and build a
+    # .deb carrying only sections 1-4 -- the exact bug F9 fixed.
+    echo "make_release: WARNING — no THIRD-PARTY-NOTICES.dist; the .deb will ship the" >&2
+    echo "  committed hand-authored file (no Rust-crate appendix, no copyleft texts)." >&2
   fi
 
   # `cargo deb` requires the package name (`-p latexml`, not the binary name).
@@ -240,7 +265,7 @@ if [[ "${os_family}" == "linux" ]]; then
   deb_path="${artifacts_dir}/latexml-oxide_${version}-1_${deb_arch}.deb"
 
   restore_notices
-  trap - EXIT
+  trap - INT TERM HUP EXIT
 
   if [[ ! -f "${deb_path}" ]]; then
     echo "make_release: cargo deb did not produce ${deb_path}" >&2

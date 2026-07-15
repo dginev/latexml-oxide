@@ -4,12 +4,17 @@
 
   - **New target: Windows** (`x86_64-pc-windows-msvc`) — a single fully-static
     `latexml_oxide.exe` (no VC++ redistributable), shipped as a `.zip`.
-  - **Third-party notices now complete and identical on every platform.**
-    Attributed the native C libraries compiled into the binary that a
-    manifest-level audit cannot see — **libmarpa** (MIT, with LGPL-3.0/LGPL-2.1
-    parts), **mimalloc** (MIT, Microsoft), **libkpathsea** (LGPL-2.1) — and ship
-    the verbatim copyleft texts. Previously only the x86_64-Linux assets carried
-    the full file, and the Windows download carried none.
+  - **Third-party notices now complete and identical in every download.**
+    Attributed the third-party material a manifest-level audit cannot see, because
+    the manifest describes the wrapper rather than what ships: **libmarpa** (MIT,
+    with LGPL-3.0/LGPL-2.1 parts), **mimalloc** (MIT, Microsoft — its crate's own
+    LICENSE names a different holder), **libkpathsea** (LGPL-2.1, statically linked
+    into every released binary), the **W3C/Mozilla SVG schema**, rustdoc's **Ayu**
+    palette, and **unidecode**'s table (generated from Sean M. Burke's
+    `Text::Unidecode`) — and ship the verbatim copyleft texts the static LGPL links
+    oblige, plus the exact source commits to relink from. Previously only the
+    x86_64-Linux **tarball** carried the full file; the `.deb`s carried sections 1–4,
+    and the Windows download and container images carried nothing at all.
     latexml-oxide's own source remains **CC0-1.0**; see `THIRD-PARTY-NOTICES`
     and [`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md).
 

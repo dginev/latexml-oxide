@@ -90,8 +90,9 @@ $ brew install imagemagick mupdf-tools poppler ghostscript dvisvgm
 $ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng)
 ```
 
-Homebrew's `texlive` ships `libkpathsea`; with MacTeX/BasicTeX the binary instead resolves TeX files
-through your distribution's `kpsewhich` executable (ensure `/Library/TeX/texbin` is on `PATH`).
+The prebuilt binary links `libkpathsea` statically, so it finds your TeX files in-process on either
+Homebrew's `texlive` or MacTeX/BasicTeX — just make sure the TeX binaries are on `PATH`
+(`/Library/TeX/texbin` for MacTeX).
 
 > **Gatekeeper / "unidentified developer" (tarball, browser downloads).**
 > The `curl` + `tar xzf` install above is warning-free: terminal downloads and command-line `tar`
@@ -249,7 +250,8 @@ the libxml2/libxslt libraries (MIT), the libmarpa parser engine (MIT, with LGPL 
 and libkpathsea (LGPL-2.1).
 
 These are attributed in [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES), published as an asset on every release
-(and bundled inside the tarball and `.deb` downloads).
+and bundled inside every download — the tarballs, the Windows `.zip`, the `.deb`s, and the container
+images (under `/usr/local/share/doc/latexml-oxide`).
 The public-domain dedication above applies to the latexml-oxide source and original resources,
 **not** to that embedded or linked third-party material.
 Full breakdown: [`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md).
