@@ -9,7 +9,7 @@ macOS asset builds natively on `macos-15` (Apple Silicon).
 Currently published platforms: **`x86_64-unknown-linux-gnu`**,
 **`aarch64-unknown-linux-gnu`**, **`aarch64-apple-darwin`** (macOS Apple
 Silicon), and **`x86_64-apple-darwin`** (macOS Intel). **`x86_64-pc-windows-msvc`**
-joins at **`0.7.4`** as a single self-contained `.exe` (validating as the
+joins at **`0.7.4`** as a single self-contained `.exe`, shipped in a `.zip` (validating as the
 `0.7.4-rc2` RC draft; see
 [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md)). Only musl
 remains out of scope for now — see "Release asset strategy" below.
@@ -88,9 +88,10 @@ What this means concretely:
 
 Assets attached to each `X.Y.Z` GitHub Release — five platform builds (two
 Linux, two macOS, one Windows). Linux/macOS ship a tarball (+ `.sha256`);
-Windows ships a bare `.exe` (+ `.sha256`) — no tarball/`.deb`, the user runs the
-`.exe` directly. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
-aggregate `THIRD-PARTY-NOTICES`:
+Windows ships a `.zip` (+ `.sha256`) — no `.deb` equivalent. Every archive
+carries the binary plus `THIRD-PARTY-NOTICES`, `LICENSE`, `README.md` and
+`CHANGELOG.md`. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
+aggregate `THIRD-PARTY-NOTICES` as a standalone asset:
 
 | Asset | Purpose |
 |---|---|
@@ -106,9 +107,9 @@ aggregate `THIRD-PARTY-NOTICES`:
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz` | Portable macOS (Intel) archive: built with a macOS 10.13 deployment target so it runs on older Intel Macs. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
-| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.exe` | Windows (x86_64) — a single fully-static `.exe` (`+crt-static`; static libxml2/libxslt/libkpathsea via `build_from_source`): imports only core OS DLLs, no VC++ redistributable. Run directly; TeX Live or MiKTeX on PATH for host TeX resolution. |
-| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.exe.sha256` | SHA-256 sidecar. |
-| `THIRD-PARTY-NOTICES` | Aggregate license notices (hand-authored §1–4 + the cargo-about Rust-crate appendix). |
+| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.zip` | Windows (x86_64) archive: a single fully-static `latexml_oxide.exe` (`+crt-static`; static libxml2/libxslt/libkpathsea via `build_from_source`) — imports only core OS DLLs, no VC++ redistributable — plus the same `README.md`/`CHANGELOG.md`/`LICENSE`/`THIRD-PARTY-NOTICES` as the tarballs. Unzip and run; TeX Live or MiKTeX on PATH for host TeX resolution. |
+| `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.zip.sha256` | SHA-256 sidecar. |
+| `THIRD-PARTY-NOTICES` | Aggregate license notices: hand-authored §1–4 (embedded TeX dumps; Perl-LaTeXML assets; the linked native libs incl. the vendored libmarpa/mimalloc and static-LGPL kpathsea) + the cargo-about Rust-crate appendix (§5) + the verbatim copyleft texts (§6). Assembled once by the `notices` job and bundled byte-identically into every archive. |
 
 The shipped `latexml_oxide` binary is fully self-contained — XSLT
 stylesheets, CSS, JavaScript, and the RelaxNG schema tree are

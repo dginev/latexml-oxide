@@ -257,15 +257,20 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   libmarpa inherits F5's relink posture (§D.3). **Follow-up:** F4's CI gate
   should assert the §D.2 table matches the shipped tree, since no existing
   automated check can see this class.
-- **F7** *(open, 2026-07-14)* — **the notices shipped differ per platform.**
-  `tools/gen_notices.sh` runs **only in the `release` job** (ubuntu), so only the
-  x86_64-linux tarball + `.deb` bundle the complete file. The macOS (both) and
+- **F7** *(landed 2026-07-14)* — **the notices shipped differed per platform.**
+  `tools/gen_notices.sh` ran **only in the `release` job** (ubuntu), so only the
+  x86_64-linux tarball + `.deb` bundled the complete file. The macOS (both) and
   aarch64-linux tarballs are packaged in their own jobs, where `make_release.sh`
-  finds no `THIRD-PARTY-NOTICES.dist` and falls back to the **committed §1-4**
-  — i.e. they ship **without §5 (all ~140 Rust crate MIT/Apache texts)** and
-  without §6. The Windows deliverable is a bare `.exe`, so it bundles **no
-  notices at all** (the full file is published as a standalone release asset,
-  which is a partial mitigation, not a bundled notice). Fix: install cargo-about
-  + run `gen_notices.sh` in each build leg (or build the notices once in a shared
-  job and pass it to the others as an artifact), and ship a `.zip` for Windows so
-  the `.exe` travels with its notices.
+  found no `THIRD-PARTY-NOTICES.dist` and fell back to the **committed §1-4** —
+  shipping **without §5 (all ~140 Rust crate MIT/Apache texts)**. The Windows
+  deliverable was a bare `.exe`, bundling **no notices at all**. Fixed by:
+  (1) a **`notices` job** that assembles the file once, gates it on a
+  content check (§3.2/3.3/3.4/§5/§6 present, plausible length), and hands it to
+  every packaging leg as an artifact — so all platforms now ship byte-identical
+  notices; (2) **Windows ships a `.zip`** (`latexml_oxide.exe` + notices +
+  LICENSE + README), so no download lacks its notices. One generated file is
+  valid for every target because `about.toml` sets no `targets` and krates treats
+  an empty filter as `include_all_targets` (§5 is the union over all platforms,
+  not the build host's subset) — **do not add a `targets` key** without
+  revisiting the `notices` job. `make_release.sh` now also warns loudly when it
+  falls back to the committed file.

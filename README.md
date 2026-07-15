@@ -102,16 +102,17 @@ through your distribution's `kpsewhich` executable (ensure `/Library/TeX/texbin`
 
 ### Windows (x86_64)
 
-*(From `0.7.4`.)* A single self-contained `.exe` (fully static: no VC++ redistributable needed).
-In PowerShell run:
+*(From `0.7.4`.)* A single self-contained `latexml_oxide.exe` (fully static: no VC++ redistributable needed),
+shipped in a `.zip`. In PowerShell run:
 
 ```
 > $VERSION = "0.7.4"
-> curl.exe -LO "https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-pc-windows-msvc.exe"
-> .\latexml-oxide-$VERSION-x86_64-pc-windows-msvc.exe --version
+> curl.exe -LO "https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip"
+> Expand-Archive "latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip" -DestinationPath .
+> .\latexml-oxide-$VERSION-x86_64-pc-windows-msvc\latexml_oxide.exe --version
 ```
 
-Rename it to `latexml_oxide.exe` and put it on your `PATH`.
+Put `latexml_oxide.exe` somewhere on your `PATH`.
 A TeX distribution (**TeX Live for Windows or MiKTeX**) must be on `PATH` for host TeX resolution;
 the binary auto-selects the fast in-process backend on TeX Live, and falls back to subprocess `kpsewhich` on MiKTeX.
 ImageMagick (`magick`), Ghostscript (`gswin64c` / MiKTeX `mgs`) and MuPDF (`mutool`)

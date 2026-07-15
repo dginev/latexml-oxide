@@ -142,34 +142,61 @@ else
   strip --strip-all "${bin_path}" 2>/dev/null || true
 fi
 
-# Windows ships a SINGLE self-contained `.exe` (the user runs it directly), not a
-# tarball — so its packaging diverges from the Linux/macOS tarball flow. Static
-# libxml2/libxslt (vcpkg, x64-windows-static-md) + the ubiquitous dynamic MSVC
-# runtime; kpathsea is resolved via subprocess `kpsewhich`, never linked.
-tarball=""
-exe_asset=""
+# --- stage the payload (identical on every platform) -------------------------
+# The binary is self-contained everywhere; the archive around it exists so the
+# binary always travels WITH its license notices. Windows used to publish a bare
+# `.exe`, which made it the one download whose recipient got no notices at all
+# (LICENSE_INVENTORY F7) — it now ships the same payload as a `.zip`.
 if [[ "${os_family}" == "windows" ]]; then
-  exe_asset="latexml-oxide-${version}-${target_triple}.exe"
-  cp "${bin_path}" "${artifacts_dir}/${exe_asset}"
-  ( cd "${artifacts_dir}" && sha256_sidecar "${exe_asset}" )
-  echo "make_release: Windows single-exe asset ${exe_asset}"
+  cp "${bin_path}" "${stage_dir}/latexml_oxide.exe"
 else
-  # --- stage tarball contents -----------------------------------------------
   cp "${bin_path}" "${stage_dir}/latexml_oxide"
-  cp README.md "${stage_dir}/README.md"
-  cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
-  cp LICENSE "${stage_dir}/LICENSE"
-  # THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
-  # sections 1-4 + the cargo-about Rust-crate appendix produced by
-  # tools/gen_notices.sh); fall back to the committed hand-authored file so a
-  # local `make_release.sh` without cargo-about still ships notices.
-  if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
-    cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
-  else
-    cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
-  fi
+fi
+cp README.md "${stage_dir}/README.md"
+cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
+cp LICENSE "${stage_dir}/LICENSE"
+# THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
+# sections 1-4 + the cargo-about Rust-crate appendix + the section 6 copyleft
+# texts, produced by tools/gen_notices.sh); fall back to the committed
+# hand-authored file so a local `make_release.sh` without cargo-about still
+# ships notices. In CI the `notices` job hands every leg the assembled file.
+if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+  cp THIRD-PARTY-NOTICES.dist "${stage_dir}/THIRD-PARTY-NOTICES"
+else
+  echo "make_release: WARNING — no THIRD-PARTY-NOTICES.dist; falling back to the" >&2
+  echo "  committed hand-authored file (no Rust-crate appendix, no copyleft texts)." >&2
+  cp THIRD-PARTY-NOTICES "${stage_dir}/THIRD-PARTY-NOTICES"
+fi
 
-  # --- build tarball --------------------------------------------------------
+# --- package -----------------------------------------------------------------
+# Windows gets a `.zip` (the native format there, and Explorer opens it without
+# extra tooling); everything else gets a `.tar.gz`.
+tarball=""
+zip_asset=""
+if [[ "${os_family}" == "windows" ]]; then
+  zip_asset="latexml-oxide-${version}-${target_triple}.zip"
+  (
+    cd "${artifacts_dir}"
+    rm -f "${zip_asset}"
+    # 7-Zip is present on GitHub's windows-latest image; `zip` covers Git-Bash
+    # hosts that have it (and lets this path be exercised off-Windows);
+    # Compress-Archive is the always-there PowerShell fallback. Fail loudly
+    # rather than publish a Windows asset with no archive around it.
+    if command -v 7z >/dev/null 2>&1; then
+      7z a -tzip -mx=9 "${zip_asset}" "${stage_dir_name}" >/dev/null
+    elif command -v zip >/dev/null 2>&1; then
+      zip -q -9 -r "${zip_asset}" "${stage_dir_name}"
+    elif command -v powershell >/dev/null 2>&1; then
+      powershell -NoProfile -NonInteractive -Command \
+        "Compress-Archive -Path '${stage_dir_name}' -DestinationPath '${zip_asset}' -Force"
+    else
+      echo "make_release: no zip tool found (tried 7z, zip, powershell)" >&2
+      exit 1
+    fi
+  )
+  ( cd "${artifacts_dir}" && sha256_sidecar "${zip_asset}" )
+  echo "make_release: Windows zip asset ${zip_asset}"
+else
   tarball="latexml-oxide-${version}-${target_triple}.tar.gz"
   ( cd "${artifacts_dir}" && tar -czf "${tarball}" "${stage_dir_name}" )
   ( cd "${artifacts_dir}" && sha256_sidecar "${tarball}" )
@@ -228,8 +255,8 @@ EOF
   if [[ -n "${RELEASE_MACOS_INTEL_TARBALL:-}" ]]; then
     echo "- **macOS (Intel)** — \`${RELEASE_MACOS_INTEL_TARBALL}\`"
   fi
-  if [[ -n "${RELEASE_WINDOWS_EXE:-}" ]]; then
-    echo "- **Windows (x86-64)** — \`${RELEASE_WINDOWS_EXE}\` (a single self-contained \`.exe\`, no installer)"
+  if [[ -n "${RELEASE_WINDOWS_ZIP:-}" ]]; then
+    echo "- **Windows (x86-64)** — \`${RELEASE_WINDOWS_ZIP}\` (unzip; a single self-contained \`latexml_oxide.exe\`, no installer)"
   fi
   echo
 
@@ -261,8 +288,8 @@ echo "make_release: SHA-256 sidecars"
 if [[ -n "${tarball}" ]]; then
   cat "${artifacts_dir}/${tarball}.sha256"
 fi
-if [[ -n "${exe_asset}" ]]; then
-  cat "${artifacts_dir}/${exe_asset}.sha256"
+if [[ -n "${zip_asset}" ]]; then
+  cat "${artifacts_dir}/${zip_asset}.sha256"
 fi
 if [[ -n "${deb_path}" ]]; then
   cat "${artifacts_dir}/$(basename "${deb_path}").sha256"
