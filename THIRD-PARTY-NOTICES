@@ -15,7 +15,8 @@ What the shipped binary is made of, and under what terms:
 
   latexml-oxide's own code + original resources ......... CC0-1.0 (public domain)
   Embedded TeX format dumps (LaTeX kernel / plain TeX) .. LPPL-1.3c / TeX  (sec 1)
-  Embedded XSLT, CSS, RelaxNG, Profiles, JS ............. public domain  (sec 2)
+  Embedded XSLT, CSS, RelaxNG, Profiles, JS ............. public domain  (sec 2.1)
+  Embedded SVG 1.1 RELAX NG schema ...................... W3C + Mozilla  (sec 2.2)
   libxml2 / libxslt / libexslt .......................... MIT           (sec 3.1)
   libkpathsea .......................................... LGPL-2.1+      (sec 3.2)
   libmarpa ............................................. MIT + LGPL     (sec 3.3)
@@ -76,6 +77,9 @@ redistribution. They are NOT part of latexml-oxide's CC0 dedication.
 2. Embedded XSLT / CSS / RelaxNG / DTD / Profiles / JavaScript  (resources/)
 --------------------------------------------------------------------------------
 
+2.1 From Perl LaTeXML  (public domain)
+--------------------------------------
+
 The embedded stylesheets, schemas, and one JavaScript helper
 (LaTeXML-maybeMathjax.js) originate from Perl LaTeXML
 (https://github.com/brucemiller/latexml):
@@ -87,6 +91,40 @@ The embedded stylesheets, schemas, and one JavaScript helper
   public domain, equivalent to Creative Commons 0 ("No Rights Reserved").
 
 No notice is legally required; attribution is provided in gratitude.
+
+2.2 SVG 1.1 RELAX NG schema  (resources/RelaxNG/svg/ — W3C + Mozilla)
+---------------------------------------------------------------------
+
+NOT public domain, and NOT from Perl LaTeXML's NIST-authored set: the 83 files
+under `resources/RelaxNG/svg/` are the W3C's RELAX NG schema for SVG 1.1 with
+Mozilla's modifications. They are embedded verbatim in the binary
+(`latexml_core/build.rs` walks the RelaxNG tree and `include_str!`s every file),
+so their notice is reproduced here as their license requires:
+
+      The Scalable Vector Graphics (SVG)
+      Copyright 2001, 2002 World Wide Web Consortium
+         (Massachusetts Institute of Technology, Institut National de
+          Recherche en Informatique et en Automatique, Keio University).
+          All Rights Reserved.
+
+      Modifications Copyright 2007 Mozilla Foundation
+
+      Permission to use, copy, modify and distribute this RELAX NG schema
+      for SVG and its accompanying documentation for any purpose and without
+      fee is hereby granted in perpetuity, provided that the above copyright
+      notice and this paragraph appear in all copies.  The copyright holders
+      nor the author make no representation about the suitability of this
+      RELAX NG schema for any purpose.
+
+      It is provided "as is" without expressed or implied warranty.
+
+          Author: Masayasu Ishikawa (mimasa@w3.org)
+          Modified by: Henri Sivonen (hsivonen@iki.fi)
+
+The grant is permissive (use/copy/modify/distribute, in perpetuity, no fee); the
+only condition is that the notice above accompany all copies — which this
+section, plus the verbatim comment headers carried inside each embedded file,
+satisfies.
 
 --------------------------------------------------------------------------------
 3. Linked native (C) libraries

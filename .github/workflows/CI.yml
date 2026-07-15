@@ -59,6 +59,17 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2.0.20
         with:
           command: check
+
+      # The complement to cargo-deny, which reasons over crate MANIFESTS and so is
+      # blind to vendored C: a `-sys` crate reports its Rust wrapper's license, not
+      # the native library's. That gap is why libmarpa statically linked
+      # MIT + LGPL-3.0/LGPL-2.1 code into every binary we ever shipped, attributed
+      # nowhere, while `cargo deny check licenses` said "licenses ok" throughout.
+      # This fails when a crate compiling native code shows up unaudited.
+      # See docs/release/LICENSE_INVENTORY.md §D.2 / §A "Scope limit".
+      - name: audit vendored native code (cargo-deny's blind spot)
+        run: python3 tools/audit_vendored_natives.py --verbose
+
       - name: install cargo-machete
         uses: taiki-e/install-action@v2
         with:

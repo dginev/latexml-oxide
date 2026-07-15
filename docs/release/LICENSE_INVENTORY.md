@@ -71,17 +71,36 @@ Re-verify: `cargo deny --all-features check licenses`
 |---|---|---|---|
 | `CSS/` | 14 | Perl LaTeXML + our schema-docs theme | PD (NIST) / CC0 |
 | `XSLT/` | 20 | Perl LaTeXML | PD (NIST) ≈ CC0 |
-| `RelaxNG/` | 108 | Perl LaTeXML schema | PD (NIST) ≈ CC0 |
+| `RelaxNG/*` (top level) | 25 | Perl LaTeXML schema | PD (NIST) ≈ CC0 |
+| **`RelaxNG/svg/`** | **83** | **W3C SVG 1.1 RELAX NG schema, modified by Mozilla** | **W3C/Mozilla permissive — notice required** |
 | `DTD/` | 2 | Perl LaTeXML | PD (NIST) ≈ CC0 |
 | `Profiles/` | 9 | Perl LaTeXML | PD (NIST) ≈ CC0 |
 | `javascript/LaTeXML-maybeMathjax.js` | 1 | Perl LaTeXML | PD (NIST) ≈ CC0 |
 | `javascript/relaxng-schema-rustdoc-theme.js` | 1 | **ours** | CC0 |
 
 Perl LaTeXML is **public domain** (NIST, 17 U.S.C. §105; upstream `LICENSE`
-explicitly equates it to CC0) — so these are CC0-compatible with no notice
+explicitly equates it to CC0) — so those are CC0-compatible with no notice
 burden. `LaTeXML-maybeMathjax.js` only *conditionally loads* MathJax from a CDN;
 it does **not** bundle MathJax, so no MathJax (Apache-2.0) redistribution
 occurs.
+
+**`RelaxNG/svg/` is the exception — the one embedded resource that is NOT public
+domain** (found 2026-07-14; this table previously called all 108 RelaxNG files
+"PD (NIST)"). It is the W3C's SVG 1.1 RELAX NG schema (© 2001, 2002 W3C —
+MIT/INRIA/Keio) with modifications © 2007 Mozilla Foundation. `latexml_core/build.rs`
+walks the whole RelaxNG tree with **no filtering** and `include_str!`s each file,
+so all 83 ship verbatim inside the binary. The grant is permissive
+(use/copy/modify/distribute, in perpetuity, no fee) with one condition: *"the
+above copyright notice and this paragraph appear in all copies."* Discharged by
+`THIRD-PARTY-NOTICES` §2.2, and belt-and-braces by the verbatim comment headers
+that travel inside each embedded file. Same species of error as §D.2: an
+attribution claim broader than what was checked.
+
+Re-verify (should list `RelaxNG/svg/` and nothing else):
+
+```bash
+grep -rliE "World Wide Web Consortium|Mozilla Foundation|Apache License|GNU General" resources/
+```
 
 ## C. Compiled-in dumps — the sharp edge (TeX-Live-derived)
 
@@ -235,15 +254,27 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   (MIT, since 0.7.1); Rust crates. Assembled by `tools/gen_notices.sh`.
 - **F3** *(landed 2026-07-09)* — **README License section** scoping the CC0 claim
   to our source + original resources (§C wording).
-- **F4** *(partially landed 2026-07-14; remainder open)* — **CI release-time
-  gate** (RELEASE_CRITERIA §7). *Done:* `tools/gen_notices.sh` runs in the
-  release workflow (now in a dedicated `notices` job), the assembled file is
-  bundled into **every** artifact, and the job content-gates it (§3.2/3.3/3.4,
-  §5, §6, plausible length) so a truncated notice fails the release. *Still
-  open:* verify the artifact's **embedded resources** match §B/§C, and assert the
-  **§D.2 vendored-native-lib table** matches the shipped tree — no cargo-deny /
-  cargo-about check can see that class (§A scope limit), so it is the one part of
-  this inventory with no automated backstop. Tracked with #51.
+- **F4** *(landed 2026-07-14)* — **CI gate for the classes no manifest audit can
+  see** (RELEASE_CRITERIA §7). `tools/gen_notices.sh` runs in a dedicated
+  `notices` job, the assembled file is bundled into **every** artifact, and the
+  job content-gates it (§2.2, §3.2/3.3/3.4, §5, §6, plausible length) so a
+  truncated notice fails the release. **`tools/audit_vendored_natives.py`** (CI
+  `lint` job, beside cargo-deny) is the standing backstop for both blind spots:
+  it fails when a shipped crate compiles/links native code without a §D.2 entry,
+  and when an embedded resource carries an unaudited third-party notice. Both
+  tripwires were verified to actually trip (removing an `AUDITED` entry, and
+  dropping an Apache-2.0-marked file into `resources/`) — a gate that cannot fail
+  is not a gate. Markers, not counts, for resources: a count gate fails on every
+  legitimate new schema file while missing the thing that matters (a new
+  copyright holder). Tracked with #51.
+- **F8** *(landed 2026-07-14)* — **`resources/RelaxNG/svg/` is not public
+  domain.** §B claimed all 108 RelaxNG files were "PD (NIST)"; 83 of them are the
+  W3C SVG 1.1 RELAX NG schema (© 2001, 2002 W3C) with Mozilla's modifications
+  (© 2007), embedded verbatim by `latexml_core/build.rs`. Permissive, but the
+  notice must accompany all copies. Attributed in `THIRD-PARTY-NOTICES` §2.2;
+  §B row corrected; `audit_vendored_natives.py` now guards the class. Found by
+  asking the §D.2 question one level up — *what does this claim actually cover?*
+  — rather than by any tool. Nothing else under `resources/` is third-party.
 - **F5** *(attribution landed 2026-07-14; posture call still OPEN)* —
   **libkpathsea (LGPL-2.1 static link).** kpathsea is statically linked on Linux
   (`build_static_kpathsea.sh`) and, as of 0.7.4, Windows (`build_from_source`).

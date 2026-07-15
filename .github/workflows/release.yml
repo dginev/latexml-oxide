@@ -72,6 +72,8 @@ jobs:
           set -euo pipefail
           f=THIRD-PARTY-NOTICES.dist
           for needle in \
+            "2.2 SVG 1.1 RELAX NG schema" \
+            "World Wide Web Consortium" \
             "3.2 libkpathsea" \
             "3.3 libmarpa" \
             "3.4 mimalloc" \
