@@ -79,11 +79,18 @@ jobs:
             "3.4 mimalloc" \
             "5. RUST DEPENDENCY LICENSES" \
             "6. COPYLEFT LICENSE TEXTS" \
+            "7. SOURCE PROVENANCE" \
             "GNU LESSER GENERAL PUBLIC LICENSE v2.1" \
             "GNU LESSER GENERAL PUBLIC LICENSE v3.0" \
             "GNU GENERAL PUBLIC LICENSE v3.0"; do
             grep -qF "$needle" "$f" || { echo "::error::THIRD-PARTY-NOTICES is missing: $needle"; exit 1; }
           done
+          # Section 7's relink pointer must name real commits: an "unresolved" here
+          # means we shipped a promise (3.5) we cannot keep.
+          if grep -q "unresolved" "$f"; then
+            echo "::error::THIRD-PARTY-NOTICES section 7 has an unresolved source revision"
+            exit 1
+          fi
           # The Rust appendix must carry real license texts, not just headings.
           if [ "$(wc -l < "$f")" -lt 1000 ]; then
             echo "::error::THIRD-PARTY-NOTICES is implausibly short ($(wc -l < "$f") lines) — cargo-about likely emitted nothing"

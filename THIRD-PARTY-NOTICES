@@ -216,16 +216,20 @@ vendored mimalloc C sources that are actually linked in.
 libkpathsea (3.2) and parts of libmarpa (3.3) are LGPL and are STATICALLY
 linked into the distributed binary. Both licenses permit this on the condition
 that a recipient can relink the work against a modified version of the LGPL
-library. Every input needed to do so is public and version-pinned:
+library. Every input needed to do so is public, and the exact commit of each one
+that went into THIS artifact is recorded in section 7:
 
   * latexml-oxide's own source is CC0-1.0 — https://github.com/dginev/latexml-oxide
   * libmarpa 8.6.2 sources are vendored verbatim in the `libmarpa-sys` crate
     (libmarpa-8.6.2.tar.gz) at https://github.com/dginev/marpa
-  * kpathsea is fetched at a recorded commit (`KPSE_REF` in the `kpathsea_sys`
-    crate; the same revision is pinned by tools/build_static_kpathsea.sh)
+  * kpathsea is fetched at a recorded commit (`KPSE_REF`, pinned by
+    tools/build_static_kpathsea.sh)
 
 Rebuilding from those sources with a modified LGPL library reproduces the
-binary. Requests for the corresponding sources: https://github.com/dginev/latexml-oxide/issues
+binary. Because latexml-oxide's own source is CC0, nothing in our terms
+restricts you from doing so.
+
+Requests for the corresponding sources: https://github.com/dginev/latexml-oxide/issues
 
 --------------------------------------------------------------------------------
 4. Graphics tools — NOT bundled, invoked as subprocesses
