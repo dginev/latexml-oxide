@@ -13,13 +13,23 @@ or linked/subprocess tool changes. (Re-verify commands are inline per section.)
 latexml-oxide's **own source code and original resources are CC0-1.0**
 (public-domain dedication; `LICENSE`, all 8 workspace-crate manifests). The CC0
 claim does **NOT** extend to third-party material the binary embeds, links, or
-derives from — each retains its upstream license, enumerated below. The two
+derives from — each retains its upstream license, enumerated below. The ones
 that matter for a distribution notice: the **build-time-embedded TeX-Live
 dumps** (§C), the **statically-linked libxml2/libxslt** (§D; static since
-0.7.1), and — the sharpest, newly universal in 0.7.4 — the **statically-linked
-LGPL-2.1 libkpathsea** (§D). A static LGPL link triggers the §6 relink
-obligation (unlike the MIT static libs and the dynamic LGPL ones); see the §D
-note.
+0.7.1), and the two **static LGPL links** — `libkpathsea` (LGPL-2.1, universal
+from 0.7.4) and parts of **`libmarpa`** (LGPL-3.0 / LGPL-2.1, in every build
+since the math parser landed). A static LGPL link triggers the relink
+obligation (LGPL-2.1 §6 / LGPL-3.0 §4), unlike the MIT static libs and the
+dynamic LGPL ones; see the §D note.
+
+**The trap that hid `libmarpa` (§D.2).** `cargo-about` attributes each *crate*
+as its **manifest** declares it, and harvests license texts from the crate's
+own files. A `-sys` crate that compiles **vendored C** therefore reports the
+*Rust wrapper's* license, silently masking the native library's real copyright
+holder and terms. Three crates in the shipped tree have this shape, and
+**auditing by cargo-deny/cargo-about alone cannot catch any of them** — §D.2
+enumerates them by hand. When adding a `-sys` dependency, check what its
+`build.rs` actually compiles, not just its `license =` field.
 
 ## A. Rust dependencies — GATED
 
@@ -37,8 +47,14 @@ binary).
 - **Attribution:** the per-crate license *texts* for the shipped binary are
   auto-generated into `THIRD-PARTY-NOTICES` §5 by `cargo about` — config
   [`about.toml`](../../about.toml) + template [`about.hbs`](../../about.hbs), assembled
-  with the hand-authored §1-4 by [`tools/gen_notices.sh`](../../tools/gen_notices.sh).
+  with the hand-authored §1-4 and the §6 copyleft texts (`licenses/`) by
+  [`tools/gen_notices.sh`](../../tools/gen_notices.sh).
   Generated from the (gitignored) lockfile at release time, not committed.
+- **Scope limit — this gate does NOT cover vendored C.** cargo-deny and
+  cargo-about both reason over *crate manifests*; a `-sys` crate that compiles
+  third-party C reports only its Rust wrapper's license. Those native libraries
+  are hand-audited in **§D.2** and attributed in `THIRD-PARTY-NOTICES` §3 —
+  a "licenses ok" result here says nothing about them.
 - **~~Known warning~~ RESOLVED 2026-07-13:** `pericortex` (our own
   `dginev/cortex-peripherals`, git source) previously had no `license` field. It
   is pulled in **only** under the `cortex` feature — absent from the shipped
@@ -102,7 +118,9 @@ This mirrors how the binary already relies on system libxml2/libxslt (§D)
 without claiming CC0 over them. Landed: [`THIRD-PARTY-NOTICES`](../../THIRD-PARTY-NOTICES)
 §1 + the README License section (F2/F3 below).
 
-## D. Dynamically-linked system libraries
+## D. Linked native (C) libraries
+
+### D.1 System libraries
 
 `ldd` on the built binary (host TeX Live ecosystem is out of scope per
 CLAUDE.md; these are standard OS libraries):
@@ -124,21 +142,72 @@ dynamic linking; the build deliberately keeps `-lgcrypt`/`-lz` dynamic. The
 default dev build (`cargo build`) links all of these dynamically against the
 host.
 
-**libkpathsea is the one STATIC LGPL link** (the LGPL libs above are kept
-dynamic precisely to avoid this). LGPL-2.1 §6 permits static linking but obliges
-the distributor to let a user relink against a modified libkpathsea. Here both
-sides are open, so relinking is possible: latexml-oxide's own source is CC0, and
-the kpathsea source is public and **pinned** — `kpathsea_sys` `build_from_source`
-fetches it at a recorded commit (`KPSE_REF`), and the Linux/macOS
-`build_static_kpathsea.sh` pins the same. What §6 still requires in the shipped
-artifact is the LGPL-2.1 license **text** + the kpathsea copyright + a pointer to
-that pinned source — currently **MISSING** from `THIRD-PARTY-NOTICES` (its
-hand-authored §1–4 carry no kpathsea entry). Tracked as **F5**. (This obligation
-is not new to 0.7.4 — the Linux legs have static-linked kpathsea since the
-`build_static_kpathsea.sh` legs; 0.7.4 makes it universal by adding Windows.)
+**libkpathsea is a STATIC LGPL link** — one of two, with libmarpa (§D.2); the
+LGPL libs in the table above are kept dynamic precisely to avoid this. LGPL-2.1
+§6 permits static linking but obliges the distributor to let a user relink
+against a modified libkpathsea. Here both sides are open, so relinking is
+possible: latexml-oxide's own source is CC0, and the kpathsea source is public
+and **pinned** — `kpathsea_sys` `build_from_source` fetches it at a recorded
+commit (`KPSE_REF`), and the Linux/macOS `build_static_kpathsea.sh` pins the
+same. The LGPL-2.1 **text** + the kpathsea copyright + the pinned-source pointer
+are now shipped (`THIRD-PARTY-NOTICES` §3.2/§3.5/§6) — see **F5**, which stays
+open only on the owner's posture call (§D.3). (The obligation is not new to
+0.7.4 — the Linux legs have static-linked kpathsea since
+`build_static_kpathsea.sh`; 0.7.4 makes it universal by adding Windows.)
 
 Re-verify: `ldd target/<profile>/latexml_oxide` (dev) or the release-artifact
 no-dynamic-clib CI assertion (release).
+
+### D.2 Vendored native libraries — the cargo-about blind spot
+
+Statically compiled into the binary by a `-sys` crate's `build.rs`. In each row
+the **crate manifest's license is not the license of the code that ships**, so
+none of these are catchable by cargo-deny (§A) — they are audited by hand here
+and attributed in `THIRD-PARTY-NOTICES` §3.2-§3.5.
+
+| Native lib | Carrier crate | Crate declares | What actually links in | Notice |
+|---|---|---|---|---|
+| **libmarpa 8.6.2** | `libmarpa-sys` (git, `dginev/marpa`) | `MIT OR Apache-2.0` | `marpa.c`, `marpa_ami.c`, `marpa_codes.c` → **MIT**, © 2018 Jeffrey Kegler; `marpa_avl.c`, `marpa_tavl.c` (from Ben Pfaff's libavl) → **LGPL-3.0-or-later**, © FSF; `marpa_obs.c` (from GNU obstack) → **LGPL-2.1-or-later**, © FSF | §3.3 |
+| **mimalloc** | `libmimalloc-sys` | `MIT` + a crate-root `LICENSE.txt` © 2019 **Octavian Oncescu** (the wrapper author) | `c_src/mimalloc/**` → **MIT**, © 2018-2025 **Microsoft Corporation, Daan Leijen** — a different holder than the harvested text | §3.4 |
+| **libkpathsea** | `kpathsea_sys` | `MIT OR Apache-2.0`, **no LICENSE file in the crate** | kpathsea C, fetched at `KPSE_REF` → **LGPL-2.1-or-later**, © Karl Berry, Olaf Weber et al. | §3.2 |
+
+Why each evades the automated gate:
+- **libmarpa** vendors its sources as a **tarball** (`libmarpa-8.6.2.tar.gz`), so
+  the `COPYING` / `COPYING.LESSER` inside it are invisible to cargo-about's file
+  scan — and its per-file license split is not expressible in a manifest field.
+- **mimalloc** *does* ship a crate-root `LICENSE.txt`, which is exactly what makes
+  it dangerous: cargo-about harvests it and emits a **plausible-looking MIT text
+  naming the wrong copyright holder**.
+- **kpathsea** fetches source at build time; nothing to scan.
+
+Checked and **not** in this class: `stacker` and `psm` compile only their own
+small C/asm shims (own copyright, covered by their manifests); `libxml2`/`libxslt`
+are source-built by the release workflow, not by a `-sys` crate, and are
+attributed in §3.1.
+
+Re-verify (lists every shipped crate that compiles native code — inspect any new
+hit by hand, and note git-sourced crates like `libmarpa-sys` need a checkout-path
+lookup rather than a registry one):
+
+```bash
+cargo tree --no-default-features --features runtime-bindings -e normal,build --prefix none \
+  | sed 's/ (\*)//' | sort -u | grep -iE '\-sys |^cc '
+```
+
+### D.3 The LGPL static-link (relink) obligation
+
+`libkpathsea` (D.1) and part of `libmarpa` (D.2) are **statically linked LGPL**.
+LGPL-2.1 §6 / LGPL-3.0 §4 permit static linking provided a recipient can relink
+against a modified version of the library. Every input is public and pinned:
+latexml-oxide's source is CC0; libmarpa 8.6.2 is vendored verbatim in
+`libmarpa-sys`; kpathsea is pinned at `KPSE_REF`. `THIRD-PARTY-NOTICES` §3.5
+states this and points at the sources; §6 now ships the verbatim LGPL-2.1,
+LGPL-3.0 and GPL-3.0 texts (LGPL-3.0 is additional permissions on top of
+GPL-3.0, so it is **not** self-contained — both texts are required).
+
+**Owner to confirm** this source-availability posture satisfies the relink
+obligation for the static links, vs. the heavier alternatives (shipping
+prelinkable object files, or a written offer). See F5.
 
 ## E. Subprocess-only tools (never linked → no license propagation)
 
@@ -170,11 +239,33 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   `tools/gen_notices.sh` in the release workflow, bundle the assembled notices in
   the artifact, and verify the artifact's embedded resources match §B/§C.
   Complements the existing cargo-deny (§A) gate. Tracked with #51.
-- **F5** *(open, 2026-07-14)* — **`THIRD-PARTY-NOTICES` missing libkpathsea
-  (LGPL-2.1 static link).** kpathsea is statically linked on Linux
-  (`build_static_kpathsea.sh`) and, as of 0.7.4, Windows (`build_from_source`),
-  but the hand-authored §1–4 carry no kpathsea entry and no LGPL-2.1 §6 relink
-  note. Add the LGPL-2.1 license text + the kpathsea copyright + a pointer to the
-  pinned source (`KPSE_REF`) so a user can relink; both sides are open so relink
-  is possible. **Owner to confirm** this source-availability posture satisfies §6
-  for the static link (vs. shipping object files / a written offer).
+- **F5** *(attribution landed 2026-07-14; posture call still OPEN)* —
+  **libkpathsea (LGPL-2.1 static link).** kpathsea is statically linked on Linux
+  (`build_static_kpathsea.sh`) and, as of 0.7.4, Windows (`build_from_source`).
+  `THIRD-PARTY-NOTICES` now carries the kpathsea copyright (§3.2), the relink
+  note + pinned-source pointer (§3.5), and the verbatim LGPL-2.1 text (§6, via
+  `tools/gen_notices.sh` + `licenses/`). **Still owner-to-confirm:** that
+  source-availability satisfies the §6 relink obligation, vs. shipping
+  prelinkable object files or a written offer. Same call covers libmarpa (F6).
+- **F6** *(attribution landed 2026-07-14)* — **vendored native libs were absent
+  from every notice: libmarpa + mimalloc.** Found by auditing what `-sys`
+  `build.rs` files actually compile, rather than trusting manifest `license =`
+  fields (§D.2). libmarpa was attributed **nowhere** despite statically linking
+  MIT (Kegler) **and LGPL-3.0/LGPL-2.1** (libavl, GNU obstack) code into every
+  binary ever shipped; mimalloc was attributed to the *wrapper author* instead of
+  Microsoft. Both now in `THIRD-PARTY-NOTICES` §3.3/§3.4. The LGPL half of
+  libmarpa inherits F5's relink posture (§D.3). **Follow-up:** F4's CI gate
+  should assert the §D.2 table matches the shipped tree, since no existing
+  automated check can see this class.
+- **F7** *(open, 2026-07-14)* — **the notices shipped differ per platform.**
+  `tools/gen_notices.sh` runs **only in the `release` job** (ubuntu), so only the
+  x86_64-linux tarball + `.deb` bundle the complete file. The macOS (both) and
+  aarch64-linux tarballs are packaged in their own jobs, where `make_release.sh`
+  finds no `THIRD-PARTY-NOTICES.dist` and falls back to the **committed §1-4**
+  — i.e. they ship **without §5 (all ~140 Rust crate MIT/Apache texts)** and
+  without §6. The Windows deliverable is a bare `.exe`, so it bundles **no
+  notices at all** (the full file is published as a standalone release asset,
+  which is a partial mitigation, not a bundled notice). Fix: install cargo-about
+  + run `gen_notices.sh` in each build leg (or build the notices once in a shared
+  job and pass it to the others as an artifact), and ship a `.zip` for Windows so
+  the `.exe` travels with its notices.

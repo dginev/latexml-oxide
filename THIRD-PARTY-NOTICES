@@ -11,6 +11,14 @@ For the licenses of the Rust crates statically linked into the binary, see the
 appended "RUST DEPENDENCY LICENSES" section (generated from the lockfile at
 release time via `cargo about`; see docs/release/LICENSE_INVENTORY.md §A).
 
+Note that the Rust section attributes each *crate* as its manifest declares it.
+Several `-sys` crates compile third-party C code that carries a different
+copyright holder and license than the Rust wrapper around it; those native
+libraries are attributed by name in section 3 below, not in section 5.
+
+The full texts of the copyleft licenses referenced from section 3 are appended
+in section 6 ("COPYLEFT LICENSE TEXTS").
+
 --------------------------------------------------------------------------------
 1. Embedded TeX format dumps  (resources/dumps/*.dump.txt)
 --------------------------------------------------------------------------------
@@ -50,8 +58,11 @@ The embedded stylesheets, schemas, and one JavaScript helper
 No notice is legally required; attribution is provided in gratitude.
 
 --------------------------------------------------------------------------------
-3. Linked system libraries
+3. Linked native (C) libraries
 --------------------------------------------------------------------------------
+
+3.1 System libraries
+--------------------
 
 The binary is built against the following C libraries (statically linked where
 noted per docs/release/RELEASE_CRITERIA.md §3; otherwise dynamically linked against the
@@ -69,6 +80,83 @@ host system libraries):
   * libgcrypt, libgpg-error  (transitive, via libxslt's EXSLT crypto module)
       Copyright Free Software Foundation and contributors.
       Licensed under the GNU LGPL v2.1 (dynamically linked).
+
+3.2 libkpathsea  (statically linked where available)
+----------------------------------------------------
+
+TeX file-path resolution. Statically linked on Linux
+(tools/build_static_kpathsea.sh) and, from 0.7.4, on Windows (the `kpathsea_sys`
+crate's `build_from_source`). On platforms where no library is available
+(notably macOS/MacTeX, and MiKTeX hosts) the binary instead calls the host's
+`kpsewhich` executable as a subprocess, and no kpathsea code is linked in.
+
+      Copyright Karl Berry, Olaf Weber and contributors.
+      Part of the TeX Live distribution.
+      Licensed under the GNU LGPL v2.1 or later — full text in section 6.
+      https://tug.org/texlive/
+
+The `kpathsea_sys` Rust crate declares "MIT OR Apache-2.0"; that covers the
+Rust binding only, NOT the kpathsea C library it links, which remains LGPL.
+See the relinking note in 3.5.
+
+3.3 libmarpa 8.6.2  (statically linked, vendored)
+-------------------------------------------------
+
+The Earley/Marpa parsing engine behind the math parser. The C sources are
+vendored as a tarball inside the `libmarpa-sys` crate and compiled into the
+binary at build time. The `marpa` / `libmarpa-sys` Rust crates declare
+"MIT OR Apache-2.0"; that covers the Rust bindings only. The vendored C library
+is under mixed licenses, per file:
+
+  * marpa.c, marpa_ami.c, marpa_codes.c
+      Copyright 2018 Jeffrey Kegler.
+      Licensed under the MIT License.
+      https://jeffreykegler.github.io/Marpa-web-site/libmarpa.html
+
+  * marpa_avl.c, marpa_tavl.c  (modifications of avl.c / tavl.c from Ben
+    Pfaff's libavl)
+      Copyright 2018 Jeffrey Kegler.
+      Copyright (C) 1998, 1999, 2000, 2001, 2002, 2004 Free Software
+      Foundation, Inc.
+      Licensed under the GNU LGPL v3 or later — full text in section 6.
+
+  * marpa_obs.c  (a modification of the GNU obstack from the GNU C Library)
+      Copyright 2018 Jeffrey Kegler.
+      Copyright (C) 1988-2005 Free Software Foundation, Inc.
+      Licensed under the GNU LGPL v2.1 or later — full text in section 6.
+
+See the relinking note in 3.5.
+
+3.4 mimalloc  (statically linked, vendored)
+-------------------------------------------
+
+The global memory allocator, vendored as C sources inside the `libmimalloc-sys`
+crate and compiled into the binary.
+
+      Copyright (c) 2018-2025 Microsoft Corporation, Daan Leijen.
+      Licensed under the MIT License.
+      https://github.com/microsoft/mimalloc
+
+The `libmimalloc-sys` crate's own LICENSE.txt (MIT, Copyright 2019 Octavian
+Oncescu) covers the Rust wrapper; the notice above is the one required by the
+vendored mimalloc C sources that are actually linked in.
+
+3.5 Relinking the LGPL components (LGPL-2.1 §6 / LGPL-3.0 §4)
+-------------------------------------------------------------
+
+libkpathsea (3.2) and parts of libmarpa (3.3) are LGPL and are STATICALLY
+linked into the distributed binary. Both licenses permit this on the condition
+that a recipient can relink the work against a modified version of the LGPL
+library. Every input needed to do so is public and version-pinned:
+
+  * latexml-oxide's own source is CC0-1.0 — https://github.com/dginev/latexml-oxide
+  * libmarpa 8.6.2 sources are vendored verbatim in the `libmarpa-sys` crate
+    (libmarpa-8.6.2.tar.gz) at https://github.com/dginev/marpa
+  * kpathsea is fetched at a recorded commit (`KPSE_REF` in the `kpathsea_sys`
+    crate; the same revision is pinned by tools/build_static_kpathsea.sh)
+
+Rebuilding from those sources with a modified LGPL library reproduces the
+binary. Requests for the corresponding sources: https://github.com/dginev/latexml-oxide/issues
 
 --------------------------------------------------------------------------------
 4. Graphics tools — NOT bundled, invoked as subprocesses
