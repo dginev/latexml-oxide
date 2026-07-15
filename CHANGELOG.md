@@ -1,5 +1,18 @@
 # Change Log
 
+## [0.7.4] (Windows target; third-party license notices)
+
+  - **New target: Windows** (`x86_64-pc-windows-msvc`) — a single fully-static
+    `latexml_oxide.exe` (no VC++ redistributable), shipped as a `.zip`.
+  - **Third-party notices now complete and identical on every platform.**
+    Attributed the native C libraries compiled into the binary that a
+    manifest-level audit cannot see — **libmarpa** (MIT, with LGPL-3.0/LGPL-2.1
+    parts), **mimalloc** (MIT, Microsoft), **libkpathsea** (LGPL-2.1) — and ship
+    the verbatim copyleft texts. Previously only the x86_64-Linux assets carried
+    the full file, and the Windows download carried none.
+    latexml-oxide's own source remains **CC0-1.0**; see `THIRD-PARTY-NOTICES`
+    and [`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md).
+
 ## [0.7.3] (Intel-macOS asset + PDF-fidelity pass)
 
   - **New target: Intel macOS** (`x86_64-apple-darwin`). Releases now publish as

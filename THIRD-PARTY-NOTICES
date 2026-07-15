@@ -5,7 +5,38 @@ latexml-oxide's own source code and original resources are dedicated to the
 public domain under CC0 1.0 Universal (see LICENSE). The distributed binary
 additionally embeds, links, or derives from third-party material that retains
 its own license, attributed below. This file is bundled with every release
-tarball.
+archive (tarball / .zip) and published as a standalone release asset.
+
+
+AT A GLANCE
+-----------
+
+What the shipped binary is made of, and under what terms:
+
+  latexml-oxide's own code + original resources ......... CC0-1.0 (public domain)
+  Embedded TeX format dumps (LaTeX kernel / plain TeX) .. LPPL-1.3c / TeX  (sec 1)
+  Embedded XSLT, CSS, RelaxNG, Profiles, JS ............. public domain  (sec 2)
+  libxml2 / libxslt / libexslt .......................... MIT           (sec 3.1)
+  libkpathsea .......................................... LGPL-2.1+      (sec 3.2)
+  libmarpa ............................................. MIT + LGPL     (sec 3.3)
+  mimalloc ............................................. MIT           (sec 3.4)
+  Rust crates .......................................... MIT / Apache-2.0 /
+                                                          BSD / ISC / …  (sec 5)
+
+The CC0 dedication covers ONLY the first line. Everything else keeps its own
+license — this file is where those are stated.
+
+Two of the linked libraries are copyleft (LGPL) and are statically linked; the
+LGPL permits that, and the relink condition it attaches is discharged by the
+fact that all of the sources involved are public and version-pinned. See
+section 3.5 for how, and section 6 for the license texts.
+
+Nothing here restricts USING latexml-oxide, for any purpose, commercial or
+otherwise. These terms concern REDISTRIBUTION of the binary.
+
+
+READING THIS FILE
+-----------------
 
 For the licenses of the Rust crates statically linked into the binary, see the
 appended "RUST DEPENDENCY LICENSES" section (generated from the lockfile at

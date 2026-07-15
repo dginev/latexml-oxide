@@ -235,10 +235,15 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   (MIT, since 0.7.1); Rust crates. Assembled by `tools/gen_notices.sh`.
 - **F3** *(landed 2026-07-09)* — **README License section** scoping the CC0 claim
   to our source + original resources (§C wording).
-- **F4** *(open)* — **CI release-time gate** (RELEASE_CRITERIA §7): run
-  `tools/gen_notices.sh` in the release workflow, bundle the assembled notices in
-  the artifact, and verify the artifact's embedded resources match §B/§C.
-  Complements the existing cargo-deny (§A) gate. Tracked with #51.
+- **F4** *(partially landed 2026-07-14; remainder open)* — **CI release-time
+  gate** (RELEASE_CRITERIA §7). *Done:* `tools/gen_notices.sh` runs in the
+  release workflow (now in a dedicated `notices` job), the assembled file is
+  bundled into **every** artifact, and the job content-gates it (§3.2/3.3/3.4,
+  §5, §6, plausible length) so a truncated notice fails the release. *Still
+  open:* verify the artifact's **embedded resources** match §B/§C, and assert the
+  **§D.2 vendored-native-lib table** matches the shipped tree — no cargo-deny /
+  cargo-about check can see that class (§A scope limit), so it is the one part of
+  this inventory with no automated backstop. Tracked with #51.
 - **F5** *(attribution landed 2026-07-14; posture call still OPEN)* —
   **libkpathsea (LGPL-2.1 static link).** kpathsea is statically linked on Linux
   (`build_static_kpathsea.sh`) and, as of 0.7.4, Windows (`build_from_source`).
