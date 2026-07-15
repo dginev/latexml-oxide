@@ -47,19 +47,34 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_ARGS = ["--manifest-path", str(REPO_ROOT / "Cargo.toml")]
 
-# The feature set the distributed binary ships (CLAUDE.md, RELEASE_CRITERIA 4).
-# Audit exactly what we ship -- no more, no less.
+# The feature sets we PUBLISH. Audit exactly what we ship -- no more, no less.
+#
+# There is more than one graph, and auditing one while calling the result "the shipped
+# tree" is how libzmq hid: `cortex_worker` (published in the cortex-worker container
+# image) is built `--features cortex`, which pulls zmq-sys -> zeromq-src, a crate that
+# statically compiles 276 vendored LGPL-3.0 C++ files. It is absent from the
+# runtime-bindings graph, so a gate that only ever looked there reported "all crates
+# audited" while the notices described libzmq as dynamically linked MPL-2.0. Every
+# graph we publish gets audited; the union must be covered by AUDITED.
+# gen_notices.sh already had this shape (NOTICES_CARGO_FEATURES) -- the tripwire didn't.
 #
 # RELEASE_EXTRA_FEATURES (release.yml passes `kpathsea-build-from-source` on the
 # Windows leg) is folded in rather than ignored: it is part of what we publish, and a
 # per-target feature that pulled in a native crate would otherwise be invisible here.
 # It adds no crates today (verified: same graph with and without) -- the point is that
 # it cannot start to without this gate noticing.
-SHIPPED_FEATURES = [
-    "--no-default-features",
-    "--features",
-    "runtime-bindings,kpathsea-build-from-source",
-]
+SHIPPED_GRAPHS = {
+    "downloads (latexml_oxide: tarballs, .zip, .deb)": [
+        "--no-default-features",
+        "--features",
+        "runtime-bindings,kpathsea-build-from-source",
+    ],
+    "cortex-worker container image (cortex_worker)": [
+        "--no-default-features",
+        "--features",
+        "cortex",
+    ],
+}
 
 # The triples we actually publish (docs/release/RELEASING.md "What ships in a release";
 # the build legs in .github/workflows/release.yml). KEEP IN SYNC when a target is added.
@@ -83,7 +98,64 @@ TARGET_ARGS = [arg for t in RELEASE_TARGETS for arg in ("--target", t)]
 # LICENSE_INVENTORY.md D.2. A crate here is NOT necessarily a licensing problem --
 # it means someone checked what it compiles and recorded the answer.
 AUDITED = {
-    "libmarpa-sys": ("0.3.0", 
+    # ---- Crates whose native code REACHES A SHIPPED BINARY. These drive disclosures.
+    "zeromq-src": ("0.2.6+4.3.4",
+        "Vendors libzmq 4.3.4 (277 C/C++ files) and compiles it into cortex_worker: "
+        "cc::Build::new().cpp(true) + 'cargo:rustc-link-lib=static=zmq'. NOT in "
+        "latexml_oxide -- reached only via --features cortex, so it is disclosed for "
+        "the cortex-worker image only. Its vendor/COPYING(.LESSER) are GPL-3.0 + "
+        "LGPL-3.0 -- NOT the MPL-2.0 that zeromq.org advertises, which arrived only "
+        "AFTER 4.3.x. Verified against the built binary: `ldd cortex_worker` shows no "
+        "libzmq.so, yet ZeroMQ's own C++ source names are inside it. libzmq's "
+        "static-linking exception relieves LGPL-3.0 s4/s5 and GPL-3.0 s6, so this owes "
+        "attribution but NO relink. THIRD-PARTY-NOTICES 3.1.",
+    ),
+    "zmq-sys": ("0.12.0",
+        "The Rust binding; declares 'MIT/Apache-2.0', which covers itself and NOT the "
+        "libzmq its build script compiles. `links = \"zmq\"` + a vestigial "
+        "[package.metadata.system-deps] read as 'links a system library', but "
+        "build/main.rs is 16 lines with no branch and unconditionally invokes "
+        "zeromq_src -- there is no system-linking path. See zeromq-src above.",
+    ),
+
+    # ---- Build-tooling and test fixtures: native files present, NOT linked into any
+    # shipped binary, so no disclosure is owed. Each verdict verified by looking at the
+    # file, not at the name. Recorded so the gate stays loud on substance and quiet here.
+    "cc": ("1.2.67",
+        "src/detect_compiler_family.c -- a probe compiled to identify the host "
+        "toolchain, never linked into our binary. The crate itself is pure Rust.",
+    ),
+    "walkdir": ("2.5.0",
+        "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
+    ),
+    "ar_archive_writer": ("0.5.2",
+        "reference/*.cpp -- LLVM's originals kept beside the Rust reimplementation for "
+        "reference; not compiled, not linked.",
+    ),
+    "libloading": ("0.8.9",
+        "tests/nagisa{32,64}.dll -- test fixtures.",
+    ),
+    "system-deps": ("6.2.2",
+        "src/tests/lib/libteststatic.a -- a test fixture.",
+    ),
+    "clang-sys": ("1.8.1",
+        "links = \"clang\": libclang is loaded by bindgen at BUILD time. No libclang "
+        "code enters our binary.",
+    ),
+    "prettyplease": ("0.2.37",
+        "links = \"prettyplease02\" is the cargo version-lock trick, not a native "
+        "library: zero native files, build.rs is pure Rust.",
+    ),
+    "rayon-core": ("1.13.0",
+        "links = \"rayon-core\": same version-lock trick. Its build.rs says so outright "
+        "-- \"we're not *actually* linking\".",
+    ),
+    "pericortex": ("0.2.7",
+        "Ours (dginev). The 'vendored archive' is 1508.01222.zip, an arXiv test paper "
+        "-- data, not code.",
+    ),
+
+    "libmarpa-sys": ("0.3.0",
         "Vendors libmarpa 8.6.2 as a tarball. Mixed per-file licensing that the "
         "manifest's 'MIT OR Apache-2.0' does not express: marpa.c/marpa_ami.c/"
         "marpa_codes.c are MIT (c) Jeffrey Kegler; marpa_avl.c/marpa_tavl.c are "
@@ -156,30 +228,37 @@ def run(cmd):
 
 
 def shipped_packages():
-    """(name, version) actually linked into the distributed binary, over RELEASE_TARGETS.
+    """(name, version) whose code can reach a published binary, over RELEASE_TARGETS.
 
-    The explicit target list is load-bearing -- see RELEASE_TARGETS above.
+    The explicit target list is load-bearing -- see RELEASE_TARGETS above. So is the
+    union over SHIPPED_GRAPHS: one graph is not "what we ship".
 
-    `-e normal` on purpose: build-dependencies (cc, bindgen, clang-sys) run at build
-    time and are not linked in, so they owe no distribution notice. The crate whose
-    build.rs compiles C is itself a normal dep -- that is what we want to catch.
+    `-e normal,build`, NOT `-e normal`. This gate used to say build-dependencies "run at
+    build time and are not linked in, so they owe no distribution notice" -- which is
+    false for the `*-src` shape and was the second half of the libzmq miss. zeromq-src
+    is a BUILD-dep of zmq-sys, and it compiles 276 vendored C++ files straight into the
+    binary; `-e normal` cannot see it, so the only evidence left was zmq-sys's
+    `links = "zmq"` -- which reads as "links a system library" and would have pointed a
+    reviewer at exactly the wrong conclusion. Same shape as openssl-src, curl-sys.
+    Dev-deps stay out (they are genuinely not shipped), hence not `-e all`.
     """
-    out = run(
-        ["cargo", "tree", *MANIFEST_ARGS, *SHIPPED_FEATURES,
-         "-e", "normal", "--prefix", "none", *TARGET_ARGS]
-    )
     pkgs = set()
-    for line in out.splitlines():
-        line = line.replace(" (*)", "").strip()
-        if not line:
-            continue
-        parts = line.split()
-        # `name vX.Y.Z [extra...]` -- the version is always field 1 and always starts
-        # with 'v'. Anything else is a header/blank/continuation we do not want, but a
-        # line we FAIL to parse must not vanish silently: that is how a shipped crate
-        # becomes an unaudited crate. main() cross-checks against cargo metadata.
-        if len(parts) >= 2 and re.fullmatch(r"v\d+\.\d+\.\d+.*", parts[1]):
-            pkgs.add((parts[0], parts[1][1:]))
+    for feature_args in SHIPPED_GRAPHS.values():
+        out = run(
+            ["cargo", "tree", *MANIFEST_ARGS, *feature_args,
+             "-e", "normal,build", "--prefix", "none", *TARGET_ARGS]
+        )
+        for line in out.splitlines():
+            line = line.replace(" (*)", "").strip()
+            if not line:
+                continue
+            parts = line.split()
+            # `name vX.Y.Z [extra...]` -- the version is always field 1 and always starts
+            # with 'v'. Anything else is a header/blank/continuation we do not want, but a
+            # line we FAIL to parse must not vanish silently: that is how a shipped crate
+            # becomes an unaudited crate. main() cross-checks against cargo metadata.
+            if len(parts) >= 2 and re.fullmatch(r"v\d+\.\d+\.\d+.*", parts[1]):
+                pkgs.add((parts[0], parts[1][1:]))
     if not pkgs:
         raise SystemExit("error: parsed zero crates from `cargo tree` — refusing to pass blind")
     return pkgs
@@ -202,9 +281,17 @@ def package_dirs():
     inviting someone to delete its attribution. Exactly the bug this script exists to
     catch, so it does not get to make it.
     """
-    meta = json.loads(
-        run(["cargo", "metadata", "--format-version", "1", *MANIFEST_ARGS, *SHIPPED_FEATURES])
-    )
+    # Merged over every published graph, for the same reason shipped_packages() is:
+    # a lookup table built from one feature set cannot place a crate that only the
+    # other one pulls in, and an unplaceable crate is a hole in the audit.
+    packages, workspace_ids = [], set()
+    for feature_args in SHIPPED_GRAPHS.values():
+        meta = json.loads(
+            run(["cargo", "metadata", "--format-version", "1", *MANIFEST_ARGS, *feature_args])
+        )
+        packages.extend(meta["packages"])
+        workspace_ids.update(meta["workspace_members"])
+    meta = {"packages": packages, "workspace_members": workspace_ids}
     dirs = {}
     for pkg in meta["packages"]:
         build_script = next(

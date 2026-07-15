@@ -12,9 +12,13 @@ binary.
 
 | File | Applies to | Why it's here |
 |---|---|---|
-| `LGPL-2.1.txt` | `libkpathsea`; libmarpa's `marpa_obs.c` (from the GNU obstack) | Statically linked → the license text must ship. |
-| `LGPL-3.0.txt` | libmarpa's `marpa_avl.c` / `marpa_tavl.c` (from Ben Pfaff's libavl) | Same. |
+| `LGPL-2.1.txt` | `libkpathsea`; libmarpa's `marpa_obs.c` (from the GNU obstack); GNU `libiconv` (Windows `.exe` only) | Statically linked → the license text must ship. |
+| `LGPL-3.0.txt` | libmarpa's `marpa_avl.c` / `marpa_tavl.c` (from Ben Pfaff's libavl); `libzmq` 4.3.4 (in `cortex_worker` only) | Same — though libzmq's own static-linking exception means it owes no *relink*, only attribution. |
 | `GPL-3.0.txt` | — (nothing here is GPL-licensed) | LGPL-3.0 is a set of *additional permissions* layered on GPL-3.0 and is not self-contained, so its text is meaningless without this one. Present **only** as LGPL-3.0's base text. |
+
+Keep this table in step with `THIRD-PARTY-NOTICES` §3: it is a list of what each
+text covers, and a list that is not re-enumerated when a component is added is
+exactly how libiconv and libzmq were missed the first time.
 
 To be explicit, since a directory of GPL files invites the wrong conclusion: no
 GPL-licensed code is linked into latexml-oxide, and none of these terms apply to

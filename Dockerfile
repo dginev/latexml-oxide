@@ -2,13 +2,18 @@
 #
 # Unified Dockerfile for BOTH published latexml-oxide images — select with --target:
 #
+# GITSHA is REQUIRED: .git is out of context (.dockerignore), so it is the only way
+# THIRD-PARTY-NOTICES section 7 can name the commit its relink pointer promises. The
+# notices stage refuses to build without it rather than ship "commit: unknown".
+#
 #   # general-purpose CLI  →  ghcr.io/dginev/latexml-oxide  (DEFAULT target)
-#   docker build --target cli -t ghcr.io/dginev/latexml-oxide .
+#   docker build --target cli --build-arg GITSHA=$(git rev-parse HEAD) -t ghcr.io/dginev/latexml-oxide .
 #   docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide paper.tex
 #
 #   # CorTeX fleet worker  →  ghcr.io/dginev/latexml-oxide/cortex-worker
 #   export HOSTTIME=$(date -Iminute)
-#   docker build --target worker --build-arg HOSTTIME=$HOSTTIME -t cortex-worker .
+#   docker build --target worker --build-arg HOSTTIME=$HOSTTIME \
+#     --build-arg GITSHA=$(git rev-parse HEAD) -t cortex-worker .
 #   docker run --network host -v /opt/cortex-scratch:/opt/cortex-scratch \
 #     --hostname="$(hostname)" cortex-worker 127.0.0.1
 #
@@ -123,11 +128,24 @@ RUN set -ex \
       tools/gen_notices.sh /tmp/THIRD-PARTY-NOTICES.worker
 # Prove it rather than assume it -- the same readback make_release.sh does on the
 # .deb. A truncated notice is invisible from outside: the image runs fine either way.
+# This mirrors release.yml's gate and must stay in step with it: it was weaker on
+# both counts that matter, and a gate that is quietly the weaker copy is how the
+# thing it guards ships broken. The last three needles are sentences from the LGPL/GPL
+# BODIES (each unique to one file), not the titles gen_notices.sh echoes -- title
+# needles pass over three 0-byte license texts. The crate count catches a section 5
+# that rendered nothing, which no line-count floor can (section 6 alone is 1341 lines).
 RUN set -ex; for f in /tmp/THIRD-PARTY-NOTICES.cli /tmp/THIRD-PARTY-NOTICES.worker; do \
       for needle in "3.2 libkpathsea" "3.3 libmarpa" "5. RUST DEPENDENCY LICENSES" \
-                    "6. COPYLEFT LICENSE TEXTS" "7. SOURCE PROVENANCE"; do \
+                    "6. COPYLEFT LICENSE TEXTS" "7. SOURCE PROVENANCE" \
+                    "This License Agreement applies to any software library or other" \
+                    "0. Additional Definitions." "16. Limitation of Liability."; do \
         grep -qF "$needle" "$f" || { echo "$f is missing: $needle" >&2; exit 1; }; \
       done; \
+      if sed -n '/^7\. SOURCE PROVENANCE/,$p' "$f" | grep -qE "unresolved|commit: unknown"; then \
+        echo "$f section 7 has an unresolved source revision (pass --build-arg GITSHA=\$(git rev-parse HEAD))" >&2; exit 1; \
+      fi; \
+      c="$(sed -n '/^5\. RUST DEPENDENCY LICENSES/,/^6\. COPYLEFT LICENSE TEXTS/p' "$f" | grep -c '^Applies to:' || true)"; \
+      [ "$c" -ge 50 ] || { echo "$f section 5 attributes only $c crates" >&2; exit 1; }; \
     done
 
 # ===========================================================================

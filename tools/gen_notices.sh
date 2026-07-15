@@ -55,10 +55,12 @@ cargo about generate "${cargo_features[@]}" about.hbs -o "$rust_section"
 # hand-authored sections 1-4  +  generated section 5  +  section 6 (copyleft texts)
 #
 # Section 6 carries the verbatim license texts that the STATICALLY linked LGPL
-# components require us to ship: libkpathsea (LGPL-2.1) and libmarpa's
-# libavl/obstack-derived files (LGPL-3.0 / LGPL-2.1) — see THIRD-PARTY-NOTICES
-# §3.2-§3.5. LGPL-3.0 is a set of additional permissions on top of GPL-3.0 and
+# components require us to ship: libkpathsea (LGPL-2.1), libmarpa's
+# libavl/obstack-derived files (LGPL-3.0 / LGPL-2.1), GNU libiconv on Windows
+# (LGPL-2.1) and libzmq in cortex_worker (LGPL-3.0) — see THIRD-PARTY-NOTICES
+# §3.1-§3.5. LGPL-3.0 is a set of additional permissions on top of GPL-3.0 and
 # is not self-contained, so the GPL-3.0 text ships alongside it.
+# Keep this list in step with §3; it is the same enumeration as licenses/README.md.
 copyleft_section="$(mktemp)"
 trap 'rm -f "$rust_section" "$copyleft_section"' EXIT
 {
@@ -74,7 +76,11 @@ trap 'rm -f "$rust_section" "$copyleft_section"' EXIT
               "GNU LESSER GENERAL PUBLIC LICENSE v3.0:licenses/LGPL-3.0.txt" \
               "GNU GENERAL PUBLIC LICENSE v3.0 (incorporated by reference into LGPL-3.0):licenses/GPL-3.0.txt"; do
     title="${pair%%:*}"; path="${pair#*:}"
-    [[ -f "$path" ]] || { echo "error: missing license text $path" >&2; exit 1; }
+    # -s, not -f: a 0-byte license text passes an exists-check and ships a section 6
+    # made of nothing but the titles echoed below -- i.e. a binary statically linking
+    # LGPL code with no license text at all, which is the obligation this file exists
+    # to discharge. Reachable via a bad sparse checkout or a botched `git add`.
+    [[ -s "$path" ]] || { echo "error: missing or EMPTY license text $path" >&2; exit 1; }
     echo "================================================================================"
     echo "$title"
     echo "--------------------------------------------------------------------------------"
@@ -86,7 +92,9 @@ trap 'rm -f "$rust_section" "$copyleft_section"' EXIT
 # Section 7: the exact revisions this artifact was built from.
 #
 # THIRD-PARTY-NOTICES 3.5 promises a recipient can relink the statically linked
-# LGPL components (libkpathsea, parts of libmarpa) against a modified library.
+# LGPL components (libkpathsea, parts of libmarpa, and libiconv on Windows)
+# against a modified library. (Not libzmq — its static-linking exception relieves
+# the relink condition; it needs attribution in 3.1, not a source pointer here.)
 # That promise is only as good as knowing WHICH sources went in. kpathsea is
 # pinned in-repo (KPSE_REF), but the marpa git dep carries no `rev =`, so the
 # revision actually built is recorded only in Cargo.lock -- which is gitignored.

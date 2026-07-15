@@ -88,11 +88,17 @@ jobs:
             "5. RUST DEPENDENCY LICENSES" \
             "6. COPYLEFT LICENSE TEXTS" \
             "7. SOURCE PROVENANCE" \
-            "GNU LESSER GENERAL PUBLIC LICENSE v2.1" \
-            "GNU LESSER GENERAL PUBLIC LICENSE v3.0" \
-            "GNU GENERAL PUBLIC LICENSE v3.0"; do
+            "This License Agreement applies to any software library or other" \
+            "0. Additional Definitions." \
+            "16. Limitation of Liability."; do
             grep -qF "$needle" "$f" || { echo "::error::THIRD-PARTY-NOTICES is missing: $needle"; exit 1; }
           done
+          # The last three needles are sentences from the BODIES of LGPL-2.1, LGPL-3.0
+          # and GPL-3.0 respectively, each unique to its own file (verified). They used
+          # to be the section titles "GNU LESSER GENERAL PUBLIC LICENSE v2.1" etc --
+          # strings that appear in NO license text and match only the title gen_notices.sh
+          # echoes above each one. Three 0-byte files in licenses/ therefore passed this
+          # gate while shipping no license text at all. Grep the text, not the scaffolding.
           # Section 7's relink pointer must name real commits: an unresolved revision
           # means we shipped a promise (3.5) we cannot keep. `commit: unknown` is the
           # same failure wearing a different word -- it is what gen_notices.sh writes
@@ -102,12 +108,23 @@ jobs:
             echo "::error::THIRD-PARTY-NOTICES section 7 has an unresolved source revision"
             exit 1
           fi
-          # The Rust appendix must carry real license texts, not just headings.
-          if [ "$(wc -l < "$f")" -lt 1000 ]; then
-            echo "::error::THIRD-PARTY-NOTICES is implausibly short ($(wc -l < "$f") lines) — cargo-about likely emitted nothing"
+          # Section 5 must actually ATTRIBUTE CRATES, not merely carry its heading.
+          # This replaces a whole-file `wc -l < 1000` floor that could never fire: the
+          # section 6 license texts alone are 1341 lines, so a notices file attributing
+          # ZERO of the ~66 shipped crates still measured ~1706 lines and passed. The
+          # heading needle above cannot cover it either -- about.hbs emits
+          # "5. RUST DEPENDENCY LICENSES" as literal template text, outside {{#each}},
+          # so it proves the template ran, not that it rendered anything. Count the
+          # per-crate "Applies to:" lines inside section 5's own range instead.
+          # Floor 50 vs ~66 today: a legitimate drop below it should stop a release and
+          # make a human look, which is the point.
+          crates="$(sed -n '/^5\. RUST DEPENDENCY LICENSES/,/^6\. COPYLEFT LICENSE TEXTS/p' "$f" \
+                    | grep -c '^Applies to:' || true)"
+          if [ "${crates:-0}" -lt 50 ]; then
+            echo "::error::THIRD-PARTY-NOTICES section 5 attributes only ${crates:-0} crates (expected ~66) — cargo-about emitted little or nothing"
             exit 1
           fi
-          echo "OK: notices complete ($(wc -l < "$f") lines)"
+          echo "OK: notices complete ($(wc -l < "$f") lines, section 5 attributes ${crates} crates)"
 
       - uses: actions/upload-artifact@v4
         with:

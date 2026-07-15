@@ -6,23 +6,28 @@ public domain under CC0 1.0 Universal (see LICENSE). What we ship additionally
 embeds, links, or derives from third-party material that retains its own license,
 attributed below.
 
-SCOPE. One file covers everything we publish, so it is the UNION over our
-artifacts, and anything that is not in all of them says so on its own line. The
-artifacts are: the tarballs, the Windows .zip and both .deb packages (each
-carrying the `latexml_oxide` binary and nothing else); the `latexml-oxide`
-container image (same binary); and the `cortex-worker` container image (which
-additionally carries `cortex_worker`, the only executable of ours that links
-libzmq — see 3.1). This file is bundled with every one of them (containers: under
-/usr/local/share/doc/latexml-oxide) and is published as a standalone release
-asset. Section 5 is the exception to the union: it is generated per artifact from
-that artifact's own dependency graph.
+SCOPE. This file describes the `latexml_oxide` binary as we release it for
+download: the Linux/macOS tarballs, the Windows .zip, and both .deb packages. It
+travels inside each of them and is published as a standalone release asset.
+Sections 1-3 are the union over those downloads — an entry that is not in all of
+them says so on its own line (e.g. libiconv, Windows only). Section 5 is
+generated per artifact from that artifact's own dependency graph.
+
+CONTAINER IMAGES are a different build and this file's sections 3.1-3.2 do NOT
+describe them. In `ghcr.io/dginev/latexml-oxide` and `ghcr.io/dginev/cortex-worker`
+the binary links libxml2, libxslt and libkpathsea DYNAMICALLY against Ubuntu's
+shared libraries, rather than statically as below; those libraries, TeX Live and
+the graphics tools of section 4 are apt packages, each carrying its own copyright
+file at /usr/share/doc/<package>/copyright inside the image. We do not restate
+them here. The one thing in a container that is ours to attribute and that no apt
+package covers is the statically linked libzmq in `cortex_worker` — see 3.1.
 
 
 AT A GLANCE
 -----------
 
-What we ship is made of, and under what terms. Unless a line says otherwise, it
-applies to every artifact:
+What the released `latexml_oxide` binary is made of, and under what terms. Unless
+a line says otherwise, it applies to every download:
 
   latexml-oxide's own code + original resources ........ CC0-1.0 (public domain)
   Embedded TeX format dumps (LaTeX kernel / plain TeX) . LPPL-1.3c / TeX         (sec 1)
@@ -31,7 +36,7 @@ applies to every artifact:
   Schema-docs Ayu colour palette ....................... MIT (rustdoc)           (sec 2.3)
   libxml2 / libxslt / libexslt ......................... MIT                     (sec 3.1)
   zlib + GNU libiconv — Windows .exe only .............. Zlib + LGPL-2.1+        (sec 3.1)
-  libzmq — cortex-worker image only .................... MPL-2.0                 (sec 3.1)
+  libzmq — in `cortex_worker` only, not in any download  LGPL-3.0 + exception    (sec 3.1)
   libkpathsea .......................................... LGPL-2.1+               (sec 3.2)
   libmarpa ............................................. MIT + LGPL              (sec 3.3)
   mimalloc ............................................. MIT                     (sec 3.4)
@@ -167,7 +172,7 @@ both — in gratitude, as in 2.1. The rest of the file is ours and CC0.
 3.1 System libraries
 --------------------
 
-The XML/XSLT stack, statically linked into every released binary
+The XML/XSLT stack, statically linked into every downloaded binary
 (tools/build_static_libxml.sh; docs/release/RELEASE_CRITERIA.md §3):
 
   * libxml2, libxslt, libexslt
@@ -175,10 +180,13 @@ The XML/XSLT stack, statically linked into every released binary
       Licensed under the MIT License.
       https://gitlab.gnome.org/GNOME/libxml2  /  libxslt
 
-On Linux and macOS these are built `--without-zlib --without-lzma --without-icu
---without-crypto`, which keeps zlib, liblzma, ICU and libgcrypt/libgpg-error out
-of the link entirely; the net closure is libm (plus the host's own libiconv on
-macOS, dynamically).
+For the Linux and macOS downloads these are built `--without-zlib --without-lzma
+--without-icu --without-crypto`, which keeps zlib, liblzma, ICU and
+libgcrypt/libgpg-error out of those binaries entirely; the net closure is libm
+(plus the host's own libiconv on macOS, dynamically). That flag set belongs to
+tools/build_static_libxml.sh and so covers only the legs that run it — the
+container images link Ubuntu's stock libxml2/libxslt, which are built WITH all
+four (see SCOPE; their copyright files ship inside the image).
 
 Windows gets libxml2/libxslt from vcpkg instead, at its port defaults, so two
 more libraries are statically linked into `latexml_oxide.exe` and nowhere else:
@@ -198,23 +206,33 @@ more libraries are statically linked into `latexml_oxide.exe` and nowhere else:
       cases dynamically — this is a Windows-only static link.
 
 One more that is NOT in `latexml_oxide` at all: `cortex_worker` — shipped only in
-the cortex-worker container image, never in a binary download — links libzmq
-DYNAMICALLY, against the `libzmq5` package that image installs from Ubuntu.
+the cortex-worker container image, never in a binary download — STATICALLY links
+libzmq, compiled from sources vendored in the `zeromq-src` crate.
 
-  * libzmq (ZeroMQ)
-      Copyright the ZeroMQ authors and contributors.
-      MPL-2.0, with MIT and LGPL-2.0+ parts. https://zeromq.org/
-      The `zmq-sys` crate declares "MIT/Apache-2.0", which covers its Rust
-      binding, not libzmq. Dynamically linked against the image's own package,
-      whose copyright file travels with it at /usr/share/doc/libzmq5/.
+  * libzmq (ZeroMQ) 4.3.4
+      Copyright the ZeroMQ authors and contributors. https://zeromq.org/
+      LGPL-3.0 (on GPL-3.0, see 6), WITH the project's static-linking exception.
+      Vendored and built by `zeromq-src`, a build-dependency of `zmq-sys`, whose
+      build script has no system-linking path: libzmq's C++ is compiled straight
+      into the binary. Note `zmq-sys` declares "MIT/Apache-2.0" — that covers its
+      Rust binding, not libzmq; and while the image also apt-installs `libzmq5`
+      (MPL-2.0, a LATER release), that package is NOT what the binary links, so
+      its copyright file does not describe this. The exception grants linking
+      "with independent modules ... regardless of the license terms of these
+      independent modules" and states it "relieves you of any obligations under
+      sections 4 and 5 of this license, and section 6 of the GNU General Public
+      License" — so unlike 3.2/3.3 this creates NO relink obligation, and 3.5
+      does not cover it.
 
-3.2 libkpathsea  (statically linked into every released binary)
---------------------------------------------------------------
+3.2 libkpathsea  (statically linked into every downloaded binary)
+----------------------------------------------------------------
 
-TeX file-path resolution. STATICALLY LINKED into every binary we release: Linux
-and macOS build it from source (tools/build_static_kpathsea.sh), Windows via the
-`kpathsea_sys` crate's `build_from_source`. If you got a binary from us, it has
-kpathsea's LGPL code in it and the relinking note in 3.5 applies to you.
+TeX file-path resolution. STATICALLY LINKED into every binary we release for
+download: Linux and macOS build it from source (tools/build_static_kpathsea.sh),
+Windows via the `kpathsea_sys` crate's `build_from_source`. If you downloaded a
+binary from us, it has kpathsea's LGPL code in it and the relinking note in 3.5
+applies to you. (In the container images it is Ubuntu's shared libkpathsea6
+instead — see SCOPE.)
 (latexml-oxide can also find TeX files by running the host's `kpsewhich` as a
 subprocess — a runtime fallback that does not remove the static link.)
 
@@ -273,7 +291,9 @@ vendored mimalloc C sources that are actually linked in.
 -------------------------------------------------------------
 
 libkpathsea (3.2), parts of libmarpa (3.3), and — on Windows only — GNU libiconv
-(3.1) are LGPL and are STATICALLY linked into the distributed binary. Those
+(3.1) are LGPL and are STATICALLY linked into every downloaded binary. (Not
+libzmq: it is statically linked too, but only into `cortex_worker`, and its own
+static-linking exception relieves the relink condition — see 3.1.) Those
 licenses permit this on the condition that a recipient can relink the work
 against a modified version of the LGPL library. Every input needed to do so is
 public, and the exact version of each one that went into THIS artifact is
