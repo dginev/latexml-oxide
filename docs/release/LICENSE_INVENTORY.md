@@ -66,19 +66,25 @@ Allow-list in [`deny.toml`](../../deny.toml); CI's `lint` job runs `cargo-deny`
 
 Re-verify: `cargo deny --all-features check licenses`
 
-### Scope of `THIRD-PARTY-NOTICES` itself (settled 2026-07-15)
+### Scope of `THIRD-PARTY-NOTICES` itself (settled 2026-07-15, revised after F16)
 
-One file ships with every artifact, so **it is the union over them, with per-entry
-scope markers** — not a description of `latexml_oxide` alone. It had been a union
-since `zlib`/`libiconv` became Windows-only entries, while its opening line still
-said "The distributed binary", singular — false once the worker image began
-shipping `cortex_worker` (our only executable linking libzmq). A file whose meaning
-silently depends on which download you got is worse than a union that says so, so
-the header now declares the scope and every non-universal entry states its own.
+The file is **the disclosure for the `latexml_oxide` binary we release for
+download** — the tarballs, the Windows `.zip`, both `.deb`s. §1-3 are the union
+over *those*, with per-entry scope markers (e.g. libiconv, Windows only).
 
-**§5 is the sole exception**: generated per artifact from that artifact's own
-graph, which is why the two container images get different §5s (measured: 5
-worker-only crates, incl. `zmq`/`zmq-sys`).
+It briefly claimed to be the union over *every* artifact including the two
+container images, which F16 falsified: the containers link nothing statically, so
+"statically linked into every released binary" was false for 2 of 7 and the file
+would have had to enumerate Ubuntu's libgcrypt/ICU/zlib/liblzma too. **Containers
+descope** to the standard posture — they are apt-built aggregates whose libraries,
+TeX Live and graphics tools each carry their own
+`/usr/share/doc/<pkg>/copyright` **inside the image**, stated once rather than
+restated per library. The one container fact that is ours and that no apt package
+covers is `cortex_worker`'s statically linked libzmq (§D.1).
+
+**§5 is the sole per-artifact section**: generated from that artifact's own graph,
+which is why the two container images get different §5s (measured: 5 worker-only
+crates, incl. `zmq`/`zmq-sys`).
 
 | Artifact | Executables it carries |
 |---|---|
@@ -161,7 +167,7 @@ without claiming CC0 over them. Landed as F2/F3.
 | zlib | Zlib | **Windows: static** (vcpkg `zlib` default feature — F13). **Linux+macOS: not linked** — libxml2 built `--without-zlib`. No `libz-sys` in the lock either (flate2 → pure-Rust miniz_oxide). |
 | liblzma / ICU | — | **not linked** anywhere: `--without-lzma --without-icu`; no `lzma` feature in vcpkg's port and `icu` is non-default. |
 | libgcrypt / libgpg-error | LGPL-2.1 | **not linked at all** since #261 — libxslt built `--without-crypto`. Previously "dynamic, keep dynamic". Dropping that flag would pull an LGPL library into the **static** link, making it a §D.3 decision rather than a build tweak. |
-| libzmq | MPL-2.0 (+MIT, LGPL-2.0+ parts) | **cortex-worker image only**, dynamic against the image's own `libzmq5` — not in any binary download. Reached via `zmq-sys` (`links = "zmq"`, declares `MIT/Apache-2.0`: the binding's license, not libzmq's — the §D.2 pattern again). Only the `cortex` feature pulls it, which `SHIPPED_FEATURES` excludes, **so the audit never sees it**. §3.1; the image also carries `/usr/share/doc/libzmq5/copyright`. |
+| libzmq **4.3.4** | **LGPL-3.0** (on GPL-3.0) **+ static-linking exception** | **`cortex_worker` only** — not in `latexml_oxide`, not in any download. **STATIC**, not dynamic: `zmq-sys` has `zeromq-src` as an *unconditional build-dep* and a 16-line build script with no branch, compiling 277 vendored C++ files → `rustc-link-lib=static=zmq`. Its `[package.metadata.system-deps]` is vestigial; there is no system-linking path. **Not MPL-2.0**: the vendored `vendor/COPYING(.LESSER)` are GPL-3.0+LGPL-3.0 — ZeroMQ relicensed only *after* 4.3.x, so the image's `/usr/share/doc/libzmq5/copyright` (MPL-2.0) describes a **different library** than the one linked and must not be leaned on. The exception relieves LGPL-3.0 §4/§5 and GPL-3.0 §6 → attribution owed, **no relink** (so §3.5 excludes it). Verified against the artifact: `ldd cortex_worker` shows no `libzmq.so`, yet ZeroMQ's own C++ source names are inside the binary. §3.1. |
 
 Net dynamic closure on Linux/macOS: the glibc family + libm (+ the host libiconv on
 macOS). The default dev build (`cargo build`) links everything dynamically.
@@ -391,3 +397,64 @@ All landed. Numbered in discovery order; **F4 is the standing gate**.
     acknowledgement. §D.3's posture discharges the relink duty.
   - **No gate covers this class**: `audit_vendored_natives.py` reasons over the cargo
     graph, and a vcpkg feature default is invisible to it.
+
+- **F14** *(landed 2026-07-15)* — **two gates could not fail.** §5's `wc -l < 1000`
+  floor was calibrated before §6 existed; those license texts are 1341 lines, so a
+  notices file attributing **zero of the 66** shipped crates still measured 1729 and
+  passed — the F5 fix broke the gate meant to detect the absence of the thing F5
+  fixed. The heading needle cannot cover it: `about.hbs` emits
+  `5. RUST DEPENDENCY LICENSES` as literal text *outside* `{{#each}}`, proving the
+  template ran, not that it rendered. §6 was worse: its needles
+  (`"GNU LESSER GENERAL PUBLIC LICENSE v2.1"` …) appear in **no license text** and
+  matched only the title `gen_notices.sh` echoes above each one — so with `-f`
+  (exists) rather than `-s`, three 0-byte files in `licenses/` shipped a §6 of three
+  titles and passed every gate. Both now assert **content** (crate count inside §5's
+  own range; sentences from the LGPL/GPL bodies, each unique to one file) and are
+  proven to fail the case they missed. **Lesson:** every gate here measured
+  scaffolding `gen_notices.sh` emits unconditionally, so each could pass while the
+  content it named was absent. Gate the payload, not the wrapper.
+- **F15** *(landed 2026-07-15)* — **libzmq wrong in every clause** (§D.1 row).
+  Claimed dynamic/Ubuntu-`libzmq5`/MPL-2.0; actually static/vendored/LGPL-3.0. Root
+  cause is the same enumeration failure as F10, one layer down: the container was
+  enumerated as a **delivery channel** (F10) but never as a distinct **dependency
+  graph**. `SHIPPED_FEATURES` pinned the audit to the `runtime-bindings` graph and
+  called the result "the shipped tree" — `zmq-sys` appears 0× there, 2× in the
+  `cortex` graph the published worker image ships. `gen_notices.sh` already had
+  `NOTICES_CARGO_FEATURES` *because the images link different graphs*: the notices
+  generator knew, the tripwire didn't. The audit now unions `SHIPPED_GRAPHS`.
+  Compounding it, `-e normal` hid the vendored sources entirely (`zeromq-src` is a
+  **build**-dep), leaving `links = "zmq"` as the only evidence — which reads as
+  "links a system library" and points a reviewer at exactly the wrong conclusion.
+  Now `-e normal,build`. **This inventory named the hole and did not chase it**: the
+  old §D.1 row literally read "so the audit never sees it".
+- **F16** *(landed 2026-07-15)* — **the container scope claim was false.** Adding the
+  images to SCOPE (F10) never propagated into §3.1/§3.2, so "STATICALLY LINKED into
+  every binary we release … if you got a binary from us, it has kpathsea's LGPL code
+  in it" was false for 2 of 7 artifacts — **the sentence F11 had already fixed once**,
+  wrong the same way on the second attempt. `ldd` on the shipped image: libxml2,
+  libxslt, libexslt and libkpathsea are **dynamic** from Ubuntu, dragging in
+  libgcrypt (LGPL-2.1+), ICU, zlib and liblzma besides. Resolved by descoping
+  containers (see "Scope of `THIRD-PARTY-NOTICES` itself").
+
+### Known holes, shipped open (owner decision 2026-07-15: merge as-is, track)
+
+Recorded rather than fixed. None affects what the released `latexml_oxide` binary
+*discloses*; each is a way a future change could go unnoticed.
+
+1. **§7's provenance is not exact by construction.** `Cargo.lock` is gitignored and
+   the `marpa` dep carries no `rev =`, so every runner re-resolves. F7 split
+   `notices` into its own job — on `main` it was a step *inside* the build job, so
+   cargo-about wrote the lock and the build reused it. §7 now records **the notices
+   runner's** marpa commit while five build legs resolve independently, hours apart.
+   A push to marpa's default branch mid-release makes §7 name a commit nothing
+   shipped. *Accepted:* the window is hours, on a repo we control. *Fix if it ever
+   bites:* pin `rev =` (a pin is not a `[patch]`), or have `notices` upload its
+   `Cargo.lock` for every leg to build `--locked` against.
+2. **The `.deb` readback is fail-open in its own scenario.** `make_release.sh`:
+   `if [[ -f THIRD-PARTY-NOTICES.dist ]] && command -v dpkg-deb`. When `.dist` is
+   missing — the **F9 bug itself** — the gate does not run; it warns to stderr and
+   ships §1-4. Unreachable in CI (download-artifact errors first); every local
+   release path is fail-open. *Fix:* drop the `-f` condition and fail instead.
+3. **No gate covers vcpkg feature defaults (F13).** The audit reasons over the cargo
+   graph; a vcpkg port default is structurally invisible. *Fix:* diff `vcpkg list`
+   after install against an allowlist so a new transitive port trips a human.
