@@ -38,6 +38,7 @@ $ VERSION=0.7.4
 ### Ubuntu / Debian
 
 The `.deb` declares its runtime apt dependencies (libraries + TeX Live + the graphics tools), so it is the easiest way in.
+Built on Ubuntu 22.04 (glibc 2.35), so it runs on Ubuntu 22.04+ and Debian 12+.
 
 ```
 $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide_${VERSION}-1_amd64.deb

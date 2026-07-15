@@ -164,7 +164,7 @@ CLAUDE.md; these are standard OS libraries):
 | libgcrypt | LGPL-2.1 | dynamic (transitive via libxslt) — **keep dynamic** |
 | libgpg-error | LGPL-2.1 | dynamic (transitive via libgcrypt) — keep dynamic |
 | zlib | Zlib | dynamic |
-| **libkpathsea** | **LGPL-2.1** | **static** where linked — Linux (`tools/build_static_kpathsea.sh`), Windows 0.7.4 (`kpathsea_sys` `build_from_source`); subprocess `kpsewhich` otherwise (macOS/MacTeX ships no lib; MiKTeX fallback). See the §6 note below. |
+| **libkpathsea** | **LGPL-2.1** | **static on every release leg** — Linux + **macOS** (`tools/build_static_kpathsea.sh`; both macOS legs run it, `release.yml` build-macos/build-macos-intel), Windows 0.7.4 (`kpathsea_sys` `build_from_source`). The subprocess-`kpsewhich` backend is a **runtime** fallback (MiKTeX; a host with no libkpathsea), not a build-time one — it does **not** avoid the static link. See §D.3. |
 
 The release binary statically links libxml2/libxslt/libexslt (§3, shipped
 0.7.1); MIT requires their copyright notice when statically linked → covered in
@@ -334,9 +334,23 @@ Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
   is misled, and an "honest" combined field would trip our own `deny.toml` (LGPL
   is not in the allow list) for no real gain. **The control is §3.3 + the CI
   audit, not the manifest** — which is precisely why the audit exists.
+- **F9** *(landed 2026-07-14)* — **the `.deb` shipped the committed notices, not the
+  assembled ones.** Found by the PR's own code review, not by any gate. F7 fixed the
+  tarballs and the `.zip` but missed the `.deb` entirely: `cargo deb` builds its payload
+  from the asset list in `latexml_oxide/Cargo.toml` (`["../THIRD-PARTY-NOTICES", ...]`),
+  i.e. the **committed** repo-root file — sections 1–4 only. Staging the assembled file
+  into `${stage_dir}` did nothing for it, so `apt install ./latexml-oxide_*.deb` — the
+  path the README calls the easiest way in — installed notices with no §5 (~140 Rust
+  crate texts), no §6 (the copyleft texts the static LGPL links oblige), and no §7.
+  Fixed in `make_release.sh`: point `../THIRD-PARTY-NOTICES` at the assembled file for
+  the `cargo deb` run, restore the committed file after, and then **read the notices back
+  out of the built `.deb`** (`dpkg-deb --fsys-tarfile`) asserting §5/§6/§7 — the failure
+  was invisible from outside, since the `.deb` builds and installs fine either way.
+  The lesson generalizes: an artifact assembled by a *different tool* does not inherit
+  the staging you did for the others.
 - **F7** *(landed 2026-07-14)* — **the notices shipped differed per platform.**
   `tools/gen_notices.sh` ran **only in the `release` job** (ubuntu), so only the
-  x86_64-linux tarball + `.deb` bundled the complete file. The macOS (both) and
+  x86_64-linux **tarball** bundled the complete file (the `.deb` never did — see F9). The macOS (both) and
   aarch64-linux tarballs are packaged in their own jobs, where `make_release.sh`
   found no `THIRD-PARTY-NOTICES.dist` and fell back to the **committed §1-4** —
   shipping **without §5 (all ~140 Rust crate MIT/Apache texts)**. The Windows

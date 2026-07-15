@@ -207,16 +207,64 @@ fi
 # future analogue); the tarball above is the macOS deliverable.
 deb_path=""
 if [[ "${os_family}" == "linux" ]]; then
+  # The .deb does NOT get its notices from ${stage_dir}: cargo-deb builds its
+  # payload from the asset list in latexml_oxide/Cargo.toml, which points at
+  # `../THIRD-PARTY-NOTICES` -- the COMMITTED repo-root file (hand-authored
+  # sections 1-4 only). Staging the assembled file into ${stage_dir} above does
+  # nothing for it, so the .deb -- the install path the README calls the easiest
+  # way in -- would ship with no Rust-crate appendix (§5), none of the copyleft
+  # texts the static libkpathsea/libmarpa links oblige (§6), and no relink
+  # provenance (§7). Point the path cargo-deb actually reads at the assembled
+  # file for the duration of the build, then put the committed file back so a
+  # local run leaves no dirty tree.
+  notices_backup=""
+  restore_notices() {
+    if [[ -n "${notices_backup}" && -f "${notices_backup}" ]]; then
+      mv -f "${notices_backup}" THIRD-PARTY-NOTICES
+      notices_backup=""
+    fi
+  }
+  if [[ -f THIRD-PARTY-NOTICES.dist ]]; then
+    notices_backup="$(mktemp)"
+    cp THIRD-PARTY-NOTICES "${notices_backup}"
+    trap restore_notices EXIT
+    cp THIRD-PARTY-NOTICES.dist THIRD-PARTY-NOTICES
+    echo "make_release: .deb notices <- THIRD-PARTY-NOTICES.dist ($(wc -l < THIRD-PARTY-NOTICES) lines)"
+  fi
+
   # `cargo deb` requires the package name (`-p latexml`, not the binary name).
   # `--no-build` reuses the maxperf target/maxperf/latexml_oxide we just built.
   echo "make_release: cargo deb --no-build --profile maxperf -p latexml (${deb_arch})"
   cargo deb --no-build --profile maxperf -p latexml --output "${artifacts_dir}/latexml-oxide_${version}-1_${deb_arch}.deb"
 
   deb_path="${artifacts_dir}/latexml-oxide_${version}-1_${deb_arch}.deb"
+
+  restore_notices
+  trap - EXIT
+
   if [[ ! -f "${deb_path}" ]]; then
     echo "make_release: cargo deb did not produce ${deb_path}" >&2
     exit 1
   fi
+
+  # Prove it rather than assume it: read the notices back OUT of the built .deb.
+  # This is the artifact users install, and the failure mode it guards (shipping
+  # the committed 1-4 file) is invisible from the outside -- the .deb builds and
+  # installs fine either way.
+  if [[ -f THIRD-PARTY-NOTICES.dist ]] && command -v dpkg-deb >/dev/null 2>&1; then
+    deb_notices="$(dpkg-deb --fsys-tarfile "${deb_path}" 2>/dev/null \
+      | tar -xO ./usr/share/doc/latexml-oxide/THIRD-PARTY-NOTICES 2>/dev/null || true)"
+    for needle in "5. RUST DEPENDENCY LICENSES" "6. COPYLEFT LICENSE TEXTS" "7. SOURCE PROVENANCE"; do
+      if ! grep -qF "${needle}" <<<"${deb_notices}"; then
+        echo "make_release: the .deb's THIRD-PARTY-NOTICES is missing '${needle}'." >&2
+        echo "  cargo-deb reads latexml_oxide/Cargo.toml's asset list (../THIRD-PARTY-NOTICES);" >&2
+        echo "  it must see the assembled file, not the committed sections 1-4." >&2
+        exit 1
+      fi
+    done
+    echo "make_release: verified the .deb ships the assembled notices ($(wc -l <<<"${deb_notices}") lines)"
+  fi
+
   ( cd "${artifacts_dir}" && sha256_sidecar "$(basename "${deb_path}")" )
 fi
 
