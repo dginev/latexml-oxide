@@ -30,175 +30,161 @@ static GLOBAL: dhat::Alloc = dhat::Alloc;
 #[derive(Parser, Debug)]
 #[command(name = "latexml_oxide", version, about)]
 struct Cli {
-  /// Source TeX file (overridden by --source)
+  /// The TeX/LaTeX source file to convert (overridden by --source). A `.bib`,
+  /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected.
   #[arg(value_name = "SOURCE")]
   source_positional: Option<String>,
 
-  /// Destination output file
+  /// Output file (default: stdout). The extension can imply --format (e.g.
+  /// .html → html5, .xml → xml, .zip → archive).
   #[arg(long, alias = "destination")]
   dest: Option<String>,
 
-  /// Source file (overrides positional argument)
+  /// Source file, overriding the positional SOURCE argument.
   #[arg(long)]
   source: Option<String>,
 
-  /// Output format: html5, html, xhtml, xml, epub
+  /// Output format: html5, html, xhtml, xml, epub. Inferred from the --dest
+  /// extension when omitted; falls back to xml.
   #[arg(long)]
   format: Option<String>,
 
-  /// Shortcut for `--format=xml`: emit the intermediate LaTeXML XML without
-  /// HTML post-processing (Perl `--xml`).
+  /// Shortcut for --format=xml: emit the raw LaTeXML XML with no HTML
+  /// post-processing.
   #[arg(long)]
   xml: bool,
 
-  /// XSLT stylesheet path
+  /// Custom XSLT stylesheet path (overrides the format's built-in default).
   #[arg(long)]
   stylesheet: Option<String>,
 
   // === Post-processing flags ===
-  /// Enable post-processing
+  /// Enable HTML/MathML post-processing (auto-enabled for HTML/ePub formats).
   #[arg(long)]
   post: bool,
 
-  /// Skip post-processing entirely, emitting the raw LaTeXML XML (negates the
-  /// auto-enabled post phase; Perl `--nopost`).
+  /// Skip post-processing, emitting the raw LaTeXML XML even for an
+  /// HTML-implying destination.
   #[arg(long)]
   nopost: bool,
 
-  /// Generate Presentation MathML
+  /// Generate Presentation MathML (on by default for HTML formats).
   #[arg(long, alias = "presentationmathml")]
   pmml: bool,
 
-  /// Suppress Presentation MathML even when a format would default it on
-  /// (Perl `--nopmml`/`--nopresentationmathml`).
+  /// Suppress Presentation MathML even when the format would enable it.
   #[arg(long, alias = "nopresentationmathml")]
   nopmml: bool,
 
-  /// Generate Content MathML
+  /// Generate Content MathML.
   #[arg(long, alias = "contentmathml")]
   cmml: bool,
 
-  /// Suppress Content MathML (Perl `--nocmml`/`--nocontentmathml`).
+  /// Suppress Content MathML.
   #[arg(long, alias = "nocontentmathml")]
   nocmml: bool,
 
-  /// Keep XMath in output alongside MathML
+  /// Keep the intermediate XMath in the output alongside MathML.
   #[arg(long, alias = "xmath")]
   #[arg(name = "keepXMath")]
   keep_xmath: bool,
 
-  /// Drop the XMath representation from the output (Perl
-  /// `--noxmath`/`--nokeepXMath`).
+  /// Drop the XMath representation from the output.
   #[arg(long, alias = "nokeepXMath")]
   noxmath: bool,
 
-  /// Wrap MathML in semantics with TeX annotation
+  /// Wrap MathML in a <semantics> element with the TeX source as annotation.
   #[arg(long)]
   mathtex: bool,
 
-  /// Suppress the TeX annotation on MathML (Perl `--nomathtex`).
+  /// Suppress the TeX-source annotation on MathML.
   #[arg(long)]
   nomathtex: bool,
 
-  /// Replace invisible times with zero-width space
+  /// Replace invisible-times operators (U+2062) with a zero-width space.
   #[arg(long)]
   noinvisibletimes: bool,
 
-  /// Keep invisible-times operators — the positive complement of
-  /// `--noinvisibletimes` (Perl `invisibletimes!`, default on).
-  /// `--noinvisibletimes` wins if both are given.
+  /// Keep invisible-times operators (the default). Overrides a package/profile
+  /// that turned them off; --noinvisibletimes wins if both are given.
   #[arg(long)]
   invisibletimes: bool,
 
-  /// Suppress default CSS/JS resources
+  /// Suppress the built-in CSS/JS resources.
   #[arg(long)]
   nodefaultresources: bool,
 
-  /// Include the default CSS/JS resources — the positive complement of
-  /// `--nodefaultresources` (Perl `defaultresources!`, default on).
-  /// `--nodefaultresources` wins if both are given.
+  /// Include the built-in CSS/JS resources (the default);
+  /// --nodefaultresources wins if both are given.
   #[arg(long)]
   defaultresources: bool,
 
-  /// Omit XML comments from output
+  /// Omit source comments from the output.
   #[arg(long)]
   nocomments: bool,
 
-  /// Preserve source `%` comments in the XML output (Perl default; the Rust
-  /// binary defaults them OFF — see OXIDIZED_DESIGN #2). `--nocomments` still
-  /// wins if both are given.
+  /// Preserve source `%` comments in the output. This Rust port omits them by
+  /// default (Perl keeps them); --nocomments wins if both are given.
+  // Divergence from Perl's default-on: see OXIDIZED_DESIGN #2.
   #[arg(long)]
   comments: bool,
 
-  /// Strict error-reporting: treat selected recoverable conditions as errors,
-  /// like Perl `--strict` (State `STRICT`, Perl Core.pm L43).
+  /// Strict mode: treat selected recoverable conditions as hard errors.
+  // Perl Core.pm L43: State STRICT.
   #[arg(long)]
   strict: bool,
 
-  /// Raw-load `.sty` and `.cls` sources from the search path instead of
-  /// relying solely on LaTeXML bindings.
+  /// Raw-load `.sty`/`.cls` sources from the search path instead of relying on
+  /// LaTeXML's own bindings.
   ///
-  /// WARNING: this raw-loads BOTH packages (`.sty`) AND classes (`.cls`) — one
-  /// `--includestyles` sets INCLUDE_STYLES and INCLUDE_CLASSES together
-  /// (faithful to Perl `--includestyles`, Core.pm L55-57), so document classes
-  /// get raw TeX loading too, not just packages.
+  /// WARNING: this enables raw TeX loading for BOTH packages (.sty) AND
+  /// document classes (.cls) at once — a common source of errors, since raw
+  /// class code is unlikely to convert cleanly.
+  // Perl --includestyles / Core.pm L55-57: sets INCLUDE_STYLES + INCLUDE_CLASSES.
   #[arg(long)]
   includestyles: bool,
 
-  /// Use .bbl file instead of running BibTeX (for arXiv-like builds)
+  /// Reuse an existing `.bbl` file instead of running BibTeX (for arXiv-style
+  /// builds that ship their bibliography pre-compiled).
   #[arg(long)]
   nobibtex: bool,
 
-  /// Treat the input as a BibTeX `.bib` file. Equivalent to Perl
-  /// `--bibtex`; auto-detected when SOURCE ends in `.bib` or starts
-  /// with `literal:@`.
+  /// Process the input as a BibTeX `.bib` bibliography. Auto-detected when
+  /// SOURCE ends in `.bib` or starts with `literal:@`.
   #[arg(long)]
   bibtex: bool,
 
-  /// Disable math parsing
+  /// Disable math parsing (leave formulae as unparsed token lists).
   #[arg(long, alias = "noparse")]
   nomathparse: bool,
 
-  /// Enable math parsing — the positive complement of `--nomathparse`
-  /// (default on). Restores parsing if a profile/package disabled it;
-  /// `--nomathparse` wins if both are given.
+  /// Enable math parsing (the default). Restores it if a profile/package
+  /// disabled it; --nomathparse wins if both are given.
   #[arg(long)]
   mathparse: bool,
 
-  /// Emit source locators: track each construct's source range and stamp
-  /// it onto the output as a `data-sourcepos` attribute (and a document-level
-  /// tag→file table). Off by default — a normal conversion pays nothing
-  /// for tracking or markup. Powers the editor/preview sync and accurate
-  /// linting (issues #47/#92). Also enabled via `LATEXML_SOURCE_MAP=1`.
-  /// See `docs/performance/SOURCE_PROVENANCE.md`.
+  /// Emit source locators: record each construct's source range as a
+  /// `data-sourcepos` attribute, plus a document-level tag→file table. Off by
+  /// default (a normal conversion pays nothing for it). Powers editor/preview
+  /// sync and precise linting. Also enabled via `LATEXML_SOURCE_MAP=1`.
+  // Issues #47/#92; see docs/performance/SOURCE_PROVENANCE.md.
   #[arg(long = "source-map")]
   source_map: bool,
 
-  /// Disable section numbering
+  /// Disable section numbering.
   #[arg(long, alias = "nosectionnumbers")]
   nonumbersections: bool,
 
-  /// Enable section numbering — the positive complement of
-  /// `--nonumbersections` (Perl `numbersections!`, default on). Restores the
-  /// default if a profile/package turned it off; `--nonumbersections` wins if
-  /// both are given.
+  /// Enable section numbering (the default). Restores it if a profile/package
+  /// turned it off; --nonumbersections wins if both are given.
   #[arg(long)]
   numbersections: bool,
 
-  /// Vector-SVG fast path control for PDF graphics.
-  ///
-  /// `0` (default) → **auto-detect**: scan the PDF header for
-  /// `/Subtype /Image`; if absent AND the file is at most 500 KB, route
-  /// through the vector-SVG converters (mutool → pdftocairo) for
-  /// vector-clean output. Raster-bearing PDFs stay on the gs/convert path.
-  ///
-  /// `N > 0` → explicit size threshold (legacy): try SVG for PDFs at
-  /// most `N` KB regardless of content. Use this when the auto-detector
-  /// misclassifies a canvas you're benchmarking; otherwise prefer the
-  /// default.
-  ///
-  /// Set `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` to disable auto-detect
-  /// entirely (forces gs/convert for every PDF in 0-mode).
+  /// Vector-SVG fast path for PDF graphics. `0` (default) auto-detects: vector
+  /// PDFs (no raster image, at most 500 KB) go through the SVG converters
+  /// (mutool → pdftocairo); raster-bearing PDFs stay on the gs/convert path.
+  /// `N > 0` forces the SVG path for any PDF at most N KB. Env
+  /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables auto-detect.
   #[arg(
     long = "graphics-svg-threshold-kb",
     value_name = "N",
@@ -206,53 +192,43 @@ struct Cli {
   )]
   graphics_svg_threshold_kb: u32,
 
-  /// Convert `\includegraphics` figures to web images — the default (Perl
-  /// `graphicimages!`). Accepted for CLI parity; `--nographicimages` overrides.
+  /// Convert `\includegraphics` figures to web images (the default);
+  /// --nographicimages overrides.
   #[arg(long)]
   graphicimages: bool,
 
-  /// Skip converting `\includegraphics` figures to images: leave the raw
-  /// `<ltx:graphics>` references in the output (Perl `--nographicimages`).
-  /// Useful for faster runs or hosts without the image tools installed.
+  /// Skip figure conversion: leave the raw `<ltx:graphics>` references in the
+  /// output. Faster, and works on hosts without the image tools installed.
   #[arg(long)]
   nographicimages: bool,
 
-  /// Output chunk to pack (Perl Pack.pm `whatsout`):
-  ///   `document` (default) → full post-processed HTML;
-  ///   `fragment`           → embeddable inline snippet
-  ///                          (`<div class="ltx_document">` unwrapped,
-  ///                          inline-content `<p>` promoted to
-  ///                          `<span class="text">`, RDFa copied from
-  ///                          the document root);
-  ///   `math`               → math subtree (least common ancestor of all
-  ///                          `<math>` nodes, or math-image fallback,
-  ///                          or `fragment` if no math present);
-  ///   `archive`            → bundle the full document + resources into a
-  ///                          zip. With no `--dest`, writes
-  ///                          `<source-name>.zip`. A `--dest *.zip`
-  ///                          implies `archive` even without this flag.
+  /// What to emit: `document` (default; the full page), `fragment` (an
+  /// embeddable inline snippet), `math` (just the math subtree), or `archive`
+  /// (the page + resources zipped — also implied by a `.zip` --dest, and writes
+  /// `<source-name>.zip` when --dest is omitted).
   #[arg(long, value_name = "TYPE")]
   whatsout: Option<String>,
 
-  /// Shortcut for `--whatsout=fragment`: emit an embeddable inline snippet
-  /// (Perl `--embed`).
+  /// Shortcut for --whatsout=fragment: emit an embeddable inline snippet.
   #[arg(long)]
   embed: bool,
 
   // === Repeatable flags ===
-  /// CSS files to inject (repeatable)
+  /// Add a CSS stylesheet link to the HTML output (repeatable).
   #[arg(long = "css", value_name = "URL")]
   css_files: Vec<String>,
 
-  /// JavaScript files to inject (repeatable)
+  /// Add a JavaScript link to the HTML output (repeatable).
   #[arg(long = "javascript", value_name = "URL")]
   js_files: Vec<String>,
 
-  /// Packages to preload (repeatable)
+  /// Preload a package/module before processing, e.g. --preload=amsmath
+  /// (repeatable).
   #[arg(long = "preload", value_name = "FILE")]
   preload_files: Vec<String>,
 
-  /// Additional search paths (repeatable)
+  /// Add a directory to the file/package search path, like TEXINPUTS
+  /// (repeatable).
   #[arg(long = "path", value_name = "DIR")]
   search_paths: Vec<String>,
 
@@ -261,91 +237,74 @@ struct Cli {
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 
-  /// Per-conversion resident-memory ceiling in MiB (default: 6144 = 6 GiB).
-  /// Use 0 to disable. Enforced by the shared `Watchdog` (exit 137 on
-  /// breach): in normal mode it guards this process; in `--server` mode each
-  /// forked body child self-guards and is reaped by the parent.
+  /// Per-conversion memory ceiling in MiB (default: 6144 = 6 GiB); the process
+  /// aborts with exit 137 if exceeded. Use 0 to disable.
   #[arg(long, value_name = "MIB", default_value = "6144")]
   max_memory: u64,
 
-  /// Maximum number of tokens to process before aborting (default: 100M).
-  /// Protects against infinite loops in macro expansion.
+  /// Abort after processing this many tokens — guards against runaway macro
+  /// expansion (default: 400M; env `LATEXML_TOKEN_LIMIT`, 0 disables).
   #[arg(long, value_name = "N")]
   token_limit: Option<usize>,
 
-  /// Navigation TOC style (e.g. "context")
+  /// Navigation table-of-contents style: context or none.
   #[arg(long, alias = "navtoc", value_name = "STYLE")]
   navigationtoc: Option<String>,
 
-  /// Favicon resource for the generated site: emitted as a `<link rel="icon">`
-  /// and copied to the destination (Perl `--icon`, XSLT `ICON` param).
+  /// Favicon for the generated site: emitted as `<link rel="icon">` and copied
+  /// to the destination.
   #[arg(long, value_name = "FILE")]
   icon: Option<String>,
 
-  /// Timestamp string embedded in the generated page (Perl `--timestamp`,
-  /// XSLT `TIMESTAMP` param), e.g. a build date shown in the footer.
-  /// `--timestamp=0` omits it. Unlike Perl (which defaults to the current
-  /// time), omitting the flag emits no timestamp — keeping output
-  /// deterministic.
+  /// Timestamp string embedded in the page (e.g. a build date in the footer);
+  /// --timestamp=0 omits it. Omitted by default, for reproducible output.
   #[arg(long, value_name = "STRING")]
   timestamp: Option<String>,
 
-  /// Apply scholarly-schema doc-specific post-processing: kind chips
-  /// on definitions, pretty-printed structural content models, and a
-  /// per-module sidebar item index.
-  ///
-  /// Intended for use with the `tools/generate-scholarly-schema-docs`
-  /// pipeline — running on a generic LaTeXML document is harmless but
-  /// has no effect.
-  ///
-  /// Module-level narratives flow in from RNC `## comments` via
-  /// `tools/genschema` and the `\moduleabstract{}` macro; no separate
-  /// metadata input is needed.
+  /// Apply scholarly-schema post-processing: kind chips on definitions,
+  /// pretty-printed content models, and a per-module item index. Intended for
+  /// the `tools/generate-scholarly-schema-docs` pipeline; harmless (no effect)
+  /// on a generic document.
   #[arg(long)]
   schemadocs: bool,
 
-  /// Write conversion log to file
+  /// Write the conversion log to this file (default: stderr).
   #[arg(long, value_name = "PATH")]
   log: Option<String>,
 
-  /// Input chunk (Perl Pack.pm `whatsin`):
-  ///   `document` (default) → a standalone TeX document;
-  ///   `fragment`           → a snippet wrapped in `standard_preamble.tex`
-  ///                          / `standard_postamble.tex` (or `--preamble`
-  ///                          / `--postamble`); implied when either is
-  ///                          given;
-  ///   `math`               → a bare formula (math-mode wrapped);
-  ///   `archive`            → a zip bundle; unpacked to a sandbox and the
-  ///                          main TeX auto-detected (also implied by a
-  ///                          `.zip` source);
-  ///   `directory`          → a source directory; main TeX auto-detected
-  ///                          (also implied by a trailing `/`).
+  /// What the input is: `document` (default; a standalone file), `fragment` (a
+  /// snippet wrapped with --preamble/--postamble or a standard pre/postamble,
+  /// implied if either is given), `math` (a bare formula), `archive` (a `.zip`
+  /// bundle, also implied by a `.zip` source), or `directory` (a source dir,
+  /// also implied by a trailing `/`).
   #[arg(long, value_name = "TYPE")]
   whatsin: Option<String>,
 
-  /// Preamble file
+  /// TeX file effectively prepended to the document (implies --whatsin=fragment).
   #[arg(long, value_name = "FILE")]
   preamble: Option<String>,
 
-  /// Postamble file
+  /// TeX file effectively appended to the document (implies --whatsin=fragment).
   #[arg(long, value_name = "FILE")]
   postamble: Option<String>,
 
-  /// Input encoding (default: UTF-8)
+  /// Input encoding for decoding source bytes to UTF-8 (default: utf-8), e.g.
+  /// iso-8859-1. Translates bytes only, not catcodes — use the inputenc
+  /// package for those.
   #[arg(long, value_name = "ENC")]
   inputencoding: Option<String>,
 
   // === Split options ===
-  /// Enable document splitting
+  /// Split the output into multiple linked pages (by section, by default).
   #[arg(long)]
   split: bool,
 
-  /// Force document splitting off even when `--splitat`/`--splitpath` would
-  /// otherwise enable it (Perl `--nosplit`).
+  /// Force splitting off even when --splitat/--splitpath would enable it.
   #[arg(long)]
   nosplit: bool,
 
-  /// Section level to split at (default: section)
+  /// Level to split at: part, chapter, section, subsection, ... (default:
+  /// section).
   #[arg(long, value_name = "LEVEL")]
   splitat: Option<String>,
 
@@ -366,21 +325,22 @@ struct Cli {
   #[arg(short = 'q', long)]
   quiet: bool,
 
-  /// Enable a named debug feature (repeatable), e.g. --debug frontmatter.
-  /// Perl: `--debug=NAME` → `$LaTeXML::DEBUG{NAME}`. Implies debug-level
-  /// logging.
+  /// Enable a named debug feature, e.g. --debug frontmatter (repeatable).
+  /// Implies debug-level logging.
   #[arg(long = "debug", value_name = "FEATURE")]
   debug: Vec<String>,
 
-  /// Assign an ID to the document root element
+  /// Assign an ID to the document's root element.
   #[arg(long, value_name = "ID")]
   documentid: Option<String>,
 
-  /// Site directory for relative path resolution
+  /// Root directory of the generated site; resource URLs are made relative to
+  /// it (default: the destination's directory).
   #[arg(long, value_name = "DIR")]
   sitedirectory: Option<String>,
 
-  /// Source directory for relative path resolution
+  /// Directory of the original source, searched for graphics and resources
+  /// during post-processing (default: the source file's directory).
   #[arg(long, value_name = "DIR")]
   sourcedirectory: Option<String>,
 
@@ -389,29 +349,26 @@ struct Cli {
   xslt_parameters: Vec<String>,
 
   // === Dev/internal flags ===
-  /// Init mode: process and dump format state
+  /// Developer tool: process a format file and dump its compiled engine state.
   #[arg(long, value_name = "FILE")]
   init: Option<String>,
 
-  /// Codegen mode: generate Rust from dump file
+  /// Developer tool: generate Rust source from a dump file.
   #[arg(long, value_name = "DUMP")]
   codegen: Option<String>,
 
-  /// Dump compiled schema model to stdout in `.model` plain-text format,
-  /// then exit. Currently only the embedded `LaTeXML` schema is supported
-  /// (matches Perl `LaTeXML::Common::Model::compileSchema` output).
+  /// Developer tool: dump the compiled schema model (.model text) to stdout
+  /// and exit. Only the embedded LaTeXML schema is supported.
   #[arg(long)]
   dump_model: bool,
 
-  /// Write per-job telemetry as a single-line JSON record to this file.
-  /// Falls back to env `LATEXML_TELEMETRY_OUT` if not set. Emitted only
-  /// on the successful conversion path; codegen / dump-model exits skip it.
-  /// See `docs/performance/TELEMETRY.md`.
+  /// Write a one-line JSON telemetry record for this job to this file (or set
+  /// env `LATEXML_TELEMETRY_OUT`). Written only on a successful conversion.
   #[arg(long, value_name = "PATH")]
   telemetry_out: Option<String>,
 
-  /// Run as a persistent JSON-RPC-over-stdio server for editor/preview
-  /// integration (LSP framing; see `latexml::lsp_server`).
+  /// Run as a persistent JSON-RPC-over-stdio (LSP) server for editor/preview
+  /// integration.
   #[arg(long)]
   server: bool,
 }
@@ -709,6 +666,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     } else {
       None
     },
+    // Perl Config.pm L57 / Core.pm L60-61: --inputencoding seeds State
+    // PERL_INPUT_ENCODING, which the Mouth reads to decode source bytes
+    // (default utf-8 when unset).
+    inputencoding: cli.inputencoding.clone(),
   };
   // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
   // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
@@ -932,10 +893,16 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       };
 
       if do_post {
-        let source_dir = Path::new(&source_for_post)
-          .parent()
-          .map(|p| p.to_string_lossy().to_string())
-          .unwrap_or_else(|| ".".to_string());
+        // Perl LaTeXML.pm:429 passes opts{sourcedirectory} to Post as
+        // `sourceDirectory`; when omitted, Post derives it from the source
+        // filename (Post.pm:727-729). Mirror that: honour `--sourcedirectory`
+        // if given, else fall back to the source file's own directory.
+        let source_dir = cli.sourcedirectory.clone().unwrap_or_else(|| {
+          Path::new(&source_for_post)
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| ".".to_string())
+        });
 
         // `--whatsout=archive` (or a `.zip` destination) bundles into a
         // zip. When `--dest` is omitted, Perl LaTeXML.pm:185-187 invents
@@ -1006,6 +973,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           stylesheet: effective_stylesheet.as_deref(),
           destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
+          // Perl LaTeXML.pm:430 `siteDirectory`; None ⇒ Post defaults it to the
+          // destination's directory (document.rs / Perl Config.pm L466-469).
+          site_directory: cli.sitedirectory.as_deref(),
           search_paths: &cli.search_paths,
           nodefaultresources: cli.nodefaultresources && !cli.defaultresources,
           css_files: &cli.css_files,

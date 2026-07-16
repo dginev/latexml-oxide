@@ -17,6 +17,16 @@
     and the Windows download and container images carried nothing at all.
     latexml-oxide's own source remains **CC0-1.0**; see `THIRD-PARTY-NOTICES`
     and [`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md).
+  - **Three `--help` options are now functional** (`--inputencoding`,
+    `--sourcedirectory`, `--sitedirectory`). All three were declared for Perl
+    CLI parity but silently ignored — parsed, then dropped. Now:
+    `--inputencoding` seeds the Mouth's byte decoder (Perl `PERL_INPUT_ENCODING`,
+    Core.pm L60-61); `--sourcedirectory` and `--sitedirectory` feed the
+    post-processor's resource resolution and site-relative resource URLs (Perl
+    `sourceDirectory`/`siteDirectory`, LaTeXML.pm L429-430). A new source-scan
+    test (`98_cli_options_consumed`) fails the build if any option shown in
+    `--help` is parsed but never consumed, closing the `Debug`-masks-`dead_code`
+    blind spot that let these three slip through.
 
 ## [0.7.3] (Intel-macOS asset + PDF-fidelity pass)
 

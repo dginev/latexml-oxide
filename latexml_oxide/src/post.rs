@@ -27,7 +27,17 @@ pub struct PostOptions<'a> {
   pub keep_xmath:                bool,
   pub stylesheet:                Option<&'a str>,
   pub destination:               Option<&'a str>,
+  /// Base directory of the original LaTeX source (`--sourcedirectory`; Perl
+  /// Config.pm L147, passed to Post as `sourceDirectory` in LaTeXML.pm L429).
+  /// Used to locate graphics/resources the post-phase copies. When `None`,
+  /// the caller defaults it to the source file's own directory.
   pub source_directory:          Option<&'a str>,
+  /// Root directory of the generated site (`--sitedirectory`; Perl Config.pm
+  /// L146, passed to Post as `siteDirectory` in LaTeXML.pm L430). Establishes
+  /// the base against which cross-document/resource URLs are made relative.
+  /// When `None`, Post defaults it to the destination's directory (Perl
+  /// Config.pm L466-469; `document.rs` mirrors that fallback).
+  pub site_directory:            Option<&'a str>,
   /// Extra resource search paths (the `--path` flag): directories searched
   /// for `--css`/`--javascript` files (and other post resources) to copy into
   /// the destination, in addition to the document's own paths, the current
@@ -164,6 +174,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     stylesheet,
     destination,
     source_directory,
+    site_directory,
     search_paths,
     nodefaultresources,
     css_files,
@@ -192,6 +203,12 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     let mut sp = doc_opts.searchpaths.take().unwrap_or_default();
     sp.push(src_dir.to_string());
     doc_opts.searchpaths = Some(sp);
+  }
+  // --sitedirectory (Perl LaTeXML.pm L430 `siteDirectory`): the site root for
+  // relativizing cross-document/resource URLs. When unset, `PostDocument::new`
+  // falls back to the destination's directory (document.rs, Perl Config.pm L466).
+  if let Some(site_dir) = site_directory {
+    doc_opts.site_directory = Some(site_dir.to_string());
   }
   let audit = *POST_AUDIT;
   let audit_start = |name: &str| -> Option<(String, std::time::Instant)> {

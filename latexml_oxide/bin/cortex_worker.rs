@@ -403,6 +403,7 @@ impl LatexmlWorker {
       stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
       destination:               Some(&dest_html_str),
       source_directory:          Some(&source_dir),
+      site_directory:            None,
       search_paths:              &[],
       nodefaultresources:        self.profile.nodefaultresources,
       css_files:                 &[],

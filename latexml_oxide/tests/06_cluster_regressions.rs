@@ -83,6 +83,7 @@ fn convert_and_post(source: &str) -> String {
     stylesheet:                None,
     destination:               None,
     source_directory:          Some("tests/cluster_regressions"),
+    site_directory:            None,
     search_paths:              &[],
     nodefaultresources:        true,
     css_files:                 &[],

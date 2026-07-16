@@ -113,6 +113,12 @@ pub struct Config {
   /// default; gates both per-token start capture and per-element
   /// `data-sourcepos` stamping. See `docs/performance/SOURCE_PROVENANCE.md`.
   pub source_map:              Option<bool>,
+  /// Input encoding for translating source bytes to LaTeXML's internal UTF-8
+  /// (`--inputencoding`; Perl Config.pm L57, Core.pm L60-61 which assigns
+  /// State `PERL_INPUT_ENCODING`, default utf-8). Consumed by the Mouth's
+  /// per-line decode; only affects byte→UTF-8 translation, never catcodes
+  /// (for those, use the inputenc package). `None` ⇒ the utf-8 default.
+  pub inputencoding:           Option<String>,
 }
 impl Default for Config {
   fn default() -> Self {
@@ -133,6 +139,7 @@ impl Default for Config {
       include_styles:          None,
       nomathparse:             None,
       source_map:              None,
+      inputencoding:           None,
     }
   }
 }

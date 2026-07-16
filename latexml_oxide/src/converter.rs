@@ -120,6 +120,9 @@ impl Converter {
       search_paths: opts.search_paths.clone(),
       nomathparse: opts.nomathparse,
       source_map: opts.source_map,
+      // Perl Core.pm L60-61: seed State PERL_INPUT_ENCODING from --inputencoding
+      // (the Mouth reads it per-line to decode source bytes). `None` ⇒ utf-8.
+      input_encoding: opts.inputencoding.clone(),
       ..CoreOptions::default()
     });
     Converter {
