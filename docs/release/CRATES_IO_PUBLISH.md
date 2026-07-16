@@ -55,37 +55,60 @@ pericortex = { version = "X.Y.Z", optional = true }
 `pericortex` into a separate unpublished workspace member so the published
 `latexml` crate has no `cortex` feature at all.)
 
-### B3 — workspace `resources/` are not in the package tarballs — ❌ HARD BLOCKER
+### B3 — workspace `resources/` are not in the package tarballs
 `resources/` lives at the **workspace root**, outside every crate dir. `cargo
 package` cannot include `../` paths, so the resources never reach the tarball.
-Two failure modes:
+Split into two independently-shippable halves; **B3a is DONE, B3b is the
+remaining hard blocker.**
 
-* **`latexml_post` — compile failure (hard).** `src/xslt.rs` embeds **37 files**
-  via `include_str!("../../resources/{XSLT,CSS,javascript}/…")`. A missing
-  `include_str!` target is a **compile error**, so `cargo publish -p
-  latexml_post` fails its verify build. Proven: `cargo package -p latexml_post
-  --list` ships only `src/` (48 files) — **zero** resource files.
-* **`latexml_core` / `latexml_engine` — empty embeds (soft).** Their `build.rs`
-  scripts *walk* `../resources/RelaxNG` and `../resources/dumps`; a missing dir
-  yields an empty manifest that still compiles, but the published crate would
-  have **no schema / no dumps** → runtime-broken (see B5 for dumps).
+#### B3a — `latexml_post` XSLT/CSS/javascript — ✅ DONE (2026-07-16)
+`src/xslt.rs` embedded **36 files** via `include_str!("../../resources/…")`; a
+missing `include_str!` target is a **compile error**, so this was the one hard
+blocker that was cleanly fixable. Relocated `resources/{XSLT,CSS,javascript}` →
+`latexml_post/resources/…` and rewrote the 36 embed paths `../../resources/…` →
+`../resources/…`. **`include_str!` resolves relative to the source file, not the
+process cwd**, so this is robust regardless of where the compiler runs. Verified:
+`cargo build -p latexml_post` green; the workspace-root self-containment smoke
+(`mv resources aside`) is unaffected because the runtime CSS/JS disk-search is
+still cwd-relative with the embedded table as the real source.
 
-**Fix (recommended): physically relocate each resource set into the crate that
-embeds it.**
-| resource | move to | update |
-|----------|---------|--------|
-| `resources/XSLT`, `resources/CSS`, `resources/javascript` | `latexml_post/resources/…` | `xslt.rs` paths `../../resources/…` → `../resources/…` |
-| `resources/RelaxNG` | `latexml_core/resources/RelaxNG` | `latexml_core/build.rs` walk dir → in-crate |
-| `resources/dumps` | `latexml_engine/resources/dumps` | `latexml_engine/build.rs` walk dir; release-dumps write here (see B5) |
+#### B3b — RelaxNG schema/model — ❌ HARD BLOCKER (needs its own branch)
+**Do NOT naively move `resources/RelaxNG` into a single crate — it breaks the
+build.** Proven 2026-07-16: moving it to `latexml_core/resources/RelaxNG` makes
+`cargo build -p latexml` fail with `proc-macro derive panicked: Model "LaTeXML"
+not found`. Why it's entangled — RelaxNG is a **compile-time input to two crates
+at different depths of the dependency graph**:
 
-Runtime is unaffected: the embedded lookups are keyed by **basename/logical
-name**, not the physical include path, so only the compile-time `include_*`
-paths change. Blast radius to audit before landing (grep `resources/`):
-`.github/workflows/release.yml` (the "move resources/ aside" self-containment
-smoke), `release-dumps.yml`, `tools/make_release.sh`, `tools/make_formats.sh`,
-and any test fixtures that read `resources/…` from disk. **Do this on its own
-branch with full `cargo test --tests` + a release-binary smoke** — it is the
-gating item for a *functional* publish, not a quick edit.
+1. **`latexml_core/build.rs`** walks `../resources/RelaxNG` to emit the runtime
+   embed (temp-extracted for `--validate` / `.model` loading).
+2. **The `load_model!` `macro_rules!`** (exported from `latexml_engine`, but
+   *invoked* in **`latexml_oxide`** — `src/lib.rs`, see `core_interface.rs:359`)
+   expands a `#[derive(LoadModel)]` that compiles `LaTeXML.model` **into code at
+   compile time**. Its `pathname::find(installation_subdir="resources/RelaxNG")`
+   resolves **cwd-relative** (`<cwd>/resources/RelaxNG` or `<cwd>/../…`), and the
+   cwd during a `cargo build` is the **workspace root**. So the model derive
+   needs RelaxNG reachable from the *root/consumer* crate, while the build.rs
+   embed needs it inside `latexml_core`. A single move can't satisfy both, and
+   the `load_model!` expansion happens in the top `latexml` crate, so a crates.io
+   consumer would need RelaxNG in that crate's tarball too.
+
+**Fix (deferred, own branch):** make the model resolution independent of process
+cwd — resolve `LaTeXML.model` relative to `CARGO_MANIFEST_DIR` (or, better, have
+`#[derive(LoadModel)]` consume `latexml_core`'s embedded RelaxNG bytes instead of
+re-reading the filesystem), then relocate `resources/RelaxNG → latexml_core` and
+package it once. Gate with a full `cargo clean && cargo build -p latexml` (the
+crate where `load_model!` actually expands — a `-p latexml_core`/`-p
+latexml_engine` build is a **false green**, it never triggers the derive) plus
+`cargo test --tests` and a release-binary self-containment smoke.
+
+#### `resources/dumps` — intentionally NOT relocated (see B5)
+The per-TL-year dumps are git-ignored, generated by the release pipeline
+(`release-dumps.yml`, `make_formats.sh`), embedded by `latexml_engine/build.rs`,
+and **already excluded from the crates.io tarball by design (B5)** — a
+from-source install starts dumpless and reconstructs kernel state. Relocating
+them buys nothing for the publish and entangles `release.yml`/`CI.yml` cache
+paths, the Dockerfile, `.gitignore`/`.gitattributes`, and `ini_tex.rs`'s
+`--init` write path. Left at the workspace root.
 
 Rejected alternatives: a prepublish copy-and-path-rewrite script (fragile — the
 `include_str!` paths are compile-time literal), and per-crate symlinks into

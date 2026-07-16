@@ -762,83 +762,83 @@ mod embedded_xslt {
   pub const FILES: &[(&str, &str)] = &[
     (
       "LaTeXML-html5.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-html5.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-html5.xsl"),
     ),
     (
       "LaTeXML-all-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-all-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-all-xhtml.xsl"),
     ),
     (
       "LaTeXML-bib-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-bib-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-bib-xhtml.xsl"),
     ),
     (
       "LaTeXML-block-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-block-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-block-xhtml.xsl"),
     ),
     (
       "LaTeXML-common.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-common.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-common.xsl"),
     ),
     (
       "LaTeXML-epub3.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-epub3.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-epub3.xsl"),
     ),
     (
       "LaTeXML-html4.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-html4.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-html4.xsl"),
     ),
     (
       "LaTeXML-inline-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-inline-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-inline-xhtml.xsl"),
     ),
     (
       "LaTeXML-jats.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-jats.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-jats.xsl"),
     ),
     (
       "LaTeXML-math-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-math-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-math-xhtml.xsl"),
     ),
     (
       "LaTeXML-meta-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-meta-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-meta-xhtml.xsl"),
     ),
     (
       "LaTeXML-misc-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-misc-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-misc-xhtml.xsl"),
     ),
     (
       "LaTeXML-para-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-para-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-para-xhtml.xsl"),
     ),
     (
       "LaTeXML-picture-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-picture-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-picture-xhtml.xsl"),
     ),
     (
       "LaTeXML-structure-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-structure-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-structure-xhtml.xsl"),
     ),
     (
       "LaTeXML-tabular-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-tabular-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-tabular-xhtml.xsl"),
     ),
     (
       "LaTeXML-tei.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-tei.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-tei.xsl"),
     ),
     (
       "LaTeXML-webpage-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-webpage-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-webpage-xhtml.xsl"),
     ),
     (
       "LaTeXML-xhtml5.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-xhtml5.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-xhtml5.xsl"),
     ),
     (
       "LaTeXML-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-xhtml.xsl"),
     ),
   ];
 
@@ -895,70 +895,70 @@ mod embedded_resources {
   pub const CSS_FILES: &[(&str, &str)] = &[
     (
       "LaTeXML-blue.css",
-      include_str!("../../resources/CSS/LaTeXML-blue.css"),
+      include_str!("../resources/CSS/LaTeXML-blue.css"),
     ),
     (
       "LaTeXML-marginpar.css",
-      include_str!("../../resources/CSS/LaTeXML-marginpar.css"),
+      include_str!("../resources/CSS/LaTeXML-marginpar.css"),
     ),
     (
       "LaTeXML-navbar-left.css",
-      include_str!("../../resources/CSS/LaTeXML-navbar-left.css"),
+      include_str!("../resources/CSS/LaTeXML-navbar-left.css"),
     ),
     (
       "LaTeXML-navbar-right.css",
-      include_str!("../../resources/CSS/LaTeXML-navbar-right.css"),
+      include_str!("../resources/CSS/LaTeXML-navbar-right.css"),
     ),
     (
       "LaTeXML.css",
-      include_str!("../../resources/CSS/LaTeXML.css"),
+      include_str!("../resources/CSS/LaTeXML.css"),
     ),
     (
       "ltx-amsart.css",
-      include_str!("../../resources/CSS/ltx-amsart.css"),
+      include_str!("../resources/CSS/ltx-amsart.css"),
     ),
     (
       "ltx-apj.css",
-      include_str!("../../resources/CSS/ltx-apj.css"),
+      include_str!("../resources/CSS/ltx-apj.css"),
     ),
     (
       "ltx-article.css",
-      include_str!("../../resources/CSS/ltx-article.css"),
+      include_str!("../resources/CSS/ltx-article.css"),
     ),
     (
       "ltx-book.css",
-      include_str!("../../resources/CSS/ltx-book.css"),
+      include_str!("../resources/CSS/ltx-book.css"),
     ),
     (
       "ltx-listings.css",
-      include_str!("../../resources/CSS/ltx-listings.css"),
+      include_str!("../resources/CSS/ltx-listings.css"),
     ),
     (
       "ltx-report.css",
-      include_str!("../../resources/CSS/ltx-report.css"),
+      include_str!("../resources/CSS/ltx-report.css"),
     ),
     (
       "ltx-svjour.css",
-      include_str!("../../resources/CSS/ltx-svjour.css"),
+      include_str!("../resources/CSS/ltx-svjour.css"),
     ),
     (
       "ltx-ulem.css",
-      include_str!("../../resources/CSS/ltx-ulem.css"),
+      include_str!("../resources/CSS/ltx-ulem.css"),
     ),
     (
       "relaxng-schema-rustdoc-theme.css",
-      include_str!("../../resources/CSS/relaxng-schema-rustdoc-theme.css"),
+      include_str!("../resources/CSS/relaxng-schema-rustdoc-theme.css"),
     ),
   ];
 
   pub const JS_FILES: &[(&str, &str)] = &[
     (
       "LaTeXML-maybeMathjax.js",
-      include_str!("../../resources/javascript/LaTeXML-maybeMathjax.js"),
+      include_str!("../resources/javascript/LaTeXML-maybeMathjax.js"),
     ),
     (
       "relaxng-schema-rustdoc-theme.js",
-      include_str!("../../resources/javascript/relaxng-schema-rustdoc-theme.js"),
+      include_str!("../resources/javascript/relaxng-schema-rustdoc-theme.js"),
     ),
   ];
 
