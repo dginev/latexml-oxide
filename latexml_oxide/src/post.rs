@@ -82,6 +82,23 @@ pub struct PostOptions<'a> {
   pub whatsout:                  latexml_post::extract::Whatsout,
 }
 
+/// The built-in XSLT stylesheet for an output format (logical embedded-resource
+/// name; Perl `Config.pm` L543-551). Returns `None` for a format with no
+/// default (e.g. `xml`), so a caller keeps `--stylesheet` / no post.
+///
+/// SINGLE SOURCE OF TRUTH shared by the CLI (`bin/latexml_oxide.rs` picks
+/// `effective_stylesheet` when `--stylesheet` is unset) and the library
+/// (`crate::api::convert_to_html`), so the two can never disagree on which
+/// sheet an `html5`/`xhtml`/`epub` job gets.
+pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
+  match format {
+    Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl"),
+    Some("html") | Some("xhtml") => Some("resources/XSLT/LaTeXML-all-xhtml.xsl"),
+    Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl"),
+    _ => None,
+  }
+}
+
 /// Emit a post-processing error: capture it into the active log buffer (so it
 /// reaches `cortex.log`) AND bump the Error counter so `Status:conversion`
 /// reflects post-phase failures (Perl `LaTeXML.pm` L633: `max(core, post)`).

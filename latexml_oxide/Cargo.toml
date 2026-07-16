@@ -6,12 +6,28 @@ authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0-1.0"
 homepage = "https://github.com/dginev/latexml-oxide"
 repository = "https://github.com/dginev/latexml-oxide"
+# Point crates.io at the self-hosted rustdoc (deployed by .github/workflows/
+# rustdoc.yml to gh-pages) so the crate page always links to working docs,
+# independent of whether the docs.rs sandbox build succeeds. Served publicly
+# once the repo is public.
+documentation = "https://dginev.github.io/latexml-oxide/latexml/"
 readme = "README.md"
 description = "A TeX to XML/HTML/ePub converter: a LaTeXML reimplementation in Rust"
+keywords = ["latex", "tex", "html", "mathml", "converter"]
+categories = ["command-line-utilities", "text-processing", "science"]
 default-run = "latexml_oxide"
 
 [lints]
 workspace = true
+
+# docs.rs builds in a no-network sandbox with a fixed system-library image:
+# libxml2/libxslt come from that image, and kpathsea 0.3 falls back to its
+# subprocess backend when libkpathsea is absent, so the default feature set
+# builds there. Pin one target so docs build once. If a docs.rs build ever
+# regresses, `documentation` (above) still links to the gh-pages rustdoc.
+# See docs/release/CRATES_IO_PUBLISH.md.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 
 # indexmap is declared here only to pin a single workspace-wide version
 # (DEP-06 #234); this crate uses it transitively, not directly, so cargo-machete
@@ -118,13 +134,13 @@ regex = { version = "1.7.1", default-features = false, features = ["std", "perf"
 glob = { version = "0.3", optional = true }
 phf = { version = "0.14.0", features = ["macros"], optional = true }
 rustc-hash = "2.0.0"
-latexml_codegen = {path = "../latexml_codegen"}
-latexml_core = {path = "../latexml_core"}
-latexml_engine = {path = "../latexml_engine"}
-latexml_package = {path = "../latexml_package"}
-latexml_contrib = {path = "../latexml_contrib"}
-latexml_math_parser = {path = "../latexml_math_parser"}
-latexml_post = {path = "../latexml_post"}
+latexml_codegen = {path = "../latexml_codegen", version = "0.4.0"}
+latexml_core = {path = "../latexml_core", version = "0.4.0"}
+latexml_engine = {path = "../latexml_engine", version = "0.5.0"}
+latexml_package = {path = "../latexml_package", version = "0.5.0"}
+latexml_contrib = {path = "../latexml_contrib", version = "0.3.0"}
+latexml_math_parser = {path = "../latexml_math_parser", version = "0.3.0"}
+latexml_post = {path = "../latexml_post", version = "0.3.0"}
 pericortex = { git = "https://github.com/dginev/cortex-peripherals.git", optional = true }
 hostname = { version = "0.4", optional = true }
 # Replaces glibc malloc. glibc's per-arena mutex is a hard scaling bottleneck

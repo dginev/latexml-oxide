@@ -153,6 +153,7 @@ serving both come first):
 - **[`docs/performance/TELEMETRY.md`](docs/performance/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` runs.
 - **[`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)** — Design for the prioritized beyond-Perl showcase: live source ↔ preview over a shared locator substrate (ar5iv-editor + VSCode clients), accurate linting (#47) and Rust-grade author errors (#92). Locators opt-in (`--source-map`). (The landed-but-deprioritized `--server` LSP docs: [`docs/archive/LSP_SERVER.md`](docs/archive/LSP_SERVER.md), [`docs/archive/LSP_MULTIFILE_PLAN.md`](docs/archive/LSP_MULTIFILE_PLAN.md); smoke `tools/lsp_smoke.py`.)
 - **[`docs/release/RELEASING.md`](docs/release/RELEASING.md)** — Tag-driven release procedure; the self-contained-binary requirement.
+- **[`docs/release/CRATES_IO_PUBLISH.md`](docs/release/CRATES_IO_PUBLISH.md)** — The `cargo publish` + docs.rs + library-consumer story: bottom-up publish order for the 8 crates, the open blockers (workspace-`resources/` packaging **B3**, the `pericortex` git dep **B2**), docs.rs metadata, and the `latexml::api` library entrypoint. Distinct from `RELEASING.md` (the GitHub-Release binary flow).
 - **[`docs/release/SAFETY.md`](docs/release/SAFETY.md)** — Threat model and `unsafe` inventory (distribution posture in `RELEASE_CRITERIA.md` §6).
 - **[`docs/performance/SCHEMA_DOCUMENTATION.md`](docs/performance/SCHEMA_DOCUMENTATION.md)** — RelaxNG Compact schema → rustdoc-styled HTML doc site (supported the closed #199 HTML-dialect schema).
 

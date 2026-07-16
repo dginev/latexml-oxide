@@ -5,6 +5,7 @@
 extern crate latexml_engine;
 extern crate latexml_package;
 
+pub mod api;
 pub mod converter;
 pub mod core_interface;
 pub mod ini_tex;

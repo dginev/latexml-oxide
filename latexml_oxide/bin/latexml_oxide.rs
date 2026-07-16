@@ -837,18 +837,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         });
 
       // Auto-select stylesheet from format (Perl Config.pm L543-551)
-      let effective_stylesheet =
-        cli
-          .stylesheet
-          .clone()
-          .or_else(|| match inferred_format.as_deref() {
-            Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl".to_string()),
-            Some("html") | Some("xhtml") => {
-              Some("resources/XSLT/LaTeXML-all-xhtml.xsl".to_string())
-            },
-            Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl".to_string()),
-            _ => None,
-          });
+      // Shared with the library entrypoint via `post::default_stylesheet` so
+      // the CLI and `latexml::api` never disagree on the per-format sheet.
+      let effective_stylesheet = cli.stylesheet.clone().or_else(|| {
+        latexml::post::default_stylesheet(inferred_format.as_deref()).map(String::from)
+      });
 
       // Auto-enable post-processing when dest implies HTML (Perl Config.pm L448-455)
       let is_html_format = matches!(

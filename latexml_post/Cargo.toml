@@ -46,12 +46,12 @@ flate2 = "1"
 which = "8"
 # Telemetry-only — used in process_chain to attribute time to the
 # correct Phase based on each processor's get_name(). See docs/performance/TELEMETRY.md.
-latexml_core = {path = "../latexml_core"}
+latexml_core = {path = "../latexml_core", version = "0.4.0"}
 # `LaTeXML::Pre::BibTeX` — the faithful `.bib` parser, reused by
 # `make_bibliography` so post-processing does not carry a second, divergent
 # BibTeX parser of its own. Costs nothing at ship time: `latexml_oxide` (the
 # only consumer of this crate) already depends on `latexml_engine` directly.
-latexml_engine = {path = "../latexml_engine"}
+latexml_engine = {path = "../latexml_engine", version = "0.5.0"}
 
 # setsid + killpg in graphics.rs `run_with_timeout` — kills convert's gs
 # grandchild on timeout instead of orphaning it for 10+ minutes.

@@ -32,10 +32,10 @@ runtime-bindings = ["dep:rhai", "dep:log"]
 script-bindings = ["runtime-bindings"]
 
 [dependencies]
-latexml_core = {path = "../latexml_core"}
-latexml_codegen = {path = "../latexml_codegen"}
-latexml_engine = {path = "../latexml_engine"}
-latexml_package = {path = "../latexml_package"}
+latexml_core = {path = "../latexml_core", version = "0.4.0"}
+latexml_codegen = {path = "../latexml_codegen", version = "0.4.0"}
+latexml_engine = {path = "../latexml_engine", version = "0.5.0"}
+latexml_package = {path = "../latexml_package", version = "0.5.0"}
 rustc-hash = "2.0.0"
 libxml = "0.3.16"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }
