@@ -5,9 +5,13 @@ docs.rs / library-consumer story. Complements
 [`RELEASING.md`](RELEASING.md) (the GitHub-Release binary flow); this file is
 specifically about **`cargo publish` + docs.rs + library use**.
 
-Status (2026-07-16): **not yet publishable** — one hard blocker remains (**B3**,
-workspace resources). B1 (dep versions) and the docs/library groundwork are
-landed.
+Status (2026-07-16): the two **forked git-dep** blockers are cleared — the
+dginev/marpa fork is published as **`marpa-asf`** 0.3.0 + **`libmarpa-asf-sys`**
+0.3.0, and **`pericortex`** 0.2.8 is published; `latexml`'s deps are repointed
+off git onto those crates (workspace builds from crates.io, `--features cortex`
+included). B1 (dep versions) + docs/library groundwork landed. **Remaining
+before the `latexml` crates can publish: B3b** (RelaxNG relocation — the one hard
+blocker) and **B4** (reserve the 7 sibling names).
 
 ---
 
@@ -28,8 +32,11 @@ crates.io permanently — **their names must be available too** (reserve them).
 | 7 | `latexml_contrib` | 0.3.0 | core, codegen, engine, package |
 | 8 | `latexml` (`latexml_oxide`) | 0.7.4-rc3 | all 7 + `pericortex` |
 
-Plus **`pericortex`** (repo `dginev/cortex-peripherals`) must be published
-before #8 — see B2.
+**Published prerequisites (all on crates.io, deps repointed off git — ✅ DONE):**
+`libmarpa-asf-sys` 0.3.0 → `marpa-asf` 0.3.0 (the dginev/marpa fork; consumed by
+`latexml_core`/`latexml_math_parser` via `marpa = { package = "marpa-asf" }`),
+and `pericortex` 0.2.8 (behind the optional `cortex` feature). crates.io rejects
+git deps, so these were hard blockers — see B2.
 
 ---
 
@@ -41,19 +48,29 @@ dep lines now carry `version = "x.y.z"` alongside `path` (local builds still use
 the path; the version is only consulted when published). Verified: `cargo
 metadata` + `cargo check` clean.
 
-### B2 — `pericortex` is a **git** dependency — resolve by publishing it
-`latexml/Cargo.toml`: `pericortex = { git = "https://github.com/dginev/cortex-peripherals.git", optional = true }`.
-crates.io **rejects git deps even when optional**. It's behind the off-by-default
-`cortex` feature (the `cortex_worker` binary), but it's still in the manifest.
+### B2 — forked **git** deps (`marpa`, `pericortex`) — ✅ DONE
+crates.io **rejects git deps even when optional**, and the workspace had two:
+* `marpa = { git = "https://github.com/dginev/marpa" }` in `latexml_core` +
+  `latexml_math_parser` (a core dep — surfaced by the `latexml_core` publish
+  dry-run: *"dependency `marpa` does not specify a version"*).
+* `pericortex = { git = "…cortex-peripherals…", optional = true }` in
+  `latexml_oxide`, behind the off-by-default `cortex` feature.
 
-**Resolution** (chosen): publish `cortex-peripherals` to crates.io first, then
-change the line to:
-```toml
-pericortex = { version = "X.Y.Z", optional = true }
-```
-(Alternative, if we'd rather not ship the worker: move `cortex_worker` +
-`pericortex` into a separate unpublished workspace member so the published
-`latexml` crate has no `cortex` feature at all.)
+**Resolution (done 2026-07-16):** both forks published under crates.io-free
+names, then the deps repointed:
+* dginev/marpa fork → **`libmarpa-asf-sys` 0.3.0** + **`marpa-asf` 0.3.0**
+  (upstream `marpa`/`libmarpa-sys` names are taken). Consumers use the cargo
+  `package` alias so `marpa::` / `libmarpa_sys::` code is unchanged:
+  `marpa = { package = "marpa-asf", version = "0.3.0" }`.
+* cortex-peripherals → **`pericortex` 0.2.8**;
+  `pericortex = { version = "0.2.8", optional = true }`.
+
+Verified: `cargo check -p latexml` and `cargo check -p latexml --features cortex`
+both resolve from crates.io. **Lesson (feature-gated drift):** the `cortex`
+feature isn't built by CI/tests by default, so a `Config` literal in
+`cortex_worker.rs` that the `--inputencoding` work left missing a field went
+unnoticed until this switch built it — worth adding a `--features cortex`
+check to CI.
 
 ### B3 — workspace `resources/` are not in the package tarballs
 `resources/` lives at the **workspace root**, outside every crate dir. `cargo
