@@ -71,13 +71,9 @@ fn emit_embedded_relaxng() {
   collect_files(&resource_root, &resource_root, &mut files);
   files.sort_by(|a, b| a.0.cmp(&b.0));
 
-  // Fail here, loudly, rather than emit an empty table. `collect_files` swallows a
-  // missing directory, so a tree that failed to ship (bad sparse checkout, a
-  // packaging regression that drops `resources/` from the tarball) would compile
-  // clean and embed NOTHING — surfacing much later as `#[derive(LoadModel)]`
-  // panicking `Model "LaTeXML" not found`, which points at the consumer rather than
-  // the real cause. The table is not optional: `LaTeXML.model` is the compile-time
-  // input to `load_model!`, and `.rng` lookups back `--validate`.
+  // `collect_files` swallows a missing dir, so a tree that failed to ship would
+  // compile clean, embed nothing, and only surface later as `#[derive(LoadModel)]`
+  // panicking `Model "LaTeXML" not found` — pointing at the consumer, not the cause.
   assert!(
     !files.is_empty(),
     "latexml_core/build.rs: no RelaxNG resources found under {}.\n  \

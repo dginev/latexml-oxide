@@ -4,21 +4,13 @@
 
   - **Installable from crates.io** — `cargo install latexml` builds the CLI from
     source, and `latexml` is usable as a library via the batteries-included
-    `latexml::api` (`convert_to_xml` / `convert_to_html`). Getting there meant the
-    workspace's resources had to travel *inside* the crates that need them: the
-    XSLT/CSS/javascript tree moved into `latexml_post`, and the RelaxNG schema tree
-    into `latexml_core` (`cargo package` cannot follow a `../` path, so a
-    workspace-root tree silently never reached the tarball). `#[derive(LoadModel)]`
-    now compiles `LaTeXML.model` from `latexml_core`'s embedded table rather than
-    resolving it relative to the process working directory, which is what made the
-    published crates buildable at all. The forked dependencies are published too
-    (`marpa-asf`, `libmarpa-asf-sys`, `pericortex`) — crates.io rejects git deps.
-    **Caveat:** a from-source install starts without the precompiled kernel dumps
-    (they are generated at release time and too large to ship), so it reconstructs
-    kernel state at every startup. One-time fix, the same "build the formats once"
-    step TeX does with `fmtutil` — `cd ~/.cargo && latexml_oxide --init=plain.tex
-    && latexml_oxide --init=latex.ltx` — after which startup matches the prebuilt
-    binaries. See the README's crates.io section.
+    `latexml::api` (`convert_to_xml` / `convert_to_html`). The forked dependencies
+    are published alongside it (`marpa-asf`, `libmarpa-asf-sys`, `pericortex`).
+    **Caveat:** a from-source install has no precompiled kernel dumps (generated at
+    release time, too large for a crate), so it rebuilds kernel state at every
+    startup. One-time fix — the "build the formats once" step TeX does with
+    `fmtutil`: `cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide
+    --init=latex.ltx`. See the README.
   - **New target: Windows** (`x86_64-pc-windows-msvc`) — a single fully-static
     `latexml_oxide.exe` (no VC++ redistributable), shipped as a `.zip`.
   - **Third-party notices now complete and identical in every download.**

@@ -122,13 +122,9 @@ RUN cargo install cargo-about --locked --features cli
 # own commit for section 7's relink pointer; docker.yml passes the real sha here.
 ARG GITSHA=unknown
 ENV LATEXML_SELF_REV=${GITSHA}
-# Each image gets the notices for ITS OWN graph. The cli image takes
-# gen_notices.sh's default (`--no-default-features --features runtime-bindings`)
-# because that is exactly what build-cli links; the worker links a different graph
-# (`--features cortex` pulls zmq/zeromq-src, and no rhai) and must override, or it
-# would ship notices describing crates it does not contain while omitting ones it
-# does. If build-cli's feature set ever changes — e.g. a deployment build that
-# drops runtime-bindings — this override has to move with it.
+# Each image gets the notices for ITS OWN graph. cli takes gen_notices.sh's default
+# (= build-cli's set); worker must override, since `--features cortex` pulls
+# zmq/zeromq-src and no rhai. Change a stage's features → change its override here.
 RUN set -ex \
  && tools/gen_notices.sh /tmp/THIRD-PARTY-NOTICES.cli \
  && NOTICES_CARGO_FEATURES="--no-default-features --features cortex" \
@@ -222,23 +218,13 @@ ENTRYPOINT ["cortex-worker-entrypoint.sh"]
 # build-cli: the distribution recipe (drop test-utils, keep runtime-bindings,
 # maxperf) — the same feature set as the GitHub-release binaries.
 #
-# `runtime-bindings` is ON here for END-USER CONVENIENCE: this image is the
-# batteries-included way to convert your own documents, and the feature lets you
-# drop a `<pkg>.sty.rhai` next to a document to add or override a binding with no
-# toolchain and no rebuild.
+# `runtime-bindings` is ON for END-USER CONVENIENCE: drop a `<pkg>.sty.rhai` beside
+# a document to add or override a binding, no toolchain, no rebuild.
 #
-# THIS IMAGE IS NOT A PRODUCTION-DEPLOYMENT RECIPE. A production deployment
-# converting source trees it did not author (arXiv tarballs, user uploads) should
-# switch `runtime-bindings` OFF — drop `--features runtime-bindings` below and
-# rebuild. The reason is that convenience and the risk are the same mechanism:
-# `converter.rs::rhai_dispatch` sits FIRST in the binding-resolution chain and runs
-# on every package/class request, resolving `<pkg>.sty.rhai` against the search
-# paths — which include THE DOCUMENT'S OWN DIRECTORY — so a `.rhai` shipped beside
-# an untrusted source file is executed by a plain conversion and overrides the
-# compiled binding of the same name (docs/parity/script_bindings_plan.md §7;
-# docs/release/SAFETY.md §H). The `worker` stage above — the arXiv fleet, i.e. our
-# own production path — accordingly builds `--features cortex` with no
-# runtime-bindings.
+# NOT a deployment recipe: the same mechanism executes a `.rhai` found beside an
+# *untrusted* source, so deployments converting trees they did not author should drop
+# `--features runtime-bindings` (docs/release/SAFETY.md §H). The `worker` stage above
+# — our arXiv fleet — accordingly builds `--features cortex` without it.
 #
 # make_formats runs FIRST — it builds a debug latexml_oxide and emits
 # the two --init dumps (plain.tex + latex.ltx) into resources/dumps/; the maxperf

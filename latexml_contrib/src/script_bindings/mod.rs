@@ -1,15 +1,10 @@
 //! Runtime script bindings via embedded **Rhai** (see `docs/parity/script_bindings_plan.md`).
 //!
-//! Feature-gated behind `runtime-bindings` (ON by default for the dev/test
-//! profile and the documented distribution build — downstream single-binary
-//! consumers customize without recompiling). This module keeps the original
-//! `script_bindings` name; the matching *feature* was renamed to
-//! `runtime-bindings`, and the `script-bindings` alias was dropped before the
-//! first crates.io publish (it gated nothing — no `cfg` ever referenced it — and
-//! shipping it would have made a dead name permanent public API). The ONLY module
-//! in the workspace that embeds Rhai; core/engine/package are untouched.
-//! Pure-Rust, no FFI, no ABI — the reliable successor to the abandoned libperl
-//! approach.
+//! Feature-gated behind `runtime-bindings` (ON by default and in the distribution
+//! build — downstream single-binary consumers customize without recompiling; the
+//! module keeps its original name, the feature does not). The ONLY module in the
+//! workspace that embeds Rhai; core/engine/package are untouched. Pure-Rust, no
+//! FFI, no ABI — the reliable successor to the abandoned libperl approach.
 //!
 //! ## Model (the "fine seam", Model A)
 //!

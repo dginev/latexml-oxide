@@ -158,58 +158,38 @@ in that window. Pipe-end fds are owned and closed exactly once.
 ### H. Script-bindings whatsit-pointer bridge (5 sites)
 
 `latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the `runtime-bindings`
-(Rhai) front-end re-mints `&`/`&mut`
-references to the in-flight whatsit / document / properties from raw pointers
-the core publishes onto a thread-local active-context stack (`WHATSIT_CTX`)
-for the duration of a single hook body. The pointer is the sole live reference
-for the call; a `mutable` flag (checked first) gates the `&mut` sites; calling
-outside a hook context returns an error, not UB. Provenance + lifetime are
-documented in the `mod.rs::with_doc` *B1 SOUNDNESS CAVEAT*.
+(Rhai) front-end re-mints `&`/`&mut` references to the in-flight whatsit / document
+/ properties from raw pointers the core publishes onto a thread-local
+active-context stack (`WHATSIT_CTX`) for the duration of a single hook body. The
+pointer is the sole live reference for the call; a `mutable` flag (checked first)
+gates the `&mut` sites; calling outside a hook context returns an error, not UB.
+Provenance + lifetime are documented in the `mod.rs::with_doc` *B1 SOUNDNESS
+CAVEAT*.
 
-**In the downloaded binaries this ships COMPILED IN AND LIVE — it is not off by
-default.** This section said "off-by-default `script-bindings`" until 2026-07-17;
-both halves were wrong. The feature is `runtime-bindings` (the `script-bindings`
-alias was removed pre-publish), it is in `latexml`'s `default`, and
-`make_release.sh` *deliberately keeps it* while dropping `test-utils` — so these 5
-sites are in every GitHub-release binary (tarballs, `.zip`, `.deb`).
-
-**Where it ships, as of 2026-07-17:**
+**Ships on.** `runtime-bindings` is in `latexml`'s `default`, and `make_release.sh`
+keeps it while dropping `test-utils`.
 
 | Artifact | Build | These 5 sites |
 |---|---|---|
 | GitHub-release binaries | `--no-default-features --features runtime-bindings` | **present** |
-| `cargo install latexml` | `default` (includes `runtime-bindings`) | **present** |
-| `ghcr.io/dginev/latexml-oxide` (cli image) | `--no-default-features --features runtime-bindings` | **present** |
-| cortex-worker image (the arXiv fleet) | `--no-default-features --features cortex` | **absent** |
+| `cargo install latexml` | `default` | **present** |
+| cli image | `--no-default-features --features runtime-bindings` | **present** |
+| cortex-worker image (arXiv fleet) | `--no-default-features --features cortex` | **absent** |
 
-The line is **end-user convenience vs production deployment**, not
-binary-vs-container. The first three are ways to convert *your own* documents, and
-there the feature is the point: drop a `.rhai` beside a file and override a binding
-with no toolchain. The worker is our production path — batch-converting arXiv
-source trees nobody vetted — and it builds without the feature.
+Convenience vs deployment: the first three convert documents you already trust; the
+worker batch-converts unvetted arXiv trees.
 
-**A deployment converting untrusted input should switch `runtime-bindings` off**,
-including one built from the cli image's recipe: drop `--features runtime-bindings`
-and rebuild. The convenience and the exposure are the same mechanism, so a
-deployment cannot keep one without the other.
+**Reachable without a flag.** `converter.rs::rhai_dispatch` is *first* in the
+binding chain and runs on every package/class request, resolving `<pkg>.sty.rhai`
+against the search paths — which include the document's own directory. So a `.rhai`
+beside an untrusted source executes on a plain conversion and, being first,
+*overrides* the compiled binding of the same name (`article.cls.rhai` shadows the
+built-in). See `script_bindings_plan.md` §7.
 
-Nor is the path dormant. `converter.rs::rhai_dispatch` sits **first** in the
-binding-resolution chain and runs on *every* package/class request: for `foo.sty`
-it does a `find_file` for `foo.sty.rhai` with `search_paths_only: true`, and
-executes it if found. So a `.rhai` file placed in a **search path — which includes
-the document's own directory** — is loaded and run by a plain conversion, with no
-flag. Converting an untrusted source tree (e.g. an arXiv tarball) therefore means
-executing any `<pkg>.sty.rhai` it ships that the document `\usepackage`s. And
-because the `.rhai` tier is checked **first**, such a file *overrides the compiled
-binding of the same name* — an `article.cls.rhai` shadows the built-in
-`article_cls` (`script_bindings_plan.md` §7).
-
-Bounding it: the interpreter is Rhai with `no_module` + `no_time`, so a script
-gets the registered LaTeXML binding API, not arbitrary host I/O, and
-`search_paths_only` keeps the lookup off the TeX tree. But this is a *sandboxed
-execution* claim, not an *inert code* claim, and it should be reviewed as such.
-Builds that want it truly gone must use `--no-default-features` *without*
-`--features runtime-bindings`.
+**Bound, not absent.** Rhai runs `no_module` + `no_time` — a script gets the
+registered binding API, not host I/O — and `search_paths_only` keeps the lookup off
+the TeX tree. That is a *sandboxed execution* claim, not an *inert code* one.
+Deployments on untrusted input should drop `--features runtime-bindings`.
 
 ---
 

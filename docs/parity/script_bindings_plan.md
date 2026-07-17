@@ -134,18 +134,13 @@ Components:
 - **Feature: `runtime-bindings`** on `latexml_contrib` (`= ["dep:rhai", "dep:log"]`);
   `rhai = { version = "1", optional = true }`. Propagated up via
   `latexml/runtime-bindings = ["latexml_contrib/runtime-bindings"]`. Core, engine,
-  package untouched. *(This plan was written against the original name
-  `script-bindings`, and it shipped **on** by default rather than off — see
-  Packaging. The alias `script-bindings = ["runtime-bindings"]` was removed
-  2026-07-17, before the first crates.io publish: no `cfg` ever referenced it and
-  no build invoked it, so publishing it would have frozen a dead name into public
-  API. The Rust module keeps the `script_bindings` name.)*
-- **Packaging: RESOLVED — on by default.** Because the value is end-user
-  extensibility, the official GitHub-release binary ships with `runtime-bindings`
-  **on** (pure Rust, modest size): `make_release.sh` builds
-  `--no-default-features --features runtime-bindings`, i.e. it drops `test-utils`
-  but deliberately keeps this. `latexml`'s `default` also includes it.
-  Minimal/embedded builds can still drop it.
+  package untouched. *(Renamed from `script-bindings` — this plan's original name;
+  the dead alias was dropped 2026-07-17, pre-publish. The Rust module keeps the
+  `script_bindings` name.)*
+- **Packaging: RESOLVED — on by default**, for end-user extensibility.
+  `make_release.sh` builds `--no-default-features --features runtime-bindings`
+  (drops `test-utils`, keeps this); `latexml`'s `default` includes it too. The
+  cortex-worker image omits it — see `SAFETY.md` §H on untrusted input.
 - **Dispatch hook (dependency-clean):** package/core dispatch cannot call *up*
   into `latexml_contrib`. So the script loader installs itself at startup via a
   registered function-pointer hook (`Option<fn(&str, &str) -> Option<...>>`)

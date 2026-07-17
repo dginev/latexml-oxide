@@ -361,16 +361,11 @@ def native_evidence(pkg_dir, links, build_script=None):
 # actually matters is a NEW third-party copyright holder appearing among the embedded
 # assets. Anchored to REPO_ROOT, never the cwd -- see the note there.
 #
-# EVERY tree that gets embedded must be listed. The crates.io packaging work split them
-# up -- `cargo package` cannot follow a `../` path, so each tree had to move inside the
-# crate that embeds it (docs/release/CRATES_IO_PUBLISH.md B3a/B3b) -- and a root-only
-# list silently stops covering whatever moved. That already bit twice here:
-#   * B3a moved XSLT/CSS/javascript -> latexml_post/resources/; this list still said
-#     `resources` alone, so they left the audit unnoticed and the gate stayed green.
-#   * B3b moved RelaxNG -> latexml_core/resources/; that is the W3C/Mozilla svg/ subtree,
-#     i.e. the exact assets AUDITED_RESOURCES exists to track. The gate would have printed
-#     "ok resources/RelaxNG/svg/ (0 file(s))" and exited 0 -- the header's scenario, live.
-# The RESOURCE_PREFIX_MUST_EXIST guard below is what turns that silence into a failure.
+# EVERY embedded tree must be listed. `cargo package` cannot follow a `../` path, so the
+# trees live inside the crates that embed them (CRATES_IO_PUBLISH.md B3a/B3b), and a
+# root-only list silently stops covering whatever moves. It bit twice: B3a's XSLT/CSS/js
+# left the audit unnoticed, and B3b would have printed "ok resources/RelaxNG/svg/ (0
+# file(s))" and exited 0. The prefix-exists guard below turns that silence into a failure.
 RESOURCE_ROOTS = [
     REPO_ROOT / "resources",
     REPO_ROOT / "latexml_core" / "resources",  # RelaxNG (B3b)
@@ -425,12 +420,8 @@ RESOURCE_PREFIX_MAY_BE_ABSENT = {"resources/dumps/"}
 
 def audit_resources(verbose):
     """Flag embedded resources carrying an unaudited third-party copyright."""
-    # Every audited prefix must still name a real directory. Without this, MOVING an
-    # audited tree is invisible: nothing is scanned, nothing is flagged, and the gate
-    # reports "ok <prefix> (0 file(s))" and exits 0 -- success for work it never did,
-    # which is the failure mode this whole file is written against (see the header).
-    # A stale prefix is equally worth failing on: it means the verdict recorded here no
-    # longer describes anything we ship, so it is either misplaced or should be deleted.
+    # Every audited prefix must still name a real directory: otherwise moving a tree is
+    # invisible -- nothing scanned, nothing flagged, "ok <prefix> (0 file(s))", exit 0.
     missing = [
         prefix
         for prefix in AUDITED_RESOURCES

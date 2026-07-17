@@ -17,18 +17,10 @@ static NAMESPACE_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.
 pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   let name = crate::attr_name_value_str(&input.attrs[0], "name");
 
-  // The compiled `.model` is read from `latexml_core`'s EMBEDDED RelaxNG table
-  // rather than from disk. `latexml_core/build.rs` bakes `resources/RelaxNG/` in
-  // via `include_str!`, and this proc-macro crate links `latexml_core`, so the
-  // bytes are already in `.rodata` by the time the derive runs.
-  //
-  // NOT `pathname::find`: it resolves the tree *cwd-relative*
-  // (`<cwd>/resources/RelaxNG`, else one level up), and the cwd during a build is
-  // the consumer's workspace root. That only ever worked inside our own checkout —
-  // from a crates.io install there is no `resources/` beside the cwd, so the derive
-  // panicked with `Model "LaTeXML" not found`. The embedded table is cwd-independent
-  // and travels inside the `latexml_core` tarball, which is what makes the whole
-  // workspace publishable. See docs/release/CRATES_IO_PUBLISH.md B3b.
+  // Read from `latexml_core`'s embedded RelaxNG table (this proc-macro crate links
+  // latexml_core, whose build.rs `include_str!`s the tree), NOT `pathname::find` —
+  // that resolves cwd-relative, so it works only inside our checkout and panics
+  // `Model "LaTeXML" not found` from a crates.io install. See CRATES_IO_PUBLISH.md B3b.
   let embed_key = s!("{}.model", name);
   let Some(source) = latexml_core::common::relaxng::embedded::lookup(&embed_key) else {
     panic!(

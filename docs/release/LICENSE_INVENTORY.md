@@ -99,12 +99,10 @@ scope paragraph together.
 
 ## B. Embedded resources (`include_str!`/`include_bytes!` at build)
 
-**The trees are no longer all under the workspace-root `resources/`.** The
-crates.io packaging work (`CRATES_IO_PUBLISH.md` B3a/B3b) moved each embedded tree
-*inside the crate that embeds it*, because `cargo package` cannot follow a `../`
-path and a workspace-root tree silently never reaches the tarball. Paths below are
-the current, real ones — check them before trusting any `resources/`-rooted command
-in an older doc or script.
+**The trees are no longer all under the workspace-root `resources/`**: crates.io
+packaging (`CRATES_IO_PUBLISH.md` B3a/B3b) moved each inside the crate that embeds
+it, since `cargo package` cannot follow `../`. Paths below are current — distrust any
+`resources/`-rooted command in an older doc.
 
 | Asset group | Count | Origin | License |
 |---|---|---|---|
@@ -134,20 +132,20 @@ plus the comment headers inside each embedded file. The Ayu palette is the secon
 **The resource gate cannot see the F12 class**: it flags files that *announce*
 themselves, and all 16 embedded CSS/JS carry no notice — they clear by silence.
 
-Re-verify (should list `latexml_core/resources/RelaxNG/svg/` files and nothing else).
-**Every embedded tree must be named** — a command rooted at the workspace `resources/`
-alone now matches nothing at all and looks like a clean bill of health:
+Re-verify with the gate — it names every tree and **fails if an audited prefix stops
+existing**, so a move cannot go quiet the way B3a/B3b did:
+
+```bash
+python3 tools/audit_vendored_natives.py --verbose
+```
+
+By hand, **every embedded tree must be named** (rooted at `resources/` alone it
+matches nothing and reads as a clean bill of health). Expect only
+`latexml_core/resources/RelaxNG/svg/`:
 
 ```bash
 grep -rliE "World Wide Web Consortium|Mozilla Foundation|Apache License|GNU General" \
   latexml_core/resources/ latexml_post/resources/ resources/
-```
-
-Better, use the gate itself — it enforces this list and **fails if an audited prefix
-stops existing**, so a future move cannot go quiet the way B3a/B3b did:
-
-```bash
-python3 tools/audit_vendored_natives.py --verbose
 ```
 
 ## C. Compiled-in dumps — the sharp edge (TeX-Live-derived)
