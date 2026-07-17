@@ -23,6 +23,22 @@ description = "A TeX to XML/HTML/ePub converter: a LaTeXML reimplementation in R
 keywords = ["latex", "tex", "html", "mathml", "converter"]
 categories = ["command-line-utilities", "text-processing", "science"]
 default-run = "latexml_oxide"
+# The regression corpus is 1342 of this crate's 1372 packageable files and ~19.5 MiB
+# of its ~20 MiB: `cargo publish` produced a 13.6 MiB tarball against crates.io's
+# hard 10 MiB cap and was rejected (`413 Payload Too Large: max upload size is
+# 10485760` from the backend; the CDN in front of it reports the same oversized
+# write as an unhelpful `503 backend write error`). Dropping it lands the crate at
+# ~600 KB. `--dry-run` cannot catch this — it stops before the upload, so the size
+# limit is only ever enforced by the real publish.
+#
+# Safe to exclude: nothing in `src/`/`bin/` reads `tests/` at build time, there are
+# no explicit `[[test]]` targets (the 50 harnesses are auto-discovered, so the
+# packaged crate simply has none), and `build.rs` only wires git hooks and no-ops
+# without a `.git`. Consumers get the library and binaries; the corpus stays in git,
+# which is where the suite is meant to run. Do NOT exclude the fixture subdirs while
+# keeping `tests/*.rs`: the `testable` proc-macro scans the corpus at compile time,
+# so a half-excluded tree would fail `cargo test` on the packaged crate.
+exclude = ["tests/"]
 
 [lints]
 workspace = true
