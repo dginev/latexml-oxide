@@ -14,13 +14,21 @@ LoadDefinitions!({
 
   // Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
   // group, mark inPreamble = 1, RequirePackage each comma-separated entry
-  // of the argument, and alias \begin{document}/\end{document} to the
-  // start/end input primitives so the sub-document is injected as a
-  // bounded scope inside the outer document.
-  DefPrimitive!("\\@standalone@documentclass[]{}", sub[(_opts, packages_tks)] {
+  // of the OPTIONAL `[]` argument (Perl binds `$packages = $_[1]`, the
+  // optional), and alias \begin{document}/\end{document} to the start/end
+  // input primitives so the sub-document is injected as a bounded scope
+  // inside the outer document.
+  // NOTE: the mandatory `{}` class name is intentionally IGNORED (the parent
+  // already loaded a class). Requiring it as a package — the earlier port
+  // used the mandatory arg — warned `missing_file:article` on a
+  // `\documentclass{article}` standalone child (issue #293).
+  DefPrimitive!("\\@standalone@documentclass[]{}", sub[(packages_tks, _class_tks)] {
     bgroup();
     assign_value("inPreamble", true, None);
-    let packages_str = packages_tks.to_string();
+    // Perl `split(",", ToString($packages))`: an absent optional stringifies
+    // to "" (⇒ no packages required), matching the `\documentclass{article}`
+    // no-options case.
+    let packages_str = packages_tks.map(|t| t.to_string()).unwrap_or_default();
     for pkg in packages_str.split(',') {
       let pkg = pkg.trim();
       if !pkg.is_empty() {
