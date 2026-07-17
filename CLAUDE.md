@@ -17,8 +17,7 @@ Two co-equal targets drive current work:
    (`canvas-triage` skill), fix GENUINE-RUST-ONLY divergences faithfully.
    Worklist: [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
 2. **Beyond-Perl improvement runs over arXiv.** The production `cortex_worker`
-   fleet converts the full ~2.8M-doc arXiv corpus (2026-07 rerun in flight;
-   next: the July-5 run, built from a fresh binary with the week's fixes).
+   fleet converts the full ~2.8M-doc arXiv corpus (2026-07 rerun complete).
    Beyond-Perl levers: performance (17% math over-parse, tikz-cd digest —
    [`docs/performance/PERFORMANCE.md`](docs/performance/PERFORMANCE.md) /
    [`docs/performance/ARXIV_PERFORMANCE.md`](docs/performance/ARXIV_PERFORMANCE.md)), reliability
@@ -27,7 +26,7 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1577/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
+**1581/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
 (policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
 `latexml_oxide/build.rs` sets `core.hooksPath`). The 2026-07 full-arXiv rerun
 runs at ~44k docs/hr, avg 4.06 s/doc, fatal rate 0.78%.

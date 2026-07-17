@@ -33,8 +33,8 @@ Two binaries: `latexml_oxide` for documents, `latexmlmath_oxide` for a single fo
 # A document → HTML5, with MathML for the math (format inferred from the extension)
 $ latexml_oxide paper.tex --destination=paper.html
 
-# One formula → XML carrying Presentation MathML
-$ latexmlmath_oxide --pmml '\frac{-b \pm \sqrt{b^2-4ac}}{2a}'
+# One formula → Presentation MathML (the default; --cmml for Content MathML)
+$ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 
 `--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` — inferred from the
