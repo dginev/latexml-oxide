@@ -72,14 +72,16 @@ fn strip_internal_attrs(node: &mut libxml::tree::Node) {
 /// so the equivalent is: declare the default namespace on the extracted root and
 /// re-point every element already in that namespace at it.
 ///
-/// NOT reparented into a fresh document the way Perl does, despite that also buying
-/// Perl's indented `toString(1)`: `Document::set_root_element` maps to
-/// `xmlDocSetRootElement`, which does NOT call `xmlSetTreeDoc`, so the subtree's `->doc`
-/// pointers keep referencing the old document and dropping either one frees nodes owned
-/// by the other — `free(): invalid pointer`, SIGABRT, on every run. XML::LibXML's
-/// `setDocumentElement` adopts the node; libxml-rs exposes no equivalent. So we
-/// serialize in place, which costs only Perl's indentation (`node_to_string` hardcodes
-/// libxml2 format=0). The markup and namespaces are identical.
+/// Indented like Perl's `toString(1)` via a serialize → re-parse → serialize round trip,
+/// NOT by reparenting into a fresh document. Reparenting is what Perl does and would be
+/// the direct route, but `Document::set_root_element` is `xmlDocSetRootElement`, which
+/// does NOT call `xmlSetTreeDoc`: the subtree keeps pointing at the old document, and
+/// dropping either one frees the other's nodes — `free(): invalid pointer`, SIGABRT on
+/// every run (measured). XML::LibXML's `setDocumentElement` adopts the node; libxml-rs
+/// exposes no equivalent. The round trip is safe because the namespace fix above makes
+/// the serialized node well-formed standalone; `no_blanks` drops the whitespace text
+/// nodes carrying the node's ORIGINAL nesting depth, so it re-indents from column 0
+/// instead of inheriting `--xmath`'s ten-space lead-in.
 fn print_node_defaulted(doc: &libxml::tree::Document, node: &mut libxml::tree::Node, href: &str) {
   use libxml::tree::Namespace;
   if let Ok(default_ns) = Namespace::new("", href, node) {
@@ -93,7 +95,22 @@ fn print_node_defaulted(doc: &libxml::tree::Document, node: &mut libxml::tree::N
     }
     repoint(node, &default_ns, href);
   }
-  println!("{}", doc.node_to_string(node));
+  let raw = doc.node_to_string(node);
+  let pretty = libxml::parser::Parser::default()
+    .parse_string_with_options(&raw, libxml::parser::ParserOptions {
+      no_blanks: true,
+      ..libxml::parser::ParserOptions::default()
+    })
+    .map(|reparsed| {
+      reparsed.to_string_with_options(SaveOptions {
+        format: true,
+        no_declaration: true, // Perl serializes the NODE — no <?xml …?> preamble
+        ..SaveOptions::default()
+      })
+    })
+    // Never lose the output to a formatting nicety: fall back to the flat form.
+    .unwrap_or(raw);
+  print!("{pretty}");
 }
 
 fn main() -> Result<()> {
