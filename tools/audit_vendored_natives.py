@@ -150,12 +150,15 @@ AUDITED = {
         "links = \"rayon-core\": same version-lock trick. Its build.rs says so outright "
         "-- \"we're not *actually* linking\".",
     ),
-    "pericortex": ("0.2.7",
+    "pericortex": ("0.2.8",
         "Ours (dginev). The 'vendored archive' is 1508.01222.zip, an arXiv test paper "
         "-- data, not code.",
     ),
 
-    "libmarpa-sys": ("0.3.0",
+    # The dginev/marpa fork's sys crate, published to crates.io as
+    # `libmarpa-asf-sys` (the upstream `libmarpa-sys` name is taken). Registry-
+    # sourced now (was a git dep); consumed via the `package = "marpa-asf"` alias.
+    "libmarpa-asf-sys": ("0.3.0",
         "Vendors libmarpa 8.6.2 as a tarball. Mixed per-file licensing that the "
         "manifest's 'MIT OR Apache-2.0' does not express: marpa.c/marpa_ami.c/"
         "marpa_codes.c are MIT (c) Jeffrey Kegler; marpa_avl.c/marpa_tavl.c are "
@@ -268,7 +271,8 @@ def package_dirs():
     """(name, version) -> (package dir, links), plus the set of OUR workspace package ids.
 
     Resolving by manifest_path rather than guessing a registry directory name is what
-    makes git-sourced crates like libmarpa-sys (a checkout hash path, not
+    makes crates whose on-disk dir is not `<name>-<version>` — e.g. libmarpa-asf-sys under
+    the local `[patch]` redirect to `~/git/marpa` (a checkout hash path, not
     `<name>-<version>/`) visible at all -- a find(1)-by-dirname sweep silently misses
     them, which is its own way to lose a library.
 
@@ -507,7 +511,7 @@ def main():
 
     if stale:
         # Deliberately NOT phrased as "prune these". An earlier version of this script
-        # skipped crates by path prefix, which made libmarpa-sys vanish from the tree
+        # skipped crates by path prefix, which made libmarpa-asf-sys vanish from the tree
         # and surface here -- so the note was cheerfully inviting someone to delete the
         # attribution of a library that was still very much being linked in. Removing
         # an entry is only safe once you have confirmed the crate is genuinely gone.

@@ -8,7 +8,7 @@
 #   libxml2     (libxml 0.3.12   — pkg-config / LIBXML2 env, bindgen)
 #   libxslt     (libxslt 0.1.3   + latexml_post/build.rs bare link line)
 #   libkpathsea (kpathsea_sys    — pkg-config only, panics if missing)
-#   libmarpa    (libmarpa-sys    — vendored tarball, ./configure && make + bindgen)
+#   libmarpa    (libmarpa-asf-sys    — vendored tarball, ./configure && make + bindgen)
 #
 # then attempts crate-by-crate builds so a failure is attributed to the
 # exact native binding, not "the workspace".
@@ -157,7 +157,7 @@ if command -v brew >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
-section "7. bindgen prerequisite: libclang (needed by libxml + libmarpa-sys)"
+section "7. bindgen prerequisite: libclang (needed by libxml + libmarpa-asf-sys)"
 LIBCLANG_FOUND=0
 if command -v llvm-config >/dev/null 2>&1; then
   note "llvm-config libdir: $(llvm-config --libdir 2>/dev/null)"

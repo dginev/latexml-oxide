@@ -249,8 +249,8 @@ See the relinking note in 3.5.
 -------------------------------------------------
 
 The Earley/Marpa parsing engine behind the math parser. The C sources are
-vendored as a tarball inside the `libmarpa-sys` crate and compiled into the
-binary at build time. The `marpa` / `libmarpa-sys` Rust crates declare
+vendored as a tarball inside the `libmarpa-asf-sys` crate and compiled into the
+binary at build time. The `marpa-asf` / `libmarpa-asf-sys` Rust crates declare
 "MIT OR Apache-2.0"; that covers the Rust bindings only. The vendored C library
 is under mixed licenses, per file:
 
@@ -300,8 +300,8 @@ public, and the exact version of each one that went into THIS artifact is
 recorded in section 7:
 
   * latexml-oxide's own source is CC0-1.0 — https://github.com/dginev/latexml-oxide
-  * libmarpa 8.6.2 sources are vendored verbatim in the `libmarpa-sys` crate
-    (libmarpa-8.6.2.tar.gz) at https://github.com/dginev/marpa
+  * libmarpa 8.6.2 sources are vendored verbatim in the `libmarpa-asf-sys` crate
+    (libmarpa-8.6.2.tar.gz), published to crates.io from https://github.com/dginev/marpa
   * kpathsea is fetched at a recorded commit (`KPSE_REF`, pinned by
     tools/build_static_kpathsea.sh on the Linux/macOS legs, and by the
     `kpathsea_sys` crate's own KPSE_REF on Windows)
