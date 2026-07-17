@@ -6,9 +6,31 @@
 #   cli    → ghcr.io/dginev/latexml-oxide                 (plain latexml_oxide CLI)
 #   worker → ghcr.io/dginev/latexml-oxide/cortex-worker   (CorTeX fleet harness)
 #
-# Fires when a release is PUBLISHED (i.e. after you review the draft the release
-# workflow created and click "Publish"), so the containers track a reviewed tag —
-# never a draft. Also dispatchable to (re)build a given tag.
+# Three ways in, one per release shape:
+#
+#   workflow_call      → release.yml's `containers` job, after the release PUBLISHES
+#                        (`needs: release`). This is the normal path for a final
+#                        X.Y.Z tag: images only exist for a release that succeeded.
+#   release published  → a maintainer reviewing the draft release.yml made for an
+#                        `X.Y.Z-rcN` tag clicks "Publish".
+#   workflow_dispatch  → (re)build any tag on demand.
+#
+# Why release.yml CALLS this instead of this workflow listening for the final tag:
+# a final tag is auto-published by release.yml using GITHUB_TOKEN, and GitHub
+# refuses to start a workflow from a GITHUB_TOKEN-authored event (recursion guard;
+# workflow_dispatch/repository_dispatch are the only exemptions). So `release:
+# published` NEVER reaches this workflow for a final tag — 0.7.4 shipped with no
+# images because of exactly that, silently. `published` still works for an RC draft,
+# because a human clicking Publish is a real-user event.
+#
+# Nothing here consumes release.yml's assets (each image builds its own binary and
+# dumps) — the `needs: release` gate is about not publishing `:latest` for a release
+# that failed, not a data dependency.
+#
+# Tag resolution is `inputs.ref` (set by BOTH workflow_call and workflow_dispatch)
+# falling back to the release tag. Deliberately no `github.ref_name` fallback: on a
+# dispatch that would silently resolve to `main` and build the wrong thing, whereas
+# an empty value trips the explicit `no tag resolved` guard below.
 #
 # CLI is multi-arch (amd64 + arm64) via NATIVE runners — each arch compiles on
 # its own runner (no QEMU emulation of a fat-LTO build) — then a merge job
@@ -19,6 +41,17 @@
 name: Publish container images
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Tag to build (release.yml passes github.ref_name)'
+        required: true
+        type: string
+      latest:
+        description: 'Also move the :latest tag to this build'
+        required: false
+        default: false
+        type: boolean
   release:
     types: [published]
   workflow_dispatch:
@@ -26,6 +59,11 @@ on:
       ref:
         description: 'Tag/ref to build (e.g. 0.7.4)'
         required: true
+      latest:
+        description: 'Also move :latest (only for the CURRENT newest release)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -52,7 +90,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.ref || github.event.release.tag_name }}
+          # `inputs.ref` covers workflow_call AND workflow_dispatch; the release
+          # tag covers the RC-publish path. (`github.event.inputs.ref` would be
+          # empty under workflow_call — it only populates for dispatch.)
+          ref: ${{ inputs.ref || github.event.release.tag_name }}
           fetch-depth: 0
       - name: git sha
         id: meta
@@ -93,7 +134,7 @@ jobs:
       - name: resolve tag
         id: tag
         run: |
-          t="${{ github.event.inputs.ref || github.event.release.tag_name }}"
+          t="${{ inputs.ref || github.event.release.tag_name }}"
           if [ -z "$t" ]; then echo "::error::no tag resolved"; exit 1; fi
           echo "tag=$t" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v6
@@ -112,10 +153,16 @@ jobs:
           t="${{ steps.tag.outputs.tag }}"
           refs=""
           for f in /tmp/digests/*; do refs="$refs ${CLI_IMAGE}@$(cat "$f")"; done
-          docker buildx imagetools create \
-            --tag "${CLI_IMAGE}:${t}" \
-            --tag "${CLI_IMAGE}:latest" \
-            $refs
+          # :latest is opt-in (release.yml passes latest=true for a final tag).
+          # Unconditionally tagging it here would let a rebuild of an OLDER tag drag
+          # :latest backwards, and would hand :latest to an RC on the publish path.
+          tags=( --tag "${CLI_IMAGE}:${t}" )
+          if [ "${{ inputs.latest }}" = "true" ]; then
+            tags+=( --tag "${CLI_IMAGE}:latest" )
+          else
+            echo "note: :latest NOT moved (latest=${{ inputs.latest }})"
+          fi
+          docker buildx imagetools create "${tags[@]}" $refs
           docker buildx imagetools inspect "${CLI_IMAGE}:${t}"
 
   # ---- CorTeX fleet worker: amd64 only (x86_64 fleet) ----
@@ -126,12 +173,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.ref || github.event.release.tag_name }}
+          # `inputs.ref` covers workflow_call AND workflow_dispatch; the release
+          # tag covers the RC-publish path. (`github.event.inputs.ref` would be
+          # empty under workflow_call — it only populates for dispatch.)
+          ref: ${{ inputs.ref || github.event.release.tag_name }}
           fetch-depth: 0
       - name: resolve tag
         id: tag
         run: |
-          t="${{ github.event.inputs.ref || github.event.release.tag_name }}"
+          t="${{ inputs.ref || github.event.release.tag_name }}"
           if [ -z "$t" ]; then echo "::error::no tag resolved"; exit 1; fi
           echo "tag=$t" >> "$GITHUB_OUTPUT"
       - name: build timestamp + git sha
@@ -139,6 +189,20 @@ jobs:
         run: |
           echo "hosttime=$(date -u +%Y-%m-%dT%H:%MZ)" >> "$GITHUB_OUTPUT"
           echo "gitsha=$(git rev-parse --short=10 HEAD)" >> "$GITHUB_OUTPUT"
+      # Same :latest opt-in as the CLI manifest job — see the note there.
+      - name: image tags
+        id: tags
+        run: |
+          {
+            echo "tags<<TAGS_EOF"
+            echo "${WORKER_IMAGE}:${{ steps.tag.outputs.tag }}"
+            if [ "${{ inputs.latest }}" = "true" ]; then
+              echo "${WORKER_IMAGE}:latest"
+            else
+              echo "note: :latest NOT moved (latest=${{ inputs.latest }})" >&2
+            fi
+            echo "TAGS_EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -156,6 +220,4 @@ jobs:
           build-args: |
             HOSTTIME=${{ steps.ts.outputs.hosttime }}
             GITSHA=${{ steps.ts.outputs.gitsha }}
-          tags: |
-            ${{ env.WORKER_IMAGE }}:${{ steps.tag.outputs.tag }}
-            ${{ env.WORKER_IMAGE }}:latest
+          tags: ${{ steps.tags.outputs.tags }}

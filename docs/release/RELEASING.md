@@ -17,25 +17,28 @@ remains out of scope for now — see "Release asset strategy" below.
 
 ## Release targets & order
 
-Five targets. Only the first is triggered by the tag; the rest hang off the
-**published GitHub Release**, which is why the order is forced rather than a
-preference — Homebrew and crates.io both need the release's assets/sha256s to exist.
+Five targets. Only the tag is pushed by hand; from there `release.yml` publishes the
+Release **and then calls `docker.yml`** to build the images, so targets 1-2 are one
+automated chain. The other three are manual and hang off the **published GitHub
+Release**, which is why their order is forced rather than a preference — Homebrew and
+crates.io both need the release's assets/sha256s to exist.
 
 ```
-tag X.Y.Z  →  release.yml  →  GitHub Release (public)          ← the only tag-triggered step
-                                  │
-                                  ├─ AUTOMATIC  docker.yml → ghcr.io (cli + cortex-worker)
-                                  │             fires on `release: types: [published]`
-                                  ├─ MANUAL     dginev/homebrew-tap: ./update-formula.sh X.Y.Z
-                                  │             (reads the release's macOS .sha256 sidecars)
-                                  ├─ MANUAL     cargo publish --workspace   (needs the repo PUBLIC)
-                                  └─ MANUAL     ar5iv-editor deploy → latexml.rs
+tag X.Y.Z  →  release.yml ─┬─→ GitHub Release (public)
+                           │       │
+                           │       ├─ MANUAL  dginev/homebrew-tap: ./update-formula.sh X.Y.Z
+                           │       │          (reads the release's macOS .sha256 sidecars)
+                           │       ├─ MANUAL  cargo publish --workspace  (needs the repo PUBLIC)
+                           │       └─ MANUAL  ar5iv-editor deploy → latexml.rs
+                           │
+                           └─→ `containers` job  (needs: release, final tags only)
+                                   └─→ docker.yml → ghcr.io (cli + cortex-worker) + :latest
 ```
 
 | # | Target | How | Doc |
 |---|---|---|---|
 | 1 | **GitHub Release** (8 assets) | tag push → `release.yml` | this file |
-| 2 | **Container images** (ghcr.io) | **automatic** on Release *publish* → `docker.yml` | "Container images (GHCR)" below |
+| 2 | **Container images** (ghcr.io) | **automatic**: `release.yml`'s `containers` job calls `docker.yml` once the Release publishes | "Container images (GHCR)" below |
 | 3 | **Homebrew tap** | manual: `dginev/homebrew-tap` → `./update-formula.sh X.Y.Z`, commit, push | that repo's README |
 | 4 | **crates.io** (8 crates) | manual: `cargo publish --workspace` | [`CRATES_IO_PUBLISH.md`](CRATES_IO_PUBLISH.md) |
 | 5 | **latexml.rs** (ar5iv-editor) | manual: that repo's `deploy/build-and-push.sh` + cloud rollout | ar5iv-editor `deploy/` |
@@ -61,9 +64,11 @@ prerelease: ${{ contains(github.ref_name, '-') }}
 
 Two consequences worth knowing before you plan an RC:
 
-* **Targets 2-5 do not happen for an RC.** `docker.yml` listens for `release:
-  published`, which does **not** fire for a draft. To exercise the container path from
-  an RC, use its `workflow_dispatch` with the tag.
+* **Targets 2-5 do not happen for an RC.** The `containers` job is gated
+  `if: ${{ !contains(github.ref_name, '-') }}`, so an RC tag skips it; `docker.yml`'s
+  other trigger, `release: published`, does not fire for a draft. To exercise the
+  container path from an RC, publish its draft or use `docker.yml`'s
+  `workflow_dispatch`. Both build `:X.Y.Z-rcN` only — **an RC never takes `:latest`**.
 * **Never publish an RC to crates.io.** `cargo install` and `latexml = "0.7"` both
   ignore pre-releases, so an `-rcN` upload leaves `cargo install latexml` resolving to
   whatever stable version exists (today: the ancient `0.0.2` placeholder) — while the
@@ -364,10 +369,32 @@ disk via `LATEXML_DUMP_DIR`. Both link the system libxml2/libxslt/kpathsea
 dynamically — static linkage is only for the portable tarball/.deb; inside a
 fixed image the dynamic libs are always present.
 
-`.github/workflows/docker.yml` builds + pushes both on `release: published` (so
-the containers track a published tag, never a draft; since the `Release`
-workflow now auto-publishes, this fires automatically on each release; also
-`workflow_dispatch`-able for a given tag). The CLI is multi-arch (amd64 + arm64) on **native runners** — no
+`.github/workflows/docker.yml` is a **reusable workflow**. The normal path is
+`release.yml`'s `containers` job calling it with `needs: release`, so images are built
+only once the Release has actually published — `:latest` can never point at a version
+with no downloadable release. It is also directly `workflow_dispatch`-able, and still
+listens for `release: published` (the RC-draft path).
+
+> **Do not "simplify" this into a `release: published` listener.** The intuition that
+> auto-publishing makes `published` fire on every release is backwards: release.yml
+> publishes using **GITHUB_TOKEN**, and GitHub will not start a workflow from a
+> GITHUB_TOKEN-authored event (recursion guard — only `workflow_dispatch` and
+> `repository_dispatch` are exempt). The `published` path works for an RC precisely
+> because a *human* clicks Publish. **0.7.4 shipped with no container images** on this
+> exact mistake, and nothing failed loudly — the release went green and the images
+> were simply absent. If images ever go missing again, check this first.
+
+**The `:latest` contract.** `docker.yml` only moves `:latest` when passed
+`latest: true`, which **only** `release.yml`'s `containers` job does, and only for a
+final tag whose release published. Every other path (dispatch, RC publish) pushes
+`:X.Y.Z` and logs `:latest NOT moved`. This is deliberate: `:latest` was previously
+tagged unconditionally, so **rebuilding an older tag would drag `:latest` backwards**
+(a `ref=0.7.3` dispatch on 2026-07-15 would have done exactly that had it not failed
+first) and an RC publish would have handed `:latest` to a prerelease. If you rebuild
+the current newest release and *do* want `:latest` moved, tick the dispatch's
+`latest` checkbox.
+
+The CLI is multi-arch (amd64 + arm64) on **native runners** — no
 QEMU emulation of the fat-LTO compile — merged into one manifest list tagged
 `:X.Y.Z` + `:latest`; the worker is amd64-only (x86_64 fleet). The first push of
 each package creates it private — make it public once in the repo's package

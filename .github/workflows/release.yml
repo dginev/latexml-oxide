@@ -921,3 +921,29 @@ jobs:
           draft: ${{ contains(github.ref_name, '-') }}
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
+
+  # Container images for a FINAL tag, gated on the release above actually
+  # publishing (`needs: release`) — so `:latest` never points at a version with no
+  # downloadable release. RC tags are skipped here: their draft is unreviewed, and
+  # an RC must not take `:latest`. To build images for an RC, publish its draft
+  # (docker.yml's `release: published` trigger) or dispatch docker.yml directly;
+  # both leave `:latest` alone.
+  #
+  # Why a call and not a `release: published` listener inside docker.yml: this job
+  # publishes with GITHUB_TOKEN, and GitHub will not start a workflow from a
+  # GITHUB_TOKEN-authored event (recursion guard). 0.7.4's images were missing for
+  # exactly that reason, with no failure to notice. See docs/release/RELEASING.md.
+  containers:
+    name: Container images ${{ github.ref_name }}
+    needs: release
+    if: ${{ !contains(github.ref_name, '-') }}
+    # The workflow-level grant is `contents: write`; pushing to GHCR additionally
+    # needs `packages: write`, and a called workflow cannot escalate past what the
+    # calling job hands it — so it must be granted right here.
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml
+    with:
+      ref: ${{ github.ref_name }}
+      latest: true
