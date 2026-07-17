@@ -157,14 +157,39 @@ in that window. Pipe-end fds are owned and closed exactly once.
 
 ### H. Script-bindings whatsit-pointer bridge (5 sites)
 
-`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the
-**off-by-default** `script-bindings` (Rhai) front-end re-mints `&`/`&mut`
-references to the in-flight whatsit / document / properties from raw pointers
-the core publishes onto a thread-local active-context stack (`WHATSIT_CTX`)
-for the duration of a single hook body. The pointer is the sole live reference
-for the call; a `mutable` flag (checked first) gates the `&mut` sites; calling
-outside a hook context returns an error, not UB. Provenance + lifetime are
-documented in the `mod.rs::with_doc` *B1 SOUNDNESS CAVEAT*.
+`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the `runtime-bindings`
+(Rhai) front-end re-mints `&`/`&mut` references to the in-flight whatsit / document
+/ properties from raw pointers the core publishes onto a thread-local
+active-context stack (`WHATSIT_CTX`) for the duration of a single hook body. The
+pointer is the sole live reference for the call; a `mutable` flag (checked first)
+gates the `&mut` sites; calling outside a hook context returns an error, not UB.
+Provenance + lifetime are documented in the `mod.rs::with_doc` *B1 SOUNDNESS
+CAVEAT*.
+
+**Ships on.** `runtime-bindings` is in `latexml`'s `default`, and `make_release.sh`
+keeps it while dropping `test-utils`.
+
+| Artifact | Build | These 5 sites |
+|---|---|---|
+| GitHub-release binaries | `--no-default-features --features runtime-bindings` | **present** |
+| `cargo install latexml` | `default` | **present** |
+| cli image | `--no-default-features --features runtime-bindings` | **present** |
+| cortex-worker image (arXiv fleet) | `--no-default-features --features cortex` | **absent** |
+
+Convenience vs deployment: the first three convert documents you already trust; the
+worker batch-converts unvetted arXiv trees.
+
+**Reachable without a flag.** `converter.rs::rhai_dispatch` is *first* in the
+binding chain and runs on every package/class request, resolving `<pkg>.sty.rhai`
+against the search paths — which include the document's own directory. So a `.rhai`
+beside an untrusted source executes on a plain conversion and, being first,
+*overrides* the compiled binding of the same name (`article.cls.rhai` shadows the
+built-in). See `script_bindings_plan.md` §7.
+
+**Bound, not absent.** Rhai runs `no_module` + `no_time` — a script gets the
+registered binding API, not host I/O — and `search_paths_only` keeps the lookup off
+the TeX tree. That is a *sandboxed execution* claim, not an *inert code* one.
+Deployments on untrusted input should drop `--features runtime-bindings`.
 
 ---
 

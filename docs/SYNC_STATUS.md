@@ -19,6 +19,23 @@
   merging `origin/main`'s Windows release hardening; the completed 2026-07
   session logs are archived — see the pointer below).
 
+- **2026-07-17 — crates.io: all code blockers cleared; tagged `0.7.4-rc4`.**
+  `#[derive(LoadModel)]` reads `latexml_core`'s **embedded** RelaxNG table instead of
+  resolving `LaTeXML.model` cwd-relative, so `resources/RelaxNG` could move into
+  `latexml_core/` (108 files) where `cargo package` sees it. Also B6 (`readme`
+  outside the crate dir → symlink) and the dead `script-bindings` alias, dropped
+  pre-publish. Detail: [`release/CRATES_IO_PUBLISH.md`](release/CRATES_IO_PUBLISH.md)
+  B3b/B6.
+  **The class worth remembering: a resource move silently breaks path-referencing
+  gates.** `audit_vendored_natives.py` scanned only the root `resources/`, so B3a had
+  *already* dropped XSLT/CSS/js out of the license audit unnoticed, and B3b would have
+  printed `ok resources/RelaxNG/svg/ (0 file(s))` and exited 0 — its own header's
+  scenario. Fixed, plus a prefix-must-exist guard (verified to fire). Same for
+  `THIRD-PARTY-NOTICES` §2.2/§2.3, `LICENSE_INVENTORY` §B, `compileschema.sh`, the XML
+  catalog, and ar5iv-editor's deploy script.
+  **Tags are bare-numeric, no `v`** (`release.yml` matches `[0-9]+.[0-9]+.[0-9]+-*`;
+  `v0.7.4-rc4` runs nothing), and `make_release.sh` refuses a tag ≠ Cargo.toml version.
+
 - **2026-07-09 — `\AtBeginDocument` #2754/#2846 re-done via context-aware `\par`
   (Direction B retired; ported to Perl too).** The earlier `inBeginDocumentHook`
   guard-decouple is reverted: `\begin{document}` restores the pre-#2846
@@ -351,6 +368,76 @@ residuals stay here so the live worklist keeps them visible:
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
 
 ## Open tasks (actionable)
+
+### `--preload=<cls>` alone trips the hook stack; class-name divergence (2026-07-17) — OPEN
+
+**Symptom.** `--preload=<any>.cls` prints `LaTeX hooks Error: Extra \PopDefaultHookLabel`
+(article/book/report; `.sty` clean; `\documentclass` clean; `LATEXML_NODUMP=1` clean).
+Perl is silent for the same preload.
+
+**Mechanism (traced, 2026-07-17).** Push/pop are perfectly balanced and nested — the trace
+is `PUSH article → (LaTeX.pool loads) → PUSH textcomp → POP textcomp → POP article → error`.
+The bug is that **`\@pushfilename` changes MEANING mid-load**: `article` is pushed *before*
+`LaTeX.pool` (and the kernel dump behind it) loads, so it uses a pre-pool `\@pushfilename`
+that never touches `\g__hook_name_stack_seq`; the pool then installs the real expl3
+`\@popfilename`, so `article`'s pop hits a seq holding only the *inner* packages' pushes,
+finds it empty, and errors. `\documentclass` escapes because the pool is already loaded, so
+both sites use the same meaning.
+
+**A definedness check cannot see this** — the CS is defined at both sites; only its meaning
+changes. Perl's `$pushpop` (Package.pm L2595, computed once and reused at L2637) is a
+definedness check too, so Perl has the same hole; it is silent only because its dump omits
+`\g__hook_name_stack_seq`, and `\seq_gpop:NNTF` on an *undefined* seq does not complain.
+Ours dumps it as `\c_empty_seq`, so the real expl3 code correctly notices.
+
+**Mitigated, not fixed (2026-07-17):** `util::preset::new_test_engine` now preloads
+`LaTeX.pool` first (the order ar5iv's list already used), so `latexmlmath_oxide` stops
+provoking it. `--preload=article.cls` on its own STILL errors.
+
+**Dead ends — measured, do not retry:**
+* Filtering the L3-hook stubs + filename stack from the dump (write+read): symptom gone,
+  preloads clean — but `cluster_mhchem_cf_author_macro` 0 → **1003 errors** (suite 1581/0 →
+  1572/9). The dump REPLACES base (DUMP_DESIGN rule 1), so filtering leaves a HOLE, not a
+  fallback to `latex_base.rs`.
+* Filtering ONLY `\g__hook_name_stack_seq` to match Perl's dump exactly: symptom gone,
+  mhchem still fails — that record is load-bearing for our expl3 emulation.
+* Threading Perl's `$pushpop` from push to pop instead of re-deciding (more Perl-faithful,
+  worth doing anyway): does NOT fix it — the flag is `true` at both sites; the *meaning*
+  moved underneath.
+* Filtering `\PopDefaultHookLabel` alone: inert. The erroring caller is the internal
+  `\__hook_curr_name_pop:`.
+
+**Candidate fixes.** (a) Ensure a class/package preload cannot be the thing that drags in
+the pool — auto-prepend `LaTeX.pool` when any `.sty`/`.cls` is preloaded. Rejected for the
+release: Perl prepends only `TeX.pool` (LaTeXML.pm L710) and never auto-loads `LaTeX.pool`,
+so this is a Rust-only divergence, and it would drag the LaTeX kernel into a `.sty` preload
+on a plain-TeX document (the LaTeX-2.09 class `graphicx_sty.rs` already guards against). If
+adopted, make it conditional on the pool being unloaded and LOG it. (b) Pair the pop to the
+push's actual *meaning* rather than to definedness. (c) Make the pool load before any
+handleoptions push. (b)/(c) address the cause.
+
+**Second divergence, same area.** `\documentclass{article}` → `<?latexml class="article"?>`
+but `--preload=article.cls` → `<?latexml class="article.cls"?>`; **Perl emits
+`class="article"` for both.** Otherwise the two paths' output is byte-identical, so the
+preload does load `article_cls.rs` correctly; `parse_preload_spec` splits correctly to
+`("article","cls")`, so the extension is re-attached further in.
+
+### `latexmlmath_oxide` empties a single-structure formula (2026-07-17) — OPEN
+
+`latexmlmath_oxide '\frac{1}{2}'` and `'\sqrt{2}'` emit `<mrow/>` — an empty math
+element. Perl `latexmlmath` renders both. Add anything around it (`\frac{a}{b}+c`) and
+it works, so the trigger is a formula whose ENTIRE body is one top-level structure.
+
+**Localized: NOT the engine or the math parser.** `latexml_oxide` converts the same
+`\(\frac{1}{2}\)` correctly (mfrac present), while `latexmlmath_oxide` does not — so it
+is that binary's preset path, `latexml::util::preset::lex_single_tex_formula` /
+`new_test_engine`, probably in the `xmath.get_child_nodes() → unlink → into_xmath`
+sequence in `bin/latexmlmath_oxide.rs`.
+
+Pre-existing (reproduced on `66808398c4`), found 2026-07-17 while aligning the binary's
+output with Perl. Not a regression from that work — which is verified byte-identical to
+Perl modulo whitespace on formulas that do convert.
+
 
 ### TL2026 `latex.ltx` dump init is NOT release-gate-clean — expl3 catcode gap (2026-07-12) — OPEN
 

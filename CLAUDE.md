@@ -17,8 +17,7 @@ Two co-equal targets drive current work:
    (`canvas-triage` skill), fix GENUINE-RUST-ONLY divergences faithfully.
    Worklist: [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
 2. **Beyond-Perl improvement runs over arXiv.** The production `cortex_worker`
-   fleet converts the full ~2.8M-doc arXiv corpus (2026-07 rerun in flight;
-   next: the July-5 run, built from a fresh binary with the week's fixes).
+   fleet converts the full ~2.8M-doc arXiv corpus (2026-07 rerun complete).
    Beyond-Perl levers: performance (17% math over-parse, tikz-cd digest —
    [`docs/performance/PERFORMANCE.md`](docs/performance/PERFORMANCE.md) /
    [`docs/performance/ARXIV_PERFORMANCE.md`](docs/performance/ARXIV_PERFORMANCE.md)), reliability
@@ -27,7 +26,7 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1577/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
+**1581/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
 (policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
 `latexml_oxide/build.rs` sets `core.hooksPath`). The 2026-07 full-arXiv rerun
 runs at ~44k docs/hr, avg 4.06 s/doc, fatal rate 0.78%.
@@ -143,7 +142,7 @@ serving both come first):
 - **[`docs/parity/KNOWN_PERL_ERRORS.md`](docs/parity/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (51 entries). Check here first when investigating a test failure; when a shared bug is simple, fix in Rust and record it here (candidate to upstream).
 - **[`docs/parity/DUMP_DESIGN.md`](docs/parity/DUMP_DESIGN.md)** — Design record for the kernel dump precompilation (strict-Perl LoadFormat mutual exclusivity, unconditional apply) — the live architecture behind the per-TL-year release dumps. NOTE the format-layering nuance: the latex format sits on the REAL-plain.tex layer (Perl's is hand-curated), so plain-only macros can leak into latex sessions (the `\+` class, retracted at the `latex.rs` seam; audit in SYNC_STATUS 2026-07-02).
 - **[`docs/parity/BINDING_DSL_ARCHITECTURE.md`](docs/parity/BINDING_DSL_ARCHITECTURE.md)** — Decision record for the binding-definition DSL: one shared `ConstructorBuilder` lowering spine, compile-time `macro_rules!` + runtime Rhai front-ends. Subsumes closed issues #93/#171.
-- **[`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md)** — The runtime (Rhai) `script-bindings` front-end reference. OFF by default (`script-bindings` feature).
+- **[`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md)** — The runtime (Rhai) script-bindings front-end reference. Gated by the **`runtime-bindings`** feature (ON by default, and in the distribution build; the old `script-bindings` alias was removed pre-publish).
 
 **Target 2 — beyond-Perl improvement runs over arXiv:**
 - **[`docs/performance/ARXIV_PERFORMANCE.md`](docs/performance/ARXIV_PERFORMANCE.md)** — Living empirical performance campaign over arXiv: slowest-100 testbed, corpus-wide profiles, phase rollups, optimization log; records settled dead-ends.
@@ -153,6 +152,7 @@ serving both come first):
 - **[`docs/performance/TELEMETRY.md`](docs/performance/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` runs.
 - **[`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)** — Design for the prioritized beyond-Perl showcase: live source ↔ preview over a shared locator substrate (ar5iv-editor + VSCode clients), accurate linting (#47) and Rust-grade author errors (#92). Locators opt-in (`--source-map`). (The landed-but-deprioritized `--server` LSP docs: [`docs/archive/LSP_SERVER.md`](docs/archive/LSP_SERVER.md), [`docs/archive/LSP_MULTIFILE_PLAN.md`](docs/archive/LSP_MULTIFILE_PLAN.md); smoke `tools/lsp_smoke.py`.)
 - **[`docs/release/RELEASING.md`](docs/release/RELEASING.md)** — Tag-driven release procedure; the self-contained-binary requirement.
+- **[`docs/release/CRATES_IO_PUBLISH.md`](docs/release/CRATES_IO_PUBLISH.md)** — The `cargo publish` + docs.rs + library-consumer story: bottom-up publish order for the 8 crates, the open blockers (workspace-`resources/` packaging **B3**, the `pericortex` git dep **B2**), docs.rs metadata, and the `latexml::api` library entrypoint. Distinct from `RELEASING.md` (the GitHub-Release binary flow).
 - **[`docs/release/SAFETY.md`](docs/release/SAFETY.md)** — Threat model and `unsafe` inventory (distribution posture in `RELEASE_CRITERIA.md` §6).
 - **[`docs/performance/SCHEMA_DOCUMENTATION.md`](docs/performance/SCHEMA_DOCUMENTATION.md)** — RelaxNG Compact schema → rustdoc-styled HTML doc site (supported the closed #199 HTML-dialect schema).
 

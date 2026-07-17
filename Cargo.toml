@@ -26,21 +26,22 @@ unimplemented = "warn"  # flag `unimplemented!()` stubs
 # for this tree and deliberately left out.
 unused_qualifications = "warn"
 
-# marpa-rs (parser engine) lives at https://github.com/dginev/marpa.
-# Crates track the default `master` branch — master carries the ASF
-# + hybrid-dispatch baseline (PR #3) plus the allocation-trim +
-# large-bocage Tree-iter fallback (PR #4), both landed 2026-05-18.
+# marpa-rs (parser engine) — the dginev/marpa fork, PUBLISHED to crates.io as
+# `marpa-asf` (the upstream `marpa` name is taken). `latexml_core` /
+# `latexml_math_parser` depend on it via the `package = "marpa-asf"` alias, so
+# `marpa::` in code is unchanged. The fork carries the ASF + hybrid-dispatch
+# baseline (PR #3) plus the allocation-trim + large-bocage Tree-iter fallback
+# (PR #4). Source: https://github.com/dginev/marpa.
 #
-# Local-development shortcut: clone the marpa repo to
-# `~/git/marpa` and *uncomment* the [patch] block below to redirect
-# the marpa dep at the local checkout. With the patch live, in-flight
-# marpa edits are picked up by `cargo build` in this workspace
-# without push/cargo-update round trips. Re-comment the patch (and
-# `cargo update -p marpa`) before pushing a workspace commit so the
-# repo state always references the published upstream.
+# Local-development shortcut: clone the marpa repo to `~/git/marpa` and
+# *uncomment* the [patch] block below to redirect the published `marpa-asf` at
+# the local checkout. With the patch live, in-flight marpa edits are picked up
+# by `cargo build` in this workspace without publish/cargo-update round trips.
+# Re-comment the patch (and `cargo update -p marpa-asf`) before pushing a
+# workspace commit so the repo state always references the published crate.
 #
-# [patch."https://github.com/dginev/marpa"]
-# marpa = { path = "/home/deyan/git/marpa/marpa" }
+# [patch.crates-io]
+# marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread

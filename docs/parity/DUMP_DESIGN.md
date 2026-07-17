@@ -8,6 +8,13 @@
 > translation of Perl's `make formats` output — mutual-exclusivity in
 > `LoadFormat`, unconditional apply in `dump_reader.rs`, same-file
 > definitions as Perl.
+>
+> **Note (2026-07-17): the dump is NOT filterable slot-by-slot.** Rule 1 makes the
+> dump the `base` layer, so removing a record leaves a HOLE — it does not fall back
+> to `latex_base.rs`. Measured twice while chasing a `--preload=<cls>` hook error:
+> both filters silenced the symptom and regressed `cluster_mhchem_cf_author_macro`
+> 0 → 1003 errors. See [`SYNC_STATUS.md`](../SYNC_STATUS.md) →
+> "`--preload=<cls>` hook-stack imbalance".
 
 ## Problem
 

@@ -5,6 +5,7 @@ edition = "2024"
 license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "Core TeX/LaTeX engine bindings (Base, TeX_*, eTeX, pdfTeX, plain, latex pools). Split out of latexml_package to reduce CI compile-time RAM peaks."
+repository = "https://github.com/dginev/latexml-oxide"
 
 [lints]
 workspace = true
@@ -35,5 +36,5 @@ rustc-hash = "2.0.0"
 # Runtime gunzip of the embedded dumps from `build.rs` (DEP-12).
 # Same flate2 instance the binary already pulls via zip/tar.
 flate2 = "1"
-latexml_codegen = { path = "../latexml_codegen" }
-latexml_core = { path = "../latexml_core" }
+latexml_codegen = { path = "../latexml_codegen", version = "0.4.0" }
+latexml_core = { path = "../latexml_core", version = "0.4.0" }

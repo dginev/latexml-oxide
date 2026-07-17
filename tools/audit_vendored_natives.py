@@ -150,12 +150,15 @@ AUDITED = {
         "links = \"rayon-core\": same version-lock trick. Its build.rs says so outright "
         "-- \"we're not *actually* linking\".",
     ),
-    "pericortex": ("0.2.7",
+    "pericortex": ("0.2.8",
         "Ours (dginev). The 'vendored archive' is 1508.01222.zip, an arXiv test paper "
         "-- data, not code.",
     ),
 
-    "libmarpa-sys": ("0.3.0",
+    # The dginev/marpa fork's sys crate, published to crates.io as
+    # `libmarpa-asf-sys` (the upstream `libmarpa-sys` name is taken). Registry-
+    # sourced now (was a git dep); consumed via the `package = "marpa-asf"` alias.
+    "libmarpa-asf-sys": ("0.3.0",
         "Vendors libmarpa 8.6.2 as a tarball. Mixed per-file licensing that the "
         "manifest's 'MIT OR Apache-2.0' does not express: marpa.c/marpa_ami.c/"
         "marpa_codes.c are MIT (c) Jeffrey Kegler; marpa_avl.c/marpa_tavl.c are "
@@ -268,7 +271,8 @@ def package_dirs():
     """(name, version) -> (package dir, links), plus the set of OUR workspace package ids.
 
     Resolving by manifest_path rather than guessing a registry directory name is what
-    makes git-sourced crates like libmarpa-sys (a checkout hash path, not
+    makes crates whose on-disk dir is not `<name>-<version>` — e.g. libmarpa-asf-sys under
+    the local `[patch]` redirect to `~/git/marpa` (a checkout hash path, not
     `<name>-<version>/`) visible at all -- a find(1)-by-dirname sweep silently misses
     them, which is its own way to lose a library.
 
@@ -349,14 +353,24 @@ def native_evidence(pkg_dir, links, build_script=None):
 
 # --- embedded resources (LICENSE_INVENTORY.md §B) ----------------------------
 #
-# The same failure mode, one level up: `latexml_core/build.rs` walks resources/RelaxNG/
-# with NO filtering and include_str!s every file, so anything dropped in there ships
-# verbatim inside the binary. The inventory called all 108 RelaxNG files "PD (NIST)"
-# until resources/RelaxNG/svg/ turned out to be W3C + Mozilla. Markers, not counts:
-# a count gate fails on every legitimate new schema file (noise), while what actually
-# matters is a NEW third-party copyright holder appearing among the embedded assets.
-# Anchored to REPO_ROOT, never the cwd -- see the note there.
-RESOURCE_ROOTS = [REPO_ROOT / "resources"]
+# The same failure mode, one level up: the embedding build.rs scripts walk their
+# resource tree with NO filtering and include_str! every file, so anything dropped in
+# there ships verbatim inside the binary. The inventory called all 108 RelaxNG files
+# "PD (NIST)" until resources/RelaxNG/svg/ turned out to be W3C + Mozilla. Markers, not
+# counts: a count gate fails on every legitimate new schema file (noise), while what
+# actually matters is a NEW third-party copyright holder appearing among the embedded
+# assets. Anchored to REPO_ROOT, never the cwd -- see the note there.
+#
+# EVERY embedded tree must be listed. `cargo package` cannot follow a `../` path, so the
+# trees live inside the crates that embed them (CRATES_IO_PUBLISH.md B3a/B3b), and a
+# root-only list silently stops covering whatever moves. It bit twice: B3a's XSLT/CSS/js
+# left the audit unnoticed, and B3b would have printed "ok resources/RelaxNG/svg/ (0
+# file(s))" and exited 0. The prefix-exists guard below turns that silence into a failure.
+RESOURCE_ROOTS = [
+    REPO_ROOT / "resources",
+    REPO_ROOT / "latexml_core" / "resources",  # RelaxNG (B3b)
+    REPO_ROOT / "latexml_post" / "resources",  # XSLT, CSS, javascript (B3a)
+]
 # Broad on purpose. The previous six fixed phrases missed "Copyright (c) 2024 Foo Inc"
 # (a real notice with no license keyword) and, live in this repo,
 # resources/dumps/texlive.YYYY.version -- which says "GNU Lesser GPL", not the
@@ -383,7 +397,7 @@ THIRD_PARTY_MARKER_RE = re.compile(
 # Embedded subtrees whose third-party origin is recorded. Prefixes are used ONLY where
 # the whole subtree has one known upstream, never as a blanket for a mixed directory.
 AUDITED_RESOURCES = {
-    "resources/RelaxNG/svg/": (
+    "latexml_core/resources/RelaxNG/svg/": (
         "W3C SVG 1.1 RELAX NG schema (c) 2001,2002 W3C, modifications (c) 2007 "
         "Mozilla Foundation. Permissive, but the notice must accompany all copies. "
         "Attributed in THIRD-PARTY-NOTICES 2.2; LICENSE_INVENTORY.md B."
@@ -398,8 +412,35 @@ AUDITED_RESOURCES = {
 }
 
 
+# Prefixes that may legitimately be absent from a checkout. `resources/dumps/` is
+# gitignored and generated at release time, so git does not even create the directory in
+# a fresh clone -- demanding it exist would fail every normal build.
+RESOURCE_PREFIX_MAY_BE_ABSENT = {"resources/dumps/"}
+
+
 def audit_resources(verbose):
     """Flag embedded resources carrying an unaudited third-party copyright."""
+    # Every audited prefix must still name a real directory: otherwise moving a tree is
+    # invisible -- nothing scanned, nothing flagged, "ok <prefix> (0 file(s))", exit 0.
+    missing = [
+        prefix
+        for prefix in AUDITED_RESOURCES
+        if prefix not in RESOURCE_PREFIX_MAY_BE_ABSENT
+        and not (REPO_ROOT / prefix).is_dir()
+    ]
+    if missing:
+        print("ERROR: AUDITED_RESOURCES names prefix(es) that do not exist:")
+        print()
+        for prefix in sorted(missing):
+            print(f"  {prefix}")
+        print()
+        print("An audited tree was moved, renamed, or deleted. Until the prefix is")
+        print("corrected this gate scans NOTHING there and still exits 0. Point it at")
+        print("the tree's new home (and add that home to RESOURCE_ROOTS), or drop the")
+        print("entry if the assets no longer ship.")
+        print()
+        return 1
+
     hits = []
     for root in RESOURCE_ROOTS:
         if not root.is_dir():
@@ -432,7 +473,7 @@ def audit_resources(verbose):
         if len(unaudited) > 20:
             print(f"  ... and {len(unaudited) - 20} more")
         print()
-        print("latexml_core/build.rs embeds resources/ verbatim, so these SHIP inside")
+        print("The build.rs scripts embed these trees verbatim, so they SHIP inside")
         print("the binary. Identify the holder + terms, attribute in")
         print("THIRD-PARTY-NOTICES section 2, add a row to LICENSE_INVENTORY.md B, and")
         print("record the path in AUDITED_RESOURCES in this file.")
@@ -507,7 +548,7 @@ def main():
 
     if stale:
         # Deliberately NOT phrased as "prune these". An earlier version of this script
-        # skipped crates by path prefix, which made libmarpa-sys vanish from the tree
+        # skipped crates by path prefix, which made libmarpa-asf-sys vanish from the tree
         # and surface here -- so the note was cheerfully inviting someone to delete the
         # attribution of a library that was still very much being linked in. Removing
         # an entry is only safe once you have confirmed the crate is genuinely gone.

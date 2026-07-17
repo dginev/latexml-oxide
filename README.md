@@ -3,7 +3,7 @@
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml)
 [![release](https://img.shields.io/github/v/release/dginev/latexml-oxide?color=orange)](https://github.com/dginev/latexml-oxide/releases)
 [![license: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-blue.svg)](LICENSE)
-[![ported tests](https://img.shields.io/badge/ported%20tests-1577%2F0%2F0-32a852?style=flat)](https://github.com/dginev/latexml-oxide/issues/30)
+![ported tests](https://img.shields.io/badge/ported%20tests-1581-32a852?style=flat)
 [![arXiv](https://img.shields.io/badge/arXiv-2605.16562-b31b1b.svg)](https://arxiv.org/abs/2605.16562)
 
 latexml-oxide turns LaTeX sources into accessible web documents.
@@ -21,6 +21,26 @@ The project is in active public **beta** as of July 2026, approaching mainline L
   * Use idiomatic Rust when possible, especially when refactoring Perl idioms.
   * Carefully address the newly required resource constraints.
   * Offer a platform for iteratively increasing coverage to 90% of all of arXiv.
+
+## Usage
+
+**Try it first — no install: [latexml.rs/editor](https://latexml.rs/editor)** — type LaTeX,
+see the converted document live.
+
+Two binaries: `latexml_oxide` for documents, `latexmlmath_oxide` for a single formula.
+
+```bash
+# A document → HTML5, with MathML for the math (format inferred from the extension)
+$ latexml_oxide paper.tex --destination=paper.html
+
+# One formula → Presentation MathML (the default; --cmml for Content MathML)
+$ latexmlmath_oxide 'a^2+b^2=c^2'
+```
+
+`--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` — inferred from the
+`--destination` extension when omitted. `--help` lists every option.
+Working from a checkout instead of an installed binary? Prefix with
+`cargo run --bin latexml_oxide --`.
 
 ## Install (prebuilt binaries)
 
@@ -151,6 +171,52 @@ The `.deb` declares all of these, so `apt install ./latexml-oxide_*.deb` pulls t
 | `dvisvgm` | `dvisvgm` | TeX Live | vector-SVG LaTeX-image output |
 | `kpsewhich`, `latex`, `pdflatex`, `tftopl` | `texlive-latex-base` (+`-extra`, `-science`) | `texlive` / MacTeX | TeX package/class/font resolution |
 
+### From crates.io (`cargo install`)
+
+```
+$ cargo +nightly install latexml
+```
+
+This builds the `latexml_oxide` CLI from source, so it needs a recent Rust
+**nightly**, the system build dependencies listed under
+[Build from source](#build-from-source) below, and a TeX distribution at runtime
+like every other install route.
+
+**It starts slower than the prebuilt binaries — until you generate the dumps
+once.** The releases embed precompiled TeX kernel dumps for a 5-year TeX Live
+window; those are generated at release time and are far too large to ship in a
+crate, so a fresh `cargo install` reconstructs the kernel state at every startup.
+Conversions themselves run at the same speed — only startup pays.
+
+To get the fast startup, generate the dumps for *your* TeX Live once. `--init`
+writes to `./resources/dumps/`, and the binary looks in
+`<its own dir>/../resources/dumps`, so run it from the parent of `bin/`:
+
+```
+$ cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide --init=latex.ltx
+```
+
+That writes `~/.cargo/resources/dumps/{plain,latex}.YYYY.dump.txt`, which the
+binary at `~/.cargo/bin/latexml_oxide` then finds on every run. Prefer somewhere
+else? Point `LATEXML_DUMP_DIR` at it instead. Re-run after a TeX Live upgrade —
+dumps are per-TL-year (this is the same "build the formats once" step TeX itself
+does with `fmtutil`).
+
+**As a library:**
+
+```toml
+[dependencies]
+latexml = "0.7"
+```
+
+```rust
+let xml  = latexml::api::convert_to_xml(tex)?;   // TeX → LaTeXML XML
+let html = latexml::api::convert_to_html(tex)?;  // TeX → HTML5 + Presentation MathML
+```
+
+For finer control (preloads, search paths, `--whatsin`, split, encoding, …), drive
+`latexml::converter::Converter` and `latexml::post` directly.
+
 ### Build from source
 
 Requires a recent Rust `nightly` to compile.
@@ -195,26 +261,6 @@ distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile
 (`cargo build` / `cargo test`, no flag) for everyday work; see
 [CLAUDE.md](CLAUDE.md) for the full profile table.
 
-### Sample use
-
-1. Make sure the tests pass first (uses the `test` profile automatically — no flag):
-    ```bash
-    $ cargo test --tests
-    ```
-
-2. Convert an example formula (release-grade binary for performance work):
-    ```bash
-    $ cargo run --release --bin latexmlmath_oxide '1+1=2'
-    ```
-
-3. Convert an example document:
-    ```bash
-    $ cargo run --release --bin latexml_oxide latexml_oxide/tests/structure/article.tex
-    ```
-
-CI runs `cargo test --profile ci --tests` automatically; you should never need to invoke that profile by hand.
-For local performance benchmarking, or when comparing against Perl LaTeXML, use `--release`.
-
 ### Development Tips
 
 To enable linting quality control via rustfmt and clippy, you can activate the included hooks via:
@@ -238,6 +284,47 @@ So when adding a new test `[name].tex` and `[name].xml` pair of files, you may n
 manually execute `cargo clean` to rediscover the entry. On a related note, running
 `cargo clean` every few days of active development frees up a lot of disk space
 taken by stale builds.
+
+### Build features
+
+Cargo features, and what the shipped binary turns on. The releases are built with
+`--no-default-features --features runtime-bindings` — that drops `test-utils` but
+deliberately **keeps** the Rhai runtime bindings below.
+
+| Feature | Crate | In releases? | What it does |
+|---|---|---|---|
+| `runtime-bindings` | `latexml` → `latexml_contrib` | **yes** (also a default) | Embeds the [Rhai](https://rhai.rs) interpreter so you can add or override TeX package/class bindings **at runtime** — no Rust toolchain, no recompile. See below. |
+| `kpathsea` | `latexml_core` | **yes** (a default) | Resolves `.sty`/`.cls`/`.tfm` from your TeX tree via libkpathsea in-process, falling back to the `kpsewhich` subprocess when the library is absent (e.g. MacTeX). |
+| `test-utils` | `latexml` | no (dropped) | Test-suite discovery helpers; drops `phf` + `glob` and 4 transitive crates from the distribution build. |
+| `token-locators` | `latexml` (+4 crates) | no | Widens `Token` from 8 to 12 bytes so each token carries its exact source offset through expansion into digestion — the precision build behind `--source-map`. Off everywhere else so normal conversions don't pay. |
+| `cortex` | `latexml` | no (worker image only) | The `cortex_worker` binary for the arXiv-scale fleet. |
+| `jemalloc`, `dhat-heap` | `latexml` | no | Allocator swap / heap profiling, for performance work. |
+
+### Runtime bindings (Rhai) — add TeX bindings without recompiling
+
+`runtime-bindings` is on in every released binary, so this works out of the box.
+Drop a file named `<pkg>.sty.rhai` (or `<class>.cls.rhai`) **next to your
+document**, and `\usepackage{<pkg>}` finds and loads it:
+
+```rust
+// mypkg.sty.rhai  —  note: backslashes are doubled in Rhai strings
+DefMacro("\\greet{}", |name| "Hello, " + name + "!");
+DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>");
+```
+
+Discovery rides the ordinary search paths (the document's own directory, plus any
+`--path DIR`), and the `.rhai` tier is consulted **first** — so a
+`article.cls.rhai` deliberately *overrides* the built-in `article` binding, which
+is how you patch a class without touching the binary.
+
+- **Worked example:** [`docs/examples/sample.sty.rhai`](docs/examples/sample.sty.rhai) — a tour of the whole surface (macros, constructors in template and imperative form, environments, options, counters, keyvals, math, rewrites). It is load-tested in CI, so it never rots.
+- **API reference:** [`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md) → *"Implemented script API (v0 reference)"*.
+
+Because a `.rhai` beside a document is executed by a plain conversion, treat it as
+you would any code shipped with an untrusted source tree — see
+[`docs/release/SAFETY.md`](docs/release/SAFETY.md) §H. Builds that want the
+capability gone entirely can use `--no-default-features` without
+`--features runtime-bindings`.
 
 ### License
 

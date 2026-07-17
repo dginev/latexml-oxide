@@ -27,7 +27,17 @@ pub struct PostOptions<'a> {
   pub keep_xmath:                bool,
   pub stylesheet:                Option<&'a str>,
   pub destination:               Option<&'a str>,
+  /// Base directory of the original LaTeX source (`--sourcedirectory`; Perl
+  /// Config.pm L147, passed to Post as `sourceDirectory` in LaTeXML.pm L429).
+  /// Used to locate graphics/resources the post-phase copies. When `None`,
+  /// the caller defaults it to the source file's own directory.
   pub source_directory:          Option<&'a str>,
+  /// Root directory of the generated site (`--sitedirectory`; Perl Config.pm
+  /// L146, passed to Post as `siteDirectory` in LaTeXML.pm L430). Establishes
+  /// the base against which cross-document/resource URLs are made relative.
+  /// When `None`, Post defaults it to the destination's directory (Perl
+  /// Config.pm L466-469; `document.rs` mirrors that fallback).
+  pub site_directory:            Option<&'a str>,
   /// Extra resource search paths (the `--path` flag): directories searched
   /// for `--css`/`--javascript` files (and other post resources) to copy into
   /// the destination, in addition to the document's own paths, the current
@@ -70,6 +80,23 @@ pub struct PostOptions<'a> {
   /// via `get_math`. Applied to each `PostDocument` in the final
   /// serialization loop.
   pub whatsout:                  latexml_post::extract::Whatsout,
+}
+
+/// The built-in XSLT stylesheet for an output format (logical embedded-resource
+/// name; Perl `Config.pm` L543-551). Returns `None` for a format with no
+/// default (e.g. `xml`), so a caller keeps `--stylesheet` / no post.
+///
+/// SINGLE SOURCE OF TRUTH shared by the CLI (`bin/latexml_oxide.rs` picks
+/// `effective_stylesheet` when `--stylesheet` is unset) and the library
+/// (`crate::api::convert_to_html`), so the two can never disagree on which
+/// sheet an `html5`/`xhtml`/`epub` job gets.
+pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
+  match format {
+    Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl"),
+    Some("html") | Some("xhtml") => Some("resources/XSLT/LaTeXML-all-xhtml.xsl"),
+    Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl"),
+    _ => None,
+  }
 }
 
 /// Emit a post-processing error: capture it into the active log buffer (so it
@@ -164,6 +191,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     stylesheet,
     destination,
     source_directory,
+    site_directory,
     search_paths,
     nodefaultresources,
     css_files,
@@ -192,6 +220,12 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     let mut sp = doc_opts.searchpaths.take().unwrap_or_default();
     sp.push(src_dir.to_string());
     doc_opts.searchpaths = Some(sp);
+  }
+  // --sitedirectory (Perl LaTeXML.pm L430 `siteDirectory`): the site root for
+  // relativizing cross-document/resource URLs. When unset, `PostDocument::new`
+  // falls back to the destination's directory (document.rs, Perl Config.pm L466).
+  if let Some(site_dir) = site_directory {
+    doc_opts.site_directory = Some(site_dir.to_string());
   }
   let audit = *POST_AUDIT;
   let audit_start = |name: &str| -> Option<(String, std::time::Instant)> {

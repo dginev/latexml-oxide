@@ -593,6 +593,27 @@ impl Processor for XSLT {
       self.copy_param_resources(&doc, icon, None);
     }
 
+    // Serialize the entire libxslt-touching critical section process-wide.
+    // libxslt/libxml2 keep NON-thread-safe process-global state — the input-
+    // callback + EXSLT registries, the generic error context, and the
+    // namespace-internalisation / dictionary caches that `xsltApplyStylesheet
+    // User` and stylesheet parsing mutate (the hidden mutation this file's
+    // per-thread-cache note already anticipates). Two conversion threads
+    // transforming concurrently DEADLOCK on that state: witnessed as the
+    // `52_source_map` XSLT tests hanging forever on a futex under
+    // `cargo test --tests` (all threads `futex_do_wait`, 0% CPU). The thread-
+    // local stylesheet cache below removes cross-thread *cache* sharing but not
+    // this shared C-library state, so a process-global lock is required for
+    // correctness. Cost: NONE in production — the CLI and the cortex fleet run
+    // one conversion per process (single thread), so this is never contended;
+    // only the multi-threaded test harness (or a hypothetical in-process pool)
+    // ever serializes here. Poison-tolerant: a transform that panicked while
+    // holding the lock didn't corrupt anything we read, so recover the guard.
+    static XSLT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _xslt_guard = XSLT_LOCK
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+
     // Register EXSLT extension functions (str:tokenize, math:*, etc.)
     // used by LaTeXML stylesheets. Safe-wrapped upstream in
     // rust-libxslt — `register_exslt()` is Once-guarded.
@@ -650,6 +671,14 @@ impl Processor for XSLT {
         .transform(transform_doc, params)
         .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))
     })?;
+    // Transform done — the libxslt-global critical section is over. Release the
+    // lock BEFORE wrapping the result: `result_doc` is the transform's fresh,
+    // unshared output tree, so building the `PostDocument` around it touches no
+    // shared libxslt/libxml2 state. Narrowing the hold keeps a hypothetical
+    // in-process pool serialized only over the actual transform, not the cheap
+    // wrapping. (No effect on the one-conversion-per-process production path,
+    // where the lock is never contended anyway.)
+    drop(_xslt_guard);
 
     // XSLT returns a libxml `Document` directly — wrap it into a
     // PostDocument without the serialize → reparse roundtrip the
@@ -762,83 +791,83 @@ mod embedded_xslt {
   pub const FILES: &[(&str, &str)] = &[
     (
       "LaTeXML-html5.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-html5.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-html5.xsl"),
     ),
     (
       "LaTeXML-all-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-all-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-all-xhtml.xsl"),
     ),
     (
       "LaTeXML-bib-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-bib-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-bib-xhtml.xsl"),
     ),
     (
       "LaTeXML-block-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-block-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-block-xhtml.xsl"),
     ),
     (
       "LaTeXML-common.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-common.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-common.xsl"),
     ),
     (
       "LaTeXML-epub3.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-epub3.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-epub3.xsl"),
     ),
     (
       "LaTeXML-html4.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-html4.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-html4.xsl"),
     ),
     (
       "LaTeXML-inline-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-inline-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-inline-xhtml.xsl"),
     ),
     (
       "LaTeXML-jats.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-jats.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-jats.xsl"),
     ),
     (
       "LaTeXML-math-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-math-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-math-xhtml.xsl"),
     ),
     (
       "LaTeXML-meta-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-meta-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-meta-xhtml.xsl"),
     ),
     (
       "LaTeXML-misc-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-misc-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-misc-xhtml.xsl"),
     ),
     (
       "LaTeXML-para-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-para-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-para-xhtml.xsl"),
     ),
     (
       "LaTeXML-picture-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-picture-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-picture-xhtml.xsl"),
     ),
     (
       "LaTeXML-structure-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-structure-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-structure-xhtml.xsl"),
     ),
     (
       "LaTeXML-tabular-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-tabular-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-tabular-xhtml.xsl"),
     ),
     (
       "LaTeXML-tei.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-tei.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-tei.xsl"),
     ),
     (
       "LaTeXML-webpage-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-webpage-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-webpage-xhtml.xsl"),
     ),
     (
       "LaTeXML-xhtml5.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-xhtml5.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-xhtml5.xsl"),
     ),
     (
       "LaTeXML-xhtml.xsl",
-      include_str!("../../resources/XSLT/LaTeXML-xhtml.xsl"),
+      include_str!("../resources/XSLT/LaTeXML-xhtml.xsl"),
     ),
   ];
 
@@ -895,70 +924,64 @@ mod embedded_resources {
   pub const CSS_FILES: &[(&str, &str)] = &[
     (
       "LaTeXML-blue.css",
-      include_str!("../../resources/CSS/LaTeXML-blue.css"),
+      include_str!("../resources/CSS/LaTeXML-blue.css"),
     ),
     (
       "LaTeXML-marginpar.css",
-      include_str!("../../resources/CSS/LaTeXML-marginpar.css"),
+      include_str!("../resources/CSS/LaTeXML-marginpar.css"),
     ),
     (
       "LaTeXML-navbar-left.css",
-      include_str!("../../resources/CSS/LaTeXML-navbar-left.css"),
+      include_str!("../resources/CSS/LaTeXML-navbar-left.css"),
     ),
     (
       "LaTeXML-navbar-right.css",
-      include_str!("../../resources/CSS/LaTeXML-navbar-right.css"),
+      include_str!("../resources/CSS/LaTeXML-navbar-right.css"),
     ),
-    (
-      "LaTeXML.css",
-      include_str!("../../resources/CSS/LaTeXML.css"),
-    ),
+    ("LaTeXML.css", include_str!("../resources/CSS/LaTeXML.css")),
     (
       "ltx-amsart.css",
-      include_str!("../../resources/CSS/ltx-amsart.css"),
+      include_str!("../resources/CSS/ltx-amsart.css"),
     ),
-    (
-      "ltx-apj.css",
-      include_str!("../../resources/CSS/ltx-apj.css"),
-    ),
+    ("ltx-apj.css", include_str!("../resources/CSS/ltx-apj.css")),
     (
       "ltx-article.css",
-      include_str!("../../resources/CSS/ltx-article.css"),
+      include_str!("../resources/CSS/ltx-article.css"),
     ),
     (
       "ltx-book.css",
-      include_str!("../../resources/CSS/ltx-book.css"),
+      include_str!("../resources/CSS/ltx-book.css"),
     ),
     (
       "ltx-listings.css",
-      include_str!("../../resources/CSS/ltx-listings.css"),
+      include_str!("../resources/CSS/ltx-listings.css"),
     ),
     (
       "ltx-report.css",
-      include_str!("../../resources/CSS/ltx-report.css"),
+      include_str!("../resources/CSS/ltx-report.css"),
     ),
     (
       "ltx-svjour.css",
-      include_str!("../../resources/CSS/ltx-svjour.css"),
+      include_str!("../resources/CSS/ltx-svjour.css"),
     ),
     (
       "ltx-ulem.css",
-      include_str!("../../resources/CSS/ltx-ulem.css"),
+      include_str!("../resources/CSS/ltx-ulem.css"),
     ),
     (
       "relaxng-schema-rustdoc-theme.css",
-      include_str!("../../resources/CSS/relaxng-schema-rustdoc-theme.css"),
+      include_str!("../resources/CSS/relaxng-schema-rustdoc-theme.css"),
     ),
   ];
 
   pub const JS_FILES: &[(&str, &str)] = &[
     (
       "LaTeXML-maybeMathjax.js",
-      include_str!("../../resources/javascript/LaTeXML-maybeMathjax.js"),
+      include_str!("../resources/javascript/LaTeXML-maybeMathjax.js"),
     ),
     (
       "relaxng-schema-rustdoc-theme.js",
-      include_str!("../../resources/javascript/relaxng-schema-rustdoc-theme.js"),
+      include_str!("../resources/javascript/relaxng-schema-rustdoc-theme.js"),
     ),
   ];
 

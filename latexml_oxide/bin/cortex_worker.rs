@@ -363,6 +363,8 @@ impl LatexmlWorker {
       nomathparse:             None,
       // Corpus/parity sweeps never emit locators — keep the zero-cost path.
       source_map:              None,
+      // Corpus sweeps don't override input decoding — default (UTF-8) applies.
+      inputencoding:           None,
     };
 
     let mut converter = Converter::from_config(opts.clone());
@@ -403,6 +405,7 @@ impl LatexmlWorker {
       stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
       destination:               Some(&dest_html_str),
       source_directory:          Some(&source_dir),
+      site_directory:            None,
       search_paths:              &[],
       nodefaultresources:        self.profile.nodefaultresources,
       css_files:                 &[],
@@ -1628,6 +1631,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // See `latexml_core::util::pathname::prewarm_kpathsea`. Skipped in harness
   // mode — the supervisor never converts, so it would only waste a thread; each
   // spawned child prewarms its own.
+  //
+  // Latency pre-warm only: the correctness invariant (warm before first lookup)
+  // is enforced by the shared `Converter::initialize_session`, so this is a
+  // best-effort overlap, not the guarantee.
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() && !cli.harness
   {
     Some(std::thread::spawn(

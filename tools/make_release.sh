@@ -305,31 +305,28 @@ if [[ "${os_family}" == "linux" ]]; then
   cat <<EOF
 ## Installation
 
-These are **self-contained** binaries — libxml2, libxslt, and kpathsea are baked
-in, so the only runtime requirement is a **TeX distribution** (TeX Live, MacTeX,
-or MiKTeX) on your \`PATH\`. Graphics tools (ImageMagick, Ghostscript, MuPDF,
-dvipng, dvisvgm) are optional — used for figure conversion when present.
+latexml-oxide ships as a single self-contained executable. It also calls a few external tools when they are on your \`PATH\`:
+ - a TeX distribution (TeX Live, MacTeX, or MiKTeX) — for the packages, classes, and fonts your documents load.
+ - graphics tools (ImageMagick, Ghostscript, MuPDF, Poppler, dvipng, dvisvgm) — to convert figures.
 
-**Step-by-step, per-platform install instructions live in the [README
-Installation guide](https://github.com/dginev/latexml-oxide#install-prebuilt-binaries).**
-This page lists only the assets, so the commands stay in one place.
+Per-platform install instructions are in the [README Installation guide](https://github.com/dginev/latexml-oxide#install-prebuilt-binaries).
 
-Download the asset for your platform (each has a matching \`.sha256\` sidecar):
+Download the asset for your platform (each has a matching \`.sha256\` to verify file integrity):
 
-- **Linux (x86-64)** — \`latexml-oxide_${version}-1_amd64.deb\`, or the portable \`latexml-oxide-${version}-${target_triple}.tar.gz\`
+- Linux (x86-64) — \`latexml-oxide_${version}-1_amd64.deb\`, or the portable \`latexml-oxide-${version}-${target_triple}.tar.gz\`
 EOF
 
   if [[ -n "${RELEASE_LINUX_ARM64_TARBALL:-}" ]]; then
-    echo "- **Linux (aarch64 / arm64)** — \`latexml-oxide_${version}-1_arm64.deb\`, or the portable \`${RELEASE_LINUX_ARM64_TARBALL}\`"
+    echo "- Linux (aarch64 / arm64) — \`latexml-oxide_${version}-1_arm64.deb\`, or the portable \`${RELEASE_LINUX_ARM64_TARBALL}\`"
   fi
   if [[ -n "${RELEASE_MACOS_TARBALL:-}" ]]; then
-    echo "- **macOS (Apple Silicon)** — \`${RELEASE_MACOS_TARBALL}\`"
+    echo "- macOS (Apple Silicon) — \`${RELEASE_MACOS_TARBALL}\`"
   fi
   if [[ -n "${RELEASE_MACOS_INTEL_TARBALL:-}" ]]; then
-    echo "- **macOS (Intel)** — \`${RELEASE_MACOS_INTEL_TARBALL}\`"
+    echo "- macOS (Intel) — \`${RELEASE_MACOS_INTEL_TARBALL}\`"
   fi
   if [[ -n "${RELEASE_WINDOWS_ZIP:-}" ]]; then
-    echo "- **Windows (x86-64)** — \`${RELEASE_WINDOWS_ZIP}\` (unzip; a single self-contained \`latexml_oxide.exe\`, no installer)"
+    echo "- Windows (x86-64) — \`${RELEASE_WINDOWS_ZIP}\` (unzip; \`latexml_oxide.exe\` is self-contained, no installer)"
   fi
   echo
 

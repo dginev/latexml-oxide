@@ -199,7 +199,11 @@ Or, should caption be used for theorem and proof?</a:documentation>
     </optional>
   </define>
   <define name="figure_model">
-    <a:documentation>Content model for \elementref{figure}; allow nested figures, etc for "sub" floats.</a:documentation>
+    <a:documentation>Content model for \elementref{figure}; allow nested figures, etc for "sub" floats.
+(latexml-oxide) theorem|proof added: a boxed/framed theorem or proof inside a
+figure/table float is valid LaTeX (e.g. \begin{figure}…\begin{theorem}…). Both
+engines previously rejected it as schema-invalid; this is a monotonic (strictly
+more permissive) expansion that drains the figure_mixed_content ERROR_DEBT.</a:documentation>
     <zeroOrMore>
       <choice>
         <optional>
@@ -238,7 +242,8 @@ Or, should caption be used for theorem and proof?</a:documentation>
     </optional>
   </define>
   <define name="table_model">
-    <a:documentation>Content model for \elementref{table}.</a:documentation>
+    <a:documentation>Content model for \elementref{table}.
+(latexml-oxide) theorem|proof added — see figure_model note.</a:documentation>
     <zeroOrMore>
       <choice>
         <optional>
@@ -282,7 +287,8 @@ Or, should caption be used for theorem and proof?</a:documentation>
     </optional>
   </define>
   <define name="float_model">
-    <a:documentation>Content model for \elementref{float}.</a:documentation>
+    <a:documentation>Content model for \elementref{float}.
+(latexml-oxide) theorem|proof added — see figure_model note.</a:documentation>
     <zeroOrMore>
       <choice>
         <optional>

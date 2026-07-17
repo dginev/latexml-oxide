@@ -5,6 +5,7 @@ edition = "2024"
 license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "User-contributed bindings for personal use"
+repository = "https://github.com/dginev/latexml-oxide"
 
 [lints]
 workspace = true
@@ -28,18 +29,16 @@ token-locators = ["latexml_core/token-locators"]
 # at runtime (no toolchain, no recompile) at an interpreted-speed cost. The
 # ONLY place Rhai enters the workspace; core/engine/package untouched.
 runtime-bindings = ["dep:rhai", "dep:log"]
-# Back-compat alias for the original feature name.
-script-bindings = ["runtime-bindings"]
 
 [dependencies]
-latexml_core = {path = "../latexml_core"}
-latexml_codegen = {path = "../latexml_codegen"}
-latexml_engine = {path = "../latexml_engine"}
-latexml_package = {path = "../latexml_package"}
+latexml_core = {path = "../latexml_core", version = "0.4.0"}
+latexml_codegen = {path = "../latexml_codegen", version = "0.4.0"}
+latexml_engine = {path = "../latexml_engine", version = "0.5.0"}
+latexml_package = {path = "../latexml_package", version = "0.5.0"}
 rustc-hash = "2.0.0"
 libxml = "0.3.16"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }
-# Optional — only compiled under `script-bindings`. Pure Rust, no native deps.
+# Optional — only compiled under `runtime-bindings`. Pure Rust, no native deps.
 rhai = { version = "1", optional = true, features = ["no_module", "no_time"] }
 # Optional — only the runtime-bindings Rhai engine (`script_bindings/engine.rs`)
 # references `log`, via the `Warn!`/`Error!` macro expansions. Gated under

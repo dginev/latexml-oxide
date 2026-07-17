@@ -1,6 +1,16 @@
 <?xml version="1.0"?>
 <!DOCTYPE catalog PUBLIC "-//OASIS//DTD Entity Resolution XML Catalog V1.0//EN"
        "http://www.oasis-open.org/committees/entity/release/1.0/catalog.dtd">
+<!-- Paths here are relative to THIS FILE (resources/), and the two schema trees no
+     longer live beside it: the crates.io packaging work moved them inside the
+     crates that embed them, because `cargo package` cannot follow a `../` path
+     (docs/release/CRATES_IO_PUBLISH.md B3a/B3b). Hence the `../<crate>/resources/`
+     prefixes below. DTD/ is still here — it is unused by the Rust port (RelaxNG
+     only) and stayed put.
+
+     This catalog is a DEV-TOOL input (trang, via tools/compileschema.sh and
+     tools/generate-scholarly-schema-docs); no Rust code reads it. Conversions
+     resolve schemas from the compiled-in embed table instead. -->
 <catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
   <public publicId="-//NIST LaTeXML//LaTeXML article"
           uri="DTD/LaTeXML.dtd"/>
@@ -8,30 +18,30 @@
   <!-- ======================================================================
        Schema related entries -->
   <!-- A plain request for the schema "LaTeXML.rng" gets found -->
-  <uri name="LaTeXML.rnc"         uri="RelaxNG/LaTeXML.rnc"/>
-  <uri name="LaTeXML.rng"         uri="RelaxNG/LaTeXML.rng"/>
+  <uri name="LaTeXML.rnc"         uri="../latexml_core/resources/RelaxNG/LaTeXML.rnc"/>
+  <uri name="LaTeXML.rng"         uri="../latexml_core/resources/RelaxNG/LaTeXML.rng"/>
 
-  <uri name="svg11.rnc"           uri="RelaxNG/svg/svg11.rnc"/>
-  <uri name="svg11.rng"           uri="RelaxNG/svg/svg11.rng"/>
+  <uri name="svg11.rnc"           uri="../latexml_core/resources/RelaxNG/svg/svg11.rnc"/>
+  <uri name="svg11.rng"           uri="../latexml_core/resources/RelaxNG/svg/svg11.rng"/>
 
   <!-- This allows schema (both the built-in one and user extensions) to include
        LaTeXML's schema modules by using the urn form, such as
        urn:x-LaTeXML:schemas:LaTeXML-common.rng -->
-  <rewriteURI uriStartString="urn:x-LaTeXML:RelaxNG:svg:" rewritePrefix="RelaxNG/svg/"/>
-  <rewriteURI uriStartString="urn:x-LaTeXML:RelaxNG:"     rewritePrefix="RelaxNG/"/>
+  <rewriteURI uriStartString="urn:x-LaTeXML:RelaxNG:svg:" rewritePrefix="../latexml_core/resources/RelaxNG/svg/"/>
+  <rewriteURI uriStartString="urn:x-LaTeXML:RelaxNG:"     rewritePrefix="../latexml_core/resources/RelaxNG/"/>
 
   <!-- ======================================================================
        XSLT related entries -->
 
   <!-- A plain request for one of the top-level XSLT gets found -->
-  <uri name="LaTeXML-xhtml.xsl"         uri="XSLT/LaTeXML-xhtml.xsl"/>
-  <uri name="LaTeXML-html4.xsl"         uri="XSLT/LaTeXML-html4.xsl"/>
-  <uri name="LaTeXML-html5.xsl"         uri="XSLT/LaTeXML-html5.xsl"/>
-  <uri name="LaTeXML-all-xhtml.xsl"     uri="XSLT/LaTeXML-all-xhtml.xsl"/>
+  <uri name="LaTeXML-xhtml.xsl"         uri="../latexml_post/resources/XSLT/LaTeXML-xhtml.xsl"/>
+  <uri name="LaTeXML-html4.xsl"         uri="../latexml_post/resources/XSLT/LaTeXML-html4.xsl"/>
+  <uri name="LaTeXML-html5.xsl"         uri="../latexml_post/resources/XSLT/LaTeXML-html5.xsl"/>
+  <uri name="LaTeXML-all-xhtml.xsl"     uri="../latexml_post/resources/XSLT/LaTeXML-all-xhtml.xsl"/>
 
   <!-- This allows XSLT Stylesheets (both the built-in one and user extensions) to include
        LaTeXML's stylesheet modules by using the urn form, such as
        urn:x-LaTeXML:XSLT:LaTeXML-common.rng -->
-  <rewriteURI uriStartString="urn:x-LaTeXML:XSLT:" rewritePrefix="XSLT/"/>
+  <rewriteURI uriStartString="urn:x-LaTeXML:XSLT:" rewritePrefix="../latexml_post/resources/XSLT/"/>
 
 </catalog>

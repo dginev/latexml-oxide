@@ -131,13 +131,16 @@ Components:
   crate; it sits atop core/engine/package and can reach the whole API). The new
   module is `latexml_contrib/src/script_bindings.rs`, every line behind the
   feature. It is the only place Rhai enters the workspace.
-- **Feature: `script-bindings`** on `latexml_contrib` (`= ["dep:rhai"]`, off by
-  default); `rhai = { version = "1", optional = true }`. Propagated up via
-  `latexml_oxide/script-bindings = ["latexml_contrib/script-bindings"]`. Core,
-  engine, package untouched. `--no-default-features`/lean builds drop it.
-- **Packaging:** because the value is end-user extensibility, the official
-  GitHub-release binary should ship with `script-bindings` **on** (it's pure
-  Rust, modest size); minimal/embedded builds drop it. (Open: confirm default.)
+- **Feature: `runtime-bindings`** on `latexml_contrib` (`= ["dep:rhai", "dep:log"]`);
+  `rhai = { version = "1", optional = true }`. Propagated up via
+  `latexml/runtime-bindings = ["latexml_contrib/runtime-bindings"]`. Core, engine,
+  package untouched. *(Renamed from `script-bindings` — this plan's original name;
+  the dead alias was dropped 2026-07-17, pre-publish. The Rust module keeps the
+  `script_bindings` name.)*
+- **Packaging: RESOLVED — on by default**, for end-user extensibility.
+  `make_release.sh` builds `--no-default-features --features runtime-bindings`
+  (drops `test-utils`, keeps this); `latexml`'s `default` includes it too. The
+  cortex-worker image omits it — see `SAFETY.md` §H on untrusted input.
 - **Dispatch hook (dependency-clean):** package/core dispatch cannot call *up*
   into `latexml_contrib`. So the script loader installs itself at startup via a
   registered function-pointer hook (`Option<fn(&str, &str) -> Option<...>>`)

@@ -96,15 +96,18 @@ trap 'rm -f "$rust_section" "$copyleft_section"' EXIT
 # against a modified library. (Not libzmq — its static-linking exception relieves
 # the relink condition; it needs attribution in 3.1, not a source pointer here.)
 # That promise is only as good as knowing WHICH sources went in. kpathsea is
-# pinned in-repo (KPSE_REF), but the marpa git dep carries no `rev =`, so the
-# revision actually built is recorded only in Cargo.lock -- which is gitignored.
-# Rather than assert "version-pinned" and hope, resolve the revisions at release
-# time and write them down, so each artifact names its own inputs exactly.
+# pinned in-repo (KPSE_REF); libmarpa now ships via the published
+# `libmarpa-asf-sys` crate, whose resolved version lives in Cargo.lock (which is
+# gitignored). Rather than assert "version-pinned" and hope, resolve the inputs
+# at release time and write them down, so each artifact names its own inputs.
 provenance_section="$(mktemp)"
 trap 'rm -f "$rust_section" "$copyleft_section" "$provenance_section"' EXIT
 
 # cargo-about already resolved the graph above, so Cargo.lock exists by now.
-marpa_rev="$(sed -n 's|^source = "git+https://github.com/dginev/marpa#\(.*\)"$|\1|p' \
+# libmarpa is vendored by the published `libmarpa-asf-sys` crate (formerly a git
+# dep). A crates.io version is an immutable, reproducible input, so record the
+# resolved version rather than a git commit.
+marpa_ver="$(sed -n '/^name = "libmarpa-asf-sys"/{n;s|^version = "\(.*\)"$|\1|p;}' \
   Cargo.lock 2>/dev/null | head -1)"
 kpse_ref="$(sed -n 's|^KPSE_REF="${KPSE_REF:-\(.*\)}"$|\1|p' \
   tools/build_static_kpathsea.sh 2>/dev/null | head -1)"
@@ -128,9 +131,9 @@ self_rev="${LATEXML_SELF_REV:-$(git rev-parse HEAD 2>/dev/null || echo "unknown"
   echo "      commit: ${self_rev}"
   echo
   echo "  libmarpa 8.6.2 -- MIT (Kegler) + LGPL-3.0/LGPL-2.1 parts (sec 3.3)"
-  echo "      vendored verbatim as libmarpa-8.6.2.tar.gz in the libmarpa-sys crate"
-  echo "      https://github.com/dginev/marpa"
-  echo "      commit: ${marpa_rev:-unresolved}"
+  echo "      vendored verbatim as libmarpa-8.6.2.tar.gz in the libmarpa-asf-sys crate"
+  echo "      https://crates.io/crates/libmarpa-asf-sys  (fork: https://github.com/dginev/marpa)"
+  echo "      version: libmarpa-asf-sys ${marpa_ver:-unresolved}"
   echo
   echo "  libkpathsea -- LGPL-2.1-or-later (sec 3.2)"
   echo "      https://github.com/TeX-Live/texlive-source (texk/kpathsea)"
@@ -149,8 +152,8 @@ self_rev="${LATEXML_SELF_REV:-$(git rev-parse HEAD 2>/dev/null || echo "unknown"
   echo
 } > "$provenance_section"
 
-if [[ -z "$marpa_rev" || -z "$kpse_ref" ]]; then
-  echo "error: could not resolve source provenance (marpa_rev='${marpa_rev}'," >&2
+if [[ -z "$marpa_ver" || -z "$kpse_ref" ]]; then
+  echo "error: could not resolve source provenance (marpa_ver='${marpa_ver}'," >&2
   echo "  kpse_ref='${kpse_ref}'). Section 7 would ship an unresolved relink" >&2
   echo "  pointer, so the LGPL relink promise in section 3.5 could not be kept." >&2
   echo "  Check Cargo.lock exists and tools/build_static_kpathsea.sh still sets" >&2

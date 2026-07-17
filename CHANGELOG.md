@@ -1,7 +1,16 @@
 # Change Log
 
-## [0.7.4] (Windows target; third-party license notices)
+## [0.7.4] (Windows target; third-party license notices; crates.io)
 
+  - **Installable from crates.io** — `cargo install latexml` builds the CLI from
+    source, and `latexml` is usable as a library via the batteries-included
+    `latexml::api` (`convert_to_xml` / `convert_to_html`). The forked dependencies
+    are published alongside it (`marpa-asf`, `libmarpa-asf-sys`, `pericortex`).
+    **Caveat:** a from-source install has no precompiled kernel dumps (generated at
+    release time, too large for a crate), so it rebuilds kernel state at every
+    startup. One-time fix — the "build the formats once" step TeX does with
+    `fmtutil`: `cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide
+    --init=latex.ltx`. See the README.
   - **New target: Windows** (`x86_64-pc-windows-msvc`) — a single fully-static
     `latexml_oxide.exe` (no VC++ redistributable), shipped as a `.zip`.
   - **Third-party notices now complete and identical in every download.**
@@ -17,6 +26,16 @@
     and the Windows download and container images carried nothing at all.
     latexml-oxide's own source remains **CC0-1.0**; see `THIRD-PARTY-NOTICES`
     and [`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md).
+  - **Three `--help` options are now functional** (`--inputencoding`,
+    `--sourcedirectory`, `--sitedirectory`). All three were declared for Perl
+    CLI parity but silently ignored — parsed, then dropped. Now:
+    `--inputencoding` seeds the Mouth's byte decoder (Perl `PERL_INPUT_ENCODING`,
+    Core.pm L60-61); `--sourcedirectory` and `--sitedirectory` feed the
+    post-processor's resource resolution and site-relative resource URLs (Perl
+    `sourceDirectory`/`siteDirectory`, LaTeXML.pm L429-430). A new source-scan
+    test (`98_cli_options_consumed`) fails the build if any option shown in
+    `--help` is parsed but never consumed, closing the `Debug`-masks-`dead_code`
+    blind spot that let these three slip through.
 
 ## [0.7.3] (Intel-macOS asset + PDF-fidelity pass)
 

@@ -122,6 +122,9 @@ RUN cargo install cargo-about --locked --features cli
 # own commit for section 7's relink pointer; docker.yml passes the real sha here.
 ARG GITSHA=unknown
 ENV LATEXML_SELF_REV=${GITSHA}
+# Each image gets the notices for ITS OWN graph. cli takes gen_notices.sh's default
+# (= build-cli's set); worker must override, since `--features cortex` pulls
+# zmq/zeromq-src and no rhai. Change a stage's features → change its override here.
 RUN set -ex \
  && tools/gen_notices.sh /tmp/THIRD-PARTY-NOTICES.cli \
  && NOTICES_CARGO_FEATURES="--no-default-features --features cortex" \
@@ -174,13 +177,20 @@ RUN cargo build --profile maxperf-cortex --no-default-features --features cortex
 FROM texbase AS worker
 ARG HOSTTIME
 ENV DOCKER_BUILD_TIME=$HOSTTIME
-# The worker binary + its resources (XSLT/CSS/RelaxNG), plus latexml_oxide (only
-# to generate dumps). maxperf-cortex outputs live in target/maxperf-cortex/.
+# The worker binary, plus latexml_oxide (only to generate dumps).
+# maxperf-cortex outputs live in target/maxperf-cortex/.
 COPY --from=build-worker /src/target/maxperf-cortex/cortex_worker /usr/local/bin/
 COPY --from=build-worker /src/target/maxperf-cortex/latexml_oxide /usr/local/bin/
+# What's left at the workspace root: DTD/, Profiles/, LaTeXML.catalog — plus the
+# resources/dumps/ mountpoint the --init below writes into. The conversion
+# resources proper are NOT here and are not read from disk: XSLT/CSS/javascript
+# live in latexml_post/resources/ and RelaxNG in latexml_core/resources/, each
+# `include_str!`d into the binary (crates.io packaging, docs/release/
+# CRATES_IO_PUBLISH.md B3a/B3b). The binary is self-contained by design.
 COPY --from=build-worker /src/resources/ /usr/local/share/latexml-oxide/resources/
-# Redistributing the binary (and, via resources/, the W3C/Mozilla SVG schemas)
-# obliges us to carry their terms with them. Generated for THIS image's feature set.
+# Redistributing the binary (which embeds, among others, the W3C/Mozilla SVG
+# schemas) obliges us to carry their terms with it. Generated for THIS image's
+# feature set.
 COPY --from=build-worker /src/LICENSE /usr/local/share/doc/latexml-oxide/LICENSE
 COPY --from=notices /tmp/THIRD-PARTY-NOTICES.worker \
      /usr/local/share/doc/latexml-oxide/THIRD-PARTY-NOTICES
@@ -206,7 +216,17 @@ ENTRYPOINT ["cortex-worker-entrypoint.sh"]
 # General-purpose CLI (--target cli) — DEFAULT target (last stage)
 # ===========================================================================
 # build-cli: the distribution recipe (drop test-utils, keep runtime-bindings,
-# maxperf). make_formats runs FIRST — it builds a debug latexml_oxide and emits
+# maxperf) — the same feature set as the GitHub-release binaries.
+#
+# `runtime-bindings` is ON for END-USER CONVENIENCE: drop a `<pkg>.sty.rhai` beside
+# a document to add or override a binding, no toolchain, no rebuild.
+#
+# NOT a deployment recipe: the same mechanism executes a `.rhai` found beside an
+# *untrusted* source, so deployments converting trees they did not author should drop
+# `--features runtime-bindings` (docs/release/SAFETY.md §H). The `worker` stage above
+# — our arXiv fleet — accordingly builds `--features cortex` without it.
+#
+# make_formats runs FIRST — it builds a debug latexml_oxide and emits
 # the two --init dumps (plain.tex + latex.ltx) into resources/dumps/; the maxperf
 # build that follows EMBEDS them (latexml_engine/build.rs scans resources/dumps/).
 # Order matters: dumps must exist BEFORE the embedding build, so the shipped

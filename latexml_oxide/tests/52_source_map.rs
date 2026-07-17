@@ -53,6 +53,7 @@ fn html_from(xml: &str) -> String {
     stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
     destination:               None,
     source_directory:          Some("tests/structure"),
+    site_directory:            None,
     search_paths:              &[],
     nodefaultresources:        true,
     css_files:                 &[],

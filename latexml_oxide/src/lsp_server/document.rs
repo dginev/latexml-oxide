@@ -129,6 +129,7 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
     stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
     destination:               None,
     source_directory:          source_dir.as_deref(),
+    site_directory:            None,
     search_paths:              &[],
     // The server returns HTML as a string with no destination — it must never
     // write CSS/JS resource files to disk (would pollute the cwd). The client
@@ -191,6 +192,8 @@ pub(crate) fn make_config(uri: &str) -> Config {
     // we deliberately do not expose a disable knob here.
     nomathparse:             None,
     source_map:              Some(true),
+    // Server input is editor buffer text (already UTF-8); no override needed.
+    inputencoding:           None,
   }
 }
 

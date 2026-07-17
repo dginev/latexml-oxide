@@ -22,6 +22,7 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`SYNC_STATUS.md`](SYNC_STATUS.md) | **The brief actionable worklist for both targets** — current status, in-flight session, open tasks, deferred families. Completed logs lift to `archive/`. |
 | [`release/RELEASE_CRITERIA.md`](release/RELEASE_CRITERIA.md) | The "what must be true before a public 1.0" contract: gates, binary-size budget, portability, license audit, tail-latency/RSS signals. |
 | [`release/RELEASING.md`](release/RELEASING.md) | Tag-driven release procedure; the self-contained-binary requirement. |
+| [`release/CRATES_IO_PUBLISH.md`](release/CRATES_IO_PUBLISH.md) | `cargo publish` + docs.rs + library-use story: bottom-up publish order, open blockers (workspace-`resources/` packaging, `pericortex` git dep), docs.rs metadata, `latexml::api` entrypoint. |
 | [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim). |
 | [`release/ISSUE_AUDIT.md`](release/ISSUE_AUDIT.md) | Local mirror of open GitHub issues with status + interpretation. |
 | [`release/SAFETY.md`](release/SAFETY.md) | Threat model and `unsafe` inventory. |
@@ -46,7 +47,7 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 | [`parity/KNOWN_PERL_ERRORS.md`](parity/KNOWN_PERL_ERRORS.md) | Upstream Perl LaTeXML issues; check first when investigating a test failure. |
 | [`parity/DUMP_DESIGN.md`](parity/DUMP_DESIGN.md) | Kernel dump precompilation (strict LoadFormat mutual exclusivity, unconditional apply). |
 | [`parity/BINDING_DSL_ARCHITECTURE.md`](parity/BINDING_DSL_ARCHITECTURE.md) | Binding-definition DSL: shared `ConstructorBuilder` spine, compile-time + runtime front-ends. |
-| [`parity/script_bindings_plan.md`](parity/script_bindings_plan.md) | The runtime (Rhai) `script-bindings` front-end reference (off by default). |
+| [`parity/script_bindings_plan.md`](parity/script_bindings_plan.md) | The runtime (Rhai) script-bindings front-end reference (the `runtime-bindings` feature; on by default). |
 
 ### Open dated diagnostics (`parity/diagnostics/`)
 Point-in-time studies with pending halves.
