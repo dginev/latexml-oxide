@@ -8,7 +8,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::{
   document::{NodeData, PostDocument, get_xml_id},
@@ -24,24 +24,6 @@ struct ChildPages {
   ids:      Vec<String>,
   index_of: HashMap<String, usize>,
 }
-
-/// Sectional element types that appear in TOCs.
-const NORMAL_TOC_TYPES: &[&str] = &[
-  "ltx:document",
-  "ltx:abstract",
-  "ltx:part",
-  "ltx:chapter",
-  "ltx:section",
-  "ltx:subsection",
-  "ltx:subsubsection",
-  "ltx:paragraph",
-  "ltx:subparagraph",
-  "ltx:index",
-  "ltx:bibliography",
-  "ltx:glossary",
-  "ltx:acknowledgements",
-  "ltx:appendix",
-];
 
 /// Fallback fields when a requested ref show key is not found.
 fn ref_fallbacks(key: &str) -> &'static [&'static str] {
@@ -737,7 +719,25 @@ impl CrossRef {
         .get_attribute("show")
         .unwrap_or_else(|| self.toc_show.clone());
 
-      let list = self.gen_toc(&id, &show);
+      // Perl CrossRef.pm fill_in_tocs L213-233: the `select` attribute (built
+      // by `\tableofcontents` from `tocdepth`) restricts which element types
+      // reach the ToC; absent `select` ⇒ no type restriction. The `lists`
+      // attribute names which inlist buckets to draw from (default `toc`;
+      // `lof`/`lot` for the figure/table lists).
+      let select_attr = toc.get_attribute("select");
+      let types: Option<HashSet<&str>> = select_attr.as_deref().map(|s| {
+        s.split('|')
+          .map(str::trim)
+          .filter(|t| !t.is_empty())
+          .collect()
+      });
+      let lists_attr = toc.get_attribute("lists");
+      let lists: HashSet<&str> = match lists_attr.as_deref() {
+        Some(l) => l.split_whitespace().collect(),
+        None => HashSet::from_iter(["toc"]),
+      };
+
+      let list = self.gen_toc(&id, &show, types.as_ref(), &lists);
       if !list.is_empty() {
         let toclist = NodeData::Element {
           tag:        "ltx:toclist".to_string(),
@@ -750,7 +750,13 @@ impl CrossRef {
     }
   }
 
-  fn gen_toc(&self, id: &str, show: &str) -> Vec<NodeData> {
+  fn gen_toc(
+    &self,
+    id: &str,
+    show: &str,
+    types: Option<&HashSet<&str>>,
+    lists: &HashSet<&str>,
+  ) -> Vec<NodeData> {
     let entry = match self.db.lookup(&format!("ID:{}", id)) {
       Some(e) => e,
       None => return vec![],
@@ -759,20 +765,24 @@ impl CrossRef {
     let children = entry.get_children();
     let kids: Vec<NodeData> = children
       .iter()
-      .flat_map(|child_id| self.gen_toc(child_id, show))
+      .flat_map(|child_id| self.gen_toc(child_id, show, types, lists))
       .collect();
 
     let entry_type = entry.get_string("type").unwrap_or("");
-    let is_toc_type = NORMAL_TOC_TYPES.contains(&entry_type);
+    // Perl CrossRef.pm gentoc L255-256: include this entry iff its type passes
+    // the `select` filter (no `select` ⇒ unrestricted) AND its `inlist` shares
+    // a list with the TOC's `lists`. This is what makes `\setcounter{tocdepth}`
+    // (issue #291) take effect — the level filter rides on `select`.
+    let type_ok = types.map(|t| t.contains(entry_type)).unwrap_or(true);
     let in_toc = entry
       .get_value("inlist")
       .map(|v| match v {
-        Value::Hash(h) => h.contains_key("toc"),
+        Value::Hash(h) => lists.iter().any(|l| h.contains_key(*l)),
         _ => false,
       })
       .unwrap_or(false);
 
-    if is_toc_type && in_toc {
+    if type_ok && in_toc {
       let type_name = entry_type.strip_prefix("ltx:").unwrap_or(entry_type);
       let mut toc_children = vec![NodeData::Element {
         tag:        "ltx:ref".to_string(),
