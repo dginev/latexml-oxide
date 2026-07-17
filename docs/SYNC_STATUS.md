@@ -369,6 +369,23 @@ residuals stay here so the live worklist keeps them visible:
 
 ## Open tasks (actionable)
 
+### `latexmlmath_oxide` empties a single-structure formula (2026-07-17) — OPEN
+
+`latexmlmath_oxide '\frac{1}{2}'` and `'\sqrt{2}'` emit `<mrow/>` — an empty math
+element. Perl `latexmlmath` renders both. Add anything around it (`\frac{a}{b}+c`) and
+it works, so the trigger is a formula whose ENTIRE body is one top-level structure.
+
+**Localized: NOT the engine or the math parser.** `latexml_oxide` converts the same
+`\(\frac{1}{2}\)` correctly (mfrac present), while `latexmlmath_oxide` does not — so it
+is that binary's preset path, `latexml::util::preset::lex_single_tex_formula` /
+`new_test_engine`, probably in the `xmath.get_child_nodes() → unlink → into_xmath`
+sequence in `bin/latexmlmath_oxide.rs`.
+
+Pre-existing (reproduced on `66808398c4`), found 2026-07-17 while aligning the binary's
+output with Perl. Not a regression from that work — which is verified byte-identical to
+Perl modulo whitespace on formulas that do convert.
+
+
 ### TL2026 `latex.ltx` dump init is NOT release-gate-clean — expl3 catcode gap (2026-07-12) — OPEN
 
 Blocks adding **2026** to the release dump window (`release-dumps.yml`,
