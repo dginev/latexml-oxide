@@ -13,7 +13,11 @@ set -eu
 TOOLSDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 LATEXMLDIR="$TOOLSDIR/.."
 RESOURCEDIR="$LATEXMLDIR/resources"
-RELAXNGDIR="$RESOURCEDIR/RelaxNG"
+# The RelaxNG tree lives inside latexml_core, not beside the catalog: `cargo
+# package` cannot follow a `../` path, so each embedded tree had to move into the
+# crate that embeds it (docs/release/CRATES_IO_PUBLISH.md B3b). The catalog itself
+# stays at resources/ and points across with `../latexml_core/...`.
+RELAXNGDIR="$LATEXMLDIR/latexml_core/resources/RelaxNG"
 CATALOG="$RESOURCEDIR/LaTeXML.catalog"
 
 if ! command -v trang >/dev/null 2>&1; then

@@ -63,7 +63,10 @@ with `/<name>` or let it surface by description.
   `pdflatex --version` fallback. Run after checkout, TL upgrade, or
   whenever post-`\dump` engine state changes.
 - **`compileschema.sh`** — RNC → RNG via `trang`, producing
-  `resources/RelaxNG/LaTeXML.model`.
+  `latexml_core/resources/RelaxNG/LaTeXML.model`. (That tree lives inside
+  `latexml_core`, not at the workspace root: `cargo package` cannot follow a `../`
+  path, so each embedded tree moved into the crate that embeds it — see
+  `docs/release/CRATES_IO_PUBLISH.md` B3b.)
 - **`generate-scholarly-schema-docs`** — standalone HTML schema-doc
   tree (trang + `genschema_oxide` + `latexml_oxide --split`).
 
