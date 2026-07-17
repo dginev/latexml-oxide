@@ -97,19 +97,26 @@ artifact (nothing in `make_release.sh`, the cargo-deb asset list, or the
 Dockerfile stages them). If that changes, revisit this table and the notices'
 scope paragraph together.
 
-## B. Embedded resources (`resources/`, `include_str!`/`include_bytes!` at build)
+## B. Embedded resources (`include_str!`/`include_bytes!` at build)
+
+**The trees are no longer all under the workspace-root `resources/`.** The
+crates.io packaging work (`CRATES_IO_PUBLISH.md` B3a/B3b) moved each embedded tree
+*inside the crate that embeds it*, because `cargo package` cannot follow a `../`
+path and a workspace-root tree silently never reaches the tarball. Paths below are
+the current, real ones — check them before trusting any `resources/`-rooted command
+in an older doc or script.
 
 | Asset group | Count | Origin | License |
 |---|---|---|---|
-| `CSS/` | 13 | Perl LaTeXML | PD (NIST) ≈ CC0 |
-| `CSS/relaxng-schema-rustdoc-theme.css` | 1 | ours, **except its `data-theme="ayu"` colour values — rustdoc's** | CC0, except that palette: MIT (rustdoc, © The Rust Project Contributors, itself crediting Ayu © 2016 Ike Kurghinyan) — §2.3 |
-| `XSLT/` | 20 | Perl LaTeXML | PD (NIST) ≈ CC0 |
-| `RelaxNG/*` (top level) | 25 | Perl LaTeXML schema | PD (NIST) ≈ CC0 |
-| **`RelaxNG/svg/`** | **83** | **W3C SVG 1.1 RELAX NG schema, modified by Mozilla** | **W3C/Mozilla permissive — notice required**, §2.2 |
-| `DTD/` | 2 | Perl LaTeXML | PD (NIST) ≈ CC0 |
-| `Profiles/` | 9 | Perl LaTeXML | PD (NIST) ≈ CC0 |
-| `javascript/LaTeXML-maybeMathjax.js` | 1 | Perl LaTeXML | PD (NIST) ≈ CC0 |
-| `javascript/relaxng-schema-rustdoc-theme.js` | 1 | ours | CC0 |
+| `latexml_post/resources/CSS/` | 13 | Perl LaTeXML | PD (NIST) ≈ CC0 |
+| `latexml_post/resources/CSS/relaxng-schema-rustdoc-theme.css` | 1 | ours, **except its `data-theme="ayu"` colour values — rustdoc's** | CC0, except that palette: MIT (rustdoc, © The Rust Project Contributors, itself crediting Ayu © 2016 Ike Kurghinyan) — §2.3 |
+| `latexml_post/resources/XSLT/` | 20 | Perl LaTeXML | PD (NIST) ≈ CC0 |
+| `latexml_core/resources/RelaxNG/*` (top level) | 25 | Perl LaTeXML schema | PD (NIST) ≈ CC0 |
+| **`latexml_core/resources/RelaxNG/svg/`** | **83** | **W3C SVG 1.1 RELAX NG schema, modified by Mozilla** | **W3C/Mozilla permissive — notice required**, §2.2 |
+| `resources/DTD/` | 2 | Perl LaTeXML | PD (NIST) ≈ CC0 |
+| `resources/Profiles/` | 9 | Perl LaTeXML | PD (NIST) ≈ CC0 |
+| `latexml_post/resources/javascript/LaTeXML-maybeMathjax.js` | 1 | Perl LaTeXML | PD (NIST) ≈ CC0 |
+| `latexml_post/resources/javascript/relaxng-schema-rustdoc-theme.js` | 1 | ours | CC0 |
 
 Perl LaTeXML is public domain (NIST, 17 U.S.C. §105; upstream `LICENSE` equates it
 to CC0) — CC0-compatible, no notice burden. `LaTeXML-maybeMathjax.js` only
@@ -127,10 +134,20 @@ plus the comment headers inside each embedded file. The Ayu palette is the secon
 **The resource gate cannot see the F12 class**: it flags files that *announce*
 themselves, and all 16 embedded CSS/JS carry no notice — they clear by silence.
 
-Re-verify (should list `RelaxNG/svg/` and nothing else):
+Re-verify (should list `latexml_core/resources/RelaxNG/svg/` files and nothing else).
+**Every embedded tree must be named** — a command rooted at the workspace `resources/`
+alone now matches nothing at all and looks like a clean bill of health:
 
 ```bash
-grep -rliE "World Wide Web Consortium|Mozilla Foundation|Apache License|GNU General" resources/
+grep -rliE "World Wide Web Consortium|Mozilla Foundation|Apache License|GNU General" \
+  latexml_core/resources/ latexml_post/resources/ resources/
+```
+
+Better, use the gate itself — it enforces this list and **fails if an audited prefix
+stops existing**, so a future move cannot go quiet the way B3a/B3b did:
+
+```bash
+python3 tools/audit_vendored_natives.py --verbose
 ```
 
 ## C. Compiled-in dumps — the sharp edge (TeX-Live-derived)

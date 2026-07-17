@@ -45,9 +45,14 @@ fn main() {
   emit_embedded_relaxng();
 }
 
-/// Walk `../resources/RelaxNG/` and emit a manifest file that lists
+/// Walk this crate's `resources/RelaxNG/` and emit a manifest file that lists
 /// every RelaxNG resource as `(rel_path, include_str!(abs_path))`.
 /// Caller imports it via `include!(concat!(env!("OUT_DIR"), "/embedded_relaxng.rs"))`.
+///
+/// The tree lives INSIDE this crate (not at the workspace root) so that `cargo
+/// package` ships it — `cargo package` cannot follow a `../` path, so a
+/// workspace-root tree would silently never reach the crates.io tarball and the
+/// published crate would embed nothing. See docs/release/CRATES_IO_PUBLISH.md B3b.
 ///
 /// Paths are absolute so the generated file remains valid regardless
 /// of where it gets included from. Forward slashes used in the manifest
@@ -55,11 +60,7 @@ fn main() {
 /// the temp-dir root with `Path::join`.
 fn emit_embedded_relaxng() {
   let crate_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-  let resource_root = crate_dir
-    .parent()
-    .expect("workspace root above crate dir")
-    .join("resources")
-    .join("RelaxNG");
+  let resource_root = crate_dir.join("resources").join("RelaxNG");
 
   // Tell cargo to re-run this build script when any RelaxNG file
   // changes. Granular per-file is overkill; the directory hint is
@@ -69,6 +70,21 @@ fn emit_embedded_relaxng() {
   let mut files: Vec<(String, PathBuf)> = Vec::new();
   collect_files(&resource_root, &resource_root, &mut files);
   files.sort_by(|a, b| a.0.cmp(&b.0));
+
+  // Fail here, loudly, rather than emit an empty table. `collect_files` swallows a
+  // missing directory, so a tree that failed to ship (bad sparse checkout, a
+  // packaging regression that drops `resources/` from the tarball) would compile
+  // clean and embed NOTHING — surfacing much later as `#[derive(LoadModel)]`
+  // panicking `Model "LaTeXML" not found`, which points at the consumer rather than
+  // the real cause. The table is not optional: `LaTeXML.model` is the compile-time
+  // input to `load_model!`, and `.rng` lookups back `--validate`.
+  assert!(
+    !files.is_empty(),
+    "latexml_core/build.rs: no RelaxNG resources found under {}.\n  \
+     This tree is a compile-time input (load_model!) and must ship inside the crate.\n  \
+     If it moved, update this path; verify packaging with `cargo package --list -p latexml_core`.",
+    resource_root.display()
+  );
 
   let mut out = String::with_capacity(files.len() * 200);
   out.push_str(

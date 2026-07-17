@@ -115,11 +115,11 @@ The embedded stylesheets, schemas, and one JavaScript helper
 
 No notice is legally required; attribution is provided in gratitude.
 
-2.2 SVG 1.1 RELAX NG schema  (resources/RelaxNG/svg/ — W3C + Mozilla)
----------------------------------------------------------------------
+2.2 SVG 1.1 RELAX NG schema  (latexml_core/resources/RelaxNG/svg/ — W3C + Mozilla)
+----------------------------------------------------------------------------------
 
 NOT public domain, and NOT from Perl LaTeXML's NIST-authored set: the 83 files
-under `resources/RelaxNG/svg/` are the W3C's RELAX NG schema for SVG 1.1 with
+under `latexml_core/resources/RelaxNG/svg/` are the W3C's RELAX NG schema for SVG 1.1 with
 Mozilla's modifications. They are embedded verbatim in the binary
 (`latexml_core/build.rs` walks the RelaxNG tree and `include_str!`s every file),
 so their notice is reproduced here as their license requires:
@@ -149,8 +149,8 @@ only condition is that the notice above accompany all copies — which this
 section, plus the verbatim comment headers carried inside each embedded file,
 satisfies.
 
-2.3 Schema-docs theme: the Ayu palette  (resources/CSS/)
---------------------------------------------------------
+2.3 Schema-docs theme: the Ayu palette  (latexml_post/resources/CSS/)
+---------------------------------------------------------------------
 
 `relaxng-schema-rustdoc-theme.css` is ours, except its `data-theme="ayu"` colour
 values, taken from rustdoc's Ayu theme:

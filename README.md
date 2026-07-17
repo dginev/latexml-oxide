@@ -151,6 +151,39 @@ The `.deb` declares all of these, so `apt install ./latexml-oxide_*.deb` pulls t
 | `dvisvgm` | `dvisvgm` | TeX Live | vector-SVG LaTeX-image output |
 | `kpsewhich`, `latex`, `pdflatex`, `tftopl` | `texlive-latex-base` (+`-extra`, `-science`) | `texlive` / MacTeX | TeX package/class/font resolution |
 
+### From crates.io (`cargo install`)
+
+```
+$ cargo +nightly install latexml
+```
+
+This builds the `latexml_oxide` CLI from source, so it needs a recent Rust
+**nightly**, the system build dependencies listed under
+[Build from source](#build-from-source) below, and a TeX distribution at runtime
+like every other install route.
+
+**It starts slower than the prebuilt binaries above.** The releases embed
+precompiled TeX kernel dumps for a 5-year TeX Live window; those are generated at
+release time and are far too large to ship in a crate, so a `cargo install` build
+reconstructs the kernel state at startup instead of loading it. Conversions
+themselves run at the same speed — only startup pays. If you want the fast-start
+binary, take a [Release](https://github.com/dginev/latexml-oxide/releases) asset.
+
+**As a library:**
+
+```toml
+[dependencies]
+latexml = "0.7"
+```
+
+```rust
+let xml  = latexml::api::convert_to_xml(tex)?;   // TeX → LaTeXML XML
+let html = latexml::api::convert_to_html(tex)?;  // TeX → HTML5 + Presentation MathML
+```
+
+For finer control (preloads, search paths, `--whatsin`, split, encoding, …), drive
+`latexml::converter::Converter` and `latexml::post` directly.
+
 ### Build from source
 
 Requires a recent Rust `nightly` to compile.

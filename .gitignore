@@ -29,6 +29,16 @@ latexml_package/src/engine/*_dump.rs
 # Post-processing test actual output
 *-post-actual.xml
 
+# CSS/JS that a conversion copies out beside its output. `cargo test` runs
+# integration tests with cwd = the package root, so an HTML-producing test drops
+# these into latexml_oxide/. They are copies of the embedded resources, never
+# source. Ignored rather than merely deleted because `cargo package` includes
+# untracked files that aren't ignored: they were found sitting at the root of the
+# packaged `latexml` crate during the 2026-07-17 publish rehearsal, i.e. they would
+# have shipped to crates.io as part of the release.
+/latexml_oxide/*.css
+/latexml_oxide/*.js
+
 # Kernel dumps are NOT committed (decision 2026-06-07): release binaries
 # embed a 5-year TL window generated at tag time by
 # .github/workflows/release-dumps.yml; dev/CI generate the ambient year

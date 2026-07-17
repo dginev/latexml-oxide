@@ -5,13 +5,13 @@ docs.rs / library-consumer story. Complements
 [`RELEASING.md`](RELEASING.md) (the GitHub-Release binary flow); this file is
 specifically about **`cargo publish` + docs.rs + library use**.
 
-Status (2026-07-16): the two **forked git-dep** blockers are cleared — the
-dginev/marpa fork is published as **`marpa-asf`** 0.3.0 + **`libmarpa-asf-sys`**
-0.3.0, and **`pericortex`** 0.2.8 is published; `latexml`'s deps are repointed
-off git onto those crates (workspace builds from crates.io, `--features cortex`
-included). B1 (dep versions) + docs/library groundwork landed. **Remaining
-before the `latexml` crates can publish: B3b** (RelaxNG relocation — the one hard
-blocker) and **B4** (reserve the 7 sibling names).
+Status (2026-07-17): **all code blockers are cleared.** B1 (dep versions), B2
+(forked git deps → published `marpa-asf` / `libmarpa-asf-sys` / `pericortex`),
+B3a (XSLT/CSS/js → `latexml_post`) and **B3b (RelaxNG → `latexml_core`)** are
+done; B5 (dumpless source install) is an accepted, documented limitation. The
+only remaining step is the **publish itself**: **B4** (reserve the 7 sibling
+names) then the bottom-up `cargo publish` of §1 — both are account actions, not
+code.
 
 ---
 
@@ -89,34 +89,46 @@ process cwd**, so this is robust regardless of where the compiler runs. Verified
 (`mv resources aside`) is unaffected because the runtime CSS/JS disk-search is
 still cwd-relative with the embedded table as the real source.
 
-#### B3b — RelaxNG schema/model — ❌ HARD BLOCKER (needs its own branch)
-**Do NOT naively move `resources/RelaxNG` into a single crate — it breaks the
-build.** Proven 2026-07-16: moving it to `latexml_core/resources/RelaxNG` makes
-`cargo build -p latexml` fail with `proc-macro derive panicked: Model "LaTeXML"
-not found`. Why it's entangled — RelaxNG is a **compile-time input to two crates
-at different depths of the dependency graph**:
+#### B3b — RelaxNG schema/model — ✅ DONE (2026-07-17)
+**Do NOT naively move `resources/RelaxNG` into a single crate — that breaks the
+build,** which is what made this look hard. Proven 2026-07-16: a bare move to
+`latexml_core/resources/RelaxNG` makes `cargo build -p latexml` fail with
+`proc-macro derive panicked: Model "LaTeXML" not found`. RelaxNG is a
+**compile-time input at two different depths of the dependency graph**:
 
-1. **`latexml_core/build.rs`** walks `../resources/RelaxNG` to emit the runtime
-   embed (temp-extracted for `--validate` / `.model` loading).
+1. **`latexml_core/build.rs`** walks `resources/RelaxNG` to emit the `include_str!`
+   embed table (`common::relaxng::embedded::{FILES, lookup}`).
 2. **The `load_model!` `macro_rules!`** (exported from `latexml_engine`, but
-   *invoked* in **`latexml_oxide`** — `src/lib.rs`, see `core_interface.rs:359`)
-   expands a `#[derive(LoadModel)]` that compiles `LaTeXML.model` **into code at
-   compile time**. Its `pathname::find(installation_subdir="resources/RelaxNG")`
-   resolves **cwd-relative** (`<cwd>/resources/RelaxNG` or `<cwd>/../…`), and the
-   cwd during a `cargo build` is the **workspace root**. So the model derive
-   needs RelaxNG reachable from the *root/consumer* crate, while the build.rs
-   embed needs it inside `latexml_core`. A single move can't satisfy both, and
-   the `load_model!` expansion happens in the top `latexml` crate, so a crates.io
-   consumer would need RelaxNG in that crate's tarball too.
+   *invoked* in **`latexml_oxide`** — `src/lib.rs`) expands a
+   `#[derive(LoadModel)]` that compiles `LaTeXML.model` **into code at compile
+   time**. It used `pathname::find(installation_subdir="resources/RelaxNG")`, which
+   resolves **cwd-relative** (`<cwd>/resources/RelaxNG`, else one level up) — fine
+   inside our checkout, fatal from a crates.io install where no `resources/` sits
+   beside the cwd.
 
-**Fix (deferred, own branch):** make the model resolution independent of process
-cwd — resolve `LaTeXML.model` relative to `CARGO_MANIFEST_DIR` (or, better, have
-`#[derive(LoadModel)]` consume `latexml_core`'s embedded RelaxNG bytes instead of
-re-reading the filesystem), then relocate `resources/RelaxNG → latexml_core` and
-package it once. Gate with a full `cargo clean && cargo build -p latexml` (the
-crate where `load_model!` actually expands — a `-p latexml_core`/`-p
-latexml_engine` build is a **false green**, it never triggers the derive) plus
-`cargo test --tests` and a release-binary self-containment smoke.
+**What actually resolved it:** the two halves were never really in conflict —
+`latexml_codegen` (the proc-macro crate) **already links `latexml_core`**, whose
+build.rs **already** embeds the tree. So the derive can read the *embedded bytes*
+instead of the filesystem, and the disk copy only needs to exist in one place:
+
+1. `latexml_codegen/src/modelable.rs` → `relaxng::embedded::lookup("<name>.model")`;
+   no `pathname::find`, no `File::open`. **Cwd-independent by construction.**
+2. `latexml_core/build.rs` → resolve under `CARGO_MANIFEST_DIR` (drop `.parent()`),
+   plus an **assert that the tree is non-empty**: `collect_files` swallows a missing
+   dir, so a tree that failed to ship would compile clean, embed nothing, and
+   resurface much later as a confusing derive panic pointing at the consumer.
+3. `git mv resources/RelaxNG latexml_core/resources/RelaxNG` (108 files).
+
+The runtime already preferred the embedded table (`model.rs` L437, `scan.rs` L97),
+so nothing else moved. `latexml_core`'s default (no `include`/`exclude`) packaging
+picks the tree up automatically.
+
+**Verified 2026-07-17:** `cargo clean && cargo build -p latexml` green (the crate
+where the derive expands — a `-p latexml_core`/`-p latexml_engine` build is a
+**false green**, it never triggers it); conversion smoke emits a model-driven
+`<para xml:id="p1">`; `cargo package --list -p latexml_core` ships all **108**
+files incl. `resources/RelaxNG/LaTeXML.model`, while `-p latexml` now needs **0**;
+self-containment smoke passes with the whole `resources/` tree moved aside.
 
 #### `resources/dumps` — intentionally NOT relocated (see B5)
 The per-TL-year dumps are git-ignored, generated by the release pipeline
@@ -131,11 +143,32 @@ Rejected alternatives: a prepublish copy-and-path-rewrite script (fragile — th
 `include_str!` paths are compile-time literal), and per-crate symlinks into
 `../resources` (Windows-hostile, brittle).
 
-### B4 — sub-crate names must be free on crates.io
-`latexml` is registered. Before publishing, confirm/reserve: `latexml_core`,
-`latexml_codegen`, `latexml_math_parser`, `latexml_engine`, `latexml_package`,
-`latexml_post`, `latexml_contrib`. (crates.io normalizes `_`/`-`, but reserve
-the exact `_` names the manifests use.)
+### B4 — sub-crate names must be free on crates.io — ✅ VERIFIED FREE (2026-07-17)
+`latexml` is registered to **dginev** (currently 0.0.2 — the placeholder the real
+release overwrites). All 7 siblings checked against the crates.io API and **free**:
+`latexml_core`, `latexml_codegen`, `latexml_math_parser`, `latexml_engine`,
+`latexml_package`, `latexml_post`, `latexml_contrib`. (crates.io normalizes
+`_`/`-`, but the exact `_` names the manifests use are what get reserved.)
+Nothing to pre-reserve — the publish in §5 claims all 7 in one go. Re-check right
+before publishing if any time has passed; a name can be taken by anyone.
+
+### B6 — `readme` pointed outside the crate dir — ✅ DONE (2026-07-17)
+Found by the first `cargo publish --workspace --dry-run`: `latexml_oxide` declared
+`readme = "README.md"` while README.md lives at the **workspace root**, so
+`cargo publish -p latexml` died with *"readme `README.md` does not appear to
+exist"*. Same root cause as B3 — `cargo package` cannot follow `../`. The other 7
+crates packaged fine; only the top crate declares a readme.
+
+**Fix:** `latexml_oxide/README.md` is a **symlink** to `../README.md`. Cargo
+dereferences it and packages the real content (verified: 12,601 bytes in the
+package, byte-identical to the root file, stored as a regular file). A *copy* was
+rejected — the root README is the single source of truth that GitHub serves, and a
+second one is guaranteed drift. The manifest carries a comment saying so, because
+the obvious "fix" for a symlink is to replace it with a copy.
+
+*Caveat:* a Windows checkout without symlink support materialises this as a text
+file containing `../README.md`, which would publish a 12-byte README. We publish
+from Linux/CI, so this is noted rather than guarded.
 
 ### B5 — dumps absent from the crates.io crate (accepted limitation)
 The per-TL-year kernel dumps are generated at release time and are large; they
@@ -202,10 +235,32 @@ prep as too broad to land safely against the release binary at that time.
 
 ## 5. Publish checklist
 
-1. [ ] **B3** resource relocation landed + `cargo test --tests` green + release-binary smoke.
-2. [ ] **B2** `cortex-peripherals` published; `latexml`'s `pericortex` switched to `version`.
-3. [ ] **B4** all 7 sibling crate names reserved.
-4. [ ] `cargo publish -p <crate> --dry-run` clean for each, in the order of §1.
-5. [ ] Publish bottom-up (§1), waiting for each to index before the next.
-6. [ ] Confirm docs.rs built `latexml` (or that the `documentation` link resolves).
-7. [ ] README `cargo install latexml` note carries the nightly + build-dep + dumpless caveats (B5).
+Code blockers: **all cleared** (B1, B2, B3a, B3b, B6 done; B4 verified free; B5 an
+accepted limitation). Verified 2026-07-17: `cargo test --tests` **1581/0/0**,
+`cargo clippy --workspace --all-targets -- -D warnings` clean, self-containment
+smoke green for both XML and HTML with the whole `resources/` tree moved aside.
+
+**One command does it** — `cargo publish --workspace` (cargo 1.99) topo-sorts and
+publishes bottom-up, and handles the not-yet-published intra-workspace deps that
+make a per-crate `cargo publish -p <sibling>` fail ("no matching package named
+`latexml_codegen` found"). Rehearsed clean end-to-end:
+
+```bash
+cargo publish --workspace --dry-run     # all 8 package + verify; RC=0
+cargo publish --workspace               # the real thing
+```
+
+The order it picks matches §1 exactly: core → codegen → math_parser → engine →
+package → post → contrib → latexml.
+
+1. [ ] **Repo is public.** It is private as of 2026-07-17. `repository` / `homepage`
+       on all 8 crates and every README badge point at
+       `github.com/dginev/latexml-oxide` — all 404 while it is private, and a
+       crates.io release is **irreversible** (yankable, never deletable; the version
+       number is burned). Flip visibility *before* publishing. The gh-pages
+       `documentation` link already serves (200).
+2. [ ] Re-check **B4** name availability (§B4) — free is not a permanent state.
+3. [ ] `cargo publish --workspace --dry-run` clean.
+4. [ ] `cargo publish --workspace`.
+5. [ ] Confirm docs.rs built `latexml` (the `documentation` link is the fallback).
+6. [ ] README `cargo install latexml` note carries the nightly + build-dep + dumpless caveats (B5).

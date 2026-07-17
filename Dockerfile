@@ -174,13 +174,20 @@ RUN cargo build --profile maxperf-cortex --no-default-features --features cortex
 FROM texbase AS worker
 ARG HOSTTIME
 ENV DOCKER_BUILD_TIME=$HOSTTIME
-# The worker binary + its resources (XSLT/CSS/RelaxNG), plus latexml_oxide (only
-# to generate dumps). maxperf-cortex outputs live in target/maxperf-cortex/.
+# The worker binary, plus latexml_oxide (only to generate dumps).
+# maxperf-cortex outputs live in target/maxperf-cortex/.
 COPY --from=build-worker /src/target/maxperf-cortex/cortex_worker /usr/local/bin/
 COPY --from=build-worker /src/target/maxperf-cortex/latexml_oxide /usr/local/bin/
+# What's left at the workspace root: DTD/, Profiles/, LaTeXML.catalog — plus the
+# resources/dumps/ mountpoint the --init below writes into. The conversion
+# resources proper are NOT here and are not read from disk: XSLT/CSS/javascript
+# live in latexml_post/resources/ and RelaxNG in latexml_core/resources/, each
+# `include_str!`d into the binary (crates.io packaging, docs/release/
+# CRATES_IO_PUBLISH.md B3a/B3b). The binary is self-contained by design.
 COPY --from=build-worker /src/resources/ /usr/local/share/latexml-oxide/resources/
-# Redistributing the binary (and, via resources/, the W3C/Mozilla SVG schemas)
-# obliges us to carry their terms with them. Generated for THIS image's feature set.
+# Redistributing the binary (which embeds, among others, the W3C/Mozilla SVG
+# schemas) obliges us to carry their terms with it. Generated for THIS image's
+# feature set.
 COPY --from=build-worker /src/LICENSE /usr/local/share/doc/latexml-oxide/LICENSE
 COPY --from=notices /tmp/THIRD-PARTY-NOTICES.worker \
      /usr/local/share/doc/latexml-oxide/THIRD-PARTY-NOTICES

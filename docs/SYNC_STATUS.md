@@ -19,6 +19,34 @@
   merging `origin/main`'s Windows release hardening; the completed 2026-07
   session logs are archived — see the pointer below).
 
+- **2026-07-17 — crates.io publishability: all code blockers cleared (B3b done);
+  release tagged from `release-prep` as `0.7.4-rc4`.** `#[derive(LoadModel)]` no
+  longer resolves `LaTeXML.model` from the filesystem: it reads `latexml_core`'s
+  **embedded** RelaxNG table (`common::relaxng::embedded::lookup`). The two halves
+  were never really in conflict — `latexml_codegen` already links `latexml_core`,
+  whose `build.rs` already embeds the tree — so the derive became cwd-independent
+  and `resources/RelaxNG` moved into `latexml_core/` (108 files) where `cargo
+  package` can actually see it. Details + the verification set:
+  [`release/CRATES_IO_PUBLISH.md`](release/CRATES_IO_PUBLISH.md) B3b.
+  **Two release gates were silently broken by the resource moves and are now
+  fixed** — worth remembering as a class:
+  * `tools/audit_vendored_natives.py` scanned only the workspace-root
+    `resources/`, so B3a (XSLT/CSS/js → `latexml_post`) had already dropped out of
+    the license audit unnoticed, and B3b would have made it print
+    `ok resources/RelaxNG/svg/ (0 file(s))` and exit 0 — the W3C/Mozilla assets it
+    exists to track, scanned zero times. This is verbatim the failure the script's
+    own header warns about ("a gate that reports success for work it never did is
+    worse than no gate"). Fixed: `RESOURCE_ROOTS` names every embedded tree, and a
+    new **`AUDITED_RESOURCES` prefix-must-exist guard** turns a future move into a
+    hard failure instead of silence (guard verified to fire).
+  * `THIRD-PARTY-NOTICES` §2.2/§2.3 and `LICENSE_INVENTORY.md` §B pointed at the
+    old paths — including a "re-verify" command rooted at `resources/` that now
+    matches nothing and reads as a clean bill of health.
+  Tag scheme reminder: tags are **bare-numeric, no `v` prefix** (`release.yml`
+  triggers on `[0-9]+.[0-9]+.[0-9]+-*`, so `v0.7.4-rc4` would match nothing and the
+  workflow would never run), and `make_release.sh` refuses any tag that doesn't
+  equal `latexml_oxide/Cargo.toml`'s version.
+
 - **2026-07-09 — `\AtBeginDocument` #2754/#2846 re-done via context-aware `\par`
   (Direction B retired; ported to Perl too).** The earlier `inBeginDocumentHook`
   guard-decouple is reverted: `\begin{document}` restores the pre-#2846

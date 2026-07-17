@@ -5,6 +5,7 @@ edition = "2024"
 license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "User-contributed bindings for personal use"
+repository = "https://github.com/dginev/latexml-oxide"
 
 [lints]
 workspace = true

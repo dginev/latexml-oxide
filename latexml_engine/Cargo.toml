@@ -5,6 +5,7 @@ edition = "2024"
 license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "Core TeX/LaTeX engine bindings (Base, TeX_*, eTeX, pdfTeX, plain, latex pools). Split out of latexml_package to reduce CI compile-time RAM peaks."
+repository = "https://github.com/dginev/latexml-oxide"
 
 [lints]
 workspace = true

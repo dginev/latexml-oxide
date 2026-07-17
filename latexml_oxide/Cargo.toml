@@ -1,6 +1,6 @@
 [package]
 name = "latexml"
-version = "0.7.4-rc3"
+version = "0.7.4-rc4"
 edition = "2024"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0-1.0"
@@ -11,6 +11,13 @@ repository = "https://github.com/dginev/latexml-oxide"
 # independent of whether the docs.rs sandbox build succeeds. Served publicly
 # once the repo is public.
 documentation = "https://dginev.github.io/latexml-oxide/latexml/"
+# `latexml_oxide/README.md` is a SYMLINK to the workspace-root README.md — do not
+# replace it with a copy. `cargo package` cannot reach a `../` path, so the root
+# README (which GitHub serves, and which is the single source of truth) is
+# unreachable from this crate dir; without the symlink `cargo publish -p latexml`
+# fails outright: "readme `README.md` does not appear to exist". Cargo dereferences
+# the symlink and packages the real 12 KB content, verified in the tarball.
+# A copy here would be a second README to keep in step, i.e. guaranteed drift.
 readme = "README.md"
 description = "A TeX to XML/HTML/ePub converter: a LaTeXML reimplementation in Rust"
 keywords = ["latex", "tex", "html", "mathml", "converter"]
