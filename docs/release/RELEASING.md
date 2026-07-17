@@ -15,6 +15,79 @@ is new in 0.7.4 and **first exercised at the next RC tag** — no RC has publish
 one yet. See [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md). Only musl
 remains out of scope for now — see "Release asset strategy" below.
 
+## Release targets & order
+
+Five targets. Only the first is triggered by the tag; the rest hang off the
+**published GitHub Release**, which is why the order is forced rather than a
+preference — Homebrew and crates.io both need the release's assets/sha256s to exist.
+
+```
+tag X.Y.Z  →  release.yml  →  GitHub Release (public)          ← the only tag-triggered step
+                                  │
+                                  ├─ AUTOMATIC  docker.yml → ghcr.io (cli + cortex-worker)
+                                  │             fires on `release: types: [published]`
+                                  ├─ MANUAL     dginev/homebrew-tap: ./update-formula.sh X.Y.Z
+                                  │             (reads the release's macOS .sha256 sidecars)
+                                  ├─ MANUAL     cargo publish --workspace   (needs the repo PUBLIC)
+                                  └─ MANUAL     ar5iv-editor deploy → latexml.rs
+```
+
+| # | Target | How | Doc |
+|---|---|---|---|
+| 1 | **GitHub Release** (8 assets) | tag push → `release.yml` | this file |
+| 2 | **Container images** (ghcr.io) | **automatic** on Release *publish* → `docker.yml` | "Container images (GHCR)" below |
+| 3 | **Homebrew tap** | manual: `dginev/homebrew-tap` → `./update-formula.sh X.Y.Z`, commit, push | that repo's README |
+| 4 | **crates.io** (8 crates) | manual: `cargo publish --workspace` | [`CRATES_IO_PUBLISH.md`](CRATES_IO_PUBLISH.md) |
+| 5 | **latexml.rs** (ar5iv-editor) | manual: that repo's `deploy/build-and-push.sh` + cloud rollout | ar5iv-editor `deploy/` |
+
+Also automatic, no action needed: `rustdoc.yml` republishes the gh-pages rustdoc on
+every push to `main` — that is what crates.io's `documentation` link points at.
+
+**Don't forget the tap.** The README tells macOS users `brew install
+dginev/tap/latexml-oxide`. If the formula isn't bumped, every Homebrew user silently
+keeps getting the *previous* version while the release page advertises the new one.
+
+## RC tags vs final tags
+
+`release.yml` decides purely on whether the tag contains a `-`:
+
+```yaml
+draft:      ${{ contains(github.ref_name, '-') }}
+prerelease: ${{ contains(github.ref_name, '-') }}
+```
+
+* **`X.Y.Z-rcN`** → a **DRAFT prerelease**. Artifacts only, for cross-OS testing.
+* **`X.Y.Z`** → a **public** Release, auto-published.
+
+Two consequences worth knowing before you plan an RC:
+
+* **Targets 2-5 do not happen for an RC.** `docker.yml` listens for `release:
+  published`, which does **not** fire for a draft. To exercise the container path from
+  an RC, use its `workflow_dispatch` with the tag.
+* **Never publish an RC to crates.io.** `cargo install` and `latexml = "0.7"` both
+  ignore pre-releases, so an `-rcN` upload leaves `cargo install latexml` resolving to
+  whatever stable version exists (today: the ancient `0.0.2` placeholder) — while the
+  README *inside that crate* tells people to run exactly that.
+
+### "Can I just promote the RC draft to latest?"
+
+**No — cut a fresh `X.Y.Z` tag.** The version string is baked into the *artifacts*, not
+just the Release object, so flipping draft→published re-labels nothing:
+
+* assets are named `…-X.Y.Z-rcN-…`; the README's `VERSION=X.Y.Z` instructions 404,
+* the `.deb` carries `X.Y.Z-rcN-1`, so a later real `X.Y.Z` is a *newer* apt version,
+* the binary reports `X.Y.Z-rcN` from `--version` — which **fails the Homebrew
+  formula's** `assert_match version.to_s, shell_output("#{bin}/latexml_oxide --version")`,
+* the tap's formula fetches `…-#{version}-…tar.gz`, which does not exist for a plain
+  `X.Y.Z` against RC assets,
+* crates.io needs a stable version regardless (above).
+
+`make_release.sh` enforces this from the other side: it refuses to build when the tag
+does not equal `latexml_oxide/Cargo.toml`'s version. So an RC is a **test artifact**.
+When happy: bump `Cargo.toml` `X.Y.Z-rcN` → `X.Y.Z`, tag `X.Y.Z`, and delete the RC
+draft. The CHANGELOG's `## [X.Y.Z]` header then also starts matching, so the release
+body carries real notes instead of the generic fallback.
+
 ## Release asset strategy
 
 **A native binary is never cross-OS.** Linux compiles to ELF linked
@@ -104,7 +177,7 @@ aggregate `THIRD-PARTY-NOTICES` as a standalone asset:
 | `latexml-oxide-X.Y.Z-aarch64-unknown-linux-gnu.tar.gz.sha256` | SHA-256 sidecar. |
 | `latexml-oxide_X.Y.Z-1_arm64.deb` | Debian package (aarch64). Same `Depends:` as the amd64 `.deb`; `cargo deb` sets `Architecture: arm64` from the native arm64 build host. |
 | `latexml-oxide_X.Y.Z-1_arm64.deb.sha256` | SHA-256 sidecar. |
-| `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz` | Portable macOS (Apple Silicon) archive: same contents as the Linux tarball. No `.deb` on macOS (a Homebrew tap is the natural future analogue). |
+| `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz` | Portable macOS (Apple Silicon) archive: same contents as the Linux tarball. No `.deb` on macOS; the Homebrew tap (`dginev/homebrew-tap`) is the analogue — bump it per release, see "Release targets & order". |
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz` | Portable macOS (Intel) archive: built with a macOS 10.13 deployment target so it runs on older Intel Macs. |
 | `latexml-oxide-X.Y.Z-x86_64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
@@ -356,15 +429,17 @@ settings.
     ```bash
     git commit -am "release: X.Y.Z"
     git tag X.Y.Z
-    git push origin master
+    git push origin main
     git push origin X.Y.Z
     ```
 
-5. **Watch the workflow.** `Release` on the Actions tab. It runs four
-   jobs: `dumps` (TL-window generation) → `build-macos` (Apple Silicon,
-   `macos-15`) ‖ `build-macos-intel` (Intel, `macos-15-intel`) → `release`
-   (Linux tarball + `.deb`, then collects both macOS artifacts and attaches
-   all **eight** assets). The Intel-macOS leg's fat-LTO `maxperf` build on the
+5. **Watch the workflow.** `Release` on the Actions tab. It runs seven
+   jobs: `dumps` (TL-window generation) → `notices` (assembles THIRD-PARTY-NOTICES
+   once, handed to every leg) → `build-macos` (Apple Silicon, `macos-15`) ‖
+   `build-macos-intel` (Intel, `macos-15-intel`) ‖ `build-linux-arm64`
+   (`ubuntu-22.04-arm`) ‖ `build-windows` (`windows-latest`) → `release`
+   (Linux x86_64 tarball + `.deb`, then collects every other leg's artifacts and
+   attaches all **eight** assets). The Intel-macOS leg's fat-LTO `maxperf` build on the
    slower `macos-15-intel` runner is the long pole (up to ~120 min budget).
 
 6. **Nothing — it auto-publishes.** The workflow publishes a **public**
