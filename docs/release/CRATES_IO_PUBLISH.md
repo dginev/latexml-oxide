@@ -149,6 +149,57 @@ a symlink with a copy.
 *Caveat:* a Windows checkout without symlink support materialises it as a 12-byte text
 file containing `../README.md`. We publish from Linux/CI — noted, not guarded.
 
+### B7 — `latexml` exceeded the 10 MiB upload cap — ✅ DONE (2026-07-17)
+The first real publish of the top crate was rejected:
+
+```
+413 Payload Too Large: max upload size is: 10485760
+```
+
+The tarball was **13.6 MiB** against a hard **10 MiB** cap. `latexml_oxide/tests` —
+the regression corpus — was **1342 of the crate's 1372** packageable files and ~19.5
+of its ~20 MiB. The other 7 crates are far smaller and were unaffected.
+
+**Fix:** `exclude = ["tests/"]` in `latexml_oxide/Cargo.toml` → **30 files, 173 KiB
+compressed**. Safe because nothing in `src/`/`bin/` reads `tests/` at build time,
+there are no explicit `[[test]]` targets (the 50 harnesses are auto-discovered, so
+the packaged crate simply has none — cargo prints a benign `ignoring test …` per
+harness), and `build.rs` only wires git hooks and no-ops without a `.git`. Do **not**
+exclude the fixture subdirs while keeping `tests/*.rs`: the `testable` proc-macro
+scans the corpus at compile time, so a half-excluded tree fails `cargo test` on the
+packaged crate.
+
+> **Two traps, and `--dry-run` catches neither.**
+>
+> 1. **The size cap is only enforced on upload.** `cargo publish --workspace
+>    --dry-run` packages and verifies, then aborts *before* uploading — so it went
+>    fully green on a 13.6 MiB tarball that could never have been accepted. A green
+>    dry-run says nothing about size.
+> 2. **The CDN masks the error.** Fastly/Varnish in front of crates.io reports the
+>    oversized write as a bare `503 backend write error` with an empty body, not a
+>    413. If a publish 503s, suspect size first and check
+>    `cargo package --list | wc -l` before assuming an outage.
+
+### B8 — new-crate rate limit aborts `--workspace` mid-run — ⚠️ KNOWN (2026-07-17)
+crates.io allows a **burst of 5 new crates**, then refills roughly one per 10
+minutes. This workspace publishes **7 new crates at once**, so a first-time
+`cargo publish --workspace` *cannot* finish in one pass. Observed: five landed in 7
+seconds (14:20:29–14:20:36), the sixth got
+
+```
+429: You have published too many new crates in a short period of time.
+     Please try again after Fri, 17 Jul 2026 14:32:10 GMT
+```
+
+and **cargo aborted rather than waiting**, so the remaining crates were never
+attempted. Recovery is just `cargo publish -p <crate>` per remaining crate as tokens
+refill; the 429 body states the exact retry time. Note the ordering constraint —
+`latexml` depends on `latexml_contrib`, so it cannot go first.
+
+Only bites when publishing **new** names (a version bump of an existing crate uses a
+far looser limit), so this is a one-time cost now that all 8 names exist. Recorded
+because a green dry-run makes it look like one `--workspace` invocation suffices.
+
 ### B5 — dumps absent from the crates.io crate (accepted; user-fixable in one step)
 The per-TL-year kernel dumps are generated at release time and are large; they
 are **not** shipped in the crates.io tarball. A from-source `cargo install
@@ -247,18 +298,27 @@ accepted limitation). Verified 2026-07-17: `cargo test --tests` **1581/0/0**,
 `cargo clippy --workspace --all-targets -- -D warnings` clean, self-containment
 smoke green for both XML and HTML with the whole `resources/` tree moved aside.
 
-**One command does it** — `cargo publish --workspace` (cargo 1.99) topo-sorts and
-publishes bottom-up, and handles the not-yet-published intra-workspace deps that
-make a per-crate `cargo publish -p <sibling>` fail ("no matching package named
-`latexml_codegen` found"). Rehearsed clean end-to-end:
+**One command *starts* it** — `cargo publish --workspace` (cargo 1.99) topo-sorts and
+publishes bottom-up, and handles the not-yet-published intra-workspace deps that make
+a per-crate `cargo publish -p <sibling>` fail ("no matching package named
+`latexml_codegen` found"). The order it picks matches §1 exactly: core → codegen →
+math_parser → engine → package → post → contrib → latexml.
 
 ```bash
 cargo publish --workspace --dry-run     # all 8 package + verify; RC=0
 cargo publish --workspace               # the real thing
 ```
 
-The order it picks matches §1 exactly: core → codegen → math_parser → engine →
-package → post → contrib → latexml.
+> **A green `--dry-run` does not mean the publish will succeed.** It aborts before
+> uploading, so it exercises neither the **10 MiB size cap** (B7) nor the **new-crate
+> rate limit** (B8). On 2026-07-17 the dry-run passed all 8 while the real publish
+> stopped at 5/8 on a 429, and the top crate could not have been accepted at any
+> point — it was 13.6 MiB against a 10 MiB cap. Both are now fixed/known, but treat
+> a green dry-run as "the *contents* are sound", not "this will go through".
+
+Expect to finish the first-ever publish with per-crate `cargo publish -p <crate>`
+calls as rate-limit tokens refill (B8). That is a one-time cost: all 8 names now
+exist, so subsequent releases are version bumps under a much looser limit.
 
 0. [ ] **Publish a STABLE version, not an `-rc`.** crates.io currently holds only
        the placeholders `latexml` **0.0.1 / 0.0.2** (`max_stable_version: 0.0.2`).
