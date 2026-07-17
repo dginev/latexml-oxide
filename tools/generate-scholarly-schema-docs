@@ -24,7 +24,7 @@ Options:
   --work DIR        Temporary working directory.
                     Default: <output>-work
   --css FILE        Stylesheet path. Default: this script's bundled
-                    `resources/CSS/relaxng-schema-rustdoc-theme.css`.
+                    `latexml_post/resources/CSS/relaxng-schema-rustdoc-theme.css`.
   --catalog FILE    OASIS XML catalog passed to trang (-C) and
                     XML_CATALOG_FILES — for schemas whose includes
                     use `urn:` prefixes that need a rewrite map (e.g.
@@ -49,7 +49,7 @@ oxide_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 schema=""
 output_dir=""
 work_dir=""
-css_file="$oxide_root/resources/CSS/relaxng-schema-rustdoc-theme.css"
+css_file="$oxide_root/latexml_post/resources/CSS/relaxng-schema-rustdoc-theme.css"
 title="Schema Reference"
 author=""
 catalog=""
@@ -107,7 +107,7 @@ fi
 # the rustdoc-styled theme (Settings popover wiring + in-page
 # filter). The post-pass injects a `<script src>` reference with the
 # same basename, so the file must be copied into `$output_dir`.
-js_file="$oxide_root/resources/javascript/$(basename "$css_file" .css).js"
+js_file="$oxide_root/latexml_post/resources/javascript/$(basename "$css_file" .css).js"
 if [[ ! -f "$js_file" ]]; then
   echo "error: theme runtime not found at $js_file" >&2
   exit 1
