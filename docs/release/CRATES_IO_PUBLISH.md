@@ -9,9 +9,9 @@ Status (2026-07-17): **all code blockers are cleared.** B1 (dep versions), B2
 (forked git deps → published `marpa-asf` / `libmarpa-asf-sys` / `pericortex`),
 B3a (XSLT/CSS/js → `latexml_post`) and **B3b (RelaxNG → `latexml_core`)** are
 done; B5 (dumpless source install) is an accepted, documented limitation. The
-only remaining step is the **publish itself**: **B4** (reserve the 7 sibling
-names) then the bottom-up `cargo publish` of §1 — both are account actions, not
-code.
+only remaining steps are **account actions, not code**: make the repo public (every
+crate's `repository`/`homepage` 404s until then), then `cargo publish --workspace`
+(§5). B4 is verified: all 7 sibling names are free.
 
 ---
 
@@ -72,11 +72,11 @@ feature isn't built by CI/tests by default, so a `Config` literal in
 unnoticed until this switch built it — worth adding a `--features cortex`
 check to CI.
 
-### B3 — workspace `resources/` are not in the package tarballs
-`resources/` lives at the **workspace root**, outside every crate dir. `cargo
-package` cannot include `../` paths, so the resources never reach the tarball.
-Split into two independently-shippable halves; **B3a is DONE, B3b is the
-remaining hard blocker.**
+### B3 — workspace `resources/` are not in the package tarballs — ✅ DONE
+`resources/` lived at the **workspace root**, outside every crate dir. `cargo
+package` cannot include `../` paths, so the resources never reached the tarball.
+Split into two independently-shippable halves — **B3a DONE (2026-07-16), B3b DONE
+(2026-07-17)**. The same `../` rule bit the README too, separately: see B6.
 
 #### B3a — `latexml_post` XSLT/CSS/javascript — ✅ DONE (2026-07-16)
 `src/xslt.rs` embedded **36 files** via `include_str!("../../resources/…")`; a
@@ -170,14 +170,57 @@ the obvious "fix" for a symlink is to replace it with a copy.
 file containing `../README.md`, which would publish a 12-byte README. We publish
 from Linux/CI, so this is noted rather than guarded.
 
-### B5 — dumps absent from the crates.io crate (accepted limitation)
+### B5 — dumps absent from the crates.io crate (accepted; user-fixable in one step)
 The per-TL-year kernel dumps are generated at release time and are large; they
 are **not** shipped in the crates.io tarball. A from-source `cargo install
 latexml` therefore starts **dumpless** → the engine reconstructs kernel state
-from the base pool at startup (slower; the `LATEXML_NODUMP` parity path). This
-is acceptable for the source-install path; the prebuilt GitHub-Release binaries
-remain the fast, dump-embedded distribution. Document it in the README's
-`cargo install` note.
+from the base pool at startup (slower; the `LATEXML_NODUMP` parity path). The
+prebuilt GitHub-Release binaries remain the fast, dump-embedded distribution.
+
+**But the user can generate them once, and no code was needed — this already
+works** (verified 2026-07-17 against the maxperf binary in a simulated install
+layout, dev tree hidden). `--init` writes to `./resources/dumps/`
+(`latexml_oxide/src/ini_tex.rs` L240) and the loader's chain step 3 is
+`<exe_dir>/../resources/dumps` — which, for `cargo install`'s
+`~/.cargo/bin/latexml_oxide`, is `~/.cargo/resources/dumps`. So:
+
+```bash
+cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide --init=latex.ltx
+```
+
+writes `~/.cargo/resources/dumps/{plain,latex}.YYYY.dump.txt` and every later run
+finds them. (`LATEXML_DUMP_DIR` overrides the location; the engine's own
+no-dump error already says *"run `latexml_oxide --init=latex.ltx` to generate"*.)
+Documented in the README's crates.io section.
+
+**Why not generate dumps from `build.rs` at `cargo install` time?** Asked
+2026-07-17; it does not work, for four independent reasons:
+1. **Ordering cycle.** A dump is produced by *running the fully linked binary*
+   (`tools/make_formats.sh` = `cargo build --bin latexml_oxide`, *then* run it with
+   `--init`). A build script runs *before* its own crate is compiled, and the
+   binary is the last node in the graph — `latexml_engine/build.rs` cannot invoke
+   the thing it is helping to build.
+2. **The escape is worse.** `latexml_oxide/build.rs` + `[build-dependencies]
+   latexml_engine` would compile the engine a *second* time for the host.
+   `latexml_engine` is precisely the crate that was split out to cut compile-time
+   RAM — doubling it makes `cargo install` far heavier. And the dumps would then
+   have to flow back into `latexml_engine`'s runtime loader, which embeds from its
+   *own* build.rs: the wiring inverts.
+3. **It would require TeX Live at build time.** `--init` resolves `plain.tex` /
+   `latex.ltx` through kpathsea, and `make_formats.sh` exits 3 when it cannot even
+   detect a TL year. Today a missing TeX means *slower startup*; via build.rs it
+   would mean a hard `cargo install` **failure** — strictly worse for a source
+   install, and docs.rs (no network, no TeX) builds the crate too.
+4. **Dumps are per-TL-year.** One baked at install time goes stale the moment the
+   user upgrades TeX Live. The release binaries dodge this by embedding a 5-year
+   window; a single install-time dump cannot, whereas the on-demand `--init` above
+   is simply re-run.
+
+The nicer version — **auto-generate on first run** into a persistent per-user dir,
+slotted into the existing fallback chain — is a real feature and a reasonable
+follow-up. It changes first-run behaviour (a surprise multi-second first
+conversion plus a disk write), so it wants its own design + test cycle rather than
+a release-day patch.
 
 ---
 
@@ -253,8 +296,17 @@ cargo publish --workspace               # the real thing
 The order it picks matches §1 exactly: core → codegen → math_parser → engine →
 package → post → contrib → latexml.
 
-1. [ ] **Repo is public.** It is private as of 2026-07-17. `repository` / `homepage`
-       on all 8 crates and every README badge point at
+0. [ ] **Publish a STABLE version, not an `-rc`.** crates.io currently holds only
+       the placeholders `latexml` **0.0.1 / 0.0.2** (`max_stable_version: 0.0.2`).
+       `cargo install` and `latexml = "0.7"` both **ignore pre-releases**, so
+       publishing `0.7.4-rc4` would leave `cargo install latexml` resolving to the
+       **0.0.2 placeholder** — while the README shipped inside that very crate tells
+       people to run exactly that command. Publishing an rc is worse than not
+       publishing. Tag `0.7.4-rc4` for the GitHub **draft prerelease** (what
+       `release.yml` does for `-*` tags: cross-OS testing, not a public release) and
+       do the crates.io publish on the **stable `0.7.4`** tag.
+1. [ ] **Repo is public.** It was private as of 2026-07-17 (going public that day).
+       `repository` / `homepage` on all 8 crates and every README badge point at
        `github.com/dginev/latexml-oxide` — all 404 while it is private, and a
        crates.io release is **irreversible** (yankable, never deletable; the version
        number is burned). Flip visibility *before* publishing. The gh-pages

@@ -15,7 +15,10 @@
     (`marpa-asf`, `libmarpa-asf-sys`, `pericortex`) — crates.io rejects git deps.
     **Caveat:** a from-source install starts without the precompiled kernel dumps
     (they are generated at release time and too large to ship), so it reconstructs
-    kernel state at startup and is slower to start than the prebuilt binaries below.
+    kernel state at every startup. One-time fix, the same "build the formats once"
+    step TeX does with `fmtutil` — `cd ~/.cargo && latexml_oxide --init=plain.tex
+    && latexml_oxide --init=latex.ltx` — after which startup matches the prebuilt
+    binaries. See the README's crates.io section.
   - **New target: Windows** (`x86_64-pc-windows-msvc`) — a single fully-static
     `latexml_oxide.exe` (no VC++ redistributable), shipped as a `.zip`.
   - **Third-party notices now complete and identical in every download.**

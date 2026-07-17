@@ -162,12 +162,25 @@ This builds the `latexml_oxide` CLI from source, so it needs a recent Rust
 [Build from source](#build-from-source) below, and a TeX distribution at runtime
 like every other install route.
 
-**It starts slower than the prebuilt binaries above.** The releases embed
-precompiled TeX kernel dumps for a 5-year TeX Live window; those are generated at
-release time and are far too large to ship in a crate, so a `cargo install` build
-reconstructs the kernel state at startup instead of loading it. Conversions
-themselves run at the same speed — only startup pays. If you want the fast-start
-binary, take a [Release](https://github.com/dginev/latexml-oxide/releases) asset.
+**It starts slower than the prebuilt binaries — until you generate the dumps
+once.** The releases embed precompiled TeX kernel dumps for a 5-year TeX Live
+window; those are generated at release time and are far too large to ship in a
+crate, so a fresh `cargo install` reconstructs the kernel state at every startup.
+Conversions themselves run at the same speed — only startup pays.
+
+To get the fast startup, generate the dumps for *your* TeX Live once. `--init`
+writes to `./resources/dumps/`, and the binary looks in
+`<its own dir>/../resources/dumps`, so run it from the parent of `bin/`:
+
+```
+$ cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide --init=latex.ltx
+```
+
+That writes `~/.cargo/resources/dumps/{plain,latex}.YYYY.dump.txt`, which the
+binary at `~/.cargo/bin/latexml_oxide` then finds on every run. Prefer somewhere
+else? Point `LATEXML_DUMP_DIR` at it instead. Re-run after a TeX Live upgrade —
+dumps are per-TL-year (this is the same "build the formats once" step TeX itself
+does with `fmtutil`).
 
 **As a library:**
 
