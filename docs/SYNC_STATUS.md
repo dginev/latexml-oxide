@@ -369,50 +369,57 @@ residuals stay here so the live worklist keeps them visible:
 
 ## Open tasks (actionable)
 
-### `--preload=<cls>` hook-stack imbalance + class-name divergence (2026-07-17) — OPEN
+### `--preload=<cls>` alone trips the hook stack; class-name divergence (2026-07-17) — OPEN
 
 **Symptom.** `--preload=<any>.cls` prints `LaTeX hooks Error: Extra \PopDefaultHookLabel`
-(article/book/report; `.sty` preloads clean; `\documentclass` clean; `LATEXML_NODUMP=1`
-clean). Visible on every `latexmlmath_oxide` run, which preloads `article.cls`. Perl is
-silent for the same preload.
+(article/book/report; `.sty` clean; `\documentclass` clean; `LATEXML_NODUMP=1` clean).
+Perl is silent for the same preload.
 
-**Mechanism (measured, and NOT what it first looks like).** Perl's dump carries the *same*
-real machinery we do — `latex_dump.pool.ltxml` has the real `\@popfilename` calling
-`\@expl@@@hook@curr@name@pop@@`, `Lt(…,'\__hook_curr_name_pop:')`, and a
-`\__hook_curr_name_pop:` byte-identical to ours (`\seq_gpop:NNTF \g__hook_name_stack_seq
-… {\msg_error:nn {hooks}{extra-pop-label}}`). So "Perl stubs the hooks" / "Perl never
-raw-loads latex.ltx" is FALSE — Perl's `make formats` raw-loads it exactly like ours.
+**Mechanism (traced, 2026-07-17).** Push/pop are perfectly balanced and nested — the trace
+is `PUSH article → (LaTeX.pool loads) → PUSH textcomp → POP textcomp → POP article → error`.
+The bug is that **`\@pushfilename` changes MEANING mid-load**: `article` is pushed *before*
+`LaTeX.pool` (and the kernel dump behind it) loads, so it uses a pre-pool `\@pushfilename`
+that never touches `\g__hook_name_stack_seq`; the pool then installs the real expl3
+`\@popfilename`, so `article`'s pop hits a seq holding only the *inner* packages' pushes,
+finds it empty, and errors. `\documentclass` escapes because the pool is already loaded, so
+both sites use the same meaning.
 
-The whole divergence is ONE record: **we dump `\g__hook_name_stack_seq` as `\c_empty_seq`;
-Perl's dump has no record for it at all** (both dump `\g__hook_hook_curr_name_tl`, so it is
-not a blanket `\g__` difference). With a properly-initialized empty stack, the real expl3
-code correctly detects the pop-without-push and reports it. Perl's `\seq_gpop:NNTF` runs
-against an *undefined* seq and is silent **by accident**.
+**A definedness check cannot see this** — the CS is defined at both sites; only its meaning
+changes. Perl's `$pushpop` (Package.pm L2595, computed once and reused at L2637) is a
+definedness check too, so Perl has the same hole; it is silent only because its dump omits
+`\g__hook_name_stack_seq`, and `\seq_gpop:NNTF` on an *undefined* seq does not complain.
+Ours dumps it as `\c_empty_seq`, so the real expl3 code correctly notices.
 
-**So the imbalance is real in BOTH engines — Perl just cannot see it.** The preload path
-pops a hook label it never pushed; `\documentclass` escapes only because it routes through
-`\@pushfilename` and balances.
+**Mitigated, not fixed (2026-07-17):** `util::preset::new_test_engine` now preloads
+`LaTeX.pool` first (the order ar5iv's list already used), so `latexmlmath_oxide` stops
+provoking it. `--preload=article.cls` on its own STILL errors.
 
-**Two dead ends, both measured — do not retry:**
-* Filtering the L3-hook stubs + filename stack at dump write/read: error gone, preloads
-  clean (0 Error/Fatal, no undefined CS) — but `cluster_mhchem_cf_author_macro` goes 0 →
-  **1003 errors** (suite 1581/0 → 1572/9). The dump REPLACES base (DUMP_DESIGN rule 1), so
-  filtering a slot leaves a HOLE rather than falling back to `latex_base.rs`.
-* Filtering ONLY `\g__hook_name_stack_seq` to match Perl's dump exactly: error gone, mhchem
-  **still fails**. That record is load-bearing for us — our expl3 emulation relies on the
-  dump to declare the seq, where Perl's declares it some other way.
-* Filtering `\PopDefaultHookLabel` alone is inert: the erroring caller is the internal
-  `\__hook_curr_name_pop:`, not the public CS.
+**Dead ends — measured, do not retry:**
+* Filtering the L3-hook stubs + filename stack from the dump (write+read): symptom gone,
+  preloads clean — but `cluster_mhchem_cf_author_macro` 0 → **1003 errors** (suite 1581/0 →
+  1572/9). The dump REPLACES base (DUMP_DESIGN rule 1), so filtering leaves a HOLE, not a
+  fallback to `latex_base.rs`.
+* Filtering ONLY `\g__hook_name_stack_seq` to match Perl's dump exactly: symptom gone,
+  mhchem still fails — that record is load-bearing for our expl3 emulation.
+* Threading Perl's `$pushpop` from push to pop instead of re-deciding (more Perl-faithful,
+  worth doing anyway): does NOT fix it — the flag is `true` at both sites; the *meaning*
+  moved underneath.
+* Filtering `\PopDefaultHookLabel` alone: inert. The erroring caller is the internal
+  `\__hook_curr_name_pop:`.
 
-**Where to look:** balance the preload path — push a hook label the way `\@pushfilename`
-does, so the pop is matched. That fixes the symptom at its cause, needs no dump surgery, and
-would leave us *more* correct than Perl (whose silence is an accident). Check also
-`InputDefinitions`' `handleoptions` path vs Perl's for the push/pop pairing.
+**Candidate fixes.** (a) Ensure a class/package preload cannot be the thing that drags in
+the pool — auto-prepend `LaTeX.pool` when any `.sty`/`.cls` is preloaded. Rejected for the
+release: Perl prepends only `TeX.pool` (LaTeXML.pm L710) and never auto-loads `LaTeX.pool`,
+so this is a Rust-only divergence, and it would drag the LaTeX kernel into a `.sty` preload
+on a plain-TeX document (the LaTeX-2.09 class `graphicx_sty.rs` already guards against). If
+adopted, make it conditional on the pool being unloaded and LOG it. (b) Pair the pop to the
+push's actual *meaning* rather than to definedness. (c) Make the pool load before any
+handleoptions push. (b)/(c) address the cause.
 
 **Second divergence, same area.** `\documentclass{article}` → `<?latexml class="article"?>`
 but `--preload=article.cls` → `<?latexml class="article.cls"?>`; **Perl emits
 `class="article"` for both.** Otherwise the two paths' output is byte-identical, so the
-preload does load `article_cls.rs` correctly. `parse_preload_spec` splits correctly to
+preload does load `article_cls.rs` correctly; `parse_preload_spec` splits correctly to
 `("article","cls")`, so the extension is re-attached further in.
 
 ### `latexmlmath_oxide` empties a single-structure formula (2026-07-17) — OPEN

@@ -18,8 +18,18 @@ use crate::core_interface::DigestionAPI;
 /// and `amsmath.sty` — the minimum needed to digest most formulae.
 pub fn new_test_engine() -> Core {
   let core_engine = Core::new(CoreOptions {
+    // `LaTeX.pool` FIRST — a class preload must not be the thing that drags the
+    // pool in. `\@pushfilename` changes meaning when the pool (and the kernel dump
+    // behind it) loads: preloading `article.cls` alone pushes the class's filename
+    // with the pre-pool `\@pushfilename` (which never touches
+    // `\g__hook_name_stack_seq`), then pops it with the real expl3 `\@popfilename`
+    // that the pool installed — popping a seq that only ever saw the *inner*
+    // packages' pushes. Hence "LaTeX hooks Error: Extra \PopDefaultHookLabel" on
+    // every latexmlmath_oxide run. Same order ar5iv's preload list uses.
+    // See SYNC_STATUS "`--preload=<cls>` hook-stack imbalance" — the underlying
+    // ordering bug is still open; this preset just stops provoking it.
     preload: Some(
-      ["article.cls", "amsmath.sty"]
+      ["LaTeX.pool", "article.cls", "amsmath.sty"]
         .map(|x| x.to_string())
         .to_vec(),
     ),
