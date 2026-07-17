@@ -47,7 +47,7 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 | [`parity/KNOWN_PERL_ERRORS.md`](parity/KNOWN_PERL_ERRORS.md) | Upstream Perl LaTeXML issues; check first when investigating a test failure. |
 | [`parity/DUMP_DESIGN.md`](parity/DUMP_DESIGN.md) | Kernel dump precompilation (strict LoadFormat mutual exclusivity, unconditional apply). |
 | [`parity/BINDING_DSL_ARCHITECTURE.md`](parity/BINDING_DSL_ARCHITECTURE.md) | Binding-definition DSL: shared `ConstructorBuilder` spine, compile-time + runtime front-ends. |
-| [`parity/script_bindings_plan.md`](parity/script_bindings_plan.md) | The runtime (Rhai) `script-bindings` front-end reference (off by default). |
+| [`parity/script_bindings_plan.md`](parity/script_bindings_plan.md) | The runtime (Rhai) script-bindings front-end reference (the `runtime-bindings` feature; on by default). |
 
 ### Open dated diagnostics (`parity/diagnostics/`)
 Point-in-time studies with pending halves.

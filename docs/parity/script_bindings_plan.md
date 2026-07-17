@@ -131,13 +131,21 @@ Components:
   crate; it sits atop core/engine/package and can reach the whole API). The new
   module is `latexml_contrib/src/script_bindings.rs`, every line behind the
   feature. It is the only place Rhai enters the workspace.
-- **Feature: `script-bindings`** on `latexml_contrib` (`= ["dep:rhai"]`, off by
-  default); `rhai = { version = "1", optional = true }`. Propagated up via
-  `latexml_oxide/script-bindings = ["latexml_contrib/script-bindings"]`. Core,
-  engine, package untouched. `--no-default-features`/lean builds drop it.
-- **Packaging:** because the value is end-user extensibility, the official
-  GitHub-release binary should ship with `script-bindings` **on** (it's pure
-  Rust, modest size); minimal/embedded builds drop it. (Open: confirm default.)
+- **Feature: `runtime-bindings`** on `latexml_contrib` (`= ["dep:rhai", "dep:log"]`);
+  `rhai = { version = "1", optional = true }`. Propagated up via
+  `latexml/runtime-bindings = ["latexml_contrib/runtime-bindings"]`. Core, engine,
+  package untouched. *(This plan was written against the original name
+  `script-bindings`, and it shipped **on** by default rather than off — see
+  Packaging. The alias `script-bindings = ["runtime-bindings"]` was removed
+  2026-07-17, before the first crates.io publish: no `cfg` ever referenced it and
+  no build invoked it, so publishing it would have frozen a dead name into public
+  API. The Rust module keeps the `script_bindings` name.)*
+- **Packaging: RESOLVED — on by default.** Because the value is end-user
+  extensibility, the official GitHub-release binary ships with `runtime-bindings`
+  **on** (pure Rust, modest size): `make_release.sh` builds
+  `--no-default-features --features runtime-bindings`, i.e. it drops `test-utils`
+  but deliberately keeps this. `latexml`'s `default` also includes it.
+  Minimal/embedded builds can still drop it.
 - **Dispatch hook (dependency-clean):** package/core dispatch cannot call *up*
   into `latexml_contrib`. So the script loader installs itself at startup via a
   registered function-pointer hook (`Option<fn(&str, &str) -> Option<...>>`)

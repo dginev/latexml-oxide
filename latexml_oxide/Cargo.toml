@@ -108,8 +108,6 @@ kpathsea-build-from-source = ["latexml_core/kpathsea-build-from-source"]
 # recompiling. Distribution builds use `--no-default-features --features
 # runtime-bindings` (drop test-utils, keep this).
 runtime-bindings = ["latexml_contrib/runtime-bindings"]
-# Back-compat alias for the original feature name.
-script-bindings = ["runtime-bindings"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

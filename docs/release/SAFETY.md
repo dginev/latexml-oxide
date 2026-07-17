@@ -157,14 +157,39 @@ in that window. Pipe-end fds are owned and closed exactly once.
 
 ### H. Script-bindings whatsit-pointer bridge (5 sites)
 
-`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the
-**off-by-default** `script-bindings` (Rhai) front-end re-mints `&`/`&mut`
+`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the `runtime-bindings`
+(Rhai) front-end re-mints `&`/`&mut`
 references to the in-flight whatsit / document / properties from raw pointers
 the core publishes onto a thread-local active-context stack (`WHATSIT_CTX`)
 for the duration of a single hook body. The pointer is the sole live reference
 for the call; a `mutable` flag (checked first) gates the `&mut` sites; calling
 outside a hook context returns an error, not UB. Provenance + lifetime are
 documented in the `mod.rs::with_doc` *B1 SOUNDNESS CAVEAT*.
+
+**This ships COMPILED IN AND LIVE — it is not off by default.** This section said
+"off-by-default `script-bindings`" until 2026-07-17; both halves were wrong. The
+feature is `runtime-bindings` (the `script-bindings` alias was removed pre-publish),
+it is in `latexml`'s `default`, and `make_release.sh` *deliberately keeps it* while
+dropping `test-utils` — so these 5 sites are in every released binary and every
+container image.
+
+Nor is the path dormant. `converter.rs::rhai_dispatch` sits **first** in the
+binding-resolution chain and runs on *every* package/class request: for `foo.sty`
+it does a `find_file` for `foo.sty.rhai` with `search_paths_only: true`, and
+executes it if found. So a `.rhai` file placed in a **search path — which includes
+the document's own directory** — is loaded and run by a plain conversion, with no
+flag. Converting an untrusted source tree (e.g. an arXiv tarball) therefore means
+executing any `<pkg>.sty.rhai` it ships that the document `\usepackage`s. And
+because the `.rhai` tier is checked **first**, such a file *overrides the compiled
+binding of the same name* — an `article.cls.rhai` shadows the built-in
+`article_cls` (`script_bindings_plan.md` §7).
+
+Bounding it: the interpreter is Rhai with `no_module` + `no_time`, so a script
+gets the registered LaTeXML binding API, not arbitrary host I/O, and
+`search_paths_only` keeps the lookup off the TeX tree. But this is a *sandboxed
+execution* claim, not an *inert code* claim, and it should be reviewed as such.
+Builds that want it truly gone must use `--no-default-features` *without*
+`--features runtime-bindings`.
 
 ---
 

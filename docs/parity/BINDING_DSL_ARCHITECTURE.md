@@ -17,7 +17,8 @@ We need binding definitions reachable two ways:
    `.pool.ltxml` files, authored in Rust and compiled in. Terseness matters:
    these are compared line-by-line against the Perl originals.
 2. **Runtime, contributed** — bindings authored next to a paper's `.tex`, loaded
-   with no Rust toolchain and no recompile (the Rhai `script-bindings` feature;
+   with no Rust toolchain and no recompile (the Rhai `runtime-bindings` feature —
+   renamed from `script-bindings`, whose alias was dropped pre-publish;
    see [`script_bindings_plan.md`](script_bindings_plan.md)).
 
 The risk: two front-ends implementing the *same* construct semantics
@@ -66,7 +67,7 @@ made them **two components of one architecture**:
 ### #93 — *Declarative Def/binding dialect* → the umbrella, **closed 2026-06-09 in favor of #247** (Interpreted runtime bindings)
 #93 asked for a declarative `Def*` variant that works **both at compile-time and
 at runtime**. That is precisely this architecture, and the live work now lives in
-**#247**. The Rhai `script-bindings` layer + the builder spine **are** the runtime
+**#247**. The Rhai `runtime-bindings` layer + the builder spine **are** the runtime
 half; the thin macro-over-builder is the compile-time half. #93 sketched a
 *YAML/TOML* surface;
 we chose **Rhai** because #93's own examples need expression evaluation
