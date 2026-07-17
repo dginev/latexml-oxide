@@ -24,6 +24,9 @@ The project is in active public **beta** as of July 2026, approaching mainline L
 
 ## Usage
 
+**Try it first — no install: [latexml.rs/editor](https://latexml.rs/editor)** — type LaTeX,
+see the converted document live.
+
 Two binaries: `latexml_oxide` for documents, `latexmlmath_oxide` for a single formula.
 
 ```bash
