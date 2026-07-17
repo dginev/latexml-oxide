@@ -180,35 +180,44 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
 /// is a no-op (lock contention only).
 #[cfg(feature = "kpathsea")]
 pub fn prewarm_kpathsea() {
-  let kpse_guard = KPSE.lock().unwrap();
-  let Some(ref kpse) = *kpse_guard else {
-    return;
-  };
-  // Subprocess backend (kpathsea 0.3, hosts without libkpathsea — e.g.
-  // MacTeX): there is no in-process format-info table to warm, and each
-  // sentinel would cost a real `kpsewhich` subprocess invocation
-  // (~10-20 ms × 11). The backend builds its own ls-R cache lazily on
-  // the first real lookup instead.
-  if !kpse.is_in_process() {
-    return;
-  }
-  for sentinel in &[
-    "warmup_lxoxide.tex",
-    "warmup_lxoxide.sty",
-    "warmup_lxoxide.cls",
-    "warmup_lxoxide.def",
-    "warmup_lxoxide.bst",
-    "warmup_lxoxide.fmt",
-    "warmup_lxoxide.afm",
-    "warmup_lxoxide.tfm",
-    "warmup_lxoxide.pfb",
-    "warmup_lxoxide.enc",
-    "warmup_lxoxide.map",
-  ] {
-    // catch_unwind defends against kpathsea-0.2.3 overflow bug (see
-    // kpsewhich docs).
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(sentinel)));
-  }
+  // Run exactly once per process: libkpathsea's format-info tables are
+  // process-global, so warming them once is enough. The `Once` also lets the
+  // CLI's early background prewarm and the shared `Converter::initialize_session`
+  // call coordinate — whichever runs first warms; any other caller blocks here
+  // until it completes (guaranteeing warm-before-first-lookup) instead of
+  // re-taking the `KPSE` mutex and re-probing 11 sentinels on every session.
+  static PREWARM_ONCE: std::sync::Once = std::sync::Once::new();
+  PREWARM_ONCE.call_once(|| {
+    let kpse_guard = KPSE.lock().unwrap();
+    let Some(ref kpse) = *kpse_guard else {
+      return;
+    };
+    // Subprocess backend (kpathsea 0.3, hosts without libkpathsea — e.g.
+    // MacTeX): there is no in-process format-info table to warm, and each
+    // sentinel would cost a real `kpsewhich` subprocess invocation
+    // (~10-20 ms × 11). The backend builds its own ls-R cache lazily on
+    // the first real lookup instead.
+    if !kpse.is_in_process() {
+      return;
+    }
+    for sentinel in &[
+      "warmup_lxoxide.tex",
+      "warmup_lxoxide.sty",
+      "warmup_lxoxide.cls",
+      "warmup_lxoxide.def",
+      "warmup_lxoxide.bst",
+      "warmup_lxoxide.fmt",
+      "warmup_lxoxide.afm",
+      "warmup_lxoxide.tfm",
+      "warmup_lxoxide.pfb",
+      "warmup_lxoxide.enc",
+      "warmup_lxoxide.map",
+    ] {
+      // catch_unwind defends against kpathsea-0.2.3 overflow bug (see
+      // kpsewhich docs).
+      let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(sentinel)));
+    }
+  });
 }
 
 /// No-op when built without the `kpathsea` feature (e.g. the host-side

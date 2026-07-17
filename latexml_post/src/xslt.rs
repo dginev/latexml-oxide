@@ -593,6 +593,27 @@ impl Processor for XSLT {
       self.copy_param_resources(&doc, icon, None);
     }
 
+    // Serialize the entire libxslt-touching critical section process-wide.
+    // libxslt/libxml2 keep NON-thread-safe process-global state — the input-
+    // callback + EXSLT registries, the generic error context, and the
+    // namespace-internalisation / dictionary caches that `xsltApplyStylesheet
+    // User` and stylesheet parsing mutate (the hidden mutation this file's
+    // per-thread-cache note already anticipates). Two conversion threads
+    // transforming concurrently DEADLOCK on that state: witnessed as the
+    // `52_source_map` XSLT tests hanging forever on a futex under
+    // `cargo test --tests` (all threads `futex_do_wait`, 0% CPU). The thread-
+    // local stylesheet cache below removes cross-thread *cache* sharing but not
+    // this shared C-library state, so a process-global lock is required for
+    // correctness. Cost: NONE in production — the CLI and the cortex fleet run
+    // one conversion per process (single thread), so this is never contended;
+    // only the multi-threaded test harness (or a hypothetical in-process pool)
+    // ever serializes here. Poison-tolerant: a transform that panicked while
+    // holding the lock didn't corrupt anything we read, so recover the guard.
+    static XSLT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _xslt_guard = XSLT_LOCK
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+
     // Register EXSLT extension functions (str:tokenize, math:*, etc.)
     // used by LaTeXML stylesheets. Safe-wrapped upstream in
     // rust-libxslt — `register_exslt()` is Once-guarded.
@@ -650,6 +671,14 @@ impl Processor for XSLT {
         .transform(transform_doc, params)
         .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))
     })?;
+    // Transform done — the libxslt-global critical section is over. Release the
+    // lock BEFORE wrapping the result: `result_doc` is the transform's fresh,
+    // unshared output tree, so building the `PostDocument` around it touches no
+    // shared libxslt/libxml2 state. Narrowing the hold keeps a hypothetical
+    // in-process pool serialized only over the actual transform, not the cheap
+    // wrapping. (No effect on the one-conversion-per-process production path,
+    // where the lock is never contended anyway.)
+    drop(_xslt_guard);
 
     // XSLT returns a libxml `Document` directly — wrap it into a
     // PostDocument without the serialize → reparse roundtrip the
@@ -909,18 +938,12 @@ mod embedded_resources {
       "LaTeXML-navbar-right.css",
       include_str!("../resources/CSS/LaTeXML-navbar-right.css"),
     ),
-    (
-      "LaTeXML.css",
-      include_str!("../resources/CSS/LaTeXML.css"),
-    ),
+    ("LaTeXML.css", include_str!("../resources/CSS/LaTeXML.css")),
     (
       "ltx-amsart.css",
       include_str!("../resources/CSS/ltx-amsart.css"),
     ),
-    (
-      "ltx-apj.css",
-      include_str!("../resources/CSS/ltx-apj.css"),
-    ),
+    ("ltx-apj.css", include_str!("../resources/CSS/ltx-apj.css")),
     (
       "ltx-article.css",
       include_str!("../resources/CSS/ltx-article.css"),

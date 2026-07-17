@@ -1629,6 +1629,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // See `latexml_core::util::pathname::prewarm_kpathsea`. Skipped in harness
   // mode — the supervisor never converts, so it would only waste a thread; each
   // spawned child prewarms its own.
+  //
+  // Latency pre-warm only: the correctness invariant (warm before first lookup)
+  // is enforced by the shared `Converter::initialize_session`, so this is a
+  // best-effort overlap, not the guarantee.
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() && !cli.harness
   {
     Some(std::thread::spawn(

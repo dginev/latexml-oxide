@@ -26,7 +26,9 @@ const SRC: &str = include_str!("../bin/latexml_oxide.rs");
 /// Return the `{ ... }` body of `struct Cli`, located by brace matching so a
 /// nested `{}` in a field type or attribute can't confuse it.
 fn cli_struct_body(src: &str) -> &str {
-  let decl = src.find("struct Cli").expect("`struct Cli` present in the binary");
+  let decl = src
+    .find("struct Cli")
+    .expect("`struct Cli` present in the binary");
   let open = decl + src[decl..].find('{').expect("opening brace of Cli");
   let bytes = src.as_bytes();
   let mut depth = 0usize;
@@ -75,8 +77,7 @@ fn cli_fields(body: &str) -> Vec<String> {
 /// Whether the binary reads `cli.<field>` anywhere. Whitespace-tolerant because
 /// rustfmt frequently splits the access across lines (`cli\n    .field`).
 fn is_consumed(field: &str) -> bool {
-  let re = Regex::new(&format!(r"\bcli\s*\.\s*{}\b", regex::escape(field)))
-    .expect("valid regex");
+  let re = Regex::new(&format!(r"\bcli\s*\.\s*{}\b", regex::escape(field))).expect("valid regex");
   re.is_match(SRC)
 }
 

@@ -426,6 +426,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // package resolution, so the warm-up usually completes before its
   // first real consumer arrives. Disable with
   // `LATEXML_NO_KPATHSEA_PREWARM=1` for A/B benchmarking.
+  //
+  // This is now purely a *latency* pre-warm (overlap the init cost with dump
+  // load). The CORRECTNESS invariant — tables warm before the first `find_file`
+  // — is enforced by the shared `Converter::initialize_session`, the single path
+  // both this binary and the library (`latexml::api`, tests) funnel through, so
+  // the library can no longer drift from the binaries the way it did (the flaky
+  // spurious "1 warning" root-caused 2026-07-16).
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
     Some(std::thread::spawn(
       latexml_core::util::pathname::prewarm_kpathsea,

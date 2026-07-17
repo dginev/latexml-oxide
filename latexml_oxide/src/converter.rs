@@ -160,6 +160,22 @@ impl Converter {
     };
     preloads.extend(self.core.preload.iter().cloned());
     self.core.initialize_singletons(preloads)?;
+    // Warm libkpathsea's per-format lazy-init tables before the first file
+    // lookup, matching the CLI binaries (`latexml_oxide.rs` / `cortex_worker.rs`
+    // spawn this at startup). The library entry — tests via the trip harness,
+    // `latexml::api`, and downstream embedders — otherwise skips that prewarm,
+    // so libkpathsea's lazy `kpathsea_init_format` runs *during* the first
+    // lookups. When many conversion threads share the one process-global
+    // kpathsea handle under load (e.g. `cargo test --tests`), that mid-flight
+    // lazy init can transiently mis-resolve a support file → a spurious, flaky
+    // "1 warning". Running it inline here guarantees the tables are complete
+    // before `convert()` looks anything up, on every thread. Idempotent and a
+    // fast no-op once warm; single-process/single-thread runs (the CLI, the
+    // one-conversion-per-process cortex fleet) are unaffected. Honours the
+    // CLI's `LATEXML_NO_KPATHSEA_PREWARM` benchmarking opt-out.
+    if std::env::var_os("LATEXML_NO_KPATHSEA_PREWARM").is_none() {
+      latexml_core::util::pathname::prewarm_kpathsea();
+    }
     self.ready = true;
     Ok(())
   }

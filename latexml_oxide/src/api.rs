@@ -108,32 +108,32 @@ pub fn convert_to_html(tex: &str) -> Result<String, String> {
       .ok_or_else(|| "conversion failed before post-processing".to_string())?;
 
     let post_opts = post::PostOptions {
-      pmml: true,
-      cmml: false,
-      keep_xmath: false,
+      pmml:                      true,
+      cmml:                      false,
+      keep_xmath:                false,
       // Same per-format sheet the CLI uses (shared source of truth).
-      stylesheet: post::default_stylesheet(Some("html5")),
-      destination: None,
-      source_directory: None,
-      site_directory: None,
-      search_paths: &[],
-      nodefaultresources: false,
-      css_files: &[],
-      js_files: &[],
-      noinvisibletimes: false,
-      mathtex: false,
-      navigationtoc: None,
-      schemadocs: false,
-      split: false,
-      split_xpath: None,
-      split_naming: None,
-      xslt_parameters: &[],
+      stylesheet:                post::default_stylesheet(Some("html5")),
+      destination:               None,
+      source_directory:          None,
+      site_directory:            None,
+      search_paths:              &[],
+      nodefaultresources:        false,
+      css_files:                 &[],
+      js_files:                  &[],
+      noinvisibletimes:          false,
+      mathtex:                   false,
+      navigationtoc:             None,
+      schemadocs:                false,
+      split:                     false,
+      split_xpath:               None,
+      split_naming:              None,
+      xslt_parameters:           &[],
       graphics_svg_threshold_kb: 0,
       // No destination to write images to; keep the raw graphics references.
-      graphicimages: false,
-      timestamp: None,
-      icon: None,
-      whatsout: latexml_post::extract::Whatsout::Document,
+      graphicimages:             false,
+      timestamp:                 None,
+      icon:                      None,
+      whatsout:                  latexml_post::extract::Whatsout::Document,
     };
     Ok(post::run_post_processing(&xml, &post_opts))
   })
@@ -148,14 +148,23 @@ mod tests {
   #[test]
   fn xml_conversion_returns_content() {
     let xml = convert_to_xml(DOC).expect("convert_to_xml");
-    assert!(xml.contains("Hello"), "XML should contain the body text: {xml}");
-    assert!(xml.contains("<?xml") || xml.contains("<document"), "looks like XML");
+    assert!(
+      xml.contains("Hello"),
+      "XML should contain the body text: {xml}"
+    );
+    assert!(
+      xml.contains("<?xml") || xml.contains("<document"),
+      "looks like XML"
+    );
   }
 
   #[test]
   fn html_conversion_returns_page() {
     let html = convert_to_html(DOC).expect("convert_to_html");
     assert!(html.contains("Hello"), "HTML should contain the body text");
-    assert!(html.contains("<math") || html.contains("ltx_Math"), "math rendered");
+    assert!(
+      html.contains("<math") || html.contains("ltx_Math"),
+      "math rendered"
+    );
   }
 }
