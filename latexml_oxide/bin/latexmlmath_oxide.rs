@@ -12,6 +12,23 @@ use latexml::util::preset::{lex_single_tex_formula, new_test_engine};
 use latexml_core::{common::error::Result, state};
 use latexml_math_parser::*;
 
+const USAGE: &str = "\
+latexmlmath_oxide — convert a single TeX formula (a LaTeXML reimplementation in Rust)
+
+Usage: latexmlmath_oxide [OPTIONS] '<formula>'
+
+Options:
+      --pmml, --presentationmathml  Include Presentation MathML in the output
+      --cmml, --contentmathml       Include Content MathML in the output
+  -q, --quiet                       Only warnings and errors; no progress/lexeme notes
+  -h, --help                        Print this help
+
+Examples:
+  latexmlmath_oxide '1+1=2'
+  latexmlmath_oxide --pmml '\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}'
+
+Convert whole documents with `latexml_oxide` instead.";
+
 fn main() -> Result<()> {
   // 256 MB stack — see cortex_worker.rs for rationale (#17).
   std::thread::Builder::new()
@@ -51,10 +68,17 @@ fn real_main() -> Result<()> {
   };
   latexml_core::util::logger::init(log_level).ok();
 
+  // `--help` before anything else: without it the flag falls through as the formula
+  // and gets typeset, landing the user in TeX's interactive error prompt.
+  if argv.iter().any(|a| a == "--help" || a == "-h") {
+    println!("{USAGE}");
+    process::exit(0);
+  }
+
   let source = match argv.first() {
     Some(s) => s.clone(),
     None => {
-      eprintln!("Usage: latexmlmath_oxide [--pmml] [--cmml] [--quiet] '<formula>'");
+      eprintln!("{USAGE}");
       process::exit(1);
     },
   };
