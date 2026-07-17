@@ -141,7 +141,7 @@ latexml_package = {path = "../latexml_package", version = "0.5.0"}
 latexml_contrib = {path = "../latexml_contrib", version = "0.3.0"}
 latexml_math_parser = {path = "../latexml_math_parser", version = "0.3.0"}
 latexml_post = {path = "../latexml_post", version = "0.3.0"}
-pericortex = { git = "https://github.com/dginev/cortex-peripherals.git", optional = true }
+pericortex = { version = "0.2.8", optional = true }
 hostname = { version = "0.4", optional = true }
 # Replaces glibc malloc. glibc's per-arena mutex is a hard scaling bottleneck
 # for multi-process workloads like cortex_worker (arena contention via futex).

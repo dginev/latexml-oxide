@@ -363,6 +363,8 @@ impl LatexmlWorker {
       nomathparse:             None,
       // Corpus/parity sweeps never emit locators — keep the zero-cost path.
       source_map:              None,
+      // Corpus sweeps don't override input decoding — default (UTF-8) applies.
+      inputencoding:           None,
     };
 
     let mut converter = Converter::from_config(opts.clone());
