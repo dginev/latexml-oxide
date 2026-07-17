@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["dump_compiled_latexml_model","load_latexml_default_model"],"macro":[["tex_tests",1]],"mod":["converter","core_interface","ini_tex","lsp_server","main_tex","post","util"]};
+window.SIDEBAR_ITEMS = {"fn":["dump_compiled_latexml_model","load_latexml_default_model"],"macro":[["tex_tests",1]],"mod":["api","converter","core_interface","ini_tex","lsp_server","main_tex","post","util"]};
