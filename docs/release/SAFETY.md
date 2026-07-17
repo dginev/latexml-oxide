@@ -166,12 +166,32 @@ for the call; a `mutable` flag (checked first) gates the `&mut` sites; calling
 outside a hook context returns an error, not UB. Provenance + lifetime are
 documented in the `mod.rs::with_doc` *B1 SOUNDNESS CAVEAT*.
 
-**This ships COMPILED IN AND LIVE — it is not off by default.** This section said
-"off-by-default `script-bindings`" until 2026-07-17; both halves were wrong. The
-feature is `runtime-bindings` (the `script-bindings` alias was removed pre-publish),
-it is in `latexml`'s `default`, and `make_release.sh` *deliberately keeps it* while
-dropping `test-utils` — so these 5 sites are in every released binary and every
-container image.
+**In the downloaded binaries this ships COMPILED IN AND LIVE — it is not off by
+default.** This section said "off-by-default `script-bindings`" until 2026-07-17;
+both halves were wrong. The feature is `runtime-bindings` (the `script-bindings`
+alias was removed pre-publish), it is in `latexml`'s `default`, and
+`make_release.sh` *deliberately keeps it* while dropping `test-utils` — so these 5
+sites are in every GitHub-release binary (tarballs, `.zip`, `.deb`).
+
+**Where it ships, as of 2026-07-17:**
+
+| Artifact | Build | These 5 sites |
+|---|---|---|
+| GitHub-release binaries | `--no-default-features --features runtime-bindings` | **present** |
+| `cargo install latexml` | `default` (includes `runtime-bindings`) | **present** |
+| `ghcr.io/dginev/latexml-oxide` (cli image) | `--no-default-features --features runtime-bindings` | **present** |
+| cortex-worker image (the arXiv fleet) | `--no-default-features --features cortex` | **absent** |
+
+The line is **end-user convenience vs production deployment**, not
+binary-vs-container. The first three are ways to convert *your own* documents, and
+there the feature is the point: drop a `.rhai` beside a file and override a binding
+with no toolchain. The worker is our production path — batch-converting arXiv
+source trees nobody vetted — and it builds without the feature.
+
+**A deployment converting untrusted input should switch `runtime-bindings` off**,
+including one built from the cli image's recipe: drop `--features runtime-bindings`
+and rebuild. The convenience and the exposure are the same mechanism, so a
+deployment cannot keep one without the other.
 
 Nor is the path dormant. `converter.rs::rhai_dispatch` sits **first** in the
 binding-resolution chain and runs on *every* package/class request: for `foo.sty`
