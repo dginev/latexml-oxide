@@ -883,12 +883,6 @@ mod embedded_xslt {
   /// resolved against the [`FILES`] table.
   pub const URL_PREFIX: &str = "embed:///";
 
-  /// The LaTeXML-canonical XSLT URN scheme. A user `--stylesheet` imports the
-  /// built-in engine as `urn:x-LaTeXML:XSLT:LaTeXML-html5.xsl` (Perl resolves it
-  /// through an XML catalog); we resolve it against the embedded [`FILES`] table
-  /// (issue #292).
-  pub const URN_PREFIX: &str = "urn:x-LaTeXML:XSLT:";
-
   /// Look up the embedded XSLT bytes by basename, or `None` if the
   /// stylesheet is not bundled.
   pub fn lookup(name: &str) -> Option<&'static [u8]> {
@@ -897,23 +891,20 @@ mod embedded_xslt {
       .find_map(|(n, c)| (*n == name).then_some(c.as_bytes()))
   }
 
-  /// Map any URL libxml2 hands us to an embedded XSLT basename, or `None` if we
-  /// don't serve it. Handles `embed:///X`, the canonical `urn:x-LaTeXML:XSLT:X`,
-  /// AND the relative form libxml2 composes when a urn-loaded root imports a
-  /// child relatively — base `urn:x-LaTeXML:XSLT:LaTeXML-html5.xsl` + rel
-  /// `LaTeXML-all-xhtml.xsl` merges (RFC 3986 §5.2, empty base path) to
-  /// `urn:LaTeXML-all-xhtml.xsl`, so the final `:`/`/` segment is the basename.
+  /// Map any URL libxml2 hands us to an embedded XSLT file, or `None` if we
+  /// don't serve it. We key purely on the **final path segment**, because a
+  /// user `--stylesheet` imports the engine by the LaTeXML-canonical
+  /// `urn:x-LaTeXML:XSLT:X` scheme (Perl resolves it via an XML catalog), and
+  /// libxml2 versions then resolve that root's *relative* child imports
+  /// differently against the opaque `urn:` base: Linux composes
+  /// `urn:LaTeXML-all-xhtml.xsl`, macOS drops to a bare `LaTeXML-all-xhtml.xsl`
+  /// (CI witness, issue #292). Keying on the basename resolves `embed:///X`,
+  /// `urn:x-LaTeXML:XSLT:X`, `urn:X`, and bare `X` uniformly. Only our
+  /// distinctive `LaTeXML-*.xsl` names are in [`FILES`], so a user's own
+  /// relative import (a different basename) still loads from disk.
   pub fn resolve(url: &str) -> Option<&'static [u8]> {
-    let name = if let Some(rest) = url.strip_prefix(URL_PREFIX) {
-      rest
-    } else if let Some(rest) = url.strip_prefix(URN_PREFIX) {
-      rest // canonical urn:x-LaTeXML:XSLT:X
-    } else if url.starts_with("urn:") {
-      url.rsplit([':', '/']).next().unwrap_or(url) // relative-composed urn:X
-    } else {
-      return None;
-    };
-    lookup(name.rsplit('/').next().unwrap_or(name))
+    let name = url.rsplit(['/', ':']).next().unwrap_or(url);
+    lookup(name)
   }
 
   /// Install the libxml2 input callback that serves `embed:///`
@@ -927,10 +918,12 @@ mod embedded_xslt {
     static INSTALLED: OnceLock<()> = OnceLock::new();
     INSTALLED.get_or_init(|| {
       libxml::io::register_input_callback(
-        // Serve our own `embed:///` URLs and any `urn:` a user stylesheet
-        // imports that maps to an embedded engine file (issue #292). Unknown
-        // urns resolve to None → libxml2 reports the load failure as before.
-        |url| url.starts_with(URL_PREFIX) || (url.starts_with("urn:") && resolve(url).is_some()),
+        // Serve any URL whose basename is one of our embedded engine files —
+        // `embed:///X`, a user stylesheet's `urn:x-LaTeXML:XSLT:X`, and the
+        // relative child imports libxml2 composes from it (`urn:X` on Linux, a
+        // bare `X` on macOS). A non-engine basename resolves to None, so the
+        // callback declines it and libxml2 loads it from disk as before (#292).
+        |url| resolve(url).is_some(),
         |url| resolve(url).map(|s| s.to_vec()),
       );
     });
