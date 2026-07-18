@@ -1,0 +1,35 @@
+\documentclass{article}
+\newcounter{mylineno}
+\makeatletter
+\let\oldtabcr\@tabcr
+\def\nonumberbreak{\oldtabcr\hspace{3.5pt}}
+\def\mynewline{\refstepcounter{mylineno}%
+               \llap{\footnotesize\arabic{mylineno}\hspace{5pt}}%
+              }
+\gdef\@tabcr{\@stopline \@ifstar{\penalty%
+           \@M \@xtabcr}\@xtabcr\mynewline}
+\newenvironment{code}{%
+                        \mathcode`\:="603A
+                        \def\colon{\mathchar"303A}
+                        \setcounter{mylineno}{0}
+                        \par
+                        \upshape
+                        \begin{list}
+                           {} {\leftmargin = 1cm}
+                        \item[]
+                        \begin{tabbing}
+                           \hspace*{.3in} \= \hspace*{.3in} \=
+                           \hspace*{.3in} \= \hspace*{.3in} \= \kill
+                           \mynewline
+                       }{\end{tabbing}\end{list}}
+\makeatother
+\newcommand{\a}{\alpha}
+\newcommand{\normo}[1]{\|#1\|}
+\begin{document}
+\begin{code}
+If \= $A$ is explicitly known\\
+  \> $\a = \normo{A}$\\
+else\\
+  \> $c = \a$
+\end{code}
+\end{document}

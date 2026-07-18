@@ -22,6 +22,33 @@ vs same-host Perl **verbose**, cross-check pathological inputs with `pdflatex`,
 never downgrade an Error to "pass", diverge only when `OXIDIZED_DESIGN.md` (or an
 explicit surpass-Perl decision) sanctions it, and add a red/green guard per fix.
 
+> ## ⚠️ Diagnostic update (2026-07-18) — P1/P2/P3 investigated → RECLASSIFIED
+>
+> The P1 "highest value genuine Rust cluster" hypothesis was **wrong**. Each
+> witness was minimally reproduced and cross-checked against **both** pdflatex
+> and same-host Perl. Findings (repros saved under `docs/reproducers/` and
+> `docs/known_crashes/blkarray_halign_math/`):
+>
+> | issue | paper | verdict | root (all cross-checked vs pdflatex) |
+> |---|---|---|---|
+> | #568 | 2309.16609 | **PARITY / Rust-better** | fragile `\lstinline{...{9}...}` (brace delim reads to 1st `}`); Rust 18 = Perl 18 **+ a Perl Fatal**. pdflatex "Too many }'s" (recovers). `docs/reproducers/lstinline_brace_2309.16609.tex` |
+> | #477 | 2310.07298 | **PARITY** | author typo `$\boldsymbol{\Delta$}` (misplaced `$`); Rust 24 = Perl 24. Rust flags it like pdflatex; Perl lenient. `docs/reproducers/misplaced_dollar_boldsymbol_2310.07298.tex` |
+> | #497/#516 | 2405.21060 | **Rust-BETTER** | same misplaced-`$` family; Rust **26** vs Perl **102 + Fatal** |
+> | #472 | 2311.06609 | **Rust-worse, deferred** | custom `code` env (tabbing+`$…$`); Rust 82 vs Perl 39. Removing the code env → **Rust 0**, Perl 14: Rust converts the *rest* perfectly. The amplifier is non-minimizable and `egroup` recovery is a faithful port. `docs/reproducers/tabbing_math_code_env_2311.06609.tex` |
+> | #594/#473 | 1811.10792, 2310.17416 | **known cluster (both engines fail)** | **`blkarray`** `block{(cc)}` in `blockarray` in display math → Rust OOM (4.5 GB/12 s), **Perl also hangs** (90 s/rc=124), pdflatex clean. 4-line repro. |
+>
+> **The unifying root is the KNOWN, documented, HIGH-DIFFICULTY, post-release
+> `\lx@begin@alignment` / `\halign`-in-math cluster** (`stomach.rs::egroup`
+> refuses to pop a per-cell inline-math frame at an alignment close; ~12.1k
+> full-arXiv fatals). See `docs/known_crashes/{kbordermatrix,blkarray}_halign_math/`.
+> This mini-sprint's contribution: a **much smaller** repro (4-line blkarray) and
+> new witnesses (blkarray degrades **both** engines, unlike kbordermatrix). The
+> deep core fix is out of mini-sprint scope; a `blkarray` binding is the safe
+> sidestep but needs non-trivial `block`-delimiter modelling (probed, deferred).
+> Net: **P1 is not a fixable Rust-only cluster** — Rust is at parity-or-better on
+> every shared construct. The P1–P8 plans below are kept for provenance but P1/P2/
+> P3 are superseded by this update.
+
 ## P1 — Alignment env inside a restricted-horizontal box (GENUINE, highest value)
 
 **Issues:** #568 (2309.16609, 31), #497/#516 (2405.21060, 26), #477 (2310.07298,
