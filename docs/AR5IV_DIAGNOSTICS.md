@@ -11,6 +11,166 @@ ranked worklist for the follow-on implementation sprint.
 > re-planning; do not treat as a live worklist once acted on. Branch
 > `ar5iv-minisprint`.
 
+# Implementation plans — remaining deep issues (2026-07-18)
+
+The self-contained wins are landed (13 issues on PR #306; see the "Ranked
+worklist" and per-cluster notes below). What remains is deep or shared-with-Perl.
+Each plan below is written to be picked up cold: symptom + evidence, a root-cause
+hypothesis, the concrete approach, the files, the traps, and the test. Ordered by
+value × tractability. **Golden rules still bind:** Perl is ground truth, classify
+vs same-host Perl **verbose**, cross-check pathological inputs with `pdflatex`,
+never downgrade an Error to "pass", diverge only when `OXIDIZED_DESIGN.md` (or an
+explicit surpass-Perl decision) sanctions it, and add a red/green guard per fix.
+
+## P1 — Alignment env inside a restricted-horizontal box (GENUINE, highest value)
+
+**Issues:** #568 (2309.16609, 31), #497/#516 (2405.21060, 26), #477 (2310.07298,
+24), and the RUST-WORSE #594 (1811.10792, timeout) / #472 (2311.06609, 82) share
+the same machinery. This is the single largest *genuine* Rust cluster.
+
+**Symptom.** `Error:unexpected:\lx@begin@alignment Attempt to close a group that
+switched to mode restricted_horizontal` (15× on 2309.16609), plus
+`\lx@end@inline@math`, `\hbox Attempt to end mode restricted_horizontal`,
+`\endgroup Attempt to close non-boxing group`. Errors fire at "Anonymous String"
+/ macro-expanded locations, not source lines.
+
+**Evidence / hypothesis.** An amsmath alignment (`align`/`cases`/`split`/`aligned`)
+or an inline `$…$` is being digested **inside a restricted-horizontal box**
+(`\hbox`/`\mbox`/`\parbox`/`\vcenter`, or a CJK box on 2309.16609 which loads
+`CJKutf8`; 2405.21060 uses `mathtools` `\DeclarePairedDelimiter`). The alignment's
+`\lx@begin@alignment` opens an alignment group, but the surrounding box already
+switched the mode to `restricted_horizontal`, so when the alignment tries to
+close/realign it "closes a group that switched mode" → cascade. Perl keeps a
+looser mode stack here (17 vs Rust 82 on 2311.06609), so Rust is stricter-wrong.
+
+**Approach.**
+1. Build the minimal repro from the smallest witness: try `\mbox{$\begin{aligned}
+   a&=b\\ c&=d\end{aligned}$}` and `\hbox{\begin{cases}…\end{cases}}`, and the
+   CJK case `\begin{CJK*}…$…$…\end{CJK*}`. One will reproduce `Attempt to close a
+   group that switched to mode restricted_horizontal`.
+2. Trace with `LXML_TRACE_BOUND_MODE=1` (see mhchem memory) around
+   `\lx@begin@alignment` / the mode stack (`latexml_core::stomach` mode
+   transitions; `latexml_engine` alignment constructs `\halign`/`\lx@…@alignment`).
+   Find where Rust pushes `restricted_horizontal` but should allow an alignment to
+   open a nested math/alignment group (Perl's `beginMode`/`endMode` pairing).
+3. The fix is almost certainly in the **mode/group pairing** when an alignment or
+   inline-math opens inside a box: permit the alignment group to nest (open its
+   own mode frame) rather than asserting the box's mode. Cite the Perl
+   `Stomach`/`Gullet` alignment source for the faithful pairing.
+
+**Files.** `latexml_core/src/stomach*.rs` (mode stack), `latexml_engine/src/*`
+alignment constructs (`\lx@begin@alignment`, `\halign`, `\lx@end@inline@math`),
+`latexml_core::stack_guard`. **Traps:** don't loosen the mode check globally (it
+guards real malformed input); scope to the alignment/inline-math-in-box case.
+Re-run every alignment test (`tests/alignment`, `tests/ams`, `tests/math`) — this
+is core machinery.
+
+**Test.** `.tex`+`.xml` pair under `tests/alignment` with align/cases/aligned
+inside `\mbox`/`\hbox` and (separately) a CJK box; assert 0 errors and correct
+`<ltx:XMArray>` nesting. Value: 4–5 issues, and it de-risks the two RUST-WORSE
+timeouts (which begin with the same `\lx@end@inline@math` cascade before looping).
+
+## P2 — 2311.06609 siamart paper-local `code` env (#472, RUST-WORSE 82 vs 17)
+
+**Root.** A paper-local `\newenvironment{code}` = `list` + `tabbing` + `\mathcode
+\`\:` remap + custom `\mynewline`, holding inline `$…$` cells. Raw `tabbing`+`$…$`
+is clean in BOTH engines (verified), so it is the **custom-env composition** that
+breaks group/mode balance (same family as P1 — `\lx@begin@alignment`/
+`\lx@end@inline@math`). **Approach:** land P1 first, then re-measure; the residual
+is likely the `list`+`tabbing`+`\mynewline` interaction — min-repro by peeling the
+env to the smallest failing combo (start from `\begin{list}{}{}\item[]
+\begin{tabbing}\>$a=b$\\ \end{tabbing}\end{list}`). **Files:** tabbing constructs +
+mode stack. **Test:** the min-repro as a `tests/alignment` pair.
+
+## P3 — Rust-only timeouts (#594 1811.10792, #473 2310.17416)
+
+**Symptom.** Rust hits the 60 s wall-clock timeout; Perl completes (with 101
+errors → its `too_many_errors` fatal, so Perl is not "clean" either, but it
+terminates). Both begin with the P1 cascade (`\lx@end@inline@math`, `\halign`,
+`_`) then loop. **Hypothesis.** The P1 group-mode cascade drives error-recovery
+that re-digests the same tokens → a grind, not a true infinite loop (the box list
+grows). **Approach.** (a) land P1 — likely removes the cascade that feeds the
+loop; (b) if a loop remains, sample it with the `EXP_TRACE` histogram (see
+`limit-counting-raise-not-reduce` memory) to find the hot re-digest site;
+**RAISE** the relevant guard limit rather than reduce counting, or fix the
+recovery to not re-enqueue. **NEVER** downgrade to a cap that hides the cascade.
+**Files:** `latexml_core::stack_guard`, the recovery path in
+`core_interface::digest_internal`. **Test:** a bounded min-repro that converts
+under the timeout with the expected (small) error count.
+
+## P4 — Shared-with-Perl timeouts (tikz / tcolorbox / forest / pgf)
+
+**Issues:** #599 (1802.01134), #598 (1611.02087), #596 (2505.01658), #471
+(2308.04512), #522 (2405.19920), #533 (2406.15882), #546 (2504.07033), #550
+(2501.09223), #551 (2501.10235). **Both engines time out** (Perl `rc=124` at 1×
+too — re-verify each at 1× first, the sweep ran 10× parallel). These are the
+heavy graphics stacks (tikz pictures, pgfplots, tcolorbox, forest). **Approach.**
+Per-paper: (1) confirm Perl also times out at 1× (if so → parity, and the lever is
+performance not correctness — see `docs/performance/ARXIV_PERFORMANCE.md`, the
+17% math over-parse + tikz-cd digest levers); (2) locate the hot construct
+(`--timeout` + the sampled histogram) — usually one runaway tikz/pgfmath loop or a
+tcolorbox `most`-library expansion; (3) either bind the offending construct to a
+placeholder (the `discard_env_body` pattern, as nicematrix/forest do) or fix the
+specific pgfmath/tikz loop. **Do not** blanket-raise the timeout. **Files:**
+`pgfmath*`, `tikz*`, `tcolorbox_sty.rs`, contrib graphics stubs. **Test:** the
+paper converts under a fixed timeout; guard the specific construct with a min-repro
+if a real fix (not a stub) lands. Lower priority than P1–P3 (mostly parity).
+
+## P5 — `_` / `^` "script can only appear in math mode" cascade
+
+**Issues:** #601 (2604.16007, 60), #557 (2305.05665, 33), #597 (1404.3143,
+ytableau — Perl fatals worse), #483 (2312.11805), #523 (2408.15403), #585
+(1802.09089). **Errors are macro-generated** ("Anonymous String"), NOT source
+lines. **Ruled out:** the Rust `axessibility` binding is a faithful, identical
+port of Perl's (parity) — not the cause. **Mixed deep roots:** (a) `ytableau`
+`\none[\textstyle …]` cells in `align*` (1404.3143 — shared Perl limit, PARITY);
+(b) `axessibility[accsupp]` ActualText re-digesting the math source in text mode
+(2305.05665 — needs the accsupp alt-text treated as an opaque string, not
+re-tokenized); (c) table-cell `_` (2604.16007). **Approach.** Split by root: for
+(b), make the axessibility accsupp injection wrap its argument as verbatim/string
+(don't re-digest); classify (a)/(c) vs Perl first — likely PARITY (record in
+`KNOWN_PERL_ERRORS.md`), fix only where Rust > Perl. **Value:** moderate; several
+are parity. **Test:** per-root min-repro.
+
+## P6 — Residuals on already-improved papers
+
+- **2412.06264 (#520) `\or` flood (337, all at `\end{document}`).** The fairmeta
+  frontmatter is fixed; the residual is 337 `\or` fired at end-of-document →
+  DEFERRED content (floats/endnotes) carrying an unbalanced `\ifcase`/`\or`, or
+  nicematrix/luabridge expl3 the stub doesn't balance. **Approach:** bisect the
+  deferred content; find the `\or`-emitting construct (likely a nicematrix table or
+  an expl3 `\int_case:nn`). Likely parity-ish. Lower priority.
+- **2508.07407 (#556) `Stomach:Recursion`.** Frontmatter fixed; residual is a
+  box-loop in `paradigms.tex`: `\resizebox{\textwidth}{!}{…\begin{minipage}[t]
+  {\linewidth}…}` — a width-resolution loop (resizebox measuring a minipage whose
+  width depends on the resize). **Approach:** min-repro the resizebox+minipage;
+  the fix is in the box-dimension resolution (a `\resizebox` should not re-measure
+  a `\linewidth`-relative child into a loop) — see the box-model memory
+  `box-model-hsize-frame-ordering-fix`. Emit `Error!` + graceful, never silent.
+
+## P7 — Parity / shared-Perl singletons (document, don't force)
+
+Both engines fail identically (verify each vs Perl, then record in
+`KNOWN_PERL_ERRORS.md`; fix in Rust only if cheap and Perl-shared):
+`2602.15902` (#591, `\mintinline`→`\verb` `\ifmmode` — already documented as
+parity), `{forest}` stubs (#476/#573), `{pNiceMatrix}` stub (#499), `\filledstar`
+(author-undefined, 2402.13846 residual), `\BibSpecAlias` (#485), biblatex
+`{refsegment}`/`\defbibfilter` (#580), `\bfR` (#484), `malformed:ltx:bibitem`
+(#482), `malformed:ltx:listing` (#554), `\@end@tabular` (#558, 2301.12995 —
+check if genuine). **Content-bearing deferrals:** `\titlehead` (#498, scrartcl/KOMA
+— needs `\maketitle` integration, not a no-op).
+
+## P8 — Verify + close the already-CLEAN batch (~48 issues)
+
+The largest bucket: ~48 issues already convert **0-error** in latexml-oxide (see
+the CLEAN table). They were filed against old Perl output. **Approach:** they close
+once the ar5iv corpus is re-served from the current binary (a redeploy, not a code
+change). Before closing each, spot-verify the specific reported symptom is gone
+(not just 0 errors — e.g. the missing section/figure the user named renders).
+Batch a maintainer-facing list; do not post to the tracker unilaterally.
+
+---
+
 ## Method
 
 - Source: `/data/arxiv/<YYMM>/<id>/<id>.zip`, copied to a scratch dir and
