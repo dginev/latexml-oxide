@@ -1,0 +1,22 @@
+\documentclass{article}
+\begin{document}
+% \ifmmode selects its true branch in math mode, its \else branch in text
+% mode. Minimal illumination of the mode-sensing conditional across the mode
+% transitions LaTeX cares about. Companion to structure/eqnums.tex (which
+% exercises \ifmmode inside \tag). Marker convention: M = math-branch taken,
+% T = text-branch taken.
+
+Plain text: \ifmmode M\else T\fi.
+
+Inline math: $\ifmmode M\else T\fi$.
+
+Display math: \[\ifmmode M\else T\fi\]
+
+A box resets to text inside math: $\mbox{\ifmmode M\else T\fi}$.
+
+Inside a robust font command: \textbf{\ifmmode M\else T\fi}.
+
+Nested in text: \ifmmode M\else\ifmmode M\else T\fi\fi.
+
+Nested in math: $\ifmmode\ifmmode A\else B\fi\else C\fi$.
+\end{document}

@@ -1,0 +1,12 @@
+\documentclass{article}
+\begin{document}
+% Companion to ifmmode.tex: the canonical mode-FORCING macros probed with
+% \ifmmode. \ensuremath forces math mode regardless of the surrounding mode;
+% \mbox forces text mode even inside math. M = math-branch, T = text-branch.
+
+In text, \string\ensuremath\ forces math: \ensuremath{\ifmmode M\else T\fi}.
+
+Already in math, \string\ensuremath\ is a no-op: $\ensuremath{\ifmmode M\else T\fi}$.
+
+In math, a box forces text: $\ifmmode M\else T\fi\ \mbox{\ifmmode M\else T\fi}$.
+\end{document}
