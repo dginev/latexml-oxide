@@ -206,6 +206,7 @@ pub mod catoptions_sty;
 pub mod pnas_new_cls;
 pub mod scis2024_cls;
 pub mod scrlayer_scrpage_sty;
+pub mod selfevolagent_cls;
 pub mod semantic_sty;
 pub mod siamart_cls;
 pub mod siamltex_cls;
@@ -535,6 +536,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("semantic", "sty", semantic_sty::load_definitions),
   ("sigma", "cls", sigma_cls::load_definitions),
+  ("selfevolagent", "cls", selfevolagent_cls::load_definitions),
   ("smc_ieeeconf", "cls", smc_ieeeconf_cls::load_definitions),
   ("sn-jnl", "cls", sn_jnl_cls::load_definitions),
   ("spie", "cls", spie_cls::load_definitions),
