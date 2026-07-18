@@ -39,7 +39,7 @@ failure.
 | **RUST-BETTER** | 25 | Rust completes where Perl fatals/times out (several still have reducible Rust errors) |
 | **PARITY** | 8 | Rust ≈ Perl error count — shared missing macro/package |
 | **PARITY-TIMEOUT** | 9 | both time out — shared, hard |
-| **RUST-WORSE** | 4 | genuine Rust regression — top priority |
+| **RUST-WORSE** | 3 | genuine Rust regression — top priority (was 4; `2602.15902` reclassified → parity, see cluster 5) |
 | **??** | 2 | #518 feature (dark mode, ar5iv frontend); #537 no main file detected |
 
 Of 100 issues: **~48 issues already convert clean** in latexml-oxide (46 papers +
@@ -70,11 +70,24 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
    `2309.16609` (31), `1811.10792` (RUST-WORSE timeout). Inline-math / amsmath
    alignment group balance. Contains the clearest RUST-WORSE regression.
 4. **`_` / `^` "script can only appear in math mode" cascade** — `2604.16007`
-   (60), `2305.05665` (33, `axessibility`), `1404.3143` (ytableau, **parity** —
-   Perl fatals worse), `2312.11805`, `2408.15403`. Mixed roots; `axessibility`
-   (redefines `_`/`^`) is a recurring suspect.
-5. **`\else`/`\fi` flood (minted)** — `2602.15902` (**783**, RUST-WORSE).
-   `minted`/`fvextra` conditional machinery.
+   (60), `2305.05665` (33), `1404.3143` (ytableau, **parity** — Perl fatals
+   worse), `2312.11805`, `2408.15403`. Errors originate at "Anonymous String"
+   (macro-generated), not source lines. **Not** axessibility — the Rust
+   `axessibility` binding is a faithful, identical port of Perl's (parity); ruled
+   out. Mixed deep roots (table cell / pgfplots / ytableau); largely parity.
+5. **`\ifmmode` double-`\else` flood** — `2602.15902` (783). **RECLASSIFIED →
+   PARITY.** Minimal repro: `\textbf{\mintinline{latex}{CD}}`. Both LaTeXML
+   bindings map `\mintinline` → fragile `\verb` (Rust `minted_sty.rs:108`, Perl
+   `minted.sty.ltxml:107`); `\verb` inside `\textbf`'s `\ifmmode\else\fi`
+   corrupts the conditional **identically in both engines** (verified — Perl
+   emits the same `Extra \else` / `\fi` / `\lx@hidden@egroup` cascade). The
+   783-vs-101 gap is only Perl bailing at `too_many_errors:100`; per-occurrence
+   behaviour is the same. A real-minted `\mintinline` is robust (works in an
+   arg), but pdflatex here can't run minted v3 (executable absent) so there is no
+   local oracle. **No faithful engine change** (both track Perl); a surpass-both
+   "robust `\mintinline`" is possible but out of mini-sprint scope. Direct
+   `\ifmmode` coverage added: `tests/expansion/ifmmode`, `.../ensuremath_mode`
+   (every branch selection verified to match pdflatex).
 6. **`malformed:ltx:subsection/section` nesting** — `2402.13846` (16),
    `2507.00833` (8). Root: a **`\newtcblisting` (tcolorbox) verbatim box does not
    close**, so deeply-nested `<ltx:verbatim><ltx:verbatim>…` swallows subsequent
