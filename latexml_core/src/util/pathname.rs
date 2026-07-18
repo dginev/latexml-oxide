@@ -129,10 +129,11 @@ fn select_kpaths() -> Option<Kpaths> {
 
 /// The ambient `kpsewhich --version` banner (full stdout), memoized for the
 /// process. It is a global property of the host TeX install, and several
-/// consumers read it — kpathsea backend selection ([`select_kpaths`]),
-/// ambient-year detection, and the latex-dump stamp check (both in
-/// `latexml_engine`) — so `kpsewhich` is spawned at most once. Returns `None`
-/// if kpsewhich is absent or the call fails.
+/// consumers read it — kpathsea backend selection ([`select_kpaths`]) and
+/// ambient-year detection (in `latexml_engine`; the year-based latex-dump
+/// staleness check in turn consumes that detected year) — so `kpsewhich` is
+/// spawned at most once. Returns `None` if kpsewhich is absent or the call
+/// fails.
 ///
 /// NOT gated on the `kpathsea` feature: it is a plain subprocess probe (no C
 /// library), so the year/stamp logic can share it even in the host-side codegen

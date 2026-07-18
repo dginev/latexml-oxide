@@ -75,9 +75,10 @@ pub fn detect_ambient_texlive_year() -> Option<u32> {
 /// The ambient `kpsewhich --version` banner, memoized ONCE per process in
 /// `latexml_core` — the lowest crate that spawns kpsewhich, shared with the
 /// kpathsea backend selection (`select_kpaths`), so the whole process spawns
-/// `kpsewhich --version` at most once across backend-choice, year detection,
-/// and the stamp check. Thin re-export for this crate's consumers. Returns
-/// `None` if kpsewhich is absent or the call fails.
+/// `kpsewhich --version` at most once across backend-choice and year detection
+/// (the year-based dump staleness check consumes that detected year — it does
+/// not read this banner itself). Thin re-export for this crate's consumers.
+/// Returns `None` if kpsewhich is absent or the call fails.
 pub fn ambient_kpsewhich_version() -> Option<&'static str> {
   latexml_core::util::pathname::ambient_kpsewhich_version()
 }
@@ -267,6 +268,57 @@ pub fn stamp_path_for_dump(dump_path: &Path, year: u32) -> Option<PathBuf> {
   Some(dump_path.parent()?.join(version_filename(year)))
 }
 
+/// Staleness check for a loaded kernel dump, at TeX-Live-**year** granularity.
+///
+/// The dump is year-versioned (`latex.YYYY.dump.txt`) and selected by the
+/// ambient TeX Live year, so the unit that decides whether the dump's macro set
+/// matches the installation is the **year**, not the kpathsea patch level. An
+/// earlier version compared the exact `kpathsea version X.Y.Z` stamp strings and
+/// warned on a within-year patch bump — e.g. the release-build container's
+/// `6.4.1` vs a user's shipped-TL2026 `6.4.2` — even though both are TL2026 with
+/// the same macros. That was a false positive (issue #299). The kpathsea string
+/// is also not a reliable cross-year discriminator (TL2023 and TL2025 report the
+/// same string), so we never compare stamps directly.
+///
+/// Returns `Some(message)` to warn, `None` to stay silent. Warns **only** when
+/// `ambient_year` is known AND differs from the loaded `dump_year` (no dump for
+/// the installed TL year was bundled, so we fell back to a different year).
+/// Silent when the years match, the ambient year is undetectable, or the dump
+/// year is unknown (`0`).
+///
+/// `from_embedded` distinguishes the shipped standalone binary (embedded dump —
+/// a user cannot regenerate it and has no `tools/` tree) from the dev/on-disk
+/// tree (where regenerating the local dump is the actionable fix).
+pub fn dump_year_mismatch_warning(
+  dump_year: u32,
+  ambient_year: Option<u32>,
+  from_embedded: bool,
+) -> Option<String> {
+  let ambient = ambient_year?;
+  if dump_year == 0 || ambient == dump_year {
+    return None;
+  }
+  let detail = if from_embedded {
+    // Standalone-binary user: no source tree, and the embedded dump can't be
+    // regenerated — upgrading the binary (or setting the env var) is the honest
+    // advice. Do NOT reference `tools/make_formats.sh` (issue #299).
+    format!(
+      ", and this binary bundles no TL{ambient} dump. A few macros may differ; \
+       conversions use the closest bundled year and are usually unaffected. \
+       Silence with LATEXML_SKIP_DUMP_STAMP_CHECK=1."
+    )
+  } else {
+    ". A few macros may differ. Run `tools/make_formats.sh` to regenerate the \
+     dump against the ambient TeX Live, or silence with \
+     LATEXML_SKIP_DUMP_STAMP_CHECK=1."
+      .to_string()
+  };
+  Some(format!(
+    "loaded the TL{dump_year} kernel dump, but the ambient TeX Live is \
+     {ambient}{detail}"
+  ))
+}
+
 #[cfg(test)]
 mod year_parse_tests {
   use super::{parse_year_from_version_banner, parse_year_str};
@@ -323,5 +375,60 @@ mod year_parse_tests {
     assert_eq!(parse_year_str(""), None);
     assert_eq!(parse_year_str("1999"), None); // outside the sane range
     assert_eq!(parse_year_str("20269"), None); // 5-digit run is not a year
+  }
+}
+
+#[cfg(test)]
+mod stamp_check_tests {
+  use super::dump_year_mismatch_warning;
+
+  // Issue #299: the reporter's exact case — TL2026 dump loaded on a TL2026
+  // install. The kpathsea *patch* level differed (6.4.1 build container vs
+  // 6.4.2 shipped TL2026) but the YEAR matches, so there is NO macro-set
+  // mismatch and the check must stay SILENT.
+  #[test]
+  fn same_year_is_silent() {
+    assert_eq!(dump_year_mismatch_warning(2026, Some(2026), true), None);
+    assert_eq!(dump_year_mismatch_warning(2026, Some(2026), false), None);
+  }
+
+  // A genuine year mismatch (installed TL year has no bundled dump, so we fell
+  // back to a different year) DOES warn — and the standalone-binary message
+  // names both years and never points at a `tools/` script the user lacks.
+  #[test]
+  fn genuine_year_mismatch_warns_without_script_hint() {
+    let msg =
+      dump_year_mismatch_warning(2022, Some(2019), true).expect("a real year mismatch must warn");
+    assert!(msg.contains("2022"), "names the loaded dump year: {msg}");
+    assert!(msg.contains("2019"), "names the ambient TL year: {msg}");
+    assert!(
+      !msg.contains("make_formats"),
+      "standalone-binary message must not reference a source-tree script: {msg}"
+    );
+  }
+
+  // The dev-tree / on-disk path (from_embedded == false) keeps the
+  // regenerate-your-local-dump hint, which is actionable there.
+  #[test]
+  fn dev_tree_mismatch_keeps_regenerate_hint() {
+    let msg =
+      dump_year_mismatch_warning(2026, Some(2027), false).expect("a real year mismatch must warn");
+    assert!(
+      msg.contains("make_formats"),
+      "dev-tree hint retained: {msg}"
+    );
+  }
+
+  // No reliable year signal → no warning (fail toward silence, not a spurious
+  // kpathsea-string mismatch).
+  #[test]
+  fn undetectable_ambient_year_is_silent() {
+    assert_eq!(dump_year_mismatch_warning(2026, None, true), None);
+  }
+
+  // Unknown dump year (0 sentinel) → nothing to compare.
+  #[test]
+  fn unknown_dump_year_is_silent() {
+    assert_eq!(dump_year_mismatch_warning(0, Some(2026), true), None);
   }
 }

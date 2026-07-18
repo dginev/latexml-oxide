@@ -225,7 +225,10 @@ pub fn embedded_latex_dump(prefer: Option<u32>) -> Option<&'static str> {
 }
 
 /// First line of the bundled `texlive.YYYY.version` stamp for the chosen
-/// year (used by the staleness check). `None` if no embedded dump applies.
+/// year — a diagnostic accessor for the exact kpathsea version the dump was
+/// generated against. (The dump staleness check compares TL *years*, not this
+/// string — see `dump_paths::dump_year_mismatch_warning`, issue #299.) `None`
+/// if no embedded dump applies.
 pub fn embedded_texlive_version_first_line(prefer: Option<u32>) -> Option<&'static str> {
   let (entry, _) = select_embedded(prefer)?;
   entry.stamp.lines().next()
