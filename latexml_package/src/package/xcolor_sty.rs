@@ -555,7 +555,25 @@ LoadDefinitions!({
   DefConditional!("\\ifxglobal@");
   RawTeX!("\\globalcolorsfalse\\definecolorstrue");
 
+  // Real xcolor is a STANDALONE color package: for
+  // `\documentclass[dvipsnames]{article}` + `\usepackage{xcolor}`, pdflatex
+  // reads only `xcolor.sty` + `dvipsnam.def` (color.sty is never loaded), so
+  // xcolor's own dvipsnames handling defines the 68 dvips names in xcolor's DB.
+  // Our binding instead layers xcolor ON TOP of `color`. A GLOBAL `dvipsnames`
+  // class option is therefore seen by `color` FIRST (during the RequirePackage
+  // below): color's eager `\ds@dvipsnames` pulls `dvipsnam.def` into color's DB
+  // (usenames-inactive → plain names not exposed) and the `input_definitions`
+  // load-dedup then makes xcolor's own (authoritative) `\ds@dvipsnames` load a
+  // no-op, leaving xcolor's DB without the dvips names → `\textcolor{OliveGreen}`
+  // fails. Flag xcolor as the driver so color DEFERS its eager dvips-name load;
+  // xcolor's `\ds@dvipsnames` (declared below, run at ProcessOptions) then
+  // performs the single DB-correct load — matching pdflatex's one-load outcome.
+  // Reset immediately after so a later standalone `\usepackage[dvips]{color}`
+  // still loads. Witness: 2405.04517 (`\documentclass[dvipsnames]{article}`,
+  // 912 × `unexpected:OliveGreen` → 0; ar5iv #503/#495/#474).
+  assign_value("xcolor_driving", true, Some(Scope::Global));
   RequirePackage!("color");
+  assign_value("xcolor_driving", false, Some(Scope::Global));
 
   // xcolor.sty L1035: \def\@ifundefinedcolor#1{\@ifundefined{\@backslashchar color@#1}}
   // Used by menukeys and other downstream packages to test if a color

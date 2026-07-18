@@ -1,0 +1,14 @@
+\documentclass[dvipsnames]{article}
+% dvipsnames passed as a GLOBAL class option, then a bare \usepackage{xcolor}.
+% Real LaTeX (pdflatex) processes the global option in xcolor's ProcessOptions
+% and loads dvipsnam.def, so the 68 dvips names (OliveGreen, RoyalBlue, …) are
+% available. Regression guard for ar5iv #503/#495/#474 (2405.04517), where the
+% dvips names were undefined (912 x "Can't find color named 'OliveGreen'").
+\usepackage{xcolor}
+\begin{document}
+\textcolor{OliveGreen}{olive} and \textcolor{RoyalBlue}{royal} and
+\textcolor{BrickRed}{brick}.
+
+\definecolor{myolive}{named}{OliveGreen}
+named: \textcolor[named]{OliveGreen}{olive2} vs \textcolor{myolive}{olive3}.
+\end{document}

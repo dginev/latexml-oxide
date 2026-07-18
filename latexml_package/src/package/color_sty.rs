@@ -226,7 +226,14 @@ LoadDefinitions!({
   // Options that want the dvipsnam definitions
   for option in &["dvips", "xdvi", "oztex", "dvipsnames"] {
     DeclareOption!(*option, {
-      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+      // Defer to xcolor when it is the driving package: xcolor requires us and
+      // then loads dvipsnam.def into ITS color DB. Loading here first would win
+      // the input_definitions load-dedup and leave xcolor's DB without the dvips
+      // names (see xcolor_sty.rs `xcolor_driving`; witness 2405.04517). Stays
+      // eager for a standalone `\usepackage[dvipsnames]{color}` (flag unset).
+      if !lookup_bool("xcolor_driving") {
+        InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+      }
     });
   }
 
