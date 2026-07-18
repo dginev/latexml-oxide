@@ -109,3 +109,73 @@ fn context_toc_breadcrumb_across_split_pages() {
      expanded:\n{nav2}"
   );
 }
+
+/// Deeper nesting exercises `gentoc_context`'s UPWARD **ancestor-wrap** — the
+/// `gentocentry($doc, $entry, undef, $show, @navtoc)` at Perl L304-306 that
+/// encloses the accumulated subtree in a parent tocentry. Splitting at `section`
+/// puts a section page under a chapter, so the current section must appear
+/// *nested inside* its (linked, non-current) chapter, expanded down to its own
+/// subsection, while the sibling section and the sibling chapter are pruned to
+/// links. Cross-checked structurally against same-host Perl 0.8.8.
+#[test]
+fn context_toc_breadcrumb_deep_split_wraps_ancestors() {
+  const DOC: &str = "\\documentclass{book}\n\
+                     \\begin{document}\n\
+                     \\chapter{Alpha}\n\
+                     \\section{Alpha One}\n\
+                     \\subsection{A1 Sub}\n\
+                     \\section{Alpha Two}\n\
+                     \\chapter{Beta}\n\
+                     \\section{Beta One}\n\
+                     \\end{document}\n";
+  let work = tempfile::tempdir().expect("tempdir");
+  std::fs::write(work.path().join("book.tex"), DOC).unwrap();
+  let out = run(work.path(), &[
+    "book.tex",
+    "--split",
+    "--splitat",
+    "section",
+    "--navigationtoc",
+    "context",
+    "--format",
+    "html5",
+    "--dest",
+    "book.html",
+  ]);
+  assert!(
+    out.status.success(),
+    "conversion failed (status {:?}):\n{}",
+    out.status.code(),
+    String::from_utf8_lossy(&out.stderr)
+  );
+
+  // The first section page (Alpha One), nested under chapter Alpha.
+  let page = std::fs::read_to_string(work.path().join("Ch1.S1.html")).expect("read Ch1.S1.html");
+  let nav = nav_toc(&page);
+
+  // The current entry is the SECTION, marked ltx_ref_self…
+  assert!(
+    nav.contains("ltx_tocentry_section ltx_ref_self"),
+    "#gentoc_context: the current section must be the ltx_ref_self entry:\n{nav}"
+  );
+  // …expanded down to its own subsection…
+  assert!(
+    nav.contains("A1 Sub"),
+    "#gentoc_context: the current section must expand to its subsection:\n{nav}"
+  );
+  // …and it must be ENCLOSED by its (linked, non-current) chapter — the
+  // ancestor-wrap — so the chapter link precedes the current section entry.
+  let chapter_link = nav.find("Ch1.html");
+  let self_entry = nav.find("ltx_ref_self");
+  assert!(
+    chapter_link.is_some() && self_entry.is_some() && chapter_link < self_entry,
+    "#gentoc_context: the current section must be wrapped inside its chapter \
+     (chapter link should precede the ltx_ref_self section):\n{nav}"
+  );
+  // Sibling section (Alpha Two) and sibling chapter (Beta) are pruned to links.
+  assert!(
+    nav.contains("Ch1.S2.html") && !nav.contains("Beta One"),
+    "#gentoc_context: sibling section/chapter must be pruned to links (Beta's \
+     contents leaked = localto/normaltoctypes pruning failed):\n{nav}"
+  );
+}
