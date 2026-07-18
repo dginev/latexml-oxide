@@ -63,6 +63,7 @@ USER_OK.md
 !.claude/skills/min-repro/
 !.claude/skills/perf-check/
 !.claude/skills/perl-port/
+!.claude/skills/resolve-issue/
 # Vendored third-party agent skills (reproducible from skills-lock.json via npx skills add)
 .agents/
 html/
