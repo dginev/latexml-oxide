@@ -171,6 +171,7 @@ pub mod nicematrix_sty;
 pub mod nicseries_cls;
 pub mod oldgerm_sty;
 pub mod oldlfont_sty;
+pub mod openmoss_cls;
 pub mod optica_article_cls;
 pub mod oup_authoring_template_cls;
 pub mod pax_sty;
@@ -506,6 +507,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
+  ("openmoss", "cls", openmoss_cls::load_definitions),
   (
     "optica-article",
     "cls",

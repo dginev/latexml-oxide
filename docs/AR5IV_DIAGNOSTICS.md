@@ -71,8 +71,14 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
    mirrors `ar5iv.sty.ltxml`) so the enhanced/breakable/skins keys resolve.
    2509.24704 **5→2**, 2511.16624 **4→2** (residual = the paper's own `luabridge`
    expl3, separate). 2412.06264's `\or`/`\f`-fragment flood (483) is a distinct
-   paper-specific issue, not frontmatter. `selfevolagent.cls` (2508.07407/#556) is
-   a near-identical sibling awaiting the same treatment.
+   paper-specific issue, not frontmatter. Two near-identical sibling classes got
+   the same treatment: **`selfevolagent.cls`** (2508.07407/#556 — frontmatter
+   captured; residual `Stomach:Recursion` is a box-loop in the paper's
+   `paradigms.tex`, separate) and **`openmoss.cls`** (2605.12090/#605 — 14→1: the
+   `\definecolor{openmossblue}` set + `\checkdata` frontmatter now defined,
+   residual `{forest}` is the parity stub). All three `\RequirePackage[latin,
+   english]{babel}` — openmoss's `\addto\extrasenglish` needed babel required in
+   the binding.
    **Core parity fix (general — benefits far beyond fairmeta):** the class loads
    `nicematrix` (→ `\RequirePackage{pgfcore}`, faithful to nicematrix.sty:23) then
    `tcolorbox[most]` (whose `skins` library also needs pgfcore). pgfcore has no
