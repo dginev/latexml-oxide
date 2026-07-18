@@ -1,0 +1,16 @@
+\documentclass{book}
+\begin{document}
+
+% Issue #291 hardening: \setcounter{tocdepth}{-1} = "parts only". A negative
+% tocdepth must NOT panic — the `select` computation used to cast `tocdepth+1`
+% through `as usize`, so -1 overflowed (debug panic / silently over-full ToC in
+% release). Faithful Perl computes `0 .. $td` in signed space (empty on
+% negative). Here the part remains; chapters/sections are filtered out.
+\setcounter{tocdepth}{-1}
+\tableofcontents
+
+\part{P}
+\chapter{A}
+\section{B}
+text
+\end{document}

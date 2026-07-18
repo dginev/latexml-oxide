@@ -1227,6 +1227,13 @@ fn tocdepth_select_restricts_the_toc() {
 /// `tocdepth_select_restricts_the_toc`'s exempt half: both rely on `gen_toc`
 /// honoring `select` (the #291 fix). Before that fix the abstract appeared twice
 /// (leaked into `\tableofcontents`). Witness = the issue's frontmatter shape.
+///
+/// NOTE: oxide's navigation TOC is currently a `scope="global"` *normal*
+/// `gen_toc` (Perl's `format="context"` `gentoc_context` — the downward-then-
+/// upward ancestor/sibling enclosure — is not yet ported; `fill_in_tocs`
+/// ignores `format`). So this test pins the *inclusion/count* contract, not the
+/// context-TOC *structure*; a faithful `gentoc_context` port may reshape the
+/// tree and should revisit the layout while keeping the count == 1 invariant.
 #[test]
 fn nav_toc_includes_abstract_issue_2316() {
   let x = convert_and_post_navtoc("tests/cluster_regressions/toc_abstract_exempt.tex");
@@ -1240,5 +1247,53 @@ fn nav_toc_includes_abstract_issue_2316() {
   assert!(
     x.contains("ltx_tocentry_section"),
     "#2316: sections missing — navigation TOC was not generated:\n{x}"
+  );
+}
+
+/// Issue #291 hardening: a *negative* `\setcounter{tocdepth}` must not panic.
+/// `\tableofcontents` builds `select` from `tocdepth` by taking the first
+/// `tocdepth + 1` section types; the old code cast that through `as usize`, so
+/// `tocdepth = -1` (parts only) overflowed — a debug panic, and in release a
+/// silently over-full ToC (`{-2}` listed everything). Faithful Perl
+/// (`latex_constructs.pool.ltxml` L727-733) computes `0 .. $td` in signed space,
+/// an empty range for negative `$td`. `tocdepth = -1` ⇒ the part stays, chapters
+/// and sections are dropped. The conversion completing at all is the no-panic
+/// guard (the fixture converts under the debug profile's overflow-checks).
+#[test]
+fn tocdepth_negative_is_parts_only_no_panic() {
+  let x = convert_and_post("tests/cluster_regressions/tocdepth_negative.tex");
+  assert!(
+    x.contains("ltx_tocentry_part"),
+    "#291: tocdepth=-1 must still list the part:\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_tocentry_chapter"),
+    "#291: tocdepth=-1 (parts only) must drop chapters from the ToC:\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_tocentry_section"),
+    "#291: tocdepth=-1 must drop sections from the ToC:\n{x}"
+  );
+}
+
+/// Issue #291 latent fix: honoring the `<ltx:TOC>` `lists` attribute (`lof`)
+/// also repairs `\listoffigures`/`\listoftables`, which the old hardcoded `"toc"`
+/// bucket broke outright — `\listoffigures` listed a document *section* (an
+/// `inlist="toc"` entry) instead of the figures (`inlist="lof"`). It must now
+/// list exactly the figures and no section. Faithful Perl: `\listoffigures`
+/// emits `<ltx:TOC lists='lof'>` and CrossRef draws only from that `inlist`
+/// bucket. Guards a fix the #291 change delivered but did not otherwise cover.
+#[test]
+fn listoffigures_lists_figures_not_toc_sections() {
+  let x = convert_and_post("tests/cluster_regressions/listoffigures.tex");
+  let n = x.matches("ltx_tocentry_figure").count();
+  assert_eq!(
+    n, 2,
+    "#291: \\listoffigures must list both figures (inlist=lof), got {n}:\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_tocentry_section"),
+    "#291: \\listoffigures must NOT list document sections (inlist=toc) — the old \
+     hardcoded `toc` bucket did exactly that:\n{x}"
   );
 }

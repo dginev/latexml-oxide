@@ -4180,12 +4180,18 @@ LoadDefinitions!({
   DefConstructor!("\\tableofcontents",
     "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
-      let mut td = CounterValue!("tocdepth").value_of() as usize + 1;
       let s  = ["ltx:part", "ltx:chapter", "ltx:section", "ltx:subsection", "ltx:subsubsection",
           "ltx:paragraph", "ltx:subparagraph"];
-      let max_level = s.len()-1;
-      td = std::cmp::min(td,max_level);
-      let mut s_depth : Vec<&'static str> = s.into_iter().take(td+1).collect();
+      // Perl latex_constructs.pool.ltxml L727-733: `$td = tocdepth+1`, clamp to
+      // the last section-type index, then take `s[0 .. $td]`. Perl's `0 .. $td`
+      // is an EMPTY range when `$td < 0`, so `\setcounter{tocdepth}{-1}` (parts
+      // only) yields `[part]` and `{-2}` or lower yields `select=''` (an empty
+      // ToC). Compute in SIGNED space: `tocdepth` is a signed counter, so the
+      // old `value_of() as usize` wrapped on negatives — a debug overflow panic,
+      // and in release a silently over-full ToC (`{-2}` listed everything).
+      let td = (CounterValue!("tocdepth").value_of() + 1).min((s.len() - 1) as i64);
+      let take = usize::try_from(td + 1).unwrap_or(0);
+      let mut s_depth : Vec<&'static str> = s.into_iter().take(take).collect();
       if !s_depth.is_empty() {
         s_depth.push("ltx:appendix");
         s_depth.push("ltx:index");
