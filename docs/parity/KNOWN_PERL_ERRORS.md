@@ -2131,8 +2131,12 @@ Minimal trigger (`blkarray.sty` is in TeX Live):
 ```
 
 Dropping the `(`/`)` delimiter (`{cc}`) OR the `blockarray` wrapper converts in
-0.2 s. **Not fixed** — this is the known HIGH-DIFFICULTY, post-release
-`\lx@begin@alignment`-in-math cluster. Full analysis + reduction map:
-[`docs/known_crashes/blkarray_halign_math/`](../known_crashes/blkarray_halign_math/README.md)
-and its sibling [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
-Witnesses: arXiv:1811.10792 (ar5iv #594), arXiv:2310.17416 (ar5iv #473).
+0.2 s. **Fixed for blkarray** via a Rust binding
+(`latexml_package/src/package/blkarray_sty.rs`) that shadows the raw `.sty` and
+routes `blockarray`/`block` through the `array` machinery (surpass-Perl; Perl has
+no binding): 1811.10792 (#594) OOM→0, 2310.17416 (#473) OOM→9. The `block`
+sub-region delimiters are dropped (documented simplification — `array` can't wrap
+a sub-region). The **underlying** `stomach.rs::egroup` math-frame bug is unchanged
+and still reachable via `kbordermatrix` (HIGH-DIFFICULTY, post-release). Full
+analysis: [`docs/known_crashes/blkarray_halign_math/`](../known_crashes/blkarray_halign_math/README.md)
++ sibling [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).

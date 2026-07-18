@@ -85,6 +85,7 @@ pub mod bigintcalc_sty;
 pub mod bigstrut_sty;
 pub mod bitset_sty;
 pub mod blindtext_sty;
+pub mod blkarray_sty;
 pub mod bm_sty;
 pub mod book_cls;
 pub mod bookman_sty;

@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{blkarray}
+% blkarray binding: the raw blkarray.sty builds each cell as inline math inside a
+% raw \halign, which OOMs Rust (4.5GB) and hangs Perl on a `block` with a
+% delimiter spec in display math (docs/known_crashes/blkarray_halign_math).
+% The binding routes blockarray/block through the array machinery; `block`s are
+% transparent (their sub-region delimiters cannot be rendered) so rows flow into
+% the one alignment. Regression guard for ar5iv #594 (1811.10792) / #473
+% (2310.17416). Witness: block{(cc)} paren delimiter must NOT loop/OOM.
+\begin{document}
+\[
+\begin{blockarray}{ccc}
+ & a & b \\
+\begin{block}{c(cc)}
+r & 1 & 2 \\
+s & 3 & 4 \\
+\end{block}
+\end{blockarray}
+\]
+\end{document}

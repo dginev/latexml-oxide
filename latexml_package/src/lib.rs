@@ -911,6 +911,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("afterpage", "sty", package::afterpage_sty::load_definitions),
   ("mathrsfs", "sty", package::mathrsfs_sty::load_definitions),
   ("blindtext", "sty", package::blindtext_sty::load_definitions),
+  ("blkarray", "sty", package::blkarray_sty::load_definitions),
   ("bookmark", "sty", package::bookmark_sty::load_definitions),
   ("cmap", "sty", package::cmap_sty::load_definitions),
   ("doi", "sty", package::doi_sty::load_definitions),

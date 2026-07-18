@@ -1,13 +1,21 @@
-# `blkarray` `\halign`-in-math OOM/timeout — OPEN, HIGH DIFFICULTY, post-release
+# `blkarray` `\halign`-in-math OOM/timeout — ✅ FIXED via binding (2026-07-18)
 
-> **Status: OPEN. Difficulty: HIGH. Priority: post-release.**
-> A second, **smaller** witness of the known `\lx@begin@alignment` /
-> `\halign`-in-math frame-accounting cluster — the same root as
-> [`../kbordermatrix_halign_math/`](../kbordermatrix_halign_math/README.md).
-> Read that sibling's README for the full root-cause analysis
-> (`stomach.rs::egroup` refuses to pop a frame that "switched to mode math" at
-> an alignment close, then re-enters and spins). This file records the blkarray
-> variant, its **4-line minimal reproducer**, and the one new fact it adds.
+> **Status: FIXED (binding).** The *blkarray* variant is resolved: a Rust
+> `blkarray` binding (`latexml_package/src/package/blkarray_sty.rs`) now shadows
+> the raw `.sty`, so the pathological `\halign`-in-math is never digested.
+> 1811.10792 (#594) went **OOM → 0 errors**; 2310.17416 (#473) **OOM → 9**
+> (residual is a separate math-mode issue, not blkarray). Guard:
+> `latexml_oxide/tests/graphics/blkarray.{tex,xml}`. The **underlying**
+> `stomach.rs::egroup` bug (a frame that "switched to mode math" is not popped at
+> an alignment close) is UNCHANGED and still reachable via the `kbordermatrix`
+> sibling ([`../kbordermatrix_halign_math/`](../kbordermatrix_halign_math/README.md),
+> still OPEN, HIGH difficulty) — the binding sidesteps it for blkarray rather than
+> fixing the core. NOTE: `blkarray_min.tex` below no longer reproduces (the
+> binding wins over `--includestyles`); to exercise the core bug use the
+> kbordermatrix reproducer. This file is kept as the record of the analysis and
+> the binding's faithfulness simplification.
+>
+> Original diagnosis (pre-binding) follows.
 
 Witnesses: **arXiv:1811.10792** (ar5iv #594) and **arXiv:2310.17416** (ar5iv
 #473), surfaced in the 2026-07-18 ar5iv mini-sprint diagnostic sweep. Both were
