@@ -15,5 +15,12 @@ LoadDefinitions!({
   DefMacro!("\\csname SCfigure*\\endcsname[][]", "\\csname figure*\\endcsname[#2]");
   DefMacro!("\\csname endSCfigure*\\endcsname", "\\csname endfigure*\\endcsname");
 
+  // \sidecaptionvpos{<float type>}{<t|c|b>} — real sidecap.sty:
+  // `\newcommand*\sidecaptionvpos[2]` — configures the vertical alignment of a
+  // side caption. Purely a layout hint with no bearing on the logical HTML
+  // output (we already ignore side-caption-ness above), so consume both args
+  // and expand to nothing. Witness 2408.08435 (ar5iv #555).
+  DefMacro!("\\sidecaptionvpos{}{}", "");
+
   DefEnvironment!("{wide}", "#body");
 });

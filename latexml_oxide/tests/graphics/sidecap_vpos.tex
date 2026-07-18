@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage{sidecap}
+% \sidecaptionvpos{<float>}{<pos>} is a layout hint (real sidecap.sty:
+% \newcommand*\sidecaptionvpos[2]). No visible effect in HTML; must not error.
+% Regression guard for ar5iv #555 (2408.08435).
+\sidecaptionvpos{figure}{t}
+\sidecaptionvpos{table}{c}
+\begin{document}
+Body text.
+\end{document}
