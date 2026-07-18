@@ -65,10 +65,18 @@ LoadDefinitions!({
   // them. Witness: 11 papers in R-stages for each.
   def_macro_noop("\\headmark")?;
   def_macro_noop("\\pagemark")?;
-  // \subject{}, \dictum{}, \uppertitleback{}, \lowertitleback{},
-  // \publishers{} — KOMA frontmatter pieces that DO carry author
-  // content. Preserve as ltx:note frontmatter so the text reaches the
-  // XML (rather than silently gobbling).
+  // \titlehead{}, \subject{}, \dictum{}, \uppertitleback{},
+  // \lowertitleback{}, \publishers{} — KOMA frontmatter pieces that DO carry
+  // author content. Preserve as ltx:note frontmatter so the text reaches the
+  // XML (rather than silently gobbling). Neither Perl nor upstream LaTeXML
+  // binds these (no scrartcl.cls.ltxml) — surpass-Perl content recovery.
+  // \titlehead renders a full-width header ABOVE the title in KOMA's
+  // \maketitle; capture it as a note. Witness 2305.01582 (ar5iv #498): a
+  // \titlehead banner with the software name + \giturl was dropped + errored.
+  DefMacro!(
+    "\\titlehead{}",
+    "\\@add@frontmatter{ltx:note}[role=titlehead]{#1}"
+  );
   DefMacro!(
     "\\subject{}",
     "\\@add@frontmatter{ltx:note}[role=subject]{#1}"
