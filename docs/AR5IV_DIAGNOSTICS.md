@@ -120,11 +120,17 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
    "robust `\mintinline`" is possible but out of mini-sprint scope. Direct
    `\ifmmode` coverage added: `tests/expansion/ifmmode`, `.../ensuremath_mode`
    (every branch selection verified to match pdflatex).
-6. **`malformed:ltx:subsection/section` nesting** — `2402.13846` (16),
-   `2507.00833` (8). Root: a **`\newtcblisting` (tcolorbox) verbatim box does not
-   close**, so deeply-nested `<ltx:verbatim><ltx:verbatim>…` swallows subsequent
-   sectioning (`<ltx:subsection> isn't allowed in <ltx:verbatim>`). tcolorbox
-   listing machinery → Tier 3 (shares tcolorbox complexity with the timeouts).
+6. **`malformed:ltx:subsection/section` nesting** — `2402.13846` (#504),
+   `2507.00833` (#569/#570). **LANDED.** Root: a **`\newtcblisting` (tcolorbox
+   `listings` library) box captured its body verbatim but never CLOSED** at
+   `\end{name}` — the raw library's body reader didn't integrate with LaTeXML's
+   verbatim reader, so the listing swallowed following content and a later
+   `\section` nested inside `<ltx:verbatim>`. Fix (`tcolorbox_sty.rs`): delegate
+   `\newtcblisting{name}[N][d]{tcb-opts}` → listings' `\lstnewenvironment{name}
+   [N][d]{}{}` (drop the visual box options), whose verbatim reader terminates
+   correctly; `locked` so the raw `\tcbuselibrary{listings}` can't clobber it.
+   2507.00833 **8→0**, 2402.13846 **16→1** (residual `\filledstar` = a genuine
+   author-undefined macro, not tcblisting). Guard: `95_newtcblisting_verbatim`.
 7. **`{forest}` undefined** — `2107.13586`, `2511.18538`, `2605.12090`,
    `2505.01658`. The `forest` tree-drawing package (unbound; often also a
    timeout). Largely parity.
