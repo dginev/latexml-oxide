@@ -66,9 +66,13 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
    `\or` flood traces to conditional/`\ifcase` parsing under the class's expl3
    code. Cross-cutting → Tier 3.
 3. **`\lx@begin@alignment` / `\lx@end@inline@math` grouping** — `2311.06609`
-   (**82**, RUST-WORSE, siamart), `2405.21060` (26), `2310.07298` (24),
-   `2309.16609` (31), `1811.10792` (RUST-WORSE timeout). Inline-math / amsmath
-   alignment group balance. Contains the clearest RUST-WORSE regression.
+   (**82**, RUST-WORSE), `2405.21060` (26), `2310.07298` (24), `2309.16609` (31),
+   `1811.10792` (RUST-WORSE timeout). Inline-math / amsmath alignment group
+   balance. `2311.06609` root: a **paper-local `code` environment** (`list` +
+   `tabbing` + `\mathcode`\`\:` + custom `\mynewline`) whose inline `$…$` cells
+   break group balance in Rust more than Perl (raw `tabbing`+math is clean in
+   both — verified — so it's the custom-env interaction, not general). Deep,
+   paper-specific.
 4. **`_` / `^` "script can only appear in math mode" cascade** — `2604.16007`
    (60), `2305.05665` (33), `1404.3143` (ytableau, **parity** — Perl fatals
    worse), `2312.11805`, `2408.15403`. Errors originate at "Anonymous String"
