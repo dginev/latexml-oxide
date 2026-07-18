@@ -58,13 +58,41 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
    proper (usenames-active) load a no-op → the 68 dvips colors never register in
    xcolor's DB. The *direct* form `\usepackage[dvipsnames]{xcolor}` works (color
    never sees the option). **surpass-Perl, self-contained → Tier 1.**
-2. **`fairmeta.cls` / ML meta-class cluster** — `2412.06264` (**504** `\or`),
-   `2509.24704` / `2511.16624` (`\metadata`, `\contribution`, `\beginappendix`
-   undefined), `2508.07407` (`Stomach:Recursion` + `\metadata`). These classes
-   (fairmeta, selfevolagent) are expl3/`nicematrix`/`luabridge`-heavy; a failure
-   partway through the class body leaves later `\newcommand`s undefined, and the
-   `\or` flood traces to conditional/`\ifcase` parsing under the class's expl3
-   code. Cross-cutting → Tier 3.
+2. **`fairmeta.cls` / ML meta-class cluster** — `2509.24704` (#567) / `2511.16624`
+   (#576) / `2412.06264` (#520). **Root (general): an unknown `.cls` body is NOT
+   raw-loaded** — OmniBus extracts its `\RequirePackage` dependencies but does not
+   execute the body, so every class-defined command (`\metadata`, `\contribution`,
+   `\beginappendix`, …) is `Error:undefined` (a `.sty` DOES raw-load; a `.cls`
+   does not). **LANDED** `fairmeta_cls.rs` binding (bytedance/fcs pattern): routes
+   the frontmatter through `\@add@frontmatter`/`\lx@add@author`/`\lx@add@abstract`
+   (title, both authors, affiliations, contribution, metadata, correspondence,
+   abstract all captured), pulls in the real deps, and loads `tcolorbox[most]` via
+   `pass_options("tcolorbox","sty",["most"])` **before** the require (Perl idiom,
+   mirrors `ar5iv.sty.ltxml`) so the enhanced/breakable/skins keys resolve.
+   2509.24704 **5→2**, 2511.16624 **4→2** (residual = the paper's own `luabridge`
+   expl3, separate). 2412.06264's `\or`/`\f`-fragment flood (483) is a distinct
+   paper-specific issue, not frontmatter. `selfevolagent.cls` (2508.07407/#556) is
+   a near-identical sibling awaiting the same treatment.
+   **Core parity fix (general — benefits far beyond fairmeta):** the class loads
+   `nicematrix` (→ `\RequirePackage{pgfcore}`, faithful to nicematrix.sty:23) then
+   `tcolorbox[most]` (whose `skins` library also needs pgfcore). pgfcore has no
+   binding, so nicematrix's bare require missed and — via the Rust-only
+   `_load_attempted` guard — permanently STARVED tcolorbox's later pgfcore
+   raw-load (49 spurious pgf errors); pdflatex loads pgfcore fine in either order.
+   Fix (`content.rs`): set `_load_attempted` only when raw-loading was actually
+   POSSIBLE (`INCLUDE_STYLES` on / `noltxml`). A miss while raw loading is OFF is a
+   deferral, not a genuine "file absent", so a later load once INCLUDE_STYLES turns
+   on (inside another package's raw read) may retry — matching pdflatex. The guard
+   still fires where its loop-prevention is needed (a raw read is itself
+   INCLUDE_STYLES=true). So fairmeta needs **no** `--includestyles`/ar5iv preload:
+   49 → 0. No new flag; restricts the existing Rust-only guard to its real case.
+   **Harness note:** the guard is a fresh-process **binary-driven** test
+   (`92_fairmeta_frontmatter`), not an in-process `tests/contrib` fixture — loading
+   a `LoadClass!("OmniBus")` `.cls` then `reset_thread_engine`-ing between files
+   (as `can_contrib` does) reads a pre-reset `SymStr` from an unresettable `pin!`
+   cache and aborts (the documented one-conversion-per-thread contract). Fresh
+   process = how production runs, and why the ~100 other contrib `.cls` bindings
+   carry no in-process fixture.
 3. **`\lx@begin@alignment` / `\lx@end@inline@math` grouping** — `2311.06609`
    (**82**, RUST-WORSE), `2405.21060` (26), `2310.07298` (24), `2309.16609` (31),
    `1811.10792` (RUST-WORSE timeout). Inline-math / amsmath alignment group

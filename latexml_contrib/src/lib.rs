@@ -98,6 +98,7 @@ pub mod emlines_sty;
 pub mod envmath_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
+pub mod fairmeta_cls;
 pub mod fancyvrb_ex_sty;
 pub mod fcs_cls;
 pub mod figcaps_sty;
@@ -450,6 +451,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("elife", "cls", elife_cls::load_definitions),
+  ("fairmeta", "cls", fairmeta_cls::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
