@@ -76,7 +76,10 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
 5. **`\else`/`\fi` flood (minted)** — `2602.15902` (**783**, RUST-WORSE).
    `minted`/`fvextra` conditional machinery.
 6. **`malformed:ltx:subsection/section` nesting** — `2402.13846` (16),
-   `2507.00833` (8). Sectioning depth / float placement.
+   `2507.00833` (8). Root: a **`\newtcblisting` (tcolorbox) verbatim box does not
+   close**, so deeply-nested `<ltx:verbatim><ltx:verbatim>…` swallows subsequent
+   sectioning (`<ltx:subsection> isn't allowed in <ltx:verbatim>`). tcolorbox
+   listing machinery → Tier 3 (shares tcolorbox complexity with the timeouts).
 7. **`{forest}` undefined** — `2107.13586`, `2511.18538`, `2605.12090`,
    `2505.01658`. The `forest` tree-drawing package (unbound; often also a
    timeout). Largely parity.
@@ -94,6 +97,10 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
     `RequirePackage(color)` so `color` defers its eager `dvipsnam.def` load to
     xcolor's authoritative (usenames-active) load — matching pdflatex's one-load
     outcome. Guard: `tests/graphics/xcolor_global_dvipsnames`.
+  - [x] **LANDED** `\sidecaptionvpos` no-op in sidecap (2408.08435, **1 → 0**,
+    #555). Layout hint, no logical output. Guard: `tests/graphics/sidecap_vpos`.
+  - Deferred (content-bearing, not a safe no-op): `\titlehead` (2305.01582,
+    scrartcl/KOMA) needs `\maketitle` integration to render the header text.
 - **Tier 2 — genuine RUST-WORSE regressions:**
   - [ ] `2602.15902` minted `\else/\fi` flood (783).
   - [ ] `2311.06609` inline-math/alignment grouping (82, siamart).
