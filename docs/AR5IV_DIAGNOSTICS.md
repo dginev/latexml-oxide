@@ -156,6 +156,14 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
     outcome. Guard: `tests/graphics/xcolor_global_dvipsnames`.
   - [x] **LANDED** `\sidecaptionvpos` no-op in sidecap (2408.08435, **1 → 0**,
     #555). Layout hint, no logical output. Guard: `tests/graphics/sidecap_vpos`.
+  - [x] **LANDED** `\newtcblisting` verbatim close (#504/#569/#570) — delegate to
+    listings' `\lstnewenvironment`. 2507.00833 8→0.
+  - [x] **LANDED** three meta-class frontmatter bindings — fairmeta/selfevolagent/
+    openmoss (#520/#567/#576/#556/#605).
+  - [x] **LANDED** agujournal2019.cls end-matter (#538, 2003.03231 **7 → 0**):
+    extend the existing binding with `\RequirePackage{rotating}` (sideways floats)
+    + the `{acronyms}`/`{notation}` description-list envs (`\acro`/`\notation` →
+    `\item[]`). Guard: `tests/97_agujournal_acronyms`.
   - Deferred (content-bearing, not a safe no-op): `\titlehead` (2305.01582,
     scrartcl/KOMA) needs `\maketitle` integration to render the header text.
 - **Tier 2 — genuine RUST-WORSE regressions:**
