@@ -201,6 +201,13 @@ the *rules* (what verdict to trust, what trap to avoid):
 - **`perf-check`** — measure correctly, pick the right profile, and don't
   re-litigate the settled dead-ends (PGO/target-cpu = no gain; startup dump-parse
   lever = declined).
+- **`resolve-issue`** — the outer loop for a public GitHub issue: branch per
+  ticket, classify the type (bug / feature / docs / other), build a red/green TDD
+  reproducer at the layer where the bug lives (core `.tex`+`.xml` pair vs
+  post-processing `.rs`), plan in a scratch `TICKET_APPROACH.md`, implement to
+  green, self-review (full scope / right abstraction / tested — no overclaim),
+  then open the PR and watch CI to green. Wraps `canvas-triage` → `min-repro` →
+  `perl-port`.
 
 ## Build & Test
 
