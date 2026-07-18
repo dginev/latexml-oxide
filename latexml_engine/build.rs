@@ -171,7 +171,11 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   }}
   let prefer = crate::dump_paths::detect_ambient_texlive_year();
   let resolved = resolve_dump_path(prefer);
-  let (content, source_label, stamp_for_check): (String, String, Option<String>) =
+  // Third/fourth tuple slots feed the year-granularity staleness check
+  // (`dump_year_mismatch_warning`): the loaded dump's TL year, and whether it
+  // came from the embedded bundle (shipped binary) vs an on-disk dump (dev
+  // tree). We compare YEARS, not kpathsea stamp strings — issue #299.
+  let (content, source_label, dump_year, from_embedded): (String, String, u32, bool) =
     if let Some((path, year)) = resolved {{
       let content = match std::fs::read_to_string(&path) {{
         Ok(c) => c,
@@ -182,17 +186,7 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
         }}
       }};
       let label = path.display().to_string();
-      // Sibling stamp file: texlive.YYYY.version next to latex.YYYY.dump.txt.
-      // Use the year of the dump we actually loaded (not the most-recent
-      // year in the directory) so the staleness check compares apples to
-      // apples on machines with multiple bundled dumps.
-      let stamp_str = if year > 0 {{
-        path.parent().and_then(|d| {{
-          let p = d.join(crate::dump_paths::version_filename(year));
-          std::fs::read_to_string(&p).ok().and_then(|s| s.lines().next().map(|l| l.to_string()))
-        }})
-      }} else {{ None }};
-      (content, label, stamp_str)
+      (content, label, year, false)
     }} else if let Some(latex_str) = crate::embedded_dumps::embedded_latex_dump(prefer) {{
       // Embedded fallback. `embedded_latex_dump` gunzips on first
       // access and caches the result for the rest of the process
@@ -200,9 +194,7 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
       let year = crate::embedded_dumps::embedded_year(prefer).unwrap_or(0);
       latexml_core::Info!("latex_dump", "embedded",
         latexml_core::s!("using embedded TL{{}} dump (no on-disk dump found)", year));
-      let stamp_first = crate::embedded_dumps::embedded_texlive_version_first_line(prefer)
-        .map(|s| s.to_string());
-      (latex_str.to_string(), format!("<embedded TL{{}}>", year), stamp_first)
+      (latex_str.to_string(), format!("<embedded TL{{}}>", year), year, true)
     }} else {{
       latexml_core::Info!("latex_dump", "missing",
         "no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
@@ -210,9 +202,15 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
          run `latexml_oxide --init=latex.ltx` to generate");
       return Ok(());
     }};
+  // TeX-Live-YEAR staleness check (issue #299): warn only on a genuine year
+  // mismatch (fell back to a different year's dump), never on a within-year
+  // kpathsea patch bump. `prefer` is the ambient TL year (memoized, no extra
+  // subprocess).
   if std::env::var_os("LATEXML_SKIP_DUMP_STAMP_CHECK").is_none() {{
-    if let Some(stamp) = stamp_for_check.as_deref() {{
-      compare_stamp_to_ambient(stamp);
+    if let Some(msg) =
+      crate::dump_paths::dump_year_mismatch_warning(dump_year, prefer, from_embedded)
+    {{
+      latexml_core::Warn!("latex_dump", "mismatch", latexml_core::s!("{{}}", msg));
     }}
   }}
   // Single load message: `dump_reader:loaded` names the real `source_label`
@@ -222,32 +220,6 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   let _count = latexml_core::dump_reader::load_from_str_labeled(&content, &source_label)
     .map_err(|e: String| -> latexml_core::common::error::Error {{ e.into() }})?;
   Ok(())
-}}
-
-fn compare_stamp_to_ambient(stamp: &str) {{
-  // Reuse the process-memoized `kpsewhich --version` banner (shared with
-  // ambient-year detection AND kpathsea backend selection) so the stamp check
-  // does NOT spawn its own kpsewhich. First line is the version banner proper.
-  let Some(ambient) = crate::dump_paths::ambient_kpsewhich_version()
-    .and_then(|b| b.lines().next()) else {{ return; }};
-  let ambient = ambient.trim();
-  // The dump stamp is a TeX Live `kpathsea version X.Y.Z` string. Only compare
-  // against another such string: MiKTeX's banner is `MiKTeX YY.MM` (a different
-  // format, not a kpathsea version), so a mismatch there is expected-by-design
-  // — the embedded dump is intentionally TeX-Live-based — and must NOT warn (it
-  // would fire on every MiKTeX run and read as a spurious error).
-  if !ambient.starts_with("kpathsea version") {{
-    return;
-  }}
-  if stamp.trim() != ambient {{
-    latexml_core::Warn!("latex_dump", "mismatch",
-      latexml_core::s!("TeXLive MISMATCH — dump stamped `{{}}`, ambient \
-        kpsewhich `{{}}`. The dump may reference macros unknown to the \
-        current TeXLive (or vice versa). Run `tools/make_formats.sh` \
-        to regenerate against ambient texlive. Silence with \
-        LATEXML_SKIP_DUMP_STAMP_CHECK=1.",
-        stamp.trim(), ambient));
-  }}
 }}
 
 fn resolve_dump_path(prefer: Option<u32>) -> Option<(std::path::PathBuf, u32)> {{
