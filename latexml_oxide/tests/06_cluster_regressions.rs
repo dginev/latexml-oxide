@@ -1228,12 +1228,10 @@ fn tocdepth_select_restricts_the_toc() {
 /// honoring `select` (the #291 fix). Before that fix the abstract appeared twice
 /// (leaked into `\tableofcontents`). Witness = the issue's frontmatter shape.
 ///
-/// NOTE: oxide's navigation TOC is currently a `scope="global"` *normal*
-/// `gen_toc` (Perl's `format="context"` `gentoc_context` — the downward-then-
-/// upward ancestor/sibling enclosure — is not yet ported; `fill_in_tocs`
-/// ignores `format`). So this test pins the *inclusion/count* contract, not the
-/// context-TOC *structure*; a faithful `gentoc_context` port may reshape the
-/// tree and should revisit the layout while keeping the count == 1 invariant.
+/// The navigation TOC now runs Perl's `format="context"` path
+/// (`gen_toc_context`); on a single page that reduces to the same downward tree
+/// as a normal TOC, so the count == 1 invariant holds. The multi-page breadcrumb
+/// shape is covered by `context_toc_breadcrumb_across_split_pages`.
 #[test]
 fn nav_toc_includes_abstract_issue_2316() {
   let x = convert_and_post_navtoc("tests/cluster_regressions/toc_abstract_exempt.tex");
