@@ -11,6 +11,25 @@ ranked worklist for the follow-on implementation sprint.
 > re-planning; do not treat as a live worklist once acted on. Branch
 > `ar5iv-minisprint`.
 
+> ## ✅ SPRINT CLOSED (2026-07-18)
+>
+> The mini-sprint's landable engine value is complete: **13 issues fixed** on PR
+> #306 (xcolor global `dvipsnames`, `\sidecaptionvpos`, `\newtcblisting` verbatim
+> close, three meta-class frontmatter bindings, agujournal end-matter, the
+> `_load_attempted` deferred-load parity fix, `\ifmmode` coverage) — all
+> CI-green. Every **remaining** deep issue was minimally reproduced and
+> cross-checked vs pdflatex **and** same-host Perl (see the Diagnostic update
+> below); none has a shallow faithful fix. They resolve three ways:
+> **(1)** parity / Rust-better (author-malformed input — not bugs);
+> **(2)** the KNOWN, post-release `\lx@begin@alignment`-in-math cluster (blkarray
+> + code-env — deep core work, now with a 4-line repro in
+> `docs/known_crashes/blkarray_halign_math/`);
+> **(3)** genuine-but-CONTAINED deep bugs (tikz `calc`-coord recursion 2508.07407;
+> deferred `\or` 2412.06264 — graceful, post-release).
+> The **~48 already-CLEAN** papers (sample re-verified 0-error) close on the ar5iv
+> **redeploy** from the current binary + a maintainer batch-comment — no code
+> change. No further mini-sprint engine work is planned.
+
 # Implementation plans — remaining deep issues (2026-07-18)
 
 The self-contained wins are landed (13 issues on PR #306; see the "Ranked
