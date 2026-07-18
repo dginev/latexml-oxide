@@ -1,0 +1,33 @@
+% GENUINE Rust-only bug (but CONTAINED) — ar5iv #556 residual, arXiv:2508.07407.
+% An inline \tikz{...} picture whose nodes are placed at `calc` coordinates
+% (`($(env.west)+(10mm,6mm)$)`, tikzlibrary calc) relative to a sized shape node,
+% with \draw arrows between them, drives Rust's pgf/tikz coordinate machinery into
+% a digestion loop: the same ~3-box window repeats until the box list grows past
+% 50000 → `Fatal:Stomach:Recursion`. The general cycle guard (stomach.rs) catches
+% it GRACEFULLY — the conversion COMPLETES ("2 warnings") and only this one tikz
+% picture (the paradigms table) is dropped. So it is a fidelity loss, not a crash.
+%
+%   Rust:     Fatal:Stomach:Recursion (window of 3 boxes) — contained, completes.
+%   Perl:     completes (no recursion) — GENUINE-RUST-ONLY.
+%   pdflatex: renders the cloud + 2 circle nodes + arrow cleanly (golden oracle).
+%
+% Root is Rust's tikz/pgf `calc`-coordinate + sized-node placement (bare binary
+% reproduces with its OWN tikz binding — not a raw-load issue). The single-node /
+% no-size variants do NOT reach the 50000-box threshold; the full 3-node picture
+% below is the minimal reliable repro. DEEP tikz-subsystem work — deferred, like
+% the \lx@begin@alignment cluster. The witness paper's main issue (selfevolagent
+% frontmatter) is already fixed; this is the residual.
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shapes.symbols,calc,positioning}
+\begin{document}
+\tikz[baseline=(env.base),node distance=4mm]{%
+  \node[cloud, draw, inner sep=13pt, minimum width=40mm, minimum height=20mm] (env) {Env};
+  \node[circle, draw, minimum size=6mm] (A1) at ($(env.west)+(10mm,6mm)$) {};
+  \node[circle, draw, minimum size=6mm] (A2) at ($(env.east)+(-10mm,6mm)$) {};
+  \node[circle, draw, minimum size=6mm] (A3) at ($(env.north)+(0,-24mm)$) {};
+  \draw[->, thick, shorten <=1pt, shorten >=1pt] (A1) -- (A2);
+  \draw[->, thick, shorten <=1pt, shorten >=1pt] (A2) -- (A3);
+  \draw[->, thick, shorten <=1pt, shorten >=1pt] (A3) -- (A1);
+}
+\end{document}

@@ -167,13 +167,23 @@ are parity. **Test:** per-root min-repro.
   nicematrix/luabridge expl3 the stub doesn't balance. **Approach:** bisect the
   deferred content; find the `\or`-emitting construct (likely a nicematrix table or
   an expl3 `\int_case:nn`). Likely parity-ish. Lower priority.
-- **2508.07407 (#556) `Stomach:Recursion`.** Frontmatter fixed; residual is a
-  box-loop in `paradigms.tex`: `\resizebox{\textwidth}{!}{…\begin{minipage}[t]
-  {\linewidth}…}` — a width-resolution loop (resizebox measuring a minipage whose
-  width depends on the resize). **Approach:** min-repro the resizebox+minipage;
-  the fix is in the box-dimension resolution (a `\resizebox` should not re-measure
-  a `\linewidth`-relative child into a loop) — see the box-model memory
-  `box-model-hsize-frame-ordering-fix`. Emit `Error!` + graceful, never silent.
+  **2026-07-18 update:** confirmed the 337 `\or` fire in DEFERRED content — the
+  first is at `paper; line 3820`, one line PAST `\end{document}` (3819). No literal
+  `\ifcase`/`\or` exists in the source, so a package macro (nicematrix/expl3) leaks
+  `\or` from an unbalanced `\ifcase` in a float/output-routine flush. Deep +
+  deferred; deferred to post-release. Frontmatter (the reported issue) is fixed.
+- **2508.07407 (#556) `Stomach:Recursion` — ROOT CORRECTED 2026-07-18.** NOT a
+  resizebox/minipage box-loop (that minimal is clean in all three engines). Bisected
+  to an inline **`\tikz{…}` picture whose nodes are placed at `calc` coordinates**
+  (`($(env.west)+(10mm,6mm)$)`) relative to a sized `cloud` shape, with `\draw`
+  arrows — Rust's tikz/pgf coordinate machinery loops (~3-box window) past the
+  50000-box guard → `Fatal:Stomach:Recursion`, **caught gracefully** (conversion
+  COMPLETES; only the one tikz table is dropped). **GENUINE-RUST-ONLY**: Perl
+  completes, pdflatex renders cleanly. Bare Rust reproduces (its OWN tikz binding,
+  not a raw-load). Minimal repro:
+  `docs/reproducers/tikz_calc_node_recursion_2508.07407.tex`. DEEP tikz-subsystem
+  work → deferred, like the `\lx@begin@alignment` cluster; already contained
+  (graceful, fidelity-only loss). Frontmatter (the reported issue) is fixed.
 
 ## P7 — Parity / shared-Perl singletons (document, don't force)
 
