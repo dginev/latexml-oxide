@@ -1295,3 +1295,42 @@ fn listoffigures_lists_figures_not_toc_sections() {
      hardcoded `toc` bucket did exactly that:\n{x}"
   );
 }
+
+/// Issue #293: `\subimport`ing a `standalone` child whose preamble is
+/// `\documentclass{article}` warned `missing_file:article` because the
+/// `\@standalone@documentclass[]{}` intercept required the WRONG argument.
+/// Perl `standalone.sty.ltxml` L24-33 binds `$packages = $_[1]` = the OPTIONAL
+/// `[]` list and RequirePackages *that*, ignoring the mandatory class name; the
+/// Rust port instead required the mandatory `{}` (the class), so
+/// `\documentclass{article}` → `RequirePackage("article")` → miss → spurious
+/// warning. The child body always rendered; only the warning was wrong.
+/// Witness = the issue's index.tex + child.tex.
+#[test]
+fn standalone_subimport_documentclass_no_spurious_require() {
+  // No optional args ⇒ nothing required ⇒ no warning (the bug).
+  let log = convert_log("tests/cluster_regressions/subimport/index.tex");
+  assert!(
+    !log.contains("missing_file") && !log.contains("Can't find binding or file for 'article"),
+    "#293: \\documentclass{{article}} in a standalone child must NOT require the \
+     class as a package (article.sty). Log:\n{log}"
+  );
+  let xml = convert_to_xml("tests/cluster_regressions/subimport/index.tex");
+  assert!(
+    xml.contains("this is a test in child document"),
+    "#293: the subimported child body was lost:\n{xml}"
+  );
+
+  // Guard the OTHER half: the OPTIONAL `[]` list IS still required (Perl
+  // parity), so a bogus optional package DOES warn — proving we honor the
+  // optional arg and only ignore the mandatory class name.
+  let log_opt = convert_log("tests/cluster_regressions/subimport/index_opt.tex");
+  assert!(
+    log_opt.contains("zzznope"),
+    "#293 guard: the optional `[zzznope]` must still be RequirePackage'd (Perl \
+     requires the bracket list):\n{log_opt}"
+  );
+  assert!(
+    !log_opt.contains("Can't find binding or file for 'article"),
+    "#293 guard: the mandatory class name must stay ignored even with options:\n{log_opt}"
+  );
+}
