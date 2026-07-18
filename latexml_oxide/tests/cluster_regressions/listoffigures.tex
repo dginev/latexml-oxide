@@ -1,0 +1,15 @@
+\documentclass{article}
+\begin{document}
+
+% Issue #291 latent fix: before CrossRef::gen_toc honored the `<ltx:TOC>`
+% `lists` attribute, it hardcoded the "toc" bucket, so \listoffigures listed a
+% document *section* (an inlist=toc entry) instead of the figures (inlist=lof).
+% It must now list exactly the two figures and no section.
+\listoffigures
+
+\begin{figure}\caption{First fig}\end{figure}
+\begin{figure}\caption{Second fig}\end{figure}
+
+\section{S}
+text
+\end{document}

@@ -1,0 +1,13 @@
+\documentclass{article}
+\begin{document}
+% arXiv-fork / upstream LaTeXML#2316: the abstract carries inlist="toc" so it
+% appears in the *navigation* TOC (accessibility), but must stay EXEMPT from the
+% user-visible \tableofcontents, whose `select` omits ltx:abstract. That exempt
+% half only works once CrossRef::gen_toc honors `select` (the #291 fix).
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\tableofcontents
+\section{One}
+\section{Two}
+\end{document}

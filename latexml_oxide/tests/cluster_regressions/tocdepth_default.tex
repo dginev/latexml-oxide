@@ -1,0 +1,12 @@
+\documentclass[12pt]{book}
+\begin{document}
+
+% No \setcounter{tocdepth}: book default is 2, so sections and subsections
+% MUST still appear in the ToC. Guards the #291 fix against over-filtering.
+\tableofcontents
+
+\chapter{A}
+\section{B}
+\subsubsection{C}
+text
+\end{document}

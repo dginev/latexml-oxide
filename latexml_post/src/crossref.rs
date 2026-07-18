@@ -8,27 +8,22 @@
 use std::{cell::RefCell, rc::Rc};
 
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::{
   document::{NodeData, PostDocument, get_xml_id},
-  object_db::{ObjectDB, Value},
+  object_db::{Entry, ObjectDB, Value},
   processor::{ProcessResult, Processor},
 };
 
-/// Memoized result of `get_child_page_ids` for one ObjectDB entry: the
-/// distinct descendant page ids, plus a position index so
-/// `find_previous_page_id`/`find_next_page_id` can locate a sibling in O(1)
-/// instead of the Perl pop/shift scan.
-struct ChildPages {
-  ids:      Vec<String>,
-  index_of: HashMap<String, usize>,
-}
-
-/// Sectional element types that appear in TOCs.
+/// Perl CrossRef.pm `$normaltoctypes` (L202-206): the sectional element types
+/// used by `gentoc_context`'s UPWARD ancestor/sibling enclosure. This is NOT
+/// the normal `gen_toc` path — that filters purely by the TOC's
+/// `select`/`inlist` (issue #291). Deliberately excludes
+/// `ltx:abstract`/`ltx:acknowledgements` (matching Perl exactly) so frontmatter
+/// does not clutter the navigation breadcrumb's sibling rows.
 const NORMAL_TOC_TYPES: &[&str] = &[
   "ltx:document",
-  "ltx:abstract",
   "ltx:part",
   "ltx:chapter",
   "ltx:section",
@@ -39,9 +34,17 @@ const NORMAL_TOC_TYPES: &[&str] = &[
   "ltx:index",
   "ltx:bibliography",
   "ltx:glossary",
-  "ltx:acknowledgements",
   "ltx:appendix",
 ];
+
+/// Memoized result of `get_child_page_ids` for one ObjectDB entry: the
+/// distinct descendant page ids, plus a position index so
+/// `find_previous_page_id`/`find_next_page_id` can locate a sibling in O(1)
+/// instead of the Perl pop/shift scan.
+struct ChildPages {
+  ids:      Vec<String>,
+  index_of: HashMap<String, usize>,
+}
 
 /// Fallback fields when a requested ref show key is not found.
 fn ref_fallbacks(key: &str) -> &'static [&'static str] {
@@ -714,30 +717,49 @@ impl CrossRef {
         .as_ref()
         .and_then(get_xml_id)
         .unwrap_or_default();
-      // `scope="global"` retargets the TOC to the topmost ancestor — used
-      // by the persistent sidebar so every split page shows the same tree.
-      // Default scope (`current` or absent) keeps the current-page id, so
-      // the inline `\tableofcontents` placeholder still produces a
-      // page-local TOC.
+      // `scope="global"` retargets the TOC to the root page. Perl
+      // fill_in_tocs L227-231 resolves this via `getRootPage`, walking up the
+      // *page* hierarchy (parent → its pageid → …) and taking the root page's
+      // `pageid`. Default scope (`current` or absent) keeps the current-page id,
+      // so the inline `\tableofcontents` placeholder stays page-local.
       if toc.get_attribute("scope").as_deref() == Some("global") {
-        let mut root = id.clone();
-        loop {
-          let parent = self
-            .db
-            .lookup(&format!("ID:{}", root))
-            .and_then(|e| e.get_string("parent").map(String::from));
-          match parent {
-            Some(p) => root = p,
-            None => break,
-          }
-        }
-        id = root;
+        id = self.get_root_page_id(&id);
       }
       let show = toc
         .get_attribute("show")
         .unwrap_or_else(|| self.toc_show.clone());
 
-      let list = self.gen_toc(&id, &show);
+      // Perl CrossRef.pm fill_in_tocs L213-233: the `select` attribute (built
+      // by `\tableofcontents` from `tocdepth`) restricts which element types
+      // reach the ToC; absent `select` ⇒ no type restriction. The `lists`
+      // attribute names which inlist buckets to draw from (default `toc`;
+      // `lof`/`lot` for the figure/table lists).
+      let select_attr = toc.get_attribute("select");
+      let types: Option<HashSet<&str>> = select_attr.as_deref().map(|s| {
+        s.split('|')
+          .map(str::trim)
+          .filter(|t| !t.is_empty())
+          .collect()
+      });
+      let lists_attr = toc.get_attribute("lists");
+      let lists: HashSet<&str> = match lists_attr.as_deref() {
+        Some(l) => l.split_whitespace().collect(),
+        None => HashSet::from_iter(["toc"]),
+      };
+
+      // Perl fill_in_tocs L232-236 dispatches on `format`: `normal` (or absent)
+      // builds a plain downward TOC; `context` builds the navigation breadcrumb
+      // (`gentoc_context`), which forces `lists={toc}`. Any other value yields
+      // no toclist (Perl leaves `@list` empty).
+      let format = toc.get_attribute("format").unwrap_or_default();
+      let list = if format.is_empty() || format.starts_with("normal") {
+        self.gen_toc(&id, &show, types.as_ref(), &lists, None, None)
+      } else if format == "context" {
+        let toc_lists: HashSet<&str> = HashSet::from_iter(["toc"]);
+        self.gen_toc_context(&id, &show, types.as_ref(), &toc_lists)
+      } else {
+        Vec::new()
+      };
       if !list.is_empty() {
         let toclist = NodeData::Element {
           tag:        "ltx:toclist".to_string(),
@@ -750,59 +772,258 @@ impl CrossRef {
     }
   }
 
-  fn gen_toc(&self, id: &str, show: &str) -> Vec<NodeData> {
+  /// Perl CrossRef.pm getRootPage L179-186 + its caller (fill_in_tocs L229):
+  /// walk up the *page* hierarchy — `parent` → that parent's `pageid` → that
+  /// page's `parent` → … — to the topmost page, and return its `pageid`. For a
+  /// single-page document this resolves back to the document id.
+  fn get_root_page_id(&self, start_id: &str) -> String {
+    let mut root_id = start_id.to_string();
+    let mut cursor = start_id.to_string();
+    while let Some(page_id) = self.parent_page_of(&cursor) {
+      root_id = page_id.clone();
+      cursor = page_id;
+    }
+    // Caller reads `$root->getValue('pageid')`.
+    self
+      .db
+      .lookup(&format!("ID:{}", root_id))
+      .and_then(|e| e.get_string("pageid"))
+      .map(String::from)
+      .unwrap_or(root_id)
+  }
+
+  /// One `getRootPage` step (Perl L182-184): the `pageid` of this entry's
+  /// parent, provided that page entry exists. `None` ends the upward walk.
+  fn parent_page_of(&self, id: &str) -> Option<String> {
+    // $x = $x->getValue('parent')
+    let parent_id = self
+      .db
+      .lookup(&format!("ID:{}", id))
+      .and_then(|e| e.get_string("parent"))
+      .filter(|s| !s.is_empty())?;
+    // $x = lookup(parent)->getValue('pageid')
+    let page_id = self
+      .db
+      .lookup(&format!("ID:{}", parent_id))
+      .and_then(|e| e.get_string("pageid"))
+      .filter(|s| !s.is_empty())?
+      .to_string();
+    // $x = lookup(pageid) — the page entry must exist to continue.
+    self.db.lookup(&format!("ID:{}", page_id)).map(|_| page_id)
+  }
+
+  /// Perl CrossRef.pm gentoc L246-262. Generate the TOC for `id` and its
+  /// children. `localto` (when `Some`) restricts the downward recursion to
+  /// entries on that page's `location` — the mechanism a context TOC uses to
+  /// stop at the current page's boundary. `selfid` marks the matching entry
+  /// with `ltx_ref_self` ("you are here").
+  fn gen_toc(
+    &self,
+    id: &str,
+    show: &str,
+    types: Option<&HashSet<&str>>,
+    lists: &HashSet<&str>,
+    localto: Option<&str>,
+    selfid: Option<&str>,
+  ) -> Vec<NodeData> {
     let entry = match self.db.lookup(&format!("ID:{}", id)) {
       Some(e) => e,
       None => return vec![],
     };
 
-    let children = entry.get_children();
-    let kids: Vec<NodeData> = children
-      .iter()
-      .flat_map(|child_id| self.gen_toc(child_id, show))
-      .collect();
+    // gentoc L250-252: recurse into children only when unrestricted, or this
+    // entry lives on the target page.
+    let recurse = match localto {
+      None => true,
+      Some(target) => entry.get_string("location").unwrap_or("") == target,
+    };
+    let kids: Vec<NodeData> = if recurse {
+      entry
+        .get_children()
+        .iter()
+        .flat_map(|child_id| self.gen_toc(child_id, show, types, lists, localto, selfid))
+        .collect()
+    } else {
+      Vec::new()
+    };
 
     let entry_type = entry.get_string("type").unwrap_or("");
-    let is_toc_type = NORMAL_TOC_TYPES.contains(&entry_type);
+    // gentoc L255-256: include this entry iff its type passes the `select`
+    // filter (no `select` ⇒ unrestricted) AND its `inlist` shares a list with
+    // the TOC's `lists`. This is what makes `\setcounter{tocdepth}` (#291) take
+    // effect — the level filter rides on `select`.
+    let type_ok = types.map(|t| t.contains(entry_type)).unwrap_or(true);
     let in_toc = entry
       .get_value("inlist")
       .map(|v| match v {
-        Value::Hash(h) => h.contains_key("toc"),
+        Value::Hash(h) => lists.iter().any(|l| h.contains_key(*l)),
         _ => false,
       })
       .unwrap_or(false);
 
-    if is_toc_type && in_toc {
-      let type_name = entry_type.strip_prefix("ltx:").unwrap_or(entry_type);
-      let mut toc_children = vec![NodeData::Element {
-        tag:        "ltx:ref".to_string(),
-        attributes: Some(HashMap::from_iter([
-          ("show".to_string(), show.to_string()),
-          ("idref".to_string(), id.to_string()),
-        ])),
-        children:   vec![],
-      }];
-      if !kids.is_empty() {
-        toc_children.push(NodeData::Element {
-          tag:        "ltx:toclist".to_string(),
-          attributes: Some(HashMap::from_iter([(
-            "class".to_string(),
-            format!("ltx_toclist_{}", type_name),
-          )])),
-          children:   kids,
-        });
-      }
-      vec![NodeData::Element {
-        tag:        "ltx:tocentry".to_string(),
-        attributes: Some(HashMap::from_iter([(
-          "class".to_string(),
-          format!("ltx_tocentry_{}", type_name),
-        )])),
-        children:   toc_children,
-      }]
+    if type_ok && in_toc {
+      vec![self.gen_tocentry(entry, selfid, show, kids)]
     } else {
       kids
     }
+  }
+
+  /// Perl CrossRef.pm gentocentry L268-283. Build one `ltx:tocentry` for an
+  /// entry: the `before < show > after` split (`generateRef_simple` for the
+  /// before/after halves), the `ltx:ref` body, the `ltx_ref_self` marker when
+  /// this is the `selfid`, and a nested `ltx:toclist` of `children`.
+  fn gen_tocentry(
+    &self,
+    entry: &Entry,
+    selfid: Option<&str>,
+    show: &str,
+    children: Vec<NodeData>,
+  ) -> NodeData {
+    let id = entry
+      .get_string("id")
+      .or_else(|| entry.get_key().strip_prefix("ID:"))
+      .unwrap_or("")
+      .to_string();
+    let entry_type = entry.get_string("type").unwrap_or("");
+    let type_name = entry_type.strip_prefix("ltx:").unwrap_or(entry_type);
+
+    // gentocentry L272-273: `before < show > after`.
+    let (mut before, mut after): (Option<&str>, Option<&str>) = (None, None);
+    let mut show_mid = show;
+    if let Some((b, rest)) = show_mid.split_once('<') {
+      before = Some(b);
+      show_mid = rest;
+    }
+    if let Some((mid, a)) = show_mid.split_once('>') {
+      show_mid = mid;
+      after = Some(a);
+    }
+
+    let self_class = if selfid == Some(id.as_str()) {
+      " ltx_ref_self"
+    } else {
+      ""
+    };
+
+    let mut kids: Vec<NodeData> = Vec::new();
+    if let Some(b) = before.filter(|b| !b.is_empty()) {
+      kids.extend(self.generate_ref_simple(&id, b));
+    }
+    kids.push(NodeData::Element {
+      tag:        "ltx:ref".to_string(),
+      attributes: Some(HashMap::from_iter([
+        ("show".to_string(), show_mid.to_string()),
+        ("idref".to_string(), id.clone()),
+      ])),
+      children:   vec![],
+    });
+    if let Some(a) = after.filter(|a| !a.is_empty()) {
+      kids.extend(self.generate_ref_simple(&id, a));
+    }
+    if !children.is_empty() {
+      kids.push(NodeData::Element {
+        tag: "ltx:toclist".to_string(),
+        attributes: Some(HashMap::from_iter([(
+          "class".to_string(),
+          format!("ltx_toclist_{}", type_name),
+        )])),
+        children,
+      });
+    }
+
+    NodeData::Element {
+      tag:        "ltx:tocentry".to_string(),
+      attributes: Some(HashMap::from_iter([(
+        "class".to_string(),
+        format!("ltx_tocentry_{}{}", type_name, self_class),
+      )])),
+      children:   kids,
+    }
+  }
+
+  /// Perl CrossRef.pm generateRef_simple L...: look the entry up and, if found,
+  /// render `req_show` against it. Used only by `gentocentry`'s before/after.
+  fn generate_ref_simple(&self, req_id: &str, req_show: &str) -> Vec<NodeData> {
+    if !req_show.is_empty()
+      && !req_id.is_empty()
+      && self.db.lookup(&format!("ID:{}", req_id)).is_some()
+    {
+      self.generate_ref_aux(req_id, req_show)
+    } else {
+      Vec::new()
+    }
+  }
+
+  /// Perl CrossRef.pm gentoc_context L288-311. A "context" TOC: the current
+  /// page's own contents (downward, page-local), enclosed upward within its
+  /// ancestors and their sibling sections — the navigation-bar breadcrumb.
+  fn gen_toc_context(
+    &self,
+    id: &str,
+    show: &str,
+    types: Option<&HashSet<&str>>,
+    lists: &HashSet<&str>,
+  ) -> Vec<NodeData> {
+    let start = match self.db.lookup(&format!("ID:{}", id)) {
+      Some(e) => e,
+      None => return vec![],
+    };
+
+    // Downward TOC covering items WITHIN the current page (localto = this page's
+    // location; selfid = this id so the current entry is marked ltx_ref_self).
+    let location = start.get_string("location").unwrap_or("").to_string();
+    let mut navtoc = self.gen_toc(id, show, types, lists, Some(&location), Some(id));
+
+    // Enclose it upward, along with siblings & ancestors. `came_from` is the id
+    // of the child we ascended through; its slot in each parent's sibling row is
+    // replaced by the accumulated `navtoc` subtree.
+    let mut came_from = id.to_string();
+    let mut parent_id = start.get_string("parent").map(String::from);
+
+    while let Some(pid) = parent_id {
+      let parent = match self.db.lookup(&format!("ID:{}", pid)) {
+        Some(e) => e,
+        None => break,
+      };
+
+      // gentoc_context L297-303: the parent's normal-type children become plain
+      // tocentries, except the one we came from (spliced with `navtoc`).
+      let mut row: Vec<NodeData> = Vec::new();
+      for child_id in parent.get_children() {
+        let child = match self.db.lookup(&format!("ID:{}", child_id)) {
+          Some(e) => e,
+          None => continue,
+        };
+        if !NORMAL_TOC_TYPES.contains(&child.get_string("type").unwrap_or("")) {
+          continue;
+        }
+        let child_id_val = child.get_string("id").unwrap_or(&child_id);
+        if child_id_val == came_from {
+          row.append(&mut navtoc);
+        } else {
+          row.push(self.gen_tocentry(child, None, show, Vec::new()));
+        }
+      }
+      navtoc = row;
+
+      // gentoc_context L304-306: wrap in the parent's own tocentry, but only if
+      // the parent passes the type filter AND is itself nested (never wrap the
+      // top-level document).
+      let parent_type = parent.get_string("type").unwrap_or("");
+      let parent_ok = types.map(|t| t.contains(parent_type)).unwrap_or(true);
+      let parent_has_parent = parent
+        .get_string("parent")
+        .map(|s| !s.is_empty())
+        .unwrap_or(false);
+      if parent_ok && parent_has_parent {
+        navtoc = vec![self.gen_tocentry(parent, None, show, navtoc)];
+      }
+
+      came_from = pid;
+      parent_id = parent.get_string("parent").map(String::from);
+    }
+
+    navtoc
   }
 
   fn fill_in_frags(&self, doc: &PostDocument) {
@@ -1149,15 +1370,15 @@ impl Processor for CrossRef {
     }
     if let Some(ref format) = navtoc {
       if let Some(mut nav) = doc.findnode("//ltx:navigation") {
-        // `scope="global"` so fill_in_tocs walks from the root page,
-        // producing the full TOC on every split sub-page (rustdoc-style
-        // persistent sidebar).
+        // Perl CrossRef.pm L50: `['ltx:TOC', {format => $navtoc}]` — format
+        // ONLY, no `scope`. `fill_in_tocs` then defaults scope to `current`, so
+        // this TOC is built relative to THIS page's document element. On a split
+        // document that yields a per-page navigation breadcrumb via
+        // `gen_toc_context` (each page's own contents enclosed within its
+        // ancestors + their siblings), rather than one identical global tree.
         doc.add_nodes(&mut nav, &[NodeData::Element {
           tag:        "ltx:TOC".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("format".to_string(), format.clone()),
-            ("scope".to_string(), "global".to_string()),
-          ])),
+          attributes: Some(HashMap::from_iter([("format".to_string(), format.clone())])),
           children:   vec![],
         }]);
       }
