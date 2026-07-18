@@ -670,6 +670,64 @@ mod exemption_audit {
 
   use super::{ERROR_DEBT, INTENTIONALLY_FAILING};
 
+  /// Recursively collect `(file_stem, path)` for every `.tex` fixture under `dir`.
+  /// A missing/unreadable `dir` yields nothing (not an error): the caller
+  /// interprets "no fixtures" as "no corpus to audit".
+  fn collect_tex_stems(dir: &Path, out: &mut Vec<(String, PathBuf)>) {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+      return;
+    };
+    for ent in rd.flatten() {
+      let p = ent.path();
+      if p.is_dir() {
+        collect_tex_stems(&p, out);
+      } else if p.extension().and_then(|e| e.to_str()) == Some("tex")
+        && let Some(stem) = p.file_stem().and_then(|s| s.to_str())
+      {
+        out.push((stem.to_string(), p.clone()));
+      }
+    }
+  }
+
+  /// Return every exemption key that matches MORE THAN ONE of the collected
+  /// `(file_stem, path)` fixtures — the collision the audit exists to catch.
+  /// Pure (no I/O), so it can be exercised on a synthetic in-memory corpus.
+  fn find_stem_collisions(all: &[(String, PathBuf)]) -> Vec<(String, Vec<PathBuf>)> {
+    let keys = INTENTIONALLY_FAILING
+      .iter()
+      .map(|(n, ..)| *n)
+      .chain(ERROR_DEBT.iter().map(|(n, _)| *n));
+    let mut collisions = Vec::new();
+    for key in keys {
+      let hits: Vec<PathBuf> = all
+        .iter()
+        .filter(|(s, _)| s == key)
+        .map(|(_, p)| p.clone())
+        .collect();
+      if hits.len() > 1 {
+        collisions.push((key.to_string(), hits));
+      }
+    }
+    collisions
+  }
+
+  /// Audit the exemption tables against the `.tex` corpus rooted at `tests_dir`,
+  /// returning every exemption key that matches MORE THAN ONE fixture.
+  ///
+  /// Returns `None` when `tests_dir` holds no corpus at all — kept distinct from
+  /// `Some(vec![])` (corpus present, no collisions). The published `latexml`
+  /// crate EXCLUDES `tests/` (Cargo.toml `exclude`, to fit crates.io's 10 MiB
+  /// cap), so a downstream `cargo test` on the packaged crate legitimately has
+  /// nothing to audit: that is a skip, not a failure (issue #301).
+  fn exemption_stem_collisions(tests_dir: &Path) -> Option<Vec<(String, Vec<PathBuf>)>> {
+    let mut all = Vec::new();
+    collect_tex_stems(tests_dir, &mut all);
+    if all.is_empty() {
+      return None;
+    }
+    Some(find_stem_collisions(&all))
+  }
+
   /// Review m1: the exemption tables match on the bare `file_stem`, which is
   /// NOT unique across the suite's globbed test dirs. A future `glossary.tex`
   /// (etc.) under a different directory would silently inherit the
@@ -680,46 +738,67 @@ mod exemption_audit {
   /// rename the fixture or dir-qualify that entry.)
   #[test]
   fn exemption_keys_have_unique_stems() {
-    fn collect(dir: &Path, out: &mut Vec<(String, PathBuf)>) {
-      let Ok(rd) = std::fs::read_dir(dir) else {
-        return;
-      };
-      for ent in rd.flatten() {
-        let p = ent.path();
-        if p.is_dir() {
-          collect(&p, out);
-        } else if p.extension().and_then(|e| e.to_str()) == Some("tex")
-          && let Some(stem) = p.file_stem().and_then(|s| s.to_str())
-        {
-          out.push((stem.to_string(), p.clone()));
-        }
-      }
-    }
-    let mut all = Vec::new();
-    collect(Path::new("tests"), &mut all);
+    // Locate the corpus via CARGO_MANIFEST_DIR, NOT a CWD-relative path: the scan
+    // must not depend on the test binary's working directory, and the packaged
+    // crate (which excludes `tests/`) must skip cleanly instead of tripping a
+    // "wrong CWD" assert (issue #301).
+    let tests_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let Some(collisions) = exemption_stem_collisions(&tests_dir) else {
+      // No corpus on disk — packaged crate. Nothing to audit.
+      return;
+    };
     assert!(
-      !all.is_empty(),
-      "no .tex fixtures found under tests/ — wrong CWD?"
+      collisions.is_empty(),
+      "exemption keys match multiple .tex fixtures {collisions:?} — the bare-stem \
+       match would apply the exemption to ALL of them, potentially masking a \
+       regression. Dir-qualify the entry or rename the fixture."
     );
+  }
 
-    let keys = INTENTIONALLY_FAILING
+  /// Regression guard for issue #301: the published crate EXCLUDES `tests/`, so
+  /// the audit must treat a missing corpus as "nothing to check" (`None`) and the
+  /// caller must skip — never panic. Before the fix the audit asserted on the
+  /// empty scan, blowing up a downstream `cargo test` on the packaged crate.
+  #[test]
+  fn audit_skips_when_corpus_absent() {
+    let absent = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests-this-dir-does-not-exist");
+    assert!(
+      exemption_stem_collisions(&absent).is_none(),
+      "an absent corpus must yield None (skip), not a spurious audit result"
+    );
+  }
+
+  /// The audit still FIRES on a real duplicate-stem collision, exercised on an
+  /// IN-MEMORY corpus so the check is deterministic, independent of the live
+  /// exemption tables staying collision-free, and needs no filesystem at all —
+  /// not even a writable temp dir, so it survives the same hostile
+  /// packaged/sandboxed environments as the rest of the suite (issue #301). Two
+  /// fixtures under different dirs share a real exemption key; the bare-stem
+  /// match must flag it.
+  #[test]
+  fn audit_detects_duplicate_stems() {
+    let key = INTENTIONALLY_FAILING
       .iter()
       .map(|(n, ..)| *n)
-      .chain(ERROR_DEBT.iter().map(|(n, _)| *n));
-    for key in keys {
-      let hits: Vec<&PathBuf> = all
+      .chain(ERROR_DEBT.iter().map(|(n, _)| *n))
+      .next()
+      .expect("at least one exemption key");
+    let all = vec![
+      (
+        key.to_string(),
+        PathBuf::from(format!("tests/here/{key}.tex")),
+      ),
+      (
+        key.to_string(),
+        PathBuf::from(format!("tests/nested/{key}.tex")),
+      ),
+    ];
+    let collisions = find_stem_collisions(&all);
+    assert!(
+      collisions
         .iter()
-        .filter(|(s, _)| s == key)
-        .map(|(_, p)| p)
-        .collect();
-      assert!(
-        hits.len() <= 1,
-        "exemption key {key:?} matches {} .tex fixtures {:?} — the bare-stem \
-         match would apply the exemption to ALL of them, potentially masking a \
-         regression. Dir-qualify the entry or rename the fixture.",
-        hits.len(),
-        hits
-      );
-    }
+        .any(|(k, hits)| k == key && hits.len() == 2),
+      "audit should flag the duplicate {key:?}: {collisions:?}"
+    );
   }
 }
