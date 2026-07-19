@@ -2281,3 +2281,45 @@ CropBox path) + `figure_panel_unmeasured` (the `width=` fallback / filename-bug
 guard). Verified: fig 2's 12 panels → uniform 84.52pt → breaks after g4/g8 → 3
 rows of 4; a bare full-size PDF → one panel per row; `scale=0.16` → wraps by the
 scaled natural size.
+
+## #63 Compiled bindings ALWAYS beat a raw `.sty` — the precedence gate is `input_definitions`'s `_loaded` check, NOT `find_file_aux`'s `notex` gate
+
+**The trap:** reading `find_file_aux` in isolation suggests `--includestyles` lets a
+raw on-disk `.sty` override a compiled binding. It does not, and reasoning from
+that function alone will produce a wrong answer (it did twice in the 2026-07-19
+issue #307 investigation, once in a comment nearly posted to a reporter).
+
+`find_file_aux`'s binding fast-path (`content.rs:2703`) IS gated on `notex`, and
+`require_package` (`content.rs:1744`) does clear `notex` under `INCLUDE_STYLES`.
+But that pair answers a *different* question — "does this name resolve at all?",
+as asked by `\IfFileExists` / `\openin` — and never decides package-load
+precedence. Precedence is decided one layer up, in `input_definitions`
+(`content.rs:101`), a stepped ladder mirroring Perl `Package.pm`:
+
+* **Step 1/2** — binding dispatch (`is_binding`, `content.rs:481`/`:505`); on
+  success sets `{filename}_loaded`.
+* **Step 3** — fallback binding via version-suffix stripping (`content.rs:615`).
+* **Step 4** — raw TeX (`content.rs:680`), guarded by
+  `else if lookup_bool("{filename}_loaded") → None` (`content.rs:698-702`).
+  Only when NO binding loaded does it call `find_file(…, notex: false)`, which
+  is the sole route to a disk `.sty`.
+
+So `notex`/`INCLUDE_STYLES` only controls whether Step 4 is *eligible*; for any
+package that HAS a binding, Step 4 is already unreachable. Mirrors Perl's
+`if/elsif` flow (`Package.pm:2118-2125`), which `return`s on binding success.
+
+**Evidence** (shipped 0.7.4 asset, `\usepackage{latexml}` with a real
+`latexml.sty` — which contains `\newif\iflatexml\latexmlfalse` — on `--path`):
+both with and without `--includestyles` the log prints `(Loading latexml_sty.rs…)`
+and the document takes the TRUE branch. Corollary: a compiled binding needs no
+path and can never be "not found", so **never advise a user to drop a raw `.sty`
+somewhere to change binding behavior** — it has no effect.
+
+**Consequence for triage:** when a `\if<pkg>` conditional takes the wrong branch,
+the cause is never "the raw `.sty` won". It is that the `\usepackage` was never
+*executed* — e.g. it lives in an `\input`ed file that failed to resolve. Witness:
+`\iflatexml` is defined only by `latexml.sty` (Rust
+`latexml_package/src/package/latexml_sty/mod.rs:239`; Perl
+`latexml.sty.ltxml:27` — neither predefines it), so a bare `\iflatexml` errors
+`undefined` and falls into `\else` in BOTH implementations, byte-identically.
+That is parity, not a bug.

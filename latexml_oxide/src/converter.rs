@@ -176,6 +176,12 @@ impl Converter {
     if std::env::var_os("LATEXML_NO_KPATHSEA_PREWARM").is_none() {
       latexml_core::util::pathname::prewarm_kpathsea();
     }
+    // Record which file-resolution backend this process resolved, so every log
+    // carries it. A dead or degraded kpathsea is otherwise invisible — it looks
+    // exactly like a document referencing files that do not exist — and issue
+    // #304 cost days for want of this one line in the reporter's log.
+    let (backend, why) = latexml_core::util::pathname::kpathsea_backend();
+    Info!("kpathsea", "backend", s!("{} ({why})", backend.as_str()));
     self.ready = true;
     Ok(())
   }
