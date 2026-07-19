@@ -1,5 +1,31 @@
 # Change Log
 
+## [0.7.5] (ar5iv corpus fixes; file-resolution robustness + diagnosability)
+
+  - **File resolution can no longer die silently.** A conversion could run with
+    **no kpathsea backend at all** and say nothing about it: a failed
+    `Kpaths::new()` was discarded, so every lookup returned `None` while embedded
+    bindings and dumps kept the conversion working. The only symptom was
+    `Can't find TeX file X` — indistinguishable from a file that is genuinely
+    absent. The trigger was an unresolvable `kpsewhich`: missing from the
+    *process's* `PATH` (as opposed to the user's interactive shell), a stale
+    `KPSEWHICH`, not executable, or a `kpsewhich.exe` beside a Linux binary under
+    WSL. Fixed in [kpathsea 0.3.4](https://github.com/dginev/rust-kpathsea/pull/25)
+    (a linked `Kpaths::new()` degrades its program-name anchor instead of failing)
+    plus a subprocess fallback here.
+  - **Every conversion log now records the file-resolution backend** —
+    `in-process`, `subprocess kpsewhich`, or `unavailable`. A dead or degraded
+    resolver used to be invisible and had to be inferred; it is now one line in an
+    ordinary log, with no special flags. A host TeX installation remains optional,
+    so an absent one warns rather than errors.
+  - **ar5iv corpus fixes** (from the 2026-07 issue sprint): `xcolor` now honors a
+    `dvipsnames` *global class* option; `\sidecaptionvpos` bound as a layout no-op;
+    `\newtcblisting` bodies close as verbatim; `agujournal2019` end-matter
+    (rotating + acronyms/notation); `blkarray` support, recovering papers that
+    previously hit OOM/timeout; `scrartcl` `\titlehead` frontmatter capture; and
+    frontmatter bindings for `fairmeta`, `selfevolagent` and `openmoss` classes.
+  - **A deferred package-load miss no longer poisons a later raw load.**
+
 ## [0.7.4] (Windows target; third-party license notices; crates.io)
 
   - **Installable from crates.io** — `cargo install latexml` builds the CLI from
