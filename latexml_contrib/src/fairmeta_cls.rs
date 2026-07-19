@@ -48,48 +48,23 @@ LoadDefinitions!({
   Digest!("\\definecolor{metafg}{HTML}{1C2B33}")?;
   Digest!("\\definecolor{metabg}{HTML}{EFF6F6}")?;
 
-  // Frontmatter. Each fairmeta helper takes an optional leading mark
-  // (\author[1]{...}, \metadata[Label]{...}); route the content to the shared
-  // \@add@frontmatter sink so it lands in <ltx:document> frontmatter. The
-  // accumulator lists (\authorlist, …) become no-ops — the sink accumulates.
-  def_macro_noop("\\authorlist")?;
-  def_macro_noop("\\affiliationlist")?;
-  def_macro_noop("\\contributionlist")?;
-  def_macro_noop("\\metadatalist")?;
+  // Shared "addtolist meta-class" frontmatter routing (\author/\affiliation/
+  // \contribution/\correspondence/\abstract/\email/\beginappendix + the list
+  // no-ops) — see `meta_class_frontmatter!` in lib.rs.
+  meta_class_frontmatter!();
 
-  // \author[mark]{name} — accumulate as a document creator. Route to the
-  // internal \lx@add@author sink (NOT \author — that would re-match this macro
-  // and recurse); the leading affiliation mark #1 is dropped.
-  DefMacro!("\\author[]{}", "\\lx@add@author{#2}");
-  // \affiliation[mark]{text}
-  DefMacro!(
-    "\\affiliation[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
-  // \contribution[mark]{text}
-  DefMacro!(
-    "\\contribution[]{}",
-    "\\@add@frontmatter{ltx:note}[role=contribution]{#2}"
-  );
-  // \metadata[label]{value} — the label becomes the note role.
+  // Class-specific labeled fields (kept per-class):
+  def_macro_noop("\\metadatalist")?;
+  // \metadata[label]{value} — fairmeta's labels are simple words, so the label
+  // goes to the note `role` attribute. (The siblings whose labels can be
+  // arbitrary markup — selfevolagent/openmoss — render "label: value" as
+  // content instead; keep fairmeta's labels attribute-safe.)
   DefMacro!(
     "\\metadata[]{}",
     "\\@add@frontmatter{ltx:note}[role=#1]{#2}"
   );
-  // \correspondence{text} (class: \metadata[Correspondence]{...}).
-  DefMacro!(
-    "\\correspondence{}",
-    "\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"
-  );
   // \date{text} (class: \metadata[Date]{...}; the \faCalendar icon is dropped).
   DefMacro!("\\date{}", "\\@add@frontmatter{ltx:note}[role=date]{#1}");
-  // \abstract{text} (class stores it in \abstractlist; feed the abstract sink).
-  DefMacro!("\\abstract{}", "\\lx@add@abstract{#1}");
-  // \email{addr} — kept verbatim from the class.
-  DefMacro!("\\email{}", "\\href{mailto:#1}{\\texttt{#1}}");
-
-  // \beginappendix — the class's stand-in for \appendix.
-  DefMacro!("\\beginappendix", "\\appendix");
   // \nm{...} — no-op text wrapper (\newcommand{\nm}[1]{#1}).
   DefMacro!("\\nm{}", "#1");
 });

@@ -46,30 +46,14 @@ LoadDefinitions!({
   DefMacro!("\\openmossblue{}", "{\\bfseries\\color{openmossblue}#1}");
   DefMacro!("\\nm{}", "#1");
 
-  // Frontmatter (see fairmeta_cls.rs). Accumulator lists become no-ops.
-  def_macro_noop("\\authorlist")?;
-  def_macro_noop("\\affiliationlist")?;
-  def_macro_noop("\\contributionlist")?;
-  def_macro_noop("\\checkdatalist")?;
+  // Shared "addtolist meta-class" frontmatter routing — see
+  // `meta_class_frontmatter!` in lib.rs.
+  meta_class_frontmatter!();
 
-  DefMacro!("\\author[]{}", "\\lx@add@author{#2}");
-  DefMacro!(
-    "\\affiliation[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
-  DefMacro!(
-    "\\contribution[]{}",
-    "\\@add@frontmatter{ltx:note}[role=contribution]{#2}"
-  );
+  // Class-specific labeled field (openmoss uses \checkdata, not \metadata):
+  def_macro_noop("\\checkdatalist")?;
   // \checkdata[label]{value} — arbitrary label (e.g. "Github Repo", a \url),
   // rendered as note CONTENT "label: value" (a label with a space can't be a
   // role attribute).
   DefMacro!("\\checkdata[]{}", "\\@add@frontmatter{ltx:note}{#1: #2}");
-  DefMacro!(
-    "\\correspondence{}",
-    "\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"
-  );
-  DefMacro!("\\abstract{}", "\\lx@add@abstract{#1}");
-  DefMacro!("\\email{}", "\\href{mailto:#1}{\\texttt{#1}}");
-  DefMacro!("\\beginappendix", "\\appendix");
 });

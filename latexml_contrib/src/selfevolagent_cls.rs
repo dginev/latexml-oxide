@@ -44,31 +44,15 @@ LoadDefinitions!({
   Digest!("\\definecolor{selfevolagent_lighter}{HTML}{CDF4E9}")?;
   Digest!("\\definecolor{selfevolagent_blue}{HTML}{0064E0}")?;
 
-  // Frontmatter (see fairmeta_cls.rs). The accumulator lists become no-ops.
-  def_macro_noop("\\authorlist")?;
-  def_macro_noop("\\affiliationlist")?;
-  def_macro_noop("\\contributionlist")?;
-  def_macro_noop("\\metadatalist")?;
+  // Shared "addtolist meta-class" frontmatter routing — see
+  // `meta_class_frontmatter!` in lib.rs.
+  meta_class_frontmatter!();
 
-  DefMacro!("\\author[]{}", "\\lx@add@author{#2}");
-  DefMacro!(
-    "\\affiliation[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
-  DefMacro!(
-    "\\contribution[]{}",
-    "\\@add@frontmatter{ltx:note}[role=contribution]{#2}"
-  );
+  // Class-specific labeled fields (kept per-class):
+  def_macro_noop("\\metadatalist")?;
   // \metadata[label]{value}: the label can be arbitrary markup (e.g. an
   // \includegraphics-bearing "Github" chip), so it cannot go in a `role`
   // attribute — render it as note CONTENT "label: value".
   DefMacro!("\\metadata[]{}", "\\@add@frontmatter{ltx:note}{#1: #2}");
-  DefMacro!(
-    "\\correspondence{}",
-    "\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"
-  );
   DefMacro!("\\date{}", "\\@add@frontmatter{ltx:note}[role=date]{#1}");
-  DefMacro!("\\abstract{}", "\\lx@add@abstract{#1}");
-  DefMacro!("\\email{}", "\\href{mailto:#1}{\\texttt{#1}}");
-  DefMacro!("\\beginappendix", "\\appendix");
 });

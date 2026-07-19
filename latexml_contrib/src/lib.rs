@@ -11,6 +11,45 @@ extern crate latexml_package;
 extern crate latexml_codegen;
 use latexml_core::common::error::*;
 
+/// Shared frontmatter interface for the "addtolist ML meta-class" family
+/// (`fairmeta` / `selfevolagent` / `openmoss` and future siblings): pre-print
+/// classes whose `\author`/`\affiliation`/`\contribution`/`\correspondence`/
+/// `\abstract`/`\beginappendix` commands are defined on an `\addtolist`
+/// accumulator in the class BODY — which an unknown `.cls` does not raw-load, so
+/// all are `Error:undefined` without a binding. Emits the identical,
+/// order-independent frontmatter routing shared by every sibling. The
+/// per-class parts stay in each `*_cls.rs`: the dependency list (order-sensitive),
+/// the colour palette, and the class-specific labeled field (`\metadata` vs
+/// `\checkdata`, and its routing) — see each file. Invoke once inside the
+/// class's `LoadDefinitions!` block. Function paths are fully qualified so the
+/// macro is hygienic regardless of the call site's imports.
+macro_rules! meta_class_frontmatter {
+  () => {
+    // Accumulator lists → no-ops; the `\@add@frontmatter` sink accumulates.
+    latexml_engine::prelude::def_macro_noop("\\authorlist")?;
+    latexml_engine::prelude::def_macro_noop("\\affiliationlist")?;
+    latexml_engine::prelude::def_macro_noop("\\contributionlist")?;
+    // `\author[mark]{name}` → the creator sink (NOT `\author` — that re-matches
+    // this macro and recurses); the leading affiliation mark #1 is dropped.
+    DefMacro!("\\author[]{}", "\\lx@add@author{#2}");
+    DefMacro!(
+      "\\affiliation[]{}",
+      "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
+    );
+    DefMacro!(
+      "\\contribution[]{}",
+      "\\@add@frontmatter{ltx:note}[role=contribution]{#2}"
+    );
+    DefMacro!(
+      "\\correspondence{}",
+      "\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"
+    );
+    DefMacro!("\\abstract{}", "\\lx@add@abstract{#1}");
+    DefMacro!("\\email{}", "\\href{mailto:#1}{\\texttt{#1}}");
+    DefMacro!("\\beginappendix", "\\appendix");
+  };
+}
+
 // Runtime script bindings (docs/parity/script_bindings_plan.md). Feature-gated; OFF by
 // default. The ONLY module that embeds Rhai.
 #[cfg(feature = "runtime-bindings")]
