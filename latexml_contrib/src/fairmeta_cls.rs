@@ -50,8 +50,8 @@ LoadDefinitions!({
 
   // Shared "addtolist meta-class" frontmatter routing (\author/\affiliation/
   // \contribution/\correspondence/\abstract/\email/\beginappendix + the list
-  // no-ops) — see `meta_class_frontmatter!` in lib.rs.
-  meta_class_frontmatter!();
+  // no-ops) — see `meta_class::install_meta_class_frontmatter`.
+  crate::meta_class::install_meta_class_frontmatter()?;
 
   // Class-specific labeled fields (kept per-class):
   def_macro_noop("\\metadatalist")?;

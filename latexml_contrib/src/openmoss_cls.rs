@@ -47,8 +47,8 @@ LoadDefinitions!({
   DefMacro!("\\nm{}", "#1");
 
   // Shared "addtolist meta-class" frontmatter routing — see
-  // `meta_class_frontmatter!` in lib.rs.
-  meta_class_frontmatter!();
+  // `meta_class::install_meta_class_frontmatter`.
+  crate::meta_class::install_meta_class_frontmatter()?;
 
   // Class-specific labeled field (openmoss uses \checkdata, not \metadata):
   def_macro_noop("\\checkdatalist")?;

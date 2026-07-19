@@ -45,8 +45,8 @@ LoadDefinitions!({
   Digest!("\\definecolor{selfevolagent_blue}{HTML}{0064E0}")?;
 
   // Shared "addtolist meta-class" frontmatter routing — see
-  // `meta_class_frontmatter!` in lib.rs.
-  meta_class_frontmatter!();
+  // `meta_class::install_meta_class_frontmatter`.
+  crate::meta_class::install_meta_class_frontmatter()?;
 
   // Class-specific labeled fields (kept per-class):
   def_macro_noop("\\metadatalist")?;
