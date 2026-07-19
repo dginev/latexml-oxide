@@ -79,52 +79,133 @@ static URL_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https|http|ftp
 #[cfg(feature = "kpathsea")]
 static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(select_kpaths()));
 
-/// Pick the kpathsea backend that can actually resolve host files, so the
-/// shipped binary works out of the box on **both** TeX Live and MiKTeX.
-///
-/// The in-process (statically linked `build_from_source`) backend is the fast
-/// path: it resolves against the host `ls-R` cache with no subprocess per
-/// lookup (~0.5s/conversion saved vs subprocess). BUT a statically-linked
-/// libkpathsea cannot read MiKTeX's MPM file database — MiKTeX ships no `ls-R`
-/// — so on a MiKTeX host every in-process lookup returns `None` (host
-/// `.sty`/`.cls`/`.tfm` become unresolvable). Detect that with one
-/// universal-sentinel probe (`cmr10.tfm` is present in every TeX distribution,
-/// and the probe returns `None` fast on MiKTeX — no directory walk) and fall
-/// back to the subprocess backend, which delegates to the host's own
-/// `kpsewhich` and resolves on MiKTeX and TeX Live alike. Net: TeX Live keeps
-/// the in-process speed; MiKTeX works with no configuration; one binary.
-///
-/// A non-linked build already returns the subprocess backend from
-/// `Kpaths::new()` (`is_in_process()` is false), so the probe and the fallback
-/// are both skipped there — the selection only does work on a linked binary.
+/// Which kpathsea backend this process resolved. Reported by
+/// [`kpathsea_backend`] so a host-resolution problem is diagnosable from the
+/// log instead of surfacing only as indistinguishable "can't find file" errors.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KpathseaBackend {
+  /// Linked libkpathsea, resolved in-process (the fast path).
+  InProcess,
+  /// Delegating to the host's `kpsewhich` executable.
+  Subprocess,
+  /// No backend could be constructed — EVERY file lookup returns `None`.
+  Unavailable,
+}
+
+impl KpathseaBackend {
+  /// Short label, for the per-conversion log line.
+  pub fn as_str(self) -> &'static str {
+    match self {
+      Self::InProcess => "in-process",
+      Self::Subprocess => "subprocess kpsewhich",
+      Self::Unavailable => "unavailable",
+    }
+  }
+}
+
+/// The resolved backend and why, recorded by [`select_kpaths`].
 #[cfg(feature = "kpathsea")]
-fn select_kpaths() -> Option<Kpaths> {
+static BACKEND: OnceLock<(KpathseaBackend, &'static str)> = OnceLock::new();
+
+/// The backend this process resolved, with a short reason. Forces the `KPSE`
+/// initialization so the answer is always the real one.
+#[cfg(feature = "kpathsea")]
+pub fn kpathsea_backend() -> (KpathseaBackend, &'static str) {
+  drop(KPSE.lock().unwrap());
+  *BACKEND
+    .get()
+    .unwrap_or(&(KpathseaBackend::Unavailable, "not initialized"))
+}
+
+/// Without the `kpathsea` feature there is no backend at all.
+#[cfg(not(feature = "kpathsea"))]
+pub fn kpathsea_backend() -> (KpathseaBackend, &'static str) {
+  (
+    KpathseaBackend::Unavailable,
+    "built without the kpathsea feature",
+  )
+}
+
+/// The backend-selection policy, with its effects injected so every branch is
+/// testable without a MiKTeX (or TeX-less) host.
+///
+/// The in-process (statically linked) backend is the fast path — it resolves
+/// against the host `ls-R` with no subprocess per lookup, ~0.5 s/conversion
+/// cheaper than shelling out — so it is preferred wherever it actually works,
+/// with the subprocess backend as the portable fallback. Net: TeX Live keeps
+/// the in-process speed, MiKTeX works with no configuration, one binary.
+#[cfg(feature = "kpathsea")]
+fn choose_kpaths(
+  banner: Option<&str>,
+  new_in_process: impl FnOnce() -> Result<Kpaths, &'static str>,
+  new_subprocess: impl Fn() -> Result<Kpaths, &'static str>,
+  can_resolve: impl FnOnce(&Kpaths) -> bool,
+) -> (Option<Kpaths>, KpathseaBackend, &'static str) {
   // MiKTeX stores its file database in an MPM `fndb` that a statically-linked
   // libkpathsea cannot read (MiKTeX ships no `ls-R`), so the in-process backend
-  // resolves nothing on a MiKTeX host. Detect MiKTeX up front from its
-  // `kpsewhich --version` banner and go straight to the subprocess backend.
-  // Doing this BEFORE any `Kpaths::new()` also avoids the in-process C library's
-  // "configuration file texmf.cnf not found" warning, which it would print to
-  // stderr while trying (and failing) to anchor on the MiKTeX tree.
-  if ambient_kpsewhich_version().is_some_and(|b| b.contains("MiKTeX"))
-    && let Ok(subprocess) = Kpaths::new_subprocess()
+  // resolves nothing there. Detecting it from the `kpsewhich --version` banner
+  // BEFORE any `Kpaths::new()` also avoids the C library's "configuration file
+  // texmf.cnf not found" warning while it fails to anchor on the MiKTeX tree.
+  if banner.is_some_and(|b| b.contains("MiKTeX"))
+    && let Ok(subprocess) = new_subprocess()
   {
-    return Some(subprocess);
+    return (Some(subprocess), KpathseaBackend::Subprocess, "MiKTeX host");
   }
-  // TeX Live (or no TeX at all): prefer the in-process backend (fast). A sentinel
-  // backstop covers any OTHER distro whose tree the linked lib can't read — if a
-  // universal file (`cmr10.tfm`, in every TeX install) is unresolvable
-  // in-process, fall back to the subprocess backend. `new_subprocess()` is pure
-  // Rust (no C-side re-init), so this second construction is safe next to the
-  // Mutex carve-out documented above.
-  let kpse = Kpaths::new().ok()?;
-  if kpse.is_in_process()
-    && kpse.find_file("cmr10.tfm").is_none()
-    && let Ok(subprocess) = Kpaths::new_subprocess()
-  {
-    return Some(subprocess);
+  match new_in_process() {
+    // Sentinel backstop for any OTHER distro whose tree the linked lib can't
+    // read. `new_subprocess()` is pure Rust (no C-side re-init), so this second
+    // construction is safe next to the Mutex carve-out documented above.
+    Ok(kpse) if kpse.is_in_process() && !can_resolve(&kpse) => match new_subprocess() {
+      Ok(subprocess) => (
+        Some(subprocess),
+        KpathseaBackend::Subprocess,
+        "linked libkpathsea resolved no host files",
+      ),
+      // Keep the in-process handle: degraded beats nothing.
+      Err(_) => (
+        Some(kpse),
+        KpathseaBackend::InProcess,
+        "linked libkpathsea resolves no host files, and no kpsewhich to fall back to",
+      ),
+    },
+    Ok(kpse) if kpse.is_in_process() => (Some(kpse), KpathseaBackend::InProcess, "linked"),
+    Ok(kpse) => (
+      Some(kpse),
+      KpathseaBackend::Subprocess,
+      "no linked libkpathsea",
+    ),
+    // Never give up without trying the other backend: this is the only path
+    // that would otherwise disable file resolution entirely, and it used to do
+    // so silently (`Kpaths::new().ok()?`).
+    Err(_) => match new_subprocess() {
+      Ok(subprocess) => (
+        Some(subprocess),
+        KpathseaBackend::Subprocess,
+        "libkpathsea unavailable",
+      ),
+      Err(_) => (
+        None,
+        KpathseaBackend::Unavailable,
+        "no usable libkpathsea and no kpsewhich executable",
+      ),
+    },
   }
-  Some(kpse)
+}
+
+/// Pick the kpathsea backend that can actually resolve host files, and record
+/// the choice for [`kpathsea_backend`].
+#[cfg(feature = "kpathsea")]
+fn select_kpaths() -> Option<Kpaths> {
+  let (kpse, backend, why) = choose_kpaths(
+    ambient_kpsewhich_version(),
+    Kpaths::new,
+    Kpaths::new_subprocess,
+    // `cmr10.tfm` is present in every TeX distribution, and the probe returns
+    // `None` fast on MiKTeX — no directory walk.
+    |kpse| kpse.find_file("cmr10.tfm").is_some(),
+  );
+  let _ = BACKEND.set((backend, why));
+  kpse
 }
 
 /// The ambient `kpsewhich --version` banner (full stdout), memoized for the
@@ -187,6 +268,7 @@ pub fn prewarm_kpathsea() {
   // call coordinate — whichever runs first warms; any other caller blocks here
   // until it completes (guaranteeing warm-before-first-lookup) instead of
   // re-taking the `KPSE` mutex and re-probing 11 sentinels on every session.
+  report_unavailable_kpathsea();
   static PREWARM_ONCE: std::sync::Once = std::sync::Once::new();
   PREWARM_ONCE.call_once(|| {
     let kpse_guard = KPSE.lock().unwrap();
@@ -793,8 +875,39 @@ pub fn clear_kpsewhich_memo() {}
 /// on the in-process backend. Results are stable for a fixed texmf tree
 /// (the same assumption kpathsea's own ls-R cache makes); the memo clears
 /// per conversion via `clear_kpsewhich_memo`.
+/// Say so, ONCE, when neither backend could be constructed.
+///
+/// A host TeX installation is OPTIONAL here — embedded bindings and dumps
+/// convert self-contained documents perfectly well without one — so this is a
+/// warning, not an error. It exists because a silent dead kpathsea is
+/// indistinguishable from a genuinely missing file: every lookup just reports
+/// `Can't find TeX file X`, which sends users (and us — issue #304) hunting
+/// `TEXINPUTS` instead of the resolver that never came up.
+#[cfg(feature = "kpathsea")]
+pub fn report_unavailable_kpathsea() {
+  static ONCE: std::sync::Once = std::sync::Once::new();
+  ONCE.call_once(|| {
+    let (backend, why) = kpathsea_backend();
+    if backend == KpathseaBackend::Unavailable {
+      crate::Warn!(
+        "kpathsea",
+        "unavailable",
+        s!(
+          "No TeX file resolution ({why}): files from a host texmf tree cannot \
+           be found. Embedded bindings still apply."
+        )
+      );
+    }
+  });
+}
+
+/// Without the `kpathsea` feature there is nothing to report at runtime.
+#[cfg(not(feature = "kpathsea"))]
+pub fn report_unavailable_kpathsea() {}
+
 #[cfg(feature = "kpathsea")]
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
+  report_unavailable_kpathsea();
   let key = candidates.join("\x1f");
   if let Some(cached) = KPSE_MEMO.with(|m| m.borrow().get(&key).cloned()) {
     return cached;
@@ -812,31 +925,41 @@ pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   result
 }
 
+/// Probe each candidate through one backend, in order, returning the first
+/// hit. Skips bogus bare-extension names and guards the in-process
+/// `guess_format_from_filename` panic.
 #[cfg(feature = "kpathsea")]
-fn kpsewhich_uncached(candidates: &[&str]) -> Option<String> {
-  if let Some(ref kpse) = *KPSE.lock().unwrap() {
-    for candidate in candidates {
-      // kpathsea-0.2.3 panics with "attempt to subtract with overflow" in
-      // `guess_format_from_filename` (lib.rs:92) when `filename.len()` is
-      // shorter than some alt_suffix the format-table holds (the L73 normal-
-      // suffix loop has a `filename.len() > suffix.len()` guard but the L92
-      // alt_suffix loop does NOT). User input like `\usepackage[opt]{}`
-      // produces a `.sty` candidate (empty stem) which trips this. Pre-filter
-      // those: a basename starting with `.` and containing only an extension
-      // is bogus to look up. The catch_unwind below remains as defense-in-
-      // depth. Witnesses: 0711.2664 (`.sty`), cs0503041 (`.sty`).
-      let basename = candidate.rsplit(['/', '\\']).next().unwrap_or(candidate);
-      if basename.starts_with('.') && !basename[1..].contains('.') {
-        continue;
-      }
-      let result =
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(candidate)));
-      if let Ok(Some(path)) = result {
-        return Some(path);
-      }
+fn find_first_via(kpse: &Kpaths, candidates: &[&str]) -> Option<String> {
+  for candidate in candidates {
+    // kpathsea-0.2.3 panics with "attempt to subtract with overflow" in
+    // `guess_format_from_filename` (lib.rs:92) when `filename.len()` is
+    // shorter than some alt_suffix the format-table holds (the L73 normal-
+    // suffix loop has a `filename.len() > suffix.len()` guard but the L92
+    // alt_suffix loop does NOT). User input like `\usepackage[opt]{}`
+    // produces a `.sty` candidate (empty stem) which trips this. Pre-filter
+    // those: a basename starting with `.` and containing only an extension
+    // is bogus to look up. The catch_unwind below remains as defense-in-
+    // depth. Witnesses: 0711.2664 (`.sty`), cs0503041 (`.sty`).
+    let basename = candidate.rsplit(['/', '\\']).next().unwrap_or(candidate);
+    if basename.starts_with('.') && !basename[1..].contains('.') {
+      continue;
+    }
+    let result =
+      std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(candidate)));
+    if let Ok(Some(path)) = result {
+      return Some(path);
     }
   }
   None
+}
+
+#[cfg(feature = "kpathsea")]
+fn kpsewhich_uncached(candidates: &[&str]) -> Option<String> {
+  KPSE
+    .lock()
+    .unwrap()
+    .as_ref()
+    .and_then(|kpse| find_first_via(kpse, candidates))
 }
 
 /// Without the `kpathsea` feature, file resolution is unavailable — every lookup
@@ -854,6 +977,81 @@ pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// `choose_kpaths` branches that a real host cannot exercise: a MiKTeX
+  /// banner, a failed in-process construction, and a TeX-less machine.
+  #[cfg(feature = "kpathsea")]
+  mod backend_selection {
+    use super::*;
+
+    /// A real subprocess handle, or `None` where the host has no `kpsewhich`.
+    fn subprocess() -> Option<Kpaths> { Kpaths::new_subprocess().ok() }
+
+    #[test]
+    fn no_constructible_backend_reports_unavailable() {
+      let (kpse, backend, why) =
+        choose_kpaths(None, || Err("no lib"), || Err("no kpsewhich"), |_| true);
+      assert!(kpse.is_none());
+      assert_eq!(backend, KpathseaBackend::Unavailable);
+      assert!(
+        !why.is_empty(),
+        "an unavailable backend must explain itself"
+      );
+    }
+
+    /// The regression this hardening exists for: a failed in-process
+    /// construction used to `?` out and silently disable ALL file resolution
+    /// instead of trying the subprocess backend.
+    #[test]
+    fn failed_in_process_construction_falls_back_to_subprocess() {
+      if subprocess().is_none() {
+        return; // no host kpsewhich — nothing to fall back to
+      }
+      let (kpse, backend, _) = choose_kpaths(
+        None,
+        || Err("libkpathsea did not initialize"),
+        Kpaths::new_subprocess,
+        |_| true,
+      );
+      assert!(kpse.is_some(), "must not give up while a kpsewhich exists");
+      assert_eq!(backend, KpathseaBackend::Subprocess);
+    }
+
+    #[test]
+    fn miktex_banner_selects_subprocess_without_constructing_in_process() {
+      if subprocess().is_none() {
+        return;
+      }
+      let (kpse, backend, _) = choose_kpaths(
+        Some("MiKTeX 24.1"),
+        || panic!("the in-process backend must not be constructed on a MiKTeX host"),
+        Kpaths::new_subprocess,
+        |_| true,
+      );
+      assert!(kpse.is_some());
+      assert_eq!(backend, KpathseaBackend::Subprocess);
+    }
+
+    /// A linked backend that resolves nothing (sentinel miss) is abandoned for
+    /// the subprocess one.
+    #[test]
+    fn sentinel_miss_falls_back_to_subprocess() {
+      let Some(primary) = subprocess() else { return };
+      if primary.is_in_process() {
+        return; // this branch only fires for an in-process primary
+      }
+      let (kpse, backend, _) = choose_kpaths(None, Kpaths::new, Kpaths::new_subprocess, |_| false);
+      assert!(kpse.is_some());
+      assert_eq!(backend, KpathseaBackend::Subprocess);
+    }
+  }
+
+  /// No backend may conjure a hit for a name that cannot exist.
+  #[cfg(feature = "kpathsea")]
+  #[test]
+  fn absent_names_resolve_to_none() {
+    assert!(kpsewhich(&["lxo_definitely_absent_probe_304.tex"]).is_none());
+  }
 
   /// The backend chosen by [`select_kpaths`] must resolve a universal host
   /// file on whatever distribution is ambient — proving the shipped binary

@@ -68,7 +68,14 @@ libxml = "0.3.16"
 # installer suppression. See docs/release/WINDOWS_COMPATIBILITY_PLAN.md.
 # 0.3.3: build_from_source fix for the `_stat64i32` LNK2005 collision under
 # +crt-static + fat-LTO (the Windows release link). kpathsea_sys 0.2.3.
-kpathsea = { version = "0.3.3", optional = true }
+# 0.3.4: a linked `Kpaths::new()` can no longer fail — the program-name anchor
+# degrades (kpsewhich → current_exe → literal) instead of returning Err, which
+# used to leave the linked libkpathsea uninitialized and EVERY lookup `None`
+# whenever `kpsewhich` was unresolvable from this process. Also fails loudly
+# when neither backend exists. Guarantee is full on Unix; on Windows the anchor
+# also governs texmf.cnf discovery, so a degraded anchor initializes but does
+# not resolve.
+kpathsea = { version = "0.3.4", optional = true }
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }

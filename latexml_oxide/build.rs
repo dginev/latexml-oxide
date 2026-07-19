@@ -12,7 +12,49 @@
 
 use std::{path::Path, process::Command};
 
-fn main() { install_git_hooks(); }
+fn main() {
+  install_git_hooks();
+  probe_texlive();
+}
+
+/// Emit `cfg(building_with_texlive)` when a TeX installation is usable **on the
+/// machine running this build**, so tests that genuinely need one can be gated:
+///
+/// ```ignore
+/// #[cfg_attr(not(building_with_texlive), ignore = "requires a TeX Live installation")]
+/// ```
+///
+/// **For tests only — never for shipped behavior.** The flag describes the
+/// BUILD host, not the machine that will eventually run the binary. Gating any
+/// runtime path on it would bake the builder's TeX state into every user's
+/// binary, so a release built on a TeX-equipped machine would misbehave on a
+/// user's without one (and vice versa). Runtime must keep asking the actual
+/// host, which is what the kpathsea backend selection does.
+///
+/// A host TeX tree is OPTIONAL for latexml-oxide — bindings and dumps are
+/// embedded — so such tests must not fail where it is absent. They must not
+/// silently *pass* either: an early `return` inside the test body reports green
+/// while asserting nothing. `ignore` keeps the skip visible in the summary.
+///
+/// The probe resolves `cmr10.tfm`, present in every TeX distribution and the
+/// same sentinel the runtime backend selection uses. Best-effort: any failure
+/// simply leaves the cfg unset, and the gated tests are skipped rather than run
+/// against a tree that isn't there.
+fn probe_texlive() {
+  println!("cargo:rustc-check-cfg=cfg(building_with_texlive)");
+  // A TeX install/removal normally moves PATH; re-probe when it does.
+  println!("cargo:rerun-if-env-changed=PATH");
+  println!("cargo:rerun-if-env-changed=KPSEWHICH");
+
+  let kpsewhich = std::env::var("KPSEWHICH").unwrap_or_else(|_| "kpsewhich".to_string());
+  let found = Command::new(kpsewhich)
+    .arg("cmr10.tfm")
+    .output()
+    .is_ok_and(|out| out.status.success() && !out.stdout.is_empty());
+  if found {
+    println!("cargo:rustc-cfg=building_with_texlive");
+  }
+}
 
 fn install_git_hooks() {
   // Re-run only when this script or the hook itself changes (keeps it off the
