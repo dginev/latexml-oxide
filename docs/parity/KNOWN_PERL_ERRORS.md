@@ -2102,3 +2102,41 @@ the next `@` rather than abandoning the file. On 2605.00264 that is all 1170
 entries and 0 dangling citations. **Upstream candidate** — but it is a rewrite of the
 scanner, not a one-line change, since `Text::Balanced` cannot express
 BibTeX's rule.
+
+## 53. Raw `blkarray.sty` / `kbordermatrix` `\halign`-in-math hangs BOTH engines
+
+`blkarray`'s `block`/`blockarray` and `kbordermatrix` build a matrix with raw
+`\halign`/`\ialign` whose column template wraps **each cell in inline math**
+(`…$##$…`), digested inside surrounding display math. LaTeXML's alignment ×
+math-mode frame accounting cannot pop the per-cell inline-math frame at the
+alignment close, and the recovery re-enters and spins.
+
+- **Perl**: on `blkarray` (a `block` with a paren-delimited spec `(cc)` nested in
+  a `blockarray`) Perl **hangs ~90 s → rc=124 (terminated)** — same-host, with
+  `--includestyles`. (On the `kbordermatrix` sibling Perl instead *completes* in
+  ~0.4 s, so that one is Rust-only; blkarray degrades both engines.)
+- **Rust**: cascades into a runaway that hits the 4500 MB memory cap →
+  `Fatal:Timeout:MemoryBudget` at ~12 s (faster failure, same root).
+- **pdflatex**: renders the matrix cleanly — the golden behaviour is well-defined;
+  both LaTeXML engines are wrong.
+
+Minimal trigger (`blkarray.sty` is in TeX Live):
+
+```latex
+\documentclass{article}\usepackage{blkarray}\begin{document}
+\[\begin{blockarray}{cc}
+\begin{block}{(cc)} 1 & 2 \\ \end{block}
+\end{blockarray}\]
+\end{document}
+```
+
+Dropping the `(`/`)` delimiter (`{cc}`) OR the `blockarray` wrapper converts in
+0.2 s. **Fixed for blkarray** via a Rust binding
+(`latexml_package/src/package/blkarray_sty.rs`) that shadows the raw `.sty` and
+routes `blockarray`/`block` through the `array` machinery (surpass-Perl; Perl has
+no binding): 1811.10792 (#594) OOM→0, 2310.17416 (#473) OOM→9. The `block`
+sub-region delimiters are dropped (documented simplification — `array` can't wrap
+a sub-region). The **underlying** `stomach.rs::egroup` math-frame bug is unchanged
+and still reachable via `kbordermatrix` (HIGH-DIFFICULTY, post-release). Full
+analysis: [`docs/known_crashes/blkarray_halign_math/`](../known_crashes/blkarray_halign_math/README.md)
++ sibling [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).

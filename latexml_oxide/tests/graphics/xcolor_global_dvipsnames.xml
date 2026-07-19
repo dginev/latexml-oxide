@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article" options="dvipsnames"?>
+<?latexml package="xcolor"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><text color="#009900">olive</text> and <text color="#0080FF">royal</text> and
+<text color="#B80000">brick</text>.</p>
+  </para>
+  <para xml:id="p2">
+    <p>named: <text color="#009900">olive2</text> vs <text color="#009900">olive3</text>.</p>
+  </para>
+</document>

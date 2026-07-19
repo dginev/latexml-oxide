@@ -1,0 +1,30 @@
+% Minimal faithful reproducer for the blkarray `\halign`-in-math cluster.
+% Reduced from arXiv:2310.17416 (#473) and arXiv:1811.10792 (#594).
+% blkarray.sty IS in TeX Live, so this needs only --includestyles (or an
+% ar5iv.sty preload) to raw-load it.
+%
+% The trigger is minimal: a `block` with a PAREN-DELIMITED column spec `(cc)`
+% nested inside a `blockarray`, in display math. Dropping the delimiter
+% (`{cc}`) OR the blockarray wrapper makes it convert in 0.2s — so it is the
+% delimiter-processing of a nested block that spins the raw `\halign` machinery.
+%
+% Rust:     Fatal:Timeout:MemoryBudget  (RSS 4500 MB > cap) at ~12 s (OOM).
+% Perl:     rc=124 (terminated) after ~90 s (hangs) — Perl fails here TOO,
+%           unlike the kbordermatrix sibling where Perl completes in 0.4 s.
+% pdflatex: renders a parenthesised 2x2 matrix cleanly (golden oracle).
+%
+%   latexml_oxide --includestyles --timeout=30 blkarray_min.tex
+%   latexml       --includestyles              blkarray_min.tex
+%   pdflatex blkarray_min.tex   # clean
+%
+% Same root as ../kbordermatrix_halign_math/ — the `\lx@begin@alignment` /
+% `\halign`-in-math frame-accounting cluster (stomach.rs::egroup refuses to pop
+% a frame that switched to mode math at an alignment close). See that sibling's
+% README for the full root-cause analysis. HIGH DIFFICULTY, post-release.
+\documentclass{article}
+\usepackage{blkarray}
+\begin{document}
+\[\begin{blockarray}{cc}
+\begin{block}{(cc)} 1 & 2 \\ \end{block}
+\end{blockarray}\]
+\end{document}

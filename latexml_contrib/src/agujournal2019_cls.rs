@@ -14,6 +14,25 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
   RequirePackage!("apacite");
+  // agujournal2019.cls L118 — the class provides {sidewaystable}/{sidewaysfigure}
+  // through rotating; without it the sideways floats are undefined and their
+  // \caption leaks ("\caption outside any known float"). Witness 2003.03231.
+  RequirePackage!("rotating");
+
+  // agujournal2019.cls L1062-1074: the end-matter {acronyms} and {notation}
+  // environments are `\section*` + a `description` list, whose items come from a
+  // LOCALLY-redefined \acro{X} / \notation{X} → \item[X]. Ported verbatim (the
+  // \vskip glue is visual and dropped). Witness 2003.03231.
+  DefMacro!(
+    "\\acronyms",
+    "\\section*{Acronyms}\\begingroup\\def\\acro##1{\\item[##1]}\\begin{description}"
+  );
+  DefMacro!("\\endacronyms", "\\end{description}\\endgroup");
+  DefMacro!(
+    "\\notation",
+    "\\section*{Notation}\\begingroup\\def\\notation##1{\\item[\\boldmath ##1]}\\begin{description}"
+  );
+  DefMacro!("\\endnotation", "\\end{description}\\endgroup");
 
   // AGU frontmatter (agujournal2019.cls L389+, L573-587).
   // Internal toggles — no content.

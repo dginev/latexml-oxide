@@ -1,0 +1,20 @@
+% PARITY reproducer (ar5iv #568, arXiv:2309.16609) — NOT a Rust-only bug.
+% `\lstinline{...}` with a brace `{` delimiter reads raw to the FIRST `}`, so an
+% inner brace group `{9}` terminates the verbatim early and the leftover `}y}`
+% is a stray close-group. This is fragile author input:
+%   - pdflatex:  "! Too many }'s" (recovers under nonstopmode, still emits a PDF).
+%   - Perl:      `Error:unexpected:} Attempt to close a group ...` (same message).
+%   - Rust:      identical `Error:unexpected:}` — at parity with Perl.
+% Perl's own listings.sty.ltxml comment on listingsReadRawString:
+%   "NOTE that this normally does NOT balance {, but DOES within mathescape'd $ ...
+%    I'd swear this is a bug that became a feature."
+% In the witness paper this stray `}` lands inside an xltabular cell in a
+% tcolorbox and cascades the table alignment — but both engines cascade
+% (Rust 18 = Perl 18 + a Perl Fatal), so Rust is at parity-or-better.
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+Before \lstinline{x{9}y} after.
+
+Nested \lstinline{pattern = r'^139\d{9}\$'} done.
+\end{document}

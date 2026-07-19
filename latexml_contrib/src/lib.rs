@@ -25,6 +25,7 @@ pub mod script_bindings;
 // now local `.rhai` next to tests/structure_rhai (Perl t/structure/*.ltxml).
 pub mod discard_env;
 pub mod keysetopt_sty;
+pub mod meta_class;
 // mykeyval_sty / myxkeyval_sty: test-local keyval fixtures, now local `.rhai`
 // next to tests/keyval_rhai (Perl t/keyval/{mykeyval,myxkeyval}.sty.ltxml).
 pub mod mytemplate_sty;
@@ -98,6 +99,7 @@ pub mod emlines_sty;
 pub mod envmath_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
+pub mod fairmeta_cls;
 pub mod fancyvrb_ex_sty;
 pub mod fcs_cls;
 pub mod figcaps_sty;
@@ -170,6 +172,7 @@ pub mod nicematrix_sty;
 pub mod nicseries_cls;
 pub mod oldgerm_sty;
 pub mod oldlfont_sty;
+pub mod openmoss_cls;
 pub mod optica_article_cls;
 pub mod oup_authoring_template_cls;
 pub mod pax_sty;
@@ -205,6 +208,7 @@ pub mod catoptions_sty;
 pub mod pnas_new_cls;
 pub mod scis2024_cls;
 pub mod scrlayer_scrpage_sty;
+pub mod selfevolagent_cls;
 pub mod semantic_sty;
 pub mod siamart_cls;
 pub mod siamltex_cls;
@@ -450,6 +454,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("elife", "cls", elife_cls::load_definitions),
+  ("fairmeta", "cls", fairmeta_cls::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
@@ -503,6 +508,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
+  ("openmoss", "cls", openmoss_cls::load_definitions),
   (
     "optica-article",
     "cls",
@@ -533,6 +539,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("semantic", "sty", semantic_sty::load_definitions),
   ("sigma", "cls", sigma_cls::load_definitions),
+  ("selfevolagent", "cls", selfevolagent_cls::load_definitions),
   ("smc_ieeeconf", "cls", smc_ieeeconf_cls::load_definitions),
   ("sn-jnl", "cls", sn_jnl_cls::load_definitions),
   ("spie", "cls", spie_cls::load_definitions),

@@ -1,0 +1,14 @@
+% PARITY reproducer (ar5iv #477, arXiv:2310.07298) — author-malformed input.
+% The closing `$` is INSIDE `\boldsymbol{...}`: `$\boldsymbol{\Delta$}` — a typo
+% for `$\boldsymbol{\Delta}$`. The `$` ends math mode while the `\boldsymbol{`
+% group is still open, so the trailing `}` closes a group that switched to math.
+%   - pdflatex:  "! Extra }, or forgotten $" + "! Missing $ inserted" (recovers).
+%   - Rust:      `Error:unexpected:} Attempt to close a group ...` +
+%                `\lx@end@inline@math` — 2 errors, MATCHING pdflatex.
+%   - Perl:      0 errors in isolation (more lenient than pdflatex here).
+% On the full paper both engines land at 24 errors (exact parity). Rust flagging
+% the genuinely-broken input (like pdflatex) is defensible; do not "fix" by
+% suppressing — that would violate the never-downgrade-an-Error rule.
+\documentclass{article}\usepackage{amsmath}\begin{document}
+\textbf{$\boldsymbol{\Delta$}} done.
+\end{document}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>Plain text: T.</p>
+  </para>
+  <para xml:id="p2">
+    <p>Inline math: <Math mode="inline" tex="M" text="M" xml:id="p2.m1">
+        <XMath>
+          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+        </XMath>
+      </Math>.</p>
+  </para>
+  <para xml:id="p3">
+    <p>Display math:</p>
+    <equation xml:id="S0.Ex1">
+      <Math mode="display" tex="M" text="M" xml:id="S0.Ex1.m1">
+        <XMath>
+          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+        </XMath>
+      </Math>
+    </equation>
+  </para>
+  <para xml:id="p4">
+    <p>A box resets to text inside math: <text class="ltx_markedasmath">T</text>.</p>
+  </para>
+  <para xml:id="p5">
+    <p>Inside a robust font command: <text font="bold">T</text>.</p>
+  </para>
+  <para xml:id="p6">
+    <p>Nested in text: T.</p>
+  </para>
+  <para xml:id="p7">
+    <p>Nested in math: <Math mode="inline" tex="A" text="A" xml:id="p7.m1">
+        <XMath>
+          <XMTok font="italic" role="UNKNOWN">A</XMTok>
+        </XMath>
+      </Math>.</p>
+  </para>
+</document>

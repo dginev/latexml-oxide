@@ -761,7 +761,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // dedicated `_load_attempted` flag — NOT `_loaded` — so the
       // post-input_definitions success check in `require_package`
       // remains honest about whether anything actually loaded.
-      assign_value(&s!("{filename}_load_attempted"), true, Some(Scope::Global));
+      //
+      // Gate the guard on raw-loading having actually been POSSIBLE
+      // (INCLUDE_STYLES on, or noltxml forced). A miss while raw `.sty` loading
+      // was OFF is a deliberate DEFERRAL, not a genuine "file absent" — and must
+      // NOT block a later load once INCLUDE_STYLES turns on (e.g. inside another
+      // package's raw read). Otherwise a bare `\RequirePackage{pgfcore}` (no
+      // binding, INCLUDE_STYLES off) permanently STARVES tcolorbox's `skins`
+      // library, which raw-loads pgfcore under INCLUDE_STYLES=true — whereas
+      // pdflatex loads pgfcore fine in any order. The guard still fires exactly
+      // where it is needed: the loop it prevents happens DURING a raw read,
+      // which is itself INCLUDE_STYLES=true. Witness: nicematrix-then-
+      // tcolorbox[most] (fairmeta.cls, ar5iv #520/#567/#576): 49 → 0 pgf errors.
+      if lookup_bool("INCLUDE_STYLES") || options.noltxml {
+        assign_value(&s!("{filename}_load_attempted"), true, Some(Scope::Global));
+      }
       Warn!(
         "missing_file",
         name,

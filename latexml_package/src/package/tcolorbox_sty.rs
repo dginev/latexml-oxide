@@ -26,4 +26,20 @@ LoadDefinitions!({
   // causing spurious "tcolorbox is not installed correctly" errors.
   // Make the check a no-op — the versions are always compatible in practice.
   DefMacro!("\\tcb@check@library@version", "", locked => true);
+
+  // \newtcblisting{name}[N][default]{tcb-options} (tcolorbox `listings`/`minted`
+  // library) — a code-listing box. Its box styling is purely visual; what
+  // matters for the logical output is the code BODY, which must be captured
+  // verbatim and CLOSED at \end{name}. The raw library's body capture does not
+  // integrate with LaTeXML's verbatim reader, so the listing runs past its
+  // \end{name} and swallows following content (sections leak into
+  // <ltx:verbatim>). Delegate to listings' \lstnewenvironment (same
+  // name/[N][default] shape; the tcb options are dropped), whose verbatim reader
+  // terminates correctly. `locked` so a later raw `\tcbuselibrary{listings}`
+  // can't clobber it. Witness: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
+  DefMacro!(
+    "\\newtcblisting{}[][]{}",
+    "\\lstnewenvironment{#1}[#2][#3]{}{}",
+    locked => true
+  );
 });
