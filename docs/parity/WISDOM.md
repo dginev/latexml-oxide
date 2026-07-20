@@ -1102,8 +1102,12 @@ $token = T_CS('\lx@delimiterdot') if !defined($token) || ToString($token) eq '.'
 my ($delim) = $STATE->getStomach->invokeToken($token);  # ← see dim 2
 return $delim;
 ```
-All three branches need porting (single-X-token read, BEGIN-unwrap,
-`.`/undef → `\lx@delimiterdot`).
+**Corrected 2026-07-20: only TWO branches still need porting** (single-X-token
+read, BEGIN-unwrap). The third — `.`/undef → `\lx@delimiterdot` — **is already
+implemented** in `base_parameter_types.rs`'s `DefParameterType!(TeXDelimiter)`
+(the `None` / `END` / `"."` match arms), together with an END-peek fallback Perl
+does not have (witness arXiv:1207.4709). The in-code comment said "3 branches
+missing" too and has been corrected alongside this line.
 
 **Dimension 2 — `undigested => 1` is architectural, not a macro flag.**
 
@@ -1994,7 +1998,7 @@ or `//` are unaffected.
 
 **Witness:** PR-2767 port, `\lx@frontmatter@fallback` — frontmatter
 (title/creator) landed at the *end* of `<ltx:document>` instead of
-after the `ltx:resource` block; caught by `20_digestion::rebox_test`.
+after the `ltx:resource` block; caught by `the `20_digestion` `rebox` fixture (`tests/digestion/rebox.{tex,xml}`)`.
 Fixed in `base_utilities.rs` by using
 `/ltx:document/ltx:resource[last()]`.
 
@@ -2017,7 +2021,7 @@ the workspace.
 with a working `_ns` call, guarded by another always-false check that never
 lets the dead block run, or carrying an `.or_else(get_property("id"))`
 fallback. **Do NOT blanket-"correct" them.** At least one mask is load-bearing:
-`rewrite.rs:1242` (XMArg→inner-id transfer) is a no-op, and swapping in the
+`rewrite.rs:1034/:1043` (XMArg→inner-id transfer) is a no-op, and swapping in the
 `_ns` accessor makes wildcard `1`/`n` tokens acquire `xml:id`s **Perl does not
 emit**, regressing `simplemath`/`declare`. Only migrate a site when a
 *confirmed* Perl divergence is traced to it. New code uses the ns-aware form

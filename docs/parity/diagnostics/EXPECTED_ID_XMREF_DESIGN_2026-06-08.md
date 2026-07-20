@@ -806,7 +806,7 @@ own Phase 0 before assuming it is.
 > requires porting that **content/presentation MathFork split** in
 > `rearrange_lone_ams_aligned` (a structural rebuild, high fixture-churn risk —
 > validate every `equationgroup`/MathFork fixture vs Perl). **Deferred as a
-> dedicated effort**, not a drive-by — same discipline as the `rewrite.rs:1242`
+> dedicated effort**, not a drive-by — same discipline as the `rewrite.rs:1034/:1043`
 > lesson ([`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](../../archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md)).
 
 **This is not a math-parser bug at all.** The source is the classic
@@ -922,7 +922,7 @@ So closing §3 is a **multi-part** change, not a one-liner:
 Plus the presentation branch needs the Perl `.mf` `ID_SUFFIX`. This touches the
 MathFork id derivation in the core builder + the parse reinstall — genuinely a
 dedicated effort, and the third core-math change in this area to be reverted
-(after `rewrite.rs:1242` and the `realize_xmnode` snapshot route). **Deferred.**
+(after `rewrite.rs:1034/:1043` and the `realize_xmnode` snapshot route). **Deferred.**
 
 ## 4. Design options
 
