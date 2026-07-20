@@ -2374,10 +2374,31 @@ Result: 0 errors / 1.9 s / 985 formulae, vs Perl's 3 errors / 52.7 s — same 98
    experiment moved the fault from "deep mode/frame accounting" (two people's
    prior hypothesis, plus a reverted fix attempt) to "one inherited kernel
    definition", and it is cheap to run.
-3. **Look for siblings whenever you find one.** The retraction list is a
-   deliberate seam: `\@tabularcr` and `\+` were already there; `\@arraycr` was
-   the missing third. When a kernel CS reimplements an alignment, box, or output
-   routine that LaTeXML models with `\lx@…` constructs, it belongs on that list.
+3. **Look for siblings whenever you find one — then check each for a
+   consumer.** The retraction list is a deliberate seam: `\@tabularcr` and `\+`
+   were already there; `\@arraycr` was the missing third. `latex.ltx` has exactly
+   four sites using this ``\ifnum0=` `` trick — `\@arraycr`, `\@tabularcr`,
+   `\@eqncr`, `\hline` — and `\hline`/`\@xhline` are already bound by both
+   engines.
+
+   **But `\@eqncr` must NOT be retracted, and this was measured, not guessed.**
+   Synthetically it looks identical (`\let\\\@eqncr` in a raw `\halign`: Rust 15
+   errors vs Perl 1, same as `\@xtabularcr` at 13 vs 1). The difference is that
+   `\@eqncr` has a **real consumer that depends on the chain**:
+   `latexml_contrib/src/equations_sty.rs` redefines `\@@eqncr` — the kernel
+   `\@eqncr`→`\@yeqncr`→`\@xeqncr`→`\@@eqncr` path is how it emits its column
+   padding *and* `\@eqnnum`/`\stepcounter{equation}`. Retracting the entry point
+   skips all of it: on an `eqaligntwo` the equation **numbers disappear and the
+   remaining ones renumber** (verified by diff; error count stayed 0 both ways,
+   so an error-count gate would have missed the regression entirely). The
+   array/tabular continuations (`\@xarraycr`, `\@argarraycr`, `\@xtabularcr`,
+   `\@argtabularcr`) are likewise left alone: they are unreachable once the entry
+   points are retracted, `\@xtabularcr` is itself redefined by `tabls.sty`, and
+   the only demonstrated harm needs a `\let\\\@xtabularcr` nobody writes.
+
+   So the rule is narrower than "retract the family": retract a kernel CS **only
+   where LaTeXML fully models the construct and nothing consumes the kernel
+   chain**. Diff the *output*, not the error count, before deciding.
 
 Neutrality argument worth reusing: the change is observable **only** by documents
 that name `\@arraycr` (no Rust binding and no `.ltxml` references it) — measured
