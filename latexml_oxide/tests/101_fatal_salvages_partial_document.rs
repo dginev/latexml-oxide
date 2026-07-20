@@ -52,7 +52,14 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
   std::fs::write(workdir.path().join("rec.tex"), RECURSION_TEX).expect("write rec.tex");
 
   let output = Command::new(bin)
-    .args(["rec.tex", "--dest", "rec.xml", "--nocomments", "--timeout", "120"])
+    .args([
+      "rec.tex",
+      "--dest",
+      "rec.xml",
+      "--nocomments",
+      "--timeout",
+      "120",
+    ])
     .current_dir(workdir.path())
     .output()
     .expect("spawn latexml_oxide");

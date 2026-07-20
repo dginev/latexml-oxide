@@ -579,7 +579,11 @@ fn read_resource_checkpoint() -> Result<Option<bool>> {
       DEBUG_RECENT_TOKENS.with(|ring| {
         let ring = ring.borrow();
         let recent: Vec<&str> = ring.iter().map(String::as_str).collect();
-        eprintln!("[debug-fatal] last {} read tokens: {}", ring.len(), recent.join(" "));
+        eprintln!(
+          "[debug-fatal] last {} read tokens: {}",
+          ring.len(),
+          recent.join(" ")
+        );
       });
     }
     Fatal!(Timeout, TokenLimit, msg);
