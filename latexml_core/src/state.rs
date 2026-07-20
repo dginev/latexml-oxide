@@ -1668,7 +1668,17 @@ pub fn lookup_tokens(key: &str) -> Option<Tokens> {
       drop(state);
       arena::with(sym, |astr| Some(mouth::tokenize_internal(astr)))
     },
-    Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
+    Some(Stored::VecDequeStored(v)) => {
+      // Reverting the queue to Tokens routes each String item through
+      // `mouth::tokenize_internal`, which takes a *mutable* STATE borrow — so
+      // clone the queue and drop the immutable `state` borrow first (mirrors
+      // the `Stored::String` branch above). Without this, LookupTokens on a
+      // VecDequeStored key (e.g. "class_options") panics "RefCell already
+      // borrowed" (#314).
+      let vdq = v.clone();
+      drop(state);
+      Stored::VecDequeStored(vdq).into()
+    },
     _ => None,
   }
 }
