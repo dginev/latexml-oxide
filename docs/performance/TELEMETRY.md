@@ -241,7 +241,7 @@ pub fn record_math_parse(us: u64, parses: u32) { /* update bucket + scalars */ }
 
 | Phase | Wrap site |
 |---:|---|
-| Bootstrap | `latexml_oxide/src/main.rs` — init through first `process_input` body |
+| Bootstrap | `latexml_oxide/bin/latexml_oxide.rs` — init through first `process_input` body |
 | Digest | `latexml_core::stomach::digest_top` |
 | Build | `latexml_core::document::Document::build` |
 | Rewrite | `latexml_post::rewrite::*` rewriter entry |
@@ -311,15 +311,17 @@ Pure stdlib + `gzip` + `json`. No pandas dep.
 
 ### Step 7 — regression tests
 
-`latexml_oxide/tests/integration_telemetry.rs`:
-1. Run on `latexml_oxide/tests/hello/hello.tex` with `--telemetry-out=/tmp/...`
-2. Parse the JSON; assert all 11 phase keys present.
-3. Assert `sum(phase_us) >= 0.85 * wall_us` (loose for tiny doc).
-4. Assert `formulae == 0` (or known small count for hello.tex).
-5. Run on a known math-heavy fixture; assert `phase_us[MathParse] > 0`.
+**Landed as `latexml_oxide/tests/001_telemetry.rs`** (the two file names planned
+here were never created — this step is a design sketch, the tree is the truth):
+* `telemetry_populates_on_hello_conversion` — converts `tests/hello/hello.tex`
+  in-process and asserts the `Digest` and `Build` phase totals are non-zero.
+* `telemetry_json_round_trip_on_real_conversion` — the JSON round-trip.
 
-`latexml_oxide/tests/integration_telemetry_perf.rs` (released-mode CI only):
-- `1011.1955` round-trip; assert wall ≤ 1.05 × no-telemetry baseline.
+Two items of the sketch did NOT land and remain open if wanted: the
+`sum(phase_us) >= 0.85 * wall_us` ratio assertion (the file's own header notes
+the §6.5 tighter ≥0.92 acceptance separately), and the released-mode
+`1011.1955` wall ≤ 1.05 × no-telemetry-baseline perf guard — there is no
+telemetry perf test in the tree.
 
 ### Step 8 — analytics rollup script
 

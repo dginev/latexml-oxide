@@ -157,14 +157,14 @@ Versioned filenames + a `build.rs`-generated manifest:
   TeXLive year). Multiple years coexist in the directory.
 * `latexml_engine/build.rs` scans the directory, stages each year's
   files into `$OUT_DIR`, and emits an
-  `embedded_dumps_manifest.rs` table with one
+  `embedded_dumps.rs` table with one
   `EmbeddedDumpYear { year, plain, latex, stamp }` entry per year
   (sorted descending). The manifest entries are populated via
   `include_str!`, so all bundled dumps live in the binary's `.rodata`.
 * `latexml_engine::dump_paths::detect_ambient_texlive_year()` reads
   `kpsewhich -var-value=SELFAUTOPARENT` (last path component →
   4-digit year), with `pdflatex --version` as fallback.
-* Resolution chain (per `latex_dump_loader.rs` and `plain_dump.rs`):
+* Resolution chain (per `latex_dump.rs` and `plain_dump.rs`):
     1. `$LATEXML_NODUMP=1` → skip (Perl `LoadFormat` parity).
     2. `$LATEXML_DUMP_PATH` (explicit full path; year inferred from
        filename if matchable).

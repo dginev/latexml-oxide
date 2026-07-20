@@ -323,7 +323,9 @@ truth for macro-expanded diagnostics.
   `grep '^Error:'` works on `cortex ... > log.txt 2>&1`. Still, defensively `sed
   's/\x1b\[[0-9;]*m//g'` before `grep -acE '^(Error|Fatal):'` (logs from older binaries carry
   ANSI), and gate on **cortex's own `Processing content` file** (multi-file papers ship decoy
-  `\begin{document}` stubs). `canvas/run_one.sh` was HARDENED 2026-06-01 to **strip ANSI before
+  `\begin{document}` stubs). `canvas/run_one.sh` (an out-of-tree sweep harness — it is NOT in
+  this repo, so don't go looking; the in-tree equivalents are `tools/benchmark_canvas.sh` and
+  `tools/parity_check.sh`) was HARDENED 2026-06-01 to **strip ANSI before
   the `^Error:`/`^Fatal:` count** — behaviour-preserving on the current ANSI-emitting release
   binary AND future-proof for an ANSI-free one (so the old landmine, where rebuilding release
   with the TTY-gate fix would zero-out run_one.sh's `$'^\x1b[31mError:'` grep and mark every

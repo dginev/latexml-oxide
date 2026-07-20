@@ -23,7 +23,7 @@ their 2026-05-24 values.
 
 | Gate | Current | Target |
 |---|---|---|
-| `cargo test --tests` | 1533/0/0 | green |
+| `cargo test --tests` | 1617/0/0 (2026-07-20) | green |
 | `cargo clippy --all-targets` | 0 | 0 |
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](../performance/PERFORMANCE.md)); **P50/P90/P99 + RSS dashboard + growth gate built** (`tools/telemetry_dashboard.py`) | §5 — capture a fleet baseline + wire `--gate` into release (absolute red lines gate today) |

@@ -88,9 +88,12 @@ flat XMath) → **Serialization**. (The post-processing pipeline now lives in
   `arena` interner (O(1) equality, less allocation than Perl's copy-on-read).
 - **Compile-time macros** — `DefMacro!`/`DefConstructor!`/`DefPrimitive!` expand at
   build time (proc macros), eliminating Perl's per-`\usepackage` parse cost.
-- **Engine file layout** — Perl's ~5400-line `LaTeX.pool.ltxml` is split by
-  Lamport chapter (`latex_ch4_sectioning_and_toc.rs`, …); the four plain-TeX
-  format files merge into `plain.rs`. Full map: [ORGANIZATION.md](ORGANIZATION.md).
+- **Engine file layout** — the pools are split along the same seams Perl uses,
+  one Rust file per pool: `latex_bootstrap.rs` / `latex_base.rs` /
+  `latex_constructs.rs` (plus the Rust-only `latex_constructs_rust_only.rs` and
+  the dump loader `latex_dump.rs`), and `plain_bootstrap.rs` / `plain_base.rs` /
+  `plain_constructs.rs` / `plain_dump.rs`. Full map:
+  [ORGANIZATION.md](ORGANIZATION.md).
 - **`latexml_contrib`** — dispatches package names to Rust binding loaders
   (`Rc<dyn Fn(&str) -> Option<Result<()>>>`); raw-TeX-only packages use
   `InputDefinitions!(name, noltxml => true)`.

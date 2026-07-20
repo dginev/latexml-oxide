@@ -769,7 +769,8 @@ The `false` was historically correct for callers that run at compile time
 broken `Parameters`. Four call sites needed the fix:
 
 - `dump_reader.rs` (was: false → true)
-- `dump_loader.rs` (was: false → true)
+- `dump_loader.rs` (was: false → true) — file since split into
+  `latex_dump.rs` / `plain_dump.rs`; kept as the historical call-site list
 - `dump_codegen.rs` codegen template (was: emitting false → now emits true)
 - `latex_constructs.rs::\DeclareTextFontCommand` (was: false → true)
 
