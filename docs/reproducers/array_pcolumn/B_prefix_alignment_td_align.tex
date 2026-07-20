@@ -1,7 +1,9 @@
 % KIND B — a `>{\raggedright}` / `>{\raggedleft}` / `>{\centering}` column
 % prefix does NOT set the cell's `align` attribute in Rust.
-% STATUS: OPEN (pre-existing; NOT introduced by the Kind-A fix — it reproduces
-%   for p{} columns and for regular (non-multicolumn) columns alike).
+% STATUS: FIXED — re-verified 2026-07-20 against same-host Perl. Rust now emits
+%   align="left" / "center" exactly like Perl, and the whole output is
+%   BYTE-IDENTICAL to Perl's (normalised diff, 0 differences). Kept as a
+%   regression witness. (Was: OPEN, "<td align=\"justify\">" vs Perl "left".)
 %
 % On the cell `<td>`:
 %   Rust:  <td align="justify" …>     (the column's base alignment)

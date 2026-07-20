@@ -194,6 +194,54 @@ the same recent-token ring under `LATEXML_DEBUG_FATAL` (and the ring fills
 before the guard activates, so a lowered `LATEXML_TOKEN_LIMIT` still captures
 it). That dump is what identified this bug in one run.
 
+### Reproducer re-verification + 400-paper output-neutrality sweep (2026-07-20)
+
+Validation pass for the two fixes above, which also **re-dated every committed
+reproducer**. Both halves changed the worklist more than the fixes did.
+
+**A. 400-paper corpus sweep, baseline (`381efaf81b`) vs fixed, same sample.**
+`0` error-count changes, `0` fatal-class changes, total wall 575.9 s → 578.9 s
+(+0.5%, noise). 26 papers differed by 1–21 bytes — **re-running those solo gave
+byte-identical output from BOTH binaries**, so that is run-to-run
+nondeterminism under parallel load, not a behaviour change. Neutrality of the
+`\@arraycr` retraction is anyway structural: nothing else in the tree names it.
+
+*Sweep-harness caveat worth reusing:* a naive `grep -rl '\begin{document}'`
+main-file pick manufactured 2 of the 4 apparent "fatals" (it chose
+`figures-pgf/tinylora_preamble.tex` and a fragment instead of the real main) —
+the trap `SYNC_STATUS` already records for the bibliography sweeps. With the
+right main, **all four are fine**: `2605.30585` Rust 0.2 s/102 err vs Perl
+2.0 s/102 err (exact parity, 10× faster); `2605.12207` Rust 0.3 s/39 err vs
+Perl **3 m 57 s**/47 err; `2605.14493` and `2605.25400` fail in BOTH engines,
+Rust in 15 s / 8.5 s vs Perl timing out at 200 s. **Zero Rust-only regressions
+in the sample.**
+
+**B. Every committed reproducer re-run against same-host Perl.** Several
+long-standing "OPEN, GENUINE-RUST-ONLY" entries are **already fixed** — they
+were stale, and left in place they mis-rank the whole worklist:
+
+| reproducer | recorded | measured 2026-07-20 |
+|---|---|---|
+| `1610.00974_multicolumn_pcell_newline` | OPEN, Rust-only, 502 err + Fatal | **0 err**, and the full paper `Nikbakht.tex` **0 err** |
+| `array_pcolumn/B_prefix_alignment_td_align` | OPEN (`align="justify"` vs Perl `left`) | **byte-identical to Perl** |
+| `array_pcolumn/C_m_column_vbox_rendering` | OPEN, deferred (2 structural diffs) | **byte-identical to Perl** |
+| `pcolumn_block_content_in_p` | OPEN, **BLOCKED** on the `\hsize`-invariant box model | **byte-identical to Perl** — that blocker no longer gates it |
+| `ieeeeqnarray_leading_empty_cell` | SHARED (both engines fail) | Rust **0** / Perl **5** — the surpass-Perl half is done |
+| `tabbing_math_code_env_2311.06609` (ar5iv #472) | Rust-worse | **11 = 11**, parity on the repro |
+
+`1610.00974` keeps one structural difference from Perl, and **pdflatex says Perl
+is the wrong one**: for `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}` Rust makes
+`B` a line break *inside* the merged cell while Perl opens a new `<tr>`;
+`pdftotext -layout` stacks A/B in the single merged cell with `y z` as the next
+row. Do NOT "fix" Rust toward Perl there.
+
+The only reproducer still genuinely Rust-worse is `glossaryref_math_xmtok`
+(Rust 12 / Perl 1) — and that Perl `1` is a **timeout kill**, not a clean run
+(`rc=124`), confirming the recorded "blocked on an unrunnable Perl reference"
+verdict is still current. **Method note:** the first pass of this table was
+wrong for exactly that reason — always capture the exit code, or a
+timeout-killed Perl reads as a 1-error success and flips the verdict.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail

@@ -1,5 +1,8 @@
 % KIND C/D — a regular m{}/b{} column renders with a divergent box form.
-% STATUS: OPEN (deferred — same family as the "global p{} → VBox port",
+% STATUS: FIXED — re-verified 2026-07-20: output is BYTE-IDENTICAL to same-host
+%   Perl (normalised diff, 0 differences), so both sub-diffs (C: width on <td>
+%   vs inline-block; D: vattach="top" no-width vs Perl's middle+width) are gone.
+%   Kept as a regression witness. Former status: OPEN (deferred — same family as the "global p{} → VBox port",
 %   SYNC_STATUS "1610.00974 step-3"; risky because the VBox port exposes a
 %   latent \multicolumn span/sizing bug).
 %
