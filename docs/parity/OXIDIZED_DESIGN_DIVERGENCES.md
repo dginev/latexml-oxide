@@ -1802,6 +1802,32 @@ L171/193/237/249/255, resolved at L562 and L611-620). Every other option
 (`crop`, `multi`, `math`, `beamer`, `float`, `png`, `border=`, `class=`,
 `10pt`/`11pt`/`12pt`, …) the class handles internally.
 
+Note the asymmetry this creates, deliberately: the allowlist is read off
+`standalone.cls`, but the code path being emulated is `standalone.sty`'s, and
+**that path never `\RequirePackage`s any of them** — it hands the options to
+`\setkeys{standalone.sty/class}`, where `tikz` means
+`multi=tikzpicture,varwidth=false` (L815-820) and `varwidth` *warns* "Please
+load this package in the preamble" and disables itself if the package is not
+already loaded (L821-831). Verified empirically: with a plain
+`\usepackage{standalone}`, `\ifsa@obeyclassoptions` is **false** (so real
+LaTeX ignores subfile class options entirely) yet `varwidth.sty` is loaded
+anyway, because `standalone.sty` preloads it unconditionally at L744-746 —
+deleting `varwidth` from a subfile's options leaves pdflatex clean. So the
+loop is a LaTeXML convenience justified by LaTeXML#1432, not a port; the
+divergence is intentional and worth keeping, but it should not be described
+as ported.
+
+The option list is read as **`OptionalKeyVals`**, not comma-split by hand:
+every one of these options has a valued form (`\sa@boolorvalue` accepts
+`varwidth=5cm` / `tikz=true` exactly as the bare word, L815-824) and values
+may be brace groups containing commas (`border={1pt 2pt}`). Matching whole
+comma-split items missed all of it — `[varwidth=5cm]{standalone}` dropped the
+package and raised `Error:undefined:{varwidth}` where pdflatex is clean, i.e.
+a harder failure than the spurious warning this entry exists to fix. Matching
+on the KEY of the parsed keyval list keeps the bare and valued forms
+equivalent and puts these options through the same reader
+`\documentclass`/`\usepackage` options already use.
+
 Dropping the loop entirely would be *more* faithful to `standalone.sty`'s default,
 but it would discard the reason the binding exists: upstream LaTeXML#1432's
 motivating MWE is a `\documentclass[tikz]{standalone}` child, where the option
@@ -1816,7 +1842,8 @@ Witness = issue #309's `index.tex` + `child.tex` (`No obvious problems` after,
 `06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`,
 which also guards the `{standalone}` half — its child *uses* `varwidth`, so
 dropping a name from `CLASS_OPTION_PACKAGES` fails the test with
-`Error:undefined:{varwidth}`. **#293 originally landed a guard asserting the
+`Error:undefined:{varwidth}` — and the valued/brace-group form
+(`[varwidth=5cm,border={1pt 2pt}]`) alongside it. **#293 originally landed a guard asserting the
 un-gated behavior** (`[zzznope]{article}` must warn); this entry is why that
 assertion was inverted rather than restored.
 

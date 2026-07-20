@@ -36,16 +36,28 @@ LoadDefinitions!({
   // — and only the ones standalone.cls turns into a package load, which is
   // what makes `\documentclass[tikz]{standalone}` work (upstream LaTeXML#1432,
   // the reason this loop exists).
-  DefPrimitive!("\\@standalone@documentclass[]{}", sub[(options_tks, class_tks)] {
+  // The optional argument is read as `OptionalKeyVals`, NOT as a raw string we
+  // comma-split ourselves: a class option list IS a keyval list, and every
+  // option here has a valued form — `\sa@boolorvalue` accepts `varwidth=5cm`
+  // and `tikz=true` exactly as it accepts bare `varwidth`/`tikz`
+  // (standalone.sty L815-824), and `border={1pt 2pt}` puts a brace group in the
+  // list. Splitting on `,` and matching the whole item missed every valued form
+  // — `[varwidth=5cm]{standalone}` then lost the package and reported
+  // `Error:undefined:{varwidth}` where pdflatex is clean. Reusing the engine's
+  // keyval reader gets brace-aware splitting and key/value separation for free,
+  // and keeps this on the same parser `\documentclass`/`\usepackage` options
+  // already flow through instead of a second, weaker one.
+  DefPrimitive!("\\@standalone@documentclass OptionalKeyVals {}", sub[(options_kv, class_tks)] {
     bgroup();
     assign_value("inPreamble", true, None);
-    if class_tks.to_string().trim() == "standalone" {
-      // An absent optional stringifies to "" ⇒ nothing required.
-      let options = options_tks.map(|t| t.to_string()).unwrap_or_default();
-      for option in options.split(',') {
-        let option = option.trim();
-        if CLASS_OPTION_PACKAGES.contains(&option) {
-          RequirePackage!(option);
+    if class_tks.to_string().trim() == "standalone"
+      && let Some(kv) = options_kv.as_ref()
+    {
+      // Match on the KEY, so `varwidth` and `varwidth=5cm` behave alike. An
+      // absent optional yields no pairs ⇒ nothing required.
+      for (key, _value) in kv.get_pairs() {
+        if CLASS_OPTION_PACKAGES.contains(&key.trim()) {
+          RequirePackage!(key.trim());
         }
       }
     }

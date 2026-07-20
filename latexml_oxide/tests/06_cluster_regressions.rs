@@ -1352,4 +1352,27 @@ fn standalone_subimport_documentclass_no_spurious_require() {
     !log_sa.contains("missing_file"),
     "#309 guard: `border=2pt` is handled by standalone.cls, not a package:\n{log_sa}"
   );
+
+  // Every one of these options also has a VALUED form — `\sa@boolorvalue`
+  // takes `varwidth=5cm` and `tikz=true` just like the bare words
+  // (standalone.sty L815-824) — and values may be brace groups containing
+  // commas. Matching whole comma-split items missed all of that:
+  // `[varwidth=5cm]` reported `Error:undefined:{varwidth}` while pdflatex was
+  // clean. Reading the argument as `OptionalKeyVals` and matching on the KEY
+  // is what makes these equivalent, so guard the valued form explicitly.
+  let log_saval = convert_log("tests/cluster_regressions/subimport/index_saval.tex");
+  assert!(
+    !log_saval.contains("undefined"),
+    "#309: a VALUED package option (`varwidth=5cm`) must load its package just \
+     like the bare `varwidth`:\n{log_saval}"
+  );
+  assert!(
+    !log_saval.contains("missing_file"),
+    "#309: `border={{1pt 2pt}}` — a brace group with a space — is not a package:\n{log_saval}"
+  );
+  assert!(
+    convert_to_xml("tests/cluster_regressions/subimport/index_saval.tex")
+      .contains("VALUED class options"),
+    "#309: the subimported child body was lost"
+  );
 }
