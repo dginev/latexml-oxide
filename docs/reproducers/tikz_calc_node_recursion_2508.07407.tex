@@ -1,3 +1,16 @@
+% >>> UPDATE 2026-07-20: the "caught gracefully -- conversion COMPLETES, only
+% >>> the one tikz table is dropped" claim below was STALE. Re-measured, the
+% >>> full paper (2508.07407, ar5iv #556) produced a ZERO-byte document: the
+% >>> Stomach:Recursion fatal fired inside the FIRST digest body, so every box
+% >>> digested so far was discarded with it.
+% >>> It is graceful NOW: `stomach::salvage_pending_box_lists` keeps the
+% >>> already-digested outer levels and drops only the runaway one, so the
+% >>> paper yields 31 KB (title/authors/abstract). The sibling witness
+% >>> 2405.19920 (#522) recovers 1.82 MB -- 6 sections and 80 bibitems --
+% >>> where same-host Perl produces nothing in 5 minutes.
+% >>> The underlying tikz `calc`-coordinate loop is STILL OPEN; only the
+% >>> blast radius changed, from "lose the paper" to "lose the picture".
+%
 % GENUINE Rust-only bug (but CONTAINED) — ar5iv #556 residual, arXiv:2508.07407.
 % An inline \tikz{...} picture whose nodes are placed at `calc` coordinates
 % (`($(env.west)+(10mm,6mm)$)`, tikzlibrary calc) relative to a sized shape node,

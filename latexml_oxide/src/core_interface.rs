@@ -630,6 +630,37 @@ impl DigestionAPI for Core {
           let target_str = format!("Fatal:{:?}:{:?} ", e.target, e.category);
           log::error!(target: &target_str, "{}", e.message);
           log::warn!("digest_internal: error during recovery digestion: {:?}", e);
+          // Recover what the failed body already digested. Without this the
+          // "still produce partial output" intent above only worked when the
+          // failure landed in a LATER body — a Fatal inside the FIRST one left
+          // `boxes` empty and the run wrote a 39-byte empty document, losing a
+          // whole paper to one bad construct (arXiv:2508.07407 / ar5iv #556,
+          // one pathological `\tikz` picture).
+          //
+          // Scoped to the STOMACH box-cycle guard, deliberately. That guard
+          // fires while the token stream is still healthy — one construct is
+          // piling up boxes — so the surrounding document is sound and worth
+          // keeping, and the innermost level (the 50k-box repeating window) is
+          // exactly the construct to drop.
+          //
+          // It is NOT extended to the gullet's `Timeout:Recursion`, where the
+          // TOKEN stream is the thing looping: measured on arXiv:2605.25400,
+          // salvaging there revived a poisoned state that re-entered the same
+          // loop during build and turned an 8.7 s fatal into a 2 m 12 s
+          // wall-clock timeout writing a ZERO-byte file — strictly worse than
+          // the 39-byte stub, for a 1.7 KB gain on the one paper it helped.
+          // Same reasoning bars `TooManyErrors`; widening to either needs its
+          // own measurement, not an assumption that more salvage is better.
+          if matches!(e.target, ErrorTarget::Stomach) {
+            let salvaged = stomach::salvage_pending_box_lists(true);
+            if !salvaged.is_empty() {
+              log::info!(
+                "digest_internal: salvaged {} box(es) digested before the fatal",
+                salvaged.len()
+              );
+              boxes.extend(salvaged);
+            }
+          }
           break;
         },
       }

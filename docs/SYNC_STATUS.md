@@ -242,6 +242,49 @@ verdict is still current. **Method note:** the first pass of this table was
 wrong for exactly that reason — always capture the exit code, or a
 timeout-killed Perl reads as a 1-error success and flips the verdict.
 
+### A recoverable Fatal no longer throws the whole document away — LANDED 2026-07-20
+
+Rust reliability fix (**beyond-Perl**). `digest_internal` is written to keep
+partial output after a recoverable Fatal ("Perl `finishDigestion` L219-220: loop
+consuming input even after errors"), but the intent only worked when the failure
+landed in a **later** body: `digest_next_body` accumulates into the stomach's
+`box_list` and hands it back only on the success path, so a Fatal inside the
+FIRST body left the caller's `boxes` empty and the run wrote a **39-byte empty
+document**. One pathological `\tikz` picture cost an entire paper.
+
+New `stomach::salvage_pending_box_lists` unwinds the stranded levels in document
+order. Results on ar5iv user-report papers, all previously **0 bytes**:
+
+| paper | issue | now |
+|---|---|---|
+| `2405.19920` | #522 | **1.82 MB** — 6 sections + **80 bibitems**, ~the complete paper. Same-host Perl: **5 min, 0 bytes**. |
+| `2508.07407` | #556 | **31 KB** — title/authors/abstract recovered |
+
+**Scope was narrowed by measurement, twice — both narrowings matter:**
+1. For the stomach box-cycle guard the innermost level IS the pathology (a
+   repeating window past 50k boxes), so it is dropped and only the suspended
+   outer levels kept — "drop the offending construct, keep the document".
+   Grafting the window in would produce a vast garbage document.
+2. **Salvage fires ONLY for `ErrorTarget::Stomach`.** Extending it to the
+   gullet's `Timeout:Recursion` looked reasonable (the token stream vs the box
+   list) and was actively harmful: on `2605.25400` it revived a poisoned state
+   that re-entered the same loop during build, turning an 8.7 s fatal into a
+   **2 m 12 s wall-clock timeout writing a ZERO-byte file** — strictly worse
+   than the 39-byte stub it replaced, for a 1.7 KB gain on the single paper it
+   helped. The same reasoning bars `TooManyErrors`. Widening to either needs its
+   own measurement; do not assume more salvage is better.
+
+Validation: suite **1617/0**, clippy clean, and the 400-paper sweep vs
+`381efaf81b` shows **0 error-count and 0 fatal-class changes**, wall 575.9 s →
+579.5 s. Guard `tests/101_fatal_salvages_partial_document.rs` (verified red —
+39 bytes, prose gone — without the fix). It asserts the Fatal is still reported:
+salvaging partial output is not a licence to downgrade the diagnostic.
+
+**Corrects a stale claim:** `docs/reproducers/tikz_calc_node_recursion_2508.07407.tex`
+and the AR5IV notes said this fatal was "caught gracefully — conversion
+COMPLETES, only the one tikz table is dropped". Re-measured, the full paper
+produced a **0-byte** file. It is graceful *now*.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail
