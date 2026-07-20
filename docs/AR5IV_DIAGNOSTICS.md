@@ -39,6 +39,42 @@ ranked worklist for the follow-on implementation sprint.
 > The **~48 already-CLEAN** papers (sample re-verified 0-error) close on the ar5iv
 > **redeploy** + a maintainer batch-comment — no code change.
 
+> ## 🔄 RE-MEASURED 2026-07-20 — the PARITY-TIMEOUT bucket largely evaporated
+>
+> After the `\@arraycr` retraction and the stale-`def_autoload` fix (see
+> `SYNC_STATUS.md`), the nine **PARITY-TIMEOUT** papers were re-run **solo**
+> (the original sweep ran 10× parallel, and its own caveat said `rc=124` rows
+> needed re-checking at 1×). **Six of nine now convert**, three of them
+> error-free — these are user-visible closes on the tracker:
+>
+> | issue | arXiv | was | now (solo, `--preload=ar5iv.sty`) |
+> |---|---|---|---|
+> | #546 | 2504.07033 | TIMEOUT | **0 err**, 10.0 s, 4.9 MB |
+> | #550 | 2501.09223 | TIMEOUT | **0 err**, 17.1 s, 3.9 MB |
+> | #598 | 1611.02087 | TIMEOUT | **0 err**, 17.8 s, 489 KB |
+> | #596 | 2505.01658 | TIMEOUT | 1 err, 10.8 s, 1.6 MB |
+> | #533 | 2406.15882 | TIMEOUT | 2 err, 39.7 s, 3.9 MB |
+> | #471 | 2308.04512 | TIMEOUT 7 | 7 err, 36.7 s, 11.5 MB |
+> | #522 | 2405.19920 | TIMEOUT | still fails — `Fatal:Stomach:Recursion` at **11 s** (was a wall-clock hang) |
+> | #551 | 2501.10235 | TIMEOUT | still fails — `Fatal:Timeout:Recursion` at **6 s**, cycle guard, window `} { ; , ,` |
+> | #599 | 1802.01134 | TIMEOUT | still fails — `Fatal:Timeout:TokenLimit` at 42 s; ring shows the pgf colour path (`\pgf@setcolor`/`\pgfsys@color@rgb` probe) churning |
+>
+> Also re-confirmed from the RUST-WORSE table: **#594 `1811.10792` is now 0
+> errors** and **#473 `2310.17416` 9 errors** (the blkarray binding); #472
+> (2311.06609, 82) and #591 (2602.15902, 783 — parity) are unchanged.
+>
+> The three residuals all now **fail fast and cleanly** (6–42 s) instead of
+> hanging, so they are fidelity losses rather than resource hazards. Get a 1×
+> Perl baseline before calling any of them Rust-only.
+>
+> **⚠️ Harness warning, hit twice while producing this table.** `ls *.tex |
+> head -1` and `grep -rl '\begin{document}' | head -1` BOTH pick the wrong main
+> on these papers (`abstract.tex` for 2501.10235; a preamble fragment
+> elsewhere), and a wrong main manufactures fake error counts — 2504.07033 read
+> as "60 errors" that way and is actually **0**. Require **both**
+> `\documentclass` *and* `\begin{document}`, then prefer the shallowest path.
+> The numbers above use that detector; the 2026-07-18 table below does not.
+
 # Implementation plans — remaining deep issues (2026-07-18)
 
 The self-contained wins are landed (13 issues on PR #306; see the "Ranked
