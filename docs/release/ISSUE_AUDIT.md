@@ -9,12 +9,15 @@
 >
 > **Refresh** before milestone planning:
 > `gh issue list --state open --limit 100 --json number,title,labels,createdAt`.
-> Last refreshed: **2026-07-19** (7 pre-existing open unchanged; the #304/#305/#307
-> user-report cluster closed, see "Recently closed").
+> Last refreshed: **2026-07-20** (10 open). The 2026-07-19 stamp was wrong on two
+> counts, worth knowing as a failure mode of this file: it still listed #192 and
+> #82 as open although both closed **2026-07-17**, and it missed #297/#303 which
+> were filed **2026-07-18**, i.e. before that refresh. Re-run the one-liner rather
+> than incrementally editing rows.
 
 Tracker: <https://github.com/dginev/latexml-oxide/issues>
 
-## Open issues (7)
+## Open issues (10)
 
 | # | Title | Labels | Local status / interpretation |
 |---|---|---|---|
@@ -22,14 +25,19 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 | **92** | Superior debugging and error-reporting for document authors | enhancement | Same source-provenance substrate as #47 ([`SOURCE_PROVENANCE.md`](../performance/SOURCE_PROVENANCE.md)): construct-start + macro-origin locators give Rust-compiler-grade author errors, fixing TeX's "error points at the end of the environment". |
 | **143** | Switch to rust stable, when `#[thread_local]` is stabilized | enhancement, performance | Toolchain-longevity risk for a public-domain tool. Pin a known-good nightly; track stabilization. [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §3. |
 | **94** | Document model: RelaxNG vs Rust data-type trade-offs | enhancement, question, documentation | Doc debt; relates to the (closed) #199 HTML-dialect schema and [`SCHEMA_DOCUMENTATION.md`](../performance/SCHEMA_DOCUMENTATION.md). |
-| **192** | Compile-time string interning? | enhancement, performance | Perf nice-to-have. The arena/interner is already the hottest read site (see [`SAFETY.md`](SAFETY.md) §B); the 2026-07-02 audit settled the related pin!/pin_static policy ([`PERFORMANCE.md`](../performance/PERFORMANCE.md) Principle 1). Measure before investing. Backlog. |
-| **82** | Manually copy over perldoc as rustdoc | enhancement, help wanted, documentation | Doc debt. Long tail. |
+| **297** | latexml_oxide 0.7.4 binding transition: `nowrap.sty.ltxml` | documentation, packages | Filed 2026-07-18. A user-supplied `.ltxml` binding on `--path` is ignored: `Warning:missing_file:nowrap … No dispatcher entry and no raw file found on disk` (`latexml_core/src/binding/content.rs`). Perl finds it silently. This is the **user-supplied `.ltxml` discovery** path — `.ltxml` is Perl, so the Rust answer is either the Rhai `runtime-bindings` front-end or a clear diagnostic; today it is neither. |
+| **303** | Precompiled kernel (dump) release and update strategy | enhancement | Filed 2026-07-18, follow-up to #299/PR #300. The dump is keyed to the TL **year**, but the LaTeX format is not frozen within a year (`\fmtversion`, `tlmgr` `fmttriggers` rebuilds) — a false positive was traded for a rarer false negative. Candidate signals: key on `\fmtversion` + L3 date, or compare against the ambient `latex.fmt` mtime; warn-not-fail. |
+| **309** | 0.7.5-rc1: unable to import latex file with options on class | bug | Filed 2026-07-20. `\subimport*` of a child whose `\documentclass[12pt]{article}` makes the engine look for a *file* named `12pt`. Same family as closed #293. **PR #310 is open with a fix.** |
+| **311** | Raw-loaded package `\newif` conditionals die with the standalone subfile group | bug | Filed 2026-07-20. **Explicitly NOT Rust-only** — same-host Perl reports the identical error, and `standalone.sty.ltxml` uses the same `bgroup` architecture. General shape: any raw-loaded package pairing a `\newif` with a document-level hook (`\ifpgf@external@grabshipout` + `\AtEndDocument`). Two fixes tried and refuted (hoisting the `RequirePackage`; `\globaldefs=1`). Related to the group-scoping class in `SYNC_STATUS.md`. |
+| **312** | 0.7.5-rc1: many problems rendering math | (none) | Filed 2026-07-20 — **newest, untriaged.** Self-contained `amsmath` reproducer in the issue body (`\left( … \right)` spacing, `\tag`, `align`/`align*`, `\prime`). Needs the usual same-host Perl + pdflatex classification before any code change. |
 | **80** | space XMhints as elided arguments | enhancement | **Open — still reproduces (verified 2026-06-16).** `$[D_{0},\ ]$` → the escaped space is dropped, so the grammar sees a dangling `,]` and rejects. Fix = emit an XMHint for the in-math space and teach the marpa grammar to treat it as an elided argument slot. Real grammar work, not a quick win. Backlog. |
 
 ## Recently closed (since the 2026-05-24 refresh — outcomes)
 
 | # | Closed | Outcome |
 |---|---|---|
+| **192** | 2026-07-17 | Compile-time string interning. (Was still listed as open in the 2026-07-19 refresh.) |
+| **82** | 2026-07-17 | Manually copy perldoc over as rustdoc. (Was still listed as open in the 2026-07-19 refresh.) |
 | **304** | 2026-07-19 | **Not reproducible — environment, not latexml_oxide.** "TEXINPUTS ignored for `\input{my_core}`" on a Linux Mint VirtualBox guest with the tree on a `/mnt/g` shared-folder mount. Unreproducible here across five matched factors (multi-part `TEXINPUTS`, trailing/empty colons, `//` recursion, a real `st_nlink=1` ntfs-3g mount, the bundled TL2025 lib). Resolved on the reporter's side by rebooting the VM; their `KPATHSEA_DEBUG=32` log then showed `TEXINPUTS` reaching the process, libkpathsea initialized, and the file resolving — positively excluding our resolver paths. **Two real defects were nevertheless found while investigating** (PR #308): (a) `select_kpaths()` discarded a failed `Kpaths::new()` with `.ok()?`, silently disabling ALL file resolution — fixed upstream in kpathsea 0.3.4 (dginev/rust-kpathsea#25, degrading program-name anchor) plus a subprocess fallback here; (b) a per-lookup subprocess fallback added mid-investigation cost one `kpsewhich` spawn per distinct missing file (30 spawns / 20 missing packages; 2.54 s against a 0.20 s conversion) — removed. **Durable outcome:** every conversion log now records the resolved kpathsea backend, so this class of report is diagnosable from an ordinary log. Guard: `003_kpathsea_backend_resolution.rs`. |
 | **305** | 2026-07-18 | "Where is latexml.sty?" — **out of scope by design.** Raw `.sty` files are not shipped; the compiled `latexml_sty.rs` binding always applies, needs no path, and cannot be overridden by a raw `latexml.sty` on the search path even under `--includestyles` (precedence is decided by `input_definitions`'s `_loaded` gate, not `find_file_aux`'s `notex` gate — see WISDOM #63). |
 | **307** | 2026-07-19 | **Downstream of #304, not an `\iflatexml` bug.** `\iflatexml\else\usepackage[fit]{truncate}…\fi` took the `\else` branch. `\iflatexml` is defined only by loading `latexml.sty` — identical in Perl LaTeXML (`latexml.sty.ltxml:27`); neither predefines it, and both emit the same `undefined` error and take `\else` for a bare `\iflatexml` (verified same-host). The reporter's log proves `\usepackage{latexml}` lives inside `my_core.tex` (`latexml_sty.rs` loads the moment that file is processed), so while #304 made it unresolvable the conditional was never defined. Their exact preamble converts cleanly on released 0.7.4 here. No code change. |

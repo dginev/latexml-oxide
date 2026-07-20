@@ -26,6 +26,7 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim). |
 | [`release/ISSUE_AUDIT.md`](release/ISSUE_AUDIT.md) | Local mirror of open GitHub issues with status + interpretation. |
 | [`release/SAFETY.md`](release/SAFETY.md) | Threat model and `unsafe` inventory. |
+| [`AR5IV_DIAGNOSTICS.md`](AR5IV_DIAGNOSTICS.md) | The ar5iv issue-tracker sweep: every open "Improve article X" report screened against the current binary and classified vs same-host Perl, plus the ranked worklist. Re-measured 2026-07-20 on top of the 2026-07-18 snapshot. |
 
 ## 🎯 Target 1 — faithful Perl translation (`parity/`)
 
@@ -95,6 +96,7 @@ site) that have no Perl equivalent.
 | `out-of-scope/` | Cases intentionally out of scope (Perl also fails, no-DTD, …). |
 | `known_crashes/` | Known crash records with triage. |
 | `examples/` | Example bindings (e.g. `sample.sty.rhai`). |
+| `scripts/` | One-off analysis helpers referenced by archived diagnostics (e.g. `bucket_callgrind_hot.py`). |
 
 ---
 

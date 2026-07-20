@@ -1,15 +1,45 @@
 # Known Rust-side crashes reproducible with small/medium .tex inputs
 
-## 🔴 OPEN (HIGH difficulty, post-release): `\kbordermatrix` `\halign`-in-math IfLimit loop — 2605.23849
+> **No OPEN entries.** Everything indexed here is resolved; each is kept as a
+> reproducer/regression witness and as a record of what the wrong hypotheses were.
+
+## ✅ RESOLVED: `\kbordermatrix` `\halign`-in-math IfLimit loop — 2605.23849 (fixed 2026-07-20)
 
 `\kbordermatrix{…}` (per-cell `$##$` math in an `\ialign`) inside an `equation`
-raises `\halign Attempt to close a group that switched to mode math` → cascades to
-`Fatal:Timeout:IfLimit`. **Perl completes the same input in ~0.4s** → GENUINE-RUST-ONLY.
-Root-caused to the alignment × math-mode frame accounting (`stomach.rs::egroup`);
-NOT fixed. Minimal reproducer + full analysis + reduction map + an orthogonal
-"red herring" side finding:
-[`kbordermatrix_halign_math/`](kbordermatrix_halign_math/README.md). One instance
-of the broad `\lx@begin@alignment` family (~12.1k full-arXiv fatals).
+raised `\halign Attempt to close a group that switched to mode math` → cascading to
+`Fatal:Timeout:IfLimit` (~149 s, 0 formulae).
+
+**Root cause — NOT the `stomach.rs::egroup` frame accounting** (that was the
+2026-07-10 hypothesis, and it was disproven). Rust raw-loads `latex.ltx` into the
+kernel dump so it inherits the real `\@arraycr`, which **Perl does not have at
+all**; its `align_state` brace/`$` trick is only valid under a real `\halign`.
+Perl's "clean 0.4 s" was it *skipping* the bordered matrix, not surviving it.
+Fix = retract the entry point in `latexml_engine/src/latex_constructs.rs`
+(`Let!("\\@arraycr", "\\lx@alignment@newline")`), mirroring the `\@tabularcr`
+retraction Perl already performs. 2605.23849 → **1.9 s, 0 errors, 985 formulae**;
+2605.05194 → 0 errors / 422 KB (was 125 errors + Fatal + a 39-byte document).
+Guard: `latexml_oxide/tests/alignment/arraycr_halign.{tex,xml}`.
+
+Full analysis, reduction map, the two wrong hypotheses, and an orthogonal
+"red herring" side finding (the hbox brace-marker boxes, still unshipped):
+[`kbordermatrix_halign_math/`](kbordermatrix_halign_math/README.md).
+
+*Caveat on breadth:* this was described as one instance of the `\lx@begin@alignment`
+family (~12.1k full-arXiv fatals). That number predates the fix and was never
+attributed to this root — **re-mine the corpus before quoting it.**
+
+---
+
+## ✅ RESOLVED (binding sidestep, 2026-07-18): `blkarray` `block{(cc)}` in display math
+
+`\begin{block}{(cc)}` nested in `blockarray` inside display math drove Rust to a
+4.5 GB `Fatal:Timeout:MemoryBudget` in ~12 s. **Unlike its kbordermatrix sibling
+this is NOT Rust-only** — same-host Perl also fails (~90 s, rc=124), while
+pdflatex renders it cleanly, so both LaTeXML engines were wrong. Sidestepped by
+`latexml_package/src/package/blkarray_sty.rs`, which shadows the raw `.sty` and
+routes through the `array` machinery (ar5iv #594 1811.10792 OOM → 0 errors;
+#473 2310.17416 OOM → 9). Note `blkarray_min.tex` no longer reproduces.
+Details: [`blkarray_halign_math/`](blkarray_halign_math/README.md).
 
 ---
 

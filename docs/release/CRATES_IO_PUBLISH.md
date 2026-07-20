@@ -5,13 +5,20 @@ docs.rs / library-consumer story. Complements
 [`RELEASING.md`](RELEASING.md) (the GitHub-Release binary flow); this file is
 specifically about **`cargo publish` + docs.rs + library use**.
 
-Status (2026-07-17): **all code blockers are cleared.** B1 (dep versions), B2
-(forked git deps → published `marpa-asf` / `libmarpa-asf-sys` / `pericortex`),
-B3a (XSLT/CSS/js → `latexml_post`) and **B3b (RelaxNG → `latexml_core`)** are
-done; B5 (dumpless source install) is an accepted, documented limitation. The
-only remaining steps are **account actions, not code**: make the repo public (every
-crate's `repository`/`homepage` 404s until then), then `cargo publish --workspace`
-(§5). B4 is verified: all 7 sibling names are free.
+Status (2026-07-17): ✅ **PUBLISHED.** All 8 crates are live on crates.io —
+`latexml` **0.7.4** (`max_stable_version` 0.7.4, published 2026-07-17T14:44Z),
+`latexml_core` 0.4.0 at 14:20Z, and the six siblings; the repo is **public**.
+B1 (dep versions), B2 (forked git deps → published `marpa-asf` /
+`libmarpa-asf-sys` / `pericortex`), B3a (XSLT/CSS/js → `latexml_post`) and
+**B3b (RelaxNG → `latexml_core`)** are done; B4 verified; B5 (dumpless source
+install) is an accepted, documented limitation.
+
+**Subsequent releases are just a version bump + `cargo publish --workspace`.**
+The checklist in §5 is retained as the procedure and, more importantly, for the
+durable traps B7/B8 — read those before the next publish. Note the working tree
+is already at `0.7.5-rc1`, and rule 0 below still binds: **never publish an
+`-rc` to crates.io** (it does not become `max_stable_version`, so
+`cargo install latexml` would silently keep resolving to 0.7.4).
 
 ---
 
@@ -30,7 +37,7 @@ crates.io permanently — **their names must be available too** (reserve them).
 | 5 | `latexml_package` | 0.5.0 | codegen, core, engine |
 | 6 | `latexml_post` | 0.3.0 | core, engine |
 | 7 | `latexml_contrib` | 0.3.0 | core, codegen, engine, package |
-| 8 | `latexml` (`latexml_oxide`) | 0.7.4-rc3 | all 7 + `pericortex` |
+| 8 | `latexml` (`latexml_oxide`) | published 0.7.4 | all 7 + `pericortex` |
 
 **Published prerequisites (all on crates.io, deps repointed off git — ✅ DONE):**
 `libmarpa-asf-sys` 0.3.0 → `marpa-asf` 0.3.0 (the dginev/marpa fork; consumed by
@@ -320,8 +327,10 @@ Expect to finish the first-ever publish with per-crate `cargo publish -p <crate>
 calls as rate-limit tokens refill (B8). That is a one-time cost: all 8 names now
 exist, so subsequent releases are version bumps under a much looser limit.
 
-0. [ ] **Publish a STABLE version, not an `-rc`.** crates.io currently holds only
-       the placeholders `latexml` **0.0.1 / 0.0.2** (`max_stable_version: 0.0.2`).
+0. [x] **Publish a STABLE version, not an `-rc`.** *(Honoured at 0.7.4; the rule
+       stands for every future release.)* When this was written crates.io held only
+       the placeholders `latexml` **0.0.1 / 0.0.2** (`max_stable_version: 0.0.2`);
+       today it is 0.7.4.
        `cargo install` and `latexml = "0.7"` both **ignore pre-releases**, so
        publishing `0.7.4-rc4` would leave `cargo install latexml` resolving to the
        **0.0.2 placeholder** — while the README shipped inside that very crate tells
@@ -329,7 +338,7 @@ exist, so subsequent releases are version bumps under a much looser limit.
        publishing. Tag `0.7.4-rc4` for the GitHub **draft prerelease** (what
        `release.yml` does for `-*` tags: cross-OS testing, not a public release) and
        do the crates.io publish on the **stable `0.7.4`** tag.
-1. [ ] **Repo is public.** It was private as of 2026-07-17 (going public that day).
+1. [x] **Repo is public.** Done 2026-07-17.
        `repository` / `homepage` on all 8 crates and every README badge point at
        `github.com/dginev/latexml-oxide` — all 404 while it is private, and a
        crates.io release is **irreversible** (yankable, never deletable; the version

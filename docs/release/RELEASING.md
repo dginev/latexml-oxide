@@ -10,9 +10,9 @@ Currently published platforms: **`x86_64-unknown-linux-gnu`**,
 **`aarch64-unknown-linux-gnu`**, **`aarch64-apple-darwin`** (macOS Apple
 Silicon), and **`x86_64-apple-darwin`** (macOS Intel). **`x86_64-pc-windows-msvc`**
 joins at **`0.7.4`** as a single self-contained `.exe`, shipped in a `.zip`. The
-`.exe` itself validated in the `0.7.4-rc2` RC draft; the `.zip` packaging around it
-is new in 0.7.4 and **first exercised at the next RC tag** — no RC has published
-one yet. See [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md). Only musl
+`.exe` itself validated in the `0.7.4-rc2` RC draft; the `.zip` packaging shipped
+in **0.7.4** and was re-exercised at **`0.7.5-rc1`** (both releases carry
+`…-x86_64-pc-windows-msvc.zip` + `.sha256`). See [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md). Only musl
 remains out of scope for now — see "Release asset strategy" below.
 
 ## Release targets & order
@@ -71,7 +71,8 @@ Two consequences worth knowing before you plan an RC:
   `workflow_dispatch`. Both build `:X.Y.Z-rcN` only — **an RC never takes `:latest`**.
 * **Never publish an RC to crates.io.** `cargo install` and `latexml = "0.7"` both
   ignore pre-releases, so an `-rcN` upload leaves `cargo install latexml` resolving to
-  whatever stable version exists (today: the ancient `0.0.2` placeholder) — while the
+  whatever stable version exists (before 0.7.4 that was the ancient `0.0.2`
+  placeholder; today it would silently pin users to the previous stable) — while the
   README *inside that crate* tells people to run exactly that.
 
 ### "Can I just promote the RC draft to latest?"
@@ -226,10 +227,13 @@ core runtime stays dynamic:
   nothing else. libxml2/libxslt/libexslt and libkpathsea are baked in
   (verified by `ldd` in `release.yml`), so the binary runs on any
   glibc-2.35+ host regardless of its libxml2 SONAME (or the absence of one).
-- **macOS**: `libSystem` plus the bundled libxml2/libxslt. `kpathsea` is
-  *not* linked on macOS — the binary resolves TeX paths through the
-  subprocess-`kpsewhich` backend (works with both Homebrew TeX Live and
-  MacTeX/BasicTeX).
+- **macOS**: `libSystem` (plus `libiconv`). libxml2/libxslt/libexslt **and
+  libkpathsea are statically linked, same as Linux** — both macOS legs run
+  `tools/build_static_kpathsea.sh` and `release.yml` asserts it with `otool`
+  (see §"Self-contained…" above and `LICENSE_INVENTORY.md` §D.1/§D.3). What is
+  macOS-specific is a *runtime* choice, not linkage: `select_kpaths` may still
+  pick the subprocess-`kpsewhich` backend (e.g. MacTeX ships no libkpathsea),
+  which works with both Homebrew TeX Live and MacTeX/BasicTeX.
 
 TeX Live (`kpsewhich`, `pdflatex`) is required at runtime and not
 bundled on any platform.

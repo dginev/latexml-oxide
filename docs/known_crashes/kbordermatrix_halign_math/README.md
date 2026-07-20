@@ -60,12 +60,24 @@
 > Do not assume the ~12.1k full-arXiv `\lx@begin@alignment` fatals all collapse
 > to this; re-mine the corpus before quoting a number.
 
+---
+
+# ⚠️ EVERYTHING BELOW THIS LINE IS THE PRE-FIX RECORD (2026-07-10)
+
+It is kept for the **reduction map** and the **ruled-out hypotheses**, which are
+the reusable part. Its root-cause analysis (`stomach.rs::egroup` frame
+accounting) and its "Entry points for whoever resumes" are **superseded and
+wrong** — see the banner above. Read it as history, not as a worklist.
+
+---
+
 Witness: **arXiv:2605.23849** (Cluster H in
 [`../../performance/STABILITY_WITNESSES.md`](../../performance/STABILITY_WITNESSES.md)).
 Surfaced by mining the 2605+2606 60k-doc telemetry as a ~149s digest-runaway →
-fatal. It is one instance of the broader **`\lx@begin@alignment` family** (the
-full-arXiv corpus shows ~12.1k `\lx@begin@alignment` fatals), so a real fix here
-likely pays off far beyond this one paper.
+fatal. It was believed to be one instance of the broader
+**`\lx@begin@alignment` family** (the full-arXiv corpus showed ~12.1k
+`\lx@begin@alignment` fatals) — that attribution was never verified and the
+actual root turned out to be narrower.
 
 ## TL;DR
 
@@ -97,7 +109,7 @@ latexml --includestyles --path=. kbm.tex
 
 ## Root cause (what is actually happening)
 
-The error is raised in `stomach.rs::egroup` (the branch at ~L459-467, "Attempt to
+The error is raised in `stomach.rs::egroup` (the branch at ~L471, "Attempt to
 close a group that switched to mode {}"). The diagnostic frame message is the key:
 
 ```
@@ -186,7 +198,7 @@ match Perl and passes local box tests, but (a) does not fix this witness (which
 fails earlier, in `\halign`-in-math) and (b) is a broad hot-path change needing a
 corpus output-neutrality diff. **Recorded as a candidate future consistency fix
 in `../../performance/STABILITY_WITNESSES.md` Cluster H; not shipped.** If someone
-takes it up: re-apply, run the full 1534-test suite + an isolated before/after
+takes it up: re-apply, run the full suite (1617/0 as of 2026-07-20) + an isolated before/after
 byte-diff on a corpus sample, and ship it on its own merits — separately from this
 crash.
 
