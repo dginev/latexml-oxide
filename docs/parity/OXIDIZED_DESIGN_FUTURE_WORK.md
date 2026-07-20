@@ -69,13 +69,29 @@ fence soup.
    the grammar prepared for U+2016 / U+2AF4 delimiters arriving on
    the token stream. Belt-and-suspenders for varied paper inputs.
 
-**Related future-work item (same paper, same equation).** Equation
-rows whose first non-whitespace token is a binary relation (e.g.
-`\leq`, `=`, `\subseteq`) currently get a phantom `<mi></mi>`
-left operand inserted by the math parser. The continuation-row
-semantics — "the LHS is the prior row" — should be made explicit
-either by suppressing the empty operand or by tagging the row with
-`intent=":continuation"`. Tracked as task #264.
+**Related item (same paper, same equation) — ⚠️ PARTLY DONE AND PARTLY
+RETRACTED, 2026-07-20.** Equation rows whose first non-whitespace token is a
+binary relation (`\leq`, `=`, `\subseteq`) carry an empty placeholder as the
+left operand. Two directions were proposed here: suppress it, or tag the row
+`intent=":continuation"`.
+
+**Do NOT suppress it.** That half was implemented and had to be reverted: in
+MathML the operand SLOT is what makes the operator infix (form is inferred from
+position — first child of its `<mrow>` ⇒ prefix — and the form selects the
+operator-dictionary spacing). Dropping it made `<mo>=</mo>` the first child of
+every continuation row, diverging from Perl, which keeps the slot
+(`MathML.pm:1474` renders `absent` as an empty `<m:mi/>`). Reported as issue
+**#312**. Guard: `90_latexmlpost.rs::alignrows_operand_slot_keeps_relop_infix`.
+
+What DID land from this item: the placeholder is an empty `<m:mphantom/>`
+rather than Perl's `<m:mi/>` — an empty `<mi>` asserts "here is an identifier"
+about content that has none, and `document.rs` carries a `debug_assert!`
+refusing to materialize one. `mphantom` is chosen over a bare `mrow` because
+its definition is precisely "occupies space, renders invisibly".
+
+**Still open:** the `intent=":continuation"` tagging, which is the part that
+actually expresses "the LHS is the prior row" without touching layout. That is
+the direction to take if this is revisited. Task #264.
 
 **Pinned-baseline test.** The current (over-nested) output is
 captured as `tests/math/norm_kerned_delims.{tex,xml}` so we can

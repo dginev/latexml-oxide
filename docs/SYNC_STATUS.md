@@ -285,6 +285,65 @@ and the AR5IV notes said this fatal was "caught gracefully — conversion
 COMPLETES, only the one tikz table is dropped". Re-measured, the full paper
 produced a **0-byte** file. It is graceful *now*.
 
+## ⏸️ HANDOFF — session of 2026-07-20 (branch `more-minisprint-ar5iv`, 13 commits, **NOT PUSHED**)
+
+**Resume here.** Working tree clean; `frontmatter_bug_ids.txt` is a pre-existing
+untracked scratch file, not mine. Suite **1618/0**, clippy clean.
+
+### Landed (each with a red/green guard, full suite + clippy green)
+1. **`\@arraycr` retraction** — ended the `\halign`-in-math runaway. 2605.23849
+   ~149 s→Fatal ⇒ **1.9 s / 0 errors / 985 formulae**; 2605.05194 ⇒ 0 errors /
+   422 KB. Now surpass-Perl.
+2. **Stale-`def_autoload` guard** — Cluster H #1 and #3 were ONE bug.
+   2606.21610 42.9 s ⇒ 0.203 s; 2605.21013 43.1 s ⇒ 0.203 s, both landing on
+   Perl's own verdict 5–10× faster.
+3. **`salvage_pending_box_lists`** — a Stomach Fatal no longer discards the
+   document. 2405.19920 (ar5iv #522) 0 bytes ⇒ **1.82 MB**; 2508.07407 (#556)
+   ⇒ 31 KB.
+4. **Issue #312 operand slot** — see the caveat below.
+5. **Docs vetting** — three commits; see "what changed" in git log.
+
+### Open threads, in the order I'd pick them up
+
+- **#312 is NOT demonstrated fixed.** The structural divergence is repaired
+  (we match Perl's continuation-row shape again), but Chrome renders identically
+  with or without the slot, and I could not get a working MathJax measurement
+  (only v2 installed, it did not typeset headless). **Next step:** render the
+  reporter's document under MathJax 4 and compare, before replying on the issue.
+  Note their *other* complaint — "equations are not centered" — is **parity**:
+  the `ltx_eqn_table`/`ltx_eqn_center_pad*` markup and equation CSS are
+  byte-identical to Perl's on their file.
+- **expl3 catcode gap is mostly closed but ONE witness regressed.**
+  2112.11932 1003⇒0, 2110.10227 102⇒0, 2204.05282 86⇒0, 2110.12034 45⇒8, but
+  **2203.05327 78 ⇒ 411** (249 × `unexpected:_`). Not a parity regression (Perl
+  now needs 6 m 19 s there and dies `token_limit`), but it wants its own dive.
+  See the re-measured banner in `diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`.
+  This also means the **TL2026 dump-gate blocker may be closer than recorded** —
+  re-run the init gate on a TL2026 host.
+- **ar5iv residuals**: three of the nine PARITY-TIMEOUT papers still fail, all
+  now fast and clean (6–42 s): 2405.19920 / 2501.10235 / 1802.01134. 1× Perl
+  baselines say **parity** for the two measured (both 5 min, 0 bytes).
+- **`latexmlmath_oxide` single-structure formula** and **`--preload=<cls>` hook
+  stack** — both re-verified as still reproducing exactly as documented above.
+
+### Cross-repo state (both pushed, both mine to finish)
+- **PR #310** (`fix-309-standalone-class-options`) — reviewed, then improved:
+  the option allowlist was hand-split on `,` and missed every valued form
+  (`[varwidth=5cm]` → `Error:undefined:{varwidth}`, pdflatex clean). Now read as
+  `OptionalKeyVals`, matched on the key. **CI fully green.** Ready to merge.
+- **Upstream Perl PR brucemiller/LaTeXML#2852** — same bug, same fix ported
+  (`OptionalKeyVals` + `getPairs`), plus a `t/structure` case that actually
+  guards it. Pushed to `dginev/LaTeXML`; CI was 11 pass / 4 pending at handoff —
+  **check it before asking for review.**
+
+### Two traps that cost me time — worth keeping
+- A **fresh git worktree has no `resources/dumps/`**, and the suite then fails
+  26 expl3/dump-dependent tests (`glossary_test`, `regex_*`, `str_*case_*`,
+  `xparse`, mhchem, si). Copy the dumps in before suspecting code.
+- **Capture Perl's exit code.** A timeout-killed `latexml` prints one line that
+  a naive `grep -c '^Error:'` reads as "1 error", which flips a verdict from
+  "Perl times out" to "Perl is better". It did exactly that to me once.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail
