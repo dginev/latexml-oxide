@@ -47,8 +47,22 @@ fn convert_clean(source: &str) {
 }
 
 /// Convert and return the serialized XML (for structural assertions that the
-/// 0-error `convert_clean` cannot express).
-fn convert_to_xml(source: &str) -> String {
+/// 0-error `convert_clean` cannot express). STRICT: like `convert_clean`, this
+/// asserts the conversion logged **zero** `Error:` markers — a structural test
+/// that silently tolerates a conversion error is exactly the false-negative the
+/// project's signal-integrity rule forbids. An input that is *supposed* to error
+/// (a malformed / EOF-truncated specimen, parity with Perl) must use
+/// `convert_expecting_errors`, which asserts the exact intended count.
+fn convert_to_xml(source: &str) -> String { convert_expecting_errors(source, 0) }
+
+/// Convert an input EXPECTED to emit exactly `n` soft `Error:` markers, returning
+/// the serialized XML. `n == 0` is the strict/clean case (`convert_to_xml`); a
+/// nonzero `n` is for an intentionally-malformed specimen whose error is the
+/// correct, Perl-parity outcome. Mirrors `util::test`'s `INTENTIONALLY_FAILING`
+/// contract: drift fails BOTH ways — *more* errors = a handling regression,
+/// *fewer* = we silently stopped detecting the bad input — and a `Fatal:`
+/// (status_code 3) is always a regression, since the point is graceful recovery.
+fn convert_expecting_errors(source: &str, n: usize) -> String {
   // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
   // drive `Converter` directly, bypassing `latexml_test_single`, so without
   // this they run under the low production default and a full-file
@@ -63,6 +77,18 @@ fn convert_to_xml(source: &str) -> String {
   let mut c = Converter::from_config(cfg);
   c.initialize_session().expect("initialize");
   let r = c.convert(source.to_string());
+  // Shared lax `Error:<class>:` counter — see util::test::error_count.
+  let n_errors = latexml::util::test::error_count(&r.log);
+  assert_eq!(
+    n_errors, n,
+    "{source}: expected {n} error(s) but log contained {n_errors} Error:<class>: markers (status_code={})",
+    r.status_code
+  );
+  assert!(
+    r.status_code < 3,
+    "{source}: conversion hit a Fatal (status_code={}) — must degrade gracefully",
+    r.status_code
+  );
   r.result
     .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
 }
@@ -193,12 +219,15 @@ fn cluster_omnibus_natbib_bbl_sideload() {
 /// \url"); now `read_token_required` emits that parity Error and the macro
 /// degrades (closes its group) instead of crashing. Guards the whole
 /// `read_token_required` family (hyperref/url.sty `\url`, `\path`, amscd `\cd@`,
-/// `\textfont`). Witnesses: 1401.5000, 1502.05051, 2204.10457. `convert_to_xml`
-/// panics if the conversion produced no result — i.e. it catches a regressed
-/// panic — while tolerating the one intentional `expected` Error.
+/// `\textfont`). Witnesses: 1401.5000, 1502.05051, 2204.10457. The specimen
+/// truncates `\url` at EOF, so the ONE intentional `expected:` Error (input
+/// ended while scanning use of `\url`) is the correct outcome — Perl emits the
+/// same. `convert_expecting_errors(…, 1)` asserts EXACTLY that error (not merely
+/// "non-empty output"): a drift to 0 means we stopped detecting the truncation,
+/// >1 or a Fatal means the graceful recovery regressed.
 #[test]
 fn cluster_url_at_eof_no_panic() {
-  let xml = convert_to_xml("tests/cluster_regressions/url_eof_no_panic.tex");
+  let xml = convert_expecting_errors("tests/cluster_regressions/url_eof_no_panic.tex", 1);
   assert!(
     !xml.is_empty(),
     "url-at-EOF conversion produced empty output"
