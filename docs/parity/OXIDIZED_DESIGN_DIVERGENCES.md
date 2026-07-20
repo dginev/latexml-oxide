@@ -1760,6 +1760,66 @@ banner* that describes the binding rather than the document; no per-paper
 diagnostic is suppressed, and the genuinely useful fact (this is an
 approximation, not the real package) is retained under an accurate category.
 
+### 63. A subimported child's `\documentclass` options are class options, not a package list
+
+Perl `standalone.sty.ltxml` L24-33 intercepts a sub-document's `\documentclass`
+and `RequirePackage`s its **optional** argument, comma-split:
+
+```perl
+DefPrimitive('\@standalone@documentclass[]{}', sub {
+    my ($stomach, $packages) = @_;          # $packages = the OPTIONAL [] arg
+    for my $package (split(",", ToString($packages))) { RequirePackage($package); }
+```
+
+But that argument holds **class options**. `\documentclass[12pt]{article}` in a
+`\subimport`ed child therefore requires `12pt.sty` and warns
+`missing_file:12pt` (issue #309); `\documentclass[border=2pt]{standalone}` — the
+most common standalone idiom — requires `border=2pt.sty`. The mandatory half had
+the same defect until #293 (`\documentclass{article}` → `missing_file:article`).
+Content is never lost; the damage is a false `missing_file` in the log and tally.
+
+Ground truth is the package being emulated. `standalone.sty` L604-614:
+
+```tex
+\newcommand{\sa@documentclass}[2][]{%
+  \let\sa@subfile@options\@empty
+  \ifsa@obeyclassoptions                      % \newif ⇒ default FALSE
+    \edef\@tempa{#2}\edef\@tempb{standalone}%
+    \ifx\@tempa\@tempb \def\sa@subfile@options{#1}%  % ONLY if the class IS standalone
+    \else \fi
+  \fi
+```
+
+It ignores a subfile's class options by default, and even under
+`obeyclassoptions` consults them only when the subfile's class is literally
+`standalone` — then handing them to a keyval family, never to `\RequirePackage`.
+
+**We keep the loop but gate it twice.** The class must be `standalone`
+(`standalone.sty`'s own `\ifx` guard), and the option must be one that
+`standalone.cls` itself turns into a same-named package load — exactly
+`tikz`, `pstricks`, `preview`, `varwidth`, `multido` (standalone.cls
+L171/193/237/249/255, resolved at L562 and L611-620). Every other option
+(`crop`, `multi`, `math`, `beamer`, `float`, `png`, `border=`, `class=`,
+`10pt`/`11pt`/`12pt`, …) the class handles internally.
+
+Dropping the loop entirely would be *more* faithful to `standalone.sty`'s default,
+but it would discard the reason the binding exists: upstream LaTeXML#1432's
+motivating MWE is a `\documentclass[tikz]{standalone}` child, where the option
+really is the package to load.
+
+This is a **shared upstream bug**, not a Rust regression: same-host Perl warns
+identically (`Warning:missing_file:12pt Can't find binding for package 12pt`).
+See KNOWN_PERL_ERRORS #54 — candidate to upstream.
+
+Witness = issue #309's `index.tex` + `child.tex` (`No obvious problems` after,
+1 warning before). Regression test:
+`06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`,
+which also guards the `{standalone}` half — its child *uses* `varwidth`, so
+dropping a name from `CLASS_OPTION_PACKAGES` fails the test with
+`Error:undefined:{varwidth}`. **#293 originally landed a guard asserting the
+un-gated behavior** (`[zzznope]{article}` must warn); this entry is why that
+assertion was inverted rather than restored.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

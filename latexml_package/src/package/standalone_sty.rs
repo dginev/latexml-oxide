@@ -3,6 +3,12 @@
 //! NOTE: standalone.cls is handled separately; this is the .sty package.
 use crate::prelude::*;
 
+/// The `standalone.cls` options that load a same-named package
+/// (standalone.cls L171/193/237/249/255, resolved at L562 and L611-620).
+/// Every other option — `crop`, `multi`, `math`, `beamer`, `float`, `png`,
+/// `border=`, `class=`, `10pt`/`11pt`/`12pt`, … — the class handles itself.
+const CLASS_OPTION_PACKAGES: [&str; 5] = ["tikz", "pstricks", "preview", "varwidth", "multido"];
+
 #[rustfmt::skip]
 LoadDefinitions!({
   DefMacro!("\\@standalone@end@input", "\\egroup\\endinput");
@@ -18,21 +24,29 @@ LoadDefinitions!({
   // optional), and alias \begin{document}/\end{document} to the start/end
   // input primitives so the sub-document is injected as a bounded scope
   // inside the outer document.
-  // NOTE: the mandatory `{}` class name is intentionally IGNORED (the parent
-  // already loaded a class). Requiring it as a package — the earlier port
-  // used the mandatory arg — warned `missing_file:article` on a
-  // `\documentclass{article}` standalone child (issue #293).
-  DefPrimitive!("\\@standalone@documentclass[]{}", sub[(packages_tks, _class_tks)] {
+  //
+  // OXIDIZED_DESIGN #63: NEITHER argument is a package list, so both are
+  // gated. The mandatory class name is ignored outright — the parent already
+  // loaded a class, and requiring it warned `missing_file:article` on a
+  // `\documentclass{article}` child (#293). The optional list holds class
+  // OPTIONS; Perl requires all of them for every class, so
+  // `\documentclass[12pt]{article}` warns `missing_file:12pt` (#309).
+  // standalone.sty L604-614 consults a subfile's options only when the
+  // subfile's class is literally `standalone`, so we require them only there
+  // — and only the ones standalone.cls turns into a package load, which is
+  // what makes `\documentclass[tikz]{standalone}` work (upstream LaTeXML#1432,
+  // the reason this loop exists).
+  DefPrimitive!("\\@standalone@documentclass[]{}", sub[(options_tks, class_tks)] {
     bgroup();
     assign_value("inPreamble", true, None);
-    // Perl `split(",", ToString($packages))`: an absent optional stringifies
-    // to "" (⇒ no packages required), matching the `\documentclass{article}`
-    // no-options case.
-    let packages_str = packages_tks.map(|t| t.to_string()).unwrap_or_default();
-    for pkg in packages_str.split(',') {
-      let pkg = pkg.trim();
-      if !pkg.is_empty() {
-        RequirePackage!(pkg);
+    if class_tks.to_string().trim() == "standalone" {
+      // An absent optional stringifies to "" ⇒ nothing required.
+      let options = options_tks.map(|t| t.to_string()).unwrap_or_default();
+      for option in options.split(',') {
+        let option = option.trim();
+        if CLASS_OPTION_PACKAGES.contains(&option) {
+          RequirePackage!(option);
+        }
       }
     }
     Let!(T_CS!("\\begin{document}"), T_CS!("\\@standalone@start@input"));
