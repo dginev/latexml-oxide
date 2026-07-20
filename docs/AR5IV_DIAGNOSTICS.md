@@ -56,17 +56,28 @@ ranked worklist for the follow-on implementation sprint.
 > | #533 | 2406.15882 | TIMEOUT | 2 err, 39.7 s, 3.9 MB |
 > | #471 | 2308.04512 | TIMEOUT 7 | 7 err, 36.7 s, 11.5 MB |
 > | #522 | 2405.19920 | TIMEOUT | `Fatal:Stomach:Recursion` at 11 s, but now emits **1.82 MB** — 6 sections + 80 bibitems, ~the whole paper (partial-output salvage). Same-host Perl: **5 min, 0 bytes** |
-> | #551 | 2501.10235 | TIMEOUT | still fails — `Fatal:Timeout:Recursion` at **6 s**, cycle guard, window `} { ; , ,` |
-> | #599 | 1802.01134 | TIMEOUT | still fails — `Fatal:Timeout:TokenLimit` at 42 s; ring shows the pgf colour path (`\pgf@setcolor`/`\pgfsys@color@rgb` probe) churning |
+> | #551 | 2501.10235 | TIMEOUT | **PARITY** — hangs in pgfplots pgfmath coordinate processing (`river_cps.tex:117`, `\addplot table` + `x filter/.expression`); Rust's cycle guard self-terminates (`Fatal:Timeout:Recursion`, window `} { ; , ,`), 0 B. Same-host Perl hangs at the **same** `river_cps.tex:117` `\pgfmath`, killed at timeout (>6 min), 0 B |
+> | #599 | 1802.01134 | TIMEOUT | **PARITY** — the paper's own `imgresize` `\sbox` box-convergence loop (`scale=width·scale/\wd0` until `|width−\wd0|<0.1pt`); with no real box typesetting `\wd0` never tracks the scaled picture, so `scale` 2-cycles `3.77214↔3.77215` forever (the pgf colour churn is one `\sbox{\BODY}` iteration). Rust's guards fire → 0 B. Same-host Perl loops identically, killed at timeout (>6 min), 0 B |
 >
 > Also re-confirmed from the RUST-WORSE table: **#594 `1811.10792` is now 0
 > errors** and **#473 `2310.17416` 9 errors** (the blkarray binding); #472
 > (2311.06609, 82) and #591 (2602.15902, 783 — parity) are unchanged.
 >
 > The three residuals all now **fail fast and cleanly** (6–42 s) instead of
-> hanging, so they are fidelity losses rather than resource hazards. 1× Perl
-> baselines captured for two of them and BOTH are **parity**: `1802.01134`
-> and `2405.19920` each run **5 minutes in Perl and produce 0 bytes**.
+> hanging, so they are fidelity losses rather than resource hazards.
+>
+> **2026-07-20 (second pass) — all three residuals now have same-host Perl
+> baselines (ar5iv preload, verbose, rc captured), and all resolve
+> PARITY-or-Rust-better; none is a Rust-only bug.** #522 `2405.19920` is
+> **Rust-better** (salvage emits 1.82 MB; Perl 0 B). #551 `2501.10235` and #599
+> `1802.01134` are **PARITY**: both engines hang in shared deep machinery —
+> pgfplots pgfmath coordinate processing (`river_cps.tex:117`) and the paper's
+> own `imgresize` box-convergence loop, respectively — and both produce
+> **0 bytes** (Perl `exit=124`, killed at the 6-min cap; Rust self-terminates
+> via its recursion/token guards). These need real TeX box / `\wd0` feedback
+> that LaTeXML (Perl and Rust alike) does not provide, so a faithful fix is
+> impossible without diverging. Closed as parity; the tracker issues close on
+> the ar5iv redeploy. **The PARITY-TIMEOUT bucket is now fully triaged.**
 >
 > Separately, **#556 `2508.07407`** — the `Stomach:Recursion` witness whose
 > notes claimed it already degraded gracefully — was in fact producing a

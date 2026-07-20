@@ -320,9 +320,14 @@ untracked scratch file, not mine. Suite **1618/0**, clippy clean.
   See the re-measured banner in `diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`.
   This also means the **TL2026 dump-gate blocker may be closer than recorded** —
   re-run the init gate on a TL2026 host.
-- **ar5iv residuals**: three of the nine PARITY-TIMEOUT papers still fail, all
-  now fast and clean (6–42 s): 2405.19920 / 2501.10235 / 1802.01134. 1× Perl
-  baselines say **parity** for the two measured (both 5 min, 0 bytes).
+- **ar5iv residuals — DONE (2026-07-20 second pass).** All three now have
+  same-host Perl baselines; all resolve parity-or-Rust-better, none Rust-only.
+  2405.19920 = Rust-better (salvage 1.82 MB, Perl 0 B); 2501.10235 (#551) and
+  1802.01134 (#599) = **parity** — both engines hang in shared deep machinery
+  (pgfplots pgfmath coord processing at `river_cps.tex:117`; the paper's own
+  `imgresize` `\wd0` box-convergence 2-cycle) and emit 0 B, Perl killed at the
+  6-min cap while Rust self-terminates via its guards. No faithful fix without a
+  box-measurement divergence. See the AR5IV_DIAGNOSTICS re-measurement block.
 - **`latexmlmath_oxide` single-structure formula** and **`--preload=<cls>` hook
   stack** — both re-verified as still reproducing exactly as documented above.
 
