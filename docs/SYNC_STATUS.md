@@ -313,12 +313,15 @@ untracked scratch file, not mine. Suite **1618/0**, clippy clean.
   Note their *other* complaint — "equations are not centered" — is **parity**:
   the `ltx_eqn_table`/`ltx_eqn_center_pad*` markup and equation CSS are
   byte-identical to Perl's on their file.
-- **expl3 catcode gap is mostly closed but ONE witness regressed.**
-  2112.11932 1003⇒0, 2110.10227 102⇒0, 2204.05282 86⇒0, 2110.12034 45⇒8, but
-  **2203.05327 78 ⇒ 411** (249 × `unexpected:_`). Not a parity regression (Perl
-  now needs 6 m 19 s there and dies `token_limit`), but it wants its own dive.
-  See the re-measured banner in `diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`.
-  This also means the **TL2026 dump-gate blocker may be closer than recorded** —
+- **expl3 catcode gap closed; the "regressed" witness was a different bug — now
+  fixed.** 2112.11932 1003⇒0, 2110.10227 102⇒0, 2204.05282 86⇒0, 2110.12034
+  45⇒8. **2203.05327 78 ⇒ 411 ⇒ 0**: the 411 was NOT the catcode gap — it was one
+  amsmath `align` breaking (`\lx@begin@alignment` group/mode) because
+  `aligned-overset.sty` was raw-loaded under ar5iv; the `unexpected:_` flood was
+  downstream. Fixed with a near-no-op `aligned_overset_sty.rs` contrib binding
+  (411⇒0, 831 KB⇒5.1 MB whole paper; Perl still dies `token_limit` → beyond-Perl).
+  Guarded by `102_aligned_overset_includestyles.rs`.
+  The **TL2026 dump-gate blocker may still be closer than recorded** —
   re-run the init gate on a TL2026 host.
 - **ar5iv residuals — DONE (2026-07-20 second pass).** All three now have
   same-host Perl baselines; all resolve parity-or-Rust-better, none Rust-only.

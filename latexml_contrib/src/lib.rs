@@ -40,6 +40,7 @@ pub mod agujournal2019_cls;
 pub mod aistats2026_sty;
 pub mod alegreyasans_sty;
 pub mod aliascnt_sty;
+pub mod aligned_overset_sty;
 pub mod aomart_cls;
 pub mod apacite_sty;
 pub mod apxproof_sty;
@@ -390,6 +391,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("xr", "sty", xr_sty::load_definitions),
   ("xr-hyper", "sty", xr_sty::load_definitions),
   ("ar5iv", "sty", ar5iv_sty::load_definitions),
+  (
+    "aligned-overset",
+    "sty",
+    aligned_overset_sty::load_definitions,
+  ),
   ("arxbj", "cls", arxbj_cls::load_definitions),
   ("arydshln", "sty", arydshln_sty::load_definitions),
   ("autofe", "sty", autofe_sty::load_definitions),
