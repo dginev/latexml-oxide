@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <equation xml:id="S0.E1">
+      <tags>
+        <tag>(1)</tag>
+        <tag role="refnum">1</tag>
+      </tags>
+      <tabular class="ltx_markedasmath" vattach="bottom">
+        <tr>
+          <td class="ltx_nopad_r"/>
+          <td align="center" class="ltx_nopad_r"><Math mode="inline" tex="a" text="a" xml:id="S0.E1.m1.m1">
+              <XMath>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              </XMath>
+            </Math></td>
+          <td align="center" class="ltx_nopad_r"><Math mode="inline" tex="b" text="b" xml:id="S0.E1.m1.m2">
+              <XMath>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMath>
+            </Math></td>
+        </tr>
+        <tr>
+          <td align="center" class="ltx_nopad_r"><Math mode="inline" tex="\scriptstyle 1" text="1" xml:id="S0.E1.m1.m3">
+              <XMath>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMath>
+            </Math></td>
+          <td align="center" class="ltx_nopad_r"><Math mode="inline" tex="x" text="x" xml:id="S0.E1.m1.m4">
+              <XMath>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMath>
+            </Math></td>
+          <td align="center" class="ltx_nopad_r"><Math mode="inline" tex="y" text="y" xml:id="S0.E1.m1.m5">
+              <XMath>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMath>
+            </Math></td>
+        </tr>
+      </tabular>
+    </equation>
+  </para>
+  <para xml:id="p2">
+    <equation xml:id="S0.E2">
+      <tags>
+        <tag>(2)</tag>
+        <tag role="refnum">2</tag>
+      </tags>
+      <text class="ltx_markedasmath"><Math mode="inline" tex="\left[\vbox{\vbox{\vbox{\halign{\hfil$\scriptstyle#$\hfil&amp;&amp;\hfil$#$\hfil\cr&amp;a&amp;b\\&#10;1&amp;x&amp;y\\&#10;}}}}\right]" text="delimited-[]@(Array[[, a, b], [1, x, y]])" xml:id="S0.E2.m1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S0.E2.m1.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">[</XMTok>
+                <XMArray vattach="bottom" xml:id="S0.E2.m1.m1.1">
+                  <XMRow>
+                    <XMCell class="ltx_nopad_r"/>
+                    <XMCell align="center" class="ltx_nopad_r">
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    </XMCell>
+                    <XMCell align="center" class="ltx_nopad_r">
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    </XMCell>
+                  </XMRow>
+                  <XMRow>
+                    <XMCell align="center" class="ltx_nopad_r">
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMCell>
+                    <XMCell align="center" class="ltx_nopad_r">
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    </XMCell>
+                    <XMCell align="center" class="ltx_nopad_r">
+                      <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                    </XMCell>
+                  </XMRow>
+                </XMArray>
+                <XMTok role="CLOSE" stretchy="true">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></text>
+    </equation>
+  </para>
+</document>

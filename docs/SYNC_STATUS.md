@@ -112,6 +112,40 @@ rows (e.g. 8 panels → 2 rows of 4). Golden suite untouched (all-PNG/JPEG).
 Regression tests `figure_panel_native` + `figure_panel_unmeasured`. See WISDOM
 #62. Fig 2 → uniform 84.52pt → 3 rows of 4, 0 errors.
 
+### `\halign`-in-math runaway (Cluster H #2 / kbordermatrix) — ✅ LANDED 2026-07-20
+
+Rust Error Fix, **surpass-Perl**. The long-standing "HIGH difficulty, post-release"
+`\lx@begin@alignment`/`\halign`-in-math crash turned out to be a one-line
+**inherited-kernel-macro leak**, not deep frame surgery.
+
+Rust raw-loads `latex.ltx` into the kernel dump, so it has the real
+`\@arraycr`/`\@xarraycr` (L16583-16585); **Perl LaTeXML has neither**. That body
+balances TeX's `align_state` with ``${\ifnum0=`}\fi … \ifnum0=`{\fi}${}\cr``,
+valid only under a real `\halign` — digested by LaTeXML it re-opens an inline-math
+frame the alignment's column-after template cannot balance. Any macro using the
+documented `\bordermatrix` idiom `\let\\\@arraycr` inside its own `\ialign`
+therefore leaked → `Attempt to close a group that switched to mode math` → runaway.
+Fix: `Let!("\\@arraycr", "\\lx@alignment@newline")` in `latex_constructs.rs`,
+beside the `\@tabularcr` retraction Perl already performs
+(`latex_constructs.pool.ltxml:3612`).
+
+- **arXiv:2605.23849** (the Cluster H witness): ~149 s runaway → token-limit Fatal,
+  **0 formulae** ⇒ **1.9 s, 0 errors, 985 formulae / 8 XMArray, 1.34 MB**. Same-host
+  Perl: 52.7 s, 3 errors, identical 985/8 counts — so Rust is now faster AND
+  error-free at equal structure.
+- **arXiv:2605.05194** (found by corpus scan): 125 errors + `Fatal:TooManyErrors`
+  and a **39-byte** (empty) document ⇒ **0 errors, 422 KB**.
+- Breadth **6 / 6,000** 2605 papers (0.1%); the other hits are byte-unchanged.
+  Neutral by construction — no Rust binding and no `.ltxml` names `\@arraycr`.
+- Suite **1614/0**, clippy clean. Guard `tests/alignment/arraycr_halign`.
+
+**Two prior hypotheses were wrong; do not retry them.** (a) "Make `egroup`'s
+mode-switch recovery degrade like Perl" — Perl was *skipping* the matrix (its `\\`
+was undefined), not recovering, so matching its error count would have meant
+matching a content loss. (b) The `\lastbox`/`\unhbox` box-peel repro is a
+different, SHARED loop. See WISDOM #64 for the reusable bisection method
+(hand-expand the suspect macro) and `docs/known_crashes/kbordermatrix_halign_math/`.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail

@@ -399,14 +399,15 @@ is NOT one bug, and NOT a watchdog opportunity:
 
 | Witness | Perl (same host) | Rust root cause | Verdict |
 |---|---|---|---|
-| `2605.23849` | **completes 46s, 0 fatal** (recovers from undefined `\@arstrut`/`\\`) | `\kbordermatrix`'s `\ialign` (Main.tex line 647) has `$…##…$` cells; Rust's `\lx@begin@inline@math` opens a math-mode frame that collides with the `\halign` group close → `Error:unexpected:\halign Attempt to close a group that switched to mode math` → error cascade → `Fatal:Timeout:IfLimit` (16M) at ~95–107s. **`\halign`-in-math**, NOT the `\lastbox` box-peel (that was a red herring from an unfaithful synthetic repro — see below) | **GENUINE-RUST-ONLY** — deep alignment+math-mode |
+| `2605.23849` | 52.7s, **3 errors** (does NOT recover — `\@arraycr` is simply undefined in Perl, so it *skips* the construct) | ✅ **FIXED 2026-07-20.** Was: `\kbordermatrix` does `\let\\\@arraycr`, and Rust — unlike Perl — inherits the **real kernel `\@arraycr`** from the latex.ltx dump; its ``align_state`` brace/`$` trick is only valid under a real `\halign`, so it re-opened an inline-math frame the alignment could not balance → `Attempt to close a group that switched to mode math` → `Fatal:Timeout:IfLimit` at ~95–107s, 0 formulae. Fix = retract `\@arraycr` → `\lx@alignment@newline`, mirroring Perl's existing `\@tabularcr` retraction | was GENUINE-RUST-ONLY; **now surpass-Perl**: 1.9s / **0 errors** / 985 formulae vs Perl 52.7s / 3 errors (same 985 Math, 8 XMArray) |
 | `2606.21610` | too_many_errors, **1.2s** | `\IfFileExists{sn-jnl.cls}{…}{…}` used to *conditionally pick* `\documentclass` (Overleaf/Springer pattern) → called in **plain-TeX context before the LaTeX-format dump loads** → undefined → expansion reads past EOF unbalanced → `Fatal:Timeout:TokenLimit` (1B) at 106s | both fatal; Rust **loops where Perl caps** |
 | `2605.21013` | too_many_errors, **2.0s** | undefined-macro cascade (bundled `arxiv.cls`: `\usetikzlibrary`/`\pgfplotsset`/…) → `Fatal:Timeout:IfLimit` at 107s | both fatal; Rust **loops where Perl caps** |
 | `2606.13482` | **times out >250s** | fatal at 99s (Rust fails *faster* than Perl) | **PARITY** (both pathological) |
 
 **Verdict — BP-4 (no-progress watchdog) is RETIRED as a "beyond-Perl perf win."** It
-would abort `2605.23849`, which **Perl converts cleanly** → a strict regression. The
-three genuine issues are Rust runaway-loop bugs (all trip an *existing* high limit —
+would have aborted `2605.23849` (now fixed at the root, and note the premise was
+partly mis-stated: Perl does not "convert it cleanly", it skips the construct) → a
+strict regression. The three genuine issues are Rust runaway-loop bugs (all trip an *existing* high limit —
 16M IfLimit / 1B TokenLimit — ~100s in, so the safety net exists but late), each
 needing a faithful per-mechanism fix, not a blunt early-abort:
 1. **`\IfFileExists`-before-`\documentclass` → readBalanced/expansion spin past EOF**
@@ -416,20 +417,21 @@ needing a faithful per-mechanism fix, not a blunt early-abort:
    in a recovery state instead of terminating (Perl keeps emitting bounded errors →
    `too_many_errors` cap). Overlaps the deferred *read_balanced unbalanced-group leak*
    family ([[ar5iv-only-failure-xint-readbalanced-group-leak]]).
-2. **`\halign`-in-math cascade** (2605.23849; the clean Perl-completes regression).
-   **OPEN — HIGH difficulty, post-release.** Detailed record + minimal reproducer:
+2. **`\halign`-in-math cascade** (2605.23849) — ✅ **FIXED 2026-07-20**, and it was
+   **not** deep alignment surgery. Full record:
    [`../known_crashes/kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
-   `\kbordermatrix`'s `\ialign` cells are wrapped in `$…$`; the inline-math frame
-   (`\lx@begin@inline@math`) collides with the `\halign`/alignment group close →
-   `Error:unexpected:\halign Attempt to close a group that switched to mode math`
-   (stomach.rs egroup, `Main.tex:647`) → cascade → IfLimit. Perl instead just emits
-   the undefined-`\@arstrut`/`\\` errors and recovers (0.4s). Deep alignment +
-   math-mode (the `\lx@begin@alignment` family; cf. the full-arXiv 12.1k
-   `\lx@begin@alignment` cluster). **Investigated 2026-07-10** (perl-port): a minimal
-   `\lastbox`/`\unhbox` box-peel repro turned out to be a *different* hbox loop that
-   **also loops in Perl** (SHARED, not this bug) and misled toward an orthogonal fix
-   — see the hbox-marker note below. The witness's real failure is the
-   `\halign`-in-math cascade above.
+   Root: an **inherited-kernel-macro leak**, the `\+`-retraction class — Rust's dump
+   carries the real `\@arraycr` (latex.ltx L16583-16585), Perl has no such macro at
+   all. Fix = `Let!("\\@arraycr", "\\lx@alignment@newline")` in `latex_constructs.rs`,
+   directly beside the `\@tabularcr` retraction Perl already does. Suite 1614/0,
+   clippy clean, guard `tests/alignment/arraycr_halign`. Second witness recovered:
+   `2605.05194`, 125 errors + Fatal + a 39-byte (empty) document → 0 errors / 422 KB.
+   **Two prior hypotheses were both wrong and are recorded so they are not retried:**
+   (a) the 2026-07-10 "make `egroup`'s mode-switch recovery degrade like Perl"
+   framing — Perl was skipping the construct, not recovering from it; and (b) the
+   `\lastbox`/`\unhbox` box-peel repro, a *different* hbox loop that **also loops in
+   Perl** (SHARED). The decisive experiment was that hand-expanding `\@arraycr`
+   inline is clean in both engines while the macro itself fails.
 3. **undefined-cascade → IfLimit** (2605.21013). Same "error-recovery loops instead
    of advancing" theme as (1) but via `\ifX` not tokens.
 

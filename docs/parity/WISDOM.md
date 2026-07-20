@@ -2323,3 +2323,63 @@ the cause is never "the raw `.sty` won". It is that the `\usepackage` was never
 `latexml.sty.ltxml:27` — neither predefines it), so a bare `\iflatexml` errors
 `undefined` and falls into `\else` in BOTH implementations, byte-identically.
 That is parity, not a bug.
+
+## #64 "Perl recovers where Rust loops" can mean **Perl never had the macro** — inherited-kernel-macro leaks are a whole bug class
+
+Rust raw-loads `latex.ltx` into the kernel dump; **Perl LaTeXML does not**. So a
+control sequence can be *fully defined and TeX-faithful* in Rust while being
+plain `undefined` in Perl. When such a CS is a **raw TeX implementation of
+something LaTeXML models structurally**, digesting it is worse than not having
+it: LaTeXML's constructs do not implement the low-level machinery (`align_state`,
+`\lastbox`, `\futurelet`-driven brace juggling) the kernel body relies on.
+
+**Canonical case (2026-07-20, arXiv:2605.23849).** `\kbordermatrix` uses the
+documented `\bordermatrix` idiom `\let\\\@arraycr` inside its own `\ialign`.
+The kernel's `\@arraycr` (latex.ltx L16583-16585) is
+
+```tex
+\protected\def\@arraycr{${\ifnum0=`}\fi\@ifstar\@xarraycr\@xarraycr}
+\def\@xarraycr{\@ifnextchar[\@argarraycr{\ifnum0=`{\fi}${}\cr}}
+```
+
+— the `$`/brace pair exists purely to keep TeX's `align_state` balanced while
+`\halign` scans for `\cr`. LaTeXML has no `align_state`, so the `$`s are digested
+as real mode switches, re-opening an inline-math frame the alignment's
+column-*after* template can no longer balance:
+`Error:unexpected:\halign Attempt to close a group that switched to mode math`,
+then a runaway to the token limit (~149 s, 0 formulae). Perl "completed in 0.4 s"
+only because `\@arraycr` was undefined and it **skipped the whole matrix**.
+
+**Fix shape** — retract the entry point to LaTeXML's own model, exactly as Perl
+already does for the tabular sibling (`latex_constructs.pool.ltxml:3612`,
+`Let('\@tabularcr','\lx@alignment@newline')`):
+
+```rust
+Let!("\\@arraycr", "\\lx@alignment@newline");
+```
+
+Aliasing the *entry point* retracts the whole `\@xarraycr`/`\@argarraycr` chain,
+and `\lx@alignment@newline` already reads the same `*` and `[dim]` arguments.
+Result: 0 errors / 1.9 s / 985 formulae, vs Perl's 3 errors / 52.7 s — same 985
+`Math` and 8 `XMArray` counts, so structure is preserved, not degraded.
+
+**Three transferable rules.**
+
+1. **A Perl "0 errors" that comes from an `undefined` is not a target to match —
+   it is a construct Perl dropped.** Compare *structure counts* (formulae,
+   arrays, sections), not just error counts, before calling Perl the better
+   result. Here Perl's 3 errors WERE the whole bordered matrix going missing.
+2. **Bisect by hand-expanding the suspect macro.** Substituting `\@arraycr`'s
+   body inline was clean in both engines while the macro was not — that one
+   experiment moved the fault from "deep mode/frame accounting" (two people's
+   prior hypothesis, plus a reverted fix attempt) to "one inherited kernel
+   definition", and it is cheap to run.
+3. **Look for siblings whenever you find one.** The retraction list is a
+   deliberate seam: `\@tabularcr` and `\+` were already there; `\@arraycr` was
+   the missing third. When a kernel CS reimplements an alignment, box, or output
+   routine that LaTeXML models with `\lx@…` constructs, it belongs on that list.
+
+Neutrality argument worth reusing: the change is observable **only** by documents
+that name `\@arraycr` (no Rust binding and no `.ltxml` references it) — measured
+at **6 of 6,000** 2605 papers, three via the direct `\let`. See
+`docs/known_crashes/kbordermatrix_halign_math/`.
