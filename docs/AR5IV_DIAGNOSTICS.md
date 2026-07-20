@@ -242,6 +242,25 @@ re-tokenized); (c) table-cell `_` (2604.16007). **Approach.** Split by root: for
 `KNOWN_PERL_ERRORS.md`), fix only where Rust > Perl. **Value:** moderate; several
 are parity. **Test:** per-root min-repro.
 
+> **RE-SCREENED 2026-07-20 (current binary) — corrections:**
+> - **(c) `2604.16007` is PARITY (Rust better).** Same-host Perl = **89 errors**
+>   (same 60 `_` cascade + same undefined `\@ACM@balancefalse`/`\@ACM@pbalancefalse`/
+>   `\Cref`) vs Rust **63**. Not a Rust-only bug. Only the 2–3 undefined acmart
+>   internals are a Rust binding gap; the `_` bulk is shared. Skip.
+> - **(b) `2305.05665` — axessibility is NOT the cause (attribution was wrong).**
+>   A minimal `\usepackage[accsupp]{axessibility}` + `$x_1$` + `equation` is
+>   **0 errors** (the stub binding is harmless), and the paper reproduces its **33
+>   `unexpected:_` BARE** (no ar5iv / INCLUDE_STYLES) — so it is not an accsupp
+>   re-digestion and not ar5iv-specific. The 33 are macro-generated ("Anonymous
+>   String", `tex_math.rs:258`), source has only 3 `$`, so a macro emits `_` in
+>   text mode; the real trigger is **unidentified** (lives in an `\input`'d
+>   section/figure file). Same-host Perl is **very slow / hangs** (>3 min, killed).
+>   Needs a fresh dedicated dive — do not re-blame axessibility.
+> - `2602.15902` (minted 783, `\else`/`\ifmmode`) stays **parity**; `2412.06264`
+>   (`\or` flood 483) and `2311.06609` (siamart, first `\@tabbing@=` undefined 82)
+>   stay **deep** (P6 / P2 alignment cluster). This round's only Rust-only win was
+>   `aligned-overset` (2203.05327, landed — see EXPL3_CATCODE_GAP doc).
+
 ## P6 — Residuals on already-improved papers
 
 - **2412.06264 (#520) `\or` flood (337, all at `\end{document}`).** The fairmeta
