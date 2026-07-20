@@ -55,7 +55,7 @@ ranked worklist for the follow-on implementation sprint.
 > | #596 | 2505.01658 | TIMEOUT | 1 err, 10.8 s, 1.6 MB |
 > | #533 | 2406.15882 | TIMEOUT | 2 err, 39.7 s, 3.9 MB |
 > | #471 | 2308.04512 | TIMEOUT 7 | 7 err, 36.7 s, 11.5 MB |
-> | #522 | 2405.19920 | TIMEOUT | still fails — `Fatal:Stomach:Recursion` at **11 s** (was a wall-clock hang) |
+> | #522 | 2405.19920 | TIMEOUT | `Fatal:Stomach:Recursion` at 11 s, but now emits **1.82 MB** — 6 sections + 80 bibitems, ~the whole paper (partial-output salvage). Same-host Perl: **5 min, 0 bytes** |
 > | #551 | 2501.10235 | TIMEOUT | still fails — `Fatal:Timeout:Recursion` at **6 s**, cycle guard, window `} { ; , ,` |
 > | #599 | 1802.01134 | TIMEOUT | still fails — `Fatal:Timeout:TokenLimit` at 42 s; ring shows the pgf colour path (`\pgf@setcolor`/`\pgfsys@color@rgb` probe) churning |
 >
@@ -64,8 +64,16 @@ ranked worklist for the follow-on implementation sprint.
 > (2311.06609, 82) and #591 (2602.15902, 783 — parity) are unchanged.
 >
 > The three residuals all now **fail fast and cleanly** (6–42 s) instead of
-> hanging, so they are fidelity losses rather than resource hazards. Get a 1×
-> Perl baseline before calling any of them Rust-only.
+> hanging, so they are fidelity losses rather than resource hazards. 1× Perl
+> baselines captured for two of them and BOTH are **parity**: `1802.01134`
+> and `2405.19920` each run **5 minutes in Perl and produce 0 bytes**.
+>
+> Separately, **#556 `2508.07407`** — the `Stomach:Recursion` witness whose
+> notes claimed it already degraded gracefully — was in fact producing a
+> **0-byte** document; it now yields 31 KB (title/authors/abstract). See
+> `SYNC_STATUS.md` "A recoverable Fatal no longer throws the whole document
+> away". The tikz `calc` loop itself is still open; only the blast radius
+> changed, from losing the paper to losing the picture.
 >
 > **⚠️ Harness warning, hit twice while producing this table.** `ls *.tex |
 > head -1` and `grep -rl '\begin{document}' | head -1` BOTH pick the wrong main
