@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:m="http://www.w3.org/1998/Math/MathML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <equationgroup class="ltx_eqn_align" xml:id="S0.EGx1">
+      <equation xml:id="S0.Ex1">
+        <MathFork>
+          <Math tex="\displaystyle y=xp+\frac{1}{p}" text="y = x * p + 1 / p" xml:id="S0.Ex1.m3">
+            <XMath>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMApp>
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                    <XMTok meaning="1" role="NUMBER">1</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMath>
+            <m:math alttext="\displaystyle y=xp+\frac{1}{p}" display="inline"><m:mrow><m:mi>y</m:mi><m:mo>=</m:mo><m:mrow><m:mrow><m:mi>x</m:mi><m:mo>⁢</m:mo><m:mi>p</m:mi></m:mrow><m:mo>+</m:mo><m:mstyle displaystyle="true"><m:mfrac><m:mn>1</m:mn><m:mi>p</m:mi></m:mfrac></m:mstyle></m:mrow></m:mrow></m:math></Math>
+          <MathBranch>
+            <td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.Ex1.m1"><XMath>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMath><m:math alttext="\displaystyle y" display="inline"><m:mi>y</m:mi></m:math></Math></td>
+            <td align="left"><Math mode="inline" tex="\displaystyle=xp+\frac{1}{p}" text="absent = x * p + 1 / p" xml:id="S0.Ex1.m2"><XMath>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                        <XMTok meaning="1" role="NUMBER">1</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMath><m:math alttext="\displaystyle=xp+\frac{1}{p}" display="inline"><m:mrow><m:mi/><m:mo>=</m:mo><m:mrow><m:mrow><m:mi>x</m:mi><m:mo>⁢</m:mo><m:mi>p</m:mi></m:mrow><m:mo>+</m:mo><m:mstyle displaystyle="true"><m:mfrac><m:mn>1</m:mn><m:mi>p</m:mi></m:mfrac></m:mstyle></m:mrow></m:mrow></m:math></Math></td>
+          </MathBranch>
+        </MathFork>
+      </equation>
+      <equation xml:id="S0.Ex2">
+        <MathFork>
+          <Math tex="\displaystyle=xf\left(p\right)+g\left(p\right)" text="absent = x * f * p + g * p" xml:id="S0.Ex2.m2">
+            <XMath>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok meaning="absent"/>
+                <XMApp>
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                    <XMDual>
+                      <XMRef idref="S0.Ex2.m2.1"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m2.1">p</XMTok>
+                        <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMDual>
+                      <XMRef idref="S0.Ex2.m2.2"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m2.2">p</XMTok>
+                        <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMath>
+            <m:math alttext="\displaystyle=xf\left(p\right)+g\left(p\right)" display="inline"><m:mrow><m:mi/><m:mo>=</m:mo><m:mrow><m:mrow><m:mi>x</m:mi><m:mo>⁢</m:mo><m:mi>f</m:mi><m:mo>⁢</m:mo><m:mrow><m:mo>(</m:mo><m:mi>p</m:mi><m:mo>)</m:mo></m:mrow></m:mrow><m:mo>+</m:mo><m:mrow><m:mi>g</m:mi><m:mo>⁢</m:mo><m:mrow><m:mo>(</m:mo><m:mi>p</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow></m:mrow></m:math></Math>
+          <MathBranch>
+            <td/>
+            <td align="left"><Math mode="inline" tex="\displaystyle=xf\left(p\right)+g\left(p\right)" text="absent = x * f * p + g * p" xml:id="S0.Ex2.m1"><XMath>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                        <XMDual>
+                          <XMRef idref="S0.Ex2.m1.1"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="true">(</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1">p</XMTok>
+                            <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                        <XMDual>
+                          <XMRef idref="S0.Ex2.m1.2"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="true">(</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">p</XMTok>
+                            <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMath><m:math alttext="\displaystyle=xf\left(p\right)+g\left(p\right)" display="inline"><m:mrow><m:mi/><m:mo>=</m:mo><m:mrow><m:mrow><m:mi>x</m:mi><m:mo>⁢</m:mo><m:mi>f</m:mi><m:mo>⁢</m:mo><m:mrow><m:mo>(</m:mo><m:mi>p</m:mi><m:mo>)</m:mo></m:mrow></m:mrow><m:mo>+</m:mo><m:mrow><m:mi>g</m:mi><m:mo>⁢</m:mo><m:mrow><m:mo>(</m:mo><m:mi>p</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow></m:mrow></m:math></Math></td>
+          </MathBranch>
+        </MathFork>
+      </equation>
+      <equation xml:id="S0.Ex3">
+        <MathFork>
+          <Math tex="\displaystyle\leq q" text="absent &lt;= q" xml:id="S0.Ex3.m2">
+            <XMath>
+              <XMApp>
+                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                <XMTok meaning="absent"/>
+                <XMTok font="italic" role="UNKNOWN">q</XMTok>
+              </XMApp>
+            </XMath>
+            <m:math alttext="\displaystyle\leq q" display="inline"><m:mrow><m:mi/><m:mo>≤</m:mo><m:mi>q</m:mi></m:mrow></m:math></Math>
+          <MathBranch>
+            <td/>
+            <td align="left"><Math mode="inline" tex="\displaystyle\leq q" text="absent &lt;= q" xml:id="S0.Ex3.m1"><XMath>
+                  <XMApp>
+                    <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMTok font="italic" role="UNKNOWN">q</XMTok>
+                  </XMApp>
+                </XMath><m:math alttext="\displaystyle\leq q" display="inline"><m:mrow><m:mi/><m:mo>≤</m:mo><m:mi>q</m:mi></m:mrow></m:math></Math></td>
+          </MathBranch>
+        </MathFork>
+      </equation>
+    </equationgroup>
+  </para>
+</document>

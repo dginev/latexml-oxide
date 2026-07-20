@@ -1006,17 +1006,32 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
     // (e.g. the LHS of a continuation row `& = ...` in `align*` whose
     // LHS is inherited from the previous row, or a prefix operator
     // applied with no left argument). At the MathML Presentation
-    // layer we materialize this as an EMPTY `<m:mrow></m:mrow>` —
-    // not `<m:mi></m:mi>`. `<m:mi>` is a semantic assertion ("here
-    // is a mathematical identifier") with no defined meaning when
-    // empty; renderers vary, screen readers announce "blank" or
-    // skip awkwardly, and search/indexing tools pollute their
-    // index with content-free identifier tokens. `<m:mrow>` is
-    // presentational grouping without a semantic claim — well-
-    // defined for empty content (zero-width, no announcement).
-    // Task #264.
+    // layer we materialize it as an EMPTY `<m:mphantom/>` — deliberately NOT
+    // the `<m:mi/>` Perl uses (`MathML.pm:1474`). `<m:mi>` is a semantic
+    // assertion ("here is an identifier") with no defined meaning when empty:
+    // renderers vary, screen readers announce "blank", indexers ingest a
+    // content-free token. That antipattern is enforced against downstream by a
+    // `debug_assert!` in `latexml_post/src/document.rs`, which refuses to
+    // materialize an empty `<m:mi>` by any route. Task #264.
+    //
+    // `<m:mphantom>` rather than a bare `<m:mrow>` because it says exactly what
+    // this node is: content that occupies layout space but is not rendered.
+    // A bare `<m:mrow>` is merely "a group", leaving a reader (human or AT) to
+    // infer why an empty one is there; `mphantom`'s whole definition is
+    // "invisible placeholder", which is precisely the operand slot's job.
+    // Measured equivalent in rendering: an inline `= q` is 35.58px in Chrome
+    // with an empty `mphantom`, an empty `mrow`, an empty `mi`, or no slot at
+    // all — so the choice is free at the pixel level and decided on clarity.
+    //
+    // What matters for rendering is only that the slot EXISTS: MathML infers
+    // an `<mo>`'s form from its position, so a sibling — of either element —
+    // keeps the operator infix. Dropping the slot is what broke issue #312;
+    // see `pmml_infix`. Because our placeholder differs from Perl's, the
+    // `tests/post/alignrows` guard asserts the STRUCTURE (the operator is not
+    // its `<mrow>`'s first child) rather than diffing against a Perl golden —
+    // a diff budget cannot tell "different placeholder" from "no placeholder".
     return NodeData::Element {
-      tag:        "m:mrow".to_string(),
+      tag:        "m:mphantom".to_string(),
       attributes: None,
       children:   vec![],
     };
@@ -1571,52 +1586,43 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   if args.is_empty() {
     return op_mml;
   }
-  // For Presentation MathML we suppress XMath's `absent` placeholders
-  // entirely — they exist to satisfy the content-arm structural
-  // contract (every binary application has 2 operands), but materializing
-  // them as visible MathML degrades accessibility (screen readers
-  // announce a blank/empty group, indexers see a spurious atom).
+  // XMath's `absent` placeholders KEEP their slot here. They exist to satisfy
+  // the content-arm contract (every binary application has 2 operands), and it
+  // is tempting to drop them so no empty box reaches the output — but in
+  // Presentation MathML an operand slot is what makes the operator INFIX.
   //
-  // The shape decision depends on WHICH operand is absent:
-  //   - absent left, real right (`Apply(=, absent, RHS)`) → prefix: <mrow><mo>=</mo><RHS></mrow>
-  //     (continuation row `& = RHS` whose LHS is inherited from the previous row — see
-  //     prefix_relop_apply in semantics.rs)
-  //   - real left, absent right (`Apply(=, LHS, absent)`) → postfix: <mrow><LHS><mo>=</mo></mrow>
-  //     (trailing relop — see postfix_relop in semantics.rs)
-  //   - real left, real right (normal case) → infix: <mrow><LHS><mo>=</mo><RHS></mrow>
-  //   - both absent → just the operator.
+  // MathML infers an `<mo>`'s form from its position: first child of its
+  // `<mrow>` ⇒ prefix, last ⇒ postfix, otherwise infix — and the form selects
+  // the operator-dictionary spacing. Dropping the absent LHS of a continuation
+  // row (`& = RHS` in an `align`, whose LHS is inherited from the row above)
+  // makes `<mo>=</mo>` the first child, so renderers give it *prefix* spacing
+  // and the `=` column stops lining up. That is issue #312 — reported against
+  // 0.7.5-rc1 as "the alignment is all off around `=`", and visible in both
+  // native MathML and MathJax.
   //
-  // For the chained case (n≥3 args), drop only absents that are
-  // strictly at the boundary (leading or trailing). Interior absents
-  // — if any — keep their slot since omitting would change the
-  // operand-count interpretation of the chain.
-  // Task #264 step 2.
-  let leading_absent = is_absent_operand(&args[0]);
-  let trailing_absent = args.len() >= 2 && is_absent_operand(&args[args.len() - 1]);
-  let slice_start = if leading_absent { 1 } else { 0 };
-  let slice_end = if trailing_absent {
-    args.len() - 1
-  } else {
-    args.len()
-  };
-  let live_args = &args[slice_start..slice_end];
+  // Keeping the slot costs nothing in accessibility, because `pmml_token`
+  // renders an `absent` token as an EMPTY `<m:mrow/>` — presentational grouping
+  // with no semantic claim, zero-width and unannounced. That is a strict
+  // improvement on Perl, which emits an empty `<m:mi/>` here
+  // (`MathML.pm:1474` `DefMathML("Token:?:absent", …)`): same spacing, but
+  // without asserting "here is an identifier" for content that has none.
+  //
+  // NB the genuine unary case is unaffected and must stay: `Apply(-, x)` has
+  // ONE arg and no absent, and still renders prefix via the Perl `pmml_infix`
+  // L632 rule below ("Infix with 1 arg is presumably Prefix").
+  // Task #264 — which proposed suppressing the placeholder; that is what
+  // regressed the spacing, so the item is closed in the other direction.
+  let live_args = args;
 
   if live_args.is_empty() {
     return op_mml;
   }
   if live_args.len() == 1 {
     let arg_mml = pmml(doc, &live_args[0]);
-    return if trailing_absent {
-      // Trailing-relop postfix: `<arg> <mo>op</mo>` (real left, absent right — e.g. a
-      // trailing relop `LHS =` continued on the next alignment row).
-      pmml_row(vec![arg_mml, op_mml])
-    } else {
-      // Single operand is rendered PREFIX. Port of Perl `pmml_infix` L632:
-      // "Infix with 1 arg is presumably Prefix! (aka Operator)". Covers genuine unary
-      // operators (`-21`, `+x`) AND the leading-absent continuation row (`& = RHS`,
-      // whose LHS is inherited from the previous row): `<mo>op</mo> <arg>`.
-      pmml_row(vec![op_mml, arg_mml])
-    };
+    // Single operand is rendered PREFIX. Port of Perl `pmml_infix` L632:
+    // "Infix with 1 arg is presumably Prefix! (aka Operator)" — genuine unary
+    // operators (`-21`, `+x`).
+    return pmml_row(vec![op_mml, arg_mml]);
   }
   let mut items = vec![pmml(doc, &live_args[0])];
   for arg in &live_args[1..] {
