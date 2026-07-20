@@ -1296,18 +1296,20 @@ fn listoffigures_lists_figures_not_toc_sections() {
   );
 }
 
-/// Issue #293: `\subimport`ing a `standalone` child whose preamble is
-/// `\documentclass{article}` warned `missing_file:article` because the
-/// `\@standalone@documentclass[]{}` intercept required the WRONG argument.
-/// Perl `standalone.sty.ltxml` L24-33 binds `$packages = $_[1]` = the OPTIONAL
-/// `[]` list and RequirePackages *that*, ignoring the mandatory class name; the
-/// Rust port instead required the mandatory `{}` (the class), so
-/// `\documentclass{article}` → `RequirePackage("article")` → miss → spurious
-/// warning. The child body always rendered; only the warning was wrong.
-/// Witness = the issue's index.tex + child.tex.
+/// Issues #293 and #309: neither argument of a subimported child's
+/// `\documentclass` is a package list, but the `\@standalone@documentclass[]{}`
+/// intercept used to RequirePackage both in turn — the mandatory class name
+/// (#293: `\documentclass{article}` → `missing_file:article`) and then the
+/// optional class options (#309: `\documentclass[12pt]{article}` →
+/// `missing_file:12pt`). Both are spurious; the child body always rendered.
+///
+/// The optional list is required only for a `{standalone}` child, and only for
+/// options that `standalone.cls` itself turns into a package load — see
+/// OXIDIZED_DESIGN #63 for why this diverges from Perl, which requires every
+/// option of every class.
 #[test]
 fn standalone_subimport_documentclass_no_spurious_require() {
-  // No optional args ⇒ nothing required ⇒ no warning (the bug).
+  // No optional args ⇒ nothing required (#293).
   let log = convert_log("tests/cluster_regressions/subimport/index.tex");
   assert!(
     !log.contains("missing_file") && !log.contains("Can't find binding or file for 'article"),
@@ -1320,17 +1322,57 @@ fn standalone_subimport_documentclass_no_spurious_require() {
     "#293: the subimported child body was lost:\n{xml}"
   );
 
-  // Guard the OTHER half: the OPTIONAL `[]` list IS still required (Perl
-  // parity), so a bogus optional package DOES warn — proving we honor the
-  // optional arg and only ignore the mandatory class name.
+  // #309's witness: `[12pt]{article}`. The class is not `standalone`, so its
+  // options are ordinary class options and none of them is a package.
   let log_opt = convert_log("tests/cluster_regressions/subimport/index_opt.tex");
   assert!(
-    log_opt.contains("zzznope"),
-    "#293 guard: the optional `[zzznope]` must still be RequirePackage'd (Perl \
-     requires the bracket list):\n{log_opt}"
+    !log_opt.contains("missing_file"),
+    "#309: class options of a non-standalone child must NOT be RequirePackage'd \
+     (`[12pt]` is a size option, not 12pt.sty):\n{log_opt}"
   );
   assert!(
-    !log_opt.contains("Can't find binding or file for 'article"),
-    "#293 guard: the mandatory class name must stay ignored even with options:\n{log_opt}"
+    convert_to_xml("tests/cluster_regressions/subimport/index_opt.tex")
+      .contains("child with class options"),
+    "#309: the subimported child body was lost"
+  );
+
+  // Guard the other half — the reason the RequirePackage loop exists at all
+  // (upstream LaTeXML#1432 wanted `\documentclass[tikz]{standalone}` to load
+  // tikz). For a `{standalone}` child the package-loading options must still
+  // load, while its non-package options stay quiet. The child *uses* varwidth,
+  // so the load is observable: drop `varwidth` from CLASS_OPTION_PACKAGES and
+  // this reports `Error:undefined:{varwidth}`.
+  let log_sa = convert_log("tests/cluster_regressions/subimport/index_sa.tex");
+  assert!(
+    !log_sa.contains("undefined"),
+    "#309 guard: a `{{standalone}}` child's package-loading options (here \
+     `varwidth`, as `tikz` in LaTeXML#1432) must still be required:\n{log_sa}"
+  );
+  assert!(
+    !log_sa.contains("missing_file"),
+    "#309 guard: `border=2pt` is handled by standalone.cls, not a package:\n{log_sa}"
+  );
+
+  // Every one of these options also has a VALUED form — `\sa@boolorvalue`
+  // takes `varwidth=5cm` and `tikz=true` just like the bare words
+  // (standalone.sty L815-824) — and values may be brace groups containing
+  // commas. Matching whole comma-split items missed all of that:
+  // `[varwidth=5cm]` reported `Error:undefined:{varwidth}` while pdflatex was
+  // clean. Reading the argument as `OptionalKeyVals` and matching on the KEY
+  // is what makes these equivalent, so guard the valued form explicitly.
+  let log_saval = convert_log("tests/cluster_regressions/subimport/index_saval.tex");
+  assert!(
+    !log_saval.contains("undefined"),
+    "#309: a VALUED package option (`varwidth=5cm`) must load its package just \
+     like the bare `varwidth`:\n{log_saval}"
+  );
+  assert!(
+    !log_saval.contains("missing_file"),
+    "#309: `border={{1pt 2pt}}` — a brace group with a space — is not a package:\n{log_saval}"
+  );
+  assert!(
+    convert_to_xml("tests/cluster_regressions/subimport/index_saval.tex")
+      .contains("VALUED class options"),
+    "#309: the subimported child body was lost"
   );
 }
