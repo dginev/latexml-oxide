@@ -2160,3 +2160,51 @@ and still reachable via `kbordermatrix` (HIGH-DIFFICULTY, post-release).~~
 *(Retracted — see the banner at the top of this entry.)* Full
 analysis: [`docs/known_crashes/blkarray_halign_math/`](../known_crashes/blkarray_halign_math/README.md)
 + sibling [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
+
+## 54. `standalone.sty` requires a subimported child's class OPTIONS as packages
+
+`standalone.sty.ltxml` L24-33 intercepts a sub-document's `\documentclass` and
+`RequirePackage`s the comma-split **optional** argument:
+
+```perl
+DefPrimitive('\@standalone@documentclass[]{}', sub {
+    my ($stomach, $packages) = @_;          # $packages = the OPTIONAL [] arg
+    $stomach->bgroup;
+    AssignValue(inPreamble => 1);
+    for my $package (split(",", ToString($packages))) { RequirePackage($package); }
+```
+
+That argument holds **class options**, not package names, and the loop is
+ungated, so any option that does not happen to name a package misses. Minimal
+trigger (`index.tex` + `child.tex` in one directory):
+
+```latex
+% index.tex
+\documentclass[12pt]{book}
+\usepackage{import}\usepackage{standalone}
+\begin{document}\subimport*{./}{child.tex}\end{document}
+
+% child.tex
+\documentclass[12pt]{article}
+\begin{document}child\end{document}
+```
+
+Perl: `Warning:missing_file:12pt Can't find binding for package 12pt at child.tex;
+line 1 col 1` → `Conversion complete: 1 warning; 1 missing file[12pt.sty]`.
+`\documentclass[border=2pt]{standalone}` misses the same way. Content is never
+lost — the damage is a false `missing_file` in the log and the missing-file tally.
+
+The package being emulated disagrees: `standalone.sty` L604-614 consults a
+subfile's class options only when the subfile's class is literally `standalone`
+(and only under `obeyclassoptions`, which `\newif` defaults to **false**), then
+feeds them to a keyval family rather than `\RequirePackage`.
+
+**Fixed in Rust** (`latexml_package/src/package/standalone_sty.rs`): the loop is
+gated on the class being `standalone` and on the option being one that
+`standalone.cls` itself turns into a same-named package load (`tikz`, `pstricks`,
+`preview`, `varwidth`, `multido`) — preserving upstream LaTeXML#1432's
+`\documentclass[tikz]{standalone}`, which is why the loop exists. See
+OXIDIZED_DESIGN #63; regression test
+`06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`.
+The mandatory half of the same defect (`\documentclass{article}` →
+`missing_file:article`) was issue #293. Candidate to upstream.

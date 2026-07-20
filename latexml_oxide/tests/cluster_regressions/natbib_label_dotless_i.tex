@@ -14,6 +14,17 @@
 \usepackage{siunitx}\usepackage[caption=false]{subfig}\usepackage[hidelinks, colorlinks]{hyperref}
 \begin{document}
 Body text.
+% The `\providecommand` preamble every revtex4-1 `.bbl` (aipnum4-1.bst) emits
+% ahead of \begin{thebibliography}. \citenamefont et al. are supplied by the
+% .bbl itself -- NOT by natbib/revtex -- so a faithful reproducer must define
+% them here; without them both Perl and Rust (correctly) log
+% `undefined:\citenamefont`. Keeping them makes the loop-guard stronger too:
+% \citenamefont{...} now actually expands to the dotless \i during
+% \lx@NAT@parselabel, exercising the exact path the guard protects.
+\providecommand \bibnamefont  [1]{#1}%
+\providecommand \bibfnamefont [1]{#1}%
+\providecommand \citenamefont [1]{#1}%
+\providecommand \natexlab     [1]{#1}%
 \begin{thebibliography}{9}
 \bibitem [{\citenamefont {M{\'\i}guez}(2009)}]{miguez2009}%
 A reference with a dotless-i author name.

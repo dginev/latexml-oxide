@@ -9,15 +9,17 @@
 >
 > **Refresh** before milestone planning:
 > `gh issue list --state open --limit 100 --json number,title,labels,createdAt`.
-> Last refreshed: **2026-07-20** (10 open). The 2026-07-19 stamp was wrong on two
-> counts, worth knowing as a failure mode of this file: it still listed #192 and
-> #82 as open although both closed **2026-07-17**, and it missed #297/#303 which
-> were filed **2026-07-18**, i.e. before that refresh. Re-run the one-liner rather
-> than incrementally editing rows.
+> Last refreshed: **2026-07-20** (17 open, from `gh issue list`). This is a
+> reconciled refresh across two same-day edits: one closed the #304/#305/#307
+> user-report cluster and #309, the other corrected the stale #192/#82 rows (both
+> closed **2026-07-17**) and added #297/#303. Ground truth then moved again — #309
+> closed (PR #310 merged), and a fresh **#314–#321 Rhai binding-API** cluster was
+> filed the same day. Both are reflected below. Failure mode worth knowing: this
+> file drifts fast — re-run the one-liner rather than incrementally editing rows.
 
 Tracker: <https://github.com/dginev/latexml-oxide/issues>
 
-## Open issues (10)
+## Open issues (17)
 
 | # | Title | Labels | Local status / interpretation |
 |---|---|---|---|
@@ -27,15 +29,23 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 | **94** | Document model: RelaxNG vs Rust data-type trade-offs | enhancement, question, documentation | Doc debt; relates to the (closed) #199 HTML-dialect schema and [`SCHEMA_DOCUMENTATION.md`](../performance/SCHEMA_DOCUMENTATION.md). |
 | **297** | latexml_oxide 0.7.4 binding transition: `nowrap.sty.ltxml` | documentation, packages | Filed 2026-07-18. A user-supplied `.ltxml` binding on `--path` is ignored: `Warning:missing_file:nowrap … No dispatcher entry and no raw file found on disk` (`latexml_core/src/binding/content.rs`). Perl finds it silently. This is the **user-supplied `.ltxml` discovery** path — `.ltxml` is Perl, so the Rust answer is either the Rhai `runtime-bindings` front-end or a clear diagnostic; today it is neither. |
 | **303** | Precompiled kernel (dump) release and update strategy | enhancement | Filed 2026-07-18, follow-up to #299/PR #300. The dump is keyed to the TL **year**, but the LaTeX format is not frozen within a year (`\fmtversion`, `tlmgr` `fmttriggers` rebuilds) — a false positive was traded for a rarer false negative. Candidate signals: key on `\fmtversion` + L3 date, or compare against the ambient `latex.fmt` mtime; warn-not-fail. |
-| **309** | 0.7.5-rc1: unable to import latex file with options on class | bug | Filed 2026-07-20. `\subimport*` of a child whose `\documentclass[12pt]{article}` makes the engine look for a *file* named `12pt`. Same family as closed #293. **PR #310 is open with a fix.** |
 | **311** | Raw-loaded package `\newif` conditionals die with the standalone subfile group | bug | Filed 2026-07-20. **Explicitly NOT Rust-only** — same-host Perl reports the identical error, and `standalone.sty.ltxml` uses the same `bgroup` architecture. General shape: any raw-loaded package pairing a `\newif` with a document-level hook (`\ifpgf@external@grabshipout` + `\AtEndDocument`). Two fixes tried and refuted (hoisting the `RequirePackage`; `\globaldefs=1`). Related to the group-scoping class in `SYNC_STATUS.md`. |
-| **312** | 0.7.5-rc1: many problems rendering math | (none) | Filed 2026-07-20 — **newest, untriaged.** Self-contained `amsmath` reproducer in the issue body (`\left( … \right)` spacing, `\tag`, `align`/`align*`, `\prime`). Needs the usual same-host Perl + pdflatex classification before any code change. |
+| **312** | 0.7.5-rc1: many problems rendering math (default CSS) | (none) | Filed 2026-07-20 — **untriaged.** Self-contained `amsmath` reproducer in the issue body (`\left( … \right)` spacing, `\tag`, `align`/`align*`, `\prime`). Needs the usual same-host Perl + pdflatex classification before any code change. |
+| **314** | panic in Rhai binding API | bug | Filed 2026-07-20. Part of the Rhai `runtime-bindings` front-end feedback cluster (#314–#321) — the only **bug** of the set; the rest are API-surface enhancements. Untriaged; needs the panicking binding reproducer from the issue. [`script_bindings_plan.md`](../parity/script_bindings_plan.md). |
+| **315** | unclear semantics of `LookupString` in Rhai binding API | documentation, packages | Filed 2026-07-20. Rhai-API doc/semantics gap. Cluster #314–#321. |
+| **316** | not possible to call `DefPrimitive` from `DefPrimitive`? | enhancement | Filed 2026-07-20. Rhai-API expressiveness gap (nested primitive definition). Cluster #314–#321. |
+| **317** | allow extra parameter of `RequireResource` in Rhai binding API | enhancement | Filed 2026-07-20. Rhai-API surface gap. Cluster #314–#321. |
+| **318** | allow external commands in Rhai bindings | enhancement | Filed 2026-07-20. Rhai-API surface gap. Cluster #314–#321. |
+| **319** | missing `Info`, `Fatal`, `NoteSTDERR`, `NoteLog`, progress spinners, etc. in Rhai binding API | enhancement | Filed 2026-07-20. Rhai-API diagnostics surface gap. Cluster #314–#321. |
+| **320** | expose the latexml-oxide version to Rhai bindings | enhancement | Filed 2026-07-20. Rhai-API surface gap. Cluster #314–#321. |
+| **321** | add `LookupDefinition` to Rhai bindings | enhancement | Filed 2026-07-20. Rhai-API surface gap. Cluster #314–#321. |
 | **80** | space XMhints as elided arguments | enhancement | **Open — still reproduces (verified 2026-06-16).** `$[D_{0},\ ]$` → the escaped space is dropped, so the grammar sees a dangling `,]` and rejects. Fix = emit an XMHint for the in-math space and teach the marpa grammar to treat it as an elided argument slot. Real grammar work, not a quick win. Backlog. |
 
 ## Recently closed (since the 2026-05-24 refresh — outcomes)
 
 | # | Closed | Outcome |
 |---|---|---|
+| **309** | 2026-07-20 (PR) | **Shared upstream bug, fixed ahead of Perl.** `\subimport`ing a child whose preamble is `\documentclass[12pt]{article}` warned `missing_file:12pt`: `standalone.sty.ltxml` L24-33 `RequirePackage`s the comma-split **optional** argument of the intercepted `\documentclass`, but that argument holds class *options*, not packages. Same-host Perl warns identically, so the fix is a documented divergence (OXIDIZED_DESIGN #63, KNOWN_PERL_ERRORS #54) rather than a straight patch. The loop is now gated as `standalone.sty` L604-614 gates it — class must be `standalone` — and further limited to the options `standalone.cls` turns into a same-named package load (`tikz`, `pstricks`, `preview`, `varwidth`, `multido`), which preserves upstream LaTeXML#1432's `\documentclass[tikz]{standalone}`. Also fixes `[border=2pt]{standalone}`. Follow-on to #293 (the mandatory-argument half). Guard: `06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`. |
 | **192** | 2026-07-17 | Compile-time string interning. (Was still listed as open in the 2026-07-19 refresh.) |
 | **82** | 2026-07-17 | Manually copy perldoc over as rustdoc. (Was still listed as open in the 2026-07-19 refresh.) |
 | **304** | 2026-07-19 | **Not reproducible — environment, not latexml_oxide.** "TEXINPUTS ignored for `\input{my_core}`" on a Linux Mint VirtualBox guest with the tree on a `/mnt/g` shared-folder mount. Unreproducible here across five matched factors (multi-part `TEXINPUTS`, trailing/empty colons, `//` recursion, a real `st_nlink=1` ntfs-3g mount, the bundled TL2025 lib). Resolved on the reporter's side by rebooting the VM; their `KPATHSEA_DEBUG=32` log then showed `TEXINPUTS` reaching the process, libkpathsea initialized, and the file resolving — positively excluding our resolver paths. **Two real defects were nevertheless found while investigating** (PR #308): (a) `select_kpaths()` discarded a failed `Kpaths::new()` with `.ok()?`, silently disabling ALL file resolution — fixed upstream in kpathsea 0.3.4 (dginev/rust-kpathsea#25, degrading program-name anchor) plus a subprocess fallback here; (b) a per-lookup subprocess fallback added mid-investigation cost one `kpsewhich` spawn per distinct missing file (30 spawns / 20 missing packages; 2.54 s against a 0.20 s conversion) — removed. **Durable outcome:** every conversion log now records the resolved kpathsea backend, so this class of report is diagnosable from an ordinary log. Guard: `003_kpathsea_backend_resolution.rs`. |
