@@ -146,6 +146,54 @@ matching a content loss. (b) The `\lastbox`/`\unhbox` box-peel repro is a
 different, SHARED loop. See WISDOM #64 for the reusable bisection method
 (hand-expand the suspect macro) and `docs/known_crashes/kbordermatrix_halign_math/`.
 
+### Stale-autoload-trigger runaway (Cluster H #1 + #3) — ✅ LANDED 2026-07-20
+
+Rust Error Fix. The remaining two Cluster H runaways — long framed as "Rust
+error-recovery *loops* where Perl keeps *advancing*" and expected to need
+separate per-mechanism gullet surgery — were **one bug**, in `def_autoload`
+(`latexml_engine/src/tex.rs`).
+
+The autoload closure's "package already loaded → just re-emit the trigger CS"
+branch is correct only when a **different** CS was `\let` to the trigger (the
+`\varmathbb` case it was written for, arXiv:2310.13684). But `<pkg>.sty_loaded`
+is assigned **globally** while the package's macros install at the current
+frame, so loading a package or class **inside a group** pops the macros and
+keeps the flag — leaving the globally installed trigger as the CS's only
+definition. It then re-emits *itself* forever, and because it emits **no
+`Error:`**, the `too_many_errors` cap is never reached; the run grinds ~42 s to
+the token limit and writes a 39-byte document. Fix: when the CS that fired the
+closure IS the trigger itself, clear the stale trigger globally so the CS takes
+the ordinary bounded undefined path.
+
+- **2606.21610** (Overleaf/Springer `\IfFileExists{sn-jnl.cls}{\documentclass…}`
+  template): 42.9 s `Fatal:Timeout:TokenLimit`, empty output ⇒ **0.203 s**,
+  bounded `Fatal:TooManyErrors:MaxLimit(100)`. Perl: 1.1 s / 102 errors /
+  `too_many_errors:100` — same verdict, **5× faster**.
+- **2605.21013** (undefined-macro cascade, was `Fatal:Timeout:IfLimit` at 107 s):
+  43.1 s ⇒ **0.203 s**, same bounded verdict. Perl 1.9 s — **~10× faster**.
+- Both papers are genuinely broken LaTeX (pdflatex fatals too), so the win is
+  *failing like Perl instead of grinding*, not converting them.
+- Known `def_autoload` regression traps re-verified clean: 2310.13684 (0 err),
+  1403.6801 (0 err), 1711.11576 (1 err, 3.5 MB).
+- Suite **1615/0**, clippy clean. Guard `tests/100_stale_autoload_no_runaway.rs`
+  (6-line self-contained repro; verified red at 54.7 s without the fix).
+
+**Ground truth, recorded but deliberately NOT ported:** real LaTeX rejects the
+premise outright — `\@fileswithoptions` (latex.ltx L18700) errors *"Loading a
+class or package in a group"* when `\currentgrouplevel > 0`. Porting that guard
+would give a better message, but `standalone_sty.rs` **deliberately** wraps its
+`\@standalone@documentclass` in `bgroup()` + `RequirePackage` (see issue #311),
+so the guard would need an internal-load exemption. Not worth the risk now that
+the runaway is gone; noted here if the diagnostic is ever wanted.
+
+**Diagnostic gap closed alongside:** the `TokenLimit` fatal previously printed
+only "infinite loop?" with no window — the cycle guard dumps its repeating
+tokens, but a run that reaches the *token limit* is by definition one the cycle
+guard did not recognise, i.e. exactly the case with no other clue. It now dumps
+the same recent-token ring under `LATEXML_DEBUG_FATAL` (and the ring fills
+before the guard activates, so a lowered `LATEXML_TOKEN_LIMIT` still captures
+it). That dump is what identified this bug in one run.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail

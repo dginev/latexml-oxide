@@ -400,23 +400,33 @@ is NOT one bug, and NOT a watchdog opportunity:
 | Witness | Perl (same host) | Rust root cause | Verdict |
 |---|---|---|---|
 | `2605.23849` | 52.7s, **3 errors** (does NOT recover — `\@arraycr` is simply undefined in Perl, so it *skips* the construct) | ✅ **FIXED 2026-07-20.** Was: `\kbordermatrix` does `\let\\\@arraycr`, and Rust — unlike Perl — inherits the **real kernel `\@arraycr`** from the latex.ltx dump; its ``align_state`` brace/`$` trick is only valid under a real `\halign`, so it re-opened an inline-math frame the alignment could not balance → `Attempt to close a group that switched to mode math` → `Fatal:Timeout:IfLimit` at ~95–107s, 0 formulae. Fix = retract `\@arraycr` → `\lx@alignment@newline`, mirroring Perl's existing `\@tabularcr` retraction | was GENUINE-RUST-ONLY; **now surpass-Perl**: 1.9s / **0 errors** / 985 formulae vs Perl 52.7s / 3 errors (same 985 Math, 8 XMArray) |
-| `2606.21610` | too_many_errors, **1.2s** | `\IfFileExists{sn-jnl.cls}{…}{…}` used to *conditionally pick* `\documentclass` (Overleaf/Springer pattern) → called in **plain-TeX context before the LaTeX-format dump loads** → undefined → expansion reads past EOF unbalanced → `Fatal:Timeout:TokenLimit` (1B) at 106s | both fatal; Rust **loops where Perl caps** |
-| `2605.21013` | too_many_errors, **2.0s** | undefined-macro cascade (bundled `arxiv.cls`: `\usetikzlibrary`/`\pgfplotsset`/…) → `Fatal:Timeout:IfLimit` at 107s | both fatal; Rust **loops where Perl caps** |
+| `2606.21610` | too_many_errors, **1.1s** | ✅ **FIXED 2026-07-20.** Not "expansion past EOF" — a **stale `def_autoload` trigger**: `\documentclass` runs inside the `\IfFileExists` group, so the class's macros pop with the group while `<pkg>.sty_loaded` (global) survives, and the trigger re-emits *itself* silently forever | now **0.203s**, bounded `Fatal:TooManyErrors:MaxLimit(100)` — Perl's verdict, **5× faster** |
+| `2605.21013` | too_many_errors, **1.9s** | ✅ **FIXED 2026-07-20 by the same one-line `def_autoload` guard** — it was NOT a separate mechanism from 2606.21610, despite the different limit (IfLimit vs TokenLimit) | measured 43.1s → **0.203s**, same bounded verdict — **~10× faster than Perl** |
 | `2606.13482` | **times out >250s** | fatal at 99s (Rust fails *faster* than Perl) | **PARITY** (both pathological) |
 
 **Verdict — BP-4 (no-progress watchdog) is RETIRED as a "beyond-Perl perf win."** It
 would have aborted `2605.23849` (now fixed at the root, and note the premise was
 partly mis-stated: Perl does not "convert it cleanly", it skips the construct) → a
-strict regression. The three genuine issues are Rust runaway-loop bugs (all trip an *existing* high limit —
-16M IfLimit / 1B TokenLimit — ~100s in, so the safety net exists but late), each
-needing a faithful per-mechanism fix, not a blunt early-abort:
-1. **`\IfFileExists`-before-`\documentclass` → readBalanced/expansion spin past EOF**
-   (2606.21610). Likely broad (conditional-`\documentclass` templates + the
-   full-arXiv readBalanced/`\lx@begin@alignment` families). The genuine gap:
-   after an undefined-macro error, the main expansion loop spins reading past EOF
-   in a recovery state instead of terminating (Perl keeps emitting bounded errors →
-   `too_many_errors` cap). Overlaps the deferred *read_balanced unbalanced-group leak*
-   family ([[ar5iv-only-failure-xint-readbalanced-group-leak]]).
+strict regression. **All three genuine issues are now FIXED (2026-07-20), and the
+"three distinct root causes" reading turned out to be two:** items 1 and 3 were the
+same `def_autoload` bug despite presenting at different limits (TokenLimit vs
+IfLimit) and from different-looking triggers. Worth remembering — the limit a
+runaway trips says nothing about its cause.
+1. **Stale `def_autoload` trigger** (2606.21610 *and* 2605.21013) — ✅ **FIXED
+   2026-07-20**. The earlier reading ("`\IfFileExists`-before-`\documentclass` →
+   expansion spins past EOF in a recovery state") was **wrong**: `\IfFileExists`
+   being undefined is incidental, and nothing reads past EOF. What actually happens
+   is that its `{…}` arm makes `\documentclass` run **inside a group**, so the
+   class's macros pop with the group while `<pkg>.sty_loaded` (assigned globally)
+   survives — leaving the autoload trigger as the CS's only definition, re-emitting
+   *itself* with no `Error:` (hence never reaching `too_many_errors`). Fix in
+   `latexml_engine/src/tex.rs`: when the CS that fired the closure IS the trigger,
+   clear it globally and take the bounded undefined path. 42.9s→0.203s and
+   43.1s→0.203s, both landing on Perl's own verdict 5–10× faster. Guard
+   `tests/100_stale_autoload_no_runaway.rs`. Note this does **not** touch the
+   `read_balanced` unbalanced-group family
+   ([[ar5iv-only-failure-xint-readbalanced-group-leak]]) — that stays open, it was
+   simply never this witness's problem.
 2. **`\halign`-in-math cascade** (2605.23849) — ✅ **FIXED 2026-07-20**, and it was
    **not** deep alignment surgery. Full record:
    [`../known_crashes/kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
@@ -432,8 +442,11 @@ needing a faithful per-mechanism fix, not a blunt early-abort:
    `\lastbox`/`\unhbox` box-peel repro, a *different* hbox loop that **also loops in
    Perl** (SHARED). The decisive experiment was that hand-expanding `\@arraycr`
    inline is clean in both engines while the macro itself fails.
-3. **undefined-cascade → IfLimit** (2605.21013). Same "error-recovery loops instead
-   of advancing" theme as (1) but via `\ifX` not tokens.
+3. **undefined-cascade → IfLimit** (2605.21013) — ✅ **FIXED by item 1**, not a
+   separate mechanism. It was recorded as a distinct "`\ifX` rather than tokens"
+   root purely because it tripped IfLimit instead of TokenLimit; the bundled
+   `arxiv.cls` reaches the same stale-trigger state. Measured 43.1s → 0.203s by
+   the item-1 change alone, with no `\ifX`-specific work.
 
 **Side finding (2026-07-10, NOT the witness fix, unshipped).** Chasing 2605.23849 via
 a synthetic `\lastbox` box-peel repro surfaced a *real but orthogonal* faithfulness
