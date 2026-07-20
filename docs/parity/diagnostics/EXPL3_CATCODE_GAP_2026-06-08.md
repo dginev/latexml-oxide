@@ -1,10 +1,43 @@
 # expl3 catcode-clobber gap — spath3/xparse `unexpected:_` (2026-06-08)
 
-**Status: OPEN, deep. The single biggest Rust-only error gap on the
-sampled corpus (2112.11932: Rust 1003 vs Perl 5, +998). Four band-aid
-fixes were tried and ALL regress something; reverted. The real fix is a
-kernel-level `\ExplSyntaxOff` completeness fix, not a catcode-restore
-patch. Documented here so a future attempt does not repeat the dead ends.**
+> ## ✅ RE-MEASURED 2026-07-20 — LARGELY CLOSED (one witness went the other way)
+>
+> The banner below ("the single biggest Rust-only error gap") is **no longer
+> true**, and the doc's own minimal repro no longer fires. Measured on the
+> current release binary with the documented invocation
+> (`--timeout 150 --preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings`):
+>
+> | witness | recorded here | 2026-07-20 |
+> |---|---|---|
+> | repro (`\usetikzlibrary{knots}`) | 975 × `unexpected:_` | **0 errors** |
+> | `2112.11932` | Rust 1003 / Perl 5 | **0 errors** |
+> | `2110.10227` | Rust 102 / Perl 47 | **0 errors** |
+> | `2204.05282` (symptom B) | Rust 86 / Perl 0 | **0 errors** |
+> | `2110.12034` | Rust 45 / Perl 34 | **8** (1 × `unexpected:_`) |
+> | `2203.05327` | Rust 78 / Perl 102 | **411** (249 × `unexpected:_`) ⚠️ |
+>
+> Two fixes landed since and are the likely closers: the preamble cleanup that
+> force-runs `\ExplSyntaxOff` when `_` is still LETTER (`latex_constructs.rs`)
+> and the global `:`/`_`/`~` restore in `expl3_sty.rs`. **The hardcode this doc
+> blames is still exactly where it says** (`xparse_sty.rs` lines 22-23), so the
+> "delete lines 22-23" instruction remains actionable if anyone revisits.
+>
+> ⚠️ **`2203.05327` regressed 78 → 411 and needs its own investigation.** It is
+> NOT a parity regression — same-host Perl on that paper now runs **6 m 19 s and
+> dies `Fatal:timeout:token_limit`**, producing nothing, so Rust completing with
+> 411 errors is still the better outcome. But the Rust error count more than
+> quintupled, which the old "Rust 78 / Perl 102" row would hide.
+>
+> **Do not treat this doc as a live worklist without re-measuring first.** The
+> dead ends below are still valuable (four band-aids, all regressing
+> `glossary_test`) — that is why the entry is kept.
+
+**Status (2026-06-08, SUPERSEDED — see above): OPEN, deep. The single biggest
+Rust-only error gap on the sampled corpus (2112.11932: Rust 1003 vs Perl 5,
++998). Four band-aid fixes were tried and ALL regress something; reverted. The
+real fix is a kernel-level `\ExplSyntaxOff` completeness fix, not a
+catcode-restore patch. Documented here so a future attempt does not repeat the
+dead ends.**
 
 > MEASUREMENT WARNING that gated this whole investigation: the default
 > `latexml_oxide --timeout` is **60 s**, and the DEBUG binary is ~10-20×

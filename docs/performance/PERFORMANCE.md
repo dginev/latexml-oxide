@@ -107,7 +107,7 @@ constant** — hoist it into a single `<xsl:variable select="boolean(//…)"/>`
 (evaluated once from the root) and reference the variable; or use the
 Muenchian `<xsl:key>` method for distinct-by-value dedup. Output-neutral.
 
-Three were found and fixed (all in `resources/XSLT/`, embedded at build time):
+Three were found and fixed (all in `latexml_post/resources/XSLT/`, embedded at build time):
 - `f:seclev-aux` heading-level (`LaTeXML-structure-xhtml.xsl`) — ARXIV_PERFORMANCE #2.
 - `head-keywords` index dedup (`LaTeXML-webpage-xhtml.xsl`, `//…[not(.=preceding::…)]`
   → Muenchian key) — ARXIV_PERFORMANCE #3.
@@ -124,7 +124,15 @@ crate's `transform()` doesn't expose profiling).
 
 ---
 
-## Phase distribution (190k aggregate, 2026-05-02..03) — canonical
+## Phase distribution (190k aggregate, 2026-05-02..03) — SUPERSEDED, historical
+
+> **The canonical budget is now the 60,469-doc 2026-07-10 measurement** in
+> [`ARXIV_PERFORMANCE.md`](ARXIV_PERFORMANCE.md) "Corpus-wide phase budget":
+> digest 19.7% · math_parse 19.2% · build 18.1% · **xslt 13.2%** · graphics
+> **8.9%** · mathml_pres 4.5%. Graphics fell 36.5% → 8.9% after the
+> graphics-cache work, so any lever ranked off the table below — notably
+> "P1 — graphics (36.5%)" and Principle 5's "graphics was the single largest
+> corpus band" — is **mis-ranked**. XSLT is now the most under-exploited band.
 
 10 stages × 10k arXiv docs (189,991 jobs). Sum-of-phases / wall = 97.78%.
 
@@ -185,10 +193,14 @@ Remaining open hot patterns (fresh 2026-06-30 measurements; the old
 `MATH_AMBIGUITY_AUDIT` claims are **stale** — `\Pi^N(p,q,r)` and simple bare
 `|x|≤|y|` are now *unambiguous*):
 - **`f(x,y)` apply-vs-multiply** — the dominant residual; parens alone create the
-  ambiguity (`f(x)` = 112 and-nodes vs `fx` unambiguous). NB an apparent latent
-  regression: `speculative_prefix_apply` (semantics.rs) no longer checks the
-  `MATHPARSER_SPECULATE` flag → speculative apply is always on; needs a same-host
-  Perl parity check before touching (may change many outputs).
+  ambiguity (`f(x)` = 112 and-nodes vs `fx` unambiguous). NB — **superseded 2026-07-20: this is an
+  INTENTIONAL divergence, not a latent regression.** `speculative_prefix_apply`
+  (semantics.rs) indeed no longer checks the `MATHPARSER_SPECULATE` flag, so the
+  speculative apply is always on — but the toward-Perl flip was implemented and
+  verified against same-host Perl on 2026-07-02 and then **reverted on explicit
+  user review**; `f(x)`→application is divergence #18 (`OXIDIZED_DESIGN_MATH.md`
+  §18: do not re-attempt without a fresh user decision). The parity check this
+  note asks for has already been done.
 - **Bare `|x|` with ambiguous inner content** — e.g. `|v(x)| ≤ |v(x')|` (625
   and-nodes, legacy fallback): bar-pairing × inner apply-ambiguity. A balanced-pair
   **pre-lexer** pass (peer of the `STRETCHY_VERTBAR` hint) targets the pairing
@@ -218,11 +230,13 @@ The `rust-libxml` fork's `xmlNodePtr → Node` cache is probed on EVERY
 FxHash pointer hasher cut wall on every node-heavy phase by **~28–30%**
 (`1510.03361` 19.6→14.1 s; `1805.03265` tikz-cd 22.4→15.7 s). Output-identical
 (map never iterated; pointer keys non-adversarial so HashDoS is moot).
-**This already ships** in every build (dev/CI/release/maxperf) via a *committed*
-`[patch.crates-io]` in the root `Cargo.toml` →
-`KWARC/rust-libxml` branch `perf-improvements` (a public fork), so the corpus
-run gets the win. The remaining task is supply-chain cleanliness only: land the
-official libxml PR, publish 0.3.15, bump the `libxml` dep, drop the patch. (The
+**✅ CLOSED 2026-07-20 — the cleanup below is DONE.** The FxHash node cache landed
+upstream and now ships in the **published `libxml 0.3.16`**: every crate declares
+`libxml = "0.3.16"` from the registry, and the only `[patch.crates-io]` in the root
+`Cargo.toml` is commented out and is for `marpa-asf`. (Historically it shipped via
+a *committed* patch pointing at `KWARC/rust-libxml` branch `perf-improvements`,
+with "land the PR, publish 0.3.15, bump the dep, drop the patch" as the remaining
+supply-chain task — all of that has happened.) (The
 marpa FxHash already ships via the marpa git dep tracking `main`.)
 
 ### tikz-cd / pgf digest backlog

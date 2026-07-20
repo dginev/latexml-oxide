@@ -732,8 +732,11 @@ hot-path / broad-diff / deep-engine item is explicitly demoted to POST-RELEASE.
   gullet/box-register surgery with broad blast radius — AND current behavior is
   already SAFE (graceful Fatal via an existing limit ~100s in, bounded, no
   crash/corruption), so they are fidelity/perf gaps, NOT release-blocking
-  stability risks. The one clean regression (`2605.23849`, Perl completes) is a
-  real fidelity loss whose fix is still deep. Post-release.
+  stability risks. ~~The one clean regression (`2605.23849`, Perl completes) is a
+  real fidelity loss whose fix is still deep.~~ **FIXED 2026-07-20** — and the
+  premise was doubly wrong: Perl does not "complete" it (it skips the matrix),
+  and the fix was one `Let!` retracting the inherited kernel `\@arraycr`, not deep
+  surgery. All of Cluster H is now resolved.
 - **`ltx_env_<name>` class enhancement** (below) — churns nearly every golden
   XML; running it in release week would swamp the regression baseline and mask
   real regressions. Isolated branch, post-release (as already noted).
@@ -1040,13 +1043,21 @@ enabling work. Perl runs both serially.
 premise).** The Cluster H "digest-runaway fatals" were triaged against same-host
 Perl (`STABILITY_WITNESSES.md` Cluster H): they are **not** a clean beyond-Perl
 watchdog opportunity but a heterogeneous set of **genuine Rust runaway-loop bugs**,
-and a no-progress abort would **regress `2605.23849`, which Perl converts cleanly**
-(46s, 0 fatal). Reclassified as Target-1 parity work — three distinct root causes:
-(a) `\IfFileExists`-before-`\documentclass` → expansion spins past EOF → TokenLimit
-(2606.21610; likely broad — conditional-`\documentclass` templates + the readBalanced/
-`\lx@begin@alignment` families; overlaps the deferred read_balanced unbalanced-group
-leak); (b) `\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop → IfLimit (2605.23849;
-the clean must-fix regression); (c) undefined-macro cascade → IfLimit (2605.21013).
+and a no-progress abort would have **aborted `2605.23849`** (note the old premise
+"which Perl converts cleanly" is wrong — Perl skips the construct)
+(46s, 0 fatal). Reclassified as Target-1 parity work — **all three FIXED
+2026-07-20**, and the "three distinct root causes" reading was itself wrong: (a)
+and (c) turned out to be ONE bug (a stale `def_autoload` trigger), and (b)'s
+recorded root was a red herring. Superseded diagnoses, kept so they are not
+retried: ~~(a) `\IfFileExists`-before-`\documentclass` → expansion spins past EOF
+→ TokenLimit (2606.21610)~~ — nothing reads past EOF; the `\IfFileExists` group
+makes `\documentclass` load inside a group, stranding the autoload trigger.
+~~(b) `\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop → IfLimit (2605.23849;
+the clean must-fix regression)~~ — that box-peel loop **also loops in Perl**
+(SHARED); the real root was the inherited kernel `\@arraycr`. ~~(c)
+undefined-macro cascade → IfLimit (2605.21013)~~ — same bug as (a), it merely
+tripped a different limit. Note the still-OPEN *read_balanced unbalanced-group
+leak* family was never this witness's problem.
 Each trips an *existing* high limit ~100s in (safety net present but late) and needs
 a faithful per-mechanism fix, NOT a blunt early-abort. The unifying theme in (a)+(c):
 Rust error-recovery *loops* where Perl keeps *advancing* (emitting bounded errors →
@@ -1079,9 +1090,10 @@ the release-week stabilization review above; first work after the tag ships:**
 **BP-2 Step 1** (cheap XSLT profile+amortize — the cleanest, divergence-free win) →
 **BP-3 graphics batch** → **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each
 lands on a feature branch, gated by the isolated before/after output-neutrality
-harness + Perl parity + `cargo test`. Separately, the Cluster H runaway-loop bugs
+harness + Perl parity + `cargo test`. ~~Separately, the Cluster H runaway-loop bugs
 (ex-BP-4) are Target-1 parity work tracked in `STABILITY_WITNESSES.md` (also
-post-release — deep engine surgery, not release-week work).
+post-release — deep engine surgery, not release-week work).~~ **Cluster H is
+fully resolved as of 2026-07-20** — and none of it needed deep engine surgery.
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 

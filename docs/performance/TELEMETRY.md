@@ -147,7 +147,7 @@ pub struct Telemetry {
 
   // Wall (microseconds)
   pub wall_us: u64,
-  pub phase_us: [u64; 11],        // indexed by Phase
+  pub phase_us: [u64; Phase::COUNT]   // 17 phases; the [u64; 11] in earlier drafts is stale,        // indexed by Phase
   pub bootstrap_us: u64,          // alias for phase_us[0] for grep convenience
   // ... aliases for each phase elide for brevity ...
 
@@ -266,7 +266,7 @@ In `cortex_worker/src/main.rs`, after the per-job subprocess returns:
   delete uncompressed.
 
 If `telemetry.json` is absent (e.g., child crashed before
-serializing), emit a row with `phase_us = [0; 11]`, `category =
+serializing), emit a row with `phase_us = [0; Phase::COUNT]  // 17`, `category =
 "telemetry_missing"`, and known scalars (wall, exit, output_bytes
 from the file system).
 

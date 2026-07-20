@@ -51,7 +51,9 @@ are generated explicitly by `tools/make_formats.sh` (which builds
 the binary, detects the TL year, and writes the versioned files).
 Dump files are **NOT tracked in git** (decision 2026-06-07; all of
 `resources/dumps/` is gitignored). Release binaries embed a 5-year
-moving TL window (currently 2022–2026) generated at tag time by
+moving TL window (**currently 2022–2025**; 2026 is blocked on the upstream TL
+container — TODO(#217) in `release-dumps.yml` — and a TL2026 host falls back to
+the most-recent embedded dump) generated at tag time by
 `.github/workflows/release-dumps.yml` — each year produced inside a
 pinned TL-year container with a strict zero-error `--init` gate
 (`LATEXML_INIT_DEBUG=1`, since init suppresses error output by
@@ -210,10 +212,10 @@ regenerated per release. `.github/workflows/release-dumps.yml` (called from
 `release.yml` on a tag, dispatchable standalone) builds one kpathsea-UNLINKED
 dumper (subprocess-`kpsewhich` backend) and runs it inside each pinned
 `texlive-docker:YYYY` container across a 5-year moving window (currently
-2022–2026), gating each `--init` on a strict zero-`Error:`/`Fatal:` check
+2022–2025), gating each `--init` on a strict zero-`Error:`/`Fatal:` check
 (`LATEXML_INIT_DEBUG=1`); the maxperf build then embeds the window via
 `build.rs`. Dev/CI generate just the ambient year with `tools/make_formats.sh`,
-and `resources/dumps/` stays gitignored. Full operational detail: `../RELEASING.md`
+and `resources/dumps/` stays gitignored. Full operational detail: `../release/RELEASING.md`
 and CLAUDE.md ("Distribution model").
 
 ## Why text format, not compiled Rust

@@ -125,7 +125,9 @@ context.
 and every action that produces XM for the affected rule); hard to
 roll back; risk of regressions on the well-behaved cases.
 
-Recent witness for this layer (open): `\Pi^N(p,q,…)` — capital
+Recent witness for this layer (**CLOSED 2026-06-30** — the deep dive re-measured
+it as *unambiguous*: a scripted UNKNOWN blocks the speculative apply. Kept as the
+worked example; this layer has no live witness at present): `\Pi^N(p,q,…)` — capital
 Greek letter followed by superscripts followed by parenthesised
 comma-list. UNKNOWN-as-function vs implicit-multiplication is a
 structural ambiguity whose right home is a grammar refinement
@@ -276,7 +278,7 @@ candidate parses for type coherence:
 This is a substantial undertaking — it pushes the math parser
 from a pure syntactic disambiguator toward a *lightweight
 semantic checker*. But many of our current pragmas (and known
-remaining failures, including the `\Pi^N(p,q,…)` explosion)
+remaining failures; note the `\Pi^N(p,q,…)` explosion cited here is CLOSED)
 are *proxies* for type checks. Replacing them with a real type
 system would be more principled, more extensible, and would
 naturally handle composite ambiguities that don't fit any

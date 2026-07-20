@@ -9,7 +9,7 @@ This file is the **index + overview**. The detail lives in a themed family:
 
 | Theme file | What it holds |
 |---|---|
-| [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) | The numbered **Intentional Divergences from Perl** (`#1–#15`, `#17–#18`, `#19–#52`) + a brief Known-Upstream-Perl-Issues list. Code comments cite these as `OXIDIZED_DESIGN #N`. |
+| [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) | The numbered **Intentional Divergences from Perl** (`#1–#15`, `#17–#18`, `#19–#62`) + a brief Known-Upstream-Perl-Issues list. Code comments cite these as `OXIDIZED_DESIGN #N`. |
 | [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md) | Marpa math-parser design: `#16` design rules + the grammar-rule cluster `#7–#18`. |
 | [OXIDIZED_DESIGN_TYPES.md](OXIDIZED_DESIGN_TYPES.md) | Type-system improvements (behavior-neutral) + tactical internal pitfalls. |
 | [OXIDIZED_DESIGN_FUTURE_WORK.md](OXIDIZED_DESIGN_FUTURE_WORK.md) | Beyond-parity directions not yet built. |
@@ -19,7 +19,7 @@ This file is the **index + overview**. The detail lives in a themed family:
 > pre-existing quirks: (1) the numbers are **not globally unique** (the math
 > cluster `#7–#18` collides by value with divergences `#7–#18`); (2) a
 > code-referenced number resolves to the file above that owns that *topic*.
-> Most (`#1–#15`, `#19–#52`) are in DIVERGENCES; the math ones (incl. the
+> Most (`#1–#15`, `#19–#62`) are in DIVERGENCES; the math ones (incl. the
 > code-referenced **`#18` = f(x) "Speculative function application"**) are in
 > MATH. When in doubt, `grep '### N\.' docs/OXIDIZED_DESIGN_*.md`.
 
@@ -79,7 +79,11 @@ flat XMath) → **Serialization**. (The post-processing pipeline now lives in
 | `latexml_codegen` | *(none)* | Proc macros for compile-time codegen |
 | `latexml_contrib` | *(none)* | User-contributed / test-specific bindings |
 
-(`latexml_post` — the XML→HTML/MathML/ePub/JATS post-processor — is the sixth crate.)
+(`latexml_post` — the XML→HTML/MathML/ePub/JATS post-processor — is one of the
+eight workspace crates. Not shown above: **`latexml_engine`** (`latexml_engine/src/`),
+which holds the pool ports — `tex.rs`/`latex.rs`, `base_*`, `TeX_*`, `plain_*`,
+`latex_*` — i.e. Perl's `LaTeXML::Engine::*`; `latexml_package` covers
+`LaTeXML::Package` only. Full map: [ORGANIZATION.md](ORGANIZATION.md).)
 
 - **State** — a thread-local, global, mutable singleton (CHANGELOG 0.3.2),
   preserving TeX's inherently stateful/sequential model without threading a state

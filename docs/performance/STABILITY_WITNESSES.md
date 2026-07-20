@@ -383,7 +383,7 @@ port — now viable — is what fixes the p{} block-content correctness bug 1510
 regressions, the content-shape gate that re-broke Cluster G) are in git history.
 
 
-## Cluster H — digest-runaway → fatal after ~100s, 0 formulae (2026-07-10, from 60k telemetry)
+## Cluster H — digest-runaway → fatal after ~100s, 0 formulae — ✅ ALL RESOLVED 2026-07-20
 
 Surfaced by mining the 2605+2606 `telemetry.json` (`ARXIV_PERFORMANCE.md`
 "Corpus-wide phase budget 2026-07-10"): the **worst wall-time tail is a reliability
@@ -402,7 +402,7 @@ is NOT one bug, and NOT a watchdog opportunity:
 | `2605.23849` | 52.7s, **3 errors** (does NOT recover — `\@arraycr` is simply undefined in Perl, so it *skips* the construct) | ✅ **FIXED 2026-07-20.** Was: `\kbordermatrix` does `\let\\\@arraycr`, and Rust — unlike Perl — inherits the **real kernel `\@arraycr`** from the latex.ltx dump; its ``align_state`` brace/`$` trick is only valid under a real `\halign`, so it re-opened an inline-math frame the alignment could not balance → `Attempt to close a group that switched to mode math` → `Fatal:Timeout:IfLimit` at ~95–107s, 0 formulae. Fix = retract `\@arraycr` → `\lx@alignment@newline`, mirroring Perl's existing `\@tabularcr` retraction | was GENUINE-RUST-ONLY; **now surpass-Perl**: 1.9s / **0 errors** / 985 formulae vs Perl 52.7s / 3 errors (same 985 Math, 8 XMArray) |
 | `2606.21610` | too_many_errors, **1.1s** | ✅ **FIXED 2026-07-20.** Not "expansion past EOF" — a **stale `def_autoload` trigger**: `\documentclass` runs inside the `\IfFileExists` group, so the class's macros pop with the group while `<pkg>.sty_loaded` (global) survives, and the trigger re-emits *itself* silently forever | now **0.203s**, bounded `Fatal:TooManyErrors:MaxLimit(100)` — Perl's verdict, **5× faster** |
 | `2605.21013` | too_many_errors, **1.9s** | ✅ **FIXED 2026-07-20 by the same one-line `def_autoload` guard** — it was NOT a separate mechanism from 2606.21610, despite the different limit (IfLimit vs TokenLimit) | measured 43.1s → **0.203s**, same bounded verdict — **~10× faster than Perl** |
-| `2606.13482` | **times out >250s** | fatal at 99s (Rust fails *faster* than Perl) | **PARITY** (both pathological) |
+| `2606.13482` | rc=124 at **281 s** (timeout-killed) | fatal at **4 s** (was 99 s — also collapsed by the 2026-07-20 `def_autoload` fix; the paper is still unconvertible) | **PARITY** (both pathological; Rust now fails ~70× faster) |
 
 **Verdict — BP-4 (no-progress watchdog) is RETIRED as a "beyond-Perl perf win."** It
 would have aborted `2605.23849` (now fixed at the root, and note the premise was
