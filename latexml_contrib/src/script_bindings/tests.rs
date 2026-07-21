@@ -431,6 +431,37 @@ fn require_resource_option_map_sets_type_media_content() {
   latexml_core::reset_thread_engine();
 }
 
+/// #316: a registration (`DefPrimitive`/`DefMacro`/…) called from INSIDE a
+/// definition body — which runs during digestion, not script load — must work,
+/// as it does in Perl (a `def*` sub is callable from anywhere). It used to fail
+/// "registration called outside a script load" because the deferred body call
+/// didn't push its script context onto `CURRENT_SCRIPT`.
+#[test]
+fn def_primitive_nested_inside_a_primitive_body() {
+  fresh_state();
+  // `\outer`, when digested, defines `\inner` via a nested DefPrimitive.
+  load_script(
+    r#"
+    DefPrimitive("\\outer", || {
+      DefPrimitive("\\inner", || { assign_global("nested:inner", "ran"); });
+    });
+    "#,
+  )
+  .expect("load \\outer");
+  // Digesting \outer runs its body → the nested DefPrimitive must NOT error.
+  latexml_core::stomach::digest(mouth::tokenize_internal(r"\outer")).expect("digest \\outer");
+  assert!(
+    latexml_core::state::lookup_definition(&latexml_core::T_CS!("\\inner"))
+      .expect("lookup")
+      .is_some(),
+    "the nested DefPrimitive should have defined \\inner"
+  );
+  // \inner is now a real primitive whose body runs on digestion.
+  latexml_core::stomach::digest(mouth::tokenize_internal(r"\inner")).expect("digest \\inner");
+  assert_eq!(lookup_str("nested:inner"), "ran", "\\inner's body ran");
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();

@@ -20,8 +20,7 @@ pub(super) fn wire_macro(
 
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let ret: Dynamic = body
-      .call::<Dynamic>(&engine, &ast, dyn_args)
+    let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .map_err(|e| Error::from(format!("script macro {cs_name}: {e}")))?;
     Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
   });
@@ -83,8 +82,7 @@ pub(super) fn closure_replacement(
           None => Dynamic::UNIT,
         });
       }
-      body
-        .call::<Dynamic>(&engine, &ast, call_args)
+      call_deferred_body(&engine, &ast, &body, call_args)
         .map(|_| ())
         .map_err(|e| Error::from(format!("script constructor {cs_name}: {e}")))
     },
@@ -305,8 +303,7 @@ pub(super) fn construction_trampoline(
         document,
         props: whatsit.get_properties(),
       });
-      let _: Dynamic = fp
-        .call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy),))
+      let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(DocProxy),))
         .map_err(|e| Error::from(format!("script afterConstruct: {e}")))?;
       Ok(())
     },
@@ -323,8 +320,7 @@ pub(super) fn after_digest_trampoline(
   Rc::new(move |w: &mut Whatsit| -> Result<Vec<Digested>> {
     // RAII pop on every exit incl. panic (review M1).
     let _whatsit_guard = WhatsitCtxGuard::new((w as *mut Whatsit, true));
-    let _: Dynamic = fp
-      .call::<Dynamic>(&engine, &ast, ())
+    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, ())
       .map_err(|e| Error::from(format!("script afterDigest: {e}")))?;
     Ok(Vec::new())
   })
@@ -339,8 +335,7 @@ pub(super) fn before_digest_trampoline(
   ast: Rc<AST>,
 ) -> BeforeDigestClosure {
   Rc::new(move || -> Result<Vec<Digested>> {
-    let _: Dynamic = fp
-      .call::<Dynamic>(&engine, &ast, ())
+    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, ())
       .map_err(|e| Error::from(format!("script beforeDigest: {e}")))?;
     Ok(Vec::new())
   })
@@ -364,8 +359,7 @@ pub(super) fn properties_trampoline(
           None => Dynamic::UNIT,
         })
         .collect();
-      let ret: Dynamic = fp
-        .call::<Dynamic>(&engine, &ast, dyn_args)
+      let ret: Dynamic = call_deferred_body(&engine, &ast, &fp, dyn_args)
         .map_err(|e| Error::from(format!("script properties: {e}")))?;
       if ret.is_unit() {
         Ok(SymHashMap::default())
@@ -424,8 +418,7 @@ pub(super) fn wire_primitive(
 
   let closure: PrimitiveClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Vec<Digested>> {
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let _: Dynamic = body
-      .call::<Dynamic>(&engine, &ast, dyn_args)
+    let _: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .map_err(|e| Error::from(format!("script primitive {cs_name}: {e}")))?;
     Ok(Vec::new())
   });
@@ -453,8 +446,7 @@ pub(super) fn wire_macro_opts(
   let ast = ast.clone();
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let ret: Dynamic = body
-      .call::<Dynamic>(&engine, &ast, dyn_args)
+    let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .map_err(|e| Error::from(format!("script macro {cs_name}: {e}")))?;
     Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
   });
@@ -525,8 +517,7 @@ pub(super) fn wire_conditional(
   let ast = ast.clone();
   let closure: ConditionalClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let ret: Dynamic = test
-      .call::<Dynamic>(&engine, &ast, dyn_args)
+    let ret: Dynamic = call_deferred_body(&engine, &ast, &test, dyn_args)
       .map_err(|e| Error::from(format!("script conditional {cs_name}: {e}")))?;
     Ok(ret.as_bool().unwrap_or(false))
   });
@@ -560,8 +551,7 @@ pub(super) fn wire_columntype(
   let ast = ast.clone();
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let ret: Dynamic = body
-      .call::<Dynamic>(&engine, &ast, dyn_args)
+    let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .map_err(|e| Error::from(format!("script column type {cs_name}: {e}")))?;
     Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
   });
@@ -767,8 +757,7 @@ pub(super) fn reversion_trampoline(
           None => Dynamic::UNIT,
         })
         .collect();
-      let ret = fp
-        .call::<Dynamic>(&engine, &ast, dyn_args)
+      let ret = call_deferred_body(&engine, &ast, &fp, dyn_args)
         .map_err(|e| Error::from(format!("script reversion: {e}")))?;
       Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
     },
@@ -786,8 +775,7 @@ pub(super) fn sizer_trampoline(
     move |w: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
       // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
       let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-      let ret = fp
-        .call::<Dynamic>(&engine, &ast, ())
+      let ret = call_deferred_body(&engine, &ast, &fp, ())
         .map_err(|e| Error::from(format!("script sizer: {e}")))?;
       let spec = dynamic_to_string(ret);
       let mut parts = spec.split(';');
@@ -1001,8 +989,7 @@ pub(super) fn wire_rewrite_replace(
         document,
         props: Rc::as_ptr(&rewrite_props),
       });
-      let _: Dynamic = replace
-        .call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy), arr))
+      let _: Dynamic = call_deferred_body(&engine, &ast, &replace, (Dynamic::from(DocProxy), arr))
         .map_err(|e| Error::from(format!("script rewrite replace: {e}")))?;
       Ok(())
     },
@@ -1024,9 +1011,13 @@ pub(super) fn wire_math_ligature_matcher(
   let ast = ast.clone();
   let rust_matcher: latexml_core::ligature::LigatureMatcher = Rc::new(
     move |_document: &mut Document, node: &mut libxml::tree::Node| {
-      let ret: Dynamic = matcher
-        .call::<Dynamic>(&engine, &ast, (Dynamic::from(NodeProxy(node.clone())),))
-        .map_err(|e| Error::from(format!("script math-ligature matcher: {e}")))?;
+      let ret: Dynamic = call_deferred_body(
+        &engine,
+        &ast,
+        &matcher,
+        (Dynamic::from(NodeProxy(node.clone())),),
+      )
+      .map_err(|e| Error::from(format!("script math-ligature matcher: {e}")))?;
       if !ret.is_map() {
         return Ok(None);
       }
