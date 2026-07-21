@@ -1538,6 +1538,11 @@ pub fn lookup_string(key: &str) -> String {
   let state = state!();
   match state.lookup_value(key) {
     None => String::new(),
+    // A list value has no scalar string form; return "" rather than leaking the
+    // internal `VecDequeStored[…]`/`Strings` Debug repr (#315). Structural
+    // access to list values is via the Rhai `LookupValue` binding, which
+    // returns an array (mirroring Perl's `LookupValue` → arrayref).
+    Some(v) if v.is_list() => String::new(),
     Some(v) => v.into(),
   }
 }

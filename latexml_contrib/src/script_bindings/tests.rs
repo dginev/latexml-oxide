@@ -322,6 +322,59 @@ fn lookup_tokens_on_vecdeque_value_does_not_panic() {
   latexml_core::reset_thread_engine();
 }
 
+/// #315: `LookupString` is scalar-only. On a list value (`class_options` is a
+/// `Stored::VecDequeStored`) it must return "" — never the internal
+/// `VecDequeStored[…]` Debug repr it used to leak. Structural access is via
+/// `LookupValue` (below), mirroring Perl's `LookupValue` returning the arrayref.
+#[test]
+fn lookup_string_on_list_value_is_empty_not_leaked() {
+  fresh_state();
+  latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
+  latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
+  load_script(r#"assign_global("ct:s", LookupString("class_options"));"#)
+    .expect("LookupString on a list value must not panic or leak");
+  let got = lookup_str("ct:s");
+  assert!(
+    !got.contains("VecDequeStored") && !got.contains("Stored["),
+    "LookupString must not leak the internal enum representation, got {got:?}"
+  );
+  assert_eq!(
+    got, "",
+    "LookupString is scalar-only; a list value yields \"\""
+  );
+  latexml_core::reset_thread_engine();
+}
+
+/// #315: `LookupValue` exposes a list value AS a Rhai array (mirroring Perl's
+/// `LookupValue` returning the arrayref), so the caller reads/iterates/joins it
+/// structurally — no invented separator baked into the reversion. Here the
+/// script indexes it and joins with its own `|`.
+#[test]
+fn lookup_value_on_list_returns_rhai_array() {
+  fresh_state();
+  latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
+  latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
+  load_script(
+    r#"
+    let opts = LookupValue("class_options");
+    assign_global("ct:0", opts[0]);
+    assign_global("ct:1", opts[1]);
+    let joined = "";
+    for o in opts { if joined != "" { joined += "|"; } joined += o; }
+    assign_global("ct:joined", joined);
+    "#,
+  )
+  .expect("LookupValue on a list value must return an indexable Rhai array");
+  assert_eq!(lookup_str("ct:0"), "a4paper", "array element 0");
+  assert_eq!(lookup_str("ct:1"), "12pt", "array element 1");
+  assert_eq!(
+    lookup_str("ct:joined"),
+    "a4paper|12pt",
+    "the caller joins the array with its own separator — structural, not a baked-in comma"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();

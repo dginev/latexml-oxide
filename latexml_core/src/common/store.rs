@@ -581,6 +581,24 @@ impl Stored {
     }
   }
 
+  /// A list-shaped value: exposed to the Rhai `LookupValue` binding as an array
+  /// (mirroring Perl's `LookupValue` returning an arrayref), and having no
+  /// scalar string form — so `lookup_string` returns "" for it rather than
+  /// leaking the internal Debug repr (#315). The two variants a `push_value` /
+  /// list `AssignValue` can produce: `VecDequeStored` (a pushed queue, e.g.
+  /// `class_options`) and `Strings` (an immutable string array).
+  pub fn is_list(&self) -> bool { matches!(self, Stored::VecDequeStored(_) | Stored::Strings(_)) }
+
+  /// The items of a list value as strings, for structural access. `None` for a
+  /// non-list value.
+  pub fn list_items(&self) -> Option<Vec<String>> {
+    match self {
+      Stored::Strings(ss) => Some(ss.iter().map(|s| arena::to_string(*s)).collect()),
+      Stored::VecDequeStored(v) => Some(v.iter().map(String::from).collect()),
+      _ => None,
+    }
+  }
+
   /// Zero-alloc `self.to_string().starts_with(prefix)` for the
   /// string-carrying variants; falls back to `to_string()` for others.
   pub fn starts_with_text(&self, prefix: &str) -> bool {

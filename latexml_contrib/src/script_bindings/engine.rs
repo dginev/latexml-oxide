@@ -165,6 +165,27 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("LookupString", |k: &str| -> String {
     latexml_core::state::lookup_string(k)
   });
+  // Perl-style `LookupValue`: returns the stored value in its natural shape. A
+  // list value (e.g. `class_options`, a pushed queue) becomes a Rhai array —
+  // mirroring Perl's `LookupValue` returning the arrayref (#315) — rather than
+  // the leaked Debug repr `LookupString` used to emit. Scalars stringify as
+  // before; a missing key is unit (Perl `undef`).
+  engine.register_fn("LookupValue", |k: &str| -> Dynamic {
+    match latexml_core::state::lookup_value(k) {
+      None => Dynamic::UNIT,
+      Some(v) if v.is_list() => {
+        let arr: rhai::Array = v
+          .list_items()
+          .unwrap_or_default()
+          .into_iter()
+          .map(Dynamic::from)
+          .collect();
+        Dynamic::from_array(arr)
+      },
+      Some(Stored::String(s)) => arena::to_string(s).into(),
+      Some(other) => other.to_string().into(),
+    }
+  });
   engine.register_fn("LookupNumber", |k: &str| -> i64 {
     latexml_core::state::lookup_number(k)
       .map(|n| n.0)
