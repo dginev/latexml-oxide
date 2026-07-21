@@ -1,7 +1,23 @@
 # Change Log
 
-## [0.7.5] (ar5iv corpus fixes; file-resolution robustness + diagnosability)
+## [0.7.5] (Rhai binding-API parity + default-CSS sync; ar5iv corpus fixes; file-resolution robustness)
 
+  - **Runtime (Rhai) binding API brought to feature-parity with the compile-time
+    macros.** A binding can now fetch an already-installed definition and push
+    before/after digest and construct hooks onto it (`LookupDefinition`), pass the
+    same flexary, unordered option bags to `DefPrimitive`/`DefMath`/`DefConstructor`
+    (`beforeDigest`/`afterDigest`/`afterDigestBody`), register new definitions from
+    inside a running body, shell out to external commands, read the engine version,
+    and use the full diagnostics surface (`Info`/`Fatal`/`Note`/progress).
+    List-valued state lookups no longer panic or leak their internal representation.
+  - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
+    text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
+    upstream; the `.htm` destination extension now infers HTML5 like `.html`.
+  - **Generator identifier** now spells out the full product name ("LaTeXML oxide")
+    and stamps the version into the XSLT output to match Perl.
+  - **A `standalone` document class's options are no longer mis-loaded as packages.**
+  - **The cortex worker builds without the `runtime-bindings` feature** — a
+    Rhai-free conversion binary for the fleet.
   - **File resolution can no longer die silently.** A conversion could run with
     **no kpathsea backend at all** and say nothing about it: a failed
     `Kpaths::new()` was discarded, so every lookup returned `None` while embedded
