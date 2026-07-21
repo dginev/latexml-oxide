@@ -190,6 +190,24 @@ fn wire_now(
   Ok(())
 }
 
+/// Call a DEFERRED Rhai body (a primitive/macro/constructor/… closure) during
+/// digestion, with its `(engine, AST)` pushed onto `CURRENT_SCRIPT` for the
+/// duration. This lets the body itself call a registration (`DefPrimitive`,
+/// `DefMacro`, …): the nested `wire_now` → `current_script()` resolves this
+/// pushed context instead of failing "registration called outside a script
+/// load" (#316). Mirrors Perl, where a `def*` sub is callable from anywhere —
+/// script load OR digestion. The RAII guard nests correctly for a body that
+/// runs another body.
+pub(super) fn call_deferred_body<A: rhai::FuncArgs>(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  body: &FnPtr,
+  args: A,
+) -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+  let _script_guard = ScriptCtxGuard::new((engine.clone(), ast.clone()));
+  body.call::<Dynamic>(engine, ast, args)
+}
+
 /// Copy the top active-context out (so we never hold the `CTOR_CTX` borrow
 /// across a Document call that might re-enter the bridge).
 fn current_ctx() -> std::result::Result<CtorCtx, Box<EvalAltResult>> {
