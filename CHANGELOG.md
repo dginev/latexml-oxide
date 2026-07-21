@@ -13,6 +13,9 @@
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
     text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
     upstream; the `.htm` destination extension now infers HTML5 like `.html`.
+  - **A stale or empty stylesheet already in the output directory is now overwritten**
+    instead of being left in place — previously a `LaTeXML.css`/`ltx-article.css`
+    left by an earlier run could be truncated to empty, leaving the page unstyled.
   - **Generator identifier** now spells out the full product name ("LaTeXML oxide")
     and stamps the version into the XSLT output to match Perl.
   - **A `standalone` document class's options are no longer mis-loaded as packages.**

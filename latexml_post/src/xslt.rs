@@ -239,8 +239,27 @@ impl XSLT {
 
     match find_resource_file(src, info, &search_paths) {
       Some(path) => {
-        // Found on disk via searchpath. Copy unless source == dest.
-        if path != dest {
+        if same_file(&path, &dest) {
+          // The only search-path match IS the destination file itself — the dest
+          // dir is on the search path and a stale/empty resource from an earlier
+          // (possibly failed) run is shadowing the bundled copy (#312). A plain
+          // `fs::copy` here copies the file onto itself and TRUNCATES it to empty.
+          // Rewrite the embedded canonical bytes when we have them, repairing the
+          // stale/empty leftover; otherwise it is genuinely already in place.
+          if let Some(bytes) = embedded_resources::lookup(basename) {
+            ensure_parent(&dest);
+            if let Err(e) = fs::write(&dest, bytes) {
+              Warn!(
+                "I/O",
+                dest,
+                "Couldn't rewrite embedded {} to {}: {}",
+                basename,
+                dest,
+                e
+              );
+            }
+          }
+        } else {
           ensure_parent(&dest);
           if let Err(e) = fs::copy(&path, &dest) {
             Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
@@ -341,7 +360,23 @@ impl XSLT {
       };
       match find_resource_file(entry, info, &search_paths) {
         Some(path) => {
-          if path != dest {
+          if same_file(&path, &dest) {
+            // Only search-path match IS the destination — avoid the self-copy
+            // truncate; rewrite the embedded canonical bytes if bundled (#312).
+            if let Some(bytes) = embedded_resources::lookup(basename) {
+              ensure_parent();
+              if let Err(e) = fs::write(&dest, bytes) {
+                Warn!(
+                  "I/O",
+                  dest,
+                  "Couldn't rewrite embedded {} to {}: {}",
+                  basename,
+                  dest,
+                  e
+                );
+              }
+            }
+          } else {
             ensure_parent();
             if let Err(e) = fs::copy(&path, &dest) {
               Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
@@ -469,6 +504,18 @@ fn parse_css_imports(css: &str) -> Vec<String> {
     .collect()
 }
 
+/// True iff both paths exist and canonicalize to the **same file** on disk.
+/// Used to avoid `fs::copy`ing a file onto itself — which truncates it to empty
+/// — when a resource's only search-path match is the destination file itself
+/// (the dest dir is on the search path; #312). A plain string `!=` on the two
+/// path spellings (relative vs absolute, `./` prefixes) misses this.
+fn same_file(a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
+  match (fs::canonicalize(a), fs::canonicalize(b)) {
+    (Ok(ca), Ok(cb)) => ca == cb,
+    _ => false,
+  }
+}
+
 /// After a CSS file is copied from `src` to `dest`, recursively copy the LOCAL
 /// resources it `@import`s, preserving each import's relative subpath so the
 /// cascade still resolves at the destination.
@@ -517,7 +564,7 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
       );
       continue;
     }
-    if import_src != import_dest {
+    if !same_file(&import_src, &import_dest) {
       if let Some(parent) = import_dest.parent() {
         let _ = fs::create_dir_all(parent);
       }
