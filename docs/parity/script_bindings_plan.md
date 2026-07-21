@@ -427,6 +427,25 @@ old run-once-then-rewire model both broke `DeclareOption` → `ProcessOptions()`
 ordering and silently dropped `RawTeX`/`Let`/`NewCounter` effects on every
 conversion after the first.)
 
+**`LookupDefinition` + hook-push (#321, 2026-07-21):** `LookupDefinition(cs)`
+returns a `Definition` proxy (or `()` for an undefined CS, mirroring Perl
+`undef`); the proxy exposes `push<H>`/`unshift<H>` for **every** before/after
+hook family — the Rhai analog of Perl BookML's `push(@{ $$def{afterConstruct}
+}, sub{…})`. `push*` appends (Perl `push`), `unshift*` prepends (Perl
+`unshift`). `before/afterDigest` apply to any DefConstructor/DefPrimitive/DefMath;
+`before/afterConstruct` and `afterDigestBody` are DefConstructor-only (a
+construct/body push onto a Primitive/MathPrimitive/Macro is a clear script
+error — MathPrimitive's construct fields are never executed). Installed defs
+have no interior mutability, so each push clones the current front definition,
+splices the trampolined hook, and re-installs at **global** scope: the global
+`assign_internal` `push_front`s the patch and clears its lower-frame undo
+entries, so it is the active meaning immediately (sequential pushes accumulate
+by re-looking-up) and persists across group exits — faithful to Perl's
+in-place, globally-visible mutation of the shared def-hash. Hook arities match
+the option-bag form (digest = parameterless via `whatsit()`; construct =
+`|document|`). Guards: `script_bindings::tests::lookup_definition_*` and the
+end-to-end `30_script_bindings::lookup_definition_pushes_construct_hooks_end_to_end`.
+
 **Challenging-specimen e2e corpus** (all green through real conversions,
 `30_script_bindings.rs`): plain `\footnote{}{}` (full hook set), ieeetran
 `{IEEEproof}`-style (properties closure that DIGESTS its title + `#font` from

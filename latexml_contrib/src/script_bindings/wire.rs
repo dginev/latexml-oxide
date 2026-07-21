@@ -2,7 +2,10 @@
 //! into a native definition via the shared core builders, plus the hook
 //! trampolines and per-options-struct scalar mappers.
 
-use latexml_core::pin;
+use latexml_core::{
+  pin,
+  state::{install_definition, lookup_definition_stored},
+};
 
 use super::*;
 
@@ -339,6 +342,172 @@ pub(super) fn before_digest_trampoline(
       .map_err(|e| Error::from(format!("script beforeDigest: {e}")))?;
     Ok(Vec::new())
   })
+}
+
+/// Which hook list a runtime `LookupDefinition(cs).push*/unshift*` targets (#321).
+/// Names mirror the `DefConstructor` option-bag hooks 1:1. The construct and body
+/// families exist only on `Constructor` (Perl `DefConstructor`): `Primitive` and
+/// `MathPrimitive` run only the digest pair, so a construct/body push onto them is
+/// a script error, not a silent no-op.
+#[derive(Clone, Copy)]
+pub(super) enum HookFamily {
+  BeforeDigest,
+  AfterDigest,
+  BeforeConstruct,
+  AfterConstruct,
+  AfterDigestBody,
+}
+
+impl HookFamily {
+  fn name(self) -> &'static str {
+    match self {
+      HookFamily::BeforeDigest => "beforeDigest",
+      HookFamily::AfterDigest => "afterDigest",
+      HookFamily::BeforeConstruct => "beforeConstruct",
+      HookFamily::AfterConstruct => "afterConstruct",
+      HookFamily::AfterDigestBody => "afterDigestBody",
+    }
+  }
+}
+
+/// Append (`at_front = false`, Perl `push`) or prepend (`at_front = true`, Perl
+/// `unshift`) a hook onto a definition's hook list.
+fn insert_hook<T>(list: &mut Vec<T>, at_front: bool, hook: T) {
+  if at_front {
+    list.insert(0, hook);
+  } else {
+    list.push(hook);
+  }
+}
+
+fn def_kind_name(stored: &Stored) -> &'static str {
+  match stored {
+    Stored::Constructor(_) => "a Constructor",
+    Stored::Primitive(_) => "a Primitive",
+    Stored::MathPrimitive(_) => "a MathPrimitive",
+    Stored::Expandable(_) => "a Macro",
+    Stored::Conditional(_) => "a Conditional",
+    Stored::Register(_) => "a Register",
+    _ => "a non-definition",
+  }
+}
+
+fn wrong_kind_err(cs: &str, family: HookFamily, stored: &Stored) -> Box<EvalAltResult> {
+  Box::<EvalAltResult>::from(format!(
+    "LookupDefinition({cs}): cannot push a {} hook onto {} — only DefConstructor \
+     carries construct/body hooks; digest hooks need a DefConstructor/DefPrimitive/DefMath",
+    family.name(),
+    def_kind_name(stored),
+  ))
+}
+
+/// Runtime hook-push behind `LookupDefinition(cs).push<H>(fn)` / `.unshift<H>(fn)`
+/// (#321 — the BookML `push(@{ $$def{afterConstruct} }, sub{…})` shape). Perl
+/// mutates the shared blessed def-hash in place; our installed defs have no
+/// interior mutability, so we clone the CURRENT front definition, splice the
+/// trampolined hook into the matching list, and re-install at GLOBAL scope. Global
+/// install `push_front`s the patched def and clears its lower-frame undo entries
+/// (`state::assign_internal`), so it is the active meaning immediately (sequential
+/// pushes accumulate by re-looking-up) and persists across group exits — a
+/// faithful match to Perl's in-place, globally-visible mutation.
+pub(super) fn push_definition_hook(
+  cs: &str,
+  family: HookFamily,
+  at_front: bool,
+  fp: FnPtr,
+) -> std::result::Result<(), Box<EvalAltResult>> {
+  let (engine, ast) = current_script()?;
+  let token = latexml_core::T_CS!(cs);
+  let stored = lookup_definition_stored(&token)
+    .map_err(rhai_err)?
+    .ok_or_else(|| {
+      Box::<EvalAltResult>::from(format!(
+        "LookupDefinition({cs}).push{}: {cs} is not defined",
+        family.name()
+      ))
+    })?;
+
+  // Build the correctly-typed trampoline for THIS family once, then splice it into
+  // the matching list of whichever concrete definition kind is installed (only one
+  // match arm runs, so the trampoline is moved into it).
+  match family {
+    HookFamily::BeforeDigest => {
+      let hook = before_digest_trampoline(fp, engine, ast);
+      match stored {
+        Stored::Constructor(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.before_digest, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        Stored::Primitive(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.before_digest, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        Stored::MathPrimitive(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.options.before_digest, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        other => return Err(wrong_kind_err(cs, family, &other)),
+      }
+    },
+    HookFamily::AfterDigest => {
+      let hook = after_digest_trampoline(fp, engine, ast);
+      match stored {
+        Stored::Constructor(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.after_digest, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        Stored::Primitive(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.after_digest, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        Stored::MathPrimitive(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.options.after_digest, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        other => return Err(wrong_kind_err(cs, family, &other)),
+      }
+    },
+    HookFamily::BeforeConstruct => {
+      let hook = construction_trampoline(fp, engine, ast);
+      match stored {
+        Stored::Constructor(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.before_construct, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        other => return Err(wrong_kind_err(cs, family, &other)),
+      }
+    },
+    HookFamily::AfterConstruct => {
+      let hook = construction_trampoline(fp, engine, ast);
+      match stored {
+        Stored::Constructor(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.after_construct, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        other => return Err(wrong_kind_err(cs, family, &other)),
+      }
+    },
+    HookFamily::AfterDigestBody => {
+      let hook = after_digest_trampoline(fp, engine, ast);
+      match stored {
+        Stored::Constructor(rc) => {
+          let mut d = (*rc).clone();
+          insert_hook(&mut d.after_digest_body, at_front, hook);
+          install_definition(d, Some(Scope::Global));
+        },
+        other => return Err(wrong_kind_err(cs, family, &other)),
+      }
+    },
+  }
+  Ok(())
 }
 
 /// Build a `properties` trampoline (Perl `properties => sub {…}`): the Rhai
