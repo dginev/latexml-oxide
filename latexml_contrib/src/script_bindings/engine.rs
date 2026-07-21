@@ -73,7 +73,7 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "DefPrimitive",
     |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
-      wire_now(|e, a| wire_primitive(e, a, proto, body, primitive_options_from_map(opts)))
+      wire_now(|e, a| wire_primitive(e, a, proto, body, primitive_options_from_map(opts, e, a)))
     },
   );
   // Class/package option. Mirrors the `DeclareOption!` macro's lowering
@@ -650,7 +650,10 @@ pub(super) fn make_engine() -> Engine {
     "DefMath",
     |proto: &str, presentation: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
       let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
-      let options = math_options_from_map(opts).map_err(rhai_err)?;
+      // Loading-script handles for the digest-hook trampolines (DefMath doesn't
+      // route through `wire_now`, so fetch them directly like `wire_now` does).
+      let (engine, ast) = current_script()?;
+      let options = math_options_from_map(opts, &engine, &ast).map_err(rhai_err)?;
       latexml_core::binding::def::dialect::def_math(cs, params, presentation.to_string(), options)
         .map_err(rhai_err)
     },

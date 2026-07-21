@@ -166,6 +166,7 @@ pub(super) trait BindingBuilder: Sized {
   fn set_option(self, key: &str, value: OptionValue) -> Result<Self>;
   fn after_digest(self, hook: DigestionClosure) -> Self;
   fn after_digest_begin(self, hook: DigestionClosure) -> Self;
+  fn after_digest_body(self, hook: DigestionClosure) -> Self;
   fn before_digest(self, hook: BeforeDigestClosure) -> Self;
   fn before_digest_end(self, hook: BeforeDigestClosure) -> Self;
   fn before_construct(self, hook: ConstructionClosure) -> Self;
@@ -187,6 +188,9 @@ macro_rules! impl_binding_builder {
       fn after_digest(self, hook: DigestionClosure) -> Self { <$t>::after_digest(self, hook) }
       fn after_digest_begin(self, hook: DigestionClosure) -> Self {
         <$t>::after_digest_begin(self, hook)
+      }
+      fn after_digest_body(self, hook: DigestionClosure) -> Self {
+        <$t>::after_digest_body(self, hook)
       }
       fn before_digest(self, hook: BeforeDigestClosure) -> Self { <$t>::before_digest(self, hook) }
       fn before_digest_end(self, hook: BeforeDigestClosure) -> Self {
@@ -232,6 +236,10 @@ pub(super) fn apply_opts<B: BindingBuilder>(
           "afterDigestBegin" => {
             builder =
               builder.after_digest_begin(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "afterDigestBody" => {
+            builder =
+              builder.after_digest_body(after_digest_trampoline(fp, engine.clone(), ast.clone()));
           },
           "properties" => {
             builder = builder.properties(properties_trampoline(fp, engine.clone(), ast.clone()));
@@ -648,8 +656,17 @@ pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
   o
 }
 
-/// Map a Rhai option bag onto `PrimitiveOptions` (the `DefPrimitive!` scalar set).
-pub(super) fn primitive_options_from_map(opts: Map) -> PrimitiveOptions {
+/// Map a Rhai option bag onto `PrimitiveOptions` — the full `DefPrimitive!` set:
+/// scalars PLUS the `beforeDigest`/`afterDigest` closures, wired through the same
+/// trampolines the constructor option-bag uses (the compile-time `DefPrimitive!`
+/// macro accepts these via `defi_opts!`'s generic digest-hook arms, so the two
+/// front-ends match). `engine`/`ast` are the loading script's handles, captured by
+/// the hook trampolines. Unknown keys are ignored (Perl `%options` forgiveness).
+pub(super) fn primitive_options_from_map(
+  opts: Map,
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+) -> PrimitiveOptions {
   let mut o = PrimitiveOptions::default();
   for (key, val) in opts {
     let b = dynamic_to_bool(&val);
@@ -665,6 +682,18 @@ pub(super) fn primitive_options_from_map(opts: Map) -> PrimitiveOptions {
       "scope" => o.scope = scope_of(&dynamic_to_string(val.clone())),
       "mode" => o.mode = Some(dynamic_to_string(val.clone())),
       "nargs" => o.nargs = val.as_int().ok().map(|i| i as usize),
+      "beforeDigest" => {
+        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+          o.before_digest
+            .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
+      "afterDigest" => {
+        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+          o.after_digest
+            .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
       _ => {},
     }
   }
@@ -728,9 +757,16 @@ pub(super) fn wire_columntype(
   Ok(())
 }
 
-/// Map a Rhai option bag onto `MathPrimitiveOptions` (the `DefMath!` scalar
-/// option set; unknown keys are ignored, matching Perl %options forgiveness).
-pub(super) fn math_options_from_map(opts: Map) -> Result<MathPrimitiveOptions> {
+/// Map a Rhai option bag onto `MathPrimitiveOptions` — the full `DefMath!` set:
+/// scalars PLUS the `beforeDigest`/`afterDigest` closures (a `MathPrimitive` runs
+/// only the digest pair; its construct fields are never executed). Wired through
+/// the same trampolines as the other front-ends, so the Rhai and compile-time
+/// surfaces match. Unknown keys are ignored (Perl %options forgiveness).
+pub(super) fn math_options_from_map(
+  opts: Map,
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+) -> Result<MathPrimitiveOptions> {
   let mut o = MathPrimitiveOptions::default();
   for (key, val) in opts {
     let s = || dynamic_to_string(val.clone());
@@ -761,6 +797,18 @@ pub(super) fn math_options_from_map(opts: Map) -> Result<MathPrimitiveOptions> {
       "hide_content_reversion" => o.hide_content_reversion = b(),
       "lpadding" => o.lpadding = val.as_int().ok().map(|i| i as usize),
       "rpadding" => o.rpadding = val.as_int().ok().map(|i| i as usize),
+      "beforeDigest" => {
+        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+          o.before_digest
+            .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
+      "afterDigest" => {
+        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+          o.after_digest
+            .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
       _ => {},
     }
   }

@@ -299,6 +299,59 @@ fn constructor_options_map_runs_afterdigest() {
   latexml_core::reset_thread_engine();
 }
 
+/// Option-bag parity: `DefPrimitive(proto, body, #{ beforeDigest, afterDigest })`
+/// must accept the digest-hook CLOSURES, exactly as the compile-time
+/// `DefPrimitive!` macro does (`defi_opts!`'s generic `before_digest`/`after_digest`
+/// arms). Previously the Rhai primitive option map was scalar-only, silently
+/// dropping the hook keys. Order: beforeDigest → body → afterDigest.
+#[test]
+fn primitive_option_bag_runs_before_and_after_digest() {
+  fresh_state();
+  load_script(
+    r#"
+      DefPrimitive("\\optbagprim", || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "X"); }, #{
+        beforeDigest: || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "B"); },
+        afterDigest:  || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "A"); }
+      });
+    "#,
+  )
+  .expect("DefPrimitive with a beforeDigest/afterDigest option bag must load");
+  latexml_core::stomach::digest(mouth::tokenize_internal(r"\optbagprim"))
+    .expect("digest \\optbagprim");
+  assert_eq!(
+    lookup_str("optbag:primlog"),
+    "BXA",
+    "beforeDigest, primitive body, afterDigest must run in order"
+  );
+  latexml_core::reset_thread_engine();
+}
+
+/// Option-bag parity: `DefMath(proto, pres, #{ beforeDigest, afterDigest })` — a
+/// `MathPrimitive` runs only the digest pair, and both must fire from the option
+/// bag (previously scalar-only). Driven in math mode via `$\optbagmath$`.
+#[test]
+fn math_option_bag_runs_digest_hooks() {
+  fresh_state();
+  load_script(
+    r#"
+      DefMath("\\optbagmath", "∑", #{
+        role: "SUMOP",
+        beforeDigest: || { assign_global("optbag:mathlog", LookupString("optbag:mathlog") + "B"); },
+        afterDigest:  || { assign_global("optbag:mathlog", LookupString("optbag:mathlog") + "A"); }
+      });
+    "#,
+  )
+  .expect("DefMath with a beforeDigest/afterDigest option bag must load");
+  latexml_core::stomach::digest(mouth::tokenize_internal(r"$\optbagmath$"))
+    .expect("digest $\\optbagmath$");
+  assert_eq!(
+    lookup_str("optbag:mathlog"),
+    "BA",
+    "DefMath beforeDigest then afterDigest must both run"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 /// Regression for #314: `LookupTokens("class_options")` panicked with
 /// "RefCell already borrowed". `class_options` is a `Stored::VecDequeStored`,
 /// whose branch in `state::lookup_tokens` reverts each item to Tokens via
