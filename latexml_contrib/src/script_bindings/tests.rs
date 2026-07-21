@@ -568,6 +568,23 @@ fn lookup_definition_construct_hook_on_primitive_errors() {
   latexml_core::reset_thread_engine();
 }
 
+/// #320: `LaTeXMLVersion()` returns the running latexml-oxide version (Perl's
+/// `$LaTeXML::VERSION`), which the top crate publishes to state as
+/// `LATEXML_VERSION` at session init. A bare contrib test runs no conversion, so
+/// we set the key directly and confirm the binding reads it back.
+#[test]
+fn latexml_version_binding_reads_published_version() {
+  fresh_state();
+  latexml_core::state::assign_value("LATEXML_VERSION", "0.7.5", Some(Scope::Global));
+  load_script(r#"assign_global("v:out", LaTeXMLVersion());"#).expect("LaTeXMLVersion() must load");
+  assert_eq!(
+    lookup_str("v:out"),
+    "0.7.5",
+    "binding returns the published X.Y.Z version"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();

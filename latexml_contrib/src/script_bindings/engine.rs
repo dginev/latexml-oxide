@@ -194,6 +194,14 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("LookupBool", |k: &str| -> bool {
     latexml_core::state::lookup_bool(k)
   });
+  // Perl's `$LaTeXML::VERSION` — the running latexml-oxide version as a bare
+  // `X.Y.Z`, so a binding can gate on it (BookML does `$LaTeXML::VERSION <= …`).
+  // It is OUR crate version, not the emulated Perl LaTeXML's. The top crate
+  // publishes it to state (`LATEXML_VERSION`) at session init (#320); `""` if a
+  // conversion hasn't been initialized (e.g. a bare unit test).
+  engine.register_fn("LaTeXMLVersion", || -> String {
+    latexml_core::state::lookup_string("LATEXML_VERSION")
+  });
   engine.register_fn("LookupTokens", |k: &str| -> Tokens {
     latexml_core::state::lookup_tokens(k).unwrap_or_default()
   });
