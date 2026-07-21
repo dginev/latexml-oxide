@@ -519,7 +519,7 @@ impl Graphics {
     static GRAPHICSPATH_RE: LazyLock<regex::Regex> =
       LazyLock::new(|| regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap());
     let mut paths = Vec::new();
-    for pi in doc.findnodes(".//processing-instruction('latexml')") {
+    for pi in doc.findnodes("//processing-instruction('latexml')") {
       let text = pi.get_content();
       if let Some(cap) = GRAPHICSPATH_RE.captures(&text) {
         paths.push(cap[1].to_string());
@@ -545,7 +545,7 @@ impl Graphics {
     let param_in_options_re =
       regex::Regex::new(&format!(r#"\b{}\s*=\s*([\d.]+)"#, regex::escape(param))).ok()?;
 
-    for pi in doc.findnodes(".//processing-instruction('latexml')") {
+    for pi in doc.findnodes("//processing-instruction('latexml')") {
       let text = pi.get_content();
       if let Some(cap) = direct_re.captures(&text) {
         return cap[1].parse().ok();

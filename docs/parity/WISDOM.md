@@ -2437,3 +2437,43 @@ that this scope existed; #48 just lifts it to a first-class scope so the Meaning
 table (definitions) can use it. Semantics pinned by
 `state::reentrancy_tests::inplace_scope_keeps_the_bindings_level` (proves it is
 neither Global nor Local across a `push_frame`/`pop_frame` boundary).
+
+## #65 Post-processing `PostDocument::findnodes` with NO context node evaluates ONLY absolute paths — a relative axis silently matches nothing (and cross-doc node copies need a target-doc namespace)
+
+Two bugs, one witness (split HTML pages losing their `LaTeXML.css`/`ltx-book.css`
+`<link>`s — GitHub #341; Perl `latexmlc --format=html5 --splitat` links them on
+every page).
+
+**Bug 1 — the relative-axis trap.** `latexml_post::PostDocument::findnodes(xpath)`
+(no context node) calls rust-libxml's `evaluate_checked`, which leaves the XPath
+**context node unset**. libxml2 then resolves only **absolute** paths (`//…`,
+`/…`); a **relative** location path — `descendant::…`, `.//…`, `child::…` —
+matches **NOTHING**, unlike XML::LibXML's `$doc->findnodes` (which evaluates from
+the document node). This silently broke `Post::Document::newDocument`'s
+`descendant::ltx:resource` / `.//processing-instruction('latexml')` copies into
+each split sub-document, `Split`'s `descendant::ltx:navigation`, CrossRef's
+`descendant::ltx:glossaryref` / `descendant::*[@decl_id or @meaning]`, and the
+graphics/documentclass PI reads — all returned empty for years.
+
+**Fix:** `findnodes_at` binds the **root element** as the context node when none
+is given, so relative axes resolve. You **cannot** bind the *document node* —
+rust-libxml's `node_evaluate` **SIGSEGVs** on a document-node context (unguarded
+FFI in the fork; see [[rust-libxml-null-nodeptr-segfault-fix]]). Consequence:
+nodes **outside** the root element — `<?latexml …?>` PIs that precede it — are
+not descendants of the root, so a relative PI query still needs the **absolute**
+`//processing-instruction('latexml')` form (used at the 4 PI call sites +
+`newDocument`). Guard: `document::tests::findnodes_resolves_relative_axes_without_context_node`.
+
+**Bug 2 — cross-document namespace SIGSEGV (was hidden behind Bug 1).** Once the
+resources were actually *found*, `add_nodes`→`add_xml_node` cloned them with
+`parent.new_child(source.get_namespace(), …)` — reusing the **source** document's
+`xmlNs` object inside the **target** sub-document. That cross-doc namespace
+pointer SIGSEGVs / corrupts the tree when either doc is freed. **Fix:** resolve
+the namespace in the **target** document (find-or-create a decl with the same
+URI, preferring the default/empty prefix), mirroring the `NodeData::Element`
+path. Any cross-document node copy (split, MathImages fork, bibliography merge)
+must reconcile namespaces into the destination — never carry the source's `xmlNs`.
+
+Both fixes are general (they repair every affected caller). Same pass also ported
+`newDocument`'s missing `addDate` (Perl Post.pm L774) and removed a
+duplicated class-copy block. Guard: `13_split_css_links`.
