@@ -58,6 +58,31 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       let pkg_loaded_key = s!("{}.sty_loaded", pkg_name);
       let pkg_raw_key = s!("{}.sty_raw_loaded", pkg_name);
       if lookup_bool(&pkg_loaded_key) || lookup_bool(&pkg_raw_key) {
+        // The re-emit above is only progress when the CS that FIRED this
+        // closure is a *different* one that was `\let` to the trigger — the
+        // `\varmathbb`/2310.13684 case the comment describes. If the firing CS
+        // is `cs_for_closure` ITSELF, then re-emitting it reproduces the exact
+        // state we are in and the gullet spins forever, silently: no error is
+        // emitted, so `too_many_errors` never caps it and the run grinds to the
+        // token limit ~42s later with an empty document.
+        //
+        // That state is reachable whenever the package's `<pkg>.sty_loaded`
+        // value (assigned GLOBALLY) outlives the definitions it installed —
+        // e.g. `{\documentclass[...]{sn-jnl}}`, a class loaded inside a group
+        // (real LaTeX refuses this outright: "! LaTeX Error: Loading a class or
+        // package in a group", latex.ltx `\@fileswithoptions` L18700). The
+        // group pops the package's macros but not its loaded-flag, leaving the
+        // globally-installed trigger as the only surviving definition.
+        // Witness arXiv:2606.21610 (the Overleaf/Springer conditional
+        // `\IfFileExists{sn-jnl.cls}{\documentclass…}` template).
+        //
+        // Recovery: clear the stale trigger globally and re-emit, so the CS
+        // resolves as genuinely undefined and takes the ordinary bounded
+        // `Error:undefined` path — which is exactly what same-host Perl reports
+        // for this input (`Error:undefined:\theoremstyle`, 1.2s).
+        if get_current_token() == Some(cs_for_closure) {
+          assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
+        }
         return Ok(Tokens::new(vec![cs_for_closure]));
       }
       // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,

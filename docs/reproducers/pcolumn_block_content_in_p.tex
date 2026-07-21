@@ -1,7 +1,15 @@
 % Reproducer: block content (a list) inside a `p{}` tabular column cell.
 %
-% GENUINE Rust-only correctness bug (Perl 0 errors / Rust 1 error), confirmed
-% 2026-06-22 against local Perl 0.8.8 on this host. Witness in the
+% >>> STATUS 2026-07-20: FIXED — re-verified against same-host Perl. This
+% >>> reproducer now converts with 0 errors and its output is BYTE-IDENTICAL to
+% >>> Perl's (normalised diff, 0 differences). Kept as a regression witness.
+% >>> IMPORTANT for planning: this item was recorded as BLOCKED on the
+% >>> \hsize-invariant vbox/paragraph box model (the blocker shared with
+% >>> Cluster G / 1707.02464). That blocker no longer gates it — do not carry
+% >>> "global p{} -> VBox is blocked" forward without re-measuring.
+%
+% (Historical) GENUINE Rust-only correctness bug (Perl 0 errors / Rust 1 error),
+% confirmed 2026-06-22 against local Perl 0.8.8 on this host. Witness in the
 % sandbox-arxiv-10k-shuffle corpus: 1510.07685 (Hera1706.tex), which converts
 % with 3× `Error:malformed:ltx:itemize <ltx:itemize> isn't allowed in <ltx:p>`
 % in Rust and ZERO errors in Perl.

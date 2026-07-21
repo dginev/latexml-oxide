@@ -769,7 +769,8 @@ The `false` was historically correct for callers that run at compile time
 broken `Parameters`. Four call sites needed the fix:
 
 - `dump_reader.rs` (was: false → true)
-- `dump_loader.rs` (was: false → true)
+- `dump_loader.rs` (was: false → true) — file since split into
+  `latex_dump.rs` / `plain_dump.rs`; kept as the historical call-site list
 - `dump_codegen.rs` codegen template (was: emitting false → now emits true)
 - `latex_constructs.rs::\DeclareTextFontCommand` (was: false → true)
 
@@ -1101,8 +1102,12 @@ $token = T_CS('\lx@delimiterdot') if !defined($token) || ToString($token) eq '.'
 my ($delim) = $STATE->getStomach->invokeToken($token);  # ← see dim 2
 return $delim;
 ```
-All three branches need porting (single-X-token read, BEGIN-unwrap,
-`.`/undef → `\lx@delimiterdot`).
+**Corrected 2026-07-20: only TWO branches still need porting** (single-X-token
+read, BEGIN-unwrap). The third — `.`/undef → `\lx@delimiterdot` — **is already
+implemented** in `base_parameter_types.rs`'s `DefParameterType!(TeXDelimiter)`
+(the `None` / `END` / `"."` match arms), together with an END-peek fallback Perl
+does not have (witness arXiv:1207.4709). The in-code comment said "3 branches
+missing" too and has been corrected alongside this line.
 
 **Dimension 2 — `undigested => 1` is architectural, not a macro flag.**
 
@@ -1993,7 +1998,7 @@ or `//` are unaffected.
 
 **Witness:** PR-2767 port, `\lx@frontmatter@fallback` — frontmatter
 (title/creator) landed at the *end* of `<ltx:document>` instead of
-after the `ltx:resource` block; caught by `20_digestion::rebox_test`.
+after the `ltx:resource` block; caught by `the `20_digestion` `rebox` fixture (`tests/digestion/rebox.{tex,xml}`)`.
 Fixed in `base_utilities.rs` by using
 `/ltx:document/ltx:resource[last()]`.
 
@@ -2016,7 +2021,7 @@ the workspace.
 with a working `_ns` call, guarded by another always-false check that never
 lets the dead block run, or carrying an `.or_else(get_property("id"))`
 fallback. **Do NOT blanket-"correct" them.** At least one mask is load-bearing:
-`rewrite.rs:1242` (XMArg→inner-id transfer) is a no-op, and swapping in the
+`rewrite.rs:1034/:1043` (XMArg→inner-id transfer) is a no-op, and swapping in the
 `_ns` accessor makes wildcard `1`/`n` tokens acquire `xml:id`s **Perl does not
 emit**, regressing `simplemath`/`declare`. Only migrate a site when a
 *confirmed* Perl divergence is traced to it. New code uses the ns-aware form
@@ -2323,3 +2328,84 @@ the cause is never "the raw `.sty` won". It is that the `\usepackage` was never
 `latexml.sty.ltxml:27` — neither predefines it), so a bare `\iflatexml` errors
 `undefined` and falls into `\else` in BOTH implementations, byte-identically.
 That is parity, not a bug.
+
+## #64 "Perl recovers where Rust loops" can mean **Perl never had the macro** — inherited-kernel-macro leaks are a whole bug class
+
+Rust raw-loads `latex.ltx` into the kernel dump; **Perl LaTeXML does not**. So a
+control sequence can be *fully defined and TeX-faithful* in Rust while being
+plain `undefined` in Perl. When such a CS is a **raw TeX implementation of
+something LaTeXML models structurally**, digesting it is worse than not having
+it: LaTeXML's constructs do not implement the low-level machinery (`align_state`,
+`\lastbox`, `\futurelet`-driven brace juggling) the kernel body relies on.
+
+**Canonical case (2026-07-20, arXiv:2605.23849).** `\kbordermatrix` uses the
+documented `\bordermatrix` idiom `\let\\\@arraycr` inside its own `\ialign`.
+The kernel's `\@arraycr` (latex.ltx L16583-16585) is
+
+```tex
+\protected\def\@arraycr{${\ifnum0=`}\fi\@ifstar\@xarraycr\@xarraycr}
+\def\@xarraycr{\@ifnextchar[\@argarraycr{\ifnum0=`{\fi}${}\cr}}
+```
+
+— the `$`/brace pair exists purely to keep TeX's `align_state` balanced while
+`\halign` scans for `\cr`. LaTeXML has no `align_state`, so the `$`s are digested
+as real mode switches, re-opening an inline-math frame the alignment's
+column-*after* template can no longer balance:
+`Error:unexpected:\halign Attempt to close a group that switched to mode math`,
+then a runaway to the token limit (~149 s, 0 formulae). Perl "completed in 0.4 s"
+only because `\@arraycr` was undefined and it **skipped the whole matrix**.
+
+**Fix shape** — retract the entry point to LaTeXML's own model, exactly as Perl
+already does for the tabular sibling (`latex_constructs.pool.ltxml:3612`,
+`Let('\@tabularcr','\lx@alignment@newline')`):
+
+```rust
+Let!("\\@arraycr", "\\lx@alignment@newline");
+```
+
+Aliasing the *entry point* retracts the whole `\@xarraycr`/`\@argarraycr` chain,
+and `\lx@alignment@newline` already reads the same `*` and `[dim]` arguments.
+Result: 0 errors / 1.9 s / 985 formulae, vs Perl's 3 errors / 52.7 s — same 985
+`Math` and 8 `XMArray` counts, so structure is preserved, not degraded.
+
+**Three transferable rules.**
+
+1. **A Perl "0 errors" that comes from an `undefined` is not a target to match —
+   it is a construct Perl dropped.** Compare *structure counts* (formulae,
+   arrays, sections), not just error counts, before calling Perl the better
+   result. Here Perl's 3 errors WERE the whole bordered matrix going missing.
+2. **Bisect by hand-expanding the suspect macro.** Substituting `\@arraycr`'s
+   body inline was clean in both engines while the macro was not — that one
+   experiment moved the fault from "deep mode/frame accounting" (two people's
+   prior hypothesis, plus a reverted fix attempt) to "one inherited kernel
+   definition", and it is cheap to run.
+3. **Look for siblings whenever you find one — then check each for a
+   consumer.** The retraction list is a deliberate seam: `\@tabularcr` and `\+`
+   were already there; `\@arraycr` was the missing third. `latex.ltx` has exactly
+   four sites using this ``\ifnum0=` `` trick — `\@arraycr`, `\@tabularcr`,
+   `\@eqncr`, `\hline` — and `\hline`/`\@xhline` are already bound by both
+   engines.
+
+   **But `\@eqncr` must NOT be retracted, and this was measured, not guessed.**
+   Synthetically it looks identical (`\let\\\@eqncr` in a raw `\halign`: Rust 15
+   errors vs Perl 1, same as `\@xtabularcr` at 13 vs 1). The difference is that
+   `\@eqncr` has a **real consumer that depends on the chain**:
+   `latexml_contrib/src/equations_sty.rs` redefines `\@@eqncr` — the kernel
+   `\@eqncr`→`\@yeqncr`→`\@xeqncr`→`\@@eqncr` path is how it emits its column
+   padding *and* `\@eqnnum`/`\stepcounter{equation}`. Retracting the entry point
+   skips all of it: on an `eqaligntwo` the equation **numbers disappear and the
+   remaining ones renumber** (verified by diff; error count stayed 0 both ways,
+   so an error-count gate would have missed the regression entirely). The
+   array/tabular continuations (`\@xarraycr`, `\@argarraycr`, `\@xtabularcr`,
+   `\@argtabularcr`) are likewise left alone: they are unreachable once the entry
+   points are retracted, `\@xtabularcr` is itself redefined by `tabls.sty`, and
+   the only demonstrated harm needs a `\let\\\@xtabularcr` nobody writes.
+
+   So the rule is narrower than "retract the family": retract a kernel CS **only
+   where LaTeXML fully models the construct and nothing consumes the kernel
+   chain**. Diff the *output*, not the error count, before deciding.
+
+Neutrality argument worth reusing: the change is observable **only** by documents
+that name `\@arraycr` (no Rust binding and no `.ltxml` references it) — measured
+at **6 of 6,000** 2605 papers, three via the direct `\let`. See
+`docs/known_crashes/kbordermatrix_halign_math/`.

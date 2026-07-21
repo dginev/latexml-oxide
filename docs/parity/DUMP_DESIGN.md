@@ -51,7 +51,9 @@ are generated explicitly by `tools/make_formats.sh` (which builds
 the binary, detects the TL year, and writes the versioned files).
 Dump files are **NOT tracked in git** (decision 2026-06-07; all of
 `resources/dumps/` is gitignored). Release binaries embed a 5-year
-moving TL window (currently 2022–2026) generated at tag time by
+moving TL window (**currently 2022–2025**; 2026 is blocked on the upstream TL
+container — TODO(#217) in `release-dumps.yml` — and a TL2026 host falls back to
+the most-recent embedded dump) generated at tag time by
 `.github/workflows/release-dumps.yml` — each year produced inside a
 pinned TL-year container with a strict zero-error `--init` gate
 (`LATEXML_INIT_DEBUG=1`, since init suppresses error output by
@@ -157,14 +159,14 @@ Versioned filenames + a `build.rs`-generated manifest:
   TeXLive year). Multiple years coexist in the directory.
 * `latexml_engine/build.rs` scans the directory, stages each year's
   files into `$OUT_DIR`, and emits an
-  `embedded_dumps_manifest.rs` table with one
+  `embedded_dumps.rs` table with one
   `EmbeddedDumpYear { year, plain, latex, stamp }` entry per year
   (sorted descending). The manifest entries are populated via
   `include_str!`, so all bundled dumps live in the binary's `.rodata`.
 * `latexml_engine::dump_paths::detect_ambient_texlive_year()` reads
   `kpsewhich -var-value=SELFAUTOPARENT` (last path component →
   4-digit year), with `pdflatex --version` as fallback.
-* Resolution chain (per `latex_dump_loader.rs` and `plain_dump.rs`):
+* Resolution chain (per `latex_dump.rs` and `plain_dump.rs`):
     1. `$LATEXML_NODUMP=1` → skip (Perl `LoadFormat` parity).
     2. `$LATEXML_DUMP_PATH` (explicit full path; year inferred from
        filename if matchable).
@@ -210,10 +212,10 @@ regenerated per release. `.github/workflows/release-dumps.yml` (called from
 `release.yml` on a tag, dispatchable standalone) builds one kpathsea-UNLINKED
 dumper (subprocess-`kpsewhich` backend) and runs it inside each pinned
 `texlive-docker:YYYY` container across a 5-year moving window (currently
-2022–2026), gating each `--init` on a strict zero-`Error:`/`Fatal:` check
+2022–2025), gating each `--init` on a strict zero-`Error:`/`Fatal:` check
 (`LATEXML_INIT_DEBUG=1`); the maxperf build then embeds the window via
 `build.rs`. Dev/CI generate just the ambient year with `tools/make_formats.sh`,
-and `resources/dumps/` stays gitignored. Full operational detail: `../RELEASING.md`
+and `resources/dumps/` stays gitignored. Full operational detail: `../release/RELEASING.md`
 and CLAUDE.md ("Distribution model").
 
 ## Why text format, not compiled Rust

@@ -167,16 +167,17 @@ cold run for a fair Linux-vs-Windows benchmark.
   `make_formats.ps1`, `cargo test --profile ci`), then mark it required. Keep
   the MiKTeX smoke as a separate scheduled/dispatch leg (full suite × 2 distros
   per PR is not worth the 2× Windows minutes).
-- [ ] **README + `RELEASING.md` platform status.** README omits Windows
-  entirely; `RELEASING.md` still lists Windows as "out of scope for now" and a
-  "deferred matrix rung." Update both to reflect the shipped `.exe` (and its
-  runtime prereqs: TeX Live or MiKTeX on PATH; ImageMagick / Ghostscript /
-  MuPDF / poppler optional for graphics).
-- [ ] **kpathsea license entry.** kpathsea is LGPL-2.1 and is now STATICALLY
-  linked (Windows `build_from_source`; Linux/macOS
-  `tools/build_static_kpathsea.sh`). It is missing from `LICENSE_INVENTORY.md`
-  and absent from `THIRD-PARTY-NOTICES` §3 (no kpathsea entry; no §6 relink note
-  found). Add it and confirm the static-LGPL relink obligation is covered.
+- [x] **README + `RELEASING.md` platform status — DONE** (verified 2026-07-20).
+  `README.md` advertises the Windows binary (L47) and carries a full
+  `### Windows (x86_64)` install section (L125) with the TeX Live/MiKTeX prereq
+  (L138); `RELEASING.md` lists `x86_64-pc-windows-msvc` as published from 0.7.4
+  (L8-11) and records it as landed (L161) — only **musl** is still out of scope
+  there.
+- [x] **kpathsea license entry — DONE** (verified 2026-07-20). Covered in
+  `LICENSE_INVENTORY.md`: the claim scope (L19), the §D.1 table row (L180), the
+  `kpathsea_sys` row, and the §D.3 relink discharge; **F5 was closed 2026-07-14**
+  ("libkpathsea: an undisclosed static LGPL-2.1 link"). `RELEASING.md` cites the
+  same discharge.
 - [ ] **expl3 / TL2026 `latex.ltx` dump gate.** `--init=latex.ltx` on TL2026
   emits 137 raw-load expl3-catcode-gap errors
   (`EXPL3_CATCODE_GAP_2026-06-08.md`), so 2026 cannot join the release dump

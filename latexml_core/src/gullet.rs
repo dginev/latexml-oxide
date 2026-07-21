@@ -567,6 +567,25 @@ fn read_resource_checkpoint() -> Result<Option<bool>> {
   {
     let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
     drop(g);
+    // The cycle guard already dumps its window when it trips, but a runaway
+    // that reaches THIS limit is by definition one the cycle guard did NOT
+    // recognise — an aperiodic grind (a counter that keeps advancing, a list
+    // that keeps growing). Those are exactly the ones with no other clue in
+    // the log, so dump the same recent-token ring here. Without it a
+    // TokenLimit fatal says only "infinite loop?" and every investigation
+    // starts from zero (witness 2606.21610, a 42 s silent grind).
+    if *DEBUG_FATAL {
+      eprintln!("[debug-fatal] token limit tripped: {msg}");
+      DEBUG_RECENT_TOKENS.with(|ring| {
+        let ring = ring.borrow();
+        let recent: Vec<&str> = ring.iter().map(String::as_str).collect();
+        eprintln!(
+          "[debug-fatal] last {} read tokens: {}",
+          ring.len(),
+          recent.join(" ")
+        );
+      });
+    }
     Fatal!(Timeout, TokenLimit, msg);
   }
   if let Some(limit) = g.pushback_limit {
@@ -602,9 +621,12 @@ fn read_resource_checkpoint() -> Result<Option<bool>> {
 /// checkpoints — they do NOT delegate to one another).
 #[inline]
 fn cycle_guard_checkpoint(active: bool, nextt: &Token) -> Result<()> {
-  if !active {
-    return Ok(());
-  }
+  // Record BEFORE the activation gate: the ring is also what the token-limit
+  // fatal dumps, and that fatal fires precisely for runaways the cycle guard
+  // never recognised — which includes ones that trip a lowered
+  // `LATEXML_TOKEN_LIMIT` before the guard ever activates. Gating the ring on
+  // `active` left it empty in exactly that case. Debug-only, so free in
+  // production.
   if *DEBUG_FATAL {
     DEBUG_RECENT_TOKENS.with(|ring| {
       let mut ring = ring.borrow_mut();
@@ -613,6 +635,9 @@ fn cycle_guard_checkpoint(active: bool, nextt: &Token) -> Result<()> {
       }
       ring.push_back(format!("{nextt:?}"));
     });
+  }
+  if !active {
+    return Ok(());
   }
   let mut g = gullet_mut!();
   {

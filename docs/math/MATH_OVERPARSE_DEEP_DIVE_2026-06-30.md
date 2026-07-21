@@ -93,5 +93,8 @@ abs-value fences. So Levers 1–4 are **pure speedups with no output change** (t
 cleanest possible win for the rerun), NOT quality fixes. The one quality item to
 verify is the `f(x)`-as-apply-by-default question entangled with Lever 1 above.
 
-Separately noted (faithfulness, not perf): `\iint`/`\iiint` are tagged **ATOM, not
-INTOP**, so their `dx` is not recognized as a differential — check against Perl.
+~~Separately noted: `\iint`/`\iiint` are tagged ATOM, not INTOP, so their `dx`
+is not recognized as a differential.~~ **WRONG — retracted 2026-07-20.** All three
+providers already declare `role => "INTOP"` (`amsmath_sty.rs` `\iint`/`\iiint`/
+`\iiiint`, `txfonts_sty.rs`, `wasysym_sty.rs`), and `git log -L` dates that to
+2026-03-20 — before this note was written. Nothing to check.

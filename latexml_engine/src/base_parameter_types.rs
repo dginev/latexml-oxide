@@ -888,8 +888,10 @@ LoadDefinitions!({
   // plus revsymb's \biglb family fall back to DefMacro workarounds.
   //
   // Gap has two dimensions:
-  //   - Reader shape (3 branches missing): single-X-token read instead of read_arg,
-  //     BEGIN-unwrap-and-re-read, `.`/undef → \lx@delimiterdot substitution.
+  //   - Reader shape (2 branches missing): single-X-token read instead of read_arg,
+  //     and BEGIN-unwrap-and-re-read. (The third, `.`/undef → \lx@delimiterdot,
+  //     IS implemented below — the None / END / "." arms — plus an END-peek
+  //     fallback Perl does not have. Corrected 2026-07-20; the doc said 3 too.)
   //   - Architectural `undigested=>1`: ArgWrap has no Digested variant and Parameter has no
   //     `undigested: bool` flag; closing this needs latexml_core changes. Required for
   //     \left\delimiter<num>.

@@ -7801,6 +7801,25 @@ LoadDefinitions!({
   DefRegister!("\\tabcolsep", Dimension!("6pt"));
   DefMacro!("\\arraystretch", None, T_OTHER!("1"));
   Let!("\\@tabularcr", "\\lx@alignment@newline");
+  // Same retraction for the kernel's ARRAY row separator. Perl only retracts
+  // `\@tabularcr` because it never loads `latex.ltx`, so `\@arraycr` is simply
+  // undefined there; our kernel dump DOES carry the real
+  // `\@arraycr`/`\@xarraycr` (latex.ltx L16583-16585), and its raw TeX body is
+  // incompatible with LaTeXML's alignment model. It balances TeX's `align_state`
+  // with the classic `${\ifnum0=`}\fi … \ifnum0=`{\fi}${}\cr` brace/`$` trick,
+  // which only works when `\cr` is scanned by a real `\halign`; digesting it
+  // instead re-opens an inline-math frame that the alignment's column-after
+  // template then cannot balance. Any macro that does the documented
+  // `\let\\\@arraycr` inside its own `\halign`/`\ialign` (the `\bordermatrix`
+  // idiom — witness `\kbordermatrix`, arXiv:2605.23849) therefore leaked a
+  // math-mode frame: `Error:unexpected:\halign Attempt to close a group that
+  // switched to mode math`, cascading into a runaway that hit the token limit
+  // after ~25-107s, where same-host Perl completes in 0.4s.
+  // `\lx@alignment@newline` IS the faithful model of `\\` in an alignment (it
+  // reads the same `*` and `[dim]` arguments `\@arraycr`/`\@argarraycr` do), so
+  // aliasing the entry point retracts the whole chain, exactly as for
+  // `\@tabularcr`. See docs/known_crashes/kbordermatrix_halign_math/.
+  Let!("\\@arraycr", "\\lx@alignment@newline");
   if !has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
   }

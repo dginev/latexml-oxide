@@ -82,7 +82,8 @@ matters, not just the tail.
 **The slow tail is two distinct populations** (different fixes): (a) **digest-
 runaway fatals** — `2605.23849` 149s, `2606.21610` 128s, `2605.21013`, `2606.13482`:
 100s+ in digest, **0 formulae**, then fatal → reliability, `STABILITY_WITNESSES.md`
-Cluster H + the BP-4 watchdog; (b) **legitimately math-dense** — `2605.16382`
+Cluster H — **all four FIXED 2026-07-20, now 0.2–4 s; BP-4 retired, do not build
+the watchdog**; (b) **legitimately math-dense** — `2605.16382`
 (4136 formulae, 116s, 3.0 GiB), `2605.20736`, `2605.14423` → the genuine math
 lever (BP-1/BP-5). Fatals are bimodal: most fail fast (median 3.0s, healthy) but a
 slow-runaway subset (P99 98s) wastes ~100s before dying = population (a).
@@ -209,7 +210,8 @@ allocation** (partial). This testbed is aimed squarely at P1.
 ## Output-neutrality gate (non-negotiable)
 
 Performance changes MUST NOT change output. After each optimization:
-1. `cargo test --tests` green (1479/0 baseline on `class-b-xmref`).
+1. `cargo test --tests` green at the CURRENT baseline (**1617/0/0**, 2026-07-20).
+   (The old `1479/0 on class-b-xmref` pin is stale — that branch no longer exists.)
 2. Structural diff of the testbed outputs before/after the change — byte-identical
    (modulo the known intentional divergences). A perf change that alters output is
    a bug, not a speedup.
@@ -475,7 +477,7 @@ See the testbed table above (category + dominant phase per paper). Status legend
 - **Output-neutral:** `xsltproc` full-HTML **byte-identical** (`cmp` clean, 25 MB Core
   XML → HTML). Suite **1502/0** + new guard `09_xslt_maketitle_navscan.rs` (asserts the
   `\date` still renders when no `ltx:navigation` is present, i.e. the memoized value is
-  `false`). See OXIDIZED_DESIGN.md #41.
+  `false`). See OXIDIZED_DESIGN_DIVERGENCES.md #41.
 - **Note:** local-only XSLT divergence from upstream LaTeXML; the per-title `//` scan
   exists verbatim upstream — candidate to upstream (like #2/#3).
 
@@ -506,7 +508,7 @@ See the testbed table above (category + dominant phase per paper). Status legend
   `xsltproc --profile`. 1802.06435 is now 77.6 → 17.3 s.
 - **Note:** local-only XSLT divergence from upstream LaTeXML; the O(n²) exists
   verbatim upstream — candidate to upstream (like the seclev memoization).
-  See OXIDIZED_DESIGN.md #40.
+  See OXIDIZED_DESIGN_DIVERGENCES.md #40.
 
 ### #2 — XSLT `f:seclev-aux` O(n²) heading-level computation (Cluster B; 14 papers) — 2026-06-27
 - **Root cause:** `LaTeXML-structure-xhtml.xsl`'s `f:seclev-aux` recomputes

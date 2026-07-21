@@ -1,6 +1,24 @@
 % Minimal, self-contained reproducer for sandbox paper 1610.00974 (corpus 7,
 % sandbox-arxiv-tikz-cd). Isolated 2026-06-20.
 %
+% >>> STATUS 2026-07-20: FIXED, and now SURPASSES Perl. Re-verified with the
+% >>> current binary: this reproducer AND the full paper (Nikbakht.tex) convert
+% >>> with 0 errors (was 502x "Single ampersand used with wrong catcode" ->
+% >>> Fatal TooManyErrors:MaxLimit(500); Perl 0). Fixed by the \multicolumn
+% >>> over m{}/b{} group-shape work (see array_pcolumn/A_*); no separate change
+% >>> was needed here. Kept as a regression witness.
+% >>>
+% >>> One structural difference from Perl REMAINS, and pdflatex says Perl is the
+% >>> one that is wrong: for `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`,
+% >>>   Rust: `B` is a line break INSIDE the merged cell (<p align="center">B</p>)
+% >>>   Perl: `B` starts a new table ROW (<tr><td>B</td><td/></tr>)
+% >>> pdftotext -layout on the same input renders
+% >>>       A
+% >>>       B
+% >>>   y       z
+% >>> i.e. A and B stack inside the single merged cell and `y z` is the next
+% >>> row -- Rust's reading. Do NOT "fix" Rust toward Perl here.
+%
 % SYMPTOM (full paper): 502× "Package pgf Error: Single ampersand used with
 % wrong catcode" → Fatal TooManyErrors:MaxLimit(500). The paper has NO \matrix;
 % the cascade fires at \end{axis} of a *pgfplots* figure (legends are rendered

@@ -1,6 +1,10 @@
 # Runtime Script Bindings (Rhai) — Plan
 
-> **Status:** proposal / planning (2026-06-08). Spike in progress.
+> **Status:** ✅ **IMPLEMENTED and SHIPPED BY DEFAULT** (updated 2026-07-20).
+> `runtime-bindings` is in `latexml_oxide`'s `default` features and in the
+> distribution build (`tools/make_release.sh`); M0–M5 are all landed and the
+> "Implemented script API (v0 reference)" section below is the live contract.
+> *(Original header: "proposal / planning (2026-06-08). Spike in progress.")*
 >
 > **What:** an **optional, secondary, feature-gated add-on** that lets users
 > contribute LaTeXML package/class bindings **at runtime** — written in an
@@ -129,7 +133,7 @@ Components:
 
 - **Home: `latexml_contrib`** (this is literally the user-contributed-bindings
   crate; it sits atop core/engine/package and can reach the whole API). The new
-  module is `latexml_contrib/src/script_bindings.rs`, every line behind the
+  module is `latexml_contrib/src/script_bindings/` (now a directory: `{engine,wire,tests}.rs`), every line behind the
   feature. It is the only place Rhai enters the workspace.
 - **Feature: `runtime-bindings`** on `latexml_contrib` (`= ["dep:rhai", "dep:log"]`);
   `rhai = { version = "1", optional = true }`. Propagated up via
@@ -248,7 +252,7 @@ for the native `BINDINGS` table.
 
 ## 10. Milestones
 
-- **M0 — spike (in progress).** Prove the Rhai mechanics behind `script-bindings`:
+- **M0 — spike — ✅ LANDED.** Prove the Rhai mechanics behind `script-bindings`:
   an `Engine` driven from Rust, a Rust fn (`DefMacro`) registered and called from
   a script, a **stored Rhai `FnPtr` called back later** from Rust (the deferred-
   expansion seam), result round-tripped. No latexml API yet. *Exit:* the seam
@@ -278,8 +282,11 @@ for the native `BINDINGS` table.
   *contributor accessibility* (lower the barrier to add a binding), not fixing
   the failure tail — so it does not need the C1 demand gate that an always-on
   core dependency would.
-- **Binary size / default.** Confirm whether the official release ships with the
-  feature on.
+- ~~**Binary size / default.** Confirm whether the official release ships with the
+  feature on.~~ **RESOLVED** — it does: `runtime-bindings` is in `latexml_oxide`'s
+  `default` features and `tools/make_release.sh` builds the distribution artifact
+  with `--features runtime-bindings`. (This question was already answered earlier
+  in this same file under "Packaging: RESOLVED — on by default".)
 
 ---
 

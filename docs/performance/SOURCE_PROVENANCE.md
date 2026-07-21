@@ -307,16 +307,12 @@ We fix it *exactly*, not heuristically, in two layers:
    makes put-back/look-ahead irrelevant (the range is fixed at open→close,
    not the look-ahead tail).
 
-**Status & priority (2026-05-25): this is the near-term lever, and it is *not yet
-implemented*.** The Mouth's `get_locator` (`mouth.rs:147`) still derives `from`
-heuristically (`from_column = if to_column ≥ max_col { 0 } else { to_column }`) —
-the eating-disorder approximation; ranges only look right for single-line
-constructs. Implementing §1 (one `last_token_start` field, captured in
-`read_token` `:629` *after* inter-token skips; an open→close snapshot at each
-digestion frame) gives **every existing element, leaves included, an accurate,
-correctly-containing `(file;line;col)` range** — with **no `Token` change and no
-markup change**. That accurate, *containing* element range is the precondition
-for the content-window character localization in §2.1.
+**Status (updated 2026-07-20): layer 1 — the mouth primitive — IS implemented**
+(`last_token_start` in `latexml_core/src/mouth.rs`, captured in `read_token`, exposed
+as `get_locator_from_start()` in `mouth.rs` / `gullet.rs`). What remains is layer 2,
+the open→close digestion snapshot — and Experiment 2 below shows it is insufficient
+on its own for macro-defined commands. *(Original 2026-05-25 status: "this is the
+near-term lever, and it is not yet implemented.")*
 
 **Experiment 1 (2026-05-25) — the capture point matters.** A first spike landed
 the `last_token_start` primitive (`mouth.rs`: captured in `read_token` at the

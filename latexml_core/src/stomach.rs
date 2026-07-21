@@ -969,6 +969,57 @@ pub fn expire_local_box_list() -> Vec<Digested> {
   buffer
 }
 
+/// Recover the boxes a failed `digest_next_body` left stranded, in document
+/// order, and reset the accumulation stack.
+///
+/// `digest_next_body` accumulates into `box_list` (with outer levels suspended
+/// on `localized_box_list`) and only hands them back via `expire_local_box_list`
+/// on the SUCCESS path — so a mid-body Fatal drops every box digested during
+/// that call. `digest_internal` is written to keep partial output after a
+/// recoverable Fatal ("Perl finishDigestion L219-220: loop consuming input even
+/// after errors"), but that intent was defeated whenever the failure landed in
+/// the FIRST body: the caller's `boxes` was still empty, so the run produced a
+/// 39-byte empty document instead of the text preceding the bad construct.
+/// Witness arXiv:2508.07407 (ar5iv #556) — its whole document was lost, though
+/// only one `\tikz` picture is pathological.
+///
+/// `drop_innermost` is for the runaway guards (`Stomach:Recursion`), where the
+/// innermost level IS the pathology — a 50k-box repeating window. Salvaging it
+/// would graft the garbage into the document, so drop that level and keep the
+/// suspended outer ones, which is precisely "drop the offending construct, keep
+/// the document". For every other recoverable Fatal the current level is honest
+/// content and is kept.
+pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
+  let mut stomach = stomach_mut!();
+  let mut acc = std::mem::take(&mut stomach.box_list);
+  if drop_innermost {
+    acc.clear();
+  }
+  // Unwind the suspended levels innermost-parent first, each time prefixing the
+  // parent's own content so the result stays in document order.
+  while let Some(mut parent) = stomach.localized_box_list.pop() {
+    parent.append(&mut acc);
+    acc = parent;
+  }
+  // Refuse a salvage that is itself pathological. `drop_innermost` removes the
+  // runaway level for the STOMACH box-cycle guard, where that level is the
+  // pathology — but the GULLET cycle guard (`Timeout:Recursion`) fires on the
+  // token stream, and there the bloated boxes can sit in the suspended outer
+  // levels instead, so dropping the innermost does not bound anything.
+  //
+  // `STOMACH_CYCLE_ACTIVATE` is exactly the engine's own "no honest document
+  // accumulates this many undrained boxes" line, so reuse it rather than invent
+  // a second threshold: a salvage at or past it is runaway output, and handing
+  // it to the builder is worse than handing over nothing. Measured on
+  // arXiv:2605.25400, where an unbounded salvage turned a 9.7 s fatal into a
+  // 120 s wall-clock timeout that wrote a ZERO-byte file — strictly worse than
+  // the 39-byte stub it replaced.
+  if acc.len() >= STOMACH_CYCLE_ACTIVATE {
+    acc.clear();
+  }
+  acc
+}
+
 /// Stomach-level cycle guard: only once `box_list` has grown far past any
 /// flushed-document size (a normal `box_list` is drained as paragraphs/boxes
 /// complete and stays small) do we record the digest-push stream and look for

@@ -2103,7 +2103,26 @@ entries and 0 dangling citations. **Upstream candidate** — but it is a rewrite
 scanner, not a one-line change, since `Text::Balanced` cannot express
 BibTeX's rule.
 
-## 53. Raw `blkarray.sty` / `kbordermatrix` `\halign`-in-math hangs BOTH engines
+## 53. Raw `blkarray.sty` `\halign`-in-math degraded BOTH engines — ✅ both halves resolved
+
+> **RE-MEASURED 2026-07-20 — the entry below is superseded on every engine claim.**
+> * `blkarray_min.tex` on the current binary: **rc=0, "No obvious problems"** (the
+>   `blkarray_sty.rs` binding shadows the raw `.sty`). Same-host **Perl: 0.6 s,
+>   rc=0** — a bounded `too_many_errors` cap, *not* the "~90 s → rc=124 hang"
+>   recorded below.
+> * The `kbordermatrix` half is **FIXED** (2026-07-20) and was **never a
+>   `stomach.rs::egroup` bug**: Rust inherits the real kernel `\@arraycr` from its
+>   `latex.ltx` dump, which Perl does not have at all. Retracting it
+>   (`Let!("\\@arraycr", "\\lx@alignment@newline")`) fixed the witness — 2605.23849
+>   now 1.9 s / 0 errors. See WISDOM #64 and
+>   [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
+> * So there is **no known residual `kbordermatrix` exposure**, and the shared
+>   "LaTeXML's alignment × math-mode frame accounting cannot pop the per-cell
+>   inline-math frame" diagnosis was never verified for either witness — treat it
+>   as a hypothesis that did not survive.
+>
+> Retained below as the original record (it is still the best description of the
+> *input* that triggers this, and of the pdflatex golden behaviour).
 
 `blkarray`'s `block`/`blockarray` and `kbordermatrix` build a matrix with raw
 `\halign`/`\ialign` whose column template wraps **each cell in inline math**
@@ -2136,8 +2155,9 @@ Dropping the `(`/`)` delimiter (`{cc}`) OR the `blockarray` wrapper converts in
 routes `blockarray`/`block` through the `array` machinery (surpass-Perl; Perl has
 no binding): 1811.10792 (#594) OOM→0, 2310.17416 (#473) OOM→9. The `block`
 sub-region delimiters are dropped (documented simplification — `array` can't wrap
-a sub-region). The **underlying** `stomach.rs::egroup` math-frame bug is unchanged
-and still reachable via `kbordermatrix` (HIGH-DIFFICULTY, post-release). Full
+a sub-region). ~~The **underlying** `stomach.rs::egroup` math-frame bug is unchanged
+and still reachable via `kbordermatrix` (HIGH-DIFFICULTY, post-release).~~
+*(Retracted — see the banner at the top of this entry.)* Full
 analysis: [`docs/known_crashes/blkarray_halign_math/`](../known_crashes/blkarray_halign_math/README.md)
 + sibling [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
 

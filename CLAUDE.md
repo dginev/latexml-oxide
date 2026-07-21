@@ -26,7 +26,7 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1581/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
+**1617/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
 (policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
 `latexml_oxide/build.rs` sets `core.hooksPath`). The 2026-07 full-arXiv rerun
 runs at ~44k docs/hr, avg 4.06 s/doc, fatal rate 0.78%.
@@ -120,11 +120,12 @@ All active docs live in `docs/`, grouped into themed subdirectories that mirror
 the two mission targets: **[`docs/README.md`](docs/README.md)** is the
 navigational front door (multi-level TOC), and this section is the authoritative
 per-file index with the placement rules. The layout: `docs/SYNC_STATUS.md` (the
-start-here worklist) stays at the root; **`docs/parity/`** (Target 1 faithful
+start-here worklist) and `docs/AR5IV_DIAGNOSTICS.md` stay at the root; **`docs/parity/`** (Target 1 faithful
 translation, `+ diagnostics/`), **`docs/math/`** (Marpa math parser),
 **`docs/performance/`** (Target 2 beyond-Perl / arXiv), **`docs/release/`** (ship
-contracts); reference collections `docs/{archive,reproducers,out-of-scope,known_crashes,examples}/`
-are unchanged. Keep BOTH this index and `docs/README.md` current when adding,
+contracts); reference collections `docs/{archive,reproducers,out-of-scope,known_crashes,examples,scripts}/`
+are unchanged (`scripts/` holds one-off analysis helpers referenced by archived
+diagnostics, e.g. `bucket_callgrind_hot.py`). Keep BOTH this index and `docs/README.md` current when adding,
 renaming, merging, or archiving a doc. Grouped by the two mission targets (docs
 serving both come first):
 
@@ -132,7 +133,7 @@ serving both come first):
 - **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — The BRIEF ACTIONABLE worklist for both targets: current status, the in-flight session entry, open tasks, deferred families, stable reference. Completed session logs are lifted to `docs/archive/SYNC_SESSIONS_*.md`. **Start here.**
 - **[`docs/release/RELEASE_CRITERIA.md`](docs/release/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy.
 - **[`docs/release/LICENSE_INVENTORY.md`](docs/release/LICENSE_INVENTORY.md)** — Living license inventory for the redistributable binary (the RELEASE_CRITERIA §4 deliverable): Rust deps (cargo-deny-gated), embedded assets, the TeX-Live-derived dumps position, linked syslibs, subprocess-only graphics tools. Scopes the CC0 claim.
-- **[`docs/release/ISSUE_AUDIT.md`](docs/release/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation (refreshed 2026-07-02; 8 open). **Refresh before milestone planning.** (Issue numbers are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
+- **[`docs/release/ISSUE_AUDIT.md`](docs/release/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation; the file carries its own refresh stamp (do not duplicate the count here — it drifted twice). **Refresh before milestone planning.** (Issue numbers are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
 - **[`docs/release/WINDOWS_COMPATIBILITY_PLAN.md`](docs/release/WINDOWS_COMPATIBILITY_PLAN.md)** — Living worklist for the Windows port (`windows-compatibility` branch): MSVC + vcpkg-static toolchain, TeX Live + MiKTeX runtime, phased plan from compile blockers (libmarpa cc-port, libxml2/libxslt vcpkg) through `cargo test --release` green on `windows-latest` CI to a zipped `.exe` release artifact. Operationalizes RELEASE_CRITERIA portability rung 5.
 
 **Target 1 — faithful Perl translation (parity):**
@@ -151,6 +152,7 @@ serving both come first):
 - **[`docs/performance/CORTEX_WORKER_HARNESS.md`](docs/performance/CORTEX_WORKER_HARNESS.md)** — `cortex_worker --harness` fleet orchestration: one-conversion-per-process, five-layer memory guards, crash-loop backoff, production deployment recommendation. Companion to pericortex `docs/HARNESS.md` and CorTeX `MANUAL.md` §7.
 - **[`docs/performance/TELEMETRY.md`](docs/performance/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` runs.
 - **[`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)** — Design for the prioritized beyond-Perl showcase: live source ↔ preview over a shared locator substrate (ar5iv-editor + VSCode clients), accurate linting (#47) and Rust-grade author errors (#92). Locators opt-in (`--source-map`). (The landed-but-deprioritized `--server` LSP docs: [`docs/archive/LSP_SERVER.md`](docs/archive/LSP_SERVER.md), [`docs/archive/LSP_MULTIFILE_PLAN.md`](docs/archive/LSP_MULTIFILE_PLAN.md); smoke `tools/lsp_smoke.py`.)
+- **[`docs/AR5IV_DIAGNOSTICS.md`](docs/AR5IV_DIAGNOSTICS.md)** — The ar5iv issue-tracker sweep: every open "Improve article X" report screened against the current binary and classified vs same-host Perl, with the ranked worklist. Carries a 2026-07-20 re-measurement block on top of the 2026-07-18 snapshot. **Refresh before quoting any row** — a wrong main-file pick manufactures fake error counts (the file records the correct detector).
 - **[`docs/release/RELEASING.md`](docs/release/RELEASING.md)** — Tag-driven release procedure; the self-contained-binary requirement.
 - **[`docs/release/CRATES_IO_PUBLISH.md`](docs/release/CRATES_IO_PUBLISH.md)** — The `cargo publish` + docs.rs + library-consumer story: bottom-up publish order for the 8 crates, the open blockers (workspace-`resources/` packaging **B3**, the `pericortex` git dep **B2**), docs.rs metadata, and the `latexml::api` library entrypoint. Distinct from `RELEASING.md` (the GitHub-Release binary flow).
 - **[`docs/release/SAFETY.md`](docs/release/SAFETY.md)** — Threat model and `unsafe` inventory (distribution posture in `RELEASE_CRITERIA.md` §6).
@@ -298,7 +300,7 @@ truth for macro-expanded diagnostics.
 - **Source comments off by default**: `INCLUDE_COMMENTS` defaults to **false** in the Rust binary (Perl defaults true), so source `%` comments and the `%**** <file> Line N ****` progress markers (emitted every 25 lines) are suppressed in the output. Deliberate — debugging noise, no semantic content. `--comments` restores Perl's behavior. When diffing vs Perl, use `--nocomments` (or ignore `<!-- … -->` lines). See OXIDIZED_DESIGN #2.
 - **`\cdots` role**: Uses `role="ELIDEOP"` (Perl uses `role="ID"`) for math parser grammar rules.
 - **Color: visual equivalence**: Colors are compared by variant+values, not reference identity. `\color{black}` in a black context produces no `color="#000000"` attribute. See OXIDIZED_DESIGN #20.
-- **No `tex=` on `<picture>`**: The `tex=` attribute on `<ltx:picture>` is suppressed by default. Enable with `LATEXML_SVG_TEX_ATTRIBUTE=true`. See OXIDIZED_DESIGN #21.
+- **No `tex=` on `<picture>`**: The `tex=` attribute on `<ltx:picture>` is suppressed **unconditionally**. (An `LATEXML_SVG_TEX_ATTRIBUTE=true` escape hatch was designed but never implemented — the name appears in no source file. Verified 2026-07-20.) See OXIDIZED_DESIGN #21.
 
 ## Practical guidance
 
@@ -323,7 +325,9 @@ truth for macro-expanded diagnostics.
   `grep '^Error:'` works on `cortex ... > log.txt 2>&1`. Still, defensively `sed
   's/\x1b\[[0-9;]*m//g'` before `grep -acE '^(Error|Fatal):'` (logs from older binaries carry
   ANSI), and gate on **cortex's own `Processing content` file** (multi-file papers ship decoy
-  `\begin{document}` stubs). `canvas/run_one.sh` was HARDENED 2026-06-01 to **strip ANSI before
+  `\begin{document}` stubs). `canvas/run_one.sh` (an out-of-tree sweep harness — it is NOT in
+  this repo, so don't go looking; the in-tree equivalents are `tools/benchmark_canvas.sh` and
+  `tools/parity_check.sh`) was HARDENED 2026-06-01 to **strip ANSI before
   the `^Error:`/`^Fatal:` count** — behaviour-preserving on the current ANSI-emitting release
   binary AND future-proof for an ANSI-free one (so the old landmine, where rebuilding release
   with the TTY-gate fix would zero-out run_one.sh's `$'^\x1b[31mError:'` grep and mark every

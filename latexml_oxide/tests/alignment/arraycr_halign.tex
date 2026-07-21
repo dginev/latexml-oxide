@@ -1,0 +1,48 @@
+\documentclass{article}
+\makeatletter
+% The plain-TeX \bordermatrix idiom, as used by kbordermatrix.sty and friends:
+% a raw \halign whose column template wraps each cell in inline math, with the
+% LaTeX kernel's array row-separator \@arraycr \let to \\.
+%
+% The kernel's \@arraycr (latex.ltx L16583-16585) balances TeX's align_state
+% with the ${\ifnum0=`}\fi ... \ifnum0=`{\fi}${}\cr brace/$ trick, which only
+% works when \cr is scanned by a real \halign. LaTeXML must instead route \\
+% through its own \lx@alignment@newline; when it did not, the cell's inline-math
+% frame leaked past the alignment close ("Attempt to close a group that switched
+% to mode math") and cascaded into a runaway.
+%
+% Witness: arXiv:2605.23849 (kbordermatrix.sty) — was a ~149s digest runaway to
+% a token-limit Fatal with 0 formulae; also arXiv:2605.05194 (125 errors + Fatal,
+% 39-byte output). Both convert error-free now.
+% See docs/known_crashes/kbordermatrix_halign_math/.
+
+% (a) the bare alignment
+\newcommand{\bmatrixish}[1]{%
+  \setbox0=\vbox{%
+    \let\\\@arraycr
+    \ialign{\hfil$\scriptstyle ##$\hfil&&\hfil$##$\hfil\crcr
+      #1\crcr}%
+  }%
+  \box0}
+
+% (b) re-boxed into math with stretchy delimiters, which is how kbordermatrix
+% actually emits it — the XMArray path the witness paper exercises.
+\newcommand{\bmatrixdelim}[1]{%
+  \setbox0=\vbox{%
+    \let\\\@arraycr
+    \ialign{\hfil$\scriptstyle ##$\hfil&&\hfil$##$\hfil\crcr
+      #1\crcr}%
+  }%
+  \setbox2=\hbox{$\left[\vcenter{\vbox{\unvbox0}}\right]$}\box2}
+\makeatother
+\begin{document}
+
+\begin{equation}
+\bmatrixish{ & a & b \\ 1 & x & y \\}
+\end{equation}
+
+\begin{equation}
+\bmatrixdelim{ & a & b \\ 1 & x & y \\}
+\end{equation}
+
+\end{document}

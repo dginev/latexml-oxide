@@ -1,18 +1,83 @@
-# `\kbordermatrix` `\halign`-in-math IfLimit loop — OPEN, **HIGH DIFFICULTY**, post-release
+# `\kbordermatrix` `\halign`-in-math IfLimit loop — ✅ **FIXED 2026-07-20**
 
-> **Status: OPEN. Difficulty: HIGH. Priority: post-release.**
-> Genuine Rust-only divergence (Perl completes the same input). Root-caused
-> 2026-07-10 to the alignment/math-mode frame interaction; **not fixed** — the
-> real fix is deep `\halign`/`\lx@begin@alignment`-family work. A first fix
-> attempt targeted an *orthogonal* bug (see "Red herring" below) and was
-> reverted. This file is the detailed record + minimal reproducer to resume from.
+> **Status: FIXED** (`latexml_engine/src/latex_constructs.rs`, one `Let!` beside
+> the existing `\@tabularcr` retraction). The witness **arXiv:2605.23849** now
+> converts in **1.9 s with 0 errors** (1.34 MB XML, 985 formulae, 8 XMArrays) —
+> it previously ran ~149 s into a token-limit Fatal emitting **0** formulae.
+> Same-host Perl needs 52.7 s and still reports 3 errors on the same paper, so
+> this is now a **surpass-Perl** result with identical structure counts.
+> Regression guard: `latexml_oxide/tests/alignment/arraycr_halign.{tex,xml}`.
+> The history below is retained because the *reduction* and the ruled-out
+> hypotheses are the reusable part.
+>
+> ## The actual root cause (2026-07-20) — NOT the frame accounting
+>
+> The 2026-07-10 hypothesis ("`egroup` refuses to pop a math frame; make the
+> recovery degrade like Perl") was **wrong**, and so was the framing of this as
+> deep `\lx@begin@alignment` surgery. The bug was an **inherited-kernel-macro
+> leak**, the same class as the `\+` retraction at the `latex.rs` seam:
+>
+> * `\kbordermatrix` does the documented `\bordermatrix` idiom
+>   `\let\\\@arraycr` inside its own `\ialign`.
+> * **Perl LaTeXML never defines `\@arraycr`** — it does not raw-load
+>   `latex.ltx`, so Perl's `\\` is simply *undefined* there. That is exactly the
+>   2-error "recovery" everyone read as Perl being more robust; Perl was
+>   **skipping the construct**, not surviving it.
+> * **Rust's kernel dump DOES carry the real `\@arraycr`/`\@xarraycr`**
+>   (latex.ltx L16583-16585). Its body balances TeX's `align_state` with the
+>   classic ``${\ifnum0=`}\fi … \ifnum0=`{\fi}${}\cr`` brace/`$` trick, which is
+>   only correct when `\cr` is scanned by a **real** `\halign`. Digested by
+>   LaTeXML it re-opens an inline-math frame that the alignment's column-*after*
+>   template can no longer balance → `Attempt to close a group that switched to
+>   mode math` → runaway.
+>
+> Perl already retracts the sibling kernel macro
+> (`latex_constructs.pool.ltxml:3612`, `Let('\@tabularcr','\lx@alignment@newline')`);
+> it simply never needed the `\@arraycr` half. Rust does. `\lx@alignment@newline`
+> is the faithful model of `\\`-in-an-alignment — it reads the same `*` and
+> `[dim]` arguments `\@arraycr`/`\@argarraycr` do — so aliasing the entry point
+> retracts the whole chain.
+>
+> **The decisive experiment** (worth reusing): hand-expanding `\@arraycr` inline
+> was *clean* in both engines, while the macro itself failed. That pinned the
+> fault to the inherited kernel definition rather than to `$`/brace handling or
+> the frame stack.
+>
+> ## Breadth measured
+>
+> `\@arraycr` appears in **6 of a 6,000-paper 2605 sample (0.1%)**, three of them
+> via the direct `\let\\\@arraycr` / `\def\\{\@arraycr}` idiom. A second
+> independent witness recovered outright: **arXiv:2605.05194** went from
+> **125 errors + `Fatal:TooManyErrors` and a 39-byte (totally empty) document**
+> to **0 errors / 422 KB**. The other two hits are byte-unchanged, confirming the
+> change is inert wherever the idiom is not used — as it must be, since no Rust
+> binding references `\@arraycr` and no `.ltxml` defines it.
+>
+> ## What this does NOT fix
+>
+> The `blkarray` sibling (both engines fail; binding-shadowed 2026-07-18) and
+> the wider `_`/`^` and `\lx@end@inline@math` truncation families are separate.
+> Do not assume the ~12.1k full-arXiv `\lx@begin@alignment` fatals all collapse
+> to this; re-mine the corpus before quoting a number.
+
+---
+
+# ⚠️ EVERYTHING BELOW THIS LINE IS THE PRE-FIX RECORD (2026-07-10)
+
+It is kept for the **reduction map** and the **ruled-out hypotheses**, which are
+the reusable part. Its root-cause analysis (`stomach.rs::egroup` frame
+accounting) and its "Entry points for whoever resumes" are **superseded and
+wrong** — see the banner above. Read it as history, not as a worklist.
+
+---
 
 Witness: **arXiv:2605.23849** (Cluster H in
 [`../../performance/STABILITY_WITNESSES.md`](../../performance/STABILITY_WITNESSES.md)).
 Surfaced by mining the 2605+2606 60k-doc telemetry as a ~149s digest-runaway →
-fatal. It is one instance of the broader **`\lx@begin@alignment` family** (the
-full-arXiv corpus shows ~12.1k `\lx@begin@alignment` fatals), so a real fix here
-likely pays off far beyond this one paper.
+fatal. It was believed to be one instance of the broader
+**`\lx@begin@alignment` family** (the full-arXiv corpus showed ~12.1k
+`\lx@begin@alignment` fatals) — that attribution was never verified and the
+actual root turned out to be narrower.
 
 ## TL;DR
 
@@ -44,7 +109,7 @@ latexml --includestyles --path=. kbm.tex
 
 ## Root cause (what is actually happening)
 
-The error is raised in `stomach.rs::egroup` (the branch at ~L459-467, "Attempt to
+The error is raised in `stomach.rs::egroup` (the branch at ~L471, "Attempt to
 close a group that switched to mode {}"). The diagnostic frame message is the key:
 
 ```
@@ -133,7 +198,7 @@ match Perl and passes local box tests, but (a) does not fix this witness (which
 fails earlier, in `\halign`-in-math) and (b) is a broad hot-path change needing a
 corpus output-neutrality diff. **Recorded as a candidate future consistency fix
 in `../../performance/STABILITY_WITNESSES.md` Cluster H; not shipped.** If someone
-takes it up: re-apply, run the full 1534-test suite + an isolated before/after
+takes it up: re-apply, run the full suite (1617/0 as of 2026-07-20) + an isolated before/after
 byte-diff on a corpus sample, and ship it on its own merits — separately from this
 crash.
 

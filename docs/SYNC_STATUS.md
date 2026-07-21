@@ -112,6 +112,246 @@ rows (e.g. 8 panels → 2 rows of 4). Golden suite untouched (all-PNG/JPEG).
 Regression tests `figure_panel_native` + `figure_panel_unmeasured`. See WISDOM
 #62. Fig 2 → uniform 84.52pt → 3 rows of 4, 0 errors.
 
+### `\halign`-in-math runaway (Cluster H #2 / kbordermatrix) — ✅ LANDED 2026-07-20
+
+Rust Error Fix, **surpass-Perl**. The long-standing "HIGH difficulty, post-release"
+`\lx@begin@alignment`/`\halign`-in-math crash turned out to be a one-line
+**inherited-kernel-macro leak**, not deep frame surgery.
+
+Rust raw-loads `latex.ltx` into the kernel dump, so it has the real
+`\@arraycr`/`\@xarraycr` (L16583-16585); **Perl LaTeXML has neither**. That body
+balances TeX's `align_state` with ``${\ifnum0=`}\fi … \ifnum0=`{\fi}${}\cr``,
+valid only under a real `\halign` — digested by LaTeXML it re-opens an inline-math
+frame the alignment's column-after template cannot balance. Any macro using the
+documented `\bordermatrix` idiom `\let\\\@arraycr` inside its own `\ialign`
+therefore leaked → `Attempt to close a group that switched to mode math` → runaway.
+Fix: `Let!("\\@arraycr", "\\lx@alignment@newline")` in `latex_constructs.rs`,
+beside the `\@tabularcr` retraction Perl already performs
+(`latex_constructs.pool.ltxml:3612`).
+
+- **arXiv:2605.23849** (the Cluster H witness): ~149 s runaway → token-limit Fatal,
+  **0 formulae** ⇒ **1.9 s, 0 errors, 985 formulae / 8 XMArray, 1.34 MB**. Same-host
+  Perl: 52.7 s, 3 errors, identical 985/8 counts — so Rust is now faster AND
+  error-free at equal structure.
+- **arXiv:2605.05194** (found by corpus scan): 125 errors + `Fatal:TooManyErrors`
+  and a **39-byte** (empty) document ⇒ **0 errors, 422 KB**.
+- Breadth **6 / 6,000** 2605 papers (0.1%); the other hits are byte-unchanged.
+  Neutral by construction — no Rust binding and no `.ltxml` names `\@arraycr`.
+- Suite **1614/0**, clippy clean. Guard `tests/alignment/arraycr_halign`.
+
+**Two prior hypotheses were wrong; do not retry them.** (a) "Make `egroup`'s
+mode-switch recovery degrade like Perl" — Perl was *skipping* the matrix (its `\\`
+was undefined), not recovering, so matching its error count would have meant
+matching a content loss. (b) The `\lastbox`/`\unhbox` box-peel repro is a
+different, SHARED loop. See WISDOM #64 for the reusable bisection method
+(hand-expand the suspect macro) and `docs/known_crashes/kbordermatrix_halign_math/`.
+
+### Stale-autoload-trigger runaway (Cluster H #1 + #3) — ✅ LANDED 2026-07-20
+
+Rust Error Fix. The remaining two Cluster H runaways — long framed as "Rust
+error-recovery *loops* where Perl keeps *advancing*" and expected to need
+separate per-mechanism gullet surgery — were **one bug**, in `def_autoload`
+(`latexml_engine/src/tex.rs`).
+
+The autoload closure's "package already loaded → just re-emit the trigger CS"
+branch is correct only when a **different** CS was `\let` to the trigger (the
+`\varmathbb` case it was written for, arXiv:2310.13684). But `<pkg>.sty_loaded`
+is assigned **globally** while the package's macros install at the current
+frame, so loading a package or class **inside a group** pops the macros and
+keeps the flag — leaving the globally installed trigger as the CS's only
+definition. It then re-emits *itself* forever, and because it emits **no
+`Error:`**, the `too_many_errors` cap is never reached; the run grinds ~42 s to
+the token limit and writes a 39-byte document. Fix: when the CS that fired the
+closure IS the trigger itself, clear the stale trigger globally so the CS takes
+the ordinary bounded undefined path.
+
+- **2606.21610** (Overleaf/Springer `\IfFileExists{sn-jnl.cls}{\documentclass…}`
+  template): 42.9 s `Fatal:Timeout:TokenLimit`, empty output ⇒ **0.203 s**,
+  bounded `Fatal:TooManyErrors:MaxLimit(100)`. Perl: 1.1 s / 102 errors /
+  `too_many_errors:100` — same verdict, **5× faster**.
+- **2605.21013** (undefined-macro cascade, was `Fatal:Timeout:IfLimit` at 107 s):
+  43.1 s ⇒ **0.203 s**, same bounded verdict. Perl 1.9 s — **~10× faster**.
+- Both papers are genuinely broken LaTeX (pdflatex fatals too), so the win is
+  *failing like Perl instead of grinding*, not converting them.
+- Known `def_autoload` regression traps re-verified clean: 2310.13684 (0 err),
+  1403.6801 (0 err), 1711.11576 (1 err, 3.5 MB).
+- Suite **1615/0**, clippy clean. Guard `tests/100_stale_autoload_no_runaway.rs`
+  (6-line self-contained repro; verified red at 54.7 s without the fix).
+
+**Ground truth, recorded but deliberately NOT ported:** real LaTeX rejects the
+premise outright — `\@fileswithoptions` (latex.ltx L18700) errors *"Loading a
+class or package in a group"* when `\currentgrouplevel > 0`. Porting that guard
+would give a better message, but `standalone_sty.rs` **deliberately** wraps its
+`\@standalone@documentclass` in `bgroup()` + `RequirePackage` (see issue #311),
+so the guard would need an internal-load exemption. Not worth the risk now that
+the runaway is gone; noted here if the diagnostic is ever wanted.
+
+**Diagnostic gap closed alongside:** the `TokenLimit` fatal previously printed
+only "infinite loop?" with no window — the cycle guard dumps its repeating
+tokens, but a run that reaches the *token limit* is by definition one the cycle
+guard did not recognise, i.e. exactly the case with no other clue. It now dumps
+the same recent-token ring under `LATEXML_DEBUG_FATAL` (and the ring fills
+before the guard activates, so a lowered `LATEXML_TOKEN_LIMIT` still captures
+it). That dump is what identified this bug in one run.
+
+### Reproducer re-verification + 400-paper output-neutrality sweep (2026-07-20)
+
+Validation pass for the two fixes above, which also **re-dated every committed
+reproducer**. Both halves changed the worklist more than the fixes did.
+
+**A. 400-paper corpus sweep, baseline (`381efaf81b`) vs fixed, same sample.**
+`0` error-count changes, `0` fatal-class changes, total wall 575.9 s → 578.9 s
+(+0.5%, noise). 26 papers differed by 1–21 bytes — **re-running those solo gave
+byte-identical output from BOTH binaries**, so that is run-to-run
+nondeterminism under parallel load, not a behaviour change. Neutrality of the
+`\@arraycr` retraction is anyway structural: nothing else in the tree names it.
+
+*Sweep-harness caveat worth reusing:* a naive `grep -rl '\begin{document}'`
+main-file pick manufactured 2 of the 4 apparent "fatals" (it chose
+`figures-pgf/tinylora_preamble.tex` and a fragment instead of the real main) —
+the trap `SYNC_STATUS` already records for the bibliography sweeps. With the
+right main, **all four are fine**: `2605.30585` Rust 0.2 s/102 err vs Perl
+2.0 s/102 err (exact parity, 10× faster); `2605.12207` Rust 0.3 s/39 err vs
+Perl **3 m 57 s**/47 err; `2605.14493` and `2605.25400` fail in BOTH engines,
+Rust in 15 s / 8.5 s vs Perl timing out at 200 s. **Zero Rust-only regressions
+in the sample.**
+
+**B. Every committed reproducer re-run against same-host Perl.** Several
+long-standing "OPEN, GENUINE-RUST-ONLY" entries are **already fixed** — they
+were stale, and left in place they mis-rank the whole worklist:
+
+| reproducer | recorded | measured 2026-07-20 |
+|---|---|---|
+| `1610.00974_multicolumn_pcell_newline` | OPEN, Rust-only, 502 err + Fatal | **0 err**, and the full paper `Nikbakht.tex` **0 err** |
+| `array_pcolumn/B_prefix_alignment_td_align` | OPEN (`align="justify"` vs Perl `left`) | **byte-identical to Perl** |
+| `array_pcolumn/C_m_column_vbox_rendering` | OPEN, deferred (2 structural diffs) | **byte-identical to Perl** |
+| `pcolumn_block_content_in_p` | OPEN, **BLOCKED** on the `\hsize`-invariant box model | **byte-identical to Perl** — that blocker no longer gates it |
+| `ieeeeqnarray_leading_empty_cell` | SHARED (both engines fail) | Rust **0** / Perl **5** — the surpass-Perl half is done |
+| `tabbing_math_code_env_2311.06609` (ar5iv #472) | Rust-worse | **11 = 11**, parity on the repro |
+
+`1610.00974` keeps one structural difference from Perl, and **pdflatex says Perl
+is the wrong one**: for `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}` Rust makes
+`B` a line break *inside* the merged cell while Perl opens a new `<tr>`;
+`pdftotext -layout` stacks A/B in the single merged cell with `y z` as the next
+row. Do NOT "fix" Rust toward Perl there.
+
+The only reproducer still genuinely Rust-worse is `glossaryref_math_xmtok`
+(Rust 12 / Perl 1) — and that Perl `1` is a **timeout kill**, not a clean run
+(`rc=124`), confirming the recorded "blocked on an unrunnable Perl reference"
+verdict is still current. **Method note:** the first pass of this table was
+wrong for exactly that reason — always capture the exit code, or a
+timeout-killed Perl reads as a 1-error success and flips the verdict.
+
+### A recoverable Fatal no longer throws the whole document away — LANDED 2026-07-20
+
+Rust reliability fix (**beyond-Perl**). `digest_internal` is written to keep
+partial output after a recoverable Fatal ("Perl `finishDigestion` L219-220: loop
+consuming input even after errors"), but the intent only worked when the failure
+landed in a **later** body: `digest_next_body` accumulates into the stomach's
+`box_list` and hands it back only on the success path, so a Fatal inside the
+FIRST body left the caller's `boxes` empty and the run wrote a **39-byte empty
+document**. One pathological `\tikz` picture cost an entire paper.
+
+New `stomach::salvage_pending_box_lists` unwinds the stranded levels in document
+order. Results on ar5iv user-report papers, all previously **0 bytes**:
+
+| paper | issue | now |
+|---|---|---|
+| `2405.19920` | #522 | **1.82 MB** — 6 sections + **80 bibitems**, ~the complete paper. Same-host Perl: **5 min, 0 bytes**. |
+| `2508.07407` | #556 | **31 KB** — title/authors/abstract recovered |
+
+**Scope was narrowed by measurement, twice — both narrowings matter:**
+1. For the stomach box-cycle guard the innermost level IS the pathology (a
+   repeating window past 50k boxes), so it is dropped and only the suspended
+   outer levels kept — "drop the offending construct, keep the document".
+   Grafting the window in would produce a vast garbage document.
+2. **Salvage fires ONLY for `ErrorTarget::Stomach`.** Extending it to the
+   gullet's `Timeout:Recursion` looked reasonable (the token stream vs the box
+   list) and was actively harmful: on `2605.25400` it revived a poisoned state
+   that re-entered the same loop during build, turning an 8.7 s fatal into a
+   **2 m 12 s wall-clock timeout writing a ZERO-byte file** — strictly worse
+   than the 39-byte stub it replaced, for a 1.7 KB gain on the single paper it
+   helped. The same reasoning bars `TooManyErrors`. Widening to either needs its
+   own measurement; do not assume more salvage is better.
+
+Validation: suite **1617/0**, clippy clean, and the 400-paper sweep vs
+`381efaf81b` shows **0 error-count and 0 fatal-class changes**, wall 575.9 s →
+579.5 s. Guard `tests/101_fatal_salvages_partial_document.rs` (verified red —
+39 bytes, prose gone — without the fix). It asserts the Fatal is still reported:
+salvaging partial output is not a licence to downgrade the diagnostic.
+
+**Corrects a stale claim:** `docs/reproducers/tikz_calc_node_recursion_2508.07407.tex`
+and the AR5IV notes said this fatal was "caught gracefully — conversion
+COMPLETES, only the one tikz table is dropped". Re-measured, the full paper
+produced a **0-byte** file. It is graceful *now*.
+
+## ⏸️ HANDOFF — session of 2026-07-20 (branch `more-minisprint-ar5iv`, 13 commits, **NOT PUSHED**)
+
+**Resume here.** Working tree clean; `frontmatter_bug_ids.txt` is a pre-existing
+untracked scratch file, not mine. Suite **1618/0**, clippy clean.
+
+### Landed (each with a red/green guard, full suite + clippy green)
+1. **`\@arraycr` retraction** — ended the `\halign`-in-math runaway. 2605.23849
+   ~149 s→Fatal ⇒ **1.9 s / 0 errors / 985 formulae**; 2605.05194 ⇒ 0 errors /
+   422 KB. Now surpass-Perl.
+2. **Stale-`def_autoload` guard** — Cluster H #1 and #3 were ONE bug.
+   2606.21610 42.9 s ⇒ 0.203 s; 2605.21013 43.1 s ⇒ 0.203 s, both landing on
+   Perl's own verdict 5–10× faster.
+3. **`salvage_pending_box_lists`** — a Stomach Fatal no longer discards the
+   document. 2405.19920 (ar5iv #522) 0 bytes ⇒ **1.82 MB**; 2508.07407 (#556)
+   ⇒ 31 KB.
+4. **Issue #312 operand slot** — see the caveat below.
+5. **Docs vetting** — three commits; see "what changed" in git log.
+
+### Open threads, in the order I'd pick them up
+
+- **#312 is NOT demonstrated fixed.** The structural divergence is repaired
+  (we match Perl's continuation-row shape again), but Chrome renders identically
+  with or without the slot, and I could not get a working MathJax measurement
+  (only v2 installed, it did not typeset headless). **Next step:** render the
+  reporter's document under MathJax 4 and compare, before replying on the issue.
+  Note their *other* complaint — "equations are not centered" — is **parity**:
+  the `ltx_eqn_table`/`ltx_eqn_center_pad*` markup and equation CSS are
+  byte-identical to Perl's on their file.
+- **expl3 catcode gap closed; the "regressed" witness was a different bug — now
+  fixed.** 2112.11932 1003⇒0, 2110.10227 102⇒0, 2204.05282 86⇒0, 2110.12034
+  45⇒8. **2203.05327 78 ⇒ 411 ⇒ 0**: the 411 was NOT the catcode gap — it was one
+  amsmath `align` breaking (`\lx@begin@alignment` group/mode) because
+  `aligned-overset.sty` was raw-loaded under ar5iv; the `unexpected:_` flood was
+  downstream. Fixed with a near-no-op `aligned_overset_sty.rs` contrib binding
+  (411⇒0, 831 KB⇒5.1 MB whole paper; Perl still dies `token_limit` → beyond-Perl).
+  Guarded by `102_aligned_overset_includestyles.rs`.
+  The **TL2026 dump-gate blocker may still be closer than recorded** —
+  re-run the init gate on a TL2026 host.
+- **ar5iv residuals — DONE (2026-07-20 second pass).** All three now have
+  same-host Perl baselines; all resolve parity-or-Rust-better, none Rust-only.
+  2405.19920 = Rust-better (salvage 1.82 MB, Perl 0 B); 2501.10235 (#551) and
+  1802.01134 (#599) = **parity** — both engines hang in shared deep machinery
+  (pgfplots pgfmath coord processing at `river_cps.tex:117`; the paper's own
+  `imgresize` `\wd0` box-convergence 2-cycle) and emit 0 B, Perl killed at the
+  6-min cap while Rust self-terminates via its guards. No faithful fix without a
+  box-measurement divergence. See the AR5IV_DIAGNOSTICS re-measurement block.
+- **`latexmlmath_oxide` single-structure formula** and **`--preload=<cls>` hook
+  stack** — both re-verified as still reproducing exactly as documented above.
+
+### Cross-repo state (both pushed, both mine to finish)
+- **PR #310** (`fix-309-standalone-class-options`) — reviewed, then improved:
+  the option allowlist was hand-split on `,` and missed every valued form
+  (`[varwidth=5cm]` → `Error:undefined:{varwidth}`, pdflatex clean). Now read as
+  `OptionalKeyVals`, matched on the key. **CI fully green.** Ready to merge.
+- **Upstream Perl PR brucemiller/LaTeXML#2852** — same bug, same fix ported
+  (`OptionalKeyVals` + `getPairs`), plus a `t/structure` case that actually
+  guards it. Pushed to `dginev/LaTeXML`; CI was 11 pass / 4 pending at handoff —
+  **check it before asking for review.**
+
+### Two traps that cost me time — worth keeping
+- A **fresh git worktree has no `resources/dumps/`**, and the suite then fails
+  26 expl3/dump-dependent tests (`glossary_test`, `regex_*`, `str_*case_*`,
+  `xparse`, mhchem, si). Copy the dumps in before suspecting code.
+- **Capture Perl's exit code.** A timeout-killed `latexml` prints one line that
+  a naive `grep -c '^Error:'` reads as "1 error", which flips a verdict from
+  "Perl times out" to "Perl is better". It did exactly that to me once.
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail
@@ -559,8 +799,11 @@ hot-path / broad-diff / deep-engine item is explicitly demoted to POST-RELEASE.
   gullet/box-register surgery with broad blast radius — AND current behavior is
   already SAFE (graceful Fatal via an existing limit ~100s in, bounded, no
   crash/corruption), so they are fidelity/perf gaps, NOT release-blocking
-  stability risks. The one clean regression (`2605.23849`, Perl completes) is a
-  real fidelity loss whose fix is still deep. Post-release.
+  stability risks. ~~The one clean regression (`2605.23849`, Perl completes) is a
+  real fidelity loss whose fix is still deep.~~ **FIXED 2026-07-20** — and the
+  premise was doubly wrong: Perl does not "complete" it (it skips the matrix),
+  and the fix was one `Let!` retracting the inherited kernel `\@arraycr`, not deep
+  surgery. All of Cluster H is now resolved.
 - **`ltx_env_<name>` class enhancement** (below) — churns nearly every golden
   XML; running it in release week would swamp the regression baseline and mask
   real regressions. Isolated branch, post-release (as already noted).
@@ -867,13 +1110,21 @@ enabling work. Perl runs both serially.
 premise).** The Cluster H "digest-runaway fatals" were triaged against same-host
 Perl (`STABILITY_WITNESSES.md` Cluster H): they are **not** a clean beyond-Perl
 watchdog opportunity but a heterogeneous set of **genuine Rust runaway-loop bugs**,
-and a no-progress abort would **regress `2605.23849`, which Perl converts cleanly**
-(46s, 0 fatal). Reclassified as Target-1 parity work — three distinct root causes:
-(a) `\IfFileExists`-before-`\documentclass` → expansion spins past EOF → TokenLimit
-(2606.21610; likely broad — conditional-`\documentclass` templates + the readBalanced/
-`\lx@begin@alignment` families; overlaps the deferred read_balanced unbalanced-group
-leak); (b) `\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop → IfLimit (2605.23849;
-the clean must-fix regression); (c) undefined-macro cascade → IfLimit (2605.21013).
+and a no-progress abort would have **aborted `2605.23849`** (note the old premise
+"which Perl converts cleanly" is wrong — Perl skips the construct)
+(46s, 0 fatal). Reclassified as Target-1 parity work — **all three FIXED
+2026-07-20**, and the "three distinct root causes" reading was itself wrong: (a)
+and (c) turned out to be ONE bug (a stale `def_autoload` trigger), and (b)'s
+recorded root was a red herring. Superseded diagnoses, kept so they are not
+retried: ~~(a) `\IfFileExists`-before-`\documentclass` → expansion spins past EOF
+→ TokenLimit (2606.21610)~~ — nothing reads past EOF; the `\IfFileExists` group
+makes `\documentclass` load inside a group, stranding the autoload trigger.
+~~(b) `\kbordermatrix` `\lastbox`/`\ifhbox` box-peel loop → IfLimit (2605.23849;
+the clean must-fix regression)~~ — that box-peel loop **also loops in Perl**
+(SHARED); the real root was the inherited kernel `\@arraycr`. ~~(c)
+undefined-macro cascade → IfLimit (2605.21013)~~ — same bug as (a), it merely
+tripped a different limit. Note the still-OPEN *read_balanced unbalanced-group
+leak* family was never this witness's problem.
 Each trips an *existing* high limit ~100s in (safety net present but late) and needs
 a faithful per-mechanism fix, NOT a blunt early-abort. The unifying theme in (a)+(c):
 Rust error-recovery *loops* where Perl keeps *advancing* (emitting bounded errors →
@@ -906,9 +1157,10 @@ the release-week stabilization review above; first work after the tag ships:**
 **BP-2 Step 1** (cheap XSLT profile+amortize — the cleanest, divergence-free win) →
 **BP-3 graphics batch** → **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each
 lands on a feature branch, gated by the isolated before/after output-neutrality
-harness + Perl parity + `cargo test`. Separately, the Cluster H runaway-loop bugs
+harness + Perl parity + `cargo test`. ~~Separately, the Cluster H runaway-loop bugs
 (ex-BP-4) are Target-1 parity work tracked in `STABILITY_WITNESSES.md` (also
-post-release — deep engine surgery, not release-week work).
+post-release — deep engine surgery, not release-week work).~~ **Cluster H is
+fully resolved as of 2026-07-20** — and none of it needed deep engine surgery.
 
 ### MakeBibliography full parity re-port (user directive 2026-07-04: reuse TeX interpretation, no special-case parser)
 

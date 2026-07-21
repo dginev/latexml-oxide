@@ -5,12 +5,15 @@
 > the raw `.sty`, so the pathological `\halign`-in-math is never digested.
 > 1811.10792 (#594) went **OOM → 0 errors**; 2310.17416 (#473) **OOM → 9**
 > (residual is a separate math-mode issue, not blkarray). Guard:
-> `latexml_oxide/tests/graphics/blkarray.{tex,xml}`. The **underlying**
-> `stomach.rs::egroup` bug (a frame that "switched to mode math" is not popped at
-> an alignment close) is UNCHANGED and still reachable via the `kbordermatrix`
-> sibling ([`../kbordermatrix_halign_math/`](../kbordermatrix_halign_math/README.md),
-> still OPEN, HIGH difficulty) — the binding sidesteps it for blkarray rather than
-> fixing the core. NOTE: `blkarray_min.tex` below no longer reproduces (the
+> `latexml_oxide/tests/graphics/blkarray.{tex,xml}`.
+>
+> **UPDATE 2026-07-20 — the "underlying `stomach.rs::egroup` bug" framing below is
+> RETRACTED.** The `kbordermatrix` sibling is now FIXED, and *not* by touching
+> `egroup`: its root was an inherited kernel `\@arraycr` that Perl never had
+> ([`../kbordermatrix_halign_math/`](../kbordermatrix_halign_math/README.md)).
+> Whether any `egroup` frame-accounting defect is reachable at all is therefore
+> **unproven** — do not treat it as a known open bug. blkarray is shadowed by a
+> binding either way. NOTE: `blkarray_min.tex` below no longer reproduces (the
 > binding wins over `--includestyles`); to exercise the core bug use the
 > kbordermatrix reproducer. This file is kept as the record of the analysis and
 > the binding's faithfulness simplification.
@@ -27,8 +30,10 @@ classified RUST-WORSE ("timeout"); the true failure mode is a fast **OOM**
 `\begin{block}{(cc)}` (a `block` with a **paren-delimited** column spec) nested
 inside `\begin{blockarray}` in display math makes raw-loaded `blkarray.sty`
 spin its `\halign` machinery. Rust cascades into a runaway that grows the box
-list to the 4500 MB memory cap → `Fatal:Timeout:MemoryBudget` (~12 s). This is
-the same alignment × inline-math frame divergence as `\kbordermatrix`.
+list to the 4500 MB memory cap → `Fatal:Timeout:MemoryBudget` (~12 s). This was
+*believed* to be the same alignment × inline-math frame divergence as
+`\kbordermatrix` — that turned out to be wrong for the sibling (see the update
+above), so the two share a symptom, not a proven root.
 
 ## The one new fact vs the kbordermatrix sibling
 
@@ -77,10 +82,11 @@ hangs). Feasibility probe (2026-07-18):
   LaTeXML's `array`. A faithful binding must model the block delimiters as
   array-spanning delimiters — non-trivial, hence the HIGH-DIFFICULTY marking.
 
-Entry points to resume are the same as the kbordermatrix sibling
-(`stomach.rs::egroup`, the alignment cell/`\crcr` frame accounting), **plus**
-the option of a dedicated blkarray binding modelling `blockarray`/`block`/
-`\BlockArray*` on LaTeXML's alignment constructs.
+Entry points to resume: the raw `blkarray.sty` `\halign` machinery itself, and a
+dedicated blkarray binding modelling `blockarray`/`block`/`\BlockArray*` on
+LaTeXML's alignment constructs (the route actually taken). The old pointer at
+`stomach.rs::egroup` is withdrawn — see the update at the top; it was inferred
+from the kbordermatrix sibling, whose real root was elsewhere.
 
 ## Cross-references
 

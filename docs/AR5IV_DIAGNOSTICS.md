@@ -39,6 +39,61 @@ ranked worklist for the follow-on implementation sprint.
 > The **~48 already-CLEAN** papers (sample re-verified 0-error) close on the ar5iv
 > **redeploy** + a maintainer batch-comment — no code change.
 
+> ## 🔄 RE-MEASURED 2026-07-20 — the PARITY-TIMEOUT bucket largely evaporated
+>
+> After the `\@arraycr` retraction and the stale-`def_autoload` fix (see
+> `SYNC_STATUS.md`), the nine **PARITY-TIMEOUT** papers were re-run **solo**
+> (the original sweep ran 10× parallel, and its own caveat said `rc=124` rows
+> needed re-checking at 1×). **Six of nine now convert**, three of them
+> error-free — these are user-visible closes on the tracker:
+>
+> | issue | arXiv | was | now (solo, `--preload=ar5iv.sty`) |
+> |---|---|---|---|
+> | #546 | 2504.07033 | TIMEOUT | **0 err**, 10.0 s, 4.9 MB |
+> | #550 | 2501.09223 | TIMEOUT | **0 err**, 17.1 s, 3.9 MB |
+> | #598 | 1611.02087 | TIMEOUT | **0 err**, 17.8 s, 489 KB |
+> | #596 | 2505.01658 | TIMEOUT | 1 err, 10.8 s, 1.6 MB |
+> | #533 | 2406.15882 | TIMEOUT | 2 err, 39.7 s, 3.9 MB |
+> | #471 | 2308.04512 | TIMEOUT 7 | 7 err, 36.7 s, 11.5 MB |
+> | #522 | 2405.19920 | TIMEOUT | `Fatal:Stomach:Recursion` at 11 s, but now emits **1.82 MB** — 6 sections + 80 bibitems, ~the whole paper (partial-output salvage). Same-host Perl: **5 min, 0 bytes** |
+> | #551 | 2501.10235 | TIMEOUT | **PARITY** — hangs in pgfplots pgfmath coordinate processing (`river_cps.tex:117`, `\addplot table` + `x filter/.expression`); Rust's cycle guard self-terminates (`Fatal:Timeout:Recursion`, window `} { ; , ,`), 0 B. Same-host Perl hangs at the **same** `river_cps.tex:117` `\pgfmath`, killed at timeout (>6 min), 0 B |
+> | #599 | 1802.01134 | TIMEOUT | **PARITY** — the paper's own `imgresize` `\sbox` box-convergence loop (`scale=width·scale/\wd0` until `|width−\wd0|<0.1pt`); with no real box typesetting `\wd0` never tracks the scaled picture, so `scale` 2-cycles `3.77214↔3.77215` forever (the pgf colour churn is one `\sbox{\BODY}` iteration). Rust's guards fire → 0 B. Same-host Perl loops identically, killed at timeout (>6 min), 0 B |
+>
+> Also re-confirmed from the RUST-WORSE table: **#594 `1811.10792` is now 0
+> errors** and **#473 `2310.17416` 9 errors** (the blkarray binding); #472
+> (2311.06609, 82) and #591 (2602.15902, 783 — parity) are unchanged.
+>
+> The three residuals all now **fail fast and cleanly** (6–42 s) instead of
+> hanging, so they are fidelity losses rather than resource hazards.
+>
+> **2026-07-20 (second pass) — all three residuals now have same-host Perl
+> baselines (ar5iv preload, verbose, rc captured), and all resolve
+> PARITY-or-Rust-better; none is a Rust-only bug.** #522 `2405.19920` is
+> **Rust-better** (salvage emits 1.82 MB; Perl 0 B). #551 `2501.10235` and #599
+> `1802.01134` are **PARITY**: both engines hang in shared deep machinery —
+> pgfplots pgfmath coordinate processing (`river_cps.tex:117`) and the paper's
+> own `imgresize` box-convergence loop, respectively — and both produce
+> **0 bytes** (Perl `exit=124`, killed at the 6-min cap; Rust self-terminates
+> via its recursion/token guards). These need real TeX box / `\wd0` feedback
+> that LaTeXML (Perl and Rust alike) does not provide, so a faithful fix is
+> impossible without diverging. Closed as parity; the tracker issues close on
+> the ar5iv redeploy. **The PARITY-TIMEOUT bucket is now fully triaged.**
+>
+> Separately, **#556 `2508.07407`** — the `Stomach:Recursion` witness whose
+> notes claimed it already degraded gracefully — was in fact producing a
+> **0-byte** document; it now yields 31 KB (title/authors/abstract). See
+> `SYNC_STATUS.md` "A recoverable Fatal no longer throws the whole document
+> away". The tikz `calc` loop itself is still open; only the blast radius
+> changed, from losing the paper to losing the picture.
+>
+> **⚠️ Harness warning, hit twice while producing this table.** `ls *.tex |
+> head -1` and `grep -rl '\begin{document}' | head -1` BOTH pick the wrong main
+> on these papers (`abstract.tex` for 2501.10235; a preamble fragment
+> elsewhere), and a wrong main manufactures fake error counts — 2504.07033 read
+> as "60 errors" that way and is actually **0**. Require **both**
+> `\documentclass` *and* `\begin{document}`, then prefer the shallowest path.
+> The numbers above use that detector; the 2026-07-18 table below does not.
+
 # Implementation plans — remaining deep issues (2026-07-18)
 
 The self-contained wins are landed (13 issues on PR #306; see the "Ranked
@@ -186,6 +241,25 @@ re-tokenized); (c) table-cell `_` (2604.16007). **Approach.** Split by root: for
 (don't re-digest); classify (a)/(c) vs Perl first — likely PARITY (record in
 `KNOWN_PERL_ERRORS.md`), fix only where Rust > Perl. **Value:** moderate; several
 are parity. **Test:** per-root min-repro.
+
+> **RE-SCREENED 2026-07-20 (current binary) — corrections:**
+> - **(c) `2604.16007` is PARITY (Rust better).** Same-host Perl = **89 errors**
+>   (same 60 `_` cascade + same undefined `\@ACM@balancefalse`/`\@ACM@pbalancefalse`/
+>   `\Cref`) vs Rust **63**. Not a Rust-only bug. Only the 2–3 undefined acmart
+>   internals are a Rust binding gap; the `_` bulk is shared. Skip.
+> - **(b) `2305.05665` — axessibility is NOT the cause (attribution was wrong).**
+>   A minimal `\usepackage[accsupp]{axessibility}` + `$x_1$` + `equation` is
+>   **0 errors** (the stub binding is harmless), and the paper reproduces its **33
+>   `unexpected:_` BARE** (no ar5iv / INCLUDE_STYLES) — so it is not an accsupp
+>   re-digestion and not ar5iv-specific. The 33 are macro-generated ("Anonymous
+>   String", `tex_math.rs:258`), source has only 3 `$`, so a macro emits `_` in
+>   text mode; the real trigger is **unidentified** (lives in an `\input`'d
+>   section/figure file). Same-host Perl is **very slow / hangs** (>3 min, killed).
+>   Needs a fresh dedicated dive — do not re-blame axessibility.
+> - `2602.15902` (minted 783, `\else`/`\ifmmode`) stays **parity**; `2412.06264`
+>   (`\or` flood 483) and `2311.06609` (siamart, first `\@tabbing@=` undefined 82)
+>   stay **deep** (P6 / P2 alignment cluster). This round's only Rust-only win was
+>   `aligned-overset` (2203.05327, landed — see EXPL3_CATCODE_GAP doc).
 
 ## P6 — Residuals on already-improved papers
 

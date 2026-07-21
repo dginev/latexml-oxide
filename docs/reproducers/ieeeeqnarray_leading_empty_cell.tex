@@ -1,5 +1,11 @@
-% Minimal reproducer: an IEEEeqnarray (IEEEtrantools) row that BEGINS with an
-% empty cell (a leading `&`) raises
+% >>> STATUS 2026-07-20: FIXED in Rust, and this is now a SURPASS-PERL witness.
+% >>> Re-verified same-host with exit codes checked: Rust 0 errors (rc=0),
+% >>> same-host Perl 5 errors (rc=0). The reproducer was recorded as a SHARED
+% >>> raw-`\halign` limitation ("a Rust fix here SURPASSES Perl") — the Rust
+% >>> half is done; Perl still fails. Kept as a regression witness.
+%
+% (Historical) Minimal reproducer: an IEEEeqnarray (IEEEtrantools) row that
+% BEGINS with an empty cell (a leading `&`) raised
 %   Error:unexpected:\halign Attempt to end mode restricted_horizontal
 % then a cascade of `_`/`^` "can only appear in math mode" as the equation body
 % leaks out of math mode. The equation is mangled; the rest of the document
