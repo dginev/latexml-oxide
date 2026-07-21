@@ -413,11 +413,15 @@ fn wrong_kind_err(cs: &str, family: HookFamily, stored: &Stored) -> Box<EvalAltR
 /// (#321 — the BookML `push(@{ $$def{afterConstruct} }, sub{…})` shape). Perl
 /// mutates the shared blessed def-hash in place; our installed defs have no
 /// interior mutability, so we clone the CURRENT front definition, splice the
-/// trampolined hook into the matching list, and re-install at GLOBAL scope. Global
-/// install `push_front`s the patched def and clears its lower-frame undo entries
-/// (`state::assign_internal`), so it is the active meaning immediately (sequential
-/// pushes accumulate by re-looking-up) and persists across group exits — a
-/// faithful match to Perl's in-place, globally-visible mutation.
+/// trampolined hook into the matching list, and re-install at `Scope::InPlace`.
+/// In-place replaces the front binding WITHOUT touching the save stack (Perl
+/// `State.pm:175` `'inplace'`), so the patch keeps the definition's existing
+/// level: it is the active meaning immediately, sequential pushes accumulate by
+/// re-looking-up, and it rides exactly as long as the current binding — a
+/// faithful match to Perl mutating the shared object in place. This corrects an
+/// earlier `Scope::Global` re-install that promoted a locally-bound def to
+/// global (harmless for BookML, which only patches already-global defs, but a
+/// real divergence — see PR #333 discussion r3623947537, @xworld21).
 pub(super) fn push_definition_hook(
   cs: &str,
   family: HookFamily,
@@ -445,17 +449,17 @@ pub(super) fn push_definition_hook(
         Stored::Constructor(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.before_digest, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         Stored::Primitive(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.before_digest, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         Stored::MathPrimitive(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.options.before_digest, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         other => return Err(wrong_kind_err(cs, family, &other)),
       }
@@ -466,17 +470,17 @@ pub(super) fn push_definition_hook(
         Stored::Constructor(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.after_digest, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         Stored::Primitive(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.after_digest, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         Stored::MathPrimitive(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.options.after_digest, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         other => return Err(wrong_kind_err(cs, family, &other)),
       }
@@ -487,7 +491,7 @@ pub(super) fn push_definition_hook(
         Stored::Constructor(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.before_construct, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         other => return Err(wrong_kind_err(cs, family, &other)),
       }
@@ -498,7 +502,7 @@ pub(super) fn push_definition_hook(
         Stored::Constructor(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.after_construct, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         other => return Err(wrong_kind_err(cs, family, &other)),
       }
@@ -509,7 +513,7 @@ pub(super) fn push_definition_hook(
         Stored::Constructor(rc) => {
           let mut d = (*rc).clone();
           insert_hook(&mut d.after_digest_body, at_front, hook);
-          install_definition(d, Some(Scope::Global));
+          install_definition(d, Some(Scope::InPlace));
         },
         other => return Err(wrong_kind_err(cs, family, &other)),
       }

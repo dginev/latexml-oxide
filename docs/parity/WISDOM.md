@@ -2409,3 +2409,31 @@ Neutrality argument worth reusing: the change is observable **only** by document
 that name `\@arraycr` (no Rust binding and no `.ltxml` references it) — measured
 at **6 of 6,000** 2605 papers, three via the direct `\let`. See
 `docs/known_crashes/kbordermatrix_halign_math/`.
+
+## 48. Patching an EXISTING definition in place → `Scope::InPlace`, never `Scope::Global`
+
+**Symptom / trigger:** the BookML `LookupDefinition(cs).push*/unshift*` idiom
+(Rhai #321) — and any code that clones an installed def, splices a hook, and
+re-installs it. The naive re-install uses `Scope::Global`.
+
+**Why Global is wrong:** Perl does NOT re-assign when BookML runs
+`push(@{ $$def{beforeConstruct} }, sub{…})`; it mutates the shared blessed
+def-hash **in place**, which never touches the save stack. `Scope::Global`
+instead collapses every frame down to the locked base and wipes lower-frame
+undo, **promoting a locally-bound def to global**. Harmless *only* because the
+sole user (BookML) patches already-global defs (`\hrule`/`\vrule`/`\rule`); a
+patch applied to a def bound inside a group would wrongly survive group exit
+(flagged by @xworld21, PR #333 r3623947537).
+
+**Fix — and the reusable fact:** Perl `State.pm:175` has a fourth scope,
+`'inplace'` ("Special case for `\box` & friends"): replace the front binding in
+its own frame, add no undo entry (or seed at the locked base if never bound).
+That is Knuth's "same level" / xworld21's tentative `scope => 'definition'`.
+Ported as **`Scope::InPlace`** (state.rs enum + `assign_internal` arm; the
+`\globaldefs` override deliberately does NOT re-scope it — Perl's guard is
+`$scope ne 'global' && $scope ne 'local'`). The Value-table fast path
+`assign_value_inplace` (mode changes, WISDOM #19) was the pre-existing witness
+that this scope existed; #48 just lifts it to a first-class scope so the Meaning
+table (definitions) can use it. Semantics pinned by
+`state::reentrancy_tests::inplace_scope_keeps_the_bindings_level` (proves it is
+neither Global nor Local across a `push_frame`/`pop_frame` boundary).
