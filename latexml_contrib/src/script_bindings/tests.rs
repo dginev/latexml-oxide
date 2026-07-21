@@ -399,6 +399,38 @@ fn diagnostics_surface_info_notes_progress_and_fatal() {
   latexml_core::reset_thread_engine();
 }
 
+/// #317: `RequireResource($resource, %options)` — the option-map form carries
+/// `type` (mime), `media`, and `content`. Perl's option name `type` maps to the
+/// `Resource`'s `mimetype`. The single-arg form still infers a missing mime from
+/// the extension.
+#[test]
+fn require_resource_option_map_sets_type_media_content() {
+  fresh_state();
+  latexml_core::state::reset_pending_resources();
+  load_script(
+    r#"RequireResource("custom.css", #{ type: "text/css", media: "print", content: "body{}" });"#,
+  )
+  .expect("RequireResource with an option map must load cleanly");
+  let pending = latexml_core::state::take_pending_resources();
+  assert_eq!(pending.len(), 1, "one resource pushed");
+  assert_eq!(pending[0].name, "custom.css");
+  assert_eq!(
+    pending[0].mimetype, "text/css",
+    "Perl `type` maps to mimetype"
+  );
+  assert_eq!(pending[0].media, "print");
+  assert_eq!(pending[0].content, "body{}");
+
+  // The single-arg form still infers the mime from the extension.
+  load_script(r#"RequireResource("plain.js");"#).expect("single-arg RequireResource");
+  let inferred = latexml_core::state::take_pending_resources();
+  assert_eq!(
+    inferred[0].mimetype, "text/javascript",
+    "js extension infers its mime"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();

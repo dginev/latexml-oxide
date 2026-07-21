@@ -840,6 +840,27 @@ pub(super) fn make_engine() -> Engine {
       ..latexml_core::document::resource::Resource::default()
     });
   });
+  // Option-map form — Perl `RequireResource($resource, %options)` (#317). The
+  // second hash carries `type` (mime), `media`, and `content`. Perl's option
+  // name `type` maps to the `Resource`'s `mimetype`. Unknown keys are ignored
+  // (Perl's CheckOptions warns; harmless to drop). The core `require_resource`
+  // still infers a missing mime from the extension and warns if none.
+  engine.register_fn("RequireResource", |resource: &str, opts: Map| {
+    let mut r = latexml_core::document::resource::Resource {
+      name: resource.to_string(),
+      ..latexml_core::document::resource::Resource::default()
+    };
+    for (key, val) in opts {
+      let v = dynamic_to_string(val);
+      match key.as_str() {
+        "type" => r.mimetype = v,
+        "media" => r.media = v,
+        "content" => r.content = v,
+        _ => {},
+      }
+    }
+    latexml_core::binding::content::require_resource(r);
+  });
   // Tag: the scalar subset (autoOpen/autoClose) of TagOptions.
   engine.register_fn("Tag", |tag: &str, opts: Map| {
     let mut options = latexml_core::document::tag::TagOptions::default();
