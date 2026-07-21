@@ -144,7 +144,7 @@
 <a href=#144 id=144 data-nosnippet>144</a>  <span class="kw">let </span><span class="kw-2">mut </span>oldstyle: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
 <a href=#145 id=145 data-nosnippet>145</a>  <span class="kw">let </span><span class="kw-2">mut </span>packages = Vec::new();
 <a href=#146 id=146 data-nosnippet>146</a>
-<a href=#147 id=147 data-nosnippet>147</a>  <span class="kw">for </span>pi <span class="kw">in </span>doc.findnodes(<span class="string">".//processing-instruction('latexml')"</span>) {
+<a href=#147 id=147 data-nosnippet>147</a>  <span class="kw">for </span>pi <span class="kw">in </span>doc.findnodes(<span class="string">"//processing-instruction('latexml')"</span>) {
 <a href=#148 id=148 data-nosnippet>148</a>    <span class="kw">let </span>data = pi.get_content();
 <a href=#149 id=149 data-nosnippet>149</a>    <span class="kw">let </span><span class="kw-2">mut </span>entry = HashMap::default();
 <a href=#150 id=150 data-nosnippet>150</a>    <span class="kw">for </span>cap <span class="kw">in </span>pi_re.captures_iter(<span class="kw-2">&amp;</span>data) {
@@ -193,7 +193,7 @@
 <a href=#193 id=193 data-nosnippet>193</a>  <span class="kw">let </span>pi_re = Regex::new(<span class="string">r#"\s*([\w\-_]*)=[\"'](.*?)[\"']"#</span>).unwrap();
 <a href=#194 id=194 data-nosnippet>194</a>  <span class="kw">let </span><span class="kw-2">mut </span>preambles = Vec::new();
 <a href=#195 id=195 data-nosnippet>195</a>
-<a href=#196 id=196 data-nosnippet>196</a>  <span class="kw">for </span>pi <span class="kw">in </span>doc.findnodes(<span class="string">".//processing-instruction('latexml')"</span>) {
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="kw">for </span>pi <span class="kw">in </span>doc.findnodes(<span class="string">"//processing-instruction('latexml')"</span>) {
 <a href=#197 id=197 data-nosnippet>197</a>    <span class="kw">let </span>data = pi.get_content();
 <a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">for </span>cap <span class="kw">in </span>pi_re.captures_iter(<span class="kw-2">&amp;</span>data) {
 <a href=#199 id=199 data-nosnippet>199</a>      <span class="kw">if </span><span class="kw-2">&amp;</span>cap[<span class="number">1</span>] == <span class="string">"preamble" </span>{
