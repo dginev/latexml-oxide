@@ -583,7 +583,7 @@
           <xsl:attribute name="alt">Mascot Sammy</xsl:attribute>
         </xsl:element>
       </xsl:element>
-      <xsl:text> (oxide)</xsl:text>
+      <xsl:text> oxide</xsl:text>
     </xsl:element>
   </xsl:template>
 
