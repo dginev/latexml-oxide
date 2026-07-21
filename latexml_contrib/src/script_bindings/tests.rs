@@ -462,6 +462,54 @@ fn def_primitive_nested_inside_a_primitive_body() {
   latexml_core::reset_thread_engine();
 }
 
+/// #318: a Rhai `Command` mirroring `std::process::Command` — build with
+/// `arg`/`args`/`env`/`current_dir`, `output()` returns `#{status, success,
+/// stdout, stderr}`. BookML shells out to `latexmk`/`dvisvgm` during digestion;
+/// this is the (trusted-binding) primitive that lets it. Commands are ALLOWED by
+/// default (Perl `.ltxml` runs `system()` freely) and BLOCKABLE via
+/// `LATEXML_DISABLE_SHELL_ESCAPE` (the opt-out an untrusted deployment sets). Uses
+/// POSIX `printf`/`false`, present on the Linux + macOS CI hosts. The env
+/// set/unset is kept sequential in one test — no other test reads that var.
+#[test]
+fn command_output_runs_by_default_and_is_blockable_via_env() {
+  fresh_state();
+  // Allowed by default (no env set).
+  unsafe { std::env::remove_var("LATEXML_DISABLE_SHELL_ESCAPE") };
+  load_script(
+    r#"
+    let cmd = Command("printf");
+    cmd.args(["%s", "hello-world"]);
+    let out = cmd.output();
+    assign_global("cmd:out", out.stdout);
+    assign_global("cmd:ok", if out.success { "yes" } else { "no" });
+    assign_global("cmd:status", out.status.to_string());
+
+    let bad = Command("false");
+    let bout = bad.output();
+    assign_global("cmd:bad", if bout.success { "ok" } else { "fail" });
+    "#,
+  )
+  .expect("Command(...).output() must run and capture by default");
+  assert_eq!(lookup_str("cmd:out"), "hello-world", "stdout captured");
+  assert_eq!(lookup_str("cmd:ok"), "yes", "printf exits 0 -> success");
+  assert_eq!(lookup_str("cmd:status"), "0", "exit code 0");
+  assert_eq!(
+    lookup_str("cmd:bad"),
+    "fail",
+    "`false` exits 1 -> success == false"
+  );
+
+  // Blockable: with the opt-out env set, `output()` refuses (a Rhai error).
+  unsafe { std::env::set_var("LATEXML_DISABLE_SHELL_ESCAPE", "1") };
+  let blocked = load_script(r#"let c = Command("printf"); c.args(["%s", "x"]); c.output();"#);
+  unsafe { std::env::remove_var("LATEXML_DISABLE_SHELL_ESCAPE") };
+  assert!(
+    blocked.is_err(),
+    "LATEXML_DISABLE_SHELL_ESCAPE must block output(), got {blocked:?}"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();

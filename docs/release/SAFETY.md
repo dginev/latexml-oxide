@@ -26,8 +26,11 @@ What follows from that:
 The output is HTML / MathML / XML rendered from LaTeX — the *content* may
 need sanitisation downstream (CSS / `<script>` injection in author-supplied
 `\href`, `\url`, `\write18`), but those are content-policy concerns, not
-memory-safety concerns. We do not execute `\write18` (the `\immediate\write`
-shell-escape) at all.
+memory-safety concerns. We do not execute **document-driven** `\write18` (the
+`\immediate\write` shell-escape) at all. A **trusted binding** can run external
+commands via the `Command` API (allowed by default, opt-out
+`LATEXML_DISABLE_SHELL_ESCAPE`) — the runtime-bindings analog of shell-escape;
+see that section below.
 
 ## `unsafe` budget
 
@@ -197,6 +200,18 @@ registered binding API, not host I/O — and `search_paths_only` keeps the looku
 the TeX tree. That is a *sandboxed execution* claim, not an *inert code* one.
 Deployments on untrusted input should drop `--features runtime-bindings`.
 
+**External commands from bindings (#318).** The binding API exposes `Command`, a
+thin mirror of `std::process::Command`, so a trusted binding can shell out
+(BookML runs `latexmk`/`dvisvgm` during digestion) — as Perl `.ltxml` does with
+`system()`. This is **allowed by default** and **blockable** by setting
+`LATEXML_DISABLE_SHELL_ESCAPE` (any value), which makes `Command::output()` return
+a Rhai error. Because a `.rhai` beside an untrusted source **auto-loads** (the
+"Reachable without a flag" note above), a bundled binding could otherwise run
+arbitrary commands: **any untrusted-input deployment that ships `--features
+runtime-bindings` MUST set `LATEXML_DISABLE_SHELL_ESCAPE`, or build without the
+feature.** The command runs to completion (no artificial per-call timeout, like
+`system()`); the overall conversion wall-time is the outer bound.
+
 ---
 
 ## Audit posture
@@ -230,7 +245,9 @@ When adding `unsafe`:
 ## Out-of-scope risks
 
 - **`\write18` shell escape**: not implemented. We do not invoke the
-  shell on author-supplied strings.
+  shell on **author-supplied** (document) strings. (A **trusted binding** can
+  run external commands via the `Command` API — allowed by default, opt-out
+  `LATEXML_DISABLE_SHELL_ESCAPE`; see the runtime-bindings section above.)
 - **Output sanitisation**: author-supplied `\href{javascript:…}` would
   pass through the HTML pipeline unchanged. Downstream consumers of
   the HTML output (web servers, viewers) are responsible for CSP /

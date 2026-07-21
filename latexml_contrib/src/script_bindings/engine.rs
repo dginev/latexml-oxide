@@ -329,6 +329,79 @@ pub(super) fn make_engine() -> Engine {
     latexml_core::common::error::note_end(stage);
   });
 
+  // ── external commands: a thin mirror of `std::process::Command` (#318). Lets
+  // a TRUSTED binding shell out (BookML's `latexmk`/`dvisvgm` during digestion),
+  // as Perl `.ltxml` does with `system()`. Method names mirror std exactly, so a
+  // user reads the `std::process::Command` docs. SAFETY.md: the runtime-bindings
+  // feature is the trust boundary — untrusted deployments drop it. Runs to
+  // completion like std/`system()` (no hidden timeout); the overall conversion
+  // timeout is the outer bound. ──
+  engine.register_type_with_name::<RhaiCommand>("Command");
+  engine.register_fn("Command", |program: &str| RhaiCommand {
+    program: program.to_string(),
+    ..RhaiCommand::default()
+  });
+  engine.register_fn("arg", |c: &mut RhaiCommand, a: &str| {
+    c.args.push(a.to_string())
+  });
+  engine.register_fn("args", |c: &mut RhaiCommand, a: rhai::Array| {
+    c.args.extend(a.into_iter().map(dynamic_to_string));
+  });
+  engine.register_fn("env", |c: &mut RhaiCommand, k: &str, v: &str| {
+    c.envs.push((k.to_string(), v.to_string()));
+  });
+  engine.register_fn("current_dir", |c: &mut RhaiCommand, dir: &str| {
+    c.cwd = Some(dir.to_string());
+  });
+  // `output()` mirrors std's: runs to completion, capturing stdout/stderr.
+  // Returns `std::process::Output` flattened for Rhai: `ExitStatus` → `status`
+  // (exit code, -1 on signal) + `success`; `Vec<u8>` → lossy `String`. A spawn
+  // failure (program not found) surfaces as a Rhai error, mirroring std's
+  // `io::Result::Err` (catchable with `try`/`catch`).
+  engine.register_fn(
+    "output",
+    |c: &mut RhaiCommand| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      // Allowed by default (Perl `.ltxml` runs `system()` freely), but BLOCKABLE
+      // via `LATEXML_DISABLE_SHELL_ESCAPE` — the opt-out an untrusted-input
+      // deployment (e.g. `cortex_worker`) sets, since a `.rhai` beside the
+      // source auto-loads (converter.rs `rhai_dispatch`) and could otherwise
+      // shell out. See SAFETY.md.
+      if std::env::var_os("LATEXML_DISABLE_SHELL_ESCAPE").is_some() {
+        return Err(rhai_err(format!(
+          "Command '{}': external commands from bindings are disabled \
+           (LATEXML_DISABLE_SHELL_ESCAPE is set)",
+          c.program
+        )));
+      }
+      let mut cmd = std::process::Command::new(&c.program);
+      cmd.args(&c.args);
+      for (k, v) in &c.envs {
+        cmd.env(k, v);
+      }
+      if let Some(dir) = &c.cwd {
+        cmd.current_dir(dir);
+      }
+      let out = cmd
+        .output()
+        .map_err(|e| rhai_err(format!("Command '{}': {e}", c.program)))?;
+      let mut m = Map::new();
+      m.insert(
+        "status".into(),
+        (out.status.code().unwrap_or(-1) as i64).into(),
+      );
+      m.insert("success".into(), out.status.success().into());
+      m.insert(
+        "stdout".into(),
+        String::from_utf8_lossy(&out.stdout).into_owned().into(),
+      );
+      m.insert(
+        "stderr".into(),
+        String::from_utf8_lossy(&out.stderr).into_owned().into(),
+      );
+      Ok(m.into())
+    },
+  );
+
   // ── counters (counter_dialect, the NewCounter!/StepCounter!/… family) ──
   engine.register_fn(
     "NewCounter",
