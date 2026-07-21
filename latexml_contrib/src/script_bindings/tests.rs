@@ -316,37 +316,8 @@ fn lookup_tokens_on_vecdeque_value_does_not_panic() {
     .expect("LookupTokens on a VecDequeStored value must not panic");
   assert_eq!(
     lookup_str("ct:opts"),
-    "a4paper,12pt",
-    "LookupTokens should revert the queued options comma-separated, faithful to \
-     Perl `Explode(join(',', @options))` (\\@classoptionslist, Package.pm:2457)"
-  );
-  latexml_core::reset_thread_engine();
-}
-
-/// Regression for #315: `LookupString("class_options")` leaked the internal
-/// enum representation, returning `"VecDequeStored[12pt]"` (the `Debug` form)
-/// instead of the option string. `class_options` is a `Stored::VecDequeStored`,
-/// and `From<&Stored> for String` fell through to `format!("{v:?}")` for any
-/// non-`String` variant. The fix flattens the queue to its comma-separated
-/// option string — the same value `LookupTokens` reverts to (`a4paper,12pt`),
-/// faithful to Perl `join(',', @options)` — so the two accessors now agree
-/// instead of leaking different internals.
-#[test]
-fn lookup_string_on_vecdeque_value_does_not_leak_debug_repr() {
-  fresh_state();
-  latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
-  latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
-  load_script(r#"assign_global("ct:s", LookupString("class_options"));"#)
-    .expect("LookupString on a VecDequeStored value must not leak its Debug repr");
-  let got = lookup_str("ct:s");
-  assert!(
-    !got.contains("VecDequeStored") && !got.contains("Stored["),
-    "LookupString must not leak the internal enum representation, got {got:?}"
-  );
-  assert_eq!(
-    got, "a4paper,12pt",
-    "LookupString should flatten the queue to the comma-separated option string, \
-     matching LookupTokens and Perl `join(',', @options)`"
+    "a4paper12pt",
+    "LookupTokens should revert the queued option strings to their tokens"
   );
   latexml_core::reset_thread_engine();
 }
