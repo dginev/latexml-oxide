@@ -231,6 +231,25 @@ impl fmt::Display for Stored {
       Strings(ref vs) => write!(f, "{}", arena::join(vs, ",")),
       KeyVals(ref kvs) => write!(f, "{kvs}"),
       Template(ref t) => write!(f, "{t}"),
+      VecDequeStored(ref v) => {
+        // A pushed list renders as its items joined — replacing the Debug repr
+        // `VecDequeStored[...]` that leaked into Rhai's LookupString (#315).
+        // Option lists (String items, e.g. class_options) are COMMA-separated,
+        // faithful to Perl `join(',', @options)` (\@classoptionslist,
+        // Package.pm L2457/L2581); hook lists (Token/Digested items:
+        // \AtBeginDocument, afterGroup) concatenate with no separator, since a
+        // stray comma would corrupt the executed token stream. Kept in lockstep
+        // with the `Stored -> Option<Tokens>` reversion below.
+        let mut first = true;
+        for item in v {
+          if !first && matches!(item, String(_)) {
+            write!(f, ",")?;
+          }
+          write!(f, "{item}")?;
+          first = false;
+        }
+        Ok(())
+      },
       None => write!(f, "Stored[None]"),
       _ => write!(f, "Stored[??]"),
     }
@@ -982,6 +1001,10 @@ impl From<&Stored> for String {
   fn from(value: &Stored) -> String {
     match value {
       Stored::String(v) => arena::to_string(*v),
+      // Flatten a pushed list to the concatenation of its item strings (via the
+      // `Display` arm) rather than leaking the `{v:?}` Debug repr
+      // `VecDequeStored[...]` into `lookup_string` / Rhai's LookupString (#315).
+      Stored::VecDequeStored(_) => s!("{value}"),
       v => s!("{v:?}"),
     }
   }
@@ -1080,10 +1103,20 @@ impl From<Stored> for Option<Tokens> {
         d.revert().ok()
       },
       Stored::VecDequeStored(vdq) => {
-        // Each item in the queue can be unlisted into a Vec<Token>
-        // and then the result can be re-cast as a single Tokens
+        // Revert the queue to a single Tokens. Option lists (String items, e.g.
+        // class_options) are COMMA-separated — faithful to Perl
+        // `Explode(join(',', @options))` (\@classoptionslist, Package.pm
+        // L2457/L2581). Token/Digested items (hook lists like
+        // @at@begin@document / afterGroup, pushed as `$op->unlist` token
+        // objects) concatenate with NO separator — a stray comma would corrupt
+        // the executed token stream. (The two never mix in one key: only the
+        // Rhai LookupTokens/LookupString bindings revert a String-item queue;
+        // internal option processing reads it via `lookup_vecdeque`.)
         let mut collected: Vec<Token> = Vec::new();
         for item in vdq {
+          if matches!(item, Stored::String(_)) && !collected.is_empty() {
+            collected.push(T_OTHER!(","));
+          }
           let item_tokens_opt: Option<Tokens> = item.into();
           if let Some(item_tokens) = item_tokens_opt {
             collected.extend(item_tokens.unlist());

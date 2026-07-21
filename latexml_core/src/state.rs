@@ -1653,7 +1653,13 @@ pub fn lookup_muglue(key: &str) -> Option<MuGlue> {
     Some(other) => panic!("State lookup expected MuGlue, found: {other:?}"),
   }
 }
-/// a variant of `lookup_value` that casts the response into `Tokens`
+/// a variant of `lookup_value` that casts the response into `Tokens`.
+///
+/// The result is a *reverted snapshot* of the stored value, never a live handle
+/// to it: for a pushed list (`VecDequeStored`, e.g. `class_options`) the queue
+/// is cloned and flattened, so mutating the returned `Tokens` does NOT write
+/// back. To mutate stored list state, go through `push_value` /
+/// `assign_value` — never "look up, then mutate the returned value".
 pub fn lookup_tokens(key: &str) -> Option<Tokens> {
   let state = state!();
   match state.lookup_value(key) {
