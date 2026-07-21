@@ -573,6 +573,80 @@ fn lookup_definition_pushes_construct_hooks_end_to_end() {
   latexml_core::reset_thread_engine();
 }
 
+/// Option-bag parity, end-to-end: `DefPrimitive`/`DefMath` accept
+/// `beforeDigest`/`afterDigest` closures and `DefEnvironment` accepts
+/// `afterDigestBody` — the same flexary, unordered options the compile-time
+/// `Def*!` macros take. Driven through a real conversion (afterDigestBody needs a
+/// captured environment body). Each hook records a state side-effect we read back.
+const OPTBAG_SAMPLE: &str = r##"
+  DefPrimitive("\\optbagprim", || { AssignValue("optbag:body", "X", "global"); }, #{
+    beforeDigest: || { AssignValue("optbag:before", "B", "global"); },
+    afterDigest:  || { AssignValue("optbag:after", "A", "global"); }
+  });
+  DefEnvironment("{optbagenv}", "<ltx:text class=\"optbagenv\">#body</ltx:text>", #{
+    mode: "text",
+    afterDigestBody: || { AssignValue("optbag:afterbody", "yes", "global"); }
+  });
+"##;
+
+fn optbag_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxoptbagtest" {
+    Some(latexml_contrib::script_bindings::load_script(OPTBAG_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+#[test]
+fn option_bag_digest_hooks_end_to_end() {
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(optbag_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxoptbagtest}",
+    "\\begin{document}\\optbagprim\\begin{optbagenv}Z\\end{optbagenv}\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("conversion with option-bag digest hooks should succeed");
+  let _ = doc.serialize_to_string();
+
+  let g = |k: &str| match state::lookup_value(k) {
+    Some(latexml_core::common::store::Stored::String(s)) => {
+      latexml_core::common::arena::to_string(s)
+    },
+    _ => String::new(),
+  };
+  // DefPrimitive option-bag beforeDigest + body + afterDigest all fired.
+  assert_eq!(
+    g("optbag:before"),
+    "B",
+    "DefPrimitive beforeDigest option did not run"
+  );
+  assert_eq!(g("optbag:body"), "X", "DefPrimitive body did not run");
+  assert_eq!(
+    g("optbag:after"),
+    "A",
+    "DefPrimitive afterDigest option did not run"
+  );
+  // DefEnvironment afterDigestBody fired after the captured body digested.
+  assert_eq!(
+    g("optbag:afterbody"),
+    "yes",
+    "DefEnvironment afterDigestBody option did not run"
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 /// Default `.rhai` FILE discovery (no embedder dispatcher): a
 /// `<name>.sty.rhai` next to the document is found via the searchpath
 /// machinery and loaded on `\usepackage{<name>}` — the downstream

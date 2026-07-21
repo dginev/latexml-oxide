@@ -414,11 +414,21 @@ registration lowers to the same native function its macro does):
   `DeclareOption`, `ProcessOptions([inorder])`, `ExecuteOptions`,
   `PassOptions`, `RequireResource`, `Tag(name, #{autoOpen, autoClose})`,
   `MergeFont(#{family,…})`, `Warn`/`Error` (with MAX_ERRORS escalation).
-- **Option bags everywhere**: `DefMacro`/`DefPrimitive` now also take a
+- **Option bags everywhere**: `DefMacro`/`DefPrimitive`/`DefMath` take a
   trailing `#{…}` (scope/locked/protected/robust/… via per-struct mappers);
   constructors/environments add `afterDigestBegin`, `beforeDigestEnd`,
-  `before/afterConstruct` (document context published; whatsit TBD),
-  string-form `reversion`, and `font: #{family: …}` directives.
+  `afterDigestBody`, `before/afterConstruct` (document context published; whatsit
+  TBD), string-form `reversion`, and `font: #{family: …}` directives.
+- **Digest-hook option parity (2026-07-21):** the `beforeDigest`/`afterDigest`
+  **closures** now work in the `DefPrimitive`/`DefMath` option bag (they were
+  scalar-only, silently dropping the keys), and `afterDigestBody` was added to the
+  constructor/environment bag — closing the gaps against the compile-time
+  `Def*!` macros. These are structural, not just tested: the primitive/math
+  mappers populate the SAME `PrimitiveOptions`/`MathPrimitiveOptions`
+  `before_digest`/`after_digest` fields the macro's `defi_opts!` sets, and
+  `afterDigestBody` routes through a new shared `ConstructorBuilder` setter — so
+  the two front-ends cannot drift. Guards: `primitive_option_bag_runs_before_and_after_digest`,
+  `math_option_bag_runs_digest_hooks`, `30_script_bindings::option_bag_digest_hooks_end_to_end`.
 
 **Load semantics fixed (load-bearing):** `load_script` now caches only the
 COMPILATION; the script RUNS on every load and each `Def…`/side-effect call

@@ -49,6 +49,13 @@ macro_rules! shared_hook_setters {
       self
     }
 
+    /// Push an `afterDigestBody` hook (environments / box constructors: runs on
+    /// the whatsit after the captured body digests — Perl's `afterDigestBody`).
+    pub fn after_digest_body(mut self, hook: DigestionClosure) -> Self {
+      self.options.after_digest_body.push(hook);
+      self
+    }
+
     /// Push a `beforeDigest` hook (runs before the arguments are digested —
     /// Perl's `beforeDigest => sub {…}`, e.g. `\footnote`'s `neutralize_font`).
     pub fn before_digest(mut self, hook: BeforeDigestClosure) -> Self {
