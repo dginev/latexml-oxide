@@ -16,6 +16,11 @@
   - **A stale or empty stylesheet already in the output directory is now overwritten**
     instead of being left in place — previously a `LaTeXML.css`/`ltx-article.css`
     left by an earlier run could be truncated to empty, leaving the page unstyled.
+  - **Split output (`--splitat`) now styles every page.** Each auto-generated split
+    child (e.g. `Ch1.html`) again loads the default stylesheets and carries the
+    document date, matching Perl — a shared post-processing XPath defect had been
+    dropping resources, processing instructions, and other relative-path lookups
+    (also repairing split navigation and cross-reference/glossary resolution).
   - **Generator identifier** now spells out the full product name ("LaTeXML oxide")
     and stamps the version into the XSLT output to match Perl.
   - **A `standalone` document class's options are no longer mis-loaded as packages.**

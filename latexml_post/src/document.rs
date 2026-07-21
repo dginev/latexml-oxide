@@ -502,8 +502,11 @@ impl PostDocument {
       }
     }
 
-    // Copy processing instructions
-    for mut pi in self.findnodes(".//processing-instruction('latexml')") {
+    // Copy processing instructions (Perl Post.pm L766-767).
+    // ABSOLUTE `//…`: `findnodes` with no context node can't evaluate a relative
+    // axis (see `findnodes_at`) — a `.//processing-instruction(...)` here matched
+    // nothing and split children lost the `<?latexml …?>` PIs (#341).
+    for mut pi in self.findnodes("//processing-instruction('latexml')") {
       if let Ok(mut pi_clone) = subdoc.document.import_node(&mut pi) {
         if let Some(mut doc_node) = subdoc.document.get_root_element() {
           doc_node.add_prev_sibling(&mut pi_clone).ok();
@@ -511,9 +514,12 @@ impl PostDocument {
       }
     }
 
-    // Copy resource elements (Perl: addNodes for ltx:resource)
+    // Copy resource elements (Perl Post.pm L770-771: addNodes for ltx:resource).
+    // ABSOLUTE `//ltx:resource` for the same reason as the PIs above — the old
+    // `descendant::ltx:resource` matched nothing, so split children dropped the
+    // default `LaTeXML.css`/`ltx-book.css` `<link>`s (#341).
     let resources: Vec<NodeData> = self
-      .findnodes("descendant::ltx:resource")
+      .findnodes("//ltx:resource")
       .iter()
       .map(|r| NodeData::XmlNode(r.clone()))
       .collect();
@@ -523,23 +529,29 @@ impl PostDocument {
       }
     }
 
-    // Copy class from top-level document element (Perl L777-782)
-    if let Some(parent_root) = self.get_document_element() {
-      if let Some(pclass) = parent_root.get_attribute("class") {
-        if let Some(mut doc_root) = subdoc.get_document_element() {
-          let existing = doc_root.get_attribute("class").unwrap_or_default();
-          if existing.is_empty() {
-            doc_root.set_attribute("class", &pclass).ok();
-          } else {
-            doc_root
-              .set_attribute("class", &format!("{} {}", existing, pclass))
-              .ok();
+    // If the new document has no date, copy the parent's (Perl Post.pm L774 →
+    // `addDate`, L866-873): when the child's document element has no direct
+    // `ltx:date` child, copy the parent document element's direct `ltx:date`
+    // children. `ltx:date` is a relative (child-axis) path, so it MUST be
+    // evaluated with the document element as an explicit context node —
+    // `findnodes` with no context node can't do relative axes (see above).
+    if let Some(sub_root) = subdoc.get_document_element() {
+      if subdoc.findnodes_at("ltx:date", Some(&sub_root)).is_empty() {
+        if let Some(parent_root) = self.get_document_element() {
+          let dates: Vec<NodeData> = self
+            .findnodes_at("ltx:date", Some(&parent_root))
+            .iter()
+            .map(|d| NodeData::XmlNode(d.clone()))
+            .collect();
+          if !dates.is_empty() {
+            let mut sub_root_mut = sub_root;
+            subdoc.add_nodes(&mut sub_root_mut, &dates);
           }
         }
       }
     }
 
-    // Copy class from top-level document element (Perl L777-782)
+    // Copy class from top-level document element (Perl Post.pm L779-782).
     if let Some(parent_root) = self.get_document_element() {
       if let Some(pclass) = parent_root.get_attribute("class") {
         if let Some(mut doc_root) = subdoc.get_document_element() {
@@ -684,7 +696,24 @@ impl PostDocument {
     let result = if let Some(node) = context_node {
       ctx.node_evaluate_checked(xpath, node)
     } else {
-      ctx.evaluate_checked(xpath)
+      // Perl `$doc->findnodes($xpath)` (no ref node) evaluates from the DOCUMENT
+      // NODE, so RELATIVE location paths (`descendant::…`, `.//…`, `child::…`)
+      // resolve against the whole tree. rust-libxml's bare `evaluate_checked`
+      // leaves the XPath context node UNSET, so relative axes silently matched
+      // NOTHING (only absolute `//…`/`/…` worked) — which broke, among others,
+      // `new_document`'s split-page resource/PI copy (#341), `Split`'s
+      // `descendant::ltx:navigation`, and CrossRef's `descendant::ltx:glossaryref`.
+      // We cannot bind the document node itself: rust-libxml's `node_evaluate`
+      // SIGSEGVs on a document-node context (an unguarded FFI path in the fork).
+      // The root ELEMENT is a safe context and makes relative axes resolve for
+      // everything inside the tree. NOTE: nodes OUTSIDE the root element — i.e.
+      // `<?latexml …?>` PIs that precede it — are not descendants of the root, so
+      // a relative PI query still needs the absolute `//processing-instruction()`
+      // form; absolute paths are unaffected by the context node either way.
+      match self.document.get_root_element() {
+        Some(root) => ctx.node_evaluate_checked(xpath, &root),
+        None => ctx.evaluate_checked(xpath),
+      }
     };
 
     match result {
@@ -1222,7 +1251,41 @@ impl PostDocument {
     match source.get_type() {
       Some(NodeType::ElementNode) => {
         let localname = source.get_name();
-        let ns = source.get_namespace();
+        // Resolve the namespace in the TARGET document. Reusing `source`'s own
+        // `Namespace` (which belongs to the SOURCE document's tree) in
+        // `new_child` plants a cross-document `xmlNs` pointer, which SIGSEGVs /
+        // corrupts the tree once either document is freed — the crash that hit
+        // `newDocument`'s cross-doc `ltx:resource` copy for split pages (#341).
+        // Mirror the `NodeData::Element` path: find or create a namespace with
+        // the same URI (preferring the default/empty prefix) on the target
+        // parent's own document.
+        let ns = source.get_namespace().and_then(|src_ns| {
+          let uri = src_ns.get_href();
+          let prefix = src_ns.get_prefix();
+          parent
+            .get_namespace_declarations()
+            .into_iter()
+            .find(|n| n.get_prefix().is_empty() && n.get_href() == uri)
+            .or_else(|| {
+              parent
+                .get_namespaces(&self.document)
+                .into_iter()
+                .find(|n| n.get_prefix().is_empty() && n.get_href() == uri)
+            })
+            .or_else(|| {
+              parent
+                .get_namespace_declarations()
+                .into_iter()
+                .find(|n| n.get_prefix() == prefix)
+            })
+            .or_else(|| {
+              parent
+                .get_namespaces(&self.document)
+                .into_iter()
+                .find(|n| n.get_prefix() == prefix)
+            })
+            .or_else(|| Namespace::new(&prefix, &uri, parent).ok())
+        });
         if let Ok(mut new_node) = parent.new_child(ns, &localname) {
           // Copy attributes
           let props = source.get_properties();
@@ -1902,6 +1965,41 @@ mod tests {
     );
     let sections = doc.findnodes("//ltx:section");
     assert_eq!(sections.len(), 2);
+  }
+
+  /// `findnodes` with no context node must resolve RELATIVE location paths
+  /// (`descendant::…`, `.//…`) against the tree — matching XML::LibXML's
+  /// `$doc->findnodes` (which evaluates from the document node) — not silently
+  /// return nothing. Regression guard for the split-page resource/PI copy (#341):
+  /// the fix binds the root element as the context node. Before-root PIs still
+  /// need the absolute `//processing-instruction()` form (documented in
+  /// `findnodes_at`), verified here too.
+  #[test]
+  fn findnodes_resolves_relative_axes_without_context_node() {
+    let doc = make_test_doc(
+      "<?latexml class='book'?>\
+       <document xmlns='http://dlmf.nist.gov/LaTeXML'>\
+         <resource src='a.css' type='text/css'/>\
+         <section xml:id='s1'/>\
+       </document>",
+    );
+    assert_eq!(doc.findnodes("//ltx:resource").len(), 1, "absolute");
+    assert_eq!(
+      doc.findnodes("descendant::ltx:resource").len(),
+      1,
+      "descendant:: axis must resolve without an explicit context node"
+    );
+    assert_eq!(
+      doc.findnodes(".//ltx:resource").len(),
+      1,
+      ".// axis must resolve without an explicit context node"
+    );
+    // Before-root PIs: absolute form finds them, relative-from-root does not.
+    assert_eq!(
+      doc.findnodes("//processing-instruction('latexml')").len(),
+      1,
+      "absolute PI query finds the before-root <?latexml?>"
+    );
   }
 
   /// The exact `--splitat=section` union `make_splitpaths` emits (the shape the

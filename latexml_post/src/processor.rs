@@ -144,7 +144,7 @@ pub fn find_documentclass_and_packages(doc: &PostDocument) -> (ClassInfo, Vec<Pa
   let mut oldstyle: Option<String> = None;
   let mut packages = Vec::new();
 
-  for pi in doc.findnodes(".//processing-instruction('latexml')") {
+  for pi in doc.findnodes("//processing-instruction('latexml')") {
     let data = pi.get_content();
     let mut entry = HashMap::default();
     for cap in pi_re.captures_iter(&data) {
@@ -193,7 +193,7 @@ pub fn find_preambles(doc: &PostDocument) -> String {
   let pi_re = Regex::new(r#"\s*([\w\-_]*)=[\"'](.*?)[\"']"#).unwrap();
   let mut preambles = Vec::new();
 
-  for pi in doc.findnodes(".//processing-instruction('latexml')") {
+  for pi in doc.findnodes("//processing-instruction('latexml')") {
     let data = pi.get_content();
     for cap in pi_re.captures_iter(&data) {
       if &cap[1] == "preamble" {
