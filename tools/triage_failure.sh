@@ -98,8 +98,12 @@ cd "$(dirname "$0")/.."
 # release build; fall back to a fresh build if missing or stale.
 WORKER_BIN="${WORKER_BIN:-./target/release/cortex_worker}"
 if [[ ! -x "$WORKER_BIN" ]]; then
-  echo "[triage] building cortex_worker (release, --features cortex) ..."
-  cargo build --release --bin cortex_worker --features cortex
+  # --no-default-features drops runtime-bindings (a DEFAULT feature): the arXiv
+  # worker converts untrusted input, so it must NOT ship the Rhai binding
+  # surface — a `.rhai` beside a source auto-loads and (with #318) could run
+  # external commands. See docs/release/SAFETY.md. Also drops test-utils.
+  echo "[triage] building cortex_worker (release, --no-default-features --features cortex) ..."
+  cargo build --release --bin cortex_worker --no-default-features --features cortex
 fi
 
 # cortex_worker --standalone takes the .zip as input, not the .tex; emits

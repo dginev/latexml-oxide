@@ -189,7 +189,10 @@ done
 echo "Building fresh release cortex_worker with ${BUILD_JOBS} cargo jobs ..."
 (
   cd "$REPO_ROOT"
-  RUSTFLAGS="$BUILD_RUSTFLAGS" cargo build --release --bin cortex_worker --features cortex --jobs "$BUILD_JOBS"
+  # --no-default-features drops runtime-bindings (a DEFAULT feature) so the
+  # untrusted-input arXiv worker has no Rhai/command-exec surface (auto-loaded
+  # `.rhai`; see docs/release/SAFETY.md). Also drops test-utils.
+  RUSTFLAGS="$BUILD_RUSTFLAGS" cargo build --release --bin cortex_worker --no-default-features --features cortex --jobs "$BUILD_JOBS"
 )
 
 if [[ "$CUSTOM_WORKER_BIN" == true ]]; then
@@ -198,7 +201,7 @@ fi
 
 if [[ ! -x "$WORKER_BIN" ]]; then
   echo "ERROR: cortex_worker binary not found after release build: $WORKER_BIN"
-  echo "  Expected build command: cargo build --release --bin cortex_worker --features cortex"
+  echo "  Expected build command: cargo build --release --bin cortex_worker --no-default-features --features cortex"
   exit 1
 fi
 

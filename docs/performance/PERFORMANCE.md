@@ -521,7 +521,9 @@ band vanish. `1005.1610` (2.83 s, 3.9 CPUs) is parallel external-graphics-bound
 ### Math-bound corpus measurement (HYBRID regression watch)
 
 ```bash
-cargo build --release --bin cortex_worker --features cortex
+# --no-default-features drops runtime-bindings (a default) so the untrusted-input
+# worker has no Rhai/command-exec surface (SAFETY.md); also drops test-utils.
+cargo build --release --bin cortex_worker --no-default-features --features cortex
 tools/benchmark_canvas.sh --input-dir <math-bound-100-zips>/in \
   --output-dir /tmp/out_hybrid --workers 8 --timeout 180
 # LEGACY control: prefix with `env LATEXML_MARPA_LEGACY=1`
