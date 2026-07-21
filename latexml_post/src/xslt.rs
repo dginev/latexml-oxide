@@ -1092,3 +1092,31 @@ fn relative_path(target: &str, base: &str) -> String {
     target.to_string()
   }
 }
+
+#[cfg(test)]
+mod witnessed_css_delta {
+  //! Guards the ONE intentional non-vanilla rule in the bundled default
+  //! `LaTeXML.css`: a tcolorbox/minipage foreignobject top-alignment rule
+  //! (arXiv **2605.02240**). The rest of the stylesheet is a straight adoption
+  //! of upstream vanilla (#312), which we do NOT assert here — the Perl
+  //! `LaTeXML/` reference tree is not shipped in the crate, so there is no
+  //! ground truth to diff against, and re-sync fidelity is a human/`cp`
+  //! responsibility. This test exists only so that a future "re-vanilla" sweep
+  //! can't silently drop the witnessed local delta.
+  use super::embedded_resources;
+
+  #[test]
+  fn witnessed_minipage_delta_stays_present() {
+    let css = std::str::from_utf8(
+      embedded_resources::lookup("LaTeXML.css").expect("LaTeXML.css is bundled"),
+    )
+    .expect("LaTeXML.css is valid UTF-8");
+    assert!(
+      css.contains("2605.02240")
+        && css.contains(
+          ".ltx_foreignobject_container:has( > .ltx_foreignobject_content > .ltx_minipage)"
+        ),
+      "the witnessed minipage top-alignment delta (2605.02240) is missing from LaTeXML.css",
+    );
+  }
+}
