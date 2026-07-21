@@ -32,6 +32,22 @@ use rustc_hash::FxHashMap as HashMap;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static LATEXML_DUMP: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP").ok());
+
+/// The latexml-oxide version exposed to bindings as the state value
+/// `LATEXML_VERSION` — the Rust analog of Perl's `$LaTeXML::VERSION`. This is
+/// **our own** crate version (`latexml_oxide`), not the emulated Perl LaTeXML's,
+/// rendered as a bare `X.Y.Z`: Cargo's `_MAJOR`/`_MINOR`/`_PATCH` components drop
+/// any `-rc`/pre-release suffix, so a version-gate parser (BookML's `.ltxml`
+/// check or the XSLT `b:version-leq`) sees three integer parts. `latexml_contrib`
+/// and `latexml_post` can't read this crate's version directly (reverse dep), so
+/// it is injected via state at session init and read back where needed.
+pub const LATEXML_VERSION: &str = concat!(
+  env!("CARGO_PKG_VERSION_MAJOR"),
+  ".",
+  env!("CARGO_PKG_VERSION_MINOR"),
+  ".",
+  env!("CARGO_PKG_VERSION_PATCH"),
+);
 use latexml_package::prelude::{
   InputDefinitionOptions, InputOptions, input_content, input_definitions,
 };
@@ -136,6 +152,10 @@ impl DigestionAPI for Core {
     model::initialize_model();
     // let paths = state::search_paths;
     let dump_path = LATEXML_DUMP.clone();
+    // Publish our version (Perl's `$LaTeXML::VERSION`) so bindings can read it —
+    // e.g. the Rhai `LaTeXMLVersion()` binding, and the XSLT `LATEXML_VERSION`
+    // parameter. Global so it survives the whole conversion.
+    state::assign_value("LATEXML_VERSION", LATEXML_VERSION, Some(Scope::Global));
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       let (name, ext, options) = parse_preload_spec(&preload);
@@ -1212,9 +1232,28 @@ fn renumber_collect_dfs(
 
 #[cfg(test)]
 mod tests {
-  use super::parse_preload_spec;
+  use super::{LATEXML_VERSION, parse_preload_spec};
 
   fn opts(v: &[&str]) -> Vec<String> { v.iter().map(|s| s.to_string()).collect() }
+
+  /// #320: `LATEXML_VERSION` must be a bare `X.Y.Z` (three integer components,
+  /// no `-rc`/pre-release) so BookML's version-gate parse works. Guards against a
+  /// future "simplify to `env!(\"CARGO_PKG_VERSION\")`" that would re-add `-rc1`.
+  #[test]
+  fn latexml_version_is_bare_xyz() {
+    let parts: Vec<&str> = LATEXML_VERSION.split('.').collect();
+    assert_eq!(
+      parts.len(),
+      3,
+      "LATEXML_VERSION must be X.Y.Z, got {LATEXML_VERSION:?}"
+    );
+    for p in &parts {
+      assert!(
+        !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()),
+        "component {p:?} is not a bare integer in {LATEXML_VERSION:?}"
+      );
+    }
+  }
 
   #[test]
   fn preload_no_brackets_no_ext() {
