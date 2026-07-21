@@ -78,6 +78,17 @@ pub enum Scope {
   Local,
   /// a named scope - visible only when explicitly activated
   Named(SymStr),
+  /// in-place: replace the value in the frame it was last bound in, WITHOUT
+  /// recording a new undo entry (or globally, at the locked base frame, if it
+  /// was never bound). Perl `State.pm:175` `$scope eq 'inplace'` ("Special case
+  /// for `\box` & friends"). This is Knuth's "same level" reassignment / what
+  /// @xworld21 tentatively called `scope => 'definition'`: the binding keeps its
+  /// save-stack level, so a mutation rides exactly as long as the current
+  /// binding — persisting past the current group if the binding was made above
+  /// it, reverting with the group if it was made locally. Distinct from Global
+  /// (which promotes + wipes lower-frame undo) and Local (which pushes an outer
+  /// binding down a level). The Value-table fast path is `assign_value_inplace`.
+  InPlace,
 }
 
 /// the kinds of tables bookkept in the State
@@ -789,13 +800,15 @@ impl State {
     // strict `==1`/`==-1`; we slightly broaden to TeX's sign-based rule
     // (matches behavior for the canonical `\globaldefs=1`/`\globaldefs=-1`
     // uses while also handling rare `\globaldefs=2` etc).
-    // `Scope::Named(_)` is preserved per Perl's "ONLY override global/local/
-    // undef" rule (State.pm:146).
+    // `Scope::Named(_)` and `Scope::InPlace` are preserved per Perl's "ONLY
+    // override global/local/undef" rule (State.pm:146 — `$scope ne 'global' &&
+    // $scope ne 'local'` short-circuits the override): an in-place mutation of
+    // the existing binding is NOT re-scoped by `\globaldefs`.
     // Without this: pgfplots' `\pgfplots@pop@next@legend`
     // (`\def\foo{{\globaldefs=1 \let\x=\relax}}`) silently drops the `\let`
     // on group exit, leaving `\pgfplots@curlegend`/`@curplotlist` undefined
     // and looping `\pgfplots@createlegend` at the digest wall-clock cap.
-    let preserve = matches!(scope_opt, Some(Scope::Named(_)));
+    let preserve = matches!(scope_opt, Some(Scope::Named(_) | Scope::InPlace));
     if !preserve
       && let Some(globaldefs) = self.value.get(&pin!("\\globaldefs"))
       && let Some(global_value) = globaldefs.front()
@@ -882,6 +895,27 @@ impl State {
         }
         // 2.2 Add new value
         defs.push_front(value);
+      },
+      Scope::InPlace => {
+        // Perl `State.pm:175`: replace the front value in the frame it was last
+        // bound in, adding NO undo entry, so the mutation keeps the binding's
+        // save-stack level (the `\box` / same-level semantics). If the key was
+        // never bound, seed it at the locked base frame (Perl's "push globally"
+        // fallback). Mirrors the Value-table `assign_value_inplace` fast path.
+        let state_table = self.table_mut(table_name);
+        if let Some(defs) = state_table.get_mut(&key)
+          && let Some(front) = defs.front_mut()
+        {
+          *front = value;
+        } else {
+          state_table.entry(key).or_default().push_front(value);
+          for frame in &mut self.undo {
+            if frame.locked {
+              frame.table_mut(table_name).insert(key, 1);
+              break;
+            }
+          }
+        }
       },
       Scope::Named(scope_name) => {
         // initialize stash if empty
@@ -3555,5 +3589,53 @@ mod reentrancy_tests {
     // Same guarantee for the pop side.
     let r2 = pop_value("p1a_bug_key");
     assert!(r2.is_ok());
+  }
+
+  /// `Scope::InPlace` (Perl `State.pm:175` 'inplace') is the same-level
+  /// reassignment behind the Rhai `LookupDefinition(cs).push*` hook-splice
+  /// (`install_definition(d, Some(Scope::InPlace))`). It must be neither Global
+  /// nor Local across a group boundary — this is exactly the divergence
+  /// @xworld21 flagged in PR #333 (r3623947537). Exercised on the Value table,
+  /// which funnels through the identical `assign_internal` arm.
+  #[test]
+  fn inplace_scope_keeps_the_bindings_level() {
+    // Scenario 1: a value bound ABOVE the group, mutated in-place from INSIDE
+    // the group, PERSISTS past group exit (Local would have reverted it). This
+    // is BookML's real case: patch an already-global def, mutation stays.
+    assign_value("ip_above", Stored::Int(1), Some(Scope::Global));
+    push_frame();
+    assign_value("ip_above", Stored::Int(2), Some(Scope::InPlace));
+    assert_eq!(
+      lookup_int("ip_above"),
+      2,
+      "in-place mutation is active at once"
+    );
+    pop_frame().expect("pop group");
+    assert_eq!(
+      lookup_int("ip_above"),
+      2,
+      "in-place patch of an outer-bound value rode the outer binding past group \
+       exit (Local would revert to 1)"
+    );
+
+    // Scenario 2: a value LOCALLY redefined in the group, then mutated in-place,
+    // REVERTS to the outer value at group exit (Global would have kept the
+    // patch). The in-place edit rode the LOCAL binding, which is discarded.
+    assign_value("ip_local", Stored::Int(1), Some(Scope::Global));
+    push_frame();
+    assign_value("ip_local", Stored::Int(2), Some(Scope::Local));
+    assign_value("ip_local", Stored::Int(3), Some(Scope::InPlace));
+    assert_eq!(
+      lookup_int("ip_local"),
+      3,
+      "in-place mutated the local front"
+    );
+    pop_frame().expect("pop group");
+    assert_eq!(
+      lookup_int("ip_local"),
+      1,
+      "in-place patch of a locally-bound value was discarded with the group \
+       (Global would keep 3)"
+    );
   }
 }

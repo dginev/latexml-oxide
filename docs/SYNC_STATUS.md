@@ -609,6 +609,24 @@ residuals stay here so the live worklist keeps them visible:
 
 ## Open tasks (actionable)
 
+### Rhai `LookupDefinition(cs).push*` hook-splice re-installs at same-level, not global — ✅ LANDED 2026-07-21
+
+Follow-up to the BookML/@xworld21 cluster: PR #333 review comment r3623947537 flagged that the
+`LookupDefinition(cs).push*/unshift*` hook-splice (#321) re-installed the patched def at
+`Scope::Global`, which **promotes a locally-bound def to global** and makes the patch survive
+group exit — a divergence from Perl, which mutates the shared def-hash *in place* (never touching
+the save stack). Harmless in practice (BookML only patches already-global `\hrule`/`\vrule`/`\rule`),
+but a real gap. Fix: ported Perl `State.pm:175`'s fourth scope, `'inplace'` ("Special case for
+`\box` & friends"), as first-class **`Scope::InPlace`** (`latexml_core/src/state.rs` enum +
+`assign_internal` arm; `\globaldefs` deliberately does NOT re-scope it, matching Perl's
+`$scope ne 'global' && ne 'local'` guard). The 9 `install_definition(d, Some(Scope::Global))` sites
+in `script_bindings/wire.rs::push_definition_hook` now pass `Scope::InPlace`. The Value-table
+`assign_value_inplace` fast path (WISDOM #19) was the pre-existing witness that this scope existed;
+this lifts it to the Meaning table too. Guards: `state::reentrancy_tests::inplace_scope_keeps_the_bindings_level`
+(proves neither-Global-nor-Local across a `push_frame`/`pop_frame` boundary) + the existing
+`script_bindings::tests::lookup_definition_*` (unchanged — top-level pushes, where in-place ≡ global).
+See WISDOM #48.
+
 ### XSLT `LATEXML_VERSION` param — generator-stamp parity gap + BookML `utils.xsl` — ✅ LANDED 2026-07-21 (branch `xslt-latexml-version-param`)
 
 Completes the BookML/@xworld21 cluster follow-up. `latexml_oxide/src/post.rs` now injects

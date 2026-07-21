@@ -155,6 +155,9 @@ impl Rewrite {
         crate::state::Scope::Named(s) => arena::with(s, |r| r.to_string()),
         crate::state::Scope::Global => String::from("global"),
         crate::state::Scope::Local => String::from("local"),
+        // Rewrite rules never carry an in-place scope, but keep the match total
+        // (Perl's scope string for `assign_internal`'s 'inplace' branch).
+        crate::state::Scope::InPlace => String::from("inplace"),
       };
       clauses.push(RewriteClause {
         compiled: false,

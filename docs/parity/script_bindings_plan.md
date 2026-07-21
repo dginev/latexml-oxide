@@ -447,11 +447,16 @@ hook family — the Rhai analog of Perl BookML's `push(@{ $$def{afterConstruct}
 construct/body push onto a Primitive/MathPrimitive/Macro is a clear script
 error — MathPrimitive's construct fields are never executed). Installed defs
 have no interior mutability, so each push clones the current front definition,
-splices the trampolined hook, and re-installs at **global** scope: the global
-`assign_internal` `push_front`s the patch and clears its lower-frame undo
-entries, so it is the active meaning immediately (sequential pushes accumulate
-by re-looking-up) and persists across group exits — faithful to Perl's
-in-place, globally-visible mutation of the shared def-hash. Hook arities match
+splices the trampolined hook, and re-installs at **`Scope::InPlace`** (Perl
+`State.pm:175` `'inplace'`, "same level"): the front binding is replaced without
+touching the save stack, so the patch is the active meaning immediately
+(sequential pushes accumulate by re-looking-up) and rides exactly as long as the
+definition's existing binding — faithful to Perl mutating the shared def-hash in
+place. (This corrects an earlier `Scope::Global` re-install that promoted a
+locally-bound def to global — harmless for BookML, which only patches
+already-global defs, but a real divergence flagged in PR #333 r3623947537
+by @xworld21; the `state::reentrancy_tests::inplace_scope_keeps_the_bindings_level`
+test pins the same-level semantics.) Hook arities match
 the option-bag form (digest = parameterless via `whatsit()`; construct =
 `|document|`). Guards: `script_bindings::tests::lookup_definition_*` and the
 end-to-end `30_script_bindings::lookup_definition_pushes_construct_hooks_end_to_end`.

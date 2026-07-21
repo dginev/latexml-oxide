@@ -567,8 +567,9 @@ fn command_output_runs_by_default_and_is_blockable_via_env() {
 /// `push<Hook>`/`unshift<Hook>` splice a trampolined hook onto its list — the
 /// Rhai analog of BookML's `push(@{ $$def{afterDigest} }, sub{…})`. Perl mutates
 /// the shared blessed def-hash in place; we clone the current front def, splice,
-/// and re-install at GLOBAL scope, so sequential pushes ACCUMULATE and `unshift`
-/// PREPENDS. Exercised here on the digest path (the harness digests but builds no
+/// and re-install at `Scope::InPlace` (same-level; Perl `State.pm:175` 'inplace'),
+/// so sequential pushes ACCUMULATE and `unshift` PREPENDS. Exercised here on the
+/// digest path (the harness digests but builds no
 /// Document — the construct path is covered end-to-end in `30_script_bindings`).
 #[test]
 fn lookup_definition_pushes_and_accumulates_digest_hooks() {
