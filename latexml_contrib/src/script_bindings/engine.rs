@@ -292,6 +292,42 @@ pub(super) fn make_engine() -> Engine {
       res.map_err(rhai_err)
     },
   );
+  // ── the rest of the diagnostics surface (Perl Common/Error.pm), completing
+  // the Warn/Error pair above (#319). ──
+  engine.register_fn("Info", |cat: &str, obj: &str, msg: &str| {
+    latexml_core::Info!(cat, obj, msg.to_string());
+  });
+  engine.register_fn(
+    "Fatal",
+    |cat: &str, obj: &str, msg: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      // Perl `Fatal($cat,$obj,$msg)` logs a fatal and aborts. Surface it as a
+      // Rhai error so the script/conversion aborts cleanly, carrying the
+      // "cat:obj msg" identity, and note the fatal status for the run tally.
+      let res: Result<()> = (|| {
+        latexml_core::Fatal!(Internal, Unexpected, format!("{cat}:{obj} {msg}"));
+        #[allow(unreachable_code)]
+        Ok(())
+      })();
+      res.map_err(rhai_err)
+    },
+  );
+  // Notes + progress reporting (Perl `NoteSTDERR`/`NoteLog`, `ProgressStep`,
+  // `ProgressSpinup`/`ProgressSpindown`).
+  engine.register_fn("NoteSTDERR", |msg: &str| {
+    latexml_core::Note!(msg);
+  });
+  engine.register_fn("NoteLog", |msg: &str| {
+    latexml_core::NoteLog!(msg);
+  });
+  engine.register_fn("ProgressStep", |note: &str| {
+    latexml_core::common::error::progress_step(note);
+  });
+  engine.register_fn("ProgressSpinup", |stage: &str| {
+    latexml_core::common::error::note_begin(stage);
+  });
+  engine.register_fn("ProgressSpindown", |stage: &str| {
+    latexml_core::common::error::note_end(stage);
+  });
 
   // ── counters (counter_dialect, the NewCounter!/StepCounter!/… family) ──
   engine.register_fn(

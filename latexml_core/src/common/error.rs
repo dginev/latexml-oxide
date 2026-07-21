@@ -727,7 +727,7 @@ macro_rules! NoteLog {
       && log::max_level() >= log::LevelFilter::Debug
     {
       let msg = $input;
-      println_stderr!("{msg}");
+      $crate::println_stderr!("{msg}");
     }
   };
 }

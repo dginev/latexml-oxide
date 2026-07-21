@@ -375,6 +375,30 @@ fn lookup_value_on_list_returns_rhai_array() {
   latexml_core::reset_thread_engine();
 }
 
+/// #319: the diagnostics surface beyond `Warn`/`Error` — `Info`, the
+/// `Note`/`Progress` family (side-effecting, must load and run cleanly), and
+/// `Fatal` (must abort the script, mirroring Perl `Fatal` which dies).
+#[test]
+fn diagnostics_surface_info_notes_progress_and_fatal() {
+  fresh_state();
+  load_script(
+    r#"
+    Info("test", "obj", "an info message");
+    NoteSTDERR("a stderr note");
+    NoteLog("a log note");
+    ProgressSpinup("stage");
+    ProgressStep("working");
+    ProgressSpindown("stage");
+    "#,
+  )
+  .expect("non-fatal diagnostics must load and run cleanly");
+  let fatal = load_script(r#"Fatal("internal", "obj", "boom");"#);
+  assert!(fatal.is_err(), "Fatal must abort the script, got {fatal:?}");
+  // Clear the run tally so the raised fatal doesn't leak into sibling tests.
+  latexml_core::common::error::initialize_report();
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();
