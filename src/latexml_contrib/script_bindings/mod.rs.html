@@ -312,182 +312,192 @@
 <a href=#312 id=312 data-nosnippet>312</a></span><span class="attr">#[derive(Clone)]
 <a href=#313 id=313 data-nosnippet>313</a></span><span class="kw">struct </span>WhatsitProxy;
 <a href=#314 id=314 data-nosnippet>314</a>
-<a href=#315 id=315 data-nosnippet>315</a><span class="doccomment">/// Resolve the top whatsit active-context (used by `WhatsitProxy` methods).
-<a href=#316 id=316 data-nosnippet>316</a></span><span class="kw">fn </span>current_whatsit() -&gt; std::result::Result&lt;<span class="kw-2">*mut </span>Whatsit, Box&lt;EvalAltResult&gt;&gt; {
-<a href=#317 id=317 data-nosnippet>317</a>  current_whatsit_entry().map(|(w, <span class="kw">_</span>)| w)
-<a href=#318 id=318 data-nosnippet>318</a>}
-<a href=#319 id=319 data-nosnippet>319</a>
-<a href=#320 id=320 data-nosnippet>320</a><span class="doccomment">/// The top whatsit entry incl. its mutability flag.
-<a href=#321 id=321 data-nosnippet>321</a></span><span class="kw">fn </span>current_whatsit_entry() -&gt; std::result::Result&lt;(<span class="kw-2">*mut </span>Whatsit, bool), Box&lt;EvalAltResult&gt;&gt; {
-<a href=#322 id=322 data-nosnippet>322</a>  WHATSIT_CTX.with(|c| {
-<a href=#323 id=323 data-nosnippet>323</a>    c.borrow()
-<a href=#324 id=324 data-nosnippet>324</a>      .last()
-<a href=#325 id=325 data-nosnippet>325</a>      .copied()
-<a href=#326 id=326 data-nosnippet>326</a>      .ok_or_else(|| Box::&lt;EvalAltResult&gt;::from(<span class="string">"whatsit() called outside a hook body"</span>))
-<a href=#327 id=327 data-nosnippet>327</a>  })
+<a href=#315 id=315 data-nosnippet>315</a><span class="doccomment">/// Rhai proxy returned by `LookupDefinition(cs)` (#321). Carries only the CS name;
+<a href=#316 id=316 data-nosnippet>316</a>/// each `push*/unshift*` re-looks-up the CURRENT front definition, splices a hook,
+<a href=#317 id=317 data-nosnippet>317</a>/// and re-installs — so sequential pushes accumulate (mirroring Perl BookML's
+<a href=#318 id=318 data-nosnippet>318</a>/// in-place mutation of the shared def-hash). `LookupDefinition` returns `()`, not
+<a href=#319 id=319 data-nosnippet>319</a>/// this proxy, when the CS is undefined.
+<a href=#320 id=320 data-nosnippet>320</a></span><span class="attr">#[derive(Clone)]
+<a href=#321 id=321 data-nosnippet>321</a></span><span class="kw">struct </span>DefinitionProxy {
+<a href=#322 id=322 data-nosnippet>322</a>  cs: String,
+<a href=#323 id=323 data-nosnippet>323</a>}
+<a href=#324 id=324 data-nosnippet>324</a>
+<a href=#325 id=325 data-nosnippet>325</a><span class="doccomment">/// Resolve the top whatsit active-context (used by `WhatsitProxy` methods).
+<a href=#326 id=326 data-nosnippet>326</a></span><span class="kw">fn </span>current_whatsit() -&gt; std::result::Result&lt;<span class="kw-2">*mut </span>Whatsit, Box&lt;EvalAltResult&gt;&gt; {
+<a href=#327 id=327 data-nosnippet>327</a>  current_whatsit_entry().map(|(w, <span class="kw">_</span>)| w)
 <a href=#328 id=328 data-nosnippet>328</a>}
 <a href=#329 id=329 data-nosnippet>329</a>
-<a href=#330 id=330 data-nosnippet>330</a><span class="kw">mod </span>engine;
-<a href=#331 id=331 data-nosnippet>331</a><span class="kw">mod </span>wire;
-<a href=#332 id=332 data-nosnippet>332</a><span class="kw">use </span>engine::make_engine;
-<a href=#333 id=333 data-nosnippet>333</a><span class="attr">#[allow(unused_imports)]
-<a href=#334 id=334 data-nosnippet>334</a></span><span class="kw">use </span>wire::<span class="kw-2">*</span>;
-<a href=#335 id=335 data-nosnippet>335</a>
-<a href=#336 id=336 data-nosnippet>336</a><span class="doccomment">/// Load a binding script from a file on disk (e.g. `mypkg.sty.rhai`). Thin
-<a href=#337 id=337 data-nosnippet>337</a>/// wrapper over [`load_script`]; reading user-supplied files from a user-named
-<a href=#338 id=338 data-nosnippet>338</a>/// path is in scope (like reading `.sty` from texmf).
-<a href=#339 id=339 data-nosnippet>339</a></span><span class="kw">pub fn </span>load_file(path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
-<a href=#340 id=340 data-nosnippet>340</a>  <span class="kw">let </span>src = std::fs::read_to_string(path)<span class="question-mark">?</span>;
-<a href=#341 id=341 data-nosnippet>341</a>  load_script(<span class="kw-2">&amp;</span>src)
-<a href=#342 id=342 data-nosnippet>342</a>}
-<a href=#343 id=343 data-nosnippet>343</a>
-<a href=#344 id=344 data-nosnippet>344</a><span class="doccomment">/// Load a binding script: compile once (cached by source), then RUN the script
-<a href=#345 id=345 data-nosnippet>345</a>/// against the current State. Every `Def…` registration wires its native
-<a href=#346 id=346 data-nosnippet>346</a>/// definition IMMEDIATELY as the script executes (sequential, Perl `.ltxml`
-<a href=#347 id=347 data-nosnippet>347</a>/// semantics — so `DeclareOption` precedes a later `ProcessOptions()`), and
-<a href=#348 id=348 data-nosnippet>348</a>/// top-level side-effect calls (`RawTeX`, `Let`, `NewCounter`, `AssignValue`,
-<a href=#349 id=349 data-nosnippet>349</a>/// `DefRegister`, …) re-apply on every load — i.e. per conversion, not just
-<a href=#350 id=350 data-nosnippet>350</a>/// the first one that happened to compile the script. Returns the number of
-<a href=#351 id=351 data-nosnippet>351</a>/// definitions installed.
-<a href=#352 id=352 data-nosnippet>352</a></span><span class="kw">pub fn </span>load_script(src: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
-<a href=#353 id=353 data-nosnippet>353</a>  <span class="comment">// Fast path: a previously-compiled script with the same source.
-<a href=#354 id=354 data-nosnippet>354</a>  </span><span class="kw">let </span>cached = SCRIPT_CACHE.with(|c| c.borrow().get(src).cloned());
-<a href=#355 id=355 data-nosnippet>355</a>  <span class="kw">let </span>cached = <span class="kw">match </span>cached {
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="prelude-val">Some</span>(c) =&gt; c,
-<a href=#357 id=357 data-nosnippet>357</a>    <span class="prelude-val">None </span>=&gt; {
-<a href=#358 id=358 data-nosnippet>358</a>      <span class="kw">let </span>engine = make_engine();
-<a href=#359 id=359 data-nosnippet>359</a>      <span class="kw">let </span>ast = engine
-<a href=#360 id=360 data-nosnippet>360</a>        .compile(src)
-<a href=#361 id=361 data-nosnippet>361</a>        .map_err(|e| Error::from(<span class="macro">format!</span>(<span class="string">"script-binding compile error: {e}"</span>)))<span class="question-mark">?</span>;
-<a href=#362 id=362 data-nosnippet>362</a>      <span class="kw">let </span>cs = CachedScript {
-<a href=#363 id=363 data-nosnippet>363</a>        engine: Rc::new(engine),
-<a href=#364 id=364 data-nosnippet>364</a>        ast:    Rc::new(ast),
-<a href=#365 id=365 data-nosnippet>365</a>      };
-<a href=#366 id=366 data-nosnippet>366</a>      SCRIPT_CACHE.with(|c| {
-<a href=#367 id=367 data-nosnippet>367</a>        c.borrow_mut().insert(src.to_string(), cs.clone());
-<a href=#368 id=368 data-nosnippet>368</a>      });
-<a href=#369 id=369 data-nosnippet>369</a>      cs
-<a href=#370 id=370 data-nosnippet>370</a>    },
-<a href=#371 id=371 data-nosnippet>371</a>  };
-<a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="comment">// Publish the script handles for the registration closures, run, unpublish
-<a href=#374 id=374 data-nosnippet>374</a>  // (a stack, so a script loading another script nests correctly). RAII pop on
-<a href=#375 id=375 data-nosnippet>375</a>  // every exit incl. a panic out of `run_ast` (review M1).
-<a href=#376 id=376 data-nosnippet>376</a>  </span><span class="kw">let </span>before = WIRED_COUNT.with(|c| <span class="kw-2">*</span>c.borrow());
-<a href=#377 id=377 data-nosnippet>377</a>  <span class="kw">let </span>run = {
-<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">let </span>_script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
-<a href=#379 id=379 data-nosnippet>379</a>    cached
-<a href=#380 id=380 data-nosnippet>380</a>      .engine
-<a href=#381 id=381 data-nosnippet>381</a>      .run_ast(<span class="kw-2">&amp;</span>cached.ast)
-<a href=#382 id=382 data-nosnippet>382</a>      .map_err(|e| Error::from(<span class="macro">format!</span>(<span class="string">"script-binding run error: {e}"</span>)))
-<a href=#383 id=383 data-nosnippet>383</a>  };
-<a href=#384 id=384 data-nosnippet>384</a>  run<span class="question-mark">?</span>;
-<a href=#385 id=385 data-nosnippet>385</a>  <span class="prelude-val">Ok</span>(WIRED_COUNT.with(|c| <span class="kw-2">*</span>c.borrow()) - before)
-<a href=#386 id=386 data-nosnippet>386</a>}
-<a href=#387 id=387 data-nosnippet>387</a>
-<a href=#388 id=388 data-nosnippet>388</a><span class="doccomment">/// Build a partial `Font` from a Rhai map (family/series/shape/… keys — the
-<a href=#389 id=389 data-nosnippet>389</a>/// `fontmap!` analog, shared by `MergeFont` and the `font =&gt;` option).
-<a href=#390 id=390 data-nosnippet>390</a></span><span class="kw">fn </span>font_from_rhai_map(opts: Map) -&gt; latexml_core::common::font::Font {
-<a href=#391 id=391 data-nosnippet>391</a>  <span class="kw">let </span><span class="kw-2">mut </span>font = latexml_core::common::font::Font::default();
-<a href=#392 id=392 data-nosnippet>392</a>  <span class="kw">for </span>(key, val) <span class="kw">in </span>opts {
-<a href=#393 id=393 data-nosnippet>393</a>    <span class="kw">let </span>v = dynamic_to_string(val.clone());
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="kw">match </span>key.as_str() {
-<a href=#395 id=395 data-nosnippet>395</a>      <span class="string">"family" </span>=&gt; font.family = <span class="prelude-val">Some</span>(v.into()),
-<a href=#396 id=396 data-nosnippet>396</a>      <span class="string">"series" </span>=&gt; font.series = <span class="prelude-val">Some</span>(v.into()),
-<a href=#397 id=397 data-nosnippet>397</a>      <span class="string">"shape" </span>=&gt; font.shape = <span class="prelude-val">Some</span>(v.into()),
-<a href=#398 id=398 data-nosnippet>398</a>      <span class="string">"encoding" </span>=&gt; font.encoding = <span class="prelude-val">Some</span>(v.into()),
-<a href=#399 id=399 data-nosnippet>399</a>      <span class="string">"language" </span>=&gt; font.language = <span class="prelude-val">Some</span>(v.into()),
-<a href=#400 id=400 data-nosnippet>400</a>      <span class="string">"mathstyle" </span>=&gt; font.mathstyle = <span class="prelude-val">Some</span>(v.into()),
-<a href=#401 id=401 data-nosnippet>401</a>      <span class="string">"size" </span>=&gt; {
-<a href=#402 id=402 data-nosnippet>402</a>        font.size = val
-<a href=#403 id=403 data-nosnippet>403</a>          .as_float()
-<a href=#404 id=404 data-nosnippet>404</a>          .ok()
-<a href=#405 id=405 data-nosnippet>405</a>          .or_else(|| val.as_int().ok().map(|i| i <span class="kw">as </span>f64))
-<a href=#406 id=406 data-nosnippet>406</a>      },
-<a href=#407 id=407 data-nosnippet>407</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#408 id=408 data-nosnippet>408</a>    }
-<a href=#409 id=409 data-nosnippet>409</a>  }
-<a href=#410 id=410 data-nosnippet>410</a>  font
-<a href=#411 id=411 data-nosnippet>411</a>}
-<a href=#412 id=412 data-nosnippet>412</a>
-<a href=#413 id=413 data-nosnippet>413</a><span class="doccomment">/// Convert a Rhai object map into a whatsit property map. `Digested` handles
-<a href=#414 id=414 data-nosnippet>414</a>/// (from `DigestText`, `RefStepCounter`, …) pass through as `Stored::Digested`;
-<a href=#415 id=415 data-nosnippet>415</a>/// a `Digested` under the `font` key contributes its FONT (the IEEEproof
-<a href=#416 id=416 data-nosnippet>416</a>/// "titlefont" idiom); everything else lands as its string form.
-<a href=#417 id=417 data-nosnippet>417</a></span><span class="kw">fn </span>rhai_map_to_props(map: Map) -&gt; SymHashMap&lt;Stored&gt; {
-<a href=#418 id=418 data-nosnippet>418</a>  <span class="kw">let </span><span class="kw-2">mut </span>props: SymHashMap&lt;Stored&gt; = SymHashMap::default();
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="kw">for </span>(k, v) <span class="kw">in </span>map {
-<a href=#420 id=420 data-nosnippet>420</a>    <span class="kw">match </span>v.clone().try_cast::&lt;Digested&gt;() {
-<a href=#421 id=421 data-nosnippet>421</a>      <span class="prelude-val">Some</span>(d) =&gt; {
-<a href=#422 id=422 data-nosnippet>422</a>        <span class="kw">if </span>k.as_str() == <span class="string">"font"
-<a href=#423 id=423 data-nosnippet>423</a>          </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(f)) = d.get_font()
-<a href=#424 id=424 data-nosnippet>424</a>        {
-<a href=#425 id=425 data-nosnippet>425</a>          props.insert(<span class="string">"font"</span>, Stored::Font(Rc::new(f.into_owned())));
-<a href=#426 id=426 data-nosnippet>426</a>          <span class="kw">continue</span>;
-<a href=#427 id=427 data-nosnippet>427</a>        }
-<a href=#428 id=428 data-nosnippet>428</a>        props.insert(k.as_str(), Stored::Digested(d));
-<a href=#429 id=429 data-nosnippet>429</a>      },
-<a href=#430 id=430 data-nosnippet>430</a>      <span class="kw">_ </span>=&gt; {
-<a href=#431 id=431 data-nosnippet>431</a>        props.insert(k.as_str(), dynamic_to_string(v).into());
-<a href=#432 id=432 data-nosnippet>432</a>      },
-<a href=#433 id=433 data-nosnippet>433</a>    }
-<a href=#434 id=434 data-nosnippet>434</a>  }
-<a href=#435 id=435 data-nosnippet>435</a>  props
-<a href=#436 id=436 data-nosnippet>436</a>}
-<a href=#437 id=437 data-nosnippet>437</a>
-<a href=#438 id=438 data-nosnippet>438</a><span class="doccomment">/// Marshal a counter/whatsit property map back into a Rhai object map (the
-<a href=#439 id=439 data-nosnippet>439</a>/// inverse of [`rhai_map_to_props`]). The single source shared by
-<a href=#440 id=440 data-nosnippet>440</a>/// `RefStepCounter`/`RefStepID`/`RefCurrentID`, which inlined this 3× before
-<a href=#441 id=441 data-nosnippet>441</a>/// (review m4).
-<a href=#442 id=442 data-nosnippet>442</a></span><span class="kw">fn </span>props_to_map(props: SymHashMap&lt;Stored&gt;) -&gt; Map {
-<a href=#443 id=443 data-nosnippet>443</a>  <span class="kw">let </span><span class="kw-2">mut </span>m = Map::new();
-<a href=#444 id=444 data-nosnippet>444</a>  <span class="kw">for </span>(k, v) <span class="kw">in </span>props {
-<a href=#445 id=445 data-nosnippet>445</a>    m.insert(arena::to_string(k).into(), stored_to_dynamic(v));
-<a href=#446 id=446 data-nosnippet>446</a>  }
-<a href=#447 id=447 data-nosnippet>447</a>  m
-<a href=#448 id=448 data-nosnippet>448</a>}
-<a href=#449 id=449 data-nosnippet>449</a>
-<a href=#450 id=450 data-nosnippet>450</a><span class="doccomment">/// Map ANY displayable error (latexml `Error`, libxml `Box&lt;dyn Error&gt;`, …) into
-<a href=#451 id=451 data-nosnippet>451</a>/// a Rhai error — the SINGLE boundary-conversion source. Review m4: the inline
-<a href=#452 id=452 data-nosnippet>452</a>/// `Box::&lt;EvalAltResult&gt;::from(e.to_string())` spelling scattered across the
-<a href=#453 id=453 data-nosnippet>453</a>/// proxy ops is routed through here so error formatting has one definition.
-<a href=#454 id=454 data-nosnippet>454</a></span><span class="kw">fn </span>rhai_err(e: <span class="kw">impl </span>std::fmt::Display) -&gt; Box&lt;EvalAltResult&gt; {
-<a href=#455 id=455 data-nosnippet>455</a>  Box::&lt;EvalAltResult&gt;::from(e.to_string())
-<a href=#456 id=456 data-nosnippet>456</a>}
-<a href=#457 id=457 data-nosnippet>457</a>
-<a href=#458 id=458 data-nosnippet>458</a><span class="doccomment">/// Parse a scope string ("local"/"global", anything else = None → TeX default).
-<a href=#459 id=459 data-nosnippet>459</a></span><span class="kw">fn </span>scope_of(scope: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Scope&gt; {
-<a href=#460 id=460 data-nosnippet>460</a>  <span class="kw">match </span>scope {
-<a href=#461 id=461 data-nosnippet>461</a>    <span class="string">"local" </span>=&gt; <span class="prelude-val">Some</span>(Scope::Local),
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="string">"global" </span>=&gt; <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#463 id=463 data-nosnippet>463</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#464 id=464 data-nosnippet>464</a>  }
-<a href=#465 id=465 data-nosnippet>465</a>}
-<a href=#466 id=466 data-nosnippet>466</a>
-<a href=#467 id=467 data-nosnippet>467</a><span class="doccomment">/// Marshal a `Stored` out to a Rhai value: `Digested` as a live handle,
-<a href=#468 id=468 data-nosnippet>468</a>/// scalars as scalars, the rest via `Display`.
-<a href=#469 id=469 data-nosnippet>469</a></span><span class="kw">fn </span>stored_to_dynamic(v: Stored) -&gt; Dynamic {
-<a href=#470 id=470 data-nosnippet>470</a>  <span class="kw">match </span>v {
-<a href=#471 id=471 data-nosnippet>471</a>    Stored::Digested(d) =&gt; Dynamic::from(d),
-<a href=#472 id=472 data-nosnippet>472</a>    Stored::String(s) =&gt; Dynamic::from(arena::to_string(s)),
-<a href=#473 id=473 data-nosnippet>473</a>    Stored::Bool(b) =&gt; Dynamic::from(b),
-<a href=#474 id=474 data-nosnippet>474</a>    other =&gt; Dynamic::from(other.to_string()),
-<a href=#475 id=475 data-nosnippet>475</a>  }
-<a href=#476 id=476 data-nosnippet>476</a>}
-<a href=#477 id=477 data-nosnippet>477</a>
-<a href=#478 id=478 data-nosnippet>478</a><span class="doccomment">/// Marshal a digested macro argument into a Rhai value. Every argument is passed
-<a href=#479 id=479 data-nosnippet>479</a>/// as its TeX-source string (authors parse it in-script as needed).
-<a href=#480 id=480 data-nosnippet>480</a></span><span class="kw">fn </span>arg_to_dynamic(arg: ArgWrap) -&gt; Dynamic { Dynamic::from(arg.to_string()) }
-<a href=#481 id=481 data-nosnippet>481</a>
-<a href=#482 id=482 data-nosnippet>482</a><span class="doccomment">/// Read a Rhai return value back as a string (the TeX-source of the expansion).
-<a href=#483 id=483 data-nosnippet>483</a></span><span class="kw">fn </span>dynamic_to_string(d: Dynamic) -&gt; String {
-<a href=#484 id=484 data-nosnippet>484</a>  <span class="kw">if </span>d.is_string() {
-<a href=#485 id=485 data-nosnippet>485</a>    d.into_string().unwrap_or_default()
-<a href=#486 id=486 data-nosnippet>486</a>  } <span class="kw">else </span>{
-<a href=#487 id=487 data-nosnippet>487</a>    d.to_string()
-<a href=#488 id=488 data-nosnippet>488</a>  }
-<a href=#489 id=489 data-nosnippet>489</a>}
-<a href=#490 id=490 data-nosnippet>490</a>
-<a href=#491 id=491 data-nosnippet>491</a><span class="attr">#[cfg(test)]
-<a href=#492 id=492 data-nosnippet>492</a></span><span class="kw">mod </span>tests;
+<a href=#330 id=330 data-nosnippet>330</a><span class="doccomment">/// The top whatsit entry incl. its mutability flag.
+<a href=#331 id=331 data-nosnippet>331</a></span><span class="kw">fn </span>current_whatsit_entry() -&gt; std::result::Result&lt;(<span class="kw-2">*mut </span>Whatsit, bool), Box&lt;EvalAltResult&gt;&gt; {
+<a href=#332 id=332 data-nosnippet>332</a>  WHATSIT_CTX.with(|c| {
+<a href=#333 id=333 data-nosnippet>333</a>    c.borrow()
+<a href=#334 id=334 data-nosnippet>334</a>      .last()
+<a href=#335 id=335 data-nosnippet>335</a>      .copied()
+<a href=#336 id=336 data-nosnippet>336</a>      .ok_or_else(|| Box::&lt;EvalAltResult&gt;::from(<span class="string">"whatsit() called outside a hook body"</span>))
+<a href=#337 id=337 data-nosnippet>337</a>  })
+<a href=#338 id=338 data-nosnippet>338</a>}
+<a href=#339 id=339 data-nosnippet>339</a>
+<a href=#340 id=340 data-nosnippet>340</a><span class="kw">mod </span>engine;
+<a href=#341 id=341 data-nosnippet>341</a><span class="kw">mod </span>wire;
+<a href=#342 id=342 data-nosnippet>342</a><span class="kw">use </span>engine::make_engine;
+<a href=#343 id=343 data-nosnippet>343</a><span class="attr">#[allow(unused_imports)]
+<a href=#344 id=344 data-nosnippet>344</a></span><span class="kw">use </span>wire::<span class="kw-2">*</span>;
+<a href=#345 id=345 data-nosnippet>345</a>
+<a href=#346 id=346 data-nosnippet>346</a><span class="doccomment">/// Load a binding script from a file on disk (e.g. `mypkg.sty.rhai`). Thin
+<a href=#347 id=347 data-nosnippet>347</a>/// wrapper over [`load_script`]; reading user-supplied files from a user-named
+<a href=#348 id=348 data-nosnippet>348</a>/// path is in scope (like reading `.sty` from texmf).
+<a href=#349 id=349 data-nosnippet>349</a></span><span class="kw">pub fn </span>load_file(path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#350 id=350 data-nosnippet>350</a>  <span class="kw">let </span>src = std::fs::read_to_string(path)<span class="question-mark">?</span>;
+<a href=#351 id=351 data-nosnippet>351</a>  load_script(<span class="kw-2">&amp;</span>src)
+<a href=#352 id=352 data-nosnippet>352</a>}
+<a href=#353 id=353 data-nosnippet>353</a>
+<a href=#354 id=354 data-nosnippet>354</a><span class="doccomment">/// Load a binding script: compile once (cached by source), then RUN the script
+<a href=#355 id=355 data-nosnippet>355</a>/// against the current State. Every `Def…` registration wires its native
+<a href=#356 id=356 data-nosnippet>356</a>/// definition IMMEDIATELY as the script executes (sequential, Perl `.ltxml`
+<a href=#357 id=357 data-nosnippet>357</a>/// semantics — so `DeclareOption` precedes a later `ProcessOptions()`), and
+<a href=#358 id=358 data-nosnippet>358</a>/// top-level side-effect calls (`RawTeX`, `Let`, `NewCounter`, `AssignValue`,
+<a href=#359 id=359 data-nosnippet>359</a>/// `DefRegister`, …) re-apply on every load — i.e. per conversion, not just
+<a href=#360 id=360 data-nosnippet>360</a>/// the first one that happened to compile the script. Returns the number of
+<a href=#361 id=361 data-nosnippet>361</a>/// definitions installed.
+<a href=#362 id=362 data-nosnippet>362</a></span><span class="kw">pub fn </span>load_script(src: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="comment">// Fast path: a previously-compiled script with the same source.
+<a href=#364 id=364 data-nosnippet>364</a>  </span><span class="kw">let </span>cached = SCRIPT_CACHE.with(|c| c.borrow().get(src).cloned());
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="kw">let </span>cached = <span class="kw">match </span>cached {
+<a href=#366 id=366 data-nosnippet>366</a>    <span class="prelude-val">Some</span>(c) =&gt; c,
+<a href=#367 id=367 data-nosnippet>367</a>    <span class="prelude-val">None </span>=&gt; {
+<a href=#368 id=368 data-nosnippet>368</a>      <span class="kw">let </span>engine = make_engine();
+<a href=#369 id=369 data-nosnippet>369</a>      <span class="kw">let </span>ast = engine
+<a href=#370 id=370 data-nosnippet>370</a>        .compile(src)
+<a href=#371 id=371 data-nosnippet>371</a>        .map_err(|e| Error::from(<span class="macro">format!</span>(<span class="string">"script-binding compile error: {e}"</span>)))<span class="question-mark">?</span>;
+<a href=#372 id=372 data-nosnippet>372</a>      <span class="kw">let </span>cs = CachedScript {
+<a href=#373 id=373 data-nosnippet>373</a>        engine: Rc::new(engine),
+<a href=#374 id=374 data-nosnippet>374</a>        ast:    Rc::new(ast),
+<a href=#375 id=375 data-nosnippet>375</a>      };
+<a href=#376 id=376 data-nosnippet>376</a>      SCRIPT_CACHE.with(|c| {
+<a href=#377 id=377 data-nosnippet>377</a>        c.borrow_mut().insert(src.to_string(), cs.clone());
+<a href=#378 id=378 data-nosnippet>378</a>      });
+<a href=#379 id=379 data-nosnippet>379</a>      cs
+<a href=#380 id=380 data-nosnippet>380</a>    },
+<a href=#381 id=381 data-nosnippet>381</a>  };
+<a href=#382 id=382 data-nosnippet>382</a>
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="comment">// Publish the script handles for the registration closures, run, unpublish
+<a href=#384 id=384 data-nosnippet>384</a>  // (a stack, so a script loading another script nests correctly). RAII pop on
+<a href=#385 id=385 data-nosnippet>385</a>  // every exit incl. a panic out of `run_ast` (review M1).
+<a href=#386 id=386 data-nosnippet>386</a>  </span><span class="kw">let </span>before = WIRED_COUNT.with(|c| <span class="kw-2">*</span>c.borrow());
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="kw">let </span>run = {
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="kw">let </span>_script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
+<a href=#389 id=389 data-nosnippet>389</a>    cached
+<a href=#390 id=390 data-nosnippet>390</a>      .engine
+<a href=#391 id=391 data-nosnippet>391</a>      .run_ast(<span class="kw-2">&amp;</span>cached.ast)
+<a href=#392 id=392 data-nosnippet>392</a>      .map_err(|e| Error::from(<span class="macro">format!</span>(<span class="string">"script-binding run error: {e}"</span>)))
+<a href=#393 id=393 data-nosnippet>393</a>  };
+<a href=#394 id=394 data-nosnippet>394</a>  run<span class="question-mark">?</span>;
+<a href=#395 id=395 data-nosnippet>395</a>  <span class="prelude-val">Ok</span>(WIRED_COUNT.with(|c| <span class="kw-2">*</span>c.borrow()) - before)
+<a href=#396 id=396 data-nosnippet>396</a>}
+<a href=#397 id=397 data-nosnippet>397</a>
+<a href=#398 id=398 data-nosnippet>398</a><span class="doccomment">/// Build a partial `Font` from a Rhai map (family/series/shape/… keys — the
+<a href=#399 id=399 data-nosnippet>399</a>/// `fontmap!` analog, shared by `MergeFont` and the `font =&gt;` option).
+<a href=#400 id=400 data-nosnippet>400</a></span><span class="kw">fn </span>font_from_rhai_map(opts: Map) -&gt; latexml_core::common::font::Font {
+<a href=#401 id=401 data-nosnippet>401</a>  <span class="kw">let </span><span class="kw-2">mut </span>font = latexml_core::common::font::Font::default();
+<a href=#402 id=402 data-nosnippet>402</a>  <span class="kw">for </span>(key, val) <span class="kw">in </span>opts {
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span>v = dynamic_to_string(val.clone());
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw">match </span>key.as_str() {
+<a href=#405 id=405 data-nosnippet>405</a>      <span class="string">"family" </span>=&gt; font.family = <span class="prelude-val">Some</span>(v.into()),
+<a href=#406 id=406 data-nosnippet>406</a>      <span class="string">"series" </span>=&gt; font.series = <span class="prelude-val">Some</span>(v.into()),
+<a href=#407 id=407 data-nosnippet>407</a>      <span class="string">"shape" </span>=&gt; font.shape = <span class="prelude-val">Some</span>(v.into()),
+<a href=#408 id=408 data-nosnippet>408</a>      <span class="string">"encoding" </span>=&gt; font.encoding = <span class="prelude-val">Some</span>(v.into()),
+<a href=#409 id=409 data-nosnippet>409</a>      <span class="string">"language" </span>=&gt; font.language = <span class="prelude-val">Some</span>(v.into()),
+<a href=#410 id=410 data-nosnippet>410</a>      <span class="string">"mathstyle" </span>=&gt; font.mathstyle = <span class="prelude-val">Some</span>(v.into()),
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="string">"size" </span>=&gt; {
+<a href=#412 id=412 data-nosnippet>412</a>        font.size = val
+<a href=#413 id=413 data-nosnippet>413</a>          .as_float()
+<a href=#414 id=414 data-nosnippet>414</a>          .ok()
+<a href=#415 id=415 data-nosnippet>415</a>          .or_else(|| val.as_int().ok().map(|i| i <span class="kw">as </span>f64))
+<a href=#416 id=416 data-nosnippet>416</a>      },
+<a href=#417 id=417 data-nosnippet>417</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#418 id=418 data-nosnippet>418</a>    }
+<a href=#419 id=419 data-nosnippet>419</a>  }
+<a href=#420 id=420 data-nosnippet>420</a>  font
+<a href=#421 id=421 data-nosnippet>421</a>}
+<a href=#422 id=422 data-nosnippet>422</a>
+<a href=#423 id=423 data-nosnippet>423</a><span class="doccomment">/// Convert a Rhai object map into a whatsit property map. `Digested` handles
+<a href=#424 id=424 data-nosnippet>424</a>/// (from `DigestText`, `RefStepCounter`, …) pass through as `Stored::Digested`;
+<a href=#425 id=425 data-nosnippet>425</a>/// a `Digested` under the `font` key contributes its FONT (the IEEEproof
+<a href=#426 id=426 data-nosnippet>426</a>/// "titlefont" idiom); everything else lands as its string form.
+<a href=#427 id=427 data-nosnippet>427</a></span><span class="kw">fn </span>rhai_map_to_props(map: Map) -&gt; SymHashMap&lt;Stored&gt; {
+<a href=#428 id=428 data-nosnippet>428</a>  <span class="kw">let </span><span class="kw-2">mut </span>props: SymHashMap&lt;Stored&gt; = SymHashMap::default();
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="kw">for </span>(k, v) <span class="kw">in </span>map {
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">match </span>v.clone().try_cast::&lt;Digested&gt;() {
+<a href=#431 id=431 data-nosnippet>431</a>      <span class="prelude-val">Some</span>(d) =&gt; {
+<a href=#432 id=432 data-nosnippet>432</a>        <span class="kw">if </span>k.as_str() == <span class="string">"font"
+<a href=#433 id=433 data-nosnippet>433</a>          </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(f)) = d.get_font()
+<a href=#434 id=434 data-nosnippet>434</a>        {
+<a href=#435 id=435 data-nosnippet>435</a>          props.insert(<span class="string">"font"</span>, Stored::Font(Rc::new(f.into_owned())));
+<a href=#436 id=436 data-nosnippet>436</a>          <span class="kw">continue</span>;
+<a href=#437 id=437 data-nosnippet>437</a>        }
+<a href=#438 id=438 data-nosnippet>438</a>        props.insert(k.as_str(), Stored::Digested(d));
+<a href=#439 id=439 data-nosnippet>439</a>      },
+<a href=#440 id=440 data-nosnippet>440</a>      <span class="kw">_ </span>=&gt; {
+<a href=#441 id=441 data-nosnippet>441</a>        props.insert(k.as_str(), dynamic_to_string(v).into());
+<a href=#442 id=442 data-nosnippet>442</a>      },
+<a href=#443 id=443 data-nosnippet>443</a>    }
+<a href=#444 id=444 data-nosnippet>444</a>  }
+<a href=#445 id=445 data-nosnippet>445</a>  props
+<a href=#446 id=446 data-nosnippet>446</a>}
+<a href=#447 id=447 data-nosnippet>447</a>
+<a href=#448 id=448 data-nosnippet>448</a><span class="doccomment">/// Marshal a counter/whatsit property map back into a Rhai object map (the
+<a href=#449 id=449 data-nosnippet>449</a>/// inverse of [`rhai_map_to_props`]). The single source shared by
+<a href=#450 id=450 data-nosnippet>450</a>/// `RefStepCounter`/`RefStepID`/`RefCurrentID`, which inlined this 3× before
+<a href=#451 id=451 data-nosnippet>451</a>/// (review m4).
+<a href=#452 id=452 data-nosnippet>452</a></span><span class="kw">fn </span>props_to_map(props: SymHashMap&lt;Stored&gt;) -&gt; Map {
+<a href=#453 id=453 data-nosnippet>453</a>  <span class="kw">let </span><span class="kw-2">mut </span>m = Map::new();
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="kw">for </span>(k, v) <span class="kw">in </span>props {
+<a href=#455 id=455 data-nosnippet>455</a>    m.insert(arena::to_string(k).into(), stored_to_dynamic(v));
+<a href=#456 id=456 data-nosnippet>456</a>  }
+<a href=#457 id=457 data-nosnippet>457</a>  m
+<a href=#458 id=458 data-nosnippet>458</a>}
+<a href=#459 id=459 data-nosnippet>459</a>
+<a href=#460 id=460 data-nosnippet>460</a><span class="doccomment">/// Map ANY displayable error (latexml `Error`, libxml `Box&lt;dyn Error&gt;`, …) into
+<a href=#461 id=461 data-nosnippet>461</a>/// a Rhai error — the SINGLE boundary-conversion source. Review m4: the inline
+<a href=#462 id=462 data-nosnippet>462</a>/// `Box::&lt;EvalAltResult&gt;::from(e.to_string())` spelling scattered across the
+<a href=#463 id=463 data-nosnippet>463</a>/// proxy ops is routed through here so error formatting has one definition.
+<a href=#464 id=464 data-nosnippet>464</a></span><span class="kw">fn </span>rhai_err(e: <span class="kw">impl </span>std::fmt::Display) -&gt; Box&lt;EvalAltResult&gt; {
+<a href=#465 id=465 data-nosnippet>465</a>  Box::&lt;EvalAltResult&gt;::from(e.to_string())
+<a href=#466 id=466 data-nosnippet>466</a>}
+<a href=#467 id=467 data-nosnippet>467</a>
+<a href=#468 id=468 data-nosnippet>468</a><span class="doccomment">/// Parse a scope string ("local"/"global", anything else = None → TeX default).
+<a href=#469 id=469 data-nosnippet>469</a></span><span class="kw">fn </span>scope_of(scope: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Scope&gt; {
+<a href=#470 id=470 data-nosnippet>470</a>  <span class="kw">match </span>scope {
+<a href=#471 id=471 data-nosnippet>471</a>    <span class="string">"local" </span>=&gt; <span class="prelude-val">Some</span>(Scope::Local),
+<a href=#472 id=472 data-nosnippet>472</a>    <span class="string">"global" </span>=&gt; <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#473 id=473 data-nosnippet>473</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#474 id=474 data-nosnippet>474</a>  }
+<a href=#475 id=475 data-nosnippet>475</a>}
+<a href=#476 id=476 data-nosnippet>476</a>
+<a href=#477 id=477 data-nosnippet>477</a><span class="doccomment">/// Marshal a `Stored` out to a Rhai value: `Digested` as a live handle,
+<a href=#478 id=478 data-nosnippet>478</a>/// scalars as scalars, the rest via `Display`.
+<a href=#479 id=479 data-nosnippet>479</a></span><span class="kw">fn </span>stored_to_dynamic(v: Stored) -&gt; Dynamic {
+<a href=#480 id=480 data-nosnippet>480</a>  <span class="kw">match </span>v {
+<a href=#481 id=481 data-nosnippet>481</a>    Stored::Digested(d) =&gt; Dynamic::from(d),
+<a href=#482 id=482 data-nosnippet>482</a>    Stored::String(s) =&gt; Dynamic::from(arena::to_string(s)),
+<a href=#483 id=483 data-nosnippet>483</a>    Stored::Bool(b) =&gt; Dynamic::from(b),
+<a href=#484 id=484 data-nosnippet>484</a>    other =&gt; Dynamic::from(other.to_string()),
+<a href=#485 id=485 data-nosnippet>485</a>  }
+<a href=#486 id=486 data-nosnippet>486</a>}
+<a href=#487 id=487 data-nosnippet>487</a>
+<a href=#488 id=488 data-nosnippet>488</a><span class="doccomment">/// Marshal a digested macro argument into a Rhai value. Every argument is passed
+<a href=#489 id=489 data-nosnippet>489</a>/// as its TeX-source string (authors parse it in-script as needed).
+<a href=#490 id=490 data-nosnippet>490</a></span><span class="kw">fn </span>arg_to_dynamic(arg: ArgWrap) -&gt; Dynamic { Dynamic::from(arg.to_string()) }
+<a href=#491 id=491 data-nosnippet>491</a>
+<a href=#492 id=492 data-nosnippet>492</a><span class="doccomment">/// Read a Rhai return value back as a string (the TeX-source of the expansion).
+<a href=#493 id=493 data-nosnippet>493</a></span><span class="kw">fn </span>dynamic_to_string(d: Dynamic) -&gt; String {
+<a href=#494 id=494 data-nosnippet>494</a>  <span class="kw">if </span>d.is_string() {
+<a href=#495 id=495 data-nosnippet>495</a>    d.into_string().unwrap_or_default()
+<a href=#496 id=496 data-nosnippet>496</a>  } <span class="kw">else </span>{
+<a href=#497 id=497 data-nosnippet>497</a>    d.to_string()
+<a href=#498 id=498 data-nosnippet>498</a>  }
+<a href=#499 id=499 data-nosnippet>499</a>}
+<a href=#500 id=500 data-nosnippet>500</a>
+<a href=#501 id=501 data-nosnippet>501</a><span class="attr">#[cfg(test)]
+<a href=#502 id=502 data-nosnippet>502</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

@@ -1162,6 +1162,39 @@
 <a href=#1162 id=1162 data-nosnippet>1162</a>    },
 <a href=#1163 id=1163 data-nosnippet>1163</a>  );
 <a href=#1164 id=1164 data-nosnippet>1164</a>
-<a href=#1165 id=1165 data-nosnippet>1165</a>  engine
-<a href=#1166 id=1166 data-nosnippet>1166</a>}
+<a href=#1165 id=1165 data-nosnippet>1165</a>  <span class="comment">// ── definition proxy (#321): LookupDefinition(cs) → push/unshift hooks ──
+<a href=#1166 id=1166 data-nosnippet>1166</a>  // Faithful to Perl `LookupDefinition($t)` + BookML's `push(@{ $$def{hook} },
+<a href=#1167 id=1167 data-nosnippet>1167</a>  // sub{…})`: fetch an installed definition and splice a hook onto one of its
+<a href=#1168 id=1168 data-nosnippet>1168</a>  // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
+<a href=#1169 id=1169 data-nosnippet>1169</a>  // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
+<a href=#1170 id=1170 data-nosnippet>1170</a>  </span>engine.register_type_with_name::&lt;DefinitionProxy&gt;(<span class="string">"Definition"</span>);
+<a href=#1171 id=1171 data-nosnippet>1171</a>  engine.register_fn(<span class="string">"LookupDefinition"</span>, |cs: <span class="kw-2">&amp;</span>str| -&gt; Dynamic {
+<a href=#1172 id=1172 data-nosnippet>1172</a>    <span class="kw">match </span>latexml_core::state::lookup_definition_stored(<span class="kw-2">&amp;</span><span class="macro">latexml_core::T_CS!</span>(cs)) {
+<a href=#1173 id=1173 data-nosnippet>1173</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; Dynamic::from(DefinitionProxy { cs: cs.to_string() }),
+<a href=#1174 id=1174 data-nosnippet>1174</a>      <span class="kw">_ </span>=&gt; Dynamic::UNIT,
+<a href=#1175 id=1175 data-nosnippet>1175</a>    }
+<a href=#1176 id=1176 data-nosnippet>1176</a>  });
+<a href=#1177 id=1177 data-nosnippet>1177</a>  <span class="macro">macro_rules!</span> def_hook_method {
+<a href=#1178 id=1178 data-nosnippet>1178</a>    (<span class="macro-nonterminal">$rhai</span>:literal, <span class="macro-nonterminal">$family</span>:expr, <span class="macro-nonterminal">$at_front</span>:expr) =&gt; {
+<a href=#1179 id=1179 data-nosnippet>1179</a>      engine.register_fn(
+<a href=#1180 id=1180 data-nosnippet>1180</a>        <span class="macro-nonterminal">$rhai</span>,
+<a href=#1181 id=1181 data-nosnippet>1181</a>        |d: <span class="kw-2">&amp;mut </span>DefinitionProxy, fp: FnPtr| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
+<a href=#1182 id=1182 data-nosnippet>1182</a>          push_definition_hook(<span class="kw-2">&amp;</span>d.cs, <span class="macro-nonterminal">$family</span>, <span class="macro-nonterminal">$at_front</span>, fp)
+<a href=#1183 id=1183 data-nosnippet>1183</a>        },
+<a href=#1184 id=1184 data-nosnippet>1184</a>      );
+<a href=#1185 id=1185 data-nosnippet>1185</a>    };
+<a href=#1186 id=1186 data-nosnippet>1186</a>  }
+<a href=#1187 id=1187 data-nosnippet>1187</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushBeforeDigest"</span>, HookFamily::BeforeDigest, <span class="bool-val">false</span>);
+<a href=#1188 id=1188 data-nosnippet>1188</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftBeforeDigest"</span>, HookFamily::BeforeDigest, <span class="bool-val">true</span>);
+<a href=#1189 id=1189 data-nosnippet>1189</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterDigest"</span>, HookFamily::AfterDigest, <span class="bool-val">false</span>);
+<a href=#1190 id=1190 data-nosnippet>1190</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterDigest"</span>, HookFamily::AfterDigest, <span class="bool-val">true</span>);
+<a href=#1191 id=1191 data-nosnippet>1191</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushBeforeConstruct"</span>, HookFamily::BeforeConstruct, <span class="bool-val">false</span>);
+<a href=#1192 id=1192 data-nosnippet>1192</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftBeforeConstruct"</span>, HookFamily::BeforeConstruct, <span class="bool-val">true</span>);
+<a href=#1193 id=1193 data-nosnippet>1193</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterConstruct"</span>, HookFamily::AfterConstruct, <span class="bool-val">false</span>);
+<a href=#1194 id=1194 data-nosnippet>1194</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterConstruct"</span>, HookFamily::AfterConstruct, <span class="bool-val">true</span>);
+<a href=#1195 id=1195 data-nosnippet>1195</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterDigestBody"</span>, HookFamily::AfterDigestBody, <span class="bool-val">false</span>);
+<a href=#1196 id=1196 data-nosnippet>1196</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterDigestBody"</span>, HookFamily::AfterDigestBody, <span class="bool-val">true</span>);
+<a href=#1197 id=1197 data-nosnippet>1197</a>
+<a href=#1198 id=1198 data-nosnippet>1198</a>  engine
+<a href=#1199 id=1199 data-nosnippet>1199</a>}
 </code></pre></div></section></main></body></html>
