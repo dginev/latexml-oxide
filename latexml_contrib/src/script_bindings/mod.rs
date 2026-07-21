@@ -312,6 +312,16 @@ pub(super) struct RhaiCommand {
 #[derive(Clone)]
 struct WhatsitProxy;
 
+/// Rhai proxy returned by `LookupDefinition(cs)` (#321). Carries only the CS name;
+/// each `push*/unshift*` re-looks-up the CURRENT front definition, splices a hook,
+/// and re-installs — so sequential pushes accumulate (mirroring Perl BookML's
+/// in-place mutation of the shared def-hash). `LookupDefinition` returns `()`, not
+/// this proxy, when the CS is undefined.
+#[derive(Clone)]
+struct DefinitionProxy {
+  cs: String,
+}
+
 /// Resolve the top whatsit active-context (used by `WhatsitProxy` methods).
 fn current_whatsit() -> std::result::Result<*mut Whatsit, Box<EvalAltResult>> {
   current_whatsit_entry().map(|(w, _)| w)

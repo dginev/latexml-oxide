@@ -510,6 +510,64 @@ fn command_output_runs_by_default_and_is_blockable_via_env() {
   latexml_core::reset_thread_engine();
 }
 
+/// #321: `LookupDefinition(cs)` returns a proxy onto an installed definition;
+/// `push<Hook>`/`unshift<Hook>` splice a trampolined hook onto its list — the
+/// Rhai analog of BookML's `push(@{ $$def{afterDigest} }, sub{…})`. Perl mutates
+/// the shared blessed def-hash in place; we clone the current front def, splice,
+/// and re-install at GLOBAL scope, so sequential pushes ACCUMULATE and `unshift`
+/// PREPENDS. Exercised here on the digest path (the harness digests but builds no
+/// Document — the construct path is covered end-to-end in `30_script_bindings`).
+#[test]
+fn lookup_definition_pushes_and_accumulates_digest_hooks() {
+  fresh_state();
+  // \dh: a plain constructor with NO afterDigest of its own. We append B, then
+  // PREPEND A, then append C, and assert both accumulation and order via a
+  // growing global string ("" for the first LookupString of an unset key).
+  load_script(
+    r#"
+      DefConstructor("\\dh{}", "<ltx:text>#1</ltx:text>", #{ mode: "text" });
+      assign_global("dh:undef", if LookupDefinition("\\nope") == () { "unit" } else { "proxy" });
+      let d = LookupDefinition("\\dh");
+      d.pushAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "B"); });
+      d.unshiftAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "A"); });
+      d.pushAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "C"); });
+    "#,
+  )
+  .expect("LookupDefinition + push/unshift AfterDigest must load");
+  assert_eq!(
+    lookup_str("dh:undef"),
+    "unit",
+    "LookupDefinition of an undefined CS returns ()"
+  );
+  latexml_core::stomach::digest(mouth::tokenize_internal(r"\dh{X}")).expect("digest \\dh");
+  // after_digest list is [A, B, C] (A prepended; B, C appended) → runs A,B,C.
+  assert_eq!(
+    lookup_str("dh:log"),
+    "ABC",
+    "pushed+unshifted afterDigest hooks accumulate and run in list order"
+  );
+  latexml_core::reset_thread_engine();
+}
+
+/// #321: the construct/body hook families exist only on `Constructor`. Pushing a
+/// construct hook onto a `Primitive` (digest-only) must raise a clear script
+/// error, not silently no-op (a `MathPrimitive`'s construct fields are dead too).
+#[test]
+fn lookup_definition_construct_hook_on_primitive_errors() {
+  fresh_state();
+  let r = load_script(
+    r#"
+      DefPrimitive("\\dprim{}", |_x| { });
+      LookupDefinition("\\dprim").pushAfterConstruct(|document| { });
+    "#,
+  );
+  assert!(
+    r.is_err(),
+    "pushAfterConstruct on a Primitive must error (only DefConstructor has construct hooks), got {r:?}"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();

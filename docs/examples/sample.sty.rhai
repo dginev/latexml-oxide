@@ -131,3 +131,15 @@ DefPrimitive("\\exset{}", |v| {
   StepCounter("exhibit");
 });
 DefMacro("\\exget", || LookupString("ex:k") + "/" + CounterValue("exhibit").to_string());
+
+// ── LookupDefinition: fetch an already-installed definition and PUSH hooks onto
+//    it (Perl BookML's `my $d = LookupDefinition(T_CS('\rule')); push(@{ $$d{afterConstruct} }, sub{…})`).
+//    Each `push<H>` appends, each `unshift<H>` prepends. Digest hooks
+//    (before/afterDigest) work on any DefConstructor/DefPrimitive/DefMath;
+//    construct + body hooks (before/afterConstruct, afterDigestBody) are
+//    DefConstructor-only. `LookupDefinition` returns `()` for an undefined CS.
+DefConstructor("\\exhook{}", "<ltx:text class=\"hooked\">#1</ltx:text>");
+let exdef = LookupDefinition("\\exhook");
+exdef.pushAfterDigest(|| { AssignValue("ex:digested", "yes", "global"); });
+exdef.pushBeforeConstruct(|document| { document.setAttribute("data-pre", "1"); });
+exdef.pushAfterConstruct(|document| { document.setAttribute("data-post", "1"); });

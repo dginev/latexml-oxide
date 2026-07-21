@@ -494,6 +494,85 @@ fn script_binding_macro_and_constructor_convert() {
   latexml_core::reset_thread_engine();
 }
 
+/// #321: `LookupDefinition(cs).pushBeforeConstruct/pushAfterConstruct` — the
+/// BookML shape (`push(@{ $$def{afterConstruct} }, sub{…})`) driven end-to-end
+/// through a real conversion, so the construct hooks fire with a LIVE Document.
+/// A binding defines `\bmlwrap{X}` → `<text class="w">X</text>`, then patches it
+/// to absorb an ordered marker BEFORE construction (into the enclosing node) and
+/// another AFTER — proving both construct-hook families run, in order.
+const HOOK_SAMPLE: &str = r##"
+  DefConstructor("\\bmlwrap{}", "<ltx:text class=\"w\">#1</ltx:text>");
+  let d = LookupDefinition("\\bmlwrap");
+  d.pushBeforeConstruct(|document| { document.absorbString("BMLB"); });
+  d.pushAfterConstruct(|document| { document.absorbString("BMLA"); });
+
+  // The actual BookML shape: patch a REAL kernel constructor (\rule, a locked-or-not
+  // engine DefConstructor) — proving LookupDefinition resolves an already-installed
+  // kernel def AND the push installs despite the binding-time lock (bindings run
+  // UNLOCKED, Perl Package.pm:loadLTXML `local $UNLOCKED = 1`).
+  LookupDefinition("\\rule").pushAfterConstruct(|document| { document.absorbString("RULEHOOK"); });
+"##;
+
+fn hook_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxhooktest" {
+    Some(latexml_contrib::script_bindings::load_script(HOOK_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+#[test]
+fn lookup_definition_pushes_construct_hooks_end_to_end() {
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(hook_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxhooktest}",
+    "\\begin{document}\\bmlwrap{MID}\\rule{1pt}{2pt}\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("conversion with pushed construct hooks should succeed");
+  let xml = doc.serialize_to_string();
+
+  use latexml_core::common::error::{LogStatus, get_status};
+  assert!(
+    get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
+    "conversion logged errors: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  // Both pushed construct hooks fired, and in order: beforeConstruct's marker
+  // precedes the construct's own content, afterConstruct's follows it.
+  let (b, m, a) = (xml.find("BMLB"), xml.find("MID"), xml.find("BMLA"));
+  assert!(
+    b.is_some() && m.is_some() && a.is_some(),
+    "a pushed construct hook did not fire; xml=\n{xml}"
+  );
+  assert!(
+    b < m && m < a,
+    "construct hooks ran out of order (before < content < after expected); xml=\n{xml}"
+  );
+
+  // The BookML case: the afterConstruct pushed onto the REAL kernel `\rule`
+  // fired — proving the push installed over a kernel definition (lock bypassed
+  // during binding load) and ran during the real conversion.
+  assert!(
+    xml.contains("<rule") && xml.contains("RULEHOOK"),
+    "pushAfterConstruct onto the kernel \\rule did not fire; xml=\n{xml}"
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 /// Default `.rhai` FILE discovery (no embedder dispatcher): a
 /// `<name>.sty.rhai` next to the document is found via the searchpath
 /// machinery and loaded on `\usepackage{<name>}` — the downstream

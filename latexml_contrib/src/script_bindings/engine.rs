@@ -1162,5 +1162,38 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
+  // ── definition proxy (#321): LookupDefinition(cs) → push/unshift hooks ──
+  // Faithful to Perl `LookupDefinition($t)` + BookML's `push(@{ $$def{hook} },
+  // sub{…})`: fetch an installed definition and splice a hook onto one of its
+  // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
+  // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
+  engine.register_type_with_name::<DefinitionProxy>("Definition");
+  engine.register_fn("LookupDefinition", |cs: &str| -> Dynamic {
+    match latexml_core::state::lookup_definition_stored(&latexml_core::T_CS!(cs)) {
+      Ok(Some(_)) => Dynamic::from(DefinitionProxy { cs: cs.to_string() }),
+      _ => Dynamic::UNIT,
+    }
+  });
+  macro_rules! def_hook_method {
+    ($rhai:literal, $family:expr, $at_front:expr) => {
+      engine.register_fn(
+        $rhai,
+        |d: &mut DefinitionProxy, fp: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+          push_definition_hook(&d.cs, $family, $at_front, fp)
+        },
+      );
+    };
+  }
+  def_hook_method!("pushBeforeDigest", HookFamily::BeforeDigest, false);
+  def_hook_method!("unshiftBeforeDigest", HookFamily::BeforeDigest, true);
+  def_hook_method!("pushAfterDigest", HookFamily::AfterDigest, false);
+  def_hook_method!("unshiftAfterDigest", HookFamily::AfterDigest, true);
+  def_hook_method!("pushBeforeConstruct", HookFamily::BeforeConstruct, false);
+  def_hook_method!("unshiftBeforeConstruct", HookFamily::BeforeConstruct, true);
+  def_hook_method!("pushAfterConstruct", HookFamily::AfterConstruct, false);
+  def_hook_method!("unshiftAfterConstruct", HookFamily::AfterConstruct, true);
+  def_hook_method!("pushAfterDigestBody", HookFamily::AfterDigestBody, false);
+  def_hook_method!("unshiftAfterDigestBody", HookFamily::AfterDigestBody, true);
+
   engine
 }
