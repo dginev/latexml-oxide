@@ -74,7 +74,7 @@
           <xsl:text> on </xsl:text>
           <xsl:value-of select="$TIMESTAMP"/>
         </xsl:if>
-        <xsl:text> by LaTeXML</xsl:text>
+        <xsl:text> by LaTeXML oxide</xsl:text>
         <xsl:if test="$LATEXML_VERSION">
           <xsl:text> (version </xsl:text>
           <xsl:value-of select="$LATEXML_VERSION"/>
