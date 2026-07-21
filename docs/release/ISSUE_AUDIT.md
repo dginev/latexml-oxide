@@ -9,13 +9,14 @@
 >
 > **Refresh** before milestone planning:
 > `gh issue list --state open --limit 100 --json number,title,labels,createdAt`.
-> Last refreshed: **2026-07-20** (17 open, from `gh issue list`). This is a
-> reconciled refresh across two same-day edits: one closed the #304/#305/#307
-> user-report cluster and #309, the other corrected the stale #192/#82 rows (both
-> closed **2026-07-17**) and added #297/#303. Ground truth then moved again — #309
-> closed (PR #310 merged), and a fresh **#314–#321 Rhai binding-API** cluster was
-> filed the same day. Both are reflected below. Failure mode worth knowing: this
-> file drifts fast — re-run the one-liner rather than incrementally editing rows.
+> Last refreshed: **2026-07-20** (15 open). Reconciled across several same-day
+> edits: the #304/#305/#307 user-report cluster closed; #309 closed (PR #310);
+> the stale #192/#82 rows corrected (both closed **2026-07-17**); #297/#303 and
+> the fresh **#314–#321 Rhai binding-API** cluster added; **#314 closed** (PR #324).
+> #315 churned (fix #325 → revert #327 → re-fixed #328) and is now **closed**
+> — 15 open. #312 (Nasser, default-CSS) triaged — see its row. Failure mode worth
+> knowing: this file drifts fast — re-run the one-liner rather than incrementally
+> editing rows.
 
 Tracker: <https://github.com/dginev/latexml-oxide/issues>
 
@@ -30,7 +31,7 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 | **297** | latexml_oxide 0.7.4 binding transition: `nowrap.sty.ltxml` | documentation, packages | Filed 2026-07-18. A user-supplied `.ltxml` binding on `--path` is ignored: `Warning:missing_file:nowrap … No dispatcher entry and no raw file found on disk` (`latexml_core/src/binding/content.rs`). Perl finds it silently. This is the **user-supplied `.ltxml` discovery** path — `.ltxml` is Perl, so the Rust answer is either the Rhai `runtime-bindings` front-end or a clear diagnostic; today it is neither. |
 | **303** | Precompiled kernel (dump) release and update strategy | enhancement | Filed 2026-07-18, follow-up to #299/PR #300. The dump is keyed to the TL **year**, but the LaTeX format is not frozen within a year (`\fmtversion`, `tlmgr` `fmttriggers` rebuilds) — a false positive was traded for a rarer false negative. Candidate signals: key on `\fmtversion` + L3 date, or compare against the ambient `latex.fmt` mtime; warn-not-fail. |
 | **311** | Raw-loaded package `\newif` conditionals die with the standalone subfile group | bug | Filed 2026-07-20. **Explicitly NOT Rust-only** — same-host Perl reports the identical error, and `standalone.sty.ltxml` uses the same `bgroup` architecture. General shape: any raw-loaded package pairing a `\newif` with a document-level hook (`\ifpgf@external@grabshipout` + `\AtEndDocument`). Two fixes tried and refuted (hoisting the `RequirePackage`; `\globaldefs=1`). Related to the group-scoping class in `SYNC_STATUS.md`. |
-| **312** | 0.7.5-rc1: many problems rendering math (default CSS) | (none) | Filed 2026-07-20 — **untriaged.** Self-contained `amsmath` reproducer in the issue body (`\left( … \right)` spacing, `\tag`, `align`/`align*`, `\prime`). Needs the usual same-host Perl + pdflatex classification before any code change. |
+| **312** | 0.7.5-rc1: many problems rendering math (default CSS) | css, fidelity | Filed 2026-07-20 (Nasser). Triaged 2026-07-20: **conversion is 0-error, structurally identical to same-host Perl**. **Root cause confirmed = the browser rendered without `LaTeXML.css`** (blocking the stylesheet on the same HTML reproduces his flush-left screenshot exactly; without it `.ltx_eqn_table` loses `width:100%` and align cells collapse left). **NOT a conversion bug** — his exact `--dest=index.htm` invocation emits both `.css` files with correct `<link>`s next to the output, so the sheet just didn't reach his browser (files separated from the `.htm` / local viewing). PR #326 is an orthogonal cleanup (re-sync the drifted default `LaTeXML.css` to vanilla — dropped `text-align: justify`, `\underline`/`\overline`, verbatim `nowrap`; witnessed delta 2605.02240 pinned by `xslt::witnessed_css_delta`; + pin `.htm`→html5 inference), **not a fix for his symptom** → references, does not close #312. His 2nd screenshot (MathJax-4 alignment) is **out of scope**: we emit standards MathML; a third-party browser library's layout of it is not ours to fix. |
 | **316** | not possible to call `DefPrimitive` from `DefPrimitive`? | enhancement | Filed 2026-07-20. Rhai-API expressiveness gap (nested primitive definition). Cluster #314–#321. |
 | **317** | allow extra parameter of `RequireResource` in Rhai binding API | enhancement | Filed 2026-07-20. Rhai-API surface gap. Cluster #314–#321. |
 | **318** | allow external commands in Rhai bindings | enhancement | Filed 2026-07-20. Rhai-API surface gap. Cluster #314–#321. |
