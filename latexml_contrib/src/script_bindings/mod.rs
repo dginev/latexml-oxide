@@ -290,6 +290,22 @@ struct DocProxy;
 #[derive(Clone)]
 pub(crate) struct NodeProxy(pub(crate) libxml::tree::Node);
 
+/// A Clone-able builder mirroring `std::process::Command`, exposed to Rhai as
+/// `Command` (#318) so a trusted binding can shell out to `latexmk`/`dvisvgm`
+/// during digestion — Perl `.ltxml` runs `system()` freely; Rhai is sandboxed,
+/// so this is the deliberate escape hatch (SAFETY.md: the runtime-bindings
+/// feature IS the trust boundary — untrusted deployments drop it). std's
+/// `Command` isn't `Clone`, so hold the fields and construct the real one at
+/// `.output()`. The Rhai method names mirror std's exactly, so a user reads the
+/// `std::process::Command` docs.
+#[derive(Clone, Default)]
+pub(super) struct RhaiCommand {
+  program: String,
+  args:    Vec<String>,
+  envs:    Vec<(String, String)>,
+  cwd:     Option<String>,
+}
+
 /// Rhai proxy for the in-flight whatsit, obtained inside a hook body via
 /// `whatsit()`. Like `DocProxy`, it carries no pointer; methods resolve the
 /// active whatsit context.
