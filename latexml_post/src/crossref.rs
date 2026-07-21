@@ -565,6 +565,46 @@ impl CrossRef {
     if let Some(next) = self.find_next_page_id(&page_id) {
       doc.add_navigation("next", &next);
     }
+
+    // 4. Relation-typed links (Perl CrossRef.pm L105-130). "Dig around for other
+    // interesting related documents": the sibling pages of each ancestor (walking
+    // up), then this page's own child pages. Each is keyed by the page's own
+    // element-name relation (`chapter`/`section`/`subsection`/…) if it is a
+    // primary page, else `sidebar`. This is what gives split pages their
+    // `rel="chapter"`/`rel="section"`/… head links; the whole block was unported.
+    let mut xentry = page_id.clone();
+    while let Some(parent) = self.get_parent_page_id(&xentry) {
+      for sib in self.child_pages(&parent).ids.iter() {
+        if *sib == page_id {
+          continue;
+        }
+        self.add_typed_navigation(doc, sib);
+      }
+      xentry = parent;
+    }
+    for child in self.child_pages(&page_id).ids.iter() {
+      self.add_typed_navigation(doc, child);
+    }
+  }
+
+  /// Add a navigation link to `related_id` keyed by its own element-name
+  /// relation (Perl: `$type =~ s/^(\w+)://` → `chapter`/`section`/…) when it is
+  /// a primary page, else `sidebar`. Port of the per-entry arm of Perl
+  /// `CrossRef::fill_in_relations`'s second half.
+  fn add_typed_navigation(&self, doc: &mut PostDocument, related_id: &str) {
+    if self.is_primary_page(related_id) {
+      let rel = self
+        .db
+        .lookup(&format!("ID:{}", related_id))
+        .and_then(|e| e.get_string("type").map(String::from))
+        // Strip the namespace prefix: `ltx:chapter` → `chapter`.
+        .map(|t| t.rsplit(':').next().unwrap_or(&t).to_string());
+      if let Some(rel) = rel.filter(|r| !r.is_empty()) {
+        doc.add_navigation(&rel, related_id);
+      }
+    } else {
+      doc.add_navigation("sidebar", related_id);
+    }
   }
 
   /// Return whether the given xml:id is registered as a primary page.
@@ -649,12 +689,18 @@ impl CrossRef {
     // Our position among the parent's child pages (None = "broken database").
     let pos = *siblings.index_of.get(page_id)?;
     // Nearest primary sibling strictly before us (Perl: peel following sibs,
-    // drop self, keep primaries, take the last one).
-    let mut current = siblings.ids[..pos]
+    // drop self, keep primaries, take the last one). If there is NONE, Perl's
+    // `$pentry` is still the PARENT page, so the previous page is the parent
+    // itself (e.g. the first `\section` of a `\chapter` → the chapter page).
+    // The old `?` returned None here, dropping the `rel="prev"` link entirely.
+    let mut current = match siblings.ids[..pos]
       .iter()
       .rev()
-      .find(|s| self.is_primary_page(s))?
-      .clone();
+      .find(|s| self.is_primary_page(s))
+    {
+      Some(sib) => sib.clone(),
+      None => return Some(parent_id),
+    };
     // Drill into the rightmost primary descendant.
     loop {
       let kids = self.child_pages(&current);
@@ -1109,6 +1155,20 @@ impl CrossRef {
         if ref_mut.get_attribute("title").is_none() {
           if let Some(titlestring) = self.generate_title(doc, id_str, &show) {
             ref_mut.set_attribute("title", &titlestring).ok();
+          }
+          // Perl CrossRef.pm L358-361: a ref carrying a `rel` (a navigation ref)
+          // ALSO gets a `fulltitle` — `generateTitle($doc, $id)` with an EMPTY
+          // `show`, i.e. the full contextual breadcrumb with NO "In <context>"
+          // dup-collapse (that collapse only fires for `show=~/title/`). The XSLT
+          // `head-links` template prefers `@fulltitle` over `@title` for the head
+          // `<link rel=… title=…>` entries, so without this split pages emitted
+          // empty (or "In X") nav-link titles.
+          if let Some(rel) = ref_mut.get_attribute("rel") {
+            if !rel.is_empty() {
+              if let Some(fulltitle) = self.generate_title(doc, id_str, "") {
+                ref_mut.set_attribute("fulltitle", &fulltitle).ok();
+              }
+            }
           }
         }
         if ref_mut.get_first_child().is_none() && tag != "ltx:graphics" && tag != "ltx:picture" {

@@ -21,6 +21,11 @@
     document date, matching Perl — a shared post-processing XPath defect had been
     dropping resources, processing instructions, and other relative-path lookups
     (also repairing split navigation and cross-reference/glossary resolution).
+  - **Split-page navigation links reach Perl parity.** Each page now emits the full
+    `<link rel=…>` head set — `prev` back to the parent for a first child, the
+    relation-typed `chapter`/`section`/`subsection` sibling and ancestor links, and
+    full-breadcrumb `title=` attributes on all of them (previously the relation-typed
+    links and `prev`-for-first-child were missing and the titles were empty).
   - **Generator identifier** now spells out the full product name ("LaTeXML oxide")
     and stamps the version into the XSLT output to match Perl.
   - **A `standalone` document class's options are no longer mis-loaded as packages.**
