@@ -299,6 +299,29 @@ fn constructor_options_map_runs_afterdigest() {
   latexml_core::reset_thread_engine();
 }
 
+/// Regression for #314: `LookupTokens("class_options")` panicked with
+/// "RefCell already borrowed". `class_options` is a `Stored::VecDequeStored`,
+/// whose branch in `state::lookup_tokens` reverts each item to Tokens via
+/// `mouth::tokenize_internal` — which takes a *mutable* STATE borrow — while
+/// the outer immutable `state!()` borrow was still held. The fix drops the
+/// borrow before the conversion (mirroring the `Stored::String` branch).
+#[test]
+fn lookup_tokens_on_vecdeque_value_does_not_panic() {
+  fresh_state();
+  // Populate class_options exactly as the class-loader does: a queue of
+  // option strings (Stored::VecDequeStored of Stored::String).
+  latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
+  latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
+  load_script(r#"assign_global("ct:opts", UnTeX(LookupTokens("class_options")));"#)
+    .expect("LookupTokens on a VecDequeStored value must not panic");
+  assert_eq!(
+    lookup_str("ct:opts"),
+    "a4paper12pt",
+    "LookupTokens should revert the queued option strings to their tokens"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 #[test]
 fn m1_errors_are_clean() {
   fresh_state();
