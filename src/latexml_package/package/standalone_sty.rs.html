@@ -11,68 +11,86 @@
 <a href=#11 id=11 data-nosnippet>11</a>
 <a href=#12 id=12 data-nosnippet>12</a><span class="attr">#[rustfmt::skip]
 <a href=#13 id=13 data-nosnippet>13</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@standalone@end@input"</span>, <span class="string">"\\egroup\\endinput"</span>);
-<a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="comment">// Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.
-<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@standalone@start@input"</span>, {
-<a href=#18 id=18 data-nosnippet>18</a>    assign_value(<span class="string">"inPreamble"</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  });
-<a href=#20 id=20 data-nosnippet>20</a>
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
-<a href=#22 id=22 data-nosnippet>22</a>  // group, mark inPreamble = 1, RequirePackage each comma-separated entry
-<a href=#23 id=23 data-nosnippet>23</a>  // of the OPTIONAL `[]` argument (Perl binds `$packages = $_[1]`, the
-<a href=#24 id=24 data-nosnippet>24</a>  // optional), and alias \begin{document}/\end{document} to the start/end
-<a href=#25 id=25 data-nosnippet>25</a>  // input primitives so the sub-document is injected as a bounded scope
-<a href=#26 id=26 data-nosnippet>26</a>  // inside the outer document.
-<a href=#27 id=27 data-nosnippet>27</a>  //
-<a href=#28 id=28 data-nosnippet>28</a>  // OXIDIZED_DESIGN #63: NEITHER argument is a package list, so both are
-<a href=#29 id=29 data-nosnippet>29</a>  // gated. The mandatory class name is ignored outright — the parent already
-<a href=#30 id=30 data-nosnippet>30</a>  // loaded a class, and requiring it warned `missing_file:article` on a
-<a href=#31 id=31 data-nosnippet>31</a>  // `\documentclass{article}` child (#293). The optional list holds class
-<a href=#32 id=32 data-nosnippet>32</a>  // OPTIONS; Perl requires all of them for every class, so
-<a href=#33 id=33 data-nosnippet>33</a>  // `\documentclass[12pt]{article}` warns `missing_file:12pt` (#309).
-<a href=#34 id=34 data-nosnippet>34</a>  // standalone.sty L604-614 consults a subfile's options only when the
-<a href=#35 id=35 data-nosnippet>35</a>  // subfile's class is literally `standalone`, so we require them only there
-<a href=#36 id=36 data-nosnippet>36</a>  // — and only the ones standalone.cls turns into a package load, which is
-<a href=#37 id=37 data-nosnippet>37</a>  // what makes `\documentclass[tikz]{standalone}` work (upstream LaTeXML#1432,
-<a href=#38 id=38 data-nosnippet>38</a>  // the reason this loop exists).
-<a href=#39 id=39 data-nosnippet>39</a>  // The optional argument is read as `OptionalKeyVals`, NOT as a raw string we
-<a href=#40 id=40 data-nosnippet>40</a>  // comma-split ourselves: a class option list IS a keyval list, and every
-<a href=#41 id=41 data-nosnippet>41</a>  // option here has a valued form — `\sa@boolorvalue` accepts `varwidth=5cm`
-<a href=#42 id=42 data-nosnippet>42</a>  // and `tikz=true` exactly as it accepts bare `varwidth`/`tikz`
-<a href=#43 id=43 data-nosnippet>43</a>  // (standalone.sty L815-824), and `border={1pt 2pt}` puts a brace group in the
-<a href=#44 id=44 data-nosnippet>44</a>  // list. Splitting on `,` and matching the whole item missed every valued form
-<a href=#45 id=45 data-nosnippet>45</a>  // — `[varwidth=5cm]{standalone}` then lost the package and reported
-<a href=#46 id=46 data-nosnippet>46</a>  // `Error:undefined:{varwidth}` where pdflatex is clean. Reusing the engine's
-<a href=#47 id=47 data-nosnippet>47</a>  // keyval reader gets brace-aware splitting and key/value separation for free,
-<a href=#48 id=48 data-nosnippet>48</a>  // and keeps this on the same parser `\documentclass`/`\usepackage` options
-<a href=#49 id=49 data-nosnippet>49</a>  // already flow through instead of a second, weaker one.
-<a href=#50 id=50 data-nosnippet>50</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@standalone@documentclass OptionalKeyVals {}"</span>, sub[(options_kv, class_tks)] {
-<a href=#51 id=51 data-nosnippet>51</a>    bgroup();
-<a href=#52 id=52 data-nosnippet>52</a>    assign_value(<span class="string">"inPreamble"</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">if </span>class_tks.to_string().trim() == <span class="string">"standalone"
-<a href=#54 id=54 data-nosnippet>54</a>      </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(kv) = options_kv.as_ref()
-<a href=#55 id=55 data-nosnippet>55</a>    {
-<a href=#56 id=56 data-nosnippet>56</a>      <span class="comment">// Match on the KEY, so `varwidth` and `varwidth=5cm` behave alike. An
-<a href=#57 id=57 data-nosnippet>57</a>      // absent optional yields no pairs ⇒ nothing required.
-<a href=#58 id=58 data-nosnippet>58</a>      </span><span class="kw">for </span>(key, _value) <span class="kw">in </span>kv.get_pairs() {
-<a href=#59 id=59 data-nosnippet>59</a>        <span class="kw">if </span>CLASS_OPTION_PACKAGES.contains(<span class="kw-2">&amp;</span>key.trim()) {
-<a href=#60 id=60 data-nosnippet>60</a>          <span class="macro">RequirePackage!</span>(key.trim());
-<a href=#61 id=61 data-nosnippet>61</a>        }
-<a href=#62 id=62 data-nosnippet>62</a>      }
-<a href=#63 id=63 data-nosnippet>63</a>    }
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="macro">Let!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{document}"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\@standalone@start@input"</span>));
-<a href=#65 id=65 data-nosnippet>65</a>    <span class="macro">Let!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{document}"</span>),   <span class="macro">T_CS!</span>(<span class="string">"\\@standalone@end@input"</span>));
-<a href=#66 id=66 data-nosnippet>66</a>  });
-<a href=#67 id=67 data-nosnippet>67</a>
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// Perl L35-36: AtBeginDocument — swap \documentclass to the intercept.
-<a href=#69 id=69 data-nosnippet>69</a>  // Native push to @at@begin@document so the hook fires at the same
-<a href=#70 id=70 data-nosnippet>70</a>  // lifecycle point Perl uses.
-<a href=#71 id=71 data-nosnippet>71</a>  </span>at_begin_document(<span class="macro">TokenizeInternal!</span>(<span class="string">r"\let\documentclass\@standalone@documentclass"</span>))<span class="question-mark">?</span>;
-<a href=#72 id=72 data-nosnippet>72</a>
-<a href=#73 id=73 data-nosnippet>73</a>  <span class="comment">// standalone.sty L1014: \includestandalone[opts]{file}. Treat as
-<a href=#74 id=74 data-nosnippet>74</a>  // \includegraphics{file} so the figure surfaces in the XML output.
-<a href=#75 id=75 data-nosnippet>75</a>  // Witness 2406.02722.
-<a href=#76 id=76 data-nosnippet>76</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\includestandalone[]{}"</span>, <span class="string">"\\includegraphics{#2}"</span>);
-<a href=#77 id=77 data-nosnippet>77</a>});
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="comment">// BEYOND PERL (the Perl standalone.sty.ltxml omits these): the real
+<a href=#15 id=15 data-nosnippet>15</a>  // standalone.sty has exactly TWO *unconditional* `\RequirePackage`s —
+<a href=#16 id=16 data-nosnippet>16</a>  // `xkeyval` (L107) and `currfile` (L305). (Every other require is guarded:
+<a href=#17 id=17 data-nosnippet>17</a>  // engine probes `ifpdf`/`ifluatex`/`ifxetex`/`shellesc`, and the
+<a href=#18 id=18 data-nosnippet>18</a>  // `\IfFileExists`/option-gated `varwidth`/`trimclip`/`adjustbox`/`gincltex`/
+<a href=#19 id=19 data-nosnippet>19</a>  // `filemod-expmin`.) Restore just those two, which real LaTeX always provides:
+<a href=#20 id=20 data-nosnippet>20</a>  //   * `xkeyval` defines `\define@key` (and the wider keyval family);
+<a href=#21 id=21 data-nosnippet>21</a>  //   * `currfile` `\RequirePackage{filehook}` (currfile.sty L30), and filehook
+<a href=#22 id=22 data-nosnippet>22</a>  //     defines the package-file hooks `\AtEndOfPackageFile`/`\AtBeginOfPackageFile`/…
+<a href=#23 id=23 data-nosnippet>23</a>  // sTeX 3.x leans on both: `\AtEndOfPackageFile{graphicx}{\define@key{Gin}
+<a href=#24 id=24 data-nosnippet>24</a>  // {archive}{…}}` (stex.sty L2134) — without them the hook is undefined and its
+<a href=#25 id=25 data-nosnippet>25</a>  // deferred body runs prematurely (`\define@key` undefined). Rust ships bindings
+<a href=#26 id=26 data-nosnippet>26</a>  // for all three. Witness: raw stex.sty under ar5iv. (Unconditional — a binding
+<a href=#27 id=27 data-nosnippet>27</a>  // emulates the package identically regardless of INCLUDE_STYLES; both requires
+<a href=#28 id=28 data-nosnippet>28</a>  // resolve to always-available package bindings.)
+<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"xkeyval"</span>);
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">RequirePackage!</span>(<span class="string">"currfile"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@standalone@end@input"</span>, <span class="string">"\\egroup\\endinput"</span>);
+<a href=#33 id=33 data-nosnippet>33</a>
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.
+<a href=#35 id=35 data-nosnippet>35</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@standalone@start@input"</span>, {
+<a href=#36 id=36 data-nosnippet>36</a>    assign_value(<span class="string">"inPreamble"</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#37 id=37 data-nosnippet>37</a>  });
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="comment">// Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
+<a href=#40 id=40 data-nosnippet>40</a>  // group, mark inPreamble = 1, RequirePackage each comma-separated entry
+<a href=#41 id=41 data-nosnippet>41</a>  // of the OPTIONAL `[]` argument (Perl binds `$packages = $_[1]`, the
+<a href=#42 id=42 data-nosnippet>42</a>  // optional), and alias \begin{document}/\end{document} to the start/end
+<a href=#43 id=43 data-nosnippet>43</a>  // input primitives so the sub-document is injected as a bounded scope
+<a href=#44 id=44 data-nosnippet>44</a>  // inside the outer document.
+<a href=#45 id=45 data-nosnippet>45</a>  //
+<a href=#46 id=46 data-nosnippet>46</a>  // OXIDIZED_DESIGN #63: NEITHER argument is a package list, so both are
+<a href=#47 id=47 data-nosnippet>47</a>  // gated. The mandatory class name is ignored outright — the parent already
+<a href=#48 id=48 data-nosnippet>48</a>  // loaded a class, and requiring it warned `missing_file:article` on a
+<a href=#49 id=49 data-nosnippet>49</a>  // `\documentclass{article}` child (#293). The optional list holds class
+<a href=#50 id=50 data-nosnippet>50</a>  // OPTIONS; Perl requires all of them for every class, so
+<a href=#51 id=51 data-nosnippet>51</a>  // `\documentclass[12pt]{article}` warns `missing_file:12pt` (#309).
+<a href=#52 id=52 data-nosnippet>52</a>  // standalone.sty L604-614 consults a subfile's options only when the
+<a href=#53 id=53 data-nosnippet>53</a>  // subfile's class is literally `standalone`, so we require them only there
+<a href=#54 id=54 data-nosnippet>54</a>  // — and only the ones standalone.cls turns into a package load, which is
+<a href=#55 id=55 data-nosnippet>55</a>  // what makes `\documentclass[tikz]{standalone}` work (upstream LaTeXML#1432,
+<a href=#56 id=56 data-nosnippet>56</a>  // the reason this loop exists).
+<a href=#57 id=57 data-nosnippet>57</a>  // The optional argument is read as `OptionalKeyVals`, NOT as a raw string we
+<a href=#58 id=58 data-nosnippet>58</a>  // comma-split ourselves: a class option list IS a keyval list, and every
+<a href=#59 id=59 data-nosnippet>59</a>  // option here has a valued form — `\sa@boolorvalue` accepts `varwidth=5cm`
+<a href=#60 id=60 data-nosnippet>60</a>  // and `tikz=true` exactly as it accepts bare `varwidth`/`tikz`
+<a href=#61 id=61 data-nosnippet>61</a>  // (standalone.sty L815-824), and `border={1pt 2pt}` puts a brace group in the
+<a href=#62 id=62 data-nosnippet>62</a>  // list. Splitting on `,` and matching the whole item missed every valued form
+<a href=#63 id=63 data-nosnippet>63</a>  // — `[varwidth=5cm]{standalone}` then lost the package and reported
+<a href=#64 id=64 data-nosnippet>64</a>  // `Error:undefined:{varwidth}` where pdflatex is clean. Reusing the engine's
+<a href=#65 id=65 data-nosnippet>65</a>  // keyval reader gets brace-aware splitting and key/value separation for free,
+<a href=#66 id=66 data-nosnippet>66</a>  // and keeps this on the same parser `\documentclass`/`\usepackage` options
+<a href=#67 id=67 data-nosnippet>67</a>  // already flow through instead of a second, weaker one.
+<a href=#68 id=68 data-nosnippet>68</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@standalone@documentclass OptionalKeyVals {}"</span>, sub[(options_kv, class_tks)] {
+<a href=#69 id=69 data-nosnippet>69</a>    bgroup();
+<a href=#70 id=70 data-nosnippet>70</a>    assign_value(<span class="string">"inPreamble"</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">if </span>class_tks.to_string().trim() == <span class="string">"standalone"
+<a href=#72 id=72 data-nosnippet>72</a>      </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(kv) = options_kv.as_ref()
+<a href=#73 id=73 data-nosnippet>73</a>    {
+<a href=#74 id=74 data-nosnippet>74</a>      <span class="comment">// Match on the KEY, so `varwidth` and `varwidth=5cm` behave alike. An
+<a href=#75 id=75 data-nosnippet>75</a>      // absent optional yields no pairs ⇒ nothing required.
+<a href=#76 id=76 data-nosnippet>76</a>      </span><span class="kw">for </span>(key, _value) <span class="kw">in </span>kv.get_pairs() {
+<a href=#77 id=77 data-nosnippet>77</a>        <span class="kw">if </span>CLASS_OPTION_PACKAGES.contains(<span class="kw-2">&amp;</span>key.trim()) {
+<a href=#78 id=78 data-nosnippet>78</a>          <span class="macro">RequirePackage!</span>(key.trim());
+<a href=#79 id=79 data-nosnippet>79</a>        }
+<a href=#80 id=80 data-nosnippet>80</a>      }
+<a href=#81 id=81 data-nosnippet>81</a>    }
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="macro">Let!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{document}"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\@standalone@start@input"</span>));
+<a href=#83 id=83 data-nosnippet>83</a>    <span class="macro">Let!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{document}"</span>),   <span class="macro">T_CS!</span>(<span class="string">"\\@standalone@end@input"</span>));
+<a href=#84 id=84 data-nosnippet>84</a>  });
+<a href=#85 id=85 data-nosnippet>85</a>
+<a href=#86 id=86 data-nosnippet>86</a>  <span class="comment">// Perl L35-36: AtBeginDocument — swap \documentclass to the intercept.
+<a href=#87 id=87 data-nosnippet>87</a>  // Native push to @at@begin@document so the hook fires at the same
+<a href=#88 id=88 data-nosnippet>88</a>  // lifecycle point Perl uses.
+<a href=#89 id=89 data-nosnippet>89</a>  </span>at_begin_document(<span class="macro">TokenizeInternal!</span>(<span class="string">r"\let\documentclass\@standalone@documentclass"</span>))<span class="question-mark">?</span>;
+<a href=#90 id=90 data-nosnippet>90</a>
+<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// standalone.sty L1014: \includestandalone[opts]{file}. Treat as
+<a href=#92 id=92 data-nosnippet>92</a>  // \includegraphics{file} so the figure surfaces in the XML output.
+<a href=#93 id=93 data-nosnippet>93</a>  // Witness 2406.02722.
+<a href=#94 id=94 data-nosnippet>94</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\includestandalone[]{}"</span>, <span class="string">"\\includegraphics{#2}"</span>);
+<a href=#95 id=95 data-nosnippet>95</a>});
 </code></pre></div></section></main></body></html>
