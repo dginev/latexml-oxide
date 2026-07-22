@@ -184,12 +184,29 @@ Components:
 >      `find_file(ext_type="rhai", search_paths_only=true)`, so **no kpsewhich**
 >      probe per package load);
 >   2. the embedder-supplied extra dispatcher (`latexml_contrib`);
->   3. `latexml_package` (core compiled bindings).
+>   3. `latexml_package` (core compiled bindings);
+>   4. *(added 2026-07-22, #345)* `<request>.rhai` on the host **TeX tree** —
+>      the same `rhai_dispatch` with `search_paths_only=false`, so kpsewhich
+>      (and therefore `$TEXINPUTS`) is consulted.
 >
-> Because the `.rhai` tier is checked **first**, a user-supplied
+> Because the local `.rhai` tier is checked **first**, a user-supplied
 > `<name>.<ext>.rhai` *overrides any compiled binding of the same name* — e.g.
 > `article.cls.rhai` shadows the built-in `article_cls`. (`latexml_package`
 > and `latexml_contrib` are disjoint, so their relative order is immaterial.)
+>
+> The TeX-tree tier is **last** on purpose, and the two properties are
+> deliberately different:
+>   * *Cost.* Tier 1 runs on every package/class request (64 of them on a plain
+>     acmart paper) and must stay a cheap local-path probe; a kpathsea miss is a
+>     directory-tree walk, or a full fork-exec on the subprocess-`kpsewhich`
+>     backend, and `pathname::kpsewhich`'s memo is keyed by candidate name, so
+>     distinct package names never share a hit. Measured before the tiers were
+>     split: +26 ms/conversion with linked libkpathsea, ~1.6 s with the
+>     subprocess backend.
+>   * *Authority.* A `.rhai` you put beside your document is an override; one
+>     that merely happens to sit in a texmf tree only **fills a gap**. Left at
+>     tier 1, a stray `amsmath.sty.rhai` on the TeX tree silently displaced the
+>     whole compiled `amsmath` binding (`\begin{align}` → undefined).
 > The most common Perl form — `DefMacro('\foo', 'bar')` with a **string** body
 > (not a closure) — is now a registered Rhai overload, wiring the same native
 > `ExpansionBody::Tokens` expandable as the compile-time `DefMacro!`.

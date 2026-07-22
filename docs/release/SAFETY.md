@@ -195,10 +195,20 @@ beside an untrusted source executes on a plain conversion and, being first,
 *overrides* the compiled binding of the same name (`article.cls.rhai` shadows the
 built-in). See `script_bindings_plan.md` §7.
 
+**Also reachable from the host TeX tree (#345, 2026-07-22).** A `<pkg>.sty.rhai`
+distributed inside a texmf tree on `$TEXINPUTS` is loaded too, so the executable
+surface is not just the document's directory: it is every directory kpathsea
+searches, including `TEXMFHOME`/`TEXMFLOCAL` and anything an operator has put on
+`TEXINPUTS`. This tier is **last** in the chain, so it can only supply a binding
+nothing else claimed — a texmf `.rhai` cannot displace a compiled one — but it is
+still *code the conversion executes*. Treat write access to the texmf tree (and to
+`TEXINPUTS`) as equivalent to code execution in any deployment that ships
+`runtime-bindings`.
+
 **Bound, not absent.** Rhai runs `no_module` + `no_time` — a script gets the
-registered binding API, not host I/O — and `search_paths_only` keeps the lookup off
-the TeX tree. That is a *sandboxed execution* claim, not an *inert code* one.
-Deployments on untrusted input should drop `--features runtime-bindings`.
+registered binding API, not host I/O. That is a *sandboxed execution* claim, not an
+*inert code* one. Deployments on untrusted input should drop `--features
+runtime-bindings`.
 
 **External commands from bindings (#318).** The binding API exposes `Command`, a
 thin mirror of `std::process::Command`, so a trusted binding can shell out

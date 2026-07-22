@@ -15,26 +15,11 @@
 //!      `\RequirePackage{xkeyval}` / `\RequirePackage{currfile}` (→ filehook), so
 //!      `\AtEndOfPackageFile` / `\define@key` were undefined.
 
+mod common;
+
 use std::{path::Path, process::Command};
 
-fn strip_ansi(s: &str) -> String {
-  // Drop CSI sequences `\x1b[ … m` so `Error:`/`Fatal:` counting is reliable.
-  let mut out = String::with_capacity(s.len());
-  let mut chars = s.chars().peekable();
-  while let Some(c) = chars.next() {
-    if c == '\x1b' {
-      // Skip until the final byte of the CSI sequence (a letter).
-      for d in chars.by_ref() {
-        if d.is_ascii_alphabetic() {
-          break;
-        }
-      }
-    } else {
-      out.push(c);
-    }
-  }
-  out
-}
+use common::strip_ansi;
 
 fn convert(work: &Path, doc: &str) -> String {
   std::fs::write(work.join("doc.tex"), doc).expect("write doc.tex");
