@@ -18,15 +18,27 @@ use crate::core_interface::DigestionAPI;
 
 const CONVERTER_IDENTITY: &str = "latexml_oxide (v0.5.0)";
 
-/// Resolve a runtime `<request>.rhai` binding from the local search paths
-/// (source directory + `--path`) and load it if present. Local-only — never
-/// consults kpsewhich, since `.rhai` files are user-supplied customizations,
-/// not TeX-tree resources (and probing kpsewhich for a non-existent `.rhai`
-/// on every package load would be wasteful). Returns `None` when no such file
-/// exists, so the caller falls through to the compiled dispatchers.
+/// Where a runtime `.rhai` binding may be looked up — the two tiers differ in
+/// *cost* and in *authority*, so they sit at opposite ends of the dispatch
+/// chain (see [`install_binding_dispatch`]).
+#[cfg(feature = "runtime-bindings")]
+#[derive(Clone, Copy)]
+enum RhaiScope {
+  /// The local search paths only (source directory + `--path`) — a cheap
+  /// `pathname::find`, no kpsewhich. Checked FIRST, so a `.rhai` a user put
+  /// beside their document *overrides* a compiled binding of the same name.
+  LocalPaths,
+  /// Additionally the host TeX tree, via kpsewhich (`$TEXINPUTS`). Checked
+  /// LAST, only once every compiled dispatcher has declined (#345).
+  TeXTree,
+}
+
+/// Resolve a runtime `<request>.rhai` binding within `scope` and load it if
+/// present. Returns `None` when no such file exists, so the caller falls
+/// through to the next tier of the chain.
 /// See `docs/parity/script_bindings_plan.md` §7.
 #[cfg(feature = "runtime-bindings")]
-fn rhai_dispatch(request: &str) -> Option<Result<()>> {
+fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<()>> {
   use latexml_core::{
     binding::content::{FindFileOptions, find_file},
     state::record_opened_source,
@@ -34,10 +46,19 @@ fn rhai_dispatch(request: &str) -> Option<Result<()>> {
   let path = find_file(
     request,
     Some(FindFileOptions {
-      // Append `.rhai` (so `foo.sty` resolves `foo.sty.rhai`) and search the
-      // local paths only.
+      // Append `.rhai`, so `foo.sty` resolves `foo.sty.rhai`.
       ext_type: Some("rhai".into()),
-      search_paths_only: true,
+      // `TeXTree` lets the search fall through to kpsewhich, which is what
+      // honours `$TEXINPUTS` — so a `<pkg>.sty.rhai` distributed in a texmf
+      // tree is found by `\usepackage{pkg}` with no `--path` (#345). kpsewhich
+      // locates it fine (the extension is irrelevant to a `//` recursive
+      // search). This tier is deliberately NOT used for the first-priority
+      // probe: that one runs on EVERY package/class request (64 of them on a
+      // plain acmart paper), and a kpathsea miss is a directory-tree probe —
+      // or a full fork-exec on the subprocess-`kpsewhich` backend. The memo
+      // in `pathname::kpsewhich` is keyed by candidate name, so distinct
+      // package names never share a hit.
+      search_paths_only: matches!(scope, RhaiScope::LocalPaths),
       ..FindFileOptions::default()
     }),
   )?;
@@ -70,10 +91,17 @@ fn rhai_dispatch(request: &str) -> Option<Result<()>> {
 ///      before `latexml_package` to preserve the prior external-before-internal
 ///      order; the two registries are disjoint, so the order is immaterial.
 ///   3. `latexml_package` — core compiled engine bindings.
+///   4. a `<request>.rhai` on the host TeX tree (`$TEXINPUTS`, via kpsewhich) —
+///      a binding *distributed* with a package, so it FILLS A GAP rather than
+///      overriding: `\usepackage{X}` finds `X.sty.rhai` in a texmf tree with no
+///      `--path` (#345), while a stray `amsmath.sty.rhai` left on that tree
+///      cannot silently displace the compiled `amsmath` binding. Last, so the
+///      kpathsea probe is paid only by requests nothing else could answer.
+///      `runtime-bindings` only.
 pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
   set_bindings_dispatch(Rc::new(move |request: &str| {
     #[cfg(feature = "runtime-bindings")]
-    if let Some(result) = rhai_dispatch(request) {
+    if let Some(result) = rhai_dispatch(request, RhaiScope::LocalPaths) {
       return Some(result);
     }
     if let Some(extra) = extra.as_ref()
@@ -81,7 +109,14 @@ pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
     {
       return Some(result);
     }
-    latexml_package::dispatch(request)
+    if let Some(result) = latexml_package::dispatch(request) {
+      return Some(result);
+    }
+    #[cfg(feature = "runtime-bindings")]
+    if let Some(result) = rhai_dispatch(request, RhaiScope::TeXTree) {
+      return Some(result);
+    }
+    None
   }));
   // Register every (name, ext) binding pair so `find_file(notex=true)` can
   // resolve compile-time bindings across all extensions

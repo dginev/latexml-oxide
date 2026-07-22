@@ -64,6 +64,13 @@
     `currfile → filehook` dependencies, so the package-file hooks
     (`\AtEndOfPackageFile`, …) and `\define@key` exist — enough for raw sTeX 3.x
     to load cleanly.
+  - **`\usepackage{X}` now finds an `X.sty.rhai` runtime binding on `$TEXINPUTS`.**
+    Previously only `\input{file}` resolved via TEXINPUTS while a Rhai package
+    binding placed in a texmf tree needed an explicit `--path`; the discovery now
+    consults kpsewhich too (covers `.sty.rhai` and `.cls.rhai`). A `.rhai` beside
+    your document keeps overriding a compiled binding; one that merely sits in a
+    texmf tree only fills a gap, so a stray copy there can no longer displace an
+    engine binding.
 
 ## [0.7.4] (Windows target; third-party license notices; crates.io)
 
