@@ -49,6 +49,16 @@
     previously hit OOM/timeout; `scrartcl` `\titlehead` frontmatter capture; and
     frontmatter bindings for `fairmeta`, `selfevolagent` and `openmoss` classes.
   - **A deferred package-load miss no longer poisons a later raw load.**
+  - **Perl `.ltxml` bindings are never read as TeX.** When raw-loading a style
+    package that also ships a Perl LaTeXML binding (e.g. sTeX's `stex.sty.ltxml`),
+    file resolution used to hand back the `.ltxml` — Perl source — and the loader
+    tokenized it as TeX, emitting spurious errors. latexml-oxide can't run Perl
+    bindings; binding availability is decided by its own dispatcher, so a missing
+    binding now falls through to the raw `.sty`, matching pdflatex. The
+    `standalone` binding also regained standalone.sty's real `xkeyval` +
+    `currfile → filehook` dependencies, so the package-file hooks
+    (`\AtEndOfPackageFile`, …) and `\define@key` exist — enough for raw sTeX 3.x
+    to load cleanly.
 
 ## [0.7.4] (Windows target; third-party license notices; crates.io)
 

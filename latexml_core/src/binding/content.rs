@@ -2663,12 +2663,10 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     //       return $file . '.ltxml' if -f ($file . '.ltxml'); }
     //     return $file if -f $file;
     //     return; }
-    if !options.forbid_ltxml {
-      let ltxml = s!("{}.ltxml", file);
-      if Path::new(&ltxml).exists() {
-        return Some(ltxml);
-      }
-    }
+    // No `<file>.ltxml` lookup (Perl checked one here): a `.ltxml` is a Perl
+    // LaTeXML binding latexml-oxide can never read. Binding availability is
+    // decided by the DISPATCHER (compiled + Rhai) in the relative-path branch's
+    // `notex` fast-path, not by a file on disk.
     if Path::new(file).exists() {
       Some(file.to_string())
     } else {
@@ -2779,12 +2777,17 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     if options.search_paths_only {
       return None;
     }
+    // NB: we do NOT add a `<file>.ltxml` candidate. That was Perl's logic —
+    // a `.ltxml` is a Perl LaTeXML binding, and latexml-oxide can never read
+    // one (as TeX or otherwise). The Rust equivalent of "is there a binding for
+    // this name?" is the BINDING DISPATCHER (the `get_binding_names()` /
+    // `{file}_binding_available` fast-path above, gated on `notex`), not a
+    // `.ltxml` on disk. Otherwise kpsewhich returns e.g. `stex.sty.ltxml` (it
+    // ships in TeX Live) ahead of the raw `stex.sty`, and the raw-loader
+    // tokenizes the Perl source as TeX (`$out =~ s/^\s+//;` → "Script ^…",
+    // `\DefMacroI` undefined, …). A missing binding falls through to the raw
+    // `.sty`, matching pdflatex.
     let mut candidates: Vec<String> = Vec::new();
-    if !options.forbid_ltxml {
-      // Perl `!nopaths` (REMOTE_REQUEST) gate not yet modeled in Rust;
-      // we always include the .ltxml candidate when ltxml is allowed.
-      candidates.push(s!("{}.ltxml", file));
-    }
     if !options.notex {
       candidates.push(file.to_string());
     }

@@ -11,6 +11,24 @@ const CLASS_OPTION_PACKAGES: [&str; 5] = ["tikz", "pstricks", "preview", "varwid
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // BEYOND PERL (the Perl standalone.sty.ltxml omits these): the real
+  // standalone.sty has exactly TWO *unconditional* `\RequirePackage`s —
+  // `xkeyval` (L107) and `currfile` (L305). (Every other require is guarded:
+  // engine probes `ifpdf`/`ifluatex`/`ifxetex`/`shellesc`, and the
+  // `\IfFileExists`/option-gated `varwidth`/`trimclip`/`adjustbox`/`gincltex`/
+  // `filemod-expmin`.) Restore just those two, which real LaTeX always provides:
+  //   * `xkeyval` defines `\define@key` (and the wider keyval family);
+  //   * `currfile` `\RequirePackage{filehook}` (currfile.sty L30), and filehook
+  //     defines the package-file hooks `\AtEndOfPackageFile`/`\AtBeginOfPackageFile`/…
+  // sTeX 3.x leans on both: `\AtEndOfPackageFile{graphicx}{\define@key{Gin}
+  // {archive}{…}}` (stex.sty L2134) — without them the hook is undefined and its
+  // deferred body runs prematurely (`\define@key` undefined). Rust ships bindings
+  // for all three. Witness: raw stex.sty under ar5iv. (Unconditional — a binding
+  // emulates the package identically regardless of INCLUDE_STYLES; both requires
+  // resolve to always-available package bindings.)
+  RequirePackage!("xkeyval");
+  RequirePackage!("currfile");
+
   DefMacro!("\\@standalone@end@input", "\\egroup\\endinput");
 
   // Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.

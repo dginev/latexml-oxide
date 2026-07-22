@@ -1,11 +1,12 @@
-use latexml_package::prelude::*;
+use crate::prelude::*;
 
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "currfile.sty",
-    "currfile.sty is only minimally stubbed and will not be interpreted raw."
-  );
+  // Real currfile.sty L30 `\RequirePackage{filehook}` — currfile is built on
+  // filehook's input-file hooks, and downstream packages (e.g. sTeX 3.x's
+  // `\AtEndOfPackageFile{…}`) rely on filehook being present transitively via
+  // currfile. Even though the currfile macros below are only stubbed, the
+  // filehook dependency is real and cheap (Rust ships a `filehook` binding).
+  RequirePackage!("filehook");
   def_macro_noop("\\currfiledir")?;
   def_macro_noop("\\currfilebase")?;
   def_macro_noop("\\currfileext")?;
