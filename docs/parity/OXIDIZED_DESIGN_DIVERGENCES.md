@@ -1867,6 +1867,83 @@ Intentional, user-directed branding. Guard:
 (`by LaTeXML oxide (version …)`) and the footer (`…</a> oxide</div>`, and the absence
 of the old `(oxide)`).
 
+### 65. An included file's group brackets its CONTENT, never its preamble
+
+Two bindings wrap an included sub-document in a group that the package they
+emulate does not have:
+
+* `standalone.sty.ltxml` L24-33 opens the subfile group at the child's
+  `\documentclass` (`$stomach->bgroup`) and closes it only at the child's
+  `\end{document}`;
+* `import.sty.ltxml` L44-47 wraps the whole `\input` in `{…}`.
+
+Both put the included file's **preamble** inside a group. That is harmless in
+Perl's own model only by accident, because LaTeXML — unlike real
+`standalone.sty`, which *gobbles* the child preamble (`\sa@gobble`) — actually
+**executes** it, which is what makes `\documentclass[tikz]{standalone}` load tikz
+at all (upstream LaTeXML#1432, divergence #63). So a package genuinely loads
+there, and its definitions are group-scoped while the document hooks it
+registers are not:
+
+```
+pgfcoreexternal.code.tex:152   \newif\ifpgf@external@grabshipout     % TeX-local
+pgfcoreexternal.code.tex:171   \AtEndDocument{\ifpgf@external@grabshipout…\fi}  % GLOBAL queue
+```
+
+The queue is flushed at the *parent's* `\end{document}`
+(`latex_constructs.rs:3500`), long after `\egroup` destroyed the conditional →
+`Error:undefined:\ifpgf@external@grabshipout` at the very end of an otherwise
+complete conversion (issue #311). The general shape is **any package loaded in
+an included child's preamble that pairs a group-scoped definition with a
+document-level hook**; pgf is the first witness, not a special case.
+
+Ground truth is the packages being emulated, and both agree the *body* is what
+gets bracketed — if anything does:
+
+* `standalone.sty` L616 opens `\begingroup`, and L680 closes it *immediately
+  before* `\begin{document}`:
+  `\def\next{\expandafter\endgroup\expandafter\begin\expandafter{\sa@gobbleto}}`.
+* `import.sty` L67-76 closes its `\begingroup` inside the `\protected@edef`
+  before `\@import` runs; `\@import` L82-96 restores `\input@path`/`\Ginput@path`
+  with plain `\def` *after* the `\input`, at the caller's level. The file is
+  never grouped — "input files must have balanced grouping" (L42).
+
+**So we move the boundary.** `\@standalone@documentclass` no longer calls
+`bgroup()`; it sets `inPreamble=1`, runs the (gated, #63) class-option
+`RequirePackage`s, stashes the real `\begin{document}` into
+`\lx@standalone@saved@begindocument`, and aliases `\begin{document}` to
+`\@standalone@start@input`. That primitive — which fires at the child's
+`\begin{document}` — restores `\begin{document}`, clears `inPreamble`, *then*
+`bgroup()`s, and aliases `\end{document}` **inside** the group so the same
+`\egroup` (via `\@standalone@end@input` = `\egroup\endinput`) still undoes it.
+`\import`/`\subimport`/`\includefrom`/`\subincludefrom` drop their `{…}`
+wrapper; the explicit `\lx@save@paths`/`\lx@restore@paths` stack already scopes
+`SEARCHPATHS`, which is the only thing Perl's braces were there to do.
+
+Net effect: the child's preamble runs at the caller's level (so a `\newif`
+outlives the child exactly as a preamble's would), the child's content stays
+group-bounded exactly as before, and `inPreamble` nets out identical. The
+consequence to accept knowingly is that a child preamble's definitions now leak
+to the parent — which is what real LaTeX gives you anyway, since there the
+parent is required to load the packages itself.
+
+This is **surpass-Perl** (RELEASE_CRITERIA §8): same-host Perl 0.8.8 reports the
+identical single error on the identical input, so it is a shared upstream defect
+(KNOWN_PERL_ERRORS #55), fixed at the mechanism rather than suppressed. Two
+alternatives were tried and refuted in the ticket: hoisting only the class-option
+`RequirePackage`s above `bgroup()` (fixes `\input` but not `\subimport`, and
+never the child's own `\usepackage`), and `\globaldefs=1` around the load
+(globalizes pgf's active-character handling → `Error:undefined:"` and **zero**
+pictures rendered).
+
+Witness = issue #311's `index.tex` + `child.tex`. Regression test:
+`06_cluster_regressions::standalone_child_preamble_package_outlives_the_subfile_group`,
+which guards both entry paths (`\subimport*` and plain `\input`) and both ways of
+asking for the package (the `[tikz]` class option and the child's own
+`\usepackage{tikz}`) — the two refuted half-fixes each covered only one — and
+asserts the picture still renders, so "no error" cannot be bought by losing the
+child.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

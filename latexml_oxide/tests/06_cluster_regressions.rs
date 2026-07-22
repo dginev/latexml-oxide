@@ -1405,3 +1405,66 @@ fn standalone_subimport_documentclass_no_spurious_require() {
     "#309: the subimported child body was lost"
   );
 }
+
+/// Issue #311: a package loaded in a standalone child's **preamble** must
+/// outlive the child, because the hooks it registers do.
+///
+/// `\@standalone@documentclass` used to open its group at the child's
+/// `\documentclass` and close it only at the child's `\end{document}`, so the
+/// whole child preamble ran inside it. `\usepackage{tikz}` raw-loads
+/// `pgfcoreexternal.code.tex`, whose L152 `\newif\ifpgf@external@grabshipout`
+/// is TeX-locally scoped while its L171-179 `\AtEndDocument{\ifpgf@external@grabshipout…}`
+/// goes onto the **global** `@at@end@document` queue — flushed at the *parent's*
+/// `\end{document}`, long after `\egroup` destroyed the conditional. Result:
+/// `Error:undefined:\ifpgf@external@grabshipout` at the very end of an otherwise
+/// complete conversion.
+///
+/// The fix moves the group to bracket the child's *content* only (real
+/// `standalone.sty` L616/L680 closes its `\begingroup` immediately before
+/// `\begin{document}` too) — see OXIDIZED_DESIGN #65. Both entry paths and both
+/// ways of asking for the package are guarded, because the two refuted
+/// half-fixes in the ticket each covered only one of them.
+#[cfg_attr(
+  not(building_with_texlive),
+  ignore = "raw-loads pgfcoreexternal.code.tex from the host texmf tree"
+)]
+#[test]
+fn standalone_child_preamble_package_outlives_the_subfile_group() {
+  // (a) the reported witness: `\subimport*` + the `tikz` CLASS OPTION.
+  let log = convert_log("tests/cluster_regressions/subimport/index_tikz.tex");
+  assert!(
+    !log.contains("ifpgf@external@grabshipout"),
+    "#311: a \\newif from the child's preamble must survive to the parent's \
+     \\end{{document}}, where pgf's \\AtEndDocument hook reads it:\n{log}"
+  );
+  assert!(
+    !log.contains("Error:") && !log.contains("Fatal:"),
+    "#311: the witness must convert cleanly:\n{log}"
+  );
+  // The error fired *after* the picture was built, so "no error" alone would
+  // also pass on a fix that simply lost the child. Pin the content too.
+  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_tikz.tex");
+  assert!(
+    xml.contains("ltx:picture") || xml.contains("<svg"),
+    "#311: the child's tikzpicture must still render:\n{xml}"
+  );
+
+  // (b) plain `\input` (no `import.sty`), and the package asked for by the
+  // child's OWN `\usepackage` rather than a class option. Hoisting just the
+  // class-option `RequirePackage`s above the group — the first fix tried in
+  // the ticket — greens (a)-via-`\input` and neither of these.
+  let log_pkg = convert_log("tests/cluster_regressions/subimport/index_tikzpkg.tex");
+  assert!(
+    !log_pkg.contains("ifpgf@external@grabshipout"),
+    "#311: same for a child that loads tikz with \\usepackage:\n{log_pkg}"
+  );
+  assert!(
+    !log_pkg.contains("Error:") && !log_pkg.contains("Fatal:"),
+    "#311: the \\input + \\usepackage variant must convert cleanly:\n{log_pkg}"
+  );
+  let xml_pkg = convert_to_xml("tests/cluster_regressions/subimport/index_tikzpkg.tex");
+  assert!(
+    xml_pkg.contains("ltx:picture") || xml_pkg.contains("<svg"),
+    "#311: the \\input-ed child's tikzpicture must still render:\n{xml_pkg}"
+  );
+}

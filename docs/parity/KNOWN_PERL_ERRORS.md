@@ -2208,3 +2208,56 @@ OXIDIZED_DESIGN #63; regression test
 `06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`.
 The mandatory half of the same defect (`\documentclass{article}` →
 `missing_file:article`) was issue #293. Candidate to upstream.
+
+## 55. A standalone subfile's preamble is executed inside a group, so its packages' `\newif` conditionals die before the hooks that read them
+
+`standalone.sty.ltxml` L24-33 opens the subfile group at the child's
+`\documentclass` (`$stomach->bgroup`) and closes it only at the child's
+`\end{document}` (`\@standalone@end@input` = `\egroup\endinput`). The child's
+whole **preamble** therefore runs inside that group — and LaTeXML, unlike real
+`standalone.sty`, executes that preamble rather than gobbling it.
+
+```latex
+% index.tex
+\documentclass[12pt]{book}
+\usepackage{import}\usepackage{standalone}
+\begin{document}\subimport*{./}{child.tex}\end{document}
+
+% child.tex
+\documentclass[tikz,border=2pt]{standalone}
+\begin{document}
+\begin{tikzpicture}\draw (0,0) -- (1,1);\end{tikzpicture}
+\end{document}
+```
+
+Perl 0.8.8: `Error:undefined:\ifpgf@external@grabshipout … at index.tex; line 5
+col 1` → `Conversion complete: 1 warning; 1 error; 1 undefined
+macro[\ifpgf@external@grabshipout]`. The picture itself renders; the error fires
+at the very end.
+
+Mechanism: `tikz` raw-loads `pgfcoreexternal.code.tex`, whose L152
+`\newif\ifpgf@external@grabshipout` is TeX-locally scoped (so the conditional
+belongs to the standalone group) while its L171-179
+`\AtEndDocument{\ifpgf@external@grabshipout…\fi}` goes onto the **global**
+`@at@end@document` queue — flushed at the *parent's* `\end{document}`, long after
+`\egroup` destroyed the conditional. The general shape: **any package loaded in
+a standalone child's preamble that pairs a group-scoped definition with a
+document-level hook breaks**; pgf is just the first witness. `import.sty.ltxml`
+L44-47 adds a second such group by wrapping the imported file in `{…}`.
+
+The packages being emulated disagree with both. `standalone.sty` L616 opens its
+`\begingroup` and L680 closes it *immediately before* `\begin{document}`
+(`\def\next{\expandafter\endgroup\expandafter\begin\expandafter{\sa@gobbleto}}`),
+so the subfile BODY is never inside it. `import.sty` L67-76 closes its
+`\begingroup` inside the `\protected@edef` before `\@import` runs, and restores
+`\input@path`/`\Ginput@path` by plain `\def` *after* the `\input`, at the
+caller's level — "input files must have balanced grouping" (L42).
+
+**Fixed in Rust** (`standalone_sty.rs` + `import_sty.rs`): the standalone group
+now opens at `\@standalone@start@input` (the child's `\begin{document}`) instead
+of at its `\documentclass`, so it brackets the child's *content* and not its
+*preamble*; and `\import`/`\subimport` drop their `{…}` wrapper, relying on the
+explicit `\lx@save@paths`/`\lx@restore@paths` stack that already scopes
+`SEARCHPATHS`. See OXIDIZED_DESIGN #65; regression test
+`06_cluster_regressions::standalone_child_preamble_package_outlives_the_subfile_group`.
+Issue #311. Candidate to upstream.
