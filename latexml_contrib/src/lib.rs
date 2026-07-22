@@ -78,7 +78,6 @@ pub mod colt2024_cls;
 pub mod combine_cls;
 pub mod commath_sty;
 pub mod crckapb_sty;
-pub mod currfile_sty;
 pub mod curve2e_sty;
 pub mod cvpr_sty;
 pub mod czjphys_cls;
@@ -400,7 +399,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("arydshln", "sty", arydshln_sty::load_definitions),
   ("autofe", "sty", autofe_sty::load_definitions),
   ("changes", "sty", changes_sty::load_definitions),
-  ("currfile", "sty", currfile_sty::load_definitions),
   ("diagrams", "tex", diagrams_tex::load_definitions),
   ("equations", "sty", equations_sty::load_definitions),
   ("eso-pic", "sty", eso_pic_sty::load_definitions),

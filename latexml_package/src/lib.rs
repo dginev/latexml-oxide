@@ -292,6 +292,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fullpage", "sty", package::fullpage_sty::load_definitions),
   ("comment", "sty", package::comment_sty::load_definitions),
   ("csquotes", "sty", package::csquotes_sty::load_definitions),
+  ("currfile", "sty", package::currfile_sty::load_definitions),
   ("ctable", "sty", package::ctable_sty::load_definitions),
   ("dcolumn", "sty", package::dcolumn_sty::load_definitions),
   ("delarray", "sty", package::delarray_sty::load_definitions),
