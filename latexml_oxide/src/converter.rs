@@ -34,10 +34,16 @@ fn rhai_dispatch(request: &str) -> Option<Result<()>> {
   let path = find_file(
     request,
     Some(FindFileOptions {
-      // Append `.rhai` (so `foo.sty` resolves `foo.sty.rhai`) and search the
-      // local paths only.
+      // Append `.rhai` (so `foo.sty` resolves `foo.sty.rhai`). Search the local
+      // paths (`--path` + the source dir) AND fall through to kpsewhich, so a
+      // `<pkg>.sty.rhai` placed in a texmf tree on `$TEXINPUTS` is found by
+      // `\usepackage{pkg}` — matching how `\input{file}` already resolves via
+      // kpsewhich (#345). kpsewhich locates the `.rhai` fine (the extension is
+      // irrelevant to a `//` recursive search) and caches the directory
+      // traversal per process, so the miss cost for a package with no `.rhai`
+      // is paid at most once per conversion.
       ext_type: Some("rhai".into()),
-      search_paths_only: true,
+      search_paths_only: false,
       ..FindFileOptions::default()
     }),
   )?;
