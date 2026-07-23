@@ -553,6 +553,24 @@ malformed. Guards: `30_script_bindings.rs::a_throwing_script_body_degrades_only_
 (one throwing body of every kind, in one document) and
 `script_bindings::tests::m1_errors_are_clean` (load-time `Err` vs run-time degrade).
 
+**The full interface is GENERATED, not listed here.**
+[`latexml_contrib/src/script_bindings/API.md`](../../latexml_contrib/src/script_bindings/API.md)
+carries every registered function, grouped by handle, read back out of the live
+engine via Rhai's reflections API (`Engine::gen_fn_signatures` — the mechanism the
+Rhai book points at for documenting a host API). A test regenerates and compares
+it on every run, so adding a `register_fn` without regenerating fails CI. It is
+included into rustdoc as `latexml_contrib::script_bindings::interface`, so
+`cargo doc` and docs.rs render it beside the Rust API. Regenerate with
+`UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date`.
+The prose in THIS document covers what the calls mean; the generated file covers
+what exists.
+
+`gen_fn_signatures` needs Rhai's `metadata` feature, which pulls serde +
+serde_json — so it is enabled on a **dev-dependency only**. Under
+`resolver = "2"` dev-dependency features are not unified into a normal build;
+verified with `cargo tree -e normal`, the shipped graph has
+`rhai … no_module,no_time,std` and no serde at all.
+
 **State API:** `assign_value(key, val)` (group-local), `assign_global(key, val)`,
 `lookup_value(key) -> string`.
 

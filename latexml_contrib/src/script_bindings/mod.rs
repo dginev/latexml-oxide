@@ -621,5 +621,20 @@ fn dynamic_to_string(d: Dynamic) -> String {
   }
 }
 
+/// The complete `.rhai` binding interface, rendered into this crate's rustdoc.
+///
+/// Not hand-written: `API.md` is GENERATED from the live engine (Rhai's
+/// `gen_fn_signatures` reflections API) and a test regenerates and compares it on
+/// every run, so `cargo doc` — and docs.rs — always show what is actually
+/// registered. Regenerate after adding a `register_fn` with:
+///
+/// ```sh
+/// UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date
+/// ```
+#[doc = include_str!("API.md")]
+pub mod interface {}
+
+#[cfg(test)]
+mod api_doc;
 #[cfg(test)]
 mod tests;
