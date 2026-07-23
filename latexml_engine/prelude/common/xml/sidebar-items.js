@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["XMLNS_NS","XML_NS"],"fn":["closest_element","content_nodes","element_nodes","get_next_element","get_prev_element","is_descendant_or_self"],"struct":["XPath"]};
+window.SIDEBAR_ITEMS = {"constant":["XMLNS_NS","XML_NS"],"fn":["closest_element","content_nodes","element_nodes","get_next_element","get_prev_element","is_descendant_or_self","is_parse_artifact","parse_chunk","parse_fragment"],"struct":["ParsedFragment","XPath"]};

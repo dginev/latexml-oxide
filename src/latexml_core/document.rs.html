@@ -4873,195 +4873,275 @@
 <a href=#4873 id=4873 data-nosnippet>4873</a>            </span><span class="self">self</span>.unrecord_id(<span class="kw-2">&amp;</span>xmlid);
 <a href=#4874 id=4874 data-nosnippet>4874</a>          }
 <a href=#4875 id=4875 data-nosnippet>4875</a>
-<a href=#4876 id=4876 data-nosnippet>4876</a>          <span class="kw">let </span>tag_sym = get_node_qname(<span class="kw-2">&amp;</span>child);
-<a href=#4877 id=4877 data-nosnippet>4877</a>          <span class="kw">let </span>tag = arena::to_string(tag_sym);
-<a href=#4878 id=4878 data-nosnippet>4878</a>          <span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_at(node, <span class="kw-2">&amp;</span>tag, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#4879 id=4879 data-nosnippet>4879</a>          <span class="self">self</span>.append_tree(<span class="kw-2">&amp;mut </span>new, child.get_child_nodes())<span class="question-mark">?</span>;
-<a href=#4880 id=4880 data-nosnippet>4880</a>          <span class="self">self</span>.close_element_at(<span class="kw-2">&amp;mut </span>new)<span class="question-mark">?</span>;
-<a href=#4881 id=4881 data-nosnippet>4881</a>        },
-<a href=#4882 id=4882 data-nosnippet>4882</a>        <span class="prelude-val">Some</span>(NodeType::DocumentFragNode) =&gt; {
-<a href=#4883 id=4883 data-nosnippet>4883</a>          <span class="self">self</span>.append_tree(node, child.get_child_nodes())<span class="question-mark">?</span>;
-<a href=#4884 id=4884 data-nosnippet>4884</a>        },
-<a href=#4885 id=4885 data-nosnippet>4885</a>        <span class="prelude-val">Some</span>(NodeType::TextNode) =&gt; {
-<a href=#4886 id=4886 data-nosnippet>4886</a>          node.append_text(<span class="kw-2">&amp;</span>child.get_content())<span class="question-mark">?</span>;
-<a href=#4887 id=4887 data-nosnippet>4887</a>        },
-<a href=#4888 id=4888 data-nosnippet>4888</a>        other =&gt; {
-<a href=#4889 id=4889 data-nosnippet>4889</a>          <span class="macro">log::debug!</span>(<span class="string">"append_tree: unhandled libxml NodeType {other:?}"</span>);
-<a href=#4890 id=4890 data-nosnippet>4890</a>        },
-<a href=#4891 id=4891 data-nosnippet>4891</a>      }
-<a href=#4892 id=4892 data-nosnippet>4892</a>    }
-<a href=#4893 id=4893 data-nosnippet>4893</a>    <span class="prelude-val">Ok</span>(())
-<a href=#4894 id=4894 data-nosnippet>4894</a>  }
-<a href=#4895 id=4895 data-nosnippet>4895</a>}
-<a href=#4896 id=4896 data-nosnippet>4896</a>
-<a href=#4897 id=4897 data-nosnippet>4897</a><span class="comment">// Auxiliary
-<a href=#4898 id=4898 data-nosnippet>4898</a>
-<a href=#4899 id=4899 data-nosnippet>4899</a></span><span class="doccomment">/// Strip characters that may not appear in XML 1.0 content at all: NUL and
-<a href=#4900 id=4900 data-nosnippet>4900</a>/// the other C0 controls except TAB/LF/CR, plus the non-characters
-<a href=#4901 id=4901 data-nosnippet>4901</a>/// U+FFFE/U+FFFF. libxml's `CString`-based APIs *panic* on interior NULs
-<a href=#4902 id=4902 data-nosnippet>4902</a>/// (node.rs:639), and the rest produce non-well-formed output that downstream
-<a href=#4903 id=4903 data-nosnippet>4903</a>/// XML consumers reject. Single shared policy for the document sinks
-<a href=#4904 id=4904 data-nosnippet>4904</a>/// (`set_attribute`, `open_text_internal`, `open_math_text_internal`).
-<a href=#4905 id=4905 data-nosnippet>4905</a>/// Borrow-free in the (overwhelmingly common) clean case.
-<a href=#4906 id=4906 data-nosnippet>4906</a></span><span class="kw">fn </span>xml_sanitize(value: <span class="kw-2">&amp;</span>str) -&gt; Cow&lt;<span class="lifetime">'_</span>, str&gt; {
-<a href=#4907 id=4907 data-nosnippet>4907</a>  <span class="kw">fn </span>invalid(c: char) -&gt; bool {
-<a href=#4908 id=4908 data-nosnippet>4908</a>    (c &lt; <span class="string">'\u{20}' </span>&amp;&amp; c != <span class="string">'\t' </span>&amp;&amp; c != <span class="string">'\n' </span>&amp;&amp; c != <span class="string">'\r'</span>) || c == <span class="string">'\u{FFFE}' </span>|| c == <span class="string">'\u{FFFF}'
-<a href=#4909 id=4909 data-nosnippet>4909</a>  </span>}
-<a href=#4910 id=4910 data-nosnippet>4910</a>  <span class="kw">if </span>value.chars().any(invalid) {
-<a href=#4911 id=4911 data-nosnippet>4911</a>    Cow::Owned(value.chars().filter(|c| !invalid(<span class="kw-2">*</span>c)).collect())
-<a href=#4912 id=4912 data-nosnippet>4912</a>  } <span class="kw">else </span>{
-<a href=#4913 id=4913 data-nosnippet>4913</a>    Cow::Borrowed(value)
-<a href=#4914 id=4914 data-nosnippet>4914</a>  }
-<a href=#4915 id=4915 data-nosnippet>4915</a>}
-<a href=#4916 id=4916 data-nosnippet>4916</a>
-<a href=#4917 id=4917 data-nosnippet>4917</a><span class="kw">fn </span>serialize_string(string: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#4918 id=4918 data-nosnippet>4918</a>  <span class="comment">// Basic entities
-<a href=#4919 id=4919 data-nosnippet>4919</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>serialized = string.replace(<span class="string">'&amp;'</span>, <span class="string">"&amp;amp;"</span>);
-<a href=#4920 id=4920 data-nosnippet>4920</a>  serialized = serialized.replace(<span class="string">'&gt;'</span>, <span class="string">"&amp;gt;"</span>);
-<a href=#4921 id=4921 data-nosnippet>4921</a>  serialized = serialized.replace(<span class="string">'&lt;'</span>, <span class="string">"&amp;lt;"</span>);
-<a href=#4922 id=4922 data-nosnippet>4922</a>  serialized
-<a href=#4923 id=4923 data-nosnippet>4923</a>}
-<a href=#4924 id=4924 data-nosnippet>4924</a>
-<a href=#4925 id=4925 data-nosnippet>4925</a><span class="kw">fn </span>serialize_attr(string: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#4926 id=4926 data-nosnippet>4926</a>  <span class="kw">let </span><span class="kw-2">mut </span>serialized = serialize_string(string);
-<a href=#4927 id=4927 data-nosnippet>4927</a>  <span class="comment">// And escape any remaining special code points
-<a href=#4928 id=4928 data-nosnippet>4928</a>  </span>serialized = serialized.replace(<span class="string">'\"'</span>, <span class="string">"&amp;quot;"</span>);
-<a href=#4929 id=4929 data-nosnippet>4929</a>  serialized = serialized.replace(<span class="string">'\n'</span>, <span class="string">"&amp;#10;"</span>);
-<a href=#4930 id=4930 data-nosnippet>4930</a>  serialized = serialized.replace(<span class="string">'\t'</span>, <span class="string">"&amp;#9;"</span>);
-<a href=#4931 id=4931 data-nosnippet>4931</a>  serialized
-<a href=#4932 id=4932 data-nosnippet>4932</a>}
-<a href=#4933 id=4933 data-nosnippet>4933</a>
-<a href=#4934 id=4934 data-nosnippet>4934</a><span class="kw">pub trait </span>IntoVDQS {
-<a href=#4935 id=4935 data-nosnippet>4935</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt;
-<a href=#4936 id=4936 data-nosnippet>4936</a>  <span class="kw">where </span><span class="self">Self</span>: Sized;
-<a href=#4937 id=4937 data-nosnippet>4937</a>}
-<a href=#4938 id=4938 data-nosnippet>4938</a><span class="kw">impl </span>IntoVDQS <span class="kw">for </span>SymStr {
-<a href=#4939 id=4939 data-nosnippet>4939</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; {
-<a href=#4940 id=4940 data-nosnippet>4940</a>    <span class="kw">let </span><span class="kw-2">mut </span>vdq = VecDeque::new();
-<a href=#4941 id=4941 data-nosnippet>4941</a>    vdq.push_front(<span class="self">self</span>);
-<a href=#4942 id=4942 data-nosnippet>4942</a>    vdq
-<a href=#4943 id=4943 data-nosnippet>4943</a>  }
-<a href=#4944 id=4944 data-nosnippet>4944</a>}
-<a href=#4945 id=4945 data-nosnippet>4945</a><span class="kw">impl </span>IntoVDQS <span class="kw">for </span><span class="kw-2">&amp;</span>str {
-<a href=#4946 id=4946 data-nosnippet>4946</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; {
-<a href=#4947 id=4947 data-nosnippet>4947</a>    <span class="kw">let </span><span class="kw-2">mut </span>vdq = VecDeque::new();
-<a href=#4948 id=4948 data-nosnippet>4948</a>    vdq.push_front(arena::pin(<span class="self">self</span>));
-<a href=#4949 id=4949 data-nosnippet>4949</a>    vdq
-<a href=#4950 id=4950 data-nosnippet>4950</a>  }
-<a href=#4951 id=4951 data-nosnippet>4951</a>}
-<a href=#4952 id=4952 data-nosnippet>4952</a>
-<a href=#4953 id=4953 data-nosnippet>4953</a><span class="kw">impl </span>IntoVDQS <span class="kw">for </span>VecDeque&lt;SymStr&gt; {
-<a href=#4954 id=4954 data-nosnippet>4954</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; { <span class="self">self </span>}
-<a href=#4955 id=4955 data-nosnippet>4955</a>}
-<a href=#4956 id=4956 data-nosnippet>4956</a>
-<a href=#4957 id=4957 data-nosnippet>4957</a><span class="comment">// containment checks are package-level (and maybe can be moved in a new submodule?)
-<a href=#4958 id=4958 data-nosnippet>4958</a>
-<a href=#4959 id=4959 data-nosnippet>4959</a></span><span class="kw">pub fn </span>can_contain(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#4960 id=4960 data-nosnippet>4960</a>  <span class="kw">let </span>tag = model::get_node_qname(node);
-<a href=#4961 id=4961 data-nosnippet>4961</a>  model::can_contain_sym(tag, arena::pin(child))
-<a href=#4962 id=4962 data-nosnippet>4962</a>}
-<a href=#4963 id=4963 data-nosnippet>4963</a>
-<a href=#4964 id=4964 data-nosnippet>4964</a><span class="kw">pub fn </span>can_contain_node(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>Node) -&gt; bool {
-<a href=#4965 id=4965 data-nosnippet>4965</a>  <span class="kw">let </span>tag = model::get_node_qname(node);
-<a href=#4966 id=4966 data-nosnippet>4966</a>  <span class="kw">let </span>child_tag = model::get_node_qname(child);
-<a href=#4967 id=4967 data-nosnippet>4967</a>  model::can_contain_sym(tag, child_tag)
-<a href=#4968 id=4968 data-nosnippet>4968</a>}
-<a href=#4969 id=4969 data-nosnippet>4969</a>
-<a href=#4970 id=4970 data-nosnippet>4970</a><span class="kw">pub fn </span>can_contain_qname(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool { model::can_contain(tag, child) }
-<a href=#4971 id=4971 data-nosnippet>4971</a>
-<a href=#4972 id=4972 data-nosnippet>4972</a><span class="kw">pub fn </span>node_can_contain_sym(node: <span class="kw-2">&amp;</span>Node, child: SymStr) -&gt; bool {
-<a href=#4973 id=4973 data-nosnippet>4973</a>  <span class="kw">let </span>tag = model::get_node_qname(node);
-<a href=#4974 id=4974 data-nosnippet>4974</a>  model::can_contain_sym(tag, child)
+<a href=#4876 id=4876 data-nosnippet>4876</a>          <span class="comment">// `get_FOREIGN_node_qname`: `data` may be a tree parsed elsewhere
+<a href=#4877 id=4877 data-nosnippet>4877</a>          // (`Document::insert_xml`), whose elements can sit in a DEFAULT
+<a href=#4878 id=4878 data-nosnippet>4878</a>          // namespace that is not ours — `&lt;p xmlns="…/1999/xhtml"&gt;`. Only here is
+<a href=#4879 id=4879 data-nosnippet>4879</a>          // that shape possible, and only here do we pay to resolve it.
+<a href=#4880 id=4880 data-nosnippet>4880</a>          </span><span class="kw">let </span>tag_sym = model::get_foreign_node_qname(<span class="kw-2">&amp;</span>child);
+<a href=#4881 id=4881 data-nosnippet>4881</a>          <span class="kw">let </span>tag = arena::to_string(tag_sym);
+<a href=#4882 id=4882 data-nosnippet>4882</a>          <span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_at(node, <span class="kw-2">&amp;</span>tag, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#4883 id=4883 data-nosnippet>4883</a>          <span class="self">self</span>.append_tree(<span class="kw-2">&amp;mut </span>new, child.get_child_nodes())<span class="question-mark">?</span>;
+<a href=#4884 id=4884 data-nosnippet>4884</a>          <span class="self">self</span>.close_element_at(<span class="kw-2">&amp;mut </span>new)<span class="question-mark">?</span>;
+<a href=#4885 id=4885 data-nosnippet>4885</a>        },
+<a href=#4886 id=4886 data-nosnippet>4886</a>        <span class="prelude-val">Some</span>(NodeType::DocumentFragNode) =&gt; {
+<a href=#4887 id=4887 data-nosnippet>4887</a>          <span class="self">self</span>.append_tree(node, child.get_child_nodes())<span class="question-mark">?</span>;
+<a href=#4888 id=4888 data-nosnippet>4888</a>        },
+<a href=#4889 id=4889 data-nosnippet>4889</a>        <span class="prelude-val">Some</span>(NodeType::TextNode) =&gt; {
+<a href=#4890 id=4890 data-nosnippet>4890</a>          node.append_text(<span class="kw-2">&amp;</span>child.get_content())<span class="question-mark">?</span>;
+<a href=#4891 id=4891 data-nosnippet>4891</a>        },
+<a href=#4892 id=4892 data-nosnippet>4892</a>        other =&gt; {
+<a href=#4893 id=4893 data-nosnippet>4893</a>          <span class="macro">log::debug!</span>(<span class="string">"append_tree: unhandled libxml NodeType {other:?}"</span>);
+<a href=#4894 id=4894 data-nosnippet>4894</a>        },
+<a href=#4895 id=4895 data-nosnippet>4895</a>      }
+<a href=#4896 id=4896 data-nosnippet>4896</a>    }
+<a href=#4897 id=4897 data-nosnippet>4897</a>    <span class="prelude-val">Ok</span>(())
+<a href=#4898 id=4898 data-nosnippet>4898</a>  }
+<a href=#4899 id=4899 data-nosnippet>4899</a>
+<a href=#4900 id=4900 data-nosnippet>4900</a>  <span class="doccomment">/// Parse an XML / (X)HTML markup string and splice the resulting subtree into
+<a href=#4901 id=4901 data-nosnippet>4901</a>  /// the document at the current insertion point.
+<a href=#4902 id=4902 data-nosnippet>4902</a>  ///
+<a href=#4903 id=4903 data-nosnippet>4903</a>  /// Named as the markup counterpart to [`Document::insert_element`] (Perl
+<a href=#4904 id=4904 data-nosnippet>4904</a>  /// `insertElement`): both insert an already-FINISHED thing at the current point.
+<a href=#4905 id=4905 data-nosnippet>4905</a>  /// Deliberately NOT an `absorb*` name — in Perl `absorb` consumes a digested
+<a href=#4906 id=4906 data-nosnippet>4906</a>  /// Box and has no `XML::LibXML` branch at all (it would die on a node), so
+<a href=#4907 id=4907 data-nosnippet>4907</a>  /// borrowing that verb here would imply a kinship that does not exist.
+<a href=#4908 id=4908 data-nosnippet>4908</a>  ///
+<a href=#4909 id=4909 data-nosnippet>4909</a>  /// This is the Rust analog of Perl BookML's `\bmlRawHTML` idiom, which composes
+<a href=#4910 id=4910 data-nosnippet>4910</a>  /// two mechanisms core never chains itself: `XML::LibXML-&gt;parse_string`
+<a href=#4911 id=4911 data-nosnippet>4911</a>  /// (`LaTeXML::Common::XML::Parser` `parseChunk`, `Common/XML/Parser.pm:36-39`)
+<a href=#4912 id=4912 data-nosnippet>4912</a>  /// and `$document-&gt;appendTree`
+<a href=#4913 id=4913 data-nosnippet>4913</a>  /// (`Document.pm:2093`, foreign-node branch `:2105-2124`). Both halves already
+<a href=#4914 id=4914 data-nosnippet>4914</a>  /// exist here — libxml's parser (a direct `latexml_core` dep, used in
+<a href=#4915 id=4915 data-nosnippet>4915</a>  /// `common/relaxng/scan.rs`) and [`Document::append_tree`] — so this is pure
+<a href=#4916 id=4916 data-nosnippet>4916</a>  /// glue.
+<a href=#4917 id=4917 data-nosnippet>4917</a>  ///
+<a href=#4918 id=4918 data-nosnippet>4918</a>  /// The markup must be WELL-FORMED, but need not be a single root: several
+<a href=#4919 id=4919 data-nosnippet>4919</a>  /// sibling nodes, or bare text, are accepted as a document fragment
+<a href=#4920 id=4920 data-nosnippet>4920</a>  /// (OXIDIZED_DESIGN #66 — Perl's `parseChunk` is single-node only). The parsed
+<a href=#4921 id=4921 data-nosnippet>4921</a>  /// nodes are re-created one by one through `append_tree`'s model-aware path, so
+<a href=#4922 id=4922 data-nosnippet>4922</a>  /// namespaces declared in the snippet (e.g. xhtml) are preserved and `xml:id`s
+<a href=#4923 id=4923 data-nosnippet>4923</a>  /// re-registered. Malformed markup is REJECTED, never salvaged — see
+<a href=#4924 id=4924 data-nosnippet>4924</a>  /// [`crate::common::xml::parse_chunk`] for what libxml's recovery mode
+<a href=#4925 id=4925 data-nosnippet>4925</a>  /// destroys — and surfaces as a clean `Error:` that inserts nothing, degrading
+<a href=#4926 id=4926 data-nosnippet>4926</a>  /// the offending binding rather than aborting the conversion (the
+<a href=#4927 id=4927 data-nosnippet>4927</a>  /// runtime-bindings failure-isolation contract).
+<a href=#4928 id=4928 data-nosnippet>4928</a>  </span><span class="kw">pub fn </span>insert_xml(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xml: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#4929 id=4929 data-nosnippet>4929</a>    <span class="comment">// The parsed Document OWNS the nodes `append_tree` re-creates from, so it
+<a href=#4930 id=4930 data-nosnippet>4930</a>    // must stay alive across the call below (bound here, dropped at fn end).
+<a href=#4931 id=4931 data-nosnippet>4931</a>    </span><span class="kw">let </span>parsed = <span class="kw">match </span>xml::parse_fragment(xml) {
+<a href=#4932 id=4932 data-nosnippet>4932</a>      <span class="prelude-val">Ok</span>(doc) =&gt; doc,
+<a href=#4933 id=4933 data-nosnippet>4933</a>      <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#4934 id=4934 data-nosnippet>4934</a>        <span class="comment">// Quote the offending snippet: a binding may insert markup from several
+<a href=#4935 id=4935 data-nosnippet>4935</a>        // places, and the reason alone would not say WHICH one to go fix. Capped
+<a href=#4936 id=4936 data-nosnippet>4936</a>        // so a runaway string cannot flood the log with a single message.
+<a href=#4937 id=4937 data-nosnippet>4937</a>        </span><span class="kw">const </span>SNIPPET_CAP: usize = <span class="number">200</span>;
+<a href=#4938 id=4938 data-nosnippet>4938</a>        <span class="kw">let </span><span class="kw-2">mut </span>snippet: String = xml.chars().take(SNIPPET_CAP).collect();
+<a href=#4939 id=4939 data-nosnippet>4939</a>        <span class="kw">if </span>xml.chars().nth(SNIPPET_CAP).is_some() {
+<a href=#4940 id=4940 data-nosnippet>4940</a>          snippet.push(<span class="string">'…'</span>);
+<a href=#4941 id=4941 data-nosnippet>4941</a>        }
+<a href=#4942 id=4942 data-nosnippet>4942</a>        <span class="macro">Error!</span>(
+<a href=#4943 id=4943 data-nosnippet>4943</a>          <span class="string">"malformed"</span>,
+<a href=#4944 id=4944 data-nosnippet>4944</a>          <span class="string">"insertXML"</span>,
+<a href=#4945 id=4945 data-nosnippet>4945</a>          <span class="macro">format!</span>(<span class="string">"could not parse XML markup: {e}"</span>),
+<a href=#4946 id=4946 data-nosnippet>4946</a>          <span class="macro">format!</span>(<span class="string">"in: {snippet}"</span>)
+<a href=#4947 id=4947 data-nosnippet>4947</a>        );
+<a href=#4948 id=4948 data-nosnippet>4948</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#4949 id=4949 data-nosnippet>4949</a>      },
+<a href=#4950 id=4950 data-nosnippet>4950</a>    };
+<a href=#4951 id=4951 data-nosnippet>4951</a>    <span class="kw">if </span>parsed.is_empty() {
+<a href=#4952 id=4952 data-nosnippet>4952</a>      <span class="macro">Error!</span>(
+<a href=#4953 id=4953 data-nosnippet>4953</a>        <span class="string">"malformed"</span>,
+<a href=#4954 id=4954 data-nosnippet>4954</a>        <span class="string">"insertXML"</span>,
+<a href=#4955 id=4955 data-nosnippet>4955</a>        <span class="string">"XML markup parsed to an empty document"</span>.to_string()
+<a href=#4956 id=4956 data-nosnippet>4956</a>      );
+<a href=#4957 id=4957 data-nosnippet>4957</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#4958 id=4958 data-nosnippet>4958</a>    }
+<a href=#4959 id=4959 data-nosnippet>4959</a>    <span class="comment">// `parsed` stays bound until this returns, so it keeps owning the nodes.
+<a href=#4960 id=4960 data-nosnippet>4960</a>    </span><span class="self">self</span>.insert_nodes(parsed.nodes())
+<a href=#4961 id=4961 data-nosnippet>4961</a>  }
+<a href=#4962 id=4962 data-nosnippet>4962</a>
+<a href=#4963 id=4963 data-nosnippet>4963</a>  <span class="doccomment">/// Splice ALREADY-PARSED nodes into the document at the current insertion
+<a href=#4964 id=4964 data-nosnippet>4964</a>  /// point. The shared tail of [`Document::insert_xml`] and of any caller that
+<a href=#4965 id=4965 data-nosnippet>4965</a>  /// obtained its nodes some other way (a script that parsed once and inserts
+<a href=#4966 id=4966 data-nosnippet>4966</a>  /// repeatedly, or that edited the parsed tree before inserting).
+<a href=#4967 id=4967 data-nosnippet>4967</a>  ///
+<a href=#4968 id=4968 data-nosnippet>4968</a>  /// The caller must keep whatever owns `nodes` alive across this call: libxml
+<a href=#4969 id=4969 data-nosnippet>4969</a>  /// nodes are pointers into their document. [`crate::common::xml::ParsedFragment`]
+<a href=#4970 id=4970 data-nosnippet>4970</a>  /// exists to make that ownership explicit rather than a comment.
+<a href=#4971 id=4971 data-nosnippet>4971</a>  </span><span class="kw">pub fn </span>insert_nodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, nodes: Vec&lt;Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#4972 id=4972 data-nosnippet>4972</a>    <span class="kw">let </span><span class="kw-2">mut </span>point = <span class="self">self</span>.get_node().clone();
+<a href=#4973 id=4973 data-nosnippet>4973</a>    <span class="self">self</span>.append_tree(<span class="kw-2">&amp;mut </span>point, nodes)
+<a href=#4974 id=4974 data-nosnippet>4974</a>  }
 <a href=#4975 id=4975 data-nosnippet>4975</a>}
-<a href=#4976 id=4976 data-nosnippet>4976</a><span class="kw">pub fn </span>can_contain_qsym(tag: SymStr, child: SymStr) -&gt; bool { model::can_contain_sym(tag, child) }
-<a href=#4977 id=4977 data-nosnippet>4977</a>
-<a href=#4978 id=4978 data-nosnippet>4978</a><span class="doccomment">/// Can an element with (qualified name) `tag` contain a `childtag` element indirectly?
-<a href=#4979 id=4979 data-nosnippet>4979</a>/// That is, by openning some number of autoOpen'able tags?
-<a href=#4980 id=4980 data-nosnippet>4980</a>/// And if so, return the tag to open.
-<a href=#4981 id=4981 data-nosnippet>4981</a></span><span class="kw">pub fn </span>can_contain_indirect(tag: SymStr, child: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
-<a href=#4982 id=4982 data-nosnippet>4982</a>  <span class="comment">// $tag = $model-&gt;getNodeQName($tag) if ref $tag;          // In case tag is a
-<a href=#4983 id=4983 data-nosnippet>4983</a>  // node. $child = $model-&gt;getNodeQName($child) if ref $child;    // In case
-<a href=#4984 id=4984 data-nosnippet>4984</a>  // child is a node.
-<a href=#4985 id=4985 data-nosnippet>4985</a>  </span><span class="kw">if </span>!state::has_indirect_model() {
-<a href=#4986 id=4986 data-nosnippet>4986</a>    <span class="kw">let </span>i_model = state::compute_indirect_model();
-<a href=#4987 id=4987 data-nosnippet>4987</a>    state::set_indirect_model(i_model);
-<a href=#4988 id=4988 data-nosnippet>4988</a>  }
-<a href=#4989 id=4989 data-nosnippet>4989</a>  state::get_indirect_model_relationship(tag, child)
-<a href=#4990 id=4990 data-nosnippet>4990</a>}
-<a href=#4991 id=4991 data-nosnippet>4991</a>
-<a href=#4992 id=4992 data-nosnippet>4992</a><span class="kw">pub fn </span>can_contain_node_somehow(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
-<a href=#4993 id=4993 data-nosnippet>4993</a>  <span class="kw">let </span>child_sym = arena::pin(child);
-<a href=#4994 id=4994 data-nosnippet>4994</a>  sym_can_contain_somehow(model::get_node_qname(node), child_sym)
+<a href=#4976 id=4976 data-nosnippet>4976</a>
+<a href=#4977 id=4977 data-nosnippet>4977</a><span class="comment">// Auxiliary
+<a href=#4978 id=4978 data-nosnippet>4978</a>
+<a href=#4979 id=4979 data-nosnippet>4979</a></span><span class="doccomment">/// Strip characters that may not appear in XML 1.0 content at all: NUL and
+<a href=#4980 id=4980 data-nosnippet>4980</a>/// the other C0 controls except TAB/LF/CR, plus the non-characters
+<a href=#4981 id=4981 data-nosnippet>4981</a>/// U+FFFE/U+FFFF. libxml's `CString`-based APIs *panic* on interior NULs
+<a href=#4982 id=4982 data-nosnippet>4982</a>/// (node.rs:639), and the rest produce non-well-formed output that downstream
+<a href=#4983 id=4983 data-nosnippet>4983</a>/// XML consumers reject. Single shared policy for the document sinks
+<a href=#4984 id=4984 data-nosnippet>4984</a>/// (`set_attribute`, `open_text_internal`, `open_math_text_internal`).
+<a href=#4985 id=4985 data-nosnippet>4985</a>/// Borrow-free in the (overwhelmingly common) clean case.
+<a href=#4986 id=4986 data-nosnippet>4986</a></span><span class="kw">fn </span>xml_sanitize(value: <span class="kw-2">&amp;</span>str) -&gt; Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+<a href=#4987 id=4987 data-nosnippet>4987</a>  <span class="kw">fn </span>invalid(c: char) -&gt; bool {
+<a href=#4988 id=4988 data-nosnippet>4988</a>    (c &lt; <span class="string">'\u{20}' </span>&amp;&amp; c != <span class="string">'\t' </span>&amp;&amp; c != <span class="string">'\n' </span>&amp;&amp; c != <span class="string">'\r'</span>) || c == <span class="string">'\u{FFFE}' </span>|| c == <span class="string">'\u{FFFF}'
+<a href=#4989 id=4989 data-nosnippet>4989</a>  </span>}
+<a href=#4990 id=4990 data-nosnippet>4990</a>  <span class="kw">if </span>value.chars().any(invalid) {
+<a href=#4991 id=4991 data-nosnippet>4991</a>    Cow::Owned(value.chars().filter(|c| !invalid(<span class="kw-2">*</span>c)).collect())
+<a href=#4992 id=4992 data-nosnippet>4992</a>  } <span class="kw">else </span>{
+<a href=#4993 id=4993 data-nosnippet>4993</a>    Cow::Borrowed(value)
+<a href=#4994 id=4994 data-nosnippet>4994</a>  }
 <a href=#4995 id=4995 data-nosnippet>4995</a>}
 <a href=#4996 id=4996 data-nosnippet>4996</a>
-<a href=#4997 id=4997 data-nosnippet>4997</a><span class="kw">pub fn </span>can_contain_somehow(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#4998 id=4998 data-nosnippet>4998</a>  <span class="kw">let </span>tag_sym = arena::pin(tag);
-<a href=#4999 id=4999 data-nosnippet>4999</a>  <span class="kw">let </span>child_sym = arena::pin(child);
-<a href=#5000 id=5000 data-nosnippet>5000</a>  sym_can_contain_somehow(tag_sym, child_sym).is_some()
-<a href=#5001 id=5001 data-nosnippet>5001</a>}
-<a href=#5002 id=5002 data-nosnippet>5002</a>
-<a href=#5003 id=5003 data-nosnippet>5003</a><span class="doccomment">/// The return type of this method is somewhat artisinal, as we have a three-way semantics:
-<a href=#5004 id=5004 data-nosnippet>5004</a>/// - `None`: There is no known structure that allows `child` as a descendant of `tag`
-<a href=#5005 id=5005 data-nosnippet>5005</a>/// - `Some(None)`: `child` is directly allowed inside `tag`
-<a href=#5006 id=5006 data-nosnippet>5006</a>/// - `Some(Some(inter_tag))`: `child` is allowed inside `inter_tag`, which is allowed in `tag`
-<a href=#5007 id=5007 data-nosnippet>5007</a>///
-<a href=#5008 id=5008 data-nosnippet>5008</a>/// This could also (maybe more naturally?) be represented with a custom 3-valued enum.
-<a href=#5009 id=5009 data-nosnippet>5009</a>/// That said, I think it may be wiser to refactor the method entirely, always requiring a `bool`
-<a href=#5010 id=5010 data-nosnippet>5010</a>/// check, followed by an explicit request for the `inner_tag` name, which can be `Option&lt;SymStr&gt;`.
-<a href=#5011 id=5011 data-nosnippet>5011</a></span><span class="kw">pub fn </span>sym_can_contain_somehow(tag: SymStr, child: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
-<a href=#5012 id=5012 data-nosnippet>5012</a>  <span class="kw">match </span>model::can_contain_sym(tag, child) {
-<a href=#5013 id=5013 data-nosnippet>5013</a>    <span class="bool-val">true </span>=&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>),
-<a href=#5014 id=5014 data-nosnippet>5014</a>    <span class="bool-val">false </span>=&gt; can_contain_indirect(tag, child).map(<span class="prelude-val">Some</span>),
-<a href=#5015 id=5015 data-nosnippet>5015</a>  }
-<a href=#5016 id=5016 data-nosnippet>5016</a>}
-<a href=#5017 id=5017 data-nosnippet>5017</a>
-<a href=#5018 id=5018 data-nosnippet>5018</a><span class="kw">pub fn </span>can_node_have_attribute(node: <span class="kw-2">&amp;</span>Node, attrib: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#5019 id=5019 data-nosnippet>5019</a>  <span class="kw">let </span>qname = model::get_node_qname(node);
-<a href=#5020 id=5020 data-nosnippet>5020</a>  model::can_have_attribute(qname, arena::pin(attrib))
-<a href=#5021 id=5021 data-nosnippet>5021</a>}
-<a href=#5022 id=5022 data-nosnippet>5022</a><span class="kw">pub fn </span>can_have_attribute(tag: <span class="kw-2">&amp;</span>str, attrib: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#5023 id=5023 data-nosnippet>5023</a>  model::can_have_attribute(arena::pin(tag), arena::pin(attrib))
+<a href=#4997 id=4997 data-nosnippet>4997</a><span class="kw">fn </span>serialize_string(string: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#4998 id=4998 data-nosnippet>4998</a>  <span class="comment">// Basic entities
+<a href=#4999 id=4999 data-nosnippet>4999</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>serialized = string.replace(<span class="string">'&amp;'</span>, <span class="string">"&amp;amp;"</span>);
+<a href=#5000 id=5000 data-nosnippet>5000</a>  serialized = serialized.replace(<span class="string">'&gt;'</span>, <span class="string">"&amp;gt;"</span>);
+<a href=#5001 id=5001 data-nosnippet>5001</a>  serialized = serialized.replace(<span class="string">'&lt;'</span>, <span class="string">"&amp;lt;"</span>);
+<a href=#5002 id=5002 data-nosnippet>5002</a>  serialized
+<a href=#5003 id=5003 data-nosnippet>5003</a>}
+<a href=#5004 id=5004 data-nosnippet>5004</a>
+<a href=#5005 id=5005 data-nosnippet>5005</a><span class="kw">fn </span>serialize_attr(string: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#5006 id=5006 data-nosnippet>5006</a>  <span class="kw">let </span><span class="kw-2">mut </span>serialized = serialize_string(string);
+<a href=#5007 id=5007 data-nosnippet>5007</a>  <span class="comment">// And escape any remaining special code points
+<a href=#5008 id=5008 data-nosnippet>5008</a>  </span>serialized = serialized.replace(<span class="string">'\"'</span>, <span class="string">"&amp;quot;"</span>);
+<a href=#5009 id=5009 data-nosnippet>5009</a>  serialized = serialized.replace(<span class="string">'\n'</span>, <span class="string">"&amp;#10;"</span>);
+<a href=#5010 id=5010 data-nosnippet>5010</a>  serialized = serialized.replace(<span class="string">'\t'</span>, <span class="string">"&amp;#9;"</span>);
+<a href=#5011 id=5011 data-nosnippet>5011</a>  serialized
+<a href=#5012 id=5012 data-nosnippet>5012</a>}
+<a href=#5013 id=5013 data-nosnippet>5013</a>
+<a href=#5014 id=5014 data-nosnippet>5014</a><span class="kw">pub trait </span>IntoVDQS {
+<a href=#5015 id=5015 data-nosnippet>5015</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt;
+<a href=#5016 id=5016 data-nosnippet>5016</a>  <span class="kw">where </span><span class="self">Self</span>: Sized;
+<a href=#5017 id=5017 data-nosnippet>5017</a>}
+<a href=#5018 id=5018 data-nosnippet>5018</a><span class="kw">impl </span>IntoVDQS <span class="kw">for </span>SymStr {
+<a href=#5019 id=5019 data-nosnippet>5019</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; {
+<a href=#5020 id=5020 data-nosnippet>5020</a>    <span class="kw">let </span><span class="kw-2">mut </span>vdq = VecDeque::new();
+<a href=#5021 id=5021 data-nosnippet>5021</a>    vdq.push_front(<span class="self">self</span>);
+<a href=#5022 id=5022 data-nosnippet>5022</a>    vdq
+<a href=#5023 id=5023 data-nosnippet>5023</a>  }
 <a href=#5024 id=5024 data-nosnippet>5024</a>}
-<a href=#5025 id=5025 data-nosnippet>5025</a><span class="kw">pub fn </span>sym_can_have_attribute(tag: SymStr, attrib: SymStr) -&gt; bool {
-<a href=#5026 id=5026 data-nosnippet>5026</a>  model::can_have_attribute(tag, attrib)
-<a href=#5027 id=5027 data-nosnippet>5027</a>}
-<a href=#5028 id=5028 data-nosnippet>5028</a>
-<a href=#5029 id=5029 data-nosnippet>5029</a><span class="comment">// Dirty little secrets:
-<a href=#5030 id=5030 data-nosnippet>5030</a>//  You can generically allow an element to autoClose using Tag.
-<a href=#5031 id=5031 data-nosnippet>5031</a>// OR you can indicate a specific node can autoClose, or forbid it, using
-<a href=#5032 id=5032 data-nosnippet>5032</a>// the _autoclose or _noautoclose attributes!
-<a href=#5033 id=5033 data-nosnippet>5033</a></span><span class="kw">pub fn </span>can_auto_close(node: <span class="kw-2">&amp;</span>Node) -&gt; bool {
-<a href=#5034 id=5034 data-nosnippet>5034</a>  <span class="comment">// text or comments auto close
-<a href=#5035 id=5035 data-nosnippet>5035</a>  // otherwise must be element
-<a href=#5036 id=5036 data-nosnippet>5036</a>  // without _noautoclose
-<a href=#5037 id=5037 data-nosnippet>5037</a>  // and either with _autoclose
-<a href=#5038 id=5038 data-nosnippet>5038</a>  // OR it has autoClose set on tag properties
-<a href=#5039 id=5039 data-nosnippet>5039</a>  </span><span class="kw">match </span>node.get_type() {
-<a href=#5040 id=5040 data-nosnippet>5040</a>    <span class="prelude-val">Some</span>(NodeType::TextNode) | <span class="prelude-val">Some</span>(NodeType::CommentNode) =&gt; <span class="bool-val">true</span>,
-<a href=#5041 id=5041 data-nosnippet>5041</a>    <span class="prelude-val">Some</span>(NodeType::ElementNode) <span class="kw">if </span>!node.has_attribute(<span class="string">"_noautoclose"</span>) =&gt; {
-<a href=#5042 id=5042 data-nosnippet>5042</a>      <span class="kw">if </span>node.has_attribute(<span class="string">"_autoclose"</span>) {
-<a href=#5043 id=5043 data-nosnippet>5043</a>        <span class="bool-val">true
-<a href=#5044 id=5044 data-nosnippet>5044</a>      </span>} <span class="kw">else </span>{
-<a href=#5045 id=5045 data-nosnippet>5045</a>        state::with_tag_property(get_node_qname(node), |props_opt| {
-<a href=#5046 id=5046 data-nosnippet>5046</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(props) = props_opt {
-<a href=#5047 id=5047 data-nosnippet>5047</a>            props.auto_close.unwrap_or(<span class="bool-val">false</span>)
-<a href=#5048 id=5048 data-nosnippet>5048</a>          } <span class="kw">else </span>{
-<a href=#5049 id=5049 data-nosnippet>5049</a>            <span class="bool-val">false
-<a href=#5050 id=5050 data-nosnippet>5050</a>          </span>}
-<a href=#5051 id=5051 data-nosnippet>5051</a>        })
-<a href=#5052 id=5052 data-nosnippet>5052</a>      }
-<a href=#5053 id=5053 data-nosnippet>5053</a>    },
-<a href=#5054 id=5054 data-nosnippet>5054</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#5055 id=5055 data-nosnippet>5055</a>  }
-<a href=#5056 id=5056 data-nosnippet>5056</a>}
-<a href=#5057 id=5057 data-nosnippet>5057</a><span class="doccomment">/// Get the node's qualified name in standard form.
-<a href=#5058 id=5058 data-nosnippet>5058</a>///
-<a href=#5059 id=5059 data-nosnippet>5059</a>/// Ie. using the registered prefix for that namespace.
-<a href=#5060 id=5060 data-nosnippet>5060</a>/// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
-<a href=#5061 id=5061 data-nosnippet>5061</a>/// NOTE: Should Deprecate! (use model)
-<a href=#5062 id=5062 data-nosnippet>5062</a></span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr { model::get_node_qname(node) }
-<a href=#5063 id=5063 data-nosnippet>5063</a><span class="kw">pub fn </span>with_node_qname&lt;R, FnR&gt;(node: <span class="kw-2">&amp;</span>Node, caller: FnR) -&gt; R
-<a href=#5064 id=5064 data-nosnippet>5064</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
-<a href=#5065 id=5065 data-nosnippet>5065</a>  model::with_node_qname(node, caller)
-<a href=#5066 id=5066 data-nosnippet>5066</a>}
+<a href=#5025 id=5025 data-nosnippet>5025</a><span class="kw">impl </span>IntoVDQS <span class="kw">for </span><span class="kw-2">&amp;</span>str {
+<a href=#5026 id=5026 data-nosnippet>5026</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; {
+<a href=#5027 id=5027 data-nosnippet>5027</a>    <span class="kw">let </span><span class="kw-2">mut </span>vdq = VecDeque::new();
+<a href=#5028 id=5028 data-nosnippet>5028</a>    vdq.push_front(arena::pin(<span class="self">self</span>));
+<a href=#5029 id=5029 data-nosnippet>5029</a>    vdq
+<a href=#5030 id=5030 data-nosnippet>5030</a>  }
+<a href=#5031 id=5031 data-nosnippet>5031</a>}
+<a href=#5032 id=5032 data-nosnippet>5032</a>
+<a href=#5033 id=5033 data-nosnippet>5033</a><span class="kw">impl </span>IntoVDQS <span class="kw">for </span>VecDeque&lt;SymStr&gt; {
+<a href=#5034 id=5034 data-nosnippet>5034</a>  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; { <span class="self">self </span>}
+<a href=#5035 id=5035 data-nosnippet>5035</a>}
+<a href=#5036 id=5036 data-nosnippet>5036</a>
+<a href=#5037 id=5037 data-nosnippet>5037</a><span class="comment">// containment checks are package-level (and maybe can be moved in a new submodule?)
+<a href=#5038 id=5038 data-nosnippet>5038</a>
+<a href=#5039 id=5039 data-nosnippet>5039</a></span><span class="kw">pub fn </span>can_contain(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#5040 id=5040 data-nosnippet>5040</a>  <span class="kw">let </span>tag = model::get_node_qname(node);
+<a href=#5041 id=5041 data-nosnippet>5041</a>  model::can_contain_sym(tag, arena::pin(child))
+<a href=#5042 id=5042 data-nosnippet>5042</a>}
+<a href=#5043 id=5043 data-nosnippet>5043</a>
+<a href=#5044 id=5044 data-nosnippet>5044</a><span class="kw">pub fn </span>can_contain_node(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>Node) -&gt; bool {
+<a href=#5045 id=5045 data-nosnippet>5045</a>  <span class="kw">let </span>tag = model::get_node_qname(node);
+<a href=#5046 id=5046 data-nosnippet>5046</a>  <span class="kw">let </span>child_tag = model::get_node_qname(child);
+<a href=#5047 id=5047 data-nosnippet>5047</a>  model::can_contain_sym(tag, child_tag)
+<a href=#5048 id=5048 data-nosnippet>5048</a>}
+<a href=#5049 id=5049 data-nosnippet>5049</a>
+<a href=#5050 id=5050 data-nosnippet>5050</a><span class="kw">pub fn </span>can_contain_qname(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool { model::can_contain(tag, child) }
+<a href=#5051 id=5051 data-nosnippet>5051</a>
+<a href=#5052 id=5052 data-nosnippet>5052</a><span class="kw">pub fn </span>node_can_contain_sym(node: <span class="kw-2">&amp;</span>Node, child: SymStr) -&gt; bool {
+<a href=#5053 id=5053 data-nosnippet>5053</a>  <span class="kw">let </span>tag = model::get_node_qname(node);
+<a href=#5054 id=5054 data-nosnippet>5054</a>  model::can_contain_sym(tag, child)
+<a href=#5055 id=5055 data-nosnippet>5055</a>}
+<a href=#5056 id=5056 data-nosnippet>5056</a><span class="kw">pub fn </span>can_contain_qsym(tag: SymStr, child: SymStr) -&gt; bool { model::can_contain_sym(tag, child) }
+<a href=#5057 id=5057 data-nosnippet>5057</a>
+<a href=#5058 id=5058 data-nosnippet>5058</a><span class="doccomment">/// Can an element with (qualified name) `tag` contain a `childtag` element indirectly?
+<a href=#5059 id=5059 data-nosnippet>5059</a>/// That is, by openning some number of autoOpen'able tags?
+<a href=#5060 id=5060 data-nosnippet>5060</a>/// And if so, return the tag to open.
+<a href=#5061 id=5061 data-nosnippet>5061</a></span><span class="kw">pub fn </span>can_contain_indirect(tag: SymStr, child: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
+<a href=#5062 id=5062 data-nosnippet>5062</a>  <span class="comment">// $tag = $model-&gt;getNodeQName($tag) if ref $tag;          // In case tag is a
+<a href=#5063 id=5063 data-nosnippet>5063</a>  // node. $child = $model-&gt;getNodeQName($child) if ref $child;    // In case
+<a href=#5064 id=5064 data-nosnippet>5064</a>  // child is a node.
+<a href=#5065 id=5065 data-nosnippet>5065</a>  </span><span class="kw">if </span>!state::has_indirect_model() {
+<a href=#5066 id=5066 data-nosnippet>5066</a>    <span class="kw">let </span>i_model = state::compute_indirect_model();
+<a href=#5067 id=5067 data-nosnippet>5067</a>    state::set_indirect_model(i_model);
+<a href=#5068 id=5068 data-nosnippet>5068</a>  }
+<a href=#5069 id=5069 data-nosnippet>5069</a>  state::get_indirect_model_relationship(tag, child)
+<a href=#5070 id=5070 data-nosnippet>5070</a>}
+<a href=#5071 id=5071 data-nosnippet>5071</a>
+<a href=#5072 id=5072 data-nosnippet>5072</a><span class="kw">pub fn </span>can_contain_node_somehow(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
+<a href=#5073 id=5073 data-nosnippet>5073</a>  <span class="kw">let </span>child_sym = arena::pin(child);
+<a href=#5074 id=5074 data-nosnippet>5074</a>  sym_can_contain_somehow(model::get_node_qname(node), child_sym)
+<a href=#5075 id=5075 data-nosnippet>5075</a>}
+<a href=#5076 id=5076 data-nosnippet>5076</a>
+<a href=#5077 id=5077 data-nosnippet>5077</a><span class="kw">pub fn </span>can_contain_somehow(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#5078 id=5078 data-nosnippet>5078</a>  <span class="kw">let </span>tag_sym = arena::pin(tag);
+<a href=#5079 id=5079 data-nosnippet>5079</a>  <span class="kw">let </span>child_sym = arena::pin(child);
+<a href=#5080 id=5080 data-nosnippet>5080</a>  sym_can_contain_somehow(tag_sym, child_sym).is_some()
+<a href=#5081 id=5081 data-nosnippet>5081</a>}
+<a href=#5082 id=5082 data-nosnippet>5082</a>
+<a href=#5083 id=5083 data-nosnippet>5083</a><span class="doccomment">/// The return type of this method is somewhat artisinal, as we have a three-way semantics:
+<a href=#5084 id=5084 data-nosnippet>5084</a>/// - `None`: There is no known structure that allows `child` as a descendant of `tag`
+<a href=#5085 id=5085 data-nosnippet>5085</a>/// - `Some(None)`: `child` is directly allowed inside `tag`
+<a href=#5086 id=5086 data-nosnippet>5086</a>/// - `Some(Some(inter_tag))`: `child` is allowed inside `inter_tag`, which is allowed in `tag`
+<a href=#5087 id=5087 data-nosnippet>5087</a>///
+<a href=#5088 id=5088 data-nosnippet>5088</a>/// This could also (maybe more naturally?) be represented with a custom 3-valued enum.
+<a href=#5089 id=5089 data-nosnippet>5089</a>/// That said, I think it may be wiser to refactor the method entirely, always requiring a `bool`
+<a href=#5090 id=5090 data-nosnippet>5090</a>/// check, followed by an explicit request for the `inner_tag` name, which can be `Option&lt;SymStr&gt;`.
+<a href=#5091 id=5091 data-nosnippet>5091</a></span><span class="kw">pub fn </span>sym_can_contain_somehow(tag: SymStr, child: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
+<a href=#5092 id=5092 data-nosnippet>5092</a>  <span class="kw">match </span>model::can_contain_sym(tag, child) {
+<a href=#5093 id=5093 data-nosnippet>5093</a>    <span class="bool-val">true </span>=&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>),
+<a href=#5094 id=5094 data-nosnippet>5094</a>    <span class="bool-val">false </span>=&gt; can_contain_indirect(tag, child).map(<span class="prelude-val">Some</span>),
+<a href=#5095 id=5095 data-nosnippet>5095</a>  }
+<a href=#5096 id=5096 data-nosnippet>5096</a>}
+<a href=#5097 id=5097 data-nosnippet>5097</a>
+<a href=#5098 id=5098 data-nosnippet>5098</a><span class="kw">pub fn </span>can_node_have_attribute(node: <span class="kw-2">&amp;</span>Node, attrib: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#5099 id=5099 data-nosnippet>5099</a>  <span class="kw">let </span>qname = model::get_node_qname(node);
+<a href=#5100 id=5100 data-nosnippet>5100</a>  model::can_have_attribute(qname, arena::pin(attrib))
+<a href=#5101 id=5101 data-nosnippet>5101</a>}
+<a href=#5102 id=5102 data-nosnippet>5102</a><span class="kw">pub fn </span>can_have_attribute(tag: <span class="kw-2">&amp;</span>str, attrib: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#5103 id=5103 data-nosnippet>5103</a>  model::can_have_attribute(arena::pin(tag), arena::pin(attrib))
+<a href=#5104 id=5104 data-nosnippet>5104</a>}
+<a href=#5105 id=5105 data-nosnippet>5105</a><span class="kw">pub fn </span>sym_can_have_attribute(tag: SymStr, attrib: SymStr) -&gt; bool {
+<a href=#5106 id=5106 data-nosnippet>5106</a>  model::can_have_attribute(tag, attrib)
+<a href=#5107 id=5107 data-nosnippet>5107</a>}
+<a href=#5108 id=5108 data-nosnippet>5108</a>
+<a href=#5109 id=5109 data-nosnippet>5109</a><span class="comment">// Dirty little secrets:
+<a href=#5110 id=5110 data-nosnippet>5110</a>//  You can generically allow an element to autoClose using Tag.
+<a href=#5111 id=5111 data-nosnippet>5111</a>// OR you can indicate a specific node can autoClose, or forbid it, using
+<a href=#5112 id=5112 data-nosnippet>5112</a>// the _autoclose or _noautoclose attributes!
+<a href=#5113 id=5113 data-nosnippet>5113</a></span><span class="kw">pub fn </span>can_auto_close(node: <span class="kw-2">&amp;</span>Node) -&gt; bool {
+<a href=#5114 id=5114 data-nosnippet>5114</a>  <span class="comment">// text or comments auto close
+<a href=#5115 id=5115 data-nosnippet>5115</a>  // otherwise must be element
+<a href=#5116 id=5116 data-nosnippet>5116</a>  // without _noautoclose
+<a href=#5117 id=5117 data-nosnippet>5117</a>  // and either with _autoclose
+<a href=#5118 id=5118 data-nosnippet>5118</a>  // OR it has autoClose set on tag properties
+<a href=#5119 id=5119 data-nosnippet>5119</a>  </span><span class="kw">match </span>node.get_type() {
+<a href=#5120 id=5120 data-nosnippet>5120</a>    <span class="prelude-val">Some</span>(NodeType::TextNode) | <span class="prelude-val">Some</span>(NodeType::CommentNode) =&gt; <span class="bool-val">true</span>,
+<a href=#5121 id=5121 data-nosnippet>5121</a>    <span class="prelude-val">Some</span>(NodeType::ElementNode) <span class="kw">if </span>!node.has_attribute(<span class="string">"_noautoclose"</span>) =&gt; {
+<a href=#5122 id=5122 data-nosnippet>5122</a>      <span class="kw">if </span>node.has_attribute(<span class="string">"_autoclose"</span>) {
+<a href=#5123 id=5123 data-nosnippet>5123</a>        <span class="bool-val">true
+<a href=#5124 id=5124 data-nosnippet>5124</a>      </span>} <span class="kw">else </span>{
+<a href=#5125 id=5125 data-nosnippet>5125</a>        state::with_tag_property(get_node_qname(node), |props_opt| {
+<a href=#5126 id=5126 data-nosnippet>5126</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(props) = props_opt {
+<a href=#5127 id=5127 data-nosnippet>5127</a>            props.auto_close.unwrap_or(<span class="bool-val">false</span>)
+<a href=#5128 id=5128 data-nosnippet>5128</a>          } <span class="kw">else </span>{
+<a href=#5129 id=5129 data-nosnippet>5129</a>            <span class="bool-val">false
+<a href=#5130 id=5130 data-nosnippet>5130</a>          </span>}
+<a href=#5131 id=5131 data-nosnippet>5131</a>        })
+<a href=#5132 id=5132 data-nosnippet>5132</a>      }
+<a href=#5133 id=5133 data-nosnippet>5133</a>    },
+<a href=#5134 id=5134 data-nosnippet>5134</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#5135 id=5135 data-nosnippet>5135</a>  }
+<a href=#5136 id=5136 data-nosnippet>5136</a>}
+<a href=#5137 id=5137 data-nosnippet>5137</a><span class="doccomment">/// Get the node's qualified name in standard form.
+<a href=#5138 id=5138 data-nosnippet>5138</a>///
+<a href=#5139 id=5139 data-nosnippet>5139</a>/// Ie. using the registered prefix for that namespace.
+<a href=#5140 id=5140 data-nosnippet>5140</a>/// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
+<a href=#5141 id=5141 data-nosnippet>5141</a>/// NOTE: Should Deprecate! (use model)
+<a href=#5142 id=5142 data-nosnippet>5142</a></span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr { model::get_node_qname(node) }
+<a href=#5143 id=5143 data-nosnippet>5143</a><span class="kw">pub fn </span>with_node_qname&lt;R, FnR&gt;(node: <span class="kw-2">&amp;</span>Node, caller: FnR) -&gt; R
+<a href=#5144 id=5144 data-nosnippet>5144</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
+<a href=#5145 id=5145 data-nosnippet>5145</a>  model::with_node_qname(node, caller)
+<a href=#5146 id=5146 data-nosnippet>5146</a>}
 </code></pre></div></section></main></body></html>
