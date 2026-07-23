@@ -710,7 +710,7 @@ pub(super) fn make_engine() -> Engine {
   });
   engine.register_fn("prevSibling", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_prev_sibling() {
-      Some(p) => Dynamic::from(NodeProxy(p)),
+      Some(p) => Dynamic::from(n.derived(p)),
       None => Dynamic::UNIT,
     }
   });
@@ -736,10 +736,59 @@ pub(super) fn make_engine() -> Engine {
   });
   engine.register_fn("parent", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_parent() {
-      Some(p) => Dynamic::from(NodeProxy(p)),
+      Some(p) => Dynamic::from(n.derived(p)),
       None => Dynamic::UNIT,
     }
   });
+
+  // ── node traversal / editing ──
+  // The extension point for XML manipulation: every method below is a single
+  // `register_fn` over `NodeProxy`, and works identically on a node inside the
+  // conversion's tree (rewrite/matcher callbacks) and on one returned by
+  // `ParseXML`, because both are the same type. Adding a capability is one entry
+  // here; nothing else has to learn about it. Nodes reached FROM a node use
+  // `derived`, so a parsed tree keeps its document alive however deep a script
+  // walks.
+  engine.register_fn("name", |n: &mut NodeProxy| -> String { n.0.get_name() });
+  engine.register_fn("children", |n: &mut NodeProxy| -> rhai::Array {
+    n.0
+      .get_child_nodes()
+      .into_iter()
+      .map(|c| Dynamic::from(n.derived(c)))
+      .collect()
+  });
+  engine.register_fn("firstChild", |n: &mut NodeProxy| -> Dynamic {
+    match n.0.get_first_child() {
+      Some(c) => Dynamic::from(n.derived(c)),
+      None => Dynamic::UNIT,
+    }
+  });
+  engine.register_fn("nextSibling", |n: &mut NodeProxy| -> Dynamic {
+    match n.0.get_next_sibling() {
+      Some(s) => Dynamic::from(n.derived(s)),
+      None => Dynamic::UNIT,
+    }
+  });
+  engine.register_fn("hasAttribute", |n: &mut NodeProxy, k: &str| -> bool {
+    n.0.get_attribute(k).is_some()
+  });
+  engine.register_fn("removeAttribute", |n: &mut NodeProxy, k: &str| {
+    let _ = n.0.remove_attribute(k);
+  });
+  // The node (and its subtree) serialized back to markup — the inverse of
+  // `ParseXML`, so a script can inspect or log what it is about to insert.
+  // libxml serializes a node THROUGH its document, so use the one this handle
+  // owns when it has one (a `ParseXML` node), and otherwise the live conversion
+  // document that an in-tree node belongs to.
+  engine.register_fn(
+    "toString",
+    |n: &mut NodeProxy| -> std::result::Result<String, Box<EvalAltResult>> {
+      match &n.1 {
+        Some(owned) => Ok(owned.node_to_string(&n.0)),
+        None => with_doc(|doc, _props| Ok(doc.document.node_to_string(&n.0))),
+      }
+    },
+  );
 
   // DefMathLigature, matcher-closure form (`matcher => sub[document,node]`):
   // the body inspects the node (and its prevSibling chain) and returns UNIT
@@ -1081,6 +1130,10 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // ── XML manipulation surface ──
+  // Three shapes, one operation: parse-and-insert in a single call, or insert
+  // nodes a script already holds (from `ParseXML`, possibly after editing them).
+  //
   // insertXML(markup) — parse an XML/(X)HTML string and splice the parsed subtree
   // in at the current point (Perl BookML's `\bmlRawHTML`: parse_string +
   // appendTree). Distinct from `absorbString`, which inserts the argument as
@@ -1092,6 +1145,54 @@ pub(super) fn make_engine() -> Engine {
         doc.insert_xml(s).map_err(rhai_err)?;
         Ok(())
       })
+    },
+  );
+  // insertXML(node) — insert one node a script is holding.
+  engine.register_fn(
+    "insertXML",
+    |_d: &mut DocProxy, n: NodeProxy| -> std::result::Result<(), Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        doc.insert_nodes(vec![n.0.clone()]).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
+  // insertXML(nodes) — insert an array of nodes, i.e. what `ParseXML` returns.
+  // Non-node entries are ignored rather than aborting the binding.
+  engine.register_fn(
+    "insertXML",
+    |_d: &mut DocProxy, nodes: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
+      let owned: Vec<_> = nodes
+        .into_iter()
+        .filter_map(|d| d.try_cast::<NodeProxy>())
+        .collect();
+      with_doc(move |doc, _props| {
+        let raw = owned.iter().map(|n| n.0.clone()).collect();
+        doc.insert_nodes(raw).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
+  // ParseXML(markup) -> [Node] — the parser exposed as its own primitive (#350),
+  // so a script can inspect or edit markup BEFORE it reaches the document. Each
+  // returned node OWNS the throwaway document it was parsed into (see
+  // `NodeProxy`), so it is safe to hold, walk and mutate for as long as the
+  // script keeps it — unlike an in-tree node from a rewrite callback. Returns an
+  // array because a chunk may legitimately be a fragment of several siblings.
+  engine.register_fn(
+    "ParseXML",
+    |markup: &str| -> std::result::Result<rhai::Array, Box<EvalAltResult>> {
+      let parsed = latexml_core::common::xml::parse_fragment(markup).map_err(|e| {
+        Box::<EvalAltResult>::from(format!("ParseXML: could not parse XML markup: {e}"))
+      })?;
+      let doc = parsed.document().clone();
+      Ok(
+        parsed
+          .nodes()
+          .into_iter()
+          .map(|n| Dynamic::from(NodeProxy::owning(n, doc.clone())))
+          .collect(),
+      )
     },
   );
   engine.register_fn(

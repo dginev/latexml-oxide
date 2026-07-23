@@ -287,8 +287,35 @@ struct DocProxy;
 /// resolve their target through the active-context stack on each call and carry
 /// no pointer — `NodeProxy` is the only proxy holding a raw tree handle. Use it
 /// within the body; never retain it across calls or past `unlink()`.
+/// A node may instead OWN its document, which lifts that restriction for parsed
+/// markup: `ParseXML` builds its nodes in a throwaway document, and since libxml's
+/// `Document` is refcounted, holding a clone here keeps the node valid for exactly
+/// as long as the script keeps the handle. One type serves both provenances on
+/// purpose — every node method then works on in-tree and parsed nodes alike, and a
+/// new one is a single registration rather than a parallel API.
 #[derive(Clone)]
-pub(crate) struct NodeProxy(pub(crate) libxml::tree::Node);
+pub(crate) struct NodeProxy(
+  pub(crate) libxml::tree::Node,
+  /// `Some` when this handle keeps its own (parsed) document alive; `None` for a
+  /// node inside the conversion's document, whose lifetime the caller guarantees.
+  pub(crate) Option<libxml::tree::Document>,
+);
+
+impl NodeProxy {
+  /// A node inside the live conversion document — valid only for the body that
+  /// received it (see the caveat above).
+  pub(crate) fn borrowed(node: libxml::tree::Node) -> Self { Self(node, None) }
+
+  /// A node whose owning document this handle keeps alive.
+  pub(crate) fn owning(node: libxml::tree::Node, doc: libxml::tree::Document) -> Self {
+    Self(node, Some(doc))
+  }
+
+  /// A node reached FROM this one (parent, sibling, child): it lives in the same
+  /// document, so it must inherit the same provenance — otherwise walking a
+  /// parsed tree would hand back nodes that no longer keep their owner alive.
+  pub(crate) fn derived(&self, node: libxml::tree::Node) -> Self { Self(node, self.1.clone()) }
+}
 
 /// A Clone-able builder mirroring `std::process::Command`, exposed to Rhai as
 /// `Command` (#318) so a trusted binding can shell out to `latexmk`/`dvisvgm`

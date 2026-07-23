@@ -258,6 +258,22 @@ const SAMPLE: &str = r##"
     document.insertXML("<p xmlns=\"http://www.w3.org/1999/xhtml\" class=\"lead\">hi <b>bold</b> x</p>");
     document.closeElement("ltx:rawhtml");
   });
+
+  // The XML-manipulation foundation, exercised as a script author would: parse a
+  // FRAGMENT (two sibling roots — rejected by Perl's single-node parseChunk, an
+  // intentional divergence), walk and EDIT the parsed nodes while they are still
+  // detached, then insert them. Proves the parsed nodes survive being held across
+  // statements (they own their document), that node methods work on them exactly
+  // as on in-tree nodes, and that edits made before insertion reach the document.
+  DefConstructor("\\rhfragment", |document| {
+    let nodes = ParseXML("<p xmlns=\"http://www.w3.org/1999/xhtml\">one</p><p xmlns=\"http://www.w3.org/1999/xhtml\">two</p>");
+    for n in nodes {
+      n.setAttribute("class", "frag-" + n.firstChild().content());
+    }
+    document.openElement("ltx:rawhtml");
+    document.insertXML(nodes);
+    document.closeElement("ltx:rawhtml");
+  });
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -289,7 +305,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
     "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} \\rwvictim{OLD} ",
-    "\\rhrawhtml ",
+    "\\rhrawhtml \\rhfragment ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -522,6 +538,16 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("http://www.w3.org/1999/xhtml") || xml.contains("xhtml:p"),
     "insertXML lost the snippet's xhtml namespace (mislabelled as ltx?); xml=\n{xml}"
+  );
+  // The XML-manipulation foundation (#350): `\rhfragment` parsed a two-root
+  // FRAGMENT — which Perl's single-node parseChunk rejects — held the parsed
+  // nodes across statements (they own their document), EDITED each one while it
+  // was still detached, and inserted them. Both `class="frag-*"` values prove all
+  // three: the fragment survived whole (two nodes, not one), the nodes were still
+  // valid when written to, and the pre-insertion edits reached the document.
+  assert!(
+    xml.contains("frag-one") && xml.contains("frag-two"),
+    "ParseXML fragment round-trip failed (both edited siblings should be present); xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

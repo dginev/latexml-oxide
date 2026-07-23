@@ -50,6 +50,81 @@ pub fn parse_chunk(markup: &str) -> std::result::Result<Document, String> {
     .map_err(|e| format!("{e:?}"))
 }
 
+/// The element we parse a fragment inside of. Never enters the document — only
+/// its children are handed back — so the name just has to not collide.
+const FRAGMENT_WRAPPER: &str = "_lxfragment";
+
+/// Parse a markup chunk that may be a document FRAGMENT — several sibling nodes,
+/// or bare text — and return its owning document together with the top-level
+/// nodes to insert. Returning the two together is deliberate: libxml `Node`s are
+/// handles into the document that owns them, so the caller must keep the
+/// [`Document`] alive for exactly as long as it uses the nodes.
+///
+/// **Intentional divergence from Perl** (OXIDIZED_DESIGN #66). Perl's
+/// `Common::XML::Parser::parseChunk` is explicitly single-node — its own comment
+/// reads *"This expects only a single node, not a document fragment"* — and
+/// LaTeXML ships no fragment parser at all, so a Perl binding has to wrap its own
+/// markup. Yet `Document::appendTree` already has an `XML_DOCUMENT_FRAG_NODE`
+/// branch (ported at `document.rs`): the INSERTION half understands fragments
+/// perfectly well, Perl simply never feeds it one. Accepting them here inserts
+/// more of the author's content correctly and can never emit fewer errors than
+/// Perl, so it is a safe extension rather than a parity break.
+///
+/// Strategy: parse as-is FIRST, so every single-root chunk — including one led by
+/// an XML declaration, which may not be preceded by anything — behaves exactly as
+/// [`parse_chunk`] always did; only if that fails do we retry inside a throwaway
+/// wrapper. Recovery stays OFF in both attempts, so genuinely malformed markup
+/// (`<p>unclosed`, a bare `&`, an undeclared `&nbsp;`) is still rejected rather
+/// than silently salvaged.
+///
+/// Namespaces are the caller's business, as in Perl: nodes that declare none land
+/// in no namespace. Markup destined for `<ltx:rawhtml>` must therefore carry its
+/// own `xmlns` (or an `xhtml:` prefix), exactly as it must in a Perl binding.
+pub fn parse_fragment(markup: &str) -> std::result::Result<ParsedFragment, String> {
+  // 1. Single well-formed root — the plain `parseChunk` case, unchanged.
+  if let Ok(doc) = parse_chunk(markup)
+    && let Some(root) = doc.get_root_element()
+  {
+    return Ok(ParsedFragment { doc, nodes: vec![root] });
+  }
+  // 2. Otherwise treat it as a fragment: parse inside a wrapper and hand back the
+  //    wrapper's children. The wrapper itself is never inserted.
+  let doc = parse_chunk(&format!(
+    "<{FRAGMENT_WRAPPER}>{markup}</{FRAGMENT_WRAPPER}>"
+  ))?;
+  let root = doc
+    .get_root_element()
+    .ok_or_else(|| String::from("markup parsed to an empty document"))?;
+  let nodes = root.get_child_nodes();
+  Ok(ParsedFragment { doc, nodes })
+}
+
+/// A parsed markup chunk, bundled with the throwaway document that owns it.
+///
+/// The pairing is the safety property, not a convenience: a libxml `Node` is a
+/// raw pointer into its owning document, so a node that outlives its owner is a
+/// dangling FFI pointer — a failure mode this project has already taken SIGSEGVs
+/// from, and one that bypasses `catch_unwind`. `Document` is refcounted and
+/// `Clone`, so holding this handle keeps [`ParsedFragment::nodes`] valid for
+/// exactly as long as the handle lives. That is what makes it safe to hand a
+/// parsed chunk to an untrusted `.rhai` script, which controls its own lifetimes.
+#[derive(Clone)]
+pub struct ParsedFragment {
+  /// Kept solely to own the nodes below; refcounted, so cloning is cheap.
+  doc:   Document,
+  nodes: Vec<Node>,
+}
+
+impl ParsedFragment {
+  /// The top-level parsed nodes, ready to hand to `Document::append_tree`.
+  pub fn nodes(&self) -> Vec<Node> { self.nodes.clone() }
+  /// How many top-level nodes the chunk parsed to (>1 means it was a fragment).
+  pub fn len(&self) -> usize { self.nodes.len() }
+  pub fn is_empty(&self) -> bool { self.nodes.is_empty() }
+  /// The owning document, for callers that need to keep it alive explicitly.
+  pub fn document(&self) -> &Document { &self.doc }
+}
+
 pub struct XPath {
   context: Context,
 }
@@ -350,5 +425,68 @@ mod parse_chunk_tests {
     assert!(parse_chunk("<p>a&nbsp;b</p>").is_err());
     // The numeric form is fine, and is the portable way to write it.
     assert!(parse_chunk("<p>a&#160;b</p>").is_ok());
+  }
+}
+
+#[cfg(test)]
+mod parse_fragment_tests {
+  //! `parse_fragment` accepts what `parse_chunk` cannot (OXIDIZED_DESIGN #66)
+  //! WITHOUT loosening the reject-don't-salvage rule that protects author markup.
+  use super::*;
+
+  #[test]
+  fn a_single_root_still_yields_exactly_one_node() {
+    let f = parse_fragment(r#"<p xmlns="http://www.w3.org/1999/xhtml">hi</p>"#).unwrap();
+    assert_eq!(f.len(), 1);
+    assert_eq!(f.nodes()[0].get_name(), "p");
+  }
+
+  #[test]
+  fn sibling_roots_are_kept_whole() {
+    // The case Perl's parseChunk rejects, and the one libxml's recovery mode
+    // silently truncated to `<b>a</b>` before recovery was turned off.
+    let f = parse_fragment("<b>a</b><i>b</i>").unwrap();
+    assert_eq!(f.len(), 2, "both siblings must survive");
+    assert_eq!(f.nodes()[0].get_name(), "b");
+    assert_eq!(f.nodes()[1].get_name(), "i");
+  }
+
+  #[test]
+  fn bare_text_is_a_legitimate_fragment() {
+    let f = parse_fragment("just text").unwrap();
+    assert_eq!(f.len(), 1);
+    assert_eq!(f.nodes()[0].get_content(), "just text");
+  }
+
+  #[test]
+  fn malformed_markup_is_still_rejected_not_salvaged() {
+    // Fragment support must not become a back door to the recovery behaviour:
+    // each of these silently mangled the author's content under `recover: true`.
+    assert!(parse_fragment("<p>unclosed").is_err(), "unclosed element");
+    assert!(parse_fragment("<p>a & b</p>").is_err(), "bare ampersand");
+    assert!(
+      parse_fragment("<p>a&nbsp;b</p>").is_err(),
+      "undeclared entity"
+    );
+  }
+
+  #[test]
+  fn empty_markup_parses_to_no_nodes_rather_than_failing() {
+    // Empty input is not malformed — it simply contains nothing, so parsing
+    // SUCCEEDS with an empty node list. Whether "nothing" is acceptable is the
+    // caller's policy, not the parser's: `Document::insert_xml` treats it as a
+    // clean `Error:` rather than silently inserting nothing.
+    let f = parse_fragment("").expect("empty markup is not a parse failure");
+    assert!(f.is_empty());
+    assert_eq!(f.len(), 0);
+  }
+
+  #[test]
+  fn the_wrapper_never_enters_the_result() {
+    let f = parse_fragment("<b>a</b><i>b</i>").unwrap();
+    assert!(
+      !f.nodes().iter().any(|n| n.get_name() == FRAGMENT_WRAPPER),
+      "the throwaway wrapper must not be handed back"
+    );
   }
 }

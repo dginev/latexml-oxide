@@ -384,6 +384,16 @@ cached by source (`SCRIPT_CACHE`).
   (the `parseChunk` port) → `Document::insert_xml` → the existing `append_tree`.
   Namespaces resolve through the registry — see below.
 
+  Overloads: `insertXML(markup)`, `insertXML(node)`, `insertXML(nodes)` — so a
+  script may parse-and-insert in one call, or insert nodes it already holds.
+
+- `ParseXML(markup) -> [Node]` — **(#350)** the parser as its own primitive, so a
+  script can inspect or edit markup *before* it reaches the document. Returns an
+  array because a chunk may be a fragment of several siblings (OXIDIZED_DESIGN
+  #66). Each node OWNS the throwaway document it was parsed into, so unlike an
+  in-tree node from a rewrite callback it is safe to hold, walk and mutate for as
+  long as the script keeps it.
+
   **The markup must be a single well-formed XML root, and parser recovery is OFF**
   (matching Perl's `parse_string`, which defaults to `recover => 0`). This is a
   deliberate strictness: libxml's recovery mode *silently destroys* author content
@@ -407,6 +417,28 @@ $_[0]->maybeCloseElement('ltx:bibliography'); })` →
 `DefConstructor("\\endreferences", |document| {
 document.maybeCloseElement("ltx:biblist");
 document.maybeCloseElement("ltx:bibliography"); })`.
+
+**`Node` — the XML-manipulation foundation.** One Rhai type serves every node,
+whatever its provenance, so a capability added once works everywhere:
+
+* a node *inside the conversion's tree*, handed to a `DefRewrite`/`DefMathLigature`
+  callback — valid only for that body (it does not own the tree);
+* a node *returned by `ParseXML`*, which **owns** its parsed document (libxml's
+  `Document` is refcounted), and is therefore safe to keep, walk and mutate across
+  statements. This is what makes handing parsed XML to an untrusted script sound
+  at all: a bare libxml node is a pointer into its document, and one that outlives
+  its owner is a dangling FFI pointer — a class of bug that has already cost this
+  project SIGSEGVs, and which bypasses `catch_unwind`.
+
+Nodes reached *from* a node (`parent`, `children`, `firstChild`, `nextSibling`,
+`prevSibling`) inherit that provenance, so ownership propagates however deep a
+script walks a parsed tree.
+
+Current methods — read: `qname`, `name`, `content`, `getAttribute`,
+`hasAttribute`, `toString` (serialize back to markup); write: `setAttribute`,
+`removeAttribute`, `setContent`, `unlink`. **Extending is one `register_fn` over
+`NodeProxy`** in `engine.rs` (see the "node traversal / editing" block) — there is
+no parallel API to keep in step, which is the point of the single type.
 
 **Namespaces (URIs vs prefixes).** A binding declares its prefix↔URI mappings with
 the same two helpers the Perl bindings use — `RegisterNamespace(prefix, uri)` (code

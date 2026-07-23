@@ -4921,7 +4921,7 @@ impl Document {
   pub fn insert_xml(&mut self, xml: &str) -> Result<()> {
     // The parsed Document OWNS the nodes `append_tree` re-creates from, so it
     // must stay alive across the call below (bound here, dropped at fn end).
-    let parsed = match xml::parse_chunk(xml) {
+    let parsed = match xml::parse_fragment(xml) {
       Ok(doc) => doc,
       Err(e) => {
         Error!(
@@ -4932,16 +4932,29 @@ impl Document {
         return Ok(());
       },
     };
-    let Some(root) = parsed.get_root_element() else {
+    if parsed.is_empty() {
       Error!(
         "malformed",
         "insertXML",
         "XML markup parsed to an empty document".to_string()
       );
       return Ok(());
-    };
+    }
+    // `parsed` stays bound until this returns, so it keeps owning the nodes.
+    self.insert_nodes(parsed.nodes())
+  }
+
+  /// Splice ALREADY-PARSED nodes into the document at the current insertion
+  /// point. The shared tail of [`Document::insert_xml`] and of any caller that
+  /// obtained its nodes some other way (a script that parsed once and inserts
+  /// repeatedly, or that edited the parsed tree before inserting).
+  ///
+  /// The caller must keep whatever owns `nodes` alive across this call: libxml
+  /// nodes are pointers into their document. [`crate::common::xml::ParsedFragment`]
+  /// exists to make that ownership explicit rather than a comment.
+  pub fn insert_nodes(&mut self, nodes: Vec<Node>) -> Result<()> {
     let mut point = self.get_node().clone();
-    self.append_tree(&mut point, vec![root])
+    self.append_tree(&mut point, nodes)
   }
 }
 

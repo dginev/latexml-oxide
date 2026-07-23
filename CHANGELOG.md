@@ -10,14 +10,20 @@
     inside a running body, shell out to external commands, read the engine version,
     and use the full diagnostics surface (`Info`/`Fatal`/`Note`/progress).
     List-valued state lookups no longer panic or leak their internal representation.
-  - **A `.rhai` binding can now parse and insert raw XML/(X)HTML.**
+  - **A `.rhai` binding can now parse and manipulate XML/(X)HTML.**
     `document.insertXML(markup)` splices a *parsed subtree* into the document at the
     current point — the runtime half of BookML's `\bmlRawHTML` → `<ltx:rawhtml>` —
-    where previously only escaped text could be inserted. Absorbed foreign markup
-    keeps its own namespace: namespaces now resolve by URI through the registered
-    prefix map (`RegisterNamespace`) instead of being assumed to be LaTeXML's, and
-    wildcard schema entries such as `xhtml:*` are honoured, so attributes like
-    `class` survive onto the final page.
+    where previously only escaped text could be inserted. `ParseXML(markup)` exposes
+    the parser on its own, returning nodes a script can inspect, walk and edit
+    before inserting them; a chunk may be a fragment of several siblings. Parsed
+    nodes are safe to hold because each owns its document. Malformed markup is
+    rejected outright rather than quietly salvaged — libxml's recovery mode
+    silently deletes author content (`<b>a</b> <i>b</i>` became `<b>a</b>`,
+    `a&nbsp;b` became `ab`). Inserted markup also keeps its own namespace:
+    namespaces resolve by URI through the registered prefix map
+    (`RegisterNamespace`) instead of being assumed to be LaTeXML's, and wildcard
+    schema entries such as `xhtml:*` are honoured, so attributes like `class`
+    survive onto the final page.
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
     text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
     upstream; the `.htm` destination extension now infers HTML5 like `.html`.

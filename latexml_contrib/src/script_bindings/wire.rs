@@ -1203,7 +1203,7 @@ pub(super) fn wire_rewrite_replace(
     move |document: &mut Document, nodes: Vec<&mut libxml::tree::Node>| -> Result<()> {
       let arr: rhai::Array = nodes
         .into_iter()
-        .map(|n| Dynamic::from(NodeProxy(n.clone())))
+        .map(|n| Dynamic::from(NodeProxy::borrowed(n.clone())))
         .collect();
       // RAII pop on every exit incl. panic (review M1).
       let _ctx_guard = CtorCtxGuard::new(CtorCtx {
@@ -1236,7 +1236,7 @@ pub(super) fn wire_math_ligature_matcher(
         &engine,
         &ast,
         &matcher,
-        (Dynamic::from(NodeProxy(node.clone())),),
+        (Dynamic::from(NodeProxy::borrowed(node.clone())),),
       )
       .map_err(|e| Error::from(format!("script math-ligature matcher: {e}")))?;
       if !ret.is_map() {
