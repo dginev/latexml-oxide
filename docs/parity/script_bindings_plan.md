@@ -376,12 +376,12 @@ cached by source (`SCRIPT_CACHE`).
   `document.maybeCloseElement(tag)`.
 - `document.setAttribute(key, val)` — attribute on the current node.
 - `document.absorbString(s)` — insert literal text (ESCAPED — `<b>` becomes `&lt;b&gt;`).
-- `document.absorbXML(markup)` — **(#350)** parse an XML/(X)HTML string and splice
+- `document.insertXML(markup)` — **(#350)** parse an XML/(X)HTML string and splice
   the parsed SUBTREE in at the current point, as structured element/attribute/text
   nodes. The runtime half of Perl BookML's `\bmlRawHTML` idiom, which composes
   `XML::LibXML->parse_string` (`Common/XML/Parser.pm` `parseChunk`) with
   `$document->appendTree` (`Document.pm:2093`); backed by `common::xml::parse_chunk`
-  (the `parseChunk` port) → `Document::absorb_xml` → the existing `append_tree`.
+  (the `parseChunk` port) → `Document::insert_xml` → the existing `append_tree`.
   Namespaces resolve through the registry — see below.
 
   **The markup must be a single well-formed XML root, and parser recovery is OFF**
@@ -414,7 +414,7 @@ prefix) and `RegisterDocumentNamespace(prefix, uri)` (output-document prefix),
 Perl `Package.pm:2049-2057` — both registered on the Rhai engine. Node re-creation
 resolves a node's namespace **URI through that registry**, faithful to Perl
 `Model::getNodeQName` → `getNamespacePrefix`; it does NOT read the raw libxml
-prefix. That distinction is load-bearing for `absorbXML`: a snippet written the
+prefix. That distinction is load-bearing for `insertXML`: a snippet written the
 natural way, `<p xmlns="http://www.w3.org/1999/xhtml">`, carries an *empty* libxml
 prefix, and treating "empty prefix" as "the ltx namespace" would relabel it
 `ltx:p` — stripping exactly what the XHTML post-processor keys on (`copy-foreign`

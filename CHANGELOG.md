@@ -11,7 +11,7 @@
     and use the full diagnostics surface (`Info`/`Fatal`/`Note`/progress).
     List-valued state lookups no longer panic or leak their internal representation.
   - **A `.rhai` binding can now parse and insert raw XML/(X)HTML.**
-    `document.absorbXML(markup)` splices a *parsed subtree* into the document at the
+    `document.insertXML(markup)` splices a *parsed subtree* into the document at the
     current point — the runtime half of BookML's `\bmlRawHTML` → `<ltx:rawhtml>` —
     where previously only escaped text could be inserted. Absorbed foreign markup
     keeps its own namespace: namespaces now resolve by URI through the registered

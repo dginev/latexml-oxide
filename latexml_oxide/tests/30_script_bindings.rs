@@ -255,7 +255,7 @@ const SAMPLE: &str = r##"
 
   DefConstructor("\\rhrawhtml", |document| {
     document.openElement("ltx:rawhtml");
-    document.absorbXML("<p xmlns=\"http://www.w3.org/1999/xhtml\" class=\"lead\">hi <b>bold</b> x</p>");
+    document.insertXML("<p xmlns=\"http://www.w3.org/1999/xhtml\" class=\"lead\">hi <b>bold</b> x</p>");
     document.closeElement("ltx:rawhtml");
   });
 "##;
@@ -503,14 +503,14 @@ fn script_binding_macro_and_constructor_convert() {
   // STRUCTURED subtree (element + attribute + text) inside <ltx:rawhtml>, NOT an
   // escaped `&lt;p&gt;` text blob. `class="lead"` surviving as a real attribute
   // (real quotes) is the structured signal; the `&lt;p` guard rules out the
-  // escaped-text failure mode. Proves `document.absorbXML` → native
-  // `Document::absorb_xml` → `append_tree` (Perl's parse_string + appendTree).
+  // escaped-text failure mode. Proves `document.insertXML` → native
+  // `Document::insert_xml` → `append_tree` (Perl's parse_string + appendTree).
   assert!(
     xml.contains("rawhtml")
       && xml.contains("class=\"lead\"")
       && xml.contains("bold")
       && !xml.contains("&lt;p"),
-    "absorbXML did not splice a parsed XML subtree; xml=\n{xml}"
+    "insertXML did not splice a parsed XML subtree; xml=\n{xml}"
   );
   // ...and the absorbed subtree kept its OWN namespace. The snippet declares
   // xhtml as a DEFAULT namespace (empty libxml prefix), so this only holds if the
@@ -521,7 +521,7 @@ fn script_binding_macro_and_constructor_convert() {
   // dropping the raw HTML from the final output.
   assert!(
     xml.contains("http://www.w3.org/1999/xhtml") || xml.contains("xhtml:p"),
-    "absorbXML lost the snippet's xhtml namespace (mislabelled as ltx?); xml=\n{xml}"
+    "insertXML lost the snippet's xhtml namespace (mislabelled as ltx?); xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

@@ -4894,10 +4894,18 @@ impl Document {
   }
 
   /// Parse an XML / (X)HTML markup string and splice the resulting subtree into
-  /// the document at the current insertion point. This is the Rust analog of Perl
-  /// BookML's `\bmlRawHTML` idiom, which composes two mechanisms core never
-  /// chains itself: `XML::LibXML->parse_string` (`LaTeXML::Common::XML::Parser`
-  /// `parseChunk`, `Common/XML/Parser.pm:36-39`) and `$document->appendTree`
+  /// the document at the current insertion point.
+  ///
+  /// Named as the markup counterpart to [`Document::insert_element`] (Perl
+  /// `insertElement`): both insert an already-FINISHED thing at the current point.
+  /// Deliberately NOT an `absorb*` name — in Perl `absorb` consumes a digested
+  /// Box and has no `XML::LibXML` branch at all (it would die on a node), so
+  /// borrowing that verb here would imply a kinship that does not exist.
+  ///
+  /// This is the Rust analog of Perl BookML's `\bmlRawHTML` idiom, which composes
+  /// two mechanisms core never chains itself: `XML::LibXML->parse_string`
+  /// (`LaTeXML::Common::XML::Parser` `parseChunk`, `Common/XML/Parser.pm:36-39`)
+  /// and `$document->appendTree`
   /// (`Document.pm:2093`, foreign-node branch `:2105-2124`). Both halves already
   /// exist here — libxml's parser (a direct `latexml_core` dep, used in
   /// `common/relaxng/scan.rs`) and [`Document::append_tree`] — so this is pure
@@ -4910,7 +4918,7 @@ impl Document {
   /// preserved and `xml:id`s re-registered. A parse failure surfaces as a clean
   /// `Error:` and inserts nothing — degrading the offending binding rather than
   /// aborting the conversion (the runtime-bindings failure-isolation contract).
-  pub fn absorb_xml(&mut self, xml: &str) -> Result<()> {
+  pub fn insert_xml(&mut self, xml: &str) -> Result<()> {
     // The parsed Document OWNS the nodes `append_tree` re-creates from, so it
     // must stay alive across the call below (bound here, dropped at fn end).
     let parsed = match xml::parse_chunk(xml) {
@@ -4918,7 +4926,7 @@ impl Document {
       Err(e) => {
         Error!(
           "malformed",
-          "absorbXML",
+          "insertXML",
           format!("could not parse XML markup: {e}")
         );
         return Ok(());
@@ -4927,7 +4935,7 @@ impl Document {
     let Some(root) = parsed.get_root_element() else {
       Error!(
         "malformed",
-        "absorbXML",
+        "insertXML",
         "XML markup parsed to an empty document".to_string()
       );
       return Ok(());

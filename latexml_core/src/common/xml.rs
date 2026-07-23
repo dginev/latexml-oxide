@@ -318,7 +318,7 @@ mod tests {
 #[cfg(test)]
 mod parse_chunk_tests {
   //! Pins `parse_chunk`'s contract — the limits a binding author inherits from
-  //! Perl `parseChunk`, and the degrade-don't-crash promise `Document::absorb_xml`
+  //! Perl `parseChunk`, and the degrade-don't-crash promise `Document::insert_xml`
   //! relies on.
   use super::*;
 
@@ -346,7 +346,7 @@ mod parse_chunk_tests {
     // XML predefines only lt/gt/amp/quot/apos. `&nbsp;` &c. are HTML entities and
     // are undefined without a DTD, so an (X)HTML snippet carrying one fails to
     // parse. It must surface as a clean Err for the caller to report — never a
-    // panic — which is what lets `absorb_xml` degrade the one binding.
+    // panic — which is what lets `insert_xml` degrade the one binding.
     assert!(parse_chunk("<p>a&nbsp;b</p>").is_err());
     // The numeric form is fine, and is the portable way to write it.
     assert!(parse_chunk("<p>a&#160;b</p>").is_ok());

@@ -661,7 +661,7 @@ pub fn get_node_qname(node: &Node) -> SymStr {
           // Common/Model.pm) rather than assuming the default is always ltx.
           // This is what gives `RegisterNamespace` (Package.pm:2049) meaning for
           // FOREIGN content absorbed from parsed markup: an xhtml snippet spliced
-          // in by `Document::absorb_xml` arrives as `<p xmlns="…/1999/xhtml">`,
+          // in by `Document::insert_xml` arrives as `<p xmlns="…/1999/xhtml">`,
           // i.e. an EMPTY libxml prefix with a non-ltx URI, and must become
           // `xhtml:p` — mislabelling it `ltx:p` would strip the namespace the
           // XHTML post-processor keys on (`copy-foreign` matches `xhtml:*`).
@@ -678,7 +678,7 @@ pub fn get_node_qname(node: &Node) -> SymStr {
           }
           // FOREIGN default namespace — an empty libxml prefix whose URI is NOT
           // ours, which in practice means markup absorbed from a parsed snippet
-          // (`Document::absorb_xml`, e.g. `<p xmlns="…/1999/xhtml">`). Resolve the
+          // (`Document::insert_xml`, e.g. `<p xmlns="…/1999/xhtml">`). Resolve the
           // URI through the registered code-namespace map, faithful to Perl
           // `Model::getNodeQName` -> `getNamespacePrefix`; this is what gives
           // `RegisterNamespace` its effect on absorbed content. Rare, so only this
