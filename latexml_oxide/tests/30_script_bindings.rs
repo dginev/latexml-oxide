@@ -923,6 +923,107 @@ fn document_xml_api_matches_the_compile_time_surface() {
   latexml_core::reset_thread_engine();
 }
 
+/// One throwing body of every binding KIND. The failure-isolation contract
+/// (`script_bindings_plan.md` §"Failure isolation") says a bad binding "degrades
+/// only that package … it can never crash, hang, or corrupt a conversion";
+/// before this, every `wire_*` trampoline mapped a Rhai error straight to a hard
+/// `Error::from`, so one `throw` — or one typo'd method name, or a
+/// `max_operations` breach — took the whole document with it.
+const THROW_SAMPLE: &str = r##"
+  DefMacro("\\thrmacro", || { throw "macro boom"; });
+  DefPrimitive("\\thrprim", || { throw "primitive boom"; });
+  DefConstructor("\\thrctor", |document| {
+    document.openElement("ltx:text");
+    throw "constructor boom";
+  });
+  DefConditional("\\ifthrcond", || { throw "conditional boom"; });
+  DefConstructor("\\thrprops{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
+    properties: |_x| { throw "properties boom"; }
+  });
+  DefConstructor("\\thrbefore{}", "<ltx:text class=\"thr-before\">#1</ltx:text>", #{
+    beforeDigest: || { throw "beforeDigest boom"; }
+  });
+  DefConstructor("\\thrafter{}", "<ltx:text class=\"thr-after\">#1</ltx:text>", #{
+    afterDigest: || { throw "afterDigest boom"; }
+  });
+  DefConstructor("\\thrconstruct{}", "<ltx:text class=\"thr-construct\">#1</ltx:text>", #{
+    afterConstruct: || { throw "afterConstruct boom"; }
+  });
+  DefColumnType("Z", || { throw "column type boom"; });
+  DefRewrite(#{ xpath: "descendant-or-self::ltx:text[@class='thr-rw']" },
+             |nodes| { throw "rewrite boom"; });
+  DefMathLigature(|document, node| { throw "matcher boom"; });
+"##;
+
+fn throw_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxthrowtest" {
+    Some(latexml_contrib::script_bindings::load_script(THROW_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+/// A failing script body degrades ITS OWN binding; the conversion completes.
+#[test]
+fn a_throwing_script_body_degrades_only_its_binding() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(throw_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxthrowtest}\\begin{document}",
+    "ALPHA \\thrmacro BETA \\thrprim GAMMA \\thrctor DELTA ",
+    "\\thrprops{P} EPSILON \\thrbefore{B} ZETA \\thrafter{A} ETA ",
+    "\\ifthrcond THETA\\fi IOTA \\thrconstruct{C} KAPPA ",
+    "\\begin{tabular}{Z}cell\\end{tabular} LAMBDA $a+b$ MU",
+    "\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("a throwing script body must not abort the conversion");
+  let xml = doc.serialize_to_string();
+
+  // Every marker AROUND the failing bindings survived — the blast radius was
+  // one binding each, not the document.
+  for marker in [
+    "ALPHA", "BETA", "GAMMA", "DELTA", "EPSILON", "ZETA", "ETA", "IOTA", "KAPPA", "LAMBDA", "MU",
+  ] {
+    assert!(
+      xml.contains(marker),
+      "content around a failing binding was lost at {marker}; xml=\n{xml}"
+    );
+  }
+  // The neutral value a contained failure falls back to must be EMPTY, never a
+  // stringified `()` leaking into the page — three of the sites feed it straight
+  // into `dynamic_to_string` and on into the token stream.
+  assert!(
+    xml.contains("BETA") && !xml.contains("()"),
+    "a contained failure leaked its neutral value into the document; xml=\n{xml}"
+  );
+  // Each failure was reported, not swallowed.
+  assert!(
+    get_status(LogStatus::Error) >= 7,
+    "expected one Error: per failing binding kind, got {}",
+    get_status(LogStatus::Error)
+  );
+  // ...and none of them escalated the conversion away.
+  assert!(
+    get_status(LogStatus::Fatal) == 0,
+    "a contained script failure still went Fatal: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 const OPTBAG_SAMPLE: &str = r##"
   DefPrimitive("\\optbagprim", || { AssignValue("optbag:body", "X", "global"); }, #{
     beforeDigest: || { AssignValue("optbag:before", "B", "global"); },

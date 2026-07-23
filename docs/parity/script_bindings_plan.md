@@ -412,15 +412,8 @@ cached by source (`SCRIPT_CACHE`).
   whole conversion — see the failure-isolation caveat below. Guard:
   `30_script_bindings.rs::malformed_insert_xml_degrades_the_binding_not_the_conversion`.
 
-  > **Known gap (pre-existing, not #350).** That containment is hand-rolled in
-  > these two functions; it is *not* the general behaviour. A Rhai error raised
-  > anywhere in a script `DefConstructor` body — a bare `throw`, a limit breach,
-  > a failing `setAttribute` — is mapped to a hard `Error::from` by
-  > `wire.rs:90` and **aborts the conversion**, contradicting the
-  > failure-isolation promise stated above (§"Failure isolation") and again in
-  > §Sandbox. Verified by making a constructor `throw`: `convert_file` returns
-  > `Err`. Closing it means containing the error at the `wire_*` seam for every
-  > binding kind, which is its own change.
+  > Containment is GENERAL, not special-cased here — see "Failure containment"
+  > below.
 - `document.absorb(arg)` — absorb a digested argument handle (`arg1`, …).
 - `document.absorbProperty(name)` — absorb a whatsit property at the current
   point (the imperative analog of a template's `#name` hole; `"body"` inside an
@@ -521,6 +514,44 @@ from the final page. Wildcard schema entries participate too: `ltx:rawhtml`'s
 content model is `xhtml:*`, so a concrete `xhtml:p` resolves its permissions
 against that wildcard (Perl `canContain`/`canHaveAttribute`'s `$1.':*'` fallback),
 which is what lets attributes such as `class` survive on absorbed markup.
+
+**Failure containment (the `wire_*` seam).** A failure inside ANY script body is
+reported as an ordinary `Error:` and the binding falls back to a neutral value —
+it does not propagate an `Err` that would abort the conversion. This is what makes
+the failure-isolation promise above real. All 14 trampolines in `wire.rs` route
+through one helper, `contain`:
+
+| binding kind | neutral value on failure |
+|---|---|
+| macro (both forms), column type, reversion | empty expansion |
+| primitive, `beforeDigest`, `afterDigest` | no digested boxes |
+| constructor, `afterConstruct`, rewrite-replace | no-op |
+| `properties` | empty property map |
+| conditional | false |
+| sizer | zero-sized box |
+| math-ligature matcher | no match |
+
+In each case the binding contributes nothing and the surrounding document carries
+on — the same shape as an undefined control sequence, which LaTeXML already
+survives. Before this, a Rhai error anywhere in a body was mapped to a hard
+`Error::from`, so ONE `throw` — or a typo'd method name, or a `max_operations`
+breach — cost the whole document: measured, a single throwing `DefMacro` produced
+an **empty** document.
+
+Two things containment deliberately does NOT do:
+
+* **It does not make a broken binding free.** `Error!` escalates to `Fatal` past
+  `MAX_ERRORS`, and that `Err` still propagates — so a binding failing on every
+  invocation ends the conversion, as it should.
+* **It does not cover LOAD-time failures.** A script that fails to compile still
+  returns `Err` from `load_script`; the package simply never installs and
+  dispatch falls through to the normal undefined-binding path.
+
+A body that fails PART-WAY may leave elements it opened unclosed; the document
+builder's auto-close handles that, so the result is structurally odd rather than
+malformed. Guards: `30_script_bindings.rs::a_throwing_script_body_degrades_only_its_binding`
+(one throwing body of every kind, in one document) and
+`script_bindings::tests::m1_errors_are_clean` (load-time `Err` vs run-time degrade).
 
 **State API:** `assign_value(key, val)` (group-local), `assign_global(key, val)`,
 `lookup_value(key) -> string`.

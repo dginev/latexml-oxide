@@ -33,6 +33,15 @@
     `appendClone`, `openElementAt`/`closeElementAt`), each under its Perl name, so
     the runtime and compile-time binding layers do not drift apart. Reading a
     namespaced attribute such as `xml:id` back by its qualified name now works.
+  - **A failing `.rhai` binding no longer costs the whole document.** An error
+    raised anywhere in a script body — a `throw`, a typo'd method name, an
+    operation-limit breach — used to abort the entire conversion; a single
+    throwing macro produced an empty document. Each binding kind now degrades to a
+    neutral result (an empty expansion, a skipped constructor, a false
+    conditional, …), reports a clean `Error:`, and the rest of the document
+    converts. A binding that fails repeatedly still ends the run at the usual
+    error ceiling, and a script that fails to *compile* still simply does not
+    install.
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
     text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
     upstream; the `.htm` destination extension now infers HTML5 like `.html`.
