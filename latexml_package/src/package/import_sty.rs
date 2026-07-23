@@ -14,6 +14,15 @@ LoadDefinitions!({
   // concat Chapter/ onto Chapter/ from the first call).
 
   DefPrimitive!("\\lx@save@paths", {
+    // OXIDIZED_DESIGN #65 (#311): the `{…}` below is a LaTeXML artifact — the
+    // real import.sty never groups the input (`\@import` restores
+    // `\input@path`/`\Ginput@path` by plain `\def` AFTER the `\input`, at the
+    // caller's level; "input files must have balanced grouping", L42). Name the
+    // region so `require_package` gives a package loaded in there the
+    // outermost-level lifetime real LaTeX would. Every caller invokes this
+    // immediately after `{`, and `activate_scope`'s marker is `Scope::Local`, so
+    // the region ends with that group.
+    activate_scope(pin_static(SUBFILE_SCOPE));
     let paths = get_search_paths();
     push_value("lx@searchpaths@stack",
       Stored::Strings(

@@ -10,7 +10,7 @@ use crate::{
   binding::def::dialect::def_macro,
   common::{
     arena,
-    arena::SymStr,
+    arena::{SymStr, pin_static},
     error::*,
     font::{Font, Fontmap},
     model,
@@ -1779,16 +1779,33 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
-  // A package always ends up defined at the OUTERMOST level, whatever group
-  // happens to be open when it is loaded. Real LaTeX gets this for free by
-  // refusing to load at all — `\@fileswithoptions` (latex.ltx L18700) errors
-  // "Loading a class or package in a group" when `\currentgrouplevel > 0` — so
-  // no real package is ever written to survive a `pop_frame`. LaTeXML *does*
-  // load in a group (a standalone/subfile child's preamble runs inside one,
-  // and autoload triggers fire from arbitrary body depth), which splits a
-  // package in half: its definitions are frame-local, while the document-level
-  // hooks it registers (`\AtEndDocument`, `@at@begin@document`) are global and
-  // outlive them.
+  // A package loaded inside a group LaTeXML ITSELF opened must still end up
+  // defined at the outermost level. Real LaTeX never has to think about this:
+  // `\@fileswithoptions` (latex.ltx L18700) errors "Loading a class or package
+  // in a group" at `\currentgrouplevel > 0`, so no real package is written to
+  // survive a `pop_frame`. But LaTeXML manufactures in-group loads real LaTeX
+  // does not have — a standalone/`\import` subfile's preamble runs inside a
+  // bracket of ours, and, unlike the real `standalone.sty` (which *gobbles*
+  // that preamble), LaTeXML executes it, precisely so
+  // `\documentclass[tikz]{standalone}` loads tikz (divergence #63). The package
+  // is then split in half: its definitions are frame-local, while the
+  // document-level hooks it registers (`\AtEndDocument`, `@at@begin@document`)
+  // are global and outlive them.
+  //
+  // Only OUR brackets are hoisted past, which is why this asks whether the
+  // `SUBFILE_SCOPE` region is active rather than testing depth. A group the
+  // AUTHOR wrote is real, and real LaTeX's verdict on it stands:
+  // `{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex
+  // ("Loading a class or package in a group", then "Undefined control
+  // sequence") and in Perl LaTeXML, so it must here too — hoisting there would
+  // emit FEWER errors than Perl on an authoring mistake, which is a downgrade,
+  // not a fix. Guard: `tests/100_stale_autoload_no_runaway.rs`.
+  //
+  // The two cases are genuinely indistinguishable by anything cheaper: both are
+  // a group opened inside the current file while `inPreamble` is true, and both
+  // sit at `\currentgrouplevel` 1. Hence a *named* region — the engine's
+  // existing scope machinery, the same vocabulary Perl uses for
+  // `class:`/`counter:`/`label:` — rather than a new kind of frame.
   //
   // Witness (issue #311): `\documentclass[tikz]{standalone}` in a subfile
   // preamble raw-loads `pgfcoreexternal.code.tex`, whose L152
@@ -1809,7 +1826,7 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // the same name with different bodies, and each must render with its own.
   // (`\globaldefs=1` was tried and refuted: it also globalizes pgf's active-
   // character handling → `Error:undefined:"` and zero pictures.)
-  let pre_keys = if get_frame_depth() > 0 {
+  let pre_keys = if is_scope_active(pin_static(SUBFILE_SCOPE)) && get_frame_depth() > 0 {
     Some(snapshot_top_frame_meaning_keys())
   } else {
     None

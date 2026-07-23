@@ -1461,10 +1461,13 @@ fn standalone_child_preamble_package_survives_the_subfile_group() {
     "tests/cluster_regressions/subimport/index_rawsty.tex",
     // … via import.sty, which adds a second group of its own …
     "tests/cluster_regressions/subimport/index_rawsty_subimport.tex",
-    // … and inside a group in the parent body, which is also the shape of a
-    // standalone child nested in another standalone child. Removing the two
-    // bindings' own groups (the first fix tried for #311) left this one broken.
+    // … inside a group in the parent body …
     "tests/cluster_regressions/subimport/index_rawsty_grouped.tex",
+    // … and a standalone child nested inside another standalone child, where
+    // the load sits two brackets deep. Removing the two bindings' own groups
+    // (the first fix tried for #311) left both of these last two broken — the
+    // enclosing group was then simply somebody else's.
+    "tests/cluster_regressions/subimport/index_rawsty_nested.tex",
   ] {
     let log = convert_log_includestyles(index);
     assert!(
@@ -1577,6 +1580,25 @@ fn subimport_sibling_calls_do_not_accumulate_search_paths() {
   assert!(
     xml.contains("second sibling body"),
     "second \\subimport lost — the lead search path accumulated:\n{xml}"
+  );
+}
+
+/// The boundary of the #311 hoist: a group the AUTHOR wrote is real, and real
+/// LaTeX's verdict on it stands. `{\usepackage{amsthm}}` errors twice in
+/// pdflatex — "Loading a class or package in a group", then "Undefined control
+/// sequence" for `\theoremstyle` — and same-host Perl LaTeXML reports the
+/// matching `Error:undefined:\theoremstyle`. Hoisting there would rescue an
+/// authoring mistake and emit FEWER errors than Perl, which is a downgrade, not
+/// a fix; only LaTeXML's own subfile brackets are hoisted past. The wall-clock
+/// half of this (the stale-autoload runaway) is
+/// `tests/100_stale_autoload_no_runaway.rs`.
+#[test]
+fn author_written_group_around_usepackage_still_loses_the_package() {
+  let log = convert_log("tests/cluster_regressions/subimport/index_author_group.tex");
+  assert!(
+    log.contains("Error:undefined:\\theoremstyle"),
+    "#311: the hoist must not reach a group the author wrote — Perl and \
+     pdflatex both leave \\theoremstyle undefined here:\n{log}"
   );
 }
 

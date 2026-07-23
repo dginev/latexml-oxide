@@ -2717,6 +2717,27 @@ pub fn get_prefix(prefix: &str) -> bool { state!().get_prefix(prefix) }
 pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
 
 // #======================================================================
+/// Named scope bracketing a sub-document LaTeXML included itself — a
+/// `standalone` child's preamble, an `\import`ed file. Real LaTeX has no group
+/// at either spot (standalone *gobbles* the child preamble; import restores its
+/// paths by plain `\def` after the `\input`), so a package loaded inside one is
+/// an artifact of LaTeXML executing what the real packages skip. Bindings that
+/// open such a bracket `activate_scope` this name; `require_package` reads it to
+/// decide whether a load must outlive the bracket. See OXIDIZED_DESIGN #65.
+pub const SUBFILE_SCOPE: &str = "subfile";
+
+/// Is the named scope currently active? Perl reads `$$self{stash_active}{$scope}`
+/// inline (State.pm L681); this is the same test as an accessor, since
+/// `activate_scope` marks `StashActive` with `Scope::Local` — so an activation
+/// is bounded by the group that made it, and asking "am I inside that region?"
+/// is exactly a liveness check on this table.
+pub fn is_scope_active(scope: SymStr) -> bool {
+  state!()
+    .stash_active
+    .get(&scope)
+    .is_some_and(|entry| !entry.is_empty())
+}
+
 /// Activates all stashed definitions for the named scope. No-op if the scope is already active.
 pub fn activate_scope(scope: SymStr) {
   let mut state = state_mut!();

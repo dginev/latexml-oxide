@@ -2252,14 +2252,21 @@ survive a group pop.
 **Fixed in Rust** at the package-load seam rather than in the bindings, which
 stay byte-identical to Perl: `content.rs::require_package` hoists the load's
 meaning-delta past the enclosing group (`snapshot_top_frame_meaning_keys` +
-`hoist_top_frame_meaning_delta`, guarded by `get_frame_depth() > 0`) — the same
-pair `tex.rs::def_autoload` already used for the mirror-image failure on the
-autoload path (witness 1711.11576). Hoisting only the package's delta keeps the
-child's OWN preamble scoped, which matters: two sibling `standalone` figures may
-`\newcommand` the same name with different bodies and each must render with its
-own. See OXIDIZED_DESIGN #65; regression tests
+`hoist_top_frame_meaning_delta`) — the same pair `tex.rs::def_autoload` already
+used for the mirror-image failure on the autoload path (witness 1711.11576).
+Only brackets LaTeXML itself opened are hoisted past; they mark themselves with
+the `SUBFILE_SCOPE` named scope. A group the author wrote is left alone, because
+`{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex ("Loading a
+class or package in a group", then "Undefined control sequence") as well as in
+Perl — matching that is parity, and rescuing it would be a downgrade. Hoisting
+only the package's delta keeps the child's OWN preamble scoped, which matters:
+two sibling `standalone` figures may `\newcommand` the same name with different
+bodies and each must render with its own. See OXIDIZED_DESIGN #65; regression
+tests
 `06_cluster_regressions::standalone_child_preamble_package_survives_the_subfile_group`
-(ungated) and `…_definitions_stay_scoped`. Issue #311. Candidate to upstream.
+(ungated), `…_definitions_stay_scoped`, and
+`author_written_group_around_usepackage_still_loses_the_package`. Issue #311.
+Candidate to upstream.
 
 ## 56. `\includefrom` / `\subincludefrom` silently drop the included file
 

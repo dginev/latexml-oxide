@@ -1902,11 +1902,32 @@ document-level hook.
 
 **So `require_package` hoists the load's meaning-delta past the enclosing
 group** (`content.rs`, `snapshot_top_frame_meaning_keys` +
-`hoist_top_frame_meaning_delta`, guarded by `get_frame_depth() > 0`). The same
-split had already bitten the autoload path from the other side — a package
-loaded at depth ≥ 1 vanished on `\end{X}`, re-firing sibling triggers into a
-10000-error cascade (witness 1711.11576) — and `tex.rs::def_autoload` fixed that
-with this exact snapshot/hoist pair; this generalizes it to every load.
+`hoist_top_frame_meaning_delta`). The same split had already bitten the autoload
+path from the other side — a package loaded at depth ≥ 1 vanished on `\end{X}`,
+re-firing sibling triggers into a 10000-error cascade (witness 1711.11576) — and
+`tex.rs::def_autoload` fixed that with this exact snapshot/hoist pair; this
+generalizes it to every load.
+
+**Only our own brackets are hoisted past**, and that distinction is
+irreducible. A group the author wrote is real, and real LaTeX's verdict on it
+stands: `{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex
+("Loading a class or package in a group", then "Undefined control sequence") and
+in Perl LaTeXML, so it must here too — hoisting there would emit *fewer* errors
+than Perl on an authoring mistake, which is a downgrade, not a fix (guard:
+`tests/100_stale_autoload_no_runaway.rs`, which is how this was caught). Nothing
+cheaper separates the two cases: both are a group opened inside the current file
+while `inPreamble` is true, and both sit at `\currentgrouplevel` 1, so neither
+depth, nor `inPreamble`, nor the depth at file entry discriminates.
+
+The mark is therefore a **named scope** — `SUBFILE_SCOPE`, activated by
+`standalone_sty.rs` right after its `bgroup()` and by `import_sty.rs`'s
+`\lx@save@paths` just inside the `{…}` — not a new kind of frame and not a
+bespoke boolean. Named scopes are the engine's existing vocabulary for a region
+of state, the same one Perl uses for `class:`/`counter:`/`label:` (State.pm
+L680), and `activate_scope` marks `StashActive` with `Scope::Local`, so the
+region ends exactly when the bracket pops **by construction** rather than by the
+caller remembering to scope its flag. Nesting is free: `activate_scope`
+no-ops when already active, so an inner subfile stays inside the outer region.
 
 Two alternatives were implemented and refuted:
 
@@ -1968,11 +1989,23 @@ at the package-load seam.
 Guards, in `06_cluster_regressions`:
 `standalone_child_preamble_package_survives_the_subfile_group` (ungated — a
 three-line paper-bundled `lx311demo.sty` raw-loaded under `INCLUDE_STYLES`, over
-all three ways into a group: plain `\input`, `\subimport*`, and inside a
-parent-body group), `standalone_child_tikz_survives_the_subfile_group` (the real
-witness, gated on TeX Live), and
-`standalone_child_preamble_definitions_stay_scoped`, which pins the half that
-must **not** leak.
+all four ways into a bracket: plain `\input`, `\subimport*`, inside a
+parent-body group, and a standalone child nested in another),
+`standalone_child_tikz_survives_the_subfile_group` (the real witness, gated on
+TeX Live), `standalone_child_preamble_definitions_stay_scoped` (the half that
+must **not** leak), and
+`author_written_group_around_usepackage_still_loses_the_package` (the boundary —
+the hoist must not reach an author's group). Note what is *not* separately
+testable: that the region ends with its bracket is `activate_scope`'s
+`Scope::Local` marker, not an observable behaviour — a package load in a
+subfile's *body* already errors `can only appear in the preamble` before scope
+membership could matter.
+
+Known partial: the hoist covers the **Meaning** table only (`state.rs`:
+"callers that need to promote Value/Catcode/etc. should add parallel helpers").
+`\newif` is meanings, which is why #311 is covered; a package allocating
+register-backed state inside a bracket would keep the name and lose the value.
+No witness needs it yet.
 
 ## Known Upstream Perl Issues (brief)
 
