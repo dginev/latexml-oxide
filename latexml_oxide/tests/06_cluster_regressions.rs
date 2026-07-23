@@ -1579,3 +1579,16 @@ fn subimport_sibling_calls_do_not_accumulate_search_paths() {
     "second \\subimport lost — the lead search path accumulated:\n{xml}"
   );
 }
+
+/// KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take a directory AND
+/// a file name, but Perl's prototypes declare only one argument while their
+/// bodies use `#3` — so the file is silently dropped: no error, no warning, no
+/// content. Real `import.sty` routes all four through the same `\@doimport`.
+#[test]
+fn includefrom_takes_directory_and_file() {
+  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_includefrom.tex");
+  assert!(
+    xml.contains("includefrom body"),
+    "\\includefrom{{dir}}{{file}} silently dropped the included file:\n{xml}"
+  );
+}

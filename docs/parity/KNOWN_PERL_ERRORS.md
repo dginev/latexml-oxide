@@ -2261,3 +2261,25 @@ own. See OXIDIZED_DESIGN #65; regression tests
 `06_cluster_regressions::standalone_child_preamble_package_survives_the_subfile_group`
 (ungated) and `…_definitions_stay_scoped`. Issue #311. Candidate to upstream.
 
+## 56. `\includefrom` / `\subincludefrom` silently drop the included file
+
+`import.sty.ltxml` L45/L47 declare one argument after the star but use `#3` in
+the body:
+
+```perl
+DefMacro('\includefrom OptionalMatch:* {}',    '{\lx@set@path #1{#2} \include{#3}}');
+DefMacro('\subincludefrom OptionalMatch:* {}', '{\lx@append@path #1{#2} \include{#3}}');
+```
+
+The undeclared `#3` expands to nothing, so `\includefrom{dir/}{file}` becomes
+`\include{}` and the file's content is dropped — with **no** error and **no**
+warning, so nothing in the log hints at the loss. Real `import.sty` takes both
+arguments for all four commands (L57/L58 route `\includefrom`/`\subincludefrom`
+through the same `\@doimport` as `\import`/`\subimport`; `\@sub@import` L65
+consumes the directory, `\@import` L82 the file name), and `\import`/`\subimport`
+in the same Perl file declare `{}{}` correctly — so this is a typo in the two
+`\include` variants, not a deliberate reading.
+
+**Fixed in Rust**: both prototypes take `{}{}`. Regression test
+`06_cluster_regressions::includefrom_takes_directory_and_file`. Candidate to
+upstream.

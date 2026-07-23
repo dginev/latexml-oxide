@@ -36,7 +36,8 @@
     ended an otherwise complete conversion with `\ifpgf@external@grabshipout`
     undefined. Packages now load with the outermost-level lifetime real LaTeX
     guarantees them, at any nesting depth, while the subfile's own preamble stays
-    scoped to the subfile.
+    scoped to the subfile. `\includefrom`/`\subincludefrom` also no longer drop
+    their file in silence.
   - **The cortex worker builds without the `runtime-bindings` feature** — a
     Rhai-free conversion binary for the fleet.
   - **File resolution can no longer die silently.** A conversion could run with
