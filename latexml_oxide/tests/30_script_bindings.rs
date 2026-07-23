@@ -270,6 +270,11 @@ const SAMPLE: &str = r##"
     for n in nodes {
       n.setAttribute("class", "frag-" + n.firstChild().content());
     }
+    // Walking UP from a top-level parsed node must find nothing: above it lies
+    // only the throwaway `_lxfragment` wrapper a multi-root chunk is parsed
+    // inside. Leaking it would let a binding splice `<_lxfragment>` into the page.
+    nodes[0].setAttribute("data-top",
+      if type_of(nodes[0].parent()) == "()" { "detached" } else { "LEAKED-WRAPPER" });
     document.openElement("ltx:rawhtml");
     document.insertXML(nodes);
     document.closeElement("ltx:rawhtml");
@@ -548,6 +553,17 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("frag-one") && xml.contains("frag-two"),
     "ParseXML fragment round-trip failed (both edited siblings should be present); xml=\n{xml}"
+  );
+  // ...and walking up from a top-level parsed node found nothing, so the
+  // throwaway `_lxfragment` wrapper a multi-root chunk is parsed inside stays
+  // invisible to scripts — it must never be reachable, let alone insertable.
+  assert!(
+    xml.contains("data-top=\"detached\""),
+    "parent() of a top-level ParseXML node leaked the fragment wrapper; xml=\n{xml}"
+  );
+  assert!(
+    !xml.contains("_lxfragment"),
+    "the internal fragment wrapper reached the document; xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

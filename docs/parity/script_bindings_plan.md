@@ -458,6 +458,13 @@ Current methods — read: `qname`, `name`, `content`, `getAttribute`,
 `NodeProxy`** in `engine.rs` (see the "node traversal / editing" block) — there is
 no parallel API to keep in step, which is the point of the single type.
 
+`parent()` on a TOP-LEVEL `ParseXML` node is `()`. Everything above such a node is
+an artifact of how the chunk was parsed — the throwaway `_lxfragment` wrapper a
+multi-root chunk is parsed inside, or the parsed document node — never markup the
+script wrote, and handing the wrapper back would let `insertXML(n.parent())`
+splice `<_lxfragment>` into the page. In-tree nodes are unaffected. Guard:
+`30_script_bindings.rs` `data-top="detached"` assertion.
+
 **Namespaces (URIs vs prefixes).** A binding declares its prefix↔URI mappings with
 the same two helpers the Perl bindings use — `RegisterNamespace(prefix, uri)` (code
 prefix) and `RegisterDocumentNamespace(prefix, uri)` (output-document prefix),

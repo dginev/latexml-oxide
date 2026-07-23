@@ -736,6 +736,13 @@ pub(super) fn make_engine() -> Engine {
   });
   engine.register_fn("parent", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_parent() {
+      // A `ParseXML` node is a TOP-LEVEL node of its chunk: everything above it
+      // is an artifact of how the chunk was parsed — the throwaway
+      // `_lxfragment` wrapper, or the parsed document node — never markup the
+      // script wrote. Report NO parent rather than hand one back, which would
+      // leak an internal name and let `insertXML(n.parent())` splice
+      // `<_lxfragment>` into the page. In-tree nodes are unaffected.
+      Some(p) if n.1.is_some() && latexml_core::common::xml::is_parse_artifact(&p) => Dynamic::UNIT,
       Some(p) => Dynamic::from(n.derived(p)),
       None => Dynamic::UNIT,
     }

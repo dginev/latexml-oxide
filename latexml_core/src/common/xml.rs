@@ -126,6 +126,25 @@ pub fn parse_fragment(markup: &str) -> std::result::Result<ParsedFragment, Strin
   Ok(ParsedFragment { doc, nodes })
 }
 
+/// Is `node` an artifact of HOW a chunk was parsed, rather than part of the
+/// chunk? True for exactly the two things that can sit ABOVE a chunk's top-level
+/// nodes: the throwaway [`parse_fragment`] wrapper, and the parsed document node.
+///
+/// Callers that let someone walk a parsed tree upwards need this. Handing back
+/// the wrapper would leak an internal name into a script-facing API — and worse,
+/// let a script insert `<_lxfragment>` into the page — while the document node
+/// would serialize the whole chunk from a `parent()` call. It also removes an
+/// arbitrary inconsistency: a single-root chunk's top node sits directly under
+/// the document node, a multi-root chunk's under the wrapper, and neither is
+/// something the caller wrote.
+pub fn is_parse_artifact(node: &Node) -> bool {
+  match node.get_type() {
+    Some(NodeType::DocumentNode) => true,
+    Some(NodeType::ElementNode) => node.get_name() == FRAGMENT_WRAPPER,
+    _ => false,
+  }
+}
+
 /// A parsed markup chunk, bundled with the throwaway document that owns it.
 ///
 /// The pairing is the safety property, not a convenience: a libxml `Node` is a
