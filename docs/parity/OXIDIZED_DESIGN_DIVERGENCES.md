@@ -1965,10 +1965,16 @@ markup is still rejected outright rather than quietly mangled. Perl agrees here:
 `XML::LibXML->parse_string` defaults to `recover => 0`. Empty markup is not a parse
 failure (it parses to zero nodes); `insert_xml` is the layer that reports it.
 
+**The wrapper is invisible.** It is never returned, and never reachable: walking
+UP from a top-level parsed node reports NO parent (`common::xml::is_parse_artifact`
+covers both the wrapper and the parsed document node), so a script can neither see
+`_lxfragment` nor splice it into the page with `insertXML(n.parent())`.
+
 **Guards:** `common::xml::parse_fragment_tests::*` (siblings kept whole, bare text,
 malformed still rejected, wrapper never returned, empty → zero nodes) and the
 end-to-end `30_script_bindings::script_binding_macro_and_constructor_convert`
-(`\rhfragment` parses two siblings, edits them while detached, inserts both).
+(`\rhfragment` parses two siblings, edits them while detached, inserts both, and
+asserts `data-top="detached"` plus a blanket `!contains("_lxfragment")`).
 
 ## Known Upstream Perl Issues (brief)
 
