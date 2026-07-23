@@ -265,6 +265,102 @@ fn with_doc<R>(
   f(doc, props)
 }
 
+/// [`with_doc`] for a query that cannot fail, so the registration returns a plain
+/// value instead of a `Result`. Outside a constructor body there is no document
+/// to consult, and a script has nothing useful to do with that fact, so the
+/// caller's `Default` (an empty array, a `()`) is the answer.
+fn with_doc_infallible<R: Default>(f: impl FnOnce(&mut Document) -> R) -> R {
+  with_doc(|doc, _props| Ok(f(doc))).unwrap_or_default()
+}
+
+/// A Rhai attribute map (`#{ class: "x" }`) as `Document`'s attribute argument.
+/// Values stringify, matching every other string-in/string-out point of this API.
+fn attribute_map(map: Map) -> rustc_hash::FxHashMap<String, String> {
+  map
+    .into_iter()
+    .map(|(k, v)| (k.to_string(), v.to_string()))
+    .collect()
+}
+
+/// Unwrap a script-held node for a document operation that SPLICES it, refusing
+/// one that came from `ParseXML`.
+///
+/// A parsed node is still owned by the throwaway document it was parsed into, so
+/// moving it into ours would leave our tree pointing at memory freed the moment
+/// the script drops its handle — a use-after-free across FFI, the failure mode
+/// that has already cost this project SIGSEGVs and that `catch_unwind` cannot
+/// contain. `insertXML` is the supported route for parsed markup: it RE-CREATES
+/// the subtree through `append_tree` rather than moving it.
+fn in_tree(
+  node: NodeProxy,
+  method: &str,
+) -> std::result::Result<libxml::tree::Node, Box<EvalAltResult>> {
+  if node.1.is_some() {
+    return Err(Box::<EvalAltResult>::from(format!(
+      "{method}: this node came from ParseXML and belongs to its own parsed \
+       document; insert it with insertXML (which re-creates it) instead of \
+       splicing it in directly"
+    )));
+  }
+  Ok(node.0)
+}
+
+/// [`in_tree`] over an array argument, rejecting non-node entries by position —
+/// never silently skipping one, which would drop part of what a script asked for.
+fn in_tree_array(
+  nodes: rhai::Array,
+  method: &str,
+) -> std::result::Result<Vec<libxml::tree::Node>, Box<EvalAltResult>> {
+  let mut out = Vec::with_capacity(nodes.len());
+  for (i, entry) in nodes.into_iter().enumerate() {
+    let kind = entry.type_name();
+    let proxy = entry.try_cast::<NodeProxy>().ok_or_else(|| {
+      Box::<EvalAltResult>::from(format!(
+        "{method}: entry {i} of the array is a {kind}, not a Node"
+      ))
+    })?;
+    out.push(in_tree(proxy, method)?);
+  }
+  Ok(out)
+}
+
+/// `Document::rename_node` `expect`s a parent — renaming an ORPHAN panics, and a
+/// panic from an untrusted script aborts the conversion (the process, under
+/// `panic = "abort"`). Check first and report it as an ordinary script error.
+fn rename_node_checked(
+  node: NodeProxy,
+  newname: &str,
+  reinsert: bool,
+) -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+  let node = in_tree(node, "renameNode")?;
+  if node.get_parent().is_none() {
+    return Err(Box::<EvalAltResult>::from(
+      "renameNode: the node has no parent (already removed, or a root); \
+       renaming it is not possible",
+    ));
+  }
+  with_doc(|doc, _props| {
+    let renamed = doc.rename_node(node, newname, reinsert).map_err(rhai_err)?;
+    Ok(Dynamic::from(NodeProxy::borrowed(renamed)))
+  })
+}
+
+/// A `Document` node-list result as a Rhai array of in-tree node handles.
+fn nodes_to_array(nodes: Vec<libxml::tree::Node>) -> rhai::Array {
+  nodes
+    .into_iter()
+    .map(|n| Dynamic::from(NodeProxy::borrowed(n)))
+    .collect()
+}
+
+/// An optional node as `Node` or `()` — Perl's `undef` for "no match".
+fn node_or_unit(node: Option<libxml::tree::Node>) -> Dynamic {
+  match node {
+    Some(n) => Dynamic::from(NodeProxy::borrowed(n)),
+    None => Dynamic::UNIT,
+  }
+}
+
 /// Rhai proxy for the live document, passed to a constructor body as its first
 /// argument — so a binding reads like the Perl original (`$document->method`).
 /// It carries no pointer itself; its methods resolve the active-context, so it
@@ -287,8 +383,35 @@ struct DocProxy;
 /// resolve their target through the active-context stack on each call and carry
 /// no pointer — `NodeProxy` is the only proxy holding a raw tree handle. Use it
 /// within the body; never retain it across calls or past `unlink()`.
+/// A node may instead OWN its document, which lifts that restriction for parsed
+/// markup: `ParseXML` builds its nodes in a throwaway document, and since libxml's
+/// `Document` is refcounted, holding a clone here keeps the node valid for exactly
+/// as long as the script keeps the handle. One type serves both provenances on
+/// purpose — every node method then works on in-tree and parsed nodes alike, and a
+/// new one is a single registration rather than a parallel API.
 #[derive(Clone)]
-pub(crate) struct NodeProxy(pub(crate) libxml::tree::Node);
+pub(crate) struct NodeProxy(
+  pub(crate) libxml::tree::Node,
+  /// `Some` when this handle keeps its own (parsed) document alive; `None` for a
+  /// node inside the conversion's document, whose lifetime the caller guarantees.
+  pub(crate) Option<libxml::tree::Document>,
+);
+
+impl NodeProxy {
+  /// A node inside the live conversion document — valid only for the body that
+  /// received it (see the caveat above).
+  pub(crate) fn borrowed(node: libxml::tree::Node) -> Self { Self(node, None) }
+
+  /// A node whose owning document this handle keeps alive.
+  pub(crate) fn owning(node: libxml::tree::Node, doc: libxml::tree::Document) -> Self {
+    Self(node, Some(doc))
+  }
+
+  /// A node reached FROM this one (parent, sibling, child): it lives in the same
+  /// document, so it must inherit the same provenance — otherwise walking a
+  /// parsed tree would hand back nodes that no longer keep their owner alive.
+  pub(crate) fn derived(&self, node: libxml::tree::Node) -> Self { Self(node, self.1.clone()) }
+}
 
 /// A Clone-able builder mirroring `std::process::Command`, exposed to Rhai as
 /// `Command` (#318) so a trusted binding can shell out to `latexmk`/`dvisvgm`

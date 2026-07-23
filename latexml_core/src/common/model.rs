@@ -652,13 +652,18 @@ pub fn get_node_qname(node: &Node) -> SymStr {
     ElementNode | AttributeNode => {
       let name_str = node.get_name();
       // Use the actual namespace prefix from the node when available.
-      // For elements in the default (ltx) namespace, the prefix is empty
-      // so we prepend "ltx:". For SVG/MathML/etc with explicit prefix,
-      // use that prefix directly.
+      // For SVG/MathML/etc with explicit prefix, use that prefix directly.
       if let Some(ns) = node.get_namespace() {
         let prefix = ns.get_prefix();
         if prefix.is_empty() {
-          // Default namespace — use ltx: prefix
+          // Default namespace — use ltx: prefix. The document we build declares
+          // ltx as ITS default namespace, so an empty prefix means ltx here, and
+          // this deliberately does NOT read the namespace URI to confirm it:
+          // `Namespace::get_href` allocates a String per call, and on this path
+          // (~140 call sites, once per node and per attribute) that measured a
+          // 3.4% whole-conversion regression. A node whose DEFAULT namespace is
+          // something else can only come from a foreign document — see
+          // [`get_foreign_node_qname`], which is what reads such a tree.
           arena::pin(prefixed_qname("ltx", &name_str))
         } else {
           // Explicit prefix (e.g., "svg", "m") — use it
@@ -683,6 +688,48 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       pin!("#BrokenNode")
     },
   }
+}
+
+/// [`get_node_qname`] for a node read out of a FOREIGN document — a tree parsed
+/// by [`crate::common::xml::parse_fragment`] rather than built by us. Used by
+/// `Document::append_tree`, the one place such a tree is ever walked.
+///
+/// The difference is confined to the DEFAULT-namespace case. Perl's single
+/// `Model::getNodeQName` always maps a namespace URI to its registered code
+/// prefix (`Common/Model.pm` → `getNamespacePrefix`), which is what gives
+/// `RegisterNamespace` (`Package.pm:2049`) its effect on absorbed content: an
+/// xhtml snippet arrives as `<p xmlns="…/1999/xhtml">`, i.e. an EMPTY libxml
+/// prefix over a non-ltx URI, and must be re-created as `xhtml:p`. Mislabelling
+/// it `ltx:p` would strip exactly the namespace the XHTML post-processor keys on
+/// (`copy-foreign` matches `xhtml:*`), silently dropping the raw HTML.
+///
+/// Splitting that off from `get_node_qname` is a pure PERFORMANCE factoring with
+/// no behavioural difference, because inside our own document an element either
+/// sits in the ltx default namespace or carries an explicit code prefix — the
+/// re-created `xhtml:p` above included. So only a foreign tree can present the
+/// ambiguous shape, and reading the URI on the shared path would cost every
+/// other caller a `String` allocation per node (measured: 3.4%).
+pub fn get_foreign_node_qname(node: &Node) -> SymStr {
+  if let Some(ns) = node.get_namespace()
+    && ns.get_prefix().is_empty()
+  {
+    let href = ns.get_href();
+    if !href.is_empty() && href != LTX_NAMESPACE {
+      // `.copied()` yields an owned SymStr, so the model guard does not outlive
+      // this expression (no borrow held across the arena pins below).
+      let registered = model!()
+        .code_namespace_prefixes
+        .get_sym(arena::pin(href.as_str()))
+        .copied();
+      // An UNREGISTERED URI keeps the historical ltx fallback, i.e. whatever
+      // `get_node_qname` would have said.
+      if let Some(code_prefix) = registered {
+        let name_str = node.get_name();
+        return arena::pin(arena::with(code_prefix, |p| prefixed_qname(p, &name_str)));
+      }
+    }
+  }
+  get_node_qname(node)
 }
 
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
@@ -740,6 +787,53 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
 /// Given a Qualified name, possibly prefixed with a namespace prefix,
 /// as defined by the code namespace mapping,
 /// return the NamespaceURI and localname.
+/// Read a possibly-PREFIXED attribute off a node, resolving the prefix the same
+/// way `Document::set_attribute` does on the write side (via [`decode_qname`]).
+///
+/// libxml stores `xml:id` as local name `id` in the built-in xml namespace, and
+/// `xmlGetProp` matches on the plain name — so `get_attribute("xml:id")` finds
+/// NOTHING. That asymmetry is invisible in Rust bindings (which read ids through
+/// `get_attribute_ns`) but bites any caller that writes an attribute by qualified
+/// name and then tries to read it back by the same name, which is exactly what a
+/// script does after `generateID`.
+pub fn get_node_attribute(node: &Node, key: &str) -> Option<String> {
+  if let Some(ns_uri) = attribute_namespace(key) {
+    let local = key.split_once(':').map_or(key, |(_, l)| l);
+    if let Some(value) = node.get_attribute_ns(local, &ns_uri) {
+      return Some(value);
+    }
+  }
+  node.get_attribute(key)
+}
+
+/// Remove a possibly-PREFIXED attribute — the counterpart of
+/// [`get_node_attribute`], with the same namespace resolution.
+pub fn remove_node_attribute(node: &mut Node, key: &str) -> std::result::Result<(), String> {
+  if let Some(ns_uri) = attribute_namespace(key) {
+    let local = key.split_once(':').map_or(key, |(_, l)| l).to_string();
+    if node.get_attribute_ns(&local, &ns_uri).is_some() {
+      return node
+        .remove_attribute_ns(&local, &ns_uri)
+        .map_err(|e| e.to_string());
+    }
+  }
+  node.remove_attribute(key).map_err(|e| e.to_string())
+}
+
+/// The namespace URI an attribute name resolves to, or `None` when it is
+/// unprefixed (or its prefix is not registered). `xml:` is built in — the one
+/// prefix [`decode_qname`] deliberately hands back whole for libxml to special-case.
+fn attribute_namespace(key: &str) -> Option<String> {
+  let (prefix, _) = key.split_once(':')?;
+  if prefix == "xml" {
+    return Some(XML_NS.to_string());
+  }
+  match decode_qname(key) {
+    Ok((ns_uri, _local)) => ns_uri,
+    Err(_) => None,
+  }
+}
+
 pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
   match PREFIXED_LOCALNAME_RE.captures(codetag) {
     Some(captures) => {
@@ -830,14 +924,88 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
     "_WildCard_" | "#Comment" | "#ProcessingInstruction" | "#DTD" => return true,
     _ => {},
   };
-  let model = model!();
-  if model.permissive && tag == "#Document" && child != "#PCDATA" {
+  let state_model = model!();
+  if state_model.permissive && tag == "#Document" && child != "#PCDATA" {
     return true; // No schema? Punt!
   }
 
-  // Else query tag properties.
-  let model = &model.tagprop.get(tag).unwrap_or(&*DEFAULT_TAG_FRAME).model;
-  model.contains(&pin!("ANY")) || model.contains(&arena::pin(child))
+  // Else query tag properties, falling back to the `ns:*` wildcard entry when this
+  // exact tag has none of its own, then applying the same most-specific-first
+  // chain as the attribute test — both are Perl `Common/Model.pm`. Without the
+  // fallback a wildcard content model such as `ltx:rawhtml{}(xhtml:*)` would
+  // reject every concrete `xhtml:p` absorbed into it.
+  let frame = state_model.tagprop.get(tag);
+  let wildcard_frame = if frame.is_none() {
+    namespace_wildcard_tag(tag).and_then(|w| state_model.tagprop.get(&w))
+  } else {
+    None
+  };
+  let content = &frame
+    .or(wildcard_frame)
+    .unwrap_or(&*DEFAULT_TAG_FRAME)
+    .model;
+  content.contains(&pin!("ANY")) || set_allows(content, child)
+}
+
+/// Perl `Model::canContain`/`canHaveAttribute` fall back to the NAMESPACE
+/// WILDCARD entry when a prefixed tag has no `tagprop` entry of its own
+/// (`Common/Model.pm`: `if (!$model && ($tag =~ /^(\w*):/)) { $xtag = $1 . ':*' }`).
+/// This is how a wildcard schema element such as `xhtml:*` — the content model of
+/// `ltx:rawhtml` — governs every concrete `xhtml:p`/`xhtml:b` absorbed into it.
+///
+/// Two knowingly narrower details than the Perl regex, neither reachable with the
+/// schema we compile (checked against `resources/RelaxNG/LaTeXML.model`, whose
+/// only `ns:*` entries are `*:*` and `xhtml:*`):
+/// * Perl falls back when the tag has no entry OR its entry has no `model` /
+///   `attributes` key; a Rust `TagFrame` always has both, possibly empty, so the
+///   callers fall back only when the whole frame is missing. Reaching that
+///   difference needs a schema with BOTH an empty-set entry and a matching `ns:*`
+///   entry — e.g. an `ltx:*`, which no LaTeXML schema declares.
+/// * Perl's `\w*` does not match `*`, so it never derives a wildcard from a tag
+///   that is already one; `split_once` would, but only for the `*:*` entry, which
+///   maps to itself and is looked up only when it has no frame — and it has one.
+fn namespace_wildcard_tag(tag: &str) -> Option<String> {
+  tag.split_once(':').map(|(ns, _)| s!("{ns}:*"))
+}
+
+/// Perl's most-specific-first membership chain over a `tagprop` set — shared by
+/// `canContain`'s child test and `canHaveAttribute`'s attribute test
+/// (`Common/Model.pm`). Order: exact, `!exact`, then for a PREFIXED key the
+/// namespace wildcard `ns:*` / `!ns:*` and finally `*:*` / `!*:*`; for an
+/// unprefixed key, `*` / `!*`. A `!`-prefixed entry is an explicit exclusion and
+/// always beats the broader wildcard that follows it. The compiled model really
+/// does carry these (e.g. `ltx:XMText{!aria:*,!xml:*,*:*,…}`), so an exact-match-only
+/// test both over-rejects (ignoring `*:*`) and under-rejects (ignoring `!ns:*`).
+fn set_allows(set: &HashSet<SymStr>, key: &str) -> bool {
+  if set.contains(&arena::pin(key)) {
+    return true;
+  }
+  if set.is_empty() {
+    return false; // nothing can match; skip the probe allocations
+  }
+  if set.contains(&arena::pin(s!("!{key}"))) {
+    return false;
+  }
+  match key.split_once(':') {
+    Some((ns, _)) => {
+      if set.contains(&arena::pin(s!("{ns}:*"))) {
+        return true;
+      }
+      if set.contains(&arena::pin(s!("!{ns}:*"))) {
+        return false;
+      }
+      if set.contains(&pin!("!*:*")) {
+        return false;
+      }
+      set.contains(&pin!("*:*"))
+    },
+    None => {
+      if set.contains(&pin!("!*")) {
+        return false;
+      }
+      set.contains(&pin!("*"))
+    },
+  }
 }
 
 pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
@@ -850,18 +1018,29 @@ pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
   }) {
     return early_choice;
   };
+  // Perl: `return 1 if $attrib =~ /^_/;` — internal bookkeeping attributes are
+  // always permitted, whatever the schema says about the element.
+  if arena::with(attrib, |a| a.starts_with('_')) {
+    return true;
+  }
   let model = model!();
   if model.permissive {
     return true;
   }
 
-  // Else query tag properties.
-  let attributes = &model
-    .tagprop
-    .get_sym(tag)
+  // Else query tag properties, falling back to the `ns:*` wildcard entry when
+  // this exact tag has none of its own (Perl canHaveAttribute).
+  let frame = model.tagprop.get_sym(tag);
+  let wildcard_frame = if frame.is_none() {
+    arena::with(tag, namespace_wildcard_tag).and_then(|w| model.tagprop.get(&w))
+  } else {
+    None
+  };
+  let attributes = &frame
+    .or(wildcard_frame)
     .unwrap_or(&*DEFAULT_TAG_FRAME)
     .attributes;
-  attributes.contains(&attrib)
+  arena::with(attrib, |a| set_allows(attributes, a))
 }
 
 pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {
@@ -990,4 +1169,83 @@ pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
 pub fn with_code_namespaces<FnR, R>(caller: FnR) -> R
 where FnR: FnOnce(&SymHashMap<SymStr>) -> R {
   caller(&model!().code_namespaces)
+}
+
+#[cfg(test)]
+mod wildcard_resolution_tests {
+  //! Direct coverage for the Perl `Common/Model.pm` resolution helpers shared by
+  //! `canContain` (child test) and `canHaveAttribute` (attribute test). The
+  //! end-to-end script-bindings guard only exercises the plain `*` branch via
+  //! `xhtml:*`, so the negation and namespace-wildcard branches are pinned here.
+  use super::*;
+
+  fn set_of(keys: &[&str]) -> HashSet<SymStr> { keys.iter().map(|k| arena::pin(*k)).collect() }
+
+  #[test]
+  fn namespace_wildcard_tag_only_applies_to_prefixed_tags() {
+    assert_eq!(
+      namespace_wildcard_tag("xhtml:p").as_deref(),
+      Some("xhtml:*")
+    );
+    assert_eq!(namespace_wildcard_tag("ltx:para").as_deref(), Some("ltx:*"));
+    // Unprefixed names have no namespace wildcard to fall back on.
+    assert_eq!(namespace_wildcard_tag("para"), None);
+    assert_eq!(namespace_wildcard_tag("#PCDATA"), None);
+  }
+
+  #[test]
+  fn exact_membership_wins_and_empty_sets_reject() {
+    let s = set_of(&["class", "href"]);
+    assert!(set_allows(&s, "class"));
+    assert!(!set_allows(&s, "style"));
+    assert!(!set_allows(&HashSet::default(), "class"));
+  }
+
+  #[test]
+  fn a_negation_beats_the_wildcard_that_would_otherwise_allow_it() {
+    // Perl order: exact, !exact, ns:*, !ns:*, !*:*, *:*  — the `!` entries are
+    // explicit exclusions and must beat the broader wildcard that follows them.
+    // This is the real shape of a compiled entry, e.g.
+    // `ltx:XMText{!aria:*,!xml:*,*:*,about,…}`.
+    let s = set_of(&["!aria:*", "!xml:*", "*:*", "about"]);
+    assert!(set_allows(&s, "about"), "exact entry allows");
+    assert!(
+      set_allows(&s, "data:foo"),
+      "*:* allows an unexcluded namespace"
+    );
+    assert!(
+      !set_allows(&s, "aria:label"),
+      "!aria:* excludes its namespace"
+    );
+    assert!(!set_allows(&s, "xml:lang"), "!xml:* excludes its namespace");
+
+    // An exact exclusion beats a namespace wildcard that would allow it.
+    let s2 = set_of(&["!svg:width", "svg:*"]);
+    assert!(set_allows(&s2, "svg:height"));
+    assert!(!set_allows(&s2, "svg:width"));
+
+    // `!*:*` denies every namespaced key that is not exactly listed.
+    let s3 = set_of(&["!*:*", "svg:width"]);
+    assert!(set_allows(&s3, "svg:width"));
+    assert!(!set_allows(&s3, "svg:height"));
+  }
+
+  #[test]
+  fn unprefixed_keys_use_the_bare_star_not_the_namespaced_one() {
+    // `*:*` governs PREFIXED keys only; an unprefixed `class` needs `*`.
+    let namespaced_only = set_of(&["*:*"]);
+    assert!(!set_allows(&namespaced_only, "class"));
+    assert!(set_allows(&namespaced_only, "svg:width"));
+
+    // This is the entry that lets attributes survive on absorbed xhtml markup:
+    // the compiled model carries `xhtml:*{*,*:*}`.
+    let html_wildcard = set_of(&["*", "*:*"]);
+    assert!(set_allows(&html_wildcard, "class"));
+    assert!(set_allows(&html_wildcard, "xlink:href"));
+
+    // …and `!*` denies the unprefixed ones.
+    let denied = set_of(&["!*", "*:*"]);
+    assert!(!set_allows(&denied, "class"));
+    assert!(set_allows(&denied, "svg:width"));
+  }
 }

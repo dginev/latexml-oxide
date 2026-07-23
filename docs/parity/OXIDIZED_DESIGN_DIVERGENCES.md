@@ -1939,6 +1939,43 @@ tables are likewise untouched (`state.rs`: "callers that need to promote
 Value/Catcode/etc. should add parallel helpers"), so a package that also sets a
 length keeps the macro and loses the value.
 
+### 66. `insertXML` accepts a document fragment, not only a single root
+
+**Perl.** `LaTeXML::Common::XML::Parser::parseChunk` (`Common/XML/Parser.pm:36-39`)
+carries its own comment — *"This expects only a single node, not a document
+fragment"* — and LaTeXML ships no fragment parser at all, so a Perl binding that
+wants to insert `<b>a</b><i>b</i>` has to wrap it in a container itself.
+
+**Rust.** `common::xml::parse_fragment` (behind `Document::insert_xml` and the
+Rhai `ParseXML`/`insertXML`) accepts a fragment: several sibling roots, or bare
+text. It parses as-is first — so every single-root chunk, including one led by an
+XML declaration, behaves exactly as `parse_chunk` always did — and only on failure
+retries inside a throwaway wrapper whose children are returned.
+
+**Why this is safe rather than a parity break.** The INSERTION half already
+understood fragments: `Document::appendTree` has an `XML_DOCUMENT_FRAG_NODE`
+branch in Perl, faithfully ported in `document.rs::append_tree`. Perl simply never
+chains its parser to it. Accepting fragments therefore inserts more of the author's
+content correctly and can never emit *fewer* errors than Perl.
+
+**What did NOT loosen.** Parser recovery stays OFF in both attempts. libxml's
+recovery mode silently destroys author content — measured: `<b>a</b> <i>b</i>`
+salvaged to just `<b>a</b>`, `a&nbsp;b` to `ab`, `a & b` to `a  b` — so malformed
+markup is still rejected outright rather than quietly mangled. Perl agrees here:
+`XML::LibXML->parse_string` defaults to `recover => 0`. Empty markup is not a parse
+failure (it parses to zero nodes); `insert_xml` is the layer that reports it.
+
+**The wrapper is invisible.** It is never returned, and never reachable: walking
+UP from a top-level parsed node reports NO parent (`common::xml::is_parse_artifact`
+covers both the wrapper and the parsed document node), so a script can neither see
+`_lxfragment` nor splice it into the page with `insertXML(n.parent())`.
+
+**Guards:** `common::xml::parse_fragment_tests::*` (siblings kept whole, bare text,
+malformed still rejected, wrapper never returned, empty → zero nodes) and the
+end-to-end `30_script_bindings::script_binding_macro_and_constructor_convert`
+(`\rhfragment` parses two siblings, edits them while detached, inserts both, and
+asserts `data-top="detached"` plus a blanket `!contains("_lxfragment")`).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

@@ -4873,7 +4873,11 @@ impl Document {
             self.unrecord_id(&xmlid);
           }
 
-          let tag_sym = get_node_qname(&child);
+          // `get_FOREIGN_node_qname`: `data` may be a tree parsed elsewhere
+          // (`Document::insert_xml`), whose elements can sit in a DEFAULT
+          // namespace that is not ours — `<p xmlns="…/1999/xhtml">`. Only here is
+          // that shape possible, and only here do we pay to resolve it.
+          let tag_sym = model::get_foreign_node_qname(&child);
           let tag = arena::to_string(tag_sym);
           let mut new = self.open_element_at(node, &tag, Some(attributes), None)?;
           self.append_tree(&mut new, child.get_child_nodes())?;
@@ -4891,6 +4895,82 @@ impl Document {
       }
     }
     Ok(())
+  }
+
+  /// Parse an XML / (X)HTML markup string and splice the resulting subtree into
+  /// the document at the current insertion point.
+  ///
+  /// Named as the markup counterpart to [`Document::insert_element`] (Perl
+  /// `insertElement`): both insert an already-FINISHED thing at the current point.
+  /// Deliberately NOT an `absorb*` name — in Perl `absorb` consumes a digested
+  /// Box and has no `XML::LibXML` branch at all (it would die on a node), so
+  /// borrowing that verb here would imply a kinship that does not exist.
+  ///
+  /// This is the Rust analog of Perl BookML's `\bmlRawHTML` idiom, which composes
+  /// two mechanisms core never chains itself: `XML::LibXML->parse_string`
+  /// (`LaTeXML::Common::XML::Parser` `parseChunk`, `Common/XML/Parser.pm:36-39`)
+  /// and `$document->appendTree`
+  /// (`Document.pm:2093`, foreign-node branch `:2105-2124`). Both halves already
+  /// exist here — libxml's parser (a direct `latexml_core` dep, used in
+  /// `common/relaxng/scan.rs`) and [`Document::append_tree`] — so this is pure
+  /// glue.
+  ///
+  /// The markup must be WELL-FORMED, but need not be a single root: several
+  /// sibling nodes, or bare text, are accepted as a document fragment
+  /// (OXIDIZED_DESIGN #66 — Perl's `parseChunk` is single-node only). The parsed
+  /// nodes are re-created one by one through `append_tree`'s model-aware path, so
+  /// namespaces declared in the snippet (e.g. xhtml) are preserved and `xml:id`s
+  /// re-registered. Malformed markup is REJECTED, never salvaged — see
+  /// [`crate::common::xml::parse_chunk`] for what libxml's recovery mode
+  /// destroys — and surfaces as a clean `Error:` that inserts nothing, degrading
+  /// the offending binding rather than aborting the conversion (the
+  /// runtime-bindings failure-isolation contract).
+  pub fn insert_xml(&mut self, xml: &str) -> Result<()> {
+    // The parsed Document OWNS the nodes `append_tree` re-creates from, so it
+    // must stay alive across the call below (bound here, dropped at fn end).
+    let parsed = match xml::parse_fragment(xml) {
+      Ok(doc) => doc,
+      Err(e) => {
+        // Quote the offending snippet: a binding may insert markup from several
+        // places, and the reason alone would not say WHICH one to go fix. Capped
+        // so a runaway string cannot flood the log with a single message.
+        const SNIPPET_CAP: usize = 200;
+        let mut snippet: String = xml.chars().take(SNIPPET_CAP).collect();
+        if xml.chars().nth(SNIPPET_CAP).is_some() {
+          snippet.push('…');
+        }
+        Error!(
+          "malformed",
+          "insertXML",
+          format!("could not parse XML markup: {e}"),
+          format!("in: {snippet}")
+        );
+        return Ok(());
+      },
+    };
+    if parsed.is_empty() {
+      Error!(
+        "malformed",
+        "insertXML",
+        "XML markup parsed to an empty document".to_string()
+      );
+      return Ok(());
+    }
+    // `parsed` stays bound until this returns, so it keeps owning the nodes.
+    self.insert_nodes(parsed.nodes())
+  }
+
+  /// Splice ALREADY-PARSED nodes into the document at the current insertion
+  /// point. The shared tail of [`Document::insert_xml`] and of any caller that
+  /// obtained its nodes some other way (a script that parsed once and inserts
+  /// repeatedly, or that edited the parsed tree before inserting).
+  ///
+  /// The caller must keep whatever owns `nodes` alive across this call: libxml
+  /// nodes are pointers into their document. [`crate::common::xml::ParsedFragment`]
+  /// exists to make that ownership explicit rather than a comment.
+  pub fn insert_nodes(&mut self, nodes: Vec<Node>) -> Result<()> {
+    let mut point = self.get_node().clone();
+    self.append_tree(&mut point, nodes)
   }
 }
 

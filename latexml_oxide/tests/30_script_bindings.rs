@@ -235,6 +235,50 @@ const SAMPLE: &str = r##"
   // DefRewrite (data form): stamp every biography note at finalization.
   DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][not(@class)]",
                 attributes: #{ class: "rw-stamp" } });
+
+  // XML-parser exposure (#350): parse a small (X)HTML snippet and splice the
+  // parsed SUBTREE into the tree at the current point — the Rhai analog of Perl
+  // BookML's \bmlRawHTML (XML::LibXML->parse_string + $document->appendTree). The
+  // snippet arrives as MARKUP (not TeX-escaped text), so the assertion proves it
+  // became structured element/attribute/text nodes, not an escaped `&lt;p&gt;`
+  // string. `<ltx:rawhtml>` is the schema's xhtml-markup container (Misc class).
+  //
+  // Namespaces go through the SAME registry the Perl bindings use — these are
+  // the Rhai-exposed `RegisterNamespace`/`RegisterDocumentNamespace` helpers
+  // (Package.pm:2049-2057). The snippet declares xhtml as its DEFAULT namespace
+  // (empty prefix), so re-creating it correctly depends on resolving the URI
+  // through this registry; the assertion pins that it lands as xhtml, not ltx.
+  // (Core pre-registers xhtml, so these calls are idempotent — they document the
+  // flow a binding needs for a namespace core does not already know.)
+  RegisterNamespace("xhtml", "http://www.w3.org/1999/xhtml");
+  RegisterDocumentNamespace("xhtml", "http://www.w3.org/1999/xhtml");
+
+  DefConstructor("\\rhrawhtml", |document| {
+    document.openElement("ltx:rawhtml");
+    document.insertXML("<p xmlns=\"http://www.w3.org/1999/xhtml\" class=\"lead\">hi <b>bold</b> x</p>");
+    document.closeElement("ltx:rawhtml");
+  });
+
+  // The XML-manipulation foundation, exercised as a script author would: parse a
+  // FRAGMENT (two sibling roots — rejected by Perl's single-node parseChunk, an
+  // intentional divergence), walk and EDIT the parsed nodes while they are still
+  // detached, then insert them. Proves the parsed nodes survive being held across
+  // statements (they own their document), that node methods work on them exactly
+  // as on in-tree nodes, and that edits made before insertion reach the document.
+  DefConstructor("\\rhfragment", |document| {
+    let nodes = ParseXML("<p xmlns=\"http://www.w3.org/1999/xhtml\">one</p><p xmlns=\"http://www.w3.org/1999/xhtml\">two</p>");
+    for n in nodes {
+      n.setAttribute("class", "frag-" + n.firstChild().content());
+    }
+    // Walking UP from a top-level parsed node must find nothing: above it lies
+    // only the throwaway `_lxfragment` wrapper a multi-root chunk is parsed
+    // inside. Leaking it would let a binding splice `<_lxfragment>` into the page.
+    nodes[0].setAttribute("data-top",
+      if type_of(nodes[0].parent()) == "()" { "detached" } else { "LEAKED-WRAPPER" });
+    document.openElement("ltx:rawhtml");
+    document.insertXML(nodes);
+    document.closeElement("ltx:rawhtml");
+  });
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -266,6 +310,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
     "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} \\rwvictim{OLD} ",
+    "\\rhrawhtml \\rhfragment ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -475,6 +520,51 @@ fn script_binding_macro_and_constructor_convert() {
     xml.contains("rw-stamp"),
     "DefRewrite xpath/attributes rule did not fire; xml=\n{xml}"
   );
+  // XML-parser exposure (#350): \rhrawhtml parsed the (X)HTML snippet into a
+  // STRUCTURED subtree (element + attribute + text) inside <ltx:rawhtml>, NOT an
+  // escaped `&lt;p&gt;` text blob. `class="lead"` surviving as a real attribute
+  // (real quotes) is the structured signal; the `&lt;p` guard rules out the
+  // escaped-text failure mode. Proves `document.insertXML` → native
+  // `Document::insert_xml` → `append_tree` (Perl's parse_string + appendTree).
+  assert!(
+    xml.contains("rawhtml")
+      && xml.contains("class=\"lead\"")
+      && xml.contains("bold")
+      && !xml.contains("&lt;p"),
+    "insertXML did not splice a parsed XML subtree; xml=\n{xml}"
+  );
+  // ...and the absorbed subtree kept its OWN namespace. The snippet declares
+  // xhtml as a DEFAULT namespace (empty libxml prefix), so this only holds if the
+  // node re-creation resolves the namespace URI through the registered
+  // code-namespace map (`RegisterNamespace`) instead of assuming an empty prefix
+  // means ltx. Mislabelling these `ltx:p`/`ltx:b` would strip exactly what the
+  // XHTML post-processor keys on (`copy-foreign` matches `xhtml:*`), silently
+  // dropping the raw HTML from the final output.
+  assert!(
+    xml.contains("http://www.w3.org/1999/xhtml") || xml.contains("xhtml:p"),
+    "insertXML lost the snippet's xhtml namespace (mislabelled as ltx?); xml=\n{xml}"
+  );
+  // The XML-manipulation foundation (#350): `\rhfragment` parsed a two-root
+  // FRAGMENT — which Perl's single-node parseChunk rejects — held the parsed
+  // nodes across statements (they own their document), EDITED each one while it
+  // was still detached, and inserted them. Both `class="frag-*"` values prove all
+  // three: the fragment survived whole (two nodes, not one), the nodes were still
+  // valid when written to, and the pre-insertion edits reached the document.
+  assert!(
+    xml.contains("frag-one") && xml.contains("frag-two"),
+    "ParseXML fragment round-trip failed (both edited siblings should be present); xml=\n{xml}"
+  );
+  // ...and walking up from a top-level parsed node found nothing, so the
+  // throwaway `_lxfragment` wrapper a multi-root chunk is parsed inside stays
+  // invisible to scripts — it must never be reachable, let alone insertable.
+  assert!(
+    xml.contains("data-top=\"detached\""),
+    "parent() of a top-level ParseXML node leaked the fragment wrapper; xml=\n{xml}"
+  );
+  assert!(
+    !xml.contains("_lxfragment"),
+    "the internal fragment wrapper reached the document; xml=\n{xml}"
+  );
 
   // Primitive seam: the digestion-time side-effect persisted into State.
   let stored = state::lookup_value("script:x");
@@ -578,6 +668,362 @@ fn lookup_definition_pushes_construct_hooks_end_to_end() {
 /// `afterDigestBody` — the same flexary, unordered options the compile-time
 /// `Def*!` macros take. Driven through a real conversion (afterDigestBody needs a
 /// captured environment body). Each hook records a state side-effect we read back.
+/// The Document XML surface a COMPILE-TIME binding (`_sty.rs`/`_cls.rs`) uses,
+/// exposed to the runtime layer so the two do not diverge (issue #350: "expose it
+/// in rhai in full generality, so that the interfaces are comparable in the
+/// runtime and compile-time layers"). Every method below is named after its Perl
+/// `Core/Document.pm` original.
+const XMLAPI_SAMPLE: &str = r##"
+  // A tagged block to query and mutate:
+  //   <ltx:text class="#1"><ltx:emph>#1-inner</ltx:emph></ltx:text>
+  DefConstructor("\\xqbuild{}", |document, cls| {
+    let c = ToString(cls);
+    document.openElement("ltx:text");
+    document.setAttribute("class", c);
+    document.openElement("ltx:emph");
+    document.absorbString(c + "-inner");
+    document.closeElement("ltx:emph");
+    document.closeElement("ltx:text");
+  });
+
+  // insertElement (Perl `insertElement`) — the element counterpart that
+  // `insertXML` is named after — plus addClass, generateID, getNode, getElement.
+  DefConstructor("\\xqinsert", |document| {
+    let n = document.insertElement("ltx:text", #{ class: "ins-elem" });
+    document.addClass(n, "ins-extra");
+    document.generateID(n, "xq");
+    assign_global("xq:insqname", n.qname());
+    assign_global("xq:insid", n.getAttribute("xml:id"));
+    assign_global("xq:cur", document.getNode().qname());
+    assign_global("xq:elem", document.getElement().qname());
+  });
+
+  // findnodes / findnode (Perl `findnodes`/`findnode`), whole-document and
+  // scoped to a node — the query half a script had no way to reach before.
+  DefConstructor("\\xqfind", |document| {
+    let hits = document.findnodes("//ltx:text[@class]");
+    assign_global("xq:count", "" + hits.len());
+    let one = document.findnode("//ltx:text[contains(@class,'ins-elem')]");
+    assign_global("xq:one", one.getAttribute("class"));
+    let keep = document.findnode("//ltx:text[@class='keep']");
+    assign_global("xq:scoped", "" + document.findnodes(".//ltx:emph", keep).len());
+    assign_global("xq:missing",
+      if type_of(document.findnode("//ltx:nosuch")) == "()" { "unit" } else { "BAD" });
+  });
+
+  // Structural manipulation: rename / remove / unwrap / wrap / appendClone /
+  // replaceNode (Perl renameNode, removeNode, unwrapNodes, wrapNodes,
+  // appendClone, replaceNode).
+  DefConstructor("\\xqmutate", |document| {
+    document.renameNode(document.findnode("//ltx:text[@class='rename']"), "ltx:emph");
+    document.removeNode(document.findnode("//ltx:text[@class='remove']"));
+    document.unwrapNodes(document.findnode("//ltx:text[@class='unwrap']"));
+    let w = document.wrapNodes("ltx:text", [document.findnode("//ltx:text[@class='wrap']")]);
+    document.addClass(w, "wrapper");
+    document.appendClone(document.findnode("//ltx:text[@class='keep']"),
+                         [document.findnode("//ltx:text[@class='clone']")]);
+    document.replaceNode(document.findnode("//ltx:text[@class='replace']"),
+                         [document.findnode("//ltx:text[@class='mover']")]);
+  });
+
+  // openElementAt / closeElementAt (Perl `openElementAt`/`closeElementAt`):
+  // build at an explicit node instead of the current insertion point.
+  DefConstructor("\\xqat", |document| {
+    let target = document.findnode("//ltx:text[@class='at']");
+    let n = document.openElementAt(target, "ltx:emph", #{ class: "at-child" });
+    document.closeElementAt(n);
+  });
+
+  // A PARSED node may only enter the document through insertXML, which
+  // re-creates it. Handing one to a node-splicing method would move a node
+  // still owned by the throwaway parse document into ours — a use-after-free
+  // once the script drops the handle. Must be a clean error, not a segfault.
+  DefConstructor("\\xqforeign", |document| {
+    let parsed = ParseXML("<b>x</b>");
+    let target = document.findnode("//ltx:text[@class='keep']");
+    try {
+      document.replaceNode(target, parsed);
+      assign_global("xq:foreign", "ACCEPTED-A-PARSED-NODE");
+    } catch (e) {
+      assign_global("xq:foreign", "rejected");
+      assign_global("xq:foreignmsg", "" + e);
+    }
+  });
+
+  // renameNode on an ORPHAN: `Document::rename_node` panics on a node with no
+  // parent, which from an untrusted script would abort the conversion (and with
+  // panic=abort, the process). Must be a clean error instead.
+  DefConstructor("\\xqorphan", |document| {
+    let orphan = document.findnode("//ltx:text[@class='orphan']");
+    document.removeNode(orphan);
+    try {
+      document.renameNode(orphan, "ltx:emph");
+      assign_global("xq:orphan", "RENAMED-AN-ORPHAN");
+    } catch (e) {
+      assign_global("xq:orphan", "rejected");
+      assign_global("xq:orphanmsg", "" + e);
+    }
+  });
+"##;
+
+fn xmlapi_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxxmlapitest" {
+    Some(latexml_contrib::script_bindings::load_script(XMLAPI_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+/// The runtime layer reaches the same Document XML surface the compile-time
+/// layer does — query (`findnodes`/`findnode`), element insertion
+/// (`insertElement`), and structural edits — and the two hazards that surface
+/// creates for an untrusted script are contained rather than fatal.
+#[test]
+fn document_xml_api_matches_the_compile_time_surface() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(xmlapi_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxxmlapitest}\\begin{document}",
+    "\\xqinsert ",
+    "\\xqbuild{keep}\\xqbuild{rename}\\xqbuild{remove}\\xqbuild{unwrap}",
+    "\\xqbuild{wrap}\\xqbuild{clone}\\xqbuild{replace}\\xqbuild{mover}",
+    "\\xqbuild{at}\\xqbuild{orphan}",
+    "\\xqfind \\xqmutate \\xqat \\xqforeign \\xqorphan ",
+    "\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("the Document XML surface must not abort the conversion");
+  let xml = doc.serialize_to_string();
+
+  let g = |k: &str| match state::lookup_value(k) {
+    Some(latexml_core::common::store::Stored::String(s)) => {
+      latexml_core::common::arena::to_string(s)
+    },
+    _ => String::new(),
+  };
+
+  // ── insertElement / addClass / generateID / getNode / getElement ──
+  assert_eq!(
+    g("xq:insqname"),
+    "ltx:text",
+    "insertElement returned the new node"
+  );
+  assert!(
+    g("xq:insid").contains("xq"),
+    "generateID did not stamp the requested prefix, or getAttribute could not \
+     read the namespaced xml:id back; got {:?}",
+    g("xq:insid")
+  );
+  assert!(
+    xml.contains("ins-elem") && xml.contains("ins-extra"),
+    "insertElement/addClass did not reach the document; xml=\n{xml}"
+  );
+  assert!(
+    !g("xq:cur").is_empty() && !g("xq:elem").is_empty(),
+    "getNode/getElement returned nothing: cur={:?} elem={:?}",
+    g("xq:cur"),
+    g("xq:elem")
+  );
+
+  // ── findnodes / findnode ──
+  assert!(
+    g("xq:count").parse::<usize>().unwrap_or(0) >= 10,
+    "findnodes did not see the built blocks; count={:?}",
+    g("xq:count")
+  );
+  assert!(
+    g("xq:one").contains("ins-elem"),
+    "findnode returned the wrong node; got {:?}",
+    g("xq:one")
+  );
+  assert_eq!(
+    g("xq:scoped"),
+    "1",
+    "findnodes scoped to a node over-matched"
+  );
+  assert_eq!(
+    g("xq:missing"),
+    "unit",
+    "findnode with no match must be (), not an error"
+  );
+
+  // ── structural manipulation ──
+  assert!(
+    xml.contains("<ltx:emph class=\"rename\"") || xml.contains("class=\"rename\""),
+    "renameNode did not retag the node; xml=\n{xml}"
+  );
+  assert!(
+    !xml.contains("remove-inner"),
+    "removeNode left its subtree behind; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("unwrap-inner") && !xml.contains("class=\"unwrap\""),
+    "unwrapNodes must drop the wrapper but keep its children; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("wrapper"),
+    "wrapNodes did not create the wrapping element; xml=\n{xml}"
+  );
+  assert_eq!(
+    xml.matches("clone-inner").count(),
+    2,
+    "appendClone should have produced a second copy; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("mover-inner"),
+    "replaceNode lost the replacement node; xml=\n{xml}"
+  );
+
+  // ── openElementAt / closeElementAt ──
+  assert!(
+    xml.contains("at-child"),
+    "openElementAt/closeElementAt did not build at the target node; xml=\n{xml}"
+  );
+
+  // ── the two hazards are contained ──
+  assert_eq!(
+    g("xq:foreign"),
+    "rejected",
+    "a PARSED node was spliced in directly — that is a use-after-free once the \
+     script drops its handle; it must be routed through insertXML"
+  );
+  // ...and it was OUR guard that refused it, not some unrelated failure.
+  assert!(
+    g("xq:foreignmsg").contains("insertXML") && g("xq:foreignmsg").contains("ParseXML"),
+    "replaceNode failed for the wrong reason: {:?}",
+    g("xq:foreignmsg")
+  );
+  assert_eq!(
+    g("xq:orphan"),
+    "rejected",
+    "renameNode on an orphan reached Document::rename_node's panic"
+  );
+  assert!(
+    g("xq:orphanmsg").contains("no parent"),
+    "renameNode failed for the wrong reason: {:?}",
+    g("xq:orphanmsg")
+  );
+  assert!(
+    get_status(LogStatus::Fatal) == 0,
+    "the XML surface escalated to Fatal: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
+/// One throwing body of every binding KIND. The failure-isolation contract
+/// (`script_bindings_plan.md` §"Failure isolation") says a bad binding "degrades
+/// only that package … it can never crash, hang, or corrupt a conversion";
+/// before this, every `wire_*` trampoline mapped a Rhai error straight to a hard
+/// `Error::from`, so one `throw` — or one typo'd method name, or a
+/// `max_operations` breach — took the whole document with it.
+const THROW_SAMPLE: &str = r##"
+  DefMacro("\\thrmacro", || { throw "macro boom"; });
+  DefPrimitive("\\thrprim", || { throw "primitive boom"; });
+  DefConstructor("\\thrctor", |document| {
+    document.openElement("ltx:text");
+    throw "constructor boom";
+  });
+  DefConditional("\\ifthrcond", || { throw "conditional boom"; });
+  DefConstructor("\\thrprops{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
+    properties: |_x| { throw "properties boom"; }
+  });
+  DefConstructor("\\thrbefore{}", "<ltx:text class=\"thr-before\">#1</ltx:text>", #{
+    beforeDigest: || { throw "beforeDigest boom"; }
+  });
+  DefConstructor("\\thrafter{}", "<ltx:text class=\"thr-after\">#1</ltx:text>", #{
+    afterDigest: || { throw "afterDigest boom"; }
+  });
+  DefConstructor("\\thrconstruct{}", "<ltx:text class=\"thr-construct\">#1</ltx:text>", #{
+    afterConstruct: || { throw "afterConstruct boom"; }
+  });
+  DefColumnType("Z", || { throw "column type boom"; });
+  DefRewrite(#{ xpath: "descendant-or-self::ltx:text[@class='thr-rw']" },
+             |nodes| { throw "rewrite boom"; });
+  DefMathLigature(|document, node| { throw "matcher boom"; });
+"##;
+
+fn throw_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxthrowtest" {
+    Some(latexml_contrib::script_bindings::load_script(THROW_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+/// A failing script body degrades ITS OWN binding; the conversion completes.
+#[test]
+fn a_throwing_script_body_degrades_only_its_binding() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(throw_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxthrowtest}\\begin{document}",
+    "ALPHA \\thrmacro BETA \\thrprim GAMMA \\thrctor DELTA ",
+    "\\thrprops{P} EPSILON \\thrbefore{B} ZETA \\thrafter{A} ETA ",
+    "\\ifthrcond THETA\\fi IOTA \\thrconstruct{C} KAPPA ",
+    "\\begin{tabular}{Z}cell\\end{tabular} LAMBDA $a+b$ MU",
+    "\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("a throwing script body must not abort the conversion");
+  let xml = doc.serialize_to_string();
+
+  // Every marker AROUND the failing bindings survived — the blast radius was
+  // one binding each, not the document.
+  for marker in [
+    "ALPHA", "BETA", "GAMMA", "DELTA", "EPSILON", "ZETA", "ETA", "IOTA", "KAPPA", "LAMBDA", "MU",
+  ] {
+    assert!(
+      xml.contains(marker),
+      "content around a failing binding was lost at {marker}; xml=\n{xml}"
+    );
+  }
+  // The neutral value a contained failure falls back to must be EMPTY, never a
+  // stringified `()` leaking into the page — three of the sites feed it straight
+  // into `dynamic_to_string` and on into the token stream.
+  assert!(
+    xml.contains("BETA") && !xml.contains("()"),
+    "a contained failure leaked its neutral value into the document; xml=\n{xml}"
+  );
+  // Each failure was reported, not swallowed.
+  assert!(
+    get_status(LogStatus::Error) >= 7,
+    "expected one Error: per failing binding kind, got {}",
+    get_status(LogStatus::Error)
+  );
+  // ...and none of them escalated the conversion away.
+  assert!(
+    get_status(LogStatus::Fatal) == 0,
+    "a contained script failure still went Fatal: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 const OPTBAG_SAMPLE: &str = r##"
   DefPrimitive("\\optbagprim", || { AssignValue("optbag:body", "X", "global"); }, #{
     beforeDigest: || { AssignValue("optbag:before", "B", "global"); },
@@ -650,6 +1096,83 @@ fn option_bag_digest_hooks_end_to_end() {
 /// Default `.rhai` FILE discovery (no embedder dispatcher): a
 /// `<name>.sty.rhai` next to the document is found via the searchpath
 /// machinery and loaded on `\usepackage{<name>}` — the downstream
+const BADXML_SAMPLE: &str = r##"
+  // Two ways to get malformed markup into the document, each of which MUST
+  // degrade only itself: parse-and-insert in one call, and the standalone parser.
+  DefConstructor("\\rhbadxml", |document| {
+    document.insertXML("<p>unclosed");
+  });
+  DefConstructor("\\rhbadparse", |document| {
+    let nodes = ParseXML("<p>a & b</p>");
+    document.insertXML(nodes);
+  });
+"##;
+
+fn badxml_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxbadxmltest" {
+    Some(latexml_contrib::script_bindings::load_script(BADXML_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+/// Malformed markup DEGRADES ONE BINDING, it does not abort the conversion and
+/// it does not silently vanish.
+///
+/// This is the contract that makes rejecting malformed input (rather than
+/// letting libxml "recover" it, which silently DESTROYS content — see
+/// `common::xml::parse_chunk`) safe to impose: the author gets a loud `Error:`
+/// naming the snippet, everything around it still converts.
+#[test]
+fn malformed_insert_xml_degrades_the_binding_not_the_conversion() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(badxml_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxbadxmltest}",
+    "\\begin{document}BEFORE \\rhbadxml MIDDLE \\rhbadparse AFTER\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("a malformed chunk must not abort the conversion");
+  let xml = doc.serialize_to_string();
+
+  // The surrounding document is intact — the failure was contained.
+  assert!(
+    xml.contains("BEFORE") && xml.contains("MIDDLE") && xml.contains("AFTER"),
+    "a malformed chunk swallowed neighbouring content; xml=\n{xml}"
+  );
+  // Nothing was salvaged into the tree: recovery mode would have inserted a
+  // repaired `<p>` here, which is precisely the silent content mangling we
+  // refuse. `insertXML` inserts all of the markup or none of it.
+  assert!(
+    !xml.contains("unclosed"),
+    "malformed markup was salvaged into the document instead of rejected; xml=\n{xml}"
+  );
+  // And it was LOUD: reported as an error, never a silent skip. (`\rhbadparse`
+  // raises its own script error from ParseXML, so both paths are covered.)
+  assert!(
+    get_status(LogStatus::Error) > 0,
+    "malformed markup was dropped silently — no Error: was logged"
+  );
+  assert!(
+    get_status(LogStatus::Fatal) == 0,
+    "a malformed chunk escalated to Fatal: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 /// customize-without-recompiling story for the single-file binary.
 #[test]
 fn script_binding_discovered_from_file() {

@@ -10,6 +10,38 @@
     inside a running body, shell out to external commands, read the engine version,
     and use the full diagnostics surface (`Info`/`Fatal`/`Note`/progress).
     List-valued state lookups no longer panic or leak their internal representation.
+  - **A `.rhai` binding can now parse and manipulate XML/(X)HTML.**
+    `document.insertXML(markup)` splices a *parsed subtree* into the document at the
+    current point — the runtime half of BookML's `\bmlRawHTML` → `<ltx:rawhtml>` —
+    where previously only escaped text could be inserted. `ParseXML(markup)` exposes
+    the parser on its own, returning nodes a script can inspect, walk and edit
+    before inserting them; a chunk may be a fragment of several siblings. Parsed
+    nodes are safe to hold because each owns its document. Malformed markup is
+    rejected outright rather than quietly salvaged — libxml's recovery mode
+    silently deletes author content (`<b>a</b> <i>b</i>` became `<b>a</b>`,
+    `a&nbsp;b` became `ab`). Inserted markup also keeps its own namespace:
+    namespaces resolve by URI through the registered prefix map
+    (`RegisterNamespace`) instead of being assumed to be LaTeXML's, and wildcard
+    schema entries such as `xhtml:*` are honoured, so attributes like `class`
+    survive onto the final page. A malformed chunk degrades only its own binding:
+    the rest of the document still converts, and the reported error names the
+    likely cause and quotes the offending snippet.
+  - **`.rhai` bindings now reach the same document XML surface the compile-time
+    bindings do** — XPath query (`findnodes`/`findnode`), element insertion
+    (`insertElement`), and structural editing (`addClass`, `generateID`,
+    `removeNode`, `replaceNode`, `renameNode`, `wrapNodes`, `unwrapNodes`,
+    `appendClone`, `openElementAt`/`closeElementAt`), each under its Perl name, so
+    the runtime and compile-time binding layers do not drift apart. Reading a
+    namespaced attribute such as `xml:id` back by its qualified name now works.
+  - **A failing `.rhai` binding no longer costs the whole document.** An error
+    raised anywhere in a script body — a `throw`, a typo'd method name, an
+    operation-limit breach — used to abort the entire conversion; a single
+    throwing macro produced an empty document. Each binding kind now degrades to a
+    neutral result (an empty expansion, a skipped constructor, a false
+    conditional, …), reports a clean `Error:`, and the rest of the document
+    converts. A binding that fails repeatedly still ends the run at the usual
+    error ceiling, and a script that fails to *compile* still simply does not
+    install.
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
     text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
     upstream; the `.htm` destination extension now infers HTML5 like `.html`.

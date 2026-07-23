@@ -644,10 +644,26 @@ fn m1_errors_are_clean() {
   fresh_state();
   assert!(load_script("DefMacro(\"\\\\x{}\", |a| a +").is_err());
 
+  // A body that throws at RUN time degrades ITS OWN binding: it expands to
+  // nothing and reports a clean `Error:`. It does NOT propagate an `Err`, which
+  // would abort the whole conversion — the failure-isolation contract
+  // (`wire.rs::contain`; before it, one throwing macro produced an EMPTY
+  // document). Compare the load-time failure above, which correctly stays an
+  // `Err`: there the package simply never installs.
   fresh_state();
+  use latexml_core::common::error::{LogStatus, get_status};
   load_script(r#"DefMacro("\\boom{}", |x| { throw "kaboom"; });"#).expect("load");
-  let r = gullet::do_expand(mouth::tokenize_internal(r"\boom{x}"));
-  assert!(r.is_err(), "throwing body should error, got {r:?}");
+  let before = get_status(LogStatus::Error);
+  let expanded = gullet::do_expand(mouth::tokenize_internal(r"\boom{x}"))
+    .expect("a throwing body must not abort the expansion");
+  assert!(
+    expanded.is_empty(),
+    "a failed expansion must contribute nothing, got {expanded:?}"
+  );
+  assert!(
+    get_status(LogStatus::Error) > before,
+    "the failure must still be REPORTED, not silently swallowed"
+  );
   latexml_core::reset_thread_engine();
 }
 

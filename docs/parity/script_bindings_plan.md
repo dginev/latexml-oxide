@@ -375,7 +375,45 @@ cached by source (`SCRIPT_CACHE`).
 - `document.openElement(tag)`, `document.closeElement(tag)`,
   `document.maybeCloseElement(tag)`.
 - `document.setAttribute(key, val)` — attribute on the current node.
-- `document.absorbString(s)` — insert literal text.
+- `document.absorbString(s)` — insert literal text (ESCAPED — `<b>` becomes `&lt;b&gt;`).
+- `document.insertXML(markup)` — **(#350)** parse an XML/(X)HTML string and splice
+  the parsed SUBTREE in at the current point, as structured element/attribute/text
+  nodes. The runtime half of Perl BookML's `\bmlRawHTML` idiom, which composes
+  `XML::LibXML->parse_string` (`Common/XML/Parser.pm` `parseChunk`) with
+  `$document->appendTree` (`Document.pm:2093`); backed by
+  `common::xml::parse_fragment` (over `parse_chunk`, the `parseChunk` port) →
+  `Document::insert_xml` → the existing `append_tree`. Namespaces resolve through
+  the registry — see below.
+
+  Overloads: `insertXML(markup)`, `insertXML(node)`, `insertXML(nodes)` — so a
+  script may parse-and-insert in one call, or insert nodes it already holds.
+
+- `ParseXML(markup) -> [Node]` — **(#350)** the parser as its own primitive, so a
+  script can inspect or edit markup *before* it reaches the document. Returns an
+  array because a chunk may be a fragment of several siblings (OXIDIZED_DESIGN
+  #66). Each node OWNS the throwaway document it was parsed into, so unlike an
+  in-tree node from a rewrite callback it is safe to hold, walk and mutate for as
+  long as the script keeps it.
+
+  **The markup must be WELL-FORMED, and parser recovery is OFF** (matching Perl's
+  `parse_string`, which defaults to `recover => 0`). It need *not* be a single
+  root — several siblings, or bare text, parse as a fragment (OXIDIZED_DESIGN
+  #66) — but nothing is salvaged. That strictness is deliberate: libxml's recovery
+  mode *silently destroys* author content — measured, `<b>a</b> <i>b</i>` salvaged
+  to just `<b>a</b>`, `a&nbsp;b` to `ab`, `a & b` to `a  b`. Practical consequence
+  for a binding author: write HTML entities in their numeric form (`&#160;`, not
+  `&nbsp;`) unless the chunk declares them — `&nbsp;` is undefined in XML without
+  a DTD.
+
+  **On malformed input both degrade, they do not abort.** `insertXML` inserts
+  nothing, `ParseXML` returns an empty array, and each raises a clean `Error:`
+  naming the likely cause (and, for `insertXML`, quoting the snippet). Neither
+  raises a *Rhai* error, which would propagate out of the constructor and kill the
+  whole conversion — see the failure-isolation caveat below. Guard:
+  `30_script_bindings.rs::malformed_insert_xml_degrades_the_binding_not_the_conversion`.
+
+  > Containment is GENERAL, not special-cased here — see "Failure containment"
+  > below.
 - `document.absorb(arg)` — absorb a digested argument handle (`arg1`, …).
 - `document.absorbProperty(name)` — absorb a whatsit property at the current
   point (the imperative analog of a template's `#name` hole; `"body"` inside an
@@ -390,6 +428,130 @@ $_[0]->maybeCloseElement('ltx:bibliography'); })` →
 `DefConstructor("\\endreferences", |document| {
 document.maybeCloseElement("ltx:biblist");
 document.maybeCloseElement("ltx:bibliography"); })`.
+
+**`Node` — the XML-manipulation foundation.** One Rhai type serves every node,
+whatever its provenance, so a capability added once works everywhere:
+
+* a node *inside the conversion's tree*, handed to a `DefRewrite`/`DefMathLigature`
+  callback — valid only for that body (it does not own the tree);
+* a node *returned by `ParseXML`*, which **owns** its parsed document (libxml's
+  `Document` is refcounted), and is therefore safe to keep, walk and mutate across
+  statements. This is what makes handing parsed XML to an untrusted script sound
+  at all: a bare libxml node is a pointer into its document, and one that outlives
+  its owner is a dangling FFI pointer — a class of bug that has already cost this
+  project SIGSEGVs, and which bypasses `catch_unwind`.
+
+Nodes reached *from* a node (`parent`, `children`, `firstChild`, `nextSibling`,
+`prevSibling`) inherit that provenance, so ownership propagates however deep a
+script walks a parsed tree.
+
+Current methods — read: `qname`, `name`, `content`, `getAttribute`,
+`hasAttribute`, `toString` (serialize back to markup); write: `setAttribute`,
+`removeAttribute`, `setContent`, `unlink`. **Extending is one `register_fn` over
+`NodeProxy`** in `engine.rs` (see the "node traversal / editing" block) — there is
+no parallel API to keep in step, which is the point of the single type.
+
+`parent()` on a TOP-LEVEL `ParseXML` node is `()`. Everything above such a node is
+an artifact of how the chunk was parsed — the throwaway `_lxfragment` wrapper a
+multi-root chunk is parsed inside, or the parsed document node — never markup the
+script wrote, and handing the wrapper back would let `insertXML(n.parent())`
+splice `<_lxfragment>` into the page. In-tree nodes are unaffected. Guard:
+`30_script_bindings.rs` `data-top="detached"` assertion.
+
+**The Document XML surface (#350).** The runtime layer reaches the same
+`Core/Document.pm` operations a compile-time `_sty.rs` binding calls, under their
+Perl names, so the two do not diverge:
+
+| Rhai | Perl / `Document` | notes |
+|---|---|---|
+| `findnodes(xpath[, node])` | `findnodes` | XPath query; array of Node |
+| `findnode(xpath[, node])` | `findnode` | first match, or `()` |
+| `getNode()` / `setNode(n)` / `getElement()` | `getNode`/`setNode`/`getElement` | the insertion point |
+| `insertElement(qname[, content][, attrs])` | `insertElement` | open+absorb+close; returns the node |
+| `openElementAt(n, qname[, attrs])` / `closeElementAt(n)` | `openElementAt`/`closeElementAt` | build at an explicit node |
+| `addClass(n, c)` / `generateID(n, prefix)` | `addClass`/`generateID` | |
+| `removeNode(n)` / `replaceNode(n, [n])` / `renameNode(n, name[, reinsert])` | `removeNode`/`replaceNode`/`renameNode` | |
+| `unwrapNodes(n)` / `wrapNodes(qname, [n])` / `appendClone(n, [n])` | `unwrapNodes`/`wrapNodes`/`appendClone` | `wrapNodes` returns `()` when it cannot wrap |
+
+Two rules hold across all of them, because a script is untrusted:
+
+* **No panic reaches the conversion.** `Document::rename_node` `expect`s a parent,
+  so `renameNode` on an ORPHAN — a node the script just removed — would abort the
+  conversion, and the process under `panic = "abort"`. It is refused with a clean
+  script error instead. Guard (red-checked): `xq:orphanmsg`.
+* **A `ParseXML` node may only enter the document through `insertXML`.** Every
+  node-splicing method refuses one. A parsed node still belongs to its throwaway
+  parse document, whose libxml *dictionary* may own the node's name and content
+  strings; moving it into our tree leaves those dangling when the script drops the
+  handle. `insertXML` is safe because it RE-CREATES the subtree via `append_tree`.
+  Guard (red-checked): `xq:foreignmsg`.
+
+`getAttribute`/`hasAttribute`/`removeAttribute` resolve a PREFIXED name through
+the namespace registry (`model::get_node_attribute`). libxml stores `xml:id` under
+the built-in xml namespace and matches `xmlGetProp` on the plain name, so a
+qualified lookup found nothing — a script could not read back the id `generateID`
+had just written.
+
+All of the above are pinned by
+`30_script_bindings.rs::document_xml_api_matches_the_compile_time_surface`.
+
+**Namespaces (URIs vs prefixes).** A binding declares its prefix↔URI mappings with
+the same two helpers the Perl bindings use — `RegisterNamespace(prefix, uri)` (code
+prefix) and `RegisterDocumentNamespace(prefix, uri)` (output-document prefix),
+Perl `Package.pm:2049-2057` — both registered on the Rhai engine. Node re-creation
+resolves a node's namespace **URI through that registry**, faithful to Perl
+`Model::getNodeQName` → `getNamespacePrefix`; it does NOT read the raw libxml
+prefix. (Rust splits that resolution into `model::get_foreign_node_qname`, called
+only from `append_tree`, from the hot `get_node_qname` — a pure performance
+factoring, since only a tree parsed *elsewhere* can present a foreign default
+namespace, and reading the URI on the shared path cost a measured 3.4%.) That
+distinction is load-bearing for `insertXML`: a snippet written the
+natural way, `<p xmlns="http://www.w3.org/1999/xhtml">`, carries an *empty* libxml
+prefix, and treating "empty prefix" as "the ltx namespace" would relabel it
+`ltx:p` — stripping exactly what the XHTML post-processor keys on (`copy-foreign`
+matches `xhtml:*`, `LaTeXML-common.xsl:358`) and silently dropping the raw HTML
+from the final page. Wildcard schema entries participate too: `ltx:rawhtml`'s
+content model is `xhtml:*`, so a concrete `xhtml:p` resolves its permissions
+against that wildcard (Perl `canContain`/`canHaveAttribute`'s `$1.':*'` fallback),
+which is what lets attributes such as `class` survive on absorbed markup.
+
+**Failure containment (the `wire_*` seam).** A failure inside ANY script body is
+reported as an ordinary `Error:` and the binding falls back to a neutral value —
+it does not propagate an `Err` that would abort the conversion. This is what makes
+the failure-isolation promise above real. All 14 trampolines in `wire.rs` route
+through one helper, `contain`:
+
+| binding kind | neutral value on failure |
+|---|---|
+| macro (both forms), column type, reversion | empty expansion |
+| primitive, `beforeDigest`, `afterDigest` | no digested boxes |
+| constructor, `afterConstruct`, rewrite-replace | no-op |
+| `properties` | empty property map |
+| conditional | false |
+| sizer | zero-sized box |
+| math-ligature matcher | no match |
+
+In each case the binding contributes nothing and the surrounding document carries
+on — the same shape as an undefined control sequence, which LaTeXML already
+survives. Before this, a Rhai error anywhere in a body was mapped to a hard
+`Error::from`, so ONE `throw` — or a typo'd method name, or a `max_operations`
+breach — cost the whole document: measured, a single throwing `DefMacro` produced
+an **empty** document.
+
+Two things containment deliberately does NOT do:
+
+* **It does not make a broken binding free.** `Error!` escalates to `Fatal` past
+  `MAX_ERRORS`, and that `Err` still propagates — so a binding failing on every
+  invocation ends the conversion, as it should.
+* **It does not cover LOAD-time failures.** A script that fails to compile still
+  returns `Err` from `load_script`; the package simply never installs and
+  dispatch falls through to the normal undefined-binding path.
+
+A body that fails PART-WAY may leave elements it opened unclosed; the document
+builder's auto-close handles that, so the result is structurally odd rather than
+malformed. Guards: `30_script_bindings.rs::a_throwing_script_body_degrades_only_its_binding`
+(one throwing body of every kind, in one document) and
+`script_bindings::tests::m1_errors_are_clean` (load-time `Err` vs run-time degrade).
 
 **State API:** `assign_value(key, val)` (group-local), `assign_global(key, val)`,
 `lookup_value(key) -> string`.

@@ -9,14 +9,14 @@
 >
 > **Refresh** before milestone planning:
 > `gh issue list --state open --limit 100 --json number,title,labels,createdAt`.
-> Last refreshed: **2026-07-23** — **7 open**. Trust the heading count against the
+> Last refreshed: **2026-07-23** — **9 open**. Trust the heading count against the
 > row count, never a running narrative; that arithmetic has drifted twice.
 > Everything closed since is in Recently closed, with its outcome. This file
 > drifts fast — re-run the one-liner rather than incrementally editing rows.
 
 Tracker: <https://github.com/dginev/latexml-oxide/issues>
 
-## Open issues (7)
+## Open issues (9)
 
 | # | Title | Labels | Local status / interpretation |
 |---|---|---|---|
@@ -27,6 +27,8 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 | **297** | latexml_oxide 0.7.4 binding transition: `nowrap.sty.ltxml` | documentation, packages | Filed 2026-07-18. A user-supplied `.ltxml` binding on `--path` is ignored: `Warning:missing_file:nowrap … No dispatcher entry and no raw file found on disk` (`latexml_core/src/binding/content.rs`). Perl finds it silently. This is the **user-supplied `.ltxml` discovery** path — `.ltxml` is Perl, so the Rust answer is either the Rhai `runtime-bindings` front-end or a clear diagnostic; today it is neither. |
 | **303** | Precompiled kernel (dump) release and update strategy | enhancement | Filed 2026-07-18, follow-up to #299/PR #300. The dump is keyed to the TL **year**, but the LaTeX format is not frozen within a year (`\fmtversion`, `tlmgr` `fmttriggers` rebuilds) — a false positive was traded for a rarer false negative. Candidate signals: key on `\fmtversion` + L3 date, or compare against the ambient `latex.fmt` mtime; warn-not-fail. |
 | **80** | space XMhints as elided arguments | enhancement | **Open — still reproduces (verified 2026-06-16).** `$[D_{0},\ ]$` → the escaped space is dropped, so the grammar sees a dangling `,]` and rejects. Fix = emit an XMHint for the in-math space and teach the marpa grammar to treat it as an elided argument slot. Real grammar work, not a quick win. Backlog. |
+| **347** | how to use `\cprotect` in latexml? | — | Filed 2026-07-23, user question. `cprotect.sty` (verbatim-in-moving-argument). Triage against the current binary before answering; likely a binding-coverage question rather than a defect. |
+| **350** | export an XML parser to Rhai bindings (?) | enhancement, rhai, bindings | Filed 2026-07-23 by the BookML author. **Addressed 2026-07-23** (`feat-350-rhai-xml-parser`): `document.insertXML(markup)` parses a snippet and splices the parsed subtree at the current point — the runtime half of `\bmlRawHTML` → `<ltx:rawhtml>` — over the existing `Document::append_tree`. Two latent defects it exposed were fixed with it: namespaces now resolve by **URI** through the registered prefix map (an `xmlns=`-declared xhtml snippet was being relabelled `ltx:`, which the XSLT `copy-foreign` would have dropped), and wildcard schema entries (`xhtml:*`) now govern concrete tags, so attributes survive. See [`script_bindings_plan.md`](../parity/script_bindings_plan.md). |
 
 ## Recently closed (since the 2026-05-24 refresh — outcomes)
 
