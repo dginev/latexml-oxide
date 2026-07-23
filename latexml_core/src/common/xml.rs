@@ -27,7 +27,9 @@ pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 /// The markup must be a single well-formed XML root (`parseChunk`'s contract): a
 /// bare fragment of several top-level nodes, or an undeclared HTML entity such as
 /// `&nbsp;`, is a parse error. The error is returned as a rendered string for the
-/// caller to report; this layer applies no logging policy of its own.
+/// caller to report; this layer applies no logging policy of its own. See
+/// [`ill_formed_markup_hint`] for why that string names the likely causes instead
+/// of quoting libxml's own diagnosis.
 ///
 /// **Recovery is deliberately OFF.** libxml's default is to salvage malformed
 /// input, which here silently DESTROYS author content rather than reporting it —
@@ -47,7 +49,32 @@ pub fn parse_chunk(markup: &str) -> std::result::Result<Document, String> {
   };
   libxml::parser::Parser::default()
     .parse_string_with_options(markup, options)
-    .map_err(|e| format!("{e:?}"))
+    .map_err(|e| match e {
+      libxml::parser::XmlParseError::DocumentTooLarge => String::from("markup too large to parse"),
+      _ => ill_formed_markup_hint(),
+    })
+}
+
+/// What we can honestly say when libxml refuses a chunk.
+///
+/// libxml2 diagnoses a parse failure precisely (`Premature end of data in tag p,
+/// line 1`), but rust-libxml's safe API discards that: `parse_string_with_options`
+/// collapses every failure to `XmlParseError::GotNullPointer`, which renders as
+/// "Got a Null pointer" — a message that tells a binding author nothing about
+/// their markup. Recovering the real text needs `xmlGetLastError`, i.e. raw
+/// libxml2 FFI, and this workspace deliberately keeps ALL such FFI in the
+/// rust-libxml fork (oxide is a pure consumer) — so surfacing it is a fork
+/// change, not something to smuggle in here.
+///
+/// Until then, name the causes rather than the symptom. Hand-written snippets
+/// fail for essentially three reasons, all covered below, so this is strictly
+/// more actionable than the pointer message even though it is not per-chunk.
+fn ill_formed_markup_hint() -> String {
+  String::from(
+    "not well-formed XML — check for an unclosed or mismatched tag, a bare `&` \
+     (write `&amp;`), or an HTML entity such as `&nbsp;` that XML does not define \
+     (write the numeric form, `&#160;`)",
+  )
 }
 
 /// The element we parse a fragment inside of. Never enters the document — only
@@ -113,6 +140,21 @@ pub struct ParsedFragment {
   /// Kept solely to own the nodes below; refcounted, so cloning is cheap.
   doc:   Document,
   nodes: Vec<Node>,
+}
+
+/// Hand-written because libxml's `Document`/`Node` are opaque FFI handles whose
+/// derived form would print pointers, not markup. Report what a caller actually
+/// wants to see: how many top-level nodes, and their names.
+impl std::fmt::Debug for ParsedFragment {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("ParsedFragment")
+      .field("nodes", &self.nodes.len())
+      .field(
+        "names",
+        &self.nodes.iter().map(Node::get_name).collect::<Vec<_>>(),
+      )
+      .finish()
+  }
 }
 
 impl ParsedFragment {
@@ -479,6 +521,25 @@ mod parse_fragment_tests {
     let f = parse_fragment("").expect("empty markup is not a parse failure");
     assert!(f.is_empty());
     assert_eq!(f.len(), 0);
+  }
+
+  #[test]
+  fn a_rejection_says_what_to_look_for_not_got_a_null_pointer() {
+    // The message a `.rhai` binding author sees is the whole point of failing
+    // loudly. rust-libxml collapses every parse failure to `GotNullPointer`
+    // ("Got a Null pointer"), which names nothing they can act on; each of the
+    // three realistic causes must instead be findable in what we report.
+    for markup in ["<p>unclosed", "<p>a & b</p>", "<p>a&nbsp;b</p>"] {
+      let err = parse_fragment(markup).expect_err("markup should be rejected");
+      assert!(
+        !err.to_lowercase().contains("null pointer"),
+        "leaked the useless libxml error for {markup:?}: {err}"
+      );
+      assert!(
+        err.contains("unclosed") && err.contains("&amp;") && err.contains("&#160;"),
+        "rejection must point at the likely causes for {markup:?}: {err}"
+      );
+    }
   }
 
   #[test]

@@ -724,6 +724,83 @@ fn option_bag_digest_hooks_end_to_end() {
 /// Default `.rhai` FILE discovery (no embedder dispatcher): a
 /// `<name>.sty.rhai` next to the document is found via the searchpath
 /// machinery and loaded on `\usepackage{<name>}` — the downstream
+const BADXML_SAMPLE: &str = r##"
+  // Two ways to get malformed markup into the document, each of which MUST
+  // degrade only itself: parse-and-insert in one call, and the standalone parser.
+  DefConstructor("\\rhbadxml", |document| {
+    document.insertXML("<p>unclosed");
+  });
+  DefConstructor("\\rhbadparse", |document| {
+    let nodes = ParseXML("<p>a & b</p>");
+    document.insertXML(nodes);
+  });
+"##;
+
+fn badxml_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxbadxmltest" {
+    Some(latexml_contrib::script_bindings::load_script(BADXML_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+/// Malformed markup DEGRADES ONE BINDING, it does not abort the conversion and
+/// it does not silently vanish.
+///
+/// This is the contract that makes rejecting malformed input (rather than
+/// letting libxml "recover" it, which silently DESTROYS content — see
+/// `common::xml::parse_chunk`) safe to impose: the author gets a loud `Error:`
+/// naming the snippet, everything around it still converts.
+#[test]
+fn malformed_insert_xml_degrades_the_binding_not_the_conversion() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(badxml_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxbadxmltest}",
+    "\\begin{document}BEFORE \\rhbadxml MIDDLE \\rhbadparse AFTER\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("a malformed chunk must not abort the conversion");
+  let xml = doc.serialize_to_string();
+
+  // The surrounding document is intact — the failure was contained.
+  assert!(
+    xml.contains("BEFORE") && xml.contains("MIDDLE") && xml.contains("AFTER"),
+    "a malformed chunk swallowed neighbouring content; xml=\n{xml}"
+  );
+  // Nothing was salvaged into the tree: recovery mode would have inserted a
+  // repaired `<p>` here, which is precisely the silent content mangling we
+  // refuse. `insertXML` inserts all of the markup or none of it.
+  assert!(
+    !xml.contains("unclosed"),
+    "malformed markup was salvaged into the document instead of rejected; xml=\n{xml}"
+  );
+  // And it was LOUD: reported as an error, never a silent skip. (`\rhbadparse`
+  // raises its own script error from ParseXML, so both paths are covered.)
+  assert!(
+    get_status(LogStatus::Error) > 0,
+    "malformed markup was dropped silently — no Error: was logged"
+  );
+  assert!(
+    get_status(LogStatus::Fatal) == 0,
+    "a malformed chunk escalated to Fatal: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 /// customize-without-recompiling story for the single-file binary.
 #[test]
 fn script_binding_discovered_from_file() {

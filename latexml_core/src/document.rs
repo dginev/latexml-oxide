@@ -4873,7 +4873,11 @@ impl Document {
             self.unrecord_id(&xmlid);
           }
 
-          let tag_sym = get_node_qname(&child);
+          // `get_FOREIGN_node_qname`: `data` may be a tree parsed elsewhere
+          // (`Document::insert_xml`), whose elements can sit in a DEFAULT
+          // namespace that is not ours — `<p xmlns="…/1999/xhtml">`. Only here is
+          // that shape possible, and only here do we pay to resolve it.
+          let tag_sym = model::get_foreign_node_qname(&child);
           let tag = arena::to_string(tag_sym);
           let mut new = self.open_element_at(node, &tag, Some(attributes), None)?;
           self.append_tree(&mut new, child.get_child_nodes())?;
@@ -4911,23 +4915,35 @@ impl Document {
   /// `common/relaxng/scan.rs`) and [`Document::append_tree`] — so this is pure
   /// glue.
   ///
-  /// Faithful to `parseChunk`, the markup must have a single well-formed root; a
-  /// multi-node fragment or bare text is a parse error. The parsed root element
-  /// and its subtree are re-created node-by-node through `append_tree`'s
-  /// model-aware path, so namespaces declared in the snippet (e.g. xhtml) are
-  /// preserved and `xml:id`s re-registered. A parse failure surfaces as a clean
-  /// `Error:` and inserts nothing — degrading the offending binding rather than
-  /// aborting the conversion (the runtime-bindings failure-isolation contract).
+  /// The markup must be WELL-FORMED, but need not be a single root: several
+  /// sibling nodes, or bare text, are accepted as a document fragment
+  /// (OXIDIZED_DESIGN #66 — Perl's `parseChunk` is single-node only). The parsed
+  /// nodes are re-created one by one through `append_tree`'s model-aware path, so
+  /// namespaces declared in the snippet (e.g. xhtml) are preserved and `xml:id`s
+  /// re-registered. Malformed markup is REJECTED, never salvaged — see
+  /// [`crate::common::xml::parse_chunk`] for what libxml's recovery mode
+  /// destroys — and surfaces as a clean `Error:` that inserts nothing, degrading
+  /// the offending binding rather than aborting the conversion (the
+  /// runtime-bindings failure-isolation contract).
   pub fn insert_xml(&mut self, xml: &str) -> Result<()> {
     // The parsed Document OWNS the nodes `append_tree` re-creates from, so it
     // must stay alive across the call below (bound here, dropped at fn end).
     let parsed = match xml::parse_fragment(xml) {
       Ok(doc) => doc,
       Err(e) => {
+        // Quote the offending snippet: a binding may insert markup from several
+        // places, and the reason alone would not say WHICH one to go fix. Capped
+        // so a runaway string cannot flood the log with a single message.
+        const SNIPPET_CAP: usize = 200;
+        let mut snippet: String = xml.chars().take(SNIPPET_CAP).collect();
+        if xml.chars().nth(SNIPPET_CAP).is_some() {
+          snippet.push('…');
+        }
         Error!(
           "malformed",
           "insertXML",
-          format!("could not parse XML markup: {e}")
+          format!("could not parse XML markup: {e}"),
+          format!("in: {snippet}")
         );
         return Ok(());
       },

@@ -380,9 +380,10 @@ cached by source (`SCRIPT_CACHE`).
   the parsed SUBTREE in at the current point, as structured element/attribute/text
   nodes. The runtime half of Perl BookML's `\bmlRawHTML` idiom, which composes
   `XML::LibXML->parse_string` (`Common/XML/Parser.pm` `parseChunk`) with
-  `$document->appendTree` (`Document.pm:2093`); backed by `common::xml::parse_chunk`
-  (the `parseChunk` port) → `Document::insert_xml` → the existing `append_tree`.
-  Namespaces resolve through the registry — see below.
+  `$document->appendTree` (`Document.pm:2093`); backed by
+  `common::xml::parse_fragment` (over `parse_chunk`, the `parseChunk` port) →
+  `Document::insert_xml` → the existing `append_tree`. Namespaces resolve through
+  the registry — see below.
 
   Overloads: `insertXML(markup)`, `insertXML(node)`, `insertXML(nodes)` — so a
   script may parse-and-insert in one call, or insert nodes it already holds.
@@ -394,15 +395,32 @@ cached by source (`SCRIPT_CACHE`).
   in-tree node from a rewrite callback it is safe to hold, walk and mutate for as
   long as the script keeps it.
 
-  **The markup must be a single well-formed XML root, and parser recovery is OFF**
-  (matching Perl's `parse_string`, which defaults to `recover => 0`). This is a
-  deliberate strictness: libxml's recovery mode *silently destroys* author content
-  — measured, `<b>a</b> <i>b</i>` salvaged to just `<b>a</b>`, `a&nbsp;b` to `ab`,
-  `a & b` to `a  b`. So a malformed chunk raises a clean `Error:` and inserts
-  nothing rather than quietly mangling the page. Practical consequences for a
-  binding author: wrap a multi-element fragment in one container element, and
-  write HTML entities in their numeric form (`&#160;`, not `&nbsp;`) unless the
-  chunk declares them — `&nbsp;` is undefined in XML without a DTD.
+  **The markup must be WELL-FORMED, and parser recovery is OFF** (matching Perl's
+  `parse_string`, which defaults to `recover => 0`). It need *not* be a single
+  root — several siblings, or bare text, parse as a fragment (OXIDIZED_DESIGN
+  #66) — but nothing is salvaged. That strictness is deliberate: libxml's recovery
+  mode *silently destroys* author content — measured, `<b>a</b> <i>b</i>` salvaged
+  to just `<b>a</b>`, `a&nbsp;b` to `ab`, `a & b` to `a  b`. Practical consequence
+  for a binding author: write HTML entities in their numeric form (`&#160;`, not
+  `&nbsp;`) unless the chunk declares them — `&nbsp;` is undefined in XML without
+  a DTD.
+
+  **On malformed input both degrade, they do not abort.** `insertXML` inserts
+  nothing, `ParseXML` returns an empty array, and each raises a clean `Error:`
+  naming the likely cause (and, for `insertXML`, quoting the snippet). Neither
+  raises a *Rhai* error, which would propagate out of the constructor and kill the
+  whole conversion — see the failure-isolation caveat below. Guard:
+  `30_script_bindings.rs::malformed_insert_xml_degrades_the_binding_not_the_conversion`.
+
+  > **Known gap (pre-existing, not #350).** That containment is hand-rolled in
+  > these two functions; it is *not* the general behaviour. A Rhai error raised
+  > anywhere in a script `DefConstructor` body — a bare `throw`, a limit breach,
+  > a failing `setAttribute` — is mapped to a hard `Error::from` by
+  > `wire.rs:90` and **aborts the conversion**, contradicting the
+  > failure-isolation promise stated above (§"Failure isolation") and again in
+  > §Sandbox. Verified by making a constructor `throw`: `convert_file` returns
+  > `Err`. Closing it means containing the error at the `wire_*` seam for every
+  > binding kind, which is its own change.
 - `document.absorb(arg)` — absorb a digested argument handle (`arg1`, …).
 - `document.absorbProperty(name)` — absorb a whatsit property at the current
   point (the imperative analog of a template's `#name` hole; `"body"` inside an
@@ -446,7 +464,11 @@ prefix) and `RegisterDocumentNamespace(prefix, uri)` (output-document prefix),
 Perl `Package.pm:2049-2057` — both registered on the Rhai engine. Node re-creation
 resolves a node's namespace **URI through that registry**, faithful to Perl
 `Model::getNodeQName` → `getNamespacePrefix`; it does NOT read the raw libxml
-prefix. That distinction is load-bearing for `insertXML`: a snippet written the
+prefix. (Rust splits that resolution into `model::get_foreign_node_qname`, called
+only from `append_tree`, from the hot `get_node_qname` — a pure performance
+factoring, since only a tree parsed *elsewhere* can present a foreign default
+namespace, and reading the URI on the shared path cost a measured 3.4%.) That
+distinction is load-bearing for `insertXML`: a snippet written the
 natural way, `<p xmlns="http://www.w3.org/1999/xhtml">`, carries an *empty* libxml
 prefix, and treating "empty prefix" as "the ltx namespace" would relabel it
 `ltx:p` — stripping exactly what the XHTML post-processor keys on (`copy-foreign`

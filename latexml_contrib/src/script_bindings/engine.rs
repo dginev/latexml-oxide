@@ -772,9 +772,15 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("hasAttribute", |n: &mut NodeProxy, k: &str| -> bool {
     n.0.get_attribute(k).is_some()
   });
-  engine.register_fn("removeAttribute", |n: &mut NodeProxy, k: &str| {
-    let _ = n.0.remove_attribute(k);
-  });
+  // Removing an attribute the node does not have is a silent no-op in libxml, so
+  // the only thing this can report is a genuine libxml2 failure — propagate it,
+  // exactly as `setAttribute` above does, rather than dropping it on the floor.
+  engine.register_fn(
+    "removeAttribute",
+    |n: &mut NodeProxy, k: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      n.0.remove_attribute(k).map_err(rhai_err)
+    },
+  );
   // The node (and its subtree) serialized back to markup — the inverse of
   // `ParseXML`, so a script can inspect or log what it is about to insert.
   // libxml serializes a node THROUGH its document, so use the one this handle
@@ -1158,14 +1164,21 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   // insertXML(nodes) — insert an array of nodes, i.e. what `ParseXML` returns.
-  // Non-node entries are ignored rather than aborting the binding.
+  // A non-node entry is an ERROR naming its position and type, never a silent
+  // skip: quietly dropping part of what a script asked to insert is exactly the
+  // content-loss failure mode this feature has to avoid.
   engine.register_fn(
     "insertXML",
     |_d: &mut DocProxy, nodes: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
-      let owned: Vec<_> = nodes
-        .into_iter()
-        .filter_map(|d| d.try_cast::<NodeProxy>())
-        .collect();
+      let mut owned = Vec::with_capacity(nodes.len());
+      for (i, entry) in nodes.into_iter().enumerate() {
+        let kind = entry.type_name();
+        owned.push(entry.try_cast::<NodeProxy>().ok_or_else(|| {
+          Box::<EvalAltResult>::from(format!(
+            "insertXML: entry {i} of the array is a {kind}, not a Node (from ParseXML)"
+          ))
+        })?);
+      }
       with_doc(move |doc, _props| {
         let raw = owned.iter().map(|n| n.0.clone()).collect();
         doc.insert_nodes(raw).map_err(rhai_err)?;
@@ -1182,17 +1195,41 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "ParseXML",
     |markup: &str| -> std::result::Result<rhai::Array, Box<EvalAltResult>> {
-      let parsed = latexml_core::common::xml::parse_fragment(markup).map_err(|e| {
-        Box::<EvalAltResult>::from(format!("ParseXML: could not parse XML markup: {e}"))
-      })?;
-      let doc = parsed.document().clone();
-      Ok(
-        parsed
-          .nodes()
-          .into_iter()
-          .map(|n| Dynamic::from(NodeProxy::owning(n, doc.clone())))
-          .collect(),
-      )
+      // Malformed markup is reported as a latexml `Error:` and yields an EMPTY
+      // array — deliberately NOT a Rhai runtime error. A script error raised here
+      // would propagate out of the constructor and ABORT THE WHOLE CONVERSION
+      // (`wire.rs` maps it to a hard `Error::from`), so a single bad snippet in one
+      // contrib binding would cost the entire document. That contradicts the
+      // failure-isolation contract (`script_bindings_plan.md`: a bad binding
+      // "degrades only that package"), and it would also make these two siblings
+      // behave oppositely on the same bad input — `insertXML(markup)` already
+      // degrades this way. Loud, but contained: the author still gets the `Error:`.
+      match latexml_core::common::xml::parse_fragment(markup) {
+        Ok(parsed) => {
+          let doc = parsed.document().clone();
+          Ok(
+            parsed
+              .nodes()
+              .into_iter()
+              .map(|n| Dynamic::from(NodeProxy::owning(n, doc.clone())))
+              .collect(),
+          )
+        },
+        Err(e) => {
+          // The one thing that MAY still abort is `Error!` escalating to Fatal
+          // past MAX_ERRORS — same shape as the `Error` registration above.
+          let res: Result<()> = (|| {
+            latexml_core::Error!(
+              "malformed",
+              "ParseXML",
+              format!("could not parse XML markup: {e}")
+            );
+            Ok(())
+          })();
+          res.map_err(rhai_err)?;
+          Ok(rhai::Array::new())
+        },
+      }
     },
   );
   engine.register_fn(

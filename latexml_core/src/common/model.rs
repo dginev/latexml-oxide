@@ -656,44 +656,15 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       if let Some(ns) = node.get_namespace() {
         let prefix = ns.get_prefix();
         if prefix.is_empty() {
-          // DEFAULT namespace. Resolve the namespace URI through the registered
-          // code-namespace map (Perl `Model::getNodeQName` → `getNamespacePrefix`,
-          // Common/Model.pm) rather than assuming the default is always ltx.
-          // This is what gives `RegisterNamespace` (Package.pm:2049) meaning for
-          // FOREIGN content absorbed from parsed markup: an xhtml snippet spliced
-          // in by `Document::insert_xml` arrives as `<p xmlns="…/1999/xhtml">`,
-          // i.e. an EMPTY libxml prefix with a non-ltx URI, and must become
-          // `xhtml:p` — mislabelling it `ltx:p` would strip the namespace the
-          // XHTML post-processor keys on (`copy-foreign` matches `xhtml:*`).
-          // Documents built the normal way are unaffected: their default
-          // namespace IS ltx, so the URI resolves right back to "ltx".
-          // An unregistered URI keeps the historical ltx fallback.
-          // FAST PATH — this is a hot path (~140 call sites): the document we are
-          // building declares ltx as ITS default namespace, so virtually every
-          // node reaching here is ltx. Settle that with a plain `&str` compare,
-          // before touching the interner or taking the model borrow.
-          let href = ns.get_href();
-          if href.is_empty() || href == LTX_NAMESPACE {
-            return arena::pin(prefixed_qname("ltx", &name_str));
-          }
-          // FOREIGN default namespace — an empty libxml prefix whose URI is NOT
-          // ours, which in practice means markup absorbed from a parsed snippet
-          // (`Document::insert_xml`, e.g. `<p xmlns="…/1999/xhtml">`). Resolve the
-          // URI through the registered code-namespace map, faithful to Perl
-          // `Model::getNodeQName` -> `getNamespacePrefix`; this is what gives
-          // `RegisterNamespace` its effect on absorbed content. Rare, so only this
-          // branch pays for the interner + registry lookup. Unregistered URIs keep
-          // the historical ltx fallback.
-          let ns_sym = arena::pin(href.as_str());
-          // `.copied()` yields an owned SymStr, so the model guard does not
-          // outlive this expression (no borrow held across the arena pins below).
-          let registered = model!().code_namespace_prefixes.get_sym(ns_sym).copied();
-          match registered {
-            Some(code_prefix) => {
-              arena::pin(arena::with(code_prefix, |p| prefixed_qname(p, &name_str)))
-            },
-            None => arena::pin(prefixed_qname("ltx", &name_str)),
-          }
+          // Default namespace — use ltx: prefix. The document we build declares
+          // ltx as ITS default namespace, so an empty prefix means ltx here, and
+          // this deliberately does NOT read the namespace URI to confirm it:
+          // `Namespace::get_href` allocates a String per call, and on this path
+          // (~140 call sites, once per node and per attribute) that measured a
+          // 3.4% whole-conversion regression. A node whose DEFAULT namespace is
+          // something else can only come from a foreign document — see
+          // [`get_foreign_node_qname`], which is what reads such a tree.
+          arena::pin(prefixed_qname("ltx", &name_str))
         } else {
           // Explicit prefix (e.g., "svg", "m") — use it
           arena::pin(prefixed_qname(&prefix, &name_str))
@@ -717,6 +688,48 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       pin!("#BrokenNode")
     },
   }
+}
+
+/// [`get_node_qname`] for a node read out of a FOREIGN document — a tree parsed
+/// by [`crate::common::xml::parse_fragment`] rather than built by us. Used by
+/// `Document::append_tree`, the one place such a tree is ever walked.
+///
+/// The difference is confined to the DEFAULT-namespace case. Perl's single
+/// `Model::getNodeQName` always maps a namespace URI to its registered code
+/// prefix (`Common/Model.pm` → `getNamespacePrefix`), which is what gives
+/// `RegisterNamespace` (`Package.pm:2049`) its effect on absorbed content: an
+/// xhtml snippet arrives as `<p xmlns="…/1999/xhtml">`, i.e. an EMPTY libxml
+/// prefix over a non-ltx URI, and must be re-created as `xhtml:p`. Mislabelling
+/// it `ltx:p` would strip exactly the namespace the XHTML post-processor keys on
+/// (`copy-foreign` matches `xhtml:*`), silently dropping the raw HTML.
+///
+/// Splitting that off from `get_node_qname` is a pure PERFORMANCE factoring with
+/// no behavioural difference, because inside our own document an element either
+/// sits in the ltx default namespace or carries an explicit code prefix — the
+/// re-created `xhtml:p` above included. So only a foreign tree can present the
+/// ambiguous shape, and reading the URI on the shared path would cost every
+/// other caller a `String` allocation per node (measured: 3.4%).
+pub fn get_foreign_node_qname(node: &Node) -> SymStr {
+  if let Some(ns) = node.get_namespace()
+    && ns.get_prefix().is_empty()
+  {
+    let href = ns.get_href();
+    if !href.is_empty() && href != LTX_NAMESPACE {
+      // `.copied()` yields an owned SymStr, so the model guard does not outlive
+      // this expression (no borrow held across the arena pins below).
+      let registered = model!()
+        .code_namespace_prefixes
+        .get_sym(arena::pin(href.as_str()))
+        .copied();
+      // An UNREGISTERED URI keeps the historical ltx fallback, i.e. whatever
+      // `get_node_qname` would have said.
+      if let Some(code_prefix) = registered {
+        let name_str = node.get_name();
+        return arena::pin(arena::with(code_prefix, |p| prefixed_qname(p, &name_str)));
+      }
+    }
+  }
+  get_node_qname(node)
 }
 
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
@@ -892,6 +905,18 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
 /// (`Common/Model.pm`: `if (!$model && ($tag =~ /^(\w*):/)) { $xtag = $1 . ':*' }`).
 /// This is how a wildcard schema element such as `xhtml:*` — the content model of
 /// `ltx:rawhtml` — governs every concrete `xhtml:p`/`xhtml:b` absorbed into it.
+///
+/// Two knowingly narrower details than the Perl regex, neither reachable with the
+/// schema we compile (checked against `resources/RelaxNG/LaTeXML.model`, whose
+/// only `ns:*` entries are `*:*` and `xhtml:*`):
+/// * Perl falls back when the tag has no entry OR its entry has no `model` /
+///   `attributes` key; a Rust `TagFrame` always has both, possibly empty, so the
+///   callers fall back only when the whole frame is missing. Reaching that
+///   difference needs a schema with BOTH an empty-set entry and a matching `ns:*`
+///   entry — e.g. an `ltx:*`, which no LaTeXML schema declares.
+/// * Perl's `\w*` does not match `*`, so it never derives a wildcard from a tag
+///   that is already one; `split_once` would, but only for the `*:*` entry, which
+///   maps to itself and is looked up only when it has no frame — and it has one.
 fn namespace_wildcard_tag(tag: &str) -> Option<String> {
   tag.split_once(':').map(|(ns, _)| s!("{ns}:*"))
 }

@@ -23,7 +23,9 @@
     namespaces resolve by URI through the registered prefix map
     (`RegisterNamespace`) instead of being assumed to be LaTeXML's, and wildcard
     schema entries such as `xhtml:*` are honoured, so attributes like `class`
-    survive onto the final page.
+    survive onto the final page. A malformed chunk degrades only its own binding:
+    the rest of the document still converts, and the reported error names the
+    likely cause and quotes the offending snippet.
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
     text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
     upstream; the `.htm` destination extension now infers HTML5 like `.html`.
