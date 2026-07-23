@@ -380,10 +380,19 @@ cached by source (`SCRIPT_CACHE`).
   the parsed SUBTREE in at the current point, as structured element/attribute/text
   nodes. The runtime half of Perl BookML's `\bmlRawHTML` idiom, which composes
   `XML::LibXML->parse_string` (`Common/XML/Parser.pm` `parseChunk`) with
-  `$document->appendTree` (`Document.pm:2093`); backed by the native
-  `Document::absorb_xml` → the existing `append_tree`. Faithful to `parseChunk`,
-  the markup needs a single well-formed root; a parse failure is a clean `Error:`
-  that inserts nothing. Namespaces resolve through the registry — see below.
+  `$document->appendTree` (`Document.pm:2093`); backed by `common::xml::parse_chunk`
+  (the `parseChunk` port) → `Document::absorb_xml` → the existing `append_tree`.
+  Namespaces resolve through the registry — see below.
+
+  **The markup must be a single well-formed XML root, and parser recovery is OFF**
+  (matching Perl's `parse_string`, which defaults to `recover => 0`). This is a
+  deliberate strictness: libxml's recovery mode *silently destroys* author content
+  — measured, `<b>a</b> <i>b</i>` salvaged to just `<b>a</b>`, `a&nbsp;b` to `ab`,
+  `a & b` to `a  b`. So a malformed chunk raises a clean `Error:` and inserts
+  nothing rather than quietly mangling the page. Practical consequences for a
+  binding author: wrap a multi-element fragment in one container element, and
+  write HTML entities in their numeric form (`&#160;`, not `&nbsp;`) unless the
+  chunk declares them — `&nbsp;` is undefined in XML without a DTD.
 - `document.absorb(arg)` — absorb a digested argument handle (`arg1`, …).
 - `document.absorbProperty(name)` — absorb a whatsit property at the current
   point (the imperative analog of a template's `#name` hole; `"body"` inside an

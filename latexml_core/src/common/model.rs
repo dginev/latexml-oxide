@@ -668,15 +668,26 @@ pub fn get_node_qname(node: &Node) -> SymStr {
           // Documents built the normal way are unaffected: their default
           // namespace IS ltx, so the URI resolves right back to "ltx".
           // An unregistered URI keeps the historical ltx fallback.
+          // FAST PATH — this is a hot path (~140 call sites): the document we are
+          // building declares ltx as ITS default namespace, so virtually every
+          // node reaching here is ltx. Settle that with a plain `&str` compare,
+          // before touching the interner or taking the model borrow.
           let href = ns.get_href();
-          let registered = if href.is_empty() {
-            None
-          } else {
-            let ns_sym = arena::pin(href.as_str());
-            // `.copied()` yields an owned SymStr, so the model guard does not
-            // outlive this expression (no borrow held across the arena pins below).
-            model!().code_namespace_prefixes.get_sym(ns_sym).copied()
-          };
+          if href.is_empty() || href == LTX_NAMESPACE {
+            return arena::pin(prefixed_qname("ltx", &name_str));
+          }
+          // FOREIGN default namespace — an empty libxml prefix whose URI is NOT
+          // ours, which in practice means markup absorbed from a parsed snippet
+          // (`Document::absorb_xml`, e.g. `<p xmlns="…/1999/xhtml">`). Resolve the
+          // URI through the registered code-namespace map, faithful to Perl
+          // `Model::getNodeQName` -> `getNamespacePrefix`; this is what gives
+          // `RegisterNamespace` its effect on absorbed content. Rare, so only this
+          // branch pays for the interner + registry lookup. Unregistered URIs keep
+          // the historical ltx fallback.
+          let ns_sym = arena::pin(href.as_str());
+          // `.copied()` yields an owned SymStr, so the model guard does not
+          // outlive this expression (no borrow held across the arena pins below).
+          let registered = model!().code_namespace_prefixes.get_sym(ns_sym).copied();
           match registered {
             Some(code_prefix) => {
               arena::pin(arena::with(code_prefix, |p| prefixed_qname(p, &name_str)))
@@ -853,14 +864,27 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
     "_WildCard_" | "#Comment" | "#ProcessingInstruction" | "#DTD" => return true,
     _ => {},
   };
-  let model = model!();
-  if model.permissive && tag == "#Document" && child != "#PCDATA" {
+  let state_model = model!();
+  if state_model.permissive && tag == "#Document" && child != "#PCDATA" {
     return true; // No schema? Punt!
   }
 
-  // Else query tag properties.
-  let model = &model.tagprop.get(tag).unwrap_or(&*DEFAULT_TAG_FRAME).model;
-  model.contains(&pin!("ANY")) || model.contains(&arena::pin(child))
+  // Else query tag properties, falling back to the `ns:*` wildcard entry when this
+  // exact tag has none of its own, then applying the same most-specific-first
+  // chain as the attribute test — both are Perl `Common/Model.pm`. Without the
+  // fallback a wildcard content model such as `ltx:rawhtml{}(xhtml:*)` would
+  // reject every concrete `xhtml:p` absorbed into it.
+  let frame = state_model.tagprop.get(tag);
+  let wildcard_frame = if frame.is_none() {
+    namespace_wildcard_tag(tag).and_then(|w| state_model.tagprop.get(&w))
+  } else {
+    None
+  };
+  let content = &frame
+    .or(wildcard_frame)
+    .unwrap_or(&*DEFAULT_TAG_FRAME)
+    .model;
+  content.contains(&pin!("ANY")) || set_allows(content, child)
 }
 
 /// Perl `Model::canContain`/`canHaveAttribute` fall back to the NAMESPACE
@@ -1073,4 +1097,83 @@ pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
 pub fn with_code_namespaces<FnR, R>(caller: FnR) -> R
 where FnR: FnOnce(&SymHashMap<SymStr>) -> R {
   caller(&model!().code_namespaces)
+}
+
+#[cfg(test)]
+mod wildcard_resolution_tests {
+  //! Direct coverage for the Perl `Common/Model.pm` resolution helpers shared by
+  //! `canContain` (child test) and `canHaveAttribute` (attribute test). The
+  //! end-to-end script-bindings guard only exercises the plain `*` branch via
+  //! `xhtml:*`, so the negation and namespace-wildcard branches are pinned here.
+  use super::*;
+
+  fn set_of(keys: &[&str]) -> HashSet<SymStr> { keys.iter().map(|k| arena::pin(*k)).collect() }
+
+  #[test]
+  fn namespace_wildcard_tag_only_applies_to_prefixed_tags() {
+    assert_eq!(
+      namespace_wildcard_tag("xhtml:p").as_deref(),
+      Some("xhtml:*")
+    );
+    assert_eq!(namespace_wildcard_tag("ltx:para").as_deref(), Some("ltx:*"));
+    // Unprefixed names have no namespace wildcard to fall back on.
+    assert_eq!(namespace_wildcard_tag("para"), None);
+    assert_eq!(namespace_wildcard_tag("#PCDATA"), None);
+  }
+
+  #[test]
+  fn exact_membership_wins_and_empty_sets_reject() {
+    let s = set_of(&["class", "href"]);
+    assert!(set_allows(&s, "class"));
+    assert!(!set_allows(&s, "style"));
+    assert!(!set_allows(&HashSet::default(), "class"));
+  }
+
+  #[test]
+  fn a_negation_beats_the_wildcard_that_would_otherwise_allow_it() {
+    // Perl order: exact, !exact, ns:*, !ns:*, !*:*, *:*  — the `!` entries are
+    // explicit exclusions and must beat the broader wildcard that follows them.
+    // This is the real shape of a compiled entry, e.g.
+    // `ltx:XMText{!aria:*,!xml:*,*:*,about,…}`.
+    let s = set_of(&["!aria:*", "!xml:*", "*:*", "about"]);
+    assert!(set_allows(&s, "about"), "exact entry allows");
+    assert!(
+      set_allows(&s, "data:foo"),
+      "*:* allows an unexcluded namespace"
+    );
+    assert!(
+      !set_allows(&s, "aria:label"),
+      "!aria:* excludes its namespace"
+    );
+    assert!(!set_allows(&s, "xml:lang"), "!xml:* excludes its namespace");
+
+    // An exact exclusion beats a namespace wildcard that would allow it.
+    let s2 = set_of(&["!svg:width", "svg:*"]);
+    assert!(set_allows(&s2, "svg:height"));
+    assert!(!set_allows(&s2, "svg:width"));
+
+    // `!*:*` denies every namespaced key that is not exactly listed.
+    let s3 = set_of(&["!*:*", "svg:width"]);
+    assert!(set_allows(&s3, "svg:width"));
+    assert!(!set_allows(&s3, "svg:height"));
+  }
+
+  #[test]
+  fn unprefixed_keys_use_the_bare_star_not_the_namespaced_one() {
+    // `*:*` governs PREFIXED keys only; an unprefixed `class` needs `*`.
+    let namespaced_only = set_of(&["*:*"]);
+    assert!(!set_allows(&namespaced_only, "class"));
+    assert!(set_allows(&namespaced_only, "svg:width"));
+
+    // This is the entry that lets attributes survive on absorbed xhtml markup:
+    // the compiled model carries `xhtml:*{*,*:*}`.
+    let html_wildcard = set_of(&["*", "*:*"]);
+    assert!(set_allows(&html_wildcard, "class"));
+    assert!(set_allows(&html_wildcard, "xlink:href"));
+
+    // …and `!*` denies the unprefixed ones.
+    let denied = set_of(&["!*", "*:*"]);
+    assert!(!set_allows(&denied, "class"));
+    assert!(set_allows(&denied, "svg:width"));
+  }
 }

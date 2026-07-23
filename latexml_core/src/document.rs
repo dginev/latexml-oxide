@@ -4911,16 +4911,15 @@ impl Document {
   /// `Error:` and inserts nothing — degrading the offending binding rather than
   /// aborting the conversion (the runtime-bindings failure-isolation contract).
   pub fn absorb_xml(&mut self, xml: &str) -> Result<()> {
-    use libxml::parser::Parser as XmlParser;
-    // The parsed Document owns the nodes `append_tree` re-creates from, so it
+    // The parsed Document OWNS the nodes `append_tree` re-creates from, so it
     // must stay alive across the call below (bound here, dropped at fn end).
-    let parsed = match XmlParser::default().parse_string(xml) {
+    let parsed = match xml::parse_chunk(xml) {
       Ok(doc) => doc,
       Err(e) => {
         Error!(
           "malformed",
           "absorbXML",
-          format!("could not parse XML markup: {e:?}")
+          format!("could not parse XML markup: {e}")
         );
         return Ok(());
       },
