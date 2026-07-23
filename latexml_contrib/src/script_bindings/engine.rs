@@ -1081,6 +1081,19 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // absorbXML(markup) — parse an XML/(X)HTML string and splice the parsed subtree
+  // in at the current point (Perl BookML's `\bmlRawHTML`: parse_string +
+  // appendTree). Distinct from `absorbString`, which inserts the argument as
+  // ESCAPED text; this inserts it as structured element/attribute/text nodes.
+  engine.register_fn(
+    "absorbXML",
+    |_d: &mut DocProxy, s: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        doc.absorb_xml(s).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
   engine.register_fn(
     "absorb",
     |_d: &mut DocProxy, arg: Digested| -> std::result::Result<(), Box<EvalAltResult>> {

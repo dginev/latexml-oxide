@@ -375,7 +375,15 @@ cached by source (`SCRIPT_CACHE`).
 - `document.openElement(tag)`, `document.closeElement(tag)`,
   `document.maybeCloseElement(tag)`.
 - `document.setAttribute(key, val)` — attribute on the current node.
-- `document.absorbString(s)` — insert literal text.
+- `document.absorbString(s)` — insert literal text (ESCAPED — `<b>` becomes `&lt;b&gt;`).
+- `document.absorbXML(markup)` — **(#350)** parse an XML/(X)HTML string and splice
+  the parsed SUBTREE in at the current point, as structured element/attribute/text
+  nodes. The runtime half of Perl BookML's `\bmlRawHTML` idiom, which composes
+  `XML::LibXML->parse_string` (`Common/XML/Parser.pm` `parseChunk`) with
+  `$document->appendTree` (`Document.pm:2093`); backed by the native
+  `Document::absorb_xml` → the existing `append_tree`. Faithful to `parseChunk`,
+  the markup needs a single well-formed root; a parse failure is a clean `Error:`
+  that inserts nothing. Namespaces resolve through the registry — see below.
 - `document.absorb(arg)` — absorb a digested argument handle (`arg1`, …).
 - `document.absorbProperty(name)` — absorb a whatsit property at the current
   point (the imperative analog of a template's `#name` hole; `"body"` inside an
@@ -390,6 +398,22 @@ $_[0]->maybeCloseElement('ltx:bibliography'); })` →
 `DefConstructor("\\endreferences", |document| {
 document.maybeCloseElement("ltx:biblist");
 document.maybeCloseElement("ltx:bibliography"); })`.
+
+**Namespaces (URIs vs prefixes).** A binding declares its prefix↔URI mappings with
+the same two helpers the Perl bindings use — `RegisterNamespace(prefix, uri)` (code
+prefix) and `RegisterDocumentNamespace(prefix, uri)` (output-document prefix),
+Perl `Package.pm:2049-2057` — both registered on the Rhai engine. Node re-creation
+resolves a node's namespace **URI through that registry**, faithful to Perl
+`Model::getNodeQName` → `getNamespacePrefix`; it does NOT read the raw libxml
+prefix. That distinction is load-bearing for `absorbXML`: a snippet written the
+natural way, `<p xmlns="http://www.w3.org/1999/xhtml">`, carries an *empty* libxml
+prefix, and treating "empty prefix" as "the ltx namespace" would relabel it
+`ltx:p` — stripping exactly what the XHTML post-processor keys on (`copy-foreign`
+matches `xhtml:*`, `LaTeXML-common.xsl:358`) and silently dropping the raw HTML
+from the final page. Wildcard schema entries participate too: `ltx:rawhtml`'s
+content model is `xhtml:*`, so a concrete `xhtml:p` resolves its permissions
+against that wildcard (Perl `canContain`/`canHaveAttribute`'s `$1.':*'` fallback),
+which is what lets attributes such as `class` survive on absorbed markup.
 
 **State API:** `assign_value(key, val)` (group-local), `assign_global(key, val)`,
 `lookup_value(key) -> string`.

@@ -4892,6 +4892,50 @@ impl Document {
     }
     Ok(())
   }
+
+  /// Parse an XML / (X)HTML markup string and splice the resulting subtree into
+  /// the document at the current insertion point. This is the Rust analog of Perl
+  /// BookML's `\bmlRawHTML` idiom, which composes two mechanisms core never
+  /// chains itself: `XML::LibXML->parse_string` (`LaTeXML::Common::XML::Parser`
+  /// `parseChunk`, `Common/XML/Parser.pm:36-39`) and `$document->appendTree`
+  /// (`Document.pm:2093`, foreign-node branch `:2105-2124`). Both halves already
+  /// exist here — libxml's parser (a direct `latexml_core` dep, used in
+  /// `common/relaxng/scan.rs`) and [`Document::append_tree`] — so this is pure
+  /// glue.
+  ///
+  /// Faithful to `parseChunk`, the markup must have a single well-formed root; a
+  /// multi-node fragment or bare text is a parse error. The parsed root element
+  /// and its subtree are re-created node-by-node through `append_tree`'s
+  /// model-aware path, so namespaces declared in the snippet (e.g. xhtml) are
+  /// preserved and `xml:id`s re-registered. A parse failure surfaces as a clean
+  /// `Error:` and inserts nothing — degrading the offending binding rather than
+  /// aborting the conversion (the runtime-bindings failure-isolation contract).
+  pub fn absorb_xml(&mut self, xml: &str) -> Result<()> {
+    use libxml::parser::Parser as XmlParser;
+    // The parsed Document owns the nodes `append_tree` re-creates from, so it
+    // must stay alive across the call below (bound here, dropped at fn end).
+    let parsed = match XmlParser::default().parse_string(xml) {
+      Ok(doc) => doc,
+      Err(e) => {
+        Error!(
+          "malformed",
+          "absorbXML",
+          format!("could not parse XML markup: {e:?}")
+        );
+        return Ok(());
+      },
+    };
+    let Some(root) = parsed.get_root_element() else {
+      Error!(
+        "malformed",
+        "absorbXML",
+        "XML markup parsed to an empty document".to_string()
+      );
+      return Ok(());
+    };
+    let mut point = self.get_node().clone();
+    self.append_tree(&mut point, vec![root])
+  }
 }
 
 // Auxiliary

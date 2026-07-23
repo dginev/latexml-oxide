@@ -235,6 +235,29 @@ const SAMPLE: &str = r##"
   // DefRewrite (data form): stamp every biography note at finalization.
   DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][not(@class)]",
                 attributes: #{ class: "rw-stamp" } });
+
+  // XML-parser exposure (#350): parse a small (X)HTML snippet and splice the
+  // parsed SUBTREE into the tree at the current point — the Rhai analog of Perl
+  // BookML's \bmlRawHTML (XML::LibXML->parse_string + $document->appendTree). The
+  // snippet arrives as MARKUP (not TeX-escaped text), so the assertion proves it
+  // became structured element/attribute/text nodes, not an escaped `&lt;p&gt;`
+  // string. `<ltx:rawhtml>` is the schema's xhtml-markup container (Misc class).
+  //
+  // Namespaces go through the SAME registry the Perl bindings use — these are
+  // the Rhai-exposed `RegisterNamespace`/`RegisterDocumentNamespace` helpers
+  // (Package.pm:2049-2057). The snippet declares xhtml as its DEFAULT namespace
+  // (empty prefix), so re-creating it correctly depends on resolving the URI
+  // through this registry; the assertion pins that it lands as xhtml, not ltx.
+  // (Core pre-registers xhtml, so these calls are idempotent — they document the
+  // flow a binding needs for a namespace core does not already know.)
+  RegisterNamespace("xhtml", "http://www.w3.org/1999/xhtml");
+  RegisterDocumentNamespace("xhtml", "http://www.w3.org/1999/xhtml");
+
+  DefConstructor("\\rhrawhtml", |document| {
+    document.openElement("ltx:rawhtml");
+    document.absorbXML("<p xmlns=\"http://www.w3.org/1999/xhtml\" class=\"lead\">hi <b>bold</b> x</p>");
+    document.closeElement("ltx:rawhtml");
+  });
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -266,6 +289,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
     "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} \\rwvictim{OLD} ",
+    "\\rhrawhtml ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -474,6 +498,30 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("rw-stamp"),
     "DefRewrite xpath/attributes rule did not fire; xml=\n{xml}"
+  );
+  // XML-parser exposure (#350): \rhrawhtml parsed the (X)HTML snippet into a
+  // STRUCTURED subtree (element + attribute + text) inside <ltx:rawhtml>, NOT an
+  // escaped `&lt;p&gt;` text blob. `class="lead"` surviving as a real attribute
+  // (real quotes) is the structured signal; the `&lt;p` guard rules out the
+  // escaped-text failure mode. Proves `document.absorbXML` → native
+  // `Document::absorb_xml` → `append_tree` (Perl's parse_string + appendTree).
+  assert!(
+    xml.contains("rawhtml")
+      && xml.contains("class=\"lead\"")
+      && xml.contains("bold")
+      && !xml.contains("&lt;p"),
+    "absorbXML did not splice a parsed XML subtree; xml=\n{xml}"
+  );
+  // ...and the absorbed subtree kept its OWN namespace. The snippet declares
+  // xhtml as a DEFAULT namespace (empty libxml prefix), so this only holds if the
+  // node re-creation resolves the namespace URI through the registered
+  // code-namespace map (`RegisterNamespace`) instead of assuming an empty prefix
+  // means ltx. Mislabelling these `ltx:p`/`ltx:b` would strip exactly what the
+  // XHTML post-processor keys on (`copy-foreign` matches `xhtml:*`), silently
+  // dropping the raw HTML from the final output.
+  assert!(
+    xml.contains("http://www.w3.org/1999/xhtml") || xml.contains("xhtml:p"),
+    "absorbXML lost the snippet's xhtml namespace (mislabelled as ltx?); xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

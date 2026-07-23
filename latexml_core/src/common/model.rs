@@ -652,14 +652,37 @@ pub fn get_node_qname(node: &Node) -> SymStr {
     ElementNode | AttributeNode => {
       let name_str = node.get_name();
       // Use the actual namespace prefix from the node when available.
-      // For elements in the default (ltx) namespace, the prefix is empty
-      // so we prepend "ltx:". For SVG/MathML/etc with explicit prefix,
-      // use that prefix directly.
+      // For SVG/MathML/etc with explicit prefix, use that prefix directly.
       if let Some(ns) = node.get_namespace() {
         let prefix = ns.get_prefix();
         if prefix.is_empty() {
-          // Default namespace — use ltx: prefix
-          arena::pin(prefixed_qname("ltx", &name_str))
+          // DEFAULT namespace. Resolve the namespace URI through the registered
+          // code-namespace map (Perl `Model::getNodeQName` → `getNamespacePrefix`,
+          // Common/Model.pm) rather than assuming the default is always ltx.
+          // This is what gives `RegisterNamespace` (Package.pm:2049) meaning for
+          // FOREIGN content absorbed from parsed markup: an xhtml snippet spliced
+          // in by `Document::absorb_xml` arrives as `<p xmlns="…/1999/xhtml">`,
+          // i.e. an EMPTY libxml prefix with a non-ltx URI, and must become
+          // `xhtml:p` — mislabelling it `ltx:p` would strip the namespace the
+          // XHTML post-processor keys on (`copy-foreign` matches `xhtml:*`).
+          // Documents built the normal way are unaffected: their default
+          // namespace IS ltx, so the URI resolves right back to "ltx".
+          // An unregistered URI keeps the historical ltx fallback.
+          let href = ns.get_href();
+          let registered = if href.is_empty() {
+            None
+          } else {
+            let ns_sym = arena::pin(href.as_str());
+            // `.copied()` yields an owned SymStr, so the model guard does not
+            // outlive this expression (no borrow held across the arena pins below).
+            model!().code_namespace_prefixes.get_sym(ns_sym).copied()
+          };
+          match registered {
+            Some(code_prefix) => {
+              arena::pin(arena::with(code_prefix, |p| prefixed_qname(p, &name_str)))
+            },
+            None => arena::pin(prefixed_qname("ltx", &name_str)),
+          }
         } else {
           // Explicit prefix (e.g., "svg", "m") — use it
           arena::pin(prefixed_qname(&prefix, &name_str))
@@ -840,6 +863,55 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
   model.contains(&pin!("ANY")) || model.contains(&arena::pin(child))
 }
 
+/// Perl `Model::canContain`/`canHaveAttribute` fall back to the NAMESPACE
+/// WILDCARD entry when a prefixed tag has no `tagprop` entry of its own
+/// (`Common/Model.pm`: `if (!$model && ($tag =~ /^(\w*):/)) { $xtag = $1 . ':*' }`).
+/// This is how a wildcard schema element such as `xhtml:*` — the content model of
+/// `ltx:rawhtml` — governs every concrete `xhtml:p`/`xhtml:b` absorbed into it.
+fn namespace_wildcard_tag(tag: &str) -> Option<String> {
+  tag.split_once(':').map(|(ns, _)| s!("{ns}:*"))
+}
+
+/// Perl's most-specific-first membership chain over a `tagprop` set — shared by
+/// `canContain`'s child test and `canHaveAttribute`'s attribute test
+/// (`Common/Model.pm`). Order: exact, `!exact`, then for a PREFIXED key the
+/// namespace wildcard `ns:*` / `!ns:*` and finally `*:*` / `!*:*`; for an
+/// unprefixed key, `*` / `!*`. A `!`-prefixed entry is an explicit exclusion and
+/// always beats the broader wildcard that follows it. The compiled model really
+/// does carry these (e.g. `ltx:XMText{!aria:*,!xml:*,*:*,…}`), so an exact-match-only
+/// test both over-rejects (ignoring `*:*`) and under-rejects (ignoring `!ns:*`).
+fn set_allows(set: &HashSet<SymStr>, key: &str) -> bool {
+  if set.contains(&arena::pin(key)) {
+    return true;
+  }
+  if set.is_empty() {
+    return false; // nothing can match; skip the probe allocations
+  }
+  if set.contains(&arena::pin(s!("!{key}"))) {
+    return false;
+  }
+  match key.split_once(':') {
+    Some((ns, _)) => {
+      if set.contains(&arena::pin(s!("{ns}:*"))) {
+        return true;
+      }
+      if set.contains(&arena::pin(s!("!{ns}:*"))) {
+        return false;
+      }
+      if set.contains(&pin!("!*:*")) {
+        return false;
+      }
+      set.contains(&pin!("*:*"))
+    },
+    None => {
+      if set.contains(&pin!("!*")) {
+        return false;
+      }
+      set.contains(&pin!("*"))
+    },
+  }
+}
+
 pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
   // Handle obvious cases explicitly.
   if let Some(early_choice) = arena::with(tag, |tag_str| match tag_str {
@@ -850,18 +922,29 @@ pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
   }) {
     return early_choice;
   };
+  // Perl: `return 1 if $attrib =~ /^_/;` — internal bookkeeping attributes are
+  // always permitted, whatever the schema says about the element.
+  if arena::with(attrib, |a| a.starts_with('_')) {
+    return true;
+  }
   let model = model!();
   if model.permissive {
     return true;
   }
 
-  // Else query tag properties.
-  let attributes = &model
-    .tagprop
-    .get_sym(tag)
+  // Else query tag properties, falling back to the `ns:*` wildcard entry when
+  // this exact tag has none of its own (Perl canHaveAttribute).
+  let frame = model.tagprop.get_sym(tag);
+  let wildcard_frame = if frame.is_none() {
+    arena::with(tag, namespace_wildcard_tag).and_then(|w| model.tagprop.get(&w))
+  } else {
+    None
+  };
+  let attributes = &frame
+    .or(wildcard_frame)
     .unwrap_or(&*DEFAULT_TAG_FRAME)
     .attributes;
-  attributes.contains(&attrib)
+  arena::with(attrib, |a| set_allows(attributes, a))
 }
 
 pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {

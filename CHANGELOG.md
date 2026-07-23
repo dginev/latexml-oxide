@@ -10,6 +10,14 @@
     inside a running body, shell out to external commands, read the engine version,
     and use the full diagnostics surface (`Info`/`Fatal`/`Note`/progress).
     List-valued state lookups no longer panic or leak their internal representation.
+  - **A `.rhai` binding can now parse and insert raw XML/(X)HTML.**
+    `document.absorbXML(markup)` splices a *parsed subtree* into the document at the
+    current point — the runtime half of BookML's `\bmlRawHTML` → `<ltx:rawhtml>` —
+    where previously only escaped text could be inserted. Absorbed foreign markup
+    keeps its own namespace: namespaces now resolve by URI through the registered
+    prefix map (`RegisterNamespace`) instead of being assumed to be LaTeXML's, and
+    wildcard schema entries such as `xhtml:*` are honoured, so attributes like
+    `class` survive onto the final page.
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
     text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
     upstream; the `.htm` destination extension now infers HTML5 like `.html`.
