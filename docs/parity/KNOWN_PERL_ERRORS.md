@@ -2207,17 +2207,16 @@ gated on the class being `standalone` and on the option being one that
 OXIDIZED_DESIGN #63; regression test
 `06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`.
 The mandatory half of the same defect (`\documentclass{article}` →
-`missing_file:article`) was issue #293. Candidate to upstream.
+`missing_file:article`) was issue #293. Candidate to upstream. A second defect of
+the same subfile group is entry #55 (a package loaded in the child's preamble
+loses its definitions).
 
 ## 55. A package loaded inside a group loses its definitions while its document hooks survive
 
 `standalone.sty.ltxml` L24-33 opens the subfile group at the child's
-`\documentclass` (`$stomach->bgroup`) and closes it only at the child's
-`\end{document}` (`\@standalone@end@input` = `\egroup\endinput`). The child's
-whole **preamble** therefore runs inside that group — and LaTeXML, unlike real
-`standalone.sty` (which *gobbles* the preamble via `\sa@gobble`), executes it,
-so packages genuinely load in there. `import.sty.ltxml` L44-47 adds a second
-such group by wrapping the imported file in `{…}`.
+`\documentclass`, closes it at `\@standalone@end@input`, and — unlike real
+`standalone.sty`, which *gobbles* the child preamble via `\sa@gobble` — executes
+that preamble, so packages genuinely load inside the group. `import.sty.ltxml` L44-47 adds a second such group.
 
 ```latex
 % index.tex
@@ -2232,46 +2231,30 @@ such group by wrapping the imported file in `{…}`.
 \end{document}
 ```
 
-Perl 0.8.8: `Error:undefined:\ifpgf@external@grabshipout … at index.tex; line 5
-col 1` → `Conversion complete: 1 warning; 1 error; 1 undefined
-macro[\ifpgf@external@grabshipout]`. The picture itself renders; the error fires
-at the very end.
+Perl 0.8.8: `1 error; 1 undefined macro[\ifpgf@external@grabshipout]` (the
+accompanying `missing file[border=2pt.sty]` is entry 54). The picture renders; the error
+fires at the parent's `\end{document}`.
 
-Mechanism: `tikz` raw-loads `pgfcoreexternal.code.tex`, whose L152
-`\newif\ifpgf@external@grabshipout` is TeX-locally scoped (so the conditional
-belongs to the child's group) while its L171-179
-`\AtEndDocument{\ifpgf@external@grabshipout…\fi}` goes onto the **global**
-`@at@end@document` queue — flushed at the *parent's* `\end{document}`, long after
-`\egroup` destroyed the conditional. The general shape is **any package loaded
-while a group is open that pairs a group-scoped definition with a document-level
-hook**; pgf is the first witness, not a special case. Real LaTeX never gets
-here: `\@fileswithoptions` (latex.ltx L18700) errors *"Loading a class or package
-in a group"* at `\currentgrouplevel > 0`, so no real package is written to
-survive a group pop.
+`tikz` raw-loads `pgfcoreexternal.code.tex`, whose L152
+`\newif\ifpgf@external@grabshipout` is TeX-local (so it belongs to the child's
+group) while its L171-179 `\AtEndDocument{\ifpgf@external@grabshipout…\fi}` goes
+onto the **global** queue, flushed at the *parent's* `\end{document}`. Real LaTeX never gets here: `\@fileswithoptions` tests `\currentgrouplevel > \z@`
+(latex.ltx L18700) and errors *"Loading a class or package in a group"* (L18702).
 
-**Fixed in Rust** at the package-load seam rather than in the bindings, which
-stay byte-identical to Perl: `content.rs::require_package` hoists the load's
-meaning-delta past the enclosing group (`snapshot_top_frame_meaning_keys` +
-`hoist_top_frame_meaning_delta`) — the same pair `tex.rs::def_autoload` already
-used for the mirror-image failure on the autoload path (witness 1711.11576).
-Only brackets LaTeXML itself opened are hoisted past; they mark themselves with
-the `SUBFILE_SCOPE` named scope. A group the author wrote is left alone, because
-`{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex ("Loading a
-class or package in a group", then "Undefined control sequence") as well as in
-Perl — matching that is parity, and rescuing it would be a downgrade. Hoisting
-only the package's delta keeps the child's OWN preamble scoped, which matters:
-two sibling `standalone` figures may `\newcommand` the same name with different
-bodies and each must render with its own. See OXIDIZED_DESIGN #65; regression
-tests
-`06_cluster_regressions::standalone_child_preamble_package_survives_the_subfile_group`
-(ungated), `…_definitions_stay_scoped`, and
-`author_written_group_around_usepackage_still_loses_the_package`. Issue #311.
-Candidate to upstream.
+Reproducing needs a **raw-loaded** `.sty` (`--includestyles`): a package with a
+Rust binding installs its definitions globally already, so a bound package cannot
+exhibit this — the trigger above works because `tikz` raw-loads
+`pgfcoreexternal.code.tex`.
+
+**Fixed in Rust** at the package-load seam: `content.rs::require_package` hoists
+the load past brackets LaTeXML itself opened. An author's own group is deliberately not
+rescued (parity). Boundary, mechanism, refuted alternatives and guards:
+OXIDIZED_DESIGN #65.
+Issue #311. Candidate to upstream (not filed as of 2026-07-23).
 
 ## 56. `\includefrom` / `\subincludefrom` silently drop the included file
 
-`import.sty.ltxml` L45/L47 declare one argument after the star but use `#3` in
-the body:
+`import.sty.ltxml` L45/L47 declare one argument after the star but use `#3`:
 
 ```perl
 DefMacro('\includefrom OptionalMatch:* {}',    '{\lx@set@path #1{#2} \include{#3}}');
@@ -2279,14 +2262,11 @@ DefMacro('\subincludefrom OptionalMatch:* {}', '{\lx@append@path #1{#2} \include
 ```
 
 The undeclared `#3` expands to nothing, so `\includefrom{dir/}{file}` becomes
-`\include{}` and the file's content is dropped — with **no** error and **no**
-warning, so nothing in the log hints at the loss. Real `import.sty` takes both
-arguments for all four commands (L57/L58 route `\includefrom`/`\subincludefrom`
-through the same `\@doimport` as `\import`/`\subimport`; `\@sub@import` L65
-consumes the directory, `\@import` L82 the file name), and `\import`/`\subimport`
-in the same Perl file declare `{}{}` correctly — so this is a typo in the two
-`\include` variants, not a deliberate reading.
+`\include{}` — content dropped with no error and no warning. Real `import.sty` L57/L58 route both
+arguments through the same `\@doimport` as `\import`/`\subimport`, and Perl's own
+`\import`/`\subimport` declare `{}{}` — a typo in the two `\include` variants.
 
-**Fixed in Rust**: both prototypes take `{}{}`. Regression test
+**Fixed in Rust**: both prototypes take `{}{}`. Guard
 `06_cluster_regressions::includefrom_takes_directory_and_file`. Candidate to
-upstream.
+upstream (not filed as of 2026-07-23) — a two-character fix at
+`import.sty.ltxml` L45/L47.

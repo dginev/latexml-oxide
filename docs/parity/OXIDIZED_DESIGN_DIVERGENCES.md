@@ -1835,7 +1835,9 @@ really is the package to load.
 
 This is a **shared upstream bug**, not a Rust regression: same-host Perl warns
 identically (`Warning:missing_file:12pt Can't find binding for package 12pt`).
-See KNOWN_PERL_ERRORS #54 — candidate to upstream.
+See KNOWN_PERL_ERRORS #54 — candidate to upstream. Executing that preamble is
+also what makes a package load inside our own bracket possible; the consequence
+and its fix are #65.
 
 Witness = issue #309's `index.tex` + `child.tex` (`No obvious problems` after,
 1 warning before). Regression test:
@@ -1867,145 +1869,70 @@ Intentional, user-directed branding. Guard:
 (`by LaTeXML oxide (version …)`) and the footer (`…</a> oxide</div>`, and the absence
 of the old `(oxide)`).
 
-### 65. A package load is hoisted past whatever group happens to be open
+### 65. A package load is hoisted past LaTeXML's own subfile brackets
 
-A package always ends up defined at the **outermost** level, whatever group is
-open when it is loaded. Real LaTeX gets this for free by refusing the premise:
-`\@fileswithoptions` (latex.ltx L18700) errors *"Loading a class or package in a
-group"* when `\currentgrouplevel > 0`, so no real package is ever written to
-survive a group pop.
+A package must end up defined at the outermost level; real LaTeX guarantees it by
+refusing to load in a group at all. LaTeXML manufactures in-group loads real
+LaTeX does not have — a `standalone`/`\import` subfile's preamble runs inside a
+bracket of ours, and LaTeXML *executes* that preamble (which the real
+`standalone.sty` gobbles) precisely so `\documentclass[tikz]{standalone}` loads
+tikz (divergence #63). The package is then split in half: frame-local
+definitions, global hooks. Anatomy, minimal trigger and the upstream verdict:
+KNOWN_PERL_ERRORS #55.
 
-LaTeXML **does** load in a group, in two routine ways:
+**`require_package` hoists the load's meaning-delta past the bracket**
+(`snapshot_top_frame_meaning_keys` + `hoist_top_frame_meaning_delta`), as
+`tex.rs::def_autoload` already did for the mirror-image autoload failure (witness
+1711.11576) — note that one is UNGATED, since an autoload fires from arbitrary
+body depth and has no bracket to be inside. We keep LaTeX's *invariant*, not its *enforcement*: refusing the
+load would discard divergence #63.
 
-* a standalone/subfile child's preamble runs inside the group
-  `standalone.sty.ltxml` L24-33 opens at the child's `\documentclass` — and
-  LaTeXML, unlike the real `standalone.sty` (which *gobbles* the child preamble
-  via `\sa@gobble`), actually **executes** it, which is what makes
-  `\documentclass[tikz]{standalone}` load tikz at all (upstream LaTeXML#1432,
-  divergence #63). `import.sty.ltxml` L44-47 adds a second such group;
-* autoload triggers fire from arbitrary body depth.
+**Only our own brackets.** An author's group keeps real LaTeX's verdict —
+`{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex and in Perl,
+so hoisting there would emit *fewer* errors than Perl on an authoring mistake.
+What separates them is *where* the bracket was opened, so the region is named
+`subfile:<frame depth>` — Perl's own `section:4` / `label:foo` convention
+(State.pm L965-975) — and activated by `standalone_sty.rs` right after its
+`bgroup()` and by `import_sty.rs`'s `\lx@save@paths` inside the `{…}`. Activity
+alone is NOT enough: `StashActive` is `Scope::Local` at the bracket's frame, so a
+plain "am I in a subfile?" test is also true at every *deeper* frame, and an
+author's `{\usepackage{…}}` written **inside** a subfile preamble was hoisted too
+— Rust 0 errors where Perl reports 1. Matching the depth confines the region to
+the bracket's own level. Mechanics and traps: WISDOM #66.
 
-Either way the package is split in half — its definitions are frame-local, the
-document-level hooks it registers are global:
+Refuted alternatives: **dropping the brackets** (a child's preamble then leaks to
+its siblings and the parent — silent wrong content — and nesting stays broken);
+**`\globaldefs=1`** (globalizes pgf's active-character handling →
+`Error:undefined:"`, zero pictures); **hoisting every in-group load** (the
+downgrade above).
 
-```
-pgfcoreexternal.code.tex:152   \newif\ifpgf@external@grabshipout     % TeX-local
-pgfcoreexternal.code.tex:171   \AtEndDocument{\ifpgf@external@grabshipout…\fi}  % GLOBAL queue
-```
+Shared upstream defect (KNOWN_PERL_ERRORS #55) fixed at the mechanism;
+surpass-Perl per RELEASE_CRITERIA §8. Neither binding's Perl-derived semantics
+change — they gain only the `activate_scope` marker.
 
-The queue is flushed at the *parent's* `\end{document}`
-(`latex_constructs.rs:3500`), long after the child's group popped the conditional
-away → `Error:undefined:\ifpgf@external@grabshipout` at the very end of an
-otherwise complete conversion (issue #311). pgf is the first witness, not a
-special case: the shape is any package pairing a group-scoped definition with a
-document-level hook.
+Guards in `06_cluster_regressions`:
+`standalone_child_preamble_package_survives_the_subfile_group` (ungated;
+`lx311demo.sty` = `\newif` + `\AtEndDocument`, over all four bracket routes —
+`\input`, `\subimport*`, inside a parent-body group, nested in another child),
+`standalone_child_tikz_survives_the_subfile_group` (the witness, TeX Live-gated),
+`standalone_child_preamble_definitions_stay_scoped` (the half that must not
+leak), `author_written_group_around_usepackage_still_loses_the_package` (the
+boundary), `subimport_sibling_calls_do_not_accumulate_search_paths` (import.sty's
+own path scoping, witnesses arXiv:2604.09744 / 2603.04457). Separately,
+`100_stale_autoload_no_runaway::stale_autoload_trigger_does_not_run_away` asserts
+the same boundary from a fresh process. A load in a subfile's *body* additionally errors `can only appear in the
+preamble`, but the load still happens, so the region is observable there too —
+which is why the gate is depth-matched, not merely active/inactive.
 
-**So `require_package` hoists the load's meaning-delta past the enclosing
-group** (`content.rs`, `snapshot_top_frame_meaning_keys` +
-`hoist_top_frame_meaning_delta`). The same split had already bitten the autoload
-path from the other side — a package loaded at depth ≥ 1 vanished on `\end{X}`,
-re-firing sibling triggers into a 10000-error cascade (witness 1711.11576) — and
-`tex.rs::def_autoload` fixed that with this exact snapshot/hoist pair; this
-generalizes it to every load.
-
-**Only our own brackets are hoisted past**, and that distinction is
-irreducible. A group the author wrote is real, and real LaTeX's verdict on it
-stands: `{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex
-("Loading a class or package in a group", then "Undefined control sequence") and
-in Perl LaTeXML, so it must here too — hoisting there would emit *fewer* errors
-than Perl on an authoring mistake, which is a downgrade, not a fix (guard:
-`tests/100_stale_autoload_no_runaway.rs`, which is how this was caught). Nothing
-cheaper separates the two cases: both are a group opened inside the current file
-while `inPreamble` is true, and both sit at `\currentgrouplevel` 1, so neither
-depth, nor `inPreamble`, nor the depth at file entry discriminates.
-
-The mark is therefore a **named scope** — `SUBFILE_SCOPE`, activated by
-`standalone_sty.rs` right after its `bgroup()` and by `import_sty.rs`'s
-`\lx@save@paths` just inside the `{…}` — not a new kind of frame and not a
-bespoke boolean. Named scopes are the engine's existing vocabulary for a region
-of state, the same one Perl uses for `class:`/`counter:`/`label:` (State.pm
-L680), and `activate_scope` marks `StashActive` with `Scope::Local`, so the
-region ends exactly when the bracket pops **by construction** rather than by the
-caller remembering to scope its flag. Nesting is free: `activate_scope`
-no-ops when already active, so an inner subfile stays inside the outer region.
-
-Two alternatives were implemented and refuted:
-
-* **Drop the groups instead** — open standalone's group at the child's
-  `\begin{document}` rather than its `\documentclass`, and remove import's
-  `{…}`. It fixes the reported witness but is a net regression: the child's own
-  preamble then leaks into the parent, so two sibling `standalone` figures that
-  each `\newcommand` the same name with different bodies both render with the
-  *first* one's, and a conditional a child flips in its preamble flips the
-  parent's same-named conditional. All of it silent wrong content, no error. It
-  also does not fix a child nested inside another child, or a child `\input` from
-  inside any group in the parent body — the group is simply somebody else's.
-* **`\globaldefs=1` around the load** — also globalizes pgf's active-character
-  handling → `Error:undefined:"` and zero pictures rendered.
-
-Hoisting only the *package's* delta is what keeps both halves right: the load
-escapes, the child's own preamble does not.
-
-**Why not simply obey latex.ltx's guard and refuse the load?** Because real
-LaTeX never reaches it here. Real `standalone.sty` *gobbles* the subfile
-preamble — `\sa@gobble` (standalone.sty L680) throws away everything from
-`\documentclass` to `\begin{document}` — so no package is ever loaded from a
-child preamble, and the `\begingroup` it holds open across that gobble scopes
-catcodes for the gobbling, not the execution of anything. The parent is required
-to have loaded tikz itself. LaTeXML deliberately departs from that (#63): it
-*executes* the child preamble precisely so `\documentclass[tikz]{standalone}`
-loads tikz, because it needs the binding to model the figure. That divergence —
-not the group — is what manufactures the in-group load latex.ltx forbids.
-
-Given we have made it, three reconciliations were available, and they are not
-equally faithful:
-
-1. gobble the preamble like the real package — faithful, but discards the
-   divergence's entire purpose (upstream LaTeXML#1432; `[tikz]` subfiles stop
-   working);
-2. execute it ungrouped — the refuted alternative above; nothing in LaTeX says a
-   subfile preamble's *own* macros should escape into the parent, and they
-   demonstrably must not;
-3. execute it grouped, and give the *package load* the level-0 lifetime LaTeX
-   guarantees it.
-
-(3) reproduces LaTeX's **invariant** ("a package's definitions live at the
-outermost level") where (1) would reproduce its **enforcement mechanism**
-("refuse to load in a group"). We cannot adopt the mechanism without giving up
-the divergence it polices, so we honour the property it exists to protect. Note
-this leaves the binding faithful to Perl LaTeXML in every respect — the fix is
-not in the bindings at all — and it does not legalize anything new for author
-documents: a paper writing `{\usepackage{x}}` is still an authoring error, now
-behaving as LaTeX would have if it had permitted it. Porting the diagnostic
-itself for that genuine author case stays possible, and stays subject to the
-internal-load exemption noted in `SYNC_STATUS.md`.
-
-This is **surpass-Perl** (RELEASE_CRITERIA §8): same-host Perl 0.8.8 reports the
-identical error on the identical input, so it is a shared upstream defect
-(KNOWN_PERL_ERRORS #55), fixed at the mechanism rather than suppressed. The
-bindings themselves stay byte-identical to Perl — this divergence lives entirely
-at the package-load seam.
-
-Guards, in `06_cluster_regressions`:
-`standalone_child_preamble_package_survives_the_subfile_group` (ungated — a
-three-line paper-bundled `lx311demo.sty` raw-loaded under `INCLUDE_STYLES`, over
-all four ways into a bracket: plain `\input`, `\subimport*`, inside a
-parent-body group, and a standalone child nested in another),
-`standalone_child_tikz_survives_the_subfile_group` (the real witness, gated on
-TeX Live), `standalone_child_preamble_definitions_stay_scoped` (the half that
-must **not** leak), and
-`author_written_group_around_usepackage_still_loses_the_package` (the boundary —
-the hoist must not reach an author's group). Note what is *not* separately
-testable: that the region ends with its bracket is `activate_scope`'s
-`Scope::Local` marker, not an observable behaviour — a package load in a
-subfile's *body* already errors `can only appear in the preamble` before scope
-membership could matter.
-
-Known partial: the hoist covers the **Meaning** table only (`state.rs`:
-"callers that need to promote Value/Catcode/etc. should add parallel helpers").
-`\newif` is meanings, which is why #311 is covered; a package allocating
-register-backed state inside a bracket would keep the name and lose the value.
-No witness needs it yet.
+Known partial: the hoist covers the **Meaning** table only (`state.rs`: "callers
+that need to promote Value/Catcode/etc. should add parallel helpers"). `\newif`
+is meanings, which is why #311 is covered. A package that also sets a **length**
+in its preamble keeps the macro and loses the value — a `\newlength`+`\setlength`
+package hoisted out of a subfile renders `\rule{\pkgwidth}{4pt}` at width 0 in
+the parent where Perl reports `Error:undefined`. That trade (silent wrong content
+for a loud error) is the cost of the Meaning-only hoist; counters are unaffected,
+since `\setcounter` is global in both engines. No witness has needed the wider
+hoist yet.
 
 ## Known Upstream Perl Issues (brief)
 

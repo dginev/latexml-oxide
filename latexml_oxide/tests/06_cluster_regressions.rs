@@ -1594,6 +1594,19 @@ fn subimport_sibling_calls_do_not_accumulate_search_paths() {
 /// `tests/100_stale_autoload_no_runaway.rs`.
 #[test]
 fn author_written_group_around_usepackage_still_loses_the_package() {
+  // (b) the harder half: an author's group written INSIDE a subfile preamble.
+  // The region is active there, so a "am I in a subfile?" test alone hoists it
+  // too and Rust drops below Perl by an error. The scope name carries the
+  // bracket's frame depth precisely to confine the region to its own level.
+  let log_in_child = convert_log_includestyles(
+    "tests/cluster_regressions/subimport/index_author_group_in_child.tex",
+  );
+  assert!(
+    log_in_child.contains("iflx@demo@flag"),
+    "#311: an author's group nested inside a subfile preamble must keep real \
+     LaTeX's verdict — the package is lost, as in pdflatex and Perl:\n{log_in_child}"
+  );
+
   let log = convert_log("tests/cluster_regressions/subimport/index_author_group.tex");
   assert!(
     log.contains("Error:undefined:\\theoremstyle"),
@@ -1612,5 +1625,10 @@ fn includefrom_takes_directory_and_file() {
   assert!(
     xml.contains("includefrom body"),
     "\\includefrom{{dir}}{{file}} silently dropped the included file:\n{xml}"
+  );
+  // Both variants carry the typo, so both need pinning.
+  assert!(
+    xml.contains("subincludefrom body"),
+    "\\subincludefrom{{dir}}{{file}} silently dropped the included file:\n{xml}"
   );
 }

@@ -2477,3 +2477,49 @@ must reconcile namespaces into the destination — never carry the source's `xml
 Both fixes are general (they repair every affected caller). Same pass also ported
 `newDocument`'s missing `addDate` (Perl Post.pm L774) and removed a
 duplicated class-copy block. Guard: `13_split_css_links`.
+
+## #66 A named scope is a self-terminating region marker — `activate_scope`/`is_scope_active`, not a bare frame-depth test
+
+**When:** code must ask *"am I inside a bracket LaTeXML itself opened?"* — the
+`standalone` child preamble (`standalone_sty.rs`, after its `bgroup()`),
+`import.sty`'s `\lx@save@paths` `{…}` — so a package loaded there survives the
+pop (OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55, issue #311).
+
+**Mechanic:** `activate_scope(subfile_scope_here())` marks `StashActive`
+with **`Scope::Local`** (`state.rs`, Perl `State.pm:683`), so the frame that set
+it undoes it: no matching "deactivate" for a call site to forget, and it no-ops
+when already active, so nesting is free. Test activity with `is_scope_active`, i.e. Perl's inline
+`$$self{stash_active}{$scope}[0]` (State.pm L682): the truthiness of the FRONT
+value, never key presence. Deactivation **overwrites the front value with
+`false`** rather than removing the key — a plain global assign (State.pm L701),
+and a global assign replaces rather than layers, leaving exactly one value. So
+the front value is the whole state. (Delete is not on offer anyway: the table
+rides the generic undo machinery, whose per-frame pop counts a removed key would
+desynchronise.) Guards:
+`state::reentrancy_tests::{scope_activity_tracks_value_not_presence,
+a_deactivated_scope_can_be_reactivated, scope_activation_is_bounded_by_its_group}`. Named scopes are the engine's own
+vocabulary for a region of state (Perl's are counter- and label-derived,
+`section:4` / `label:foo`, State.pm L965-975) — reach for one before inventing a
+boolean Value plus a manual restore.
+
+**Trap 1 — activity ALONE is not the test; the name must carry the frame
+depth.** `StashActive` is `Scope::Local` at the bracket's frame, so a bare "is the
+region active?" reads true at every *deeper* frame — an author's
+`{\usepackage{…}}` written inside a subfile preamble then gets hoisted too, and
+Rust drops an error below Perl. Hence `subfile:<depth>`, Perl's own
+`section:4`/`label:foo` shape. A bare `get_frame_depth() > 0` is worse still:
+it matches any author group anywhere. It also matches a group the AUTHOR wrote, which must keep failing
+(OXIDIZED_DESIGN #65) — and the two are indistinguishable by anything cheaper:
+same file, `inPreamble` true, `\currentgrouplevel` 1. That is *why* the region has
+to be named. Guard:
+`06_cluster_regressions::author_written_group_around_usepackage_still_loses_the_package`.
+
+**Trap 2 — `require_package` is idempotent** (`input_definitions`'s
+`already_handled` `_loaded`/`_raw_loaded`/`_load_attempted` check in `content.rs`;
+the binding-vs-raw precedence half is WISDOM #63), so
+"clear and re-load" does *not* reinstall: hoist the installed defs instead
+(`snapshot_top_frame_meaning_keys` + `hoist_top_frame_meaning_delta`, Meaning-only
+— Value/Catcode/register state stays frame-local; OXIDIZED_DESIGN #65). See also
+WISDOM **`48.`** — `Scope::InPlace` for patching an existing definition, in the
+plain-numbered series, NOT `#48`: it says don't promote out of the frame, #66
+says do, but only past a bracket that is ours.

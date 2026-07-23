@@ -22,7 +22,7 @@ LoadDefinitions!({
     // outermost-level lifetime real LaTeX would. Every caller invokes this
     // immediately after `{`, and `activate_scope`'s marker is `Scope::Local`, so
     // the region ends with that group.
-    activate_scope(pin_static(SUBFILE_SCOPE));
+    activate_scope(subfile_scope_here());
     let paths = get_search_paths();
     push_value("lx@searchpaths@stack",
       Stored::Strings(

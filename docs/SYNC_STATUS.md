@@ -15,7 +15,9 @@
 
 ## Current status
 
-- `cargo test --tests`: **1577 / 0 / 0** (on `public-release-prep-week` after
+- `cargo test --tests`: **1657 passing / 90 targets** (2026-07-23, branch
+  `fix-311-standalone-newif-group`; the one `latexml_post` graphics failure needs a
+  host image tool and is green on CI). Previously 1577 (on `public-release-prep-week` after
   merging `origin/main`'s Windows release hardening; the completed 2026-07
   session logs are archived — see the pointer below).
 
@@ -181,16 +183,14 @@ the ordinary bounded undefined path.
 **Ground truth, recorded but deliberately NOT ported:** real LaTeX rejects the
 premise outright — `\@fileswithoptions` (latex.ltx L18700) errors *"Loading a
 class or package in a group"* when `\currentgrouplevel > 0`. Porting that guard
-would give a better message, but `standalone_sty.rs` **deliberately** wraps its
-`\@standalone@documentclass` in `bgroup()` + `RequirePackage`, so the guard
-would need an internal-load exemption. Not worth the risk now that the runaway
-is gone; noted here if the diagnostic is ever wanted. **Updated 2026-07-23
-(#311):** the exemption is still required — that wrapping is unchanged, and
-faithful to Perl — but the *harm* it caused is gone: `require_package` now
-hoists a load's definitions past the enclosing group, so a package loaded in a
-subfile preamble no longer loses its `\newif`s while the hooks reading them
-survive (OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55). We reproduce latex.ltx's
-invariant instead of its enforcement.
+would give a better message. **Updated 2026-07-23 (#311):** we now reproduce that
+invariant rather than its enforcement — `require_package` hoists a load's
+definitions past LaTeXML's own brackets, marked `subfile:<depth>`
+(OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55). The guard would still need an
+exemption for those brackets and would add only the message, so it stays
+unported. This section's witness `2606.21610` is a *different* shape: its braces
+are `\IfFileExists`'s branch arguments, executing as a group only because
+`\IfFileExists` is itself undefined that early — it too keeps losing its class.
 
 **Diagnostic gap closed alongside:** the `TokenLimit` fatal previously printed
 only "infinite loop?" with no window — the cycle guard dumps its repeating
@@ -614,6 +614,25 @@ residuals stay here so the live worklist keeps them visible:
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
 
 ## Open tasks (actionable)
+
+### A package loaded in a LaTeXML subfile bracket lost its definitions (#311) — ✅ LANDED 2026-07-23 (branch `fix-311-standalone-newif-group`)
+
+Rust Error Fix; shared upstream defect fixed ahead of Perl (KNOWN_PERL_ERRORS
+#55/#56, RELEASE_CRITERIA §8). `content.rs::require_package` hoists the load's
+**Meaning** delta past brackets LaTeXML itself opened, named `subfile:<depth>`
+(activated by `standalone_sty.rs` after its `bgroup()` and by `import_sty.rs`'s
+`\lx@save@paths`). The depth is load-bearing: `StashActive` is `Scope::Local` at
+the bracket's frame, so a bare activity test is also true at deeper frames and an
+author's `{\usepackage{…}}` *inside* a subfile preamble got hoisted too — Rust 0
+errors where Perl reports 1. Reproducing needs a **raw** `.sty` under
+`--includestyles`; a bound package installs globally already. Also fixed:
+`\includefrom`/`\subincludefrom` declared one argument but used `#3`, dropping
+the file in silence; and three `state.rs` scope bugs (activity is the FRONT
+`stash_active` value, not key presence — so a deactivated scope read active
+forever, could never be re-activated, and a second `deactivate_scope` re-popped).
+Mechanism, refuted alternatives, boundary and the Meaning-only partial:
+OXIDIZED_DESIGN #65 + WISDOM #66. Guards: `06_cluster_regressions` (5 new) +
+`state::reentrancy_tests` (3 new).
 
 ### Rhai `LookupDefinition(cs).push*` hook-splice re-installs at same-level, not global — ✅ LANDED 2026-07-21
 

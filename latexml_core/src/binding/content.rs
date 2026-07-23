@@ -10,7 +10,7 @@ use crate::{
   binding::def::dialect::def_macro,
   common::{
     arena,
-    arena::{SymStr, pin_static},
+    arena::SymStr,
     error::*,
     font::{Font, Fontmap},
     model,
@@ -1779,54 +1779,28 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
-  // A package loaded inside a group LaTeXML ITSELF opened must still end up
-  // defined at the outermost level. Real LaTeX never has to think about this:
-  // `\@fileswithoptions` (latex.ltx L18700) errors "Loading a class or package
-  // in a group" at `\currentgrouplevel > 0`, so no real package is written to
-  // survive a `pop_frame`. But LaTeXML manufactures in-group loads real LaTeX
-  // does not have — a standalone/`\import` subfile's preamble runs inside a
-  // bracket of ours, and, unlike the real `standalone.sty` (which *gobbles*
-  // that preamble), LaTeXML executes it, precisely so
-  // `\documentclass[tikz]{standalone}` loads tikz (divergence #63). The package
-  // is then split in half: its definitions are frame-local, while the
-  // document-level hooks it registers (`\AtEndDocument`, `@at@begin@document`)
-  // are global and outlive them.
+  // OXIDIZED_DESIGN #65 (#311): a package loaded inside a bracket LaTeXML ITSELF
+  // opened must still end up defined at the outermost level, so hoist the load's
+  // meaning-delta past it. Real LaTeX has no such bracket — `\@fileswithoptions`
+  // (latex.ltx L18700) refuses to load at `\currentgrouplevel > 0` — but we
+  // execute a subfile preamble the real `standalone.sty` gobbles (divergence
+  // #63), which splits the package in half: frame-local definitions, global
+  // hooks. Witness: `pgfcoreexternal.code.tex` L152
+  // `\newif\ifpgf@external@grabshipout` popped with the child while its L171-179
+  // `\AtEndDocument` reaches the parent's `\end{document}`. `tex.rs::def_autoload`
+  // already used this snapshot/hoist pair for the mirror-image autoload failure
+  // (witness 1711.11576).
   //
-  // Only OUR brackets are hoisted past, which is why this asks whether the
-  // `SUBFILE_SCOPE` region is active rather than testing depth. A group the
-  // AUTHOR wrote is real, and real LaTeX's verdict on it stands:
-  // `{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex
-  // ("Loading a class or package in a group", then "Undefined control
-  // sequence") and in Perl LaTeXML, so it must here too — hoisting there would
-  // emit FEWER errors than Perl on an authoring mistake, which is a downgrade,
-  // not a fix. Guard: `tests/100_stale_autoload_no_runaway.rs`.
-  //
-  // The two cases are genuinely indistinguishable by anything cheaper: both are
-  // a group opened inside the current file while `inPreamble` is true, and both
-  // sit at `\currentgrouplevel` 1. Hence a *named* region — the engine's
-  // existing scope machinery, the same vocabulary Perl uses for
-  // `class:`/`counter:`/`label:` — rather than a new kind of frame.
-  //
-  // Witness (issue #311): `\documentclass[tikz]{standalone}` in a subfile
-  // preamble raw-loads `pgfcoreexternal.code.tex`, whose L152
-  // `\newif\ifpgf@external@grabshipout` is TeX-local while its L171-179
-  // `\AtEndDocument{\ifpgf@external@grabshipout…\fi}` goes onto the global
-  // queue — flushed at the PARENT's `\end{document}`, long after the child's
-  // group popped the conditional away → `Error:undefined:
-  // \ifpgf@external@grabshipout` at the very end of an otherwise complete
-  // conversion. Perl 0.8.8 reports the identical error (KNOWN_PERL_ERRORS #55).
-  // The same split already bit the autoload path from the other side (a package
-  // loaded at depth>=1 vanished on `\end{X}`, re-firing sibling triggers into a
-  // 10000-error cascade, witness 1711.11576); `tex.rs::def_autoload` fixed that
-  // with this same snapshot/hoist pair, and this generalizes it to every load.
-  //
-  // Hoisting the delta — rather than dropping the enclosing group, or setting
-  // `\globaldefs=1` for the load — is what keeps the child's OWN preamble
-  // definitions scoped: two sibling standalone figures may each `\newcommand`
-  // the same name with different bodies, and each must render with its own.
-  // (`\globaldefs=1` was tried and refuted: it also globalizes pgf's active-
-  // character handling → `Error:undefined:"` and zero pictures.)
-  let pre_keys = if is_scope_active(pin_static(SUBFILE_SCOPE)) && get_frame_depth() > 0 {
+  // `subfile:<depth>`, not a bare depth test: a group the AUTHOR wrote must keep real
+  // LaTeX's verdict — `{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in
+  // pdflatex and Perl alike, and rescuing it would emit fewer errors than Perl on
+  // an authoring mistake (guards
+  // `06_cluster_regressions::author_written_group_around_usepackage_still_loses_the_package`,
+  // and `100_stale_autoload_no_runaway` from a fresh process). The
+  // two cases are indistinguishable by anything cheaper: both are a group opened
+  // inside the current file, while `inPreamble` is true, at `\currentgrouplevel`
+  // 1. Refuted alternatives in #65 — dropping the brackets, and `\globaldefs=1`.
+  let pre_keys = if is_scope_active(subfile_scope_here()) {
     Some(snapshot_top_frame_meaning_keys())
   } else {
     None
