@@ -185,7 +185,7 @@ jobs:
       - name: verify dump window completeness
         run: |
           ls -la resources/dumps/
-          for year in 2022 2023 2024 2025; do
+          for year in 2022 2023 2024 2025 2026; do
             for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
               if [ ! -s "resources/dumps/$f" ]; then
                 echo "::error::release dump window incomplete: missing resources/dumps/$f"
@@ -307,7 +307,7 @@ jobs:
       - name: verify dump window completeness
         run: |
           ls -la resources/dumps/
-          for year in 2022 2023 2024 2025; do
+          for year in 2022 2023 2024 2025 2026; do
             for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
               if [ ! -s "resources/dumps/$f" ]; then
                 echo "::error::release dump window incomplete: missing resources/dumps/$f"
@@ -417,7 +417,7 @@ jobs:
       - name: verify dump window completeness
         run: |
           ls -la resources/dumps/
-          for year in 2022 2023 2024 2025; do
+          for year in 2022 2023 2024 2025 2026; do
             for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
               if [ ! -s "resources/dumps/$f" ]; then
                 echo "::error::release dump window incomplete: missing resources/dumps/$f"
@@ -577,7 +577,7 @@ jobs:
         shell: bash
         run: |
           ls -la resources/dumps/
-          for year in 2022 2023 2024 2025; do
+          for year in 2022 2023 2024 2025 2026; do
             for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
               if [ ! -s "resources/dumps/$f" ]; then
                 echo "::error::release dump window incomplete: missing resources/dumps/$f"
@@ -728,10 +728,11 @@ jobs:
       - name: verify dump window completeness
         run: |
           ls -la resources/dumps/
-          # 2026 is temporarily out of the window: no usable TL2026 container
-          # exists yet (see release-dumps.yml — tkw1536:2026 / PR #1 pending).
-          # TL2026 hosts fall back to the most-recent embedded dump at runtime.
-          for year in 2022 2023 2024 2025; do
+          # The full 5-year moving window. 2026 rejoined it 2026-07-23 (the
+          # TL2026 container and the zero-error init gate both cleared — see
+          # the matrix comment in release-dumps.yml), so a TL2026 host now gets
+          # an exact-year dump instead of falling back to the 2025 one.
+          for year in 2022 2023 2024 2025 2026; do
             for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
               if [ ! -s "resources/dumps/$f" ]; then
                 echo "::error::release dump window incomplete: missing resources/dumps/$f"

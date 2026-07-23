@@ -107,33 +107,114 @@ jobs:
             image: ghcr.io/tkw1536/texlive-docker:2024
           - year: 2025
             image: ghcr.io/tkw1536/texlive-docker:2025
-          # TODO(#217): re-add 2026 once ghcr.io/tkw1536/texlive-docker:2026
-          # is published (tkw1536/historic-texlive-docker#1, still OPEN). The
-          # islandoftex `latest` image is NOT a usable interim: it is Debian
-          # testing (libxml2 2.15 → soname libxml2.so.16, apt pkg `libxml2-16`),
-          # so the dumper binary — built on ubuntu-22.04 against libxml2.so.2 —
-          # cannot run there at all (the apt-get even lacks a `libxml2`
-          # candidate). The whole single-binary-serves-all-containers design
-          # relies on the tkw1536 family sharing one (bookworm/.so.2) base.
-          # Until then the window is 2022–2025; a TL2026 host falls back to the
-          # most-recent embedded dump (2025) at runtime.
-    container:
-      image: ${{ matrix.image }}
-      options: --entrypoint ""
+          # 2026 restored 2026-07-23, clearing the former TODO(#217) marker
+          # here (#217 is the long-closed macOS-portability issue this
+          # pipeline descends from — it was a back-reference, not a live
+          # ticket). Both of the two INDEPENDENT blockers that had held 2026
+          # out of the window are now measured clear
+          # (locally, with a kpathsea-unlinked dumper built exactly as
+          # `build-dumper` does, run inside the real image):
+          #   1. Container. tkw1536/historic-texlive-docker#1 merged
+          #      2026-06-08 and `:2026` is published. It shares the SAME
+          #      `none-5.42.0` / debian:trixie base as `:2025`, so libxml2's
+          #      apt candidate is 2.9.14 → soname libxml2.so.2 and glibc is
+          #      2.41 (≥ the ubuntu-22.04 build host's 2.35). The one binary
+          #      therefore still serves every container — which is precisely
+          #      what the islandoftex `latest` interim could NOT do (Debian
+          #      testing, libxml2 2.15 → libxml2.so.16, no `libxml2` apt
+          #      candidate at all). Do not swap the image family.
+          #   2. Zero-error init gate. TL2026's expanded l3 `text-case`
+          #      module used to trip the expl3 raw-load catcode gap:
+          #      `--init=latex.ltx` measured 137 errors on 2026-07-12 (90 ×
+          #      `unexpected:_`, 29 × catcode PARAM, ~18 undefined l3
+          #      case-change internals). The two expl3 fixes that landed
+          #      2026-07-20 (force `\ExplSyntaxOff` when `_` is still LETTER;
+          #      global `:`/`_`/`~` restore) closed it: both inits are now
+          #      exit 0 / 0 errors, latex dump 24,221 entries (2025: 21,997 —
+          #      the delta IS text-case), plain dump byte-identical to 2025.
+          - year: 2026
+            image: ghcr.io/tkw1536/texlive-docker:2026
+    # DELIBERATELY NOT a job-level `container:`. That pulls the image during
+    # "Initialize containers", BEFORE any step can run, so nothing can free
+    # disk first. Measured 2026-07-23: the SAME 2026 leg passed one run and
+    # failed the next with `failed to register layer: … no space left on
+    # device` (all 3 pull retries out of space). 2026 is the fattest image —
+    # 6.2 GB compressed / 9.8 GB extracted, and every year is bigger than the
+    # last (2022=4.6, 2023=5.0, 2024=5.4, 2025=5.7 GB compressed) — so it falls
+    # over first.
+    #
+    # NOTE the diagnosis, because the obvious one is wrong: this is NOT a
+    # steady-state capacity ceiling. `/` reports 145 GB total / 88 GB free
+    # BEFORE cleanup, ~5x the ~16 GB the pull peaks at. The pass and the fail
+    # drew different runner image versions (ubuntu-24.04 20260714 passed,
+    # 20260720 failed), and GitHub-hosted runners cannot pin an image version —
+    # so some runners simply come up with much less headroom and we must be
+    # tolerant rather than merely "big enough". Two layers of tolerance:
+    # (1) free ~28 GB up front (58 GB used -> 30 GB), and (2) an explicit
+    # `docker pull` retry step (below) that reclaims space and backs off
+    # between attempts. Do NOT assume more capacity is the fix.
+    #
+    # Every release.yml build leg hard-requires the full window, so one flaky
+    # leg blocks a whole release. Do NOT "simplify" this back to `container:`.
     steps:
-      # The binary needs libxml2/libxslt runtime libs inside the container.
-      - name: install runtime libraries
+      - name: free runner disk space
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends libxml2 libxslt1.1 ca-certificates
+          echo "before:"; df -h / | tail -1
+          # Preinstalled toolchains this job never uses. ~15-25 GB total; the
+          # Android SDK alone is the biggest single win. `|| true` throughout:
+          # a path missing on a future runner image must not fail the release.
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+                      /usr/share/dotnet /usr/share/swift /usr/local/share/powershell \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/chromium \
+                      /usr/local/share/boost 2>/dev/null || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          echo "after:"; df -h / | tail -1
+      # Explicit, retry-tolerant pull BEFORE `docker run` (whose implicit pull
+      # is a single non-retried attempt). The images are large and the runner
+      # fleet is heterogeneous, so a first-attempt transient failure — network,
+      # or a marginal `no space left on device` — often clears on retry once a
+      # partial/aborted layer is pruned. Reclaim + linear backoff between tries.
+      - name: pull TL image (retry-tolerant)
+        env:
+          TL_IMAGE: ${{ matrix.image }}
+        run: |
+          set -u
+          ok=0
+          for attempt in 1 2 3 4; do
+            echo "=== docker pull attempt $attempt: $TL_IMAGE ==="
+            if docker pull "$TL_IMAGE"; then ok=1; break; fi
+            echo "pull attempt $attempt failed; reclaiming space, backing off"
+            df -h / | tail -1
+            # Drop anything half-pulled / any stale cache so the next attempt
+            # starts from maximum free space.
+            docker system prune -af >/dev/null 2>&1 || true
+            sleep $(( attempt * 10 ))
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::docker pull failed for $TL_IMAGE after 4 attempts"
+            df -h / | tail -1
+            exit 1
+          fi
       - uses: actions/download-artifact@v6
         with:
           name: dumper-binary
       - name: generate and gate dumps
+        env:
+          TL_YEAR: ${{ matrix.year }}
+          TL_IMAGE: ${{ matrix.image }}
         run: |
           set -u
-          chmod +x ./latexml_oxide
           mkdir -p resources/dumps
+
+          # The in-container half. Quoted heredoc: nothing is expanded by the
+          # host shell, so `$` stays intact; the year arrives via `-e TL_YEAR`.
+          cat > gate.sh <<'GATE'
+          set -u
+          cd /work
+          # The binary needs libxml2/libxslt runtime libs inside the container.
+          apt-get update
+          apt-get install -y --no-install-recommends libxml2 libxslt1.1 ca-certificates
+          chmod +x ./latexml_oxide
 
           # Sanity: the container's TL year must match the matrix year
           # (guards against image drift, e.g. a `latest` tag moving on).
@@ -141,22 +222,22 @@ jobs:
           if [ -z "$AMBIENT" ]; then
             AMBIENT="$(pdflatex --version | head -3 | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)"
           fi
-          if [ "$AMBIENT" != "${{ matrix.year }}" ]; then
-            echo "::error::container TL year is '$AMBIENT', expected ${{ matrix.year }}"
+          if [ "$AMBIENT" != "$TL_YEAR" ]; then
+            echo "::error::container TL year is '$AMBIENT', expected $TL_YEAR"
             exit 1
           fi
 
           # Zero-error gate per init (see workflow header).
           run_init() {
-            local init="$1" log="init-$1.log"
-            echo "=== --init=$init (TL ${{ matrix.year }}) ==="
+            init="$1"; log="init-$1.log"
+            echo "=== --init=$init (TL $TL_YEAR) ==="
             LATEXML_INIT_DEBUG=1 ./latexml_oxide --init="$init" >"$log" 2>&1
             status=$?
             # ANSI-strip defensively, then strict error count.
             errors=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE '^(Error|Fatal):' || true)
             tail -5 "$log"
             if [ "$status" -ne 0 ] || [ "$errors" -ne 0 ]; then
-              echo "::error::--init=$init on TL ${{ matrix.year }}: exit=$status errors=$errors"
+              echo "::error::--init=$init on TL $TL_YEAR: exit=$status errors=$errors"
               sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -aE '^(Error|Fatal):' | head -20
               exit 1
             fi
@@ -164,8 +245,18 @@ jobs:
           run_init plain.tex
           run_init latex.ltx
 
-          # All three artifacts must exist and be non-trivial.
-          for f in plain.${{ matrix.year }}.dump.txt latex.${{ matrix.year }}.dump.txt texlive.${{ matrix.year }}.version; do
+          # Written as root inside the container; make them readable to the
+          # runner user so actions/upload-artifact can pick them up.
+          chmod -R a+rX resources/dumps
+          GATE
+
+          docker run --rm --entrypoint "" -e TL_YEAR \
+            -v "$PWD":/work -w /work "$TL_IMAGE" bash /work/gate.sh
+
+          # All three artifacts must exist and be non-trivial. Checked on the
+          # HOST, after the container exits, so this also proves the bind mount
+          # round-tripped what upload-artifact is about to read.
+          for f in plain.$TL_YEAR.dump.txt latex.$TL_YEAR.dump.txt texlive.$TL_YEAR.version; do
             if [ ! -s "resources/dumps/$f" ]; then
               echo "::error::missing or empty resources/dumps/$f"
               ls -la resources/dumps/ || true

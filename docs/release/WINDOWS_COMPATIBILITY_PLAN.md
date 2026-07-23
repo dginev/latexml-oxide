@@ -11,10 +11,12 @@ Decisions locked with the maintainer (2026-07-12): **MSVC** target
 MiKTeX** must both work at runtime; a self-contained `.exe` alongside the
 Linux/macOS assets. No MinGW/GNU bring-up phase.
 
-> **Release-dump caveat:** Windows test-suite green does NOT imply TL2026
-> release-readiness — `--init=latex.ltx` on TL2026 is not dump-gate-clean (137
-> expl3-catcode errors; see REMAINING and `SYNC_STATUS.md`). 2026 is out of the
-> release dump window; TL2026 hosts fall back to the newest embedded dump.
+> **Release-dump caveat — RESOLVED 2026-07-23.** This used to read: Windows
+> test-suite green does NOT imply TL2026 release-readiness, because
+> `--init=latex.ltx` on TL2026 emitted 137 expl3-catcode errors and 2026 was
+> out of the release dump window. Both halves are now closed — the init is
+> **0 errors** and **2026 is IN the window** (2022–2026). See `SYNC_STATUS.md`
+> ("TL2026 `latex.ltx` dump init … ✅ CLOSED 2026-07-23").
 
 ## Toolchain & native deps (reproduce the build from here)
 
@@ -178,12 +180,14 @@ cold run for a fair Linux-vs-Windows benchmark.
   `kpathsea_sys` row, and the §D.3 relink discharge; **F5 was closed 2026-07-14**
   ("libkpathsea: an undisclosed static LGPL-2.1 link"). `RELEASING.md` cites the
   same discharge.
-- [ ] **expl3 / TL2026 `latex.ltx` dump gate.** `--init=latex.ltx` on TL2026
-  emits 137 raw-load expl3-catcode-gap errors
-  (`EXPL3_CATCODE_GAP_2026-06-08.md`), so 2026 cannot join the release dump
-  window (`SYNC_STATUS.md`: "TL2026 latex.ltx dump init is NOT
-  release-gate-clean"). Deep, pre-existing, Linux-equivalent gap — first
-  post-release work.
+- [x] **expl3 / TL2026 `latex.ltx` dump gate — DONE 2026-07-23.** Was: 137
+  raw-load expl3-catcode-gap errors (`EXPL3_CATCODE_GAP_2026-06-08.md`)
+  blocking 2026 from the release dump window. The two expl3 fixes landed
+  2026-07-20 closed it; re-measured inside the real
+  `ghcr.io/tkw1536/texlive-docker:2026` under the verbatim release gate:
+  `plain.tex` and `latex.ltx` both exit 0 with **0 errors**. 2026 is now in the
+  window (`SYNC_STATUS.md`: "TL2026 `latex.ltx` dump init … ✅ CLOSED
+  2026-07-23").
 - [ ] **Fast TeX-ecosystem CI install** (DEFERRED). The cold
   `setup-texlive-action` download (~1–2 GB) is the slowest CI step. Target: a
   pinned, content-hash-keyed minimal texmf snapshot (fast + deterministic +

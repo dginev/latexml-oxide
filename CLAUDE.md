@@ -69,8 +69,9 @@ are **NOT committed to the repo**. They are generated at release time by
 push, dispatchable standalone): a 5-year moving TL window — currently
 2022–2026 — each generated inside a pinned TL-year container
 (`ghcr.io/tkw1536/texlive-docker:YYYY`, the image family behind Perl
-LaTeXML's CI; 2026 interim: islandoftex `latest` until
-tkw1536/historic-texlive-docker#1 publishes). One kpathsea-UNLINKED
+LaTeXML's CI; 2026 joined the window 2026-07-23 — upstream published
+`:2026` on the same trixie/`libxml2.so.2` base, and the TL2026
+`latex.ltx` init reached the zero-error gate). One kpathsea-UNLINKED
 dumper binary (subprocess-`kpsewhich` backend) serves all containers.
 Each `--init` runs under `LATEXML_INIT_DEBUG=1` with a strict
 zero-`Error:`/`Fatal:` gate (init output is suppressed otherwise —
