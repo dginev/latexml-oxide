@@ -668,6 +668,261 @@ fn lookup_definition_pushes_construct_hooks_end_to_end() {
 /// `afterDigestBody` — the same flexary, unordered options the compile-time
 /// `Def*!` macros take. Driven through a real conversion (afterDigestBody needs a
 /// captured environment body). Each hook records a state side-effect we read back.
+/// The Document XML surface a COMPILE-TIME binding (`_sty.rs`/`_cls.rs`) uses,
+/// exposed to the runtime layer so the two do not diverge (issue #350: "expose it
+/// in rhai in full generality, so that the interfaces are comparable in the
+/// runtime and compile-time layers"). Every method below is named after its Perl
+/// `Core/Document.pm` original.
+const XMLAPI_SAMPLE: &str = r##"
+  // A tagged block to query and mutate:
+  //   <ltx:text class="#1"><ltx:emph>#1-inner</ltx:emph></ltx:text>
+  DefConstructor("\\xqbuild{}", |document, cls| {
+    let c = ToString(cls);
+    document.openElement("ltx:text");
+    document.setAttribute("class", c);
+    document.openElement("ltx:emph");
+    document.absorbString(c + "-inner");
+    document.closeElement("ltx:emph");
+    document.closeElement("ltx:text");
+  });
+
+  // insertElement (Perl `insertElement`) — the element counterpart that
+  // `insertXML` is named after — plus addClass, generateID, getNode, getElement.
+  DefConstructor("\\xqinsert", |document| {
+    let n = document.insertElement("ltx:text", #{ class: "ins-elem" });
+    document.addClass(n, "ins-extra");
+    document.generateID(n, "xq");
+    assign_global("xq:insqname", n.qname());
+    assign_global("xq:insid", n.getAttribute("xml:id"));
+    assign_global("xq:cur", document.getNode().qname());
+    assign_global("xq:elem", document.getElement().qname());
+  });
+
+  // findnodes / findnode (Perl `findnodes`/`findnode`), whole-document and
+  // scoped to a node — the query half a script had no way to reach before.
+  DefConstructor("\\xqfind", |document| {
+    let hits = document.findnodes("//ltx:text[@class]");
+    assign_global("xq:count", "" + hits.len());
+    let one = document.findnode("//ltx:text[contains(@class,'ins-elem')]");
+    assign_global("xq:one", one.getAttribute("class"));
+    let keep = document.findnode("//ltx:text[@class='keep']");
+    assign_global("xq:scoped", "" + document.findnodes(".//ltx:emph", keep).len());
+    assign_global("xq:missing",
+      if type_of(document.findnode("//ltx:nosuch")) == "()" { "unit" } else { "BAD" });
+  });
+
+  // Structural manipulation: rename / remove / unwrap / wrap / appendClone /
+  // replaceNode (Perl renameNode, removeNode, unwrapNodes, wrapNodes,
+  // appendClone, replaceNode).
+  DefConstructor("\\xqmutate", |document| {
+    document.renameNode(document.findnode("//ltx:text[@class='rename']"), "ltx:emph");
+    document.removeNode(document.findnode("//ltx:text[@class='remove']"));
+    document.unwrapNodes(document.findnode("//ltx:text[@class='unwrap']"));
+    let w = document.wrapNodes("ltx:text", [document.findnode("//ltx:text[@class='wrap']")]);
+    document.addClass(w, "wrapper");
+    document.appendClone(document.findnode("//ltx:text[@class='keep']"),
+                         [document.findnode("//ltx:text[@class='clone']")]);
+    document.replaceNode(document.findnode("//ltx:text[@class='replace']"),
+                         [document.findnode("//ltx:text[@class='mover']")]);
+  });
+
+  // openElementAt / closeElementAt (Perl `openElementAt`/`closeElementAt`):
+  // build at an explicit node instead of the current insertion point.
+  DefConstructor("\\xqat", |document| {
+    let target = document.findnode("//ltx:text[@class='at']");
+    let n = document.openElementAt(target, "ltx:emph", #{ class: "at-child" });
+    document.closeElementAt(n);
+  });
+
+  // A PARSED node may only enter the document through insertXML, which
+  // re-creates it. Handing one to a node-splicing method would move a node
+  // still owned by the throwaway parse document into ours — a use-after-free
+  // once the script drops the handle. Must be a clean error, not a segfault.
+  DefConstructor("\\xqforeign", |document| {
+    let parsed = ParseXML("<b>x</b>");
+    let target = document.findnode("//ltx:text[@class='keep']");
+    try {
+      document.replaceNode(target, parsed);
+      assign_global("xq:foreign", "ACCEPTED-A-PARSED-NODE");
+    } catch (e) {
+      assign_global("xq:foreign", "rejected");
+      assign_global("xq:foreignmsg", "" + e);
+    }
+  });
+
+  // renameNode on an ORPHAN: `Document::rename_node` panics on a node with no
+  // parent, which from an untrusted script would abort the conversion (and with
+  // panic=abort, the process). Must be a clean error instead.
+  DefConstructor("\\xqorphan", |document| {
+    let orphan = document.findnode("//ltx:text[@class='orphan']");
+    document.removeNode(orphan);
+    try {
+      document.renameNode(orphan, "ltx:emph");
+      assign_global("xq:orphan", "RENAMED-AN-ORPHAN");
+    } catch (e) {
+      assign_global("xq:orphan", "rejected");
+      assign_global("xq:orphanmsg", "" + e);
+    }
+  });
+"##;
+
+fn xmlapi_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxxmlapitest" {
+    Some(latexml_contrib::script_bindings::load_script(XMLAPI_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+/// The runtime layer reaches the same Document XML surface the compile-time
+/// layer does — query (`findnodes`/`findnode`), element insertion
+/// (`insertElement`), and structural edits — and the two hazards that surface
+/// creates for an untrusted script are contained rather than fatal.
+#[test]
+fn document_xml_api_matches_the_compile_time_surface() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(xmlapi_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxxmlapitest}\\begin{document}",
+    "\\xqinsert ",
+    "\\xqbuild{keep}\\xqbuild{rename}\\xqbuild{remove}\\xqbuild{unwrap}",
+    "\\xqbuild{wrap}\\xqbuild{clone}\\xqbuild{replace}\\xqbuild{mover}",
+    "\\xqbuild{at}\\xqbuild{orphan}",
+    "\\xqfind \\xqmutate \\xqat \\xqforeign \\xqorphan ",
+    "\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("the Document XML surface must not abort the conversion");
+  let xml = doc.serialize_to_string();
+
+  let g = |k: &str| match state::lookup_value(k) {
+    Some(latexml_core::common::store::Stored::String(s)) => {
+      latexml_core::common::arena::to_string(s)
+    },
+    _ => String::new(),
+  };
+
+  // ── insertElement / addClass / generateID / getNode / getElement ──
+  assert_eq!(
+    g("xq:insqname"),
+    "ltx:text",
+    "insertElement returned the new node"
+  );
+  assert!(
+    g("xq:insid").contains("xq"),
+    "generateID did not stamp the requested prefix, or getAttribute could not \
+     read the namespaced xml:id back; got {:?}",
+    g("xq:insid")
+  );
+  assert!(
+    xml.contains("ins-elem") && xml.contains("ins-extra"),
+    "insertElement/addClass did not reach the document; xml=\n{xml}"
+  );
+  assert!(
+    !g("xq:cur").is_empty() && !g("xq:elem").is_empty(),
+    "getNode/getElement returned nothing: cur={:?} elem={:?}",
+    g("xq:cur"),
+    g("xq:elem")
+  );
+
+  // ── findnodes / findnode ──
+  assert!(
+    g("xq:count").parse::<usize>().unwrap_or(0) >= 10,
+    "findnodes did not see the built blocks; count={:?}",
+    g("xq:count")
+  );
+  assert!(
+    g("xq:one").contains("ins-elem"),
+    "findnode returned the wrong node; got {:?}",
+    g("xq:one")
+  );
+  assert_eq!(
+    g("xq:scoped"),
+    "1",
+    "findnodes scoped to a node over-matched"
+  );
+  assert_eq!(
+    g("xq:missing"),
+    "unit",
+    "findnode with no match must be (), not an error"
+  );
+
+  // ── structural manipulation ──
+  assert!(
+    xml.contains("<ltx:emph class=\"rename\"") || xml.contains("class=\"rename\""),
+    "renameNode did not retag the node; xml=\n{xml}"
+  );
+  assert!(
+    !xml.contains("remove-inner"),
+    "removeNode left its subtree behind; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("unwrap-inner") && !xml.contains("class=\"unwrap\""),
+    "unwrapNodes must drop the wrapper but keep its children; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("wrapper"),
+    "wrapNodes did not create the wrapping element; xml=\n{xml}"
+  );
+  assert_eq!(
+    xml.matches("clone-inner").count(),
+    2,
+    "appendClone should have produced a second copy; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("mover-inner"),
+    "replaceNode lost the replacement node; xml=\n{xml}"
+  );
+
+  // ── openElementAt / closeElementAt ──
+  assert!(
+    xml.contains("at-child"),
+    "openElementAt/closeElementAt did not build at the target node; xml=\n{xml}"
+  );
+
+  // ── the two hazards are contained ──
+  assert_eq!(
+    g("xq:foreign"),
+    "rejected",
+    "a PARSED node was spliced in directly — that is a use-after-free once the \
+     script drops its handle; it must be routed through insertXML"
+  );
+  // ...and it was OUR guard that refused it, not some unrelated failure.
+  assert!(
+    g("xq:foreignmsg").contains("insertXML") && g("xq:foreignmsg").contains("ParseXML"),
+    "replaceNode failed for the wrong reason: {:?}",
+    g("xq:foreignmsg")
+  );
+  assert_eq!(
+    g("xq:orphan"),
+    "rejected",
+    "renameNode on an orphan reached Document::rename_node's panic"
+  );
+  assert!(
+    g("xq:orphanmsg").contains("no parent"),
+    "renameNode failed for the wrong reason: {:?}",
+    g("xq:orphanmsg")
+  );
+  assert!(
+    get_status(LogStatus::Fatal) == 0,
+    "the XML surface escalated to Fatal: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 const OPTBAG_SAMPLE: &str = r##"
   DefPrimitive("\\optbagprim", || { AssignValue("optbag:body", "X", "global"); }, #{
     beforeDigest: || { AssignValue("optbag:before", "B", "global"); },

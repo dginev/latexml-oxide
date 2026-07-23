@@ -787,6 +787,53 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
 /// Given a Qualified name, possibly prefixed with a namespace prefix,
 /// as defined by the code namespace mapping,
 /// return the NamespaceURI and localname.
+/// Read a possibly-PREFIXED attribute off a node, resolving the prefix the same
+/// way `Document::set_attribute` does on the write side (via [`decode_qname`]).
+///
+/// libxml stores `xml:id` as local name `id` in the built-in xml namespace, and
+/// `xmlGetProp` matches on the plain name — so `get_attribute("xml:id")` finds
+/// NOTHING. That asymmetry is invisible in Rust bindings (which read ids through
+/// `get_attribute_ns`) but bites any caller that writes an attribute by qualified
+/// name and then tries to read it back by the same name, which is exactly what a
+/// script does after `generateID`.
+pub fn get_node_attribute(node: &Node, key: &str) -> Option<String> {
+  if let Some(ns_uri) = attribute_namespace(key) {
+    let local = key.split_once(':').map_or(key, |(_, l)| l);
+    if let Some(value) = node.get_attribute_ns(local, &ns_uri) {
+      return Some(value);
+    }
+  }
+  node.get_attribute(key)
+}
+
+/// Remove a possibly-PREFIXED attribute — the counterpart of
+/// [`get_node_attribute`], with the same namespace resolution.
+pub fn remove_node_attribute(node: &mut Node, key: &str) -> std::result::Result<(), String> {
+  if let Some(ns_uri) = attribute_namespace(key) {
+    let local = key.split_once(':').map_or(key, |(_, l)| l).to_string();
+    if node.get_attribute_ns(&local, &ns_uri).is_some() {
+      return node
+        .remove_attribute_ns(&local, &ns_uri)
+        .map_err(|e| e.to_string());
+    }
+  }
+  node.remove_attribute(key).map_err(|e| e.to_string())
+}
+
+/// The namespace URI an attribute name resolves to, or `None` when it is
+/// unprefixed (or its prefix is not registered). `xml:` is built in — the one
+/// prefix [`decode_qname`] deliberately hands back whole for libxml to special-case.
+fn attribute_namespace(key: &str) -> Option<String> {
+  let (prefix, _) = key.split_once(':')?;
+  if prefix == "xml" {
+    return Some(XML_NS.to_string());
+  }
+  match decode_qname(key) {
+    Ok((ns_uri, _local)) => ns_uri,
+    Err(_) => None,
+  }
+}
+
 pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
   match PREFIXED_LOCALNAME_RE.captures(codetag) {
     Some(captures) => {

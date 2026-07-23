@@ -705,8 +705,11 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("content", |n: &mut NodeProxy| -> String {
     n.0.get_content()
   });
+  // Namespace-aware (`model::get_node_attribute`): libxml stores `xml:id` under
+  // the built-in xml namespace, so a plain lookup by the qualified name misses
+  // it — a script could not read back the id `generateID` had just written.
   engine.register_fn("getAttribute", |n: &mut NodeProxy, k: &str| -> String {
-    n.0.get_attribute(k).unwrap_or_default()
+    latexml_core::common::model::get_node_attribute(&n.0, k).unwrap_or_default()
   });
   engine.register_fn("prevSibling", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_prev_sibling() {
@@ -777,7 +780,7 @@ pub(super) fn make_engine() -> Engine {
     }
   });
   engine.register_fn("hasAttribute", |n: &mut NodeProxy, k: &str| -> bool {
-    n.0.get_attribute(k).is_some()
+    latexml_core::common::model::get_node_attribute(&n.0, k).is_some()
   });
   // Removing an attribute the node does not have is a silent no-op in libxml, so
   // the only thing this can report is a genuine libxml2 failure — propagate it,
@@ -785,7 +788,8 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "removeAttribute",
     |n: &mut NodeProxy, k: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      n.0.remove_attribute(k).map_err(rhai_err)
+      latexml_core::common::model::remove_node_attribute(&mut n.0, k)
+        .map_err(Box::<EvalAltResult>::from)
     },
   );
   // The node (and its subtree) serialized back to markup — the inverse of
@@ -1143,6 +1147,268 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // ── the Document XML surface the COMPILE-TIME layer uses (#350) ──
+  // "expose it in rhai in full generality, so that the interfaces are comparable
+  // in the runtime and compile-time layers." Each registration below is a thin
+  // wrapper over the same `Document` method a `_sty.rs` binding calls, named
+  // after its Perl `Core/Document.pm` original, ranked by how often the
+  // compile-time bindings actually use it.
+  //
+  // TWO RULES hold for every one of them, because a `.rhai` script is untrusted:
+  //  * it must not panic — a panic escapes `catch_unwind` policy here and, under
+  //    the `maxperf` `panic = "abort"` profile, takes the process with it; and
+  //  * a node from `ParseXML` must NOT be spliced in directly. Such a node is
+  //    still owned by its throwaway parse document, so moving it into ours leaves
+  //    our tree pointing at memory freed when the script drops the handle.
+  //    `insertXML` is the supported route: it RE-CREATES the subtree through
+  //    `append_tree`. `in_tree` below enforces that at every splice site.
+
+  // findnodes/findnode (Perl `findnodes`/`findnode`, Document.pm:139-147) — the
+  // query half. Without it a script could walk a tree by hand but never ask it a
+  // question, which is what "full generality" mostly means in practice.
+  engine.register_fn(
+    "findnodes",
+    |_d: &mut DocProxy, xpath: &str| -> rhai::Array {
+      with_doc_infallible(|doc| nodes_to_array(doc.findnodes(xpath, None)))
+    },
+  );
+  engine.register_fn(
+    "findnodes",
+    |_d: &mut DocProxy, xpath: &str, scope: NodeProxy| -> rhai::Array {
+      with_doc_infallible(|doc| nodes_to_array(doc.findnodes(xpath, Some(&scope.0))))
+    },
+  );
+  // No match is `()`, not an error — Perl returns undef, and a script asking
+  // "is there one?" is the normal case, not an exceptional one.
+  engine.register_fn("findnode", |_d: &mut DocProxy, xpath: &str| -> Dynamic {
+    with_doc_infallible(|doc| node_or_unit(doc.findnode(xpath, None)))
+  });
+  engine.register_fn(
+    "findnode",
+    |_d: &mut DocProxy, xpath: &str, scope: NodeProxy| -> Dynamic {
+      with_doc_infallible(|doc| node_or_unit(doc.findnode(xpath, Some(&scope.0))))
+    },
+  );
+
+  // getNode/setNode/getElement (Perl Document.pm:72-98) — the insertion point.
+  engine.register_fn("getNode", |_d: &mut DocProxy| -> Dynamic {
+    with_doc_infallible(|doc| Dynamic::from(NodeProxy::borrowed(doc.get_node().clone())))
+  });
+  engine.register_fn(
+    "setNode",
+    |_d: &mut DocProxy, n: NodeProxy| -> std::result::Result<(), Box<EvalAltResult>> {
+      let n = in_tree(n, "setNode")?;
+      with_doc(|doc, _props| {
+        doc.set_node(&n);
+        Ok(())
+      })
+    },
+  );
+  engine.register_fn("getElement", |_d: &mut DocProxy| -> Dynamic {
+    with_doc_infallible(|doc| node_or_unit(doc.get_element()))
+  });
+
+  // insertElement (Perl `insertElement`, Document.pm:639) — open, absorb the
+  // content, close, and hand back the node. The ELEMENT counterpart that
+  // `insertXML` is named after; it was the one missing half of that pairing.
+  engine.register_fn(
+    "insertElement",
+    |_d: &mut DocProxy, qname: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        let n = doc
+          .insert_element(qname, Vec::new(), None)
+          .map_err(rhai_err)?;
+        Ok(Dynamic::from(NodeProxy::borrowed(n)))
+      })
+    },
+  );
+  engine.register_fn(
+    "insertElement",
+    |_d: &mut DocProxy,
+     qname: &str,
+     attrib: Map|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let attrib = attribute_map(attrib);
+      with_doc(|doc, _props| {
+        let n = doc
+          .insert_element(qname, Vec::new(), Some(attrib))
+          .map_err(rhai_err)?;
+        Ok(Dynamic::from(NodeProxy::borrowed(n)))
+      })
+    },
+  );
+  engine.register_fn(
+    "insertElement",
+    |_d: &mut DocProxy,
+     qname: &str,
+     content: Digested|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        let n = doc
+          .insert_element(qname, vec![&content], None)
+          .map_err(rhai_err)?;
+        Ok(Dynamic::from(NodeProxy::borrowed(n)))
+      })
+    },
+  );
+  engine.register_fn(
+    "insertElement",
+    |_d: &mut DocProxy,
+     qname: &str,
+     content: Digested,
+     attrib: Map|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let attrib = attribute_map(attrib);
+      with_doc(|doc, _props| {
+        let n = doc
+          .insert_element(qname, vec![&content], Some(attrib))
+          .map_err(rhai_err)?;
+        Ok(Dynamic::from(NodeProxy::borrowed(n)))
+      })
+    },
+  );
+
+  // openElementAt/closeElementAt (Perl Document.pm:1830-1884) — build at an
+  // explicit node instead of the current insertion point.
+  engine.register_fn(
+    "openElementAt",
+    |_d: &mut DocProxy,
+     at: NodeProxy,
+     qname: &str|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let mut at = in_tree(at, "openElementAt")?;
+      with_doc(|doc, _props| {
+        let n = doc
+          .open_element_at(&mut at, qname, None, None)
+          .map_err(rhai_err)?;
+        Ok(Dynamic::from(NodeProxy::borrowed(n)))
+      })
+    },
+  );
+  engine.register_fn(
+    "openElementAt",
+    |_d: &mut DocProxy,
+     at: NodeProxy,
+     qname: &str,
+     attrib: Map|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let mut at = in_tree(at, "openElementAt")?;
+      let attrib = attribute_map(attrib);
+      with_doc(|doc, _props| {
+        let n = doc
+          .open_element_at(&mut at, qname, Some(attrib), None)
+          .map_err(rhai_err)?;
+        Ok(Dynamic::from(NodeProxy::borrowed(n)))
+      })
+    },
+  );
+  engine.register_fn(
+    "closeElementAt",
+    |_d: &mut DocProxy, at: NodeProxy| -> std::result::Result<(), Box<EvalAltResult>> {
+      let mut at = in_tree(at, "closeElementAt")?;
+      with_doc(|doc, _props| doc.close_element_at(&mut at).map_err(rhai_err))
+    },
+  );
+
+  // Per-node document operations (Perl `addClass`, `generateID`).
+  engine.register_fn(
+    "addClass",
+    |_d: &mut DocProxy, n: NodeProxy, class: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      let mut n = in_tree(n, "addClass")?;
+      with_doc(|doc, _props| doc.add_class(&mut n, class).map_err(rhai_err))
+    },
+  );
+  engine.register_fn(
+    "generateID",
+    |_d: &mut DocProxy,
+     n: NodeProxy,
+     prefix: &str|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      let mut n = in_tree(n, "generateID")?;
+      with_doc(|doc, _props| doc.generate_id(&mut n, prefix).map_err(rhai_err))
+    },
+  );
+
+  // Structural edits (Perl `removeNode`, `replaceNode`, `renameNode`,
+  // `unwrapNodes`, `wrapNodes`, `appendClone`).
+  engine.register_fn(
+    "removeNode",
+    |_d: &mut DocProxy, n: NodeProxy| -> std::result::Result<(), Box<EvalAltResult>> {
+      let n = in_tree(n, "removeNode")?;
+      with_doc(|doc, _props| {
+        doc.remove_node(n);
+        Ok(())
+      })
+    },
+  );
+  engine.register_fn(
+    "replaceNode",
+    |_d: &mut DocProxy,
+     n: NodeProxy,
+     with: rhai::Array|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      let n = in_tree(n, "replaceNode")?;
+      let with = in_tree_array(with, "replaceNode")?;
+      with_doc(|doc, _props| doc.replace_node(n, with).map_err(rhai_err))
+    },
+  );
+  // `Document::rename_node` PANICS on a node with no parent (its own `expect`),
+  // so the orphan case has to be refused here rather than reached — an untrusted
+  // script must not be able to abort the conversion by renaming a node it just
+  // removed.
+  engine.register_fn(
+    "renameNode",
+    |_d: &mut DocProxy,
+     n: NodeProxy,
+     newname: &str|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      rename_node_checked(n, newname, true)
+    },
+  );
+  engine.register_fn(
+    "renameNode",
+    |_d: &mut DocProxy,
+     n: NodeProxy,
+     newname: &str,
+     reinsert: bool|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      rename_node_checked(n, newname, reinsert)
+    },
+  );
+  engine.register_fn(
+    "unwrapNodes",
+    |_d: &mut DocProxy, n: NodeProxy| -> std::result::Result<(), Box<EvalAltResult>> {
+      let n = in_tree(n, "unwrapNodes")?;
+      with_doc(|doc, _props| doc.unwrap_nodes(n).map_err(rhai_err))
+    },
+  );
+  // Returns `()` when there is nothing to wrap or the target has no parent —
+  // `Document::wrap_nodes`' own "can't wrap here" answer, not an error.
+  engine.register_fn(
+    "wrapNodes",
+    |_d: &mut DocProxy,
+     qname: &str,
+     nodes: rhai::Array|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let nodes = in_tree_array(nodes, "wrapNodes")?;
+      with_doc(|doc, _props| {
+        let wrapped = doc.wrap_nodes(qname, nodes).map_err(rhai_err)?;
+        Ok(node_or_unit(wrapped))
+      })
+    },
+  );
+  engine.register_fn(
+    "appendClone",
+    |_d: &mut DocProxy,
+     n: NodeProxy,
+     children: rhai::Array|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      let mut n = in_tree(n, "appendClone")?;
+      let children = in_tree_array(children, "appendClone")?;
+      with_doc(|doc, _props| doc.append_clone(&mut n, children).map_err(rhai_err))
+    },
+  );
+
   // ── XML manipulation surface ──
   // Three shapes, one operation: parse-and-insert in a single call, or insert
   // nodes a script already holds (from `ParseXML`, possibly after editing them).

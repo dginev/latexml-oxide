@@ -465,6 +465,43 @@ script wrote, and handing the wrapper back would let `insertXML(n.parent())`
 splice `<_lxfragment>` into the page. In-tree nodes are unaffected. Guard:
 `30_script_bindings.rs` `data-top="detached"` assertion.
 
+**The Document XML surface (#350).** The runtime layer reaches the same
+`Core/Document.pm` operations a compile-time `_sty.rs` binding calls, under their
+Perl names, so the two do not diverge:
+
+| Rhai | Perl / `Document` | notes |
+|---|---|---|
+| `findnodes(xpath[, node])` | `findnodes` | XPath query; array of Node |
+| `findnode(xpath[, node])` | `findnode` | first match, or `()` |
+| `getNode()` / `setNode(n)` / `getElement()` | `getNode`/`setNode`/`getElement` | the insertion point |
+| `insertElement(qname[, content][, attrs])` | `insertElement` | open+absorb+close; returns the node |
+| `openElementAt(n, qname[, attrs])` / `closeElementAt(n)` | `openElementAt`/`closeElementAt` | build at an explicit node |
+| `addClass(n, c)` / `generateID(n, prefix)` | `addClass`/`generateID` | |
+| `removeNode(n)` / `replaceNode(n, [n])` / `renameNode(n, name[, reinsert])` | `removeNode`/`replaceNode`/`renameNode` | |
+| `unwrapNodes(n)` / `wrapNodes(qname, [n])` / `appendClone(n, [n])` | `unwrapNodes`/`wrapNodes`/`appendClone` | `wrapNodes` returns `()` when it cannot wrap |
+
+Two rules hold across all of them, because a script is untrusted:
+
+* **No panic reaches the conversion.** `Document::rename_node` `expect`s a parent,
+  so `renameNode` on an ORPHAN — a node the script just removed — would abort the
+  conversion, and the process under `panic = "abort"`. It is refused with a clean
+  script error instead. Guard (red-checked): `xq:orphanmsg`.
+* **A `ParseXML` node may only enter the document through `insertXML`.** Every
+  node-splicing method refuses one. A parsed node still belongs to its throwaway
+  parse document, whose libxml *dictionary* may own the node's name and content
+  strings; moving it into our tree leaves those dangling when the script drops the
+  handle. `insertXML` is safe because it RE-CREATES the subtree via `append_tree`.
+  Guard (red-checked): `xq:foreignmsg`.
+
+`getAttribute`/`hasAttribute`/`removeAttribute` resolve a PREFIXED name through
+the namespace registry (`model::get_node_attribute`). libxml stores `xml:id` under
+the built-in xml namespace and matches `xmlGetProp` on the plain name, so a
+qualified lookup found nothing — a script could not read back the id `generateID`
+had just written.
+
+All of the above are pinned by
+`30_script_bindings.rs::document_xml_api_matches_the_compile_time_surface`.
+
 **Namespaces (URIs vs prefixes).** A binding declares its prefix↔URI mappings with
 the same two helpers the Perl bindings use — `RegisterNamespace(prefix, uri)` (code
 prefix) and `RegisterDocumentNamespace(prefix, uri)` (output-document prefix),

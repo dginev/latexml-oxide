@@ -26,6 +26,13 @@
     survive onto the final page. A malformed chunk degrades only its own binding:
     the rest of the document still converts, and the reported error names the
     likely cause and quotes the offending snippet.
+  - **`.rhai` bindings now reach the same document XML surface the compile-time
+    bindings do** — XPath query (`findnodes`/`findnode`), element insertion
+    (`insertElement`), and structural editing (`addClass`, `generateID`,
+    `removeNode`, `replaceNode`, `renameNode`, `wrapNodes`, `unwrapNodes`,
+    `appendClone`, `openElementAt`/`closeElementAt`), each under its Perl name, so
+    the runtime and compile-time binding layers do not drift apart. Reading a
+    namespaced attribute such as `xml:id` back by its qualified name now works.
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
     text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
     upstream; the `.htm` destination extension now infers HTML5 like `.html`.
