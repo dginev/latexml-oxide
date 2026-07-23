@@ -1867,23 +1867,26 @@ Intentional, user-directed branding. Guard:
 (`by LaTeXML oxide (version …)`) and the footer (`…</a> oxide</div>`, and the absence
 of the old `(oxide)`).
 
-### 65. An included file's group brackets its CONTENT, never its preamble
+### 65. A package load is hoisted past whatever group happens to be open
 
-Two bindings wrap an included sub-document in a group that the package they
-emulate does not have:
+A package always ends up defined at the **outermost** level, whatever group is
+open when it is loaded. Real LaTeX gets this for free by refusing the premise:
+`\@fileswithoptions` (latex.ltx L18700) errors *"Loading a class or package in a
+group"* when `\currentgrouplevel > 0`, so no real package is ever written to
+survive a group pop.
 
-* `standalone.sty.ltxml` L24-33 opens the subfile group at the child's
-  `\documentclass` (`$stomach->bgroup`) and closes it only at the child's
-  `\end{document}`;
-* `import.sty.ltxml` L44-47 wraps the whole `\input` in `{…}`.
+LaTeXML **does** load in a group, in two routine ways:
 
-Both put the included file's **preamble** inside a group. That is harmless in
-Perl's own model only by accident, because LaTeXML — unlike real
-`standalone.sty`, which *gobbles* the child preamble (`\sa@gobble`) — actually
-**executes** it, which is what makes `\documentclass[tikz]{standalone}` load tikz
-at all (upstream LaTeXML#1432, divergence #63). So a package genuinely loads
-there, and its definitions are group-scoped while the document hooks it
-registers are not:
+* a standalone/subfile child's preamble runs inside the group
+  `standalone.sty.ltxml` L24-33 opens at the child's `\documentclass` — and
+  LaTeXML, unlike the real `standalone.sty` (which *gobbles* the child preamble
+  via `\sa@gobble`), actually **executes** it, which is what makes
+  `\documentclass[tikz]{standalone}` load tikz at all (upstream LaTeXML#1432,
+  divergence #63). `import.sty.ltxml` L44-47 adds a second such group;
+* autoload triggers fire from arbitrary body depth.
+
+Either way the package is split in half — its definitions are frame-local, the
+document-level hooks it registers are global:
 
 ```
 pgfcoreexternal.code.tex:152   \newif\ifpgf@external@grabshipout     % TeX-local
@@ -1891,58 +1894,85 @@ pgfcoreexternal.code.tex:171   \AtEndDocument{\ifpgf@external@grabshipout…\fi}
 ```
 
 The queue is flushed at the *parent's* `\end{document}`
-(`latex_constructs.rs:3500`), long after `\egroup` destroyed the conditional →
-`Error:undefined:\ifpgf@external@grabshipout` at the very end of an otherwise
-complete conversion (issue #311). The general shape is **any package loaded in
-an included child's preamble that pairs a group-scoped definition with a
-document-level hook**; pgf is the first witness, not a special case.
+(`latex_constructs.rs:3500`), long after the child's group popped the conditional
+away → `Error:undefined:\ifpgf@external@grabshipout` at the very end of an
+otherwise complete conversion (issue #311). pgf is the first witness, not a
+special case: the shape is any package pairing a group-scoped definition with a
+document-level hook.
 
-Ground truth is the packages being emulated, and both agree the *body* is what
-gets bracketed — if anything does:
+**So `require_package` hoists the load's meaning-delta past the enclosing
+group** (`content.rs`, `snapshot_top_frame_meaning_keys` +
+`hoist_top_frame_meaning_delta`, guarded by `get_frame_depth() > 0`). The same
+split had already bitten the autoload path from the other side — a package
+loaded at depth ≥ 1 vanished on `\end{X}`, re-firing sibling triggers into a
+10000-error cascade (witness 1711.11576) — and `tex.rs::def_autoload` fixed that
+with this exact snapshot/hoist pair; this generalizes it to every load.
 
-* `standalone.sty` L616 opens `\begingroup`, and L680 closes it *immediately
-  before* `\begin{document}`:
-  `\def\next{\expandafter\endgroup\expandafter\begin\expandafter{\sa@gobbleto}}`.
-* `import.sty` L67-76 closes its `\begingroup` inside the `\protected@edef`
-  before `\@import` runs; `\@import` L82-96 restores `\input@path`/`\Ginput@path`
-  with plain `\def` *after* the `\input`, at the caller's level. The file is
-  never grouped — "input files must have balanced grouping" (L42).
+Two alternatives were implemented and refuted:
 
-**So we move the boundary.** `\@standalone@documentclass` no longer calls
-`bgroup()`; it sets `inPreamble=1`, runs the (gated, #63) class-option
-`RequirePackage`s, stashes the real `\begin{document}` into
-`\lx@standalone@saved@begindocument`, and aliases `\begin{document}` to
-`\@standalone@start@input`. That primitive — which fires at the child's
-`\begin{document}` — restores `\begin{document}`, clears `inPreamble`, *then*
-`bgroup()`s, and aliases `\end{document}` **inside** the group so the same
-`\egroup` (via `\@standalone@end@input` = `\egroup\endinput`) still undoes it.
-`\import`/`\subimport`/`\includefrom`/`\subincludefrom` drop their `{…}`
-wrapper; the explicit `\lx@save@paths`/`\lx@restore@paths` stack already scopes
-`SEARCHPATHS`, which is the only thing Perl's braces were there to do.
+* **Drop the groups instead** — open standalone's group at the child's
+  `\begin{document}` rather than its `\documentclass`, and remove import's
+  `{…}`. It fixes the reported witness but is a net regression: the child's own
+  preamble then leaks into the parent, so two sibling `standalone` figures that
+  each `\newcommand` the same name with different bodies both render with the
+  *first* one's, and a conditional a child flips in its preamble flips the
+  parent's same-named conditional. All of it silent wrong content, no error. It
+  also does not fix a child nested inside another child, or a child `\input` from
+  inside any group in the parent body — the group is simply somebody else's.
+* **`\globaldefs=1` around the load** — also globalizes pgf's active-character
+  handling → `Error:undefined:"` and zero pictures rendered.
 
-Net effect: the child's preamble runs at the caller's level (so a `\newif`
-outlives the child exactly as a preamble's would), the child's content stays
-group-bounded exactly as before, and `inPreamble` nets out identical. The
-consequence to accept knowingly is that a child preamble's definitions now leak
-to the parent — which is what real LaTeX gives you anyway, since there the
-parent is required to load the packages itself.
+Hoisting only the *package's* delta is what keeps both halves right: the load
+escapes, the child's own preamble does not.
+
+**Why not simply obey latex.ltx's guard and refuse the load?** Because real
+LaTeX never reaches it here. Real `standalone.sty` *gobbles* the subfile
+preamble — `\sa@gobble` (standalone.sty L680) throws away everything from
+`\documentclass` to `\begin{document}` — so no package is ever loaded from a
+child preamble, and the `\begingroup` it holds open across that gobble scopes
+catcodes for the gobbling, not the execution of anything. The parent is required
+to have loaded tikz itself. LaTeXML deliberately departs from that (#63): it
+*executes* the child preamble precisely so `\documentclass[tikz]{standalone}`
+loads tikz, because it needs the binding to model the figure. That divergence —
+not the group — is what manufactures the in-group load latex.ltx forbids.
+
+Given we have made it, three reconciliations were available, and they are not
+equally faithful:
+
+1. gobble the preamble like the real package — faithful, but discards the
+   divergence's entire purpose (upstream LaTeXML#1432; `[tikz]` subfiles stop
+   working);
+2. execute it ungrouped — the refuted alternative above; nothing in LaTeX says a
+   subfile preamble's *own* macros should escape into the parent, and they
+   demonstrably must not;
+3. execute it grouped, and give the *package load* the level-0 lifetime LaTeX
+   guarantees it.
+
+(3) reproduces LaTeX's **invariant** ("a package's definitions live at the
+outermost level") where (1) would reproduce its **enforcement mechanism**
+("refuse to load in a group"). We cannot adopt the mechanism without giving up
+the divergence it polices, so we honour the property it exists to protect. Note
+this leaves the binding faithful to Perl LaTeXML in every respect — the fix is
+not in the bindings at all — and it does not legalize anything new for author
+documents: a paper writing `{\usepackage{x}}` is still an authoring error, now
+behaving as LaTeX would have if it had permitted it. Porting the diagnostic
+itself for that genuine author case stays possible, and stays subject to the
+internal-load exemption noted in `SYNC_STATUS.md`.
 
 This is **surpass-Perl** (RELEASE_CRITERIA §8): same-host Perl 0.8.8 reports the
-identical single error on the identical input, so it is a shared upstream defect
-(KNOWN_PERL_ERRORS #55), fixed at the mechanism rather than suppressed. Two
-alternatives were tried and refuted in the ticket: hoisting only the class-option
-`RequirePackage`s above `bgroup()` (fixes `\input` but not `\subimport`, and
-never the child's own `\usepackage`), and `\globaldefs=1` around the load
-(globalizes pgf's active-character handling → `Error:undefined:"` and **zero**
-pictures rendered).
+identical error on the identical input, so it is a shared upstream defect
+(KNOWN_PERL_ERRORS #55), fixed at the mechanism rather than suppressed. The
+bindings themselves stay byte-identical to Perl — this divergence lives entirely
+at the package-load seam.
 
-Witness = issue #311's `index.tex` + `child.tex`. Regression test:
-`06_cluster_regressions::standalone_child_preamble_package_outlives_the_subfile_group`,
-which guards both entry paths (`\subimport*` and plain `\input`) and both ways of
-asking for the package (the `[tikz]` class option and the child's own
-`\usepackage{tikz}`) — the two refuted half-fixes each covered only one — and
-asserts the picture still renders, so "no error" cannot be bought by losing the
-child.
+Guards, in `06_cluster_regressions`:
+`standalone_child_preamble_package_survives_the_subfile_group` (ungated — a
+three-line paper-bundled `lx311demo.sty` raw-loaded under `INCLUDE_STYLES`, over
+all three ways into a group: plain `\input`, `\subimport*`, and inside a
+parent-body group), `standalone_child_tikz_survives_the_subfile_group` (the real
+witness, gated on TeX Live), and
+`standalone_child_preamble_definitions_stay_scoped`, which pins the half that
+must **not** leak.
 
 ## Known Upstream Perl Issues (brief)
 

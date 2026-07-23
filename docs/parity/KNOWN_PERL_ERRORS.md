@@ -2209,13 +2209,15 @@ OXIDIZED_DESIGN #63; regression test
 The mandatory half of the same defect (`\documentclass{article}` →
 `missing_file:article`) was issue #293. Candidate to upstream.
 
-## 55. A standalone subfile's preamble is executed inside a group, so its packages' `\newif` conditionals die before the hooks that read them
+## 55. A package loaded inside a group loses its definitions while its document hooks survive
 
 `standalone.sty.ltxml` L24-33 opens the subfile group at the child's
 `\documentclass` (`$stomach->bgroup`) and closes it only at the child's
 `\end{document}` (`\@standalone@end@input` = `\egroup\endinput`). The child's
 whole **preamble** therefore runs inside that group — and LaTeXML, unlike real
-`standalone.sty`, executes that preamble rather than gobbling it.
+`standalone.sty` (which *gobbles* the preamble via `\sa@gobble`), executes it,
+so packages genuinely load in there. `import.sty.ltxml` L44-47 adds a second
+such group by wrapping the imported file in `{…}`.
 
 ```latex
 % index.tex
@@ -2237,27 +2239,25 @@ at the very end.
 
 Mechanism: `tikz` raw-loads `pgfcoreexternal.code.tex`, whose L152
 `\newif\ifpgf@external@grabshipout` is TeX-locally scoped (so the conditional
-belongs to the standalone group) while its L171-179
+belongs to the child's group) while its L171-179
 `\AtEndDocument{\ifpgf@external@grabshipout…\fi}` goes onto the **global**
 `@at@end@document` queue — flushed at the *parent's* `\end{document}`, long after
-`\egroup` destroyed the conditional. The general shape: **any package loaded in
-a standalone child's preamble that pairs a group-scoped definition with a
-document-level hook breaks**; pgf is just the first witness. `import.sty.ltxml`
-L44-47 adds a second such group by wrapping the imported file in `{…}`.
+`\egroup` destroyed the conditional. The general shape is **any package loaded
+while a group is open that pairs a group-scoped definition with a document-level
+hook**; pgf is the first witness, not a special case. Real LaTeX never gets
+here: `\@fileswithoptions` (latex.ltx L18700) errors *"Loading a class or package
+in a group"* at `\currentgrouplevel > 0`, so no real package is written to
+survive a group pop.
 
-The packages being emulated disagree with both. `standalone.sty` L616 opens its
-`\begingroup` and L680 closes it *immediately before* `\begin{document}`
-(`\def\next{\expandafter\endgroup\expandafter\begin\expandafter{\sa@gobbleto}}`),
-so the subfile BODY is never inside it. `import.sty` L67-76 closes its
-`\begingroup` inside the `\protected@edef` before `\@import` runs, and restores
-`\input@path`/`\Ginput@path` by plain `\def` *after* the `\input`, at the
-caller's level — "input files must have balanced grouping" (L42).
+**Fixed in Rust** at the package-load seam rather than in the bindings, which
+stay byte-identical to Perl: `content.rs::require_package` hoists the load's
+meaning-delta past the enclosing group (`snapshot_top_frame_meaning_keys` +
+`hoist_top_frame_meaning_delta`, guarded by `get_frame_depth() > 0`) — the same
+pair `tex.rs::def_autoload` already used for the mirror-image failure on the
+autoload path (witness 1711.11576). Hoisting only the package's delta keeps the
+child's OWN preamble scoped, which matters: two sibling `standalone` figures may
+`\newcommand` the same name with different bodies and each must render with its
+own. See OXIDIZED_DESIGN #65; regression tests
+`06_cluster_regressions::standalone_child_preamble_package_survives_the_subfile_group`
+(ungated) and `…_definitions_stay_scoped`. Issue #311. Candidate to upstream.
 
-**Fixed in Rust** (`standalone_sty.rs` + `import_sty.rs`): the standalone group
-now opens at `\@standalone@start@input` (the child's `\begin{document}`) instead
-of at its `\documentclass`, so it brackets the child's *content* and not its
-*preamble*; and `\import`/`\subimport` drop their `{…}` wrapper, relying on the
-explicit `\lx@save@paths`/`\lx@restore@paths` stack that already scopes
-`SEARCHPATHS`. See OXIDIZED_DESIGN #65; regression test
-`06_cluster_regressions::standalone_child_preamble_package_outlives_the_subfile_group`.
-Issue #311. Candidate to upstream.

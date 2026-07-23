@@ -1406,65 +1406,176 @@ fn standalone_subimport_documentclass_no_spurious_require() {
   );
 }
 
-/// Issue #311: a package loaded in a standalone child's **preamble** must
-/// outlive the child, because the hooks it registers do.
+/// Convert with `INCLUDE_STYLES` (the `--includestyles` / ar5iv mode) and return
+/// the log: the only way to exercise a *raw-loaded* `.sty`, which is where the
+/// TeX-local-vs-global split of issue #311 actually lives. A package with a Rust
+/// binding installs its definitions globally already, so a bound package cannot
+/// reproduce the bug.
+fn convert_log_includestyles(source: &str) -> String {
+  latexml::util::test::init_test_rss_cap();
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    include_styles: Some(true),
+    ..Config::default()
+  };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(source.to_string());
+  assert!(
+    r.result.is_some(),
+    "{source}: conversion produced no result"
+  );
+  r.log
+}
+
+/// Issue #311: a package loaded while a group is open must still be defined
+/// after that group closes.
 ///
-/// `\@standalone@documentclass` used to open its group at the child's
-/// `\documentclass` and close it only at the child's `\end{document}`, so the
-/// whole child preamble ran inside it. `\usepackage{tikz}` raw-loads
-/// `pgfcoreexternal.code.tex`, whose L152 `\newif\ifpgf@external@grabshipout`
-/// is TeX-locally scoped while its L171-179 `\AtEndDocument{\ifpgf@external@grabshipout…}`
-/// goes onto the **global** `@at@end@document` queue — flushed at the *parent's*
-/// `\end{document}`, long after `\egroup` destroyed the conditional. Result:
-/// `Error:undefined:\ifpgf@external@grabshipout` at the very end of an otherwise
-/// complete conversion.
+/// A standalone subfile's preamble runs inside the group `standalone.sty.ltxml`
+/// opens at the child's `\documentclass`, and LaTeXML — unlike the real package,
+/// which *gobbles* the child preamble — actually executes it, so packages
+/// genuinely load in there. A package is then split in half: its definitions are
+/// frame-local, while the document-level hooks it registers are global. The
+/// witness is `\documentclass[tikz]{standalone}`, where
+/// `pgfcoreexternal.code.tex` L152 `\newif\ifpgf@external@grabshipout` is popped
+/// with the child's group but its L171-179 `\AtEndDocument` survives to the
+/// *parent's* `\end{document}` → `Error:undefined:\ifpgf@external@grabshipout`
+/// at the very end of an otherwise complete conversion. Perl 0.8.8 emits the
+/// identical error (KNOWN_PERL_ERRORS #55).
 ///
-/// The fix moves the group to bracket the child's *content* only (real
-/// `standalone.sty` L616/L680 closes its `\begingroup` immediately before
-/// `\begin{document}` too) — see OXIDIZED_DESIGN #65. Both entry paths and both
-/// ways of asking for the package are guarded, because the two refuted
-/// half-fixes in the ticket each covered only one of them.
+/// Fixed at the package-load seam (`content.rs::require_package` hoists the
+/// load's meaning-delta past the enclosing group) rather than by removing the
+/// group, so it holds for *every* way of ending up inside one — see
+/// OXIDIZED_DESIGN #65 and the companion
+/// `standalone_child_preamble_definitions_stay_scoped`, which pins the half that
+/// must NOT leak.
+///
+/// `lx311demo.sty` is the mechanism in three lines and needs no host texmf tree,
+/// so this arm runs everywhere; the tikz arms below are the real witness and are
+/// gated on TeX Live.
+#[test]
+fn standalone_child_preamble_package_survives_the_subfile_group() {
+  for index in [
+    // plain \input …
+    "tests/cluster_regressions/subimport/index_rawsty.tex",
+    // … via import.sty, which adds a second group of its own …
+    "tests/cluster_regressions/subimport/index_rawsty_subimport.tex",
+    // … and inside a group in the parent body, which is also the shape of a
+    // standalone child nested in another standalone child. Removing the two
+    // bindings' own groups (the first fix tried for #311) left this one broken.
+    "tests/cluster_regressions/subimport/index_rawsty_grouped.tex",
+  ] {
+    let log = convert_log_includestyles(index);
+    assert!(
+      !log.contains("iflx@demo@flag"),
+      "#311: a \\newif from a package loaded in the child's preamble must \
+       survive to the parent's \\end{{document}}, where the package's \
+       \\AtEndDocument hook reads it ({index}):\n{log}"
+    );
+    assert!(
+      !log.contains("Error:") && !log.contains("Fatal:"),
+      "#311: {index} must convert cleanly:\n{log}"
+    );
+  }
+}
+
+/// The other half of #311: hoisting a package load past the enclosing group must
+/// NOT hoist the child's OWN preamble, which stays scoped to the child.
+///
+/// This is the regression the first attempt at #311 caused — it dropped the
+/// groups instead of fixing the load — and every case here is silent wrong
+/// content, not an error, so nothing else would have caught it. Multi-figure
+/// papers are exactly the shape at risk: a directory of `standalone` figures
+/// whose preambles reuse the same macro names with different bodies.
+#[test]
+fn standalone_child_preamble_definitions_stay_scoped() {
+  // Two sibling children define \sharedmac and {sharedenv} differently; each
+  // must render with its own.
+  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_macro_siblings.tex");
+  assert!(
+    xml.contains("SHAREDA") && xml.contains("SHAREDB"),
+    "#311: each sibling child must use its OWN \\newcommand, not the first \
+     child's leaked definition:\n{xml}"
+  );
+  assert!(
+    xml.contains("[Aone A]") || xml.contains("[AoneA]"),
+    "#311: first child's environment body:\n{xml}"
+  );
+  assert!(
+    xml.contains("[Btwo B]") || xml.contains("[BtwoB]"),
+    "#311: second child must use its OWN \\newenvironment:\n{xml}"
+  );
+
+  // A conditional the child flips in its preamble must not flip the parent's.
+  let xml_flag = convert_to_xml("tests/cluster_regressions/subimport/index_flag.tex");
+  assert!(
+    xml_flag.contains("CHILDTRUE"),
+    "#311: the child's own \\dupflagtrue must hold inside the child:\n{xml_flag}"
+  );
+  assert!(
+    xml_flag.contains("PARENTFALSE"),
+    "#311: the child's \\dupflagtrue must NOT leak into the parent's \
+     same-named conditional:\n{xml_flag}"
+  );
+}
+
+/// The #311 witness itself, and the second entry path. Gated: raw-loads
+/// `pgfcoreexternal.code.tex` from the host texmf tree.
 #[cfg_attr(
   not(building_with_texlive),
   ignore = "raw-loads pgfcoreexternal.code.tex from the host texmf tree"
 )]
 #[test]
-fn standalone_child_preamble_package_outlives_the_subfile_group() {
-  // (a) the reported witness: `\subimport*` + the `tikz` CLASS OPTION.
-  let log = convert_log("tests/cluster_regressions/subimport/index_tikz.tex");
-  assert!(
-    !log.contains("ifpgf@external@grabshipout"),
-    "#311: a \\newif from the child's preamble must survive to the parent's \
-     \\end{{document}}, where pgf's \\AtEndDocument hook reads it:\n{log}"
-  );
-  assert!(
-    !log.contains("Error:") && !log.contains("Fatal:"),
-    "#311: the witness must convert cleanly:\n{log}"
-  );
-  // The error fired *after* the picture was built, so "no error" alone would
-  // also pass on a fix that simply lost the child. Pin the content too.
-  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_tikz.tex");
-  assert!(
-    xml.contains("ltx:picture") || xml.contains("<svg"),
-    "#311: the child's tikzpicture must still render:\n{xml}"
-  );
+fn standalone_child_tikz_survives_the_subfile_group() {
+  for (index, how) in [
+    // the reported witness: `\subimport*` + the `tikz` CLASS OPTION …
+    (
+      "tests/cluster_regressions/subimport/index_tikz.tex",
+      "[tikz] class option",
+    ),
+    // … and plain `\input` + the child's OWN `\usepackage`. The two half-fixes
+    // tried in the ticket each covered only one of these.
+    (
+      "tests/cluster_regressions/subimport/index_tikzpkg.tex",
+      "child \\usepackage",
+    ),
+  ] {
+    let log = convert_log(index);
+    assert!(
+      !log.contains("ifpgf@external@grabshipout"),
+      "#311 ({how}): pgf's \\newif must survive the child's group:\n{log}"
+    );
+    assert!(
+      !log.contains("Error:") && !log.contains("Fatal:"),
+      "#311 ({how}): must convert cleanly:\n{log}"
+    );
+    // The error fired *after* the picture was built, so "no error" alone would
+    // also pass on a fix that simply lost the child. Pin the content too.
+    let xml = convert_to_xml(index);
+    assert!(
+      xml.contains("ltx:picture") || xml.contains("<svg"),
+      "#311 ({how}): the child's tikzpicture must still render:\n{xml}"
+    );
+  }
+}
 
-  // (b) plain `\input` (no `import.sty`), and the package asked for by the
-  // child's OWN `\usepackage` rather than a class option. Hoisting just the
-  // class-option `RequirePackage`s above the group — the first fix tried in
-  // the ticket — greens (a)-via-`\input` and neither of these.
-  let log_pkg = convert_log("tests/cluster_regressions/subimport/index_tikzpkg.tex");
+/// `import.sty`'s search-path save/restore, which the #311 work nearly removed.
+/// Perl's `{…}` wrapper around the input is what scopes `SEARCHPATHS` there;
+/// Rust needs the explicit `\lx@save@paths`/`\lx@restore@paths` stack on top
+/// because `set_search_paths` mutates a global. Without one or the other, the
+/// second sibling `\subimport{Chapter/}{…}` concatenates `Chapter/` onto the
+/// still-mutated lead and searches `Chapter/Chapter/…`. Witnesses:
+/// arXiv:2604.09744, 2603.04457.
+#[test]
+fn subimport_sibling_calls_do_not_accumulate_search_paths() {
+  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_siblings.tex");
   assert!(
-    !log_pkg.contains("ifpgf@external@grabshipout"),
-    "#311: same for a child that loads tikz with \\usepackage:\n{log_pkg}"
+    xml.contains("first sibling body"),
+    "first \\subimport lost:\n{xml}"
   );
   assert!(
-    !log_pkg.contains("Error:") && !log_pkg.contains("Fatal:"),
-    "#311: the \\input + \\usepackage variant must convert cleanly:\n{log_pkg}"
-  );
-  let xml_pkg = convert_to_xml("tests/cluster_regressions/subimport/index_tikzpkg.tex");
-  assert!(
-    xml_pkg.contains("ltx:picture") || xml_pkg.contains("<svg"),
-    "#311: the \\input-ed child's tikzpicture must still render:\n{xml_pkg}"
+    xml.contains("second sibling body"),
+    "second \\subimport lost — the lead search path accumulated:\n{xml}"
   );
 }

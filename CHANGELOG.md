@@ -29,12 +29,14 @@
   - **Generator identifier** now spells out the full product name ("LaTeXML oxide")
     and stamps the version into the XSLT output to match Perl.
   - **A `standalone` document class's options are no longer mis-loaded as packages.**
-  - **Packages loaded in an `\input`/`\subimport`ed sub-document's preamble now
-    survive to the end of the document.** A `tikzpicture` in a `standalone` child
-    ended the conversion with `undefined:\ifpgf@external@grabshipout`, because the
-    child's preamble ran inside a group that the real `standalone.sty`/`import.sty`
-    do not have — so a package's conditionals were destroyed while the document
-    hooks reading them lived on. The group now brackets the child's content only.
+  - **A package loaded inside a group keeps its definitions.** A `standalone` or
+    `\import`-ed subfile's preamble runs inside a group, which used to discard the
+    conditionals a package defined there while the document hooks reading them
+    survived to the end of the parent — a `\documentclass[tikz]{standalone}` figure
+    ended an otherwise complete conversion with `\ifpgf@external@grabshipout`
+    undefined. Packages now load with the outermost-level lifetime real LaTeX
+    guarantees them, at any nesting depth, while the subfile's own preamble stays
+    scoped to the subfile.
   - **The cortex worker builds without the `runtime-bindings` feature** — a
     Rhai-free conversion binary for the fleet.
   - **File resolution can no longer die silently.** A conversion could run with

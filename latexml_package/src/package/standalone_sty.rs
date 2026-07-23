@@ -32,22 +32,8 @@ LoadDefinitions!({
   DefMacro!("\\@standalone@end@input", "\\egroup\\endinput");
 
   // Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.
-  //
-  // OXIDIZED_DESIGN #65 (#311): this is also where the standalone group OPENS
-  // (Perl opens it back at \@standalone@documentclass). The child's
-  // \begin{document} has just been consumed, so:
-  //   * restore the real \begin{document} at the CALLER's level — the alias
-  //     installed by \@standalone@documentclass is no longer inside a group
-  //     that would undo it;
-  //   * only then `bgroup`, so the group brackets the child's CONTENT and not
-  //     its preamble;
-  //   * alias \end{document} INSIDE the group, exactly as before, so the same
-  //     `\egroup` (via \@standalone@end@input) undoes it.
   DefPrimitive!("\\@standalone@start@input", {
-    Let!(T_CS!("\\begin{document}"), T_CS!("\\lx@standalone@saved@begindocument"));
     assign_value("inPreamble", false, None);
-    bgroup();
-    Let!(T_CS!("\\end{document}"), T_CS!("\\@standalone@end@input"));
   });
 
   // Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
@@ -79,13 +65,8 @@ LoadDefinitions!({
   // keyval reader gets brace-aware splitting and key/value separation for free,
   // and keeps this on the same parser `\documentclass`/`\usepackage` options
   // already flow through instead of a second, weaker one.
-  // OXIDIZED_DESIGN #65 (#311): NO `bgroup()` here. Perl opens the group at the
-  // child's `\documentclass`, so the child's whole PREAMBLE runs inside it — and
-  // a package loaded there registers document-level hooks that outlive the group
-  // while its `\newif` conditionals do not. Real `standalone.sty` closes its own
-  // `\begingroup` (L616) immediately before `\begin{document}` (L680), which is
-  // where we open ours instead (`\@standalone@start@input`).
   DefPrimitive!("\\@standalone@documentclass OptionalKeyVals {}", sub[(options_kv, class_tks)] {
+    bgroup();
     assign_value("inPreamble", true, None);
     if class_tks.to_string().trim() == "standalone"
       && let Some(kv) = options_kv.as_ref()
@@ -98,13 +79,8 @@ LoadDefinitions!({
         }
       }
     }
-    // Stash the real \begin{document} so \@standalone@start@input can put it
-    // back: with the group no longer wrapping the preamble, nothing else would.
-    // Saving/restoring here is safe under nesting — the restore happens at the
-    // child's own \begin{document}, before any nested subfile can intercept.
-    // \end{document} is aliased later, inside the group, so `\egroup` undoes it.
-    Let!(T_CS!("\\lx@standalone@saved@begindocument"), T_CS!("\\begin{document}"));
     Let!(T_CS!("\\begin{document}"), T_CS!("\\@standalone@start@input"));
+    Let!(T_CS!("\\end{document}"),   T_CS!("\\@standalone@end@input"));
   });
 
   // Perl L35-36: AtBeginDocument — swap \documentclass to the intercept.

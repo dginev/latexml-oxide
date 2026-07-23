@@ -181,18 +181,16 @@ the ordinary bounded undefined path.
 **Ground truth, recorded but deliberately NOT ported:** real LaTeX rejects the
 premise outright — `\@fileswithoptions` (latex.ltx L18700) errors *"Loading a
 class or package in a group"* when `\currentgrouplevel > 0`. Porting that guard
-would give a better message. **Updated 2026-07-22 (#311):** the obstacle named
-here — `standalone_sty.rs` deliberately wrapping its
-`\@standalone@documentclass` in `bgroup()` + `RequirePackage`, which would have
-needed an internal-load exemption — is **gone**. That wrapping *was* the bug:
-loading a package inside a group destroys its `\newif` conditionals while the
-document hooks reading them survive (`\ifpgf@external@grabshipout`), so the
-group now opens at the child's `\begin{document}` instead and the child's
-preamble loads at the caller's level (OXIDIZED_DESIGN #65,
-KNOWN_PERL_ERRORS #55). latex.ltx's guard and this fix agree on the principle.
-Still not ported — a new diagnostic over the whole corpus is its own risk — but
-the exemption caveat no longer applies; noted here if the diagnostic is ever
-wanted.
+would give a better message, but `standalone_sty.rs` **deliberately** wraps its
+`\@standalone@documentclass` in `bgroup()` + `RequirePackage`, so the guard
+would need an internal-load exemption. Not worth the risk now that the runaway
+is gone; noted here if the diagnostic is ever wanted. **Updated 2026-07-23
+(#311):** the exemption is still required — that wrapping is unchanged, and
+faithful to Perl — but the *harm* it caused is gone: `require_package` now
+hoists a load's definitions past the enclosing group, so a package loaded in a
+subfile preamble no longer loses its `\newif`s while the hooks reading them
+survive (OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55). We reproduce latex.ltx's
+invariant instead of its enforcement.
 
 **Diagnostic gap closed alongside:** the `TokenLimit` fatal previously printed
 only "infinite loop?" with no window — the cycle guard dumps its repeating

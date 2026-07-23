@@ -81,27 +81,14 @@ LoadDefinitions!({
   // sibling `\subimport{Chapter/}{Abstract}` + `\subimport{Chapter/}{Poster}`
   // would concat Chapter/ onto the still-mutated lead from the first
   // call, producing "Chapter/Chapter/Poster" as the search target.
-  //
-  // OXIDIZED_DESIGN #65 (#311): the save/restore pair is what scopes the paths,
-  // so the imported file is NOT additionally wrapped in a `{…}` group. Perl's
-  // import.sty.ltxml L44-47 wraps it because its `AssignValue(SEARCHPATHS)` has
-  // no other way to be undone; the explicit stack above makes the group pure
-  // collateral damage — it destroys `\newif` conditionals and other local
-  // definitions made by the imported file's own preamble while the document
-  // hooks that read them survive (#311's `\ifpgf@external@grabshipout`). The
-  // real `import.sty` agrees: `\@sub@import` (L67-76) closes its `\begingroup`
-  // *inside* the `\protected@edef` before `\@import` runs, and `\@import`
-  // (L82-96) restores `\input@path`/`\Ginput@path` by plain `\def` AFTER the
-  // `\input`, at the caller's level — the imported file is never grouped ("input
-  // files must have balanced grouping", import.sty L42).
   DefMacro!("\\import OptionalMatch:* {}{}",
-    "\\lx@save@paths\\lx@set@path #1{#2} \\input{#3}\\lx@restore@paths");
+    "{\\lx@save@paths\\lx@set@path #1{#2} \\input{#3}\\lx@restore@paths}");
   DefMacro!("\\includefrom OptionalMatch:* {}",
-    "\\lx@save@paths\\lx@set@path #1{#2} \\include{#3}\\lx@restore@paths");
+    "{\\lx@save@paths\\lx@set@path #1{#2} \\include{#3}\\lx@restore@paths}");
   DefMacro!("\\subimport OptionalMatch:* {}{}",
-    "\\lx@save@paths\\lx@append@path #1{#2} \\input{#3}\\lx@restore@paths");
+    "{\\lx@save@paths\\lx@append@path #1{#2} \\input{#3}\\lx@restore@paths}");
   DefMacro!("\\subincludefrom OptionalMatch:* {}",
-    "\\lx@save@paths\\lx@append@path #1{#2} \\include{#3}\\lx@restore@paths");
+    "{\\lx@save@paths\\lx@append@path #1{#2} \\include{#3}\\lx@restore@paths}");
   Let!("\\inputfrom", "\\import");
   Let!("\\subinputfrom", "\\subimport");
 });

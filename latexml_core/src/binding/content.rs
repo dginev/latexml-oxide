@@ -1779,6 +1779,41 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
+  // A package always ends up defined at the OUTERMOST level, whatever group
+  // happens to be open when it is loaded. Real LaTeX gets this for free by
+  // refusing to load at all — `\@fileswithoptions` (latex.ltx L18700) errors
+  // "Loading a class or package in a group" when `\currentgrouplevel > 0` — so
+  // no real package is ever written to survive a `pop_frame`. LaTeXML *does*
+  // load in a group (a standalone/subfile child's preamble runs inside one,
+  // and autoload triggers fire from arbitrary body depth), which splits a
+  // package in half: its definitions are frame-local, while the document-level
+  // hooks it registers (`\AtEndDocument`, `@at@begin@document`) are global and
+  // outlive them.
+  //
+  // Witness (issue #311): `\documentclass[tikz]{standalone}` in a subfile
+  // preamble raw-loads `pgfcoreexternal.code.tex`, whose L152
+  // `\newif\ifpgf@external@grabshipout` is TeX-local while its L171-179
+  // `\AtEndDocument{\ifpgf@external@grabshipout…\fi}` goes onto the global
+  // queue — flushed at the PARENT's `\end{document}`, long after the child's
+  // group popped the conditional away → `Error:undefined:
+  // \ifpgf@external@grabshipout` at the very end of an otherwise complete
+  // conversion. Perl 0.8.8 reports the identical error (KNOWN_PERL_ERRORS #55).
+  // The same split already bit the autoload path from the other side (a package
+  // loaded at depth>=1 vanished on `\end{X}`, re-firing sibling triggers into a
+  // 10000-error cascade, witness 1711.11576); `tex.rs::def_autoload` fixed that
+  // with this same snapshot/hoist pair, and this generalizes it to every load.
+  //
+  // Hoisting the delta — rather than dropping the enclosing group, or setting
+  // `\globaldefs=1` for the load — is what keeps the child's OWN preamble
+  // definitions scoped: two sibling standalone figures may each `\newcommand`
+  // the same name with different bodies, and each must render with its own.
+  // (`\globaldefs=1` was tried and refuted: it also globalizes pgf's active-
+  // character handling → `Error:undefined:"` and zero pictures.)
+  let pre_keys = if get_frame_depth() > 0 {
+    Some(snapshot_top_frame_meaning_keys())
+  } else {
+    None
+  };
   let result = input_definitions(name, InputDefinitionOptions {
     extension: options.extension,
     handleoptions: true,
@@ -1796,6 +1831,9 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     after: options.after,
     ..InputDefinitionOptions::default()
   });
+  if let Some(pre_keys) = pre_keys {
+    hoist_top_frame_meaning_delta(&pre_keys);
+  }
   // Perl Package.pm L2679 maybeRequireDependencies is invoked from
   // input_definitions's miss-handler. But that handler only runs when
   // the file was NOT found at all. For paper-bundled .sty files that

@@ -1,0 +1,8 @@
+\documentclass{article}
+\usepackage{standalone}
+\newif\ifdupflag
+
+\begin{document}
+\input{child_flag}
+parent \ifdupflag PARENTTRUE\else PARENTFALSE\fi
+\end{document}
