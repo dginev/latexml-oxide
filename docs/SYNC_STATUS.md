@@ -694,10 +694,97 @@ output with Perl. Not a regression from that work — which is verified byte-ide
 Perl modulo whitespace on formulas that do convert.
 
 
-### TL2026 `latex.ltx` dump init is NOT release-gate-clean — expl3 catcode gap (2026-07-12) — OPEN
+### TL2026 `latex.ltx` dump init is NOT release-gate-clean — expl3 catcode gap (2026-07-12) — ✅ CLOSED 2026-07-23
 
-Blocks adding **2026** to the release dump window (`release-dumps.yml`,
-currently 2022–2025; see also the container blocker TODO(#217) — the two are
+> **✅ RE-MEASURED 2026-07-23 — BOTH TL2026 blockers are clear; 2026 is IN the
+> release dump window.** Measured the way the release actually runs it, rather
+> than on a local install: a kpathsea-UNLINKED dumper built exactly as
+> `release-dumps.yml`'s `build-dumper` job does (`KPATHSEA_NO_LINK=1
+> KPATHSEA_SKIP_TOOLCHAIN_CHECK=1 cargo build --release`, `ldd` asserted
+> kpathsea-free), run inside the real `ghcr.io/tkw1536/texlive-docker:2026`
+> under the verbatim gate (`LATEXML_INIT_DEBUG=1`, ANSI-strip, `grep -acE
+> '^(Error|Fatal):'`):
+>
+> | init | 2026-07-12 | 2026-07-23 |
+> |---|---|---|
+> | `--init=plain.tex` | exit 0, 0 errors | exit 0, **0 errors** |
+> | `--init=latex.ltx` | exit 0, **137 errors** | exit 0, **0 errors** |
+>
+> The **likely** closers (not bisected — the 0/0 result is measured, the
+> attribution is inferred) are the two expl3 fixes that landed **2026-07-20**,
+> after the measurement below: force `\ExplSyntaxOff` when `_` is still LETTER
+> (`latex_constructs.rs`) and the global `:`/`_`/`~` restore (`expl3_sty.rs`).
+> They are the same pair credited with closing
+> [`EXPL3_CATCODE_GAP_2026-06-08.md`](parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md),
+> and all three error families listed below are now gone (the 90 ×
+> `unexpected:_` was the bulk). Dump is sound, not degenerate: **24,221** latex entries vs
+> 2025's 21,997 — the delta IS TL2026's expanded l3 `text-case` module — and
+> the plain dump is byte-identical to 2025's.
+>
+> The **container** blocker (TODO(#217), independent) cleared too:
+> tkw1536/historic-texlive-docker#1 merged 2026-06-08 and `:2026` publishes on
+> the SAME `none-5.42.0`/debian:trixie base as `:2025` — libxml2 apt candidate
+> 2.9.14 → `libxml2.so.2`, glibc 2.41 ≥ the ubuntu-22.04 build host's 2.35 — so
+> the one-binary-serves-all-containers design holds unchanged.
+>
+> Landed: `release-dumps.yml` matrix + **all five** of `release.yml`'s
+> `verify dump window completeness` gates (they are duplicated per build leg —
+> `build-macos`, `build-macos-intel`, `build-linux-arm64`, `build-windows`,
+> `release`; update them together or the legs disagree about the window) now
+> span **2022–2026**. Validated end-to-end, not just at the gate: a binary embedding
+> only TL2025 warns `latex_dump:mismatch loaded the TL2025 kernel dump, but the
+> ambient TeX Live is 2026` on a TL2026 host; rebuilt with the 2026 dump the
+> warning is gone and the conversion is clean. Cost: 48.1 → 49.0 MB (`release`
+> profile), i.e. ~876 KB gzipped, against the 64 MB RELEASE_CRITERIA §2 cap.
+> `release-dumps.yml` was also dispatched for real (run 30014067643): all five
+> legs green.
+>
+> **Runner-disk flake on the 2026 leg — `generate` no longer uses a job-level
+> `container:`.** The first CI run went 5/5 green; an identical re-run failed
+> *only* the 2026 leg with `failed to register layer: … no space left on
+> device` (3 pull retries, all out of space). 2026 is the fattest image —
+> compressed 2022=4.6, 2023=5.0, 2024=5.4, 2025=5.7, **2026=6.2 GB** (9.8 GB
+> extracted), monotonically worse each year — so it is the first to fall over.
+>
+> **Careful with the diagnosis** (an earlier draft of this note got it wrong):
+> this is *not* a steady-state capacity ceiling. Instrumenting the job shows
+> `/` at **145 GB total, 88 GB free before any cleanup** — roughly 5× the ~16 GB
+> the pull peaks at. The pass and the fail landed on *different runner image
+> versions* (`ubuntu-24.04` `20260714.240.1` passed, `20260720.247.2` failed),
+> so the fleet is heterogeneous and some images come up with far less headroom.
+> There is no way to pin a runner image *version* on GitHub-hosted runners, so
+> the fix has to be tolerance, not capacity.
+>
+> Fix, in two layers of *tolerance* (not capacity): (1) drop `container:` (it
+> pulls during "Initialize containers", *before* any step can run, so nothing
+> can free space first) and `docker run` the image explicitly after a
+> `free runner disk space` step that drops the preinstalled Android SDK / ghc /
+> dotnet / CodeQL trees — measured 58 GB used → 30 GB, ~28 GB of margin ahead of
+> the pull; and (2) a `pull TL image (retry-tolerant)` step that does an
+> explicit `docker pull` with reclaim + linear backoff (10/20/30/40 s) across 4
+> attempts, so a transient network / marginal-disk first failure clears on
+> retry (`docker run`'s implicit pull is a single, non-retried attempt).
+> Verified by extracting each step's script straight out of the YAML and running
+> it verbatim — the gate against the real `:2026` image (byte-identical
+> artifacts), the retry loop's control flow via a failing-`docker` stub (4 tries
+> then exit 1) — plus a 5/5 green CI run. **Do not "simplify" back to
+> `container:`.** This matters more than it used to, because every `release.yml`
+> build leg now hard-requires the full window, so one flaky leg blocks a whole
+> release.
+>
+> **Observed in passing — dumps are not bit-reproducible (pre-existing, ALL
+> years, not introduced here).** The CI-produced `latex.2026.dump.txt` and the
+> local one are identical in size and entry count but differ in exactly ONE
+> byte-range: `V\ttexsys.aux_contents` embeds a wall-clock stamp
+> (`2026/07/23:13:54` local vs `:14:13` in CI). Harmless today (cosmetic
+> `texsys.cfg` capture), but it means two dumps of the same TL year + same
+> revision never compare equal, so any future "did the dump change?" check must
+> normalize that field rather than `cmp`.
+>
+> History below kept for the root-cause trail.
+
+Blocked adding **2026** to the release dump window (`release-dumps.yml`,
+then 2022–2025; see also the container blocker TODO(#217) — the two are
 independent). Measured on a full local TL2026 install (`x86_64-pc-windows-msvc`,
 but Linux-equivalent — this is the raw-load path, not a platform issue), using
 the exact release gate (`LATEXML_INIT_DEBUG=1 ./latexml_oxide --init=<init>`,
