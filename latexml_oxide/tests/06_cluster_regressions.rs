@@ -1429,6 +1429,22 @@ fn convert_log_includestyles(source: &str) -> String {
   r.log
 }
 
+/// `convert_log_includestyles`'s XML sibling, for content assertions on inputs
+/// that need a raw-loaded `.sty`.
+fn convert_xml_includestyles(source: &str) -> String {
+  latexml::util::test::init_test_rss_cap();
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    include_styles: Some(true),
+    ..Config::default()
+  };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(source.to_string());
+  r.result.expect("conversion produced no result").to_string()
+}
+
 /// Issue #311: a package loaded while a group is open must still be defined
 /// after that group closes.
 ///
@@ -1463,6 +1479,11 @@ fn standalone_child_preamble_package_survives_the_subfile_group() {
     "tests/cluster_regressions/subimport/index_rawsty_subimport.tex",
     // … inside a group in the parent body …
     "tests/cluster_regressions/subimport/index_rawsty_grouped.tex",
+    // … `\subimport*` in the PREAMBLE of a plain article, where import.sty's
+    // `{…}` is the ONLY bracket — the arm that makes `import_sty.rs`'s own
+    // `activate_scope` falsifiable (every other route also crosses
+    // standalone_sty's bracket, so deleting import's line stayed green) …
+    "tests/cluster_regressions/subimport/index_import_preamble.tex",
     // … and a standalone child nested inside another standalone child, where
     // the load sits two brackets deep. Removing the two bindings' own groups
     // (the first fix tried for #311) left both of these last two broken — the
@@ -1508,6 +1529,22 @@ fn standalone_child_preamble_definitions_stay_scoped() {
   assert!(
     xml.contains("[Btwo B]") || xml.contains("[BtwoB]"),
     "#311: second child must use its OWN \\newenvironment:\n{xml}"
+  );
+
+  // The package half: two sibling children load DIFFERENT packages that define
+  // the same macro. Hoisting a package's ordinary macros to global made the
+  // second `\newcommand` a silent no-op, so sibling B rendered sibling A's body
+  // — worse than Perl, which scopes both. Only conditionals are hoisted.
+  let xml_pkg =
+    convert_xml_includestyles("tests/cluster_regressions/subimport/index_pkg_siblings.tex");
+  assert!(
+    xml_pkg.contains("kidA FROM-A"),
+    "#311: first sibling must use its own package's macro:\n{xml_pkg}"
+  );
+  assert!(
+    xml_pkg.contains("kidB FROM-B"),
+    "#311: second sibling must use ITS OWN package's macro, not the first \
+     child's hoisted one:\n{xml_pkg}"
   );
 
   // A conditional the child flips in its preamble must not flip the parent's.

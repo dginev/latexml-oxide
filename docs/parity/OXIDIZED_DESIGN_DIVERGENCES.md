@@ -1924,15 +1924,20 @@ the same boundary from a fresh process. A load in a subfile's *body* additionall
 preamble`, but the load still happens, so the region is observable there too —
 which is why the gate is depth-matched, not merely active/inactive.
 
-Known partial: the hoist covers the **Meaning** table only (`state.rs`: "callers
-that need to promote Value/Catcode/etc. should add parallel helpers"). `\newif`
-is meanings, which is why #311 is covered. A package that also sets a **length**
-in its preamble keeps the macro and loses the value — a `\newlength`+`\setlength`
-package hoisted out of a subfile renders `\rule{\pkgwidth}{4pt}` at width 0 in
-the parent where Perl reports `Error:undefined`. That trade (silent wrong content
-for a loud error) is the cost of the Meaning-only hoist; counters are unaffected,
-since `\setcounter` is global in both engines. No witness has needed the wider
-hoist yet.
+Scope of the hoist: **conditionals only**, and within the Meaning table only.
+The failure this exists for is a definition destroyed while a *global* document
+hook still reads it, and every witness is a `\newif` (`\newif` installs `\ifX` as
+a Conditional; `\Xtrue`/`\Xfalse` are plain macros the hooks do not read).
+Hoisting a package's ordinary macros as well is what made a second sibling
+subfile render the FIRST one's content: promoting pkgA's `\newcommand` to global
+turns pkgB's same-named `\newcommand` into a silent no-op, so sibling B shows A's
+body — silent wrong content, and worse than Perl, which scopes both. Guard:
+`standalone_child_preamble_definitions_stay_scoped`. The residue: a package
+pairing a non-conditional definition with a document-level hook is still broken,
+exactly as on `main` — no witness has needed it, and the Value/Catcode/register
+tables are likewise untouched (`state.rs`: "callers that need to promote
+Value/Catcode/etc. should add parallel helpers"), so a package that also sets a
+length keeps the macro and loses the value.
 
 ## Known Upstream Perl Issues (brief)
 

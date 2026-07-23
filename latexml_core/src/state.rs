@@ -2577,6 +2577,19 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
         .and_then(|stack| stack.front().cloned())
     };
     if let Some(value) = current {
+      // CONDITIONALS ONLY. The failure this exists for is a definition destroyed
+      // while a GLOBAL document hook still reads it, and every witness is a
+      // `\newif` conditional (`\ifpgf@external@grabshipout`, OXIDIZED_DESIGN
+      // #65). Hoisting a package's ordinary macros too is what makes a second
+      // sibling subfile render the FIRST one's content: promoting pkgA's
+      // `\newcommand` to global makes pkgB's same-named `\newcommand` a silent
+      // no-op, so sibling B shows A's body — silent wrong content, and worse
+      // than Perl, which scopes both. `\newif` installs `\ifX` as a Conditional
+      // (`\Xtrue`/`\Xfalse` are plain macros the hooks do not read), so this
+      // filter keeps every witness working while leaving macros scoped.
+      if !matches!(value, Stored::Conditional(_)) {
+        continue;
+      }
       // Direct re-bind via assign_internal so we don't need to round-trip a
       // full Token. The Meaning table is keyed by SymStr (the CS name);
       // any future read via `assign_meaning(token, ...)` would reach the
@@ -2762,6 +2775,16 @@ pub fn is_scope_active(scope: SymStr) -> bool { scope_active_in(&state!(), scope
 /// generic table + undo machinery, whose per-frame pop counts a removed key
 /// would desynchronise.) Pinned by
 /// `reentrancy_tests::scope_activity_tracks_value_not_presence`.
+///
+/// Reach: the production consumers — `counter/dialect.rs` (a reference number's
+/// `<ctr>:<refnum>` scope, deactivated then re-activated as the counter moves,
+/// mirroring Perl `Package.pm` L774-779) and `latex_constructs.rs`'s `label:`
+/// scopes — activate names that nothing currently STASHES into, so an activation
+/// installs no bindings and the re-activation fix is correct but latent. It
+/// becomes observable the moment a binding defines with `scope => "<ctr>:<n>"`.
+/// That is why the guards are unit-level: there is no output difference to
+/// assert end-to-end yet. (The one `Scope::Named` stash writer, `declare.rs`'s
+/// `id:<section_id>`, is consumed by `rewrite.rs` by prefix, not by activation.)
 ///
 /// The local/global asymmetry is deliberate (Perl's own note above
 /// `deactivateScope`): activation is `local`, so it expires with its group

@@ -2514,7 +2514,10 @@ same file, `inPreamble` true, `\currentgrouplevel` 1. That is *why* the region h
 to be named. Guard:
 `06_cluster_regressions::author_written_group_around_usepackage_still_loses_the_package`.
 
-**Trap 2 — `require_package` is idempotent** (`input_definitions`'s
+**Trap 2 — hoist CONDITIONALS, not everything.** The hooks read `\ifX`; a
+package's ordinary macros must stay scoped, or a second sibling subfile's
+same-named `\newcommand` becomes a silent no-op and renders the first sibling's
+body (worse than Perl). **Trap 3 — `require_package` is idempotent** (`input_definitions`'s
 `already_handled` `_loaded`/`_raw_loaded`/`_load_attempted` check in `content.rs`;
 the binding-vs-raw precedence half is WISDOM #63), so
 "clear and re-load" does *not* reinstall: hoist the installed defs instead
