@@ -14,6 +14,15 @@ LoadDefinitions!({
   // concat Chapter/ onto Chapter/ from the first call).
 
   DefPrimitive!("\\lx@save@paths", {
+    // OXIDIZED_DESIGN #65 (#311): the `{…}` below is a LaTeXML artifact — the
+    // real import.sty never groups the input (`\@import` restores
+    // `\input@path`/`\Ginput@path` by plain `\def` AFTER the `\input`, at the
+    // caller's level; "input files must have balanced grouping", L42). Name the
+    // region so `require_package` gives a package loaded in there the
+    // outermost-level lifetime real LaTeX would. Every caller invokes this
+    // immediately after `{`, and `activate_scope`'s marker is `Scope::Local`, so
+    // the region ends with that group.
+    activate_scope(subfile_scope_here());
     let paths = get_search_paths();
     push_value("lx@searchpaths@stack",
       Stored::Strings(
@@ -81,13 +90,23 @@ LoadDefinitions!({
   // sibling `\subimport{Chapter/}{Abstract}` + `\subimport{Chapter/}{Poster}`
   // would concat Chapter/ onto the still-mutated lead from the first
   // call, producing "Chapter/Chapter/Poster" as the search target.
+  //
+  // KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take TWO arguments
+  // after the star — `\includefrom{dir/}{file}` — but Perl's prototypes declare
+  // only one while their bodies reference `#3` (import.sty.ltxml L45/L47). The
+  // undeclared `#3` expands to nothing, so `\include{}` includes nothing and the
+  // file is dropped in silence: no error, no warning, no content. Real
+  // `import.sty` takes both for all four (L57/L58 route `\includefrom` /
+  // `\subincludefrom` through the same `\@doimport` as `\import`/`\subimport`;
+  // `\@sub@import` L65 consumes the directory as #3 and `\@import` L82 the file
+  // name as #7), so the arity below is the real package's, not Perl's typo.
   DefMacro!("\\import OptionalMatch:* {}{}",
     "{\\lx@save@paths\\lx@set@path #1{#2} \\input{#3}\\lx@restore@paths}");
-  DefMacro!("\\includefrom OptionalMatch:* {}",
+  DefMacro!("\\includefrom OptionalMatch:* {}{}",
     "{\\lx@save@paths\\lx@set@path #1{#2} \\include{#3}\\lx@restore@paths}");
   DefMacro!("\\subimport OptionalMatch:* {}{}",
     "{\\lx@save@paths\\lx@append@path #1{#2} \\input{#3}\\lx@restore@paths}");
-  DefMacro!("\\subincludefrom OptionalMatch:* {}",
+  DefMacro!("\\subincludefrom OptionalMatch:* {}{}",
     "{\\lx@save@paths\\lx@append@path #1{#2} \\include{#3}\\lx@restore@paths}");
   Let!("\\inputfrom", "\\import");
   Let!("\\subinputfrom", "\\subimport");

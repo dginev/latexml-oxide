@@ -29,6 +29,17 @@
   - **Generator identifier** now spells out the full product name ("LaTeXML oxide")
     and stamps the version into the XSLT output to match Perl.
   - **A `standalone` document class's options are no longer mis-loaded as packages.**
+  - **A package loaded in a subfile's preamble keeps its definitions.** A
+    `standalone` or `\import`-ed child used to end an otherwise complete conversion
+    with `\ifpgf@external@grabshipout` undefined: the group around the child's
+    preamble discarded what the package defined, while the document hooks reading it
+    survived. The child's own definitions stay scoped to the child.
+  - **Named scopes are tracked correctly again.** A scope that had been deactivated
+    still read as active, so it could never be re-activated — a counter- or
+    label-derived reference-number scope reused after a counter reset kept the
+    stale one — and a second deactivation popped the same bindings twice.
+  - **`\includefrom`/`\subincludefrom` no longer drop their file in silence** — the
+    included content used to vanish with no error or warning at all.
   - **The cortex worker builds without the `runtime-bindings` feature** — a
     Rhai-free conversion binary for the fleet.
   - **File resolution can no longer die silently.** A conversion could run with

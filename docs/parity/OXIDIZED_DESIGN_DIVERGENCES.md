@@ -1835,7 +1835,9 @@ really is the package to load.
 
 This is a **shared upstream bug**, not a Rust regression: same-host Perl warns
 identically (`Warning:missing_file:12pt Can't find binding for package 12pt`).
-See KNOWN_PERL_ERRORS #54 — candidate to upstream.
+See KNOWN_PERL_ERRORS #54 — candidate to upstream. Executing that preamble is
+also what makes a package load inside our own bracket possible; the consequence
+and its fix are #65.
 
 Witness = issue #309's `index.tex` + `child.tex` (`No obvious problems` after,
 1 warning before). Regression test:
@@ -1866,6 +1868,76 @@ Intentional, user-directed branding. Guard:
 `latexml_oxide/tests/10_xslt_generator_version.rs` asserts both the head comment
 (`by LaTeXML oxide (version …)`) and the footer (`…</a> oxide</div>`, and the absence
 of the old `(oxide)`).
+
+### 65. A package load is hoisted past LaTeXML's own subfile brackets
+
+A package must end up defined at the outermost level; real LaTeX guarantees it by
+refusing to load in a group at all. LaTeXML manufactures in-group loads real
+LaTeX does not have — a `standalone`/`\import` subfile's preamble runs inside a
+bracket of ours, and LaTeXML *executes* that preamble (which the real
+`standalone.sty` gobbles) precisely so `\documentclass[tikz]{standalone}` loads
+tikz (divergence #63). The package is then split in half: frame-local
+definitions, global hooks. Anatomy, minimal trigger and the upstream verdict:
+KNOWN_PERL_ERRORS #55.
+
+**`require_package` hoists the load's meaning-delta past the bracket**
+(`snapshot_top_frame_meaning_keys` + `hoist_top_frame_meaning_delta`), as
+`tex.rs::def_autoload` already did for the mirror-image autoload failure (witness
+1711.11576) — note that one is UNGATED, since an autoload fires from arbitrary
+body depth and has no bracket to be inside. We keep LaTeX's *invariant*, not its *enforcement*: refusing the
+load would discard divergence #63.
+
+**Only our own brackets.** An author's group keeps real LaTeX's verdict —
+`{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in pdflatex and in Perl,
+so hoisting there would emit *fewer* errors than Perl on an authoring mistake.
+What separates them is *where* the bracket was opened, so the region is named
+`subfile:<frame depth>` — Perl's own `section:4` / `label:foo` convention
+(State.pm L965-975) — and activated by `standalone_sty.rs` right after its
+`bgroup()` and by `import_sty.rs`'s `\lx@save@paths` inside the `{…}`. Activity
+alone is NOT enough: `StashActive` is `Scope::Local` at the bracket's frame, so a
+plain "am I in a subfile?" test is also true at every *deeper* frame, and an
+author's `{\usepackage{…}}` written **inside** a subfile preamble was hoisted too
+— Rust 0 errors where Perl reports 1. Matching the depth confines the region to
+the bracket's own level. Mechanics and traps: WISDOM #66.
+
+Refuted alternatives: **dropping the brackets** (a child's preamble then leaks to
+its siblings and the parent — silent wrong content — and nesting stays broken);
+**`\globaldefs=1`** (globalizes pgf's active-character handling →
+`Error:undefined:"`, zero pictures); **hoisting every in-group load** (the
+downgrade above).
+
+Shared upstream defect (KNOWN_PERL_ERRORS #55) fixed at the mechanism;
+surpass-Perl per RELEASE_CRITERIA §8. Neither binding's Perl-derived semantics
+change — they gain only the `activate_scope` marker.
+
+Guards in `06_cluster_regressions`:
+`standalone_child_preamble_package_survives_the_subfile_group` (ungated;
+`lx311demo.sty` = `\newif` + `\AtEndDocument`, over all four bracket routes —
+`\input`, `\subimport*`, inside a parent-body group, nested in another child),
+`standalone_child_tikz_survives_the_subfile_group` (the witness, TeX Live-gated),
+`standalone_child_preamble_definitions_stay_scoped` (the half that must not
+leak), `author_written_group_around_usepackage_still_loses_the_package` (the
+boundary), `subimport_sibling_calls_do_not_accumulate_search_paths` (import.sty's
+own path scoping, witnesses arXiv:2604.09744 / 2603.04457). Separately,
+`100_stale_autoload_no_runaway::stale_autoload_trigger_does_not_run_away` asserts
+the same boundary from a fresh process. A load in a subfile's *body* additionally errors `can only appear in the
+preamble`, but the load still happens, so the region is observable there too —
+which is why the gate is depth-matched, not merely active/inactive.
+
+Scope of the hoist: **conditionals only**, and within the Meaning table only.
+The failure this exists for is a definition destroyed while a *global* document
+hook still reads it, and every witness is a `\newif` (`\newif` installs `\ifX` as
+a Conditional; `\Xtrue`/`\Xfalse` are plain macros the hooks do not read).
+Hoisting a package's ordinary macros as well is what made a second sibling
+subfile render the FIRST one's content: promoting pkgA's `\newcommand` to global
+turns pkgB's same-named `\newcommand` into a silent no-op, so sibling B shows A's
+body — silent wrong content, and worse than Perl, which scopes both. Guard:
+`standalone_child_preamble_definitions_stay_scoped`. The residue: a package
+pairing a non-conditional definition with a document-level hook is still broken,
+exactly as on `main` — no witness has needed it, and the Value/Catcode/register
+tables are likewise untouched (`state.rs`: "callers that need to promote
+Value/Catcode/etc. should add parallel helpers"), so a package that also sets a
+length keeps the macro and loses the value.
 
 ## Known Upstream Perl Issues (brief)
 

@@ -1779,6 +1779,32 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
+  // OXIDIZED_DESIGN #65 (#311): a package loaded inside a bracket LaTeXML ITSELF
+  // opened must still end up defined at the outermost level, so hoist the load's
+  // meaning-delta past it. Real LaTeX has no such bracket — `\@fileswithoptions`
+  // (latex.ltx L18700) refuses to load at `\currentgrouplevel > 0` — but we
+  // execute a subfile preamble the real `standalone.sty` gobbles (divergence
+  // #63), which splits the package in half: frame-local definitions, global
+  // hooks. Witness: `pgfcoreexternal.code.tex` L152
+  // `\newif\ifpgf@external@grabshipout` popped with the child while its L171-179
+  // `\AtEndDocument` reaches the parent's `\end{document}`. `tex.rs::def_autoload`
+  // already used this snapshot/hoist pair for the mirror-image autoload failure
+  // (witness 1711.11576).
+  //
+  // `subfile:<depth>`, not a bare depth test: a group the AUTHOR wrote must keep real
+  // LaTeX's verdict — `{\usepackage{amsthm}}` leaves `\theoremstyle` undefined in
+  // pdflatex and Perl alike, and rescuing it would emit fewer errors than Perl on
+  // an authoring mistake (guards
+  // `06_cluster_regressions::author_written_group_around_usepackage_still_loses_the_package`,
+  // and `100_stale_autoload_no_runaway` from a fresh process). The
+  // two cases are indistinguishable by anything cheaper: both are a group opened
+  // inside the current file, while `inPreamble` is true, at `\currentgrouplevel`
+  // 1. Refuted alternatives in #65 — dropping the brackets, and `\globaldefs=1`.
+  let pre_keys = if is_scope_active(subfile_scope_here()) {
+    Some(snapshot_top_frame_meaning_keys())
+  } else {
+    None
+  };
   let result = input_definitions(name, InputDefinitionOptions {
     extension: options.extension,
     handleoptions: true,
@@ -1796,6 +1822,9 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     after: options.after,
     ..InputDefinitionOptions::default()
   });
+  if let Some(pre_keys) = pre_keys {
+    hoist_top_frame_meaning_delta(&pre_keys);
+  }
   // Perl Package.pm L2679 maybeRequireDependencies is invoked from
   // input_definitions's miss-handler. But that handler only runs when
   // the file was NOT found at all. For paper-bundled .sty files that

@@ -2207,4 +2207,66 @@ gated on the class being `standalone` and on the option being one that
 OXIDIZED_DESIGN #63; regression test
 `06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`.
 The mandatory half of the same defect (`\documentclass{article}` →
-`missing_file:article`) was issue #293. Candidate to upstream.
+`missing_file:article`) was issue #293. Candidate to upstream. A second defect of
+the same subfile group is entry #55 (a package loaded in the child's preamble
+loses its definitions).
+
+## 55. A package loaded inside a group loses its definitions while its document hooks survive
+
+`standalone.sty.ltxml` L24-33 opens the subfile group at the child's
+`\documentclass`, closes it at `\@standalone@end@input`, and — unlike real
+`standalone.sty`, which *gobbles* the child preamble via `\sa@gobble` — executes
+that preamble, so packages genuinely load inside the group. `import.sty.ltxml` L44-47 adds a second such group.
+
+```latex
+% index.tex
+\documentclass[12pt]{book}
+\usepackage{import}\usepackage{standalone}
+\begin{document}\subimport*{./}{child.tex}\end{document}
+
+% child.tex
+\documentclass[tikz,border=2pt]{standalone}
+\begin{document}
+\begin{tikzpicture}\draw (0,0) -- (1,1);\end{tikzpicture}
+\end{document}
+```
+
+Perl 0.8.8: `1 error; 1 undefined macro[\ifpgf@external@grabshipout]` (the
+accompanying `missing file[border=2pt.sty]` is entry 54). The picture renders; the error
+fires at the parent's `\end{document}`.
+
+`tikz` raw-loads `pgfcoreexternal.code.tex`, whose L152
+`\newif\ifpgf@external@grabshipout` is TeX-local (so it belongs to the child's
+group) while its L171-179 `\AtEndDocument{\ifpgf@external@grabshipout…\fi}` goes
+onto the **global** queue, flushed at the *parent's* `\end{document}`. Real LaTeX never gets here: `\@fileswithoptions` tests `\currentgrouplevel > \z@`
+(latex.ltx L18700) and errors *"Loading a class or package in a group"* (L18702).
+
+Reproducing needs a **raw-loaded** `.sty` (`--includestyles`): a package with a
+Rust binding installs its definitions globally already, so a bound package cannot
+exhibit this — the trigger above works because `tikz` raw-loads
+`pgfcoreexternal.code.tex`.
+
+**Fixed in Rust** at the package-load seam: `content.rs::require_package` hoists
+the load past brackets LaTeXML itself opened. An author's own group is deliberately not
+rescued (parity). Boundary, mechanism, refuted alternatives and guards:
+OXIDIZED_DESIGN #65.
+Issue #311. Candidate to upstream (not filed as of 2026-07-23).
+
+## 56. `\includefrom` / `\subincludefrom` silently drop the included file
+
+`import.sty.ltxml` L45/L47 declare one argument after the star but use `#3`:
+
+```perl
+DefMacro('\includefrom OptionalMatch:* {}',    '{\lx@set@path #1{#2} \include{#3}}');
+DefMacro('\subincludefrom OptionalMatch:* {}', '{\lx@append@path #1{#2} \include{#3}}');
+```
+
+The undeclared `#3` expands to nothing, so `\includefrom{dir/}{file}` becomes
+`\include{}` — content dropped with no error and no warning. Real `import.sty` L57/L58 route both
+arguments through the same `\@doimport` as `\import`/`\subimport`, and Perl's own
+`\import`/`\subimport` declare `{}{}` — a typo in the two `\include` variants.
+
+**Fixed in Rust**: both prototypes take `{}{}`. Guard
+`06_cluster_regressions::includefrom_takes_directory_and_file`. Candidate to
+upstream (not filed as of 2026-07-23) — a two-character fix at
+`import.sty.ltxml` L45/L47.

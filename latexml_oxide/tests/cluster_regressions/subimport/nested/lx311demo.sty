@@ -1,0 +1,5 @@
+% Paper-bundled style file, raw-loaded under --includestyles: the minimal shape
+% of issue #311 — a TeX-LOCAL \newif read back from a GLOBAL document hook.
+\ProvidesPackage{lx311demo}
+\newif\iflx@demo@flag
+\AtEndDocument{\iflx@demo@flag\else\fi}

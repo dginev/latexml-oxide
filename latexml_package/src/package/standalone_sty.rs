@@ -67,6 +67,22 @@ LoadDefinitions!({
   // already flow through instead of a second, weaker one.
   DefPrimitive!("\\@standalone@documentclass OptionalKeyVals {}", sub[(options_kv, class_tks)] {
     bgroup();
+    // OXIDIZED_DESIGN #65 (#311): the bracket just opened is a LaTeXML artifact —
+    // real standalone.sty *gobbles* the child preamble (`\sa@gobble`), so
+    // nothing loads inside a group there, and LaTeXML only executes that
+    // preamble to make `\documentclass[tikz]{standalone}` work (#63). Name the
+    // region with the engine's own scope machinery (Perl's named scopes, e.g.
+    // `section:4`/`label:foo`, State.pm L965-975) so `require_package` can give a package
+    // loaded in here the outermost-level lifetime real LaTeX would have given
+    // it. `activate_scope` marks StashActive with `Scope::Local`, so the region
+    // ends exactly when this bracket pops — we do not have to arrange that. A
+    // group the AUTHOR wrote carries no scope and is untouched: `{\usepackage
+    // {amsthm}}` must still leave `\theoremstyle` undefined, as it does in
+    // pdflatex ("Loading a class or package in a group", then "Undefined control
+    // sequence") and in Perl. Guards:
+    // `06_cluster_regressions::author_written_group_around_usepackage_still_loses_the_package`
+    // and `100_stale_autoload_no_runaway` (same boundary, fresh process).
+    activate_scope(subfile_scope_here());
     assign_value("inPreamble", true, None);
     if class_tks.to_string().trim() == "standalone"
       && let Some(kv) = options_kv.as_ref()

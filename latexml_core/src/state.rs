@@ -2577,6 +2577,19 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
         .and_then(|stack| stack.front().cloned())
     };
     if let Some(value) = current {
+      // CONDITIONALS ONLY. The failure this exists for is a definition destroyed
+      // while a GLOBAL document hook still reads it, and every witness is a
+      // `\newif` conditional (`\ifpgf@external@grabshipout`, OXIDIZED_DESIGN
+      // #65). Hoisting a package's ordinary macros too is what makes a second
+      // sibling subfile render the FIRST one's content: promoting pkgA's
+      // `\newcommand` to global makes pkgB's same-named `\newcommand` a silent
+      // no-op, so sibling B shows A's body — silent wrong content, and worse
+      // than Perl, which scopes both. `\newif` installs `\ifX` as a Conditional
+      // (`\Xtrue`/`\Xfalse` are plain macros the hooks do not read), so this
+      // filter keeps every witness working while leaving macros scoped.
+      if !matches!(value, Stored::Conditional(_)) {
+        continue;
+      }
       // Direct re-bind via assign_internal so we don't need to round-trip a
       // full Token. The Meaning table is keyed by SymStr (the CS name);
       // any future read via `assign_meaning(token, ...)` would reach the
@@ -2717,13 +2730,82 @@ pub fn get_prefix(prefix: &str) -> bool { state!().get_prefix(prefix) }
 pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
 
 // #======================================================================
+/// Named scope bracketing a subfile LaTeXML included itself — a `standalone`
+/// child's preamble, an `\import`ed file. Real LaTeX has no group at either spot
+/// (standalone *gobbles* the child preamble; import restores its paths by plain
+/// `\def` after the `\input`), so a package loaded inside one is an artifact of
+/// LaTeXML executing what the real packages skip. Bindings that open such a
+/// bracket activate this scope; `require_package` reads it to decide whether a
+/// load must outlive the bracket. See OXIDIZED_DESIGN #65.
+///
+/// The name carries the frame depth of the bracket that opened it — Perl's own
+/// `section:4` / `label:foo` convention (State.pm L965-975) — because activity
+/// alone is not enough: `StashActive` is `Scope::Local` at the bracket's frame,
+/// so a plain "is the region active?" test is ALSO true at every deeper frame,
+/// and an author's `{\usepackage{…}}` written *inside* a subfile preamble would
+/// be hoisted as well. That is a downgrade: pdflatex and Perl both leave such a
+/// package lost. Matching the depth confines the region to the bracket's own
+/// level.
+pub fn subfile_scope_at_depth(depth: usize) -> SymStr { arena::pin(format!("subfile:{depth}")) }
+
+/// The subfile scope for the CURRENT frame depth — what a bracket activates on
+/// opening, and what `require_package` tests before hoisting.
+pub fn subfile_scope_here() -> SymStr { subfile_scope_at_depth(get_frame_depth()) }
+
+/// Is the named scope currently active? See `scope_active_in` for why this is a
+/// front-value test and not a presence test, and `subfile_scope_at_depth` for the region
+/// marker it supports.
+pub fn is_scope_active(scope: SymStr) -> bool { scope_active_in(&state!(), scope) }
+
+/// Perl's scope-activity test, shared by the three call sites that need it
+/// (`is_scope_active`, `activate_scope`, `deactivate_scope`; `get_active_scopes`
+/// deliberately still enumerates KEYS, faithful to Perl State.pm L722-725, which
+/// has the same latent quirk — it has no callers):
+/// the truthiness of the FRONT `stash_active` value — `$$self{stash_active}
+/// {$scope}[0]` in `activateScope` (State.pm L682) and `deactivateScope`
+/// (L700).
+///
+/// Presence is NOT the test, and cannot be: deactivation OVERWRITES the front
+/// value with a falsy one rather than removing the key — an ordinary global
+/// assignment (`assign_internal(… 'stash_active', $scope, 0, 'global')`,
+/// State.pm L701; ours passes `Stored::Bool(false)`). A global assign replaces
+/// rather than layers: it drops the per-frame counts down to the locked frame,
+/// pops exactly that many values, and leaves ONE. So the front value is the
+/// whole state. (A delete is not available anyway — `stash_active` rides the
+/// generic table + undo machinery, whose per-frame pop counts a removed key
+/// would desynchronise.) Pinned by
+/// `reentrancy_tests::scope_activity_tracks_value_not_presence`.
+///
+/// Reach: the production consumers — `counter/dialect.rs` (a reference number's
+/// `<ctr>:<refnum>` scope, deactivated then re-activated as the counter moves,
+/// mirroring Perl `Package.pm` L774-779) and `latex_constructs.rs`'s `label:`
+/// scopes — activate names that nothing currently STASHES into, so an activation
+/// installs no bindings and the re-activation fix is correct but latent. It
+/// becomes observable the moment a binding defines with `scope => "<ctr>:<n>"`.
+/// That is why the guards are unit-level: there is no output difference to
+/// assert end-to-end yet. (The one `Scope::Named` stash writer, `declare.rs`'s
+/// `id:<section_id>`, is consumed by `rewrite.rs` by prefix, not by activation.)
+///
+/// The local/global asymmetry is deliberate (Perl's own note above
+/// `deactivateScope`): activation is `local`, so it expires with its group
+/// without a teardown call — which is what makes a named scope usable as a
+/// region marker (see `subfile_scope_at_depth`) — while deactivation is `global` so it
+/// survives group exit. A local deactivation would be undone by the very group
+/// that contained it.
+fn scope_active_in(state: &State, scope: SymStr) -> bool {
+  state
+    .stash_active
+    .get(&scope)
+    .and_then(|entry| entry.front())
+    .is_some_and(|v| !matches!(v, Stored::Bool(false)))
+}
+
 /// Activates all stashed definitions for the named scope. No-op if the scope is already active.
 pub fn activate_scope(scope: SymStr) {
   let mut state = state_mut!();
-  // do not re-activate if already active.
-  if let Some(stash_active_entry) = state.stash_active.get(&scope)
-    && !stash_active_entry.is_empty()
-  {
+  // Perl L682 `if (!$$self{stash_active}{$scope}[0])` — do not re-activate if
+  // already active, but a scope that was DEACTIVATED must be activatable again.
+  if scope_active_in(&state, scope) {
     return;
   }
 
@@ -2770,11 +2852,9 @@ pub fn activate_scope(scope: SymStr) {
 /// Normally not needed, since a scopes definitions are locally bound anyway.
 pub fn deactivate_scope(scope: SymStr) {
   let mut state = state_mut!();
-  let scope_exists = match state.stash_active.get(&scope) {
-    None => false,
-    Some(v) => !v.is_empty(),
-  };
-  if !scope_exists {
+  // Perl L700 `if ($$self{stash_active}{$scope}[0])` — only an ACTIVE scope is
+  // deactivated; a second deactivation must not re-run the pop below.
+  if !scope_active_in(&state, scope) {
     return;
   }
 
@@ -3636,6 +3716,100 @@ mod reentrancy_tests {
       1,
       "in-place patch of a locally-bound value was discarded with the group \
        (Global would keep 3)"
+    );
+  }
+
+  /// `is_scope_active` must track the FRONT value's truthiness, not key presence:
+  /// `deactivate_scope` OVERWRITES the front value with `Stored::Bool(false)`
+  /// instead of removing the entry, so a presence test reports a deactivated
+  /// scope as still active.
+  /// Perl writes the same test inline as `$$self{stash_active}{$scope}[0]`
+  /// (State.pm L682). The region property `subfile_scope_at_depth` relies on
+  /// (OXIDIZED_DESIGN #65) is the second assertion: an activation made inside a
+  /// group is undone by that group, with no matching teardown call.
+  #[test]
+  fn scope_activity_tracks_value_not_presence() {
+    let scope = arena::pin("t@scope@activity");
+    assert!(!is_scope_active(scope), "unknown scope must be inactive");
+
+    activate_scope(scope);
+    assert!(is_scope_active(scope), "activated scope must read active");
+
+    deactivate_scope(scope);
+    assert!(
+      !is_scope_active(scope),
+      "a deactivated scope must read INACTIVE — `stash_active` still holds the \
+       key, carrying Stored::Bool(false)"
+    );
+    // Deactivation is a GLOBAL assign, which replaces rather than layers: the
+    // stack collapses to exactly that one falsy value. This is why the front
+    // value is the whole state, and why presence cannot be the activity test.
+    let depth = state!()
+      .stash_active
+      .get(&scope)
+      .map(|entry| entry.len())
+      .unwrap_or(0);
+    assert_eq!(
+      depth, 1,
+      "global assign must overwrite, leaving one value — not stack a second"
+    );
+
+    // A second deactivation must be a silent no-op. Perl gates on `[0]` being
+    // TRUE (State.pm L700) precisely so the binding-pop below it does not run
+    // twice; re-running it pops values `activate_scope` never pushed, which is
+    // what Perl's "Unassigning wrong value for KEY from table T in
+    // deactivateScope" warning reports.
+    deactivate_scope(scope);
+    assert!(
+      !is_scope_active(scope),
+      "still inactive after a second deactivate"
+    );
+    let depth2 = state!()
+      .stash_active
+      .get(&scope)
+      .map(|entry| entry.len())
+      .unwrap_or(0);
+    assert_eq!(
+      depth2, 1,
+      "a second deactivation must not stack another value"
+    );
+  }
+
+  /// A DEACTIVATED scope must be activatable again — Perl gates `activateScope`
+  /// on `!$$self{stash_active}{$scope}[0]` (State.pm L682), the front value's
+  /// truthiness. Gating on key presence instead made the first deactivation
+  /// permanent, since `deactivate_scope` leaves `Stored::Bool(false)` behind.
+  /// Reached in Perl by the counter/label scopes, which deactivate the old
+  /// reference number before activating the next (`Package.pm` L774-779).
+  #[test]
+  fn a_deactivated_scope_can_be_reactivated() {
+    let scope = arena::pin("t@scope@reactivate");
+    activate_scope(scope);
+    deactivate_scope(scope);
+    assert!(!is_scope_active(scope), "precondition: deactivated");
+
+    activate_scope(scope);
+    assert!(
+      is_scope_active(scope),
+      "re-activation after deactivation must take effect (Perl State.pm L682)"
+    );
+  }
+
+  /// The self-terminating half: `activate_scope` marks `StashActive` with
+  /// `Scope::Local`, so the enclosing group ends the region by construction.
+  #[test]
+  fn scope_activation_is_bounded_by_its_group() {
+    let scope = arena::pin("t@scope@bounded");
+    push_frame();
+    activate_scope(scope);
+    assert!(
+      is_scope_active(scope),
+      "active inside the group that opened it"
+    );
+    pop_frame().expect("pop group");
+    assert!(
+      !is_scope_active(scope),
+      "the region must end with its group — no explicit deactivate_scope"
     );
   }
 }

@@ -26,7 +26,7 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1617/0/0**; `cargo clippy --workspace --all-targets -- -D warnings` is clean
+**1657 passing** (2026-07-23, 90 targets; one `latexml_post` graphics test needs a host image tool and is green on CI); `cargo clippy --workspace --all-targets -- -D warnings` is clean
 (policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
 `latexml_oxide/build.rs` sets `core.hooksPath`). The 2026-07 full-arXiv rerun
 runs at ~44k docs/hr, avg 4.06 s/doc, fatal rate 0.78%.
@@ -141,7 +141,7 @@ serving both come first):
 - **[`docs/parity/OXIDIZED_DESIGN.md`](docs/parity/OXIDIZED_DESIGN.md)** — Public-facing design **index + overview** (guiding principles, architecture). Detail lives in a themed family it links to: **[`OXIDIZED_DESIGN_DIVERGENCES.md`](docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md)** (the numbered **intentional Perl divergences** that `.rs` comments cite as `OXIDIZED_DESIGN #N`), **[`OXIDIZED_DESIGN_MATH.md`](docs/math/OXIDIZED_DESIGN_MATH.md)** (Marpa math-parser + grammar rules), **[`OXIDIZED_DESIGN_TYPES.md`](docs/parity/OXIDIZED_DESIGN_TYPES.md)** (type-system improvements + tactical pitfalls), **[`OXIDIZED_DESIGN_FUTURE_WORK.md`](docs/parity/OXIDIZED_DESIGN_FUTURE_WORK.md)**. Read the divergences file to check if a translation difference was a marked intentional divergence. (Divergence `#N` numbers are load-bearing and kept verbatim; note the pre-existing collision between divergence `#7–#18` and the math cluster `#7–#18` — the index explains which file owns each.)
 - **[`docs/parity/ORGANIZATION.md`](docs/parity/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Loading hierarchy and LaTeX chapter structure.
 - **[`docs/parity/WISDOM.md`](docs/parity/WISDOM.md)** — Tactical insights about system internals from specialized debugging. Check here to avoid re-introducing known bugs.
-- **[`docs/parity/KNOWN_PERL_ERRORS.md`](docs/parity/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (54 entries). Check here first when investigating a test failure; when a shared bug is simple, fix in Rust and record it here (candidate to upstream).
+- **[`docs/parity/KNOWN_PERL_ERRORS.md`](docs/parity/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (56 numbered entries, plus 7 unnumbered). Check here first when investigating a test failure; when a shared bug is simple, fix in Rust and record it here (candidate to upstream).
 - **[`docs/parity/DUMP_DESIGN.md`](docs/parity/DUMP_DESIGN.md)** — Design record for the kernel dump precompilation (strict-Perl LoadFormat mutual exclusivity, unconditional apply) — the live architecture behind the per-TL-year release dumps. NOTE the format-layering nuance: the latex format sits on the REAL-plain.tex layer (Perl's is hand-curated), so plain-only macros can leak into latex sessions (the `\+` class, retracted at the `latex.rs` seam; audit in SYNC_STATUS 2026-07-02).
 - **[`docs/parity/BINDING_DSL_ARCHITECTURE.md`](docs/parity/BINDING_DSL_ARCHITECTURE.md)** — Decision record for the binding-definition DSL: one shared `ConstructorBuilder` lowering spine, compile-time `macro_rules!` + runtime Rhai front-ends. Subsumes closed issues #93/#171.
 - **[`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md)** — The runtime (Rhai) script-bindings front-end reference. Gated by the **`runtime-bindings`** feature (ON by default, and in the distribution build; the old `script-bindings` alias was removed pre-publish).
@@ -180,10 +180,11 @@ out-of-scope cases live in `docs/reproducers/`, `docs/out-of-scope/`,
 
 **Rules for these docs:**
 - `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
-- `WISDOM.md` is for tactical system insights — record when specialized analysis leads to a correct patch.
+- `WISDOM.md` is for tactical system insights — record when specialized analysis leads to a correct patch. A reusable *method* is a durable fact, not narrative.
 - Rust-specific error fixes go in `SYNC_STATUS.md` under "Rust Error Fixes", referencing the KNOWN_PERL_ERRORS entry when applicable.
 - When an upstream Perl error is identified, record it. Fix in Rust if simple; otherwise keep as-is.
 - **Diagnostic-snapshot naming.** Docs that capture a point-in-time technical diagnostic — `*_TRIAGE`, `*_HOTSPOTS`, `*_AUDIT`, `*_ANALYSIS`, `*_BISECT`, and similar — **must carry a date in the filename** (`NAME_YYYY-MM-DD.md`), using the date of their last commit. This keeps a study from masquerading as a live worklist. *Living* worklists are exempt even when their name reads like a diagnostic — date only what is a frozen snapshot. (When such a worklist's mission *completes*, date it and move it to `docs/archive/`, lifting any live residual into `SYNC_STATUS.md` — as was done for the LoadFormat audit.)
+- **Record the conclusion, not the play-by-play.** State the defect, its cause, the fix, and the guard test names — not the narrative of how it was found or what was tried on which day. Keep what is expensive to re-derive: witness arXiv ids, `file:line` into the Perl source, minimal trigger examples, named guards, identifiers a reader would otherwise grep for, measured figures with their basis, and settled dead-ends (one line each, so they are not re-attempted). Cut connective tissue, not identifiers. A table cell is not an essay: in `ISSUE_AUDIT.md` and similar, a few sentences, then point at `KNOWN_PERL_ERRORS`/`OXIDIZED_DESIGN` for the mechanism.
 - Keep this index current. When a diagnostic snapshot is superseded, archive it under `docs/archive/` rather than leaving it orphaned at the top level.
 
 ## Skills (`.claude/skills/`)
