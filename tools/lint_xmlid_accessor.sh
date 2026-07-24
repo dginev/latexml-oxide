@@ -24,6 +24,21 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Byte-exact, locale-independent collation. NOT optional: the baseline is a
+# CHECKED-IN sorted file diffed with `comm`, which pairs lines byte-wise, while
+# `sort` under a UTF-8 locale collates punctuation-insensitively. The two
+# variants below then compare EQUAL to `sort` and may be blessed in any order:
+#     ...get_attribute("xml:id"))
+#     ...get_attribute("xml:id"));
+# The file passes `sort -c` yet is unsorted to `comm`, which prints
+# "comm: file N is not in sorted order" and reports already-baselined sites as
+# NEW -- a false failure that blocks `git push` (this lint is a pre-push hook)
+# on a tree with no Rust changes at all. It also made the verdict depend on the
+# runner's locale: green on CI's C.UTF-8, red on an en_US.UTF-8 dev box, for
+# the same commit. Pinning here covers `sort`, `comm` and `grep` together, so
+# a baseline blessed anywhere compares identically everywhere.
+export LC_ALL=C
+
 BASELINE="tools/xmlid_lint_baseline.txt"
 CRATES=(latexml_core latexml_engine latexml_package latexml_post
         latexml_math_parser latexml_contrib latexml_oxide latexml_codegen)
