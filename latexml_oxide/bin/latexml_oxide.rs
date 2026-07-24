@@ -242,7 +242,12 @@ struct Cli {
   /// nears it, and a hard watchdog aborts the process (exit 137) at the
   /// ceiling. Use 0 to disable memory limiting entirely. Also settable via the
   /// `LATEXML_MAX_MEMORY` env var; this flag wins when both are given.
-  #[arg(long, value_name = "MIB", env = "LATEXML_MAX_MEMORY", default_value = "6144")]
+  #[arg(
+    long,
+    value_name = "MIB",
+    env = "LATEXML_MAX_MEMORY",
+    default_value = "6144"
+  )]
   max_memory: u64,
 
   /// Abort after processing this many tokens — guards against runaway macro
@@ -777,9 +782,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // fleet/test decoupling escape hatch), so honor it when present.
     let rss_cap_env_set = std::env::var_os("LATEXML_RSS_CAP_BYTES").is_some();
     if !rss_cap_env_set {
-      latexml_core::stomach::set_memory_cap(Some(
-        latexml_core::stomach::soft_cap_from_ceiling(cli.max_memory),
-      ));
+      latexml_core::stomach::set_memory_cap(Some(latexml_core::stomach::soft_cap_from_ceiling(
+        cli.max_memory,
+      )));
     }
     if cli.max_memory == 0 && !rss_cap_env_set {
       // Removing the surprise of one flag silently disabling two guards: say
