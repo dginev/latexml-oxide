@@ -243,6 +243,9 @@ impl Document {
     }
   }
 
+  /// The current insertion point: the node that absorbed content is appended
+  /// to, and the one [`open_element`](Self::open_element) opens beneath.
+  /// Perl's `$document->getNode`.
   pub fn get_node(&self) -> &Node { &self.node }
   pub fn get_node_mut(&mut self) -> &mut Node { &mut self.node }
 
@@ -944,6 +947,16 @@ impl Document {
     Ok(())
   }
 
+  /// Open a new `qname` element and make it the current insertion point.
+  ///
+  /// Where it opens is the model's decision, not the caller's: the insertion
+  /// point is first moved by [`find_insertion_point`](Self::find_insertion_point),
+  /// which auto-opens any element the schema requires in between and
+  /// auto-closes any that cannot contain `qname`. So a binding may open a
+  /// `ltx:para` without first checking what is currently open.
+  ///
+  /// See [`open_element_at`](Self::open_element_at) to open at an explicit node
+  /// instead, and [`close_element`](Self::close_element) for the counterpart.
   pub fn open_element(
     &mut self,
     qname: &str,
@@ -1173,7 +1186,13 @@ impl Document {
     node_opt
   }
 
-  // Close $qname, if it is closeable.
+  /// Close `qname`, if it is closeable — the forgiving counterpart to
+  /// [`close_element`](Self::close_element).
+  ///
+  /// Returns the closed node, or `None` when no such element is open (or it
+  /// cannot be auto-closed from here). That "or nothing happens" is the point:
+  /// it lets a binding close an element it *may* have opened without having to
+  /// track whether it did, where `close_element` would report an error.
   pub fn maybe_close_element(&mut self, qname: &str) -> Result<Option<Node>> {
     match self.is_closeable(qname) {
       Some(node) => {
@@ -1578,6 +1597,13 @@ impl Document {
     }
   }
 
+  /// Move the current insertion point to `node` — Perl `Document.pm:setNode`
+  /// L74-87.
+  ///
+  /// A document fragment is not itself an insertion point: as in Perl, a
+  /// single-child fragment is descended into, and a fragment with several
+  /// children is an error (reported, not fatal — see the body comment on why
+  /// this returns `()`).
   pub fn set_node(&mut self, node: &Node) {
     // Perl Document.pm:setNode L74-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
@@ -2840,9 +2866,14 @@ impl Document {
   // insertion point (eg self.node), but rather relative to nodes specified
   // in the arguments.
 
-  // Set any allowed attribute on a node, decoding the prefix, if any.
-  // Also records, and checks, any id attributes.
-  // [xml:id and namespaced attributes are always allowed]
+  /// Set any allowed attribute on a node, decoding the prefix, if any.
+  /// Also records, and checks, any id attributes.
+  /// \[xml:id and namespaced attributes are always allowed\]
+  ///
+  /// "Allowed" is the document model's call, so this is not a plain libxml
+  /// write: an attribute the schema does not permit on `node` is dropped rather
+  /// than emitted, which is what keeps a binding from producing a document that
+  /// fails validation.
   pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) -> Result<()> {
     // Sanitize BEFORE the empty check: a value of only invalid chars (e.g. a
     // lone NUL) must degrade to the skip path, not reach libxml. Without this
@@ -2937,6 +2968,14 @@ impl Document {
     Ok(())
   }
 
+  /// Add one or more CSS classes to a node, without disturbing the ones it
+  /// already carries.
+  ///
+  /// `class` is treated as the space-separated set it is
+  /// ([`add_ss_values`](Self::add_ss_values)), so several bindings can each
+  /// contribute a class to the same element — which is why this exists rather
+  /// than a plain `setAttribute("class", …)`, and what
+  /// [`remove_ss_values`](Self::remove_ss_values) undoes.
   pub fn add_class(&mut self, node: &mut Node, class: &str) -> Result<()> {
     self.add_ss_values(node, "class", class)
   }
@@ -3759,7 +3798,13 @@ impl Document {
   //   my ($self, $fontid) = @_;
   //   return $$self{node_fonts}{$fontid} || LaTeXML::Common::Font->textDefault(); }
 
-  // Remove a node from the document (from it's parent)
+  /// Remove a node from the document (from it's parent).
+  ///
+  /// Two pieces of bookkeeping come with it: the `xml:id` of the node and of
+  /// every descendant is un-recorded, so the ids are free for reuse and no
+  /// dangling reference is left behind; and if the insertion point was inside
+  /// what is being removed, it is rescued up to the parent — otherwise the
+  /// document would go on building into a detached subtree.
   pub fn remove_node(&mut self, mut node: Node) {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
@@ -4107,13 +4152,16 @@ impl Document {
 
   // Inserting clones of nodes into the document.
   // Nodes that exist in some other part of the document (or some other document)
-  // will need to be cloned so that they can be part of the new document;
-  // otherwise, they would be removed from thier previous document.
-  // Also, we want to have a clean namespace node structure
-  // (otherwise, libxml2 has a tendency to introduce annoying "default" namespace prefix
-  // declarations) And, finally, we need to modify any id's present in the old nodes,
-  // since otherwise they may be duplicated.
-
+  /// Append COPIES of `new_children` under `node`.
+  ///
+  /// Cloning rather than moving is what makes this usable on nodes that belong
+  /// to another document — moving them would remove them from it. Three things
+  /// are repaired on the way in: document fragments are expanded to their
+  /// children, the namespace structure is rebuilt clean (libxml2 otherwise has
+  /// a tendency to introduce annoying "default" namespace prefix
+  /// declarations), and every `xml:id` in the copy is rewritten to a fresh id,
+  /// with internal references remapped to match — otherwise the copy would
+  /// duplicate the original's ids.
   // # Should have variants here for prepend, insert before, insert after.... ???
   pub fn append_clone(&mut self, node: &mut Node, new_children: Vec<Node>) -> Result<()> {
     // Expand any document fragments
@@ -4252,11 +4300,20 @@ impl Document {
   //**********************************************************************
   // Wrapping & Unwrapping nodes by another element.
 
-  // Wrap `nodes` with an element named `qname`, making the new element replace the first `node`,
-  // and all `nodes` becomes the child of the new node.
-  // [this makes most sense if `nodes` are a sequence of siblings]
-  // Returns undef if $qname isn't allowed in the parent, or if `nodes` aren't allowed in `qname`,
-  // otherwise, returns the newly created `qname`.
+  /// Wrap `nodes` with an element named `qname`, making the new element replace
+  /// the first `node`, and all `nodes` becomes the child of the new node.
+  /// \[this makes most sense if `nodes` are a sequence of siblings\]
+  ///
+  /// Returns `None` if `qname` isn't allowed in the parent, or if `nodes`
+  /// aren't allowed in `qname`, otherwise the newly created `qname` — so a
+  /// caller must treat "wrapped" as a request the model may decline, not as a
+  /// guarantee. `None` also covers a first node with no parent (already
+  /// detached, or the root): there is nothing to wrap it in place of. Witness
+  /// 1804.09736.
+  ///
+  /// The wrapper inherits the parent's font and box, so wrapping does not
+  /// change how the enclosed material renders. [`unwrap_nodes`](Self::unwrap_nodes)
+  /// is the inverse.
   pub fn wrap_nodes(&mut self, qname: &str, nodes: Vec<Node>) -> Result<Option<Node>> {
     if nodes.is_empty() {
       return Ok(None);
@@ -4331,8 +4388,18 @@ impl Document {
     Ok(())
   }
 
-  // initially since $node->setNodeName was broken in XML::LibXML 1.58
-  // but this can provide for more options & correctness?
+  /// Rename an element to `newname`, returning the new node.
+  ///
+  /// Not an in-place rename: a fresh element is opened next to the original,
+  /// the attributes and (when `reinsert`) the children are carried over, and
+  /// the original is removed. Perl went this way "initially since
+  /// `$node->setNodeName` was broken in XML::LibXML 1.58", and kept it because
+  /// building the replacement through the normal open path is what runs the
+  /// model's checks and `afterOpen` hooks for the new tag — a raw rename would
+  /// leave an element the schema never vetted.
+  ///
+  /// [`rename_node_qsym`](Self::rename_node_qsym) is the same for an already
+  /// interned name.
   pub fn rename_node(&mut self, node: Node, newname: &str, reinsert: bool) -> Result<Node> {
     let (ns, tag) = model::decode_qname(newname)?;
     let newsym = arena::pin(newname);

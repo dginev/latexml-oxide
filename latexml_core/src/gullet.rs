@@ -118,7 +118,7 @@ pub struct Gullet {
   pub pushback_limit:       Option<usize>,
   pub progress:             usize,
   /// Token-progress floor above which [`cycle_guard`](Self::cycle_guard)
-  /// engages. Defaults to [`CYCLE_GUARD_ACTIVATE`] (20M). Graphics packages
+  /// engages. Defaults to `CYCLE_GUARD_ACTIVATE` (20M). Graphics packages
   /// whose healthy expansion legitimately runs to 100M+ tokens (pgf/tikz/xy)
   /// raise it via [`raise_cycle_guard_activate`] so their streams stay out of
   /// the per-token fingerprint regime; the 400M `token_limit` remains the hard
@@ -1552,7 +1552,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
 /// TODO: This seems to be the wrong Rust type interface, we need to rework...
 pub fn read_until_token(t: Token) -> Result<Tokens> { read_until(&Tokens!(t)) }
 /// reads until it encounters a Catcode::BEGIN token
-/// Note: Perl uses $$token[1] == CC_BEGIN (catcode check, not defined_as)
+/// Note: Perl uses `$$token[1] == CC_BEGIN` (catcode check, not defined_as)
 pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
   while let Some(token) = read_token()? {
@@ -1912,8 +1912,9 @@ fn read_optional_delimited(
   }
 }
 
-/// <filler> = <optional spaces> | <filler>\relax<optional spaces>
-/// TeX Book p.276 "<left brace> can be implicit", and experimentation, indicate Expansion!!!
+/// `<filler> = <optional spaces> | <filler>\relax<optional spaces>`
+///
+/// TeX Book p.276 "`<left brace>` can be implicit", and experimentation, indicate Expansion!!!
 pub fn skip_filler() -> Result<()> {
   while let Some(tok) = read_x_non_space()? {
     if !tok.defined_as(&TOKEN_RELAX) {
@@ -2611,6 +2612,12 @@ pub fn read_tokens_value() -> Result<Tokens> {
   }
 }
 
+/// Discard any run of spaces at the head of the input — Perl
+/// `Package.pm:SkipSpaces`.
+///
+/// Reads past the spaces via [`read_non_space`] and pushes the first
+/// non-space token back, so the caller's next read starts on real content.
+/// End of input is not an error: there is simply nothing to unread.
 pub fn skip_spaces() -> Result<()> {
   if let Some(t) = read_non_space()? {
     unread_one(t);
@@ -2729,6 +2736,14 @@ pub fn read_factor() -> Result<Option<f64>> {
   }
 }
 
+/// Fully expand `tokens` and return the result, without digesting them.
+///
+/// Port of Perl `Package.pm:Expand` L950-955. The tokens are read from a fresh
+/// mouth wrapped in `{`…`}` and consumed with `readBalanced` — the braces are
+/// what bound the expansion to exactly this material, so an unbalanced or
+/// runaway body cannot walk off into whatever follows in the real input.
+///
+/// See [`do_expand_partially`] for the expand-until-unexpandable variant.
 pub fn do_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   let tokens: Tokens = tokens.into();
   reading_from_mouth(Mouth::default(), move || -> Result<Tokens> {
@@ -2741,6 +2756,12 @@ pub fn do_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   })
 }
 
+/// As [`do_expand`], but stopping at the first unexpandable token of each
+/// branch ([`ExpansionLevel::Partial`]) instead of expanding to the bitter end.
+///
+/// What a binding wants when it needs to *look* at what a macro produces —
+/// resolving a `\newcommand` alias, say — without forcing the primitives
+/// underneath it, whose expansion has side effects the caller is not ready for.
 pub fn do_expand_partially<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   let tokens: Tokens = tokens.into();
   reading_from_mouth(Mouth::default(), move || -> Result<Tokens> {

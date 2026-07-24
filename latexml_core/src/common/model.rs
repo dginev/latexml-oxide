@@ -732,6 +732,12 @@ pub fn get_foreign_node_qname(node: &Node) -> SymStr {
   get_node_qname(node)
 }
 
+/// Borrow a node's qualified name (`ltx:section`, `#PCDATA`, …) as a `&str`
+/// for the duration of `caller`.
+///
+/// The closure form is the point: qnames are interned, and lending the arena's
+/// copy lets a caller compare or match on the name without the `String` that
+/// [`get_node_qname`] + `to_string` would allocate on every node of a walk.
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   let qsym = get_node_qname(node);

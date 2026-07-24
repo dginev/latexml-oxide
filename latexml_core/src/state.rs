@@ -2031,6 +2031,13 @@ pub fn shift_value(key: &str) -> Result<Option<Stored>> {
   )
 }
 
+/// Bind `key` to `value` inside the named mapping — Perl's `AssignMapping`.
+///
+/// A mapping is a named hash living in the value table (`TAG_PROPERTIES`,
+/// `counter_for_type`, …). The mapping itself is created **globally** on first
+/// use, so that entries assigned inside a group are still found from outside
+/// it; passing `None` for `value` removes the key. Read entries back with
+/// [`with_mapping`].
 pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
   let map_sym = arena::pin(map);
   let mut state = state_mut!();
@@ -2211,9 +2218,6 @@ pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
   let s = arena::pin(key.encode_utf8(&mut tmp));
   state_mut!().assign_internal(TableName::Delcode, s, Stored::Charcode(value.into()), scope);
 }
-/// Get the `Meaning' of a token.  For active control sequences
-/// this may give the definition object (if defined) or another token (if \let) or undef
-/// Any other token is returned as is.
 /// The key under which a token's meaning is stored. **All** `\special_relax`-family
 /// tokens (`\noexpand`'d forms — the bare `\special_relax` and every
 /// `\special_relax\x01<shadowed>`) resolve under the bare `\special_relax` name:
@@ -2232,6 +2236,14 @@ pub fn meaning_key(token: &Token) -> SymStr {
   }
 }
 
+/// Get the "Meaning" of a token.
+///
+/// For active control sequences this may give the definition object (if
+/// defined) or another token (if `\let`) or `None`. Any other token is returned
+/// as is — which is what makes a `\let`-style comparison between a control
+/// sequence and a character token work.
+///
+/// Clones the stored meaning; use [`with_meaning`] when inspecting it is enough.
 pub fn lookup_meaning(token: &Token) -> Option<Stored> {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
     match state!().meaning.get(&meaning_key(token)) {
@@ -2506,7 +2518,7 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
 //======================================================================
 /// Starts a new level of grouping.
 /// Note that this is lower level than C<\bgroup>;
-/// Diagnostic helper: dump the keys in undo[0]'s value table.
+/// Diagnostic helper: dump the keys in undo`0`'s value table.
 /// For temporary instrumentation only — no production callers should rely on this.
 pub fn dump_top_frame_keys() -> String {
   let state = state!();

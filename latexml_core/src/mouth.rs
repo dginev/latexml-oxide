@@ -1091,6 +1091,18 @@ impl Mouth {
   }
 }
 
+/// Tokenize a string under the **standard** catcode table — Perl
+/// `Package.pm:Tokenize` L1019-1023.
+///
+/// "Standard" is the document-level table: `@` is an ordinary letter-less
+/// character, so this is how user-facing text should be read. The current
+/// state's catcodes are deliberately NOT consulted; the table is swapped in for
+/// the duration and restored afterwards, exactly as Perl's `local $STATE =
+/// $STD_CATTABLE` does, so a document that has been playing with catcodes
+/// cannot change what a binding's own string means.
+///
+/// See [`tokenize_internal`] for the `.sty`-style table that treats `@` as a
+/// letter.
 pub fn tokenize(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
@@ -1101,6 +1113,13 @@ pub fn tokenize(text: &str) -> Tokens {
   use_main_state();
   result
 }
+/// Tokenize a string under the **style-file** catcode table — Perl
+/// `Package.pm:TokenizeInternal` L1026-1030.
+///
+/// Same swap-and-restore discipline as [`tokenize`], but with `@` a letter, so
+/// internal control sequences (`\@ifnextchar`, `\@currentlabel`, …) tokenize as
+/// single names. This is the right choice for a macro body a binding writes
+/// itself, and the wrong one for text that came from the document.
 pub fn tokenize_internal(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
