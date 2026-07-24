@@ -15,9 +15,21 @@
 
 ## Current status
 
-- `cargo test --tests`: **1677 passing / 90 targets** (2026-07-24, on `main`;
-  the one `latexml_post` graphics failure needs a
-  host image tool and is green on CI). Previously 1675 (`feat-347-cprotect`), 1657 (`fix-311-standalone-newif-group`)
+- `cargo test --tests`: **1678 passing / 91 targets, 0 failed, 0 ignored**
+  (2026-07-24, on `main` @ `7d3963646e`, dev box with ImageMagick + ghostscript +
+  poppler installed, `mutool` absent). This supersedes the carried-forward
+  "one `latexml_post` graphics failure needs a host image tool" caveat (added
+  2026-07-23 in `28223835aa` at 1657/90, then bumped without re-deriving the
+  target count): **that failure did not reproduce, and no `latexml_post` test
+  can produce it as written.** The only tool-dependent tests there are the two
+  vector-SVG ones (`test_vector_svg_graphics_path`,
+  `test_vector_svg_pathological_convert_case`), and they do not go red on a bare
+  host — `svg_converter_available()` (`tests/integration.rs`) makes them `return`
+  early and report **ok** when neither `mutool` nor `pdftocairo` is on PATH.
+  Their real risk is the opposite one: **coverage lost silently to a green
+  tick**, since the skip `eprintln!` is swallowed without `--nocapture`. CI
+  installs poppler/mupdf, so the branch is exercised there.
+  Previously 1675 (`feat-347-cprotect`), 1657 (`fix-311-standalone-newif-group`)
   and 1577 (on `public-release-prep-week` after
   merging `origin/main`'s Windows release hardening; the completed 2026-07
   session logs are archived — see the pointer below).
