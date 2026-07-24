@@ -279,6 +279,7 @@ LoadDefinitions!({
   DefKeyVal!("Frontmatter", "labelref", "Semiverbatim");
   DefKeyVal!("Frontmatter", "labelseq", "");
   DefKeyVal!("Frontmatter", "annotate", "");
+  DefKeyVal!("Frontmatter", "name", "");
 
   // \lx@clear@frontmatter{tag}[kv]
   // Remove all pending frontmatter element matching $tag, and role (if given) in keyvals
