@@ -114,6 +114,14 @@
     your document keeps overriding a compiled binding; one that merely sits in a
     texmf tree only fills a gap, so a stray copy there can no longer displace an
     engine binding.
+  - **`cprotect` is now supported** — `\cprotect\section{\verb|…\tensor…|}` and
+    `\cprotect\footnote{\begin{verbatim}…\end{verbatim}}` produce the verbatim
+    title/footnote instead of `\cprotect is not defined`. The package works around
+    a TeX-only limitation (a braced argument is tokenized before `\verb` can change
+    catcodes) by writing the argument to a scratch file and `\input`ting it back;
+    the binding does the same re-read through a mouth, with no file written.
+    `\cMakeRobust` and `\cprotEnv` come with it. Perl LaTeXML has no binding for
+    this package.
 
 ## [0.7.4] (Windows target; third-party license notices; crates.io)
 

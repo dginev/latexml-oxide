@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="cprotect"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag><verbatim font="typewriter">What’s wrong in the \tensor command?</verbatim></title>
+    <para xml:id="S1.p1">
+      <p>Text.<note mark="1" role="footnote" xml:id="footnote1"><tags>
+            <tag>1</tag>
+            <tag role="refnum">1</tag>
+            <tag role="typerefnum">footnote 1</tag>
+          </tags><verbatim font="typewriter">\foo{#1}</verbatim></note></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag><verbatim font="typewriter">\alpha_{i}</verbatim></title>
+    <toctitle><tag close=" ">2</tag>short toc</toctitle>
+    <para xml:id="S2.p1">
+      <p>Spacing is kept: <emph font="italic"><verbatim font="typewriter upright">a  b</verbatim></emph>.
+Nested optional: (a[b]c: <verbatim font="typewriter">\x</verbatim>).</p>
+    </para>
+    <subsection inlist="toc" xml:id="S2.SS1">
+      <tags>
+        <tag>2.1</tag>
+        <tag role="refnum">2.1</tag>
+        <tag role="typerefnum">§2.1</tag>
+      </tags>
+      <title><tag close=" ">2.1</tag><verbatim font="typewriter">\gamma</verbatim></title>
+      <para xml:id="S2.SS1.p1">
+        <p align="center"><verbatim font="typewriter">\delta</verbatim></p>
+      </para>
+    </subsection>
+  </section>
+  <section xml:id="Sx1">
+    <title><verbatim font="typewriter">\zeta</verbatim></title>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>An ordinary title</title>
+    <para xml:id="S3.p1">
+      <p>More text.<note mark="2" role="footnote" xml:id="footnote2"><tags>
+            <tag>2</tag>
+            <tag role="refnum">2</tag>
+            <tag role="typerefnum">footnote 2</tag>
+          </tags><verbatim font="typewriter">
+line one
+  line two
+</verbatim></note></p>
+    </para>
+  </section>
+</document>
