@@ -105,7 +105,7 @@ Called at the top level of a binding file, or from inside any body.
 | `RegisterDocumentNamespace(string, string)` | Bind an OUTPUT-document prefix to a namespace URI. ([`register_document_namespace`](latexml_core::common::model::register_document_namespace)) |
 | `RegisterNamespace(string, string)` | Bind a CODE prefix to a namespace URI. ([`register_namespace`](latexml_core::common::model::register_namespace)) |
 | `RelaxNGSchema(string)` | Select the RelaxNG schema defining the output language. ([`select_relaxng_schema`](latexml_core::binding::content::select_relaxng_schema)) |
-| `RequirePackage(string)`<br>`RequirePackage(string, array)` | Load a package. ([`require_package`](latexml_core::binding::content::require_package)) |
+| `RequirePackage(string)`<br>`RequirePackage(string, array)` | Load a package: its binding, or the raw `.sty` when `INCLUDE_STYLES` allows. ([`require_package`](latexml_core::binding::content::require_package)) |
 | `RequireResource(string)`<br>`RequireResource(string, map)` | Attach a CSS or JavaScript resource to the document. ([`require_resource`](latexml_core::binding::content::require_resource)) |
 | `ResetCounter(string)` | Reset a counter to zero. ([`reset_counter`](latexml_core::binding::counter::dialect::reset_counter)) |
 | `Revert(Digested) -> Tokens` | A digested value back to the source tokens that made it. ([`Digested::revert`](latexml_core::digested::Digested::revert)) |

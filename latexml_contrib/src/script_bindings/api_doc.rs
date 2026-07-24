@@ -547,7 +547,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "RequirePackage",
     Doc::Rust(
-      "Load a package.",
+      "Load a package: its binding, or the raw `.sty` when `INCLUDE_STYLES` allows.",
       "latexml_core::binding::content::require_package",
     ),
   ),
