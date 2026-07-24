@@ -71,6 +71,23 @@ pub fn soft_cap_from_ceiling(max_memory_mib: u64) -> u64 {
   (max_memory_mib.saturating_mul(3) / 4).saturating_mul(1024 * 1024)
 }
 
+/// Apply the single `--max-memory` ceiling (MiB) to this thread's cooperative
+/// soft fuse, so the one knob means the same thing on every conversion path.
+/// Returns `false` — leaving the fuse alone — when `LATEXML_RSS_CAP_BYTES` pins
+/// it explicitly, which is the fleet/test decoupling escape hatch.
+///
+/// Callers must be BOTH the plain conversion path and the `--server` forked
+/// body child. When only the former called it, `--server --max-memory=0` still
+/// ran against a live 4.5 GB fuse while the help text promised the limit was
+/// off — the hard Watchdog was the only guard the LSP path wired to the knob.
+pub fn apply_memory_ceiling(max_memory_mib: u64) -> bool {
+  if std::env::var_os("LATEXML_RSS_CAP_BYTES").is_some() {
+    return false;
+  }
+  set_memory_cap(Some(soft_cap_from_ceiling(max_memory_mib)));
+  true
+}
+
 /// Resolve the effective soft-RSS budget: `None` = disabled (no ceiling),
 /// `Some(n)` = abort above `n` bytes. Precedence: the explicit
 /// [`set_memory_cap`] override, else `LATEXML_RSS_CAP_BYTES`, else the 4.5 GB
@@ -1772,7 +1789,28 @@ pub fn get_script_level() -> usize {
 
 #[cfg(test)]
 mod memory_cap_tests {
-  use super::{resolve_rss_cap, set_memory_cap, soft_cap_from_ceiling};
+  use super::{apply_memory_ceiling, resolve_rss_cap, set_memory_cap, soft_cap_from_ceiling};
+
+  // The single knob must reach the fuse through `apply_memory_ceiling`, which is
+  // what every conversion path calls. `--max-memory=0` has to leave NO ceiling:
+  // the plain path, the `--server` forked body child and the in-process fallback
+  // all rely on this one function, and the LSP pair used to skip it entirely.
+  #[test]
+  fn apply_memory_ceiling_drives_the_fuse() {
+    assert!(apply_memory_ceiling(6144), "no env pin, so it applies");
+    assert_eq!(resolve_rss_cap(), Some(4608 * 1024 * 1024));
+
+    // 0 means "no limit", not "abort immediately".
+    assert!(apply_memory_ceiling(0));
+    assert_eq!(resolve_rss_cap(), None, "--max-memory=0 leaves no ceiling");
+
+    // A tight ceiling is honored rather than ignored in favour of the old
+    // built-in 4.5 GB default, which sat far ABOVE such a ceiling.
+    assert!(apply_memory_ceiling(2000));
+    assert_eq!(resolve_rss_cap(), Some(1500 * 1024 * 1024));
+
+    set_memory_cap(None);
+  }
 
   // The override path is thread-local (race-free across libtest threads) and
   // never reads the process-global env, so these assertions are deterministic.

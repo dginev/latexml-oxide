@@ -780,13 +780,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // one flag governs one limit and `--max-memory=0` disables both. An
     // explicit `LATEXML_RSS_CAP_BYTES` still overrides just the soft fuse (the
     // fleet/test decoupling escape hatch), so honor it when present.
-    let rss_cap_env_set = std::env::var_os("LATEXML_RSS_CAP_BYTES").is_some();
-    if !rss_cap_env_set {
-      latexml_core::stomach::set_memory_cap(Some(latexml_core::stomach::soft_cap_from_ceiling(
-        cli.max_memory,
-      )));
-    }
-    if cli.max_memory == 0 && !rss_cap_env_set {
+    let ceiling_applied = latexml_core::stomach::apply_memory_ceiling(cli.max_memory);
+    if cli.max_memory == 0 && ceiling_applied {
       // Removing the surprise of one flag silently disabling two guards: say
       // so, out loud, when the whole memory limit is off.
       latexml_core::Warn!(

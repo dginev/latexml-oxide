@@ -533,6 +533,13 @@ fn run_body_child(
     // already-expired) deadline. Digest loops raise Fatal:Timeout (caught
     // below) for the graceful common case; the Watchdog above is the backstop.
     latexml_core::stomach::set_timeout(timeout_secs);
+    // Same for the cooperative RSS fuse, which the Watchdog above does NOT
+    // cover: derive it from the very `--max-memory` that set `max_rss_kb`, so
+    // one knob governs one limit here exactly as on the plain conversion path.
+    // Without this the child kept the built-in 4.5 GB default, so
+    // `--server --max-memory=0` still ran against a live fuse while the help
+    // text promised the limit was off.
+    latexml_core::stomach::apply_memory_ceiling(max_rss_kb / 1024);
     // Bare Core over the inherited state — does NOT reset thread-local state.
     let mut core = latexml_core::Core {
       preload: make_config(uri).preload.unwrap_or_default(),
