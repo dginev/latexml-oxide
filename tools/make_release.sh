@@ -333,10 +333,19 @@ EOF
   # Slice the CHANGELOG section for this version. CHANGELOG entries use
   # `## [VERSION]` headers (CommonMark task-list style — see CHANGELOG.md
   # for shape). Extract from the matching header up to the next `## `.
-  if grep -qE "^## \[${version}\]" CHANGELOG.md; then
+  #
+  # An RC carries the notes of the version it is a CANDIDATE for: `0.7.5-rc2`
+  # has no section of its own, so fall back to `0.7.5`. Without this every RC
+  # body silently degraded to the bare link below — the notes were written and
+  # then dropped, with nothing in the output saying so.
+  changelog_version="${version}"
+  if ! grep -qE "^## \[${version}\]" CHANGELOG.md; then
+    changelog_version="${version%%-*}"
+  fi
+  if grep -qE "^## \[${changelog_version}\]" CHANGELOG.md; then
     echo "## Changelog"
     echo
-    awk -v ver="${version}" '
+    awk -v ver="${changelog_version}" '
       /^## \[/ {
         if (in_block) exit
         if ($0 ~ "^## \\[" ver "\\]") { in_block = 1; print; next }

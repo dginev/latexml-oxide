@@ -26,9 +26,12 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1657 passing** (2026-07-23, 90 targets; one `latexml_post` graphics test needs a host image tool and is green on CI); `cargo clippy --workspace --all-targets -- -D warnings` is clean
+**1677 passing** (2026-07-24, 90 targets, on `main`; one `latexml_post` graphics test needs a host image tool and is green on CI); `cargo clippy --workspace --all-targets -- -D warnings` is clean
 (policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
-`latexml_oxide/build.rs` sets `core.hooksPath`). The 2026-07 full-arXiv rerun
+`latexml_oxide/build.rs` sets `core.hooksPath`). `cargo doc --workspace` is
+**rustdoc-warning-clean** and gated on `-D warnings` in the same `lint` job (and
+again in `rustdoc.yml` before publishing) — a broken intra-doc link renders as
+dead text on the deployed site, so the warning is the only signal there is. The 2026-07 full-arXiv rerun
 runs at ~44k docs/hr, avg 4.06 s/doc, fatal rate 0.78%.
 
 Durable parity rules (the dump/format boundary):
