@@ -562,8 +562,10 @@ it on every run, so adding a `register_fn` without regenerating fails CI. It is
 included into rustdoc as `latexml_contrib::script_bindings::interface`, so
 `cargo doc` and docs.rs render it beside the Rust API. Regenerate with
 `UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date`.
-The prose in THIS document covers what the calls mean; the generated file covers
-what exists.
+Each row carries a one-line explanation plus a link to the Rust item that
+implements the call, so the generated file answers both "what exists" and "what
+does this do"; the prose in THIS document covers the design — why the surface is
+shaped the way it is, and how failures are contained.
 
 `gen_fn_signatures` needs Rhai's `metadata` feature, which pulls serde +
 serde_json — so it is enabled on a **dev-dependency only**. Under
