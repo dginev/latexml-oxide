@@ -77,6 +77,7 @@ pub mod colm2025_conference_sty;
 pub mod colt2024_cls;
 pub mod combine_cls;
 pub mod commath_sty;
+pub mod cprotect_sty;
 pub mod crckapb_sty;
 pub mod curve2e_sty;
 pub mod cvpr_sty;
@@ -277,6 +278,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("capt-of", "sty", capt_of_sty::load_definitions),
   ("chngpage", "sty", chngpage_sty::load_definitions),
   ("commath", "sty", commath_sty::load_definitions),
+  // No Perl binding (issue #347): cprotect's file round-trip is replaced by
+  // `\scantokens`. See cprotect_sty.rs.
+  ("cprotect", "sty", cprotect_sty::load_definitions),
   ("crckapb", "sty", crckapb_sty::load_definitions),
   ("colt2024", "cls", colt2024_cls::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),

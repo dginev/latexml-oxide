@@ -15,9 +15,10 @@
 
 ## Current status
 
-- `cargo test --tests`: **1657 passing / 90 targets** (2026-07-23, branch
-  `fix-311-standalone-newif-group`; the one `latexml_post` graphics failure needs a
-  host image tool and is green on CI). Previously 1577 (on `public-release-prep-week` after
+- `cargo test --tests`: **1675 passing / 90 targets** (2026-07-23, branch
+  `feat-347-cprotect`; the one `latexml_post` graphics failure needs a
+  host image tool and is green on CI). Previously 1657 (`fix-311-standalone-newif-group`)
+  and 1577 (on `public-release-prep-week` after
   merging `origin/main`'s Windows release hardening; the completed 2026-07
   session logs are archived — see the pointer below).
 
