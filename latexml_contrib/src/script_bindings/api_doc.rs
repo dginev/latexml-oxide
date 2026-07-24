@@ -449,7 +449,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "ProcessOptions",
     Doc::Rust(
-      "Execute the options declared so far, in order or as given.",
+      "Execute the declared options — in declaration order, or (`*`) in the order passed.",
       "latexml_core::binding::content::process_options",
     ),
   ),

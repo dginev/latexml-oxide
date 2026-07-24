@@ -91,7 +91,7 @@ Called at the top level of a binding file, or from inside any body.
 | `NoteSTDERR(string)` | Write a progress note to stderr as well as the log. |
 | `ParseXML(string) -> array` | Parse a markup chunk into nodes; a bare fragment is fine. ([`parse_fragment`](latexml_core::common::xml::parse_fragment)) |
 | `PassOptions(string, string, array)` | Forward options to a package or class not yet loaded. ([`pass_options`](latexml_core::binding::content::pass_options)) |
-| `ProcessOptions()`<br>`ProcessOptions(bool)` | Execute the options declared so far, in order or as given. ([`process_options`](latexml_core::binding::content::process_options)) |
+| `ProcessOptions()`<br>`ProcessOptions(bool)` | Execute the declared options — in declaration order, or (`*`) in the order passed. ([`process_options`](latexml_core::binding::content::process_options)) |
 | `ProgressSpindown(string)` | Close a named progress stage in the log. ([`note_end`](latexml_core::common::error::note_end)) |
 | `ProgressSpinup(string)` | Open a named progress stage in the log. ([`note_begin`](latexml_core::common::error::note_begin)) |
 | `ProgressStep(string)` | Advance the progress indicator; a no-op in this port. ([`progress_step`](latexml_core::common::error::progress_step)) |
