@@ -13,6 +13,17 @@ Nested optional: \cprotect\cptdemo[a[b]c]{\verb|\x|}.
 \cprotEnv\begin{center}
 \verb|\delta|
 \end{center}
+\begin{figure}
+\cprotect\caption{A \verb|\gamma_1| figure}
+\label{fig:a}
+\end{figure}
+See \ref{fig:a}.
+\begin{table}
+\cprotect\caption[short \verb|\x| toc]{Long \verb|\y| caption}
+\end{table}
+\begin{description}
+\cprotect[o]\item[\verb|\beta|] the beta case
+\end{description}
 \cprotect[mm]\section*{\verb|\zeta|}
 \cprotect\section{An ordinary title}
 More text.\cprotect\footnote{\begin{verbatim}

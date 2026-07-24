@@ -48,6 +48,37 @@
 //! degrades exactly as the package does (the `*` is the `m` argument, the group
 //! reaches `\section*` unprotected), so a document that works with pdflatex
 //! converts the same way here.
+//!
+//! ## Two known limitations, both on input pdflatex also rejects
+//!
+//! **1. An argument its command reads verbatim keeps the `%` sentinel.**
+//! `\cprotect[mm]\href{http://x.org/a_b}{link \verb|\eta|}` yields
+//! `href="http://x.org/a_b%"`: the URL is consumed under semiverbatim catcodes,
+//! where `%` is catcode 12, so the end-of-line sentinel survives as a character.
+//! Anything we emit is at the mercy of a consumer that reads literally, and the
+//! sentinel has no character that is a comment under BOTH catcode regimes — `%`
+//! is precisely the one semiverbatim neutralizes. Two fixes were measured and
+//! rejected as worse: dropping the sentinel when the argument carries no escape
+//! trades the `%` for the mouth's end-of-line, which HTML collapses at the end
+//! of a title but renders as a **visible** space mid-flow
+//! (`(a[b]c : …)` for `\cprotect\cmd[a[b]c]{…}`); and skipping the round trip
+//! altogether emits the neutralized catcode-12 space as a literal glyph
+//! (`short ̵toc`). pdflatex + cprotect cannot compile `\cprotect\href` at all
+//! (`TeX capacity exceeded`, no PDF), so there is no reference behaviour being
+//! missed — protecting a URL/filename/citekey argument is outside the package's
+//! own domain.
+//!
+//! **2. A pre-tokenized argument gains a space inside `\verb`.** When
+//! `\cprotect` is reached from inside another macro's argument
+//! (`\wrap{\cprotect\emph{\verb|\zeta|}}`) the group has already been tokenized,
+//! so the raw read yields real CS tokens and `writable_tokens` spaces every
+//! control word: the body comes back as `\zeta ` . Protection is impossible
+//! there in principle — the mis-tokenization happened at `\wrap`'s argument read
+//! — and the result is still far better than the unprotected `<verbatim/>` plus
+//! italic `ζ`. In the package this input is a hard error, since `\cprotect` is
+//! `\outer` and therefore illegal in any macro argument
+//! (`! Forbidden control sequence found while scanning use of \wrap`); this
+//! binding carries no `\outer` restriction, so it accepts more than TeX does.
 
 use latexml_package::prelude::*;
 
