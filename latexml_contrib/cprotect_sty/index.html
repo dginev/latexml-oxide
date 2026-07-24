@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="`cprotect.sty` — verbatim material inside macro arguments."><title>latexml_contrib::cprotect_sty - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ddecd707.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (6f72b5dd5 2026-07-22)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module cprotect_sty</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_contrib/index.html">latexml_<wbr>contrib</a><span class="version">0.3.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module cprotect_<wbr>sty</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#what-the-package-does-and-how-the-port-differs" title="What the package does, and how the port differs">What the package does, and how the port differs</a></li><li><a href="#one-deliberate-deviation-from-cprotectsty" title="One deliberate deviation from `cprotect.sty`">One deliberate deviation from <code>cprotect.sty</code></a></li><li><a href="#two-known-limitations-both-on-input-pdflatex-also-rejects" title="Two known limitations, both on input pdflatex also rejects">Two known limitations, both on input pdflatex also rejects</a></li></ul><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>contrib</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_contrib</a></div><h1>Module <span>cprotect_<wbr>sty</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_contrib/cprotect_sty.rs.html#1-265">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><code>cprotect.sty</code> — verbatim material inside macro arguments.</p>
+<p>There is <strong>no upstream Perl binding</strong> for this package (Perl LaTeXML 0.8.8
+reports <code>Warning:missing_file:cprotect</code> and then <code>Error:undefined:\cprotect</code>
+on the issue #347 witness), so this is a beyond-Perl contribution and lives
+in <code>latexml_contrib</code>.</p>
+<h3 id="what-the-package-does-and-how-the-port-differs"><a class="doc-anchor" href="#what-the-package-does-and-how-the-port-differs">§</a>What the package does, and how the port differs</h3>
+<p><code>cprotect.sty</code> (Bruno Le Floch, TL <code>tex/latex/cprotect/cprotect.sty</code>) works
+around a pure-TeX limitation: a braced macro argument is tokenized <em>before</em>
+the macro runs, so a <code>\verb</code> inside it never gets to change catcodes and the
+<code>\</code>, <code>%</code>, <code>#</code>, … of its body have already been mis-tokenized. Its machinery
+(<code>\CPT@readContent</code> / <code>\makeallother</code> / <code>\CPT@Write</code>) reads the argument with
+every catcode forced to 12, <strong>writes it out to <code>\jobname-N.cpt</code></strong>, and hands
+the command <code>\protect\input &lt;that file&gt;</code> instead — the re-<code>\input</code> is what
+re-tokenizes the text so <code>\verb</code> can finally do its job.</p>
+<p>LaTeXML has a mouth-level equivalent of “write it out and read it back”
+that needs no disk round-trip: eTeX’s <code>\scantokens</code> (<code>latexml_engine::etex</code>,
+Perl <code>eTeX.pool.ltxml</code> L251) opens a fresh <code>Mouth</code> over a string. So the
+port keeps cprotect’s <em>reading</em> half verbatim and replaces its <em>file</em> half:</p>
+<div class="example-wrap"><pre class="language-text"><code>\cprotect\section{&lt;raw&gt;}   ==&gt;   \section{\scantokens{&lt;raw&gt;}}</code></pre></div>
+<p><code>&lt;raw&gt;</code> is read with the specials neutralized (the <code>\makeallother</code> stand-in),
+except that <code>{</code>/<code>}</code> keep catcodes 1/2 so <code>read_balanced</code> does the brace
+counting that <code>\CPT@gobbleOneB</code> does by hand.</p>
+<p>Not ported: <code>\ReadVerbatimUntil</code> (the package-author-level generic verbatim
+reader) and the <code>gobbling-escape=</code>/<code>gobbling-letter=</code> options — the latter
+only tune the <code>^^E</code>/<code>^^L</code> sentinels of the file round-trip we do not perform.</p>
+<h3 id="one-deliberate-deviation-from-cprotectsty"><a class="doc-anchor" href="#one-deliberate-deviation-from-cprotectsty">§</a>One deliberate deviation from <code>cprotect.sty</code></h3>
+<p>A <strong>multi-letter signature keeps going after a single-token argument.</strong> In
+the package, <code>\CPT@read@mone</code> (the <code>m</code> branch for an argument that is not a
+<code>{</code>-group) is <code>\CPT@cs\CPT@next</code> — it emits the command and stops, dropping
+the rest of the signature. So <code>\cprotect[mm]\section*{\verb|\x|}</code> protects
+nothing and errors in pdflatex (<code>! LaTeX Error: \verb illegal in argument</code>,
+verified TL2025), the same as the plain <code>\cprotect\section*{…}</code> that the
+default <code>om</code> signature cannot express either. Here the loop continues, so
+<code>[mm]</code> is the working spelling for a starred sectioning command. This only
+ever <em>adds</em> a case the package errors on — every signature it handles
+correctly is handled identically. Plain <code>\cprotect\section*{…}</code> still
+degrades exactly as the package does (the <code>*</code> is the <code>m</code> argument, the group
+reaches <code>\section*</code> unprotected), so a document that works with pdflatex
+converts the same way here.</p>
+<h3 id="two-known-limitations-both-on-input-pdflatex-also-rejects"><a class="doc-anchor" href="#two-known-limitations-both-on-input-pdflatex-also-rejects">§</a>Two known limitations, both on input pdflatex also rejects</h3>
+<p><strong>1. An argument its command reads verbatim keeps the <code>%</code> sentinel.</strong>
+<code>\cprotect[mm]\href{http://x.org/a_b}{link \verb|\eta|}</code> yields
+<code>href="http://x.org/a_b%"</code>: the URL is consumed under semiverbatim catcodes,
+where <code>%</code> is catcode 12, so the end-of-line sentinel survives as a character.
+Anything we emit is at the mercy of a consumer that reads literally, and the
+sentinel has no character that is a comment under BOTH catcode regimes — <code>%</code>
+is precisely the one semiverbatim neutralizes. Two fixes were measured and
+rejected as worse: dropping the sentinel when the argument carries no escape
+trades the <code>%</code> for the mouth’s end-of-line, which HTML collapses at the end
+of a title but renders as a <strong>visible</strong> space mid-flow
+(<code>(a[b]c : …)</code> for <code>\cprotect\cmd[a[b]c]{…}</code>); and skipping the round trip
+altogether emits the neutralized catcode-12 space as a literal glyph
+(<code>short ̵toc</code>). pdflatex + cprotect cannot compile <code>\cprotect\href</code> at all
+(<code>TeX capacity exceeded</code>, no PDF), so there is no reference behaviour being
+missed — protecting a URL/filename/citekey argument is outside the package’s
+own domain.</p>
+<p><strong>2. A pre-tokenized argument gains a space inside <code>\verb</code>.</strong> When
+<code>\cprotect</code> is reached from inside another macro’s argument
+(<code>\wrap{\cprotect\emph{\verb|\zeta|}}</code>) the group has already been tokenized,
+so the raw read yields real CS tokens and <code>writable_tokens</code> spaces every
+control word: the body comes back as <code>\zeta </code> . Protection is impossible
+there in principle — the mis-tokenization happened at <code>\wrap</code>’s argument read
+— and the result is still far better than the unprotected <code>&lt;verbatim/&gt;</code> plus
+italic <code>ζ</code>. In the package this input is a hard error, since <code>\cprotect</code> is
+<code>\outer</code> and therefore illegal in any macro argument
+(<code>! Forbidden control sequence found while scanning use of \wrap</code>); this
+binding carries no <code>\outer</code> restriction, so it accepts more than TeX does.</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_contrib::cprotect_sty::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>
