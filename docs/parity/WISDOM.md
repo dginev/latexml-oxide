@@ -2526,3 +2526,35 @@ the binding-vs-raw precedence half is WISDOM #63), so
 WISDOM **`48.`** — `Scope::InPlace` for patching an existing definition, in the
 plain-numbered series, NOT `#48`: it says don't promote out of the frame, #66
 says do, but only past a bracket that is ours.
+
+## #67 A `.tex`/`.xml` suite must give every pair its own `#[test]` (`tex_tests!`) — the runtime `latexml_tests_internal` glob SIGABRTs on the SECOND conversion in one thread
+
+`latexml_tests_internal(dir, …)` (`latexml_oxide/src/util/test.rs`) globs a
+directory and converts every `.tex`/`.xml` pair **inside a single `#[test]`
+fn**, i.e. one libtest thread. The engine's roots are `#[thread_local]`
+*attribute* statics that are torn down per test by `reset_thread_engine`
+(WISDOM: `feedback_test_oom_leak`), so the second `initialize_singletons()` in
+the same thread re-runs the engine's `Let!`s against interner ids from the first
+one. That trips `slice::get_unchecked`'s precondition inside `state::let_i` — a
+**non-unwinding** panic, so it is a SIGABRT of the whole test binary, not a
+catchable failure, and the backtrace points at engine bootstrap with no trace of
+the fixture that actually triggered it.
+
+The tell is that the crash appears the moment a directory gains its *second*
+fixture and vanishes when it is removed — and that the same second document
+converts perfectly through the CLI. Two copies of the SAME passing `.tex`
+reproduce it, which is what separates "my new fixture is broken" from "this
+harness never ran two documents".
+
+`tex_tests!` (`latexml_codegen/src/testable.rs`) is the fix and the tree-wide
+convention: it emits one `#[test]` per pair at compile time, and libtest gives
+each its own thread. Every other directory-wide suite (`65_graphics`,
+`51_structure_rhai`, …) already uses it; `00_contrib` was the last runtime-glob
+holdout and only ever held one fixture, so the defect stayed latent until
+issue #347 added `tests/contrib/cprotect.{tex,xml}`. **Adding the second pair to
+a directory is what surfaces this** — if a suite still calls
+`latexml_tests_internal`, convert it rather than debugging the abort.
+
+Note the compile-time glob: a new pair needs the test target rebuilt (touching
+the suite's `.rs` suffices; `cargo clean` is the sledgehammer) or it is simply
+not discovered.
