@@ -93,7 +93,8 @@ pub fn custom_float_format(n: f64, tight: bool) -> String {
 }
 
 impl From<&str> for Float {
-  /// Non-numeric input silently becomes 0.0 (Perl parity — see From<String> impl).
+  /// Non-numeric input silently becomes 0.0 (Perl parity — see the
+  /// `From<String>` impl).
   fn from(spec: &str) -> Self { Float(spec.trim().parse::<f64>().unwrap_or(0.0)) }
 }
 impl From<String> for Float {

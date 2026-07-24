@@ -3,8 +3,8 @@
 //!
 //! When babel-italian (or babel-spanish, babel-portuges, …) is
 //! missing on disk, babel.sty L4175's `\InputIfFileExists{<lang>.ldf}`
-//! fails and babel errors with "Unknown option '<lang>'. Either you
-//! misspelled it or the language definition file <lang>.ldf was not
+//! fails and babel errors with "Unknown option '`<lang>`'. Either you
+//! misspelled it or the language definition file `<lang>`.ldf was not
 //! found".
 //!
 //! Each stub here:

@@ -1,7 +1,7 @@
 //! Stable, high-level conversion API for using `latexml` as a **library**.
 //!
 //! Downstream Rust crates depend on `latexml` and call one function — no
-//! binary, no manual [`Config`](latexml_core::common::Config) or
+//! binary, no manual [`Config`] or
 //! binding-dispatch wiring:
 //!
 //! ```no_run

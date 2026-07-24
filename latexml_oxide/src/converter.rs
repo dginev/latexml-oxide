@@ -619,7 +619,7 @@ impl Converter {
   /// This is the in-memory twin of [`crate::core_interface::DigestionAPI::digest_file`]:
   /// same top-level spine — establish the source context, open the source,
   /// `digest_internal` — but the content is *supplied* rather than read from
-  /// disk. It shares [`crate::core_interface::establish_source_context`] with
+  /// disk. It shares `core_interface::establish_source_context` with
   /// `digest_file` (so `SOURCEFILE`/`SOURCEDIRECTORY`/`SEARCHPATHS`/
   /// `GRAPHICSPATHS`/`\jobname` can't drift), making sibling
   /// `\usepackage`/`\input`/`\includegraphics` of local files resolve. The
@@ -659,7 +659,7 @@ impl Converter {
 /// Low-level and *position-agnostic*: it does NOT touch the document-global
 /// `SOURCEDIRECTORY`/`SEARCHPATHS`, so it is safe for a continuation (the
 /// forked child's body over already-inherited state) or a nested include. For
-/// the *main* document load, go through [`Converter::digest_named`], which
+/// the *main* document load, go through `Converter::digest_named`, which
 /// installs the document directory first.
 pub fn open_named_in_memory_mouth(name: &str, content: String) -> Result<()> {
   use latexml_core::{

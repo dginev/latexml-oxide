@@ -51,7 +51,7 @@ pub struct MathML {
   /// Whether to include TeX source annotation in parallel MathML.
   /// Perl: --mathtex adds <m:annotation encoding='application/x-tex'>
   mathtex:         bool,
-  /// Whether to add intent=":literal" on all <math> elements.
+  /// Whether to add intent=":literal" on all `<math>` elements.
   /// ar5iv.sty.ltxml monkey-patches outerWrapper to add this.
   intent_literal:  bool,
   /// Parallel-markup secondaries (e.g. a Content-MathML processor under a
@@ -99,7 +99,7 @@ impl MathML {
     }
   }
 
-  /// Enable intent=":literal" on all <math> elements.
+  /// Enable intent=":literal" on all `<math>` elements.
   /// Perl: ar5iv.sty.ltxml monkey-patches outerWrapper for this.
   pub fn with_intent_literal(mut self, enable: bool) -> Self {
     self.intent_literal = enable;
@@ -143,7 +143,8 @@ impl MathML {
   }
 
   /// Attach parallel-markup secondaries to this (primary) processor. Their
-  /// conversions are merged into one `<m:semantics>` by [`combine_parallel`]
+  /// conversions are merged into one `<m:semantics>` by
+  /// [`combine_parallel`](MathProcessor::combine_parallel)
   /// during the primary's pass. Mirrors Perl `MathProcessor`'s primary holding
   /// its parallel secondaries.
   pub fn with_secondaries(mut self, secondaries: Vec<Box<dyn MathProcessor>>) -> Self {

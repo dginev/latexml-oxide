@@ -401,7 +401,7 @@ impl ArgWrap {
   }
 
   /// Borrow the token slice backing an ArgWrap::Tokens, falling back
-  /// to an owned Vec<Token> for the other variants. Avoids a full
+  /// to an owned `Vec<Token>` for the other variants. Avoids a full
   /// Tokens clone in the common `ArgWrap::Tokens(_)` case.
   pub fn unlist_cow(&self) -> Cow<'_, [Token]> {
     match self {

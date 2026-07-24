@@ -2,7 +2,7 @@
 //!
 //! User-bundled template with author/affiliation/contribution-list
 //! helpers built on \addtolist. Our raw-load fails on the
-//! \addtolist[5] (5-arg, optional-arg-first) signature; provide
+//! `\addtolist[5]` (5-arg, optional-arg-first) signature; provide
 //! content-preserving stubs so the metadata reaches XML output.
 //!
 //! Witness: 2503.04598 (Seed-1.5 thinking paper).

@@ -466,8 +466,8 @@ fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
 /// verifies the matched node's children match the specific pattern.
 ///
 /// Pattern types:
-/// - "subscript": node is XMApp[@role='POSTSUBSCRIPT'], check base text + optional sub text
-/// - "prime": node is XMApp[@role='POSTSUPERSCRIPT'], check base text
+/// - "subscript": node is `XMApp[@role='POSTSUBSCRIPT']`, check base text + optional sub text
+/// - "prime": node is `XMApp[@role='POSTSUPERSCRIPT']`, check base text
 /// - "accent": node is XMApp, check accent name in first child, optional base text
 /// - "simple": no extra filtering needed (XPath is specific enough)
 pub fn declare_node_matches(document: &Document, node: &Node, pat: &DeclarePattern) -> bool {

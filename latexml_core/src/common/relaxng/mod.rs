@@ -137,19 +137,21 @@ pub enum Pattern {
 /// The mutable fields beyond `name` and `modules` are populated during
 /// `simplify`:
 ///
-/// * [`elementdefs`]      — pattern qname → element tag, when a pattern resolves to a single
-///   element.
-/// * [`element_reverse_defs`] — inverse of `elementdefs`.
-/// * [`elements`]         — element tag → list of body patterns, accumulating across overrides /
-///   re-definitions.
-/// * [`defs`]             — pattern qname → its (combined) body pattern.
-/// * [`def_combiner`]     — pattern qname → the combiner that won the most recent definition.
-/// * [`uses_name`]        — pattern qname → set of containers that reference it: `pattern:QNAME`
+/// * [`elementdefs`](Relaxng::elementdefs) — pattern qname → element tag, when a pattern resolves
+///   to a single element.
+/// * [`element_reverse_defs`](Relaxng::element_reverse_defs) — inverse of `elementdefs`.
+/// * [`elements`](Relaxng::elements) — element tag → list of body patterns, accumulating across
+///   overrides / re-definitions.
+/// * [`defs`](Relaxng::defs) — pattern qname → its (combined) body pattern.
+/// * [`def_combiner`](Relaxng::def_combiner) — pattern qname → the combiner that won the most
+///   recent definition.
+/// * [`uses_name`](Relaxng::uses_name) — pattern qname → set of containers that reference it: `pattern:QNAME`
 ///   for refs at define scope, `element:TAG@pattern:HOST` for refs inside an `element TAG {…}`
 ///   hosted by define HOST (bare `element:TAG` when the element sits outside any define). Drives
 ///   the "Used by" lists in the schema docs; `tex::symbol_uses` reports the element or the host
 ///   pattern, whichever identifies the definition uniquely.
-/// * [`internal_grammars`] — counter for naming embedded `<grammar>` blocks (`grammar1`,
+/// * [`internal_grammars`](Relaxng::internal_grammars) — counter for naming embedded `<grammar>`
+///   blocks (`grammar1`,
 ///   `grammar2`, …).
 #[derive(Debug)]
 pub struct Relaxng {

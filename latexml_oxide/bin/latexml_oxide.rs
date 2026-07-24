@@ -93,7 +93,7 @@ struct Cli {
   #[arg(long, alias = "nokeepXMath")]
   noxmath: bool,
 
-  /// Wrap MathML in a <semantics> element with the TeX source as annotation.
+  /// Wrap MathML in a `<semantics>` element with the TeX source as annotation.
   #[arg(long)]
   mathtex: bool,
 
