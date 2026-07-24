@@ -51,7 +51,8 @@ thread_local! {
 /// Override the cooperative soft-RSS memory budget, in bytes. `Some(0)`
 /// disables the budget; `Some(n)` caps at `n` bytes; `None` restores the
 /// `LATEXML_RSS_CAP_BYTES` env / built-in default. Mirrors the `--max-memory`
-/// CLI convention where `0` means "no limit". See [`resolve_rss_cap`].
+/// CLI convention where `0` means "no limit". See `resolve_rss_cap` (private)
+/// for the precedence order.
 pub fn set_memory_cap(bytes: Option<u64>) { RSS_CAP_OVERRIDE.with(|c| c.set(bytes)); }
 
 /// Derive the cooperative soft-RSS budget (bytes) from the hard `--max-memory`
