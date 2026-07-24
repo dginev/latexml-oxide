@@ -795,9 +795,6 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
   }
 }
 
-/// Given a Qualified name, possibly prefixed with a namespace prefix,
-/// as defined by the code namespace mapping,
-/// return the NamespaceURI and localname.
 /// Read a possibly-PREFIXED attribute off a node, resolving the prefix the same
 /// way `Document::set_attribute` does on the write side (via [`decode_qname`]).
 ///
@@ -845,6 +842,9 @@ fn attribute_namespace(key: &str) -> Option<String> {
   }
 }
 
+/// Given a Qualified name, possibly prefixed with a namespace prefix,
+/// as defined by the code namespace mapping,
+/// return the NamespaceURI and localname.
 pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
   match PREFIXED_LOCALNAME_RE.captures(codetag) {
     Some(captures) => {

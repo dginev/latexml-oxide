@@ -96,12 +96,17 @@ pub(super) fn overrides_all_exist(engine: &Engine) -> Vec<&'static str> {
 
 /// Where the in-depth documentation for one `.rhai` call lives.
 enum Doc {
-  /// A thin wrapper over a documented Rust item — link straight to it, so the
-  /// reader lands on the real semantics instead of a paraphrase that can rot.
-  /// Emitted as a rustdoc INTRA-DOC link, which means rustdoc itself validates
-  /// the path: a renamed or deleted target is a `cargo doc` warning naming the
-  /// line in `API.md`, so a dead link cannot ship unnoticed.
-  Rust(&'static str),
+  /// A short explanation, plus the documented Rust item that implements the
+  /// call: `Rust(summary, path)`.
+  ///
+  /// BOTH, deliberately. The link is what keeps the reference from rotting —
+  /// it goes to the real semantics, and being a rustdoc INTRA-DOC link it is
+  /// validated by rustdoc itself, so a renamed target is a `cargo doc` warning
+  /// naming the line in `API.md` rather than a dead anchor nobody notices. But
+  /// a link alone makes the reader click 145 times to find out what anything
+  /// does, so every row also says it in one line. The summary is what the call
+  /// means TO A BINDING AUTHOR; the link carries the exact semantics.
+  Rust(&'static str, &'static str),
   /// No single Rust item to point at — a Rhai-only helper, or a shim whose
   /// whole behaviour lives in the registration. Written out here, because "no
   /// counterpart" must not mean "no documentation". Rendered as Markdown, so a
@@ -122,23 +127,38 @@ enum Doc {
 const DOCS: &[(&str, Doc)] = &[
   (
     "AddToCounter",
-    Doc::Rust("latexml_core::binding::counter::dialect::add_to_counter"),
+    Doc::Rust(
+      "Add a number to a counter.",
+      "latexml_core::binding::counter::dialect::add_to_counter",
+    ),
   ),
   (
     "AssignCatcode",
-    Doc::Rust("latexml_core::state::assign_catcode"),
+    Doc::Rust(
+      "Set a character's category code.",
+      "latexml_core::state::assign_catcode",
+    ),
   ),
   (
     "AssignMapping",
-    Doc::Rust("latexml_core::state::assign_mapping"),
+    Doc::Rust(
+      "Bind one key inside a named mapping.",
+      "latexml_core::state::assign_mapping",
+    ),
   ),
   (
     "AssignMeaning",
-    Doc::Rust("latexml_core::state::assign_meaning"),
+    Doc::Rust(
+      "Make a control sequence mean a definition, or another token.",
+      "latexml_core::state::assign_meaning",
+    ),
   ),
   (
     "AssignValue",
-    Doc::Rust("latexml_core::state::assign_value"),
+    Doc::Rust(
+      "Bind a key in the value table, with a scope.",
+      "latexml_core::state::assign_value",
+    ),
   ),
   (
     "Command",
@@ -148,7 +168,10 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "CounterValue",
-    Doc::Rust("latexml_core::binding::counter::dialect::counter_value"),
+    Doc::Rust(
+      "The current value of a counter.",
+      "latexml_core::binding::counter::dialect::counter_value",
+    ),
   ),
   (
     "DeclareOption",
@@ -162,32 +185,56 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "DefColumnType",
-    Doc::Rust("latexml_core::binding::def::dialect::def_macro"),
+    Doc::Rust(
+      "Define a tabular column type, as its rewrite expansion.",
+      "latexml_core::binding::def::dialect::def_macro",
+    ),
   ),
   (
     "DefConditional",
-    Doc::Rust("latexml_core::binding::def::dialect::def_conditional"),
+    Doc::Rust(
+      "Define a conditional control sequence.",
+      "latexml_core::binding::def::dialect::def_conditional",
+    ),
   ),
   (
     "DefConstructor",
-    Doc::Rust("latexml_core::binding::def::dialect::def_constructor"),
+    Doc::Rust(
+      "Define a control sequence that constructs XML.",
+      "latexml_core::binding::def::dialect::def_constructor",
+    ),
   ),
   (
     "DefEnvironment",
-    Doc::Rust("latexml_core::binding::def::dialect::def_environment"),
+    Doc::Rust(
+      "Define an environment that constructs XML.",
+      "latexml_core::binding::def::dialect::def_environment",
+    ),
   ),
-  ("DefKeyVal", Doc::Rust("latexml_core::keyval::define")),
+  (
+    "DefKeyVal",
+    Doc::Rust(
+      "Declare one key of a keyval family.",
+      "latexml_core::keyval::define",
+    ),
+  ),
   (
     "DefLigature",
     Doc::Note("Register a text ligature pattern."),
   ),
   (
     "DefMacro",
-    Doc::Rust("latexml_core::binding::def::dialect::def_macro"),
+    Doc::Rust(
+      "Define a macro's expansion.",
+      "latexml_core::binding::def::dialect::def_macro",
+    ),
   ),
   (
     "DefMath",
-    Doc::Rust("latexml_core::binding::def::dialect::def_math"),
+    Doc::Rust(
+      "Define a mathematical symbol or function.",
+      "latexml_core::binding::def::dialect::def_math",
+    ),
   ),
   (
     "DefMathLigature",
@@ -199,20 +246,35 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "DefPrimitive",
-    Doc::Rust("latexml_core::binding::def::dialect::def_primitive"),
+    Doc::Rust(
+      "Define a primitive: it runs at digestion, after expansion.",
+      "latexml_core::binding::def::dialect::def_primitive",
+    ),
   ),
   (
     "DefRegister",
-    Doc::Rust("latexml_core::binding::def::dialect::def_register"),
+    Doc::Rust(
+      "Define a register with an initial value.",
+      "latexml_core::binding::def::dialect::def_register",
+    ),
   ),
   (
     "DefRewrite",
     Doc::Note("Register a document rewrite rule (data form, or a replace closure)."),
   ),
-  ("Digest", Doc::Rust("latexml_core::stomach::digest")),
+  (
+    "Digest",
+    Doc::Rust(
+      "Digest tokens into boxes, independent of the current gullet.",
+      "latexml_core::stomach::digest",
+    ),
+  ),
   (
     "DigestText",
-    Doc::Rust("latexml_core::binding::content::digest_text"),
+    Doc::Rust(
+      "Digest tokens in text mode, whatever mode the caller is in.",
+      "latexml_core::binding::content::digest_text",
+    ),
   ),
   (
     "Error",
@@ -222,12 +284,24 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "ExecuteOptions",
-    Doc::Rust("latexml_core::binding::content::execute_options"),
+    Doc::Rust(
+      "Run the handlers for a list of class/package options.",
+      "latexml_core::binding::content::execute_options",
+    ),
   ),
-  ("Expand", Doc::Rust("latexml_core::gullet::do_expand")),
+  (
+    "Expand",
+    Doc::Rust(
+      "Fully expand tokens, without digesting them.",
+      "latexml_core::gullet::do_expand",
+    ),
+  ),
   (
     "ExpandPartially",
-    Doc::Rust("latexml_core::gullet::do_expand_partially"),
+    Doc::Rust(
+      "Expand tokens only up to the first unexpandable one.",
+      "latexml_core::gullet::do_expand_partially",
+    ),
   ),
   ("Fatal", Doc::Note("End the conversion with a `Fatal:`.")),
   (
@@ -236,16 +310,25 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "GetKeyVals",
-    Doc::Rust("latexml_core::keyval::split_keyval_source"),
+    Doc::Rust(
+      "Parse a whole keyval string into a map.",
+      "latexml_core::keyval::split_keyval_source",
+    ),
   ),
   ("Info", Doc::Note("Log an `Info:` line.")),
   (
     "InputDefinitions",
-    Doc::Rust("latexml_core::binding::content::input_definitions"),
+    Doc::Rust(
+      "Find and load the definitions for a package or class.",
+      "latexml_core::binding::content::input_definitions",
+    ),
   ),
   (
     "IsDefined",
-    Doc::Rust("latexml_core::binding::def::dialect::is_defined_token"),
+    Doc::Rust(
+      "Whether a control sequence is defined, and not `\\let` to `\\relax`.",
+      "latexml_core::binding::def::dialect::is_defined_token",
+    ),
   ),
   (
     "LaTeXMLVersion",
@@ -253,15 +336,33 @@ const DOCS: &[(&str, Doc)] = &[
       "The engine version string — the `LATEXML_VERSION` value ([`lookup_string`](latexml_core::state::lookup_string)).",
     ),
   ),
-  ("Let", Doc::Rust("latexml_core::state::let_i")),
+  (
+    "Let",
+    Doc::Rust(
+      "TeX's `\\let`: copy one token's meaning onto another.",
+      "latexml_core::state::let_i",
+    ),
+  ),
   (
     "LoadClass",
-    Doc::Rust("latexml_core::binding::content::load_class"),
+    Doc::Rust(
+      "Load a document class, falling back to a prefix match then OmniBus.",
+      "latexml_core::binding::content::load_class",
+    ),
   ),
-  ("LookupBool", Doc::Rust("latexml_core::state::lookup_bool")),
+  (
+    "LookupBool",
+    Doc::Rust(
+      "Read a value as a boolean.",
+      "latexml_core::state::lookup_bool",
+    ),
+  ),
   (
     "LookupCatcode",
-    Doc::Rust("latexml_core::state::lookup_catcode"),
+    Doc::Rust(
+      "The category code currently in force for a character.",
+      "latexml_core::state::lookup_catcode",
+    ),
   ),
   (
     "LookupDefinition",
@@ -269,35 +370,59 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "LookupMapping",
-    Doc::Rust("latexml_core::state::with_mapping"),
+    Doc::Rust(
+      "Read one key out of a named mapping.",
+      "latexml_core::state::with_mapping",
+    ),
   ),
   (
     "LookupMeaning",
-    Doc::Rust("latexml_core::state::lookup_meaning"),
+    Doc::Rust(
+      "What a token means right now: its definition, or itself.",
+      "latexml_core::state::lookup_meaning",
+    ),
   ),
   (
     "LookupNumber",
-    Doc::Rust("latexml_core::state::lookup_number"),
+    Doc::Rust(
+      "Read a value as a number.",
+      "latexml_core::state::lookup_number",
+    ),
   ),
   (
     "LookupString",
-    Doc::Rust("latexml_core::state::lookup_string"),
+    Doc::Rust(
+      "Read a value as a string; empty when unset.",
+      "latexml_core::state::lookup_string",
+    ),
   ),
   (
     "LookupTokens",
-    Doc::Rust("latexml_core::state::lookup_tokens"),
+    Doc::Rust(
+      "Read a value as tokens.",
+      "latexml_core::state::lookup_tokens",
+    ),
   ),
   (
     "LookupValue",
-    Doc::Rust("latexml_core::state::lookup_value"),
+    Doc::Rust(
+      "Read a value, whatever type it was stored as.",
+      "latexml_core::state::lookup_value",
+    ),
   ),
   (
     "MergeFont",
-    Doc::Rust("latexml_core::binding::content::merge_font"),
+    Doc::Rust(
+      "Merge font attributes into the current font, group-locally.",
+      "latexml_core::binding::content::merge_font",
+    ),
   ),
   (
     "NewCounter",
-    Doc::Rust("latexml_core::binding::counter::dialect::new_counter"),
+    Doc::Rust(
+      "Declare a new counter.",
+      "latexml_core::binding::counter::dialect::new_counter",
+    ),
   ),
   (
     "NoteLog",
@@ -309,79 +434,157 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "ParseXML",
-    Doc::Rust("latexml_core::common::xml::parse_fragment"),
+    Doc::Rust(
+      "Parse a markup chunk into nodes; a bare fragment is fine.",
+      "latexml_core::common::xml::parse_fragment",
+    ),
   ),
   (
     "PassOptions",
-    Doc::Rust("latexml_core::binding::content::pass_options"),
+    Doc::Rust(
+      "Forward options to a package or class not yet loaded.",
+      "latexml_core::binding::content::pass_options",
+    ),
   ),
   (
     "ProcessOptions",
-    Doc::Rust("latexml_core::binding::content::process_options"),
+    Doc::Rust(
+      "Execute the options declared so far, in order or as given.",
+      "latexml_core::binding::content::process_options",
+    ),
   ),
   (
     "ProgressSpindown",
-    Doc::Rust("latexml_core::common::error::note_end"),
+    Doc::Rust(
+      "Close a named progress stage in the log.",
+      "latexml_core::common::error::note_end",
+    ),
   ),
   (
     "ProgressSpinup",
-    Doc::Rust("latexml_core::common::error::note_begin"),
+    Doc::Rust(
+      "Open a named progress stage in the log.",
+      "latexml_core::common::error::note_begin",
+    ),
   ),
   (
     "ProgressStep",
-    Doc::Rust("latexml_core::common::error::progress_step"),
+    Doc::Rust(
+      "Advance the progress indicator; a no-op in this port.",
+      "latexml_core::common::error::progress_step",
+    ),
   ),
-  ("RawTeX", Doc::Rust("latexml_core::stomach::raw_tex")),
-  ("ReadArg", Doc::Rust("latexml_core::gullet::read_arg")),
+  (
+    "RawTeX",
+    Doc::Rust(
+      "Process a chunk of literal TeX as definitions.",
+      "latexml_core::stomach::raw_tex",
+    ),
+  ),
+  (
+    "ReadArg",
+    Doc::Rust(
+      "Read one TeX argument: a token, or a braced group.",
+      "latexml_core::gullet::read_arg",
+    ),
+  ),
   (
     "ReadOptional",
-    Doc::Rust("latexml_core::gullet::read_optional"),
+    Doc::Rust(
+      "Read a LaTeX optional `[…]` argument, or a default.",
+      "latexml_core::gullet::read_optional",
+    ),
   ),
-  ("ReadUntil", Doc::Rust("latexml_core::gullet::read_until")),
+  (
+    "ReadUntil",
+    Doc::Rust(
+      "Read a balanced token sequence up to a delimiter.",
+      "latexml_core::gullet::read_until",
+    ),
+  ),
   (
     "RefCurrentID",
-    Doc::Rust("latexml_core::binding::counter::dialect::ref_current_id"),
+    Doc::Rust(
+      "Reuse the last id without stepping, when its box was pruned.",
+      "latexml_core::binding::counter::dialect::ref_current_id",
+    ),
   ),
   (
     "RefStepCounter",
-    Doc::Rust("latexml_core::binding::counter::dialect::ref_step_counter"),
+    Doc::Rust(
+      "Step a counter and return its `refnum` and `id`.",
+      "latexml_core::binding::counter::dialect::ref_step_counter",
+    ),
   ),
   (
     "RefStepID",
-    Doc::Rust("latexml_core::binding::counter::dialect::ref_step_id"),
+    Doc::Rust(
+      "Step only the uncounter, for an UN-numbered unit; returns the id.",
+      "latexml_core::binding::counter::dialect::ref_step_id",
+    ),
   ),
   (
     "RegisterDocumentNamespace",
-    Doc::Rust("latexml_core::common::model::register_document_namespace"),
+    Doc::Rust(
+      "Bind an OUTPUT-document prefix to a namespace URI.",
+      "latexml_core::common::model::register_document_namespace",
+    ),
   ),
   (
     "RegisterNamespace",
-    Doc::Rust("latexml_core::common::model::register_namespace"),
+    Doc::Rust(
+      "Bind a CODE prefix to a namespace URI.",
+      "latexml_core::common::model::register_namespace",
+    ),
   ),
   (
     "RelaxNGSchema",
-    Doc::Rust("latexml_core::binding::content::select_relaxng_schema"),
+    Doc::Rust(
+      "Select the RelaxNG schema defining the output language.",
+      "latexml_core::binding::content::select_relaxng_schema",
+    ),
   ),
   (
     "RequirePackage",
-    Doc::Rust("latexml_core::binding::content::require_package"),
+    Doc::Rust(
+      "Load a package.",
+      "latexml_core::binding::content::require_package",
+    ),
   ),
   (
     "RequireResource",
-    Doc::Rust("latexml_core::binding::content::require_resource"),
+    Doc::Rust(
+      "Attach a CSS or JavaScript resource to the document.",
+      "latexml_core::binding::content::require_resource",
+    ),
   ),
   (
     "ResetCounter",
-    Doc::Rust("latexml_core::binding::counter::dialect::reset_counter"),
+    Doc::Rust(
+      "Reset a counter to zero.",
+      "latexml_core::binding::counter::dialect::reset_counter",
+    ),
   ),
   (
     "Revert",
-    Doc::Rust("latexml_core::digested::Digested::revert"),
+    Doc::Rust(
+      "A digested value back to the source tokens that made it.",
+      "latexml_core::digested::Digested::revert",
+    ),
   ),
-  ("SkipSpaces", Doc::Rust("latexml_core::gullet::skip_spaces")),
+  (
+    "SkipSpaces",
+    Doc::Rust(
+      "Discard any run of spaces at the head of the input.",
+      "latexml_core::gullet::skip_spaces",
+    ),
+  ),
   (
     "StepCounter",
-    Doc::Rust("latexml_core::binding::counter::dialect::step_counter"),
+    Doc::Rust(
+      "Step a counter; usually you want `RefStepCounter` instead.",
+      "latexml_core::binding::counter::dialect::step_counter",
+    ),
   ),
   (
     "T_CS",
@@ -391,48 +594,102 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "Tag",
-    Doc::Rust("latexml_core::binding::content::install_tag"),
+    Doc::Rust(
+      "Declare document-model properties for one element tag.",
+      "latexml_core::binding::content::install_tag",
+    ),
   ),
-  ("TeX", Doc::Rust("latexml_core::stomach::digest")),
+  (
+    "TeX",
+    Doc::Rust(
+      "Tokenize a TeX source string (style catcodes) and digest it.",
+      "latexml_core::stomach::digest",
+    ),
+  ),
   (
     "ToAttribute",
-    Doc::Rust("latexml_core::digested::Digested::to_attribute"),
+    Doc::Rust(
+      "The digested value as a string fit for an XML attribute.",
+      "latexml_core::digested::Digested::to_attribute",
+    ),
   ),
   (
     "ToString",
     Doc::Note("The digested value as plain text (its `Display`)."),
   ),
-  ("Today", Doc::Rust("latexml_engine::base_utilities::today")),
-  ("Tokenize", Doc::Rust("latexml_core::mouth::tokenize")),
+  (
+    "Today",
+    Doc::Rust(
+      "Today's date, as `\\today` renders it.",
+      "latexml_engine::base_utilities::today",
+    ),
+  ),
+  (
+    "Tokenize",
+    Doc::Rust(
+      "Tokenize a string under the standard catcode table.",
+      "latexml_core::mouth::tokenize",
+    ),
+  ),
   (
     "TokenizeInternal",
-    Doc::Rust("latexml_core::mouth::tokenize_internal"),
+    Doc::Rust(
+      "Tokenize a string under the style-file table, where `@` is a letter.",
+      "latexml_core::mouth::tokenize_internal",
+    ),
   ),
-  ("UnTeX", Doc::Rust("latexml_core::tokens::Tokens::untex")),
+  (
+    "UnTeX",
+    Doc::Rust(
+      "Tokens back to the TeX source that could have produced them.",
+      "latexml_core::tokens::Tokens::untex",
+    ),
+  ),
   (
     "Warn",
     Doc::Note("Log a `Warning:` with the given category and object."),
   ),
-  ("XEquals", Doc::Rust("latexml_core::state::x_equals")),
+  (
+    "XEquals",
+    Doc::Rust(
+      "Whether two control sequences have the same meaning.",
+      "latexml_core::state::x_equals",
+    ),
+  ),
   (
     "absorb",
-    Doc::Rust("latexml_core::document::Document::absorb"),
+    Doc::Rust(
+      "Absorb a digested value at the current insertion point.",
+      "latexml_core::document::Document::absorb",
+    ),
   ),
   (
     "absorbProperty",
-    Doc::Rust("latexml_core::document::Document::absorb"),
+    Doc::Rust(
+      "Absorb one of the whatsit's properties, by name.",
+      "latexml_core::document::Document::absorb",
+    ),
   ),
   (
     "absorbString",
-    Doc::Rust("latexml_core::document::Document::absorb_string"),
+    Doc::Rust(
+      "Absorb a plain string at the current insertion point.",
+      "latexml_core::document::Document::absorb_string",
+    ),
   ),
   (
     "addClass",
-    Doc::Rust("latexml_core::document::Document::add_class"),
+    Doc::Rust(
+      "Add CSS classes to a node, keeping those it already has.",
+      "latexml_core::document::Document::add_class",
+    ),
   ),
   (
     "appendClone",
-    Doc::Rust("latexml_core::document::Document::append_clone"),
+    Doc::Rust(
+      "Append COPIES of nodes, with fresh ids.",
+      "latexml_core::document::Document::append_clone",
+    ),
   ),
   ("arg", Doc::Note("Append one argument to the command.")),
   (
@@ -455,16 +712,34 @@ const DOCS: &[(&str, Doc)] = &[
       "[`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group.",
     ),
   ),
-  ("children", Doc::Rust("libxml::tree::Node::get_child_nodes")),
+  (
+    "children",
+    Doc::Rust(
+      "The node's child nodes.",
+      "libxml::tree::Node::get_child_nodes",
+    ),
+  ),
   (
     "closeElement",
-    Doc::Rust("latexml_core::document::Document::close_element"),
+    Doc::Rust(
+      "Close the deepest open element of that name.",
+      "latexml_core::document::Document::close_element",
+    ),
   ),
   (
     "closeElementAt",
-    Doc::Rust("latexml_core::document::Document::close_element_at"),
+    Doc::Rust(
+      "Close an element that was opened with `openElementAt`.",
+      "latexml_core::document::Document::close_element_at",
+    ),
   ),
-  ("content", Doc::Rust("libxml::tree::Node::get_content")),
+  (
+    "content",
+    Doc::Rust(
+      "The node's text content.",
+      "libxml::tree::Node::get_content",
+    ),
+  ),
   (
     "current_dir",
     Doc::Note("Run the command in this working directory."),
@@ -475,43 +750,73 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "findnode",
-    Doc::Rust("latexml_core::document::Document::findnode"),
+    Doc::Rust(
+      "The first node matching an XPath.",
+      "latexml_core::document::Document::findnode",
+    ),
   ),
   (
     "findnodes",
-    Doc::Rust("latexml_core::document::Document::findnodes"),
+    Doc::Rust(
+      "Every node matching an XPath.",
+      "latexml_core::document::Document::findnodes",
+    ),
   ),
   (
     "firstChild",
-    Doc::Rust("libxml::tree::Node::get_first_child"),
+    Doc::Rust(
+      "The node's first child, or `()`.",
+      "libxml::tree::Node::get_first_child",
+    ),
   ),
   (
     "generateID",
-    Doc::Rust("latexml_core::document::Document::generate_id"),
+    Doc::Rust(
+      "Give a node an `xml:id`, if it has none.",
+      "latexml_core::document::Document::generate_id",
+    ),
   ),
   (
     "getAttribute",
-    Doc::Rust("latexml_core::common::model::get_node_attribute"),
+    Doc::Rust(
+      "An attribute's value, namespace-aware so `xml:id` is found.",
+      "latexml_core::common::model::get_node_attribute",
+    ),
   ),
   (
     "getElement",
-    Doc::Rust("latexml_core::document::Document::get_element"),
+    Doc::Rust(
+      "The element at, or containing, the insertion point.",
+      "latexml_core::document::Document::get_element",
+    ),
   ),
   (
     "getNode",
-    Doc::Rust("latexml_core::document::Document::get_node"),
+    Doc::Rust(
+      "The current insertion point.",
+      "latexml_core::document::Document::get_node",
+    ),
   ),
   (
     "hasAttribute",
-    Doc::Rust("latexml_core::common::model::get_node_attribute"),
+    Doc::Rust(
+      "Whether the node carries that attribute.",
+      "latexml_core::common::model::get_node_attribute",
+    ),
   ),
   (
     "insertElement",
-    Doc::Rust("latexml_core::document::Document::insert_element"),
+    Doc::Rust(
+      "Open, absorb and close in one step; returns the new element.",
+      "latexml_core::document::Document::insert_element",
+    ),
   ),
   (
     "insertXML",
-    Doc::Rust("latexml_core::document::Document::insert_nodes"),
+    Doc::Rust(
+      "Splice ALREADY-PARSED nodes in at the insertion point.",
+      "latexml_core::document::Document::insert_nodes",
+    ),
   ),
   (
     "lookup_value",
@@ -521,24 +826,42 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "maybeCloseElement",
-    Doc::Rust("latexml_core::document::Document::maybe_close_element"),
+    Doc::Rust(
+      "Close an element if it is open and closeable; otherwise do nothing.",
+      "latexml_core::document::Document::maybe_close_element",
+    ),
   ),
-  ("name", Doc::Rust("libxml::tree::Node::get_name")),
+  (
+    "name",
+    Doc::Rust("The node's local name.", "libxml::tree::Node::get_name"),
+  ),
   (
     "neutralize_font",
-    Doc::Rust("latexml_engine::base_utilities::neutralize_font"),
+    Doc::Rust(
+      "Reset the text and math fonts to their defaults, group-locally.",
+      "latexml_engine::base_utilities::neutralize_font",
+    ),
   ),
   (
     "nextSibling",
-    Doc::Rust("libxml::tree::Node::get_next_sibling"),
+    Doc::Rust(
+      "The node's next sibling, or `()`.",
+      "libxml::tree::Node::get_next_sibling",
+    ),
   ),
   (
     "openElement",
-    Doc::Rust("latexml_core::document::Document::open_element"),
+    Doc::Rust(
+      "Open an element and make it the insertion point.",
+      "latexml_core::document::Document::open_element",
+    ),
   ),
   (
     "openElementAt",
-    Doc::Rust("latexml_core::document::Document::open_element_at"),
+    Doc::Rust(
+      "Open an element at a given node rather than the insertion point.",
+      "latexml_core::document::Document::open_element_at",
+    ),
   ),
   (
     "output",
@@ -554,7 +877,10 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "prevSibling",
-    Doc::Rust("libxml::tree::Node::get_prev_sibling"),
+    Doc::Rust(
+      "The node's previous sibling, or `()`.",
+      "libxml::tree::Node::get_prev_sibling",
+    ),
   ),
   (
     "propertyString",
@@ -582,30 +908,54 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "qname",
-    Doc::Rust("latexml_core::common::model::with_node_qname"),
+    Doc::Rust(
+      "The node's qualified name (`ltx:section`, `#PCDATA`, …).",
+      "latexml_core::common::model::with_node_qname",
+    ),
   ),
   (
     "removeAttribute",
-    Doc::Rust("latexml_core::common::model::remove_node_attribute"),
+    Doc::Rust(
+      "Remove a possibly-prefixed attribute.",
+      "latexml_core::common::model::remove_node_attribute",
+    ),
   ),
   (
     "removeNode",
-    Doc::Rust("latexml_core::document::Document::remove_node"),
+    Doc::Rust(
+      "Remove a node, releasing the ids under it.",
+      "latexml_core::document::Document::remove_node",
+    ),
   ),
   (
     "renameNode",
-    Doc::Rust("latexml_core::document::Document::rename_node"),
+    Doc::Rust(
+      "Rename an element, rebuilding it through the model.",
+      "latexml_core::document::Document::rename_node",
+    ),
   ),
   (
     "replaceNode",
-    Doc::Rust("latexml_core::document::Document::replace_node"),
+    Doc::Rust(
+      "Replace a node by other nodes.",
+      "latexml_core::document::Document::replace_node",
+    ),
   ),
   // `setAttribute` is deliberately absent: it is registered on two handles and
   // means something different on each, so it lives in HANDLE_DOCS.
-  ("setContent", Doc::Rust("libxml::tree::Node::set_content")),
+  (
+    "setContent",
+    Doc::Rust(
+      "Replace the node's text content.",
+      "libxml::tree::Node::set_content",
+    ),
+  ),
   (
     "setNode",
-    Doc::Rust("latexml_core::document::Document::set_node"),
+    Doc::Rust(
+      "Move the insertion point to a node.",
+      "latexml_core::document::Document::set_node",
+    ),
   ),
   (
     "setProperty",
@@ -617,7 +967,13 @@ const DOCS: &[(&str, Doc)] = &[
     "toString",
     Doc::Note("The node and its subtree serialized back to markup — the inverse of `ParseXML`."),
   ),
-  ("unlink", Doc::Rust("libxml::tree::Node::unlink")),
+  (
+    "unlink",
+    Doc::Rust(
+      "Detach the node from its tree.",
+      "libxml::tree::Node::unlink",
+    ),
+  ),
   (
     "unshiftAfterConstruct",
     Doc::Note("Prepend a hook to that definition's `afterConstruct` list."),
@@ -640,7 +996,10 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "unwrapNodes",
-    Doc::Rust("latexml_core::document::Document::unwrap_nodes"),
+    Doc::Rust(
+      "Replace a node by its own children.",
+      "latexml_core::document::Document::unwrap_nodes",
+    ),
   ),
   (
     "whatsit",
@@ -650,7 +1009,10 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "wrapNodes",
-    Doc::Rust("latexml_core::document::Document::wrap_nodes"),
+    Doc::Rust(
+      "Wrap a run of sibling nodes in a new element.",
+      "latexml_core::document::Document::wrap_nodes",
+    ),
   ),
 ];
 
@@ -667,12 +1029,18 @@ const HANDLE_DOCS: &[(&str, &str, Doc)] = &[
   (
     "Document",
     "setAttribute",
-    Doc::Rust("latexml_core::document::Document::set_attribute"),
+    Doc::Rust(
+      "Set an attribute on the current node, if the model allows it.",
+      "latexml_core::document::Document::set_attribute",
+    ),
   ),
   (
     "Node",
     "setAttribute",
-    Doc::Rust("libxml::tree::Node::set_attribute"),
+    Doc::Rust(
+      "Set an attribute on this node directly.",
+      "libxml::tree::Node::set_attribute",
+    ),
   ),
 ];
 
@@ -766,7 +1134,9 @@ fn lookup(receiver: Option<&str>, name: &str) -> Option<&'static Doc> {
 /// The documentation cell for one call: a rustdoc intra-doc link, or the note.
 fn doc_cell(receiver: Option<&str>, name: &str) -> String {
   match lookup(receiver, name) {
-    Some(Doc::Rust(path)) => format!("[`{}`]({path})", short_path(path)),
+    Some(Doc::Rust(summary, path)) => {
+      format!("{summary} ([`{}`]({path}))", short_path(path))
+    },
     Some(Doc::Note(note)) => (*note).to_string(),
     None => String::new(),
   }
@@ -844,13 +1214,16 @@ matches what is actually registered — see `api_doc.rs`.
 Overloads share a row — the accepted argument shapes differ, what the call means
 does not.
 
-The **documentation** column links the Rust item that implements the call: that
-is where its exact semantics live, and linking rather than paraphrasing is what
-keeps this reference from drifting out of step with the engine. Where a call has
-no single counterpart — a Rhai-only helper, or a shim whose whole behaviour is in
-the registration — the column describes it instead. A name registered on two
-different handles is two different calls, and is documented separately under
-each.
+The **documentation** column says in one line what each call does, and links the
+Rust item that implements it — where the exact semantics live, and what keeps
+this reference from drifting out of step with the engine. Read the line; follow
+the link when you need the detail, the edge cases, or the Perl original it is
+ported from.
+
+Some calls have no such counterpart — a Rhai-only helper, or a shim whose whole
+behaviour is in the registration — and carry only the description. A name
+registered on two different handles is two different calls, and is documented
+separately under each.
 
 Types are Rhai's: `string`, `int`, `bool`, `array`, `map`, `Fn` (a closure),
 `?` (any value), and the handle types named by the sections below. A trailing `?`
