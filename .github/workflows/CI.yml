@@ -45,6 +45,15 @@ jobs:
         run: cargo fmt --all --check
       - name: clippy (deny warnings, whole workspace + all targets)
         run: cargo clippy --workspace --all-targets --profile ci -- -D warnings
+      # Gate the docs HERE, on the pull_request, not only in rustdoc.yml — that
+      # workflow runs on push to main, so a doc warning introduced by a PR would
+      # only surface once it had already landed. A broken rustdoc link is
+      # invisible on the deployed site (it renders as dead text, not an error),
+      # so the warning is the only signal there is.
+      - name: rustdoc (deny warnings)
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps --profile ci
       - name: cargo-deny (advisories + licenses + bans + sources)
         # The action's default arguments inject `--all-features`, so this audits
         # feature-gated trees too (e.g. the off-by-default `cortex` worker deps).

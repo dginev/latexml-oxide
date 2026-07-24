@@ -34,6 +34,11 @@ jobs:
             # and a published dead anchor. The workspace is warning-clean as of
             # this commit; keep it that way rather than letting the noise floor
             # grow back.
+            #
+            # CI.yml's lint job runs the same gate on every pull request, which
+            # is where a regression should actually be caught. This one is the
+            # backstop for what is about to be PUBLISHED — it also covers the
+            # paths that reach main without a PR.
             - name: Build Documentation
               env:
                 RUSTDOCFLAGS: -D warnings
