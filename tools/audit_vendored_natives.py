@@ -121,9 +121,12 @@ AUDITED = {
     # ---- Build-tooling and test fixtures: native files present, NOT linked into any
     # shipped binary, so no disclosure is owed. Each verdict verified by looking at the
     # file, not at the name. Recorded so the gate stays loud on substance and quiet here.
-    "cc": ("1.3.0",
+    "cc": ("1.4.0",
         "src/detect_compiler_family.c -- a probe compiled to identify the host "
-        "toolchain, never linked into our binary. The crate itself is pure Rust.",
+        "toolchain, never linked into our binary. The crate itself is pure Rust. "
+        "Re-verified at 1.4.0: still the only non-Rust file in the crate, and still "
+        "nothing but #ifdef/#pragma message lines, so it emits diagnostics and no "
+        "object code.",
     ),
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
