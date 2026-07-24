@@ -34,6 +34,12 @@ fail_fast=0
 
 profile_args=()
 [ -n "${LINT_PROFILE:-}" ] && profile_args=(--profile "$LINT_PROFILE")
+# NOTE: expand this as ${profile_args[@]+"${profile_args[@]}"}, never as a bare
+# "${profile_args[@]}". Under `set -u`, bash before 4.4 treats an EMPTY array's
+# expansion as an unbound variable and exits. profile_args is empty on every
+# local run (LINT_PROFILE unset — the pre-push path) and macOS ships bash 3.2 as
+# /bin/bash, so the bare form would kill the hook there while passing on this
+# ubuntu CI and on any bash 5 dev box.
 
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   BOLD=$'\033[1m'; RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; OFF=$'\033[0m'
@@ -114,7 +120,7 @@ run "rustfmt (check)" \
 # 3. Clippy across the whole workspace and all targets (tests/benches/bins).
 run "clippy (deny warnings, workspace + all targets)" \
   "fix them (try: cargo clippy --fix)" -- \
-  cargo clippy --workspace --all-targets "${profile_args[@]}" -- -D warnings
+  cargo clippy --workspace --all-targets ${profile_args[@]+"${profile_args[@]}"} -- -D warnings
 
 # 4. Rustdoc. Gated HERE, on every push/PR, not only in rustdoc.yml — that
 #    workflow runs on push to main, so a doc warning introduced by a PR would
@@ -123,7 +129,7 @@ run "clippy (deny warnings, workspace + all targets)" \
 #    the warning is the only signal there is.
 run "rustdoc (deny warnings)" \
   "fix the doc warning; do not #[allow] it — the link still dies on the site" -- \
-  env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps "${profile_args[@]}"
+  env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps ${profile_args[@]+"${profile_args[@]}"}
 
 # 5. The complement to cargo-deny, which reasons over crate MANIFESTS and so is
 #    blind to vendored C: a `-sys` crate reports its Rust wrapper's license, not
