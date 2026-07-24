@@ -36,6 +36,18 @@ pub fn get_xml_id(node: &Node) -> Option<String> {
     })
 }
 
+/// Remap a cloned node's `fragid` after its `xml:id` was uniquified.
+///
+/// Port of Perl `Post::Document::cloneNode` (`Post.pm` L1268-1270):
+/// `fragid => substr($newid, length($id) - length($fragid))`. The fragid is
+/// the reference-visible tail of the id (equal to the whole id for a top-level
+/// object), so we take the corresponding tail of the new id. IDs are ASCII, so
+/// byte and character offsets coincide.
+fn remap_fragid(id: &str, new_id: &str, fragid: &str) -> String {
+  let offset = id.len().saturating_sub(fragid.len());
+  new_id.get(offset..).unwrap_or(fragid).to_string()
+}
+
 /// The LaTeXML namespace URI.
 pub const LTX_NSURI: &str = "http://dlmf.nist.gov/LaTeXML";
 
@@ -1240,14 +1252,56 @@ impl PostDocument {
           }
         },
         NodeData::XmlNode(source_node) => {
-          self.add_xml_node(parent, source_node);
+          self.append_clone(parent, source_node);
         },
       }
     }
   }
 
-  /// Clone and append an existing XML node into `parent`.
-  fn add_xml_node(&mut self, parent: &mut Node, source: &Node) {
+  /// Deep-clone an existing node subtree and append it under `parent`, giving
+  /// the copy fresh (non-clashing) ids — the faithful equivalent of Perl
+  /// `Post::Document::cloneNode` + insert.
+  ///
+  /// [`clone_subtree`](Self::clone_subtree) does the structural deep copy and
+  /// uniquifies every `xml:id` inline (remapping each node's own `fragid`),
+  /// recording old→new in `idmap`. This pass then remaps `idref` attributes
+  /// through that map and drops `labels`, mirroring Perl `cloneNode`
+  /// (`Post.pm` L1256-1287). Uniquification matters because the source stays
+  /// in the tree: e.g. a section-title `<ltx:Math xml:id=…>` cloned into the
+  /// table of contents must not duplicate the body copy's id (issue #356) —
+  /// the HTML `id` is emitted from `fragid` by the XSLT `add_id` template, so
+  /// `fragid` must be remapped too.
+  fn append_clone(&mut self, parent: &mut Node, source: &Node) {
+    let mut idmap: HashMap<String, String> = HashMap::default();
+    let Some(root) = self.clone_subtree(parent, source, &mut idmap) else {
+      return;
+    };
+    if !idmap.is_empty() {
+      for mut n in self.findnodes_at("descendant-or-self::*[@idref]", Some(&root)) {
+        if let Some(idref) = n.get_attribute("idref") {
+          if let Some(newid) = idmap.get(&idref) {
+            n.set_attribute("idref", newid).ok();
+          }
+        }
+      }
+    }
+    for mut n in self.findnodes_at("descendant-or-self::*[@labels]", Some(&root)) {
+      let _ = n.remove_attribute("labels");
+    }
+  }
+
+  /// Structural half of [`append_clone`](Self::append_clone): recursively deep
+  /// copy `source` under `parent`, uniquifying each element's `xml:id` inline
+  /// (so the tree never carries a transient duplicate id) and remapping its
+  /// `fragid`. Records each old→new id in `idmap` for the caller's `idref`
+  /// remap. Returns the new element root (for the caller's post-pass), or
+  /// `None` for text/fragment sources.
+  fn clone_subtree(
+    &mut self,
+    parent: &mut Node,
+    source: &Node,
+    idmap: &mut HashMap<String, String>,
+  ) -> Option<Node> {
     match source.get_type() {
       Some(NodeType::ElementNode) => {
         let localname = source.get_name();
@@ -1286,48 +1340,69 @@ impl PostDocument {
             })
             .or_else(|| Namespace::new(&prefix, &uri, parent).ok())
         });
-        if let Ok(mut new_node) = parent.new_child(ns, &localname) {
-          // Copy attributes
-          let props = source.get_properties();
-          for (key, value) in &props {
-            if key.starts_with('_') {
-              continue;
-            }
-            if key == "xml:id" {
-              let id = if self.idcache.contains_key(value.as_str()) {
-                self.uniquify_id(value, None)
-              } else {
-                value.clone()
-              };
-              self.record_id(&id, new_node.clone());
-              new_node.set_attribute("xml:id", &id).ok();
-            } else {
-              new_node.set_attribute(key, value).ok();
-            }
+        let mut new_node = parent.new_child(ns, &localname).ok()?;
+
+        // The namespaced `xml:id` is the ONE id LaTeXML uses (there is no bare
+        // non-namespaced `id` in the model); `get_properties` surfaces it under
+        // its localname "id", so read it namespace-aware via `get_xml_id`.
+        let src_xmlid = get_xml_id(source);
+        let src_fragid = source.get_attribute("fragid");
+        let new_xmlid = src_xmlid.as_ref().map(|id| {
+          let newid = if self.idcache.contains_key(id.as_str()) {
+            self.uniquify_id(id, None)
+          } else {
+            id.clone()
+          };
+          idmap.insert(id.clone(), newid.clone());
+          self.record_id(&newid, new_node.clone());
+          newid
+        });
+        // Perl `cloneNode`: `fragid => substr($newid, length($id) - length($fragid))`.
+        let new_fragid = match (&src_xmlid, &new_xmlid, &src_fragid) {
+          (Some(id), Some(newid), Some(fragid)) => Some(remap_fragid(id, newid, fragid)),
+          _ => src_fragid.clone(),
+        };
+
+        // Copy the remaining attributes verbatim; the xml:id and fragid are set
+        // explicitly (above/below) from their remapped values.
+        for (key, value) in &source.get_properties() {
+          if key.starts_with('_') || key == "fragid" {
+            continue;
           }
-          // Recursively add children
-          if let Some(child) = source.get_first_child() {
-            let mut current = Some(child);
-            while let Some(ref c) = current {
-              self.add_xml_node(&mut new_node, c);
-              current = c.get_next_sibling();
-            }
+          let is_xmlid = key == "xml:id" || (key == "id" && src_xmlid.as_deref() == Some(value));
+          if is_xmlid {
+            continue;
           }
+          new_node.set_attribute(key, value).ok();
         }
+        if let Some(newid) = &new_xmlid {
+          new_node.set_attribute("xml:id", newid).ok();
+        }
+        if let Some(fragid) = &new_fragid {
+          new_node.set_attribute("fragid", fragid).ok();
+        }
+
+        // Recurse into children, sharing the id map.
+        let mut child = source.get_first_child();
+        while let Some(c) = child {
+          self.clone_subtree(&mut new_node, &c, idmap);
+          child = c.get_next_sibling();
+        }
+        Some(new_node)
       },
       Some(NodeType::TextNode) => {
         parent.append_text(&source.get_content()).ok();
+        None
       },
       Some(NodeType::DocumentFragNode) => {
-        if let Some(child) = source.get_first_child() {
-          let mut current = Some(child);
-          while let Some(ref c) = current {
-            self.add_xml_node(parent, c);
-            current = c.get_next_sibling();
-          }
+        let mut child = source.get_first_child();
+        while let Some(c) = child {
+          self.clone_subtree(parent, &c, idmap);
+          child = c.get_next_sibling();
         }
+        None
       },
-      _ => {},
+      _ => None,
     }
   }
 
@@ -1483,39 +1558,10 @@ impl PostDocument {
     }
   }
 
-  /// Clone a node with unique IDs.
-  ///
-  /// Port of `Post::Document::cloneNode`.
-  pub fn clone_node(&mut self, node: &Node, id_suffix: Option<&str>) -> Option<Node> {
-    let copy = node.clone();
-
-    // Find all IDs and remap them
-    let mut idmap: HashMap<String, String> = HashMap::default();
-    for mut n in self.findnodes_at("descendant-or-self::*[@xml:id]", Some(&copy)) {
-      if let Some(id) = n.get_attribute("xml:id") {
-        let newid = self.uniquify_id(&id, id_suffix);
-        idmap.insert(id, newid.clone());
-        self.record_id(&newid, n.clone());
-        n.set_attribute("xml:id", &newid).ok();
-      }
-    }
-
-    // Update idref references
-    for mut n in self.findnodes_at("descendant-or-self::*[@idref]", Some(&copy)) {
-      if let Some(idref) = n.get_attribute("idref") {
-        if let Some(newid) = idmap.get(&idref) {
-          n.set_attribute("idref", newid).ok();
-        }
-      }
-    }
-
-    // Remove labels
-    for mut n in self.findnodes_at("descendant-or-self::*[@labels]", Some(&copy)) {
-      let _ = n.remove_attribute("labels");
-    }
-
-    Some(copy)
-  }
+  // The faithful `Post::Document::cloneNode` port lives in
+  // [`append_clone`](Self::append_clone) / [`clone_subtree`](Self::clone_subtree),
+  // which deep-copy into a parent (rust-libxml's `Node::clone` is only a
+  // reference copy, so an in-place remap would corrupt the source).
 
   // ======================================================================
   // CSS class and style management

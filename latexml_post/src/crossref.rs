@@ -7,13 +7,14 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use libxml::tree::Node;
+use libxml::tree::{Node, NodeType};
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::{
   document::{NodeData, PostDocument, get_xml_id},
   object_db::{Entry, ObjectDB, Value},
   processor::{ProcessResult, Processor},
+  scan::title_text_content,
 };
 
 /// Perl CrossRef.pm `$normaltoctypes` (L202-206): the sectional element types
@@ -55,6 +56,81 @@ fn ref_fallbacks(key: &str) -> &'static [&'static str] {
     "rawtoctitle" => &["toctitle", "title", "toccaption"],
     "rawtitle" => &["title", "toccaption"],
     _ => &[],
+  }
+}
+
+/// Derive the STRING form of a stored value (page `<title>`, `title=` tooltip).
+/// Perl `CrossRef::getTextContent`. A `Value::Xml` title is flattened tag-aware
+/// (via [`title_text_content`]); any other value uses its plain string form.
+fn value_text(val: &Value) -> String {
+  match val {
+    Value::Xml(node) => title_text_content(node),
+    other => other.to_string(),
+  }
+}
+
+/// Build the child nodes of an `<ltx:ref>` from a stored value.
+///
+/// Port of Perl `CrossRef::prepRefText` = `cloneNodes(trimChildNodes($value))`:
+/// deep-clone the title's child nodes — `<ltx:Math>` included — trimming
+/// whitespace at the two edges. Element children become [`NodeData::XmlNode`]
+/// (deep-copied at materialization by `PostDocument::add_xml_node`, which
+/// uniquifies their `xml:id`s); text children become [`NodeData::Text`]. A
+/// plain-string value keeps the single flat-text child.
+///
+/// (Perl's `fillInTitle` — resolving nested `ltx:ref`/`ltx:bibref`/`ltx:break`
+/// embedded in a title before cloning — is not ported here; those are rare in
+/// titles and were not handled by the previous flat-text path either.)
+fn ref_content_children(val: &Value) -> Vec<NodeData> {
+  let node = match val {
+    Value::Xml(node) => node,
+    other => return vec![NodeData::Text(other.to_string())],
+  };
+  let mut out: Vec<NodeData> = Vec::new();
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    match c.get_type() {
+      Some(NodeType::TextNode) => out.push(NodeData::Text(c.get_content())),
+      Some(NodeType::ElementNode) => out.push(NodeData::XmlNode(c.clone())),
+      _ => {},
+    }
+    child = c.get_next_sibling();
+  }
+  // trimChildNodes: left-trim the first text child, right-trim the last; drop
+  // either if it becomes empty.
+  if let Some(NodeData::Text(s)) = out.first_mut() {
+    let t = s.trim_start().to_string();
+    if t.is_empty() {
+      out.remove(0);
+    } else {
+      *s = t;
+    }
+  }
+  if let Some(NodeData::Text(s)) = out.last_mut() {
+    let t = s.trim_end().to_string();
+    if t.is_empty() {
+      out.pop();
+    } else {
+      *s = t;
+    }
+  }
+  out
+}
+
+/// Strip `fragid` from everything inside an `<ltx:ref>` (TOC entries, inline
+/// refs, navigation).
+///
+/// Reference content is a non-anchor DISPLAY copy of a title, so it must not
+/// carry a `fragid` — the XSLT `add_id` template emits the HTML `id` from
+/// `fragid`, and a display copy with an `id` would spuriously duplicate the
+/// real target's anchor. Perl gets this for free: its ref content is cloned
+/// from Scan's `cleanNode` snapshot, taken before `fragid` is assigned
+/// (`Scan.pm` L290 / `CrossRef.pm` fillInFrags). We clone the live (already
+/// `fragid`'d) title, so we drop `fragid` here to match (issue #356). The
+/// uniquified `xml:id` is kept, as in Perl's snapshot.
+fn strip_ref_display_fragids(doc: &PostDocument) {
+  for mut n in doc.findnodes("//ltx:ref//*[@fragid]") {
+    let _ = n.remove_attribute("fragid");
   }
 }
 
@@ -213,7 +289,10 @@ impl CrossRef {
       if let Some(title_val) = entry.get_value("title") {
         if title_val.is_truthy() {
           is_dup = shown_so_far.contains("title");
-          pieces.push(title_val.to_string());
+          // The title is stored as a NODE (`Value::Xml`) for sections; derive
+          // its string form tag-aware (Perl `getTextContent`). A plain-string
+          // title (e.g. abstract/bibliography names) is used verbatim.
+          pieces.push(value_text(title_val));
         }
       }
       if pieces.is_empty() {
@@ -450,14 +529,20 @@ impl CrossRef {
           if let Some(val) = entry.get_value(k) {
             if val.is_truthy() {
               ok = true;
-              let text = val.to_string();
+              // Perl `generateRef_aux` L779: `['ltx:text', {class}, prepRefText]`
+              // where `prepRefText` = `cloneNodes(trimChildNodes($value))` — a
+              // DEEP CLONE of the title's child nodes, `<ltx:Math>` included.
+              // The CrossRef pass runs before the MathML pass, so the cloned
+              // `<ltx:Math>` is later turned into `<math>` just like the body
+              // copy (issue #356). A plain-string value keeps the flat-text
+              // rendering.
               stuff.push(NodeData::Element {
                 tag:        "ltx:text".to_string(),
                 attributes: Some(HashMap::from_iter([(
                   "class".to_string(),
                   class.to_string(),
                 )])),
-                children:   vec![NodeData::Text(text)],
+                children:   ref_content_children(val),
               });
               break;
             }
@@ -1461,6 +1546,7 @@ impl Processor for CrossRef {
     self.fill_in_bibrefs(&mut doc);
     self.fill_in_mathlinks(&doc);
     self.copy_resources(&doc);
+    strip_ref_display_fragids(&doc);
     self.report_missing();
     Ok(vec![doc])
   }
