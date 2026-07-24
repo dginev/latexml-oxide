@@ -1324,6 +1324,14 @@ pub fn assign_internal<T: Into<Stored>>(
   state_mut!().assign_internal(table_name, key, value.into(), scope);
 }
 
+/// Bind `key` to `value` in the value table — Perl's `AssignValue`.
+///
+/// [`Scope`] decides how long the binding lasts: [`Scope::Local`] expires with
+/// the enclosing TeX group, [`Scope::Global`] does not, [`Scope::Named`] applies
+/// only while that scope is activated, and [`Scope::InPlace`] rebinds at the
+/// frame the value was last bound in. Passing `None` takes the state's current
+/// default. Read back with [`lookup_value`], or one of the typed
+/// [`lookup_string`] / [`lookup_number`] / [`lookup_bool`] accessors.
 pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T, scope: S) {
   state_mut!().assign_value(key, value, scope)
 }
@@ -1514,6 +1522,12 @@ pub fn push_tokens(key: &str, value: Tokens) {
   }
 }
 
+/// The value bound to `key`, or `None` when nothing is bound — Perl's
+/// `LookupValue`.
+///
+/// Returns whatever [`Stored`] variant was assigned, so a caller that knows the
+/// type usually wants [`lookup_string`] / [`lookup_number`] / [`lookup_bool`]
+/// instead. Clones the value; [`with_value`] lends it when inspecting is enough.
 pub fn lookup_value(key: &str) -> Option<Stored> { state!().lookup_value(key).cloned() }
 pub fn with_value<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&Stored>) -> R {

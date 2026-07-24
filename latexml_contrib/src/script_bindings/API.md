@@ -49,7 +49,7 @@ Called at the top level of a binding file, or from inside any body.
 | `DefConditional(string, Fn)` | [`def_conditional`](latexml_core::binding::def::dialect::def_conditional) |
 | `DefConstructor(string, Fn)`<br>`DefConstructor(string, Fn, map)`<br>`DefConstructor(string, string)`<br>`DefConstructor(string, string, map)` | [`def_constructor`](latexml_core::binding::def::dialect::def_constructor) |
 | `DefEnvironment(string, Fn)`<br>`DefEnvironment(string, Fn, map)`<br>`DefEnvironment(string, string)`<br>`DefEnvironment(string, string, map)` | [`def_environment`](latexml_core::binding::def::dialect::def_environment) |
-| `DefKeyVal(string, string, string)`<br>`DefKeyVal(string, string, string, string)`<br>`DefKeyVal(string, string, string, string, map)` | Declare one key in a keyval family. |
+| `DefKeyVal(string, string, string)`<br>`DefKeyVal(string, string, string, string)`<br>`DefKeyVal(string, string, string, string, map)` | [`define`](latexml_core::keyval::define) |
 | `DefLigature(string, string)` | Register a text ligature pattern. |
 | `DefMacro(string, Fn)`<br>`DefMacro(string, Fn, map)`<br>`DefMacro(string, string)`<br>`DefMacro(string, string, map)` | [`def_macro`](latexml_core::binding::def::dialect::def_macro) |
 | `DefMath(string, string)`<br>`DefMath(string, string, map)` | [`def_math`](latexml_core::binding::def::dialect::def_math) |
@@ -70,7 +70,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Info(string, string, string)` | Log an `Info:` line. |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | [`input_definitions`](latexml_core::binding::content::input_definitions) |
 | `IsDefined(string) -> bool` | [`is_defined_token`](latexml_core::binding::def::dialect::is_defined_token) |
-| `LaTeXMLVersion() -> string` | The engine version string. |
+| `LaTeXMLVersion() -> string` | The engine version string — the `LATEXML_VERSION` value ([`lookup_string`](latexml_core::state::lookup_string)). |
 | `Let(string, string)` | [`let_i`](latexml_core::state::let_i) |
 | `LoadClass(string)`<br>`LoadClass(string, array)` | [`load_class`](latexml_core::binding::content::load_class) |
 | `LookupBool(string) -> bool` | [`lookup_bool`](latexml_core::state::lookup_bool) |
@@ -119,9 +119,9 @@ Called at the top level of a binding file, or from inside any body.
 | `UnTeX(Tokens) -> string` | [`Tokens::untex`](latexml_core::tokens::Tokens::untex) |
 | `Warn(string, string, string)` | Log a `Warning:` with the given category and object. |
 | `XEquals(string, string) -> bool` | [`x_equals`](latexml_core::state::x_equals) |
-| `assign_global(string, string)` | `AssignValue` with global scope: the binding survives the enclosing TeX group. |
-| `assign_value(string, string)` | `AssignValue` with the default (group-local) scope. |
-| `lookup_value(string) -> string` | `LookupValue` coerced to a string; empty when unset. |
+| `assign_global(string, string)` | [`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group. |
+| `assign_value(string, string)` | [`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group. |
+| `lookup_value(string) -> string` | [`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here. |
 | `neutralize_font()` | [`neutralize_font`](latexml_engine::base_utilities::neutralize_font) |
 | `whatsit() -> Whatsit` | A handle on the whatsit under construction. Meaningful only inside a digest hook — the handle itself is always returned, but USING it outside one is a clean script error, not a crash. |
 

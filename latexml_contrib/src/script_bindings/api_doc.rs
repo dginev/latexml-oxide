@@ -176,10 +176,7 @@ const DOCS: &[(&str, Doc)] = &[
     "DefEnvironment",
     Doc::Rust("latexml_core::binding::def::dialect::def_environment"),
   ),
-  (
-    "DefKeyVal",
-    Doc::Note("Declare one key in a keyval family."),
-  ),
+  ("DefKeyVal", Doc::Rust("latexml_core::keyval::define")),
   (
     "DefLigature",
     Doc::Note("Register a text ligature pattern."),
@@ -250,7 +247,12 @@ const DOCS: &[(&str, Doc)] = &[
     "IsDefined",
     Doc::Rust("latexml_core::binding::def::dialect::is_defined_token"),
   ),
-  ("LaTeXMLVersion", Doc::Note("The engine version string.")),
+  (
+    "LaTeXMLVersion",
+    Doc::Note(
+      "The engine version string — the `LATEXML_VERSION` value ([`lookup_string`](latexml_core::state::lookup_string)).",
+    ),
+  ),
   ("Let", Doc::Rust("latexml_core::state::let_i")),
   (
     "LoadClass",
@@ -443,11 +445,15 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "assign_global",
-    Doc::Note("`AssignValue` with global scope: the binding survives the enclosing TeX group."),
+    Doc::Note(
+      "[`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group.",
+    ),
   ),
   (
     "assign_value",
-    Doc::Note("`AssignValue` with the default (group-local) scope."),
+    Doc::Note(
+      "[`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group.",
+    ),
   ),
   ("children", Doc::Rust("libxml::tree::Node::get_child_nodes")),
   (
@@ -509,7 +515,9 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "lookup_value",
-    Doc::Note("`LookupValue` coerced to a string; empty when unset."),
+    Doc::Note(
+      "[`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here.",
+    ),
   ),
   (
     "maybeCloseElement",
