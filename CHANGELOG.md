@@ -122,6 +122,13 @@
     the binding does the same re-read through a mouth, with no file written.
     `\cMakeRobust` and `\cprotEnv` come with it. Perl LaTeXML has no binding for
     this package.
+  - **The `.rhai` binding interface now has a reference.** Every function a
+    runtime binding can call is listed, grouped by the handle it is called on,
+    each with a one-line explanation and a link to the Rust item implementing it.
+    It renders into `cargo doc` (and docs.rs) beside the Rust API. The list is
+    generated from the live engine rather than hand-maintained, so it cannot
+    drift from what is registered, and a test fails if a newly registered call
+    is left undocumented.
 
 ## [0.7.4] (Windows target; third-party license notices; crates.io)
 

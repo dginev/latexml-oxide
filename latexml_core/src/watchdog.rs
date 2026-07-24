@@ -29,7 +29,8 @@
 //!
 //! # Resource limits
 //!
-//! [`Watchdog::with_limits`] guards **both** a wall-clock deadline and a
+//! [`Watchdog::with_limits`](crate::watchdog::Watchdog::with_limits) guards
+//! **both** a wall-clock deadline and a
 //! resident-memory ceiling — the two defenses any executable that converts
 //! arbitrary input needs. It is the shared guard reused by both
 //! `cortex_worker` (in-process, one paper per process) and the
@@ -42,7 +43,8 @@
 //!
 //! The wall-clock guard is portable (`std::thread` + `Instant`). The RAM guard
 //! samples RSS from `/proc/self/status` and is therefore **Linux-only** today;
-//! on other platforms [`process_rss_kb`] returns `None` and the memory ceiling
+//! on other platforms [`process_rss_kb`](crate::watchdog::process_rss_kb)
+//! returns `None` and the memory ceiling
 //! is silently inactive (the time guard still works). LONG-TERM the guards
 //! should be fully portable — macOS via `task_info(TASK_BASIC_INFO)` and
 //! Windows via `GetProcessMemoryInfo` — so every supported OS gets the same

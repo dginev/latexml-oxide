@@ -17,7 +17,7 @@ pub struct MetricData {
   pub slant:        f64,
   /// TFM font dimension parameters (1-indexed in TeX, 0-indexed here).
   /// For math symbol fonts (cmsy), these include:
-  ///   [4]=x_height, [12]=sup1, [13]=sup2, [14]=sup3, [15]=sub1
+  ///   `4`=x_height, `12`=sup1, `13`=sup2, `14`=sup3, `15`=sub1
   pub parameters:   &'static [f64],
 }
 

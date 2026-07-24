@@ -684,3 +684,79 @@ fn shipped_example_loads() {
   );
   latexml_core::reset_thread_engine();
 }
+
+/// The generated `.rhai` interface reference must match the live engine.
+///
+/// `API.md` is read back OUT of the engine (Rhai's `gen_fn_signatures`
+/// reflections API), so it cannot drift from what is registered — adding a
+/// `register_fn` without regenerating fails here. Regenerate with:
+///
+/// ```sh
+/// UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date
+/// ```
+#[test]
+fn api_reference_is_up_to_date() {
+  let engine = make_engine();
+  // A return-type override naming a function that no longer exists would leave a
+  // silent lie in the reference.
+  let stale_overrides = api_doc::overrides_all_exist(&engine);
+  assert!(
+    stale_overrides.is_empty(),
+    "api_doc::RETURN_OVERRIDES names functions the engine no longer registers: \
+     {stale_overrides:?}"
+  );
+  // Every registered call must be documented — a link to its Rust counterpart,
+  // or a written note where there is none. A new `register_fn` with neither
+  // fails here rather than shipping an undocumented entry.
+  let undocumented = api_doc::undocumented_names(&engine);
+  assert!(
+    undocumented.is_empty(),
+    "these .rhai calls have no api_doc::DOCS entry — add a Doc::Rust link or a \
+     Doc::Note description: {undocumented:?}"
+  );
+  let stale_docs = api_doc::stale_names(&engine);
+  assert!(
+    stale_docs.is_empty(),
+    "api_doc::DOCS/HANDLE_DOCS documents calls the engine no longer registers: \
+     {stale_docs:?}"
+  );
+  // One name registered on two handles is two different calls. A single
+  // name-keyed entry would be shared between them, and can only describe one —
+  // `setAttribute` was documented as `Document::get_node` before this check.
+  let ambiguous = api_doc::ambiguous_names(&engine);
+  assert!(
+    ambiguous.is_empty(),
+    "these .rhai calls share one api_doc::DOCS entry across different handles — \
+     give each its own api_doc::HANDLE_DOCS entry: {ambiguous:?}"
+  );
+  let generated = api_doc::generate(&engine);
+  let path = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/",
+    "src/script_bindings/API.md"
+  );
+  let on_disk = std::fs::read_to_string(path).unwrap_or_default();
+  if generated != on_disk {
+    if std::env::var("UPDATE_API_DOC").is_ok() {
+      std::fs::write(path, &generated).expect("write API.md");
+      return;
+    }
+    // Show the shape of the drift rather than a 200-line diff.
+    let gen_lines: Vec<&str> = generated.lines().collect();
+    let old_lines: Vec<&str> = on_disk.lines().collect();
+    let added: Vec<&&str> = gen_lines
+      .iter()
+      .filter(|l| !old_lines.contains(l))
+      .collect();
+    let removed: Vec<&&str> = old_lines
+      .iter()
+      .filter(|l| !gen_lines.contains(l))
+      .collect();
+    panic!(
+      "src/script_bindings/API.md is stale — the engine registers a different \
+       surface than the reference documents.\n  added: {added:?}\n  removed: {removed:?}\n\
+       Regenerate with: UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib \
+       api_reference_is_up_to_date"
+    );
+  }
+}

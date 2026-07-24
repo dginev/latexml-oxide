@@ -137,6 +137,11 @@ impl Model {
     };
   }
 
+  /// Register a prefix in the DOCUMENT mapping — the second of the two
+  /// mappings described on [`Model::register_namespace`] above.
+  ///
+  /// An empty `docprefix` is the `#default` entry, i.e. the unprefixed form of
+  /// elements (never attributes). `None` for the namespace unbinds the prefix.
   pub fn register_document_namespace(&mut self, docprefix: &str, namespace_opt: Option<&str>) {
     let default_sym = pin!("#default");
     let docprefix_sym = if docprefix.is_empty() {
@@ -732,6 +737,12 @@ pub fn get_foreign_node_qname(node: &Node) -> SymStr {
   get_node_qname(node)
 }
 
+/// Borrow a node's qualified name (`ltx:section`, `#PCDATA`, …) as a `&str`
+/// for the duration of `caller`.
+///
+/// The closure form is the point: qnames are interned, and lending the arena's
+/// copy lets a caller compare or match on the name without the `String` that
+/// [`get_node_qname`] + `to_string` would allocate on every node of a walk.
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   let qsym = get_node_qname(node);
@@ -784,9 +795,6 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
   }
 }
 
-/// Given a Qualified name, possibly prefixed with a namespace prefix,
-/// as defined by the code namespace mapping,
-/// return the NamespaceURI and localname.
 /// Read a possibly-PREFIXED attribute off a node, resolving the prefix the same
 /// way `Document::set_attribute` does on the write side (via [`decode_qname`]).
 ///
@@ -834,6 +842,9 @@ fn attribute_namespace(key: &str) -> Option<String> {
   }
 }
 
+/// Given a Qualified name, possibly prefixed with a namespace prefix,
+/// as defined by the code namespace mapping,
+/// return the NamespaceURI and localname.
 pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
   match PREFIXED_LOCALNAME_RE.captures(codetag) {
     Some(captures) => {
@@ -1145,6 +1156,12 @@ pub(crate) fn compute_indirect_model_aux(
     }
   }
 }
+/// Bind an OUTPUT-document prefix to a namespace URI, on the current model.
+///
+/// The document half of the two mappings described on
+/// [`Model::register_namespace`] — these are the prefixes that appear in the
+/// generated XML, and the one place `#default` is meaningful (for unprefixed
+/// elements; never for attributes). Passing `None` unbinds the prefix.
 pub fn register_document_namespace(docprefix: &str, namespace_opt: Option<&str>) {
   model_mut!().register_document_namespace(docprefix, namespace_opt)
 }
@@ -1162,6 +1179,12 @@ pub fn get_document_namespace_prefixes() -> Vec<(String, String)> {
     .collect()
 }
 
+/// Bind a CODE prefix to a namespace URI, on the current model.
+///
+/// The coding half of the two mappings described on
+/// [`Model::register_namespace`] — the prefixes constructors and bindings write,
+/// which must be one-to-one and admit no default namespace. Passing `None`
+/// unbinds the prefix.
 pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
   model_mut!().register_namespace(codeprefix, namespace_opt)
 }

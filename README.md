@@ -318,7 +318,8 @@ Discovery rides the ordinary search paths (the document's own directory, plus an
 is how you patch a class without touching the binary.
 
 - **Worked example:** [`docs/examples/sample.sty.rhai`](docs/examples/sample.sty.rhai) — a tour of the whole surface (macros, constructors in template and imperative form, environments, options, counters, keyvals, math, rewrites). It is load-tested in CI, so it never rots.
-- **API reference:** [`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md) → *"Implemented script API (v0 reference)"*.
+- **Interface reference:** [`latexml_contrib/src/script_bindings/API.md`](latexml_contrib/src/script_bindings/API.md) — every function you can call, grouped by handle (global, `document`, `Node`, `whatsit()`, `LookupDefinition()`, `Command`). It is **generated from the live engine** and re-checked on every test run, so it cannot drift from what is actually registered. It also renders into `cargo doc` as `latexml_contrib::script_bindings::interface`, so `cargo doc --workspace --open` (and docs.rs) show it beside the Rust API.
+- **Semantics and design notes:** [`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md) — what the calls *mean*, the namespace rules, and what a failing binding degrades to.
 
 Because a `.rhai` beside a document is executed by a plain conversion, treat it as
 you would any code shipped with an untrusted source tree — see

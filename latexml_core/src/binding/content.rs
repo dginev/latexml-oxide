@@ -2241,6 +2241,18 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   }
 }
 
+/// Attach a resource (CSS, JavaScript, …) to the document being built.
+///
+/// Port of Perl `Package.pm:RequireResource` L3139-3158. A resource needs
+/// either a pathname or inline content, and a mime-type: an absent type is
+/// inferred from the pathname's extension (case-sensitively, as Perl's
+/// `$resource_types{$ext}` lookup is), and a resource still lacking one after
+/// that is skipped with a warning rather than emitted untyped.
+///
+/// The resource is queued as *pending* and folded into the document later,
+/// covering Perl's `$LaTeXML::DOCUMENT ? addResource : PushValue(PENDING_RESOURCES)`
+/// split — bindings routinely call this from a preamble, before any document
+/// exists.
 pub fn require_resource(mut resource: Resource) {
   if resource.name.is_empty() && resource.content.is_empty() {
     Warn!(
@@ -2290,6 +2302,22 @@ pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
   load_class(name, options, after)
 }
 
+/// Load a document class — the `\documentclass` / `\LoadClass` implementation,
+/// port of Perl `Package.pm:LoadClass` L2702-2730.
+///
+/// Resolution runs [`input_definitions`] for `<name>.cls`, then Perl's
+/// three-step fallback when that yields no binding: the longest known
+/// `.cls.ltxml` binding whose name PREFIXES the requested class (so an
+/// author-renamed `IEEEtranTCOM.cls` still gets the `IEEEtran` binding), and
+/// failing that `OmniBus`, the generic class supplying frontmatter, counter and
+/// theorem definitions. Whether the raw `.cls` may be read at all is the
+/// `INCLUDE_CLASSES` value's call (`searchpaths` restricts it to local
+/// sources); by default it may not, because a raw load that "succeeds" would
+/// suppress the OmniBus fallback while providing none of its bindings.
+///
+/// See [`load_class_with_options`] for Perl's `withoptions => 1` variant. The
+/// per-branch reasoning, and the arXiv witnesses behind it, are in the body
+/// comments.
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
   // Perl Package.pm LoadClass: $options{notex}=1 unless LookupValue('INCLUDE_CLASSES').
   // Defaults to NOT loading raw .cls. Only .cls.ltxml bindings are considered;
@@ -2836,6 +2864,17 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
 // Declaring and Adjusting the Document Model.
 //======================================================================
 
+/// Declare document-model properties for one element tag — Perl's `Tag`
+/// (`Package.pm` L2015-2030).
+///
+/// Merges `properties` into the tag's existing entry rather than replacing it,
+/// which is what lets a class, a package and the engine each contribute to the
+/// same tag. How a property merges depends on the property: `auto_open` /
+/// `auto_close` overwrite when given, while the accumulating properties
+/// (`afterOpen`, `afterClose`, …) prepend or append per
+/// [`TagOptionName::is_prepend`]/[`TagOptionName::is_append`] — Perl's
+/// `$tag_prepend_options` / `$tag_append_options` tables, whose order decides
+/// whether a late binding's hook runs before or after the engine's.
 pub fn install_tag(tag: &str, mut properties: TagOptions) {
   let tag_ticket = arena::pin(tag);
   with_tag_property_mut(tag_ticket, |options| {
@@ -2868,6 +2907,13 @@ pub fn select_relaxng_schema(schema: &str, namespaces: Option<HashMap<String, St
   }
 }
 
+/// Merge font attributes into the current font, **locally** — the change
+/// reverts with the enclosing TeX group.
+///
+/// Port of Perl `Package.pm:MergeFont` L441-444
+/// (`AssignValue(font => LookupValue('font')->merge(@kv), 'local')`). Only the
+/// attributes `font` actually specifies are taken; the rest are inherited from
+/// the font in force. See [`merge_font_ref`] to merge without moving the font.
 pub fn merge_font(font: Font) {
   let new_font = lookup_font().unwrap().merge_ref(&font);
   assign_font(Rc::new(new_font), Some(Scope::Local));
@@ -2946,6 +2992,13 @@ pub fn def_color_model(model: &str, coremodel: &str) {
   );
 }
 
+/// Digest tokens in text mode, whatever mode the caller is in.
+///
+/// Port of Perl `Package.pm:DigestText` L405-411: brackets the digestion in
+/// `beginMode`/`endMode` so that material which must come out as text — a
+/// title, a caption, an alt string — does so even when it is being read from
+/// inside math. Compare [`digest_literal`], which additionally forces an ASCII
+/// encoding and leaves the mode's other side-effects out.
 pub fn digest_text(stuff: Tokens) -> Result<Digested> {
   begin_mode("text")?;
   let value = digest(stuff);

@@ -268,6 +268,13 @@ impl Object for Digested {
       Postponed(ref _t) => None, // Tokens carry no locator
     }
   }
+  /// The source tokens this digested value came from — digestion run
+  /// backwards, delegated to whichever variant is held.
+  ///
+  /// What `\meaning`-style introspection and the `tex` attribute are built on:
+  /// a construct that has already become boxes, a whatsit or an alignment can
+  /// still show the LaTeX that produced it. A `Postponed` variant is already
+  /// tokens and reverts to itself.
   fn revert(&self) -> Result<Tokens> {
     use DigestedData::*;
     match *self.0 {
@@ -507,7 +514,7 @@ impl BoxOps for Digested {
 const FP_BUDGET: u32 = 48;
 
 /// Per-box traversal cap for [`Digested::estimate_bytes`]. Larger than
-/// [`FP_BUDGET`] (the estimate is computed only on a small *sample* of the box
+/// `FP_BUDGET` (the estimate is computed only on a small *sample* of the box
 /// list, so a deeper walk is affordable and improves accuracy for nested
 /// boxes).
 const EB_BUDGET: u32 = 256;
@@ -523,7 +530,7 @@ impl Digested {
   /// different boxes that merely share a shape (e.g. two `List`s of equal
   /// length but different children) don't collide into a false cycle, yet
   /// (b) be cheap on the digestion path. We reconcile both with a hard
-  /// **node budget**: at most [`FP_BUDGET`] sub-boxes are ever visited (a
+  /// **node budget**: at most `FP_BUDGET` sub-boxes are ever visited (a
   /// depth-first sample of the content), so cost is O(1) per box regardless
   /// of how large or deeply nested the structure is, while the sample is rich
   /// enough that real content differences change the hash. (It is also only
@@ -612,7 +619,7 @@ impl Digested {
   /// memory-budget guard ([`crate::stomach`]) to detect a runaway *by the
   /// resource that actually matters — bytes — rather than box COUNT*, since
   /// per-box weight varies several-fold (a bare text box vs a deeply nested
-  /// `\hbox{\raise…\hbox{…}}`). Traversal is capped at [`EB_BUDGET`] sub-boxes
+  /// `\hbox{\raise…\hbox{…}}`). Traversal is capped at `EB_BUDGET` sub-boxes
   /// (depth-first) so the estimate stays O(1) per box; deeply nested boxes
   /// beyond the budget are under-counted, which is safe (the guard only needs
   /// a monotone lower bound to catch unbounded growth).

@@ -164,7 +164,7 @@ impl ConstructorBuilder {
     self
   }
 
-  /// Apply a **scalar** option by name (see [`apply_scalar_option`], the
+  /// Apply a **scalar** option by name (see `apply_scalar_option`, the
   /// single-source key→field map shared with [`EnvironmentBuilder`]).
   pub fn set_option(mut self, key: &str, value: OptionValue) -> Result<Self> {
     apply_scalar_option(&mut self.options, key, value)?;
@@ -247,7 +247,7 @@ impl EnvironmentBuilder {
     self
   }
 
-  /// Apply a **scalar** option by name (shared map: [`apply_scalar_option`]).
+  /// Apply a **scalar** option by name (shared map: `apply_scalar_option`).
   pub fn set_option(mut self, key: &str, value: OptionValue) -> Result<Self> {
     apply_scalar_option(&mut self.options, key, value)?;
     Ok(self)

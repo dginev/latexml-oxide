@@ -28,8 +28,35 @@ jobs:
               with:
                 components: rustfmt, rust-src
 
+            # `-D warnings` because a broken rustdoc link is INVISIBLE in the
+            # deployed site — it renders as dead text, not as an error — so a
+            # warning nobody reads is the only thing standing between a rename
+            # and a published dead anchor. The workspace is warning-clean as of
+            # this commit; keep it that way rather than letting the noise floor
+            # grow back.
+            #
+            # CI.yml's lint job runs the same gate on every pull request, which
+            # is where a regression should actually be caught. This one is the
+            # backstop for what is about to be PUBLISHED — it also covers the
+            # paths that reach main without a PR.
             - name: Build Documentation
+              env:
+                RUSTDOCFLAGS: -D warnings
               run: cargo doc --all --no-deps
+
+            # The generated .rhai interface reference
+            # (latexml_contrib/src/script_bindings/API.md) links every documented
+            # call to its Rust counterpart, and rustdoc is what validates those
+            # paths. The build above already covers it — `runtime-bindings` is in
+            # latexml_oxide's default features and workspace feature unification
+            # turns it on for latexml_contrib too. This step pins the feature
+            # EXPLICITLY so that chain is not load-bearing: were the default ever
+            # dropped, the reference would quietly stop being link-checked
+            # instead of failing here.
+            - name: Check the generated .rhai reference has no dead links
+              env:
+                RUSTDOCFLAGS: -D warnings
+              run: cargo doc -p latexml_contrib --features runtime-bindings --no-deps
 
             - name: Deploy Documentation
               env:

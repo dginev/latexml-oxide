@@ -621,5 +621,30 @@ fn dynamic_to_string(d: Dynamic) -> String {
   }
 }
 
+/// The complete `.rhai` binding interface, rendered into this crate's rustdoc.
+///
+/// Not hand-written: `API.md` is GENERATED from the live engine (Rhai's
+/// `gen_fn_signatures` reflections API) and a test regenerates and compares it on
+/// every run, so `cargo doc` — and docs.rs — always show what is actually
+/// registered. Regenerate after adding a `register_fn` with:
+///
+/// ```sh
+/// UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date
+/// ```
+// The table links each call as `[`short_name`](full::path)`. `short_name` is
+// what a reader can scan; the full path is what rustdoc resolves. Where a short
+// name ALSO happens to resolve on its own — `def_macro` does, because
+// `#[macro_use] extern crate` pulls the engine and codegen macro namespaces in
+// crate-wide — rustdoc calls the explicit target redundant. It is not wrong,
+// and the link works; requiring the generator to drop the target on exactly the
+// rows where the label collides would make the output depend on what happens to
+// be in scope. `broken_intra_doc_links` — the lint that catches a DEAD link,
+// and the reason `cargo doc` is gated on `-D warnings` at all — stays on.
+#[allow(rustdoc::redundant_explicit_links)]
+#[doc = include_str!("API.md")]
+pub mod interface {}
+
+#[cfg(test)]
+mod api_doc;
 #[cfg(test)]
 mod tests;

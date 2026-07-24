@@ -28,7 +28,7 @@ pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 /// bare fragment of several top-level nodes, or an undeclared HTML entity such as
 /// `&nbsp;`, is a parse error. The error is returned as a rendered string for the
 /// caller to report; this layer applies no logging policy of its own. See
-/// [`ill_formed_markup_hint`] for why that string names the likely causes instead
+/// `ill_formed_markup_hint` for why that string names the likely causes instead
 /// of quoting libxml's own diagnosis.
 ///
 /// **Recovery is deliberately OFF.** libxml's default is to salvage malformed

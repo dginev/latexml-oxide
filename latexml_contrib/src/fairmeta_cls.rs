@@ -2,7 +2,7 @@
 //!
 //! fairmeta.cls builds its frontmatter interface
 //! (\author/\affiliation/\contribution/\metadata/\correspondence/\abstract) on
-//! an \addtolist[5] accumulator in the class BODY. Since an unknown .cls body is
+//! an `\addtolist[5]` accumulator in the class BODY. Since an unknown .cls body is
 //! NOT raw-loaded (OmniBus extracts dependencies only), every one of those
 //! commands is Error:undefined without a binding — and the class's
 //! \RequirePackage{nicematrix} etc. never take effect either. Route the

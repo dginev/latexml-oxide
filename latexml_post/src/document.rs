@@ -736,7 +736,7 @@ impl PostDocument {
   /// `make_splitpaths` emits `//ltx:X` and
   /// `//ltx:X[preceding-sibling::ltx:Y or parent::ltx:Z]` arms. As XPath on a
   /// huge document the predicated arms overflow the 10M node-set ceiling (see
-  /// [`scan_ids_and_pis`]), the union returns NULL, and nothing splits — the
+  /// `scan_ids_and_pis`), the union returns NULL, and nothing splits — the
   /// whole document stays one page and the downstream XSLT then dies on the same
   /// ceiling. Instead we parse the arms and select pages with one limit-safe
   /// walk, applying the predicates in Rust: same nodes, document order, no
@@ -1382,7 +1382,8 @@ impl PostDocument {
   ///
   /// Mirrors Perl `Post.pm` L373-393's "XMath will be removed (LATER!),
   /// but mark its ids as reusable" pattern. The actual unlink happens
-  /// in [`drain_pending_xmath_unlinks`], which the post-pipeline
+  /// in [`drain_pending_xmath_unlinks`](Self::drain_pending_xmath_unlinks),
+  /// which the post-pipeline
   /// invokes once *all* math-format processors have completed. Without
   /// the defer, parallel-format chains (pmml + cmml) lose the XMath
   /// subtree on the first processor's unlink and the second

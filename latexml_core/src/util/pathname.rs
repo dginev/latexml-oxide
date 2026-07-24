@@ -103,7 +103,7 @@ impl KpathseaBackend {
   }
 }
 
-/// The resolved backend and why, recorded by [`select_kpaths`].
+/// The resolved backend and why, recorded by `select_kpaths`.
 #[cfg(feature = "kpathsea")]
 static BACKEND: OnceLock<(KpathseaBackend, &'static str)> = OnceLock::new();
 
@@ -210,7 +210,7 @@ fn select_kpaths() -> Option<Kpaths> {
 
 /// The ambient `kpsewhich --version` banner (full stdout), memoized for the
 /// process. It is a global property of the host TeX install, and several
-/// consumers read it — kpathsea backend selection ([`select_kpaths`]) and
+/// consumers read it — kpathsea backend selection (`select_kpaths`) and
 /// ambient-year detection (in `latexml_engine`; the year-based latex-dump
 /// staleness check in turn consumes that detected year) — so `kpsewhich` is
 /// spawned at most once. Returns `None` if kpsewhich is absent or the call
@@ -1053,7 +1053,7 @@ mod tests {
     assert!(kpsewhich(&["lxo_definitely_absent_probe_304.tex"]).is_none());
   }
 
-  /// The backend chosen by [`select_kpaths`] must resolve a universal host
+  /// The backend chosen by `select_kpaths` must resolve a universal host
   /// file on whatever distribution is ambient — proving the shipped binary
   /// works out of the box on both TeX Live (in-process) and MiKTeX (subprocess
   /// fallback, since the linked libkpathsea can't read MiKTeX's fndb). Asks

@@ -46,11 +46,11 @@ pub struct MathConversion {
 /// Port of `LaTeXML::Post::MathProcessor`.
 ///
 /// Implementors must define:
-/// - [`convert_node`] — convert an XMath node to the target format
-/// - [`raw_id_suffix`] — suffix for generated IDs (e.g., ".pmml")
+/// - [`convert_node`](MathProcessor::convert_node) — convert an XMath node to the target format
+/// - [`raw_id_suffix`](MathProcessor::raw_id_suffix) — suffix for generated IDs (e.g., ".pmml")
 ///
 /// For parallel markup, also implement:
-/// - [`combine_parallel`] — merge primary + secondary conversions
+/// - [`combine_parallel`](MathProcessor::combine_parallel) — merge primary + secondary conversions
 pub trait MathProcessor: Processor {
   /// Convert an XMath node to this processor's format.
   ///
@@ -100,7 +100,8 @@ pub trait MathProcessor: Processor {
   /// Parallel-markup secondaries held by this (primary) processor. During the
   /// primary's `process_math_node`, each secondary's `convert_node` runs against
   /// the still-live XMath and the results are folded into one `<m:semantics>`
-  /// via [`combine_parallel`]. Empty by default (standalone, single-format).
+  /// via [`combine_parallel`](MathProcessor::combine_parallel). Empty by
+  /// default (standalone, single-format).
   /// Port of Perl `MathProcessor`'s primary→secondary parallel model.
   fn parallel_secondaries(&self) -> &[Box<dyn MathProcessor>] { &[] }
 

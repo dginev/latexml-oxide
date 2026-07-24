@@ -27,11 +27,11 @@ use crate::{
 /// Citation style.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CitationStyle {
-  /// Numeric: [1], [2], ...
+  /// Numeric: `[1]`, `[2]`, ...
   Numbers,
   /// Author-Year: Author (Year)
   AuthorYear,
-  /// Alphabetic: [ABC24]
+  /// Alphabetic: `[ABC24]`
   Alpha,
 }
 

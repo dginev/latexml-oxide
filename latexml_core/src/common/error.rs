@@ -962,6 +962,13 @@ impl From<marpa::error::Error> for Error {
 //**********************************************************************
 // Progress reporting.
 
+/// Advance the progress indicator by one step.
+///
+/// Perl `Common/Error.pm:ProgressStep` L430-433 ticks a terminal spinner. This
+/// port draws no spinner — conversion steps go by faster than a spinner can
+/// usefully render — so the call is a deliberate no-op, kept as the seam Perl
+/// bindings call through. The reporting that does reach the log is
+/// [`note_progress`] and the [`note_begin`]/[`note_end`] pair.
 pub fn progress_step(_note: &str) {
   // should we also do a spinner? It's often too fast to spin
   // _spinnerstep(note)
@@ -978,12 +985,25 @@ pub fn note_progress_detailed(stuff: &str) {
   debug!(target: "note", "{}", stuff);
 }
 
+/// Open a named progress stage, logging `(stage...`.
+///
+/// Perl `Common/Error.pm:ProgressSpinup` L435ff. Pair every call with
+/// [`note_end`], which closes the parenthesis — the nesting of those
+/// parentheses is what makes a conversion log readable as a phase tree.
+/// Perl also stamps a `NOTE_TIMERS` entry here so the close can report elapsed
+/// time; this port logs the structure without the timing (per-phase wall times
+/// are the telemetry module's job).
 pub fn note_begin(stage: &str) {
   // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
   use log::info;
   info!(target: "note", "\n({}...", stage);
 }
 
+/// Close the progress stage opened by [`note_begin`], logging the matching `)`.
+///
+/// Perl `Common/Error.pm:ProgressSpindown` additionally prints the stage's
+/// elapsed time from its `NOTE_TIMERS` entry; see [`note_begin`] for why this
+/// port does not.
 pub fn note_end(_stage: &str) {
   // if (my $start = $state && $state->lookupMapping('NOTE_TIMERS', $stage)) {
   //   $state->assignMapping('NOTE_TIMERS', $stage, undef);

@@ -45,3 +45,10 @@ rhai = { version = "1", optional = true, features = ["no_module", "no_time"] }
 # `runtime-bindings` so default builds don't pull it (it was previously an
 # always-on dependency that cargo-machete flagged as unused in default builds).
 log = { version = "0.4", optional = true }
+# Doc/test-only: `metadata` turns on Rhai's reflections API
+# (`Engine::gen_fn_signatures`), which is how `script_bindings/API.md` is
+# generated and kept honest. It pulls serde + serde_json, so it must NEVER reach
+# the shipped binary — under `resolver = "2"` a dev-dependency's features are not
+# unified into a normal build, so `cargo build --release` stays serde-free.
+[dev-dependencies]
+rhai = { version = "1", features = ["no_module", "no_time", "metadata"] }

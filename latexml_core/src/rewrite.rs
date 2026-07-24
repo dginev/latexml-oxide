@@ -19,7 +19,7 @@ pub type RewriteTestClosure = Rc<dyn Fn(&mut Document, &Node) -> Result<usize>>;
 pub type RewriteRegexpClosure = Rc<dyn Fn(&str) -> Option<String>>;
 
 /// A single sub-pattern in a MultiSelect clause.
-/// Perl: [$xpath, $nnodes, @wilds]
+/// Perl: `[$xpath, $nnodes, @wilds]`
 #[derive(Debug, Clone)]
 pub struct MultiSelectEntry {
   pub xpath:  String,

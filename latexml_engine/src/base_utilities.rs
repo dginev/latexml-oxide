@@ -2267,11 +2267,25 @@ pub fn reenter_text_mode(vertical_mode: bool) {
 
 // Similarly, for metadata appearing within peculiar environments, fonts, etc
 // You'll typically want this within a group or bounded=>1.
+/// Reset the text and math fonts to their defaults, **locally**.
+///
+/// For metadata that must not inherit the font it happens to be written in —
+/// a title picked up inside an italic environment, an author in a small-caps
+/// box. The assignments are group-local, so use this inside a group (or a
+/// `bounded => 1` definition), otherwise the reset outlives the construct that
+/// wanted it.
 pub fn neutralize_font() {
   assign_value("font", Font::text_default(), Some(Scope::Local));
   assign_value("mathfont", Font::math_default(), Some(Scope::Local));
 }
 
+/// Today's date as LaTeX's `\today` renders it — `Month D, YYYY`.
+///
+/// Mirrors Perl `TeX_Job.pool.ltxml` L52-55, reading `\year`/`\month`/`\day`
+/// from the **value** table where job startup put them — not from the register
+/// meanings, which a class file is free to `\def` out from under us. A missing
+/// value falls back to a default instead of aborting the conversion; the body
+/// comment records that divergence and its witnesses.
 pub fn today() -> Result<String> {
   let month_names = [
     "January",
