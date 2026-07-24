@@ -22,6 +22,9 @@ this doc is the **performance follow-up** to shrink RAM + time faithfully.
 
 - **Peak RSS 9.05 GB**, **wall 38.8 s**, 0 errors, 3007 split pages / 79 MB out.
 - Perl same-host: **7.36 GB and climbing, unfinished at 2 min, many errors.**
+- After the landed M1+M2 density work this is **6.43 GB / 37.1 s** (same 0
+  errors / 3007 pages / 79 MB). The analysis below describes the *original*
+  baseline; the phase *shape* is unchanged, only the magnitudes shrink.
 
 ### RAM — a transient coexistence, not a leak
 
@@ -66,7 +69,9 @@ Post-phase breakdown (`LATEXML_POST_AUDIT=1`): digestion **~20 s**, CrossRef
 boxes+DOM; time is allocation + DOM traversal, both proportional to box/node
 count. So *reducing box/node volume/density helps both axes*.
 
-## Landed — M1 (this PR)
+## Landed — M1 + M2 (this PR)
+
+### M1 — share `List` fonts
 
 **`List.font: Option<Font>` → `Option<Rc<Font>>`** (`latexml_core/src/list.rs`,
 `latexml_engine/src/tex_box.rs`). `Tbox.font` was already `Rc<Font>`; `List`
@@ -79,27 +84,48 @@ box (`DigestedData` 424 → ~216 B).
 - **Peak RSS 9.05 → 7.55 GB (−1.5 GB / −17 %)**, wall 38.8 → 37.6 s (no
   regression), 0 errors, output identical, full suite **1678/0**.
 
-## TODO — M2 (contained density, safe, resume here)
+### M2 — box the `KeyVals` variant
 
-After M1 the largest `DigestedData` variant is **`KeyVals` (208 B)**
-(`digested.rs::DigestedData`); everything else is ≤152 B (`Whatsit`). Boxing it —
-`KeyVals(KeyVals)` → `KeyVals(Box<KeyVals>)` — drops `DigestedData` to ~160 B,
-shrinking *every* box by ~56 B (KeyVals is rare, so the added indirection only
-touches rare accesses). Est. a few hundred MB; also trims the allocator bucket.
-- Update the `DigestedData::KeyVals` construction + match sites (grep
-  `DigestedData::KeyVals`). Measure for any time change; keep the full suite green.
-- Smaller inner-heap follow-ups: audit `Whatsit.properties`/`List.properties`
-  (`SymHashMap<Stored>`, 72 B per value) and `Whatsit.args` for boxes that carry
-  empty/near-empty maps. `HashMap` doesn't allocate until first insert, so only
-  populated maps cost — confirm before touching.
-- A `#[test]` asserting `size_of::<DigestedData>()` stays ≤ a budget would guard
-  against future variant bloat (there is a `// TODO` about this on the enum).
+**`DigestedData::KeyVals(KeyVals)` → `KeyVals(Box<KeyVals>)`**
+(`latexml_core/src/digested.rs`). After M1 the enum's size ceiling was `KeyVals`
+(208 B: two `String`s, three `Vec`s, two `HashMap`s) — a **rare** variant setting
+the price of *every* box. Boxing it drops `DigestedData` **208 → 168 B** (the
+ceiling is now `Whatsit`, `RefCell<Whatsit>` = 160 B + discriminant), and the
+indirection is only paid on rare KeyVals accesses.
+
+- **Peak RSS 7.55 → 6.43 GB (−1.12 GB / −15 %)**, wall 37.6 → 37.1 s (no
+  regression), 0 errors, 3007 pages / 79 MB out, full suite **1679/0**.
+- **Cumulative M1+M2: 9.05 → 6.43 GB (−2.62 GB / −29 %)** at unchanged wall time
+  and byte-identical output.
+- The win exceeds a naive "40 B × top-level boxes": every box in the *recursive*
+  tree pays the enum size, and each is a separate `Rc` allocation whose
+  `16 B + payload` rounds up into an allocator size class, so the shrink also
+  drops some boxes into a smaller class.
+- Only **one** downstream site needed a change — `enumitem_sty.rs::extract_keyvals`
+  clones the value out (`(**kv).clone()`); the ~40 other `DigestedData::KeyVals(..)`
+  match sites auto-deref through the `Box` unchanged.
+- Guarded by **`digested_data_size_budget`** (`digested.rs`, ≤168 B) so a future
+  fat variant can't silently re-inflate the per-box footprint. The
+  `#[allow(clippy::large_enum_variant)]` on the enum is no longer needed and was
+  removed (along with the stale size TODO it carried).
+- Checked and **not** worth pursuing: `Whatsit.properties`/`List.properties`
+  (`SymHashMap<T>` is a newtype over `HashMap`, which does not allocate until the
+  first insert), so empty property maps already cost zero heap.
+
+### The next density ceiling (open, needs data before acting)
+
+`Whatsit` (160 B) now sets the 168 B budget. Boxing it too would drop
+`DigestedData` to ~104 B (`TBox`/`List` `RefCell` = 96 B) — but unlike `KeyVals`,
+`Whatsit` is a **hot, common** variant, so the extra allocation + indirection per
+whatsit could cost more time than the RAM is worth. Measure the live box-type
+distribution first; do not box it on size reasoning alone.
 
 ## TODO — M3 (streaming boxes→DOM — the big RAM lever, architectural)
 
 The only path to a *large* further RAM cut: free each digested subtree **as it is
 absorbed** into the DOM, instead of holding the whole box tree until Building
-finishes. Target peak **~7.5 → ~3–4 GB** (DOM-dominated).
+finishes. Target peak **~6.4 → ~3 GB** (DOM-dominated — post-processing runs at
+1.1 GB once the boxes are gone, so the DOM itself is not the bulk).
 
 - **Where:** `latexml_oxide/src/core_interface.rs::convert_document` L424
   `document.absorb(&digested, None)` builds the whole DOM from one top-level
