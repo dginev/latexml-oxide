@@ -1,16 +1,20 @@
 //! Build script for the top-level `latexml` crate.
 //!
 //! Its only job is a developer convenience: point this checkout's git at the
-//! repo's tracked hooks (`.githooks/`) so every contributor gets the
-//! fmt + clippy pre-push gate automatically on their first `cargo build`/`test`
-//! — no manual `git config core.hooksPath` step (which is easy to forget, and
-//! its absence is exactly how unformatted / clippy-dirty branches reach CI).
+//! repo's tracked hooks (`.githooks/`) so every contributor gets the pre-push
+//! lint gate (`tools/lint.sh`, the same script CI runs) automatically on their
+//! first `cargo build`/`test` — no manual `git config core.hooksPath` step
+//! (which is easy to forget, and its absence is exactly how unformatted /
+//! clippy-dirty branches reach CI).
 //!
 //! It is a strict no-op outside a source git checkout — packaged crates,
 //! `cargo install`, and release tarballs have no `.git`, so distribution builds
 //! are unaffected — and it never fails the build (every git call is best-effort).
 
-use std::{path::Path, process::Command};
+use std::{
+  path::{Path, PathBuf},
+  process::Command,
+};
 
 fn main() {
   install_git_hooks();
@@ -76,28 +80,71 @@ fn install_git_hooks() {
     return;
   }
 
-  // Idempotent: leave it alone if it already points at our hooks.
   let current = Command::new("git")
     .current_dir(repo_root)
     .args(["config", "--local", "--get", "core.hooksPath"])
     .output();
-  if let Ok(out) = &current
-    && String::from_utf8_lossy(&out.stdout).trim() == ".githooks"
-  {
+  let current_raw = current
+    .as_ref()
+    .ok()
+    .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+    .unwrap_or_default();
+
+  // Resolve a configured hooksPath the way git does — relative to the repo root
+  // — so we compare DIRECTORIES, not strings.
+  let resolve = |value: &str| -> Option<PathBuf> {
+    let trimmed = Path::new(value.trim_end_matches('/'));
+    let abs = if trimmed.is_absolute() {
+      trimmed.to_path_buf()
+    } else {
+      repo_root.join(trimmed)
+    };
+    std::fs::canonicalize(abs).ok()
+  };
+  let same_dir = |a: &str, b: &Path| -> bool {
+    matches!((resolve(a), std::fs::canonicalize(b).ok()), (Some(x), Some(y)) if x == y)
+  };
+
+  // Idempotent: leave it alone if it already points at our hooks. This compares
+  // resolved paths because a string compare against ".githooks" missed both
+  // ".githooks/" — the trailing-slash form CLAUDE.md tells contributors to use —
+  // and any absolute path to the same directory. Those fell through to the
+  // "custom hooksPath" branch below, so the gate stayed off while this script
+  // believed the user had deliberately chosen that.
+  if !current_raw.is_empty() && same_dir(&current_raw, &repo_root.join(".githooks")) {
     return;
   }
 
+  // A hooksPath pointing at git's OWN default (<repo>/.git/hooks) is not a
+  // deliberate choice — it is where git looks anyway — so treat it as unset and
+  // wire up the gate. Without this, a checkout whose hooksPath had been set to
+  // the default kept the gate silently disabled forever: the notice below goes
+  // to stderr, which cargo shows only under `-vv` or on failure. That is how
+  // three unformatted/doc-broken pushes reached CI on 2026-07-24.
+  //
+  // Unless the directory actually carries a hook, that is — everything git ships
+  // there is a `.sample`. If a real one is present, it is someone's, so respect it.
+  let default_hooks = repo_root.join(".git/hooks");
+  let default_carries_hooks = std::fs::read_dir(&default_hooks)
+    .map(|entries| {
+      entries
+        .flatten()
+        .any(|e| e.path().is_file() && !e.file_name().to_string_lossy().ends_with(".sample"))
+    })
+    .unwrap_or(false);
+  let redundant_default = same_dir(&current_raw, &default_hooks) && !default_carries_hooks;
+
   // Respect a deliberately-set custom hooksPath rather than clobbering it; just
   // nudge. Otherwise (the common unset case) wire up the gate.
-  let already_custom = matches!(&current, Ok(out) if !out.stdout.is_empty());
+  let already_custom = !current_raw.is_empty() && !redundant_default;
   if already_custom {
     // Print to stderr, NOT `cargo:warning=` — cargo replays build-script
     // warnings on every build until the script re-runs, which would turn a
     // one-time notice into perpetual noise. Build-script stderr is surfaced
     // only under `cargo build -vv` or on failure.
     eprintln!(
-      "latexml: git core.hooksPath is set to a custom value; the fmt+clippy \
-       pre-push gate lives in .githooks/ — point core.hooksPath there to enable it."
+      "latexml: git core.hooksPath is set to a custom value; the pre-push lint \
+       gate lives in .githooks/ — point core.hooksPath there to enable it."
     );
     return;
   }
@@ -109,7 +156,7 @@ fn install_git_hooks() {
   if matches!(set, Ok(s) if s.success()) {
     // stderr, not `cargo:warning=` (see the note above re: per-build replay).
     eprintln!(
-      "latexml: enabled the fmt+clippy pre-push gate \
+      "latexml: enabled the pre-push lint gate \
        (set git core.hooksPath=.githooks). Bypass once with `git push --no-verify`."
     );
   }

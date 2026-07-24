@@ -13,10 +13,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Fast-failing quality gate, mirroring the local pre-push hook
-  # (.githooks/pre-push). No TeX Live: the engine compiles without on-disk
-  # dumps (self-contained / embedded-fallback invariant), so clippy only needs
-  # the C library headers, not a texmf tree. Runs in parallel with `test`.
+  # Quality gate, running the SAME script as the local pre-push hook
+  # (tools/lint.sh — see the comment on the gate step below). No TeX Live: the
+  # engine compiles without on-disk dumps (self-contained / embedded-fallback
+  # invariant), so clippy only needs the C library headers, not a texmf tree.
+  # Runs in parallel with `test`.
+  #
+  # The gate deliberately does NOT stop at the first failed check: it reports
+  # every failure in one run. Fail-fast costs a whole CI cycle per failure when
+  # several checks are broken at once, which is worse than the few extra
+  # minutes. (tools/lint.sh --fail-fast restores the old behaviour.)
+  #
+  # `name:` is load-bearing — it is the check name branch protection matches.
+  # Don't rename it casually, even though the gate now covers more than three
+  # tools.
   lint:
     name: lint (fmt + clippy + deny)
     runs-on: ubuntu-latest
@@ -41,19 +51,29 @@ jobs:
         with:
           cache-on-failure: true
           key: lint
-      - name: rustfmt (check)
-        run: cargo fmt --all --check
-      - name: clippy (deny warnings, whole workspace + all targets)
-        run: cargo clippy --workspace --all-targets --profile ci -- -D warnings
-      # Gate the docs HERE, on the pull_request, not only in rustdoc.yml — that
-      # workflow runs on push to main, so a doc warning introduced by a PR would
-      # only surface once it had already landed. A broken rustdoc link is
-      # invisible on the deployed site (it renders as dead text, not an error),
-      # so the warning is the only signal there is.
-      - name: rustdoc (deny warnings)
+      # cargo-machete is installed BEFORE the gate below, which runs it.
+      - name: install cargo-machete
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+
+      # The gate itself: xml:id ratchet, rustfmt, clippy, rustdoc, the
+      # vendored-native audit and cargo-machete. It lives in tools/lint.sh
+      # because .githooks/pre-push runs the SAME script — one source of truth,
+      # so the hook and CI cannot drift. (They were hand-maintained copies and
+      # did drift: neither was a superset of the other, so a push could pass the
+      # hook and still fail here on a check the hook never ran.) The per-check
+      # rationale lives in that script, next to each check.
+      #
+      # LINT_PROFILE=ci keeps the RAM-tuned profile for this 16 GB runner;
+      # LINT_STRICT=1 makes a missing tool an error here rather than the loud
+      # skip a local run is allowed to take.
+      - name: lint gate (tools/lint.sh — same script as .githooks/pre-push)
         env:
-          RUSTDOCFLAGS: -D warnings
-        run: cargo doc --workspace --no-deps --profile ci
+          LINT_PROFILE: ci
+          LINT_STRICT: "1"
+        run: tools/lint.sh
+
       - name: cargo-deny (advisories + licenses + bans + sources)
         # The action's default arguments inject `--all-features`, so this audits
         # feature-gated trees too (e.g. the off-by-default `cortex` worker deps).
@@ -68,23 +88,10 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2.0.20
         with:
           command: check
-
-      # The complement to cargo-deny, which reasons over crate MANIFESTS and so is
-      # blind to vendored C: a `-sys` crate reports its Rust wrapper's license, not
-      # the native library's. That gap is why libmarpa statically linked
-      # MIT + LGPL-3.0/LGPL-2.1 code into every binary we ever shipped, attributed
-      # nowhere, while `cargo deny check licenses` said "licenses ok" throughout.
-      # This fails when a crate compiling native code shows up unaudited.
-      # See docs/release/LICENSE_INVENTORY.md §D.2 / §A "Scope limit".
-      - name: audit vendored native code (cargo-deny's blind spot)
-        run: python3 tools/audit_vendored_natives.py --verbose
-
-      - name: install cargo-machete
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-machete
-      - name: cargo-machete (unused dependencies)
-        run: cargo machete
+        # Stays a separate step, and stays CI's real gate for licenses: it is a
+        # Docker action, so tools/lint.sh cannot invoke it. That script runs
+        # `cargo deny` only when the binary happens to be installed locally, as
+        # a pre-push convenience — it is not a substitute for this step.
 
   # Miri (UB detector) over the FFI-FREE pure-Rust `unsafe` — the string
   # interner / arena bounds-skip (resolve_unchecked) + re-entrant `&mut *ptr`

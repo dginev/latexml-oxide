@@ -4,31 +4,17 @@
 #
 # Installed automatically: the `latexml` (latexml_oxide) build script points
 # this checkout's `core.hooksPath` at `.githooks/` on first build, so every
-# contributor gets this gate without a manual `git config` step. CI runs the
-# same three checks (see .github/workflows/CI.yml `lint` job) as a backstop.
+# contributor gets this gate without a manual `git config` step.
+#
+# The checks themselves live in tools/lint.sh, which CI's `lint` job runs too —
+# one script, both callers, so the hook and CI cannot drift. They used to be
+# hand-maintained copies and had: this hook ran the xml:id ratchet, fmt and
+# clippy; CI ran fmt, clippy, rustdoc, cargo-deny, the vendored-native audit and
+# cargo-machete. Neither was a superset, so a clean push could still fail CI on
+# a check the hook never ran.
 #
 # It BLOCKS the push (non-zero exit) when any check fails — it does NOT silently
 # rewrite your tree. Fix locally, then push again. To bypass in an emergency:
 #   git push --no-verify
 #
-set -e
-
-# 1. Cheap source ratchet first (fails fast, no compile): ban new string-keyed
-#    xml: attribute accessors. See docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
-tools/lint_xmlid_accessor.sh
-
-# 2. Formatting must already be applied (check, don't rewrite).
-if ! cargo +nightly fmt --all --check; then
-  echo >&2
-  echo "✗ pre-push: code is not formatted. Run:  cargo +nightly fmt --all" >&2
-  exit 1
-fi
-
-# 3. Clippy must be clean across the whole workspace and all targets
-#    (tests/benches/bins), matching CI. The old hook checked only the default
-#    package/targets and missed most crates.
-if ! cargo +nightly clippy --workspace --all-targets -- --deny warnings; then
-  echo >&2
-  echo "✗ pre-push: clippy warnings present. Fix them (try: cargo +nightly clippy --fix)." >&2
-  exit 1
-fi
+exec tools/lint.sh
