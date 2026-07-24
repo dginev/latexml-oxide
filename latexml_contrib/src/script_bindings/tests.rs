@@ -705,6 +705,30 @@ fn api_reference_is_up_to_date() {
     "api_doc::RETURN_OVERRIDES names functions the engine no longer registers: \
      {stale_overrides:?}"
   );
+  // Every registered call must be documented — a link to its Rust counterpart,
+  // or a written note where there is none. A new `register_fn` with neither
+  // fails here rather than shipping an undocumented entry.
+  let undocumented = api_doc::undocumented_names(&engine);
+  assert!(
+    undocumented.is_empty(),
+    "these .rhai calls have no api_doc::DOCS entry — add a Doc::Rust link or a \
+     Doc::Note description: {undocumented:?}"
+  );
+  let stale_docs = api_doc::stale_names(&engine);
+  assert!(
+    stale_docs.is_empty(),
+    "api_doc::DOCS/HANDLE_DOCS documents calls the engine no longer registers: \
+     {stale_docs:?}"
+  );
+  // One name registered on two handles is two different calls. A single
+  // name-keyed entry would be shared between them, and can only describe one —
+  // `setAttribute` was documented as `Document::get_node` before this check.
+  let ambiguous = api_doc::ambiguous_names(&engine);
+  assert!(
+    ambiguous.is_empty(),
+    "these .rhai calls share one api_doc::DOCS entry across different handles — \
+     give each its own api_doc::HANDLE_DOCS entry: {ambiguous:?}"
+  );
   let generated = api_doc::generate(&engine);
   let path = concat!(
     env!("CARGO_MANIFEST_DIR"),
