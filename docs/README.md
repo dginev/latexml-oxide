@@ -82,6 +82,7 @@ site) that have no Perl equivalent.
 | [`performance/PERFORMANCE.md`](performance/PERFORMANCE.md) | Timeless optimization principles, open/closed lever state, dated audit log. |
 | [`performance/STABILITY_WITNESSES.md`](performance/STABILITY_WITNESSES.md) | Living worklist of reliability witnesses (timeout/OOM/peak-RSS/hang) with current + Perl baselines. |
 | [`performance/STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) | Very-large split-document post-processing (the 614 MB `index.xml` witness); two-pass streaming split design. |
+| [`performance/ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md`](performance/ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md) | Very-large **single** doc (#361): RAM+time diagnosis; M1 (`List.font`→`Rc`, −1.5 GB) landed; M2/M3 (box KeyVals; stream boxes→DOM) pending. |
 | [`performance/CORTEX_WORKER_HARNESS.md`](performance/CORTEX_WORKER_HARNESS.md) | `cortex_worker --harness` fleet orchestration: one-conversion-per-process, memory guards, deployment. |
 | [`performance/TELEMETRY.md`](performance/TELEMETRY.md) | Per-job structured telemetry schema for `cortex_worker` runs. |
 | [`performance/SOURCE_PROVENANCE.md`](performance/SOURCE_PROVENANCE.md) | Design for the source↔preview showcase over a shared locator substrate (issues #47/#92). |
