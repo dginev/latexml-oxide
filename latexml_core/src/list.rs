@@ -19,8 +19,8 @@ pub struct List {
   pub boxes:      Vec<Digested>,
   pub mode:       Option<TexMode>,
   /// The list's font. `Rc`-shared (like [`crate::tbox::Tbox::font`]): fonts
-  /// repeat massively across a document, and storing the 328-byte [`Font`] by
-  /// value in every list box dominated the digested-box footprint (issue #361
+  /// repeat massively across a document, and storing the 328-byte [`struct@Font`]
+  /// by value in every list box dominated the digested-box footprint (issue #361
   /// memory pass). Set once at construction; never mutated in place.
   pub font:       Option<Rc<Font>>,
   pub locator:    Option<Locator>,
