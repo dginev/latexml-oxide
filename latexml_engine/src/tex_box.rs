@@ -401,7 +401,7 @@ LoadDefinitions!({
     List {
       boxes,
       mode,
-      font,
+      font: font.map(Rc::new),
       locator: None,
       properties,
     }

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, fmt, rc::Rc};
 
 use libxml::tree::Node;
 
@@ -18,7 +18,11 @@ use crate::{
 pub struct List {
   pub boxes:      Vec<Digested>,
   pub mode:       Option<TexMode>,
-  pub font:       Option<Font>,
+  /// The list's font. `Rc`-shared (like [`crate::tbox::Tbox::font`]): fonts
+  /// repeat massively across a document, and storing the 328-byte [`Font`] by
+  /// value in every list box dominated the digested-box footprint (issue #361
+  /// memory pass). Set once at construction; never mutated in place.
+  pub font:       Option<Rc<Font>>,
   pub locator:    Option<Locator>,
   pub properties: HashMap<Stored>,
 }
@@ -97,16 +101,17 @@ impl BoxOps for List {
     Ok(Vec::new())
   }
 
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> {
+    Ok(self.font.as_ref().map(|f| Cow::Borrowed(f.as_ref())))
+  }
   fn compute_size(
     &self,
     mut options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let font = self
       .font
-      .as_ref()
-      .cloned()
-      .unwrap_or_else(Font::text_default);
+      .clone()
+      .unwrap_or_else(|| Rc::new(Font::text_default()));
     // Perl: pass mode, vattach, and width from List properties through options
     // so that compute_boxes_size can determine layout mode
     //
@@ -184,7 +189,7 @@ impl List {
     }
     List {
       boxes,
-      font,
+      font: font.map(Rc::new),
       mode: None,
       locator,
       properties: HashMap::default(),
