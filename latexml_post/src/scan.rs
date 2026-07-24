@@ -305,11 +305,17 @@ impl Scan {
     if let Some(ref id_str) = id {
       sp.push("primary", Value::Bool(true));
       sp.push("children", Value::List(Vec::new()));
+      // Store the title/toctitle NODES (not flattened text), mirroring Perl
+      // Scan (`$$entry{title} = $node`). CrossRef later deep-clones them into
+      // `<ltx:ref>` content via `prepRefText`, so math/markup in a section
+      // title survives into the table of contents (issue #356). The string
+      // form used for the page `<title>`/tooltip is derived on demand via
+      // `title_text_content` in CrossRef::generate_title.
       if let Some(title_node) = doc.findnode_at("ltx:title", node) {
-        sp.push("title", Value::from(title_text_content(&title_node)));
+        sp.push("title", Value::from(title_node));
       }
       if let Some(toctitle_node) = doc.findnode_at("ltx:toctitle", node) {
-        sp.push("toctitle", Value::from(title_text_content(&toctitle_node)));
+        sp.push("toctitle", Value::from(toctitle_node));
       }
       if let Some(stub) = node.get_attribute("stub") {
         sp.push("stub", Value::from(stub));
@@ -921,7 +927,14 @@ fn get_xml_id(node: &Node) -> Option<String> {
 /// Perl uses cloneNode(1) + full DOM rendering, so `<tag close=" ">A</tag>GPT-4o`
 /// renders as "A GPT-4o". Our get_content() would give "AGPT-4o".
 /// This function inserts the `open`/`close` attribute values around tag elements.
-fn title_text_content(node: &Node) -> String {
+///
+/// This is the derived STRING form of a title (page `<title>`, `title=`
+/// tooltip). The rich node form is kept in the ObjectDB (`Value::Xml`) so
+/// CrossRef can deep-clone it into `<ltx:ref>` content. Mirrors Perl
+/// `CrossRef::getTextContent_rec`'s `ltx:tag` open/close handling (its
+/// `ltx:Math → unicodemath` branch is not yet ported — math in a title still
+/// flattens to its token text here, unchanged from before).
+pub(crate) fn title_text_content(node: &Node) -> String {
   let mut result = String::new();
   let mut child = node.get_first_child();
   while let Some(c) = child {
@@ -951,7 +964,10 @@ fn title_text_content(node: &Node) -> String {
   result
 }
 
-// NOTE: Perl uses cloneNode(1) for deep DOM copies. Our libxml bindings only
-// provide reference copies via Clone. All Value::Xml uses were converted to
-// Value::String (using get_content()) to avoid dangling node references.
-// TODO: Add deep clone support to rust-libxml (wrapping xmlCopyNode).
+// NOTE: Perl uses cloneNode(1) for deep DOM copies. rust-libxml now provides
+// deep-copy on materialization (`PostDocument::add_xml_node`, wrapping
+// xmlDocCopyNode with cross-doc namespace reconciliation + xml:id
+// uniquification), so `Value::Xml(node)` is safe to store and later clone.
+// Section titles are kept as nodes (see `section_handler`); the derived string
+// form is `title_text_content`. Glossary `phrase`/`see_also` values are also
+// stored as `Value::Xml`.
