@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_file","load_script"]};
+window.SIDEBAR_ITEMS = {"fn":["load_file","load_script"],"mod":["interface"]};
