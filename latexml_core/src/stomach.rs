@@ -36,6 +36,56 @@ pub fn set_timeout(seconds: u64) {
   }
 }
 
+// Explicit override for the cooperative soft-RSS budget (bytes). When set it
+// takes precedence over the `LATEXML_RSS_CAP_BYTES` env; when `None` the env /
+// built-in default applies. The binary sets it from the single `--max-memory`
+// knob (via [`soft_cap_from_ceiling`]) so that ONE flag governs the whole
+// memory limit — this cooperative fuse rides a fixed fraction below the hard
+// Watchdog ceiling rather than being an independent number, and `--max-memory=0`
+// disables both (this fuse via a `0` cap → `None`, the Watchdog via
+// `max_rss_kb == 0`).
+thread_local! {
+  static RSS_CAP_OVERRIDE: Cell<Option<u64>> = const { Cell::new(None) };
+}
+
+/// Override the cooperative soft-RSS memory budget, in bytes. `Some(0)`
+/// disables the budget; `Some(n)` caps at `n` bytes; `None` restores the
+/// `LATEXML_RSS_CAP_BYTES` env / built-in default. Mirrors the `--max-memory`
+/// CLI convention where `0` means "no limit". See [`resolve_rss_cap`].
+pub fn set_memory_cap(bytes: Option<u64>) { RSS_CAP_OVERRIDE.with(|c| c.set(bytes)); }
+
+/// Derive the cooperative soft-RSS budget (bytes) from the hard `--max-memory`
+/// ceiling (MiB). The soft fuse sits at 75% of the ceiling, leaving ~25%
+/// headroom for the post-processing phase (libxml DOM + XSLT) that runs above
+/// digestion and which this cooperative guard cannot see. `0` in → `0` out
+/// (disabled), so `--max-memory=0` disables the whole memory limit. This keeps
+/// `--max-memory` the single knob: the hard Watchdog rides the ceiling, this
+/// fuse rides a fixed fraction below it — no independent second number.
+///
+/// The 75% factor reproduces the historical ~4.5 GB-under-6 GiB relationship at
+/// the 6144 MiB default (→ 4608 MiB) while scaling with any user-chosen ceiling
+/// (so a tight `--max-memory` also gets the graceful cooperative failure first,
+/// and a generous one raises both guards together).
+pub fn soft_cap_from_ceiling(max_memory_mib: u64) -> u64 {
+  (max_memory_mib.saturating_mul(3) / 4).saturating_mul(1024 * 1024)
+}
+
+/// Resolve the effective soft-RSS budget: `None` = disabled (no ceiling),
+/// `Some(n)` = abort above `n` bytes. Precedence: the explicit
+/// [`set_memory_cap`] override, else `LATEXML_RSS_CAP_BYTES`, else the 4.5 GB
+/// default. A cap of `0` from EITHER source resolves to `None`, so
+/// `--max-memory=0` / `LATEXML_RSS_CAP_BYTES=0` mean "no limit" — not "abort
+/// immediately" (a literal `0` compared as `rss_bytes > 0` is always true).
+fn resolve_rss_cap() -> Option<u64> {
+  let cap = RSS_CAP_OVERRIDE.with(|c| c.get()).unwrap_or_else(|| {
+    std::env::var("LATEXML_RSS_CAP_BYTES")
+      .ok()
+      .and_then(|v| v.parse::<u64>().ok())
+      .unwrap_or(4_500_000_000)
+  });
+  (cap > 0).then_some(cap)
+}
+
 /// Check if conversion has timed out. Returns Err if deadline exceeded.
 ///
 /// Also samples RSS via /proc/self/status every ~1024 calls and raises
@@ -95,7 +145,9 @@ pub fn check_timeout() -> Result<()> {
           // canvas3 corpus stay below 1 GB peak RSS, so this is well
           // into pathological territory while leaving headroom for
           // post-processing (XSLT, MathML chain).
-          // Override via LATEXML_RSS_CAP_BYTES env.
+          // Override via LATEXML_RSS_CAP_BYTES env or `set_memory_cap`; a
+          // value of 0 (or `--max-memory=0`) disables it — see
+          // `resolve_rss_cap`.
           //
           // This is a *per-process* fuse, deliberately kept LOW. It must
           // bound ONE conversion: in production the binary is
@@ -116,11 +168,9 @@ pub fn check_timeout() -> Result<()> {
           // test setup (latexml_oxide `util::test::init_test_rss_cap`).
           // Any other single-process-many-conversion driver should do the
           // same.
-          let cap = std::env::var("LATEXML_RSS_CAP_BYTES")
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(4_500_000_000);
-          if rss_bytes > cap {
+          if let Some(cap) = resolve_rss_cap()
+            && rss_bytes > cap
+          {
             // R35.A debug: when LATEXML_DEBUG_MEMBUDGET=1 is set, dump
             // a stack backtrace before exiting so we can identify the
             // expansion loop responsible. Backtrace allocation is
@@ -1717,4 +1767,43 @@ pub fn get_script_level() -> usize {
       boxlevel
     }
   })
+}
+
+#[cfg(test)]
+mod memory_cap_tests {
+  use super::{resolve_rss_cap, set_memory_cap, soft_cap_from_ceiling};
+
+  // The override path is thread-local (race-free across libtest threads) and
+  // never reads the process-global env, so these assertions are deterministic.
+  #[test]
+  fn override_zero_disables_budget() {
+    // `--max-memory=0` maps to `set_memory_cap(Some(0))`, which must resolve
+    // to "no ceiling" — NOT a 0-byte cap that fatals every conversion.
+    set_memory_cap(Some(0));
+    assert_eq!(resolve_rss_cap(), None, "cap 0 disables the soft budget");
+    // A positive override is honored verbatim.
+    set_memory_cap(Some(1_000));
+    assert_eq!(resolve_rss_cap(), Some(1_000));
+    // Restore the default so we don't leak state onto other tests sharing
+    // this thread.
+    set_memory_cap(None);
+  }
+
+  #[test]
+  fn soft_cap_tracks_the_single_knob() {
+    // 0 in → 0 out: `--max-memory=0` disables the soft fuse (and, via
+    // resolve_rss_cap, the whole memory limit).
+    assert_eq!(soft_cap_from_ceiling(0), 0);
+    // The soft fuse always sits strictly below the hard ceiling (graceful
+    // cooperative failure fires first), and reproduces the historical
+    // ~4.5 GB-under-6 GiB relationship at the 6144 MiB default.
+    let hard = 6144u64 * 1024 * 1024;
+    let soft = soft_cap_from_ceiling(6144);
+    assert_eq!(soft, 4608u64 * 1024 * 1024);
+    assert!(soft < hard, "soft fuse must be below the hard ceiling");
+    // It scales with the knob, so a tight ceiling still gets a cooperative
+    // guard below it (fixing the old fixed-4.5 GB decoupling).
+    assert!(soft_cap_from_ceiling(2000) < 2000 * 1024 * 1024);
+    assert!(soft_cap_from_ceiling(20000) > 6144 * 1024 * 1024);
+  }
 }

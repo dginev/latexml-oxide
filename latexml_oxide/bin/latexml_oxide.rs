@@ -237,9 +237,12 @@ struct Cli {
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 
-  /// Per-conversion memory ceiling in MiB (default: 6144 = 6 GiB); the process
-  /// aborts with exit 137 if exceeded. Use 0 to disable.
-  #[arg(long, value_name = "MIB", default_value = "6144")]
+  /// Per-conversion memory ceiling in MiB (default: 6144 = 6 GiB). The single
+  /// memory knob: a cooperative guard raises a graceful Fatal as digestion
+  /// nears it, and a hard watchdog aborts the process (exit 137) at the
+  /// ceiling. Use 0 to disable memory limiting entirely. Also settable via the
+  /// `LATEXML_MAX_MEMORY` env var; this flag wins when both are given.
+  #[arg(long, value_name = "MIB", env = "LATEXML_MAX_MEMORY", default_value = "6144")]
   max_memory: u64,
 
   /// Abort after processing this many tokens — guards against runaway macro
@@ -765,11 +768,36 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       cli.timeout,
       cli.max_memory.saturating_mul(1024),
     );
+    // `--max-memory` (or its `LATEXML_MAX_MEMORY` env) is the SINGLE memory
+    // knob. The hard Watchdog ceiling above rides it directly; the cooperative
+    // stomach RSS fuse is DERIVED from it (a fixed fraction below, leaving
+    // post-processing headroom) rather than being an independent number — so
+    // one flag governs one limit and `--max-memory=0` disables both. An
+    // explicit `LATEXML_RSS_CAP_BYTES` still overrides just the soft fuse (the
+    // fleet/test decoupling escape hatch), so honor it when present.
+    let rss_cap_env_set = std::env::var_os("LATEXML_RSS_CAP_BYTES").is_some();
+    if !rss_cap_env_set {
+      latexml_core::stomach::set_memory_cap(Some(
+        latexml_core::stomach::soft_cap_from_ceiling(cli.max_memory),
+      ));
+    }
+    if cli.max_memory == 0 && !rss_cap_env_set {
+      // Removing the surprise of one flag silently disabling two guards: say
+      // so, out loud, when the whole memory limit is off.
+      latexml_core::Warn!(
+        "memory",
+        "unlimited",
+        "--max-memory=0: memory limiting disabled entirely (cooperative guard + hard watchdog); a runaway conversion may exhaust host RAM"
+      );
+    }
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);
     }
     if let Some(limit) = cli.token_limit {
-      latexml_core::gullet::set_token_limit(Some(limit));
+      // 0 disables (as documented), matching the LATEXML_TOKEN_LIMIT env
+      // convention (`Some(0) => None` at the gullet initializer). Passing a
+      // literal `Some(0)` would instead fatal on the first token.
+      latexml_core::gullet::set_token_limit((limit != 0).then_some(limit));
     }
 
     let source_for_post = source.clone();
