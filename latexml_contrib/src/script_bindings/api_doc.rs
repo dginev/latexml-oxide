@@ -239,7 +239,7 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "GetKeyVals",
-    Doc::Note("A whole keyval string parsed into a map."),
+    Doc::Rust("latexml_core::keyval::split_keyval_source"),
   ),
   ("Info", Doc::Note("Log an `Info:` line.")),
   (
@@ -350,11 +350,11 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "RegisterDocumentNamespace",
-    Doc::Note("Bind an OUTPUT-document prefix to a namespace URI."),
+    Doc::Rust("latexml_core::common::model::register_document_namespace"),
   ),
   (
     "RegisterNamespace",
-    Doc::Note("Bind a CODE prefix to a namespace URI (Perl `Package.pm` `RegisterNamespace`)."),
+    Doc::Rust("latexml_core::common::model::register_namespace"),
   ),
   (
     "RelaxNGSchema",

@@ -66,7 +66,7 @@ Called at the top level of a binding file, or from inside any body.
 | `ExpandPartially(Tokens) -> Tokens` | [`do_expand_partially`](latexml_core::gullet::do_expand_partially) |
 | `Fatal(string, string, string)` | End the conversion with a `Fatal:`. |
 | `GetKeyVal(?, string) -> string` | One value out of a parsed keyval set. |
-| `GetKeyVals(string) -> map` | A whole keyval string parsed into a map. |
+| `GetKeyVals(string) -> map` | [`split_keyval_source`](latexml_core::keyval::split_keyval_source) |
 | `Info(string, string, string)` | Log an `Info:` line. |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | [`input_definitions`](latexml_core::binding::content::input_definitions) |
 | `IsDefined(string) -> bool` | [`is_defined_token`](latexml_core::binding::def::dialect::is_defined_token) |
@@ -99,8 +99,8 @@ Called at the top level of a binding file, or from inside any body.
 | `RefCurrentID(string) -> map` | [`ref_current_id`](latexml_core::binding::counter::dialect::ref_current_id) |
 | `RefStepCounter(string) -> map` | [`ref_step_counter`](latexml_core::binding::counter::dialect::ref_step_counter) |
 | `RefStepID(string) -> map` | [`ref_step_id`](latexml_core::binding::counter::dialect::ref_step_id) |
-| `RegisterDocumentNamespace(string, string)` | Bind an OUTPUT-document prefix to a namespace URI. |
-| `RegisterNamespace(string, string)` | Bind a CODE prefix to a namespace URI (Perl `Package.pm` `RegisterNamespace`). |
+| `RegisterDocumentNamespace(string, string)` | [`register_document_namespace`](latexml_core::common::model::register_document_namespace) |
+| `RegisterNamespace(string, string)` | [`register_namespace`](latexml_core::common::model::register_namespace) |
 | `RelaxNGSchema(string)` | [`select_relaxng_schema`](latexml_core::binding::content::select_relaxng_schema) |
 | `RequirePackage(string)`<br>`RequirePackage(string, array)` | [`require_package`](latexml_core::binding::content::require_package) |
 | `RequireResource(string)`<br>`RequireResource(string, map)` | [`require_resource`](latexml_core::binding::content::require_resource) |

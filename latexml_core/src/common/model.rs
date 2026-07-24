@@ -137,6 +137,11 @@ impl Model {
     };
   }
 
+  /// Register a prefix in the DOCUMENT mapping — the second of the two
+  /// mappings described on [`Model::register_namespace`] above.
+  ///
+  /// An empty `docprefix` is the `#default` entry, i.e. the unprefixed form of
+  /// elements (never attributes). `None` for the namespace unbinds the prefix.
   pub fn register_document_namespace(&mut self, docprefix: &str, namespace_opt: Option<&str>) {
     let default_sym = pin!("#default");
     let docprefix_sym = if docprefix.is_empty() {
@@ -1151,6 +1156,12 @@ pub(crate) fn compute_indirect_model_aux(
     }
   }
 }
+/// Bind an OUTPUT-document prefix to a namespace URI, on the current model.
+///
+/// The document half of the two mappings described on
+/// [`Model::register_namespace`] — these are the prefixes that appear in the
+/// generated XML, and the one place `#default` is meaningful (for unprefixed
+/// elements; never for attributes). Passing `None` unbinds the prefix.
 pub fn register_document_namespace(docprefix: &str, namespace_opt: Option<&str>) {
   model_mut!().register_document_namespace(docprefix, namespace_opt)
 }
@@ -1168,6 +1179,12 @@ pub fn get_document_namespace_prefixes() -> Vec<(String, String)> {
     .collect()
 }
 
+/// Bind a CODE prefix to a namespace URI, on the current model.
+///
+/// The coding half of the two mappings described on
+/// [`Model::register_namespace`] — the prefixes constructors and bindings write,
+/// which must be one-to-one and admit no default namespace. Passing `None`
+/// unbinds the prefix.
 pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
   model_mut!().register_namespace(codeprefix, namespace_opt)
 }
