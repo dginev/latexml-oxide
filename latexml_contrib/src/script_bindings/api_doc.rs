@@ -248,7 +248,7 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "IsDefined",
-    Doc::Note("Whether a control sequence currently has a definition."),
+    Doc::Rust("latexml_core::binding::def::dialect::is_defined_token"),
   ),
   ("LaTeXMLVersion", Doc::Note("The engine version string.")),
   ("Let", Doc::Rust("latexml_core::state::let_i")),
@@ -601,7 +601,9 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "setProperty",
-    Doc::Note("Set a property on the current whatsit (only while it is still mutable)."),
+    Doc::Note(
+      "Set a property on the current whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error.",
+    ),
   ),
   (
     "toString",
@@ -635,7 +637,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "whatsit",
     Doc::Note(
-      "The whatsit under construction. Valid only inside a digest hook; a call outside one is a clean script error.",
+      "A handle on the whatsit under construction. Meaningful only inside a digest hook — the handle itself is always returned, but USING it outside one is a clean script error, not a crash.",
     ),
   ),
   (

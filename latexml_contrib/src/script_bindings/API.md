@@ -69,7 +69,7 @@ Called at the top level of a binding file, or from inside any body.
 | `GetKeyVals(string) -> map` | A whole keyval string parsed into a map. |
 | `Info(string, string, string)` | Log an `Info:` line. |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | [`input_definitions`](latexml_core::binding::content::input_definitions) |
-| `IsDefined(string) -> bool` | Whether a control sequence currently has a definition. |
+| `IsDefined(string) -> bool` | [`is_defined_token`](latexml_core::binding::def::dialect::is_defined_token) |
 | `LaTeXMLVersion() -> string` | The engine version string. |
 | `Let(string, string)` | [`let_i`](latexml_core::state::let_i) |
 | `LoadClass(string)`<br>`LoadClass(string, array)` | [`load_class`](latexml_core::binding::content::load_class) |
@@ -123,7 +123,7 @@ Called at the top level of a binding file, or from inside any body.
 | `assign_value(string, string)` | `AssignValue` with the default (group-local) scope. |
 | `lookup_value(string) -> string` | `LookupValue` coerced to a string; empty when unset. |
 | `neutralize_font()` | [`neutralize_font`](latexml_engine::base_utilities::neutralize_font) |
-| `whatsit() -> Whatsit` | The whatsit under construction. Valid only inside a digest hook; a call outside one is a clean script error. |
+| `whatsit() -> Whatsit` | A handle on the whatsit under construction. Meaningful only inside a digest hook — the handle itself is always returned, but USING it outside one is a clean script error, not a crash. |
 
 ## `document` methods
 
@@ -192,7 +192,7 @@ The whatsit under construction, inside a digest hook.
 |---|---|
 | `argString(int) -> string` | The nth digested argument of the current whatsit, reverted to source text. |
 | `propertyString(string) -> string` | One property of the current whatsit, as a string. |
-| `setProperty(string, string)` | Set a property on the current whatsit (only while it is still mutable). |
+| `setProperty(string, string)` | Set a property on the current whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error. |
 
 ## `LookupDefinition()` methods
 
