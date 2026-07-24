@@ -125,11 +125,11 @@ indirection is only paid on rare KeyVals accesses.
 whatsit could cost more time than the RAM is worth. Measure the live box-type
 distribution first; do not box it on size reasoning alone.
 
-## TODO — M3 (streaming boxes→DOM — the big RAM lever, architectural)
+## SETTLED DEAD-END — M3 (streaming boxes→DOM): implemented, measured, reverted
 
-The only path to a *large* further RAM cut: free each digested subtree **as it is
-absorbed** into the DOM, instead of holding the whole box tree until Building
-finishes.
+Freeing each digested subtree **as it is absorbed** looked like the one remaining
+*large* RAM lever. It was implemented in full, passed every correctness gate, and
+**did not pay** — so it was reverted. Do not re-attempt it in this shape.
 
 **What it can and cannot buy — measured.** Post-M1+M2 phase profile (0.3 s
 `VmRSS` sampling against the phase markers):
@@ -147,60 +147,92 @@ finishes.
 37.0s  2.11 GB  post-processing
 ```
 
-Today peak = `B + D` with **B ≈ 4.5 GB** (end of digestion) and **D ≈ 1.9 GB**
-(what Building adds on top). Streaming makes boxes fall as the DOM rises, and
-since the DOM total (~1.9 GB) is far smaller than the box mass being released,
-the sum decreases monotonically from the moment Building starts. So the best
-achievable peak is **B itself ≈ 4.5 GB** — i.e. **6.43 → ~4.5 GB, −1.9 GB
-(−30 %)**.
+Peak = `B + D` with **B ≈ 4.5 GB** (end of digestion) and **D ≈ 1.9 GB** (what
+Building adds on top). *In theory* streaming makes boxes fall as the DOM rises,
+and since the DOM total is far smaller than the box mass being released, the sum
+would decrease from the moment Building starts — capping peak at **B ≈ 4.5 GB**,
+i.e. −1.9 GB (−30 %). That is the number this experiment chased; the
+implementation reached ~4 % of it, for the structural reason below.
 
-It is `max(B, D)`, **not** `D`: digestion has already materialised the whole box
-tree before Building starts, and that plateau is a hard floor for any
-Building-phase change. Going below it would require interleaving digestion with
-building — a far deeper change, and one that departs from Perl's
+Note the ceiling is `max(B, D)`, **not** `D`: digestion has already materialised
+the whole box tree before Building starts, and that plateau is a hard floor for
+*any* Building-phase change. Going below it would require interleaving digestion
+with building — a far deeper change, and one that departs from Perl's
 `digest-then-absorb` shape.
 
-- **Where:** `latexml_oxide/src/core_interface.rs::convert_document` L424
-  `document.absorb(&digested, None)` builds the whole DOM from one top-level
-  `Digested` (`convert_document` already takes it **by value**, so the top-level
-  handle is ours to consume). `Document::absorb`
-  (`latexml_core/src/document.rs:650`) is **not** recursive over Lists — it runs
-  an explicit worklist `Vec<Cow<Digested>>`, and for a `List` it pushes
-  `list.borrow().unlist()`, i.e. a **clone** of the children `Vec<Digested>`.
-  That clone is exactly why nothing frees: the parent `List` keeps its own strong
-  refs, so the tree only dies when the root `digested` drops after Building.
-  (`TBox`/`Whatsit` subtrees re-enter `absorb` from their `be_absorbed`, which
-  can stay by-reference — they are freed when their worklist entry drops.)
-- **Change:** add a consuming entry point (`absorb_owned(Digested)`), used *only*
-  at the top-level call site, whose worklist holds owned `Digested`. For the
-  `List` arm, when `Rc::strong_count(&entry) == 1` — we are the sole owner, so
-  emptying it is unobservable — `mem::take` the children out of the `List`
-  instead of cloning them; otherwise fall back to today's `unlist()` clone. Each
-  worklist entry then drops right after it is absorbed, freeing its subtree.
-- **Why the refcount test is sound:** there are **no `Weak<DigestedData>`** and no
-  `Rc::downgrade` anywhere in the workspace (verified), so `strong_count == 1`
-  really does mean nobody else can observe the mutation. Shared boxes
-  (`\setbox`/`\usebox`, State-held) simply take the clone path and are not freed
-  early — correct, just not optimised.
-- **Why it will actually free (the feasibility question):** the optimisation is
-  worthless if the stomach still holds the same handles. It does not —
-  `stomach::expire_local_box_list` (`stomach.rs:965`) hands the body's boxes back
-  via `std::mem::swap` on `box_list`, so the stomach **gives up ownership**;
-  `digest_internal` (`core_interface.rs:608`) then accumulates them into a plain
-  local `Vec` and wraps it in one `List`. The document spine is therefore
-  uniquely owned, and `strong_count == 1` holds along it.
-- **Risk/scope:** `absorb` is the core builder; ~10 call sites take `&Digested`
-  (`grep 'document.absorb(&'` across `latexml_*`) and should stay as they are.
-  Correctness-critical: gate on the FULL suite + re-convert this witness and
-  `diff -rq` the 3007-file tree against the pre-change output (this is how M2 was
-  validated) + a spread of normal papers.
-- Overlaps but is DISTINCT from the deferred post-processing streaming split
-  ([`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md),
-  task #44): that streams the *post* DOM; this streams *digestion→build*.
+### What was built
+
+`Document::absorb` (`latexml_core/src/document.rs:650`) is **not** recursive over
+Lists — it runs an explicit worklist `Vec<Cow<Digested>>`, and for a `List` it
+pushes `list.borrow().unlist()`, i.e. a **clone** of the children
+`Vec<Digested>`. That clone is why nothing frees today: the parent keeps its own
+strong refs, so the tree only dies when the root `digested` drops after Building.
+
+The experiment added a consuming entry point `Document::absorb_owned(Digested)`
+used *only* at the top-level call site (`core_interface.rs::convert_document`,
+which already takes `digested` by value and never reads it again). Its worklist
+holds **owned** `Digested`; in the `List` arm, when the entry is `Cow::Owned`
+**and** `Rc::strong_count == 1`, it `mem::take`s the children out of the parent
+instead of cloning them, so each worklist entry's subtree dies the moment it is
+absorbed. Everything else falls back to the `unlist()` clone.
+
+Two preconditions were verified, and both hold — the design was *not* the
+problem:
+- **The refcount test is sound.** No `Weak<DigestedData>` / `Rc::downgrade`
+  exists anywhere in the workspace, so `strong_count == 1` really is sole
+  ownership. (`Cow::Owned` must be checked *as well*: a borrowed entry can also
+  have count 1 — the caller's only handle — and stealing from it would silently
+  empty a List its owner still means to use.)
+- **The spine is genuinely ours.** `stomach::expire_local_box_list`
+  (`stomach.rs:965`) hands each body's boxes back via `mem::swap` on `box_list`,
+  so the stomach gives up ownership; `digest_internal` accumulates them into a
+  plain local `Vec` wrapped in one `List`.
+
+### Why it does not pay
+
+Correctness gates all passed — full suite **1679/0**, witness 0 errors / 3007
+pages, and output **byte-identical** (`diff -rq`, zero differences). But:
+
+| | peak RSS | wall |
+|---|---|---|
+| M2 (no streaming) | 6.43 GB | 37.1 s |
+| M3 streaming, run 1 | 6.15 GB | 37.5 s |
+| M3 streaming, run 2 | 6.23 GB | 37.7 s |
+
+−3–4 %, i.e. **inside the ~5 % run-to-run variance** — not a defensible win. The
+RSS curve shows why: the late cliff where the boxes are released *en masse*
+(6.13 → 0.88 GB at t ≈ 23 s) is **still there, unmoved**. The boxes are not dying
+during Building.
+
+Instrumenting the `List` arm (steal vs clone counters) gave the reason:
+
+```
+steals = 54 526 (10.5%)   clones = 463 530 (89.5%)   children traversed = 8 282 516
+```
+
+The steal engages, but only along the **top-level worklist spine**. The box mass
+hangs off `TBox`/`Whatsit` children, and their contents are absorbed by the
+*constructor* API — `Whatsit::be_absorbed` → `Definition::do_absorption(&self,
+document, whatsit)` → `document.absorb(&arg, …)` — each a fresh worklist seeded
+`Cow::Borrowed`, which by construction may not steal. Those nested calls are the
+463 K clone-path traversals. A subtree therefore still dies only when its
+top-level ancestor is dropped, which is far too coarse to move the peak.
+
+**To actually pay**, `be_absorbed`/`do_absorption` would have to *consume* their
+arguments — a deep change to the binding/constructor API that every constructor
+implements, and one that would fight the reversion machinery (`args` are re-read
+to revert whatsits). That is a large parity risk for ~2 GB on pathological
+documents. Not worth it; the ~4.5 GB end-of-digestion plateau stands as the
+floor, and going below *that* needs digest↔build interleaving, which departs from
+Perl's `digest-then-absorb` shape.
+
+Distinct from the deferred post-processing streaming split
+([`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md),
+task #44), which streams the *post* DOM and is unaffected by this result.
 
 ## TODO — time (secondary; no silver bullet)
 
-- Density work (M1/M2/M3) directly cuts the ~10–12 % allocator bucket.
+- Density work (M1/M2) directly cuts the ~10–12 % allocator bucket.
 - libxml2 XPath ~7–10 % is Scan/CrossRef `descendant::` traversal across 3005
   pages; look for redundant full-doc queries (e.g. batch per-page work, cache
   `get_node_font` walks) before touching libxml2.
