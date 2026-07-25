@@ -1,0 +1,29 @@
+% Regression: a LEADING relop (implied `absent` left operand) followed by a
+% comma used to have no derivation at all.
+%
+% `list_apply`'s fragment guard rejected any item carrying an `absent` relop
+% operand, and the `formula relop formula_list` rule is deliberately gone
+% (KNOWN_PERL_ERRORS #37), so `$>50,000$` fell out as ltx_math_unparsed even
+% though every neighbouring shape parses: `$>x$`, `$a,b$` and `$a>50,000$` all
+% worked. Pragmas prune the forest; they must not empty it.
+%
+% The `\quad` cases are the other side of the same guard and must STAY strict —
+% a `\quad`-separated run of align fragments is one broken-up equation, not a
+% list (see tests/math/sampler's `\displaystyle=f(x)+\phantom{g(x)}+h(x)`).
+%
+% NOTE `50,000` is really one number with a thousands separator; BOTH engines
+% read the comma as a list separator instead. Presentation is unaffected, the
+% content arm is not. Tracked in docs/math/CONTENT_MATHML_GAPS.md — do not
+% "fix" the expectation here without settling the locale question first
+% (a decimal comma means `$3,14$` is 3.14).
+%
+% Witness: arXiv 2605.17646, `population $ > 50,000$`.
+\documentclass{article}
+\begin{document}
+A: $ > 50,000$.
+B: $>x$.
+C: $a > 50,000$.
+D: $a, b$.
+E: $> a, b$.
+F: $>50000$.
+\end{document}

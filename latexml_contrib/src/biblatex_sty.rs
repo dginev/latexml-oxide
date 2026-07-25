@@ -1050,6 +1050,36 @@ LoadDefinitions!({
   // entries, each generating an undefined-CS error.
   DefMacro!("\\blx@bbl@keyalias{}{}", "", locked => true);
   Let!("\\keyalias", "\\blx@bbl@keyalias");
+
+  // biblatex `\missing{entrykey}` (TL biblatex.sty L8503-8515
+  // `\blx@bbl@missing`, aliased at L8857 `\let\missing\blx@bbl@missing`):
+  // biber writes one per cite-key it could NOT find in any `.bib`. Upstream
+  // records the key on `blx@miss@<refsection>` and emits a package WARNING
+  // ("The following entry could not be found in the database … Please verify
+  // the spelling and rerun") — it typesets NOTHING. (The bold marker a reader
+  // sees at the citation site is a different macro, `\abx@missing` L1368
+  // = `\mbox{\reset@font\bfseries#1}`, invoked from the `\cite` side.)
+  //
+  // So the faithful port is a no-op that warns. We don't keep the miss-list —
+  // nothing consumes it: our `\cite` resolves against the entries actually
+  // built from the `.bbl`, so an unfound key is already dangling by
+  // construction. Perl's binding leaves `\missing` commented out
+  // (ar5iv-bindings/biblatex.sty.ltxml L613), so every biber `.bbl` carrying
+  // one costs an `Error:undefined:\missing` there.
+  //
+  // Warning, not error: an unresolvable cite-key is the AUTHOR's bug (a
+  // stale `.bib`), reported by biblatex itself as a warning — not a gap in
+  // our engine. Naming the key makes it actionable (issue #92,
+  // "Rust-grade author errors"). Witness: arXiv 2605.17646, whose `.bbl`
+  // ends in `\missing{Cowen2021}` for a `\cite{Cowen2021}` with no entry.
+  DefMacro!("\\blx@bbl@missing{}", sub[(key)] {
+    Warn!("missing_entry", "biblatex",
+      format!("the entry '{}' could not be found in the database; \
+               \\cite of it will not resolve. Please verify the spelling \
+               and re-run biber.", key.to_string().trim()));
+    Ok(Tokens::default())
+  }, locked => true);
+  Let!("\\missing", "\\blx@bbl@missing");
   // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
   // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
   // emitted by repeated \endentry calls in `\thebibliography{count}…

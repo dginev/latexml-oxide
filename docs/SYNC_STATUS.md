@@ -372,6 +372,39 @@ never reads a real `.bbl` this way. Mechanism, minimal trigger and the
 upstream-candidate note: `KNOWN_PERL_ERRORS.md` #57. Guard
 `06_cluster_regressions::cluster_biblatex_two_datalists`.
 
+**Follow-up the same day — the witness is now error-free.** Two more gaps it
+surfaced, both landed:
+* **`\missing{key}` was undefined** (`Error:undefined:\missing`). It is biber's
+  marker for a cite-key absent from every `.bib` (TL `biblatex.sty` L8503
+  `\blx@bbl@missing`): upstream records the key and emits a **warning**,
+  typesetting nothing. Ported faithfully to `biblatex_sty.rs` — a no-op that
+  names the key (`Warning:missing_entry:biblatex`), which is the author's bug,
+  not ours (issue #92). Perl's binding leaves it commented out
+  (ar5iv-bindings L613), so every biber `.bbl` carrying one errors there.
+* **A leading relop + comma had NO parse.** `list_apply`'s fragment guard
+  rejected any item with an `absent` relop operand while
+  `formula relop formula_list` is deliberately gone (`KNOWN_PERL_ERRORS` #37),
+  so `$>50,000$` was `ltx_math_unparsed` though `$>x$`, `$a,b$` and
+  `$a>50,000$` all parsed. The guard now rejects a **comma** pair only when
+  BOTH items are fragments (mirroring the relaxation `formulae_apply` already
+  carried) and stays strict for `\quad`, where a fragment run is one broken-up
+  equation — the `\quad` half is load-bearing: relaxing it too made
+  `tests/math/sampler`'s `\displaystyle=f(x)+\phantom{g(x)}+h(x)` parse
+  *wrongly* rather than not at all. Guard
+  `06_cluster_regressions::cluster_leading_relop_comma_list`.
+
+Witness end state: **0 errors, 1 warning** (the actionable missing-entry), 0.96 s,
+and structurally identical to Perl — same counts for all 25 element classes
+sampled (312 `Math`, 58 `bibitem`, 336 `td`, 78 `ref`, …; sole delta 87 vs 88
+`para`). **Residual: 3 of 312 formulas unparsed where Perl has 0** —
+`f(\cdot)`, `S(\cdot)` (a bare operator inside a fence: Perl parses 7 of 8 such
+shapes, we parsed 0 of 8; `\langle\cdot,\cdot\rangle` is in that family too) and
+one `\mid`-conditional equation. Both are math-grammar structure work and so sit
+under the R8 "do not pick off in isolation" directive — see
+[`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md), which also now records
+the **thousands-separator** reading (`50,000` is one number; both engines read
+the comma as a list separator — locale-dependent, decide policy before coding).
+
 
 ### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup

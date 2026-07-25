@@ -239,12 +239,41 @@ pub fn list_apply(
   if !is_quad && left_rel && right_rel {
     return Err("list_apply: both items relational in a comma list, use formulae_apply".into());
   }
-  // Rule 3: Reject when either item has `absent` as a relop operand.
-  // `absent` means equation fragment — fragments should be single formulas,
-  // not list items. If `absent` appears, the expression should be parsed
-  // as a single formula, not broken into a list.
-  if left.as_ref().is_some_and(has_absent_relop_operand) || has_absent_relop_operand(&right) {
-    return Err("list_apply: absent relop operand (should be single formula, not list)".into());
+  // Rule 3: an `absent` relop operand marks an equation FRAGMENT — a leading or
+  // trailing relop whose other operand lives on a different align line. How
+  // strictly a fragment disqualifies an item depends on the separator:
+  //
+  //  * `\quad` (WIDE_PUNCT): reject if EITHER item is a fragment. A
+  //    `\quad`-separated run of align continuations is one broken-up equation,
+  //    not a list, and admitting it produces actively WRONG trees — the pinned
+  //    `tests/math/sampler` case `\displaystyle=f(x)+\phantom{g(x)}+h(x)`
+  //    (`\phantom` lexes as WIDE_PUNCT) parses to
+  //    `fragments@(absent = limit-from@(f@(x), +), + h@(x))`, which mis-groups
+  //    the `+`. `ltx_math_unparsed` is the honest outcome there.
+  //  * comma: reject only when BOTH items are fragments. This mirrors the
+  //    relaxation `formulae_apply` already carries below ("the earlier strict
+  //    rule (reject if EITHER is a fragment) was correct only for inner
+  //    contexts … at the top level these pairings are well-formed and need to
+  //    survive pragmatic prune").
+  //
+  // The comma half matters because `list_apply` kept the strict form for both,
+  // and with the `formula relop formula_list` rule deliberately gone
+  // (KNOWN_PERL_ERRORS #37) a leading-relop item followed by a comma then had NO
+  // derivation at all: `$>50,000$` fell out as `ltx_math_unparsed` even though
+  // both halves parse alone (`>x` ✓, `a,b` ✓, `a>50,000` ✓). Pragmas prune; they
+  // must not empty the forest. With this split, `>50,000` reaches the #37 reading
+  // `list@(absent>50, 000)` — the same shape `a>50,000` already produced as
+  // `list@(a>50, 000)`. (Perl instead builds `>(absent, list(50,000))` via the
+  // rule #37 removed; ours is the intended divergence.) Witness: arXiv 2605.17646.
+  let left_fragment = left.as_ref().is_some_and(has_absent_relop_operand);
+  let right_fragment = has_absent_relop_operand(&right);
+  let fragment_reject = if is_quad {
+    left_fragment || right_fragment
+  } else {
+    left_fragment && right_fragment
+  };
+  if fragment_reject {
+    return Err("list_apply: fragment item (absent relop operand) in this list".into());
   }
   // Rule 4: Reject when an item is a BARE `conditional@(...)` Apply
   // — `|` (conditional / MODIFIEROP) binds LOOSER than `,` (list
