@@ -26,7 +26,16 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1677 passing** (2026-07-24, 90 targets, on `main`; one `latexml_post` graphics test needs a host image tool and is green on CI); `cargo clippy --workspace --all-targets -- -D warnings` is clean
+**1678 passing** (2026-07-24, 91 targets, on `main`; the two `latexml_post`
+vector-SVG tests self-skip — silently, and *green* — unless `mutool` or
+`pdftocairo` is on PATH, so a green local run does not by itself prove that
+branch ran; CI installs poppler/mupdf). **A fully green suite still prints
+`Error:` lines to stderr** — several tests deliberately raise diagnostics to
+prove they get reported (the `graphics.rs` worker-thread fold emits
+`failed_to_convert` for a nonexistent `w0.pdf`; the Rhai script-binding tests
+emit `boom`). Judge a test run by its `test result:` lines and exit code, never
+by grepping its output for `Error:` — that heuristic is for *conversion* logs
+(below), and it inverts here. `cargo clippy --workspace --all-targets -- -D warnings` is clean
 (policy in `[workspace.lints]`, gated by CI's `lint` job and the pre-push hook —
 `latexml_oxide/build.rs` sets `core.hooksPath`). `cargo doc --workspace` is
 **rustdoc-warning-clean** and gated on `-D warnings` in the same `lint` job (and
