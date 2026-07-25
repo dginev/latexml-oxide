@@ -175,6 +175,23 @@ impl Whatsit {
     self.properties.insert("body", Digested::from(list).into());
     if let Some(digested) = trailer_opt {
       self.properties.insert("trailer", digested.clone().into());
+      // Perl `Whatsit.pm` L84: the whatsit's locator becomes the RANGE from its
+      // own start to the trailer's end, so an environment reports the extent it
+      // actually covers instead of collapsing to its `\begin`. Perl writes
+      // `$$self{properties}{locator}`, which is what its inherited
+      // `Box::getLocator` reads (`Box.pm` L85-87); our `get_locator` reads the
+      // struct field, so the field is the faithful sink here — a `"locator"`
+      // property would be inert.
+      //
+      // `new_range` yields `None` when the two ends sit in different sources (an
+      // environment spanning an `\input`), and Perl's `newRange` likewise
+      // declines to fuse them; keep the opening locator in that case rather than
+      // inventing a cross-file span.
+      if let (Some(from), Some(to)) = (self.locator, digested.get_locator())
+        && let Some(range) = Locator::new_range(from, to)
+      {
+        self.locator = Some(range);
+      }
       // And copy any otherwise undefined properties from the trailer
       // Perl: copies properties from trailer (typically a Whatsit for \end{...})
       match digested.data() {
@@ -210,8 +227,6 @@ impl Whatsit {
         },
         _ => {},
       }
-      // TODO: Perl line 84 — create locator range from self to trailer
-      // $$self{properties}{locator} = Locator->newRange($self->getLocator, $trailer->getLocator);
     }
   }
 
