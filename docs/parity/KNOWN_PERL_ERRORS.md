@@ -2278,3 +2278,66 @@ arguments through the same `\@doimport` as `\import`/`\subimport`, and Perl's ow
 `06_cluster_regressions::includefrom_takes_directory_and_file`. Candidate to
 upstream (not filed as of 2026-07-23) — a two-character fix at
 `import.sty.ltxml` L45/L47.
+
+## 57. A listing's trailing-empty-line trim discards the braces that close it
+
+`listings.sty.ltxml` L1330 trims trailing blank lines by slicing the generated token
+vector:
+
+```perl
+@LaTeXML::lsttokens = @LaTeXML::lsttokens[0 .. $LaTeXML::emptyfrom - 1] if $LaTeXML::emptyfrom;
+```
+
+`$emptyfrom` is a token index, not a structural boundary. Any delimited class still
+open there (string, comment, styled span) has its closing `}` in the discarded tail,
+so the listing body is emitted with unclosed groups and `\@@listings@block` reads its
+arguments past the end of the document.
+
+Trigger: `lastline=N` on a file with **more** than N lines — the line-skipping loop
+consumes the rest without closing what the last rendered line left open.
+
+```latex
+\documentclass{article}\usepackage{listings}
+\begin{document}
+\lstinputlisting[lastline=3]{four_line_file.py}
+Text after the listing.
+\end{document}
+```
+
+Perl: `Error:expected:{} Missing argument {} for Core::Definition::Constructor
+[\@@listings@block {}{}{}]`, ×7 on the witness. **Both engines lose the snippet.**
+
+**Fixed in Rust** (OXIDIZED_DESIGN #68): truncate as Perl does, then re-close whatever
+the cut left open — the discarded region is by construction only empty-line markup.
+Witness arXiv 2412.04705 (arXiv/html_feedback#6735): 22 errors → **0**, while
+same-host Perl still reports 15. Guard
+`104_lstinputlisting_range_crlf::lastline_shorter_than_file_does_not_swallow_the_document`.
+Candidate to upstream (not filed as of 2026-07-25).
+
+## 58. A CRLF listing source makes line-comment styling bleed down the file
+
+`listingsReadRawFile` slurps the file verbatim, but every end-of-line test in the
+listings processor is written against `\n` (the `__NEWLINE__` comment-close test, the
+blank-line test in `lstProcessStartLine`, the line-skipping loops). A `\r` before the
+`\n` defeats them all, so a line comment never terminates and its style bleeds over
+every following line. The `ltx_lst_comment` class wrapper *does* close — only the
+font/colour group leaks — so the bug is invisible if you inspect classes rather than
+`font`/`color`.
+
+```latex
+\lstdefinestyle{s}{morecomment=[l]{\#},commentstyle=\itshape}
+\lstinputlisting[style=s]{crlf_file.py}   % every line comes out italic
+```
+
+TeX never sees the CR (its file reader strips the terminator and appends
+`\endlinechar`), so this is a slurp that skips what the engine does.
+
+Ground truth on arXiv 2412.04705 (CRLF Python sources): pdflatex renders only the `#`
+line in comment green — 9 green vs 69 black glyph groups on the page — while both
+LaTeXML engines paint the whole snippet green and slanted. Pre-fix A/B confirms the
+cause: an LF copy of the same file renders correctly, the CRLF original does not.
+
+**Fixed in Rust** (OXIDIZED_DESIGN #69): normalize `\r\n` and lone `\r` to `\n` on
+read. Guard
+`104_lstinputlisting_range_crlf::crlf_line_comment_style_does_not_bleed_past_its_line`.
+Candidate to upstream (not filed as of 2026-07-25).

@@ -2011,6 +2011,69 @@ end-to-end `30_script_bindings::script_binding_macro_and_constructor_convert`
 (`\rhfragment` parses two siblings, edits them while detached, inserts both, and
 asserts `data-top="detached"` plus a blanket `!contains("_lxfragment")`).
 
+### 68. Trimming a listing's trailing empty lines re-closes what the trim cut open
+
+Perl `listings.sty.ltxml` L1330 drops trailing blank lines by slicing the generated
+token vector:
+
+```perl
+@LaTeXML::lsttokens = @LaTeXML::lsttokens[0 .. $LaTeXML::emptyfrom - 1] if $LaTeXML::emptyfrom;
+```
+
+`$emptyfrom` is where the run of trailing empty lines began — but it is an index into
+a token stream, not a structural boundary. When a delimited class (a string, a
+comment, a styled span) is still **open** at that point, its closing `}` tokens live
+in the discarded tail. The slice throws them away and the listing body is emitted with
+unclosed groups; `\@@listings@block` then reads its arguments past the end of the
+listing and off the end of the **document**.
+
+`lastline=N` on a file with more than N lines is the everyday way to reach it: the
+skip loop consumes the remaining lines without closing what the last rendered line
+left open. Measured discarded tail on the witness below —
+
+```
+["\@lst@startline", "{", "}", "}", "}", "}", "\@lst@endline"]
+```
+
+— three of those `}` close groups opened *before* the cut, leaving the body at brace
+depth 3.
+
+**Both engines lose the snippet**, with different diagnostics: Perl reports
+`Missing argument {} for \@@listings@block {}{}{}`, we reported
+`Gullet->readBalanced ran out of input in an unbalanced state` plus a cascade of
+`Attempt to end mode internal_vertical` and malformed-sectioning errors as the
+mode-switch frame was never unwound.
+
+Rust truncates as Perl does, then re-closes whatever the cut left open. The discarded
+region is by construction only empty-line markup (it starts at a line with
+`colnum == 0`), so nothing visible is lost by closing there.
+
+Witness: arXiv 2412.04705 (arXiv/html_feedback#6735) — 22 errors → **0**, where
+same-host Perl still reports 15. Guard:
+`104_lstinputlisting_range_crlf::lastline_shorter_than_file_does_not_swallow_the_document`.
+
+### 69. A listing source file's CRLF line endings are normalized on read
+
+`listingsReadRawFile` slurps the file verbatim in Perl. Every end-of-line test in the
+listings processor is then written against `\n` — the `__NEWLINE__` close test for
+line comments, the blank-line test in `lstProcessStartLine`, the line-skipping loops —
+and a `\r` sitting before the `\n` defeats all of them. A line comment therefore never
+terminates, and its **style** bleeds over every following line. (The
+`ltx_lst_comment` class wrapper does close; it is the font/colour group that leaks, so
+the defect is invisible if you inspect classes rather than `font`/`color`.)
+
+TeX never sees the CR — its file reader strips the line terminator and appends
+`\endlinechar` — so normalizing `\r\n` and lone `\r` to `\n` at ingestion is what
+matches the engine we emulate, not a special case.
+
+Ground truth, arXiv 2412.04705 (arXiv/html_feedback#6735), whose Python sources are
+CRLF: pdflatex renders only the `#` line in comment green (measured on the rendered
+page: 9 green vs 69 black glyph groups), while both LaTeXML engines painted the whole
+snippet green and slanted. Verified by A/B — pre-fix, an LF copy of the same file
+renders correctly and the CRLF original does not.
+
+Guard: `104_lstinputlisting_range_crlf::crlf_line_comment_style_does_not_bleed_past_its_line`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
