@@ -323,22 +323,20 @@ provoking it. `--preload=article.cls` on its own STILL errors.
 * Filtering `\PopDefaultHookLabel` alone: inert. The erroring caller is the internal
   `\__hook_curr_name_pop:`.
 
-**Both seams pinned (2026-07-25).** Push: `latexml_core/src/binding/content.rs:992-1005`
-(`push_defined && pop_defined` → digest `\@pushfilename{}{}{name}`). Pop:
-`content.rs:822-828` (`pop_use_expl` recomputes the same definedness pair and
-digests `\@popfilename`). The pop's comment states it re-checks "rather than
-threading a flag" — for THIS bug it must thread, because the state legitimately
-changed between the two.
+**Where the failing pair is NOT (2026-07-25, measured — corrects an earlier note
+in this entry).** The Rust binding has exactly two push/pop sites:
+`binding/content.rs:1000-1015` (push) and `:826-831` (pop). Probing both on the
+failing `--preload=article.cls` run shows **only `textcomp`'s push reaches them —
+`article`'s push and BOTH pops never do.** So the erroring pair is not a Rust-side
+`digest`; it runs inside TeX (expl3's `\__hook_curr_name_pop:`, as noted above).
 
-**Usable discriminator for fix (b).** "Did *this frame* push onto the hook-name
-stack?" is answerable: the expl3 `\@pushfilename` body chains into
-`\@expl@push@filename@aux@@` (recorded in the push-site comment at
-`content.rs:984`), the pre-pool one does not. So inspect the push-time *body*,
-carry that answer to the pop, and select `\@popfilename` vs `\lx@popfilename`
-from it instead of from definedness. NOT yet implemented — the remaining design
-choice is where to thread it (`InputDefinitionOptions` is the obvious carrier)
-and whether (c) "pool before any handleoptions push" is the cleaner cause-fix.
-Do not start without re-reading the four dead ends above.
+**Consequence: a Rust-side "thread the push's answer to the pop" fix cannot work**
+— there is no Rust-side pop for the failing frame to pair with. An earlier version
+of this entry proposed exactly that (inspect `\@pushfilename`'s body for
+`\@expl@push@filename@aux@@` at push, carry it to the pop); it is a **fifth dead
+end**, disproved before implementation. Any real fix has to act on the TeX side —
+which points back at (c), ordering the pool load before the class's own
+`\@onefilewithoptions` push, rather than at the Rust seams.
 
 **Candidate fixes.** (a) Ensure a class/package preload cannot be the thing that drags in
 the pool — auto-prepend `LaTeX.pool` when any `.sty`/`.cls` is preloaded. Rejected for the
