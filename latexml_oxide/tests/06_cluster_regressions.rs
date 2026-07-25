@@ -662,6 +662,74 @@ fn convert_to_xml_contrib(source: &str) -> String {
     .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
 }
 
+/// `convert_to_xml_contrib` with the strict signal-integrity gate that
+/// `convert_to_xml` applies to the core helpers: zero `Error:<class>:` markers
+/// and a non-fatal status. Use this for contrib regressions whose whole point
+/// is that the input stops erroring — tolerating an error there is exactly the
+/// false negative the project's log-parsing rule forbids.
+fn convert_to_xml_contrib_clean(source: &str) -> String {
+  latexml::util::test::init_test_rss_cap();
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+    ..Config::default()
+  };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(source.to_string());
+  let n_errors = latexml::util::test::error_count(&r.log);
+  assert_eq!(
+    n_errors, 0,
+    "{source}: expected 0 errors but log contained {n_errors} Error:<class>: markers (status_code={})",
+    r.status_code
+  );
+  assert!(
+    r.status_code <= 1,
+    "{source}: status_code {} (expected 0/1), status={:?}",
+    r.status_code,
+    r.status
+  );
+  r.result
+    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
+}
+
+/// A biber `.bbl` with more than one `\datalist` (biblatex's apa style asks for
+/// two sorting schemes, so the same references are emitted twice) used to hang
+/// the engine: each `\enddatalist` expands to a bare
+/// `\thebibliography…\endthebibliography`, neither of which opens a group, so
+/// the second one re-entered `setupPseudoBibitem` while the first arming was
+/// live and captured `\save@bibitem` ← `\restoring@bibitem` — a self-referential
+/// `\let` that expands forever (`Fatal:Timeout:TokenLimit`, 1e9 tokens).
+/// The blank line after `\printbibliography` covers the second half of the fix:
+/// `\endthebibliography` now disarms the redirection, so that `\par` no longer
+/// expands to `\par@in@bibliography` and deposits a stray empty bibitem outside
+/// the biblist. Witness: arXiv 2605.17646 (Perl converts it — its biblatex
+/// binding never defines `\printbibliography`, so upstream never reaches this —
+/// but Perl hangs identically on the bare-CS form; KNOWN_PERL_ERRORS #57).
+#[test]
+fn cluster_biblatex_two_datalists() {
+  let x =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_two_datalists/twolists.tex");
+  // One bibliography per \datalist, each holding its own biblist.
+  assert_eq!(
+    x.matches("<bibliography").count(),
+    2,
+    "expected one <bibliography> per \\datalist:\n{x}"
+  );
+  assert_eq!(
+    x.matches("<biblist>").count(),
+    2,
+    "expected one <biblist> per \\datalist:\n{x}"
+  );
+  // 2 entries × 2 datalists, and NOT a 5th stray from the trailing blank line.
+  assert_eq!(
+    x.matches("<bibitem").count(),
+    4,
+    "expected exactly 4 bibitems (2 entries x 2 datalists, no stray):\n{x}"
+  );
+}
+
 /// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
 /// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
 /// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the

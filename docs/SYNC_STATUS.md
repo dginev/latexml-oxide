@@ -54,7 +54,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
 | **R3** | `latexmlmath_oxide` empties a single-structure formula | **OPEN**, re-verified 2026-07-25 (`\frac{1}{2}`→`<mrow/>`; `\frac{a}{b}+c` fine) | small, narrow surface | Open items |
-| **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | real Fatal, pre-existing (bisected — not a PR regression) | medium, needs a dive | Open items |
+| **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04 | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
@@ -76,10 +76,13 @@ session of their own. Re-verify a row before planning on it (rule 1).
   2606.13010 (arXiv/html_feedback#6624) now converts at 0 errors / 0 warnings /
   0 unparsed math. This file was compacted the same day — see the header.
 
-- `cargo test --tests`: **1684 passing / 91 targets, 0 failed, 0 ignored**
-  (2026-07-25, on `main` @ `0dda6ca833`, dev box with ImageMagick + ghostscript +
-  poppler installed, `mutool` absent). +6 against the 2026-07-24 count of 1678;
-  two of those are this session's `siunitx_v3_test` and `split_fence_test`.
+- `cargo test --tests`: **1684 passing / 91 targets, 0 ignored** (2026-07-25, on
+  `main` @ `35200b1598` + the R4 fix, dev box with ImageMagick + ghostscript +
+  poppler installed, `mutool` absent) — including this session's
+  `cluster_biblatex_two_datalists`. The one red,
+  `latexml_post::graphics::process_coalesces_only_matching_conversion_options`,
+  is the **known local-only artifact** (this laptop has the full vector
+  toolchain; green in CI) — not a regression, and unrelated to bibliographies.
   **Caveat that keeps mattering:** the two vector-SVG tests
   (`test_vector_svg_graphics_path`, `test_vector_svg_pathological_convert_case`)
   do NOT go red on a bare host — `svg_converter_available()`
@@ -357,17 +360,35 @@ output with Perl. Not a regression from that work — which is verified byte-ide
 Perl modulo whitespace on formulas that do convert.
 
 
-### R4 — biblatex `.bbl` TokenLimit loop, 2605.17646 (pre-existing, NOT a PR regression)
+### R4 — biblatex `.bbl` TokenLimit loop, 2605.17646 — ✅ FIXED 2026-07-25
 
-A biblatex (apa style) paper whose `.bbl` ends in `\missing{Cowen2021}` hits
-`Fatal:Timeout:TokenLimit` (999M tokens) during .bbl processing under the
-ar5iv profile. Bisect 2026-07-04: **9a679469e1 (run-230 binary) fatals
-identically** under equal local conditions (release, `LATEXML_TOKEN_LIMIT`
-=50M, `--preload=ar5iv.sty`) — run 230's "error" status for this paper was
-fleet nondeterminism, so the July PR branch did not introduce it. Repro:
-`scratchpad fatal5/17646src` (arXiv 2605.17646). Suspect area: biblatex
-runtime binding's refsection/datalist handling with `\missing`. Not a
-July-5 blocker; needs a dedicated session.
+Root cause was **not** `\missing{Cowen2021}` (the `.bbl`'s last line, and the
+entry's standing suspicion): deleting it leaves the Fatal untouched. It is a
+self-referential `\let` in the engine's pseudo-bibitem machinery —
+`setupPseudoBibitem` re-arming captures `\save@bibitem` ← `\restoring@bibitem`,
+whose body ends in `\bibitem`, so it expands forever. The re-arm happens because
+biblatex's apa style asks biber for **two sorting schemes**, so the `.bbl`
+carries two `\datalist` blocks (2 × 29 entries here) and each `\enddatalist`
+expands to a whole *bare-CS* `\thebibliography…\endthebibliography` — no group,
+so the first arming was still live when the second opened.
+
+Fixed in two symmetric halves: `setup_pseudo_bibitem` captures the originals
+once per arming (`\ifx\bibitem\restoring@bibitem` guard), and
+`\endthebibliography` now disarms — upstream has no teardown, relying on
+`\begin`/`\end` popping the group, which the bare-CS pair never opens. The
+missing teardown was separately costing a stray empty bibitem outside the
+biblist (`Error:malformed:ltx:bibitem`) from the blank line after
+`\printbibliography`.
+
+Witness now converts in ~1 s with **1 error** (`\missing`, undefined in both
+engines) and 58 bibitems / 2 bibliographies / 2 biblists — byte-for-byte the
+structure same-host Perl produces, which takes 33.7 s and reports **59 errors**.
+**The defect is shared with Perl** (`\thebibliography \endthebibliography
+\thebibliography \bibitem{b}` hangs Perl 0.8.8 >400 s); it stays latent upstream
+only because Perl's biblatex binding never defines `\printbibliography`, so Perl
+never reads a real `.bbl` this way. Mechanism, minimal trigger and the
+upstream-candidate note: `KNOWN_PERL_ERRORS.md` #57. Guard
+`06_cluster_regressions::cluster_biblatex_two_datalists`.
 
 
 ### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)

@@ -2278,3 +2278,76 @@ arguments through the same `\@doimport` as `\import`/`\subimport`, and Perl's ow
 `06_cluster_regressions::includefrom_takes_directory_and_file`. Candidate to
 upstream (not filed as of 2026-07-23) — a two-character fix at
 `import.sty.ltxml` L45/L47.
+
+## 57. `setupPseudoBibitem` re-arming makes `\save@bibitem` a self-referential `\let` → infinite expansion
+
+`latex_constructs.pool.ltxml:setupPseudoBibitem` (L4028-4032) saves the real
+meanings before installing its "missing `\bibitem`" redirection:
+
+```perl
+Let('\save@bibitem', '\bibitem');
+Let('\save@par',     '\par');
+Let('\save@backbackslash', '\\\\');
+Let('\bibitem', '\restoring@bibitem');
+Let('\par',     '\par@in@bibliography');
+Let('\\\\',     '\par@in@bibliography');
+```
+
+The captures are unconditional. If it runs a second time while the redirection
+is still armed, all three save the *redirectors*: `\save@bibitem` becomes
+`\restoring@bibitem`, whose body is
+`\let\bibitem\save@bibitem\let\par\save@par\let\\\save@backbackslash\bibitem`
+(L4067) — it points `\bibitem` back at `\restoring@bibitem` and then calls it.
+That is an unconditional infinite expansion, not a slow document.
+
+`\thebibliography` / `\endthebibliography` are `DefConstructor`s, not an
+environment ("Should be an environment, but people seem to want to misuse it"),
+so a *bare-CS* pair opens no group and the arming survives it. Minimal trigger —
+hangs Perl 0.8.8 (>400 s on 8 lines; the same file converts in <2 s once the
+double-arm is broken):
+
+```latex
+\documentclass{article}
+\begin{document}
+\thebibliography{9}
+\endthebibliography
+\thebibliography{9}
+\bibitem{b} Author B.
+\endthebibliography
+\end{document}
+```
+
+The first bibliography must contain no `\bibitem` — one there fires
+`\restoring@bibitem`, which disarms and makes the second capture legitimate.
+`\ifx\save@bibitem\restoring@bibitem` after the second `\thebibliography` is
+true in **both** engines, so the latent defect is shared.
+
+It stays latent upstream because Perl's biblatex binding
+(`ar5iv-bindings/biblatex.sty.ltxml`) never defines `\printbibliography`, so
+Perl never reads a real `.bbl` through this path. Rust's binding does, and a
+biber `.bbl` reaches it routinely: biblatex's apa style requests two sorting
+schemes, so the `.bbl` carries **two `\datalist` blocks** with the same
+references, and each `\enddatalist` expands to a whole bare
+`\thebibliography…\endthebibliography` (`biblatex_sty.rs::bib_as_thebibliography`,
+mirroring Perl's `biblatex_as_thebibliography` L105-119).
+
+**Fixed in Rust**, in two symmetric halves:
+* `setup_pseudo_bibitem` guards the three captures on
+  `\ifx\bibitem\restoring@bibitem` — capture the originals once per arming.
+* `\endthebibliography` now *disarms* (the same three `\let`s
+  `\restoring@bibitem` performs, minus its trailing `\bibitem`). Upstream has no
+  teardown, relying on `\begin`/`\end{thebibliography}` popping the group; that
+  never covers the bare-CS pair, so the redirection outlived the bibliography
+  and the next `\par` — a blank line after `\printbibliography` — expanded to
+  `\par@in@bibliography` and deposited a stray empty `\save@bibitem{}` outside
+  the biblist (`Error:malformed:ltx:bibitem <ltx:bibitem> isn't allowed in
+  <ltx:p>`). Restoring is a no-op for the grouped shape and for a bare
+  `\thebibliography` with no closer.
+
+Witness arXiv 2605.17646 (biblatex apa, 2 × 29 entries, blank line after
+`\printbibliography`): `Fatal:Timeout:TokenLimit` at 1e9 tokens with no output →
+now converts with 1 error (`\missing{Cowen2021}`, undefined in both engines) and
+58 bibitems / 2 bibliographies / 2 biblists, matching same-host Perl exactly
+(Perl: 59 errors, 33.7 s). Guard
+`06_cluster_regressions::cluster_biblatex_two_datalists`. Candidate to upstream
+(not filed as of 2026-07-25).

@@ -2226,9 +2226,34 @@ pub fn before_digest_bibliography() -> Result<()> {
 // bibliographies with blank lines!
 // So, let's do some redirection!
 fn setup_pseudo_bibitem() -> Result<()> {
-  Let!("\\save@bibitem", "\\bibitem");
-  Let!("\\save@par", "\\par");
-  Let!("\\save@backbackslash", "\\\\");
+  // Capture the REAL meanings, but only once per arming. Perl
+  // (latex_constructs.pool.ltxml:setupPseudoBibitem L4028-4032) captures
+  // unconditionally; if this runs while the redirection below is still
+  // installed, all three saves capture the *redirectors* instead of the
+  // originals — `\save@bibitem` becomes `\restoring@bibitem`, whose body ends
+  // in `\bibitem`, which `\let\bibitem\save@bibitem` has just pointed back at
+  // `\restoring@bibitem`. That is an unconditional infinite expansion loop
+  // (`\let \bibitem \save@bibitem \let \par \save@par \let \\
+  // \save@backbackslash \bibitem` forever), not a slow document.
+  //
+  // Perl has the identical hole — `\thebibliography \endthebibliography
+  // \thebibliography \bibitem{b}` hangs Perl 0.8.8 too (>400 s on an 8-line
+  // file that converts in <2 s otherwise); see KNOWN_PERL_ERRORS #57. It stays
+  // latent upstream only because Perl's biblatex binding never defines
+  // `\printbibliography`, so Perl never reads a real `.bbl` this way.
+  //
+  // We do reach it: a biber `.bbl` carries one `\datalist` per sorting scheme
+  // (apa emits `nyt/apasortcite//…` *and* `nyt/global//…`), and every
+  // `\enddatalist` expands to a whole `\thebibliography…\endthebibliography`.
+  // Neither of those is an environment — no group — so the first arming is
+  // still in force when the second `\thebibliography` opens. Witness:
+  // arXiv 2605.17646 (`Fatal:Timeout:TokenLimit`, 1e9 tokens), guarded by
+  // `tests/cluster_regressions/biblatex_two_datalists`.
+  if !x_equals(&T_CS!("\\bibitem"), &T_CS!("\\restoring@bibitem")) {
+    Let!("\\save@bibitem", "\\bibitem");
+    Let!("\\save@par", "\\par");
+    Let!("\\save@backbackslash", "\\\\");
+  }
   Let!("\\bibitem", "\\restoring@bibitem");
   Let!("\\par", "\\par@in@bibliography");
   Let!("\\\\", "\\par@in@bibliography");
@@ -8312,7 +8337,39 @@ LoadDefinitions!({
   DefConstructor!("\\endthebibliography", sub[document,_whatsit,_props] {
     document.maybe_close_element("ltx:biblist")?;
     document.maybe_close_element("ltx:bibliography")?;
-  }, locked=>true);
+  },
+    // Disarm the `setupPseudoBibitem` redirection that `\thebibliography`
+    // installed — the same three `\let`s `\restoring@bibitem` performs, minus
+    // its trailing `\bibitem`. Perl (latex_constructs.pool.ltxml L4014-4017)
+    // has no teardown: it relies on `\begin`/`\end{thebibliography}` popping
+    // the group the `\let`s were made in. That covers hand-written
+    // bibliographies, but NOT the bare-CS `\thebibliography …
+    // \endthebibliography` pair that the biblatex `.bbl` rebuilder expands to
+    // (`biblatex_sty.rs::bib_as_thebibliography`), which opens no group. There
+    // the redirection outlived the bibliography, so the next `\par` — a blank
+    // line after `\printbibliography` — still expanded to
+    // `\par@in@bibliography` and deposited a stray empty `\save@bibitem{}`
+    // OUTSIDE the biblist (`Error:malformed:ltx:bibitem <ltx:bibitem> isn't
+    // allowed in <ltx:p>`, witness arXiv 2605.17646: 59 bibitems where Perl
+    // and the `.bbl` both say 58).
+    //
+    // Restoring here is a no-op for the grouped case (the `\let`s are undone
+    // again when the group pops) and for the bare `\thebibliography` with no
+    // closer at all (this never runs) — the two shapes Perl's comment at
+    // `\thebibliography` calls out. See KNOWN_PERL_ERRORS #57.
+    //
+    // Gated on still being armed, for the same reason `\restoring@bibitem`
+    // only runs once: a real `\bibitem` inside the bibliography has already
+    // restored all three, and an `\endthebibliography` reached with no arming
+    // at all would otherwise copy an UNDEFINED `\save@par` onto `\par`.
+    after_digest => sub[_whatsit] {
+      if x_equals(&T_CS!("\\bibitem"), &T_CS!("\\restoring@bibitem")) {
+        Let!("\\bibitem", "\\save@bibitem");
+        Let!("\\par", "\\save@par");
+        Let!("\\\\", "\\save@backbackslash");
+      }
+    },
+    locked=>true);
   Let!("\\saved@endthebibliography", "\\endthebibliography");
   // auto close the bibliography and contained biblist.
   Tag!("ltx:biblist",      auto_close => true);
