@@ -382,101 +382,120 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <XMath>
               <XMTok meaning="123" role="NUMBER">123</XMTok>
             </XMath>
-          </Math><break/><Math mode="inline" tex="123+234\mathrm{i}" text="123 + 234 * i" xml:id="S1.SS1.p4.m3">
+          </Math><break/><Math mode="inline" tex="123+234\text{$\mathrm{i}$}" text="123 + 234 * imaginary-unit" xml:id="S1.SS1.p4.m3">
             <XMath>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
                 <XMTok meaning="123" role="NUMBER">123</XMTok>
-                <XMApp>
+                <XMApp xml:id="S1.SS1.p4.m3.3">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="234" role="NUMBER">234</XMTok>
-                  <XMTok role="UNKNOWN">i</XMTok>
+                  <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                 </XMApp>
               </XMApp>
             </XMath>
-          </Math><break/><Math mode="inline" tex="123+234\mathrm{i}\text{\times}{10}^{3}" text="(123 + 234 * i) * power@(10, 3)" xml:id="S1.SS1.p4.m4">
+          </Math><break/><Math mode="inline" tex="(123+234\text{$\mathrm{i}$})\text{\times}{10}^{3}" text="(123 + 234 * imaginary-unit) * power@(10, 3)" xml:id="S1.SS1.p4.m4">
             <XMath>
               <XMApp>
                 <XMText meaning="times" role="MULOP" xml:id="S1.SS1.p4.m4.1">×</XMText>
-                <XMApp xml:id="S1.SS1.p4.m4.2">
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok meaning="123" role="NUMBER">123</XMTok>
+                <XMDual xml:id="S1.SS1.p4.m4.2">
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok meaning="234" role="NUMBER">234</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
+                    <XMRef idref="S1.SS1.p4.m4.4"/>
+                    <XMRef idref="S1.SS1.p4.m4.5"/>
+                    <XMRef idref="S1.SS1.p4.m4.6"/>
                   </XMApp>
-                </XMApp>
-                <XMApp xml:id="S1.SS1.p4.m4.3">
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S1.SS1.p4.m4.3">
+                      <XMTok meaning="plus" role="ADDOP" xml:id="S1.SS1.p4.m4.4">+</XMTok>
+                      <XMTok meaning="123" role="NUMBER" xml:id="S1.SS1.p4.m4.5">123</XMTok>
+                      <XMApp xml:id="S1.SS1.p4.m4.6">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="234" role="NUMBER">234</XMTok>
+                        <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp xml:id="S1.SS1.p4.m4.10">
                   <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                   <XMTok meaning="10" role="NUMBER">10</XMTok>
                   <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                 </XMApp>
               </XMApp>
             </XMath>
-          </Math><break/><Math mode="inline" tex="123(1)+234(1)\mathrm{i}\text{\times}{10}^{3}" text="(123 * 1 + 234 * 1 * i) * power@(10, 3)" xml:id="S1.SS1.p4.m5">
+          </Math><break/><Math mode="inline" tex="(123(1)+234(1)\text{$\mathrm{i}$})\text{\times}{10}^{3}" text="(123 * 1 + 234 * 1 * imaginary-unit) * power@(10, 3)" xml:id="S1.SS1.p4.m5">
             <XMath>
               <XMApp>
                 <XMText meaning="times" role="MULOP" xml:id="S1.SS1.p4.m5.1">×</XMText>
-                <XMApp xml:id="S1.SS1.p4.m5.2">
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMDual xml:id="S1.SS1.p4.m5.2">
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok meaning="123" role="NUMBER">123</XMTok>
-                    <XMDual>
-                      <XMRef idref="S1.SS1.p4.m5.3"/>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok meaning="1" role="NUMBER" xml:id="S1.SS1.p4.m5.3">1</XMTok>
-                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                      </XMWrap>
-                    </XMDual>
+                    <XMRef idref="S1.SS1.p4.m5.4"/>
+                    <XMRef idref="S1.SS1.p4.m5.5"/>
+                    <XMRef idref="S1.SS1.p4.m5.7"/>
                   </XMApp>
-                  <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok meaning="234" role="NUMBER">234</XMTok>
-                    <XMDual>
-                      <XMRef idref="S1.SS1.p4.m5.4"/>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok meaning="1" role="NUMBER" xml:id="S1.SS1.p4.m5.4">1</XMTok>
-                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                      </XMWrap>
-                    </XMDual>
-                    <XMTok role="UNKNOWN">i</XMTok>
-                  </XMApp>
-                </XMApp>
-                <XMApp xml:id="S1.SS1.p4.m5.5">
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S1.SS1.p4.m5.3">
+                      <XMTok meaning="plus" role="ADDOP" xml:id="S1.SS1.p4.m5.4">+</XMTok>
+                      <XMApp xml:id="S1.SS1.p4.m5.5">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="123" role="NUMBER">123</XMTok>
+                        <XMDual>
+                          <XMRef idref="S1.SS1.p4.m5.6"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="false">(</XMTok>
+                            <XMTok meaning="1" role="NUMBER" xml:id="S1.SS1.p4.m5.6">1</XMTok>
+                            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
+                      <XMApp xml:id="S1.SS1.p4.m5.7">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMApp xml:id="S1.SS1.p4.m5.9">
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok meaning="234" role="NUMBER">234</XMTok>
+                          <XMDual>
+                            <XMRef idref="S1.SS1.p4.m5.10"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok meaning="1" role="NUMBER" xml:id="S1.SS1.p4.m5.10">1</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp xml:id="S1.SS1.p4.m5.12">
                   <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                   <XMTok meaning="10" role="NUMBER">10</XMTok>
                   <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                 </XMApp>
               </XMApp>
             </XMath>
-          </Math><break/><Math mode="inline" tex="+3\mathrm{i}" text="+ 3 * i" xml:id="S1.SS1.p4.m6">
+          </Math><break/><Math mode="inline" tex="3\text{$\mathrm{i}$}" text="3 * imaginary-unit" xml:id="S1.SS1.p4.m6">
             <XMath>
               <XMApp>
-                <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok meaning="3" role="NUMBER">3</XMTok>
-                  <XMTok role="UNKNOWN">i</XMTok>
-                </XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="3" role="NUMBER">3</XMTok>
+                <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
               </XMApp>
             </XMath>
-          </Math><break/><Math mode="inline" tex="+3\mathrm{i}\text{\times}{10}^{4}" text="(+ 3 * i) * power@(10, 4)" xml:id="S1.SS1.p4.m7">
+          </Math><break/><Math mode="inline" tex="3\text{$\mathrm{i}$}\text{\times}{10}^{4}" text="(3 * imaginary-unit) * power@(10, 4)" xml:id="S1.SS1.p4.m7">
             <XMath>
               <XMApp>
                 <XMText meaning="times" role="MULOP" xml:id="S1.SS1.p4.m7.1">×</XMText>
                 <XMApp xml:id="S1.SS1.p4.m7.2">
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok meaning="3" role="NUMBER">3</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
-                  </XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="3" role="NUMBER">3</XMTok>
+                  <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                 </XMApp>
-                <XMApp xml:id="S1.SS1.p4.m7.3">
+                <XMApp xml:id="S1.SS1.p4.m7.6">
                   <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                   <XMTok meaning="10" role="NUMBER">10</XMTok>
                   <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
@@ -790,27 +809,27 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tags>
         <title><tag close=" ">1.2.5</tag>input-complex-roots</title>
         <para xml:id="S1.SS2.SSS5.p1">
-          <p><Math mode="inline" tex="9.99+88.8\mathrm{i}" text="9.99 + 88.8 * i" xml:id="S1.SS2.SSS5.p1.m1">
+          <p><Math mode="inline" tex="9.99+88.8\text{$\mathrm{i}$}" text="9.99 + 88.8 * imaginary-unit" xml:id="S1.SS2.SSS5.p1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok meaning="9.99" role="NUMBER">9.99</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS2.SSS5.p1.m1.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="88.8" role="NUMBER">88.8</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
+                    <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="9.99+88.8\mathrm{i}" text="9.99 + 88.8 * i" xml:id="S1.SS2.SSS5.p1.m2">
+            </Math> <break/><Math mode="inline" tex="9.99+88.8\text{$\mathrm{i}$}" text="9.99 + 88.8 * imaginary-unit" xml:id="S1.SS2.SSS5.p1.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok meaning="9.99" role="NUMBER">9.99</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS2.SSS5.p1.m2.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="88.8" role="NUMBER">88.8</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
+                    <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -1413,51 +1432,51 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMWrap>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="1+2\mathrm{i}" text="1 + 2 * i" xml:id="S1.SS4.SSS3.p1.m3">
+            </Math> <break/><Math mode="inline" tex="1+2\text{$\mathrm{i}$}" text="1 + 2 * imaginary-unit" xml:id="S1.SS4.SSS3.p1.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS4.SSS3.p1.m3.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="2" role="NUMBER">2</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
+                    <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="1+2\text{$i$}" text="1 + 2 * i" xml:id="S1.SS4.SSS3.p1.m4">
+            </Math> <break/><Math mode="inline" tex="1+2\text{\text{$i$}}" text="1 + 2 * imaginary-unit" xml:id="S1.SS4.SSS3.p1.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS4.SSS3.p1.m4.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="2" role="NUMBER">2</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                    <XMTok font="italic" meaning="imaginary-unit" role="ID">i</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="1+2j" text="1 + 2 * j" xml:id="S1.SS4.SSS3.p1.m5">
+            </Math> <break/><Math mode="inline" tex="1+2\text{j}" text="1 + 2 * imaginary-unit" xml:id="S1.SS4.SSS3.p1.m5">
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS4.SSS3.p1.m5.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="2" role="NUMBER">2</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                    <XMText meaning="imaginary-unit" role="ID" xml:id="S1.SS4.SSS3.p1.m5.6">j</XMText>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="1+2j" text="1 + 2 * j" xml:id="S1.SS4.SSS3.p1.m6">
+            </Math> <break/><Math mode="inline" tex="1+2\text{j}" text="1 + 2 * imaginary-unit" xml:id="S1.SS4.SSS3.p1.m6">
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS4.SSS3.p1.m6.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="2" role="NUMBER">2</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                    <XMText meaning="imaginary-unit" role="ID" xml:id="S1.SS4.SSS3.p1.m6.6">j</XMText>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -1476,39 +1495,39 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tags>
         <title><tag close=" ">1.4.4</tag>complex-root-position</title>
         <para xml:id="S1.SS4.SSS4.p1">
-          <p><Math mode="inline" tex="67-0.9\mathrm{i}" text="67 - 0.9 * i" xml:id="S1.SS4.SSS4.p1.m1">
+          <p><Math mode="inline" tex="67-0.9\text{$\mathrm{i}$}" text="67 - 0.9 * imaginary-unit" xml:id="S1.SS4.SSS4.p1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="minus" role="ADDOP">-</XMTok>
                   <XMTok meaning="67" role="NUMBER">67</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS4.SSS4.p1.m1.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="0.9" role="NUMBER">0.9</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
+                    <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="67-0.9\mathrm{i}" text="67 - 0.9 * i" xml:id="S1.SS4.SSS4.p1.m2">
+            </Math> <break/><Math mode="inline" tex="67-\text{$\mathrm{i}$}0.9" text="67 - imaginary-unit * 0.9" xml:id="S1.SS4.SSS4.p1.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="minus" role="ADDOP">-</XMTok>
                   <XMTok meaning="67" role="NUMBER">67</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS4.SSS4.p1.m2.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                     <XMTok meaning="0.9" role="NUMBER">0.9</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="67-0.9\mathrm{i}" text="67 - 0.9 * i" xml:id="S1.SS4.SSS4.p1.m3">
+            </Math> <break/><Math mode="inline" tex="67-0.9\text{$\mathrm{i}$}" text="67 - 0.9 * imaginary-unit" xml:id="S1.SS4.SSS4.p1.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="minus" role="ADDOP">-</XMTok>
                   <XMTok meaning="67" role="NUMBER">67</XMTok>
-                  <XMApp>
+                  <XMApp xml:id="S1.SS4.SSS4.p1.m3.3">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="0.9" role="NUMBER">0.9</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
+                    <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -1836,56 +1855,67 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="2\mathrm{i}\text{\times}{10}^{10}" text="(2 * i) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m2">
+            </Math> <break/><Math mode="inline" tex="2\text{$\mathrm{i}$}\text{\times}{10}^{10}" text="(2 * imaginary-unit) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m2">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S1.SS4.SSS8.p1.m2.1">×</XMText>
                   <XMApp xml:id="S1.SS4.SSS8.p1.m2.2">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="2" role="NUMBER">2</XMTok>
-                    <XMTok role="UNKNOWN">i</XMTok>
+                    <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                   </XMApp>
-                  <XMApp xml:id="S1.SS4.SSS8.p1.m2.3">
+                  <XMApp xml:id="S1.SS4.SSS8.p1.m2.6">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMTok meaning="10" role="NUMBER">10</XMTok>
                     <XMTok fontsize="70%" meaning="10" role="NUMBER">10</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="1+2\mathrm{i}\text{\times}{10}^{10}" text="(1 + 2 * i) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m3">
+            </Math> <break/><Math mode="inline" tex="(1+2\text{$\mathrm{i}$})\text{\times}{10}^{10}" text="(1 + 2 * imaginary-unit) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m3">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S1.SS4.SSS8.p1.m3.1">×</XMText>
-                  <XMApp xml:id="S1.SS4.SSS8.p1.m3.2">
-                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok meaning="1" role="NUMBER">1</XMTok>
+                  <XMDual xml:id="S1.SS4.SSS8.p1.m3.2">
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok role="UNKNOWN">i</XMTok>
+                      <XMRef idref="S1.SS4.SSS8.p1.m3.4"/>
+                      <XMRef idref="S1.SS4.SSS8.p1.m3.5"/>
+                      <XMRef idref="S1.SS4.SSS8.p1.m3.6"/>
                     </XMApp>
-                  </XMApp>
-                  <XMApp xml:id="S1.SS4.SSS8.p1.m3.3">
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S1.SS4.SSS8.p1.m3.3">
+                        <XMTok meaning="plus" role="ADDOP" xml:id="S1.SS4.SSS8.p1.m3.4">+</XMTok>
+                        <XMTok meaning="1" role="NUMBER" xml:id="S1.SS4.SSS8.p1.m3.5">1</XMTok>
+                        <XMApp xml:id="S1.SS4.SSS8.p1.m3.6">
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok meaning="2" role="NUMBER">2</XMTok>
+                          <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMApp xml:id="S1.SS4.SSS8.p1.m3.10">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMTok meaning="10" role="NUMBER">10</XMTok>
                     <XMTok fontsize="70%" meaning="10" role="NUMBER">10</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="1+2\mathrm{i}\text{\times}{10}^{10}" text="(1 + 2 * i) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m4">
+            </Math> <break/><Math mode="inline" tex="1+2\text{$\mathrm{i}$}\text{\times}{10}^{10}" text="(1 + 2 * imaginary-unit) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m4">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S1.SS4.SSS8.p1.m4.1">×</XMText>
                   <XMApp xml:id="S1.SS4.SSS8.p1.m4.2">
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
                     <XMTok meaning="1" role="NUMBER">1</XMTok>
-                    <XMApp>
+                    <XMApp xml:id="S1.SS4.SSS8.p1.m4.5">
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok role="UNKNOWN">i</XMTok>
+                      <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMApp xml:id="S1.SS4.SSS8.p1.m4.3">
+                  <XMApp xml:id="S1.SS4.SSS8.p1.m4.9">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMTok meaning="10" role="NUMBER">10</XMTok>
                     <XMTok fontsize="70%" meaning="10" role="NUMBER">10</XMTok>
@@ -1893,20 +1923,31 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMApp>
               </XMath>
             </Math> <break/>
-<Math mode="inline" tex="1+2\mathrm{i}\text{\times}{10}^{10}" text="(1 + 2 * i) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m5">
+<Math mode="inline" tex="\{1+2\text{$\mathrm{i}$}\}\text{\times}{10}^{10}" text="(1 + 2 * imaginary-unit) * power@(10, 10)" xml:id="S1.SS4.SSS8.p1.m5">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S1.SS4.SSS8.p1.m5.1">×</XMText>
-                  <XMApp xml:id="S1.SS4.SSS8.p1.m5.2">
-                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok meaning="1" role="NUMBER">1</XMTok>
+                  <XMDual xml:id="S1.SS4.SSS8.p1.m5.2">
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok role="UNKNOWN">i</XMTok>
+                      <XMRef idref="S1.SS4.SSS8.p1.m5.4"/>
+                      <XMRef idref="S1.SS4.SSS8.p1.m5.5"/>
+                      <XMRef idref="S1.SS4.SSS8.p1.m5.6"/>
                     </XMApp>
-                  </XMApp>
-                  <XMApp xml:id="S1.SS4.SSS8.p1.m5.3">
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">{</XMTok>
+                      <XMApp xml:id="S1.SS4.SSS8.p1.m5.3">
+                        <XMTok meaning="plus" role="ADDOP" xml:id="S1.SS4.SSS8.p1.m5.4">+</XMTok>
+                        <XMTok meaning="1" role="NUMBER" xml:id="S1.SS4.SSS8.p1.m5.5">1</XMTok>
+                        <XMApp xml:id="S1.SS4.SSS8.p1.m5.6">
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok meaning="2" role="NUMBER">2</XMTok>
+                          <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMApp xml:id="S1.SS4.SSS8.p1.m5.10">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMTok meaning="10" role="NUMBER">10</XMTok>
                     <XMTok fontsize="70%" meaning="10" role="NUMBER">10</XMTok>

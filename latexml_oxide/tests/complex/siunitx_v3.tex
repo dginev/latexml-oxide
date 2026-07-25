@@ -1,0 +1,45 @@
+% siunitx v3 surface, on top of the v2 vocabulary this binding implements
+% (Perl LaTeXML/lib/LaTeXML/Package/siunitx.sty.ltxml). Guards
+% arXiv/html_feedback#6624. The v2 cases live in the Perl-shared si.tex
+% fixture; keep that one byte-comparable with LaTeXML/t/complex/si.xml and
+% put v3-only coverage here.
+\documentclass{article}
+\usepackage{siunitx}
+
+% v3-only option spellings must be known keys, not "unknown KeyVals key" warns.
+% Witness 2606.13010 (the reporting paper).
+\sisetup{mode = math, reset-text-family = false, unit-font-command = \mathrm}
+
+% \DeclareSIPower{<before>}{<after>}{<power>} declares one pre- and one
+% post-power, so both orders yield the same unit.
+\DeclareSIPower\quartic\tothefourth{4}
+
+% Deprecated upstream (v3 manual S6); accepted as a no-op.
+\SendSettingsToPgf
+
+% The reporting paper's attributive-quantity macro: the v3 key
+% quantity-product is the v2 number-unit-product, so the author's hyphen shows
+% while the MULOP/times semantics survive.
+\newcommand{\qtyhy}[2]{\qty[quantity-product = \text{-}]{#1}{#2}}
+
+\begin{document}
+
+\section{v3 command aliases}
+
+\complexnum{1+2i}\\
+\complexqty{1+2i}{\ohm}\\
+\numproduct{5 x 100 x 2}\\
+\qtyproduct{5 x 100 x 2}{\metre}\\
+\num{2i}\\
+\num[complex-root-position = before-number]{1+2i}\\
+
+\section{Declared powers}
+
+\unit{\quartic\metre} and \unit{\metre\tothefourth}\\
+
+\section{Quantity product}
+
+\qty{1.6}{\giga\hertz}\\
+\qtyhy{10}{\mega\hertz}\\
+
+\end{document}
