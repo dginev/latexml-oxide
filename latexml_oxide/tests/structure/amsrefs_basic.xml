@@ -22,7 +22,8 @@
     author = {John Smith},
      title = {On Examples},
    journal = {JMP},
-      year = {2020}}</bib-data>
+      year = {2020}}
+</bib-data>
       </bibentry>
       <bibentry key="Doe1999" type="book" xml:id="bib.bib2">
         <bib-name role="author">
@@ -36,7 +37,8 @@
     author = {Jane Doe},
      title = {A Book},
  publisher = {Pub},
-      year = {1999}}</bib-data>
+      year = {1999}}
+</bib-data>
       </bibentry>
       <bibentry key="Bartnik" type="article" xml:id="bib.bib3">
         <bib-name role="author">
@@ -64,7 +66,8 @@
     number = {5},
      pages = {661\ndash 693},
        url = {https://doi.org/10.1002/cpa.3160390505},
-    review = {\MR{849427}}}</bib-data>
+    review = {\MR{849427}}}
+</bib-data>
       </bibentry>
     </biblist>
   </bibliography>

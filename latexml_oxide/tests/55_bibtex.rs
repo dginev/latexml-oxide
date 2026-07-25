@@ -70,4 +70,41 @@ fn bibtex_mode_emits_bibentries() {
     "expected unknown bib field value to be emitted (not dropped), got:\n{}",
     s
   );
+
+  // `\bib@entry@default@complete` runs `\bib@synthesize@mr\bib@synthesize@zbl`
+  // (Perl `BibTeX.pool.ltxml:210-211`, `:803-845`), turning the non-standard
+  // mrnumber/mrreviewer/zblno fields into MathReview/ZentralBlatt links. Both
+  // synthesizers read `currentBibEntryField`, which in Perl returns the field's
+  // STRING; the Rust `BibEntry::fields` (Tokens) store it consulted is only ever
+  // populated by crossref-copy, so every lookup returned None and NEITHER
+  // synthesizer could fire. Expected shapes verified against same-host Perl.
+  for needle in [
+    // mrnumber alone -> a plain identifier, no review.
+    "<bib-identifier href=\"https://www.ams.org/mathscinet-getitem?mr=849427\" \
+     id=\"849427\" scheme=\"mr\">MathReview Entry</bib-identifier>",
+    // mrnumber + mrreviewer -> a review naming the reviewer.
+    "<bib-review href=\"https://www.ams.org/mathscinet-getitem?mr=2124018\" \
+     id=\"2124018\" scheme=\"mr\">MathReview (C. Three)</bib-review>",
+    // `MR1380882 (96e:83024)` -> review, `MR` prefix and note stripped from the id.
+    "<bib-review href=\"https://www.ams.org/mathscinet-getitem?mr=1380882\" \
+     id=\"1380882\" scheme=\"mr\">MathReview</bib-review>",
+    // zblno -> ZentralBlatt review.
+    "<bib-review href=\"https://zbmath.org/0674.53077\" id=\"0674.53077\" \
+     scheme=\"zbl\">ZentralBlatt</bib-review>",
+  ] {
+    assert!(
+      s.contains(needle),
+      "MR/Zbl synthesis missing:\n  expected: {needle}\ngot:\n{s}"
+    );
+  }
+
+  // Same root, different symptom: the `date`-already-set guard in
+  // `\bib@field@default@year` also read the dead `fields` store, so an entry
+  // carrying BOTH emitted a SECOND <ltx:bib-date> from the year. Perl emits one.
+  let dates = s.matches("<bib-date").count();
+  assert_eq!(
+    dates, 4,
+    "expected exactly one <ltx:bib-date> per entry (4 entries, and DateAndYear1986 \
+     must not emit a second one from its `year`), got {dates}:\n{s}"
+  );
 }
