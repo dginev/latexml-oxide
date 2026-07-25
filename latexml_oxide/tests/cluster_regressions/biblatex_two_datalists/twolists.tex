@@ -1,0 +1,21 @@
+% Regression: a biber .bbl that carries MORE THAN ONE \datalist block.
+% biblatex's apa style asks biber for two sorting schemes, so the .bbl holds
+% the same references twice (nyt/apasortcite//… and nyt/global//…). Every
+% \enddatalist expands to a whole \thebibliography…\endthebibliography, and
+% neither of those is an environment, so the second one re-entered
+% setupPseudoBibitem while the first one's \let-redirection was still armed:
+%   \save@bibitem -> \restoring@bibitem -> …\let\bibitem\save@bibitem…\bibitem
+% i.e. an unconditional infinite expansion (Fatal:Timeout:TokenLimit, 1e9
+% tokens). The BLANK LINE after \printbibliography below is load-bearing too:
+% with the redirection left armed past \endthebibliography, that \par expanded
+% to \par@in@bibliography and deposited a stray empty \save@bibitem{} outside
+% the biblist ("Error:malformed:ltx:bibitem <ltx:bibitem> isn't allowed in
+% <ltx:p>"). Witness: arXiv 2605.17646. See KNOWN_PERL_ERRORS #57.
+\documentclass{article}
+\usepackage[style=apa,backend=biber]{biblatex}
+\addbibresource{twolists.bib}
+\begin{document}
+Cited: \parencite{smith2020} and \parencite{jones2019}.
+\printbibliography
+
+\end{document}
