@@ -730,6 +730,34 @@ fn cluster_biblatex_two_datalists() {
   );
 }
 
+/// A leading relop (implied `absent` left operand) followed by a comma had no
+/// derivation at all: `list_apply`'s fragment guard rejected any item carrying
+/// an `absent` relop operand, and `formula relop formula_list` is deliberately
+/// gone (KNOWN_PERL_ERRORS #37), so `$>50,000$` fell out as `ltx_math_unparsed`
+/// while every neighbouring shape parsed. The guard now only rejects a comma
+/// pair when BOTH items are fragments — matching the relaxation `formulae_apply`
+/// already carried — and stays strict for `\quad`, where a run of align
+/// fragments really is one broken-up equation (`tests/math/sampler`).
+/// Witness: arXiv 2605.17646.
+#[test]
+fn cluster_leading_relop_comma_list() {
+  let x = convert_to_xml("tests/cluster_regressions/leading_relop_comma_list.tex");
+  assert!(
+    !x.contains("ltx_math_unparsed"),
+    "every formula here must parse; got an unparsed one:\n{x}"
+  );
+  // The #37 reading: the comma splits at the statements level, and the leading
+  // relop keeps its `absent` operand — same shape `a>50,000` already produced.
+  assert!(
+    x.contains(r#"text="list@(absent &gt; 50, 000)""#),
+    "expected list@(absent > 50, 000) for the leading-relop comma list:\n{x}"
+  );
+  assert!(
+    x.contains(r#"text="list@(a &gt; 50, 000)""#),
+    "the binary-relop sibling must be unchanged:\n{x}"
+  );
+}
+
 /// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
 /// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
 /// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the

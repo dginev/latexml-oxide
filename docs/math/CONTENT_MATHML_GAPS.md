@@ -135,6 +135,26 @@
   (apply) where Perl groups `(n to infinity)`. Same ARROW-as-applied-function
   family as `f(a,b)`.
 
+- **Thousands-separator comma read as a list separator — OPEN, shared with Perl
+  (user-raised 2026-07-25).** `$>50,000$` is ONE number, `50000`, written with a
+  thousands separator. Neither engine sees that: Perl builds
+  `>(absent, list(50,000))`, Rust `list@(absent>50, 000)` (the #37 reading). The
+  glyphs come out right, so it is invisible in a rendered page, but the grouping
+  is wrong in presentation MathML too —
+  `mrow(mrow(mphantom, >, mn 50), mo ",", mn 000)` where it should be
+  `mrow(mo >, mn "50,000")` — and the content arm is nonsense.
+  A conservative lexer-level merge would be `NUMBER , NUMBER` where the right
+  group is **exactly three digits** (chaining for `1,234,567`), done where the
+  math lexer assigns roles (`latexml_math_parser/src/util.rs`) so the grammar
+  never sees the comma.
+  **Why it is not a five-minute fix: the comma is locale-dependent.** In much of
+  Europe the comma is the DECIMAL separator, so `$3,14$` is 3.14 and `$50,000$`
+  is 50 — the exact opposite reading. A digit-count heuristic gets the
+  Anglo-American case right and silently corrupts the European one, and TeX
+  source carries no locale marker (`\usepackage[german]{babel}` is a document-level
+  hint at best; siunitx's `\num{50000}` is the only unambiguous form). Decide the
+  policy before coding. Witness: arXiv 2605.17646 (`population $ > 50,000$`).
+
 CAUTION: new VERTBAR/fence grammar rules can collide with package-built
 structures — always cross-check the affected fixture against Perl before
 assuming a regression (the norm rule "regressed" physics_test, but Perl matched
