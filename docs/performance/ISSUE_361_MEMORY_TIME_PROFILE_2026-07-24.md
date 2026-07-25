@@ -19,11 +19,15 @@ follow-up** to shrink RAM + time faithfully.
 > **Knob note (post-PR #363).** `--max-memory` is now the *single* memory knob:
 > the soft stomach fuse is derived from it (`soft_cap_from_ceiling`, 75 % of the
 > ceiling — which reproduces the historical ~4.5 GB fuse at the 6144 MiB
-> default), and a `0` from any source resolves to "disabled" for **both** the
-> soft fuse and the hard watchdog. `LATEXML_RSS_CAP_BYTES` survives only as a
-> fallback when no ceiling is given (and as the test-harness override), so it is
-> no longer the thing to reach for. The measurements below were taken with both
-> guards off and are unaffected; only the invocation is simpler now.
+> default), and `--max-memory=0` disables **both** the soft fuse and the hard
+> watchdog. It is also the *winner*: it overrides `LATEXML_RSS_CAP_BYTES`, so no
+> env var can quietly countermand what you typed. That env still governs
+> embedders which never parse CLI flags — the library test harness and the
+> `cortex_worker` fleet, which pins each child to its `--max-rss-mb` — but in the
+> binary it is no longer the thing to reach for. Note `LATEXML_RSS_CAP_BYTES=0`
+> is NOT equivalent to `--max-memory=0`: it only silences the soft fuse where it
+> still applies, and never touches the watchdog. The measurements below were
+> taken with both guards off and are unaffected; only the invocation is simpler.
 
 ## Baseline (fast dev box, release build, guards off)
 
@@ -51,8 +55,9 @@ building the DOM, then drop. **Peak = boxes + DOM together.** During pure
 digestion the boxes sit on the boxing stack in one context
 (`localized_box_list_total ≈ 236 832` top-level entries at 6 GB, each a subtree
 — recursive box count far higher). Diagnose with
-`LATEXML_DEBUG_MEMBUDGET=1 --max-memory <MiB>` (dumps box_list /
-localized_box_list sizes + a backtrace when the derived soft fuse trips).
+`LATEXML_DEBUG_MEMBUDGET=1 latexml_oxide --max-memory <MiB>` (dumps box_list /
+localized_box_list sizes + a backtrace when the derived soft fuse trips, i.e. at
+75 % of `<MiB>` — so pick a ceiling whose 75 % is where you want the dump).
 
 ### TIME — flat, no silver bullet
 

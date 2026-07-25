@@ -777,11 +777,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // knob. The hard Watchdog ceiling above rides it directly; the cooperative
     // stomach RSS fuse is DERIVED from it (a fixed fraction below, leaving
     // post-processing headroom) rather than being an independent number — so
-    // one flag governs one limit and `--max-memory=0` disables both. An
-    // explicit `LATEXML_RSS_CAP_BYTES` still overrides just the soft fuse (the
-    // fleet/test decoupling escape hatch), so honor it when present.
-    let ceiling_applied = latexml_core::stomach::apply_memory_ceiling(cli.max_memory);
-    if cli.max_memory == 0 && ceiling_applied {
+    // one flag governs one limit and `--max-memory=0` disables both. It also
+    // WINS over `LATEXML_RSS_CAP_BYTES`: no env var may quietly override what
+    // the user typed. That env still governs embedders which never parse CLI
+    // flags and so never get here (the library test harness, the cortex_worker
+    // fleet) — see `stomach::apply_memory_ceiling`.
+    latexml_core::stomach::apply_memory_ceiling(cli.max_memory);
+    if cli.max_memory == 0 {
       // Removing the surprise of one flag silently disabling two guards: say
       // so, out loud, when the whole memory limit is off.
       latexml_core::Warn!(
