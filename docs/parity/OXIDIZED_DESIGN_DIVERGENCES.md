@@ -1958,6 +1958,41 @@ branch in Perl, faithfully ported in `document.rs::append_tree`. Perl simply nev
 chains its parser to it. Accepting fragments therefore inserts more of the author's
 content correctly and can never emit *fewer* errors than Perl.
 
+### 67. A fence split by TeX's null delimiter is re-balanced before it is given up on
+
+**Perl.** `\left( a+b \right.` is a fence whose right delimiter is *empty*, and
+digestion emits no token for the `.` at all. When such a fence is split across an
+alignment break — the standard way to break a long parenthesised expression:
+
+```latex
+\begin{align}
+  H & = \frac{\hbar}{2} \left( \Omega_{IX} IX + \ldots \right. \nonumber \\
+    & \quad \left. + \Omega_{ZX} ZX + \ldots \right).
+\end{align}
+```
+
+each cell is left holding one unmatched delimiter. Perl's MathGrammar has no rule
+for that, so it reports `not_parsed` (four warnings on the minimal case) and the
+formula degrades to unstructured markup.
+
+**Rust.** The XMath we build is byte-identical to Perl's — same `XMWrap` with an
+unmatched `OPEN`, same bare `CLOSE` — so this is purely a parser difference. When
+the grammar returns **zero** derivations, `parser.rs::balance_null_delimiters`
+re-supplies the delimiter TeX says is there and retries once. The synthesized
+`XMTok` carries the fence `role` but empty text, so it renders as nothing, which
+is exactly `\right.`'s meaning; `tex=` reversions stay verbatim
+(`\left(a+b\right.`). The cells then parse through the *existing* open/close
+fence semantics as `delimited-(@(…)` / `delimited-)@(…)`.
+
+**Why this is safe rather than a parity break.** It is gated on total parse
+failure, so no formula that already parses can be re-read — the repair is
+unreachable for them. That gate is load-bearing, not incidental: an earlier
+unconditional version read the `⟩` of a ket `|f⟩` as a dangling close (its partner
+is a `VERTBAR`, not an `OPEN`), prepended a bogus `(`, and broke formulae that had
+been fine. Guarded by `tests/math/split_fence.tex`, which pins the ket case
+alongside the split fence. Emitting *more* structure than Perl on input Perl
+cannot parse never yields fewer errors than Perl. Witness: arXiv 2606.13010.
+
 **What did NOT loosen.** Parser recovery stays OFF in both attempts. libxml's
 recovery mode silently destroys author content — measured: `<b>a</b> <i>b</i>`
 salvaged to just `<b>a</b>`, `a&nbsp;b` to `ab`, `a & b` to `a  b` — so malformed

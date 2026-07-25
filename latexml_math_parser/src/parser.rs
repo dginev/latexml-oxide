@@ -424,6 +424,11 @@ pub struct MathParser {
   /// (`core_interface`), so this set's lifetime IS the document scope. Hashed (not stored whole) to
   /// stay O(8 bytes) per formula under the worker fleet.
   warned_formulas:           HashSet<u64>,
+  /// Set while running the SPECULATIVE first parse of a fence-unbalanced
+  /// formula, whose failure is expected and is rescued by the
+  /// `balance_null_delimiters` retry. Without it the log would carry an
+  /// `unparsed_math` warning for a formula that ends up fully parsed.
+  suppress_unparsed_warning: bool,
   // strict: bool,
   // xnode: Option<Node>,
 }
@@ -450,6 +455,7 @@ impl Default for MathParser {
       n_parsed: 0,
       last_parsetrees_count: 0,
       warned_formulas: HashSet::new(),
+      suppress_unparsed_warning: false,
       // strict: true,
       // xnode: None,
     }
@@ -1493,7 +1499,8 @@ impl MathParser {
     } else {
       // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called
       // above)
-      let (lexemes, mut nodes) = node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
+      let (mut lexemes, mut nodes) =
+        node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
@@ -1534,7 +1541,22 @@ impl MathParser {
           warn_fn().ok();
           Ok(None)
         },
-        _ => self.parse_lexemes(lexemes, &nodes, document),
+        _ => {
+          // A fence-unbalanced stream is the one shape the retry below can
+          // rescue, so keep this attempt's expected failure out of the log —
+          // and keep the lexemes, which the retry needs. Balanced formulae (the
+          // overwhelming majority) hand theirs over and pay no copy.
+          let retryable = Self::fence_imbalance(&lexemes).is_some();
+          self.suppress_unparsed_warning = retryable;
+          let attempt = if retryable {
+            lexemes.clone()
+          } else {
+            std::mem::take(&mut lexemes)
+          };
+          let out = self.parse_lexemes(attempt, &nodes, document);
+          self.suppress_unparsed_warning = false;
+          out
+        },
       };
       // Resource fatals must propagate, not be dropped by the if-let below
       // (PR #249 review P1-4); other Errs keep the old treated-as-failure
@@ -1542,6 +1564,21 @@ impl MathParser {
       let parse_outcome = match parse_outcome {
         Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
           return Err(e);
+        },
+        other => other,
+      };
+      // Second chance for a formula the grammar could not parse AT ALL: if its
+      // fences are unbalanced, re-supply TeX's null delimiter and retry once.
+      // Gating on failure is what makes this safe — a stream that already
+      // parses is never touched, so no working formula can be re-interpreted.
+      // (An earlier unconditional version did exactly that: it read the `⟩` of
+      // a ket `|f⟩` as an unmatched CLOSE and prepended a bogus `(`, breaking
+      // formulae that had been fine.)
+      let parse_outcome = match parse_outcome {
+        Ok(None) | Err(_)
+          if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? =>
+        {
+          self.parse_lexemes(lexemes, &nodes, document)
         },
         other => other,
       };
@@ -1640,6 +1677,89 @@ impl MathParser {
     document.close_element_at(&mut xmwrap)?;
     document.close_element_at(&mut dual)?;
     Ok(dual)
+  }
+
+  /// Count the fence delimiters a stream is missing: `(closes_needed_in_front,
+  /// opens_needed_at_end)`, or `None` when it is balanced — or so lopsided that
+  /// it is garbled rather than null-delimited, where synthesizing a pile of
+  /// fences would only invent structure that isn't there.
+  fn fence_imbalance(lexemes: &[String]) -> Option<(i32, i32)> {
+    const MAX_SYNTHETIC_DELIMITERS: i32 = 2;
+    let (mut depth, mut min_depth) = (0i32, 0i32);
+    for lex in lexemes {
+      // The ROLE is the first `:`-segment. (Not `distill_lexeme`, which splits
+      // at the LAST separator to recover the trailing lexeme text.)
+      match lex.split(':').next().unwrap_or("") {
+        "OPEN" | "OTHER_OPEN" => depth += 1,
+        "CLOSE" | "OTHER_CLOSE" => depth -= 1,
+        _ => {},
+      }
+      min_depth = min_depth.min(depth);
+    }
+    let unmatched_closes = -min_depth;
+    let unmatched_opens = depth - min_depth;
+    let lopsided =
+      unmatched_closes > MAX_SYNTHETIC_DELIMITERS || unmatched_opens > MAX_SYNTHETIC_DELIMITERS;
+    match (unmatched_closes, unmatched_opens) {
+      (0, 0) => None,
+      _ if lopsided => None,
+      pair => Some(pair),
+    }
+  }
+
+  /// Restore the fence partner that TeX's *null delimiter* leaves implicit.
+  ///
+  /// `\left( a+b \right.` is a genuine fence whose right delimiter is empty, but
+  /// digestion emits no token for the `.` at all (Perl does the same — the XMath
+  /// is byte-identical), so the parser sees an `OPEN` with no `CLOSE`. The
+  /// grammar's `open_fenced`/`close_fenced` rules only cover the `ARRAY`
+  /// terminal (a fenced matrix), not general expressions, whose fence rules in
+  /// `fenced_factor` are balanced-only. The result is a hard parse failure —
+  /// **zero** derivations — so the whole formula falls back to
+  /// `ltx_math_unparsed`, losing every unrelated structure in it (fractions,
+  /// subscripts, operator trees).
+  ///
+  /// Rather than add open-ended grammar rules — which would make every balanced
+  /// `( … )` ambiguous with a dangling reading and inflate the parse forest on
+  /// the ~99 % of math that is balanced — we re-supply the delimiter that TeX
+  /// says is there. The synthesized `XMTok` carries the fence `role` but **empty
+  /// text**, so it renders as nothing, which is exactly `\right.`'s semantics.
+  ///
+  /// Balanced input is untouched: the scan finds no imbalance and returns.
+  ///
+  /// Witness: 2606.13010 appendix (CR Hamiltonian split across an `align` break).
+  fn balance_null_delimiters(
+    lexemes: &mut Vec<String>,
+    nodes: &mut Vec<Node>,
+    mathnode: &mut Node,
+    document: &mut Document,
+  ) -> Result<bool> {
+    // The lexeme's trailing `:N` is a 1-based index into `nodes`, so a lexeme's
+    // position in the stream is independent of where its node sits — we can
+    // insert at the front while pushing its node at the back.
+    if lexemes.len() != nodes.len() {
+      return Ok(false); // defensive: never repair a stream we can't index safely
+    }
+    let Some((unmatched_closes, unmatched_opens)) = Self::fence_imbalance(lexemes) else {
+      return Ok(false);
+    };
+    let mut synth = |role: &str, text: &str, nodes: &mut Vec<Node>| -> Result<String> {
+      let mut tok = document.open_element_at(mathnode, "ltx:XMTok", None, None)?;
+      document.set_attribute(&mut tok, "role", role)?;
+      document.close_element_at(&mut tok)?;
+      tok.unlink();
+      nodes.push(tok);
+      Ok(format!("{role}:{text}:{}", nodes.len()))
+    };
+    for _ in 0..unmatched_closes {
+      let lex = synth("OPEN", "(", nodes)?;
+      lexemes.insert(0, lex);
+    }
+    for _ in 0..unmatched_opens {
+      let lex = synth("CLOSE", ")", nodes)?;
+      lexemes.push(lex);
+    }
+    Ok(true)
   }
 
   pub fn parse_marpa(
@@ -2112,6 +2232,11 @@ impl MathParser {
       Some("ambiguous_math")
     } else {
       None
+    };
+    let diagnostic_category = match diagnostic_category {
+      // The retry below may still rescue this formula — stay quiet until it has had its turn.
+      Some("unparsed_math") if self.suppress_unparsed_warning => None,
+      other => other,
     };
     if let Some(category) = diagnostic_category {
       // Warn once per DISTINCT formula per document (Perl LaTeXML's rule): a formula repeated N
