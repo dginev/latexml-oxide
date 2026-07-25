@@ -1948,6 +1948,14 @@ Confirmed on the installed Perl 0.8.8 **and** the vendored tree
 (`perl -I LaTeXML/blib/lib`, rev `51fea96a`) — not a version skew. On
 arXiv:2605.01646 Perl yields 0 bibitems and 81 dangling citations.
 
+Reported in the wild as [arXiv/html_feedback#6776](https://github.com/arXiv/html_feedback/issues/6776)
+("the references are not loading") against **arXiv:2508.17585**
+(`PMTCornersSpinor.tex`, amsrefs + a shipped `.bbl` of 34 `\bib` entries). The
+deployed arXiv HTML — Perl-produced — carries `<ul id="bib.L1"
+class="ltx_biblist"></ul>`, empty; same-host Perl reproduces it exactly
+(`Warning:expected:bibkeys Missing bibkeys …`, 34 `<bibentry>` in the core XML,
+0 `ltx_bibitem` after `latexmlpost`). pdflatex and Rust both render all 34.
+
 **Fixed in Rust** (OXIDIZED_DESIGN #57): `get_bib_entries` also scans the main
 document for inline `ltx:bibentry`. Papers with an external `.bib`/`.bbl` carry
 no inline entries, so the scan is a no-op for them. All 40 corpus papers went

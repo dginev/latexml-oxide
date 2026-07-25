@@ -628,6 +628,51 @@ residuals stay here so the live worklist keeps them visible:
 
 ## Open tasks (actionable)
 
+### amsrefs `\bib` field values reached the XML as dead text (arXiv/html_feedback#6776) — ✅ LANDED 2026-07-25 (branch `fix-6776-2508.17585-refs`)
+
+Rust Error Fix. The **reported** symptom (2508.17585: "references are not
+loading", empty `<ul class="ltx_biblist">`) is the *Perl* defect already fixed
+here — KNOWN_PERL_ERRORS #49 / OXIDIZED_DESIGN #57, guarded by
+`amsrefs_inline_bibliography_is_not_dropped`; same-host Perl still emits
+`Warning:expected:bibkeys` + 0 bibitems where Rust emits 34 (pdflatex: 34).
+Verifying that surfaced four **genuine Rust-only** divergences *inside* the
+entries, all now matching Perl's core XML on all 34:
+
+* **Field values were not live TeX.** Perl `BibTeX.pool.ltxml:134-166`
+  (`\bibentry@create`) assembles the entry as TeX *source* and hands it to a
+  fresh `Mouth`; `bibtex.rs` built a pre-tokenized stream with `Explode!`
+  (catcode-12 OTHER throughout), so `\MR{849427}` reached the XML as literal
+  characters (`Review “MR–849427˝` — the OT1 rendering). Now ports the Mouth,
+  with `\csname …\endcsname` for the `@`-bearing handler names as Perl does.
+  Lazy tokenization is also what lets the handlers' `Verbatim`/`Semiverbatim`
+  params set catcodes first, so `%`/`#`/`~` in a `url` value stay intact — a
+  plain `Tokenize!` swap would have regressed that.
+* **`pages` rendered empty.** `\bib@@pages` stored `Stored::Tokens`, but
+  `prop_digested!` renders only `Digested`/`VecDigested` and fell through its
+  catch-all to nothing. Perl L674 is `Digest(Tokenize($pages))` — now digested.
+* **`id` was aliased onto `xml:id`.** `LaTeXML-bib.rnc:335,353` declare a real
+  `attribute id` on `ltx:bib-identifier`/`ltx:bib-review`; the blanket alias
+  turned the ISSN into an invalid-NCName `xml:id="0010-3640,1097-0312"`.
+  `document.rs::set_attribute` now normalises the key once (the port spells
+  `xml:id` as bare `id` in ~15 internal call sites — math parser, `base_xmath`,
+  alignment rows — so the alias stays, but yields where the model declares a
+  real `id`), then follows Perl `Core/Document.pm:1370-1386` verbatim. The
+  serializer's companion name-keyed fixup is gone: it emits the attribute's
+  resolved qname, ordering unchanged (local name, `xml:id` last).
+* **`<bib-review>` children were flattened.** Perl `MakeBibliography.pm:655-667`
+  `do_links` clones `$node->childNodes` in every branch; Rust used
+  `get_content()`, dropping the nested `<ltx:ref>` — the MathSciNet link
+  vanished. Now clones (27 live links on the witness).
+
+Also `amsrefs_sty.rs` uses `untex()` (Perl `UnTeX($v,1)`) for the keyval slot:
+the tokenizer eats a control word's terminating space, so `to_string()` wrote
+`661\ndash693` into the `<bib-data>` BibTeX dump. Guards: `amsrefs_basic`
+(structure pair, extended with the pages/ISSN/url/review band) +
+`amsrefs_inline_bibliography_is_not_dropped` (post layer). **Not fixed** (adjacent,
+pre-existing, out of scope): a `mrnumber` field synthesizes no
+`<bib-identifier scheme="mr">` in Rust where Perl's `default@complete` does; and
+Rust omits the trailing newline Perl writes inside `<bib-data>`.
+
 ### A package loaded in a LaTeXML subfile bracket lost its definitions (#311) — ✅ LANDED 2026-07-23 (branch `fix-311-standalone-newif-group`)
 
 Rust Error Fix; shared upstream defect fixed ahead of Perl (KNOWN_PERL_ERRORS

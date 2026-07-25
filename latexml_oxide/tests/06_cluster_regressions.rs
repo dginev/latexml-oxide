@@ -1121,6 +1121,24 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
     !x.contains("<bibentry"),
     "an ltx:bibentry survived unconverted:\n{x}"
   );
+  // A `\bib` field value is TeX, not literal text: Perl `BibTeX.pool.ltxml`
+  // `\bibentry@create` (L134-166) hands the assembled entry to a fresh Mouth, so
+  // `\ndash`/`\MR{…}` tokenize as control sequences. Building a pre-tokenized
+  // catcode-12 stream instead leaked them verbatim (`661\ndash693` and the OT1
+  // rendering `Review “MR–849427˝`) and left `pages` empty. Witness 2508.17585.
+  assert!(
+    x.contains("661–693"),
+    "`pages={{661\\ndash 693}}` did not render as an en-dashed range — the field \
+     value never reached the handlers as live TeX:\n{x}"
+  );
+  // MakeBibliography must clone bib-review's CHILDREN (Perl `do_links`
+  // L655-667 `cloneNodes($node->childNodes)`), not collapse them to text, or
+  // the `\MR` MathSciNet link is dropped on the floor.
+  assert!(
+    x.contains("mathscinet-getitem?mr=849427"),
+    "the `review={{\\MR{{849427}}}}` MathSciNet link vanished — bib-review's \
+     children were flattened to plain text:\n{x}"
+  );
 }
 
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —

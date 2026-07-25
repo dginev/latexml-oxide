@@ -1496,29 +1496,45 @@ impl Document {
         }
 
         let anodes = node.get_attributes();
-        let mut anodes_keys: Vec<&String> = anodes.keys().collect();
-        // Sort: xmlns:* declarations first (matching Perl's output order), then alphabetically
-        anodes_keys.sort_by(|a, b| {
-          let a_is_xmlns = a.starts_with("xmlns:");
-          let b_is_xmlns = b.starts_with("xmlns:");
-          match (a_is_xmlns, b_is_xmlns) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.cmp(b),
+        // `get_attributes()` reports LOCAL names, so an `xml:id` attribute comes
+        // back keyed as "id" -- by name alone indistinguishable from a genuine
+        // plain `id`, which the model really does declare (see
+        // `LaTeXML-bib.rnc:335,353`: `ltx:bib-identifier/@id`,
+        // `ltx:bib-review/@id`). `get_node_document_qname` resolves the
+        // attribute's NAMESPACE, so it returns "xml:id" for the former and "id"
+        // for the latter; SERIALIZE that qname. Ordering stays keyed on the
+        // local name, which is what the goldens encode (`xml:lang` files under
+        // "lang", so it precedes `role`), with `xml:id` forced last -- the
+        // previous code got that by appending it separately, which is also what
+        // rewrote every plain `id` into an invalid-NCName `xml:id`
+        // (witness arXiv 2508.17585).
+        let mut anodes_keys: Vec<(SymStr, &String)> = anodes
+          .keys()
+          .map(|key| {
+            let qname = node
+              .get_attribute_node(key)
+              .map(|a| model::get_node_document_qname(&a))
+              .unwrap_or_else(|| arena::pin(key));
+            (qname, key)
+          })
+          .collect();
+        // Rank: xmlns:* declarations first (matching Perl's output order), then
+        // the ordinary attributes by local name, then xml:id last.
+        let rank = |qname: SymStr, key: &String| -> u8 {
+          if key.starts_with("xmlns:") {
+            0
+          } else if arena::with(qname, |q| q == "xml:id") {
+            2
+          } else {
+            1
           }
+        };
+        anodes_keys.sort_by(|(a_sym, a_key), (b_sym, b_key)| {
+          rank(*a_sym, a_key)
+            .cmp(&rank(*b_sym, b_key))
+            .then_with(|| a_key.cmp(b_key))
         });
-        for key in anodes_keys {
-          // Plain "id" is duplicated by libxml2 when xml:id is set.
-          // Skip it for non-SVG elements (which use xml:id).
-          // SVG elements use plain "id" (not xml:id).
-          if key == "id" && !tag.starts_with("svg:") {
-            continue;
-          }
-          // For SVG elements that have plain "id", skip the xml:id duplicate
-          if key == "xml:id" && tag.starts_with("svg:") && anodes.contains_key("id") {
-            continue;
-          }
-          let key_sym = model::get_node_document_qname(&node.get_attribute_node(key).unwrap());
+        for (key_sym, key) in anodes_keys {
           // Reuse the value already in `anodes` instead of re-fetching it with
           // `get_property` — `get_attributes()` read each value from the
           // attribute node directly, so a by-name `xmlGetProp` re-scan (plus a
@@ -1529,12 +1545,6 @@ impl Document {
             write!(open_tag, " {key_str}=\"{val_serialized}\"")
           })
           .ok();
-        }
-        // HACK for xml:id for now, assuming last element.
-        // SVG elements use plain "id" (not xml:id) — skip xml:id conversion for them.
-        if anodes.contains_key("id") && !tag.starts_with("svg:") {
-          let val_serialized = serialize_attr(anodes.get("id").map(String::as_str).unwrap_or(""));
-          write!(open_tag, " xml:id=\"{val_serialized}\"").ok();
         }
 
         let noindent_children: bool = if heuristic {
@@ -2888,36 +2898,42 @@ impl Document {
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
-    // Perl: setAttribute checks canHaveAttribute before setting.
+    // Normalise the key first, then run Perl's plain `setAttribute`
+    // (`Core/Document.pm:1370-1386`): schema-check, then the LITERAL `xml:id`
+    // test. The normalisation is needed because this port spells `xml:id` as a
+    // bare `id` throughout its property/attribute maps -- the math parser,
+    // `base_xmath`, alignment rows and `RefStepID`'s `#id` all do it, where
+    // Perl's constructors always write `xml:id` out in full -- so a bare `id`
+    // arriving here normally MEANS `xml:id`. The exception is that `id` is ALSO
+    // a real attribute in the model: `LaTeXML-bib.rnc:335,353` declare
+    // `attribute id { text }?` on `ltx:bib-identifier` and `ltx:bib-review`,
+    // carrying the ISSN/DOI/MR identifier itself. Letting the alias apply
+    // unconditionally rewrote those into invalid-NCName ids
+    // (`xml:id="0010-3640,1097-0312"`) -- witness arXiv 2508.17585.
+    let key = if key == "id" && !model::can_have_attribute(get_node_qname(node), arena::pin("id")) {
+      "xml:id"
+    } else {
+      key
+    };
     // Accept internal attributes (starting with _), namespaced (containing :), and model-allowed.
-    if !key.starts_with('_') && !key.contains(':') && key != "id" {
+    if !key.starts_with('_') && !key.contains(':') {
       let qname = get_node_qname(node);
       if !model::can_have_attribute(qname, arena::pin(key)) {
         return Ok(()); // silently skip attributes not allowed by schema
       }
     }
-    if key == "xml:id" || key == "id" {
-      // Perl: only matches 'xml:id' literally, but our constructors use "id" for
-      // xml:id. For SVG elements, keep plain "id" (SVG spec uses id, not xml:id).
-      let node_qname = get_node_qname(node);
-      let is_svg = arena::with(node_qname, |s| s.starts_with("svg:"));
-      if is_svg && key == "id" {
-        // SVG elements use plain id, not xml:id (matching Perl behavior)
-        node.set_attribute(key, value)?;
-      } else {
-        // LaTeXML elements: always use xml:id.
-        // record_id_with_node detects duplicates and returns a
-        // deduplicated id when a DIFFERENT node already claims the
-        // same id. Previously we discarded that return value and
-        // wrote the original `value`, which meant libxml2 saw two
-        // nodes with the same xml:id. The post-processing scan's
-        // libxml2 idHash lookups then ran O(n²) on any document
-        // with enough duplicates (see 1106.1389 / KNOWN_PERL_ERRORS
-        // #13: 14 duplicate-id sites from \addtocounter{equation}{-1}
-        // + \subequations inside a \newtheorem[equation] theorem).
-        let deduped = self.record_id_with_node(value, node);
-        node.set_attribute("xml:id", &deduped)?;
-      }
+    if key == "xml:id" {
+      // record_id_with_node detects duplicates and returns a
+      // deduplicated id when a DIFFERENT node already claims the
+      // same id. Previously we discarded that return value and
+      // wrote the original `value`, which meant libxml2 saw two
+      // nodes with the same xml:id. The post-processing scan's
+      // libxml2 idHash lookups then ran O(n²) on any document
+      // with enough duplicates (see 1106.1389 / KNOWN_PERL_ERRORS
+      // #13: 14 duplicate-id sites from \addtocounter{equation}{-1}
+      // + \subequations inside a \newtheorem[equation] theorem).
+      let deduped = self.record_id_with_node(value, node);
+      node.set_attribute("xml:id", &deduped)?;
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
       // Note: Full model validation (can_have_attribute) is done in node_set_attribute.
