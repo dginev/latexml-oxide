@@ -376,7 +376,7 @@
 <a href=#376 id=376 data-nosnippet>376</a>  args.first().and_then(|a| {
 <a href=#377 id=377 data-nosnippet>377</a>    a.as_ref().and_then(|d| {
 <a href=#378 id=378 data-nosnippet>378</a>      <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
-<a href=#379 id=379 data-nosnippet>379</a>        <span class="prelude-val">Some</span>(kv.clone())
+<a href=#379 id=379 data-nosnippet>379</a>        <span class="prelude-val">Some</span>((<span class="kw-2">**</span>kv).clone())
 <a href=#380 id=380 data-nosnippet>380</a>      } <span class="kw">else </span>{
 <a href=#381 id=381 data-nosnippet>381</a>        <span class="prelude-val">None
 <a href=#382 id=382 data-nosnippet>382</a>      </span>}
