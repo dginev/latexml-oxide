@@ -261,7 +261,32 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
       ..Default::default()
     }),
   ) {
-    std::fs::read_to_string(&path).ok()
+    // Normalize line terminators to bare LF.
+    //
+    // DIVERGENCE (OXIDIZED_DESIGN #69) — Perl slurps the file verbatim, so a
+    // CRLF (or classic-Mac CR) source keeps its `\r`, and every downstream
+    // end-of-line test in the listings processor is written against `\n`: the
+    // `__NEWLINE__` close test for line comments, the blank-line test in
+    // `lst_process_start_line`, the line-skipping loops. A `\r` sitting before
+    // the `\n` defeats all of them, so a line comment never terminates and its
+    // style bleeds over every following line.
+    //
+    // TeX itself never sees the CR — its file reader strips the line
+    // terminator and appends `\endlinechar` — so normalizing here is what
+    // matches the engine we emulate, not a special case.
+    //
+    // Ground truth, arXiv 2412.04705 (arXiv/html_feedback#6735), whose Python
+    // sources are CRLF: pdflatex renders only the `#` line in comment green
+    // (measured: 9 green vs 69 black glyph groups), while BOTH LaTeXML engines
+    // paint the whole snippet green — Perl identically, so this is a shared
+    // upstream bug we are fixing rather than a Rust regression.
+    std::fs::read_to_string(&path).ok().map(|text| {
+      if text.contains('\r') {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+      } else {
+        text
+      }
+    })
   } else {
     log::warn!("Can't read listings file '{}'", filename);
     None
@@ -1255,9 +1280,50 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     assign_value(&key, Stored::Int(ctx.linenum), Some(Scope::Global));
   }
 
-  // Remove trailing empty lines
-  if let Some(from) = ctx.emptyfrom {
+  // Remove trailing empty lines.
+  // Perl listings.sty.ltxml:1330 does the bare truncation:
+  //   @lsttokens = @lsttokens[0 .. $emptyfrom - 1] if $emptyfrom;
+  //
+  // DIVERGENCE (OXIDIZED_DESIGN #68) — that truncation is UNBALANCED, in Perl
+  // too. `$emptyfrom` is the index of the first trailing empty line's
+  // `\@lst@startline`, but a delimited class left open by the last *content*
+  // line (a string/comment the listing was cut off inside — exactly what
+  // `lastline=N` on a longer file does) has its closing `}` tokens sitting in
+  // that discarded tail. Dropping them emits a listing body with unclosed
+  // groups; `\@@listings@block` then reads its arguments off the end of the
+  // DOCUMENT. Perl reports that as "Missing argument {} for \@@listings@block",
+  // we reported it as "readBalanced ran out of input" plus a cascade of
+  // mode/sectioning errors — both engines lose the snippet.
+  // Witness: arXiv 2412.04705 (arXiv/html_feedback#6735), whose
+  // `\lstinputlisting[firstline=32,lastline=35]` over CRLF Python sources hit
+  // this 7×. Measured discarded tail there:
+  //   ["\@lst@startline", "{", "}", "}", "}", "}", "\@lst@endline"]
+  // — three of those `}` close groups opened BEFORE the cut.
+  //
+  // So: truncate as Perl does, then re-close whatever the cut left open. The
+  // discarded region is by construction only empty-line markup (it starts at a
+  // line with colnum == 0), so nothing visible is lost by closing here.
+  // `from > 0` mirrors Perl's `if $LaTeXML::emptyfrom` truthiness guard, which
+  // skips index 0. It cannot be reached today (`lsttokens` is seeded with the
+  // opening T_BEGIN, so the `linestart` that feeds `emptyfrom` is always >= 1),
+  // but truncating to 0 would drop that T_BEGIN and leave the lone T_END pushed
+  // below — the very imbalance this block exists to prevent.
+  if let Some(from) = ctx.emptyfrom.filter(|from| *from > 0) {
     ctx.lsttokens.truncate(from);
+    let mut depth: i64 = 0;
+    for token in &ctx.lsttokens {
+      match token.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+    }
+    // `depth` still counts the opening T_BEGIN this function seeded
+    // `lsttokens` with; the T_END pushed below is its partner. Any depth
+    // beyond that is a group whose closer was truncated away.
+    for _ in 1..depth {
+      ctx.lsttokens.push(T_END!());
+    }
   }
 
   ctx.lsttokens.push(T_END!());
