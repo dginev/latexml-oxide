@@ -40,9 +40,11 @@ use crate::{
 pub struct Digested(Rc<DigestedData>);
 /// These are all kinds of data which we consider officially supported
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
-#[allow(clippy::large_enum_variant)]
-// TODO: Investigate if the outer Rc<> wrap of Digested is enough to avoid performance penalties
-// from having       the concrete structs in DigestedData vary a lot in size.
+// Every `DigestedData` is `Rc`-allocated once per box and a huge document keeps
+// millions alive at once (issue #361), so the enum's size is paid per box. The
+// two historically oversized variants are contained — `List.font` is `Rc`-shared
+// (M1) and `KeyVals` is boxed (M2) — bringing the ceiling to `Whatsit` (168 B).
+// The `digested_data_size_budget` test guards against future re-inflation.
 pub enum DigestedData {
   /// A TeX Box
   TBox(RefCell<Tbox>),
@@ -54,8 +56,16 @@ pub enum DigestedData {
   List(RefCell<List>),
   /// Raw Tokens that were postponed to the digestion phase uninvoked/undigested
   Postponed(Tokens),
-  /// A LaTeX-like digested key-value map
-  KeyVals(KeyVals),
+  /// A LaTeX-like digested key-value map.
+  ///
+  /// Boxed to keep it off the hot `DigestedData` size budget: `KeyVals` is a
+  /// heavy struct (two `String`s, three `Vec`s, two `HashMap`s ≈ 208 B) but a
+  /// **rare** variant, whereas `DigestedData` is `Rc`-allocated once per box and
+  /// every box in a document pays its size. Inlining `KeyVals` made the whole
+  /// enum 208 B; boxing it drops the enum to 168 B (now `Whatsit`-bound),
+  /// shrinking *every* digested box by 40 B (issue #361 memory pass, M2). The
+  /// added indirection only touches the rare KeyVals accesses.
+  KeyVals(Box<KeyVals>),
   /// A TeX-like `RegisterValue` (e.g. a Dimension or Glue)
   RegisterValue(RegisterValue),
   /// A TeX comment
@@ -191,7 +201,7 @@ impl From<Alignment> for Digested {
   }
 }
 impl From<KeyVals> for Digested {
-  fn from(value: KeyVals) -> Digested { Digested(Rc::new(DigestedData::KeyVals(value))) }
+  fn from(value: KeyVals) -> Digested { Digested(Rc::new(DigestedData::KeyVals(Box::new(value)))) }
 }
 impl From<RegisterValue> for Digested {
   fn from(value: RegisterValue) -> Digested {
@@ -862,6 +872,26 @@ impl Digested {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// `DigestedData` is `Rc`-allocated once per digested box, and a very large
+  /// document holds millions of them alive at once (issue #361), so every byte
+  /// in this enum is paid per box. This budget guards against a fat variant
+  /// silently re-inflating it. The ceiling is currently `Whatsit`
+  /// (`RefCell<Whatsit>` = 160 B) + discriminant = 168 B; the two historically
+  /// oversized variants are contained — `List.font` is `Rc`-shared (M1) and
+  /// `KeyVals` is boxed (M2). Raise this only with a deliberate justification,
+  /// never to paper over an accidental blow-up (box the offending variant
+  /// instead — see the `KeyVals` doc).
+  #[test]
+  fn digested_data_size_budget() {
+    let size = size_of::<DigestedData>();
+    assert!(
+      size <= 168,
+      "DigestedData grew to {size} B (budget 168). A large variant re-inflated \
+       the per-box footprint — box it (cf. KeyVals, issue #361 M2) rather than \
+       raising this budget."
+    );
+  }
 
   #[test]
   fn digested_from_tokens_roundtrip() {
