@@ -15,7 +15,9 @@ Linux/macOS assets. No MinGW/GNU bring-up phase.
 > test-suite green does NOT imply TL2026 release-readiness, because
 > `--init=latex.ltx` on TL2026 emitted 137 expl3-catcode errors and 2026 was
 > out of the release dump window. Both halves are now closed — the init is
-> **0 errors** and **2026 is IN the window** (2022–2026). See `SYNC_STATUS.md`
+> **0 errors** and **2026 is IN the window** (2022–2026); re-confirmed on `main`
+> 2026-07-25. See
+> [`archive/SYNC_SESSIONS_2026-07.md`](../archive/SYNC_SESSIONS_2026-07.md)
 > ("TL2026 `latex.ltx` dump init … ✅ CLOSED 2026-07-23").
 
 ## Toolchain & native deps (reproduce the build from here)
@@ -186,8 +188,9 @@ cold run for a fair Linux-vs-Windows benchmark.
   2026-07-20 closed it; re-measured inside the real
   `ghcr.io/tkw1536/texlive-docker:2026` under the verbatim release gate:
   `plain.tex` and `latex.ltx` both exit 0 with **0 errors**. 2026 is now in the
-  window (`SYNC_STATUS.md`: "TL2026 `latex.ltx` dump init … ✅ CLOSED
-  2026-07-23").
+  window; re-confirmed on `main` 2026-07-25
+  ([`archive/SYNC_SESSIONS_2026-07.md`](../archive/SYNC_SESSIONS_2026-07.md):
+  "TL2026 `latex.ltx` dump init … ✅ CLOSED 2026-07-23").
 - [ ] **Fast TeX-ecosystem CI install** (DEFERRED). The cold
   `setup-texlive-action` download (~1–2 GB) is the slowest CI step. Target: a
   pinned, content-hash-keyed minimal texmf snapshot (fast + deterministic +

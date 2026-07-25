@@ -17,7 +17,7 @@ whole intent of this file; everything after it is supporting detail.
 |---|---|---|
 | **Ranked worklist** | every open item, ordered, with size + where the detail lives | **first, always** |
 | Current status | suite count, the last session, release state | to orient |
-| Open items | the detail behind rows R1–R6 | when you pick that row |
+| Open items | the detail behind the ranked rows | when you pick that row |
 | Standing policies | rules that constrain *how* you fix things | before adding a CLI flag, a stub, or a divergence |
 | Parked families | pointers to four extracted docs | only when starting that family |
 | Reference | stable facts, not work | when something surprises you |
@@ -46,14 +46,13 @@ families).*
 ## Ranked worklist — start here
 
 Ordered by: **does it reproduce today** → **is a real user affected** → **is it
-unblocked** → **effort**. Rows R1–R3 are small and self-contained; R4+ need a
+unblocked** → **effort**. Rows R1–R2 are small and self-contained; R4+ need a
 session of their own. Re-verify a row before planning on it (rule 1).
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
-| **R3** | `latexmlmath_oxide` empties a single-structure formula | **OPEN**, re-verified 2026-07-25 (`\frac{1}{2}`→`<mrow/>`; `\frac{a}{b}+c` fine) | small, narrow surface | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04 | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
@@ -145,21 +144,6 @@ history now live in the dated session archives:
 
 (Upstream-sync catalog also at
 [`archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md`](archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md).)
-
-## Live residuals from the 2026-07-20 ar5iv sprint (merged as PR #323)
-
-Everything that sprint landed is in `docs/archive/SYNC_SESSIONS_2026-07.md`.
-Two scraps are still live:
-
-- **TL2026 dump gate may be closer than recorded** — the expl3 catcode gap is
-  closed (2112.11932 1003⇒0, 2110.10227 102⇒0, 2204.05282 86⇒0, 2110.12034 45⇒8;
-  2203.05327 411⇒0 via the `aligned_overset_sty.rs` contrib binding, guarded by
-  `102_aligned_overset_includestyles.rs`). **Re-run the init gate on a TL2026
-  host** before trusting the recorded blocker.
-- **ar5iv residuals — DONE**, kept only so they are not re-mined: all three are
-  parity-or-Rust-better, none Rust-only. 2405.19920 Rust-better (1.82 MB vs Perl
-  0 B); 2501.10235 (#551) and 1802.01134 (#599) parity — both engines hang in
-  shared deep machinery. No faithful fix without a box-measurement divergence.
 
 ## Standing policies & method — read before changing behaviour
 
@@ -328,6 +312,21 @@ provoking it. `--preload=article.cls` on its own STILL errors.
 * Filtering `\PopDefaultHookLabel` alone: inert. The erroring caller is the internal
   `\__hook_curr_name_pop:`.
 
+**Where the failing pair is NOT (2026-07-25, measured — corrects an earlier note
+in this entry).** The Rust binding has exactly two push/pop sites:
+`binding/content.rs:1000-1015` (push) and `:826-831` (pop). Probing both on the
+failing `--preload=article.cls` run shows **only `textcomp`'s push reaches them —
+`article`'s push and BOTH pops never do.** So the erroring pair is not a Rust-side
+`digest`; it runs inside TeX (expl3's `\__hook_curr_name_pop:`, as noted above).
+
+**Consequence: a Rust-side "thread the push's answer to the pop" fix cannot work**
+— there is no Rust-side pop for the failing frame to pair with. An earlier version
+of this entry proposed exactly that (inspect `\@pushfilename`'s body for
+`\@expl@push@filename@aux@@` at push, carry it to the pop); it is a **fifth dead
+end**, disproved before implementation. Any real fix has to act on the TeX side —
+which points back at (c), ordering the pool load before the class's own
+`\@onefilewithoptions` push, rather than at the Rust seams.
+
 **Candidate fixes.** (a) Ensure a class/package preload cannot be the thing that drags in
 the pool — auto-prepend `LaTeX.pool` when any `.sty`/`.cls` is preloaded. Rejected for the
 release: Perl prepends only `TeX.pool` (LaTeXML.pm L710) and never auto-loads `LaTeX.pool`,
@@ -342,23 +341,6 @@ but `--preload=article.cls` → `<?latexml class="article.cls"?>`; **Perl emits
 `class="article"` for both.** Otherwise the two paths' output is byte-identical, so the
 preload does load `article_cls.rs` correctly; `parse_preload_spec` splits correctly to
 `("article","cls")`, so the extension is re-attached further in.
-
-### R3 — `latexmlmath_oxide` empties a single-structure formula — OPEN (re-verified 2026-07-25)
-
-`latexmlmath_oxide '\frac{1}{2}'` and `'\sqrt{2}'` emit `<mrow/>` — an empty math
-element. Perl `latexmlmath` renders both. Add anything around it (`\frac{a}{b}+c`) and
-it works, so the trigger is a formula whose ENTIRE body is one top-level structure.
-
-**Localized: NOT the engine or the math parser.** `latexml_oxide` converts the same
-`\(\frac{1}{2}\)` correctly (mfrac present), while `latexmlmath_oxide` does not — so it
-is that binary's preset path, `latexml::util::preset::lex_single_tex_formula` /
-`new_test_engine`, probably in the `xmath.get_child_nodes() → unlink → into_xmath`
-sequence in `bin/latexmlmath_oxide.rs`.
-
-Pre-existing (reproduced on `66808398c4`), found 2026-07-17 while aligning the binary's
-output with Perl. Not a regression from that work — which is verified byte-identical to
-Perl modulo whitespace on formulas that do convert.
-
 
 ### R4 — biblatex `.bbl` TokenLimit loop, 2605.17646 — ✅ FIXED 2026-07-25
 
@@ -509,6 +491,12 @@ drops stretch/shrink to bare pt.
   2410.10068, 2511.03798 (Perl also fails).
 - **Rust supersedes Perl**: `1207.6068`, `0909.3444`, + 40 more in
   `memory/project_rust_supersedes_perl.md`.
+- **2026-07-20 ar5iv sprint (PR #323) residuals — do not re-mine.** Its three
+  ar5iv leftovers all resolve parity-or-Rust-better, none Rust-only
+  (`AR5IV_DIAGNOSTICS.md`); its TL2026 dump-gate scrap closed 2026-07-23 and
+  was re-confirmed on `main` 2026-07-25 (0 errors on both inits inside
+  `ghcr.io/tkw1536/texlive-docker:2026`; 2026 is in the release window). Both
+  in `archive/SYNC_SESSIONS_2026-07.md`.
 - **BibTeX**: `BibTeX.pool.ltxml` ported (Phases 1–8; remaining B1–B6 polish in
   `BIBTEX_PORT_PLAN.md`). `--nobibtex` is opt-out, not default.
 
