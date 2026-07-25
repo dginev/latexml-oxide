@@ -128,7 +128,7 @@ kpathsea-build-from-source = ["latexml_core/kpathsea-build-from-source"]
 runtime-bindings = ["latexml_contrib/runtime-bindings"]
 
 [dependencies]
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 flate2 = "1"
 # Used by latexml_oxide / cortex_worker binaries for `getrusage(RUSAGE_CHILDREN)`
 # child-process CPU/memory accounting in telemetry (see *.rs `peak_rss_kb`).

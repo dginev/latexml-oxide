@@ -123,6 +123,11 @@ impl Server {
     // RAM/time backstops don't apply; the cooperative deadline + the engine's
     // RSS fuse are what bound a runaway fallback conversion.)
     latexml_core::stomach::set_timeout(self.timeout_secs);
+    // ...and that RSS fuse must come from `--max-memory` like everywhere else.
+    // It matters most here, precisely because there is no Watchdog to fall back
+    // on: before this the fuse sat at its built-in 4.5 GB default, so on this
+    // path the flag bounded nothing at all.
+    latexml_core::stomach::apply_memory_ceiling(self.max_rss_kb / 1024);
 
     let opts = make_config(uri);
     let mut converter = Converter::from_config(opts.clone());
