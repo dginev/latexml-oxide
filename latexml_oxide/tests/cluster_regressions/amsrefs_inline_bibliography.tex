@@ -1,7 +1,7 @@
 \documentclass{article}
 \usepackage[lite,abbrev,msc-links,alphabetic]{amsrefs}
 \begin{document}
-Cited inline: \cite{Bei87} and \cite{Smith2020}.
+Cited inline: \cite{Bei87} and \cite{Smith2020} and \cite{Bartnik}.
 % amsrefs writes the bibliography INTO the document (no external .bib, and so
 % no @files for getBibliographies to resolve). Upstream collects entries only
 % from external bib documents and then deletes every //ltx:bibentry, dropping
@@ -19,6 +19,19 @@ Cited inline: \cite{Bei87} and \cite{Smith2020}.
    title={On Examples},
    journal={JMP},
    date={2020},
+}
+% Field values must reach the handlers as LIVE TeX (Perl re-tokenizes them
+% through a fresh Mouth), so `\ndash` and `\MR` are control sequences, not
+% literal characters; and MakeBibliography must clone the marked-up children
+% of ltx:bib-review rather than flattening them to text. Witness 2508.17585.
+\bib{Bartnik}{article}{
+   author={Bartnik, Robert},
+   title={The mass of an asymptotically flat manifold},
+   journal={Comm. Pure Appl. Math.},
+   date={1986},
+   pages={661\ndash 693},
+   url={https://doi.org/10.1002/cpa.3160390505},
+   review={\MR{849427}},
 }
 \end{biblist}
 \end{bibdiv}

@@ -2460,47 +2460,61 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
       (Some(h), _) => Some(force_absolute_url(h)),
       (None, _) => None,
     };
+    // Perl `MakeBibliography.pm:do_links` L655-667 uses
+    // `$doc->cloneNodes($node->childNodes)` as the child list in EVERY branch —
+    // it copies the marked-up children, it does not flatten them. Taking
+    // `get_content()` (a plain-text collapse) instead silently dropped any
+    // nested element: an amsrefs `review={\MR{849427}}` digests to
+    // `<ltx:bib-review>Review <ltx:ref class="ltx_mathreviews" href="…">
+    // MathReviews</ltx:ref></ltx:bib-review>`, and the flattening rendered a
+    // dead "Review MathReviews" with the MathSciNet link gone. Witness
+    // arXiv 2508.17585.
+    let children: Vec<NodeData> = node
+      .get_child_nodes()
+      .into_iter()
+      .map(NodeData::XmlNode)
+      .collect();
     match tag.as_str() {
       "ltx:bib-identifier" | "ltx:bib-review" => {
         if let Some(href) = href {
           links.push(NodeData::Element {
-            tag:        "ltx:ref".to_string(),
+            tag: "ltx:ref".to_string(),
             attributes: Some(HashMap::from_iter([
               ("href".to_string(), href),
               ("class".to_string(), format!("{} ltx_bib_external", scheme)),
             ])),
-            children:   vec![NodeData::Text(content_text)],
+            children,
           });
         } else {
           links.push(NodeData::Element {
-            tag:        "ltx:text".to_string(),
+            tag: "ltx:text".to_string(),
             attributes: Some(HashMap::from_iter([(
               "class".to_string(),
               format!("{} ltx_bib_external", scheme),
             )])),
-            children:   vec![NodeData::Text(content_text)],
+            children,
           });
         }
       },
       "ltx:bib-links" => {
         links.push(NodeData::Element {
-          tag:        "ltx:text".to_string(),
+          tag: "ltx:text".to_string(),
           attributes: Some(HashMap::from_iter([(
             "class".to_string(),
             "ltx_bib_external".to_string(),
           )])),
-          children:   vec![NodeData::Text(content_text)],
+          children,
         });
       },
       "ltx:bib-url" => {
         if let Some(href) = href {
           links.push(NodeData::Element {
-            tag:        "ltx:ref".to_string(),
+            tag: "ltx:ref".to_string(),
             attributes: Some(HashMap::from_iter([
               ("href".to_string(), href),
               ("class".to_string(), "ltx_bib_external".to_string()),
             ])),
-            children:   vec![NodeData::Text(content_text)],
+            children,
           });
         }
       },

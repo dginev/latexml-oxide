@@ -28,7 +28,14 @@ LoadDefinitions!({
     use latexml_engine::bibtex::{BibEntry, register_entry, parse_amsrefs_keyvals};
     let key = if args[0].is_some() { args[0].to_string() } else { String::new() };
     let entry_type = if args[1].is_some() { args[1].to_string() } else { String::new() };
-    let raw_kv = if args[2].is_some() { args[2].to_string() } else { String::new() };
+    // Perl L48: `UnTeX(shift(@rawpairs), 1)`. `untex()` — NOT `to_string()`:
+    // the tokenizer eats the space that terminates a control word, so a plain
+    // token→string round-trip renders `661\ndash 693` as `661\ndash693`, and
+    // that string is what the `<ltx:bib-data>` BibTeX dump reproduces verbatim.
+    // `untex` re-inserts the separator at the letter boundary.
+    let raw_kv = if args[2].is_some() {
+      args[2].clone().owned_tokens().unwrap_or_default().untex()
+    } else { String::new() };
     let mut entry = BibEntry::new(key.clone(), entry_type);
     for (field, value) in parse_amsrefs_keyvals(&raw_kv) {
       entry.add_raw_field(field, value);

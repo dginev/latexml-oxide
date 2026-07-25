@@ -1474,8 +1474,16 @@ LoadDefinitions!({
         normalised.push(c);
       }
     }
-    // Perl L674: Digest(Tokenize($pages)) — tokenize, not explode.
-    whatsit.set_property("pages", Stored::Tokens(Tokenize!(normalised.as_str())));
+    // Perl L674: `Digest(Tokenize($pages))` — tokenize (so `\ndash` &co stay
+    // live control sequences), then DIGEST. The digest step is load-bearing:
+    // `#pages` is a content slot, and `prop_digested!` only renders
+    // `Stored::Digested`/`VecDigested` — a `Stored::Tokens` fell through to its
+    // catch-all and rendered as NOTHING, so every amsrefs `pages` field came
+    // out as an empty `<ltx:bib-part role="pages"/>`. Witness arXiv 2508.17585.
+    whatsit.set_property(
+      "pages",
+      Stored::Digested(digest(Tokenize!(normalised.as_str()))?),
+    );
   });
 
   // Standard BibTeX fields.
@@ -1772,18 +1780,23 @@ LoadDefinitions!({
     // `current_entry_field` etc.) see the right entry.
     set_current_entry(&key);
 
-    let mut out: Vec<Token> = Vec::new();
+    // Perl L134-166 assembles the entry as TeX *source lines* and hands
+    // the join to a fresh Mouth. That is load-bearing, not incidental:
+    // the field values come from the document, so they must be tokenized
+    // under live catcodes (`\MR{...}` / `\ndash` in an amsrefs entry are
+    // real control sequences), and tokenizing lazily from a Mouth is what
+    // lets the handlers' `Verbatim`/`Semiverbatim` parameter types set
+    // their catcodes *first* — which is what keeps `%`/`#`/`~` in a `url`
+    // value intact. Building a pre-tokenized stream with `Explode!`
+    // (catcode-12 OTHER throughout) did neither: `\MR{849427}` reached the
+    // XML as the literal characters `\MR{849427}`. Witness arXiv 2508.17585.
+    //
+    // Handler names carry `@`, which is catcode-OTHER under the standard
+    // table a Mouth reads with, so — exactly as Perl does — they are
+    // invoked through `\csname ...\endcsname` rather than written bare.
+    let mut lines: Vec<String> = Vec::new();
     // `\begin{bib@entry}{<type>}{<key>}`
-    out.push(T_CS!("\\begin"));
-    out.push(T_BEGIN!());
-    out.extend(Explode!("bib@entry"));
-    out.push(T_END!());
-    out.push(T_BEGIN!());
-    out.extend(Explode!(resolved_type.as_str()));
-    out.push(T_END!());
-    out.push(T_BEGIN!());
-    out.extend(Explode!(&key));
-    out.push(T_END!());
+    lines.push(format!("\\begin{{bib@entry}}{{{}}}{{{}}}", resolved_type, key));
 
     // Dispatch prepare macros. Perl L128-131: prepare for the
     // resolved type, then the orig type if different, then default.
@@ -1794,9 +1807,8 @@ LoadDefinitions!({
     ];
     for cs_name in &prepare_csnames {
       if cs_name.is_empty() { continue; }
-      let tok = T_CS!(cs_name.as_str());
-      if lookup_definition(&tok)?.is_some() {
-        out.push(tok);
+      if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
+        lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
       }
     }
 
@@ -1811,29 +1823,19 @@ LoadDefinitions!({
       let mut handler: Option<&str> = None;
       for c in candidates.iter() {
         if c.is_empty() { continue; }
-        let tok = T_CS!(c.as_str());
-        if lookup_definition(&tok)?.is_some() {
+        if lookup_definition(&T_CS!(c.as_str()))?.is_some() {
           handler = Some(c.as_str());
           break;
         }
       }
       match handler {
         Some(h) => {
-          // `\csname <h>\endcsname{value}`
-          out.push(T_CS!(h));
-          out.push(T_BEGIN!());
-          out.extend(Explode!(value));
-          out.push(T_END!());
+          lines.push(format!("\\csname {}\\endcsname{{{}}}", &h[1..], value));
         },
         None => {
           // Fallback per Perl L157: `\bib@field@default@default{field}{value}`.
-          out.push(T_CS!("\\bib@field@default@default"));
-          out.push(T_BEGIN!());
-          out.extend(Explode!(field));
-          out.push(T_END!());
-          out.push(T_BEGIN!());
-          out.extend(Explode!(value));
-          out.push(T_END!());
+          lines.push(format!(
+            "\\csname bib@field@default@default\\endcsname{{{}}}{{{}}}", field, value));
         },
       }
     }
@@ -1846,19 +1848,20 @@ LoadDefinitions!({
     ];
     for cs_name in &complete_csnames {
       if cs_name.is_empty() { continue; }
-      let tok = T_CS!(cs_name.as_str());
-      if lookup_definition(&tok)?.is_some() {
-        out.push(tok);
+      if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
+        lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
       }
     }
 
     // `\end{bib@entry}`
-    out.push(T_CS!("\\end"));
-    out.push(T_BEGIN!());
-    out.extend(Explode!("bib@entry"));
-    out.push(T_END!());
+    lines.push("\\end{bib@entry}".to_string());
 
-    Ok(Tokens::new(out))
+    // Release the entry borrow before handing control to the gullet.
+    drop(entry);
+    // Perl L165-166: `openMouth(Mouth->new($tex))` — autoclose (Perl passes
+    // no `$noautoclose`), so the mouth pops itself once drained.
+    open_mouth(Mouth::new(&lines.join("\n"), None)?, true);
+    Ok(Tokens!())
   });
 
   // `{bib@entry}` environment — Perl L185-190. Wraps an entry's

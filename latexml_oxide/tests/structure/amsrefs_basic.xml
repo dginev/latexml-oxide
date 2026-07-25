@@ -38,6 +38,34 @@
  publisher = {Pub},
       year = {1999}}</bib-data>
       </bibentry>
+      <bibentry key="Bartnik" type="article" xml:id="bib.bib3">
+        <bib-name role="author">
+          <surname>Bartnik</surname>
+          <givenname>Robert</givenname>
+        </bib-name>
+        <bib-title>The mass of an asymptotically flat manifold</bib-title>
+        <bib-date role="publication">1986</bib-date>
+        <bib-identifier id="0010-3640,1097-0312" scheme="issn">ISSN 0010-3640,1097-0312</bib-identifier>
+        <bib-related role="host" type="journal">
+          <bib-title>Comm. Pure Appl. Math.,</bib-title>
+        </bib-related>
+        <bib-part role="volume">39</bib-part>
+        <bib-part role="number">5</bib-part>
+        <bib-part role="pages">661–693</bib-part>
+        <bib-url href="https://doi.org/10.1002/cpa.3160390505">Link</bib-url>
+        <bib-review>Review <ref class="ltx_mathreviews" href="http://www.ams.org/mathscinet-getitem?mr=849427">MathReviews</ref></bib-review>
+        <bib-data role="self" type="BibTeX">@article{Bartnik,
+    author = {Bartnik, Robert},
+     title = {The mass of an asymptotically flat manifold},
+      date = {1986},
+      issn = {0010-3640,1097-0312},
+   journal = {Comm. Pure Appl. Math.,},
+    volume = {39},
+    number = {5},
+     pages = {661\ndash 693},
+       url = {https://doi.org/10.1002/cpa.3160390505},
+    review = {\MR{849427}}}</bib-data>
+      </bibentry>
     </biblist>
   </bibliography>
 </document>
