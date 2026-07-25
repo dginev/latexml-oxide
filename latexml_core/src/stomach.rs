@@ -73,19 +73,21 @@ pub fn soft_cap_from_ceiling(max_memory_mib: u64) -> u64 {
 
 /// Apply the single `--max-memory` ceiling (MiB) to this thread's cooperative
 /// soft fuse, so the one knob means the same thing on every conversion path.
-/// Returns `false` — leaving the fuse alone — when `LATEXML_RSS_CAP_BYTES` pins
-/// it explicitly, which is the fleet/test decoupling escape hatch.
 ///
-/// Callers must be BOTH the plain conversion path and the `--server` forked
-/// body child. When only the former called it, `--server --max-memory=0` still
-/// ran against a live 4.5 GB fuse while the help text promised the limit was
-/// off — the hard Watchdog was the only guard the LSP path wired to the knob.
-pub fn apply_memory_ceiling(max_memory_mib: u64) -> bool {
-  if std::env::var_os("LATEXML_RSS_CAP_BYTES").is_some() {
-    return false;
-  }
+/// **`--max-memory` wins over `LATEXML_RSS_CAP_BYTES`, unconditionally.** The
+/// flag is the single knob; an env var must not silently override what the user
+/// typed. This deliberately overwrites the env, which is why the env keeps its
+/// meaning exactly where no flag exists to contradict it: embedders that never
+/// parse CLI arguments and so never reach this function — the library test
+/// harness (`util::test`, which pins 9 GB) and the `cortex_worker` fleet (which
+/// pins each child to its `--max-rss-mb`). Both are unaffected.
+///
+/// Callers must be EVERY conversion path: the plain one, the `--server` forked
+/// body child, and the in-process fallback. When only the first called it,
+/// `--server --max-memory=0` still ran against a live 4.5 GB fuse while the help
+/// text promised the limit was off.
+pub fn apply_memory_ceiling(max_memory_mib: u64) {
   set_memory_cap(Some(soft_cap_from_ceiling(max_memory_mib)));
-  true
 }
 
 /// Resolve the effective soft-RSS budget: `None` = disabled (no ceiling),
@@ -94,6 +96,10 @@ pub fn apply_memory_ceiling(max_memory_mib: u64) -> bool {
 /// default. A cap of `0` from EITHER source resolves to `None`, so
 /// `--max-memory=0` / `LATEXML_RSS_CAP_BYTES=0` mean "no limit" — not "abort
 /// immediately" (a literal `0` compared as `rss_bytes > 0` is always true).
+///
+/// Note the env is consulted only when nothing set the override — i.e. only for
+/// embedders that never call [`apply_memory_ceiling`]. Every path in the
+/// `latexml_oxide` binary calls it, so there `--max-memory` always wins.
 fn resolve_rss_cap() -> Option<u64> {
   let cap = RSS_CAP_OVERRIDE.with(|c| c.get()).unwrap_or_else(|| {
     std::env::var("LATEXML_RSS_CAP_BYTES")
@@ -1795,18 +1801,25 @@ mod memory_cap_tests {
   // what every conversion path calls. `--max-memory=0` has to leave NO ceiling:
   // the plain path, the `--server` forked body child and the in-process fallback
   // all rely on this one function, and the LSP pair used to skip it entirely.
+  //
+  // The env-precedence half is deliberately NOT asserted here: proving it needs
+  // `set_var`, and this workspace has a standing rule against touching the
+  // process env from tests (a concurrent read races glibc's getenv). It holds by
+  // construction instead — `apply_memory_ceiling` sets the override
+  // unconditionally, and `resolve_rss_cap` only consults the env when no
+  // override is present.
   #[test]
   fn apply_memory_ceiling_drives_the_fuse() {
-    assert!(apply_memory_ceiling(6144), "no env pin, so it applies");
+    apply_memory_ceiling(6144);
     assert_eq!(resolve_rss_cap(), Some(4608 * 1024 * 1024));
 
     // 0 means "no limit", not "abort immediately".
-    assert!(apply_memory_ceiling(0));
+    apply_memory_ceiling(0);
     assert_eq!(resolve_rss_cap(), None, "--max-memory=0 leaves no ceiling");
 
     // A tight ceiling is honored rather than ignored in favour of the old
     // built-in 4.5 GB default, which sat far ABOVE such a ceiling.
-    assert!(apply_memory_ceiling(2000));
+    apply_memory_ceiling(2000);
     assert_eq!(resolve_rss_cap(), Some(1500 * 1024 * 1024));
 
     set_memory_cap(None);
