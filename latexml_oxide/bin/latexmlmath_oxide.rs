@@ -195,6 +195,16 @@ fn real_main() -> Result<()> {
         node.unlink();
       }
       let xml_tree = parse_tree.into_xmath(&mut xmath, &mut lex_nodes, &mut doc)?;
+      // `into_xmath` RETURNS the tree; it does not attach it. The main parser
+      // path pairs it with `append_tree` (`parser.rs`, the reparent step) —
+      // without that, a formula whose whole body is ONE top-level structure
+      // (`\frac{1}{2}`, `\sqrt{2}`) serialized as an empty `<mrow/>`, because
+      // the pre-parse children were unlinked just above and nothing replaced
+      // them. Formulas with more than one top-level part appeared to work only
+      // because their parts are pre-existing lexeme nodes still in the tree.
+      if xml_tree.get_parent().is_none() {
+        doc.append_tree(&mut xmath, vec![xml_tree.clone()])?;
+      }
       xmath
         .get_parent()
         .unwrap()
