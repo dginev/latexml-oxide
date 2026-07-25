@@ -75,8 +75,8 @@ session of their own. Re-verify a row before planning on it (rule 1).
   2606.13010 (arXiv/html_feedback#6624) now converts at 0 errors / 0 warnings /
   0 unparsed math. This file was compacted the same day — see the header.
 
-- `cargo test --tests`: **1684 passing / 91 targets, 0 ignored** (2026-07-25, on
-  `main` @ `35200b1598` + the R4 fix, dev box with ImageMagick + ghostscript +
+- `cargo test --tests`: **1686 passing / 92 targets, 0 ignored** (2026-07-25, on
+  `main` @ `3b04a8fb79` + the R4 fix, dev box with ImageMagick + ghostscript +
   poppler installed, `mutool` absent) — including this session's
   `cluster_biblatex_two_datalists`. The one red,
   `latexml_post::graphics::process_coalesces_only_matching_conversion_options`,
