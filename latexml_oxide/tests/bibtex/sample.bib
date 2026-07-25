@@ -8,11 +8,36 @@
   journal = tcs,
   year    = 2020,
   zzcustomfield = {unknown-field marker value},
+  mrnumber = {849427},
 }
 
 @book{Doe1999,
   author    = {Jane Doe},
   title     = {A Book of Things},
   publisher = {Acme Press},
-  year      = 1999
+  year      = 1999,
+  mrnumber  = {2124018},
+  mrreviewer = {C. Three},
+}
+
+% `\bib@entry@default@complete` synthesizes MathReview/ZentralBlatt links from
+% the non-standard mrnumber/mrreviewer/zblno fields. A parenthesised note on the
+% mrnumber means "there IS a review" even with no named reviewer, and the `MR`
+% prefix + note are stripped from the id.
+@article{Review1990,
+  author   = {D. Four},
+  title    = {Parenthesised note},
+  year     = 1990,
+  mrnumber = {MR1380882 (96e:83024)},
+  zblno    = {0674.53077},
+}
+
+% An explicit `date` wins: the `year` field must NOT also emit a second
+% <ltx:bib-date> (Perl `\bib@field@default@year` returns early on
+% `currentBibEntryField('date')`).
+@article{DateAndYear1986,
+  author = {E. Five},
+  title  = {Date beats year},
+  date   = {1986-05},
+  year   = {1999},
 }

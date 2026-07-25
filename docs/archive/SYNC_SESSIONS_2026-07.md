@@ -1216,7 +1216,33 @@ Also `amsrefs_sty.rs` uses `untex()` (Perl `UnTeX($v,1)`) for the keyval slot:
 the tokenizer eats a control word's terminating space, so `to_string()` wrote
 `661\ndash693` into the `<bib-data>` BibTeX dump. Guards: `amsrefs_basic`
 (structure pair, extended with the pages/ISSN/url/review band) +
-`amsrefs_inline_bibliography_is_not_dropped` (post layer). **Not fixed** (adjacent,
-pre-existing, out of scope): a `mrnumber` field synthesizes no
-`<bib-identifier scheme="mr">` in Rust where Perl's `default@complete` does; and
-Rust omits the trailing newline Perl writes inside `<bib-data>`.
+`amsrefs_inline_bibliography_is_not_dropped` (post layer). Two adjacent gaps this
+surfaced were closed in the follow-up below.
+
+### `BibEntry::fields` is dead, so MR/Zbl synthesis never fired — ✅ LANDED 2026-07-25 (branch `fix-bibtex-mrnumber-synthesis`)
+
+Rust Error Fix; the closeout of the entry above. `current_entry_field`
+(Perl `currentBibEntryField`) read `BibEntry::fields`, but `add_field` is called
+**only** by `copy_crossref_fields` — outside a `crossref` that store is EMPTY, so
+every lookup returned `None` for fields that plainly exist. Two observable
+symptoms, one root:
+
+* `\bib@synthesize@mr` / `@zbl` (Perl L803-845) could never fire — a `mrnumber`
+  produced no `<ltx:bib-identifier scheme="mr">`, `mrreviewer` no
+  `<ltx:bib-review>`, `zblno` no ZentralBlatt link. Perl emits all three.
+* `\bib@field@default@year`'s "is `date` already set?" guard never fired, so an
+  entry carrying **both** emitted a duplicate `<ltx:bib-date>` (Perl emits one).
+
+Fix: `current_entry_field` falls back to the raw field (Perl's `getField`
+returns the field's STRING, and `Pre::BibTeX::Entry` is built with both lists
+populated — for amsrefs, `new(…, [@fields], [@fields])` passes the same list
+twice). `\bib@field@unknownasdata` now reads the raw field FIRST, since it
+reproduces source text verbatim and a Tokens round-trip eats a control word's
+terminating space. Also: `pretty_print` appends the trailing newline Perl's
+`Pre/BibTeX/Entry.pm:64` writes (`. "}\n"`) — the `<ltx:bib-data>` dump is now
+byte-identical to Perl, and the unwired `tests/daemon/formats/makebib.xml`
+reference fixture (copied from Perl) already had that shape. Guard: `55_bibtex.rs`
+`bibtex_mode_emits_bibentries`, extended with all four synthesis shapes
+(bare `mrnumber`; `mrnumber`+`mrreviewer`; `MR1380882 (96e:83024)` → id stripped,
+review implied; `zblno`) plus the one-`bib-date` assertion, all verified against
+same-host Perl.

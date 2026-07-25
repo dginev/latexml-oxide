@@ -115,7 +115,7 @@ impl BibEntry {
   pub fn pretty_print(&self) -> String {
     let mut out = format!("@{}{{{}", self.entry_type, self.key);
     if self.raw_fields.is_empty() {
-      out.push('}');
+      out.push_str("}\n");
       return out;
     }
     for (k, v) in &self.raw_fields {
@@ -127,7 +127,9 @@ impl BibEntry {
       // Match Perl's source reconstruction: each field on its own line,
       // the name right-justified so the `=` aligns — `max(1, 10 - len)`
       // leading spaces (≥1 space even for names ≥10 chars). The entry's
-      // closing `}` follows the last value directly (no newline before it).
+      // closing `}` follows the last value directly (no newline before it),
+      // and the whole entry ends with one — Perl `Pre/BibTeX/Entry.pm:60-64`
+      // joins the lines and appends `"}\n"`.
       let lead = 10usize.saturating_sub(k.len()).max(1);
       out.push_str(",\n");
       out.push_str(&" ".repeat(lead));
@@ -136,7 +138,7 @@ impl BibEntry {
       out.push_str(v);
       out.push('}');
     }
-    out.push('}');
+    out.push_str("}\n");
     out
   }
 }
@@ -223,9 +225,30 @@ pub fn lookup_entry(key: &str) -> Option<Rc<RefCell<BibEntry>>> {
 }
 
 /// Perl: `currentBibEntryField('fieldname')` — get the *processed*
-/// token value of a field on the current entry.
+/// value of a field on the current entry.
+///
+/// Falls back to the raw source field, and that fallback is what makes this
+/// function work at all: Perl's `Pre::BibTeX::Entry` is built with BOTH lists
+/// populated (for amsrefs, `new(…, [@fields], [@fields])` passes the *same*
+/// list twice), whereas here [`BibEntry::add_field`] is only ever called by
+/// [`copy_crossref_fields`] — so outside a `crossref` the `fields` store is
+/// EMPTY and an unguarded `get_field` returned `None` for every field that
+/// exists. That silently disabled every caller which asks Perl's question:
+/// `\bib@synthesize@mr`/`@zbl` never emitted a MathReview/ZentralBlatt link,
+/// and `\bib@field@default@year`'s "is `date` already set?" guard never fired,
+/// so an entry with both emitted a duplicate `<ltx:bib-date>`.
+///
+/// Perl's `getField` yields the field's STRING; callers that need the source
+/// text verbatim (e.g. `\bib@field@unknownasdata`) should therefore prefer
+/// [`current_entry_raw_field`] — tokenizing here is lossy in one direction, in
+/// that a control word's terminating space is consumed (`\ndash 693`).
 pub fn current_entry_field(name: &str) -> Option<Tokens> {
-  current_entry()?.borrow().get_field(name).cloned()
+  let entry = current_entry()?;
+  let entry = entry.borrow();
+  if let Some(tokens) = entry.get_field(name) {
+    return Some(tokens.clone());
+  }
+  entry.get_raw_field(name).map(|raw| Tokenize!(raw))
 }
 
 /// Perl: `currentBibEntryRawField('fieldname')` — get the *raw*
@@ -1052,17 +1075,19 @@ LoadDefinitions!({
   // body is already built — the previous code set the property too late, so
   // every unknown bib field came out as an EMPTY `<ltx:bib-data role=.../>`,
   // dropping its value entirely; Perl emits the value). `args[0]` is the field
-  // name (#1). Prefer the DIGESTED field tokens (Perl `currentBibEntryField`),
-  // falling back to the raw source exploded char-by-char.
+  // name (#1).
   properties => sub[args] {
     let field = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-    // Prefer the DIGESTED field (Perl `currentBibEntryField`), falling back to
-    // the raw source — but as a STRING, not Tokens: the constructor's `#prop`
+    // The value goes out as a STRING, not Tokens: the constructor's `#prop`
     // content-insertion handles `Stored::String` and silently drops
     // `Stored::Tokens` (the old `after_digest` + `Stored::Tokens(...)` produced
     // an EMPTY `<ltx:bib-data role=.../>`, dropping every unknown field's value).
-    let s = current_entry_field(&field).map(|t| t.to_string())
-      .or_else(|| current_entry_raw_field(&field))
+    // Read the RAW field first: this element reproduces the field's source text,
+    // and a Tokens round-trip eats the space that terminates a control word
+    // (`\ndash 693` -> `\ndash693`). Perl reads `currentBibEntryField`, but
+    // there that IS the string.
+    let s = current_entry_raw_field(&field)
+      .or_else(|| current_entry_field(&field).map(|t| t.to_string()))
       .unwrap_or_default();
     Ok(stored_map!("rawdata" => Stored::String(pin(&s))))
   });
@@ -2282,7 +2307,9 @@ mod tests {
   #[test]
   fn pretty_print_no_fields_is_empty_braced() {
     let e = BibEntry::new("Solo", "misc");
-    assert_eq!(e.pretty_print(), "@misc{Solo}");
+    // Trailing newline included — Perl `Pre/BibTeX/Entry.pm:64` appends `"}\n"`
+    // on every entry, fields or not.
+    assert_eq!(e.pretty_print(), "@misc{Solo}\n");
   }
 
   #[test]
@@ -2294,10 +2321,11 @@ mod tests {
     let out = e.pretty_print();
     // Order matches insertion order (Vec<(String,String)>). Field names are
     // right-justified to width 10 so the `=` aligns (Perl source-reconstruction
-    // shape): author→4sp, title→5sp, year→6sp; entry `}` follows the last value.
+    // shape): author→4sp, title→5sp, year→6sp; entry `}` follows the last value,
+    // and the whole thing ends with a newline (Perl `Entry.pm:64` `. "}\n"`).
     assert_eq!(
       out,
-      "@article{Smith2020,\n    author = {John Smith},\n     title = {On Examples},\n      year = {2020}}"
+      "@article{Smith2020,\n    author = {John Smith},\n     title = {On Examples},\n      year = {2020}}\n"
     );
   }
 
