@@ -19,7 +19,11 @@ The live worklists and the ship contract. Read these first when resuming.
 
 | Doc | What it is |
 |-----|------------|
-| [`SYNC_STATUS.md`](SYNC_STATUS.md) | **The brief actionable worklist for both targets** — current status, in-flight session, open tasks, deferred families. Completed logs lift to `archive/`. |
+| [`SYNC_STATUS.md`](SYNC_STATUS.md) | **The brief actionable worklist for both targets.** Opens with *How to read this file* + a **ranked worklist (R1…R9)** — take the top unblocked row. Then: current status, per-row detail, standing policies, parked-family pointers, stable reference. Completed logs lift to `archive/`. |
+| [`parity/BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) | **R5** — surveyed missing-references targets + the MakeBibliography full-parity re-port. |
+| [`performance/BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) | **R7** — BP-1…BP-6 levers from the 60k-doc telemetry; POST-RELEASE. |
+| [`math/CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) | **R8** — content-MathML / math-parser gaps; deferred by user directive, do not pick off in isolation. |
+| [`parity/DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md) | **R9** — parked deep families (`.bst`, xy-pic, mode-frame, …); several carry explicit "do NOT start". |
 | [`release/RELEASE_CRITERIA.md`](release/RELEASE_CRITERIA.md) | The "what must be true before a public 1.0" contract: gates, binary-size budget, portability, license audit, tail-latency/RSS signals. |
 | [`release/RELEASING.md`](release/RELEASING.md) | Tag-driven release procedure; the self-contained-binary requirement. |
 | [`release/CRATES_IO_PUBLISH.md`](release/CRATES_IO_PUBLISH.md) | `cargo publish` + docs.rs + library-use story: bottom-up publish order, open blockers (workspace-`resources/` packaging, `pericortex` git dep), docs.rs metadata, `latexml::api` entrypoint. |
