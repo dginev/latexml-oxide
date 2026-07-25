@@ -1246,3 +1246,14 @@ reference fixture (copied from Perl) already had that shape. Guard: `55_bibtex.r
 (bare `mrnumber`; `mrnumber`+`mrreviewer`; `MR1380882 (96e:83024)` → id stripped,
 review implied; `zblno`) plus the one-`bib-date` assertion, all verified against
 same-host Perl.
+
+
+### R3 — `latexmlmath_oxide` emptied a single-structure formula — ✅ LANDED 2026-07-25
+
+`into_xmath` returns the parsed tree without attaching it; the main parser path pairs it
+with `append_tree`, `bin/latexmlmath_oxide.rs` did not, so a body consisting of ONE
+top-level structure (`\frac{1}{2}`, `\sqrt{2}`) serialized as an empty `<mrow/>`.
+Multi-part bodies survived only because their parts are pre-existing lexeme nodes still
+in the tree — which is why an UNCONDITIONAL append is wrong (it renders `\frac{a}{b}+c`
+twice); the append is gated on the tree being detached. Both witnesses now byte-identical
+to Perl `latexmlmath --pmml`. Guard `005_latexmlmath_single_structure`, verified red.

@@ -53,7 +53,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 |---|---|---|---|---|
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
-| **R3** | `latexmlmath_oxide` empties a single-structure formula | **OPEN**, re-verified 2026-07-25 (`\frac{1}{2}`→`<mrow/>`; `\frac{a}{b}+c` fine) | small, narrow surface | Open items |
+| ~~R3~~ | `latexmlmath_oxide` empties a single-structure formula | ✅ **LANDED 2026-07-25** — guard `005_latexmlmath_single_structure` | — | archived |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | real Fatal, pre-existing (bisected — not a PR regression) | medium, needs a dive | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04 | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
@@ -325,6 +325,23 @@ provoking it. `--preload=article.cls` on its own STILL errors.
 * Filtering `\PopDefaultHookLabel` alone: inert. The erroring caller is the internal
   `\__hook_curr_name_pop:`.
 
+**Both seams pinned (2026-07-25).** Push: `latexml_core/src/binding/content.rs:992-1005`
+(`push_defined && pop_defined` → digest `\@pushfilename{}{}{name}`). Pop:
+`content.rs:822-828` (`pop_use_expl` recomputes the same definedness pair and
+digests `\@popfilename`). The pop's comment states it re-checks "rather than
+threading a flag" — for THIS bug it must thread, because the state legitimately
+changed between the two.
+
+**Usable discriminator for fix (b).** "Did *this frame* push onto the hook-name
+stack?" is answerable: the expl3 `\@pushfilename` body chains into
+`\@expl@push@filename@aux@@` (recorded in the push-site comment at
+`content.rs:984`), the pre-pool one does not. So inspect the push-time *body*,
+carry that answer to the pop, and select `\@popfilename` vs `\lx@popfilename`
+from it instead of from definedness. NOT yet implemented — the remaining design
+choice is where to thread it (`InputDefinitionOptions` is the obvious carrier)
+and whether (c) "pool before any handleoptions push" is the cleaner cause-fix.
+Do not start without re-reading the four dead ends above.
+
 **Candidate fixes.** (a) Ensure a class/package preload cannot be the thing that drags in
 the pool — auto-prepend `LaTeX.pool` when any `.sty`/`.cls` is preloaded. Rejected for the
 release: Perl prepends only `TeX.pool` (LaTeXML.pm L710) and never auto-loads `LaTeX.pool`,
@@ -339,23 +356,6 @@ but `--preload=article.cls` → `<?latexml class="article.cls"?>`; **Perl emits
 `class="article"` for both.** Otherwise the two paths' output is byte-identical, so the
 preload does load `article_cls.rs` correctly; `parse_preload_spec` splits correctly to
 `("article","cls")`, so the extension is re-attached further in.
-
-### R3 — `latexmlmath_oxide` empties a single-structure formula — OPEN (re-verified 2026-07-25)
-
-`latexmlmath_oxide '\frac{1}{2}'` and `'\sqrt{2}'` emit `<mrow/>` — an empty math
-element. Perl `latexmlmath` renders both. Add anything around it (`\frac{a}{b}+c`) and
-it works, so the trigger is a formula whose ENTIRE body is one top-level structure.
-
-**Localized: NOT the engine or the math parser.** `latexml_oxide` converts the same
-`\(\frac{1}{2}\)` correctly (mfrac present), while `latexmlmath_oxide` does not — so it
-is that binary's preset path, `latexml::util::preset::lex_single_tex_formula` /
-`new_test_engine`, probably in the `xmath.get_child_nodes() → unlink → into_xmath`
-sequence in `bin/latexmlmath_oxide.rs`.
-
-Pre-existing (reproduced on `66808398c4`), found 2026-07-17 while aligning the binary's
-output with Perl. Not a regression from that work — which is verified byte-identical to
-Perl modulo whitespace on formulas that do convert.
-
 
 ### R4 — biblatex `.bbl` TokenLimit loop, 2605.17646 (pre-existing, NOT a PR regression)
 
