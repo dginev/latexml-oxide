@@ -26,6 +26,19 @@
 #   fails that year (fail toward flagging, per CLAUDE.md "Canvas
 #   signal integrity").
 #
+# Reproducing a single year LOCALLY (e.g. to re-check the init gate
+# without dispatching all five legs): build the dumper in a container
+# whose base is OLDER than the TL image's, never on the dev host. Two
+# independent things break otherwise, both only at `docker run` time —
+# a 2026-07-25 host (glibc 2.43, libxml2.so.16) produced a binary the
+# `:2026` image cannot load at all (it has glibc 2.41 / libxml2.so.2),
+# which the gate reports as `exit=127 errors=0`, i.e. NOT as an init
+# failure. `rustlang/rust:nightly` (bookworm, glibc 2.36) works; add
+# `clang libclang-dev` to the apt set below, which GitHub's runner image
+# preinstalls but a bare image does not (bindgen/libmarpa-asf-sys needs
+# it). `KPATHSEA_NO_LINK=1` is what keeps the binary kpathsea-free on a
+# host that HAS libkpathsea-dev installed.
+#
 # Callable from release.yml (workflow_call) and testable standalone
 # (workflow_dispatch).
 

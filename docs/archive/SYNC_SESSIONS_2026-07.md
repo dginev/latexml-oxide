@@ -677,17 +677,34 @@ const version, read dynamically → no version-bump churn; + explicit-param over
 > under the verbatim gate (`LATEXML_INIT_DEBUG=1`, ANSI-strip, `grep -acE
 > '^(Error|Fatal):'`):
 >
-> | init | 2026-07-12 | 2026-07-23 |
-> |---|---|---|
-> | `--init=plain.tex` | exit 0, 0 errors | exit 0, **0 errors** |
-> | `--init=latex.ltx` | exit 0, **137 errors** | exit 0, **0 errors** |
+> | init | 2026-07-12 | 2026-07-23 | 2026-07-25 |
+> |---|---|---|---|
+> | `--init=plain.tex` | exit 0, 0 errors | exit 0, **0 errors** | exit 0, **0 errors** |
+> | `--init=latex.ltx` | exit 0, **137 errors** | exit 0, **0 errors** | exit 0, **0 errors** |
+>
+> The 07-25 column re-confirms the gate on `main` @ `b36c6cd21c` — 22 commits
+> later — by the same method: 934 plain entries, **24,199** latex entries
+> (24,221 lines), i.e. the 07-23 dump unchanged. The host's own TL2025 tree
+> gates 0/0 on the same binary. **The stale "re-run the init gate before
+> trusting the recorded blocker" residual in `SYNC_STATUS.md` is retired by
+> this.**
+>
+> **Reproducing one year locally costs two false starts** — both surface only at
+> `docker run`, and the first reads as a *clean* gate. Build the dumper in a
+> container OLDER than the TL image, never on the dev host: a 2026-07-25 host
+> (glibc 2.43, `libxml2.so.16`) yields a binary `:2026` (glibc 2.41,
+> `libxml2.so.2`) cannot load, which the gate reports as `exit=127 errors=0` —
+> **zero errors, because nothing ran.** `rustlang/rust:nightly` (bookworm, glibc
+> 2.36) works, plus `clang libclang-dev`, which GitHub's runner preinstalls but
+> a bare image does not (bindgen/`libmarpa-asf-sys`). `KPATHSEA_NO_LINK=1` is
+> what keeps the binary kpathsea-free on a host that HAS libkpathsea-dev.
 >
 > The **likely** closers (not bisected — the 0/0 result is measured, the
 > attribution is inferred) are the two expl3 fixes that landed **2026-07-20**,
 > after the measurement below: force `\ExplSyntaxOff` when `_` is still LETTER
 > (`latex_constructs.rs`) and the global `:`/`_`/`~` restore (`expl3_sty.rs`).
 > They are the same pair credited with closing
-> [`EXPL3_CATCODE_GAP_2026-06-08.md`](parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md),
+> [`EXPL3_CATCODE_GAP_2026-06-08.md`](../parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md),
 > and all three error families listed below are now gone (the 90 ×
 > `unexpected:_` was the bulk). Dump is sound, not degenerate: **24,221** latex entries vs
 > 2025's 21,997 — the delta IS TL2026's expanded l3 `text-case` module — and
