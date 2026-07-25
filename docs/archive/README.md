@@ -18,6 +18,25 @@ lifted into `../SYNC_STATUS.md` ("Archived-audit residuals"):
   velocity fork (57 commits). Ranked items 1–4 landed 2026-07-03; sole residual
   (item G, `readBalanced` comment-token drop) deferred to a gullet-seam session.
 
+## 2026-07-25 SYNC_STATUS freshening
+
+- `SYNC_SESSIONS_2026-07.md` gained a **"Lifted from `SYNC_STATUS.md` on
+  2026-07-25"** block: 23 completed/historical sections (~800 lines) moved out of
+  the live worklist, which went 1979 → 1179 lines (131 → 79 KB). Covers the
+  2026-07-10 … 07-23 landings (apxproof, figure panels, the two Cluster-H
+  runaways, the recoverable-Fatal salvage, #311, the Rhai hook-splice, the XSLT
+  `LATEXML_VERSION` param, the TL2026 dump-init gate and ambient-drift fixes, the
+  frontmatter-fidelity pass, verbatim-in-box, mhchem, the July-5 prep checklist,
+  the 0.7.2 release and the third XSLT O(n²)), plus the release-week
+  stabilization review and the `index.xml` investigation.
+- Each was verified landed **by its named guard test being present in the tree**
+  before the move — not by its own `LANDED` label. (Label-trust is what left two
+  live-worklist entries pointing at work that did not exist: a `⏸️ 13 commits NOT
+  PUSHED` banner for commits merged as PR #323, and a "#312 next step: MathJax 4"
+  bullet for an issue closed 2026-07-21. Note SHA-ancestry is *not* a usable
+  check here — the repo squash-merges, so branch SHAs never become ancestors of
+  `main`.)
+
 ## 2026-07-08 docs consolidation (release 0.7.3 prep)
 
 - `SYNC_SESSIONS_2026-07.md` — completed "Landed this session" logs for the
