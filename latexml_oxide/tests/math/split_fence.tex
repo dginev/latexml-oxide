@@ -1,0 +1,30 @@
+% TeX's null delimiter: `\left( ... \right.` is a fence whose right delimiter is
+% empty. Digestion emits no token for the `.` (Perl does the same — the XMath is
+% byte-identical), so a fence split across an alignment break leaves each cell
+% with an unmatched delimiter. The grammar's fence rules for general
+% expressions are balanced-only, so this used to yield ZERO parses and drop the
+% whole formula — fractions and subscripts included — to ltx_math_unparsed.
+% Witness: arXiv 2606.13010 appendix (CR Hamiltonian).
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+% The split fence itself: both cells must parse, and neither may gain a
+% delimiter the author did not write.
+\begin{align}
+  H & = \frac{\hbar}{2} \left( a + b \right. \nonumber \\
+    & \quad \left. + c + d \right).
+\end{align}
+
+% Balanced control — must be completely unaffected by the repair.
+\begin{equation}
+  H = \frac{\hbar}{2} \left( a + b + c + d \right)
+\end{equation}
+
+% REGRESSION GUARD. A ket's closing `⟩` pairs with a VERTBAR, not with an OPEN,
+% so a naive "unbalanced ⇒ synthesize a partner" pass reads it as a dangling
+% close and prepends a bogus `(`. These parsed before the repair existed and
+% must keep parsing; an earlier unconditional version broke exactly these.
+\(|f\rangle\) and \(\langle g|\) and \(\langle f | g \rangle\)
+
+\end{document}
