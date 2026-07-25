@@ -33,9 +33,18 @@ pub struct Whatsit {
   pub definition:     Rc<dyn Definition>,
   /// cached tokens for reverting back
   ///  (note that the "reversion" _property_ is currently also used)
-  pub reversion:      Option<Tokens>,
-  /// special-case reversion tokens for whatsits representing Dual math structures
-  pub dual_reversion: Option<HashMap<Tokens>>,
+  ///
+  /// Boxed: this is the memo slot of a reversion cache that Rust cannot yet
+  /// fill — `revert(&self)` has no mutability, so the write-back in `revert`
+  /// stays commented out (Perl does cache here, `Whatsit.pm` L136-138). Held
+  /// inline it charged 24 B to every Whatsit for a value measured `None` on
+  /// 100 % of ~601 K whatsits across five documents. `Option<Box<_>>` is 8 B
+  /// via the null-pointer niche and allocates nothing while `None`, so the slot
+  /// costs almost nothing until the cache is actually wired up (issue #361 M4).
+  pub reversion:      Option<Box<Tokens>>,
+  /// special-case reversion tokens for whatsits representing Dual math
+  /// structures. Boxed for the same reason as [`Whatsit::reversion`] — see there.
+  pub dual_reversion: Option<Box<HashMap<Tokens>>>,
   /// point of origin in the source file (`None` = not recorded; set under
   /// `--source-map` at constructor digest, Perl `Constructor.pm` L106)
   pub locator:        Option<Locator>,
@@ -298,10 +307,10 @@ impl Object for Whatsit {
       if let Some(ref dual_reversion) = self.dual_reversion {
         dual_reversion.get(this_branch).cloned()
       } else {
-        self.reversion.clone()
+        self.reversion.as_deref().cloned()
       }
     } else {
-      self.reversion.clone()
+      self.reversion.as_deref().cloned()
     };
     if let Some(saved) = saved_opt {
       return Ok(saved);
@@ -367,18 +376,20 @@ impl Object for Whatsit {
       }
     }
 
-    // Now cache it, in case it's needed again
+    // Now cache it, in case it's needed again (Perl does: `Whatsit.pm` L134-138).
     // TODO: DG: We can't yet cache reversions, because we lack mutability on .revert()
     //       should we reorganize? is it worth it?
+    // NB: both slots are `Option<Box<_>>` (issue #361 M4) — keep the `Box::new`
+    // below if this is ever re-enabled.
     //
     // if let Some(this_branch) = state!().get_dual_branch() {
     //   if self.dual_reversion.is_none() {
-    //     self.dual_reversion = Some(HashMap::default());
+    //     self.dual_reversion = Some(Box::new(HashMap::default()));
     //   }
     //   self.dual_reversion.as_mut().unwrap()
     //     .insert(this_branch.to_string(), Tokens::new(tokens.clone()));
     // } else {
-    //   self.reversion = Some(Tokens::new(tokens.clone()));
+    //   self.reversion = Some(Box::new(Tokens::new(tokens.clone())));
     // }
     Ok(Tokens::new(tokens))
   }

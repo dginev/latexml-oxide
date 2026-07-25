@@ -41,10 +41,12 @@ pub struct Digested(Rc<DigestedData>);
 /// These are all kinds of data which we consider officially supported
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
 // Every `DigestedData` is `Rc`-allocated once per box and a huge document keeps
-// millions alive at once (issue #361), so the enum's size is paid per box. The
-// two historically oversized variants are contained — `List.font` is `Rc`-shared
-// (M1) and `KeyVals` is boxed (M2) — bringing the ceiling to `Whatsit` (168 B).
-// The `digested_data_size_budget` test guards against future re-inflation.
+// millions alive at once (issue #361 measured 11.5 M live at peak), so the
+// enum's size is paid per box. The oversized payloads are contained — `List.font`
+// is `Rc`-shared (M1), `KeyVals` is boxed (M2), and `Whatsit`'s reversion-cache
+// slots are boxed (M4) — bringing the ceiling to `Whatsit` (128 B), over a
+// `TBox`/`List` floor of 104 B. The `digested_data_size_budget` test guards
+// against future re-inflation.
 pub enum DigestedData {
   /// A TeX Box
   TBox(RefCell<Tbox>),
@@ -62,9 +64,10 @@ pub enum DigestedData {
   /// heavy struct (two `String`s, three `Vec`s, two `HashMap`s ≈ 208 B) but a
   /// **rare** variant, whereas `DigestedData` is `Rc`-allocated once per box and
   /// every box in a document pays its size. Inlining `KeyVals` made the whole
-  /// enum 208 B; boxing it drops the enum to 168 B (now `Whatsit`-bound),
-  /// shrinking *every* digested box by 40 B (issue #361 memory pass, M2). The
-  /// added indirection only touches the rare KeyVals accesses.
+  /// enum 208 B; boxing it took 40 B off *every* digested box (issue #361 memory
+  /// pass, M2), and the added indirection only touches the rare KeyVals
+  /// accesses. Measured at 0.83 % of live boxes on the #361 witness — the
+  /// rarity is what makes the trade pay.
   KeyVals(Box<KeyVals>),
   /// A TeX-like `RegisterValue` (e.g. a Dimension or Glue)
   RegisterValue(RegisterValue),
@@ -874,21 +877,27 @@ mod tests {
   use super::*;
 
   /// `DigestedData` is `Rc`-allocated once per digested box, and a very large
-  /// document holds millions of them alive at once (issue #361), so every byte
-  /// in this enum is paid per box. This budget guards against a fat variant
-  /// silently re-inflating it. The ceiling is currently `Whatsit`
-  /// (`RefCell<Whatsit>` = 160 B) + discriminant = 168 B; the two historically
-  /// oversized variants are contained — `List.font` is `Rc`-shared (M1) and
-  /// `KeyVals` is boxed (M2). Raise this only with a deliberate justification,
-  /// never to paper over an accidental blow-up (box the offending variant
-  /// instead — see the `KeyVals` doc).
+  /// document holds millions of them alive at once (issue #361 measured 11.5 M
+  /// live at peak), so every byte in this enum is paid per box. This budget
+  /// guards against a fat variant silently re-inflating it.
+  ///
+  /// The ceiling is currently `Whatsit` (`RefCell<Whatsit>` = 120 B) +
+  /// discriminant = 128 B, with the historically oversized payloads contained:
+  /// `List.font` is `Rc`-shared (M1), `KeyVals` is boxed (M2), and `Whatsit`'s
+  /// two reversion-cache slots are boxed (M4). Below this sit `TBox`/`List` at
+  /// 96 B, so 104 B is the floor for any further variant boxing.
+  ///
+  /// Raise this only with a deliberate justification, never to paper over an
+  /// accidental blow-up — box the offending payload instead (see the `KeyVals`
+  /// doc for when that pays: the payload must be *rare*, or the extra
+  /// allocation costs more than the per-box byte it saves).
   #[test]
   fn digested_data_size_budget() {
     let size = size_of::<DigestedData>();
     assert!(
-      size <= 168,
-      "DigestedData grew to {size} B (budget 168). A large variant re-inflated \
-       the per-box footprint — box it (cf. KeyVals, issue #361 M2) rather than \
+      size <= 128,
+      "DigestedData grew to {size} B (budget 128). A large payload re-inflated \
+       the per-box footprint — box it (cf. KeyVals, issue #361) rather than \
        raising this budget."
     );
   }

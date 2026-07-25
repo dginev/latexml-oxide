@@ -35,9 +35,10 @@ follow-up** to shrink RAM + time faithfully.
 
 - **Peak RSS 9.05 GB**, **wall 38.8 s**, 0 errors, 3007 split pages / 79 MB out.
 - Perl same-host: **7.36 GB and climbing, unfinished at 2 min, many errors.**
-- After the landed M1+M2 density work this is **6.43 GB / 37.1 s** (same 0
-  errors / 3007 pages / 79 MB). The analysis below describes the *original*
-  baseline; the phase *shape* is unchanged, only the magnitudes shrink.
+- After the landed M1+M2+M4 density work this is **5.99 GB / 36.9 s** (same 0
+  errors / 3007 pages / 79 MB) — a **−34 %** peak-RSS cut at unchanged wall time.
+  The analysis below describes the *original* baseline; the phase *shape* is
+  unchanged, only the magnitudes shrink.
 
 ### RAM — a transient coexistence, not a leak
 
@@ -83,7 +84,7 @@ Post-phase breakdown (`LATEXML_POST_AUDIT=1`): digestion **~20 s**, CrossRef
 boxes+DOM; time is allocation + DOM traversal, both proportional to box/node
 count. So *reducing box/node volume/density helps both axes*.
 
-## Landed — M1 + M2 (this PR)
+## Landed — M1, M2 (PR #362) + M4 (this PR)
 
 ### M1 — share `List` fonts
 
@@ -123,21 +124,69 @@ indirection is only paid on rare KeyVals accesses.
 - Only **one** downstream site needed a change — `enumitem_sty.rs::extract_keyvals`
   clones the value out (`(**kv).clone()`); the ~40 other `DigestedData::KeyVals(..)`
   match sites auto-deref through the `Box` unchanged.
-- Guarded by **`digested_data_size_budget`** (`digested.rs`, ≤168 B) so a future
-  fat variant can't silently re-inflate the per-box footprint. The
+- Guarded by **`digested_data_size_budget`** (`digested.rs`; tightened to ≤128 B
+  by M4) so a future fat variant can't silently re-inflate the footprint. The
   `#[allow(clippy::large_enum_variant)]` on the enum is no longer needed and was
   removed (along with the stale size TODO it carried).
 - Checked and **not** worth pursuing: `Whatsit.properties`/`List.properties`
   (`SymHashMap<T>` is a newtype over `HashMap`, which does not allocate until the
   first insert), so empty property maps already cost zero heap.
 
-### The next density ceiling (open, needs data before acting)
+### M4 — box `Whatsit`'s two reversion-cache slots
 
-`Whatsit` (160 B) now sets the 168 B budget. Boxing it too would drop
-`DigestedData` to ~104 B (`TBox`/`List` `RefCell` = 96 B) — but unlike `KeyVals`,
-`Whatsit` is a **hot, common** variant, so the extra allocation + indirection per
-whatsit could cost more time than the RAM is worth. Measure the live box-type
-distribution first; do not box it on size reasoning alone.
+`Whatsit` (160 B) then set the 168 B budget. The tempting move — boxing the
+**variant** — is the wrong one, and the census says why (below). What actually
+pays is boxing two *fields*: **`reversion: Option<Tokens>` → `Option<Box<Tokens>>`**
+and **`dual_reversion: Option<HashMap<Tokens>>` → `Option<Box<…>>`**
+(`latexml_core/src/whatsit.rs`). Those are the memo slots of a reversion cache
+that **Rust cannot fill**: `revert(&self)` has no mutability, so the write-back is
+commented out (`whatsit.rs` ~L379). Perl *does* cache there (`Whatsit.pm`
+L134-138), so these are an unimplemented port, **not** dead code — box, don't
+delete. `Option<Box<_>>` is 8 B via the null-pointer niche and allocates nothing
+while `None`, so the slots cost ~nothing until the cache is wired up.
+
+`DigestedData` **168 → 128 B**; `RefCell<Whatsit>` 160 → 120.
+
+- **Same-session A/B** on the witness: peak RSS **6.41 → 5.99 GB (−0.41 GB /
+  −6.5 %)**, wall **36.87 → 36.86 s (flat)**, 0 errors, 3007 pages, output
+  **byte-identical** (`diff -rq`, zero differences). Full suite **1682/0**.
+- Two call sites changed (`self.reversion.clone()` → `.as_deref().cloned()`); the
+  `dual_reversion` lookup auto-derefs through the `Box` unchanged.
+
+### Why NOT to box the `Whatsit` variant (census, 5 payloads)
+
+Live box-type distribution at peak — the payload dependence is real, so this was
+measured across deliberately contrasting documents:
+
+| document | TBox | **Whatsit** | List | live boxes |
+|---|---|---|---|---|
+| #361 book (232 K lines) | 87.4 % | **4.5 %** | 6.1 % | 11.5 M |
+| equality_big (math bench) | 82.7 % | **6.2 %** | 10.3 % | 131 K |
+| tikz unit tests | 81.3 % | **3.5 %** | 13.1 % | 170 K |
+| si (siunitx) | 57.4 % | **16.4 %** | 23.5 % | 77 K |
+| mathtools (AMS) | 58.7 % | **16.7 %** | 22.1 % | 9 K |
+
+Boxing a variant trades −64 B on every *other* box against **+96 B** on each box
+of that variant (the `Rc` payload shrinks into a smaller mimalloc bin, but a
+second allocation appears) — break-even at **~40 %**. Whatsit never approaches
+that, so boxing the variant *would* save memory — but it costs one malloc/free
+per Whatsit plus a pointer hop on the hot absorb path, for a further 24 B/box
+beyond M4. Not worth it; **stop here**. Note the share *falls* as documents grow
+(the 16 % readings are 14–34 KB files), so the margin is widest exactly where
+memory matters.
+
+Also measured, and the reason M4 targets fields rather than the whole struct:
+across ~601 K whatsits on all five documents, `dual_reversion` and `reversion`
+were `Some` **zero** times, while `args` (4.8 %) and `properties` (9.1 % on #361
+but 46 % on the tikz doc) are genuinely used — so those two are **not** boxing
+candidates, and their occupancy is strongly payload-dependent.
+
+### The floor for this line of attack
+
+`TBox`/`List` (`RefCell` = 96 B) now bound the enum at **104 B**, i.e. at most
+24 B/box remains available from variant boxing. Density work is essentially
+exhausted; further RAM cuts need a different mechanism (and M3 below shows the
+obvious one does not pay).
 
 ## SETTLED DEAD-END — M3 (streaming boxes→DOM): implemented, measured, reverted
 
