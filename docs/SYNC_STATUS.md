@@ -17,7 +17,7 @@ whole intent of this file; everything after it is supporting detail.
 |---|---|---|
 | **Ranked worklist** | every open item, ordered, with size + where the detail lives | **first, always** |
 | Current status | suite count, the last session, release state | to orient |
-| Open items | the detail behind rows R1–R6 | when you pick that row |
+| Open items | the detail behind the ranked rows | when you pick that row |
 | Standing policies | rules that constrain *how* you fix things | before adding a CLI flag, a stub, or a divergence |
 | Parked families | pointers to four extracted docs | only when starting that family |
 | Reference | stable facts, not work | when something surprises you |
@@ -46,14 +46,13 @@ families).*
 ## Ranked worklist — start here
 
 Ordered by: **does it reproduce today** → **is a real user affected** → **is it
-unblocked** → **effort**. Rows R1–R3 are small and self-contained; R4+ need a
+unblocked** → **effort**. Rows R1–R2 are small and self-contained; R4+ need a
 session of their own. Re-verify a row before planning on it (rule 1).
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
-| ~~R3~~ | `latexmlmath_oxide` empties a single-structure formula | ✅ **LANDED 2026-07-25** — guard `005_latexmlmath_single_structure` | — | archived |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | real Fatal, pre-existing (bisected — not a PR regression) | medium, needs a dive | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04 | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
@@ -153,10 +152,9 @@ Two scraps are still live:
   2203.05327 411⇒0 via the `aligned_overset_sty.rs` contrib binding, guarded by
   `102_aligned_overset_includestyles.rs`). **Re-run the init gate on a TL2026
   host** before trusting the recorded blocker.
-- **ar5iv residuals — DONE**, kept only so they are not re-mined: all three are
-  parity-or-Rust-better, none Rust-only. 2405.19920 Rust-better (1.82 MB vs Perl
-  0 B); 2501.10235 (#551) and 1802.01134 (#599) parity — both engines hang in
-  shared deep machinery. No faithful fix without a box-measurement divergence.
+- **ar5iv residuals — closed, do not re-mine.** All three resolve
+  parity-or-Rust-better, none Rust-only; detail in `AR5IV_DIAGNOSTICS.md` and
+  `docs/archive/SYNC_SESSIONS_2026-07.md`.
 
 ## Standing policies & method — read before changing behaviour
 
