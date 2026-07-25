@@ -175,6 +175,23 @@ impl Whatsit {
     self.properties.insert("body", Digested::from(list).into());
     if let Some(digested) = trailer_opt {
       self.properties.insert("trailer", digested.clone().into());
+      // Perl `Whatsit.pm` L84: the whatsit's locator becomes the RANGE from its
+      // own start to the trailer's end, so an environment reports the extent it
+      // actually covers instead of collapsing to its `\begin`. Perl writes
+      // `$$self{properties}{locator}`, which is what its inherited
+      // `Box::getLocator` reads (`Box.pm` L85-87); our `get_locator` reads the
+      // struct field, so the field is the faithful sink here — a `"locator"`
+      // property would be inert.
+      //
+      // `new_range` yields `None` when the two ends sit in different sources (an
+      // environment spanning an `\input`), and Perl's `newRange` likewise
+      // declines to fuse them; keep the opening locator in that case rather than
+      // inventing a cross-file span.
+      if let (Some(from), Some(to)) = (self.locator, digested.get_locator())
+        && let Some(range) = Locator::new_range(from, to)
+      {
+        self.locator = Some(range);
+      }
       // And copy any otherwise undefined properties from the trailer
       // Perl: copies properties from trailer (typically a Whatsit for \end{...})
       match digested.data() {
@@ -210,8 +227,6 @@ impl Whatsit {
         },
         _ => {},
       }
-      // TODO: Perl line 84 — create locator range from self to trailer
-      // $$self{properties}{locator} = Locator->newRange($self->getLocator, $trailer->getLocator);
     }
   }
 
@@ -379,6 +394,25 @@ impl Object for Whatsit {
     // Now cache it, in case it's needed again (Perl does: `Whatsit.pm` L134-138).
     // TODO: DG: We can't yet cache reversions, because we lack mutability on .revert()
     //       should we reorganize? is it worth it?
+    //
+    // MEASURED — **not worth it**. Classifying each `revert()` at call time as a
+    // first (a memo would MISS) or a repeat (would HIT) gives the exact hit rate
+    // a cache would achieve:
+    //
+    //   #361 witness, 232 K lines / 11.5 M boxes / 37 s :  78 572 calls,  0.0 % hit
+    //   equality_big (math benchmark)                    :   1 106 calls,  0.0 % hit
+    //   si (siunitx)                                     :  22 728 calls, 63.8 % hit
+    //   mathtools                                        :   1 867 calls, 50.5 % hit
+    //
+    // Repeats track *packages that re-read their arguments* (siunitx, mathtools),
+    // not document scale — and on the large document, the one case where time
+    // actually matters, the cache would never fire once in 78 K reverts. Where it
+    // does hit, the volume is trivial. Perl's "big performance boost" reflects
+    // Perl's per-call cost (interpreted, object-heavy), not call volume; our
+    // per-call cost is far lower, so the same hit rate buys far less. Don't build
+    // this without a payload showing BOTH a high hit rate and a material share of
+    // runtime (`revert` does not appear in the #361 profile's top self-time).
+    //
     // NB: both slots are `Option<Box<_>>` (issue #361 M4) — keep the `Box::new`
     // below if this is ever re-enabled.
     //
