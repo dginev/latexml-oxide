@@ -280,9 +280,13 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
     // (measured: 9 green vs 69 black glyph groups), while BOTH LaTeXML engines
     // paint the whole snippet green — Perl identically, so this is a shared
     // upstream bug we are fixing rather than a Rust regression.
-    std::fs::read_to_string(&path)
-      .ok()
-      .map(|text| text.replace("\r\n", "\n").replace('\r', "\n"))
+    std::fs::read_to_string(&path).ok().map(|text| {
+      if text.contains('\r') {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+      } else {
+        text
+      }
+    })
   } else {
     log::warn!("Can't read listings file '{}'", filename);
     None
@@ -1299,7 +1303,12 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   // So: truncate as Perl does, then re-close whatever the cut left open. The
   // discarded region is by construction only empty-line markup (it starts at a
   // line with colnum == 0), so nothing visible is lost by closing here.
-  if let Some(from) = ctx.emptyfrom {
+  // `from > 0` mirrors Perl's `if $LaTeXML::emptyfrom` truthiness guard, which
+  // skips index 0. It cannot be reached today (`lsttokens` is seeded with the
+  // opening T_BEGIN, so the `linestart` that feeds `emptyfrom` is always >= 1),
+  // but truncating to 0 would drop that T_BEGIN and leave the lone T_END pushed
+  // below — the very imbalance this block exists to prevent.
+  if let Some(from) = ctx.emptyfrom.filter(|from| *from > 0) {
     ctx.lsttokens.truncate(from);
     let mut depth: i64 = 0;
     for token in &ctx.lsttokens {
