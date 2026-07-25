@@ -209,10 +209,25 @@ fn six_get_op_sym(kv: &[(&str, Tokens)], key: SymStr) -> Tokens {
   }
 }
 
+/// siunitx v3 renamed a handful of v2 option keys. This binding implements the
+/// v2 vocabulary (as Perl's does), so the v3 spelling is canonicalised to its v2
+/// name at the single point where every option is assigned — which routes it
+/// into the existing machinery instead of needing a parallel implementation.
+/// (Upstream ships the two versions as separate files via `\DeclareRelease`, so
+/// there is no upstream alias table to port; these come from the v3 manual.)
+fn six_canonical_key(key: &str) -> &str {
+  match key {
+    // Separator between the number and its unit. Witness 2606.13010, whose
+    // `\qtyhy` sets `quantity-product = \text{-}` for attributive "10-MHz".
+    "quantity-product" => "number-unit-product",
+    other => other,
+  }
+}
+
 /// Perl: six_setup — assign all keyvals to SIX_key state values
 fn six_setup(kv: &KeyVals) {
   for (key, value) in kv.get_pairs() {
-    let key_str = key.clone();
+    let key_str = six_canonical_key(key).to_string();
     match value {
       ArgWrap::Tokens(t) => {
         if t.is_empty() {
@@ -1160,30 +1175,67 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           Tokens::new(tks)
         }
       },
+      // Perl six_format_complexnumber L555-576.
       "complex" => {
         if let SixNumber::Operator { arg1, arg2, sign, symbol, .. } = number {
           let real = arg1.as_deref().map(|n| six_format_number_inner(n, 0));
-          let imag = arg2.as_deref().map(|n| six_format_number_inner(n, 0));
-          let i_tok = if six_get_bool_sym(six_pin!("copy-complex-root")) {
+          // Perl L561: return $real unless $arg2
+          let Some(imag) = arg2.as_deref().map(|n| six_format_number_inner(n, 0)) else {
+            return real.unwrap_or_default();
+          };
+          // Perl L562: echo the root as the author typed it, or emit the configured one.
+          let root = if six_get_bool_sym(six_pin!("copy-complex-root")) {
             symbol
               .clone()
               .unwrap_or_else(|| six_get_tokens_sym(six_pin!("output-complex-root")))
           } else {
             six_get_tokens_sym(six_pin!("output-complex-root"))
           };
-
-          let mut result = Vec::new();
-          if let Some(r) = &real {
-            result.extend_from_slice(r.unlist_ref());
+          // Perl L563-564: the imaginary unit carries its own semantics.
+          let mut texed = vec![T_CS!("\\text"), T_BEGIN!()];
+          texed.extend(root.unlist());
+          texed.push(T_END!());
+          let root = i_wrap(
+            make_kv_content(&[
+              ("role", Tokenize!("ID")),
+              ("meaning", Tokenize!("imaginary-unit")),
+            ]),
+            Tokens::new(texed),
+          );
+          // Perl L565-566
+          let args = if six_get_choice_sym(six_pin!("complex-root-position")) == "before-number" {
+            vec![root, imag]
+          } else {
+            vec![imag, root]
+          };
+          let mut result = six_format_infix(
+            Tokens::new(vec![T_CS!("\\lx@InvisibleTimes")]),
+            None,
+            None,
+            args,
+          );
+          if let Some(real) = real {
+            // Perl L570-575
+            let (open, close) = if bracket > 0 {
+              (
+                Some(six_get_tokens_sym(six_pin!("open-bracket"))),
+                Some(six_get_tokens_sym(six_pin!("close-bracket"))),
+              )
+            } else {
+              (None, None)
+            };
+            result = six_format_infix(sign.clone().unwrap_or_default(), open, close, vec![
+              real, result,
+            ]);
+          } else if let Some(sign) = sign {
+            // Perl L567-569: force an explicit sign on a pure imaginary?
+            if sign.to_string() == "+" && six_get_bool_sym(six_pin!("retain-explicit-plus")) {
+              let mut tks = sign.unlist_ref().to_vec();
+              tks.extend(result.unlist());
+              result = i_wrap(None, Tokens::new(tks));
+            }
           }
-          if let Some(s) = sign {
-            result.extend_from_slice(s.unlist_ref());
-          }
-          if let Some(im) = &imag {
-            result.extend_from_slice(im.unlist_ref());
-          }
-          result.extend(i_tok.unlist());
-          Tokens::new(result)
+          result
         } else {
           Tokens::default()
         }
@@ -2193,6 +2245,27 @@ fn make_unitobject_expansion(name: &str) -> Tokens {
   Tokens::new(tks)
 }
 
+/// Shared body of `\DeclareSIPrePower` / `\DeclareSIPostPower` (Perl L1283-1305),
+/// and hence of v3's `\DeclareSIPower`, which declares one of each.
+/// `kind` is `prepower` (applies before the unit, `\square\metre`) or `postpower`
+/// (after it, `\metre\squared`).
+fn declare_si_power(cs: &Token, power: &Tokens, kind: &str) -> Result<()> {
+  let name = cs.to_string().trim_start_matches('\\').to_string();
+  let encoded = format!("{kind}|^{{{power}}}|{power}");
+  assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
+  register_unit_macro_name(&name);
+
+  define_macro_simple(
+    T_CS!(&format!("\\lx@six@{name}")),
+    make_unitobject_expansion(&name),
+  )?;
+  // Let \cs = \relax if not yet defined (prevents "undefined" errors)
+  if !has_meaning(cs) {
+    let_i(cs, &T_CS!("\\relax"), None);
+  }
+  Ok(())
+}
+
 /// Build expansion tokens: \lx@six@unitobject@collapsible{name}{presentation}
 /// Perl L1227-1249: If presentation expands to more \lx@six@unitobject tokens,
 /// pass them through (alias collapsing, e.g. \metre → \meter).
@@ -2297,6 +2370,30 @@ LoadDefinitions!({
     "table-figures-integer", "table-format",
     "table-number-alignment",
     "table-space-text-post", "table-space-text-pre",
+    // The rest of Perl's `\sisetup` defaults block (L1493-1632), mirrored
+    // verbatim below. Perl sets these without registering them; we register
+    // so our own defaults pass — and any document that sets them — is quiet.
+    "math-rm", "math-sf", "math-tt", "mode",
+    "text-rm", "text-sf", "text-tt",
+    "forbid-literal-units", "multi-part-units",
+    "table-unit-alignment", "table-align-comparator", "table-align-exponent",
+    "table-align-text-pre", "table-align-text-post", "table-align-uncertainty",
+    "table-omit-exponent", "table-parse-only", "table-text-alignment",
+    "redefine-symbols",
+    "math-angstrom", "math-arcminute", "math-arcsecond", "math-celsius",
+    "math-degree", "math-micro", "math-ohm",
+    "text-angstrom", "text-arcminute", "text-arcsecond", "text-celsius",
+    "text-degree", "text-micro", "text-ohm",
+    "detect-family", "detect-italic", "detect-mode", "detect-shape",
+    "detect-weight", "number-angle-separator",
+    // siunitx v3-only spellings with no v2 equivalent to route them to. They
+    // select fonts/families that LaTeXML models structurally rather than
+    // visually, so they are accepted and ignored — but accepting them keeps
+    // Warn meaningful. Witness 2606.13010 `\sisetup{reset-text-family,
+    // unit-font-command}`.
+    "reset-text-family", "unit-font-command",
+    // v3 spellings routed to their v2 names by `six_canonical_key`.
+    "quantity-product",
   ] {
     DefKeyVal!("SIX", key, "", "");
   }
@@ -2510,17 +2607,7 @@ LoadDefinitions!({
     let cs = read_si_declare_cs()?;
     skip_spaces()?;
     let power = read_arg(ExpansionLevel::Off)?;
-    let name = cs.to_string().trim_start_matches('\\').to_string();
-    let newcs_name = format!("\\lx@six@{name}");
-
-    let encoded = format!("prepower|^{{{}}}|{}", power, power);
-    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
-    register_unit_macro_name(&name);
-
-    define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    declare_si_power(&cs, &power, "prepower")?;
   });
 
   // \DeclareSIPostPower [kv] \cs {power}
@@ -2529,19 +2616,30 @@ LoadDefinitions!({
     let cs = read_si_declare_cs()?;
     skip_spaces()?;
     let power = read_arg(ExpansionLevel::Off)?;
-    let name = cs.to_string().trim_start_matches('\\').to_string();
-    let newcs_name = format!("\\lx@six@{name}");
-
-    let encoded = format!("postpower|^{{{}}}|{}", power, power);
-    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
-    register_unit_macro_name(&name);
-
-    define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    // Let \cs = \relax if not yet defined (prevents "undefined" errors)
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    declare_si_power(&cs, &power, "postpower")?;
   });
+
+  // siunitx v3 \DeclareSIPower [kv] \before \after {power} — "creates two
+  // symbols, one for use before a unit, the second for use after a unit, both
+  // of which are equivalent to the <power>" (manual §"\DeclareSIPower", e.g.
+  // `\DeclareSIPower\quartic\tothefourth{4}`). Exactly one \DeclareSIPrePower
+  // plus one \DeclareSIPostPower, so it reuses their shared body.
+  DefPrimitive!("\\DeclareSIPower[]", {
+    skip_spaces()?;
+    let before = read_si_declare_cs()?;
+    skip_spaces()?;
+    let after = read_si_declare_cs()?;
+    skip_spaces()?;
+    let power = read_arg(ExpansionLevel::Off)?;
+    declare_si_power(&before, &power, "prepower")?;
+    declare_si_power(&after, &power, "postpower")?;
+  });
+
+  // \SendSettingsToPgf — "deprecated, and should be replaced simply by setting
+  // the appropriate \pgfkeys in parallel to \sisetup" (manual §6). Takes no
+  // arguments; we model the deprecation as a no-op rather than leaving the CS
+  // undefined, since LaTeXML has no pgf key state to push settings into.
+  DefMacro!("\\SendSettingsToPgf", "");
 
   // \DeclareSIQualifier [kv] \cs {qualifier}
   DefPrimitive!("\\DeclareSIQualifier[]", {
@@ -2868,7 +2966,23 @@ LoadDefinitions!({
   RawTeX!("\\@ifundefined{qty}{\\let\\qty\\SI}{}");
   Let!("\\qtylist", "\\SIlist");
   Let!("\\qtyrange", "\\SIrange");
-  Let!("\\qtyproduct", "\\SIlist");
+
+  // siunitx v3 renamed some v2 spellings and added commands whose behaviour the
+  // v2 number grammar already covers, so they are aliases rather than new code:
+  //
+  // * `\numproduct{5 x 100 x 2}` / `\qtyproduct{...}{unit}` — a *product*
+  //   (`5 × 100 × 2`, siunitx manual §"product-mode"), which `six_parse_number`
+  //   already builds from `input-product` into an `operator => 'product'` node
+  //   (Perl L288-289) and formats through the MULOP/times op (Perl L625-627).
+  //   `\qtyproduct` previously aliased `\SIlist`, which rendered a product as a
+  //   comma-and-"and" *list* — wrong output, not just wrong semantics.
+  // * `\complexnum{1+2i}` / `\complexqty{1+2i}{unit}` — Cartesian `a+bi`/`a+ib`
+  //   or polar `r:θ`, "otherwise identical to the standard \num/\qty command"
+  //   (manual §3.5). `six_match_complexnumber` (Perl L251) already parses these.
+  Let!("\\numproduct", "\\num");
+  Let!("\\qtyproduct", "\\SI");
+  Let!("\\complexnum", "\\num");
+  Let!("\\complexqty", "\\SI");
 
   //======================================================================
   // Table column types S and s — Perl: DefColumnType('S Optional', ...) and
@@ -3020,64 +3134,150 @@ LoadDefinitions!({
   //======================================================================
   // Default options
   //======================================================================
+  // Default options — a verbatim mirror of Perl siunitx.sty.ltxml
+  // L1493-L1632 (including its comments, so the two blocks stay diffable).
+  // Perl sets 107 keys; we previously set 57. None of the 50 added here are
+  // read by this file (they are state parity only), so the port is inert —
+  // its value is that `\sisetup{mode = math}` & co. are now known keys.
   RawTeX!(r#"\sisetup{
   abbreviations,
   binary-units,
+
+  math-rm = \mathrm,
+  math-sf = \mathsf,
+  math-tt = \mathtt,
+  mode    = math,
+  text-rm = \rmfamily,
+  text-sf = \sffamily,
+  text-tt = \ttfamily,
+
   input-product  = x,
   input-quotient = /,
+%(
   input-close-uncertainty = ),
   input-complex-roots     = ij,
   input-comparators       = {<=>\approx\ge\geq\gg\le\leq\ll\sim},
   input-decimal-markers   = {.,},
   input-digits            = 0123456789,
   input-exponent-markers  = dDeE,
-  input-open-uncertainty  = (,
+  input-open-uncertainty  = (, % )
   input-protect-tokens    = \approx\dots\ge\geq\gg\le\leq\ll\mp\pi\pm\sim,
   input-signs             = +-\mp\pm,
   input-symbols           = \dots\pi,
   input-uncertainty-signs = \pm,
+
   add-decimal-zero      = true,
   add-integer-zero      = true,
   retain-unity-mantissa = true,
-  bracket-numbers           = true,
-  close-bracket             = ),
-  complex-root-position     = after-number,
-  copy-decimal-marker       = false,
-  exponent-base             = 10,
-  exponent-product          = \times,
-  group-digits              = true,
-  group-minimum-digits      = 5,
-  group-separator           = \,,
-  open-bracket              = (,
-  output-close-uncertainty  = ),
-  output-complex-root       = \ensuremath{\mathrm{i}},
-  output-decimal-marker     = .,
-  output-open-uncertainty   = (,
-  fraction-function = \frac,
-  output-product    = \times,
-  output-quotient   = /,
-  parse-numbers     = true,
+  round-half            = up,
+  round-minimum         = 0,
+  round-precision       = 2,
+
+  bracket-numbers           = true                          , % (
+  close-bracket             = )                             ,
+  complex-root-position     = after-number                  ,
+  copy-decimal-marker       = false                         ,
+  exponent-base             = 10                            ,
+  exponent-product          = \times                        ,
+  group-digits              = true                          ,
+  group-minimum-digits      = 5                             ,
+  group-separator           = \,                            ,
+  open-bracket              = (                             , % ) (
+  output-close-uncertainty  = )                             ,
+  output-complex-root       = \ensuremath { \mathrm { i } } ,
+  output-decimal-marker     = .                             ,
+  output-open-uncertainty   = (, % )
+
+  fraction-function = \frac  ,
+  output-product    = \times ,
+  output-quotient   = /      ,
+  parse-numbers     = true   ,
   quotient-mode     = symbol,
+
+
+  forbid-literal-units = false,
+  parse-units          = true,
+
   prefixes-as-symbols = true,
+
   bracket-unit-denominator     = true,
   inter-unit-product           = \,,
+  literal-superscript-as-power = true,
   per-mode                     = reciprocal,
   per-symbol                   = /,
+  power-font                   = number,
   qualifier-mode               = subscript,
-  number-unit-product = \,,
+  qualifier-phrase             = { ~ of ~ },
+
+  multi-part-units    = brackets,
+  number-unit-product = \,      ,
   product-units       = repeat,
-  list-final-separator = { and },
-  list-pair-separator  = { and },
-  list-separator       = {, },
+
+  list-final-separator = { and } ,
+  list-pair-separator  = { and } ,
+  list-separator       = {, }    ,
   list-units           = repeat,
+
   range-phrase = { to },
   range-units  = repeat,
-  bracket-numbers,
-  parse-numbers,
-  parse-units,
+
+  table-unit-alignment = center,
+
+  table-align-comparator  = true,
+  table-align-exponent    = true,
+  table-align-text-pre    = true,
+  table-align-text-post   = true,
+  table-align-uncertainty = true,
+  table-omit-exponent     = false,
+  table-parse-only        = false,
+  table-number-alignment  = center-decimal-marker,
+  table-text-alignment    = center,
+  table-figures-decimal   = 2,
+  table-figures-integer   = 3,
+
+  redefine-symbols = true,
+
+  math-angstrom  = \text { \AA },
+  math-arcminute = { } ^ { \prime },
+  math-arcsecond = { } ^ { \prime \prime },
+  math-celsius   = { } ^ { \circ } \kern - \scriptspace \__siunitx_unit_mathrm:n { C } ,
+  math-degree    = { } ^ { \circ },
+  math-micro     = \text { \c__siunitx_mu_tl },
+  math-ohm       = \text { \ensuremath { \c__siunitx_omega_tl } },
+
+  text-angstrom  = \AA,
+  text-arcminute = \ensuremath { { } ^ { \prime } },
+  text-arcsecond = \ensuremath { { } ^ { \prime \prime } },
+  text-celsius   =
+    \ensuremath { { } ^ { \circ } } \kern -\scriptspace C ,
+  text-degree    = \ensuremath { { } ^ { \circ } },
+  text-micro     = \c__siunitx_mu_tl ,
+  text-ohm       = \ensuremath { \c__siunitx_omega_tl },
+
+% if strict;
+% bracket-numbers  = true,
+% detect-family    = false,
+% detect-mode      = false,
+% detect-shape     = false,
+% detect-weight    = false,
+% multi-part-units = brackets,
+% parse-numbers    = true,
+% parse-units      = true,
+% product-units    = repeat,
+% otherwise
+  bracket-numbers  ,
+  detect-family    ,
+  detect-italic    ,
+  detect-mode      ,
+  detect-shape     ,
+  detect-weight    ,
+  multi-part-units ,
+  parse-numbers    ,
+  parse-units      ,
   product-units,
   number-angle-product=,
-  arc-separator=
+  number-angle-separator=,
+  arc-separator=,
 }"#);
 
   //======================================================================

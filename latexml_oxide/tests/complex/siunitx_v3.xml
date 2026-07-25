@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="siunitx"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>v3 command aliases</title>
+    <para xml:id="S1.p1">
+      <p><Math mode="inline" tex="1+2\text{$\mathrm{i}$}" text="1 + 2 * imaginary-unit" xml:id="S1.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok meaning="1" role="NUMBER">1</XMTok>
+              <XMApp xml:id="S1.p1.m1.3">
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="2" role="NUMBER">2</XMTok>
+                <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math><break/><Math mode="inline" tex="1+2\text{$\mathrm{i}$}\text{\,}\mathrm{\SIUnitSymbolOhm}" text="(1 + 2 * imaginary-unit) * ohm" xml:id="S1.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMText meaning="times" role="MULOP" xml:id="S1.p1.m2.1"> </XMText>
+              <XMApp xml:id="S1.p1.m2.2">
+                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok meaning="1" role="NUMBER">1</XMTok>
+                <XMApp xml:id="S1.p1.m2.5">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="2" role="NUMBER">2</XMTok>
+                  <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok class="ltx_unit" meaning="ohm" name="SIUnitSymbolOhm" role="ID">Ω</XMTok>
+            </XMApp>
+          </XMath>
+        </Math><break/><Math mode="inline" tex="5\text{\times}100\text{\times}2" text="5 * 100 * 2" xml:id="S1.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMText meaning="times" role="MULOP" xml:id="S1.p1.m3.1">×</XMText>
+              <XMApp xml:id="S1.p1.m3.2">
+                <XMText meaning="times" role="MULOP" xml:id="S1.p1.m3.3">×</XMText>
+                <XMTok meaning="5" role="NUMBER">5</XMTok>
+                <XMTok meaning="100" role="NUMBER">100</XMTok>
+              </XMApp>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+          </XMath>
+        </Math><break/><Math mode="inline" tex="5\text{\times}100\text{\times}2\text{\,}\mathrm{m}" text="5 * 100 * 2 * meter" xml:id="S1.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMText meaning="times" role="MULOP" xml:id="S1.p1.m4.1"> </XMText>
+              <XMApp xml:id="S1.p1.m4.2">
+                <XMText meaning="times" role="MULOP" xml:id="S1.p1.m4.3">×</XMText>
+                <XMApp xml:id="S1.p1.m4.4">
+                  <XMText meaning="times" role="MULOP" xml:id="S1.p1.m4.5">×</XMText>
+                  <XMTok meaning="5" role="NUMBER">5</XMTok>
+                  <XMTok meaning="100" role="NUMBER">100</XMTok>
+                </XMApp>
+                <XMTok meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMTok class="ltx_unit" meaning="meter" role="ID">m</XMTok>
+            </XMApp>
+          </XMath>
+        </Math><break/><Math mode="inline" tex="2\text{$\mathrm{i}$}" text="2 * imaginary-unit" xml:id="S1.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+            </XMApp>
+          </XMath>
+        </Math><break/><Math mode="inline" tex="1+\text{$\mathrm{i}$}2" text="1 + imaginary-unit * 2" xml:id="S1.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok meaning="1" role="NUMBER">1</XMTok>
+              <XMApp xml:id="S1.p1.m6.3">
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="imaginary-unit" role="ID">i</XMTok>
+                <XMTok meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math><break/></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>Declared powers</title>
+    <para xml:id="S2.p1">
+      <p><Math mode="inline" tex="{\mathrm{m}}^{4}" text="power@(meter, 4)" xml:id="S2.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok class="ltx_unit" meaning="meter" role="ID">m</XMTok>
+              <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> and <Math mode="inline" tex="{\mathrm{m}}^{4}" text="power@(meter, 4)" xml:id="S2.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok class="ltx_unit" meaning="meter" role="ID">m</XMTok>
+              <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+            </XMApp>
+          </XMath>
+        </Math><break/></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>Quantity product</title>
+    <para xml:id="S3.p1">
+      <p><Math mode="inline" tex="1.6\text{\,}\mathrm{GHz}" text="1.6 * gigahertz" xml:id="S3.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMText meaning="times" role="MULOP" xml:id="S3.p1.m1.1"> </XMText>
+              <XMTok meaning="1.6" role="NUMBER">1.6</XMTok>
+              <XMTok class="ltx_unit" meaning="gigahertz" role="ID">GHz</XMTok>
+            </XMApp>
+          </XMath>
+        </Math><break/><Math mode="inline" tex="10\text{\text{-}}\mathrm{MHz}" text="10 * megahertz" xml:id="S3.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMText meaning="times" role="MULOP" xml:id="S3.p1.m2.1">-</XMText>
+              <XMTok meaning="10" role="NUMBER">10</XMTok>
+              <XMTok class="ltx_unit" meaning="megahertz" role="ID">MHz</XMTok>
+            </XMApp>
+          </XMath>
+        </Math><break/></p>
+    </para>
+  </section>
+</document>

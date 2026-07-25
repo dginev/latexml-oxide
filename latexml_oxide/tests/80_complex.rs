@@ -78,5 +78,11 @@ fn physics_test() { complex("physics"); }
 #[test]
 fn si_test() { complex("si"); }
 
+// siunitx v3 surface layered on the v2 vocabulary (arXiv/html_feedback#6624).
+// Kept apart from si_test so that fixture stays byte-comparable with the Perl
+// golden LaTeXML/t/complex/si.xml, which has no v3 coverage to compare against.
+#[test]
+fn siunitx_v3_test() { complex("siunitx_v3"); }
+
 #[test]
 fn tcilatex_minimal_test() { complex("tcilatex_minimal"); }
