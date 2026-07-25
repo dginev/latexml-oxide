@@ -10,15 +10,24 @@ subsubsections**, tikz/tabular/array/verbatim-heavy, CRLF line endings. Command:
 **beats Perl** on the same host (Perl throws many `\FancyVerbGetLine`
 unbalanced-input errors at the CRLF EOF and had not finished at 2 min). The
 user's reported fatals are the **default resource guards** being too tight for a
-legit huge single doc (they are FLEET-tuned): peak RSS trips the 4.5 GB stomach
-fuse (`LATEXML_RSS_CAP_BYTES`), and the ~20 s digestion trips the 60 s
-`--timeout` on the reporter's slower VM. The reporter is unblocked via the
-runtime knobs (`LATEXML_RSS_CAP_BYTES=<big> --max-memory <big> --timeout 0`);
-this doc is the **performance follow-up** to shrink RAM + time faithfully.
+legit huge single doc (they are FLEET-tuned): peak RSS trips the cooperative
+stomach fuse (~4.5 GB at the default ceiling), and the ~20 s digestion trips the
+60 s `--timeout` on the reporter's slower VM. The reporter is unblocked via the
+runtime knobs — **`--max-memory 0 --timeout 0`**; this doc is the **performance
+follow-up** to shrink RAM + time faithfully.
+
+> **Knob note (post-PR #363).** `--max-memory` is now the *single* memory knob:
+> the soft stomach fuse is derived from it (`soft_cap_from_ceiling`, 75 % of the
+> ceiling — which reproduces the historical ~4.5 GB fuse at the 6144 MiB
+> default), and a `0` from any source resolves to "disabled" for **both** the
+> soft fuse and the hard watchdog. `LATEXML_RSS_CAP_BYTES` survives only as a
+> fallback when no ceiling is given (and as the test-harness override), so it is
+> no longer the thing to reach for. The measurements below were taken with both
+> guards off and are unaffected; only the invocation is simpler now.
 
 ## Baseline (fast dev box, release build, guards off)
 
-`LATEXML_RSS_CAP_BYTES=60000000000 latexml_oxide --timeout 0 --max-memory 0 --splitat=subsection --format=html5 --dest=out/index.htm index.tex`
+`latexml_oxide --max-memory 0 --timeout 0 --splitat=subsection --format=html5 --dest=out/index.htm index.tex`
 
 - **Peak RSS 9.05 GB**, **wall 38.8 s**, 0 errors, 3007 split pages / 79 MB out.
 - Perl same-host: **7.36 GB and climbing, unfinished at 2 min, many errors.**
@@ -42,8 +51,8 @@ building the DOM, then drop. **Peak = boxes + DOM together.** During pure
 digestion the boxes sit on the boxing stack in one context
 (`localized_box_list_total ≈ 236 832` top-level entries at 6 GB, each a subtree
 — recursive box count far higher). Diagnose with
-`LATEXML_DEBUG_MEMBUDGET=1 LATEXML_RSS_CAP_BYTES=<N>` (dumps box_list /
-localized_box_list sizes + a backtrace at the cap).
+`LATEXML_DEBUG_MEMBUDGET=1 --max-memory <MiB>` (dumps box_list /
+localized_box_list sizes + a backtrace when the derived soft fuse trips).
 
 ### TIME — flat, no silver bullet
 
