@@ -142,20 +142,6 @@ history now live in the dated session archives:
 (Upstream-sync catalog also at
 [`archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md`](archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md).)
 
-## Live residuals from the 2026-07-20 ar5iv sprint (merged as PR #323)
-
-Everything that sprint landed is in `docs/archive/SYNC_SESSIONS_2026-07.md`.
-Two scraps are still live:
-
-- **TL2026 dump gate may be closer than recorded** — the expl3 catcode gap is
-  closed (2112.11932 1003⇒0, 2110.10227 102⇒0, 2204.05282 86⇒0, 2110.12034 45⇒8;
-  2203.05327 411⇒0 via the `aligned_overset_sty.rs` contrib binding, guarded by
-  `102_aligned_overset_includestyles.rs`). **Re-run the init gate on a TL2026
-  host** before trusting the recorded blocker.
-- **ar5iv residuals — closed, do not re-mine.** All three resolve
-  parity-or-Rust-better, none Rust-only; detail in `AR5IV_DIAGNOSTICS.md` and
-  `docs/archive/SYNC_SESSIONS_2026-07.md`.
-
 ## Standing policies & method — read before changing behaviour
 
 ### Methodology & the cortex cross-join
@@ -484,6 +470,12 @@ drops stretch/shrink to bare pt.
   2410.10068, 2511.03798 (Perl also fails).
 - **Rust supersedes Perl**: `1207.6068`, `0909.3444`, + 40 more in
   `memory/project_rust_supersedes_perl.md`.
+- **2026-07-20 ar5iv sprint (PR #323) residuals — do not re-mine.** Its three
+  ar5iv leftovers all resolve parity-or-Rust-better, none Rust-only
+  (`AR5IV_DIAGNOSTICS.md`); its TL2026 dump-gate scrap closed 2026-07-23 and
+  was re-confirmed on `main` 2026-07-25 (0 errors on both inits inside
+  `ghcr.io/tkw1536/texlive-docker:2026`; 2026 is in the release window). Both
+  in `archive/SYNC_SESSIONS_2026-07.md`.
 - **BibTeX**: `BibTeX.pool.ltxml` ported (Phases 1–8; remaining B1–B6 polish in
   `BIBTEX_PORT_PLAN.md`). `--nobibtex` is opt-out, not default.
 
