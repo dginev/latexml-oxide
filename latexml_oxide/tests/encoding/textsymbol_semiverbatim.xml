@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="fontenc" options="OT1"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>A literal accented character inside a <verbatim font="typewriter">\cite</verbatim> key: <cite class="ltx_citemacro_cite">[<bibref bibrefs="garcía2024key" separator="," yyseparator=","/>]</cite>.</p>
+  </para>
+  <para xml:id="p2">
+    <p>The same symbol written as an explicit control sequence: <cite class="ltx_citemacro_cite">[<bibref bibrefs="garcía2024cs" separator="," yyseparator=","/>]</cite>.</p>
+  </para>
+  <para xml:id="p3">
+    <p>And in ordinary text, where the encoding is not neutralized: garcía, garcía.</p>
+  </para>
+</document>

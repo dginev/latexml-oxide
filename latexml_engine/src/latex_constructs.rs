@@ -6672,7 +6672,52 @@ LoadDefinitions!({
   // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
 
   def_primitive_noop("\\UndeclareTextCommand{}{}")?;
-  DefMacro!("\\UseTextSymbol{}{}", "{\\fontencoding{#1}#2}");
+  // Perl `latex_constructs.pool.ltxml:2642`:
+  //   DefMacro('\UseTextSymbol{}{}', '{\fontencoding{#1}#2}');
+  //
+  // Perl's body verbatim is `{\fontencoding{#1}#2}`, and that shape CANNOT
+  // TERMINATE when it is reached from a pure-expansion collect loop: `{` and
+  // `\fontencoding` are non-expandable, so the loop gathers them without
+  // executing, the font encoding never changes, and the inner `#2` re-enters
+  // `\@changed@cmd` under the same encoding — forever.
+  //
+  // The live trigger is `beginSemiverbatim` (Perl `State.pm:597`, faithfully
+  // ported at `state.rs:2691`) merging `encoding => 'ASCII'` — a stay-ASCII
+  // neutralization, not a real LaTeX text encoding. So inside a Semiverbatim
+  // argument (a `\cite` key, a `\usepackage` option value) `\cf@encoding` is
+  // `ASCII`, `\ASCII\i` is undefined, and the `?`-fallback spins.
+  //
+  // Perl has the SAME looping shape available and simply reaches it less
+  // often: measured 2026-07-26 against a format-equipped Perl 0.8.8 built with
+  // `cpanm --build-arg formats .`, its own `latex_dump.pool.ltxml` carries
+  // `\?\i -> \UseTextSymbol{OT1}\i` (72 `UseTextSymbol` records). So the dump
+  // is NOT the differentiator — an earlier draft of this comment claimed it
+  // was, and that was wrong. What is measured, on that one Perl install:
+  //   * `\usepackage[pdfauthor={Mar{\'\i}n}]{hyperref}` — Perl HANGS (exit 124)
+  //     exactly as we did: SHARED, the KNOWN_PERL_ERRORS entry.
+  //   * `\cite{garc<U+00ED>a2024key}` under `[OT1]{fontenc}` — Perl converts
+  //     cleanly in 0.89 s (`bibrefs="garcía2024key"`) while we looped:
+  //     GENUINE-RUST-ONLY. Something in our `\cite`-key read reaches the
+  //     encoding dispatch where Perl's does not; that residual delta is not
+  //     yet pinned and is worth its own look.
+  //
+  // Either way the loop is a property of this macro's SHAPE, so fix it here:
+  // resolve to the direct glyph — which is precisely what Perl's own
+  // `\DeclareTextSymbolDefault` (`latex_constructs.pool.ltxml:2684-2688`,
+  // ported above) makes `\?<cs>` expand to — and keep Perl's literal body as
+  // the fallback when no such glyph exists. The observable result therefore
+  // matches Perl wherever Perl terminates, and terminates where Perl does not.
+  //
+  // Witness 2606.11784 (`\usepackage[OT1]{fontenc}` + a literal `í` U+00ED in
+  // a `\cite` key, mapped onto the text-symbol chain by the `.dfu`):
+  // `Fatal:Timeout:PushbackLimit` with no output before, 0 errors / 519 KB
+  // after. Also breaks the SHARED hang 2004.08143 — a surpass-Perl reliability
+  // win, using the cure KNOWN_PERL_ERRORS "text-symbol CS in a Semiverbatim
+  // argument" prescribes.
+  DefMacro!(
+    "\\UseTextSymbol{}{}",
+    r"\expandafter\ifx\csname #1\string#2\endcsname\relax{\fontencoding{#1}#2}\else\csname #1\string#2\endcsname\fi"
+  );
   DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)

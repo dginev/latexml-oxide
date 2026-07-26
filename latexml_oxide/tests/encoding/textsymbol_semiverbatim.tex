@@ -1,0 +1,34 @@
+% A font-encoding text symbol reached from inside a SEMIVERBATIM argument.
+%
+% `beginSemiverbatim` (Perl State.pm:597, ported at state.rs:2691) merges the
+% current font with `encoding => 'ASCII'` — a stay-ASCII neutralization, not a
+% real LaTeX text encoding. A `\cite` key is read that way, so inside it
+% `\cf@encoding` is `ASCII` and `\ASCII\i` is undefined.
+%
+% With `fontenc` loaded, the `.dfu` makes the literal `í` (U+00ED) active and
+% maps it onto the text-symbol CS chain, which then lands in `\@changed@cmd`'s
+% `?`-fallback. The LaTeX kernel spells that fallback `\UseTextSymbol{OT1}\i` =
+% `{\fontencoding{OT1}\i}` — and `{` / `\fontencoding` are NON-EXPANDABLE, so a
+% pure-expansion collect loop gathers them without executing: the encoding
+% stays ASCII and the inner `\i` re-enters forever.
+%
+% Perl never reaches that shape (its own `\DeclareTextSymbolDefault` makes
+% `\?<cs>` the direct glyph `\<enc><cs>`, and Perl does not dump latex.ltx, so
+% the kernel form is not live there). We DO dump latex.ltx, so the kernel form
+% wins — the inherited-kernel-macro leak class.
+%
+% Guards `\UseTextSymbol` resolving to the direct glyph. Witness 2606.11784
+% (`\usepackage[OT1]{fontenc}` + a literal `í` in a `\cite` key): before the
+% fix this was `Fatal:Timeout:PushbackLimit` with no output at all; same-host
+% Perl 0.8.8 converts it in 0.91 s. The same repair also breaks the SHARED
+% hyperref hang 2004.08143 (`pdfauthor={…Mar{\'\i}n…}`) — see
+% KNOWN_PERL_ERRORS "text-symbol CS in a Semiverbatim option".
+\documentclass{article}
+\usepackage[OT1]{fontenc}
+\begin{document}
+A literal accented character inside a \verb|\cite| key: \cite{garcía2024key}.
+
+The same symbol written as an explicit control sequence: \cite{garc\'{i}a2024cs}.
+
+And in ordinary text, where the encoding is not neutralized: garc\'{i}a, garcía.
+\end{document}
