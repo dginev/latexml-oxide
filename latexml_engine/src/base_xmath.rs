@@ -16,6 +16,49 @@ static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
   || static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => "."),
 );
 
+/// How many times the thousands-separator rewrite is registered — one pass per
+/// separator in the longest number it can fully collapse. See the rule for why
+/// chains need repeated passes; 4 covers up to 10^15.
+const THOUSANDS_MERGE_PASSES: usize = 4;
+
+/// Selects the HEAD of a comma-grouped number: a `NUMBER` token immediately
+/// followed by a `,` (PUNCT) and then by a NUMBER of EXACTLY three digits.
+///
+/// Every clause earns its place:
+/// Every clause earns its place:
+/// * the group's first three characters must be digits, and the group must then
+///   either END (`50,000`) or continue with the decimal point (`1,234.56`, which
+///   the ligature has already merged into the single token `234.56`). This is
+///   the whole safety argument: by this phase a digit run is ONE token, so a
+///   fourth digit is visible right here — `(1, 2024)` offers `2024` and
+///   `50,0001` offers `0001`, and both are rejected.
+/// * the leading token must be a NUMBER, so a list like `f(x,000)` is untouched.
+/// * the `not(preceding-sibling…)` clause restricts matches to chain HEADS.
+///   Matches are computed up front, so merging a head would leave the interior
+///   matches pointing at freed nodes; taking heads only makes each pass
+///   independent, and repeated registration walks the chain rightward.
+///
+/// * `not(parent::ltx:XMWrap)` keeps this to commas the AUTHOR typed. A package
+///   that formats numbers itself — siunitx `\num{12345}`, numprint
+///   `\numprint{123456.134}` — builds its own `XMDual(semantic, XMWrap[digits,
+///   ',', digits])`, where the content arm is already the right number and the
+///   Wrap is a deliberate presentation arm. Collapsing that would rewrite a
+///   binding's considered output (it regressed `si_test` / `numprints_test`
+///   before this clause).
+///
+/// The literal `.` for the decimal point is deliberate — this rule IS the
+/// US-default reading (see the registration site); European documents are served
+/// by the language-keyed separator maps instead.
+const THOUSANDS_SELECT_XPATH: &str = concat!(
+  "descendant-or-self::ltx:XMTok[@role='NUMBER']",
+  "[following-sibling::*[1][self::ltx:XMTok][@role='PUNCT'][.=',']]",
+  "[following-sibling::*[2][self::ltx:XMTok][@role='NUMBER']",
+  "[translate(substring(.,1,3),'0123456789','')='']",
+  "[string-length(.)=3 or substring(.,4,1)='.']]",
+  "[not(preceding-sibling::*[1][self::ltx:XMTok][@role='PUNCT'][.=','])]",
+  "[not(parent::ltx:XMWrap)]"
+);
+
 /// Perl: XMath_copy_keyvals — copy key-value pairs from OptionalKeyVals:XMath arg to whatsit props
 fn xmath_copy_keyvals(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
   // Get pairs first, then set properties (avoids borrow conflict)
@@ -786,6 +829,79 @@ LoadDefinitions!({
       Ok(None)
     }
   });
+
+  // --- Thousands separator (US default) ------------------------------------
+  //
+  // The ligature above can never do this for English. Its thousands arm demands
+  // `role != "PUNCT"` (Perl `Base_XMath.pool.ltxml` L506-508, "Be paranoid about
+  // lists"), and a math-mode comma is ALWAYS PUNCT — so for `en`, where the
+  // thousands separator IS the comma, that arm is dead code and `$50,000$` came
+  // out as a two-item LIST: wrong content (`list(50, 000)`) and wrong
+  // presentation grouping (`mrow(mn 50, mo ",", mn 000)` instead of one `mn`).
+  //
+  // It CANNOT be fixed in the ligature: ligatures run per-token from
+  // `Document::open_math_text_internal` as the document is built, so
+  // `get_next_sibling()` is None for every node — there is no right context at
+  // all. A "merge once the group reaches three digits" rule therefore fires
+  // before a fourth digit can arrive; measured, it turned `$(1, 2024)$` into the
+  // single number `12024` and `$(12, 3456)$` into `123456`. Reverted.
+  //
+  // Here in the post-build `Rewriting` phase (which runs BEFORE math parsing)
+  // the DOM is stable AND the ligature has already collapsed each digit run into
+  // ONE `XMTok`. So the group length is simply `string-length()`, testable WITH
+  // its right context — which is exactly what makes the pathological cases safe
+  // by construction: `(1, 2024)` is `1 | , | 2024` (4 chars, no match), and
+  // `50,0001` is `50 | , | 0001` (4 chars, no match).
+  //
+  // OWNER POLICY (2026-07-25): default to the US reading. European documents are
+  // served by the LANGUAGE maps instead — for `de`/`fr`/`nl`/`pt`/`es` the comma
+  // is the DECIMAL separator and the ligature's decimal arm (which has no role
+  // guard) already handles it, so this rule is gated on the document's own
+  // `thousands separator == ","`, i.e. it stays out of their way.
+  //
+  // Registered as intentional divergence OXIDIZED_DESIGN #70 (Perl reads
+  // `$50,000$` as a two-item list).
+  //
+  // `f(x,000)` is left alone: the token before the comma must itself be a
+  // NUMBER, so a genuine list whose item merely starts with digits is untouched.
+  // `$(12, 345)$` DOES merge to `12345` — that shape is genuinely ambiguous and
+  // the US default resolves it this way, deliberately.
+  //
+  // Chains (`1,234,567`) need one pass per separator: the rewrite engine runs
+  // each rule exactly once over a match set computed up front, and merging the
+  // head would dangle the later matches, so the selector takes only chain HEADS
+  // and the rule is registered several times. Each extra pass is one XPath that
+  // matches nothing on the overwhelmingly common single-separator number.
+  // THOUSANDS_MERGE_PASSES = 4 covers up to 10^15.
+  for _pass in 0..THOUSANDS_MERGE_PASSES {
+    DefRewrite!(select => THOUSANDS_SELECT_XPATH,
+    select_count => 3,
+    replace => sub[document, nodes] {
+      // `nodes` is [NUMBER, PUNCT ",", NUMBER] — already detached and
+      // id-unrecorded by the rewrite engine; we insert ONE token in their place.
+      let group = nodes.pop().unwrap();
+      let comma = nodes.pop().unwrap();
+      let lead  = nodes.pop().unwrap();
+      let (lead_text, group_text) = (lead.get_content(), group.get_content());
+      // `meaning` carries the digits WITHOUT separators (the ligature's own
+      // convention), the text content keeps them so presentation is unchanged.
+      let digits = |n: &Node, fallback: &str| -> String {
+        n.get_attribute("meaning").unwrap_or_else(|| fallback.to_string())
+      };
+      let meaning = digits(lead, &lead_text) + &digits(group, &group_text);
+      let text = lead_text + &comma.get_content() + &group_text;
+      let attrs = string_map!("role" => "NUMBER", "meaning" => &meaning);
+      // Pass the LEAD's font explicitly. With `None`, `insert_math_token`
+      // falls back to the ambient math font and stamps `font="italic"` on the
+      // result — digits are upright, and the un-merged `$50000$` carries no
+      // font attribute at all, so `None` would make the merged token diverge
+      // from its own unmerged twin.
+      // (cloned: `get_node_font` borrows the document, which
+      // `insert_math_token` needs mutably.)
+      let font = document.get_node_font(lead).clone();
+      document.insert_math_token(&text, attrs, Some(&font))?;
+    });
+  }
 
   // This needs to be applied AFTER numbers have been resolved!
   // If we have a non-negative integer (no signs, decimals,...)
