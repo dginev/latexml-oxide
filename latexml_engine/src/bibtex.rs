@@ -722,7 +722,15 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
             i += 1;
           }
         } else {
-          i += 1;
+          // Advance by the WHOLE character, not one byte. This walk is over raw
+          // byte indices, so a fixed `i += 1` past a multi-byte escape (`\“`,
+          // `\é`) leaves `i` inside the codepoint and the `&title[word_start..i]`
+          // slice below panics — aborting the document, since a panic is not a
+          // recoverable conversion error. Witness 2605.22125 (`\` at byte 26,
+          // `“` at 27..30, `i` at 28). Perl's `\bib@@title`
+          // (BibTeX.pool.ltxml L293-333) works in characters and cannot hit this.
+          // Guard: `recase_title_does_not_split_a_multibyte_escape`.
+          i += title[i..].chars().next().map_or(1, char::len_utf8);
         }
         consumed_word = true;
         continue;
@@ -2262,6 +2270,51 @@ mod tests {
       recase_title("THE {LaTeX} BOOK", TitleCaseMode::Capitalize1),
       "THE {LaTeX} book"
     );
+  }
+
+  /// A `\<char>` escape whose character is MULTI-BYTE must not split it.
+  ///
+  /// `recase_title` walks raw byte indices, and the `\<char>` branch advanced a
+  /// fixed ONE byte past the backslash. For an ASCII escape (`\&`, `\_`) that is
+  /// right; for `\“` it lands `i` inside the character, and the very next
+  /// `&title[word_start..i]` slice panics — taking the whole document with it,
+  /// since a panic is not a recoverable conversion error.
+  ///
+  /// Witness 2605.22125, found by the 2026-07-26 sandbox sweep:
+  /// `panicked at bibtex.rs:733:24: end byte index 28 is not a char boundary;
+  /// it is inside '“' (bytes 27..30 of string)` — `\` at 26, `“` at 27..30,
+  /// `i` at 28. Latent until #396 routed every raw `.bib` through this code;
+  /// before that only `--bibtex` mode reached it.
+  ///
+  /// Perl cannot have this bug: `\bib@@title` (BibTeX.pool.ltxml L293-333)
+  /// works in characters, not bytes.
+  #[test]
+  fn recase_title_does_not_split_a_multibyte_escape() {
+    // The assertion is that it RETURNS AT ALL — the bug was a panic, and any
+    // sane output beats aborting the document.
+    for title in [
+      "A \\“smart\\” quote",   // the witness shape: backslash + curly quote
+      "\\é accent",            // 2-byte
+      "\\→ arrow",             // 3-byte
+      "\\𝔄 fraktur",           // 4-byte
+      "trailing backslash \\", // the i+1 < len guard's edge
+    ] {
+      for mode in [
+        TitleCaseMode::Capitalize1,
+        TitleCaseMode::Capitalize,
+        TitleCaseMode::Lowercase,
+        TitleCaseMode::Uppercase,
+        TitleCaseMode::AsIs,
+      ] {
+        let out = recase_title(title, mode);
+        // Nothing may be silently dropped either: every char of the input has
+        // to survive in some case-form, so a "fix" that skips the escape fails.
+        assert!(
+          out.chars().count() >= title.chars().count(),
+          "recase_title({title:?}, {mode:?}) lost characters: {out:?}"
+        );
+      }
+    }
   }
 
   #[test]
