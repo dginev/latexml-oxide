@@ -752,6 +752,8 @@ impl MakeBibliography {
     }
 
     let mut skip_first_block = false;
+    // Author-year only: keep the first block but drop its (redundant) year field.
+    let mut drop_first_block_year = false;
     match effective_style {
       CitationStyle::Numbers => {
         tags.push(NodeData::Element {
@@ -811,6 +813,7 @@ impl MakeBibliography {
         // below is its port. Perl's own role="authors" tag likewise truncates at
         // >2 (L433-437), so the full-list label was internally inconsistent.
         skip_first_block = false;
+        drop_first_block_year = true;
         let suffix = entry.suffix.as_deref().unwrap_or("");
         let mut refnum_children: Vec<NodeData> = if let Some(ref bibentry) = entry.bibentry {
           let authors = PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
@@ -876,7 +879,7 @@ impl MakeBibliography {
     }
 
     // --- Content blocks ---
-    let blocks = self.format_blocks(doc, entry, skip_first_block);
+    let blocks = self.format_blocks(doc, entry, skip_first_block, drop_first_block_year);
     children.extend(blocks);
 
     // --- Cited-by block ---
@@ -1201,6 +1204,7 @@ impl MakeBibliography {
     doc: &PostDocument,
     entry: &BibEntryData,
     skip_first: bool,
+    drop_first_year: bool,
   ) -> Vec<NodeData> {
     let format_type = entry.format_type();
     let block_specs = get_fmt_spec(format_type);
@@ -1213,6 +1217,16 @@ impl MakeBibliography {
 
       let mut items: Vec<NodeData> = Vec::new();
       for field_spec in block_spec {
+        // Author-year: the refnum label already reads "Author (Year)", so the
+        // first block repeating the year would print it twice in the one entry.
+        // Perl avoids that by dropping the whole block (and with it the author
+        // list); we keep the block and drop only the redundant field. Matches
+        // the biblatex author-year path already shipped here, whose entries
+        // render as `[Smith (2020)]  John Smith  “A study of things” …` —
+        // label carries the year, author block does not. See OXIDIZED_DESIGN #71.
+        if drop_first_year && i == 0 && field_spec.class == "year" {
+          continue;
+        }
         let (nodes_found, negated) = if let Some(ref bibentry) = entry.bibentry {
           let xpath = field_spec.xpath.trim_start_matches('!').trim();
           let negated = field_spec.xpath.starts_with('!');

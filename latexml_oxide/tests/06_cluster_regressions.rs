@@ -865,6 +865,29 @@ fn cluster_bib_long_author_list_refnum() {
     x.contains("Abril-Cabezas") && x.contains("Agrawal"),
     "the full author list must survive in the entry body:\n{x}"
   );
+  // ...but the RENDERED first block must not re-print the year the label
+  // already carries. Perl dropped the whole block to avoid that redundancy; we
+  // keep it and drop only its year field, matching the shipped biblatex
+  // author-year rendering (`[Smith (2020)] John Smith “A study…”`).
+  //
+  // Scoped to the first <bibblock> on purpose: `2025` also legitimately occurs
+  // as the `<tags>` metadata year (CrossRef reads it, and the numeric style
+  // emits it too), in `key="Collab2025"`, and as this entry's journal VOLUME.
+  let first_block = {
+    let i = x.find("science goals and forecasts").expect("entry");
+    let start = x[..i].rfind("<bibitem").expect("bibitem start");
+    let b = start + x[start..].find("<bibblock").expect("first bibblock");
+    let e = b + x[b..].find("</bibblock>").expect("bibblock end");
+    &x[b..e]
+  };
+  assert!(
+    first_block.contains(r#"class="ltx_bib_author""#),
+    "the first block should carry the authors:\n{first_block}"
+  );
+  assert!(
+    !first_block.contains(r#"class="ltx_bib_year""#),
+    "the first block must not re-emit the year the label already carries:\n{first_block}"
+  );
 }
 
 /// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
