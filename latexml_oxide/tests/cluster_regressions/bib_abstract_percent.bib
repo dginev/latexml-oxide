@@ -1,0 +1,66 @@
+% Reference-manager exports (Mendeley, Zotero, EndNote) attach a full `abstract`
+% to every entry, and they write it as ONE long line with the closing `},` at the
+% end of that same line. That layout is what makes a `%` lethal: `%` is catcode 14,
+% so it comments out the rest of the LINE — closing brace included. The entry's
+% group never closes, the next `@article` is swallowed as more abstract, and
+% `\end{bib@entry}` fails against the wrong group. Entries then stack open and the
+% WHOLE bibliography is lost, not just the entry that carried the `%`.
+%
+% The single-line layout is load-bearing in this fixture. An abstract wrapped
+% across lines does NOT reproduce the bug — the `%` only eats to the end of its
+% own line and the brace on the next line still closes the group. Do not reflow
+% these entries.
+%
+% Real BibTeX never exposes anyone to this: a `.bst` declares a closed ENTRY
+% field list, and plain/unsrt/alpha/abbrv all omit `abstract` and `keywords`, so
+% bibtex(1) drops them when writing the `.bbl` and pdflatex never sees them.
+% Verified against bibtex 0.99d. Reading `.bib` directly — which is what both
+% LaTeXML engines do — is what puts the prose in front of the tokenizer.
+%
+% Witness 2605.00184 (`warm-ref.bib`, a Mendeley export: 52 entries, 31 with an
+% abstract, percentages throughout — "64.84% and 66.40% emotion classification
+% accuracy"). 52 entries, 0 emitted, 102 errors. Perl is worse on the same input
+% — 101 errors plus a `too_many_errors` Fatal and no output at all — so this is a
+% shared-bug fix, not a parity gap. `abstract`, `keywords` and `contents` are
+% therefore read Verbatim; the key is still supported and still emitted as
+% `ltx:bib-extract[@role]`, exactly as Perl emits it. OXIDIZED_DESIGN #73.
+%
+% `survivor` is not decoration: it is the entry that proves the damage was
+% contained. Before the fix it vanished along with everything else.
+
+@article{percentabstract,
+   abstract = {The experimental results demonstrate that the proposed model outperforms previous models with a 64.84% and 66.40% classification accuracy on the test set, respectively. We perform an ablation study to demonstrate how each component contributes to the proposed solution's performance.},
+   author = {Sareh Gilakjani and Hussein Al Osman},
+   title = {An abstract carrying a bare percent sign},
+   journal = {J. Bibliographies},
+   year = {2025}
+}
+
+@article{keywordspercent,
+   keywords = {100% recall,cost & benefit,x_1 indexing},
+   author = {Ada Okonkwo},
+   title = {Keywords carrying prose specials},
+   journal = {J. Bibliographies},
+   year = {2025}
+}
+
+@article{survivor,
+   author = {Bo Lindqvist},
+   title = {The entry after the runaway},
+   journal = {J. Bibliographies},
+   year = {2025}
+}
+
+% An EMPTY abstract, verbatim as reference managers write it. Distinct failure
+% from the `%`: there is no runaway, but an `ltx:bib-extract` opened with no
+% content is never CLOSED, so every later field nests inside it and the entry
+% is malformed. Witness 2605.00555 `refs.bib` L956 (`abstract = {},`) — 86
+% errors from this one line, while the same file's 17 percent-bearing abstracts
+% were already handled.
+@article{emptyabstract,
+   abstract = {},
+   author = {Wei Chen},
+   title = {An entry whose abstract field is empty},
+   journal = {J. Bibliographies},
+   year = {2025}
+}
