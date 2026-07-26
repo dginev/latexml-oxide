@@ -5,6 +5,68 @@
 > MakeBibliography full-parity re-port (user directive 2026-07-04 — reuse TeX
 > interpretation, no special-case parser).
 
+### Why the re-port is the real fix: eager tokenization defeats parameter types (measured 2026-07-26)
+
+The 2026-07-26 sandbox rerun quantified what the simplified parser costs. In
+`sandbox-arxiv-2605` (30,079 docs) the rc2→rc3 window moved **90 papers
+`no_problem → error`** and 61 `warning → error`; **87 %** of the errors in the
+latter bucket, and 38 of the first 40 sampled in the former, were raised
+`at Anonymous String` — i.e. from `make_bibliography.rs`'s field digest.
+
+Three sub-causes, and they are NOT three bugs — they are one architectural gap:
+
+| symptom | count (sampled) | why |
+|---|---|---|
+| `undefined:\url` | 21 + 18 | a real `.bbl` opens with `\providecommand{\url}…` from the `.bst`; we digest the raw FIELD, one step earlier |
+| `expected:}` | 32 + 17 | percent-ENCODED URLs — `%` at catcode 14 comments out the rest of the line, closing brace included |
+| `unexpected:_` / `&` / `^`, `misdefined:#` | 61 | TeX specials that are literal inside a URL |
+
+The first two are fixed (#391: `BBL_STANDARD_FALLBACKS`, `BibCatcodeScope`).
+The third is **not**, and must not be fixed by widening the catcode phase:
+`$a_b$` and `$x^2$` in a title are legitimate, so neutralizing `_`/`^`
+file-wide would trade one regression for another.
+
+Perl does not need any of these patches, and the reason is structural.
+`BibTeX.pool.ltxml` declares a parameter type per field — `url` **Verbatim**
+(L740), `crossref`/`doi`/`isbn`/`issn`/`lccn`/`pii` **Semiverbatim**
+(L684, L750-779), `key`/`type`/`review`/`links` **Digested**, the other 34
+ordinary — and L92-93 states the rule outright: *"Semiverbatim for fields that
+may contain something like a url."* Those types only work because Perl assembles
+the entry as TeX **source lines** and hands them to a fresh Mouth (L134-166), so
+tokenization is **lazy** and a parameter type can set the catcode table *before*
+its argument's characters are read.
+
+Note `note` and `howpublished` are in the ordinary 34 — Perl survives
+`note = {\url{…%20…}}` not because the FIELD is Semiverbatim but because
+`\url` itself is, and lazy consumption lets it act.
+
+`latexml_engine/src/bibtex.rs` already does this correctly for the pool route:
+`open_mouth(Mouth::new(&lines.join("\n"))?, true)` (≈L1888) with
+`\bib@field@default@url Verbatim` (L1577), and a comment at L1809-1821 saying
+why it is load-bearing — a pre-tokenized `Explode!` stream "did neither"
+(witness 2508.17585). `make_bibliography.rs` instead calls `tokenize()` then
+`digest()`, which is **eager**: every catcode is fixed before any handler runs,
+so no parameter type can ever take effect.
+
+**Relation to issue #386** (build XML through libxml, not string concatenation).
+Separate axes that meet in this one file, and the dependency runs one way.
+#386 is about OUTPUT — `interpret_tex_markup` currently returns a *serialized
+XML string* spliced into the bibliography behind three trust gates, which is
+exactly #386's complaint. This section is about INPUT — how the field is
+tokenized. Routing field interpretation through the pool path makes the output
+arrive as DOM nodes, so **doing this re-port resolves #386's
+`make_bibliography.rs` portion as a side effect; doing #386 first does not help
+here.** Do not attack that portion of #386 separately.
+
+**Consequence for planning.** The remaining 61 errors are bounded by this gap,
+not by a new defect. A per-field `Tokens::neutralize` (`tokens.rs:371`, the
+existing "retroactively imitate what Semiverbatim would have done" helper —
+note its comment explains why it deliberately does NOT cover `%`) would close
+most of them as an interim, but it imitates the mechanism rather than using it.
+The durable fix is this re-port: route field interpretation through the lazy
+Mouth, at which point the `\providecommand` and `%` patches above become
+redundant and should be retired with it.
+
 ### Bibliography "missing references" — NEXT-TARGET list (surveyed 2026-07-12)
 
 Per the user follow-up ("detect docs where References are entirely missing … the
