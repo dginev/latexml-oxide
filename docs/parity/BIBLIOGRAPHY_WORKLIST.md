@@ -202,6 +202,46 @@ absolute `https://doi.org/` hrefs (percent-encoded, Perl BibTeX.pool
 L750-756) and scheme-less bib URLs are forced absolute — normalized both at
 .bib conversion AND in `format_links` (covers .bbl-borne/pre-compiled XML).
 
+SECOND INTERIM — field values keep their MARKUP (landed 2026-07-25). The
+2026-07-04 step digested field values but then **stringified** them, and a
+Whatsit stringifies to its *reversion*: `note = {\url{https://x}}` came back as
+its own TeX source, which `strip_braces` mashed into the dead literal
+`\urlhttps://x`; `\href{u}{text}` additionally **lost its link text** (the
+reversion keeps only the first argument). A second, independent flatten sat
+downstream in `apply_formatter`, which took `get_content()` of the field node and
+discarded element children — Perl's formatters are `do_any`-shaped and return
+`$doc->cloneNodes(@nodes)` (`MakeBibliography.pm` L525-531, L550-552). **Both had
+to be fixed; either one alone keeps the bug.** Same-host Perl renders all of
+`\url`/`\href`/`\emph`/math correctly, so this was GENUINE-RUST-ONLY.
+
+* `interpret_tex_markup` (make_bibliography.rs) digests into a scratch
+  `Document`, runs the new `Document::finalize_subtree` (font resolution +
+  `_font`/`_autoopened` bookkeeping-attribute removal — whole-document
+  `finalize()` *fails* on a fragment), and serializes the wrapper's children.
+* Applied to `title`/`journal`/`journaltitle`/`booktitle`/`publisher`/`note`;
+  every other field is untouched, and a wholly plain field still takes the
+  plain-text path, so the 99 % case is byte-identical.
+* Three fail-safe gates return `None` (→ escaped plain text) rather than splice
+  something unsound, because a bad fragment would break the XML parse and lose
+  the WHOLE bibliography: failed digest, **unparsed math**, and any prefixed
+  element name. The math gate is the one remaining sub-Perl case — the Marpa
+  pass lives in `latexml_math_parser`, which `latexml_post` does not depend on,
+  so a `<Math>` built here keeps unparsed `<XMath>` and would emit malformed
+  MathML (`x^2` → `msup` with an empty base). Falling back to the TeX source is
+  exactly today's behaviour for math; item 1 below fixes it properly.
+* One serialization note settled during review: a finalized LaTeXML document is
+  entirely in the LaTeXML namespace and serializes **unprefixed**, so the single
+  `xmlns` on the generated `<bibliography>` root covers the spliced fragment —
+  no second `xmlns:ltx` declaration is needed (an early draft added one).
+
+Witness 2607.00045 (sn-jnl, reported by email 2026-07-25): 44 of 78 rendered
+entries carry `note = {\url{...}}`. Raw-TeX tokens in the rendered bibliography
+**46 → 2**, live links **0 → 45**; the 2 residuals are the gated `$\psi$` title
+and one `url={\url{...}}` that **Perl renders equally broken**
+(`href="\urlhttps://arxiv.org/abs/quant-ph/0510095"`) — parity, not ours.
+Guard: `06_cluster_regressions::bib_field_markup_survives_into_the_bibliography`
+(fixture carries a `\&` so a text-escaping regression cannot pass silently).
+
 FULL RE-PORT remaining (post-release):
 1. Replace `convert_bib_file_to_xml` with the recursive core conversion
    (`DigestionMode::BibTeX` + `PreBibTeX` + bibtex.rs already exist):

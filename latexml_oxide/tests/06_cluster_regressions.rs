@@ -1321,6 +1321,69 @@ fn non_utf8_bib_file_still_yields_a_bibliography() {
   );
 }
 
+/// Witness arXiv 2607.00045 (sn-jnl): 44 of its 78 rendered entries carry
+/// `note = {\url{...}}`, and every one of them rendered as the dead literal text
+/// `\urlhttps://…` instead of a link.
+///
+/// Two independent flatten-to-text steps had to be fixed, and EITHER of them
+/// alone keeps the bug alive:
+///
+/// 1. `convert_bib_file_to_xml` stringified the digested field
+///    (`interpret_tex_text`), and a Whatsit stringifies to its REVERSION — so
+///    `\url{…}` came back as its own TeX source, which `strip_braces` then
+///    mashed into `\urlhttps://…`. `\href{u}{text}` was worse: the reversion
+///    drops the second argument, so the link TEXT was lost outright.
+/// 2. `apply_formatter` then took `get_content()` of the field node, discarding
+///    any element children. Perl's formatters are `do_any`-shaped and return
+///    `$doc->cloneNodes(@nodes)` (`MakeBibliography.pm` L525-531, L550-552), so
+///    the markup reaches the bibitem.
+///
+/// Same-host Perl renders all three of these correctly, so this was
+/// GENUINE-RUST-ONLY, not a parity gap.
+#[test]
+fn bib_field_markup_survives_into_the_bibliography() {
+  let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "bib markup: no bibliography at all:\n{x}"
+  );
+  // The whole point: no TeX source may leak into the rendered entries.
+  for leak in ["\\urlhttps", "\\url{", "\\href", "\\emph"] {
+    assert!(
+      !x.contains(leak),
+      "bib markup: {leak:?} leaked as literal text into the bibliography:\n{x}"
+    );
+  }
+  // `\url` becomes a real link carrying the URL as its own text.
+  assert!(
+    x.contains("href=\"https://example.org/a\""),
+    "bib markup: \\url in a note did not become a link:\n{x}"
+  );
+  // `\href`'s SECOND argument is the link text — the reversion path lost it.
+  assert!(
+    x.contains("href=\"https://example.org/b\"") && x.contains("the link text"),
+    "bib markup: \\href lost its href or its link text:\n{x}"
+  );
+  // Markup inside a title survives as markup, not as flattened text.
+  assert!(
+    x.contains("<emph") && x.contains("emphasis"),
+    "bib markup: the emphasized title lost its markup:\n{x}"
+  );
+  // The fragment is spliced as SERIALIZED XML, so an unescaped `&` in a text
+  // node would make the generated bibliography unparseable and drop every
+  // entry — the other three entries above are the canary for that.
+  assert!(
+    x.contains("an ampersand"),
+    "bib markup: `\\&` in a marked-up title broke the field:\n{x}"
+  );
+  // A wholly plain field keeps taking the plain-text path unchanged, so the
+  // fix cannot silently restructure the 99% case.
+  assert!(
+    x.contains("Wholly Plain Title") && x.contains("Plain Publisher"),
+    "bib markup: a plain field was damaged by the markup path:\n{x}"
+  );
+}
+
 /// Witness 2605.11619: `\end{lstlisting}` preceded by content on the same line
 /// (`</body></html> \end{lstlisting}`). Perl anchors the terminator regex at the
 /// line start (listings.sty.ltxml L316), so the reader ran to EOF and swallowed

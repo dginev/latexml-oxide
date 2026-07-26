@@ -1,0 +1,32 @@
+@article{urlnote2020,
+  author  = {Doe, Jane},
+  title   = {A Plain Title},
+  journal = {Journal of Things},
+  year    = {2020},
+  note    = {\url{https://example.org/a}}
+}
+
+@article{hrefnote2021,
+  author = {Roe, Richard},
+  title  = {Another Title},
+  year   = {2021},
+  note   = {\href{https://example.org/b}{the link text}}
+}
+
+% The `\&` matters: the markup path splices SERIALIZED XML into the generated
+% bibliography, so a text node that failed to escape `&` would make the whole
+% document unparseable and drop every entry.
+@article{emphtitle2022,
+  author = {Poe, Paula},
+  title  = {A Title with \emph{emphasis} \& an ampersand},
+  year   = {2022}
+}
+
+% `@book` on purpose: `publisher` is only rendered by the book-shaped format
+% specs, so an `@article` here would make the plain-field assertion vacuous.
+@book{plaintitle2023,
+  author    = {Moe, Mark},
+  title     = {Wholly Plain Title},
+  publisher = {Plain Publisher},
+  year      = {2023}
+}

@@ -2273,15 +2273,43 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
 // ======================================================================
 // Formatting helpers
 
+/// The renderable content of one bibliography field node.
+///
+/// Perl's field formatters are all `do_any`-shaped — they receive
+/// `$doc->cloneNodes(@nodes)` and return the CLONED NODES (`MakeBibliography.pm`
+/// L525-531, L550-552), so an `ltx:ref`/`ltx:emph`/`ltx:Math` inside a field
+/// reaches the bibitem intact. Taking `get_content()` here instead threw all of
+/// that away and kept only the text, which is how `note = {\url{...}}` rendered
+/// as dead text even once the field XML carried a proper link.
+///
+/// Fields whose content is plain text — the overwhelming majority — keep
+/// returning a single `Text` node, so their output is byte-identical to before;
+/// only a field that actually holds markup takes the cloning path. (Perl clones
+/// the field element itself and lets the XSLT render it transparently; we clone
+/// its CHILDREN, which yields the same HTML without changing our flatter
+/// intermediate shape.)
+fn field_content(node: &Node) -> Vec<NodeData> {
+  let mut children = Vec::new();
+  let mut child = node.get_first_child();
+  let mut has_element = false;
+  while let Some(n) = child {
+    has_element |= n.get_type() == Some(libxml::tree::NodeType::ElementNode);
+    child = n.get_next_sibling();
+    children.push(n);
+  }
+  if has_element {
+    children.into_iter().map(NodeData::XmlNode).collect()
+  } else {
+    vec![NodeData::Text(node.get_content())]
+  }
+}
+
 /// Apply a formatter function to the given nodes.
 ///
 /// Port of the various `do_*` functions.
 fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> Vec<NodeData> {
   match formatter {
-    Formatter::Any => nodes
-      .iter()
-      .map(|n| NodeData::Text(n.get_content()))
-      .collect(),
+    Formatter::Any => nodes.iter().flat_map(field_content).collect(),
     Formatter::Authors => format_author_nodes(doc, nodes),
     Formatter::EditorsA => {
       let mut result = format_author_nodes(doc, nodes);
@@ -2312,34 +2340,21 @@ fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> 
       result
     },
     Formatter::Type => {
-      let content: Vec<NodeData> = nodes
-        .iter()
-        .map(|n| NodeData::Text(n.get_content()))
-        .collect();
       let mut result = vec![NodeData::Text("(".to_string())];
-      result.extend(content);
+      result.extend(nodes.iter().flat_map(field_content));
       result.push(NodeData::Text(")".to_string()));
       result
     },
-    Formatter::Title => nodes
-      .iter()
-      .map(|n| NodeData::Text(n.get_content()))
-      .collect(),
-    Formatter::ThesisType => nodes
-      .iter()
-      .map(|n| NodeData::Text(n.get_content()))
-      .collect(),
+    Formatter::Title => nodes.iter().flat_map(field_content).collect(),
+    Formatter::ThesisType => nodes.iter().flat_map(field_content).collect(),
     Formatter::Edition => {
-      let mut result: Vec<NodeData> = nodes
-        .iter()
-        .map(|n| NodeData::Text(n.get_content()))
-        .collect();
+      let mut result: Vec<NodeData> = nodes.iter().flat_map(field_content).collect();
       result.push(NodeData::Text(" edition".to_string()));
       result
     },
     Formatter::Pages => {
       let mut result = vec![NodeData::Text("pp.\u{00A0}".to_string())]; // Non-breaking space
-      result.extend(nodes.iter().map(|n| NodeData::Text(n.get_content())));
+      result.extend(nodes.iter().flat_map(field_content));
       result
     },
     Formatter::CrossRef => {
@@ -2958,22 +2973,7 @@ fn interpret_tex_text(s: &str) -> String {
   match interpreted {
     Ok(Ok(text)) => text,
     _ => {
-      let n = BIB_INTERPRET_FAILURES.with(|c| {
-        let n = c.get() + 1;
-        c.set(n);
-        n
-      });
-      if n == MAX_BIB_INTERPRET_FAILURES + 1 {
-        Warn!(
-          "bibliography",
-          "interpret",
-          format!(
-            "Disabling TeX interpretation of bibliography fields after {} failures; \
-             remaining fields pass through raw.",
-            MAX_BIB_INTERPRET_FAILURES
-          )
-        );
-      }
+      bump_bib_interpret_failures();
       s.to_string()
     },
   }
@@ -3154,6 +3154,10 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
       // full rendering-field coverage is an open parity task (SYNC_STATUS,
       // "bibliography field-interpretation parity"). url/doi/eprint render but
       // are verbatim identifiers; isbn/issn are plain digits.
+
+      // The RAW field text, before `interpret_tex_text` flattens it — the markup
+      // path below has to re-digest from source, not from the stringified form.
+      let orig_value: &str = value;
       let interpreted;
       let value = match field.as_str() {
         "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"
@@ -3164,6 +3168,18 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
         _ => value,
       };
       let clean = strip_braces(value);
+      // Markup-bearing fields: prefer the digested XML fragment, so links and
+      // font switches survive; fall back to the escaped plain text (which is
+      // also what `interpret_tex_markup` asks for on math — see its math gate).
+      // `raw` is the already-escaped text, so each arm reads as one substitution.
+      let markup = |raw: &str| -> String {
+        match field.as_str() {
+          "title" | "journal" | "journaltitle" | "booktitle" | "publisher" | "note" => {
+            interpret_tex_markup(orig_value).unwrap_or_else(|| raw.to_string())
+          },
+          _ => raw.to_string(),
+        }
+      };
       match field.as_str() {
         "author" => {
           let authors = parse_bib_authors(value);
@@ -3202,7 +3218,7 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
         "title" => {
           xml.push_str(&format!(
             "    <bib-title>{}</bib-title>\n",
-            xml_escape(&clean)
+            markup(&xml_escape(&clean))
           ));
         },
         "year" => {
@@ -3214,13 +3230,13 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
         "journal" | "journaltitle" => {
           xml.push_str(&format!(
             "    <bib-related type=\"journal\"><bib-title>{}</bib-title></bib-related>\n",
-            xml_escape(&clean)
+            markup(&xml_escape(&clean))
           ));
         },
         "booktitle" => {
           xml.push_str(&format!(
             "    <bib-related type=\"book\"><bib-title>{}</bib-title></bib-related>\n",
-            xml_escape(&clean)
+            markup(&xml_escape(&clean))
           ));
         },
         "volume" => {
@@ -3278,13 +3294,13 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
         "publisher" => {
           xml.push_str(&format!(
             "    <bib-publisher>{}</bib-publisher>\n",
-            xml_escape(&clean)
+            markup(&xml_escape(&clean))
           ));
         },
         "note" => {
           xml.push_str(&format!(
             "    <bib-note>{}</bib-note>\n",
-            xml_escape(&clean)
+            markup(&xml_escape(&clean))
           ));
         },
         // Remaining fields: skip or log
@@ -3301,6 +3317,131 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
     source_directory: Some(".".to_string()),
     ..PostDocumentOptions::default()
   })
+}
+
+/// Interpret a BibTeX field value into an XML **fragment**, so that constructs
+/// which digest into *elements* survive instead of collapsing to their TeX
+/// source.
+///
+/// [`interpret_tex_text`] stringifies the digested boxes, and a Whatsit
+/// stringifies to its REVERSION — so `\url{https://x}` came back as the literal
+/// `\url{https://x}`, which [`strip_braces`] then mashed into `\urlhttps://x`.
+/// `\href{u}{text}` was worse: the reversion kept only the first argument, so
+/// the link text was *lost*. Perl has neither problem, because its
+/// `convertBibliography` (`MakeBibliography.pm` L180-215) runs the `.bib`
+/// through a real BibTeX.pool session whose `\bib@@field` is a DefConstructor
+/// absorbing digested boxes into the XML (`BibTeX.pool.ltxml` L693-694 for
+/// `note`). This helper closes that gap for the fields where markup carries
+/// meaning, without re-porting the whole `.bib`→XML route (tracked separately
+/// in `docs/parity/BIBLIOGRAPHY_WORKLIST.md`).
+///
+/// Witness arXiv 2607.00045 (sn-jnl): 44 of 78 entries carry
+/// `note = {\url{...}}` and every one of them rendered as dead literal text.
+///
+/// Returns `None` whenever the fragment cannot be trusted — a failed digest,
+/// unparsed math, or a namespace prefix the generated `<bibliography>` root does
+/// not declare (see the three gates below) — so the caller falls back to escaped
+/// plain text. That direction is the safe one: splicing a fragment we cannot
+/// vouch for would break the XML parse and lose the WHOLE bibliography.
+fn interpret_tex_markup(s: &str) -> Option<String> {
+  use latexml_core::document::Document;
+  if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
+    return None; // plain text: nothing markup-bearing to preserve
+  }
+  if BIB_INTERPRET_FAILURES.with(|c| c.get()) > MAX_BIB_INTERPRET_FAILURES {
+    return None;
+  }
+  // Same diagnostic policy as `interpret_tex_text`: report at native severity,
+  // but never let a broken field take the document down with it.
+  let prev = latexml_core::common::error::set_demote_fatals(true);
+  let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+    let digested = latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).ok()?;
+    let mut doc = Document::new();
+    // `ltx:text` is the model's generic inline container, so any inline content
+    // a field can hold is placeable inside it; we serialize its CHILDREN, so the
+    // wrapper itself (and anything `find_insertion_point` opened above it) never
+    // reaches the output.
+    let mut wrapper = doc.open_element("ltx:text", None, None).ok()?;
+    doc.absorb(&digested, None).ok()?;
+    // The subtree half of what the main conversion applies before handing its
+    // DOM out: resolve each node's font against its ancestors into a real
+    // `font=` attribute and drop the `_font`/`_autoopened`/… bookkeeping
+    // attributes. Without it the fragment carries engine-internal attributes
+    // into the bibliography, and `\emph` loses the very styling it exists for.
+    // (Whole-document `finalize()` is wrong here and *fails* on a scratch
+    // fragment — see `Document::finalize_subtree`.)
+    doc.finalize_subtree(&mut wrapper).ok()?;
+    let mut fragment = String::new();
+    let mut child = wrapper.get_first_child();
+    while let Some(node) = child {
+      fragment.push_str(&doc.serialize_aux(&node, 0, true, false));
+      child = node.get_next_sibling();
+    }
+    Some(fragment)
+  }));
+  latexml_core::common::error::set_demote_fatals(prev);
+
+  let fragment = match built {
+    Ok(Some(fragment)) => fragment,
+    _ => {
+      bump_bib_interpret_failures();
+      return None;
+    },
+  };
+  if fragment.trim().is_empty() {
+    return None;
+  }
+  // Math gate. The Marpa parse pass lives in `latexml_math_parser`, which runs
+  // over the main document in `core_interface::convert_document` — this crate
+  // does not (and should not) depend on it, so a `<Math>` built here keeps its
+  // UNPARSED `<XMath>` and converts to malformed MathML (`x^2` came out as an
+  // `msup` with an empty base). Falling back to the escaped TeX source is the
+  // honest option: it is exactly today's behaviour for math, whereas splicing
+  // the fragment would be a regression. Perl gets this right because its
+  // recursive BibTeX session is a full conversion, math parse included — so
+  // this is the one piece of the gap that waits for the full `.bib`-through-the-
+  // engine re-port (`docs/parity/BIBLIOGRAPHY_WORKLIST.md`).
+  if fragment.contains("<XMath") {
+    return None;
+  }
+  // Namespace gate. A finalized LaTeXML document lives entirely in the LaTeXML
+  // namespace and serializes UNPREFIXED, so the single `xmlns` on the generated
+  // `<bibliography>` root covers every element spliced in here. A *prefixed*
+  // element would therefore be something from outside that namespace, with no
+  // declaration to bind it — and an undeclared prefix makes `new_from_string`
+  // reject the document, losing the WHOLE bibliography. Decline the fragment
+  // instead; the caller falls back to escaped plain text.
+  for (idx, _) in fragment.match_indices('<') {
+    let rest = &fragment[idx + 1..];
+    let rest = rest.strip_prefix('/').unwrap_or(rest);
+    let name: String = rest
+      .chars()
+      .take_while(|c| c.is_ascii_alphanumeric() || *c == ':' || *c == '_' || *c == '-')
+      .collect();
+    if name.contains(':') {
+      return None;
+    }
+  }
+  Some(fragment)
+}
+
+fn bump_bib_interpret_failures() {
+  let n = BIB_INTERPRET_FAILURES.with(|c| {
+    let n = c.get() + 1;
+    c.set(n);
+    n
+  });
+  if n == MAX_BIB_INTERPRET_FAILURES + 1 {
+    Warn!(
+      "bibliography",
+      "interpret",
+      format!(
+        "Disabling TeX interpretation of bibliography fields after {} failures; \
+         remaining fields pass through raw.",
+        MAX_BIB_INTERPRET_FAILURES
+      )
+    );
+  }
 }
 
 /// Escape special XML characters.
