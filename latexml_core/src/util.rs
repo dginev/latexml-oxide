@@ -1,3 +1,6 @@
+/// boundary-safe forward cursor over `&str` — the shared answer to the
+/// byte-index scanners inherited from Perl's character-oriented string ops
+pub mod char_cursor;
 /// image file helpers — port of `LaTeXML::Util::Image`
 pub mod image;
 /// log recording and reporting interface

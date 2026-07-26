@@ -2625,3 +2625,52 @@ BalancedBoundary::{Transparent,Opaque})` — rather than inferred from
 `autoclose && !File`. Declare **Opaque** whenever the mouth carries a
 self-contained input; reserve Transparent for token-level injections
 (`\scantokens`, RawTeX). Related: #68 above.
+
+## #70 Byte-index scanners over `&str` are a standing hazard of this port — scan by CHARACTER (`CharCursor`), and remember the bug is in the ADVANCE, not the slice
+
+`&str` carries one compiler-enforced invariant — valid UTF-8. A `usize` used to
+index it carries **none**. So every `&s[a..b]` is an unchecked assertion that
+both ends are char boundaries, and when it is wrong the program does not return
+an error, it **panics** — aborting the whole document.
+
+That is unusually dangerous *here* specifically, and it will recur: Perl strings
+are sequences of **characters** (`pos`, `substr`, `\G` have no boundary concept),
+so every hand-rolled `as_bytes()` + `i += 1` scanner translated from Perl
+introduces an invariant the original never had. Silently, with no type-level
+trace, and passing every ASCII fixture forever.
+
+**The rule.** The panic fires at the slice; the defect is always in the advance:
+
+| advance | safe? |
+|---|---|
+| scan to an ASCII delimiter | **always** — an ASCII byte is never a UTF-8 continuation byte |
+| by `char::len_utf8()` | **always** |
+| a fixed count past an unclassified byte | **never** |
+
+That is why a walker can be correct for years and break on one edit: three of the
+four arms in `recase_title` only ever *stopped* at ASCII, and the fourth
+(`\<char>`) advanced one byte past the backslash — right for `\&`, fatal for
+`\“`. Witness 2605.22125, found by the 2026-07-26 sandbox sweep, not by tests.
+
+**What to use.** `latexml_core::util::char_cursor::CharCursor` — a thin wrapper
+over `char_indices` (Rust guidelines `anti-index-over-iter` /
+`perf-iter-over-index`; do NOT invent a newtype, std already has the iterator).
+Its value is what it withholds: no advance-by-byte-count exists, so `slice_from`
+is infallible and the class is unrepresentable. Deliberately NOT an `Iterator` —
+`by_ref().take_while()` consumes the item that fails the predicate, desyncing
+`peek`/`pos` and making a mark meaningless.
+
+**Convert even the arms that are provably safe.** All three `bibtex.rs` walkers
+were converted, though only one had ever panicked: "happens to be safe" is
+exactly the state `recase_title` was in.
+
+**Testing.** Enumerate rather than sample where the space is small: 4 UTF-8
+widths x scanner position x mode is complete coverage and needs no proptest
+dev-dependency (which would touch the license inventory and `cargo-deny`).
+Assert across CASE FORMS when the function re-cases — a literal `contains(c)`
+check fails on `Uppercase` turning `a` into `A`, and that is the test being
+wrong, not the code.
+
+Guards: `bibtex::tests::recase_title_handles_every_character_width_at_every_position`,
+`util::char_cursor::tests::*`. Related: [[#68]] above (the same "port a Perl
+loop, inherit an invariant Perl never had" family).

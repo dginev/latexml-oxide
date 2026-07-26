@@ -8,7 +8,9 @@ pub use std::{borrow::Cow, collections::VecDeque, rc::Rc, str::FromStr, sync::Ar
 // Re-export the public API available in latexml_core
 pub use latexml_core::binding::content::*;
 pub use latexml_core::{
-  BoxOps, Core, TexMode,
+  BoxOps,
+  Core,
+  TexMode,
   alignment::{
     Alignment, AlignmentConfig,
     cell::Cell,
@@ -71,7 +73,11 @@ pub use latexml_core::{
   tbox::Tbox,
   token::*,
   tokens::{NO_TOKENS, Tokens},
-  util::{pathname, radix},
+  // `CharCursor` is preluded on purpose: it is the shared answer to the
+  // byte-index scanners this port keeps inheriting from Perl's
+  // character-oriented string ops (WISDOM #70), so it should be the thing
+  // a binding author reaches for without having to know the path.
+  util::{char_cursor::CharCursor, pathname, radix},
   whatsit::Whatsit,
   *,
 };

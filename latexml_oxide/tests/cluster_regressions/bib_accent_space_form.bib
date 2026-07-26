@@ -1,0 +1,54 @@
+% Author names carrying SPACE-FORM accents — `{\v S}`, `{\c c}`, `{\" a}` —
+% where the accent command is separated from its argument by a space rather
+% than braced (`\v{S}`). Both spellings are ordinary BibTeX; the space form is
+% what BibTeX's own documentation uses, and it dominates real `.bib` files
+% exported by reference managers.
+%
+% Why this fixture exists: the space that terminates a control word is CONSUMED
+% by the tokenizer, so it is gone as data by token-time. Reverting tokens to a
+% string therefore has to re-emit it — `UnTeX` does, plain concatenation does
+% not. `\bib@@names` reverted with `to_string()` instead of `untex()`, so `\v`
+% and `S` were welded into `\vS`, a control sequence that exists in no LaTeX:
+% every such name became `undefined:\vS` and rendered as literal `\vSpakov`.
+%
+% Measured cost on the 2026-07-26 sandbox sweep, which is how it was found:
+% ~+2800 error documents in sandbox-arxiv-2605 and again in 2606 — most
+% non-English author names in either corpus. Same-host `latexmlc` renders all
+% of these correctly, so this was GENUINE-RUST-ONLY.
+%
+% The braced forms are here deliberately: they were never broken, and pinning
+% them stops a "fix" that repairs the space form by mangling the braced one.
+@article{caron,
+  author  = {{\v S}pakov, Oleg},
+  title   = {Caron, space form},
+  journal = {J. Accents},
+  year    = {2025}
+}
+
+@article{cedilla,
+  author  = {Gon{\c c}alves, Ana},
+  title   = {Cedilla, space form},
+  journal = {J. Accents},
+  year    = {2025}
+}
+
+@article{umlautbare,
+  author  = {\" Ozturk, Mehmet},
+  title   = {Umlaut, space form without braces},
+  journal = {J. Accents},
+  year    = {2025}
+}
+
+@article{bracedarg,
+  author  = {\v{S}vec, Jan},
+  title   = {Caron, braced argument},
+  journal = {J. Accents},
+  year    = {2025}
+}
+
+@article{acute,
+  author  = {Gr{\'e}goire, Ren{\'e}},
+  title   = {Acute, braced argument},
+  journal = {J. Accents},
+  year    = {2025}
+}

@@ -408,30 +408,19 @@ fn split_words(input: &str) -> Vec<String> {
 
   let mut words: Vec<String> = Vec::new();
   let mut word = String::new();
-  let bytes = s.as_bytes();
-  let mut i = 0;
-  while i < bytes.len() {
-    let b = bytes[i];
+  // Scanned by character, not by byte index — see `CharCursor`'s module docs.
+  // Author names are the most reliably non-ASCII field in a `.bib`.
+  let mut cur = CharCursor::new(&s);
+  const SEP: [char; 5] = [' ', '\t', '\n', '\r', '~'];
+  while let Some(c) = cur.peek() {
     // Check for `(comma?) whitespace+` separators. Perl regex:
     // s/^(,?)[\s~]+//
-    if b == b',' || b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' || b == b'~' {
-      let had_comma = b == b',';
-      let mut j = i + 1;
-      // Either a leading comma we just consumed, or the whole run is
-      // pure whitespace/tilde — collect the trailing whitespace.
-      if had_comma {
-        while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~') {
-          j += 1;
-        }
-      } else {
-        // Pure whitespace run; skip them.
-        while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~') {
-          j += 1;
-        }
-        // If we didn't actually see any whitespace beyond this one
-        // char, we still advance (the `[\s~]+` pattern matches `+`
-        // which requires ≥1; we have 1 = the current char).
-      }
+    if c == ',' || SEP.contains(&c) {
+      let had_comma = c == ',';
+      cur.next();
+      // Either a leading comma we just consumed, or a pure whitespace/tilde
+      // run — either way, absorb the trailing whitespace.
+      cur.take_while(|c| SEP.contains(&c));
       // Flush accumulated word
       if !word.is_empty() {
         words.push(std::mem::take(&mut word));
@@ -439,38 +428,31 @@ fn split_words(input: &str) -> Vec<String> {
       if had_comma {
         words.push(",".to_string());
       }
-      i = j;
-    } else if b == b'{' {
+    } else if c == '{' {
       // Extract balanced group; include the braces.
-      let start = i;
+      let start = cur.pos();
       let mut depth = 0i32;
-      while i < bytes.len() {
-        match bytes[i] {
-          b'{' => depth += 1,
-          b'}' => {
+      while let Some(c) = cur.next() {
+        match c {
+          '{' => depth += 1,
+          '}' => {
             depth -= 1;
             if depth == 0 {
-              i += 1;
               break;
             }
           },
           _ => {},
         }
-        i += 1;
       }
       // Append the entire braced chunk (including the braces) to the
       // current word so it stays atomic across word splits — matches
       // Perl `$word .= $t`.
-      word.push_str(&s[start..i]);
+      word.push_str(cur.slice_from(start));
     } else {
       // Greedily accumulate until the next separator / `{`.
-      let start = i;
-      while i < bytes.len()
-        && !matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b'~' | b',' | b'{')
-      {
-        i += 1;
-      }
-      word.push_str(&s[start..i]);
+      let start = cur.pos();
+      cur.take_while(|c| !SEP.contains(&c) && c != ',' && c != '{');
+      word.push_str(cur.slice_from(start));
     }
   }
   if !word.is_empty() {
@@ -644,93 +626,85 @@ impl TitleCaseMode {
 /// `Capitalize1` mode capitalise the FIRST word and lowercase the
 /// rest, while `Capitalize` uppercases every word.
 pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
-  let bytes = title.as_bytes();
+  // Scanned through `char_indices`, NOT `as_bytes()` + a hand-rolled index.
+  //
+  // Every index this yields is a char boundary by construction, so the
+  // `&title[a..b]` slices below cannot panic — which they previously could:
+  // the `\<char>` escape arm advanced a fixed ONE byte past the backslash, so
+  // `\“` left the cursor inside the codepoint and the next slice aborted the
+  // whole document (a panic is not a recoverable conversion error). Witness
+  // 2605.22125, found by the 2026-07-26 sandbox sweep.
+  //
+  // The class, not just the instance: a byte walker re-admits the bug on every
+  // future edit, because `usize` carries no boundary invariant and nothing in
+  // the type system objects. Perl cannot have it at all — `\bib@@title`
+  // (BibTeX.pool.ltxml L293-333) works in characters. Rust rules
+  // `anti-index-over-iter` / `perf-iter-over-index`.
+  let mut cur = CharCursor::new(title);
   let mut out = String::with_capacity(title.len());
   let mut wb: bool = true;
   let mut wc: u32 = 0;
-  let mut i = 0;
-  while i < bytes.len() {
-    let b = bytes[i];
+
+  while let Some(c) = cur.peek() {
     // Whitespace run — copy verbatim, set word-beginning.
-    if b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' {
-      let start = i;
-      while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {
-        i += 1;
-      }
-      out.push_str(&title[start..i]);
+    if matches!(c, ' ' | '\t' | '\n' | '\r') {
+      let start = cur.pos();
+      cur.take_while(|c| matches!(c, ' ' | '\t' | '\n' | '\r'));
+      out.push_str(cur.slice_from(start));
       wb = true;
       continue;
     }
     // Balanced `{...}` — copy verbatim, atomic word.
-    if b == b'{' {
-      let start = i;
+    if c == '{' {
+      let start = cur.pos();
       let mut depth = 0i32;
-      while i < bytes.len() {
-        match bytes[i] {
-          b'{' => depth += 1,
-          b'}' => {
+      while let Some(c) = cur.next() {
+        match c {
+          '{' => depth += 1,
+          '}' => {
             depth -= 1;
             if depth == 0 {
-              i += 1;
               break;
             }
           },
           _ => {},
         }
-        i += 1;
       }
       if wb {
         wc += 1;
       }
-      out.push_str(&title[start..i]);
+      out.push_str(cur.slice_from(start));
       wb = false;
       continue;
     }
     // Balanced `$...$` — copy verbatim, no word-counter bump.
-    if b == b'$' {
-      let start = i;
-      i += 1;
-      while i < bytes.len() && bytes[i] != b'$' {
-        i += 1;
-      }
-      if i < bytes.len() {
-        i += 1;
-      }
-      out.push_str(&title[start..i]);
+    if c == '$' {
+      let start = cur.pos();
+      cur.next();
+      cur.take_while(|c| c != '$');
+      cur.next(); // the closing `$`, if any
+      out.push_str(cur.slice_from(start));
       wb = false;
       continue;
     }
     // Word: ASCII alphanumeric/underscore OR `\<word>` / `\<char>` escape.
-    let word_start = i;
+    let word_start = cur.pos();
     let mut consumed_word = false;
-    loop {
-      if i >= bytes.len() {
-        break;
-      }
-      let c = bytes[i];
-      let is_wordchar = c.is_ascii_alphanumeric() || c == b'_';
-      if is_wordchar {
-        i += 1;
+    while let Some(c) = cur.peek() {
+      if c.is_ascii_alphanumeric() || c == '_' {
+        cur.next();
         consumed_word = true;
         continue;
       }
-      if c == b'\\' && i + 1 < bytes.len() {
-        // \<word> or \<single-char>
-        i += 1;
-        if bytes[i].is_ascii_alphabetic() {
-          while i < bytes.len() && bytes[i].is_ascii_alphabetic() {
-            i += 1;
-          }
+      if c == '\\' && cur.peek_second().is_some() {
+        cur.next(); // the backslash
+        // `\<word>`: a run of ASCII letters. `\<char>`: exactly one character,
+        // of whatever width — the cursor advances by the CHARACTER, so a
+        // multi-byte escape can no longer split.
+        if cur.peek().is_some_and(|c| c.is_ascii_alphabetic()) {
+          cur.take_while(|c| c.is_ascii_alphabetic());
         } else {
-          // Advance by the WHOLE character, not one byte. This walk is over raw
-          // byte indices, so a fixed `i += 1` past a multi-byte escape (`\“`,
-          // `\é`) leaves `i` inside the codepoint and the `&title[word_start..i]`
-          // slice below panics — aborting the document, since a panic is not a
-          // recoverable conversion error. Witness 2605.22125 (`\` at byte 26,
-          // `“` at 27..30, `i` at 28). Perl's `\bib@@title`
-          // (BibTeX.pool.ltxml L293-333) works in characters and cannot hit this.
-          // Guard: `recase_title_does_not_split_a_multibyte_escape`.
-          i += title[i..].chars().next().map_or(1, char::len_utf8);
+          cur.next();
         }
         consumed_word = true;
         continue;
@@ -738,7 +712,7 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
       break;
     }
     if consumed_word {
-      let word = &title[word_start..i];
+      let word = cur.slice_from(word_start);
       let recased = match mode {
         TitleCaseMode::AsIs => word.to_string(),
         TitleCaseMode::Uppercase => word.to_uppercase(),
@@ -759,14 +733,9 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
       continue;
     }
     // Fallback single char (e.g. punctuation).
-    let ch_start = i;
-    let mut chars = title[i..].chars();
-    if let Some(c) = chars.next() {
-      i += c.len_utf8();
-    } else {
-      i += 1;
-    }
-    out.push_str(&title[ch_start..i]);
+    let ch_start = cur.pos();
+    cur.next();
+    out.push_str(cur.slice_from(ch_start));
     wb = true;
   }
   out
@@ -788,67 +757,59 @@ pub fn process_identifier(s: &str) -> String { s.trim().to_string() }
 /// dispatch. Mirrors Perl `$keyvals->getPairs` + `lc()` + `UnTeX()`
 /// from `amsrefs.sty.ltxml:42-50`.
 pub fn parse_amsrefs_keyvals(s: &str) -> Vec<(String, String)> {
-  let bytes = s.as_bytes();
+  // `CharCursor`, not `as_bytes()` + an index: see its module docs. This walker
+  // happens to be safe as written (it only ever STOPS at ASCII delimiters, and
+  // an ASCII byte is never a UTF-8 continuation byte), but "happens to be safe"
+  // is the state `recase_title` was in until someone added one `i += 1` —
+  // witness 2605.22125. Scanning by character removes the possibility rather
+  // than relying on every future edit to re-derive the argument.
+  let mut cur = CharCursor::new(s);
   let mut out: Vec<(String, String)> = Vec::new();
-  let mut i = 0;
-  while i < bytes.len() {
+  while !cur.is_done() {
     // Skip whitespace + commas.
-    while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b',') {
-      i += 1;
-    }
-    if i >= bytes.len() {
+    cur.take_while(|c| matches!(c, ' ' | '\t' | '\n' | '\r' | ','));
+    if cur.is_done() {
       break;
     }
     // Read key up to `=` (or end / `,`).
-    let key_start = i;
-    while i < bytes.len() && !matches!(bytes[i], b'=' | b',') {
-      i += 1;
-    }
-    let key = s[key_start..i].trim().to_ascii_lowercase();
+    let key_start = cur.pos();
+    cur.take_while(|c| !matches!(c, '=' | ','));
+    let key = cur.slice_from(key_start).trim().to_ascii_lowercase();
     if key.is_empty() {
       // Stray comma or trailing garbage; skip the separator and continue.
-      if i < bytes.len() {
-        i += 1;
-      }
+      cur.next();
       continue;
     }
-    if i >= bytes.len() || bytes[i] != b'=' {
+    if cur.peek() != Some('=') {
       // No `=` — key without value; record empty value.
       out.push((key, String::new()));
       continue;
     }
-    i += 1; // skip `=`
-    // Skip whitespace before value.
-    while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {
-      i += 1;
-    }
+    cur.next(); // skip `=`
+    cur.take_while(|c| matches!(c, ' ' | '\t' | '\n' | '\r'));
     // Value: balanced `{...}` group OR until next top-level `,`.
     let value: String;
-    if i < bytes.len() && bytes[i] == b'{' {
-      let start = i + 1;
+    if cur.peek() == Some('{') {
+      cur.next(); // the opening brace, excluded from the value
+      let start = cur.pos();
       let mut depth = 1i32;
-      i += 1;
-      while i < bytes.len() && depth > 0 {
-        match bytes[i] {
-          b'{' => depth += 1,
-          b'}' => depth -= 1,
+      while let Some(c) = cur.peek() {
+        match c {
+          '{' => depth += 1,
+          '}' => depth -= 1,
           _ => {},
         }
         if depth == 0 {
           break;
         }
-        i += 1;
+        cur.next();
       }
-      value = s[start..i].to_string();
-      if i < bytes.len() {
-        i += 1;
-      } // skip closing `}`
+      value = cur.slice_from(start).to_string();
+      cur.next(); // skip the closing `}`, if present
     } else {
-      let start = i;
-      while i < bytes.len() && bytes[i] != b',' {
-        i += 1;
-      }
-      value = s[start..i].trim().to_string();
+      let start = cur.pos();
+      cur.take_while(|c| c != ',');
+      value = cur.slice_from(start).trim().to_string();
     }
     out.push((key, value));
   }
@@ -955,7 +916,25 @@ LoadDefinitions!({
   // name emit `Invocation(\bib@@@name, field, name_tokens)`.
   DefMacro!("\\bib@@names{}{}", sub[args] {
     let field_tokens = args[0].clone().owned_tokens().unwrap_or_default();
-    let names_str = if args[1].is_some() { args[1].to_string() } else { String::new() };
+    // `untex()`, NOT `to_string()` — Perl L277 is `processBibNameList(UnTeX($names, 1))`,
+    // and the two are not interchangeable. `Display for Tokens` says so itself:
+    // "NOT for creating valid TeX (use revert or UnTeX for that!)". It concatenates
+    // token texts, so the SPACE that terminated a control word — consumed by the
+    // tokenizer, and therefore absent as data — is never re-emitted: `\v` + `S`
+    // comes back as `\vS`, a control sequence that exists in no LaTeX.
+    //
+    // That silently mangles every space-form accent in an author name — `{\v S}`,
+    // `{\c c}`, `{\"a}`, `{\'e}`, i.e. most non-English names — into an undefined
+    // macro, rendering `\vSpakov` where Perl renders `Špakov`. Measured on the
+    // 2026-07-26 sweep of sandbox-arxiv-2605/2606: ~+2800 error documents per
+    // corpus. `\v{S}` (braced argument) was unaffected, which is what made it look
+    // like a brace bug rather than a reversion bug.
+    // Guard: `bib_name_space_form_accent_survives_reversion`.
+    let names_str = args[1]
+      .clone()
+      .owned_tokens()
+      .map(Tokens::untex)
+      .unwrap_or_default();
     let parsed = process_bib_name_list(&names_str);
 
     // Build the `\bib@@@names{ <name-invocations> }` Tokens stream.
@@ -2272,48 +2251,67 @@ mod tests {
     );
   }
 
-  /// A `\<char>` escape whose character is MULTI-BYTE must not split it.
+  /// `recase_title` must survive EVERY character width at every scanner
+  /// position — the deterministic stand-in for a property test.
   ///
-  /// `recase_title` walks raw byte indices, and the `\<char>` branch advanced a
-  /// fixed ONE byte past the backslash. For an ASCII escape (`\&`, `\_`) that is
-  /// right; for `\“` it lands `i` inside the character, and the very next
-  /// `&title[word_start..i]` slice panics — taking the whole document with it,
-  /// since a panic is not a recoverable conversion error.
+  /// The hazard is small and fully enumerable (4 widths x 6 positions x 5
+  /// modes), so a table gives complete coverage of it where random generation
+  /// would only sample; and it needs no new dev-dependency, which for this tree
+  /// means no addition to the license inventory or `cargo-deny` surface.
   ///
-  /// Witness 2605.22125, found by the 2026-07-26 sandbox sweep:
-  /// `panicked at bibtex.rs:733:24: end byte index 28 is not a char boundary;
-  /// it is inside '“' (bytes 27..30 of string)` — `\` at 26, `“` at 27..30,
-  /// `i` at 28. Latent until #396 routed every raw `.bib` through this code;
-  /// before that only `--bibtex` mode reached it.
+  /// What it is guarding: the scanner used to walk raw BYTE indices, and its
+  /// `\<char>` arm advanced a fixed one byte past the backslash — fine for
+  /// `\&`, fatal for `\“`, where the cursor landed inside the codepoint and the
+  /// next `&title[a..b]` slice PANICKED, aborting the whole document. Witness
+  /// 2605.22125 from the 2026-07-26 sandbox sweep. The scanner is now written
+  /// on `char_indices` (see `CharCursor`), so the class is gone structurally
+  /// rather than patched at the one arm that happened to fire.
   ///
-  /// Perl cannot have this bug: `\bib@@title` (BibTeX.pool.ltxml L293-333)
-  /// works in characters, not bytes.
+  /// Perl is immune by construction: `\bib@@title` (BibTeX.pool.ltxml
+  /// L293-333) works in characters, not bytes.
   #[test]
-  fn recase_title_does_not_split_a_multibyte_escape() {
-    // The assertion is that it RETURNS AT ALL — the bug was a panic, and any
-    // sane output beats aborting the document.
-    for title in [
-      "A \\“smart\\” quote",   // the witness shape: backslash + curly quote
-      "\\é accent",            // 2-byte
-      "\\→ arrow",             // 3-byte
-      "\\𝔄 fraktur",           // 4-byte
-      "trailing backslash \\", // the i+1 < len guard's edge
-    ] {
-      for mode in [
-        TitleCaseMode::Capitalize1,
-        TitleCaseMode::Capitalize,
-        TitleCaseMode::Lowercase,
-        TitleCaseMode::Uppercase,
-        TitleCaseMode::AsIs,
+  fn recase_title_handles_every_character_width_at_every_position() {
+    // One representative per UTF-8 encoded length.
+    let chars = ['a', 'é', '“', '𝔄'];
+    let modes = [
+      TitleCaseMode::AsIs,
+      TitleCaseMode::Uppercase,
+      TitleCaseMode::Lowercase,
+      TitleCaseMode::Capitalize,
+      TitleCaseMode::Capitalize1,
+    ];
+    for c in chars {
+      // Each position exercises a different scanner arm: after a backslash
+      // (the arm that broke), inside a word run, in a brace group, in math,
+      // as bare punctuation, and at end-of-input.
+      for title in [
+        format!("\\{c} tail"),      // `\<char>` escape  <-- the witness shape
+        format!("word\\{c}more"),   // escape mid-word
+        format!("{{brace {c}}} x"), // inside a braced group
+        format!("$math {c}$ x"),    // inside math
+        format!("bare {c} text"),   // standalone
+        format!("trailing \\{c}"),  // escape at end of input
       ] {
-        let out = recase_title(title, mode);
-        // Nothing may be silently dropped either: every char of the input has
-        // to survive in some case-form, so a "fix" that skips the escape fails.
-        assert!(
-          out.chars().count() >= title.chars().count(),
-          "recase_title({title:?}, {mode:?}) lost characters: {out:?}"
-        );
+        for mode in modes {
+          // Returning at all is the primary assertion: the bug was a panic.
+          let out = recase_title(&title, mode);
+          // And nothing may be dropped — a "fix" that skips the escape would
+          // pass a panic-only check while silently eating the author's text.
+          // Checked across case forms, since re-casing is the function's JOB:
+          // `Uppercase` turns `a` into `A`, which is not a loss.
+          let survives = out.contains(c)
+            || c.to_lowercase().all(|lc| out.contains(lc))
+            || c.to_uppercase().all(|uc| out.contains(uc));
+          assert!(
+            survives,
+            "recase_title({title:?}, {mode:?}) lost {c:?}: {out:?}"
+          );
+        }
       }
+    }
+    // A lone trailing backslash: the `peek_second` guard's edge.
+    for mode in modes {
+      assert_eq!(recase_title("x \\", mode).matches('\\').count(), 1);
     }
   }
 
