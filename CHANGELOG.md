@@ -66,8 +66,9 @@
     `type`, …) were emitted by no branch at all.
   - **amsrefs `\bib` values digest as live TeX** — `\MR{…}` came out as literal
     characters and `pages` rendered empty.
-  - **MathReview / ZentralBlatt links are synthesized again**, and an entry with
-    both `date` and `year` no longer emits a duplicate date.
+  - **MathReview / ZentralBlatt links are synthesized** — `mrnumber`/`zblno`
+    produced no link at all — and an entry carrying both `date` and `year` no
+    longer emits a duplicate date.
   - **A biblatex `.bbl` carrying two `\datalist` blocks no longer hangs the
     conversion** on a self-referential `\let`.
   - **A biber `\missing{key}` is a named warning**, not an undefined-command error.
@@ -81,8 +82,9 @@
     `\ref` to that section.
   - **`latexmlmath` no longer empties a single-structure formula**
     (`\frac{1}{2}`, `\sqrt{2}`).
-  - **siunitx complex numbers are faithful again**, plus the v3 command surface
-    and the full `\sisetup` default set.
+  - **siunitx complex numbers are faithful to Perl** — the port had flattened away
+    the imaginary-unit enrichment and mantissa brackets — plus the v3 command
+    surface and the full `\sisetup` default set.
   - **`\lstinputlisting` converts the requested snippet** — `lastline=N` used to
     unbalance the listing and swallow the rest of the document, and CRLF sources
     bled comment styling down the file.
