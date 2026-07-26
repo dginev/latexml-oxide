@@ -1,0 +1,28 @@
+% A `.bib` whose middle entry contains a bare `%` in a field.
+%
+% BibTeX has NO comment syntax inside an entry, so this is literal data — but
+% `\ProcessBibTeXEntry` hands the entry to a Mouth as TeX SOURCE (Perl
+% `BibTeX.pool.ltxml` L165-166), where `%` is catcode 14 and comments out the
+% rest of the line, closing brace included. Both engines therefore mis-read the
+% field, and so does real bibtex+pdflatex — that part is parity and is
+% deliberately not corrected.
+%
+% What is NOT parity is the blast radius, which is what this fixture pins:
+% `before` and `after` must survive the entry that ran away.
+@misc{before,
+  author = {Able, Ann},
+  title  = {Entry Before The Runaway},
+  year   = {2023}
+}
+
+@misc{runawaytitle,
+  author = {Poe, Percy},
+  title  = {Fifty % of the time},
+  year   = {2024}
+}
+
+@misc{after,
+  author = {Zed, Zoe},
+  title  = {Entry After The Runaway},
+  year   = {2025}
+}

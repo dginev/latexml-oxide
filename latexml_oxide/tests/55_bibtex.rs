@@ -108,3 +108,64 @@ fn bibtex_mode_emits_bibentries() {
      must not emit a second one from its `year`), got {dates}:\n{s}"
   );
 }
+
+/// A runaway field must cost only its own entry — not the rest of the `.bib`.
+///
+/// A bare `%` in a BibTeX field is literal data (BibTeX has no comment syntax
+/// inside an entry) but TeX source when `\ProcessBibTeXEntry` replays the entry
+/// through a Mouth, so it comments out the closing brace and the argument read
+/// runs away. Both engines mis-read the field — that is parity, and real
+/// bibtex+pdflatex break on it too, so it is deliberately NOT corrected here.
+///
+/// What was Rust-only was the blast radius. `read_balanced` used to treat every
+/// autoclose literal mouth as a token-level continuation of its parent
+/// (`gullet.rs`, the xint `\scantokens` divergence), so the runaway crossed out
+/// of the entry mouth and swallowed every following `\ProcessBibTeXEntry` AND
+/// `\end{bibtex@bibliography}`: a 3-entry `.bib` produced ONE entry and a single
+/// error, where same-host Perl produces all three. The entry mouth now declares
+/// itself `BalancedBoundary::Opaque`, which is what Perl's readBalanced
+/// (`Gullet.pm` L465-472, current mouth only) does for every mouth.
+///
+/// Ground truth for the assertions is same-host Perl on the same fixture: all
+/// three keys present, and the runaway title truncated at the `%` to "Fifty".
+#[test]
+fn runaway_field_costs_only_its_own_entry() {
+  // `init` is process-global and the sibling test in this target may have won
+  // the race; either outcome is fine here.
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let opts = Config {
+    format: OutputFormat::XML,
+    mode: Some(DigestionMode::BibTeX),
+    ..Config::default()
+  };
+  let mut converter = Converter::from_config(opts);
+  converter.initialize_session().expect("can initialize");
+  let resp = converter.convert("tests/bibtex/runaway_field.bib".to_string());
+  let Some(doc) = resp.result.as_ref() else {
+    panic!(
+      "BibTeX conversion produced no document. status={} ({})",
+      resp.status_code, resp.status
+    );
+  };
+  let s = doc.to_string();
+
+  for key in ["before", "runawaytitle", "after"] {
+    assert!(
+      s.contains(&format!("key=\"{key}\"")),
+      "entry '{key}' was lost — a runaway field must not take other entries \
+       with it (same-host Perl keeps all three). Got:\n{s}"
+    );
+  }
+  // The entries that carry no runaway must be intact, not merely present.
+  assert!(
+    s.contains("Entry after the runaway"),
+    "the entry FOLLOWING the runaway lost its title, so the runaway is still \
+     consuming past its own mouth. Got:\n{s}"
+  );
+  // And the damaged entry is damaged exactly as far as Perl's is: the title is
+  // truncated at the `%`, the rest of that line gone.
+  assert!(
+    s.contains("<bib-title>Fifty</bib-title>"),
+    "expected the runaway title truncated at the `%` (same as Perl), got:\n{s}"
+  );
+}
