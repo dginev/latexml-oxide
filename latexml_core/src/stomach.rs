@@ -1354,7 +1354,12 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
 
   let init_depth = { stomach!().boxing.len() };
-  let mut found_token = false;
+  // Did the loop end because the INPUT RAN OUT (as opposed to reaching the
+  // terminal or closing the initial mode)? Perl `Stomach.pm` L130 keys the
+  // trailer box on `unless $token`, and `$token` is undef exactly when the
+  // `while (defined($token = ...))` condition failed — i.e. on EOF, whether or
+  // not tokens were read before it. See the trailer push below.
+  let mut ran_out = true;
   let mut found_terminal = false;
   new_local_box_list();
   let alignment_opt = lookup_alignment();
@@ -1368,8 +1373,6 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   } {
     // Check conversion timeout
     check_timeout()?;
-    // done if we run out of tokens
-    found_token = true;
     // first, check for alignment case
     // Perl #2775: only fire at the original alignment nesting level,
     // not inside deeper boxing groups (e.g. \vbox inside a tabular cell).
@@ -1392,9 +1395,11 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       && &token == terminal
     {
       found_terminal = true;
+      ran_out = false;
       break;
     }
     if init_depth > stomach!().boxing.len() {
+      ran_out = false;
       break;
     }
   }
@@ -1409,10 +1414,21 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     );
     Warn!("expected", terminal, message);
   }
-  // and add a Dummy `trailer' if none explicit.
-  if !found_token {
+  // and add a Dummy `trailer' if none explicit — Perl `Stomach.pm` L130,
+  // `push(@LaTeXML::LIST, Box()) unless $token;`.
+  //
+  // This was mistranslated as "if we never read ANY token", which is a strictly
+  // narrower condition: it agrees with Perl only on a body that was empty from
+  // the start. The case it missed is a body that read content and THEN hit EOF —
+  // and that is the case the trailer exists for. `readDigested`
+  // (`Base_ParameterTypes.pool.ltxml` L374, ported in `base_parameter_types.rs`)
+  // does `push(@list, digestNextBody()); pop(@list);` to strip the closing `}`
+  // box; with no trailer pushed, that `pop` silently ate a box of REAL CONTENT.
+  // Concretely: one runaway `.bib` field swallowed the rest of the entry into
+  // its own argument, and the `pop` then removed the boxes carrying every
+  // following entry — an empty bibliography where Perl renders all of them.
+  if ran_out {
     push_box_list(Digested::from(Tbox::default()));
-    // info!(target:"digest_next_body","no_token");
   }
   Ok(expire_local_box_list())
 }

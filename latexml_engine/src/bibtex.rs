@@ -1885,7 +1885,21 @@ LoadDefinitions!({
     drop(entry);
     // Perl L165-166: `openMouth(Mouth->new($tex))` — autoclose (Perl passes
     // no `$noautoclose`), so the mouth pops itself once drained.
-    open_mouth(Mouth::new(&lines.join("\n"), None)?, true);
+    //
+    // OPAQUE to a balanced read, which is what Perl's readBalanced is for every
+    // mouth (Gullet.pm L465-472 reads the current mouth only). This entry is a
+    // self-contained input, not a continuation of the enclosing wrapper, so an
+    // unbalanced field must cost only the rest of THIS entry. Left transparent,
+    // one runaway argument — a bare `%` in a title is enough, since BibTeX has
+    // no comment syntax inside an entry but TeX does — consumed every following
+    // `\ProcessBibTeXEntry` and `\end{bibtex@bibliography}` too, so a 3-entry
+    // `.bib` produced ONE entry and a single error where Perl produces all three
+    // and four errors. Guard: `55_bibtex::runaway_field_costs_only_its_own_entry`.
+    open_mouth_with(
+      Mouth::new(&lines.join("\n"), None)?,
+      true,
+      BalancedBoundary::Opaque,
+    );
     Ok(Tokens!())
   });
 
