@@ -840,3 +840,64 @@ mod tests {
     assert_eq!(s, "abc");
   }
 }
+
+#[cfg(test)]
+mod untex_control_word_space_tests {
+  use super::*;
+
+  /// `untex()` must re-emit the space that terminates a control word;
+  /// `to_string()` documents that it does not, and the two must not be
+  /// confused at a call site that needs valid TeX back.
+  ///
+  /// TeX CONSUMES the space after a control word, so by token-time it is gone
+  /// as data — `\v S` and `\vS` tokenize to different things but a naive
+  /// concatenation of the first yields the second. `\vS` exists in no LaTeX.
+  ///
+  /// This is not academic: `\bib@@names` used `to_string()` where Perl uses
+  /// `UnTeX` (BibTeX.pool.ltxml L277), which mangled every space-form accent in
+  /// a bibliography author name — `{\v S}`, `{\c c}`, `{\" a}`, i.e. most
+  /// non-English names — into an undefined macro. ~+2800 error documents per
+  /// corpus on the 2026-07-26 sandbox sweep.
+  #[test]
+  fn untex_reemits_the_space_that_terminates_a_control_word() {
+    for (src, expect_untex) in [
+      (r"\v Spakov", r"\v Spakov"), // control word + space + LETTER: space needed
+      (r"\c calves", r"\c calves"), //   likewise
+      (r"\v{S}pakov", r"\v{S}pakov"), // braced argument: no space needed, none added
+    ] {
+      let toks = crate::mouth::tokenize(src);
+      assert_eq!(
+        toks.clone().untex(),
+        expect_untex,
+        "untex({src:?}) must round-trip to valid TeX"
+      );
+      // Re-tokenizing the untex output must yield the SAME control sequence —
+      // the property that actually matters, and the one that broke.
+      let first = |t: Tokens| {
+        t.unlist()
+          .first()
+          .map(|t| t.to_string())
+          .unwrap_or_default()
+      };
+      assert_eq!(
+        first(crate::mouth::tokenize(&toks.clone().untex())),
+        first(crate::mouth::tokenize(src)),
+        "untex({src:?}) changed the leading control sequence on re-tokenization"
+      );
+    }
+  }
+
+  /// The documented contract of the other direction, pinned so nobody
+  /// "helpfully" makes `Display` TeX-correct and silently changes every
+  /// keyword-ish `to_string()` caller in the tree.
+  #[test]
+  fn to_string_deliberately_does_not_reemit_the_space() {
+    let toks = crate::mouth::tokenize(r"\v Spakov");
+    assert_eq!(
+      toks.to_string(),
+      r"\vSpakov",
+      "Display for Tokens is documented as NOT producing valid TeX; if this \
+       changes, audit every to_string() caller before updating the expectation"
+    );
+  }
+}

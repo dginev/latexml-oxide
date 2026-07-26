@@ -2148,3 +2148,55 @@ fn includefrom_takes_directory_and_file() {
     "\\subincludefrom{{dir}}{{file}} silently dropped the included file:\n{xml}"
   );
 }
+
+/// A space-form accent in an author name must survive reversion.
+///
+/// `{\v S}pakov` / `Gon{\c c}alves` / `\" Ozturk` are ordinary BibTeX — the
+/// accent command separated from its argument by a space rather than braced.
+/// The space is what TERMINATES the control word, and the tokenizer consumes
+/// it, so by token-time it is gone as data. Reverting tokens back to a string
+/// therefore has to re-emit it: `UnTeX` does, plain concatenation does not.
+///
+/// `\bib@@names` reverted with `to_string()` where Perl uses
+/// `UnTeX($names, 1)` (`BibTeX.pool.ltxml` L277) — and `Display for Tokens`
+/// says outright that it is "NOT for creating valid TeX (use revert or UnTeX
+/// for that!)". So `\v` and `S` were welded into `\vS`, a control sequence that
+/// exists in no LaTeX: `Error:undefined:\vS`, rendered as literal `\vSpakov`.
+///
+/// RED before the fix, on exactly this content: 2 errors
+/// (`undefined:\vS`, `undefined:\cc`) and `O. \vSpakov and A. Gon\ccalves`.
+/// Same-host `latexmlc`: 0 errors, `O. Špakov and A. Gonçalves` —
+/// GENUINE-RUST-ONLY. Found by the 2026-07-26 sweep of sandbox-arxiv-2605/2606,
+/// where it cost ~+2800 error documents per corpus; the guard suite was green
+/// throughout, because every bibliography fixture was ASCII.
+#[test]
+fn bib_name_space_form_accent_survives_reversion() {
+  let x = convert_and_post("tests/cluster_regressions/bib_accent_space_form.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "accent fixture: no bibliography at all:\n{x}"
+  );
+  // The accents must have COMPOSED, not merely survived as source.
+  for (name, ch) in [
+    ("Špakov", 'Š'),    // {\v S} — space form, braced group
+    ("Gonçalves", 'ç'), // {\c c} — space form, braced group
+    ("Özturk", 'Ö'),    // \" O   — space form, no braces at all
+    ("Švec", 'Š'),      // \v{S}  — braced argument, never broken
+    ("Grégoire", 'é'),  // {\'e}  — braced argument, never broken
+  ] {
+    assert!(
+      x.contains(name),
+      "accent fixture: {name:?} (composing {ch:?}) is missing — the accent \
+       command did not apply:\n{x}"
+    );
+  }
+  // And no welded control sequence may leak. These are the exact shapes the
+  // bug produced; each is a CS that exists in no LaTeX.
+  for welded in ["\\vS", "\\cc", "\\\"O", "\\vSpakov", "\\ccalves"] {
+    assert!(
+      !x.contains(welded),
+      "accent fixture: {welded:?} leaked — a control word was welded to its \
+       argument, so reversion dropped the terminating space:\n{x}"
+    );
+  }
+}
