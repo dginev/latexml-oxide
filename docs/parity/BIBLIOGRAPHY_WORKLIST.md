@@ -63,8 +63,57 @@ existing "retroactively imitate what Semiverbatim would have done" helper —
 note its comment explains why it deliberately does NOT cover `%`) would close
 most of them as an interim, but it imitates the mechanism rather than using it.
 The durable fix is this re-port: route field interpretation through the lazy
-Mouth, at which point the `\providecommand` and `%` patches above become
-redundant and should be retired with it.
+Mouth.
+
+#### What the 2026-07-26 prototype measured (and the two claims it corrected)
+
+Before designing the re-port, the existing `--bibtex` route was probed directly
+against same-host Perl (`latexml --bibtex`). It is further along than this
+document assumed:
+
+| probe | Rust | Perl |
+|---|---|---|
+| clean `.bib` (`url` with `_ ^ & #`, `pages={1--10}`, `doi`) | 0 errors, XML **byte-identical to Perl** | 0 errors |
+| `howpublished={\url{…%20…}}` with `--preload=url.sty` | **0 errors**, `%20` intact in `<ref href=…>` | identical |
+
+So the `_ ^ & #` residual and the percent-encoded-URL family are both solved by
+*using* the route — the `url` field's **Verbatim** type and `\url`'s
+**Semiverbatim** parameter do it by construction. Two claims made above needed
+correcting:
+
+1. **The `\providecommand` block is NOT redundant under the engine route.** It
+   is load-bearing: with no url package the same probe gives 4 errors and *zero*
+   entries, because `\url` is undefined and its Semiverbatim parameter therefore
+   never runs — the `%` comments out the closing brace. Defining `\url` is what
+   arms the protection. `BBL_STANDARD_FALLBACKS` becomes the recursive session's
+   **preamble**; `BibCatcodeScope` (the file-wide `%` catcode hack) does retire.
+2. **The ObjectDB metadata fallback is NOT an artifact of the string route.**
+   Perl's `getBibEntries` has no equivalent at all — `MakeBibliography.pm`
+   L342-343 records a missing key and moves on. The Rust path
+   (`match_metadata_field` / `get_metadata_content`, L1241/L1277) serves entries
+   whose data comes from the ObjectDB, so the re-port must leave it alone; it is
+   a separate divergence with its own coverage.
+
+**Blocker the prototype also found (fixed 2026-07-26, before the switch).** Rust
+lost the WHOLE bibliography where Perl keeps every entry, from two independent
+causes — and reported FEWER errors while doing it, the worst combination:
+
+* `read_balanced` crossed out of the `\ProcessBibTeXEntry` entry mouth into the
+  wrapper, swallowing every following entry and `\end{bibtex@bibliography}`.
+  Perl's readBalanced reads the current mouth only (`Gullet.pm` L465-472).
+  Fixed by `BalancedBoundary::Opaque` on that mouth (`gullet.rs`,
+  `bibtex.rs`), leaving the xint `\scantokens` divergence untouched.
+* `digest_next_body` pushed Perl's EOF trailer box (`Stomach.pm` L130,
+  `push(@LaTeXML::LIST, Box()) unless $token`) only when the body had read *no
+  token at all* — a strictly narrower condition than Perl's "the read returned
+  undef". A `Digested` argument that ran to EOF therefore had `readDigested`'s
+  `pop` (meant to strip the closing-brace box) eat **real content**.
+
+A bare `%` in a field triggers either one — BibTeX has no comment syntax inside
+an entry, TeX does. Mis-reading the field stays parity (real bibtex+pdflatex
+break on it too); only the blast radius was ours. Guard:
+`55_bibtex::runaway_field_costs_only_its_own_entry`. After both fixes every
+probe matches Perl's entry count exactly (1/1, 2/2, 3/3 across eight shapes).
 
 ### Bibliography "missing references" — NEXT-TARGET list (surveyed 2026-07-12)
 
@@ -400,16 +449,35 @@ adding regression risk to a validated fix. Item 1 is the answer; it removes the
 string machinery *and* fixes the residual math gap and the entry-type
 boilerplate for free.
 
-FULL RE-PORT remaining (post-release):
-1. Replace `convert_bib_file_to_xml` with the recursive core conversion
-   (`DigestionMode::BibTeX` + `PreBibTeX` + bibtex.rs already exist):
-   inject from latexml_oxide's post-orchestration (latexml_post cannot
-   depend on the converter); recover class+packages(+options) preloads from
-   the document PIs; isolate/accumulate REPORT counters + log around the
-   recursive session; single combined pass for multiple raw bibs
-   (cross-bib @string sharing); prefer `<name>.bib.xml`; kpsewhich +
-   literaldata inputs. Deletes the string parser + metadata fallback
-   (~770 lines).
+FULL RE-PORT — item 1 LANDED 2026-07-26:
+1. **DONE.** `convert_bib_file_to_xml` and the whole string route are gone
+   (**-727 lines**; `latexml_post` no longer depends on `latexml_engine` at
+   all). A raw `.bib` is converted by the recursive BibTeX session
+   (`latexml_oxide/src/bib_session.rs`), injected through the
+   `set_bib_converter` hook `latexml_post` declares —
+   `latexml_post` cannot depend on the converter, since `convert_document`
+   needs the model loader. `get_bibliographies` now follows Perl's shape:
+   accumulate `@rawbibs`, ONE combined pass (cross-bib `@string` sharing),
+   `literal:` data, kpsewhich fallback, prefer `<name>.bib.xml`.
+   The bib document crosses as a **node tree** (`PostDocument::new(XmlDoc)`),
+   not a serialize/reparse — which is the `make_bibliography.rs` portion of
+   issue 386.
+
+   Two things went differently from the plan above, both measured:
+   * The session **reuses the live core State** instead of building a fresh
+     one — Perl's own TODO (`MakeBibliography.pm` L174-177). A fresh session
+     lost the LaTeX layer (103 errors, 0 bibitems), and a second
+     `initialize_singletons` on one thread is a non-unwinding abort
+     (WISDOM #67). Sharing the state also gives Perl's `MergeStatus` for
+     free — the REPORT counters never left.
+   * The **metadata fallback stays**. It is not a string-route artifact:
+     Perl's `getBibEntries` has no equivalent at all (L342-343 just records a
+     missing key), and the Rust path serves entries whose data comes from the
+     ObjectDB.
+
+   Measured on `bib_field_no_url_package` (full pipeline, both engines):
+   Rust **0 errors / 3 bibitems**, same-host `latexmlc` **7 errors / 3
+   bibitems** with the note truncated. The gap is divergence #72.
 2. Secondary parity gaps from the audit: `unisort` (Unicode collation) vs
    `Vec::sort()`; citestyle semantics swapped (`AY` should be the
    abbreviated `[AA+yy]` label, not full author-year); `Formatter::Year`

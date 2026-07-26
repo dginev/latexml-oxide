@@ -13,7 +13,12 @@ use latexml_core::common::{Config, DigestionMode, OutputFormat};
 
 #[test]
 fn bibtex_mode_emits_bibentries() {
-  assert!(latexml_core::util::logger::init(log::LevelFilter::Warn).is_ok());
+  // NOT `assert!(… .is_ok())`: `init` is process-global, and libtest runs this
+  // target's tests concurrently, so exactly one of them wins the race and the
+  // other's `init` legitimately returns Err. Asserting success made whichever
+  // test lost fail — latent while this target held a single test, and immediate
+  // once `runaway_field_costs_only_its_own_entry` joined it.
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let bib_source = "tests/bibtex/sample.bib";
   let opts = Config {
     format: OutputFormat::XML,

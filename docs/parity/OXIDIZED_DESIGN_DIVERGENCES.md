@@ -2162,6 +2162,41 @@ Beyond Perl's unused helper, a trailing BibTeX `others` is dropped and forces th
 **Guard**: `cluster_bib_long_author_list_refnum`.
 **Upstream**: to file against `brucemiller/LaTeXML` (dead `do_names_short`).
 
+### 72. A `.bib` field's `\url` gets url.sty's real definition, not a bare `\providecommand`
+
+**Perl behaviour.** `convertBibliography` (`MakeBibliography.pm` L180-242) spins
+the recursive BibTeX session with the article's class and packages preloaded and
+nothing else. If the document loads neither `url` nor `hyperref`, `\url` is
+simply undefined in that session, so a `.bib` field carrying `\url{...}` raises
+`Error:undefined:\url` and its argument is digested as ordinary text — which
+means a **percent-encoded** URL is truncated at the first `%` (catcode 14
+comments out the rest of the line, closing brace included). Measured with
+same-host `latexmlc` on `tests/cluster_regressions/bib_field_no_url_package.tex`:
+**7 errors**, the note rendered as `https://example.org/B130936`, and the raw
+`@misc{...}` entry spilled into it. Real `bibtex` + pdflatex break the same way.
+
+**Rust behaviour.** Before digesting entries, the session provides the block a
+`.bst`-generated `.bbl` provides (`\providecommand{\url}`, `\doi`, `\bibinfo`,
+`\eprint`, `\newblock`, ...), and — the part that is a divergence —
+when `\url` is *undefined* it loads LaTeXML's own `url.sty` binding rather than
+settling for the `\providecommand` shape. That matters because the binding
+declares `\url`'s argument **Semiverbatim** (`url_sty.rs`), which is what keeps
+a `%` literal; a `\providecommand{\url}[1]{...}` renders but protects nothing.
+Same fixture: **0 errors**, three entries, and
+`B130936%20Law%20of%20War.pdf` intact.
+
+**Why.** A `.bst` that emits `\url{...}` into the `.bbl` assumes the document
+provides `\url`, and nearly every document that cites a URL does. Supplying the
+real definition reconstructs what the author's document meant, rather than
+punishing the bibliography for a package the *article body* happened not to need.
+It cannot mask a diagnostic for a correct document: a document that loads
+`url`/`hyperref` keeps its own definition — `input_definitions` early-returns on
+its `_loaded` flag and `\providecommand` defers.
+
+Guards: `06_cluster_regressions::bib_field_bbl_fallbacks_render_without_a_url_package`
+(no url package) and `::bib_field_markup_survives_into_the_bibliography`
+(hyperref loaded — hyperref's `\url` must still win).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

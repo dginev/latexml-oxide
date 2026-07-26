@@ -20,9 +20,63 @@ use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use crate::{
   document::{NodeData, PostDocument, PostDocumentOptions},
   object_db::ObjectDB,
-  processor::{ProcessResult, Processor},
+  processor::{ProcessResult, Processor, find_documentclass_and_packages},
   radix::radix_alpha,
 };
+
+// ================================================================================
+// The injected raw-`.bib` converter
+// ================================================================================
+
+/// A raw bibliography source that still needs converting.
+///
+/// Perl accumulates these across all `\bibliography{}` names and converts them
+/// in ONE pass (`MakeBibliography.pm` L146-165), so an `@string` macro defined in
+/// the first file is in scope for the last.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RawBibSource {
+  /// A resolved path to a `.bib` file on disk.
+  Path(String),
+  /// Literal BibTeX data, without the `literal:` protocol prefix.
+  Literal(String),
+}
+
+/// Everything the recursive BibTeX session needs, gathered post-side.
+///
+/// Port of the inputs `convertBibliography` (`MakeBibliography.pm` L180-242)
+/// assembles before calling `LaTeXML->get_converter`.
+#[derive(Debug, Clone)]
+pub struct BibConversionRequest {
+  /// The raw sources, in document order.
+  pub sources:      Vec<RawBibSource>,
+  /// `$$doc{searchpaths}` — the inner session's `paths`.
+  pub search_paths: Vec<String>,
+  /// `[options]name.cls` / `[options]name.sty` specs recovered from the
+  /// document's `<?latexml?>` processing instructions (Perl L186-199): the
+  /// bibliography's fields are the article's TeX, so they need the article's
+  /// class and packages to mean anything.
+  pub preloads:     Vec<String>,
+}
+
+/// Convert raw BibTeX into a document containing `ltx:bibentry` elements.
+///
+/// `latexml_post` cannot run this itself: a conversion needs the model loader
+/// and `convert_document`, which live in `latexml_oxide` (depending the other
+/// way would be a cycle). The orchestrating binary installs an implementation
+/// with [`set_bib_converter`] before running the pipeline.
+pub type BibConverterFn = fn(&BibConversionRequest) -> Option<PostDocument>;
+
+thread_local! {
+  static BIB_CONVERTER: std::cell::Cell<Option<BibConverterFn>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// Install the recursive-BibTeX-session implementation for this thread.
+pub fn set_bib_converter(convert: BibConverterFn) {
+  BIB_CONVERTER.with(|slot| slot.set(Some(convert)));
+}
+
+fn bib_converter() -> Option<BibConverterFn> { BIB_CONVERTER.with(|slot| slot.get()) }
 
 /// Citation style.
 #[derive(Debug, Clone, PartialEq)]
@@ -150,9 +204,20 @@ impl MakeBibliography {
 
     let search_paths = doc.get_search_paths();
     let mut bibs: Vec<PostDocument> = Vec::new();
+    // Raw sources accumulate rather than converting one-by-one, so that a
+    // single recursive session sees them all (Perl L110, L146-165): `@string`
+    // macros are file-scoped in BibTeX but shared across a combined payload,
+    // and one session is also far cheaper than N.
+    let mut rawbibs: Vec<RawBibSource> = Vec::new();
 
     for bib in &bibnames {
       let mut loaded = false;
+
+      // Literal BibTeX handed in on the command line (Perl L121-123).
+      if let Some(data) = bib.strip_prefix("literal:") {
+        rawbibs.push(RawBibSource::Literal(data.to_string()));
+        continue;
+      }
 
       // Try as .xml file
       if bib.ends_with(".xml") {
@@ -196,27 +261,22 @@ impl MakeBibliography {
         }
       }
 
-      // If not loaded yet, try raw .bib file and convert it
+      // If not loaded yet, queue the raw `.bib` for the recursive session.
+      // `kpsewhich` is the last resort, matching Perl's
+      // `pathname_find(...) || pathname_kpsewhich($bib)` (L133-134) — a `.bib`
+      // installed in the host texmf tree (revtex's `apsrev`, say) resolves
+      // there and nowhere else.
       if !loaded {
         let bib_file = if from_bibliography && !bib.ends_with(".bib") {
           format!("{}.bib", bib)
         } else {
           bib.clone()
         };
-        if let Some(bib_path) = find_file(&bib_file, search_paths) {
-          match convert_bib_file_to_xml(&bib_path) {
-            Ok(bibdoc) => {
-              bibs.push(bibdoc);
-              loaded = true;
-            },
-            Err(e) => Warn!(
-              "bibliography",
-              "convert",
-              "Failed to convert bibliography '{}': {}",
-              bib_path,
-              e
-            ),
-          }
+        if let Some(bib_path) = find_file(&bib_file, search_paths)
+          .or_else(|| latexml_core::util::pathname::kpsewhich(&[bib_file.as_str()]))
+        {
+          rawbibs.push(RawBibSource::Path(bib_path));
+          loaded = true;
         }
       }
 
@@ -227,6 +287,53 @@ impl MakeBibliography {
           "Couldn't find usable bibliography for '{}'",
           bib
         );
+      }
+    }
+
+    // Lastly, if we found any raw .bib files / literal data, convert them —
+    // in ONE pass (Perl L146-165).
+    if !rawbibs.is_empty() {
+      match bib_converter() {
+        Some(convert) => {
+          let (class, packages) = find_documentclass_and_packages(doc);
+          // Perl L188-199: `[$classoptions]$class.cls` then `[$options]$pkg.sty`.
+          let mut preloads = Vec::with_capacity(1 + packages.len());
+          preloads.push(if class.options.is_empty() {
+            format!("{}.cls", class.name)
+          } else {
+            format!("[{}]{}.cls", class.options, class.name)
+          });
+          for pkg in &packages {
+            preloads.push(if pkg.options.is_empty() {
+              format!("{}.sty", pkg.name)
+            } else {
+              format!("[{}]{}.sty", pkg.options, pkg.name)
+            });
+          }
+          let request = BibConversionRequest {
+            sources: rawbibs,
+            search_paths: search_paths.to_vec(),
+            preloads,
+          };
+          match convert(&request) {
+            Some(bibdoc) => bibs.push(bibdoc),
+            None => Error!(
+              "bibliography",
+              "convert",
+              "Recursive BibTeX conversion produced no bibliography"
+            ),
+          }
+        },
+        // Never silently drop the sources: an uninstalled converter would
+        // otherwise render an empty References section with no diagnostic,
+        // which is the exact fail-open shape this codebase forbids.
+        None => Error!(
+          "bibliography",
+          "converter",
+          "No BibTeX converter installed; cannot convert {} raw bibliography source(s) \
+           (call make_bibliography::set_bib_converter before post-processing)",
+          rawbibs.len()
+        ),
       }
     }
 
@@ -2985,197 +3092,6 @@ fn find_file(name: &str, search_paths: &[String]) -> Option<String> {
   })
 }
 
-// ================================================================================
-// BibTeX → XML conversion
-// ================================================================================
-
-/// A parsed BibTeX entry — the faithful `LaTeXML::Pre::BibTeX` port's own type.
-type BibEntry = latexml_engine::pre_bibtex::ParsedEntry;
-
-/// Parse a raw `.bib` file into BibTeX entries.
-///
-/// Delegates to `latexml_engine::pre_bibtex`, the faithful translation of Perl's
-/// `LaTeXML::Pre::BibTeX` (`newFromString` + `parseTopLevel`). This used to be a
-/// bespoke second parser living here, which quietly diverged from BibTeX: it read
-/// the entry type straight after `@` with no `skipWhite`, so `@ ARTICLE{key,` —
-/// which real BibTeX 0.99d and Perl's `parseEntryType` (which calls `skipWhite`)
-/// both accept — produced an EMPTY type, failed the following `{`-check and hit
-/// `continue`, dropping the entry SILENTLY. Witness 2606.26367: 361 of its 374
-/// entries vanished, taking 287 citations with them.
-///
-/// Reusing the port also inherits `@string` macro expansion, `@preamble`/
-/// `@comment` handling and the paren-delimited `@article(...)` form for free,
-/// and keeps a single BibTeX grammar in the tree. Same anti-pattern, same fix as
-/// the bespoke `find_file` that shadowed `pathname::find`.
-fn parse_bibtex(input: &str) -> Vec<BibEntry> {
-  let mut bib = latexml_engine::pre_bibtex::PreBibTeX::new_from_string(input);
-  if let Err(e) = bib.parse_top_level() {
-    // Perl's parser calls Error(...) (recoverable) and keeps whatever it read;
-    // mirror that — surface the problem but return the entries parsed so far
-    // rather than dropping the whole bibliography.
-    Warn!("bibtex", "parse", "BibTeX parse error: {:?}", e);
-  }
-  bib.entries
-}
-
-thread_local! {
-  // Per-document backstop: after this many failed field digests, stop
-  // interpreting (raw passthrough) instead of flooding the log. Reset at
-  // each .bib conversion.
-  static BIB_INTERPRET_FAILURES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
-  // Whether this document's field-interpretation scope has been given the
-  // `.bbl` standard fallbacks yet. Reset per .bib conversion, beside the
-  // failure counter.
-  static BBL_FALLBACKS_PROVIDED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-}
-const MAX_BIB_INTERPRET_FAILURES: usize = 50;
-
-/// The commands a real `.bst`-generated `.bbl` provides before its entries.
-///
-/// We digest raw `.bib` FIELD values, which is a step earlier than LaTeX ever
-/// sees them: BibTeX copies the field into the `.bbl`, and the `.bbl` opens
-/// with a block of `\providecommand`s so that `\url{…}` in a `note` renders
-/// even in a document that loads neither `hyperref` nor `url.sty`. Digesting
-/// the field without that block makes us raise `undefined:\url` where real
-/// LaTeX renders text.
-///
-/// Measured cost of omitting it: on the 2026-07-26 sandbox rerun, 90 papers in
-/// `sandbox-arxiv-2605` went from `no_problem` to `error` and 21 of the first
-/// 40 sampled were exactly `undefined:\url`. Witness 2605.01149 — no
-/// `hyperref`, no `url.sty`, no `.bbl`, and a single `howpublished =
-/// {\url{…}}`. That field is one of the eleven this interpreter newly began
-/// rendering, so the error was the direct cost of recovering the content.
-///
-/// `\providecommand` is the right primitive precisely because it defers: a
-/// document that DOES load `hyperref` keeps hyperref's `\url`, so the
-/// hyperlinked rendering is unaffected. Bodies mirror the conventional `.bbl`
-/// definitions (plain/natbib/revtex all ship these shapes).
-const BBL_STANDARD_FALLBACKS: &str = concat!(
-  r"\providecommand{\url}[1]{\texttt{#1}}",
-  r"\providecommand{\urlprefix}{URL }",
-  r"\providecommand{\doi}[1]{doi:#1}",
-  r"\providecommand{\bibinfo}[2]{#2}",
-  r"\providecommand{\eprint}[2][]{\url{#2}}",
-  r"\providecommand{\selectlanguage}[1]{\relax}",
-  r"\providecommand{\newblock}{}",
-);
-
-/// Tokenize a `.bib` FIELD value under the bibliography catcode regime.
-///
-/// BibTeX has no comment syntax inside an entry, so a `%` in a field is a
-/// literal percent — and percent-encoding makes that routine:
-/// `\url{https://host/B130936%20Law%20of%20War.pdf}` is an ordinary
-/// `howpublished`. Read with `%` at its usual catcode 14 it starts a COMMENT
-/// that swallows the rest of the line, closing brace included, and
-/// `read_balanced` then reports `expected:}` — "Gullet->readBalanced ran out of
-/// input in an unbalanced state" (`gullet.rs:1383`). Perl keeps these by
-/// reading the fields through `Verbatim`/`Semiverbatim` parameters in
-/// `BibTeX.pool.ltxml`.
-///
-/// Why not `mouth::tokenize`: it calls `use_std_state()`, swapping to the
-/// prebuilt `STD_STATE` catcode table (`state.rs:379`, `:1095`), so a live
-/// `assign_catcode` has NO effect on it — verified, an earlier attempt to scope
-/// the catcode around `tokenize` left the witness at 3 errors. Driving the
-/// `Mouth` directly keeps the MAIN state's catcodes, which is what
-/// [`begin_bib_catcodes`] has just adjusted. No kernel change needed: the
-/// regime belongs to what we are reading, not to the tokenizer.
-///
-/// Measured: 17 of the first 40 sampled `no_problem -> error` papers in the
-/// 2026-07-26 `sandbox-arxiv-2605` rerun. Witness 2605.00245 — three
-/// percent-encoded `\url{...}` values in one `.bib`, three `expected:}`.
-fn tokenize_bib_field(s: &str) -> latexml_core::tokens::Tokens {
-  match latexml_core::mouth::Mouth::new(s, None) {
-    Ok(mut m) => m.read_tokens(),
-    // Mirror `mouth::tokenize`'s shape on the impossible path rather than
-    // panicking inside post-processing.
-    Err(_) => latexml_core::mouth::tokenize(s),
-  }
-}
-
-/// The bibliography catcode phase — see [`tokenize_bib_field`] for why one is
-/// needed. RAII rather than a begin/end pair: `convert_bib_file_to_xml` has
-/// several early `return`s, and a leaked frame would leave `%` neutralized for
-/// the rest of post-processing.
-struct BibCatcodeScope;
-
-impl BibCatcodeScope {
-  fn open() -> Self {
-    latexml_core::state::push_frame();
-    latexml_core::state::assign_catcode(
-      '%',
-      latexml_core::token::Catcode::OTHER,
-      Some(latexml_core::state::Scope::Local),
-    );
-    BibCatcodeScope
-  }
-}
-
-impl Drop for BibCatcodeScope {
-  fn drop(&mut self) { let _ = latexml_core::state::pop_frame(); }
-}
-
-/// Install [`BBL_STANDARD_FALLBACKS`] once per document, before the first
-/// field is digested. Idempotent and cheap: one tokenize+digest of a short
-/// string, and `\providecommand` no-ops for anything already defined.
-fn provide_bbl_fallbacks() {
-  if BBL_FALLBACKS_PROVIDED.with(|c| c.get()) {
-    return;
-  }
-  BBL_FALLBACKS_PROVIDED.with(|c| c.set(true));
-  // Never let the fallback block itself take a document down: it runs in the
-  // same demote-fatals discipline as the field digests around it.
-  let prev = latexml_core::common::error::set_demote_fatals(true);
-  let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-    let _ = latexml_core::stomach::digest(latexml_core::mouth::tokenize(BBL_STANDARD_FALLBACKS));
-  }));
-  latexml_core::common::error::set_demote_fatals(prev);
-}
-
-/// Interpret a BibTeX field value through the REAL TeX engine — Perl's
-/// `ToString(Digest(Tokenize($x)))` idiom. The post-processor runs in the
-/// same process right after the core conversion, so the engine state is
-/// still live: accents (`{\'\i}`), letter macros (`\ss`), ties (`~` ->
-/// non-breaking space) and — crucially — macros DEFINED BY THE ARTICLE'S
-/// CLASS (`\aap` etc.) all take their true meaning. This replaces a
-/// ~150-line hand-rolled transliterator (user directive 2026-07-04: reuse
-/// our TeX interpretation, no special-case TeX parser). Perl instead spins
-/// a recursive BibTeX.pool session with class/package preloads — the full
-/// re-port is tracked in SYNC_STATUS ("MakeBibliography: convert raw .bib
-/// through the core engine"). Plain strings skip the engine round-trip; on
-/// any engine failure the raw text passes through unchanged (the
-/// pre-decoder behavior).
-fn interpret_tex_text(s: &str) -> String {
-  if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
-    return s.to_string();
-  }
-  if BIB_INTERPRET_FAILURES.with(|c| c.get()) > MAX_BIB_INTERPRET_FAILURES {
-    return s.to_string();
-  }
-  // A `.bbl` would have provided these before any entry was typeset; we digest
-  // the raw field, one step earlier, so we must supply them ourselves.
-  provide_bbl_fallbacks();
-  // Diagnostic policy (user, 2026-07-04, final form): with live-state
-  // interpretation the diagnostics are trustworthy, so Warn!/Error! from
-  // a field digest report at NATIVE severity and count against the
-  // document — matching Perl's MergeStatus accounting (Common/Error.pm
-  // L669; its recursive session also prints at native severity). ONLY
-  // Fatal! is demoted (to a counted+logged Error): a broken bibliography
-  // must never lose the document. The Err return still aborts just this
-  // field's digest — the raw text passes through below.
-  let prev = latexml_core::common::error::set_demote_fatals(true);
-  let interpreted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-    latexml_core::stomach::digest(tokenize_bib_field(s)).map(|d| d.to_string())
-  }));
-  latexml_core::common::error::set_demote_fatals(prev);
-  match interpreted {
-    Ok(Ok(text)) => text,
-    _ => {
-      bump_bib_interpret_failures();
-      s.to_string()
-    },
-  }
-}
-
 /// Percent-encode a DOI into its canonical absolute resolver URL.
 /// Mirrors the engine's `\bib@field@default@doi` (bibtex.rs; Perl
 /// BibTeX.pool L750-756): `[^0-9a-zA-Z./\-+]` chars are %-encoded.
@@ -3203,575 +3119,6 @@ fn force_absolute_url(url: &str) -> String {
   } else {
     format!("https://{}", u)
   }
-}
-
-/// Strip outer braces from a BibTeX field value.
-/// "{My Title}" → "My Title"
-fn strip_braces(s: &str) -> String {
-  let mut result = String::with_capacity(s.len());
-  for c in s.chars() {
-    if c != '{' && c != '}' {
-      result.push(c);
-    }
-  }
-  result
-}
-
-/// True if `s` is a single brace group wrapping its entire content, e.g.
-/// `{W3C Math Working Group}` — i.e. the opening brace's match is the final
-/// character. Used to detect brace-protected corporate author names.
-fn is_braced_group(s: &str) -> bool {
-  let s = s.trim();
-  if s.len() < 2 || !s.starts_with('{') || !s.ends_with('}') {
-    return false;
-  }
-  let mut depth = 0i32;
-  for (i, b) in s.bytes().enumerate() {
-    match b {
-      b'{' => depth += 1,
-      b'}' => {
-        depth -= 1;
-        if depth == 0 {
-          return i == s.len() - 1;
-        }
-      },
-      _ => {},
-    }
-  }
-  false
-}
-
-/// Parse BibTeX author field into individual author names.
-/// "Lastname, Firstname and Lastname2, Firstname2" → vec of (surname, givenname)
-fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
-  let mut result = Vec::new();
-  // Perl processBibNameList (BibTeX.pool.ltxml L872+): names split on the
-  // STANDALONE word "and" (case-insensitive, any whitespace incl. newlines),
-  // over brace-respecting words — `{Barnes and Noble}` is ONE author, and a
-  // line-wrapped "...Smith and\nJones..." still splits.
-  let mut parts: Vec<String> = Vec::new();
-  let mut cur = String::new();
-  let mut depth: usize = 0;
-  for tok in authors_str.split_whitespace() {
-    if depth == 0 && tok.eq_ignore_ascii_case("and") {
-      parts.push(std::mem::take(&mut cur));
-      continue;
-    }
-    if !cur.is_empty() {
-      cur.push(' ');
-    }
-    cur.push_str(tok);
-    for c in tok.chars() {
-      match c {
-        '{' => depth += 1,
-        '}' => depth = depth.saturating_sub(1),
-        _ => {},
-      }
-    }
-  }
-  parts.push(cur);
-  for part in &parts {
-    let part = part.trim();
-    if part.is_empty() {
-      continue;
-    }
-    // Corporate/institutional author wrapped in braces, e.g.
-    // `{W3C Math Working Group}`. BibTeX treats a fully brace-protected name as
-    // a single unit (a "last" name with no first/von parts), so keep it verbatim
-    // as the surname instead of splitting "last word = surname" (which produced
-    // "W. M. W. Group"). Witness 2605.16562.
-    if is_braced_group(part) {
-      result.push((strip_braces(part).trim().to_string(), String::new()));
-      continue;
-    }
-    let clean = strip_braces(part);
-    if let Some((surname, given)) = clean.split_once(',') {
-      result.push((surname.trim().to_string(), given.trim().to_string()));
-    } else {
-      // "Firstname Lastname" format — last word is surname
-      let words: Vec<&str> = clean.split_whitespace().collect();
-      if words.len() >= 2 {
-        let surname = words.last().unwrap().to_string();
-        let given = words[..words.len() - 1].join(" ");
-        result.push((surname, given));
-      } else if words.len() == 1 {
-        result.push((words[0].to_string(), String::new()));
-      }
-    }
-  }
-  result
-}
-
-/// Convert a raw `.bib` file to a PostDocument containing ltx:bibentry elements.
-///
-/// This is a simplified port of Perl's `convertBibliography` that directly parses
-/// BibTeX instead of spawning a full LaTeXML sub-session with BibTeX.pool.
-fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
-  BIB_INTERPRET_FAILURES.with(|c| c.set(0));
-  // Re-arm per .bib: the fallbacks are installed lazily, on the first field
-  // that actually needs interpreting, so a bibliography of purely plain fields
-  // costs nothing.
-  BBL_FALLBACKS_PROVIDED.with(|c| c.set(false));
-  // Read this whole `.bib` as BibTeX DATA, not as TeX source — one catcode
-  // phase for the file rather than a per-field dance. Dropped on every exit.
-  let _bib_catcodes = BibCatcodeScope::open();
-  // Decode rather than `read_to_string`: see `mouth::decode_input_bytes` —
-  // a strict UTF-8 read drops the whole bibliography on the first stray
-  // Cp1252 byte (witness 2605.00490).
-  let content = latexml_core::mouth::decode_input_bytes(
-    &std::fs::read(bib_path).map_err(|e| format!("Failed to read '{}': {}", bib_path, e))?,
-  );
-
-  let entries = parse_bibtex(&content);
-  Info!(
-    "bibtex",
-    "parse",
-    "Parsed {} BibTeX entries from '{}'",
-    entries.len(),
-    bib_path
-  );
-
-  // Build XML document with ltx:bibentry elements
-  let mut xml = String::from(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-     <bibliography xmlns=\"http://dlmf.nist.gov/LaTeXML\">\n",
-  );
-
-  for entry in &entries {
-    xml.push_str(&format!(
-      "  <bibentry key=\"{}\" type=\"{}\">\n",
-      xml_escape(&entry.key),
-      xml_escape(&entry.entry_type),
-    ));
-
-    // Process fields into ltx:bib-* elements
-    for (field, value) in &entry.fields {
-      // FIRST STAGE toward Perl parity — NOT yet a faithful match. Perl's
-      // BibTeX.pool.ltxml has ~28 `\bib@field@default@*` constructors that
-      // digest their values with live catcodes, INCLUDING abstract (L708),
-      // keywords (L732), annote (L680), series, institution, ... So Perl DOES
-      // raise the undefined-macro errors these fields carry and MergeStatus'es
-      // them into the document; this 13-field whitelist deliberately under-
-      // reports vs Perl for now, to avoid the junk-field error floods of
-      // ADS/Zotero exports (2605.02213: a .bib with 291 abstract fields ->
-      // 500+ errors on an otherwise-clean paper). Widening this set to Perl's
-      // full rendering-field coverage is an open parity task (SYNC_STATUS,
-      // "bibliography field-interpretation parity"). url/doi/eprint render but
-      // are verbatim identifiers; isbn/issn are plain digits.
-
-      // Markup-bearing fields are tried FIRST, from the raw field text, so that
-      // links and font switches survive. This must run BEFORE `interpret_tex_text`
-      // and suppress it on success: both digest the same value, and digesting
-      // twice re-reports every error the field raises (measured: a `_` in a note
-      // counted its `unexpected:_` twice) and re-runs any side effect its macros
-      // have. Only the fallback path pays for the text digest — which is also
-      // what `interpret_tex_markup` asks for on math (see its math gate).
-      // Every field emitted as element CONTENT takes the markup path. Excluded
-      // are the ones whose text is parsed further or used as an attribute:
-      // author/editor (name splitting), year (4-digit extraction), volume/
-      // number/issue/pages (numeric, and `pages` rewrites `--`), and
-      // doi/url/isbn/issn (verbatim identifiers, some of them hrefs).
-      let fragment = match field.as_str() {
-        "title" | "journal" | "journaltitle" | "booktitle" | "publisher" | "note" | "annote"
-        | "howpublished" | "institution" | "organization" | "school" | "address" | "edition"
-        | "series" | "part" | "type" | "status" | "language" => interpret_tex_markup(value),
-        _ => None,
-      };
-      let interpreted;
-      let value = if fragment.is_some() {
-        value
-      } else {
-        match field.as_str() {
-          "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"
-          | "volume" | "number" | "issue" | "pages" | "publisher" | "note" | "annote"
-          | "howpublished" | "institution" | "organization" | "school" | "address" | "edition"
-          | "series" | "part" | "type" | "status" | "language" => {
-            interpreted = interpret_tex_text(value);
-            &interpreted
-          },
-          _ => value,
-        }
-      };
-      let clean = strip_braces(value);
-      // `raw` is the already-escaped plain text, used only when there is no
-      // fragment — so each field arm below reads as a single substitution.
-      let markup = |raw: &str| -> String { fragment.clone().unwrap_or_else(|| raw.to_string()) };
-      match field.as_str() {
-        "author" => {
-          let authors = parse_bib_authors(value);
-          for (surname, given) in authors {
-            xml.push_str("    <bib-name role=\"author\">");
-            xml.push_str(&format!(
-              "<surname>{}</surname>",
-              xml_escape(&strip_braces(&surname))
-            ));
-            if !given.is_empty() {
-              xml.push_str(&format!(
-                "<givenname>{}</givenname>",
-                xml_escape(&strip_braces(&given))
-              ));
-            }
-            xml.push_str("</bib-name>\n");
-          }
-        },
-        "editor" => {
-          let editors = parse_bib_authors(value);
-          for (surname, given) in editors {
-            xml.push_str("    <bib-name role=\"editor\">");
-            xml.push_str(&format!(
-              "<surname>{}</surname>",
-              xml_escape(&strip_braces(&surname))
-            ));
-            if !given.is_empty() {
-              xml.push_str(&format!(
-                "<givenname>{}</givenname>",
-                xml_escape(&strip_braces(&given))
-              ));
-            }
-            xml.push_str("</bib-name>\n");
-          }
-        },
-        "title" => {
-          xml.push_str(&format!(
-            "    <bib-title>{}</bib-title>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "year" => {
-          xml.push_str(&format!(
-            "    <bib-date role=\"publication\">{}</bib-date>\n",
-            xml_escape(&clean)
-          ));
-        },
-        "journal" | "journaltitle" => {
-          xml.push_str(&format!(
-            "    <bib-related type=\"journal\"><bib-title>{}</bib-title></bib-related>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "booktitle" => {
-          xml.push_str(&format!(
-            "    <bib-related type=\"book\"><bib-title>{}</bib-title></bib-related>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "volume" => {
-          xml.push_str(&format!(
-            "    <bib-part role=\"volume\">{}</bib-part>\n",
-            xml_escape(&clean)
-          ));
-        },
-        "number" | "issue" => {
-          xml.push_str(&format!(
-            "    <bib-part role=\"number\">{}</bib-part>\n",
-            xml_escape(&clean)
-          ));
-        },
-        "pages" => {
-          let pages_clean = clean.replace("--", "\u{2013}");
-          xml.push_str(&format!(
-            "    <bib-part role=\"pages\">{}</bib-part>\n",
-            xml_escape(&pages_clean)
-          ));
-        },
-        "doi" => {
-          // Perl BibTeX.pool L750-756: DOIs are ALWAYS external — emit an
-          // absolute https href (percent-encoding non url-safe chars), never
-          // the bare identifier (which renders as dead text / a relative
-          // link; witness 2605.00223 "External Links: 10.1051/...").
-          xml.push_str(&format!(
-            "    <bib-identifier scheme=\"doi\" href=\"{}\">{}</bib-identifier>\n",
-            xml_escape(&doi_href(&clean)),
-            xml_escape(&clean)
-          ));
-        },
-        "url" => {
-          // Bibliography URLs are external by nature; authors often write
-          // them scheme-less ("www.x.org/...") which the browser then
-          // resolves RELATIVE to the article — force an absolute https://.
-          xml.push_str(&format!(
-            "    <bib-url href=\"{}\">{}</bib-url>\n",
-            xml_escape(&force_absolute_url(&clean)),
-            xml_escape(&clean)
-          ));
-        },
-        "isbn" => {
-          xml.push_str(&format!(
-            "    <bib-identifier scheme=\"isbn\">{}</bib-identifier>\n",
-            xml_escape(&clean)
-          ));
-        },
-        "issn" => {
-          xml.push_str(&format!(
-            "    <bib-identifier scheme=\"issn\">{}</bib-identifier>\n",
-            xml_escape(&clean)
-          ));
-        },
-        "publisher" => {
-          xml.push_str(&format!(
-            "    <bib-publisher>{}</bib-publisher>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        // Perl `\bib@field@default@note` is `\bib@@field{ltx:bib-note}
-        // [role=annotation]` (BibTeX.pool L693-694); `annote` is the same
-        // element (L680-681) and `howpublished` the same element with
-        // `role=publication` (L641-642). All three render under the META_BLOCK's
-        // unqualified `ltx:bib-note`.
-        "note" | "annote" => {
-          xml.push_str(&format!(
-            "    <bib-note role=\"annotation\">{}</bib-note>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        // `howpublished = {\url{...}}` is THE conventional way to give a
-        // `@misc` its URL, and dropping the field lost that URL outright.
-        "howpublished" => {
-          xml.push_str(&format!(
-            "    <bib-note role=\"publication\">{}</bib-note>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        // Perl maps all three of institution/organization/school onto
-        // `ltx:bib-organization` (BibTeX.pool L646-660 → bibtex.rs L1369-1379).
-        "institution" | "organization" | "school" => {
-          xml.push_str(&format!(
-            "    <bib-organization>{}</bib-organization>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "address" => {
-          xml.push_str(&format!(
-            "    <bib-place>{}</bib-place>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "edition" => {
-          xml.push_str(&format!(
-            "    <bib-edition>{}</bib-edition>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "series" => {
-          xml.push_str(&format!(
-            "    <bib-part role=\"series\">{}</bib-part>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "part" => {
-          xml.push_str(&format!(
-            "    <bib-part role=\"part\">{}</bib-part>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        // The `type` FIELD (e.g. "Technical Memo"). Safe to emit: `bib-type` is
-        // queried on its own here, NOT unioned with `bib-date`, so it cannot
-        // displace the publication year the way Perl's combined XPath could.
-        "type" => {
-          xml.push_str(&format!(
-            "    <bib-type>{}</bib-type>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "status" => {
-          xml.push_str(&format!(
-            "    <bib-status>{}</bib-status>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        "language" => {
-          xml.push_str(&format!(
-            "    <bib-language>{}</bib-language>\n",
-            markup(&xml_escape(&clean))
-          ));
-        },
-        // Everything else is deliberately not emitted. Perl's BibTeX.pool does
-        // build elements for `chapter`, `subtitle` and `translator`, but NO
-        // format spec queries `ltx:bib-part[@role='chapter']`,
-        // `ltx:bib-subtitle` or `ltx:bib-name[@role='translator']`, so emitting
-        // them would add nodes that can never render — dead weight rather than
-        // fidelity. (Perl leaves them unrendered too; verified on a fixture
-        // carrying `chapter={5}`.) The entry-type boilerplate Perl synthesizes
-        // in `\bib@entry@<type>@prepare` ("Ph.D. Thesis", "Technical Report")
-        // is engine-side, not a `.bib` field, and arrives with the full
-        // `.bib`-through-the-engine re-port.
-        _ => {},
-      }
-    }
-
-    xml.push_str("  </bibentry>\n");
-  }
-
-  xml.push_str("</bibliography>\n");
-
-  PostDocument::new_from_string(&xml, PostDocumentOptions {
-    source_directory: Some(".".to_string()),
-    ..PostDocumentOptions::default()
-  })
-}
-
-/// Interpret a BibTeX field value into an XML **fragment**, so that constructs
-/// which digest into *elements* survive instead of collapsing to their TeX
-/// source.
-///
-/// [`interpret_tex_text`] stringifies the digested boxes, and a Whatsit
-/// stringifies to its REVERSION — so `\url{https://x}` came back as the literal
-/// `\url{https://x}`, which [`strip_braces`] then mashed into `\urlhttps://x`.
-/// `\href{u}{text}` was worse: the reversion kept only the first argument, so
-/// the link text was *lost*. Perl has neither problem, because its
-/// `convertBibliography` (`MakeBibliography.pm` L180-215) runs the `.bib`
-/// through a real BibTeX.pool session whose `\bib@@field` is a DefConstructor
-/// absorbing digested boxes into the XML (`BibTeX.pool.ltxml` L693-694 for
-/// `note`). This helper closes that gap for the fields where markup carries
-/// meaning, without re-porting the whole `.bib`→XML route (tracked separately
-/// in `docs/parity/BIBLIOGRAPHY_WORKLIST.md`).
-///
-/// Witness arXiv 2607.00045 (sn-jnl): 44 of 78 entries carry
-/// `note = {\url{...}}` and every one of them rendered as dead literal text.
-///
-/// Returns `None` whenever the fragment cannot be trusted — a failed digest,
-/// unparsed math, or a namespace prefix the generated `<bibliography>` root does
-/// not declare (see the three gates below) — so the caller falls back to escaped
-/// plain text. That direction is the safe one: splicing a fragment we cannot
-/// vouch for would break the XML parse and lose the WHOLE bibliography.
-fn interpret_tex_markup(s: &str) -> Option<String> {
-  use latexml_core::document::Document;
-  if !s.contains('\\') && !s.contains('~') && !s.contains('$') {
-    return None; // plain text: nothing markup-bearing to preserve
-  }
-  if BIB_INTERPRET_FAILURES.with(|c| c.get()) > MAX_BIB_INTERPRET_FAILURES {
-    return None;
-  }
-  // A `.bbl` would have provided these before any entry was typeset; we digest
-  // the raw field, one step earlier, so we must supply them ourselves.
-  provide_bbl_fallbacks();
-  // Same diagnostic policy as `interpret_tex_text`: report at native severity,
-  // but never let a broken field take the document down with it.
-  let prev = latexml_core::common::error::set_demote_fatals(true);
-  let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-    let digested = latexml_core::stomach::digest(tokenize_bib_field(s)).ok()?;
-    let mut doc = Document::new();
-    // `ltx:text` is the model's generic inline container, so any inline content
-    // a field can hold is placeable inside it; we serialize its CHILDREN, so the
-    // wrapper itself (and anything `find_insertion_point` opened above it) never
-    // reaches the output.
-    let mut wrapper = doc.open_element("ltx:text", None, None).ok()?;
-    doc.absorb(&digested, None).ok()?;
-    // The subtree half of what the main conversion applies before handing its
-    // DOM out: resolve each node's font against its ancestors into a real
-    // `font=` attribute and drop the `_font`/`_autoopened`/… bookkeeping
-    // attributes. Without it the fragment carries engine-internal attributes
-    // into the bibliography, and `\emph` loses the very styling it exists for.
-    // It must be the SUBTREE variant: whole-document `finalize()` returns `Ok`
-    // but unwraps this redundant font-only `ltx:text`, leaving `wrapper`
-    // detached and childless so the fragment serializes to nothing — see
-    // `Document::finalize_subtree`.
-    doc.finalize_subtree(&mut wrapper).ok()?;
-    // Fail-safe: BLOCK-level content (a list, `\par`, a quote, a footnote)
-    // CLOSES `ltx:text` and continues as a sibling, so serializing only the
-    // wrapper's children would silently drop everything from that point on.
-    // Measured before this guard: `note={before \begin{itemize}\item X
-    // \end{itemize} after}` rendered as just "before" — with zero errors, i.e.
-    // exactly the fail-OPEN this function is supposed to avoid. Whenever any
-    // text escaped the wrapper, decline and let the caller fall back to the
-    // plain-text digest, which keeps the whole value.
-    //
-    // Compares TEXT, so it cannot see block content carrying none (a lone
-    // floated image in a note). Every realistic escape — list, `\par`, quote,
-    // footnote — carries text, and the check is cheap; tightening it further is
-    // only worth it once the full `.bib`-through-the-engine re-port makes block
-    // content in a field renderable at all instead of merely lossless.
-    let escaped = doc
-      .get_document()
-      .get_root_element()
-      .map(|root| squash_ws(&root.get_content()) != squash_ws(&wrapper.get_content()))
-      .unwrap_or(true);
-    if escaped {
-      return None;
-    }
-    let mut fragment = String::new();
-    let mut child = wrapper.get_first_child();
-    while let Some(node) = child {
-      fragment.push_str(&doc.serialize_aux(&node, 0, true, false));
-      child = node.get_next_sibling();
-    }
-    Some(fragment)
-  }));
-  latexml_core::common::error::set_demote_fatals(prev);
-
-  let fragment = match built {
-    Ok(Some(fragment)) => fragment,
-    _ => {
-      bump_bib_interpret_failures();
-      return None;
-    },
-  };
-  if fragment.trim().is_empty() {
-    return None;
-  }
-  // Math gate. The Marpa parse pass lives in `latexml_math_parser`, which runs
-  // over the main document in `core_interface::convert_document` — this crate
-  // does not (and should not) depend on it, so a `<Math>` built here keeps its
-  // UNPARSED `<XMath>` and converts to malformed MathML (`x^2` came out as an
-  // `msup` with an empty base). Falling back to the escaped TeX source is the
-  // honest option: it is exactly today's behaviour for math, whereas splicing
-  // the fragment would be a regression. Perl gets this right because its
-  // recursive BibTeX session is a full conversion, math parse included — so
-  // this is the one piece of the gap that waits for the full `.bib`-through-the-
-  // engine re-port (`docs/parity/BIBLIOGRAPHY_WORKLIST.md`).
-  if fragment.contains("<XMath") {
-    return None;
-  }
-  // Namespace gate. A finalized LaTeXML document lives entirely in the LaTeXML
-  // namespace and serializes UNPREFIXED, so the single `xmlns` on the generated
-  // `<bibliography>` root covers every element spliced in here. A *prefixed*
-  // element would therefore be something from outside that namespace, with no
-  // declaration to bind it — and an undeclared prefix makes `new_from_string`
-  // reject the document, losing the WHOLE bibliography. Decline the fragment
-  // instead; the caller falls back to escaped plain text.
-  for (idx, _) in fragment.match_indices('<') {
-    let rest = &fragment[idx + 1..];
-    let rest = rest.strip_prefix('/').unwrap_or(rest);
-    let name: String = rest
-      .chars()
-      .take_while(|c| c.is_ascii_alphanumeric() || *c == ':' || *c == '_' || *c == '-')
-      .collect();
-    if name.contains(':') {
-      return None;
-    }
-  }
-  Some(fragment)
-}
-
-/// All non-whitespace characters, for comparing two renderings of the same
-/// content without tripping over the builder's incidental whitespace.
-fn squash_ws(s: &str) -> String { s.split_whitespace().collect() }
-
-fn bump_bib_interpret_failures() {
-  let n = BIB_INTERPRET_FAILURES.with(|c| {
-    let n = c.get() + 1;
-    c.set(n);
-    n
-  });
-  if n == MAX_BIB_INTERPRET_FAILURES + 1 {
-    Warn!(
-      "bibliography",
-      "interpret",
-      format!(
-        "Disabling TeX interpretation of bibliography fields after {} failures; \
-         remaining fields pass through raw.",
-        MAX_BIB_INTERPRET_FAILURES
-      )
-    );
-  }
-}
-
-/// Escape special XML characters.
-fn xml_escape(s: &str) -> String {
-  s.replace('&', "&amp;")
-    .replace('<', "&lt;")
-    .replace('>', "&gt;")
-    .replace('"', "&quot;")
 }
 
 #[cfg(test)]
@@ -3863,80 +3210,5 @@ mod tests {
         fmt
       );
     }
-  }
-}
-
-#[cfg(test)]
-mod bib_parse_tests {
-  use super::*;
-
-  #[test]
-  fn corporate_author_brace_protected() {
-    // Braced groups protect the inner "and" and read as single corporate names.
-    let a = parse_bib_authors("{Barnes and Noble} and Smith, John");
-    assert_eq!(a.len(), 2);
-    assert_eq!(a[0].0, "Barnes and Noble");
-    assert_eq!(a[1].0, "Smith");
-  }
-
-  #[test]
-  fn newline_wrapped_and_splits() {
-    let a = parse_bib_authors("Smith, John and\nJones, Mary");
-    assert_eq!(a.len(), 2);
-  }
-
-  /// BibTeX allows whitespace between `@` and the entry type — real BibTeX
-  /// 0.99d accepts `@ ARTICLE{k,` silently, and Perl's `parseEntryType` calls
-  /// `skipWhite` before reading the type. The bespoke parser that used to live
-  /// here did not: it read the type straight after `@`, got an EMPTY type,
-  /// failed its `{`-check and `continue`d — dropping the entry with no
-  /// diagnostic. Witness 2606.26367, whose `.bib` writes 361 of its 374 entries
-  /// as `@ BOOK{`/`@ ARTICLE{`: only 13 parsed, 287 citations dangled and the
-  /// References were all but empty. Delegating to `latexml_engine::pre_bibtex`
-  /// fixes it (375 parsed, 315 rendered, 0 dangling).
-  #[test]
-  fn entry_type_may_be_separated_from_at_by_whitespace() {
-    let entries = parse_bibtex(
-      "@ARTICLE{tight, title={T1}}\n@ ARTICLE{spaced, title={T2}}\n@  BOOK{extra, title={T3}}\n",
-    );
-    let keys: Vec<&str> = entries.iter().map(|e| e.key.as_str()).collect();
-    assert_eq!(
-      keys,
-      vec!["tight", "spaced", "extra"],
-      "`@ TYPE{{` entries were dropped; real BibTeX and Perl both accept them"
-    );
-    assert_eq!(entries[1].entry_type, "article");
-    assert_eq!(entries[2].entry_type, "book");
-  }
-
-  #[test]
-  fn quoted_field_keeps_braces() {
-    let entries = parse_bibtex("@article{k, author = \"{W3C Math Working Group}\", title={T}}");
-    assert_eq!(entries.len(), 1);
-    let author = &entries[0]
-      .fields
-      .iter()
-      .find(|(n, _)| n == "author")
-      .unwrap()
-      .1;
-    assert!(
-      author.starts_with('{') && author.ends_with('}'),
-      "braces kept: {author}"
-    );
-    let names = parse_bib_authors(author);
-    assert_eq!(names.len(), 1);
-    assert_eq!(names[0].0, "W3C Math Working Group");
-  }
-
-  #[test]
-  fn unbalanced_entry_resyncs_at_next_at() {
-    let src = "@article{bad, title = {unclosed\n}\n@article{good, title={ok}, author={A}}";
-    let entries = parse_bibtex(src);
-    // The good entry must survive the bad one's unbalanced brace.
-    assert!(
-      entries.iter().any(|e| e.key == "good"),
-      "entries: {:?}",
-      entries.iter().map(|e| e.key.clone()).collect::<Vec<_>>()
-    );
   }
 }
