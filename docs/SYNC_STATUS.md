@@ -54,7 +54,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
-| **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04; **field-markup interim landed 2026-07-25 (#383)**, **short author-year label 2026-07-26 (#385)** | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
+| **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04; interims landed #383/#385/#391. **2026-07-26: the re-port is now EVIDENCED, not just aspirational** — a 30k sandbox measured 151 papers regressed by the eager-tokenization gap; 61 errors remain by design | **family** — dedicated session, now the top bibliography item | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -63,6 +63,28 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | — | Two-pass streaming split | **deferred by user decision 2026-07-06**; trigger = a <64 GB target appears | — | [`STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
 
 ## Current status
+
+- **2026-07-26 (later) — session: resilience mining, and a regression the sweep caught.**
+  Mined the 2605+2606 fatals: `Timeout:PushbackLimit` (25), `TooManyErrors`
+  (`MaxLimit(100)` is Perl's own default — parity; `MaxLimit(500)` is our
+  consecutive-error bail). Fixed the Semiverbatim text-symbol loop at its shape
+  (`d28cd6427d`, PR #390): `\UseTextSymbol` now resolves to the direct glyph, as
+  Perl's own `\DeclareTextSymbolDefault` does. Witness 2606.11784
+  (`[OT1]{fontenc}` + a literal `í` in a `\cite` key) went `Fatal:Timeout` → 0
+  errors / 519 KB; it also clears the SHARED hang 2004.08143.
+  **The Perl oracle was rebuilt WITH DUMPS** (`cd LaTeXML && sudo cpanm
+  --build-arg formats .`, rev `1eed356a` → `0d02309d`) — which *disproved* the
+  first explanation: Perl's dump carries the same `\UseTextSymbol`-shaped
+  `\?\i` (72 records), so the dump is not the differentiator. Both verdicts
+  survived the apples-to-apples re-test.
+  **A full 2605 rerun then caught a regression in #383's own field digest**:
+  90 papers `no_problem → error`, 61 `warning → error`, 87 % of them raised
+  `at Anonymous String`. Two thirds fixed in PR #391 (the `.bbl`
+  `\providecommand` block; a `%` catcode phase for percent-encoded URLs — `%`
+  must be corrected BEFORE tokenizing, since the comment has already eaten the
+  line). The residual 61 (`_ & ^ #`) is bounded by the eager-tokenization gap —
+  see R5. Guards: `textsymbol_semiverbatim`,
+  `bib_field_bbl_fallbacks_render_without_a_url_package`.
 
 - **2026-07-26 — session: the email-reported "missing References" clusters, and rc3 prep.**
   Five clusters over 11 witness papers arrived by email; oxide was already clean on
