@@ -54,7 +54,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
-| **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04; **field-markup interim landed 2026-07-25** | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
+| **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04; **field-markup interim landed 2026-07-25 (#383)**, **short author-year label 2026-07-26 (#385)** | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -63,6 +63,21 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | — | Two-pass streaming split | **deferred by user decision 2026-07-06**; trigger = a <64 GB target appears | — | [`STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
 
 ## Current status
+
+- **2026-07-26 — session: the email-reported "missing References" clusters, and rc3 prep.**
+  Five clusters over 11 witness papers arrived by email; oxide was already clean on
+  four of them (all ~1 s, 0 errors, 1:1 cited↔rendered). The fifth was real, and
+  landed as `8a964d484b` (PR #383): `.bib` field values were digested and then
+  **stringified** — a Whatsit stringifies to its TeX *reversion*, so
+  `note={\url{…}}` rendered as the dead literal `\urlhttps://…` — with a second,
+  independent flatten in `apply_formatter`; and eleven field kinds
+  (`howpublished`, `institution`, `organization`, `school`, `address`, `edition`,
+  `series`, `part`, `type`, `status`, `language`) reached **no emit branch at
+  all**. Guards `bib_field_markup_survives_into_the_bibliography` +
+  `105_bib_field_digest_once`. Also merged `071e1541ff` (PR #384, thousands
+  separator, divergence #70) and `e07548e6b3` (PR #385, short author-year label,
+  divergence #71 / KNOWN_PERL_ERRORS #61). `type`-appended-to-entry-label recorded
+  as **KNOWN_PERL_ERRORS #60** (PARITY, byte-identical in Perl).
 
 - **2026-07-25 — session: siunitx v3 + split-fence math, and a worklist freshening.**
   Merged `0f7711c0b5` (PR #372) — faithful `six_format_complexnumber`
@@ -75,13 +90,14 @@ session of their own. Re-verify a row before planning on it (rule 1).
   2606.13010 (arXiv/html_feedback#6624) now converts at 0 errors / 0 warnings /
   0 unparsed math. This file was compacted the same day — see the header.
 
-- `cargo test --tests`: **1686 passing / 92 targets, 0 ignored** (2026-07-25, on
-  `main` @ `3b04a8fb79` + the R4 fix, dev box with ImageMagick + ghostscript +
-  poppler installed, `mutool` absent) — including this session's
-  `cluster_biblatex_two_datalists`. The one red,
+- `cargo test --tests`: **1696 passing / 94 targets, 0 failed, 0 ignored**
+  (2026-07-26, on `main` @ `e07548e6b3`, dev box with ImageMagick + ghostscript +
+  poppler **and `mutool`** installed, so the vector-SVG branch really ran — both
+  `test_vector_svg_*` report ok, not skipped). Two claims carried here for weeks
+  did **not** reproduce and have been dropped:
   `latexml_post::graphics::process_coalesces_only_matching_conversion_options`,
-  is the **known local-only artifact** (this laptop has the full vector
-  toolchain; green in CI) — not a regression, and unrelated to bibliographies.
+  long labelled "the one red, known local-only artifact", passes; and `mutool` is
+  no longer absent. Re-measure before quoting either.
   **Caveat that keeps mattering:** the two vector-SVG tests
   (`test_vector_svg_graphics_path`, `test_vector_svg_pathological_convert_case`)
   do NOT go red on a bare host — `svg_converter_available()`
