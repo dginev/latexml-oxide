@@ -929,8 +929,15 @@ fn cluster_bib_long_author_list_refnum() {
     "1-author:\n{x}"
   );
   // A literal BibTeX `and others` already produced "et al." — still does.
+  //
+  // The needle is the SENTENCE-CASED title ("BibTeX" -> "bibtex"): `.bib` field
+  // values now go through the engine's `\bib@@title`, which re-cases per
+  // `BibTeX_title_case` exactly as Perl does (BibTeX.pool.ltxml L281-333). The
+  // deleted string route left the author's capitalization alone, so this needle
+  // used to read "BibTeX". Verified against same-host `latexmlc`: all four
+  // rendered titles are byte-identical between the engines.
   assert_eq!(
-    refnum("An explicit BibTeX others entry"),
+    refnum("An explicit bibtex others entry"),
     "Smith et al. (2020)",
     "explicit others:\n{x}"
   );
@@ -1595,11 +1602,18 @@ fn bib_field_markup_survives_into_the_bibliography() {
     x.contains("an ampersand"),
     "bib markup: `\\&` in a marked-up title broke the field:\n{x}"
   );
-  // A wholly plain field keeps taking the plain-text path unchanged, so the
-  // fix cannot silently restructure the 99% case.
+  // A wholly plain field survives intact — the markup handling cannot silently
+  // restructure the 99% case.
+  //
+  // `title` is asserted SENTENCE-CASED and `publisher` verbatim, which is the
+  // engine's `\bib@@title` re-casing (BibTeX.pool.ltxml L281-333) applying to
+  // one and not the other. The deleted string route re-cased nothing, so this
+  // needle used to read "Wholly Plain Title". Verified against same-host
+  // `latexmlc`: all eight rendered titles in this fixture are byte-identical
+  // between the engines.
   assert!(
-    x.contains("Wholly Plain Title") && x.contains("Plain Publisher"),
-    "bib markup: a plain field was damaged by the markup path:\n{x}"
+    x.contains("Wholly plain title") && x.contains("Plain Publisher"),
+    "bib markup: a plain field was damaged:\n{x}"
   );
   // Block-level content closes the `ltx:text` wrapper and continues as a
   // sibling. Serializing only the wrapper's children dropped everything past

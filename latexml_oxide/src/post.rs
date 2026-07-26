@@ -420,6 +420,12 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   telemetry::phase_exit();
 
   // Phase 3: MakeBibliography
+  //
+  // A raw `.bib` is converted by a recursive BibTeX session (Perl
+  // `MakeBibliography.pm::convertBibliography`), which needs this crate's
+  // model loader — so `latexml_post` declares the hook and we fill it in here,
+  // on the thread that is about to run the pipeline.
+  crate::bib_session::install();
   let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(indexer.db, false);
   telemetry::phase_enter(Phase::Bibliography);
   let t_bib = audit_start("MakeBibliography");

@@ -2558,3 +2558,70 @@ a directory is what surfaces this** — if a suite still calls
 Note the compile-time glob: a new pair needs the test target rebuilt (touching
 the suite's `.rs` suffices; `cargo clean` is the sledgehammer) or it is simply
 not discovered.
+
+## #68 Porting a Perl `while (defined($x = read()))` loop: a post-loop test on `$x` means "the read ran out", NOT "we never read"
+
+Perl's idiomatic reader loop leaves the loop variable holding the value that
+*ended* the loop, and the code after it discriminates on that:
+
+```perl
+while (defined($token = $gullet->readXToken(1))) {
+  ...
+  last if $terminal and Equals($token, $terminal);
+  last if $initdepth > scalar(@{ $$self{boxing} }); }
+push(@LaTeXML::LIST, Box()) unless $token;       # Stomach.pm:130
+```
+
+`unless $token` is true in exactly one case: the `while` condition failed, i.e.
+**the input ran out**. It is false for every `last`, because `$token` still holds
+a live Token. Rust's `while let Some(token) = ...` **drops** that binding at the
+end of the loop, so the discriminator has to be reconstructed — and it is easy to
+reconstruct the wrong one.
+
+`digest_next_body` (`stomach.rs`) reconstructed it as `found_token` — "did we ever
+read a token" — set inside the loop body. That agrees with Perl only on a body
+that was empty from the very start, and silently disagrees on the case the code
+exists for: read some content, *then* hit EOF. The correct shape is a flag that
+starts `true` and is cleared at each `break`:
+
+```rust
+let mut ran_out = true;
+while let Some(token) = read()? { ...; ran_out = false; break; ... }
+if ran_out { push_box_list(Digested::from(Tbox::default())); }
+```
+
+**Why it mattered.** That trailer box is what makes `readDigested`
+(`Base_ParameterTypes.pool.ltxml` L374) safe: it does
+`push(@list, digestNextBody()); pop(@list);` to strip the closing-brace box. With
+no trailer on the EOF path, the `pop` removed a box of **real content**. A single
+runaway `.bib` field (a bare `%` — literal data to BibTeX, a comment to TeX) then
+emptied an entire bibliography that same-host Perl renders in full, while
+reporting *fewer* errors than Perl. Fixed 2026-07-26 with
+`55_bibtex::runaway_field_costs_only_its_own_entry`; the companion mouth-boundary
+half is #69 below.
+
+**Method.** When porting any Perl loop, ask what the loop variable holds *after*
+each exit path before translating a post-loop condition on it. The `last`-vs-
+condition-failure distinction is invisible in the Rust rewrite and produces a
+silent behavioural narrowing — no compile error, no test failure on well-formed
+input, and damage only on malformed input, which is exactly where error recovery
+is judged.
+
+## #69 A balanced read must not cross out of a self-contained mouth
+
+`read_balanced` (`gullet.rs`) crosses a mouth boundary when the exhausted mouth is
+autoclose and not a file — a deliberate surpass-Perl divergence for xint's
+`\edef\X{\scantokens{…}}`, where the matching `}` really does live in the parent.
+Perl never crosses: `Gullet.pm` L465-472 reads `$$self{mouth}->readToken()`, the
+current mouth only, and `last`s at its end.
+
+"Literal mouth" is NOT evidence of a continuation. `\ProcessBibTeXEntry` replays
+each entry through `Mouth::new` too (Perl `BibTeX.pool.ltxml` L165-166), and there
+a runaway argument crossed into the wrapper and consumed every following
+`\ProcessBibTeXEntry` *and* `\end{bibtex@bibliography}`.
+
+The property is now explicit — `open_mouth_with(mouth, autoclose,
+BalancedBoundary::{Transparent,Opaque})` — rather than inferred from
+`autoclose && !File`. Declare **Opaque** whenever the mouth carries a
+self-contained input; reserve Transparent for token-level injections
+(`\scantokens`, RawTeX). Related: #68 above.
