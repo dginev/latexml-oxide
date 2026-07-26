@@ -74,69 +74,78 @@
 <a href=#74 id=74 data-nosnippet>74</a>
 <a href=#75 id=75 data-nosnippet>75</a>  <span class="comment">// Perl: \DC@{}{}{} — activates the decimal delimiter in math mode
 <a href=#76 id=76 data-nosnippet>76</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DC@{}{}{}"</span>, sub[(delim, todelim, _ndec)] {
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">let </span>delim_str = delim.to_string();
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">let </span>todelim_str = todelim.to_string();
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="kw">if </span>delim_str != todelim_str {
-<a href=#80 id=80 data-nosnippet>80</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(ch) = delim_str.chars().next() {
-<a href=#81 id=81 data-nosnippet>81</a>        <span class="comment">// Make the delimiter math-active (code 0x8000)
-<a href=#82 id=82 data-nosnippet>82</a>        </span>assign_mathcode(ch, <span class="number">0x8000u16</span>, <span class="prelude-val">None</span>);
-<a href=#83 id=83 data-nosnippet>83</a>      }
-<a href=#84 id=84 data-nosnippet>84</a>      <span class="comment">// Define the active character's expansion
-<a href=#85 id=85 data-nosnippet>85</a>      </span><span class="kw">let </span>expansion_body = <span class="macro">s!</span>(
-<a href=#86 id=86 data-nosnippet>86</a>        <span class="string">"\\lx@hidden@bgroup\\lx@unactivate{{{}}}\\lx@wrap[role=PERIOD]{{{}}}\\lx@hidden@egroup"</span>,
-<a href=#87 id=87 data-nosnippet>87</a>        delim_str, todelim_str
-<a href=#88 id=88 data-nosnippet>88</a>      );
-<a href=#89 id=89 data-nosnippet>89</a>      <span class="kw">let </span>expansion = mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion_body);
-<a href=#90 id=90 data-nosnippet>90</a>      def_macro(<span class="macro">T_CS!</span>(delim_str), <span class="prelude-val">None</span>, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#91 id=91 data-nosnippet>91</a>    }
-<a href=#92 id=92 data-nosnippet>92</a>    <span class="comment">// Save and deactivate $
-<a href=#93 id=93 data-nosnippet>93</a>    </span><span class="macro">Let!</span>(<span class="string">"\\DC@saved@dollar"</span>, <span class="string">"$"</span>);
-<a href=#94 id=94 data-nosnippet>94</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>), <span class="prelude-val">None</span>);
-<a href=#95 id=95 data-nosnippet>95</a>    <span class="comment">// Perl: return Tokens(LookupValue('IN_MATH') ? () : T_CS('\lx@begin@inline@math'));
-<a href=#96 id=96 data-nosnippet>96</a>    // FAITHFUL: no `DC_started_math` flag. Perl's \DC@ / \DC@end are symmetric by
-<a href=#97 id=97 data-nosnippet>97</a>    // construction — \DC@ begins inline math unless already IN_MATH, and \DC@end
-<a href=#98 id=98 data-nosnippet>98</a>    // ALWAYS ends inline math. The earlier Rust guard flag desynced across
-<a href=#99 id=99 data-nosnippet>99</a>    // consecutive D columns (a global value read back in a different cell scope),
-<a href=#100 id=100 data-nosnippet>100</a>    // leaking the math-mode frame so a later \endgroup/\end{...} failed with
-<a href=#101 id=101 data-nosnippet>101</a>    // "close a group that switched to mode display_math" (witness 1805.00875:
-<a href=#102 id=102 data-nosnippet>102</a>    // `D{.}{}{3}` followed by `D{.}{.}{-1}` — Perl 0, Rust was 5).
-<a href=#103 id=103 data-nosnippet>103</a>    </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
-<a href=#104 id=104 data-nosnippet>104</a>      <span class="prelude-val">Ok</span>(Tokens::default())
-<a href=#105 id=105 data-nosnippet>105</a>    } <span class="kw">else </span>{
-<a href=#106 id=106 data-nosnippet>106</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inline@math"</span>)))
-<a href=#107 id=107 data-nosnippet>107</a>    }
-<a href=#108 id=108 data-nosnippet>108</a>  });
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// Perl: \DC@end — restores $ and ALWAYS ends inline math (unconditional).
-<a href=#111 id=111 data-nosnippet>111</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DC@end"</span>, sub[_args] {
-<a href=#112 id=112 data-nosnippet>112</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\DC@saved@dollar"</span>), <span class="prelude-val">None</span>);
-<a href=#113 id=113 data-nosnippet>113</a>    <span class="comment">// Perl: return (T_CS('\lx@end@inline@math'));
-<a href=#114 id=114 data-nosnippet>114</a>    </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>)))
-<a href=#115 id=115 data-nosnippet>115</a>  });
-<a href=#116 id=116 data-nosnippet>116</a>
-<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// Perl: DefColumnType('D{}{}{}', ...) — decimal alignment column
-<a href=#118 id=118 data-nosnippet>118</a>  // Perl: align =&gt; 'char:' . absorbedString(Tokens(T_CS('\ensuremath'), T_BEGIN, $todelim, T_END))
-<a href=#119 id=119 data-nosnippet>119</a>  </span><span class="macro">DefColumnType!</span>(<span class="string">"D{}{}{}"</span>, sub[(delim, todelim, ndec)] {
-<a href=#120 id=120 data-nosnippet>120</a>    <span class="comment">// Perl: absorbedString — digest \ensuremath{todelim} to get display character
-<a href=#121 id=121 data-nosnippet>121</a>    </span><span class="kw">let </span>alignment = absorbed_string(<span class="kw-2">&amp;</span>todelim);
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="comment">// Build before tokens: \DC@{delim}{todelim}{ndec}
-<a href=#123 id=123 data-nosnippet>123</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>before = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\DC@"</span>), <span class="macro">T_BEGIN!</span>()];
-<a href=#124 id=124 data-nosnippet>124</a>    before.extend(delim.unlist());
-<a href=#125 id=125 data-nosnippet>125</a>    before.push(<span class="macro">T_END!</span>());
-<a href=#126 id=126 data-nosnippet>126</a>    before.push(<span class="macro">T_BEGIN!</span>());
-<a href=#127 id=127 data-nosnippet>127</a>    before.extend(todelim.unlist());
-<a href=#128 id=128 data-nosnippet>128</a>    before.push(<span class="macro">T_END!</span>());
-<a href=#129 id=129 data-nosnippet>129</a>    before.push(<span class="macro">T_BEGIN!</span>());
-<a href=#130 id=130 data-nosnippet>130</a>    before.extend(ndec.unlist());
-<a href=#131 id=131 data-nosnippet>131</a>    before.push(<span class="macro">T_END!</span>());
-<a href=#132 id=132 data-nosnippet>132</a>    with_current_build_template(|template_opt| {
-<a href=#133 id=133 data-nosnippet>133</a>      template_opt.unwrap().add_column(Cell {
-<a href=#134 id=134 data-nosnippet>134</a>        before: <span class="prelude-val">Some</span>(Tokens::new(before)),
-<a href=#135 id=135 data-nosnippet>135</a>        after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\DC@end"</span>))),
-<a href=#136 id=136 data-nosnippet>136</a>        align: <span class="prelude-val">Some</span>(Align::Char(alignment)),
-<a href=#137 id=137 data-nosnippet>137</a>        ..Cell::default()
-<a href=#138 id=138 data-nosnippet>138</a>      });
-<a href=#139 id=139 data-nosnippet>139</a>    });
-<a href=#140 id=140 data-nosnippet>140</a>  });
-<a href=#141 id=141 data-nosnippet>141</a>});
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="comment">// Perl L36-39 uses TWO different serializations, deliberately:
+<a href=#78 id=78 data-nosnippet>78</a>    // `ToString($delim)` for the delimiter (a single character — a comparison
+<a href=#79 id=79 data-nosnippet>79</a>    // key and a `T_CS` name) but `UnTeX($todelim, 1)` for the replacement,
+<a href=#80 id=80 data-nosnippet>80</a>    // because that one is spliced back into a macro BODY and so must be valid
+<a href=#81 id=81 data-nosnippet>81</a>    // TeX. `to_string()` is not: it concatenates token strings without the
+<a href=#82 id=82 data-nosnippet>82</a>    // space that terminates a control word, so `D{.}{\times x}{2}` welded to
+<a href=#83 id=83 data-nosnippet>83</a>    // `\timesx` — a control sequence that exists in no LaTeX. `untex()` is the
+<a href=#84 id=84 data-nosnippet>84</a>    // Rust `UnTeX` (see `Tokens::untex`; the `%\n` line-breaking half is
+<a href=#85 id=85 data-nosnippet>85</a>    // OXIDIZED_DESIGN #2, so the suppress-linebreaks flag has no counterpart).
+<a href=#86 id=86 data-nosnippet>86</a>    </span><span class="kw">let </span>delim_str = delim.to_string();
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">let </span>todelim_str = todelim.clone().untex();
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">if </span>delim_str != todelim_str {
+<a href=#89 id=89 data-nosnippet>89</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(ch) = delim_str.chars().next() {
+<a href=#90 id=90 data-nosnippet>90</a>        <span class="comment">// Make the delimiter math-active (code 0x8000)
+<a href=#91 id=91 data-nosnippet>91</a>        </span>assign_mathcode(ch, <span class="number">0x8000u16</span>, <span class="prelude-val">None</span>);
+<a href=#92 id=92 data-nosnippet>92</a>      }
+<a href=#93 id=93 data-nosnippet>93</a>      <span class="comment">// Define the active character's expansion
+<a href=#94 id=94 data-nosnippet>94</a>      </span><span class="kw">let </span>expansion_body = <span class="macro">s!</span>(
+<a href=#95 id=95 data-nosnippet>95</a>        <span class="string">"\\lx@hidden@bgroup\\lx@unactivate{{{}}}\\lx@wrap[role=PERIOD]{{{}}}\\lx@hidden@egroup"</span>,
+<a href=#96 id=96 data-nosnippet>96</a>        delim_str, todelim_str
+<a href=#97 id=97 data-nosnippet>97</a>      );
+<a href=#98 id=98 data-nosnippet>98</a>      <span class="kw">let </span>expansion = mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion_body);
+<a href=#99 id=99 data-nosnippet>99</a>      def_macro(<span class="macro">T_CS!</span>(delim_str), <span class="prelude-val">None</span>, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#100 id=100 data-nosnippet>100</a>    }
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="comment">// Save and deactivate $
+<a href=#102 id=102 data-nosnippet>102</a>    </span><span class="macro">Let!</span>(<span class="string">"\\DC@saved@dollar"</span>, <span class="string">"$"</span>);
+<a href=#103 id=103 data-nosnippet>103</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>), <span class="prelude-val">None</span>);
+<a href=#104 id=104 data-nosnippet>104</a>    <span class="comment">// Perl: return Tokens(LookupValue('IN_MATH') ? () : T_CS('\lx@begin@inline@math'));
+<a href=#105 id=105 data-nosnippet>105</a>    // FAITHFUL: no `DC_started_math` flag. Perl's \DC@ / \DC@end are symmetric by
+<a href=#106 id=106 data-nosnippet>106</a>    // construction — \DC@ begins inline math unless already IN_MATH, and \DC@end
+<a href=#107 id=107 data-nosnippet>107</a>    // ALWAYS ends inline math. The earlier Rust guard flag desynced across
+<a href=#108 id=108 data-nosnippet>108</a>    // consecutive D columns (a global value read back in a different cell scope),
+<a href=#109 id=109 data-nosnippet>109</a>    // leaking the math-mode frame so a later \endgroup/\end{...} failed with
+<a href=#110 id=110 data-nosnippet>110</a>    // "close a group that switched to mode display_math" (witness 1805.00875:
+<a href=#111 id=111 data-nosnippet>111</a>    // `D{.}{}{3}` followed by `D{.}{.}{-1}` — Perl 0, Rust was 5).
+<a href=#112 id=112 data-nosnippet>112</a>    </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
+<a href=#113 id=113 data-nosnippet>113</a>      <span class="prelude-val">Ok</span>(Tokens::default())
+<a href=#114 id=114 data-nosnippet>114</a>    } <span class="kw">else </span>{
+<a href=#115 id=115 data-nosnippet>115</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inline@math"</span>)))
+<a href=#116 id=116 data-nosnippet>116</a>    }
+<a href=#117 id=117 data-nosnippet>117</a>  });
+<a href=#118 id=118 data-nosnippet>118</a>
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="comment">// Perl: \DC@end — restores $ and ALWAYS ends inline math (unconditional).
+<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DC@end"</span>, sub[_args] {
+<a href=#121 id=121 data-nosnippet>121</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\DC@saved@dollar"</span>), <span class="prelude-val">None</span>);
+<a href=#122 id=122 data-nosnippet>122</a>    <span class="comment">// Perl: return (T_CS('\lx@end@inline@math'));
+<a href=#123 id=123 data-nosnippet>123</a>    </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>)))
+<a href=#124 id=124 data-nosnippet>124</a>  });
+<a href=#125 id=125 data-nosnippet>125</a>
+<a href=#126 id=126 data-nosnippet>126</a>  <span class="comment">// Perl: DefColumnType('D{}{}{}', ...) — decimal alignment column
+<a href=#127 id=127 data-nosnippet>127</a>  // Perl: align =&gt; 'char:' . absorbedString(Tokens(T_CS('\ensuremath'), T_BEGIN, $todelim, T_END))
+<a href=#128 id=128 data-nosnippet>128</a>  </span><span class="macro">DefColumnType!</span>(<span class="string">"D{}{}{}"</span>, sub[(delim, todelim, ndec)] {
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="comment">// Perl: absorbedString — digest \ensuremath{todelim} to get display character
+<a href=#130 id=130 data-nosnippet>130</a>    </span><span class="kw">let </span>alignment = absorbed_string(<span class="kw-2">&amp;</span>todelim);
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="comment">// Build before tokens: \DC@{delim}{todelim}{ndec}
+<a href=#132 id=132 data-nosnippet>132</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>before = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\DC@"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#133 id=133 data-nosnippet>133</a>    before.extend(delim.unlist());
+<a href=#134 id=134 data-nosnippet>134</a>    before.push(<span class="macro">T_END!</span>());
+<a href=#135 id=135 data-nosnippet>135</a>    before.push(<span class="macro">T_BEGIN!</span>());
+<a href=#136 id=136 data-nosnippet>136</a>    before.extend(todelim.unlist());
+<a href=#137 id=137 data-nosnippet>137</a>    before.push(<span class="macro">T_END!</span>());
+<a href=#138 id=138 data-nosnippet>138</a>    before.push(<span class="macro">T_BEGIN!</span>());
+<a href=#139 id=139 data-nosnippet>139</a>    before.extend(ndec.unlist());
+<a href=#140 id=140 data-nosnippet>140</a>    before.push(<span class="macro">T_END!</span>());
+<a href=#141 id=141 data-nosnippet>141</a>    with_current_build_template(|template_opt| {
+<a href=#142 id=142 data-nosnippet>142</a>      template_opt.unwrap().add_column(Cell {
+<a href=#143 id=143 data-nosnippet>143</a>        before: <span class="prelude-val">Some</span>(Tokens::new(before)),
+<a href=#144 id=144 data-nosnippet>144</a>        after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\DC@end"</span>))),
+<a href=#145 id=145 data-nosnippet>145</a>        align: <span class="prelude-val">Some</span>(Align::Char(alignment)),
+<a href=#146 id=146 data-nosnippet>146</a>        ..Cell::default()
+<a href=#147 id=147 data-nosnippet>147</a>      });
+<a href=#148 id=148 data-nosnippet>148</a>    });
+<a href=#149 id=149 data-nosnippet>149</a>  });
+<a href=#150 id=150 data-nosnippet>150</a>});
 </code></pre></div></section></main></body></html>
