@@ -1394,6 +1394,29 @@ fn bib_field_markup_survives_into_the_bibliography() {
        wrapper and the fragment was spliced anyway:\n{x}"
     );
   }
+  // Fields that reached NO emit branch at all, so their content never appeared
+  // in the References. Perl emits every one of them and the format specs
+  // already query the matching `ltx:bib-*` elements — only the emitter was
+  // missing. `howpublished` is the important one: it is how a @misc carries its
+  // URL, and that URL was simply gone.
+  for needle in [
+    "BIGINSTITUTE",
+    "TECHMEMO",
+    "LECTURENOTES",
+    "SECONDED",
+    "BERLINPLACE",
+    "SOMEUNIVERSITY",
+  ] {
+    assert!(
+      x.contains(needle),
+      "bib fields: {needle:?} never reached the bibliography — its field is \
+       parsed but emitted by no branch:\n{x}"
+    );
+  }
+  assert!(
+    x.contains("href=\"https://example.org/howpub\""),
+    "bib fields: a @misc lost the URL its `howpublished` carries:\n{x}"
+  );
 }
 
 /// Witness 2605.11619: `\end{lstlisting}` preceded by content on the same line

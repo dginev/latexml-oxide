@@ -3162,10 +3162,15 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
       // counted its `unexpected:_` twice) and re-runs any side effect its macros
       // have. Only the fallback path pays for the text digest — which is also
       // what `interpret_tex_markup` asks for on math (see its math gate).
+      // Every field emitted as element CONTENT takes the markup path. Excluded
+      // are the ones whose text is parsed further or used as an attribute:
+      // author/editor (name splitting), year (4-digit extraction), volume/
+      // number/issue/pages (numeric, and `pages` rewrites `--`), and
+      // doi/url/isbn/issn (verbatim identifiers, some of them hrefs).
       let fragment = match field.as_str() {
-        "title" | "journal" | "journaltitle" | "booktitle" | "publisher" | "note" => {
-          interpret_tex_markup(value)
-        },
+        "title" | "journal" | "journaltitle" | "booktitle" | "publisher" | "note" | "annote"
+        | "howpublished" | "institution" | "organization" | "school" | "address" | "edition"
+        | "series" | "part" | "type" | "status" | "language" => interpret_tex_markup(value),
         _ => None,
       };
       let interpreted;
@@ -3174,7 +3179,9 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
       } else {
         match field.as_str() {
           "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"
-          | "volume" | "number" | "issue" | "pages" | "publisher" | "note" => {
+          | "volume" | "number" | "issue" | "pages" | "publisher" | "note" | "annote"
+          | "howpublished" | "institution" | "organization" | "school" | "address" | "edition"
+          | "series" | "part" | "type" | "status" | "language" => {
             interpreted = interpret_tex_text(value);
             &interpreted
           },
@@ -3302,13 +3309,88 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
             markup(&xml_escape(&clean))
           ));
         },
-        "note" => {
+        // Perl `\bib@field@default@note` is `\bib@@field{ltx:bib-note}
+        // [role=annotation]` (BibTeX.pool L693-694); `annote` is the same
+        // element (L680-681) and `howpublished` the same element with
+        // `role=publication` (L641-642). All three render under the META_BLOCK's
+        // unqualified `ltx:bib-note`.
+        "note" | "annote" => {
           xml.push_str(&format!(
-            "    <bib-note>{}</bib-note>\n",
+            "    <bib-note role=\"annotation\">{}</bib-note>\n",
             markup(&xml_escape(&clean))
           ));
         },
-        // Remaining fields: skip or log
+        // `howpublished = {\url{...}}` is THE conventional way to give a
+        // `@misc` its URL, and dropping the field lost that URL outright.
+        "howpublished" => {
+          xml.push_str(&format!(
+            "    <bib-note role=\"publication\">{}</bib-note>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        // Perl maps all three of institution/organization/school onto
+        // `ltx:bib-organization` (BibTeX.pool L646-660 → bibtex.rs L1369-1379).
+        "institution" | "organization" | "school" => {
+          xml.push_str(&format!(
+            "    <bib-organization>{}</bib-organization>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        "address" => {
+          xml.push_str(&format!(
+            "    <bib-place>{}</bib-place>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        "edition" => {
+          xml.push_str(&format!(
+            "    <bib-edition>{}</bib-edition>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        "series" => {
+          xml.push_str(&format!(
+            "    <bib-part role=\"series\">{}</bib-part>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        "part" => {
+          xml.push_str(&format!(
+            "    <bib-part role=\"part\">{}</bib-part>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        // The `type` FIELD (e.g. "Technical Memo"). Safe to emit: `bib-type` is
+        // queried on its own here, NOT unioned with `bib-date`, so it cannot
+        // displace the publication year the way Perl's combined XPath could.
+        "type" => {
+          xml.push_str(&format!(
+            "    <bib-type>{}</bib-type>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        "status" => {
+          xml.push_str(&format!(
+            "    <bib-status>{}</bib-status>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        "language" => {
+          xml.push_str(&format!(
+            "    <bib-language>{}</bib-language>\n",
+            markup(&xml_escape(&clean))
+          ));
+        },
+        // Everything else is deliberately not emitted. Perl's BibTeX.pool does
+        // build elements for `chapter`, `subtitle` and `translator`, but NO
+        // format spec queries `ltx:bib-part[@role='chapter']`,
+        // `ltx:bib-subtitle` or `ltx:bib-name[@role='translator']`, so emitting
+        // them would add nodes that can never render — dead weight rather than
+        // fidelity. (Perl leaves them unrendered too; verified on a fixture
+        // carrying `chapter={5}`.) The entry-type boilerplate Perl synthesizes
+        // in `\bib@entry@<type>@prepare` ("Ph.D. Thesis", "Technical Report")
+        // is engine-side, not a `.bib` field, and arrives with the full
+        // `.bib`-through-the-engine re-port.
         _ => {},
       }
     }

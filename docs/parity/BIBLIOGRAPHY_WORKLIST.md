@@ -270,6 +270,65 @@ and one `url={\url{...}}` that **Perl renders equally broken**
 Guard: `06_cluster_regressions::bib_field_markup_survives_into_the_bibliography`
 (fixture carries a `\&` so a text-escaping regression cannot pass silently).
 
+THIRD INTERIM — fields that reached NO emit branch (landed 2026-07-25). Found by
+asking what else the reported family ("content missing from References") could
+cover. `convert_bib_file_to_xml` parsed every field but emitted only a subset,
+so eleven field kinds were **silently discarded** — most damagingly
+`howpublished = {\url{...}}`, which is how a `@misc` conventionally carries its
+URL. Same-host Perl emits all of them, so this was GENUINE-RUST-ONLY.
+
+The format specs ALREADY query the matching elements (`ltx:bib-organization`,
+`ltx:bib-place`, `ltx:bib-edition`, `ltx:bib-part[@role='series'|'part']`,
+`ltx:bib-status`, `ltx:bib-language`, `ltx:bib-type`, `ltx:bib-note`), so only
+the emitter was missing — mappings taken from `bibtex.rs` L1340-1573 (the port of
+`BibTeX.pool` `\bib@field@default@*`): `howpublished`→`bib-note[role=publication]`,
+`note`/`annote`→`bib-note[role=annotation]`,
+`institution`/`organization`/`school`→`bib-organization`, `address`→`bib-place`,
+`edition`→`bib-edition`, `series`/`part`→`bib-part[@role=…]`, `type`→`bib-type`,
+`status`→`bib-status`, `language`→`bib-language`.
+
+Deliberately still NOT emitted: `chapter`, `subtitle`, `translator`. Perl builds
+elements for them, but **no format spec queries** `ltx:bib-part[@role='chapter']`,
+`ltx:bib-subtitle` or `ltx:bib-name[@role='translator']`, so emitting them adds
+nodes that can never render (confirmed: Perl leaves `chapter={5}` unrendered
+too). The entry-type boilerplate Perl synthesizes in `\bib@entry@<type>@prepare`
+("Ph.D. Thesis", "Technical Report") is engine-side, not a `.bib` field, and
+arrives with item 1 below.
+
+`bib-type` is safe to emit here even though Perl's `getBibEntries` unions it with
+`bib-date`: the Rust port queries the two separately (make_bibliography.rs
+L1029/L1048), so a `type` field cannot displace the publication year.
+
+Measured: 7/7 probe fields now match same-host Perl on a per-entry fixture;
+across the nine 2607 witnesses this recovers **45 `bib-place` + 8 `bib-edition`
++ 1 `bib-type`** that were previously dropped, at **unchanged error counts**
+(the wider interpretation surfaces no new diagnostics on real input).
+Guard: the `BIGINSTITUTE`/`TECHMEMO`/`LECTURENOTES`/`SECONDED`/`BERLINPLACE`/
+`SOMEUNIVERSITY` + `howpub` assertions in
+`bib_field_markup_survives_into_the_bibliography`.
+
+#### Why this file is 3,735 lines, and why the interims did NOT refactor it
+
+User observation (2026-07-25): `make_bibliography.rs` builds XML by **string
+concatenation** instead of using libxml2 directly, and the file is large partly
+as a consequence. Measured: **3,735 lines vs Perl's 818** (4.6×), with 33
+`xml.push_str` / 31 `xml_escape` / 71 `format!` sites; the `.bib`→XML route
+alone is **573 lines** (`convert_bib_file_to_xml` 296, `interpret_tex_markup`
+105, plus the parse/escape helpers).
+
+The cost is concrete, not stylistic: the 2026-07-25 markup work had to add a
+serialize→string→reparse round-trip AND a namespace-prefix scanner purely
+because the target is a string rather than a node tree. With
+`PostDocument::add_nodes`/`NodeData` those two would not exist, and `xml_escape`
+would be unnecessary (libxml escapes on set).
+
+**Decision (user, 2026-07-25): do NOT refactor it to node-building as an
+intermediate step** — item 1 below already deletes the entire route, so a
+node-based rewrite of `convert_bib_file_to_xml` would be thrown away, while
+adding regression risk to a validated fix. Item 1 is the answer; it removes the
+string machinery *and* fixes the residual math gap and the entry-type
+boilerplate for free.
+
 FULL RE-PORT remaining (post-release):
 1. Replace `convert_bib_file_to_xml` with the recursive core conversion
    (`DigestionMode::BibTeX` + `PreBibTeX` + bibtex.rs already exist):

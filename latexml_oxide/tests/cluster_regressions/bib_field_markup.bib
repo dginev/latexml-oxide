@@ -22,6 +22,44 @@
   year   = {2022}
 }
 
+% These fields were emitted by NO branch at all, so their content vanished from
+% the References — `howpublished = {\url{...}}` is the conventional way to give
+% a @misc its URL, and that URL was simply gone. Perl emits every one of them
+% (BibTeX.pool `\bib@field@default@*`), and the format specs already query the
+% corresponding `ltx:bib-*` elements, so only the emitter was missing.
+@misc{howpub2026,
+  author       = {Xoe, Xena},
+  title        = {A Web Thing},
+  year         = {2026},
+  howpublished = {\url{https://example.org/howpub}}
+}
+
+@techreport{report2026,
+  author      = {Yoe, Yuri},
+  title       = {A Report},
+  year        = {2026},
+  institution = {BIGINSTITUTE},
+  type        = {TECHMEMO},
+  number      = {TR-7}
+}
+
+@book{book2026,
+  author    = {Zoe, Zack},
+  title     = {A Book},
+  year      = {2026},
+  publisher = {Pub},
+  series    = {LECTURENOTES},
+  edition   = {SECONDED},
+  address   = {BERLINPLACE}
+}
+
+@phdthesis{thesis2026,
+  author = {Qoe, Quinn},
+  title  = {A Thesis},
+  year   = {2026},
+  school = {SOMEUNIVERSITY}
+}
+
 % Block-level content CLOSES the `ltx:text` wrapper the markup path builds and
 % continues as a sibling. Serializing only that wrapper's children therefore
 % dropped everything from `\begin{itemize}` onward — silently, with zero errors.
