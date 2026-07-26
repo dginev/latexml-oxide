@@ -299,6 +299,16 @@ arrives with item 1 below.
 `bib-date`: the Rust port queries the two separately (make_bibliography.rs
 L1029/L1048), so a `type` field cannot displace the publication year.
 
+One visible consequence of emitting `type`, checked and accepted: real BibTeX
+treats it as an **override** of the entry-type label, while LaTeXML renders both,
+so `type = {Technical Report}` on a `@techreport` now reads "Technical Report
+Technical Report SIDL-WP-1999-0120". Verified byte-identical in same-host Perl —
+this is **parity**, KNOWN_PERL_ERRORS #60, and suppressing it would be a
+surpass-Perl divergence. It was previously hidden by dropping the field
+entirely, which also lost genuinely distinct types (`type = {Technical Memo}`) —
+a strictly worse trade. Only 1 `type` field exists across the nine witness
+`.bib` files.
+
 Measured: 7/7 probe fields now match same-host Perl on a per-entry fixture;
 across the nine 2607 witnesses this recovers **45 `bib-place` + 8 `bib-edition`
 + 1 `bib-type`** that were previously dropped, at **unchanged error counts**
