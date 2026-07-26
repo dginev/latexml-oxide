@@ -1,134 +1,97 @@
 # Change Log
 
-## [0.7.5] (Rhai binding-API parity + default-CSS sync; ar5iv corpus fixes; file-resolution robustness)
+## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
-  - **Runtime (Rhai) binding API brought to feature-parity with the compile-time
-    macros.** A binding can now fetch an already-installed definition and push
-    before/after digest and construct hooks onto it (`LookupDefinition`), pass the
-    same flexary, unordered option bags to `DefPrimitive`/`DefMath`/`DefConstructor`
-    (`beforeDigest`/`afterDigest`/`afterDigestBody`), register new definitions from
-    inside a running body, shell out to external commands, read the engine version,
-    and use the full diagnostics surface (`Info`/`Fatal`/`Note`/progress).
-    List-valued state lookups no longer panic or leak their internal representation.
-  - **A `.rhai` binding can now parse and manipulate XML/(X)HTML.**
-    `document.insertXML(markup)` splices a *parsed subtree* into the document at the
-    current point — the runtime half of BookML's `\bmlRawHTML` → `<ltx:rawhtml>` —
-    where previously only escaped text could be inserted. `ParseXML(markup)` exposes
-    the parser on its own, returning nodes a script can inspect, walk and edit
-    before inserting them; a chunk may be a fragment of several siblings. Parsed
-    nodes are safe to hold because each owns its document. Malformed markup is
-    rejected outright rather than quietly salvaged — libxml's recovery mode
-    silently deletes author content (`<b>a</b> <i>b</i>` became `<b>a</b>`,
-    `a&nbsp;b` became `ab`). Inserted markup also keeps its own namespace:
-    namespaces resolve by URI through the registered prefix map
-    (`RegisterNamespace`) instead of being assumed to be LaTeXML's, and wildcard
-    schema entries such as `xhtml:*` are honoured, so attributes like `class`
-    survive onto the final page. A malformed chunk degrades only its own binding:
-    the rest of the document still converts, and the reported error names the
-    likely cause and quotes the offending snippet.
-  - **`.rhai` bindings now reach the same document XML surface the compile-time
-    bindings do** — XPath query (`findnodes`/`findnode`), element insertion
-    (`insertElement`), and structural editing (`addClass`, `generateID`,
-    `removeNode`, `replaceNode`, `renameNode`, `wrapNodes`, `unwrapNodes`,
-    `appendClone`, `openElementAt`/`closeElementAt`), each under its Perl name, so
-    the runtime and compile-time binding layers do not drift apart. Reading a
-    namespaced attribute such as `xml:id` back by its qualified name now works.
-  - **A failing `.rhai` binding no longer costs the whole document.** An error
-    raised anywhere in a script body — a `throw`, a typo'd method name, an
-    operation-limit breach — used to abort the entire conversion; a single
-    throwing macro produced an empty document. Each binding kind now degrades to a
-    neutral result (an empty expansion, a skipped constructor, a false
-    conditional, …), reports a clean `Error:`, and the rest of the document
-    converts. A binding that fails repeatedly still ends the run at the usual
-    error ceiling, and a script that fails to *compile* still simply does not
-    install.
-  - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — restores justified
-    text, `\underline`/`\overline`, and verbatim no-wrap that had drifted from
-    upstream; the `.htm` destination extension now infers HTML5 like `.html`.
-  - **A stale or empty stylesheet already in the output directory is now overwritten**
-    instead of being left in place — previously a `LaTeXML.css`/`ltx-article.css`
-    left by an earlier run could be truncated to empty, leaving the page unstyled.
-  - **Split output (`--splitat`) now styles every page.** Each auto-generated split
-    child (e.g. `Ch1.html`) again loads the default stylesheets and carries the
-    document date, matching Perl — a shared post-processing XPath defect had been
-    dropping resources, processing instructions, and other relative-path lookups
-    (also repairing split navigation and cross-reference/glossary resolution).
-  - **Split-page navigation links reach Perl parity.** Each page now emits the full
-    `<link rel=…>` head set — `prev` back to the parent for a first child, the
-    relation-typed `chapter`/`section`/`subsection` sibling and ancestor links, and
-    full-breadcrumb `title=` attributes on all of them (previously the relation-typed
-    links and `prev`-for-first-child were missing and the titles were empty).
-  - **Generator identifier** now spells out the full product name ("LaTeXML oxide")
-    and stamps the version into the XSLT output to match Perl.
+  - **The runtime (Rhai) binding API reaches feature-parity with the compile-time
+    macros** — definition lookup and digest/construct hooks, the same flexary
+    option bags, definitions registered from a running body, external commands,
+    and the full diagnostics surface.
+  - **A `.rhai` binding can parse and manipulate XML/(X)HTML** —
+    `document.insertXML` splices a parsed subtree, `ParseXML` exposes the parser
+    on its own, namespaces resolve by URI, and malformed markup is rejected
+    outright rather than silently salvaged.
+  - **`.rhai` bindings reach the same document XML surface the compile-time
+    bindings do** — XPath query, element insertion, and structural editing, each
+    under its Perl name.
+  - **A failing `.rhai` binding no longer costs the whole document** — each
+    binding kind degrades to a neutral result and reports a clean `Error:`.
+  - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — justified text,
+    `\underline`/`\overline` and verbatim no-wrap are back; `.htm` infers HTML5.
+  - **A stale or empty stylesheet in the output directory is overwritten** instead
+    of leaving the page unstyled.
+  - **Split output (`--splitat`) styles every page** and carries the document date
+    — a shared post-processing XPath defect had been dropping relative-path
+    lookups (also repairing split navigation and cross-reference/glossary
+    resolution).
+  - **Split-page navigation links reach Perl parity** — the full `<link rel=…>`
+    head set with relation types and full-breadcrumb titles.
+  - **The generator identifier spells out the product name and version**, matching
+    Perl.
   - **A `standalone` document class's options are no longer mis-loaded as packages.**
-  - **A package loaded in a subfile's preamble keeps its definitions.** A
-    `standalone` or `\import`-ed child used to end an otherwise complete conversion
-    with `\ifpgf@external@grabshipout` undefined: the group around the child's
-    preamble discarded what the package defined, while the document hooks reading it
-    survived. The child's own definitions stay scoped to the child.
-  - **Named scopes are tracked correctly again.** A scope that had been deactivated
-    still read as active, so it could never be re-activated — a counter- or
-    label-derived reference-number scope reused after a counter reset kept the
-    stale one — and a second deactivation popped the same bindings twice.
-  - **`\includefrom`/`\subincludefrom` no longer drop their file in silence** — the
-    included content used to vanish with no error or warning at all.
+  - **A package loaded in a subfile's preamble keeps its definitions** — the group
+    around the child's preamble used to discard them.
+  - **Named scopes are tracked correctly again** — a deactivated scope could never
+    be re-activated, and a second deactivation popped the same bindings twice.
+  - **`\includefrom`/`\subincludefrom` no longer drop their file in silence.**
   - **The cortex worker builds without the `runtime-bindings` feature** — a
     Rhai-free conversion binary for the fleet.
-  - **File resolution can no longer die silently.** A conversion could run with
-    **no kpathsea backend at all** and say nothing about it: a failed
-    `Kpaths::new()` was discarded, so every lookup returned `None` while embedded
-    bindings and dumps kept the conversion working. The only symptom was
-    `Can't find TeX file X` — indistinguishable from a file that is genuinely
-    absent. The trigger was an unresolvable `kpsewhich`: missing from the
-    *process's* `PATH` (as opposed to the user's interactive shell), a stale
-    `KPSEWHICH`, not executable, or a `kpsewhich.exe` beside a Linux binary under
-    WSL. Fixed in [kpathsea 0.3.4](https://github.com/dginev/rust-kpathsea/pull/25)
-    (a linked `Kpaths::new()` degrades its program-name anchor instead of failing)
-    plus a subprocess fallback here.
-  - **Every conversion log now records the file-resolution backend** —
-    `in-process`, `subprocess kpsewhich`, or `unavailable`. A dead or degraded
-    resolver used to be invisible and had to be inferred; it is now one line in an
-    ordinary log, with no special flags. A host TeX installation remains optional,
-    so an absent one warns rather than errors.
-  - **ar5iv corpus fixes** (from the 2026-07 issue sprint): `xcolor` now honors a
-    `dvipsnames` *global class* option; `\sidecaptionvpos` bound as a layout no-op;
-    `\newtcblisting` bodies close as verbatim; `agujournal2019` end-matter
-    (rotating + acronyms/notation); `blkarray` support, recovering papers that
-    previously hit OOM/timeout; `scrartcl` `\titlehead` frontmatter capture; and
-    frontmatter bindings for `fairmeta`, `selfevolagent` and `openmoss` classes.
+  - **File resolution can no longer die silently** — a conversion could run with no
+    kpathsea backend at all and say nothing, reporting only `Can't find TeX file X`
+    (fixed in [kpathsea 0.3.4](https://github.com/dginev/rust-kpathsea/pull/25)
+    plus a subprocess fallback here).
+  - **Every conversion log records the file-resolution backend** — `in-process`,
+    `subprocess kpsewhich`, or `unavailable`.
+  - **ar5iv corpus fixes** (2026-07 issue sprint) — `xcolor` `dvipsnames` as a
+    global class option, `\sidecaptionvpos`, verbatim `\newtcblisting` bodies,
+    `agujournal2019` end-matter, `blkarray` (recovering papers that hit
+    OOM/timeout), `scrartcl` `\titlehead`, and frontmatter bindings for
+    `fairmeta`, `selfevolagent` and `openmoss`.
   - **A deferred package-load miss no longer poisons a later raw load.**
-  - **Perl `.ltxml` bindings are never read as TeX.** When raw-loading a style
-    package that also ships a Perl LaTeXML binding (e.g. sTeX's `stex.sty.ltxml`),
-    file resolution used to hand back the `.ltxml` — Perl source — and the loader
-    tokenized it as TeX, emitting spurious errors. latexml-oxide can't run Perl
-    bindings; binding availability is decided by its own dispatcher, so a missing
-    binding now falls through to the raw `.sty`, matching pdflatex. The
-    `standalone` binding also regained standalone.sty's real `xkeyval` +
-    `currfile → filehook` dependencies, so the package-file hooks
-    (`\AtEndOfPackageFile`, …) and `\define@key` exist — enough for raw sTeX 3.x
-    to load cleanly.
-  - **`\usepackage{X}` now finds an `X.sty.rhai` runtime binding on `$TEXINPUTS`.**
-    Previously only `\input{file}` resolved via TEXINPUTS while a Rhai package
-    binding placed in a texmf tree needed an explicit `--path`; the discovery now
-    consults kpsewhich too (covers `.sty.rhai` and `.cls.rhai`). A `.rhai` beside
-    your document keeps overriding a compiled binding; one that merely sits in a
-    texmf tree only fills a gap, so a stray copy there can no longer displace an
-    engine binding.
-  - **`cprotect` is now supported** — `\cprotect\section{\verb|…\tensor…|}` and
+  - **Perl `.ltxml` bindings are never read as TeX** — file resolution used to hand
+    back the `.ltxml` (Perl source) and tokenize it, so raw-loading a package that
+    ships one (e.g. sTeX) emitted spurious errors; a missing binding now falls
+    through to the raw `.sty`, matching pdflatex.
+  - **`\usepackage{X}` finds an `X.sty.rhai` runtime binding on `$TEXINPUTS`** — a
+    `.rhai` beside your document still overrides a compiled binding; one in a
+    texmf tree only fills a gap.
+  - **`cprotect` is now supported** — `\cprotect\section{\verb|…|}` and
     `\cprotect\footnote{\begin{verbatim}…\end{verbatim}}` produce the verbatim
-    title/footnote instead of `\cprotect is not defined`. The package works around
-    a TeX-only limitation (a braced argument is tokenized before `\verb` can change
-    catcodes) by writing the argument to a scratch file and `\input`ting it back;
-    the binding does the same re-read through a mouth, with no file written.
-    `\cMakeRobust` and `\cprotEnv` come with it. Perl LaTeXML has no binding for
-    this package.
-  - **The `.rhai` binding interface now has a reference.** Every function a
-    runtime binding can call is listed, grouped by the handle it is called on,
-    each with a one-line explanation and a link to the Rust item implementing it.
-    It renders into `cargo doc` (and docs.rs) beside the Rust API. The list is
-    generated from the live engine rather than hand-maintained, so it cannot
-    drift from what is registered, and a test fails if a newly registered call
-    is left undocumented.
+    title/footnote, with `\cMakeRobust` and `\cprotEnv`. Perl LaTeXML has no
+    binding for this package.
+  - **The `.rhai` binding interface has a reference**, generated from the live
+    engine into `cargo doc` so it cannot drift from what is registered.
+  - **Bibliographies stop losing reference content** — `.bib` field markup
+    (`\url`, `\href`, `\emph`) survived only as dead literal text, and eleven
+    field kinds (`howpublished`, `institution`, `address`, `edition`, `series`,
+    `type`, …) were emitted by no branch at all.
+  - **amsrefs `\bib` values digest as live TeX** — `\MR{…}` came out as literal
+    characters and `pages` rendered empty.
+  - **MathReview / ZentralBlatt links are synthesized again**, and an entry with
+    both `date` and `year` no longer emits a duplicate date.
+  - **A biblatex `.bbl` carrying two `\datalist` blocks no longer hangs the
+    conversion** on a self-referential `\let`.
+  - **A biber `\missing{key}` is a named warning**, not an undefined-command error.
+  - **The author-year citation label uses the short author form** — a
+    collaboration paper's label ran to 5104 characters and displaced the entry.
+  - **More math parses** — fences split by TeX's null delimiter, bare operators
+    used as operands (`f(\cdot)`, `(+)`), and mixed relation/term comma lists.
+  - **`$50,000$` reads as one number** rather than `list(50, 000)` — US default;
+    the European `$1.234,56$` reading is unchanged.
+  - **Math in a section title survives into the table of contents** and into any
+    `\ref` to that section.
+  - **`latexmlmath` no longer empties a single-structure formula**
+    (`\frac{1}{2}`, `\sqrt{2}`).
+  - **siunitx complex numbers are faithful again**, plus the v3 command surface
+    and the full `\sisetup` default set.
+  - **`\lstinputlisting` converts the requested snippet** — `lastline=N` used to
+    unbalance the listing and swallow the rest of the document, and CRLF sources
+    bled comment styling down the file.
+  - **Very large documents use far less memory** — peak RSS 9.05 → 5.99 GB on a
+    232K-line book, wall time unchanged.
+  - **`--max-memory` is the single memory knob**, `0` disables limiting entirely,
+    and no environment variable can countermand it.
+  - **Environments report their true source extent** — the locator spans through
+    the matching `\end` instead of collapsing to the `\begin`.
 
 ## [0.7.4] (Windows target; third-party license notices; crates.io)
 
