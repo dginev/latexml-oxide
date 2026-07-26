@@ -3155,31 +3155,36 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
       // "bibliography field-interpretation parity"). url/doi/eprint render but
       // are verbatim identifiers; isbn/issn are plain digits.
 
-      // The RAW field text, before `interpret_tex_text` flattens it — the markup
-      // path below has to re-digest from source, not from the stringified form.
-      let orig_value: &str = value;
-      let interpreted;
-      let value = match field.as_str() {
-        "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"
-        | "volume" | "number" | "issue" | "pages" | "publisher" | "note" => {
-          interpreted = interpret_tex_text(value);
-          &interpreted
+      // Markup-bearing fields are tried FIRST, from the raw field text, so that
+      // links and font switches survive. This must run BEFORE `interpret_tex_text`
+      // and suppress it on success: both digest the same value, and digesting
+      // twice re-reports every error the field raises (measured: a `_` in a note
+      // counted its `unexpected:_` twice) and re-runs any side effect its macros
+      // have. Only the fallback path pays for the text digest — which is also
+      // what `interpret_tex_markup` asks for on math (see its math gate).
+      let fragment = match field.as_str() {
+        "title" | "journal" | "journaltitle" | "booktitle" | "publisher" | "note" => {
+          interpret_tex_markup(value)
         },
-        _ => value,
+        _ => None,
       };
-      let clean = strip_braces(value);
-      // Markup-bearing fields: prefer the digested XML fragment, so links and
-      // font switches survive; fall back to the escaped plain text (which is
-      // also what `interpret_tex_markup` asks for on math — see its math gate).
-      // `raw` is the already-escaped text, so each arm reads as one substitution.
-      let markup = |raw: &str| -> String {
+      let interpreted;
+      let value = if fragment.is_some() {
+        value
+      } else {
         match field.as_str() {
-          "title" | "journal" | "journaltitle" | "booktitle" | "publisher" | "note" => {
-            interpret_tex_markup(orig_value).unwrap_or_else(|| raw.to_string())
+          "author" | "editor" | "title" | "year" | "journal" | "journaltitle" | "booktitle"
+          | "volume" | "number" | "issue" | "pages" | "publisher" | "note" => {
+            interpreted = interpret_tex_text(value);
+            &interpreted
           },
-          _ => raw.to_string(),
+          _ => value,
         }
       };
+      let clean = strip_braces(value);
+      // `raw` is the already-escaped plain text, used only when there is no
+      // fragment — so each field arm below reads as a single substitution.
+      let markup = |raw: &str| -> String { fragment.clone().unwrap_or_else(|| raw.to_string()) };
       match field.as_str() {
         "author" => {
           let authors = parse_bib_authors(value);

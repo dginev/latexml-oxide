@@ -229,6 +229,16 @@ to be fixed; either one alone keeps the bug.** Same-host Perl renders all of
   so a `<Math>` built here keeps unparsed `<XMath>` and would emit malformed
   MathML (`x^2` → `msup` with an empty base). Falling back to the TeX source is
   exactly today's behaviour for math; item 1 below fixes it properly.
+* **Digest each field exactly once.** The markup path runs BEFORE
+  `interpret_tex_text` and suppresses it on success — both digest the same
+  value, and digesting twice re-reports every error the field raises (measured:
+  a `_` in a note counted its `unexpected:_` **twice**, silently inflating the
+  document's error count, which is the canvas pass/fail signal) and re-runs any
+  side effect the macros have. Undefined macros hide this: the first digest
+  defines them as `<ltx:ERROR/>`, so they are self-healing on a second pass —
+  a guard fixture must use a non-self-healing error, and must contain a
+  backslash or both paths short-circuit and the test goes vacuously green.
+  Guard: `105_bib_field_digest_once`.
 * One serialization note settled during review: a finalized LaTeXML document is
   entirely in the LaTeXML namespace and serializes **unprefixed**, so the single
   `xmlns` on the generated `<bibliography>` root covers the spliced fragment —
