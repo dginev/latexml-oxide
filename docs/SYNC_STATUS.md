@@ -393,17 +393,45 @@ surfaced, both landed:
   *wrongly* rather than not at all. Guard
   `06_cluster_regressions::cluster_leading_relop_comma_list`.
 
-Witness end state: **0 errors, 1 warning** (the actionable missing-entry), 0.96 s,
-and structurally identical to Perl — same counts for all 25 element classes
-sampled (312 `Math`, 58 `bibitem`, 336 `td`, 78 `ref`, …; sole delta 87 vs 88
-`para`). **Residual: 3 of 312 formulas unparsed where Perl has 0** —
-`f(\cdot)`, `S(\cdot)` (a bare operator inside a fence: Perl parses 7 of 8 such
-shapes, we parsed 0 of 8; `\langle\cdot,\cdot\rangle` is in that family too) and
-one `\mid`-conditional equation. Both are math-grammar structure work and so sit
-under the R8 "do not pick off in isolation" directive — see
-[`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md), which also now records
-the **thousands-separator** reading (`50,000` is one number; both engines read
-the comma as a list separator — locale-dependent, decide policy before coding).
+**Then the residual math gaps too (user-directed, same day) — the witness is now
+0 errors AND 0 unparsed formulas.** Two grammar additions, both measured against
+same-host Perl:
+* **A bare operator used as an OPERAND** — `f(\cdot)`, `\langle\cdot,\cdot\rangle`,
+  and operators NAMED rather than applied (`(+)`, `(=)`, `(\times)`). The grammar
+  admitted fenced singleton bigops/OPERATORs but not the ADDOP/MULOP/BINOP/RELOP
+  roles, so **Perl parsed 7 of 8 such shapes and we parsed 0**. New
+  `placeholder` / `placeholder_list` (`grammar/builder.rs`) admit them only where
+  FENCED — the same containment the bigop lines use — so a stray `a + \times b`
+  still fails. `$\|\cdot\|$` stays unparsed as parity (Perl fails it too).
+* **A comma list mixing ONE relation with a plain term.** `formula_list` carried
+  only the all-`modified_term` variants, the mixed ones deferred *"until a
+  witness shows them needed"* — so `f(a\geq 0, b\leq 1)` parsed while
+  `f(a\geq 0, b)` did not. arXiv 2605.17646's
+  `m_S(t \mid T_i \geq t_{\text{crit}}, \mathbf{Z})` is that witness; Phase 2
+  adds both orders.
+
+Not just this paper: on the #37 ambiguity stress witness **1510.03361** the two
+additions took `ltx_math_unparsed` **170 → 136** *and* wall time **16.8 s →
+11.7 s** — formulas that used to exhaust the parser now succeed early. The
+`parse_tree_count_limits` canary stays green.
+
+Witness end state: **0 errors, 1 warning** (the actionable missing-entry), 1.0 s,
+**312 formulas / 0 unparsed** (Perl: 0 unparsed, 59 errors, 33.7 s), and
+structurally identical to Perl — same counts for all 25 element classes sampled
+(312 `Math`, 58 `bibitem`, 336 `td`, 78 `ref`, …; sole delta 87 vs 88 `para`).
+Guards `cluster_fenced_bare_operator`, `cluster_leading_relop_comma_list`.
+
+**Thousands separator — policy settled, implementation still OPEN.** `50,000` is
+ONE number; both engines read the comma as a list separator. Owner policy
+(2026-07-25): **default US, support EU as a documented secondary.** The `en` half
+is the broken one — Perl's thousands arm demands `$r ne 'PUNCT'` and a math comma
+is always PUNCT, so it is dead code for English, while the EU decimal comma
+already works through the language maps. **Implementing it in the ligature is a
+measured dead end** (built, reverted): ligatures run per-token during building,
+so there is no right context at all, and a merge-at-three-digits rule corrupts
+plausible pairs — `$(1, 2024)$` → `12024`. Correct home is a `DefRewrite` in the
+post-build `Rewriting` phase; full design in
+[`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md).
 
 
 ### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)

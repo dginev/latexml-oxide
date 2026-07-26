@@ -135,25 +135,51 @@
   (apply) where Perl groups `(n to infinity)`. Same ARROW-as-applied-function
   family as `f(a,b)`.
 
-- **Thousands-separator comma read as a list separator — OPEN, shared with Perl
-  (user-raised 2026-07-25).** `$>50,000$` is ONE number, `50000`, written with a
-  thousands separator. Neither engine sees that: Perl builds
-  `>(absent, list(50,000))`, Rust `list@(absent>50, 000)` (the #37 reading). The
-  glyphs come out right, so it is invisible in a rendered page, but the grouping
-  is wrong in presentation MathML too —
+- **Thousands-separator comma read as a list separator — OPEN, shared with Perl.
+  Policy SETTLED 2026-07-25, implementation seam identified, NOT yet built.**
+  `$>50,000$` is ONE number, `50000`, written with a thousands separator.
+  Neither engine sees that: Perl builds `>(absent, list(50,000))`, Rust
+  `list@(absent>50, 000)` (the #37 reading). The glyphs come out right, so it is
+  invisible in a rendered page, but the presentation grouping is wrong too —
   `mrow(mrow(mphantom, >, mn 50), mo ",", mn 000)` where it should be
   `mrow(mo >, mn "50,000")` — and the content arm is nonsense.
-  A conservative lexer-level merge would be `NUMBER , NUMBER` where the right
-  group is **exactly three digits** (chaining for `1,234,567`), done where the
-  math lexer assigns roles (`latexml_math_parser/src/util.rs`) so the grammar
-  never sees the comma.
-  **Why it is not a five-minute fix: the comma is locale-dependent.** In much of
-  Europe the comma is the DECIMAL separator, so `$3,14$` is 3.14 and `$50,000$`
-  is 50 — the exact opposite reading. A digit-count heuristic gets the
-  Anglo-American case right and silently corrupts the European one, and TeX
-  source carries no locale marker (`\usepackage[german]{babel}` is a document-level
-  hint at best; siunitx's `\num{50000}` is the only unambiguous form). Decide the
-  policy before coding. Witness: arXiv 2605.17646 (`population $ > 50,000$`).
+
+  **Owner policy (2026-07-25): default to the US reading (comma = thousands
+  separator); support the European reading (comma = decimal separator) as a
+  documented secondary, since real corpora contain both.** The locale seam
+  already exists and is already right: `base_xmath.rs`'s `DECIMAL_SEP` /
+  `THOUSANDS_SEP` maps are keyed by `xml:lang` (`en` → `.`/`,`;
+  `de`/`fr`/`nl`/`pt`/`es` → `,`/`.`), and the EU case already works — a `de`
+  document's comma is matched by the ligature's *decimal* arm, which has no role
+  guard. Only the US case is broken: Perl's thousands arm demands
+  `$r ne 'PUNCT'` ("Be paranoid about lists", `Base_XMath.pool.ltxml` L506-508),
+  and a math-mode comma is ALWAYS `role="PUNCT"`, so for `en` that arm is dead
+  code.
+
+  **Do NOT implement it in the ligature — measured dead end (2026-07-25).**
+  Ligatures run from `Document::open_math_text_internal`, i.e. once per token as
+  it is appended during building, so `get_next_sibling()` is `None` for every
+  node and there is **no right context at all** (verified by tracing: every
+  invocation reports `next=None`). A "merge when the group is exactly three
+  digits" rule therefore fires the moment the third digit arrives and cannot see
+  a fourth coming. Implemented and reverted: it corrupted plausible pairs —
+  `$(1, 2024)$` → one number `12024`, `$(12, 3456)$` → `123456` — because the
+  premature merge is then extended by the ordinary adjacent-NUMBER rule. Adding
+  a start-of-run guard does not help (there is no right sibling to test).
+
+  **Correct home: a `DefRewrite` in the post-build `Rewriting` phase**, which
+  runs with the full DOM and BEFORE math parsing (`core_interface.rs`
+  Building → Rewriting → Math Parsing). By then the ligature has already
+  collapsed each digit run, so the pattern is exactly three siblings —
+  `XMTok[@role='NUMBER']`, `XMTok[@role='PUNCT']` with text `,`,
+  `XMTok[@role='NUMBER']` — and the group length is simply
+  `string-length()` of the third, testable *with* its right context. Merge into
+  the first node (text `50,000`, `meaning` `50000`) and unlink the other two,
+  unrecording their ids first (the `\not` rewrite in `math_common.rs` L599 is the
+  pattern to copy — see its UAF comment). Open sub-questions: whether the rewrite
+  engine iterates to a fixpoint (needed for `1,234,567`), and whether to gate on
+  `xml:lang` here or keep reading the existing separator maps.
+  Witness: arXiv 2605.17646 (`population $ > 50,000$`).
 
 CAUTION: new VERTBAR/fence grammar rules can collide with package-built
 structures — always cross-check the affected fixture against Perl before

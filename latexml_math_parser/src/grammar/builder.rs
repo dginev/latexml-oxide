@@ -350,12 +350,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // See `docs/math/MATH_PARSER_ASF_TIEBREAKING.md` (commit
       // 5cde377610) for the proposal context.
       modified_term = tight_term relop expression => infix_relation;
-      // Phase 1: only the all-modified-terms variants. Mixed-content
-      // variants (`modified_term punct expression`, etc.) deferred
-      // until a witness shows them needed, to keep ambiguity growth
-      // tight (the `parse_tree_count_limits` regression test is the
-      // canary).
+      // Phase 1 was the all-modified-terms variants only; the mixed-content
+      // variants were deferred "until a witness shows them needed", to keep
+      // ambiguity growth tight (the `parse_tree_count_limits` regression test
+      // is the canary).
+      //
+      // Phase 2 (2026-07-25) — the witness arrived. arXiv 2605.17646 carries
+      // `m_S(t \mid T_i \geq t_{\text{crit}}, \mathbf{Z})`: a conditional whose
+      // RHS is a comma list of ONE relation plus ONE plain term. With only the
+      // all-modified rule, `f(a\geq 0, b\leq 1)` parsed while
+      // `f(a\geq 0, b)` did not — the whole equation fell to
+      // ltx_math_unparsed. Both orders are admitted; the longer chains are
+      // already covered by the `formula_list punct …` extensions.
       formula_list += modified_term punct modified_term => modified_list_apply
+        | modified_term punct expression => modified_list_apply
+        | expression punct modified_term => modified_list_apply
         | formula_list punct modified_term => modified_list_apply;
       // Comma-separated term lists: term, term, term, ...
       // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
@@ -366,6 +375,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | limit_from_term punct limit_from_term => list_apply
         | term_list punct limit_from_term => list_apply
         | term punct limit_from_term => list_apply;
+
+      // A bare operator standing in for an OPERAND — the argument-slot
+      // notation `f(\cdot)`, `\langle\cdot,\cdot\rangle`, and operators named
+      // rather than applied, `(+)` / `(=)` / `(\times)`. Perl's grammar admits
+      // operators as factors generally; we admit them only where they are
+      // FENCED (see `fenced_factor`), the same containment the bigop/operator
+      // lines there already use — so a stray `a + \times b` still fails.
+      // Without this the whole formula died: Perl parsed 7 of 8 such shapes,
+      // we parsed 0 of 8. Witness: arXiv 2605.17646 (`f(\cdot)`, `S(\cdot)`).
+      placeholder = mulop | addop | binop | relop;
+      // Comma list carrying AT LEAST ONE placeholder. The "≥1" shape is
+      // deliberate: an all-`expression` list is already `formula_list`, so
+      // admitting it here too would duplicate every ordinary `(a,b)` parse and
+      // double the forest for no new coverage.
+      placeholder_list = placeholder punct placeholder => list_apply
+        | placeholder punct expression => list_apply
+        | expression punct placeholder => list_apply
+        | placeholder_list punct placeholder => list_apply
+        | placeholder_list punct expression => list_apply;
 
       // Perl MathGrammar L709-711: Two-part relops (>=, <=, <<, >>)
       two_part_relop = langle_rel langle_rel => two_part_relop_combine
@@ -638,6 +666,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lparen compound_operator rparen => fenced
              | open any_bigop close => fenced
              | open operator close => fenced
+             // Fenced bare-operator placeholders: (\cdot), [\cdot], \langle\cdot,\cdot\rangle,
+             // (+), (=), (\times), f(\cdot,x). See `placeholder` above for why
+             // these are admitted only when fenced.
+             | lparen placeholder rparen => fenced
+             | lbracket placeholder rbracket => fenced
+             | lbrace placeholder rbrace => fenced
+             | langle_open placeholder rangle_close => fenced
+             | open placeholder close => fenced
+             | lparen placeholder_list rparen => fenced
+             | lbracket placeholder_list rbracket => fenced
+             | lbrace placeholder_list rbrace => fenced
+             | langle_open placeholder_list rangle_close => fenced
+             | open placeholder_list close => fenced
              // Empty fenced expressions: () [] {} ⌊⌋ ⟨⟩ etc.
              | lparen rparen => empty_fenced
              | lbracket rbracket => empty_fenced

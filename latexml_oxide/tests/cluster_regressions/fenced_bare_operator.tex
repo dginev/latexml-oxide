@@ -1,0 +1,33 @@
+% Regression: a bare operator used as an OPERAND — the argument-slot notation
+% `f(\cdot)`, the inner product `\langle\cdot,\cdot\rangle`, and operators
+% NAMED rather than applied, `(+)` / `(=)` / `(\times)`.
+%
+% The grammar admitted fenced singleton bigops/OPERATORs but not the ADDOP /
+% MULOP / BINOP / RELOP roles, so every one of these died as ltx_math_unparsed:
+% measured against same-host Perl 0.8.8, Perl parsed 7 of these 8 shapes and we
+% parsed 0. `placeholder` / `placeholder_list` in grammar/builder.rs admit them
+% only where FENCED, so a stray `a + \times b` still fails.
+%
+% `$\|\cdot\|$` is the one Perl does NOT parse either — it stays unparsed here
+% on purpose, as parity. Do not "fix" it without checking Perl again.
+%
+% The last two lines cover the second half: a comma list mixing ONE relation
+% with a plain term (`modified_term punct expression`). The grammar carried only
+% the all-modified-terms variants, deferred "until a witness shows them needed"
+% — so `f(a\geq 0, b\leq 1)` parsed while `f(a\geq 0, b)` did not, which is what
+% killed the witness's conditional equation.
+%
+% Witness: arXiv 2605.17646 (`f(\cdot)`, `S(\cdot)`, and
+% `m_S(t \mid T_i \geq t_{\text{crit}}, \mathbf{Z})`).
+\documentclass{article}
+\begin{document}
+A: $f(\cdot)$.
+B: $g(\cdot,\cdot)$.
+C: $(+)$.
+D: $(=)$.
+E: $(\times)$.
+F: $f(\cdot,x)$.
+G: $\langle\cdot,\cdot\rangle$.
+H: $P(x \mid y \geq 0, z)$.
+I: $f(a \geq 0, b)$.
+\end{document}
