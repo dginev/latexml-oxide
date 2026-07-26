@@ -3023,8 +3023,113 @@ thread_local! {
   // interpreting (raw passthrough) instead of flooding the log. Reset at
   // each .bib conversion.
   static BIB_INTERPRET_FAILURES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  // Whether this document's field-interpretation scope has been given the
+  // `.bbl` standard fallbacks yet. Reset per .bib conversion, beside the
+  // failure counter.
+  static BBL_FALLBACKS_PROVIDED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 const MAX_BIB_INTERPRET_FAILURES: usize = 50;
+
+/// The commands a real `.bst`-generated `.bbl` provides before its entries.
+///
+/// We digest raw `.bib` FIELD values, which is a step earlier than LaTeX ever
+/// sees them: BibTeX copies the field into the `.bbl`, and the `.bbl` opens
+/// with a block of `\providecommand`s so that `\url{…}` in a `note` renders
+/// even in a document that loads neither `hyperref` nor `url.sty`. Digesting
+/// the field without that block makes us raise `undefined:\url` where real
+/// LaTeX renders text.
+///
+/// Measured cost of omitting it: on the 2026-07-26 sandbox rerun, 90 papers in
+/// `sandbox-arxiv-2605` went from `no_problem` to `error` and 21 of the first
+/// 40 sampled were exactly `undefined:\url`. Witness 2605.01149 — no
+/// `hyperref`, no `url.sty`, no `.bbl`, and a single `howpublished =
+/// {\url{…}}`. That field is one of the eleven this interpreter newly began
+/// rendering, so the error was the direct cost of recovering the content.
+///
+/// `\providecommand` is the right primitive precisely because it defers: a
+/// document that DOES load `hyperref` keeps hyperref's `\url`, so the
+/// hyperlinked rendering is unaffected. Bodies mirror the conventional `.bbl`
+/// definitions (plain/natbib/revtex all ship these shapes).
+const BBL_STANDARD_FALLBACKS: &str = concat!(
+  r"\providecommand{\url}[1]{\texttt{#1}}",
+  r"\providecommand{\urlprefix}{URL }",
+  r"\providecommand{\doi}[1]{doi:#1}",
+  r"\providecommand{\bibinfo}[2]{#2}",
+  r"\providecommand{\eprint}[2][]{\url{#2}}",
+  r"\providecommand{\selectlanguage}[1]{\relax}",
+  r"\providecommand{\newblock}{}",
+);
+
+/// Tokenize a `.bib` FIELD value under the bibliography catcode regime.
+///
+/// BibTeX has no comment syntax inside an entry, so a `%` in a field is a
+/// literal percent — and percent-encoding makes that routine:
+/// `\url{https://host/B130936%20Law%20of%20War.pdf}` is an ordinary
+/// `howpublished`. Read with `%` at its usual catcode 14 it starts a COMMENT
+/// that swallows the rest of the line, closing brace included, and
+/// `read_balanced` then reports `expected:}` — "Gullet->readBalanced ran out of
+/// input in an unbalanced state" (`gullet.rs:1383`). Perl keeps these by
+/// reading the fields through `Verbatim`/`Semiverbatim` parameters in
+/// `BibTeX.pool.ltxml`.
+///
+/// Why not `mouth::tokenize`: it calls `use_std_state()`, swapping to the
+/// prebuilt `STD_STATE` catcode table (`state.rs:379`, `:1095`), so a live
+/// `assign_catcode` has NO effect on it — verified, an earlier attempt to scope
+/// the catcode around `tokenize` left the witness at 3 errors. Driving the
+/// `Mouth` directly keeps the MAIN state's catcodes, which is what
+/// [`begin_bib_catcodes`] has just adjusted. No kernel change needed: the
+/// regime belongs to what we are reading, not to the tokenizer.
+///
+/// Measured: 17 of the first 40 sampled `no_problem -> error` papers in the
+/// 2026-07-26 `sandbox-arxiv-2605` rerun. Witness 2605.00245 — three
+/// percent-encoded `\url{...}` values in one `.bib`, three `expected:}`.
+fn tokenize_bib_field(s: &str) -> latexml_core::tokens::Tokens {
+  match latexml_core::mouth::Mouth::new(s, None) {
+    Ok(mut m) => m.read_tokens(),
+    // Mirror `mouth::tokenize`'s shape on the impossible path rather than
+    // panicking inside post-processing.
+    Err(_) => latexml_core::mouth::tokenize(s),
+  }
+}
+
+/// The bibliography catcode phase — see [`tokenize_bib_field`] for why one is
+/// needed. RAII rather than a begin/end pair: `convert_bib_file_to_xml` has
+/// several early `return`s, and a leaked frame would leave `%` neutralized for
+/// the rest of post-processing.
+struct BibCatcodeScope;
+
+impl BibCatcodeScope {
+  fn open() -> Self {
+    latexml_core::state::push_frame();
+    latexml_core::state::assign_catcode(
+      '%',
+      latexml_core::token::Catcode::OTHER,
+      Some(latexml_core::state::Scope::Local),
+    );
+    BibCatcodeScope
+  }
+}
+
+impl Drop for BibCatcodeScope {
+  fn drop(&mut self) { let _ = latexml_core::state::pop_frame(); }
+}
+
+/// Install [`BBL_STANDARD_FALLBACKS`] once per document, before the first
+/// field is digested. Idempotent and cheap: one tokenize+digest of a short
+/// string, and `\providecommand` no-ops for anything already defined.
+fn provide_bbl_fallbacks() {
+  if BBL_FALLBACKS_PROVIDED.with(|c| c.get()) {
+    return;
+  }
+  BBL_FALLBACKS_PROVIDED.with(|c| c.set(true));
+  // Never let the fallback block itself take a document down: it runs in the
+  // same demote-fatals discipline as the field digests around it.
+  let prev = latexml_core::common::error::set_demote_fatals(true);
+  let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+    let _ = latexml_core::stomach::digest(latexml_core::mouth::tokenize(BBL_STANDARD_FALLBACKS));
+  }));
+  latexml_core::common::error::set_demote_fatals(prev);
+}
 
 /// Interpret a BibTeX field value through the REAL TeX engine — Perl's
 /// `ToString(Digest(Tokenize($x)))` idiom. The post-processor runs in the
@@ -3046,6 +3151,9 @@ fn interpret_tex_text(s: &str) -> String {
   if BIB_INTERPRET_FAILURES.with(|c| c.get()) > MAX_BIB_INTERPRET_FAILURES {
     return s.to_string();
   }
+  // A `.bbl` would have provided these before any entry was typeset; we digest
+  // the raw field, one step earlier, so we must supply them ourselves.
+  provide_bbl_fallbacks();
   // Diagnostic policy (user, 2026-07-04, final form): with live-state
   // interpretation the diagnostics are trustworthy, so Warn!/Error! from
   // a field digest report at NATIVE severity and count against the
@@ -3056,7 +3164,7 @@ fn interpret_tex_text(s: &str) -> String {
   // field's digest — the raw text passes through below.
   let prev = latexml_core::common::error::set_demote_fatals(true);
   let interpreted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-    latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).map(|d| d.to_string())
+    latexml_core::stomach::digest(tokenize_bib_field(s)).map(|d| d.to_string())
   }));
   latexml_core::common::error::set_demote_fatals(prev);
   match interpreted {
@@ -3200,6 +3308,13 @@ fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
 /// BibTeX instead of spawning a full LaTeXML sub-session with BibTeX.pool.
 fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
   BIB_INTERPRET_FAILURES.with(|c| c.set(0));
+  // Re-arm per .bib: the fallbacks are installed lazily, on the first field
+  // that actually needs interpreting, so a bibliography of purely plain fields
+  // costs nothing.
+  BBL_FALLBACKS_PROVIDED.with(|c| c.set(false));
+  // Read this whole `.bib` as BibTeX DATA, not as TeX source — one catcode
+  // phase for the file rather than a per-field dance. Dropped on every exit.
+  let _bib_catcodes = BibCatcodeScope::open();
   // Decode rather than `read_to_string`: see `mouth::decode_input_bytes` —
   // a strict UTF-8 read drops the whole bibliography on the first stray
   // Cp1252 byte (witness 2605.00490).
@@ -3527,11 +3642,14 @@ fn interpret_tex_markup(s: &str) -> Option<String> {
   if BIB_INTERPRET_FAILURES.with(|c| c.get()) > MAX_BIB_INTERPRET_FAILURES {
     return None;
   }
+  // A `.bbl` would have provided these before any entry was typeset; we digest
+  // the raw field, one step earlier, so we must supply them ourselves.
+  provide_bbl_fallbacks();
   // Same diagnostic policy as `interpret_tex_text`: report at native severity,
   // but never let a broken field take the document down with it.
   let prev = latexml_core::common::error::set_demote_fatals(true);
   let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-    let digested = latexml_core::stomach::digest(latexml_core::mouth::tokenize(s)).ok()?;
+    let digested = latexml_core::stomach::digest(tokenize_bib_field(s)).ok()?;
     let mut doc = Document::new();
     // `ltx:text` is the model's generic inline container, so any inline content
     // a field can hold is placeable inside it; we serialize its CHILDREN, so the
