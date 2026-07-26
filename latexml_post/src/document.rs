@@ -1977,6 +1977,33 @@ pub fn element_children_iter(node: &Node) -> impl Iterator<Item = Node> + use<> 
     .filter(|c| c.get_type() == Some(NodeType::ElementNode))
 }
 
+/// Escape a string for XML **text content or a double-quoted attribute value**.
+///
+/// The one escaper for markup this crate still assembles as a string. It used to
+/// be three byte-identical private copies: `make_bibliography.rs::xml_escape`
+/// went away with the `.bib` string route, `manifest/epub.rs::escape_xml` went
+/// away when the OPF moved onto the DOM, and `schema_docs.rs::html_escape` — the
+/// dev-facing RelaxNG doc site, the last string-assembled markup here — is what
+/// remains. Duplicated escapers drift; that is issue 386's premise, and the
+/// reason to keep exactly one even now that it has a single caller.
+///
+/// **`'` is deliberately not escaped.** It is legal raw in text content, and both
+/// callers emit double-quoted attributes, where only `"` must go. Escaping it
+/// would change output without fixing anything.
+///
+/// **`latexml_core::document`'s `serialize_string`/`serialize_attr` are NOT
+/// folded in here, and must not be.** They look like a fourth copy with a
+/// missing `"`, but they are a correct pair: `serialize_string` escapes text
+/// nodes and comments, and `serialize_attr` layers `"`, `\n` and `\t` on top for
+/// attribute values. Escaping `"` in a text node would be *wrong* XML, not safer
+/// XML.
+pub fn escape_xml(s: &str) -> String {
+  s.replace('&', "&amp;")
+    .replace('<', "&lt;")
+    .replace('>', "&gt;")
+    .replace('"', "&quot;")
+}
+
 /// Compute a relative path from `base` to `path`.
 fn pathdiff(path: &str, base: &str) -> String {
   let p = Path::new(path);
