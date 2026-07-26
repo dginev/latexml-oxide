@@ -293,6 +293,30 @@ impl Document {
     Ok(())
   }
 
+  /// [`finalize`](Self::finalize) restricted to one subtree: resolve fonts
+  /// against ancestors and strip the `_font`/`_autoopened`/… bookkeeping
+  /// attributes, without the document-level passes (idstore rebuild, XMDual
+  /// pruning, RDFa/namespace declarations) that only make sense for a complete
+  /// document.
+  ///
+  /// Used by `latexml_post::make_bibliography` to render a `.bib` field value
+  /// into an XML fragment through the real engine: it absorbs into a scratch
+  /// `ltx:text` wrapper and serializes that wrapper's children.
+  ///
+  /// Whole-document [`finalize`](Self::finalize) cannot serve that caller —
+  /// **not** because it errors (it returns `Ok`), but because running
+  /// `finalize_rec` from the ROOT legitimately UNWRAPS a redundant font-only
+  /// `ltx:text`: measured on such a scratch document, the content survives at
+  /// the root while the caller's wrapper handle is left detached and childless
+  /// (`wrapper_children 1 -> 0`, `parent = None`), so it serializes to nothing.
+  /// Starting the recursion AT the wrapper keeps it addressable.
+  pub fn finalize_subtree(&mut self, node: &mut Node) -> Result<()> {
+    self.set_local_font(Rc::new(Font::text_default()));
+    let result = self.finalize_rec(node);
+    self.expire_local_font();
+    result
+  }
+
   /// Apply registered document namespace declarations to the root element.
   /// Perl's RegisterDocumentNamespace stores prefix→URI mappings in the model.
   /// These must appear as xmlns:prefix="URI" on the root element during serialization.

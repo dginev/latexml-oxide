@@ -1,0 +1,89 @@
+@article{urlnote2020,
+  author  = {Doe, Jane},
+  title   = {A Plain Title},
+  journal = {Journal of Things},
+  year    = {2020},
+  note    = {\url{https://example.org/a}}
+}
+
+@article{hrefnote2021,
+  author = {Roe, Richard},
+  title  = {Another Title},
+  year   = {2021},
+  note   = {\href{https://example.org/b}{the link text}}
+}
+
+% The `\&` matters: the markup path splices SERIALIZED XML into the generated
+% bibliography, so a text node that failed to escape `&` would make the whole
+% document unparseable and drop every entry.
+@article{emphtitle2022,
+  author = {Poe, Paula},
+  title  = {A Title with \emph{emphasis} \& an ampersand},
+  year   = {2022}
+}
+
+% These fields were emitted by NO branch at all, so their content vanished from
+% the References — `howpublished = {\url{...}}` is the conventional way to give
+% a @misc its URL, and that URL was simply gone. Perl emits every one of them
+% (BibTeX.pool `\bib@field@default@*`), and the format specs already query the
+% corresponding `ltx:bib-*` elements, so only the emitter was missing.
+@misc{howpub2026,
+  author       = {Xoe, Xena},
+  title        = {A Web Thing},
+  year         = {2026},
+  howpublished = {\url{https://example.org/howpub}}
+}
+
+@techreport{report2026,
+  author      = {Yoe, Yuri},
+  title       = {A Report},
+  year        = {2026},
+  institution = {BIGINSTITUTE},
+  type        = {TECHMEMO},
+  number      = {TR-7}
+}
+
+@book{book2026,
+  author    = {Zoe, Zack},
+  title     = {A Book},
+  year      = {2026},
+  publisher = {Pub},
+  series    = {LECTURENOTES},
+  edition   = {SECONDED},
+  address   = {BERLINPLACE}
+}
+
+@phdthesis{thesis2026,
+  author = {Qoe, Quinn},
+  title  = {A Thesis},
+  year   = {2026},
+  school = {SOMEUNIVERSITY}
+}
+
+% Block-level content CLOSES the `ltx:text` wrapper the markup path builds and
+% continues as a sibling. Serializing only that wrapper's children therefore
+% dropped everything from `\begin{itemize}` onward — silently, with zero errors.
+% The escape guard declines such a fragment so the plain-text digest keeps it
+% all; these entries are the canary.
+@article{blocklist2024,
+  author = {Voe, Vera},
+  title  = {T Blocklist},
+  year   = {2024},
+  note   = {beforeblock \begin{itemize}\item INSIDELIST\end{itemize} afterblock}
+}
+
+@article{blockpar2025,
+  author = {Woe, Walt},
+  title  = {T Blockpar},
+  year   = {2025},
+  note   = {beforepar \par AFTERPAR \textbf{tail}}
+}
+
+% `@book` on purpose: `publisher` is only rendered by the book-shaped format
+% specs, so an `@article` here would make the plain-field assertion vacuous.
+@book{plaintitle2023,
+  author    = {Moe, Mark},
+  title     = {Wholly Plain Title},
+  publisher = {Plain Publisher},
+  year      = {2023}
+}

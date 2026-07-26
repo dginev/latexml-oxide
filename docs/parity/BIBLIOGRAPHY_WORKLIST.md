@@ -202,6 +202,143 @@ absolute `https://doi.org/` hrefs (percent-encoded, Perl BibTeX.pool
 L750-756) and scheme-less bib URLs are forced absolute — normalized both at
 .bib conversion AND in `format_links` (covers .bbl-borne/pre-compiled XML).
 
+SECOND INTERIM — field values keep their MARKUP (landed 2026-07-25). The
+2026-07-04 step digested field values but then **stringified** them, and a
+Whatsit stringifies to its *reversion*: `note = {\url{https://x}}` came back as
+its own TeX source, which `strip_braces` mashed into the dead literal
+`\urlhttps://x`; `\href{u}{text}` additionally **lost its link text** (the
+reversion keeps only the first argument). A second, independent flatten sat
+downstream in `apply_formatter`, which took `get_content()` of the field node and
+discarded element children — Perl's formatters are `do_any`-shaped and return
+`$doc->cloneNodes(@nodes)` (`MakeBibliography.pm` L525-531, L550-552). **Both had
+to be fixed; either one alone keeps the bug.** Same-host Perl renders all of
+`\url`/`\href`/`\emph`/math correctly, so this was GENUINE-RUST-ONLY.
+
+* `interpret_tex_markup` (make_bibliography.rs) digests into a scratch
+  `Document`, runs the new `Document::finalize_subtree` (font resolution +
+  `_font`/`_autoopened` bookkeeping-attribute removal), and serializes the
+  scratch `ltx:text` wrapper's children. It must be the SUBTREE variant:
+  whole-document `finalize()` returns `Ok` but, recursing from the root,
+  legitimately UNWRAPS that redundant font-only `ltx:text` — measured, the
+  content survives at the root while the caller's handle is left detached and
+  childless (`wrapper_children 1 → 0`, `parent = None`), serializing to nothing.
+  (An earlier note here said `finalize()` "fails"; it does not — that was
+  inferred from the empty output rather than measured.)
+* Applied to `title`/`journal`/`journaltitle`/`booktitle`/`publisher`/`note`;
+  every other field is untouched, and a wholly plain field still takes the
+  plain-text path, so the 99 % case is byte-identical.
+* Four fail-safe gates return `None` (→ escaped plain text) rather than splice
+  something unsound, because a bad fragment would break the XML parse and lose
+  the WHOLE bibliography: failed digest, **escaped content**, **unparsed math**,
+  and any prefixed element name.
+* The **escaped-content** gate is the one that a first cut got WRONG, and it is
+  the most important: BLOCK-level content (`\begin{itemize}`, `\par`,
+  `\begin{quote}`, `\footnote`) CLOSES the `ltx:text` wrapper and continues as a
+  SIBLING, so serializing only the wrapper's children dropped everything past
+  that point — `note={before \begin{itemize}\item X\end{itemize} after}`
+  rendered as just `before`, **silently, with zero errors**, i.e. precisely the
+  fail-OPEN the design claims to prevent. The gate compares the scratch
+  document's whole text against the wrapper's and declines on any difference.
+  It compares TEXT, so block content carrying none (a lone floated image) is
+  still invisible to it; every realistic escape carries text. Guarded by the
+  `INSIDELIST`/`afterblock`/`AFTERPAR` entries in the fixture.
+* The math gate is the one remaining sub-Perl case — the Marpa
+  pass lives in `latexml_math_parser`, which `latexml_post` does not depend on,
+  so a `<Math>` built here keeps unparsed `<XMath>` and would emit malformed
+  MathML (`x^2` → `msup` with an empty base). Falling back to the TeX source is
+  exactly today's behaviour for math; item 1 below fixes it properly.
+* **Digest each field exactly once.** The markup path runs BEFORE
+  `interpret_tex_text` and suppresses it on success — both digest the same
+  value, and digesting twice re-reports every error the field raises (measured:
+  a `_` in a note counted its `unexpected:_` **twice**, silently inflating the
+  document's error count, which is the canvas pass/fail signal) and re-runs any
+  side effect the macros have. Undefined macros hide this: the first digest
+  defines them as `<ltx:ERROR/>`, so they are self-healing on a second pass —
+  a guard fixture must use a non-self-healing error, and must contain a
+  backslash or both paths short-circuit and the test goes vacuously green.
+  Guard: `105_bib_field_digest_once`.
+* One serialization note settled during review: a finalized LaTeXML document is
+  entirely in the LaTeXML namespace and serializes **unprefixed**, so the single
+  `xmlns` on the generated `<bibliography>` root covers the spliced fragment —
+  no second `xmlns:ltx` declaration is needed (an early draft added one).
+
+Witness 2607.00045 (sn-jnl, reported by email 2026-07-25): 44 of 78 rendered
+entries carry `note = {\url{...}}`. Raw-TeX tokens in the rendered bibliography
+**46 → 2**, live links **0 → 45**; the 2 residuals are the gated `$\psi$` title
+and one `url={\url{...}}` that **Perl renders equally broken**
+(`href="\urlhttps://arxiv.org/abs/quant-ph/0510095"`) — parity, not ours.
+Guard: `06_cluster_regressions::bib_field_markup_survives_into_the_bibliography`
+(fixture carries a `\&` so a text-escaping regression cannot pass silently).
+
+THIRD INTERIM — fields that reached NO emit branch (landed 2026-07-25). Found by
+asking what else the reported family ("content missing from References") could
+cover. `convert_bib_file_to_xml` parsed every field but emitted only a subset,
+so eleven field kinds were **silently discarded** — most damagingly
+`howpublished = {\url{...}}`, which is how a `@misc` conventionally carries its
+URL. Same-host Perl emits all of them, so this was GENUINE-RUST-ONLY.
+
+The format specs ALREADY query the matching elements (`ltx:bib-organization`,
+`ltx:bib-place`, `ltx:bib-edition`, `ltx:bib-part[@role='series'|'part']`,
+`ltx:bib-status`, `ltx:bib-language`, `ltx:bib-type`, `ltx:bib-note`), so only
+the emitter was missing — mappings taken from `bibtex.rs` L1340-1573 (the port of
+`BibTeX.pool` `\bib@field@default@*`): `howpublished`→`bib-note[role=publication]`,
+`note`/`annote`→`bib-note[role=annotation]`,
+`institution`/`organization`/`school`→`bib-organization`, `address`→`bib-place`,
+`edition`→`bib-edition`, `series`/`part`→`bib-part[@role=…]`, `type`→`bib-type`,
+`status`→`bib-status`, `language`→`bib-language`.
+
+Deliberately still NOT emitted: `chapter`, `subtitle`, `translator`. Perl builds
+elements for them, but **no format spec queries** `ltx:bib-part[@role='chapter']`,
+`ltx:bib-subtitle` or `ltx:bib-name[@role='translator']`, so emitting them adds
+nodes that can never render (confirmed: Perl leaves `chapter={5}` unrendered
+too). The entry-type boilerplate Perl synthesizes in `\bib@entry@<type>@prepare`
+("Ph.D. Thesis", "Technical Report") is engine-side, not a `.bib` field, and
+arrives with item 1 below.
+
+`bib-type` is safe to emit here even though Perl's `getBibEntries` unions it with
+`bib-date`: the Rust port queries the two separately (make_bibliography.rs
+L1029/L1048), so a `type` field cannot displace the publication year.
+
+One visible consequence of emitting `type`, checked and accepted: real BibTeX
+treats it as an **override** of the entry-type label, while LaTeXML renders both,
+so `type = {Technical Report}` on a `@techreport` now reads "Technical Report
+Technical Report SIDL-WP-1999-0120". Verified byte-identical in same-host Perl —
+this is **parity**, KNOWN_PERL_ERRORS #60, and suppressing it would be a
+surpass-Perl divergence. It was previously hidden by dropping the field
+entirely, which also lost genuinely distinct types (`type = {Technical Memo}`) —
+a strictly worse trade. Only 1 `type` field exists across the nine witness
+`.bib` files.
+
+Measured: 7/7 probe fields now match same-host Perl on a per-entry fixture;
+across the nine 2607 witnesses this recovers **45 `bib-place` + 8 `bib-edition`
++ 1 `bib-type`** that were previously dropped, at **unchanged error counts**
+(the wider interpretation surfaces no new diagnostics on real input).
+Guard: the `BIGINSTITUTE`/`TECHMEMO`/`LECTURENOTES`/`SECONDED`/`BERLINPLACE`/
+`SOMEUNIVERSITY` + `howpub` assertions in
+`bib_field_markup_survives_into_the_bibliography`.
+
+#### Why this file is 3,735 lines, and why the interims did NOT refactor it
+
+User observation (2026-07-25): `make_bibliography.rs` builds XML by **string
+concatenation** instead of using libxml2 directly, and the file is large partly
+as a consequence. Measured: **3,735 lines vs Perl's 818** (4.6×), with 33
+`xml.push_str` / 31 `xml_escape` / 71 `format!` sites; the `.bib`→XML route
+alone is **573 lines** (`convert_bib_file_to_xml` 296, `interpret_tex_markup`
+105, plus the parse/escape helpers).
+
+The cost is concrete, not stylistic: the 2026-07-25 markup work had to add a
+serialize→string→reparse round-trip AND a namespace-prefix scanner purely
+because the target is a string rather than a node tree. With
+`PostDocument::add_nodes`/`NodeData` those two would not exist, and `xml_escape`
+would be unnecessary (libxml escapes on set).
+
+**Decision (user, 2026-07-25): do NOT refactor it to node-building as an
+intermediate step** — item 1 below already deletes the entire route, so a
+node-based rewrite of `convert_bib_file_to_xml` would be thrown away, while
+adding regression risk to a validated fix. Item 1 is the answer; it removes the
+string machinery *and* fixes the residual math gap and the entry-type
+boilerplate for free.
+
 FULL RE-PORT remaining (post-release):
 1. Replace `convert_bib_file_to_xml` with the recursive core conversion
    (`DigestionMode::BibTeX` + `PreBibTeX` + bibtex.rs already exist):
