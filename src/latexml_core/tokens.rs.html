@@ -840,4 +840,65 @@
 <a href=#840 id=840 data-nosnippet>840</a>    <span class="macro">assert_eq!</span>(s, <span class="string">"abc"</span>);
 <a href=#841 id=841 data-nosnippet>841</a>  }
 <a href=#842 id=842 data-nosnippet>842</a>}
+<a href=#843 id=843 data-nosnippet>843</a>
+<a href=#844 id=844 data-nosnippet>844</a><span class="attr">#[cfg(test)]
+<a href=#845 id=845 data-nosnippet>845</a></span><span class="kw">mod </span>untex_control_word_space_tests {
+<a href=#846 id=846 data-nosnippet>846</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#847 id=847 data-nosnippet>847</a>
+<a href=#848 id=848 data-nosnippet>848</a>  <span class="doccomment">/// `untex()` must re-emit the space that terminates a control word;
+<a href=#849 id=849 data-nosnippet>849</a>  /// `to_string()` documents that it does not, and the two must not be
+<a href=#850 id=850 data-nosnippet>850</a>  /// confused at a call site that needs valid TeX back.
+<a href=#851 id=851 data-nosnippet>851</a>  ///
+<a href=#852 id=852 data-nosnippet>852</a>  /// TeX CONSUMES the space after a control word, so by token-time it is gone
+<a href=#853 id=853 data-nosnippet>853</a>  /// as data — `\v S` and `\vS` tokenize to different things but a naive
+<a href=#854 id=854 data-nosnippet>854</a>  /// concatenation of the first yields the second. `\vS` exists in no LaTeX.
+<a href=#855 id=855 data-nosnippet>855</a>  ///
+<a href=#856 id=856 data-nosnippet>856</a>  /// This is not academic: `\bib@@names` used `to_string()` where Perl uses
+<a href=#857 id=857 data-nosnippet>857</a>  /// `UnTeX` (BibTeX.pool.ltxml L277), which mangled every space-form accent in
+<a href=#858 id=858 data-nosnippet>858</a>  /// a bibliography author name — `{\v S}`, `{\c c}`, `{\" a}`, i.e. most
+<a href=#859 id=859 data-nosnippet>859</a>  /// non-English names — into an undefined macro. ~+2800 error documents per
+<a href=#860 id=860 data-nosnippet>860</a>  /// corpus on the 2026-07-26 sandbox sweep.
+<a href=#861 id=861 data-nosnippet>861</a>  </span><span class="attr">#[test]
+<a href=#862 id=862 data-nosnippet>862</a>  </span><span class="kw">fn </span>untex_reemits_the_space_that_terminates_a_control_word() {
+<a href=#863 id=863 data-nosnippet>863</a>    <span class="kw">for </span>(src, expect_untex) <span class="kw">in </span>[
+<a href=#864 id=864 data-nosnippet>864</a>      (<span class="string">r"\v Spakov"</span>, <span class="string">r"\v Spakov"</span>), <span class="comment">// control word + space + LETTER: space needed
+<a href=#865 id=865 data-nosnippet>865</a>      </span>(<span class="string">r"\c calves"</span>, <span class="string">r"\c calves"</span>), <span class="comment">//   likewise
+<a href=#866 id=866 data-nosnippet>866</a>      </span>(<span class="string">r"\v{S}pakov"</span>, <span class="string">r"\v{S}pakov"</span>), <span class="comment">// braced argument: no space needed, none added
+<a href=#867 id=867 data-nosnippet>867</a>    </span>] {
+<a href=#868 id=868 data-nosnippet>868</a>      <span class="kw">let </span>toks = <span class="kw">crate</span>::mouth::tokenize(src);
+<a href=#869 id=869 data-nosnippet>869</a>      <span class="macro">assert_eq!</span>(
+<a href=#870 id=870 data-nosnippet>870</a>        toks.clone().untex(),
+<a href=#871 id=871 data-nosnippet>871</a>        expect_untex,
+<a href=#872 id=872 data-nosnippet>872</a>        <span class="string">"untex({src:?}) must round-trip to valid TeX"
+<a href=#873 id=873 data-nosnippet>873</a>      </span>);
+<a href=#874 id=874 data-nosnippet>874</a>      <span class="comment">// Re-tokenizing the untex output must yield the SAME control sequence —
+<a href=#875 id=875 data-nosnippet>875</a>      // the property that actually matters, and the one that broke.
+<a href=#876 id=876 data-nosnippet>876</a>      </span><span class="kw">let </span>first = |t: Tokens| {
+<a href=#877 id=877 data-nosnippet>877</a>        t.unlist()
+<a href=#878 id=878 data-nosnippet>878</a>          .first()
+<a href=#879 id=879 data-nosnippet>879</a>          .map(|t| t.to_string())
+<a href=#880 id=880 data-nosnippet>880</a>          .unwrap_or_default()
+<a href=#881 id=881 data-nosnippet>881</a>      };
+<a href=#882 id=882 data-nosnippet>882</a>      <span class="macro">assert_eq!</span>(
+<a href=#883 id=883 data-nosnippet>883</a>        first(<span class="kw">crate</span>::mouth::tokenize(<span class="kw-2">&amp;</span>toks.clone().untex())),
+<a href=#884 id=884 data-nosnippet>884</a>        first(<span class="kw">crate</span>::mouth::tokenize(src)),
+<a href=#885 id=885 data-nosnippet>885</a>        <span class="string">"untex({src:?}) changed the leading control sequence on re-tokenization"
+<a href=#886 id=886 data-nosnippet>886</a>      </span>);
+<a href=#887 id=887 data-nosnippet>887</a>    }
+<a href=#888 id=888 data-nosnippet>888</a>  }
+<a href=#889 id=889 data-nosnippet>889</a>
+<a href=#890 id=890 data-nosnippet>890</a>  <span class="doccomment">/// The documented contract of the other direction, pinned so nobody
+<a href=#891 id=891 data-nosnippet>891</a>  /// "helpfully" makes `Display` TeX-correct and silently changes every
+<a href=#892 id=892 data-nosnippet>892</a>  /// keyword-ish `to_string()` caller in the tree.
+<a href=#893 id=893 data-nosnippet>893</a>  </span><span class="attr">#[test]
+<a href=#894 id=894 data-nosnippet>894</a>  </span><span class="kw">fn </span>to_string_deliberately_does_not_reemit_the_space() {
+<a href=#895 id=895 data-nosnippet>895</a>    <span class="kw">let </span>toks = <span class="kw">crate</span>::mouth::tokenize(<span class="string">r"\v Spakov"</span>);
+<a href=#896 id=896 data-nosnippet>896</a>    <span class="macro">assert_eq!</span>(
+<a href=#897 id=897 data-nosnippet>897</a>      toks.to_string(),
+<a href=#898 id=898 data-nosnippet>898</a>      <span class="string">r"\vSpakov"</span>,
+<a href=#899 id=899 data-nosnippet>899</a>      <span class="string">"Display for Tokens is documented as NOT producing valid TeX; if this \
+<a href=#900 id=900 data-nosnippet>900</a>       changes, audit every to_string() caller before updating the expectation"
+<a href=#901 id=901 data-nosnippet>901</a>    </span>);
+<a href=#902 id=902 data-nosnippet>902</a>  }
+<a href=#903 id=903 data-nosnippet>903</a>}
 </code></pre></div></section></main></body></html>
