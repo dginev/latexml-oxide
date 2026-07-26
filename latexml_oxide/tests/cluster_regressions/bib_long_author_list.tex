@@ -1,0 +1,28 @@
+% arXiv/html_feedback#6797 — an author-year bibliography built from a `.bib`
+% (no `.bst` interpretation) used the FULL author list as the entry's refnum
+% LABEL. On a collaboration paper that is a 5104-character label, and because
+% the author-year branch also skipped the first block ("Skip redundant 1st
+% block!!"), the authors appeared ONLY there.
+%
+% pdflatex is the ground truth for the shape. Running `aa.bst` over the witness
+% (arXiv 2607.21432) emits
+%   \bibitem[{Abitbol {et~al.}(2025)Abitbol, Abril-Cabezas, …all surnames…}]{…}
+%   Abitbol, M., Abril-Cabezas, I., Adachi, S., {et~al.} 2025, JCAP, 2025, 034
+% i.e. natbib's SHORT form ("Abitbol et al. (2025)") is the citation label, the
+% long list is only natbib's optional full-author form and is never printed,
+% and the authors are shown in the entry BODY.
+%
+% Perl is byte-identical to the old Rust here (`do_names` truncates only for a
+% literal BibTeX "and others"), so this is a deliberate divergence —
+% OXIDIZED_DESIGN #71. Note Perl already carries the right helper,
+% `do_names_short`, defined at MakeBibliography.pm L586 and never called.
+\documentclass{article}
+\usepackage[authoryear]{natbib}
+\begin{document}
+See \citep{Collab2025}, \citep{Pair2019}, \citep{Solo2018} and \citep{Others2020}.
+% `aa` is not in the BIBSTYLES map (like the witness), so natbib's [authoryear]
+% option decides the citestyle. A mapped name such as `plainnat` would override
+% it back to `numbers` and the entry would never take the author-year branch.
+\bibliographystyle{aa}
+\bibliography{bib_long_author_list_refs}
+\end{document}

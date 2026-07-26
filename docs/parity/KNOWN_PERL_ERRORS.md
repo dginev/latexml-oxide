@@ -2413,3 +2413,49 @@ cause: an LF copy of the same file renders correctly, the CRLF original does not
 read. Guard
 `104_lstinputlisting_range_crlf::crlf_line_comment_style_does_not_bleed_past_its_line`.
 Candidate to upstream (not filed as of 2026-07-25).
+
+## 58. `do_names_short` is dead code — the author-year label carries every author
+
+`LaTeXML/lib/LaTeXML/Post/MakeBibliography.pm` defines exactly the helper the
+author-year citation label needs:
+
+```perl
+sub do_names_short {
+  my (@names) = @_;
+  if (@names > 2) {
+    return ($names[0]->childNodes, ' ', ['ltx:text', { class => 'ltx_bib_etal' }, 'et al.']); }
+  elsif (@names > 1) {
+    return ($names[0]->childNodes, ' and ', $names[1]->childNodes); }
+  elsif (@names) {
+    return ($names[0]->childNodes); } }
+```
+
+It is **never called** — `grep do_names_short` finds only the definition (L586).
+The `role="refnum"` `ltx_bib_author-year` label instead goes through
+`do_authors`→`do_names` (L505-517, L568-584), which emits **every** author and
+says "et al." only when the BibTeX field literally ends `and others`. The
+author-year branch then drops the entry's first block
+(`shift(@blockspecs); # Skip redundant 1st block!!`) on the grounds that the
+authors are already in the label.
+
+For a collaboration paper the result is a citation label thousands of characters
+long which IS the entry. Witness arXiv 2607.21432 (A&A, Simons Observatory):
+a **5104-character** label; 9 of its 19 entries exceed 120 characters. Reader
+report: [arXiv/html_feedback#6797](https://github.com/arXiv/html_feedback/issues/6797).
+Reproduce with any `.bib` entry of >2 authors that does not end `and others`,
+under an author-year citestyle (the bibliography must be built from the `.bib` —
+LaTeXML does not interpret `.bst`).
+
+That this is an oversight rather than a considered style is corroborated inside
+the same file: the `role="authors"` tag already truncates at `>2` (L433-437), so
+the full-list label contradicts its neighbour; and BibTeX itself disagrees —
+running the witness's `aa.bst` puts the SHORT form in `\bibitem[…]` (natbib's
+`Abitbol {et~al.}(2025)`) and prints the authors in the entry body, the long
+surname list being only natbib's optional `\citet*` form.
+
+**Fixed in Rust** by calling the short form for the label and keeping the first
+block, so the full author list survives in the body (max label on the witness
+5104 → 48 chars). Intentional divergence OXIDIZED_DESIGN #71, guard
+`cluster_bib_long_author_list_refnum`. Candidate to upstream — the fix upstream is
+to route the refnum through the already-present `do_names_short` and stop
+skipping the first block.
