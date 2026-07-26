@@ -54,7 +54,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
-| **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04 | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
+| **R5** | Bibliography targets + MakeBibliography re-port | surveyed 2026-07-12; user directive 2026-07-04; **field-markup interim landed 2026-07-25** | **family** — dedicated session | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -421,16 +421,20 @@ structurally identical to Perl — same counts for all 25 element classes sample
 (312 `Math`, 58 `bibitem`, 336 `td`, 78 `ref`, …; sole delta 87 vs 88 `para`).
 Guards `cluster_fenced_bare_operator`, `cluster_leading_relop_comma_list`.
 
-**Thousands separator — policy settled, implementation still OPEN.** `50,000` is
-ONE number; both engines read the comma as a list separator. Owner policy
-(2026-07-25): **default US, support EU as a documented secondary.** The `en` half
-is the broken one — Perl's thousands arm demands `$r ne 'PUNCT'` and a math comma
-is always PUNCT, so it is dead code for English, while the EU decimal comma
-already works through the language maps. **Implementing it in the ligature is a
+**Thousands separator — ✅ FIXED 2026-07-25 (US default; EU already worked).**
+`50,000` is ONE number; both engines read the comma as a list separator. Owner
+policy: **default US, EU a supported secondary.** The `en` half was the broken
+one — Perl's thousands arm demands `$r ne 'PUNCT'` and a math comma is always
+PUNCT, so it is dead code for English, while the EU decimal comma already works
+through the language maps. **The ligature is the wrong seam and that is a
 measured dead end** (built, reverted): ligatures run per-token during building,
-so there is no right context at all, and a merge-at-three-digits rule corrupts
-plausible pairs — `$(1, 2024)$` → `12024`. Correct home is a `DefRewrite` in the
-post-build `Rewriting` phase; full design in
+so there is NO right context, and a merge-at-three-digits rule corrupts plausible
+pairs — `$(1, 2024)$` → `12024`. Landed instead as a `DefRewrite` in the
+post-build `Rewriting` phase, where the ligature has already collapsed each digit
+run into one token, so the group length is testable with its right context and
+those cases are safe by construction. Guards
+`cluster_thousands_separator_us_default` / `_eu`; mechanism, the two
+implementation traps and the full result table in
 [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md).
 
 

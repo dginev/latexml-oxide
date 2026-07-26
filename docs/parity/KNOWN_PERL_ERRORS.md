@@ -2414,7 +2414,42 @@ read. Guard
 `104_lstinputlisting_range_crlf::crlf_line_comment_style_does_not_bleed_past_its_line`.
 Candidate to upstream (not filed as of 2026-07-25).
 
-## 58. `do_names_short` is dead code — the author-year label carries every author
+## 60. A BibTeX `type` field is APPENDED to the entry-type label instead of replacing it
+
+Real BibTeX treats `type` as an **override**: in `@techreport`/`@phdthesis`/
+`@mastersthesis`/`@inbook`, `type = {...}` replaces the default label
+("Technical report", "PhD thesis", "chapter"). `plain.bst` implements this as
+`format.tr.number`: `type empty$ { "Technical report" } { type } if$`.
+
+LaTeXML renders both. The value lands in `ltx:bib-type` (`BibTeX.pool.ltxml`
+L1544 `\bib@field@default@type`), while the format spec independently carries an
+unconditional `"Technical Report "` prestring in front of
+`ltx:bib-part[@role='number']` — so the two concatenate.
+
+```bibtex
+@techreport{pr, author={Page, L.}, title={PageRank}, year={1998},
+  institution={Stanford}, type={Technical Report}, number={SIDL-WP-1999-0120} }
+```
+
+Both engines render, byte-identically:
+
+```
+Technical Report Technical Report SIDL-WP-1999-0120 , Stanford
+```
+
+where real BibTeX prints the label once. Witness arXiv 2607.00052 (the PageRank
+entry in `main.bib`); it is the ONLY `type` field across the nine 2607 witness
+`.bib` files, so the practical blast radius is small.
+
+**PARITY — not fixed.** Rust only started showing it on 2026-07-25, when the
+`.bib` emitter stopped dropping the `type` field altogether (previously the
+duplication was hidden by losing the field, which also lost genuinely distinct
+types like `type = {Technical Memo}` — a strictly worse trade). Suppressing the
+prestring when `ltx:bib-type` is present would make Rust emit less than Perl on
+the same input, i.e. a surpass-Perl divergence needing explicit authorization.
+Candidate to upstream (not filed as of 2026-07-25).
+
+## 61. `do_names_short` is dead code — the author-year label carries every author
 
 `LaTeXML/lib/LaTeXML/Post/MakeBibliography.pm` defines exactly the helper the
 author-year citation label needs:

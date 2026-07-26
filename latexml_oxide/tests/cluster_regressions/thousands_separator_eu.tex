@@ -1,0 +1,15 @@
+% The European half of the thousands/decimal split (owner policy 2026-07-25:
+% US is the default, EU is a supported secondary).
+%
+% Nothing in the US thousands rewrite fires here — for `de` the language maps
+% put the DECIMAL separator on the comma and the thousands separator on the dot,
+% and the number ligature's decimal arm has never had a role guard, so a German
+% document reads `$3,14$` as 3.14 and `$50.000$` as 50000 through the existing
+% machinery. This fixture pins that the US-default rewrite does not regress it.
+\documentclass{article}
+\usepackage[german]{babel}
+\begin{document}
+A: $3,14$.
+B: $50.000$.
+C: $1.234,56$.
+\end{document}

@@ -746,16 +746,91 @@ fn cluster_leading_relop_comma_list() {
     !x.contains("ltx_math_unparsed"),
     "every formula here must parse; got an unparsed one:\n{x}"
   );
-  // The #37 reading: the comma splits at the statements level, and the leading
-  // relop keeps its `absent` operand — same shape `a>50,000` already produced.
+  // `50,000` is now recognized as ONE number by the thousands-separator rewrite
+  // (see `cluster_thousands_separator_us_default`), so these two read as plain
+  // relations rather than lists. The grammar fix is still what this test guards:
+  // without it the LEADING-relop form has no derivation at all, which `$>a,b$`
+  // below still exercises with a non-numeric list.
   assert!(
-    x.contains(r#"text="list@(absent &gt; 50, 000)""#),
-    "expected list@(absent > 50, 000) for the leading-relop comma list:\n{x}"
+    x.contains(r#"text="absent &gt; 50000""#),
+    "expected `absent > 50000` for the leading relop:\n{x}"
   );
   assert!(
-    x.contains(r#"text="list@(a &gt; 50, 000)""#),
-    "the binary-relop sibling must be unchanged:\n{x}"
+    x.contains(r#"text="a &gt; 50000""#),
+    "the binary-relop sibling must agree:\n{x}"
   );
+  assert!(
+    x.contains(r#"text="list@(absent &gt; a, b)""#),
+    "the leading-relop comma list (non-numeric, so untouched by the thousands \
+     rewrite) is the shape that had NO derivation before:\n{x}"
+  );
+}
+
+/// Thousands separator, US default (owner policy 2026-07-25). `$50,000$` is ONE
+/// number; the number ligature can never see that for English (its thousands arm
+/// demands `role != PUNCT` and a math comma is always PUNCT) and cannot be fixed
+/// there, since ligatures run per-token during building with no right context —
+/// a merge-at-three-digits rule turns `$(1, 2024)$` into `12024`. The merge runs
+/// in the post-build Rewriting phase instead, where each digit run is already
+/// one token, which is what makes the "must NOT merge" half safe.
+/// Witness: arXiv 2605.17646.
+#[test]
+fn cluster_thousands_separator_us_default() {
+  let x = convert_to_xml("tests/cluster_regressions/thousands_separator.tex");
+  let text_of = |tex: &str| -> String {
+    let needle = format!(r#"tex="{tex}""#);
+    let i = x
+      .find(&needle)
+      .unwrap_or_else(|| panic!("no formula {tex} in:\n{x}"));
+    let rest = &x[i..];
+    let t = rest.find(r#"text=""#).expect("text attr");
+    let start = i + t + 6;
+    x[start..start + x[start..].find('"').expect("close quote")].to_string()
+  };
+  // Merged into a single number, separators kept in the text but not the meaning.
+  for (tex, want) in [
+    ("50,000", "50000"),
+    ("&gt;50,000", "absent &gt; 50000"),
+    ("1,234,567", "1234567"),
+    ("12,345,678,901", "12345678901"), // 4 groups — exercises every pass
+    ("1,234.56", "1234.56"),           // thousands AND decimal
+    ("3.14", "3.14"),
+  ] {
+    assert_eq!(text_of(tex), want, "{tex} should merge");
+  }
+  // Must NOT merge. `3,14` is the European decimal reading (two digits, so the
+  // US rule declines); the rest would each be a real corruption.
+  for (tex, want) in [
+    ("3,14", "list@(3, 14)"),
+    ("50,0001", "list@(50, 0001)"),          // 4-digit group
+    ("f(x,000)", "f@(vector@(x, 000))"),     // no NUMBER left of the comma
+    ("(1,2024)", "open-interval@(1, 2024)"), // the pair the ligature corrupted
+    ("(12,3456)", "open-interval@(12, 3456)"),
+    ("a,b", "list@(a, b)"),
+  ] {
+    assert_eq!(text_of(tex), want, "{tex} must stay unmerged");
+  }
+  // The merged token must be indistinguishable from an unmerged one: no
+  // `font="italic"` stamped on by an ambient-font fallback.
+  assert!(
+    !x.contains(r#"<XMTok font="italic" meaning="50000""#),
+    "merged number picked up an ambient italic font:\n{x}"
+  );
+}
+
+/// The European half: for `de` the comma is the DECIMAL separator and the dot
+/// the thousands one, handled by the language maps + the ligature's decimal arm.
+/// Pins that the US-default rewrite leaves it alone.
+#[test]
+fn cluster_thousands_separator_eu() {
+  let x = convert_to_xml("tests/cluster_regressions/thousands_separator_eu.tex");
+  for want in [
+    r#"tex="3,14" text="3.14""#,
+    r#"tex="50.000" text="50000""#,
+    r#"tex="1.234,56" text="1234.56""#,
+  ] {
+    assert!(x.contains(want), "missing {want} in:\n{x}");
+  }
 }
 
 /// A bare operator used as an OPERAND — the argument-slot `f(\cdot)`, the inner
@@ -1416,6 +1491,104 @@ fn non_utf8_bib_file_still_yields_a_bibliography() {
   assert!(
     x.contains("Café"),
     "cp1252 .bib: the accented surname did not survive the decode:\n{x}"
+  );
+}
+
+/// Witness arXiv 2607.00045 (sn-jnl): 44 of its 78 rendered entries carry
+/// `note = {\url{...}}`, and every one of them rendered as the dead literal text
+/// `\urlhttps://…` instead of a link.
+///
+/// Two independent flatten-to-text steps had to be fixed, and EITHER of them
+/// alone keeps the bug alive:
+///
+/// 1. `convert_bib_file_to_xml` stringified the digested field
+///    (`interpret_tex_text`), and a Whatsit stringifies to its REVERSION — so
+///    `\url{…}` came back as its own TeX source, which `strip_braces` then
+///    mashed into `\urlhttps://…`. `\href{u}{text}` was worse: the reversion
+///    drops the second argument, so the link TEXT was lost outright.
+/// 2. `apply_formatter` then took `get_content()` of the field node, discarding
+///    any element children. Perl's formatters are `do_any`-shaped and return
+///    `$doc->cloneNodes(@nodes)` (`MakeBibliography.pm` L525-531, L550-552), so
+///    the markup reaches the bibitem.
+///
+/// Same-host Perl renders all three of these correctly, so this was
+/// GENUINE-RUST-ONLY, not a parity gap.
+#[test]
+fn bib_field_markup_survives_into_the_bibliography() {
+  let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "bib markup: no bibliography at all:\n{x}"
+  );
+  // The whole point: no TeX source may leak into the rendered entries.
+  for leak in ["\\urlhttps", "\\url{", "\\href", "\\emph"] {
+    assert!(
+      !x.contains(leak),
+      "bib markup: {leak:?} leaked as literal text into the bibliography:\n{x}"
+    );
+  }
+  // `\url` becomes a real link carrying the URL as its own text.
+  assert!(
+    x.contains("href=\"https://example.org/a\""),
+    "bib markup: \\url in a note did not become a link:\n{x}"
+  );
+  // `\href`'s SECOND argument is the link text — the reversion path lost it.
+  assert!(
+    x.contains("href=\"https://example.org/b\"") && x.contains("the link text"),
+    "bib markup: \\href lost its href or its link text:\n{x}"
+  );
+  // Markup inside a title survives as markup, not as flattened text.
+  assert!(
+    x.contains("<emph") && x.contains("emphasis"),
+    "bib markup: the emphasized title lost its markup:\n{x}"
+  );
+  // The fragment is spliced as SERIALIZED XML, so an unescaped `&` in a text
+  // node would make the generated bibliography unparseable and drop every
+  // entry — the other three entries above are the canary for that.
+  assert!(
+    x.contains("an ampersand"),
+    "bib markup: `\\&` in a marked-up title broke the field:\n{x}"
+  );
+  // A wholly plain field keeps taking the plain-text path unchanged, so the
+  // fix cannot silently restructure the 99% case.
+  assert!(
+    x.contains("Wholly Plain Title") && x.contains("Plain Publisher"),
+    "bib markup: a plain field was damaged by the markup path:\n{x}"
+  );
+  // Block-level content closes the `ltx:text` wrapper and continues as a
+  // sibling. Serializing only the wrapper's children dropped everything past
+  // that point — silently, with zero errors. The content must survive (the
+  // fallback renders it as flattened text, which is the pre-existing
+  // behaviour); losing it is the regression being guarded.
+  for needle in ["INSIDELIST", "afterblock", "AFTERPAR"] {
+    assert!(
+      x.contains(needle),
+      "bib markup: {needle:?} was silently dropped — block content escaped the \
+       wrapper and the fragment was spliced anyway:\n{x}"
+    );
+  }
+  // Fields that reached NO emit branch at all, so their content never appeared
+  // in the References. Perl emits every one of them and the format specs
+  // already query the matching `ltx:bib-*` elements — only the emitter was
+  // missing. `howpublished` is the important one: it is how a @misc carries its
+  // URL, and that URL was simply gone.
+  for needle in [
+    "BIGINSTITUTE",
+    "TECHMEMO",
+    "LECTURENOTES",
+    "SECONDED",
+    "BERLINPLACE",
+    "SOMEUNIVERSITY",
+  ] {
+    assert!(
+      x.contains(needle),
+      "bib fields: {needle:?} never reached the bibliography — its field is \
+       parsed but emitted by no branch:\n{x}"
+    );
+  }
+  assert!(
+    x.contains("href=\"https://example.org/howpub\""),
+    "bib fields: a @misc lost the URL its `howpublished` carries:\n{x}"
   );
 }
 
