@@ -135,8 +135,8 @@
   (apply) where Perl groups `(n to infinity)`. Same ARROW-as-applied-function
   family as `f(a,b)`.
 
-- **Thousands-separator comma read as a list separator — OPEN, shared with Perl.
-  Policy SETTLED 2026-07-25, implementation seam identified, NOT yet built.**
+- **Thousands-separator comma read as a list separator — ✅ FIXED 2026-07-25
+  (US default; EU already worked). Was shared with Perl.**
   `$>50,000$` is ONE number, `50000`, written with a thousands separator.
   Neither engine sees that: Perl builds `>(absent, list(50,000))`, Rust
   `list@(absent>50, 000)` (the #37 reading). The glyphs come out right, so it is
@@ -167,19 +167,32 @@
   premature merge is then extended by the ordinary adjacent-NUMBER rule. Adding
   a start-of-run guard does not help (there is no right sibling to test).
 
-  **Correct home: a `DefRewrite` in the post-build `Rewriting` phase**, which
-  runs with the full DOM and BEFORE math parsing (`core_interface.rs`
-  Building → Rewriting → Math Parsing). By then the ligature has already
-  collapsed each digit run, so the pattern is exactly three siblings —
-  `XMTok[@role='NUMBER']`, `XMTok[@role='PUNCT']` with text `,`,
-  `XMTok[@role='NUMBER']` — and the group length is simply
-  `string-length()` of the third, testable *with* its right context. Merge into
-  the first node (text `50,000`, `meaning` `50000`) and unlink the other two,
-  unrecording their ids first (the `\not` rewrite in `math_common.rs` L599 is the
-  pattern to copy — see its UAF comment). Open sub-questions: whether the rewrite
-  engine iterates to a fixpoint (needed for `1,234,567`), and whether to gate on
-  `xml:lang` here or keep reading the existing separator maps.
-  Witness: arXiv 2605.17646 (`population $ > 50,000$`).
+  **Built as a `DefRewrite` in the post-build `Rewriting` phase**
+  (`base_xmath.rs`, `THOUSANDS_SELECT_XPATH`), which runs with the full DOM and
+  BEFORE math parsing (`core_interface.rs` Building → Rewriting → Math Parsing).
+  By then the ligature has already collapsed each digit run into ONE token, so
+  the group length is directly testable *with* its right context — which is
+  exactly what makes the ligature's failure cases safe by construction:
+  `(1, 2024)` presents the group `2024` and `50,0001` presents `0001`, both
+  rejected. The selector takes a NUMBER followed by `,` and by a group whose
+  first three chars are digits and which then either ends (`50,000`) or
+  continues with the decimal point (`1,234.56`, one token by then).
+  Results: `50,000`→`50000`, `1,234,567`→`1234567`,
+  `12,345,678,901`→`12345678901`, `1,234.56`→`1234.56`; and unmerged:
+  `3,14` (EU decimal — two digits), `50,0001`, `f(x,000)` (no NUMBER left of the
+  comma), `(1, 2024)`, `(12, 3456)`. Presentation becomes a single
+  `<mn>50,000</mn>`. `$(12, 345)$` DOES merge — genuinely ambiguous, resolved by
+  the US default on purpose.
+  Two implementation notes worth keeping: pass the lead token's font to
+  `insert_math_token` (with `None` it stamps `font="italic"` from the ambient
+  math font, so the merged token would differ from its own unmerged twin); and
+  the rewrite engine runs each rule ONCE over a match set computed up front, so
+  chains are handled by selecting only chain HEADS and registering the rule
+  `THOUSANDS_MERGE_PASSES` (4) times — merging a head would otherwise dangle the
+  interior matches.
+  Guards `cluster_thousands_separator_us_default`,
+  `cluster_thousands_separator_eu`. Witness: arXiv 2605.17646
+  (`population $ > 50,000$` → `absent > 50000`).
 
 CAUTION: new VERTBAR/fence grammar rules can collide with package-built
 structures — always cross-check the affected fixture against Perl before
