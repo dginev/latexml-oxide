@@ -63,7 +63,12 @@
   - **Bibliographies stop losing reference content** — `.bib` field markup
     (`\url`, `\href`, `\emph`) survived only as dead literal text, and eleven
     field kinds (`howpublished`, `institution`, `address`, `edition`, `series`,
-    `type`, …) were emitted by no branch at all.
+    `type`, …) were emitted by no branch at all. Recovering that content means
+    the fields are now *interpreted*, so they must also be given what a
+    `.bst`-generated `.bbl` provides — the `\providecommand{\url}…` block, and
+    a percent that stays literal (BibTeX has no comments, and `%` is routine in
+    an encoded URL). Measured over a 30,079-document arXiv sample: 62 more
+    documents convert cleanly, 44 fewer carry errors.
   - **amsrefs `\bib` values digest as live TeX** — `\MR{…}` came out as literal
     characters and `pages` rendered empty.
   - **MathReview / ZentralBlatt links are synthesized** — `mrnumber`/`zblno`
@@ -72,6 +77,10 @@
   - **A biblatex `.bbl` carrying two `\datalist` blocks no longer hangs the
     conversion** on a self-referential `\let`.
   - **A biber `\missing{key}` is a named warning**, not an undefined-command error.
+  - **A font-encoding text symbol inside a `\cite` key or package option no
+    longer hangs the conversion** — an accented character reached the encoding
+    dispatch while the font encoding was the stay-ASCII one, and the fallback
+    could not terminate under pure expansion.
   - **The author-year citation label uses the short author form** — a
     collaboration paper's label ran to 5104 characters and displaced the entry.
   - **More math parses** — fences split by TeX's null delimiter, bare operators
