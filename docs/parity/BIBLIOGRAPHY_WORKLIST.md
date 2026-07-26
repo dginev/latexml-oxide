@@ -48,15 +48,14 @@ why it is load-bearing — a pre-tokenized `Explode!` stream "did neither"
 `digest()`, which is **eager**: every catcode is fixed before any handler runs,
 so no parameter type can ever take effect.
 
-**Relation to issue #386** (build XML through libxml, not string concatenation).
+**Relation to issue 386** (build XML through libxml, not string concatenation).
 Separate axes that meet in this one file, and the dependency runs one way.
-#386 is about OUTPUT — `interpret_tex_markup` currently returns a *serialized
+Issue 386 is about OUTPUT — `interpret_tex_markup` currently returns a *serialized
 XML string* spliced into the bibliography behind three trust gates, which is
-exactly #386's complaint. This section is about INPUT — how the field is
+exactly issue 386's complaint. This section is about INPUT — how the field is
 tokenized. Routing field interpretation through the pool path makes the output
-arrive as DOM nodes, so **doing this re-port resolves #386's
-`make_bibliography.rs` portion as a side effect; doing #386 first does not help
-here.** Do not attack that portion of #386 separately.
+arrive as DOM nodes, so **doing this re-port also settles the `make_bibliography.rs` portion of
+issue 386 as a side effect; doing 386 first does not help here.** Do not attack that portion of issue 386 separately.
 
 **Consequence for planning.** The remaining 61 errors are bounded by this gap,
 not by a new defect. A per-field `Tokens::neutralize` (`tokens.rs:371`, the
