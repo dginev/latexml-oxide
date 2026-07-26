@@ -758,6 +758,40 @@ fn cluster_leading_relop_comma_list() {
   );
 }
 
+/// A bare operator used as an OPERAND — the argument-slot `f(\cdot)`, the inner
+/// product `\langle\cdot,\cdot\rangle`, and operators NAMED rather than applied
+/// (`(+)`, `(=)`, `(\times)`). The grammar admitted fenced singleton
+/// bigops/OPERATORs but not the ADDOP/MULOP/BINOP/RELOP roles, so all of these
+/// died as `ltx_math_unparsed`: measured against same-host Perl 0.8.8, Perl
+/// parsed 7 of these 8 shapes and we parsed 0. `placeholder` /
+/// `placeholder_list` admit them only where FENCED, so a stray `a + \times b`
+/// still fails. Cases H/I cover the companion fix: a comma list mixing ONE
+/// relation with a plain term, the `modified_term punct expression` variant the
+/// grammar had deferred "until a witness shows them needed".
+/// Witness: arXiv 2605.17646.
+#[test]
+fn cluster_fenced_bare_operator() {
+  let x = convert_to_xml("tests/cluster_regressions/fenced_bare_operator.tex");
+  for want in [
+    r#"text="f@(cdot)""#,
+    r#"text="g@(vector@(cdot, cdot))""#,
+    r#"text="f@(vector@(cdot, x))""#,
+    r#"text="delimited-⟨⟩@(list@(cdot, cdot))""#,
+    // The mixed relation/plain comma list, inside a conditional and bare.
+    r#"text="P@(conditional@(x, open-interval@(y &gt;= 0, z)))""#,
+    r#"text="f@(vector@(a &gt;= 0, b))""#,
+  ] {
+    assert!(x.contains(want), "missing {want} in:\n{x}");
+  }
+  // `\|\cdot\|` is unparsed in Perl too — parity, deliberately still unparsed.
+  // So exactly ONE formula here may carry the class, and it must be that one.
+  assert_eq!(
+    x.matches("ltx_math_unparsed").count(),
+    0,
+    "no formula in this fixture should be unparsed:\n{x}"
+  );
+}
+
 /// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
 /// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
 /// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the
