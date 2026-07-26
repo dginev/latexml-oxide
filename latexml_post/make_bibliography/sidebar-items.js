@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["CitationStyle"],"struct":["MakeBibliography"]};
+window.SIDEBAR_ITEMS = {"enum":["CitationStyle","RawBibSource"],"fn":["set_bib_converter"],"struct":["BibConversionRequest","MakeBibliography"],"type":["BibConverterFn"]};
