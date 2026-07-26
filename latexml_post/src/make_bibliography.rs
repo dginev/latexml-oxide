@@ -752,6 +752,8 @@ impl MakeBibliography {
     }
 
     let mut skip_first_block = false;
+    // Author-year only: keep the first block but drop its (redundant) year field.
+    let mut drop_first_block_year = false;
     match effective_style {
       CitationStyle::Numbers => {
         tags.push(NodeData::Element {
@@ -786,18 +788,37 @@ impl MakeBibliography {
         });
       },
       CitationStyle::AuthorYear => {
-        // Author-year refnum — Perl MakeBibliography.pm else-branch (L505-517):
-        // the ltx_bib_author-year label is the FULL author list via
-        // do_authors→do_names (every author, initials-first do_name, ", "/" "
-        // separators with "and " before the last, "et al." only for a literal
-        // BibTeX "and others"), followed by " (year)". NOT the abbreviated
-        // inline "X et al." form — that is the separate role="authors" tag.
-        skip_first_block = true;
+        // Author-year refnum. Perl (MakeBibliography.pm else-branch L505-517)
+        // builds this label from `do_authors`→`do_names`, i.e. EVERY author,
+        // with "et al." only for a literal BibTeX "and others"; and it then
+        // drops the first block ("Skip redundant 1st block!!") because the
+        // authors are already in the label.
+        //
+        // We use the SHORT form instead — intentional divergence
+        // OXIDIZED_DESIGN #71. On a collaboration paper Perl's rule yields a
+        // 5104-character citation label (witness arXiv 2607.21432, reported as
+        // arXiv/html_feedback#6797) and, with the block skipped, that label is
+        // essentially the whole entry.
+        //
+        // pdflatex is the ground truth for the shape. `aa.bst` over the witness
+        // emits
+        //   \bibitem[{Abitbol {et~al.}(2025)Abitbol, Abril-Cabezas, …}]{…}
+        //   Abitbol, M., Abril-Cabezas, I., Adachi, S., {et~al.} 2025, JCAP …
+        // — natbib's SHORT form is the citation label, the long surname list is
+        // only natbib's optional full-author form (never printed), and the
+        // authors live in the entry BODY. So: short label, and keep the block.
+        //
+        // Perl already carries the right helper — `do_names_short`
+        // (MakeBibliography.pm L586) — defined and never called; `do_names_short`
+        // below is its port. Perl's own role="authors" tag likewise truncates at
+        // >2 (L433-437), so the full-list label was internally inconsistent.
+        skip_first_block = false;
+        drop_first_block_year = true;
         let suffix = entry.suffix.as_deref().unwrap_or("");
         let mut refnum_children: Vec<NodeData> = if let Some(ref bibentry) = entry.bibentry {
           let authors = PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
           if !authors.is_empty() {
-            do_names(authors)
+            do_names_short(authors)
           } else {
             let editors = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
             if !editors.is_empty() {
@@ -858,7 +879,7 @@ impl MakeBibliography {
     }
 
     // --- Content blocks ---
-    let blocks = self.format_blocks(doc, entry, skip_first_block);
+    let blocks = self.format_blocks(doc, entry, skip_first_block, drop_first_block_year);
     children.extend(blocks);
 
     // --- Cited-by block ---
@@ -1183,6 +1204,7 @@ impl MakeBibliography {
     doc: &PostDocument,
     entry: &BibEntryData,
     skip_first: bool,
+    drop_first_year: bool,
   ) -> Vec<NodeData> {
     let format_type = entry.format_type();
     let block_specs = get_fmt_spec(format_type);
@@ -1195,6 +1217,16 @@ impl MakeBibliography {
 
       let mut items: Vec<NodeData> = Vec::new();
       for field_spec in block_spec {
+        // Author-year: the refnum label already reads "Author (Year)", so the
+        // first block repeating the year would print it twice in the one entry.
+        // Perl avoids that by dropping the whole block (and with it the author
+        // list); we keep the block and drop only the redundant field. Matches
+        // the biblatex author-year path already shipped here, whose entries
+        // render as `[Smith (2020)]  John Smith  “A study of things” …` —
+        // label carries the year, author block does not. See OXIDIZED_DESIGN #71.
+        if drop_first_year && i == 0 && field_spec.class == "year" {
+          continue;
+        }
         let (nodes_found, negated) = if let Some(ref bibentry) = entry.bibentry {
           let xpath = field_spec.xpath.trim_start_matches('!').trim();
           let negated = field_spec.xpath.starts_with('!');
@@ -2648,6 +2680,63 @@ fn do_name_text(namenode: &Node) -> String {
     out.push_str(&surname.get_content());
   }
   out
+}
+
+/// The SHORT author form used for the author-year citation label: surnames
+/// only, `>2` collapsing to "First et al.".
+///
+/// Port of Perl's `do_names_short` (MakeBibliography.pm L586-593) — which is
+/// **defined there and never called**; Perl's author-year refnum uses the full
+/// `do_names` instead, producing labels thousands of characters long on
+/// collaboration papers. See OXIDIZED_DESIGN #71 for why we call it, and
+/// `cluster_bib_long_author_list_refnum` for the guard.
+///
+/// Beyond Perl's version: a trailing BibTeX `others` is dropped and forces the
+/// "et al." form, so `Smith and others` reads "Smith et al." rather than
+/// "Smith and others". Perl's unused helper has no `others` handling at all;
+/// `do_names` (its called sibling) does, so this keeps the two consistent.
+fn do_names_short(mut names: Vec<Node>) -> Vec<NodeData> {
+  let surname_text = |n: &Node| -> String {
+    PostDocument::findnodes_foreign("ltx:surname", n)
+      .into_iter()
+      .next()
+      .map(|s| s.get_content())
+      .unwrap_or_else(|| n.get_content())
+      .trim()
+      .to_string()
+  };
+  let mut etal = names
+    .last()
+    .map(|n| n.get_content().trim() == "others")
+    .unwrap_or(false);
+  if etal {
+    names.pop();
+  }
+  if names.len() > 2 {
+    etal = true;
+  }
+  let etal_span = || NodeData::Element {
+    tag:        "ltx:text".to_string(),
+    attributes: Some(HashMap::from_iter([(
+      "class".to_string(),
+      "ltx_bib_etal".to_string(),
+    )])),
+    children:   vec![NodeData::Text("et al.".to_string())],
+  };
+  match (names.len(), etal) {
+    (0, _) => Vec::new(),
+    (_, true) => vec![
+      NodeData::Text(surname_text(&names[0])),
+      NodeData::Text(" ".to_string()),
+      etal_span(),
+    ],
+    (1, false) => vec![NodeData::Text(surname_text(&names[0]))],
+    (_, false) => vec![
+      NodeData::Text(surname_text(&names[0])),
+      NodeData::Text(" and ".to_string()),
+      NodeData::Text(surname_text(&names[1])),
+    ],
+  }
 }
 
 /// Perl MakeBibliography `do_names` (L568-584) / `do_authors` (L595-597): the

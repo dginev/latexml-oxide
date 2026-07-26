@@ -867,6 +867,104 @@ fn cluster_fenced_bare_operator() {
   );
 }
 
+/// arXiv/html_feedback#6797 — an author-year bibliography built from a `.bib`
+/// used the FULL author list as the entry's refnum LABEL (5104 characters on the
+/// witness, arXiv 2607.21432); and because the author-year branch also skipped
+/// the first block, the authors appeared ONLY there.
+///
+/// pdflatex is the ground truth for the shape: `aa.bst` over the witness emits
+/// `\bibitem[{Abitbol {et~al.}(2025)Abitbol, …all surnames…}]` — natbib's SHORT
+/// form is the citation label, the long list is only natbib's optional
+/// full-author form and is never printed — and shows the authors in the entry
+/// BODY. Perl is byte-identical to the old Rust (`do_names` truncates only for a
+/// literal BibTeX `and others`), so this is a deliberate divergence,
+/// OXIDIZED_DESIGN #71.
+#[test]
+fn cluster_bib_long_author_list_refnum() {
+  let x = convert_and_post("tests/cluster_regressions/bib_long_author_list.tex");
+  // The refnum tag of the <bibitem> that carries a given entry's title. NOTE
+  // the refnum is pushed LAST within <tags>, so it follows the title — scope to
+  // the enclosing bibitem rather than searching backwards from the title.
+  let refnum = |title: &str| -> String {
+    let i = x
+      .find(title)
+      .unwrap_or_else(|| panic!("no entry titled {title} in:\n{x}"));
+    let start = x[..i].rfind("<bibitem").unwrap_or(0);
+    let end = x[start..]
+      .find("</bibitem>")
+      .map(|e| start + e)
+      .unwrap_or(x.len());
+    let s = start
+      + x[start..end]
+        .find(r#"role="refnum""#)
+        .unwrap_or_else(|| panic!("no refnum in the bibitem for {title}:\n{x}"));
+    let open = x[s..].find('>').expect("tag open") + s + 1;
+    let close = x[open..].find("</tag>").expect("tag close") + open;
+    let (mut out, mut depth) = (String::new(), 0);
+    for c in x[open..close].chars() {
+      match c {
+        '<' => depth += 1,
+        '>' => depth -= 1,
+        _ if depth == 0 => out.push(c),
+        _ => {},
+      }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+  };
+  // >2 authors: the label is natbib's short form, NOT the full list.
+  assert_eq!(
+    refnum("science goals and forecasts"),
+    "Abitbol et al. (2025)",
+    "long-author label:\n{x}"
+  );
+  // 2 and 1 author are unaffected by the short form.
+  assert_eq!(
+    refnum("On examples"),
+    "Jones and Brown (2019)",
+    "2-author:\n{x}"
+  );
+  assert_eq!(
+    refnum("A single-author paper"),
+    "Berg (2018)",
+    "1-author:\n{x}"
+  );
+  // A literal BibTeX `and others` already produced "et al." — still does.
+  assert_eq!(
+    refnum("An explicit BibTeX others entry"),
+    "Smith et al. (2020)",
+    "explicit others:\n{x}"
+  );
+  // The full author list must NOT be lost: with a short label the first block
+  // (the authors) is no longer redundant and must appear in the entry body.
+  assert!(
+    x.contains("Abril-Cabezas") && x.contains("Agrawal"),
+    "the full author list must survive in the entry body:\n{x}"
+  );
+  // ...but the RENDERED first block must not re-print the year the label
+  // already carries. Perl dropped the whole block to avoid that redundancy; we
+  // keep it and drop only its year field, matching the shipped biblatex
+  // author-year rendering (`[Smith (2020)] John Smith “A study…”`).
+  //
+  // Scoped to the first <bibblock> on purpose: `2025` also legitimately occurs
+  // as the `<tags>` metadata year (CrossRef reads it, and the numeric style
+  // emits it too), in `key="Collab2025"`, and as this entry's journal VOLUME.
+  let first_block = {
+    let i = x.find("science goals and forecasts").expect("entry");
+    let start = x[..i].rfind("<bibitem").expect("bibitem start");
+    let b = start + x[start..].find("<bibblock").expect("first bibblock");
+    let e = b + x[b..].find("</bibblock>").expect("bibblock end");
+    &x[b..e]
+  };
+  assert!(
+    first_block.contains(r#"class="ltx_bib_author""#),
+    "the first block should carry the authors:\n{first_block}"
+  );
+  assert!(
+    !first_block.contains(r#"class="ltx_bib_year""#),
+    "the first block must not re-emit the year the label already carries:\n{first_block}"
+  );
+}
+
 /// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
 /// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
 /// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the

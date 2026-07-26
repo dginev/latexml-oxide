@@ -2114,6 +2114,54 @@ Golden updated: `tests/complex/si.xml` (three author-typed `$3,762$` cells).
 Guards `cluster_thousands_separator_us_default`, `cluster_thousands_separator_eu`.
 Witness: arXiv 2605.17646 (`population $ > 50,000$`).
 
+### 71. The author-year citation label is the SHORT author form, not every author
+
+**Perl behaviour.** `MakeBibliography.pm` builds the `role="refnum"`
+`ltx_bib_author-year` label from `do_authors`→`do_names` (L505-517, L568-584):
+**every** author, with "et al." only when the BibTeX field literally ends
+`and others`. It then drops the entry's first block — `shift(@blockspecs); # Skip
+redundant 1st block!!` — because the authors are already in the label.
+
+On a collaboration paper that label is the whole entry. Witness arXiv 2607.21432
+(A&A, Simons Observatory): a **5104-character** citation label, and 9 of its 19
+entries over 120 characters. Reported by a reader as
+[arXiv/html_feedback#6797](https://github.com/arXiv/html_feedback/issues/6797).
+Applies whenever the bibliography is built from a `.bib` (we do not interpret
+`.bst`), which is the default `BIB_CONFIG` order `['bib','bbl']`.
+
+**Rust behaviour.** The label is the short form — `Abitbol et al. (2025)`,
+`Jones and Brown (2019)`, `Berg (2018)` — and the first block is **kept**, so the
+full author list still appears in the entry body. Nothing is lost; the label
+becomes usable. Max label on the witness: 5104 → **48** characters.
+
+**Why — pdflatex is the ground truth for the shape.** Running the witness's own
+`aa.bst` through BibTeX emits
+
+```
+\bibitem[{Abitbol {et~al.}(2025)Abitbol, Abril-Cabezas, Adachi, …}]{Abitbol_2025}
+Abitbol, M., Abril-Cabezas, I., Adachi, S., {et~al.} 2025, JCAP, 2025, 034
+```
+
+natbib's **short** form (`Abitbol et al. (2025)`) is the citation label; the long
+surname list is only natbib's *optional* full-author form, used by `\citet*` and
+never printed in the bibliography; and the authors are shown in the entry BODY.
+That is exactly the shape adopted here.
+
+Two further signs the Perl behaviour is an oversight rather than a decision:
+`do_names_short` — the correct `>2 → "First et al."` helper — is **defined at
+`MakeBibliography.pm` L586 and never called**; and Perl's own `role="authors"`
+tag already truncates at `>2` (L433-437), so the full-list label contradicted its
+own neighbouring policy. See `KNOWN_PERL_ERRORS.md` #61.
+
+Beyond Perl's unused helper, a trailing BibTeX `others` is dropped and forces the
+"et al." form, so `Smith and others` reads "Smith et al." rather than
+"Smith and others" — keeping it consistent with `do_names`, which does handle
+`others`.
+
+**Witnesses**: arXiv 2607.21432 (arXiv/html_feedback#6797).
+**Guard**: `cluster_bib_long_author_list_refnum`.
+**Upstream**: to file against `brucemiller/LaTeXML` (dead `do_names_short`).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
