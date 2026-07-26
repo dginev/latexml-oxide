@@ -1073,7 +1073,7 @@ Not actionable as a Rust-only fix; would require teaching LaTeXML's
 `\sqrtsign`/`\meaning` to round-trip mathchar codes the way TeX does,
 which is out of scope and equally absent in Perl.
 
-## A text-symbol CS (`\i`/`\j`) in a `\usepackage` Semiverbatim option hangs (SHARED)
+## A text-symbol CS (`\i`/`\j`) in a Semiverbatim argument hangs (SHARED — FIXED in Rust 2026-07-26)
 
 `\usepackage[pdfauthor={…Mar{\'\i}n…}]{hyperref}` — i.e. a font-encoding
 text symbol (`\i`, `\j`, …) inside a `\usepackage`/`\RequirePackage`
@@ -1110,11 +1110,45 @@ Mechanism (identical in both engines):
    *collects* them without executing — the font encoding stays "ASCII" —
    and the inner `\i` re-expands → step 2. Infinite.
 
-Breaking the loop requires making `\fontencoding{OT1}` take effect inside
-the semiverbatim `readXToken` (so the inner `\i` resolves to `\OT1\i`,
-CD 16, which IS defined). Perl does not, so Perl hangs too. **This is a
-RELEASE_CRITERIA surpass-Perl reliability item, not a translation parity
-bug.** Tracked in memory `robust-cs-semiverbatim-loop`. (Separately, a
+**✅ FIXED IN RUST 2026-07-26 (surpass-Perl; Perl still hangs).** The cure is
+the one this entry predicted — resolve the inner `\i` to `\OT1\i` — but
+reached without needing `\fontencoding` to take effect inside the collect
+loop. `\UseTextSymbol{#1}{#2}` (`latex_constructs.rs`, Perl
+`latex_constructs.pool.ltxml:2642`) now expands to the encoding-specific
+glyph CS `\csname #1\string#2\endcsname` **when that glyph is defined**,
+keeping Perl's literal `{\fontencoding{#1}#2}` only as the fallback for when
+it is not. That is not an invention: it is exactly what Perl's own
+`\DeclareTextSymbolDefault` (`latex_constructs.pool.ltxml:2684-2688`) makes
+`\?<cs>` expand to — the direct glyph, with no `\fontencoding` wrapper — so
+the observable result matches Perl in every case Perl can reach.
+
+**The dump is NOT the differentiator** — worth recording, because the obvious
+guess is wrong. Measured 2026-07-26 against a format-equipped Perl 0.8.8
+(`cd LaTeXML && cpanm --build-arg formats .`, which installs
+`{plain,latex}_dump.pool.ltxml` beside the modules): Perl's own dump carries
+`\?\i` → `\UseTextSymbol{OT1}\i`, 72 `UseTextSymbol` records. Perl has the
+identical looping shape available. On that one install:
+
+| trigger | Perl (with dumps) | Rust (before) | verdict |
+|---|---|---|---|
+| `\usepackage[pdfauthor={Mar{\'\i}n}]{hyperref}` | **hangs**, exit 124 | hangs | SHARED |
+| `\cite{garcía2024key}` under `[OT1]{fontenc}` | converts, 0.89 s, `bibrefs="garcía2024key"` | `Fatal:Timeout` | **GENUINE-RUST-ONLY** |
+
+So the second witness, **2606.11784**, is the same loop reached from a
+*literal* non-ASCII character rather than an author-typed CS: fontenc's `.dfu`
+maps `í` (U+00ED) onto the text-symbol chain and a `\cite` key is Semiverbatim.
+It went from `Fatal:Timeout:PushbackLimit` with no output to 0 errors / 519 KB.
+**Residual, unpinned:** *why* our `\cite`-key read reaches the encoding
+dispatch when Perl's does not — the fix removes the loop shape for both, but
+that read-path delta is still unexplained and deserves its own look.
+
+Guard: `tests/encoding/textsymbol_semiverbatim` (pins that the literal and
+`\'{i}` spellings converge). Causality checked by restoring Perl's literal body
+at runtime on the fixed binary — the Fatal returns. Of the 25 `PushbackLimit`
+papers in the 2605+2606 sandboxes only 2606.11784 carries a non-ASCII cite key,
+so this repairs a failure *shape*, not that whole cluster.
+
+Tracked in memory `robust-cs-semiverbatim-loop`. (Separately, a
 genuine adjacent divergence was fixed: Rust's `\cf@encoding`/`\f@encoding`
 fell back to *empty* when the live font's encoding slot is `None`; Perl's
 Font always carries OT1 — `Common/Font.pm:331`/`$DEFENCODING`. Now falls
