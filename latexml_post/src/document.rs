@@ -1980,11 +1980,12 @@ pub fn element_children_iter(node: &Node) -> impl Iterator<Item = Node> + use<> 
 /// Escape a string for XML **text content or a double-quoted attribute value**.
 ///
 /// The one escaper for markup this crate still assembles as a string. It used to
-/// be three byte-identical private copies (`manifest/epub.rs::escape_xml`,
-/// `schema_docs.rs::html_escape`, and `make_bibliography.rs::xml_escape`); the
-/// third went away with the `.bib` string route, and these are the rest.
-/// Duplicated escapers drift — that is issue 386's premise, and it is the reason
-/// to keep exactly one.
+/// be three byte-identical private copies: `make_bibliography.rs::xml_escape`
+/// went away with the `.bib` string route, `manifest/epub.rs::escape_xml` went
+/// away when the OPF moved onto the DOM, and `schema_docs.rs::html_escape` — the
+/// dev-facing RelaxNG doc site, the last string-assembled markup here — is what
+/// remains. Duplicated escapers drift; that is issue 386's premise, and the
+/// reason to keep exactly one even now that it has a single caller.
 ///
 /// **`'` is deliberately not escaped.** It is legal raw in text content, and both
 /// callers emit double-quoted attributes, where only `"` must go. Escaping it
