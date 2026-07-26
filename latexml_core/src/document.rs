@@ -297,11 +297,19 @@ impl Document {
   /// against ancestors and strip the `_font`/`_autoopened`/… bookkeeping
   /// attributes, without the document-level passes (idstore rebuild, XMDual
   /// pruning, RDFa/namespace declarations) that only make sense for a complete
-  /// document — on a scratch fragment those either no-op or fail, taking the
-  /// whole finalization down with them.
+  /// document.
   ///
   /// Used by `latexml_post::make_bibliography` to render a `.bib` field value
-  /// into an XML fragment through the real engine.
+  /// into an XML fragment through the real engine: it absorbs into a scratch
+  /// `ltx:text` wrapper and serializes that wrapper's children.
+  ///
+  /// Whole-document [`finalize`](Self::finalize) cannot serve that caller —
+  /// **not** because it errors (it returns `Ok`), but because running
+  /// `finalize_rec` from the ROOT legitimately UNWRAPS a redundant font-only
+  /// `ltx:text`: measured on such a scratch document, the content survives at
+  /// the root while the caller's wrapper handle is left detached and childless
+  /// (`wrapper_children 1 -> 0`, `parent = None`), so it serializes to nothing.
+  /// Starting the recursion AT the wrapper keeps it addressable.
   pub fn finalize_subtree(&mut self, node: &mut Node) -> Result<()> {
     self.set_local_font(Rc::new(Font::text_default()));
     let result = self.finalize_rec(node);

@@ -3373,8 +3373,10 @@ fn interpret_tex_markup(s: &str) -> Option<String> {
     // `font=` attribute and drop the `_font`/`_autoopened`/… bookkeeping
     // attributes. Without it the fragment carries engine-internal attributes
     // into the bibliography, and `\emph` loses the very styling it exists for.
-    // (Whole-document `finalize()` is wrong here and *fails* on a scratch
-    // fragment — see `Document::finalize_subtree`.)
+    // It must be the SUBTREE variant: whole-document `finalize()` returns `Ok`
+    // but unwraps this redundant font-only `ltx:text`, leaving `wrapper`
+    // detached and childless so the fragment serializes to nothing — see
+    // `Document::finalize_subtree`.
     doc.finalize_subtree(&mut wrapper).ok()?;
     // Fail-safe: BLOCK-level content (a list, `\par`, a quote, a footnote)
     // CLOSES `ltx:text` and continues as a sibling, so serializing only the

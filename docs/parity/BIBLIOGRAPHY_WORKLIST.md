@@ -216,8 +216,14 @@ to be fixed; either one alone keeps the bug.** Same-host Perl renders all of
 
 * `interpret_tex_markup` (make_bibliography.rs) digests into a scratch
   `Document`, runs the new `Document::finalize_subtree` (font resolution +
-  `_font`/`_autoopened` bookkeeping-attribute removal — whole-document
-  `finalize()` *fails* on a fragment), and serializes the wrapper's children.
+  `_font`/`_autoopened` bookkeeping-attribute removal), and serializes the
+  scratch `ltx:text` wrapper's children. It must be the SUBTREE variant:
+  whole-document `finalize()` returns `Ok` but, recursing from the root,
+  legitimately UNWRAPS that redundant font-only `ltx:text` — measured, the
+  content survives at the root while the caller's handle is left detached and
+  childless (`wrapper_children 1 → 0`, `parent = None`), serializing to nothing.
+  (An earlier note here said `finalize()` "fails"; it does not — that was
+  inferred from the empty output rather than measured.)
 * Applied to `title`/`journal`/`journaltitle`/`booktitle`/`publisher`/`note`;
   every other field is untouched, and a wholly plain field still takes the
   plain-text path, so the 99 % case is byte-identical.
