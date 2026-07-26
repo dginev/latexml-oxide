@@ -9,6 +9,8 @@
 
 use std::{fs, path::Path};
 
+use crate::document::escape_xml;
+
 /// EPUB 3.2 container.xml content.
 const CONTAINER_XML: &str = r#"<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -269,14 +271,6 @@ fn generate_uuid() -> String {
     bytes[14],
     bytes[15]
   )
-}
-
-/// Simple XML escaping.
-fn escape_xml(s: &str) -> String {
-  s.replace('&', "&amp;")
-    .replace('<', "&lt;")
-    .replace('>', "&gt;")
-    .replace('"', "&quot;")
 }
 
 /// Generate an ISO 8601 timestamp (CCYY-MM-DDThh:mm:ssZ).
