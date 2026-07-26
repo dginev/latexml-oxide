@@ -22,6 +22,25 @@
   year   = {2022}
 }
 
+% Block-level content CLOSES the `ltx:text` wrapper the markup path builds and
+% continues as a sibling. Serializing only that wrapper's children therefore
+% dropped everything from `\begin{itemize}` onward — silently, with zero errors.
+% The escape guard declines such a fragment so the plain-text digest keeps it
+% all; these entries are the canary.
+@article{blocklist2024,
+  author = {Voe, Vera},
+  title  = {T Blocklist},
+  year   = {2024},
+  note   = {beforeblock \begin{itemize}\item INSIDELIST\end{itemize} afterblock}
+}
+
+@article{blockpar2025,
+  author = {Woe, Walt},
+  title  = {T Blockpar},
+  year   = {2025},
+  note   = {beforepar \par AFTERPAR \textbf{tail}}
+}
+
 % `@book` on purpose: `publisher` is only rendered by the book-shaped format
 % specs, so an `@article` here would make the plain-field assertion vacuous.
 @book{plaintitle2023,

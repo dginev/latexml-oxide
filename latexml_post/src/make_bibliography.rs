@@ -3376,6 +3376,28 @@ fn interpret_tex_markup(s: &str) -> Option<String> {
     // (Whole-document `finalize()` is wrong here and *fails* on a scratch
     // fragment — see `Document::finalize_subtree`.)
     doc.finalize_subtree(&mut wrapper).ok()?;
+    // Fail-safe: BLOCK-level content (a list, `\par`, a quote, a footnote)
+    // CLOSES `ltx:text` and continues as a sibling, so serializing only the
+    // wrapper's children would silently drop everything from that point on.
+    // Measured before this guard: `note={before \begin{itemize}\item X
+    // \end{itemize} after}` rendered as just "before" — with zero errors, i.e.
+    // exactly the fail-OPEN this function is supposed to avoid. Whenever any
+    // text escaped the wrapper, decline and let the caller fall back to the
+    // plain-text digest, which keeps the whole value.
+    //
+    // Compares TEXT, so it cannot see block content carrying none (a lone
+    // floated image in a note). Every realistic escape — list, `\par`, quote,
+    // footnote — carries text, and the check is cheap; tightening it further is
+    // only worth it once the full `.bib`-through-the-engine re-port makes block
+    // content in a field renderable at all instead of merely lossless.
+    let escaped = doc
+      .get_document()
+      .get_root_element()
+      .map(|root| squash_ws(&root.get_content()) != squash_ws(&wrapper.get_content()))
+      .unwrap_or(true);
+    if escaped {
+      return None;
+    }
     let mut fragment = String::new();
     let mut child = wrapper.get_first_child();
     while let Some(node) = child {
@@ -3429,6 +3451,10 @@ fn interpret_tex_markup(s: &str) -> Option<String> {
   }
   Some(fragment)
 }
+
+/// All non-whitespace characters, for comparing two renderings of the same
+/// content without tripping over the builder's incidental whitespace.
+fn squash_ws(s: &str) -> String { s.split_whitespace().collect() }
 
 fn bump_bib_interpret_failures() {
   let n = BIB_INTERPRET_FAILURES.with(|c| {

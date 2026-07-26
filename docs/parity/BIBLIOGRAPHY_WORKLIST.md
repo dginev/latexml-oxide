@@ -221,10 +221,22 @@ to be fixed; either one alone keeps the bug.** Same-host Perl renders all of
 * Applied to `title`/`journal`/`journaltitle`/`booktitle`/`publisher`/`note`;
   every other field is untouched, and a wholly plain field still takes the
   plain-text path, so the 99 % case is byte-identical.
-* Three fail-safe gates return `None` (→ escaped plain text) rather than splice
+* Four fail-safe gates return `None` (→ escaped plain text) rather than splice
   something unsound, because a bad fragment would break the XML parse and lose
-  the WHOLE bibliography: failed digest, **unparsed math**, and any prefixed
-  element name. The math gate is the one remaining sub-Perl case — the Marpa
+  the WHOLE bibliography: failed digest, **escaped content**, **unparsed math**,
+  and any prefixed element name.
+* The **escaped-content** gate is the one that a first cut got WRONG, and it is
+  the most important: BLOCK-level content (`\begin{itemize}`, `\par`,
+  `\begin{quote}`, `\footnote`) CLOSES the `ltx:text` wrapper and continues as a
+  SIBLING, so serializing only the wrapper's children dropped everything past
+  that point — `note={before \begin{itemize}\item X\end{itemize} after}`
+  rendered as just `before`, **silently, with zero errors**, i.e. precisely the
+  fail-OPEN the design claims to prevent. The gate compares the scratch
+  document's whole text against the wrapper's and declines on any difference.
+  It compares TEXT, so block content carrying none (a lone floated image) is
+  still invisible to it; every realistic escape carries text. Guarded by the
+  `INSIDELIST`/`afterblock`/`AFTERPAR` entries in the fixture.
+* The math gate is the one remaining sub-Perl case — the Marpa
   pass lives in `latexml_math_parser`, which `latexml_post` does not depend on,
   so a `<Math>` built here keeps unparsed `<XMath>` and would emit malformed
   MathML (`x^2` → `msup` with an empty base). Falling back to the TeX source is

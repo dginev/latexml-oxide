@@ -1382,6 +1382,18 @@ fn bib_field_markup_survives_into_the_bibliography() {
     x.contains("Wholly Plain Title") && x.contains("Plain Publisher"),
     "bib markup: a plain field was damaged by the markup path:\n{x}"
   );
+  // Block-level content closes the `ltx:text` wrapper and continues as a
+  // sibling. Serializing only the wrapper's children dropped everything past
+  // that point — silently, with zero errors. The content must survive (the
+  // fallback renders it as flattened text, which is the pre-existing
+  // behaviour); losing it is the regression being guarded.
+  for needle in ["INSIDELIST", "afterblock", "AFTERPAR"] {
+    assert!(
+      x.contains(needle),
+      "bib markup: {needle:?} was silently dropped — block content escaped the \
+       wrapper and the fragment was spliced anyway:\n{x}"
+    );
+  }
 }
 
 /// Witness 2605.11619: `\end{lstlisting}` preceded by content on the same line
