@@ -74,8 +74,17 @@ LoadDefinitions!({
 
   // Perl: \DC@{}{}{} — activates the decimal delimiter in math mode
   DefMacro!("\\DC@{}{}{}", sub[(delim, todelim, _ndec)] {
+    // Perl L36-39 uses TWO different serializations, deliberately:
+    // `ToString($delim)` for the delimiter (a single character — a comparison
+    // key and a `T_CS` name) but `UnTeX($todelim, 1)` for the replacement,
+    // because that one is spliced back into a macro BODY and so must be valid
+    // TeX. `to_string()` is not: it concatenates token strings without the
+    // space that terminates a control word, so `D{.}{\times x}{2}` welded to
+    // `\timesx` — a control sequence that exists in no LaTeX. `untex()` is the
+    // Rust `UnTeX` (see `Tokens::untex`; the `%\n` line-breaking half is
+    // OXIDIZED_DESIGN #2, so the suppress-linebreaks flag has no counterpart).
     let delim_str = delim.to_string();
-    let todelim_str = todelim.to_string();
+    let todelim_str = todelim.clone().untex();
     if delim_str != todelim_str {
       if let Some(ch) = delim_str.chars().next() {
         // Make the delimiter math-active (code 0x8000)

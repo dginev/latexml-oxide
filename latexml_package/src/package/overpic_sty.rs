@@ -12,8 +12,16 @@ LoadDefinitions!({
   DefEnvironment!("{overpic} OptionalKeyVals:Gin Semiverbatim",
     "<ltx:picture fill='none' stroke='none' tex='#tex'></ltx:picture>",
     after_digest_body => sub[whatsit] {
-      // Set tex attribute from reversion of the full overpic content
-      let tex_str = whatsit.revert().map(|t| t.to_string()).unwrap_or_default();
+      // Set tex attribute from reversion of the full overpic content.
+      // `untex()`, NOT `to_string()`: Perl L35 is `UnTeX(Tokens($whatsit->revert))`,
+      // and the whole point of this attribute is to hand valid TeX to an image
+      // generator. `to_string()` drops the space that terminates a control word,
+      // so `\put (1,2)` reverts as `\put(1,2)` and a control word followed by a
+      // letter welds outright. See `Tokens::untex`.
+      let tex_str = whatsit
+        .revert()
+        .map(Tokens::untex)
+        .unwrap_or_default();
       whatsit.set_property("tex", Stored::String(pin(tex_str)));
     }
   );
