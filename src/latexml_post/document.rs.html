@@ -1977,209 +1977,236 @@
 <a href=#1977 id=1977 data-nosnippet>1977</a>    .filter(|c| c.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode))
 <a href=#1978 id=1978 data-nosnippet>1978</a>}
 <a href=#1979 id=1979 data-nosnippet>1979</a>
-<a href=#1980 id=1980 data-nosnippet>1980</a><span class="doccomment">/// Compute a relative path from `base` to `path`.
-<a href=#1981 id=1981 data-nosnippet>1981</a></span><span class="kw">fn </span>pathdiff(path: <span class="kw-2">&amp;</span>str, base: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#1982 id=1982 data-nosnippet>1982</a>  <span class="kw">let </span>p = Path::new(path);
-<a href=#1983 id=1983 data-nosnippet>1983</a>  <span class="kw">let </span>b = Path::new(base);
-<a href=#1984 id=1984 data-nosnippet>1984</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(rel) = p.strip_prefix(b) {
-<a href=#1985 id=1985 data-nosnippet>1985</a>    rel.to_string_lossy().to_string()
-<a href=#1986 id=1986 data-nosnippet>1986</a>  } <span class="kw">else </span>{
-<a href=#1987 id=1987 data-nosnippet>1987</a>    path.to_string()
-<a href=#1988 id=1988 data-nosnippet>1988</a>  }
-<a href=#1989 id=1989 data-nosnippet>1989</a>}
-<a href=#1990 id=1990 data-nosnippet>1990</a>
-<a href=#1991 id=1991 data-nosnippet>1991</a><span class="attr">#[cfg(test)]
-<a href=#1992 id=1992 data-nosnippet>1992</a></span><span class="kw">mod </span>tests {
-<a href=#1993 id=1993 data-nosnippet>1993</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#1994 id=1994 data-nosnippet>1994</a>
-<a href=#1995 id=1995 data-nosnippet>1995</a>  <span class="kw">fn </span>make_test_doc(xml: <span class="kw-2">&amp;</span>str) -&gt; PostDocument {
-<a href=#1996 id=1996 data-nosnippet>1996</a>    PostDocument::new_from_string(xml, PostDocumentOptions::default()).unwrap()
-<a href=#1997 id=1997 data-nosnippet>1997</a>  }
-<a href=#1998 id=1998 data-nosnippet>1998</a>
-<a href=#1999 id=1999 data-nosnippet>1999</a>  <span class="attr">#[test]
-<a href=#2000 id=2000 data-nosnippet>2000</a>  </span><span class="kw">fn </span>test_new_from_string() {
-<a href=#2001 id=2001 data-nosnippet>2001</a>    <span class="kw">let </span>doc = make_test_doc(<span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'/&gt;"</span>);
-<a href=#2002 id=2002 data-nosnippet>2002</a>    <span class="macro">assert!</span>(doc.get_document_element().is_some());
-<a href=#2003 id=2003 data-nosnippet>2003</a>  }
-<a href=#2004 id=2004 data-nosnippet>2004</a>
-<a href=#2005 id=2005 data-nosnippet>2005</a>  <span class="attr">#[test]
-<a href=#2006 id=2006 data-nosnippet>2006</a>  </span><span class="kw">fn </span>test_findnodes() {
-<a href=#2007 id=2007 data-nosnippet>2007</a>    <span class="kw">let </span>doc = make_test_doc(
-<a href=#2008 id=2008 data-nosnippet>2008</a>      <span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
-<a href=#2009 id=2009 data-nosnippet>2009</a>         &lt;section xml:id='s1'/&gt;\
-<a href=#2010 id=2010 data-nosnippet>2010</a>         &lt;section xml:id='s2'/&gt;\
-<a href=#2011 id=2011 data-nosnippet>2011</a>       &lt;/document&gt;"</span>,
-<a href=#2012 id=2012 data-nosnippet>2012</a>    );
-<a href=#2013 id=2013 data-nosnippet>2013</a>    <span class="kw">let </span>sections = doc.findnodes(<span class="string">"//ltx:section"</span>);
-<a href=#2014 id=2014 data-nosnippet>2014</a>    <span class="macro">assert_eq!</span>(sections.len(), <span class="number">2</span>);
+<a href=#1980 id=1980 data-nosnippet>1980</a><span class="doccomment">/// Escape a string for XML **text content or a double-quoted attribute value**.
+<a href=#1981 id=1981 data-nosnippet>1981</a>///
+<a href=#1982 id=1982 data-nosnippet>1982</a>/// The one escaper for markup this crate still assembles as a string. It used to
+<a href=#1983 id=1983 data-nosnippet>1983</a>/// be three byte-identical private copies: `make_bibliography.rs::xml_escape`
+<a href=#1984 id=1984 data-nosnippet>1984</a>/// went away with the `.bib` string route, `manifest/epub.rs::escape_xml` went
+<a href=#1985 id=1985 data-nosnippet>1985</a>/// away when the OPF moved onto the DOM, and `schema_docs.rs::html_escape` — the
+<a href=#1986 id=1986 data-nosnippet>1986</a>/// dev-facing RelaxNG doc site, the last string-assembled markup here — is what
+<a href=#1987 id=1987 data-nosnippet>1987</a>/// remains. Duplicated escapers drift; that is issue 386's premise, and the
+<a href=#1988 id=1988 data-nosnippet>1988</a>/// reason to keep exactly one even now that it has a single caller.
+<a href=#1989 id=1989 data-nosnippet>1989</a>///
+<a href=#1990 id=1990 data-nosnippet>1990</a>/// **`'` is deliberately not escaped.** It is legal raw in text content, and both
+<a href=#1991 id=1991 data-nosnippet>1991</a>/// callers emit double-quoted attributes, where only `"` must go. Escaping it
+<a href=#1992 id=1992 data-nosnippet>1992</a>/// would change output without fixing anything.
+<a href=#1993 id=1993 data-nosnippet>1993</a>///
+<a href=#1994 id=1994 data-nosnippet>1994</a>/// **`latexml_core::document`'s `serialize_string`/`serialize_attr` are NOT
+<a href=#1995 id=1995 data-nosnippet>1995</a>/// folded in here, and must not be.** They look like a fourth copy with a
+<a href=#1996 id=1996 data-nosnippet>1996</a>/// missing `"`, but they are a correct pair: `serialize_string` escapes text
+<a href=#1997 id=1997 data-nosnippet>1997</a>/// nodes and comments, and `serialize_attr` layers `"`, `\n` and `\t` on top for
+<a href=#1998 id=1998 data-nosnippet>1998</a>/// attribute values. Escaping `"` in a text node would be *wrong* XML, not safer
+<a href=#1999 id=1999 data-nosnippet>1999</a>/// XML.
+<a href=#2000 id=2000 data-nosnippet>2000</a></span><span class="kw">pub fn </span>escape_xml(s: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#2001 id=2001 data-nosnippet>2001</a>  s.replace(<span class="string">'&amp;'</span>, <span class="string">"&amp;amp;"</span>)
+<a href=#2002 id=2002 data-nosnippet>2002</a>    .replace(<span class="string">'&lt;'</span>, <span class="string">"&amp;lt;"</span>)
+<a href=#2003 id=2003 data-nosnippet>2003</a>    .replace(<span class="string">'&gt;'</span>, <span class="string">"&amp;gt;"</span>)
+<a href=#2004 id=2004 data-nosnippet>2004</a>    .replace(<span class="string">'"'</span>, <span class="string">"&amp;quot;"</span>)
+<a href=#2005 id=2005 data-nosnippet>2005</a>}
+<a href=#2006 id=2006 data-nosnippet>2006</a>
+<a href=#2007 id=2007 data-nosnippet>2007</a><span class="doccomment">/// Compute a relative path from `base` to `path`.
+<a href=#2008 id=2008 data-nosnippet>2008</a></span><span class="kw">fn </span>pathdiff(path: <span class="kw-2">&amp;</span>str, base: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#2009 id=2009 data-nosnippet>2009</a>  <span class="kw">let </span>p = Path::new(path);
+<a href=#2010 id=2010 data-nosnippet>2010</a>  <span class="kw">let </span>b = Path::new(base);
+<a href=#2011 id=2011 data-nosnippet>2011</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(rel) = p.strip_prefix(b) {
+<a href=#2012 id=2012 data-nosnippet>2012</a>    rel.to_string_lossy().to_string()
+<a href=#2013 id=2013 data-nosnippet>2013</a>  } <span class="kw">else </span>{
+<a href=#2014 id=2014 data-nosnippet>2014</a>    path.to_string()
 <a href=#2015 id=2015 data-nosnippet>2015</a>  }
-<a href=#2016 id=2016 data-nosnippet>2016</a>
-<a href=#2017 id=2017 data-nosnippet>2017</a>  <span class="doccomment">/// `findnodes` with no context node must resolve RELATIVE location paths
-<a href=#2018 id=2018 data-nosnippet>2018</a>  /// (`descendant::…`, `.//…`) against the tree — matching XML::LibXML's
-<a href=#2019 id=2019 data-nosnippet>2019</a>  /// `$doc-&gt;findnodes` (which evaluates from the document node) — not silently
-<a href=#2020 id=2020 data-nosnippet>2020</a>  /// return nothing. Regression guard for the split-page resource/PI copy (#341):
-<a href=#2021 id=2021 data-nosnippet>2021</a>  /// the fix binds the root element as the context node. Before-root PIs still
-<a href=#2022 id=2022 data-nosnippet>2022</a>  /// need the absolute `//processing-instruction()` form (documented in
-<a href=#2023 id=2023 data-nosnippet>2023</a>  /// `findnodes_at`), verified here too.
-<a href=#2024 id=2024 data-nosnippet>2024</a>  </span><span class="attr">#[test]
-<a href=#2025 id=2025 data-nosnippet>2025</a>  </span><span class="kw">fn </span>findnodes_resolves_relative_axes_without_context_node() {
-<a href=#2026 id=2026 data-nosnippet>2026</a>    <span class="kw">let </span>doc = make_test_doc(
-<a href=#2027 id=2027 data-nosnippet>2027</a>      <span class="string">"&lt;?latexml class='book'?&gt;\
-<a href=#2028 id=2028 data-nosnippet>2028</a>       &lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
-<a href=#2029 id=2029 data-nosnippet>2029</a>         &lt;resource src='a.css' type='text/css'/&gt;\
-<a href=#2030 id=2030 data-nosnippet>2030</a>         &lt;section xml:id='s1'/&gt;\
-<a href=#2031 id=2031 data-nosnippet>2031</a>       &lt;/document&gt;"</span>,
-<a href=#2032 id=2032 data-nosnippet>2032</a>    );
-<a href=#2033 id=2033 data-nosnippet>2033</a>    <span class="macro">assert_eq!</span>(doc.findnodes(<span class="string">"//ltx:resource"</span>).len(), <span class="number">1</span>, <span class="string">"absolute"</span>);
-<a href=#2034 id=2034 data-nosnippet>2034</a>    <span class="macro">assert_eq!</span>(
-<a href=#2035 id=2035 data-nosnippet>2035</a>      doc.findnodes(<span class="string">"descendant::ltx:resource"</span>).len(),
-<a href=#2036 id=2036 data-nosnippet>2036</a>      <span class="number">1</span>,
-<a href=#2037 id=2037 data-nosnippet>2037</a>      <span class="string">"descendant:: axis must resolve without an explicit context node"
-<a href=#2038 id=2038 data-nosnippet>2038</a>    </span>);
-<a href=#2039 id=2039 data-nosnippet>2039</a>    <span class="macro">assert_eq!</span>(
-<a href=#2040 id=2040 data-nosnippet>2040</a>      doc.findnodes(<span class="string">".//ltx:resource"</span>).len(),
-<a href=#2041 id=2041 data-nosnippet>2041</a>      <span class="number">1</span>,
-<a href=#2042 id=2042 data-nosnippet>2042</a>      <span class="string">".// axis must resolve without an explicit context node"
-<a href=#2043 id=2043 data-nosnippet>2043</a>    </span>);
-<a href=#2044 id=2044 data-nosnippet>2044</a>    <span class="comment">// Before-root PIs: absolute form finds them, relative-from-root does not.
-<a href=#2045 id=2045 data-nosnippet>2045</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#2046 id=2046 data-nosnippet>2046</a>      doc.findnodes(<span class="string">"//processing-instruction('latexml')"</span>).len(),
-<a href=#2047 id=2047 data-nosnippet>2047</a>      <span class="number">1</span>,
-<a href=#2048 id=2048 data-nosnippet>2048</a>      <span class="string">"absolute PI query finds the before-root &lt;?latexml?&gt;"
-<a href=#2049 id=2049 data-nosnippet>2049</a>    </span>);
-<a href=#2050 id=2050 data-nosnippet>2050</a>  }
-<a href=#2051 id=2051 data-nosnippet>2051</a>
-<a href=#2052 id=2052 data-nosnippet>2052</a>  <span class="doccomment">/// The exact `--splitat=section` union `make_splitpaths` emits (the shape the
-<a href=#2053 id=2053 data-nosnippet>2053</a>  /// limit-safe `find_split_pages` walk must reproduce).
-<a href=#2054 id=2054 data-nosnippet>2054</a>  </span><span class="kw">const </span>SECTION_UNION: <span class="kw-2">&amp;</span>str = <span class="string">"//ltx:section | \
-<a href=#2055 id=2055 data-nosnippet>2055</a>    //ltx:bibliography[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
-<a href=#2056 id=2056 data-nosnippet>2056</a>    //ltx:appendix[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
-<a href=#2057 id=2057 data-nosnippet>2057</a>    //ltx:index[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
-<a href=#2058 id=2058 data-nosnippet>2058</a>    //ltx:part | \
-<a href=#2059 id=2059 data-nosnippet>2059</a>    //ltx:bibliography[preceding-sibling::ltx:part] | \
-<a href=#2060 id=2060 data-nosnippet>2060</a>    //ltx:appendix[preceding-sibling::ltx:part] | \
-<a href=#2061 id=2061 data-nosnippet>2061</a>    //ltx:index[preceding-sibling::ltx:part] | \
-<a href=#2062 id=2062 data-nosnippet>2062</a>    //ltx:chapter | \
-<a href=#2063 id=2063 data-nosnippet>2063</a>    //ltx:bibliography[preceding-sibling::ltx:chapter or parent::ltx:part] | \
-<a href=#2064 id=2064 data-nosnippet>2064</a>    //ltx:appendix[preceding-sibling::ltx:chapter or parent::ltx:part] | \
-<a href=#2065 id=2065 data-nosnippet>2065</a>    //ltx:index[preceding-sibling::ltx:chapter or parent::ltx:part]"</span>;
-<a href=#2066 id=2066 data-nosnippet>2066</a>
-<a href=#2067 id=2067 data-nosnippet>2067</a>  <span class="kw">fn </span>split_doc() -&gt; PostDocument {
-<a href=#2068 id=2068 data-nosnippet>2068</a>    make_test_doc(
-<a href=#2069 id=2069 data-nosnippet>2069</a>      <span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
-<a href=#2070 id=2070 data-nosnippet>2070</a>         &lt;part xml:id='P1'&gt;\
-<a href=#2071 id=2071 data-nosnippet>2071</a>           &lt;chapter xml:id='C1'&gt;\
-<a href=#2072 id=2072 data-nosnippet>2072</a>             &lt;section xml:id='S1'/&gt;\
-<a href=#2073 id=2073 data-nosnippet>2073</a>             &lt;section xml:id='S2'/&gt;\
-<a href=#2074 id=2074 data-nosnippet>2074</a>             &lt;index xml:id='I1'/&gt;\
-<a href=#2075 id=2075 data-nosnippet>2075</a>           &lt;/chapter&gt;\
-<a href=#2076 id=2076 data-nosnippet>2076</a>           &lt;bibliography xml:id='B1'/&gt;\
-<a href=#2077 id=2077 data-nosnippet>2077</a>         &lt;/part&gt;\
-<a href=#2078 id=2078 data-nosnippet>2078</a>         &lt;section xml:id='S3'/&gt;\
-<a href=#2079 id=2079 data-nosnippet>2079</a>         &lt;index xml:id='I2'/&gt;\
-<a href=#2080 id=2080 data-nosnippet>2080</a>       &lt;/document&gt;"</span>,
-<a href=#2081 id=2081 data-nosnippet>2081</a>    )
-<a href=#2082 id=2082 data-nosnippet>2082</a>  }
-<a href=#2083 id=2083 data-nosnippet>2083</a>
-<a href=#2084 id=2084 data-nosnippet>2084</a>  <span class="doccomment">/// The limit-safe DOM walk must select exactly the nodes (and order) the raw
-<a href=#2085 id=2085 data-nosnippet>2085</a>  /// XPath union selects on a small document where XPath is limit-safe.
-<a href=#2086 id=2086 data-nosnippet>2086</a>  </span><span class="attr">#[test]
-<a href=#2087 id=2087 data-nosnippet>2087</a>  </span><span class="kw">fn </span>test_find_split_pages_matches_xpath() {
-<a href=#2088 id=2088 data-nosnippet>2088</a>    <span class="kw">let </span>doc = split_doc();
-<a href=#2089 id=2089 data-nosnippet>2089</a>    <span class="kw">let </span>ids = |nodes: Vec&lt;Node&gt;| -&gt; Vec&lt;String&gt; { nodes.iter().filter_map(get_xml_id).collect() };
-<a href=#2090 id=2090 data-nosnippet>2090</a>    <span class="kw">let </span>via_walk = ids(doc.find_split_pages(SECTION_UNION));
-<a href=#2091 id=2091 data-nosnippet>2091</a>    <span class="kw">let </span>via_xpath = ids(doc.findnodes(SECTION_UNION));
-<a href=#2092 id=2092 data-nosnippet>2092</a>    <span class="macro">assert_eq!</span>(
-<a href=#2093 id=2093 data-nosnippet>2093</a>      via_walk,
-<a href=#2094 id=2094 data-nosnippet>2094</a>      <span class="macro">vec!</span>[<span class="string">"P1"</span>, <span class="string">"C1"</span>, <span class="string">"S1"</span>, <span class="string">"S2"</span>, <span class="string">"I1"</span>, <span class="string">"B1"</span>, <span class="string">"S3"</span>, <span class="string">"I2"</span>],
-<a href=#2095 id=2095 data-nosnippet>2095</a>      <span class="string">"walk selected the wrong pages / order"
-<a href=#2096 id=2096 data-nosnippet>2096</a>    </span>);
-<a href=#2097 id=2097 data-nosnippet>2097</a>    <span class="macro">assert_eq!</span>(via_walk, via_xpath, <span class="string">"walk diverged from XPath union"</span>);
-<a href=#2098 id=2098 data-nosnippet>2098</a>  }
-<a href=#2099 id=2099 data-nosnippet>2099</a>
-<a href=#2100 id=2100 data-nosnippet>2100</a>  <span class="doccomment">/// A union outside the recognized grammar falls back to raw XPath (unchanged
-<a href=#2101 id=2101 data-nosnippet>2101</a>  /// behavior for custom `--splitpaths`).
-<a href=#2102 id=2102 data-nosnippet>2102</a>  </span><span class="attr">#[test]
-<a href=#2103 id=2103 data-nosnippet>2103</a>  </span><span class="kw">fn </span>test_find_split_pages_fallback() {
-<a href=#2104 id=2104 data-nosnippet>2104</a>    <span class="kw">let </span>doc = split_doc();
-<a href=#2105 id=2105 data-nosnippet>2105</a>    <span class="comment">// `descendant::` is not in the make_splitpaths grammar → fallback path.
-<a href=#2106 id=2106 data-nosnippet>2106</a>    </span><span class="kw">let </span>via = doc.find_split_pages(<span class="string">"//ltx:chapter/descendant::ltx:section"</span>);
-<a href=#2107 id=2107 data-nosnippet>2107</a>    <span class="kw">let </span>ids: Vec&lt;String&gt; = via.iter().filter_map(get_xml_id).collect();
-<a href=#2108 id=2108 data-nosnippet>2108</a>    <span class="macro">assert_eq!</span>(ids, <span class="macro">vec!</span>[<span class="string">"S1"</span>, <span class="string">"S2"</span>]);
+<a href=#2016 id=2016 data-nosnippet>2016</a>}
+<a href=#2017 id=2017 data-nosnippet>2017</a>
+<a href=#2018 id=2018 data-nosnippet>2018</a><span class="attr">#[cfg(test)]
+<a href=#2019 id=2019 data-nosnippet>2019</a></span><span class="kw">mod </span>tests {
+<a href=#2020 id=2020 data-nosnippet>2020</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#2021 id=2021 data-nosnippet>2021</a>
+<a href=#2022 id=2022 data-nosnippet>2022</a>  <span class="kw">fn </span>make_test_doc(xml: <span class="kw-2">&amp;</span>str) -&gt; PostDocument {
+<a href=#2023 id=2023 data-nosnippet>2023</a>    PostDocument::new_from_string(xml, PostDocumentOptions::default()).unwrap()
+<a href=#2024 id=2024 data-nosnippet>2024</a>  }
+<a href=#2025 id=2025 data-nosnippet>2025</a>
+<a href=#2026 id=2026 data-nosnippet>2026</a>  <span class="attr">#[test]
+<a href=#2027 id=2027 data-nosnippet>2027</a>  </span><span class="kw">fn </span>test_new_from_string() {
+<a href=#2028 id=2028 data-nosnippet>2028</a>    <span class="kw">let </span>doc = make_test_doc(<span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'/&gt;"</span>);
+<a href=#2029 id=2029 data-nosnippet>2029</a>    <span class="macro">assert!</span>(doc.get_document_element().is_some());
+<a href=#2030 id=2030 data-nosnippet>2030</a>  }
+<a href=#2031 id=2031 data-nosnippet>2031</a>
+<a href=#2032 id=2032 data-nosnippet>2032</a>  <span class="attr">#[test]
+<a href=#2033 id=2033 data-nosnippet>2033</a>  </span><span class="kw">fn </span>test_findnodes() {
+<a href=#2034 id=2034 data-nosnippet>2034</a>    <span class="kw">let </span>doc = make_test_doc(
+<a href=#2035 id=2035 data-nosnippet>2035</a>      <span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
+<a href=#2036 id=2036 data-nosnippet>2036</a>         &lt;section xml:id='s1'/&gt;\
+<a href=#2037 id=2037 data-nosnippet>2037</a>         &lt;section xml:id='s2'/&gt;\
+<a href=#2038 id=2038 data-nosnippet>2038</a>       &lt;/document&gt;"</span>,
+<a href=#2039 id=2039 data-nosnippet>2039</a>    );
+<a href=#2040 id=2040 data-nosnippet>2040</a>    <span class="kw">let </span>sections = doc.findnodes(<span class="string">"//ltx:section"</span>);
+<a href=#2041 id=2041 data-nosnippet>2041</a>    <span class="macro">assert_eq!</span>(sections.len(), <span class="number">2</span>);
+<a href=#2042 id=2042 data-nosnippet>2042</a>  }
+<a href=#2043 id=2043 data-nosnippet>2043</a>
+<a href=#2044 id=2044 data-nosnippet>2044</a>  <span class="doccomment">/// `findnodes` with no context node must resolve RELATIVE location paths
+<a href=#2045 id=2045 data-nosnippet>2045</a>  /// (`descendant::…`, `.//…`) against the tree — matching XML::LibXML's
+<a href=#2046 id=2046 data-nosnippet>2046</a>  /// `$doc-&gt;findnodes` (which evaluates from the document node) — not silently
+<a href=#2047 id=2047 data-nosnippet>2047</a>  /// return nothing. Regression guard for the split-page resource/PI copy (#341):
+<a href=#2048 id=2048 data-nosnippet>2048</a>  /// the fix binds the root element as the context node. Before-root PIs still
+<a href=#2049 id=2049 data-nosnippet>2049</a>  /// need the absolute `//processing-instruction()` form (documented in
+<a href=#2050 id=2050 data-nosnippet>2050</a>  /// `findnodes_at`), verified here too.
+<a href=#2051 id=2051 data-nosnippet>2051</a>  </span><span class="attr">#[test]
+<a href=#2052 id=2052 data-nosnippet>2052</a>  </span><span class="kw">fn </span>findnodes_resolves_relative_axes_without_context_node() {
+<a href=#2053 id=2053 data-nosnippet>2053</a>    <span class="kw">let </span>doc = make_test_doc(
+<a href=#2054 id=2054 data-nosnippet>2054</a>      <span class="string">"&lt;?latexml class='book'?&gt;\
+<a href=#2055 id=2055 data-nosnippet>2055</a>       &lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
+<a href=#2056 id=2056 data-nosnippet>2056</a>         &lt;resource src='a.css' type='text/css'/&gt;\
+<a href=#2057 id=2057 data-nosnippet>2057</a>         &lt;section xml:id='s1'/&gt;\
+<a href=#2058 id=2058 data-nosnippet>2058</a>       &lt;/document&gt;"</span>,
+<a href=#2059 id=2059 data-nosnippet>2059</a>    );
+<a href=#2060 id=2060 data-nosnippet>2060</a>    <span class="macro">assert_eq!</span>(doc.findnodes(<span class="string">"//ltx:resource"</span>).len(), <span class="number">1</span>, <span class="string">"absolute"</span>);
+<a href=#2061 id=2061 data-nosnippet>2061</a>    <span class="macro">assert_eq!</span>(
+<a href=#2062 id=2062 data-nosnippet>2062</a>      doc.findnodes(<span class="string">"descendant::ltx:resource"</span>).len(),
+<a href=#2063 id=2063 data-nosnippet>2063</a>      <span class="number">1</span>,
+<a href=#2064 id=2064 data-nosnippet>2064</a>      <span class="string">"descendant:: axis must resolve without an explicit context node"
+<a href=#2065 id=2065 data-nosnippet>2065</a>    </span>);
+<a href=#2066 id=2066 data-nosnippet>2066</a>    <span class="macro">assert_eq!</span>(
+<a href=#2067 id=2067 data-nosnippet>2067</a>      doc.findnodes(<span class="string">".//ltx:resource"</span>).len(),
+<a href=#2068 id=2068 data-nosnippet>2068</a>      <span class="number">1</span>,
+<a href=#2069 id=2069 data-nosnippet>2069</a>      <span class="string">".// axis must resolve without an explicit context node"
+<a href=#2070 id=2070 data-nosnippet>2070</a>    </span>);
+<a href=#2071 id=2071 data-nosnippet>2071</a>    <span class="comment">// Before-root PIs: absolute form finds them, relative-from-root does not.
+<a href=#2072 id=2072 data-nosnippet>2072</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#2073 id=2073 data-nosnippet>2073</a>      doc.findnodes(<span class="string">"//processing-instruction('latexml')"</span>).len(),
+<a href=#2074 id=2074 data-nosnippet>2074</a>      <span class="number">1</span>,
+<a href=#2075 id=2075 data-nosnippet>2075</a>      <span class="string">"absolute PI query finds the before-root &lt;?latexml?&gt;"
+<a href=#2076 id=2076 data-nosnippet>2076</a>    </span>);
+<a href=#2077 id=2077 data-nosnippet>2077</a>  }
+<a href=#2078 id=2078 data-nosnippet>2078</a>
+<a href=#2079 id=2079 data-nosnippet>2079</a>  <span class="doccomment">/// The exact `--splitat=section` union `make_splitpaths` emits (the shape the
+<a href=#2080 id=2080 data-nosnippet>2080</a>  /// limit-safe `find_split_pages` walk must reproduce).
+<a href=#2081 id=2081 data-nosnippet>2081</a>  </span><span class="kw">const </span>SECTION_UNION: <span class="kw-2">&amp;</span>str = <span class="string">"//ltx:section | \
+<a href=#2082 id=2082 data-nosnippet>2082</a>    //ltx:bibliography[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
+<a href=#2083 id=2083 data-nosnippet>2083</a>    //ltx:appendix[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
+<a href=#2084 id=2084 data-nosnippet>2084</a>    //ltx:index[preceding-sibling::ltx:section or parent::ltx:part or parent::ltx:chapter] | \
+<a href=#2085 id=2085 data-nosnippet>2085</a>    //ltx:part | \
+<a href=#2086 id=2086 data-nosnippet>2086</a>    //ltx:bibliography[preceding-sibling::ltx:part] | \
+<a href=#2087 id=2087 data-nosnippet>2087</a>    //ltx:appendix[preceding-sibling::ltx:part] | \
+<a href=#2088 id=2088 data-nosnippet>2088</a>    //ltx:index[preceding-sibling::ltx:part] | \
+<a href=#2089 id=2089 data-nosnippet>2089</a>    //ltx:chapter | \
+<a href=#2090 id=2090 data-nosnippet>2090</a>    //ltx:bibliography[preceding-sibling::ltx:chapter or parent::ltx:part] | \
+<a href=#2091 id=2091 data-nosnippet>2091</a>    //ltx:appendix[preceding-sibling::ltx:chapter or parent::ltx:part] | \
+<a href=#2092 id=2092 data-nosnippet>2092</a>    //ltx:index[preceding-sibling::ltx:chapter or parent::ltx:part]"</span>;
+<a href=#2093 id=2093 data-nosnippet>2093</a>
+<a href=#2094 id=2094 data-nosnippet>2094</a>  <span class="kw">fn </span>split_doc() -&gt; PostDocument {
+<a href=#2095 id=2095 data-nosnippet>2095</a>    make_test_doc(
+<a href=#2096 id=2096 data-nosnippet>2096</a>      <span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
+<a href=#2097 id=2097 data-nosnippet>2097</a>         &lt;part xml:id='P1'&gt;\
+<a href=#2098 id=2098 data-nosnippet>2098</a>           &lt;chapter xml:id='C1'&gt;\
+<a href=#2099 id=2099 data-nosnippet>2099</a>             &lt;section xml:id='S1'/&gt;\
+<a href=#2100 id=2100 data-nosnippet>2100</a>             &lt;section xml:id='S2'/&gt;\
+<a href=#2101 id=2101 data-nosnippet>2101</a>             &lt;index xml:id='I1'/&gt;\
+<a href=#2102 id=2102 data-nosnippet>2102</a>           &lt;/chapter&gt;\
+<a href=#2103 id=2103 data-nosnippet>2103</a>           &lt;bibliography xml:id='B1'/&gt;\
+<a href=#2104 id=2104 data-nosnippet>2104</a>         &lt;/part&gt;\
+<a href=#2105 id=2105 data-nosnippet>2105</a>         &lt;section xml:id='S3'/&gt;\
+<a href=#2106 id=2106 data-nosnippet>2106</a>         &lt;index xml:id='I2'/&gt;\
+<a href=#2107 id=2107 data-nosnippet>2107</a>       &lt;/document&gt;"</span>,
+<a href=#2108 id=2108 data-nosnippet>2108</a>    )
 <a href=#2109 id=2109 data-nosnippet>2109</a>  }
 <a href=#2110 id=2110 data-nosnippet>2110</a>
-<a href=#2111 id=2111 data-nosnippet>2111</a>  <span class="doccomment">/// The id scan must populate the idcache for every `xml:id` (the walk replaces
-<a href=#2112 id=2112 data-nosnippet>2112</a>  /// the `//*[@xml:id]` query that overflows libxml2 on huge documents).
+<a href=#2111 id=2111 data-nosnippet>2111</a>  <span class="doccomment">/// The limit-safe DOM walk must select exactly the nodes (and order) the raw
+<a href=#2112 id=2112 data-nosnippet>2112</a>  /// XPath union selects on a small document where XPath is limit-safe.
 <a href=#2113 id=2113 data-nosnippet>2113</a>  </span><span class="attr">#[test]
-<a href=#2114 id=2114 data-nosnippet>2114</a>  </span><span class="kw">fn </span>test_scan_ids_populates_idcache() {
+<a href=#2114 id=2114 data-nosnippet>2114</a>  </span><span class="kw">fn </span>test_find_split_pages_matches_xpath() {
 <a href=#2115 id=2115 data-nosnippet>2115</a>    <span class="kw">let </span>doc = split_doc();
-<a href=#2116 id=2116 data-nosnippet>2116</a>    <span class="kw">for </span>id <span class="kw">in </span>[<span class="string">"P1"</span>, <span class="string">"C1"</span>, <span class="string">"S1"</span>, <span class="string">"S2"</span>, <span class="string">"I1"</span>, <span class="string">"B1"</span>, <span class="string">"S3"</span>, <span class="string">"I2"</span>] {
-<a href=#2117 id=2117 data-nosnippet>2117</a>      <span class="macro">assert!</span>(
-<a href=#2118 id=2118 data-nosnippet>2118</a>        doc.find_node_by_id(id).is_some(),
-<a href=#2119 id=2119 data-nosnippet>2119</a>        <span class="string">"missing id {id} in idcache"
-<a href=#2120 id=2120 data-nosnippet>2120</a>      </span>);
-<a href=#2121 id=2121 data-nosnippet>2121</a>    }
-<a href=#2122 id=2122 data-nosnippet>2122</a>    <span class="macro">assert!</span>(doc.find_node_by_id(<span class="string">"nope"</span>).is_none());
-<a href=#2123 id=2123 data-nosnippet>2123</a>  }
-<a href=#2124 id=2124 data-nosnippet>2124</a>
-<a href=#2125 id=2125 data-nosnippet>2125</a>  <span class="doccomment">/// A document-level `&lt;?latexml searchpaths=…?&gt;` PI (a sibling of the root
-<a href=#2126 id=2126 data-nosnippet>2126</a>  /// element) must still be collected by the walk and its searchpaths applied.
-<a href=#2127 id=2127 data-nosnippet>2127</a>  </span><span class="attr">#[test]
-<a href=#2128 id=2128 data-nosnippet>2128</a>  </span><span class="kw">fn </span>test_scan_collects_doclevel_pi_searchpaths() {
-<a href=#2129 id=2129 data-nosnippet>2129</a>    <span class="kw">let </span>doc = make_test_doc(
-<a href=#2130 id=2130 data-nosnippet>2130</a>      <span class="string">"&lt;?latexml searchpaths=\"alpha,beta\"?&gt;\
-<a href=#2131 id=2131 data-nosnippet>2131</a>       &lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;&lt;section xml:id='s1'/&gt;&lt;/document&gt;"</span>,
-<a href=#2132 id=2132 data-nosnippet>2132</a>    );
-<a href=#2133 id=2133 data-nosnippet>2133</a>    <span class="kw">let </span>paths = doc.get_search_paths();
-<a href=#2134 id=2134 data-nosnippet>2134</a>    <span class="macro">assert!</span>(paths.iter().any(|p| p == <span class="string">"alpha"</span>), <span class="string">"searchpaths: {paths:?}"</span>);
-<a href=#2135 id=2135 data-nosnippet>2135</a>    <span class="macro">assert!</span>(paths.iter().any(|p| p == <span class="string">"beta"</span>), <span class="string">"searchpaths: {paths:?}"</span>);
+<a href=#2116 id=2116 data-nosnippet>2116</a>    <span class="kw">let </span>ids = |nodes: Vec&lt;Node&gt;| -&gt; Vec&lt;String&gt; { nodes.iter().filter_map(get_xml_id).collect() };
+<a href=#2117 id=2117 data-nosnippet>2117</a>    <span class="kw">let </span>via_walk = ids(doc.find_split_pages(SECTION_UNION));
+<a href=#2118 id=2118 data-nosnippet>2118</a>    <span class="kw">let </span>via_xpath = ids(doc.findnodes(SECTION_UNION));
+<a href=#2119 id=2119 data-nosnippet>2119</a>    <span class="macro">assert_eq!</span>(
+<a href=#2120 id=2120 data-nosnippet>2120</a>      via_walk,
+<a href=#2121 id=2121 data-nosnippet>2121</a>      <span class="macro">vec!</span>[<span class="string">"P1"</span>, <span class="string">"C1"</span>, <span class="string">"S1"</span>, <span class="string">"S2"</span>, <span class="string">"I1"</span>, <span class="string">"B1"</span>, <span class="string">"S3"</span>, <span class="string">"I2"</span>],
+<a href=#2122 id=2122 data-nosnippet>2122</a>      <span class="string">"walk selected the wrong pages / order"
+<a href=#2123 id=2123 data-nosnippet>2123</a>    </span>);
+<a href=#2124 id=2124 data-nosnippet>2124</a>    <span class="macro">assert_eq!</span>(via_walk, via_xpath, <span class="string">"walk diverged from XPath union"</span>);
+<a href=#2125 id=2125 data-nosnippet>2125</a>  }
+<a href=#2126 id=2126 data-nosnippet>2126</a>
+<a href=#2127 id=2127 data-nosnippet>2127</a>  <span class="doccomment">/// A union outside the recognized grammar falls back to raw XPath (unchanged
+<a href=#2128 id=2128 data-nosnippet>2128</a>  /// behavior for custom `--splitpaths`).
+<a href=#2129 id=2129 data-nosnippet>2129</a>  </span><span class="attr">#[test]
+<a href=#2130 id=2130 data-nosnippet>2130</a>  </span><span class="kw">fn </span>test_find_split_pages_fallback() {
+<a href=#2131 id=2131 data-nosnippet>2131</a>    <span class="kw">let </span>doc = split_doc();
+<a href=#2132 id=2132 data-nosnippet>2132</a>    <span class="comment">// `descendant::` is not in the make_splitpaths grammar → fallback path.
+<a href=#2133 id=2133 data-nosnippet>2133</a>    </span><span class="kw">let </span>via = doc.find_split_pages(<span class="string">"//ltx:chapter/descendant::ltx:section"</span>);
+<a href=#2134 id=2134 data-nosnippet>2134</a>    <span class="kw">let </span>ids: Vec&lt;String&gt; = via.iter().filter_map(get_xml_id).collect();
+<a href=#2135 id=2135 data-nosnippet>2135</a>    <span class="macro">assert_eq!</span>(ids, <span class="macro">vec!</span>[<span class="string">"S1"</span>, <span class="string">"S2"</span>]);
 <a href=#2136 id=2136 data-nosnippet>2136</a>  }
 <a href=#2137 id=2137 data-nosnippet>2137</a>
-<a href=#2138 id=2138 data-nosnippet>2138</a>  <span class="attr">#[test]
-<a href=#2139 id=2139 data-nosnippet>2139</a>  </span><span class="kw">fn </span>test_uniquify_id() {
-<a href=#2140 id=2140 data-nosnippet>2140</a>    <span class="kw">let </span>doc = make_test_doc(
-<a href=#2141 id=2141 data-nosnippet>2141</a>      <span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
-<a href=#2142 id=2142 data-nosnippet>2142</a>         &lt;p xml:id='p1'/&gt;\
-<a href=#2143 id=2143 data-nosnippet>2143</a>       &lt;/document&gt;"</span>,
-<a href=#2144 id=2144 data-nosnippet>2144</a>    );
-<a href=#2145 id=2145 data-nosnippet>2145</a>    <span class="kw">let </span><span class="kw-2">mut </span>doc = doc;
-<a href=#2146 id=2146 data-nosnippet>2146</a>    <span class="comment">// First call reserves a unique id based on "p1"
-<a href=#2147 id=2147 data-nosnippet>2147</a>    </span><span class="kw">let </span>id1 = doc.uniquify_id(<span class="string">"p1"</span>, <span class="prelude-val">None</span>);
-<a href=#2148 id=2148 data-nosnippet>2148</a>    <span class="comment">// Second call with same base must produce a different id
-<a href=#2149 id=2149 data-nosnippet>2149</a>    </span><span class="kw">let </span>id2 = doc.uniquify_id(<span class="string">"p1"</span>, <span class="prelude-val">None</span>);
-<a href=#2150 id=2150 data-nosnippet>2150</a>    <span class="macro">assert_ne!</span>(id1, id2);
-<a href=#2151 id=2151 data-nosnippet>2151</a>    <span class="comment">// Both should start with p1
-<a href=#2152 id=2152 data-nosnippet>2152</a>    </span><span class="macro">assert!</span>(id1.starts_with(<span class="string">"p1"</span>));
-<a href=#2153 id=2153 data-nosnippet>2153</a>    <span class="macro">assert!</span>(id2.starts_with(<span class="string">"p1"</span>));
-<a href=#2154 id=2154 data-nosnippet>2154</a>  }
-<a href=#2155 id=2155 data-nosnippet>2155</a>
-<a href=#2156 id=2156 data-nosnippet>2156</a>  <span class="attr">#[test]
-<a href=#2157 id=2157 data-nosnippet>2157</a>  </span><span class="kw">fn </span>test_initial() {
-<a href=#2158 id=2158 data-nosnippet>2158</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"Hello"</span>, <span class="bool-val">false</span>), <span class="string">"H"</span>);
-<a href=#2159 id=2159 data-nosnippet>2159</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"  world"</span>, <span class="bool-val">false</span>), <span class="string">"W"</span>);
-<a href=#2160 id=2160 data-nosnippet>2160</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"123abc"</span>, <span class="bool-val">true</span>), <span class="string">"A"</span>);
-<a href=#2161 id=2161 data-nosnippet>2161</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"!@#"</span>, <span class="bool-val">false</span>), <span class="string">"*"</span>);
-<a href=#2162 id=2162 data-nosnippet>2162</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"\u{00E9}cole"</span>, <span class="bool-val">false</span>), <span class="string">"E"</span>); <span class="comment">// é NFD-decomposes to e + combining accent
-<a href=#2163 id=2163 data-nosnippet>2163</a>  </span>}
+<a href=#2138 id=2138 data-nosnippet>2138</a>  <span class="doccomment">/// The id scan must populate the idcache for every `xml:id` (the walk replaces
+<a href=#2139 id=2139 data-nosnippet>2139</a>  /// the `//*[@xml:id]` query that overflows libxml2 on huge documents).
+<a href=#2140 id=2140 data-nosnippet>2140</a>  </span><span class="attr">#[test]
+<a href=#2141 id=2141 data-nosnippet>2141</a>  </span><span class="kw">fn </span>test_scan_ids_populates_idcache() {
+<a href=#2142 id=2142 data-nosnippet>2142</a>    <span class="kw">let </span>doc = split_doc();
+<a href=#2143 id=2143 data-nosnippet>2143</a>    <span class="kw">for </span>id <span class="kw">in </span>[<span class="string">"P1"</span>, <span class="string">"C1"</span>, <span class="string">"S1"</span>, <span class="string">"S2"</span>, <span class="string">"I1"</span>, <span class="string">"B1"</span>, <span class="string">"S3"</span>, <span class="string">"I2"</span>] {
+<a href=#2144 id=2144 data-nosnippet>2144</a>      <span class="macro">assert!</span>(
+<a href=#2145 id=2145 data-nosnippet>2145</a>        doc.find_node_by_id(id).is_some(),
+<a href=#2146 id=2146 data-nosnippet>2146</a>        <span class="string">"missing id {id} in idcache"
+<a href=#2147 id=2147 data-nosnippet>2147</a>      </span>);
+<a href=#2148 id=2148 data-nosnippet>2148</a>    }
+<a href=#2149 id=2149 data-nosnippet>2149</a>    <span class="macro">assert!</span>(doc.find_node_by_id(<span class="string">"nope"</span>).is_none());
+<a href=#2150 id=2150 data-nosnippet>2150</a>  }
+<a href=#2151 id=2151 data-nosnippet>2151</a>
+<a href=#2152 id=2152 data-nosnippet>2152</a>  <span class="doccomment">/// A document-level `&lt;?latexml searchpaths=…?&gt;` PI (a sibling of the root
+<a href=#2153 id=2153 data-nosnippet>2153</a>  /// element) must still be collected by the walk and its searchpaths applied.
+<a href=#2154 id=2154 data-nosnippet>2154</a>  </span><span class="attr">#[test]
+<a href=#2155 id=2155 data-nosnippet>2155</a>  </span><span class="kw">fn </span>test_scan_collects_doclevel_pi_searchpaths() {
+<a href=#2156 id=2156 data-nosnippet>2156</a>    <span class="kw">let </span>doc = make_test_doc(
+<a href=#2157 id=2157 data-nosnippet>2157</a>      <span class="string">"&lt;?latexml searchpaths=\"alpha,beta\"?&gt;\
+<a href=#2158 id=2158 data-nosnippet>2158</a>       &lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;&lt;section xml:id='s1'/&gt;&lt;/document&gt;"</span>,
+<a href=#2159 id=2159 data-nosnippet>2159</a>    );
+<a href=#2160 id=2160 data-nosnippet>2160</a>    <span class="kw">let </span>paths = doc.get_search_paths();
+<a href=#2161 id=2161 data-nosnippet>2161</a>    <span class="macro">assert!</span>(paths.iter().any(|p| p == <span class="string">"alpha"</span>), <span class="string">"searchpaths: {paths:?}"</span>);
+<a href=#2162 id=2162 data-nosnippet>2162</a>    <span class="macro">assert!</span>(paths.iter().any(|p| p == <span class="string">"beta"</span>), <span class="string">"searchpaths: {paths:?}"</span>);
+<a href=#2163 id=2163 data-nosnippet>2163</a>  }
 <a href=#2164 id=2164 data-nosnippet>2164</a>
 <a href=#2165 id=2165 data-nosnippet>2165</a>  <span class="attr">#[test]
-<a href=#2166 id=2166 data-nosnippet>2166</a>  </span><span class="kw">fn </span>test_add_class() {
+<a href=#2166 id=2166 data-nosnippet>2166</a>  </span><span class="kw">fn </span>test_uniquify_id() {
 <a href=#2167 id=2167 data-nosnippet>2167</a>    <span class="kw">let </span>doc = make_test_doc(
 <a href=#2168 id=2168 data-nosnippet>2168</a>      <span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
 <a href=#2169 id=2169 data-nosnippet>2169</a>         &lt;p xml:id='p1'/&gt;\
 <a href=#2170 id=2170 data-nosnippet>2170</a>       &lt;/document&gt;"</span>,
 <a href=#2171 id=2171 data-nosnippet>2171</a>    );
-<a href=#2172 id=2172 data-nosnippet>2172</a>    <span class="kw">let </span><span class="kw-2">mut </span>node = doc.findnode(<span class="string">"//ltx:p"</span>).unwrap();
-<a href=#2173 id=2173 data-nosnippet>2173</a>    PostDocument::add_class(<span class="kw-2">&amp;mut </span>node, <span class="string">"foo bar"</span>);
-<a href=#2174 id=2174 data-nosnippet>2174</a>    <span class="kw">let </span>class = node.get_attribute(<span class="string">"class"</span>).unwrap();
-<a href=#2175 id=2175 data-nosnippet>2175</a>    <span class="macro">assert!</span>(class.contains(<span class="string">"bar"</span>));
-<a href=#2176 id=2176 data-nosnippet>2176</a>    <span class="macro">assert!</span>(class.contains(<span class="string">"foo"</span>));
-<a href=#2177 id=2177 data-nosnippet>2177</a>
-<a href=#2178 id=2178 data-nosnippet>2178</a>    <span class="comment">// Adding again should not duplicate
-<a href=#2179 id=2179 data-nosnippet>2179</a>    </span>PostDocument::add_class(<span class="kw-2">&amp;mut </span>node, <span class="string">"foo"</span>);
-<a href=#2180 id=2180 data-nosnippet>2180</a>    <span class="kw">let </span>class = node.get_attribute(<span class="string">"class"</span>).unwrap();
-<a href=#2181 id=2181 data-nosnippet>2181</a>    <span class="kw">let </span>count = class.matches(<span class="string">"foo"</span>).count();
-<a href=#2182 id=2182 data-nosnippet>2182</a>    <span class="macro">assert_eq!</span>(count, <span class="number">1</span>);
-<a href=#2183 id=2183 data-nosnippet>2183</a>  }
-<a href=#2184 id=2184 data-nosnippet>2184</a>}
+<a href=#2172 id=2172 data-nosnippet>2172</a>    <span class="kw">let </span><span class="kw-2">mut </span>doc = doc;
+<a href=#2173 id=2173 data-nosnippet>2173</a>    <span class="comment">// First call reserves a unique id based on "p1"
+<a href=#2174 id=2174 data-nosnippet>2174</a>    </span><span class="kw">let </span>id1 = doc.uniquify_id(<span class="string">"p1"</span>, <span class="prelude-val">None</span>);
+<a href=#2175 id=2175 data-nosnippet>2175</a>    <span class="comment">// Second call with same base must produce a different id
+<a href=#2176 id=2176 data-nosnippet>2176</a>    </span><span class="kw">let </span>id2 = doc.uniquify_id(<span class="string">"p1"</span>, <span class="prelude-val">None</span>);
+<a href=#2177 id=2177 data-nosnippet>2177</a>    <span class="macro">assert_ne!</span>(id1, id2);
+<a href=#2178 id=2178 data-nosnippet>2178</a>    <span class="comment">// Both should start with p1
+<a href=#2179 id=2179 data-nosnippet>2179</a>    </span><span class="macro">assert!</span>(id1.starts_with(<span class="string">"p1"</span>));
+<a href=#2180 id=2180 data-nosnippet>2180</a>    <span class="macro">assert!</span>(id2.starts_with(<span class="string">"p1"</span>));
+<a href=#2181 id=2181 data-nosnippet>2181</a>  }
+<a href=#2182 id=2182 data-nosnippet>2182</a>
+<a href=#2183 id=2183 data-nosnippet>2183</a>  <span class="attr">#[test]
+<a href=#2184 id=2184 data-nosnippet>2184</a>  </span><span class="kw">fn </span>test_initial() {
+<a href=#2185 id=2185 data-nosnippet>2185</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"Hello"</span>, <span class="bool-val">false</span>), <span class="string">"H"</span>);
+<a href=#2186 id=2186 data-nosnippet>2186</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"  world"</span>, <span class="bool-val">false</span>), <span class="string">"W"</span>);
+<a href=#2187 id=2187 data-nosnippet>2187</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"123abc"</span>, <span class="bool-val">true</span>), <span class="string">"A"</span>);
+<a href=#2188 id=2188 data-nosnippet>2188</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"!@#"</span>, <span class="bool-val">false</span>), <span class="string">"*"</span>);
+<a href=#2189 id=2189 data-nosnippet>2189</a>    <span class="macro">assert_eq!</span>(PostDocument::initial(<span class="string">"\u{00E9}cole"</span>, <span class="bool-val">false</span>), <span class="string">"E"</span>); <span class="comment">// é NFD-decomposes to e + combining accent
+<a href=#2190 id=2190 data-nosnippet>2190</a>  </span>}
+<a href=#2191 id=2191 data-nosnippet>2191</a>
+<a href=#2192 id=2192 data-nosnippet>2192</a>  <span class="attr">#[test]
+<a href=#2193 id=2193 data-nosnippet>2193</a>  </span><span class="kw">fn </span>test_add_class() {
+<a href=#2194 id=2194 data-nosnippet>2194</a>    <span class="kw">let </span>doc = make_test_doc(
+<a href=#2195 id=2195 data-nosnippet>2195</a>      <span class="string">"&lt;document xmlns='http://dlmf.nist.gov/LaTeXML'&gt;\
+<a href=#2196 id=2196 data-nosnippet>2196</a>         &lt;p xml:id='p1'/&gt;\
+<a href=#2197 id=2197 data-nosnippet>2197</a>       &lt;/document&gt;"</span>,
+<a href=#2198 id=2198 data-nosnippet>2198</a>    );
+<a href=#2199 id=2199 data-nosnippet>2199</a>    <span class="kw">let </span><span class="kw-2">mut </span>node = doc.findnode(<span class="string">"//ltx:p"</span>).unwrap();
+<a href=#2200 id=2200 data-nosnippet>2200</a>    PostDocument::add_class(<span class="kw-2">&amp;mut </span>node, <span class="string">"foo bar"</span>);
+<a href=#2201 id=2201 data-nosnippet>2201</a>    <span class="kw">let </span>class = node.get_attribute(<span class="string">"class"</span>).unwrap();
+<a href=#2202 id=2202 data-nosnippet>2202</a>    <span class="macro">assert!</span>(class.contains(<span class="string">"bar"</span>));
+<a href=#2203 id=2203 data-nosnippet>2203</a>    <span class="macro">assert!</span>(class.contains(<span class="string">"foo"</span>));
+<a href=#2204 id=2204 data-nosnippet>2204</a>
+<a href=#2205 id=2205 data-nosnippet>2205</a>    <span class="comment">// Adding again should not duplicate
+<a href=#2206 id=2206 data-nosnippet>2206</a>    </span>PostDocument::add_class(<span class="kw-2">&amp;mut </span>node, <span class="string">"foo"</span>);
+<a href=#2207 id=2207 data-nosnippet>2207</a>    <span class="kw">let </span>class = node.get_attribute(<span class="string">"class"</span>).unwrap();
+<a href=#2208 id=2208 data-nosnippet>2208</a>    <span class="kw">let </span>count = class.matches(<span class="string">"foo"</span>).count();
+<a href=#2209 id=2209 data-nosnippet>2209</a>    <span class="macro">assert_eq!</span>(count, <span class="number">1</span>);
+<a href=#2210 id=2210 data-nosnippet>2210</a>  }
+<a href=#2211 id=2211 data-nosnippet>2211</a>}
 </code></pre></div></section></main></body></html>
