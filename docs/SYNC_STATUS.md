@@ -421,16 +421,20 @@ structurally identical to Perl — same counts for all 25 element classes sample
 (312 `Math`, 58 `bibitem`, 336 `td`, 78 `ref`, …; sole delta 87 vs 88 `para`).
 Guards `cluster_fenced_bare_operator`, `cluster_leading_relop_comma_list`.
 
-**Thousands separator — policy settled, implementation still OPEN.** `50,000` is
-ONE number; both engines read the comma as a list separator. Owner policy
-(2026-07-25): **default US, support EU as a documented secondary.** The `en` half
-is the broken one — Perl's thousands arm demands `$r ne 'PUNCT'` and a math comma
-is always PUNCT, so it is dead code for English, while the EU decimal comma
-already works through the language maps. **Implementing it in the ligature is a
+**Thousands separator — ✅ FIXED 2026-07-25 (US default; EU already worked).**
+`50,000` is ONE number; both engines read the comma as a list separator. Owner
+policy: **default US, EU a supported secondary.** The `en` half was the broken
+one — Perl's thousands arm demands `$r ne 'PUNCT'` and a math comma is always
+PUNCT, so it is dead code for English, while the EU decimal comma already works
+through the language maps. **The ligature is the wrong seam and that is a
 measured dead end** (built, reverted): ligatures run per-token during building,
-so there is no right context at all, and a merge-at-three-digits rule corrupts
-plausible pairs — `$(1, 2024)$` → `12024`. Correct home is a `DefRewrite` in the
-post-build `Rewriting` phase; full design in
+so there is NO right context, and a merge-at-three-digits rule corrupts plausible
+pairs — `$(1, 2024)$` → `12024`. Landed instead as a `DefRewrite` in the
+post-build `Rewriting` phase, where the ligature has already collapsed each digit
+run into one token, so the group length is testable with its right context and
+those cases are safe by construction. Guards
+`cluster_thousands_separator_us_default` / `_eu`; mechanism, the two
+implementation traps and the full result table in
 [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md).
 
 

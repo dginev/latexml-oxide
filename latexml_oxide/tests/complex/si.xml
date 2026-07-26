@@ -8253,52 +8253,19 @@ uncertainty</title>
                 </Math></td>
             </tr>
             <tr>
-              <td align="left"><Math mode="inline" tex="3,762" text="list@(3, 762)" xml:id="S3.T25.m17">
+              <td align="left"><Math mode="inline" tex="3,762" text="3762" xml:id="S3.T25.m17">
                   <XMath>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="list"/>
-                        <XMRef idref="S3.T25.m17.1"/>
-                        <XMRef idref="S3.T25.m17.2"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok meaning="3" role="NUMBER" xml:id="S3.T25.m17.1">3</XMTok>
-                        <XMTok role="PUNCT">,</XMTok>
-                        <XMTok meaning="762" role="NUMBER" xml:id="S3.T25.m17.2">762</XMTok>
-                      </XMWrap>
-                    </XMDual>
+                    <XMTok meaning="3762" role="NUMBER">3,762</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="3,762" text="list@(3, 762)" xml:id="S3.T25.m18">
+              <td align="left"><Math mode="inline" tex="3,762" text="3762" xml:id="S3.T25.m18">
                   <XMath>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="list"/>
-                        <XMRef idref="S3.T25.m18.1"/>
-                        <XMRef idref="S3.T25.m18.2"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok meaning="3" role="NUMBER" xml:id="S3.T25.m18.1">3</XMTok>
-                        <XMTok role="PUNCT">,</XMTok>
-                        <XMTok meaning="762" role="NUMBER" xml:id="S3.T25.m18.2">762</XMTok>
-                      </XMWrap>
-                    </XMDual>
+                    <XMTok meaning="3762" role="NUMBER">3,762</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="3,762" text="list@(3, 762)" xml:id="S3.T25.m19">
+              <td align="left"><Math mode="inline" tex="3,762" text="3762" xml:id="S3.T25.m19">
                   <XMath>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="list"/>
-                        <XMRef idref="S3.T25.m19.1"/>
-                        <XMRef idref="S3.T25.m19.2"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok meaning="3" role="NUMBER" xml:id="S3.T25.m19.1">3</XMTok>
-                        <XMTok role="PUNCT">,</XMTok>
-                        <XMTok meaning="762" role="NUMBER" xml:id="S3.T25.m19.2">762</XMTok>
-                      </XMWrap>
-                    </XMDual>
+                    <XMTok meaning="3762" role="NUMBER">3,762</XMTok>
                   </XMath>
                 </Math></td>
               <td align="left"><Math mode="inline" tex="3.762" text="3.762" xml:id="S3.T25.m20">

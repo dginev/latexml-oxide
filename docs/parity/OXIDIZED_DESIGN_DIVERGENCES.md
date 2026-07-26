@@ -2074,6 +2074,46 @@ renders correctly and the CRLF original does not.
 
 Guard: `104_lstinputlisting_range_crlf::crlf_line_comment_style_does_not_bleed_past_its_line`.
 
+### 70. A comma between digit groups is a thousands separator, not a list separator
+
+**Perl behaviour.** `$50,000$` parses as a two-item LIST — `list(50, 000)` (or,
+after a relation, `>(absent, list(50,000))`). The number ligature that would join
+them (`Base_XMath.pool.ltxml` L506-508) demands `$r ne 'PUNCT'` on the separator
+— "Be paranoid about lists" — and a math-mode comma is ALWAYS `role="PUNCT"`, so
+for `en`, where the thousands separator *is* the comma, that arm is unreachable
+dead code. The content arm is then nonsense and even the presentation grouping is
+wrong: `mrow(mn 50, mo ",", mn 000)` instead of a single `mn`.
+
+**Rust behaviour (owner-directed 2026-07-25).** `$50,000$` is ONE number, 50000.
+The default reading is **US** (comma groups digits); the **European** reading
+(comma as DECIMAL separator, `$3,14$` = 3.14) stays available and is selected the
+way it already was — by the document language, through the `DECIMAL_SEP` /
+`THOUSANDS_SEP` maps, whose decimal arm never had the role guard and so always
+worked. Real corpora contain both conventions, hence a default rather than a
+single answer.
+
+Merged: `50,000`→`50000`, `1,234,567`→`1234567`, `12,345,678,901`, `1,234.56`.
+Left alone: `3,14` (two digits — the European decimal shape), `50,0001`,
+`f(x,000)` (no NUMBER left of the comma), `(1, 2024)`, `(12, 3456)`.
+`$(12, 345)$` DOES merge — genuinely ambiguous, and this is what "default US"
+decides. Presentation becomes a single `<mn>50,000</mn>`.
+
+**Where, and why not elsewhere.** A `DefRewrite` in the post-build `Rewriting`
+phase (`base_xmath.rs`, `THOUSANDS_SELECT_XPATH`), not the ligature. Ligatures run
+per-token from `Document::open_math_text_internal` while the document is being
+built, so `get_next_sibling()` is None for every node — there is no right context
+at all, and a merge-on-three-digits rule fires before a fourth digit can arrive.
+Measured: it turned `$(1, 2024)$` into `12024` and `$(12, 3456)$` into `123456`.
+By the Rewriting phase the ligature has already collapsed each digit run into ONE
+token, so the group length is directly testable and those cases are rejected by
+construction. Package-built number markup is excluded (`not(parent::ltx:XMWrap)`)
+— siunitx/numprint construct their own `XMDual(semantic, XMWrap[...])` and are
+already correct.
+
+Golden updated: `tests/complex/si.xml` (three author-typed `$3,762$` cells).
+Guards `cluster_thousands_separator_us_default`, `cluster_thousands_separator_eu`.
+Witness: arXiv 2605.17646 (`population $ > 50,000$`).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

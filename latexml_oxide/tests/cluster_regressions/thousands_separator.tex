@@ -1,0 +1,35 @@
+% Thousands separator, US default (owner policy 2026-07-25).
+%
+% `$50,000$` is ONE number. The number LIGATURE can never see that for English:
+% its thousands arm demands role != PUNCT (Perl Base_XMath.pool.ltxml L506-508,
+% "Be paranoid about lists") and a math comma is always PUNCT. And it cannot be
+% fixed there — ligatures run per-token while the document is being built, so
+% there is no right context at all; a merge-at-three-digits rule fires before a
+% fourth digit can arrive and turns `$(1, 2024)$` into `12024`.
+%
+% The merge therefore happens in the post-build Rewriting phase, where the
+% ligature has already collapsed each digit run into ONE token — so the group
+% length is directly testable and the pathological cases below are safe by
+% construction.
+%
+% EU documents are NOT handled here: for de/fr/nl/pt/es the comma is the DECIMAL
+% separator and the ligature's decimal arm (no role guard) already handles it.
+% See `thousands_separator_eu.tex` for that side.
+%
+% Witness: arXiv 2605.17646 (`population $ > 50,000$`).
+\documentclass{article}
+\begin{document}
+A: $50,000$.
+B: $>50,000$.
+C: $1,234,567$.
+D: $12,345,678,901$.
+E: $1,234.56$.
+F: $3.14$.
+% --- must NOT merge ---
+G: $3,14$.
+H: $50,0001$.
+I: $f(x,000)$.
+J: $(1, 2024)$.
+K: $(12, 3456)$.
+L: $a,b$.
+\end{document}
