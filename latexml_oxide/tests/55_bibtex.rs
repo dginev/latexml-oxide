@@ -117,17 +117,24 @@ fn bibtex_mode_emits_bibentries() {
 /// runs away. Both engines mis-read the field — that is parity, and real
 /// bibtex+pdflatex break on it too, so it is deliberately NOT corrected here.
 ///
-/// What was Rust-only was the blast radius. `read_balanced` used to treat every
-/// autoclose literal mouth as a token-level continuation of its parent
-/// (`gullet.rs`, the xint `\scantokens` divergence), so the runaway crossed out
-/// of the entry mouth and swallowed every following `\ProcessBibTeXEntry` AND
-/// `\end{bibtex@bibliography}`: a 3-entry `.bib` produced ONE entry and a single
-/// error, where same-host Perl produces all three. The entry mouth now declares
-/// itself `BalancedBoundary::Opaque`, which is what Perl's readBalanced
-/// (`Gullet.pm` L465-472, current mouth only) does for every mouth.
+/// What was Rust-only was the blast radius, and it had two independent causes —
+/// hence the two runaway entries in the fixture, which fail by different routes:
+///
+/// * **`{}`-read argument** (`\bib@@title`). `read_balanced` used to treat every
+///   autoclose literal mouth as a token-level continuation of its parent
+///   (`gullet.rs`, the xint `\scantokens` divergence), so the runaway crossed out
+///   of the entry mouth and swallowed every following `\ProcessBibTeXEntry` AND
+///   `\end{bibtex@bibliography}`. The entry mouth now declares itself
+///   `BalancedBoundary::Opaque`, which is what Perl's readBalanced (`Gullet.pm`
+///   L465-472, current mouth only) does for every mouth.
+/// * **`Digested` argument** (`\bib@@field`). The group opened by `{` is never
+///   closed, so the argument digestion runs to EOF; `readDigested` then `pop`s
+///   the last box to strip the closing brace, but `digest_next_body` was pushing
+///   Perl's EOF trailer box (`Stomach.pm` L130) only for a body that had read no
+///   token at all, so the `pop` ate real content — every following entry.
 ///
 /// Ground truth for the assertions is same-host Perl on the same fixture: all
-/// three keys present, and the runaway title truncated at the `%` to "Fifty".
+/// four keys present, and the runaway title truncated at the `%` to "Fifty".
 #[test]
 fn runaway_field_costs_only_its_own_entry() {
   // `init` is process-global and the sibling test in this target may have won
@@ -149,11 +156,11 @@ fn runaway_field_costs_only_its_own_entry() {
   };
   let s = doc.to_string();
 
-  for key in ["before", "runawaytitle", "after"] {
+  for key in ["before", "runawaytitle", "runawaynote", "after"] {
     assert!(
       s.contains(&format!("key=\"{key}\"")),
       "entry '{key}' was lost — a runaway field must not take other entries \
-       with it (same-host Perl keeps all three). Got:\n{s}"
+       with it (same-host Perl keeps all four). Got:\n{s}"
     );
   }
   // The entries that carry no runaway must be intact, not merely present.

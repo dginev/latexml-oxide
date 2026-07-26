@@ -1,4 +1,4 @@
-% A `.bib` whose middle entry contains a bare `%` in a field.
+% A `.bib` whose fields contain a bare `%`.
 %
 % BibTeX has NO comment syntax inside an entry, so this is literal data — but
 % `\ProcessBibTeXEntry` hands the entry to a Mouth as TeX SOURCE (Perl
@@ -7,18 +7,33 @@
 % field, and so does real bibtex+pdflatex — that part is parity and is
 % deliberately not corrected.
 %
-% What is NOT parity is the blast radius, which is what this fixture pins:
-% `before` and `after` must survive the entry that ran away.
+% What is NOT parity is the blast radius. The point of this fixture is that the
+% damage stays inside the entry that caused it: `before` and `after` must
+% survive, whichever field the runaway sits in.
 @misc{before,
   author = {Able, Ann},
   title  = {Entry Before The Runaway},
   year   = {2023}
 }
 
+% Runaway inside a `{}`-read macro argument (`\bib@@title`, BibTeX.pool L293).
+% Fixed by the entry mouth being opaque to a balanced read.
 @misc{runawaytitle,
   author = {Poe, Percy},
   title  = {Fifty % of the time},
   year   = {2024}
+}
+
+% Runaway inside a `Digested` argument (`\bib@@field`, BibTeX.pool L230) — a
+% different mechanism: the group opened by `{` is never closed, so the argument
+% digestion runs to EOF and `readDigested`'s `pop` (which is meant to drop the
+% closing-brace box) ate real content instead, for want of the EOF trailer box
+% Perl pushes at `Stomach.pm` L130.
+@misc{runawaynote,
+  author = {Quill, Quinn},
+  title  = {Has A Runaway Note},
+  year   = {2024},
+  note   = {plain % comment}
 }
 
 @misc{after,
