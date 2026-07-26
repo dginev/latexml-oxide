@@ -1543,6 +1543,13 @@ fn bib_field_bbl_fallbacks_render_without_a_url_package() {
     x.contains("10.1000/xyz123"),
     "the note's DOI must survive into the entry:\n{x}"
   );
+  // `%` is a comment in TeX but literal data in a `.bib`: a percent-encoded URL
+  // must survive whole, not be truncated at the first `%` (which also took the
+  // closing brace, surfacing as `expected:}`). See `tokenize_bib_field`.
+  assert!(
+    x.contains("B130936%20Law%20of%20War.pdf"),
+    "percent-encoded URL was truncated at the first %:\n{x}"
+  );
   // ... and no TeX source may leak, exactly as in the hyperref sibling.
   for leak in ["\\url", "\\doi"] {
     assert!(

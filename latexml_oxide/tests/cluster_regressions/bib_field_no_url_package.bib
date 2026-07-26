@@ -23,3 +23,15 @@
   year    = {2025},
   note    = {\doi{10.1000/xyz123}}
 }
+
+% Percent-ENCODED URL. `%` is TeX's comment character but BibTeX has no comment
+% syntax inside an entry, so this is literal data. Read at catcode 14 the `%20`
+% comments out the rest of the line — closing brace included — and
+% `read_balanced` reports `expected:}`. Witness 2605.00245 carried three of
+% these in one .bib; 17 of the first 40 sampled regressions were this shape.
+@misc{pcturl,
+  author       = {Poe, Percy},
+  title        = {A Percent Encoded Thing},
+  year         = {2024},
+  howpublished = {\url{https://example.org/B130936%20Law%20of%20War.pdf}}
+}
