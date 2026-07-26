@@ -1,0 +1,10 @@
+% NO hyperref, NO url.sty — that absence is the whole point of this fixture.
+% The sibling `bib_field_markup.tex` DOES load hyperref and pins that
+% hyperref's `\url` still wins there; this one pins that a document with
+% nothing defining `\url` still renders the field instead of erroring.
+\documentclass{article}
+\begin{document}
+See \cite{urlnopkg,doinopkg}.
+\bibliographystyle{plain}
+\bibliography{bib_field_no_url_package}
+\end{document}

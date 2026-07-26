@@ -1513,6 +1513,45 @@ fn non_utf8_bib_file_still_yields_a_bibliography() {
 ///
 /// Same-host Perl renders all three of these correctly, so this was
 /// GENUINE-RUST-ONLY, not a parity gap.
+/// The `.bbl` standard fallbacks: a `.bib` field may use `\url`/`\doi` in a
+/// document that loads NOTHING defining them. BibTeX would copy the field into
+/// a `.bbl` whose preamble provides them; we digest the raw field one step
+/// earlier, so `make_bibliography` supplies the same `\providecommand` block.
+///
+/// Red before that block existed: `Error:undefined:\url` raised from the field
+/// digest (`at Anonymous String`). Witness 2605.01149 — no hyperref, no
+/// url.sty, no .bbl, one `howpublished = {\url{...}}`; 1 error -> 0 with the
+/// URL still recovered. On the 2026-07-26 sandbox rerun the missing block cost
+/// 90 `no_problem -> error` papers in sandbox-arxiv-2605.
+///
+/// The sibling `bib_field_markup_survives_into_the_bibliography` covers the
+/// other side: with hyperref loaded, hyperref's `\url` must still win
+/// (`\providecommand` defers), so the link keeps its `href`.
+#[test]
+fn bib_field_bbl_fallbacks_render_without_a_url_package() {
+  let x = convert_and_post("tests/cluster_regressions/bib_field_no_url_package.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "bbl fallbacks: no bibliography at all:\n{x}"
+  );
+  // The recovered content must be THERE ...
+  assert!(
+    x.contains("https://example.org/nopkg"),
+    "the howpublished URL must survive into the entry:\n{x}"
+  );
+  assert!(
+    x.contains("10.1000/xyz123"),
+    "the note's DOI must survive into the entry:\n{x}"
+  );
+  // ... and no TeX source may leak, exactly as in the hyperref sibling.
+  for leak in ["\\url", "\\doi"] {
+    assert!(
+      !x.contains(leak),
+      "raw {leak} leaked into the rendered bibliography:\n{x}"
+    );
+  }
+}
+
 #[test]
 fn bib_field_markup_survives_into_the_bibliography() {
   let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
