@@ -25,7 +25,6 @@ const THOUSANDS_MERGE_PASSES: usize = 4;
 /// followed by a `,` (PUNCT) and then by a NUMBER of EXACTLY three digits.
 ///
 /// Every clause earns its place:
-/// Every clause earns its place:
 /// * the group's first three characters must be digits, and the group must then
 ///   either END (`50,000`) or continue with the decimal point (`1,234.56`, which
 ///   the ligature has already merged into the single token `234.56`). This is
