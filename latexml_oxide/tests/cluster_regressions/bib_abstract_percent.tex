@@ -1,0 +1,11 @@
+% Driver for `bib_abstract_percent.bib`: four entries covering the two distinct
+% ways an `ltx:bib-extract` field breaks an entry — a bare `%` (runaway, eats
+% the closing brace) and an EMPTY value (element opened and never closed). All
+% four must reach the rendered bibliography; `survivor` is the containment
+% canary. See the `.bib` header and OXIDIZED_DESIGN #73.
+\documentclass{article}
+\begin{document}
+See \cite{percentabstract,keywordspercent,survivor,emptyabstract}.
+\bibliographystyle{plain}
+\bibliography{bib_abstract_percent}
+\end{document}

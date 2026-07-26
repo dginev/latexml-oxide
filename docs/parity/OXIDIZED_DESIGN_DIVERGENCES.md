@@ -2197,6 +2197,84 @@ Guards: `06_cluster_regressions::bib_field_bbl_fallbacks_render_without_a_url_pa
 (no url package) and `::bib_field_markup_survives_into_the_bibliography`
 (hyperref loaded — hyperref's `\url` must still win).
 
+### 73. A `.bib` `abstract`/`keywords`/`contents` field is read verbatim, not digested
+
+**Perl behaviour.** `BibTeX.pool.ltxml` L708-709/716-717/732-733 route these three
+fields to `\bib@@field{ltx:bib-extract}[role=...]`, whose value is `Digested` —
+so the field's content is tokenized and digested as TeX. These fields are bulk
+prose, and prose contains `%`. A `%` is catcode 14: it comments out the rest of
+the LINE, taking the field's closing brace with it. The entry's group never
+closes, the next `@article` is absorbed as more abstract, and `\end{bib@entry}`
+fails against the wrong group. The damage is not local — entries stack open and
+the **entire** bibliography is lost.
+
+Measured on witness **2605.00184** (`warm-ref.bib`, a Mendeley export with an
+abstract on every entry, 52 entries): same-host `latexmlc` emits **101 errors
+plus a `too_many_errors` Fatal and produces no output at all**. Perl's own
+`\bib@field@default@abstract` cannot survive its own input.
+
+**Rust behaviour.** The same three fields become `DefConstructor`s taking a
+`Verbatim` argument (`bibtex.rs`). `Verbatim` calls
+`begin_semiverbatim(Some(&['%', '\\']))` (`base_parameter_types.rs` L457-469),
+so `%` and `\` are neutralized for the field's duration and the content cannot
+break out of it. The value is then recovered from the entry's stored field via
+`bib_extract_text` + a `#rawdata` property — **Perl's own idiom for a
+`Verbatim`-read field**, whose comment at L346 reads "IGNORE the tokenized data"
+(`\bib@field@default@default Verbatim Verbatim` -> `\bib@field@unknownasdata{#1}`,
+which builds its content the same way). The verbatim token form is a dead end:
+measured, `#1` substitutes to nothing in a macro expansion body, which leaves
+`\bib@@field`'s `Digested` slot empty — that opens `ltx:bib-extract` and never
+closes it, so every later field nests inside and the entry is malformed.
+
+An **empty** value is a second, independent failure mode: `abstract = {},` is a
+routine reference-manager export, and an element opened with no content is never
+closed, so every later field nests inside `ltx:bib-extract` and the entry is
+malformed. The constructor is therefore conditional —
+`?#rawdata(<ltx:bib-extract .../>)()` with the property left undefined when the
+text is empty — so nothing is emitted rather than something unclosed. Witness
+2605.00555 `refs.bib` L956: that one line cost **86 errors**, while the same
+file's 17 percent-bearing abstracts were already handled.
+
+The **key is still supported exactly as Perl supports it** — the same
+`ltx:bib-extract[@role]` element is emitted with its value whenever there is
+one, so metadata consumers keep the data. Only the *reading* changed.
+
+Measured, current binary: **2605.00184 102 -> 0 errors, 0 -> 41 entries**;
+**2605.00555 86 -> 0 errors, 15 entries**. Seven more papers sampled from the
+cluster (2605.00120/00208/00254/00314/00426/00440/00462) go to 0-or-1 errors
+with **zero** `bibtex@bibliography` / `bib@entry` / `bib-extract` errors, from
+300/77/57 on the worst three. In sandbox-arxiv-2605 run 272 (which PREDATES this
+fix) the cluster is 695 `\end{bibtex@bibliography}` + 656 `\end{bib@entry}`
+documents; `abstract` is the driver in 47 of 48 lethal-`%` field hits across an
+8-paper sample (the 48th is a `title`, which is genuine parity — pdflatex breaks
+on it too, and `title` is rendered so it cannot be read verbatim).
+
+**Why.** Real BibTeX never puts these fields in front of a TeX tokenizer. A
+`.bst` declares a closed `ENTRY` field list, and plain/unsrt/alpha/abbrv all omit
+`abstract` and `keywords`, so `bibtex(1)` drops them when writing the `.bbl` and
+pdflatex never sees them. Verified by running bibtex 0.99d: for an entry whose
+abstract contains `64.84%`, the generated `.bbl` carries author/title/journal/year
+and no trace of the abstract. Digesting them is an artifact of reading `.bib`
+**directly** instead of running bibtex+bst, so pdflatex — not Perl — is the
+ground truth here, and pdflatex's answer is "this text never reaches TeX".
+
+The cost of the divergence is markup inside these three fields, and it is zero in
+practice: **nothing renders `ltx:bib-extract`.** No format spec in
+`make_bibliography.rs` queries it, in either engine's output path. This is
+`surpass-perl` on a shared bug, not a parity gap — Rust was already better than
+Perl on the witness before the fix (102 errors and no fatal, vs Perl's 101 plus
+a fatal), and the fix widens that rather than papering over a Rust-only defect.
+
+Other `.bst`-dependent fields keep Perl's exact coverage; only the three that
+reach the unrendered `ltx:bib-extract` are neutralized.
+
+Guard: `06_cluster_bibliography::bib_abstract_percent_does_not_sink_the_entry`,
+which uses the new `convert_and_post_clean` helper — the ordinary
+`convert_and_post` gates only the CORE stage, so a post-stage error flood (17 on
+this fixture, 203 on the witness) passed every bibliography guard silently.
+(percent in `abstract`, specials in `keywords`, and a third entry as the
+containment canary).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

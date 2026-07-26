@@ -241,6 +241,28 @@ pub fn lookup_entry(key: &str) -> Option<Rc<RefCell<BibEntry>>> {
 /// Perl's `getField` yields the field's STRING; callers that need the source
 /// text verbatim (e.g. `\bib@field@unknownasdata`) should therefore prefer
 /// [`current_entry_raw_field`] — tokenizing here is lossy in one direction, in
+/// Text for an `ltx:bib-extract` field, read from the entry's stored field
+/// rather than from the macro argument.
+///
+/// Perl's own idiom for a `Verbatim`-read field — `\bib@field@default@default
+/// Verbatim Verbatim` -> `\bib@field@unknownasdata{#1}`, whose comment reads
+/// "IGNORE the tokenized data" (`BibTeX.pool.ltxml` L346) — is to consume the
+/// value verbatim so it cannot be interpreted, then recover it from
+/// `currentBibEntryField` at construction time. The verbatim token form is a
+/// dead end: it does not survive into a macro expansion body (measured — `#1`
+/// substitutes to nothing, leaving `\bib@@field`'s `Digested` slot empty, which
+/// opens `ltx:bib-extract` and never closes it: 203 errors on 2605.00184 as
+/// every later field nests inside).
+///
+/// Raw-first, same as [`bib@field@unknownasdata`](install_bibtex_definitions)
+/// and for the same reason: a Tokens round-trip eats the space that terminates
+/// a control word.
+fn bib_extract_text(field: &str) -> String {
+  current_entry_raw_field(field)
+    .or_else(|| current_entry_field(field).map(|t| t.to_string()))
+    .unwrap_or_default()
+}
+
 /// that a control word's terminating space is consumed (`\ndash 693`).
 pub fn current_entry_field(name: &str) -> Option<Tokens> {
   let entry = current_entry()?;
@@ -1533,14 +1555,76 @@ LoadDefinitions!({
   );
 
   // Non-standard fields.
-  DefMacro!(
-    "\\bib@field@default@abstract",
-    "\\bib@@field{ltx:bib-extract}[role=abstract]"
+  // The three `ltx:bib-extract` fields are read VERBATIM, not digested as TeX.
+  //
+  // Perl digests them (BibTeX.pool.ltxml L708/716/732) and that is a bug both
+  // engines shared: `abstract` and `keywords` are bulk prose, and real BibTeX
+  // never lets them reach LaTeX at all. A `.bst` declares a closed ENTRY field
+  // list — plain/unsrt/alpha/abbrv all omit `abstract` and `keywords` — so
+  // bibtex(1) drops them when writing the `.bbl`, and pdflatex never sees them.
+  // Verified by running bibtex 0.99d: the `.bbl` for an entry with
+  // `abstract = {... 64.84% ...}` contains author/title/journal/year and no
+  // trace of the abstract.
+  //
+  // Digesting them is therefore an artifact of reading `.bib` DIRECTLY instead
+  // of running bibtex+bst, and it is destructive: a `%` in an abstract (a
+  // percentage — utterly routine) is a TeX comment, so it eats the rest of the
+  // line including the field's closing brace, the entry's group never closes,
+  // and `\end{bib@entry}` fails. Entries then stack open and the WHOLE
+  // bibliography is lost. Witness 2605.00184 (`warm-ref.bib`, a Mendeley export
+  // with an abstract on every entry): 52 entries, 0 emitted, 102 errors — and
+  // same-host Perl is worse, 101 errors plus a `too_many_errors` Fatal and no
+  // output at all. Perl's own `\bib@field@default@abstract` cannot survive its
+  // own input.
+  //
+  // The KEY is still supported, exactly as Perl supports it — the same
+  // `ltx:bib-extract[@role]` element is emitted with its value (recovered via
+  // `bib_extract_text`, Perl's own "IGNORE the tokenized data" idiom — see that
+  // helper). Only the READING changes: `Verbatim` neutralizes `%` and `\`
+  // (`base_parameter_types.rs`, `begin_semiverbatim(Some(&['%', '\\']))`), so
+  // the content cannot break the entry. Nothing renders `ltx:bib-extract` —
+  // no FMT_SPEC in `make_bibliography.rs` queries it — so losing markup inside
+  // it costs nothing.
+  //
+  // SURPASS-PERL, with pdflatex as ground truth rather than preference.
+  // OXIDIZED_DESIGN #73. Guard:
+  // `06_cluster_bibliography::bib_abstract_percent_does_not_sink_the_entry`.
+  DefConstructor!(
+    "\\bib@field@default@abstract Verbatim",
+    "?#rawdata(<ltx:bib-extract role='abstract'>#rawdata</ltx:bib-extract>)()",
+    properties => sub[_args] {
+      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
+      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
+      // element opened with no content is never closed — every later field then
+      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
+      // property undefined makes the `?#rawdata(...)()` conditional pick the
+      // empty branch. Same guard fixture case: `emptyabstract`.
+      let text = bib_extract_text("abstract");
+      Ok(if text.is_empty() {
+        stored_map!()
+      } else {
+        stored_map!("rawdata" => Stored::String(pin(&text)))
+      })
+    }
   );
   DefMacro!("\\bib@field@default@archive", "\\bib@@field{ltx:bib-links}");
-  DefMacro!(
-    "\\bib@field@default@contents",
-    "\\bib@@field{ltx:bib-extract}[role=contents]"
+  DefConstructor!(
+    "\\bib@field@default@contents Verbatim",
+    "?#rawdata(<ltx:bib-extract role='contents'>#rawdata</ltx:bib-extract>)()",
+    properties => sub[_args] {
+      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
+      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
+      // element opened with no content is never closed — every later field then
+      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
+      // property undefined makes the `?#rawdata(...)()` conditional pick the
+      // empty branch. Same guard fixture case: `emptyabstract`.
+      let text = bib_extract_text("contents");
+      Ok(if text.is_empty() {
+        stored_map!()
+      } else {
+        stored_map!("rawdata" => Stored::String(pin(&text)))
+      })
+    }
   );
   DefMacro!(
     "\\bib@field@default@copyright",
@@ -1551,9 +1635,23 @@ LoadDefinitions!({
     "\\bib@field@default@preprint",
     "\\bib@@field{ltx:bib-links}"
   );
-  DefMacro!(
-    "\\bib@field@default@keywords",
-    "\\bib@@field{ltx:bib-extract}[role=keywords]"
+  DefConstructor!(
+    "\\bib@field@default@keywords Verbatim",
+    "?#rawdata(<ltx:bib-extract role='keywords'>#rawdata</ltx:bib-extract>)()",
+    properties => sub[_args] {
+      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
+      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
+      // element opened with no content is never closed — every later field then
+      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
+      // property undefined makes the `?#rawdata(...)()` conditional pick the
+      // empty branch. Same guard fixture case: `emptyabstract`.
+      let text = bib_extract_text("keywords");
+      Ok(if text.is_empty() {
+        stored_map!()
+      } else {
+        stored_map!("rawdata" => Stored::String(pin(&text)))
+      })
+    }
   );
   DefMacro!(
     "\\bib@field@default@language",
