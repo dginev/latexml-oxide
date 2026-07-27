@@ -1,0 +1,29 @@
+% Witnesses: arXiv 2605.00181, 2605.19650, 2606.06645 — three JHEP/JCAP/JINST
+% papers whose INSPIRE-exported `.bib` wraps the DOI in an `\href`. Every one
+% took `Fatal:Timeout:Recursion` ("Infinite expansion loop: a window of 6
+% token(s) repeated 100+ times") and lost its whole bibliography.
+%
+% `\bib@field@default@doi` reads its value `Semiverbatim`, and
+% `Parameter::digest` pre-expands a semiverbatim argument with
+% `fully_expand = true` (Perl `Core/Parameter.pm` L123-132). That linearizing
+% pass expanded `\href`, whose body re-emits `\href` for the
+% `\lx@hyper@url@` reversion slot — so it expanded again, forever.
+@article{HrefDoi2021,
+  author  = {Doe, Jane and Roe, Richard},
+  title   = {{A Paper With A Wrapped DOI}},
+  journal = {J. Testing},
+  volume  = {27},
+  pages   = {13401},
+  doi     = {\href{https://doi.org/10.5281/zenodo.19852912}{10.5281/zenodo.19852912}},
+  year    = {2021},
+}
+
+% The same shape in `booktitle` — a Digested field rather than a Semiverbatim
+% one, so it never looped; it is here to keep the two paths side by side.
+@inproceedings{HrefBooktitle2021,
+  author    = {Enomoto, Yoshinori},
+  title     = {{A Flux Concentrator}},
+  booktitle = {\href{https://jacow.org/ipac2021/papers/wepab144.pdf}{Proc. IPAC'21}},
+  pages     = {2954-2956},
+  year      = {2021},
+}

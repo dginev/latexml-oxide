@@ -2528,3 +2528,69 @@ block, so the full author list survives in the body (max label on the witness
 `cluster_bib_long_author_list_refnum`. Candidate to upstream — the fix upstream is
 to route the refnum through the already-present `do_names_short` and stop
 skipping the first block.
+
+## 62. `\href` in a **Semiverbatim** argument expands forever (`doi = {\href{…}{…}}` hangs `latexmlc`)
+
+`hyperref.sty.ltxml` expands `\href` into a stream that re-emits `\href`:
+
+```perl
+DefMacro('\href HyperVerbatim {}', '\lx@hyper@url@\href{}{}{#1}{#2}');
+```
+
+The re-emitted `\href` exists only to fill `\lx@hyper@url@`'s reversion slot
+`#1` (`Undigested`), and is normally consumed as an argument without expanding.
+But `Core/Parameter.pm` L123-132 pre-expands a **semiverbatim** argument before
+digesting it —
+
+```perl
+# If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
+while (defined(my $token = $gullet->getPendingComment || $gullet->readXToken(1))) {
+```
+
+— and `readXToken(1)` sets `$fully_expand = $toplevel = 1`, which by
+`Core/Gullet.pm` L408-409 expands even a `isProtected` definition. That pass
+linearizes tokens one at a time and never reaches `\lx@hyper@url@`'s parameter
+list, so `\lx@hyper@url@` is kept (a Constructor, not expandable) and the
+re-emitted `\href` is expanded again: `\href` → `\lx@hyper@url@\href{}{}…` →
+`\href` → … unbounded.
+
+Minimal trigger — a 7-line `.bib`, since `\bib@field@default@doi` reads
+`Semiverbatim` and INSPIRE exports DOIs wrapped in a link:
+
+```bibtex
+@article{K,
+  author = {Doe, Jane}, title = {{T}}, journal = {J}, year = {2021},
+  doi = {\href{https://doi.org/10.5281/zenodo.19852912}{10.5281/zenodo.19852912}},
+}
+```
+
+```latex
+\documentclass{article}\usepackage{hyperref}
+\begin{document}\cite{K}.\bibliographystyle{plain}\bibliography{thatfile}\end{document}
+```
+
+Measured same-host on an IDLE box (1-min load 4.5), as an A/B against the
+identical document with the `\href` removed from the `doi` field:
+
+| `latexmlc` on | wall | status |
+|---|---|---|
+| `doi = {10.5281/zenodo.19852912}` | **3.7 s** | `Status:conversion:0` |
+| `doi = {\href{https://doi.org/…}{…}}` | **439 s, killed (rc=124)** | `Status:conversion:3` |
+
+so it is a hang, not slowness. Perl `latexml` alone is unaffected only because
+it never reads the `.bib`; the loop is in the post-processing bibliography
+session. Witnesses arXiv 2605.00181, 2605.19650, 2606.06645 (each has exactly
+this `doi = {\href{…}{…}}`), which Perl `latexml` converts cleanly in 8-28 s.
+
+Related to entry 57 (`\save@bibitem`): both are a definition whose expansion
+names itself, surviving only where nothing re-expands it.
+
+**Fixed in Rust** in `hyperref_sty.rs` by putting the command NAME in the
+reversion slot as an OTHER-catcode token rather than the live control sequence —
+which is what the sibling `\url` path (`\lx@hyper@url`) already does
+(`Tokens!(cmd.as_other())`). Inert under every expansion regime, and it
+stringifies and reverts identically. Guard
+`href_in_semiverbatim_bib_field_does_not_loop`
+(`latexml_oxide/tests/59_href_semiverbatim_loop.rs`); the `\edef`/`\xdef` half of
+the same defect is guarded by `58_href_edef_loop.rs`. Candidate to upstream —
+the same one-token change applies to `hyperref.sty.ltxml`.
