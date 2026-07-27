@@ -74,6 +74,15 @@
     a percent that stays literal (BibTeX has no comments, and `%` is routine in
     an encoded URL). Measured over a 30,079-document arXiv sample: 62 more
     documents convert cleanly, 44 fewer carry errors.
+  - **A reference's `& % # _` are the characters the author typed** — "Taylor &
+    Francis" in a publisher used to report an error and print "Taylor Francis",
+    a gene id `AT1G01010_v2` came out as a subscript error, and a percent in an
+    encoded URL commented out the rest of the entry. A `.bib` field's content is
+    data, so all four are kept, while `\emph{…}`, `$x_1+x_2$` and accents in the
+    same field keep working.
+  - **A reference exported through HTML no longer shows `&amp;` for `&`** — a
+    doubly escaped ampersand (`\&amp;`) in a `.bib` title, journal or booktitle
+    is decoded back to the one character the author wrote.
   - **amsrefs `\bib` values digest as live TeX** — `\MR{…}` came out as literal
     characters and `pages` rendered empty.
   - **MathReview / ZentralBlatt links are synthesized** — `mrnumber`/`zblno`

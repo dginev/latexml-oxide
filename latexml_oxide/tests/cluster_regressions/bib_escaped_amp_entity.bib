@@ -1,0 +1,61 @@
+% `\&amp;` — an HTML-escaped ampersand that was then TeX-escaped a second time.
+% A reference manager rendered the field to HTML (`&` -> `&amp;`), a second pass
+% escaped that entity's own `&`, and the `.bib` ended up carrying four extra
+% characters the author never wrote. TeX cannot tell: `\&` is the glyph and
+% `amp;` is ordinary text, so the entry renders "Computer Engineering, &amp;
+% Applied Computing". pdflatex prints the same — this is neither a Perl gap nor
+% a pdflatex gap, it is corrupt input that only the `.bib` reader can undo.
+% OXIDIZED_DESIGN #74.
+%
+% All three spellings are real, found by scanning 6000 arXiv/2605 sources:
+%
+%   \&amp;    booktitle 2605.00833, 2605.01362; journal 2605.00922, 2605.01200,
+%             2605.01224; title 2605.01353 (`{{A}}\&amp;{{AS}}`)
+%   {\&}amp;  title 2605.01224 ("Reversible Template-based Shake {\&}amp; Bake")
+%   &amp;     publisher 2605.00859 ("European Association of Geoscientists
+%             &amp; Engineers"); journal 2605.01187
+%
+% The `title` cases are NOT redundant with the others: `\bib@@title` re-reads the
+% raw field for its case conversion (Perl L294) instead of using the argument it
+% was handed, so it bypasses the decode done while assembling the entry and needs
+% its own. `titleentity` is the case that proves it.
+%
+% `plainescaped` is the control: an ordinary `\&` must keep rendering as one
+% ampersand and must not lose a following word that happens to start with "amp".
+% `ampersandword` is the near-miss guard — "amp;" not preceded by an ampersand is
+% ordinary text and must survive untouched.
+
+@inproceedings{bookentity,
+  author = {Alice Author},
+  title = {A talk at a doubly-escaped conference},
+  booktitle = {2023 Congress in Computer Science, Computer Engineering, \&amp; Applied Computing},
+  year = {2023}
+}
+
+@article{titleentity,
+  author = {Bob Builder},
+  title = {Commentary on the {{A}}\&amp;{{AS}} all-sky survey},
+  journal = {J. Bibliographies},
+  year = {2019}
+}
+
+@article{bracedentity,
+  author = {Carol Coder},
+  title = {Reversible template-based shake {\&}amp; bake generation},
+  journal = {J. Bibliographies},
+  year = {2021}
+}
+
+@article{plainescaped,
+  author = {Dan Draper},
+  title = {A control entry},
+  journal = {Crime \& Delinquency},
+  year = {2019}
+}
+
+@article{ampersandword,
+  author = {Eve Ericsson},
+  title = {On the amp; token and amplitude modulation},
+  journal = {J. Bibliographies},
+  year = {2022}
+}

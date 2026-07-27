@@ -2275,6 +2275,161 @@ this fixture, 203 on the witness) passed every bibliography guard silently.
 (percent in `abstract`, specials in `keywords`, and a third entry as the
 containment canary).
 
+### 74. A `.bib` field's content is DATA — `% & # _` are literal, not catcodes
+
+Supersedes the separate `%`-only and `&`-only entries this consolidates
+(PRs #405 and #409); `_` was a third instance of the same defect.
+
+**The two regimes, and the two treatments that restore them.** The real
+toolchain is `pdflatex → bibtex → pdflatex`, and it treats these characters
+differently at two distinct points. We collapse both into one pass over live
+core state, so we have to perform both, in order — the frame is
+[`BIBLIOGRAPHY_WORKLIST.md` → "two regimes collapsed into one pass"](BIBLIOGRAPHY_WORKLIST.md).
+
+**Treatment 1 — reading the `.bib` (be `bibtex`).** A field's bytes are inert
+data. BibTeX's lexer interprets only braces and the entry/field delimiters: `%`
+is not a comment (it is significant only in the junk BETWEEN entries,
+`Pre::BibTeX::skipJunk`), `&` is not an alignment tab, `#` is not a parameter.
+So the read path neutralizes those three **without altering the text** — the
+stored value keeps its exact bytes. `Mouth::with_bib_data_literals()` is a
+per-Mouth property, applied to the per-entry mouth in `\ProcessBibTeXEntry` and,
+via `mouth::tokenize_bib_literal` / `bibtex.rs::tokenize_bib_field`, to the
+handlers that re-read a raw field instead. Deliberately NOT a State catcode
+assignment: a raw `.sty` opened from inside a field handler — and the document
+itself — must keep TeX's meanings, so the rule belongs to the *text BibTeX
+lexed*, not to the session.
+
+**Treatment 2 — synthesizing the `.bbl` and digesting it (be `pdflatex` pass 2).**
+Now the content must be valid TeX. We are the ones writing the `.bbl` and we
+know the author meant the literal character, so we escape at that boundary:
+`%`→`\%`, `&`→`\&`, `#`→`\#`, `_`→`\_`.
+`bibtex.rs::escape_bib_data_specials`. Escaping here rather than suppressing
+catcodes during digestion is what keeps the TeX regime intact **by
+construction**: `\emph{…}`, `{\v S}pakov` and `$x_1+x_2$` are already valid TeX
+and simply pass through.
+
+**Why `_` is in treatment 2 only.** A catcode is decided at tokenization, before
+anything knows whether it is inside `$…$` — and a subscript in a title's math
+(`title = {Bounds on $x_1+x_2$}`) is legitimate TeX that must keep working.
+Measured: adding `_` to treatment 1 silently flattened every subscript in a
+bibliography title. Only the escaper can be math-aware, so `_` lives there
+alone. The other three have no legitimate TeX meaning inside a `.bib` field,
+in math or out.
+
+**The exclusion list is principled, not ad hoc.** A handler that consumes the
+field's characters *itself*, under its own catcode regime — `url`'s Verbatim
+href, `doi`'s Semiverbatim id — is still operating in **treatment 1, on data**,
+so it must receive the *unescaped* value. `bib_field_source` reads that
+declaration back off the `Definition` (Perl declares it per field,
+`BibTeX.pool.ltxml` L740 and L684/L750-783) rather than keeping a second copy of
+the list. **Trap:** only `Semiverbatim` sets the `semiverbatim` *descriptor*
+field; `Verbatim` calls `begin_semiverbatim(Some(&['%','\\']))` inside its reader
+closure and leaves the descriptor empty, so a descriptor-only test silently
+misses `url` — measured, it planted a literal `\%` in a href. The check must
+also test `Parameter::name`.
+
+**Treatment 2 covers three seams, not one.** Two handlers re-read the RAW field
+instead of using the value the entry line passed them, so escaping only the
+entry line silently missed them — `title` most of all:
+
+* `\ProcessBibTeXEntry`'s synthesized entry line (Perl L147-157);
+* `\bib@@title` (Perl L293-333), which re-reads the raw field to recase it — the
+  value it is handed lands in Perl's vestigial `ignoretitle` slot and is dropped;
+* `\bib@@pages` (Perl L670-674), which re-reads the raw field to normalize `-`.
+
+Escaping runs **before** `recase_title`: that pass splits on words and treats a
+`\…` escape as part of its word, so raw `AT&T` would recase to `AT&t` (three
+words) while raw `AT\&T` recases to `AT&T` (one). Every real `.bib` mixes both
+spellings and they must render identically.
+
+**Idempotency.** Most real `.bib` files already write `\&`, `\%`, `\_`. In the
+escaper a backslash consumes the next character as a pair and neither is
+re-examined, so `\&` stays `\&`. The tricky `\\&` falls out of the same rule:
+`\\` is consumed as one pair, leaving a genuinely bare `&` that IS escaped.
+
+**A nested data region.** url.sty reads `\url`/`\nolinkurl`/`\path`'s argument
+verbatim, so `howpublished = {\url{http://x.org/a%20b}}` must keep its `%20`.
+Those control words' single next group is copied through untouched
+(`VERBATIM_ARG_COMMANDS`); `\href`'s *second* argument is prose and is still
+escaped.
+
+**A separate input corruption, fixed alongside: `\&amp;`.** A reference manager
+rendered the field to HTML (`&` → `&amp;`), then a second pass TeX-escaped the
+ampersand of that entity, so the file carries `\&amp;` / `{\&}amp;` / `&amp;`
+where the source said `&`. TeX has no idea — `\&` produces the glyph and `amp;`
+is four more ordinary characters — so the entry renders "Computer Engineering,
+&amp; Applied Computing", and pdflatex prints exactly the same. Not a parity gap
+in either direction: an input corruption only the `.bib` reader is positioned to
+undo. `undouble_escaped_ampersand` decodes it to a plain `&` and lets the two
+treatments give it its meaning. Witnesses: `\&amp;` in `booktitle` (2605.00833,
+2605.01362), `journal` (2605.00922, 2605.01200, 2605.01224), `title`
+(2605.01353); `{\&}amp;` in `title` (2605.01224); bare `&amp;` in `publisher`
+(2605.00859) and `journal` (2605.01187).
+
+**Why this is authorized surpass-Perl AND surpass-pdflatex.** User decision,
+2026-07-27. LaTeXML reads `.bib` **directly**, with no `.bst` and no `bibtex(1)`
+in the loop, so it is the component deciding what reaches the tokenizer. That
+the real toolchain also breaks on these characters is a property of that
+toolchain, not a semantic we are obliged to reproduce: the author's intent for
+`AT&T` in a bibliography field is plainly the two letters, an ampersand and a T.
+This supersedes the "genuine parity, pdflatex breaks on it too" reading that #73
+applied to a `title`, and it covers `volume = {27 suppl_4}` and
+`language = {en_US}`, which a narrower earlier version of this fix left erroring.
+
+**Guards.** `06_cluster_bibliography::bib_field_specials_are_data_not_tex` (one
+ten-entry fixture, because the risk is precisely that fixing one case breaks
+another: the four specials bare, the same four already escaped rendering an
+IDENTICAL string, `$x_1+x_2$` keeping its `SUBSCRIPTOP`, `\emph` still markup,
+`{\v S}pakov` still reverting, `%20` inside `\url{…}` intact, and `url`/`doi`
+values with no backslash); `::bib_field_percent_is_an_ordinary_character`;
+`::bib_bare_ampersand_is_literal_data`;
+`::bib_bare_ampersand_leaves_live_markup_alone`;
+`::bib_escaped_amp_entity_decodes_to_one_ampersand`;
+`55_bibtex::runaway_field_costs_only_its_own_entry`; and six
+`escape_bib_data_specials` unit tests in `bibtex.rs`, which isolate the `\\&`
+hazard that cannot live end-to-end (see below).
+
+**Measured**, `--release` before/after on the same host, TOTAL document errors:
+
+| cluster | witness | before | after |
+|---|---|---|---|
+| `_` | 2605.06926 | 8 | **0** |
+| `_` | 2605.01936 | 13 | **0** |
+| `_` | 2605.04604 | 2 | **0** |
+| `_` | 2605.08986 | 2 | **0** |
+| `_` | 2605.05898 | 1 | **0** |
+| `_` | 2605.11300 | 1 | **0** |
+| `%` | 2605.01196 | 28 | **0** |
+| `%` | 2605.02131 | 28 | **0** |
+| `%` | 2605.00879 | 103 | **1** |
+| `&` | 2605.06249 | 3 | **0** |
+| `&` | 2605.03054 | 1 | **0** |
+| `&` | 2605.00462 | 1 | **0** |
+| `&` | 2605.08753 | 1 | **0** |
+| `&` | 2605.10409 | 1 | **0** |
+| `&` | 2605.00833 | 0 | **0** |
+
+**193 → 0.** Two residuals are unrelated to this cluster and were unchanged by
+it: 2605.00879's remaining error is `undefined:\mathsemicolon`, and 2605.11579
+(listed for the `_` cluster) has 5 errors before AND after with zero
+`unexpected:_` in either — its apparent three were an artifact of measuring in
+the DEGRADED no-dump mode a fresh worktree starts in. Run
+`tools/make_formats.sh` before believing any error count. 2605.00833 is a
+RENDERING witness, not an error-count one: its `\&amp;` printed as "&amp;" and
+now prints "&".
+
+**Known not covered.** A literal `\\` in a title makes
+`\bib@field@default@title` open a nested `<ltx:bibitem>`
+(`malformed:ltx:bibitem <ltx:bibitem> isn't allowed in <ltx:bib-title>`) with no
+special character anywhere in the entry — a pre-existing behaviour of `\\` in a
+bibliography, independent of this work, and the reason the `\\&` hazard is
+pinned by a unit test rather than end-to-end. `^` is deliberately outside the
+set: it is not in the authorized four, and outside math in a `.bib` field it is
+essentially always a typo (it also remains the live probe in
+`105_bib_field_digest_once`). An `&` inside a `.bib` field's `$\begin{array}…$`
+would lose its alignment meaning — treatment 1 is catcode-level and cannot be
+math-aware; no witness exhibits one.
+
 ### 75. A `.bib`-derived bibliography does not run the missing-`\bibitem` rescue
 
 **Perl behaviour.** `BibTeX.pool.ltxml:183` gives `{bibtex@bibliography}` the

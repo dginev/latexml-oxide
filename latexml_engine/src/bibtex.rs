@@ -263,6 +263,187 @@ fn bib_extract_text(field: &str) -> String {
     .unwrap_or_default()
 }
 
+/// The four TeX specials that a `.bib` field can only have meant literally.
+///
+/// Not `~` (a tie is plausible in a name) and not `^` (it only ever shows up in
+/// math here) — this is the maintainer-authorized set, no wider.
+const BIB_DATA_SPECIALS: [char; 4] = ['_', '&', '#', '%'];
+
+/// The `.bib`-data -> TeX-source boundary: escape the specials a `.bst` would
+/// have escaped, so the synthesized entry line is valid TeX.
+///
+/// Real BibTeX has TWO regimes and latexml-oxide collapses them into one pass.
+/// In the DATA regime (`.bib` read by `bibtex(1)`) a field's bytes are data:
+/// `%` is not a comment, `&` is not an alignment tab, `_` is not a subscript,
+/// `#` is not a parameter. Only in the TeX regime (the `.bbl` read by
+/// `pdflatex`) do those catcodes exist — and what lands in the `.bbl` is
+/// whatever the `.bst` chose to write. We read `.bib` directly, with no `.bst`
+/// in the loop, so we are the component that decides what reaches the
+/// tokenizer, and the author's intent for a bare `&` in `AT&T` is plainly the
+/// character. Escaping here — emitting what a careful `.bst` author would have
+/// written — is "be bibtex first, then be pdflatex on the `.bbl` you just
+/// synthesized". OXIDIZED_DESIGN #74.
+///
+/// Escaping at the boundary rather than neutralizing catcodes during digestion
+/// is what keeps the TeX regime intact **by construction**: `\emph{…}`,
+/// `{\v S}pakov` and `$x_1+x_2$` are already valid TeX and simply pass through.
+/// Two hazards, both guarded by
+/// `06_cluster_bibliography::bib_field_specials_are_data_not_tex`:
+///
+/// * **Math.** `_` inside `$…$` is a real subscript, so math spans are skipped.
+///   `$`/`$$` toggle; `\(`/`\[` open and `\)`/`\]` close.
+/// * **Idempotency.** Most `.bib` files already write `\&`, `\%`, `\_`. A
+///   backslash therefore consumes the next character as a pair and neither is
+///   re-examined, so `\&` stays `\&`. The tricky case falls out of the same
+///   rule: in `\\&` the `\\` is consumed as one pair, leaving a genuinely bare
+///   `&` that IS escaped.
+fn escape_bib_data_specials(value: &str) -> String {
+  let mut out = String::with_capacity(value.len() + 8);
+  let mut chars = value.chars().peekable();
+  let mut in_math = false;
+  while let Some(c) = chars.next() {
+    match c {
+      '\\' => {
+        out.push('\\');
+        match chars.peek() {
+          // A control WORD. Copy it whole (the terminating space is emitted by
+          // the next iteration, so `\ndash 693` keeps its space), then — if it
+          // reads its own argument verbatim — copy that argument untouched too.
+          Some(n) if n.is_alphabetic() => {
+            let mut word = String::new();
+            while let Some(&n) = chars.peek() {
+              if !n.is_alphabetic() {
+                break;
+              }
+              word.push(n);
+              chars.next();
+            }
+            out.push_str(&word);
+            if VERBATIM_ARG_COMMANDS.contains(&word.as_str()) {
+              copy_balanced_group(&mut chars, &mut out);
+            }
+          },
+          // A control SYMBOL. Copy the pair. This one arm is the whole of the
+          // idempotency rule (`\&` stays `\&`) AND of "leave `\` alone" — and
+          // it is what makes the tricky `\\&` case fall out for free: `\\` is
+          // consumed here as one pair, leaving a genuinely bare `&` to escape.
+          Some(_) => {
+            let n = chars.next().unwrap_or('\\');
+            out.push(n);
+            match n {
+              '(' | '[' => in_math = true,
+              ')' | ']' => in_math = false,
+              _ => {},
+            }
+          },
+          None => {},
+        }
+      },
+      '$' => {
+        out.push('$');
+        // `$$` is one display delimiter, not two toggles.
+        if chars.peek() == Some(&'$') {
+          chars.next();
+          out.push('$');
+        }
+        in_math = !in_math;
+      },
+      _ if !in_math && BIB_DATA_SPECIALS.contains(&c) => {
+        out.push('\\');
+        out.push(c);
+      },
+      _ => out.push(c),
+    }
+  }
+  out
+}
+
+/// Control words that read their own next argument as DATA, so the escaper must
+/// leave that argument alone.
+///
+/// url.sty's `\url`/`\nolinkurl`/`\path` take a Verbatim argument and `\href`
+/// takes a Semiverbatim URL — a percent-encoded `%20` inside one is not a
+/// comment and must not become `\%`, which would land a literal backslash in
+/// the href. `howpublished = {\url{http://x.org/a%20b}}` is the measured case
+/// (`docs/parity/BIBLIOGRAPHY_WORKLIST.md` records it as a working probe, and
+/// blind escaping regressed it). Only ONE group is skipped, so `\href`'s second
+/// argument — real prose — is still escaped.
+const VERBATIM_ARG_COMMANDS: [&str; 5] = ["url", "nolinkurl", "path", "href", "doi"];
+
+/// Copy one balanced `{...}` group through untouched, leading spaces included.
+/// A no-op when the next non-space character is not `{`.
+fn copy_balanced_group(chars: &mut std::iter::Peekable<std::str::Chars>, out: &mut String) {
+  let mut pending = String::new();
+  while let Some(&c) = chars.peek() {
+    if c == ' ' {
+      pending.push(c);
+      chars.next();
+    } else {
+      break;
+    }
+  }
+  if chars.peek() != Some(&'{') {
+    out.push_str(&pending);
+    return;
+  }
+  out.push_str(&pending);
+  out.push('{');
+  chars.next();
+  let mut depth = 1usize;
+  for c in chars.by_ref() {
+    out.push(c);
+    match c {
+      '{' => depth += 1,
+      '}' => {
+        depth -= 1;
+        if depth == 0 {
+          break;
+        }
+      },
+      _ => {},
+    }
+  }
+}
+
+/// The field value to write into the synthesized entry line for `handler`.
+///
+/// A handler that declares a `Verbatim`/`Semiverbatim` first parameter reads the
+/// field's characters itself, under its own catcode table, and hands them on as
+/// a string — a `url` href, a `doi` id. Escaping those would put a literal
+/// backslash in the value, so they are passed through raw. Perl declares
+/// exactly which fields those are (`BibTeX.pool.ltxml` L740 `url` **Verbatim**,
+/// L684/L750-783 `crossref`/`doi`/`isbn`/`issn`/`lccn`/`pii` **Semiverbatim**),
+/// and this reads that declaration back off the definition instead of keeping a
+/// second copy of the list that could drift from it.
+fn bib_field_source(value: &str, handler: &Rc<dyn Definition>) -> String {
+  let reads_raw = handler
+    .get_parameters()
+    .and_then(|params| params.get_parameters().first().map(|p| reads_field_raw(p)))
+    .unwrap_or(false);
+  if reads_raw {
+    value.to_string()
+  } else {
+    escape_bib_data_specials(value)
+  }
+}
+
+/// Whether `p` consumes its argument's characters as data rather than as TeX.
+///
+/// Both halves are needed, and the asymmetry is a trap worth naming: only
+/// `Semiverbatim` sets the `semiverbatim` DESCRIPTOR field; `Verbatim` calls
+/// `begin_semiverbatim(Some(&['%', '\\']))` inside its reader closure instead
+/// and leaves the descriptor empty (`base_parameter_types.rs`). Testing the
+/// descriptor alone therefore silently misses `url` — measured, it put a
+/// literal `\%` in a `url` href. `Parameter::name` is the declared type name
+/// (it is explicitly preserved when a descriptor is merged in), so it is the
+/// reliable half for `Verbatim`.
+fn reads_field_raw(p: &Parameter) -> bool {
+  p.semiverbatim.is_some()
+    || with(p.name, |name| {
+      matches!(name, "Verbatim" | "Semiverbatim" | "OptionalSemiverbatim")
+    })
+}
+
 /// that a control word's terminating space is consumed (`\ndash 693`).
 pub fn current_entry_field(name: &str) -> Option<Tokens> {
   let entry = current_entry()?;
@@ -270,7 +451,92 @@ pub fn current_entry_field(name: &str) -> Option<Tokens> {
   if let Some(tokens) = entry.get_field(name) {
     return Some(tokens.clone());
   }
-  entry.get_raw_field(name).map(|raw| Tokenize!(raw))
+  entry.get_raw_field(name).map(tokenize_bib_field)
+}
+
+/// `Tokenize!` for a string that came out of the BibTeX lexer.
+///
+/// The standard catcode table, as Perl's `Tokenize` uses — except that `%`, `&`
+/// and `#` are ordinary characters. BibTeX has no comment syntax inside an entry
+/// (`Pre::BibTeX` only skips `%` in the junk BETWEEN entries), no alignment and
+/// no parameters, so all three are data; under catcode 14 a `%` comments out the
+/// rest of the string and takes any brace still open with it, under catcode 4 an
+/// `&` is a stray alignment tab, and under catcode 6 a `#` reaches the Stomach as
+/// a parameter. Witnesses 2605.02131 (a percent-encoded URL in a `title`'s
+/// `\href`, 24 `malformed:ltx:bibentry`) and 2605.01936
+/// (`publisher = {Taylor & Francis}` and six more, 7 `unexpected:&`).
+///
+/// **Treatment 1 of `OXIDIZED_DESIGN #74`** — the same rule the per-entry Mouth
+/// applies (see `\ProcessBibTeXEntry` below); it has to be repeated here because
+/// the handlers that re-read a raw field — `\bib@@title` recasing, name
+/// splitting, date/pages/MR/Zbl assembly — build their tokens from the stored
+/// string and never go through that mouth.
+///
+/// `_` is NOT in this set: a catcode is fixed at tokenization, before anything
+/// knows whether it is inside `$…$`, and a subscript in a title's math is
+/// legitimate TeX. It is handled by treatment 2 ([`bib_tex_tokens`]) instead.
+fn tokenize_bib_field(text: &str) -> Tokens { mouth::tokenize_bib_literal(text) }
+
+/// Both treatments, for a raw `.bib` string that is about to become TeX tokens.
+///
+/// Treatment 2 (`escape_bib_data_specials`) makes the data valid TeX — it is the
+/// only one of the two that can be math-aware, so it is what covers `_`; then
+/// treatment 1 ([`tokenize_bib_field`]) reads the result with `% & #` still inert,
+/// covering whatever the escaper deliberately left alone (the inside of a
+/// `\url{…}`).
+///
+/// Every site that re-reads a RAW field and hands it to the tokenizer uses this:
+/// `\bib@@title`, `\bib@@pages`, name splitting, date assembly, MR/Zbl. They are
+/// listed explicitly in `BIBLIOGRAPHY_WORKLIST.md` — "any change here must cover
+/// all three, plus the name-, date- and MR/Zbl-assembly sites that share that
+/// path". Escaping is idempotent, so a value already escaped upstream (a recased
+/// title) is unharmed by passing through again.
+fn bib_tex_tokens(text: &str) -> Tokens { tokenize_bib_field(&escape_bib_data_specials(text)) }
+
+/// Collapse an HTML-escaped ampersand — `&amp;` — back to the single `&` the
+/// author wrote, in whichever of its three spellings a `.bib` export used.
+///
+/// This is a DOUBLE escape, not a TeX construct: a reference manager rendered
+/// the field to HTML (`&` -> `&amp;`), then a second pass TeX-escaped the
+/// ampersand of that entity, so the file carries `\&amp;` / `{\&}amp;` /
+/// `&amp;` where the source said `&`. TeX has no idea: `\&` produces the glyph
+/// and `amp;` is four more ordinary characters, so the entry renders
+/// "Computer Engineering, &amp; Applied Computing". pdflatex prints exactly the
+/// same thing — this is not a parity gap in either direction, it is an input
+/// corruption that only the `.bib` reader is positioned to undo, and we read
+/// `.bib` directly (see OXIDIZED_DESIGN #73's framing of that position).
+///
+/// Distinct from a BARE `&`, which is catcode 4 and is neutralized at the mouth
+/// (`tokenize_bib_field` above, `#75`). Decoding here deliberately yields a
+/// plain `&` and lets that mechanism give it its catcode, rather than escaping
+/// it to `\&` behind the mechanism's back.
+///
+/// Measured over 6000 arXiv/2605 sources: `\&amp;` in `booktitle` (2605.00833,
+/// 2605.01362), in `journal` (2605.00922, 2605.01200, 2605.01224), in `title`
+/// (2605.01353 `{{A}}\&amp;{{AS}}`); `{\&}amp;` in `title` (2605.01224 "Shake
+/// {\&}amp; Bake"); bare `&amp;` in `publisher` (2605.00859 "European
+/// Association of Geoscientists &amp; Engineers") and `journal` (2605.01187).
+///
+/// Only `amp;` DIRECTLY after an ampersand is touched, so a field that merely
+/// contains the letters "amp" is untouched, and a lone `&` is left exactly as
+/// it was.
+fn undouble_escaped_ampersand(value: &str) -> String {
+  if !value.contains("amp;") {
+    return value.to_string();
+  }
+  let mut out = String::with_capacity(value.len());
+  let mut rest = value;
+  while let Some(i) = rest.find("amp;") {
+    let (head, tail) = rest.split_at(i);
+    out.push_str(head);
+    // `{\&}` first: its last character is `}`, not `&`.
+    if !(head.ends_with("{\\&}") || head.ends_with('&')) {
+      out.push_str("amp;");
+    }
+    rest = &tail["amp;".len()..];
+  }
+  out.push_str(rest);
+  out
 }
 
 /// Perl: `currentBibEntryRawField('fieldname')` — get the *raw*
@@ -983,17 +1249,17 @@ LoadDefinitions!({
       let mut name_tks: Vec<Token> = Vec::new();
       if !name.surname.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@surname"),
-          vec![Tokenize!(name.surname.as_str())]);
+          vec![bib_tex_tokens(&name.surname)]);
         name_tks.extend(inv.unlist());
       }
       if !name.given.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@given"),
-          vec![Tokenize!(name.given.as_str())]);
+          vec![bib_tex_tokens(&name.given)]);
         name_tks.extend(inv.unlist());
       }
       if !name.lineage.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@lineage"),
-          vec![Tokenize!(name.lineage.as_str())]);
+          vec![bib_tex_tokens(&name.lineage)]);
         name_tks.extend(inv.unlist());
       }
       let inv = Invocation!(T_CS!("\\bib@@@name"),
@@ -1036,13 +1302,31 @@ LoadDefinitions!({
       })
       .unwrap_or_else(|| "capitalize1".to_string());
     let mode = TitleCaseMode::parse(&mode_str);
-    let raw = current_entry_raw_field(&field_name).unwrap_or_default();
+    // Both treatments, in the order the real toolchain applies them, because
+    // `\bib@@title` re-reads the RAW field rather than the argument the entry
+    // line passed it (Perl L294 — that slot is the vestigial `ignoretitle`), so
+    // neither the decode nor the escaping in `\ProcessBibTeXEntry` reaches a
+    // title. Witnesses: 2605.01353, a `title` reading `{{A}}\&amp;{{AS}}`
+    // (decode); `title = {AT&T dataset AT1G01010_v2}` (escape).
+    //
+    // Escaping runs BEFORE `recase_title`, not after: `recase_title` splits on
+    // words and treats a `\…` escape as part of its word, so raw `AT&T` recases
+    // to `AT&t` (three words) while raw `AT\&T` recases to `AT&T` (one). Every
+    // real `.bib` mixes both spellings and they must render the same string, so
+    // the data becomes TeX first and the casing pass sees one consistent input.
+    // Guard case: `barespecials` vs `preescaped` in `bib_field_specials.bib`.
+    let raw = escape_bib_data_specials(&undouble_escaped_ampersand(
+      &current_entry_raw_field(&field_name).unwrap_or_default(),
+    ));
     let recased = recase_title(&raw, mode);
     // Emit `\bib@@field{tag}{}{<recased>}`. The empty `{}` slot
     // is the OptionalKeyVals arg (absent → no attributes).
     // Perl L333: Tokenize($recap) — catcode-aware, so TeX macros in
     // titles stay live (accents, math). Explode leaked them verbatim.
-    let recased_tokens = Tokenize!(recased.as_str());
+    // `tokenize_bib_field`, not `Tokenize!`: treatment 1 is the safety net under
+    // the escaping above — anything the escaper deliberately left alone (a
+    // `%` inside `\url{…}`) is still read as data rather than as a comment.
+    let recased_tokens = bib_tex_tokens(&recased);
     let inv = Invocation!(T_CS!("\\bib@@field"),
       vec![tag_tokens, Tokens!(), recased_tokens]);
     Ok(inv)
@@ -1454,7 +1738,7 @@ LoadDefinitions!({
     let mut out_toks: Vec<Token> = Vec::new();
     out_toks.push(T_CS!("\\bib@field@default@date"));
     out_toks.push(T_BEGIN!());
-    out_toks.extend(Tokenize!(date.as_str()).unlist());
+    out_toks.extend(bib_tex_tokens(&date).unlist());
     out_toks.push(T_END!());
     Ok(Tokens::new(out_toks))
   });
@@ -1514,9 +1798,12 @@ LoadDefinitions!({
     // `Stored::Digested`/`VecDigested` — a `Stored::Tokens` fell through to its
     // catch-all and rendered as NOTHING, so every amsrefs `pages` field came
     // out as an empty `<ltx:bib-part role="pages"/>`. Witness arXiv 2508.17585.
+    // Third and last door from `.bib` data into the TeX regime — `\bib@@pages`
+    // also re-reads the raw field rather than using the entry line's value, so
+    // it escapes too, on the same rule (`escape_bib_data_specials`).
     whatsit.set_property(
       "pages",
-      Stored::Digested(digest(Tokenize!(normalised.as_str()))?),
+      Stored::Digested(digest(bib_tex_tokens(&normalised))?),
     );
   });
 
@@ -1741,9 +2028,9 @@ LoadDefinitions!({
     if mrnumber.is_none() && mrreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let mr_tks = Tokenize!(mrnumber.unwrap_or_default().as_str());
+    let mr_tks = bib_tex_tokens(&mrnumber.unwrap_or_default());
     let rev_tks = match mrreviewer {
-      Some(r) => Tokenize!(r.as_str()),
+      Some(r) => bib_tex_tokens(&r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@mr"), vec![mr_tks, rev_tks]);
@@ -1794,9 +2081,9 @@ LoadDefinitions!({
     if zblno.is_none() && zblreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let zbl_tks = Tokenize!(zblno.unwrap_or_default().as_str());
+    let zbl_tks = bib_tex_tokens(&zblno.unwrap_or_default());
     let rev_tks = match zblreviewer {
-      Some(r) => Tokenize!(r.as_str()),
+      Some(r) => bib_tex_tokens(&r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@zbl"), vec![zbl_tks, rev_tks]);
@@ -1930,20 +2217,24 @@ LoadDefinitions!({
         if origtype != resolved_type { format!("\\bib@field@{}@{}", origtype, field) } else { String::new() },
         format!("\\bib@field@default@{}", field),
       ];
-      let mut handler: Option<&str> = None;
+      let mut handler: Option<(&str, Rc<dyn Definition>)> = None;
       for c in candidates.iter() {
         if c.is_empty() { continue; }
-        if lookup_definition(&T_CS!(c.as_str()))?.is_some() {
-          handler = Some(c.as_str());
+        if let Some(def) = lookup_definition(&T_CS!(c.as_str()))? {
+          handler = Some((c.as_str(), def));
           break;
         }
       }
+      let value = &undouble_escaped_ampersand(value);
       match handler {
-        Some(h) => {
-          lines.push(format!("\\csname {}\\endcsname{{{}}}", &h[1..], value));
+        Some((h, def)) => {
+          let v = bib_field_source(value, &def);
+          lines.push(format!("\\csname {}\\endcsname{{{}}}", &h[1..], v));
         },
         None => {
           // Fallback per Perl L157: `\bib@field@default@default{field}{value}`.
+          // Both of its slots are `Verbatim`, so the value is passed raw — the
+          // same rule `bib_field_source` applies, reached without a lookup.
           lines.push(format!(
             "\\csname bib@field@default@default\\endcsname{{{}}}{{{}}}", field, value));
         },
@@ -1980,8 +2271,38 @@ LoadDefinitions!({
     // `\ProcessBibTeXEntry` and `\end{bibtex@bibliography}` too, so a 3-entry
     // `.bib` produced ONE entry and a single error where Perl produces all three
     // and four errors. Guard: `55_bibtex::runaway_field_costs_only_its_own_entry`.
+    //
+    // `% & # _` are read as ordinary characters in this mouth — treatment 1 of
+    // OXIDIZED_DESIGN #74, "be `bibtex`". BibTeX's lexer has no comment syntax
+    // inside an entry, no alignment, no parameters and no subscripts, so the
+    // values `PreBibTeX` just handed us hold all four literally. Under TeX's
+    // catcodes each misfires: `%` (14) comments out the rest of its line — the
+    // field's own closing `}` included — so the entry's group never closes and
+    // every later entry nests inside it; `&` (4) is a stray alignment tab and
+    // is dropped, so "Taylor & Francis" printed as "Taylor Francis"; `#` (6)
+    // reaches the Stomach as a parameter; `_` (8) is a subscript outside math.
+    //
+    // Witnesses — `%`: 2605.01196 (`doi={%doi:...}`) and 2605.02131 (a
+    // percent-encoded URL in a `title`'s `\href`), 28 errors each with Perl
+    // breaking identically (29 / 31 same-host), 2605.00879 (103).
+    // `&`: 2605.01936 (7), 2605.06249 (3), 2605.00462 / 2605.03054 /
+    // 2605.06624 / 2605.08753 / 2605.10409 (1 each).
+    // `_`: 2605.06926 (8), 2605.01936 (6), 2605.04604 / 2605.08986 (2 each),
+    // 2605.11300 / 2605.05898 (1 each).
+    // Same-host Perl and bibtex+pdflatex break the same way on all three — the
+    // decision that a field's content is DATA is what overrides them, and it is
+    // ours to make because we read the `.bib` directly.
+    //
+    // Treatment 2 (`escape_bib_data_specials`, applied to the values written
+    // into `lines` above) makes the synthesized `.bbl` valid TeX in the first
+    // place; this mouth is the safety net under it, covering the values that
+    // deliberately go through unescaped — a `url` href, a `doi` id, the inside
+    // of a `\url{…}`.
+    //
+    // Guards: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`,
+    // `::bib_bare_ampersand_is_literal_data`, `::bib_field_specials_are_data_not_tex`.
     open_mouth_with(
-      Mouth::new(&lines.join("\n"), None)?,
+      Mouth::new(&lines.join("\n"), None)?.with_bib_data_literals(),
       true,
       BalancedBoundary::Opaque,
     );
@@ -2301,6 +2622,89 @@ mod tests {
     attrs.insert("role".to_string(), "host".to_string());
     let xpath = bib_container_xpath("ltx:bib-related", &attrs);
     assert_eq!(xpath, "ltx:bib-related[@role='host' and @type='book']");
+  }
+
+  // --- escape_bib_data_specials (the `.bib`-data -> TeX-source boundary) ---
+
+  #[test]
+  fn escape_specials_bare_are_escaped() {
+    assert_eq!(
+      escape_bib_data_specials("AT&T AT1G01010_v2 95% #3"),
+      r"AT\&T AT1G01010\_v2 95\% \#3"
+    );
+  }
+
+  /// Idempotency. Most real `.bib` files already write `\&`, `\%`, `\_` — a
+  /// blind escaper would turn `\&` into `\\&`, i.e. a line break followed by an
+  /// ampersand. Escaping twice must equal escaping once.
+  #[test]
+  fn escape_specials_is_idempotent() {
+    let once = escape_bib_data_specials("AT&T at 95% with x_1");
+    assert_eq!(escape_bib_data_specials(&once), once);
+    assert_eq!(
+      escape_bib_data_specials(r"AT\&T at 95\% with x\_1"),
+      r"AT\&T at 95\% with x\_1"
+    );
+  }
+
+  /// The tricky case the idempotency rule has to get right: in `\\&` the `\\`
+  /// is a genuine line break, so the `&` after it is BARE and must be escaped —
+  /// the second backslash is not an escape character, it is escaped itself.
+  #[test]
+  fn escape_specials_double_backslash_then_bare_special() {
+    assert_eq!(
+      escape_bib_data_specials(r"break \\& more"),
+      r"break \\\& more"
+    );
+    assert_eq!(escape_bib_data_specials(r"break \\_x"), r"break \\\_x");
+  }
+
+  /// Math is the other hazard: `_` inside `$…$` is a real subscript and must
+  /// stay catcode 8, while the same character outside is data.
+  #[test]
+  fn escape_specials_skips_math() {
+    assert_eq!(
+      escape_bib_data_specials("Bounds on $x_1+x_2$ for AT1G_v2"),
+      r"Bounds on $x_1+x_2$ for AT1G\_v2"
+    );
+    assert_eq!(
+      escape_bib_data_specials("display $$a_1$$ then b_2"),
+      r"display $$a_1$$ then b\_2"
+    );
+    assert_eq!(
+      escape_bib_data_specials(r"open \(x_1\) then y_2"),
+      r"open \(x_1\) then y\_2"
+    );
+  }
+
+  /// Markup passes through by construction — the escaper never touches `\`,
+  /// `{` or `}`, so control words and their braces are untouched, and a
+  /// space-form accent keeps the space that terminates its control word.
+  #[test]
+  fn escape_specials_leaves_markup_and_accents_alone() {
+    assert_eq!(
+      escape_bib_data_specials(r"\emph{Drosophila} genetics"),
+      r"\emph{Drosophila} genetics"
+    );
+    assert_eq!(escape_bib_data_specials(r"{\v S}pakov"), r"{\v S}pakov");
+    assert_eq!(escape_bib_data_specials(r"\ndash 693"), r"\ndash 693");
+    // …but a special INSIDE an ordinary command's argument is still data.
+    assert_eq!(escape_bib_data_specials(r"\emph{AT&T}"), r"\emph{AT\&T}");
+  }
+
+  /// url.sty reads `\url`'s argument verbatim, so it is a nested DATA region
+  /// and a percent-encoded `%20` inside it must NOT become `\%20`.
+  /// `\href`'s SECOND argument is prose and is still escaped.
+  #[test]
+  fn escape_specials_skips_a_verbatim_argument() {
+    assert_eq!(
+      escape_bib_data_specials(r"\url{http://x.org/a%20b?c=1&d=2}"),
+      r"\url{http://x.org/a%20b?c=1&d=2}"
+    );
+    assert_eq!(
+      escape_bib_data_specials(r"\href{http://x.org/a%20b}{AT&T}"),
+      r"\href{http://x.org/a%20b}{AT\&T}"
+    );
   }
 
   // --- recase_title (Perl `\bib@@title` body) ---

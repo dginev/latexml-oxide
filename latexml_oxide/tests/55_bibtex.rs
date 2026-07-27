@@ -114,32 +114,31 @@ fn bibtex_mode_emits_bibentries() {
   );
 }
 
-/// A runaway field must cost only its own entry — not the rest of the `.bib`.
+/// A `%` in a field is data, and a real runaway costs only its own entry.
 ///
-/// A bare `%` in a BibTeX field is literal data (BibTeX has no comment syntax
-/// inside an entry) but TeX source when `\ProcessBibTeXEntry` replays the entry
-/// through a Mouth, so it comments out the closing brace and the argument read
-/// runs away. Both engines mis-read the field — that is parity, and real
-/// bibtex+pdflatex break on it too, so it is deliberately NOT corrected here.
+/// **The `%` half.** A bare `%` in a BibTeX field is literal data — BibTeX has
+/// no comment syntax inside an entry — but it used to become TeX source when
+/// `\ProcessBibTeXEntry` replays the entry through a Mouth, so catcode 14 ate
+/// the closing brace and the argument read ran away. That is now corrected on
+/// both seams (OXIDIZED_DESIGN #74): the entry Mouth reads `%` as OTHER, and so
+/// does `\bib@@title`, which never touches that Mouth — it re-reads the RAW
+/// field to re-case it and tokenizes the result itself. Hence the fixture's two
+/// `%` entries, one per seam. Perl still truncates both (`Fifty`, `plain`), so
+/// these assertions are deliberately BEYOND same-host Perl; see #74 for why
+/// pdflatex, not Perl, is the ground truth for a directly-read `.bib`.
 ///
-/// What was Rust-only was the blast radius, and it had two independent causes —
-/// hence the two runaway entries in the fixture, which fail by different routes:
-///
-/// * **`{}`-read argument** (`\bib@@title`). `read_balanced` used to treat every
-///   autoclose literal mouth as a token-level continuation of its parent
-///   (`gullet.rs`, the xint `\scantokens` divergence), so the runaway crossed out
-///   of the entry mouth and swallowed every following `\ProcessBibTeXEntry` AND
-///   `\end{bibtex@bibliography}`. The entry mouth now declares itself
-///   `BalancedBoundary::Opaque`, which is what Perl's readBalanced (`Gullet.pm`
-///   L465-472, current mouth only) does for every mouth.
-/// * **`Digested` argument** (`\bib@@field`). The group opened by `{` is never
-///   closed, so the argument digestion runs to EOF; `readDigested` then `pop`s
-///   the last box to strip the closing brace, but `digest_next_body` was pushing
-///   Perl's EOF trailer box (`Stomach.pm` L130) only for a body that had read no
-///   token at all, so the `pop` ate real content — every following entry.
-///
-/// Ground truth for the assertions is same-host Perl on the same fixture: all
-/// four keys present, and the runaway title truncated at the `%` to "Fifty".
+/// **The blast-radius half.** `runawaymath`'s unescaped `$` still runs away —
+/// it opens math that never closes, so the `Digested` argument (`\bib@@field`,
+/// BibTeX.pool L230) digests to EOF. `readDigested` then `pop`s the last box to
+/// strip the closing brace, and `digest_next_body` must have pushed Perl's EOF
+/// trailer box (`Stomach.pm` L130) or that `pop` eats real content — every
+/// following entry. The gullet-level twin of that guarantee is the entry
+/// mouth's `BalancedBoundary::Opaque` (Perl's readBalanced reads the current
+/// mouth only, `Gullet.pm` L465-472); with `%` retired as a trigger, no `.bib`
+/// input reachable through `Pre::BibTeX` produces a token-level unbalanced read
+/// any more — the parser balances braces character-wise before we ever see the
+/// value — so that boundary is now an invariant this fixture states rather than
+/// one it can provoke.
 #[test]
 fn runaway_field_costs_only_its_own_entry() {
   // `init` is process-global and the sibling test in this target may have won
@@ -161,11 +160,17 @@ fn runaway_field_costs_only_its_own_entry() {
   };
   let s = doc.to_string();
 
-  for key in ["before", "runawaytitle", "runawaynote", "after"] {
+  for key in [
+    "before",
+    "runawaytitle",
+    "runawaynote",
+    "runawaymath",
+    "after",
+  ] {
     assert!(
       s.contains(&format!("key=\"{key}\"")),
       "entry '{key}' was lost — a runaway field must not take other entries \
-       with it (same-host Perl keeps all four). Got:\n{s}"
+       with it. Got:\n{s}"
     );
   }
   // The entries that carry no runaway must be intact, not merely present.
@@ -174,10 +179,17 @@ fn runaway_field_costs_only_its_own_entry() {
     "the entry FOLLOWING the runaway lost its title, so the runaway is still \
      consuming past its own mouth. Got:\n{s}"
   );
-  // And the damaged entry is damaged exactly as far as Perl's is: the title is
-  // truncated at the `%`, the rest of that line gone.
+  // The `%` is data: both seams must keep the whole value, not stop at it.
+  // `\bib@@title` re-tokenizes the raw field itself …
   assert!(
-    s.contains("<bib-title>Fifty</bib-title>"),
-    "expected the runaway title truncated at the `%` (same as Perl), got:\n{s}"
+    s.contains("<bib-title>Fifty % of the time</bib-title>"),
+    "the title was truncated at its `%` — a `%` in a .bib field is data, not a \
+     comment (OXIDIZED_DESIGN #74). Got:\n{s}"
+  );
+  // … while the note comes straight off the entry Mouth.
+  assert!(
+    s.contains("plain % comment"),
+    "the note was truncated at its `%` — the entry Mouth must read `%` as an \
+     ordinary character (OXIDIZED_DESIGN #74). Got:\n{s}"
   );
 }

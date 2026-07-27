@@ -64,6 +64,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #74).**
 - **2026-07-26 — undefined CSes from packages with no binding: `silence.sty`,
   bundled `arxiv.sty`/`PRIMEarxiv.sty`.** Long-standing gaps, **not** a
   regression: Perl 0.8.8 has no binding for either and reproduces the identical
@@ -81,6 +82,33 @@ session of their own. Re-verify a row before planning on it (rule 1).
   1→0, 4→1, 1→0, 1→0. Divergence #77. Guards `00_contrib::{silence_filters,
   arxiv_keywords, primearxiv_keywords}_test`, `106_arxiv_sty_defers_to_bundled`,
   `107_silence_keeps_diagnostics`.
+- **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #75).**
+  Seven 2605 witnesses carried `Error:unexpected:&` from `publisher` / `journal`
+  / `booktitle` / `author` / `copyright` ("Taylor & Francis"). Not a Rust-only
+  defect: same-host `latexmlc` raised the identical per-`&` count on all six
+  re-measured witnesses, and bibtex 0.99d + pdflatex agree (the `&` reaches the
+  `.bbl` under `plain` and `abbrvnat`; pdflatex stops with "Misplaced alignment
+  tab character &" and prints "Taylor Francis"). **A `.bib` field's content is
+  DATA** — authorized surpass-Perl and surpass-pdflatex, since LaTeXML reads
+  `.bib` directly and decides what reaches the tokenizer.
+  Landed inside the consolidated **OXIDIZED_DESIGN #74**, which covers `%`, `&`,
+  `#` and `_` under one two-treatment design — be `bibtex` (the per-entry Mouth
+  and `mouth::tokenize_bib_literal`, via `Mouth::with_bib_data_literals`), then
+  be `pdflatex` on the `.bbl` you just synthesized
+  (`bibtex.rs::escape_bib_data_specials`, at three seams: the entry line,
+  `\bib@@title` and `\bib@@pages`). `_` is in the escaper ONLY: a catcode is
+  fixed at tokenization and cannot tell whether it is inside `$…$`, and a
+  subscript in a title's math is legitimate TeX — putting `_` in the Mouth set
+  flattened every one of them. Measured across all sixteen witnesses of the
+  three clusters (`_`, `%`, `&`): **193 -> 0**.
+  Also fixed, a different bug the neutralization does *not* reach: the doubly
+  escaped `\&amp;` / `{\&}amp;` / `&amp;`, an HTML entity that survived into
+  the `.bib` and printed as "&amp;" in Perl and pdflatex alike
+  (`undouble_escaped_ampersand`). Guards
+  `bib_bare_ampersand_is_literal_data`, `bib_bare_ampersand_leaves_live_markup_alone`
+  (the `\emph` / inline-math / space-form-accent boundary) and
+  `bib_escaped_amp_entity_decodes_to_one_ampersand`. Detail in
+  [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md).
 
 - **2026-07-26 (later) — session: resilience mining, and a regression the sweep caught.**
   Mined the 2605+2606 fatals: `Timeout:PushbackLimit` (25), `TooManyErrors`

@@ -644,6 +644,268 @@ fn bib_abstract_percent_does_not_sink_the_entry() {
     "abstract percent: abstract prose leaked into the rendered entry:\n{x}"
   );
 }
+/// `\&amp;` in a `.bib` field is a doubly escaped ampersand, and renders as one.
+///
+/// A reference manager rendered the field to HTML (`&` -> `&amp;`) and a second
+/// pass TeX-escaped that entity's own ampersand, so the file carries four
+/// characters the author never wrote. TeX has no way to know: `\&` is the glyph,
+/// `amp;` is ordinary text, and the entry reads "Computer Engineering, &amp;
+/// Applied Computing". pdflatex prints exactly the same, so this is neither a
+/// Perl gap nor a pdflatex gap — it is corrupt input, and reading `.bib`
+/// directly is what puts us in a position to undo it. OXIDIZED_DESIGN #74.
+///
+/// All three spellings are real; found by scanning 6000 arXiv/2605 sources.
+/// `titleentity` is the one that needs its own decode: `\bib@@title` re-reads
+/// the raw field for case conversion instead of using the argument it was
+/// handed, so it bypasses the decode done while assembling the entry.
+///
+/// RED before the fix: `&amp;amp;` for the first three entries.
+#[test]
+fn bib_escaped_amp_entity_decodes_to_one_ampersand() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_escaped_amp_entity.tex");
+  // The XML escape of a literal `&` is `&amp;`, so the doubled entity shows up
+  // as `&amp;amp;`. Assert on that serialized form directly — unescaping first
+  // would make the two cases indistinguishable.
+  assert!(
+    !x.contains("&amp;amp;"),
+    "escaped amp entity: a doubled `&amp;` survived into the bibliography:\n{x}"
+  );
+  // Not merely absent — decoded. Each entry keeps ONE ampersand, with the text
+  // on both sides intact (a decode that ate the neighbouring word would also
+  // satisfy the assertion above).
+  for needle in [
+    "Computer Engineering, &amp; Applied Computing",
+    "the A&amp;AS all-sky survey",
+    "shake &amp; bake generation",
+    // Control: an ordinary `\&` was already right and must stay right.
+    "Crime &amp; Delinquency",
+  ] {
+    assert!(
+      x.contains(needle),
+      "escaped amp entity: expected {needle:?} in the bibliography:\n{x}"
+    );
+  }
+  // Near miss: "amp;" that is NOT preceded by an ampersand is ordinary text.
+  assert!(
+    x.contains("amp; token and amplitude modulation"),
+    "escaped amp entity: a literal `amp;` unrelated to an ampersand was eaten:\n{x}"
+  );
+}
+/// A bare `&` in a `.bib` field is the literal character, not an alignment tab.
+///
+/// `publisher = {Taylor & Francis}` is real: seven arXiv/2605 papers ship it
+/// (per-witness provenance in the fixture header). BibTeX's lexer has no
+/// alignment, so the `&` it hands back is a character in a publisher's or a
+/// journal's name — but TeX reads catcode 4, raises `Error:unexpected:&`, and
+/// DROPS the character, so the entry printed "Taylor Francis".
+///
+/// Deliberately ahead of every other engine, which is why the before-numbers
+/// matter: same-host `latexmlc` raised the same one-error-per-`&` (2605.03054
+/// 1/1, 2605.06249 3/3, 2605.00462 1/1, 2605.06624 1/1, 2605.08753 1/1,
+/// 2605.10409 1/1), and bibtex 0.99d + pdflatex agree — under `plain` and
+/// `abbrvnat` the bare `&` reaches the `.bbl`, pdflatex stops with "Misplaced
+/// alignment tab character &" and prints "Taylor Francis". Reading `.bib`
+/// directly is what lets us decide otherwise. OXIDIZED_DESIGN #74.
+///
+/// Neutralized at the per-entry Mouth beside the `%` of #74 — regime A, because
+/// `&` derails alignment in ANY field and these fields have no Perl
+/// Semiverbatim precedent to follow.
+///
+/// RED before the fix: 5 post-stage errors, and "Taylor Francis".
+#[test]
+fn bib_bare_ampersand_is_literal_data() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_bare_ampersand.tex");
+  // The ampersand is KEPT, with the text on both sides of it — a neutralization
+  // that swallowed the rest of the field would still be error-free.
+  for needle in [
+    "Taylor &amp; Francis",
+    "Information Processing &amp; Management",
+    "Knowledge Discovery &amp; Data Mining",
+  ] {
+    assert!(
+      x.contains(needle),
+      "bare ampersand: expected the literal {needle:?} in the bibliography:\n{x}"
+    );
+  }
+  // Containment: every entry still renders, including the one after the run of
+  // bad fields. The sibling `%` bug (#73) took the whole bibliography down.
+  for needle in ["Author", "Builder", "Coder", "Crespi", "Draper", "Ericsson"] {
+    assert!(
+      x.contains(needle),
+      "bare ampersand: {needle:?} was lost from the bibliography:\n{x}"
+    );
+  }
+  assert!(
+    x.contains("The entry after the stray ampersands"),
+    "bare ampersand: the trailing entry's title was lost:\n{x}"
+  );
+}
+/// Making `&` ordinary must not flatten the live TeX beside it.
+///
+/// The boundary the mouth-level neutralization has to hold: it downgrades ONE
+/// catcode, so everything else in the same field keeps working. `\emph` still
+/// marks up, `$x_1+x_2$` still parses as math with `_` a subscript INSIDE math
+/// (the neutralization is not a blanket verbatim), and the space-form accents
+/// PR #399 recovered still resolve — all in the entry that also carries a bare
+/// `&`, so a regression cannot hide behind a separate clean fixture.
+#[test]
+fn bib_bare_ampersand_leaves_live_markup_alone() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_bare_ampersand.tex");
+  // Lower-cased by `\bib@@title`'s `capitalize1` recasing, exactly as Perl
+  // recases it — the point here is the `&`, which survives.
+  assert!(
+    x.contains("ampere &amp; ohm"),
+    "markup boundary: the ampersand in the boundary entry was lost:\n{x}"
+  );
+  assert!(
+    x.contains(">emphasized</emph>"),
+    "markup boundary: \\emph stopped producing markup:\n{x}"
+  );
+  // `_` keeps its subscript meaning INSIDE math — the neutralization downgrades
+  // one catcode in the `.bib` text, it is not a blanket verbatim. The parsed
+  // form is a subscript application, not the literal characters.
+  assert!(
+    x.contains(r#"role="SUBSCRIPTOP""#),
+    "markup boundary: inline math stopped parsing (`_` must still subscript \
+     inside math):\n{x}"
+  );
+  for needle in ["\u{160}pakov", "Gon\u{e7}alves"] {
+    assert!(
+      x.contains(needle),
+      "markup boundary: space-form accent {needle:?} regressed (PR #399):\n{x}"
+    );
+  }
+}
+/// A `.bib` field's content is DATA, not TeX: a bare `_`, `&`, `#` or `%` is
+/// the literal character. `AT&T` renders "AT&T"; `AT1G01010_v2` renders
+/// "AT1G01010_v2". Witnesses: 2605.06926 (8 `unexpected:_`, four `eprint` PDF
+/// URLs), 2605.01936, 2605.04604, 2605.08986, 2605.11300, and the `&` half in
+/// 2605.01936 / 2605.06249 (`publisher = {Taylor & Francis}`).
+///
+/// Authorized surpass-Perl AND surpass-pdflatex (OXIDIZED_DESIGN #74): real
+/// BibTeX has a DATA regime and a TeX regime, and we collapse them because we
+/// read `.bib` directly with no `.bst` in the loop. That `bibtex(1)` +
+/// `pdflatex` also break on these characters is a property of that toolchain,
+/// not a semantic we are obliged to reproduce.
+///
+/// ONE fixture for all of it, because the whole risk is that fixing one case
+/// breaks another. This asserts, together: the four specials bare render
+/// literally; already-escaped `\&`/`\%`/`\_`/`\#` render IDENTICALLY and are not
+/// double-escaped; `$x_1+x_2$` still parses as math with a real `<msub>`;
+/// `\emph` still produces markup; a space-form accent still reverts (PR #399);
+/// and `%20` inside `\url{…}` is untouched, since url.sty reads that argument
+/// verbatim. The `\\&` hazard is pinned separately, by the
+/// `escape_bib_data_specials` unit tests in `latexml_engine/src/bibtex.rs` —
+/// see the fixture header for why it cannot live end-to-end.
+#[test]
+fn bib_field_specials_are_data_not_tex() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_field_specials.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "bib specials: no bibliography at all:\n{x}"
+  );
+  // All ten entries arrive — `Gilakjani` is the containment canary.
+  for needle in [
+    "Okonkwo",
+    "Lindqvist",
+    "Chen",
+    "Park",
+    "Diallo",
+    "Bergstr",
+    "Raghavan",
+    "Osman",
+    "Gilakjani",
+  ] {
+    assert!(
+      x.contains(needle),
+      "bib specials: {needle:?} was swallowed:\n{x}"
+    );
+  }
+  // The rendered `<text class="ltx_bib_title">` of the entry with a given key.
+  let title_of = |key: &str| -> String {
+    let i = x
+      .find(&format!("key=\"{key}\""))
+      .unwrap_or_else(|| panic!("bib specials: no entry keyed {key:?} in:\n{x}"));
+    let block = &x[i..];
+    let s = block
+      .find("class=\"ltx_bib_title\">")
+      .expect("a rendered bib-title")
+      + "class=\"ltx_bib_title\">".len();
+    let e = block[s..].find("</text>").expect("bib-title close") + s;
+    block[s..e].to_string()
+  };
+  // 1. The four specials, bare, are literal text. `&` is XML-escaped on the way
+  //    out, which is the correct rendering of the character. `recase_title`
+  //    lowercases (capitalize1, Perl parity), hence `at1g01010`.
+  let bare = "AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates";
+  assert_eq!(
+    title_of("barespecials"),
+    bare,
+    "bib specials: bare `& _ % #` did not render literally:\n{x}"
+  );
+  // 2. Idempotency: the entry that already wrote `\&`/`\_`/`\%`/`\#` renders
+  //    the SAME string. Had the escaper double-escaped, `\&` would have become
+  //    `\\&` — a line break followed by an ampersand.
+  assert_eq!(
+    title_of("preescaped"),
+    title_of("barespecials"),
+    "bib specials: the pre-escaped title must render identically to the bare \
+     one:\n{x}"
+  );
+  assert!(
+    !x.contains(r"\&") && !x.contains(r"\_") && !x.contains(r"\%"),
+    "bib specials: an escaping backslash leaked into the output:\n{x}"
+  );
+  // 3. Math survives WITH its subscript, and 4. markup survives.
+  //    `convert_and_post_clean` stops at the post-processed `ltx` XML with
+  //    `pmml: false`, so the subscript shows as XMath's SUBSCRIPTOP rather than
+  //    an `<m:msub>`.
+  assert!(
+    x.contains(r#"role="SUBSCRIPTOP""#),
+    "bib specials: `$x_1+x_2$` in a title lost its subscript:\n{x}"
+  );
+  assert!(
+    x.contains("<emph font=\"italic\">Drosophila</emph>"),
+    "bib specials: `\\emph` in a title stopped producing markup:\n{x}"
+  );
+  // 5. Space-form accents still revert (PR #399).
+  assert!(
+    x.contains("Špakov") && x.contains("Gonçalves"),
+    "bib specials: a space-form accent stopped reverting:\n{x}"
+  );
+  // 6. A percent-encoded URL inside `\url{…}` is a nested DATA region.
+  assert!(
+    x.contains("http://example.org/a%20b"),
+    "bib specials: `%20` inside `\\url{{…}}` was escaped into the href:\n{x}"
+  );
+  // And a Verbatim/Semiverbatim-read FIELD is passed through raw, so neither
+  // the `url` href nor the `doi` id picks up a backslash.
+  assert!(
+    x.contains("https://example.org/a%20b?x=1&amp;y=2_3"),
+    "bib specials: the `url` field was escaped:\n{x}"
+  );
+  assert!(
+    x.contains("10.1007/3-540-44886-1%5F25"),
+    "bib specials: the `doi` id lost its percent-encoding:\n{x}"
+  );
+  // 7. The original cluster: both spellings of the AIP `eprint` URL land as a
+  //    plain `_`.
+  for needle in ["18931574/1876_1_online.pdf", "15540793/184110_1_online.pdf"] {
+    assert!(
+      x.contains(needle),
+      "bib specials: {needle:?} did not reach the rendered links:\n{x}"
+    );
+  }
+  // 8. The `&` half of the cluster.
+  assert!(
+    x.contains("Taylor &amp; Francis"),
+    "bib specials: a bare `&` in `publisher` did not render:\n{x}"
+  );
+  assert!(
+    x.contains("IEEE Communications Surveys &amp; Tutorials"),
+    "bib specials: a bare `&` in `journal` did not render:\n{x}"
+  );
+}
 /// A space-form accent in an author name must survive reversion.
 ///
 /// `{\v S}pakov` / `Gon{\c c}alves` / `\" Ozturk` are ordinary BibTeX — the
@@ -795,4 +1057,80 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
       "blank line: {name:?} lost — an empty sibling part ate a real one:\n{x}"
     );
   }
+}
+
+/// A `%` inside a `.bib` field value is data, not a comment.
+///
+/// BibTeX's lexer has no comment syntax inside an entry — `Pre::BibTeX` only
+/// skips `%` in the junk BETWEEN entries — so the value it stores keeps its
+/// `%`. LaTeXML then re-injects that value as TeX source, where catcode 14
+/// makes it comment out the rest of its line, closing brace included: the
+/// entry's group never closes and every later entry nests inside the unclosed
+/// element (`<ltx:bibentry> isn't allowed in <ltx:bibentry>`).
+///
+/// Two paths, one per entry in the fixture: `doi` goes through the per-entry
+/// Mouth `\ProcessBibTeXEntry` opens, `title` does NOT — `\bib@@title` re-reads
+/// the raw field and tokenizes it itself. Fixing only the mouth left the
+/// `title` half broken (it went 28 → 37 errors on the witness, surfacing an
+/// `Extra \endcsname` once the value was no longer truncated), so both call
+/// sites read `%` as OTHER. OXIDIZED_DESIGN #74.
+///
+/// RED before the fix: witnesses 2605.01196 (`doi={%doi:10.1017/jfm.2016.420}`)
+/// and 2605.02131 (percent-encoded URL in a `title`'s `\href`) at **28 errors
+/// each**; same-host `latexmlc` 29 / 31 on the same inputs, so this is a shared
+/// bug and a surpass-Perl fix, not a Rust-only defect. Both are 0 after.
+/// `convert_and_post_clean`, not `convert_and_post`: the bibliography is built
+/// in POST, and a text-presence assertion still finds text INSIDE an unclosed
+/// element — the plain helper passes on a structurally broken document.
+#[test]
+fn bib_field_percent_is_an_ordinary_character() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_field_percent.tex");
+  // Containment: four entries, four bibitems. Before the fix the runaway
+  // swallowed its followers into its own unclosed <ltx:bibentry>.
+  assert_eq!(
+    x.matches("<bibitem").count(),
+    4,
+    "percent field: expected four bibitems, one per entry:\n{x}"
+  );
+  assert!(
+    x.contains("The entry after the runaway"),
+    "percent field: the canary entry after the runaway is missing:\n{x}"
+  );
+  // The `%` is DATA: it must survive into the output, not be dropped along
+  // with everything after it on its line.
+  // (the doi becomes an href, so its own `%`/`:` are URL-escaped there —
+  // `%25doi%3A` IS the surviving `%doi:`.)
+  assert!(
+    x.contains("dx.doi.org/%25doi%3A10.1017/jfm.2016.420"),
+    "percent field: the doi value was truncated at its percent sign:\n{x}"
+  );
+  assert!(
+    x.contains("https://cdn.example.org/20240723%20IPWG%20Item%2004b%20DRAFT.pdf"),
+    "percent field: the percent-encoded URL lost its escapes:\n{x}"
+  );
+  assert!(
+    x.contains("A linked title behind a percent-encoded URL"),
+    "percent field: the linked title did not render:\n{x}"
+  );
+  // Neutralizing `%` must not flatten the field: markup, math and accents in
+  // the SAME field still have to work (the boundary PR #399 established).
+  assert!(
+    x.contains("Yield rose <emph") && x.contains(">sharply</emph>"),
+    "percent field: \\emph in a percent-bearing title lost its markup:\n{x}"
+  );
+  assert!(
+    x.contains("tex=\"x_{1}+x_{2}\"") && x.contains("<XMApp>"),
+    "percent field: inline math in a percent-bearing title did not parse:\n{x}"
+  );
+  assert!(
+    x.contains("Špakov"),
+    "percent field: the space-form accent in the same entry stopped \
+     composing:\n{x}"
+  );
+  // No entry may nest inside another, and no element may be left open.
+  assert!(
+    !x.contains("<bibentry"),
+    "percent field: a raw <bibentry> survived post-processing — \
+     MakeBibliography could not read the entry:\n{x}"
+  );
 }
