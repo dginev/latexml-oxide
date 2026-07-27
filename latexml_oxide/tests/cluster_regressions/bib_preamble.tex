@@ -1,0 +1,8 @@
+% Driver for `bib_preamble.bib`. Loads NO package: every macro the entries use
+% has to come from the `.bib`'s own `@preamble`. See the `.bib` header.
+\documentclass{article}
+\begin{document}
+See \cite{firstentry,secondentry}.
+\bibliographystyle{plain}
+\bibliography{bib_preamble}
+\end{document}

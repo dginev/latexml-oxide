@@ -1253,3 +1253,63 @@ fn bib_mathscinet_macro_yields_to_the_authors_own_definition() {
     "author `\\Dbar`: no bibliography at all:\n{x}"
   );
 }
+
+/// A `.bib`'s `@preamble` is TeX source, executed once before any entry.
+///
+/// This is the one part of a `.bib` that `bibtex(1)` does not treat as data: it
+/// copies the block verbatim to the top of the `.bbl` (plain.bst `begin.bib`,
+/// `preamble$ write$`, ahead of `\begin{thebibliography}`), so pdflatex has the
+/// definitions before the first `\bibitem`. It is how a `.bib` ships the macros
+/// its own fields use, and MathSciNet's exporter emits one routinely —
+/// `@preamble{"\def\cprime{$'$} "}` in 2605.00097's `referLiu.bib` (L11) and
+/// fourteen times over in 2605.11579's `biblo.bib` (L4768, L6910, …).
+///
+/// We read `.bib` directly, so performing that copy is ours to do: Perl
+/// `Pre/BibTeX.pm::toTeX` L118-122 joins the preamble lines ahead of
+/// `\begin{bibtex@bibliography}`, and `pre_bibtex::to_tex` mirrors it. Verified
+/// end to end against same-host `latexmlc` on this exact fixture: both engines
+/// 0 errors, both expand every macro.
+///
+/// Under the two-treatment frame (`docs/parity/BIBLIOGRAPHY_WORKLIST.md`) the
+/// preamble belongs to treatment 2 — the TeX regime — and must therefore NOT
+/// pass through `escape_bib_data_specials`, which would turn `\def\cprime{$'$}`
+/// into inert text. Nothing else guards that: `to_tex_includes_preamble`
+/// (`pre_bibtex.rs`) asserts on the emitted STRING, so it stays green even if
+/// the string is never executed, is escaped on the way to the tokenizer, or is
+/// read under `Mouth::with_bib_data_literals`.
+///
+/// The fixture's macro names are unique to it on purpose. `\cprime` is defined
+/// always-on in `latex_constructs_rust_only.rs`, so probing with it would pass
+/// whether or not the preamble ran at all.
+#[test]
+fn bib_preamble_defines_macros_for_the_whole_bibliography() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_preamble.tex");
+  // A parameter survives: `#` reaches the tokenizer at catcode 6, so
+  // `\newcommand{\bibpreamblearg}[1]{[[#1]]}` is a real one-argument macro.
+  assert!(
+    x.contains("[[ARGWORKS]]"),
+    "@preamble: the parameterized macro did not expand:\n{x}"
+  );
+  // `\&` and `\%` in the preamble are TeX escapes, not data to be re-escaped.
+  assert!(
+    x.contains("Taylor &amp; Francis"),
+    "@preamble: `\\&` in a preamble macro body did not render:\n{x}"
+  );
+  // The SECOND entry uses a preamble macro: the definitions are installed once,
+  // before the entries, not scoped to whichever entry happens to be first.
+  assert!(
+    x.contains("100%"),
+    "@preamble: the second entry lost the preamble macro — definitions must \
+     outlive the first entry:\n{x}"
+  );
+  // The MathSciNet shape verbatim, in the field it actually occupies: a name.
+  // `$'$` composes to a prime, and no source leaks.
+  assert!(
+    x.contains("Gel\u{2032}fand"),
+    "@preamble: `\\def\\bibpreambleprime{{$'$}}` did not compose in a name:\n{x}"
+  );
+  assert!(
+    !x.contains("bibpreamble"),
+    "@preamble: a preamble macro leaked into the output as source:\n{x}"
+  );
+}
