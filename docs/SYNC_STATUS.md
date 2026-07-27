@@ -78,7 +78,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
   LaTeXML diagnostics: measured Perl 0 vs Rust 1 on a probe), the two bundled
   arxiv styles gated on `INCLUDE_STYLES` so the paper's own file still wins in
   ar5iv mode (all four witnesses byte-identical there, before vs after). Bare:
-  1→0, 4→1, 1→0, 1→0. Divergence #74. Guards `00_contrib::{silence_filters,
+  1→0, 4→1, 1→0, 1→0. Divergence #77. Guards `00_contrib::{silence_filters,
   arxiv_keywords, primearxiv_keywords}_test`, `106_arxiv_sty_defers_to_bundled`,
   `107_silence_keeps_diagnostics`.
 
