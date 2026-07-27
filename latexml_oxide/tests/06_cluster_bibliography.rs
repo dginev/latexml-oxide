@@ -795,6 +795,7 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
       "blank line: {name:?} lost — an empty sibling part ate a real one:\n{x}"
     );
   }
+}
 
 /// A `%` inside a `.bib` field value is data, not a comment.
 ///
@@ -822,7 +823,7 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
 #[test]
 fn bib_field_percent_is_an_ordinary_character() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_field_percent.tex");
-  // Containment: three entries, three bibitems. Before the fix the runaway
+  // Containment: four entries, four bibitems. Before the fix the runaway
   // swallowed its followers into its own unclosed <ltx:bibentry>.
   assert_eq!(
     x.matches("<bibitem").count(),
