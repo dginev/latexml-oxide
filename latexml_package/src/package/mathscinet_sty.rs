@@ -58,7 +58,14 @@
 use crate::prelude::*;
 
 /// `\ProvideTextCommandDefault` semantics: define only if the name is free.
-fn provide(proto: &str, body: &str) -> Result<()> {
+///
+/// `body` is `&'static str` rather than `&str` because it is TeX source handed
+/// to the tokenizer, and `TeXString` (OXIDIZED_DESIGN — see `latexml_core::tokens`)
+/// only converts implicitly from a literal. Every caller below passes one, so
+/// this costs nothing and buys the guarantee: a runtime-built `String` — which
+/// is what a welded `Tokens::to_string()` arrives as — cannot reach this path
+/// without saying so via `TeXString::assembled`.
+fn provide(proto: &str, body: &'static str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(proto, true)?;
   if lookup_meaning(&cs_tok).is_some() {
     return Ok(());
