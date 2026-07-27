@@ -56,6 +56,13 @@ pub struct BibConversionRequest {
   /// bibliography's fields are the article's TeX, so they need the article's
   /// class and packages to mean anything.
   pub preloads:     Vec<String>,
+  /// The keys the document cites, or `None` to convert every entry.
+  ///
+  /// A `.bib` is a library: the converter should digest the cited entries (and
+  /// their `crossref`/`\cite` closure) rather than the whole file, exactly as
+  /// `bibtex(1)` does from the `.aux`'s `\citation` records. `None` means no
+  /// citation record was available, or the document said `\nocite{*}`.
+  pub wanted_keys:  Option<Vec<String>>,
 }
 
 /// Convert raw BibTeX into a document containing `ltx:bibentry` elements.
@@ -182,7 +189,14 @@ impl MakeBibliography {
   /// Locates .bib.xml files from:
   ///   - Command-line options (overrides)
   ///   - //ltx:bibliography[@files] attribute
-  fn get_bibliographies(&self, doc: &PostDocument) -> Vec<PostDocument> {
+  ///
+  /// `wanted_keys` is forwarded to the recursive raw-`.bib` conversion so it
+  /// digests only the cited entries; see [`BibConversionRequest::wanted_keys`].
+  fn get_bibliographies(
+    &self,
+    doc: &PostDocument,
+    wanted_keys: Option<&Vec<String>>,
+  ) -> Vec<PostDocument> {
     let mut bibnames: Vec<String> = Vec::new();
     let mut from_bibliography = false;
 
@@ -314,6 +328,7 @@ impl MakeBibliography {
             sources: rawbibs,
             search_paths: search_paths.to_vec(),
             preloads,
+            wanted_keys: wanted_keys.cloned(),
           };
           match convert(&request) {
             Some(bibdoc) => bibs.push(bibdoc),
@@ -396,6 +411,36 @@ impl MakeBibliography {
     }
   }
 
+  /// The bib keys this document cites, for the recursive raw-`.bib` conversion
+  /// to digest instead of the whole library.
+  ///
+  /// Reads the same `BIBLABEL:<list>:<key>` ObjectDB records that Step 2 of
+  /// [`Self::get_bib_entries`] scans — they are written during the document
+  /// conversion, so they are already complete by the time post-processing asks.
+  /// Returns `None` (= convert everything) for `\nocite{*}`, and also when no
+  /// `BIBLABEL` record exists at all: an empty filter and "no citation data"
+  /// are indistinguishable here, and dropping every entry on a missing record
+  /// would be a silent, unrecoverable loss.
+  fn cited_keys(&self, lists: &[&str]) -> Option<Vec<String>> {
+    let mut keys: Vec<String> = Vec::new();
+    for db_key in self.db.get_keys() {
+      let Some(rest) = db_key.strip_prefix("BIBLABEL:") else {
+        continue;
+      };
+      let Some((list, bibkey)) = rest.split_once(':') else {
+        continue;
+      };
+      if !lists.contains(&list) {
+        continue;
+      }
+      if bibkey == "*" {
+        return None; // `\nocite{*}` — the document wants the whole library.
+      }
+      keys.push(bibkey.to_string());
+    }
+    (!keys.is_empty()).then_some(keys)
+  }
+
   fn get_bib_entries(
     &self,
     doc: &PostDocument,
@@ -411,7 +456,7 @@ impl MakeBibliography {
     // Import bibentry nodes into the main document so that XPath queries
     // (which use the main document's namespace context) work correctly.
     let mut entries: HashMap<String, BibEntryData> = HashMap::default();
-    let bib_docs = self.get_bibliographies(doc);
+    let bib_docs = self.get_bibliographies(doc, self.cited_keys(&lists).as_ref());
     for bibdoc in &bib_docs {
       Self::scan_bibentries(&mut entries, bibdoc);
     }
