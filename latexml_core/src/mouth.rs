@@ -90,6 +90,10 @@ pub struct Mouth {
   /// inside the text) is a separate object and keeps `%` as a comment,
   /// which a State-level assignment could not guarantee.
   percent_is_other:       bool,
+  /// Read `&` as an ordinary character rather than an alignment tab, for this
+  /// mouth only. Set by `with_align_as_other()`; same per-Mouth scoping, and
+  /// for the same reason, as `percent_is_other` above.
+  align_is_other:         bool,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
@@ -137,6 +141,7 @@ impl Default for Mouth {
       // handle : None,
       foodtype:               FoodType::File,
       percent_is_other:       false,
+      align_is_other:         false,
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
@@ -314,6 +319,29 @@ impl Mouth {
   /// (LETTER, say) keeps it.
   pub fn with_percent_as_other(mut self) -> Self {
     self.percent_is_other = true;
+    self
+  }
+
+  /// Read `&` as an ordinary character (catcode 12) instead of an alignment
+  /// tab, for the whole life of this mouth.
+  ///
+  /// The companion of [`Self::with_percent_as_other`], and the same argument:
+  /// BibTeX's lexer has no alignment either, so an `&` in a field value it
+  /// hands back is an ordinary character — a publisher's name ("Taylor &
+  /// Francis"), a journal's ("Infrared Physics & Technology"), a conference's
+  /// ("Knowledge Discovery & Data Mining"). Under TeX's catcode 4 each one is a
+  /// stray alignment tab, `Error:unexpected:&`, and the character is dropped
+  /// from the rendered entry.
+  ///
+  /// Per-Mouth rather than a State catcode for the same reason as `%`: a raw
+  /// `.sty` opened from inside a field handler must keep TeX's alignment tab,
+  /// and so must the DOCUMENT — this rule belongs to the text BibTeX lexed, not
+  /// to the session.
+  ///
+  /// Only alignment-ness is removed: an `&` that has been given some other
+  /// catcode keeps it.
+  pub fn with_align_as_other(mut self) -> Self {
+    self.align_is_other = true;
     self
   }
 
@@ -688,13 +716,14 @@ impl Mouth {
   }
 
   /// The catcode this mouth reads `ch` with: the State's, except that a
-  /// `with_percent_as_other()` mouth downgrades a COMMENT `%` to OTHER.
+  /// `with_percent_as_other()` mouth downgrades a COMMENT `%` to OTHER, and a
+  /// `with_align_as_other()` mouth downgrades an ALIGN `&` the same way.
   fn catcode_of(&self, ch: char) -> Catcode {
     let cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
-    if self.percent_is_other && ch == '%' && cc == Catcode::COMMENT {
-      Catcode::OTHER
-    } else {
-      cc
+    match cc {
+      Catcode::COMMENT if self.percent_is_other && ch == '%' => Catcode::OTHER,
+      Catcode::ALIGN if self.align_is_other && ch == '&' => Catcode::OTHER,
+      _ => cc,
     }
   }
 
@@ -1156,16 +1185,17 @@ pub fn tokenize(text: &str) -> Tokens {
   use_main_state();
   result
 }
-/// Tokenize a string under the standard catcode table, reading `%` as an
-/// ordinary character rather than a comment.
+/// Tokenize a string under the standard catcode table, reading `%` and `&` as
+/// ordinary characters rather than a comment and an alignment tab.
 ///
-/// For text that came out of a lexer with no comment syntax of its own — a
-/// BibTeX field value, whose `%` is data (see
-/// [`Mouth::with_percent_as_other`]). Plain [`tokenize`] would let that `%`
-/// comment out the rest of the string, which for a `.bib` field means losing
+/// For text that came out of the BibTeX lexer, which has neither construct, so
+/// both characters are data (see [`Mouth::with_percent_as_other`] and
+/// [`Mouth::with_align_as_other`]). Plain [`tokenize`] would let that `%`
+/// comment out the rest of the string — which for a `.bib` field means losing
 /// its closing brace and leaving whatever it opened unclosed
-/// (`OXIDIZED_DESIGN #74`).
-pub fn tokenize_percent_literal(text: &str) -> Tokens {
+/// (`OXIDIZED_DESIGN #74`) — and would make an `&` in "Taylor & Francis" a
+/// stray alignment tab (`#75`).
+pub fn tokenize_bib_literal(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
@@ -1174,6 +1204,7 @@ pub fn tokenize_percent_literal(text: &str) -> Tokens {
   let result = Mouth::new(text, None)
     .unwrap()
     .with_percent_as_other()
+    .with_align_as_other()
     .read_tokens();
   use_main_state();
   result

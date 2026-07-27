@@ -275,20 +275,67 @@ pub fn current_entry_field(name: &str) -> Option<Tokens> {
 
 /// `Tokenize!` for a string that came out of the BibTeX lexer.
 ///
-/// The standard catcode table, as Perl's `Tokenize` uses — except that `%` is
-/// an ordinary character. BibTeX has no comment syntax inside an entry
-/// (`Pre::BibTeX` only skips `%` in the junk BETWEEN entries), so a `%` in a
-/// field value is data; under catcode 14 it comments out the rest of the
-/// string and takes any brace still open with it, which leaves the field's
-/// element unclosed and swallows every following entry. Witness 2605.02131:
-/// a percent-encoded URL in a `title`'s `\href`, 24 `malformed:ltx:bibentry`.
-/// See `OXIDIZED_DESIGN #74`.
+/// The standard catcode table, as Perl's `Tokenize` uses — except that `%` and
+/// `&` are ordinary characters. BibTeX has no comment syntax inside an entry
+/// (`Pre::BibTeX` only skips `%` in the junk BETWEEN entries) and no alignment
+/// either, so both are data; under catcode 14 a `%` comments out the rest of
+/// the string and takes any brace still open with it, and under catcode 4 an
+/// `&` is a stray alignment tab. Witnesses 2605.02131 (a percent-encoded URL in
+/// a `title`'s `\href`, 24 `malformed:ltx:bibentry`) and 2605.01936
+/// (`publisher = {Taylor & Francis}` and six more, 7 `unexpected:&`).
+/// See `OXIDIZED_DESIGN #74` and `#75`.
 ///
 /// This is the same rule the per-entry Mouth applies (see `\ProcessBibTeXEntry`
 /// below); it has to be repeated here because the handlers that re-read a raw
 /// field — `\bib@@title` recasing, name splitting, date/pages assembly — build
 /// their tokens from the stored string and never go through that mouth.
-fn tokenize_bib_field(text: &str) -> Tokens { mouth::tokenize_percent_literal(text) }
+fn tokenize_bib_field(text: &str) -> Tokens { mouth::tokenize_bib_literal(text) }
+
+/// Collapse an HTML-escaped ampersand — `&amp;` — back to the single `&` the
+/// author wrote, in whichever of its three spellings a `.bib` export used.
+///
+/// This is a DOUBLE escape, not a TeX construct: a reference manager rendered
+/// the field to HTML (`&` -> `&amp;`), then a second pass TeX-escaped the
+/// ampersand of that entity, so the file carries `\&amp;` / `{\&}amp;` /
+/// `&amp;` where the source said `&`. TeX has no idea: `\&` produces the glyph
+/// and `amp;` is four more ordinary characters, so the entry renders
+/// "Computer Engineering, &amp; Applied Computing". pdflatex prints exactly the
+/// same thing — this is not a parity gap in either direction, it is an input
+/// corruption that only the `.bib` reader is positioned to undo, and we read
+/// `.bib` directly (see OXIDIZED_DESIGN #73's framing of that position).
+///
+/// Distinct from a BARE `&`, which is catcode 4 and is neutralized at the mouth
+/// (`tokenize_bib_field` above, `#75`). Decoding here deliberately yields a
+/// plain `&` and lets that mechanism give it its catcode, rather than escaping
+/// it to `\&` behind the mechanism's back.
+///
+/// Measured over 6000 arXiv/2605 sources: `\&amp;` in `booktitle` (2605.00833,
+/// 2605.01362), in `journal` (2605.00922, 2605.01200, 2605.01224), in `title`
+/// (2605.01353 `{{A}}\&amp;{{AS}}`); `{\&}amp;` in `title` (2605.01224 "Shake
+/// {\&}amp; Bake"); bare `&amp;` in `publisher` (2605.00859 "European
+/// Association of Geoscientists &amp; Engineers") and `journal` (2605.01187).
+///
+/// Only `amp;` DIRECTLY after an ampersand is touched, so a field that merely
+/// contains the letters "amp" is untouched, and a lone `&` is left exactly as
+/// it was.
+fn undouble_escaped_ampersand(value: &str) -> String {
+  if !value.contains("amp;") {
+    return value.to_string();
+  }
+  let mut out = String::with_capacity(value.len());
+  let mut rest = value;
+  while let Some(i) = rest.find("amp;") {
+    let (head, tail) = rest.split_at(i);
+    out.push_str(head);
+    // `{\&}` first: its last character is `}`, not `&`.
+    if !(head.ends_with("{\\&}") || head.ends_with('&')) {
+      out.push_str("amp;");
+    }
+    rest = &tail["amp;".len()..];
+  }
+  out.push_str(rest);
+  out
+}
 
 /// Perl: `currentBibEntryRawField('fieldname')` — get the *raw*
 /// source string of a field on the current entry.
@@ -1053,7 +1100,11 @@ LoadDefinitions!({
       })
       .unwrap_or_else(|| "capitalize1".to_string());
     let mode = TitleCaseMode::parse(&mode_str);
-    let raw = current_entry_raw_field(&field_name).unwrap_or_default();
+    // Re-read the RAW field rather than the passed argument (Perl L294), which
+    // is why the decode in `\bibentry@create` does not reach this path and has
+    // to be repeated here — witness 2605.01353, a `title` reading
+    // `{{A}}\&amp;{{AS}}`. See `undouble_escaped_ampersand`.
+    let raw = undouble_escaped_ampersand(&current_entry_raw_field(&field_name).unwrap_or_default());
     let recased = recase_title(&raw, mode);
     // Emit `\bib@@field{tag}{}{<recased>}`. The empty `{}` slot
     // is the OptionalKeyVals arg (absent → no attributes).
@@ -1955,6 +2006,7 @@ LoadDefinitions!({
           break;
         }
       }
+      let value = &undouble_escaped_ampersand(value);
       match handler {
         Some(h) => {
           lines.push(format!("\\csname {}\\endcsname{{{}}}", &h[1..], value));
@@ -2008,8 +2060,21 @@ LoadDefinitions!({
     // each, and Perl breaks identically (29 / 31 on the same host); 2605.00879
     // (`note = {https://doi.org/10.1145%2F...}`): 103 errors.
     // Guard: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`.
+    //
+    // `&` likewise (OXIDIZED_DESIGN #75) — BibTeX has no alignment either, so
+    // an `&` in a value it handed us is a character in a publisher's or a
+    // journal's name. Under catcode 4 it is a stray alignment tab:
+    // `Error:unexpected:&`, and the `&` is dropped from the entry, so "Taylor &
+    // Francis" printed as "Taylor Francis". Witnesses arXiv 2605.01936 (7),
+    // 2605.06249 (3), 2605.00462 / 2605.03054 / 2605.06624 / 2605.08753 /
+    // 2605.10409 (1 each). Same-host Perl and bibtex+pdflatex both break the
+    // same way — the decision that a field's content is DATA is what overrides
+    // them, and it is ours to make because we read the `.bib` directly.
+    // Guard: `06_cluster_bibliography::bib_bare_ampersand_is_literal_data`.
     open_mouth_with(
-      Mouth::new(&lines.join("\n"), None)?.with_percent_as_other(),
+      Mouth::new(&lines.join("\n"), None)?
+        .with_percent_as_other()
+        .with_align_as_other(),
       true,
       BalancedBoundary::Opaque,
     );

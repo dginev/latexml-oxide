@@ -2357,6 +2357,85 @@ fields no parameter type was protecting.
 Guard: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`
 (fixture `bib_field_percent.{tex,bib}` — one entry per seam plus a containment
 canary; the single-line `value...}` layout is load-bearing, as in #73).
+### 75. A bare `&` in a `.bib` field is data, and a `\&amp;` is one ampersand
+
+Two ampersand bugs in `.bib` field values, with different causes and different
+fixes. Both are settled against **pdflatex**, not against Perl.
+
+**(a) The bare `&`.** `publisher = {Taylor & Francis}` — seven arXiv/2605
+witnesses: 2605.01936 (7 occurrences), 2605.06249 (3), 2605.00462 / 2605.03054 /
+2605.06624 / 2605.08753 / 2605.10409 (1 each), in `publisher`, `journal`,
+`booktitle`, `author` and `copyright`. BibTeX's lexer has no alignment, so the
+`&` it hands back is a character in a name; TeX reads catcode 4, raises
+`Error:unexpected:&`, and **drops** it, so the entry printed "Taylor Francis".
+
+*What every other engine does, measured.* Same-host `latexmlc` raises the same
+one-error-per-`&` on all six re-measured witnesses (1/1, 3/3, 1/1, 1/1, 1/1,
+1/1). bibtex 0.99d + pdflatex agree: under `plain` and under natbib's
+`abbrvnat` the bare `&` is copied straight into the `.bbl`, pdflatex stops with
+`! Misplaced alignment tab character &`, and the PDF reads "Taylor Francis" /
+"Information Processing Management" / "Knowledge Discovery Data Mining". So
+this was never a Rust-only defect — Rust already beat Perl on the witnesses
+overall (2605.01936: 7 errors and a complete bibliography vs Perl's 101 plus a
+Fatal and none at all; 2605.00462: 1 vs 57).
+
+*Rust behaviour.* A `.bib` field's content is **data, not TeX**: the `&` is read
+as an ordinary character. Implemented at the per-entry Mouth beside the `%` of
+**#74** — `Mouth::with_align_as_other()`, plus `mouth::tokenize_bib_literal`
+for the handlers that re-tokenize a stored raw field (`\bib@@title` recasing,
+name splitting, date/pages assembly) and never pass through that mouth.
+
+*Why the mouth and not a parameter type.* `&` derails alignment in **any**
+field, and the fields carrying it here have no Perl `Semiverbatim` precedent to
+follow — unlike `doi`/`isbn`/`issn`/`lccn`/`pii`, whose per-field treatment
+`eprint` joins. Per-Mouth rather than a State catcode for #74's reason: a raw
+`.sty` opened from inside a field handler, and the document itself, must keep
+TeX's alignment tab. The rule belongs to the text BibTeX lexed.
+
+Authorized surpass-Perl **and** surpass-pdflatex: LaTeXML reads `.bib`
+directly, with no `.bst` and no `bibtex(1)` in the path, so it decides what
+reaches the tokenizer, and the real toolchain's breakage there is a property of
+that toolchain. `#` is deliberately **not** included: across all seven
+witnesses there is exactly one bare `#`, in 2605.00462's JabRef `file` path,
+and that field is already covered as an unknown field
+(`\bib@field@default@default Verbatim Verbatim`). No evidence, no change.
+
+**(b) The doubly escaped `\&amp;`.** A reference manager rendered the field to
+HTML (`&` → `&amp;`), then a second pass TeX-escaped that entity's own
+ampersand. Three spellings, all found by scanning 6000 arXiv/2605 sources:
+`\&amp;` (booktitle 2605.00833, 2605.01362; journal 2605.00922, 2605.01200,
+2605.01224; title 2605.01353 `{{A}}\&amp;{{AS}}`), `{\&}amp;` (title 2605.01224,
+"Reversible Template-based Shake {\&}amp; Bake Generation") and bare `&amp;`
+(publisher 2605.00859; journal 2605.01187).
+
+Not the same bug, and (a) does not fix it: that `&` is already **escaped**, so
+it raises no error at all — in Perl or in pdflatex, both of which print
+"Computer Engineering, &amp; Applied Computing". The damage is the stray `amp;`.
+`undouble_escaped_ampersand` (`bibtex.rs`) drops an `amp;` that directly follows
+an ampersand in any of its three spellings, at the entry-assembly seam and again
+in `\bib@@title`, which re-reads the RAW field for its case conversion (Perl
+L294) and so bypasses the first. Only `amp;` immediately after an ampersand is
+touched: "amplitude", and a lone `\&`, are untouched. Measured: witness
+2605.00833 renders "Computer Engineering, & Applied Computing" (was
+"&amp;"), 0 errors.
+
+*Why repair it rather than render it faithfully.* It is not a TeX construct
+that a reader might have meant — no author writes `\&amp;` intending the six
+characters — it is one file mixing two escaping conventions, and the entity is
+unambiguous. Rendering it faithfully means printing `&amp;` in a bibliography
+for every reader of the paper. pdflatex has no way to know better; reading the
+`.bib` directly, we do, which is the same position #73 argued from.
+
+**Boundary, verified rather than assumed.** The neutralization downgrades one
+catcode and nothing else: in the same entry that carries a bare `&`, `\emph`
+still produces markup, `$x_1+x_2$` still parses as math with `_` a subscript
+INSIDE math, and the space-form accents PR #399 recovered (`{\v S}pakov` →
+Špakov, `Gon{\c c}alves` → Gonçalves) still resolve.
+
+Guards: `06_cluster_bibliography::bib_bare_ampersand_is_literal_data`,
+`::bib_bare_ampersand_leaves_live_markup_alone` (the boundary entry) and
+`::bib_escaped_amp_entity_decodes_to_one_ampersand` (all three spellings, a `\&`
+control, and an "amp;"-as-ordinary-text near miss).
 
 ### 75. A `.bib`-derived bibliography does not run the missing-`\bibitem` rescue
 
