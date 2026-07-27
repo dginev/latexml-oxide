@@ -451,7 +451,7 @@
 <a href=#451 id=451 data-nosnippet>451</a>        require_package(<span class="string">"amsthm"</span>, RequireOptions::default())<span class="question-mark">?</span>;
 <a href=#452 id=452 data-nosnippet>452</a>        <span class="kw">let </span><span class="kw-2">mut </span>expanded = preload.clone();
 <a href=#453 id=453 data-nosnippet>453</a>        expanded.push_str(<span class="kw-2">&amp;</span>beginenv_clone);
-<a href=#454 id=454 data-nosnippet>454</a>        <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expanded))
+<a href=#454 id=454 data-nosnippet>454</a>        <span class="prelude-val">Ok</span>(mouth::tokenize_internal(TeXString::assembled(expanded)))
 <a href=#455 id=455 data-nosnippet>455</a>      })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#456 id=456 data-nosnippet>456</a>  }
 <a href=#457 id=457 data-nosnippet>457</a>  <span class="comment">// Perl L216-219: newtheorem aliases auto-load amsthm
@@ -626,7 +626,7 @@
 <a href=#626 id=626 data-nosnippet>626</a>          } <span class="kw">else </span>{
 <a href=#627 id=627 data-nosnippet>627</a>            require_package(<span class="kw-2">&amp;</span>name_str, RequireOptions::default())<span class="question-mark">?</span>;
 <a href=#628 id=628 data-nosnippet>628</a>          }
-<a href=#629 id=629 data-nosnippet>629</a>          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>trigger_str))
+<a href=#629 id=629 data-nosnippet>629</a>          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(TeXString::assembled(trigger_str.clone())))
 <a href=#630 id=630 data-nosnippet>630</a>        })), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#631 id=631 data-nosnippet>631</a>    }
 <a href=#632 id=632 data-nosnippet>632</a>  }

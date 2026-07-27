@@ -67,12 +67,12 @@
 <a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">let </span>postfix = roman_aux(level);
 <a href=#68 id=68 data-nosnippet>68</a>    <span class="comment">// DefMacroI for \theenumX, \p@enumX, \labelenumX
 <a href=#69 id=69 data-nosnippet>69</a>    </span><span class="kw">let </span>the_body = <span class="macro">s!</span>(<span class="string">"\\lx@Picountersymbol{{{font_str}}}{{enum{postfix}}}{{{base_str}}}"</span>);
-<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">let </span>the_tokens = mouth::tokenize_internal(<span class="kw-2">&amp;</span>the_body);
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">let </span>the_tokens = mouth::tokenize_internal(TeXString::assembled(the_body));
 <a href=#71 id=71 data-nosnippet>71</a>    def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{postfix}"</span>)), <span class="prelude-val">None</span>, the_tokens, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#72 id=72 data-nosnippet>72</a>    <span class="kw">let </span>empty_tokens = Tokens::new(<span class="macro">vec!</span>[]);
 <a href=#73 id=73 data-nosnippet>73</a>    def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\p@enum{postfix}"</span>)), <span class="prelude-val">None</span>, empty_tokens, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">let </span>label_body = <span class="macro">s!</span>(<span class="string">"\\theenum{postfix}"</span>);
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">let </span>label_tokens = mouth::tokenize_internal(<span class="kw-2">&amp;</span>label_body);
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">let </span>label_tokens = mouth::tokenize_internal(TeXString::assembled(label_body));
 <a href=#76 id=76 data-nosnippet>76</a>    def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\labelenum{postfix}"</span>)), <span class="prelude-val">None</span>, label_tokens, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#77 id=77 data-nosnippet>77</a>    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[]))
 <a href=#78 id=78 data-nosnippet>78</a>  });

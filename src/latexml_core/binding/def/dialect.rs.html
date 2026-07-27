@@ -33,7 +33,7 @@
 <a href=#33 id=33 data-nosnippet>33</a>  stomach::<span class="kw-2">*</span>,
 <a href=#34 id=34 data-nosnippet>34</a>  tbox::Tbox,
 <a href=#35 id=35 data-nosnippet>35</a>  token::<span class="kw-2">*</span>,
-<a href=#36 id=36 data-nosnippet>36</a>  tokens::Tokens,
+<a href=#36 id=36 data-nosnippet>36</a>  tokens::{TeXString, Tokens},
 <a href=#37 id=37 data-nosnippet>37</a>  whatsit::Whatsit,
 <a href=#38 id=38 data-nosnippet>38</a>};
 <a href=#39 id=39 data-nosnippet>39</a>
@@ -475,7 +475,7 @@
 <a href=#475 id=475 data-nosnippet>475</a>  </span>} <span class="kw">else </span>{
 <a href=#476 id=476 data-nosnippet>476</a>    cs
 <a href=#477 id=477 data-nosnippet>477</a>  };
-<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">let </span>presentation_toks = mouth::tokenize_internal(<span class="kw-2">&amp;</span>presentation);
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">let </span>presentation_toks = mouth::tokenize_internal(TeXString::assembled(presentation.clone()));
 <a href=#479 id=479 data-nosnippet>479</a>
 <a href=#480 id=480 data-nosnippet>480</a>  <span class="comment">// Make the original CS expand into a DUAL invoking a presentation macro and content constructor
 <a href=#481 id=481 data-nosnippet>481</a>  </span><span class="kw">let </span>captured_role = options.role.clone();

@@ -1123,13 +1123,13 @@
 <a href=#1123 id=1123 data-nosnippet>1123</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lshiftnum {}"</span>, sub[(num)] {
 <a href=#1124 id=1124 data-nosnippet>1124</a>    <span class="kw">let </span>n: f64 = do_expand(num)<span class="question-mark">?</span>.to_string().parse().unwrap_or(<span class="number">0.0</span>);
 <a href=#1125 id=1125 data-nosnippet>1125</a>    <span class="kw">let </span>result = (<span class="number">10.0 </span>* n) <span class="kw">as </span>i64;
-<a href=#1126 id=1126 data-nosnippet>1126</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>result.to_string()))
+<a href=#1126 id=1126 data-nosnippet>1126</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(TeXString::assembled(result.to_string())))
 <a href=#1127 id=1127 data-nosnippet>1127</a>  });
 <a href=#1128 id=1128 data-nosnippet>1128</a>
 <a href=#1129 id=1129 data-nosnippet>1129</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\llshiftnum {}"</span>, sub[(num)] {
 <a href=#1130 id=1130 data-nosnippet>1130</a>    <span class="kw">let </span>n: f64 = do_expand(num)<span class="question-mark">?</span>.to_string().parse().unwrap_or(<span class="number">0.0</span>);
 <a href=#1131 id=1131 data-nosnippet>1131</a>    <span class="kw">let </span>result = (<span class="number">100.0 </span>* n) <span class="kw">as </span>i64;
-<a href=#1132 id=1132 data-nosnippet>1132</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>result.to_string()))
+<a href=#1132 id=1132 data-nosnippet>1132</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(TeXString::assembled(result.to_string())))
 <a href=#1133 id=1133 data-nosnippet>1133</a>  });
 <a href=#1134 id=1134 data-nosnippet>1134</a>
 <a href=#1135 id=1135 data-nosnippet>1135</a>  <span class="comment">// \lshiftset and \llshiftset: set register = 10*n or 100*n

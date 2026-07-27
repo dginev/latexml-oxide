@@ -57,7 +57,7 @@
 <a href=#57 id=57 data-nosnippet>57</a>    <span class="kw">let </span>format_cs_tok = <span class="macro">T_CS!</span>(format_cs);
 <a href=#58 id=58 data-nosnippet>58</a>    <span class="kw">let </span>format_paramlist = parse_parameters(<span class="string">"{}"</span>, <span class="kw-2">&amp;</span>format_cs_tok, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 <a href=#59 id=59 data-nosnippet>59</a>    def_macro(format_cs_tok, format_paramlist,
-<a href=#60 id=60 data-nosnippet>60</a>      mouth::tokenize_internal(<span class="kw-2">&amp;</span>format_body), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#60 id=60 data-nosnippet>60</a>      mouth::tokenize_internal(TeXString::assembled(format_body)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#61 id=61 data-nosnippet>61</a>
 <a href=#62 id=62 data-nosnippet>62</a>    define_float_environment(<span class="kw-2">&amp;</span>ftype, <span class="kw-2">&amp;</span>auxext, <span class="kw-2">&amp;</span>within)<span class="question-mark">?</span>;
 <a href=#63 id=63 data-nosnippet>63</a>  });
@@ -91,7 +91,7 @@
 <a href=#91 id=91 data-nosnippet>91</a>    def_macro(
 <a href=#92 id=92 data-nosnippet>92</a>      <span class="macro">T_CS!</span>(the_cs),
 <a href=#93 id=93 data-nosnippet>93</a>      <span class="prelude-val">None</span>,
-<a href=#94 id=94 data-nosnippet>94</a>      mouth::tokenize_internal(<span class="kw-2">&amp;</span>the_body),
+<a href=#94 id=94 data-nosnippet>94</a>      mouth::tokenize_internal(TeXString::assembled(the_body)),
 <a href=#95 id=95 data-nosnippet>95</a>      <span class="prelude-val">None</span>,
 <a href=#96 id=96 data-nosnippet>96</a>    )<span class="question-mark">?</span>;
 <a href=#97 id=97 data-nosnippet>97</a>  }

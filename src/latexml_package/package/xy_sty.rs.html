@@ -400,47 +400,53 @@
 <a href=#400 id=400 data-nosnippet>400</a>  <span class="comment">// Catch-all: DeclareOption(undef, ...)
 <a href=#401 id=401 data-nosnippet>401</a>  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
 <a href=#402 id=402 data-nosnippet>402</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span>current_option = do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.to_string();
-<a href=#404 id=404 data-nosnippet>404</a>    unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\xyoption{{{}}}"</span>, current_option)));
-<a href=#405 id=405 data-nosnippet>405</a>  });
-<a href=#406 id=406 data-nosnippet>406</a>
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="comment">//======================================================================
-<a href=#408 id=408 data-nosnippet>408</a>  // Step 6
-<a href=#409 id=409 data-nosnippet>409</a>  </span><span class="macro">ProcessOptions!</span>();
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a>  <span class="comment">//======================================================================
-<a href=#412 id=412 data-nosnippet>412</a>  // Step 7: Defensive stub for `\xymatrix` when bare `\usepackage{xy}`
-<a href=#413 id=413 data-nosnippet>413</a>  // (no [matrix,arrow] options) leaves `xymatrix.tex` unloaded. Without
-<a href=#414 id=414 data-nosnippet>414</a>  // a stub, papers using `\xymatrix@1{a &amp; b \\ c &amp; d}` (e.g.
-<a href=#415 id=415 data-nosnippet>415</a>  // arXiv:1409.7007) cascade 100+ "Stray alignment '&amp;'" errors as the
-<a href=#416 id=416 data-nosnippet>416</a>  // unguarded body is parsed in math mode. The stub uses TeX's `#{`
-<a href=#417 id=417 data-nosnippet>417</a>  // implicit-brace-stop pattern to read xy-pic's `@&lt;modifier&gt;` prefix
-<a href=#418 id=418 data-nosnippet>418</a>  // tokens (`@1`, `@C=10pt`, `@R=2cm`, etc.) up to the brace, then
-<a href=#419 id=419 data-nosnippet>419</a>  // swallows the brace-balanced body. The diagram is dropped — but
-<a href=#420 id=420 data-nosnippet>420</a>  // the cascade is gone, matching latexml's general philosophy of
-<a href=#421 id=421 data-nosnippet>421</a>  // "drop unsupported package content rather than fail conversion".
-<a href=#422 id=422 data-nosnippet>422</a>  //
-<a href=#423 id=423 data-nosnippet>423</a>  // Gated by `\@ifundefined{xymatrix}` so it only fires when xy.tex's
-<a href=#424 id=424 data-nosnippet>424</a>  // option pipeline didn't auto-load matrix/arrow features.
-<a href=#425 id=425 data-nosnippet>425</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{xymatrix}{%
-<a href=#426 id=426 data-nosnippet>426</a>    \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
-<a href=#427 id=427 data-nosnippet>427</a>    \def\lx@xy@stub@xymatrix@body#1{}%
-<a href=#428 id=428 data-nosnippet>428</a>  }{}"</span>);
-<a href=#429 id=429 data-nosnippet>429</a>
-<a href=#430 id=430 data-nosnippet>430</a>  <span class="comment">// Step 8: Defensive stubs for xy2cell.tex's `\UseTwocells` /
-<a href=#431 id=431 data-nosnippet>431</a>  // `\UseHalfTwocells` / `\UseCompositeMaps` / `\UseAllTwocells`.
-<a href=#432 id=432 data-nosnippet>432</a>  // Papers using `\input xy \xyoption{all} \usepackage[all,2cell]{xy}
-<a href=#433 id=433 data-nosnippet>433</a>  // \UseAllTwocells` bypass our ProcessOptions (xy.tex already-loaded
-<a href=#434 id=434 data-nosnippet>434</a>  // by \input), so \xyoption{2cell} never fires and xy2cell.tex never
-<a href=#435 id=435 data-nosnippet>435</a>  // loads. The morphism semantics (definesupermorphism for twocell,
-<a href=#436 id=436 data-nosnippet>436</a>  // halftwocell, compositemap) need the full xy machinery — but at
-<a href=#437 id=437 data-nosnippet>437</a>  // least preventing the undefined-CS error lets the paper render
-<a href=#438 id=438 data-nosnippet>438</a>  // (sans 2cell-specific diagrams). Witness 2305.08678.
-<a href=#439 id=439 data-nosnippet>439</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{UseAllTwocells}{%
-<a href=#440 id=440 data-nosnippet>440</a>    \def\UseTwocells{}%
-<a href=#441 id=441 data-nosnippet>441</a>    \def\UseHalfTwocells{}%
-<a href=#442 id=442 data-nosnippet>442</a>    \def\UseCompositeMaps{}%
-<a href=#443 id=443 data-nosnippet>443</a>    \def\UseAllTwocells{}%
-<a href=#444 id=444 data-nosnippet>444</a>  }{}"</span>);
-<a href=#445 id=445 data-nosnippet>445</a>});
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="comment">// `untex_string()`, NOT `to_string()`: `\\CurrentOption` expands to `Tokens`,
+<a href=#404 id=404 data-nosnippet>404</a>    // and flattening those with `Display` welds a control word onto the letter
+<a href=#405 id=405 data-nosnippet>405</a>    // that follows it. See `TeXString`.
+<a href=#406 id=406 data-nosnippet>406</a>    </span><span class="kw">let </span>current_option = do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.untex_string();
+<a href=#407 id=407 data-nosnippet>407</a>    unread(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">s!</span>(
+<a href=#408 id=408 data-nosnippet>408</a>      <span class="string">"\\xyoption{{{}}}"</span>,
+<a href=#409 id=409 data-nosnippet>409</a>      current_option.as_str()
+<a href=#410 id=410 data-nosnippet>410</a>    ))));
+<a href=#411 id=411 data-nosnippet>411</a>  });
+<a href=#412 id=412 data-nosnippet>412</a>
+<a href=#413 id=413 data-nosnippet>413</a>  <span class="comment">//======================================================================
+<a href=#414 id=414 data-nosnippet>414</a>  // Step 6
+<a href=#415 id=415 data-nosnippet>415</a>  </span><span class="macro">ProcessOptions!</span>();
+<a href=#416 id=416 data-nosnippet>416</a>
+<a href=#417 id=417 data-nosnippet>417</a>  <span class="comment">//======================================================================
+<a href=#418 id=418 data-nosnippet>418</a>  // Step 7: Defensive stub for `\xymatrix` when bare `\usepackage{xy}`
+<a href=#419 id=419 data-nosnippet>419</a>  // (no [matrix,arrow] options) leaves `xymatrix.tex` unloaded. Without
+<a href=#420 id=420 data-nosnippet>420</a>  // a stub, papers using `\xymatrix@1{a &amp; b \\ c &amp; d}` (e.g.
+<a href=#421 id=421 data-nosnippet>421</a>  // arXiv:1409.7007) cascade 100+ "Stray alignment '&amp;'" errors as the
+<a href=#422 id=422 data-nosnippet>422</a>  // unguarded body is parsed in math mode. The stub uses TeX's `#{`
+<a href=#423 id=423 data-nosnippet>423</a>  // implicit-brace-stop pattern to read xy-pic's `@&lt;modifier&gt;` prefix
+<a href=#424 id=424 data-nosnippet>424</a>  // tokens (`@1`, `@C=10pt`, `@R=2cm`, etc.) up to the brace, then
+<a href=#425 id=425 data-nosnippet>425</a>  // swallows the brace-balanced body. The diagram is dropped — but
+<a href=#426 id=426 data-nosnippet>426</a>  // the cascade is gone, matching latexml's general philosophy of
+<a href=#427 id=427 data-nosnippet>427</a>  // "drop unsupported package content rather than fail conversion".
+<a href=#428 id=428 data-nosnippet>428</a>  //
+<a href=#429 id=429 data-nosnippet>429</a>  // Gated by `\@ifundefined{xymatrix}` so it only fires when xy.tex's
+<a href=#430 id=430 data-nosnippet>430</a>  // option pipeline didn't auto-load matrix/arrow features.
+<a href=#431 id=431 data-nosnippet>431</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{xymatrix}{%
+<a href=#432 id=432 data-nosnippet>432</a>    \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
+<a href=#433 id=433 data-nosnippet>433</a>    \def\lx@xy@stub@xymatrix@body#1{}%
+<a href=#434 id=434 data-nosnippet>434</a>  }{}"</span>);
+<a href=#435 id=435 data-nosnippet>435</a>
+<a href=#436 id=436 data-nosnippet>436</a>  <span class="comment">// Step 8: Defensive stubs for xy2cell.tex's `\UseTwocells` /
+<a href=#437 id=437 data-nosnippet>437</a>  // `\UseHalfTwocells` / `\UseCompositeMaps` / `\UseAllTwocells`.
+<a href=#438 id=438 data-nosnippet>438</a>  // Papers using `\input xy \xyoption{all} \usepackage[all,2cell]{xy}
+<a href=#439 id=439 data-nosnippet>439</a>  // \UseAllTwocells` bypass our ProcessOptions (xy.tex already-loaded
+<a href=#440 id=440 data-nosnippet>440</a>  // by \input), so \xyoption{2cell} never fires and xy2cell.tex never
+<a href=#441 id=441 data-nosnippet>441</a>  // loads. The morphism semantics (definesupermorphism for twocell,
+<a href=#442 id=442 data-nosnippet>442</a>  // halftwocell, compositemap) need the full xy machinery — but at
+<a href=#443 id=443 data-nosnippet>443</a>  // least preventing the undefined-CS error lets the paper render
+<a href=#444 id=444 data-nosnippet>444</a>  // (sans 2cell-specific diagrams). Witness 2305.08678.
+<a href=#445 id=445 data-nosnippet>445</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{UseAllTwocells}{%
+<a href=#446 id=446 data-nosnippet>446</a>    \def\UseTwocells{}%
+<a href=#447 id=447 data-nosnippet>447</a>    \def\UseHalfTwocells{}%
+<a href=#448 id=448 data-nosnippet>448</a>    \def\UseCompositeMaps{}%
+<a href=#449 id=449 data-nosnippet>449</a>    \def\UseAllTwocells{}%
+<a href=#450 id=450 data-nosnippet>450</a>  }{}"</span>);
+<a href=#451 id=451 data-nosnippet>451</a>});
 </code></pre></div></section></main></body></html>

@@ -95,7 +95,7 @@
 <a href=#95 id=95 data-nosnippet>95</a>        <span class="string">"\\lx@hidden@bgroup\\lx@unactivate{{{}}}\\lx@wrap[role=PERIOD]{{{}}}\\lx@hidden@egroup"</span>,
 <a href=#96 id=96 data-nosnippet>96</a>        delim_str, todelim_str
 <a href=#97 id=97 data-nosnippet>97</a>      );
-<a href=#98 id=98 data-nosnippet>98</a>      <span class="kw">let </span>expansion = mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion_body);
+<a href=#98 id=98 data-nosnippet>98</a>      <span class="kw">let </span>expansion = mouth::tokenize_internal(TeXString::assembled(expansion_body));
 <a href=#99 id=99 data-nosnippet>99</a>      def_macro(<span class="macro">T_CS!</span>(delim_str), <span class="prelude-val">None</span>, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#100 id=100 data-nosnippet>100</a>    }
 <a href=#101 id=101 data-nosnippet>101</a>    <span class="comment">// Save and deactivate $

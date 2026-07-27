@@ -20,7 +20,7 @@
 <a href=#20 id=20 data-nosnippet>20</a>    bgroup();
 <a href=#21 id=21 data-nosnippet>21</a>    <span class="kw">let </span>result = pgfmath_code_tex::pgfmathparse_eval(<span class="kw-2">&amp;</span>expr_str);
 <a href=#22 id=22 data-nosnippet>22</a>    egroup()<span class="question-mark">?</span>;
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">let </span>result_tokens = mouth::tokenize_internal(<span class="kw-2">&amp;</span>result);
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">let </span>result_tokens = mouth::tokenize_internal(TeXString::assembled(result));
 <a href=#24 id=24 data-nosnippet>24</a>    def_macro(
 <a href=#25 id=25 data-nosnippet>25</a>      cs.unlist().into_iter().next().unwrap_or_else(|| <span class="macro">T_CS!</span>(<span class="string">"\\pgfmathresult"</span>)),
 <a href=#26 id=26 data-nosnippet>26</a>      <span class="prelude-val">None</span>,

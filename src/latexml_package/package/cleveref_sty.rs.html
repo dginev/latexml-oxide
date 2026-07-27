@@ -234,7 +234,7 @@
 <a href=#234 id=234 data-nosnippet>234</a>      out.push(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>));
 <a href=#235 id=235 data-nosnippet>235</a>    }
 <a href=#236 id=236 data-nosnippet>236</a>    out.push(<span class="macro">T_BEGIN!</span>());
-<a href=#237 id=237 data-nosnippet>237</a>    out.extend(mouth::tokenize_internal(show).unlist());
+<a href=#237 id=237 data-nosnippet>237</a>    out.extend(mouth::tokenize_internal(TeXString::assembled(show.to_string())).unlist());
 <a href=#238 id=238 data-nosnippet>238</a>    out.push(<span class="macro">T_END!</span>());
 <a href=#239 id=239 data-nosnippet>239</a>    out.push(<span class="macro">T_BEGIN!</span>());
 <a href=#240 id=240 data-nosnippet>240</a>    out.extend(label.clone().unlist());

@@ -27,7 +27,7 @@
 <a href=#27 id=27 data-nosnippet>27</a>  // or more likely, treating the bytes as (misinterpreted?) utf8?
 <a href=#28 id=28 data-nosnippet>28</a>  // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
 <a href=#29 id=29 data-nosnippet>29</a>  </span>assign_value(<span class="string">"INPUT_ENCODING"</span>, encoding.to_string(), <span class="prelude-val">None</span>);
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="kw">let </span>encoding_tokenized = <span class="macro">TokenizeInternal!</span>(encoding);
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="kw">let </span>encoding_tokenized = <span class="macro">TokenizeInternal!</span>(TeXString::assembled(encoding.to_string()));
 <a href=#31 id=31 data-nosnippet>31</a>  def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\inputencodingname"</span>), <span class="prelude-val">None</span>, encoding_tokenized, <span class="prelude-val">None</span>)
 <a href=#32 id=32 data-nosnippet>32</a>}
 <a href=#33 id=33 data-nosnippet>33</a>
