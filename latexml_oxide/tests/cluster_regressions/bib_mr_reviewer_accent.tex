@@ -2,6 +2,12 @@
 % accent in a reviewer field; all must render as names, not undefined macros.
 % See the `.bib` header.
 \documentclass{article}
+% `primerev` carries `Gel\cprime fand`, and `\cprime` belongs to mathscinet.sty
+% (AMS, amsrefs bundle) — as of 2026-07-27 it is no longer defined always-on, so a
+% document that uses it must load the package, exactly as pdflatex requires. This
+% fixture is about accent WELDS surviving reversion, not about macro availability;
+% loading the package keeps it testing the former.
+\usepackage{mathscinet}
 \begin{document}
 See \cite{cedillarev,primerev,dotlessrev,zblrev}.
 \bibliographystyle{plain}
