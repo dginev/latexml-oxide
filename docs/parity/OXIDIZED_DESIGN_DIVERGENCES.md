@@ -2848,6 +2848,40 @@ Guards (`pre_bibtex.rs`): `filter_digests_only_the_cited_entries`,
 `filter_tolerates_a_cited_key_with_no_entry`, `no_filter_digests_every_entry`,
 `cite_key_scanner_handles_the_cite_family`.
 
+### 81. amsmath's `\ext@arrow` / `\arrowfill@` internals get bindings Perl does not have
+
+**Perl behaviour.** `LaTeXML/lib/LaTeXML/Package/amsmath.sty.ltxml` binds the
+*public* extensible arrows (`\xrightarrow`, `\xleftarrow`, …) as constructors and
+never defines the internals they are built from. `\ext@arrow` (amsmath.sty L1012,
+`\def\ext@arrow#1#2#3#4#5#6#7`) and `\arrowfill@` (L971, `\def\arrowfill@#1#2#3#4`)
+are therefore **undefined** in Perl in every configuration that does not raw-load
+`amsmath.sty` itself. Any package or preamble that builds its own arrow on top of
+them — `extpfeil.sty`'s `\newextarrow`, `mathtools`' `\xhookrightarrow`, a
+hand-rolled `\newcommand*{\xfoo}[2][]{\ext@arrow …}` — hits
+`Error:undefined:\ext@arrow` plus `Error:undefined:\arrowfill@`, and the arrow's
+own arguments then leak into the surrounding math as text.
+
+**We define both** (`latexml_package/src/package/amsmath_sty.rs`), passing through
+to `\to^{above}_{below}` and `\to` respectively — we do not model stretchy arrow
+rendering, but the arity is what the binding is for. Witnesses 2411.17873 and
+2412.00464 (amsmath's own `\ext@arrow 0359\rightarrowfill@…`), 1308.1071
+(`extpfeil`'s `\xmapsto`), 2606.01903 (`extpfeil`'s `\xtwoheadleftarrow`). On
+2606.01903 this is the whole difference between the two engines: same-host Perl
+0.8.8, verbose, ar5iv profile, reports **258 errors** with `MAX_ERRORS` lifted
+(and `Fatal:too_many_errors` at 102 with the shipped cap of 100); we report **0**.
+
+**The parameters are TeX undelimited arguments, all of them.** Each `#n` of a
+plain `\def` reads a single token OR a balanced `{…}` group. Spelling any of them
+`Token` in the parameter spec reads only the opening `{` of a braced argument and
+spills the remainder — including its closing `}` — back into the stream, where the
+stray `}` closes the enclosing math group and everything after it is swallowed
+into the leaked `<ltx:XMath>`. The braced form is not exotic: `\newextarrow`
+expands to `\ext@arrow #2{\arrowfill@#3}{##1}{##2}`, and the `\mkern` quadruple
+`#2` is only four bare digits when every amount is a single digit —
+`\newextarrow{\xtwoheadleftarrow}{500{40}}{…}` braces the 40. So all seven
+parameters of `\ext@arrow` and all four of `\arrowfill@` are `{}`. Guard
+`06_cluster_math::cluster_ext_arrow_braced_mkern`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

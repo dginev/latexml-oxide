@@ -583,28 +583,37 @@ LoadDefinitions!({
     "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}"
   );
 
-  // amsmath.sty L1013: \ext@arrow #1#2#3#4#5#6#7 — the internal extension-arrow
-  // builder. Args: #1..#4 are mkern digit-tokens, #5 is the arrow renderer
-  // CS (e.g. \rightarrowfill@) OR a `{...}` group (extpfeil's
-  // \newextarrow generates `\ext@arrow #2{\arrowfill@#3}{...}{...}`
-  // where `{\arrowfill@#3}` is a braced group), #6 is below-label,
-  // #7 is above-label. Use `{}` for the 5th arg so it reads either
-  // a single token OR a balanced group (TeX-semantic `#5` —
-  // matches Perl `\def\ext@arrow#1#2#3#4#5#6#7`).
-  // User code occasionally calls \ext@arrow directly when defining custom
-  // arrows. Pass-through to plain \to^{above}_{below} so the math renders.
-  // amsmath.sty L972: \arrowfill@ #1#2#3#4 — 4 CS tokens; we don't model
-  // stretchy arrow rendering, stub as \to.
-  // Witness 2411.17873, 2412.00464 (amsmath's own arrows);
-  // 1308.1071 (extpfeil's \xmapsto = `\ext@arrow 0599{\arrowfill@
-  // {\mapstochar\relbar}\relbar\rightarrow}{a}{f}` — `Token` for
-  // arg 5 read only the `{` and left the rest as unmatched group,
-  // crashing display math with "Attempt to end mode display_math").
+  // amsmath.sty L1012: `\def\ext@arrow#1#2#3#4#5#6#7` — the internal
+  // extension-arrow builder. #1..#4 are the four `\mkern` amounts, #5 the
+  // arrow renderer, #6 the below-label, #7 the above-label.
+  // amsmath.sty L971: `\def\arrowfill@#1#2#3#4` — the stretchy-arrow renderer.
+  // User code calls both directly when defining custom arrows; we don't model
+  // stretchy rendering, so pass through to plain `\to^{above}_{below}` / `\to`.
+  //
+  // EVERY parameter of both is a plain TeX undelimited argument: it reads a
+  // single token OR a balanced `{...}` group. Spelling any of them `Token`
+  // reads only the opening `{` of a braced argument and spills the remainder
+  // (including its closing `}`) back into the stream, where the stray `}`
+  // closes the enclosing math group and the rest of the document is swallowed
+  // into the leaked `<ltx:XMath>`. So all seven / all four are `{}`.
+  //
+  // The braced form is what extpfeil.sty's `\newextarrow` generates:
+  //   \newcommand*{#1}[2][]{\ext@arrow #2{\arrowfill@#3}{##1}{##2}}
+  // with `#2` an mkern quadruple that is NOT always four single digits —
+  // `\newextarrow{\xtwoheadleftarrow}{500{40}}{…}` makes #4 the group `{40}`
+  // (an mkern amount ≥ 10 has to be braced), and `{\arrowfill@#3}` makes #5 a
+  // group whose own first argument may be braced in turn
+  // (`\arrowfill@{\mapstochar\relbar}\relbar\rightarrow`).
+  // Witnesses: 2411.17873, 2412.00464 (amsmath's own `0359`/`3095` arrows);
+  // 1308.1071 (extpfeil `\xmapsto`, arg 5); 2606.01903 and 2606.14212
+  // (extpfeil `\xtwoheadleftarrow`/`\xtwoheadrightarrow`, arg 4 — 258 and 3
+  // errors in Perl, which has no `\ext@arrow` at all, vs a 1000-error runaway
+  // and a 194-error one here).
   DefMacro!(
-    "\\ext@arrow Token Token Token Token {}{}{}",
+    "\\ext@arrow {}{}{}{}{}{}{}",
     "{\\mathrel{\\to}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}"
   );
-  DefMacro!("\\arrowfill@ Token Token Token Token", "\\to");
+  DefMacro!("\\arrowfill@ {}{}{}{}", "\\to");
   DefMacro!("\\rightarrowfill@", "\\rightarrow");
   DefMacro!("\\leftarrowfill@", "\\leftarrow");
   DefMacro!("\\leftrightarrowfill@", "\\leftrightarrow");

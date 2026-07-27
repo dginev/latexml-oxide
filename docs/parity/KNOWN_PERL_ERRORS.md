@@ -2594,3 +2594,74 @@ stringifies and reverts identically. Guard
 (`latexml_oxide/tests/59_href_semiverbatim_loop.rs`); the `\edef`/`\xdef` half of
 the same defect is guarded by `58_href_edef_loop.rs`. Candidate to upstream —
 the same one-token change applies to `hyperref.sty.ltxml`.
+
+---
+
+## 63. An unclosed math region swallows the rest of the document — in BOTH engines
+
+**Symptom.** One macro-level breakage inside `$…$` / `\[…\]` / an
+`align`-family body leaves the math group open. Digestion never returns to text
+mode, so every following `_`, `^`, `&`, `\end{…}` and section break is an error
+and the whole remainder of the document lands inside a single `<ltx:XMath>` — the
+leak surfaces in `<ltx:title>`, `<ltx:tag>`, `<ltx:proof>`. The engine then hits
+its `too_many_errors` circuit breaker and produces no document at all.
+
+**This is shared, not a Rust regression.** Classified 2026-07-27 against
+same-host Perl 0.8.8 (`/usr/local/bin/latexml`, verbose — never `--quiet` —
+`--preload=ar5iv.sty --path=ar5iv-bindings/bindings`, the fleet's ar5iv
+profile, each paper's cortex-chosen main file). **At shipped defaults Perl goes
+`Fatal:too_many_errors` on all eleven witnesses**, at 101 errors + the fatal;
+we go fatal at 1001 + the fatal, because `tikz.sty` raises our `MAX_ERRORS` to
+1000 while Perl's `Core/State.pm` L96 default of 100 has no override anywhere in
+its tree. Same severity, same outcome, different amount of diagnostics on the way
+down.
+
+Lifting both caps (Perl: a preloaded binding doing
+`AssignValue('MAX_ERRORS'=>100000)`; Rust: a throwaway patch to the two circuit
+breakers in `common/error.rs`) shows the flood itself is the same flood — same
+first error, same classes, frequently the same counts:
+
+| witness | Perl uncapped | Rust uncapped | first error (both engines, same site) |
+|---|---|---|---|
+| 2605.03113 | 1956 | 1953 | `undefined:\overarrow@` — amsmath internal behind a hand-rolled `\overrightharpoon` via `\mathpalette` |
+| 2605.05934 | 4211¹ | 3604 | `\lx@begin@alignment` in math — mhchem `\ce{}` inside a `\bea`/`\eea` alignment (see also #53) |
+| 2605.07772 | 100002² | 2040 | `undefined:\usephysicsmodule` (physics2) |
+| 2605.09261 | 926³ | 1079 | custom tikz `diagram` env inside `align*` |
+| 2605.11190 | 19984 | 1159 | `\input` of a tikz `\matrix` whose cells carry `$…$`, inside `align*` |
+| 2605.12930 | 2842 | 1097 | tikz-cd "Diagrams cannot be nested" |
+| 2605.15522 | 614 | OOM⁴ | mathtools `\DeclarePairedDelimiterX` starred form spanning lines |
+| 2605.15678 | 1976¹ | 2024 | `undefined:\nin`; author `\def\({\left(}` `\def\){\right)}` |
+| 2605.23308 | 1055 | OOM⁴ | `\g{c}{summ}` custom macro inside `align*` |
+| 2605.30732 | 1137 | 1173 | `\brackets{…}` group leak inside `equation*` |
+| 2606.01903 | 258 | 1810 | `undefined:\ext@arrow` — **the one Rust-only case, see below** |
+
+¹ killed at the harness timeout, count is a floor. ² hit the raised cap.
+³ Perl ends in `Fatal:perl:deep_recursion` rather than finishing.
+⁴ with the circuit breaker removed the runaway exhausts RAM and is SIGKILLed —
+which is what the breaker exists to prevent.
+
+Two rows are worth reading as exact matches rather than "same order of
+magnitude". 2605.05934, uncapped on both sides: `XMHint` 260,
+`\lx@end@inline@math` 189, `unexpected:_` 71, `bibitem` 64,
+`\lx@begin@alignment` 45 — five classes identical, and the same first error at
+the same line:col. 2605.23308, our *capped* run against Perl uncapped:
+`unexpected:_` 160 = 160, `unexpected:^` 104 = 104, `\lx@begin@alignment`
+54 = 54 — i.e. we saturate before we can diverge.
+
+**The one exception, fixed:** `2606.01903` was GENUINE-RUST-ONLY. Perl has no
+`\ext@arrow` binding at all, so it errors once and recovers; we bind it, and the
+binding read four of its seven undelimited arguments as `Token`, splitting
+`extpfeil`'s braced `\mkern` amount `{40}` and spilling a `}` that closed the
+display math. Fixed (OXIDIZED_DESIGN #81, guard
+`06_cluster_math::cluster_ext_arrow_braced_mkern`): 1002 errors + fatal → **0**.
+Grepping the 536 currently-fatal 2605+2606 papers for
+`ext@arrow|extpfeil|newextarrow` found one more of the same shape, 2606.14212
+(`\xtwoheadrightarrow` in an `align*`): 194 errors + fatal → **0**, against 3
+in Perl.
+
+**Not to be "fixed" into a divergence.** The remaining ten need their individual
+undefined internals (`\overarrow@`, `\underarrow@`, `\usephysicsmodule`, …)
+implemented before the math can close — each of those is a capability Perl also
+lacks, so adding them is beyond-Perl work, not parity work. Do not mistake the
+1000-vs-100 error-cap difference for a divergence: it is a diagnostics budget,
+and both engines fail these papers.
