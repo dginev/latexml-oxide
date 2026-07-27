@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["set_hook","try_autoload"],"type":["KernelAutoloadHook"]};

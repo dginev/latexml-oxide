@@ -1,0 +1,56 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Loading the LaTeX format on demand — the eager trigger list’s safety net."><title>latexml_engine::latex_kernel - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ddecd707.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (dc3f85158 2026-07-26)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module latex_kernel</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_engine/index.html">latexml_<wbr>engine</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module latex_<wbr>kernel</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#the-membership-oracle-is-the-dump-not-latexltx" title="The membership oracle is the DUMP, not `latex.ltx`">The membership oracle is the DUMP, not <code>latex.ltx</code></a></li><li><a href="#degraded-no-dump-branch" title="Degraded (no-dump) branch">Degraded (no-dump) branch</a></li></ul><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>engine</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_engine</a></div><h1>Module <span>latex_<wbr>kernel</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_engine/latex_kernel.rs.html#1-197">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Loading the LaTeX format on demand — the eager trigger list’s safety net.</p>
+<p><code>TeX.pool</code> installs the Perl-faithful autoload triggers (<code>TeX.pool.ltxml</code>
+L33-56: <code>\documentclass</code>, <code>\newcommand</code>, <code>\begin</code>, …), each a macro that
+expands to <code>\@load@latex@pool &lt;trigger&gt;</code>. Those fire <em>eagerly</em>, on a
+legitimate use, before any error is raised — and they stay exactly as Perl
+writes them.</p>
+<p>But a curated list is incomplete by construction: real LaTeX has no “before
+the kernel” (<code>latex.ltx</code> <em>is</em> the format), so a document may legitimately
+open with any kernel command. Anything not on the list was simply undefined
+— stubbed as <code>&lt;ltx:ERROR/&gt;</code>, with the document derailing from there. The
+canonical witness is the “use this class if installed” idiom</p>
+<div class="example-wrap"><pre class="language-tex"><code>\IfFileExists{proc-l.cls}{\documentclass{proc-l}}{\documentclass{amsproc}}</code></pre></div>
+<p>(arXiv 2605.25877 line 4, 2606.06905, 2606.09693, 2606.16723): with
+<code>\IfFileExists</code> undefined the conditional collapses, <em>no class is ever
+selected</em>, and the run cascades into <code>Fatal:TooManyErrors</code>. Same-host Perl
+LaTeXML fails identically — see <code>docs/parity/KNOWN_PERL_ERRORS.md</code>.</p>
+<p><a href="fn.autoload_latex_kernel.html" title="fn latexml_engine::latex_kernel::autoload_latex_kernel"><code>autoload_latex_kernel</code></a> closes the gap generally: registered into
+<code>latexml_core::binding::kernel_autoload</code>, it is consulted at the two
+undefined-CS paths (gullet <code>read_x_token</code>, stomach <code>invoke_token_undefined</code>)
+<em>instead of</em> erroring, and answers “is this a LaTeX kernel command?” — if so
+the format loads and the token is retried. It subsumes the two Rust-only,
+witness-driven trigger accretions that used to sit in <code>tex.rs</code>’s list:
+<code>\UseRawInputEncoding</code> (witness 2403.19280) and <code>\DocumentMetadata</code>
+(witness 2305.08034), which are now just two instances of “a kernel CS used
+before the format loaded”.</p>
+<h2 id="the-membership-oracle-is-the-dump-not-latexltx"><a class="doc-anchor" href="#the-membership-oracle-is-the-dump-not-latexltx">§</a>The membership oracle is the DUMP, not <code>latex.ltx</code></h2>
+<p>The question that has to be answered <em>before</em> committing to a load is “what
+will be defined <strong>after</strong> <code>LaTeX.pool</code> loads?” — because “load it and see if
+that helped” would drag the kernel into genuinely plain-TeX documents on
+their first undefined CS.</p>
+<p>The right oracle for that is <code>latex.YYYY.dump.txt</code>, and deliberately <strong>not</strong>
+the host’s <code>latex.ltx</code>. The dump is not a “YYYY artifact”: it is generated by
+<em>our current code</em> inside a pinned TL-YYYY container, and it is the
+<strong>executed</strong> result of that bootstrap — the state delta this engine actually
+reaches. <code>latex.ltx</code> is source text, so answering the same question from it
+would mean re-deciding every <code>\def</code> / <code>\let</code> / <code>\csname</code> / <code>\@namedef</code> /
+<code>\ifx</code> in the file, i.e. re-running the load we are trying to avoid. It is
+also the very artifact <code>LaTeX.pool</code> goes on to replay, so a catalogue built
+from it cannot disagree with what the load installs.
+<strong>Do not “correct” this to <code>latex.ltx</code>.</strong></p>
+<p>Only the backward direction exists. A control sequence newer than the
+ambient dump year is out of scope by design — we cannot predict a TeX Live
+that has not shipped, and the host TeX Live of that age does not have the
+command either, so reporting it undefined is correct. There is no
+forward-compat seam and none is wanted.</p>
+<h2 id="degraded-no-dump-branch"><a class="doc-anchor" href="#degraded-no-dump-branch">§</a>Degraded (no-dump) branch</h2>
+<p><code>LoadFormat('latex')</code> has two mutually exclusive branches (CLAUDE.md durable
+parity rule 1). On the degraded one — <code>$LATEXML_NODUMP</code>, or no dump
+reachable at all — there is no key set to test against, so
+<a href="fn.latex_kernel_defines.html" title="fn latexml_engine::latex_kernel::latex_kernel_defines"><code>latex_kernel_defines</code></a> is always <code>false</code> and this mechanism never fires.
+Behaviour there is bit-identical to before: the Perl <code>TeX.pool</code> L33-56
+trigger list remains the only mechanism.</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.autoload_latex_kernel.html" title="fn latexml_engine::latex_kernel::autoload_latex_kernel">autoload_<wbr>latex_<wbr>kernel</a></dt><dd>The <code>latexml_core::binding::kernel_autoload</code> hook: <code>true</code> means the LaTeX
+format was just loaded <em>and</em> <code>token</code> now has a meaning, so the caller must
+retry it; <code>false</code> means take the ordinary bounded <code>Error:undefined</code> path.</dd><dt><a class="fn" href="fn.latex_kernel_defines.html" title="fn latexml_engine::latex_kernel::latex_kernel_defines">latex_<wbr>kernel_<wbr>defines</a></dt><dd>Does loading <code>LaTeX.pool</code> define <code>cs</code>? See the module docs for why the
+ambient kernel dump is the oracle. <code>false</code> on the degraded no-dump branch.</dd><dt><a class="fn" href="fn.load_latex_pool.html" title="fn latexml_engine::latex_kernel::load_latex_pool">load_<wbr>latex_<wbr>pool</a></dt><dd>Load <code>LaTeX.pool</code>, the way the <code>\@load@latex@pool</code> trigger primitive does.</dd></dl></section></div></main></body></html>

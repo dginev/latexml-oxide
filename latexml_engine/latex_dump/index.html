@@ -3,4 +3,6 @@
 via <code>dump_reader::load_from_str()</code>. Avoids 350K-line compiled Rust overhead.</p>
 <p>Regenerated automatically when TeX Live installation changes.
 Manual regeneration: <code>cargo clean -p latexml_package &amp;&amp; cargo build</code></p>
-</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_engine::latex_dump::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_engine::latex_dump::load_definitions">load_<wbr>definitions</a></dt><dt><a class="fn" href="fn.resolve_dump_text.html" title="fn latexml_engine::latex_dump::resolve_dump_text">resolve_<wbr>dump_<wbr>text</a></dt><dd>Resolve the ambient <code>latex.YYYY.dump.txt</code> and read it, WITHOUT applying
+anything to State. <code>Some((content, source_label, dump_year, from_embedded))</code>
+or <code>None</code> when <code>$LATEXML_NODUMP</code> is set or no dump is reachable.</dd></dl></section></div></main></body></html>

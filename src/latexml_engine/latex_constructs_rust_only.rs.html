@@ -53,20 +53,20 @@
 <a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
 <a href=#54 id=54 data-nosnippet>54</a>  // for legacy 8-bit-encoding compat (used by papers that pre-date the
 <a href=#55 id=55 data-nosnippet>55</a>  // 2018-04-01 default switch to UTF-8). Upstream `\let`s it to `\relax`
-<a href=#56 id=56 data-nosnippet>56</a>  // after first use (L18324). LaTeXML's dump skips this section, so the
-<a href=#57 id=57 data-nosnippet>57</a>  // CS arrives undefined — papers like 1711.09157 with
-<a href=#58 id=58 data-nosnippet>58</a>  // `\UseRawInputEncoding` at line 1 col 1 fail with
-<a href=#59 id=59 data-nosnippet>59</a>  // `Error:undefined:\UseRawInputEncoding`. Define as a no-op so the
-<a href=#60 id=60 data-nosnippet>60</a>  // legacy preamble compiles silently; the encoding-switching behaviour
-<a href=#61 id=61 data-nosnippet>61</a>  // is irrelevant for our XML pipeline.
+<a href=#56 id=56 data-nosnippet>56</a>  // after first use (L18324); the raw definition is a catcode-mangling
+<a href=#57 id=57 data-nosnippet>57</a>  // loop we must not run. Papers like 1711.09157 and 2403.19280 invoke it
+<a href=#58 id=58 data-nosnippet>58</a>  // at line 1 col 1, BEFORE `\documentclass` — `latex_kernel::
+<a href=#59 id=59 data-nosnippet>59</a>  // autoload_latex_kernel` pulls the format in for them. Define as a
+<a href=#60 id=60 data-nosnippet>60</a>  // no-op so the legacy preamble compiles silently; the encoding-switching
+<a href=#61 id=61 data-nosnippet>61</a>  // behaviour is irrelevant for our XML pipeline.
 <a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">Let!</span>(<span class="string">"\\UseRawInputEncoding"</span>, <span class="string">r"\relax"</span>);
 <a href=#63 id=63 data-nosnippet>63</a>
 <a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// \DocumentMetadata{&lt;keyval&gt;} — LaTeX 2024 kernel command for PDF
-<a href=#65 id=65 data-nosnippet>65</a>  // accessibility metadata. Author calls it BEFORE `\documentclass`
-<a href=#66 id=66 data-nosnippet>66</a>  // (the autoload trigger in tex.rs ensures the LaTeX pool is loaded
-<a href=#67 id=67 data-nosnippet>67</a>  // by the time it's expanded). The kvopts inside are PDF-only and
-<a href=#68 id=68 data-nosnippet>68</a>  // semantically irrelevant for XML output — gobble the brace group.
-<a href=#69 id=69 data-nosnippet>69</a>  // Witness 2305.08034.
+<a href=#65 id=65 data-nosnippet>65</a>  // accessibility metadata. Author calls it BEFORE `\documentclass`;
+<a href=#66 id=66 data-nosnippet>66</a>  // `latex_kernel::autoload_latex_kernel` loads the LaTeX pool on the
+<a href=#67 id=67 data-nosnippet>67</a>  // undefined CS so this stub is in place by the time it is expanded.
+<a href=#68 id=68 data-nosnippet>68</a>  // The kvopts inside are PDF-only and semantically irrelevant for XML
+<a href=#69 id=69 data-nosnippet>69</a>  // output — gobble the brace group. Witness 2305.08034.
 <a href=#70 id=70 data-nosnippet>70</a>  </span>def_macro_noop(<span class="string">"\\DocumentMetadata{}"</span>)<span class="question-mark">?</span>;
 <a href=#71 id=71 data-nosnippet>71</a>
 <a href=#72 id=72 data-nosnippet>72</a>  <span class="comment">//======================================================================
