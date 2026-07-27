@@ -218,15 +218,19 @@ fn convert(request: &BibConversionRequest) -> Option<PostDocument> {
     provide_url_command()?;
     latexml_core::stomach::digest(latexml_core::mouth::tokenize(BBL_STANDARD_FALLBACKS))?;
 
-    // `noinitialize` because the session above is already the one we want:
-    // `digest_file`'s own initialization would call `initialize_singletons` a
-    // second time on this thread, which re-runs the pools' `Let!`s and resets
-    // the REPORT the outer document is still counting into.
+    // Digest only what the document cites — a `.bib` is a library, and
+    // `bibtex(1)` reads the `.aux`'s `\citation` records rather than the whole
+    // file. Set around `digest_file` only: the filter lives in the same
+    // thread-local State the outer document uses, so leaving it installed
+    // would leak into any later `.bib` in this process.
+    latexml_engine::pre_bibtex::set_wanted_keys(request.wanted_keys.clone());
     let digested = core.digest_file(source.clone(), DigestionOptions {
       mode: Some(DigestionMode::BibTeX),
       noinitialize: Some(true),
       ..DigestionOptions::default()
-    })?;
+    });
+    latexml_engine::pre_bibtex::clear_wanted_keys();
+    let digested = digested?;
     let document = core.convert_document(digested)?;
     Ok(PostDocument::new(document.document, PostDocumentOptions {
       source_directory: Some(".".to_string()),
