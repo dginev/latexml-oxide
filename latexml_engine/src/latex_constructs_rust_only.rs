@@ -405,63 +405,25 @@ LoadDefinitions!({
     Some(Scope::Global),
   );
 
+    //======================================================================
+  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — REMOVED from the
+  // always-on set 2026-07-27 (maintainer decision). They belong to
+  // `mathscinet.sty`, which defines them (`mathscinet_sty.rs`), and a
+  // definition that is always live can shadow an author's own — the same
+  // hazard that kept `\Dbar` package-only from the start.
+  //
+  // The stub was justified by four papers regaining `undefined:\cprime`
+  // without it (2605.00173/.00186/.00190/.00305). Three of those four were
+  // artifacts of a defect since fixed: we digested EVERY entry of a `.bib`
+  // library, so we met `\cprime` in entries `bibtex(1)` never copies into
+  // the `.bbl`. Since #416 we digest only the CITED entries, which removes
+  // the trigger structurally rather than papering over it.
+  //
+  // What a paper needs now is what the real toolchain needs: load
+  // `mathscinet` (or `amsrefs`, which requires it), or carry the definition
+  // in its own `.bib` `@preamble` — which executes, and is guarded by
+  // `bib_preamble_defines_macros_for_the_whole_bibliography`. Witness
+  // 2605.11579 (17 uses) is covered by its `@preamble` and is unaffected.
+  // See OXIDIZED_DESIGN #78 and `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
   //======================================================================
-  // 5. MathSciNet transliteration — the `\cprime` family, always-on
-  //
-  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` render the Russian
-  // soft/hard signs in transliterated names (`Gel\cprime fand` is
-  // Gelʹfand). Their real home is `mathscinet.sty` (AMS, amsrefs
-  // bundle), which `mathscinet_sty.rs` now binds — and all three
-  // witnesses below DO load that package (arXiv:2508.13753 L7,
-  // 2508.20226 L3, 2509.07628 L13), which corrects the claim in the
-  // comment these lines used to carry in `latex_constructs.rs`
-  // (cyracc.def, "no Cyrillic encoding otherwise loaded").
-  //
-  // They stay always-on anyway, because the package is not the only way
-  // they arrive: a `.bib` field carries `Gel\cprime fand` with no
-  // `\usepackage` behind it, and MathSciNet exports lean on an
-  // `@preamble` that may or may not define it (2605.11579's `biblo.bib`
-  // defines `\cprime` twenty-odd times; another export need not).
-  // Removing this stub was measured to cost exactly that case —
-  // `bib_mr_reviewer_accent`'s `primerev` entry regains
-  // `undefined:\cprime`. The `provide` in the binding then finds them
-  // already defined, which is the correct no-op.
-  //
-  // Re-measured on the corpus 2026-07-27, because `@preamble` execution
-  // works (it is Perl `Pre/BibTeX.pm::toTeX` L118-122, ported at
-  // `pre_bibtex::to_tex`, guarded by
-  // `bib_preamble_defines_macros_for_the_whole_bibliography`) and would
-  // in principle make this stub redundant. It does not: across the first
-  // 600 papers of arXiv 2605, SEVEN use `\cprime` inside a `.bib` and
-  // **six of them carry no `@preamble` at all** — nothing defines it
-  // anywhere in their source. Deleting these four lines takes 2605.00173,
-  // 2605.00186, 2605.00190 and 2605.00305 from 0 to 1 `undefined:\cprime`
-  // each, while the one paper that DOES define it in its `@preamble`
-  // (2605.11579, 17 uses across `AUTHOR`/`TITLE`/`BOOKTITLE`/`MRREVIEWER`)
-  // is unaffected either way. Detail + table in
-  // `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
-  //
-  // Three of those four regressions would also be errors the real toolchain
-  // never produces: `bibtex(1)` copies only CITED entries into the `.bbl`,
-  // and in 2605.00173/.00186/.00190 the `\cprime`-bearing entry is never
-  // cited, so pdflatex never sees the macro. We digest every entry in the
-  // `.bib`, so the stub is what keeps that asymmetry from manufacturing a
-  // diagnostic. (2605.00305 is the fourth, and there the entry IS cited —
-  // `MR710121`, "Arnol\cprime d diffusion" — so the stub renders content the
-  // reader sees.)
-  //
-  // Contrast `\Dbar`, which is package-ONLY and deliberately so: four
-  // authors per 4,000 papers define it themselves with `\newcommand`,
-  // and an always-on definition would silently shadow them
-  // (OXIDIZED_DESIGN #78). No author in that scan defines the `\cprime`
-  // family with `\newcommand`, so this stub shadows nobody.
-  //
-  // Per WISDOM #50 the visual intent (an apostrophe-like mark) is what
-  // survives the XML→HTML pipeline; the TeX definitions are math-mode
-  // primes.
-  //======================================================================
-  DefMacro!("\\cprime", "\u{02B9}");
-  DefMacro!("\\Cprime", "\u{02B9}");
-  DefMacro!("\\cdprime", "\u{02BA}");
-  DefMacro!("\\Cdprime", "\u{02BA}");
 });
