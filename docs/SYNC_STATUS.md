@@ -58,7 +58,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
-| **R9** | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | parked; several carry explicit "do NOT start" | **family** | [`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md) |
+| **R9** | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | parked; several carry explicit "do NOT start". **`.bst` sharpened 2026-07-27** — the `\Dbar` finding shows `.bst` files *vendor macro definitions*, so this is not only a formatting gap | **family** | [`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md), and R9-BST below |
 | — | `\gls`/`\acrshort` in math mode (1705.10306) | **PARITY, blocked** on unrunnable Perl | — | do not chase; Open items |
 | — | Two-pass streaming split | **deferred by user decision 2026-07-06**; trigger = a <64 GB target appears | — | [`STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
 
@@ -521,6 +521,66 @@ those cases are safe by construction. Guards
 implementation traps and the full result table in
 [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md).
 
+
+### R9-BST — `.bst` support: raw interpretation vs `_bst.rs` bindings — FUTURE, not started
+
+**The new evidence (2026-07-27).** Chasing `undefined:\Dbar` on witness
+**2605.11579** established something the earlier `.bst` deferral did not capture:
+a `.bst` does not only *format* a bibliography, it **vendors macro definitions**.
+MathSciNet's styles emit a preamble defining the glyph macros their `.bib`
+exports use —
+
+```
+\def\Dbar{\leavevmode\lower.6ex\hbox to 0pt{\hskip-.23ex \accent"16\hss}D}
+```
+
+— so `MRREVIEWER = {Dragomir \v{Z}. \Dbar okovi\'{c}}` (Đoković) is perfectly
+well-defined *for anyone who runs `bibtex`*, and undefined only for us, because
+we read `.bib` directly and never see the `.bst`. The paper's own `.bib` carries
+an `@preamble{"\def\cprime{$'$} "}`, which we DO honour — the vendor macros it
+does not repeat are exactly the ones that break.
+
+This reframes the gap. The existing deferral
+([`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md)) treats missing `.bst`
+support as a *formatting* divergence (label style, sort order). It is also a
+**definition-availability** problem, and that half leaks into the document as
+`undefined:` errors rather than as cosmetic differences. Every such macro fixed
+by hand — `\cprime`/`\Cprime`/`\cdprime`/`\Cdprime`, now `\Dbar` — is a
+symptom patch for one vendor's preamble.
+
+**Two candidate resolutions.** They are not exclusive; (b) is a strict subset of
+what (a) delivers.
+
+**(a) Port upstream `brucemiller/LaTeXML#1955`, "[WiP] BibTeX emulation".** A
+real BibTeX virtual machine: `LaTeXML/BibTeX/BibStyle/` parses the `.bst`
+(`StyCommand`, `StyString`, `Precompiled`), `LaTeXML/BibTeX/Runtime/` executes it
+(`Builtins`, `Names`, `Strings`, `Buffer`, `Entry`). **34 files, +4224/-801**,
+open since **2022-10-05**, itself a refactor of tkw1536's closed #1231. Buys the
+whole thing at once — correct labels, correct sort order, correct field
+selection (which is what OXIDIZED_DESIGN #73/#74 currently approximate by hand),
+*and* the vendored preamble. Costs: it is upstream **WiP and unmerged**, so
+porting it means tracking a moving, unreviewed target; its author's own summary
+says "I've undoubtedly broken a few features that had been working".
+
+**(b) Per-style `_bst.rs` bindings**, mirroring the `_cls.rs` / `_sty.rs`
+convention already in the tree. A binding per common style (`plain`, `unsrt`,
+`alpha`, `abbrv`, `amsplain`, `amsalpha`, `splncs04`, `IEEEtran`) supplying its
+preamble definitions and its label/sort rules. Cheaper per increment, matches how
+the rest of the port already handles vendor files, and can land style-by-style
+against measured witnesses. Costs: the long tail of `.bst` files is unbounded,
+and hand-written rules will drift from what the real `.bst` computes.
+
+**Prerequisite either way — the `.bbl` question.** arXiv's convention means most
+papers ship a `.bbl`, which we already prefer; `.bst` support only matters for
+sources with `.bib` + `.bst` and **no** `.bbl`. Before committing to (a) or (b),
+**measure how large that population actually is** in a full-corpus run. The
+existing deferral names witness **2605.16562** (LNCS, `splncs04.bst`); one
+witness is not a business case. That measurement is cheap and is the honest first
+step.
+
+**Do NOT start** either resolution without that measurement and an explicit
+decision — this row exists to stop the next `\Dbar` from being patched in
+isolation without the context above.
 
 ### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
