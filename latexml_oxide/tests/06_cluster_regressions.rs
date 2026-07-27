@@ -372,3 +372,41 @@ fn inline_end_lstlisting_does_not_swallow_the_document() {
     "inline \\end{{lstlisting}}: the listing body was lost:\n{x}"
   );
 }
+/// `\usepackage{xparse}` (or `expl3`) must not clobber LaTeX's cedilla accent.
+///
+/// `expl3_sty.rs` used to `\edef` the `\c_sys_*` system constants through
+/// `raw_tex`, which tokenizes with the AMBIENT catcodes. After the expl3 load
+/// the document regime has `_` = SUB, so `\edef\c_sys_shell_escape_int{0}`
+/// parsed as `\edef\c` with parameter text `_sys_shell_escape_int` and body `0`:
+/// it rebound LaTeX's cedilla accent `\c` (`\meaning\c` =
+/// `macro:_sys_shell_escape_int->0`) and defined none of the constants. Every
+/// later `Fran\c cois` then rendered "Fran0cois" — silently, with 0 errors —
+/// where Perl LaTeXML renders "François" (GENUINE-RUST-ONLY; issue 421, witness
+/// arXiv 2605.11579's `MRREVIEWER = {Fran\c cois\ Digne}`). The block was dead
+/// code — expl3 defines those constants itself, with live values — so it was
+/// deleted rather than re-tokenized.
+///
+/// Two properties, because the accent is only the symptom: the accents
+/// round-trip, AND the document catcode regime that made the corruption
+/// possible is intact after the expl3/xparse load (`_` = 8, `:` = 12, `~` = 13
+/// — a leaked `\ExplSyntaxOn` regime would show up here first).
+/// (Post-processing is not involved: the corruption happens in the gullet, so
+/// the engine XML is the right layer.)
+#[test]
+fn expl3_load_does_not_clobber_cedilla_accent() {
+  let x = convert_to_xml("tests/cluster_regressions/expl3_accent_catcode.tex");
+  assert!(
+    x.contains("François") && x.contains('Ç') && x.contains('Ş') && x.contains('ţ'),
+    "\\usepackage{{xparse}} clobbered the \\c cedilla accent:\n{x}"
+  );
+  assert!(
+    !x.contains("Fran0cois"),
+    "\\c expanded to a `\\c_sys_…` macro body — expl3-syntax raw TeX was \
+     tokenized outside the expl3 catcode regime:\n{x}"
+  );
+  assert!(
+    x.contains("catcodes: [8][12][13]"),
+    "the document catcode regime did not survive \\usepackage{{xparse}} \
+     (expected `_`=8, `:`=12, `~`=13):\n{x}"
+  );
+}

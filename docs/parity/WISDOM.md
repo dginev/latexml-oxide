@@ -2763,3 +2763,36 @@ collapse that is deliberately downgraded.
 the CORE stage, so a post-stage error flood passes every bibliography guard
 silently — 17 errors on one fixture, 203 on its witness, all green. Use
 `convert_and_post_clean` for anything in this path (see OXIDIZED_DESIGN #73).
+
+## #73 `raw_tex` is the only binding-side path that TOKENIZES a CS name — so binding-authored expl3 TeX needs the expl3 catcode regime
+
+**The trap.** `RawTeX!` → `stomach::raw_tex` builds a `Mouth` and reads it with
+the **ambient** catcode table (`at_letter: true` is the only override). Under the
+document regime `_` is SUB, so a CS name written in a raw string terminates at its
+first `_`: `\edef\c_sys_shell_escape_int{0}` is `\edef\c` with parameter text
+`_sys_shell_escape_int` and body `0`. The intended constant is never defined, and
+a **short, real** CS is silently rebound — here LaTeX's cedilla accent `\c`, so
+every later `Fran\c cois` rendered "Fran0cois" with **zero errors** while Perl
+rendered "François" (issue 421; `expl3_sty.rs`, witness arXiv 2605.11579). The
+same shape threatens any `\c…`/`\v…`/`\u…`-prefixed expl3 name.
+
+**The rule.** Binding-authored expl3-syntax raw TeX must run inside the
+`\ExplSyntaxOn` regime — `expl3_sty.rs::with_expl_catcodes` saves the ambient
+`:`/`_` catcodes, sets LETTER, and restores on both the success and error paths.
+Do NOT hardcode the restore to OTHER/SUB: the caller may itself be an expl3
+package (that mistake is the older half of this family, in
+`docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`).
+
+**The cheaper escape.** `T_CS!`, `Let!` and `parse_prototype`
+(`def_macro_noop`, `def_macro_identity`, `def_primitive_noop`, …) build the CS
+name as a **string** and never reach the tokenizer — `def_parser.rs::CS_RE`
+admits `[a-zA-Z@_]+(?::[a-zA-Z]*)?` for exactly this reason. Prefer them for
+expl3 names; reach for `raw_tex` only when you need real TeX control flow.
+
+**Diagnosing it.** The symptom is a *wrong glyph*, not an error — grep the
+output for the corrupted rendering, and probe `\meaning\<cs>` (a rebound accent
+reads `macro:_…->…`). To ask whether a `\c_sys_*`-style constant is really
+defined, use `\number\csname …\endcsname`, not bare
+`\csname …\endcsname`: an `\int_const:Nn` chardef ≥ 256 expands to a glyph the
+font lacks and renders as *nothing*, which reads exactly like "undefined" and
+sent this investigation down a wrong path once.
