@@ -1,0 +1,18 @@
+\documentclass{article}
+\usepackage[debrief]{silence}
+\WarningFilter{etex}{Extended allocation already in use}
+\WarningFilter[captions]{caption}{Unknown document class (or package)}
+\WarningFilter{latex}{Reference `\thref' on page \thepage\space undefined}
+\WarningFilter*[fam]{hyperref}{Token not allowed in a PDF string (Unicode)}
+\ErrorFilter{amsmath}{\begin{split} won't work here}
+\WarningsOff[latex,hyperref]
+\ErrorsOff*
+\ActivateWarningFilters[captions]
+\ActivateFilters
+\begin{document}
+\DeactivateWarningFilters[captions]
+\DeactivateFilters[fam]
+\WarningsOn
+\ErrorsOn[latex]
+Body text.
+\end{document}

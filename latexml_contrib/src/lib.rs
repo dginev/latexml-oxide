@@ -46,6 +46,7 @@ pub mod apacite_sty;
 pub mod apxproof_sty;
 pub mod ar5iv_sty;
 pub mod arxbj_cls;
+pub mod arxiv_sty;
 pub mod arydshln_sty;
 pub mod ascmac_sty;
 pub mod asme2ej_cls;
@@ -181,6 +182,7 @@ pub mod pb_diagram_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
+pub mod primearxiv_sty;
 pub mod program_sty;
 pub mod pst_all_sty;
 pub mod pst_plot_sty;
@@ -214,6 +216,7 @@ pub mod semantic_sty;
 pub mod siamart_cls;
 pub mod siamltex_cls;
 pub mod sigma_cls;
+pub mod silence_sty;
 pub mod smc_ieeeconf_cls;
 pub mod sn_jnl_cls;
 pub mod spie_cls;
@@ -400,6 +403,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     aligned_overset_sty::load_definitions,
   ),
   ("arxbj", "cls", arxbj_cls::load_definitions),
+  // Paper-BUNDLED styles, so both bindings hand control straight back to the
+  // paper's own file whenever raw style loading is on; they only fill the
+  // frontmatter gap in bare mode. See arxiv_sty.rs for the rationale.
+  ("arxiv", "sty", arxiv_sty::load_definitions),
+  ("PRIMEarxiv", "sty", primearxiv_sty::load_definitions),
   ("arydshln", "sty", arydshln_sty::load_definitions),
   ("autofe", "sty", autofe_sty::load_definitions),
   ("changes", "sty", changes_sty::load_definitions),
@@ -547,6 +555,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("semantic", "sty", semantic_sty::load_definitions),
   ("sigma", "cls", sigma_cls::load_definitions),
+  ("silence", "sty", silence_sty::load_definitions),
   ("selfevolagent", "cls", selfevolagent_cls::load_definitions),
   ("smc_ieeeconf", "cls", smc_ieeeconf_cls::load_definitions),
   ("sn-jnl", "cls", sn_jnl_cls::load_definitions),

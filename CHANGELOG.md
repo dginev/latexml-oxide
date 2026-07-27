@@ -46,6 +46,11 @@
     `agujournal2019` end-matter, `blkarray` (recovering papers that hit
     OOM/timeout), `scrartcl` `\titlehead`, and frontmatter bindings for
     `fairmeta`, `selfevolagent` and `openmoss`.
+  - **`silence` and the bundled arXiv preprint styles no longer leave their
+    commands undefined** — `\WarningFilter` and friends stopped spilling their
+    filter text into the page, and `\keywords` renders again. The silence
+    binding also restores diagnostics the real package's `\ErrorsOff` was
+    swallowing.
   - **A deferred package-load miss no longer poisons a later raw load.**
   - **Perl `.ltxml` bindings are never read as TeX** — file resolution used to hand
     back the `.ltxml` (Perl source) and tokenize it, so raw-loading a package that
