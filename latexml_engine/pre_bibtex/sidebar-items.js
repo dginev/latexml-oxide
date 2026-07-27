@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["BibParseError"],"struct":["ParsedEntry","PreBibTeX"]};
+window.SIDEBAR_ITEMS = {"enum":["BibParseError"],"fn":["clear_wanted_keys","set_wanted_keys"],"struct":["ParsedEntry","PreBibTeX"]};
