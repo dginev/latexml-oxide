@@ -405,64 +405,26 @@
 <a href=#405 id=405 data-nosnippet>405</a>    <span class="prelude-val">Some</span>(Scope::Global),
 <a href=#406 id=406 data-nosnippet>406</a>  );
 <a href=#407 id=407 data-nosnippet>407</a>
-<a href=#408 id=408 data-nosnippet>408</a>  <span class="comment">//======================================================================
-<a href=#409 id=409 data-nosnippet>409</a>  // 5. MathSciNet transliteration — the `\cprime` family, always-on
-<a href=#410 id=410 data-nosnippet>410</a>  //
-<a href=#411 id=411 data-nosnippet>411</a>  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` render the Russian
-<a href=#412 id=412 data-nosnippet>412</a>  // soft/hard signs in transliterated names (`Gel\cprime fand` is
-<a href=#413 id=413 data-nosnippet>413</a>  // Gelʹfand). Their real home is `mathscinet.sty` (AMS, amsrefs
-<a href=#414 id=414 data-nosnippet>414</a>  // bundle), which `mathscinet_sty.rs` now binds — and all three
-<a href=#415 id=415 data-nosnippet>415</a>  // witnesses below DO load that package (arXiv:2508.13753 L7,
-<a href=#416 id=416 data-nosnippet>416</a>  // 2508.20226 L3, 2509.07628 L13), which corrects the claim in the
-<a href=#417 id=417 data-nosnippet>417</a>  // comment these lines used to carry in `latex_constructs.rs`
-<a href=#418 id=418 data-nosnippet>418</a>  // (cyracc.def, "no Cyrillic encoding otherwise loaded").
-<a href=#419 id=419 data-nosnippet>419</a>  //
-<a href=#420 id=420 data-nosnippet>420</a>  // They stay always-on anyway, because the package is not the only way
-<a href=#421 id=421 data-nosnippet>421</a>  // they arrive: a `.bib` field carries `Gel\cprime fand` with no
-<a href=#422 id=422 data-nosnippet>422</a>  // `\usepackage` behind it, and MathSciNet exports lean on an
-<a href=#423 id=423 data-nosnippet>423</a>  // `@preamble` that may or may not define it (2605.11579's `biblo.bib`
-<a href=#424 id=424 data-nosnippet>424</a>  // defines `\cprime` twenty-odd times; another export need not).
-<a href=#425 id=425 data-nosnippet>425</a>  // Removing this stub was measured to cost exactly that case —
-<a href=#426 id=426 data-nosnippet>426</a>  // `bib_mr_reviewer_accent`'s `primerev` entry regains
-<a href=#427 id=427 data-nosnippet>427</a>  // `undefined:\cprime`. The `provide` in the binding then finds them
-<a href=#428 id=428 data-nosnippet>428</a>  // already defined, which is the correct no-op.
-<a href=#429 id=429 data-nosnippet>429</a>  //
-<a href=#430 id=430 data-nosnippet>430</a>  // Re-measured on the corpus 2026-07-27, because `@preamble` execution
-<a href=#431 id=431 data-nosnippet>431</a>  // works (it is Perl `Pre/BibTeX.pm::toTeX` L118-122, ported at
-<a href=#432 id=432 data-nosnippet>432</a>  // `pre_bibtex::to_tex`, guarded by
-<a href=#433 id=433 data-nosnippet>433</a>  // `bib_preamble_defines_macros_for_the_whole_bibliography`) and would
-<a href=#434 id=434 data-nosnippet>434</a>  // in principle make this stub redundant. It does not: across the first
-<a href=#435 id=435 data-nosnippet>435</a>  // 600 papers of arXiv 2605, SEVEN use `\cprime` inside a `.bib` and
-<a href=#436 id=436 data-nosnippet>436</a>  // **six of them carry no `@preamble` at all** — nothing defines it
-<a href=#437 id=437 data-nosnippet>437</a>  // anywhere in their source. Deleting these four lines takes 2605.00173,
-<a href=#438 id=438 data-nosnippet>438</a>  // 2605.00186, 2605.00190 and 2605.00305 from 0 to 1 `undefined:\cprime`
-<a href=#439 id=439 data-nosnippet>439</a>  // each, while the one paper that DOES define it in its `@preamble`
-<a href=#440 id=440 data-nosnippet>440</a>  // (2605.11579, 17 uses across `AUTHOR`/`TITLE`/`BOOKTITLE`/`MRREVIEWER`)
-<a href=#441 id=441 data-nosnippet>441</a>  // is unaffected either way. Detail + table in
-<a href=#442 id=442 data-nosnippet>442</a>  // `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
-<a href=#443 id=443 data-nosnippet>443</a>  //
-<a href=#444 id=444 data-nosnippet>444</a>  // Three of those four regressions would also be errors the real toolchain
-<a href=#445 id=445 data-nosnippet>445</a>  // never produces: `bibtex(1)` copies only CITED entries into the `.bbl`,
-<a href=#446 id=446 data-nosnippet>446</a>  // and in 2605.00173/.00186/.00190 the `\cprime`-bearing entry is never
-<a href=#447 id=447 data-nosnippet>447</a>  // cited, so pdflatex never sees the macro. We digest every entry in the
-<a href=#448 id=448 data-nosnippet>448</a>  // `.bib`, so the stub is what keeps that asymmetry from manufacturing a
-<a href=#449 id=449 data-nosnippet>449</a>  // diagnostic. (2605.00305 is the fourth, and there the entry IS cited —
-<a href=#450 id=450 data-nosnippet>450</a>  // `MR710121`, "Arnol\cprime d diffusion" — so the stub renders content the
-<a href=#451 id=451 data-nosnippet>451</a>  // reader sees.)
-<a href=#452 id=452 data-nosnippet>452</a>  //
-<a href=#453 id=453 data-nosnippet>453</a>  // Contrast `\Dbar`, which is package-ONLY and deliberately so: four
-<a href=#454 id=454 data-nosnippet>454</a>  // authors per 4,000 papers define it themselves with `\newcommand`,
-<a href=#455 id=455 data-nosnippet>455</a>  // and an always-on definition would silently shadow them
-<a href=#456 id=456 data-nosnippet>456</a>  // (OXIDIZED_DESIGN #78). No author in that scan defines the `\cprime`
-<a href=#457 id=457 data-nosnippet>457</a>  // family with `\newcommand`, so this stub shadows nobody.
-<a href=#458 id=458 data-nosnippet>458</a>  //
-<a href=#459 id=459 data-nosnippet>459</a>  // Per WISDOM #50 the visual intent (an apostrophe-like mark) is what
-<a href=#460 id=460 data-nosnippet>460</a>  // survives the XML→HTML pipeline; the TeX definitions are math-mode
-<a href=#461 id=461 data-nosnippet>461</a>  // primes.
-<a href=#462 id=462 data-nosnippet>462</a>  //======================================================================
-<a href=#463 id=463 data-nosnippet>463</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cprime"</span>, <span class="string">"\u{02B9}"</span>);
-<a href=#464 id=464 data-nosnippet>464</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Cprime"</span>, <span class="string">"\u{02B9}"</span>);
-<a href=#465 id=465 data-nosnippet>465</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cdprime"</span>, <span class="string">"\u{02BA}"</span>);
-<a href=#466 id=466 data-nosnippet>466</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Cdprime"</span>, <span class="string">"\u{02BA}"</span>);
-<a href=#467 id=467 data-nosnippet>467</a>});
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="comment">//======================================================================
+<a href=#409 id=409 data-nosnippet>409</a>  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — REMOVED from the
+<a href=#410 id=410 data-nosnippet>410</a>  // always-on set 2026-07-27 (maintainer decision). They belong to
+<a href=#411 id=411 data-nosnippet>411</a>  // `mathscinet.sty`, which defines them (`mathscinet_sty.rs`), and a
+<a href=#412 id=412 data-nosnippet>412</a>  // definition that is always live can shadow an author's own — the same
+<a href=#413 id=413 data-nosnippet>413</a>  // hazard that kept `\Dbar` package-only from the start.
+<a href=#414 id=414 data-nosnippet>414</a>  //
+<a href=#415 id=415 data-nosnippet>415</a>  // The stub was justified by four papers regaining `undefined:\cprime`
+<a href=#416 id=416 data-nosnippet>416</a>  // without it (2605.00173/.00186/.00190/.00305). Three of those four were
+<a href=#417 id=417 data-nosnippet>417</a>  // artifacts of a defect since fixed: we digested EVERY entry of a `.bib`
+<a href=#418 id=418 data-nosnippet>418</a>  // library, so we met `\cprime` in entries `bibtex(1)` never copies into
+<a href=#419 id=419 data-nosnippet>419</a>  // the `.bbl`. Since #416 we digest only the CITED entries, which removes
+<a href=#420 id=420 data-nosnippet>420</a>  // the trigger structurally rather than papering over it.
+<a href=#421 id=421 data-nosnippet>421</a>  //
+<a href=#422 id=422 data-nosnippet>422</a>  // What a paper needs now is what the real toolchain needs: load
+<a href=#423 id=423 data-nosnippet>423</a>  // `mathscinet` (or `amsrefs`, which requires it), or carry the definition
+<a href=#424 id=424 data-nosnippet>424</a>  // in its own `.bib` `@preamble` — which executes, and is guarded by
+<a href=#425 id=425 data-nosnippet>425</a>  // `bib_preamble_defines_macros_for_the_whole_bibliography`. Witness
+<a href=#426 id=426 data-nosnippet>426</a>  // 2605.11579 (17 uses) is covered by its `@preamble` and is unaffected.
+<a href=#427 id=427 data-nosnippet>427</a>  // See OXIDIZED_DESIGN #78 and `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
+<a href=#428 id=428 data-nosnippet>428</a>  //======================================================================
+<a href=#429 id=429 data-nosnippet>429</a></span>});
 </code></pre></div></section></main></body></html>
