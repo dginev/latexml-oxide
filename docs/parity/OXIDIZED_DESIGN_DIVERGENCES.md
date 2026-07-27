@@ -2275,6 +2275,76 @@ this fixture, 203 on the witness) passed every bibliography guard silently.
 (percent in `abstract`, specials in `keywords`, and a third entry as the
 containment canary).
 
+### 74. A `%` inside a `.bib` field value is data, not a comment
+
+**Perl behaviour.** `Pre::BibTeX` is a real BibTeX-format parser: field values
+come out of `parseString`/`parseBalancedBraces` as raw strings, and `%` is
+significant **only** in the junk between entries (`skipJunk`, `BibTeX.pm` L335-343
+— its own comment reads "Although % officially starts comments, apparently BibTeX
+accepts anything until @"). Inside an entry there is no comment syntax, matching
+`bibtex.web`. `BibTeX.pool.ltxml` L134-166 (`\bibentry@create`) then re-serializes
+those values into TeX source — one `\csname bib@field@<t>@<f>\endcsname{<value>}`
+per line — and hands the join to `Mouth->new($tex)`. There `%` is catcode 14
+again, so it comments out the rest of its line, **the field's own closing brace
+included**. The entry's group never closes, `<ltx:bibentry>` is left open, and
+every following entry nests inside it: `<ltx:bibentry> isn't allowed in
+<ltx:bibentry>`, once per remaining entry. `\bib@@title` (L293-333) loses the
+value a second way — it re-reads the RAW field to re-case it and `Tokenize`s the
+result itself, and `Tokenize` uses the standard cattable, where `%` is again a
+comment; the truncated title leaves a `\href` mid-argument and the runaway eats
+the following `\csname`s (`Extra \endcsname`).
+
+**Rust behaviour.** The text BibTeX lexed is read with `%` as an ordinary
+character. Two seams, because the value reaches the tokenizer two ways:
+`Mouth::with_percent_as_other()` on the per-entry mouth
+(`\ProcessBibTeXEntry`, `bibtex.rs`), and `mouth::tokenize_percent_literal`
+behind `bibtex.rs::tokenize_bib_field` for the handlers that re-tokenize a
+stored raw field (title recasing, name splitting, date/pages assembly, MR/Zbl).
+It is a per-**Mouth** property rather than a `\catcode` assignment on purpose: a
+State catcode would be inherited by a `.sty` raw-load triggered from inside a
+field handler, where `%` must stay a comment. Only comment-ness is removed — a
+`%` given some other catcode keeps it, and `\%` is unaffected (a control symbol
+is formed from the following character whatever its catcode).
+
+**Why — measured against `bibtex` 0.99d + pdflatex, not against Perl.** The
+fixture's three entries were run through the real toolchain (TL2025,
+`plain.bst`, hyperref loaded), and it handles both fields cleanly:
+
+* `doi` — **`bibtex` drops it.** `plain.bst` does not declare `doi` in its
+  `ENTRY` list, so the generated `d.bbl` carries author/title/journal/year and
+  no trace of `%doi:`. pdflatex never sees the character. (Nor would it in the
+  witness: 2605.01196's entry sits in that file's own "UNUSED REFERENCES" block,
+  which `bibtex` never processes at all.)
+* `title` — **`bibtex` keeps the `%` verbatim** (its lexer has no comment rule
+  inside `{}`), writing `\href{https://…/20240723%20IPWG%20…DRAFT.pdf}{A linked
+  title…}` into the `.bbl` with the closing brace on that same line. pdflatex
+  **compiles it, rc=0**, and the PDF renders the linked title: real hyperref's
+  `\href` sets `` \catcode`\%=12 `` before reading its URL. So the ground-truth
+  engine reads a percent-encoded URL with `%` as an ordinary character — the
+  exact rule adopted here.
+
+LaTeXML's `HyperVerbatim` does the same catcode trick as hyperref, but far too
+late: the `%` is eaten during the *field* read, before `\href` is ever reached.
+Reading the `.bib` **directly** — which is what both LaTeXML engines do, and
+what no other consumer does — is what puts the value in front of a TeX tokenizer
+in the first place, so the reader has to use BibTeX's lexing rules for it. The
+damage under the old reading is also wildly disproportionate to the input: one
+stray character in one uncited reference costs the whole rest of the
+bibliography.
+
+This is `surpass-perl` on a shared bug, like #73 (its sibling: same "element
+opened and never closed" shape, same `%`-eats-the-closing-brace mechanism, but
+#73's three fields could be read `Verbatim` because nothing renders
+`ltx:bib-extract`, while `doi`/`title` are rendered and cannot be). Measured on
+the same host: **2605.01196 28 → 0 errors** (Perl `latexmlc` 29; output otherwise
+byte-identical, 83 bibitems before and after — the entire cost was diagnostics)
+and **2605.02131 28 → 0** (Perl 31; 20 bibitems unchanged, and the two
+percent-encoded `\href` titles now render, URLs intact).
+
+Guard: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`
+(fixture `bib_field_percent.{tex,bib}` — one entry per seam plus a containment
+canary; the single-line `value...}` layout is load-bearing, as in #73).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
