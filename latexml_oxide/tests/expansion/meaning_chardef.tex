@@ -1,0 +1,26 @@
+\documentclass{article}
+% \meaning of a \chardef / \mathchardef token must report the character value
+% behind a literal " separator (Perl: TeX_Debugging.pool.ltxml L166-168), not
+% the internal definition class. Packages recover the value by splitting the
+% result on that ", so a missing " turns the delimited-argument scan into a
+% runaway that swallows the surrounding \fi tokens.
+% \grabtail below is bxcoloremoji.sty's idiom.
+% Witnesses: arXiv 2605.03971, 2606.06712 (both ship bxcoloremoji.sty).
+\newcount\mycnt
+\mycnt="41
+\chardef\chA\mycnt
+\mathchardef\mcA="0141
+\def\grabtail#1"#2\relax{\def\thetail{#2}}
+\begin{document}
+
+M1[\meaning\chA]
+
+M2[\meaning\mcA]
+
+\expandafter\grabtail\meaning\chA\relax
+T1[\thetail]
+
+\expandafter\grabtail\meaning\mcA\relax
+T2[\thetail]
+
+\end{document}
