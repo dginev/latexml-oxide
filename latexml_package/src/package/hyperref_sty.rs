@@ -344,11 +344,62 @@ LoadDefinitions!({
   // expands exactly as before — only edef-family contexts defer it.
   // Witness 2110.10227 (ems-journal.sty `\Emsaffil`→`\build@ffil`'s
   // `\xdef\ems@temp{…\href{mailto:…}{\mbox{…}}…}`).
-  DefMacro!(
-    "\\href HyperVerbatim {}",
-    "\\lx@hyper@url@\\href{}{}{#1}{#2}",
-    protected => true
-  );
+  //
+  // The `protected` flag alone is NOT enough, because one seam legitimately
+  // expands protected macros: `Parameter::digest`'s semiverbatim
+  // pre-expansion (`parameter.rs`, Perl `Core/Parameter.pm` L123-132 —
+  // "If semiverbatim, Expand (before digest), so tokens can be neutralized")
+  // calls `readXToken` with `$toplevel=1`, hence `fully_expand=1`, hence
+  // protected macros DO expand there (Perl `Core/Gullet.pm` L408-409). That
+  // pass linearizes tokens one at a time and never reaches
+  // `\lx@hyper@url@`'s parameter list — `\lx@hyper@url@` is a Constructor, so
+  // it is kept as-is and the next token read is the re-emitted `\href`, which
+  // expands again. Rust matches Perl at that seam, so the flag cannot be the
+  // fix.
+  //
+  // So the reversion slot carries the command NAME rather than the live
+  // command: an OTHER-catcode `\href` is inert to every expansion regime
+  // while stringifying and reverting exactly as the control sequence did.
+  // This is what the sibling `\url` path (`\lx@hyper@url` below) has always
+  // done — `Tokens!(cmd.as_other())` — so the two now agree, and the
+  // self-reference is structurally impossible rather than flag-dependent.
+  //
+  // Witnesses: `doi = {\href{https://doi.org/…}{…}}` in a `.bib` reaches
+  // `\bib@field@default@doi Semiverbatim` and looped until the gullet cycle
+  // guard fired — 2605.00181, 2605.19650, 2606.06645 (all
+  // `Fatal:Timeout:Recursion`, bibliography lost, document aborted). Perl
+  // `latexmlc` HANGS on the same input, so this is a shared upstream bug
+  // (`KNOWN_PERL_ERRORS.md`). Guard:
+  // `latexml_oxide/tests/59_href_semiverbatim_loop.rs`.
+  //
+  // Kept as a Token body (not a closure) so the definition still serializes
+  // into a dump (CLAUDE.md strict-LoadFormat rule 3); `T_OTHER!` is the only
+  // thing a `DefMacro!` string literal cannot spell.
+  {
+    let (href_cs, href_params) = parse_prototype("\\href HyperVerbatim {}", true)?;
+    def_macro(
+      href_cs,
+      href_params,
+      ExpansionBody::Tokens(Tokens!(
+        T_CS!("\\lx@hyper@url@"),
+        T_OTHER!("\\href"),
+        T_BEGIN!(),
+        T_END!(),
+        T_BEGIN!(),
+        T_END!(),
+        T_BEGIN!(),
+        T_ARG!(1),
+        T_END!(),
+        T_BEGIN!(),
+        T_ARG!(2),
+        T_END!()
+      )),
+      Some(ExpandableOptions {
+        protected: true,
+        ..ExpandableOptions::default()
+      }),
+    )?;
+  }
 
   // \XeTeXLinkBox{content} — hyperref.sty L4915/4947 wraps content in
   // a XeTeX hyperlink target box. We don't model XeTeX-specific link
