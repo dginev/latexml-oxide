@@ -2005,7 +2005,8 @@ LoadDefinitions!({
     // so the entry's group never closes, `ltx:bibentry` is left open, and every
     // later entry nests inside it. Witnesses arXiv 2605.01196 (`doi={%doi:...}`)
     // and 2605.02131 (a percent-encoded URL in a `title`'s `\href`): 28 errors
-    // each, and Perl breaks identically (29 / 31 on the same host).
+    // each, and Perl breaks identically (29 / 31 on the same host); 2605.00879
+    // (`note = {https://doi.org/10.1145%2F...}`): 103 errors.
     // Guard: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`.
     open_mouth_with(
       Mouth::new(&lines.join("\n"), None)?.with_percent_as_other(),

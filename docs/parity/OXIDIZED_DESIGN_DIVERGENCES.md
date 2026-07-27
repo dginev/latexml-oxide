@@ -2337,9 +2337,22 @@ opened and never closed" shape, same `%`-eats-the-closing-brace mechanism, but
 #73's three fields could be read `Verbatim` because nothing renders
 `ltx:bib-extract`, while `doi`/`title` are rendered and cannot be). Measured on
 the same host: **2605.01196 28 → 0 errors** (Perl `latexmlc` 29; output otherwise
-byte-identical, 83 bibitems before and after — the entire cost was diagnostics)
-and **2605.02131 28 → 0** (Perl 31; 20 bibitems unchanged, and the two
-percent-encoded `\href` titles now render, URLs intact).
+byte-identical, 83 bibitems before and after — the entire cost was diagnostics),
+**2605.02131 28 → 0** (Perl 31; 20 bibitems unchanged, and the two
+percent-encoded `\href` titles now render, URLs intact), and **2605.00879
+103 → 5** (`note = {https://doi.org/10.1145%2F3292500.3330925}`; the residual 5
+are other clusters — `unexpected:_`, `\mathsemicolon`).
+
+**How much of the corpus this is.** Over the first 1200 papers of
+sandbox-arxiv-2605, 178 ship a `.bib` with a `%` somewhere in a field value; 66
+of those have an *unescaped* `%` in a field other than the three #73 already
+reads `Verbatim`. Of the 15 whose field is one that is neither `Semiverbatim`
+nor `Verbatim` (`doi`, `note`, `journal`, `howpublished`, `adsurl`), two were
+broken and are now clean — 2605.00879 (103 → 5) and 2605.01196 (28 → 0) — and
+the other 13 were already fine, because `url` (#72) and unknown fields
+(`\bib@field@default@default Verbatim Verbatim`) had their catcodes protected by
+their parameter type. That is exactly the population this closes: the rendered
+fields no parameter type was protecting.
 
 Guard: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`
 (fixture `bib_field_percent.{tex,bib}` — one entry per seam plus a containment
