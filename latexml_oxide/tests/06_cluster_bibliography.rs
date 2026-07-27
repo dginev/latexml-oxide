@@ -834,18 +834,22 @@ fn bib_field_specials_are_data_not_tex() {
     let e = block[s..].find("</text>").expect("bib-title close") + s;
     block[s..e].to_string()
   };
-  // 1. The four specials, bare, are literal text. `&` is XML-escaped on the way
+  // 1. The five specials, bare, are literal text. `&` is XML-escaped on the way
   //    out, which is the correct rendering of the character. `recase_title`
   //    lowercases (capitalize1, Perl parity), hence `at1g01010`.
-  let bare = "AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates";
+  //    The trailing `^` is the one whose escape is NOT `\` + the character:
+  //    `\^` is the circumflex accent, so a generic escape would have rendered
+  //    the following letter accented ("ĉaret") instead of a caret.
+  let bare = "AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates ^ caret";
   assert_eq!(
     title_of("barespecials"),
     bare,
-    "bib specials: bare `& _ % #` did not render literally:\n{x}"
+    "bib specials: bare `& _ % # ^` did not render literally:\n{x}"
   );
-  // 2. Idempotency: the entry that already wrote `\&`/`\_`/`\%`/`\#` renders
-  //    the SAME string. Had the escaper double-escaped, `\&` would have become
-  //    `\\&` — a line break followed by an ampersand.
+  // 2. Idempotency: the entry that already wrote `\&`/`\_`/`\%`/`\#`/
+  //    `\textasciicircum{}` renders the SAME string. Had the escaper
+  //    double-escaped, `\&` would have become `\\&` — a line break followed by
+  //    an ampersand.
   assert_eq!(
     title_of("preescaped"),
     title_of("barespecials"),

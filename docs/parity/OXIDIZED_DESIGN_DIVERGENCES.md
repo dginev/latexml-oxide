@@ -2275,7 +2275,7 @@ this fixture, 203 on the witness) passed every bibliography guard silently.
 (percent in `abstract`, specials in `keywords`, and a third entry as the
 containment canary).
 
-### 74. A `.bib` field's content is DATA — `% & # _` are literal, not catcodes
+### 74. A `.bib` field's content is DATA — `% & # _ ^` are literal, not catcodes
 
 Supersedes the separate `%`-only and `&`-only entries this consolidates
 (PRs #405 and #409); `_` was a third instance of the same defect.
@@ -2302,19 +2302,35 @@ lexed*, not to the session.
 **Treatment 2 — synthesizing the `.bbl` and digesting it (be `pdflatex` pass 2).**
 Now the content must be valid TeX. We are the ones writing the `.bbl` and we
 know the author meant the literal character, so we escape at that boundary:
-`%`→`\%`, `&`→`\&`, `#`→`\#`, `_`→`\_`.
+`%`→`\%`, `&`→`\&`, `#`→`\#`, `_`→`\_`, `^`→`\textasciicircum{}`.
 `bibtex.rs::escape_bib_data_specials`. Escaping here rather than suppressing
 catcodes during digestion is what keeps the TeX regime intact **by
 construction**: `\emph{…}`, `{\v S}pakov` and `$x_1+x_2$` are already valid TeX
 and simply pass through.
 
-**Why `_` is in treatment 2 only.** A catcode is decided at tokenization, before
-anything knows whether it is inside `$…$` — and a subscript in a title's math
-(`title = {Bounds on $x_1+x_2$}`) is legitimate TeX that must keep working.
-Measured: adding `_` to treatment 1 silently flattened every subscript in a
-bibliography title. Only the escaper can be math-aware, so `_` lives there
-alone. The other three have no legitimate TeX meaning inside a `.bib` field,
-in math or out.
+**Why `_` and `^` are in treatment 2 only.** A catcode is decided at
+tokenization, before anything knows whether it is inside `$…$` — and a
+sub/superscript in a title's math (`title = {Bounds on $x^2+y_1$}`) is
+legitimate TeX that must keep working. Measured: adding `_` to treatment 1
+silently flattened every subscript in a bibliography title. Only the escaper can
+be math-aware, so the two scripting characters live there alone. The other three
+have no legitimate TeX meaning inside a `.bib` field, in math or out.
+
+**`^` is `_`'s twin, and the symmetry was verified rather than assumed.** Both
+are TeX scripting characters; `bibtex(1)`'s lexer gives neither any meaning
+inside an entry, so both are plain data; and outside math both raise the same
+diagnostic, "Script … can only appear in math mode". Checked end-to-end: a
+`note = {q _ r ^ s}` renders `q _ r ^ s`, zero errors, both characters intact.
+
+**But the escape is NOT `\` + the character, and that is the whole reason `^`
+needs its own arm** (`BIB_DATA_CARET`, placed before the generic
+`BIB_DATA_SPECIALS` arm). `\_` is the underscore text command; `\^` is the
+circumflex **accent**, so the generic arm would turn `^o` into "ô" — a wrong
+glyph, silently, where the author wrote a caret. `\textasciicircum{}` is the
+actual caret, and the braces are load-bearing so a following letter is not
+absorbed into the control word. Idempotency needs nothing new: `\textasciicircum`
+is a control word and is copied whole, `\^{}` is a control symbol and is copied
+as a pair.
 
 **The exclusion list is principled, not ad hoc.** A handler that consumes the
 field's characters *itself*, under its own catcode regime — `url`'s Verbatim
@@ -2345,7 +2361,8 @@ spellings and they must render identically.
 **Idempotency.** Most real `.bib` files already write `\&`, `\%`, `\_`. In the
 escaper a backslash consumes the next character as a pair and neither is
 re-examined, so `\&` stays `\&`. The tricky `\\&` falls out of the same rule:
-`\\` is consumed as one pair, leaving a genuinely bare `&` that IS escaped.
+`\\` is consumed as one pair, leaving a genuinely bare `&` that IS escaped —
+and so does `\\^`, which becomes `\\\textasciicircum{}`.
 
 **A nested data region.** url.sty reads `\url`/`\nolinkurl`/`\path`'s argument
 verbatim, so `howpublished = {\url{http://x.org/a%20b}}` must keep its `%20`.
@@ -2378,16 +2395,18 @@ applied to a `title`, and it covers `volume = {27 suppl_4}` and
 
 **Guards.** `06_cluster_bibliography::bib_field_specials_are_data_not_tex` (one
 ten-entry fixture, because the risk is precisely that fixing one case breaks
-another: the four specials bare, the same four already escaped rendering an
-IDENTICAL string, `$x_1+x_2$` keeping its `SUBSCRIPTOP`, `\emph` still markup,
+another: the five specials bare, the same five already escaped rendering an
+IDENTICAL string, `$x^2+y_1$` keeping BOTH its `SUPERSCRIPTOP` and its
+`SUBSCRIPTOP`, `\emph` still markup,
 `{\v S}pakov` still reverting, `%20` inside `\url{…}` intact, and `url`/`doi`
 values with no backslash); `::bib_field_percent_is_an_ordinary_character`;
 `::bib_bare_ampersand_is_literal_data`;
 `::bib_bare_ampersand_leaves_live_markup_alone`;
 `::bib_escaped_amp_entity_decodes_to_one_ampersand`;
-`55_bibtex::runaway_field_costs_only_its_own_entry`; and six
+`55_bibtex::runaway_field_costs_only_its_own_entry`; and seven
 `escape_bib_data_specials` unit tests in `bibtex.rs`, which isolate the `\\&`
-hazard that cannot live end-to-end (see below).
+hazard that cannot live end-to-end (see below) and pin
+`escape_specials_caret_is_textasciicircum_not_an_accent`.
 
 **Measured**, `--release` before/after on the same host, TOTAL document errors:
 
@@ -2423,12 +2442,17 @@ now prints "&".
 (`malformed:ltx:bibitem <ltx:bibitem> isn't allowed in <ltx:bib-title>`) with no
 special character anywhere in the entry — a pre-existing behaviour of `\\` in a
 bibliography, independent of this work, and the reason the `\\&` hazard is
-pinned by a unit test rather than end-to-end. `^` is deliberately outside the
-set: it is not in the authorized four, and outside math in a `.bib` field it is
-essentially always a typo (it also remains the live probe in
-`105_bib_field_digest_once`). An `&` inside a `.bib` field's `$\begin{array}…$`
-would lose its alignment meaning — treatment 1 is catcode-level and cannot be
-math-aware; no witness exhibits one.
+pinned by a unit test rather than end-to-end. An `&` inside a `.bib` field's
+`$\begin{array}…$` would lose its alignment meaning — treatment 1 is
+catcode-level and cannot be math-aware; no witness exhibits one.
+
+**A knock-on for the digest-once guard.** `105_bib_field_digest_once` needs a
+probe that re-raises on EVERY digest (an undefined macro self-heals into
+`<ltx:ERROR/>` on first sight and would pass with the bug present). It used `_`,
+then `^` when `_` became data; both are now data, so the probe moved to `\hline`
+in a `note`, which expands to `\noalign` — a context error with nothing to
+memoize. Both scripting characters stay in that fixture as the standing
+zero-error check.
 
 ### 75. A `.bib`-derived bibliography does not run the missing-`\bibitem` rescue
 

@@ -263,11 +263,28 @@ fn bib_extract_text(field: &str) -> String {
     .unwrap_or_default()
 }
 
-/// The four TeX specials that a `.bib` field can only have meant literally.
+/// The TeX specials that a `.bib` field can only have meant literally, and whose
+/// escape is simply `\` + the character.
 ///
-/// Not `~` (a tie is plausible in a name) and not `^` (it only ever shows up in
-/// math here) — this is the maintainer-authorized set, no wider.
+/// Not `~` — a tie is plausible in a name. `^` belongs to the same authorized
+/// set but is NOT here, because `\^` is the circumflex accent and not an escaped
+/// caret; it gets its own arm and [`BIB_DATA_CARET`].
 const BIB_DATA_SPECIALS: [char; 4] = ['_', '&', '#', '%'];
+
+/// The escape for a bare `^`, which cannot be spelled `\` + the character.
+///
+/// `^` is `_`'s twin in this flow — both are TeX scripting characters, both are
+/// plain data to `bibtex(1)` (its lexer gives neither any meaning inside an
+/// entry), and both raise "Script … can only appear in math mode" once outside
+/// math. So the DATA-regime rule that covers `_` covers `^` on the same ground.
+///
+/// The escape spelling is where the symmetry stops, and it is a silent trap:
+/// `\_` is the underscore text command, but `\^` is the **circumflex accent**,
+/// so the generic `\` + character arm would turn `\Dbar okovi^c` into a "ĉ" and
+/// `^o` into "ô" — a wrong glyph rather than a diagnostic. `\textasciicircum` is
+/// the actual caret; the braces are load-bearing, so a following letter is not
+/// absorbed as the control word's continuation.
+const BIB_DATA_CARET: &str = "\\textasciicircum{}";
 
 /// The `.bib`-data -> TeX-source boundary: escape the specials a `.bst` would
 /// have escaped, so the synthesized entry line is valid TeX.
@@ -275,7 +292,7 @@ const BIB_DATA_SPECIALS: [char; 4] = ['_', '&', '#', '%'];
 /// Real BibTeX has TWO regimes and latexml-oxide collapses them into one pass.
 /// In the DATA regime (`.bib` read by `bibtex(1)`) a field's bytes are data:
 /// `%` is not a comment, `&` is not an alignment tab, `_` is not a subscript,
-/// `#` is not a parameter. Only in the TeX regime (the `.bbl` read by
+/// `^` is not a superscript, `#` is not a parameter. Only in the TeX regime (the `.bbl` read by
 /// `pdflatex`) do those catcodes exist — and what lands in the `.bbl` is
 /// whatever the `.bst` chose to write. We read `.bib` directly, with no `.bst`
 /// in the loop, so we are the component that decides what reaches the
@@ -290,13 +307,14 @@ const BIB_DATA_SPECIALS: [char; 4] = ['_', '&', '#', '%'];
 /// Two hazards, both guarded by
 /// `06_cluster_bibliography::bib_field_specials_are_data_not_tex`:
 ///
-/// * **Math.** `_` inside `$…$` is a real subscript, so math spans are skipped.
-///   `$`/`$$` toggle; `\(`/`\[` open and `\)`/`\]` close.
-/// * **Idempotency.** Most `.bib` files already write `\&`, `\%`, `\_`. A
-///   backslash therefore consumes the next character as a pair and neither is
-///   re-examined, so `\&` stays `\&`. The tricky case falls out of the same
-///   rule: in `\\&` the `\\` is consumed as one pair, leaving a genuinely bare
-///   `&` that IS escaped.
+/// * **Math.** `_`/`^` inside `$…$` are a real subscript and superscript, so
+///   math spans are skipped. `$`/`$$` toggle; `\(`/`\[` open and `\)`/`\]` close.
+/// * **Idempotency.** Most `.bib` files already write `\&`, `\%`, `\_`,
+///   `\textasciicircum`. A backslash therefore consumes the next character as a
+///   pair and neither is re-examined, so `\&` stays `\&` and `\^{}` stays
+///   `\^{}`; a control WORD is copied whole, so `\textasciicircum` survives. The
+///   tricky case falls out of the same rule: in `\\&` the `\\` is consumed as
+///   one pair, leaving a genuinely bare `&` that IS escaped.
 fn escape_bib_data_specials(value: &str) -> String {
   let mut out = String::with_capacity(value.len() + 8);
   let mut chars = value.chars().peekable();
@@ -348,6 +366,10 @@ fn escape_bib_data_specials(value: &str) -> String {
         }
         in_math = !in_math;
       },
+      // Before the generic arm, and deliberately: `\^` is the circumflex
+      // accent, so the generic `\` + character escape would render `^o` as "ô".
+      // See [`BIB_DATA_CARET`].
+      '^' if !in_math => out.push_str(BIB_DATA_CARET),
       _ if !in_math && BIB_DATA_SPECIALS.contains(&c) => {
         out.push('\\');
         out.push(c);
@@ -477,16 +499,18 @@ pub fn current_entry_field(name: &str) -> Option<Tokens> {
 /// splitting, date/pages/MR/Zbl assembly — build their tokens from the stored
 /// string and never go through that mouth.
 ///
-/// `_` is NOT in this set: a catcode is fixed at tokenization, before anything
-/// knows whether it is inside `$…$`, and a subscript in a title's math is
-/// legitimate TeX. It is handled by treatment 2 ([`bib_tex_tokens`]) instead.
+/// `_` and `^` are NOT in this set: a catcode is fixed at tokenization, before
+/// anything knows whether it is inside `$…$`, and a sub/superscript in a title's
+/// math is legitimate TeX. Both are handled by treatment 2
+/// ([`bib_tex_tokens`]) instead, which is the only one of the two that can be
+/// math-aware.
 fn tokenize_bib_field(text: impl Into<TeXString>) -> Tokens { mouth::tokenize_bib_literal(text) }
 
 /// Both treatments, for a raw `.bib` string that is about to become TeX tokens.
 ///
 /// Treatment 2 (`escape_bib_data_specials`) makes the data valid TeX — it is the
-/// only one of the two that can be math-aware, so it is what covers `_`; then
-/// treatment 1 ([`tokenize_bib_field`]) reads the result with `% & #` still inert,
+/// only one of the two that can be math-aware, so it is what covers `_` and `^`;
+/// then treatment 1 ([`tokenize_bib_field`]) reads the result with `% & #` still inert,
 /// covering whatever the escaper deliberately left alone (the inside of a
 /// `\url{…}`).
 ///
@@ -2674,17 +2698,38 @@ mod tests {
     );
   }
 
+  /// `^` is `_`'s twin — data to `bibtex(1)`, "Script … can only appear in math
+  /// mode" to TeX — but its escape is NOT `\` + the character: `\^` is the
+  /// circumflex accent, so `\^o` would silently render "ô" instead of "^o".
+  /// The braces are load-bearing too: without them `\textasciicircum` would
+  /// absorb a following letter into the control word.
+  #[test]
+  fn escape_specials_caret_is_textasciicircum_not_an_accent() {
+    assert_eq!(
+      escape_bib_data_specials("x^2 and ^o"),
+      r"x\textasciicircum{}2 and \textasciicircum{}o"
+    );
+    assert!(!escape_bib_data_specials("^o").starts_with(r"\^"));
+  }
+
   /// Idempotency. Most real `.bib` files already write `\&`, `\%`, `\_` — a
   /// blind escaper would turn `\&` into `\\&`, i.e. a line break followed by an
   /// ampersand. Escaping twice must equal escaping once.
   #[test]
   fn escape_specials_is_idempotent() {
-    let once = escape_bib_data_specials("AT&T at 95% with x_1");
+    let once = escape_bib_data_specials("AT&T at 95% with x_1 and x^2");
     assert_eq!(escape_bib_data_specials(&once), once);
     assert_eq!(
       escape_bib_data_specials(r"AT\&T at 95\% with x\_1"),
       r"AT\&T at 95\% with x\_1"
     );
+    // Both spellings a `.bib` uses for an already-escaped caret survive: the
+    // control WORD is copied whole, the control SYMBOL as a pair.
+    assert_eq!(
+      escape_bib_data_specials(r"x\textasciicircum{}2"),
+      r"x\textasciicircum{}2"
+    );
+    assert_eq!(escape_bib_data_specials(r"x\^{}2"), r"x\^{}2");
   }
 
   /// The tricky case the idempotency rule has to get right: in `\\&` the `\\`
@@ -2697,10 +2742,15 @@ mod tests {
       r"break \\\& more"
     );
     assert_eq!(escape_bib_data_specials(r"break \\_x"), r"break \\\_x");
+    assert_eq!(
+      escape_bib_data_specials(r"break \\^x"),
+      r"break \\\textasciicircum{}x"
+    );
   }
 
-  /// Math is the other hazard: `_` inside `$…$` is a real subscript and must
-  /// stay catcode 8, while the same character outside is data.
+  /// Math is the other hazard: `_`/`^` inside `$…$` are a real subscript and
+  /// superscript and must stay catcode 8/7, while the same characters outside
+  /// are data.
   #[test]
   fn escape_specials_skips_math() {
     assert_eq!(
@@ -2714,6 +2764,14 @@ mod tests {
     assert_eq!(
       escape_bib_data_specials(r"open \(x_1\) then y_2"),
       r"open \(x_1\) then y\_2"
+    );
+    assert_eq!(
+      escape_bib_data_specials("Bounds on $x^2+y_1$ for 10^6 cells"),
+      r"Bounds on $x^2+y_1$ for 10\textasciicircum{}6 cells"
+    );
+    assert_eq!(
+      escape_bib_data_specials(r"open \[x^2\] then y^3"),
+      r"open \[x^2\] then y\textasciicircum{}3"
     );
   }
 
@@ -2738,8 +2796,8 @@ mod tests {
   #[test]
   fn escape_specials_skips_a_verbatim_argument() {
     assert_eq!(
-      escape_bib_data_specials(r"\url{http://x.org/a%20b?c=1&d=2}"),
-      r"\url{http://x.org/a%20b?c=1&d=2}"
+      escape_bib_data_specials(r"\url{http://x.org/a%20b?c=1&d=2^3}"),
+      r"\url{http://x.org/a%20b?c=1&d=2^3}"
     );
     assert_eq!(
       escape_bib_data_specials(r"\href{http://x.org/a%20b}{AT&T}"),

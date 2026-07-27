@@ -69,7 +69,7 @@ collapsing the pipeline collapsed both handlings into one.
 
 | | treatment | what it does | mechanism |
 |---|---|---|---|
-| **1** | reading the `.bib` — *be `bibtex`* | field bytes are inert data: `%` is not a comment, `&` not an alignment tab, `#` not a parameter, `_` not a subscript. Only braces and the entry/field delimiters are structural. **The text is not altered** — the stored value keeps its exact bytes. | a per-Mouth opt-in property on the entry mouth, plus a companion (`tokenize_bib_literal`) for handlers that re-read the raw field |
+| **1** | reading the `.bib` — *be `bibtex`* | field bytes are inert data: `%` is not a comment, `&` not an alignment tab, `#` not a parameter, `_` not a subscript, `^` not a superscript. Only braces and the entry/field delimiters are structural. **The text is not altered** — the stored value keeps its exact bytes. | a per-Mouth opt-in property on the entry mouth, plus a companion (`tokenize_bib_literal`) for handlers that re-read the raw field |
 | **2** | synthesizing the `.bbl` and digesting it — *be `pdflatex` pass 2* | the content must now be valid TeX, and we are the ones writing the `.bbl`, so we escape what the author plainly meant literally | `escape_bib_data_specials` at the data→TeX boundary: math spans skipped, idempotent |
 
 **The corollary that makes the exclusion list principled.** A handler that
@@ -90,16 +90,26 @@ name-, date- and MR/Zbl-assembly sites that share that path.
 State catcode is inherited by a `.sty` raw-load triggered from inside a field
 handler, where `%` must still be a comment.
 
-**Correction to the table above, measured while implementing it: `_` belongs to
-treatment 2 ONLY.** The row is right that a `_` in a field is data, but wrong
-that treatment 1 is where that gets expressed. A catcode is decided at
+**Correction to the table above, measured while implementing it: `_` and `^`
+belong to treatment 2 ONLY.** The row is right that a `_` in a field is data,
+but wrong that treatment 1 is where that gets expressed. A catcode is decided at
 tokenization, before anything knows whether the character is inside `$…$`, and
 a subscript in a title's math (`title = {Bounds on $x_1+x_2$}`) is legitimate
 TeX that must keep working. Putting `_` in `Mouth::with_bib_data_literals`
 silently flattened every subscript in a bibliography title — caught by the
 existing `bib_bare_ampersand_leaves_live_markup_alone`, which asserts
 `role="SUBSCRIPTOP"`. Only the escaper can be math-aware, so treatment 1 covers
-`% & #` and treatment 2 covers all four. Landed that way in OXIDIZED_DESIGN #74.
+`% & #` and treatment 2 covers all five. Landed that way in OXIDIZED_DESIGN #74.
+
+**`^` is treatment-2-only for exactly the same reason as `_`, and joined it
+2026-07-27.** The two are twins in this flow: both are TeX scripting characters,
+both are plain data to `bibtex(1)`, both raise "Script … can only appear in math
+mode" outside math — verified end-to-end rather than assumed (`note = {q _ r ^ s}`
+renders `q _ r ^ s`, zero errors). The one asymmetry is the escape spelling, and
+it is a silent trap: `\_` is the underscore command but `\^` is the circumflex
+**accent**, so the generic `\` + character arm would render `^o` as "ô". `^` gets
+its own arm emitting `\textasciicircum{}`, braces included. This is what closed
+"the `^` third remains open" below.
 
 ### Why the re-port is the real fix: eager tokenization defeats parameter types (measured 2026-07-26)
 
@@ -118,14 +128,16 @@ Three sub-causes, and they are NOT three bugs — they are one architectural gap
 | `unexpected:_` / `&` / `^`, `misdefined:#` | 61 | TeX specials that are literal inside a URL |
 
 The first two are fixed (#391: `BBL_STANDARD_FALLBACKS`, `BibCatcodeScope`).
-The third is **not**, and must not be fixed by widening the catcode phase:
-`$a_b$` and `$x^2$` in a title are legitimate, so neutralizing `_`/`^`
-file-wide would trade one regression for another.
+The third is fixed too (below), but NOT by widening the catcode phase, and that
+constraint is why: `$a_b$` and `$x^2$` in a title are legitimate, so
+neutralizing `_`/`^` file-wide would trade one regression for another. Only the
+math-aware escaper can carry a scripting character.
 
 **LANDED 2026-07-27 on the `.bib` POOL route, exactly as consequence 2 above
 prescribes** — an escape at the A→B boundary, not catcode suppression.
 `escape_bib_data_specials` (`bibtex.rs`) emits `%`→`\%`, `&`→`\&`, `#`→`\#`,
-`_`→`\_`; `\emph{…}`, `$x_1+x_2$` and `{\v S}pakov` pass through untouched.
+`_`→`\_`, `^`→`\textasciicircum{}`; `\emph{…}`, `$x^2+y_1$` and `{\v S}pakov`
+pass through untouched.
 The mechanism, its four hazards (math, idempotency, raw-read fields, nested
 `\url` data regions) and — the part that was NOT obvious — the **three** seams
 it had to cover are in OXIDIZED_DESIGN #74: the entry line in
@@ -222,8 +234,9 @@ field.
 `{\&}amp;` / `&amp;`, where an HTML entity survived into the `.bib`. Those raise
 no error at all — Perl and pdflatex both print "&amp;" — so the mouth-level
 change does not reach them; `undouble_escaped_ampersand` in `bibtex.rs` does.
-Guard `bib_escaped_amp_entity_decodes_to_one_ampersand`. The `^` third remains
-open.
+Guard `bib_escaped_amp_entity_decodes_to_one_ampersand`. **The `^` third is
+CLOSED** (2026-07-27) — the same treatment-2 escape as `_`, with its own arm
+because `\^` is the circumflex accent; see the two-treatments section above.
 
 #### What the 2026-07-26 prototype measured (and the two claims it corrected)
 
