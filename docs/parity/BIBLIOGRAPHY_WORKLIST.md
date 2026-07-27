@@ -123,7 +123,7 @@ and fourteen times over in 2605.11579's `biblo.bib` (L4768, L6910, …).
 
 We read `.bib` directly, so that copy is ours to make — and it is made. Perl
 `Pre/BibTeX.pm::toTeX` L118-122 joins the preamble lines ahead of
-`\begin{bibtex@bibliography}`; `pre_bibtex::to_tex` L699-703 mirrors it
+`\begin{bibtex@bibliography}`; `pre_bibtex::to_tex` mirrors it
 **verbatim** — no `escape_bib_data_specials`, no
 `Mouth::with_bib_data_literals` — which is exactly right for treatment-2
 content. Measured end to end with a probe `@preamble` defining a macro nothing
@@ -148,8 +148,10 @@ green even if that string is never executed.
 motivation for checking, and the corpus says no. Scan of the first 600 papers of
 `/data/arxiv/2605/`: 7 use `\cprime` inside a `.bib`, and **6 of the 7 carry no
 `@preamble` at all** (the seventh, 2605.00097, has one but never uses
-`\cprime`). Measured with the raw-`.bib` route forced, `--includestyles`,
-`--release`, TOTAL document errors with-stub → without:
+`\cprime`). 2605.11579 sits outside that window and is added as the eighth row
+because it is the one paper whose `@preamble` covers real uses. Measured with
+the raw-`.bib` route forced, `--includestyles`, `--release`, TOTAL document
+errors with-stub → without:
 
 | paper | `@preamble` defines `\cprime`? | with → without |
 |---|---|---|
