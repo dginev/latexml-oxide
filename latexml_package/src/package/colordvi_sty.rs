@@ -51,7 +51,7 @@ LoadDefinitions!({
       name_str, name_str
     );
     for def_str in [&text_def, &name_def] {
-      let tokens = mouth::tokenize_internal(def_str);
+      let tokens = mouth::tokenize_internal(TeXString::assembled(def_str.clone()));
       do_expand(tokens)?;
     }
     Ok(Vec::new())

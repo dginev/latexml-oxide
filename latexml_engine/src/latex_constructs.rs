@@ -669,7 +669,9 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     if let Some((final_line, remaining)) = line.split_once(end) {
       line = final_line;
       unread_one(T_CR!());
-      unread(Tokenize!(remaining));
+      // `assembled`: `remaining` is a slice of the raw verbatim line — source
+      // text straight off the mouth, never a flattened `Tokens`.
+      unread(Tokenize!(TeXString::assembled(remaining.to_string())));
       exiting = true;
     }
     // The raw chars will still have to be decoded (but not space!!)
@@ -1300,7 +1302,9 @@ pub fn use_theorem_style(name: &str) {
             },
             // Values round-tripping through tokens — use internal cattable so
             // any `\lx@…` names re-tokenize as single CS (not `\lx`+`@…`).
-            _ => mouth::tokenize_internal(&val.to_string()),
+            // `assembled`: the `Stored::Tokens` case is taken by the arm above,
+            // so what reaches here is a scalar (string/number) rendering.
+            _ => mouth::tokenize_internal(TeXString::assembled(val.to_string())),
           };
           let _ = assign_register(&key, RegisterValue::Tokens(tokens), None, vec![]);
         } else {
@@ -1393,7 +1397,9 @@ pub fn define_new_theorem(
       DefMacro!(
         T_CS!(s!("\\the{counter}")),
         None,
-        Some(ExpansionBody::Tokens(mouth::tokenize_internal(&the_counter_body))),
+        Some(ExpansionBody::Tokens(mouth::tokenize_internal(
+          TeXString::assembled(the_counter_body)
+        ))),
         scope => Some(Scope::Global)
       );
     }
@@ -1531,7 +1537,9 @@ pub fn define_new_theorem(
     DefMacro!(
       format_cs_token,
       params,
-      Some(ExpansionBody::Tokens(mouth::tokenize_internal(&fmt_str))),
+      Some(ExpansionBody::Tokens(mouth::tokenize_internal(
+        TeXString::assembled(fmt_str)
+      ))),
       scope => Some(Scope::Global)
     );
   }
@@ -1669,7 +1677,7 @@ pub fn define_new_theorem(
       .map(|n| n.revert().map(|t| t.to_string()).unwrap_or_default())
       .unwrap_or_default();
     let digest_str = s!("\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}");
-    let digested = digest(mouth::tokenize_internal(&digest_str))?;
+    let digested = digest(mouth::tokenize_internal(TeXString::assembled(digest_str)))?;
     Ok(vec![digested])
   });
   options.after_digest_begin.push(after_digest_begin_closure);
@@ -1714,7 +1722,9 @@ pub fn define_new_theorem(
               T_BEGIN!(),
             ]);
             let mut full_toks = tag_tokens.unlist();
-            full_toks.extend(mouth::tokenize_internal(&thmset_for_tags).unlist());
+            full_toks.extend(
+              mouth::tokenize_internal(TeXString::assembled(thmset_for_tags.clone())).unlist(),
+            );
             full_toks.push(T_END!());
             full_toks.push(T_END!());
             let tags = digest(Tokens::new(full_toks))?;
@@ -6135,7 +6145,8 @@ LoadDefinitions!({
         other => other.to_string(),
       };
       let new_id_macro = format!("{}.\\@equation@ID", id_str);
-      def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
+      def_macro(T_CS!("\\theequation@ID"), None,
+        mouth::tokenize_internal(TeXString::assembled(new_id_macro)), None)?;
     }
   });
   Tag!("ltx:equationgroup", auto_close => true);
@@ -7290,10 +7301,10 @@ LoadDefinitions!({
       let thectrid = s!("\\the{}@ID", ctr_str);
       let _ = def_macro(T_CS!(thectrid), None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
-          Ok(mouth::tokenize_internal(&s!(
+          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
             "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
             within_for_id, within_for_id, clean_prefix, ctr_for_id
-          )))
+          ))))
         }))),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
     }
@@ -7327,9 +7338,9 @@ LoadDefinitions!({
       let thectrid = s!("\\the{}@ID", ctr_str);
       let _ = def_macro(T_CS!(thectrid), None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
-          Ok(mouth::tokenize_internal(&s!(
+          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
             "{}\\csname @{}@ID\\endcsname", clean_prefix, ctr_for_id
-          )))
+          ))))
         }))),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
     }

@@ -57,7 +57,7 @@ LoadDefinitions!({
     let format_cs_tok = T_CS!(format_cs);
     let format_paramlist = parse_parameters("{}", &format_cs_tok, true)?;
     def_macro(format_cs_tok, format_paramlist,
-      mouth::tokenize_internal(&format_body), None)?;
+      mouth::tokenize_internal(TeXString::assembled(format_body)), None)?;
 
     define_float_environment(&ftype, &auxext, &within)?;
   });
@@ -91,7 +91,7 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
     def_macro(
       T_CS!(the_cs),
       None,
-      mouth::tokenize_internal(&the_body),
+      mouth::tokenize_internal(TeXString::assembled(the_body)),
       None,
     )?;
   }

@@ -91,7 +91,7 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
   // Perl uses Explode() which creates catcode-12 (OTHER) tokens.
   // '#' as catcode OTHER, then hex digits as catcode OTHER.
   let mut tokens = vec![T_OTHER!("#")];
-  tokens.extend(mouth::tokenize_internal(&hex).unlist());
+  tokens.extend(mouth::tokenize_internal(TeXString::assembled(hex)).unlist());
   tokens
 }
 
@@ -672,7 +672,7 @@ LoadDefinitions!({
       dim_to_px(e),
       dim_to_px(f));
     let tok_str = format!("\\lxSVG@begingroup{{{}}}", transform);
-    mouth::tokenize_internal(&tok_str).unlist()
+    mouth::tokenize_internal(TeXString::assembled(tok_str)).unlist()
   });
 
   //===================================================================
@@ -705,10 +705,10 @@ LoadDefinitions!({
     let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@drawpath@clipped{{{}}}{{{}}}}}", path, arg_str);
-      mouth::tokenize_internal(&clip_cmd).unlist()
+      mouth::tokenize_internal(TeXString::assembled(clip_cmd)).unlist()
     } else {
       let draw_cmd = format!("\\lxSVG@clearpath\\pgfsysprotocol@literal{{\\lxSVG@drawpath@unclipped{{{}}}{{{}}}}}", path, arg_str);
-      mouth::tokenize_internal(&draw_cmd).unlist()
+      mouth::tokenize_internal(TeXString::assembled(draw_cmd)).unlist()
     }
   });
 
@@ -820,7 +820,7 @@ LoadDefinitions!({
     let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@discardpath@clipped{{{}}}}}", path);
-      mouth::tokenize_internal(&clip_cmd).unlist()
+      mouth::tokenize_internal(TeXString::assembled(clip_cmd)).unlist()
     } else {
       vec![]
     }
@@ -1616,7 +1616,7 @@ LoadDefinitions!({
 
       // Define \lxSVG@pos macro
       let pos_toks = mouth::tokenize_internal(
-        &format!("\\pgfpoint{{{x}}}{{{y}}}"));
+        TeXString::assembled(format!("\\pgfpoint{{{x}}}{{{y}}}")));
       let _ = def_macro(T_CS!("\\lxSVG@pos"), None, pos_toks, None);
 
       Ok(vec![Digested::default()])
@@ -1698,7 +1698,7 @@ LoadDefinitions!({
 
       // Define \lxSVG@pos macro
       let pos_toks = mouth::tokenize_internal(
-        &format!("\\pgfpoint{{{}}}{{{}}}", 2.0 * endpos, 2.0 * endpos));
+        TeXString::assembled(format!("\\pgfpoint{{{}}}{{{}}}", 2.0 * endpos, 2.0 * endpos)));
       let _ = def_macro(T_CS!("\\lxSVG@pos"), None, pos_toks, None);
 
       Ok(vec![Digested::default()])

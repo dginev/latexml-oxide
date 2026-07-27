@@ -831,7 +831,13 @@ LoadDefinitions!({
   // author<->affiliation). Witness arXiv:2606.00313.
   DefMacro!("\\lx@add@thanks [] Semiverbatim", sub[(attr, content)] {
     if starts_with_affiliation_mark(&content) {
-      let retok = mouth::tokenize_internal(&content.to_string());
+      // `untex_string()`, NOT `to_string()`: flattening with `Display` welds a
+      // control word to whatever letter follows it (`\c c` → `\cc`), because the
+      // space that terminated the control word was eaten by the tokenizer and is
+      // not in the token list. `\thanks{...}` carries author names, so that is
+      // exactly the space-form-accent case that broke `\bib@@names` (PR #399) and
+      // the MathSciNet review path (issue 410). Witness arXiv:2606.00313.
+      let retok = mouth::tokenize_internal(content.clone().untex_string());
       let mut calls: Vec<Token> = Vec::new();
       for seg in split_before_affiliation_marks(retok) {
         if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
@@ -4216,7 +4222,7 @@ mod author_split_tests {
     // string interning.
     set_state(State::new(StateOptions::default()));
   }
-  fn tk(s: &str) -> Tokens { mouth::tokenize_internal(s) }
+  fn tk(s: &'static str) -> Tokens { mouth::tokenize_internal(s) }
 
   #[test]
   fn whole_line_cs_wrapper_detects_font_wrapper() {

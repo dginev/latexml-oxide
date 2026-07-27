@@ -60,9 +60,16 @@ LoadDefinitions!({
   // Perl: DefPrimitive('\mathtoolsset RequiredKeyVals', sub { ... getPairs ... DefMacro })
   DefPrimitive!("\\mathtoolsset RequiredKeyVals:mt", sub[(kv)] {
     for (key, val) in kv.get_pairs() {
-      let val_str = if val.is_empty() { "\\@mt@true".to_string() } else { val.to_string() };
+      // `untex_string()` on the `Tokens` variant: this value is re-tokenized as
+      // TeX, so a flattened control word would weld onto the letter after it
+      // (`\\v S` -> `\\vS`). The other `ArgWrap` variants are scalar renderings.
+      let val_tex = match val {
+        _ if val.is_empty() => TeXString::from("\\@mt@true"),
+        ArgWrap::Tokens(t) => t.clone().untex_string(),
+        _ => TeXString::assembled(val.to_string()),
+      };
       let cs_name = s!("\\@mt@mathtoolsset@{}", key);
-      def_macro(T_CS!(&cs_name), None, Tokenize!(&val_str), None)?;
+      def_macro(T_CS!(&cs_name), None, Tokenize!(val_tex), None)?;
     }
   });
 

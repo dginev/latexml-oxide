@@ -20,7 +20,7 @@ LoadDefinitions!({
     bgroup();
     let result = pgfmath_code_tex::pgfmathparse_eval(&expr_str);
     egroup()?;
-    let result_tokens = mouth::tokenize_internal(&result);
+    let result_tokens = mouth::tokenize_internal(TeXString::assembled(result));
     def_macro(
       cs.unlist().into_iter().next().unwrap_or_else(|| T_CS!("\\pgfmathresult")),
       None,

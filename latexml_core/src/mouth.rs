@@ -18,7 +18,7 @@ use crate::{
   common::{error::*, locator::Locator, numeric_ops::NumericOps, object::Object},
   state::*,
   token::*,
-  tokens::{NO_TOKENS, Tokens},
+  tokens::{NO_TOKENS, TeXString, Tokens},
   util::pathname,
 };
 
@@ -1170,13 +1170,20 @@ impl Mouth {
 ///
 /// See [`tokenize_internal`] for the `.sty`-style table that treats `@` as a
 /// letter.
-pub fn tokenize(text: &str) -> Tokens {
+///
+/// The argument is an `impl Into<`[`TeXString`]`>`, not a `&str`: a string
+/// literal converts implicitly, but a `String` — the shape a control-word-welding
+/// `Tokens::to_string()` arrives in — must declare itself via
+/// [`Tokens::untex_string`] or [`TeXString::assembled`]. See the [`TeXString`]
+/// docs for why.
+pub fn tokenize(text: impl Into<TeXString>) -> Tokens {
+  let text = text.into();
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
   }
   use_std_state();
-  let result = Mouth::new(text, None).unwrap().read_tokens();
+  let result = Mouth::new(text.as_str(), None).unwrap().read_tokens();
   use_main_state();
   result
 }
@@ -1194,13 +1201,18 @@ pub fn tokenize(text: &str) -> Tokens {
 /// This exists because the handlers that re-read a raw field — `\bib@@title`
 /// recasing, name splitting, date/pages assembly — build their tokens from the
 /// stored string and never pass through the per-entry mouth.
-pub fn tokenize_bib_literal(text: &str) -> Tokens {
+///
+/// Takes an `impl Into<`[`TeXString`]`>` for the same reason as [`tokenize`] —
+/// and it is the sink that most needs it: the bibliography is where the
+/// control-word weld has surfaced three times (PR #399, PR #400, issue 410).
+pub fn tokenize_bib_literal(text: impl Into<TeXString>) -> Tokens {
+  let text = text.into();
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
   }
   use_std_state();
-  let result = Mouth::new(text, None)
+  let result = Mouth::new(text.as_str(), None)
     .unwrap()
     .with_bib_data_literals()
     .read_tokens();
@@ -1215,13 +1227,16 @@ pub fn tokenize_bib_literal(text: &str) -> Tokens {
 /// internal control sequences (`\@ifnextchar`, `\@currentlabel`, …) tokenize as
 /// single names. This is the right choice for a macro body a binding writes
 /// itself, and the wrong one for text that came from the document.
-pub fn tokenize_internal(text: &str) -> Tokens {
+///
+/// Takes an `impl Into<`[`TeXString`]`>` for the same reason as [`tokenize`].
+pub fn tokenize_internal(text: impl Into<TeXString>) -> Tokens {
+  let text = text.into();
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
   }
   use_sty_state();
-  let result = Mouth::new(text, None).unwrap().read_tokens();
+  let result = Mouth::new(text.as_str(), None).unwrap().read_tokens();
   use_main_state();
   result
 }

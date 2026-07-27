@@ -400,8 +400,14 @@ LoadDefinitions!({
   // Catch-all: DeclareOption(undef, ...)
   // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
   DeclareOption!(None, {
-    let current_option = do_expand(T_CS!("\\CurrentOption"))?.to_string();
-    unread(Tokenize!(&s!("\\xyoption{{{}}}", current_option)));
+    // `untex_string()`, NOT `to_string()`: `\\CurrentOption` expands to `Tokens`,
+    // and flattening those with `Display` welds a control word onto the letter
+    // that follows it. See `TeXString`.
+    let current_option = do_expand(T_CS!("\\CurrentOption"))?.untex_string();
+    unread(Tokenize!(TeXString::assembled(s!(
+      "\\xyoption{{{}}}",
+      current_option.as_str()
+    ))));
   });
 
   //======================================================================

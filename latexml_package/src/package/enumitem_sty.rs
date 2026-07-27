@@ -36,7 +36,7 @@ fn begin_enum_itemize(
         .flatten()
         .is_none()
     {
-      let toks = mouth::tokenize_internal(first_key);
+      let toks = mouth::tokenize_internal(TeXString::assembled(first_key.to_string()));
       set_enumeration_style(Some(&toks), Some(level as i32))?;
     }
   }
@@ -248,7 +248,9 @@ fn merged_enumitem_keyvals(
             Stored::Tokens(t) => ArgWrap::Tokens(t),
             Stored::Number(n) => ArgWrap::Number(n),
             Stored::None => ArgWrap::None,
-            Stored::String(s) => ArgWrap::Tokens(with(s, mouth::tokenize_internal)),
+            Stored::String(s) => ArgWrap::Tokens(with(s, |t| {
+              mouth::tokenize_internal(TeXString::assembled(t.to_string()))
+            })),
             _ => ArgWrap::None,
           };
           hash.insert(key.clone(), aw);
@@ -272,7 +274,9 @@ fn argwrap_to_tokens(aw: &ArgWrap) -> Option<Tokens> {
   match aw {
     ArgWrap::Tokens(t) => Some(t.clone()),
     ArgWrap::None => None,
-    _ => Some(mouth::tokenize_internal(&aw.to_string())),
+    _ => Some(mouth::tokenize_internal(TeXString::assembled(
+      aw.to_string(),
+    ))),
   }
 }
 

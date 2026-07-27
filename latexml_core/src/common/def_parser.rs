@@ -10,7 +10,7 @@ use crate::{
   parameter::{Parameter, Parameters},
   pin,
   token::*,
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
 };
 
 static CSNAME_MACRO_RE: Lazy<Regex> =
@@ -59,9 +59,11 @@ pub fn parse_prototype(proto: &str, init_flag: bool) -> Result<(Token, Option<Pa
     SINGLE_CHAR_RE.replace(proto, "")
   } else if let Some(captures) = ACTIVE_CHAR_RE.captures(proto) {
     // Match an active char
-    cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str()))
-      .unlist()
-      .remove(0);
+    cs = mouth::tokenize_internal(TeXString::assembled(
+      captures.get(1).map_or("", |m| m.as_str()).to_string(),
+    ))
+    .unlist()
+    .remove(0);
     // also replace in proto
     ACTIVE_CHAR_RE.replace(proto, "")
   } else {
@@ -168,7 +170,9 @@ pub fn parse_parameters(
               let extra = if default_str.is_empty() {
                 vec![]
               } else {
-                vec![mouth::tokenize_internal(default_str)]
+                vec![mouth::tokenize_internal(TeXString::assembled(
+                  default_str.to_string(),
+                ))]
               };
               Parameter {
                 name: pin!("Optional"),
@@ -208,7 +212,11 @@ pub fn parse_parameters(
                   None | Some("") => Vec::new(),
                   Some(extra_str) => extra_str
                     .split('|')
-                    .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
+                    .map(|t| {
+                      Tokens::new(
+                        mouth::tokenize_internal(TeXString::assembled(t.to_string())).unlist(),
+                      )
+                    })
                     .collect(),
                 };
                 Parameter {

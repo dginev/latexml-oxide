@@ -41,7 +41,7 @@ LoadDefinitions!({
     ("\\unknownplatform", os.to_string())
   };
   def_macro(T_CS!("\\unknownplatform"), None,
-    Tokenize!(&unknown_name), None)?;
+    Tokenize!(TeXString::assembled(unknown_name)), None)?;
   let_i(&T_CS!("\\platformname"), &T_CS!(platform_cs), None);
 
   // Perl L63-66: one conditional per OS, returning the same-named sub.

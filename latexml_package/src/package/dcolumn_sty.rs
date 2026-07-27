@@ -95,7 +95,7 @@ LoadDefinitions!({
         "\\lx@hidden@bgroup\\lx@unactivate{{{}}}\\lx@wrap[role=PERIOD]{{{}}}\\lx@hidden@egroup",
         delim_str, todelim_str
       );
-      let expansion = mouth::tokenize_internal(&expansion_body);
+      let expansion = mouth::tokenize_internal(TeXString::assembled(expansion_body));
       def_macro(T_CS!(delim_str), None, expansion, None)?;
     }
     // Save and deactivate $

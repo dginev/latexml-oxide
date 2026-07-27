@@ -12,6 +12,7 @@ use crate::{
   list::List,
   state::{Scope, lookup_font},
   token::*,
+  tokens::TeXString,
   whatsit::Whatsit,
   *,
 };
@@ -78,7 +79,12 @@ impl IntoOption<Option<Reversion>> for &str {
       Some(Reversion::Tokens(Tokens!()))
     } else {
       Some(Reversion::Tokens(
-        mouth::tokenize_internal(self)
+        // `assembled`, not the literal `From<&'static str>`: this impl is on
+        // plain `&str`, so the lifetime is unknown here. See the note on
+        // `From<&str> for Reversion` in `definition.rs` — these `&str`
+        // conversion helpers are the residual way a `String` can still reach
+        // the tokenizer without saying so.
+        mouth::tokenize_internal(TeXString::assembled(self.to_string()))
           .pack_parameters()
           .ok()
           .unwrap(),

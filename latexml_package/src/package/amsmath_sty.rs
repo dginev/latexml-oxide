@@ -1564,7 +1564,7 @@ LoadDefinitions!({
     let within_str = Expand!(within.unwrap().clone()).to_string();
     new_counter(&counter_str, &within_str, None)?;
     let the_body = s!("\\csname the{within_str}\\endcsname.{format_str}{{{counter_str}}}");
-    let expansion_tokens = mouth::tokenize(&the_body);
+    let expansion_tokens = mouth::tokenize(TeXString::assembled(the_body));
     def_macro(
       T_CS!(s!("\\the{counter_str}")),
       None,

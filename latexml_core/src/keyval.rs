@@ -16,7 +16,7 @@ use crate::{
   parameter::Parameter,
   state,
   token::{Catcode, Token},
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -97,9 +97,9 @@ pub fn disable_keyval(prefix: &str, keyset: &str, key: &str) -> Result<()> {
   // disable the key
   define_ordinary(
     &qname,
-    Some(ExpansionBody::Tokens(tokenize(&s!(
+    Some(ExpansionBody::Tokens(tokenize(TeXString::assembled(s!(
       "\\PackageWarning{{keyval}}{{`{key}' has been disabled. }}"
-    )))),
+    ))))),
   )
 }
 
@@ -257,14 +257,29 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   // store metadata for introspection (used by \xkvview)
   // only register when xkvview tracking is enabled
   if state::lookup_bool("XKVVIEW_TRACKING") {
+    // `assembled`: these four are bare identifiers (a key/keyset/prefix name),
+    // not markup — nothing to weld — but they arrive as borrowed `&str`.
+    let identifier = |s: &str| TeXString::assembled(s.to_string());
     keyval_set(
       &qname,
       "kind",
-      Stored::Tokens(tokenize(kind.unwrap_or("ordinary"))),
+      Stored::Tokens(tokenize(identifier(kind.unwrap_or("ordinary")))),
     );
-    keyval_set(&qname, "keyval_prefix", Stored::Tokens(tokenize(prefix)));
-    keyval_set(&qname, "keyset", Stored::Tokens(tokenize(keyset)));
-    keyval_set(&qname, "key_name", Stored::Tokens(tokenize(key)));
+    keyval_set(
+      &qname,
+      "keyval_prefix",
+      Stored::Tokens(tokenize(identifier(prefix))),
+    );
+    keyval_set(
+      &qname,
+      "keyset",
+      Stored::Tokens(tokenize(identifier(keyset))),
+    );
+    keyval_set(
+      &qname,
+      "key_name",
+      Stored::Tokens(tokenize(identifier(key))),
+    );
     register_keyval(&qname);
   }
   // set the type
@@ -301,7 +316,7 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   // set the default
   // Question: Why was $default converted ToString ???
   if let Some(default_str) = default {
-    let default_tks = tokenize(default_str);
+    let default_tks = tokenize(TeXString::assembled(default_str.to_string()));
     keyval_set(&qname, "default", Stored::Tokens(default_tks.clone()));
     def_macro(
       T_CS!(s!("\\{qname}@default")),

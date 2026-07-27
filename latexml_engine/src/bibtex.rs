@@ -451,7 +451,12 @@ pub fn current_entry_field(name: &str) -> Option<Tokens> {
   if let Some(tokens) = entry.get_field(name) {
     return Some(tokens.clone());
   }
-  entry.get_raw_field(name).map(tokenize_bib_field)
+  // `assembled`: a *raw* field is the .bib source text verbatim, straight off
+  // the BibTeX lexer — never a flattened `Tokens`, so no control word can have
+  // been welded to what follows it.
+  entry
+    .get_raw_field(name)
+    .map(|raw| tokenize_bib_field(TeXString::assembled(raw.to_string())))
 }
 
 /// `Tokenize!` for a string that came out of the BibTeX lexer.
@@ -475,7 +480,7 @@ pub fn current_entry_field(name: &str) -> Option<Tokens> {
 /// `_` is NOT in this set: a catcode is fixed at tokenization, before anything
 /// knows whether it is inside `$…$`, and a subscript in a title's math is
 /// legitimate TeX. It is handled by treatment 2 ([`bib_tex_tokens`]) instead.
-fn tokenize_bib_field(text: &str) -> Tokens { mouth::tokenize_bib_literal(text) }
+fn tokenize_bib_field(text: impl Into<TeXString>) -> Tokens { mouth::tokenize_bib_literal(text) }
 
 /// Both treatments, for a raw `.bib` string that is about to become TeX tokens.
 ///
@@ -491,7 +496,22 @@ fn tokenize_bib_field(text: &str) -> Tokens { mouth::tokenize_bib_literal(text) 
 /// all three, plus the name-, date- and MR/Zbl-assembly sites that share that
 /// path". Escaping is idempotent, so a value already escaped upstream (a recased
 /// title) is unharmed by passing through again.
-fn bib_tex_tokens(text: &str) -> Tokens { tokenize_bib_field(&escape_bib_data_specials(text)) }
+///
+/// The `impl Into<TeXString>` is the guard, and this is the site that has needed
+/// it: a caller must hand over either a raw `.bib` string (`TeXString::assembled`
+/// — lexer output, never a flattened `Tokens`) or a reverted token list
+/// ([`Tokens::untex_string`]). A bare `Tokens::to_string()` no longer compiles
+/// here, which is what made `MRREVIEWER = {Fran\c cois\ Digne}` come back as
+/// `undefined:\ccois`. See [`latexml_core::tokens::TeXString`].
+fn bib_tex_tokens(text: impl Into<TeXString>) -> Tokens {
+  // `escape_bib_data_specials` is a TeX-preserving transform of TeX-valid input,
+  // so re-asserting `assembled` over its output carries the caller's assertion
+  // through rather than laundering a new one.
+  let text = text.into();
+  tokenize_bib_field(TeXString::assembled(escape_bib_data_specials(
+    text.as_str(),
+  )))
+}
 
 /// Collapse an HTML-escaped ampersand — `&amp;` — back to the single `&` the
 /// author wrote, in whichever of its three spellings a `.bib` export used.
@@ -1245,21 +1265,26 @@ LoadDefinitions!({
     let mut body: Vec<Token> = Vec::new();
     body.push(T_CS!("\\bib@@@names"));
     body.push(T_BEGIN!());
+    // `assembled`: every part below is a slice of `names_str`, which came out of
+    // `Tokens::untex` just above — already valid TeX, with the spaces that
+    // terminate control words restored. That is exactly the obligation
+    // `TeXString::assembled` names.
+    let part = |s: &str| TeXString::assembled(s.to_string());
     for name in &parsed.names {
       let mut name_tks: Vec<Token> = Vec::new();
       if !name.surname.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@surname"),
-          vec![bib_tex_tokens(&name.surname)]);
+          vec![bib_tex_tokens(part(&name.surname))]);
         name_tks.extend(inv.unlist());
       }
       if !name.given.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@given"),
-          vec![bib_tex_tokens(&name.given)]);
+          vec![bib_tex_tokens(part(&name.given))]);
         name_tks.extend(inv.unlist());
       }
       if !name.lineage.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@lineage"),
-          vec![bib_tex_tokens(&name.lineage)]);
+          vec![bib_tex_tokens(part(&name.lineage))]);
         name_tks.extend(inv.unlist());
       }
       let inv = Invocation!(T_CS!("\\bib@@@name"),
@@ -1326,7 +1351,8 @@ LoadDefinitions!({
     // `tokenize_bib_field`, not `Tokenize!`: treatment 1 is the safety net under
     // the escaping above — anything the escaper deliberately left alone (a
     // `%` inside `\url{…}`) is still read as data rather than as a comment.
-    let recased_tokens = bib_tex_tokens(&recased);
+    // `assembled`: `recased` is a re-cased *raw* field, i.e. .bib source text.
+    let recased_tokens = bib_tex_tokens(TeXString::assembled(recased));
     let inv = Invocation!(T_CS!("\\bib@@field"),
       vec![tag_tokens, Tokens!(), recased_tokens]);
     Ok(inv)
@@ -1738,7 +1764,8 @@ LoadDefinitions!({
     let mut out_toks: Vec<Token> = Vec::new();
     out_toks.push(T_CS!("\\bib@field@default@date"));
     out_toks.push(T_BEGIN!());
-    out_toks.extend(bib_tex_tokens(&date).unlist());
+    // `assembled`: `date` is assembled here from digits and `-` separators.
+    out_toks.extend(bib_tex_tokens(TeXString::assembled(date)).unlist());
     out_toks.push(T_END!());
     Ok(Tokens::new(out_toks))
   });
@@ -1803,7 +1830,8 @@ LoadDefinitions!({
     // it escapes too, on the same rule (`escape_bib_data_specials`).
     whatsit.set_property(
       "pages",
-      Stored::Digested(digest(bib_tex_tokens(&normalised))?),
+      // `assembled`: `normalised` is the raw `pages` field, `-` runs collapsed.
+      Stored::Digested(digest(bib_tex_tokens(TeXString::assembled(normalised)))?),
     );
   });
 
@@ -2035,14 +2063,14 @@ LoadDefinitions!({
   // Third site of this defect after `\bib@@names` (PR #399) and dcolumn/overpic
   // (PR #400). Guard: `06_cluster_bibliography::bib_mr_reviewer_accent_survives_reversion`.
   DefMacro!("\\bib@synthesize@mr", sub[_args] {
-    let mrnumber = current_entry_field("mrnumber").map(Tokens::untex);
-    let mrreviewer = current_entry_field("mrreviewer").map(Tokens::untex);
+    let mrnumber = current_entry_field("mrnumber").map(Tokens::untex_string);
+    let mrreviewer = current_entry_field("mrreviewer").map(Tokens::untex_string);
     if mrnumber.is_none() && mrreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let mr_tks = bib_tex_tokens(&mrnumber.unwrap_or_default());
+    let mr_tks = bib_tex_tokens(mrnumber.unwrap_or_default());
     let rev_tks = match mrreviewer {
-      Some(r) => bib_tex_tokens(&r),
+      Some(r) => bib_tex_tokens(r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@mr"), vec![mr_tks, rev_tks]);
@@ -2088,14 +2116,14 @@ LoadDefinitions!({
   // \bib@synthesize@zbl — Perl L828-835. Same shape as mr but
   // unconditional `isreview` (no MR-style id stripping).
   DefMacro!("\\bib@synthesize@zbl", sub[_args] {
-    let zblno = current_entry_field("zblno").map(Tokens::untex);
-    let zblreviewer = current_entry_field("zblreviewer").map(Tokens::untex);
+    let zblno = current_entry_field("zblno").map(Tokens::untex_string);
+    let zblreviewer = current_entry_field("zblreviewer").map(Tokens::untex_string);
     if zblno.is_none() && zblreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let zbl_tks = bib_tex_tokens(&zblno.unwrap_or_default());
+    let zbl_tks = bib_tex_tokens(zblno.unwrap_or_default());
     let rev_tks = match zblreviewer {
-      Some(r) => bib_tex_tokens(&r),
+      Some(r) => bib_tex_tokens(r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@zbl"), vec![zbl_tks, rev_tks]);
