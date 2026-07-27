@@ -2674,3 +2674,55 @@ wrong, not the code.
 Guards: `bibtex::tests::recase_title_handles_every_character_width_at_every_position`,
 `util::char_cursor::tests::*`. Related: [[#68]] above (the same "port a Perl
 loop, inherit an invariant Perl never had" family).
+
+## #71 A `Tokens` flattened with `Display` and re-tokenized WELDS control words — the tokenizing sinks take `TeXString`, so a bare `String` cannot reach them
+
+TeX **consumes** the space that terminates a control word, so it is gone as data
+by token time: `\v S` tokenizes to `[\v][S]`, and concatenating those token
+strings gives `\vS` — a control sequence that exists in no LaTeX. `untex()`
+re-emits the space; `Display`/`to_string()` deliberately does not.
+
+This is **not** a divergence. Perl is identical (`Core/Tokens.pm:61 toString`
+joins the token strings, `Core/Token.pm:306` returns a CS name with no trailing
+space) and its comment — which our port copies verbatim — already says the
+result is "NOT for creating valid TeX (use revert or UnTeX for that!)". Perl
+protects itself by author discipline alone. That failed three times here, each
+found by a user-visible failure years later: `\bib@@names` (PR #399),
+`dcolumn`/`overpic` (PR #400), and `\bib@synthesize@mr` (issue 410 —
+`MRREVIEWER = {Dragomir \v{Z}. \Dbar okovi\'{c}}` → `undefined:\Dbarokovi`;
+witness 2605.11579, 5 welds over 36 bibitems, Perl 0).
+
+**The rule.** All three mouth entry points — `mouth::tokenize`,
+`mouth::tokenize_internal`, `mouth::tokenize_bib_literal` — and therefore
+`Tokenize!`/`TokenizeInternal!`/`bib_tex_tokens` take `impl Into<TeXString>`
+(`latexml_core::tokens`). Its value, like `CharCursor`'s in [[#70]], is what it
+withholds — there is `From<&'static str>` and nothing else:
+
+| you have | you write |
+|---|---|
+| a TeX literal | nothing; `&'static str` converts implicitly (~125 sites untouched) |
+| a `Tokens` | `t.untex_string()` |
+| a `format!` of literal TeX around safe pieces | `TeXString::assembled(…)`, whose doc names the obligation |
+
+`s!(…)` returns `String` and `&some_var` is a short-lived borrow, so neither
+coerces: a welded flatten fails to compile (E0277) or fails the borrow check
+(E0521 "`'1` must outlive `'static`"). **Do not add `From<String>`.**
+
+**Not every flatten is a weld** — the audit matters. A string that becomes a CS
+*name* (`T_CS!(cs.to_string())`), an `ExplodeText!` char run, a `.parse()`, or a
+comparison cannot weld, and those keep `to_string()`. So does `Display for
+Tokens` itself: 500+ sites use it for keys and names, and making it TeX-correct
+would silently change all of them.
+
+**Method — census a call site family without breaking the build.** Replace/shadow
+the trait method with a *deprecated inherent* one (`impl Tokens { #[deprecated]
+pub fn to_string(&self) }`): an inherent method wins over `ToString`, so every
+call site warns while `format!("{t}")` stays silent. Collect the warnings
+workspace-wide, classify, then remove the shim. Measured 547 sites, of which 18
+reached a TeX-source sink and 6 could weld.
+
+Guards: `tokens::texstring_guard_tests` (compile-time — `String`/`&String` must
+NOT be `Into<TeXString>`, `&'static str` must be; plus a `compile_fail`
+doctest), `bib_name_space_form_accent_survives_reversion`,
+`bib_mr_reviewer_accent_survives_reversion`. Related: [[#70]] (the same
+"withhold the operation and the class disappears" shape).

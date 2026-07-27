@@ -88,6 +88,12 @@
   - **MathReview / ZentralBlatt links are synthesized** — `mrnumber`/`zblno`
     produced no link at all — and an entry carrying both `date` and `year` no
     longer emits a duplicate date.
+  - **An accent in a MathSciNet / Zentralblatt reviewer name survives** —
+    `MRREVIEWER = {Fran\c cois Digne}` came back as `\ccois`, an undefined
+    macro, because flattening a token list drops the space that terminates a
+    control word. That flattening had already cost author names and two column
+    types, so the tokenizing entry points now take a dedicated TeX-string type
+    and it no longer compiles anywhere in the tree.
   - **A biblatex `.bbl` carrying two `\datalist` blocks no longer hangs the
     conversion** on a self-referential `\let`.
   - **A biber `\missing{key}` is a named warning**, not an undefined-command error.
