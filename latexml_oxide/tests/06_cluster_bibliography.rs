@@ -776,6 +776,63 @@ fn bib_bare_ampersand_leaves_live_markup_alone() {
     );
   }
 }
+
+/// An unmatched `$` in a `.bib` field is a currency sign, not a math shift.
+///
+/// Witness 2605.00166 (`annote = {… of the order of $10 million …}`): **0
+/// errors** before the raw `.bib` became a real conversion, **103 and a Fatal**
+/// after. A `.bib` is digested as ONE unit, so the never-closed inline-math
+/// group crossed `\end{bib@entry}` and every subsequent element landed inside
+/// `<ltx:XMath>` — `<ltx:bib-organization> isn't allowed in <ltx:XMath>` ~100
+/// times, tripping the 100-error cap. Across the 2605+2606 sandboxes, 33 of the
+/// 69 papers whose bibliography sub-conversion newly failed carry an odd `$`.
+///
+/// Authorized surpass-Perl (OXIDIZED_DESIGN #79): same-host Perl cascades
+/// identically (`latexmlc` on 2605.00166 gives 102 errors,
+/// `Fatal:too_many_errors:100`, rc=1), because `\bibentry@create` interpolates
+/// the field raw into a fresh Mouth. Upstream already agrees an unmatched `$`
+/// is not math — `\bib@@title` errors and DELETES it — it just applies that to
+/// one field and drops the character. Nothing is suppressed here: the cascade
+/// is gone because the entry is well-formed, and `convert_and_post_clean`
+/// enforces the zero-post-error gate.
+///
+/// The load-bearing assertion is `aftermath`, the LAST entry: containment. If a
+/// stray `$` leaks again it is the first thing to disappear.
+#[test]
+fn bib_unmatched_dollar_does_not_leak_math() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_unmatched_dollar.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "unmatched $: no bibliography at all:\n{x}"
+  );
+  // Every entry survives — `aftermath` sits after all three stray-`$` entries.
+  for needle in [
+    "Okonkwo",
+    "Lindqvist",
+    "Diallo",
+    "Park",
+    "Raghavan",
+    "containment canary",
+  ] {
+    assert!(
+      x.contains(needle),
+      "unmatched $: {needle:?} was swallowed by a leaked math group:\n{x}"
+    );
+  }
+  // The currency amount survives as TEXT rather than being absorbed into math.
+  assert!(
+    x.contains("10 million"),
+    "unmatched $: the currency amount vanished:\n{x}"
+  );
+  // …while a genuinely balanced span is still parsed as math: `$x_1+x_2$` in
+  // `mathandcurrency` keeps its subscript, so demoting the later `$8` did not
+  // disturb the earlier pair.
+  assert!(
+    x.contains(r#"role="SUBSCRIPTOP""#),
+    "unmatched $: balanced `$x_1+x_2$` stopped being math:\n{x}"
+  );
+}
+
 /// A `.bib` field's content is DATA, not TeX: a bare `_`, `&`, `#` or `%` is
 /// the literal character. `AT&T` renders "AT&T"; `AT1G01010_v2` renders
 /// "AT1G01010_v2". Witnesses: 2605.06926 (8 `unexpected:_`, four `eprint` PDF

@@ -2686,6 +2686,59 @@ the stub beneath it) and
 does not — RED under an always-on `\Dbar`, where the author's barred-D math
 renders `Đ`, and equally RED if the `.bib` session is made to auto-load).
 
+### 79. An UNMATCHED `$` in a `.bib` field is data, not a math shift
+
+Extends divergence #74 (a `.bib` field's content is DATA) to the one special it
+left out. Treatment 2's escaper is math-aware precisely so `$x_1+x_2$` passes
+through — but it treated `$` as an unconditional toggle, with no check that the
+toggles pair up.
+
+**The defect.** One stray `$` opens an inline-math group that never closes. A
+`.bib` is digested as ONE unit, so the leak crosses `\end{bib@entry}` and every
+subsequent element of every subsequent entry lands inside `<ltx:XMath>`:
+`<ltx:bib-organization> isn't allowed in <ltx:XMath>`, ~100 times over, tripping
+the 100-error cap and taking the whole document **Fatal**. Witness 2605.00166,
+`annote = {… costs … are probably of the order of $10 million. …}` — a literal
+currency dollar: **0 errors before the `.bib` became a real conversion, 103 and
+a Fatal after**. Across the 2605+2606 sandboxes, 33 of the 69 papers whose
+bibliography sub-conversion newly failed carry an odd `$` in a field, mostly in
+`title`, `abstract` and Mendeley-exported `keywords`/`mendeley-tags`.
+
+**The rule.** A `$` with no partner cannot be a math delimiter — there is no
+reading under which it opens a span that closes. It is therefore data, and `\$`
+is what a careful `.bst` author would have written, which is exactly #74's
+stated principle. With pure toggling an even count is always balanced, so only
+an odd count has an unmatched member; "immediately followed by an ASCII digit"
+is the tell that picks which one, and it settles the real cases:
+`of the order of $10 million` (demote the lone toggle), `$x$ costs $10` (demote
+the digit one, `$x$` stays math), `costs $10 and $x$` (note the *last* toggle
+would have been the wrong pick), `$1 and $2 and $3` (demote all three). With no
+digit anywhere, fall back to the trailing toggle.
+`bibtex.rs::demote_unmatched_dollars`.
+
+**SURPASS-PERL, and deliberately.** Same-host Perl cascades identically —
+`latexmlc` on 2605.00166 gives 102 errors and `Fatal:too_many_errors:100`, rc=1
+— because `\bibentry@create` interpolates the field raw into a fresh Mouth
+(`BibTeX.pool.ltxml` L155-166) with no escaping of any kind, and `Digested`
+(L230) then digests it live. Upstream *already agrees* an unmatched `$` is not
+math: `\bib@@title` balances it with `extract_delimited`, raises
+`Error('expected','$',…)` and **deletes** the stray (L324-330). It just applies
+that judgement to one field, and drops the character instead of keeping it. We
+apply it to every field and keep the character.
+
+Nothing is suppressed: this removes the CAUSE of the cascade, so the ~100
+`malformed:` errors are gone because the entry is now well-formed, not because
+they stopped being reported. It costs no fidelity against `pdflatex` either — a
+standard `.bst` never emits `annote` at all, so the character only ever reaches
+a tokenizer because we read the `.bib` directly, with no `.bst` in the loop.
+
+Guards: `bibtex.rs::escape_specials_lone_dollar_is_currency_not_math`,
+`::escape_specials_balanced_math_is_untouched`,
+`::escape_specials_digit_dollar_is_preferred_over_the_last`,
+`::escape_specials_all_currency_dollars_demote`,
+`::escape_specials_unmatched_dollar_without_a_digit_falls_back_to_the_last`,
+and `06_cluster_bibliography::bib_unmatched_dollar_does_not_leak_math`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
