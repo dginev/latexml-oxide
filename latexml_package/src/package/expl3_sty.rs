@@ -173,7 +173,10 @@ LoadDefinitions!({
   //  * They ARE defined, at package-load time and with live values — probing
   //    `\number\csname c_sys_year_int\endcsname` right after `\usepackage{xparse}`
   //    gives the real year, and `c_sys_minute_int` advances between runs. Only
-  //    `\c_sys_jobname_str` needed the `Let!` above.
+  //    `\c_sys_jobname_str` needed the `Let!` above. (That is the dump path. On
+  //    the `LATEXML_NODUMP=1` raw-load branch they come back undefined — but the
+  //    block did not define them there either, so nothing changed; that branch
+  //    dies earlier anyway, on the expl3-code codepoint group.)
   //  * The block never actually ran. Written as raw TeX, it was tokenized with
   //    the AMBIENT catcodes, and after the expl3 load the document regime has
   //    `_` = SUB — so `\edef\c_sys_minute_int{0}` parsed as `\edef\c` with

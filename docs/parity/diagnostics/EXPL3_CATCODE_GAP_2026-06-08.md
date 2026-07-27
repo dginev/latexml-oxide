@@ -74,6 +74,17 @@
 > (`06_cluster_regressions`) — asserts the accents round-trip AND that the
 > document regime survives the load (`_`=8, `:`=12, `~`=13).
 >
+> Branch nuance, measured: the "already defined, live" finding is the **dump**
+> path (the shipped one). Under `LATEXML_NODUMP=1`, where `expl3.sty` really
+> does `\input expl3-code.tex` in-session, `\c_sys_year_int` / `\c_sys_month_int`
+> come back **UNDEF** — but that is unchanged by this fix (the block never
+> defined them either), and that path already ends in the pre-existing
+> "Conversion failed: 1 fatal error" from the dangling-group half below, before
+> and after, on the same input. The cedilla fix does apply there too
+> (`Fran0cois` → `François`). Whether the raw-load branch should gain a
+> *branch-gated* constants patch-up with real (not frozen) values is an open
+> question, not a regression.
+>
 > Method note worth keeping: `raw_tex` is the ONLY binding-side path that
 > tokenizes a CS name; `T_CS!`, `Let!` and `parse_prototype`
 > (`def_macro_noop` &c.) build the name as a string and are catcode-independent
