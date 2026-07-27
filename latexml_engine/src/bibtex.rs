@@ -2008,10 +2008,26 @@ LoadDefinitions!({
   // `{bibtex@bibliography}` environment — Perl
   // `BibTeX.pool.ltxml:175-183`. The outer wrapper for the entries
   // emitted by `Pre::BibTeX::toTeX`. Delegates the heavy lifting
-  // (id allocation, title resolution, bibstyle/citestyle lookup,
-  // pseudo-bibitem fixup) to `before_digest_bibliography` /
-  // `begin_bibliography` in `latex_constructs.rs`, which already
-  // port the Perl helpers used by `\thebibliography`.
+  // (id allocation, title resolution, bibstyle/citestyle lookup) to
+  // `before_digest_bibliography` / `begin_bibliography_clean` in
+  // `latex_constructs.rs`, which already port the Perl helpers used by
+  // `\thebibliography`.
+  //
+  // OXIDIZED_DESIGN #75: `begin_bibliography_clean`, NOT
+  // `begin_bibliography` — the `setupPseudoBibitem` half is deliberately
+  // skipped here. Perl `BibTeX.pool.ltxml:183` calls the full
+  // `beginBibliography`, which `\let`s `\par` AND `\\` to
+  // `\par@in@bibliography`, a heuristic that starts a fresh
+  // `\save@bibitem{}` whenever it fires. That rescue exists for
+  // HAND-WRITTEN `thebibliography` lists whose author separated entries
+  // with blank lines instead of `\bibitem`. This body is machine-generated
+  // — one `\ProcessBibTeXEntry{key}` per line, never a missing `\bibitem`
+  // — so the heuristic can only misfire, and it does: a blank line or a
+  // `\\` inside a `.bib` FIELD VALUE injects a spurious `<ltx:bibitem>`
+  // mid-field, which the model rejects and which is then never closed, so
+  // every later entry nests inside the dangling `<ltx:surname>` /
+  // `<ltx:bib-title>` / `<ltx:bib-note>`.
+  // Witnesses: 2605.03313 (7 errors), 2605.03693 (7), 2605.11080 (1).
   DefEnvironment!("{bibtex@bibliography}",
   "<ltx:bibliography xml:id='#id' \
      bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
@@ -2022,7 +2038,7 @@ LoadDefinitions!({
     crate::latex_constructs::before_digest_bibliography()?;
   },
   after_digest_begin => sub[whatsit] {
-    crate::latex_constructs::begin_bibliography(whatsit)?;
+    crate::latex_constructs::begin_bibliography_clean(whatsit)?;
   });
 });
 

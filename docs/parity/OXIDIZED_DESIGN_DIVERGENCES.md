@@ -2275,6 +2275,68 @@ this fixture, 203 on the witness) passed every bibliography guard silently.
 (percent in `abstract`, specials in `keywords`, and a third entry as the
 containment canary).
 
+### 75. A `.bib`-derived bibliography does not run the missing-`\bibitem` rescue
+
+**Perl behaviour.** `BibTeX.pool.ltxml:183` gives `{bibtex@bibliography}` the
+same `afterDigestBegin => beginBibliography` as a hand-written
+`{thebibliography}`. `beginBibliography` = `beginBibliography_clean` +
+`setupPseudoBibitem` (`latex_constructs.pool.ltxml` L4028-4047), and
+`setupPseudoBibitem` `\let`s **both** `\par` and `\\` to
+`\par@in@bibliography`, which emits a fresh `\save@bibitem{}` every time it
+fires. Its purpose is stated in its own comment: "Since SOME people seem to
+write bibliographies w/o `\bibitem`, just blank lines between apparent
+entries".
+
+That rescue cannot apply to a `.bib`-derived bibliography.
+`Pre::BibTeX::toTeX` (L110-122) generates the body mechanically — one
+`\ProcessBibTeXEntry{key}` per line between `\begin{bibtex@bibliography}` and
+`\end{bibtex@bibliography}` — so there is never a missing `\bibitem` to
+recover, and the only `\par`/`\\` that can reach the heuristic come from
+**inside a field value**. There the heuristic opens `<ltx:bibitem>` in the
+middle of `<ltx:surname>` / `<ltx:bib-title>` / `<ltx:bib-note>`; the model
+rejects it (`Error:malformed:ltx:bibitem`), it is inserted anyway, and it is
+never closed, so every later entry nests inside it.
+
+Note the diagnostic trap: the element named in the error is **not** the one
+that failed to close. `<ltx:surname>` is opened and closed exactly as its
+constructor says — it is merely the insertion context at the moment the
+spurious item is opened.
+
+**Rust behaviour.** `{bibtex@bibliography}` calls `begin_bibliography_clean`
+and skips `setup_pseudo_bibitem`. Nothing else in that environment needs the
+skipped bindings: `\newblock`→`\lx@bibnewblock` is already `Let` globally
+(`latex_constructs.pool.ltxml` L4133), `\bibitem`/`\item`/`\vskip` never occur
+in the generated body, and the trailing "risky" lookahead that unreads a `\par`
+is a no-op because the body starts with the executable `\ProcessBibTeXEntry`.
+`{thebibliography}` and the biblatex/amsrefs/revtex/OmniBus bibliographies keep
+the full `begin_bibliography` — the rescue still applies where it was meant to.
+
+**Why.** Same-host Perl 0.8.8 emits byte-identical malformed output on the same
+input (over the fixture `.bib`: the same 6 `malformed:ltx:bibitem` errors, one
+of them naming `<ltx:givenname>` where Rust names `<ltx:surname>` — a name-split
+nuance, same cluster), so pdflatex is the ground truth, and it disagrees with
+both engines:
+bibtex 0.99d compresses every white-space run in a field value to a single
+space, so a blank line **never reaches TeX at all**, and it copies `\\` through
+to the `.bbl`, where `thebibliography` renders it as a line break *inside* the
+item. Verified by running bibtex 0.99d over the fixture's `blankline` entry:
+the generated `.bbl` reads `Debarati Das and Michal Koucky.` and `A dynamic
+structure for one-dimensional top-k range reporting.` on single lines. Under
+neither reading does a field value start a new bibliography item.
+
+Measured, current binary: **2605.03313 7 -> 0**, **2605.03693 7 -> 1** (the
+residual is an unrelated text-mode `^`), **2605.11080 1 -> 0**. The final
+rendered HTML is **byte-identical** on all three — `MakeBibliography` rebuilds
+each cited entry from its fields, so the injected items never reached the page
+and the whole cost was diagnostic noise plus a malformed intermediate.
+
+Guard: `06_cluster_bibliography::bib_field_blank_line_does_not_inject_a_bibitem`
+(`convert_and_post_clean`, since the damage is done in the recursive `.bib`
+session that `MakeBibliography` drives during POST). Fixture
+`bib_field_blank_line.{bib,tex}` carries all three witness shapes: a blank line
+in `title`, in `author`, in a `note`-routed `Annote`, plus the `\\` note — 6
+errors RED, 0 GREEN.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

@@ -1,0 +1,11 @@
+% Driver for `bib_field_blank_line.bib`: a blank line (`\par`) or a `\\` inside
+% a `.bib` field value must not inject a bibliography item mid-field. Every
+% entry must reach the rendered bibliography; `survivor` is the containment
+% canary. See the `.bib` header and OXIDIZED_DESIGN #75.
+\documentclass{article}
+\begin{document}
+See \cite{t14b,smo15,Girolami05,BertiRingdown,survivor}.
+Empty name parts: \cite{emptyauthor,trailingcomma,leadingcomma,trailingand,doubleand}.
+\bibliographystyle{plain}
+\bibliography{bib_field_blank_line}
+\end{document}

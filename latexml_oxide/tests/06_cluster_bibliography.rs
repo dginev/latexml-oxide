@@ -695,3 +695,104 @@ fn bib_name_space_form_accent_survives_reversion() {
     );
   }
 }
+/// A blank line or a `\\` inside a `.bib` FIELD VALUE must not start a new
+/// bibliography item.
+///
+/// `{bibtex@bibliography}` inherited Perl's `setupPseudoBibitem`
+/// (`latex_constructs.pool.ltxml` L4028-4047), which `\let`s BOTH `\par` and
+/// `\\` to `\par@in@bibliography` — a heuristic that emits a fresh
+/// `\save@bibitem{}` whenever it fires. It rescues HAND-WRITTEN
+/// `thebibliography` lists whose author used blank lines instead of
+/// `\bibitem`; a `.bib`-derived bibliography is machine-generated
+/// (`Pre::BibTeX::toTeX` writes one `\ProcessBibTeXEntry{key}` per line) and
+/// has no missing `\bibitem` to rescue, so it can only misfire. It did:
+/// `<ltx:bibitem>` was opened inside `<ltx:surname>` / `<ltx:bib-title>` /
+/// `<ltx:bib-note>`, which the model rejects, and it never closed — every
+/// later entry then nested inside the dangling element.
+///
+/// Note the diagnostic trap: the element in the error message is NOT unclosed
+/// at fault. `<ltx:surname>` is opened and closed exactly as its constructor
+/// says; it is merely the insertion context when the spurious item is opened.
+///
+/// Same-host Perl 0.8.8 over this very `.bib` emits the same 6
+/// `malformed:ltx:bibitem` errors (it names `<ltx:givenname>` where Rust names
+/// `<ltx:surname>` — a name-split nuance, same cluster), so pdflatex is the
+/// ground truth: bibtex 0.99d compresses white-space runs in a field value to a
+/// single space (the blank line never reaches TeX) and copies `\\` through,
+/// where `thebibliography` renders it as a line break inside the item.
+/// OXIDIZED_DESIGN #75.
+///
+/// RED before the fix on exactly this fixture: 6 post-stage
+/// `malformed:ltx:bibitem` errors — 2 in `<ltx:surname>`, 2 in
+/// `<ltx:bib-note>`, 1 in `<ltx:bib-title>`, 1 cascading into the injected
+/// item's own `<ltx:bibblock>`. Witnesses 2605.03313 7 -> 0,
+/// 2605.03693 7 -> 1 (residual is an unrelated text-mode `^`),
+/// 2605.11080 1 -> 0; final rendered HTML byte-identical on all three.
+#[test]
+fn bib_field_blank_line_does_not_inject_a_bibitem() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_field_blank_line.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "blank line: no bibliography at all:\n{x}"
+  );
+  // Every entry must arrive, including the canary AFTER the injected item.
+  for needle in ["Tao", "Santos", "Girolami", "Fixture"] {
+    assert!(
+      x.contains(needle),
+      "blank line: {needle:?} was lost to an injected bibliography item:\n{x}"
+    );
+  }
+  assert!(
+    x.contains("The entry after the injected item"),
+    "blank line: the containment canary's title was lost:\n{x}"
+  );
+  // The blank line inside `title` is whitespace, so the title must read as ONE
+  // phrase; before the fix everything past it moved into an injected item.
+  assert!(
+    x.contains("top-k range reporting"),
+    "blank line: the title was split at the blank line:\n{x}"
+  );
+  // The blank lines inside `author` must not damage the name split either:
+  // `MacDonald` is the SECOND name, the one that followed a blank line.
+  assert!(
+    x.contains("MacDonald"),
+    "blank line: a name following a blank line was lost:\n{x}"
+  );
+  // Both `\\`-separated URLs of the 2605.11080 note must survive in one entry.
+  for url in ["pages.jh.edu/eberti2/ringdown", "grit/files/ringdown"] {
+    assert!(
+      x.contains(url),
+      "blank line: {url:?} was lost — `\\\\` started a new item:\n{x}"
+    );
+  }
+  // Resilience half: an EMPTY name part is the other way an `<ltx:surname>`
+  // could be left open, since `insert_element(tag, [], attrs)` opens and leaves
+  // open on empty content (Perl `insertElement($tag, undef, ...)`). It cannot
+  // happen through this path — `\bib@@names` skips an empty part outright — and
+  // these five entries pin that. Each one's title must arrive, which it cannot
+  // if a preceding entry left an element open.
+  for title in [
+    "Wholly empty author",
+    "Surname then nothing",
+    "Nothing then given",
+    "A trailing and",
+    "Two ands in a row",
+  ] {
+    assert!(
+      x.contains(title),
+      "blank line: {title:?} lost — an empty name part left an element open:\n{x}"
+    );
+  }
+  // The parts that DO exist are still split correctly around the empty ones.
+  // `, John` is deliberately absent from this list: a givenname-only author
+  // renders as nothing at all, which is a MakeBibliography formatting nuance
+  // shared with Perl (bibtex's `{f.}` would print "J."), not this cluster. Its
+  // ENTRY still arrives — asserted by title above — which is what containment
+  // means here.
+  for name in ["Smith", "Brown", "Green"] {
+    assert!(
+      x.contains(name),
+      "blank line: {name:?} lost — an empty sibling part ate a real one:\n{x}"
+    );
+  }
+}
