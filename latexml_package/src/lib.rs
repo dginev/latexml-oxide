@@ -250,6 +250,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mdwtab", "sty", package::mdwtab_sty::load_definitions),
   ("microtype", "sty", package::microtype_sty::load_definitions),
   ("amsrefs", "sty", package::amsrefs_sty::load_definitions),
+  (
+    "mathscinet",
+    "sty",
+    package::mathscinet_sty::load_definitions,
+  ),
   ("amsfonts", "sty", package::amsfonts_sty::load_definitions),
   ("amssymb", "sty", package::amssymb_sty::load_definitions),
   ("amsthm", "sty", package::amsthm_sty::load_definitions),

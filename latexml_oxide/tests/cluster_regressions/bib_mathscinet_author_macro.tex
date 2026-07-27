@@ -1,0 +1,26 @@
+% Driver for `bib_mathscinet_author_macro.bib`. The other half of
+% `bib_mathscinet_package.tex`: this document does NOT load mathscinet.
+%
+% The author defines `\Dbar` as a barred D — the commonest real meaning of the
+% name in mathematics, and what four of the six papers that define it in a
+% 4,000-paper scan of arXiv 2605 mean by it (2605.00730, 2605.00808, 2605.01550,
+% 2605.03484). MathSciNet's Đ must NOT displace it, from either direction:
+%
+%   * not from the LaTeX format chain — that runs BEFORE this preamble, and
+%     `\newcommand` over an already-defined CS silently keeps the old meaning,
+%     so an always-present `\Dbar` would win here with no diagnostic at all;
+%   * not from the recursive `.bib` session either. That session does load
+%     `url.sty` on a document's behalf, so auto-loading mathscinet the same way
+%     is a tempting move — but `\Dbar` has no `.bst` behind it (witness
+%     2605.11579 uses `\bibliographystyle{alpha}`, and `alpha.bst` contains no
+%     `Dbar`), so a paper that uses it without the package fails in real
+%     pdflatex too. Supplying it anyway would push our error count BELOW what
+%     the author's own build produces.
+\documentclass{article}
+\newcommand{\Dbar}{\ensuremath{\bar{D}}}
+\begin{document}
+The author's own operator: $\Dbar$.
+See \cite{plainref}.
+\bibliographystyle{plain}
+\bibliography{bib_mathscinet_author_macro}
+\end{document}

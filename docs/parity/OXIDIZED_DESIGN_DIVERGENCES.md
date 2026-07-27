@@ -2275,7 +2275,7 @@ this fixture, 203 on the witness) passed every bibliography guard silently.
 (percent in `abstract`, specials in `keywords`, and a third entry as the
 containment canary).
 
-### 74. A `.bib` field's content is DATA — `% & # _` are literal, not catcodes
+### 74. A `.bib` field's content is DATA — `% & # _ ^` are literal, not catcodes
 
 Supersedes the separate `%`-only and `&`-only entries this consolidates
 (PRs #405 and #409); `_` was a third instance of the same defect.
@@ -2302,19 +2302,35 @@ lexed*, not to the session.
 **Treatment 2 — synthesizing the `.bbl` and digesting it (be `pdflatex` pass 2).**
 Now the content must be valid TeX. We are the ones writing the `.bbl` and we
 know the author meant the literal character, so we escape at that boundary:
-`%`→`\%`, `&`→`\&`, `#`→`\#`, `_`→`\_`.
+`%`→`\%`, `&`→`\&`, `#`→`\#`, `_`→`\_`, `^`→`\textasciicircum{}`.
 `bibtex.rs::escape_bib_data_specials`. Escaping here rather than suppressing
 catcodes during digestion is what keeps the TeX regime intact **by
 construction**: `\emph{…}`, `{\v S}pakov` and `$x_1+x_2$` are already valid TeX
 and simply pass through.
 
-**Why `_` is in treatment 2 only.** A catcode is decided at tokenization, before
-anything knows whether it is inside `$…$` — and a subscript in a title's math
-(`title = {Bounds on $x_1+x_2$}`) is legitimate TeX that must keep working.
-Measured: adding `_` to treatment 1 silently flattened every subscript in a
-bibliography title. Only the escaper can be math-aware, so `_` lives there
-alone. The other three have no legitimate TeX meaning inside a `.bib` field,
-in math or out.
+**Why `_` and `^` are in treatment 2 only.** A catcode is decided at
+tokenization, before anything knows whether it is inside `$…$` — and a
+sub/superscript in a title's math (`title = {Bounds on $x^2+y_1$}`) is
+legitimate TeX that must keep working. Measured: adding `_` to treatment 1
+silently flattened every subscript in a bibliography title. Only the escaper can
+be math-aware, so the two scripting characters live there alone. The other three
+have no legitimate TeX meaning inside a `.bib` field, in math or out.
+
+**`^` is `_`'s twin, and the symmetry was verified rather than assumed.** Both
+are TeX scripting characters; `bibtex(1)`'s lexer gives neither any meaning
+inside an entry, so both are plain data; and outside math both raise the same
+diagnostic, "Script … can only appear in math mode". Checked end-to-end: a
+`note = {q _ r ^ s}` renders `q _ r ^ s`, zero errors, both characters intact.
+
+**But the escape is NOT `\` + the character, and that is the whole reason `^`
+needs its own arm** (`BIB_DATA_CARET`, placed before the generic
+`BIB_DATA_SPECIALS` arm). `\_` is the underscore text command; `\^` is the
+circumflex **accent**, so the generic arm would turn `^o` into "ô" — a wrong
+glyph, silently, where the author wrote a caret. `\textasciicircum{}` is the
+actual caret, and the braces are load-bearing so a following letter is not
+absorbed into the control word. Idempotency needs nothing new: `\textasciicircum`
+is a control word and is copied whole, `\^{}` is a control symbol and is copied
+as a pair.
 
 **The exclusion list is principled, not ad hoc.** A handler that consumes the
 field's characters *itself*, under its own catcode regime — `url`'s Verbatim
@@ -2345,7 +2361,8 @@ spellings and they must render identically.
 **Idempotency.** Most real `.bib` files already write `\&`, `\%`, `\_`. In the
 escaper a backslash consumes the next character as a pair and neither is
 re-examined, so `\&` stays `\&`. The tricky `\\&` falls out of the same rule:
-`\\` is consumed as one pair, leaving a genuinely bare `&` that IS escaped.
+`\\` is consumed as one pair, leaving a genuinely bare `&` that IS escaped —
+and so does `\\^`, which becomes `\\\textasciicircum{}`.
 
 **A nested data region.** url.sty reads `\url`/`\nolinkurl`/`\path`'s argument
 verbatim, so `howpublished = {\url{http://x.org/a%20b}}` must keep its `%20`.
@@ -2378,16 +2395,18 @@ applied to a `title`, and it covers `volume = {27 suppl_4}` and
 
 **Guards.** `06_cluster_bibliography::bib_field_specials_are_data_not_tex` (one
 ten-entry fixture, because the risk is precisely that fixing one case breaks
-another: the four specials bare, the same four already escaped rendering an
-IDENTICAL string, `$x_1+x_2$` keeping its `SUBSCRIPTOP`, `\emph` still markup,
+another: the five specials bare, the same five already escaped rendering an
+IDENTICAL string, `$x^2+y_1$` keeping BOTH its `SUPERSCRIPTOP` and its
+`SUBSCRIPTOP`, `\emph` still markup,
 `{\v S}pakov` still reverting, `%20` inside `\url{…}` intact, and `url`/`doi`
 values with no backslash); `::bib_field_percent_is_an_ordinary_character`;
 `::bib_bare_ampersand_is_literal_data`;
 `::bib_bare_ampersand_leaves_live_markup_alone`;
 `::bib_escaped_amp_entity_decodes_to_one_ampersand`;
-`55_bibtex::runaway_field_costs_only_its_own_entry`; and six
+`55_bibtex::runaway_field_costs_only_its_own_entry`; and seven
 `escape_bib_data_specials` unit tests in `bibtex.rs`, which isolate the `\\&`
-hazard that cannot live end-to-end (see below).
+hazard that cannot live end-to-end (see below) and pin
+`escape_specials_caret_is_textasciicircum_not_an_accent`.
 
 **Measured**, `--release` before/after on the same host, TOTAL document errors:
 
@@ -2423,12 +2442,17 @@ now prints "&".
 (`malformed:ltx:bibitem <ltx:bibitem> isn't allowed in <ltx:bib-title>`) with no
 special character anywhere in the entry — a pre-existing behaviour of `\\` in a
 bibliography, independent of this work, and the reason the `\\&` hazard is
-pinned by a unit test rather than end-to-end. `^` is deliberately outside the
-set: it is not in the authorized four, and outside math in a `.bib` field it is
-essentially always a typo (it also remains the live probe in
-`105_bib_field_digest_once`). An `&` inside a `.bib` field's `$\begin{array}…$`
-would lose its alignment meaning — treatment 1 is catcode-level and cannot be
-math-aware; no witness exhibits one.
+pinned by a unit test rather than end-to-end. An `&` inside a `.bib` field's
+`$\begin{array}…$` would lose its alignment meaning — treatment 1 is
+catcode-level and cannot be math-aware; no witness exhibits one.
+
+**A knock-on for the digest-once guard.** `105_bib_field_digest_once` needs a
+probe that re-raises on EVERY digest (an undefined macro self-heals into
+`<ltx:ERROR/>` on first sight and would pass with the bug present). It used `_`,
+then `^` when `_` became data; both are now data, so the probe moved to `\hline`
+in a `note`, which expands to `\noalign` — a context error with nothing to
+memoize. Both scripting characters stay in that fixture as the standing
+zero-error check.
 
 ### 75. A `.bib`-derived bibliography does not run the missing-`\bibitem` rescue
 
@@ -2559,6 +2583,92 @@ Guards: `00_contrib::silence_filters_test`, `00_contrib::arxiv_keywords_test`,
 `106_arxiv_sty_defers_to_bundled` (the `INCLUDE_STYLES` gate — a bundled
 `arxiv.sty` with a distinctive keyword label must still win),
 `107_silence_keeps_diagnostics` (the raw-load suppression above).
+
+### 78. `mathscinet.sty` gets a binding — and nothing loads it for you
+
+`mathscinet.sty` is a real package: AMS, v1.05 (2002/04/17), LPPL, shipped in TeX
+Live inside the **amsrefs** bundle
+(`texmf-dist/tex/latex/amsrefs/mathscinet.sty`). It holds the vocabulary
+[MathSciNet](https://mathscinet.ams.org) records transliterate Cyrillic and
+South-Slavic names with: `\cprime` (ь), `\Dbar`/`\dbar` (Đ/đ), `\cdprime`,
+`\bud`, `\cydot`, `\polhk`, `\soft` and the under-accents. Perl LaTeXML has
+`amsrefs.sty.ltxml` but **no** `mathscinet.sty.ltxml`, so the binding is a
+Rust-only addition — though a port of the real `.sty`, not an invention.
+`latexml_package/src/package/mathscinet_sty.rs`.
+
+**Mappings come from the file's own T1 branches**, which say what each glyph IS
+rather than how it is drawn: `\Dbar`→`\DJ` (U+0110), `\dbar`→`\dj` (U+0111),
+`\cprime`→`\tprime` (U+02B9), `\cdprime`→two of them (U+02BA), `\polhk`→`\k`,
+`\soft`→`\v`, `\udot`→`\d`. The Default branches overprint with `\accent` and
+`\hbox` kerning (`\Dbar` is
+`\leavevmode\lower.5ex\rlap{\hskip-.07em\accent"16}D`), which would reach the XML
+as a bare "D" (WISDOM #50). Two deliberate departures from the source: L36's
+`\RequirePackage{textcmds}` is not reproduced (it would raw-load a
+`\pcatcode`-juggling docstrip `.sty` for two commands whose results are inlined),
+and `\Cprime`/`\Cdprime` — `cyracc.def` L53-55 spellings that arrive with the
+same data but are absent from this `.sty` — are provided alongside.
+
+**Nothing auto-loads it, and that is the load-bearing decision.** The recursive
+`.bib` session already loads `url.sty` on a document's behalf (divergence #72),
+so doing the same for mathscinet is the obvious move. It would be wrong.
+Checked, not assumed, on witness 2605.11579: the paper never mentions
+`mathscinet` or `amsrefs`, and it uses `\bibliographystyle{alpha}` — and
+`alpha.bst` contains **zero** occurrences of `Dbar`, so no `.bst` `@preamble`
+supplies it either. `\Dbar` is therefore undefined in the author's own build:
+real pdflatex raises the same undefined control sequence. **The residual
+`undefined:\Dbar` is PARITY, not a defect**, and supplying the macro anyway would
+push our error count below what the author's toolchain produces — the one thing
+the canvas signal must never do. 2605.11579 stays at **1 error / 36 bibitems**,
+with that error now explained rather than outstanding.
+
+**Why a package and not an always-present kernel definition**, for `\Dbar`
+specifically. A format-chain definition runs before the document's preamble, and
+LaTeXML's `\newcommand` over an already-defined CS silently keeps the OLD meaning
+(no error, no warning), so an always-present vendor macro SHADOWS an author's
+own. Scanned 4,000 papers of arXiv 2605:
+
+| macro | authors define it | with `\newcommand` (would be shadowed) | used-but-undefined |
+|---|---|---|---|
+| `\cprime` family | 10 | 0 (all `\def`, which overrides cleanly) | ~20 |
+| `\Dbar` | 6 | **4** | 2 |
+| `\dbar` | 12 | 8 | 0 |
+
+An always-on `\Dbar` renders `Đ` where four authors wrote
+`\newcommand{\Dbar}{\bar{D}}` — verified, with zero diagnostics — i.e. it breaks
+more papers than it fixes. Inside a document that DOES load the package, the
+upstream `\ProvideTextCommand`/`\ProvideTextCommandDefault` deferral (kept as
+`mathscinet_sty.rs::provide`) yields to a name already taken. That is also what
+makes `\dbar` safe to bind here and nowhere else.
+
+**The `\cprime` family keeps an always-on stub as well, deliberately.** All three
+of its witnesses load the package by name — 2508.13753 L7, 2508.20226 L3,
+2509.07628 L13 — which corrects the `cyracc.def` / "no Cyrillic encoding
+otherwise loaded" justification the block used to carry. But the package is not
+the only way the family arrives: a `.bib` field carries `Gel\cprime fand` with no
+`\usepackage` behind it, and a MathSciNet export's `@preamble` may or may not
+define it. Removing the stub was measured to cost exactly that case
+(`bib_mr_reviewer_accent`'s `primerev` entry regains `undefined:\cprime`), and no
+author in the scan defines the family with `\newcommand`, so the stub shadows
+nobody. It moved out of `latex_constructs.rs` — which mirrors
+`latex_constructs.pool.ltxml` byte-for-byte and should hold no non-Perl
+definitions — into `latex_constructs_rust_only.rs` §5, the file that exists for
+exactly this, carrying its witnesses. `provide` in the binding then finds them
+already defined, the correct no-op. `\polhk`'s comment there claimed tipa.sty as
+its source; the real one is `mathscinet.sty` L111-113, corrected in place.
+
+**Measured**, same host: 2605.11579 `--includestyles` **1 error / 36 bibitems**
+(the `\Dbar` parity residual); 2508.13753 **0 errors**, `Kondratʹev` composing;
+2508.20226 **0 errors**; 2509.07628 `--includestyles` **0 errors**, `Drinfelʹ d`
+composing (its 6 bare-mode errors are an unloaded local `Latex-document.sty`,
+unrelated).
+
+Guards: `06_cluster_bibliography::bib_mathscinet_package_supplies_its_transliteration_glyphs`
+(a document that loads the package, exercising both body prose and a `.bib`
+`MRREVIEWER`; `\Dbar` is the discriminating assertion, since `\cprime` also has
+the stub beneath it) and
+`::bib_mathscinet_macro_yields_to_the_authors_own_definition` (a document that
+does not — RED under an always-on `\Dbar`, where the author's barred-D math
+renders `Đ`, and equally RED if the `.bib` session is made to auto-load).
 
 ## Known Upstream Perl Issues (brief)
 

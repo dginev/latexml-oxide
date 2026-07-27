@@ -291,6 +291,7 @@ pub mod mathpple_sty;
 pub mod mathptm_sty;
 pub mod mathptmx_sty;
 pub mod mathrsfs_sty;
+pub mod mathscinet_sty;
 pub mod mathtools_sty;
 pub mod mdwtab_sty;
 pub mod media9_sty;

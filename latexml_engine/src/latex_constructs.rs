@@ -4866,24 +4866,22 @@ LoadDefinitions!({
   // arXiv:2507.06392 / .09311 (ifacconf.cls — no Rust binding).
   DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
 
-  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — Cyrillic
-  // transliteration markers used in BibTeX-generated bibliographies
-  // (cyracc.def L53-55 defines them as math-mode prime/dprime). They
-  // appear in Russian-authored references at the BBL stage where no
-  // Cyrillic encoding is otherwise loaded. Stub each as the Unicode
-  // modifier-letter-prime so the BBL renders cleanly. Witnesses:
-  // arXiv:2508.13753 / .20226 / 2509.07628 — 1 undefined-CS error
-  // each, Perl LaTeXML also lacks a universal def. Two-grep audit:
-  // not in Perl `*.ltxml`, defined in TL `cyracc.def` for math
-  // context only. Per WISDOM #50 the visual intent (apostrophe-like
-  // mark) is what survives the XML→HTML pipeline.
-  DefMacro!("\\cprime", "\u{02B9}");
-  DefMacro!("\\Cprime", "\u{02B9}");
-  DefMacro!("\\cdprime", "\u{02BA}");
-  DefMacro!("\\Cdprime", "\u{02BA}");
-  // `\polhk{char}` — Polish hook (ogonek) accent. Defined in tipa.sty
-  // for TS1-encoded composite output. Bibliographies use it directly
-  // (e.g. `\polhk{a}` → ą). Stub as identity so the bare char shows.
+  // NOTE: the `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` Cyrillic
+  // transliteration family used to live here, which kept a non-Perl definition
+  // in a file that mirrors `latex_constructs.pool.ltxml` byte-for-byte. They are
+  // not LaTeX kernel commands at all — they belong to `mathscinet.sty` (AMS, in
+  // the amsrefs bundle), now bound at
+  // `latexml_package/src/package/mathscinet_sty.rs`, which all three witnesses
+  // (arXiv:2508.13753 / .20226 / 2509.07628) actually load. The always-on stub
+  // they still need for `.bib`-borne use with no package moved to
+  // `latex_constructs_rust_only.rs` §5, carrying those witnesses.
+
+  // `\polhk{char}` — Polish hook (ogonek) accent. Its real home is
+  // `mathscinet.sty` L111-113 (NOT tipa.sty, as this comment said before the
+  // source was read), where every encoding branch defines it as the kernel
+  // accent `\k` — and `mathscinet_sty.rs` binds it that way. This identity stub
+  // stays as the fallback for a document that uses `\polhk{a}` without loading
+  // the package (bibliographies do), so the bare char still shows.
   // Witnesses: 2 papers in Stage-15 v3.
   def_macro_identity("\\polhk{}")?;
   // \@personname (now \lx@personname) and the ltx:personname sanitize Tag

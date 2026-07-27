@@ -21,6 +21,8 @@
 //!    captures the values raw `latex.ltx` installs; these are defensive overrides for the NODUMP
 //!    path.
 //! 4. Misc Rust-side stubs (`\@latexbug`, `\maybe@end@title`, `\thebibliography@ID` empty default).
+//! 5. The MathSciNet `\cprime` transliteration family, always-on as a safety net beneath the real
+//!    `mathscinet.sty` binding — see the block itself for why both exist.
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -402,4 +404,41 @@ LoadDefinitions!({
     lookup_meaning(&T_CS!("\\endfilecontents")).unwrap_or(Stored::None),
     Some(Scope::Global),
   );
+
+  //======================================================================
+  // 5. MathSciNet transliteration — the `\cprime` family, always-on
+  //
+  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` render the Russian
+  // soft/hard signs in transliterated names (`Gel\cprime fand` is
+  // Gelʹfand). Their real home is `mathscinet.sty` (AMS, amsrefs
+  // bundle), which `mathscinet_sty.rs` now binds — and all three
+  // witnesses below DO load that package (arXiv:2508.13753 L7,
+  // 2508.20226 L3, 2509.07628 L13), which corrects the claim in the
+  // comment these lines used to carry in `latex_constructs.rs`
+  // (cyracc.def, "no Cyrillic encoding otherwise loaded").
+  //
+  // They stay always-on anyway, because the package is not the only way
+  // they arrive: a `.bib` field carries `Gel\cprime fand` with no
+  // `\usepackage` behind it, and MathSciNet exports lean on an
+  // `@preamble` that may or may not define it (2605.11579's `biblo.bib`
+  // defines `\cprime` twenty-odd times; another export need not).
+  // Removing this stub was measured to cost exactly that case —
+  // `bib_mr_reviewer_accent`'s `primerev` entry regains
+  // `undefined:\cprime`. The `provide` in the binding then finds them
+  // already defined, which is the correct no-op.
+  //
+  // Contrast `\Dbar`, which is package-ONLY and deliberately so: four
+  // authors per 4,000 papers define it themselves with `\newcommand`,
+  // and an always-on definition would silently shadow them
+  // (OXIDIZED_DESIGN #78). No author in that scan defines the `\cprime`
+  // family with `\newcommand`, so this stub shadows nobody.
+  //
+  // Per WISDOM #50 the visual intent (an apostrophe-like mark) is what
+  // survives the XML→HTML pipeline; the TeX definitions are math-mode
+  // primes.
+  //======================================================================
+  DefMacro!("\\cprime", "\u{02B9}");
+  DefMacro!("\\Cprime", "\u{02B9}");
+  DefMacro!("\\cdprime", "\u{02BA}");
+  DefMacro!("\\Cdprime", "\u{02BA}");
 });

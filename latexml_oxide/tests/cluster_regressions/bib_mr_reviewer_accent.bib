@@ -19,6 +19,14 @@
 %
 % `zblreviewer` is here because the Zentralblatt path is the same code shape and
 % was fixed in the same commit; without an entry it would be untested.
+%
+% The witness's fourth shape, `\Dbar okovi\'{c}`, is deliberately NOT here. That
+% one is not a reversion bug: `\Dbar` belongs to `mathscinet.sty`, the witness
+% never loads it, and no `.bst` supplies it either (the paper uses
+% `\bibliographystyle{alpha}`, and `alpha.bst` contains no `Dbar`), so real
+% pdflatex raises the same undefined control sequence. Leaving it undefined is
+% PARITY. The package binding is exercised by `bib_mathscinet_package.{tex,bib}`,
+% which loads `mathscinet` the way a document actually does.
 
 @article{cedillarev,
   author      = {A. Author},
