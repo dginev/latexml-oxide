@@ -2337,6 +2337,74 @@ session that `MakeBibliography` drives during POST). Fixture
 in `title`, in `author`, in a `note`-routed `Annote`, plus the `\\` note — 6
 errors RED, 0 GREEN.
 
+### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
+
+**Perl behaviour.** Neither package has a `.ltxml` — not in
+`LaTeXML/lib/LaTeXML/Package/`, not in the installed 0.8.8 tree, not in
+ar5iv-bindings. `\keywords` exists in Perl only inside a *class* binding
+(`OmniBus.cls.ltxml`, `llncs.cls.ltxml`, `sv_support.sty.ltxml`, …), and these
+papers are `\documentclass{article}` + `\usepackage{arxiv}`, so none of them
+fires. Both packages are therefore undefined in any configuration that does not
+raw-load the `.sty`. Measured, same-host Perl 0.8.8, verbose, no `--includestyles`:
+2605.05327 `undefined:\WarningFilter`; 2605.06624 `undefined:\WarningFilter` +
+`\ActivateWarningFilters` + `\DeactivateWarningFilters`; 2605.02338 and 2605.10111
+`undefined:\keywords`. So these bindings are **new work, not a port**, and Rust
+ends up with fewer errors than Perl on all four.
+
+**Why the gap is worth closing rather than matching.** LaTeXML recovers an
+undefined CS as a **zero-argument** `<ltx:ERROR/>`, so the arguments do not
+vanish — they leak into the body as text. 2605.05327 renders the literal
+"Extended allocation already in use" (an `\WarningFilter` message) in the
+document, and 2605.02338 renders its keyword list as an unlabelled paragraph
+next to an `ltx_ERROR` span. Arity, not the body, is what the binding is for.
+
+**Two different shapes, because the two packages are different kinds of file.**
+
+*`silence.sty`* is a stable CTAN package (v1.5b, 2012) whose entire job is
+filtering LaTeX's *console* messages; it contributes no document content, so
+every public command is a no-op with silence's own arity
+(`\WarningFilter*[family]{package}Semiverbatim`, …). It is registered
+**unconditionally** — it pre-empts the raw `.sty` everywhere — because the raw
+file rebinds `\PackageError`/`\GenericError` (L581-599) and `\ErrorsOff` then
+drops messages that LaTeXML would have reported. Measured on a two-line probe
+(`\usepackage{silence}\ErrorsOff` + a package raising `\PackageError`): Perl
+`--includestyles` reports **0 errors**, Rust with this binding reports **1**.
+Pre-empting the raw file *restores* a suppressed diagnostic; it does not hide one.
+
+*`arxiv.sty`* (George Kour's arXiv-preprint style) and its `PRIMEarxiv.sty` fork
+are **bundled inside the paper**, so their contents vary and they carry real
+formatting — `\@maketitle`, `abstract`/`table` redefinitions, section shapes.
+Their bindings are therefore gated on `lookup_bool("INCLUDE_STYLES")` — the same
+predicate the raw-load path uses (`binding/content.rs` L776): when raw style
+loading is available the binding does nothing but hand control back to the
+paper's own file, and only in bare mode does it define arxiv.sty L10/L29-31/L33/
+L44-47 (`\keywords`, `\keywordname`, `\headeright`, `\undertitle`,
+`\shorttitle`, and the two `\RequirePackage`s a registered binding would
+otherwise skip past the dependency scan). `\keywords` is ported verbatim,
+including the local `\and` → `$\cdot$` rebinding and PRIMEarxiv's unbraced
+`\emph Keywords`, so bare mode renders exactly what the raw load renders.
+
+**Measured.** Bare mode, four witnesses: 2605.05327 **1 → 0**, 2605.06624
+**4 → 1** (the residual `unexpected:&` is an unrelated pre-existing cluster,
+present in the ar5iv baseline too), 2605.02338 **1 → 0**, 2605.10111 **1 → 0**.
+ar5iv mode (`--preload=ar5iv.sty`), before vs after: all four HTML outputs
+**byte-identical**, same error counts. A fifth witness, 2504.08779
+(`ascelike-new.cls`, whose `\RequirePackage{silence}` never reaches a raw load),
+carried `undefined:\WarningFilter` in the full-arXiv corpus report and now
+converts at 0 errors — registering the binding is what lets the class's
+dependency scan resolve `silence` at all.
+
+Corpus scale from the full-arXiv report: `\keywords` 428 tasks;
+`\WarningFilter` witnesses 2010.00969, 2101.00910, 2504.08779, 2508.11482,
+2509.17283, 2509.20705, 2509.20709, 2510.02612, 2512.12232, 2512.14031,
+2601.01344, 2602.11517.
+
+Guards: `00_contrib::silence_filters_test`, `00_contrib::arxiv_keywords_test`,
+`00_contrib::primearxiv_keywords_test` (bare mode, golden `.tex`+`.xml` pairs),
+`106_arxiv_sty_defers_to_bundled` (the `INCLUDE_STYLES` gate — a bundled
+`arxiv.sty` with a distinctive keyword label must still win),
+`107_silence_keeps_diagnostics` (the raw-load suppression above).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

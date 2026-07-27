@@ -64,6 +64,24 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-26 — undefined CSes from packages with no binding: `silence.sty`,
+  bundled `arxiv.sty`/`PRIMEarxiv.sty`.** Long-standing gaps, **not** a
+  regression: Perl 0.8.8 has no binding for either and reproduces the identical
+  `undefined:\WarningFilter` / `undefined:\keywords` on the same witnesses
+  today. They surface only where the raw `.sty` is not read (bare mode; or a
+  bundled class whose `\RequirePackage{silence}` never reaches a raw load —
+  2504.08779). The four witnesses' current `no_problem → error` flip in
+  sandbox-arxiv-2605 is a *different* cause (`unexpected:&`, `undefined:\sqrtn`,
+  bibliography `malformed:ltx:bibitem`/`ltx:bibentry`). New contrib bindings,
+  two deliberately different shapes — silence unconditional (the raw file's
+  `\ErrorsOff` rebinding of `\PackageError`/`\GenericError` *suppresses* real
+  LaTeXML diagnostics: measured Perl 0 vs Rust 1 on a probe), the two bundled
+  arxiv styles gated on `INCLUDE_STYLES` so the paper's own file still wins in
+  ar5iv mode (all four witnesses byte-identical there, before vs after). Bare:
+  1→0, 4→1, 1→0, 1→0. Divergence #74. Guards `00_contrib::{silence_filters,
+  arxiv_keywords, primearxiv_keywords}_test`, `106_arxiv_sty_defers_to_bundled`,
+  `107_silence_keeps_diagnostics`.
+
 - **2026-07-26 (later) — session: resilience mining, and a regression the sweep caught.**
   Mined the 2605+2606 fatals: `Timeout:PushbackLimit` (25), `TooManyErrors`
   (`MaxLimit(100)` is Perl's own default — parity; `MaxLimit(500)` is our
