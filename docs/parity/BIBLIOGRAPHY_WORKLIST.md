@@ -111,6 +111,83 @@ it is a silent trap: `\_` is the underscore command but `\^` is the circumflex
 its own arm emitting `\textasciicircum{}`, braces included. This is what closed
 "the `^` third remains open" below.
 
+#### `@preamble` is treatment 2, and it already executes — verified 2026-07-27
+
+`@preamble` is the one part of a `.bib` that `bibtex(1)` does **not** treat as
+data: it copies the block verbatim to the top of the `.bbl` (plain.bst
+`begin.bib`, `preamble$ write$`, ahead of `\begin{thebibliography}`), so pdflatex
+has the definitions before the first `\bibitem`. It is how a `.bib` ships the
+macros its own fields use, and MathSciNet's exporter emits one as a matter of
+course — `@preamble{"\def\cprime{$'$} "}` in 2605.00097's `referLiu.bib` (L11)
+and fourteen times over in 2605.11579's `biblo.bib` (L4768, L6910, …).
+
+We read `.bib` directly, so that copy is ours to make — and it is made. Perl
+`Pre/BibTeX.pm::toTeX` L118-122 joins the preamble lines ahead of
+`\begin{bibtex@bibliography}`; `pre_bibtex::to_tex` L699-703 mirrors it
+**verbatim** — no `escape_bib_data_specials`, no
+`Mouth::with_bib_data_literals` — which is exactly right for treatment-2
+content. Measured end to end with a probe `@preamble` defining a macro nothing
+else defines: **Rust 0 errors, same-host `latexmlc` 0 errors, both expand it**;
+delete the `@preamble` and both raise `undefined:`. **`\cprime` is a vacuous
+probe** for this question — the always-on stub in
+`latex_constructs_rust_only.rs` defines it either way, so a fresh name is
+required.
+
+Guard:
+`06_cluster_bibliography::bib_preamble_defines_macros_for_the_whole_bibliography`
+(fixture `cluster_regressions/bib_preamble.{tex,bib}`), pinning a `#1`
+parameter, `\&`/`\%` in a macro body, the `$'$` MathSciNet shape inside a name,
+and — via a second entry — that the definitions are installed **once before any
+entry**, not per entry. Red-verified twice: dropping the preamble from `to_tex`
+costs 4 errors, and routing it through `escape_bib_data_specials` kills the
+parameterized macro. The pre-existing `pre_bibtex::to_tex_includes_preamble`
+does **not** cover any of this — it asserts on the emitted *string*, so it stays
+green even if that string is never executed.
+
+**Consequence for the always-on `\cprime` stub: it stays.** Removing it was the
+motivation for checking, and the corpus says no. Scan of the first 600 papers of
+`/data/arxiv/2605/`: 7 use `\cprime` inside a `.bib`, and **6 of the 7 carry no
+`@preamble` at all** (the seventh, 2605.00097, has one but never uses
+`\cprime`). Measured with the raw-`.bib` route forced, `--includestyles`,
+`--release`, TOTAL document errors with-stub → without:
+
+| paper | `@preamble` defines `\cprime`? | with → without |
+|---|---|---|
+| 2605.00097 | yes, unused | 1 → 1 |
+| 2605.00173 | no | 0 → **1** `undefined:\cprime` |
+| 2605.00186 | no | 0 → **1** |
+| 2605.00190 | no | 0 → **1** |
+| 2605.00305 | no | 0 → **1** |
+| 2605.00316 | no | 2 → 2 (its `\cprime` is in `fjournal`, undigested) |
+| 2605.00584 | no | 0 → 0 (same) |
+| 2605.11579 | yes, 17 uses in `AUTHOR`/`TITLE`/`BOOKTITLE`/`MRREVIEWER` | 1 → 1 |
+
+2605.11579 is the informative row twice over: it is the only paper whose
+`@preamble` covers real uses, and it stays at its single unrelated
+`undefined:\Dbar` **with the stub gone** — the `@preamble` is carrying all 17.
+2605.00173 is the control: same field kind (`AUTHOR`), same binary, `+1` error,
+distinguished only by having no `@preamble`.
+
+Three of the four regressions are errors the real toolchain never produces, and
+that is the durable point: `bibtex(1)` copies only **cited** entries into the
+`.bbl`, and in 2605.00173/.00186/.00190 the `\cprime`-bearing entry is never
+cited — pdflatex never sees the macro. We digest every entry in the `.bib`, so
+the stub is what keeps that asymmetry from manufacturing a diagnostic. In
+2605.00305 the entry IS cited (`MR710121`, "Arnol\cprime d diffusion"), so there
+the stub renders text the reader sees.
+
+Same-host Perl was run over all eight (production profile, verbose) and is not a
+usable oracle for this question — it never raises `undefined:\cprime` anywhere,
+for reasons unrelated to the macro: 2605.00305 and 2605.00316 hit `MAX_ERRORS`
+(101 + Fatal) on a pgfparse flood long before MakeBibliography, 2605.00173/.00186/
+.00190 take their shipped `.bbl`, and on 2605.11579 Perl emits **zero**
+bibliography entries at all ("Missing Entry for citation" × 36, against Rust's
+36 rendered) — a silent total loss, not a clean run. The mechanism was confirmed
+against Perl on the controlled fixture instead, where both engines reach 0
+errors with every preamble macro expanded. Note Perl defines `\cprime`
+**nowhere** in `LaTeXML/lib`, so the stub is and stays a surpass-Perl
+divergence.
+
 ### Why the re-port is the real fix: eager tokenization defeats parameter types (measured 2026-07-26)
 
 The 2026-07-26 sandbox rerun quantified what the simplified parser costs. In
