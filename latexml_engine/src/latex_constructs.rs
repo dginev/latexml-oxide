@@ -4872,9 +4872,10 @@ LoadDefinitions!({
   // not LaTeX kernel commands at all — they belong to `mathscinet.sty` (AMS, in
   // the amsrefs bundle), now bound at
   // `latexml_package/src/package/mathscinet_sty.rs`, which all three witnesses
-  // (arXiv:2508.13753 / .20226 / 2509.07628) actually load. The always-on stub
-  // they still need for `.bib`-borne use with no package moved to
-  // `latex_constructs_rust_only.rs` §5, carrying those witnesses.
+  // (arXiv:2508.13753 / .20226 / 2509.07628) actually load. An always-on stub
+  // for `.bib`-borne use in a document loading no package was tried in
+  // `latex_constructs_rust_only.rs` and retracted 2026-07-27 — see the
+  // retraction comment there for why it is no longer needed.
 
   // `\polhk{char}` — Polish hook (ogonek) accent. Its real home is
   // `mathscinet.sty` L111-113 (NOT tipa.sty, as this comment said before the

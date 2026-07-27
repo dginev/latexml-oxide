@@ -21,8 +21,10 @@
 //!    captures the values raw `latex.ltx` installs; these are defensive overrides for the NODUMP
 //!    path.
 //! 4. Misc Rust-side stubs (`\@latexbug`, `\maybe@end@title`, `\thebibliography@ID` empty default).
-//! 5. The MathSciNet `\cprime` transliteration family, always-on as a safety net beneath the real
-//!    `mathscinet.sty` binding — see the block itself for why both exist.
+//!
+//! The file ends with a **retraction record**: the MathSciNet `\cprime` transliteration family was
+//! briefly always-on here and was removed 2026-07-27. The comment is kept because it carries the
+//! witnesses and the reasoning — do not re-add the family.
 use crate::prelude::*;
 
 #[rustfmt::skip]

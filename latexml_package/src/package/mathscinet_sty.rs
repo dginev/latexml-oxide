@@ -46,10 +46,14 @@
 //! **T1 branches**, which say what each glyph IS (`\Dbar`→`\DJ`, `\dbar`→`\dj`,
 //! `\polhk`→`\k`, `\soft`→`\v`, `\udot`→`\d`).
 //!
-//! The `\cprime` family additionally keeps an always-on stub in
-//! `latex_constructs_rust_only.rs` §5, for `.bib`-borne use in a document that
-//! loads no package; `provide` below then finds it defined, the correct no-op.
-//! That stub is NOT extended to `\Dbar` — see the collision counts above.
+//! This binding is the ONLY home of the family. An always-on `\cprime` stub was
+//! briefly kept in `latex_constructs_rust_only.rs` for `.bib`-borne use in a
+//! document that loads no package, and was retracted 2026-07-27: a definition
+//! that is always live can shadow an author's own, and since #416 we digest only
+//! the CITED entries of a `.bib`, which removed the trigger it existed for. A
+//! document that needs these must do what the real toolchain needs — load
+//! `mathscinet` (or `amsrefs`, which requires it), or define them in its own
+//! `.bib` `@preamble`, which executes.
 //!
 //! Witnesses: 2508.13753, 2508.20226, 2509.07628 (`\cprime`); 2605.11579
 //! (`\Dbar` in `MRREVIEWER = {Dragomir \v{Z}. \Dbar okovi\'{c}}`, which stays a
