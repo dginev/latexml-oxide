@@ -69,6 +69,12 @@
     a percent that stays literal (BibTeX has no comments, and `%` is routine in
     an encoded URL). Measured over a 30,079-document arXiv sample: 62 more
     documents convert cleanly, 44 fewer carry errors.
+  - **An ampersand in a reference is an ampersand** — "Taylor & Francis" in a
+    `.bib` publisher, journal or booktitle used to report an error and print
+    "Taylor Francis". A `.bib` field's content is data, so the character is kept.
+  - **A reference exported through HTML no longer shows `&amp;` for `&`** — a
+    doubly escaped ampersand (`\&amp;`) in a `.bib` title, journal or booktitle
+    is decoded back to the one character the author wrote.
   - **amsrefs `\bib` values digest as live TeX** — `\MR{…}` came out as literal
     characters and `pages` rendered empty.
   - **MathReview / ZentralBlatt links are synthesized** — `mrnumber`/`zblno`

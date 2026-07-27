@@ -64,6 +64,32 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #75).**
+  Seven 2605 witnesses carried `Error:unexpected:&` from `publisher` / `journal`
+  / `booktitle` / `author` / `copyright` ("Taylor & Francis"). Not a Rust-only
+  defect: same-host `latexmlc` raised the identical per-`&` count on all six
+  re-measured witnesses, and bibtex 0.99d + pdflatex agree (the `&` reaches the
+  `.bbl` under `plain` and `abbrvnat`; pdflatex stops with "Misplaced alignment
+  tab character &" and prints "Taylor Francis"). **A `.bib` field's content is
+  DATA** — authorized surpass-Perl and surpass-pdflatex, since LaTeXML reads
+  `.bib` directly and decides what reaches the tokenizer. Neutralized at the
+  same two seams #74 uses for `%`, and BOTH are required — the per-entry Mouth
+  (`Mouth::with_align_as_other`) and `mouth::tokenize_bib_literal` for handlers
+  that re-tokenize a stored raw field (`\bib@@title` recasing, name/date/pages
+  assembly, MR/Zbl). Measured: **2605.06249 3→0, 2605.03054 1→0, 2605.00462 1→0,
+  2605.08753 1→0, 2605.10409 1→0, 2605.01936 13→6, 2605.06624 4→3** (the
+  residuals are unrelated `undefined:` errors). `#` was checked and NOT included
+  — one bare `#` across all seven, in a JabRef `file` path already covered as an
+  unknown field. **Stacked on PR #405**: merge after it.
+  Also fixed, a different bug the neutralization does *not* reach: the doubly
+  escaped `\&amp;` / `{\&}amp;` / `&amp;`, an HTML entity that survived into
+  the `.bib` and printed as "&amp;" in Perl and pdflatex alike
+  (`undouble_escaped_ampersand`). Guards
+  `bib_bare_ampersand_is_literal_data`, `bib_bare_ampersand_leaves_live_markup_alone`
+  (the `\emph` / inline-math / space-form-accent boundary) and
+  `bib_escaped_amp_entity_decodes_to_one_ampersand`. Detail in
+  [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md).
+
 - **2026-07-26 (later) — session: resilience mining, and a regression the sweep caught.**
   Mined the 2605+2606 fatals: `Timeout:PushbackLimit` (25), `TooManyErrors`
   (`MaxLimit(100)` is Perl's own default — parity; `MaxLimit(500)` is our

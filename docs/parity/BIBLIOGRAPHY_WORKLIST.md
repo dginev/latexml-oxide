@@ -65,6 +65,48 @@ most of them as an interim, but it imitates the mechanism rather than using it.
 The durable fix is this re-port: route field interpretation through the lazy
 Mouth.
 
+**Maintainer policy, 2026-07-26 — a `.bib` field's content is DATA, not TeX.**
+A bare `%`, `&`, `_` is the literal character; "Taylor & Francis" renders with
+its ampersand. Authorized surpass-Perl *and* surpass-pdflatex: LaTeXML reads
+`.bib` directly, with no `.bst` and no `bibtex(1)`, so it decides what reaches
+the tokenizer. **The boundary is blast radius, not character:**
+
+* *Regime A, per-Mouth* — a character destructive in ANY field, with no Perl
+  per-field idiom to follow. `%` (#74, PR #405) and `&` (#75) are here.
+  `Mouth::with_percent_as_other()` / `with_align_as_other()`, deliberately NOT a
+  State catcode, so a `.sty` raw-loaded from inside a field handler — and the
+  document — keep TeX's meaning.
+* *Regime B, per-field parameter type* — harmful only in specific fields where
+  Perl already has the idiom. `_` (PR #403) is here: `eprint`/`preprint`/
+  `archive` get `Semiverbatim`, mirroring `doi`/`isbn`/`issn`/`lccn`/`pii`.
+
+**Both regime-A seams are required.** The value reaches a tokenizer by two
+independent routes: the per-entry Mouth, and the handlers that re-read the
+stored RAW field and tokenize it themselves (`\bib@@title` recasing,
+`current_entry_field`, name splitting, date/pages assembly, MR/Zbl). The
+companion for the second is `mouth::tokenize_bib_literal`, behind
+`bibtex.rs::tokenize_bib_field`. Fixing only the mouth made 2605.02131 *worse*
+(28 → 37 errors) — a title's value never passes through it.
+
+*The `&` third, measured.* Witnesses 2605.01936, 2605.06249, 2605.00462,
+2605.03054, 2605.06624, 2605.08753, 2605.10409. The `&` sits in `publisher` /
+`journal` / `booktitle` / `author` / `copyright` — all `Digested` in
+`BibTeX.pool.ltxml`, so **no parameter type was ever going to cover them and the
+eager-tokenization gap above was never this third's cause**. Before: Rust
+matched same-host `latexmlc` 1:1 on every re-measured witness, and pdflatex
+broke identically. After (#75): **3→0, 1→0, 1→0, 1→0, 1→0, 13→6, 4→3**; the two
+residuals are unrelated `undefined:` errors, no `unexpected:&` remains anywhere.
+`#` was checked and deliberately left alone — one bare `#` across all seven
+witnesses, in 2605.00462's JabRef `file` path, already covered as an unknown
+field.
+
+*A separate ampersand bug, also fixed as #75:* the doubly escaped `\&amp;` /
+`{\&}amp;` / `&amp;`, where an HTML entity survived into the `.bib`. Those raise
+no error at all — Perl and pdflatex both print "&amp;" — so the mouth-level
+change does not reach them; `undouble_escaped_ampersand` in `bibtex.rs` does.
+Guard `bib_escaped_amp_entity_decodes_to_one_ampersand`. The `^` third remains
+open.
+
 #### What the 2026-07-26 prototype measured (and the two claims it corrected)
 
 Before designing the re-port, the existing `--bibtex` route was probed directly
