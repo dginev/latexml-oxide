@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#81**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#83**.
 
 ---
 
@@ -2881,6 +2881,56 @@ expands to `\ext@arrow #2{\arrowfill@#3}{##1}{##2}`, and the `\mkern` quadruple
 `\newextarrow{\xtwoheadleftarrow}{500{40}}{…}` braces the 40. So all seven
 parameters of `\ext@arrow` and all four of `\arrowfill@` are `{}`. Guard
 `06_cluster_math::cluster_ext_arrow_braced_mkern`.
+
+### 82. spconf.sty's `keywords` block becomes `ltx:keywords` frontmatter, not inline body text
+
+**Perl behaviour.** `spconf.sty` (the ICASSP/ICIP/Interspeech conference style,
+bundled inside the paper) has no `.ltxml` — not in `LaTeXML/lib/LaTeXML/Package/`,
+not in the installed 0.8.8 tree. Its "Index Terms" block is a bare plain-TeX
+environment pair, not a `\newenvironment` (spconf.sty L211-214):
+
+```tex
+\def\keywords{\vspace{.5em}{\bfseries\textit{Index Terms}---\,\relax}}
+\def\endkeywords{\par}
+```
+
+Measured, same-host Perl 0.8.8, verbose, witness 2605.00480 (`main.tex`):
+**bare** = 4 errors (`\name`, `\address`, `\ninept`, `{keywords}`);
+**`--includestyles`** = 0 errors, because the raw `.sty` is read — but the block
+then lands in the body as
+`<para><p><text font="bold italic">Index Terms<text>—…`, with **no `ltx:keywords`
+element**. Perl produces **zero `<creator>` and zero `<keywords>` for these papers
+in either configuration**: LaTeXML locks `\maketitle`, so spconf's own
+`\def\maketitle` — the only thing that would ever emit the stashed `\@name` — is
+ignored (`Info:ignore:\maketitle:locked`). That is why this binding is registered
+unconditionally rather than gated on `INCLUDE_STYLES` the way the bundled
+`arxiv.sty` is (#77): deferring to the raw file here *loses* the frontmatter.
+
+**We bind it as structured frontmatter.** `latexml_contrib/src/spconf_sty.rs`
+defines `\keywords` → `\lx@begin@keywords[name={\spconf@keywordsname:~}]` and
+`\endkeywords` → `\lx@end@keywords`, mirroring the `.sty`'s `\def` pair rather
+than declaring a `DefEnvironment!` (so a document calling the two macros directly
+also works). The label rides in `@name`, not in the content; the XSLT renders it
+as the block's `<h6 class="ltx_title ltx_title_keywords">`.
+
+**Why this exact shape.** spconf.sty's own comment says the section was "adapted
+from IEEEtrans", and IEEEtran.cls L5286-5288 typesets it identically
+(`\textit{\IEEEkeywordsname}---`). Perl LaTeXML **does** bind that construct, in
+`IEEEtran.cls.ltxml` L147-148 — as `\lx@begin@keywords[name={\IEEEkeywordsname:~}]`,
+i.e. `ltx:keywords` with the label in `@name` and the print-only `---` separator
+normalized to `:~`. So the divergence is only against *raw-loaded* spconf; against
+Perl's own binding for the same markup it is a verbatim follow.
+
+**Corpus scale.** `{keywords}` is the single largest `undefined` *what* in the
+sandbox corpora: **94 tasks in sandbox-arxiv-2605**, **49 in sandbox-arxiv-2606**;
+142 of those 143 papers ship a byte-identical `spconf.sty`.
+
+**Measured**, before → after, identical in bare and `--preload=ar5iv.sty` mode:
+2605.00480 **1 → 0**, 2605.00698 **1 → 0**, 2605.00721 **1 → 0**, 2605.01187
+**2 → 1** (residual `undefined:\bstctlcite`, unrelated).
+
+Guard: `06_cluster_frontmatter::frontmatter_spconf_keywords` (via
+`convert_to_xml_contrib_clean`, so a returning error fails it).
 
 ## Known Upstream Perl Issues (brief)
 

@@ -10,6 +10,12 @@
 //! 2309.14838, 2405.13379, 2605.10272). Route `\name` through the standard
 //! author machinery so the comma/superscript-marked list becomes structured
 //! creators, and keep `\address`/`\email` as frontmatter.
+//!
+//! The same file's `keywords` block (the "Index Terms" list) is a bare
+//! `\def\keywords`/`\def\endkeywords` pair, so `\begin{keywords}` found no
+//! environment at all — the single largest `undefined` cluster in the sandbox
+//! corpora (94 papers in sandbox-arxiv-2605, 49 in 2606; witnesses 2605.00480,
+//! 2605.00698, 2605.00721, 2605.01187). See the `\keywords` binding below.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -27,6 +33,29 @@ LoadDefinitions!({
     "\\email{}",
     "\\lx@add@frontmatter{ltx:note}[role=email]{#1}"
   );
+  // The "Index Terms" block (spconf.sty L211-214):
+  //   \def\keywords{\vspace{.5em}{\bfseries\textit{Index Terms}---\,\relax}}
+  //   \def\endkeywords{\par}
+  // — a plain-TeX environment pair, not a `\newenvironment`, so
+  // `\begin{keywords}` runs `\keywords` and `\end{keywords}` runs
+  // `\endkeywords`. Mirror the pair rather than declaring a `DefEnvironment!`,
+  // both because that is what the `.sty` does and because it keeps a document
+  // that calls the two macros directly (without `\begin`/`\end`) working.
+  //
+  // spconf.sty says this section was "adapted from IEEEtrans", and IEEEtran.cls
+  // L5286-5288 typesets it identically (`\textit{\IEEEkeywordsname}---`). Perl
+  // LaTeXML binds that very construct in IEEEtran.cls.ltxml L147-148 as the
+  // structured `ltx:keywords` frontmatter, carrying the label in `@name` and
+  // normalizing the print-only `---` separator to `:~`. Follow that precedent
+  // exactly: the label is metadata (the XSLT renders `@name` as the block's
+  // `<h6 class="ltx_title_keywords">` title), not content of the keyword list.
+  // Raw-loaded spconf leaves it as inline body text instead — OXIDIZED_DESIGN #82.
+  DefMacro!("\\spconf@keywordsname", "Index Terms");
+  DefMacro!(
+    "\\keywords",
+    "\\lx@begin@keywords[name={\\spconf@keywordsname:~}]"
+  );
+  DefMacro!("\\endkeywords", "\\lx@end@keywords");
   // spconf uppercases the title; keep LaTeX's `\title` semantics (no forced
   // uppercase — casing is presentational and belongs in CSS).
   DefMacro!("\\ninept", "");

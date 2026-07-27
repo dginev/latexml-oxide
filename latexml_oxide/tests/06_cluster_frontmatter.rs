@@ -9,7 +9,7 @@
 //! [`mod cluster`](cluster).
 
 mod cluster;
-use cluster::{convert_to_xml, convert_to_xml_contrib};
+use cluster::{convert_to_xml, convert_to_xml_contrib, convert_to_xml_contrib_clean};
 
 /// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
 /// (optional running-head short name + full name). The name must render, and
@@ -109,6 +109,33 @@ fn frontmatter_spconf_name() {
   let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_spconf_name.tex");
   assert!(x.contains("Alice Smith"), "spconf author 1 missing:\n{x}");
   assert!(x.contains("Bob Jones"), "spconf author 2 missing:\n{x}");
+}
+/// spconf.sty `\begin{keywords}…\end{keywords}` — the "Index Terms" block, a
+/// bare `\def\keywords`/`\def\endkeywords` pair (spconf.sty L211-214), not a
+/// `\newenvironment`. It must become structured `ltx:keywords` frontmatter
+/// with the label in `@name`, not bounce as an undefined environment (94 papers
+/// in sandbox-arxiv-2605, 49 in 2606 — the single largest `undefined` what).
+/// Witnesses 2605.00480, 2605.00698, 2605.00721, 2605.01187.
+#[test]
+fn frontmatter_spconf_keywords() {
+  let x = convert_to_xml_contrib_clean("tests/cluster_regressions/frontmatter_spconf_keywords.tex");
+  assert!(
+    x.contains("<keywords"),
+    "spconf keywords did not become ltx:keywords frontmatter:\n{x}"
+  );
+  assert!(
+    x.contains("Speech recognition, deep learning"),
+    "spconf keyword list missing:\n{x}"
+  );
+  assert!(
+    x.contains("name=\"Index Terms:"),
+    "spconf keywords label not carried in @name:\n{x}"
+  );
+  // The label is an attribute, never inline content of the block.
+  assert!(
+    !x.contains(">Index Terms"),
+    "spconf `Index Terms` label leaked into the content:\n{x}"
+  );
 }
 /// atlasdoc `\AtlasTitle{…}` / `\AtlasAbstract{…}` / `\AtlasOrcid[orcid]{Name}`:
 /// the frontmatter macros of the (very large, unbound) ATLAS class must not leak
