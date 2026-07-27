@@ -697,6 +697,23 @@ impl PreBibTeX {
       register_entry(&parsed.key, entry);
     }
     let mut out = String::new();
+    // `@preamble` is the one part of a `.bib` that is NOT data — `bibtex(1)`
+    // copies it verbatim to the top of the `.bbl` (plain.bst `begin.bib`:
+    // `preamble$ write$`, ahead of `\begin{thebibliography}`), so pdflatex has
+    // its definitions before the first `\bibitem`. Perl L118-122 emits it in
+    // the same position, and so must we: it is how a `.bib` ships the macros
+    // its own fields use, and MathSciNet exports lean on it
+    // (`@preamble{"\def\cprime{$'$} "}` — 2605.00097 `referLiu.bib` L11,
+    // 2605.11579 `biblo.bib` L4768/L6910/… fourteen times).
+    //
+    // It goes out RAW, and must keep going out raw. In the two-treatment frame
+    // (`docs/parity/BIBLIOGRAPHY_WORKLIST.md`) this is treatment 2 — TeX
+    // source — so it must never pass through `escape_bib_data_specials` (which
+    // would turn `\def\cprime{$'$}` into inert text) nor be read under
+    // `Mouth::with_bib_data_literals`. Guard:
+    // `06_cluster_bibliography::bib_preamble_defines_macros_for_the_whole_bibliography`
+    // — `to_tex_includes_preamble` below only checks the emitted STRING, so it
+    // stays green if the string is later escaped or never executed.
     for pre in &self.preamble {
       out.push_str(pre);
       out.push('\n');

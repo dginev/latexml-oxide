@@ -2656,6 +2656,22 @@ exactly this, carrying its witnesses. `provide` in the binding then finds them
 already defined, the correct no-op. `\polhk`'s comment there claimed tipa.sty as
 its source; the real one is `mathscinet.sty` L111-113, corrected in place.
 
+*Re-measured 2026-07-27, and the "may or may not define it" is now a number.*
+The stub's redundancy was re-opened once `@preamble` execution was confirmed
+working end to end (it is Perl `Pre/BibTeX.pm::toTeX` L118-122, ported at
+`pre_bibtex::to_tex`, now guarded by
+`bib_preamble_defines_macros_for_the_whole_bibliography`) — a `.bib` that
+defines `\cprime` itself needs no stub. The corpus says the stub still earns its
+place: across the first 600 papers of arXiv 2605, **seven** use `\cprime` inside
+a `.bib` and **six carry no `@preamble` at all**. Deleting the four lines takes
+2605.00173/.00186/.00190/.00305 from 0 to 1 `undefined:\cprime` each, while
+2605.11579 — 17 uses, `@preamble`-covered — is unaffected either way. Three of
+those four are errors the real toolchain never produces, because `bibtex(1)`
+copies only *cited* entries into the `.bbl` and there the `\cprime`-bearing
+entry is uncited; we digest every entry, so the stub is what keeps that
+asymmetry from manufacturing a diagnostic. Per-paper table in
+[`BIBLIOGRAPHY_WORKLIST.md`](BIBLIOGRAPHY_WORKLIST.md).
+
 **Measured**, same host: 2605.11579 `--includestyles` **1 error / 36 bibitems**
 (the `\Dbar` parity residual); 2508.13753 **0 errors**, `Kondratʹev` composing;
 2508.20226 **0 errors**; 2509.07628 `--includestyles` **0 errors**, `Drinfelʹ d`

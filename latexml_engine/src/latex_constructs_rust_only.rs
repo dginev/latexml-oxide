@@ -427,6 +427,29 @@ LoadDefinitions!({
   // `undefined:\cprime`. The `provide` in the binding then finds them
   // already defined, which is the correct no-op.
   //
+  // Re-measured on the corpus 2026-07-27, because `@preamble` execution
+  // works (it is Perl `Pre/BibTeX.pm::toTeX` L118-122, ported at
+  // `pre_bibtex::to_tex`, guarded by
+  // `bib_preamble_defines_macros_for_the_whole_bibliography`) and would
+  // in principle make this stub redundant. It does not: across the first
+  // 600 papers of arXiv 2605, SEVEN use `\cprime` inside a `.bib` and
+  // **six of them carry no `@preamble` at all** — nothing defines it
+  // anywhere in their source. Deleting these four lines takes 2605.00173,
+  // 2605.00186, 2605.00190 and 2605.00305 from 0 to 1 `undefined:\cprime`
+  // each, while the one paper that DOES define it in its `@preamble`
+  // (2605.11579, 17 uses across `AUTHOR`/`TITLE`/`BOOKTITLE`/`MRREVIEWER`)
+  // is unaffected either way. Detail + table in
+  // `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
+  //
+  // Three of those four regressions would also be errors the real toolchain
+  // never produces: `bibtex(1)` copies only CITED entries into the `.bbl`,
+  // and in 2605.00173/.00186/.00190 the `\cprime`-bearing entry is never
+  // cited, so pdflatex never sees the macro. We digest every entry in the
+  // `.bib`, so the stub is what keeps that asymmetry from manufacturing a
+  // diagnostic. (2605.00305 is the fourth, and there the entry IS cited —
+  // `MR710121`, "Arnol\cprime d diffusion" — so the stub renders content the
+  // reader sees.)
+  //
   // Contrast `\Dbar`, which is package-ONLY and deliberately so: four
   // authors per 4,000 papers define it themselves with `\newcommand`,
   // and an always-on definition would silently shadow them
