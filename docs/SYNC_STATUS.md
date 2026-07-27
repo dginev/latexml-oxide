@@ -524,29 +524,32 @@ implementation traps and the full result table in
 
 ### R9-BST — `.bst` support: raw interpretation vs `_bst.rs` bindings — FUTURE, not started
 
-**The new evidence (2026-07-27).** Chasing `undefined:\Dbar` on witness
-**2605.11579** established something the earlier `.bst` deferral did not capture:
-a `.bst` does not only *format* a bibliography, it **vendors macro definitions**.
-MathSciNet's styles emit a preamble defining the glyph macros their `.bib`
-exports use —
+**How this row came to be, and a correction (2026-07-27).** It was opened on the
+claim that `\Dbar` in witness **2605.11579** proved `.bst` files *vendor macro
+definitions*. **That claim was wrong and is retracted.** Checked afterwards:
 
-```
-\def\Dbar{\leavevmode\lower.6ex\hbox to 0pt{\hskip-.23ex \accent"16\hss}D}
-```
+* the witness uses `\bibliographystyle{alpha}`, and `alpha.bst` contains **zero**
+  occurrences of `Dbar`;
+* `\Dbar` is defined by **`mathscinet.sty` v1.05** (ships with **amsrefs**;
+  `\ProvideTextCommand{\Dbar}{T1}{\DJ}`), which also defines `\cprime`,
+  `\cdprime` and `\bud`;
+* **the witness does not load `mathscinet.sty`**, so real pdflatex on that source
+  raises the same undefined control sequence. `undefined:\Dbar` there is
+  **PARITY**, not a defect — see R9-MSC below.
 
-— so `MRREVIEWER = {Dragomir \v{Z}. \Dbar okovi\'{c}}` (Đoković) is perfectly
-well-defined *for anyone who runs `bibtex`*, and undefined only for us, because
-we read `.bib` directly and never see the `.bst`. The paper's own `.bib` carries
-an `@preamble{"\def\cprime{$'$} "}`, which we DO honour — the vendor macros it
-does not repeat are exactly the ones that break.
+**What survives the correction.** The row still stands, on its original and
+independently-true footing: we read `.bib` directly, never execute the `.bst`,
+and therefore cannot reproduce the label style, sort order or **field selection**
+a document's own `.bst` would produce. Field selection is the part currently
+approximated by hand — OXIDIZED_DESIGN **#73** neutralizes `abstract`/`keywords`/
+`contents` precisely because no standard `.bst` declares them in its `ENTRY`
+list, which is a `.bst` fact we hard-coded rather than computed. A `.bst` we can
+execute is what would replace that guess with an answer.
 
-This reframes the gap. The existing deferral
-([`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md)) treats missing `.bst`
-support as a *formatting* divergence (label style, sort order). It is also a
-**definition-availability** problem, and that half leaks into the document as
-`undefined:` errors rather than as cosmetic differences. Every such macro fixed
-by hand — `\cprime`/`\Cprime`/`\cdprime`/`\Cdprime`, now `\Dbar` — is a
-symptom patch for one vendor's preamble.
+**The lesson worth keeping** is about method, not `.bst`: the vendoring claim was
+recalled from memory and written into a merged doc without checking the witness's
+own `alpha.bst`. Two minutes of `grep` refuted it. Verify the file, not the
+recollection.
 
 **Two candidate resolutions.** They are not exclusive; (b) is a strict subset of
 what (a) delivers.
@@ -581,6 +584,26 @@ step.
 **Do NOT start** either resolution without that measurement and an explicit
 decision — this row exists to stop the next `\Dbar` from being patched in
 isolation without the context above.
+
+### R9-MSC — `mathscinet.sty` binding — SMALL, unblocked
+
+`mathscinet.sty` (amsrefs, v1.05) defines the transliteration glyphs that
+mathematics bibliographies use: `\Dbar` (Đ), `\cprime`, `\cdprime`, `\bud`.
+**Perl LaTeXML has `amsrefs.sty.ltxml` but no `mathscinet.sty.ltxml`**, and
+neither do we — so a document that legitimately loads the package still gets
+`undefined:` for all of them. A binding is the faithful fix and is small.
+
+Note what it does **not** fix: witness **2605.11579** does not load the package,
+so its `undefined:\Dbar` is correct and stays. Do not use that witness to
+measure this work.
+
+Related and unresolved: `\cprime`/`\Cprime`/`\cdprime`/`\Cdprime` are
+currently defined in `latex_constructs.rs:4859-4874` — the LaTeX **kernel** file,
+which is meant to track Perl's `latex_constructs.pool.ltxml` — with a comment
+citing `cyracc.def`. `mathscinet.sty` defines them too and is the likelier origin
+for bibliography usage. Whether they move into the binding or stay always-on
+(they appear at BBL stage with no package loaded — witnesses 2508.13753,
+2508.20226, 2509.07628) needs a decision backed by re-running those three.
 
 ### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
