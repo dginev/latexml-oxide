@@ -1,5 +1,45 @@
 use crate::prelude::*;
 
+/// Run a chunk of our own expl3-syntax TeX under the expl3 catcode regime.
+///
+/// **Every `raw_tex` chunk in this file that names an expl3 CS must go through
+/// here.** Real expl3 code always lives between `\ExplSyntaxOn` and
+/// `\ExplSyntaxOff`, which make `:` and `_` LETTER so a name like
+/// `\c_sys_shell_escape_int` is a SINGLE control sequence. `raw_tex` tokenizes
+/// with the **ambient** catcodes, and after the expl3 load the ambient
+/// (document) regime has `_` = SUB (8) — so an unwrapped chunk mis-tokenizes:
+/// the CS terminates at the first `_`, and `\edef\c_sys_shell_escape_int{0}`
+/// becomes `\edef\c` with parameter text `_sys_shell_escape_int` and body `0`,
+/// silently rebinding LaTeX's cedilla accent `\c` (`Fran\c cois` → "Fran0cois",
+/// no error at all, where Perl renders "François"). That was issue 421 —
+/// witness arXiv 2605.11579; see the NOTE at the deleted `\c_sys_*` block.
+///
+/// Catcode-INDEPENDENT alternatives, when they fit, are safer still: `T_CS!` /
+/// `Let!` / `parse_prototype` (`def_macro_noop` &c.) build the CS name as a
+/// string and never reach the tokenizer.
+///
+/// We cannot delegate to `\ExplSyntaxOn`/`\ExplSyntaxOff` here: our expl3
+/// kernel's `\ExplSyntaxOff` is incomplete (the reason xparse_sty.rs and
+/// siunitx_sty.rs hardcode a `~`/`:`/`_` restore after their raw loads —
+/// docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md). Instead this
+/// saves the ambient catcodes of `:`/`_`, installs the expl3 LETTER regime for
+/// the duration, and restores the saved values — including on the error path,
+/// so a failing chunk cannot leak the LETTER regime into the document.
+fn with_expl_catcodes<T>(body: impl FnOnce() -> Result<T>) -> Result<T> {
+  // (char, catcode to fall back to if the ambient table has no entry — the
+  // document/plain-TeX default for that char).
+  const EXPL_LETTERS: [(char, Catcode); 2] = [(':', Catcode::OTHER), ('_', Catcode::SUB)];
+  let saved = EXPL_LETTERS.map(|(c, dflt)| lookup_catcode(c).unwrap_or(dflt));
+  for (c, _) in EXPL_LETTERS {
+    assign_catcode(c, Catcode::LETTER, Some(Scope::Global));
+  }
+  let result = body();
+  for ((c, _), cc) in EXPL_LETTERS.into_iter().zip(saved) {
+    assign_catcode(c, cc, Some(Scope::Global));
+  }
+  result
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Strict-Perl translation of LaTeXML/lib/LaTeXML/Package/expl3.sty.ltxml:
@@ -53,11 +93,7 @@ LoadDefinitions!({
   // expl3-code.tex. On the dump path the guard short-circuits the
   // re-load and the dump already provides the right state.
   if raw_load_will_run {
-    assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
-    assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
-    raw_tex(r"\protected\gdef\__kernel_msg_info:nnxx#1#2#3#4{}")?;
-    assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-    assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+    with_expl_catcodes(|| raw_tex(r"\protected\gdef\__kernel_msg_info:nnxx#1#2#3#4{}"))?;
   }
 
   // expl3 case-folding override.
@@ -97,21 +133,20 @@ LoadDefinitions!({
     Ok(Tokenize!(TeXString::assembled(format!("{{{}}}{{}}{{}}", result_cp))))
   });
 
-  // expl3 system-info constants normally bound by `\g__sys_everyjob_tl`
-  // expansion at job start (via `\everyjob`). Our engine never fires
-  // `\everyjob` (matching Perl's gap), so the tl never runs and these
-  // CSes stay undefined. When packages like `duckuments.sty` then do
+  // `\c_sys_jobname_str` is one of the system-info constants bound by
+  // `\g__sys_everyjob_tl` at job start (via `\everyjob`), which our engine
+  // never fires (matching Perl's gap). When packages like `duckuments.sty`
+  // then do
   //   `\str_if_eq_p:Vn \c_sys_jobname_str { example-image-duck }`
   // the V-expansion triggers `\if_int_compare:w` cascades on Rust
   // (Perl emits one undefined error and recovers; Rust's recovery
   // re-fires per scan, surfacing 21+ relational-token cascades).
   //
-  // Mirror the body of `\g__sys_everyjob_tl` for the constants
-  // duckuments-class packages actually consume — `\c_sys_jobname_str`
-  // (= jobname) plus the date/time int constants. Use plain `\Let`/
-  // `\edef` aliases rather than the full `\str_const:Ne` machinery
-  // because those expl3 constructors themselves require a working
-  // `\c_sys_jobname_str` at definition time.
+  // A plain `\Let` alias to `\jobname`, rather than the full `\str_const:Ne`
+  // machinery — those expl3 constructors themselves require a working
+  // `\c_sys_jobname_str` at definition time. The sibling date/time int
+  // constants need NO such patch-up: they are already defined, with live
+  // values, by the time a package body runs (see the NOTE below).
   //
   // Driver: 2406.14142 (duckuments cascade, 21 errors → 4 expected
   // (matching Perl's residual undefined-CS count)).
@@ -129,15 +164,31 @@ LoadDefinitions!({
   // non-clearing version.)
   Let!("\\hbox_unpack_clear:N", "\\hbox_unpack_drop:N");
 
-  RawTeX!(r"
-    \edef\c_sys_minute_int{0}%
-    \edef\c_sys_hour_int{0}%
-    \edef\c_sys_day_int{1}%
-    \edef\c_sys_month_int{1}%
-    \edef\c_sys_year_int{2026}%
-    \edef\c_sys_timestamp_str{}%
-    \edef\c_sys_shell_escape_int{0}%
-  ");
+  // NOTE (issue 421): there used to be a `RawTeX!` block here `\edef`-ing the
+  // seven `\c_sys_{minute,hour,day,month,year}_int` / `\c_sys_timestamp_str` /
+  // `\c_sys_shell_escape_int` constants, on the belief that they stay undefined
+  // because we never fire `\everyjob`. **Do not re-add it.** Both halves of that
+  // belief were wrong, measured on the current engine:
+  //
+  //  * They ARE defined, at package-load time and with live values — probing
+  //    `\number\csname c_sys_year_int\endcsname` right after `\usepackage{xparse}`
+  //    gives the real year, and `c_sys_minute_int` advances between runs. Only
+  //    `\c_sys_jobname_str` needed the `Let!` above.
+  //  * The block never actually ran. Written as raw TeX, it was tokenized with
+  //    the AMBIENT catcodes, and after the expl3 load the document regime has
+  //    `_` = SUB — so `\edef\c_sys_minute_int{0}` parsed as `\edef\c` with
+  //    parameter text `_sys_minute_int`. It defined none of the constants and
+  //    instead REBOUND LaTeX's cedilla accent `\c` (`\meaning\c` =
+  //    `macro:_sys_shell_escape_int->0`), so every later `Fran\c cois` rendered
+  //    "Fran0cois" — silently, 0 errors, where Perl renders "François".
+  //    Witness arXiv 2605.11579; guard
+  //    `expl3_load_does_not_clobber_cedilla_accent`.
+  //
+  // Fixing only the tokenization would have been worse than deleting: the
+  // constants would then overwrite expl3's live clock values with frozen
+  // dummies (and a hardcoded year). Perl's expl3.sty.ltxml has no such block
+  // either — it is three lines. Any FUTURE expl3-syntax raw TeX added to this
+  // file must go through `with_expl_catcodes`.
 
   // expl3 l3regex is handled NATIVELY by the real expl3 VM (loaded from
   // expl3-code.tex: \__regex_compile:n / \__regex_build:n / \__regex_match:n,
