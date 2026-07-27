@@ -2022,9 +2022,21 @@ LoadDefinitions!({
 
   // \bib@synthesize@mr — Perl L803-810. Emit \bib@@mr if either
   // mrnumber or mrreviewer is set, else nothing.
+  // `untex()`, NOT `to_string()`, on all four MR/Zbl fields. Perl's
+  // `currentBibEntryField` returns a plain STRING (`Pre/BibTeX/Entry.pm` L38:
+  // `$$self{fieldmap}{$key}`), so `Tokenize($mrnumber)` at L806-807 never had a
+  // Tokens round trip to get wrong. Our `current_entry_field` returns `Tokens`,
+  // so recovering Perl's string requires `untex()` — `to_string()` drops the
+  // space that terminates a control word and welds it to the following text.
+  // Witness 2605.11579 (`biblo.bib`), five reviewer names, one per shape:
+  // `MRREVIEWER = {Fran\c cois\ Digne}` -> `undefined:\ccois`;
+  // `{S. I. Gel\cprime fand}` -> `\cprimefand`; `{Sait Hal\i c\i o\u{g}lu}`
+  // -> `\ic` and `\io`; `{Dragomir \v{Z}. \Dbar okovi\'{c}}` -> `\Dbarokovi`.
+  // Third site of this defect after `\bib@@names` (PR #399) and dcolumn/overpic
+  // (PR #400). Guard: `06_cluster_bibliography::bib_mr_reviewer_accent_survives_reversion`.
   DefMacro!("\\bib@synthesize@mr", sub[_args] {
-    let mrnumber = current_entry_field("mrnumber").map(|t| t.to_string());
-    let mrreviewer = current_entry_field("mrreviewer").map(|t| t.to_string());
+    let mrnumber = current_entry_field("mrnumber").map(Tokens::untex);
+    let mrreviewer = current_entry_field("mrreviewer").map(Tokens::untex);
     if mrnumber.is_none() && mrreviewer.is_none() {
       return Ok(Tokens!());
     }
@@ -2076,8 +2088,8 @@ LoadDefinitions!({
   // \bib@synthesize@zbl — Perl L828-835. Same shape as mr but
   // unconditional `isreview` (no MR-style id stripping).
   DefMacro!("\\bib@synthesize@zbl", sub[_args] {
-    let zblno = current_entry_field("zblno").map(|t| t.to_string());
-    let zblreviewer = current_entry_field("zblreviewer").map(|t| t.to_string());
+    let zblno = current_entry_field("zblno").map(Tokens::untex);
+    let zblreviewer = current_entry_field("zblreviewer").map(Tokens::untex);
     if zblno.is_none() && zblreviewer.is_none() {
       return Ok(Tokens!());
     }

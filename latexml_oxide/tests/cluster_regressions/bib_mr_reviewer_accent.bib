@@ -1,0 +1,57 @@
+% MathSciNet exports carry `MRREVIEWER`, and reviewer names are where non-ASCII
+% lives. BibTeX's own convention writes an accent in SPACE form — `\c c`, `\i o`,
+% `\cprime f` — because TeX consumes the space that terminates a control word.
+% That space is therefore GONE by token-time, so any Tokens->string round trip
+% must re-emit it: `untex()` does, `to_string()` does not. Without it `\c c` and
+% the following `ois` weld into `\ccois`, a control sequence that exists in no
+% LaTeX, and the reviewer's name is replaced by an undefined-macro error.
+%
+% Perl cannot hit this: `currentBibEntryField` returns a plain STRING
+% (`Pre/BibTeX/Entry.pm` L38, `$$self{fieldmap}{$key}`), so `Tokenize($mrreviewer)`
+% at `BibTeX.pool.ltxml` L806-807 has no round trip to get wrong. Our
+% `current_entry_field` returns `Tokens`, so this is GENUINE-RUST-ONLY.
+%
+% Witness 2605.11579 (`biblo.bib`) — one entry here per shape it exhibited:
+%   Fran\c cois        -> \ccois        Gel\cprime fand -> \cprimefand
+%   Hal\i c\i o\u{g}lu -> \ic and \io   \Dbar okovi\'{c} -> \Dbarokovi
+% Third site of this defect, after `\bib@@names` (PR #399) and dcolumn/overpic
+% (PR #400).
+%
+% `zblreviewer` is here because the Zentralblatt path is the same code shape and
+% was fixed in the same commit; without an entry it would be untested.
+
+@article{cedillarev,
+  author      = {A. Author},
+  title       = {Cedilla in a reviewer name},
+  journal     = {J. Reviews},
+  year        = {2025},
+  mrnumber    = {MR1234567},
+  MRREVIEWER  = {Fran\c cois\ Digne}
+}
+
+@article{primerev,
+  author      = {B. Author},
+  title       = {Soft sign in a reviewer name},
+  journal     = {J. Reviews},
+  year        = {2025},
+  mrnumber    = {MR2345678},
+  MRREVIEWER  = {S. I. Gel\cprime fand}
+}
+
+@article{dotlessrev,
+  author      = {C. Author},
+  title       = {Two dotless i accents in one name},
+  journal     = {J. Reviews},
+  year        = {2025},
+  mrnumber    = {MR3456789},
+  MRREVIEWER  = {Sait Hal\i c\i o\u{g}lu}
+}
+
+@article{zblrev,
+  author        = {D. Author},
+  title         = {The Zentralblatt path shares the code shape},
+  journal       = {J. Reviews},
+  year          = {2025},
+  zblno         = {1234.56789},
+  ZBLREVIEWER   = {Fran\c cois\ Digne}
+}

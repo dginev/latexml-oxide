@@ -1134,3 +1134,39 @@ fn bib_field_percent_is_an_ordinary_character() {
      MakeBibliography could not read the entry:\n{x}"
   );
 }
+
+/// A space-form accent in a `MRREVIEWER` / `ZBLREVIEWER` field must survive the
+/// Tokens->string round trip.
+///
+/// `current_entry_field` returns `Tokens`; `to_string()` drops the space that
+/// terminates a control word, so `Fran\c cois` welded to `\ccois` — an undefined
+/// macro where a reviewer's name belongs. Perl cannot hit this: its
+/// `currentBibEntryField` returns a plain string (`Pre/BibTeX/Entry.pm` L38), so
+/// `Tokenize($mrreviewer)` has no round trip. GENUINE-RUST-ONLY; the fix is
+/// `untex()`, the same one PR #399 applied to `\bib@@names`.
+///
+/// Witness 2605.11579: 5 errors -> 1, and the survivor (`undefined:\Dbar`, a
+/// MathSciNet glyph macro LaTeXML genuinely lacks) is now an honest diagnostic
+/// rather than a fabricated one.
+#[test]
+fn bib_mr_reviewer_accent_survives_reversion() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_mr_reviewer_accent.tex");
+  // The welds this guards against, one per accent shape in the witness.
+  for weld in ["ccois", "cprimefand", "\\ic", "\\io"] {
+    assert!(
+      !x.contains(weld),
+      "MR reviewer: accent welded to the following text ({weld:?}):\n{x}"
+    );
+  }
+  // ... and the names must actually be there, in both the MR and Zbl paths.
+  assert!(
+    x.matches("Digne").count() >= 2,
+    "MR reviewer: the cedilla name is missing from one of the MR/Zbl paths:\n{x}"
+  );
+  for needle in ["fand", "lu"] {
+    assert!(
+      x.contains(needle),
+      "MR reviewer: {needle:?} lost from a reviewer name:\n{x}"
+    );
+  }
+}
