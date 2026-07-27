@@ -2921,6 +2921,16 @@ i.e. `ltx:keywords` with the label in `@name` and the print-only `---` separator
 normalized to `:~`. So the divergence is only against *raw-loaded* spconf; against
 Perl's own binding for the same markup it is a verbatim follow.
 
+`\keywords` is argument-less in the `.sty`, so `\keywords{a, b}` is legal there
+too — the group just typesets after the label. Routed straight to the environment
+opener that form has no `\endkeywords` to stop at and
+`\lx@add@frontmatter@until` scans to EOF, pulling the whole body inside
+`<ltx:keywords>` (loudly: `malformed:ltx:section`, `malformed:ltx:document`). The
+binding peeks for a `{` and dispatches to a one-argument form, exactly as Perl
+does for the same legacy pair in `IEEEtran.cls.ltxml` L398-404
+(`\keywords@onearg`). No corpus paper hits it today (`undefined:\keywords` has
+zero reports in either sandbox corpus), but the form is valid spconf input.
+
 The same file's `\twoauthors{names1}{affil1}{names2}{affil2}` (L183-190) is bound
 alongside, routed to `\author{#1 \\ #2 \and #3 \\ #4}` so each pair becomes a
 creator with its own affiliation instead of a zero-argument `<ltx:ERROR/>` whose
@@ -2936,7 +2946,7 @@ sandbox corpora: **94 tasks in sandbox-arxiv-2605**, **49 in sandbox-arxiv-2606*
 2605.18923 **1 → 0**, 2605.26747 **2 → 0**.
 
 Guards: `06_cluster_frontmatter::frontmatter_spconf_keywords`,
-`06_cluster_frontmatter::frontmatter_spconf_twoauthors` (both via
+`frontmatter_spconf_keywords_braced`, `frontmatter_spconf_twoauthors` (all via
 `convert_to_xml_contrib_clean`, so a returning error fails them).
 
 ## Known Upstream Perl Issues (brief)

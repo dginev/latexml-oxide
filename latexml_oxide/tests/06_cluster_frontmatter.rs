@@ -137,6 +137,27 @@ fn frontmatter_spconf_keywords() {
     "spconf `Index Terms` label leaked into the content:\n{x}"
   );
 }
+/// spconf's `\keywords` is argument-less, so the braced `\keywords{a, b}` form
+/// is legal too. Routed to the bare environment opener it would find no
+/// `\endkeywords` and scan to EOF, dragging the whole body into
+/// `<ltx:keywords>`; the `{`-peek (Perl's `\keywords@onearg`, IEEEtran.cls.ltxml
+/// L398-404) must close the block after the argument.
+#[test]
+fn frontmatter_spconf_keywords_braced() {
+  let x = convert_to_xml_contrib_clean(
+    "tests/cluster_regressions/frontmatter_spconf_keywords_braced.tex",
+  );
+  // The `@name` separator is a `~` tie (U+00A0), so match around it.
+  assert!(
+    x.contains("<keywords name=\"Index Terms:")
+      && x.contains(">Speech recognition, deep learning</keywords>"),
+    "braced spconf `\\keywords{{…}}` did not close after its argument:\n{x}"
+  );
+  assert!(
+    x.contains("<section"),
+    "the document body was swallowed into the keywords block:\n{x}"
+  );
+}
 /// spconf.sty `\twoauthors{N1}{A1}{N2}{A2}` (L183-190) — the side-by-side
 /// two-author title block. Each pair must become a creator with its own
 /// affiliation instead of an undefined-token `<ltx:ERROR/>`.

@@ -62,8 +62,29 @@ LoadDefinitions!({
   // Raw-loaded spconf leaves it as inline body text instead — OXIDIZED_DESIGN #82.
   DefMacro!("\\spconf@keywordsname", "Index Terms");
   DefMacro!(
-    "\\keywords",
+    "\\spconf@begin@keywords",
     "\\lx@begin@keywords[name={\\spconf@keywordsname:~}]"
+  );
+  // `\keywords` is argument-less in the `.sty`, so `\keywords{a, b}` is also
+  // legal there — the group simply typesets after the label. Routed straight to
+  // the environment opener, that form has no `\endkeywords` to stop at and
+  // `\lx@add@frontmatter@until` scans to EOF, pulling the rest of the document
+  // inside `<ltx:keywords>` (loudly — `malformed:ltx:section` and friends — but
+  // the body is wrecked, where before it was one undefined error with the text
+  // intact). Peek for a `{` and dispatch, exactly as Perl does for the same
+  // legacy pair in IEEEtran.cls.ltxml L398-404 (`\keywords@onearg`).
+  DefMacro!("\\keywords", sub[_args] {
+    if let Some(t) = read_token()? {
+      unread(Tokens!(t));
+      if t.get_catcode() == Catcode::BEGIN {
+        return Ok(Tokens!(T_CS!("\\spconf@keywords@onearg")));
+      }
+    }
+    Ok(Tokens!(T_CS!("\\spconf@begin@keywords")))
+  });
+  DefMacro!(
+    "\\spconf@keywords@onearg{}",
+    "\\spconf@begin@keywords #1\\lx@end@keywords"
   );
   DefMacro!("\\endkeywords", "\\lx@end@keywords");
   // spconf uppercases the title; keep LaTeX's `\title` semantics (no forced
