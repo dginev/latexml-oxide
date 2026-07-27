@@ -59,7 +59,7 @@ Point-in-time studies with pending halves.
 | Doc | What it is |
 |-----|------------|
 | [`parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md) | `expected:id` dangling-XMRef cluster: container-id half landed; MathFork reconciliation pending. |
-| [`parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`](parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md) | expl3 catcode-gap study — still OPEN; records four reverted attempts. |
+| [`parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`](parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md) | expl3 catcode-gap study — **largely closed** (re-measured 2026-07-20; `2110.12034` the lone regression at 8). Third member fixed 2026-07-27 (`\c` cedilla clobber). Kept for its four reverted attempts as settled dead-ends. |
 
 ## ➗ Math parser (`math/`) — serves both targets
 
