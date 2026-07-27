@@ -28,7 +28,7 @@ use crate::{
   state::{let_i, *},
   stomach::*,
   token::*,
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
   util::pathname::{self, PathnameFindOptions},
 };
 
@@ -2973,7 +2973,7 @@ pub fn def_color(
   def_macro(
     T_CS!(s!("\\\\color@{name}")),
     None,
-    crate::mouth::tokenize_internal(&model_spec),
+    crate::mouth::tokenize_internal(TeXString::assembled(model_spec)),
     Some(ExpandableOptions {
       scope: effective_scope,
       ..Default::default()
@@ -3106,8 +3106,12 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Option<Tokens>>) -> 
 /// token, this reduces to `build_invocation` on that token. Otherwise the tokens are
 /// treated as an "anonymous macro" containing parameter markers like `#1`, and the
 /// arguments are substituted in.
-pub fn build_invocation_str(spec: &str, args: Vec<Option<Tokens>>) -> Result<Tokens> {
-  let tokens = crate::mouth::tokenize_internal(spec);
+pub fn build_invocation_str(
+  spec: impl Into<TeXString>,
+  args: Vec<Option<Tokens>>,
+) -> Result<Tokens> {
+  let spec = spec.into();
+  let tokens = crate::mouth::tokenize_internal(spec.clone());
   let mut list = tokens.unlist();
   if list.len() > 1 {
     // Treat as anonymous macro

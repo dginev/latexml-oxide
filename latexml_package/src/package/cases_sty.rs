@@ -169,14 +169,14 @@ LoadDefinitions!({
     reset_counter(&T_OTHER!("equation"))?;
     // Redefine \theequation to parent_number + \alph{equation} (e.g. "3a", "3b")
     let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
-    def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
+    def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(TeXString::assembled(new_theequation)), None)?;
     // Redefine \theequation@ID for xml:id generation (e.g. "S0.E3.\@equation@ID")
     let id_str = eqn_props.iter().find_map(|(k, v)| {
       if with(*k, |ks| ks == "id") { Some(v.to_string()) } else { None }
     }).unwrap_or_default();
     if !id_str.is_empty() {
       let new_id_macro = format!("{}.\\@equation@ID", id_str);
-      def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
+      def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(TeXString::assembled(new_id_macro)), None)?;
     }
   });
   DefPrimitive!("\\lx@numcases@subnumbering@end", sub[_args] {

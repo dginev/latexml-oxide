@@ -150,7 +150,7 @@ fn six_get_tokens_sym(key: SymStr) -> Tokens {
     Some(Stored::Tokens(t)) => t,
     Some(Stored::String(s)) => {
       let txt = with(s, |t| t.to_string());
-      Tokenize!(&txt)
+      Tokenize!(TeXString::assembled(txt))
     },
     _ => Tokens::default(),
   }
@@ -1064,7 +1064,7 @@ fn six_format_simplenumber(number: &SixNumber) -> Tokens {
     tokens.extend(trailer);
 
     let meaning = six_number_string(number);
-    let meaning_toks = Tokenize!(&meaning);
+    let meaning_toks = Tokenize!(TeXString::assembled(meaning));
     let symbol = i_symbol(
       &[("role", Tokenize!("NUMBER")), ("meaning", meaning_toks)],
       None,
@@ -1679,10 +1679,10 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
   // to be ASCII.
   let mut pres_inner = Vec::new();
   if let Some(pr) = &pre_resolved {
-    pres_inner.extend(mouth::tokenize(pr).unlist());
+    pres_inner.extend(mouth::tokenize(TeXString::assembled(pr.clone())).unlist());
   }
   if let Some(ut) = &u_resolved {
-    pres_inner.extend(mouth::tokenize(ut).unlist());
+    pres_inner.extend(mouth::tokenize(TeXString::assembled(ut.clone())).unlist());
   }
 
   // \lx@unit{name}{\mathrm{presentation}}
@@ -2057,9 +2057,9 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       {
         // Apply arg to the appropriate field
         if defn.unit_type == "postpower" || defn.unit_type == "prepower" {
-          defn.power = Some(Tokenize!(&arg));
+          defn.power = Some(Tokenize!(TeXString::assembled(arg.clone())));
         } else if defn.unit_type == "qualifier" {
-          defn.presentation = Tokenize!(&arg);
+          defn.presentation = Tokenize!(TeXString::assembled(arg.clone()));
         }
         defns.push(defn);
       }
@@ -2144,12 +2144,14 @@ fn decode_unit_defn_from_encoded_sym(
     Some(SixUnitDefn {
       name:         name.to_string(),
       unit_type:    parts[0].to_string(),
-      presentation: Tokenize!(parts.get(1).unwrap_or(&"")),
+      presentation: Tokenize!(TeXString::assembled(
+        parts.get(1).unwrap_or(&"").to_string()
+      )),
       power:        parts.get(2).and_then(|p| {
         if p.is_empty() {
           None
         } else {
-          Some(Tokenize!(p))
+          Some(Tokenize!(TeXString::assembled(p.to_string())))
         }
       }),
       base:         parts.get(3).and_then(|b| b.parse().ok()),
@@ -2218,7 +2220,7 @@ fn resolve_unit_presentation(pres: &Tokens) -> String {
           let pres = parts[1];
           // If the presentation itself contains backslashes, try to resolve recursively
           if pres.contains('\\') {
-            let sub = Tokenize!(pres);
+            let sub = Tokenize!(TeXString::assembled(pres.to_string()));
             let sub_resolved = resolve_unit_presentation(&sub);
             result.push_str(&sub_resolved);
           } else {
@@ -2456,7 +2458,7 @@ LoadDefinitions!({
     };
     if !pkg_opts.is_empty() {
       let setup = format!("\\sisetup{{{}}}", pkg_opts.join(","));
-      Digest!(Tokenize!(&setup))?;
+      Digest!(Tokenize!(TeXString::assembled(setup)))?;
     }
 
     // Perl siunitx.sty.ltxml L115-121: if version-1-compatibility OR
@@ -2849,7 +2851,7 @@ LoadDefinitions!({
     }
 
     let symbol = i_symbol(
-      &[("role", Tokenize!("NUMBER")), ("meaning", Tokenize!(&meaning))],
+      &[("role", Tokenize!("NUMBER")), ("meaning", Tokenize!(TeXString::assembled(meaning)))],
       None,
     );
     let dual = i_dual(&[], symbol, combined, vec![]).unwrap_or_default();

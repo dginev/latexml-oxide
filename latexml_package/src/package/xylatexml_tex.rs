@@ -449,8 +449,8 @@ LoadDefinitions!({
       2 => (-delta, 1.0),
       _ => (-1.0, -delta),
     };
-    def_macro(T_CS!("\\cosDirection"), None, Tokenize!(&s!("{:.6}", dx * norm)), None)?;
-    def_macro(T_CS!("\\sinDirection"), None, Tokenize!(&s!("{:.6}", dy * norm)), None)?;
+    def_macro(T_CS!("\\cosDirection"), None, Tokenize!(TeXString::assembled(s!("{:.6}", dx * norm))), None)?;
+    def_macro(T_CS!("\\sinDirection"), None, Tokenize!(TeXString::assembled(s!("{:.6}", dy * norm))), None)?;
   });
 
   // \lx@xy@move@to — position content at (x,y) in SVG (Perl L236-242)
@@ -1389,23 +1389,23 @@ LoadDefinitions!({
         let mut h_max = Dimension::default();
         for (i, h) in row_heights.iter().enumerate() {
           let name = s!("\\Hrow@{}", i + 1);
-          def_macro(T_CS!(&name), None, Tokenize!(&h.to_string()), global_opts(&name))?;
+          def_macro(T_CS!(&name), None, Tokenize!(TeXString::assembled(h.to_string())), global_opts(&name))?;
           h_max = h_max.larger(*h);
         }
         // Add fake last row (Perl L1077-1078)
         let last_idx = row_heights.len() + 1;
         let name = s!("\\Hrow@{}", last_idx);
         def_macro(T_CS!(&name), None, Tokenize!("0pt"), global_opts(&name))?;
-        def_macro(T_CS!("\\H@max"), None, Tokenize!(&h_max.to_string()), global_opts(""))?;
+        def_macro(T_CS!("\\H@max"), None, Tokenize!(TeXString::assembled(h_max.to_string())), global_opts(""))?;
         // Define \Wcol@1, \Wcol@2, ... and find \W@max
         let mut w_max = Dimension::default();
         for (j, w) in col_widths.iter().enumerate() {
           let name = s!("\\Wcol@{}", j + 1);
-          def_macro(T_CS!(&name), None, Tokenize!(&w.to_string()), global_opts(&name))?;
+          def_macro(T_CS!(&name), None, Tokenize!(TeXString::assembled(w.to_string())), global_opts(&name))?;
           w_max = w_max.larger(*w);
         }
-        def_macro(T_CS!("\\W@max"), None, Tokenize!(&w_max.to_string()), global_opts(""))?;
-        def_macro(T_CS!("\\HW@max"), None, Tokenize!(&h_max.larger(w_max).to_string()), global_opts(""))?;
+        def_macro(T_CS!("\\W@max"), None, Tokenize!(TeXString::assembled(w_max.to_string())), global_opts(""))?;
+        def_macro(T_CS!("\\HW@max"), None, Tokenize!(TeXString::assembled(h_max.larger(w_max).to_string())), global_opts(""))?;
         // Reset counters (Perl L1086-1088)
         assign_register("\\Col", RegisterValue::Number(Number::new(0)), Some(Scope::Global), Vec::new())?;
         assign_register("\\Row", RegisterValue::Number(Number::new(0)), Some(Scope::Global), Vec::new())?;

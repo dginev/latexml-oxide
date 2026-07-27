@@ -72,7 +72,7 @@ pub use latexml_core::{
   stomach::*,
   tbox::Tbox,
   token::*,
-  tokens::{NO_TOKENS, Tokens},
+  tokens::{NO_TOKENS, TeXString, Tokens},
   // `CharCursor` is preluded on purpose: it is the shared answer to the
   // byte-index scanners this port keeps inheriting from Perl's
   // character-oriented string ops (WISDOM #70), so it should be the thing

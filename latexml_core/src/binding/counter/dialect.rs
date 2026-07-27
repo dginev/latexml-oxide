@@ -28,7 +28,7 @@ use crate::{
   state::*,
   stomach,
   token::*,
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
   whatsit::Whatsit,
 };
 
@@ -230,13 +230,13 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
           // semantics — `create_xmrefs`/`get_xmarg_id`). Witness
           // math0402448 (plain TeX + 3464 formulae): "Conversion failed:
           // 1 fatal error" with no Fatal: line in the log.
-          Ok(mouth::tokenize_internal(&s!(
+          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
             "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\lx@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
             idwithin,
             idwithin,
             prefix,
             ctr_string
-          )))
+          ))))
         }))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
@@ -248,9 +248,9 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         T_CS!(thectrid),
         None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
-          Ok(mouth::tokenize_internal(&s!(
+          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
             "{prefix}\\csname @{ctr_string}@ID\\endcsname",
-          )))
+          ))))
         }))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
@@ -833,7 +833,7 @@ pub fn begin_itemize(
     def_macro(
       T_CS!(thectr),
       None,
-      mouth::tokenize_internal(&theexpansion),
+      mouth::tokenize_internal(TeXString::assembled(theexpansion)),
       None,
     )?;
 

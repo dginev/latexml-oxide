@@ -451,7 +451,7 @@ LoadDefinitions!({
         require_package("amsthm", RequireOptions::default())?;
         let mut expanded = preload.clone();
         expanded.push_str(&beginenv_clone);
-        Ok(mouth::tokenize_internal(&expanded))
+        Ok(mouth::tokenize_internal(TeXString::assembled(expanded)))
       })), None)?;
   }
   // Perl L216-219: newtheorem aliases auto-load amsthm
@@ -626,7 +626,7 @@ LoadDefinitions!({
           } else {
             require_package(&name_str, RequireOptions::default())?;
           }
-          Ok(mouth::tokenize_internal(&trigger_str))
+          Ok(mouth::tokenize_internal(TeXString::assembled(trigger_str.clone())))
         })), None)?;
     }
   }

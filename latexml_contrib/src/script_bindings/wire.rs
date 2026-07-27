@@ -57,7 +57,9 @@ pub(super) fn wire_macro(
       Ok(v) => v,
       Err(e) => return contain(&format!("macro {cs_name}"), e, Tokens::default()),
     };
-    Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
+    Ok(mouth::tokenize_internal(TeXString::assembled(
+      dynamic_to_string(ret),
+    )))
   });
 
   def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
@@ -73,7 +75,9 @@ pub(super) fn wire_macro_string(proto: &str, body: &str) -> Result<()> {
   def_macro(
     cs,
     paramlist,
-    ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+    ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(
+      body.to_string(),
+    ))),
     None,
   )?;
   Ok(())
@@ -87,7 +91,9 @@ pub(super) fn wire_macro_string_opts(proto: &str, body: &str, opts: Map) -> Resu
   def_macro(
     cs,
     paramlist,
-    ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+    ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(
+      body.to_string(),
+    ))),
     Some(expandable_options_from_map(opts)),
   )?;
   Ok(())
@@ -316,7 +322,7 @@ pub(super) fn apply_opts<B: BindingBuilder>(
         } else if key.as_str() == "reversion" {
           // String reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
           builder = builder.reversion(Reversion::Tokens(mouth::tokenize_internal(
-            &dynamic_to_string(val),
+            TeXString::assembled(dynamic_to_string(val)),
           )));
         } else if key.as_str() == "font" && val.is_map() {
           // Partial-font directive (`font => { family => 'typewriter', … }`).
@@ -662,7 +668,9 @@ pub(super) fn wire_macro_opts(
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("macro {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
+    Ok(mouth::tokenize_internal(TeXString::assembled(
+      dynamic_to_string(ret),
+    )))
   });
   def_macro(
     cs,
@@ -788,7 +796,9 @@ pub(super) fn wire_columntype(
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("column type {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
+    Ok(mouth::tokenize_internal(TeXString::assembled(
+      dynamic_to_string(ret),
+    )))
   });
   def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
   Ok(())
@@ -875,7 +885,9 @@ pub(super) fn wire_option_string(opt: &str, body: &str) -> Result<()> {
   def_macro(
     latexml_core::T_CS!(format!("\\ds@{opt}")),
     None,
-    ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+    ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(
+      body.to_string(),
+    ))),
     None,
   )?;
   Ok(())
@@ -1013,7 +1025,9 @@ pub(super) fn reversion_trampoline(
         .collect();
       let ret = call_deferred_body(&engine, &ast, &fp, dyn_args)
         .or_else(|e| contain("reversion", e, Dynamic::UNIT))?;
-      Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
+      Ok(mouth::tokenize_internal(TeXString::assembled(
+        dynamic_to_string(ret),
+      )))
     },
   )
 }
@@ -1175,7 +1189,11 @@ fn parse_rewrite_options(kind: &str, opts: Map) -> latexml_core::rewrite::Rewrit
         }
       },
       "regexp" => o.regexp = Some(dynamic_to_string(val)),
-      "match" => o.on_match = Some(mouth::tokenize_internal(&dynamic_to_string(val))),
+      "match" => {
+        o.on_match = Some(mouth::tokenize_internal(TeXString::assembled(
+          dynamic_to_string(val),
+        )))
+      },
       "scope" => o.scope = scope_of(&dynamic_to_string(val)),
       _ => {},
     }

@@ -94,7 +94,7 @@ LoadDefinitions!({
     } else {
       cp_n
     };
-    Ok(Tokenize!(&format!("{{{}}}{{}}{{}}", result_cp)))
+    Ok(Tokenize!(TeXString::assembled(format!("{{{}}}{{}}{{}}", result_cp))))
   });
 
   // expl3 system-info constants normally bound by `\g__sys_everyjob_tl`

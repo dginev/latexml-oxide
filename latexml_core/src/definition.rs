@@ -32,7 +32,7 @@ use crate::{
   parameter::Parameters,
   state::{Scope, expire_state_unlocked, local_state_unlocked},
   token::Token,
-  tokens::{NO_TOKENS, Tokens},
+  tokens::{NO_TOKENS, TeXString, Tokens},
   whatsit::Whatsit,
 };
 
@@ -132,9 +132,20 @@ impl PartialEq for Reversion {
   }
 }
 
+/// NOTE (`TeXString` guard): this and `From<&str> for ExpansionBody` below are
+/// the residual back doors into the tokenizer — a `String` reaches them as
+/// `s.as_str()` without ever naming its intent. They stay on plain `&str`
+/// because narrowing them to `&'static str` would reject the many legitimate
+/// runtime-built bodies. Anything that flattens `Tokens` must still go through
+/// [`Tokens::untex_string`](crate::tokens::Tokens::untex_string) before it gets
+/// here.
 impl From<&str> for Reversion {
   fn from(t: &str) -> Reversion {
-    Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().unwrap())
+    Reversion::Tokens(
+      mouth::tokenize_internal(TeXString::assembled(t.to_string()))
+        .pack_parameters()
+        .unwrap(),
+    )
   }
 }
 impl From<Tokens> for Reversion {
@@ -158,7 +169,9 @@ impl From<Tokens> for Option<ExpansionBody> {
 }
 
 impl From<&str> for ExpansionBody {
-  fn from(s: &str) -> ExpansionBody { mouth::tokenize_internal(s).into() }
+  fn from(s: &str) -> ExpansionBody {
+    mouth::tokenize_internal(TeXString::assembled(s.to_string())).into()
+  }
 }
 
 impl From<String> for ExpansionBody {

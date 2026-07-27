@@ -33,7 +33,7 @@ use crate::{
   stomach::*,
   tbox::Tbox,
   token::*,
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
   whatsit::Whatsit,
 };
 
@@ -475,7 +475,7 @@ pub fn def_math_dual(
   } else {
     cs
   };
-  let presentation_toks = mouth::tokenize_internal(&presentation);
+  let presentation_toks = mouth::tokenize_internal(TeXString::assembled(presentation.clone()));
 
   // Make the original CS expand into a DUAL invoking a presentation macro and content constructor
   let captured_role = options.role.clone();

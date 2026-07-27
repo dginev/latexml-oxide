@@ -7,7 +7,7 @@ use crate::{
   common::{error::Result, numeric_ops::NumericOps, object::Object},
   definition::register::RegisterType,
   mouth,
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
 };
 
 static TRAILING_ZEROS: Lazy<Regex> = Lazy::new(|| Regex::new(r"0+$").unwrap());
@@ -57,7 +57,7 @@ impl NumericOps for Float {
 }
 
 impl From<Float> for Tokens {
-  fn from(v: Float) -> Tokens { mouth::tokenize_internal(&v.to_string()) }
+  fn from(v: Float) -> Tokens { mouth::tokenize_internal(TeXString::assembled(v.to_string())) }
 }
 
 impl From<Float> for Option<Tokens> {

@@ -236,7 +236,7 @@ LoadDefinitions!({
       let dim = read_dimension()?;
       // Return the raw sp value as tokens for lossless round-trip.
       // to_attribute() rounds to 1 decimal pt, losing precision in scale calculations.
-      Ok(Tokenize!(&dim.value_of().to_string()))
+      Ok(Tokenize!(TeXString::assembled(dim.value_of().to_string())))
     }
   }, optional => true);
 
@@ -297,7 +297,7 @@ LoadDefinitions!({
         .map(|d| Dimension(*d).to_string())
         .collect::<Vec<_>>()
         .join(" ");
-      Ok(Tokenize!(&joined))
+      Ok(Tokenize!(TeXString::assembled(joined)))
     }
   }, optional => true);
 

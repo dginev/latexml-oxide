@@ -335,7 +335,7 @@ LoadDefinitions!({
   DefMacro!("\\tblr []{}", sub[(_outer, inner)] {
     let inner_str = inner.to_string();
     let cols = translate_tblr_colspec(&inner_str).unwrap_or(inner_str);
-    Ok(Tokenize!(&format!("\\tabular{{{cols}}}")))
+    Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}}}"))))
   });
   DefMacro!("\\endtblr", "\\endtabular");
   DefMacro!("\\booktabs", "\\tabular");

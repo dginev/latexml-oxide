@@ -39,7 +39,7 @@ use crate::{
   rewrite::Rewrite,
   state::StashTable,
   token::{Catcode, Token},
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
 };
 
 const STORED_TRUE: Stored = Stored::Bool(true);
@@ -1088,7 +1088,9 @@ impl<'a> From<&'a Stored> for Option<Glue> {
 impl From<Stored> for Option<Tokens> {
   fn from(value: Stored) -> Option<Tokens> {
     match value {
-      Stored::String(sym) => Some(mouth::tokenize_internal(&arena::to_string(sym))),
+      Stored::String(sym) => Some(mouth::tokenize_internal(TeXString::assembled(
+        arena::to_string(sym),
+      ))),
       Stored::Token(ts) => Some(Tokens::new(vec![ts])),
       Stored::Tokens(ts) => Some(ts),
       // Digested: revert to tokens (needed for \AtBeginDocument hooks that

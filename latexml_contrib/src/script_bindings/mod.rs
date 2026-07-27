@@ -65,7 +65,7 @@ use latexml_core::{
   mouth,
   state::Scope,
   token::{Catcode, Token},
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
   whatsit::Whatsit,
 };
 // `Error!` expands a `Fatal!`/`fatal!` arm (too-many-errors escalation); the

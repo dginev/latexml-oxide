@@ -16,7 +16,7 @@ use crate::{
 fn def_jhep_journal(cs: &str, body: &str) -> Result<()> {
   let proto = format!("{cs}{{}}{{}}{{}}");
   let (cs_tok, params) = parse_prototype(&proto, true)?;
-  let body_toks = mouth::tokenize_internal(body);
+  let body_toks = mouth::tokenize_internal(TeXString::assembled(body.to_string()));
   def_macro(cs_tok, params, ExpansionBody::Tokens(body_toks), None)?;
   Ok(())
 }

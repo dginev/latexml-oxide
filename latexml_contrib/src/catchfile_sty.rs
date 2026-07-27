@@ -27,7 +27,7 @@ LoadDefinitions!({
       .and_then(|disk| std::fs::read(&disk).ok())
       .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
       .unwrap_or_default();
-    let tokens = mouth::tokenize_internal(&body);
+    let tokens = mouth::tokenize_internal(TeXString::assembled(body));
     def_macro(target, None, tokens, None)?;
     Ok(())
   });
