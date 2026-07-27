@@ -5,6 +5,60 @@
 > MakeBibliography full-parity re-port (user directive 2026-07-04 — reuse TeX
 > interpretation, no special-case parser).
 
+### The governing design tension: two regimes collapsed into one pass
+
+Read this before touching anything in the `.bib` path. It is the frame that
+decides what is a bug and what is correct behaviour, and every bibliography
+defect found so far is a violation of it.
+
+The real toolchain has **two regimes separated by a hard boundary**:
+
+| | input → tool | what the bytes ARE | consequences |
+|---|---|---|---|
+| **A. Data** | `.bib` → `bibtex(1)` | data | `%` is not a comment, `&` is not an alignment tab, `_` is not a subscript. Braces ARE significant (delimit fields, protect case). `\`-sequences pass through as inert text. The `.bst` program selects which fields survive. |
+| **B. TeX** | `.bbl` → `pdflatex` | TeX source | `\emph`, accents, `$…$` mean what they mean. |
+
+latexml-oxide runs **one pass over the live core State** — no `bibtex`
+subprocess, no second `pdflatex` invocation, no `.bbl` on disk. Both regimes
+therefore happen in the same place, and the discipline is:
+
+> **Be `bibtex` first, then be `pdflatex` on the `.bbl` you just synthesized.**
+
+Collapsing the boundary is what produces the whole defect family: field bytes
+that should still have been *data* arrive at the tokenizer as *TeX*.
+
+**Three consequences that follow directly, and are the reason to keep this frame
+explicit rather than fixing symptoms:**
+
+1. **Field selection is part of the emulation, not a rendering convenience.**
+   No standard `.bst` (plain/unsrt/alpha/abbrv) declares `abstract`, `keywords`
+   or `contents` in its `ENTRY` list, so in the real pipeline those fields never
+   cross into regime B at all. That — not "nothing renders `ltx:bib-extract`" —
+   is the principled justification for OXIDIZED_DESIGN **#73** reading them
+   verbatim. The weaker rendering-based argument in that entry predates this
+   frame.
+
+2. **The right seam for specials is an escape at the A→B boundary, not catcode
+   suppression during digestion.** When a field's data-string crosses into the
+   TeX regime, emit what a careful `.bst` author would have written: `%`→`\%`,
+   `&`→`\&`, `#`→`\#`, `_`→`\_`. Legitimate TeX in the field (`\emph{...}`,
+   `$x_1+x_2$`, `{\v S}pakov`) is already valid and passes through untouched —
+   correct by construction, instead of fighting to keep it alive while
+   suppressing catcodes. Authorized as surpass-Perl **and** surpass-pdflatex
+   (user decision 2026-07-26): we read `.bib` directly, so we are the component
+   that decides what reaches the tokenizer, and the real toolchain's breakage on
+   these characters is a property of that toolchain, not a semantic to reproduce.
+
+3. **The balance is delicate in exactly two places**, and both need guards:
+   - **Math-awareness** — `_` inside `$…$` must stay a subscript
+     (`title = {Bounds on $x_1+x_2$}`) while `AT1G01010_v2` becomes `\_`.
+   - **Idempotency** — most real `.bib` files already contain correctly-escaped
+     `\&`, `\%`, `\_`. Escaping blindly turns `\&` into `\\&`, a line break
+     followed by an ampersand. Only a special NOT already preceded by an
+     escaping backslash may be escaped, and `\\&` (a real `\\` then `&`) is the
+     tricky case. Mixed conventions inside one file are real: witness
+     `booktitle = {... Medical Measurements \&amp; Applications ...}`.
+
 ### Why the re-port is the real fix: eager tokenization defeats parameter types (measured 2026-07-26)
 
 The 2026-07-26 sandbox rerun quantified what the simplified parser costs. In
