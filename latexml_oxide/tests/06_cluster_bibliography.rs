@@ -652,7 +652,7 @@ fn bib_abstract_percent_does_not_sink_the_entry() {
 /// `amp;` is ordinary text, and the entry reads "Computer Engineering, &amp;
 /// Applied Computing". pdflatex prints exactly the same, so this is neither a
 /// Perl gap nor a pdflatex gap — it is corrupt input, and reading `.bib`
-/// directly is what puts us in a position to undo it. OXIDIZED_DESIGN #75.
+/// directly is what puts us in a position to undo it. OXIDIZED_DESIGN #74.
 ///
 /// All three spellings are real; found by scanning 6000 arXiv/2605 sources.
 /// `titleentity` is the one that needs its own decode: `\bib@@title` re-reads
@@ -705,7 +705,7 @@ fn bib_escaped_amp_entity_decodes_to_one_ampersand() {
 /// 2605.10409 1/1), and bibtex 0.99d + pdflatex agree — under `plain` and
 /// `abbrvnat` the bare `&` reaches the `.bbl`, pdflatex stops with "Misplaced
 /// alignment tab character &" and prints "Taylor Francis". Reading `.bib`
-/// directly is what lets us decide otherwise. OXIDIZED_DESIGN #75.
+/// directly is what lets us decide otherwise. OXIDIZED_DESIGN #74.
 ///
 /// Neutralized at the per-entry Mouth beside the `%` of #74 — regime A, because
 /// `&` derails alignment in ANY field and these fields have no Perl
@@ -775,6 +775,136 @@ fn bib_bare_ampersand_leaves_live_markup_alone() {
       "markup boundary: space-form accent {needle:?} regressed (PR #399):\n{x}"
     );
   }
+}
+/// A `.bib` field's content is DATA, not TeX: a bare `_`, `&`, `#` or `%` is
+/// the literal character. `AT&T` renders "AT&T"; `AT1G01010_v2` renders
+/// "AT1G01010_v2". Witnesses: 2605.06926 (8 `unexpected:_`, four `eprint` PDF
+/// URLs), 2605.01936, 2605.04604, 2605.08986, 2605.11300, and the `&` half in
+/// 2605.01936 / 2605.06249 (`publisher = {Taylor & Francis}`).
+///
+/// Authorized surpass-Perl AND surpass-pdflatex (OXIDIZED_DESIGN #74): real
+/// BibTeX has a DATA regime and a TeX regime, and we collapse them because we
+/// read `.bib` directly with no `.bst` in the loop. That `bibtex(1)` +
+/// `pdflatex` also break on these characters is a property of that toolchain,
+/// not a semantic we are obliged to reproduce.
+///
+/// ONE fixture for all of it, because the whole risk is that fixing one case
+/// breaks another. This asserts, together: the four specials bare render
+/// literally; already-escaped `\&`/`\%`/`\_`/`\#` render IDENTICALLY and are not
+/// double-escaped; `$x_1+x_2$` still parses as math with a real `<msub>`;
+/// `\emph` still produces markup; a space-form accent still reverts (PR #399);
+/// and `%20` inside `\url{…}` is untouched, since url.sty reads that argument
+/// verbatim. The `\\&` hazard is pinned separately, by the
+/// `escape_bib_data_specials` unit tests in `latexml_engine/src/bibtex.rs` —
+/// see the fixture header for why it cannot live end-to-end.
+#[test]
+fn bib_field_specials_are_data_not_tex() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_field_specials.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "bib specials: no bibliography at all:\n{x}"
+  );
+  // All ten entries arrive — `Gilakjani` is the containment canary.
+  for needle in [
+    "Okonkwo",
+    "Lindqvist",
+    "Chen",
+    "Park",
+    "Diallo",
+    "Bergstr",
+    "Raghavan",
+    "Osman",
+    "Gilakjani",
+  ] {
+    assert!(
+      x.contains(needle),
+      "bib specials: {needle:?} was swallowed:\n{x}"
+    );
+  }
+  // The rendered `<text class="ltx_bib_title">` of the entry with a given key.
+  let title_of = |key: &str| -> String {
+    let i = x
+      .find(&format!("key=\"{key}\""))
+      .unwrap_or_else(|| panic!("bib specials: no entry keyed {key:?} in:\n{x}"));
+    let block = &x[i..];
+    let s = block
+      .find("class=\"ltx_bib_title\">")
+      .expect("a rendered bib-title")
+      + "class=\"ltx_bib_title\">".len();
+    let e = block[s..].find("</text>").expect("bib-title close") + s;
+    block[s..e].to_string()
+  };
+  // 1. The four specials, bare, are literal text. `&` is XML-escaped on the way
+  //    out, which is the correct rendering of the character. `recase_title`
+  //    lowercases (capitalize1, Perl parity), hence `at1g01010`.
+  let bare = "AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates";
+  assert_eq!(
+    title_of("barespecials"),
+    bare,
+    "bib specials: bare `& _ % #` did not render literally:\n{x}"
+  );
+  // 2. Idempotency: the entry that already wrote `\&`/`\_`/`\%`/`\#` renders
+  //    the SAME string. Had the escaper double-escaped, `\&` would have become
+  //    `\\&` — a line break followed by an ampersand.
+  assert_eq!(
+    title_of("preescaped"),
+    title_of("barespecials"),
+    "bib specials: the pre-escaped title must render identically to the bare \
+     one:\n{x}"
+  );
+  assert!(
+    !x.contains(r"\&") && !x.contains(r"\_") && !x.contains(r"\%"),
+    "bib specials: an escaping backslash leaked into the output:\n{x}"
+  );
+  // 3. Math survives WITH its subscript, and 4. markup survives.
+  //    `convert_and_post_clean` stops at the post-processed `ltx` XML with
+  //    `pmml: false`, so the subscript shows as XMath's SUBSCRIPTOP rather than
+  //    an `<m:msub>`.
+  assert!(
+    x.contains(r#"role="SUBSCRIPTOP""#),
+    "bib specials: `$x_1+x_2$` in a title lost its subscript:\n{x}"
+  );
+  assert!(
+    x.contains("<emph font=\"italic\">Drosophila</emph>"),
+    "bib specials: `\\emph` in a title stopped producing markup:\n{x}"
+  );
+  // 5. Space-form accents still revert (PR #399).
+  assert!(
+    x.contains("Špakov") && x.contains("Gonçalves"),
+    "bib specials: a space-form accent stopped reverting:\n{x}"
+  );
+  // 6. A percent-encoded URL inside `\url{…}` is a nested DATA region.
+  assert!(
+    x.contains("http://example.org/a%20b"),
+    "bib specials: `%20` inside `\\url{{…}}` was escaped into the href:\n{x}"
+  );
+  // And a Verbatim/Semiverbatim-read FIELD is passed through raw, so neither
+  // the `url` href nor the `doi` id picks up a backslash.
+  assert!(
+    x.contains("https://example.org/a%20b?x=1&amp;y=2_3"),
+    "bib specials: the `url` field was escaped:\n{x}"
+  );
+  assert!(
+    x.contains("10.1007/3-540-44886-1%5F25"),
+    "bib specials: the `doi` id lost its percent-encoding:\n{x}"
+  );
+  // 7. The original cluster: both spellings of the AIP `eprint` URL land as a
+  //    plain `_`.
+  for needle in ["18931574/1876_1_online.pdf", "15540793/184110_1_online.pdf"] {
+    assert!(
+      x.contains(needle),
+      "bib specials: {needle:?} did not reach the rendered links:\n{x}"
+    );
+  }
+  // 8. The `&` half of the cluster.
+  assert!(
+    x.contains("Taylor &amp; Francis"),
+    "bib specials: a bare `&` in `publisher` did not render:\n{x}"
+  );
+  assert!(
+    x.contains("IEEE Communications Surveys &amp; Tutorials"),
+    "bib specials: a bare `&` in `journal` did not render:\n{x}"
+  );
 }
 /// A space-form accent in an author name must survive reversion.
 ///

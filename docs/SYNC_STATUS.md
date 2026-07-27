@@ -64,6 +64,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #74).**
 - **2026-07-26 — undefined CSes from packages with no binding: `silence.sty`,
   bundled `arxiv.sty`/`PRIMEarxiv.sty`.** Long-standing gaps, **not** a
   regression: Perl 0.8.8 has no binding for either and reproduces the identical
@@ -89,15 +90,17 @@ session of their own. Re-verify a row before planning on it (rule 1).
   `.bbl` under `plain` and `abbrvnat`; pdflatex stops with "Misplaced alignment
   tab character &" and prints "Taylor Francis"). **A `.bib` field's content is
   DATA** — authorized surpass-Perl and surpass-pdflatex, since LaTeXML reads
-  `.bib` directly and decides what reaches the tokenizer. Neutralized at the
-  same two seams #74 uses for `%`, and BOTH are required — the per-entry Mouth
-  (`Mouth::with_align_as_other`) and `mouth::tokenize_bib_literal` for handlers
-  that re-tokenize a stored raw field (`\bib@@title` recasing, name/date/pages
-  assembly, MR/Zbl). Measured: **2605.06249 3→0, 2605.03054 1→0, 2605.00462 1→0,
-  2605.08753 1→0, 2605.10409 1→0, 2605.01936 13→6, 2605.06624 4→3** (the
-  residuals are unrelated `undefined:` errors). `#` was checked and NOT included
-  — one bare `#` across all seven, in a JabRef `file` path already covered as an
-  unknown field. **Stacked on PR #405**: merge after it.
+  `.bib` directly and decides what reaches the tokenizer.
+  Landed inside the consolidated **OXIDIZED_DESIGN #74**, which covers `%`, `&`,
+  `#` and `_` under one two-treatment design — be `bibtex` (the per-entry Mouth
+  and `mouth::tokenize_bib_literal`, via `Mouth::with_bib_data_literals`), then
+  be `pdflatex` on the `.bbl` you just synthesized
+  (`bibtex.rs::escape_bib_data_specials`, at three seams: the entry line,
+  `\bib@@title` and `\bib@@pages`). `_` is in the escaper ONLY: a catcode is
+  fixed at tokenization and cannot tell whether it is inside `$…$`, and a
+  subscript in a title's math is legitimate TeX — putting `_` in the Mouth set
+  flattened every one of them. Measured across all sixteen witnesses of the
+  three clusters (`_`, `%`, `&`): **193 -> 0**.
   Also fixed, a different bug the neutralization does *not* reach: the doubly
   escaped `\&amp;` / `{\&}amp;` / `&amp;`, an HTML entity that survived into
   the `.bib` and printed as "&amp;" in Perl and pdflatex alike

@@ -83,17 +83,14 @@ pub struct Mouth {
   /// floor and cheaper than a per-read flag check.
   last_token_start:       (usize, usize),
   foodtype:               FoodType,
-  /// Read `%` as an ordinary character rather than a comment, for this
-  /// mouth only. Set by `with_percent_as_other()`; see that method for the
-  /// BibTeX rationale. Deliberately a per-Mouth field rather than a State
-  /// catcode assignment: a nested mouth (a `.sty` raw-load triggered from
-  /// inside the text) is a separate object and keeps `%` as a comment,
-  /// which a State-level assignment could not guarantee.
-  percent_is_other:       bool,
-  /// Read `&` as an ordinary character rather than an alignment tab, for this
-  /// mouth only. Set by `with_align_as_other()`; same per-Mouth scoping, and
-  /// for the same reason, as `percent_is_other` above.
-  align_is_other:         bool,
+  /// Read `% & #` as ordinary characters — not comment, alignment tab,
+  /// parameter — for this mouth only. Set by `with_bib_data_literals()`; see
+  /// that method for the BibTeX rationale, and for why `_` is NOT here.
+  /// Deliberately a per-Mouth field rather than a State catcode assignment: a
+  /// nested mouth (a `.sty` raw-load triggered from inside the text) is a
+  /// separate object and keeps TeX's meanings, which a State-level assignment
+  /// could not guarantee.
+  bib_data_literals:      bool,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
@@ -140,8 +137,7 @@ impl Default for Mouth {
       shortsource:            s!("String"),
       // handle : None,
       foodtype:               FoodType::File,
-      percent_is_other:       false,
-      align_is_other:         false,
+      bib_data_literals:      false,
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
@@ -298,50 +294,46 @@ impl Mouth {
     Ok(mouth)
   }
 
-  /// Read `%` as an ordinary character (catcode 12) instead of a comment,
-  /// for the whole life of this mouth.
+  /// Read `% & #` as ordinary characters (catcode 12) instead of comment,
+  /// alignment tab and parameter, for the whole life of this mouth.
   ///
-  /// BibTeX's lexer has **no comment syntax inside an entry** — `%` is only
-  /// significant in the junk BETWEEN entries (`Pre::BibTeX::skipJunk`), so a
-  /// field value it hands back is a string in which `%` is an ordinary
-  /// character. When such a value is re-injected as TeX source (BibTeX.pool's
-  /// `\bibentry@create`), the default catcode 14 makes it comment out the rest
-  /// of its line — the field's own closing brace included — and the entry's
-  /// group never closes. Reading the injected text with `%` neutralized is what
-  /// preserves the value BibTeX actually parsed.
+  /// **Treatment 1 of two** (see `OXIDIZED_DESIGN #74`): this is "be `bibtex`".
+  /// BibTeX's lexer interprets only braces and the entry/field delimiters — it
+  /// has no comment syntax inside an entry (`%` is significant only in the junk
+  /// BETWEEN entries, `Pre::BibTeX::skipJunk`), no alignment and no parameters.
+  /// So a field value it hands back is a string in which all three are ordinary
+  /// characters: a percent-encoded URL, a publisher's name ("Taylor &
+  /// Francis"), an issue number.
   ///
-  /// A `\catcode` in the injected text cannot do this job: the catcode would
-  /// still be a State assignment, so a raw `.sty` opened from inside a field
-  /// handler would inherit it. Scoping to the Mouth keeps the rule attached to
-  /// the *text that BibTeX lexed*, which is exactly where it belongs.
+  /// Re-injected as TeX source (BibTeX.pool's `\bibentry@create`) under the
+  /// default catcodes, each misfires: `%` (14) comments out the rest of its
+  /// line — the field's own closing brace included — so the entry's group never
+  /// closes; `&` (4) is a stray alignment tab and is dropped; `#` (6) reaches
+  /// the Stomach as a parameter token. Reading the injected text with all three
+  /// neutralized preserves the value BibTeX actually parsed, **without altering
+  /// a byte of it**.
   ///
-  /// Only comment-ness is removed: a `%` that has been given some other catcode
-  /// (LETTER, say) keeps it.
-  pub fn with_percent_as_other(mut self) -> Self {
-    self.percent_is_other = true;
-    self
-  }
-
-  /// Read `&` as an ordinary character (catcode 12) instead of an alignment
-  /// tab, for the whole life of this mouth.
+  /// **`_` is deliberately NOT in this set**, and the reason is the boundary
+  /// between the two treatments. A catcode is decided at tokenization, before
+  /// anything knows whether it is inside `$…$` — and a subscript in a `.bib`
+  /// title's math (`title = {Bounds on $x_1+x_2$}`) is *legitimate TeX* that
+  /// must keep working. `_` therefore belongs to treatment 2
+  /// (`bibtex.rs::escape_bib_data_specials`), which walks the value and skips
+  /// math spans. Measured: putting `_` here silently flattened every
+  /// subscript in a bibliography title. The other three have no legitimate
+  /// meaning inside a `.bib` field, in math or out.
   ///
-  /// The companion of [`Self::with_percent_as_other`], and the same argument:
-  /// BibTeX's lexer has no alignment either, so an `&` in a field value it
-  /// hands back is an ordinary character — a publisher's name ("Taylor &
-  /// Francis"), a journal's ("Infrared Physics & Technology"), a conference's
-  /// ("Knowledge Discovery & Data Mining"). Under TeX's catcode 4 each one is a
-  /// stray alignment tab, `Error:unexpected:&`, and the character is dropped
-  /// from the rendered entry.
+  /// A `\catcode` in the injected text cannot do this job either: the catcode
+  /// would still be a State assignment, so a raw `.sty` opened from inside a
+  /// field handler would inherit it — and so would the document. Scoping to the
+  /// Mouth keeps the rule attached to the *text that BibTeX lexed*, which is
+  /// exactly where it belongs.
   ///
-  /// Per-Mouth rather than a State catcode for the same reason as `%`: a raw
-  /// `.sty` opened from inside a field handler must keep TeX's alignment tab,
-  /// and so must the DOCUMENT — this rule belongs to the text BibTeX lexed, not
-  /// to the session.
-  ///
-  /// Only alignment-ness is removed: an `&` that has been given some other
-  /// catcode keeps it.
-  pub fn with_align_as_other(mut self) -> Self {
-    self.align_is_other = true;
+  /// Only the TeX-special meaning is removed: a character that has been given
+  /// some other catcode (LETTER, say) keeps it. And `\%`, `\&`, `\#` still
+  /// work, because the backslash is untouched.
+  pub fn with_bib_data_literals(mut self) -> Self {
+    self.bib_data_literals = true;
     self
   }
 
@@ -716,13 +708,16 @@ impl Mouth {
   }
 
   /// The catcode this mouth reads `ch` with: the State's, except that a
-  /// `with_percent_as_other()` mouth downgrades a COMMENT `%` to OTHER, and a
-  /// `with_align_as_other()` mouth downgrades an ALIGN `&` the same way.
+  /// [`Self::with_bib_data_literals`] mouth downgrades the four BibTeX-data
+  /// characters to OTHER when — and only when — they still carry their TeX
+  /// meaning.
   fn catcode_of(&self, ch: char) -> Catcode {
     let cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
-    match cc {
-      Catcode::COMMENT if self.percent_is_other && ch == '%' => Catcode::OTHER,
-      Catcode::ALIGN if self.align_is_other && ch == '&' => Catcode::OTHER,
+    if !self.bib_data_literals {
+      return cc;
+    }
+    match (cc, ch) {
+      (Catcode::COMMENT, '%') | (Catcode::ALIGN, '&') | (Catcode::PARAM, '#') => Catcode::OTHER,
       _ => cc,
     }
   }
@@ -1185,16 +1180,20 @@ pub fn tokenize(text: &str) -> Tokens {
   use_main_state();
   result
 }
-/// Tokenize a string under the standard catcode table, reading `%` and `&` as
-/// ordinary characters rather than a comment and an alignment tab.
+/// Tokenize a string under the standard catcode table, reading `% & #` as
+/// ordinary characters rather than comment, alignment tab and parameter.
 ///
-/// For text that came out of the BibTeX lexer, which has neither construct, so
-/// both characters are data (see [`Mouth::with_percent_as_other`] and
-/// [`Mouth::with_align_as_other`]). Plain [`tokenize`] would let that `%`
-/// comment out the rest of the string — which for a `.bib` field means losing
-/// its closing brace and leaving whatever it opened unclosed
-/// (`OXIDIZED_DESIGN #74`) — and would make an `&` in "Taylor & Francis" a
-/// stray alignment tab (`#75`).
+/// For text that came out of the BibTeX lexer, which has none of those
+/// constructs, so all three are data — treatment 1 of `OXIDIZED_DESIGN #74`,
+/// see [`Mouth::with_bib_data_literals`] (including why `_` is not in the set).
+/// Plain [`tokenize`] would let a `%` comment out the rest of the string, which
+/// for a `.bib` field means losing its closing brace and leaving whatever it
+/// opened unclosed, and would make the `&` in "Taylor & Francis" a stray
+/// alignment tab.
+///
+/// This exists because the handlers that re-read a raw field — `\bib@@title`
+/// recasing, name splitting, date/pages assembly — build their tokens from the
+/// stored string and never pass through the per-entry mouth.
 pub fn tokenize_bib_literal(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
@@ -1203,8 +1202,7 @@ pub fn tokenize_bib_literal(text: &str) -> Tokens {
   use_std_state();
   let result = Mouth::new(text, None)
     .unwrap()
-    .with_percent_as_other()
-    .with_align_as_other()
+    .with_bib_data_literals()
     .read_tokens();
   use_main_state();
   result

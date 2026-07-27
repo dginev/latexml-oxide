@@ -18,14 +18,21 @@ use std::{path::Path, process::Command};
 
 /// Two properties this fixture must have, both learned the hard way:
 ///
-/// * `_` outside math raises `unexpected:_` on EVERY digest — unlike an
+/// * `^` outside math raises `unexpected:^` on EVERY digest — unlike an
 ///   undefined macro, which is defined as `<ltx:ERROR/>` on first sight and is
 ///   therefore silently self-healing on a second pass. An undefined-macro
 ///   fixture would pass even with the bug present.
 /// * The value must contain a BACKSLASH. Both interpret paths short-circuit on
-///   a value with no `\`, `~` or `$`, so `note={a _ b}` never digests at all and
+///   a value with no `\`, `~` or `$`, so `note={a ^ b}` never digests at all and
 ///   the test goes vacuously green (observed: "digested 0 times"). `\textbf` is
 ///   the carrier here because it needs no package.
+///
+/// `_` used to be the other probe, and no longer can be: OXIDIZED_DESIGN #74
+/// escapes `_ & # %` in a `.bib` field as DATA, so `note={a _ …}` now renders a
+/// literal underscore and raises nothing at all. The `a1` entry stays in the
+/// fixture as the standing check that escaping did not disturb the once-only
+/// property — it must contribute ZERO errors — while `a2`'s `^` (outside the
+/// escaped set) remains the live probe.
 const BIB: &str = r"@article{a1, author={Doe, J.}, title={T}, year={2020},
   note={a _ \textbf{b}} }
 @article{a2, author={Roe, R.}, title={T2}, year={2021},
@@ -64,17 +71,23 @@ fn bib_field_errors_are_reported_once_not_once_per_digest() {
   // and would make this test vacuously green.
   let stderr = strip_ansi(&String::from_utf8_lossy(&output.stderr));
 
-  for needle in [
-    "Script _ can only appear in math mode",
-    "Script ^ can only appear in math mode",
-  ] {
-    let n = stderr.matches(needle).count();
-    assert_eq!(
-      n, 1,
-      "the field was digested {n} times, not once — bibliography errors are \
-       being multiplied into the document's error count.\nstderr:\n{stderr}"
-    );
-  }
+  let needle = "Script ^ can only appear in math mode";
+  let n = stderr.matches(needle).count();
+  assert_eq!(
+    n, 1,
+    "the field was digested {n} times, not once — bibliography errors are \
+     being multiplied into the document's error count.\nstderr:\n{stderr}"
+  );
+  // `_` is DATA in a `.bib` field (OXIDIZED_DESIGN #74), so `a1` must raise
+  // nothing. Asserted rather than dropped: if the escaping ever regresses, this
+  // catches it here too, and once-per-digest would show up as a count of 2.
+  let n = stderr
+    .matches("Script _ can only appear in math mode")
+    .count();
+  assert_eq!(
+    n, 0,
+    "a `_` in a bib field is data and must raise nothing, got {n}.\nstderr:\n{stderr}"
+  );
 }
 
 fn strip_ansi(s: &str) -> String {

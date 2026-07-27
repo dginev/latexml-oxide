@@ -90,6 +90,17 @@ name-, date- and MR/Zbl-assembly sites that share that path.
 State catcode is inherited by a `.sty` raw-load triggered from inside a field
 handler, where `%` must still be a comment.
 
+**Correction to the table above, measured while implementing it: `_` belongs to
+treatment 2 ONLY.** The row is right that a `_` in a field is data, but wrong
+that treatment 1 is where that gets expressed. A catcode is decided at
+tokenization, before anything knows whether the character is inside `$…$`, and
+a subscript in a title's math (`title = {Bounds on $x_1+x_2$}`) is legitimate
+TeX that must keep working. Putting `_` in `Mouth::with_bib_data_literals`
+silently flattened every subscript in a bibliography title — caught by the
+existing `bib_bare_ampersand_leaves_live_markup_alone`, which asserts
+`role="SUBSCRIPTOP"`. Only the escaper can be math-aware, so treatment 1 covers
+`% & #` and treatment 2 covers all four. Landed that way in OXIDIZED_DESIGN #74.
+
 ### Why the re-port is the real fix: eager tokenization defeats parameter types (measured 2026-07-26)
 
 The 2026-07-26 sandbox rerun quantified what the simplified parser costs. In
@@ -110,6 +121,28 @@ The first two are fixed (#391: `BBL_STANDARD_FALLBACKS`, `BibCatcodeScope`).
 The third is **not**, and must not be fixed by widening the catcode phase:
 `$a_b$` and `$x^2$` in a title are legitimate, so neutralizing `_`/`^`
 file-wide would trade one regression for another.
+
+**LANDED 2026-07-27 on the `.bib` POOL route, exactly as consequence 2 above
+prescribes** — an escape at the A→B boundary, not catcode suppression.
+`escape_bib_data_specials` (`bibtex.rs`) emits `%`→`\%`, `&`→`\&`, `#`→`\#`,
+`_`→`\_`; `\emph{…}`, `$x_1+x_2$` and `{\v S}pakov` pass through untouched.
+The mechanism, its four hazards (math, idempotency, raw-read fields, nested
+`\url` data regions) and — the part that was NOT obvious — the **three** seams
+it had to cover are in OXIDIZED_DESIGN #74: the entry line in
+`\ProcessBibTeXEntry` plus `\bib@@title` and `\bib@@pages`, both of which
+re-read the RAW field instead of using the value the entry line passed them, so
+escaping only the entry line silently missed every `title`. Guard
+`06_cluster_bibliography::bib_field_specials_are_data_not_tex` plus six
+`escape_bib_data_specials` unit tests. Seven witnesses, TOTAL document errors,
+`--release` before→after: 2605.06926 8→0, 2605.01936 13→0, 2605.04604 2→0,
+2605.08986 2→0, 2605.11300 1→0, 2605.05898 1→0, 2605.06249 3→0. **30 → 0** —
+every one converts clean.
+
+Two corrections this work turned up: those witnesses raise their errors in the
+**pool route's own Mouth**, so the 61 above are not all
+`make_bibliography.rs`'s eager digest as this section assumes; and
+`volume`/`language`, previously read as genuine parity to leave erroring, are
+covered by the DATA-regime policy like everything else.
 
 Perl does not need any of these patches, and the reason is structural.
 `BibTeX.pool.ltxml` declares a parameter type per field — `url` **Verbatim**
@@ -157,8 +190,8 @@ its ampersand. Authorized surpass-Perl *and* surpass-pdflatex: LaTeXML reads
 the tokenizer. **The boundary is blast radius, not character:**
 
 * *Regime A, per-Mouth* — a character destructive in ANY field, with no Perl
-  per-field idiom to follow. `%` (#74, PR #405) and `&` (#75) are here.
-  `Mouth::with_percent_as_other()` / `with_align_as_other()`, deliberately NOT a
+  per-field idiom to follow. `%`, `&`, `#` and `_` are all here (#74).
+  `Mouth::with_bib_data_literals()`, deliberately NOT a
   State catcode, so a `.sty` raw-loaded from inside a field handler — and the
   document — keep TeX's meaning.
 * *Regime B, per-field parameter type* — harmful only in specific fields where
@@ -179,13 +212,13 @@ companion for the second is `mouth::tokenize_bib_literal`, behind
 `BibTeX.pool.ltxml`, so **no parameter type was ever going to cover them and the
 eager-tokenization gap above was never this third's cause**. Before: Rust
 matched same-host `latexmlc` 1:1 on every re-measured witness, and pdflatex
-broke identically. After (#75): **3→0, 1→0, 1→0, 1→0, 1→0, 13→6, 4→3**; the two
+broke identically. After: **3→0, 1→0, 1→0, 1→0, 1→0, 13→6, 4→3**; the two
 residuals are unrelated `undefined:` errors, no `unexpected:&` remains anywhere.
 `#` was checked and deliberately left alone — one bare `#` across all seven
 witnesses, in 2605.00462's JabRef `file` path, already covered as an unknown
 field.
 
-*A separate ampersand bug, also fixed as #75:* the doubly escaped `\&amp;` /
+*A separate ampersand bug, also fixed under #74:* the doubly escaped `\&amp;` /
 `{\&}amp;` / `&amp;`, where an HTML entity survived into the `.bib`. Those raise
 no error at all — Perl and pdflatex both print "&amp;" — so the mouth-level
 change does not reach them; `undouble_escaped_ampersand` in `bibtex.rs` does.

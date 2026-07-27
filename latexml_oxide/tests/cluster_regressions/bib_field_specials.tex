@@ -1,0 +1,14 @@
+% Driver for `bib_field_specials.bib`. Ten entries, each a distinct hazard for
+% the `.bib`-data -> TeX-source escaping boundary; all ten must reach the
+% rendered bibliography with zero POST errors. See the `.bib` header and
+% OXIDIZED_DESIGN #74.
+%
+% `url` is loaded because the `urlencoded` entry's `howpublished` calls `\url`,
+% and it is url.sty's own Verbatim parameter that keeps `%20` intact.
+\documentclass{article}
+\usepackage{url}
+\begin{document}
+See \cite{aipexport,aipescaped,taylorfrancis,surveystut,barespecials,preescaped,mathmarkup,accent,urlencoded,survivor}.
+\bibliographystyle{plain}
+\bibliography{bib_field_specials}
+\end{document}
