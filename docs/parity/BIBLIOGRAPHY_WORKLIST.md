@@ -4,6 +4,18 @@
 > work: the surveyed "missing references" target list (2026-07-12) and the
 > MakeBibliography full-parity re-port (user directive 2026-07-04 — reuse TeX
 > interpretation, no special-case parser).
+>
+> **State, 2026-07-27.** Re-port **items 1 and 3 are DONE**; the open work is
+> item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER)
+> and the missing-references target list. The `.bib`-as-DATA family closed as
+> divergences **#73 #74 #75 #78 #79 #80**.
+>
+> **Two reading rules for this file.** (1) The three **INTERIM** blocks under the
+> re-port are HISTORY — every identifier they name was deleted with the string
+> route; they are kept for the properties, witnesses and traps that outlive the
+> code, and they carry their own banner. (2) **Re-measure any error count dated
+> before 2026-07-27**: divergence #80 stopped digesting uncited entries, so a
+> count can have dropped without anything being fixed.
 
 ### The governing design tension: two regimes collapsed into one pass
 
@@ -36,7 +48,10 @@ explicit rather than fixing symptoms:**
    cross into regime B at all. That — not "nothing renders `ltx:bib-extract`" —
    is the principled justification for OXIDIZED_DESIGN **#73** reading them
    verbatim. The weaker rendering-based argument in that entry predates this
-   frame.
+   frame. **Entry selection is the same rule one level up:** `bibtex(1)` copies
+   only the `.aux`'s cited keys (plus `crossref` targets, plus `\nocite{*}`) into
+   the `.bbl`, so an uncited entry never crosses into regime B either —
+   OXIDIZED_DESIGN **#80**, and the section below.
 
 2. **The right seam for specials is an escape at the A→B boundary, not catcode
    suppression during digestion.** When a field's data-string crosses into the
@@ -128,10 +143,12 @@ We read `.bib` directly, so that copy is ours to make — and it is made. Perl
 `Mouth::with_bib_data_literals` — which is exactly right for treatment-2
 content. Measured end to end with a probe `@preamble` defining a macro nothing
 else defines: **Rust 0 errors, same-host `latexmlc` 0 errors, both expand it**;
-delete the `@preamble` and both raise `undefined:`. **`\cprime` is a vacuous
-probe** for this question — the always-on stub in
-`latex_constructs_rust_only.rs` defines it either way, so a fresh name is
-required.
+delete the `@preamble` and both raise `undefined:`. A fresh name is still the
+right probe: at the time this was measured `\cprime` was a **vacuous** one,
+because an always-on stub in `latex_constructs_rust_only.rs` defined it either
+way. That stub is gone (below), so `\cprime` would work now — but any name the
+kernel or a binding might also supply re-opens the same trap, so the fixture
+keeps macro names unique to itself.
 
 Guard:
 `06_cluster_bibliography::bib_preamble_defines_macros_for_the_whole_bibliography`
@@ -144,53 +161,94 @@ parameterized macro. The pre-existing `pre_bibtex::to_tex_includes_preamble`
 does **not** cover any of this — it asserts on the emitted *string*, so it stays
 green even if that string is never executed.
 
-**Consequence for the always-on `\cprime` stub: it stays.** Removing it was the
-motivation for checking, and the corpus says no. Scan of the first 600 papers of
-`/data/arxiv/2605/`: 7 use `\cprime` inside a `.bib`, and **6 of the 7 carry no
-`@preamble` at all** (the seventh, 2605.00097, has one but never uses
-`\cprime`). 2605.11579 sits outside that window and is added as the eighth row
-because it is the one paper whose `@preamble` covers real uses. Measured with
-the raw-`.bib` route forced, `--includestyles`, `--release`, TOTAL document
-errors with-stub → without:
+#### Entry selection: digest the CITED entries, not the library — LANDED 2026-07-27
 
-| paper | `@preamble` defines `\cprime`? | with → without |
-|---|---|---|
-| 2605.00097 | yes, unused | 1 → 1 |
-| 2605.00173 | no | 0 → **1** `undefined:\cprime` |
-| 2605.00186 | no | 0 → **1** |
-| 2605.00190 | no | 0 → **1** |
-| 2605.00305 | no | 0 → **1** |
-| 2605.00316 | no | 2 → 2 (its `\cprime` is in `fjournal`, undigested) |
-| 2605.00584 | no | 0 → 0 (same) |
-| 2605.11579 | yes, 17 uses in `AUTHOR`/`TITLE`/`BOOKTITLE`/`MRREVIEWER` | 1 → 1 |
+Full design record: OXIDIZED_DESIGN **#80**. What belongs on this worklist:
 
-2605.11579 is the informative row twice over: it is the only paper whose
-`@preamble` covers real uses, and it stays at its single unrelated
-`undefined:\Dbar` **with the stub gone** — the `@preamble` is carrying all 17.
-2605.00173 is the control: same field kind (`AUTHOR`), same binary, `+1` error,
-distinguished only by having no `@preamble`.
+* **A `.bib` is a library, not a document.** Perl `Pre/BibTeX.pm::toTeX` L110-122
+  emits `\ProcessBibTeXEntry` for every entry unconditionally. That was cheap
+  under the old string parser; since the raw `.bib` became a real conversion
+  (item 1 below) each entry is a full expand/digest/construct cycle.
+* **Cost, measured.** `anthology.bib` = 80,576 ACL entries for 9 cited. Witness
+  **2605.07796**: 112 s / 4.8 GB RSS / memory budget tripped / **0 bibentries**
+  (the whole bibliography lost) / killed by the fleet's 60 s timeout →
+  **10 s / 9 bibentries / 0 errors**. Same shape in **59 of the 69** 2605/2606
+  `never_completed_with_retries` papers (median 80,597 entries).
+* **It is more faithful, not less** — `bibtex(1)` has always filtered on the
+  `.aux`'s `\citation` records. Selection is closed over `crossref` and over a
+  `\cite` made from inside a selected entry; every entry is still *registered*, so
+  by-key lookup still resolves; `None` (= digest everything) covers `\nocite{*}`
+  and a missing `BIBLABEL` record.
+* **Standing consequence for this worklist: re-measure before believing any
+  bibliography error count recorded before 2026-07-27.** An error raised only by
+  an uncited entry now disappears without the underlying macro becoming
+  available. It already invalidated the `\cprime` stub verdict directly below and
+  2605.11579's `undefined:\Dbar` residual.
 
-Three of the four regressions are errors the real toolchain never produces, and
-that is the durable point: `bibtex(1)` copies only **cited** entries into the
-`.bbl`, and in 2605.00173/.00186/.00190 the `\cprime`-bearing entry is never
-cited — pdflatex never sees the macro. We digest every entry in the `.bib`, so
-the stub is what keeps that asymmetry from manufacturing a diagnostic. In
-2605.00305 the entry IS cited (`MR710121`, "Arnol\cprime d diffusion"), so there
-the stub renders text the reader sees.
+#### The always-on `\cprime` stub — DELETED 2026-07-27 (it was "it stays" for one day)
 
-Same-host Perl was run over all eight (production profile, verbose) and is not a
-usable oracle for this question — it never raises `undefined:\cprime` anywhere,
-for reasons unrelated to the macro: 2605.00305 and 2605.00316 hit `MAX_ERRORS`
-(101 + Fatal) on a pgfparse flood long before MakeBibliography, 2605.00173/.00186/
-.00190 take their shipped `.bbl`, and on 2605.11579 Perl emits **zero**
-bibliography entries at all ("Missing Entry for citation" × 36, against Rust's
-36 rendered) — a silent total loss, not a clean run. The mechanism was confirmed
-against Perl on the controlled fixture instead, where both engines reach 0
-errors with every preamble macro expanded. Note Perl defines `\cprime`
-**nowhere** in `LaTeXML/lib`, so the stub is and stays a surpass-Perl
-divergence.
+**Current rule:** `\cprime`/`\Cprime`/`\cdprime`/`\Cdprime` are `mathscinet.sty`
+vocabulary and live only in `latexml_package/src/package/mathscinet_sty.rs`. A
+paper gets them by loading `mathscinet` (or `amsrefs`, `amsrefs.sty` L217
+`\RequirePackage{mathscinet}[2002/01/01]`), or by carrying the definition in its
+own `.bib` `@preamble` — which executes, per the section above. Divergence
+**#78**.
 
-### Why the re-port is the real fix: eager tokenization defeats parameter types (measured 2026-07-26)
+**Why the earlier "it stays" verdict was overturned, and it is worth keeping.**
+That verdict was measured against a binary that digested **every** entry of a
+`.bib` library. Three of its four regression papers only regressed because their
+`\cprime`-bearing entry is **uncited** — `bibtex(1)` never copies such an entry
+into the `.bbl`, so pdflatex never sees the macro, and the diagnostic was
+manufactured by us. Divergence **#80** (digest the cited entries only) removed
+that asymmetry structurally, and the justification collapsed with it. *The
+measurement was right; its baseline moved under it within the day. A "regression
+without the fix" measured against a defective baseline measures the defect.*
+
+Original scan, kept because re-deriving it costs a corpus sweep: across the first
+600 papers of `/data/arxiv/2605/`, **7** use `\cprime` inside a `.bib` and **6 of
+the 7 carry no `@preamble` at all** (the seventh, 2605.00097, has one but never
+uses `\cprime`); 2605.11579 sits outside that window and is the one paper whose
+`@preamble` covers real uses.
+
+Re-measured on current main (stub gone), `--includestyles`, idle box, serial —
+TOTAL document errors and `undefined:\cprime`:
+
+| paper | `@preamble` defines `\cprime`? | errors | `undefined:\cprime` |
+|---|---|---|---|
+| 2605.00173 | no | 0 | 0 — `MR2562222` (`bibliography.bib` L885) is uncited |
+| 2605.00186 | no | 0 | 0 — same shape |
+| 2605.00190 | no | 0 | 0 — same shape |
+| 2605.00305 | no | **1** | **1** — the only real cost |
+| 2605.11579 | yes, 17 uses in `AUTHOR`/`TITLE`/`BOOKTITLE`/`MRREVIEWER` | 0 | 0 |
+
+2605.00305 is the honest residual and the row to keep: it **cites** `MR710121`
+(`mybib.bib` L26, `MRREVIEWER = {V.\ Z.\ Enol\cprime ski\u i}`), loads neither
+`mathscinet` nor `amsrefs`, ships no `@preamble`, and uses
+`\bibliographystyle{plain}` — `plain.bst` contains zero `cprime`. Real pdflatex
+raises the same undefined control sequence, so this is PARITY, and supplying the
+macro anyway would push our error count below the author's own toolchain.
+2605.11579 is informative twice over: its 14 `@preamble` blocks (`biblo.bib`
+L4768/L6910/…) carry all 17 uses, and its formerly-standing `undefined:\Dbar`
+went away too — `KacNilpotentorbits` (`biblo.bib` L2059) is uncited (#80), not
+newly defined.
+
+Two rows from the with/without table are dropped as uninformative once the
+baseline changed but are recorded so they are not re-measured: 2605.00316's
+`\cprime` sits in `fjournal` (undigested — 2 errors either way) and 2605.00584
+was 0 → 0.
+
+Same-host Perl is **not a usable oracle for this question** (production profile,
+verbose, all eight): it never raises `undefined:\cprime` anywhere, for reasons
+unrelated to the macro — 2605.00305 and 2605.00316 hit `MAX_ERRORS` (101 + Fatal)
+on a pgfparse flood long before MakeBibliography, 2605.00173/.00186/.00190 take
+their shipped `.bbl`, and on 2605.11579 Perl emits **zero** bibliography entries
+at all ("Missing Entry for citation" × 36, against Rust's 36 rendered) — a silent
+total loss, not a clean run. The mechanism was confirmed against Perl on the
+controlled fixture instead, where both engines reach 0 errors with every preamble
+macro expanded. Perl defines `\cprime` **nowhere** in `LaTeXML/lib`, so the
+`mathscinet.sty` binding that now owns it is a surpass-Perl divergence — see #78.
+
+### Why the re-port was the real fix: eager tokenization defeats parameter types — DIAGNOSIS 2026-07-26, FIX LANDED 2026-07-26/27
 
 The 2026-07-26 sandbox rerun quantified what the simplified parser costs. In
 `sandbox-arxiv-2605` (30,079 docs) the rc2→rc3 window moved **90 papers
@@ -206,7 +264,10 @@ Three sub-causes, and they are NOT three bugs — they are one architectural gap
 | `expected:}` | 32 + 17 | percent-ENCODED URLs — `%` at catcode 14 comments out the rest of the line, closing brace included |
 | `unexpected:_` / `&` / `^`, `misdefined:#` | 61 | TeX specials that are literal inside a URL |
 
-The first two are fixed (#391: `BBL_STANDARD_FALLBACKS`, `BibCatcodeScope`).
+The first two are fixed (#391: `BBL_STANDARD_FALLBACKS`, `BibCatcodeScope` — the
+latter has since **retired**, as predicted below once the engine route landed; it
+exists in no source file today, `BBL_STANDARD_FALLBACKS` lives on in
+`latexml_oxide/src/bib_session.rs` as the recursive session's preamble).
 The third is fixed too (below), but NOT by widening the catcode phase, and that
 constraint is why: `$a_b$` and `$x^2$` in a title are legitimate, so
 neutralizing `_`/`^` file-wide would trade one regression for another. Only the
@@ -223,8 +284,9 @@ it had to cover are in OXIDIZED_DESIGN #74: the entry line in
 `\ProcessBibTeXEntry` plus `\bib@@title` and `\bib@@pages`, both of which
 re-read the RAW field instead of using the value the entry line passed them, so
 escaping only the entry line silently missed every `title`. Guard
-`06_cluster_bibliography::bib_field_specials_are_data_not_tex` plus six
-`escape_bib_data_specials` unit tests. Seven witnesses, TOTAL document errors,
+`06_cluster_bibliography::bib_field_specials_are_data_not_tex` plus the
+`escape_specials_*` unit tests in `bibtex.rs` (six at the time; **13** today,
+after the `^` arm and #79's five unmatched-`$` cases). Seven witnesses, TOTAL document errors,
 `--release` before→after: 2605.06926 8→0, 2605.01936 13→0, 2605.04604 2→0,
 2605.08986 2→0, 2605.11300 1→0, 2605.05898 1→0, 2605.06249 3→0. **30 → 0** —
 every one converts clean.
@@ -249,47 +311,58 @@ Note `note` and `howpublished` are in the ordinary 34 — Perl survives
 `note = {\url{…%20…}}` not because the FIELD is Semiverbatim but because
 `\url` itself is, and lazy consumption lets it act.
 
-`latexml_engine/src/bibtex.rs` already does this correctly for the pool route:
-`open_mouth(Mouth::new(&lines.join("\n"))?, true)` (≈L1888) with
-`\bib@field@default@url Verbatim` (L1577), and a comment at L1809-1821 saying
-why it is load-bearing — a pre-tokenized `Explode!` stream "did neither"
-(witness 2508.17585). `make_bibliography.rs` instead calls `tokenize()` then
-`digest()`, which is **eager**: every catcode is fixed before any handler runs,
-so no parameter type can ever take effect.
+`latexml_engine/src/bibtex.rs` already did this correctly for the pool route:
+`open_mouth(Mouth::new(&lines.join("\n"))?, true)` with
+`\bib@field@default@url Verbatim`, and a comment there saying why it is
+load-bearing — a pre-tokenized `Explode!` stream "did neither" (witness
+2508.17585). `make_bibliography.rs` instead called `tokenize()` then `digest()`,
+which is **eager**: every catcode is fixed before any handler runs, so no
+parameter type could ever take effect. **That eager path is gone** — item 1 below
+deleted it, and every `.bib` now reaches the tokenizer through the pool route's
+lazy Mouth. (Line numbers into `bibtex.rs` are deliberately dropped here: the
+file has been edited in every PR of this campaign and the old `L1577`/`L1809`/
+`L1888` anchors no longer point where they did. Perl `file:line` citations are
+stable and are kept.)
 
 **Relation to issue 386** (build XML through libxml, not string concatenation).
-Separate axes that meet in this one file, and the dependency runs one way.
-Issue 386 is about OUTPUT — `interpret_tex_markup` currently returns a *serialized
-XML string* spliced into the bibliography behind three trust gates, which is
-exactly issue 386's complaint. This section is about INPUT — how the field is
-tokenized. Routing field interpretation through the pool path makes the output
-arrive as DOM nodes, so **doing this re-port also settles the `make_bibliography.rs` portion of
-issue 386 as a side effect; doing 386 first does not help here.** Do not attack that portion of issue 386 separately.
+Separate axes that met in this one file, and the dependency ran one way.
+Issue 386 is about OUTPUT — `interpret_tex_markup` returned a *serialized XML
+string* spliced into the bibliography behind three trust gates, which was exactly
+issue 386's complaint. This section is about INPUT — how the field is tokenized.
+Routing field interpretation through the pool path made the output arrive as DOM
+nodes, so **the re-port settled the `make_bibliography.rs` portion of issue 386 as
+a side effect** — landed with item 1 below (`PostDocument::new(XmlDoc)`, no
+serialize/reparse). Do not attack that portion of issue 386 separately.
 
-**Consequence for planning.** The remaining 61 errors are bounded by this gap,
-not by a new defect. A per-field `Tokens::neutralize` (`tokens.rs:371`, the
-existing "retroactively imitate what Semiverbatim would have done" helper —
-note its comment explains why it deliberately does NOT cover `%`) would close
-most of them as an interim, but it imitates the mechanism rather than using it.
-The durable fix is this re-port: route field interpretation through the lazy
-Mouth.
+**Consequence for planning — SETTLED, the interim was never taken.** The 61
+residual errors were bounded by this gap, not by a new defect. The considered
+interim was a per-field `Tokens::neutralize` (`tokens.rs`, the existing
+"retroactively imitate what Semiverbatim would have done" helper — its comment
+explains why it deliberately does NOT cover `%`); it imitates the mechanism
+rather than using it, and was **not** taken. The durable fix landed instead:
+item 1 routes field interpretation through the lazy Mouth, and #74/#79 close the
+specials at the data→TeX boundary.
 
 **Maintainer policy, 2026-07-26 — a `.bib` field's content is DATA, not TeX.**
-A bare `%`, `&`, `_` is the literal character; "Taylor & Francis" renders with
-its ampersand. Authorized surpass-Perl *and* surpass-pdflatex: LaTeXML reads
-`.bib` directly, with no `.bst` and no `bibtex(1)`, so it decides what reaches
-the tokenizer. **The boundary is blast radius, not character:**
+A bare `%`, `&`, `_`, `#`, `^` is the literal character; "Taylor & Francis"
+renders with its ampersand. Authorized surpass-Perl *and* surpass-pdflatex:
+LaTeXML reads `.bib` directly, with no `.bst` and no `bibtex(1)`, so it decides
+what reaches the tokenizer.
 
-* *Regime A, per-Mouth* — a character destructive in ANY field, with no Perl
-  per-field idiom to follow. `%`, `&`, `#` and `_` are all here (#74).
-  `Mouth::with_bib_data_literals()`, deliberately NOT a
-  State catcode, so a `.sty` raw-loaded from inside a field handler — and the
-  document — keep TeX's meaning.
-* *Regime B, per-field parameter type* — harmful only in specific fields where
-  Perl already has the idiom. `_` (PR #403) is here: `eprint`/`preprint`/
-  `archive` get `Semiverbatim`, mirroring `doi`/`isbn`/`issn`/`lccn`/`pii`.
+> **RETRACTED, and the retraction is the design.** This block once read "the
+> boundary is blast radius, not character", splitting the five specials into a
+> per-Mouth *regime A* (`% & # _`) and a per-field-parameter-type *regime B*
+> (`_` via `Semiverbatim` on `eprint`/`preprint`/`archive`). **Neither half
+> survived implementation.** `_` is NOT in the Mouth set — `mouth.rs`'s
+> `with_bib_data_literals` is `% & #` only, and its doc says why — and no
+> `Semiverbatim` was ever put on `eprint`/`preprint`/`archive`: they are plain
+> `\bib@@field{ltx:bib-links}` macros in both engines (`bibtex.rs` L2030/L2053/
+> L2055, `BibTeX.pool.ltxml` L712/L724/L728). The correct frame is the **two
+> treatments** above — both apply, at different points, and the split is by
+> *treatment*, not by blast radius: treatment 1 covers `% & #`, treatment 2
+> covers all five. The retired divergence **#76** was this reading's entry.
 
-**Both regime-A seams are required.** The value reaches a tokenizer by two
+**Both treatment-1 seams are required.** The value reaches a tokenizer by two
 independent routes: the per-entry Mouth, and the handlers that re-read the
 stored RAW field and tokenize it themselves (`\bib@@title` recasing,
 `current_entry_field`, name splitting, date/pages assembly, MR/Zbl). The
@@ -516,11 +589,14 @@ Perl never fails here (`Mouth.pm` L75-80: decode with `Encode::FB_DEFAULT`, or
 pass the raw bytes through when `PERL_INPUT_ENCODING` is undef) — so this was
 **GENUINE-RUST-ONLY**, not parity.
 
-Fix: both `.bib` read sites (`pre_bibtex::new_from_file` engine-side,
-`make_bibliography::convert_bib_file_to_xml` post-side) now decode via the new
-shared `latexml_core::mouth::decode_input_bytes` — UTF-8, else a **Latin-1
+Fix: both `.bib` read sites decode via the shared
+`latexml_core::mouth::decode_input_bytes` — UTF-8, else a **Latin-1
 passthrough** (lossless byte → char, so accented names survive intact instead of
 collapsing to U+FFFD; legacy `.bib` files are overwhelmingly Latin-1/Cp1252).
+The sites are `pre_bibtex::new_from_file` engine-side and — since item 1 deleted
+`make_bibliography::convert_bib_file_to_xml`, which was the post-side one — the
+multi-file concatenation in `bib_session::payload`, which inherited the
+obligation and the witness.
 The Mouth's own no-encoding branch now calls the same helper, so there is one
 implementation rather than three (the "bespoke duplicate shadowing a faithful
 port" anti-pattern has already bitten twice here).
@@ -529,7 +605,7 @@ Breadth: 17 papers corpus-wide, 10 of them EMPTY. All 10 recovered: **0 → 336
 references** (7/15/5/22/57/25/39/48/108/10), 0 dangling.
 
 Red/green tests: `pre_bibtex::tests::non_utf8_bib_file_is_read_not_rejected`
-(engine reader) **and** `06_cluster_regressions::non_utf8_bib_file_still_yields_a_bibliography`
+(engine reader) **and** `06_cluster_bibliography::non_utf8_bib_file_still_yields_a_bibliography`
 (post path — where the production failure actually was; the engine-side test
 alone would NOT have guarded it). Fixture `cluster_regressions/cp1252_refs.bib`
 carries a raw `0xe9`; it is asserted non-UTF-8 so the test cannot go vacuous.
@@ -554,6 +630,20 @@ replaces Perl's 63-line recursive-core-session `convertBibliography` with
 `is_braced_group`, `convert_bib_file_to_xml`, plus the whole
 metadata-fallback path that exists only because no real bibentry XML is
 produced).
+
+> **The three INTERIMs below are HISTORY, superseded by item 1 (landed
+> 2026-07-26).** Every identifier they name — `convert_bib_file_to_xml`,
+> `interpret_tex_markup`, `interpret_tex_text`, `parse_bibtex`,
+> `read_bib_value`, `strip_braces` — was **deleted** with the string route
+> (−727 lines); `grep`ping for them in `make_bibliography.rs` today returns
+> nothing. They are kept, not pruned, for the three things that outlive the
+> code: the *properties* the current route must also satisfy (digest each field
+> exactly once, keep markup, emit every field kind), their **witnesses**
+> (2607.00045, the eleven field kinds, `KNOWN_PERL_ERRORS #60`), and the traps
+> that cost a wrong first cut. The live guards are
+> `06_cluster_bibliography::bib_field_markup_survives_into_the_bibliography` and
+> `105_bib_field_digest_once`, both of which were re-pointed at the current
+> route.
 
 INTERIM (landed 2026-07-04): field VALUES now go through the real engine —
 `interpret_tex_text` = `digest(mouth::tokenize(v)).to_string()` against the
@@ -629,8 +719,10 @@ entries carry `note = {\url{...}}`. Raw-TeX tokens in the rendered bibliography
 **46 → 2**, live links **0 → 45**; the 2 residuals are the gated `$\psi$` title
 and one `url={\url{...}}` that **Perl renders equally broken**
 (`href="\urlhttps://arxiv.org/abs/quant-ph/0510095"`) — parity, not ours.
-Guard: `06_cluster_regressions::bib_field_markup_survives_into_the_bibliography`
+Guard: `06_cluster_bibliography::bib_field_markup_survives_into_the_bibliography`
 (fixture carries a `\&` so a text-escaping regression cannot pass silently).
+*(Guards moved out of `06_cluster_regressions` when PR #400 split the
+bibliography cluster into its own test file.)*
 
 THIRD INTERIM — fields that reached NO emit branch (landed 2026-07-25). Found by
 asking what else the reported family ("content missing from References") could
@@ -735,23 +827,27 @@ FULL RE-PORT — item 1 LANDED 2026-07-26:
    abbreviated `[AA+yy]` label, not full author-year); `Formatter::Year`
    drops the disambiguation `@SUFFIX`; document-global NUMBER across split
    documents.
-3. **Field-interpretation whitelist (first stage, not yet Perl-faithful)** —
-   flagged by the 2026-07-05 commit review of `ede2bdcc2c`. The `.bib`→XML
-   path (`make_bibliography.rs`) only digests 13 fields
+3. **Field-interpretation whitelist — RESOLVED by item 1, not by widening the
+   list.** Flagged by the 2026-07-05 commit review of `ede2bdcc2c`: the
+   `.bib`→XML path in `make_bibliography.rs` digested only 13 fields
    (author/editor/title/year/journal/journaltitle/booktitle/volume/number/
-   issue/pages/publisher/note). Perl's `BibTeX.pool.ltxml` has ~28
+   issue/pages/publisher/note), while Perl's `BibTeX.pool.ltxml` has ~28
    `\bib@field@default@*` constructors that DO digest — incl. `abstract`
    (L708), `keywords` (L732), `annote` (L680), `series`, `institution`,
    `organization`, `school`, `edition`, `chapter`, `howpublished`,
-   `translator`, `subtitle`, `type` — so Perl raises (and MergeStatus'es) the
-   undefined-macro errors those fields carry, while Rust currently does NOT.
-   The commit's original "mirrors Perl" comment was factually inverted
-   (corrected in-code 2026-07-05). Decision (user, 2026-07-05): keep the
-   narrow set FOR NOW as a first stage — it suppresses the junk-field error
-   floods of ADS/Zotero exports — but the eventual target is Perl's full
-   rendering-field set. Bounded blast radius: this path only fires for raw
-   `.bib` inputs WITHOUT a `.bbl`. Widen when the full re-port (item 1) lands
-   the recursive core session, which digests fields the Perl way by
-   construction.
+   `translator`, `subtitle`, `type` — so Perl raised (and MergeStatus'ed) the
+   undefined-macro errors those fields carry and Rust did not. (The commit's
+   original "mirrors Perl" comment was factually inverted; corrected in-code
+   2026-07-05.) The 2026-07-05 decision was to keep the narrow set as a first
+   stage and widen it when the recursive core session landed. It landed, and it
+   **digests fields the Perl way by construction** — there is no whitelist left
+   to widen: the 13-name constant went with the string route, and the
+   `\bib@field@default@*` name sets now match exactly (**45 unique names on each
+   side**, `bibtex.rs` vs `BibTeX.pool.ltxml`; `diff` of the two sorted lists is
+   empty). **Three of those constructors are a deliberate exception, not an
+   omission:** `abstract`/`keywords`/`contents` are read `Verbatim` per
+   divergence **#73**, and that is the sole surviving narrowing of Perl's set. The ADS/Zotero junk-field error floods the whitelist
+   was suppressing are handled at their root instead, by the DATA-regime
+   treatments (#74/#79).
 
 Witness: 2605.00223 (ADS .bib: `{\'\i}`, `~` ties, `\aap`, bare DOIs).

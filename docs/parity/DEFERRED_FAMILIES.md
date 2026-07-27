@@ -35,6 +35,14 @@
   (value-less `[@attr]` predicate treated as always-true; `split('/')` fragmenting a
   predicate's `../`). Fixed: corporate-author detection in `parse_bib_authors`, and a
   bracket-aware / existence-checking `findnodes_by_traversal`.
+  **Stale identifiers, kept for the record:** `convert_bib_file_to_xml` and
+  `parse_bib_authors` no longer exist — the whole simplified `.bib` parser was
+  deleted 2026-07-26 when a raw `.bib` became a recursive engine conversion
+  ([`BIBLIOGRAPHY_WORKLIST.md`](BIBLIOGRAPHY_WORKLIST.md) re-port item 1), so
+  name splitting is now `bibtex.rs`'s port of `BibTeX.pool`. `findnodes_by_traversal`
+  is unaffected. **No named guard survives for the corporate-author half**
+  (`grep` for "corporate" / "W3C Math Working Group" across the tests returns
+  nothing), so re-verify it on this witness before relying on it.
 
 - **`Fatal:Stomach:Recursion` (43 cortex Rust-service fatals) — TRIAGED 2026-06-28,
   mostly SHARED / Rust-better; ~1 Rust-only over-fatal DEFERRED (deep core).** Two
