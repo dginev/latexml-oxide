@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="mathscinet.sty — the AMS’s transliteration vocabulary for MathSciNet output."><title>latexml_package::package::mathscinet_sty - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ddecd707.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (dc3f85158 2026-07-26)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module mathscinet_sty</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../latexml_package/index.html">latexml_<wbr>package</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module mathscinet_<wbr>sty</a></h2><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In latexml_<wbr>package::<wbr>package</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">latexml_package</a>::<wbr><a href="../index.html">package</a></div><h1>Module <span>mathscinet_<wbr>sty</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/latexml_package/package/mathscinet_sty.rs.html#1-144">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>mathscinet.sty — the AMS’s transliteration vocabulary for MathSciNet output.</p>
+<p>Real source: <code>mathscinet.sty</code> v1.05 (2002/04/17), American Mathematical
+Society, LPPL, shipped in TeX Live as part of the <strong>amsrefs</strong> bundle
+(<code>texmf-dist/tex/latex/amsrefs/mathscinet.sty</code>). Perl LaTeXML has no binding
+for it — <code>\Dbar</code> and <code>\cprime</code> appear in no <code>.ltxml</code> file — so this is
+Rust-only, not a port of a Perl binding; the <code>.sty</code> itself is the ground truth.</p>
+<p><a href="https://mathscinet.ams.org">MathSciNet</a> is the AMS reviewing database, and
+its BibTeX export assembles a large share of pure-mathematics bibliographies.
+The macros here are how those records transliterate Cyrillic and South-Slavic
+names: <code>\cprime</code> for the soft sign ь, <code>\Dbar</code>/<code>\dbar</code> for Đ/đ.</p>
+<p><strong>Loaded the normal way, and only the normal way.</strong> <code>\usepackage{mathscinet}</code>
+is the trigger, and <code>amsrefs.sty</code> L217 does
+<code>\RequirePackage{mathscinet}[2002/01/01]</code>. All three <code>\cprime</code> witnesses name
+the package themselves (2508.13753 L7, 2508.20226 L3, 2509.07628 L13) — they
+errored only because no binding existed.</p>
+<p>Nothing loads it on a document’s behalf, and that is deliberate. The
+recursive <code>.bib</code> session does exactly that for <code>url.sty</code>, on the grounds that
+a real <code>.bst</code> writes <code>\providecommand{\url}</code> into the <code>.bbl</code>; the same
+argument does NOT hold here. Checked on witness 2605.11579: it never mentions
+mathscinet or amsrefs, and it uses <code>\bibliographystyle{alpha}</code> — <code>alpha.bst</code>
+contains no <code>Dbar</code> at all. So <code>\Dbar</code> is undefined in the author’s own build
+too, real pdflatex raises the same undefined control sequence, and leaving it
+undefined is PARITY. Supplying it would push our error count below what the
+author’s toolchain produces. Guard:
+<code>06_cluster_bibliography::bib_mathscinet_macro_yields_to_the_authors_own_definition</code>.</p>
+<p><strong><code>\Provide…</code> semantics are load-bearing, not incidental.</strong> The upstream file
+uses <code>\ProvideTextCommand</code>/<code>\ProvideTextCommandDefault</code> for the character
+commands, so an author who defined the name first keeps their meaning. That
+matters concretely: in a 4,000-paper scan of arXiv 2605, six papers define
+<code>\Dbar</code> themselves (four with <code>\newcommand</code>) and twelve define <code>\dbar</code> — and
+every one of those twelve means the inexact-differential đ of thermodynamics
+or a barred derivative, not a Croatian letter. Being a <em>package</em> rather than
+an always-present kernel definition is what keeps us out of their way, and
+<code>provide</code> below reproduces the deferral for the case where the package IS
+loaded.</p>
+<p>Each glyph binds the Unicode character carrying the author’s visual intent
+(WISDOM #50). The upstream definitions build their glyphs by overprinting —
+<code>\Dbar</code> is <code>\leavevmode\lower.5ex\rlap{\hskip-.07em\accent"16}D</code> — which would
+reach the XML as a bare “D”; the mappings below are taken from the file’s own
+<strong>T1 branches</strong>, which say what each glyph IS (<code>\Dbar</code>→<code>\DJ</code>, <code>\dbar</code>→<code>\dj</code>,
+<code>\polhk</code>→<code>\k</code>, <code>\soft</code>→<code>\v</code>, <code>\udot</code>→<code>\d</code>).</p>
+<p>The <code>\cprime</code> family additionally keeps an always-on stub in
+<code>latex_constructs_rust_only.rs</code> §5, for <code>.bib</code>-borne use in a document that
+loads no package; <code>provide</code> below then finds it defined, the correct no-op.
+That stub is NOT extended to <code>\Dbar</code> — see the collision counts above.</p>
+<p>Witnesses: 2508.13753, 2508.20226, 2509.07628 (<code>\cprime</code>); 2605.11579
+(<code>\Dbar</code> in <code>MRREVIEWER = {Dragomir \v{Z}. \Dbar okovi\'{c}}</code>, which stays a
+parity error because that paper loads no package and its <code>.bst</code> has no
+<code>Dbar</code>).</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_package::package::mathscinet_sty::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>
