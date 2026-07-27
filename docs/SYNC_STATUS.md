@@ -64,6 +64,37 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-27 — a `.bib` field's `^` is data too, and `mathscinet.sty` gets a
+  binding.** Two changes, one PR. (a) `^` joins `_` in treatment 2 of
+  **OXIDIZED_DESIGN #74** — verified symmetric with `_` rather than assumed
+  (both are TeX scripting characters, both inert to `bibtex(1)`, both raise
+  "Script … can only appear in math mode" outside math; `note = {q _ r ^ s}`
+  now renders literally, zero errors). It needs its OWN escaper arm, because
+  `\^` is the circumflex **accent** — the generic `\` + character arm would
+  render `^o` as "ô", a wrong glyph rather than a diagnostic — so
+  `BIB_DATA_CARET` emits `\textasciicircum{}`. Knock-on:
+  `105_bib_field_digest_once` lost its last non-self-healing probe and moved to
+  `\hline` (→ `\noalign`, a context error).
+  (b) **`mathscinet.sty`** (AMS, v1.05, in the amsrefs bundle) is now bound at
+  `latexml_package/src/package/mathscinet_sty.rs` — Perl has `amsrefs.sty.ltxml`
+  but no `mathscinet.sty.ltxml`, so Rust-only, though ported from the real
+  `.sty` (mappings from its T1 branches: `\Dbar`→`\DJ`, `\dbar`→`\dj`,
+  `\cprime`→`\tprime`, `\polhk`→`\k`). **Nothing auto-loads it**, and that is
+  the decision: witness 2605.11579 never loads the package and uses
+  `\bibliographystyle{alpha}`, whose `.bst` has zero `Dbar`, so its
+  `undefined:\Dbar` is **PARITY** with the author's own pdflatex build — it
+  stays at 1 error / 36 bibitems, now explained. `\Dbar` is package-only for a
+  second measured reason: 4 of 4,000 arXiv-2605 papers define it with
+  `\newcommand`, which an always-on definition silently shadows (LaTeXML keeps
+  the OLD meaning, no diagnostic). The `\cprime` family keeps an always-on stub
+  — a `.bib` carries `Gel\cprime fand` with no `\usepackage` — but moved out of
+  `latex_constructs.rs` (Perl-parity file) into `latex_constructs_rust_only.rs`
+  §5 with its witnesses 2508.13753 / 2508.20226 / 2509.07628, all three of which
+  load the package by name, refuting the old `cyracc.def` justification.
+  Divergence **#78**. Guards `bib_mathscinet_package_supplies_its_transliteration_glyphs`,
+  `bib_mathscinet_macro_yields_to_the_authors_own_definition`,
+  `escape_specials_caret_is_textasciicircum_not_an_accent`.
+
 - **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #74).**
 - **2026-07-26 — undefined CSes from packages with no binding: `silence.sty`,
   bundled `arxiv.sty`/`PRIMEarxiv.sty`.** Long-standing gaps, **not** a

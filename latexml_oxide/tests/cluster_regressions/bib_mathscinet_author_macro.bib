@@ -1,0 +1,11 @@
+% One ordinary entry, so the bibliography exists and the recursive `.bib`
+% session actually runs — which is half the point: the session must NOT pull in
+% `mathscinet.sty` while it is there. The assertion under test is in the BODY of
+% the driver `.tex`: the author's `\newcommand{\Dbar}` must still mean a barred D.
+
+@article{plainref,
+  author  = {F. Author},
+  title   = {An entry with nothing special in it},
+  journal = {J. Reviews},
+  year    = {2025}
+}

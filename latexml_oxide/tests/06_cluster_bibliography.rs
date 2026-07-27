@@ -1174,3 +1174,82 @@ fn bib_mr_reviewer_accent_survives_reversion() {
     );
   }
 }
+
+/// The `mathscinet.sty` binding, on the load path a document actually uses.
+///
+/// `\Dbar` (Đ), `\cprime` (ь) and friends are not kernel commands: they belong
+/// to `mathscinet.sty`, AMS v1.05, shipped in the amsrefs bundle. Perl LaTeXML
+/// has `amsrefs.sty.ltxml` but no `mathscinet.sty.ltxml`, so the binding is a
+/// Rust-only addition — ported from the real `.sty`, whose T1 branches say what
+/// each glyph IS (`\Dbar`->`\DJ`, `\cprime`->`\tprime`) rather than how the
+/// Default branches draw it with `\accent` and `\hbox` kerning.
+///
+/// Both arrival points in one fixture: body prose (2508.13753 uses `\cprime`
+/// there, at L2131) and a `.bib` `MRREVIEWER` (2605.11579's `biblo.bib` L2059).
+/// All three `\cprime` witnesses load the package by name — 2508.13753 L7,
+/// 2508.20226 L3, 2509.07628 L13 — which is the evidence that moved the family
+/// out of `latex_constructs.rs` and into this binding.
+#[test]
+fn bib_mathscinet_package_supplies_its_transliteration_glyphs() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_mathscinet_package.tex");
+  // Composed characters, not source and not a silently-dropped letter.
+  for (needle, what) in [
+    ("Kondratʹev", "`\\cprime` in body prose"),
+    ("Đokovi", "`\\Dbar` in a bib reviewer field"),
+  ] {
+    assert!(
+      x.contains(needle),
+      "mathscinet: {what} did not compose ({needle:?} missing):\n{x}"
+    );
+  }
+  for leaked in ["Dbar", "cprime"] {
+    assert!(
+      !x.contains(leaked),
+      "mathscinet: `\\{leaked}` leaked into the output as source:\n{x}"
+    );
+  }
+  assert!(
+    x.contains("<bibitem"),
+    "mathscinet: no bibliography at all:\n{x}"
+  );
+}
+
+/// A document that does NOT load mathscinet keeps its own `\Dbar` — and nothing
+/// loads the package on its behalf.
+///
+/// Two things are pinned here, and the second is the one that is easy to lose.
+///
+/// 1. The binding must not become an always-present kernel definition. That
+///    would run BEFORE the document's preamble, and LaTeXML's `\newcommand` over
+///    an already-defined CS silently keeps the OLD meaning — no error, no
+///    warning — so the author's macro would be shadowed with nothing in the log.
+///    Measured on 4,000 papers of arXiv 2605: six define `\Dbar` themselves
+///    (four with `\newcommand`) against two that use it undefined, and all
+///    twelve `\dbar` definitions mean a thermodynamic differential or a barred
+///    derivative, never a Croatian letter.
+/// 2. The recursive `.bib` session must not auto-load the package either. It
+///    would be tempting — the session already loads `url.sty` that way — but
+///    `\Dbar` has no `.bst` behind it: witness 2605.11579 uses
+///    `\bibliographystyle{alpha}` and `alpha.bst` contains no `Dbar`, so real
+///    pdflatex raises the same undefined control sequence. Auto-loading would
+///    lower an error count below what the author's own build produces.
+#[test]
+fn bib_mathscinet_macro_yields_to_the_authors_own_definition() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_mathscinet_author_macro.tex");
+  // The author's own `\Dbar` is a barred D in math, and must survive verbatim.
+  assert!(
+    x.contains("<XMApp>"),
+    "author `\\Dbar`: the barred-D math did not render as math:\n{x}"
+  );
+  assert!(
+    !x.contains("Đ"),
+    "author `\\Dbar`: MathSciNet's Đ shadowed the author's own \
+     `\\newcommand{{\\Dbar}}` — the binding must not reach a document that \
+     never loads the package:\n{x}"
+  );
+  // …and the bibliography still renders, so the guard cannot pass by losing it.
+  assert!(
+    x.contains("<bibitem"),
+    "author `\\Dbar`: no bibliography at all:\n{x}"
+  );
+}

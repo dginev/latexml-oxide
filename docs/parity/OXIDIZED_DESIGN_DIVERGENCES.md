@@ -2584,6 +2584,92 @@ Guards: `00_contrib::silence_filters_test`, `00_contrib::arxiv_keywords_test`,
 `arxiv.sty` with a distinctive keyword label must still win),
 `107_silence_keeps_diagnostics` (the raw-load suppression above).
 
+### 78. `mathscinet.sty` gets a binding — and nothing loads it for you
+
+`mathscinet.sty` is a real package: AMS, v1.05 (2002/04/17), LPPL, shipped in TeX
+Live inside the **amsrefs** bundle
+(`texmf-dist/tex/latex/amsrefs/mathscinet.sty`). It holds the vocabulary
+[MathSciNet](https://mathscinet.ams.org) records transliterate Cyrillic and
+South-Slavic names with: `\cprime` (ь), `\Dbar`/`\dbar` (Đ/đ), `\cdprime`,
+`\bud`, `\cydot`, `\polhk`, `\soft` and the under-accents. Perl LaTeXML has
+`amsrefs.sty.ltxml` but **no** `mathscinet.sty.ltxml`, so the binding is a
+Rust-only addition — though a port of the real `.sty`, not an invention.
+`latexml_package/src/package/mathscinet_sty.rs`.
+
+**Mappings come from the file's own T1 branches**, which say what each glyph IS
+rather than how it is drawn: `\Dbar`→`\DJ` (U+0110), `\dbar`→`\dj` (U+0111),
+`\cprime`→`\tprime` (U+02B9), `\cdprime`→two of them (U+02BA), `\polhk`→`\k`,
+`\soft`→`\v`, `\udot`→`\d`. The Default branches overprint with `\accent` and
+`\hbox` kerning (`\Dbar` is
+`\leavevmode\lower.5ex\rlap{\hskip-.07em\accent"16}D`), which would reach the XML
+as a bare "D" (WISDOM #50). Two deliberate departures from the source: L36's
+`\RequirePackage{textcmds}` is not reproduced (it would raw-load a
+`\pcatcode`-juggling docstrip `.sty` for two commands whose results are inlined),
+and `\Cprime`/`\Cdprime` — `cyracc.def` L53-55 spellings that arrive with the
+same data but are absent from this `.sty` — are provided alongside.
+
+**Nothing auto-loads it, and that is the load-bearing decision.** The recursive
+`.bib` session already loads `url.sty` on a document's behalf (divergence #72),
+so doing the same for mathscinet is the obvious move. It would be wrong.
+Checked, not assumed, on witness 2605.11579: the paper never mentions
+`mathscinet` or `amsrefs`, and it uses `\bibliographystyle{alpha}` — and
+`alpha.bst` contains **zero** occurrences of `Dbar`, so no `.bst` `@preamble`
+supplies it either. `\Dbar` is therefore undefined in the author's own build:
+real pdflatex raises the same undefined control sequence. **The residual
+`undefined:\Dbar` is PARITY, not a defect**, and supplying the macro anyway would
+push our error count below what the author's toolchain produces — the one thing
+the canvas signal must never do. 2605.11579 stays at **1 error / 36 bibitems**,
+with that error now explained rather than outstanding.
+
+**Why a package and not an always-present kernel definition**, for `\Dbar`
+specifically. A format-chain definition runs before the document's preamble, and
+LaTeXML's `\newcommand` over an already-defined CS silently keeps the OLD meaning
+(no error, no warning), so an always-present vendor macro SHADOWS an author's
+own. Scanned 4,000 papers of arXiv 2605:
+
+| macro | authors define it | with `\newcommand` (would be shadowed) | used-but-undefined |
+|---|---|---|---|
+| `\cprime` family | 10 | 0 (all `\def`, which overrides cleanly) | ~20 |
+| `\Dbar` | 6 | **4** | 2 |
+| `\dbar` | 12 | 8 | 0 |
+
+An always-on `\Dbar` renders `Đ` where four authors wrote
+`\newcommand{\Dbar}{\bar{D}}` — verified, with zero diagnostics — i.e. it breaks
+more papers than it fixes. Inside a document that DOES load the package, the
+upstream `\ProvideTextCommand`/`\ProvideTextCommandDefault` deferral (kept as
+`mathscinet_sty.rs::provide`) yields to a name already taken. That is also what
+makes `\dbar` safe to bind here and nowhere else.
+
+**The `\cprime` family keeps an always-on stub as well, deliberately.** All three
+of its witnesses load the package by name — 2508.13753 L7, 2508.20226 L3,
+2509.07628 L13 — which corrects the `cyracc.def` / "no Cyrillic encoding
+otherwise loaded" justification the block used to carry. But the package is not
+the only way the family arrives: a `.bib` field carries `Gel\cprime fand` with no
+`\usepackage` behind it, and a MathSciNet export's `@preamble` may or may not
+define it. Removing the stub was measured to cost exactly that case
+(`bib_mr_reviewer_accent`'s `primerev` entry regains `undefined:\cprime`), and no
+author in the scan defines the family with `\newcommand`, so the stub shadows
+nobody. It moved out of `latex_constructs.rs` — which mirrors
+`latex_constructs.pool.ltxml` byte-for-byte and should hold no non-Perl
+definitions — into `latex_constructs_rust_only.rs` §5, the file that exists for
+exactly this, carrying its witnesses. `provide` in the binding then finds them
+already defined, the correct no-op. `\polhk`'s comment there claimed tipa.sty as
+its source; the real one is `mathscinet.sty` L111-113, corrected in place.
+
+**Measured**, same host: 2605.11579 `--includestyles` **1 error / 36 bibitems**
+(the `\Dbar` parity residual); 2508.13753 **0 errors**, `Kondratʹev` composing;
+2508.20226 **0 errors**; 2509.07628 `--includestyles` **0 errors**, `Drinfelʹ d`
+composing (its 6 bare-mode errors are an unloaded local `Latex-document.sty`,
+unrelated).
+
+Guards: `06_cluster_bibliography::bib_mathscinet_package_supplies_its_transliteration_glyphs`
+(a document that loads the package, exercising both body prose and a `.bib`
+`MRREVIEWER`; `\Dbar` is the discriminating assertion, since `\cprime` also has
+the stub beneath it) and
+`::bib_mathscinet_macro_yields_to_the_authors_own_definition` (a document that
+does not — RED under an always-on `\Dbar`, where the author's barred-D math
+renders `Đ`, and equally RED if the `.bib` session is made to auto-load).
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

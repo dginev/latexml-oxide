@@ -1,0 +1,26 @@
+% Driver for `bib_mathscinet_package.bib` — the mathscinet.sty binding, loaded
+% the way a real document loads it.
+%
+% `mathscinet.sty` (AMS, v1.05, in the amsrefs bundle) holds the transliteration
+% vocabulary MathSciNet records are written in: `\Dbar`/`\dbar` (Đ/đ), `\cprime`
+% (ь), `\cdprime`, `\bud`. A document gets it by naming it — as all three of the
+% `\cprime` witnesses do (2508.13753 L7, 2508.20226 L3, 2509.07628 L13) — or via
+% `amsrefs.sty` L217's `\RequirePackage{mathscinet}`.
+%
+% This exercises BOTH places the vocabulary shows up: the body prose (which is
+% where 2508.13753 uses `\cprime`, at its L2131) and a `.bib` field's MRREVIEWER
+% (witness 2605.11579's `biblo.bib` L2059).
+%
+% Note what is NOT claimed here: nothing loads this package on a document's
+% behalf. A paper that uses `\Dbar` without loading mathscinet gets an
+% undefined-CS error, which is PARITY — real pdflatex does too, and no `.bst`
+% supplies it (2605.11579 uses `\bibliographystyle{alpha}`; `alpha.bst` has no
+% `Dbar`). See `bib_mathscinet_author_macro.tex` for the other half of that.
+\documentclass{article}
+\usepackage{mathscinet}
+\begin{document}
+Body prose, as in 2508.13753: Kondrat\cprime ev and \Dbar okovi\'{c}.
+See \cite{dbarrev}.
+\bibliographystyle{plain}
+\bibliography{bib_mathscinet_package}
+\end{document}

@@ -1,0 +1,17 @@
+% The MRREVIEWER shape from witness 2605.11579 (`biblo.bib` L2059), in a
+% document that DOES load mathscinet.sty — see the driver `.tex` for why that
+% distinction is the whole point of this fixture.
+%
+% `\Dbar okovi\'{c}` is Đoković. It is also a space-form accent case (the space
+% terminates the control word and the tokenizer eats it), so this entry needs
+% both the `untex()` reversion of `bib_mr_reviewer_accent.bib` AND the package
+% binding — a regression in either one shows up here.
+
+@article{dbarrev,
+  author      = {E. Author},
+  title       = {A MathSciNet glyph macro in a reviewer name},
+  journal     = {J. Reviews},
+  year        = {2025},
+  mrnumber    = {MR4567890},
+  MRREVIEWER  = {Dragomir \v{Z}. \Dbar okovi\'{c}}
+}
