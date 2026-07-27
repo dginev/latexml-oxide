@@ -1,0 +1,9 @@
+% Driver for `bib_mr_reviewer_accent.bib`. Every entry carries a space-form
+% accent in a reviewer field; all must render as names, not undefined macros.
+% See the `.bib` header.
+\documentclass{article}
+\begin{document}
+See \cite{cedillarev,primerev,dotlessrev,zblrev}.
+\bibliographystyle{plain}
+\bibliography{bib_mr_reviewer_accent}
+\end{document}
