@@ -179,6 +179,11 @@ pub struct Graphics {
   /// failure or timeout. 0 disables the path entirely.
   /// Tracks upstream brucemiller/LaTeXML#902.
   svg_threshold_kb: u32,
+  /// Whether conversions may be served from the shared, host-persistent
+  /// graphics cache. Threaded explicitly (rather than read from a global)
+  /// so a caller can guarantee its conversions actually run — see
+  /// [`crate::graphics_cache::CachePolicy`] and `with_cache_policy`.
+  cache_policy:     crate::graphics_cache::CachePolicy,
 }
 
 impl Graphics {
@@ -271,7 +276,23 @@ impl Graphics {
       type_properties,
       background: "#FFFFFF".to_string(),
       svg_threshold_kb: 0,
+      cache_policy: crate::graphics_cache::CachePolicy::default(),
     }
+  }
+
+  /// Choose whether conversions may be served from the shared,
+  /// host-persistent graphics cache. Defaults to
+  /// [`CachePolicy::Shared`](crate::graphics_cache::CachePolicy::Shared).
+  ///
+  /// Pass [`CachePolicy::Bypass`](crate::graphics_cache::CachePolicy::Bypass)
+  /// when the conversion *itself* is what matters — e.g. a test asserting
+  /// on how many converter subprocesses ran, which a cache hit would
+  /// silently satisfy without running any. The builder returns `self` so
+  /// it composes with `Graphics::new(...)`.
+  #[must_use]
+  pub fn with_cache_policy(mut self, policy: crate::graphics_cache::CachePolicy) -> Self {
+    self.cache_policy = policy;
+    self
   }
 
   /// Enable the vector-SVG path for PDFs under `kb` KB. When `kb == 0`
@@ -2198,6 +2219,9 @@ impl Processor for Graphics {
       // call (the EPS-via-PDF internal pair counts as one).
       let subproc_count = AtomicU32::new(0);
       let subproc_ref = &subproc_count;
+      // Copy out of `self` before the scope: the worker closures must not
+      // borrow `self` (it is `&mut` here), and `CachePolicy` is `Copy`.
+      let cache_policy = self.cache_policy;
       // Unique conversion jobs only. Repeated nodes with the same
       // source/page/options share one subprocess result, while distinct
       // options keep separate outputs.
@@ -2264,6 +2288,7 @@ impl Processor for Graphics {
                         ext:     "svg",
                       };
                       let svg_res = crate::graphics_cache::with_cache_dims(
+                        cache_policy,
                         source,
                         abs_svg,
                         svg_key,
@@ -2303,6 +2328,7 @@ impl Processor for Graphics {
                         ext:     ext_from_path(abs_dest_str),
                       };
                       crate::graphics_cache::with_cache_dims(
+                        cache_policy,
                         source,
                         abs_dest_str,
                         raster_key,
@@ -2543,44 +2569,10 @@ impl Processor for Graphics {
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  struct EnvGuard {
-    key: String,
-    old: Option<String>,
-  }
-
-  impl EnvGuard {
-    fn set(key: &str, value: &str) -> Self {
-      let old = std::env::var(key).ok();
-      // SAFETY: EnvGuard is a test-only helper (`#[cfg(test)] mod tests`),
-      // used in `process_coalesces_only_matching_conversion_options` to point
-      // PATH at a fake `convert` for the duration of one test. `set_var`/
-      // `remove_var` are `unsafe` in edition 2024 because a concurrent env
-      // read/write from another thread is a data race.
-      // FIXME: the single-threaded property is NOT formally guaranteed here —
-      // cargo's default test harness runs the binary's tests on multiple
-      // threads and other tests read the environment (`std::env::var`). Make
-      // this airtight by serializing env-mutating tests (e.g. `serial_test`).
-      unsafe { std::env::set_var(key, value) };
-      Self { key: key.to_string(), old }
-    }
-  }
-
-  impl Drop for EnvGuard {
-    fn drop(&mut self) {
-      if let Some(old) = &self.old {
-        // SAFETY: test-only restore of the value EnvGuard::set saved; same
-        // edition-2024 data-race rationale as in `set`.
-        // FIXME: single-threaded property not formally guaranteed (see `set`).
-        unsafe { std::env::set_var(&self.key, old) };
-      } else {
-        // SAFETY: test-only removal of a var EnvGuard::set introduced; same
-        // edition-2024 data-race rationale as in `set`.
-        // FIXME: single-threaded property not formally guaranteed (see `set`).
-        unsafe { std::env::remove_var(&self.key) };
-      }
-    }
-  }
+  // `EnvGuard` (env mutation, serialised + restored) and `TempDir`
+  // (unique name, removed on drop including on panic) are shared with
+  // `graphics_cache::tests`; see that module for the rationale.
+  use crate::test_env::{EnvGuard, TempDir};
 
   /// `run_with_timeout` kills the child and returns `None` when the
   /// process exceeds the deadline. Uses `sleep` as a stand-in for any
@@ -2626,8 +2618,7 @@ mod tests {
   /// attempt, large PDF does not, non-PDF is always skipped.
   #[test]
   fn should_try_svg_path_explicit_threshold() {
-    let tmp = std::env::temp_dir().join("latexml_graphics_svg_gate_test");
-    std::fs::create_dir_all(&tmp).unwrap();
+    let tmp = TempDir::new("svg_gate");
     let small_pdf = tmp.join("small.pdf");
     let big_pdf = tmp.join("big.pdf");
     let png = tmp.join("raster.png");
@@ -2649,8 +2640,6 @@ mod tests {
     assert!(!Graphics::should_try_svg_path(png.to_str().unwrap(), 200));
     // Missing file → false, not panic.
     assert!(!Graphics::should_try_svg_path("/no/such/file.pdf", 200));
-
-    std::fs::remove_dir_all(&tmp).ok();
   }
 
   /// Auto-detect path (`threshold_kb == 0`): vector-only PDFs trigger
@@ -2700,8 +2689,7 @@ mod tests {
 
   #[test]
   fn postscript_density_caps_huge_bounding_box() {
-    let tmp = std::env::temp_dir().join("latexml_graphics_density_test");
-    std::fs::create_dir_all(&tmp).unwrap();
+    let tmp = TempDir::new("ps_density");
     let normal = tmp.join("normal.eps");
     let huge = tmp.join("huge.eps");
     std::fs::write(
@@ -2727,13 +2715,12 @@ mod tests {
       read_postscript_bounding_box(huge.to_str().unwrap()),
       Some((11339.0, 11339.0))
     );
-
-    std::fs::remove_dir_all(&tmp).ok();
   }
 
   #[test]
   fn pdf_density_caps_huge_page_box() {
-    let tmp = std::env::temp_dir().join("latexml_graphics_pdf_density_test.pdf");
+    let dir = TempDir::new("pdf_density");
+    let tmp = dir.join("page.pdf");
     std::fs::write(
       &tmp,
       b"%PDF-1.4
@@ -2752,14 +2739,13 @@ endobj
       Graphics::raster_density_for_source(tmp.to_str().unwrap()),
       34
     );
-
-    std::fs::remove_file(&tmp).ok();
   }
 
   /// SVG viewBox parsing extracts width/height.
   #[test]
   fn read_svg_dimensions_parses_viewbox() {
-    let tmp = std::env::temp_dir().join("latexml_svg_dim_test.svg");
+    let dir = TempDir::new("svg_dim");
+    let tmp = dir.join("dims.svg");
     std::fs::write(
       &tmp,
       r#"<?xml version="1.0"?>
@@ -2770,13 +2756,13 @@ endobj
     .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
     assert_eq!(dims, (640, 480));
-    std::fs::remove_file(&tmp).ok();
   }
 
   /// Falls back to width/height attrs when viewBox is missing.
   #[test]
   fn read_svg_dimensions_falls_back_to_width_height() {
-    let tmp = std::env::temp_dir().join("latexml_svg_dim_fallback.svg");
+    let dir = TempDir::new("svg_dim_fallback");
+    let tmp = dir.join("dims.svg");
     std::fs::write(
       &tmp,
       r#"<svg xmlns="http://www.w3.org/2000/svg" width="123.7pt" height="99.4pt">
@@ -2786,27 +2772,47 @@ endobj
     .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
     assert_eq!(dims, (124, 99));
-    std::fs::remove_file(&tmp).ok();
   }
 
+  /// Three `<graphics>` nodes over one source: two share `options`, one
+  /// differs. `process` must coalesce the matching pair into a single
+  /// conversion and run a second one for the differing options — proven by
+  /// counting the lines a fake `convert` on `PATH` appends to its log.
+  ///
+  /// **The cache must be bypassed for this to mean anything.** The
+  /// observable here is "how many converter subprocesses ran", and
+  /// `graphics_cache` is content-addressed against a *host-persistent* root
+  /// (`$XDG_CACHE_HOME/latexml-oxide/graphics`). With the cache live this
+  /// test was self-poisoning: the first run stored the shim's output under a
+  /// key derived from these fixed source bytes, and every later run was
+  /// served from that entry, spawned nothing, and died on a missing log
+  /// (issue 401). The two jobs also share one cache key — same bytes, page,
+  /// density and extension, differing only in destination name — so even a
+  /// pristine cache could serve job two from job one and see a single log
+  /// line. `CachePolicy::Bypass` removes both, without touching any env var.
   #[test]
   #[cfg(unix)]
   fn process_coalesces_only_matching_conversion_options() {
     use std::os::unix::fs::PermissionsExt;
 
-    use crate::document::{PostDocument, PostDocumentOptions};
+    use crate::{
+      document::{PostDocument, PostDocumentOptions},
+      graphics_cache::CachePolicy,
+    };
 
-    let tmp = std::env::temp_dir().join(format!("latexml_graphics_dedupe_{}", std::process::id()));
-    std::fs::create_dir_all(&tmp).unwrap();
+    let tmp = TempDir::new("graphics_dedupe");
     let source = tmp.join("plot.ai");
     std::fs::write(&source, "%!PS-Adobe-3.0\n%%BoundingBox: 0 0 100 100\n").unwrap();
     let log = tmp.join("convert.log");
     let fake_convert = tmp.join("convert");
     // Log the args AND write a non-empty file at the dest (the last positional
     // arg) — `convert_image` now requires actual output, not just exit 0.
+    // The log path is derived from `$0` (the kernel hands a shebang script its
+    // resolved path, so PATH lookup still yields an absolute `dirname`) rather
+    // than from an env var: one less process-global to synchronise.
     std::fs::write(
       &fake_convert,
-      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$LATEXML_FAKE_CONVERT_LOG\"\n\
+      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/convert.log\"\n\
        for a in \"$@\"; do d=\"$a\"; done\nprintf x > \"$d\"\nexit 0\n",
     )
     .unwrap();
@@ -2815,8 +2821,8 @@ endobj
     std::fs::set_permissions(&fake_convert, perms).unwrap();
 
     let old_path = std::env::var("PATH").unwrap_or_default();
-    let _path_guard = EnvGuard::set("PATH", &format!("{}:{}", tmp.display(), old_path));
-    let _log_guard = EnvGuard::set("LATEXML_FAKE_CONVERT_LOG", log.to_str().unwrap());
+    let mut env = EnvGuard::acquire();
+    env.set("PATH", &format!("{}:{}", tmp.path().display(), old_path));
     let xml = format!(
       r#"<?xml version="1.0"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
@@ -2828,25 +2834,31 @@ endobj
     );
     let doc_opts = PostDocumentOptions {
       destination: Some(tmp.join("out.html").display().to_string()),
-      source_directory: Some(tmp.display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
       ..Default::default()
     };
     let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
-    let mut graphics = Graphics::new(None, true);
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
     let nodes = graphics.to_process(&doc);
     assert_eq!(nodes.len(), 3);
 
     let docs = graphics.process(doc, nodes).unwrap();
     let out = docs[0].to_xml_string();
-    let log_lines = std::fs::read_to_string(&log).unwrap().lines().count();
+    let log_contents = std::fs::read_to_string(&log).unwrap_or_else(|e| {
+      panic!(
+        "fake `convert` never ran: no log at {} ({e}). The shim is on PATH and the cache is \
+         bypassed, so `process` should have spawned it.",
+        log.display()
+      )
+    });
     assert_eq!(
-      log_lines, 2,
-      "matching source/page/options should coalesce, but different options need separate conversions"
+      log_contents.lines().count(),
+      2,
+      "matching source/page/options should coalesce, but different options need separate \
+       conversions; convert log was:\n{log_contents}"
     );
     assert_eq!(out.matches(r#"imagesrc="plot.png""#).count(), 2);
     assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
-
-    std::fs::remove_dir_all(&tmp).ok();
   }
 
   /// A post-processing diagnostic raised on a WORKER THREAD must reach the MAIN

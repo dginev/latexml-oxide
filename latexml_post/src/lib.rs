@@ -69,6 +69,11 @@ pub mod writer;
 pub mod xmath;
 pub mod xslt;
 
+/// Shared helpers for the process-global state (`env`, `/tmp`) that this
+/// crate's multi-threaded unit tests contend over.
+#[cfg(test)]
+mod test_env;
+
 use std::sync::LazyLock;
 
 use document::PostDocument;

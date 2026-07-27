@@ -180,6 +180,32 @@ pub fn reset_stats() {
   MISSES.store(0, Ordering::Relaxed);
 }
 
+/// Whether a given conversion consults the shared graphics cache.
+///
+/// The cache root is *process-global, host-persistent* state: it comes
+/// from `LATEXML_GRAPHICS_CACHE_DIR`, else
+/// `$XDG_CACHE_HOME/latexml-oxide/graphics`, which survives across runs
+/// and across unrelated conversions. A caller that needs its conversions
+/// to actually *run* — rather than be served from whatever a previous
+/// run on this host happened to leave behind — must be able to opt out,
+/// and must be able to do so **without mutating the environment**
+/// (`set_var` is process-wide and racy against every other thread).
+/// Hence an explicit, caller-threaded policy rather than another env var.
+///
+/// The env kill-switch `LATEXML_GRAPHICS_CACHE_OFF=1` still applies
+/// independently, inside [`lookup`] / [`store`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CachePolicy {
+  /// Consult and populate the shared cache. The production default.
+  #[default]
+  Shared,
+  /// Bypass the cache entirely: every conversion runs, nothing is read
+  /// and nothing is stored. Used where the *conversion itself* is the
+  /// observable under test, so a prior run's cached output must not be
+  /// able to substitute for it.
+  Bypass,
+}
+
 /// Render-shaping inputs that go into the cache key alongside source
 /// bytes. Two calls with the same `RenderKey` MUST produce
 /// byte-equivalent output (modulo metadata variation tools like
@@ -535,7 +561,11 @@ impl ConvertResult {
 ///
 /// Callers without a dimension hook can pass `measure = || None` to
 /// get the bytes-only cache behaviour.
+///
+/// `policy` decides whether the shared cache is consulted at all; see
+/// [`CachePolicy`].
 pub fn with_cache_dims<F, M>(
+  policy: CachePolicy,
   source: &str,
   dest: &str,
   key: RenderKey,
@@ -546,6 +576,12 @@ where
   F: FnOnce() -> bool,
   M: FnOnce() -> Option<CachedDims>,
 {
+  if policy == CachePolicy::Bypass {
+    if !convert() {
+      return ConvertResult::Failed;
+    }
+    return ConvertResult::Ok { dims: measure() };
+  }
   if let Some(hit) = lookup(source, dest, key) {
     if let Some(d) = hit.dims {
       return ConvertResult::Ok { dims: Some(d) };
@@ -574,8 +610,22 @@ where
 /// Bytes-only cache wrapper. Use when the caller doesn't need
 /// dimensions cached (e.g. SVG path where viewBox dims are cheap to
 /// re-read from disk). Returns `true` on success.
-pub fn with_cache<F>(source: &str, dest: &str, key: RenderKey, convert: F) -> bool
-where F: FnOnce() -> bool {
+///
+/// `policy` decides whether the shared cache is consulted at all; see
+/// [`CachePolicy`].
+pub fn with_cache<F>(
+  policy: CachePolicy,
+  source: &str,
+  dest: &str,
+  key: RenderKey,
+  convert: F,
+) -> bool
+where
+  F: FnOnce() -> bool,
+{
+  if policy == CachePolicy::Bypass {
+    return convert();
+  }
   if lookup(source, dest, key).is_some() {
     return true;
   }
@@ -609,17 +659,32 @@ mod tests {
     fs::write(path, bytes).unwrap();
   }
 
-  // The cache_root() OnceLock locks the cache root on first call. To
-  // isolate per-test directories we'd need to reset the OnceLock,
-  // which the public API doesn't support. Instead, share one cache
-  // directory across tests and use unique source bytes per test.
+  // These tests exercise the cache itself, so they need a real cache
+  // root — pointed at a scratch directory rather than the developer's
+  // `~/.cache`. One directory is shared across them (with unique source
+  // bytes per test) because the root is read from the environment, which
+  // is process-global.
+  //
+  // The env write is deliberately NOT undone: it stays set for the rest
+  // of the binary's life, and `LATEXML_GRAPHICS_CACHE_DIR` is leaked into
+  // any test that runs afterwards. That is tolerable only because no
+  // other test's correctness depends on the cache root any more — the one
+  // that used to, `graphics::tests::process_coalesces_only_matching_
+  // conversion_options`, now bypasses the cache explicitly via
+  // `CachePolicy::Bypass` instead of racing this setter (issue 401).
+  // Taking the shared `env_lock` keeps the write from interleaving with
+  // that test's `PATH` window.
   static SHARED_DIR: OnceLock<PathBuf> = OnceLock::new();
   fn shared_cache_dir() -> &'static Path {
     SHARED_DIR.get_or_init(|| {
       let dir = temp_dir("shared");
-      // SAFETY: tests run in their own process; the env-var write is
-      // serialized by the OnceLock initializer (only the first caller
-      // runs the closure).
+      let _lock = crate::test_env::env_lock()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+      // SAFETY: `set_var` is `unsafe` in edition 2024 because concurrent
+      // env access from another thread is a data race. We hold the
+      // binary-wide `env_lock`, so no other env-mutating test runs
+      // concurrently, and only the first caller runs this initializer.
       unsafe {
         std::env::set_var("LATEXML_GRAPHICS_CACHE_DIR", &dir);
       }
@@ -676,18 +741,30 @@ mod tests {
       ext:     "png",
     };
     let mut spawn_calls = 0u32;
-    let ok1 = with_cache(src.to_str().unwrap(), dest1.to_str().unwrap(), key, || {
-      spawn_calls += 1;
-      fs::write(&dest1, b"converted-output").unwrap();
-      true
-    });
+    let ok1 = with_cache(
+      CachePolicy::Shared,
+      src.to_str().unwrap(),
+      dest1.to_str().unwrap(),
+      key,
+      || {
+        spawn_calls += 1;
+        fs::write(&dest1, b"converted-output").unwrap();
+        true
+      },
+    );
     assert!(ok1);
     assert_eq!(spawn_calls, 1, "first call must spawn");
 
-    let ok2 = with_cache(src.to_str().unwrap(), dest2.to_str().unwrap(), key, || {
-      spawn_calls += 1;
-      true
-    });
+    let ok2 = with_cache(
+      CachePolicy::Shared,
+      src.to_str().unwrap(),
+      dest2.to_str().unwrap(),
+      key,
+      || {
+        spawn_calls += 1;
+        true
+      },
+    );
     assert!(ok2);
     assert_eq!(spawn_calls, 1, "second call must NOT spawn");
     assert_eq!(
@@ -714,6 +791,7 @@ mod tests {
     let mut measure_calls = 0u32;
     // First call: miss → spawn + measure → store dims.
     let dims1 = with_cache_dims(
+      CachePolicy::Shared,
       src.to_str().unwrap(),
       dest1.to_str().unwrap(),
       key,
@@ -733,6 +811,7 @@ mod tests {
 
     // Second call: hit → sidecar replay, NO spawn, NO measure.
     let dims2 = with_cache_dims(
+      CachePolicy::Shared,
       src.to_str().unwrap(),
       dest2.to_str().unwrap(),
       key,
@@ -771,6 +850,7 @@ mod tests {
     };
     let mut calls = 0u32;
     let ok_png = with_cache(
+      CachePolicy::Shared,
       src.to_str().unwrap(),
       dest_png.to_str().unwrap(),
       key_png,
@@ -781,6 +861,7 @@ mod tests {
       },
     );
     let ok_svg = with_cache(
+      CachePolicy::Shared,
       src.to_str().unwrap(),
       dest_svg.to_str().unwrap(),
       key_svg,
@@ -808,17 +889,29 @@ mod tests {
       ext:     "png",
     };
     let mut calls = 0u32;
-    let ok = with_cache(src.to_str().unwrap(), dest.to_str().unwrap(), key, || {
-      calls += 1;
-      // simulate spawn failure: did NOT write dest, returned false
-      false
-    });
+    let ok = with_cache(
+      CachePolicy::Shared,
+      src.to_str().unwrap(),
+      dest.to_str().unwrap(),
+      key,
+      || {
+        calls += 1;
+        // simulate spawn failure: did NOT write dest, returned false
+        false
+      },
+    );
     assert!(!ok);
     assert_eq!(calls, 1);
-    let ok2 = with_cache(src.to_str().unwrap(), dest.to_str().unwrap(), key, || {
-      calls += 1;
-      false
-    });
+    let ok2 = with_cache(
+      CachePolicy::Shared,
+      src.to_str().unwrap(),
+      dest.to_str().unwrap(),
+      key,
+      || {
+        calls += 1;
+        false
+      },
+    );
     assert!(!ok2);
     assert_eq!(calls, 2, "cache must not memoise failures");
   }
@@ -846,11 +939,17 @@ mod tests {
     };
     let mut calls = 0u32;
     // Step 1: register a fresh entry via with_cache. Cache file is on disk.
-    let ok = with_cache(src.to_str().unwrap(), dest1.to_str().unwrap(), key, || {
-      calls += 1;
-      fs::write(&dest1, b"v1-bytes").unwrap();
-      true
-    });
+    let ok = with_cache(
+      CachePolicy::Shared,
+      src.to_str().unwrap(),
+      dest1.to_str().unwrap(),
+      key,
+      || {
+        calls += 1;
+        fs::write(&dest1, b"v1-bytes").unwrap();
+        true
+      },
+    );
     assert!(ok);
     assert_eq!(calls, 1);
 
@@ -875,11 +974,17 @@ mod tests {
     // Step 4: with_cache must regenerate quietly. The closure should fire,
     // producing fresh output bytes. After this, the cache should hold the
     // new entry again.
-    let ok2 = with_cache(src.to_str().unwrap(), dest2.to_str().unwrap(), key, || {
-      calls += 1;
-      fs::write(&dest2, b"v2-bytes-regenerated").unwrap();
-      true
-    });
+    let ok2 = with_cache(
+      CachePolicy::Shared,
+      src.to_str().unwrap(),
+      dest2.to_str().unwrap(),
+      key,
+      || {
+        calls += 1;
+        fs::write(&dest2, b"v2-bytes-regenerated").unwrap();
+        true
+      },
+    );
     assert!(ok2);
     assert_eq!(
       calls, 2,
@@ -933,6 +1038,7 @@ mod tests {
 
     let dest = dir.join("out.png");
     let result = with_cache_dims(
+      CachePolicy::Shared,
       src.to_str().unwrap(),
       dest.to_str().unwrap(),
       key,
@@ -976,7 +1082,7 @@ mod tests {
         let dir_s = dir_s.clone();
         s.spawn(move || {
           let dest = format!("{dir_s}/dest_{i}.png");
-          with_cache(&src_s, &dest, key, || {
+          with_cache(CachePolicy::Shared, &src_s, &dest, key, || {
             // Tiny artificial work to encourage interleaving.
             std::thread::sleep(std::time::Duration::from_millis(5));
             fs::write(&dest, b"final-bytes").unwrap();
