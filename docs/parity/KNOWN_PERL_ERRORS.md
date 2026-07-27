@@ -2569,11 +2569,18 @@ Minimal trigger — a 7-line `.bib`, since `\bib@field@default@doi` reads
 \begin{document}\cite{K}.\bibliographystyle{plain}\bibliography{thatfile}\end{document}
 ```
 
-Measured same-host: `latexmlc` does not terminate — killed at 300 s (rc=124),
-`Status:conversion:3`. Perl `latexml` alone is unaffected only because it never
-reads the `.bib`; the loop is in the post-processing bibliography session.
-Witnesses arXiv 2605.00181, 2605.19650, 2606.06645 (each has exactly this
-`doi = {\href{…}{…}}`), which Perl `latexml` converts cleanly in 8-28 s.
+Measured same-host on an IDLE box (1-min load 4.5), as an A/B against the
+identical document with the `\href` removed from the `doi` field:
+
+| `latexmlc` on | wall | status |
+|---|---|---|
+| `doi = {10.5281/zenodo.19852912}` | **3.7 s** | `Status:conversion:0` |
+| `doi = {\href{https://doi.org/…}{…}}` | **439 s, killed (rc=124)** | `Status:conversion:3` |
+
+so it is a hang, not slowness. Perl `latexml` alone is unaffected only because
+it never reads the `.bib`; the loop is in the post-processing bibliography
+session. Witnesses arXiv 2605.00181, 2605.19650, 2606.06645 (each has exactly
+this `doi = {\href{…}{…}}`), which Perl `latexml` converts cleanly in 8-28 s.
 
 Related to entry 57 (`\save@bibitem`): both are a definition whose expansion
 names itself, surviving only where nothing re-expands it.
