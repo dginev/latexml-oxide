@@ -2532,7 +2532,11 @@ entries were consolidated it was merged into **#74** — which adds `^`, the
 two-treatment framing, and the exclusion list — and the number was **retired
 rather than renumbered**, because divergence numbers are cited verbatim from
 `.rs` comments and renumbering silently invalidates every citation. Nothing in
-the tree cites `OXIDIZED_DESIGN #76`. Next free number: **#81**.
+the tree cites `OXIDIZED_DESIGN #76`. For the next free number see the header at
+the top of this file — it is the single authoritative counter. (This spot used to
+restate it and drifted stale at **#81** while the header had already moved on;
+restating the number in two places is what makes it get taken out from under
+people.)
 
 ### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
 

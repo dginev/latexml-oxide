@@ -64,7 +64,52 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
-- **2026-07-27 (latest) — spconf.sty's `keywords` and `\twoauthors` were
+- **2026-07-27 (latest) — the `unexpected:fi` fatal cluster: `\meaning` of a
+  `\chardef` token returned the internal class name.** GENUINE-RUST-ONLY,
+  **18 papers, one cause.** Largest unclassified first-error cluster in the 186
+  `Fatal:TooManyErrors` papers of sandbox-arxiv-2605+2606:
+  `2605.{03971,04451,09005,15128,16720,29156,29341}`
+  `2606.{06712,07410,11290,11722,13769,14502,15753,18180,24256,26947}` — all 17
+  ship `bxcoloremoji.sty`. Rust `\meaning` had **no chardef arm**: CharDef and
+  plain Register are both `Stored::Register` (discriminated by `register_type`),
+  so a chardef fell through a catch-all and rendered as the literal string
+  `Register`. The dropped `"` is load-bearing — `bxcoloremoji.sty` L1373 recovers
+  the value with the delimited `\def\bxce@do#1"#2\relax`, so with no `"` the
+  argument scan runs away and swallows the `\fi\fi` of the enclosing
+  `\AtEndOfPackage{…\@whilenum…}` loop (L1366-1386). Those `\fi`s then executed
+  against an empty if-stack **from a macro body — hence the `at Anonymous String`
+  locator**, which is the tell that separates this from a source-level `\fi`.
+  Fixed faithfully per `TeX_Debugging.pool.ltxml` L166-168 (`\char` + `"` +
+  decimal). Measured, release + dumps, `--preload=ar5iv.sty`: **1002 -> 1-10
+  errors on all 17, zero `fi`, no fatal**; same-host Perl was 1-102 with no `fi`,
+  so post-fix Rust is at or below Perl on every witness. (Both caps must be named
+  or the deltas mislead: our 1002 is the tikz-raised 1000 cap, and Perl's lone
+  102 — 2606.11290 — is Perl's own `MAX_ERRORS`=100, so that one Perl total is
+  >=100 and unknown.) PR #426 fixed none of them (all 17 still reproduced at
+  `fc56b4d081`, which *is* #426). Guard `meaning_chardef`
+  (`latexml_oxide/tests/expansion/`). Perl's own two deviations from `tex.web`
+  L22897-22899 here (decimal not hex; `\char` for `\mathchardef`) are
+  deliberately inherited — recorded as `KNOWN_PERL_ERRORS` #65, which also warns
+  why Rust's populated `mathglyph` must NOT be used to revive the `\mathchar`
+  arm.
+  **Method note — first-error bucketing UNDER-counted this cluster.** Exactly 18
+  papers in 2605+2606 (of 60,513) ship `bxcoloremoji.sty`; 17 surfaced as
+  `unexpected:fi`, and the 18th, **2605.14271**, bucketed elsewhere because its
+  *first* error was `undefined:\SetTitleBoxVerticalShift` — yet it carried the
+  same two `fi` errors, was a real `Status:conversion:3`, and went **1002 -> 12**
+  (Perl 42) on the same fix. So a first-error histogram is a lower bound on a
+  cause's reach, not a census: confirm membership by the mechanism (here, "ships
+  the package"), then re-measure.
+  Second method note, the counterpart trap: a *heuristic* main-file pick
+  (largest `.tex` containing `\documentclass`) chose `macro.tex` for that paper
+  and manufactured a plausible-but-wrong 103 -> 1. Always take the main file
+  from cortex's own `Processing content` line.
+  Third: this worktree had **no dumps**, so the first sweeps ran in DEGRADED
+  raw-load mode. The tell was an identical error count (1003) across 17
+  *different* papers — a same-number-everywhere result is an environment
+  artifact until proven otherwise. `tools/make_formats.sh`, then re-measure.
+
+- **2026-07-27 (later still) — spconf.sty's `keywords` and `\twoauthors` were
   unbound.** `Error:undefined:{keywords}` was the **single largest `undefined`
   what** in the sandbox corpora — **94 tasks in sandbox-arxiv-2605, 49 in
   sandbox-arxiv-2606**; 142 of those 143 papers ship a byte-identical

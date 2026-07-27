@@ -126,7 +126,33 @@ LoadDefinitions!({
           meaning.push_str(&text);
         },
         Stored::Register(register) => {
-          meaning = register.get_address().to_string();
+          // Perl dispatches on the *concrete* class here. A CharDef is a
+          // subclass of Register, but `ref $definition` yields
+          // `...::Definition::CharDef`, which misses the `/register$/` arm and
+          // lands on the `/chardef$/` one. We store both as `Stored::Register`,
+          // discriminated by `register_type`, so test the chardef case first.
+          // Perl: Engine/TeX_Debugging.pool.ltxml L166-168.
+          if matches!(register.register_type, RegisterType::CharDef) {
+            // Perl reads `($$definition{mathglyph} ? '\mathchar' : '\char')`,
+            // but `Core/Definition/CharDef.pm` L32-35 blesses only
+            // cs/parameters/mode/value/encoding/registerType/readonly/locator —
+            // no `mathglyph` key is ever set on a CharDef, so Perl's ternary
+            // always yields `\char`, including for `\mathchardef`. Our
+            // `Register` *does* carry a decoded `mathglyph`, so branching on it
+            // would silently diverge from Perl; emit `\char` unconditionally.
+            let value = register
+              .value
+              .clone()
+              .map_or(0, NumericOps::value_of);
+            // The literal `"` is load-bearing: packages recover the character
+            // value by splitting \meaning on it with a delimited argument
+            // (bxcoloremoji.sty's `\def\bxce@do#1"#2\relax`). Without it the
+            // scan runs away and swallows the enclosing \fi tokens — witnesses
+            // arXiv 2605.03971, 2606.06712 (a 1000-error `unexpected:fi` flood).
+            meaning = format!("\\char\"{value}");
+          } else {
+            meaning = register.get_address().to_string();
+          }
         },
         Stored::Expandable(expandable) => {
           // short-circuit some troublesome discrepancies with TeX, which end up macros on our end,

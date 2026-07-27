@@ -2742,3 +2742,57 @@ Candidate to upstream, though not as a straight port: Perl has no dump to use as
 the membership oracle, so the upstream-shaped fix is to extend
 `TeX.pool.ltxml`'s list with at least `IfFileExists InputIfFileExists
 PassOptionsToClass providecommand`.
+
+---
+
+## 65. `\meaning` of a `\chardef` token prints the value in DECIMAL, and says `\char` for `\mathchardef`
+
+**Perl source:** `LaTeXML/Engine/TeX_Debugging.pool.ltxml` lines 166-168
+
+```perl
+elsif ($type =~ /chardef$/i) {    # from \chardef or \mathchardef
+  my $prefix = ($$definition{mathglyph} ? '\mathchar' : '\char');
+  $meaning = $prefix . '"' . $definition->valueOf->valueOf; }
+```
+
+**Symptom:** two deviations from real TeX, both benign in isolation but wrong
+for packages that parse `\meaning` to recover a character code.
+
+1. **Decimal, not hex.** `tex.web` L22897-22899 prints the value with
+   `print_hex`, i.e. `"` followed by *uppercase hexadecimal*. Perl interpolates
+   `valueOf->valueOf`, a Perl integer, so it renders decimal.
+2. **`\char` for a `\mathchardef`.** `tex.web` L22899 prints `\mathchar` for the
+   `math_given` command code. Perl's ternary keys off `$$definition{mathglyph}`,
+   but `Core/Definition/CharDef.pm` L32-35 blesses only
+   `cs/parameters/mode/value/encoding/registerType/readonly/locator` — no
+   `mathglyph` key is ever set on a CharDef — so the `\mathchar` arm is
+   unreachable and every chardef reports `\char`.
+
+**Minimal example:**
+```tex
+\newcount\mycnt  \mycnt="41
+\chardef\chA\mycnt
+\mathchardef\mcA="0141
+\meaning\chA   % TeX: \char"41      Perl/Rust: \char"65
+\meaning\mcA   % TeX: \mathchar"141 Perl/Rust: \char"321
+```
+
+**Real-world consequence:** `bxcoloremoji.sty` L1366-1386 builds emoji tag
+codepoints as `E00` concatenated with the `\meaning` tail, expecting hex — so
+`@A` resolves to `E0065` instead of `E0041` (a different tag character). Only
+the rarely used `@!`..`@~` tag range is affected; nothing errors.
+
+**Kept as-is in Rust** — deliberately. `latexml_engine/src/tex_debugging.rs`
+ports Perl exactly (`\char` + decimal, unconditionally), because `\meaning`
+output feeds goldens copied from Perl and every corpus baseline; switching to
+hex is a behaviour change with corpus-wide blast radius, not a local fix. The
+Rust `Register` *does* carry a decoded `mathglyph`, so the `\mathchar` arm could
+be revived at any time — that is the divergence the comment at the fix site
+warns against taking accidentally.
+
+Note this entry is about the *format* only. The Rust port separately had no
+chardef arm at all and returned the internal class name `Register`, dropping the
+`"` that packages split on; that was a Rust-only defect, fixed with guard
+`meaning_chardef` (`latexml_oxide/tests/expansion/meaning_chardef.{tex,xml}`).
+Candidate to upstream: both deviations are one-line fixes (`sprintf('%X')` and
+threading the math flag), but they change observable `\meaning` output.
