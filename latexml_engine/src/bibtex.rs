@@ -315,8 +315,78 @@ const BIB_DATA_CARET: &str = "\\textasciicircum{}";
 ///   `\^{}`; a control WORD is copied whole, so `\textasciicircum` survives. The
 ///   tricky case falls out of the same rule: in `\\&` the `\\` is consumed as
 ///   one pair, leaving a genuinely bare `&` that IS escaped.
+///
+/// An UNMATCHED `$` is data too, and gets the same treatment — see
+/// [`demote_unmatched_dollars`].
 fn escape_bib_data_specials(value: &str) -> String {
+  // Pass 1 measures the `$` toggles; pass 2 emits, demoting the ones that
+  // cannot be math delimiters. Running the same scanner twice, rather than
+  // writing a second one, is what keeps the (subtle) skip rules in one place.
+  let toggles = scan_bib_data_specials(value, &[]).1;
+  let demote = demote_unmatched_dollars(&toggles);
+  scan_bib_data_specials(value, &demote).0
+}
+
+/// A `$` that never finds its partner cannot be a math shift — it is a currency
+/// sign the author typed, and `\$` is what a careful `.bst` would have written.
+///
+/// Without this, one stray `$` opens an inline-math group that swallows the rest
+/// of the entry AND every entry after it: the `.bib` is one digestion, so the
+/// leak crosses `\end{bib@entry}` and every following element lands inside
+/// `<ltx:XMath>` — `<ltx:bib-organization> isn't allowed in <ltx:XMath>`, ~100
+/// times, tripping the 100-error cap and taking the document Fatal. Witness
+/// 2605.00166 (`annote = {... costs ... of the order of $10 million ...}`, a
+/// literal currency dollar): 0 errors before, 103 and a Fatal after.
+///
+/// SURPASS-PERL, and deliberately: same-host Perl cascades identically here
+/// (`latexmlc` on 2605.00166 — 102 errors, `Fatal:too_many_errors:100`, rc=1),
+/// because `\bibentry@create` interpolates the field raw into a fresh Mouth
+/// (`BibTeX.pool.ltxml` L155-166) with no escaping of any kind. Perl only
+/// balances `$` in `\bib@@title`, where it raises `expected:$` and DELETES the
+/// stray (L324-330) — so upstream already agrees an unmatched `$` is not math;
+/// it just applies that judgement to one field and drops the character instead
+/// of keeping it. Nothing is suppressed here: this removes the CAUSE of the
+/// cascade, so the ~100 `malformed:` errors are gone because the entry is now
+/// well-formed, not because they stopped being reported. It costs no fidelity
+/// against `pdflatex` either — a real `.bst` never emits `annote`, so the
+/// character only reaches a tokenizer because we read the `.bib` directly.
+/// OXIDIZED_DESIGN #79.
+///
+/// `toggles[i]` says whether the i-th `$` toggle is immediately followed by an
+/// ASCII digit. With pure toggling an even count is always balanced, so only an
+/// odd count has an unmatched member. Which one to demote is a judgement call,
+/// and "followed by a digit" is the tell that settles the common cases:
+///
+/// * `of the order of $10 million` — the lone toggle is currency. Demote it.
+/// * `$x$ costs $10` — demoting the digit one leaves `$x$` intact as math.
+/// * `costs $10 and $x$` — likewise, and note the *last* toggle would have been
+///   the wrong pick here.
+/// * `$1 and $2 and $3` — all three are currency; demoting all three balances.
+/// * No digit anywhere: fall back to the last toggle, which is the unmatched one
+///   under pure toggling.
+fn demote_unmatched_dollars(toggles: &[bool]) -> Vec<usize> {
+  if toggles.len().is_multiple_of(2) {
+    return Vec::new(); // balanced — every `$` has a partner
+  }
+  let mut demote: Vec<usize> = (0..toggles.len()).filter(|&i| toggles[i]).collect();
+  // Still odd (no digit tell, or an even number of them): the trailing toggle
+  // is the one left without a partner.
+  if !(toggles.len() - demote.len()).is_multiple_of(2)
+    && let Some(last) = (0..toggles.len()).rev().find(|i| !demote.contains(i))
+  {
+    demote.push(last);
+  }
+  demote
+}
+
+/// The shared scanner behind [`escape_bib_data_specials`].
+///
+/// Returns the escaped text plus, per `$`-toggle in order, whether it is
+/// immediately followed by an ASCII digit. Toggles whose ordinal is in `demote`
+/// are emitted as the literal `\$` and do NOT flip math mode.
+fn scan_bib_data_specials(value: &str, demote: &[usize]) -> (String, Vec<bool>) {
   let mut out = String::with_capacity(value.len() + 8);
+  let mut toggles: Vec<bool> = Vec::new();
   let mut chars = value.chars().peekable();
   let mut in_math = false;
   while let Some(c) = chars.next() {
@@ -358,13 +428,24 @@ fn escape_bib_data_specials(value: &str) -> String {
         }
       },
       '$' => {
-        out.push('$');
         // `$$` is one display delimiter, not two toggles.
-        if chars.peek() == Some(&'$') {
+        let doubled = chars.peek() == Some(&'$');
+        if doubled {
           chars.next();
-          out.push('$');
         }
-        in_math = !in_math;
+        let ordinal = toggles.len();
+        toggles.push(chars.peek().is_some_and(char::is_ascii_digit));
+        if demote.contains(&ordinal) {
+          // Data, not a math shift: emit the character and stay in whatever
+          // mode we were in.
+          out.push_str(if doubled { "\\$\\$" } else { "\\$" });
+        } else {
+          out.push('$');
+          if doubled {
+            out.push('$');
+          }
+          in_math = !in_math;
+        }
       },
       // Before the generic arm, and deliberately: `\^` is the circumflex
       // accent, so the generic `\` + character escape would render `^o` as "ô".
@@ -377,7 +458,7 @@ fn escape_bib_data_specials(value: &str) -> String {
       _ => out.push(c),
     }
   }
-  out
+  (out, toggles)
 }
 
 /// Control words that read their own next argument as DATA, so the escaper must
@@ -2772,6 +2853,86 @@ mod tests {
     assert_eq!(
       escape_bib_data_specials(r"open \[x^2\] then y^3"),
       r"open \[x^2\] then y\textasciicircum{}3"
+    );
+  }
+
+  // --- unmatched `$` is currency, not a math shift (OXIDIZED_DESIGN #79) ----
+  //
+  // One stray `$` used to open an inline-math group that never closed, and
+  // since a `.bib` is digested as ONE unit the leak crossed `\end{bib@entry}`
+  // and swallowed every following entry: ~100 `isn't allowed in <ltx:XMath>`,
+  // the 100-error cap, and a Fatal. Witness 2605.00166 (0 -> 103 errors).
+
+  /// A balanced field must keep behaving exactly as before — this is the
+  /// regression risk of the whole change.
+  #[test]
+  fn escape_specials_balanced_math_is_untouched() {
+    assert_eq!(
+      escape_bib_data_specials("Bounds on $x_1+x_2$ for AT1G_v2"),
+      r"Bounds on $x_1+x_2$ for AT1G\_v2"
+    );
+    assert_eq!(
+      escape_bib_data_specials("display $$a_1$$ then b_2"),
+      r"display $$a_1$$ then b\_2"
+    );
+    // Four toggles, all paired.
+    assert_eq!(
+      escape_bib_data_specials("$X$-band and $Y$-band"),
+      "$X$-band and $Y$-band"
+    );
+  }
+
+  /// The witness: a lone currency dollar in an `annote`.
+  #[test]
+  fn escape_specials_lone_dollar_is_currency_not_math() {
+    assert_eq!(
+      escape_bib_data_specials("costs of the order of $10 million."),
+      r"costs of the order of \$10 million."
+    );
+    // …and the escaped form stays escaped (idempotency).
+    assert_eq!(
+      escape_bib_data_specials(r"costs of the order of \$10 million."),
+      r"costs of the order of \$10 million."
+    );
+  }
+
+  /// With an odd count, the digit tell picks the currency dollar and leaves a
+  /// genuine math span alone — in BOTH orders, which is why "demote the last
+  /// toggle" alone would be wrong.
+  #[test]
+  fn escape_specials_digit_dollar_is_preferred_over_the_last() {
+    assert_eq!(escape_bib_data_specials("$x$ costs $10"), r"$x$ costs \$10");
+    assert_eq!(
+      escape_bib_data_specials("costs $10 and $x$"),
+      r"costs \$10 and $x$"
+    );
+  }
+
+  #[test]
+  fn escape_specials_all_currency_dollars_demote() {
+    assert_eq!(
+      escape_bib_data_specials("$1 and $2 and $3"),
+      r"\$1 and \$2 and \$3"
+    );
+  }
+
+  /// No digit anywhere: the trailing toggle is the one left without a partner.
+  #[test]
+  fn escape_specials_unmatched_dollar_without_a_digit_falls_back_to_the_last() {
+    assert_eq!(escape_bib_data_specials("a $ b"), r"a \$ b");
+    assert_eq!(
+      escape_bib_data_specials("$x$ and a stray $ here"),
+      r"$x$ and a stray \$ here"
+    );
+  }
+
+  /// Demoting must not strand the `_`/`^` rule: text after the demoted `$` is
+  /// OUT of math, so its scripting characters are data again.
+  #[test]
+  fn escape_specials_demoted_dollar_leaves_following_text_out_of_math() {
+    assert_eq!(
+      escape_bib_data_specials("cost $10 for x_1"),
+      r"cost \$10 for x\_1"
     );
   }
 

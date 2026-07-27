@@ -1,0 +1,45 @@
+% An UNMATCHED `$` in a .bib field is a currency sign, not a math shift.
+% OXIDIZED_DESIGN #79. Witness 2605.00166 (`annote = {... of the order of
+% $10 million ...}`): 0 errors before the raw .bib became a real conversion,
+% 103 errors and a Fatal after, because the stray `$` opened an inline-math
+% group that never closed and — a .bib being ONE digestion — swallowed every
+% following entry into <ltx:XMath>.
+%
+% Entry order is load-bearing: `aftermath` sits LAST so that it is the canary
+% for containment. If a stray `$` ever leaks again, it is the first entry to
+% disappear.
+
+@article{currency,
+  author = {Okonkwo, A.},
+  title = {Klystron programme costs of the order of $10 million},
+  journal = {Accelerator Review},
+  year = {2019}
+}
+
+@article{mathandcurrency,
+  author = {Lindqvist, B.},
+  title = {Bounds on $x_1+x_2$ for repairs costing $8 each},
+  journal = {Journal of Estimates},
+  year = {2020}
+}
+
+@article{straynodigit,
+  author = {Diallo, C.},
+  title = {A stray $ shift with no amount after it},
+  journal = {Typesetting Notes},
+  year = {2021}
+}
+
+@article{balancedmath,
+  author = {Park, D.},
+  title = {Genuine math $X$-band and $y^2$ survive untouched},
+  journal = {Physics Letters},
+  year = {2022}
+}
+
+@article{aftermath,
+  author = {Raghavan, E.},
+  title = {The containment canary},
+  journal = {Last Entry Quarterly},
+  year = {2023}
+}
