@@ -59,6 +59,37 @@ explicit rather than fixing symptoms:**
      tricky case. Mixed conventions inside one file are real: witness
      `booktitle = {... Medical Measurements \&amp; Applications ...}`.
 
+#### The two treatments, and which mechanism belongs to each (settled 2026-07-26)
+
+An earlier draft of this section proposed choosing ONE seam per character by
+"blast radius". That was wrong, and the correction is worth keeping because it
+is the whole design: **both treatments apply, at different points.** The real
+`pdflatex -> bibtex -> pdflatex` dynamic handles these characters twice, and
+collapsing the pipeline collapsed both handlings into one.
+
+| | treatment | what it does | mechanism |
+|---|---|---|---|
+| **1** | reading the `.bib` — *be `bibtex`* | field bytes are inert data: `%` is not a comment, `&` not an alignment tab, `#` not a parameter, `_` not a subscript. Only braces and the entry/field delimiters are structural. **The text is not altered** — the stored value keeps its exact bytes. | a per-Mouth opt-in property on the entry mouth, plus a companion (`tokenize_bib_literal`) for handlers that re-read the raw field |
+| **2** | synthesizing the `.bbl` and digesting it — *be `pdflatex` pass 2* | the content must now be valid TeX, and we are the ones writing the `.bbl`, so we escape what the author plainly meant literally | `escape_bib_data_specials` at the data→TeX boundary: math spans skipped, idempotent |
+
+**The corollary that makes the exclusion list principled.** A handler that
+consumes the field's characters *itself*, under its own catcode regime — `url`'s
+`Semiverbatim` href, `doi` — is still in **treatment 1, still on data**. It must
+receive the *unescaped* value. Escaping there is what would plant a literal
+`\%` inside a URL. `reads_field_raw` / `bib_field_source` implement this; that
+is their justification, not a workaround for a symptom.
+
+**Treatment 2 has three seams, not one.** `\ProcessBibTeXEntry`'s entry line is
+the obvious one; `\bib@@title` and `\bib@@pages` both **re-read the RAW field**
+rather than the value handed to them, so escaping only the entry line silently
+misses every title. Measured: fixing only the mouth took witness `2605.02131`
+from 28 errors to **37**. Any change here must cover all three, plus the
+name-, date- and MR/Zbl-assembly sites that share that path.
+
+**Treatment-1 changes must stay opt-in per Mouth, never a State catcode.** A
+State catcode is inherited by a `.sty` raw-load triggered from inside a field
+handler, where `%` must still be a comment.
+
 ### Why the re-port is the real fix: eager tokenization defeats parameter types (measured 2026-07-26)
 
 The 2026-07-26 sandbox rerun quantified what the simplified parser costs. In
