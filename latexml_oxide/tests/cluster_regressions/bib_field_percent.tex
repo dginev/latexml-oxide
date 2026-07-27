@@ -1,0 +1,14 @@
+% Driver for `bib_field_percent.bib`: a `%` inside a `.bib` field value must be
+% an ordinary character, not a TeX comment. See the `.bib` header and
+% OXIDIZED_DESIGN #74.
+%
+% `hyperref` is loaded because witness 2605.02131 loads it — the point of the
+% `percenthref` entry is a percent-encoded URL reaching a DEFINED `\href`, not
+% an undefined-macro diagnostic.
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+See \cite{percentdoi,percenthref,percentwithmarkup,survivor}.
+\bibliographystyle{plain}
+\bibliography{bib_field_percent}
+\end{document}

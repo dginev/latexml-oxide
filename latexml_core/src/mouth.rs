@@ -83,6 +83,13 @@ pub struct Mouth {
   /// floor and cheaper than a per-read flag check.
   last_token_start:       (usize, usize),
   foodtype:               FoodType,
+  /// Read `%` as an ordinary character rather than a comment, for this
+  /// mouth only. Set by `with_percent_as_other()`; see that method for the
+  /// BibTeX rationale. Deliberately a per-Mouth field rather than a State
+  /// catcode assignment: a nested mouth (a `.sty` raw-load triggered from
+  /// inside the text) is a separate object and keeps `%` as a comment,
+  /// which a State-level assignment could not guarantee.
+  percent_is_other:       bool,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
@@ -129,6 +136,7 @@ impl Default for Mouth {
       shortsource:            s!("String"),
       // handle : None,
       foodtype:               FoodType::File,
+      percent_is_other:       false,
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
@@ -283,6 +291,30 @@ impl Mouth {
     };
     mouth.open(text)?;
     Ok(mouth)
+  }
+
+  /// Read `%` as an ordinary character (catcode 12) instead of a comment,
+  /// for the whole life of this mouth.
+  ///
+  /// BibTeX's lexer has **no comment syntax inside an entry** — `%` is only
+  /// significant in the junk BETWEEN entries (`Pre::BibTeX::skipJunk`), so a
+  /// field value it hands back is a string in which `%` is an ordinary
+  /// character. When such a value is re-injected as TeX source (BibTeX.pool's
+  /// `\bibentry@create`), the default catcode 14 makes it comment out the rest
+  /// of its line — the field's own closing brace included — and the entry's
+  /// group never closes. Reading the injected text with `%` neutralized is what
+  /// preserves the value BibTeX actually parsed.
+  ///
+  /// A `\catcode` in the injected text cannot do this job: the catcode would
+  /// still be a State assignment, so a raw `.sty` opened from inside a field
+  /// handler would inherit it. Scoping to the Mouth keeps the rule attached to
+  /// the *text that BibTeX lexed*, which is exactly where it belongs.
+  ///
+  /// Only comment-ness is removed: a `%` that has been given some other catcode
+  /// (LETTER, say) keeps it.
+  pub fn with_percent_as_other(mut self) -> Self {
+    self.percent_is_other = true;
+    self
   }
 
   pub fn get_source(&self) -> &str { &self.source }
@@ -611,7 +643,7 @@ impl Mouth {
     self.colno += 1;
     if let Some(ch) = ch_opt {
       let mut ch = *ch;
-      let mut cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+      let mut cc = self.catcode_of(ch);
       // Possible convert ^^x
       // Perl: (cc == CC_SUPER) && (colno + 1 < nchars) && (ch == chars[colno])
       if cc == Catcode::SUPER
@@ -647,11 +679,22 @@ impl Mouth {
           self.splice(self.colno - 1..self.colno + 2, &[ch]);
           self.nchars -= 2;
         }
-        cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+        cc = self.catcode_of(ch);
       }
       Some((ch, cc))
     } else {
       None
+    }
+  }
+
+  /// The catcode this mouth reads `ch` with: the State's, except that a
+  /// `with_percent_as_other()` mouth downgrades a COMMENT `%` to OTHER.
+  fn catcode_of(&self, ch: char) -> Catcode {
+    let cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+    if self.percent_is_other && ch == '%' && cc == Catcode::COMMENT {
+      Catcode::OTHER
+    } else {
+      cc
     }
   }
 
@@ -1113,6 +1156,29 @@ pub fn tokenize(text: &str) -> Tokens {
   use_main_state();
   result
 }
+/// Tokenize a string under the standard catcode table, reading `%` as an
+/// ordinary character rather than a comment.
+///
+/// For text that came out of a lexer with no comment syntax of its own — a
+/// BibTeX field value, whose `%` is data (see
+/// [`Mouth::with_percent_as_other`]). Plain [`tokenize`] would let that `%`
+/// comment out the rest of the string, which for a `.bib` field means losing
+/// its closing brace and leaving whatever it opened unclosed
+/// (`OXIDIZED_DESIGN #74`).
+pub fn tokenize_percent_literal(text: &str) -> Tokens {
+  // special case! empty input is empty Tokens
+  if text.is_empty() {
+    return NO_TOKENS;
+  }
+  use_std_state();
+  let result = Mouth::new(text, None)
+    .unwrap()
+    .with_percent_as_other()
+    .read_tokens();
+  use_main_state();
+  result
+}
+
 /// Tokenize a string under the **style-file** catcode table — Perl
 /// `Package.pm:TokenizeInternal` L1026-1030.
 ///

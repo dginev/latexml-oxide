@@ -1,0 +1,76 @@
+% A `%` inside a BibTeX field value is DATA, not a comment.
+%
+% BibTeX's lexer has no comment syntax inside an entry — `%` is only significant
+% in the junk BETWEEN entries — so `Pre::BibTeX` hands the value back with the
+% `%` in it. LaTeXML then re-injects that value as TeX source, where catcode 14
+% makes it comment out the rest of its LINE. The field's own closing brace goes
+% with it, the entry's group never closes, and every following entry nests
+% inside the unclosed element: `<ltx:bibentry> isn't allowed in <ltx:bibentry>`,
+% over and over. See OXIDIZED_DESIGN #74.
+%
+% The single-line layout is load-bearing, exactly as in `bib_abstract_percent.bib`:
+% the closing `}` must sit at the END of the line that carries the `%`. Wrap the
+% value across lines and the `%` only eats to its own line end, the brace on the
+% next line still closes the group, and the fixture stops reproducing. Do not
+% reflow these entries.
+%
+% Two DISTINCT code paths reach the tokenizer, and each needs its own entry:
+%
+%   `percentdoi`  — `doi` is dispatched through the per-entry Mouth that
+%                   `\ProcessBibTeXEntry` opens over the generated
+%                   `\csname bib@field@default@doi\endcsname{<value>}` line.
+%                   Copied from witness arXiv 2605.01196 `references.bib` L1984
+%                   (`doi={%doi:10.1017/jfm.2016.420},` — an author's own note to
+%                   self, left in an UNCITED entry). 28 errors, and the paper's
+%                   rendered output was otherwise byte-identical: the whole cost
+%                   was diagnostics for a reference nobody cites.
+%
+%   `percenthref` — `title` never reaches that Mouth. `\bib@@title` re-reads the
+%                   RAW field to re-case it and tokenizes the result itself, so
+%                   the mouth-level rule has to be repeated at that call. Copied
+%                   from witness arXiv 2605.02131 `IAS_GFM_References.bib` L104
+%                   (a percent-ENCODED URL in an `\href`). 28 errors; the two
+%                   linked titles were lost.
+%
+% pdflatex is the ground truth for both. `bibtex` keeps the `%` (its lexer has
+% no comment rule inside `{}`), and neither of these fields is in plain.bst's
+% ENTRY list, so `bibtex(1)` drops them when writing the `.bbl` and pdflatex
+% never sees them. Reading the `.bib` directly is what puts them in front of a
+% TeX tokenizer, so the reader has to use BibTeX's rules, not TeX's.
+%
+% `survivor` is the containment canary: before the fix it was swallowed into the
+% preceding entry's unclosed `<ltx:bibentry>`.
+
+@article{percentdoi,
+   author={Gagnon, D. A. and Arratia, P. E.},
+   year={2016},
+   journal={J. Fluid Mech.},
+   title={A doi field carrying a bare percent sign},
+   doi={%doi:10.1017/jfm.2016.420},
+}
+
+@techreport{percenthref,
+  author       = {{Midcontinent Independent System Operator}},
+  title        = {\href{https://cdn.example.org/20240723%20IPWG%20Item%2004b%20DRAFT.pdf}{A linked title behind a percent-encoded URL}},
+  institution  = {MISO},
+  year         = {2024},
+}
+
+% The boundary: neutralizing `%` must not flatten the field into plain text.
+% Markup, math and accents in the SAME field as the `%` all have to keep working
+% — `\emph` must still produce an element, `$x_1+x_2$` must still parse as math,
+% and `{\v S}` must still compose (PR #399; `bib_accent_space_form.bib` guards
+% the accent path on its own).
+@article{percentwithmarkup,
+   author = {{\v S}pakov, Oleg},
+   title = {Yield rose \emph{sharply} by 50% when $x_1+x_2$ held},
+   journal = {J. Bibliographies},
+   year = {2025}
+}
+
+@article{survivor,
+   author = {Bo Lindqvist},
+   title = {The entry after the runaway},
+   journal = {J. Bibliographies},
+   year = {2025}
+}

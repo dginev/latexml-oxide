@@ -795,4 +795,79 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
       "blank line: {name:?} lost — an empty sibling part ate a real one:\n{x}"
     );
   }
+
+/// A `%` inside a `.bib` field value is data, not a comment.
+///
+/// BibTeX's lexer has no comment syntax inside an entry — `Pre::BibTeX` only
+/// skips `%` in the junk BETWEEN entries — so the value it stores keeps its
+/// `%`. LaTeXML then re-injects that value as TeX source, where catcode 14
+/// makes it comment out the rest of its line, closing brace included: the
+/// entry's group never closes and every later entry nests inside the unclosed
+/// element (`<ltx:bibentry> isn't allowed in <ltx:bibentry>`).
+///
+/// Two paths, one per entry in the fixture: `doi` goes through the per-entry
+/// Mouth `\ProcessBibTeXEntry` opens, `title` does NOT — `\bib@@title` re-reads
+/// the raw field and tokenizes it itself. Fixing only the mouth left the
+/// `title` half broken (it went 28 → 37 errors on the witness, surfacing an
+/// `Extra \endcsname` once the value was no longer truncated), so both call
+/// sites read `%` as OTHER. OXIDIZED_DESIGN #74.
+///
+/// RED before the fix: witnesses 2605.01196 (`doi={%doi:10.1017/jfm.2016.420}`)
+/// and 2605.02131 (percent-encoded URL in a `title`'s `\href`) at **28 errors
+/// each**; same-host `latexmlc` 29 / 31 on the same inputs, so this is a shared
+/// bug and a surpass-Perl fix, not a Rust-only defect. Both are 0 after.
+/// `convert_and_post_clean`, not `convert_and_post`: the bibliography is built
+/// in POST, and a text-presence assertion still finds text INSIDE an unclosed
+/// element — the plain helper passes on a structurally broken document.
+#[test]
+fn bib_field_percent_is_an_ordinary_character() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_field_percent.tex");
+  // Containment: three entries, three bibitems. Before the fix the runaway
+  // swallowed its followers into its own unclosed <ltx:bibentry>.
+  assert_eq!(
+    x.matches("<bibitem").count(),
+    4,
+    "percent field: expected four bibitems, one per entry:\n{x}"
+  );
+  assert!(
+    x.contains("The entry after the runaway"),
+    "percent field: the canary entry after the runaway is missing:\n{x}"
+  );
+  // The `%` is DATA: it must survive into the output, not be dropped along
+  // with everything after it on its line.
+  // (the doi becomes an href, so its own `%`/`:` are URL-escaped there —
+  // `%25doi%3A` IS the surviving `%doi:`.)
+  assert!(
+    x.contains("dx.doi.org/%25doi%3A10.1017/jfm.2016.420"),
+    "percent field: the doi value was truncated at its percent sign:\n{x}"
+  );
+  assert!(
+    x.contains("https://cdn.example.org/20240723%20IPWG%20Item%2004b%20DRAFT.pdf"),
+    "percent field: the percent-encoded URL lost its escapes:\n{x}"
+  );
+  assert!(
+    x.contains("A linked title behind a percent-encoded URL"),
+    "percent field: the linked title did not render:\n{x}"
+  );
+  // Neutralizing `%` must not flatten the field: markup, math and accents in
+  // the SAME field still have to work (the boundary PR #399 established).
+  assert!(
+    x.contains("Yield rose <emph") && x.contains(">sharply</emph>"),
+    "percent field: \\emph in a percent-bearing title lost its markup:\n{x}"
+  );
+  assert!(
+    x.contains("tex=\"x_{1}+x_{2}\"") && x.contains("<XMApp>"),
+    "percent field: inline math in a percent-bearing title did not parse:\n{x}"
+  );
+  assert!(
+    x.contains("Špakov"),
+    "percent field: the space-form accent in the same entry stopped \
+     composing:\n{x}"
+  );
+  // No entry may nest inside another, and no element may be left open.
+  assert!(
+    !x.contains("<bibentry"),
+    "percent field: a raw <bibentry> survived post-processing — \
+     MakeBibliography could not read the entry:\n{x}"
+  );
 }
