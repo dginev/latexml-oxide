@@ -1,0 +1,9 @@
+\documentclass{article}
+\usepackage{silence}
+\WarningFilter{etex}{Extended allocation already in use}
+\WarningFilter[captions]{caption}{Unknown document class (or package)}
+\ActivateWarningFilters[captions]
+\begin{document}
+\DeactivateWarningFilters[captions]
+Body text.
+\end{document}
