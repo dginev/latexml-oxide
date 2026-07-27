@@ -464,6 +464,37 @@ output-neutrality validation — so it was **reverted, not shipped**. Recorded h
 candidate future consistency fix.
 Re-measure with the current binary first (sweep records go stale).
 
+## Cluster I — a `.bib` LIBRARY digested whole → timeout + memory budget — ✅ FIXED 2026-07-27
+
+**Symptom.** `never_completed_with_retries`: the fleet's 60 s lease expires, or
+`Fatal:Timeout:MemoryBudget` fires, on a paper whose *body* is unremarkable. The
+tell is a huge `.bib` next to a short document.
+
+**Cause.** A `.bib` is a library, not a document. Once a raw `.bib` became a real
+conversion (PR #396) instead of a string parse, every entry cost a full
+expand/digest/construct cycle — and Perl's `Pre/BibTeX.pm::toTeX` (L110-122),
+which we follow, emits `\ProcessBibTeXEntry` for **every** entry in the file.
+`anthology.bib` ships **80,576** ACL entries; the citing paper wants **9**.
+
+**Witness `2605.07796`** (`anthology.bib`, 43.6 MB): **112 s / 4.8 GB RSS**,
+memory budget tripped, **0 bibentries produced** (the paper loses its whole
+bibliography), conversion killed by the 60 s timeout → **10 s / 9 bibentries /
+0 errors**, matching what the pre-#396 run produced.
+
+**Breadth.** **59 of the 69** papers in the 2605/2606 sandbox
+`never_completed_with_retries` bucket share this shape (median **80,597** entries
+each); 10 of them had converted cleanly before #396. 9 of those 10 recover; the
+tenth, `2605.16752`, is an unrelated `Fatal:Timeout:TokenLimit` and stays a live
+witness.
+
+**Fix.** Digest only the CITED entries plus their `crossref`/`\cite` closure —
+what `bibtex(1)` has always done from the `.aux`'s `\citation` records. Design,
+faithfulness argument and guards: OXIDIZED_DESIGN **#80**.
+
+**Note for anyone re-measuring an older reliability row here:** an error or cost
+attributable to an *uncited* entry disappears with this change. Re-measure rather
+than reading a drop as a separate fix.
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.

@@ -2690,7 +2690,13 @@ protects itself by author discipline alone. That failed three times here, each
 found by a user-visible failure years later: `\bib@@names` (PR #399),
 `dcolumn`/`overpic` (PR #400), and `\bib@synthesize@mr` (issue 410 —
 `MRREVIEWER = {Dragomir \v{Z}. \Dbar okovi\'{c}}` → `undefined:\Dbarokovi`;
-witness 2605.11579, 5 welds over 36 bibitems, Perl 0).
+witness 2605.11579, 5 welds over 36 bibitems, Perl 0). *Re-measure that count
+before quoting it: OXIDIZED_DESIGN **#80** now digests only the CITED entries, so
+the `\Dbar` one (`KacNilpotentorbits`, `biblo.bib` L2059) is no longer read at
+all. Other accented `MRREVIEWER`s **are** in cited entries (`BM93`
+`{Fran\c cois\ Digne}`, `Nek03` `{Marcos\ Mari\~no}`, …), so the shape still
+occurs — only the tally moved. The guard fixture, not the paper, is what pins
+this.*
 
 **The rule.** All three mouth entry points — `mouth::tokenize`,
 `mouth::tokenize_internal`, `mouth::tokenize_bib_literal` — and therefore
@@ -2726,3 +2732,34 @@ NOT be `Into<TeXString>`, `&'static str` must be; plus a `compile_fail`
 doctest), `bib_name_space_form_accent_survives_reversion`,
 `bib_mr_reviewer_accent_survives_reversion`. Related: [[#70]] (the same
 "withhold the operation and the class disappears" shape).
+
+## #72 A bibliography sub-conversion's FATAL carries no fatal-severity message — it surfaces on the parent as a trailing `error bibliography/convert`
+
+**The trap.** Mining a corpus run by clustering on **fatal messages** buckets
+these documents as *"no fatal recorded"* — measured, **~80 documents** in one
+sweep. Their conversion really did die; the death simply has no `Fatal:` line to
+cluster on. Cluster on the **status code** (`Status:conversion:3`) or on the
+document's last `Error:` instead, and treat `bibliography/convert` as a
+fatal-class marker.
+
+**Why it is built this way, and why it is right.** `bib_session.rs` imports the
+**post-phase** diagnostic macros (`latexml_post::{Error, Info}`), which are plain
+reporters with none of the too-many-errors escalation the engine-side `Error!`
+carries. The recursive `.bib` session runs *inside* post-processing, so an
+inner-session failure must not itself become a document Fatal — and Perl's
+`convertBibliography` does the same, returning empty-handed
+(`MakeBibliography.pm` L240-242). The `Err` arm therefore emits
+`Error!("bibliography", "convert", "Recursive bibliography conversion failed: …")`
+and returns `None`.
+
+**What DOES cross the boundary** — do not confuse the two. Perl's `MergeStatus`
+(`MakeBibliography.pm` L237, `Common/Error.pm` L669-686) adds the inner session's
+tally to the outer document's, so a `.bib` that raises *errors* makes the
+document an error document. Rust gets that for free by sharing the live core
+State (the counters never left). It is only the *fatal severity* of a sub-session
+collapse that is deliberately downgraded.
+
+**Consequence for guards.** The ordinary `convert_and_post` test helper gates only
+the CORE stage, so a post-stage error flood passes every bibliography guard
+silently — 17 errors on one fixture, 203 on its witness, all green. Use
+`convert_and_post_clean` for anything in this path (see OXIDIZED_DESIGN #73).
