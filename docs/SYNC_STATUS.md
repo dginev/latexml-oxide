@@ -54,11 +54,11 @@ session of their own. Re-verify a row before planning on it (rule 1).
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
-| **R5** | Bibliography targets + MakeBibliography re-port | **re-port item 1 LANDED 2026-07-26**: a raw `.bib` is converted by the engine (recursive BibTeX session on the LIVE core state), the 727-line string route is deleted, and the eager-tokenization gap that cost 151 papers is closed at the root. Six witnesses re-measured vs same-host `latexmlc`: Rust ≤ Perl errors and ≥ Perl references on every one. Remaining: items 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER) and the missing-references target list | **items 2+targets** — the re-port itself is done | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
+| **R5** | Bibliography targets + MakeBibliography re-port | **re-port items 1 and 3 LANDED**: a raw `.bib` is converted by the engine (recursive BibTeX session on the LIVE core state), the 727-line string route is deleted, the eager-tokenization gap that cost 151 papers is closed at the root, and the 13-field digest whitelist is gone — the `\bib@field@default@*` name sets now match Perl exactly (45 each). The 2026-07-27 follow-ups closed the `.bib`-as-DATA family (divergences #74/#78/#79/**#80**). Remaining: item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER) and the missing-references target list | **item 2 + targets** — the re-port itself is done | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
-| **R9** | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | parked; several carry explicit "do NOT start". **`.bst` sharpened 2026-07-27** — the `\Dbar` finding shows `.bst` files *vendor macro definitions*, so this is not only a formatting gap | **family** | [`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md), and R9-BST below |
+| **R9** | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | parked; several carry explicit "do NOT start". The `.bst` row's "`.bst` files *vendor macro definitions*" premise was **RETRACTED 2026-07-27** (`alpha.bst` has zero `Dbar`; the macro is `mathscinet.sty`'s) — it survives on label style / sort order / **field selection**, and the prerequisite is a corpus measurement of the `.bib`+`.bst`-with-no-`.bbl` population | **family** | [`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md), and R9-BST below |
 | — | `\gls`/`\acrshort` in math mode (1705.10306) | **PARITY, blocked** on unrunnable Perl | — | do not chase; Open items |
 | — | Two-pass streaming split | **deferred by user decision 2026-07-06**; trigger = a <64 GB target appears | — | [`STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
 
@@ -82,20 +82,58 @@ session of their own. Re-verify a row before planning on it (rule 1).
   `\cprime`→`\tprime`, `\polhk`→`\k`). **Nothing auto-loads it**, and that is
   the decision: witness 2605.11579 never loads the package and uses
   `\bibliographystyle{alpha}`, whose `.bst` has zero `Dbar`, so its
-  `undefined:\Dbar` is **PARITY** with the author's own pdflatex build — it
-  stays at 1 error / 36 bibitems, now explained. `\Dbar` is package-only for a
-  second measured reason: 4 of 4,000 arXiv-2605 papers define it with
-  `\newcommand`, which an always-on definition silently shadows (LaTeXML keeps
-  the OLD meaning, no diagnostic). The `\cprime` family keeps an always-on stub
-  — a `.bib` carries `Gel\cprime fand` with no `\usepackage` — but moved out of
-  `latex_constructs.rs` (Perl-parity file) into `latex_constructs_rust_only.rs`
-  §5 with its witnesses 2508.13753 / 2508.20226 / 2509.07628, all three of which
-  load the package by name, refuting the old `cyracc.def` justification.
-  Divergence **#78**. Guards `bib_mathscinet_package_supplies_its_transliteration_glyphs`,
+  `undefined:\Dbar` is **PARITY** with the author's own pdflatex build. `\Dbar`
+  is package-only for a second measured reason: 4 of 4,000 arXiv-2605 papers
+  define it with `\newcommand`, which an always-on definition silently shadows
+  (LaTeXML keeps the OLD meaning, no diagnostic). The `\cprime` family moved out
+  of `latex_constructs.rs` (Perl-parity file) into
+  `latex_constructs_rust_only.rs` §5 with its witnesses 2508.13753 / 2508.20226
+  / 2509.07628, all three of which load the package by name, refuting the old
+  `cyracc.def` justification. Divergence **#78**. Guards
+  `bib_mathscinet_package_supplies_its_transliteration_glyphs`,
   `bib_mathscinet_macro_yields_to_the_authors_own_definition`,
   `escape_specials_caret_is_textasciicircum_not_an_accent`.
+  *Two claims in this bullet were overturned within the day — see the next one.
+  The `\cprime` stub is **deleted**, not merely relocated; and 2605.11579 no
+  longer emits `undefined:\Dbar` (the reasoning stands, the witness went silent
+  because its `\Dbar` entry is uncited).*
 
-- **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #74).**
+- **2026-07-27 (later) — the `.bib`-as-DATA family closed, and a `.bib` library
+  is filtered to its CITED entries.** Five PRs, in dependency order.
+  **#413** — `TeXString`, so a flattened `Tokens` cannot reach the tokenizer
+  (543→536 `to_string()` sites, 6 weld-risk families → 0; WISDOM **#71**).
+  **#416 — divergence #80, the big one:** Perl `Pre/BibTeX.pm::toTeX` L110-122
+  emits `\ProcessBibTeXEntry` for *every* entry, which was free under the old
+  string parser and is a full expand/digest/construct cycle since #396.
+  `anthology.bib` = 80,576 ACL entries for 9 cited; witness **2605.07796** went
+  112 s / 4.8 GB / memory-budget-tripped / **0 bibentries** / fleet-killed →
+  **10 s / 9 bibentries / 0 errors**. Same shape in **59 of the 69** 2605/2606
+  `never_completed_with_retries` papers. Filtering is *more* faithful —
+  `bibtex(1)` has always read the `.aux`'s `\citation` records — and is closed
+  over `crossref` and inner `\cite`; every entry stays registered; `None` (=
+  digest all) covers `\nocite{*}` and a missing `BIBLABEL` record.
+  **#417** — the `.bib` `@preamble` already executes (Perl `toTeX` L118-122 →
+  `pre_bibtex::to_tex`); guard + docs only, no behaviour change.
+  **#418 — divergence #79:** an unmatched `$` in a field is currency, not a math
+  shift; 2605.00166 went 103 errors + Fatal → 0, and same-host Perl cascades
+  identically.
+  **#419** — the always-on `\cprime` stub is **deleted**; the family is
+  `mathscinet.sty` vocabulary and lives only in the binding. Its justification
+  (four papers regaining `undefined:\cprime`) collapsed because #416 removed the
+  trigger: three of the four only regressed on **uncited** entries. Current main,
+  `--includestyles`: 2605.00173/.00186/.00190 **0 errors**, 2605.11579 **0**
+  (its own `@preamble` covers 17 uses), 2605.00305 **1** — the only cost, and
+  PARITY (it cites `MR710121`, loads no `mathscinet`/`amsrefs`, and `plain.bst`
+  has zero `cprime`, so pdflatex fails too).
+  **Standing consequence — re-measure any bibliography error count recorded
+  before 2026-07-27.** An error raised only by an uncited entry now disappears
+  without the macro becoming available; that is also what removed 2605.11579's
+  `undefined:\Dbar` (its `KacNilpotentorbits` entry, `biblo.bib` L2059, is
+  uncited). Guards: `filter_digests_only_the_cited_entries` + 7 siblings
+  (`pre_bibtex.rs`), `bib_preamble_defines_macros_for_the_whole_bibliography`,
+  `bib_unmatched_dollar_does_not_leak_math` + 5
+  `escape_specials_*` unit tests.
+
 - **2026-07-26 — undefined CSes from packages with no binding: `silence.sty`,
   bundled `arxiv.sty`/`PRIMEarxiv.sty`.** Long-standing gaps, **not** a
   regression: Perl 0.8.8 has no binding for either and reproduces the identical
@@ -113,7 +151,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
   1→0, 4→1, 1→0, 1→0. Divergence #77. Guards `00_contrib::{silence_filters,
   arxiv_keywords, primearxiv_keywords}_test`, `106_arxiv_sty_defers_to_bundled`,
   `107_silence_keeps_diagnostics`.
-- **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #75).**
+- **2026-07-26 (later still) — a bare `&` in a `.bib` field is data (OXIDIZED_DESIGN #74).**
   Seven 2605 witnesses carried `Error:unexpected:&` from `publisher` / `journal`
   / `booktitle` / `author` / `copyright` ("Taylor & Francis"). Not a Rust-only
   defect: same-host `latexmlc` raised the identical per-`&` count on all six
@@ -190,6 +228,10 @@ session of their own. Re-verify a row before planning on it (rule 1).
   0 unparsed math. This file was compacted the same day — see the header.
 
 - `cargo test --tests`: **1696 passing / 94 targets, 0 failed, 0 ignored**
+  — **STALE COUNT, re-run before quoting.** It is a 2026-07-26 measurement and
+  the seven PRs #403…#419 landed after it, several adding guards
+  (`filter_*` ×8, `escape_specials_*` ×6, `bib_preamble_*`, `bib_mathscinet_*`,
+  `bib_unmatched_dollar_*`), so the true figure is higher.
   (2026-07-26, on `main` @ `e07548e6b3`, dev box with ImageMagick + ghostscript +
   poppler **and `mutool`** installed, so the vector-SVG branch really ran — both
   `test_vector_svg_*` report ok, not skipped). Two claims carried here for weeks
@@ -267,6 +309,15 @@ history now live in the dated session archives:
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail
 is exhausted) → bisect the doc to the trigger line → verify Perl with `--verbose`
 → fix the divergence. Random sweeps are low-yield.
+
+**Clustering trap — a bibliography sub-conversion's fatal has no fatal message.**
+It is deliberately downgraded to a trailing `Error:bibliography:convert` on the
+parent (`bib_session.rs` uses the post-phase reporters; Perl's
+`convertBibliography` returns empty-handed the same way,
+`MakeBibliography.pm` L240-242). So a sweep that clusters on **fatal messages**
+files those documents as "no fatal recorded" — measured **~80** in one run.
+Cluster on `Status:conversion:3` or the last `Error:` line. Mechanism and what
+DOES cross the boundary (`MergeStatus`): [`WISDOM.md`](parity/WISDOM.md) **#72**.
 
 **Cortex agentic API (reads open, no token):** `http://127.0.0.1:8000/api`.
 Recipe: `GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categories;
@@ -566,7 +617,11 @@ definitions*. **That claim was wrong and is retracted.** Checked afterwards:
   `\cdprime` and `\bud`;
 * **the witness does not load `mathscinet.sty`**, so real pdflatex on that source
   raises the same undefined control sequence. `undefined:\Dbar` there is
-  **PARITY**, not a defect — see R9-MSC below.
+  **PARITY**, not a defect — see R9-MSC below, which is now DONE. (The witness
+  stopped *emitting* that error on 2026-07-27 for an unrelated reason: divergence
+  **#80** digests only cited entries, and its `\Dbar` entry is uncited. The
+  parity reasoning is unchanged; the witness is just no longer a demonstration
+  of it.)
 
 **What survives the correction.** The row still stands, on its original and
 independently-true footing: we read `.bib` directly, never execute the `.bst`,
@@ -576,6 +631,13 @@ approximated by hand — OXIDIZED_DESIGN **#73** neutralizes `abstract`/`keyword
 `contents` precisely because no standard `.bst` declares them in its `ENTRY`
 list, which is a `.bst` fact we hard-coded rather than computed. A `.bst` we can
 execute is what would replace that guess with an answer.
+
+**One half of that shrank 2026-07-27.** *Entry* selection no longer needs a
+`.bst` at all: divergence **#80** takes the cited set from the document's own
+`BIBLABEL` records — the same information `bibtex(1)` reads out of the `.aux` —
+so which entries reach the `.bbl` is now computed, not guessed. What remains
+`.bst`-shaped is *field* selection (#73's hard-coded three), label style and sort
+order.
 
 **The lesson worth keeping** is about method, not `.bst`: the vendoring claim was
 recalled from memory and written into a merged doc without checking the witness's
@@ -616,25 +678,27 @@ step.
 decision — this row exists to stop the next `\Dbar` from being patched in
 isolation without the context above.
 
-### R9-MSC — `mathscinet.sty` binding — SMALL, unblocked
+### R9-MSC — `mathscinet.sty` binding — ✅ DONE 2026-07-27 (PRs #415 + #419)
 
-`mathscinet.sty` (amsrefs, v1.05) defines the transliteration glyphs that
-mathematics bibliographies use: `\Dbar` (Đ), `\cprime`, `\cdprime`, `\bud`.
-**Perl LaTeXML has `amsrefs.sty.ltxml` but no `mathscinet.sty.ltxml`**, and
-neither do we — so a document that legitimately loads the package still gets
-`undefined:` for all of them. A binding is the faithful fix and is small.
+Closed. `latexml_package/src/package/mathscinet_sty.rs` binds the AMS v1.05
+package (amsrefs bundle), and the `\cprime`/`\Cprime`/`\cdprime`/`\Cdprime`
+family that used to sit always-on in `latex_constructs.rs` — the LaTeX **kernel**
+file, which must track `latex_constructs.pool.ltxml` — was moved out and then
+**deleted**: it is package vocabulary, a paper gets it by loading the package (or
+`amsrefs`, `amsrefs.sty` L217) or via its own `.bib` `@preamble`. The three
+witnesses that opened this row all load the package by name (2508.13753 L7,
+2508.20226 L3, 2509.07628 L13), refuting the `cyracc.def` justification the old
+comment carried. Full record: divergence **#78**; the corpus tables and the
+retracted "the stub stays" verdict are in
+[`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md).
 
-Note what it does **not** fix: witness **2605.11579** does not load the package,
-so its `undefined:\Dbar` is correct and stays. Do not use that witness to
-measure this work.
-
-Related and unresolved: `\cprime`/`\Cprime`/`\cdprime`/`\Cdprime` are
-currently defined in `latex_constructs.rs:4859-4874` — the LaTeX **kernel** file,
-which is meant to track Perl's `latex_constructs.pool.ltxml` — with a comment
-citing `cyracc.def`. `mathscinet.sty` defines them too and is the likelier origin
-for bibliography usage. Whether they move into the binding or stay always-on
-(they appear at BBL stage with no package loaded — witnesses 2508.13753,
-2508.20226, 2509.07628) needs a decision backed by re-running those three.
+**The one thing to carry forward:** this row said "witness 2605.11579's
+`undefined:\Dbar` is correct and stays — do not use that witness to measure this
+work." The *reasoning* is still right (that paper loads no package and
+`alpha.bst` has zero `Dbar`, so pdflatex fails too) but the witness no longer
+**shows** the error: since divergence **#80** only cited entries are digested,
+and its `KacNilpotentorbits` entry (`biblo.bib` L2059) is uncited. Still do not
+measure with it — now because it is silent, not because it is parity.
 
 ### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup

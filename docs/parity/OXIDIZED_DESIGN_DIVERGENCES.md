@@ -3,6 +3,8 @@
 [← OXIDIZED_DESIGN.md](OXIDIZED_DESIGN.md) · Deliberate breaks with Perl behavior, numbered. Code comments reference these as `OXIDIZED_DESIGN #N`.
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
+>
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#81**.
 
 ---
 
@@ -2193,9 +2195,11 @@ It cannot mask a diagnostic for a correct document: a document that loads
 `url`/`hyperref` keeps its own definition — `input_definitions` early-returns on
 its `_loaded` flag and `\providecommand` defers.
 
-Guards: `06_cluster_regressions::bib_field_bbl_fallbacks_render_without_a_url_package`
+Guards: `06_cluster_bibliography::bib_field_bbl_fallbacks_render_without_a_url_package`
 (no url package) and `::bib_field_markup_survives_into_the_bibliography`
-(hyperref loaded — hyperref's `\url` must still win).
+(hyperref loaded — hyperref's `\url` must still win). *(Both moved out of
+`06_cluster_regressions` when PR #400 split the bibliography cluster into its own
+test file.)*
 
 ### 73. A `.bib` `abstract`/`keywords`/`contents` field is read verbatim, not digested
 
@@ -2403,9 +2407,10 @@ values with no backslash); `::bib_field_percent_is_an_ordinary_character`;
 `::bib_bare_ampersand_is_literal_data`;
 `::bib_bare_ampersand_leaves_live_markup_alone`;
 `::bib_escaped_amp_entity_decodes_to_one_ampersand`;
-`55_bibtex::runaway_field_costs_only_its_own_entry`; and seven
-`escape_bib_data_specials` unit tests in `bibtex.rs`, which isolate the `\\&`
-hazard that cannot live end-to-end (see below) and pin
+`55_bibtex::runaway_field_costs_only_its_own_entry`; and the `escape_specials_*`
+unit tests in `bibtex.rs` (seven when this entry landed, **13** today — #79 added
+the five unmatched-`$` cases), which isolate the `\\&` hazard that cannot live
+end-to-end (see below) and pin
 `escape_specials_caret_is_textasciicircum_not_an_accent`.
 
 **Measured**, `--release` before/after on the same host, TOTAL document errors:
@@ -2430,12 +2435,14 @@ hazard that cannot live end-to-end (see below) and pin
 
 **193 → 0.** Two residuals are unrelated to this cluster and were unchanged by
 it: 2605.00879's remaining error is `undefined:\mathsemicolon`, and 2605.11579
-(listed for the `_` cluster) has 5 errors before AND after with zero
+(listed for the `_` cluster) had 5 errors before AND after with zero
 `unexpected:_` in either — its apparent three were an artifact of measuring in
 the DEGRADED no-dump mode a fresh worktree starts in. Run
-`tools/make_formats.sh` before believing any error count. 2605.00833 is a
-RENDERING witness, not an error-count one: its `\&amp;` printed as "&amp;" and
-now prints "&".
+`tools/make_formats.sh` before believing any error count. (That 5 no longer
+reproduces: 2605.11579 is at **0** on current main, because #80 stopped digesting
+its uncited entries — a second reason to re-measure rather than quote.)
+2605.00833 is a RENDERING witness, not an error-count one: its `\&amp;` printed
+as "&amp;" and now prints "&".
 
 **Known not covered.** A literal `\\` in a title makes
 `\bib@field@default@title` open a nested `<ltx:bibitem>`
@@ -2515,6 +2522,17 @@ session that `MakeBibliography` drives during POST). Fixture
 `bib_field_blank_line.{bib,tex}` carries all three witness shapes: a blank line
 in `title`, in `author`, in a `note`-routed `Annote`, plus the `\\` note — 6
 errors RED, 0 GREEN.
+
+### 76. — RETIRED NUMBER, deliberately unused. Do NOT reuse it.
+
+Not a mistake and not a gap to fill. #76 briefly held "A `.bib` field's content is
+DATA — `_ & # %` are literal, not catcodes", whose first witness was the
+underscores in an `eprint` PDF URL. When the separate `%`-only and `&`-only
+entries were consolidated it was merged into **#74** — which adds `^`, the
+two-treatment framing, and the exclusion list — and the number was **retired
+rather than renumbered**, because divergence numbers are cited verbatim from
+`.rs` comments and renumbering silently invalidates every citation. Nothing in
+the tree cites `OXIDIZED_DESIGN #76`. Next free number: **#81**.
 
 ### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
 
@@ -2618,14 +2636,15 @@ supplies it either. `\Dbar` is therefore undefined in the author's own build:
 real pdflatex raises the same undefined control sequence. **The residual
 `undefined:\Dbar` is PARITY, not a defect**, and supplying the macro anyway would
 push our error count below what the author's toolchain produces — the one thing
-the canvas signal must never do. 2605.11579 stays at **1 error / 36 bibitems**,
-with that error now explained rather than outstanding.
+the canvas signal must never do. (That witness no longer *shows* the residual —
+see the measurement below — because its `\Dbar` entry is uncited, not because
+anything about this reasoning changed.)
 
-**Why a package and not an always-present kernel definition**, for `\Dbar`
-specifically. A format-chain definition runs before the document's preamble, and
-LaTeXML's `\newcommand` over an already-defined CS silently keeps the OLD meaning
-(no error, no warning), so an always-present vendor macro SHADOWS an author's
-own. Scanned 4,000 papers of arXiv 2605:
+**Why a package and not an always-present kernel definition.** A format-chain
+definition runs before the document's preamble, and LaTeXML's `\newcommand` over
+an already-defined CS silently keeps the OLD meaning (no error, no warning), so
+an always-present vendor macro SHADOWS an author's own. Scanned 4,000 papers of
+arXiv 2605:
 
 | macro | authors define it | with `\newcommand` (would be shadowed) | used-but-undefined |
 |---|---|---|---|
@@ -2640,51 +2659,78 @@ upstream `\ProvideTextCommand`/`\ProvideTextCommandDefault` deferral (kept as
 `mathscinet_sty.rs::provide`) yields to a name already taken. That is also what
 makes `\dbar` safe to bind here and nowhere else.
 
-**The `\cprime` family keeps an always-on stub as well, deliberately.** All three
-of its witnesses load the package by name — 2508.13753 L7, 2508.20226 L3,
-2509.07628 L13 — which corrects the `cyracc.def` / "no Cyrillic encoding
-otherwise loaded" justification the block used to carry. But the package is not
-the only way the family arrives: a `.bib` field carries `Gel\cprime fand` with no
-`\usepackage` behind it, and a MathSciNet export's `@preamble` may or may not
-define it. Removing the stub was measured to cost exactly that case
-(`bib_mr_reviewer_accent`'s `primerev` entry regains `undefined:\cprime`), and no
-author in the scan defines the family with `\newcommand`, so the stub shadows
-nobody. It moved out of `latex_constructs.rs` — which mirrors
-`latex_constructs.pool.ltxml` byte-for-byte and should hold no non-Perl
-definitions — into `latex_constructs_rust_only.rs` §5, the file that exists for
-exactly this, carrying its witnesses. `provide` in the binding then finds them
-already defined, the correct no-op. `\polhk`'s comment there claimed tipa.sty as
-its source; the real one is `mathscinet.sty` L111-113, corrected in place.
+Read the `\cprime` row correctly: **zero** authors define that family with
+`\newcommand`, so a stub for it would have shadowed nobody. Shadowing is the
+`\Dbar`/`\dbar` argument, not the `\cprime` one — the `\cprime` family is
+package-only because the errors that motivated a stub were manufactured by
+digesting uncited entries (below), and because vendor vocabulary belongs to the
+vendor's binding.
 
-*Re-measured 2026-07-27, and the "may or may not define it" is now a number.*
-The stub's redundancy was re-opened once `@preamble` execution was confirmed
-working end to end (it is Perl `Pre/BibTeX.pm::toTeX` L118-122, ported at
-`pre_bibtex::to_tex`, now guarded by
-`bib_preamble_defines_macros_for_the_whole_bibliography`) — a `.bib` that
-defines `\cprime` itself needs no stub. The corpus says the stub still earns its
-place: across the first 600 papers of arXiv 2605, **seven** use `\cprime` inside
-a `.bib` and **six carry no `@preamble` at all**. Deleting the four lines takes
-2605.00173/.00186/.00190/.00305 from 0 to 1 `undefined:\cprime` each, while
-2605.11579 — 17 uses, `@preamble`-covered — is unaffected either way. Three of
-those four are errors the real toolchain never produces, because `bibtex(1)`
-copies only *cited* entries into the `.bbl` and there the `\cprime`-bearing
-entry is uncited; we digest every entry, so the stub is what keeps that
-asymmetry from manufacturing a diagnostic. Per-paper table in
+**The `\cprime` family is package vocabulary too — there is NO always-on stub**
+(deleted 2026-07-27; the block it left behind in
+`latex_constructs_rust_only.rs` records why). All three of its witnesses load the
+package by name — 2508.13753 L7, 2508.20226 L3, 2509.07628 L13 — which corrects
+the `cyracc.def` / "no Cyrillic encoding otherwise loaded" justification the
+family used to carry. The stub briefly lived in `latex_constructs.rs`, then moved
+to `latex_constructs_rust_only.rs` §5 (the Perl-parity file mirrors
+`latex_constructs.pool.ltxml` byte-for-byte and must hold no non-Perl
+definitions), then went away entirely. `\polhk` stays behind in
+`latex_constructs.rs` as a fallback; its comment there claimed tipa.sty as its
+source, and the real one is `mathscinet.sty` L111-113, corrected in place.
+
+**Why the stub's justification collapsed.** It rested on four papers regaining
+`undefined:\cprime` without it (2605.00173/.00186/.00190/.00305). Three of the
+four were artifacts of a defect since fixed: we digested EVERY entry of a `.bib`
+library, so we met `\cprime` in entries `bibtex(1)` never copies into the `.bbl`.
+Since **divergence #80** digests only the CITED entries, that trigger is gone
+structurally rather than papered over — and a definition that is always live can
+shadow an author's own, the same hazard that kept `\Dbar` package-only from the
+start.
+
+**The rule, therefore.** `mathscinet.sty`'s vocabulary belongs to its binding. A
+paper gets it the way the real toolchain gives it: by loading `mathscinet` (or
+`amsrefs`, which `\RequirePackage{mathscinet}[2002/01/01]`s it at `amsrefs.sty`
+L217), or by carrying the definition in its own `.bib` `@preamble` — which
+executes, faithfully to Perl (`Pre/BibTeX.pm::toTeX` L118-122 →
+`pre_bibtex::to_tex`), guarded by
+`bib_preamble_defines_macros_for_the_whole_bibliography`.
+
+**Measured** on current main, `--includestyles`, idle box, serial — total
+document errors and `undefined:\cprime` count:
+
+| paper | errors | `undefined:\cprime` | why |
+|---|---|---|---|
+| 2605.00173 / .00186 / .00190 | 0 | 0 | the `\cprime`-bearing entry is **uncited** (2605.00173: `MR2562222`, `bibliography.bib` L885), so #80 never digests it |
+| 2605.00305 | 1 | 1 | **the only real cost, and it is honest.** It CITES `MR710121` (`mybib.bib` L26, `MRREVIEWER = {V.\ Z.\ Enol\cprime ski\u i}`), loads neither `mathscinet` nor `amsrefs`, ships no `@preamble`, and uses `\bibliographystyle{plain}` — `plain.bst` contains zero `cprime`. Real pdflatex fails there too |
+| 2605.11579 | 0 | 0 | its own `.bib` `@preamble` — 14 copies of `\def\cprime{$'$}`, `biblo.bib` L4768/L6910/… — covers all 17 uses |
+
+So the whole cost of package-only is one paper and one PARITY diagnostic. Earlier
+corpus framing, kept because it is expensive to re-derive: across the first 600
+papers of arXiv 2605, **seven** use `\cprime` inside a `.bib` and **six carry no
+`@preamble` at all**; per-paper table in
 [`BIBLIOGRAPHY_WORKLIST.md`](BIBLIOGRAPHY_WORKLIST.md).
 
-**Measured**, same host: 2605.11579 `--includestyles` **1 error / 36 bibitems**
-(the `\Dbar` parity residual); 2508.13753 **0 errors**, `Kondratʹev` composing;
+**Measured**, same host: 2508.13753 **0 errors**, `Kondratʹev` composing;
 2508.20226 **0 errors**; 2509.07628 `--includestyles` **0 errors**, `Drinfelʹ d`
 composing (its 6 bare-mode errors are an unloaded local `Latex-document.sty`,
-unrelated).
+unrelated). 2605.11579 measured **1 error / 36 bibitems** before #416 and **0
+errors** after: the `\Dbar` residual vanished not because the macro became
+available but because the entry carrying it (`KacNilpotentorbits`, `biblo.bib`
+L2059) is **uncited**, so #80 never digests it. The PARITY reasoning above is
+unchanged — a paper that CITES a `\Dbar` entry while loading no package still
+gets the diagnostic — but that case is now pinned by the guard fixture alone, not
+by this witness.
 
 Guards: `06_cluster_bibliography::bib_mathscinet_package_supplies_its_transliteration_glyphs`
 (a document that loads the package, exercising both body prose and a `.bib`
-`MRREVIEWER`; `\Dbar` is the discriminating assertion, since `\cprime` also has
-the stub beneath it) and
+`MRREVIEWER`; `\Dbar` was the discriminating assertion while `\cprime` had a stub
+beneath it — both are package-only now, so either discriminates) and
 `::bib_mathscinet_macro_yields_to_the_authors_own_definition` (a document that
 does not — RED under an always-on `\Dbar`, where the author's barred-D math
 renders `Đ`, and equally RED if the `.bib` session is made to auto-load).
+`bib_mr_reviewer_accent.tex`, whose `primerev` entry carries `Gel\cprime fand`,
+now loads the package: that fixture is about accent welds surviving reversion,
+not about macro availability.
 
 ### 79. An UNMATCHED `$` in a `.bib` field is data, not a math shift
 
@@ -2738,6 +2784,69 @@ Guards: `bibtex.rs::escape_specials_lone_dollar_is_currency_not_math`,
 `::escape_specials_all_currency_dollars_demote`,
 `::escape_specials_unmatched_dollar_without_a_digit_falls_back_to_the_last`,
 and `06_cluster_bibliography::bib_unmatched_dollar_does_not_leak_math`.
+
+### 80. A `.bib` library is digested down to the CITED entries
+
+**Perl behaviour.** `Pre/BibTeX.pm::toTeX` (L110-122) emits one
+`\ProcessBibTeXEntry{key}` per entry in the file, unconditionally, and the whole
+block is then digested. That was affordable while a raw `.bib` was read by a
+hand-rolled string parser; since it became a real conversion (PR #396) every
+entry costs a full expand/digest/construct cycle.
+
+**What that cost.** A `.bib` is a library, not a document: `anthology.bib` ships
+**80,576** ACL entries and the citing paper wants **9**. Witness **2605.07796**:
+112 s and 4.8 GB RSS, tripping the memory budget and producing **zero**
+bibentries — the paper loses its whole bibliography — with the fleet's 60 s
+timeout killing the conversion outright. The same shape covers **59 of the 69**
+papers in the 2605/2606 sandbox `never_completed_with_retries` bucket (median
+80,597 entries each); 10 of them had converted cleanly before #396.
+
+**Rust behaviour.** `pre_bibtex::to_tex` emits `\ProcessBibTeXEntry` only for the
+selected entries. The cited set is not guessed: `MakeBibliography` already holds
+it as the `BIBLABEL:<list>:<key>` ObjectDB records written during the *document*
+conversion, so it is complete before post-processing asks. It travels as
+`BibConversionRequest::wanted_keys` → `pre_bibtex::set_wanted_keys` (a
+thread-local the caller must `clear_wanted_keys` after use).
+
+**Why this is MORE faithful, not less.** `bibtex(1)` has always read the `.aux`'s
+`\citation` records and emitted only those entries, plus `crossref` targets, plus
+everything under `\nocite{*}`. Filtering here reproduces the real pipeline;
+digesting the library whole never did.
+
+**Selection is closed transitively** (`pre_bibtex::select_cited`) over both edges
+that can reach an uncited entry — `crossref`, BibTeX's own inheritance link, and
+a `\cite` made from inside an already-selected entry, which `getBibEntries`
+follows — so a filtered run keeps everything an unfiltered one kept.
+
+**Every entry is still REGISTERED** (`bibtex::register_entry`, Perl's
+`assignValue 'BIBENTRY@<lc-key>'` at L114-116). That is a map insert of
+already-parsed strings, and keeping it complete is what lets `crossref` and by-key
+lookup resolve against an entry nobody cited.
+
+**`None` means "digest everything"**, and is used for `\nocite{*}` and —
+deliberately — when no `BIBLABEL` record exists at all: an empty filter and absent
+citation data are indistinguishable, and dropping every entry on a missing record
+would be a silent, unrecoverable total loss.
+
+**Measured.** 2605.07796: 112 s / 0 bibentries / killed → **10 s / 9 bibentries /
+0 errors**, matching what the pre-#396 run produced. 9 of the 10 cleanly-converting
+regressions recover; the tenth (2605.16752) is an unrelated
+`Fatal:Timeout:TokenLimit`.
+
+**A knock-on that invalidates older measurements, and is expensive to
+rediscover.** An error raised only by an *uncited* entry now disappears without
+the macro becoming available. That is what took 2605.00173/.00186/.00190 off the
+`undefined:\cprime` list and what removed 2605.11579's `undefined:\Dbar` residual
+(its `KacNilpotentorbits` entry, `biblo.bib` L2059, is uncited) — see #78.
+**Re-measure any bibliography error count recorded before 2026-07-27** rather than
+reading a drop as a fix.
+
+Guards (`pre_bibtex.rs`): `filter_digests_only_the_cited_entries`,
+`filter_follows_crossref`, `filter_follows_a_cite_from_inside_an_entry`,
+`filter_still_registers_every_entry`,
+`filter_is_case_insensitive_like_the_registry`,
+`filter_tolerates_a_cited_key_with_no_entry`, `no_filter_digests_every_entry`,
+`cite_key_scanner_handles_the_cite_family`.
 
 ## Known Upstream Perl Issues (brief)
 
