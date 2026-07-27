@@ -2850,6 +2850,12 @@ LoadDefinitions!({
   // after_digest below). Witness: 15 wp4 papers like 2305.09030 ship
   // `\magnification=\magstep1` and previously failed with
   // `Error:undefined:\magnification` under the worker.
+  //
+  // `latex_kernel::autoload_latex_kernel` is a second route into the same
+  // state (LaTeX.pool loaded in a plain-TeX document), so the deferral is
+  // load-bearing there too. It cannot fire ON `\magnification` itself:
+  // latex.ltx does not define it, so it is absent from the kernel dump that
+  // the autoload's membership test consults — checked when that hook landed.
   Let!("\\@empty", "\\lx@empty");
   Let!("\\@ifundefined", "\\lx@ifundefined");
   //**********************************************************************

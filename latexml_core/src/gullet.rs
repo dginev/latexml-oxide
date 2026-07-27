@@ -997,6 +997,15 @@ pub fn read_x_token(
         },
         Outcome::Undefined => {
           if token.get_catcode() == Catcode::CS {
+            // The LaTeX format may not be loaded yet (a document may use a
+            // kernel CS before `\documentclass` — real LaTeX has no "before
+            // the kernel"). If this is a kernel CS, pull the format in and
+            // re-resolve rather than stubbing it as `<ltx:ERROR/>`. Fires at
+            // most once per session; see `binding::kernel_autoload`.
+            if crate::binding::kernel_autoload::try_autoload(&token) {
+              unread_one(token); // Retry, now that the kernel is in state.
+              continue;
+            }
             return Ok(Some(generate_error_stub(&token)?));
           } else {
             return Ok(Some(token));

@@ -193,6 +193,41 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
   Ok(count)
 }
 
+/// Collect the control-sequence keys of every `M` (meaning) record in a dump,
+/// **without applying anything to State**.
+///
+/// This is a pure index scan over the same text [`load_from_str_labeled`]
+/// replays: one `splitn(3, '\t')` per line, keeping field 1 of the `M` rows and
+/// dropping everything else. No token bodies are parsed, no arena interning
+/// happens, and the State is not touched — so it is safe to call in a session
+/// that has deliberately *not* loaded the dump (see
+/// `latexml_engine::latex_kernel`, which uses it to answer "does the LaTeX
+/// kernel define this CS?" before committing to a pool load).
+///
+/// Keys are url-decoded exactly as `parse_and_load` decodes them, so a name
+/// found here compares equal to the CS name the loader would install.
+pub fn collect_meaning_keys(content: &str) -> rustc_hash::FxHashSet<Box<str>> {
+  let mut keys = rustc_hash::FxHashSet::default();
+  for line in content.lines() {
+    // `M` is the only table code whose keys are control-sequence names;
+    // the char-table rows (`C`/`LC`/…) and value rows (`V`/`IA`) are keyed
+    // by character or by internal parameter name.
+    let Some(rest) = line.strip_prefix("M\t") else {
+      continue;
+    };
+    let raw_key = rest.split('\t').next().unwrap_or("");
+    if raw_key.is_empty() {
+      continue;
+    }
+    if raw_key.contains('%') {
+      keys.insert(url_decode(raw_key).into_boxed_str());
+    } else {
+      keys.insert(Box::from(raw_key));
+    }
+  }
+  keys
+}
+
 /// Parse a single dump line and load it. Returns Ok(true) if loaded,
 /// Ok(false) if filtered (e.g. corrupt MC/DC), Err on parse error.
 fn parse_and_load(line: &str) -> Result<bool, String> {

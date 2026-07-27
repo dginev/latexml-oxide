@@ -2665,3 +2665,80 @@ implemented before the math can close — each of those is a capability Perl als
 lacks, so adding them is beyond-Perl work, not parity work. Do not mistake the
 1000-vs-100 error-cap difference for a divergence: it is a diagnostics budget,
 and both engines fail these papers.
+
+---
+
+## 64. A LaTeX **kernel** command before `\documentclass` is undefined (the class is never selected)
+
+In real LaTeX there is no "before the kernel": `latex.ltx` *is* the format, so
+every kernel command is live from token one. LaTeXML instead loads `LaTeX.pool`
+lazily, on first sight of a *trigger* control sequence — the hand-maintained
+list in `TeX.pool.ltxml` L33-56:
+
+```perl
+foreach my $ltxtrigger (qw(documentclass
+  newcommand renewcommand newenvironment renewenvironment
+  NeedsTeXFormat ProvidesFile
+  ProvidesPackage RequirePackage PassOptionsToPackage
+  makeatletter makeatother
+  typeout begin listfiles nofiles)) {
+  DefAutoload($ltxtrigger, 'LaTeX.pool.ltxml'); }
+```
+
+Any kernel command **not** on that list is simply undefined at that point, gets
+`generateErrorStub`'s `<ltx:ERROR/>`, and its arguments leak into the stream.
+The list has grown one witness at a time and its gaps are arbitrary:
+`\PassOptionsToPackage` is there but `\PassOptionsToClass` is not;
+`\newcommand`/`\renewcommand` are there but `\providecommand` is not;
+`\IfFileExists`/`\InputIfFileExists` are absent entirely.
+
+The damaging case is the completely standard "use this class if installed"
+idiom, because the collapsed conditional means **no class is ever selected** —
+and worse, both branches leak, so the *first* (wrong) `\documentclass` wins:
+
+```latex
+\IfFileExists{ltxo-no-such-class.cls}{\documentclass{ltxo-no-such-class}}{\documentclass{article}}
+\begin{document}
+Selected the fallback class.
+\end{document}
+```
+
+Same-host Perl `latexml` (v0.8.8) on that four-line file:
+
+```
+Error:undefined:\IfFileExists ... at perl_probe.tex; line 1 col 14
+Warning:missing_file:ltxo-no-such-class Can't find binding for class ltxo-no-such-class (using OmniBus)
+Error:undefined:\warn@unusedclassoptions ... at perl_probe.tex; line 2 col 1
+```
+
+— i.e. it picks `class="ltxo-no-such-class"`, the branch that was supposed to be
+*rejected*. The second trigger, `\providecommand`/`\PassOptionsToClass` before
+`\documentclass`, is the same defect without the class damage:
+`Error:undefined:\PassOptionsToClass`, `Error:undefined:\providecommand`, and
+then `Error:undefined:` for every macro the lost `\providecommand` should have
+defined.
+
+On a real paper the class loss cascades: witnesses arXiv 2605.25877
+(`\IfFileExists{proc-l.cls}{…}{\documentclass{amsproc}}`) and 2606.06905
+(`siamart251216.cls`, same idiom) both hit **101 errors + `Fatal:TooManyErrors`,
+no class at all**. Also 2606.09693, 2606.16723. Seven papers across sandbox
+corpora 2605+2606 have `undefined:\IfFileExists` as their FIRST error.
+
+**Fixed in Rust** generally rather than by extending the list, which would only
+move the gap. `latexml_engine/src/latex_kernel.rs` registers a hook consulted at
+the two undefined-CS paths (`gullet::read_x_token`, `stomach::
+invoke_token_undefined`) *before* the error is raised: if the ambient kernel
+dump defines the control sequence, load `LaTeX.pool` and retry the token; else
+take the ordinary bounded `Error:undefined` path. Fires at most once per
+session, never during `--init` dump-build, and not at all on the degraded
+no-dump branch of `LoadFormat('latex')`. It also retired the two Rust-only
+trigger accretions (`\UseRawInputEncoding`, `\DocumentMetadata`). Guards
+`preclass_iffileexists_test` / `preclass_kernel_cs_test`
+(`latexml_oxide/tests/structure/`) and
+`nodump_leaves_pre_documentclass_kernel_cs_undefined`
+(`latexml_oxide/tests/108_preclass_kernel_autoload.rs`).
+
+Candidate to upstream, though not as a straight port: Perl has no dump to use as
+the membership oracle, so the upstream-shaped fix is to extend
+`TeX.pool.ltxml`'s list with at least `IfFileExists InputIfFileExists
+PassOptionsToClass providecommand`.

@@ -1621,6 +1621,15 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
 }
 
 fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
+  // The LaTeX format may not be loaded yet (a document may use a kernel CS
+  // before `\documentclass` — real LaTeX has no "before the kernel"). If this
+  // is a kernel CS, pull the format in and re-digest instead of stubbing it as
+  // `<ltx:ERROR/>`. Fires at most once per session; see
+  // `binding::kernel_autoload`. Same retry shape as the `\ifsomething` arm below.
+  if crate::binding::kernel_autoload::try_autoload(token) {
+    gullet::unread_one(*token); // Retry, now that the kernel is in state.
+    return Ok(Vec::new());
+  }
   let cs = token.with_cs_name(|cs| String::from(cs));
   // Gate the undefined-CS summary tally and the Error! emission by
   // SUPPRESS_UNDEFINED_ERRORS. During expl3-code.tex raw load we install
