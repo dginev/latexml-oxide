@@ -41,6 +41,51 @@
 > dead ends below are still valuable (four band-aids, all regressing
 > `glossary_test`) — that is why the entry is kept.
 
+> ## ✅ A THIRD member of the family, found + FIXED 2026-07-27 (issue 421)
+>
+> Same family, opposite direction, and **not** a kernel `\ExplSyntaxOff` problem:
+> here the wrong regime was in **our own binding's raw TeX**, not in the raw
+> `.sty` read. `expl3_sty.rs` emitted the `\c_sys_*` system constants through
+> `raw_tex`, which tokenizes with the **ambient** catcodes. After the expl3 load
+> the ambient (document) regime is the correct `_` = SUB — so
+> `\edef\c_sys_shell_escape_int{0}` parsed as `\edef\c` with parameter text
+> `_sys_shell_escape_int` and body `0`, **rebinding LaTeX's cedilla accent
+> `\c`**. `\meaning\c` = `macro:_sys_shell_escape_int->0`; every later
+> `Fran\c cois` rendered **"Fran0cois", silently, with 0 errors**, where
+> same-host Perl 0.8.8 renders "François" ⇒ GENUINE-RUST-ONLY. Blast radius: any
+> document loading `xparse` or `expl3`. Four lines reproduce it (no paper, no
+> `--includestyles`); witness arXiv **2605.11579** (`biblo.bib`
+> `MRREVIEWER = {Fran\c cois\ Digne}`), whose production sandbox output carries
+> `Fran0cois` at `Status:conversion:0`.
+>
+> **Fix: the block was DELETED**, not re-tokenized. Both premises behind it were
+> false, measured: (1) the `\c_sys_{minute,hour,day,month,year}_int` /
+> `_timestamp_str` / `_shell_escape_int` constants **are** already defined, at
+> package-load time, with live values (`\number\csname c_sys_year_int\endcsname`
+> right after `\usepackage{xparse}` gives the real year; `c_sys_minute_int`
+> advances between runs) — only `\c_sys_jobname_str` ever needed the `Let!`;
+> (2) the block never ran at all, so "fixing" its tokenization would have
+> *replaced* those live values with frozen dummies and a hardcoded year. Perl's
+> `expl3.sty.ltxml` has no such block either (it is 3 lines). The one remaining
+> raw expl3 chunk in the file (`\__kernel_msg_info:nnxx`) now goes through
+> `expl3_sty.rs::with_expl_catcodes`, which SAVES and restores the ambient
+> `:`/`_` catcodes instead of hardcoding OTHER/SUB, and restores on the error
+> path too. Guard: `expl3_load_does_not_clobber_cedilla_accent`
+> (`06_cluster_regressions`) — asserts the accents round-trip AND that the
+> document regime survives the load (`_`=8, `:`=12, `~`=13).
+>
+> Method note worth keeping: `raw_tex` is the ONLY binding-side path that
+> tokenizes a CS name; `T_CS!`, `Let!` and `parse_prototype`
+> (`def_macro_noop` &c.) build the name as a string and are catcode-independent
+> — `def_parser.rs`'s `CS_RE` already admits `_`/`:` for exactly this reason. An
+> audit of every `RawTeX!`/`raw_tex` literal in the workspace found this as the
+> only site *defining* an expl3-named CS; `siunitx_sty.rs`'s `\sisetup` block
+> mentions `\c__siunitx_mu_tl` / `\__siunitx_unit_mathrm:n` inside stored key
+> *values* (no `\def`, inert per its own comment), so it cannot clobber. A
+> 16-package accent sweep (xparse, expl3, siunitx, l3keys2e, mhsetup, fontspec,
+> tikz, hyperref, biblatex, amsmath, xcolor, pgfplots, tcolorbox, glossaries,
+> mathtools vs a no-package baseline) is byte-identical at 0 errors.
+
 **Status (2026-06-08, SUPERSEDED — see above): OPEN, deep. The single biggest
 Rust-only error gap on the sampled corpus (2112.11932: Rust 1003 vs Perl 5,
 +998). Four band-aid fixes were tried and ALL regress something; reverted. The

@@ -51,6 +51,9 @@
     filter text into the page, and `\keywords` renders again. The silence
     binding also restores diagnostics the real package's `\ErrorsOff` was
     swallowing.
+  - **`\usepackage{xparse}` no longer destroys the `\c` cedilla accent** — any
+    document loading `xparse` or `expl3` rendered `Fran\c cois` as "Fran0cois",
+    silently and with no error reported.
   - **A deferred package-load miss no longer poisons a later raw load.**
   - **Perl `.ltxml` bindings are never read as TeX** — file resolution used to hand
     back the `.ltxml` (Perl source) and tokenize it, so raw-loading a package that

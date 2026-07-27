@@ -64,6 +64,27 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-27 — `\usepackage{xparse}` silently destroyed the `\c` cedilla
+  accent (issue 421).** GENUINE-RUST-ONLY, **0 errors** both before and after —
+  a wrong glyph, not a diagnostic, on any document loading `xparse`/`expl3`.
+  `expl3_sty.rs` emitted the `\c_sys_*` constants through `raw_tex`, which
+  tokenizes with the AMBIENT catcodes; under the document regime (`_` = SUB)
+  `\edef\c_sys_shell_escape_int{0}` parsed as `\edef\c` + parameter text
+  `_sys_shell_escape_int`, so `\meaning\c` became
+  `macro:_sys_shell_escape_int->0` and `Fran\c cois` rendered **"Fran0cois"**
+  (Perl 0.8.8, same host: "François"). **The block was DELETED, not
+  re-tokenized** — measurement killed both of its premises: the constants are
+  already defined at package-load time with live values, and the block had never
+  run, so repairing its tokenization would have overwritten those with frozen
+  dummies + a hardcoded year. Perl's `expl3.sty.ltxml` has no such block. The
+  surviving raw expl3 chunk now goes through `with_expl_catcodes`
+  (save/restore, error path included). Witness 2605.11579: `Fran0cois` →
+  `François`, 0 errors, 36 bibitems, unchanged otherwise; named witnesses
+  2406.14142 / 2002.07146 byte-identical. Guard
+  `expl3_load_does_not_clobber_cedilla_accent`. Detail + the workspace-wide
+  audit: [`EXPL3_CATCODE_GAP_2026-06-08.md`](parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md)
+  (third member of that family), method in **WISDOM #73**.
+
 - **2026-07-27 — a `.bib` field's `^` is data too, and `mathscinet.sty` gets a
   binding.** Two changes, one PR. (a) `^` joins `_` in treatment 2 of
   **OXIDIZED_DESIGN #74** — verified symmetric with `_` rather than assumed
