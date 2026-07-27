@@ -238,3 +238,31 @@ fn cluster_hdotsfor_columns() {
     "expected 3 + 2 dots cells, got:\n{x}"
   );
 }
+/// amsmath's `\def\ext@arrow#1#2#3#4#5#6#7` (and `\arrowfill@#1#2#3#4`) take
+/// plain TeX undelimited arguments — a single token OR a balanced group. Our
+/// binding spelled the first four `Token`, which reads only the opening `{` of
+/// a braced argument and spills the rest, including its `}`, back into the
+/// stream; the stray `}` then closes the enclosing display math and everything
+/// after it is swallowed into the leaked `<ltx:XMath>`. extpfeil.sty's
+/// `\newextarrow{\xtwoheadleftarrow}{500{40}}{…}` is exactly that shape — an
+/// `\mkern` amount of 40 has to be braced. Witness arXiv 2606.01903 (Perl,
+/// which defines no `\ext@arrow` at all, reports 258 errors; we ran into the
+/// 1000-error cap). Red without the fix: `Error:unexpected:} Attempt to close a
+/// group that switched to mode display_math`, and the `\simeq` above-label is
+/// replaced by a `0` SUBscript scavenged from the leaked `{40}`.
+#[test]
+fn cluster_ext_arrow_braced_mkern() {
+  let x = convert_to_xml("tests/cluster_regressions/ext_arrow_braced_mkern.tex");
+  assert!(
+    x.contains(r#"<XMApp role="POSTSUPERSCRIPT""#) && x.contains(r#"name="simeq""#),
+    "the \\ext@arrow above-label must survive as a superscript on the arrow:\n{x}"
+  );
+  assert!(
+    !x.contains(r#"<XMApp role="POSTSUBSCRIPT""#),
+    "a POSTSUBSCRIPT here means the braced `{{40}}` mkern amount leaked into the math:\n{x}"
+  );
+  assert!(
+    x.contains("<p>Text after the display must survive.</p>"),
+    "text after the display must stay OUTSIDE the math, in its own paragraph:\n{x}"
+  );
+}
