@@ -2921,16 +2921,23 @@ i.e. `ltx:keywords` with the label in `@name` and the print-only `---` separator
 normalized to `:~`. So the divergence is only against *raw-loaded* spconf; against
 Perl's own binding for the same markup it is a verbatim follow.
 
+The same file's `\twoauthors{names1}{affil1}{names2}{affil2}` (L183-190) is bound
+alongside, routed to `\author{#1 \\ #2 \and #3 \\ #4}` so each pair becomes a
+creator with its own affiliation instead of a zero-argument `<ltx:ERROR/>` whose
+four braced arguments leak into the body as text.
+
 **Corpus scale.** `{keywords}` is the single largest `undefined` *what* in the
 sandbox corpora: **94 tasks in sandbox-arxiv-2605**, **49 in sandbox-arxiv-2606**;
-142 of those 143 papers ship a byte-identical `spconf.sty`.
+142 of those 143 papers ship a byte-identical `spconf.sty`. `\twoauthors` adds 3.
 
 **Measured**, before → after, identical in bare and `--preload=ar5iv.sty` mode:
 2605.00480 **1 → 0**, 2605.00698 **1 → 0**, 2605.00721 **1 → 0**, 2605.01187
-**2 → 1** (residual `undefined:\bstctlcite`, unrelated).
+**2 → 1** (residual `undefined:\bstctlcite`, unrelated), 2605.05692 **2 → 0**,
+2605.18923 **1 → 0**, 2605.26747 **2 → 0**.
 
-Guard: `06_cluster_frontmatter::frontmatter_spconf_keywords` (via
-`convert_to_xml_contrib_clean`, so a returning error fails it).
+Guards: `06_cluster_frontmatter::frontmatter_spconf_keywords`,
+`06_cluster_frontmatter::frontmatter_spconf_twoauthors` (both via
+`convert_to_xml_contrib_clean`, so a returning error fails them).
 
 ## Known Upstream Perl Issues (brief)
 

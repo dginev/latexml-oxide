@@ -33,6 +33,16 @@ LoadDefinitions!({
     "\\email{}",
     "\\lx@add@frontmatter{ltx:note}[role=email]{#1}"
   );
+  // `\twoauthors{names1}{affil1}{names2}{affil2}` (spconf.sty L183-190) — the
+  // side-by-side two-author title block, typeset as two `tabular`s that
+  // overwrite `\@name` and blank `\@address`. Feed the same author machinery
+  // as `\name`: `\and` separates the two groups, and within a group the `\\`
+  // line after the names is that group's affiliation (`\lx@add@authors`,
+  // base_utilities.rs L950-960). Witnesses 2605.05692, 2605.18923, 2605.26747.
+  DefMacro!(
+    "\\twoauthors{}{}{}{}",
+    "\\author{#1 \\\\ #2 \\and #3 \\\\ #4}"
+  );
   // The "Index Terms" block (spconf.sty L211-214):
   //   \def\keywords{\vspace{.5em}{\bfseries\textit{Index Terms}---\,\relax}}
   //   \def\endkeywords{\par}

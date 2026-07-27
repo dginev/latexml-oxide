@@ -137,6 +137,27 @@ fn frontmatter_spconf_keywords() {
     "spconf `Index Terms` label leaked into the content:\n{x}"
   );
 }
+/// spconf.sty `\twoauthors{N1}{A1}{N2}{A2}` (L183-190) — the side-by-side
+/// two-author title block. Each pair must become a creator with its own
+/// affiliation instead of an undefined-token `<ltx:ERROR/>`.
+/// Witnesses 2605.05692, 2605.18923, 2605.26747.
+#[test]
+fn frontmatter_spconf_twoauthors() {
+  let x =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/frontmatter_spconf_twoauthors.tex");
+  assert!(
+    x.contains("<personname>Alice Smith</personname>"),
+    "twoauthors author 1 is not a creator:\n{x}"
+  );
+  assert!(
+    x.contains("<personname>Bob Jones</personname>"),
+    "twoauthors author 2 is not a creator:\n{x}"
+  );
+  assert!(
+    x.contains("University A") && x.contains("University B"),
+    "twoauthors affiliations missing:\n{x}"
+  );
+}
 /// atlasdoc `\AtlasTitle{…}` / `\AtlasAbstract{…}` / `\AtlasOrcid[orcid]{Name}`:
 /// the frontmatter macros of the (very large, unbound) ATLAS class must not leak
 /// as literal text — the title/abstract render and the collaboration author
