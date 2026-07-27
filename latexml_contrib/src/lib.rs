@@ -46,6 +46,7 @@ pub mod apacite_sty;
 pub mod apxproof_sty;
 pub mod ar5iv_sty;
 pub mod arxbj_cls;
+pub mod arxiv_sty;
 pub mod arydshln_sty;
 pub mod ascmac_sty;
 pub mod asme2ej_cls;
@@ -181,6 +182,7 @@ pub mod pb_diagram_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
+pub mod primearxiv_sty;
 pub mod program_sty;
 pub mod pst_all_sty;
 pub mod pst_plot_sty;
@@ -401,6 +403,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     aligned_overset_sty::load_definitions,
   ),
   ("arxbj", "cls", arxbj_cls::load_definitions),
+  // Paper-BUNDLED styles, so both bindings hand control straight back to the
+  // paper's own file whenever raw style loading is on; they only fill the
+  // frontmatter gap in bare mode. See arxiv_sty.rs for the rationale.
+  ("arxiv", "sty", arxiv_sty::load_definitions),
+  ("PRIMEarxiv", "sty", primearxiv_sty::load_definitions),
   ("arydshln", "sty", arydshln_sty::load_definitions),
   ("autofe", "sty", autofe_sty::load_definitions),
   ("changes", "sty", changes_sty::load_definitions),
