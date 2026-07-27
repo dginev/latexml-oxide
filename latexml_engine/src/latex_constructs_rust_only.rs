@@ -53,20 +53,20 @@ LoadDefinitions!({
   // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
   // for legacy 8-bit-encoding compat (used by papers that pre-date the
   // 2018-04-01 default switch to UTF-8). Upstream `\let`s it to `\relax`
-  // after first use (L18324). LaTeXML's dump skips this section, so the
-  // CS arrives undefined — papers like 1711.09157 with
-  // `\UseRawInputEncoding` at line 1 col 1 fail with
-  // `Error:undefined:\UseRawInputEncoding`. Define as a no-op so the
-  // legacy preamble compiles silently; the encoding-switching behaviour
-  // is irrelevant for our XML pipeline.
+  // after first use (L18324); the raw definition is a catcode-mangling
+  // loop we must not run. Papers like 1711.09157 and 2403.19280 invoke it
+  // at line 1 col 1, BEFORE `\documentclass` — `latex_kernel::
+  // autoload_latex_kernel` pulls the format in for them. Define as a
+  // no-op so the legacy preamble compiles silently; the encoding-switching
+  // behaviour is irrelevant for our XML pipeline.
   Let!("\\UseRawInputEncoding", r"\relax");
 
   // \DocumentMetadata{<keyval>} — LaTeX 2024 kernel command for PDF
-  // accessibility metadata. Author calls it BEFORE `\documentclass`
-  // (the autoload trigger in tex.rs ensures the LaTeX pool is loaded
-  // by the time it's expanded). The kvopts inside are PDF-only and
-  // semantically irrelevant for XML output — gobble the brace group.
-  // Witness 2305.08034.
+  // accessibility metadata. Author calls it BEFORE `\documentclass`;
+  // `latex_kernel::autoload_latex_kernel` loads the LaTeX pool on the
+  // undefined CS so this stub is in place by the time it is expanded.
+  // The kvopts inside are PDF-only and semantically irrelevant for XML
+  // output — gobble the brace group. Witness 2305.08034.
   def_macro_noop("\\DocumentMetadata{}")?;
 
   //======================================================================

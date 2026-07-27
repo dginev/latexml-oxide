@@ -84,6 +84,7 @@ pub mod latex_bootstrap; // Perl: latex_bootstrap.pool.ltxml
 pub mod latex_constructs;
 pub mod latex_constructs_rust_only; // Rust-only overrides loaded LAST in latex.rs after latex_constructs.
 pub mod latex_dump; // Rust: precompiled latex.ltx state (auto-generated) // Perl: latex_constructs.pool.ltxml (C.1-C.15)
+pub mod latex_kernel; // Rust-only: on-demand LaTeX format load for kernel CSes used before \documentclass
 
 // Top-level entry points
 pub mod latex;

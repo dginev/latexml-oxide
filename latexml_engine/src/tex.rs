@@ -205,6 +205,16 @@ LoadDefinitions!({
   Let!("\\protect", "\\relax");
 
   // Perl TeX.pool.ltxml L33-56: autoload triggers for LaTeX, expl3, AmSTeX.
+  //
+  // This list is a straight port of the Perl source — do not grow it. A
+  // curated list is incomplete by construction, and the CSes it misses are
+  // handled generally by `latex_kernel::autoload_latex_kernel` (registered
+  // below), which loads the format for ANY undefined CS the ambient kernel
+  // dump defines. Two Rust-only accretions that used to live here,
+  // `\UseRawInputEncoding` (witness 2403.19280) and `\DocumentMetadata`
+  // (witness 2305.08034), were retired into that mechanism. What the eager
+  // triggers still buy over it: they fire on a legitimate *use*, before any
+  // error is raised, and without consulting the dump.
   for ltxtrigger in [
     "\\documentclass",
     "\\newcommand",
@@ -222,17 +232,6 @@ LoadDefinitions!({
     "\\nofiles",
     "\\typeout",
     "\\PassOptionsToPackage",
-    // \UseRawInputEncoding is a LaTeX kernel command defined by latex.ltx
-    // (L18268-18324). Some papers invoke it on line 1 col 1, BEFORE
-    // \documentclass — e.g. as a UTF-8 / fontenc shield. Treat it as a
-    // LaTeX-pool trigger so the kernel binds load and its `\relax` stub
-    // (latex_constructs_rust_only.rs L59) is in place. Witness 2403.19280.
-    "\\UseRawInputEncoding",
-    // \DocumentMetadata{...} is the LaTeX 2024 kernel command for PDF
-    // accessibility metadata; LaTeX expects it BEFORE \documentclass.
-    // Same pre-documentclass autoload pattern as \UseRawInputEncoding.
-    // Witness 2305.08034.
-    "\\DocumentMetadata",
   ]
   .iter()
   {
@@ -241,19 +240,12 @@ LoadDefinitions!({
     });
   }
   DefPrimitive!("\\@load@latex@pool", {
-    input_definitions("LaTeX", InputDefinitionOptions {
-      extension: Some(Cow::Borrowed("pool")),
-      ..InputDefinitionOptions::default()
-    })?;
-    // Restore our `\documentstyle` impl after the LaTeX pool load. The
-    // latex_dump unconditionally redefines `\documentstyle` to the
-    // kernel-style `\input{latex209.def}\documentclass`; in Perl that's
-    // overridden by latex_constructs.pool.ltxml's DefConstructor, but
-    // our latex_constructs.rs port doesn't redefine it. Re-Let to our
-    // backup to win. See tex_job.rs `\lx@documentstyle@impl` for the
-    // full diagnostic context (hep-th9912229 witness).
-    Let!("\\documentstyle", "\\lx@documentstyle@impl");
+    crate::latex_kernel::load_latex_pool()?;
   });
+  // Arm the general safety net: any undefined CS that the ambient kernel dump
+  // defines loads the format and retries, instead of becoming `<ltx:ERROR/>`.
+  // See `latex_kernel` for the oracle's rationale and the no-dump branch.
+  binding::kernel_autoload::set_hook(crate::latex_kernel::autoload_latex_kernel);
 
   // Perl TeX.pool.ltxml L42-48: expl3 triggers
   for ltx3trigger in [
