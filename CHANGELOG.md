@@ -51,6 +51,10 @@
     filter text into the page, and `\keywords` renders again. The silence
     binding also restores diagnostics the real package's `\ErrorsOff` was
     swallowing.
+  - **ICASSP/Interspeech papers keep their Index Terms and author blocks** — the
+    `spconf` style's `keywords` environment and `\twoauthors` now become real
+    keyword and creator frontmatter instead of an undefined-environment error
+    (the largest such cluster in the arXiv sandbox corpora).
   - **`\usepackage{xparse}` no longer destroys the `\c` cedilla accent** — any
     document loading `xparse` or `expl3` rendered `Fran\c cois` as "Fran0cois",
     silently and with no error reported.

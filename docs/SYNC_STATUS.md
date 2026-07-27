@@ -64,6 +64,26 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-27 (latest) — spconf.sty's `keywords` and `\twoauthors` were
+  unbound.** `Error:undefined:{keywords}` was the **single largest `undefined`
+  what** in the sandbox corpora — **94 tasks in sandbox-arxiv-2605, 49 in
+  sandbox-arxiv-2606**; 142 of those 143 papers ship a byte-identical
+  `spconf.sty`. The block is a bare `\def\keywords`/`\def\endkeywords` pair
+  (L211-214), not a `\newenvironment`, and `latexml_contrib/src/spconf_sty.rs`
+  covered neither. Bound as `\lx@begin@keywords[name={…:~}]` / `\lx@end@keywords`
+  — verbatim what Perl does for the same markup in `IEEEtran.cls.ltxml` L147-148
+  (spconf says the section was "adapted from IEEEtrans"; IEEEtran.cls L5286-5288
+  typesets it identically). Raw-loaded spconf gives Perl inline bold body text
+  and **zero creators in either configuration** (`\maketitle` is locked, so
+  spconf's own one never emits `\@name`) — **divergence #82**. Sibling gap
+  `\twoauthors` (3 papers) routed to the same author machinery; braced
+  `\keywords{a,b}` guarded with Perl's `\keywords@onearg` brace-peek (without it
+  the until-scan runs to EOF and swallows the body). Witnesses, bare and
+  `--preload=ar5iv.sty` alike: 2605.00480 1→0, 2605.00698 1→0, 2605.00721 1→0,
+  2605.01187 2→1 (residual `undefined:\bstctlcite`), 2605.05692 2→0, 2605.18923
+  1→0, 2605.26747 2→0. Guards
+  `06_cluster_frontmatter::{frontmatter_spconf_keywords,
+  frontmatter_spconf_keywords_braced, frontmatter_spconf_twoauthors}`.
 - **2026-07-27 — `\usepackage{xparse}` silently destroyed the `\c` cedilla
   accent (issue 421).** GENUINE-RUST-ONLY, **0 errors** both before and after —
   a wrong glyph, not a diagnostic, on any document loading `xparse`/`expl3`.
@@ -85,7 +105,7 @@ session of their own. Re-verify a row before planning on it (rule 1).
   audit: [`EXPL3_CATCODE_GAP_2026-06-08.md`](parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md)
   (third member of that family), method in **WISDOM #73**.
 
-- **2026-07-27 (latest) — the LaTeX kernel autoloads on ANY undefined kernel
+- **2026-07-27 — the LaTeX kernel autoloads on ANY undefined kernel
   CS, not just a curated trigger list.** A document may legitimately use a
   kernel command before `\documentclass` (real LaTeX has no "before the
   kernel"), but LaTeXML only loads `LaTeX.pool` on a *trigger* CS — Perl

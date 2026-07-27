@@ -9,7 +9,7 @@
 //! [`mod cluster`](cluster).
 
 mod cluster;
-use cluster::{convert_to_xml, convert_to_xml_contrib};
+use cluster::{convert_to_xml, convert_to_xml_contrib, convert_to_xml_contrib_clean};
 
 /// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
 /// (optional running-head short name + full name). The name must render, and
@@ -109,6 +109,75 @@ fn frontmatter_spconf_name() {
   let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_spconf_name.tex");
   assert!(x.contains("Alice Smith"), "spconf author 1 missing:\n{x}");
   assert!(x.contains("Bob Jones"), "spconf author 2 missing:\n{x}");
+}
+/// spconf.sty `\begin{keywords}…\end{keywords}` — the "Index Terms" block, a
+/// bare `\def\keywords`/`\def\endkeywords` pair (spconf.sty L211-214), not a
+/// `\newenvironment`. It must become structured `ltx:keywords` frontmatter
+/// with the label in `@name`, not bounce as an undefined environment (94 papers
+/// in sandbox-arxiv-2605, 49 in 2606 — the single largest `undefined` what).
+/// Witnesses 2605.00480, 2605.00698, 2605.00721, 2605.01187.
+#[test]
+fn frontmatter_spconf_keywords() {
+  let x = convert_to_xml_contrib_clean("tests/cluster_regressions/frontmatter_spconf_keywords.tex");
+  assert!(
+    x.contains("<keywords"),
+    "spconf keywords did not become ltx:keywords frontmatter:\n{x}"
+  );
+  assert!(
+    x.contains("Speech recognition, deep learning"),
+    "spconf keyword list missing:\n{x}"
+  );
+  assert!(
+    x.contains("name=\"Index Terms:"),
+    "spconf keywords label not carried in @name:\n{x}"
+  );
+  // The label is an attribute, never inline content of the block.
+  assert!(
+    !x.contains(">Index Terms"),
+    "spconf `Index Terms` label leaked into the content:\n{x}"
+  );
+}
+/// spconf's `\keywords` is argument-less, so the braced `\keywords{a, b}` form
+/// is legal too. Routed to the bare environment opener it would find no
+/// `\endkeywords` and scan to EOF, dragging the whole body into
+/// `<ltx:keywords>`; the `{`-peek (Perl's `\keywords@onearg`, IEEEtran.cls.ltxml
+/// L398-404) must close the block after the argument.
+#[test]
+fn frontmatter_spconf_keywords_braced() {
+  let x = convert_to_xml_contrib_clean(
+    "tests/cluster_regressions/frontmatter_spconf_keywords_braced.tex",
+  );
+  // The `@name` separator is a `~` tie (U+00A0), so match around it.
+  assert!(
+    x.contains("<keywords name=\"Index Terms:")
+      && x.contains(">Speech recognition, deep learning</keywords>"),
+    "braced spconf `\\keywords{{…}}` did not close after its argument:\n{x}"
+  );
+  assert!(
+    x.contains("<section"),
+    "the document body was swallowed into the keywords block:\n{x}"
+  );
+}
+/// spconf.sty `\twoauthors{N1}{A1}{N2}{A2}` (L183-190) — the side-by-side
+/// two-author title block. Each pair must become a creator with its own
+/// affiliation instead of an undefined-token `<ltx:ERROR/>`.
+/// Witnesses 2605.05692, 2605.18923, 2605.26747.
+#[test]
+fn frontmatter_spconf_twoauthors() {
+  let x =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/frontmatter_spconf_twoauthors.tex");
+  assert!(
+    x.contains("<personname>Alice Smith</personname>"),
+    "twoauthors author 1 is not a creator:\n{x}"
+  );
+  assert!(
+    x.contains("<personname>Bob Jones</personname>"),
+    "twoauthors author 2 is not a creator:\n{x}"
+  );
+  assert!(
+    x.contains("University A") && x.contains("University B"),
+    "twoauthors affiliations missing:\n{x}"
+  );
 }
 /// atlasdoc `\AtlasTitle{…}` / `\AtlasAbstract{…}` / `\AtlasOrcid[orcid]{Name}`:
 /// the frontmatter macros of the (very large, unbound) ATLAS class must not leak
