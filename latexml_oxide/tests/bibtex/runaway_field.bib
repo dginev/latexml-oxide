@@ -1,39 +1,60 @@
-% A `.bib` whose fields contain a bare `%`.
+% A `.bib` whose fields break the TeX replay of their own entry.
 %
-% BibTeX has NO comment syntax inside an entry, so this is literal data — but
-% `\ProcessBibTeXEntry` hands the entry to a Mouth as TeX SOURCE (Perl
-% `BibTeX.pool.ltxml` L165-166), where `%` is catcode 14 and comments out the
-% rest of the line, closing brace included. Both engines therefore mis-read the
-% field, and so does real bibtex+pdflatex — that part is parity and is
-% deliberately not corrected.
+% Two things are asserted over this file, in `55_bibtex.rs`:
 %
-% What is NOT parity is the blast radius. The point of this fixture is that the
-% damage stays inside the entry that caused it: `before` and `after` must
-% survive, whichever field the runaway sits in.
+% 1. A `%` in a field value is DATA. BibTeX has no comment syntax inside an
+%    entry, so `Pre::BibTeX` hands the `%` through; `\ProcessBibTeXEntry` then
+%    replays the entry as TeX SOURCE (Perl `BibTeX.pool.ltxml` L165-166), where
+%    catcode 14 used to comment out the rest of the line — closing brace and
+%    all. That is corrected: the entry Mouth (and the handlers that re-tokenize
+%    a stored raw field, like `\bib@@title`) read `%` as an ordinary character.
+%    OXIDIZED_DESIGN #74; `runawaytitle` and `runawaynote` are its two seams.
+%    Perl still mis-reads both, so their titles/notes come out truncated there.
+%
+% 2. A runaway that IS still a runaway must cost only its own entry. `$5` — an
+%    unescaped dollar in a `note`, one of the most common `.bib` malformations —
+%    opens math that never closes, so the argument digestion runs to EOF. That
+%    is the `Digested`-argument mechanism (`\bib@@field`, BibTeX.pool L230):
+%    `readDigested` `pop`s the last box to drop the closing brace, and
+%    `digest_next_body` has to have pushed Perl's EOF trailer box
+%    (`Stomach.pm` L130) or the `pop` eats real content — every following entry.
+%    The entry mouth is also `BalancedBoundary::Opaque`, as Perl's readBalanced
+%    is for every mouth (`Gullet.pm` L465-472), so a gullet-level runaway cannot
+%    cross out of the entry either.
+%
+% `before` and `after` are the containment canaries: they must survive whichever
+% field the runaway sits in.
 @misc{before,
   author = {Able, Ann},
   title  = {Entry Before The Runaway},
   year   = {2023}
 }
 
-% Runaway inside a `{}`-read macro argument (`\bib@@title`, BibTeX.pool L293).
-% Fixed by the entry mouth being opaque to a balanced read.
+% `%` in a `{}`-read macro argument (`\bib@@title`, BibTeX.pool L293) — which
+% never reaches the entry Mouth: `\bib@@title` re-reads the RAW field to re-case
+% it and tokenizes the result itself.
 @misc{runawaytitle,
   author = {Poe, Percy},
   title  = {Fifty % of the time},
   year   = {2024}
 }
 
-% Runaway inside a `Digested` argument (`\bib@@field`, BibTeX.pool L230) — a
-% different mechanism: the group opened by `{` is never closed, so the argument
-% digestion runs to EOF and `readDigested`'s `pop` (which is meant to drop the
-% closing-brace box) ate real content instead, for want of the EOF trailer box
-% Perl pushes at `Stomach.pm` L130.
+% `%` in a `Digested` argument (`\bib@@field`, BibTeX.pool L230) — this one does
+% come off the entry Mouth.
 @misc{runawaynote,
   author = {Quill, Quinn},
   title  = {Has A Runaway Note},
   year   = {2024},
   note   = {plain % comment}
+}
+
+% A live runaway: the unescaped `$` opens math and swallows the rest of the
+% entry. Its damage must not reach `after`.
+@misc{runawaymath,
+  author = {Rho, Rita},
+  title  = {Has An Unescaped Dollar},
+  year   = {2024},
+  note   = {costs $5 each}
 }
 
 @misc{after,

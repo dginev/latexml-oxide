@@ -270,8 +270,25 @@ pub fn current_entry_field(name: &str) -> Option<Tokens> {
   if let Some(tokens) = entry.get_field(name) {
     return Some(tokens.clone());
   }
-  entry.get_raw_field(name).map(|raw| Tokenize!(raw))
+  entry.get_raw_field(name).map(tokenize_bib_field)
 }
+
+/// `Tokenize!` for a string that came out of the BibTeX lexer.
+///
+/// The standard catcode table, as Perl's `Tokenize` uses — except that `%` is
+/// an ordinary character. BibTeX has no comment syntax inside an entry
+/// (`Pre::BibTeX` only skips `%` in the junk BETWEEN entries), so a `%` in a
+/// field value is data; under catcode 14 it comments out the rest of the
+/// string and takes any brace still open with it, which leaves the field's
+/// element unclosed and swallows every following entry. Witness 2605.02131:
+/// a percent-encoded URL in a `title`'s `\href`, 24 `malformed:ltx:bibentry`.
+/// See `OXIDIZED_DESIGN #74`.
+///
+/// This is the same rule the per-entry Mouth applies (see `\ProcessBibTeXEntry`
+/// below); it has to be repeated here because the handlers that re-read a raw
+/// field — `\bib@@title` recasing, name splitting, date/pages assembly — build
+/// their tokens from the stored string and never go through that mouth.
+fn tokenize_bib_field(text: &str) -> Tokens { mouth::tokenize_percent_literal(text) }
 
 /// Perl: `currentBibEntryRawField('fieldname')` — get the *raw*
 /// source string of a field on the current entry.
@@ -983,17 +1000,17 @@ LoadDefinitions!({
       let mut name_tks: Vec<Token> = Vec::new();
       if !name.surname.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@surname"),
-          vec![Tokenize!(name.surname.as_str())]);
+          vec![tokenize_bib_field(&name.surname)]);
         name_tks.extend(inv.unlist());
       }
       if !name.given.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@given"),
-          vec![Tokenize!(name.given.as_str())]);
+          vec![tokenize_bib_field(&name.given)]);
         name_tks.extend(inv.unlist());
       }
       if !name.lineage.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@lineage"),
-          vec![Tokenize!(name.lineage.as_str())]);
+          vec![tokenize_bib_field(&name.lineage)]);
         name_tks.extend(inv.unlist());
       }
       let inv = Invocation!(T_CS!("\\bib@@@name"),
@@ -1042,7 +1059,7 @@ LoadDefinitions!({
     // is the OptionalKeyVals arg (absent → no attributes).
     // Perl L333: Tokenize($recap) — catcode-aware, so TeX macros in
     // titles stay live (accents, math). Explode leaked them verbatim.
-    let recased_tokens = Tokenize!(recased.as_str());
+    let recased_tokens = tokenize_bib_field(&recased);
     let inv = Invocation!(T_CS!("\\bib@@field"),
       vec![tag_tokens, Tokens!(), recased_tokens]);
     Ok(inv)
@@ -1454,7 +1471,7 @@ LoadDefinitions!({
     let mut out_toks: Vec<Token> = Vec::new();
     out_toks.push(T_CS!("\\bib@field@default@date"));
     out_toks.push(T_BEGIN!());
-    out_toks.extend(Tokenize!(date.as_str()).unlist());
+    out_toks.extend(tokenize_bib_field(&date).unlist());
     out_toks.push(T_END!());
     Ok(Tokens::new(out_toks))
   });
@@ -1516,7 +1533,7 @@ LoadDefinitions!({
     // out as an empty `<ltx:bib-part role="pages"/>`. Witness arXiv 2508.17585.
     whatsit.set_property(
       "pages",
-      Stored::Digested(digest(Tokenize!(normalised.as_str()))?),
+      Stored::Digested(digest(tokenize_bib_field(&normalised))?),
     );
   });
 
@@ -1741,9 +1758,9 @@ LoadDefinitions!({
     if mrnumber.is_none() && mrreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let mr_tks = Tokenize!(mrnumber.unwrap_or_default().as_str());
+    let mr_tks = tokenize_bib_field(&mrnumber.unwrap_or_default());
     let rev_tks = match mrreviewer {
-      Some(r) => Tokenize!(r.as_str()),
+      Some(r) => tokenize_bib_field(&r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@mr"), vec![mr_tks, rev_tks]);
@@ -1794,9 +1811,9 @@ LoadDefinitions!({
     if zblno.is_none() && zblreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let zbl_tks = Tokenize!(zblno.unwrap_or_default().as_str());
+    let zbl_tks = tokenize_bib_field(&zblno.unwrap_or_default());
     let rev_tks = match zblreviewer {
-      Some(r) => Tokenize!(r.as_str()),
+      Some(r) => tokenize_bib_field(&r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@zbl"), vec![zbl_tks, rev_tks]);
@@ -1980,8 +1997,18 @@ LoadDefinitions!({
     // `\ProcessBibTeXEntry` and `\end{bibtex@bibliography}` too, so a 3-entry
     // `.bib` produced ONE entry and a single error where Perl produces all three
     // and four errors. Guard: `55_bibtex::runaway_field_costs_only_its_own_entry`.
+    //
+    // `%` is read as an ordinary character in this mouth (OXIDIZED_DESIGN #74).
+    // BibTeX has no comment syntax inside an entry, so the values `PreBibTeX`
+    // just handed us hold `%` literally; under TeX's catcode 14 each one
+    // comments out the rest of its line — the field's own closing `}` included —
+    // so the entry's group never closes, `ltx:bibentry` is left open, and every
+    // later entry nests inside it. Witnesses arXiv 2605.01196 (`doi={%doi:...}`)
+    // and 2605.02131 (a percent-encoded URL in a `title`'s `\href`): 28 errors
+    // each, and Perl breaks identically (29 / 31 on the same host).
+    // Guard: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`.
     open_mouth_with(
-      Mouth::new(&lines.join("\n"), None)?,
+      Mouth::new(&lines.join("\n"), None)?.with_percent_as_other(),
       true,
       BalancedBoundary::Opaque,
     );
