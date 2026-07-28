@@ -776,13 +776,24 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       if lookup_bool("INCLUDE_STYLES") || options.noltxml {
         assign_value(&s!("{filename}_load_attempted"), true, Some(Scope::Global));
       }
+      // Say which of the two things actually happened. `notex` (the DEFAULT
+      // whenever `INCLUDE_STYLES` is off — see `require_package`, Perl
+      // `Package.pm` L2671-2672) gates the raw-search branch above, so in that
+      // case NO disk lookup was performed at all. Claiming "no raw file found
+      // on disk" there asserts a search that never ran, and the package is
+      // usually installed and findable: `\usepackage{xstring}` on arXiv
+      // 2607.21760 warned exactly that while `kpsewhich xstring.sty` resolved
+      // it fine, sending a reader hunting a file-resolution bug that does not
+      // exist. A diagnostic must not overclaim what it checked.
+      let why = if options.notex {
+        "no dispatcher entry, and raw TeX loading is off (enable with --includestyles)"
+      } else {
+        "no dispatcher entry, and no raw file found on disk"
+      };
       Warn!(
         "missing_file",
         name,
-        s!(
-          "Can't find binding or file for '{filename}'. \
-          No dispatcher entry and no raw file found on disk."
-        )
+        s!("Can't find binding or file for '{filename}'. {why}.")
       );
     }
   }
