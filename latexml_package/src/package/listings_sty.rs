@@ -101,7 +101,7 @@ pub fn listings_read_raw_lines(environment: &str) -> String {
       }
       let rest = line[m.end()..].to_string();
       if !rest.is_empty() {
-        unread(Tokenize!(&rest));
+        unread(Tokenize!(TeXString::assembled(rest)));
         unread(Tokens::new(vec![T_CR!()]));
       }
       break;
@@ -144,7 +144,7 @@ fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
 
 /// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
-  let tokens = mouth::tokenize(text);
+  let tokens = mouth::tokenize(TeXString::assembled(text.to_string()));
   let mut toks: Vec<Token> = tokens.unlist();
   let mut level: i32 = 0;
   for t in &toks {
@@ -814,7 +814,7 @@ fn lst_add_delimiter(
     let style_is_markup =
       !style_re.is_match(style) && !style.is_empty() && style != "None" && style.contains('\\'); // TeX markup contains backslash
     let style_tokens = if style_is_markup {
-      mouth::tokenize_internal(style)
+      mouth::tokenize_internal(TeXString::assembled(style.to_string()))
     } else {
       Tokens!()
     };

@@ -3,6 +3,8 @@
 [← OXIDIZED_DESIGN.md](OXIDIZED_DESIGN.md) · Deliberate breaks with Perl behavior, numbered. Code comments reference these as `OXIDIZED_DESIGN #N`.
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
+>
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#83**.
 
 ---
 
@@ -2161,6 +2163,795 @@ Beyond Perl's unused helper, a trailing BibTeX `others` is dropped and forces th
 **Witnesses**: arXiv 2607.21432 (arXiv/html_feedback#6797).
 **Guard**: `cluster_bib_long_author_list_refnum`.
 **Upstream**: to file against `brucemiller/LaTeXML` (dead `do_names_short`).
+
+### 72. A `.bib` field's `\url` gets url.sty's real definition, not a bare `\providecommand`
+
+**Perl behaviour.** `convertBibliography` (`MakeBibliography.pm` L180-242) spins
+the recursive BibTeX session with the article's class and packages preloaded and
+nothing else. If the document loads neither `url` nor `hyperref`, `\url` is
+simply undefined in that session, so a `.bib` field carrying `\url{...}` raises
+`Error:undefined:\url` and its argument is digested as ordinary text — which
+means a **percent-encoded** URL is truncated at the first `%` (catcode 14
+comments out the rest of the line, closing brace included). Measured with
+same-host `latexmlc` on `tests/cluster_regressions/bib_field_no_url_package.tex`:
+**7 errors**, the note rendered as `https://example.org/B130936`, and the raw
+`@misc{...}` entry spilled into it. Real `bibtex` + pdflatex break the same way.
+
+**Rust behaviour.** Before digesting entries, the session provides the block a
+`.bst`-generated `.bbl` provides (`\providecommand{\url}`, `\doi`, `\bibinfo`,
+`\eprint`, `\newblock`, ...), and — the part that is a divergence —
+when `\url` is *undefined* it loads LaTeXML's own `url.sty` binding rather than
+settling for the `\providecommand` shape. That matters because the binding
+declares `\url`'s argument **Semiverbatim** (`url_sty.rs`), which is what keeps
+a `%` literal; a `\providecommand{\url}[1]{...}` renders but protects nothing.
+Same fixture: **0 errors**, three entries, and
+`B130936%20Law%20of%20War.pdf` intact.
+
+**Why.** A `.bst` that emits `\url{...}` into the `.bbl` assumes the document
+provides `\url`, and nearly every document that cites a URL does. Supplying the
+real definition reconstructs what the author's document meant, rather than
+punishing the bibliography for a package the *article body* happened not to need.
+It cannot mask a diagnostic for a correct document: a document that loads
+`url`/`hyperref` keeps its own definition — `input_definitions` early-returns on
+its `_loaded` flag and `\providecommand` defers.
+
+Guards: `06_cluster_bibliography::bib_field_bbl_fallbacks_render_without_a_url_package`
+(no url package) and `::bib_field_markup_survives_into_the_bibliography`
+(hyperref loaded — hyperref's `\url` must still win). *(Both moved out of
+`06_cluster_regressions` when PR #400 split the bibliography cluster into its own
+test file.)*
+
+### 73. A `.bib` `abstract`/`keywords`/`contents` field is read verbatim, not digested
+
+**Perl behaviour.** `BibTeX.pool.ltxml` L708-709/716-717/732-733 route these three
+fields to `\bib@@field{ltx:bib-extract}[role=...]`, whose value is `Digested` —
+so the field's content is tokenized and digested as TeX. These fields are bulk
+prose, and prose contains `%`. A `%` is catcode 14: it comments out the rest of
+the LINE, taking the field's closing brace with it. The entry's group never
+closes, the next `@article` is absorbed as more abstract, and `\end{bib@entry}`
+fails against the wrong group. The damage is not local — entries stack open and
+the **entire** bibliography is lost.
+
+Measured on witness **2605.00184** (`warm-ref.bib`, a Mendeley export with an
+abstract on every entry, 52 entries): same-host `latexmlc` emits **101 errors
+plus a `too_many_errors` Fatal and produces no output at all**. Perl's own
+`\bib@field@default@abstract` cannot survive its own input.
+
+**Rust behaviour.** The same three fields become `DefConstructor`s taking a
+`Verbatim` argument (`bibtex.rs`). `Verbatim` calls
+`begin_semiverbatim(Some(&['%', '\\']))` (`base_parameter_types.rs` L457-469),
+so `%` and `\` are neutralized for the field's duration and the content cannot
+break out of it. The value is then recovered from the entry's stored field via
+`bib_extract_text` + a `#rawdata` property — **Perl's own idiom for a
+`Verbatim`-read field**, whose comment at L346 reads "IGNORE the tokenized data"
+(`\bib@field@default@default Verbatim Verbatim` -> `\bib@field@unknownasdata{#1}`,
+which builds its content the same way). The verbatim token form is a dead end:
+measured, `#1` substitutes to nothing in a macro expansion body, which leaves
+`\bib@@field`'s `Digested` slot empty — that opens `ltx:bib-extract` and never
+closes it, so every later field nests inside and the entry is malformed.
+
+An **empty** value is a second, independent failure mode: `abstract = {},` is a
+routine reference-manager export, and an element opened with no content is never
+closed, so every later field nests inside `ltx:bib-extract` and the entry is
+malformed. The constructor is therefore conditional —
+`?#rawdata(<ltx:bib-extract .../>)()` with the property left undefined when the
+text is empty — so nothing is emitted rather than something unclosed. Witness
+2605.00555 `refs.bib` L956: that one line cost **86 errors**, while the same
+file's 17 percent-bearing abstracts were already handled.
+
+The **key is still supported exactly as Perl supports it** — the same
+`ltx:bib-extract[@role]` element is emitted with its value whenever there is
+one, so metadata consumers keep the data. Only the *reading* changed.
+
+Measured, current binary: **2605.00184 102 -> 0 errors, 0 -> 41 entries**;
+**2605.00555 86 -> 0 errors, 15 entries**. Seven more papers sampled from the
+cluster (2605.00120/00208/00254/00314/00426/00440/00462) go to 0-or-1 errors
+with **zero** `bibtex@bibliography` / `bib@entry` / `bib-extract` errors, from
+300/77/57 on the worst three. In sandbox-arxiv-2605 run 272 (which PREDATES this
+fix) the cluster is 695 `\end{bibtex@bibliography}` + 656 `\end{bib@entry}`
+documents; `abstract` is the driver in 47 of 48 lethal-`%` field hits across an
+8-paper sample (the 48th is a `title`, which is genuine parity — pdflatex breaks
+on it too, and `title` is rendered so it cannot be read verbatim).
+
+**Why.** Real BibTeX never puts these fields in front of a TeX tokenizer. A
+`.bst` declares a closed `ENTRY` field list, and plain/unsrt/alpha/abbrv all omit
+`abstract` and `keywords`, so `bibtex(1)` drops them when writing the `.bbl` and
+pdflatex never sees them. Verified by running bibtex 0.99d: for an entry whose
+abstract contains `64.84%`, the generated `.bbl` carries author/title/journal/year
+and no trace of the abstract. Digesting them is an artifact of reading `.bib`
+**directly** instead of running bibtex+bst, so pdflatex — not Perl — is the
+ground truth here, and pdflatex's answer is "this text never reaches TeX".
+
+The cost of the divergence is markup inside these three fields, and it is zero in
+practice: **nothing renders `ltx:bib-extract`.** No format spec in
+`make_bibliography.rs` queries it, in either engine's output path. This is
+`surpass-perl` on a shared bug, not a parity gap — Rust was already better than
+Perl on the witness before the fix (102 errors and no fatal, vs Perl's 101 plus
+a fatal), and the fix widens that rather than papering over a Rust-only defect.
+
+Other `.bst`-dependent fields keep Perl's exact coverage; only the three that
+reach the unrendered `ltx:bib-extract` are neutralized.
+
+Guard: `06_cluster_bibliography::bib_abstract_percent_does_not_sink_the_entry`,
+which uses the new `convert_and_post_clean` helper — the ordinary
+`convert_and_post` gates only the CORE stage, so a post-stage error flood (17 on
+this fixture, 203 on the witness) passed every bibliography guard silently.
+(percent in `abstract`, specials in `keywords`, and a third entry as the
+containment canary).
+
+### 74. A `.bib` field's content is DATA — `% & # _ ^` are literal, not catcodes
+
+Supersedes the separate `%`-only and `&`-only entries this consolidates
+(PRs #405 and #409); `_` was a third instance of the same defect.
+
+**The two regimes, and the two treatments that restore them.** The real
+toolchain is `pdflatex → bibtex → pdflatex`, and it treats these characters
+differently at two distinct points. We collapse both into one pass over live
+core state, so we have to perform both, in order — the frame is
+[`BIBLIOGRAPHY_WORKLIST.md` → "two regimes collapsed into one pass"](BIBLIOGRAPHY_WORKLIST.md).
+
+**Treatment 1 — reading the `.bib` (be `bibtex`).** A field's bytes are inert
+data. BibTeX's lexer interprets only braces and the entry/field delimiters: `%`
+is not a comment (it is significant only in the junk BETWEEN entries,
+`Pre::BibTeX::skipJunk`), `&` is not an alignment tab, `#` is not a parameter.
+So the read path neutralizes those three **without altering the text** — the
+stored value keeps its exact bytes. `Mouth::with_bib_data_literals()` is a
+per-Mouth property, applied to the per-entry mouth in `\ProcessBibTeXEntry` and,
+via `mouth::tokenize_bib_literal` / `bibtex.rs::tokenize_bib_field`, to the
+handlers that re-read a raw field instead. Deliberately NOT a State catcode
+assignment: a raw `.sty` opened from inside a field handler — and the document
+itself — must keep TeX's meanings, so the rule belongs to the *text BibTeX
+lexed*, not to the session.
+
+**Treatment 2 — synthesizing the `.bbl` and digesting it (be `pdflatex` pass 2).**
+Now the content must be valid TeX. We are the ones writing the `.bbl` and we
+know the author meant the literal character, so we escape at that boundary:
+`%`→`\%`, `&`→`\&`, `#`→`\#`, `_`→`\_`, `^`→`\textasciicircum{}`.
+`bibtex.rs::escape_bib_data_specials`. Escaping here rather than suppressing
+catcodes during digestion is what keeps the TeX regime intact **by
+construction**: `\emph{…}`, `{\v S}pakov` and `$x_1+x_2$` are already valid TeX
+and simply pass through.
+
+**Why `_` and `^` are in treatment 2 only.** A catcode is decided at
+tokenization, before anything knows whether it is inside `$…$` — and a
+sub/superscript in a title's math (`title = {Bounds on $x^2+y_1$}`) is
+legitimate TeX that must keep working. Measured: adding `_` to treatment 1
+silently flattened every subscript in a bibliography title. Only the escaper can
+be math-aware, so the two scripting characters live there alone. The other three
+have no legitimate TeX meaning inside a `.bib` field, in math or out.
+
+**`^` is `_`'s twin, and the symmetry was verified rather than assumed.** Both
+are TeX scripting characters; `bibtex(1)`'s lexer gives neither any meaning
+inside an entry, so both are plain data; and outside math both raise the same
+diagnostic, "Script … can only appear in math mode". Checked end-to-end: a
+`note = {q _ r ^ s}` renders `q _ r ^ s`, zero errors, both characters intact.
+
+**But the escape is NOT `\` + the character, and that is the whole reason `^`
+needs its own arm** (`BIB_DATA_CARET`, placed before the generic
+`BIB_DATA_SPECIALS` arm). `\_` is the underscore text command; `\^` is the
+circumflex **accent**, so the generic arm would turn `^o` into "ô" — a wrong
+glyph, silently, where the author wrote a caret. `\textasciicircum{}` is the
+actual caret, and the braces are load-bearing so a following letter is not
+absorbed into the control word. Idempotency needs nothing new: `\textasciicircum`
+is a control word and is copied whole, `\^{}` is a control symbol and is copied
+as a pair.
+
+**The exclusion list is principled, not ad hoc.** A handler that consumes the
+field's characters *itself*, under its own catcode regime — `url`'s Verbatim
+href, `doi`'s Semiverbatim id — is still operating in **treatment 1, on data**,
+so it must receive the *unescaped* value. `bib_field_source` reads that
+declaration back off the `Definition` (Perl declares it per field,
+`BibTeX.pool.ltxml` L740 and L684/L750-783) rather than keeping a second copy of
+the list. **Trap:** only `Semiverbatim` sets the `semiverbatim` *descriptor*
+field; `Verbatim` calls `begin_semiverbatim(Some(&['%','\\']))` inside its reader
+closure and leaves the descriptor empty, so a descriptor-only test silently
+misses `url` — measured, it planted a literal `\%` in a href. The check must
+also test `Parameter::name`.
+
+**Treatment 2 covers three seams, not one.** Two handlers re-read the RAW field
+instead of using the value the entry line passed them, so escaping only the
+entry line silently missed them — `title` most of all:
+
+* `\ProcessBibTeXEntry`'s synthesized entry line (Perl L147-157);
+* `\bib@@title` (Perl L293-333), which re-reads the raw field to recase it — the
+  value it is handed lands in Perl's vestigial `ignoretitle` slot and is dropped;
+* `\bib@@pages` (Perl L670-674), which re-reads the raw field to normalize `-`.
+
+Escaping runs **before** `recase_title`: that pass splits on words and treats a
+`\…` escape as part of its word, so raw `AT&T` would recase to `AT&t` (three
+words) while raw `AT\&T` recases to `AT&T` (one). Every real `.bib` mixes both
+spellings and they must render identically.
+
+**Idempotency.** Most real `.bib` files already write `\&`, `\%`, `\_`. In the
+escaper a backslash consumes the next character as a pair and neither is
+re-examined, so `\&` stays `\&`. The tricky `\\&` falls out of the same rule:
+`\\` is consumed as one pair, leaving a genuinely bare `&` that IS escaped —
+and so does `\\^`, which becomes `\\\textasciicircum{}`.
+
+**A nested data region.** url.sty reads `\url`/`\nolinkurl`/`\path`'s argument
+verbatim, so `howpublished = {\url{http://x.org/a%20b}}` must keep its `%20`.
+Those control words' single next group is copied through untouched
+(`VERBATIM_ARG_COMMANDS`); `\href`'s *second* argument is prose and is still
+escaped.
+
+**A separate input corruption, fixed alongside: `\&amp;`.** A reference manager
+rendered the field to HTML (`&` → `&amp;`), then a second pass TeX-escaped the
+ampersand of that entity, so the file carries `\&amp;` / `{\&}amp;` / `&amp;`
+where the source said `&`. TeX has no idea — `\&` produces the glyph and `amp;`
+is four more ordinary characters — so the entry renders "Computer Engineering,
+&amp; Applied Computing", and pdflatex prints exactly the same. Not a parity gap
+in either direction: an input corruption only the `.bib` reader is positioned to
+undo. `undouble_escaped_ampersand` decodes it to a plain `&` and lets the two
+treatments give it its meaning. Witnesses: `\&amp;` in `booktitle` (2605.00833,
+2605.01362), `journal` (2605.00922, 2605.01200, 2605.01224), `title`
+(2605.01353); `{\&}amp;` in `title` (2605.01224); bare `&amp;` in `publisher`
+(2605.00859) and `journal` (2605.01187).
+
+**Why this is authorized surpass-Perl AND surpass-pdflatex.** User decision,
+2026-07-27. LaTeXML reads `.bib` **directly**, with no `.bst` and no `bibtex(1)`
+in the loop, so it is the component deciding what reaches the tokenizer. That
+the real toolchain also breaks on these characters is a property of that
+toolchain, not a semantic we are obliged to reproduce: the author's intent for
+`AT&T` in a bibliography field is plainly the two letters, an ampersand and a T.
+This supersedes the "genuine parity, pdflatex breaks on it too" reading that #73
+applied to a `title`, and it covers `volume = {27 suppl_4}` and
+`language = {en_US}`, which a narrower earlier version of this fix left erroring.
+
+**Guards.** `06_cluster_bibliography::bib_field_specials_are_data_not_tex` (one
+ten-entry fixture, because the risk is precisely that fixing one case breaks
+another: the five specials bare, the same five already escaped rendering an
+IDENTICAL string, `$x^2+y_1$` keeping BOTH its `SUPERSCRIPTOP` and its
+`SUBSCRIPTOP`, `\emph` still markup,
+`{\v S}pakov` still reverting, `%20` inside `\url{…}` intact, and `url`/`doi`
+values with no backslash); `::bib_field_percent_is_an_ordinary_character`;
+`::bib_bare_ampersand_is_literal_data`;
+`::bib_bare_ampersand_leaves_live_markup_alone`;
+`::bib_escaped_amp_entity_decodes_to_one_ampersand`;
+`55_bibtex::runaway_field_costs_only_its_own_entry`; and the `escape_specials_*`
+unit tests in `bibtex.rs` (seven when this entry landed, **13** today — #79 added
+the five unmatched-`$` cases), which isolate the `\\&` hazard that cannot live
+end-to-end (see below) and pin
+`escape_specials_caret_is_textasciicircum_not_an_accent`.
+
+**Measured**, `--release` before/after on the same host, TOTAL document errors:
+
+| cluster | witness | before | after |
+|---|---|---|---|
+| `_` | 2605.06926 | 8 | **0** |
+| `_` | 2605.01936 | 13 | **0** |
+| `_` | 2605.04604 | 2 | **0** |
+| `_` | 2605.08986 | 2 | **0** |
+| `_` | 2605.05898 | 1 | **0** |
+| `_` | 2605.11300 | 1 | **0** |
+| `%` | 2605.01196 | 28 | **0** |
+| `%` | 2605.02131 | 28 | **0** |
+| `%` | 2605.00879 | 103 | **1** |
+| `&` | 2605.06249 | 3 | **0** |
+| `&` | 2605.03054 | 1 | **0** |
+| `&` | 2605.00462 | 1 | **0** |
+| `&` | 2605.08753 | 1 | **0** |
+| `&` | 2605.10409 | 1 | **0** |
+| `&` | 2605.00833 | 0 | **0** |
+
+**193 → 0.** Two residuals are unrelated to this cluster and were unchanged by
+it: 2605.00879's remaining error is `undefined:\mathsemicolon`, and 2605.11579
+(listed for the `_` cluster) had 5 errors before AND after with zero
+`unexpected:_` in either — its apparent three were an artifact of measuring in
+the DEGRADED no-dump mode a fresh worktree starts in. Run
+`tools/make_formats.sh` before believing any error count. (That 5 no longer
+reproduces: 2605.11579 is at **0** on current main, because #80 stopped digesting
+its uncited entries — a second reason to re-measure rather than quote.)
+2605.00833 is a RENDERING witness, not an error-count one: its `\&amp;` printed
+as "&amp;" and now prints "&".
+
+**Known not covered.** A literal `\\` in a title makes
+`\bib@field@default@title` open a nested `<ltx:bibitem>`
+(`malformed:ltx:bibitem <ltx:bibitem> isn't allowed in <ltx:bib-title>`) with no
+special character anywhere in the entry — a pre-existing behaviour of `\\` in a
+bibliography, independent of this work, and the reason the `\\&` hazard is
+pinned by a unit test rather than end-to-end. An `&` inside a `.bib` field's
+`$\begin{array}…$` would lose its alignment meaning — treatment 1 is
+catcode-level and cannot be math-aware; no witness exhibits one.
+
+**A knock-on for the digest-once guard.** `105_bib_field_digest_once` needs a
+probe that re-raises on EVERY digest (an undefined macro self-heals into
+`<ltx:ERROR/>` on first sight and would pass with the bug present). It used `_`,
+then `^` when `_` became data; both are now data, so the probe moved to `\hline`
+in a `note`, which expands to `\noalign` — a context error with nothing to
+memoize. Both scripting characters stay in that fixture as the standing
+zero-error check.
+
+### 75. A `.bib`-derived bibliography does not run the missing-`\bibitem` rescue
+
+**Perl behaviour.** `BibTeX.pool.ltxml:183` gives `{bibtex@bibliography}` the
+same `afterDigestBegin => beginBibliography` as a hand-written
+`{thebibliography}`. `beginBibliography` = `beginBibliography_clean` +
+`setupPseudoBibitem` (`latex_constructs.pool.ltxml` L4028-4047), and
+`setupPseudoBibitem` `\let`s **both** `\par` and `\\` to
+`\par@in@bibliography`, which emits a fresh `\save@bibitem{}` every time it
+fires. Its purpose is stated in its own comment: "Since SOME people seem to
+write bibliographies w/o `\bibitem`, just blank lines between apparent
+entries".
+
+That rescue cannot apply to a `.bib`-derived bibliography.
+`Pre::BibTeX::toTeX` (L110-122) generates the body mechanically — one
+`\ProcessBibTeXEntry{key}` per line between `\begin{bibtex@bibliography}` and
+`\end{bibtex@bibliography}` — so there is never a missing `\bibitem` to
+recover, and the only `\par`/`\\` that can reach the heuristic come from
+**inside a field value**. There the heuristic opens `<ltx:bibitem>` in the
+middle of `<ltx:surname>` / `<ltx:bib-title>` / `<ltx:bib-note>`; the model
+rejects it (`Error:malformed:ltx:bibitem`), it is inserted anyway, and it is
+never closed, so every later entry nests inside it.
+
+Note the diagnostic trap: the element named in the error is **not** the one
+that failed to close. `<ltx:surname>` is opened and closed exactly as its
+constructor says — it is merely the insertion context at the moment the
+spurious item is opened.
+
+**Rust behaviour.** `{bibtex@bibliography}` calls `begin_bibliography_clean`
+and skips `setup_pseudo_bibitem`. Nothing else in that environment needs the
+skipped bindings: `\newblock`→`\lx@bibnewblock` is already `Let` globally
+(`latex_constructs.pool.ltxml` L4133), `\bibitem`/`\item`/`\vskip` never occur
+in the generated body, and the trailing "risky" lookahead that unreads a `\par`
+is a no-op because the body starts with the executable `\ProcessBibTeXEntry`.
+`{thebibliography}` and the biblatex/amsrefs/revtex/OmniBus bibliographies keep
+the full `begin_bibliography` — the rescue still applies where it was meant to.
+
+**Why.** Same-host Perl 0.8.8 emits byte-identical malformed output on the same
+input (over the fixture `.bib`: the same 6 `malformed:ltx:bibitem` errors, one
+of them naming `<ltx:givenname>` where Rust names `<ltx:surname>` — a name-split
+nuance, same cluster), so pdflatex is the ground truth, and it disagrees with
+both engines:
+bibtex 0.99d compresses every white-space run in a field value to a single
+space, so a blank line **never reaches TeX at all**, and it copies `\\` through
+to the `.bbl`, where `thebibliography` renders it as a line break *inside* the
+item. Verified by running bibtex 0.99d over the fixture's `blankline` entry:
+the generated `.bbl` reads `Debarati Das and Michal Koucky.` and `A dynamic
+structure for one-dimensional top-k range reporting.` on single lines. Under
+neither reading does a field value start a new bibliography item.
+
+Measured, current binary: **2605.03313 7 -> 0**, **2605.03693 7 -> 1** (the
+residual is an unrelated text-mode `^`), **2605.11080 1 -> 0**. The final
+rendered HTML is **byte-identical** on all three — `MakeBibliography` rebuilds
+each cited entry from its fields, so the injected items never reached the page
+and the whole cost was diagnostic noise plus a malformed intermediate.
+
+Guard: `06_cluster_bibliography::bib_field_blank_line_does_not_inject_a_bibitem`
+(`convert_and_post_clean`, since the damage is done in the recursive `.bib`
+session that `MakeBibliography` drives during POST). Fixture
+`bib_field_blank_line.{bib,tex}` carries all three witness shapes: a blank line
+in `title`, in `author`, in a `note`-routed `Annote`, plus the `\\` note — 6
+errors RED, 0 GREEN.
+
+### 76. — RETIRED NUMBER, deliberately unused. Do NOT reuse it.
+
+Not a mistake and not a gap to fill. #76 briefly held "A `.bib` field's content is
+DATA — `_ & # %` are literal, not catcodes", whose first witness was the
+underscores in an `eprint` PDF URL. When the separate `%`-only and `&`-only
+entries were consolidated it was merged into **#74** — which adds `^`, the
+two-treatment framing, and the exclusion list — and the number was **retired
+rather than renumbered**, because divergence numbers are cited verbatim from
+`.rs` comments and renumbering silently invalidates every citation. Nothing in
+the tree cites `OXIDIZED_DESIGN #76`. For the next free number see the header at
+the top of this file — it is the single authoritative counter. (This spot used to
+restate it and drifted stale at **#81** while the header had already moved on;
+restating the number in two places is what makes it get taken out from under
+people.)
+
+### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
+
+**Perl behaviour.** Neither package has a `.ltxml` — not in
+`LaTeXML/lib/LaTeXML/Package/`, not in the installed 0.8.8 tree, not in
+ar5iv-bindings. `\keywords` exists in Perl only inside a *class* binding
+(`OmniBus.cls.ltxml`, `llncs.cls.ltxml`, `sv_support.sty.ltxml`, …), and these
+papers are `\documentclass{article}` + `\usepackage{arxiv}`, so none of them
+fires. Both packages are therefore undefined in any configuration that does not
+raw-load the `.sty`. Measured, same-host Perl 0.8.8, verbose, no `--includestyles`:
+2605.05327 `undefined:\WarningFilter`; 2605.06624 `undefined:\WarningFilter` +
+`\ActivateWarningFilters` + `\DeactivateWarningFilters`; 2605.02338 and 2605.10111
+`undefined:\keywords`. So these bindings are **new work, not a port**, and Rust
+ends up with fewer errors than Perl on all four.
+
+**Why the gap is worth closing rather than matching.** LaTeXML recovers an
+undefined CS as a **zero-argument** `<ltx:ERROR/>`, so the arguments do not
+vanish — they leak into the body as text. 2605.05327 renders the literal
+"Extended allocation already in use" (an `\WarningFilter` message) in the
+document, and 2605.02338 renders its keyword list as an unlabelled paragraph
+next to an `ltx_ERROR` span. Arity, not the body, is what the binding is for.
+
+**Two different shapes, because the two packages are different kinds of file.**
+
+*`silence.sty`* is a stable CTAN package (v1.5b, 2012) whose entire job is
+filtering LaTeX's *console* messages; it contributes no document content, so
+every public command is a no-op with silence's own arity
+(`\WarningFilter*[family]{package}Semiverbatim`, …). It is registered
+**unconditionally** — it pre-empts the raw `.sty` everywhere — because the raw
+file rebinds `\PackageError`/`\GenericError` (L581-599) and `\ErrorsOff` then
+drops messages that LaTeXML would have reported. Measured on a two-line probe
+(`\usepackage{silence}\ErrorsOff` + a package raising `\PackageError`): Perl
+`--includestyles` reports **0 errors**, Rust with this binding reports **1**.
+Pre-empting the raw file *restores* a suppressed diagnostic; it does not hide one.
+
+*`arxiv.sty`* (George Kour's arXiv-preprint style) and its `PRIMEarxiv.sty` fork
+are **bundled inside the paper**, so their contents vary and they carry real
+formatting — `\@maketitle`, `abstract`/`table` redefinitions, section shapes.
+Their bindings are therefore gated on `lookup_bool("INCLUDE_STYLES")` — the same
+predicate the raw-load path uses (`binding/content.rs` L776): when raw style
+loading is available the binding does nothing but hand control back to the
+paper's own file, and only in bare mode does it define arxiv.sty L10/L29-31/L33/
+L44-47 (`\keywords`, `\keywordname`, `\headeright`, `\undertitle`,
+`\shorttitle`, and the two `\RequirePackage`s a registered binding would
+otherwise skip past the dependency scan). `\keywords` is ported verbatim,
+including the local `\and` → `$\cdot$` rebinding and PRIMEarxiv's unbraced
+`\emph Keywords`, so bare mode renders exactly what the raw load renders.
+
+**Measured.** Bare mode, four witnesses: 2605.05327 **1 → 0**, 2605.06624
+**4 → 1** (the residual `unexpected:&` is an unrelated pre-existing cluster,
+present in the ar5iv baseline too), 2605.02338 **1 → 0**, 2605.10111 **1 → 0**.
+ar5iv mode (`--preload=ar5iv.sty`), before vs after: all four HTML outputs
+**byte-identical**, same error counts. A fifth witness, 2504.08779
+(`ascelike-new.cls`, whose `\RequirePackage{silence}` never reaches a raw load),
+carried `undefined:\WarningFilter` in the full-arXiv corpus report and now
+converts at 0 errors — registering the binding is what lets the class's
+dependency scan resolve `silence` at all.
+
+Corpus scale from the full-arXiv report: `\keywords` 428 tasks;
+`\WarningFilter` witnesses 2010.00969, 2101.00910, 2504.08779, 2508.11482,
+2509.17283, 2509.20705, 2509.20709, 2510.02612, 2512.12232, 2512.14031,
+2601.01344, 2602.11517.
+
+Guards: `00_contrib::silence_filters_test`, `00_contrib::arxiv_keywords_test`,
+`00_contrib::primearxiv_keywords_test` (bare mode, golden `.tex`+`.xml` pairs),
+`106_arxiv_sty_defers_to_bundled` (the `INCLUDE_STYLES` gate — a bundled
+`arxiv.sty` with a distinctive keyword label must still win),
+`107_silence_keeps_diagnostics` (the raw-load suppression above).
+
+### 78. `mathscinet.sty` gets a binding — and nothing loads it for you
+
+`mathscinet.sty` is a real package: AMS, v1.05 (2002/04/17), LPPL, shipped in TeX
+Live inside the **amsrefs** bundle
+(`texmf-dist/tex/latex/amsrefs/mathscinet.sty`). It holds the vocabulary
+[MathSciNet](https://mathscinet.ams.org) records transliterate Cyrillic and
+South-Slavic names with: `\cprime` (ь), `\Dbar`/`\dbar` (Đ/đ), `\cdprime`,
+`\bud`, `\cydot`, `\polhk`, `\soft` and the under-accents. Perl LaTeXML has
+`amsrefs.sty.ltxml` but **no** `mathscinet.sty.ltxml`, so the binding is a
+Rust-only addition — though a port of the real `.sty`, not an invention.
+`latexml_package/src/package/mathscinet_sty.rs`.
+
+**Mappings come from the file's own T1 branches**, which say what each glyph IS
+rather than how it is drawn: `\Dbar`→`\DJ` (U+0110), `\dbar`→`\dj` (U+0111),
+`\cprime`→`\tprime` (U+02B9), `\cdprime`→two of them (U+02BA), `\polhk`→`\k`,
+`\soft`→`\v`, `\udot`→`\d`. The Default branches overprint with `\accent` and
+`\hbox` kerning (`\Dbar` is
+`\leavevmode\lower.5ex\rlap{\hskip-.07em\accent"16}D`), which would reach the XML
+as a bare "D" (WISDOM #50). Two deliberate departures from the source: L36's
+`\RequirePackage{textcmds}` is not reproduced (it would raw-load a
+`\pcatcode`-juggling docstrip `.sty` for two commands whose results are inlined),
+and `\Cprime`/`\Cdprime` — `cyracc.def` L53-55 spellings that arrive with the
+same data but are absent from this `.sty` — are provided alongside.
+
+**Nothing auto-loads it, and that is the load-bearing decision.** The recursive
+`.bib` session already loads `url.sty` on a document's behalf (divergence #72),
+so doing the same for mathscinet is the obvious move. It would be wrong.
+Checked, not assumed, on witness 2605.11579: the paper never mentions
+`mathscinet` or `amsrefs`, and it uses `\bibliographystyle{alpha}` — and
+`alpha.bst` contains **zero** occurrences of `Dbar`, so no `.bst` `@preamble`
+supplies it either. `\Dbar` is therefore undefined in the author's own build:
+real pdflatex raises the same undefined control sequence. **The residual
+`undefined:\Dbar` is PARITY, not a defect**, and supplying the macro anyway would
+push our error count below what the author's toolchain produces — the one thing
+the canvas signal must never do. (That witness no longer *shows* the residual —
+see the measurement below — because its `\Dbar` entry is uncited, not because
+anything about this reasoning changed.)
+
+**Why a package and not an always-present kernel definition.** A format-chain
+definition runs before the document's preamble, and LaTeXML's `\newcommand` over
+an already-defined CS silently keeps the OLD meaning (no error, no warning), so
+an always-present vendor macro SHADOWS an author's own. Scanned 4,000 papers of
+arXiv 2605:
+
+| macro | authors define it | with `\newcommand` (would be shadowed) | used-but-undefined |
+|---|---|---|---|
+| `\cprime` family | 10 | 0 (all `\def`, which overrides cleanly) | ~20 |
+| `\Dbar` | 6 | **4** | 2 |
+| `\dbar` | 12 | 8 | 0 |
+
+An always-on `\Dbar` renders `Đ` where four authors wrote
+`\newcommand{\Dbar}{\bar{D}}` — verified, with zero diagnostics — i.e. it breaks
+more papers than it fixes. Inside a document that DOES load the package, the
+upstream `\ProvideTextCommand`/`\ProvideTextCommandDefault` deferral (kept as
+`mathscinet_sty.rs::provide`) yields to a name already taken. That is also what
+makes `\dbar` safe to bind here and nowhere else.
+
+Read the `\cprime` row correctly: **zero** authors define that family with
+`\newcommand`, so a stub for it would have shadowed nobody. Shadowing is the
+`\Dbar`/`\dbar` argument, not the `\cprime` one — the `\cprime` family is
+package-only because the errors that motivated a stub were manufactured by
+digesting uncited entries (below), and because vendor vocabulary belongs to the
+vendor's binding.
+
+**The `\cprime` family is package vocabulary too — there is NO always-on stub**
+(deleted 2026-07-27; the block it left behind in
+`latex_constructs_rust_only.rs` records why). All three of its witnesses load the
+package by name — 2508.13753 L7, 2508.20226 L3, 2509.07628 L13 — which corrects
+the `cyracc.def` / "no Cyrillic encoding otherwise loaded" justification the
+family used to carry. The stub briefly lived in `latex_constructs.rs`, then moved
+to `latex_constructs_rust_only.rs` §5 (the Perl-parity file mirrors
+`latex_constructs.pool.ltxml` byte-for-byte and must hold no non-Perl
+definitions), then went away entirely. `\polhk` stays behind in
+`latex_constructs.rs` as a fallback; its comment there claimed tipa.sty as its
+source, and the real one is `mathscinet.sty` L111-113, corrected in place.
+
+**Why the stub's justification collapsed.** It rested on four papers regaining
+`undefined:\cprime` without it (2605.00173/.00186/.00190/.00305). Three of the
+four were artifacts of a defect since fixed: we digested EVERY entry of a `.bib`
+library, so we met `\cprime` in entries `bibtex(1)` never copies into the `.bbl`.
+Since **divergence #80** digests only the CITED entries, that trigger is gone
+structurally rather than papered over — and a definition that is always live can
+shadow an author's own, the same hazard that kept `\Dbar` package-only from the
+start.
+
+**The rule, therefore.** `mathscinet.sty`'s vocabulary belongs to its binding. A
+paper gets it the way the real toolchain gives it: by loading `mathscinet` (or
+`amsrefs`, which `\RequirePackage{mathscinet}[2002/01/01]`s it at `amsrefs.sty`
+L217), or by carrying the definition in its own `.bib` `@preamble` — which
+executes, faithfully to Perl (`Pre/BibTeX.pm::toTeX` L118-122 →
+`pre_bibtex::to_tex`), guarded by
+`bib_preamble_defines_macros_for_the_whole_bibliography`.
+
+**Measured** on current main, `--includestyles`, idle box, serial — total
+document errors and `undefined:\cprime` count:
+
+| paper | errors | `undefined:\cprime` | why |
+|---|---|---|---|
+| 2605.00173 / .00186 / .00190 | 0 | 0 | the `\cprime`-bearing entry is **uncited** (2605.00173: `MR2562222`, `bibliography.bib` L885), so #80 never digests it |
+| 2605.00305 | 1 | 1 | **the only real cost, and it is honest.** It CITES `MR710121` (`mybib.bib` L26, `MRREVIEWER = {V.\ Z.\ Enol\cprime ski\u i}`), loads neither `mathscinet` nor `amsrefs`, ships no `@preamble`, and uses `\bibliographystyle{plain}` — `plain.bst` contains zero `cprime`. Real pdflatex fails there too |
+| 2605.11579 | 0 | 0 | its own `.bib` `@preamble` — 14 copies of `\def\cprime{$'$}`, `biblo.bib` L4768/L6910/… — covers all 17 uses |
+
+So the whole cost of package-only is one paper and one PARITY diagnostic. Earlier
+corpus framing, kept because it is expensive to re-derive: across the first 600
+papers of arXiv 2605, **seven** use `\cprime` inside a `.bib` and **six carry no
+`@preamble` at all**; per-paper table in
+[`BIBLIOGRAPHY_WORKLIST.md`](BIBLIOGRAPHY_WORKLIST.md).
+
+**Measured**, same host: 2508.13753 **0 errors**, `Kondratʹev` composing;
+2508.20226 **0 errors**; 2509.07628 `--includestyles` **0 errors**, `Drinfelʹ d`
+composing (its 6 bare-mode errors are an unloaded local `Latex-document.sty`,
+unrelated). 2605.11579 measured **1 error / 36 bibitems** before #416 and **0
+errors** after: the `\Dbar` residual vanished not because the macro became
+available but because the entry carrying it (`KacNilpotentorbits`, `biblo.bib`
+L2059) is **uncited**, so #80 never digests it. The PARITY reasoning above is
+unchanged — a paper that CITES a `\Dbar` entry while loading no package still
+gets the diagnostic — but that case is now pinned by the guard fixture alone, not
+by this witness.
+
+Guards: `06_cluster_bibliography::bib_mathscinet_package_supplies_its_transliteration_glyphs`
+(a document that loads the package, exercising both body prose and a `.bib`
+`MRREVIEWER`; `\Dbar` was the discriminating assertion while `\cprime` had a stub
+beneath it — both are package-only now, so either discriminates) and
+`::bib_mathscinet_macro_yields_to_the_authors_own_definition` (a document that
+does not — RED under an always-on `\Dbar`, where the author's barred-D math
+renders `Đ`, and equally RED if the `.bib` session is made to auto-load).
+`bib_mr_reviewer_accent.tex`, whose `primerev` entry carries `Gel\cprime fand`,
+now loads the package: that fixture is about accent welds surviving reversion,
+not about macro availability.
+
+### 79. An UNMATCHED `$` in a `.bib` field is data, not a math shift
+
+Extends divergence #74 (a `.bib` field's content is DATA) to the one special it
+left out. Treatment 2's escaper is math-aware precisely so `$x_1+x_2$` passes
+through — but it treated `$` as an unconditional toggle, with no check that the
+toggles pair up.
+
+**The defect.** One stray `$` opens an inline-math group that never closes. A
+`.bib` is digested as ONE unit, so the leak crosses `\end{bib@entry}` and every
+subsequent element of every subsequent entry lands inside `<ltx:XMath>`:
+`<ltx:bib-organization> isn't allowed in <ltx:XMath>`, ~100 times over, tripping
+the 100-error cap and taking the whole document **Fatal**. Witness 2605.00166,
+`annote = {… costs … are probably of the order of $10 million. …}` — a literal
+currency dollar: **0 errors before the `.bib` became a real conversion, 103 and
+a Fatal after**. Across the 2605+2606 sandboxes, 33 of the 69 papers whose
+bibliography sub-conversion newly failed carry an odd `$` in a field, mostly in
+`title`, `abstract` and Mendeley-exported `keywords`/`mendeley-tags`.
+
+**The rule.** A `$` with no partner cannot be a math delimiter — there is no
+reading under which it opens a span that closes. It is therefore data, and `\$`
+is what a careful `.bst` author would have written, which is exactly #74's
+stated principle. With pure toggling an even count is always balanced, so only
+an odd count has an unmatched member; "immediately followed by an ASCII digit"
+is the tell that picks which one, and it settles the real cases:
+`of the order of $10 million` (demote the lone toggle), `$x$ costs $10` (demote
+the digit one, `$x$` stays math), `costs $10 and $x$` (note the *last* toggle
+would have been the wrong pick), `$1 and $2 and $3` (demote all three). With no
+digit anywhere, fall back to the trailing toggle.
+`bibtex.rs::demote_unmatched_dollars`.
+
+**SURPASS-PERL, and deliberately.** Same-host Perl cascades identically —
+`latexmlc` on 2605.00166 gives 102 errors and `Fatal:too_many_errors:100`, rc=1
+— because `\bibentry@create` interpolates the field raw into a fresh Mouth
+(`BibTeX.pool.ltxml` L155-166) with no escaping of any kind, and `Digested`
+(L230) then digests it live. Upstream *already agrees* an unmatched `$` is not
+math: `\bib@@title` balances it with `extract_delimited`, raises
+`Error('expected','$',…)` and **deletes** the stray (L324-330). It just applies
+that judgement to one field, and drops the character instead of keeping it. We
+apply it to every field and keep the character.
+
+Nothing is suppressed: this removes the CAUSE of the cascade, so the ~100
+`malformed:` errors are gone because the entry is now well-formed, not because
+they stopped being reported. It costs no fidelity against `pdflatex` either — a
+standard `.bst` never emits `annote` at all, so the character only ever reaches
+a tokenizer because we read the `.bib` directly, with no `.bst` in the loop.
+
+Guards: `bibtex.rs::escape_specials_lone_dollar_is_currency_not_math`,
+`::escape_specials_balanced_math_is_untouched`,
+`::escape_specials_digit_dollar_is_preferred_over_the_last`,
+`::escape_specials_all_currency_dollars_demote`,
+`::escape_specials_unmatched_dollar_without_a_digit_falls_back_to_the_last`,
+and `06_cluster_bibliography::bib_unmatched_dollar_does_not_leak_math`.
+
+### 80. A `.bib` library is digested down to the CITED entries
+
+**Perl behaviour.** `Pre/BibTeX.pm::toTeX` (L110-122) emits one
+`\ProcessBibTeXEntry{key}` per entry in the file, unconditionally, and the whole
+block is then digested. That was affordable while a raw `.bib` was read by a
+hand-rolled string parser; since it became a real conversion (PR #396) every
+entry costs a full expand/digest/construct cycle.
+
+**What that cost.** A `.bib` is a library, not a document: `anthology.bib` ships
+**80,576** ACL entries and the citing paper wants **9**. Witness **2605.07796**:
+112 s and 4.8 GB RSS, tripping the memory budget and producing **zero**
+bibentries — the paper loses its whole bibliography — with the fleet's 60 s
+timeout killing the conversion outright. The same shape covers **59 of the 69**
+papers in the 2605/2606 sandbox `never_completed_with_retries` bucket (median
+80,597 entries each); 10 of them had converted cleanly before #396.
+
+**Rust behaviour.** `pre_bibtex::to_tex` emits `\ProcessBibTeXEntry` only for the
+selected entries. The cited set is not guessed: `MakeBibliography` already holds
+it as the `BIBLABEL:<list>:<key>` ObjectDB records written during the *document*
+conversion, so it is complete before post-processing asks. It travels as
+`BibConversionRequest::wanted_keys` → `pre_bibtex::set_wanted_keys` (a
+thread-local the caller must `clear_wanted_keys` after use).
+
+**Why this is MORE faithful, not less.** `bibtex(1)` has always read the `.aux`'s
+`\citation` records and emitted only those entries, plus `crossref` targets, plus
+everything under `\nocite{*}`. Filtering here reproduces the real pipeline;
+digesting the library whole never did.
+
+**Selection is closed transitively** (`pre_bibtex::select_cited`) over both edges
+that can reach an uncited entry — `crossref`, BibTeX's own inheritance link, and
+a `\cite` made from inside an already-selected entry, which `getBibEntries`
+follows — so a filtered run keeps everything an unfiltered one kept.
+
+**Every entry is still REGISTERED** (`bibtex::register_entry`, Perl's
+`assignValue 'BIBENTRY@<lc-key>'` at L114-116). That is a map insert of
+already-parsed strings, and keeping it complete is what lets `crossref` and by-key
+lookup resolve against an entry nobody cited.
+
+**`None` means "digest everything"**, and is used for `\nocite{*}` and —
+deliberately — when no `BIBLABEL` record exists at all: an empty filter and absent
+citation data are indistinguishable, and dropping every entry on a missing record
+would be a silent, unrecoverable total loss.
+
+**Measured.** 2605.07796: 112 s / 0 bibentries / killed → **10 s / 9 bibentries /
+0 errors**, matching what the pre-#396 run produced. 9 of the 10 cleanly-converting
+regressions recover; the tenth (2605.16752) is an unrelated
+`Fatal:Timeout:TokenLimit`.
+
+**A knock-on that invalidates older measurements, and is expensive to
+rediscover.** An error raised only by an *uncited* entry now disappears without
+the macro becoming available. That is what took 2605.00173/.00186/.00190 off the
+`undefined:\cprime` list and what removed 2605.11579's `undefined:\Dbar` residual
+(its `KacNilpotentorbits` entry, `biblo.bib` L2059, is uncited) — see #78.
+**Re-measure any bibliography error count recorded before 2026-07-27** rather than
+reading a drop as a fix.
+
+Guards (`pre_bibtex.rs`): `filter_digests_only_the_cited_entries`,
+`filter_follows_crossref`, `filter_follows_a_cite_from_inside_an_entry`,
+`filter_still_registers_every_entry`,
+`filter_is_case_insensitive_like_the_registry`,
+`filter_tolerates_a_cited_key_with_no_entry`, `no_filter_digests_every_entry`,
+`cite_key_scanner_handles_the_cite_family`.
+
+### 81. amsmath's `\ext@arrow` / `\arrowfill@` internals get bindings Perl does not have
+
+**Perl behaviour.** `LaTeXML/lib/LaTeXML/Package/amsmath.sty.ltxml` binds the
+*public* extensible arrows (`\xrightarrow`, `\xleftarrow`, …) as constructors and
+never defines the internals they are built from. `\ext@arrow` (amsmath.sty L1012,
+`\def\ext@arrow#1#2#3#4#5#6#7`) and `\arrowfill@` (L971, `\def\arrowfill@#1#2#3#4`)
+are therefore **undefined** in Perl in every configuration that does not raw-load
+`amsmath.sty` itself. Any package or preamble that builds its own arrow on top of
+them — `extpfeil.sty`'s `\newextarrow`, `mathtools`' `\xhookrightarrow`, a
+hand-rolled `\newcommand*{\xfoo}[2][]{\ext@arrow …}` — hits
+`Error:undefined:\ext@arrow` plus `Error:undefined:\arrowfill@`, and the arrow's
+own arguments then leak into the surrounding math as text.
+
+**We define both** (`latexml_package/src/package/amsmath_sty.rs`), passing through
+to `\to^{above}_{below}` and `\to` respectively — we do not model stretchy arrow
+rendering, but the arity is what the binding is for. Witnesses 2411.17873 and
+2412.00464 (amsmath's own `\ext@arrow 0359\rightarrowfill@…`), 1308.1071
+(`extpfeil`'s `\xmapsto`), 2606.01903 (`extpfeil`'s `\xtwoheadleftarrow`). On
+2606.01903 this is the whole difference between the two engines: same-host Perl
+0.8.8, verbose, ar5iv profile, reports **258 errors** with `MAX_ERRORS` lifted
+(and `Fatal:too_many_errors` at 102 with the shipped cap of 100); we report **0**.
+
+**The parameters are TeX undelimited arguments, all of them.** Each `#n` of a
+plain `\def` reads a single token OR a balanced `{…}` group. Spelling any of them
+`Token` in the parameter spec reads only the opening `{` of a braced argument and
+spills the remainder — including its closing `}` — back into the stream, where the
+stray `}` closes the enclosing math group and everything after it is swallowed
+into the leaked `<ltx:XMath>`. The braced form is not exotic: `\newextarrow`
+expands to `\ext@arrow #2{\arrowfill@#3}{##1}{##2}`, and the `\mkern` quadruple
+`#2` is only four bare digits when every amount is a single digit —
+`\newextarrow{\xtwoheadleftarrow}{500{40}}{…}` braces the 40. So all seven
+parameters of `\ext@arrow` and all four of `\arrowfill@` are `{}`. Guard
+`06_cluster_math::cluster_ext_arrow_braced_mkern`.
+
+### 82. spconf.sty's `keywords` block becomes `ltx:keywords` frontmatter, not inline body text
+
+**Perl behaviour.** `spconf.sty` (the ICASSP/ICIP/Interspeech conference style,
+bundled inside the paper) has no `.ltxml` — not in `LaTeXML/lib/LaTeXML/Package/`,
+not in the installed 0.8.8 tree. Its "Index Terms" block is a bare plain-TeX
+environment pair, not a `\newenvironment` (spconf.sty L211-214):
+
+```tex
+\def\keywords{\vspace{.5em}{\bfseries\textit{Index Terms}---\,\relax}}
+\def\endkeywords{\par}
+```
+
+Measured, same-host Perl 0.8.8, verbose, witness 2605.00480 (`main.tex`):
+**bare** = 4 errors (`\name`, `\address`, `\ninept`, `{keywords}`);
+**`--includestyles`** = 0 errors, because the raw `.sty` is read — but the block
+then lands in the body as
+`<para><p><text font="bold italic">Index Terms<text>—…`, with **no `ltx:keywords`
+element**. Perl produces **zero `<creator>` and zero `<keywords>` for these papers
+in either configuration**: LaTeXML locks `\maketitle`, so spconf's own
+`\def\maketitle` — the only thing that would ever emit the stashed `\@name` — is
+ignored (`Info:ignore:\maketitle:locked`). That is why this binding is registered
+unconditionally rather than gated on `INCLUDE_STYLES` the way the bundled
+`arxiv.sty` is (#77): deferring to the raw file here *loses* the frontmatter.
+
+**We bind it as structured frontmatter.** `latexml_contrib/src/spconf_sty.rs`
+defines `\keywords` → `\lx@begin@keywords[name={\spconf@keywordsname:~}]` and
+`\endkeywords` → `\lx@end@keywords`, mirroring the `.sty`'s `\def` pair rather
+than declaring a `DefEnvironment!` (so a document calling the two macros directly
+also works). The label rides in `@name`, not in the content; the XSLT renders it
+as the block's `<h6 class="ltx_title ltx_title_keywords">`.
+
+**Why this exact shape.** spconf.sty's own comment says the section was "adapted
+from IEEEtrans", and IEEEtran.cls L5286-5288 typesets it identically
+(`\textit{\IEEEkeywordsname}---`). Perl LaTeXML **does** bind that construct, in
+`IEEEtran.cls.ltxml` L147-148 — as `\lx@begin@keywords[name={\IEEEkeywordsname:~}]`,
+i.e. `ltx:keywords` with the label in `@name` and the print-only `---` separator
+normalized to `:~`. So the divergence is only against *raw-loaded* spconf; against
+Perl's own binding for the same markup it is a verbatim follow.
+
+`\keywords` is argument-less in the `.sty`, so `\keywords{a, b}` is legal there
+too — the group just typesets after the label. Routed straight to the environment
+opener that form has no `\endkeywords` to stop at and
+`\lx@add@frontmatter@until` scans to EOF, pulling the whole body inside
+`<ltx:keywords>` (loudly: `malformed:ltx:section`, `malformed:ltx:document`). The
+binding peeks for a `{` and dispatches to a one-argument form, exactly as Perl
+does for the same legacy pair in `IEEEtran.cls.ltxml` L398-404
+(`\keywords@onearg`). No corpus paper hits it today (`undefined:\keywords` has
+zero reports in either sandbox corpus), but the form is valid spconf input.
+
+The same file's `\twoauthors{names1}{affil1}{names2}{affil2}` (L183-190) is bound
+alongside, routed to `\author{#1 \\ #2 \and #3 \\ #4}` so each pair becomes a
+creator with its own affiliation instead of a zero-argument `<ltx:ERROR/>` whose
+four braced arguments leak into the body as text.
+
+**Corpus scale.** `{keywords}` is the single largest `undefined` *what* in the
+sandbox corpora: **94 tasks in sandbox-arxiv-2605**, **49 in sandbox-arxiv-2606**;
+142 of those 143 papers ship a byte-identical `spconf.sty`. `\twoauthors` adds 3.
+
+**Measured**, before → after, identical in bare and `--preload=ar5iv.sty` mode:
+2605.00480 **1 → 0**, 2605.00698 **1 → 0**, 2605.00721 **1 → 0**, 2605.01187
+**2 → 1** (residual `undefined:\bstctlcite`, unrelated), 2605.05692 **2 → 0**,
+2605.18923 **1 → 0**, 2605.26747 **2 → 0**.
+
+Guards: `06_cluster_frontmatter::frontmatter_spconf_keywords`,
+`frontmatter_spconf_keywords_braced`, `frontmatter_spconf_twoauthors` (all via
+`convert_to_xml_contrib_clean`, so a returning error fails them).
 
 ## Known Upstream Perl Issues (brief)
 

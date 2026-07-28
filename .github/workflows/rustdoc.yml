@@ -9,6 +9,17 @@ on:
 permissions:
     contents: write
 
+# `gh-pages` is a single shared ref, so two deploys must never run at once: two
+# merges to `main` in quick succession each start a deploy, and the slower one's
+# push is rejected with `cannot lock ref 'refs/heads/gh-pages'` (witness: runs
+# 30200330650 / 30200338975, merges 16 s apart on 2026-07-26). Cancelling the
+# older run is right for a docs deploy — only the newest commit's docs are
+# wanted, and the ref update is atomic, so a cancel lands either wholly before
+# or wholly after it. Same shape as `CI.yml`.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
     release:
         name: GitHub Pages
@@ -63,11 +74,32 @@ jobs:
                 PUBLISH_BRANCH: gh-pages
                 PUBLISH_DIR: ./target/doc
               run: |
+                set -euo pipefail
                 git config user.name "${GITHUB_ACTOR}"
                 git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-                git fetch origin ${PUBLISH_BRANCH}
-                git checkout ${PUBLISH_BRANCH}
+                git fetch origin "${PUBLISH_BRANCH}"
+                git checkout "${PUBLISH_BRANCH}"
                 find "${GITHUB_WORKSPACE}/${PUBLISH_DIR}" -maxdepth 1 | tail -n +2 | xargs -I % cp -rf % "."
                 git add --all
                 git commit --allow-empty -m "Automated deployment: $(date -u) ${GITHUB_SHA}"
-                git push origin ${PUBLISH_BRANCH}
+                # The `concurrency` group above serialises our own deploys; this
+                # covers anything else that lands on `gh-pages` between our fetch
+                # and our push. Publishing is "put THIS generated tree on the tip",
+                # so on rejection re-parent rather than merge: `reset --soft` moves
+                # HEAD to the new tip while leaving index and worktree alone, so
+                # the replayed commit carries exactly the same docs. It therefore
+                # publishes OUR tree wholesale — anything the run we lost to added
+                # and we did not generate is pruned. That is what we want for a
+                # generated site (both runs render the same file set from the same
+                # source), and the losing commit stays an ancestor: no force push.
+                for attempt in 1 2 3; do
+                  if git push origin "${PUBLISH_BRANCH}"; then
+                    exit 0
+                  fi
+                  echo "push rejected (attempt ${attempt}/3) — replaying onto the new ${PUBLISH_BRANCH} tip"
+                  git fetch origin "${PUBLISH_BRANCH}"
+                  git reset --soft "origin/${PUBLISH_BRANCH}"
+                  git commit --allow-empty -m "Automated deployment: $(date -u) ${GITHUB_SHA}"
+                done
+                echo "::error::could not publish to ${PUBLISH_BRANCH} after 3 attempts"
+                exit 1

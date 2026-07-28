@@ -1,0 +1,18 @@
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+% Exactly what extpfeil.sty's \newextarrow generates:
+%   \newcommand*{#1}[2][]{\ext@arrow #2{\arrowfill@#3}{##1}{##2}}
+% for \newextarrow{\xtwoheadleftarrow}{500{40}}{\relbar\relbar\relbar}.
+% The FOURTH \mkern amount is the braced group `{40}` (an amount >= 10 has
+% to be braced), and the arrow renderer's own first argument is braced too.
+% Both are plain TeX undelimited arguments of \ext@arrow / \arrowfill@.
+\newcommand*{\xtwoheadleftarrowish}[2][]{%
+  \ext@arrow 500{40}{\arrowfill@{\relbar\relbar}\relbar\relbar}{#1}{#2}}
+\makeatother
+\begin{document}
+\[
+  A \xtwoheadleftarrowish{\simeq} B
+\]
+Text after the display must survive.
+\end{document}

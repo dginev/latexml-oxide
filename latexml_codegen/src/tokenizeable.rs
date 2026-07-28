@@ -1,4 +1,7 @@
-use latexml_core::{mouth, tokens::Tokens};
+use latexml_core::{
+  mouth,
+  tokens::{TeXString, Tokens},
+};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
@@ -11,7 +14,10 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
   let compiled_expansion = if expansion.is_empty() {
     quote!(None)
   } else {
-    let performed_expansion = mouth::tokenize_internal(&expansion);
+    // `assembled` is exact here: this string IS the source literal, recovered
+    // from the derive attribute at compile time. It just cannot be typed
+    // `&'static str` because `syn` hands it back owned.
+    let performed_expansion = mouth::tokenize_internal(TeXString::assembled(expansion));
     if performed_expansion.is_empty() {
       quote!(None)
     } else {
@@ -47,7 +53,8 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
   let tokenized = if literal.is_empty() {
     Tokens::default()
   } else {
-    mouth::tokenize(&literal)
+    // The source literal, recovered from the derive attribute — see above.
+    mouth::tokenize(TeXString::assembled(literal))
   };
   quote!(
     macro_rules! these_tokens {
@@ -63,7 +70,8 @@ pub fn compile_tokenize_internal(input: DeriveInput) -> TokenStream {
   let tokenized = if literal.is_empty() {
     Tokens::default()
   } else {
-    mouth::tokenize_internal(&literal)
+    // The source literal, recovered from the derive attribute — see above.
+    mouth::tokenize_internal(TeXString::assembled(literal))
   };
 
   quote!(

@@ -1532,6 +1532,19 @@ LoadDefinitions!({
   // dispatches through the `\lx@generalized@over` constructor.
   // Driver for OOM regression: `\edef\theequation{$\binom{n}{m}$}`
   // from amsmath `\tag` (witness 2311.16416 proof.tex L287).
+  //
+  // KNOWN RESIDUAL: `protected` does NOT cover every forced expansion.
+  // `Parameter::digest` pre-expands a **Semiverbatim** argument with
+  // `fully_expand = true` (Perl `Core/Parameter.pm` L123-132 +
+  // `Core/Gullet.pm` L408-409), which expands protected macros by design —
+  // so the loop is still reachable there. Demonstrated:
+  // `doi = {10.1000/a \over b}` in a `.bib` (the `doi` field is read
+  // Semiverbatim) still runs away. The same defect in `\href` was closed by
+  // putting the command NAME in the reversion slot as an OTHER-catcode token
+  // instead of the live CS (`hyperref_sty.rs`, `KNOWN_PERL_ERRORS.md` #62);
+  // the identical one-token recipe applies here, and is left undone only
+  // because no corpus paper exercises it and these reversions are pinned by
+  // the math `tex=` goldens.
   DefMacro!(
     "\\above Dimension",
     "\\lx@generalized@over{\\above #1}{meaning=divide,thickness=#1}",

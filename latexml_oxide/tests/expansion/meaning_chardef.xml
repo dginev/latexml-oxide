@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>M1[“char”65]</p>
+  </para>
+  <para xml:id="p2">
+    <p>M2[“char”321]</p>
+  </para>
+  <para xml:id="p3">
+    <p>T1[65]</p>
+  </para>
+  <para xml:id="p4">
+    <p>T2[321]</p>
+  </para>
+</document>

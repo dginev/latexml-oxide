@@ -11,7 +11,7 @@ use crate::prelude::*;
 /// Per [[wisdom_data_drive_min_call_sites]]: 74 ≫ 5 threshold.
 fn def_iop_journal(cs: &str, name: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(cs, true)?;
-  let body_toks = mouth::tokenize_internal(&format!("\\textit{{{name}}}"));
+  let body_toks = mouth::tokenize_internal(TeXString::assembled(format!("\\textit{{{name}}}")));
   def_macro(cs_tok, params, ExpansionBody::Tokens(body_toks), None)?;
   Ok(())
 }
@@ -116,7 +116,7 @@ LoadDefinitions!({
   DefPrimitive!("\\jl{}", sub[(n)] {
     let idx: usize = n.to_string().trim().parse().unwrap_or(0);
     if let Some(journal) = IOP_JOURNALS.get(idx) {
-      def_macro(T_CS!("\\journal"), None, Tokenize!(journal), None)?;
+      def_macro(T_CS!("\\journal"), None, Tokenize!(*journal), None)?;
     }
   });
 

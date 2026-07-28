@@ -1073,7 +1073,7 @@ Not actionable as a Rust-only fix; would require teaching LaTeXML's
 `\sqrtsign`/`\meaning` to round-trip mathchar codes the way TeX does,
 which is out of scope and equally absent in Perl.
 
-## A text-symbol CS (`\i`/`\j`) in a `\usepackage` Semiverbatim option hangs (SHARED)
+## A text-symbol CS (`\i`/`\j`) in a Semiverbatim argument hangs (SHARED — FIXED in Rust 2026-07-26)
 
 `\usepackage[pdfauthor={…Mar{\'\i}n…}]{hyperref}` — i.e. a font-encoding
 text symbol (`\i`, `\j`, …) inside a `\usepackage`/`\RequirePackage`
@@ -1110,11 +1110,45 @@ Mechanism (identical in both engines):
    *collects* them without executing — the font encoding stays "ASCII" —
    and the inner `\i` re-expands → step 2. Infinite.
 
-Breaking the loop requires making `\fontencoding{OT1}` take effect inside
-the semiverbatim `readXToken` (so the inner `\i` resolves to `\OT1\i`,
-CD 16, which IS defined). Perl does not, so Perl hangs too. **This is a
-RELEASE_CRITERIA surpass-Perl reliability item, not a translation parity
-bug.** Tracked in memory `robust-cs-semiverbatim-loop`. (Separately, a
+**✅ FIXED IN RUST 2026-07-26 (surpass-Perl; Perl still hangs).** The cure is
+the one this entry predicted — resolve the inner `\i` to `\OT1\i` — but
+reached without needing `\fontencoding` to take effect inside the collect
+loop. `\UseTextSymbol{#1}{#2}` (`latex_constructs.rs`, Perl
+`latex_constructs.pool.ltxml:2642`) now expands to the encoding-specific
+glyph CS `\csname #1\string#2\endcsname` **when that glyph is defined**,
+keeping Perl's literal `{\fontencoding{#1}#2}` only as the fallback for when
+it is not. That is not an invention: it is exactly what Perl's own
+`\DeclareTextSymbolDefault` (`latex_constructs.pool.ltxml:2684-2688`) makes
+`\?<cs>` expand to — the direct glyph, with no `\fontencoding` wrapper — so
+the observable result matches Perl in every case Perl can reach.
+
+**The dump is NOT the differentiator** — worth recording, because the obvious
+guess is wrong. Measured 2026-07-26 against a format-equipped Perl 0.8.8
+(`cd LaTeXML && cpanm --build-arg formats .`, which installs
+`{plain,latex}_dump.pool.ltxml` beside the modules): Perl's own dump carries
+`\?\i` → `\UseTextSymbol{OT1}\i`, 72 `UseTextSymbol` records. Perl has the
+identical looping shape available. On that one install:
+
+| trigger | Perl (with dumps) | Rust (before) | verdict |
+|---|---|---|---|
+| `\usepackage[pdfauthor={Mar{\'\i}n}]{hyperref}` | **hangs**, exit 124 | hangs | SHARED |
+| `\cite{garcía2024key}` under `[OT1]{fontenc}` | converts, 0.89 s, `bibrefs="garcía2024key"` | `Fatal:Timeout` | **GENUINE-RUST-ONLY** |
+
+So the second witness, **2606.11784**, is the same loop reached from a
+*literal* non-ASCII character rather than an author-typed CS: fontenc's `.dfu`
+maps `í` (U+00ED) onto the text-symbol chain and a `\cite` key is Semiverbatim.
+It went from `Fatal:Timeout:PushbackLimit` with no output to 0 errors / 519 KB.
+**Residual, unpinned:** *why* our `\cite`-key read reaches the encoding
+dispatch when Perl's does not — the fix removes the loop shape for both, but
+that read-path delta is still unexplained and deserves its own look.
+
+Guard: `tests/encoding/textsymbol_semiverbatim` (pins that the literal and
+`\'{i}` spellings converge). Causality checked by restoring Perl's literal body
+at runtime on the fixed binary — the Fatal returns. Of the 25 `PushbackLimit`
+papers in the 2605+2606 sandboxes only 2606.11784 carries a non-ASCII cite key,
+so this repairs a failure *shape*, not that whole cluster.
+
+Tracked in memory `robust-cs-semiverbatim-loop`. (Separately, a
 genuine adjacent divergence was fixed: Rust's `\cf@encoding`/`\f@encoding`
 fell back to *empty* when the live font's encoding slot is `None`; Perl's
 Font always carries OT1 — `Common/Font.pm:331`/`$DEFENCODING`. Now falls
@@ -2494,3 +2528,271 @@ block, so the full author list survives in the body (max label on the witness
 `cluster_bib_long_author_list_refnum`. Candidate to upstream — the fix upstream is
 to route the refnum through the already-present `do_names_short` and stop
 skipping the first block.
+
+## 62. `\href` in a **Semiverbatim** argument expands forever (`doi = {\href{…}{…}}` hangs `latexmlc`)
+
+`hyperref.sty.ltxml` expands `\href` into a stream that re-emits `\href`:
+
+```perl
+DefMacro('\href HyperVerbatim {}', '\lx@hyper@url@\href{}{}{#1}{#2}');
+```
+
+The re-emitted `\href` exists only to fill `\lx@hyper@url@`'s reversion slot
+`#1` (`Undigested`), and is normally consumed as an argument without expanding.
+But `Core/Parameter.pm` L123-132 pre-expands a **semiverbatim** argument before
+digesting it —
+
+```perl
+# If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
+while (defined(my $token = $gullet->getPendingComment || $gullet->readXToken(1))) {
+```
+
+— and `readXToken(1)` sets `$fully_expand = $toplevel = 1`, which by
+`Core/Gullet.pm` L408-409 expands even a `isProtected` definition. That pass
+linearizes tokens one at a time and never reaches `\lx@hyper@url@`'s parameter
+list, so `\lx@hyper@url@` is kept (a Constructor, not expandable) and the
+re-emitted `\href` is expanded again: `\href` → `\lx@hyper@url@\href{}{}…` →
+`\href` → … unbounded.
+
+Minimal trigger — a 7-line `.bib`, since `\bib@field@default@doi` reads
+`Semiverbatim` and INSPIRE exports DOIs wrapped in a link:
+
+```bibtex
+@article{K,
+  author = {Doe, Jane}, title = {{T}}, journal = {J}, year = {2021},
+  doi = {\href{https://doi.org/10.5281/zenodo.19852912}{10.5281/zenodo.19852912}},
+}
+```
+
+```latex
+\documentclass{article}\usepackage{hyperref}
+\begin{document}\cite{K}.\bibliographystyle{plain}\bibliography{thatfile}\end{document}
+```
+
+Measured same-host on an IDLE box (1-min load 4.5), as an A/B against the
+identical document with the `\href` removed from the `doi` field:
+
+| `latexmlc` on | wall | status |
+|---|---|---|
+| `doi = {10.5281/zenodo.19852912}` | **3.7 s** | `Status:conversion:0` |
+| `doi = {\href{https://doi.org/…}{…}}` | **439 s, killed (rc=124)** | `Status:conversion:3` |
+
+so it is a hang, not slowness. Perl `latexml` alone is unaffected only because
+it never reads the `.bib`; the loop is in the post-processing bibliography
+session. Witnesses arXiv 2605.00181, 2605.19650, 2606.06645 (each has exactly
+this `doi = {\href{…}{…}}`), which Perl `latexml` converts cleanly in 8-28 s.
+
+Related to entry 57 (`\save@bibitem`): both are a definition whose expansion
+names itself, surviving only where nothing re-expands it.
+
+**Fixed in Rust** in `hyperref_sty.rs` by putting the command NAME in the
+reversion slot as an OTHER-catcode token rather than the live control sequence —
+which is what the sibling `\url` path (`\lx@hyper@url`) already does
+(`Tokens!(cmd.as_other())`). Inert under every expansion regime, and it
+stringifies and reverts identically. Guard
+`href_in_semiverbatim_bib_field_does_not_loop`
+(`latexml_oxide/tests/59_href_semiverbatim_loop.rs`); the `\edef`/`\xdef` half of
+the same defect is guarded by `58_href_edef_loop.rs`. Candidate to upstream —
+the same one-token change applies to `hyperref.sty.ltxml`.
+
+---
+
+## 63. An unclosed math region swallows the rest of the document — in BOTH engines
+
+**Symptom.** One macro-level breakage inside `$…$` / `\[…\]` / an
+`align`-family body leaves the math group open. Digestion never returns to text
+mode, so every following `_`, `^`, `&`, `\end{…}` and section break is an error
+and the whole remainder of the document lands inside a single `<ltx:XMath>` — the
+leak surfaces in `<ltx:title>`, `<ltx:tag>`, `<ltx:proof>`. The engine then hits
+its `too_many_errors` circuit breaker and produces no document at all.
+
+**This is shared, not a Rust regression.** Classified 2026-07-27 against
+same-host Perl 0.8.8 (`/usr/local/bin/latexml`, verbose — never `--quiet` —
+`--preload=ar5iv.sty --path=ar5iv-bindings/bindings`, the fleet's ar5iv
+profile, each paper's cortex-chosen main file). **At shipped defaults Perl goes
+`Fatal:too_many_errors` on all eleven witnesses**, at 101 errors + the fatal;
+we go fatal at 1001 + the fatal, because `tikz.sty` raises our `MAX_ERRORS` to
+1000 while Perl's `Core/State.pm` L96 default of 100 has no override anywhere in
+its tree. Same severity, same outcome, different amount of diagnostics on the way
+down.
+
+Lifting both caps (Perl: a preloaded binding doing
+`AssignValue('MAX_ERRORS'=>100000)`; Rust: a throwaway patch to the two circuit
+breakers in `common/error.rs`) shows the flood itself is the same flood — same
+first error, same classes, frequently the same counts:
+
+| witness | Perl uncapped | Rust uncapped | first error (both engines, same site) |
+|---|---|---|---|
+| 2605.03113 | 1956 | 1953 | `undefined:\overarrow@` — amsmath internal behind a hand-rolled `\overrightharpoon` via `\mathpalette` |
+| 2605.05934 | 4211¹ | 3604 | `\lx@begin@alignment` in math — mhchem `\ce{}` inside a `\bea`/`\eea` alignment (see also #53) |
+| 2605.07772 | 100002² | 2040 | `undefined:\usephysicsmodule` (physics2) |
+| 2605.09261 | 926³ | 1079 | custom tikz `diagram` env inside `align*` |
+| 2605.11190 | 19984 | 1159 | `\input` of a tikz `\matrix` whose cells carry `$…$`, inside `align*` |
+| 2605.12930 | 2842 | 1097 | tikz-cd "Diagrams cannot be nested" |
+| 2605.15522 | 614 | OOM⁴ | mathtools `\DeclarePairedDelimiterX` starred form spanning lines |
+| 2605.15678 | 1976¹ | 2024 | `undefined:\nin`; author `\def\({\left(}` `\def\){\right)}` |
+| 2605.23308 | 1055 | OOM⁴ | `\g{c}{summ}` custom macro inside `align*` |
+| 2605.30732 | 1137 | 1173 | `\brackets{…}` group leak inside `equation*` |
+| 2606.01903 | 258 | 1810 | `undefined:\ext@arrow` — **the one Rust-only case, see below** |
+
+¹ killed at the harness timeout, count is a floor. ² hit the raised cap.
+³ Perl ends in `Fatal:perl:deep_recursion` rather than finishing.
+⁴ with the circuit breaker removed the runaway exhausts RAM and is SIGKILLed —
+which is what the breaker exists to prevent.
+
+Two rows are worth reading as exact matches rather than "same order of
+magnitude". 2605.05934, uncapped on both sides: `XMHint` 260,
+`\lx@end@inline@math` 189, `unexpected:_` 71, `bibitem` 64,
+`\lx@begin@alignment` 45 — five classes identical, and the same first error at
+the same line:col. 2605.23308, our *capped* run against Perl uncapped:
+`unexpected:_` 160 = 160, `unexpected:^` 104 = 104, `\lx@begin@alignment`
+54 = 54 — i.e. we saturate before we can diverge.
+
+**The one exception, fixed:** `2606.01903` was GENUINE-RUST-ONLY. Perl has no
+`\ext@arrow` binding at all, so it errors once and recovers; we bind it, and the
+binding read four of its seven undelimited arguments as `Token`, splitting
+`extpfeil`'s braced `\mkern` amount `{40}` and spilling a `}` that closed the
+display math. Fixed (OXIDIZED_DESIGN #81, guard
+`06_cluster_math::cluster_ext_arrow_braced_mkern`): 1002 errors + fatal → **0**.
+Grepping the 536 currently-fatal 2605+2606 papers for
+`ext@arrow|extpfeil|newextarrow` found one more of the same shape, 2606.14212
+(`\xtwoheadrightarrow` in an `align*`): 194 errors + fatal → **0**, against 3
+in Perl.
+
+**Not to be "fixed" into a divergence.** The remaining ten need their individual
+undefined internals (`\overarrow@`, `\underarrow@`, `\usephysicsmodule`, …)
+implemented before the math can close — each of those is a capability Perl also
+lacks, so adding them is beyond-Perl work, not parity work. Do not mistake the
+1000-vs-100 error-cap difference for a divergence: it is a diagnostics budget,
+and both engines fail these papers.
+
+---
+
+## 64. A LaTeX **kernel** command before `\documentclass` is undefined (the class is never selected)
+
+In real LaTeX there is no "before the kernel": `latex.ltx` *is* the format, so
+every kernel command is live from token one. LaTeXML instead loads `LaTeX.pool`
+lazily, on first sight of a *trigger* control sequence — the hand-maintained
+list in `TeX.pool.ltxml` L33-56:
+
+```perl
+foreach my $ltxtrigger (qw(documentclass
+  newcommand renewcommand newenvironment renewenvironment
+  NeedsTeXFormat ProvidesFile
+  ProvidesPackage RequirePackage PassOptionsToPackage
+  makeatletter makeatother
+  typeout begin listfiles nofiles)) {
+  DefAutoload($ltxtrigger, 'LaTeX.pool.ltxml'); }
+```
+
+Any kernel command **not** on that list is simply undefined at that point, gets
+`generateErrorStub`'s `<ltx:ERROR/>`, and its arguments leak into the stream.
+The list has grown one witness at a time and its gaps are arbitrary:
+`\PassOptionsToPackage` is there but `\PassOptionsToClass` is not;
+`\newcommand`/`\renewcommand` are there but `\providecommand` is not;
+`\IfFileExists`/`\InputIfFileExists` are absent entirely.
+
+The damaging case is the completely standard "use this class if installed"
+idiom, because the collapsed conditional means **no class is ever selected** —
+and worse, both branches leak, so the *first* (wrong) `\documentclass` wins:
+
+```latex
+\IfFileExists{ltxo-no-such-class.cls}{\documentclass{ltxo-no-such-class}}{\documentclass{article}}
+\begin{document}
+Selected the fallback class.
+\end{document}
+```
+
+Same-host Perl `latexml` (v0.8.8) on that four-line file:
+
+```
+Error:undefined:\IfFileExists ... at perl_probe.tex; line 1 col 14
+Warning:missing_file:ltxo-no-such-class Can't find binding for class ltxo-no-such-class (using OmniBus)
+Error:undefined:\warn@unusedclassoptions ... at perl_probe.tex; line 2 col 1
+```
+
+— i.e. it picks `class="ltxo-no-such-class"`, the branch that was supposed to be
+*rejected*. The second trigger, `\providecommand`/`\PassOptionsToClass` before
+`\documentclass`, is the same defect without the class damage:
+`Error:undefined:\PassOptionsToClass`, `Error:undefined:\providecommand`, and
+then `Error:undefined:` for every macro the lost `\providecommand` should have
+defined.
+
+On a real paper the class loss cascades: witnesses arXiv 2605.25877
+(`\IfFileExists{proc-l.cls}{…}{\documentclass{amsproc}}`) and 2606.06905
+(`siamart251216.cls`, same idiom) both hit **101 errors + `Fatal:TooManyErrors`,
+no class at all**. Also 2606.09693, 2606.16723. Seven papers across sandbox
+corpora 2605+2606 have `undefined:\IfFileExists` as their FIRST error.
+
+**Fixed in Rust** generally rather than by extending the list, which would only
+move the gap. `latexml_engine/src/latex_kernel.rs` registers a hook consulted at
+the two undefined-CS paths (`gullet::read_x_token`, `stomach::
+invoke_token_undefined`) *before* the error is raised: if the ambient kernel
+dump defines the control sequence, load `LaTeX.pool` and retry the token; else
+take the ordinary bounded `Error:undefined` path. Fires at most once per
+session, never during `--init` dump-build, and not at all on the degraded
+no-dump branch of `LoadFormat('latex')`. It also retired the two Rust-only
+trigger accretions (`\UseRawInputEncoding`, `\DocumentMetadata`). Guards
+`preclass_iffileexists_test` / `preclass_kernel_cs_test`
+(`latexml_oxide/tests/structure/`) and
+`nodump_leaves_pre_documentclass_kernel_cs_undefined`
+(`latexml_oxide/tests/108_preclass_kernel_autoload.rs`).
+
+Candidate to upstream, though not as a straight port: Perl has no dump to use as
+the membership oracle, so the upstream-shaped fix is to extend
+`TeX.pool.ltxml`'s list with at least `IfFileExists InputIfFileExists
+PassOptionsToClass providecommand`.
+
+---
+
+## 65. `\meaning` of a `\chardef` token prints the value in DECIMAL, and says `\char` for `\mathchardef`
+
+**Perl source:** `LaTeXML/Engine/TeX_Debugging.pool.ltxml` lines 166-168
+
+```perl
+elsif ($type =~ /chardef$/i) {    # from \chardef or \mathchardef
+  my $prefix = ($$definition{mathglyph} ? '\mathchar' : '\char');
+  $meaning = $prefix . '"' . $definition->valueOf->valueOf; }
+```
+
+**Symptom:** two deviations from real TeX, both benign in isolation but wrong
+for packages that parse `\meaning` to recover a character code.
+
+1. **Decimal, not hex.** `tex.web` L22897-22899 prints the value with
+   `print_hex`, i.e. `"` followed by *uppercase hexadecimal*. Perl interpolates
+   `valueOf->valueOf`, a Perl integer, so it renders decimal.
+2. **`\char` for a `\mathchardef`.** `tex.web` L22899 prints `\mathchar` for the
+   `math_given` command code. Perl's ternary keys off `$$definition{mathglyph}`,
+   but `Core/Definition/CharDef.pm` L32-35 blesses only
+   `cs/parameters/mode/value/encoding/registerType/readonly/locator` — no
+   `mathglyph` key is ever set on a CharDef — so the `\mathchar` arm is
+   unreachable and every chardef reports `\char`.
+
+**Minimal example:**
+```tex
+\newcount\mycnt  \mycnt="41
+\chardef\chA\mycnt
+\mathchardef\mcA="0141
+\meaning\chA   % TeX: \char"41      Perl/Rust: \char"65
+\meaning\mcA   % TeX: \mathchar"141 Perl/Rust: \char"321
+```
+
+**Real-world consequence:** `bxcoloremoji.sty` L1366-1386 builds emoji tag
+codepoints as `E00` concatenated with the `\meaning` tail, expecting hex — so
+`@A` resolves to `E0065` instead of `E0041` (a different tag character). Only
+the rarely used `@!`..`@~` tag range is affected; nothing errors.
+
+**Kept as-is in Rust** — deliberately. `latexml_engine/src/tex_debugging.rs`
+ports Perl exactly (`\char` + decimal, unconditionally), because `\meaning`
+output feeds goldens copied from Perl and every corpus baseline; switching to
+hex is a behaviour change with corpus-wide blast radius, not a local fix. The
+Rust `Register` *does* carry a decoded `mathglyph`, so the `\mathchar` arm could
+be revived at any time — that is the divergence the comment at the fix site
+warns against taking accidentally.
+
+Note this entry is about the *format* only. The Rust port separately had no
+chardef arm at all and returned the internal class name `Register`, dropping the
+`"` that packages split on; that was a Rust-only defect, fixed with guard
+`meaning_chardef` (`latexml_oxide/tests/expansion/meaning_chardef.{tex,xml}`).
+Candidate to upstream: both deviations are one-line fixes (`sprintf('%X')` and
+threading the math flag), but they change observable `\meaning` output.

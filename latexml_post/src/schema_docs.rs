@@ -26,6 +26,8 @@ use std::sync::OnceLock;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
+use crate::document::escape_xml;
+
 /// Filename of the rustdoc-styled theme stylesheet that ships next
 /// to each schema-doc site. Auto-prepended to `--css` when
 /// `--schemadocs` is on, so callers don't need to remember it.
@@ -784,14 +786,14 @@ fn inject_sidebar_index(html: &str) -> String {
       };
       fragment.push_str(&format!(
         r#"<h6 class="schema_index_heading">{}</h6>"#,
-        html_escape(&heading)
+        escape_xml(&heading)
       ));
       fragment.push_str(r#"<ul class="schema_index_list">"#);
       for (name, dt_id) in entries.iter() {
         fragment.push_str(&format!(
           r##"<li><a href="#{}">{}</a></li>"##,
-          html_escape(dt_id),
-          html_escape(name),
+          escape_xml(dt_id),
+          escape_xml(name),
         ));
       }
       fragment.push_str("</ul>");
@@ -831,13 +833,6 @@ fn pattern_suffix(name: &str) -> Option<&str> {
 /// while the dt sits at `#schema.xhtml:foo`. Underscores survive as
 /// `_` in both forms; only `:` needs the substitution.
 fn clean_anchor_name(name: &str) -> String { name.replace(':', "..") }
-
-fn html_escape(s: &str) -> String {
-  s.replace('&', "&amp;")
-    .replace('<', "&lt;")
-    .replace('>', "&gt;")
-    .replace('"', "&quot;")
-}
 
 #[cfg(test)]
 mod tests {

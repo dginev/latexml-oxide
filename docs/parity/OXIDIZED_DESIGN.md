@@ -15,13 +15,16 @@ This file is the **index + overview**. The detail lives in a themed family:
 | [OXIDIZED_DESIGN_FUTURE_WORK.md](OXIDIZED_DESIGN_FUTURE_WORK.md) | Beyond-parity directions not yet built. |
 
 > **Finding a divergence by number.** The `### N` numbers are load-bearing —
-> `.rs` comments reference them — so they are kept verbatim, which means two
-> pre-existing quirks: (1) the numbers are **not globally unique** (the math
-> cluster `#7–#18` collides by value with divergences `#7–#18`); (2) a
-> code-referenced number resolves to the file above that owns that *topic*.
-> Most (`#1–#15`, `#19–#65`) are in DIVERGENCES; the math ones (incl. the
-> code-referenced **`#18` = f(x) "Speculative function application"**) are in
-> MATH. When in doubt, `grep '### N\.' docs/OXIDIZED_DESIGN_*.md`.
+> `.rs` comments reference them — so they are kept verbatim, which means three
+> quirks: (1) the numbers are **not globally unique** (the math cluster `#7–#18`
+> collides by value with divergences `#7–#18`); (2) a code-referenced number
+> resolves to the file above that owns that *topic* — most (`#1–#15`, `#19–#80`)
+> are in DIVERGENCES, the math ones (incl. the code-referenced **`#18` = f(x)
+> "Speculative function application"**) are in MATH; (3) **`#76` is a retired
+> number** — its entry was consolidated into `#74` and the number was not
+> reused, so a gap in the sequence is expected, not a missing file. Next free
+> number: **#81**. When in doubt,
+> `grep '### N\.' docs/parity/OXIDIZED_DESIGN_*.md docs/math/OXIDIZED_DESIGN_MATH.md`.
 
 ---
 

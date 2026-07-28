@@ -75,6 +75,47 @@ Two consequences worth knowing before you plan an RC:
   placeholder; today it would silently pin users to the previous stable) — while the
   README *inside that crate* tells people to run exactly that.
 
+### Publishing an RC for external download (keep it a prerelease)
+
+An RC that is only a cross-OS smoke test can stay a draft. An RC meant to be
+*used* — early adopters, a downstream consumer, an ar5iv/CorTeX deployment
+pulling a binary — has to be **published** so its assets are fetchable. Publish
+the draft, but **keep `prerelease: true`**:
+
+```bash
+gh release edit X.Y.Z-rcN --prerelease --latest=false
+```
+
+A published prerelease is fully downloadable — by tag URL, by
+`gh release download X.Y.Z-rcN`, and from the Releases page, where it carries a
+"Pre-release" badge. What it does *not* do is claim the **"Latest"** badge or
+answer `/releases/latest`; those stay on the last final release, which is
+correct, because that endpoint is what unqualified "give me latexml-oxide"
+tooling follows and an RC is not what such a caller should get.
+
+Verify with the API rather than `gh release list` — its "Latest" column is
+computed client-side and goes stale right after an edit:
+
+```bash
+gh api repos/dginev/latexml-oxide/releases/latest -q .tag_name   # expect the last FINAL X.Y.Z
+gh api repos/dginev/latexml-oxide/releases -q '.[:4][] | "\(.tag_name) prerelease=\(.prerelease)"'
+```
+
+Three senses of "latest" collide in this file; they are independent, and an RC
+takes **none** of them:
+
+| sense | what it is | RC? |
+|---|---|---|
+| GitHub **"Latest"** badge / `/releases/latest` | newest non-draft non-prerelease Release | no — stays on the last final `X.Y.Z` |
+| container **`:latest`** | Docker tag | no — `docker.yml` gates on `!contains(ref_name, '-')` |
+| promoting an RC **to the final `X.Y.Z`** | relabelling RC artifacts as the release | no — see the next section |
+
+Publishing an RC changes nothing about the artifacts: they stay named
+`…-X.Y.Z-rcN-…`, `--version` still reports `X.Y.Z-rcN`, the `.deb` still carries
+`X.Y.Z-rcN-1`, crates.io still must not receive an RC, and the Homebrew tap still
+tracks the last final `X.Y.Z`. The next section is about why no edit to the
+Release object can change any of that.
+
 ### "Can I just promote the RC draft to latest?"
 
 **No — cut a fresh `X.Y.Z` tag.** The version string is baked into the *artifacts*, not

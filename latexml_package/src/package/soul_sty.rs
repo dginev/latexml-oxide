@@ -64,7 +64,7 @@ LoadDefinitions!({
       let font_key = s!("soul_font_{cs_name}");
       if let Some(Stored::String(font_sym)) = lookup_value(&font_key) {
         let font_str = to_string(font_sym);
-        let toks = mouth::tokenize_internal(&font_str);
+        let toks = mouth::tokenize_internal(TeXString::assembled(font_str));
         digest(toks)?;
       }
     }

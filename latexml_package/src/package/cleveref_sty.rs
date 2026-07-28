@@ -234,7 +234,7 @@ fn cref_multi(
       out.push(T_OTHER!("*"));
     }
     out.push(T_BEGIN!());
-    out.extend(mouth::tokenize_internal(show).unlist());
+    out.extend(mouth::tokenize_internal(TeXString::assembled(show.to_string())).unlist());
     out.push(T_END!());
     out.push(T_BEGIN!());
     out.extend(label.clone().unlist());

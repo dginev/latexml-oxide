@@ -1123,13 +1123,13 @@ LoadDefinitions!({
   DefMacro!("\\lshiftnum {}", sub[(num)] {
     let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
     let result = (10.0 * n) as i64;
-    Ok(mouth::tokenize_internal(&result.to_string()))
+    Ok(mouth::tokenize_internal(TeXString::assembled(result.to_string())))
   });
 
   DefMacro!("\\llshiftnum {}", sub[(num)] {
     let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
     let result = (100.0 * n) as i64;
-    Ok(mouth::tokenize_internal(&result.to_string()))
+    Ok(mouth::tokenize_internal(TeXString::assembled(result.to_string())))
   });
 
   // \lshiftset and \llshiftset: set register = 10*n or 100*n

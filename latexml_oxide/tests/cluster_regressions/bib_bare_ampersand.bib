@@ -1,0 +1,97 @@
+% A bare `&` in a `.bib` field, verbatim as seven arXiv/2605 papers ship it.
+% `&` is catcode 4, so digesting the field reads it as an alignment tab.
+% Every line below is copied from a witness, not invented:
+%
+%   publisher  {Taylor & Francis}                       2605.03054, 2605.01936,
+%                                                       2605.06249 (x2)
+%   journal    {Information Processing & Management}    2605.01936
+%   journal    {Infrared Physics & Technology}          2605.08753
+%   booktitle  {... Knowledge Discovery & Data Mining}  2605.00462
+%   author     {Giovanni P. Crespi,
+%               Daishi Kuroiwa & Matteo Rocca}          2605.06624
+%   copyright  {Copyright {\copyright}2009
+%               Lippincott Williams & Wilkins}          2605.01936 L2838
+%   publisher  {... John Wiley & Sons Ltd.}             2605.10409
+%
+% A `.bib` field's content is DATA, not TeX: the `&` is the literal character
+% BibTeX handed back, so "Taylor & Francis" renders with its ampersand. Read at
+% the per-entry Mouth, beside the `%` of #74 — regime A, because `&` derails
+% alignment in ANY field and the fields carrying it here (publisher, journal,
+% booktitle) have no Perl Semiverbatim precedent to follow.
+%
+% What every engine did BEFORE, measured, because this is deliberately ahead of
+% all of them: one `Error:unexpected:&` per bare `&` in Rust and in same-host
+% `latexmlc` alike (2605.03054 1/1, 2605.06249 3/3, 2605.00462 1/1, 2605.06624
+% 1/1, 2605.08753 1/1, 2605.10409 1/1), and bibtex 0.99d + pdflatex agree —
+% under `plain` and `abbrvnat` the bare `&` is copied into the `.bbl`, pdflatex
+% stops with "Misplaced alignment tab character &", drops the character and
+% prints "Taylor Francis". So this is not a defect fix: LaTeXML reads `.bib`
+% directly, with no `.bst` and no bibtex(1), so it decides what reaches the
+% tokenizer. OXIDIZED_DESIGN #74.
+%
+% `#` is NOT neutralized with it. Checked across all seven witnesses: one bare
+% `#` in total, in 2605.00462's JabRef `file` path, and that field is already
+% covered (unknown field -> `\bib@field@default@default Verbatim Verbatim`).
+% No evidence, no change.
+%
+% `markupboundary` is the entry that keeps the neutralization honest: making a
+% character ordinary must not flatten the live TeX around it. `\emph` must
+% still mark up, `$x_1+x_2$` must still parse as math with `_` a subscript
+% INSIDE math, and the space-form accents PR #399 recovered must still resolve.
+%
+% `ampsurvivor` is the containment canary: a stray `&` must cost its own field
+% and nothing else. Under the sibling `%` bug (#73) an entry like these took the
+% WHOLE bibliography down, so "the entries after the bad one still render" is a
+% live assertion, not decoration.
+
+@book{amppublisher,
+  author = {Alice Author},
+  title = {A book from a two-name press},
+  publisher = {Taylor & Francis},
+  address = {Abingdon},
+  year = {2009}
+}
+
+@article{ampjournal,
+  author = {Bob Builder},
+  title = {A paper in a two-name journal},
+  journal = {Information Processing & Management},
+  volume = {12},
+  year = {2010}
+}
+
+@inproceedings{ampbooktitle,
+  author = {Carol Coder},
+  title = {A talk at a two-name conference},
+  booktitle = {Proceedings of the 26th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining},
+  year = {2011}
+}
+
+@article{ampauthor,
+  author = {Giovanni P. Crespi, Daishi Kuroiwa & Matteo Rocca},
+  title = {A paper whose author list uses an ampersand},
+  journal = {J. Bibliographies},
+  year = {2012}
+}
+
+@book{ampcopyright,
+  author = {Dan Draper},
+  title = {A book with a copyright line},
+  publisher = {Lippincott},
+  copyright = {Copyright {\copyright}2009 Lippincott Williams & Wilkins},
+  year = {2009}
+}
+
+@article{ampsurvivor,
+  author = {Eve Ericsson},
+  title = {The entry after the stray ampersands},
+  journal = {J. Bibliographies},
+  year = {2013}
+}
+
+@article{markupboundary,
+  author = {{\v S}pakov, Oleg and Gon{\c c}alves, Ana},
+  title = {An \emph{emphasized} word, math $x_1+x_2$, and Ampere \& Ohm},
+  journal = {J. Bibliographies},
+  year = {2022}
+}

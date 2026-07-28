@@ -162,6 +162,48 @@ fn main() {
 // matches the ambient TeXLive install. Falls back to the most-recent year
 // present, then to the embedded-bundled snapshot.
 
+/// Resolve the ambient `latex.YYYY.dump.txt` and read it, WITHOUT applying
+/// anything to State. `Some((content, source_label, dump_year, from_embedded))`
+/// or `None` when `$LATEXML_NODUMP` is set or no dump is reachable.
+///
+/// Shared by [`load_definitions`] (which then replays it) and by
+/// `crate::latex_kernel`, which scans its keys to answer "does the LaTeX kernel
+/// define this CS?" without loading anything. Keeping one resolver means the
+/// catalogue can never disagree with the dump the pool actually loads — same
+/// env overrides, same ambient-year preference, same embedded fallback.
+pub fn resolve_dump_text() -> Option<(String, String, u32, bool)> {{
+  // Honoured here as well as in `load_definitions` so that NO consumer —
+  // including the kernel catalogue — sees dump-derived data on the degraded
+  // raw-load branch of `LoadFormat('latex')` (CLAUDE.md durable parity rule 1).
+  if std::env::var_os("LATEXML_NODUMP").is_some() {{
+    return None;
+  }}
+  let prefer = crate::dump_paths::detect_ambient_texlive_year();
+  // Third/fourth tuple slots feed the year-granularity staleness check
+  // (`dump_year_mismatch_warning`): the loaded dump's TL year, and whether it
+  // came from the embedded bundle (shipped binary) vs an on-disk dump (dev
+  // tree). We compare YEARS, not kpathsea stamp strings — issue #299.
+  if let Some((path, year)) = resolve_dump_path(prefer) {{
+    let content = match std::fs::read_to_string(&path) {{
+      Ok(c) => c,
+      Err(e) => {{
+        latexml_core::Warn!("latex_dump", "read",
+          latexml_core::s!("failed to read {{}}: {{}}", path.display(), e));
+        return None;
+      }}
+    }};
+    let label = path.display().to_string();
+    return Some((content, label, year, false));
+  }}
+  // Embedded fallback. `embedded_latex_dump` gunzips on first access and
+  // caches the result for the rest of the process (DEP-12, 2026-05-18).
+  if let Some(latex_str) = crate::embedded_dumps::embedded_latex_dump(prefer) {{
+    let year = crate::embedded_dumps::embedded_year(prefer).unwrap_or(0);
+    return Some((latex_str.to_string(), format!("<embedded TL{{}}>", year), year, true));
+  }}
+  None
+}}
+
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   if std::env::var_os("LATEXML_NODUMP").is_some() {{
     latexml_core::Info!("latex_dump", "nodump",
@@ -170,38 +212,17 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
     return Ok(());
   }}
   let prefer = crate::dump_paths::detect_ambient_texlive_year();
-  let resolved = resolve_dump_path(prefer);
-  // Third/fourth tuple slots feed the year-granularity staleness check
-  // (`dump_year_mismatch_warning`): the loaded dump's TL year, and whether it
-  // came from the embedded bundle (shipped binary) vs an on-disk dump (dev
-  // tree). We compare YEARS, not kpathsea stamp strings — issue #299.
-  let (content, source_label, dump_year, from_embedded): (String, String, u32, bool) =
-    if let Some((path, year)) = resolved {{
-      let content = match std::fs::read_to_string(&path) {{
-        Ok(c) => c,
-        Err(e) => {{
-          latexml_core::Warn!("latex_dump", "read",
-            latexml_core::s!("failed to read {{}}: {{}}", path.display(), e));
-          return Ok(());
-        }}
-      }};
-      let label = path.display().to_string();
-      (content, label, year, false)
-    }} else if let Some(latex_str) = crate::embedded_dumps::embedded_latex_dump(prefer) {{
-      // Embedded fallback. `embedded_latex_dump` gunzips on first
-      // access and caches the result for the rest of the process
-      // (DEP-12, 2026-05-18).
-      let year = crate::embedded_dumps::embedded_year(prefer).unwrap_or(0);
-      latexml_core::Info!("latex_dump", "embedded",
-        latexml_core::s!("using embedded TL{{}} dump (no on-disk dump found)", year));
-      (latex_str.to_string(), format!("<embedded TL{{}}>", year), year, true)
-    }} else {{
-      latexml_core::Info!("latex_dump", "missing",
-        "no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
-         exe-relative, dev-tree path, and embedded fallback); \
-         run `latexml_oxide --init=latex.ltx` to generate");
-      return Ok(());
-    }};
+  let Some((content, source_label, dump_year, from_embedded)) = resolve_dump_text() else {{
+    latexml_core::Info!("latex_dump", "missing",
+      "no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
+       exe-relative, dev-tree path, and embedded fallback); \
+       run `latexml_oxide --init=latex.ltx` to generate");
+    return Ok(());
+  }};
+  if from_embedded {{
+    latexml_core::Info!("latex_dump", "embedded",
+      latexml_core::s!("using embedded TL{{}} dump (no on-disk dump found)", dump_year));
+  }}
   // TeX-Live-YEAR staleness check (issue #299): warn only on a genuine year
   // mismatch (fell back to a different year's dump), never on a within-year
   // kpathsea patch bump. `prefer` is the ambient TL year (memoized, no extra

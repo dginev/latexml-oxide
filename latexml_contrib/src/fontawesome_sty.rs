@@ -9,7 +9,9 @@ use latexml_package::prelude::*;
 fn def_fa4_icon(suffix: &str) -> Result<()> {
   let proto = format!("\\fa{suffix}");
   let (cs, params) = parse_prototype(&proto, true)?;
-  let body = mouth::tokenize_internal(&format!("\\faIconFromMacro{{fa{suffix}}}"));
+  let body = mouth::tokenize_internal(TeXString::assembled(format!(
+    "\\faIconFromMacro{{fa{suffix}}}"
+  )));
   def_macro(cs, params, ExpansionBody::Tokens(body), None)?;
   Ok(())
 }

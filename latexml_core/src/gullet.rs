@@ -92,10 +92,35 @@ static COLUMN_ENDS: Lazy<[(Token, &'static str, bool); 6]> = Lazy::new(|| {
   ]
 });
 
+/// What a balanced read ([`read_balanced`]) does when it exhausts a mouth before
+/// the braces balance.
+///
+/// Perl has no such distinction: `Gullet.pm` L465-472 reads `$$self{mouth}
+/// ->readToken()` — the *current* mouth only — and `last`s at the boundary, so
+/// every Perl mouth is [`Opaque`](BalancedBoundary::Opaque). Rust crosses the
+/// boundary for token-level injections, which is a deliberate surpass-Perl
+/// divergence (xint, see [`read_balanced`]) and must stay narrow: crossing from a
+/// mouth that is *its own input* lets one runaway argument swallow everything
+/// after it.
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum BalancedBoundary {
+  /// The mouth is a token-level continuation of the enclosing stream
+  /// (`\scantokens`, RawTeX): its `}` may legitimately live in the parent, so a
+  /// balanced read drains it and resumes there.
+  Transparent,
+  /// The mouth is a self-contained input. A balanced read stops at its end, as
+  /// Perl always does — an unbalanced argument loses the rest of *this* mouth
+  /// and nothing more.
+  Opaque,
+}
+
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
   pub autoclose: bool,
   pub mouth:     Mouth,
+  /// See [`BalancedBoundary`]. Only consulted when `autoclose` is set and the
+  /// mouth is not a file.
+  pub boundary:  BalancedBoundary,
   /// Pushback LIFO stack: the "next to read" token is at `pushback.last()`.
   /// Invariant: reading pops from the back; `unread_one` pushes to the back;
   /// `unread_vec` iterates its input in reverse and pushes each — so the
@@ -384,6 +409,14 @@ pub fn unread_vec(tokens: Vec<Token>) {
 // Exception: if $toplevel=1, readXToken will step to next source
 // Note that a Tokens can act as a Mouth.
 pub fn open_mouth(mouth: Mouth, autoclose: bool) {
+  open_mouth_with(mouth, autoclose, BalancedBoundary::Transparent);
+}
+
+/// [`open_mouth`], choosing how a balanced read treats the new mouth's end.
+///
+/// Pass [`BalancedBoundary::Opaque`] whenever the mouth carries a self-contained
+/// input rather than a continuation of the current line — see the type's docs.
+pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary) {
   let mut gullet = gullet_mut!();
   if let Some(runtime) = gullet.runtime.take() {
     gullet.mouthstack.push_front(runtime);
@@ -391,6 +424,7 @@ pub fn open_mouth(mouth: Mouth, autoclose: bool) {
   gullet.runtime = Some(MouthRuntime {
     mouth,
     autoclose,
+    boundary,
     pushback: Vec::with_capacity(128),
   });
 }
@@ -963,6 +997,15 @@ pub fn read_x_token(
         },
         Outcome::Undefined => {
           if token.get_catcode() == Catcode::CS {
+            // The LaTeX format may not be loaded yet (a document may use a
+            // kernel CS before `\documentclass` — real LaTeX has no "before
+            // the kernel"). If this is a kernel CS, pull the format in and
+            // re-resolve rather than stubbing it as `<ltx:ERROR/>`. Fires at
+            // most once per session; see `binding::kernel_autoload`.
+            if crate::binding::kernel_autoload::try_autoload(&token) {
+              unread_one(token); // Retry, now that the kernel is in state.
+              continue;
+            }
             return Ok(Some(generate_error_stub(&token)?));
           } else {
             return Ok(Some(token));
@@ -1242,13 +1285,26 @@ pub fn read_balanced(
       // Perl — not silently absorb the parent document into the argument
       // (PR_READINESS should-fix 9). Only string/literal injections
       // (\scantokens, RawTeX) are transparent to a balanced read.
+      //
+      // The `boundary` check narrows it further, because "literal mouth" is not
+      // by itself evidence of a continuation: `\ProcessBibTeXEntry` also hands
+      // an entry to `Mouth::new` (bibtex.rs, Perl BibTeX.pool L165-166), and
+      // there one runaway field — a bare `%` in a title is enough — used to
+      // swallow every following entry AND `\end{bibtex@bibliography}`, emptying
+      // the whole bibliography while reporting a single error. Perl keeps all
+      // the other entries. Such a mouth declares itself
+      // [`BalancedBoundary::Opaque`].
       None => {
         let cross = {
           let gullet = gullet!();
           gullet
             .runtime
             .as_ref()
-            .map(|r| r.autoclose && r.mouth.foodtype() != crate::mouth::FoodType::File)
+            .map(|r| {
+              r.autoclose
+                && r.boundary == BalancedBoundary::Transparent
+                && r.mouth.foodtype() != crate::mouth::FoodType::File
+            })
             .unwrap_or(false)
             && !gullet.mouthstack.is_empty()
         };
@@ -2978,6 +3034,7 @@ pub fn flush() {
     mouth:     Mouth::default(),
     pushback:  Vec::with_capacity(128),
     autoclose: true,
+    boundary:  BalancedBoundary::Transparent,
   });
   g.mouthstack = VecDeque::new();
 }

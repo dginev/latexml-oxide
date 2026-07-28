@@ -51,6 +51,15 @@ fn phys_rev_size(no_stretch: bool, size_tok: &Option<Token>) -> Vec<Token> {
   }
 }
 
+/// The TeX for one delimiter token, ready to re-tokenize.
+///
+/// `assembled` rather than `Tokens::untex_string` because a physics delimiter is
+/// a *single* `Token` — `(`, `|`, `\lbrace`. Flattening it cannot weld a control
+/// word onto a following letter, because there is nothing following it. (The
+/// `semantic` arguments in this file are full `Tokens` and do use
+/// `untex_string`.)
+fn phys_delim_tex(t: Token) -> TeXString { TeXString::assembled(t.to_string()) }
+
 /// Perl: phys_open — opening fence with sizing
 fn phys_open(no_stretch: bool, size_tok: &Option<Token>, delim: Tokens) -> Tokens {
   if delim.is_empty() {
@@ -227,9 +236,9 @@ LoadDefinitions!({
     let content = Tokens::new(vec![i_arg("1")]);
 
     // Presentation: open + arg + close
-    let open_tks = open.map(|t| Tokenize!(&t.to_string()))
+    let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t)))
       .unwrap_or_else(|| Tokenize!("\\lbrace"));
-    let close_tks = close.map(|t| Tokenize!(&t.to_string()))
+    let close_tks = close.map(|t| Tokenize!(phys_delim_tex(t)))
       .unwrap_or_else(|| Tokenize!("\\rbrace"));
     let mut pres = Vec::new();
     pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());
@@ -248,8 +257,8 @@ LoadDefinitions!({
   // Perl: \lx@physics@fenced — fenced stuff with optional semantics
   DefPrimitive!("\\lx@physics@fenced{}{}{}{}{}", sub[(cs, semantic, function, open, close)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
-    let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
+    let semantic_tex = semantic.untex_string();
+    let semantic_opt = if semantic_tex.is_empty() { None } else { Some(semantic_tex) };
     let function_tks = function;
     let open_tks = open;
     let close_tks = close;
@@ -368,7 +377,7 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
     let content = i_apply(&[],
       i_symbol(&[("meaning", Tokenize!("evaluated-at"))], None), content_args);
-    let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!("."));
+    let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!("."));
     let close_tks = close.map(|_| Tokenize!("|")).unwrap_or_else(|| Tokenize!("|"));
     let mut pres = Vec::new();
     pres.extend(
@@ -393,7 +402,7 @@ LoadDefinitions!({
   // Perl: \lx@physics@fencedII — 2-argument fenced
   DefPrimitive!("\\lx@physics@fencedII{}{}{}{}{}", sub[(cs, semantic, _function, open, close)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
+    let semantic_tex = semantic.untex_string();
     let open_tks = open;
     let close_tks = close;
     let (no_stretch, size_tok) = phys_read_size()?;
@@ -411,7 +420,7 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
 
     // Content: apply(symbol(meaning), arg1, arg2)
-    let content = i_apply(&[], i_symbol(&[("meaning", Tokenize!(&semantic_str))], None),
+    let content = i_apply(&[], i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None),
       vec![a1, a2]);
 
     // Presentation: open arg1 , arg2 close
@@ -471,9 +480,9 @@ LoadDefinitions!({
   // WISDOM #44 alignment reason as `\mqty`/`\lx@physics@operatorP`. Return the dual.
   DefMacro!("\\lx@physics@operator{}{}{}", sub[(cs, semantic, function)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
+    let semantic_tex = semantic.untex_string();
     let function_tks = function;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
     let (no_stretch, size_tok) = phys_read_size()?;
     let (arg, open, close) = phys_read_arg(false, physics_delimiters)?;
 
@@ -487,8 +496,8 @@ LoadDefinitions!({
       let reversion = Tokens::new(rev);
 
       let content = i_apply(&[], cfunc, vec![a1]);
-      let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default();
-      let close_tks = close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default();
+      let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default();
+      let close_tks = close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default();
       let mut pres = Vec::new();
       pres.extend(function_tks.unlist());
       pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());
@@ -537,9 +546,9 @@ LoadDefinitions!({
   // of `gullet::unread`.
   DefMacro!("\\lx@physics@operatorP{}{}{}", sub[(cs, semantic, function)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
+    let semantic_tex = semantic.untex_string();
     let function_tks = function;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
     let pfunc = function_tks;
     let (no_stretch, size_tok) = phys_read_size()?;
     let power = read_optional(None)?;
@@ -589,8 +598,8 @@ LoadDefinitions!({
       let reversion = Tokens::new(rev);
       let content = i_apply(&[], content_op, vec![a1]);
 
-      let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!("("));
-      let close_tks = close.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!(")"));
+      let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!("("));
+      let close_tks = close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!(")"));
       let mut pres = Vec::new();
       pres.extend(pres_func.unlist());
       pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());
@@ -686,11 +695,11 @@ LoadDefinitions!({
   // Perl: \lx@physics@ReIm — Re/Im with optional braced arg
   DefPrimitive!("\\lx@physics@ReIm{}{}{}{}", sub[(cs, semantic, raw, function)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
+    let semantic_tex = semantic.untex_string();
     let raw_tks = raw;
     let function_tks = function;
     let (no_stretch, size_tok) = phys_read_size()?;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
     let arg = phys_read_arg_tex()?;
 
     if let Some(arg_tks) = arg {
@@ -790,9 +799,9 @@ LoadDefinitions!({
   // WISDOM #44 alignment reason as `\mqty`/`\lx@physics@operatorP`. Return the dual.
   DefMacro!("\\lx@physics@diff{}{}{}", sub[(cs, semantic, diff)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
+    let semantic_tex = semantic.untex_string();
     let diff_tks = diff;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
     let degree = read_optional(None)?;
     let (arg, open, close) = phys_read_arg(false, |s| {
@@ -826,17 +835,17 @@ LoadDefinitions!({
         content = i_apply(&[], cfunc, vec![a1, a2.clone()]);
         presentation = Tokens::new([
           i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc, a2).unlist(),
-          phys_open(false, &None, open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist(),
+          phys_open(false, &None, open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default()).unlist(),
           vec![i_arg("1")],
-          phys_close(false, &None, close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist(),
+          phys_close(false, &None, close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default()).unlist(),
         ].concat());
       } else {
         content = i_apply(&[], cfunc, vec![a1]);
         presentation = Tokens::new([
           pfunc.unlist(),
-          phys_open(false, &None, open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist(),
+          phys_open(false, &None, open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default()).unlist(),
           vec![i_arg("1")],
-          phys_close(false, &None, close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist(),
+          phys_close(false, &None, close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default()).unlist(),
         ].concat());
       }
 
@@ -873,9 +882,9 @@ LoadDefinitions!({
   // For partial: \pdv{f}{x}{y} (double derivative)
   DefPrimitive!("\\lx@physics@deriv{}{}{}", sub[(cs, semantic, diff)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
+    let semantic_tex = semantic.untex_string();
     let diff_tks = diff;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
 
     let inline = read_match(&[&Tokenize!("*")])?.is_some();
@@ -887,7 +896,7 @@ LoadDefinitions!({
 
     // For partial derivatives: try to read a 3rd {} arg (2nd var)
     let mut tmp3: Option<Tokens> = None;
-    if semantic_str.starts_with("partial")
+    if semantic_tex.as_str().starts_with("partial")
       && let Some(ref _t2) = tmp2
         && open.is_none() {
           // tmp2 was a {} arg, try for 3rd
@@ -1036,9 +1045,9 @@ LoadDefinitions!({
       pres_tks.push(T_END!());
       if has_expr && has_open {
         pres_tks.push(T_CS!("\\lx@ApplyFunction"));
-        pres_tks.extend(phys_open(false, &None, open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist());
+        pres_tks.extend(phys_open(false, &None, open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default()).unlist());
         pres_tks.push(i_arg("1"));
-        pres_tks.extend(phys_close(false, &None, close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist());
+        pres_tks.extend(phys_close(false, &None, close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_default()).unlist());
       }
       let presentation = Tokens::new(pres_tks);
       // Perl passes (expr, var, degree) to I_dual unconditionally (physics.sty
@@ -1158,7 +1167,7 @@ LoadDefinitions!({
   // Perl: \innerproduct — ⟨arg1|arg2⟩
   DefPrimitive!("\\lx@physics@qm@product{}{}{}{}{}", sub[(cs, semantic, open, middle, close)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
+    let semantic_tex = semantic.untex_string();
     let open_tks = open;
     let middle_tks = middle;
     let close_tks = close;
@@ -1177,7 +1186,7 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
 
     let content = i_apply(&[],
-      i_symbol(&[("meaning", Tokenize!(&semantic_str))], None),
+      i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None),
       vec![a1, a2]);
     // Stretchy by default (Perl parity); `no_stretch` passed directly — see the
     // `\matrixelement` note. A prior `!no_stretch` made `\innerproduct`/`\outerproduct`
@@ -1448,8 +1457,8 @@ LoadDefinitions!({
   // `&`/`\\`. Return the dual instead of `gullet::unread`.
   DefMacro!("\\lx@physics@mat{}{}{}{}{}", sub[(cs, semantic, env, defopen, defclose)] {
     let cs_tks = cs;
-    let semantic_str = semantic.to_string();
-    let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
+    let semantic_tex = semantic.untex_string();
+    let semantic_opt = if semantic_tex.is_empty() { None } else { Some(semantic_tex) };
     let env_str = env.to_string();
     let defopen_tks = defopen;
     let defclose_tks = defclose;
@@ -1480,8 +1489,8 @@ LoadDefinitions!({
     };
 
     // Presentation: open + matrix + close (using default fences if no explicit ones)
-    let open_fence = open.map(|t| Tokenize!(&t.to_string())).unwrap_or(defopen_tks);
-    let close_fence = close.map(|t| Tokenize!(&t.to_string())).unwrap_or(defclose_tks);
+    let open_fence = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or(defopen_tks);
+    let close_fence = close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or(defclose_tks);
     let mut pres = Vec::new();
     if !open_fence.is_empty() {
       pres.extend(phys_open(false, &None, open_fence).unlist());

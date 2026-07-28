@@ -1,0 +1,49 @@
+% `@preamble` is the one part of a `.bib` that BibTeX does NOT treat as data:
+% `bibtex(1)` copies it verbatim to the top of the `.bbl` (plain.bst's
+% `begin.bib`: `preamble$ write$` before `\begin{thebibliography}`), so pdflatex
+% executes it before any `\bibitem`. It is how a `.bib` ships the macros its own
+% fields use, and MathSciNet's exporter emits one as a matter of course —
+% witnesses 2605.00097 (`referLiu.bib` L11) and 2605.11579 (`biblo.bib`, the
+% same block fourteen times, L4768/L6910/...), both exactly
+% `@preamble{"\def\cprime{$'$} "}`.
+%
+% We read `.bib` directly, with no `bibtex(1)` and no `.bbl`, so the copy is
+% ours to perform: `pre_bibtex::to_tex` emits the preamble lines ahead of
+% `\begin{bibtex@bibliography}` (Perl `Pre/BibTeX.pm` L118-122).
+%
+% The macro names here are deliberately unique to this fixture. `\cprime` itself
+% would be a vacuous probe: `latex_constructs_rust_only.rs` defines it
+% always-on, so the entry would render whether or not the preamble ran.
+%
+% What each block is here to pin:
+%   * `$'$` — the MathSciNet shape verbatim. It is also the treatment-2 canary:
+%     `escape_bib_data_specials` would turn a `.bib` FIELD's `$`/`\` into
+%     something inert, and applying it here would destroy the definition.
+%   * `[1]{[[#1]]}` — a parameter. `#` is BibTeX's concatenation operator
+%     between values, but inside a quoted string it is literal, and the emitted
+%     line must reach the tokenizer with catcode 6 intact.
+%   * `\&` and `\%` — specials that are data in a field and TeX here.
+%   * the second entry uses a preamble macro, which pins the ORDERING: once per
+%     `.bib`, before any entry, not per-entry.
+
+@preamble{"\def\bibpreambleprime{$'$} "}
+
+@preamble{
+  "\newcommand{\bibpreamblearg}[1]{[[#1]]}
+   \def\bibpreambleamp{Taylor \& Francis}
+   \def\bibpreamblepct{100\%}"
+}
+
+@article{firstentry,
+  author  = {Gel\bibpreambleprime fand, I. M.},
+  title   = {Arg \bibpreamblearg{ARGWORKS} and \bibpreambleamp},
+  journal = {J. Probe},
+  year    = {2020},
+}
+
+@article{secondentry,
+  author  = {Other, B.},
+  title   = {The second entry still sees \bibpreamblepct},
+  journal = {J. Probe},
+  year    = {2021},
+}

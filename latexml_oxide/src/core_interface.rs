@@ -621,6 +621,18 @@ impl DigestionAPI for Core {
           // R35.A: ensure pathological inputs fail loudly (exit 1+)
           // rather than silently turning into a zero-byte HTML.
           use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+          // NOTE the target discrimination on `MemoryBudget`, which is
+          // deliberate rather than an oversight. `Timeout`-target is the RSS
+          // fuse: real resident memory is already at the ceiling, so
+          // continuing means allocating straight into an OOM — there is
+          // nothing to do but stop. `Stomach`-target is the box-list ceilings
+          // (`box_count_cap` / `box_bytes_budget` / boxing depth), where the
+          // salvage below CLEARS the offending accumulation and therefore
+          // itself frees the memory; recovering there is safe precisely
+          // because the hard RSS backstop above stays non-recoverable
+          // underneath it. So the stomach's memory guards stay on the recovery
+          // path — a graceful end with as much of the document as was already
+          // digested, and the Fatal announced and latched below.
           if matches!(
             (&e.target, &e.category),
             (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)
@@ -635,20 +647,29 @@ impl DigestionAPI for Core {
             );
             return Err(e);
           }
-          // The Err that landed here was raised via `Fatal!` (or
-          // similar), which incremented `LogStatus::Fatal` via
-          // `note_status` in error.rs:353 BUT never emitted the
-          // standard `Fatal:<target>:<category>` log line — that's
-          // normally Error::log_fatal's job, called from the
-          // converter's outer Err handler. We catch the Err here and
-          // continue (recovery), so log_fatal never runs. Without
-          // this explicit emission, papers like arXiv:1903.01633
-          // report `1 fatal error` in the final summary while the
-          // log shows zero `Fatal:` lines — undiagnosable from
-          // logs alone. Emit the Fatal: line directly (not via
-          // log_fatal which would double-increment the counter).
-          let target_str = format!("Fatal:{:?}:{:?} ", e.target, e.category);
-          log::error!(target: &target_str, "{}", e.message);
+          // The Err that landed here was raised at Fatal level. We recover
+          // BOXES from it (below) — Perl `finishDigestion` L219-220 — but a
+          // Fatal-level raise stays FATAL in the document's reported outcome:
+          // salvaging content is not licence to reclassify the verdict, and
+          // there is deliberately no auto-upgrade to Error severity here (user
+          // policy 2026-07-28). The one sanctioned demotion in this codebase is
+          // the bibliography's explicit `DEMOTE_FATALS` (`error.rs`), which is
+          // opt-in and scoped.
+          //
+          // `log_fatal()` is the single seam that does BOTH halves: it emits
+          // the standard `Fatal:<target>:<category>` line AND latches
+          // `LogStatus::Fatal`. This used to be a hand-rolled `log::error!`
+          // with a `Fatal:`-prefixed target, avoiding `log_fatal` for fear of
+          // "double-incrementing the counter" — unfounded, since the fatal
+          // status is a sticky BOOL (`error.rs` `note_status`, guarded by
+          // `fatal_status_is_sticky_and_returns_1`). The hand-rolled call used
+          // the raw `log`-crate macro, which never reaches `note_status`, so
+          // guard fatals raised as a plain `Err` by `stomach::check_timeout`
+          // (rather than through `Fatal!`) were never counted at all: the log
+          // carried a `Fatal:` line while the run summarised as `Conversion
+          // complete: No obvious problems`, status code 0 — "ok" to cortex.
+          // Guard: `101_fatal_salvages_partial_document`.
+          e.log_fatal();
           log::warn!("digest_internal: error during recovery digestion: {:?}", e);
           // Recover what the failed body already digested. Without this the
           // "still produce partial output" intent above only worked when the

@@ -24,11 +24,15 @@ LoadDefinitions!({
 
   // activate a certain theorem style
   DefPrimitive!("\\theoremstyle{}", sub[(style_tok)] {
+    // `untex_string()` for the tokenizer, plain `to_string()` for the CS *name*
+    // below: only the former is re-read as TeX, and only it can weld a control
+    // word onto a following letter. See `TeXString`.
     let style = style_tok.to_string();
+    let style_tex = style_tok.untex_string();
     let style_cs = T_CS!(s!("\\th@{style}"));
     if is_defined(&s!("\\th@{style}")) {
       assign_register("\\thm@style",
-        RegisterValue::Tokens(mouth::tokenize(&style)),
+        RegisterValue::Tokens(mouth::tokenize(style_tex)),
         None, vec![])?;
       digest(Tokens::new(vec![style_cs]))?;
     } else {

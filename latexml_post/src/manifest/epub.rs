@@ -9,6 +9,11 @@
 
 use std::{fs, path::Path};
 
+/// The OPF package namespace (EPUB 3).
+const OPF_NS: &str = "http://www.idpf.org/2007/opf";
+/// Dublin Core, the metadata vocabulary an OPF's `<metadata>` carries.
+const DC_NS: &str = "http://purl.org/dc/elements/1.1/";
+
 /// EPUB 3.2 container.xml content.
 const CONTAINER_XML: &str = r#"<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -16,6 +21,16 @@ const CONTAINER_XML: &str = r#"<?xml version="1.0"?>
         <rootfile full-path="OPS/content.opf" media-type="application/oebps-package+xml"/>
    </rootfiles>
 </container>"#;
+
+/// Error context for a libxml call.
+///
+/// Generic over the error type on purpose: `rust-libxml` returns
+/// `Box<dyn Error>` from some constructors and `String` from others, so one
+/// fixed-argument closure cannot serve both.
+fn ctx<E>(what: impl Into<String>) -> impl Fn(E) -> String {
+  let what = what.into();
+  move |_| format!("couldn't create {what}")
+}
 
 /// Core Media Types as per EPUB 3.2 spec.
 fn core_media_type(ext: &str) -> &'static str {
@@ -126,9 +141,18 @@ impl EpubManifest {
     }
   }
 
-  /// Generate the content.opf XML as a string.
+  /// Generate the content.opf package document.
   ///
-  /// Port of `Epub::finalize`.
+  /// Port of `Epub::finalize`. Built through the libxml DOM rather than by
+  /// `push_str`, because an OPF is parsed by strict readers: one unescaped `&`
+  /// in a single `href` invalidates the whole package, not one entry.
+  ///
+  /// That was reachable. `href` is `format!("{}.{}", name, ext)` over a split
+  /// document's file stem, and `--splitnaming=label` takes that stem from the
+  /// author's `\label{...}` — `\label{Fisher&Yates}` really does produce a file
+  /// named `Fisher&Yates.xhtml`. The old builder escaped 2 of 12 interpolated
+  /// values and `href` was not one of them. libxml escapes on set, so the
+  /// question no longer arises for any of them. (Issue 386 item 2.)
   pub fn generate_opf(
     &self,
     title: &str,
@@ -141,61 +165,134 @@ impl EpubManifest {
       .unique_identifier
       .as_deref()
       .unwrap_or("urn:uuid:00000000-0000-0000-0000-000000000000");
-    let now = chrono_like_now();
 
-    let mut xml = String::new();
-    xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    xml.push_str("<package xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"pub-id\" version=\"3.0\">\n");
-
-    // Metadata
-    xml.push_str("  <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n");
-    xml.push_str(&format!("    <dc:title>{}</dc:title>\n", escape_xml(title)));
-    for author in authors {
-      xml.push_str(&format!(
-        "    <dc:creator>{}</dc:creator>\n",
-        escape_xml(author)
-      ));
+    match self.build_opf_dom(title, authors, language, uid, spine, resources) {
+      Ok(xml) => xml,
+      // A DOM allocation failure is not something a caller can act on, and an
+      // empty package is a clearer failure than a half-built one.
+      Err(e) => {
+        crate::Error!(
+          "epub",
+          "opf",
+          "Couldn't build the EPUB package document: {}",
+          e
+        );
+        String::new()
+      },
     }
-    xml.push_str(&format!("    <dc:language>{}</dc:language>\n", language));
-    xml.push_str(&format!(
-      "    <meta property=\"dcterms:modified\">{}</meta>\n",
-      now
-    ));
-    xml.push_str(&format!(
-      "    <dc:identifier id=\"pub-id\">{}</dc:identifier>\n",
-      uid
-    ));
-    xml.push_str("  </metadata>\n");
+  }
 
-    // Manifest
-    xml.push_str("  <manifest>\n");
+  fn build_opf_dom(
+    &self,
+    title: &str,
+    authors: &[String],
+    language: &str,
+    uid: &str,
+    spine: &[SpineEntry],
+    resources: &[ResourceEntry],
+  ) -> Result<String, String> {
+    use libxml::tree::{Document as XmlDoc, Namespace, Node};
+
+    let mut doc = XmlDoc::new().map_err(|_| "couldn't create the OPF document".to_string())?;
+
+    let mut package = Node::new("package", None, &doc).map_err(ctx("<package>"))?;
+    let opf_ns = Namespace::new("", OPF_NS, &mut package).map_err(ctx("the OPF namespace"))?;
+    package
+      .set_namespace(&opf_ns)
+      .map_err(ctx("the OPF namespace"))?;
+    package
+      .set_attribute("unique-identifier", "pub-id")
+      .map_err(ctx("@unique-identifier"))?;
+    package
+      .set_attribute("version", "3.0")
+      .map_err(ctx("@version"))?;
+    doc.set_root_element(&package);
+
+    // ---- metadata ----
+    let mut metadata = Node::new("metadata", None, &doc).map_err(ctx("<metadata>"))?;
+    // `dc:` is declared HERE, matching the shape readers expect, and the
+    // Dublin Core children below are created in it.
+    let dc_ns = Namespace::new("dc", DC_NS, &mut metadata).map_err(ctx("the dc namespace"))?;
+    package
+      .add_child(&mut metadata)
+      .map_err(ctx("<metadata>"))?;
+
+    // A closure would hold `metadata` borrowed across every call, so the
+    // Dublin Core children are appended inline through one small helper.
+    fn dc_child(
+      doc: &XmlDoc,
+      dc_ns: &Namespace,
+      metadata: &mut Node,
+      name: &str,
+      text: &str,
+    ) -> Result<Node, String> {
+      let mut n = Node::new(name, Some(dc_ns.clone()), doc).map_err(ctx(name))?;
+      n.set_content(text).map_err(ctx(name))?;
+      metadata.add_child(&mut n).map_err(ctx(name))?;
+      Ok(n)
+    }
+    dc_child(&doc, &dc_ns, &mut metadata, "title", title)?;
+    for author in authors {
+      dc_child(&doc, &dc_ns, &mut metadata, "creator", author)?;
+    }
+    dc_child(&doc, &dc_ns, &mut metadata, "language", language)?;
+
+    let mut modified = Node::new("meta", None, &doc).map_err(ctx("<meta>"))?;
+    modified
+      .set_attribute("property", "dcterms:modified")
+      .map_err(ctx("@property"))?;
+    modified
+      .set_content(&chrono_like_now())
+      .map_err(ctx("<meta>"))?;
+    metadata.add_child(&mut modified).map_err(ctx("<meta>"))?;
+
+    let mut identifier = dc_child(&doc, &dc_ns, &mut metadata, "identifier", uid)?;
+    identifier
+      .set_attribute("id", "pub-id")
+      .map_err(ctx("@id"))?;
+
+    // ---- manifest ----
+    let mut manifest = Node::new("manifest", None, &doc).map_err(ctx("<manifest>"))?;
+    package
+      .add_child(&mut manifest)
+      .map_err(ctx("<manifest>"))?;
+    let mut item =
+      |id: &str, href: &str, media_type: &str, properties: Option<&str>| -> Result<(), String> {
+        let mut n = Node::new("item", None, &doc).map_err(ctx("<item>"))?;
+        n.set_attribute("id", id).map_err(ctx("@id"))?;
+        n.set_attribute("href", href).map_err(ctx("@href"))?;
+        n.set_attribute("media-type", media_type)
+          .map_err(ctx("@media-type"))?;
+        if let Some(props) = properties {
+          n.set_attribute("properties", props)
+            .map_err(ctx("@properties"))?;
+        }
+        manifest.add_child(&mut n).map_err(ctx("<item>"))
+      };
     for entry in spine {
-      xml.push_str(&format!(
-        "    <item id=\"{}\" href=\"{}\" media-type=\"{}\"",
-        entry.id, entry.href, entry.media_type
-      ));
-      if let Some(ref props) = entry.properties {
-        xml.push_str(&format!(" properties=\"{}\"", props));
-      }
-      xml.push_str("/>\n");
+      item(
+        &entry.id,
+        &entry.href,
+        &entry.media_type,
+        entry.properties.as_deref(),
+      )?;
     }
     for res in resources {
-      xml.push_str(&format!(
-        "    <item id=\"{}\" href=\"{}\" media-type=\"{}\"/>\n",
-        res.id, res.href, res.media_type
-      ));
+      item(&res.id, &res.href, &res.media_type, None)?;
     }
-    xml.push_str("  </manifest>\n");
 
-    // Spine
-    xml.push_str("  <spine>\n");
+    // ---- spine ----
+    let mut spine_el = Node::new("spine", None, &doc).map_err(ctx("<spine>"))?;
+    package.add_child(&mut spine_el).map_err(ctx("<spine>"))?;
     for entry in spine {
-      xml.push_str(&format!("    <itemref idref=\"{}\"/>\n", entry.id));
+      let mut itemref = Node::new("itemref", None, &doc).map_err(ctx("<itemref>"))?;
+      itemref
+        .set_attribute("idref", &entry.id)
+        .map_err(ctx("@idref"))?;
+      spine_el.add_child(&mut itemref).map_err(ctx("<itemref>"))?;
     }
-    xml.push_str("  </spine>\n");
-    xml.push_str("</package>\n");
 
-    xml
+    Ok(doc.to_string())
   }
 }
 
@@ -271,14 +368,6 @@ fn generate_uuid() -> String {
   )
 }
 
-/// Simple XML escaping.
-fn escape_xml(s: &str) -> String {
-  s.replace('&', "&amp;")
-    .replace('<', "&lt;")
-    .replace('>', "&gt;")
-    .replace('"', "&quot;")
-}
-
 /// Generate an ISO 8601 timestamp (CCYY-MM-DDThh:mm:ssZ).
 fn chrono_like_now() -> String {
   use std::time::{SystemTime, UNIX_EPOCH};
@@ -313,4 +402,143 @@ fn days_to_ymd(days: i64) -> (i64, u32, u32) {
   let d = doy - (153 * mp + 2) / 5 + 1;
   let m = if mp < 10 { mp + 3 } else { mp - 9 };
   (y + if m <= 2 { 1 } else { 0 }, m, d)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn spine_entry(id: &str, href: &str, properties: Option<&str>) -> SpineEntry {
+    SpineEntry {
+      id:         id.to_string(),
+      href:       href.to_string(),
+      media_type: "application/xhtml+xml".to_string(),
+      properties: properties.map(str::to_string),
+    }
+  }
+
+  /// The package document must be well-formed for **author-controlled** input.
+  ///
+  /// Issue 386 item 2. An OPF is read by strict parsers, so one unescaped `&`
+  /// invalidates the whole book rather than one entry — and `&` is reachable:
+  /// `href` is built from a split document's file stem, and `--splitnaming=label`
+  /// takes that stem from the author's `\label{...}`, so `\label{Fisher&Yates}`
+  /// yields a file named `Fisher&Yates.xhtml`. The old `push_str` builder escaped
+  /// 2 of 12 interpolated values and `href` was not among them.
+  ///
+  /// The assertion is deliberately "it parses", not "it contains `&amp;`":
+  /// well-formedness is the property that matters, and it cannot be satisfied by
+  /// accident.
+  #[test]
+  fn opf_stays_well_formed_when_author_input_carries_xml_specials() {
+    let mut manifest = EpubManifest::new("/tmp/does-not-need-to-exist");
+    manifest.unique_identifier = Some("urn:uuid:test".to_string());
+
+    let spine = vec![
+      spine_entry(
+        "_Fisher_x26_Yates.xhtml",
+        "Fisher&Yates.xhtml",
+        Some("mathml"),
+      ),
+      spine_entry("_quote_x22_.xhtml", "a\"quote\".xhtml", None),
+      spine_entry("_lt_x3C_.xhtml", "a<less>.xhtml", None),
+    ];
+    let resources = vec![ResourceEntry {
+      id:         "_css".to_string(),
+      href:       "LaTeXML&core.css".to_string(),
+      media_type: "text/css".to_string(),
+    }];
+
+    let opf = manifest.generate_opf(
+      "Tom & Jerry: a <study> of \"conflict\"",
+      &["Ampersand & Co.".to_string()],
+      "en",
+      &spine,
+      &resources,
+    );
+
+    let parser = libxml::parser::Parser::default();
+    let doc = parser.parse_string(&opf).unwrap_or_else(|e| {
+      panic!("the OPF is not well-formed XML ({e:?}) — an unescaped special reached it:\n{opf}")
+    });
+    let root = doc.get_root_element().expect("a root element");
+    assert_eq!(root.get_name(), "package");
+
+    // The values must round-trip to their ORIGINAL text, not to an escaped or
+    // truncated form — well-formedness alone would also be satisfied by dropping
+    // the offending characters.
+    let hrefs: Vec<String> = crate::document::element_children(
+      &crate::document::element_children(&root)
+        .into_iter()
+        .find(|n| n.get_name() == "manifest")
+        .expect("a <manifest>"),
+    )
+    .iter()
+    .filter_map(|n| n.get_attribute("href"))
+    .collect();
+    assert!(
+      hrefs.contains(&"Fisher&Yates.xhtml".to_string()),
+      "the ampersand href did not survive the round-trip: {hrefs:?}"
+    );
+    assert!(
+      hrefs.contains(&"a\"quote\".xhtml".to_string())
+        && hrefs.contains(&"a<less>.xhtml".to_string()),
+      "a quote/less-than href did not survive the round-trip: {hrefs:?}"
+    );
+    assert!(
+      hrefs.contains(&"LaTeXML&core.css".to_string()),
+      "a RESOURCE href is interpolated by the same code path and must be escaped too: {hrefs:?}"
+    );
+  }
+
+  /// Structure the readers rely on, so the DOM rewrite cannot quietly drop a
+  /// required element or attribute.
+  #[test]
+  fn opf_carries_the_structure_epub_readers_require() {
+    let mut manifest = EpubManifest::new("/tmp/does-not-need-to-exist");
+    manifest.unique_identifier = Some("urn:uuid:abc".to_string());
+    let spine = vec![spine_entry("_a.xhtml", "a.xhtml", Some("nav"))];
+
+    let opf = manifest.generate_opf("T", &["A".to_string()], "en", &spine, &[]);
+    let parser = libxml::parser::Parser::default();
+    let doc = parser.parse_string(&opf).expect("well-formed");
+    let root = doc.get_root_element().expect("root");
+
+    assert_eq!(root.get_attribute("version").as_deref(), Some("3.0"));
+    assert_eq!(
+      root.get_attribute("unique-identifier").as_deref(),
+      Some("pub-id")
+    );
+
+    let kids = crate::document::element_children(&root);
+    let names: Vec<String> = kids.iter().map(|n| n.get_name()).collect();
+    assert_eq!(
+      names,
+      vec!["metadata", "manifest", "spine"],
+      "OPF child order"
+    );
+
+    // The identifier the package points at must actually carry that id.
+    let meta = kids.iter().find(|n| n.get_name() == "metadata").unwrap();
+    let ident = crate::document::element_children(meta)
+      .into_iter()
+      .find(|n| n.get_attribute("id").as_deref() == Some("pub-id"))
+      .expect("a <dc:identifier id='pub-id'>");
+    assert_eq!(ident.get_content(), "urn:uuid:abc");
+
+    // `properties` is optional and must be emitted only when present.
+    let item =
+      crate::document::element_children(kids.iter().find(|n| n.get_name() == "manifest").unwrap())
+        .into_iter()
+        .next()
+        .expect("an <item>");
+    assert_eq!(item.get_attribute("properties").as_deref(), Some("nav"));
+
+    let itemref =
+      crate::document::element_children(kids.iter().find(|n| n.get_name() == "spine").unwrap())
+        .into_iter()
+        .next()
+        .expect("an <itemref>");
+    assert_eq!(itemref.get_attribute("idref").as_deref(), Some("_a.xhtml"));
+  }
 }

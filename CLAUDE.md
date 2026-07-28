@@ -26,7 +26,7 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1678 passing** (2026-07-24, 91 targets, on `main`; the two `latexml_post`
+**1696 passing** (2026-07-26, 94 targets, on `main` @ `e07548e6b3`; the two `latexml_post`
 vector-SVG tests self-skip — silently, and *green* — unless `mutool` or
 `pdftocairo` is on PATH, so a green local run does not by itself prove that
 branch ran; CI installs poppler/mupdf). **A fully green suite still prints
@@ -109,38 +109,30 @@ Similarly, the test `.tex`, `.xml` and `.pdf` files often need to be copied from
 
 ## Workspace Structure
 
-Cargo workspace with 8 crates:
+Cargo workspace with 8 crates — see `Cargo.toml` `[workspace] members` for the
+list and each crate's own `lib.rs` docs for its role. The Perl→Rust crate map is
+in "Key Concepts Mapping" below.
 
-- **latexml_core** — Core engine: tokenizer (mouth), macro expander (gullet), digester (stomach), document builder, state management, definitions, bindings
-- **latexml_engine** — TeX/LaTeX engine modules and kernel state
-- **latexml_oxide** — Top-level crate with binary targets (`latexml_oxide`, `latexmlmath_oxide`) and integration tests
-- **latexml_package** — TeX/LaTeX package system: compile-time macro engine, package loader, prelude
-- **latexml_math_parser** — Math expression parser with Marpa-style grammar
-- **latexml_codegen** — Proc macros for compile-time code generation (constructable, modelable, parametrizeable, testable, tokenizeable)
-- **latexml_contrib** — User-contributed style packages
-- **latexml_post** - post-processing functionality to HTML/MathML/ePub/JATS/... following the core XML generation phase
-
-Supporting directories: `resources/`, `tools/`, `.githooks/`, `docs/` (indexed below), and
-`background/` — TeX documentation and code, the original project generating PDF, which LaTeXML
+One directory whose purpose is not self-evident: `background/` — TeX
+documentation and source, the original project generating PDF, which LaTeXML
 emulates and adapts.
 
 ## Internal Documentation
 
 All active docs live in `docs/`, grouped into themed subdirectories that mirror
-the two mission targets. **[`docs/README.md`](docs/README.md) is the
-authoritative per-file index** — one row per doc with its caveats; keep it
-current when adding, renaming, merging, or archiving a doc, and read the
-relevant row before opening a doc. The layout: `docs/SYNC_STATUS.md` (the
-start-here worklist) and `docs/AR5IV_DIAGNOSTICS.md` at the root;
-**`docs/parity/`** (Target 1 faithful translation, `+ diagnostics/`),
-**`docs/math/`** (Marpa math parser), **`docs/performance/`** (Target 2
-beyond-Perl / arXiv), **`docs/release/`** (ship contracts); reference
-collections `docs/{archive,reproducers,out-of-scope,known_crashes,examples,scripts}/`
-(`scripts/` holds one-off analysis helpers referenced by archived diagnostics).
-**Resuming work? Start with [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — a
-ranked worklist (R1…R9); take the top unblocked row. Labels there have gone
-stale before: verify a status against the named guard test or `gh issue view`
-before acting on it (SHA-ancestry does not work, the repo squash-merges).
+the two mission targets. **[`docs/README.md`](docs/README.md)** is the single
+index: a multi-level TOC over those subdirectories, followed by a **Per-file
+detail** section that says what each doc is for and when to read it. Read it when
+you need to find or place a doc — it used to be duplicated here, and the copy in
+this file was retired 2026-07-28 so there is one index to keep current, not two.
+
+**[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) is the start-here worklist** for
+both targets (ranked rows R1…R9 — take the top unblocked one). Labels there have
+gone stale before: verify a status against its named guard test or `gh issue
+view` before acting on it, and note that SHA-ancestry does not work here because
+the repo squash-merges.
+
+The placement rules below are policy, not navigation, so they stay in this file.
 
 **Rules for these docs:**
 - `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
@@ -149,17 +141,18 @@ before acting on it (SHA-ancestry does not work, the repo squash-merges).
 - When an upstream Perl error is identified, record it. Fix in Rust if simple; otherwise keep as-is.
 - **Diagnostic-snapshot naming.** Docs that capture a point-in-time technical diagnostic — `*_TRIAGE`, `*_HOTSPOTS`, `*_AUDIT`, `*_ANALYSIS`, `*_BISECT`, and similar — **must carry a date in the filename** (`NAME_YYYY-MM-DD.md`), using the date of their last commit. This keeps a study from masquerading as a live worklist. *Living* worklists are exempt even when their name reads like a diagnostic — date only what is a frozen snapshot. (When such a worklist's mission *completes*, date it and move it to `docs/archive/`, lifting any live residual into `SYNC_STATUS.md` — as was done for the LoadFormat audit.)
 - **Record the conclusion, not the play-by-play.** State the defect, its cause, the fix, and the guard test names — not the narrative of how it was found or what was tried on which day. Keep what is expensive to re-derive: witness arXiv ids, `file:line` into the Perl source, minimal trigger examples, named guards, identifiers a reader would otherwise grep for, measured figures with their basis, and settled dead-ends (one line each, so they are not re-attempted). Cut connective tissue, not identifiers. A table cell is not an essay: in `ISSUE_AUDIT.md` and similar, a few sentences, then point at `KNOWN_PERL_ERRORS`/`OXIDIZED_DESIGN` for the mechanism.
-- Keep `docs/README.md` — the authoritative index — current. When a diagnostic snapshot is superseded, archive it under `docs/archive/` rather than leaving it orphaned at the top level.
+- Keep **[`docs/README.md`](docs/README.md)** current — both its TOC table and its **Per-file detail** section — when adding, renaming, merging, or archiving a doc. When a diagnostic snapshot is superseded, archive it under `docs/archive/` rather than leaving it orphaned at the top level.
 
 ## Skills (`.claude/skills/`)
 
-Reusable workflows that encode this project's hard-won judgement — invoke with
-`/<name>` or let them surface by description (each skill's full description is
-already in the session skill listing). They wrap the `tools/` scripts with the
-*rules* (what verdict to trust, what trap to avoid). The core chain for a failing
-paper: `canvas-triage` (genuine Rust bug vs Perl parity) → `min-repro` →
-`perl-port`; `resolve-issue` wraps that chain end-to-end for a public GitHub
-issue, and `perf-check` guards the settled performance dead-ends.
+Reusable workflows encoding this project's hard-won judgement — the *rules*
+around the `tools/` scripts (what verdict to trust, what trap to avoid). Each is
+listed with its description in every session and loads on invocation, so they are
+not restated here; read the `SKILL.md` for the one you need.
+
+`canvas-triage` (genuine Rust bug vs Perl parity) → `min-repro` (shrink it) →
+`perl-port` (faithful fix) is the standard chain, wrapped by `resolve-issue` for
+a public GitHub issue. `perf-check` governs measurement.
 
 ## Build & Test
 
@@ -210,7 +203,8 @@ cargo doc --workspace --no-deps --open
 
 ## Code Style
 
-Formatting is configured in `rustfmt.toml`.
+Formatting is configured in `rustfmt.toml` — run `cargo +nightly fmt --all`
+rather than matching its settings by hand.
 
 Enable linting hooks:
 ```bash
@@ -285,3 +279,15 @@ When a **session is completed**: continue working, until:
 - no obvious improvements remain
 
 Do **not** stop early.
+
+## Key Concepts Mapping (Perl → Rust)
+
+| LaTeXML Perl | latexml-oxide |
+|---|---|
+| `LaTeXML::Core::Mouth` | `latexml_core::mouth` — tokenizer/reader |
+| `LaTeXML::Core::Gullet` | `latexml_core::gullet` — macro expansion |
+| `LaTeXML::Core::Stomach` | `latexml_core::stomach` — digestion |
+| `LaTeXML::Core::Document` | `latexml_core::document` — XML construction |
+| `LaTeXML::Core::State` | `latexml_core::state` — global state |
+| `LaTeXML::Core::Definition` | `latexml_core::definition` — macro/command defs |
+| `LaTeXML::Package` | `latexml_package` — package loading |

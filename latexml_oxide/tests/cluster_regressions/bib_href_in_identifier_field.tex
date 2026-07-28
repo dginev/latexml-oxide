@@ -1,0 +1,9 @@
+% `\href` inside a Semiverbatim `.bib` field must not expand forever.
+% See bib_href_in_identifier_field.bib for the witnesses and the mechanism.
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+Wrapped DOI \cite{HrefDoi2021}, wrapped booktitle \cite{HrefBooktitle2021}.
+\bibliographystyle{plain}
+\bibliography{bib_href_in_identifier_field}
+\end{document}

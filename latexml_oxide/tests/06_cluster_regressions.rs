@@ -1,181 +1,24 @@
-//! Cluster-regression integration tests.
+//! Cluster-regression integration tests — package and engine clusters.
 //!
-//! Pins the surpass-Perl wins from the post-100k cluster work
-//! (NBSP, @ifundefined, setdec/dec, \CITE) as 0-error.
-//! If a future change re-introduces the cluster errors, CI fails
-//! before the PR can land.
-use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
+//! Pins the surpass-Perl wins from the post-100k cluster work (NBSP,
+//! `\@ifundefined`, setdec/dec, `\CITE`) as 0-error. If a future change
+//! re-introduces the cluster errors, CI fails before the PR can land.
+//!
+//! Siblings, all sharing [`mod cluster`](cluster): `06_cluster_math`,
+//! `06_cluster_bibliography`, `06_cluster_frontmatter`,
+//! `06_cluster_toc_navigation`, `06_cluster_standalone_subfiles`.
 
-fn convert_clean(source: &str) {
-  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
-  // drive `Converter` directly, bypassing `latexml_test_single`, so without
-  // this they run under the low production default and a full-file
-  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
-  // conversions are in flight. See util::test::init_test_rss_cap.
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    // Same contrib dispatcher the binaries install — without it,
-    // contrib-provided bindings (mhchem, chemformula, …) resolve to
-    // nothing in the test environment while working in production.
-    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  assert!(
-    r.result.is_some(),
-    "{source}: conversion produced no result"
-  );
-  // Shared lax `Error:<class>:` counter — see util::test::error_count
-  // (single source of truth for the signal-integrity pattern).
-  let n_errors = latexml::util::test::error_count(&r.log);
-  assert_eq!(
-    n_errors, 0,
-    "{source}: expected 0 errors but log contained {n_errors} Error:<class>: markers (status_code={})",
-    r.status_code
-  );
-  assert!(
-    r.status_code <= 1,
-    "{source}: status_code {} (expected 0/1), status={:?}",
-    r.status_code,
-    r.status
-  );
-}
-
-/// Convert and return the serialized XML (for structural assertions that the
-/// 0-error `convert_clean` cannot express). STRICT: like `convert_clean`, this
-/// asserts the conversion logged **zero** `Error:` markers — a structural test
-/// that silently tolerates a conversion error is exactly the false-negative the
-/// project's signal-integrity rule forbids. An input that is *supposed* to error
-/// (a malformed / EOF-truncated specimen, parity with Perl) must use
-/// `convert_expecting_errors`, which asserts the exact intended count.
-fn convert_to_xml(source: &str) -> String { convert_expecting_errors(source, 0) }
-
-/// Convert an input EXPECTED to emit exactly `n` soft `Error:` markers, returning
-/// the serialized XML. `n == 0` is the strict/clean case (`convert_to_xml`); a
-/// nonzero `n` is for an intentionally-malformed specimen whose error is the
-/// correct, Perl-parity outcome. Mirrors `util::test`'s `INTENTIONALLY_FAILING`
-/// contract: drift fails BOTH ways — *more* errors = a handling regression,
-/// *fewer* = we silently stopped detecting the bad input — and a `Fatal:`
-/// (status_code 3) is always a regression, since the point is graceful recovery.
-fn convert_expecting_errors(source: &str, n: usize) -> String {
-  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
-  // drive `Converter` directly, bypassing `latexml_test_single`, so without
-  // this they run under the low production default and a full-file
-  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
-  // conversions are in flight. See util::test::init_test_rss_cap.
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  // Shared lax `Error:<class>:` counter — see util::test::error_count.
-  let n_errors = latexml::util::test::error_count(&r.log);
-  assert_eq!(
-    n_errors, n,
-    "{source}: expected {n} error(s) but log contained {n_errors} Error:<class>: markers (status_code={})",
-    r.status_code
-  );
-  assert!(
-    r.status_code < 3,
-    "{source}: conversion hit a Fatal (status_code={}) — must degrade gracefully",
-    r.status_code
-  );
-  r.result
-    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
-}
-
-/// Convert AND run the post-processing pipeline, returning the post-processed
-/// XML. `convert_to_xml` stops at the engine, so it cannot see anything
-/// MakeBibliography/CrossRef do — a `<bibitem>` in its output came straight from
-/// `\begin{thebibliography}`, not from an `ltx:bibentry` conversion. Use this
-/// helper for post-stage regressions.
-fn convert_and_post(source: &str) -> String { convert_and_post_opts(source, None) }
-
-/// Like `convert_and_post` but with the `context` navigation TOC enabled — for
-/// the upstream LaTeXML#2316 / arXiv-fork behavior where frontmatter
-/// (abstract/acknowledgements/bibliography) joins the navigation TOC.
-fn convert_and_post_navtoc(source: &str) -> String {
-  convert_and_post_opts(source, Some("context"))
-}
-
-fn convert_and_post_opts(source: &str, navigationtoc: Option<&str>) -> String {
-  let xml = convert_to_xml(source);
-  // No `stylesheet`: the assertions are about MakeBibliography, so stop at the
-  // post-processed ltx XML rather than running XSLT into HTML.
-  let opts = latexml::post::PostOptions {
-    pmml: false,
-    cmml: false,
-    keep_xmath: false,
-    stylesheet: None,
-    destination: None,
-    source_directory: Some("tests/cluster_regressions"),
-    site_directory: None,
-    search_paths: &[],
-    nodefaultresources: true,
-    css_files: &[],
-    js_files: &[],
-    noinvisibletimes: false,
-    mathtex: false,
-    navigationtoc,
-    schemadocs: false,
-    split: false,
-    split_xpath: None,
-    split_naming: None,
-    xslt_parameters: &[],
-    graphics_svg_threshold_kb: 0,
-    graphicimages: false,
-    timestamp: None,
-    icon: None,
-    whatsout: latexml_post::extract::Whatsout::default(),
-  };
-  latexml::post::run_post_processing(&xml, &opts)
-}
-
-/// Convert and return the conversion log (for asserting the ABSENCE of a
-/// Rust-only warning that `convert_clean` — which only counts `Error:` — misses).
-fn convert_log(source: &str) -> String {
-  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
-  // drive `Converter` directly, bypassing `latexml_test_single`, so without
-  // this they run under the low production default and a full-file
-  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
-  // conversions are in flight. See util::test::init_test_rss_cap.
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  assert!(
-    r.result.is_some(),
-    "{source}: conversion produced no result"
-  );
-  r.log
-}
+mod cluster;
+use cluster::{convert_clean, convert_expecting_errors, convert_log, convert_to_xml};
 
 #[test]
 fn cluster_nbsp_csname() { convert_clean("tests/cluster_regressions/nbsp_csname.tex"); }
-
 #[test]
 fn cluster_at_ifundefined() { convert_clean("tests/cluster_regressions/at_ifundefined.tex"); }
-
 #[test]
 fn cluster_setdec_dec() { convert_clean("tests/cluster_regressions/setdec_dec.tex"); }
-
 #[test]
 fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppercase.tex"); }
-
 /// `\let\cline\cmidrule` (a common booktabs idiom) must NOT create a
 /// `\cmidrule`->`\cline`->`\cmidrule` infinite expansion. LaTeXML's booktabs
 /// binding defines `\cmidrule` via `\cline`, so the `\let` would loop until the
@@ -186,7 +29,6 @@ fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppe
 fn cluster_cmidrule_cline_let() {
   convert_clean("tests/cluster_regressions/cmidrule_cline_let.tex");
 }
-
 /// fvextra's `breakanywhere=true` installs a recursive char-by-char break
 /// scanner that measures every character by boxing a line-prefix. In our
 /// engine that recursed through `predigest_box_contents_in_mode` and grew the
@@ -200,7 +42,6 @@ fn cluster_cmidrule_cline_let() {
 fn cluster_fvextra_breakanywhere() {
   convert_clean("tests/cluster_regressions/fvextra_breakanywhere.tex");
 }
-
 /// An unbound class (->OmniBus) whose `.bbl` `\bibitem[\protect\citeauthoryear…]`
 /// side-loads natbib must not leave a body `\citep` looping. The side-load runs
 /// inside the `thebibliography` group, so natbib's `\citep` would be popped on
@@ -212,7 +53,6 @@ fn cluster_fvextra_breakanywhere() {
 fn cluster_omnibus_natbib_bbl_sideload() {
   convert_clean("tests/cluster_regressions/omnibus_natbib_bbl_sideload.tex");
 }
-
 /// A bare `\url` at end-of-input previously panicked: `\url`'s reader did
 /// `read_token()?.unwrap()` and the `None` (input exhausted) hit the `.unwrap()`.
 /// Real TeX raises a clean "Emergency stop" ("File ended while scanning use of
@@ -233,7 +73,6 @@ fn cluster_url_at_eof_no_panic() {
     "url-at-EOF conversion produced empty output"
   );
 }
-
 /// Twemoji-style csname construction with accent macros (`\'`, `\^`, `\~`)
 /// and `\textquoteright` apostrophe — must produce 0 errors after the
 /// csname-stream soft-substitute fixes for `\lx@applyaccent`, the canonical
@@ -242,14 +81,12 @@ fn cluster_url_at_eof_no_panic() {
 /// 2603.23433, 2604.20621 — twemoji St. Barthélemy / Côte d'Ivoire / São Tomé).
 #[test]
 fn cluster_csname_accent() { convert_clean("tests/cluster_regressions/csname_accent.tex"); }
-
 /// Legacy `\documentstyle[…]{amsart}` (LaTeX 2.09 compat) must auto-load
 /// the AmS-TeX `\Sb` / `\Sp` substack environments via
 /// `RequirePackage('amstex') if LookupValue('2.09_COMPATIBILITY')`.
 /// Witnesses: arXiv:alg-geom9208004, arXiv:alg-geom9202004.
 #[test]
 fn cluster_amstex_2_09_sb() { convert_clean("tests/cluster_regressions/amstex_2_09_sb.tex"); }
-
 /// AmSTeX `\input amstex` + `\documentstyle{amsppt}` papers must
 /// stub `\vspace` / `\hspace` / `\scriptsize` / other LaTeX2e
 /// typesetting CSes as no-ops (the AmSTeX pool path doesn't load
@@ -257,7 +94,6 @@ fn cluster_amstex_2_09_sb() { convert_clean("tests/cluster_regressions/amstex_2_
 /// funct-an9211013, funct-an9211011, funct-an9312004.
 #[test]
 fn cluster_amsppt_vspace() { convert_clean("tests/cluster_regressions/amsppt_vspace.tex"); }
-
 /// Picture-environment `\multiput(x,{y})` with the second coordinate
 /// braced. Pair parameter reader must look through BEGIN…END groups
 /// before reading the float. Witnesses: arXiv:hep-th9610147,
@@ -266,7 +102,6 @@ fn cluster_amsppt_vspace() { convert_clean("tests/cluster_regressions/amsppt_vsp
 fn cluster_multiput_braced_pair() {
   convert_clean("tests/cluster_regressions/multiput_braced_pair.tex");
 }
-
 /// `\thechapter` autoload from `omnibus_cls.rs` must autoload the
 /// `book.cls` BINDING, not `book.sty`. The obsolete `book.sty` shim
 /// in TeXLive fires `\LoadClass{book}` immediately — by the time
@@ -278,7 +113,6 @@ fn cluster_multiput_braced_pair() {
 fn cluster_omnibus_chapter_book_autoload() {
   convert_clean("tests/cluster_regressions/omnibus_chapter_book_autoload.tex");
 }
-
 /// Tolerant `Pair` parameter reader: malformed `(3.2,3,8)` (three
 /// comma-separated values where Pair expects two) must consume the
 /// trailing `,8` silently so the next Pair argument can read its `(`.
@@ -288,7 +122,6 @@ fn cluster_omnibus_chapter_book_autoload() {
 fn cluster_pair_tolerant_trailing() {
   convert_clean("tests/cluster_regressions/pair_tolerant_trailing.tex");
 }
-
 /// `\newpsobject{name}{old}{keyval}` must dynamically define
 /// `\<name>` as a forwarder to `\<old>[<keyval>]`. Earlier stub
 /// no-op'd, leaving the defined CS undefined. Mirrors Perl
@@ -298,7 +131,6 @@ fn cluster_pair_tolerant_trailing() {
 fn cluster_newpsobject_forward() {
   convert_clean("tests/cluster_regressions/newpsobject_forward.tex");
 }
-
 /// JHEP.cls override of `\href` must use `Semiverbatim Semiverbatim`
 /// (NOT hyperref's `HyperVerbatim {}`) so the BODY arg's `^`/`_`
 /// are neutralized to OTHER catcode and don't fire `script_handler`
@@ -309,90 +141,6 @@ fn cluster_newpsobject_forward() {
 fn cluster_jhep_href_semiverbatim() {
   convert_clean("tests/cluster_regressions/jhep_href_semiverbatim.tex");
 }
-
-/// The broad `^S\d+` prune sweep (`Document::prune_dangling_split_xmrefs`)
-/// must NOT drop a `\Pr` (`\lx@dual` content-arm) ARGUMENT ref for
-/// section-numbered aligned equations — that emitted a malformed
-/// `apply(probability)` with no operand (silent content-MathML corruption).
-/// The operand-protection guard keeps the ref (dangling rather than dropped,
-/// closer to Perl which resolves it). See
-/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o).
-/// A comma-list LEFT of a conditional bar parses with `|` binding to the LAST
-/// item (Perl): `a,b|c` → `list@(a, conditional@(b, c))`, `a,b,c|d` →
-/// `list@(a, b, conditional@(c, d))`, `x|y,z` → `conditional@(x, list@(y, z))`.
-/// Previously `a,b|c` was UNPARSED — the root of the Class-B dangling-XMRef
-/// witness (aligned `\Pr(s_A,s_B|\Omega)` arg failed to parse). The grammar rule
-/// `statements punct statement vertbar statements => vertbar_modifier_listlhs`
-/// fixes it; this asserts the exact Perl-matching tree shapes.
-#[test]
-fn cluster_comma_list_conditional() {
-  let xml = convert_to_xml("tests/cluster_regressions/comma_list_conditional.tex");
-  for expected in [
-    "list@(a, conditional@(b, c))",
-    "list@(a, b, conditional@(c, d))",
-    "conditional@(x, list@(y, z))",
-  ] {
-    assert!(
-      xml.contains(expected),
-      "expected math text {expected:?} not found (comma-list conditional regressed)"
-    );
-  }
-}
-
-/// A `\quad`-separated formulae sequence whose first item is a
-/// comma-list-left-of-relation (built by `distribute_list_relation`, which makes
-/// a dual with a relation-`Apply` presentation, not an `XMWrap`) must NOT strand a
-/// keyless bare `<XMRef/>` when a further `\quad` formula extends it. This was the
-/// dominant `expected:id` "Missing idref" cluster (~370 papers). The Wrap-
-/// presentation guard on the formulae/list extend paths fixes it. See
-/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26v).
-#[test]
-fn cluster_formulae_distribute_no_bare_ref() {
-  let xml = convert_to_xml("tests/cluster_regressions/formulae_distribute_no_bare_ref.tex");
-  // A bare `<XMRef/>` (no idref) is the "Missing idref" symptom.
-  let collapsed: String = xml.split_whitespace().collect::<Vec<_>>().join("");
-  assert!(
-    !collapsed.contains("<XMRef/>"),
-    "keyless bare <XMRef/> present — distribute/formulae extend stranded a ref"
-  );
-}
-
-/// A bare bigop as a `/`-fraction numerator (`\partial/\partial t`, Leibniz
-/// partial-derivative notation) must PARSE — previously `ltx_math_unparsed`
-/// (Rust-only; Perl: `partial-differential / partial-differential@(t)`). The
-/// divide-scoped grammar rule `any_bigop divide term` fixes it without disturbing
-/// the apply case (`\partial t`) or `\partial \times B`. See SYNC_STATUS.
-#[test]
-fn cluster_partial_over_partial() {
-  let xml = convert_to_xml("tests/cluster_regressions/partial_over_partial.tex");
-  // The \partial/\partial t formula must parse (no unparsed marker) and match Perl.
-  assert!(
-    !xml.contains("ltx_math_unparsed"),
-    "\\partial/\\partial t left unparsed (bare-bigop fraction regressed)"
-  );
-  assert!(
-    xml.contains("partial-differential / partial-differential"),
-    "expected Perl-matching content text for \\partial/\\partial t not found"
-  );
-}
-
-#[test]
-fn cluster_xmref_pr_arg_not_dropped() {
-  let xml = convert_to_xml("tests/cluster_regressions/xmref_pr_arg_not_dropped.tex");
-  assert!(
-    xml.contains(r#"meaning="probability""#),
-    "probability operator missing from output"
-  );
-  // The probability XMApp must retain an operand: a bare
-  // `<XMTok meaning="probability"/>` immediately followed by `</XMApp>`
-  // (whitespace-insensitive) is the malformed/corrupted form we guard against.
-  let collapsed: String = xml.split_whitespace().collect::<Vec<_>>().join("");
-  assert!(
-    !collapsed.contains(r#"meaning="probability"/></XMApp>"#),
-    "malformed apply(probability) with no operand — content-arm arg ref was dropped"
-  );
-}
-
 /// An eqnarray reading a `\def`-ized `\arraycolsep` (a plain macro, not a length
 /// register) must NOT emit the Rust-only `expected:register` warning — Perl's
 /// `LookupDimension` reads the macro body silently (verified same-host: Perl
@@ -406,7 +154,6 @@ fn cluster_eqnarray_arraycolsep_macro_no_register_warning() {
     "spurious expected:register warning on a \\def-ized \\arraycolsep (LookupDimension regressed):\n{log}"
   );
 }
-
 /// Same as above for the `cases` package `numcases` environment (Perl
 /// cases.sty.ltxml L82 also reads `\arraycolsep` via `LookupDimension`). A
 /// `\def`-ized `\arraycolsep` must not produce the Rust-only `expected:register`
@@ -419,7 +166,6 @@ fn cluster_numcases_arraycolsep_macro_no_register_warning() {
     "spurious expected:register warning on a \\def-ized \\arraycolsep in numcases:\n{log}"
   );
 }
-
 /// floatflt `floatingfigure` must compute the `width` percentage from its
 /// `{Dimension}` arg (Perl `toPercent`: `int(100*dim/\textwidth)`). The args are
 /// only on the BEGIN whatsit (after_digest_begin); the prior code read them in
@@ -437,7 +183,6 @@ fn cluster_floatflt_pctwidth() {
     "floatflt floatingfigure width=\"0%\" — Dimension arg not read (after_digest args=None)"
   );
 }
-
 /// Same fix for the `floatfig` package: a 4cm figure → `width="32%"`.
 #[test]
 fn cluster_floatfig_pctwidth() {
@@ -447,7 +192,6 @@ fn cluster_floatfig_pctwidth() {
     "floatfig floatingfigure width != 32% (pctwidth/args regressed)"
   );
 }
-
 /// The arXiv IMS journal class (`arximspdf`/`arxstspdf`, used by Annals of
 /// Probability/Statistics — aop/aos) must convert with 0 errors AND preserve
 /// frontmatter metadata via the standard `\lx@add@*` API. Neither Perl LaTeXML nor
@@ -473,7 +217,6 @@ fn cluster_arximspdf_imsart() {
     "structured \\b* bibliography content missing"
   );
 }
-
 /// A plain DefMath symbol (`\rightarrowfill`, a DefMath ARROW) used in TEXT mode
 /// must NOT emit the Rust-only `unexpected:mode` "should only appear in math mode"
 /// warning. Perl (Package.pm:1304) adds the requireMath beforeDigest only for
@@ -488,7 +231,6 @@ fn cluster_defmath_textmode_no_mode_warning() {
     "spurious unexpected:mode warning for a DefMath symbol in text mode (requireMath over-applied):\n{log}"
   );
 }
-
 /// A `feynmp` (Feynman-diagram, MetaPost) document must convert with 0 errors —
 /// feynmp shares feynmf's macros but had no Rust binding, so `\fmf{...label=$$}`
 /// cascaded into `expected:$` display-math errors and `{fmfgraph*}`/`\fmfleft`/…
@@ -496,7 +238,6 @@ fn cluster_defmath_textmode_no_mode_warning() {
 /// shared diagram-macro stubs absorb them. See docs/SYNC_STATUS.md.
 #[test]
 fn cluster_feynmp_fmf() { convert_clean("tests/cluster_regressions/feynmp_fmf.tex"); }
-
 /// An UNBOUND journal class (`sn-jnl`, `wlpeerj`, `sagej`, Wiley, …) falls back
 /// to the OmniBus class, whose lazy natbib autoload triggers (`\citep`/`\citet`/
 /// `\citeyear`/…) must load natbib EXACTLY ONCE and resolve to natbib's real
@@ -531,7 +272,6 @@ fn cluster_omnibus_natbib_autoload_no_reload_loop() {
     "OmniBus natbib autoload: a cite trigger reverted to undefined after the load:\n{log}"
   );
 }
-
 /// The mhchem stub must NOT clobber an author's own `\cf` ("cf.") macro.
 /// `\cf`/`\cee` are mhchem LEGACY (`version < 4`) commands; real mhchem
 /// resolves the default version to 4 and leaves them undefined, so Perl
@@ -545,7 +285,6 @@ fn cluster_omnibus_natbib_autoload_no_reload_loop() {
 fn cluster_mhchem_cf_author_macro() {
   convert_clean("tests/cluster_regressions/mhchem_cf_author_macro.tex");
 }
-
 /// The flagship raw-load guard: \ce{H2O}/\ce{SO4^2-} must convert cleanly
 /// through the real mhchem.sty + expl3 pipeline (PR_READINESS review — the
 /// chemistry corpus had no fixture at all).
@@ -553,7 +292,6 @@ fn cluster_mhchem_cf_author_macro() {
 fn cluster_mhchem_ce_subscripts() {
   convert_clean("tests/cluster_regressions/mhchem_ce_subscripts.tex");
 }
-
 /// Multi-level `theindex` (`\item`/`\subitem`/`\subsubitem`) must build nested
 /// `<ltx:indexlist>`/`<ltx:indexentry>` cleanly. Requires (1) `Tag('ltx:indexentry',
 /// autoClose=>1)` — Perl `latex_constructs.pool.ltxml` L4477 — so a new entry
@@ -567,712 +305,6 @@ fn cluster_mhchem_ce_subscripts() {
 fn cluster_theindex_nested_autoclose() {
   convert_clean("tests/cluster_regressions/theindex_nested_autoclose.tex");
 }
-
-/// Convert with the ar5iv profile preloaded — the production route that sets
-/// `bibconfig=bbl,bib` PROGRAMMATICALLY (`ar5iv_sty.rs`). It cannot be set
-/// from TeX source: `\usepackage[bibconfig={bbl,bib}]{latexml}` naive-splits
-/// at the comma in BOTH engines (Perl `TrimmedCommaList` is not brace-aware),
-/// leaving `['bbl']`.
-fn convert_to_xml_ar5iv(source: &str) -> String {
-  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
-  // drive `Converter` directly, bypassing `latexml_test_single`, so without
-  // this they run under the low production default and a full-file
-  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
-  // conversions are in flight. See util::test::init_test_rss_cap.
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    preload: Some(vec!["ar5iv.sty".to_string()]),
-    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  r.result
-    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
-}
-
-/// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
-/// decision seam behind `\bibliography`. The clauses are arbitrary tokens, so
-/// marker text pins WHICH phase was chosen without running the full BibTeX
-/// pipeline. Covers the cb8b648784 fallback (bbl-first config + no .bbl on
-/// disk → use the real .bib) and Perl's first-phase-only rule.
-#[test]
-fn cluster_bbl_bib_precedence() {
-  // Default config ['bib','bbl']: refs.bib AND <jobname>.bbl both exist —
-  // the bib phase is first and all bibs exist → BIB wins.
-  let x = convert_to_xml("tests/cluster_regressions/bblbib/both.tex");
-  assert!(
-    x.contains("BIBCHOSEN") && !x.contains("BBLCHOSEN"),
-    "default config with both files should choose bib, got:\n{x}"
-  );
-  // Default config, requested norefs.bib is MISSING but <jobname>.bbl exists
-  // → falls to the bbl clause (Perl: "Couldn't find all bib files").
-  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblwins.tex");
-  assert!(
-    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
-    "default config with missing .bib should choose bbl, got:\n{x}"
-  );
-  // nobibtex config ['bbl'] with <jobname>.bbl on disk → BBL wins,
-  // even though refs.bib also exists.
-  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblfirst.tex");
-  assert!(
-    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
-    "nobibtex config with .bbl present should choose bbl, got:\n{x}"
-  );
-  // nobibtex config ['bbl'] and NO <jobname>.bbl: Perl's first-phase-only
-  // rule — no 'bib' phase configured, so NEITHER clause fires (empty +
-  // Info:expected:bbl), not a spurious empty bibliography.
-  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblnone.tex");
-  assert!(
-    !x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
-    "nobibtex config without .bbl should choose neither, got:\n{x}"
-  );
-  // ar5iv profile (bibconfig=bbl,bib) but NO <jobname>.bbl: falls through to
-  // the configured bib phase because refs.bib exists (cb8b648784; witness
-  // 2605.16562 — refs.bib and no .bbl under the ar5iv fleet profile).
-  let x = convert_to_xml_ar5iv("tests/cluster_regressions/bblbib/bblfallback.tex");
-  assert!(
-    x.contains("BIBCHOSEN") && !x.contains("BBLCHOSEN"),
-    "ar5iv bbl-first config without .bbl should fall back to bib, got:\n{x}"
-  );
-}
-
-/// Convert with the contrib bindings dispatched (biblatex lives in
-/// latexml_contrib) and return the serialized XML.
-fn convert_to_xml_contrib(source: &str) -> String {
-  // Raise the RSS fuse to the harness cap (9 GB): these hand-written helpers
-  // drive `Converter` directly, bypassing `latexml_test_single`, so without
-  // this they run under the low production default and a full-file
-  // `--test-threads=2` run trips a false `MemoryBudget` cascade once enough
-  // conversions are in flight. See util::test::init_test_rss_cap.
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  r.result
-    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
-}
-
-/// `convert_to_xml_contrib` with the strict signal-integrity gate that
-/// `convert_to_xml` applies to the core helpers: zero `Error:<class>:` markers
-/// and a non-fatal status. Use this for contrib regressions whose whole point
-/// is that the input stops erroring — tolerating an error there is exactly the
-/// false negative the project's log-parsing rule forbids.
-fn convert_to_xml_contrib_clean(source: &str) -> String {
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  let n_errors = latexml::util::test::error_count(&r.log);
-  assert_eq!(
-    n_errors, 0,
-    "{source}: expected 0 errors but log contained {n_errors} Error:<class>: markers (status_code={})",
-    r.status_code
-  );
-  assert!(
-    r.status_code <= 1,
-    "{source}: status_code {} (expected 0/1), status={:?}",
-    r.status_code,
-    r.status
-  );
-  r.result
-    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
-}
-
-/// A biber `.bbl` with more than one `\datalist` (biblatex's apa style asks for
-/// two sorting schemes, so the same references are emitted twice) used to hang
-/// the engine: each `\enddatalist` expands to a bare
-/// `\thebibliography…\endthebibliography`, neither of which opens a group, so
-/// the second one re-entered `setupPseudoBibitem` while the first arming was
-/// live and captured `\save@bibitem` ← `\restoring@bibitem` — a self-referential
-/// `\let` that expands forever (`Fatal:Timeout:TokenLimit`, 1e9 tokens).
-/// The blank line after `\printbibliography` covers the second half of the fix:
-/// `\endthebibliography` now disarms the redirection, so that `\par` no longer
-/// expands to `\par@in@bibliography` and deposits a stray empty bibitem outside
-/// the biblist. Witness: arXiv 2605.17646 (Perl converts it — its biblatex
-/// binding never defines `\printbibliography`, so upstream never reaches this —
-/// but Perl hangs identically on the bare-CS form; KNOWN_PERL_ERRORS #57).
-#[test]
-fn cluster_biblatex_two_datalists() {
-  let x =
-    convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_two_datalists/twolists.tex");
-  // One bibliography per \datalist, each holding its own biblist.
-  assert_eq!(
-    x.matches("<bibliography").count(),
-    2,
-    "expected one <bibliography> per \\datalist:\n{x}"
-  );
-  assert_eq!(
-    x.matches("<biblist>").count(),
-    2,
-    "expected one <biblist> per \\datalist:\n{x}"
-  );
-  // 2 entries × 2 datalists, and NOT a 5th stray from the trailing blank line.
-  assert_eq!(
-    x.matches("<bibitem").count(),
-    4,
-    "expected exactly 4 bibitems (2 entries x 2 datalists, no stray):\n{x}"
-  );
-}
-
-/// A leading relop (implied `absent` left operand) followed by a comma had no
-/// derivation at all: `list_apply`'s fragment guard rejected any item carrying
-/// an `absent` relop operand, and `formula relop formula_list` is deliberately
-/// gone (KNOWN_PERL_ERRORS #37), so `$>50,000$` fell out as `ltx_math_unparsed`
-/// while every neighbouring shape parsed. The guard now only rejects a comma
-/// pair when BOTH items are fragments — matching the relaxation `formulae_apply`
-/// already carried — and stays strict for `\quad`, where a run of align
-/// fragments really is one broken-up equation (`tests/math/sampler`).
-/// Witness: arXiv 2605.17646.
-#[test]
-fn cluster_leading_relop_comma_list() {
-  let x = convert_to_xml("tests/cluster_regressions/leading_relop_comma_list.tex");
-  assert!(
-    !x.contains("ltx_math_unparsed"),
-    "every formula here must parse; got an unparsed one:\n{x}"
-  );
-  // `50,000` is now recognized as ONE number by the thousands-separator rewrite
-  // (see `cluster_thousands_separator_us_default`), so these two read as plain
-  // relations rather than lists. The grammar fix is still what this test guards:
-  // without it the LEADING-relop form has no derivation at all, which `$>a,b$`
-  // below still exercises with a non-numeric list.
-  assert!(
-    x.contains(r#"text="absent &gt; 50000""#),
-    "expected `absent > 50000` for the leading relop:\n{x}"
-  );
-  assert!(
-    x.contains(r#"text="a &gt; 50000""#),
-    "the binary-relop sibling must agree:\n{x}"
-  );
-  assert!(
-    x.contains(r#"text="list@(absent &gt; a, b)""#),
-    "the leading-relop comma list (non-numeric, so untouched by the thousands \
-     rewrite) is the shape that had NO derivation before:\n{x}"
-  );
-}
-
-/// Thousands separator, US default (owner policy 2026-07-25). `$50,000$` is ONE
-/// number; the number ligature can never see that for English (its thousands arm
-/// demands `role != PUNCT` and a math comma is always PUNCT) and cannot be fixed
-/// there, since ligatures run per-token during building with no right context —
-/// a merge-at-three-digits rule turns `$(1, 2024)$` into `12024`. The merge runs
-/// in the post-build Rewriting phase instead, where each digit run is already
-/// one token, which is what makes the "must NOT merge" half safe.
-/// Witness: arXiv 2605.17646.
-#[test]
-fn cluster_thousands_separator_us_default() {
-  let x = convert_to_xml("tests/cluster_regressions/thousands_separator.tex");
-  let text_of = |tex: &str| -> String {
-    let needle = format!(r#"tex="{tex}""#);
-    let i = x
-      .find(&needle)
-      .unwrap_or_else(|| panic!("no formula {tex} in:\n{x}"));
-    let rest = &x[i..];
-    let t = rest.find(r#"text=""#).expect("text attr");
-    let start = i + t + 6;
-    x[start..start + x[start..].find('"').expect("close quote")].to_string()
-  };
-  // Merged into a single number, separators kept in the text but not the meaning.
-  for (tex, want) in [
-    ("50,000", "50000"),
-    ("&gt;50,000", "absent &gt; 50000"),
-    ("1,234,567", "1234567"),
-    ("12,345,678,901", "12345678901"), // 4 groups — exercises every pass
-    ("1,234.56", "1234.56"),           // thousands AND decimal
-    ("3.14", "3.14"),
-  ] {
-    assert_eq!(text_of(tex), want, "{tex} should merge");
-  }
-  // Must NOT merge. `3,14` is the European decimal reading (two digits, so the
-  // US rule declines); the rest would each be a real corruption.
-  for (tex, want) in [
-    ("3,14", "list@(3, 14)"),
-    ("50,0001", "list@(50, 0001)"),          // 4-digit group
-    ("f(x,000)", "f@(vector@(x, 000))"),     // no NUMBER left of the comma
-    ("(1,2024)", "open-interval@(1, 2024)"), // the pair the ligature corrupted
-    ("(12,3456)", "open-interval@(12, 3456)"),
-    ("a,b", "list@(a, b)"),
-  ] {
-    assert_eq!(text_of(tex), want, "{tex} must stay unmerged");
-  }
-  // The merged token must be indistinguishable from an unmerged one: no
-  // `font="italic"` stamped on by an ambient-font fallback.
-  assert!(
-    !x.contains(r#"<XMTok font="italic" meaning="50000""#),
-    "merged number picked up an ambient italic font:\n{x}"
-  );
-}
-
-/// The European half: for `de` the comma is the DECIMAL separator and the dot
-/// the thousands one, handled by the language maps + the ligature's decimal arm.
-/// Pins that the US-default rewrite leaves it alone.
-#[test]
-fn cluster_thousands_separator_eu() {
-  let x = convert_to_xml("tests/cluster_regressions/thousands_separator_eu.tex");
-  for want in [
-    r#"tex="3,14" text="3.14""#,
-    r#"tex="50.000" text="50000""#,
-    r#"tex="1.234,56" text="1234.56""#,
-  ] {
-    assert!(x.contains(want), "missing {want} in:\n{x}");
-  }
-}
-
-/// A bare operator used as an OPERAND — the argument-slot `f(\cdot)`, the inner
-/// product `\langle\cdot,\cdot\rangle`, and operators NAMED rather than applied
-/// (`(+)`, `(=)`, `(\times)`). The grammar admitted fenced singleton
-/// bigops/OPERATORs but not the ADDOP/MULOP/BINOP/RELOP roles, so all of these
-/// died as `ltx_math_unparsed`: measured against same-host Perl 0.8.8, Perl
-/// parsed 7 of these 8 shapes and we parsed 0. `placeholder` /
-/// `placeholder_list` admit them only where FENCED, so a stray `a + \times b`
-/// still fails. Cases H/I cover the companion fix: a comma list mixing ONE
-/// relation with a plain term, the `modified_term punct expression` variant the
-/// grammar had deferred "until a witness shows them needed".
-/// Witness: arXiv 2605.17646.
-#[test]
-fn cluster_fenced_bare_operator() {
-  let x = convert_to_xml("tests/cluster_regressions/fenced_bare_operator.tex");
-  for want in [
-    r#"text="f@(cdot)""#,
-    r#"text="g@(vector@(cdot, cdot))""#,
-    r#"text="f@(vector@(cdot, x))""#,
-    r#"text="delimited-⟨⟩@(list@(cdot, cdot))""#,
-    // The mixed relation/plain comma list, inside a conditional and bare.
-    r#"text="P@(conditional@(x, open-interval@(y &gt;= 0, z)))""#,
-    r#"text="f@(vector@(a &gt;= 0, b))""#,
-  ] {
-    assert!(x.contains(want), "missing {want} in:\n{x}");
-  }
-  // `\|\cdot\|` is unparsed in Perl too — parity, deliberately still unparsed.
-  // So exactly ONE formula here may carry the class, and it must be that one.
-  assert_eq!(
-    x.matches("ltx_math_unparsed").count(),
-    0,
-    "no formula in this fixture should be unparsed:\n{x}"
-  );
-}
-
-/// arXiv/html_feedback#6797 — an author-year bibliography built from a `.bib`
-/// used the FULL author list as the entry's refnum LABEL (5104 characters on the
-/// witness, arXiv 2607.21432); and because the author-year branch also skipped
-/// the first block, the authors appeared ONLY there.
-///
-/// pdflatex is the ground truth for the shape: `aa.bst` over the witness emits
-/// `\bibitem[{Abitbol {et~al.}(2025)Abitbol, …all surnames…}]` — natbib's SHORT
-/// form is the citation label, the long list is only natbib's optional
-/// full-author form and is never printed — and shows the authors in the entry
-/// BODY. Perl is byte-identical to the old Rust (`do_names` truncates only for a
-/// literal BibTeX `and others`), so this is a deliberate divergence,
-/// OXIDIZED_DESIGN #71.
-#[test]
-fn cluster_bib_long_author_list_refnum() {
-  let x = convert_and_post("tests/cluster_regressions/bib_long_author_list.tex");
-  // The refnum tag of the <bibitem> that carries a given entry's title. NOTE
-  // the refnum is pushed LAST within <tags>, so it follows the title — scope to
-  // the enclosing bibitem rather than searching backwards from the title.
-  let refnum = |title: &str| -> String {
-    let i = x
-      .find(title)
-      .unwrap_or_else(|| panic!("no entry titled {title} in:\n{x}"));
-    let start = x[..i].rfind("<bibitem").unwrap_or(0);
-    let end = x[start..]
-      .find("</bibitem>")
-      .map(|e| start + e)
-      .unwrap_or(x.len());
-    let s = start
-      + x[start..end]
-        .find(r#"role="refnum""#)
-        .unwrap_or_else(|| panic!("no refnum in the bibitem for {title}:\n{x}"));
-    let open = x[s..].find('>').expect("tag open") + s + 1;
-    let close = x[open..].find("</tag>").expect("tag close") + open;
-    let (mut out, mut depth) = (String::new(), 0);
-    for c in x[open..close].chars() {
-      match c {
-        '<' => depth += 1,
-        '>' => depth -= 1,
-        _ if depth == 0 => out.push(c),
-        _ => {},
-      }
-    }
-    out.split_whitespace().collect::<Vec<_>>().join(" ")
-  };
-  // >2 authors: the label is natbib's short form, NOT the full list.
-  assert_eq!(
-    refnum("science goals and forecasts"),
-    "Abitbol et al. (2025)",
-    "long-author label:\n{x}"
-  );
-  // 2 and 1 author are unaffected by the short form.
-  assert_eq!(
-    refnum("On examples"),
-    "Jones and Brown (2019)",
-    "2-author:\n{x}"
-  );
-  assert_eq!(
-    refnum("A single-author paper"),
-    "Berg (2018)",
-    "1-author:\n{x}"
-  );
-  // A literal BibTeX `and others` already produced "et al." — still does.
-  assert_eq!(
-    refnum("An explicit BibTeX others entry"),
-    "Smith et al. (2020)",
-    "explicit others:\n{x}"
-  );
-  // The full author list must NOT be lost: with a short label the first block
-  // (the authors) is no longer redundant and must appear in the entry body.
-  assert!(
-    x.contains("Abril-Cabezas") && x.contains("Agrawal"),
-    "the full author list must survive in the entry body:\n{x}"
-  );
-  // ...but the RENDERED first block must not re-print the year the label
-  // already carries. Perl dropped the whole block to avoid that redundancy; we
-  // keep it and drop only its year field, matching the shipped biblatex
-  // author-year rendering (`[Smith (2020)] John Smith “A study…”`).
-  //
-  // Scoped to the first <bibblock> on purpose: `2025` also legitimately occurs
-  // as the `<tags>` metadata year (CrossRef reads it, and the numeric style
-  // emits it too), in `key="Collab2025"`, and as this entry's journal VOLUME.
-  let first_block = {
-    let i = x.find("science goals and forecasts").expect("entry");
-    let start = x[..i].rfind("<bibitem").expect("bibitem start");
-    let b = start + x[start..].find("<bibblock").expect("first bibblock");
-    let e = b + x[b..].find("</bibblock>").expect("bibblock end");
-    &x[b..e]
-  };
-  assert!(
-    first_block.contains(r#"class="ltx_bib_author""#),
-    "the first block should carry the authors:\n{first_block}"
-  );
-  assert!(
-    !first_block.contains(r#"class="ltx_bib_year""#),
-    "the first block must not re-emit the year the label already carries:\n{first_block}"
-  );
-}
-
-/// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
-/// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
-/// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the
-/// three citation families; style=numeric documents keep sequential
-/// labels, core [ ] brackets, and plain-\cite fallbacks (multicite keys
-/// comma-joined).
-#[test]
-fn cluster_biblatex_authoryear() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/ay.tex");
-  // Structured tags with author/year roles (single-author, 2-author "&",
-  // 3+-author "et al." short form vs full list, prefix-name surname).
-  assert!(
-    x.contains(r#"<tag role="year">2020</tag>"#),
-    "year tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Smith</tag>"#),
-    "authors tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="refnum">Smith (2020)</tag>"#),
-    "refnum tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Jones &amp; Brown</tag>"#),
-    "2-author tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Adams et al.</tag>"#),
-    "et-al short form missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="fullauthors">Adams, Baker &amp; Clark</tag>"#),
-    "fullauthors missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Berg</tag>"#),
-    "prefix-name surname missing:\n{x}"
-  );
-  // Citation families: parenthetical vs textual vs bare, with show= specs.
-  assert!(
-    x.contains("citemacro_citep"),
-    "parenthetical cite class missing:\n{x}"
-  );
-  assert!(
-    x.contains("citemacro_citet"),
-    "textual cite class missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"show="Authors Phrase1YearPhrase2""#),
-    "textual show spec missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"show="FullAuthorsPhrase1Year""#),
-    "starred full-author show missing:\n{x}"
-  );
-  // Multicite: two bibrefs inside one cite, "; "-joined.
-  assert!(
-    x.contains(r#"bibrefs="smith2020""#) && x.contains(r#"bibrefs="jones2019""#),
-    "multicite per-group bibrefs missing:\n{x}"
-  );
-  // arxiv-readability#10 / ar5iv-bindings#4: \parencite[see][]{key} — a
-  // present-but-EMPTY second optional must NOT demote the prenote to a
-  // postnote ("(see Smith, 2020)", never "(Smith, 2020, see)").
-  assert!(
-    x.matches("(see ").count() >= 2,
-    "issue-4 prenote missing:\n{x}"
-  );
-  assert!(
-    !x.contains(", see)"),
-    "issue-4 prenote demoted to postnote:\n{x}"
-  );
-
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/num.tex");
-  // Numeric style: sequential labels, NO author-year relabeling, and the
-  // fallback \cite path (keys preserved; multicite keys comma-joined).
-  assert!(
-    x.contains(r#"bibrefs="smith2020""#),
-    "numeric fallback lost keys:\n{x}"
-  );
-  assert!(
-    x.contains(r#"bibrefs="smith2020,jones2019""#),
-    "numeric multicite keys not comma-joined:\n{x}"
-  );
-  assert!(
-    !x.contains("Smith, 2020"),
-    "numeric doc must not get author-year labels:\n{x}"
-  );
-  assert!(
-    !x.contains(r#"role="fullauthors""#),
-    "numeric doc must not get author-year tags:\n{x}"
-  );
-}
-
-/// Upstream LaTeXML #2837: `\hdotsfor[]{N}` spans N alignment columns (the
-/// dots row gets N cells, `\hdots & … & \hdots`), instead of piling N
-/// `\hdots` into one cell. 3+3+3 cells in the first matrix + 2+2 in the
-/// second = 13 mtds, 5 of them dots. The optional spacing arg is consumed
-/// and ignored, matching upstream.
-#[test]
-fn cluster_hdotsfor_columns() {
-  let x = convert_to_xml("tests/cluster_regressions/hdotsfor.tex");
-  // The harness returns the pre-XSLT XML, so count XMath cells.
-  let cells = x.matches("<XMCell").count() + x.matches("<mtd").count();
-  assert_eq!(
-    cells, 13,
-    "\\hdotsfor must span its column count (9 + 4 cells), got:\n{x}"
-  );
-  assert_eq!(
-    x.matches('\u{2026}').count(),
-    5,
-    "expected 3 + 2 dots cells, got:\n{x}"
-  );
-}
-
-// ── Frontmatter class-binding fixtures ──────────────────────────────────────
-// Structured, well-rendered author blocks across conference/journal classes.
-// Witnesses are open arXiv HTML "front matter" reports; each fix is described
-// in its binding. `<personname>` counts use the default-namespace serialization
-// (bare tag names).
-
-/// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
-/// (optional running-head short name + full name). The name must render, and
-/// the `[F. Poli]` optarg must NOT leak as a `[` creator. Witness 2405.08372.
-#[test]
-fn frontmatter_acmart_author_optarg() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_acmart_author_optarg.tex");
-  assert!(
-    x.contains("Federico Poli"),
-    "acmart author name missing:\n{x}"
-  );
-  assert!(
-    !x.contains("<personname>[") && !x.contains("<personname> ["),
-    "acmart `[short]` optarg leaked as a bracket creator:\n{x}"
-  );
-}
-
-/// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
-/// block is one creator; the `1\textsuperscript{st}` ordinals must not be
-/// misread as affiliation markers and drop every author. Witness 2602.05517.
-#[test]
-fn frontmatter_ieee_authorblock() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_authorblock.tex");
-  assert!(
-    x.contains("Alice Smith"),
-    "IEEE authorblock author 1 missing:\n{x}"
-  );
-  assert!(
-    x.contains("Bob Jones"),
-    "IEEE authorblock author 2 missing:\n{x}"
-  );
-  assert!(
-    x.matches("<personname>").count() >= 2,
-    "IEEE authorblock must yield >=2 creators, got {}:\n{x}",
-    x.matches("<personname>").count()
-  );
-}
-
-/// IEEEtran `\IEEEmembership{Senior Member, IEEE}` inside a flat comma author
-/// list must not become a phantom "Senior Member, IEEE" creator. Witness
-/// 2508.00603.
-#[test]
-fn frontmatter_ieee_membership_no_phantom() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_membership.tex");
-  assert!(
-    x.contains("Alice Smith") && x.contains("Bob Jones"),
-    "IEEE authors missing:\n{x}"
-  );
-  assert!(
-    !x.contains("<personname>Senior Member") && !x.contains("<personname>Member, IEEE"),
-    "IEEEmembership leaked as a phantom creator:\n{x}"
-  );
-}
-
-/// Modern Interspeech.cls `\name[affiliation={1,*}]{First}{Last}` (2-arg): the
-/// author renders as "First Last"; the `[affiliation=…]` optarg must not leak a
-/// `[` creator or `\name`. Interspeech2024 resolves here by version-stripping.
-/// Witness 2406.11727.
-#[test]
-fn frontmatter_interspeech2024_name() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_interspeech2024_name.tex");
-  assert!(
-    x.contains("Alice Smith"),
-    "Interspeech author 1 missing:\n{x}"
-  );
-  assert!(
-    x.contains("Bob Jones"),
-    "Interspeech author 2 missing:\n{x}"
-  );
-  assert!(!x.contains("\\name"), "Interspeech `\\name` leaked:\n{x}");
-  assert!(
-    !x.contains("<personname>["),
-    "Interspeech optarg leaked as bracket:\n{x}"
-  );
-}
-
-/// czipreprint `\author[1]{…}` / `\author*[1,2]{…}` (starred = corresponding):
-/// the star must be peeked via `\@ifstar`, not baked into the signature (which
-/// would break the plain form → `]Name` leak). Witness 2508.00826.
-#[test]
-fn frontmatter_czipreprint_author_star() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_czipreprint_author.tex");
-  assert!(
-    x.contains("Alice Smith"),
-    "czipreprint plain author missing:\n{x}"
-  );
-  assert!(
-    x.contains("Bob Jones"),
-    "czipreprint starred author missing:\n{x}"
-  );
-  assert!(
-    !x.contains("<personname>]"),
-    "czipreprint `[n]` optarg leaked a `]`:\n{x}"
-  );
-}
-
-/// spconf.sty / INTERSPEECH2021.sty single-arg `\name{Author1$^1$, Author2$^2$}`
-/// on `\documentclass{article}`: the name list becomes structured creators
-/// rather than being stashed and dropped. Witness 2309.14838, 2405.13379.
-#[test]
-fn frontmatter_spconf_name() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_spconf_name.tex");
-  assert!(x.contains("Alice Smith"), "spconf author 1 missing:\n{x}");
-  assert!(x.contains("Bob Jones"), "spconf author 2 missing:\n{x}");
-}
-
-/// atlasdoc `\AtlasTitle{…}` / `\AtlasAbstract{…}` / `\AtlasOrcid[orcid]{Name}`:
-/// the frontmatter macros of the (very large, unbound) ATLAS class must not leak
-/// as literal text — the title/abstract render and the collaboration author
-/// names show. Witness 2508.20929. (Full author-list-as-creators is out of scope
-/// for this minimal frontmatter binding — the list is `\input` in the body.)
-#[test]
-fn frontmatter_atlasdoc_title() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_atlasdoc_title.tex");
-  assert!(
-    x.contains("heavy neutral leptons"),
-    "AtlasTitle text missing:\n{x}"
-  );
-  assert!(
-    !x.contains("\\AtlasTitle") && !x.contains("\\AtlasAbstract") && !x.contains("\\AtlasOrcid"),
-    "Atlas frontmatter macro leaked as raw text:\n{x}"
-  );
-  assert!(x.contains("Aad"), "AtlasOrcid author name missing:\n{x}");
-}
-
-/// jmlr.cls `\author{ \Name{N} \Email{E} \\ ... \addr Affiliation }`: the
-/// structured sub-macros must build one clean creator per `\Name` (name →
-/// personname, `\Email` → contact[email], the trailing `\addr` block →
-/// contact[affiliation]), not cram everything into one personname or split the
-/// affiliation's commas into phantom "Foo"/"FL" authors. `\nametag` must not
-/// leak. Witness 2410.16138.
-#[test]
-fn frontmatter_jmlr_structured_author() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_jmlr_name.tex");
-  assert!(
-    x.contains("<personname>Alice Smith</personname>"),
-    "jmlr author 1 not a clean personname:\n{x}"
-  );
-  assert!(
-    x.contains("<personname>Bob Jones</personname>"),
-    "jmlr author 2 not a clean personname:\n{x}"
-  );
-  assert!(
-    !x.contains("\\Name") && !x.contains("\\nametag") && !x.contains("\\addr"),
-    "jmlr author sub-macro leaked as raw text:\n{x}"
-  );
-  assert!(
-    x.contains("role=\"email\"") && x.contains("alice@example.edu"),
-    "jmlr email not structured:\n{x}"
-  );
-  assert!(
-    x.contains("role=\"affiliation\"") && x.contains("Department of Computer Science"),
-    "jmlr affiliation not structured:\n{x}"
-  );
-  assert!(
-    !x.contains("<personname>Foo") && !x.contains("<personname>FL"),
-    "jmlr affiliation commas mis-split into phantom authors:\n{x}"
-  );
-}
-
-/// MRM.cls (Wiley `\author[idx]{name}{orcid}` family): the author name renders,
-/// the ORCID becomes a linked contact, `\address`/`\state`/`\country` don't leak
-/// (`\state` is deliberately absent from OmniBus), and `\corres`/`\finfo` are
-/// preserved as notes. Witness 2509.13644.
-#[test]
-fn frontmatter_mrm_author() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_mrm_author.tex");
-  assert!(
-    x.contains("<personname>Jakob Asslander*</personname>"),
-    "MRM author name missing/unstructured:\n{x}"
-  );
-  assert!(
-    !x.contains("\\state")
-      && !x.contains("\\orcid")
-      && !x.contains("\\corres")
-      && !x.contains("\\authormark"),
-    "MRM frontmatter macro leaked as raw text:\n{x}"
-  );
-  assert!(
-    x.contains("role=\"orcid\"") && x.contains("0000-0003-2288-038X"),
-    "MRM ORCID not a structured contact:\n{x}"
-  );
-  assert!(
-    x.contains("Center for Biomedical Imaging"),
-    "MRM affiliation content missing:\n{x}"
-  );
-}
-
 /// subcaption loaded AFTER subfigure.sty must not clobber subfigure.sty's
 /// self-contained `\subfigure[][]{}` macro with its own `{subfigure}[]{Dimension}`
 /// environment. The two have incompatible contracts: the macro consumes a
@@ -1297,7 +329,6 @@ fn subcaption_does_not_clobber_subfigure_macro() {
     "bibliography lost — the subfigure/subcaption clash leaked a group and truncated the document:\n{x}"
   );
 }
-
 /// Brace-less `\hphantom` immediately followed by `\endminipage` (the low-level
 /// minipage primitive, no braces): upstream #2783's `\hphantom{}` grabs `#1`
 /// unconditionally, so it would swallow `\endminipage` into the phantom's
@@ -1320,278 +351,6 @@ fn hphantom_braceless_minipage_does_not_swallow_endminipage() {
     "bibliography lost — the minipage leaked and truncated the document:\n{x}"
   );
 }
-
-/// apacite spells its citation pre-note in ANGLE brackets:
-/// `\cite<pre-note>[post-note]{key-list}` (apacite.sty L259-311 dispatch
-/// `\@ifnextchar< {\@cite} {\@cite<>}`, L313-327 `\def\@cite<#1>`). Without that
-/// form the kernel/natbib `\cite` takes the single token `<` as its whole key
-/// list: the citation renders as a dangling `[<]`, the REAL keys are never cited
-/// (so they are silently absent from the References) and `see>` leaks into the
-/// body text. Witness 2605.10951 (`\cite<see>{Gangopadhyay02,Ferris25}`,
-/// agujournal2019), 2606.16518, 2606.19048, 2606.21531, 2606.24563.
-///
-/// Guards BOTH halves of the fix: the pre-note form resolves its keys, AND the
-/// pre-note-ABSENT case does not swallow a later `>`. The latter is why this
-/// uses the real `OptionalAngled` parameter type rather than
-/// `OptionalMatch:< OptionalUntil:>` — `Until` never checks for the OPENING
-/// delimiter, so with no `<` it scanned to the next `>` anywhere downstream and
-/// `\citeA{Gangopadhyay02} and $a > b$` reported the key as `b`.
-#[test]
-fn apacite_angled_prenote_cites_keys_and_does_not_swallow_gt() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/cite_angled_prenote/ap.tex");
-  // `\cite<see>{Gangopadhyay02,Ferris25}` cites BOTH real keys, not `<`.
-  assert!(
-    x.contains("Gangopadhyay02,Ferris25"),
-    "\\cite<see>{{...}} lost its keys (apacite angle-bracket pre-note):\n{x}"
-  );
-  assert!(
-    !x.contains(r#"bibrefs="&lt;""#) && !x.contains(r#"bibrefs="<""#),
-    "`<` was parsed as the citation key list:\n{x}"
-  );
-  // Pre-note absent + a later `>`: the cite keeps its key and the math survives.
-  assert!(
-    !x.contains(r#"bibrefs="b""#),
-    "an absent angle pre-note swallowed the cite and the following `$a > b$`:\n{x}"
-  );
-}
-
-/// Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/…:
-/// `\usepackage[numbers,sort&compress]{natbib}` / `\usepackage[authoryear]{natbib}`),
-/// but our binding `LoadClass!("OmniBus")`es — which short-circuits the
-/// unbound-class dependency scan — and OmniBus only `def_autoload`s natbib off
-/// `\citet`/`\citep`/`\citeyear`/…, deliberately NOT off `\cite` (the kernel
-/// already defines it). So a paper citing solely via natbib's TWO-optional
-/// `\cite[pre][post]{keys}` never triggered the autoload and the kernel's
-/// single-optional `\cite[] Semiverbatim` read `[` as the whole key list — the
-/// real keys were dropped (silently absent from the References) and `]{keys}`
-/// leaked as body text. Witness 2605.23484 (sn-mathphys-num), 2606.10002
-/// (sn-basic), 2606.10215, 2606.11534.
-#[test]
-fn sn_jnl_natbib_two_optional_cite_keeps_its_keys() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/sn_jnl_cite/sn.tex");
-  assert!(
-    x.contains("Melrose1980"),
-    "sn-jnl `\\cite[e.g.][]{{Melrose1980}}` lost its key (natbib not loaded):\n{x}"
-  );
-  assert!(
-    !x.contains(r#"bibrefs="[""#) && !x.contains(r#"bibrefs="&#91;""#),
-    "`[` was parsed as the citation key list — natbib's two-optional \
-     \\cite[pre][post]{{keys}} did not parse:\n{x}"
-  );
-  assert!(
-    x.contains("Zhang2021"),
-    "`\\cite[see][chap.~2]{{Zhang2021}}` lost its key:\n{x}"
-  );
-}
-
-/// amsrefs writes the bibliography INTO the document —
-/// `\begin{bibdiv}\begin{biblist}\bib{key}{article}{...}` — instead of into an
-/// external `.bib`. The engine digests that correctly into
-/// `ltx:biblist`/`ltx:bibentry` (see the `amsrefs_basic` structure test), but
-/// upstream `MakeBibliography::getBibEntries` collects entries ONLY from
-/// `getBibliographies()`, which resolves `//ltx:bibliography/@files` — an
-/// amsrefs bibliography has no `@files`, so nothing is collected, and `process`
-/// then executes its unconditional `removeNodes(//ltx:bibentry)`, deleting every
-/// entry it never converted. The whole bibliography vanishes with ZERO errors:
-/// empty References plus every `\cite` dangling.
-///
-/// PARITY with installed AND vendored Perl 0.8.8 (rev 51fea96a) — fixed here
-/// rather than reproduced (OXIDIZED_DESIGN #57, KNOWN_PERL_ERRORS #49).
-/// Witness 2605.01646 (AIPFa.tex; Perl: 0 bibitems / 81 dangling citations,
-/// Rust now 23 / 0), 2605.00783, 2605.03852.
-///
-/// NOTE the structure test `amsrefs_basic` asserts only on the ENGINE's XML and
-/// so never exercised MakeBibliography — which is exactly how this stayed
-/// silent. This test runs the full pipeline.
-#[test]
-fn amsrefs_inline_bibliography_is_not_dropped() {
-  let x = convert_and_post("tests/cluster_regressions/amsrefs_inline_bibliography.tex");
-  // The inline entries became real bibitems (post ran and collected them).
-  assert!(
-    x.contains("<bibitem"),
-    "amsrefs inline bibliography was dropped whole — no bibitem survived:\n{x}"
-  );
-  // Both entries, with their content, are present. NB amsrefs sentence-cases
-  // titles ("On Examples" -> "On examples"), as `amsrefs_basic.xml` records.
-  for needle in ["Beilinson", "Height pairing", "On examples", "Smith"] {
-    assert!(
-      x.contains(needle),
-      "amsrefs entry content `{needle}` missing from the References:\n{x}"
-    );
-  }
-  // No leftover uncollected bibentry (they were converted, not deleted).
-  assert!(
-    !x.contains("<bibentry"),
-    "an ltx:bibentry survived unconverted:\n{x}"
-  );
-  // A `\bib` field value is TeX, not literal text: Perl `BibTeX.pool.ltxml`
-  // `\bibentry@create` (L134-166) hands the assembled entry to a fresh Mouth, so
-  // `\ndash`/`\MR{…}` tokenize as control sequences. Building a pre-tokenized
-  // catcode-12 stream instead leaked them verbatim (`661\ndash693` and the OT1
-  // rendering `Review “MR–849427˝`) and left `pages` empty. Witness 2508.17585.
-  assert!(
-    x.contains("661–693"),
-    "`pages={{661\\ndash 693}}` did not render as an en-dashed range — the field \
-     value never reached the handlers as live TeX:\n{x}"
-  );
-  // MakeBibliography must clone bib-review's CHILDREN (Perl `do_links`
-  // L655-667 `cloneNodes($node->childNodes)`), not collapse them to text, or
-  // the `\MR` MathSciNet link is dropped on the floor.
-  assert!(
-    x.contains("mathscinet-getitem?mr=849427"),
-    "the `review={{\\MR{{849427}}}}` MathSciNet link vanished — bib-review's \
-     children were flattened to plain text:\n{x}"
-  );
-}
-
-/// Loading `bibunits` — even without ever opening a `bibunit` environment —
-/// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
-/// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the
-/// document's one `\bibliography` registers its bibitems under the default
-/// `bibliography` list, and CrossRef searched the unit list ONLY. Witness
-/// 2303.06077 (revtex4-2 + bibunits): 93 bibitems rendered, 93 keys dangling,
-/// 0 links. Deleting the single `\usepackage{bibunits}` line resolves the cite,
-/// which is the whole defect in one bisect.
-#[test]
-fn bibunits_cite_resolves_against_the_main_bibliography() {
-  let x = convert_and_post("tests/cluster_regressions/bibunits_cite.tex");
-  // The entry reaches the References either way — the defect is the LINK.
-  assert!(
-    x.contains("<bibitem"),
-    "bibunits: the bibliography itself is missing:\n{x}"
-  );
-  assert!(
-    !x.contains("ltx_missing_citation"),
-    "bibunits: \\cite{{Smith2020}} dangles — CrossRef only searched the `bu0` \
-     unit list and never fell back to the main `bibliography` list:\n{x}"
-  );
-}
-
-/// Witness 2605.00490: a JabRef `.bib` self-declaring `% Encoding: Cp1252`.
-/// MakeBibliography read it with `read_to_string`, which hard-errors on the
-/// first non-UTF-8 byte, so the whole bibliography was dropped and the paper
-/// rendered an empty References section with NO `Error:` — a silent, total
-/// loss. Real `bibtex` 0.99d is 8-bit clean and Perl passes raw bytes through
-/// (`Mouth.pm` L75-80).
-///
-/// This exercises the POST path (`convert_bib_file_to_xml`), which is where
-/// the production failure actually happened; `pre_bibtex`'s own
-/// `non_utf8_bib_file_is_read_not_rejected` covers the engine-side reader.
-#[test]
-fn non_utf8_bib_file_still_yields_a_bibliography() {
-  let x = convert_and_post("tests/cluster_regressions/cp1252_bib.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "cp1252 .bib: the whole bibliography was dropped on a non-UTF-8 byte:\n{x}"
-  );
-  // The Latin-1 fallback is lossless byte -> char, so the accent survives to
-  // the rendered entry rather than collapsing to U+FFFD. Only the SURNAME is
-  // asserted: the fixture's `author = {Café, André}` is BibTeX's `Last, First`
-  // form, so the style abbreviates the given name to `A.` ("A. Café").
-  assert!(
-    x.contains("Café"),
-    "cp1252 .bib: the accented surname did not survive the decode:\n{x}"
-  );
-}
-
-/// Witness arXiv 2607.00045 (sn-jnl): 44 of its 78 rendered entries carry
-/// `note = {\url{...}}`, and every one of them rendered as the dead literal text
-/// `\urlhttps://…` instead of a link.
-///
-/// Two independent flatten-to-text steps had to be fixed, and EITHER of them
-/// alone keeps the bug alive:
-///
-/// 1. `convert_bib_file_to_xml` stringified the digested field
-///    (`interpret_tex_text`), and a Whatsit stringifies to its REVERSION — so
-///    `\url{…}` came back as its own TeX source, which `strip_braces` then
-///    mashed into `\urlhttps://…`. `\href{u}{text}` was worse: the reversion
-///    drops the second argument, so the link TEXT was lost outright.
-/// 2. `apply_formatter` then took `get_content()` of the field node, discarding
-///    any element children. Perl's formatters are `do_any`-shaped and return
-///    `$doc->cloneNodes(@nodes)` (`MakeBibliography.pm` L525-531, L550-552), so
-///    the markup reaches the bibitem.
-///
-/// Same-host Perl renders all three of these correctly, so this was
-/// GENUINE-RUST-ONLY, not a parity gap.
-#[test]
-fn bib_field_markup_survives_into_the_bibliography() {
-  let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "bib markup: no bibliography at all:\n{x}"
-  );
-  // The whole point: no TeX source may leak into the rendered entries.
-  for leak in ["\\urlhttps", "\\url{", "\\href", "\\emph"] {
-    assert!(
-      !x.contains(leak),
-      "bib markup: {leak:?} leaked as literal text into the bibliography:\n{x}"
-    );
-  }
-  // `\url` becomes a real link carrying the URL as its own text.
-  assert!(
-    x.contains("href=\"https://example.org/a\""),
-    "bib markup: \\url in a note did not become a link:\n{x}"
-  );
-  // `\href`'s SECOND argument is the link text — the reversion path lost it.
-  assert!(
-    x.contains("href=\"https://example.org/b\"") && x.contains("the link text"),
-    "bib markup: \\href lost its href or its link text:\n{x}"
-  );
-  // Markup inside a title survives as markup, not as flattened text.
-  assert!(
-    x.contains("<emph") && x.contains("emphasis"),
-    "bib markup: the emphasized title lost its markup:\n{x}"
-  );
-  // The fragment is spliced as SERIALIZED XML, so an unescaped `&` in a text
-  // node would make the generated bibliography unparseable and drop every
-  // entry — the other three entries above are the canary for that.
-  assert!(
-    x.contains("an ampersand"),
-    "bib markup: `\\&` in a marked-up title broke the field:\n{x}"
-  );
-  // A wholly plain field keeps taking the plain-text path unchanged, so the
-  // fix cannot silently restructure the 99% case.
-  assert!(
-    x.contains("Wholly Plain Title") && x.contains("Plain Publisher"),
-    "bib markup: a plain field was damaged by the markup path:\n{x}"
-  );
-  // Block-level content closes the `ltx:text` wrapper and continues as a
-  // sibling. Serializing only the wrapper's children dropped everything past
-  // that point — silently, with zero errors. The content must survive (the
-  // fallback renders it as flattened text, which is the pre-existing
-  // behaviour); losing it is the regression being guarded.
-  for needle in ["INSIDELIST", "afterblock", "AFTERPAR"] {
-    assert!(
-      x.contains(needle),
-      "bib markup: {needle:?} was silently dropped — block content escaped the \
-       wrapper and the fragment was spliced anyway:\n{x}"
-    );
-  }
-  // Fields that reached NO emit branch at all, so their content never appeared
-  // in the References. Perl emits every one of them and the format specs
-  // already query the matching `ltx:bib-*` elements — only the emitter was
-  // missing. `howpublished` is the important one: it is how a @misc carries its
-  // URL, and that URL was simply gone.
-  for needle in [
-    "BIGINSTITUTE",
-    "TECHMEMO",
-    "LECTURENOTES",
-    "SECONDED",
-    "BERLINPLACE",
-    "SOMEUNIVERSITY",
-  ] {
-    assert!(
-      x.contains(needle),
-      "bib fields: {needle:?} never reached the bibliography — its field is \
-       parsed but emitted by no branch:\n{x}"
-    );
-  }
-  assert!(
-    x.contains("href=\"https://example.org/howpub\""),
-    "bib fields: a @misc lost the URL its `howpublished` carries:\n{x}"
-  );
-}
-
 /// Witness 2605.11619: `\end{lstlisting}` preceded by content on the same line
 /// (`</body></html> \end{lstlisting}`). Perl anchors the terminator regex at the
 /// line start (listings.sty.ltxml L316), so the reader ran to EOF and swallowed
@@ -1613,478 +372,41 @@ fn inline_end_lstlisting_does_not_swallow_the_document() {
     "inline \\end{{lstlisting}}: the listing body was lost:\n{x}"
   );
 }
-
-/// Issue #291: `\setcounter{tocdepth}{0}` in a `book` must restrict the
-/// `\tableofcontents` to chapters only. The `\tableofcontents` constructor
-/// already computes the correct `select="ltx:part | ltx:chapter | ..."`
-/// attribute from `tocdepth`; the defect was purely in POST — CrossRef's
-/// `gen_toc` ignored `select` (and the TOC's `lists`), hardcoding
-/// `NORMAL_TOC_TYPES` + `inlist=="toc"`, so every level leaked into the ToC.
-/// Faithful Perl: `CrossRef.pm::gentoc` L246-261 filters by the `select`-derived
-/// `$types` and `inlist_match($lists, ...)`. Witness = the issue's MWE.
-#[test]
-fn tocdepth_select_restricts_the_toc() {
-  // tocdepth=0 ⇒ chapters only; sections/subsubsections must be filtered out.
-  let x = convert_and_post("tests/cluster_regressions/tocdepth0.tex");
-  assert!(
-    x.contains("ltx_tocentry_chapter"),
-    "#291: chapters must appear in the ToC:\n{x}"
-  );
-  assert!(
-    !x.contains("ltx_tocentry_section"),
-    "#291: \\setcounter{{tocdepth}}{{0}} must drop sections from the ToC, but a \
-     section tocentry is present (CrossRef gen_toc ignored the `select` attr):\n{x}"
-  );
-  assert!(
-    !x.contains("ltx_tocentry_subsubsection"),
-    "#291: subsubsections must be dropped from a tocdepth=0 ToC:\n{x}"
-  );
-
-  // Guard against over-filtering: with the book default (tocdepth=2), sections
-  // MUST still appear.
-  let y = convert_and_post("tests/cluster_regressions/tocdepth_default.tex");
-  assert!(
-    y.contains("ltx_tocentry_chapter") && y.contains("ltx_tocentry_section"),
-    "#291 guard: default tocdepth must still list chapters AND sections:\n{y}"
-  );
-
-  // Connected behavior — upstream LaTeXML#2316 / arXiv-fork: the abstract carries
-  // inlist="toc" (so it shows in the navigation TOC), but the user
-  // `\tableofcontents` emits a `select` that omits ltx:abstract, so the abstract
-  // must be EXEMPT here. Honoring `select` (the #291 fix) is exactly what keeps
-  // it out; before the fix `gen_toc` ignored `select`, so the abstract LEAKED
-  // into `\tableofcontents` (`ltx_tocentry_abstract` present). `convert_and_post`
-  // runs no navigation TOC, so the only TOC here is the user's.
-  let z = convert_and_post("tests/cluster_regressions/toc_abstract_exempt.tex");
-  assert!(
-    z.contains("ltx_tocentry_section"),
-    "#2316 guard: sections must appear in \\tableofcontents:\n{z}"
-  );
-  assert!(
-    !z.contains("ltx_tocentry_abstract"),
-    "#2316/#291 guard: the abstract (inlist=toc, for the nav TOC) must stay \
-     EXEMPT from the user \\tableofcontents, whose `select` omits ltx:abstract:\n{z}"
-  );
-}
-
-/// Upstream LaTeXML#2316 / arXiv-fork, the *inclusion* half: with the `context`
-/// navigation TOC enabled, the abstract MUST appear in the nav TOC (screenreader
-/// accessibility) — and, because its `select`-less nav TOC accepts all types
-/// while the user `\tableofcontents` omits `ltx:abstract`, it must appear
-/// **exactly once** (nav TOC only, not the inline one). This is the companion of
-/// `tocdepth_select_restricts_the_toc`'s exempt half: both rely on `gen_toc`
-/// honoring `select` (the #291 fix). Before that fix the abstract appeared twice
-/// (leaked into `\tableofcontents`). Witness = the issue's frontmatter shape.
+/// `\usepackage{xparse}` (or `expl3`) must not clobber LaTeX's cedilla accent.
 ///
-/// The navigation TOC now runs Perl's `format="context"` path
-/// (`gen_toc_context`); on a single page that reduces to the same downward tree
-/// as a normal TOC, so the count == 1 invariant holds. The multi-page breadcrumb
-/// shape is covered by `context_toc_breadcrumb_across_split_pages`.
-#[test]
-fn nav_toc_includes_abstract_issue_2316() {
-  let x = convert_and_post_navtoc("tests/cluster_regressions/toc_abstract_exempt.tex");
-  let n = x.matches("ltx_tocentry_abstract").count();
-  assert_eq!(
-    n, 1,
-    "#2316: the abstract must appear in the navigation TOC exactly once (nav \
-     only — present for accessibility, exempt from \\tableofcontents), got {n}:\n{x}"
-  );
-  // Sections still populate both TOCs — sanity that the nav TOC was built at all.
-  assert!(
-    x.contains("ltx_tocentry_section"),
-    "#2316: sections missing — navigation TOC was not generated:\n{x}"
-  );
-}
-
-/// Issue #291 hardening: a *negative* `\setcounter{tocdepth}` must not panic.
-/// `\tableofcontents` builds `select` from `tocdepth` by taking the first
-/// `tocdepth + 1` section types; the old code cast that through `as usize`, so
-/// `tocdepth = -1` (parts only) overflowed — a debug panic, and in release a
-/// silently over-full ToC (`{-2}` listed everything). Faithful Perl
-/// (`latex_constructs.pool.ltxml` L727-733) computes `0 .. $td` in signed space,
-/// an empty range for negative `$td`. `tocdepth = -1` ⇒ the part stays, chapters
-/// and sections are dropped. The conversion completing at all is the no-panic
-/// guard (the fixture converts under the debug profile's overflow-checks).
-#[test]
-fn tocdepth_negative_is_parts_only_no_panic() {
-  let x = convert_and_post("tests/cluster_regressions/tocdepth_negative.tex");
-  assert!(
-    x.contains("ltx_tocentry_part"),
-    "#291: tocdepth=-1 must still list the part:\n{x}"
-  );
-  assert!(
-    !x.contains("ltx_tocentry_chapter"),
-    "#291: tocdepth=-1 (parts only) must drop chapters from the ToC:\n{x}"
-  );
-  assert!(
-    !x.contains("ltx_tocentry_section"),
-    "#291: tocdepth=-1 must drop sections from the ToC:\n{x}"
-  );
-}
-
-/// Issue #291 latent fix: honoring the `<ltx:TOC>` `lists` attribute (`lof`)
-/// also repairs `\listoffigures`/`\listoftables`, which the old hardcoded `"toc"`
-/// bucket broke outright — `\listoffigures` listed a document *section* (an
-/// `inlist="toc"` entry) instead of the figures (`inlist="lof"`). It must now
-/// list exactly the figures and no section. Faithful Perl: `\listoffigures`
-/// emits `<ltx:TOC lists='lof'>` and CrossRef draws only from that `inlist`
-/// bucket. Guards a fix the #291 change delivered but did not otherwise cover.
-#[test]
-fn listoffigures_lists_figures_not_toc_sections() {
-  let x = convert_and_post("tests/cluster_regressions/listoffigures.tex");
-  let n = x.matches("ltx_tocentry_figure").count();
-  assert_eq!(
-    n, 2,
-    "#291: \\listoffigures must list both figures (inlist=lof), got {n}:\n{x}"
-  );
-  assert!(
-    !x.contains("ltx_tocentry_section"),
-    "#291: \\listoffigures must NOT list document sections (inlist=toc) — the old \
-     hardcoded `toc` bucket did exactly that:\n{x}"
-  );
-}
-
-/// Issues #293 and #309: neither argument of a subimported child's
-/// `\documentclass` is a package list, but the `\@standalone@documentclass[]{}`
-/// intercept used to RequirePackage both in turn — the mandatory class name
-/// (#293: `\documentclass{article}` → `missing_file:article`) and then the
-/// optional class options (#309: `\documentclass[12pt]{article}` →
-/// `missing_file:12pt`). Both are spurious; the child body always rendered.
+/// `expl3_sty.rs` used to `\edef` the `\c_sys_*` system constants through
+/// `raw_tex`, which tokenizes with the AMBIENT catcodes. After the expl3 load
+/// the document regime has `_` = SUB, so `\edef\c_sys_shell_escape_int{0}`
+/// parsed as `\edef\c` with parameter text `_sys_shell_escape_int` and body `0`:
+/// it rebound LaTeX's cedilla accent `\c` (`\meaning\c` =
+/// `macro:_sys_shell_escape_int->0`) and defined none of the constants. Every
+/// later `Fran\c cois` then rendered "Fran0cois" — silently, with 0 errors —
+/// where Perl LaTeXML renders "François" (GENUINE-RUST-ONLY; issue 421, witness
+/// arXiv 2605.11579's `MRREVIEWER = {Fran\c cois\ Digne}`). The block was dead
+/// code — expl3 defines those constants itself, with live values — so it was
+/// deleted rather than re-tokenized.
 ///
-/// The optional list is required only for a `{standalone}` child, and only for
-/// options that `standalone.cls` itself turns into a package load — see
-/// OXIDIZED_DESIGN #63 for why this diverges from Perl, which requires every
-/// option of every class.
+/// Two properties, because the accent is only the symptom: the accents
+/// round-trip, AND the document catcode regime that made the corruption
+/// possible is intact after the expl3/xparse load (`_` = 8, `:` = 12, `~` = 13
+/// — a leaked `\ExplSyntaxOn` regime would show up here first).
+/// (Post-processing is not involved: the corruption happens in the gullet, so
+/// the engine XML is the right layer.)
 #[test]
-fn standalone_subimport_documentclass_no_spurious_require() {
-  // No optional args ⇒ nothing required (#293).
-  let log = convert_log("tests/cluster_regressions/subimport/index.tex");
+fn expl3_load_does_not_clobber_cedilla_accent() {
+  let x = convert_to_xml("tests/cluster_regressions/expl3_accent_catcode.tex");
   assert!(
-    !log.contains("missing_file") && !log.contains("Can't find binding or file for 'article"),
-    "#293: \\documentclass{{article}} in a standalone child must NOT require the \
-     class as a package (article.sty). Log:\n{log}"
-  );
-  let xml = convert_to_xml("tests/cluster_regressions/subimport/index.tex");
-  assert!(
-    xml.contains("this is a test in child document"),
-    "#293: the subimported child body was lost:\n{xml}"
-  );
-
-  // #309's witness: `[12pt]{article}`. The class is not `standalone`, so its
-  // options are ordinary class options and none of them is a package.
-  let log_opt = convert_log("tests/cluster_regressions/subimport/index_opt.tex");
-  assert!(
-    !log_opt.contains("missing_file"),
-    "#309: class options of a non-standalone child must NOT be RequirePackage'd \
-     (`[12pt]` is a size option, not 12pt.sty):\n{log_opt}"
+    x.contains("François") && x.contains('Ç') && x.contains('Ş') && x.contains('ţ'),
+    "\\usepackage{{xparse}} clobbered the \\c cedilla accent:\n{x}"
   );
   assert!(
-    convert_to_xml("tests/cluster_regressions/subimport/index_opt.tex")
-      .contains("child with class options"),
-    "#309: the subimported child body was lost"
-  );
-
-  // Guard the other half — the reason the RequirePackage loop exists at all
-  // (upstream LaTeXML#1432 wanted `\documentclass[tikz]{standalone}` to load
-  // tikz). For a `{standalone}` child the package-loading options must still
-  // load, while its non-package options stay quiet. The child *uses* varwidth,
-  // so the load is observable: drop `varwidth` from CLASS_OPTION_PACKAGES and
-  // this reports `Error:undefined:{varwidth}`.
-  let log_sa = convert_log("tests/cluster_regressions/subimport/index_sa.tex");
-  assert!(
-    !log_sa.contains("undefined"),
-    "#309 guard: a `{{standalone}}` child's package-loading options (here \
-     `varwidth`, as `tikz` in LaTeXML#1432) must still be required:\n{log_sa}"
+    !x.contains("Fran0cois"),
+    "\\c expanded to a `\\c_sys_…` macro body — expl3-syntax raw TeX was \
+     tokenized outside the expl3 catcode regime:\n{x}"
   );
   assert!(
-    !log_sa.contains("missing_file"),
-    "#309 guard: `border=2pt` is handled by standalone.cls, not a package:\n{log_sa}"
-  );
-
-  // Every one of these options also has a VALUED form — `\sa@boolorvalue`
-  // takes `varwidth=5cm` and `tikz=true` just like the bare words
-  // (standalone.sty L815-824) — and values may be brace groups containing
-  // commas. Matching whole comma-split items missed all of that:
-  // `[varwidth=5cm]` reported `Error:undefined:{varwidth}` while pdflatex was
-  // clean. Reading the argument as `OptionalKeyVals` and matching on the KEY
-  // is what makes these equivalent, so guard the valued form explicitly.
-  let log_saval = convert_log("tests/cluster_regressions/subimport/index_saval.tex");
-  assert!(
-    !log_saval.contains("undefined"),
-    "#309: a VALUED package option (`varwidth=5cm`) must load its package just \
-     like the bare `varwidth`:\n{log_saval}"
-  );
-  assert!(
-    !log_saval.contains("missing_file"),
-    "#309: `border={{1pt 2pt}}` — a brace group with a space — is not a package:\n{log_saval}"
-  );
-  assert!(
-    convert_to_xml("tests/cluster_regressions/subimport/index_saval.tex")
-      .contains("VALUED class options"),
-    "#309: the subimported child body was lost"
-  );
-}
-
-/// Convert with `INCLUDE_STYLES` (the `--includestyles` / ar5iv mode) and return
-/// the log: the only way to exercise a *raw-loaded* `.sty`, which is where the
-/// TeX-local-vs-global split of issue #311 actually lives. A package with a Rust
-/// binding installs its definitions globally already, so a bound package cannot
-/// reproduce the bug.
-fn convert_log_includestyles(source: &str) -> String {
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    include_styles: Some(true),
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  assert!(
-    r.result.is_some(),
-    "{source}: conversion produced no result"
-  );
-  r.log
-}
-
-/// `convert_log_includestyles`'s XML sibling, for content assertions on inputs
-/// that need a raw-loaded `.sty`.
-fn convert_xml_includestyles(source: &str) -> String {
-  latexml::util::test::init_test_rss_cap();
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    include_styles: Some(true),
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert(source.to_string());
-  r.result.expect("conversion produced no result").to_string()
-}
-
-/// Issue #311: a package loaded while a group is open must still be defined
-/// after that group closes.
-///
-/// A standalone subfile's preamble runs inside the group `standalone.sty.ltxml`
-/// opens at the child's `\documentclass`, and LaTeXML — unlike the real package,
-/// which *gobbles* the child preamble — actually executes it, so packages
-/// genuinely load in there. A package is then split in half: its definitions are
-/// frame-local, while the document-level hooks it registers are global. The
-/// witness is `\documentclass[tikz]{standalone}`, where
-/// `pgfcoreexternal.code.tex` L152 `\newif\ifpgf@external@grabshipout` is popped
-/// with the child's group but its L171-179 `\AtEndDocument` survives to the
-/// *parent's* `\end{document}` → `Error:undefined:\ifpgf@external@grabshipout`
-/// at the very end of an otherwise complete conversion. Perl 0.8.8 emits the
-/// identical error (KNOWN_PERL_ERRORS #55).
-///
-/// Fixed at the package-load seam (`content.rs::require_package` hoists the
-/// load's meaning-delta past the enclosing group) rather than by removing the
-/// group, so it holds for *every* way of ending up inside one — see
-/// OXIDIZED_DESIGN #65 and the companion
-/// `standalone_child_preamble_definitions_stay_scoped`, which pins the half that
-/// must NOT leak.
-///
-/// `lx311demo.sty` is the mechanism in three lines and needs no host texmf tree,
-/// so this arm runs everywhere; the tikz arms below are the real witness and are
-/// gated on TeX Live.
-#[test]
-fn standalone_child_preamble_package_survives_the_subfile_group() {
-  for index in [
-    // plain \input …
-    "tests/cluster_regressions/subimport/index_rawsty.tex",
-    // … via import.sty, which adds a second group of its own …
-    "tests/cluster_regressions/subimport/index_rawsty_subimport.tex",
-    // … inside a group in the parent body …
-    "tests/cluster_regressions/subimport/index_rawsty_grouped.tex",
-    // … `\subimport*` in the PREAMBLE of a plain article, where import.sty's
-    // `{…}` is the ONLY bracket — the arm that makes `import_sty.rs`'s own
-    // `activate_scope` falsifiable (every other route also crosses
-    // standalone_sty's bracket, so deleting import's line stayed green) …
-    "tests/cluster_regressions/subimport/index_import_preamble.tex",
-    // … and a standalone child nested inside another standalone child, where
-    // the load sits two brackets deep. Removing the two bindings' own groups
-    // (the first fix tried for #311) left both of these last two broken — the
-    // enclosing group was then simply somebody else's.
-    "tests/cluster_regressions/subimport/index_rawsty_nested.tex",
-  ] {
-    let log = convert_log_includestyles(index);
-    assert!(
-      !log.contains("iflx@demo@flag"),
-      "#311: a \\newif from a package loaded in the child's preamble must \
-       survive to the parent's \\end{{document}}, where the package's \
-       \\AtEndDocument hook reads it ({index}):\n{log}"
-    );
-    assert!(
-      !log.contains("Error:") && !log.contains("Fatal:"),
-      "#311: {index} must convert cleanly:\n{log}"
-    );
-  }
-}
-
-/// The other half of #311: hoisting a package load past the enclosing group must
-/// NOT hoist the child's OWN preamble, which stays scoped to the child.
-///
-/// This is the regression the first attempt at #311 caused — it dropped the
-/// groups instead of fixing the load — and every case here is silent wrong
-/// content, not an error, so nothing else would have caught it. Multi-figure
-/// papers are exactly the shape at risk: a directory of `standalone` figures
-/// whose preambles reuse the same macro names with different bodies.
-#[test]
-fn standalone_child_preamble_definitions_stay_scoped() {
-  // Two sibling children define \sharedmac and {sharedenv} differently; each
-  // must render with its own.
-  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_macro_siblings.tex");
-  assert!(
-    xml.contains("SHAREDA") && xml.contains("SHAREDB"),
-    "#311: each sibling child must use its OWN \\newcommand, not the first \
-     child's leaked definition:\n{xml}"
-  );
-  assert!(
-    xml.contains("[Aone A]") || xml.contains("[AoneA]"),
-    "#311: first child's environment body:\n{xml}"
-  );
-  assert!(
-    xml.contains("[Btwo B]") || xml.contains("[BtwoB]"),
-    "#311: second child must use its OWN \\newenvironment:\n{xml}"
-  );
-
-  // The package half: two sibling children load DIFFERENT packages that define
-  // the same macro. Hoisting a package's ordinary macros to global made the
-  // second `\newcommand` a silent no-op, so sibling B rendered sibling A's body
-  // — worse than Perl, which scopes both. Only conditionals are hoisted.
-  let xml_pkg =
-    convert_xml_includestyles("tests/cluster_regressions/subimport/index_pkg_siblings.tex");
-  assert!(
-    xml_pkg.contains("kidA FROM-A"),
-    "#311: first sibling must use its own package's macro:\n{xml_pkg}"
-  );
-  assert!(
-    xml_pkg.contains("kidB FROM-B"),
-    "#311: second sibling must use ITS OWN package's macro, not the first \
-     child's hoisted one:\n{xml_pkg}"
-  );
-
-  // A conditional the child flips in its preamble must not flip the parent's.
-  let xml_flag = convert_to_xml("tests/cluster_regressions/subimport/index_flag.tex");
-  assert!(
-    xml_flag.contains("CHILDTRUE"),
-    "#311: the child's own \\dupflagtrue must hold inside the child:\n{xml_flag}"
-  );
-  assert!(
-    xml_flag.contains("PARENTFALSE"),
-    "#311: the child's \\dupflagtrue must NOT leak into the parent's \
-     same-named conditional:\n{xml_flag}"
-  );
-}
-
-/// The #311 witness itself, and the second entry path. Gated: raw-loads
-/// `pgfcoreexternal.code.tex` from the host texmf tree.
-#[cfg_attr(
-  not(building_with_texlive),
-  ignore = "raw-loads pgfcoreexternal.code.tex from the host texmf tree"
-)]
-#[test]
-fn standalone_child_tikz_survives_the_subfile_group() {
-  for (index, how) in [
-    // the reported witness: `\subimport*` + the `tikz` CLASS OPTION …
-    (
-      "tests/cluster_regressions/subimport/index_tikz.tex",
-      "[tikz] class option",
-    ),
-    // … and plain `\input` + the child's OWN `\usepackage`. The two half-fixes
-    // tried in the ticket each covered only one of these.
-    (
-      "tests/cluster_regressions/subimport/index_tikzpkg.tex",
-      "child \\usepackage",
-    ),
-  ] {
-    let log = convert_log(index);
-    assert!(
-      !log.contains("ifpgf@external@grabshipout"),
-      "#311 ({how}): pgf's \\newif must survive the child's group:\n{log}"
-    );
-    assert!(
-      !log.contains("Error:") && !log.contains("Fatal:"),
-      "#311 ({how}): must convert cleanly:\n{log}"
-    );
-    // The error fired *after* the picture was built, so "no error" alone would
-    // also pass on a fix that simply lost the child. Pin the content too.
-    let xml = convert_to_xml(index);
-    assert!(
-      xml.contains("ltx:picture") || xml.contains("<svg"),
-      "#311 ({how}): the child's tikzpicture must still render:\n{xml}"
-    );
-  }
-}
-
-/// `import.sty`'s search-path save/restore, which the #311 work nearly removed.
-/// Perl's `{…}` wrapper around the input is what scopes `SEARCHPATHS` there;
-/// Rust needs the explicit `\lx@save@paths`/`\lx@restore@paths` stack on top
-/// because `set_search_paths` mutates a global. Without one or the other, the
-/// second sibling `\subimport{Chapter/}{…}` concatenates `Chapter/` onto the
-/// still-mutated lead and searches `Chapter/Chapter/…`. Witnesses:
-/// arXiv:2604.09744, 2603.04457.
-#[test]
-fn subimport_sibling_calls_do_not_accumulate_search_paths() {
-  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_siblings.tex");
-  assert!(
-    xml.contains("first sibling body"),
-    "first \\subimport lost:\n{xml}"
-  );
-  assert!(
-    xml.contains("second sibling body"),
-    "second \\subimport lost — the lead search path accumulated:\n{xml}"
-  );
-}
-
-/// The boundary of the #311 hoist: a group the AUTHOR wrote is real, and real
-/// LaTeX's verdict on it stands. `{\usepackage{amsthm}}` errors twice in
-/// pdflatex — "Loading a class or package in a group", then "Undefined control
-/// sequence" for `\theoremstyle` — and same-host Perl LaTeXML reports the
-/// matching `Error:undefined:\theoremstyle`. Hoisting there would rescue an
-/// authoring mistake and emit FEWER errors than Perl, which is a downgrade, not
-/// a fix; only LaTeXML's own subfile brackets are hoisted past. The wall-clock
-/// half of this (the stale-autoload runaway) is
-/// `tests/100_stale_autoload_no_runaway.rs`.
-#[test]
-fn author_written_group_around_usepackage_still_loses_the_package() {
-  // (b) the harder half: an author's group written INSIDE a subfile preamble.
-  // The region is active there, so a "am I in a subfile?" test alone hoists it
-  // too and Rust drops below Perl by an error. The scope name carries the
-  // bracket's frame depth precisely to confine the region to its own level.
-  let log_in_child = convert_log_includestyles(
-    "tests/cluster_regressions/subimport/index_author_group_in_child.tex",
-  );
-  assert!(
-    log_in_child.contains("iflx@demo@flag"),
-    "#311: an author's group nested inside a subfile preamble must keep real \
-     LaTeX's verdict — the package is lost, as in pdflatex and Perl:\n{log_in_child}"
-  );
-
-  let log = convert_log("tests/cluster_regressions/subimport/index_author_group.tex");
-  assert!(
-    log.contains("Error:undefined:\\theoremstyle"),
-    "#311: the hoist must not reach a group the author wrote — Perl and \
-     pdflatex both leave \\theoremstyle undefined here:\n{log}"
-  );
-}
-
-/// KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take a directory AND
-/// a file name, but Perl's prototypes declare only one argument while their
-/// bodies use `#3` — so the file is silently dropped: no error, no warning, no
-/// content. Real `import.sty` routes all four through the same `\@doimport`.
-#[test]
-fn includefrom_takes_directory_and_file() {
-  let xml = convert_to_xml("tests/cluster_regressions/subimport/index_includefrom.tex");
-  assert!(
-    xml.contains("includefrom body"),
-    "\\includefrom{{dir}}{{file}} silently dropped the included file:\n{xml}"
-  );
-  // Both variants carry the typo, so both need pinning.
-  assert!(
-    xml.contains("subincludefrom body"),
-    "\\subincludefrom{{dir}}{{file}} silently dropped the included file:\n{xml}"
+    x.contains("catcodes: [8][12][13]"),
+    "the document catcode regime did not survive \\usepackage{{xparse}} \
+     (expected `_`=8, `:`=12, `~`=13):\n{x}"
   );
 }

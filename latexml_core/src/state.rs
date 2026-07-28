@@ -39,7 +39,7 @@ use crate::{
   document::{resource::Resource, tag::TagOptions},
   gullet, mouth, pin,
   token::{Catcode, Token},
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
   util::pathname,
 };
 
@@ -1714,12 +1714,18 @@ pub fn lookup_tokens(key: &str) -> Option<Tokens> {
     Some(Stored::Tokens(v)) => Some(v.clone()),
     Some(Stored::Token(v)) => Some(Tokens::new(vec![*v])),
     Some(Stored::String(sym)) => {
-      // Release the state borrow first, then pass the interned &str directly
-      // into tokenize_internal via the re-entrant arena — avoids materializing
-      // an owned String just to tokenize.
+      // Release the state borrow first, then read the interned string through
+      // the re-entrant arena. The copy is unavoidable: an arena `&str` is not
+      // `'static` (it dangles across a realloc — see WISDOM), and `TeXString`
+      // borrows only `'static`, so the value has to be owned to cross into the
+      // tokenizer. `Mouth::new` copies its input anyway.
       let sym = *sym;
       drop(state);
-      arena::with(sym, |astr| Some(mouth::tokenize_internal(astr)))
+      arena::with(sym, |astr| {
+        Some(mouth::tokenize_internal(TeXString::assembled(
+          astr.to_string(),
+        )))
+      })
     },
     Some(Stored::VecDequeStored(v)) => {
       // Reverting the queue to Tokens routes each String item through
@@ -1873,7 +1879,7 @@ pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Option<Dimension> {
   if obvious && let Ok(d) = Dimension::from_str(cs) {
     return Some(d);
   }
-  let tokens = mouth::tokenize_internal(cs);
+  let tokens = mouth::tokenize_internal(TeXString::assembled(cs.to_string()));
   let toks = tokens.unlist();
   if toks.len() == 1 {
     match lookup_definition(&toks[0]) {

@@ -1,0 +1,121 @@
+% A `.bib` field's content is DATA, not TeX. Real BibTeX has two regimes and
+% latexml-oxide collapses them into one pass: in the DATA regime (`.bib` read by
+% `bibtex(1)`) `%` is not a comment, `&` is not an alignment tab, `_` is not a
+% subscript, `^` is not a superscript and `#` is not a parameter; only the `.bbl`
+% that a `.bst` writes is ever TeX. We read `.bib` directly, so we synthesize
+% that `.bbl` ourselves and must escape the five specials on the way.
+% OXIDIZED_DESIGN #74.
+%
+% ONE fixture, because the whole risk is that fixing one case breaks another —
+% the escaper has to be simultaneously literal, idempotent, math-aware and
+% markup-preserving, and a fixture that split those apart would let a
+% regression through. Every entry below is a distinct hazard:
+%
+%   aipexport      bare `_` in an `eprint` PDF URL, verbatim from witness
+%                  2605.06926 `bibliography.bib` L145
+%   aipescaped     the SAME URL shape written `\_` (L1457 of the same file) —
+%                  the publisher's own export uses both spellings, which is why
+%                  escaping must be IDEMPOTENT and must not neutralize `\`
+%   taylorfrancis  bare `&` in `publisher`, verbatim from witnesses 2605.01936
+%                  `references.bib` L1570 and 2605.06249 `CV.bib` L715/763
+%   surveystut     bare `&` in `journal`, from 2605.06249 `CV.bib` L1775
+%   barespecials   all five specials bare in one rendered `title` — the four
+%                  above plus `^`, whose escape is `\textasciicircum{}` and NOT
+%                  `\^`, which is the circumflex ACCENT (`\^o` would render "ô")
+%   preescaped     all five already escaped — must render IDENTICALLY to
+%                  `barespecials`, never `\\&`
+%   mathmarkup     `$x^2+y_1$` must stay math WITH A SUPERSCRIPT AND A
+%                  SUBSCRIPT, and `\emph` must stay markup: the escaper skips
+%                  math spans and never touches `\`, so all are correct by
+%                  construction. `^` is in the same math span as `_` on purpose
+%                  — both are scripting characters and both must be left alone
+%                  inside `$…$` while being data outside it
+%   accent         a space-form accent (PR #399) must still revert
+%   urlencoded     `%20` inside `\url{...}` must NOT become `\%20` — url.sty
+%                  reads that argument verbatim, so it is a nested DATA region.
+%                  `docs/parity/BIBLIOGRAPHY_WORKLIST.md` records this as a
+%                  working probe; blind escaping regressed it.
+%   survivor       the containment canary
+%
+% NOT covered here, deliberately: a literal `\\` in a title. It makes
+% `\bib@field@default@title` open a nested `<ltx:bibitem>`
+% (`malformed:ltx:bibitem <ltx:bibitem> isn't allowed in <ltx:bib-title>`) with
+% NO special character anywhere in the entry, so it is a pre-existing behaviour
+% of `\\` in a bibliography and not this cluster. The `\\&` hazard it would have
+% covered — where the second backslash must NOT be read as escaping the `&` —
+% is pinned instead by the `escape_bib_data_specials` unit tests in
+% `latexml_engine/src/bibtex.rs`, which isolate it exactly.
+
+@article{aipexport,
+    author = {Ada Okonkwo},
+    title = {An eprint field carrying a raw PDF URL},
+    journal = {J. Chem. Phys.},
+    year = {1981},
+    eprint = {https://pubs.aip.org/aip/jcp/article-pdf/75/4/1876/18931574/1876_1_online.pdf},
+}
+
+@article{aipescaped,
+    author = {Bo Lindqvist},
+    title = {An eprint field whose underscores are escaped},
+    journal = {J. Chem. Phys.},
+    year = {2018},
+    eprint = {https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/1.5019805/15540793/184110\_1\_online.pdf},
+}
+
+@book{taylorfrancis,
+    author = {Wei Chen},
+    title = {A publisher name with a bare ampersand},
+    publisher = {Taylor & Francis},
+    year = {2024},
+}
+
+@article{surveystut,
+    author = {Jae-Hyun Park},
+    title = {A journal name with a bare ampersand},
+    journal = {IEEE Communications Surveys & Tutorials},
+    year = {2023},
+}
+
+@article{barespecials,
+    author = {Amara Diallo},
+    title = {AT&T dataset AT1G01010_v2 at 95% with #3 replicates ^ caret},
+    journal = {J. Bibliographies},
+    year = {2025},
+}
+
+@article{preescaped,
+    author = {Nils Bergstr{\"o}m},
+    title = {AT\&T dataset AT1G01010\_v2 at 95\% with \#3 replicates \textasciicircum{} caret},
+    journal = {J. Bibliographies},
+    year = {2025},
+}
+
+@article{mathmarkup,
+    author = {Priya Raghavan},
+    title = {Bounds on $x^2+y_1$ in \emph{Drosophila} genetics},
+    journal = {J. Bibliographies},
+    year = {2025},
+}
+
+@article{accent,
+    author = {{\v S}pakov, O. and Gon{\c c}alves, A.},
+    title = {A space-form accent must still revert},
+    journal = {J. Bibliographies},
+    year = {2025},
+}
+
+@misc{urlencoded,
+    author = {Hussein Al Osman},
+    title = {A percent-encoded URL inside a rendered field},
+    year = {2025},
+    howpublished = {\url{http://example.org/a%20b}},
+    url = {https://example.org/a%20b?x=1&y=2_3},
+    doi = {10.1007/3-540-44886-1_25},
+}
+
+@article{survivor,
+    author = {Sareh Gilakjani},
+    title = {The entry after the specials},
+    journal = {J. Bibliographies},
+    year = {2025}
+}

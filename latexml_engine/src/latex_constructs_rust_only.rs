@@ -21,6 +21,10 @@
 //!    captures the values raw `latex.ltx` installs; these are defensive overrides for the NODUMP
 //!    path.
 //! 4. Misc Rust-side stubs (`\@latexbug`, `\maybe@end@title`, `\thebibliography@ID` empty default).
+//!
+//! The file ends with a **retraction record**: the MathSciNet `\cprime` transliteration family was
+//! briefly always-on here and was removed 2026-07-27. The comment is kept because it carries the
+//! witnesses and the reasoning — do not re-add the family.
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -49,20 +53,20 @@ LoadDefinitions!({
   // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
   // for legacy 8-bit-encoding compat (used by papers that pre-date the
   // 2018-04-01 default switch to UTF-8). Upstream `\let`s it to `\relax`
-  // after first use (L18324). LaTeXML's dump skips this section, so the
-  // CS arrives undefined — papers like 1711.09157 with
-  // `\UseRawInputEncoding` at line 1 col 1 fail with
-  // `Error:undefined:\UseRawInputEncoding`. Define as a no-op so the
-  // legacy preamble compiles silently; the encoding-switching behaviour
-  // is irrelevant for our XML pipeline.
+  // after first use (L18324); the raw definition is a catcode-mangling
+  // loop we must not run. Papers like 1711.09157 and 2403.19280 invoke it
+  // at line 1 col 1, BEFORE `\documentclass` — `latex_kernel::
+  // autoload_latex_kernel` pulls the format in for them. Define as a
+  // no-op so the legacy preamble compiles silently; the encoding-switching
+  // behaviour is irrelevant for our XML pipeline.
   Let!("\\UseRawInputEncoding", r"\relax");
 
   // \DocumentMetadata{<keyval>} — LaTeX 2024 kernel command for PDF
-  // accessibility metadata. Author calls it BEFORE `\documentclass`
-  // (the autoload trigger in tex.rs ensures the LaTeX pool is loaded
-  // by the time it's expanded). The kvopts inside are PDF-only and
-  // semantically irrelevant for XML output — gobble the brace group.
-  // Witness 2305.08034.
+  // accessibility metadata. Author calls it BEFORE `\documentclass`;
+  // `latex_kernel::autoload_latex_kernel` loads the LaTeX pool on the
+  // undefined CS so this stub is in place by the time it is expanded.
+  // The kvopts inside are PDF-only and semantically irrelevant for XML
+  // output — gobble the brace group. Witness 2305.08034.
   def_macro_noop("\\DocumentMetadata{}")?;
 
   //======================================================================
@@ -402,4 +406,26 @@ LoadDefinitions!({
     lookup_meaning(&T_CS!("\\endfilecontents")).unwrap_or(Stored::None),
     Some(Scope::Global),
   );
+
+    //======================================================================
+  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — REMOVED from the
+  // always-on set 2026-07-27 (maintainer decision). They belong to
+  // `mathscinet.sty`, which defines them (`mathscinet_sty.rs`), and a
+  // definition that is always live can shadow an author's own — the same
+  // hazard that kept `\Dbar` package-only from the start.
+  //
+  // The stub was justified by four papers regaining `undefined:\cprime`
+  // without it (2605.00173/.00186/.00190/.00305). Three of those four were
+  // artifacts of a defect since fixed: we digested EVERY entry of a `.bib`
+  // library, so we met `\cprime` in entries `bibtex(1)` never copies into
+  // the `.bbl`. Since #416 we digest only the CITED entries, which removes
+  // the trigger structurally rather than papering over it.
+  //
+  // What a paper needs now is what the real toolchain needs: load
+  // `mathscinet` (or `amsrefs`, which requires it), or carry the definition
+  // in its own `.bib` `@preamble` — which executes, and is guarded by
+  // `bib_preamble_defines_macros_for_the_whole_bibliography`. Witness
+  // 2605.11579 (17 uses) is covered by its `@preamble` and is unaffected.
+  // See OXIDIZED_DESIGN #78 and `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
+  //======================================================================
 });

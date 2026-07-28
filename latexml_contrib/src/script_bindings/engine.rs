@@ -108,9 +108,14 @@ pub(super) fn make_engine() -> Engine {
   // `Tokens` is registered as an opaque pass-through handle (Tier-2): a script
   // produces it with Tokenize and hands it to Digest without inspecting it.
   engine.register_type_with_name::<Tokens>("Tokens");
-  engine.register_fn("Tokenize", |s: &str| -> Tokens { mouth::tokenize(s) });
+  // `assembled`: the argument is TeX the script author wrote — the runtime twin
+  // of a `Tokenize!("…")` literal. A script cannot hand us a flattened `Tokens`
+  // (Rhai `Tokens` is opaque and has no string conversion registered).
+  engine.register_fn("Tokenize", |s: &str| -> Tokens {
+    mouth::tokenize(TeXString::assembled(s.to_string()))
+  });
   engine.register_fn("TokenizeInternal", |s: &str| -> Tokens {
-    mouth::tokenize_internal(s)
+    mouth::tokenize_internal(TeXString::assembled(s.to_string()))
   });
   // `Digest` returns the digested handle (Perl returns the digested box), so a
   // script can `ToString(Digest(...))` — e.g. a default-option handler reading
@@ -245,7 +250,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "TeX",
     |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      latexml_core::stomach::digest(mouth::tokenize_internal(text)).map_err(rhai_err)?;
+      latexml_core::stomach::digest(mouth::tokenize_internal(TeXString::assembled(
+        text.to_string(),
+      )))
+      .map_err(rhai_err)?;
       Ok(())
     },
   );
@@ -267,7 +275,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "DigestText",
     |s: &str| -> std::result::Result<Digested, Box<EvalAltResult>> {
-      latexml_core::binding::content::digest_text(mouth::tokenize_internal(s)).map_err(rhai_err)
+      latexml_core::binding::content::digest_text(mouth::tokenize_internal(TeXString::assembled(
+        s.to_string(),
+      )))
+      .map_err(rhai_err)
     },
   );
   // ToString/ToAttribute/Revert on a Digested handle (Perl ToString/Revert).
@@ -875,9 +886,11 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "ReadUntil",
     |delim: &str| -> std::result::Result<String, Box<EvalAltResult>> {
-      latexml_core::gullet::read_until(&mouth::tokenize_internal(delim))
-        .map(|t| t.untex())
-        .map_err(rhai_err)
+      latexml_core::gullet::read_until(&mouth::tokenize_internal(TeXString::assembled(
+        delim.to_string(),
+      )))
+      .map(|t| t.untex())
+      .map_err(rhai_err)
     },
   );
   // ReadOptional: a bracketed [..] optional ("" when absent).

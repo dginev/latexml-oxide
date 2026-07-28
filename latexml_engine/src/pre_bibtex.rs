@@ -33,12 +33,51 @@
 //! - `skip_junk` is greedy: everything up to the next `@` is discarded (Perl L335-346: "anything
 //!   until @ as an implied comment").
 
-use std::collections::VecDeque;
+use std::{cell::RefCell, collections::VecDeque};
 
 use latexml_core::s;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::bibtex::{BibEntry, register_entry};
+
+thread_local! {
+  /// The cited-key filter for the next `.bib` digestion — see
+  /// [`set_wanted_keys`]. `None` means "digest every entry".
+  static WANTED_KEYS: RefCell<Option<HashSet<String>>> = const { RefCell::new(None) };
+}
+
+/// Restrict the next [`PreBibTeX::to_tex`] to the entries a document actually
+/// cites — what `bibtex(1)` itself has always done.
+///
+/// A `.bib` is a *library*, not a document: `anthology.bib` ships 80,558 ACL
+/// entries and the citing paper wants 10 of them. Parsing all of them is cheap
+/// (a string scan), but DIGESTING all of them is not — since the raw `.bib` is
+/// converted through the engine rather than by a string parser, each entry now
+/// costs a full expand/digest/construct cycle. Measured on 2605.07796
+/// (`anthology.bib`, 43.6 MB, 80 576 entries, 13 cited): 112 s and 4.8 GB RSS,
+/// which trips the memory budget and yields **zero** bibentries — the paper
+/// loses its whole bibliography and the conversion is killed by the 60 s
+/// timeout. The same shape covers 59 of the 69 papers in the corpus's
+/// `never_completed_with_retries` bucket (median 80 597 entries each).
+///
+/// `bibtex(1)` reads the `.aux`'s `\citation` records and emits only those
+/// entries (plus `crossref` targets, plus everything under `\nocite{*}`), so
+/// filtering here is *more* faithful to the real pipeline than digesting the
+/// library whole. Every entry is still REGISTERED — registration is a HashMap
+/// insert of already-parsed strings, and keeping it complete is what lets
+/// `crossref` and any by-key lookup still resolve against an uncited entry.
+///
+/// Pass `None` to digest everything (`\nocite{*}`, or no citation record at
+/// all). Cleared by [`clear_wanted_keys`]; the caller must do so, since the
+/// engine State is shared with the outer document.
+pub fn set_wanted_keys(keys: Option<Vec<String>>) {
+  WANTED_KEYS.with(|w| {
+    *w.borrow_mut() = keys.map(|ks| ks.iter().map(|k| k.to_lowercase()).collect());
+  });
+}
+
+/// Drop the cited-key filter installed by [`set_wanted_keys`].
+pub fn clear_wanted_keys() { WANTED_KEYS.with(|w| *w.borrow_mut() = None); }
 
 /// Default `@string`-style macros, populated on every new
 /// `PreBibTeX`. Mirrors Perl L34-57 `%default_macros`.
@@ -696,19 +735,122 @@ impl PreBibTeX {
       }
       register_entry(&parsed.key, entry);
     }
+    let wanted = WANTED_KEYS.with(|w| w.borrow().clone());
+    let selected = wanted.as_ref().map(|w| self.select_cited(w));
+    if let (Some(sel), Some(_)) = (selected.as_ref(), wanted.as_ref()) {
+      latexml_core::Info!(
+        "bibliography",
+        "filtered",
+        s!(
+          "Digesting {} of {} .bib entries (the cited set and its crossref/\\cite closure)",
+          sel.len(),
+          self.entries.len()
+        )
+      );
+    }
+
     let mut out = String::new();
+    // `@preamble` is the one part of a `.bib` that is NOT data — `bibtex(1)`
+    // copies it verbatim to the top of the `.bbl` (plain.bst `begin.bib`:
+    // `preamble$ write$`, ahead of `\begin{thebibliography}`), so pdflatex has
+    // its definitions before the first `\bibitem`. Perl L118-122 emits it in
+    // the same position, and so must we: it is how a `.bib` ships the macros
+    // its own fields use, and MathSciNet exports lean on it
+    // (`@preamble{"\def\cprime{$'$} "}` — 2605.00097 `referLiu.bib` L11,
+    // 2605.11579 `biblo.bib` L4768/L6910/… fourteen times).
+    //
+    // It goes out RAW, and must keep going out raw. In the two-treatment frame
+    // (`docs/parity/BIBLIOGRAPHY_WORKLIST.md`) this is treatment 2 — TeX
+    // source — so it must never pass through `escape_bib_data_specials` (which
+    // would turn `\def\cprime{$'$}` into inert text) nor be read under
+    // `Mouth::with_bib_data_literals`. Guard:
+    // `06_cluster_bibliography::bib_preamble_defines_macros_for_the_whole_bibliography`
+    // — `to_tex_includes_preamble` below only checks the emitted STRING, so it
+    // stays green if the string is later escaped or never executed.
     for pre in &self.preamble {
       out.push_str(pre);
       out.push('\n');
     }
     out.push_str("\\begin{bibtex@bibliography}\n");
-    for entry in &self.entries {
+    for (i, entry) in self.entries.iter().enumerate() {
+      if selected.as_ref().is_some_and(|s| !s.contains(&i)) {
+        continue;
+      }
       out.push_str("\\ProcessBibTeXEntry{");
       out.push_str(&entry.key);
       out.push_str("}\n");
     }
     out.push_str("\\end{bibtex@bibliography}");
     Ok(out)
+  }
+
+  /// Indices of the entries to digest: those `wanted` by the citing document,
+  /// closed transitively over `crossref` targets and `\cite`s made from inside
+  /// an already-selected entry.
+  ///
+  /// The closure is what keeps the filter behaviour-preserving. `crossref` is
+  /// BibTeX's own inheritance link (an `@inproceedings` naming its
+  /// `@proceedings`), and `MakeBibliography`'s `getBibEntries` separately
+  /// pulls in entries a *bibentry* cites (a `note = {see also \cite{foo}}`),
+  /// so both edges have to be followed or a filtered run would drop an entry
+  /// the unfiltered one kept. Keys compare lowercased, matching
+  /// `register_entry` and `getBibEntries`.
+  fn select_cited(&self, wanted: &HashSet<String>) -> HashSet<usize> {
+    let mut by_key: HashMap<String, usize> = HashMap::default();
+    for (i, e) in self.entries.iter().enumerate() {
+      // First definition wins, as `register_entry`'s registry lookup would.
+      by_key.entry(e.key.to_lowercase()).or_insert(i);
+    }
+
+    let mut selected: HashSet<usize> = HashSet::default();
+    let mut queue: Vec<String> = wanted.iter().cloned().collect();
+    while let Some(key) = queue.pop() {
+      let Some(&i) = by_key.get(&key) else { continue };
+      if !selected.insert(i) {
+        continue;
+      }
+      for (name, value) in &self.entries[i].fields {
+        if name == "crossref" {
+          queue.push(value.trim().to_lowercase());
+        } else {
+          collect_cited_keys(value, &mut queue);
+        }
+      }
+    }
+    selected
+  }
+}
+
+/// Push every key of every `\cite`-family call in `value` onto `out`,
+/// lowercased. Deliberately loose — over-collecting only keeps an extra entry,
+/// while missing one would silently drop it from the bibliography.
+fn collect_cited_keys(value: &str, out: &mut Vec<String>) {
+  let mut rest = value;
+  while let Some(at) = rest.find("\\cite") {
+    rest = &rest[at + "\\cite".len()..];
+    // `\cite` + command tail (`p`, `t`, `year`, `*`, …) + any `[optional]`
+    // arguments + the `{...}` key list, in that order.
+    let mut tail = rest
+      .trim_start_matches(|c: char| c.is_ascii_alphabetic() || c == '*')
+      .trim_start();
+    while let Some(stripped) = tail.strip_prefix('[') {
+      match stripped.find(']') {
+        Some(end) => tail = stripped[end + 1..].trim_start(),
+        None => return,
+      }
+    }
+    let Some(stripped) = tail.strip_prefix('{') else {
+      continue;
+    };
+    let Some(end) = stripped.find('}') else {
+      continue;
+    };
+    for k in stripped[..end].split(',') {
+      let k = k.trim();
+      if !k.is_empty() {
+        out.push(k.to_lowercase());
+      }
+    }
   }
 }
 
@@ -1228,6 +1370,130 @@ value} }
     let tex = p.to_tex().unwrap();
     assert!(tex.starts_with("\\providecommand{\\noop}[1]{}"));
     crate::bibtex::reset();
+  }
+
+  // --- the cited-key filter (set_wanted_keys) ------------------------------
+  //
+  // A `.bib` is a library: `anthology.bib` is 80 576 entries and the citing
+  // paper wants 9. Digesting the library whole cost 112 s / 4.8 GB and lost
+  // the bibliography outright on witness 2605.07796.
+
+  /// Run `to_tex` under a cited-key filter, always clearing it again — a leaked
+  /// filter would silently shrink every later `.bib` in the same thread.
+  fn to_tex_wanted(src: &str, wanted: Option<&[&str]>) -> String {
+    crate::bibtex::reset();
+    set_wanted_keys(wanted.map(|w| w.iter().map(|s| s.to_string()).collect()));
+    let mut p = PreBibTeX::new_from_string(src);
+    let tex = p.to_tex().expect("to_tex");
+    clear_wanted_keys();
+    tex
+  }
+
+  const LIBRARY: &str = r#"
+@article{cited, title = {C}}
+@article{uncited, title = {U}}
+@article{alsouncited, title = {A}}
+"#;
+
+  #[test]
+  fn no_filter_digests_every_entry() {
+    let tex = to_tex_wanted(LIBRARY, None);
+    assert!(tex.contains("\\ProcessBibTeXEntry{cited}"));
+    assert!(tex.contains("\\ProcessBibTeXEntry{uncited}"));
+    assert!(tex.contains("\\ProcessBibTeXEntry{alsouncited}"));
+    crate::bibtex::reset();
+  }
+
+  #[test]
+  fn filter_digests_only_the_cited_entries() {
+    let tex = to_tex_wanted(LIBRARY, Some(&["cited"]));
+    assert!(tex.contains("\\ProcessBibTeXEntry{cited}"));
+    assert!(!tex.contains("\\ProcessBibTeXEntry{uncited}"));
+    assert!(!tex.contains("\\ProcessBibTeXEntry{alsouncited}"));
+    crate::bibtex::reset();
+  }
+
+  /// Registration stays COMPLETE even when digestion is filtered: it is a cheap
+  /// map insert, and `crossref` / by-key lookup must still resolve an entry the
+  /// document never cited.
+  #[test]
+  fn filter_still_registers_every_entry() {
+    let _ = to_tex_wanted(LIBRARY, Some(&["cited"]));
+    assert!(crate::bibtex::lookup_entry("cited").is_some());
+    assert!(crate::bibtex::lookup_entry("uncited").is_some());
+    crate::bibtex::reset();
+  }
+
+  #[test]
+  fn filter_is_case_insensitive_like_the_registry() {
+    let tex = to_tex_wanted(LIBRARY, Some(&["CiTeD"]));
+    assert!(tex.contains("\\ProcessBibTeXEntry{cited}"));
+    crate::bibtex::reset();
+  }
+
+  /// BibTeX's own inheritance edge: an `@inproceedings` naming its
+  /// `@proceedings` needs that parent digested even though nobody cites it.
+  #[test]
+  fn filter_follows_crossref() {
+    let tex = to_tex_wanted(
+      r#"
+@inproceedings{paper, title = {P}, crossref = {proc}}
+@proceedings{proc, title = {Proceedings}}
+@article{unrelated, title = {U}}
+"#,
+      Some(&["paper"]),
+    );
+    assert!(tex.contains("\\ProcessBibTeXEntry{paper}"));
+    assert!(tex.contains("\\ProcessBibTeXEntry{proc}"));
+    assert!(!tex.contains("\\ProcessBibTeXEntry{unrelated}"));
+    crate::bibtex::reset();
+  }
+
+  /// `getBibEntries` transitively includes entries a *bibentry* cites, so the
+  /// filter has to follow that edge too or a filtered run would drop one the
+  /// unfiltered run kept.
+  #[test]
+  fn filter_follows_a_cite_from_inside_an_entry() {
+    let tex = to_tex_wanted(
+      r#"
+@article{outer, title = {O}, note = {see also \cite{inner}}}
+@article{inner, title = {I}, note = {and \citep[cf.][]{deep}}}
+@article{deep, title = {D}}
+@article{unrelated, title = {U}}
+"#,
+      Some(&["outer"]),
+    );
+    assert!(tex.contains("\\ProcessBibTeXEntry{outer}"));
+    assert!(tex.contains("\\ProcessBibTeXEntry{inner}"));
+    assert!(tex.contains("\\ProcessBibTeXEntry{deep}"));
+    assert!(!tex.contains("\\ProcessBibTeXEntry{unrelated}"));
+    crate::bibtex::reset();
+  }
+
+  /// A cited key that the `.bib` does not define must not abort the selection —
+  /// `MakeBibliography` reports it as a missing key downstream.
+  #[test]
+  fn filter_tolerates_a_cited_key_with_no_entry() {
+    let tex = to_tex_wanted(LIBRARY, Some(&["cited", "nosuchkey"]));
+    assert!(tex.contains("\\ProcessBibTeXEntry{cited}"));
+    assert!(tex.contains("\\begin{bibtex@bibliography}"));
+    crate::bibtex::reset();
+  }
+
+  #[test]
+  fn cite_key_scanner_handles_the_cite_family() {
+    let mut got = Vec::new();
+    collect_cited_keys(r"a \cite{one} b \citep[see][p.2]{two,three} c", &mut got);
+    assert_eq!(got, vec!["one", "two", "three"]);
+
+    let mut got = Vec::new();
+    collect_cited_keys(r"\cite*{Star} and \citeyear{Y}", &mut got);
+    assert_eq!(got, vec!["star", "y"]);
+
+    // No key list, and an unterminated optional argument: neither may panic.
+    let mut got = Vec::new();
+    collect_cited_keys(r"\cite and \cite[oops", &mut got);
+    assert!(got.is_empty());
   }
 
   // Internal helper tests.

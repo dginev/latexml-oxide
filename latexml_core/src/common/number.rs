@@ -7,7 +7,7 @@ use crate::{
   digested::Digested,
   mouth,
   token::Catcode,
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
 };
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
@@ -29,7 +29,7 @@ impl Number {
 }
 
 impl From<Number> for Tokens {
-  fn from(v: Number) -> Tokens { mouth::tokenize_internal(&v.0.to_string()) }
+  fn from(v: Number) -> Tokens { mouth::tokenize_internal(TeXString::assembled(v.0.to_string())) }
 }
 
 impl From<Number> for Option<Tokens> {

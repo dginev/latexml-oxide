@@ -151,6 +151,102 @@ impl AsRef<Tokens> for Tokens {
   fn as_ref(&self) -> &Tokens { self }
 }
 
+/// A string of **TeX markup** — text that is safe to hand back to the tokenizer.
+///
+/// It is *not* a path and *not* an input `.tex` file (`source_directory`,
+/// `--source-map` and `docs/performance/SOURCE_PROVENANCE.md` own that sense of
+/// "source"); it is the character content a [`crate::mouth::Mouth`] will read.
+///
+/// # Why the type exists
+///
+/// Flattening [`struct@Tokens`] with [`Display`] **welds control words**. TeX consumes
+/// the space that terminates a control word, so `\v S` tokenizes to `[\v][S]`;
+/// re-emitting that with `Display` gives `\vS`, a control sequence that exists in
+/// no LaTeX. [`Tokens::untex`] re-emits the space, `Display` deliberately does
+/// not — this is faithful to Perl (`Core/Tokens.pm:61 toString` joins the token
+/// strings, and `Core/Token.pm:306` returns a CS name with no trailing space),
+/// whose own comment says the result is "NOT for creating valid TeX (use revert
+/// or UnTeX for that!)".
+///
+/// Perl relies on author discipline there. It has failed three times in this
+/// port — `\bib@@names` (PR #399), `dcolumn`/`overpic` (PR #400), and the
+/// MathSciNet review path (issue 410: `MRREVIEWER = {Fran\c cois\ Digne}` became
+/// `undefined:\ccois`) — each found by a user-visible failure years after the
+/// code was written. `TeXString` makes the mistake unrepresentable instead: the
+/// tokenizing sinks take `impl Into<TeXString>`, and a bare `String` has no way
+/// in.
+///
+/// # The three ways in
+///
+/// * `From<&'static str>` — a string *literal* in a binding is TeX its author
+///   typed by hand, so it converts implicitly and the ~125 literal call sites
+///   stay untouched. There is deliberately **no** `From<String>` and **no**
+///   `From<&str>`: those are exactly the shapes a welded `Tokens::to_string()`
+///   arrives in, and `s!(…)`/`format!(…)` returns the former.
+/// * [`Tokens::untex_string`] — the blessed path from `Tokens`.
+/// * [`TeXString::assembled`] — the explicit escape hatch, for a `format!` of
+///   literal TeX around already-safe pieces. It names the obligation it imposes.
+///
+/// ```
+/// # use latexml_core::tokens::TeXString;
+/// let s: TeXString = r"\relax".into(); // literal: implicit
+/// assert_eq!(s.as_str(), r"\relax");
+/// ```
+///
+/// A `String` cannot get in on its own — this is the guard, and it bites:
+///
+/// ```compile_fail
+/// # use latexml_core::tokens::TeXString;
+/// let welded: String = String::from(r"\vS");
+/// let _: TeXString = welded.into(); // no `From<String>`: does not compile
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct TeXString(Cow<'static, str>);
+
+impl TeXString {
+  /// Assert that an owned `String` is valid TeX markup.
+  ///
+  /// **The caller's obligation**: every interpolated fragment must be either
+  /// literal TeX written at the call site, or a fragment that came from
+  /// [`Tokens::untex_string`] / another `TeXString`. It must **not** be a bare
+  /// `Tokens::to_string()` — that is the welding bug this type exists to
+  /// prevent (`\v S` → `\vS`); use [`Tokens::untex_string`] for those.
+  ///
+  /// The typical honest use is a `format!` whose *shape* is literal TeX:
+  ///
+  /// ```
+  /// # use latexml_core::tokens::TeXString;
+  /// let counter = "section";
+  /// let tex = TeXString::assembled(format!(r"\the{counter}"));
+  /// assert_eq!(tex.as_str(), r"\thesection");
+  /// ```
+  pub fn assembled(tex: String) -> Self { TeXString(Cow::Owned(tex)) }
+
+  /// The TeX markup, borrowed.
+  pub fn as_str(&self) -> &str { &self.0 }
+
+  /// The TeX markup, owned (allocates only when this was built from a literal).
+  pub fn into_string(self) -> String { self.0.into_owned() }
+
+  /// Is there any markup at all?
+  pub fn is_empty(&self) -> bool { self.0.is_empty() }
+}
+
+impl From<&'static str> for TeXString {
+  /// A `&'static str` in a binding is a TeX literal its author typed by hand.
+  ///
+  /// Deliberately the *only* blanket string conversion — see the type docs.
+  fn from(tex: &'static str) -> Self { TeXString(Cow::Borrowed(tex)) }
+}
+
+impl Display for TeXString {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { f.write_str(&self.0) }
+}
+
+impl AsRef<str> for TeXString {
+  fn as_ref(&self) -> &str { &self.0 }
+}
+
 impl Tokens {
   /// Create a Tokens object from a `Vec` of individual `Token`
   pub fn new(tokens: Vec<Token>) -> Self { Tokens(tokens) }
@@ -526,6 +622,17 @@ impl Tokens {
     tex_string
   }
 
+  /// [`untex`](Tokens::untex), typed — the blessed way to get TeX markup out of
+  /// a `Tokens` and back into a tokenizing sink.
+  ///
+  /// Prefer this over `untex()` whenever the string is destined for
+  /// `Tokenize!` / `mouth::tokenize` / `mouth::tokenize_internal`: it is the
+  /// only [`struct@Tokens`]→[`TeXString`] conversion, so the sink's signature proves
+  /// the round trip cannot weld a control word (`\v S` stays `\v S`, not
+  /// `\vS`). `untex()` itself is unchanged for the callers that want a plain
+  /// `String` (a `tex=` attribute, a log message, a comparison).
+  pub fn untex_string(self) -> TeXString { TeXString::assembled(self.untex()) }
+
   /// Packs repeated CC_PARAM tokens into CC_ARG tokens for use as a macro body (and other token
   /// lists) Also unwraps \noexpand tokens, since that is also needed for macro bodies
   /// (but not strictly part of packing parameters)
@@ -838,5 +945,146 @@ mod tests {
     let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
     let s = format!("{t}");
     assert_eq!(s, "abc");
+  }
+}
+
+#[cfg(test)]
+mod untex_control_word_space_tests {
+  use super::*;
+
+  /// `untex()` must re-emit the space that terminates a control word;
+  /// `to_string()` documents that it does not, and the two must not be
+  /// confused at a call site that needs valid TeX back.
+  ///
+  /// TeX CONSUMES the space after a control word, so by token-time it is gone
+  /// as data — `\v S` and `\vS` tokenize to different things but a naive
+  /// concatenation of the first yields the second. `\vS` exists in no LaTeX.
+  ///
+  /// This is not academic: `\bib@@names` used `to_string()` where Perl uses
+  /// `UnTeX` (BibTeX.pool.ltxml L277), which mangled every space-form accent in
+  /// a bibliography author name — `{\v S}`, `{\c c}`, `{\" a}`, i.e. most
+  /// non-English names — into an undefined macro. ~+2800 error documents per
+  /// corpus on the 2026-07-26 sandbox sweep.
+  #[test]
+  fn untex_reemits_the_space_that_terminates_a_control_word() {
+    for (src, expect_untex) in [
+      (r"\v Spakov", r"\v Spakov"), // control word + space + LETTER: space needed
+      (r"\c calves", r"\c calves"), //   likewise
+      (r"\v{S}pakov", r"\v{S}pakov"), // braced argument: no space needed, none added
+    ] {
+      let toks = crate::mouth::tokenize(src);
+      assert_eq!(
+        toks.clone().untex(),
+        expect_untex,
+        "untex({src:?}) must round-trip to valid TeX"
+      );
+      // Re-tokenizing the untex output must yield the SAME control sequence —
+      // the property that actually matters, and the one that broke.
+      let first = |t: Tokens| {
+        t.unlist()
+          .first()
+          .map(|t| t.to_string())
+          .unwrap_or_default()
+      };
+      assert_eq!(
+        first(crate::mouth::tokenize(toks.clone().untex_string())),
+        first(crate::mouth::tokenize(src)),
+        "untex({src:?}) changed the leading control sequence on re-tokenization"
+      );
+    }
+  }
+
+  /// The documented contract of the other direction, pinned so nobody
+  /// "helpfully" makes `Display` TeX-correct and silently changes every
+  /// keyword-ish `to_string()` caller in the tree.
+  #[test]
+  fn to_string_deliberately_does_not_reemit_the_space() {
+    let toks = crate::mouth::tokenize(r"\v Spakov");
+    assert_eq!(
+      toks.to_string(),
+      r"\vSpakov",
+      "Display for Tokens is documented as NOT producing valid TeX; if this \
+       changes, audit every to_string() caller before updating the expectation"
+    );
+  }
+}
+
+/// The guard itself: proof, at COMPILE time, that a welded `String` cannot reach
+/// a tokenizing sink.
+///
+/// This module contains no runtime assertions worth the name — its whole value is
+/// that it stops compiling if the property is lost. It is `#[cfg(test)]`, so it is
+/// checked whenever the test target is built (`cargo test --tests`, and so CI).
+#[cfg(test)]
+mod texstring_guard_tests {
+  use super::*;
+
+  /// Neither `String: Into<TeXString>` nor `&String: Into<TeXString>` may hold.
+  ///
+  /// Those are the shapes a control-word-welding `Tokens::to_string()` arrives in
+  /// (`s!(…)`/`format!(…)` gives the first, `&some_local` the second), so an
+  /// implicit conversion would silently reopen the bug this type exists to close
+  /// (`\bib@@names` PR #399, `dcolumn`/`overpic` PR #400, MathSciNet review path
+  /// issue 410).
+  ///
+  /// Mechanism (the `static_assertions::assert_not_impl_any!` trick, hand-rolled
+  /// to avoid the dependency): a helper trait with a blanket impl for everything
+  /// plus a second impl gated on `Into<TeXString>`. If BOTH apply the item path is
+  /// ambiguous and this fails to compile; if only the blanket one applies it
+  /// resolves. So "still compiles" == "the conversion does not exist".
+  ///
+  /// A `&str` whose lifetime is shorter than `'static` is rejected too, but not
+  /// by this assertion — an unconstrained `&'_ str` here infers to `&'static str`,
+  /// which is exactly the case that MUST convert. The compiler enforces that half
+  /// at the call site instead, as an E0521 "borrowed data escapes … `'1` must
+  /// outlive `'static`".
+  const _NO_IMPLICIT_STRING_CONVERSION: fn() = || {
+    trait AmbiguousIfConvertible<A> {
+      fn some_item() {}
+    }
+    impl<T> AmbiguousIfConvertible<()> for T {}
+    impl<T: Into<TeXString>> AmbiguousIfConvertible<u8> for T {}
+
+    let _ = <String as AmbiguousIfConvertible<_>>::some_item;
+    let _ = <&String as AmbiguousIfConvertible<_>>::some_item;
+  };
+
+  /// The other half: a `&'static str` — i.e. every TeX literal a binding types
+  /// out — must keep converting implicitly, or ~125 call sites would need
+  /// ceremony for nothing.
+  const _LITERALS_STILL_CONVERT: fn() = || {
+    fn sink(_: impl Into<TeXString>) {}
+    sink(r"\relax");
+    sink(TeXString::assembled(String::new()));
+  };
+
+  /// …while the three blessed ways in must all still work. Kept beside the
+  /// negative assertion so a "fix" that deletes the conversions to satisfy it is
+  /// caught here.
+  #[test]
+  fn the_three_blessed_constructors_reach_the_sink() {
+    // 1. a literal
+    assert_eq!(crate::mouth::tokenize(r"\relax").to_string(), r"\relax");
+    // 2. untex_string — the space that terminates `\v` survives the round trip
+    let welded = crate::mouth::tokenize(r"\v Spakov");
+    assert_eq!(
+      crate::mouth::tokenize(welded.clone().untex_string()).to_string(),
+      r"\vSpakov",
+      "re-tokenizing untex_string() output must give back the SAME tokens \
+       (whose Display is again the welded form) — i.e. \\v stayed \\v"
+    );
+    // …which is precisely what the welded string does NOT do:
+    let welded_again = crate::mouth::tokenize(TeXString::assembled(welded.to_string()));
+    assert_eq!(
+      welded_again.unlist().first().map(|t| t.to_string()),
+      Some(r"\vSpakov".to_string()),
+      "the welded path collapses \\v + Spakov into the single undefined CS \
+       \\vSpakov — the bug TeXString exists to make hard to write"
+    );
+    // 3. assembled
+    assert_eq!(
+      crate::mouth::tokenize(TeXString::assembled(format!(r"\the{}", "section"))).to_string(),
+      r"\thesection"
+    );
   }
 }

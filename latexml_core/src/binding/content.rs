@@ -28,7 +28,7 @@ use crate::{
   state::{let_i, *},
   stomach::*,
   token::*,
-  tokens::Tokens,
+  tokens::{TeXString, Tokens},
   util::pathname::{self, PathnameFindOptions},
 };
 
@@ -776,13 +776,24 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       if lookup_bool("INCLUDE_STYLES") || options.noltxml {
         assign_value(&s!("{filename}_load_attempted"), true, Some(Scope::Global));
       }
+      // Say which of the two things actually happened. `notex` (the DEFAULT
+      // whenever `INCLUDE_STYLES` is off — see `require_package`, Perl
+      // `Package.pm` L2671-2672) gates the raw-search branch above, so in that
+      // case NO disk lookup was performed at all. Claiming "no raw file found
+      // on disk" there asserts a search that never ran, and the package is
+      // usually installed and findable: `\usepackage{xstring}` on arXiv
+      // 2607.21760 warned exactly that while `kpsewhich xstring.sty` resolved
+      // it fine, sending a reader hunting a file-resolution bug that does not
+      // exist. A diagnostic must not overclaim what it checked.
+      let why = if options.notex {
+        "no dispatcher entry, and raw TeX loading is off (enable with --includestyles)"
+      } else {
+        "no dispatcher entry, and no raw file found on disk"
+      };
       Warn!(
         "missing_file",
         name,
-        s!(
-          "Can't find binding or file for '{filename}'. \
-          No dispatcher entry and no raw file found on disk."
-        )
+        s!("Can't find binding or file for '{filename}'. {why}.")
       );
     }
   }
@@ -2973,7 +2984,7 @@ pub fn def_color(
   def_macro(
     T_CS!(s!("\\\\color@{name}")),
     None,
-    crate::mouth::tokenize_internal(&model_spec),
+    crate::mouth::tokenize_internal(TeXString::assembled(model_spec)),
     Some(ExpandableOptions {
       scope: effective_scope,
       ..Default::default()
@@ -3106,8 +3117,12 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Option<Tokens>>) -> 
 /// token, this reduces to `build_invocation` on that token. Otherwise the tokens are
 /// treated as an "anonymous macro" containing parameter markers like `#1`, and the
 /// arguments are substituted in.
-pub fn build_invocation_str(spec: &str, args: Vec<Option<Tokens>>) -> Result<Tokens> {
-  let tokens = crate::mouth::tokenize_internal(spec);
+pub fn build_invocation_str(
+  spec: impl Into<TeXString>,
+  args: Vec<Option<Tokens>>,
+) -> Result<Tokens> {
+  let spec = spec.into();
+  let tokens = crate::mouth::tokenize_internal(spec.clone());
   let mut list = tokens.unlist();
   if list.len() > 1 {
     // Treat as anonymous macro

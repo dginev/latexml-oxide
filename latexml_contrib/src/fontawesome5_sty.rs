@@ -18,7 +18,7 @@ use latexml_package::prelude::*;
 fn def_fa5_icon(suffix: &str, kebab: &str) -> Result<()> {
   let proto = format!("\\fa{suffix}[]");
   let (cs, params) = parse_prototype(&proto, true)?;
-  let body = mouth::tokenize_internal(&format!("\\faIcon[#1]{{{kebab}}}"));
+  let body = mouth::tokenize_internal(TeXString::assembled(format!("\\faIcon[#1]{{{kebab}}}")));
   def_macro(cs, params, ExpansionBody::Tokens(body), None)?;
   Ok(())
 }

@@ -2558,3 +2558,287 @@ a directory is what surfaces this** — if a suite still calls
 Note the compile-time glob: a new pair needs the test target rebuilt (touching
 the suite's `.rs` suffices; `cargo clean` is the sledgehammer) or it is simply
 not discovered.
+
+## #68 Porting a Perl `while (defined($x = read()))` loop: a post-loop test on `$x` means "the read ran out", NOT "we never read"
+
+Perl's idiomatic reader loop leaves the loop variable holding the value that
+*ended* the loop, and the code after it discriminates on that:
+
+```perl
+while (defined($token = $gullet->readXToken(1))) {
+  ...
+  last if $terminal and Equals($token, $terminal);
+  last if $initdepth > scalar(@{ $$self{boxing} }); }
+push(@LaTeXML::LIST, Box()) unless $token;       # Stomach.pm:130
+```
+
+`unless $token` is true in exactly one case: the `while` condition failed, i.e.
+**the input ran out**. It is false for every `last`, because `$token` still holds
+a live Token. Rust's `while let Some(token) = ...` **drops** that binding at the
+end of the loop, so the discriminator has to be reconstructed — and it is easy to
+reconstruct the wrong one.
+
+`digest_next_body` (`stomach.rs`) reconstructed it as `found_token` — "did we ever
+read a token" — set inside the loop body. That agrees with Perl only on a body
+that was empty from the very start, and silently disagrees on the case the code
+exists for: read some content, *then* hit EOF. The correct shape is a flag that
+starts `true` and is cleared at each `break`:
+
+```rust
+let mut ran_out = true;
+while let Some(token) = read()? { ...; ran_out = false; break; ... }
+if ran_out { push_box_list(Digested::from(Tbox::default())); }
+```
+
+**Why it mattered.** That trailer box is what makes `readDigested`
+(`Base_ParameterTypes.pool.ltxml` L374) safe: it does
+`push(@list, digestNextBody()); pop(@list);` to strip the closing-brace box. With
+no trailer on the EOF path, the `pop` removed a box of **real content**. A single
+runaway `.bib` field (a bare `%` — literal data to BibTeX, a comment to TeX) then
+emptied an entire bibliography that same-host Perl renders in full, while
+reporting *fewer* errors than Perl. Fixed 2026-07-26 with
+`55_bibtex::runaway_field_costs_only_its_own_entry`; the companion mouth-boundary
+half is #69 below.
+
+**Method.** When porting any Perl loop, ask what the loop variable holds *after*
+each exit path before translating a post-loop condition on it. The `last`-vs-
+condition-failure distinction is invisible in the Rust rewrite and produces a
+silent behavioural narrowing — no compile error, no test failure on well-formed
+input, and damage only on malformed input, which is exactly where error recovery
+is judged.
+
+## #69 A balanced read must not cross out of a self-contained mouth
+
+`read_balanced` (`gullet.rs`) crosses a mouth boundary when the exhausted mouth is
+autoclose and not a file — a deliberate surpass-Perl divergence for xint's
+`\edef\X{\scantokens{…}}`, where the matching `}` really does live in the parent.
+Perl never crosses: `Gullet.pm` L465-472 reads `$$self{mouth}->readToken()`, the
+current mouth only, and `last`s at its end.
+
+"Literal mouth" is NOT evidence of a continuation. `\ProcessBibTeXEntry` replays
+each entry through `Mouth::new` too (Perl `BibTeX.pool.ltxml` L165-166), and there
+a runaway argument crossed into the wrapper and consumed every following
+`\ProcessBibTeXEntry` *and* `\end{bibtex@bibliography}`.
+
+The property is now explicit — `open_mouth_with(mouth, autoclose,
+BalancedBoundary::{Transparent,Opaque})` — rather than inferred from
+`autoclose && !File`. Declare **Opaque** whenever the mouth carries a
+self-contained input; reserve Transparent for token-level injections
+(`\scantokens`, RawTeX). Related: #68 above.
+
+## #70 Byte-index scanners over `&str` are a standing hazard of this port — scan by CHARACTER (`CharCursor`), and remember the bug is in the ADVANCE, not the slice
+
+`&str` carries one compiler-enforced invariant — valid UTF-8. A `usize` used to
+index it carries **none**. So every `&s[a..b]` is an unchecked assertion that
+both ends are char boundaries, and when it is wrong the program does not return
+an error, it **panics** — aborting the whole document.
+
+That is unusually dangerous *here* specifically, and it will recur: Perl strings
+are sequences of **characters** (`pos`, `substr`, `\G` have no boundary concept),
+so every hand-rolled `as_bytes()` + `i += 1` scanner translated from Perl
+introduces an invariant the original never had. Silently, with no type-level
+trace, and passing every ASCII fixture forever.
+
+**The rule.** The panic fires at the slice; the defect is always in the advance:
+
+| advance | safe? |
+|---|---|
+| scan to an ASCII delimiter | **always** — an ASCII byte is never a UTF-8 continuation byte |
+| by `char::len_utf8()` | **always** |
+| a fixed count past an unclassified byte | **never** |
+
+That is why a walker can be correct for years and break on one edit: three of the
+four arms in `recase_title` only ever *stopped* at ASCII, and the fourth
+(`\<char>`) advanced one byte past the backslash — right for `\&`, fatal for
+`\“`. Witness 2605.22125, found by the 2026-07-26 sandbox sweep, not by tests.
+
+**What to use.** `latexml_core::util::char_cursor::CharCursor` — a thin wrapper
+over `char_indices` (Rust guidelines `anti-index-over-iter` /
+`perf-iter-over-index`; do NOT invent a newtype, std already has the iterator).
+Its value is what it withholds: no advance-by-byte-count exists, so `slice_from`
+is infallible and the class is unrepresentable. Deliberately NOT an `Iterator` —
+`by_ref().take_while()` consumes the item that fails the predicate, desyncing
+`peek`/`pos` and making a mark meaningless.
+
+**Convert even the arms that are provably safe.** All three `bibtex.rs` walkers
+were converted, though only one had ever panicked: "happens to be safe" is
+exactly the state `recase_title` was in.
+
+**Testing.** Enumerate rather than sample where the space is small: 4 UTF-8
+widths x scanner position x mode is complete coverage and needs no proptest
+dev-dependency (which would touch the license inventory and `cargo-deny`).
+Assert across CASE FORMS when the function re-cases — a literal `contains(c)`
+check fails on `Uppercase` turning `a` into `A`, and that is the test being
+wrong, not the code.
+
+Guards: `bibtex::tests::recase_title_handles_every_character_width_at_every_position`,
+`util::char_cursor::tests::*`. Related: [[#68]] above (the same "port a Perl
+loop, inherit an invariant Perl never had" family).
+
+## #71 A `Tokens` flattened with `Display` and re-tokenized WELDS control words — the tokenizing sinks take `TeXString`, so a bare `String` cannot reach them
+
+TeX **consumes** the space that terminates a control word, so it is gone as data
+by token time: `\v S` tokenizes to `[\v][S]`, and concatenating those token
+strings gives `\vS` — a control sequence that exists in no LaTeX. `untex()`
+re-emits the space; `Display`/`to_string()` deliberately does not.
+
+This is **not** a divergence. Perl is identical (`Core/Tokens.pm:61 toString`
+joins the token strings, `Core/Token.pm:306` returns a CS name with no trailing
+space) and its comment — which our port copies verbatim — already says the
+result is "NOT for creating valid TeX (use revert or UnTeX for that!)". Perl
+protects itself by author discipline alone. That failed three times here, each
+found by a user-visible failure years later: `\bib@@names` (PR #399),
+`dcolumn`/`overpic` (PR #400), and `\bib@synthesize@mr` (issue 410 —
+`MRREVIEWER = {Dragomir \v{Z}. \Dbar okovi\'{c}}` → `undefined:\Dbarokovi`;
+witness 2605.11579, 5 welds over 36 bibitems, Perl 0). *Re-measure that count
+before quoting it: OXIDIZED_DESIGN **#80** now digests only the CITED entries, so
+the `\Dbar` one (`KacNilpotentorbits`, `biblo.bib` L2059) is no longer read at
+all. Other accented `MRREVIEWER`s **are** in cited entries (`BM93`
+`{Fran\c cois\ Digne}`, `Nek03` `{Marcos\ Mari\~no}`, …), so the shape still
+occurs — only the tally moved. The guard fixture, not the paper, is what pins
+this.*
+
+**The rule.** All three mouth entry points — `mouth::tokenize`,
+`mouth::tokenize_internal`, `mouth::tokenize_bib_literal` — and therefore
+`Tokenize!`/`TokenizeInternal!`/`bib_tex_tokens` take `impl Into<TeXString>`
+(`latexml_core::tokens`). Its value, like `CharCursor`'s in [[#70]], is what it
+withholds — there is `From<&'static str>` and nothing else:
+
+| you have | you write |
+|---|---|
+| a TeX literal | nothing; `&'static str` converts implicitly (~125 sites untouched) |
+| a `Tokens` | `t.untex_string()` |
+| a `format!` of literal TeX around safe pieces | `TeXString::assembled(…)`, whose doc names the obligation |
+
+`s!(…)` returns `String` and `&some_var` is a short-lived borrow, so neither
+coerces: a welded flatten fails to compile (E0277) or fails the borrow check
+(E0521 "`'1` must outlive `'static`"). **Do not add `From<String>`.**
+
+**Not every flatten is a weld** — the audit matters. A string that becomes a CS
+*name* (`T_CS!(cs.to_string())`), an `ExplodeText!` char run, a `.parse()`, or a
+comparison cannot weld, and those keep `to_string()`. So does `Display for
+Tokens` itself: 500+ sites use it for keys and names, and making it TeX-correct
+would silently change all of them.
+
+**Method — census a call site family without breaking the build.** Replace/shadow
+the trait method with a *deprecated inherent* one (`impl Tokens { #[deprecated]
+pub fn to_string(&self) }`): an inherent method wins over `ToString`, so every
+call site warns while `format!("{t}")` stays silent. Collect the warnings
+workspace-wide, classify, then remove the shim. Measured 547 sites, of which 18
+reached a TeX-source sink and 6 could weld.
+
+Guards: `tokens::texstring_guard_tests` (compile-time — `String`/`&String` must
+NOT be `Into<TeXString>`, `&'static str` must be; plus a `compile_fail`
+doctest), `bib_name_space_form_accent_survives_reversion`,
+`bib_mr_reviewer_accent_survives_reversion`. Related: [[#70]] (the same
+"withhold the operation and the class disappears" shape).
+
+## #72 A bibliography sub-conversion's FATAL carries no fatal-severity message — it surfaces on the parent as a trailing `error bibliography/convert`
+
+**The trap.** Mining a corpus run by clustering on **fatal messages** buckets
+these documents as *"no fatal recorded"* — measured, **~80 documents** in one
+sweep. Their conversion really did die; the death simply has no `Fatal:` line to
+cluster on. Cluster on the **status code** (`Status:conversion:3`) or on the
+document's last `Error:` instead, and treat `bibliography/convert` as a
+fatal-class marker.
+
+**Why it is built this way, and why it is right.** `bib_session.rs` imports the
+**post-phase** diagnostic macros (`latexml_post::{Error, Info}`), which are plain
+reporters with none of the too-many-errors escalation the engine-side `Error!`
+carries. The recursive `.bib` session runs *inside* post-processing, so an
+inner-session failure must not itself become a document Fatal — and Perl's
+`convertBibliography` does the same, returning empty-handed
+(`MakeBibliography.pm` L240-242). The `Err` arm therefore emits
+`Error!("bibliography", "convert", "Recursive bibliography conversion failed: …")`
+and returns `None`.
+
+**What DOES cross the boundary** — do not confuse the two. Perl's `MergeStatus`
+(`MakeBibliography.pm` L237, `Common/Error.pm` L669-686) adds the inner session's
+tally to the outer document's, so a `.bib` that raises *errors* makes the
+document an error document. Rust gets that for free by sharing the live core
+State (the counters never left). It is only the *fatal severity* of a sub-session
+collapse that is deliberately downgraded.
+
+**Consequence for guards.** The ordinary `convert_and_post` test helper gates only
+the CORE stage, so a post-stage error flood passes every bibliography guard
+silently — 17 errors on one fixture, 203 on its witness, all green. Use
+`convert_and_post_clean` for anything in this path (see OXIDIZED_DESIGN #73).
+
+## #73 `raw_tex` is the only binding-side path that TOKENIZES a CS name — so binding-authored expl3 TeX needs the expl3 catcode regime
+
+**The trap.** `RawTeX!` → `stomach::raw_tex` builds a `Mouth` and reads it with
+the **ambient** catcode table (`at_letter: true` is the only override). Under the
+document regime `_` is SUB, so a CS name written in a raw string terminates at its
+first `_`: `\edef\c_sys_shell_escape_int{0}` is `\edef\c` with parameter text
+`_sys_shell_escape_int` and body `0`. The intended constant is never defined, and
+a **short, real** CS is silently rebound — here LaTeX's cedilla accent `\c`, so
+every later `Fran\c cois` rendered "Fran0cois" with **zero errors** while Perl
+rendered "François" (issue 421; `expl3_sty.rs`, witness arXiv 2605.11579). The
+same shape threatens any `\c…`/`\v…`/`\u…`-prefixed expl3 name.
+
+**The rule.** Binding-authored expl3-syntax raw TeX must run inside the
+`\ExplSyntaxOn` regime — `expl3_sty.rs::with_expl_catcodes` saves the ambient
+`:`/`_` catcodes, sets LETTER, and restores on both the success and error paths.
+Do NOT hardcode the restore to OTHER/SUB: the caller may itself be an expl3
+package (that mistake is the older half of this family, in
+`docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`).
+
+**The cheaper escape.** `T_CS!`, `Let!` and `parse_prototype`
+(`def_macro_noop`, `def_macro_identity`, `def_primitive_noop`, …) build the CS
+name as a **string** and never reach the tokenizer — `def_parser.rs::CS_RE`
+admits `[a-zA-Z@_]+(?::[a-zA-Z]*)?` for exactly this reason. Prefer them for
+expl3 names; reach for `raw_tex` only when you need real TeX control flow.
+
+**Diagnosing it.** The symptom is a *wrong glyph*, not an error — grep the
+output for the corrupted rendering, and probe `\meaning\<cs>` (a rebound accent
+reads `macro:_…->…`). To ask whether a `\c_sys_*`-style constant is really
+defined, use `\number\csname …\endcsname`, not bare
+`\csname …\endcsname`: an `\int_const:Nn` chardef ≥ 256 expands to a glyph the
+font lacks and renders as *nothing*, which reads exactly like "undefined" and
+sent this investigation down a wrong path once.
+
+---
+
+## #74 The kernel dump is a usable "what will the format define" ORACLE — and it is NOT the same question as "what does `latex.ltx` define"
+
+Loading `LaTeX.pool` on demand needs a membership test that runs *before* the
+load: "load it and see if that helped" is not available, because it would drag
+the LaTeX kernel into genuinely plain-TeX documents on their first undefined CS.
+The reflex is to scan the host's `latex.ltx`. That is the wrong question.
+
+`resources/dumps/latex.YYYY.dump.txt` is **not** a YYYY artifact. It is
+generated by our *current* code inside a pinned TL-YYYY container, so its key
+set is "what this engine's bootstrap of that TeX Live produces", which is
+exactly what a caller wants to know. A `latex.ltx` scan answers a different
+question and misses whatever our own layer contributes.
+
+Mechanically the scan is cheap and safe: dump rows are
+`<table>\t<key>\t<data>`, so `M\t`-prefixed rows yield the CS names with one
+`splitn` per line and no record parsing, no arena interning, and no State
+mutation (`dump_reader::collect_meaning_keys`). ~22k names on TL2025, built
+lazily — never at startup.
+
+Three properties any such "load a format from the undefined path" hook needs,
+all learned the hard way elsewhere in this port:
+
+1. **Claim the single attempt BEFORE the load, in State, not in a
+   `thread_local`.** `input_definitions` sets `<name>.pool_loaded` only *after*
+   the pool body runs, so that flag cannot stop the load re-entering itself
+   through its own undefined CSes. A State value also resets per session, which
+   a process-global flag does not — a test binary runs many conversions on one
+   thread and the second one would silently lose the mechanism.
+2. **Retry by pushback, not by returning the token.** `unread_one(token)` +
+   `continue` (gullet) / + `return Ok(Vec::new())` (stomach) — returning a
+   now-expandable token from `read_x_token` leaks it unexpanded to whatever
+   asked for a fully-expanded head.
+3. **Hoist the load's frame delta to global** (`snapshot_top_frame_meaning_keys`
+   / `hoist_top_frame_meaning_delta`). Unlike the eager `TeX.pool` triggers,
+   which in practice fire at top level, this can fire at any group depth, and a
+   pop that takes the format away while `LaTeX.pool_loaded` survives is the
+   silent-infinite-loop shape of witness 2606.21610.
+
+And it must be inert where undefined CSes are *expected*: `LATEXML_INI_MODE`
+(dump-build — otherwise a previous run's dump leaks into the next one) and
+`SUPPRESS_UNDEFINED_ERRORS` (bulk raw loads with forward references).
+See `latexml_engine/src/latex_kernel.rs`; the defect it fixes is
+`KNOWN_PERL_ERRORS.md` #64.

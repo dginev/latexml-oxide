@@ -1,0 +1,37 @@
+% A `.bib` whose fields use the commands a `.bst`-generated `.bbl` normally
+% PROVIDES, in a document that loads no package defining them. BibTeX would
+% copy these into the `.bbl`, whose preamble opens with
+% `\providecommand{\url}[1]{\texttt{#1}}` and friends — so real LaTeX renders
+% them. We digest the raw FIELD, one step earlier, so we must supply the same
+% block or we raise `undefined:\url` where LaTeX renders text.
+%
+% Witness 2605.01149: no hyperref, no url.sty, no .bbl, one
+% `howpublished = {\url{...}}` — 1 error before the fallbacks, 0 after, with
+% the URL still recovered. Measured cost of omitting them on the 2026-07-26
+% sandbox rerun: 90 papers in sandbox-arxiv-2605 went no_problem -> error.
+@misc{urlnopkg,
+  author       = {Doe, Jane},
+  title        = {A Web Thing},
+  year         = {2026},
+  howpublished = {\url{https://example.org/nopkg}}
+}
+
+@article{doinopkg,
+  author  = {Roe, Rick},
+  title   = {A Thing With A DOI},
+  journal = {J. Things},
+  year    = {2025},
+  note    = {\doi{10.1000/xyz123}}
+}
+
+% Percent-ENCODED URL. `%` is TeX's comment character but BibTeX has no comment
+% syntax inside an entry, so this is literal data. Read at catcode 14 the `%20`
+% comments out the rest of the line — closing brace included — and
+% `read_balanced` reports `expected:}`. Witness 2605.00245 carried three of
+% these in one .bib; 17 of the first 40 sampled regressions were this shape.
+@misc{pcturl,
+  author       = {Poe, Percy},
+  title        = {A Percent Encoded Thing},
+  year         = {2024},
+  howpublished = {\url{https://example.org/B130936%20Law%20of%20War.pdf}}
+}

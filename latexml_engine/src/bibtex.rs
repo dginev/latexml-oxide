@@ -241,6 +241,312 @@ pub fn lookup_entry(key: &str) -> Option<Rc<RefCell<BibEntry>>> {
 /// Perl's `getField` yields the field's STRING; callers that need the source
 /// text verbatim (e.g. `\bib@field@unknownasdata`) should therefore prefer
 /// [`current_entry_raw_field`] — tokenizing here is lossy in one direction, in
+/// Text for an `ltx:bib-extract` field, read from the entry's stored field
+/// rather than from the macro argument.
+///
+/// Perl's own idiom for a `Verbatim`-read field — `\bib@field@default@default
+/// Verbatim Verbatim` -> `\bib@field@unknownasdata{#1}`, whose comment reads
+/// "IGNORE the tokenized data" (`BibTeX.pool.ltxml` L346) — is to consume the
+/// value verbatim so it cannot be interpreted, then recover it from
+/// `currentBibEntryField` at construction time. The verbatim token form is a
+/// dead end: it does not survive into a macro expansion body (measured — `#1`
+/// substitutes to nothing, leaving `\bib@@field`'s `Digested` slot empty, which
+/// opens `ltx:bib-extract` and never closes it: 203 errors on 2605.00184 as
+/// every later field nests inside).
+///
+/// Raw-first, same as [`bib@field@unknownasdata`](install_bibtex_definitions)
+/// and for the same reason: a Tokens round-trip eats the space that terminates
+/// a control word.
+fn bib_extract_text(field: &str) -> String {
+  current_entry_raw_field(field)
+    .or_else(|| current_entry_field(field).map(|t| t.to_string()))
+    .unwrap_or_default()
+}
+
+/// The TeX specials that a `.bib` field can only have meant literally, and whose
+/// escape is simply `\` + the character.
+///
+/// Not `~` — a tie is plausible in a name. `^` belongs to the same authorized
+/// set but is NOT here, because `\^` is the circumflex accent and not an escaped
+/// caret; it gets its own arm and [`BIB_DATA_CARET`].
+const BIB_DATA_SPECIALS: [char; 4] = ['_', '&', '#', '%'];
+
+/// The escape for a bare `^`, which cannot be spelled `\` + the character.
+///
+/// `^` is `_`'s twin in this flow — both are TeX scripting characters, both are
+/// plain data to `bibtex(1)` (its lexer gives neither any meaning inside an
+/// entry), and both raise "Script … can only appear in math mode" once outside
+/// math. So the DATA-regime rule that covers `_` covers `^` on the same ground.
+///
+/// The escape spelling is where the symmetry stops, and it is a silent trap:
+/// `\_` is the underscore text command, but `\^` is the **circumflex accent**,
+/// so the generic `\` + character arm would turn `\Dbar okovi^c` into a "ĉ" and
+/// `^o` into "ô" — a wrong glyph rather than a diagnostic. `\textasciicircum` is
+/// the actual caret; the braces are load-bearing, so a following letter is not
+/// absorbed as the control word's continuation.
+const BIB_DATA_CARET: &str = "\\textasciicircum{}";
+
+/// The `.bib`-data -> TeX-source boundary: escape the specials a `.bst` would
+/// have escaped, so the synthesized entry line is valid TeX.
+///
+/// Real BibTeX has TWO regimes and latexml-oxide collapses them into one pass.
+/// In the DATA regime (`.bib` read by `bibtex(1)`) a field's bytes are data:
+/// `%` is not a comment, `&` is not an alignment tab, `_` is not a subscript,
+/// `^` is not a superscript, `#` is not a parameter. Only in the TeX regime (the `.bbl` read by
+/// `pdflatex`) do those catcodes exist — and what lands in the `.bbl` is
+/// whatever the `.bst` chose to write. We read `.bib` directly, with no `.bst`
+/// in the loop, so we are the component that decides what reaches the
+/// tokenizer, and the author's intent for a bare `&` in `AT&T` is plainly the
+/// character. Escaping here — emitting what a careful `.bst` author would have
+/// written — is "be bibtex first, then be pdflatex on the `.bbl` you just
+/// synthesized". OXIDIZED_DESIGN #74.
+///
+/// Escaping at the boundary rather than neutralizing catcodes during digestion
+/// is what keeps the TeX regime intact **by construction**: `\emph{…}`,
+/// `{\v S}pakov` and `$x_1+x_2$` are already valid TeX and simply pass through.
+/// Two hazards, both guarded by
+/// `06_cluster_bibliography::bib_field_specials_are_data_not_tex`:
+///
+/// * **Math.** `_`/`^` inside `$…$` are a real subscript and superscript, so
+///   math spans are skipped. `$`/`$$` toggle; `\(`/`\[` open and `\)`/`\]` close.
+/// * **Idempotency.** Most `.bib` files already write `\&`, `\%`, `\_`,
+///   `\textasciicircum`. A backslash therefore consumes the next character as a
+///   pair and neither is re-examined, so `\&` stays `\&` and `\^{}` stays
+///   `\^{}`; a control WORD is copied whole, so `\textasciicircum` survives. The
+///   tricky case falls out of the same rule: in `\\&` the `\\` is consumed as
+///   one pair, leaving a genuinely bare `&` that IS escaped.
+///
+/// An UNMATCHED `$` is data too, and gets the same treatment — see
+/// [`demote_unmatched_dollars`].
+fn escape_bib_data_specials(value: &str) -> String {
+  // Pass 1 measures the `$` toggles; pass 2 emits, demoting the ones that
+  // cannot be math delimiters. Running the same scanner twice, rather than
+  // writing a second one, is what keeps the (subtle) skip rules in one place.
+  let toggles = scan_bib_data_specials(value, &[]).1;
+  let demote = demote_unmatched_dollars(&toggles);
+  scan_bib_data_specials(value, &demote).0
+}
+
+/// A `$` that never finds its partner cannot be a math shift — it is a currency
+/// sign the author typed, and `\$` is what a careful `.bst` would have written.
+///
+/// Without this, one stray `$` opens an inline-math group that swallows the rest
+/// of the entry AND every entry after it: the `.bib` is one digestion, so the
+/// leak crosses `\end{bib@entry}` and every following element lands inside
+/// `<ltx:XMath>` — `<ltx:bib-organization> isn't allowed in <ltx:XMath>`, ~100
+/// times, tripping the 100-error cap and taking the document Fatal. Witness
+/// 2605.00166 (`annote = {... costs ... of the order of $10 million ...}`, a
+/// literal currency dollar): 0 errors before, 103 and a Fatal after.
+///
+/// SURPASS-PERL, and deliberately: same-host Perl cascades identically here
+/// (`latexmlc` on 2605.00166 — 102 errors, `Fatal:too_many_errors:100`, rc=1),
+/// because `\bibentry@create` interpolates the field raw into a fresh Mouth
+/// (`BibTeX.pool.ltxml` L155-166) with no escaping of any kind. Perl only
+/// balances `$` in `\bib@@title`, where it raises `expected:$` and DELETES the
+/// stray (L324-330) — so upstream already agrees an unmatched `$` is not math;
+/// it just applies that judgement to one field and drops the character instead
+/// of keeping it. Nothing is suppressed here: this removes the CAUSE of the
+/// cascade, so the ~100 `malformed:` errors are gone because the entry is now
+/// well-formed, not because they stopped being reported. It costs no fidelity
+/// against `pdflatex` either — a real `.bst` never emits `annote`, so the
+/// character only reaches a tokenizer because we read the `.bib` directly.
+/// OXIDIZED_DESIGN #79.
+///
+/// `toggles[i]` says whether the i-th `$` toggle is immediately followed by an
+/// ASCII digit. With pure toggling an even count is always balanced, so only an
+/// odd count has an unmatched member. Which one to demote is a judgement call,
+/// and "followed by a digit" is the tell that settles the common cases:
+///
+/// * `of the order of $10 million` — the lone toggle is currency. Demote it.
+/// * `$x$ costs $10` — demoting the digit one leaves `$x$` intact as math.
+/// * `costs $10 and $x$` — likewise, and note the *last* toggle would have been
+///   the wrong pick here.
+/// * `$1 and $2 and $3` — all three are currency; demoting all three balances.
+/// * No digit anywhere: fall back to the last toggle, which is the unmatched one
+///   under pure toggling.
+fn demote_unmatched_dollars(toggles: &[bool]) -> Vec<usize> {
+  if toggles.len().is_multiple_of(2) {
+    return Vec::new(); // balanced — every `$` has a partner
+  }
+  let mut demote: Vec<usize> = (0..toggles.len()).filter(|&i| toggles[i]).collect();
+  // Still odd (no digit tell, or an even number of them): the trailing toggle
+  // is the one left without a partner.
+  if !(toggles.len() - demote.len()).is_multiple_of(2)
+    && let Some(last) = (0..toggles.len()).rev().find(|i| !demote.contains(i))
+  {
+    demote.push(last);
+  }
+  demote
+}
+
+/// The shared scanner behind [`escape_bib_data_specials`].
+///
+/// Returns the escaped text plus, per `$`-toggle in order, whether it is
+/// immediately followed by an ASCII digit. Toggles whose ordinal is in `demote`
+/// are emitted as the literal `\$` and do NOT flip math mode.
+fn scan_bib_data_specials(value: &str, demote: &[usize]) -> (String, Vec<bool>) {
+  let mut out = String::with_capacity(value.len() + 8);
+  let mut toggles: Vec<bool> = Vec::new();
+  let mut chars = value.chars().peekable();
+  let mut in_math = false;
+  while let Some(c) = chars.next() {
+    match c {
+      '\\' => {
+        out.push('\\');
+        match chars.peek() {
+          // A control WORD. Copy it whole (the terminating space is emitted by
+          // the next iteration, so `\ndash 693` keeps its space), then — if it
+          // reads its own argument verbatim — copy that argument untouched too.
+          Some(n) if n.is_alphabetic() => {
+            let mut word = String::new();
+            while let Some(&n) = chars.peek() {
+              if !n.is_alphabetic() {
+                break;
+              }
+              word.push(n);
+              chars.next();
+            }
+            out.push_str(&word);
+            if VERBATIM_ARG_COMMANDS.contains(&word.as_str()) {
+              copy_balanced_group(&mut chars, &mut out);
+            }
+          },
+          // A control SYMBOL. Copy the pair. This one arm is the whole of the
+          // idempotency rule (`\&` stays `\&`) AND of "leave `\` alone" — and
+          // it is what makes the tricky `\\&` case fall out for free: `\\` is
+          // consumed here as one pair, leaving a genuinely bare `&` to escape.
+          Some(_) => {
+            let n = chars.next().unwrap_or('\\');
+            out.push(n);
+            match n {
+              '(' | '[' => in_math = true,
+              ')' | ']' => in_math = false,
+              _ => {},
+            }
+          },
+          None => {},
+        }
+      },
+      '$' => {
+        // `$$` is one display delimiter, not two toggles.
+        let doubled = chars.peek() == Some(&'$');
+        if doubled {
+          chars.next();
+        }
+        let ordinal = toggles.len();
+        toggles.push(chars.peek().is_some_and(char::is_ascii_digit));
+        if demote.contains(&ordinal) {
+          // Data, not a math shift: emit the character and stay in whatever
+          // mode we were in.
+          out.push_str(if doubled { "\\$\\$" } else { "\\$" });
+        } else {
+          out.push('$');
+          if doubled {
+            out.push('$');
+          }
+          in_math = !in_math;
+        }
+      },
+      // Before the generic arm, and deliberately: `\^` is the circumflex
+      // accent, so the generic `\` + character escape would render `^o` as "ô".
+      // See [`BIB_DATA_CARET`].
+      '^' if !in_math => out.push_str(BIB_DATA_CARET),
+      _ if !in_math && BIB_DATA_SPECIALS.contains(&c) => {
+        out.push('\\');
+        out.push(c);
+      },
+      _ => out.push(c),
+    }
+  }
+  (out, toggles)
+}
+
+/// Control words that read their own next argument as DATA, so the escaper must
+/// leave that argument alone.
+///
+/// url.sty's `\url`/`\nolinkurl`/`\path` take a Verbatim argument and `\href`
+/// takes a Semiverbatim URL — a percent-encoded `%20` inside one is not a
+/// comment and must not become `\%`, which would land a literal backslash in
+/// the href. `howpublished = {\url{http://x.org/a%20b}}` is the measured case
+/// (`docs/parity/BIBLIOGRAPHY_WORKLIST.md` records it as a working probe, and
+/// blind escaping regressed it). Only ONE group is skipped, so `\href`'s second
+/// argument — real prose — is still escaped.
+const VERBATIM_ARG_COMMANDS: [&str; 5] = ["url", "nolinkurl", "path", "href", "doi"];
+
+/// Copy one balanced `{...}` group through untouched, leading spaces included.
+/// A no-op when the next non-space character is not `{`.
+fn copy_balanced_group(chars: &mut std::iter::Peekable<std::str::Chars>, out: &mut String) {
+  let mut pending = String::new();
+  while let Some(&c) = chars.peek() {
+    if c == ' ' {
+      pending.push(c);
+      chars.next();
+    } else {
+      break;
+    }
+  }
+  if chars.peek() != Some(&'{') {
+    out.push_str(&pending);
+    return;
+  }
+  out.push_str(&pending);
+  out.push('{');
+  chars.next();
+  let mut depth = 1usize;
+  for c in chars.by_ref() {
+    out.push(c);
+    match c {
+      '{' => depth += 1,
+      '}' => {
+        depth -= 1;
+        if depth == 0 {
+          break;
+        }
+      },
+      _ => {},
+    }
+  }
+}
+
+/// The field value to write into the synthesized entry line for `handler`.
+///
+/// A handler that declares a `Verbatim`/`Semiverbatim` first parameter reads the
+/// field's characters itself, under its own catcode table, and hands them on as
+/// a string — a `url` href, a `doi` id. Escaping those would put a literal
+/// backslash in the value, so they are passed through raw. Perl declares
+/// exactly which fields those are (`BibTeX.pool.ltxml` L740 `url` **Verbatim**,
+/// L684/L750-783 `crossref`/`doi`/`isbn`/`issn`/`lccn`/`pii` **Semiverbatim**),
+/// and this reads that declaration back off the definition instead of keeping a
+/// second copy of the list that could drift from it.
+fn bib_field_source(value: &str, handler: &Rc<dyn Definition>) -> String {
+  let reads_raw = handler
+    .get_parameters()
+    .and_then(|params| params.get_parameters().first().map(|p| reads_field_raw(p)))
+    .unwrap_or(false);
+  if reads_raw {
+    value.to_string()
+  } else {
+    escape_bib_data_specials(value)
+  }
+}
+
+/// Whether `p` consumes its argument's characters as data rather than as TeX.
+///
+/// Both halves are needed, and the asymmetry is a trap worth naming: only
+/// `Semiverbatim` sets the `semiverbatim` DESCRIPTOR field; `Verbatim` calls
+/// `begin_semiverbatim(Some(&['%', '\\']))` inside its reader closure instead
+/// and leaves the descriptor empty (`base_parameter_types.rs`). Testing the
+/// descriptor alone therefore silently misses `url` — measured, it put a
+/// literal `\%` in a `url` href. `Parameter::name` is the declared type name
+/// (it is explicitly preserved when a descriptor is merged in), so it is the
+/// reliable half for `Verbatim`.
+fn reads_field_raw(p: &Parameter) -> bool {
+  p.semiverbatim.is_some()
+    || with(p.name, |name| {
+      matches!(name, "Verbatim" | "Semiverbatim" | "OptionalSemiverbatim")
+    })
+}
+
 /// that a control word's terminating space is consumed (`\ndash 693`).
 pub fn current_entry_field(name: &str) -> Option<Tokens> {
   let entry = current_entry()?;
@@ -248,7 +554,114 @@ pub fn current_entry_field(name: &str) -> Option<Tokens> {
   if let Some(tokens) = entry.get_field(name) {
     return Some(tokens.clone());
   }
-  entry.get_raw_field(name).map(|raw| Tokenize!(raw))
+  // `assembled`: a *raw* field is the .bib source text verbatim, straight off
+  // the BibTeX lexer — never a flattened `Tokens`, so no control word can have
+  // been welded to what follows it.
+  entry
+    .get_raw_field(name)
+    .map(|raw| tokenize_bib_field(TeXString::assembled(raw.to_string())))
+}
+
+/// `Tokenize!` for a string that came out of the BibTeX lexer.
+///
+/// The standard catcode table, as Perl's `Tokenize` uses — except that `%`, `&`
+/// and `#` are ordinary characters. BibTeX has no comment syntax inside an entry
+/// (`Pre::BibTeX` only skips `%` in the junk BETWEEN entries), no alignment and
+/// no parameters, so all three are data; under catcode 14 a `%` comments out the
+/// rest of the string and takes any brace still open with it, under catcode 4 an
+/// `&` is a stray alignment tab, and under catcode 6 a `#` reaches the Stomach as
+/// a parameter. Witnesses 2605.02131 (a percent-encoded URL in a `title`'s
+/// `\href`, 24 `malformed:ltx:bibentry`) and 2605.01936
+/// (`publisher = {Taylor & Francis}` and six more, 7 `unexpected:&`).
+///
+/// **Treatment 1 of `OXIDIZED_DESIGN #74`** — the same rule the per-entry Mouth
+/// applies (see `\ProcessBibTeXEntry` below); it has to be repeated here because
+/// the handlers that re-read a raw field — `\bib@@title` recasing, name
+/// splitting, date/pages/MR/Zbl assembly — build their tokens from the stored
+/// string and never go through that mouth.
+///
+/// `_` and `^` are NOT in this set: a catcode is fixed at tokenization, before
+/// anything knows whether it is inside `$…$`, and a sub/superscript in a title's
+/// math is legitimate TeX. Both are handled by treatment 2
+/// ([`bib_tex_tokens`]) instead, which is the only one of the two that can be
+/// math-aware.
+fn tokenize_bib_field(text: impl Into<TeXString>) -> Tokens { mouth::tokenize_bib_literal(text) }
+
+/// Both treatments, for a raw `.bib` string that is about to become TeX tokens.
+///
+/// Treatment 2 (`escape_bib_data_specials`) makes the data valid TeX — it is the
+/// only one of the two that can be math-aware, so it is what covers `_` and `^`;
+/// then treatment 1 ([`tokenize_bib_field`]) reads the result with `% & #` still inert,
+/// covering whatever the escaper deliberately left alone (the inside of a
+/// `\url{…}`).
+///
+/// Every site that re-reads a RAW field and hands it to the tokenizer uses this:
+/// `\bib@@title`, `\bib@@pages`, name splitting, date assembly, MR/Zbl. They are
+/// listed explicitly in `BIBLIOGRAPHY_WORKLIST.md` — "any change here must cover
+/// all three, plus the name-, date- and MR/Zbl-assembly sites that share that
+/// path". Escaping is idempotent, so a value already escaped upstream (a recased
+/// title) is unharmed by passing through again.
+///
+/// The `impl Into<TeXString>` is the guard, and this is the site that has needed
+/// it: a caller must hand over either a raw `.bib` string (`TeXString::assembled`
+/// — lexer output, never a flattened `Tokens`) or a reverted token list
+/// ([`Tokens::untex_string`]). A bare `Tokens::to_string()` no longer compiles
+/// here, which is what made `MRREVIEWER = {Fran\c cois\ Digne}` come back as
+/// `undefined:\ccois`. See [`latexml_core::tokens::TeXString`].
+fn bib_tex_tokens(text: impl Into<TeXString>) -> Tokens {
+  // `escape_bib_data_specials` is a TeX-preserving transform of TeX-valid input,
+  // so re-asserting `assembled` over its output carries the caller's assertion
+  // through rather than laundering a new one.
+  let text = text.into();
+  tokenize_bib_field(TeXString::assembled(escape_bib_data_specials(
+    text.as_str(),
+  )))
+}
+
+/// Collapse an HTML-escaped ampersand — `&amp;` — back to the single `&` the
+/// author wrote, in whichever of its three spellings a `.bib` export used.
+///
+/// This is a DOUBLE escape, not a TeX construct: a reference manager rendered
+/// the field to HTML (`&` -> `&amp;`), then a second pass TeX-escaped the
+/// ampersand of that entity, so the file carries `\&amp;` / `{\&}amp;` /
+/// `&amp;` where the source said `&`. TeX has no idea: `\&` produces the glyph
+/// and `amp;` is four more ordinary characters, so the entry renders
+/// "Computer Engineering, &amp; Applied Computing". pdflatex prints exactly the
+/// same thing — this is not a parity gap in either direction, it is an input
+/// corruption that only the `.bib` reader is positioned to undo, and we read
+/// `.bib` directly (see OXIDIZED_DESIGN #73's framing of that position).
+///
+/// Distinct from a BARE `&`, which is catcode 4 and is neutralized at the mouth
+/// (`tokenize_bib_field` above, `#75`). Decoding here deliberately yields a
+/// plain `&` and lets that mechanism give it its catcode, rather than escaping
+/// it to `\&` behind the mechanism's back.
+///
+/// Measured over 6000 arXiv/2605 sources: `\&amp;` in `booktitle` (2605.00833,
+/// 2605.01362), in `journal` (2605.00922, 2605.01200, 2605.01224), in `title`
+/// (2605.01353 `{{A}}\&amp;{{AS}}`); `{\&}amp;` in `title` (2605.01224 "Shake
+/// {\&}amp; Bake"); bare `&amp;` in `publisher` (2605.00859 "European
+/// Association of Geoscientists &amp; Engineers") and `journal` (2605.01187).
+///
+/// Only `amp;` DIRECTLY after an ampersand is touched, so a field that merely
+/// contains the letters "amp" is untouched, and a lone `&` is left exactly as
+/// it was.
+fn undouble_escaped_ampersand(value: &str) -> String {
+  if !value.contains("amp;") {
+    return value.to_string();
+  }
+  let mut out = String::with_capacity(value.len());
+  let mut rest = value;
+  while let Some(i) = rest.find("amp;") {
+    let (head, tail) = rest.split_at(i);
+    out.push_str(head);
+    // `{\&}` first: its last character is `}`, not `&`.
+    if !(head.ends_with("{\\&}") || head.ends_with('&')) {
+      out.push_str("amp;");
+    }
+    rest = &tail["amp;".len()..];
+  }
+  out.push_str(rest);
+  out
 }
 
 /// Perl: `currentBibEntryRawField('fieldname')` — get the *raw*
@@ -408,30 +821,19 @@ fn split_words(input: &str) -> Vec<String> {
 
   let mut words: Vec<String> = Vec::new();
   let mut word = String::new();
-  let bytes = s.as_bytes();
-  let mut i = 0;
-  while i < bytes.len() {
-    let b = bytes[i];
+  // Scanned by character, not by byte index — see `CharCursor`'s module docs.
+  // Author names are the most reliably non-ASCII field in a `.bib`.
+  let mut cur = CharCursor::new(&s);
+  const SEP: [char; 5] = [' ', '\t', '\n', '\r', '~'];
+  while let Some(c) = cur.peek() {
     // Check for `(comma?) whitespace+` separators. Perl regex:
     // s/^(,?)[\s~]+//
-    if b == b',' || b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' || b == b'~' {
-      let had_comma = b == b',';
-      let mut j = i + 1;
-      // Either a leading comma we just consumed, or the whole run is
-      // pure whitespace/tilde — collect the trailing whitespace.
-      if had_comma {
-        while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~') {
-          j += 1;
-        }
-      } else {
-        // Pure whitespace run; skip them.
-        while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~') {
-          j += 1;
-        }
-        // If we didn't actually see any whitespace beyond this one
-        // char, we still advance (the `[\s~]+` pattern matches `+`
-        // which requires ≥1; we have 1 = the current char).
-      }
+    if c == ',' || SEP.contains(&c) {
+      let had_comma = c == ',';
+      cur.next();
+      // Either a leading comma we just consumed, or a pure whitespace/tilde
+      // run — either way, absorb the trailing whitespace.
+      cur.take_while(|c| SEP.contains(&c));
       // Flush accumulated word
       if !word.is_empty() {
         words.push(std::mem::take(&mut word));
@@ -439,38 +841,31 @@ fn split_words(input: &str) -> Vec<String> {
       if had_comma {
         words.push(",".to_string());
       }
-      i = j;
-    } else if b == b'{' {
+    } else if c == '{' {
       // Extract balanced group; include the braces.
-      let start = i;
+      let start = cur.pos();
       let mut depth = 0i32;
-      while i < bytes.len() {
-        match bytes[i] {
-          b'{' => depth += 1,
-          b'}' => {
+      while let Some(c) = cur.next() {
+        match c {
+          '{' => depth += 1,
+          '}' => {
             depth -= 1;
             if depth == 0 {
-              i += 1;
               break;
             }
           },
           _ => {},
         }
-        i += 1;
       }
       // Append the entire braced chunk (including the braces) to the
       // current word so it stays atomic across word splits — matches
       // Perl `$word .= $t`.
-      word.push_str(&s[start..i]);
+      word.push_str(cur.slice_from(start));
     } else {
       // Greedily accumulate until the next separator / `{`.
-      let start = i;
-      while i < bytes.len()
-        && !matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b'~' | b',' | b'{')
-      {
-        i += 1;
-      }
-      word.push_str(&s[start..i]);
+      let start = cur.pos();
+      cur.take_while(|c| !SEP.contains(&c) && c != ',' && c != '{');
+      word.push_str(cur.slice_from(start));
     }
   }
   if !word.is_empty() {
@@ -644,85 +1039,85 @@ impl TitleCaseMode {
 /// `Capitalize1` mode capitalise the FIRST word and lowercase the
 /// rest, while `Capitalize` uppercases every word.
 pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
-  let bytes = title.as_bytes();
+  // Scanned through `char_indices`, NOT `as_bytes()` + a hand-rolled index.
+  //
+  // Every index this yields is a char boundary by construction, so the
+  // `&title[a..b]` slices below cannot panic — which they previously could:
+  // the `\<char>` escape arm advanced a fixed ONE byte past the backslash, so
+  // `\“` left the cursor inside the codepoint and the next slice aborted the
+  // whole document (a panic is not a recoverable conversion error). Witness
+  // 2605.22125, found by the 2026-07-26 sandbox sweep.
+  //
+  // The class, not just the instance: a byte walker re-admits the bug on every
+  // future edit, because `usize` carries no boundary invariant and nothing in
+  // the type system objects. Perl cannot have it at all — `\bib@@title`
+  // (BibTeX.pool.ltxml L293-333) works in characters. Rust rules
+  // `anti-index-over-iter` / `perf-iter-over-index`.
+  let mut cur = CharCursor::new(title);
   let mut out = String::with_capacity(title.len());
   let mut wb: bool = true;
   let mut wc: u32 = 0;
-  let mut i = 0;
-  while i < bytes.len() {
-    let b = bytes[i];
+
+  while let Some(c) = cur.peek() {
     // Whitespace run — copy verbatim, set word-beginning.
-    if b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' {
-      let start = i;
-      while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {
-        i += 1;
-      }
-      out.push_str(&title[start..i]);
+    if matches!(c, ' ' | '\t' | '\n' | '\r') {
+      let start = cur.pos();
+      cur.take_while(|c| matches!(c, ' ' | '\t' | '\n' | '\r'));
+      out.push_str(cur.slice_from(start));
       wb = true;
       continue;
     }
     // Balanced `{...}` — copy verbatim, atomic word.
-    if b == b'{' {
-      let start = i;
+    if c == '{' {
+      let start = cur.pos();
       let mut depth = 0i32;
-      while i < bytes.len() {
-        match bytes[i] {
-          b'{' => depth += 1,
-          b'}' => {
+      while let Some(c) = cur.next() {
+        match c {
+          '{' => depth += 1,
+          '}' => {
             depth -= 1;
             if depth == 0 {
-              i += 1;
               break;
             }
           },
           _ => {},
         }
-        i += 1;
       }
       if wb {
         wc += 1;
       }
-      out.push_str(&title[start..i]);
+      out.push_str(cur.slice_from(start));
       wb = false;
       continue;
     }
     // Balanced `$...$` — copy verbatim, no word-counter bump.
-    if b == b'$' {
-      let start = i;
-      i += 1;
-      while i < bytes.len() && bytes[i] != b'$' {
-        i += 1;
-      }
-      if i < bytes.len() {
-        i += 1;
-      }
-      out.push_str(&title[start..i]);
+    if c == '$' {
+      let start = cur.pos();
+      cur.next();
+      cur.take_while(|c| c != '$');
+      cur.next(); // the closing `$`, if any
+      out.push_str(cur.slice_from(start));
       wb = false;
       continue;
     }
     // Word: ASCII alphanumeric/underscore OR `\<word>` / `\<char>` escape.
-    let word_start = i;
+    let word_start = cur.pos();
     let mut consumed_word = false;
-    loop {
-      if i >= bytes.len() {
-        break;
-      }
-      let c = bytes[i];
-      let is_wordchar = c.is_ascii_alphanumeric() || c == b'_';
-      if is_wordchar {
-        i += 1;
+    while let Some(c) = cur.peek() {
+      if c.is_ascii_alphanumeric() || c == '_' {
+        cur.next();
         consumed_word = true;
         continue;
       }
-      if c == b'\\' && i + 1 < bytes.len() {
-        // \<word> or \<single-char>
-        i += 1;
-        if bytes[i].is_ascii_alphabetic() {
-          while i < bytes.len() && bytes[i].is_ascii_alphabetic() {
-            i += 1;
-          }
+      if c == '\\' && cur.peek_second().is_some() {
+        cur.next(); // the backslash
+        // `\<word>`: a run of ASCII letters. `\<char>`: exactly one character,
+        // of whatever width — the cursor advances by the CHARACTER, so a
+        // multi-byte escape can no longer split.
+        if cur.peek().is_some_and(|c| c.is_ascii_alphabetic()) {
+          cur.take_while(|c| c.is_ascii_alphabetic());
         } else {
-          i += 1;
+          cur.next();
         }
         consumed_word = true;
         continue;
@@ -730,7 +1125,7 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
       break;
     }
     if consumed_word {
-      let word = &title[word_start..i];
+      let word = cur.slice_from(word_start);
       let recased = match mode {
         TitleCaseMode::AsIs => word.to_string(),
         TitleCaseMode::Uppercase => word.to_uppercase(),
@@ -751,14 +1146,9 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
       continue;
     }
     // Fallback single char (e.g. punctuation).
-    let ch_start = i;
-    let mut chars = title[i..].chars();
-    if let Some(c) = chars.next() {
-      i += c.len_utf8();
-    } else {
-      i += 1;
-    }
-    out.push_str(&title[ch_start..i]);
+    let ch_start = cur.pos();
+    cur.next();
+    out.push_str(cur.slice_from(ch_start));
     wb = true;
   }
   out
@@ -780,67 +1170,59 @@ pub fn process_identifier(s: &str) -> String { s.trim().to_string() }
 /// dispatch. Mirrors Perl `$keyvals->getPairs` + `lc()` + `UnTeX()`
 /// from `amsrefs.sty.ltxml:42-50`.
 pub fn parse_amsrefs_keyvals(s: &str) -> Vec<(String, String)> {
-  let bytes = s.as_bytes();
+  // `CharCursor`, not `as_bytes()` + an index: see its module docs. This walker
+  // happens to be safe as written (it only ever STOPS at ASCII delimiters, and
+  // an ASCII byte is never a UTF-8 continuation byte), but "happens to be safe"
+  // is the state `recase_title` was in until someone added one `i += 1` —
+  // witness 2605.22125. Scanning by character removes the possibility rather
+  // than relying on every future edit to re-derive the argument.
+  let mut cur = CharCursor::new(s);
   let mut out: Vec<(String, String)> = Vec::new();
-  let mut i = 0;
-  while i < bytes.len() {
+  while !cur.is_done() {
     // Skip whitespace + commas.
-    while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b',') {
-      i += 1;
-    }
-    if i >= bytes.len() {
+    cur.take_while(|c| matches!(c, ' ' | '\t' | '\n' | '\r' | ','));
+    if cur.is_done() {
       break;
     }
     // Read key up to `=` (or end / `,`).
-    let key_start = i;
-    while i < bytes.len() && !matches!(bytes[i], b'=' | b',') {
-      i += 1;
-    }
-    let key = s[key_start..i].trim().to_ascii_lowercase();
+    let key_start = cur.pos();
+    cur.take_while(|c| !matches!(c, '=' | ','));
+    let key = cur.slice_from(key_start).trim().to_ascii_lowercase();
     if key.is_empty() {
       // Stray comma or trailing garbage; skip the separator and continue.
-      if i < bytes.len() {
-        i += 1;
-      }
+      cur.next();
       continue;
     }
-    if i >= bytes.len() || bytes[i] != b'=' {
+    if cur.peek() != Some('=') {
       // No `=` — key without value; record empty value.
       out.push((key, String::new()));
       continue;
     }
-    i += 1; // skip `=`
-    // Skip whitespace before value.
-    while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {
-      i += 1;
-    }
+    cur.next(); // skip `=`
+    cur.take_while(|c| matches!(c, ' ' | '\t' | '\n' | '\r'));
     // Value: balanced `{...}` group OR until next top-level `,`.
     let value: String;
-    if i < bytes.len() && bytes[i] == b'{' {
-      let start = i + 1;
+    if cur.peek() == Some('{') {
+      cur.next(); // the opening brace, excluded from the value
+      let start = cur.pos();
       let mut depth = 1i32;
-      i += 1;
-      while i < bytes.len() && depth > 0 {
-        match bytes[i] {
-          b'{' => depth += 1,
-          b'}' => depth -= 1,
+      while let Some(c) = cur.peek() {
+        match c {
+          '{' => depth += 1,
+          '}' => depth -= 1,
           _ => {},
         }
         if depth == 0 {
           break;
         }
-        i += 1;
+        cur.next();
       }
-      value = s[start..i].to_string();
-      if i < bytes.len() {
-        i += 1;
-      } // skip closing `}`
+      value = cur.slice_from(start).to_string();
+      cur.next(); // skip the closing `}`, if present
     } else {
-      let start = i;
-      while i < bytes.len() && bytes[i] != b',' {
-        i += 1;
-      }
-      value = s[start..i].trim().to_string();
+      let start = cur.pos();
+      cur.take_while(|c| c != ',');
+      value = cur.slice_from(start).trim().to_string();
     }
     out.push((key, value));
   }
@@ -947,7 +1329,25 @@ LoadDefinitions!({
   // name emit `Invocation(\bib@@@name, field, name_tokens)`.
   DefMacro!("\\bib@@names{}{}", sub[args] {
     let field_tokens = args[0].clone().owned_tokens().unwrap_or_default();
-    let names_str = if args[1].is_some() { args[1].to_string() } else { String::new() };
+    // `untex()`, NOT `to_string()` — Perl L277 is `processBibNameList(UnTeX($names, 1))`,
+    // and the two are not interchangeable. `Display for Tokens` says so itself:
+    // "NOT for creating valid TeX (use revert or UnTeX for that!)". It concatenates
+    // token texts, so the SPACE that terminated a control word — consumed by the
+    // tokenizer, and therefore absent as data — is never re-emitted: `\v` + `S`
+    // comes back as `\vS`, a control sequence that exists in no LaTeX.
+    //
+    // That silently mangles every space-form accent in an author name — `{\v S}`,
+    // `{\c c}`, `{\"a}`, `{\'e}`, i.e. most non-English names — into an undefined
+    // macro, rendering `\vSpakov` where Perl renders `Špakov`. Measured on the
+    // 2026-07-26 sweep of sandbox-arxiv-2605/2606: ~+2800 error documents per
+    // corpus. `\v{S}` (braced argument) was unaffected, which is what made it look
+    // like a brace bug rather than a reversion bug.
+    // Guard: `bib_name_space_form_accent_survives_reversion`.
+    let names_str = args[1]
+      .clone()
+      .owned_tokens()
+      .map(Tokens::untex)
+      .unwrap_or_default();
     let parsed = process_bib_name_list(&names_str);
 
     // Build the `\bib@@@names{ <name-invocations> }` Tokens stream.
@@ -970,21 +1370,26 @@ LoadDefinitions!({
     let mut body: Vec<Token> = Vec::new();
     body.push(T_CS!("\\bib@@@names"));
     body.push(T_BEGIN!());
+    // `assembled`: every part below is a slice of `names_str`, which came out of
+    // `Tokens::untex` just above — already valid TeX, with the spaces that
+    // terminate control words restored. That is exactly the obligation
+    // `TeXString::assembled` names.
+    let part = |s: &str| TeXString::assembled(s.to_string());
     for name in &parsed.names {
       let mut name_tks: Vec<Token> = Vec::new();
       if !name.surname.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@surname"),
-          vec![Tokenize!(name.surname.as_str())]);
+          vec![bib_tex_tokens(part(&name.surname))]);
         name_tks.extend(inv.unlist());
       }
       if !name.given.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@given"),
-          vec![Tokenize!(name.given.as_str())]);
+          vec![bib_tex_tokens(part(&name.given))]);
         name_tks.extend(inv.unlist());
       }
       if !name.lineage.is_empty() {
         let inv = Invocation!(T_CS!("\\bib@lineage"),
-          vec![Tokenize!(name.lineage.as_str())]);
+          vec![bib_tex_tokens(part(&name.lineage))]);
         name_tks.extend(inv.unlist());
       }
       let inv = Invocation!(T_CS!("\\bib@@@name"),
@@ -1027,13 +1432,32 @@ LoadDefinitions!({
       })
       .unwrap_or_else(|| "capitalize1".to_string());
     let mode = TitleCaseMode::parse(&mode_str);
-    let raw = current_entry_raw_field(&field_name).unwrap_or_default();
+    // Both treatments, in the order the real toolchain applies them, because
+    // `\bib@@title` re-reads the RAW field rather than the argument the entry
+    // line passed it (Perl L294 — that slot is the vestigial `ignoretitle`), so
+    // neither the decode nor the escaping in `\ProcessBibTeXEntry` reaches a
+    // title. Witnesses: 2605.01353, a `title` reading `{{A}}\&amp;{{AS}}`
+    // (decode); `title = {AT&T dataset AT1G01010_v2}` (escape).
+    //
+    // Escaping runs BEFORE `recase_title`, not after: `recase_title` splits on
+    // words and treats a `\…` escape as part of its word, so raw `AT&T` recases
+    // to `AT&t` (three words) while raw `AT\&T` recases to `AT&T` (one). Every
+    // real `.bib` mixes both spellings and they must render the same string, so
+    // the data becomes TeX first and the casing pass sees one consistent input.
+    // Guard case: `barespecials` vs `preescaped` in `bib_field_specials.bib`.
+    let raw = escape_bib_data_specials(&undouble_escaped_ampersand(
+      &current_entry_raw_field(&field_name).unwrap_or_default(),
+    ));
     let recased = recase_title(&raw, mode);
     // Emit `\bib@@field{tag}{}{<recased>}`. The empty `{}` slot
     // is the OptionalKeyVals arg (absent → no attributes).
     // Perl L333: Tokenize($recap) — catcode-aware, so TeX macros in
     // titles stay live (accents, math). Explode leaked them verbatim.
-    let recased_tokens = Tokenize!(recased.as_str());
+    // `tokenize_bib_field`, not `Tokenize!`: treatment 1 is the safety net under
+    // the escaping above — anything the escaper deliberately left alone (a
+    // `%` inside `\url{…}`) is still read as data rather than as a comment.
+    // `assembled`: `recased` is a re-cased *raw* field, i.e. .bib source text.
+    let recased_tokens = bib_tex_tokens(TeXString::assembled(recased));
     let inv = Invocation!(T_CS!("\\bib@@field"),
       vec![tag_tokens, Tokens!(), recased_tokens]);
     Ok(inv)
@@ -1445,7 +1869,8 @@ LoadDefinitions!({
     let mut out_toks: Vec<Token> = Vec::new();
     out_toks.push(T_CS!("\\bib@field@default@date"));
     out_toks.push(T_BEGIN!());
-    out_toks.extend(Tokenize!(date.as_str()).unlist());
+    // `assembled`: `date` is assembled here from digits and `-` separators.
+    out_toks.extend(bib_tex_tokens(TeXString::assembled(date)).unlist());
     out_toks.push(T_END!());
     Ok(Tokens::new(out_toks))
   });
@@ -1505,9 +1930,13 @@ LoadDefinitions!({
     // `Stored::Digested`/`VecDigested` — a `Stored::Tokens` fell through to its
     // catch-all and rendered as NOTHING, so every amsrefs `pages` field came
     // out as an empty `<ltx:bib-part role="pages"/>`. Witness arXiv 2508.17585.
+    // Third and last door from `.bib` data into the TeX regime — `\bib@@pages`
+    // also re-reads the raw field rather than using the entry line's value, so
+    // it escapes too, on the same rule (`escape_bib_data_specials`).
     whatsit.set_property(
       "pages",
-      Stored::Digested(digest(Tokenize!(normalised.as_str()))?),
+      // `assembled`: `normalised` is the raw `pages` field, `-` runs collapsed.
+      Stored::Digested(digest(bib_tex_tokens(TeXString::assembled(normalised)))?),
     );
   });
 
@@ -1546,14 +1975,76 @@ LoadDefinitions!({
   );
 
   // Non-standard fields.
-  DefMacro!(
-    "\\bib@field@default@abstract",
-    "\\bib@@field{ltx:bib-extract}[role=abstract]"
+  // The three `ltx:bib-extract` fields are read VERBATIM, not digested as TeX.
+  //
+  // Perl digests them (BibTeX.pool.ltxml L708/716/732) and that is a bug both
+  // engines shared: `abstract` and `keywords` are bulk prose, and real BibTeX
+  // never lets them reach LaTeX at all. A `.bst` declares a closed ENTRY field
+  // list — plain/unsrt/alpha/abbrv all omit `abstract` and `keywords` — so
+  // bibtex(1) drops them when writing the `.bbl`, and pdflatex never sees them.
+  // Verified by running bibtex 0.99d: the `.bbl` for an entry with
+  // `abstract = {... 64.84% ...}` contains author/title/journal/year and no
+  // trace of the abstract.
+  //
+  // Digesting them is therefore an artifact of reading `.bib` DIRECTLY instead
+  // of running bibtex+bst, and it is destructive: a `%` in an abstract (a
+  // percentage — utterly routine) is a TeX comment, so it eats the rest of the
+  // line including the field's closing brace, the entry's group never closes,
+  // and `\end{bib@entry}` fails. Entries then stack open and the WHOLE
+  // bibliography is lost. Witness 2605.00184 (`warm-ref.bib`, a Mendeley export
+  // with an abstract on every entry): 52 entries, 0 emitted, 102 errors — and
+  // same-host Perl is worse, 101 errors plus a `too_many_errors` Fatal and no
+  // output at all. Perl's own `\bib@field@default@abstract` cannot survive its
+  // own input.
+  //
+  // The KEY is still supported, exactly as Perl supports it — the same
+  // `ltx:bib-extract[@role]` element is emitted with its value (recovered via
+  // `bib_extract_text`, Perl's own "IGNORE the tokenized data" idiom — see that
+  // helper). Only the READING changes: `Verbatim` neutralizes `%` and `\`
+  // (`base_parameter_types.rs`, `begin_semiverbatim(Some(&['%', '\\']))`), so
+  // the content cannot break the entry. Nothing renders `ltx:bib-extract` —
+  // no FMT_SPEC in `make_bibliography.rs` queries it — so losing markup inside
+  // it costs nothing.
+  //
+  // SURPASS-PERL, with pdflatex as ground truth rather than preference.
+  // OXIDIZED_DESIGN #73. Guard:
+  // `06_cluster_bibliography::bib_abstract_percent_does_not_sink_the_entry`.
+  DefConstructor!(
+    "\\bib@field@default@abstract Verbatim",
+    "?#rawdata(<ltx:bib-extract role='abstract'>#rawdata</ltx:bib-extract>)()",
+    properties => sub[_args] {
+      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
+      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
+      // element opened with no content is never closed — every later field then
+      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
+      // property undefined makes the `?#rawdata(...)()` conditional pick the
+      // empty branch. Same guard fixture case: `emptyabstract`.
+      let text = bib_extract_text("abstract");
+      Ok(if text.is_empty() {
+        stored_map!()
+      } else {
+        stored_map!("rawdata" => Stored::String(pin(&text)))
+      })
+    }
   );
   DefMacro!("\\bib@field@default@archive", "\\bib@@field{ltx:bib-links}");
-  DefMacro!(
-    "\\bib@field@default@contents",
-    "\\bib@@field{ltx:bib-extract}[role=contents]"
+  DefConstructor!(
+    "\\bib@field@default@contents Verbatim",
+    "?#rawdata(<ltx:bib-extract role='contents'>#rawdata</ltx:bib-extract>)()",
+    properties => sub[_args] {
+      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
+      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
+      // element opened with no content is never closed — every later field then
+      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
+      // property undefined makes the `?#rawdata(...)()` conditional pick the
+      // empty branch. Same guard fixture case: `emptyabstract`.
+      let text = bib_extract_text("contents");
+      Ok(if text.is_empty() {
+        stored_map!()
+      } else {
+        stored_map!("rawdata" => Stored::String(pin(&text)))
+      })
+    }
   );
   DefMacro!(
     "\\bib@field@default@copyright",
@@ -1564,9 +2055,23 @@ LoadDefinitions!({
     "\\bib@field@default@preprint",
     "\\bib@@field{ltx:bib-links}"
   );
-  DefMacro!(
-    "\\bib@field@default@keywords",
-    "\\bib@@field{ltx:bib-extract}[role=keywords]"
+  DefConstructor!(
+    "\\bib@field@default@keywords Verbatim",
+    "?#rawdata(<ltx:bib-extract role='keywords'>#rawdata</ltx:bib-extract>)()",
+    properties => sub[_args] {
+      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
+      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
+      // element opened with no content is never closed — every later field then
+      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
+      // property undefined makes the `?#rawdata(...)()` conditional pick the
+      // empty branch. Same guard fixture case: `emptyabstract`.
+      let text = bib_extract_text("keywords");
+      Ok(if text.is_empty() {
+        stored_map!()
+      } else {
+        stored_map!("rawdata" => Stored::String(pin(&text)))
+      })
+    }
   );
   DefMacro!(
     "\\bib@field@default@language",
@@ -1650,15 +2155,27 @@ LoadDefinitions!({
 
   // \bib@synthesize@mr — Perl L803-810. Emit \bib@@mr if either
   // mrnumber or mrreviewer is set, else nothing.
+  // `untex()`, NOT `to_string()`, on all four MR/Zbl fields. Perl's
+  // `currentBibEntryField` returns a plain STRING (`Pre/BibTeX/Entry.pm` L38:
+  // `$$self{fieldmap}{$key}`), so `Tokenize($mrnumber)` at L806-807 never had a
+  // Tokens round trip to get wrong. Our `current_entry_field` returns `Tokens`,
+  // so recovering Perl's string requires `untex()` — `to_string()` drops the
+  // space that terminates a control word and welds it to the following text.
+  // Witness 2605.11579 (`biblo.bib`), five reviewer names, one per shape:
+  // `MRREVIEWER = {Fran\c cois\ Digne}` -> `undefined:\ccois`;
+  // `{S. I. Gel\cprime fand}` -> `\cprimefand`; `{Sait Hal\i c\i o\u{g}lu}`
+  // -> `\ic` and `\io`; `{Dragomir \v{Z}. \Dbar okovi\'{c}}` -> `\Dbarokovi`.
+  // Third site of this defect after `\bib@@names` (PR #399) and dcolumn/overpic
+  // (PR #400). Guard: `06_cluster_bibliography::bib_mr_reviewer_accent_survives_reversion`.
   DefMacro!("\\bib@synthesize@mr", sub[_args] {
-    let mrnumber = current_entry_field("mrnumber").map(|t| t.to_string());
-    let mrreviewer = current_entry_field("mrreviewer").map(|t| t.to_string());
+    let mrnumber = current_entry_field("mrnumber").map(Tokens::untex_string);
+    let mrreviewer = current_entry_field("mrreviewer").map(Tokens::untex_string);
     if mrnumber.is_none() && mrreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let mr_tks = Tokenize!(mrnumber.unwrap_or_default().as_str());
+    let mr_tks = bib_tex_tokens(mrnumber.unwrap_or_default());
     let rev_tks = match mrreviewer {
-      Some(r) => Tokenize!(r.as_str()),
+      Some(r) => bib_tex_tokens(r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@mr"), vec![mr_tks, rev_tks]);
@@ -1704,14 +2221,14 @@ LoadDefinitions!({
   // \bib@synthesize@zbl — Perl L828-835. Same shape as mr but
   // unconditional `isreview` (no MR-style id stripping).
   DefMacro!("\\bib@synthesize@zbl", sub[_args] {
-    let zblno = current_entry_field("zblno").map(|t| t.to_string());
-    let zblreviewer = current_entry_field("zblreviewer").map(|t| t.to_string());
+    let zblno = current_entry_field("zblno").map(Tokens::untex_string);
+    let zblreviewer = current_entry_field("zblreviewer").map(Tokens::untex_string);
     if zblno.is_none() && zblreviewer.is_none() {
       return Ok(Tokens!());
     }
-    let zbl_tks = Tokenize!(zblno.unwrap_or_default().as_str());
+    let zbl_tks = bib_tex_tokens(zblno.unwrap_or_default());
     let rev_tks = match zblreviewer {
-      Some(r) => Tokenize!(r.as_str()),
+      Some(r) => bib_tex_tokens(r),
       None => Tokens!(),
     };
     let inv = Invocation!(T_CS!("\\bib@@zbl"), vec![zbl_tks, rev_tks]);
@@ -1845,20 +2362,24 @@ LoadDefinitions!({
         if origtype != resolved_type { format!("\\bib@field@{}@{}", origtype, field) } else { String::new() },
         format!("\\bib@field@default@{}", field),
       ];
-      let mut handler: Option<&str> = None;
+      let mut handler: Option<(&str, Rc<dyn Definition>)> = None;
       for c in candidates.iter() {
         if c.is_empty() { continue; }
-        if lookup_definition(&T_CS!(c.as_str()))?.is_some() {
-          handler = Some(c.as_str());
+        if let Some(def) = lookup_definition(&T_CS!(c.as_str()))? {
+          handler = Some((c.as_str(), def));
           break;
         }
       }
+      let value = &undouble_escaped_ampersand(value);
       match handler {
-        Some(h) => {
-          lines.push(format!("\\csname {}\\endcsname{{{}}}", &h[1..], value));
+        Some((h, def)) => {
+          let v = bib_field_source(value, &def);
+          lines.push(format!("\\csname {}\\endcsname{{{}}}", &h[1..], v));
         },
         None => {
           // Fallback per Perl L157: `\bib@field@default@default{field}{value}`.
+          // Both of its slots are `Verbatim`, so the value is passed raw — the
+          // same rule `bib_field_source` applies, reached without a lookup.
           lines.push(format!(
             "\\csname bib@field@default@default\\endcsname{{{}}}{{{}}}", field, value));
         },
@@ -1885,7 +2406,51 @@ LoadDefinitions!({
     drop(entry);
     // Perl L165-166: `openMouth(Mouth->new($tex))` — autoclose (Perl passes
     // no `$noautoclose`), so the mouth pops itself once drained.
-    open_mouth(Mouth::new(&lines.join("\n"), None)?, true);
+    //
+    // OPAQUE to a balanced read, which is what Perl's readBalanced is for every
+    // mouth (Gullet.pm L465-472 reads the current mouth only). This entry is a
+    // self-contained input, not a continuation of the enclosing wrapper, so an
+    // unbalanced field must cost only the rest of THIS entry. Left transparent,
+    // one runaway argument — a bare `%` in a title is enough, since BibTeX has
+    // no comment syntax inside an entry but TeX does — consumed every following
+    // `\ProcessBibTeXEntry` and `\end{bibtex@bibliography}` too, so a 3-entry
+    // `.bib` produced ONE entry and a single error where Perl produces all three
+    // and four errors. Guard: `55_bibtex::runaway_field_costs_only_its_own_entry`.
+    //
+    // `% & # _` are read as ordinary characters in this mouth — treatment 1 of
+    // OXIDIZED_DESIGN #74, "be `bibtex`". BibTeX's lexer has no comment syntax
+    // inside an entry, no alignment, no parameters and no subscripts, so the
+    // values `PreBibTeX` just handed us hold all four literally. Under TeX's
+    // catcodes each misfires: `%` (14) comments out the rest of its line — the
+    // field's own closing `}` included — so the entry's group never closes and
+    // every later entry nests inside it; `&` (4) is a stray alignment tab and
+    // is dropped, so "Taylor & Francis" printed as "Taylor Francis"; `#` (6)
+    // reaches the Stomach as a parameter; `_` (8) is a subscript outside math.
+    //
+    // Witnesses — `%`: 2605.01196 (`doi={%doi:...}`) and 2605.02131 (a
+    // percent-encoded URL in a `title`'s `\href`), 28 errors each with Perl
+    // breaking identically (29 / 31 same-host), 2605.00879 (103).
+    // `&`: 2605.01936 (7), 2605.06249 (3), 2605.00462 / 2605.03054 /
+    // 2605.06624 / 2605.08753 / 2605.10409 (1 each).
+    // `_`: 2605.06926 (8), 2605.01936 (6), 2605.04604 / 2605.08986 (2 each),
+    // 2605.11300 / 2605.05898 (1 each).
+    // Same-host Perl and bibtex+pdflatex break the same way on all three — the
+    // decision that a field's content is DATA is what overrides them, and it is
+    // ours to make because we read the `.bib` directly.
+    //
+    // Treatment 2 (`escape_bib_data_specials`, applied to the values written
+    // into `lines` above) makes the synthesized `.bbl` valid TeX in the first
+    // place; this mouth is the safety net under it, covering the values that
+    // deliberately go through unescaped — a `url` href, a `doi` id, the inside
+    // of a `\url{…}`.
+    //
+    // Guards: `06_cluster_bibliography::bib_field_percent_is_an_ordinary_character`,
+    // `::bib_bare_ampersand_is_literal_data`, `::bib_field_specials_are_data_not_tex`.
+    open_mouth_with(
+      Mouth::new(&lines.join("\n"), None)?.with_bib_data_literals(),
+      true,
+      BalancedBoundary::Opaque,
+    );
     Ok(Tokens!())
   });
 
@@ -1909,10 +2474,26 @@ LoadDefinitions!({
   // `{bibtex@bibliography}` environment — Perl
   // `BibTeX.pool.ltxml:175-183`. The outer wrapper for the entries
   // emitted by `Pre::BibTeX::toTeX`. Delegates the heavy lifting
-  // (id allocation, title resolution, bibstyle/citestyle lookup,
-  // pseudo-bibitem fixup) to `before_digest_bibliography` /
-  // `begin_bibliography` in `latex_constructs.rs`, which already
-  // port the Perl helpers used by `\thebibliography`.
+  // (id allocation, title resolution, bibstyle/citestyle lookup) to
+  // `before_digest_bibliography` / `begin_bibliography_clean` in
+  // `latex_constructs.rs`, which already port the Perl helpers used by
+  // `\thebibliography`.
+  //
+  // OXIDIZED_DESIGN #75: `begin_bibliography_clean`, NOT
+  // `begin_bibliography` — the `setupPseudoBibitem` half is deliberately
+  // skipped here. Perl `BibTeX.pool.ltxml:183` calls the full
+  // `beginBibliography`, which `\let`s `\par` AND `\\` to
+  // `\par@in@bibliography`, a heuristic that starts a fresh
+  // `\save@bibitem{}` whenever it fires. That rescue exists for
+  // HAND-WRITTEN `thebibliography` lists whose author separated entries
+  // with blank lines instead of `\bibitem`. This body is machine-generated
+  // — one `\ProcessBibTeXEntry{key}` per line, never a missing `\bibitem`
+  // — so the heuristic can only misfire, and it does: a blank line or a
+  // `\\` inside a `.bib` FIELD VALUE injects a spurious `<ltx:bibitem>`
+  // mid-field, which the model rejects and which is then never closed, so
+  // every later entry nests inside the dangling `<ltx:surname>` /
+  // `<ltx:bib-title>` / `<ltx:bib-note>`.
+  // Witnesses: 2605.03313 (7 errors), 2605.03693 (7), 2605.11080 (1).
   DefEnvironment!("{bibtex@bibliography}",
   "<ltx:bibliography xml:id='#id' \
      bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
@@ -1923,7 +2504,7 @@ LoadDefinitions!({
     crate::latex_constructs::before_digest_bibliography()?;
   },
   after_digest_begin => sub[whatsit] {
-    crate::latex_constructs::begin_bibliography(whatsit)?;
+    crate::latex_constructs::begin_bibliography_clean(whatsit)?;
   });
 });
 
@@ -2188,6 +2769,203 @@ mod tests {
     assert_eq!(xpath, "ltx:bib-related[@role='host' and @type='book']");
   }
 
+  // --- escape_bib_data_specials (the `.bib`-data -> TeX-source boundary) ---
+
+  #[test]
+  fn escape_specials_bare_are_escaped() {
+    assert_eq!(
+      escape_bib_data_specials("AT&T AT1G01010_v2 95% #3"),
+      r"AT\&T AT1G01010\_v2 95\% \#3"
+    );
+  }
+
+  /// `^` is `_`'s twin — data to `bibtex(1)`, "Script … can only appear in math
+  /// mode" to TeX — but its escape is NOT `\` + the character: `\^` is the
+  /// circumflex accent, so `\^o` would silently render "ô" instead of "^o".
+  /// The braces are load-bearing too: without them `\textasciicircum` would
+  /// absorb a following letter into the control word.
+  #[test]
+  fn escape_specials_caret_is_textasciicircum_not_an_accent() {
+    assert_eq!(
+      escape_bib_data_specials("x^2 and ^o"),
+      r"x\textasciicircum{}2 and \textasciicircum{}o"
+    );
+    assert!(!escape_bib_data_specials("^o").starts_with(r"\^"));
+  }
+
+  /// Idempotency. Most real `.bib` files already write `\&`, `\%`, `\_` — a
+  /// blind escaper would turn `\&` into `\\&`, i.e. a line break followed by an
+  /// ampersand. Escaping twice must equal escaping once.
+  #[test]
+  fn escape_specials_is_idempotent() {
+    let once = escape_bib_data_specials("AT&T at 95% with x_1 and x^2");
+    assert_eq!(escape_bib_data_specials(&once), once);
+    assert_eq!(
+      escape_bib_data_specials(r"AT\&T at 95\% with x\_1"),
+      r"AT\&T at 95\% with x\_1"
+    );
+    // Both spellings a `.bib` uses for an already-escaped caret survive: the
+    // control WORD is copied whole, the control SYMBOL as a pair.
+    assert_eq!(
+      escape_bib_data_specials(r"x\textasciicircum{}2"),
+      r"x\textasciicircum{}2"
+    );
+    assert_eq!(escape_bib_data_specials(r"x\^{}2"), r"x\^{}2");
+  }
+
+  /// The tricky case the idempotency rule has to get right: in `\\&` the `\\`
+  /// is a genuine line break, so the `&` after it is BARE and must be escaped —
+  /// the second backslash is not an escape character, it is escaped itself.
+  #[test]
+  fn escape_specials_double_backslash_then_bare_special() {
+    assert_eq!(
+      escape_bib_data_specials(r"break \\& more"),
+      r"break \\\& more"
+    );
+    assert_eq!(escape_bib_data_specials(r"break \\_x"), r"break \\\_x");
+    assert_eq!(
+      escape_bib_data_specials(r"break \\^x"),
+      r"break \\\textasciicircum{}x"
+    );
+  }
+
+  /// Math is the other hazard: `_`/`^` inside `$…$` are a real subscript and
+  /// superscript and must stay catcode 8/7, while the same characters outside
+  /// are data.
+  #[test]
+  fn escape_specials_skips_math() {
+    assert_eq!(
+      escape_bib_data_specials("Bounds on $x_1+x_2$ for AT1G_v2"),
+      r"Bounds on $x_1+x_2$ for AT1G\_v2"
+    );
+    assert_eq!(
+      escape_bib_data_specials("display $$a_1$$ then b_2"),
+      r"display $$a_1$$ then b\_2"
+    );
+    assert_eq!(
+      escape_bib_data_specials(r"open \(x_1\) then y_2"),
+      r"open \(x_1\) then y\_2"
+    );
+    assert_eq!(
+      escape_bib_data_specials("Bounds on $x^2+y_1$ for 10^6 cells"),
+      r"Bounds on $x^2+y_1$ for 10\textasciicircum{}6 cells"
+    );
+    assert_eq!(
+      escape_bib_data_specials(r"open \[x^2\] then y^3"),
+      r"open \[x^2\] then y\textasciicircum{}3"
+    );
+  }
+
+  // --- unmatched `$` is currency, not a math shift (OXIDIZED_DESIGN #79) ----
+  //
+  // One stray `$` used to open an inline-math group that never closed, and
+  // since a `.bib` is digested as ONE unit the leak crossed `\end{bib@entry}`
+  // and swallowed every following entry: ~100 `isn't allowed in <ltx:XMath>`,
+  // the 100-error cap, and a Fatal. Witness 2605.00166 (0 -> 103 errors).
+
+  /// A balanced field must keep behaving exactly as before — this is the
+  /// regression risk of the whole change.
+  #[test]
+  fn escape_specials_balanced_math_is_untouched() {
+    assert_eq!(
+      escape_bib_data_specials("Bounds on $x_1+x_2$ for AT1G_v2"),
+      r"Bounds on $x_1+x_2$ for AT1G\_v2"
+    );
+    assert_eq!(
+      escape_bib_data_specials("display $$a_1$$ then b_2"),
+      r"display $$a_1$$ then b\_2"
+    );
+    // Four toggles, all paired.
+    assert_eq!(
+      escape_bib_data_specials("$X$-band and $Y$-band"),
+      "$X$-band and $Y$-band"
+    );
+  }
+
+  /// The witness: a lone currency dollar in an `annote`.
+  #[test]
+  fn escape_specials_lone_dollar_is_currency_not_math() {
+    assert_eq!(
+      escape_bib_data_specials("costs of the order of $10 million."),
+      r"costs of the order of \$10 million."
+    );
+    // …and the escaped form stays escaped (idempotency).
+    assert_eq!(
+      escape_bib_data_specials(r"costs of the order of \$10 million."),
+      r"costs of the order of \$10 million."
+    );
+  }
+
+  /// With an odd count, the digit tell picks the currency dollar and leaves a
+  /// genuine math span alone — in BOTH orders, which is why "demote the last
+  /// toggle" alone would be wrong.
+  #[test]
+  fn escape_specials_digit_dollar_is_preferred_over_the_last() {
+    assert_eq!(escape_bib_data_specials("$x$ costs $10"), r"$x$ costs \$10");
+    assert_eq!(
+      escape_bib_data_specials("costs $10 and $x$"),
+      r"costs \$10 and $x$"
+    );
+  }
+
+  #[test]
+  fn escape_specials_all_currency_dollars_demote() {
+    assert_eq!(
+      escape_bib_data_specials("$1 and $2 and $3"),
+      r"\$1 and \$2 and \$3"
+    );
+  }
+
+  /// No digit anywhere: the trailing toggle is the one left without a partner.
+  #[test]
+  fn escape_specials_unmatched_dollar_without_a_digit_falls_back_to_the_last() {
+    assert_eq!(escape_bib_data_specials("a $ b"), r"a \$ b");
+    assert_eq!(
+      escape_bib_data_specials("$x$ and a stray $ here"),
+      r"$x$ and a stray \$ here"
+    );
+  }
+
+  /// Demoting must not strand the `_`/`^` rule: text after the demoted `$` is
+  /// OUT of math, so its scripting characters are data again.
+  #[test]
+  fn escape_specials_demoted_dollar_leaves_following_text_out_of_math() {
+    assert_eq!(
+      escape_bib_data_specials("cost $10 for x_1"),
+      r"cost \$10 for x\_1"
+    );
+  }
+
+  /// Markup passes through by construction — the escaper never touches `\`,
+  /// `{` or `}`, so control words and their braces are untouched, and a
+  /// space-form accent keeps the space that terminates its control word.
+  #[test]
+  fn escape_specials_leaves_markup_and_accents_alone() {
+    assert_eq!(
+      escape_bib_data_specials(r"\emph{Drosophila} genetics"),
+      r"\emph{Drosophila} genetics"
+    );
+    assert_eq!(escape_bib_data_specials(r"{\v S}pakov"), r"{\v S}pakov");
+    assert_eq!(escape_bib_data_specials(r"\ndash 693"), r"\ndash 693");
+    // …but a special INSIDE an ordinary command's argument is still data.
+    assert_eq!(escape_bib_data_specials(r"\emph{AT&T}"), r"\emph{AT\&T}");
+  }
+
+  /// url.sty reads `\url`'s argument verbatim, so it is a nested DATA region
+  /// and a percent-encoded `%20` inside it must NOT become `\%20`.
+  /// `\href`'s SECOND argument is prose and is still escaped.
+  #[test]
+  fn escape_specials_skips_a_verbatim_argument() {
+    assert_eq!(
+      escape_bib_data_specials(r"\url{http://x.org/a%20b?c=1&d=2^3}"),
+      r"\url{http://x.org/a%20b?c=1&d=2^3}"
+    );
+    assert_eq!(
+      escape_bib_data_specials(r"\href{http://x.org/a%20b}{AT&T}"),
+      r"\href{http://x.org/a%20b}{AT\&T}"
+    );
+  }
+
   // --- recase_title (Perl `\bib@@title` body) ---
 
   #[test]
@@ -2248,6 +3026,70 @@ mod tests {
       recase_title("THE {LaTeX} BOOK", TitleCaseMode::Capitalize1),
       "THE {LaTeX} book"
     );
+  }
+
+  /// `recase_title` must survive EVERY character width at every scanner
+  /// position — the deterministic stand-in for a property test.
+  ///
+  /// The hazard is small and fully enumerable (4 widths x 6 positions x 5
+  /// modes), so a table gives complete coverage of it where random generation
+  /// would only sample; and it needs no new dev-dependency, which for this tree
+  /// means no addition to the license inventory or `cargo-deny` surface.
+  ///
+  /// What it is guarding: the scanner used to walk raw BYTE indices, and its
+  /// `\<char>` arm advanced a fixed one byte past the backslash — fine for
+  /// `\&`, fatal for `\“`, where the cursor landed inside the codepoint and the
+  /// next `&title[a..b]` slice PANICKED, aborting the whole document. Witness
+  /// 2605.22125 from the 2026-07-26 sandbox sweep. The scanner is now written
+  /// on `char_indices` (see `CharCursor`), so the class is gone structurally
+  /// rather than patched at the one arm that happened to fire.
+  ///
+  /// Perl is immune by construction: `\bib@@title` (BibTeX.pool.ltxml
+  /// L293-333) works in characters, not bytes.
+  #[test]
+  fn recase_title_handles_every_character_width_at_every_position() {
+    // One representative per UTF-8 encoded length.
+    let chars = ['a', 'é', '“', '𝔄'];
+    let modes = [
+      TitleCaseMode::AsIs,
+      TitleCaseMode::Uppercase,
+      TitleCaseMode::Lowercase,
+      TitleCaseMode::Capitalize,
+      TitleCaseMode::Capitalize1,
+    ];
+    for c in chars {
+      // Each position exercises a different scanner arm: after a backslash
+      // (the arm that broke), inside a word run, in a brace group, in math,
+      // as bare punctuation, and at end-of-input.
+      for title in [
+        format!("\\{c} tail"),      // `\<char>` escape  <-- the witness shape
+        format!("word\\{c}more"),   // escape mid-word
+        format!("{{brace {c}}} x"), // inside a braced group
+        format!("$math {c}$ x"),    // inside math
+        format!("bare {c} text"),   // standalone
+        format!("trailing \\{c}"),  // escape at end of input
+      ] {
+        for mode in modes {
+          // Returning at all is the primary assertion: the bug was a panic.
+          let out = recase_title(&title, mode);
+          // And nothing may be dropped — a "fix" that skips the escape would
+          // pass a panic-only check while silently eating the author's text.
+          // Checked across case forms, since re-casing is the function's JOB:
+          // `Uppercase` turns `a` into `A`, which is not a loss.
+          let survives = out.contains(c)
+            || c.to_lowercase().all(|lc| out.contains(lc))
+            || c.to_uppercase().all(|uc| out.contains(uc));
+          assert!(
+            survives,
+            "recase_title({title:?}, {mode:?}) lost {c:?}: {out:?}"
+          );
+        }
+      }
+    }
+    // A lone trailing backslash: the `peek_second` guard's edge.
+    for mode in modes {
+      assert_eq!(recase_title("x \\", mode).matches('\\').count(), 1);
+    }
   }
 
   #[test]

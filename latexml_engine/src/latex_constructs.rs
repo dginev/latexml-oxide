@@ -669,7 +669,9 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     if let Some((final_line, remaining)) = line.split_once(end) {
       line = final_line;
       unread_one(T_CR!());
-      unread(Tokenize!(remaining));
+      // `assembled`: `remaining` is a slice of the raw verbatim line — source
+      // text straight off the mouth, never a flattened `Tokens`.
+      unread(Tokenize!(TeXString::assembled(remaining.to_string())));
       exiting = true;
     }
     // The raw chars will still have to be decoded (but not space!!)
@@ -1300,7 +1302,9 @@ pub fn use_theorem_style(name: &str) {
             },
             // Values round-tripping through tokens — use internal cattable so
             // any `\lx@…` names re-tokenize as single CS (not `\lx`+`@…`).
-            _ => mouth::tokenize_internal(&val.to_string()),
+            // `assembled`: the `Stored::Tokens` case is taken by the arm above,
+            // so what reaches here is a scalar (string/number) rendering.
+            _ => mouth::tokenize_internal(TeXString::assembled(val.to_string())),
           };
           let _ = assign_register(&key, RegisterValue::Tokens(tokens), None, vec![]);
         } else {
@@ -1393,7 +1397,9 @@ pub fn define_new_theorem(
       DefMacro!(
         T_CS!(s!("\\the{counter}")),
         None,
-        Some(ExpansionBody::Tokens(mouth::tokenize_internal(&the_counter_body))),
+        Some(ExpansionBody::Tokens(mouth::tokenize_internal(
+          TeXString::assembled(the_counter_body)
+        ))),
         scope => Some(Scope::Global)
       );
     }
@@ -1531,7 +1537,9 @@ pub fn define_new_theorem(
     DefMacro!(
       format_cs_token,
       params,
-      Some(ExpansionBody::Tokens(mouth::tokenize_internal(&fmt_str))),
+      Some(ExpansionBody::Tokens(mouth::tokenize_internal(
+        TeXString::assembled(fmt_str)
+      ))),
       scope => Some(Scope::Global)
     );
   }
@@ -1669,7 +1677,7 @@ pub fn define_new_theorem(
       .map(|n| n.revert().map(|t| t.to_string()).unwrap_or_default())
       .unwrap_or_default();
     let digest_str = s!("\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}");
-    let digested = digest(mouth::tokenize_internal(&digest_str))?;
+    let digested = digest(mouth::tokenize_internal(TeXString::assembled(digest_str)))?;
     Ok(vec![digested])
   });
   options.after_digest_begin.push(after_digest_begin_closure);
@@ -1714,7 +1722,9 @@ pub fn define_new_theorem(
               T_BEGIN!(),
             ]);
             let mut full_toks = tag_tokens.unlist();
-            full_toks.extend(mouth::tokenize_internal(&thmset_for_tags).unlist());
+            full_toks.extend(
+              mouth::tokenize_internal(TeXString::assembled(thmset_for_tags.clone())).unlist(),
+            );
             full_toks.push(T_END!());
             full_toks.push(T_END!());
             let tags = digest(Tokens::new(full_toks))?;
@@ -2840,6 +2850,12 @@ LoadDefinitions!({
   // after_digest below). Witness: 15 wp4 papers like 2305.09030 ship
   // `\magnification=\magstep1` and previously failed with
   // `Error:undefined:\magnification` under the worker.
+  //
+  // `latex_kernel::autoload_latex_kernel` is a second route into the same
+  // state (LaTeX.pool loaded in a plain-TeX document), so the deferral is
+  // load-bearing there too. It cannot fire ON `\magnification` itself:
+  // latex.ltx does not define it, so it is absent from the kernel dump that
+  // the autoload's membership test consults — checked when that hook landed.
   Let!("\\@empty", "\\lx@empty");
   Let!("\\@ifundefined", "\\lx@ifundefined");
   //**********************************************************************
@@ -4856,24 +4872,23 @@ LoadDefinitions!({
   // arXiv:2507.06392 / .09311 (ifacconf.cls — no Rust binding).
   DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
 
-  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — Cyrillic
-  // transliteration markers used in BibTeX-generated bibliographies
-  // (cyracc.def L53-55 defines them as math-mode prime/dprime). They
-  // appear in Russian-authored references at the BBL stage where no
-  // Cyrillic encoding is otherwise loaded. Stub each as the Unicode
-  // modifier-letter-prime so the BBL renders cleanly. Witnesses:
-  // arXiv:2508.13753 / .20226 / 2509.07628 — 1 undefined-CS error
-  // each, Perl LaTeXML also lacks a universal def. Two-grep audit:
-  // not in Perl `*.ltxml`, defined in TL `cyracc.def` for math
-  // context only. Per WISDOM #50 the visual intent (apostrophe-like
-  // mark) is what survives the XML→HTML pipeline.
-  DefMacro!("\\cprime", "\u{02B9}");
-  DefMacro!("\\Cprime", "\u{02B9}");
-  DefMacro!("\\cdprime", "\u{02BA}");
-  DefMacro!("\\Cdprime", "\u{02BA}");
-  // `\polhk{char}` — Polish hook (ogonek) accent. Defined in tipa.sty
-  // for TS1-encoded composite output. Bibliographies use it directly
-  // (e.g. `\polhk{a}` → ą). Stub as identity so the bare char shows.
+  // NOTE: the `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` Cyrillic
+  // transliteration family used to live here, which kept a non-Perl definition
+  // in a file that mirrors `latex_constructs.pool.ltxml` byte-for-byte. They are
+  // not LaTeX kernel commands at all — they belong to `mathscinet.sty` (AMS, in
+  // the amsrefs bundle), now bound at
+  // `latexml_package/src/package/mathscinet_sty.rs`, which all three witnesses
+  // (arXiv:2508.13753 / .20226 / 2509.07628) actually load. An always-on stub
+  // for `.bib`-borne use in a document loading no package was tried in
+  // `latex_constructs_rust_only.rs` and retracted 2026-07-27 — see the
+  // retraction comment there for why it is no longer needed.
+
+  // `\polhk{char}` — Polish hook (ogonek) accent. Its real home is
+  // `mathscinet.sty` L111-113 (NOT tipa.sty, as this comment said before the
+  // source was read), where every encoding branch defines it as the kernel
+  // accent `\k` — and `mathscinet_sty.rs` binds it that way. This identity stub
+  // stays as the fallback for a document that uses `\polhk{a}` without loading
+  // the package (bibliographies do), so the bare char still shows.
   // Witnesses: 2 papers in Stage-15 v3.
   def_macro_identity("\\polhk{}")?;
   // \@personname (now \lx@personname) and the ltx:personname sanitize Tag
@@ -6135,7 +6150,8 @@ LoadDefinitions!({
         other => other.to_string(),
       };
       let new_id_macro = format!("{}.\\@equation@ID", id_str);
-      def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
+      def_macro(T_CS!("\\theequation@ID"), None,
+        mouth::tokenize_internal(TeXString::assembled(new_id_macro)), None)?;
     }
   });
   Tag!("ltx:equationgroup", auto_close => true);
@@ -6672,7 +6688,52 @@ LoadDefinitions!({
   // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
 
   def_primitive_noop("\\UndeclareTextCommand{}{}")?;
-  DefMacro!("\\UseTextSymbol{}{}", "{\\fontencoding{#1}#2}");
+  // Perl `latex_constructs.pool.ltxml:2642`:
+  //   DefMacro('\UseTextSymbol{}{}', '{\fontencoding{#1}#2}');
+  //
+  // Perl's body verbatim is `{\fontencoding{#1}#2}`, and that shape CANNOT
+  // TERMINATE when it is reached from a pure-expansion collect loop: `{` and
+  // `\fontencoding` are non-expandable, so the loop gathers them without
+  // executing, the font encoding never changes, and the inner `#2` re-enters
+  // `\@changed@cmd` under the same encoding — forever.
+  //
+  // The live trigger is `beginSemiverbatim` (Perl `State.pm:597`, faithfully
+  // ported at `state.rs:2691`) merging `encoding => 'ASCII'` — a stay-ASCII
+  // neutralization, not a real LaTeX text encoding. So inside a Semiverbatim
+  // argument (a `\cite` key, a `\usepackage` option value) `\cf@encoding` is
+  // `ASCII`, `\ASCII\i` is undefined, and the `?`-fallback spins.
+  //
+  // Perl has the SAME looping shape available and simply reaches it less
+  // often: measured 2026-07-26 against a format-equipped Perl 0.8.8 built with
+  // `cpanm --build-arg formats .`, its own `latex_dump.pool.ltxml` carries
+  // `\?\i -> \UseTextSymbol{OT1}\i` (72 `UseTextSymbol` records). So the dump
+  // is NOT the differentiator — an earlier draft of this comment claimed it
+  // was, and that was wrong. What is measured, on that one Perl install:
+  //   * `\usepackage[pdfauthor={Mar{\'\i}n}]{hyperref}` — Perl HANGS (exit 124)
+  //     exactly as we did: SHARED, the KNOWN_PERL_ERRORS entry.
+  //   * `\cite{garc<U+00ED>a2024key}` under `[OT1]{fontenc}` — Perl converts
+  //     cleanly in 0.89 s (`bibrefs="garcía2024key"`) while we looped:
+  //     GENUINE-RUST-ONLY. Something in our `\cite`-key read reaches the
+  //     encoding dispatch where Perl's does not; that residual delta is not
+  //     yet pinned and is worth its own look.
+  //
+  // Either way the loop is a property of this macro's SHAPE, so fix it here:
+  // resolve to the direct glyph — which is precisely what Perl's own
+  // `\DeclareTextSymbolDefault` (`latex_constructs.pool.ltxml:2684-2688`,
+  // ported above) makes `\?<cs>` expand to — and keep Perl's literal body as
+  // the fallback when no such glyph exists. The observable result therefore
+  // matches Perl wherever Perl terminates, and terminates where Perl does not.
+  //
+  // Witness 2606.11784 (`\usepackage[OT1]{fontenc}` + a literal `í` U+00ED in
+  // a `\cite` key, mapped onto the text-symbol chain by the `.dfu`):
+  // `Fatal:Timeout:PushbackLimit` with no output before, 0 errors / 519 KB
+  // after. Also breaks the SHARED hang 2004.08143 — a surpass-Perl reliability
+  // win, using the cure KNOWN_PERL_ERRORS "text-symbol CS in a Semiverbatim
+  // argument" prescribes.
+  DefMacro!(
+    "\\UseTextSymbol{}{}",
+    r"\expandafter\ifx\csname #1\string#2\endcsname\relax{\fontencoding{#1}#2}\else\csname #1\string#2\endcsname\fi"
+  );
   DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
@@ -7245,10 +7306,10 @@ LoadDefinitions!({
       let thectrid = s!("\\the{}@ID", ctr_str);
       let _ = def_macro(T_CS!(thectrid), None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
-          Ok(mouth::tokenize_internal(&s!(
+          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
             "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
             within_for_id, within_for_id, clean_prefix, ctr_for_id
-          )))
+          ))))
         }))),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
     }
@@ -7282,9 +7343,9 @@ LoadDefinitions!({
       let thectrid = s!("\\the{}@ID", ctr_str);
       let _ = def_macro(T_CS!(thectrid), None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
-          Ok(mouth::tokenize_internal(&s!(
+          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
             "{}\\csname @{}@ID\\endcsname", clean_prefix, ctr_for_id
-          )))
+          ))))
         }))),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
     }

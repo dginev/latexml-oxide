@@ -1,0 +1,132 @@
+% A `.bib` field value that contains a BLANK LINE, or a `\\`, must not start a
+% new bibliography item.
+%
+% `{bibtex@bibliography}` used to run Perl's `setupPseudoBibitem`
+% (`latex_constructs.pool.ltxml` L4028-4047), which `\let`s BOTH `\par` and `\\`
+% to `\par@in@bibliography` — a heuristic that emits a fresh `\save@bibitem{}`
+% whenever it fires. It exists to rescue HAND-WRITTEN `thebibliography` lists
+% whose author separated entries with blank lines instead of `\bibitem`. A
+% `.bib`-derived bibliography is machine-generated (one `\ProcessBibTeXEntry`
+% per line), so it has no missing `\bibitem` to rescue and the heuristic can
+% only misfire — a blank line or a `\\` inside a FIELD VALUE injected an
+% `<ltx:bibitem>` in the middle of `<ltx:surname>` / `<ltx:bib-title>` /
+% `<ltx:bib-note>`, which the model rejects. See OXIDIZED_DESIGN #75.
+%
+% The blank lines and the `\\` are load-bearing. Reflowing any field onto one
+% line removes the `\par` and the fixture stops reproducing. Do not tidy them.
+%
+% Ground truth is bibtex(1), not Perl — same-host Perl 0.8.8 emits exactly the
+% same malformed errors on this file. bibtex 0.99d compresses every white-space
+% run in a field value to a single space, so the blank line never reaches TeX
+% at all, and it copies `\\` through verbatim, where `thebibliography` renders
+% it as a line break inside the item. Verified by running bibtex 0.99d over the
+% `blankline`-shaped entry: the generated `.bbl` reads
+% `Debarati Das and Michal Koucky.` / `A dynamic structure for one-dimensional
+% top-k range reporting.` on single lines.
+%
+% Witnesses, all from arXiv 2605:
+%   `t14b` / `smo15`  — 2605.03313 `ref.bib` (7 errors: 5 blank-line entries)
+%   `Girolami05`      — 2605.03693 `Bibliography-MM-MC.bib` (7 errors, one entry)
+%   `BertiRingdown`   — 2605.11080 `reference.bib` (1 error, the `\\` in a note)
+% `survivor` is the containment canary: before the fix the injected item stayed
+% open, so every later entry nested inside the dangling element.
+%
+% `booktitle`/`journal` are spelled out here; the 2605.03313 original used
+% `@string` abbreviations (`pods`, `kdd`) that are beside the point.
+
+@inproceedings{t14b,
+	title        = {
+		A dynamic {I/O}-efficient structure for one-dimensional top-k range
+
+		reporting
+	},
+	author       = {Yufei Tao},
+	year         = 2014,
+	booktitle    = {Principles of Database Systems},
+	pages        = {256--265}
+}
+
+@article{smo15,
+	title        = {Search Result Diversification},
+	author       = {
+		Rodrygo L. T. Santos and
+
+		Craig MacDonald and
+
+		Iadh Ounis
+	},
+	year         = 2015,
+	journal      = {Found. Trends Inf. Retr.},
+	volume       = 9,
+	number       = 1,
+	pages        = {1--90}
+}
+
+@article{Girolami05,
+	Annote = {Builds a mixed-membership model where the basis profiles are markov chains of varying order.
+Uses two types of estimation: Variational approximation, and maximum a posteriori.
+
+Compares models on perplexity, defined as the exponential of the negative-normalized log-likelihood.
+
+For all the data sets, the mixed-membership model offers better results.},
+	Author = {Mark Girolami and Ata Kaban},
+	Journal = {Data Mining and Knowledge Discovery},
+	Pages = {175-196},
+	Title = {Sequential Activity Profiling: Latent Dirichlet Allocation of Markov Chains},
+	Volume = {10},
+	Year = {2005}
+}
+
+@misc{BertiRingdown,
+    note = {\url{https://pages.jh.edu/eberti2/ringdown} \\
+    \url{https://centra.tecnico.ulisboa.pt/network/grit/files/ringdown}}
+}
+
+% An EMPTY name part is the other way an `<ltx:surname>` could in principle be
+% left open — `insert_element(tag, [], attrs)` opens an element and leaves it
+% open on empty content, mirroring Perl `insertElement($tag, undef, ...)`. These
+% five entries pin that it cannot happen here: `\bib@@names` never invokes
+% `\bib@surname`/`\bib@given`/`\bib@lineage` for an empty part (Perl
+% `BibTeX.pool.ltxml` L912-914 `$surname ? Invocation(...) : ()`, ported as
+% `if !name.surname.is_empty()`), and the name-part constructors are a paired
+% `<tag>#1</tag>` that lowers to OpenElement+Absorb+CloseElement — closed even
+% with empty content. Measured: 0 errors, and the elements that ARE emitted are
+% all closed. Keep them; they are what makes the guard a resilience test rather
+% than a single-trigger one.
+@article{emptyauthor,
+	title        = {Wholly empty author},
+	author       = {},
+	year         = 2020
+}
+
+@article{trailingcomma,
+	title        = {Surname then nothing},
+	author       = {Smith, },
+	year         = 2021
+}
+
+@article{leadingcomma,
+	title        = {Nothing then given},
+	author       = {, John},
+	year         = 2022
+}
+
+@article{trailingand,
+	title        = {A trailing and},
+	author       = {Alice Brown and },
+	year         = 2023
+}
+
+@article{doubleand,
+	title        = {Two ands in a row},
+	author       = {Alice Brown and and Bob Green},
+	year         = 2024
+}
+
+@article{survivor,
+	title        = {The entry after the injected item},
+	author       = {Jane Q. Fixture},
+	year         = 2026,
+	journal      = {Journal of Containment},
+	pages        = {1--2}
+}

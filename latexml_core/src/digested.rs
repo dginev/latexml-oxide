@@ -530,7 +530,7 @@ const FP_BUDGET: u32 = 48;
 /// `FP_BUDGET` (the estimate is computed only on a small *sample* of the box
 /// list, so a deeper walk is affordable and improves accuracy for nested
 /// boxes).
-const EB_BUDGET: u32 = 256;
+pub(crate) const EB_BUDGET: u32 = 256;
 
 impl Digested {
   /// immutably borrow the inner Digested data

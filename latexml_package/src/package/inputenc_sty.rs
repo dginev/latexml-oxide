@@ -27,7 +27,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   // or more likely, treating the bytes as (misinterpreted?) utf8?
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
   assign_value("INPUT_ENCODING", encoding.to_string(), None);
-  let encoding_tokenized = TokenizeInternal!(encoding);
+  let encoding_tokenized = TokenizeInternal!(TeXString::assembled(encoding.to_string()));
   def_macro(T_CS!("\\inputencodingname"), None, encoding_tokenized, None)
 }
 

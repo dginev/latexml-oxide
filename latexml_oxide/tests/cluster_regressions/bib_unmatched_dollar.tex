@@ -1,0 +1,9 @@
+% Driver for `bib_unmatched_dollar.bib`. An unmatched `$` in a field is a
+% currency sign, and must not open a math group that swallows the rest of the
+% bibliography. See the `.bib` header and OXIDIZED_DESIGN #79.
+\documentclass{article}
+\begin{document}
+See \cite{currency,mathandcurrency,straynodigit,balancedmath,aftermath}.
+\bibliographystyle{plain}
+\bibliography{bib_unmatched_dollar}
+\end{document}

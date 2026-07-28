@@ -18,7 +18,7 @@ use crate::{
   common::{error::*, locator::Locator, numeric_ops::NumericOps, object::Object},
   state::*,
   token::*,
-  tokens::{NO_TOKENS, Tokens},
+  tokens::{NO_TOKENS, TeXString, Tokens},
   util::pathname,
 };
 
@@ -83,6 +83,14 @@ pub struct Mouth {
   /// floor and cheaper than a per-read flag check.
   last_token_start:       (usize, usize),
   foodtype:               FoodType,
+  /// Read `% & #` as ordinary characters — not comment, alignment tab,
+  /// parameter — for this mouth only. Set by `with_bib_data_literals()`; see
+  /// that method for the BibTeX rationale, and for why `_` is NOT here.
+  /// Deliberately a per-Mouth field rather than a State catcode assignment: a
+  /// nested mouth (a `.sty` raw-load triggered from inside the text) is a
+  /// separate object and keeps TeX's meanings, which a State-level assignment
+  /// could not guarantee.
+  bib_data_literals:      bool,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
@@ -129,6 +137,7 @@ impl Default for Mouth {
       shortsource:            s!("String"),
       // handle : None,
       foodtype:               FoodType::File,
+      bib_data_literals:      false,
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
@@ -283,6 +292,49 @@ impl Mouth {
     };
     mouth.open(text)?;
     Ok(mouth)
+  }
+
+  /// Read `% & #` as ordinary characters (catcode 12) instead of comment,
+  /// alignment tab and parameter, for the whole life of this mouth.
+  ///
+  /// **Treatment 1 of two** (see `OXIDIZED_DESIGN #74`): this is "be `bibtex`".
+  /// BibTeX's lexer interprets only braces and the entry/field delimiters — it
+  /// has no comment syntax inside an entry (`%` is significant only in the junk
+  /// BETWEEN entries, `Pre::BibTeX::skipJunk`), no alignment and no parameters.
+  /// So a field value it hands back is a string in which all three are ordinary
+  /// characters: a percent-encoded URL, a publisher's name ("Taylor &
+  /// Francis"), an issue number.
+  ///
+  /// Re-injected as TeX source (BibTeX.pool's `\bibentry@create`) under the
+  /// default catcodes, each misfires: `%` (14) comments out the rest of its
+  /// line — the field's own closing brace included — so the entry's group never
+  /// closes; `&` (4) is a stray alignment tab and is dropped; `#` (6) reaches
+  /// the Stomach as a parameter token. Reading the injected text with all three
+  /// neutralized preserves the value BibTeX actually parsed, **without altering
+  /// a byte of it**.
+  ///
+  /// **`_` is deliberately NOT in this set**, and the reason is the boundary
+  /// between the two treatments. A catcode is decided at tokenization, before
+  /// anything knows whether it is inside `$…$` — and a subscript in a `.bib`
+  /// title's math (`title = {Bounds on $x_1+x_2$}`) is *legitimate TeX* that
+  /// must keep working. `_` therefore belongs to treatment 2
+  /// (`bibtex.rs::escape_bib_data_specials`), which walks the value and skips
+  /// math spans. Measured: putting `_` here silently flattened every
+  /// subscript in a bibliography title. The other three have no legitimate
+  /// meaning inside a `.bib` field, in math or out.
+  ///
+  /// A `\catcode` in the injected text cannot do this job either: the catcode
+  /// would still be a State assignment, so a raw `.sty` opened from inside a
+  /// field handler would inherit it — and so would the document. Scoping to the
+  /// Mouth keeps the rule attached to the *text that BibTeX lexed*, which is
+  /// exactly where it belongs.
+  ///
+  /// Only the TeX-special meaning is removed: a character that has been given
+  /// some other catcode (LETTER, say) keeps it. And `\%`, `\&`, `\#` still
+  /// work, because the backslash is untouched.
+  pub fn with_bib_data_literals(mut self) -> Self {
+    self.bib_data_literals = true;
+    self
   }
 
   pub fn get_source(&self) -> &str { &self.source }
@@ -611,7 +663,7 @@ impl Mouth {
     self.colno += 1;
     if let Some(ch) = ch_opt {
       let mut ch = *ch;
-      let mut cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+      let mut cc = self.catcode_of(ch);
       // Possible convert ^^x
       // Perl: (cc == CC_SUPER) && (colno + 1 < nchars) && (ch == chars[colno])
       if cc == Catcode::SUPER
@@ -647,11 +699,26 @@ impl Mouth {
           self.splice(self.colno - 1..self.colno + 2, &[ch]);
           self.nchars -= 2;
         }
-        cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+        cc = self.catcode_of(ch);
       }
       Some((ch, cc))
     } else {
       None
+    }
+  }
+
+  /// The catcode this mouth reads `ch` with: the State's, except that a
+  /// [`Self::with_bib_data_literals`] mouth downgrades the four BibTeX-data
+  /// characters to OTHER when — and only when — they still carry their TeX
+  /// meaning.
+  fn catcode_of(&self, ch: char) -> Catcode {
+    let cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+    if !self.bib_data_literals {
+      return cc;
+    }
+    match (cc, ch) {
+      (Catcode::COMMENT, '%') | (Catcode::ALIGN, '&') | (Catcode::PARAM, '#') => Catcode::OTHER,
+      _ => cc,
     }
   }
 
@@ -1103,16 +1170,56 @@ impl Mouth {
 ///
 /// See [`tokenize_internal`] for the `.sty`-style table that treats `@` as a
 /// letter.
-pub fn tokenize(text: &str) -> Tokens {
+///
+/// The argument is an `impl Into<`[`TeXString`]`>`, not a `&str`: a string
+/// literal converts implicitly, but a `String` — the shape a control-word-welding
+/// `Tokens::to_string()` arrives in — must declare itself via
+/// [`Tokens::untex_string`] or [`TeXString::assembled`]. See the [`TeXString`]
+/// docs for why.
+pub fn tokenize(text: impl Into<TeXString>) -> Tokens {
+  let text = text.into();
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
   }
   use_std_state();
-  let result = Mouth::new(text, None).unwrap().read_tokens();
+  let result = Mouth::new(text.as_str(), None).unwrap().read_tokens();
   use_main_state();
   result
 }
+/// Tokenize a string under the standard catcode table, reading `% & #` as
+/// ordinary characters rather than comment, alignment tab and parameter.
+///
+/// For text that came out of the BibTeX lexer, which has none of those
+/// constructs, so all three are data — treatment 1 of `OXIDIZED_DESIGN #74`,
+/// see [`Mouth::with_bib_data_literals`] (including why `_` is not in the set).
+/// Plain [`tokenize`] would let a `%` comment out the rest of the string, which
+/// for a `.bib` field means losing its closing brace and leaving whatever it
+/// opened unclosed, and would make the `&` in "Taylor & Francis" a stray
+/// alignment tab.
+///
+/// This exists because the handlers that re-read a raw field — `\bib@@title`
+/// recasing, name splitting, date/pages assembly — build their tokens from the
+/// stored string and never pass through the per-entry mouth.
+///
+/// Takes an `impl Into<`[`TeXString`]`>` for the same reason as [`tokenize`] —
+/// and it is the sink that most needs it: the bibliography is where the
+/// control-word weld has surfaced three times (PR #399, PR #400, issue 410).
+pub fn tokenize_bib_literal(text: impl Into<TeXString>) -> Tokens {
+  let text = text.into();
+  // special case! empty input is empty Tokens
+  if text.is_empty() {
+    return NO_TOKENS;
+  }
+  use_std_state();
+  let result = Mouth::new(text.as_str(), None)
+    .unwrap()
+    .with_bib_data_literals()
+    .read_tokens();
+  use_main_state();
+  result
+}
+
 /// Tokenize a string under the **style-file** catcode table — Perl
 /// `Package.pm:TokenizeInternal` L1026-1030.
 ///
@@ -1120,13 +1227,16 @@ pub fn tokenize(text: &str) -> Tokens {
 /// internal control sequences (`\@ifnextchar`, `\@currentlabel`, …) tokenize as
 /// single names. This is the right choice for a macro body a binding writes
 /// itself, and the wrong one for text that came from the document.
-pub fn tokenize_internal(text: &str) -> Tokens {
+///
+/// Takes an `impl Into<`[`TeXString`]`>` for the same reason as [`tokenize`].
+pub fn tokenize_internal(text: impl Into<TeXString>) -> Tokens {
+  let text = text.into();
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
   }
   use_sty_state();
-  let result = Mouth::new(text, None).unwrap().read_tokens();
+  let result = Mouth::new(text.as_str(), None).unwrap().read_tokens();
   use_main_state();
   result
 }

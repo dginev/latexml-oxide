@@ -494,7 +494,7 @@ LoadDefinitions!({
       // workflow requiring multiple conversion calls, alongside a call to the
       // `makeidx` binary, which we don't do in latexml. This parameter type
       // emulates one important aspect implied by those steps.
-      Ok(mouth::tokenize_internal(&arg.untex()))
+      Ok(mouth::tokenize_internal(arg.untex_string()))
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
