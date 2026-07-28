@@ -57,9 +57,11 @@ USER_OK.md
 # via `npx skills add` (vendored under .agents/, symlinked in here) stay OUT of
 # the repo; only their skills-lock.json is tracked. Add a line per new project skill.
 .claude/*
+!.claude/agents/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/canvas-triage/
+!.claude/skills/cluster-classify/
 !.claude/skills/min-repro/
 !.claude/skills/perf-check/
 !.claude/skills/perl-port/

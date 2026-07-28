@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
+> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth.
 
 ## Active priorities (refreshed 2026-07-02): faithful parity + beyond-Perl arXiv runs
 
@@ -229,7 +229,6 @@ truth for macro-expanded diagnostics.
 - Uses a **string interner** for efficient symbol handling
 - TeX macro definitions can be compiled at compile-time via proc macros in `latexml_codegen`
 - **No DTD support** — the Rust port only supports RelaxNG schemas. DTD-based document tests (namespace ns1–ns5, xii) are permanently ignored. The `DocType!` macro has been removed; `RegisterDocumentNamespaces!` handles namespace registration only.
-- The port aims to be **faithful to the Perl original** while using idiomatic Rust where possible
 - **Self-contained, portable binary** (design requirement): a conversion must not *read* latexml_oxide's *own* resources from disk during its main operation. Engine dumps, the RelaxNG schema, and XSLT/CSS/JS are embedded and served from memory (verified: XSLT via `strace`, dumps by renaming the dev-tree `resources/dumps/` away and still converting). *Writing* outputs — including auxiliary files — into the **destination** directory is fine. New code that adds a runtime read of an *owned* resource must instead embed it (`include_bytes!` / `include_str!`). The host **TeX Live ecosystem is out of scope**: reading `.sty`/`.cls`/`.tfm` from the user's texmf tree via `kpathsea` is allowed and expected. Official releases ship the `maxperf` binary as a GitHub Release Asset, runnable with no `resources/` tree. Full rationale in [`docs/parity/OXIDIZED_DESIGN.md`](docs/parity/OXIDIZED_DESIGN.md) → Guiding Principles.
 - Test files (`.t` extension) mirror the original LaTeXML Perl test suite; `.rs` files are the Rust equivalents
 - most tests are regression-oriented. They contain a complete TeX input, and can experience failures in many different intermediate stages.
@@ -268,19 +267,10 @@ truth for macro-expanded diagnostics.
   ANSI), and gate on **cortex's own `Processing content` file** (multi-file papers ship decoy
   `\begin{document}` stubs). `canvas/run_one.sh` (an out-of-tree sweep harness — it is NOT in
   this repo, so don't go looking; the in-tree equivalents are `tools/benchmark_canvas.sh` and
-  `tools/parity_check.sh`) was HARDENED 2026-06-01 to **strip ANSI before
-  the `^Error:`/`^Fatal:` count** — behaviour-preserving on the current ANSI-emitting release
-  binary AND future-proof for an ANSI-free one (so the old landmine, where rebuilding release
-  with the TTY-gate fix would zero-out run_one.sh's `$'^\x1b[31mError:'` grep and mark every
-  paper a false "OK", is DEFUSED; release may now be rebuilt safely). Validated against ground
-  truth on a 100-undefined-macro + recursion article: 101 errors / 1 fatal, identical counts on
-  both the ANSI and ANSI-free binaries, matching `Status:conversion:3`. When in doubt, count it
-  as a failure to investigate, not a pass.
+  `tools/parity_check.sh`) already ANSI-strips before its `^Error:`/`^Fatal:` count. When in
+  doubt, count it as a failure to investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - **Never delete a witness article (arXiv id) from a code comment; always carry existing witnesses into any new/edited comment and add the new one.** Witnesses are the concrete reproducer a past decision hinged on — they are very valuable. Before landing a change to a construct whose comment names a witness, **re-convert that witness and confirm it still succeeds** (the test suite can miss it). Example: the `\hphantom` comment's `2004.10048` witness caught a lateral regression (the naive quantikz2 fix dropped 2004.10048's bibliography) that no test guarded.
-- Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
-- **Active work**: the two targets in "Active priorities" above — corpus-driven parity mining plus the beyond-Perl arXiv-run levers. The actionable list lives in `docs/SYNC_STATUS.md`; completed missions (dump parity, upstream-sync U1–U11, …) are archived under `docs/archive/`.
-- When a test failure traces to an upstream Perl issue, document it in `docs/parity/KNOWN_PERL_ERRORS.md`.
 
 When a **session is completed**: continue working, until:
 - all tests pass
@@ -301,7 +291,3 @@ Do **not** stop early.
 | `LaTeXML::Core::State` | `latexml_core::state` — global state |
 | `LaTeXML::Core::Definition` | `latexml_core::definition` — macro/command defs |
 | `LaTeXML::Package` | `latexml_package` — package loading |
-
----
-
-> **Reminder:** This is a faithful Perl-to-Rust translation. When porting any Perl code, preserve the original semantics, control flow, edge cases, and naming conventions. Read the Perl source first, translate precisely, and only diverge when documented in `docs/parity/OXIDIZED_DESIGN.md`.
