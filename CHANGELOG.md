@@ -127,7 +127,17 @@
   - **Very large documents use far less memory** — peak RSS 9.05 → 5.99 GB on a
     232K-line book, wall time unchanged.
   - **`--max-memory` is the single memory knob**, `0` disables limiting entirely,
-    and no environment variable can countermand it.
+    and no environment variable can countermand it. The stomach's box-list
+    ceilings now ride it too — they were fixed constants, so `--max-memory=0`
+    still Fatal'd on a 3.2 GB budget no flag could raise, and a very large
+    document could not be converted at all.
+  - **A Fatal is reported as a Fatal** — the stomach's runaway guards raise
+    outside the `Fatal!` macro, so their diagnostic never reached the status
+    tally: a run could print `Fatal:` and still sign off as `Conversion
+    complete: No obvious problems` with a success exit code. Recovery of the
+    already-digested content is unchanged (and still runs through
+    post-processing, so a partial document is written) — only the verdict is
+    corrected.
   - **Environments report their true source extent** — the locator spans through
     the matching `\end` instead of collapsing to the `\begin`.
 

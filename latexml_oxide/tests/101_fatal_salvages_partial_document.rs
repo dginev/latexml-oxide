@@ -90,6 +90,52 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
     xml.len(),
   );
 
+  // ...and the SUMMARY must agree with the log. Recovering boxes is NOT a
+  // licence to reclassify the verdict: a Fatal-level raise stays Fatal in the
+  // document's reported outcome (user policy 2026-07-28), and the graceful
+  // salvage below is a *feature* of that Fatal, not a downgrade of it.
+  //
+  // `digest_internal` used to emit its recovered Fatal with the raw
+  // `log::error!` macro rather than `Error::log_fatal`, so nothing reached
+  // `note_status` and the tally stayed empty: this very input printed
+  // `Fatal:Stomach:Recursion` and then signed off with "Conversion complete:
+  // No obvious problems" — status code 0, i.e. "ok" to cortex (which reads
+  // `get_status_code`) and clean to any check that does not scrape the log. A
+  // run that reports a Fatal and summarises as problem-free is the false
+  // negative CLAUDE.md forbids outright.
+  // There is exactly one verdict line (`converter.rs`, folding in
+  // `bin/latexml:127`'s failed/complete choice), and it is the run's FINAL
+  // word — so assert its exact text and its position, not merely that the word
+  // "fatal" occurs somewhere in the stream.
+  let verdict = stderr
+    .lines()
+    .find(|l| l.contains("Conversion failed:") || l.contains("Conversion complete:"))
+    .unwrap_or_else(|| panic!("no conversion verdict line in stderr:\n{stderr}"));
+  let tail: Vec<&str> = stderr.lines().rev().take(5).collect();
+  assert!(
+    tail.contains(&verdict),
+    "the verdict is not among the last 5 lines of stderr, so it is not the \
+     final status:\n{stderr}",
+  );
+
+  // Both directions, so neither seam can drift from the other again:
+  // a `Fatal:` in the log REQUIRES the fatal verdict, and no `Fatal:` forbids
+  // it. (The verdict is `(Finalizing... )`-prefixed, hence `ends_with`.)
+  if stderr.contains("Fatal:") {
+    assert!(
+      verdict.ends_with("Conversion failed: 1 fatal error"),
+      "the log reports a Fatal, so the final status must be exactly \
+       \"Conversion failed: 1 fatal error\" — recovering boxes is not a \
+       licence to reclassify the verdict. Got:\n  {verdict}\n{stderr}",
+    );
+  } else {
+    assert!(
+      !verdict.contains("fatal"),
+      "the final status claims a fatal that never appears in the log:\n  \
+       {verdict}\n{stderr}",
+    );
+  }
+
   // And the runaway's own boxes must NOT be grafted in: the guard trips at
   // 50k repeated boxes, so salvaging that level would produce a vast garbage
   // document rather than a small honest one.

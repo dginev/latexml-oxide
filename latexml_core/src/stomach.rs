@@ -1118,14 +1118,17 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     // counter, or period > MAX_WINDOW). 40× the validated cycle-activation
     // size, far past any flushed-document list. Analogous to the gullet's
     // platform-independent `token_limit`.
-    if st.box_list.len() > STOMACH_BOX_HARD_CAP {
+    if let Some(cap) = box_count_cap()
+      && st.box_list.len() > cap
+    {
       st.pending_cycle_fatal = Some((
         ErrorCategory::MemoryBudget,
         s!(
           "Box-list runaway: {} accumulated boxes exceeded the hard cap of {} \
-           (unbounded digestion with no detectable cycle)",
+           (unbounded digestion with no detectable cycle); raise --max-memory, \
+           or --max-memory=0 to lift the ceiling",
           st.box_list.len(),
-          STOMACH_BOX_HARD_CAP
+          cap
         ),
       ));
       return;
@@ -1143,17 +1146,24 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     // ~1.87 M heavy line-segment boxes reached 4.5 GB RSS before the 2 M count
     // cap could fire).
     let len = st.box_list.len();
-    if len >= BYTE_CHECK_ACTIVATE && len.is_multiple_of(BYTE_CHECK_EVERY) {
+    if let Some(budget) = box_bytes_budget()
+      && len >= BYTE_CHECK_ACTIVATE
+      && len.is_multiple_of(BYTE_CHECK_EVERY)
+    {
       let est = estimate_box_list_bytes(&st.box_list);
-      if est > STOMACH_BOX_BYTES_BUDGET {
+      if est > budget {
         st.pending_cycle_fatal = Some((
           ErrorCategory::MemoryBudget,
           s!(
             "Box-list memory runaway: ~{} MB estimated across {} boxes exceeded \
-             the {} MB internal budget (unbounded accumulation)",
+             the {} MB budget (unbounded accumulation); raise --max-memory, or \
+             --max-memory=0 to lift the ceiling. NOTE: the estimate is a LOWER \
+             BOUND (each box is walked at most {} nodes deep), so true RSS at \
+             this point is typically several times larger",
             est / 1_000_000,
             len,
-            STOMACH_BOX_BYTES_BUDGET / 1_000_000
+            budget / 1_000_000,
+            crate::digested::EB_BUDGET
           ),
         ));
         return;
@@ -1175,25 +1185,52 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
   }
 }
 
-/// Hard, platform-independent ceiling on `box_list` length. A normal list is
-/// flushed continuously and stays tiny; reaching this is an unbounded
-/// accumulation. 40× [`STOMACH_CYCLE_ACTIVATE`].
-const STOMACH_BOX_HARD_CAP: usize = 2_000_000;
+/// Hard, platform-independent ceiling on `box_list` length — `None` when the
+/// memory limit is disabled. A normal list is flushed continuously and stays
+/// tiny; reaching this is an unbounded accumulation. The backstop for
+/// very-LIGHT-box runaways, which the byte budget below can under-weigh.
+///
+/// **Rides `--max-memory`**, like every other memory ceiling: the resolved soft
+/// cap divided by [`BYTES_PER_LIGHT_BOX`], which reproduces the historical fixed
+/// 2 M at the stock `--max-memory=6144` (soft cap 4608 MiB), scales linearly
+/// with the flag, and is `None` at `--max-memory=0`.
+///
+/// It used to be a hardcoded `const`, which made `--max-memory=0` a documented
+/// lie: the binary prints "memory limiting disabled entirely" and then Fatal'd
+/// on a memory ceiling anyway, with no flag able to raise it. Witness: a
+/// ~10 000-page notes document (Nasser Abbasi, rc4 report 2026-07-28) died on
+/// the byte budget below after 8 h at ~58 GB RSS having explicitly passed
+/// `--max-memory=0`. Guard: `box_ceilings_follow_the_memory_knob`.
+fn box_count_cap() -> Option<usize> {
+  resolve_rss_cap().map(|cap| (cap / BYTES_PER_LIGHT_BOX) as usize)
+}
 
-/// Portable byte-budget for the accumulated `box_list`. `estimate_bytes` now
-/// counts each box's OWNED heavy data (the `properties` HashMap, the `Tbox`
-/// `tokens` source-TeX vector, args/children vectors + nested children), so the
-/// estimate tracks true RSS within ~10% (calibrated on math0102053: ~2.25 KB
-/// estimate per box vs ~2.4 KB RSS per box). At 3.2 GB of estimate the box list
-/// is ~1.4 M boxes ≈ ~3.4 GB RSS — about 1 GB UNDER the Linux 4.5 GB RSS cap, so
-/// on Linux the internal estimate `Fatal`s ~1 GB earlier, and on macOS/Windows
-/// (where the `/proc` RSS check is inactive) it is the ONLY memory guard for a
-/// heavy-box runaway. A continuously-flushed document never accumulates a
-/// multi-GB box list, so the guard is inert for normal conversions; the band of
-/// documents this newly affects is the narrow 3.4–4.5 GB extreme that the RSS
-/// cap barely admitted anyway. The 2 M count cap above remains the backstop for
-/// very-light-box runaways.
-const STOMACH_BOX_BYTES_BUDGET: usize = 3_200_000_000;
+/// Calibration for [`box_count_cap`]: the per-box footprint of a *light* box,
+/// chosen so the stock ceiling yields the validated 2 M-box cap.
+const BYTES_PER_LIGHT_BOX: u64 = 2_416;
+
+/// Portable byte-budget for the accumulated `box_list` — `None` when the memory
+/// limit is disabled. `estimate_bytes` counts each box's OWNED heavy data (the
+/// `properties` HashMap, the `Tbox` `tokens` source-TeX vector, args/children
+/// vectors + nested children). Works on macOS/Windows, where the `/proc` RSS
+/// check is inactive and this is the ONLY memory guard for a heavy-box runaway.
+///
+/// **Rides `--max-memory`** (see [`box_count_cap`]): two thirds of the resolved
+/// soft cap, i.e. 3.22 GB at the stock `--max-memory=6144` — the historical
+/// fixed 3.2 GB — so on Linux it still `Fatal`s well before the RSS fuse, and
+/// `None` at `--max-memory=0`.
+///
+/// **The estimate is a LOWER BOUND, not an RSS prediction.**
+/// [`Digested::estimate_bytes`] walks at most `EB_BUDGET` (256) nodes per box,
+/// so a deep document tree is undercounted by however much hangs below that
+/// horizon — and the shortfall is content-dependent, not a constant. Measured:
+/// a flat 600 k-paragraph synthetic crosses the 3.2 GB budget at 5.8 GB true RSS
+/// (est ≈ 58 % of RSS), while Nasser's deeply-nested notes crossed the *same*
+/// budget at ~58 GB (est ≈ 6 %). A ~10× spread — so do not read the budget as a
+/// megabyte ceiling on the process. (The "tracks true RSS within ~10 %" claim
+/// this doc used to carry held only for its calibration paper, math0102053: a
+/// plain-TeX `\@whiledim` line-drawing loop whose ~1.87 M boxes are shallow.)
+fn box_bytes_budget() -> Option<usize> { resolve_rss_cap().map(|cap| (cap / 3 * 2) as usize) }
 /// Don't bother byte-sampling until the list is already well past the cycle
 /// activation size (a normal list never gets here).
 const BYTE_CHECK_ACTIVATE: usize = 200_000;
@@ -1820,7 +1857,52 @@ pub fn get_script_level() -> usize {
 
 #[cfg(test)]
 mod memory_cap_tests {
-  use super::{apply_memory_ceiling, resolve_rss_cap, set_memory_cap, soft_cap_from_ceiling};
+  use super::{
+    apply_memory_ceiling, box_bytes_budget, box_count_cap, resolve_rss_cap, set_memory_cap,
+    soft_cap_from_ceiling,
+  };
+
+  // The box-list ceilings are memory ceilings, so they must ride the SAME
+  // `--max-memory` knob as the RSS fuse — including its "0 = no limit" meaning.
+  // They were hardcoded `const`s (2 M boxes / 3.2 GB estimate) read
+  // unconditionally, which made `--max-memory=0` a documented lie: the binary
+  // prints "memory limiting disabled entirely" and then Fatal'd on a memory
+  // ceiling no flag could raise. Witness: a ~10 000-page notes document
+  // (Nasser Abbasi, rc4 report 2026-07-28) died on the byte budget after 8 h at
+  // ~58 GB RSS having explicitly passed `--max-memory=0`.
+  #[test]
+  fn box_ceilings_follow_the_memory_knob() {
+    // Stock ceiling reproduces the historical fixed values.
+    apply_memory_ceiling(6144);
+    assert_eq!(
+      box_count_cap(),
+      Some(1_999_933),
+      "≈ the validated 2 M boxes"
+    );
+    let budget = box_bytes_budget().expect("stock ceiling has a byte budget");
+    assert_eq!(budget, 3_221_225_472, "≈ the historical 3.2 GB");
+
+    // `--max-memory=0` lifts BOTH — that is the whole point of the flag.
+    apply_memory_ceiling(0);
+    assert_eq!(box_count_cap(), None, "--max-memory=0 lifts the count cap");
+    assert_eq!(
+      box_bytes_budget(),
+      None,
+      "--max-memory=0 lifts the byte budget"
+    );
+
+    // A tighter ceiling scales them down rather than leaving them at the
+    // stock value (which would sit far ABOVE the requested ceiling).
+    apply_memory_ceiling(2000);
+    assert!(box_count_cap().unwrap() < 1_999_933);
+    assert!(box_bytes_budget().unwrap() < budget);
+
+    // The byte budget stays UNDER the RSS fuse, so on Linux the portable
+    // estimate still fires first for an accurately-estimated runaway.
+    assert!(box_bytes_budget().unwrap() < resolve_rss_cap().unwrap() as usize);
+
+    set_memory_cap(None);
+  }
 
   // The single knob must reach the fuse through `apply_memory_ceiling`, which is
   // what every conversion path calls. `--max-memory=0` has to leave NO ceiling:
