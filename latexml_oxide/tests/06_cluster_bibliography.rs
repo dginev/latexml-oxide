@@ -6,7 +6,8 @@
 
 mod cluster;
 use cluster::{
-  convert_and_post, convert_and_post_clean, convert_to_xml, convert_to_xml_ar5iv,
+  convert_and_post, convert_and_post_clean, convert_and_post_logging, convert_to_xml,
+  convert_to_xml_ar5iv,
   convert_to_xml_contrib, convert_to_xml_contrib_clean,
 };
 
@@ -55,6 +56,35 @@ fn cluster_bbl_bib_precedence() {
     "ar5iv bbl-first config without .bbl should fall back to bib, got:\n{x}"
   );
 }
+
+/// A bibliography file that cannot be found must be an **Error**, not an Info.
+///
+/// Perl raises `Error:missing_file` (`Post/MakeBibliography.pm` L138-140) and
+/// then falls through to the `Info:expected` below it, so both reach the log.
+/// This port hoisted the raw-`.bib` lookup out of that branch and lost the
+/// raise, leaving only the Info — which is why a whole family of lost
+/// bibliographies reported telemetry `ok` and stayed invisible to every
+/// error-keyed sweep: 14 silent papers in the 2605+2606 sandboxes and 691
+/// corpus-wide. Witness 2606.04416 (bibunits — the shipped `bu1.bbl` is never
+/// consulted and the named `.bib` does not exist; Perl loses the bibliography
+/// too, but says so). Audit family F2.
+#[test]
+fn bib_missing_file_is_an_error_not_just_an_info() {
+  let (_xml, log) = convert_and_post_logging("tests/cluster_regressions/bib_missing_file.tex");
+  assert!(
+    log.contains("Error:missing_file:"),
+    "a missing bibliography must raise Error:missing_file, log was:\n{log}"
+  );
+  // The name that could not be resolved has to be in the message — a bare
+  // "couldn't find a bibliography" is not actionable for a multi-`.bib`
+  // document. (Perl's `Info:expected` fallthrough is emitted too, but Info
+  // sits below this harness's log threshold, so it is not asserted here.)
+  assert!(
+    log.contains("no_such_bibliography_file"),
+    "the raise must name the unresolved bibliography, log was:\n{log}"
+  );
+}
+
 /// A biber `.bbl` with more than one `\datalist` (biblatex's apa style asks for
 /// two sorting schemes, so the same references are emitted twice) used to hang
 /// the engine: each `\enddatalist` expands to a bare

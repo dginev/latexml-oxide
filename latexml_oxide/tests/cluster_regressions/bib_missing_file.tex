@@ -1,0 +1,12 @@
+% A `\bibliography` naming a file that does not exist. Perl raises
+% `Error:missing_file` from MakeBibliography.pm L138-140 and then falls
+% through to the `Info:expected` — BOTH reach the log. This port emitted only
+% the Info, so a lost bibliography reported telemetry `ok`. Audit family F2;
+% witness 2606.04416 (bibunits: the shipped bu1.bbl is never consulted and the
+% named `.bib` does not exist).
+\documentclass{article}
+\begin{document}
+See \cite{nobody}.
+\bibliographystyle{plain}
+\bibliography{no_such_bibliography_file}
+\end{document}

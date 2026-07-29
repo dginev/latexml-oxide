@@ -226,6 +226,12 @@ impl MakeBibliography {
 
     for bib in &bibnames {
       let mut loaded = false;
+      // Perl reaches the raw-`.bib` lookup only from inside the
+      // `.bib`/`\bibliography` branch (`MakeBibliography.pm` L126-140), and it
+      // is that branch alone whose failure is an `Error`. Hoisting the lookup
+      // out of the branch (below) is what lost the raise, so carry the branch
+      // condition along instead.
+      let is_bib_style = bib.ends_with(".bib") || bib.ends_with(".bib.xml") || from_bibliography;
 
       // Literal BibTeX handed in on the command line (Perl L121-123).
       if let Some(data) = bib.strip_prefix("literal:") {
@@ -249,7 +255,7 @@ impl MakeBibliography {
         }
       }
       // Try as .bib or from \bibliography command
-      else if bib.ends_with(".bib") || bib.ends_with(".bib.xml") || from_bibliography {
+      else if is_bib_style {
         let xmlbib = if from_bibliography && !bib.ends_with(".bib") {
           format!("{}.bib", bib)
         } else {
@@ -291,6 +297,22 @@ impl MakeBibliography {
         {
           rawbibs.push(RawBibSource::Path(bib_path));
           loaded = true;
+        } else if is_bib_style {
+          // Perl L138-140 raises this BEFORE falling through to the Info
+          // below, and both reach the log. Dropping it is what let a whole
+          // family of lost bibliographies report telemetry `ok`: the shipped
+          // `bu1.bbl`/`bu2.bbl` of a bibunits paper are never consulted, the
+          // named `.bib` does not exist, and the only trace was an Info.
+          // 14 silent papers in the 2605+2606 sandboxes, 691 corpus-wide;
+          // witness 2606.04416 (same loss under Perl, which DOES raise here).
+          // Audit `docs/parity/BIB_ABSENCE_AUDIT_2026-07-29.md` family F2.
+          Error!(
+            "missing_file",
+            bib,
+            "Couldn't find Bibliography '{}'\nSearchpaths were {}",
+            bib,
+            search_paths.join(",")
+          );
         }
       }
 

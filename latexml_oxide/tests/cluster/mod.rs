@@ -126,6 +126,22 @@ pub fn convert_and_post_clean(source: &str) -> String {
 
 /// the upstream LaTeXML#2316 / arXiv-fork behavior where frontmatter
 /// (abstract/acknowledgements/bibliography) joins the navigation TOC.
+/// Like [`convert_and_post`], but returns the ANSI-free POST-stage log
+/// alongside the XML instead of gating on it.
+///
+/// [`convert_and_post_clean`] asserts the post stage logged NO errors, which is
+/// the right gate for "the bibliography built cleanly". The opposite assertion
+/// — that a diagnostic WAS raised — needs the log itself, and post_with is
+/// private, so a guard cannot bind `LOG_BUFFER` around it from the outside.
+/// Used by the guards for dropped raises (audit family F2).
+pub fn convert_and_post_logging(source: &str) -> (String, String) {
+  let xml = convert_to_xml(source);
+  latexml_core::util::logger::bind_log();
+  let out = post_with(&xml, None);
+  let log = latexml_core::util::logger::flush_log();
+  (out, log)
+}
+
 pub fn convert_and_post_navtoc(source: &str) -> String {
   convert_and_post_opts(source, Some("context"))
 }
