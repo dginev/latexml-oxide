@@ -3480,9 +3480,17 @@ impl Document {
       spine.push(n);
     }
     spine.reverse();
+    if spine.is_empty() && self.node.get_type() == Some(NodeType::DocumentNode) {
+      // The ROOT itself has closed (`\end{document}` absorbed): everything
+      // under it is a closed subtree now, so the spine is just the root and
+      // every eligible child may spill. Without this case the FINAL spill of
+      // a streaming conversion silently no-ops — the witness kept 27,400
+      // formulae live into the spine tail this way and died there.
+      spine.push(root.clone());
+    }
     if spine.first() != Some(&root) {
-      // The insertion point is outside the tree under the root (e.g. still at
-      // the document node): nothing is safely classifiable as closed.
+      // The insertion point is outside the tree under the root: nothing is
+      // safely classifiable as closed.
       return Ok(0);
     }
     let namespaces: Vec<(String, String)> = root
@@ -3492,9 +3500,16 @@ impl Document {
       .collect();
 
     let mut runs_spilled = 0usize;
-    for level in 0..spine.len().saturating_sub(1) {
+    // Every spine level INCLUDING the insertion element itself: at a legal
+    // yield seam the insertion point routinely IS the root (between
+    // top-level constructs), where a levels-above-only walk sees an empty
+    // spine range and spills NOTHING — the witness leaked two thirds of its
+    // chapters into the spine tail exactly this way. The insertion element's
+    // children are complete, closed subtrees at a seam (the constructed-node
+    // stacks expire between absorbs); its level simply has no barrier child.
+    for level in 0..spine.len() {
       let parent = spine[level].clone();
-      let barrier = spine[level + 1].clone();
+      let barrier = spine.get(level + 1).cloned();
       // The ambient SECTION for scope-gated processing (`\lxDeclare`):
       // nearest section at or above this spill parent, mirroring the
       // ancestor walk `apply_lx_declarations` performs.
@@ -3511,7 +3526,7 @@ impl Document {
       };
       let mut run: Vec<Node> = Vec::new();
       for child in parent.get_child_nodes() {
-        if child == barrier {
+        if Some(&child) == barrier.as_ref() {
           break;
         }
         let eligible = child.get_type() == Some(NodeType::ElementNode)

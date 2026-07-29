@@ -100,7 +100,7 @@ pub fn apply_memory_ceiling(max_memory_mib: u64) {
 /// Note the env is consulted only when nothing set the override — i.e. only for
 /// embedders that never call [`apply_memory_ceiling`]. Every path in the
 /// `latexml_oxide` binary calls it, so there `--max-memory` always wins.
-fn resolve_rss_cap() -> Option<u64> {
+pub fn resolve_rss_cap() -> Option<u64> {
   let cap = RSS_CAP_OVERRIDE.with(|c| c.get()).unwrap_or_else(|| {
     std::env::var("LATEXML_RSS_CAP_BYTES")
       .ok()
@@ -164,6 +164,7 @@ pub fn check_timeout() -> Result<()> {
     {
       {
         if let Some(rss_kb) = crate::watchdog::process_rss_kb() {
+          LAST_SAMPLED_RSS_KB.set(rss_kb);
           let rss_bytes = rss_kb * 1024;
           // R35.A safety cap: 4.5 GB RSS. Real documents in the wp5 /
           // canvas3 corpus stay below 1 GB peak RSS, so this is well
@@ -311,6 +312,24 @@ static FRAGMENT_YIELDED: Cell<bool> = Cell::new(false);
 /// Total yields this conversion (telemetry + test probe).
 #[thread_local]
 static FRAGMENT_YIELD_COUNT: Cell<usize> = Cell::new(0);
+/// Soft RSS threshold (KiB) above which the yield predicate fires regardless
+/// of the box count. The box budget alone assumes a per-box footprint; on
+/// content whose real cost per box is higher (math-dense trees, debug
+/// builds), RSS crosses the ceiling long before the box count does —
+/// measured on the 19.8 MB witness at cap 24 GB, where the fuse fired
+/// during early fragments while the 2.6M-box budget sat untouched.
+#[thread_local]
+static FRAGMENT_YIELD_RSS_SOFT_KB: Cell<Option<u64>> = Cell::new(None);
+/// The most recent RSS sample from `check_timeout`'s 1024-call cadence, so
+/// the yield predicate reads a cell instead of `/proc`.
+#[thread_local]
+static LAST_SAMPLED_RSS_KB: Cell<u64> = Cell::new(0);
+
+/// Set (or clear) the soft-RSS yield threshold, in KiB.
+pub fn set_fragment_yield_rss_soft_kb(kb: Option<u64>) { FRAGMENT_YIELD_RSS_SOFT_KB.set(kb); }
+
+/// The most recent sampled RSS in KiB (0 until the first sample).
+pub fn last_sampled_rss_kb() -> u64 { LAST_SAMPLED_RSS_KB.get() }
 
 /// Ask digestion to yield at legal fragment seams once `budget` boxes have
 /// accumulated at the current level (`None` restores eager digestion). Set by
@@ -1512,7 +1531,10 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       && init_depth == 0
       && terminal_opt.is_none()
       && alignment_opt.is_none()
-      && stomach!().box_list.len() >= budget
+      && (stomach!().box_list.len() >= budget
+        || FRAGMENT_YIELD_RSS_SOFT_KB
+          .get()
+          .is_some_and(|soft| LAST_SAMPLED_RSS_KB.get() > soft))
       && stomach!().boxing.is_empty()
       && lookup_alignment().is_none()
       && !lookup_bool_sym(crate::pin!("IN_MATH"))

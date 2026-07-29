@@ -946,8 +946,16 @@ impl DigestionAPI for Core {
     document.set_defer_root_after_open(true);
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
+    // Soft-RSS yield: fire regardless of box count once RSS crosses half the
+    // ceiling — the box budget assumes a per-box footprint, and math-dense
+    // content blows past it (witness: fuse at 18.8 GB with the box budget
+    // untouched). The cap is bytes here (resolve_rss_cap basis).
+    if let Some(cap_bytes) = latexml_core::stomach::resolve_rss_cap() {
+      stomach::set_fragment_yield_rss_soft_kb(Some(cap_bytes / 1024 / 2));
+    }
 
     // Pass 1: interleaved digest → absorb → spill, at legal seams only.
+    let mut fatal_stop = false;
     loop {
       let mut boxes = Vec::new();
       let step = digest_step_guarded(&mut boxes);
@@ -976,6 +984,7 @@ impl DigestionAPI for Core {
           // Safe because everything salvaged is absorbed, spilled and freed
           // immediately below.
           boxes.extend(stomach::salvage_pending_box_lists(false));
+          fatal_stop = true;
           true
         },
       };
@@ -990,6 +999,7 @@ impl DigestionAPI for Core {
             e.target,
             e.category
           );
+          fatal_stop = true;
           stopped = true;
         }
       }
@@ -998,12 +1008,31 @@ impl DigestionAPI for Core {
       // per fragment — mid-digestion consumers (the frontmatter fallback's
       // resource[last()] anchor) depend on them being placed.
       document.process_pending_resources_at_top()?;
-      document.spill_closed_subtrees(&mut index)?;
-      if stopped || (!yielded && !gullet::has_more_input()) {
+      let finishing = stopped || (!yielded && !gullet::has_more_input());
+      // Spill policy at the end: a conversion that NEVER yielded fits in RAM
+      // whole — spilling it would buy no headroom and cost a full
+      // serialize→reparse→reserialize cycle in pass 2 (measured +38% wall
+      // time at a roomy cap). But once yields happened, the ceiling is real
+      // and the FINAL fragment must spill like every other one: retaining it
+      // hands the eager-style spine tail (rewrites, whole-doc math parse,
+      // finalize) everything the last fragment held — the witness died in
+      // exactly that tail at 24.5 GB after a perfectly bounded pass 1.
+      let bounded_mode = stomach::fragment_yield_count() > 0;
+      if !finishing || bounded_mode {
+        document.spill_closed_subtrees(&mut index)?;
+        log::info!(
+          "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB",
+          stomach::fragment_yield_count(),
+          latexml_core::document::spilled_segment_count(),
+          stomach::last_sampled_rss_kb() / 1024,
+        );
+      }
+      if finishing {
         break;
       }
     }
     stomach::set_fragment_yield_budget(None);
+    stomach::set_fragment_yield_rss_soft_kb(None);
     gullet::flush();
     note_end(&digestion_note);
 
@@ -1023,6 +1052,20 @@ impl DigestionAPI for Core {
     // ran early).
     latexml_engine::base_utilities::insert_late_frontmatter(&mut document)?;
     document.dispatch_deferred_root_hooks()?;
+    if fatal_stop {
+      // CHEAP partial (Fatal contract under real memory pressure): every
+      // further phase allocates while we are AT the ceiling — the first
+      // implementation marched from the 18.8 GB cooperative fuse straight
+      // into the 24 GB hard watchdog (SIGKILL) doing pass 2. Skip pass 2 and
+      // the spine tail: spilled segments splice in their raw pre-finalize
+      // form — well-formed XML that still carries `_`-bookkeeping attributes,
+      // which a salvaged partial is allowed to. The verdict is already
+      // latched Fatal.
+      log::warn!(
+        "convert_streaming: fatal stop — emitting the cheap partial (pass 2 and the finalize          tail skipped to avoid allocating at the memory ceiling)"
+      );
+      return Ok(document);
+    }
     // RDFa prefixes used inside spilled content: the finalize scan can no
     // longer see them, so feed the spill-time record in.
     document.add_extra_rdfa_prefixes(index.rdfa_prefixes().map(|(p, _)| p));
