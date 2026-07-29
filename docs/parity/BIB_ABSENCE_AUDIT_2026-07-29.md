@@ -70,39 +70,18 @@ are not re-attempted:
 - **F4(c)(d)** — `\addbibresource` inside an unbound `.cls` is never registered
   (2605.23724), and apa6 OmniBus dep-mining takes a biblatex branch the
   document did not (2605.14990). Both still EMPTY.
-- **F6 — achemso, re-diagnosed and reduced to 5 lines.** The trigger is NOT the
-  abstract gobbler the first pass blamed: achemso's `{tocentry}` leaves the
-  conditional machinery broken, and the *next* conditional — a plain, balanced
-  document loses everything after it, including `\bibliography` — and it does
-  so with **no conditional of its own anywhere in the file**. The `\iffalse`
-  in the message is achemso's: `\acs@tocentry@print` (L1232-1246) defers the
-  entry with `\AtEndDocument{\if@twocolumn …\fi …\if@restonecol …\fi}`, and
-  a `\newif` boolean IS `\iffalse` when false. Repro
-  [`repros/f6_tocentry_conditional/`](bib_absence_2026-07-29/repros/f6_tocentry_conditional/):
-  pdflatex renders it and raises nothing; delete the `{tocentry}` block and we
-  convert cleanly too. Suspect is `\acs@collect` (achemso.cls L1174-1211) —
-  `\begingroup` + `\let\csname\@currenvir\endcsname` + the delimited
-  `\acs@collect@aux#1\end#2` scan + an `\ifx…\else…\expandafter` recursion
-  inside an `\edef`. **Settled dead ends, do not re-attempt:** a `\let` alias
-  of `\fi` is honoured (plain and inside a catcode-modified group);
-  `\endgroup` inside a conditional branch is handled correctly; the
-  `\edef`+`\expandafter` tail recursion transcribed on its own converts
-  cleanly. Worth 36 of the 42 sandbox `expected:\fi` papers and 1,700 corpus
-  first-errors.
-
-**Corrected legacy count.** The pass-2b classifier matched `\references` inside
-longer control sequences — 0704.0420 defines `\def\referencesz{…}`, a
-hand-rolled heading, and was counted as an aastex `references` environment. A
-tight re-check (`pass2c.sh`, word-boundary signals, amsrefs `\bib` required to
-have its 3-argument shape) over all 17,055 `yes_legacy` rows drops **1,522
-false positives (8.9%)**, leaving **15,533**: `\bib{}{}{}` 6,227, `biblist`
-6,187, `\listrefs` 4,305, `\reference` 3,901, `references` env 3,801, `\Refs`
-483. Corpus wrongly-missing therefore reads **50,777**, not 52,299.
-
-## Method (fail-safe toward flagging)
-
-Two passes, both scripted (scan_bib.sh / pass2.sh, session scratchpad):
-
+- **F6 — FIXED.** achemso's `{tocentry}` was suppressed with
+  `\begin{tocentry}` → `\iffalse` and `\end{tocentry}` → `\fi`
+  (`achemso_cls.rs`). Conditional skipping matches `\fi` by MEANING and expands
+  nothing on the way, so an `\end{tocentry}` whose macro *body* is `\fi` is
+  invisible to it: the skip ran to EOF and took the rest of the paper with it,
+  `\bibliography` included. It surfaced as `Error:expected:\fi \iffalse` at
+  EOF — reading like a source defect when the `\iffalse` was ours. The body is
+  now skipped as RAW LINES (comment.sty's idiom). **42 papers recovered**;
+  witness 2606.14933 0 → 69 entries. Dead end recorded: digesting the body and
+  dropping it (`DefEnvironment!("{tocentry}", "")`) costs three papers their
+  output entirely — these graphics are TikZ blocks that error out of context.
+  Perl never reaches any of this (no achemso binding, OmniBus fallback).
 - **Pass 1** streams every `*.html` member plus the `status` member of each
   result zip through one `unzip -p | awk` and assigns a verdict:
   `ok` (≥1 `ltx_bibitem`), `empty_bib` (bibliography/biblist markup but zero

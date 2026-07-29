@@ -84,11 +84,36 @@ LoadDefinitions!({
   // to OmniBus (`Warning:missing_file:achemso`), leaving `{tocentry}`
   // undefined. pdflatex of course renders these papers fine.
   //
-  // An ordinary environment with no `#body` in the pattern digests the
-  // content and emits nothing, which suppresses the graphic without any
-  // conditional trickery — and works whether `\end{tocentry}` sits on its own
-  // line or shares one with the body.
-  DefEnvironment!("{tocentry}", "");
+  // Nor may the body simply be DIGESTED and dropped (`DefEnvironment!
+  // ("{tocentry}", "")`): these graphics are TikZ/`\includegraphics` blocks
+  // that error heavily out of context. Measured on the same cohort, that
+  // turned three papers from "no bibliography" into no OUTPUT AT ALL —
+  // 2606.08929, 2606.12056 and 2606.15422 went from 1 error to 513 and a
+  // fatal (`\lxSVG@endscope`, `undefined:\@startsection`).
+  //
+  // So skip the body as RAW LINES, the way comment.sty's excluded
+  // environments do (`comment_sty.rs`) — no digestion, no conditionals. The
+  // `\end{tocentry}` is consumed as text, so it is deliberately left
+  // undefined.
+  DefConstructor!(T_CS!("\\begin{tocentry}"), None, None,
+  after_digest => {
+    // The rest of the `\begin{tocentry}` line — which may already carry the
+    // matching `\end{tocentry}`, as the one-line form does.
+    if let Some(first) = read_raw_line()
+      && first.contains("\\end{tocentry}")
+    {
+      return Ok(Vec::new());
+    }
+    let mut nlines = 0;
+    while let Some(line) = read_raw_line() {
+      if line.contains("\\end{tocentry}") {
+        break;
+      }
+      nlines += 1;
+    }
+    note_progress(&s!("[Skipped tocentry ({nlines} lines)]"));
+    Ok(Vec::new())
+  });
 
   // {acknowledgement} — ACS-spelt acknowledgement section.
   DefEnvironment!(

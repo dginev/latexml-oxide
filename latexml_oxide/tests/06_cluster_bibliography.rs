@@ -99,6 +99,12 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
 /// (0 -> 69 entries). Perl never reaches it: no achemso binding, OmniBus
 /// fallback, `{tocentry}` simply undefined.
 ///
+/// The body is skipped as RAW LINES (comment.sty's idiom), not digested:
+/// digesting it and dropping the result turned three papers from "no
+/// bibliography" into no OUTPUT at all — 2606.08929, 2606.12056, 2606.15422
+/// went from 1 error to 513 and a fatal, because these graphics are TikZ /
+/// `\includegraphics` blocks that error out of context.
+///
 /// Red/green is the bibliography length — 0 entries is red. The third
 /// assertion keeps the suppression honest: the graphic's text must stay out of
 /// the body.

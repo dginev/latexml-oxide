@@ -18,14 +18,14 @@ uses — then counts `ltx_bibitem` against what the source implies and what
 
 | | papers | entries |
 |---|---|---|
-| **Recovered** (0 → non-zero) | **191** | **14 770** |
-| Complete (`now == cited`) | 184 OK | |
-| Short of what was cited (THIN) | 7 | |
-| Still empty | 340 | |
-| No HTML | 2 | |
+| **Recovered** (0 → non-zero) | **230** | **17 059** |
+| Complete (`now == cited`) | 222 OK | |
+| Short of what was cited (THIN) | 8 | |
+| Still empty | 298 | |
+| No HTML | 5 | |
 
 Regression control: 20 papers whose bibliographies already worked reconvert
-with **identical** counts. `cargo test --tests`: **1770 passed, 0 failed**.
+with **identical** counts. `cargo test --tests`: **1771 passed, 0 failed**.
 
 ## Duplication audit
 
@@ -59,22 +59,28 @@ read as rendered text:
 - **2605.21570** (46) — 34 + 12 across its two bibunits, each matching that
   unit's own `\begin{thebibliography}{N}`
 
-## What is still empty (340), by first error
+## What is still empty (298), by first error
 
-`expected:\fi` 42 · *no error at all* 34 · `unexpected:\lx@begin@alignment` 28 ·
+*no error at all* 32 · `unexpected:\lx@begin@alignment` 28 ·
 `unexpected:\endgroup` 8 · `unexpected:\@end@tabular` 7 ·
 `Fatal:Stomach:Recursion` 6 · `unexpected:\usepackage` 6 ·
-`undefined:\setboolean` 6 · long tail.
+`undefined:\setboolean` 6 · `malformed:ltx:XMTok` 6 · long tail.
 
-The largest single bucket is **F6/achemso** (`expected:\fi`, 42), reduced to a
-5-line reproducer in `repros/f6_tocentry_conditional/` and not yet fixed.
+The `expected:\fi` bucket that led this list (42 papers) is **gone** — it was
+achemso's `{tocentry}`, suppressed with an `\iffalse` whose `\fi` lived in a
+macro body where conditional skipping can never see it. The silent bucket also
+gave up `\captionof` opening a verbatim-bodied environment (OXIDIZED_DESIGN
+#87). Both were OUR constructs manufacturing what looked like source defects.
 
-The silent bucket has since given up one real fix: `\captionof` opening a
-verbatim-bodied environment (OXIDIZED_DESIGN #87, witness 2606.08339, 0 → 30
-entries). It is narrow in THIS cohort — 2 papers — but it destroyed whole
-document tails wherever it fired, so its corpus reach is wider than its
-sandbox count. Reduction notes for the rest are in
-`repros/f5_captionof_swallow/`.
+**Three papers moved the wrong way**, and honestly so: 2606.08929, 2606.12056
+and 2606.15422 went from EMPTY (1 error, truncated HTML) to NOHTML (513 errors,
+fatal). They had 0 bibliography entries before and after; the `{tocentry}`
+swallow had been hiding an unrelated SVG/math group leak in each, which now
+surfaces and trips the error cap. That is the F2 pattern again — a real defect
+becoming visible — but it costs the partial output, so the underlying leak is
+worth its own fix.
+
+Alignment (28) and the 32 remaining silent papers are the next targets.
 
 ## Reproducing
 
