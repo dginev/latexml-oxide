@@ -428,6 +428,27 @@ pub(super) fn bind_cmml_top_context(doc: &PostDocument, xmath: &Node) {
 /// (Perl stylizeContent's `|| $LaTeXML::MathML::FONT` fallback).
 pub(super) fn ctx_font() -> Option<String> { ctx_get(&CTX_FONT) }
 
+/// The inherited color context (Perl `|| $LaTeXML::MathML::COLOR`).
+pub(super) fn ctx_color() -> Option<String> { ctx_get(&CTX_COLOR) }
+
+/// The inherited background-color context (Perl `|| $LaTeXML::MathML::BGCOLOR`).
+pub(super) fn ctx_bgcolor() -> Option<String> { ctx_get(&CTX_BGCOLOR) }
+
+/// The inherited opacity context (Perl `|| $LaTeXML::MathML::OPACITY`).
+pub(super) fn ctx_opacity() -> Option<String> { ctx_get(&CTX_OPACITY) }
+
+/// The current style's nominal size, as a percentage string — Perl's
+/// `$LaTeXML::MathML::SIZE || 'text'` comparand in `stylizeContent` L779-781.
+pub(super) fn context_size() -> &'static str { current_context_size() }
+
+/// `resolve_token_size`, for the `m:mtext` arm of `stylizeContent`.
+pub(super) fn resolve_size(s: String) -> String { resolve_token_size(s) }
+
+/// `pmml_maybe_resize`, for the `ltx:text` arm of `pmml_text_aux` (Perl L1059).
+pub(super) fn maybe_resize(doc: &PostDocument, node: &Node, result: NodeData) -> NodeData {
+  pmml_maybe_resize(doc, node, result)
+}
+
 /// Core dispatch: convert a single XMath node to Presentation MathML.
 ///
 /// Port of `pmml` + `pmml_internal`.
@@ -594,7 +615,7 @@ fn pmml_inner(doc: &PostDocument, node: &Node) -> NodeData {
         if let Some(child) = node.get_first_child() {
           let mut current = Some(child);
           while let Some(ref c) = current {
-            children.extend(super::pmml_text_aux(doc, c));
+            children.extend(super::pmml_text_aux(doc, c, &super::TextAttrs::default()));
             current = c.get_next_sibling();
           }
         }

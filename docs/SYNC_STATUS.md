@@ -56,7 +56,8 @@ Re-verify a row before planning on it (rule 1).
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
-| **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
+| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN; F17's `pmml_text_aux` item ✅ **FIXED 2026-07-29**. The rest of F17 is a list of individually-scoped items, each with a Perl `MathML.pm` line | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
+| **R6** | `ltx_env_<name>` env-markup class | user-requested, **PHASE 2 — do NOT start yet** (user directive 2026-07-29) | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
 | **R9** | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | parked; several carry explicit "do NOT start". The `.bst` row's "`.bst` files *vendor macro definitions*" premise was **RETRACTED 2026-07-27** (`alpha.bst` has zero `Dbar`; the macro is `mathscinet.sty`'s) — it survives on label style / sort order / **field selection**, and the prerequisite is a corpus measurement of the `.bib`+`.bst`-with-no-`.bbl` population | **family** | [`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md), and R9-BST below |
@@ -623,12 +624,16 @@ Two completed diagnostic snapshots were dated + archived; their still-open
 residuals stay here so the live worklist keeps them visible:
 
 - **MathML-post line audit** (sweep complete; →
-  `archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`). Open feature-gaps: **F5**
-  Linebreaker (full feature gap — the sketch used the wrong strategy), **F11**
-  Hint width normalization, **F14** multirelation + lt-or-approx cMML, **F15**
-  continued-fraction, **F16** OperatorDictionary Cat A/B data holes + U+2A50
-  misclassification + fence U+0331, **F17** formulae pMML arm, plus PARTIAL
-  inherited-context bindings on `pmml_top`/`pmml_parenthesize`/`stylizeContent`.
+  `archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`). **This list was stale until
+  2026-07-29** — it named F11/F14/F15/F16 as open when the archive marks all four
+  ✅ and the code confirms it (`filter_row` in `mathml/mod.rs`, `do_cfrac` in
+  `presentation.rs`, the `0x2A50`→Cat C / `0x27A1` / `0x0331` rows plus their
+  guard in `operator_dictionary.rs`). What is genuinely open is **R3**: **F17**
+  (a list of smaller pMML gaps) and **F5** Linebreaker (full feature gap — the
+  sketch used the wrong strategy; needs a port-or-drop scope decision). Also
+  still open: the **F14 residual** (`m:share` hrefs use the primary ID suffix;
+  the `MATHPROCESSOR->IDSuffix` secondary-suffix wiring is unconnected) and
+  PARTIAL inherited-context bindings on `pmml_top`/`pmml_parenthesize`.
   (Content-MathML items obey the defer-to-a-dedicated-session directive above.)
 - **arXiv velocity-fork audit** (items 1–4 landed 2026-07-03; →
   `archive/ARXIV_FORK_AUDIT_2026-07-03.md`). Sole residual: **item G** —
@@ -946,7 +951,80 @@ work." The *reasoning* is still right (that paper loads no package and
 and its `KacNilpotentorbits` entry (`biblo.bib` L2059) is uncited. Still do not
 measure with it — now because it is silent, not because it is parity.
 
-### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)
+### R3 — Presentation-MathML audit gaps F17, and F5 Linebreaker
+
+Both from the archived MathML-post line audit
+(`archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`); read the F17 bullet there for
+the per-item Perl line references. **F17 is a list, not a family** — each item is
+individually scoped and separately landable. **F5 is a family** and needs a
+port-or-drop decision before any code.
+
+**F17 — `pmml_text_aux` styling ✅ FIXED 2026-07-29.** `pmml_text_aux` took no
+`%attr` at all (Perl `MathML.pm` L1029, L1041-1045 threads font / fontsize /
+color / backgroundcolor / opacity down from each enclosing `ltx:*` element), so
+**every `<m:mtext>` came out unstyled**: `\textcolor{red}{\text{…}}` in math lost
+its color, `\text{\textbf{…}}` lost its `ltx_mathvariant_bold` class,
+`\text{\small …}` lost its `mathsize`. Two more defects in the same function:
+- a **leading whitespace run was dropped instead of becoming an NBSP** — the arm
+  called `trim_start()` and only then tested the *already-trimmed* string with
+  `starts_with(char::is_whitespace)`, which can never be true, so `$a \text{ and
+  } b$` closed up on the left (Perl L1035 is `s/^\s+/NBSP/` — replace, not trim);
+- an `ltx:Math` inside an `XMText` whose `XMath` was already converted on an
+  earlier pass returned `vec![]`, **silently dropping the formula**; Perl
+  (L1051-1052) hands back the existing `m:math`'s children. Note the fallback
+  must find that `m:math` by **namespace URI, not the `m:` prefix** — this
+  processor is what introduces MathML, so `m:` is not yet in the document's XPath
+  context and an XPath lookup would no-op.
+Also added the `framed`/`framecolor` guard on the `ltx:text` arm plus its
+`pmml_maybe_resize` (L1057-1059), and the `unexpected:nested-math` warning
+(L1070-1072). Perl's `delete $mmlattr{stretchy}` (L1069) has **nothing to port**:
+`%props` is filled only for `m:mo` and `$stretchy` is cleared for every other tag
+(L764-767), so it is belt-and-braces over an already-absent attribute.
+**The dead second copy of `stylizeContent` is gone.** `mathml/mod.rs` carried a
+~245-line tag-generic `stylize_content` that **nothing called** — the live token
+half had grown separately inside `presentation::pmml_token_inner` — so its `m:mo`
+arm had drifted out of parity unnoticed (always-emitted `_lspace`/`_rspace`, no
+`stretchyhack`, size compared against a hardcoded `"100%"`). It is now the live,
+`%attr`-threading `m:mtext` half, `stylize_text_content`, and its doc comment
+states the split so neither half grows the other's branches.
+Guard `90_latexmlpost::mtextstyle_post_test`, **0 diff lines** — the golden is
+same-host Perl 0.8.8 `latexmlpost --keepXMath --pmml` on the identical core XML,
+and the test was verified RED pre-fix at **18 diff lines**. The fixture exercises
+every arm of the function.
+
+**F17 — remaining items** (each with its Perl line in the archive): `pmml_infix`
+ADDOP flatten via `pmml_unrow` (L639-644); `pmml_scriptsize_padded` primed-sum
+limit centering (L926) + `pmml_script_decipher` emb_left/emb_right;
+`Apply:?:formulae` has no pMML arm (renders the phantom op); `outerWrapper`
+altimg/RDFa attrs (L82-89); `combineParallel` `annotation-xml` non-mathml wrap
+(L123-127); `preprocess` plane1/hackplane1/nestmath config unwired (L69-73).
+`pmml_parenthesize`'s missing `usemfenced` branch is **probably N-A** (obsolete
+`m:mfenced`) — confirm before porting.
+
+### R6 — `ltx_env_<name>` env-markup class — PHASE 2, do NOT start yet
+**Deferred by user directive 2026-07-29: this waits until the parity and
+first-arXiv-release milestones are done.** It is a beyond-Perl styling
+enhancement, not a parity gap, and its golden churn (an additive class on every
+env element in nearly every test XML) would sit on top of release-critical work.
+Pick it up only after those milestones land — then on its own branch.
+
+Design notes, kept so the analysis is not re-derived:
+- `Document::open_element` (`latexml_core/src/document.rs`) is the single funnel
+  for element creation, so one armed-in-`before_construct` /
+  consumed-by-first-`open_element` slot on `Document` tags exactly the env's
+  wrapper element. That survives the schema's auto-open/auto-close (which defeats
+  a parent-anchor + child-count mark for `figure`/`table`) and needs **no** node
+  gid — so the "needs a globally-unique monotonic node gid" prerequisite below
+  applies only to the raw `\newenvironment` half.
+- Name sanitizing is already available: `clean_class_name` (Perl
+  `Package.pm:527 CleanClassName`), giving `figure*` → `ltx_env_figure`.
+- 302 of 305 `DefEnvironment!` sites are template-based and 3 are closures; both
+  paths funnel through `open_element`, so one hook covers all of them.
+- `add_class` merges with a template's existing `class` and is schema-filtered,
+  so `minipage` would become `class="ltx_env_minipage ltx_minipage"`.
+- Golden churn is mechanical via `tools/maketests.sh` (`LATEXML_BLESS=1`), with a
+  filtered diff to prove only `class=` changed.
+
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
 with `class="ltx_env_<name>"` so custom/minipage-like envs (e.g. `SideBySideExample`)
 become responsively styleable in CSS instead of fixed-width minipages. **MUST be on a

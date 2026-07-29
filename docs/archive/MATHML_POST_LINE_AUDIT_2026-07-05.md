@@ -164,6 +164,21 @@ Verified-and-landed items move to the ✅ list at the bottom.
   misaligned ns field — the known rust-libxml class; element-type guard,
   Perl-faithful).
 
+- **F17a ✅ (2026-07-29)** — `pmml_text_aux` now threads Perl's `%attr`
+  (L1029, L1041-1045), so an `m:mtext` keeps the font/fontsize/color/
+  backgroundcolor/opacity of the `ltx:text` that wrapped it — previously EVERY
+  `m:mtext` was unstyled. Same function, two more: a leading whitespace run was
+  `trim_start()`ed away rather than replaced by an NBSP (L1035), and an
+  already-converted nested `ltx:Math` returned nothing instead of the existing
+  `m:math`'s children (L1051-1052), silently dropping the formula. Plus the
+  `framed`/`framecolor` guard + `pmml_maybe_resize` on the `ltx:text` arm and the
+  `unexpected:nested-math` warning. `delete $mmlattr{stretchy}` (L1069) is N-A:
+  `%props` is `m:mo`-only and `$stretchy` is cleared for other tags (L764-767).
+  Killed the ~245-line DEAD second copy of `stylizeContent` in `mathml/mod.rs`
+  (nothing called it, so its `m:mo` arm had silently drifted); it is now the live
+  `m:mtext` half. Guard `90_latexmlpost::mtextstyle_post_test` — 0 diff lines vs
+  same-host Perl 0.8.8, verified RED pre-fix at 18. See SYNC_STATUS R3.
+
 - **F15 ✅ (2026-07-02)** — `do_cfrac` ported in full (denominator-sum last-
   term pull-up: trailing `\cdots`, nested-cfrac recursion, invisible-times
   `\cdots`·factor; Perl L1930-1951) behind the faithful `cfrac-inline` gate

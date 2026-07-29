@@ -21,7 +21,6 @@ use crate::{
   document::{NodeData, PostDocument},
   math_processor::{MathConversion, MathProcessor, math_is_parsed, process_math},
   processor::{ProcessResult, Processor},
-  unicode,
 };
 
 const MML_URI: &str = "http://www.w3.org/1998/Math/MathML";
@@ -400,260 +399,201 @@ pub fn style_size(style: &str) -> &str {
   }
 }
 
-/// Stylize a token's content for MathML.
+/// Perl's `%attr` for `pmml_text_aux` — the presentation attributes an
+/// enclosing `ltx:*` element contributes to the `m:mtext` elements below it.
 ///
-/// Port of `stylizeContent` (~130 lines of Perl).
-/// Given an XMTok node and a target MathML tag, determines:
-/// - The text content (with empty-token defaults)
-/// - The mathvariant (from font, with plane1 mapping)
-/// - Operator dictionary properties (fence, stretchy, etc.)
-/// - Color, background, class, href attributes
+/// Perl threads an open hash (`MathML.pm` L1029, L1041-1045), but only these
+/// five keys are ever written on this path, so they are named fields. The other
+/// keys `stylizeContent` consults (`role`, `class`, `cssstyle`, `href`, `title`,
+/// `stretchy`) are never set by this caller — they come off the node itself.
+#[derive(Clone, Default, Debug)]
+pub struct TextAttrs {
+  font:            Option<String>,
+  fontsize:        Option<String>,
+  color:           Option<String>,
+  backgroundcolor: Option<String>,
+  opacity:         Option<String>,
+}
+
+impl TextAttrs {
+  /// Overlay `node`'s own presentation attributes, as Perl `pmml_text_aux`
+  /// L1041-1045 does: an attribute PRESENT on the element wins over what was
+  /// inherited; an absent one leaves the inherited value in place.
+  fn overlay(&self, node: &Node) -> Self {
+    let pick = |cur: &Option<String>, name: &str| -> Option<String> {
+      node
+        .get_attribute(name)
+        .filter(|v| !v.is_empty())
+        .or_else(|| cur.clone())
+    };
+    Self {
+      font:            pick(&self.font, "font"),
+      fontsize:        pick(&self.fontsize, "fontsize"),
+      color:           pick(&self.color, "color"),
+      backgroundcolor: pick(&self.backgroundcolor, "backgroundcolor"),
+      opacity:         pick(&self.opacity, "opacity"),
+    }
+  }
+}
+
+/// The first direct element child of `node` with the given namespace URI and
+/// local name — Perl's `findnode('<prefix>:<name>', $node)` without depending on
+/// the prefix being registered in the document's XPath context.
+fn element_child_named(node: &Node, ns_uri: &str, local: &str) -> Option<Node> {
+  let mut current = node.get_first_child();
+  while let Some(c) = current {
+    if c.get_type() == Some(libxml::tree::NodeType::ElementNode)
+      && c.get_name() == local
+      && c.get_namespace().map(|ns| ns.get_href()).as_deref() == Some(ns_uri)
+    {
+      return Some(c);
+    }
+    current = c.get_next_sibling();
+  }
+  None
+}
+
+/// Perl's `\p{Format}` over the codepoints that occur in math content — the
+/// same approximation `pmml_token_inner` uses, so the two arms agree.
+fn is_format_char(c: char) -> bool {
+  matches!(c,
+    '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')
+}
+
+/// `stylizeContent` (`MathML.pm` L672-828) for the `$tag eq 'm:mtext'` case —
+/// the styling half of the `pmml_text_aux` path.
 ///
-/// Returns (text, attributes_map).
-pub fn stylize_content(node: &Node, target_tag: &str) -> (String, HashMap<String, String>) {
-  let _is_element = true; // Node is always an element in our API
-  let role = node.get_attribute("role").unwrap_or_default();
-  let font = node.get_attribute("font");
-  let size = node.get_attribute("fontsize");
-  let color = node.get_attribute("color");
-  let bgcolor = node.get_attribute("backgroundcolor");
-  let opacity = node.get_attribute("opacity");
-  let class = node.get_attribute("class");
-  let href = node.get_attribute("href");
-  let title = node.get_attribute("title");
+/// **The token half of the same Perl function lives in
+/// `presentation::pmml_token_inner`**, the golden-guarded faithful copy of the
+/// `m:mi`/`m:mo`/`m:mn` branches (operator dictionary, plane-1 remapping,
+/// stretch/size interplay). Perl is one function; the Rust split is by target
+/// tag, and neither half should grow the other's branches. (This function used
+/// to be a whole second copy of `stylizeContent`, tag-generic and dead — nothing
+/// called it, so its `m:mo` arm had drifted out of parity unnoticed.)
+///
+/// What `m:mtext` reaches, and hence emits:
+/// - **no `mathvariant`** — Perl clears it unconditionally for `m:mtext`
+///   (L756-757); a font survives only as an `ltx_font_*` / `ltx_mathvariant_*`
+///   CSS class.
+/// - **no plane-1 remapping** — guarded off by `($tag ne 'm:mtext')` (L737).
+/// - **no `href`/`title`** — gated on `$istoken` (L691-692).
+/// - **no operator-dictionary attributes** — `%props` is filled only for `m:mo`
+///   (L764), and `$stretchy` is cleared for every other tag (L767). So Perl's
+///   `delete $mmlattr{stretchy}` in `pmml_text_aux` (L1069) is belt-and-braces
+///   over something already absent, and has nothing to port.
+///
+/// `node` is `None` for a text node — Perl's non-`XML_ELEMENT_NODE` `$item`,
+/// which contributes no attributes of its own (`$iselement` is false).
+fn stylize_text_content(
+  node: Option<&Node>,
+  attrs: &TextAttrs,
+  text: &str,
+) -> HashMap<String, String> {
+  let attr_of = |name: &str| -> Option<String> {
+    node
+      .and_then(|n| n.get_attribute(name))
+      .filter(|v| !v.is_empty())
+  };
+  // Perl L677-686: the passed-in %attr wins, then the item's own attribute,
+  // then the inherited context.
+  let font = attrs
+    .font
+    .clone()
+    .or_else(|| attr_of("font"))
+    .or_else(presentation::ctx_font);
+  let size = attrs.fontsize.clone().or_else(|| attr_of("fontsize"));
+  let color = attrs
+    .color
+    .clone()
+    .or_else(|| attr_of("color"))
+    .or_else(presentation::ctx_color);
+  // NB Perl L683-684 reads `$attr{backgroundcolor} && ($iselement &&
+  // $item->getAttribute('backgroundcolor')) || $BGCOLOR`, so the item's own
+  // attribute counts only when an inherited one is ALSO set, and the result is
+  // then the item's. Mirrored, quirk included; `pmml_token_inner` carries the
+  // same note for the token arm.
+  let bgcolor = attrs
+    .backgroundcolor
+    .as_ref()
+    .and_then(|_| attr_of("backgroundcolor"))
+    .or_else(presentation::ctx_bgcolor);
+  let opacity = attrs
+    .opacity
+    .clone()
+    .or_else(|| attr_of("opacity"))
+    .or_else(presentation::ctx_opacity);
+  let mut class = attr_of("class");
+  let mut cssstyle = attr_of("cssstyle");
 
-  let mut text = node.get_content();
-  let is_token = matches!(target_tag, "m:mi" | "m:mo" | "m:mn");
+  // Perl L744-745: purely-Format content (invisible times/apply/separator, …)
+  // needs no visual styling attributes at all.
+  let (font, color, bgcolor, opacity) = if text.chars().all(is_format_char) {
+    (None, None, None, None)
+  } else {
+    (font, color, bgcolor, opacity)
+  };
 
-  // Default token content for invisible operators
-  static DEFAULT_CONTENT: &[(&str, &str)] = &[
-    ("MULOP", "\u{2062}"), // INVISIBLE TIMES
-    ("ADDOP", "\u{2064}"), // INVISIBLE PLUS
-    ("PUNCT", "\u{2063}"), // INVISIBLE SEPARATOR
-  ];
-
-  if text.is_empty() {
-    for (r, default) in DEFAULT_CONTENT {
-      if role == *r {
-        text = default.to_string();
-        break;
-      }
-    }
-    if text.is_empty() {
-      text = node
-        .get_attribute("name")
-        .or_else(|| node.get_attribute("meaning"))
-        .unwrap_or_else(|| role.clone());
-    }
-  }
-
-  // Minus sign normalization (MathML Core prefers Unicode minus)
-  if text == "-" && matches!(role.as_str(), "ADDOP" | "OPERATOR") {
-    text = "\u{2212}".to_string();
-  }
-
-  // Determine mathvariant from font.
-  // Port of Perl stylizeContent lines 689-756.
-  let mut variant: Option<&str> = font.as_deref().map(unicode::unicode_mathvariant);
-  let mut attrs = HashMap::default();
-
-  // Single char mi: italic is default, "normal" must be stated explicitly
-  // Perl L717-719
-  if target_tag == "m:mi" && text.chars().count() == 1 {
-    if variant == Some("italic") {
-      variant = None; // defaults to italic
-    } else if variant.is_none() && font.is_none() {
-      // no font at all — italic is MathML default for single-char mi
-    } else if variant.is_none() {
-      variant = Some("normal"); // font present but no recognized variant → say "normal"
-    }
-  } else if font.is_some() && variant == Some("normal") {
-    // "normal" is default for non-mi tokens; omit
-    variant = None;
-  }
-
-  // Plane 1 Unicode conversion.
-  // Port of Perl stylizeContent lines 729-741.
-  // When plane1=true (default), convert text to Mathematical Alphanumeric Symbols
-  // and clear the mathvariant (the character itself carries the style).
-  if let Some(v) = variant {
-    if target_tag != "m:mtext" {
-      if let Some(u_text) = unicode::unicode_convert(&text, v) {
-        if !u_text.is_empty() || text.is_empty() {
-          text = u_text;
-          variant = None; // Plane 1 char carries the style; no mathvariant needed
-        }
-      }
-    }
-  }
-
-  // Apply remaining variant (not cleared by plane1 conversion)
-  if let Some(v) = variant {
-    if target_tag == "m:mi" && text.chars().count() == 1 {
-      if v != "italic" {
-        attrs.insert("mathvariant".to_string(), v.to_string());
-      }
-    } else if v != "normal" {
-      attrs.insert("mathvariant".to_string(), v.to_string());
-    }
-  } else if target_tag == "m:mi" && text.chars().count() > 1 && font.is_none() {
-    // Multi-char mi without font → normal
-    attrs.insert("mathvariant".to_string(), "normal".to_string());
-  }
-
-  // Invisible/format-only text needs no styling attributes.
-  // Port of Perl L743-744: if ($text =~ /^\p{Format}*$/)
-  let is_format_only = text.chars().all(|c| {
-    use std::char;
-    matches!(char::from_u32(c as u32), Some(ch) if ch.is_control())
-      || matches!(c,
-        '\u{200B}'..='\u{200F}' | '\u{2028}'..='\u{202F}'
-        | '\u{2060}'..='\u{2064}' | '\u{FEFF}' | '\u{00AD}')
-  });
-  if is_format_only {
-    variant = None;
-    // Don't clear font/color etc from attrs — they weren't added yet
-  }
-
-  // Font-based CSS class fallbacks.
-  // Port of Perl L746-756: only when variant was NOT converted to plane1.
-  let mut class_val = class;
+  // Perl L746-756: patch up weak font translations with a CSS class. For
+  // `m:mtext` this is the ONLY channel a font has, since the mathvariant is
+  // dropped below.
   if let Some(ref f) = font {
-    if !is_format_only {
-      if f.contains("caligraphic") {
-        let c = class_val.as_deref().unwrap_or("");
-        class_val = Some(if c.is_empty() {
-          "ltx_font_mathcaligraphic".to_string()
-        } else {
-          format!("{} ltx_font_mathcaligraphic", c)
-        });
-      } else if f.contains("script") {
-        let c = class_val.as_deref().unwrap_or("");
-        class_val = Some(if c.is_empty() {
-          "ltx_font_mathscript".to_string()
-        } else {
-          format!("{} ltx_font_mathscript", c)
-        });
-      } else if f.contains("fraktur") && text.chars().all(|c| "+-0123456789.".contains(c)) {
-        // Perl L751: fraktur number → oldstyle class
-        let c = class_val.as_deref().unwrap_or("");
-        class_val = Some(if c.is_empty() {
-          "ltx_font_oldstyle".to_string()
-        } else {
-          format!("{} ltx_font_oldstyle", c)
-        });
-      } else if f.contains("smallcaps") {
-        let c = class_val.as_deref().unwrap_or("");
-        class_val = Some(if c.is_empty() {
-          "ltx_font_smallcaps".to_string()
-        } else {
-          format!("{} ltx_font_smallcaps", c)
-        });
-      } else if let Some(v) = variant {
-        if v != "normal" {
-          // Perl L755-756: leftover mathvariant → CSS fallback
-          let c = class_val.as_deref().unwrap_or("");
-          class_val = Some(if c.is_empty() {
-            format!("ltx_mathvariant_{}", v)
-          } else {
-            format!("{} ltx_mathvariant_{}", c, v)
-          });
-        }
-      }
-    }
-  }
-  if let Some(cv) = class_val {
-    if !cv.is_empty() {
-      attrs.insert("class".to_string(), cv);
+    let extra = if f.contains("caligraphic") {
+      Some("ltx_font_mathcaligraphic".to_string())
+    } else if f.contains("script") {
+      Some("ltx_font_mathscript".to_string())
+    } else if f.contains("fraktur") && text.chars().all(|c| "+-0123456789.".contains(c)) {
+      Some("ltx_font_oldstyle".to_string())
+    } else if f.contains("smallcaps") {
+      Some("ltx_font_smallcaps".to_string())
+    } else {
+      Some(crate::unicode::unicode_mathvariant(f))
+        .filter(|v| *v != "normal")
+        .map(|v| format!("ltx_mathvariant_{v}"))
+    };
+    if let Some(extra) = extra {
+      class = Some(match class {
+        Some(c) if !c.is_empty() => format!("{c} {extra}"),
+        _ => extra,
+      });
     }
   }
 
-  // Operator-specific properties (mo only) — from MathML Core operator dictionary
-  if target_tag == "m:mo" {
-    let dict_props = operator_dictionary::opdict_lookup(&text, &role);
-
-    // Implied role-based properties
-    let is_fence = matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE");
-    let is_sep = role == "PUNCT";
-    let is_large = matches!(role.as_str(), "SUMOP" | "INTOP");
-    let is_move = matches!(role.as_str(), "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP");
-    let is_symm = is_large || text == "/";
-
-    // Only set attributes that differ from the operator dictionary defaults
-    // (matching Perl's xor-based attribute generation)
-    let stretchy = node.get_attribute("stretchy").as_deref() == Some("true");
-    if stretchy != dict_props.stretchy {
-      attrs.insert(
-        "stretchy".to_string(),
-        if stretchy { "true" } else { "false" }.to_string(),
-      );
-    }
-    if is_fence != dict_props.fence {
-      attrs.insert(
-        "fence".to_string(),
-        if is_fence { "true" } else { "false" }.to_string(),
-      );
-    }
-    if is_sep != dict_props.separator {
-      attrs.insert(
-        "separator".to_string(),
-        if is_sep { "true" } else { "false" }.to_string(),
-      );
-    }
-    if is_large != dict_props.largeop {
-      attrs.insert(
-        "largeop".to_string(),
-        if is_large { "true" } else { "false" }.to_string(),
-      );
-    }
-    if is_large {
-      attrs.insert("_largeop".to_string(), "1".to_string()); // For needsMathStyle
-    }
-    if is_symm && !dict_props.symmetric && (stretchy || dict_props.stretchy) {
-      attrs.insert("symmetric".to_string(), "true".to_string());
-    }
-    if is_move {
-      let pos = node.get_attribute("scriptpos").unwrap_or_default();
-      if pos.starts_with("mid") {
-        attrs.insert("movablelimits".to_string(), "false".to_string());
-      }
-    }
-
-    // Store dictionary spacing for later spacing resolution
-    attrs.insert("_lspace".to_string(), format!("{}em", dict_props.lspace));
-    attrs.insert("_rspace".to_string(), format!("{}em", dict_props.rspace));
+  // Perl L758-759: opacity folds into the css style.
+  if let Some(op) = opacity {
+    cssstyle = Some(match cssstyle {
+      Some(c) if !c.is_empty() => format!("{c};opacity:{op}"),
+      _ => format!("opacity:{op}"),
+    });
   }
 
-  // Color
+  let mut out: HashMap<String, String> = HashMap::default();
+  // Perl L779-797: emit a size only when it differs from the style's nominal
+  // size, re-expressed relative to a script context and converted to em. The
+  // `stretchyhack` minsize/maxsize arm needs `$issymm`, which for a non-`m:mo`
+  // tag reduces to `$text eq '/'` (L703) — `$islargeop` needs a SUMOP/INTOP
+  // role and `$props{symmetric}` is `m:mo`-only.
+  if let Some(s) = size.filter(|s| s != presentation::context_size()) {
+    let s = presentation::resolve_size(s);
+    if text == "/" {
+      out.insert("minsize".to_string(), s.clone());
+      out.insert("maxsize".to_string(), s);
+    } else {
+      out.insert("mathsize".to_string(), s);
+    }
+  }
   if let Some(c) = color {
-    attrs.insert("mathcolor".to_string(), c);
+    out.insert("mathcolor".to_string(), c);
   }
   if let Some(bg) = bgcolor {
-    attrs.insert("mathbackground".to_string(), bg);
+    out.insert("mathbackground".to_string(), bg);
   }
-  if let Some(op) = opacity {
-    let style_val = format!("opacity:{}", op);
-    attrs.insert("style".to_string(), style_val);
+  if let Some(style) = cssstyle.filter(|s| !s.is_empty()) {
+    out.insert("style".to_string(), style);
   }
-
-  // Size
-  if let Some(s) = size {
-    if s != "100%" {
-      attrs.insert("mathsize".to_string(), s);
-    }
+  if let Some(c) = class.filter(|c| !c.is_empty()) {
+    out.insert("class".to_string(), c);
   }
-
-  // Href and title (tokens only)
-  if is_token {
-    if let Some(h) = href {
-      attrs.insert("href".to_string(), h);
-    }
-    if let Some(t) = title {
-      attrs.insert("title".to_string(), t);
-    }
-  }
-
-  (text, attrs)
+  out
 }
 
 /// Convert an XMHint spacing attribute to em value.
@@ -964,36 +904,44 @@ pub fn pmml_punctuate(separators: &str, items: Vec<NodeData>) -> NodeData {
 
 /// Convert a text node within XMText to Presentation MathML.
 ///
-/// Port of `pmml_text_aux`.
-/// Handles text nodes, element nodes (including nested Math),
-/// and preserves font/color attributes through the conversion.
-pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
+/// Port of `pmml_text_aux` (`MathML.pm` L1029-1077). `attrs` is Perl's `%attr`:
+/// the presentation attributes accumulated from the enclosing `ltx:*` elements,
+/// which `stylize_text_content` then puts on the `m:mtext`. The top-level caller
+/// (the `ltx:XMText` arm of `pmml_internal`, Perl L494-498) passes an empty set,
+/// exactly as Perl's bare `pmml_text_aux($_)` does.
+pub fn pmml_text_aux(doc: &PostDocument, node: &Node, attrs: &TextAttrs) -> Vec<NodeData> {
   use libxml::tree::NodeType;
 
   match node.get_type() {
     Some(NodeType::TextNode) => {
-      let text = node.get_content();
-      // Replace leading/trailing whitespace with NBSP
-      let text = text.trim_start().to_string();
-      let text = if text.is_empty() {
-        "\u{00A0}".to_string()
+      // Perl L1035-1036: `s/^\s+/NBSP/` then `s/\s+$/NBSP/` — a leading or
+      // trailing whitespace RUN is REPLACED by a single NBSP, not trimmed away.
+      // (This arm used to `trim_start()` unconditionally and only then test the
+      // already-trimmed string with `starts_with(is_whitespace)`, which can
+      // never be true — so leading space was silently dropped instead of
+      // becoming the NBSP that keeps `$a \text{ and } b$` from closing up.)
+      let raw = node.get_content();
+      let head_trimmed = raw.trim_start();
+      let mut text = if head_trimmed.len() == raw.len() {
+        raw.clone()
       } else {
-        let mut t = text;
-        if t.starts_with(char::is_whitespace) {
-          t = format!("\u{00A0}{}", t.trim_start());
-        }
-        if t.ends_with(char::is_whitespace) {
-          t = format!("{}\u{00A0}", t.trim_end());
-        }
-        t
+        format!("\u{00A0}{head_trimmed}")
       };
+      let tail_trimmed = text.trim_end();
+      if tail_trimmed.len() != text.len() {
+        text = format!("{tail_trimmed}\u{00A0}");
+      }
+      let attributes = stylize_text_content(None, attrs, &text);
       vec![NodeData::Element {
         tag:        "m:mtext".to_string(),
-        attributes: None,
+        attributes: (!attributes.is_empty()).then_some(attributes),
         children:   vec![NodeData::Text(text)],
       }]
     },
     Some(NodeType::ElementNode) => {
+      // Perl L1041-1045: the element's own font/fontsize/color/backgroundcolor/
+      // opacity join the inherited set for everything below it.
+      let attrs = attrs.overlay(node);
       let tag = doc.get_qname(node).unwrap_or_default();
       match tag.as_str() {
         "ltx:Math" => {
@@ -1002,22 +950,45 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
             Some(xmath) => {
               vec![presentation::convert_to_pmml(doc, &xmath)]
             },
-            _ => {
-              vec![]
+            // Perl L1051-1052: no XMath left means this Math was already
+            // converted on an earlier pass — hand back the existing
+            // `m:math`'s children rather than dropping the formula. Perl finds
+            // it with `findnode('m:math', …)`, a DIRECT child; we scan the
+            // children by namespace URI because the `m` prefix is not in the
+            // document's XPath context at this point — this very processor is
+            // what introduces MathML, so `m:` would fail to resolve and the
+            // formula would go on being dropped silently.
+            _ => match element_child_named(node, MML_URI, "math") {
+              Some(mml) => {
+                let mut out = Vec::new();
+                let mut current = mml.get_first_child();
+                while let Some(ref c) = current {
+                  if let Some(nd) = rebuild_text_subtree_with_doc(c, true, Some(doc)) {
+                    out.push(nd);
+                  }
+                  current = c.get_next_sibling();
+                }
+                out
+              },
+              _ => vec![],
             },
           }
         },
-        "ltx:text" => {
+        // Perl L1057-1059: an `ltx:text` is transparent — recurse and let the
+        // attributes ride down — but ONLY when it is not framed. `m:mtext`
+        // cannot express a frame, so a framed one falls through to the
+        // raw-markup arm below, where the XSLT can still render the box.
+        "ltx:text" if !node.has_attribute("framed") && !node.has_attribute("framecolor") => {
           // Recurse on children
           let mut results = Vec::new();
           if let Some(child) = node.get_first_child() {
             let mut current = Some(child);
             while let Some(ref c) = current {
-              results.extend(pmml_text_aux(doc, c));
+              results.extend(pmml_text_aux(doc, c, &attrs));
               current = c.get_next_sibling();
             }
           }
-          results
+          vec![presentation::maybe_resize(doc, node, pmml_row(results))]
         },
         "ltx:picture" => {
           // Picture in text: wrap in mtext. Eagerly materialize the picture
@@ -1029,6 +1000,9 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
           // are stripped into a detached document fragment and later
           // accesses via the stale rust-libxml wrapper dereference freed
           // memory — reproducible on 0710.1208 / 1110.2158 / 1605.07431).
+          // Perl L1061-1063 passes no %attr through this arm — the picture is
+          // its own rendering, so the surrounding math font/color does not
+          // restyle it.
           vec![NodeData::Element {
             tag:        "m:mtext".to_string(),
             attributes: None,
@@ -1044,11 +1018,24 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
           // owned subtree, threading `doc` through so URI→prefix
           // resolution recovers the canonical `ltx:` prefix on
           // default-namespace elements.
+          //
+          // Perl L1067-1072 also stylizes this `m:mtext` from the accumulated
+          // %attr and warns `unexpected:nested-math` when the raw subtree still
+          // contains an `ltx:Math` (an `m:math` inside an `m:mtext` is invalid
+          // MathML, but dropping the formula would be worse).
+          if doc.findnode_at(".//ltx:Math", node).is_some() {
+            crate::Warn!(
+              "unexpected",
+              "nested-math",
+              "We're getting m:math nested within an m:mtext"
+            );
+          }
+          let attributes = stylize_text_content(Some(node), &attrs, &node.get_content());
           let cloned = rebuild_text_subtree_with_doc(node, true, Some(doc))
             .unwrap_or_else(|| NodeData::Text("\u{00A0}".to_string()));
           vec![NodeData::Element {
             tag:        "m:mtext".to_string(),
-            attributes: None,
+            attributes: (!attributes.is_empty()).then_some(attributes),
             children:   vec![cloned],
           }]
         },
