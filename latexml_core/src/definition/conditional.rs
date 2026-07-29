@@ -14,6 +14,7 @@ use crate::{
   document::Document,
   gullet,
   parameter::Parameters,
+  pin,
   state::*,
   token::*,
   tokens::Tokens,
@@ -175,11 +176,14 @@ pub struct IfFrame {
 
 impl Conditional {
   fn invoke_conditional(&self) -> Result<Tokens> {
-    let mut ifid = lookup_int("if_count");
+    // Hot path: fires on every \if/\ifx/\ifnum/…; all state probes use
+    // pin!-cached keys (the per-call arena::pin was ~1% of self-time on
+    // \ifnum-dense pgfplots documents).
+    let mut ifid = lookup_int_sym(pin!("if_count"));
     ifid += 1;
-    assign_value("if_count", ifid, Some(Scope::Global));
+    assign_value_sym(pin!("if_count"), ifid, Some(Scope::Global));
     // Perl: if ($LaTeXML::IF_LIMIT and $ifid > $LaTeXML::IF_LIMIT) { Fatal(...) }
-    let if_limit = lookup_int("if_limit");
+    let if_limit = lookup_int_sym(pin!("if_limit"));
     if if_limit > 0 && ifid > if_limit {
       Fatal!(
         Timeout,
@@ -208,7 +212,7 @@ impl Conditional {
         // true branch: do nothing, tokens follow naturally
       } else {
         let to = self.skip_conditional_body(-1);
-        if lookup_bool("tracingcommands") {
+        if lookup_bool_sym(pin!("tracingcommands")) {
           Debug!("{{false}} [skipped to {:?}]\n", to);
         }
       }

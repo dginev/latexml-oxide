@@ -80,6 +80,27 @@ impl Locator {
     }
   }
 
+  /// [`Locator::new`] with an already-interned source. `Locator::new` re-pins
+  /// the source string (an interner hash probe over the whole path) on every
+  /// call, which is real cost on paths that build locators per token / per
+  /// conditional — a `Mouth` pins its source ONCE at construction and builds
+  /// locators from the cached symbol. Same parameter order as `new`.
+  pub fn from_sym(
+    source: SymStr,
+    from_line: u32,
+    from_column: u32,
+    to_line: u32,
+    to_column: u32,
+  ) -> Self {
+    Locator {
+      source,
+      from_line,
+      to_line,
+      from_column,
+      to_column,
+    }
+  }
+
   /// creates a new locator range from a given start and end
   pub fn new_range(from: Locator, to: Locator) -> Option<Locator> {
     // make sure that either parameters are defined

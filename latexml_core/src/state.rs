@@ -777,8 +777,13 @@ impl State {
 
   // needed for assign_internal, so keeping it as a object method
   /// gets the current value of a named prefix
-  pub fn get_prefix(&self, prefix: &str) -> bool {
-    match self.prefixes.get(&arena::pin(prefix)) {
+  pub fn get_prefix(&self, prefix: &str) -> bool { self.get_prefix_sym(arena::pin(prefix)) }
+
+  /// `get_prefix` variant with a pre-pinned SymStr (see `crate::pin!`) —
+  /// `assign_internal` probes the `global` prefix on every unscoped
+  /// assignment, so the per-call `arena::pin` there was pure overhead.
+  pub fn get_prefix_sym(&self, prefix: SymStr) -> bool {
+    match self.prefixes.get(&prefix) {
       Some(b) => *b,
       _ => false,
     }
@@ -829,7 +834,7 @@ impl State {
     let scope = match scope_opt {
       Some(s) => s,
       None => {
-        if self.get_prefix("global") {
+        if self.get_prefix_sym(pin!("global")) {
           Scope::Global
         } else {
           Scope::Local
@@ -962,13 +967,7 @@ impl State {
   //======================================================================
   /// fetches a Stored value at the given key, from the Value table
   pub fn lookup_value(&self, key: &str) -> Option<&Stored> {
-    match self.value.get(&arena::pin(key)) {
-      None => None,
-      Some(vvec) => match vvec.front() {
-        None | Some(Stored::None) => None,
-        Some(other) => Some(other),
-      },
-    }
+    self.lookup_value_sym(arena::pin(key))
   }
   pub fn lookup_value_sym(&self, key: SymStr) -> Option<&Stored> {
     match self.value.get(&key) {
@@ -1375,8 +1374,12 @@ pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(key: SymStr, va
 }
 
 /// inline lookup_value after which globally assign an empty Tokens() to undo
-pub fn remove_value(key: &str) -> Option<Stored> {
-  let key_sym = arena::pin(key);
+pub fn remove_value(key: &str) -> Option<Stored> { remove_value_sym(arena::pin(key)) }
+
+/// `remove_value` variant for hot call sites with a pre-pinned SymStr (see
+/// `crate::pin!`) — added for `after_assignment`, which fires on every
+/// `\def`/`\let`/register assignment.
+pub fn remove_value_sym(key_sym: SymStr) -> Option<Stored> {
   match state_mut!().value.get_mut(&key_sym) {
     None => None,
     Some(vvec) => match vvec.front_mut() {
@@ -1543,13 +1546,7 @@ where FnR: FnOnce(Option<&mut Stored>) -> R {
   caller(state_mut!().lookup_value_mut(key))
 }
 /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
-pub fn lookup_bool(key: &str) -> bool {
-  let state = state!();
-  match state.lookup_value(key) {
-    None => false,
-    Some(v) => v.into(),
-  }
-}
+pub fn lookup_bool(key: &str) -> bool { lookup_bool_sym(arena::pin(key)) }
 
 /// `lookup_bool` variant for hot call sites with a pre-pinned SymStr
 /// (see `crate::pin!`). Skips the per-call `arena::pin(key)` hash
@@ -1595,9 +1592,16 @@ pub fn lookup_string(key: &str) -> String {
   }
 }
 /// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
-pub fn lookup_int(key: &str) -> i64 {
+pub fn lookup_int(key: &str) -> i64 { lookup_int_sym(arena::pin(key)) }
+
+/// `lookup_int` variant for hot call sites with a pre-pinned SymStr (see
+/// `crate::pin!`). Skips the per-call `arena::pin(key)` hash lookup — the
+/// sibling of [`lookup_bool_sym`], added for the per-conditional
+/// `if_count`/`if_limit` probes (`Conditional::invoke` fires on every
+/// `\if`/`\ifx`/`\ifnum`/…).
+pub fn lookup_int_sym(key: SymStr) -> i64 {
   let state = state!();
-  match state.lookup_value(key) {
+  match state.lookup_value_sym(key) {
     Some(Stored::Int(i)) => *i,
     Some(Stored::Bool(true)) => 1, // this is Perl's boolean -> integer semantics
     Some(Stored::Number(n)) => n.value_of(),
@@ -2757,6 +2761,9 @@ pub fn pop_daemon_frame() -> Result<()> {
 pub fn set_prefix(prefix: &str) { state_mut!().prefixes.insert(arena::pin(prefix), true); }
 /// gets the current value of a named prefix
 pub fn get_prefix(prefix: &str) -> bool { state!().get_prefix(prefix) }
+/// `get_prefix` with a pre-pinned SymStr key (see `crate::pin!`) — for the
+/// per-`\def` prefix probes in `Expandable::new` and friends.
+pub fn get_prefix_sym(prefix: SymStr) -> bool { state!().get_prefix_sym(prefix) }
 
 /// clears the global prefixes
 pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
@@ -3232,7 +3239,7 @@ pub fn generate_ligature_id() -> usize {
 
 /// run the accumulated directives from `\afterassignment`
 pub fn after_assignment() {
-  match remove_value("afterAssignment") {
+  match remove_value_sym(pin!("afterAssignment")) {
     Some(Stored::Tokens(after)) => gullet::unread(after),
     Some(Stored::Token(after)) => gullet::unread_one(after),
     None | Some(Stored::None) => {},
