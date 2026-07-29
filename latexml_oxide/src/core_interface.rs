@@ -421,7 +421,24 @@ impl DigestionAPI for Core {
     }
     Debug!("Doc absorb: {:?}", digested);
 
-    document.absorb(&digested, None)?;
+    // A Build that runs out of budget KEEPS what it has already built. The
+    // guard tick inside `absorb` (see `document.rs`) can now raise a resource
+    // Fatal mid-build; propagating it with `?` would discard a document that is
+    // structurally sound up to the cut and hand the user a 39-byte stub — the
+    // same loss `digest_internal` already salvages against on the digestion
+    // side. Recovery is a FEATURE of Fatal here (user policy 2026-07-28):
+    // announce it, keep the partial document, finish the pipeline gracefully.
+    // `log_fatal` both emits the `Fatal:` line and latches the status, so the
+    // run still reports as failed and never masquerades as clean.
+    if let Err(e) = document.absorb(&digested, None) {
+      e.log_fatal();
+      log::warn!(
+        "convert_document: build stopped early ({:?}/{:?}) — keeping the \
+         document built so far",
+        e.target,
+        e.category
+      );
+    }
     note_end("Building");
 
     // Load .latexml file if it exists alongside the source .tex file.
