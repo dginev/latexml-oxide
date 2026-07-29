@@ -124,6 +124,10 @@ pub struct Document {
   /// segment's text where its `<_spilled_ ref="N"/>` placeholder sits. `None`
   /// on the eager path and on fragment documents.
   spill_store:                 Option<crate::sxml::SegmentStore>,
+  /// Streaming only: RDFa prefixes USED inside spilled (freed) content,
+  /// recorded at spill time — `set_rdfa_prefixes` scans the live DOM, and
+  /// spilled usages would otherwise vanish from the root's `prefix=`.
+  extra_rdfa_prefixes:         Vec<String>,
   /// Streaming pass 1 only: suppress the ROOT element's `after_open` hook
   /// dispatch. Eager semantics guarantee every hook runs with digestion
   /// COMPLETE (build starts after digestion ends); interleaving would fire
@@ -164,7 +168,6 @@ const ROOT_SPILLABLE: &[&str] = &[
   "subsubsection",
   "paragraph",
   "subparagraph",
-  "bibliography",
   "index",
   "glossary",
   "acknowledgements",
@@ -221,6 +224,7 @@ impl Document {
       localized_boxes:             Vec::new(),
       localized_fonts:             Vec::new(),
       spill_store:                 None,
+      extra_rdfa_prefixes:         Vec::new(),
       defer_root_after_open:       false,
     }
   }
@@ -1888,6 +1892,12 @@ impl Document {
       }
     }
 
+    for prefix in &self.extra_rdfa_prefixes {
+      if !non_rdf_prefixes.contains(prefix.as_str()) && prefix_map.contains_key(prefix) {
+        used_prefixes.insert(prefix.clone());
+      }
+    }
+
     if !used_prefixes.is_empty()
       && let Some(mut root) = self.document.get_root_element()
     {
@@ -3487,7 +3497,18 @@ impl Document {
         }
         let eligible = child.get_type() == Some(NodeType::ElementNode)
           && child.get_name() != SPILL_PLACEHOLDER
-          && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()));
+          && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()))
+          // Two things pin a subtree in RAM: a bibliography (a LATER
+          // `\bibstyle` writes attributes onto it through a doc-wide search —
+          // sweep witness tests/structure/bibsect.tex), and a deferred
+          // frontmatter marker (resolved on the live spine at
+          // end-of-digestion). Both are rare and small.
+          && self
+            .findnodes(
+              "descendant-or-self::ltx:bibliography | descendant-or-self::*[@_frontmatter_marker]",
+              Some(&child),
+            )
+            .is_empty();
         if eligible {
           run.push(child);
         } else if !run.is_empty() {
@@ -3604,6 +3625,17 @@ impl Document {
       return;
     }
     self.node_boxes.remove(&node.to_hashable());
+    for attr in [
+      "about", "resource", "property", "typeof", "rel", "rev", "datatype",
+    ] {
+      if let Some(value) = node.get_attribute(attr) {
+        for term in value.split_whitespace() {
+          if let Some(colon) = term.find(':') {
+            index.record_rdfa_prefix(&term[..colon], "");
+          }
+        }
+      }
+    }
     let id_opt = node.get_attribute_ns("id", XML_NS);
     if let Some(id) = &id_opt {
       index.record_id(id, seg);
@@ -3660,6 +3692,11 @@ impl Document {
   /// Streaming pass 1 switch: defer (true) or restore (false) the ROOT
   /// element's `after_open` hook dispatch. See the field docs.
   pub fn set_defer_root_after_open(&mut self, defer: bool) { self.defer_root_after_open = defer; }
+
+  /// Is the root's late-hook dispatch currently deferred (streaming pass 1)?
+  /// Engine bindings consult this to defer digestion-state-dependent
+  /// insertions (frontmatter) to end-of-digestion.
+  pub fn root_after_open_deferred(&self) -> bool { self.defer_root_after_open }
 
   /// Open a `ltx:_Capture_` wrapper at the TOP of the root — after the last
   /// existing `ltx:resource` child (resources lead the document in the eager
@@ -3753,6 +3790,12 @@ impl Document {
     self.unwrap_nodes(wrapper)?;
     self.set_node(&savenode);
     Ok(())
+  }
+
+  /// Merge RDFa prefixes recorded from spilled content, so the root's
+  /// `prefix=` attribute covers usages the live-DOM scan can no longer see.
+  pub fn add_extra_rdfa_prefixes<'a>(&mut self, prefixes: impl Iterator<Item = &'a str>) {
+    self.extra_rdfa_prefixes.extend(prefixes.map(String::from));
   }
 
   /// Detach the spill store (the streaming driver takes it out for pass 2 —

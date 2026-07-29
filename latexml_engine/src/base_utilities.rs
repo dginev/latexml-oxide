@@ -2031,6 +2031,19 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
     return Ok(());
   }
+  // Streaming pass 1: frontmatter insertion reads digestion-GLOBAL state (the
+  // eager path only ever runs it with digestion complete — build starts after
+  // digestion ends). Interleaved, an early `\maketitle` would insert with the
+  // abstract still undigested (sweep witnesses tests/structure/amsarticle.tex,
+  // titlepage.tex). Leave a position marker instead;
+  // `resolve_deferred_frontmatter` performs the real insertion here at
+  // end-of-digestion.
+  if document.root_after_open_deferred() {
+    let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+    attrs.insert("_frontmatter_marker".to_string(), "1".to_string());
+    document.insert_element("ltx:_Capture_", vec![], Some(attrs))?;
+    return Ok(());
+  }
   digest_front_matter()?; // If needed
   let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS
     .iter()
@@ -2102,6 +2115,25 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     }
   }
   relocate_annotations(document)?;
+  Ok(())
+}
+
+/// Streaming: perform the frontmatter insertions that pass 1 deferred, at the
+/// positions their markers recorded. Called by the streaming driver after
+/// digestion completes and the root-hook deferral is cleared; a document with
+/// no marker (no `\maketitle`/fallback fired) is handled by the root's own
+/// deferred late hook instead.
+pub fn resolve_deferred_frontmatter(document: &mut Document) -> Result<()> {
+  debug_assert!(!document.root_after_open_deferred());
+  for mut marker in document.findnodes("//*[@_frontmatter_marker]", None) {
+    let savenode = document.get_node().clone();
+    let wrapper = document.insert_element_before(&marker, "ltx:_Capture_", None)?;
+    document.set_node(&wrapper);
+    insert_frontmatter(document)?;
+    document.unwrap_nodes(wrapper)?;
+    document.set_node(&savenode);
+    marker.unlink_node();
+  }
   Ok(())
 }
 

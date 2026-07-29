@@ -949,7 +949,13 @@ impl DigestionAPI for Core {
     // (dropping `ltx_authors_1line`; gate witness). Dispatch exactly once,
     // now, with digestion finished — the eager timing.
     document.set_defer_root_after_open(false);
+    // Frontmatter first (at its recorded marker positions), then the root's
+    // deferred late hooks (which handle the no-marker documents themselves).
+    latexml_engine::base_utilities::resolve_deferred_frontmatter(&mut document)?;
     document.dispatch_deferred_root_hooks()?;
+    // RDFa prefixes used inside spilled content: the finalize scan can no
+    // longer see them, so feed the spill-time record in.
+    document.add_extra_rdfa_prefixes(index.rdfa_prefixes().map(|(p, _)| p));
 
     // The rule set must be complete before ANY rewrites run: the source's
     // `.latexml` file loads only now (as in the eager path), and fragments
