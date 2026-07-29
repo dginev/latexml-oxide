@@ -64,7 +64,7 @@ fn cluster_bbl_bib_precedence() {
 ///
 /// Perl stops at `return unless $bib_files` (`latex_constructs.pool.ltxml`
 /// L3901) and says nothing, so the references are dropped in silence — this
-/// port did the same until OXIDIZED_DESIGN #84. 7 papers in the 2605+2606
+/// port did the same until OXIDIZED_DESIGN #86. 7 papers in the 2605+2606
 /// sandboxes share one template that writes `\bibliography{}` and ships the
 /// `.bbl` (the GWTC-5 LIGO set); witness 2605.27226.
 ///
@@ -203,7 +203,7 @@ fn bib_achemso_tocentry_does_not_swallow_the_bibliography() {
 ///
 /// The red/green signal is the bibliography length — 0 entries is red. Witness
 /// 2606.08339: one such line cost all 30 of its entries (verified 0 -> 30).
-/// OXIDIZED_DESIGN #88.
+/// OXIDIZED_DESIGN #89.
 #[test]
 fn bib_captionof_verbatim_env_does_not_swallow_the_bibliography() {
   let x = convert_to_xml("tests/cluster_regressions/bib_captionof_listing.tex");
@@ -235,7 +235,7 @@ fn bib_captionof_verbatim_env_does_not_swallow_the_bibliography() {
 /// list either. Keeping the semantic `ltx:cite` is what makes the HTML usable.
 /// 13 of 15 witnesses recovered, all 0 before: 2605.07102 (0 -> 50),
 /// 2606.21959 (0 -> 54), 2605.00671 (0 -> 44), 2605.09519 (0 -> 24).
-/// OXIDIZED_DESIGN #87; audit family F9(a).
+/// OXIDIZED_DESIGN #88; audit family F9(a).
 #[test]
 fn bib_raw_cite_redefinition_is_ignored() {
   let x = convert_and_post("tests/cluster_regressions/bib_cite_clobber.tex");
@@ -298,7 +298,7 @@ fn biblatex_refcontext_block_keeps_its_printbibliography() {
 /// 15 papers measured across the 2605+2606 sandboxes, every one 0 entries
 /// before and complete after — 2606.04416 (79), 2606.28854 (180), 2605.21570
 /// (46 = bu1's 34 + bu2's 12, matching each unit's own
-/// `\begin{thebibliography}{N}`). Audit family F3(c); OXIDIZED_DESIGN #86.
+/// `\begin{thebibliography}{N}`). Audit family F3(c); OXIDIZED_DESIGN #87.
 #[test]
 fn bibunits_putbib_reads_the_per_unit_bbl() {
   let x = convert_to_xml("tests/cluster_regressions/bblbib/bibunits.tex");
@@ -1650,4 +1650,92 @@ fn bib_preamble_defines_macros_for_the_whole_bibliography() {
     !x.contains("bibpreamble"),
     "@preamble: a preamble macro leaked into the output as source:\n{x}"
   );
+}
+/// The secondary `MakeBibliography` parity gaps of SYNC_STATUS R5 item 2, on one
+/// alpha-styled document: the swapped `citestyle` mapping, the disambiguation
+/// key read off the wrong name string, collating `unisort`, format-order
+/// numbering — and the fourth audit item that turned out NOT to be a gap. See
+/// `bib_alpha_style.tex` for the list and `bib_alpha_style_refs.bib` for why
+/// each entry is present.
+///
+/// Every expectation here is ground-truthed against same-host Perl LaTeXML
+/// 0.8.8 on this exact fixture, after which the two engines' bibliographies are
+/// byte-identical on it.
+#[test]
+fn cluster_bib_alpha_style_labels() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_alpha_style.tex");
+
+  // Every bibitem in document order, as (refnum class, refnum text).
+  let mut labels: Vec<(String, String)> = Vec::new();
+  let mut rest = x.as_str();
+  while let Some(i) = rest.find("<bibitem") {
+    let item_end = rest[i..]
+      .find("</bibitem>")
+      .map(|e| i + e)
+      .unwrap_or(rest.len());
+    let item = &rest[i..item_end];
+    if let Some(r) = item.find(r#"role="refnum""#) {
+      let tag_start = item[..r].rfind("<tag").expect("refnum tag start");
+      let tag = &item[tag_start..];
+      let class = tag
+        .find(r#"class=""#)
+        .map(|c| {
+          let c = tag_start + c + 7;
+          let e = item[c..].find('"').expect("class end") + c;
+          item[c..e].to_string()
+        })
+        .unwrap_or_default();
+      let open = tag.find('>').expect("tag open") + tag_start + 1;
+      let close = item[open..].find("</tag>").expect("tag close") + open;
+      labels.push((class, item[open..close].to_string()));
+    }
+    rest = &rest[item_end..];
+  }
+
+  // Gap 1 — `\bibliographystyle{alpha}` (CITE_STYLE=AY) is Perl's ABBREVIATED
+  // label branch, not the spelled-out author-year one.
+  assert!(
+    labels.iter().all(|(c, _)| c == "ltx_bib_abbrv"),
+    "every refnum should be an abbreviated alpha label, got {labels:?}\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_bib_author-year"),
+    "an alpha bibliography must not emit author-year refnums:\n{x}"
+  );
+
+  // Gap 4 — collation: `ångström` sorts between `adams` and `baker`, not after
+  // every ASCII letter as a codepoint sort would place it. (The numbering that
+  // rides on the same order is asserted by construction: the labels are read in
+  // document order.)
+  // Gap 2 — the two `Smith`-led entries share Perl's short-form `{ay}`, so they
+  // are disambiguated `a`/`b`; a full-author key never collides.
+  // Also covers the `make_alpha_label` char-boundary panic: `Ångström`'s
+  // multi-byte initial used to be byte-sliced.
+  let texts: Vec<&str> = labels.iter().map(|(_, t)| t.as_str()).collect();
+  assert_eq!(
+    texts,
+    vec!["ADA01", "\u{c5}NG02", "BAK03", "SBC99a", "SDE99b"],
+    "bibitem order and alpha labels:\n{x}"
+  );
+
+  // Gap 3 was NOT a gap — KNOWN_PERL_ERRORS #67. Perl's `do_year` reads the
+  // ARRAY `@…::SUFFIX` while `formatBibEntry` binds the SCALAR `$…::SUFFIX`,
+  // so the letter never reaches the entry body; same-host Perl 0.8.8 prints
+  // ` (1999)` here, and `alpha.bst` agrees. Pinned so a future reader of
+  // L613-615 does not "fix" it back.
+  for needle in ["An alpha study", "A beta study"] {
+    let i = x
+      .find(needle)
+      .unwrap_or_else(|| panic!("no entry titled {needle} in:\n{x}"));
+    let start = x[..i].rfind("<bibitem").expect("bibitem start");
+    let end = x[start..]
+      .find("</bibitem>")
+      .map(|e| start + e)
+      .unwrap_or(x.len());
+    let item = &x[start..end];
+    assert!(
+      item.contains("(1999)") && !item.contains("(1999a)") && !item.contains("(1999b)"),
+      "the entry body of {needle} should carry the bare year, as Perl does:\n{item}"
+    );
+  }
 }

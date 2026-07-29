@@ -3064,29 +3064,37 @@ above — through to HTML and asserts that each lands where the table says, that
 `aria-label` appears nowhere, that captions survive, and that no
 `aria-describedby` reference dangles.
 
-### 84. `\bibliography{}` with an empty argument still inputs `\jobname.bbl`
+### 84. Bibliography sort keys collate at UCA's PRIMARY level, not by full UCA
 
-`latex.ltx` ends `\bibliography` with an **unconditional**
-`\@input@{\jobname.bbl}` — the argument only drives the `.aux` `\bibdata`
-record, not whether the `.bbl` is read. So `\bibliography{}` beside a shipped
-`<jobname>.bbl` renders the full reference list under pdflatex (measured:
-"References / [1] A. Uthor. A paper. 2020.", with `\cite` resolving to `[1]`).
+Perl's `Post::unisort` (`Post.pm` L1399-1403) sorts the bibliography sort keys
+with a `Unicode::Collate::Locale` built from the document's `xml:lang` and
+configured `variable => 'non-ignorable'`, `upper_before_lower => 1`. The Rust
+port called `Vec::sort()` — plain codepoint order — so every non-ASCII surname
+was exiled past `z`: on `bib_alpha_style.tex`, `Ångström` sorted **after**
+`Smith` where Perl (and every real `.bst`) puts it between `Adams` and `Baker`.
 
-Perl returns before looking at anything (`latex_constructs.pool.ltxml` L3901,
-`return unless $bib_files;`) and raises no diagnostic, so the references are
-dropped in silence; this port mirrored that. Rust now follows `latex.ltx`
-instead: on an empty argument it takes the `.bbl` branch **when
-`\jobname.bbl` actually exists**, and otherwise still returns quietly.
+`make_bibliography.rs::unisort` now collates. It reproduces UCA's **primary**
+level only — NFD-decompose, drop combining marks, case-fold — and breaks ties on
+the raw key. That is **exact** for accented Latin, which is what these keys
+actually contain.
 
-Ground truth is the arXiv PDF (bibliography formats are config-driven —
-`BIBLIOGRAPHY_WORKLIST.md`), and this is the shape where Rust and Perl agreed
-with each other but not with the PDF. 7 papers in the 2605+2606 sandboxes,
-including the GWTC-5 LIGO set, which share one template that writes
-`\bibliography{}` and ships the `.bbl`. Witness **2605.27226**; repro
-`docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`; audit family
-F3(a) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+`upper_before_lower` needs no counterpart at all here, and the honest reason is
+that it is **moot**, not that the tie-break reproduces it: `getBibEntries`
+lowercases the whole sort key before it is ever stored
+(`format!(...).to_lowercase()`), so no comparison this function performs can
+see a case difference. Codepoint order on the raw key does happen to sort
+uppercase first, but that property is never exercised.
 
-Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
+It **diverges** from Perl for: orders that cross scripts, letters with no
+canonical decomposition (`Ø`, `Æ`, `Ł`, `Đ`), and locale tailorings (Swedish
+sorts `Ö` last, German does not). Closing those means a DUCET table, i.e. a new
+dependency shipping embedded collation data — declined on the standing
+dependency-conservatism rule, and the approximation stays inside the range Perl
+itself ships: `Post.pm` L123-128 falls back to a codepoint `DumbCollator`
+whenever `Unicode::Collate` is not installed, which is strictly worse than this.
+
+Guard: `06_cluster_bibliography::cluster_bib_alpha_style_labels`, whose expected
+order was ground-truthed against same-host Perl LaTeXML 0.8.8 on the fixture.
 
 ### 85. `\fnum@<type>` is expanded with an empty group, so an arg-taking author redefinition cannot eat the caption's closing brace
 
@@ -3169,7 +3177,31 @@ applies there — filed as **brucemiller/LaTeXML#2856**. Also
 
 Guard: `06_cluster_regressions::cluster_fnum_arg_hook`.
 
-### 86. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
+### 86. `\bibliography{}` with an empty argument still inputs `\jobname.bbl`
+
+`latex.ltx` ends `\bibliography` with an **unconditional**
+`\@input@{\jobname.bbl}` — the argument only drives the `.aux` `\bibdata`
+record, not whether the `.bbl` is read. So `\bibliography{}` beside a shipped
+`<jobname>.bbl` renders the full reference list under pdflatex (measured:
+"References / [1] A. Uthor. A paper. 2020.", with `\cite` resolving to `[1]`).
+
+Perl returns before looking at anything (`latex_constructs.pool.ltxml` L3901,
+`return unless $bib_files;`) and raises no diagnostic, so the references are
+dropped in silence; this port mirrored that. Rust now follows `latex.ltx`
+instead: on an empty argument it takes the `.bbl` branch **when
+`\jobname.bbl` actually exists**, and otherwise still returns quietly.
+
+Ground truth is the arXiv PDF (bibliography formats are config-driven —
+`BIBLIOGRAPHY_WORKLIST.md`), and this is the shape where Rust and Perl agreed
+with each other but not with the PDF. 7 papers in the 2605+2606 sandboxes,
+including the GWTC-5 LIGO set, which share one template that writes
+`\bibliography{}` and ships the `.bbl`. Witness **2605.27226**; repro
+`docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`; audit family
+F3(a) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+
+Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
+
+### 87. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
 
 Same shape as #84, one level down. The real package
 (`bibunits.sty` L324-330) writes the optional argument to the bibunit `.aux`
@@ -3190,7 +3222,7 @@ Audit family F3(c) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026
 
 Guard: `bibunits_putbib_reads_the_per_unit_bbl`.
 
-### 87. The core `\cite` is locked against raw `.sty` redefinition
+### 88. The core `\cite` is locked against raw `.sty` redefinition
 
 arXiv submissions ship their conference style, and under `--includestyles`
 (the fleet's ar5iv profile) it is raw-loaded. aaai, iccc, flairs, kr,
@@ -3219,7 +3251,7 @@ cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 
 Guard: `bib_raw_cite_redefinition_is_ignored`.
 
-### 88. `\captionof` does not open a verbatim-bodied environment
+### 89. `\captionof` does not open a verbatim-bodied environment
 
 Perl hosts the faked caption inside the named environment — *"it isn't
 necessarily IN a figure or any float, so we'll wrap it in an otherwise empty

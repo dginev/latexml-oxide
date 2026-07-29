@@ -126,7 +126,7 @@ LoadDefinitions!({
   // `bu1.bbl`/`bu2.bbl` precisely because it does not run bibtex, and the
   // named `.bib` is usually absent, so the `.bib` route finds nothing and the
   // References section comes out empty. Prefer the shipped `.bbl` and keep
-  // Perl's route as the fallback. OXIDIZED_DESIGN #86; audit family F3(c),
+  // Perl's route as the fallback. OXIDIZED_DESIGN #87; audit family F3(c),
   // witnesses 2606.04416, 2605.21570, 2605.26693.
   DefMacro!(
     "\\putbib[]",

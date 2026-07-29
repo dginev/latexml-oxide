@@ -8270,7 +8270,7 @@ LoadDefinitions!({
       // sandboxes, including the GWTC-5 LIGO set, all of which ship a
       // jobname-matching `.bbl`. Witness 2605.27226 (repro
       // `docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`).
-      // OXIDIZED_DESIGN #84; audit family F3(a).
+      // OXIDIZED_DESIGN #86; audit family F3(a).
       if FindFile!(&jobname, type => "bbl").is_some() {
         return Ok(bbl_clause);
       }

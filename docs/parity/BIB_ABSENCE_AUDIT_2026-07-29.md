@@ -23,8 +23,8 @@ what the source implies and what `MakeBibliography` says it cited):
 |---|---|---|
 | **S2 / F1** | `$$` in a `.bib` field is no longer paired off as a display shift; balance counted per `$` character | **66 of the 69** `bibliography:convert` papers now build a bibliography (0 before), errors ~102 → 0. 2605.06069 0→497, 2605.16014 0→367, 2605.01115 0→31 |
 | **S1 / F2** | restored Perl's `Error:missing_file` raise in `make_bibliography.rs` | the 7 bibunits witnesses now report status 2 instead of telemetry `ok` — the loss became visible, which is what unblocked F3(c) |
-| **S3a / F3(a)** | empty-arg `\bibliography{}` still inputs `\jobname.bbl` (OXIDIZED_DESIGN #84) | **7 of 7**, 0 → 330/379/260/134/31/19/16 entries, each matching its `.bbl` exactly (GWTC-5 LIGO set) |
-| **S3c / F3(c)** | bibunits `\putbib` inputs the per-unit `bu<N>.bbl` (OXIDIZED_DESIGN #86) | **15 of 15**, all 0 before: 2606.28854 180, 2606.04416 79, 2605.21570 46 |
+| **S3a / F3(a)** | empty-arg `\bibliography{}` still inputs `\jobname.bbl` (OXIDIZED_DESIGN #86) | **7 of 7**, 0 → 330/379/260/134/31/19/16 entries, each matching its `.bbl` exactly (GWTC-5 LIGO set) |
+| **S3c / F3(c)** | bibunits `\putbib` inputs the per-unit `bu<N>.bbl` (OXIDIZED_DESIGN #87) | **15 of 15**, all 0 before: 2606.28854 180, 2606.04416 79, 2605.21570 46 |
 | **S4 / F4(a)(b)** | `\refcontext` only eats a following group; `\addbibresource` takes its optional arg | 2606.11276 0→24, 2606.02676 0→93, 2605.27263 0→58 |
 
 Regression check: 20 papers whose bibliographies already worked reconvert with
