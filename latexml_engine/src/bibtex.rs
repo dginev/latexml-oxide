@@ -469,11 +469,17 @@ fn scan_bib_data_specials(value: &str, demote: &[usize]) -> (String, Vec<bool>) 
           toggles.push(false);
         }
         toggles.push(chars.peek().is_some_and(char::is_ascii_digit));
-        let live = (first..toggles.len()).filter(|o| !demote.contains(o)).count();
+        let live = (first..toggles.len())
+          .filter(|o| !demote.contains(o))
+          .count();
         for ordinal in first..toggles.len() {
           // Demoted: data, not a math shift — emit the character and stay in
           // whatever mode we were in.
-          out.push_str(if demote.contains(&ordinal) { "\\$" } else { "$" });
+          out.push_str(if demote.contains(&ordinal) {
+            "\\$"
+          } else {
+            "$"
+          });
         }
         // A live pair is one display shift; otherwise each live character is
         // its own toggle, so an even number of them cancels out.
@@ -2976,10 +2982,7 @@ mod tests {
   /// mixes one with a stray `$` still comes out even for digestion.
   #[test]
   fn escape_specials_display_pair_counts_two_toward_balance() {
-    assert_eq!(
-      escape_bib_data_specials("$$a$$ and $b"),
-      r"$$a$$ and \$b"
-    );
+    assert_eq!(escape_bib_data_specials("$$a$$ and $b"), r"$$a$$ and \$b");
   }
 
   #[test]

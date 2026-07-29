@@ -7,8 +7,7 @@
 mod cluster;
 use cluster::{
   convert_and_post, convert_and_post_clean, convert_and_post_logging, convert_to_xml,
-  convert_to_xml_ar5iv,
-  convert_to_xml_contrib, convert_to_xml_contrib_clean,
+  convert_to_xml_ar5iv, convert_to_xml_contrib, convert_to_xml_contrib_clean,
 };
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
