@@ -23,9 +23,7 @@ This file is the **index + overview**. The detail lives in a themed family:
 > "Speculative function application"**) are in MATH; (3) **`#76` is a retired
 > number** — its entry was consolidated into `#74` and the number was not
 > reused, so a gap in the sequence is expected, not a missing file. Next free
-> number: **#86**. (**#84** is claimed by the concurrent bibliography
-> branch — PR #445 — so on this branch alone the sequence skips it.)
-> When in doubt,
+> number: **#86**. When in doubt,
 > `grep '### N\.' docs/parity/OXIDIZED_DESIGN_*.md docs/math/OXIDIZED_DESIGN_MATH.md`.
 
 ---

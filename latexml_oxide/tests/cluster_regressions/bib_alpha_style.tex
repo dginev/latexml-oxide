@@ -1,0 +1,24 @@
+% MakeBibliography secondary parity gaps (SYNC_STATUS R5 item 2). Four
+% independent divergences from `LaTeXML::Post::MakeBibliography`, all visible
+% on this one document:
+%
+% 1. citestyle semantics were SWAPPED. `\bibliographystyle{alpha}` sets
+%    CITE_STYLE=AY (Perl $BIBSTYLES, latex_constructs.pool.ltxml L3953-3961),
+%    and Perl's `AY` branch (L485-503) is the ABBREVIATED `[ADA01]` label,
+%    class `ltx_bib_abbrv`. Rust mapped `AY` to the spelled-out author-year
+%    branch instead, so every alpha-styled document got the wrong label shape.
+% 2. `{ay}`, the disambiguation key, is Perl's SHORT name form (L326-336), not
+%    the full sort-names — see the `wide1`/`wide2` note in the .bib.
+% 3. NOT a gap after all: `do_year` (L613-615) reads the ARRAY `@...::SUFFIX`
+%    while `formatBibEntry` (L417) binds the SCALAR `$...::SUFFIX`, so the
+%    letter never reaches the entry body. Same-host Perl prints " (1999)", and
+%    `alpha.bst` agrees. KNOWN_PERL_ERRORS #67.
+% 4. `Post::unisort` collates; Rust sorted by codepoint — see the `angstrom`
+%    note in the .bib.
+\documentclass{article}
+\begin{document}
+Citing \cite{adams}, \cite{angstrom}, \cite{baker}, \cite{wide1} and
+\cite{wide2}.
+\bibliographystyle{alpha}
+\bibliography{bib_alpha_style_refs}
+\end{document}

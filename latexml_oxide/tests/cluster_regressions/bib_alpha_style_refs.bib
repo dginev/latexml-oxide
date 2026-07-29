@@ -1,0 +1,41 @@
+% Fixture for `cluster_bib_alpha_style_labels` — see the test for what each
+% entry is here to prove.
+%
+% `adams` / `angstrom` / `baker` exist ONLY for their sort order: by Unicode
+% codepoint "ångström" follows every ASCII letter and lands last, while the
+% UCA collation Perl's `Post::unisort` uses puts it between "adams" and
+% "baker" (its primary weight is plain `a`).
+@article{adams,
+  author  = {Adams, Alan},
+  title   = {A first work},
+  journal = {Journal of Firsts},
+  year    = {2001}
+}
+@article{angstrom,
+  author  = {Ångström, Anders},
+  title   = {On radiation},
+  journal = {Journal of Radiation},
+  year    = {2002}
+}
+@article{baker,
+  author  = {Baker, Bea},
+  title   = {A second work},
+  journal = {Journal of Seconds},
+  year    = {2003}
+}
+% Same FIRST author and year, different coauthors. Perl's disambiguation key
+% is the SHORT name form ("Smith et al"), so these two collide and take the
+% suffixes `a` and `b`; keying on the full author list — as the Rust port did
+% — makes them distinct and neither entry is ever disambiguated.
+@article{wide1,
+  author  = {Smith, Alice and Brown, Bob and Clark, Carol},
+  title   = {An alpha study},
+  journal = {Journal of Studies},
+  year    = {1999}
+}
+@article{wide2,
+  author  = {Smith, Alice and Davis, Dan and Evans, Eve},
+  title   = {A beta study},
+  journal = {Journal of Studies},
+  year    = {1999}
+}
