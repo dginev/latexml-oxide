@@ -141,9 +141,12 @@ AUDITED = {
     "system-deps": ("6.2.2",
         "src/tests/lib/libteststatic.a -- a test fixture.",
     ),
-    "clang-sys": ("1.8.1",
+    "clang-sys": ("1.9.1",
         "links = \"clang\": libclang is loaded by bindgen at BUILD time. No libclang "
-        "code enters our binary.",
+        "code enters our binary. Re-verified at 1.9.1 (2026-07-29): file inventory "
+        "identical to the audited 1.8.1 apart from an added Cargo.lock, license still "
+        "Apache-2.0, links key unchanged, and build.rs compiles no C (no cc::Build). "
+        "The only native-ish file is tests/header.h, a test fixture.",
     ),
     "prettyplease": ("0.2.37",
         "links = \"prettyplease02\" is the cargo version-lock trick, not a native "
