@@ -2796,3 +2796,61 @@ chardef arm at all and returned the internal class name `Register`, dropping the
 `meaning_chardef` (`latexml_oxide/tests/expansion/meaning_chardef.{tex,xml}`).
 Candidate to upstream: both deviations are one-line fixes (`sprintf('%X')` and
 threading the math flag), but they change observable `\meaning` output.
+
+## 66. acmart `\Description` emits the OPTIONAL short argument and discards the mandatory long one
+
+`LaTeXML/lib/LaTeXML/Package/acmart.cls.ltxml` L78-86:
+
+```perl
+DefConstructor('\Description[]{}', '^^<ltx:note xml:id="#id" class="ltx_nodisplay">#1</ltx:note>',
+  properties => sub { ('width' => Dimension(0), 'height' => Dimension(0), RefStepCounter('acmlabel')) },
+  beforeConstruct => sub {
+    my ($document, $whatsit) = @_;
+    # TODO: Is there something useful to do with the short description in our schema?
+    ... $document->setAttribute($figure, 'aria:labelledby', $whatsit->getProperty('id'));
+```
+
+For `\Description[]{}` the parameters are `#1` = **optional** short description,
+`#2` = **mandatory** long description. The template emits `#1`. The long
+description — the extended alternative ACM actually mandates, and the reason the
+command exists — is digested and then dropped. Upstream's own `TODO` asks what
+to do with "the short description", suggesting `#1` was believed to be the main
+one. `\Description[S]{L}` emits `S` and loses `L`; `\Description{L}` emits
+nothing at all.
+
+Confirmed on `LaTeXML/t/complex/acm_aria.tex` (whose golden `acm_aria.xml`
+records the defect) and on arXiv **2607.21760** — an ACM accessibility paper
+with four figures and zero descriptions in its HTML.
+
+**`aria:labelledby` is NOT one of the defects.** acmart's documentation says
+"Unlike `\caption`, which is used alongside the image, `\Description` is
+intended to be used **instead of** the image", i.e. it is a *text alternative*,
+which in ARIA is name-like. Pointing a name relation at it is defensible; what
+goes wrong is only that the referenced note holds the short form while the long
+form is gone.
+
+Two further problems do stand:
+
+1. **`ltx:note` carries footnote decoration.** `LaTeXML-meta-xhtml.xsl` wraps a
+   note in a `†` mark plus a `<role>: ` type prefix, and because the note is the
+   *name* target, all of that lands in the computed accessible name —
+   "†† : Fly 1 and Fly 2 look identical".
+2. **The argument is digested although the class gobbles it.** `acmart.cls`
+   L895 is
+   `\newcommand\Description[2][]{\global\@Description@presenttrue\ignorespaces}`,
+   so pdflatex never expands the description and an author cannot see a defect
+   inside it. Digesting therefore manufactures errors invisible in the normal
+   workflow: 2607.21760 writes `\D1 … \D5` inside `\Description` (a copy-paste
+   slip from the adjacent `alt=` text, which has plain `D1 … D5`) and both
+   engines report `Error:undefined:\D` — for content they then discard.
+
+**Fixed in Rust, deliberately diverging** (`latexml_package/src/package/acmart_cls.rs`;
+see `OXIDIZED_DESIGN_DIVERGENCES.md` #83): the description is read `Undigested`
+so nothing inside it expands, the short form becomes `aria:label` and the long
+form an `aria:describedby` block, and a dedicated XSLT template strips the
+footnote scaffolding. `acm_aria.xml` was re-blessed — it previously matched Perl
+byte-for-byte and so certified the defect.
+
+Candidate to upstream: swapping `#1`→`#2` is a one-token fix; the
+note-decoration and undigested-reading parts need the XSLT and parameter-type
+changes too.

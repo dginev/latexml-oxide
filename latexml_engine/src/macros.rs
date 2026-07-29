@@ -157,6 +157,18 @@ macro_rules! parameter_rust_type {
   (Digested) => {Tokens};
   (DigestedBody) => {Tokens};
   (DigestUntil) => {Tokens};
+  // `Undigested` reads its argument with `ExpansionLevel::Off` and refuses to
+  // digest it (`base_parameter_types.rs`, porting Perl
+  // `Base_ParameterTypes.pool.ltxml` L241-242), so a closure binding receives
+  // the raw `Tokens`. The type was reachable from string-expansion bindings
+  // only — omitting it here meant `sub[(desc)] {…}` fell through to the
+  // catch-all arm below and tried to name a Rust type `Undigested`, failing to
+  // compile. Needed wherever a binding must INSPECT tokens before deciding
+  // whether to digest them (e.g. acmart `\Description`, which must not expand
+  // an author's macro just to find out if the text is plain).
+  (Undigested) => {Tokens};
+  (OptionalUndigested) => {Option<Tokens>};
+  (UndigestedKey) => {Tokens};
   (BalancedParen) => {Option<Tokens>};
   (TeXDelimiter) => {Tokens};
   (MoveableBox) => {Option<Tokens>};

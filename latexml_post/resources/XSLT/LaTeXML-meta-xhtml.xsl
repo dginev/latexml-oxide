@@ -32,6 +32,30 @@
        The role will likely distinguish various modes of footnote, endnote,
        and other annotation -->
   <xsl:preserve-space elements="ltx:note"/>
+  <!-- An accessible description (acmart \Description) is never rendered: it is
+       hidden by ltx_nodisplay and referenced by aria-describedby, so assistive
+       technology reads its text content directly. The generic note template
+       below would wrap it in the footnote scaffolding — a leading dagger mark,
+       a second mark inside ltx_note_content, and a "<role>: " type prefix —
+       all of which lands in the computed accessible description ("†† : …").
+       Emit a plain span instead.
+
+       The class is written out directly rather than via add_attributes, which
+       derives an ltx_[local-name] class from the element: these carry ltx:note
+       only because that is what the document builder places inside a float's
+       caption, and labelling them ltx_note would assert footnote semantics they
+       do not have. -->
+  <xsl:template match="ltx:note[contains(@class,'ltx_acm_description')]" priority="2">
+    <xsl:param name="context"/>
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:call-template name="add_id"/>
+      <xsl:attribute name="class"><xsl:value-of select="@class"/></xsl:attribute>
+      <xsl:apply-templates>
+        <xsl:with-param name="context" select="'inline'"/>
+      </xsl:apply-templates>
+    </xsl:element>
+  </xsl:template>
+
   <xsl:template match="ltx:note">
     <xsl:param name="context"/>
     <xsl:element name="span" namespace="{$html_ns}">
