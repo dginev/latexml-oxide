@@ -125,11 +125,37 @@ Rewrites run in the **core** stage (`core_interface.rs:443-470`), starting from
 falling back to whole-document only when the subtree match is empty. So the
 matching machinery is already subtree-capable; a fragment DOM can be the context.
 
-**The blocker.** `core_interface.rs:448` calls
-`document.load_labels_for_rewrite()` before applying rules, and
-`mark_xmnode_visibility()` before that. Labels are **document-global**. A rule
-that matches on a label defined in a later fragment cannot be resolved in a
-single forward pass.
+**The blocker is far smaller than it looks — census 2026-07-29.**
+`core_interface.rs:448` calls `document.load_labels_for_rewrite()` before
+applying rules, building a document-global `rewrite_labels` map. But only one
+rule form actually *consumes* it:
+
+| scope form | data needed | resolvable inside a fragment? |
+|---|---|---|
+| `label:<name>` | the global `rewrite_labels` map | **no** — needs the pass-1 index |
+| `id:<xml:id>` | an `xml:id` anywhere in the document | only if it lies in this fragment |
+| everything else (`select`, `xpath`, `regexp`, `match`, `attributes`, `replace`) | the subtree only | **yes** — already `findnodes(xpath, Some(tree))` |
+
+And `scope => 'label:…'` occurs **4 times in the whole repository, every one a
+test fixture** (`tests/helpers/scopemacro_src.rs`,
+`tests/math/simplemath.latexml` x2, `tests/grouping/scopemacro.latexml`). Zero
+in `latexml_engine`, `latexml_package`, `latexml_contrib` — and **zero in
+upstream Perl's own bindings** (`LaTeXML/lib`). On a real document (a 0.6 MB
+slice of the witness) only **7 rules run at all, ~10 ms total**, none scoped.
+
+So the production rewrite corpus is **essentially entirely subtree-local**: pass
+1 can apply nearly every rule inline per fragment, and only the rare
+`label:`/`id:` scope need defer. Two caveats that must not be waved away:
+
+* A `label:` scope whose target is missing compiles to `Ignore`
+  (`rewrite.rs:285-289`) rather than erroring — so a fragment that cannot
+  resolve one would **silently drop the rule**. Streaming needs a real deferral
+  path, not a "rare enough to skip" argument; silence is exactly how a corpus
+  regression hides.
+* `id:` scope walks `findnodes("descendant-or-self::*")` and filters Rust-side,
+  because `@xml:id` XPath fails in rust-libxml (flagged at the site as an L2
+  workaround). That is O(document) per rule, and an inefficiency worth fixing in
+  our own fork independently of streaming.
 
 Hence the two-pass shape: pass 1 emits a **label/id index** to disk; pass 2
 loads that index (or queries it) and applies the rules that need it. Rules that
@@ -179,7 +205,7 @@ is small and helps every oversized document.
 |---|---|---|
 | **S0** | Machine-aware ceiling + swap/disk check + `Fatal` naming the shortfall | unit tests on the derivation; no behaviour change under an explicit `--max-memory` |
 | **S1** | Cooperative memory guard inside the Build/absorb loop | a large document degrades to a graceful `Fatal` with partial output instead of exit 137 |
-| **S2** | Classify rewrite rules local vs global; make the local ones subtree-scoped | full suite green; `\lxDeclare` corpus unchanged in output |
+| **S2** | ~~Classify rewrite rules local vs global~~ **done** (census above). Remaining: route the rare `label:`/`id:` scope through the pass-1 index instead of silently `Ignore`-ing an unresolved one | full suite green; `\lxDeclare` corpus unchanged in output |
 | **S3** | Pass-1 fragmented digest→build→serialize with an on-disk label/id index | byte-identical output vs the eager path on the existing test corpus |
 | **S4** | Pass-2 `TextReader` + `expand_to_document` for global rewrites and crossref | ditto, plus the 614 MB `index.xml` witness |
 | **S5** | Retire the eager path, or keep it for small documents behind a size threshold | measured crossover point |
@@ -193,8 +219,10 @@ suite and corrupts a corpus.
 
 ## 5. Open questions
 
-1. **Which rewrite rules are genuinely global?** Needs a census of the real rule
-   corpus, not a guess. This gates S2 and therefore everything after it.
+1. ~~Which rewrite rules are genuinely global?~~ **ANSWERED 2026-07-29** — see
+   §2.2. Only `scope => 'label:'`/`'id:'`, and `label:` appears solely in test
+   fixtures. S2 is therefore far cheaper than budgeted, and S3 can apply rules
+   inline in pass 1 for the whole production corpus.
 2. **Fragment boundary when the user did not ask for `--splitat`.** A document
    with no natural seam still needs bounding — section? A byte budget with a
    safe cut point? What happens to an alignment or math environment straddling
