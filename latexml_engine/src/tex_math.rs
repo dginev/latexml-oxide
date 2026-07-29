@@ -1935,15 +1935,13 @@ LoadDefinitions!({
                         None
                       }
                     }),
-                    None => math.get_attribute("_font").and_then(|id| {
-                      document.decode_font(&id).and_then(|font| {
-                        if is_math_font(font) {
-                          Some("italic".to_string())
-                        } else {
-                          None
-                        }
-                      })
-                    }),
+                    // Streaming pass 2: the box was purged at spill, but its
+                    // EXACT verdict was stamped on the XMArg then (see
+                    // `spill_run`) — an ancestor-font approximation
+                    // mis-wrapped text-mode superscripts (niceunits).
+                    None => xmarg
+                      .get_attribute("_boxfont_math")
+                      .map(|_| "italic".to_string()),
                   }
                 }
               };

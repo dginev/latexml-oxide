@@ -63,6 +63,14 @@ pub struct SegmentMeta {
   /// section by walking ancestors — which a spilled-from-inside-a-section
   /// fragment no longer has.
   pub section_id: Option<String>,
+  /// The qname of the spilled run's PARENT element (the spine node the
+  /// segment splices back under). Pass-2 finalize consults the parent for
+  /// schema decisions — e.g. collapsing an attribute-less `ltx:text` font
+  /// wrapper requires `can_contain(parent, grandchild)` — and the parse
+  /// wrapper (`ltx:_lxfragment`) is not in the model, so the recorded real
+  /// parent substitutes for it (witness: tests/digestion/dollar.tex kept an
+  /// empty `<text>` around an inline-block that eager collapsed).
+  pub parent:     Option<String>,
 }
 
 /// The element wrapping a spilled segment's sibling subtrees. Matches the
@@ -216,6 +224,7 @@ mod tests {
       depth:      2,
       noindent:   false,
       section_id: None,
+      parent:     None,
       font:       Some(String::from("italic")),
       namespaces: vec![(
         String::from("ltx"),

@@ -138,6 +138,13 @@ pub struct Document {
   /// EVERYTHING — sweep witness tests/math/declare.tex, where section-7
   /// declarations stamped section-1 math.
   pub scoped_rules_strict:     bool,
+  /// Streaming pass 2 only: the recorded qname of the fragment's REAL parent
+  /// (SegmentMeta::parent). `finalize_rec` substitutes it for the
+  /// `ltx:_lxfragment` parse wrapper in schema decisions, so top-level
+  /// fragment content is judged against the element it will splice back
+  /// under (e.g. the empty-`ltx:text` collapse needs
+  /// `can_contain(parent, grandchild)`).
+  pub fragment_parent_qname:   Option<SymStr>,
   /// Streaming pass 1 only: suppress the ROOT element's `after_open` hook
   /// dispatch. Eager semantics guarantee every hook runs with digestion
   /// COMPLETE (build starts after digestion ends); interleaving would fire
@@ -236,6 +243,7 @@ impl Document {
       spill_store:                 None,
       extra_rdfa_prefixes:         Vec::new(),
       scoped_rules_strict:         false,
+      fragment_parent_qname:       None,
       defer_root_after_open:       false,
     }
   }
@@ -544,7 +552,14 @@ impl Document {
     while let Some(work) = stack.pop() {
       match work {
         Work::Enter(mut current) => {
-          let qname = get_node_qname(&current);
+          let raw_qname = get_node_qname(&current);
+          // Streaming pass 2: judge the fragment's parse wrapper as the REAL
+          // parent it splices back under, so schema decisions for top-level
+          // fragment content match the eager walk (see the field docs).
+          let qname = match self.fragment_parent_qname {
+            Some(parent) if raw_qname == pin!("ltx:_lxfragment") => parent,
+            _ => raw_qname,
+          };
           let local_font = self.get_local_font().unwrap();
           // _standalone_font is typically for metadata that gets extracted out of context
           let mut declared_font = if current.has_attribute("_standalone_font") {
@@ -605,7 +620,10 @@ impl Document {
             }
           }
           // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
-          if qname != pin!("ltx:document")
+          // (gate on the RAW name: a fragment wrapper standing in for its
+          // real parent must not mint an id — it is never serialized).
+          if raw_qname != pin!("ltx:document")
+            && raw_qname != pin!("ltx:_lxfragment")
             && state::lookup_bool("GENERATE_IDS")
             && !current.has_attribute("xml:id")
             && !current.has_attribute("id") // SVG elements with plain id don't need xml:id
@@ -714,19 +732,26 @@ impl Document {
           // libxml2 validator (1312.5864 cluster: 70× `S8.T5.m2241 already
           // defined`, where the Math element carried `_ID_counter__="1"`
           // populated post-Enter).
-          let attrs_now = node.get_attributes();
-          let total_attrs = attrs_now.len();
-          let bookkeeping_attrs: Vec<&String> = attrs_now
-            .keys()
-            .filter(|name| name.starts_with('_'))
-            .collect();
-          let bookkeeping_count = bookkeeping_attrs.len();
-          for name in bookkeeping_attrs {
-            let _ = node.remove_attribute(name);
-          }
-          // If all attributes were bookkeeping, the node now has empty attrs.
-          if total_attrs <= bookkeeping_count {
-            empty_attr_nodes.insert(node.to_hashable());
+          //
+          // EXCEPT the streaming pass-2 parse wrapper: it is never
+          // serialized, and its `_ID_counter_*` attrs are how id numbering
+          // carries ACROSS segments (read back after each segment — see
+          // `streaming_pass2`).
+          if get_node_qname(&node) != pin!("ltx:_lxfragment") {
+            let attrs_now = node.get_attributes();
+            let total_attrs = attrs_now.len();
+            let bookkeeping_attrs: Vec<&String> = attrs_now
+              .keys()
+              .filter(|name| name.starts_with('_'))
+              .collect();
+            let bookkeeping_count = bookkeeping_attrs.len();
+            for name in bookkeeping_attrs {
+              let _ = node.remove_attribute(name);
+            }
+            // If all attributes were bookkeeping, the node now has empty attrs.
+            if total_attrs <= bookkeeping_count {
+              empty_attr_nodes.insert(node.to_hashable());
+            }
           }
           self.expire_local_font();
         },
@@ -3615,6 +3640,25 @@ impl Document {
     for node in run.iter() {
       mark_empty_text_elements(node);
     }
+    // Stamp the DIGESTED BOX's math-font verdict on XMArg elements before
+    // their boxes are purged: the FLOATSUPERSCRIPT rewrite (tex_math.rs)
+    // decides `<text font="italic">` wrapping from the box font's family,
+    // and a fragment re-materialized in pass 2 has no boxes. An attr carries
+    // the EXACT verdict (an ancestor-`_font` approximation mis-wrapped
+    // text-mode superscripts — sweep witness tests/math/niceunits.tex).
+    for node in run.iter() {
+      for mut xmarg in self.findnodes("descendant-or-self::ltx:XMArg", Some(node)) {
+        if let Some(tbox) = self.get_node_box(&xmarg)
+          && let Ok(Some(font)) = tbox.get_font()
+          && font
+            .get_family()
+            .map(|f| f.as_ref() == "math")
+            .unwrap_or(false)
+        {
+          let _ = xmarg.set_attribute("_boxfont_math", "1");
+        }
+      }
+    }
 
     // Chunk the run so each segment stays under SEGMENT_CHUNK_BYTES of
     // serialized text; every chunk gets its own segment + placeholder, so
@@ -3622,7 +3666,7 @@ impl Document {
     let mut runs_spilled = 0usize;
     let mut chunk: Vec<Node> = Vec::new();
     let mut xml = String::new();
-    let all: Vec<Node> = run.drain(..).collect();
+    let all: Vec<Node> = std::mem::take(run);
     let total = all.len();
     for (i, node) in all.into_iter().enumerate() {
       // A spilled subtree can CONTAIN placeholders from earlier, deeper
@@ -3662,6 +3706,10 @@ impl Document {
           font: None,
           namespaces: namespaces.to_vec(),
           section_id: section_id.clone(),
+          parent: chunk
+            .first()
+            .and_then(|n| n.get_parent())
+            .map(|p| arena::to_string(get_node_qname(&p))),
         };
         let store = self
           .spill_store
@@ -3684,16 +3732,28 @@ impl Document {
         placeholder
           .set_attribute("ref", &seg.to_string())
           .map_err(|e| spill_error(s!("cannot mark the placeholder: {e}")))?;
+        // Record the LAST spilled sibling's qname: build-time hooks that
+        // consult a previous element sibling (prune_empty_para's
+        // was-I-first test — sweep witness tests/alignment/colortbls.tex)
+        // would otherwise see the placeholder where eager sees that node.
+        // Never serialized — assembly splices the segment text instead.
+        if let Some(last) = chunk.last() {
+          placeholder
+            .set_attribute("last", &arena::to_string(get_node_qname(last)))
+            .map_err(|e| spill_error(s!("cannot mark the placeholder: {e}")))?;
+        }
         chunk
           .first_mut()
           .expect("a flushed chunk is non-empty")
           .add_prev_sibling(&mut placeholder)
           .map_err(|e| spill_error(s!("cannot insert the placeholder: {e}")))?;
         for node in chunk.drain(..) {
-          // `unlink_node` marks the wrapper RustOwned: the C subtree is freed
-          // when the last Rust handle drops (end of this iteration).
-          let mut node = node;
-          node.unlink_node();
+          // Actually FREE the spilled subtree (unlink alone leaks — see
+          // Node::free_subtree). Its ids were unrecorded by
+          // index_and_purge_spilled above; discard_subtree re-purges
+          // node_boxes (cheap) and reclaims the C memory, which is the whole
+          // point of the spill.
+          self.discard_subtree(node);
         }
         SPILLED_SEGMENTS.set(SPILLED_SEGMENTS.get() + 1);
         runs_spilled += 1;
@@ -3769,6 +3829,46 @@ impl Document {
         _ => {},
       }
     }
+  }
+
+  /// Remove the pointer-keyed `node_boxes` entries for `node` and its whole
+  /// subtree. MANDATORY before freeing nodes mid-conversion: a freed node's
+  /// address is REUSED by later allocations, and a stale entry then
+  /// mis-associates the old box (and its font) with an unrelated new node —
+  /// observed as spurious `<text font="italic">` wrappers the moment the
+  /// math parser started freeing replaced trees promptly.
+  pub fn purge_node_boxes_rec(&mut self, node: &Node) {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return;
+    }
+    self.node_boxes.remove(&node.to_hashable());
+    for child in node.get_child_nodes() {
+      self.purge_node_boxes_rec(&child);
+    }
+  }
+
+  /// Discard a garbage subtree for good: purge the pointer-keyed
+  /// `node_boxes` entries, then free the C memory NOW via the fork's
+  /// `Node::free_subtree` — the missing half of every unlink-to-discard
+  /// site (rust-libxml Linkage: a doc-created node that is unlinked but
+  /// never re-attached is freed by NOBODY; math parsing discards thousands
+  /// of replaced subtrees per document, measured ~1.4 MB/formula, ~1.8 GB
+  /// retained per 32 MB streaming segment). `free_subtree` also
+  /// neutralizes every live wrapper into the subtree, so stray clones in
+  /// long-lived collections (`constructed_nodes`, an idstore epoch) go
+  /// inert instead of firing a deferred `xmlFreeNode` after the document
+  /// itself is gone.
+  ///
+  /// PRECONDITIONS (the caller's contract, satisfied at current sites):
+  /// * every `xml:id` in the subtree is already unrecorded or transferred —
+  ///   this deliberately does NOT `unrecord_node_ids`, because discard
+  ///   always follows a copy (`append_tree`) that re-recorded the SAME id
+  ///   strings for the copies, and unrecording here would kill those fresh
+  ///   entries;
+  /// * no live handle into the subtree is used afterwards.
+  pub fn discard_subtree(&mut self, node: Node) {
+    self.purge_node_boxes_rec(&node);
+    node.free_subtree();
   }
 
   /// Attach the processed-segment store for serialization: from here on,
@@ -5608,14 +5708,32 @@ impl Document {
           sib.unlink();
           following.push_front(sib);
         }
-        // NOTE: remove_node calls old.unlink() which sets unlinked=true and detaches
-        // the node from the DOM. The document's node cache holds another Rc reference,
-        // so _Node::drop (and xmlFreeNode) doesn't run until the Document itself drops.
-        // By that time, any children reused by `new` have been moved at the C level,
-        // so xmlFreeNode on old only frees the shell.
-        self.remove_node(old);
+        // Unrecord old's ids BEFORE the copy, so the copy's freshly
+        // recorded entries (append_tree → open_element_at) survive — the
+        // copy typically re-uses the same id strings.
+        self.unrecord_node_ids(&old);
+        // COPY FIRST, detach `old` after: `new` may sit INSIDE `old`
+        // (parse_single's single-node shortcut returns an original child;
+        // tex_box's foreignObject cleanup replaces a node with its own
+        // grandchild), so `old` must stay intact while append_tree
+        // serializes the copy. With `following` detached, the copy lands in
+        // old's slot either way.
         self.append_tree(&mut parent, vec![new])?;
         let inserted = parent.get_last_child();
+        // Keep the insertion point out of the discarded subtree (the
+        // `chopped` half of remove_node; its id bookkeeping happened above).
+        let mut cursor = Some(self.node.clone());
+        while let Some(cur) = cursor {
+          if cur == old {
+            self.set_node(&parent);
+            break;
+          }
+          cursor = cur.get_parent();
+        }
+        {
+          let mut old = old;
+          old.unlink();
+        }
         for mut child in following {
           parent.add_child(&mut child)?; // No need for clone
         }
@@ -5623,6 +5741,36 @@ impl Document {
       },
       _ => Ok(None),
     }
+  }
+
+  /// `replace_tree` for a caller that owns BOTH trees as garbage-after-copy
+  /// (the math parser's rebuild sites): the replacement is copied into
+  /// place exactly as `replace_tree` does (Perl appendTree parity —
+  /// elements are re-created, sources abandoned), and then the sources are
+  /// FREED: `old`'s subtree, plus `new`'s detached root when `new` is a
+  /// standalone built tree rather than a node inside `old`. Without the
+  /// frees every replaced formula leaks its pre-parse tree AND the built
+  /// parse tree (see `discard_subtree`).
+  ///
+  /// On the `None` return (old had no parent) nothing was copied and
+  /// NOTHING is freed — the caller keeps using `new` as-is.
+  pub fn replace_tree_free(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
+    // Resolve new's root BEFORE any freeing (walking afterwards would read
+    // freed memory). A chain ending at a Document node means `new` is
+    // inside a live tree — either inside `old` (freed below with it) or
+    // elsewhere (not ours to free).
+    let new_root = xml::detached_root(&new);
+    let inserted = self.replace_tree(new, old.clone())?;
+    if inserted.is_some() {
+      self.discard_subtree(old);
+      if let Some(root) = new_root {
+        // Standalone source tree; disjoint from old's subtree by
+        // construction (a detached root has no parent, every node inside
+        // old's subtree has one).
+        self.discard_subtree(root);
+      }
+    }
+    Ok(inserted)
   }
 
   pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>) -> Result<()> {

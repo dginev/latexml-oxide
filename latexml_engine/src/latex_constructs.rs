@@ -638,6 +638,15 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
       }
     }
   }
+  // Release the saved node handles: every `assign_value` here PUSHES onto the
+  // key's binding stack (build-time assignments sit outside digestion groups,
+  // so nothing ever pops them), and each retained `Stored::Node` pins its
+  // whole document — under streaming, a pinned handle into a SPILLED subtree
+  // even blocks the `xmlFreeNode` the spill relies on. Overwrite with `None`
+  // so the C trees can go; the (empty) stack entries themselves are the cheap
+  // part (dhat: 288 B each).
+  assign_value("ALIGNING_NODE", Stored::None, None);
+  assign_value("ALIGNING_PREV_CHILD", Stored::None, None);
   Ok(())
 }
 
