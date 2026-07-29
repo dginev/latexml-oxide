@@ -9,6 +9,7 @@ One row per flagged paper (= HTML lacks any `class="ltx_bibitem"`).
 | `2605.flagged.tsv` | `/data/arxiv/2605` sandbox-13 rerun (2026-07-27 binary), all 625 flagged |
 | `2606.flagged.tsv` | `/data/arxiv/2606` sandbox-14 rerun, all 623 flagged |
 | `corpus.flagged.full.tsv.gz` | full `/data/arxiv` 2026-07 rerun (pre-R5-re-port binary), all 153 296 flagged |
+| `VERIFICATION.md` + `verification_2026-07-29.tsv.gz` | re-conversion of all 533 known articles with the PR build: 189 recovered / 14 715 entries, duplication audit, content spot-checks |
 | `corpus.wrongly_missing.tsv.gz` | the actionable subset: HTML present + source wants a bibliography (52 299 rows) |
 
 Columns (tab-separated):
