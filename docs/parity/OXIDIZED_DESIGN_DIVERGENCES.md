@@ -3138,6 +3138,36 @@ cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 
 Guard: `bib_raw_cite_redefinition_is_ignored`.
 
+### 87. `\captionof` does not open a verbatim-bodied environment
+
+Perl hosts the faked caption inside the named environment — *"it isn't
+necessarily IN a figure or any float, so we'll wrap it in an otherwise empty
+one!"* (`caption.sty.ltxml` L124-125, `\@captionof@` →
+`\begin{#1}…\end{#1}`). That is fatal when the environment reads its body
+verbatim: `\captionof{lstlisting}{…}` becomes
+`\begin{lstlisting}…\end{lstlisting}`, and listings scans the **raw input**
+for its terminator, never the token stream. It finds none, and swallows the
+rest of the file — the document tail, `\bibliography` included, comes out as
+line-numbered listing text.
+
+Real caption.sty never opens the environment: `\caption@of` is
+`\setcaptiontype*{#2}#1` (caption.sty L391) — it only sets the caption type.
+So for the verbatim-bodied environments (`VERBATIM_BODY_ENVS` in
+`caption_sty.rs`: lstlisting, verbatim, fancyvrb's Verbatim family, minted,
+alltt) Rust emits the caption alone, letting `\@caption@` carry the type for
+numbering; such a `\captionof` is in practice already inside a float, which is
+what pdflatex shows. Every other type keeps Perl's wrapper, since that is what
+gives an unfloated `\captionof{figure}` its container.
+
+Witness **2606.08339**: one `\captionof{lstlisting}{PROMISE.yml}` cost the
+paper all 30 of its bibliography entries (measured 0 → 30, and the swallowed
+tail restored). pdflatex renders that paper correctly and its source has four
+balanced `lstlisting` pairs, so the runaway was ours. Audit family F5 in
+[`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md); reduction
+notes in `bib_absence_2026-07-29/repros/f5_captionof_swallow/`.
+
+Guard: `bib_captionof_verbatim_env_does_not_swallow_the_bibliography`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

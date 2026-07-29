@@ -1,0 +1,30 @@
+% `\captionof{lstlisting}{…}` must not open an `lstlisting`. Perl's binding
+% wraps the caption in the named environment ("we'll wrap it in an otherwise
+% empty one!", caption.sty.ltxml L124-125), which is fatal here: listings scans
+% the raw INPUT for `\end{lstlisting}`, never the token stream, so it finds no
+% terminator and swallows the rest of the file — `\bibliography` included — as
+% line-numbered listing text. Real caption.sty only sets the type
+% (`\caption@of` = `\setcaptiontype*{#2}#1`, L391) and pdflatex renders such
+% papers correctly.
+%
+% Red/green is the bibliography length: 0 entries is red, the full list green.
+% Witness 2606.08339 — one such line cost all 30 of its entries.
+% OXIDIZED_DESIGN #87.
+\documentclass{article}
+\usepackage{caption}
+\usepackage{listings}
+\begin{document}
+Body cites \cite{knuth,lamport}.
+\begin{figure}
+\begin{lstlisting}
+some code
+\end{lstlisting}
+\captionof{lstlisting}{A listing caption} \label{lst:x}
+\caption{The float caption.}
+\end{figure}
+Tail text after the figure.
+\begin{thebibliography}{9}
+\bibitem{knuth} D.~Knuth. \newblock The TeXbook. \newblock 1984.
+\bibitem{lamport} L.~Lamport. \newblock LaTeX. \newblock 1994.
+\end{thebibliography}
+\end{document}

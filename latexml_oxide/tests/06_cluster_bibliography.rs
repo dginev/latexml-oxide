@@ -84,6 +84,37 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// `\captionof{lstlisting}` must not swallow the rest of the document.
+///
+/// Perl's binding wraps the caption in the named environment — "it isn't
+/// necessarily IN a figure or any float, so we'll wrap it in an otherwise empty
+/// one!" (`caption.sty.ltxml` L124-125) — which is fatal when that environment
+/// reads its body verbatim: `\begin{lstlisting}` makes listings scan the raw
+/// INPUT for `\end{lstlisting}`, never the token stream, so it finds no
+/// terminator and consumes the rest of the file. The tail — `\bibliography`
+/// included — comes out as line-numbered listing text.
+///
+/// Real caption.sty never opens the environment: `\caption@of` is
+/// `\setcaptiontype*{#2}#1` (caption.sty L391), i.e. it only sets the type, and
+/// pdflatex renders such papers correctly.
+///
+/// The red/green signal is the bibliography length — 0 entries is red. Witness
+/// 2606.08339: one such line cost all 30 of its entries (verified 0 -> 30).
+/// OXIDIZED_DESIGN #87.
+#[test]
+fn bib_captionof_verbatim_env_does_not_swallow_the_bibliography() {
+  let x = convert_to_xml("tests/cluster_regressions/bib_captionof_listing.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "\\captionof{{lstlisting}} swallowed the bibliography: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("Tail text after the figure"),
+    "the document tail after the figure was swallowed:\n{x}"
+  );
+}
+
 /// A raw `\def\cite` must not displace LaTeXML's binding.
 ///
 /// arXiv submissions ship their conference style, and under `--includestyles`
