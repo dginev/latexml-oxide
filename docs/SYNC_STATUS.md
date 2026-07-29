@@ -46,13 +46,14 @@ families).*
 ## Ranked worklist — start here
 
 Ordered by: **does it reproduce today** → **is a real user affected** → **is it
-unblocked** → **effort**. Rows R1–R2 are small and self-contained; R4+ need a
-session of their own. Re-verify a row before planning on it (rule 1).
+unblocked** → **effort**. R1 is small and self-contained; R2's cheap half landed
+2026-07-29 and what remains of it, like R4+, needs a session of its own.
+Re-verify a row before planning on it (rule 1).
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
-| **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
+| **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **re-port items 1 and 3 LANDED**: a raw `.bib` is converted by the engine (recursive BibTeX session on the LIVE core state), the 727-line string route is deleted, the eager-tokenization gap that cost 151 papers is closed at the root, and the 13-field digest whitelist is gone — the `\bib@field@default@*` name sets now match Perl exactly (45 each). The 2026-07-27 follow-ups closed the `.bib`-as-DATA family (divergences #74/#78/#79/**#80**). Remaining: item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER) and the missing-references target list | **item 2 + targets** — the re-port itself is done | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
@@ -574,7 +575,10 @@ ask for review** — no code work expected. *(This entry read "PR #310 … Ready
 merge" until 2026-07-25, long after it merged.)*
 
 
-### R2 — `--preload=<cls>` alone trips the hook stack; class-name divergence — OPEN (re-verified 2026-07-25)
+### R2 — `--preload=<cls>` alone trips the hook stack — OPEN (re-verified 2026-07-29)
+
+*(The "class-name divergence" this heading used to also name was the second
+divergence below; it is fixed. Only the hook stack is still open.)*
 
 **Symptom.** `--preload=<any>.cls` prints `LaTeX hooks Error: Extra \PopDefaultHookLabel`
 (article/book/report; `.sty` clean; `\documentclass` clean; `LATEXML_NODUMP=1` clean).
@@ -636,11 +640,39 @@ adopted, make it conditional on the pool being unloaded and LOG it. (b) Pair the
 push's actual *meaning* rather than to definedness. (c) Make the pool load before any
 handleoptions push. (b)/(c) address the cause.
 
-**Second divergence, same area.** `\documentclass{article}` → `<?latexml class="article"?>`
-but `--preload=article.cls` → `<?latexml class="article.cls"?>`; **Perl emits
-`class="article"` for both.** Otherwise the two paths' output is byte-identical, so the
-preload does load `article_cls.rs` correctly; `parse_preload_spec` splits correctly to
-`("article","cls")`, so the extension is re-attached further in.
+**(c) collapses into (a) — checked 2026-07-29.** The pool load is not *ours* to reorder:
+`LoadPool('LaTeX')` is the **class binding's own first statement**, in Perl
+(`article.cls.ltxml` L5) exactly as in Rust (`article_cls.rs:4`), and it runs *inside*
+`InputDefinitions`, i.e. after the `\@pushfilename`. Perl's ordering is therefore
+identical to ours — Perl is silent only for the dump reason above. So "load the pool
+earlier" means hoisting it out of the binding, which is the same Rust-only divergence
+that got (a) rejected. That leaves (b), or a TeX-side repair of the stack at the moment
+`LoadPool` swaps `\@pushfilename`'s meaning underneath an already-open frame.
+
+**Second divergence, same area — ✅ FIXED 2026-07-29.** It was wider than recorded here:
+the preload-PI loop (`core_interface.rs`, the `for preload in &self.preload` block) is a
+translation of Perl `Core.pm` L268-277, whose three `s///` rewrite `$preload` **in place**.
+`Regex::replace_all` *returns* the rewritten string instead, and all three results were
+discarded, so **nothing was ever stripped and no `options` attribute was ever emitted**:
+
+| `--preload=` | was | Perl (and now) |
+|---|---|---|
+| `article.cls` | `class="article.cls"` | `class="article"` |
+| `[twocolumn,11pt]article.cls` | `class="[twocolumn,11pt]article.cls"` | `class="article" options="twocolumn,11pt"` |
+| `[dvipsnames]color.sty` | `package="[dvipsnames]color.sty"` | `package="color" options="dvipsnames"` |
+
+**Not cosmetic:** `latexml_post`'s `find_documentclass_and_packages` parses these PIs and
+`latex_images.rs:pre_preamble` emits the result as a literal `\documentclass[…]{…}` /
+`\usepackage[…]{…}`, so `--mathimages`/`--graphicimages` on any preload-driven conversion
+was writing `\documentclass{article.cls}` and losing every preload option.
+
+Fixed by stripping the bracket and the suffix off a `&str` cursor, Perl-faithfully:
+only the two literal `.cls`/`.sty` suffixes (so `mystyle.tex` keeps its extension, as in
+Perl), and an empty bracket contributes no attribute (Perl's `($options ? … : ())` is
+falsy on `""`). Deliberately **not** routed through `parse_preload_spec`, which splits on
+the last `.` and would eat any extension. Guard: `109_preload_pi_attributes.rs`, a
+six-shape table whose every expectation was ground-truthed byte-for-byte against Perl
+LaTeXML 0.8.8 on the same input.
 
 ### R4 — biblatex `.bbl` TokenLimit loop, 2605.17646 — ✅ FIXED 2026-07-25
 
