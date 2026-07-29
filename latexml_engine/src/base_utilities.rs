@@ -2133,11 +2133,19 @@ pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
     // the root's deferred late hook performs the one-and-only insertion.
     return Ok(());
   }
-  // Anchor: after the last frontmatter element already in the document.
+  // Anchor: the late elements' CANONICAL slot among the frontmatter already
+  // placed — `insert_frontmatter` emits in `FRONTMATTER_ELEMENTS` order, so a
+  // late abstract belongs between an existing date and existing keywords
+  // (sweep witness tests/structure/amsarticle.tex), not after everything.
+  // ROOT CHILDREN only: `//ltx:title` would also match every SECTION's
+  // title, and the last of those anchors the insertion deep inside the body.
+  // If several late kinds straddle an existing kind they clump at the first
+  // late kind's slot — the byte-parity gate guards the day that case
+  // materializes.
   let existing = document.findnodes(
     &FRONTMATTER_ELEMENTS
       .iter()
-      .map(|q| format!("//{q}"))
+      .map(|q| format!("/ltx:document/{q}"))
       .collect::<Vec<_>>()
       .join(" | "),
     None,
@@ -2145,14 +2153,34 @@ pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
   let Some(last) = existing.last() else {
     return Ok(());
   };
+  let rank = |qname: &str| {
+    FRONTMATTER_ELEMENTS
+      .iter()
+      .position(|q| *q == qname)
+      .unwrap_or(usize::MAX)
+  };
+  let min_late_rank = with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(h)) => h.keys().map(|k| rank(k)).min(),
+    _ => None,
+  })
+  .unwrap_or(usize::MAX);
+  let displaced = existing.iter().find(|node| {
+    let qname = format!("ltx:{}", node.get_name());
+    rank(&qname) > min_late_rank
+  });
   let savenode = document.get_node().clone();
-  let wrapper = match last.get_next_sibling() {
-    Some(next) => document.insert_element_before(&next, "ltx:_Capture_", None)?,
-    None => {
-      let mut parent = last
-        .get_parent()
-        .expect("a frontmatter element always has a parent");
-      document.open_element_at(&mut parent, "ltx:_Capture_", None, None)?
+  let wrapper = match displaced {
+    // Canonically later frontmatter exists: insert right before it.
+    Some(next) => document.insert_element_before(next, "ltx:_Capture_", None)?,
+    // Everything placed is canonically earlier: insert after the last.
+    None => match last.get_next_sibling() {
+      Some(next) => document.insert_element_before(&next, "ltx:_Capture_", None)?,
+      None => {
+        let mut parent = last
+          .get_parent()
+          .expect("a frontmatter element always has a parent");
+        document.open_element_at(&mut parent, "ltx:_Capture_", None, None)?
+      },
     },
   };
   document.set_node(&wrapper);

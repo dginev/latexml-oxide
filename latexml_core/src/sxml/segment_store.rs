@@ -58,6 +58,11 @@ pub struct SegmentMeta {
   /// root (hoisted during build); a spilled subtree's own serialization does
   /// not repeat them.
   pub namespaces: Vec<(String, String)>,
+  /// The nearest ancestor SECTION's `xml:id` on the spine at the spill point.
+  /// Scope-gated processing (`\lxDeclare` section scoping) resolves a token's
+  /// section by walking ancestors — which a spilled-from-inside-a-section
+  /// fragment no longer has.
+  pub section_id: Option<String>,
 }
 
 /// The element wrapping a spilled segment's sibling subtrees. Matches the

@@ -3484,6 +3484,14 @@ impl Document {
     for level in 0..spine.len().saturating_sub(1) {
       let parent = spine[level].clone();
       let barrier = spine[level + 1].clone();
+      // The ambient SECTION for scope-gated processing (`\lxDeclare`):
+      // nearest section at or above this spill parent, mirroring the
+      // ancestor walk `apply_lx_declarations` performs.
+      let section_id = spine[..=level]
+        .iter()
+        .rev()
+        .find(|n| n.get_name() == "section")
+        .and_then(|n| n.get_attribute_ns("id", XML_NS));
       // The serializer's recursion contract for children of `parent`
       // (`serialize_into`: depth+1, parent's schema-driven noindent).
       let noindent = {
@@ -3510,13 +3518,27 @@ impl Document {
           // A non-eligible node interrupts the run: flush what precedes it so
           // each placeholder replaces exactly the contiguous nodes it stands
           // for, and document order is preserved around the interloper.
-          runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
+          runs_spilled += self.spill_run(
+            &mut run,
+            level + 1,
+            noindent,
+            &namespaces,
+            &section_id,
+            index,
+          )?;
         } else {
           run.clear();
         }
       }
       if !run.is_empty() {
-        runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
+        runs_spilled += self.spill_run(
+          &mut run,
+          level + 1,
+          noindent,
+          &namespaces,
+          &section_id,
+          index,
+        )?;
       }
     }
     Ok(runs_spilled)
@@ -3530,6 +3552,7 @@ impl Document {
     depth: usize,
     noindent: bool,
     namespaces: &[(String, String)],
+    section_id: &Option<String>,
     index: &mut crate::sxml::FragmentIndex,
   ) -> Result<usize> {
     use crate::sxml::SegmentMeta;
@@ -3569,6 +3592,7 @@ impl Document {
       noindent,
       font: None,
       namespaces: namespaces.to_vec(),
+      section_id: section_id.clone(),
     };
     let store = self
       .spill_store

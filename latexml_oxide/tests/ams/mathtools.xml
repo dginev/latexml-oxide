@@ -891,7 +891,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
 (<ref labelref="LABEL:eq:b1"/>) and (<ref labelref="LABEL:eq:nt1"/>).</p>
     </para>
     <para xml:id="S2.p10">
-      <equationgroup class="ltx_eqn_gather" xml:id="S12.EGx1">
+      <equationgroup class="ltx_eqn_gather" xml:id="S2.EGx1">
         <equation labels="LABEL:eq:a" xml:id="S2.E6">
           <tags>
             <tag>(6)</tag>
@@ -933,7 +933,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
           </XMath>
         </Math>: (<ref labelref="LABEL:eq:a"/>).
 Then a switch of tag forms.</p>
-      <equationgroup class="ltx_eqn_align" xml:id="S12.EGx2">
+      <equationgroup class="ltx_eqn_align" xml:id="S2.EGx2">
         <equation labels="LABEL:eq:c" xml:id="S2.E7">
           <tags>
             <tag>(7)</tag>
@@ -3206,7 +3206,7 @@ Then a switch of tag forms.</p>
       </equation>
     </para>
     <para xml:id="S6.p4">
-      <equationgroup class="ltx_eqn_align" xml:id="S12.EGx3">
+      <equationgroup class="ltx_eqn_align" xml:id="S6.EGx3">
         <equation xml:id="S6.Ex49">
           <MathFork>
             <Math tex="\displaystyle f(x)=\int h(x)\,dx" text="f@(x) = integral@(h@(x) * differential-d@(x))" xml:id="S6.Ex49.m3">
@@ -3344,7 +3344,7 @@ Then a switch of tag forms.</p>
       </equationgroup>
     </para>
     <para xml:id="S6.p5">
-      <equationgroup class="ltx_eqn_align" xml:id="S12.EGx4">
+      <equationgroup class="ltx_eqn_align" xml:id="S6.EGx4">
         <equation xml:id="S6.E11">
           <tags>
             <tag>(11)</tag>
@@ -5781,7 +5781,7 @@ Then a switch of tag forms.</p>
       </equation>
     </para>
     <para xml:id="S10.p7">
-      <equationgroup class="ltx_eqn_gather" rowsep="30.0pt" xml:id="S12.EGx5">
+      <equationgroup class="ltx_eqn_gather" rowsep="30.0pt" xml:id="S10.EGx5">
         <equation xml:id="S10.E18">
           <tags>
             <tag>(18)</tag>
@@ -5815,7 +5815,7 @@ Then a switch of tag forms.</p>
       </equationgroup>
     </para>
     <para xml:id="S10.p8">
-      <equationgroup class="ltx_eqn_align" rowsep="30.0pt" xml:id="S12.EGx6">
+      <equationgroup class="ltx_eqn_align" rowsep="30.0pt" xml:id="S10.EGx6">
         <equation xml:id="S10.E20">
           <tags>
             <tag>(20)</tag>
@@ -5981,7 +5981,7 @@ Then a switch of tag forms.</p>
       </equationgroup>
     </para>
     <para xml:id="S10.p9">
-      <equationgroup class="ltx_eqn_align" rowsep="30.0pt" xml:id="S12.EGx7">
+      <equationgroup class="ltx_eqn_align" rowsep="30.0pt" xml:id="S10.EGx7">
         <equation xml:id="S10.Ex74">
           <MathFork>
             <Math tex="\displaystyle a_{11}=b_{11}" text="a _ 11 = b _ 11" xml:id="S10.Ex74.m5">
@@ -6177,7 +6177,7 @@ Then a switch of tag forms.</p>
       </equationgroup>
     </para>
     <para xml:id="S10.p10">
-      <equationgroup class="ltx_eqn_align" rowsep="30.0pt" xml:id="S12.EGx8">
+      <equationgroup class="ltx_eqn_align" rowsep="30.0pt" xml:id="S10.EGx8">
         <equation xml:id="S10.E22">
           <tags>
             <tag>(22)</tag>
@@ -6618,7 +6618,7 @@ Then a switch of tag forms.</p>
       </equation>
     </para>
     <para xml:id="S10.p15">
-      <equationgroup class="ltx_eqn_eqnarray" rowsep="30.0pt" xml:id="S12.EGx9">
+      <equationgroup class="ltx_eqn_eqnarray" rowsep="30.0pt" xml:id="S10.EGx9">
         <equation xml:id="S10.E25">
           <tags>
             <tag>(25)</tag>

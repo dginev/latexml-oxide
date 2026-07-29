@@ -377,7 +377,7 @@ fn finish_document(document: &mut Document) -> Result<()> {
 
   // Apply \lxDeclare declarations: set roles/names/meanings on matching XMTok elements.
   // Must run BEFORE math parsing so the parser sees the updated roles.
-  apply_lx_declarations(document);
+  apply_lx_declarations(document, None);
 
   if !state::get_nomathparse_flag() {
     // Telemetry: count formulae and time the whole Marpa parse pass.
@@ -599,7 +599,7 @@ fn streaming_pass2(
           apply_rewrite_rules(&mut frag, rules.clone(), &root)?;
         }
       }
-      apply_lx_declarations(&mut frag);
+      apply_lx_declarations(&mut frag, meta.section_id.as_deref());
       if !nomath {
         let mut parser = MathParser::default();
         parser.parse_math(&mut frag)?;
@@ -1284,7 +1284,7 @@ fn load_latexml_file(path: &str) -> Result<()> {
 /// Apply \lxDeclare declarations to the document.
 /// Simple fast-path: matches single-token patterns in XMTok elements
 /// and sets role/name/meaning attributes.
-fn apply_lx_declarations(document: &mut Document) {
+fn apply_lx_declarations(document: &mut Document, ambient_section: Option<&str>) {
   let decls_str = match state::lookup_value("LATEXML_DECLARATIONS") {
     Some(Stored::String(s)) => arena::with(s, |r| r.to_string()),
     _ => return,
@@ -1348,6 +1348,11 @@ fn apply_lx_declarations(document: &mut Document) {
           break;
         }
         cur = p.get_parent();
+      }
+      if scope.is_empty() {
+        // Streaming fragment: the enclosing section lives on the spine — its
+        // id was recorded at spill time (SegmentMeta::section_id).
+        scope = ambient_section.unwrap_or_default().to_string();
       }
       scope
     };
