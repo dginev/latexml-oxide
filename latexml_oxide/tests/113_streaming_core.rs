@@ -45,11 +45,14 @@ fn convert(source: &str, streaming: Option<usize>) -> (String, usize, usize) {
         "{source}: {errors} errors (streaming={streaming:?}):\n{}",
         r.log
       );
-      (
+      let outcome = (
         r.result.expect("conversion produced XML"),
         latexml_core::stomach::fragment_yield_count(),
         latexml_core::document::spilled_segment_count(),
-      )
+      );
+      // See 114_streaming_corpus: free the thread's engine before exit.
+      latexml_core::reset_thread_engine();
+      outcome
     })
     .expect("spawn conversion thread")
     .join()

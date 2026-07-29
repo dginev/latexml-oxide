@@ -124,6 +124,16 @@ pub struct Document {
   /// segment's text where its `<_spilled_ ref="N"/>` placeholder sits. `None`
   /// on the eager path and on fragment documents.
   spill_store:                 Option<crate::sxml::SegmentStore>,
+  /// Streaming pass 1 only: suppress the ROOT element's `after_open` hook
+  /// dispatch. Eager semantics guarantee every hook runs with digestion
+  /// COMPLETE (build starts after digestion ends); interleaving would fire
+  /// the root's hooks during fragment 1 instead — with harmful effects, not
+  /// just missed data: the frontmatter hook (`base_utilities.rs`,
+  /// `Tag!("ltx:document", after_open_late)`) would run `insert_frontmatter`
+  /// against still-EMPTY frontmatter state and mark it done, discarding the
+  /// document's abstract when the real content arrived. The streaming driver
+  /// dispatches the root's hooks exactly once, after digestion finishes.
+  defer_root_after_open:       bool,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -211,6 +221,7 @@ impl Document {
       localized_boxes:             Vec::new(),
       localized_fonts:             Vec::new(),
       spill_store:                 None,
+      defer_root_after_open:       false,
     }
   }
 
@@ -1436,6 +1447,47 @@ impl Document {
       self.close_node_internal(node)?;
     }
     Ok(())
+  }
+
+  /// Like [`Self::get_tag_action_list`], but keeps the `_Late` bucket
+  /// separate. Streaming needs the split: a root's early/normal hooks
+  /// (structural — the pending-resource drain) run at open as usual, while
+  /// its `_late` hooks (semantically "with digestion complete" — frontmatter
+  /// placement, root classes) are deferred to end-of-digestion.
+  pub fn get_tag_action_list_parts(
+    &self,
+    tag: SymStr,
+    when: TagOptionName,
+  ) -> (Vec<TagConstructionClosure>, Vec<TagConstructionClosure>) {
+    use self::tag::TagOptionName::*;
+    let (when_early, when_late) = match when {
+      AfterOpen => (Some(AfterOpenEarly), Some(AfterOpenLate)),
+      AfterClose => (Some(AfterCloseEarly), Some(AfterCloseLate)),
+      _ => (None, None),
+    };
+    let mut prompt = Vec::new();
+    let mut late = Vec::new();
+    state::with_tag_property(tag, |tag_hash| {
+      state::with_tag_property(pin!("ltx:*"), |all_hash| {
+        let mut collect =
+          |bucket: &mut Vec<TagConstructionClosure>, opts: Option<&tag::TagOptions>, key| {
+            if let Some(v) = opts.and_then(|o| o.get(key)) {
+              bucket.extend(v.iter().cloned());
+            }
+          };
+        if let Some(when0) = &when_early {
+          collect(&mut prompt, tag_hash, when0);
+          collect(&mut prompt, all_hash, when0);
+        }
+        collect(&mut prompt, tag_hash, &when);
+        collect(&mut prompt, all_hash, &when);
+        if let Some(when1) = &when_late {
+          collect(&mut late, tag_hash, when1);
+          collect(&mut late, all_hash, when1);
+        }
+      });
+    });
+    (prompt, late)
   }
 
   /// get the actions that should be performed on afterOpen or afterClose
@@ -3605,6 +3657,104 @@ impl Document {
     self.spill_store = Some(store);
   }
 
+  /// Streaming pass 1 switch: defer (true) or restore (false) the ROOT
+  /// element's `after_open` hook dispatch. See the field docs.
+  pub fn set_defer_root_after_open(&mut self, defer: bool) { self.defer_root_after_open = defer; }
+
+  /// Open a `ltx:_Capture_` wrapper at the TOP of the root — after the last
+  /// existing `ltx:resource` child (resources lead the document in the eager
+  /// output), else as the first child. Shared insertion context for the
+  /// streaming-mode operations that must place content where an
+  /// empty-just-opened root would have put it.
+  fn open_root_top_capture(&mut self) -> Result<Option<Node>> {
+    let Some(mut root) = self.document.get_root_element() else {
+      return Ok(None);
+    };
+    let mut last_resource: Option<Node> = None;
+    for child in root.get_child_nodes() {
+      if child.get_type() == Some(NodeType::ElementNode) && child.get_name() == "resource" {
+        last_resource = Some(child);
+      }
+    }
+    let wrapper = match last_resource {
+      Some(r) => match r.get_next_sibling() {
+        Some(next) => self.insert_element_before(&next, "ltx:_Capture_", None)?,
+        None => self.open_element_at(&mut root, "ltx:_Capture_", None, None)?,
+      },
+      None => match root.get_first_child() {
+        Some(first) => self.insert_element_before(&first, "ltx:_Capture_", None)?,
+        None => self.open_element_at(&mut root, "ltx:_Capture_", None, None)?,
+      },
+    };
+    Ok(Some(wrapper))
+  }
+
+  /// Streaming pass 1: fold freshly queued resources into the live document
+  /// as they arrive, at the top of the root. Perl's own contract
+  /// (`Package.pm:RequireResource`): with a live document, `addResource`
+  /// inserts DIRECTLY; only a document-less preamble queues. The eager path
+  /// keeps the queue until the root's `after_open` because its build starts
+  /// post-digestion; under streaming that drain is deferred to
+  /// end-of-digestion, and mid-digestion consumers — the frontmatter
+  /// fallback's `/ltx:document/ltx:resource[last()]` anchor — need the
+  /// resources already placed.
+  pub fn process_pending_resources_at_top(&mut self) -> Result<()> {
+    let resources: Vec<Resource> = state::take_pending_resources();
+    if resources.is_empty() {
+      state::reset_pending_resources();
+      return Ok(());
+    }
+    let Some(wrapper) = self.open_root_top_capture()? else {
+      // No root yet: re-queue for the next absorb (or the deferred drain).
+      for resource in resources {
+        state::push_pending_resource(resource);
+      }
+      return Ok(());
+    };
+    let savenode = self.node.clone();
+    self.set_node(&wrapper);
+    for resource in resources {
+      self.add_resource(resource)?;
+    }
+    state::reset_pending_resources();
+    self.unwrap_nodes(wrapper)?;
+    self.set_node(&savenode);
+    Ok(())
+  }
+
+  /// Streaming: dispatch the ROOT's deferred after-open hooks at
+  /// end-of-digestion — the eager timing (build starts only after digestion
+  /// ends) — with the insertion point at the TOP of the root, as if it had
+  /// just opened empty. `after_open` itself cannot be used here: it pins the
+  /// current node to the dispatched element, so everything the hooks insert
+  /// (resources, frontmatter) would APPEND after the built content instead
+  /// of leading it. A `ltx:_Capture_` wrapper as first child recreates the
+  /// empty-root insertion context (the frontmatter fallback's own
+  /// technique), and is unwrapped afterwards.
+  pub fn dispatch_deferred_root_hooks(&mut self) -> Result<()> {
+    debug_assert!(
+      !self.defer_root_after_open,
+      "clear the deferral before dispatching"
+    );
+    let Some(mut root) = self.document.get_root_element() else {
+      return Ok(());
+    };
+    let savenode = self.node.clone();
+    let Some(wrapper) = self.open_root_top_capture()? else {
+      return Ok(());
+    };
+    self.set_node(&wrapper);
+    let qname = get_node_qname(&root);
+    let box_opt = self.get_node_box(&root);
+    let (_prompt, late) = self.get_tag_action_list_parts(qname, tag::TagOptionName::AfterOpen);
+    for action in late {
+      action(self, &mut root, box_opt.as_ref())?;
+    }
+    self.unwrap_nodes(wrapper)?;
+    self.set_node(&savenode);
+    Ok(())
+  }
+
   /// Detach the spill store (the streaming driver takes it out for pass 2 —
   /// which mutates segments while fragment documents exist independently —
   /// and re-attaches it for assembly).
@@ -4524,6 +4674,23 @@ impl Document {
   pub fn close_element_at(&mut self, node: &mut Node) -> Result<()> { self.after_close(node) }
 
   pub fn after_open(&mut self, node: &mut Node) -> Result<()> {
+    // Streaming pass 1: the root's LATE hooks are deferred to
+    // end-of-digestion (their eager semantics are "digestion complete") but
+    // its early/normal hooks — structural work like the pending-resource
+    // drain, which mid-digestion consumers depend on — still run at open.
+    // See the `defer_root_after_open` field docs.
+    if self.defer_root_after_open && self.document.get_root_element().as_ref() == Some(node) {
+      let savenode = self.node.clone();
+      self.set_node(node);
+      let node_qname = get_node_qname(node);
+      let box_opt = self.get_node_box(node);
+      let (prompt, _late) = self.get_tag_action_list_parts(node_qname, TagOptionName::AfterOpen);
+      for action in prompt {
+        action(self, node, box_opt.as_ref())?;
+      }
+      self.set_node(&savenode);
+      return Ok(());
+    }
     // Set current point to this node, just in case the afterOpen's use it.
     let savenode = self.node.clone();
     self.set_node(node);

@@ -50,7 +50,10 @@ fn convert_with_budget(source: &str, budget: Option<usize>) -> (String, usize) {
         errors, 0,
         "{source}: {errors} errors with budget {budget:?}"
       );
-      (r.result.expect("conversion produced XML"), yields)
+      let outcome = (r.result.expect("conversion produced XML"), yields);
+      // See 114_streaming_corpus: free the thread's engine before exit.
+      latexml_core::reset_thread_engine();
+      outcome
     })
     .expect("spawn conversion thread")
     .join()

@@ -895,6 +895,7 @@ impl DigestionAPI for Core {
       _ => std::env::temp_dir(),
     };
     document.set_spill_store(SegmentStore::create(&spill_anchor)?);
+    document.set_defer_root_after_open(true);
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
 
@@ -924,6 +925,11 @@ impl DigestionAPI for Core {
           stopped = true;
         }
       }
+      // Perl inserts resources directly once a document exists; the eager
+      // path's root-hook drain is deferred here, so fold fresh arrivals in
+      // per fragment — mid-digestion consumers (the frontmatter fallback's
+      // resource[last()] anchor) depend on them being placed.
+      document.process_pending_resources_at_top()?;
       document.spill_closed_subtrees(&mut index)?;
       if stopped || (!yielded && !gullet::has_more_input()) {
         break;
@@ -933,19 +939,17 @@ impl DigestionAPI for Core {
     gullet::flush();
     note_end(&digestion_note);
 
-    // Interleaving moved the ROOT's `after_open` dispatch to fragment 1's
-    // absorb — before most of the document had digested — while the eager
-    // path guarantees every hook runs with digestion COMPLETE. The root is
-    // the one element structurally exposed to that shift (it opens before
-    // ~everything), so re-dispatch its after-open hooks now that digestion
-    // has finished: the registered hooks (root classes via `add_class` =
-    // deduped `add_ss_values`) are idempotent, so this converges to exactly
-    // the eager outcome. Witness: `DOCUMENT_CLASSES`'s `ltx_authors_1line`
-    // was assigned during `\maketitle` digestion and missed by the early
-    // dispatch, dropping the class from the root under streaming.
-    if let Some(mut root) = document.get_document().get_root_element() {
-      document.after_open(&mut root)?;
-    }
+    // The ROOT's after-open hooks were DEFERRED during pass 1
+    // (`set_defer_root_after_open`): eager semantics guarantee every hook
+    // runs with digestion complete, and firing them at fragment 1 was not
+    // merely incomplete but harmful — the frontmatter hook consumed EMPTY
+    // frontmatter state and marked it done (losing the abstract; sweep
+    // witness tests/structure/abstract.tex), and the root-classes hook read
+    // a `DOCUMENT_CLASSES` mapping `\maketitle` had not populated yet
+    // (dropping `ltx_authors_1line`; gate witness). Dispatch exactly once,
+    // now, with digestion finished — the eager timing.
+    document.set_defer_root_after_open(false);
+    document.dispatch_deferred_root_hooks()?;
 
     // The rule set must be complete before ANY rewrites run: the source's
     // `.latexml` file loads only now (as in the eager path), and fragments
