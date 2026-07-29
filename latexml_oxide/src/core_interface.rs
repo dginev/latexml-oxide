@@ -999,12 +999,16 @@ impl DigestionAPI for Core {
     document.set_defer_root_after_open(true);
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
-    // Soft-RSS yield: fire regardless of box count once RSS crosses half the
-    // ceiling — the box budget assumes a per-box footprint, and math-dense
-    // content blows past it (witness: fuse at 18.8 GB with the box budget
-    // untouched). The cap is bytes here (resolve_rss_cap basis).
+    // Soft-RSS yield: fire regardless of box count once RSS crosses a THIRD
+    // of the fuse — the box budget assumes a per-box footprint, and
+    // math-dense content blows past it (witness: fuse at 18.8 GB with the
+    // box budget untouched). A third, not half: the sampled-RSS check lags,
+    // yields wait for a legal seam (a big alignment digests un-yieldingly),
+    // and per-run bookkeeping creeps — half-of-fuse steadied the 131 MB
+    // witness only ~5 GB under the fuse and the creep closed the gap. The
+    // cap is bytes here (resolve_rss_cap basis).
     if let Some(cap_bytes) = stomach::resolve_rss_cap() {
-      stomach::set_fragment_yield_rss_soft_kb(Some(cap_bytes / 1024 / 2));
+      stomach::set_fragment_yield_rss_soft_kb(Some(cap_bytes / 1024 / 3));
     }
 
     // Pass 1: interleaved digest → absorb → spill, at legal seams only.
