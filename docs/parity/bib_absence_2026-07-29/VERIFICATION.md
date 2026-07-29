@@ -18,10 +18,10 @@ uses — then counts `ltx_bibitem` against what the source implies and what
 
 | | papers | entries |
 |---|---|---|
-| **Recovered** (0 → non-zero) | **236** | **17 283** |
-| Complete (`now == cited`) | 228 OK | |
+| **Recovered** (0 → non-zero) | **241** | **17 466** |
+| Complete (`now == cited`) | 233 OK | |
 | Short of what was cited (THIN) | 8 | |
-| Still empty | 292 | |
+| Still empty | 287 | |
 | No HTML | 5 | |
 
 Regression control: 20 papers whose bibliographies already worked reconvert
@@ -59,7 +59,7 @@ read as rendered text:
 - **2605.21570** (46) — 34 + 12 across its two bibunits, each matching that
   unit's own `\begin{thebibliography}{N}`
 
-## What is still empty (292), by first error
+## What is still empty (287), by first error
 
 *no error at all* 32 · `unexpected:\lx@begin@alignment` 28 ·
 `unexpected:\endgroup` 8 · `unexpected:\@end@tabular` 7 ·
@@ -80,6 +80,9 @@ surfaces and trips the error cap. That is the F2 pattern again — a real defect
 becoming visible — but it costs the partial output, so the underlying leak is
 worth its own fix.
 
+`docmute` accounts for another 5 (a native binding; the raw `.sty` is inert
+here because it patches the `document` environment rather than our
+`\begin{document}` control sequence) — 2605.17865 0 → 69, 2606.21971 0 → 41.
 `undefined:\setboolean` is also gone: all 6 were `\documentclass{pnas-new}`,
 whose class declares four booleans our binding did not
 (2606.29674 0 → 60, 2605.07504 0 → 53, 2606.02411 0 → 45).
