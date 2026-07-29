@@ -52,7 +52,7 @@ Re-verify a row before planning on it (rule 1).
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
-| **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
+| **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310; **CI all-green + mergeable, re-verified 2026-07-29** | nothing left but a review nudge — no code, no automatable step | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **re-port items 1 and 3 LANDED**: a raw `.bib` is converted by the engine (recursive BibTeX session on the LIVE core state), the 727-line string route is deleted, the eager-tokenization gap that cost 151 papers is closed at the root, and the 13-field digest whitelist is gone — the `\bib@field@default@*` name sets now match Perl exactly (45 each). The 2026-07-27 follow-ups closed the `.bib`-as-DATA family (divergences #74/#78/#79/**#80**). Remaining: item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER) and the missing-references target list | **item 2 + targets** — the re-port itself is done | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
@@ -64,6 +64,43 @@ Re-verify a row before planning on it (rule 1).
 | — | Two-pass streaming split | **deferred by user decision 2026-07-06**; trigger = a <64 GB target appears | — | [`STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
 
 ## Current status
+
+- **2026-07-29 — an arg-taking `\fnum@<type>` absorbed the rest of the document
+  into an unclosed `<figure>`.** The one concrete, analysed-but-unfixed item of
+  R5's "missing references" family, parked since 2026-07-14 on "needs a user
+  decision + a full-suite diff". Both are now done: user-approved per the
+  `surpass-perl` protocol, and the full-suite diff is **empty**.
+  LaTeX's `\@makecaption` is `\sbox\@tempboxa{#1: #2}`, so the widely-copied
+  "`Fig. 1:` → `Fig. 1.`" hack — `\renewcommand*{\fnum@figure}[1]{...}` — works
+  under pdflatex by having the hook eat that `:` **token**. LaTeXML's separator
+  is a tag **attribute** (`\lx@tag[][: ]`), so the argument scan ran past the
+  hook and took the caption group's closing brace: the `<figure>` never closed
+  and every following section, **the bibliography included**, was absorbed into
+  it. That is the truncation mechanism, not a bad caption.
+  Fixed by expanding the hook as `\csname fnum@#1\endcsname{}` at all three
+  `fnum@` sites (`\lx@fnum@@`, `\lx@fnum@toc@@`, the theorem-header formatter);
+  `\lx@typerefnum@@` shares the shape and is deliberately excluded — no LaTeX
+  kernel feeds it a separator token. **SHARED-FAILURE, so this is a surpass**:
+  pdflatex 0 errors, same-host Perl 0.8.8 **9**, pre-fix Rust **7** on the
+  two-hook minimal form; the three-hook guard fixture goes **10 → 0**.
+  **The deferral's premise was wrong and that is the lesson**: "`\lx@fnum@@`
+  formats every figure/table caption in every document" — it does not. The
+  changed branch fires only where `\fnum@<type>` is *defined*; the untouched
+  `\lx@@fnum@@` default serves nearly every caption. Measured blast radius:
+  **106/106 targets, zero goldens re-blessed**, and three real papers whose
+  classes `\def\fnum@figure` (svjour3, aastex631, llncs) are byte-identical
+  before vs after.
+  **A second recorded claim did NOT survive re-measurement.** The 2026-07-14
+  note said "18 papers corpus-wide, 5 with no References", counted by
+  `grep 'lx@tag@intags'`. Live against the current fleet run that proxy gives
+  **23** papers over 2605+2606 (60,505 docs), but only **2** carry this cause's
+  actual signature — 2605.01731 (18 figures × 3 errors, confirmed live) and
+  2605.12842 (10 × 3). `\lx@tag@intags` has several causes; the proxy
+  over-attributes, and the "5 with no References" sub-claim is withdrawn. The
+  fix is justified on being right and free, not on breadth. Does NOT fix the
+  `close=": "` separator, so the caption still reads `Figure 1.: A caption.`.
+  OXIDIZED_DESIGN **#85**, KNOWN_PERL_ERRORS **#68**, guard
+  `06_cluster_regressions::cluster_fnum_arg_hook`.
 
 - **2026-07-27 (latest) — the `unexpected:fi` fatal cluster: `\meaning` of a
   `\chardef` token returned the internal class name.** GENUINE-RUST-ONLY,
@@ -565,8 +602,13 @@ residuals stay here so the live worklist keeps them visible:
 
 ### R1 — upstream `brucemiller/LaTeXML#2852`: a subfile's `\documentclass` options are not packages
 
-**OPEN upstream** (state checked 2026-07-25); **our half is already merged as PR
-#310**, so nothing is pending here in this repo. The allowlist was hand-split on
+**OPEN upstream**; **our half is already merged as PR #310**, so nothing is
+pending here in this repo. **CI re-verified 2026-07-29: all 15 checks SUCCESS**
+(TeX Live none/2021/2022/2023/2024/2025 × Perl 5.34-5.42, Linux + Windows),
+`mergeable`, not a draft, **zero reviews**, untouched since 2026-07-20. So the
+code side of this row is done and green; what is left is a review nudge to the
+maintainer, which is a human-voice action, not a task to automate. The
+allowlist was hand-split on
 `,` and missed every valued form (`[varwidth=5cm]` → `Error:undefined:{varwidth}`,
 pdflatex clean); it now reads `OptionalKeyVals` and matches on the key. The same
 fix is ported to Perl (`OptionalKeyVals` + `getPairs`) with a `t/structure` case

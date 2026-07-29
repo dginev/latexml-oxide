@@ -1300,9 +1300,23 @@ LoadDefinitions!({
   );
   DefMacro!(r"\lx@refnum@compose@{}{}", r"\if.#1.#2\else#2\space#1\fi");
 
+  // The `{}` after `\endcsname` is OXIDIZED_DESIGN #85, a deliberate divergence
+  // from Perl's otherwise byte-identical `Base_Utility.pool.ltxml` L1041-1043.
+  // LaTeX's `\@makecaption` is `\sbox\@tempboxa{#1: #2}`, so the widely-copied
+  // "Fig. 1: -> Fig. 1." hack —
+  //   \renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+  // — works under pdflatex by having the hook eat that `:` TOKEN. LaTeXML has
+  // no `:` to eat: the separator is a tag ATTRIBUTE (`\lx@tag[][: ]`,
+  // `latex_constructs.rs::format@title@figure`). So the argument scan ran past
+  // the hook and swallowed the caption group's closing brace — the `<figure>`
+  // never closed and every following section, bibliography included, was
+  // absorbed into it. The empty group gives an arg-taking hook something
+  // harmless to consume and is inert for the 0-arg hooks that are the normal
+  // case. The `\lx@@fnum@@` branch below — what fires when no `\fnum@<type>`
+  // exists at all, i.e. for nearly every caption — is untouched.
   DefMacro!(
     r"\lx@fnum@@{}",
-    r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}"
+    r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname{}}}"
   );
 
   // Really seems like <type>name should take precedence over \lx@name@<type>,
@@ -1319,9 +1333,15 @@ LoadDefinitions!({
   // \\lx@fnum@toc@{type} is similar, but formats the number for use within \\toctitle
   // Customize by defining \\fnum@toc@<type> or \\fnum@tocfont@<type>
   // Default uses just \\the<counter>, else composes using \\lx@@fnum@@{type}
+  // Same `{}` as `\lx@fnum@@` above, same reason — OXIDIZED_DESIGN #85.
+  // (`\lx@typerefnum@@` below has the identical *shape* but is deliberately NOT
+  // changed: `typerefnum@<type>` is a LaTeXML-internal hook with no LaTeX
+  // kernel behind it, so no author writes an arg-taking version to eat a
+  // separator token that LaTeXML never emits. The divergence is justified by
+  // pdflatex compatibility, and that argument does not reach this one.)
   DefMacro!(
     r"\lx@fnum@toc@@{}",
-    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}"
+    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname{}}}"
   );
 
   //----------------------------------------------------------------------

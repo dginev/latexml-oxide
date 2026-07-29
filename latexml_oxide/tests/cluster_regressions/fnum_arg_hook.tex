@@ -1,0 +1,50 @@
+% OXIDIZED_DESIGN #85 / KNOWN_PERL_ERRORS #68 — an author's `\fnum@<type>`
+% redefined to TAKE AN ARGUMENT.
+%
+% Real `\fnum@<type>` takes none, but LaTeX's `\@makecaption` is
+% `\sbox\@tempboxa{#1: #2}`, so a one-argument version eats the `:` that
+% follows. That is the widely-copied "Fig. 1: -> Fig. 1." hack, and pdflatex
+% accepts it (verified: 0 errors, renders "Figure 1. A caption.").
+%
+% LaTeXML has no `:` TOKEN to eat — the separator is a tag ATTRIBUTE
+% (`\lx@tag[][: ]`) — so the argument scan used to run past the hook and
+% swallow the caption group's closing brace. The `<figure>` never closed and
+% every following section, THE BIBLIOGRAPHY INCLUDED, was absorbed into it:
+% 7 errors in Rust, 9 in same-host Perl 0.8.8, and a document that looks
+% truncated to a reader. Witnesses 2605.01731 (cas-sc, 18 figures x 3 errors)
+% and 2605.12842 (10 x 3), both confirmed live on the fleet run 2026-07-29 —
+% but plain `article` reproduces, the class is not implicated. (A 2026-07-14
+% note claimed 18 papers via a `grep 'lx@tag@intags'` proxy; re-measured, that
+% proxy gives 23 papers over 2605+2606 of which only 2 carry this cause's
+% signature — the symptom has several causes.)
+%
+% All three `\csname fnum@...\endcsname` hooks are covered here: the caption
+% one, the toc one, and the theorem-header one.
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{thmx}{Theorem}
+\makeatletter
+\renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+\renewcommand*{\fnum@toc@figure}[1]{\thefigure.}
+\renewcommand*{\fnum@thmx}[1]{\thethmx.}
+\makeatother
+\begin{document}
+
+\section{First}
+Text before.
+
+\begin{figure}
+  \caption{A caption.}
+\end{figure}
+
+\begin{thmx}
+  A theorem body.
+\end{thmx}
+
+\section{Second}
+Text after must survive, as a sibling of the figure and not inside it.
+
+\begin{thebibliography}{9}
+\bibitem{a} An entry.
+\end{thebibliography}
+\end{document}
