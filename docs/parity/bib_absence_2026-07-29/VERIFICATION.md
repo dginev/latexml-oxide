@@ -18,14 +18,14 @@ uses — then counts `ltx_bibitem` against what the source implies and what
 
 | | papers | entries |
 |---|---|---|
-| **Recovered** (0 → non-zero) | **189** | **14 715** |
-| Complete (`now == cited`) | 182 OK | |
+| **Recovered** (0 → non-zero) | **191** | **14 770** |
+| Complete (`now == cited`) | 184 OK | |
 | Short of what was cited (THIN) | 7 | |
-| Still empty | 342 | |
+| Still empty | 340 | |
 | No HTML | 2 | |
 
 Regression control: 20 papers whose bibliographies already worked reconvert
-with **identical** counts. `cargo test --tests`: **1767 passed, 0 failed**.
+with **identical** counts. `cargo test --tests`: **1770 passed, 0 failed**.
 
 ## Duplication audit
 
@@ -59,17 +59,22 @@ read as rendered text:
 - **2605.21570** (46) — 34 + 12 across its two bibunits, each matching that
   unit's own `\begin{thebibliography}{N}`
 
-## What is still empty (342), by first error
+## What is still empty (340), by first error
 
 `expected:\fi` 42 · *no error at all* 34 · `unexpected:\lx@begin@alignment` 28 ·
 `unexpected:\endgroup` 8 · `unexpected:\@end@tabular` 7 ·
 `Fatal:Stomach:Recursion` 6 · `unexpected:\usepackage` 6 ·
 `undefined:\setboolean` 6 · long tail.
 
-The largest single bucket is **F6/achemso** (`expected:\fi`, 42), reduced to an
-8-line reproducer in `repros/f6_tocentry_conditional/` and not yet fixed. The
-34 with no diagnostic at all are the next thing to mine — silence is the
-defect class this PR's F2 fix exists to remove.
+The largest single bucket is **F6/achemso** (`expected:\fi`, 42), reduced to a
+5-line reproducer in `repros/f6_tocentry_conditional/` and not yet fixed.
+
+The silent bucket has since given up one real fix: `\captionof` opening a
+verbatim-bodied environment (OXIDIZED_DESIGN #87, witness 2606.08339, 0 → 30
+entries). It is narrow in THIS cohort — 2 papers — but it destroyed whole
+document tails wherever it fired, so its corpus reach is wider than its
+sandbox count. Reduction notes for the rest are in
+`repros/f5_captionof_swallow/`.
 
 ## Reproducing
 
