@@ -3498,16 +3498,11 @@ impl Document {
         let eligible = child.get_type() == Some(NodeType::ElementNode)
           && child.get_name() != SPILL_PLACEHOLDER
           && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()))
-          // Two things pin a subtree in RAM: a bibliography (a LATER
-          // `\bibstyle` writes attributes onto it through a doc-wide search —
-          // sweep witness tests/structure/bibsect.tex), and a deferred
-          // frontmatter marker (resolved on the live spine at
-          // end-of-digestion). Both are rare and small.
+          // A bibliography pins its subtree in RAM: a LATER `\bibstyle`
+          // writes attributes onto it through a doc-wide search (sweep
+          // witness tests/structure/bibsect.tex). Rare and small.
           && self
-            .findnodes(
-              "descendant-or-self::ltx:bibliography | descendant-or-self::*[@_frontmatter_marker]",
-              Some(&child),
-            )
+            .findnodes("descendant-or-self::ltx:bibliography", Some(&child))
             .is_empty();
         if eligible {
           run.push(child);

@@ -2031,19 +2031,6 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
     return Ok(());
   }
-  // Streaming pass 1: frontmatter insertion reads digestion-GLOBAL state (the
-  // eager path only ever runs it with digestion complete — build starts after
-  // digestion ends). Interleaved, an early `\maketitle` would insert with the
-  // abstract still undigested (sweep witnesses tests/structure/amsarticle.tex,
-  // titlepage.tex). Leave a position marker instead;
-  // `resolve_deferred_frontmatter` performs the real insertion here at
-  // end-of-digestion.
-  if document.root_after_open_deferred() {
-    let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
-    attrs.insert("_frontmatter_marker".to_string(), "1".to_string());
-    document.insert_element("ltx:_Capture_", vec![], Some(attrs))?;
-    return Ok(());
-  }
   digest_front_matter()?; // If needed
   let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS
     .iter()
@@ -2118,22 +2105,61 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   Ok(())
 }
 
-/// Streaming: perform the frontmatter insertions that pass 1 deferred, at the
-/// positions their markers recorded. Called by the streaming driver after
-/// digestion completes and the root-hook deferral is cleared; a document with
-/// no marker (no `\maketitle`/fallback fired) is handled by the root's own
-/// deferred late hook instead.
-pub fn resolve_deferred_frontmatter(document: &mut Document) -> Result<()> {
+/// Streaming: insert frontmatter that arrived AFTER the in-document insertion
+/// point had already been absorbed.
+///
+/// Eager conversion runs every `insert_frontmatter` with digestion complete
+/// (build starts after digestion ends), so the `\maketitle`-time insertion
+/// sees the whole document's frontmatter. Interleaved pass 1 runs it
+/// mid-digestion — with the REAL builder navigation, so paragraph splitting
+/// and ids come out exactly as eager — but anything queued after that moment
+/// (an abstract following `\maketitle` in an AMS-style document; sweep
+/// witnesses tests/structure/amsarticle.tex, titlepage.tex) misses the
+/// consumption. Those late arrivals re-populate the `frontmatter` state hash;
+/// this inserts them at their canonical slot — after the last frontmatter
+/// element already placed — by re-running `insert_frontmatter` there
+/// (element order within it is canonical, not arrival order).
+pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
   debug_assert!(!document.root_after_open_deferred());
-  for mut marker in document.findnodes("//*[@_frontmatter_marker]", None) {
-    let savenode = document.get_node().clone();
-    let wrapper = document.insert_element_before(&marker, "ltx:_Capture_", None)?;
-    document.set_node(&wrapper);
-    insert_frontmatter(document)?;
-    document.unwrap_nodes(wrapper)?;
-    document.set_node(&savenode);
-    marker.unlink_node();
+  let has_late = with_value(
+    "frontmatter",
+    |v| matches!(v, Some(Stored::HashTagData(h)) if !h.is_empty()),
+  ) || with_value(
+    "frontmatter_raw",
+    |v| matches!(v, Some(Stored::FrontmatterRaw(q)) if !q.is_empty()),
+  );
+  if !has_late || !lookup_bool("frontmatter_done") {
+    // Nothing late, or nothing was ever inserted early — in the latter case
+    // the root's deferred late hook performs the one-and-only insertion.
+    return Ok(());
   }
+  // Anchor: after the last frontmatter element already in the document.
+  let existing = document.findnodes(
+    &FRONTMATTER_ELEMENTS
+      .iter()
+      .map(|q| format!("//{q}"))
+      .collect::<Vec<_>>()
+      .join(" | "),
+    None,
+  );
+  let Some(last) = existing.last() else {
+    return Ok(());
+  };
+  let savenode = document.get_node().clone();
+  let wrapper = match last.get_next_sibling() {
+    Some(next) => document.insert_element_before(&next, "ltx:_Capture_", None)?,
+    None => {
+      let mut parent = last
+        .get_parent()
+        .expect("a frontmatter element always has a parent");
+      document.open_element_at(&mut parent, "ltx:_Capture_", None, None)?
+    },
+  };
+  document.set_node(&wrapper);
+  assign_value("frontmatter_done", false, Some(Scope::Global));
+  insert_frontmatter(document)?;
+  document.unwrap_nodes(wrapper)?;
+  document.set_node(&savenode);
   Ok(())
 }
 
