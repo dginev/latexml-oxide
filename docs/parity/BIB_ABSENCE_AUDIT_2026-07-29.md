@@ -46,6 +46,27 @@ are not re-attempted:
   (`?#wrap(…)`) when no `{bibdiv}` is open — same empty document. The element
   simply cannot open inside `ltx:section`; a real fix has to go through the
   `BACKMATTER_ELEMENT` mapping that bibunits' `sectionbib` option uses.
+- **F3(b) — REVTeX `auto@bib`: ATTEMPTED AND WITHDRAWN, do not re-apply as is.**
+  `\appdef\class@enddocumenthook{\auto@bib}` (revtex4-2.cls L5972) runs
+  `\bibliography{}` (L7275-7291), so with #84 in place an end-document hook
+  recovers a manuscript that never calls `\bibliography` — witness 2605.03978,
+  0 → 22 entries. It was reverted because the hook cannot yet be guarded
+  correctly against emitting a SECOND list:
+  * aastex631 derives from REVTeX and pairs `\bibliography{}` with a shipped
+    `.bbl`; witness **2605.27226** doubled 330 → 660 across two sections. An
+    expansion-time flag set in `\lx@ifusebbl` fixes that shape.
+  * But **2605.13984** writes `\input{main.bbl}` by hand with `\bibliography`
+    commented out, which never reaches `\lx@ifusebbl`, and doubled 88 → 176.
+  * Setting the flag anywhere INSIDE the bibliography build instead —
+    `begin_bibliography_clean`'s body, or `before_digest_bibliography` —
+    makes that paper emit **0** entries and 0 sections. Both placements were
+    measured. Whatever the interaction is, it is not understood, and shipping
+    the hook without a correct guard risks silent duplication across REVTeX
+    and AASTeX. Re-attempt only with a construction-time test for an existing
+    `ltx:bibliography`, not a state flag.
+  * Independently discovered and still open: 2605.13984's hand-written
+    `\input{main.bbl}` yields **0 entries on its own** — that is the paper's
+    actual bug, and the hook was only masking it.
 - **F4(c)(d)** — `\addbibresource` inside an unbound `.cls` is never registered
   (2605.23724), and apa6 OmniBus dep-mining takes a biblatex branch the
   document did not (2605.14990). Both still EMPTY.
@@ -383,7 +404,7 @@ the acceptance metric, re-measured on the witnesses named above.
 |---|---|---|---|---|
 | ~~S1~~ ✅ **LANDED** | F2 | Restore the two parity Error raises: `make_bibliography.rs:298-303` Info→Error (Perl `MakeBibliography.pm:139`); EOF-with-open-environment error. Consider Warning→Error for all-keys-`missing_keys`. Guards: the 2605.27226 / 2605.19817 / 2606.04416 witnesses must stop reporting `ok`. | small (1-2 days) | signal only, ~28 sandbox papers leave `ok`; unlocks honest telemetry for S2-S8 |
 | ~~S2~~ ✅ **LANDED** (66/69) | F1 | Treat `$$` in the bib restricted-horizontal context as TeX does; per-entry error containment at `\end{bib@entry}` (close dangling math/box frames, drop only that entry). Min-repros ready ([`bib_absence_2026-07-29/repros/f1_bib_cascade/`](bib_absence_2026-07-29/repros/f1_bib_cascade/), incl. `bibbisect.py`). | medium | ~69 papers + 68 fatals / pair; projected ~3 200 corpus-wide once the re-port binary ships |
-| **S3** — (a) ✅ and (c) ✅ **LANDED**; (b) REVTeX `auto@bib` open | F3 | (a) empty-arg `\bibliography{}` → `\jobname.bbl` fallback (= latex.ltx, beyond-Perl-vs-broken doc); (b) REVTeX 4-2 `auto@bib` end-document `.bbl` input; (c) bibunits `\putbib` reads shipped `bu<N>.bbl`. PDF ground truth per config-driven rule. | medium | ~47 / pair; corpus: the 2 987 `bbl,bibcmd|empty_bib` + 1 084 `bbl,bibcmd|no_bib` silent blocks are the upper bound |
+| **S3** — (a) ✅ and (c) ✅ **LANDED**; (b) attempted and WITHDRAWN (see above) | F3 | (a) empty-arg `\bibliography{}` → `\jobname.bbl` fallback (= latex.ltx, beyond-Perl-vs-broken doc); (b) REVTeX 4-2 `auto@bib` end-document `.bbl` input; (c) bibunits `\putbib` reads shipped `bu<N>.bbl`. PDF ground truth per config-driven rule. | medium | ~47 / pair; corpus: the 2 987 `bbl,bibcmd|empty_bib` + 1 084 `bbl,bibcmd|no_bib` silent blocks are the upper bound |
 | **S4** — (a)(b) ✅ **LANDED**; (c)(d) open | F4 | `\refcontext[]{}` must not eat `\printbibliography` (`biblatex_sty.rs:2193`); `\addbibresource[]` optional (`:1781`); resource registration from unbound-class dep-mining; apa6 branch fidelity. | small-medium | ~18 / pair + corpus `undefined:\addbibresource` 83, `\printbibliography` cluster |
 | **S5 — achemso `\iffalse`** | F6 | **Re-diagnosed**: `{tocentry}`, not the abstract, breaks the next conditional — 8-line repro in `repros/f6_tocentry_conditional/`, three hypotheses already ruled out. Fix inside `\acs@collect`'s re-read machinery. | small | 36 / pair; corpus `expected:\fi` 1 700 |
 | **S6 — Never discard a built document** | F7 | `document:convert` abort → salvage the partial DOM instead of the 1809-byte stub (recover-partial principle, cf. `fatal-stays-fatal` policy). | small-medium | 10 / pair; corpus 436 |
