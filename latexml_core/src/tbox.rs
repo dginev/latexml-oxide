@@ -286,7 +286,7 @@ impl BoxOps for Tbox {
     }
   }
 
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }
+  fn get_font(&self) -> Result<Option<Rc<Font>>> { Ok(Some(Rc::clone(&self.font))) }
 
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     match self.get_property("body") {

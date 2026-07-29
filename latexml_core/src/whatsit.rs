@@ -14,7 +14,7 @@ use crate::{
     object::Object,
     store::Stored,
   },
-  definition::{Definition, FontDirective, Reversion, expandable::Expandable},
+  definition::{Definition, Reversion, expandable::Expandable},
   document::Document,
   list::List,
   state::{get_dual_branch, lookup_font},
@@ -461,13 +461,10 @@ impl BoxOps for Whatsit {
     })
   }
 
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> {
+  fn get_font(&self) -> Result<Option<Rc<Font>>> {
     match self.properties.get("font") {
-      Some(Stored::Font(font)) => Ok(Some(Cow::Owned((**font).clone()))),
-      Some(Stored::FontDirective(fd)) => match fd {
-        FontDirective::Closure(code) => Ok(Some(Cow::Owned(code(Some(self))?))),
-        FontDirective::Asset(asset) => Ok(Some(Cow::Borrowed(asset))),
-      },
+      Some(Stored::Font(font)) => Ok(Some(Rc::clone(font))),
+      Some(Stored::FontDirective(fd)) => fd.get_font(Some(self)).map(Some),
       _ => Ok(None),
     }
   }

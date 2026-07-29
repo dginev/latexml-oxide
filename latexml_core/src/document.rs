@@ -731,9 +731,7 @@ impl Document {
             Some(Rc::clone(prop_font))
           } else {
             match self.box_to_absorb {
-              Some(ref thisbox) => thisbox
-                .get_font()?
-                .map(|thisfont| Rc::new(thisfont.into_owned())),
+              Some(ref thisbox) => thisbox.get_font()?,
               None => None,
             }
           };
@@ -748,10 +746,7 @@ impl Document {
           let text = kv.to_string();
           if !text.is_empty() {
             let text_font = match self.box_to_absorb {
-              Some(ref thisbox) => thisbox
-                .get_font()?
-                .map(|f| Rc::new(f.into_owned()))
-                .unwrap_or_default(),
+              Some(ref thisbox) => thisbox.get_font()?.unwrap_or_default(),
               None => Rc::default(),
             };
             if let Some(new_text) = self.open_text(&text, &text_font)? {
@@ -820,13 +815,7 @@ impl Document {
         return self.open_text(object, &fnt);
       }
       // Fallback to box_to_absorb font.
-      let fnt = self
-        .box_to_absorb
-        .as_ref()
-        .unwrap()
-        .get_font()?
-        .unwrap()
-        .into_owned();
+      let fnt = self.box_to_absorb.as_ref().unwrap().get_font()?.unwrap();
       self.open_text(object, &fnt)
     } else if get_node_qname(&self.node) == pin!("ltx:XMTok") {
       // Or plain string in math mode.
@@ -1787,7 +1776,7 @@ impl Document {
         Some(f) => f.clone(),
         None => match self.box_to_absorb {
           Some(ref tbox) => match tbox.get_font()? {
-            Some(f) => f.into_owned(),
+            Some(f) => (*f).clone(),
             None => Font::math_default(), // should never happen?
           },
           None => Font::math_default(), // should never happen?
@@ -3755,7 +3744,7 @@ impl Document {
     if let Some(ref thisbox) = self.box_to_absorb
       && let Some(font) = thisbox.get_font()?
     {
-      let todo_font_clone = font.into_owned();
+      let todo_font_clone = (*font).clone();
       self.set_node_font(node, &todo_font_clone)?;
     }
     Ok(())
@@ -3931,7 +3920,7 @@ impl Document {
       && let Some(ref digested) = self.box_to_absorb
       && let Ok(Some(font)) = digested.get_font()
     {
-      font_opt = Some(font.into_owned());
+      font_opt = Some((*font).clone());
     }
     let (decoded_ns, tag) = model::decode_qname(qname)?;
     let mut newnode;

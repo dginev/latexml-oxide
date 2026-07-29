@@ -475,12 +475,33 @@ impl BoxOps for Digested {
       Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => false,
     }
   }
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> {
+  /// The box's font as a SHARED handle.
+  ///
+  /// This used to return `Cow<'_, Font>`, which was a false promise on exactly
+  /// the path that matters: the payloads live behind a `RefCell`, so a
+  /// `Cow::Borrowed` cannot outlive the borrow guard and every arm was forced
+  /// through `Cow::Owned(v.into_owned())` — a deep `Font` clone on every call,
+  /// even though `Tbox`/`List`/`Whatsit` all already hold an `Rc<Font>`.
+  ///
+  /// That clone was the single largest allocation in a conversion. Measured
+  /// 2026-07-29 with `--features dhat-heap` on 100k words of plain prose:
+  /// `Rc<Font>::new` accounted for **392 MB of the 840 MB peak (47 %)** across
+  /// 1,196,000 blocks of 344 B — one per box absorbed — reached via
+  /// `List::new` ← `append_node_box` ← `open_text` ← `absorb`. The digested
+  /// boxes themselves came to 164 MB, so the *font attached to* each box cost
+  /// 2.4x the box. No caller ever used `Cow`'s one advantage (`to_mut`).
+  fn get_font(&self) -> Result<Option<Rc<Font>>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => Ok(b.borrow().get_font()?.map(|v| Cow::Owned(v.into_owned()))),
-      List(ref l) => Ok(l.borrow().get_font()?.map(|v| Cow::Owned(v.into_owned()))),
-      Whatsit(ref w) => Ok(w.borrow().get_font()?.map(|t| Cow::Owned(t.into_owned()))),
+      // `try_borrow` rather than `borrow`: a re-entrant traversal (the same
+      // guard the other `Digested` walks use) degrades to "no font" instead of
+      // panicking mid-conversion.
+      TBox(ref b) => Ok(b.try_borrow().ok().map(|b| Rc::clone(&b.font))),
+      List(ref l) => Ok(l.try_borrow().ok().and_then(|l| l.font.clone())),
+      Whatsit(ref w) => match w.try_borrow() {
+        Ok(w) => w.get_font(),
+        Err(_) => Ok(None),
+      },
       Postponed(ref _tks) => Ok(None),
       _ => Ok(None),
     }

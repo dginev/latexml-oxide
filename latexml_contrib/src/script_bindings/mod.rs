@@ -555,7 +555,7 @@ fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
         if k.as_str() == "font"
           && let Ok(Some(f)) = d.get_font()
         {
-          props.insert("font", Stored::Font(Rc::new(f.into_owned())));
+          props.insert("font", Stored::Font(f));
           continue;
         }
         props.insert(k.as_str(), Stored::Digested(d));

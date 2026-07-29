@@ -1754,7 +1754,7 @@ pub fn define_new_theorem(
       title_tokens.push(T_END!());
 
       let title = digest_text(Tokens::new(title_tokens))?;
-      let titlefont = title.get_font()?.map(|f| f.into_owned());
+      let titlefont = title.get_font()?.map(|f| (*f).clone());
       props.insert("title", title.into());
       if let Some(f) = titlefont {
         props.insert("titlefont", Stored::Font(Rc::new(f)));

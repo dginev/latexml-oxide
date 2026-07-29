@@ -505,7 +505,7 @@ impl BoxOps for Alignment {
       Dimension::default(),
     ))
   }
-  fn get_font(&self) -> Result<Option<Cow<'_, crate::common::font::Font>>> { Ok(None) }
+  fn get_font(&self) -> Result<Option<Rc<crate::common::font::Font>>> { Ok(None) }
   fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed("")) }
 
   fn compute_size_and_cache(

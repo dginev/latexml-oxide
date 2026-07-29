@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, fmt, rc::Rc};
 
 use libxml::tree::Node;
 
@@ -42,7 +42,7 @@ impl BoxOps for Comment {
     document.insert_comment(&self.0)?;
     Ok(Vec::new())
   }
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(None) }
+  fn get_font(&self) -> Result<Option<Rc<Font>>> { Ok(None) }
   fn get_width(&self, _options: Option<HashMap<Stored>>) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
   }

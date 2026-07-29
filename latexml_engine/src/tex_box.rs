@@ -378,7 +378,7 @@ LoadDefinitions!({
     let mut font = None;
     for abox in boxes.iter().rev() {
       if let Some(boxfont) = abox.get_font()? {
-        font = Some(boxfont.into_owned());
+        font = Some((*boxfont).clone());
         break;
       }
     }

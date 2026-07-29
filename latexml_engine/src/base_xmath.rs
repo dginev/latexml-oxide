@@ -129,7 +129,7 @@ LoadDefinitions!({
       // Copy font from arg 2 to whatsit
       if let Some(arg2) = whatsit.get_arg(2)
         && let Ok(Some(font)) = arg2.get_font() {
-          whatsit.set_font(Rc::new(font.into_owned()));
+          whatsit.set_font(font);
         }
       xmath_copy_keyvals(whatsit) });
 

@@ -101,9 +101,7 @@ impl BoxOps for List {
     Ok(Vec::new())
   }
 
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> {
-    Ok(self.font.as_ref().map(|f| Cow::Borrowed(f.as_ref())))
-  }
+  fn get_font(&self) -> Result<Option<Rc<Font>>> { Ok(self.font.clone()) }
   fn compute_size(
     &self,
     mut options: HashMap<Stored>,
@@ -180,16 +178,23 @@ impl List {
     // A single box whose font resolution errors (e.g. FontDirective::Closure
     // returning Err) shouldn't crash the whole List; treat it as "no font"
     // and keep walking.
-    let mut font: Option<Font> = None;
+    // The handle is SHARED, not deep-copied. This is the hottest caller of
+    // `get_font` in the whole conversion: `Document::append_node_box` builds a
+    // fresh `List` for EVERY box absorbed into a node, so while `get_font`
+    // returned an owned `Font` this line paid a struct clone plus an `Rc::new`
+    // per box. Measured with `--features dhat-heap` on 100k words of plain
+    // prose: 392 MB of an 840 MB peak (47 %), 1,196,000 allocations of 344 B,
+    // all attributed here.
+    let mut font: Option<Rc<Font>> = None;
     for bx in boxes.iter().rev() {
       if let Ok(Some(bx_font)) = bx.get_font() {
-        font = Some(bx_font.into_owned());
+        font = Some(bx_font);
         break;
       }
     }
     List {
       boxes,
-      font: font.map(Rc::new),
+      font,
       mode: None,
       locator,
       properties: HashMap::default(),

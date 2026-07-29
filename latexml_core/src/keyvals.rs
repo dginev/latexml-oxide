@@ -147,7 +147,7 @@ impl BoxOps for KeyVals {
     log::warn!("set_property on KeyVals not supported");
   }
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(None) } // TODO
+  fn get_font(&self) -> Result<Option<std::rc::Rc<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
     _options: SymHashMap<Stored>,
