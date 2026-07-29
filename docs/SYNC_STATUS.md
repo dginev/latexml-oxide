@@ -54,7 +54,7 @@ Re-verify a row before planning on it (rule 1).
 |---|---|---|---|---|
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310; **CI all-green + mergeable, re-verified 2026-07-29** | nothing left but a review nudge — no code, no automatable step | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
-| **R3** | **Bibliography-absence campaign** — audited 2026-07-29 over 2605/2606 + full `/data/arxiv`: **50 777 corpus / 533 sandbox** docs wrongly lack every `ltx_bibitem`. **Six fixes landed** (PR: `$$`-in-`.bib` cascade, dropped `Error:missing_file` raise, empty-arg `\bibliography{}`, bibunits `bu<N>.bbl`, biblatex `refcontext`/`addbibresource`, locked `\cite`) — **189 of the 533 known articles recovered, 14 715 entries, verified by re-conversion** ([`VERIFICATION.md`](parity/bib_absence_2026-07-29/VERIFICATION.md)). Next: **S5/F6 achemso** (42 of the 342 residual; 8-line repro, 3 dead ends ruled out), the **34 silent** residuals, S7 alignment swallow (28), S9 legacy conventions (15 533 corpus). F3(b) REVTeX `auto@bib` attempted and WITHDRAWN — read its entry before re-attempting | **6 landed**, S5 next | per-sprint | [`BIB_ABSENCE_AUDIT_2026-07-29.md`](parity/BIB_ABSENCE_AUDIT_2026-07-29.md) |
+| **R3** | **Bibliography-absence campaign** (PR #444) — **10 fixes landed**, **241 of the 533** known articles recovered / 17 466 entries, re-verified by reconversion. **292 still empty, all characterized** — plan R3a-R3g below. Corpus scope 50 777 | **R3a next** | per-item | [`BIB_ABSENCE_AUDIT_2026-07-29.md`](parity/BIB_ABSENCE_AUDIT_2026-07-29.md), [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
@@ -63,6 +63,26 @@ Re-verify a row before planning on it (rule 1).
 | **R9** | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | parked; several carry explicit "do NOT start". The `.bst` row's "`.bst` files *vendor macro definitions*" premise was **RETRACTED 2026-07-27** (`alpha.bst` has zero `Dbar`; the macro is `mathscinet.sty`'s) — it survives on label style / sort order / **field selection**, and the prerequisite is a corpus measurement of the `.bib`+`.bst`-with-no-`.bbl` population | **family** | [`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md), and R9-BST below |
 | — | `\gls`/`\acrshort` in math mode (1705.10306) | **PARITY, blocked** on unrunnable Perl | — | do not chase; Open items |
 | — | Two-pass streaming split | **deferred by user decision 2026-07-06**; trigger = a <64 GB target appears | — | [`STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
+
+### R3 mini plan — the 292 remaining bibliography failures
+
+Detail and per-paper rows: [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md).
+Red/green for every item is the bibliography length (0 = red); reconvert with
+`tools/bib_recheck.sh` and never trust a first-error label alone — 96 of the 123
+classes are singletons and the first error is often incidental.
+
+| # | item | papers | state |
+|---|---|---|---|
+| **R3a** | **biblatex, document complete** — resource declared in an unbound `.cls` never registers; OmniBus dep-mining takes a branch the document did not. Audit F4(c)/(d), witnesses 2605.23724, 2605.14990 | **29** | mechanism named, start here |
+| **R3b** | **No diagnostic at all** — silent loss with a complete document. The class this audit exists to expose; overlaps R3a | **32** | needs first reproducers |
+| **R3c** | `\ce` inside a `p{}` column leaks a mode → `\@end@tabular` cannot close. 7-line repro in [`repros/f8_ce_in_p_column/`](parity/bib_absence_2026-07-29/repros/f8_ce_in_p_column/); mhchem is raw-loaded, so check Perl parity first | **7** | repro ready |
+| **R3d** | **Alignment rows split on the UNEXPANDED `&`**, so any macro with a delimiter-fenced `&` leaks. 14-line repro in [`repros/f7_alignment_fenced_amp/`](parity/bib_absence_2026-07-29/repros/f7_alignment_fenced_amp/). **Engine-level, own branch + corpus measurement** — not a bibliography patch | **28** | diagnosed, deferred |
+| **R3e** | `N bibentries, 0 cited` — citation records never attach, so an empty References heading renders. The raw-`\cite`-clobber half landed as #88; this is the narrower residue | **22** | needs a reproducer |
+| **R3f** | Ships **no** bibliography source (`.bbl`/`.bib`/`thebibliography`/biblatex). Verify each against its own PDF, then exclude — the PDF says what the *toolchain* produced, not what we may emit ([`README_residual_triage.md`](parity/bib_absence_2026-07-29/repros/README_residual_triage.md)) | **17** | triage to close |
+| **R3g** | amsrefs bare `\begin{biblist}` with no `{bibdiv}` wrapper → `malformed:ltx:biblist`. Two dead ends recorded (naive `auto_open`, and a conditional wrapper) — needs the `BACKMATTER_ELEMENT` route | **4** | dead ends recorded |
+| — | No output at all (`Stomach:Recursion`, `Timeout`, `MemoryBudget`) → the general **fatal-mining** mission, not bibliography work | 9 | routed away |
+| — | Truncation residue behind R3d, plus a ~96-strong singleton tail of per-template defects | rest | work after R3a-R3g |
+
 
 ## Current status
 
