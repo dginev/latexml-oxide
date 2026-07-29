@@ -84,6 +84,43 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// docmute must strip an included stand-alone document's preamble and turn its
+/// `\end{document}` into `\endinput`.
+///
+/// docmute exists so a paper can `\input` files that are each a complete
+/// document. The real package hooks `\let\documentclass=…` and
+/// `\renewenvironment{document}`; neither reaches us, because `\begin{document}`
+/// and `\end{document}` are their own control sequences here rather than the
+/// `document` environment docmute patches — so raw-loading docmute.sty is inert.
+/// The included preamble then leaks (`\usepackage … can only appear in the
+/// preamble`, once per line) and the included `\end{document}` terminates the
+/// OUTER document, discarding everything after the `\input` with the
+/// bibliography in it.
+///
+/// Witness 2606.09184: 0 -> 18 entries, and pdflatex renders 17 under
+/// "References" from a clean extract. 6 papers in the residual load docmute.
+/// Perl has no docmute binding either, so this is surpass-Perl with the arXiv
+/// PDF as ground truth. Red/green is the bibliography length; 0 is red.
+#[test]
+fn bib_docmute_input_keeps_the_outer_document() {
+  let x = convert_to_xml("tests/cluster_regressions/docmute/outer.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "docmute: the included \\end{{document}} ended the outer document: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("AFTERTEXT reached"),
+    "content after the \\input was discarded:\n{x}"
+  );
+  // The included body must still be spliced in — stripping the preamble must
+  // not throw away the file's content.
+  assert!(
+    x.contains("INNERBODY"),
+    "the included document's body was lost:\n{x}"
+  );
+}
+
 /// pnas-new must declare the booleans its own style files switch.
 ///
 /// The real class does `\RequirePackage{xifthen}` (pnas-new.cls L97) and then

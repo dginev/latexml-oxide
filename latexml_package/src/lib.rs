@@ -296,6 +296,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("latexsym", "sty", package::latexsym_sty::load_definitions),
   ("fullpage", "sty", package::fullpage_sty::load_definitions),
   ("comment", "sty", package::comment_sty::load_definitions),
+  ("docmute", "sty", package::docmute_sty::load_definitions),
   ("csquotes", "sty", package::csquotes_sty::load_definitions),
   ("currfile", "sty", package::currfile_sty::load_definitions),
   ("ctable", "sty", package::ctable_sty::load_definitions),

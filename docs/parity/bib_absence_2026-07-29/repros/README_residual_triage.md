@@ -46,8 +46,19 @@ pdftotext <main>.pdf - | grep -coE '^\[[0-9]+\]'   # bracketed reference count
 pdftotext <main>.pdf - | grep -n -iA 6 references  # and read them
 ```
 
-A paper whose own PDF has no reference list is faithful-to-broken-source, and
-belongs in the excluded pile rather than the worklist.
+**Refinement, learned the hard way.** A PDF with no reference list tells you the
+*toolchain* produced none — it does NOT cap what we should produce. If the
+source ships a `.bib`, we read it directly (the recursive BibTeX session, no
+`bibtex(1)`), so we can legitimately have a bibliography where the PDF has
+none. 2605.17865 is exactly that: its PDF has zero references because no `.bbl`
+was shipped and arXiv never runs bibtex, and we now emit **69 entries** from
+its `bib.bib`. I first filed it as "faithful, not a bug" on the strength of the
+PDF alone; that was wrong.
+
+So use the PDF to answer *"does the reference content exist in this
+submission?"* — not *"how many entries may we emit?"*. A paper is only
+faithful-to-broken-source when the content is genuinely absent (no `.bib`, no
+`.bbl`, no `thebibliography`).
 
 ## Bisecting a truncation
 
