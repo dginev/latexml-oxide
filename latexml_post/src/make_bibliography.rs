@@ -2825,10 +2825,11 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
 ///
 /// **Documented approximation** (OXIDIZED_DESIGN #84): we reproduce UCA's
 /// PRIMARY level for Latin script only — NFD-decompose, drop the combining
-/// marks, case-fold — and break ties on the raw string, whose codepoint order
-/// already sorts uppercase before lowercase, matching `upper_before_lower`.
-/// That is exact for accented Latin (the input this actually sees: author
-/// surnames and titles), and diverges from Perl for script-crossing orders,
+/// marks, case-fold — and break ties on the raw string. That is exact for
+/// accented Latin (the input this actually sees: author surnames and titles).
+/// Perl's `upper_before_lower` needs no counterpart because it is MOOT: the
+/// sort keys are `to_lowercase()`d when built, so no comparison here can see a
+/// case difference. It diverges from Perl for script-crossing orders,
 /// non-decomposable letters (`Ø`, `Æ`, `Ł`) and locale tailorings — none of
 /// which a DUCET table could be added for without a new dependency carrying
 /// embedded collation data. `Post.pm` L123-128 shows Perl itself falling back

@@ -3075,10 +3075,15 @@ was exiled past `z`: on `bib_alpha_style.tex`, `Ångström` sorted **after**
 
 `make_bibliography.rs::unisort` now collates. It reproduces UCA's **primary**
 level only — NFD-decompose, drop combining marks, case-fold — and breaks ties on
-the raw key, whose codepoint order already sorts uppercase first, matching
-`upper_before_lower`. That is **exact** for accented Latin, which is what these
-keys actually contain (surnames, then the year, title and bibkey, all
-lowercased before comparison, so case never reaches the tie-break in practice).
+the raw key. That is **exact** for accented Latin, which is what these keys
+actually contain.
+
+`upper_before_lower` needs no counterpart at all here, and the honest reason is
+that it is **moot**, not that the tie-break reproduces it: `getBibEntries`
+lowercases the whole sort key before it is ever stored
+(`format!(...).to_lowercase()`), so no comparison this function performs can
+see a case difference. Codepoint order on the raw key does happen to sort
+uppercase first, but that property is never exercised.
 
 It **diverges** from Perl for: orders that cross scripts, letters with no
 canonical decomposition (`Ø`, `Æ`, `Ł`, `Đ`), and locale tailorings (Swedish
