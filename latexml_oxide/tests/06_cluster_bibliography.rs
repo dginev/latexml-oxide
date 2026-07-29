@@ -166,7 +166,7 @@ fn bib_achemso_tocentry_does_not_swallow_the_bibliography() {
 ///
 /// The red/green signal is the bibliography length — 0 entries is red. Witness
 /// 2606.08339: one such line cost all 30 of its entries (verified 0 -> 30).
-/// OXIDIZED_DESIGN #87.
+/// OXIDIZED_DESIGN #88.
 #[test]
 fn bib_captionof_verbatim_env_does_not_swallow_the_bibliography() {
   let x = convert_to_xml("tests/cluster_regressions/bib_captionof_listing.tex");
@@ -198,7 +198,7 @@ fn bib_captionof_verbatim_env_does_not_swallow_the_bibliography() {
 /// list either. Keeping the semantic `ltx:cite` is what makes the HTML usable.
 /// 13 of 15 witnesses recovered, all 0 before: 2605.07102 (0 -> 50),
 /// 2606.21959 (0 -> 54), 2605.00671 (0 -> 44), 2605.09519 (0 -> 24).
-/// OXIDIZED_DESIGN #86; audit family F9(a).
+/// OXIDIZED_DESIGN #87; audit family F9(a).
 #[test]
 fn bib_raw_cite_redefinition_is_ignored() {
   let x = convert_and_post("tests/cluster_regressions/bib_cite_clobber.tex");
@@ -261,7 +261,7 @@ fn biblatex_refcontext_block_keeps_its_printbibliography() {
 /// 15 papers measured across the 2605+2606 sandboxes, every one 0 entries
 /// before and complete after — 2606.04416 (79), 2606.28854 (180), 2605.21570
 /// (46 = bu1's 34 + bu2's 12, matching each unit's own
-/// `\begin{thebibliography}{N}`). Audit family F3(c); OXIDIZED_DESIGN #85.
+/// `\begin{thebibliography}{N}`). Audit family F3(c); OXIDIZED_DESIGN #86.
 #[test]
 fn bibunits_putbib_reads_the_per_unit_bbl() {
   let x = convert_to_xml("tests/cluster_regressions/bblbib/bibunits.tex");

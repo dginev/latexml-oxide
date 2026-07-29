@@ -278,7 +278,7 @@ LoadDefinitions!({
   // the type through for numbering and the construct is normally already
   // inside a float (it is in the witness), which is what pdflatex shows.
   // Non-verbatim types keep Perl's wrapper, since that is what gives an
-  // unfloated `\captionof{figure}` its container. OXIDIZED_DESIGN #87.
+  // unfloated `\captionof{figure}` its container. OXIDIZED_DESIGN #88.
   DefMacro!("\\@captionof@{}{}{}", sub[(ty, opt, text)] {
     let name = ty.to_string();
     let mut out = Vec::new();

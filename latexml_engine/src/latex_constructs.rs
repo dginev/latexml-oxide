@@ -1531,7 +1531,12 @@ pub fn define_new_theorem(
       "#1"
     };
     let fmt_str = s!(
-      "{{\\the\\thm@headfont\\lx@tag{{\\csname fnum@{thmset_str}\\endcsname}}{{{note_part}}}\\the\\thm@headpunct}}"
+      // The `{}` after `\endcsname` is OXIDIZED_DESIGN #85 — see `\lx@fnum@@`
+      // in `base_utilities.rs`. A theorem set's `\fnum@<set>` reaches the same
+      // trap: an author redefinition that takes an argument (to eat LaTeX's
+      // separator token) otherwise scans past the hook and swallows the tag
+      // group's closing brace.
+      "{{\\the\\thm@headfont\\lx@tag{{\\csname fnum@{thmset_str}\\endcsname{{}}}}{{{note_part}}}\\the\\thm@headpunct}}"
     );
     let params = parse_parameters("{}", &format_cs_token, true)?;
     DefMacro!(

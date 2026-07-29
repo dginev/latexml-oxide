@@ -3088,7 +3088,88 @@ F3(a) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
 
 Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
 
-### 85. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
+### 85. `\fnum@<type>` is expanded with an empty group, so an arg-taking author redefinition cannot eat the caption's closing brace
+
+**Perl behavior.** `\lx@fnum@@` (`Base_Utility.pool.ltxml` L1041-1043) expands
+the author's hook bare — `\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname
+fnum@#1\endcsname}`. Rust's definition was byte-identical.
+
+**Rust behavior.** The same, plus a trailing empty group: `{\csname
+fnum@#1\endcsname{}}`. Applied at all three `fnum@` hook sites —
+`\lx@fnum@@` and `\lx@fnum@toc@@` (`base_utilities.rs`) and the theorem-header
+formatter (`latex_constructs.rs`).
+
+**Why.** Real `\fnum@<type>` takes no argument, but LaTeX's `\@makecaption` is
+`\sbox\@tempboxa{#1: #2}`, so a *one-argument* `\fnum@<type>` eats the `:` that
+follows it. That is a widely-copied author hack — "change `Fig. 1:` to
+`Fig. 1.`":
+
+```tex
+\makeatletter
+\renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+\makeatother
+```
+
+pdflatex accepts it and prints `Figure 1. A caption.` LaTeXML has **no `:` token
+to eat** — its separator is a tag ATTRIBUTE (`\lx@tag[][: ]`,
+`latex_constructs.pool.ltxml` L3158-3159) — so the argument scan ran past the
+hook and swallowed the caption group's closing brace. The `<figure>` then never
+closed and **every following section, the bibliography included, was absorbed
+into it**: to a reader the document is truncated. The empty group gives an
+arg-taking hook something harmless to consume, reproducing pdflatex's result,
+and is inert for the 0-arg hooks that are the normal case (`\fnum@subfigure`,
+`\fnum@lstlisting`, `\fnum@sidebar`, `\fnum@ALC@line`, `\fnum@equation`, and the
+dynamic ones `enumitem`/`newfloat` create).
+
+Not a TeX-semantics change: it does not redefine argument scanning, and the
+`\lx@@fnum@@` default branch — what fires when no `\fnum@<type>` exists at all,
+i.e. for nearly every figure and table caption — is untouched.
+
+**What this does NOT buy.** The rendered separator still comes from the tag's
+`close=": "` attribute, so the caption reads `Figure 1.: A caption.` rather than
+pdflatex's `Figure 1. A caption.` The divergence buys **error-freedom and an
+un-truncated document**, not punctuation parity. Suppressing the attribute when
+the hook is arg-taking would be a second, far more speculative change and is
+deliberately not part of this one.
+
+**`\lx@typerefnum@@` has the identical shape and is deliberately NOT changed.**
+`typerefnum@<type>` is a LaTeXML-internal hook with no LaTeX kernel behind it,
+so no author writes an arg-taking version to eat a separator token that LaTeXML
+never emits. The pdflatex-compatibility argument does not reach it, and without
+that argument the change would be speculative.
+
+**Witnesses.** `2605.01731` (cas-sc, 18 figures x 3 errors -> body collapsed to
+one section, 19 `<bibref>` but no `<bibliography>` element) and `2605.12842`
+(10 x 3). `cas-sc` is NOT implicated — plain `article` reproduces; that was the
+first hypothesis and it was wrong.
+
+**Breadth — re-measured live 2026-07-29, and the recorded figure does NOT hold.**
+The 2026-07-14 note claimed "18 papers corpus-wide" from a `grep 'lx@tag@intags'`
+proxy. Against the current fleet run that proxy yields **23 papers** across
+sandbox-arxiv-2605 (9) + 2606 (14), 60,505 documents — but only **2** of the 23
+carry the signature this cause actually produces (equal counts of
+`unexpected:\lx@tag@intags`, `unexpected:\lx@tag` and `unexpected:\end{figure}`,
+one triple per figure): **2605.01731** (18 figures x 3) and **2605.12842**
+(10 x 3). Several more match partially (2606.06276 18/18 but no `\end{figure}`;
+2606.18583, 2606.23565). So `\lx@tag@intags` is a **shared symptom with multiple
+causes** and over-attributes to this one; the "5 of them with no References"
+sub-claim is likewise unverified and is withdrawn. Witness 2605.01731 itself is
+confirmed live on the fleet binary with exactly the recorded 18x3 signature.
+
+**Measured.** Guard fixture `cluster_regressions/fnum_arg_hook.tex`, which
+exercises all three hooks: **10 errors -> 0**, and the bibliography stops being
+absorbed into the unclosed `<figure>`. On the two-hook minimal form, same-host
+Perl 0.8.8 raises **9** errors and pre-fix Rust raised **7**; pdflatex raises
+**0**. Full suite unchanged by the divergence — 106/106 targets, no golden
+re-blessed.
+
+**Upstream.** Perl's definition is byte-identical, so the same one-token fix
+applies there — filed as **brucemiller/LaTeXML#2856**. Also
+`KNOWN_PERL_ERRORS.md` #68.
+
+Guard: `06_cluster_regressions::cluster_fnum_arg_hook`.
+
+### 86. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
 
 Same shape as #84, one level down. The real package
 (`bibunits.sty` L324-330) writes the optional argument to the bibunit `.aux`
@@ -3109,7 +3190,7 @@ Audit family F3(c) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026
 
 Guard: `bibunits_putbib_reads_the_per_unit_bbl`.
 
-### 86. The core `\cite` is locked against raw `.sty` redefinition
+### 87. The core `\cite` is locked against raw `.sty` redefinition
 
 arXiv submissions ship their conference style, and under `--includestyles`
 (the fleet's ar5iv profile) it is raw-loaded. aaai, iccc, flairs, kr,
@@ -3138,7 +3219,7 @@ cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 
 Guard: `bib_raw_cite_redefinition_is_ignored`.
 
-### 87. `\captionof` does not open a verbatim-bodied environment
+### 88. `\captionof` does not open a verbatim-bodied environment
 
 Perl hosts the faked caption inside the named environment — *"it isn't
 necessarily IN a figure or any float, so we'll wrap it in an otherwise empty
