@@ -575,7 +575,10 @@ ask for review** — no code work expected. *(This entry read "PR #310 … Ready
 merge" until 2026-07-25, long after it merged.)*
 
 
-### R2 — `--preload=<cls>` alone trips the hook stack; class-name divergence — OPEN (re-verified 2026-07-25)
+### R2 — `--preload=<cls>` alone trips the hook stack — OPEN (re-verified 2026-07-29)
+
+*(The "class-name divergence" this heading used to also name was the second
+divergence below; it is fixed. Only the hook stack is still open.)*
 
 **Symptom.** `--preload=<any>.cls` prints `LaTeX hooks Error: Extra \PopDefaultHookLabel`
 (article/book/report; `.sty` clean; `\documentclass` clean; `LATEXML_NODUMP=1` clean).
