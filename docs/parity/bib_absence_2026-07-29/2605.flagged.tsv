@@ -1,0 +1,625 @@
+2605.00003	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.00027	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.00058	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.00125	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.00131	no_html	0	auto_ignore	stub	ok	-	-
+2605.00182	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\microtypesetup	-
+2605.00248	no_bib	3	yes	bbl,bibcmd	conversion_fatal	Error:latex:(scrbase)	-
+2605.00270	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\volumeheader	-
+2605.00312	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.00451	no_bib	2	yes	bib,thebib,bibcmd,bibitem	conversion_error	Error:expected:\fi	-
+2605.00503	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.00508	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.00553	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\CJKspace	-
+2605.00601	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.00604	no_bib	2	yes	bibitem	conversion_error	Error:latex:(newunicodechar)	-
+2605.00617	no_html	0	auto_ignore	stub	ok	-	-
+2605.00671	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\affiliations	-
+2605.00679	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:Recursion	-
+2605.00687	no_bib	0	no		ok	-	-
+2605.00715	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.00743	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:{CCSXML}	-
+2605.00773	no_bib	2	yes	bib,bibcmd	conversion_error	Error:latex:(tikz-cd)	-
+2605.00792	no_bib	0	no		ok	-	-
+2605.00808	no_bib	2	yes	thebib,bibcmd,bibitem	conversion_error	Error:document:open_element_internal	-
+2605.00812	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:unexpected:\lx@end@inline@math	-
+2605.00930	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:latex:(pgfplots)	-
+2605.01076	no_bib	1	no		ok	-	-
+2605.01093	no_bib	0	no		ok	-	-
+2605.01115	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.01118	no_bib	0	no		ok	-	-
+2605.01124	no_result	-	yes	bbl,bibcmd	-	-	-
+2605.01174	no_html	3	yes	bibcmd	conversion_fatal	Error:undefined:\MH_if_boolean:nT	-
+2605.01190	no_bib	0	no		ok	-	-
+2605.01204	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\addbibresource	-
+2605.01206	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\CJKencfamily	-
+2605.01244	no_bib	2	yes	bib,bibcmd	conversion_error	Fatal:Stomach:MemoryBudget	-
+2605.01317	no_bib	1	no		ok	-	-
+2605.01521	no_bib	1	no		ok	-	-
+2605.01585	no_bib	2	no		conversion_error	Error:missing_file:chapters/epilogue	-
+2605.01618	no_bib	2	yes	bbl,bib,printbib	conversion_error	Error:undefined:\regform	-
+2605.01671	no_html	0	auto_ignore	stub	ok	-	-
+2605.01710	no_bib	1	no		ok	-	-
+2605.01725	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.01773	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\ifCLASSOPTIONcompsoc	-
+2605.01908	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.01984	no_html	3	yes	bib,bibcmd,printbib	conversion_fatal	Error:undefined:\DeclareOptionX	-
+2605.02000	no_html	0	auto_ignore	stub	ok	-	-
+2605.02024	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\affiliations	-
+2605.02063	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\endgroup	-
+2605.02082	no_html	0	auto_ignore	stub	ok	-	-
+2605.02085	empty_bib	2	yes	bib,thebib,bibcmd,bibitem	conversion_error	Error:undefined:\WSCpagesetup	-
+2605.02089	no_html	3	yes	bib,thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:\fontspec_if_language:nT	-
+2605.02092	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\keepXColumns	-
+2605.02115	empty_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\citeq	-
+2605.02134	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.02138	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\digitalasset	-
+2605.02173	no_bib	2	no		conversion_error	Error:undefined:\setCJKmainfont	-
+2605.02216	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:&	-
+2605.02221	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:}	-
+2605.02229	no_html	3	yes	bib,thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:\jvol	-
+2605.02253	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:unexpected:^	-
+2605.02293	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.02303	no_html	0	auto_ignore	stub	ok	-	-
+2605.02331	no_bib	2	no		conversion_error	Error:undefined:\setmathfont	-
+2605.02362	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\Cref	-
+2605.02373	no_bib	2	yes	bib,bibcmd	conversion_error	Error:xpath:findnodes	-
+2605.02461	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\AFF	-
+2605.02480	no_html	0	auto_ignore	stub	ok	-	-
+2605.02488	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\affiliations	-
+2605.02494	no_html	3	yes	bib,printbib	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.02506	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\usephysicsmodule	-
+2605.02657	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.02664	no_bib	2	yes	thebib,bibitem	conversion_error	Error:document:open_element_internal	-
+2605.02676	no_html	0	auto_ignore	stub	ok	-	-
+2605.02720	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\doctype	-
+2605.02810	no_bib	0	no		ok	-	-
+2605.02836	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:latex:(pgfplots)	-
+2605.02850	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.02858	no_html	0	auto_ignore	stub	ok	-	-
+2605.02893	no_html	0	auto_ignore	stub	ok	-	-
+2605.02953	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.02974	no_bib	1	no		ok	-	-
+2605.03031	no_bib	0	no		ok	-	-
+2605.03078	no_bib	0	no		ok	-	-
+2605.03102	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\pdf@system	-
+2605.03113	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\overarrow@	-
+2605.03129	empty_bib	3	yes	bib,thebib,bibcmd,bibitem	conversion_fatal	Error:unexpected:}	-
+2605.03153	no_bib	1	no		ok	-	-
+2605.03191	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:}	-
+2605.03224	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.03240	empty_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.03301	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\csvreader	-
+2605.03441	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\volumeheader	-
+2605.03462	no_html	0	auto_ignore	stub	ok	-	-
+2605.03516	no_bib	1	yes	thebib,bibitem	ok	Fatal:Stomach:Recursion	-
+2605.03562	no_html	0	auto_ignore	stub	ok	-	-
+2605.03599	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\setboolean	-
+2605.03676	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\@@input	-
+2605.03695	no_html	0	auto_ignore	stub	ok	-	-
+2605.03718	no_bib	2	yes	bib,bibcmd,bibitem	conversion_error	Error:undefined:\nin	-
+2605.03811	no_html	0	auto_ignore	stub	ok	-	-
+2605.03921	no_html	3	yes	bib,printbib	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.03954	no_bib	1	yes	bib,bibcmd	ok	-	-
+2605.03959	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:malformed:ltx:XMTok	-
+2605.03977	no_bib	3	yes	thebib,bibitem	conversion_fatal	Error:undefined:{ack}	-
+2605.03978	no_bib	1	yes	bbl,bib,bibcmd	ok	-	-
+2605.04028	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\published	-
+2605.04086	no_bib	1	no		ok	-	-
+2605.04167	no_bib	2	no		conversion_error	Error:expected:<variable>	-
+2605.04248	no_bib	2	yes	bib,bibcmd,printbib	conversion_error	Error:unexpected:\lx@end@inline@math	-
+2605.04275	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:^	-
+2605.04328	no_html	0	auto_ignore	stub	ok	-	-
+2605.04343	no_html	3	yes	bibcmd	conversion_fatal	Error:unexpected:\lxSVG@endscope	-
+2605.04360	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.04377	no_bib	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.04395	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\hobbyinit	-
+2605.04442	no_html	3	yes	thebib,bibitem	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.04516	no_bib	2	yes	thebib,bibcmd,printbib,bibitem	conversion_error	Error:unexpected:\endgroup	-
+2605.04530	no_bib	2	yes	bib,bibcmd	conversion_error	Fatal:Stomach:MemoryBudget	-
+2605.04654	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lxSVG@endscope	-
+2605.04687	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:\endgroup	-
+2605.04691	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\else	-
+2605.04710	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.04756	no_html	3	yes	bibcmd,bibitem	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.04924	no_bib	2	yes	bbl,bib,bibcmd,printbib	conversion_error	Error:latex:\GenericError	-
+2605.04961	no_bib	0	no		ok	-	-
+2605.05181	no_html	3	yes	thebib,bibitem	conversion_fatal	Fatal:Timeout:IfLimit	-
+2605.05254	no_bib	0	no		ok	-	-
+2605.05315	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.05437	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:}	-
+2605.05460	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.05479	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.05526	no_html	0	auto_ignore	stub	ok	-	-
+2605.05558	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.05690	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.05698	no_bib	2	yes_legacy		conversion_error	Error:unexpected:\lx@begin@alignment	biblist,bibcs
+2605.05760	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\varv	-
+2605.05802	no_bib	0	no		ok	-	-
+2605.05840	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\lstset	-
+2605.05877	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\usephysicsmodule	-
+2605.05900	no_html	3	yes	bib,thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:\fontspec_if_language:nT	-
+2605.05903	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.05934	no_bib	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.06045	no_html	0	auto_ignore	stub	ok	-	-
+2605.06069	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.06099	no_bib	2	yes	thebib,bibitem	conversion_error	Fatal:Stomach:Recursion	-
+2605.06213	no_html	0	auto_ignore	stub	ok	-	-
+2605.06384	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\label	-
+2605.06488	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:malformed:ltx:XMTok	-
+2605.06489	no_html	3	yes	bib,bibcmd,printbib	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.06542	no_bib	2	yes	bib,bibcmd	conversion_error	Fatal:Stomach:Recursion	-
+2605.06546	no_result	-	yes	bib,bibcmd	-	-	-
+2605.06548	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\lstnewenvironment	-
+2605.06563	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\DeclareSourcemap	-
+2605.06655	no_html	3	yes	bib,printbib	conversion_fatal	Error:undefined:\DeclareDelimFormat	-
+2605.06661	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:post:convert	-
+2605.06685	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.06707	no_bib	0	no		ok	-	-
+2605.06721	no_bib	0	no		ok	-	-
+2605.06742	no_html	3	yes	bbl,bib	conversion_fatal	Error:unexpected:_	-
+2605.06766	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\alsoaffiliation	-
+2605.06767	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.06789	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.06812	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:missing_file:	-
+2605.06836	no_bib	2	no		conversion_error	Error:expected:<variable>	-
+2605.06890	no_bib	1	no		ok	-	-
+2605.07063	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:Recursion	-
+2605.07102	empty_bib	1	yes	bib,bibcmd	ok	-	-
+2605.07282	no_bib	1	no		ok	-	-
+2605.07284	no_bib	1	no		ok	-	-
+2605.07397	no_result	-	yes	bib,bibcmd	-	-	-
+2605.07465	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.07504	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:undefined:\setboolean	-
+2605.07528	empty_bib	1	yes	bib,bibcmd	ok	-	-
+2605.07596	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:}	-
+2605.07622	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\email	-
+2605.07633	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:undefined:\newbool	-
+2605.07714	no_bib	2	yes	bbl,bib,bibcmd,printbib	conversion_error	Error:expected:\fi	-
+2605.07734	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:unexpected:\end@amsalign	-
+2605.07772	no_bib	3	yes	bib,bibcmd,printbib	conversion_fatal	Error:undefined:\usephysicsmodule	-
+2605.07907	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\svgpath	-
+2605.07942	empty_bib	2	yes	bbl	conversion_error	Error:undefined:\close@column@grid	-
+2605.07967	no_bib	0	no		ok	-	-
+2605.08036	no_html	3	yes	bib,printbib,bibitem	conversion_fatal	Fatal:Timeout:IfLimit	-
+2605.08071	no_bib	1	no		ok	-	-
+2605.08259	no_bib	1	no		ok	-	-
+2605.08318	no_html	0	auto_ignore	stub	ok	-	-
+2605.08349	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\citep	-
+2605.08378	no_bib	2	yes	bbl,bib,printbib,bibitem	conversion_error	Error:undefined:\ConfigureBibliography	-
+2605.08394	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.08402	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\afterchapskip	-
+2605.08494	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\AppendGraphicsExtensions	-
+2605.08513	no_bib	2	yes	bib,bibcmd	conversion_error	Error:post:convert	-
+2605.08522	no_html	0	auto_ignore	stub	ok	-	-
+2605.08706	no_bib	2	yes	bib,bibcmd	conversion_error	Error:post:convert	-
+2605.08780	no_bib	2	yes	bibcmd,bibitem	conversion_error	Error:expected:\fi	-
+2605.08916	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.08962	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.08990	no_html	3	yes	thebib,bibcmd,bibitem	conversion_fatal	Error:latex:(newunicodechar)	-
+2605.09073	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\maintitleauthorlist	-
+2605.09117	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.09123	no_bib	0	no		ok	-	-
+2605.09146	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.09185	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.09235	empty_bib	1	yes	bbl	ok	-	-
+2605.09261	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.09309	no_html	0	auto_ignore	stub	ok	-	-
+2605.09459	no_html	3	yes	bbl,printbib	conversion_fatal	Error:unexpected:_	-
+2605.09492	no_html	0	auto_ignore	stub	ok	-	-
+2605.09519	empty_bib	3	yes	bib,thebib,bibcmd,bibitem	conversion_fatal	Error:unexpected:}	-
+2605.09577	no_html	3	yes	bib,bibcmd,printbib	conversion_fatal	Error:undefined:\keepXColumns	-
+2605.09596	no_bib	3	yes	thebib,bibitem	conversion_fatal	Error:malformed:ltx:XMWrap	-
+2605.09611	no_bib	1	no		ok	-	-
+2605.09655	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.09690	no_html	0	auto_ignore	stub	ok	-	-
+2605.09844	no_bib	0	no		ok	-	-
+2605.09923	no_html	0	auto_ignore	stub	ok	-	-
+2605.09935	no_html	0	auto_ignore	stub	ok	-	-
+2605.09938	no_bib	0	no		ok	-	-
+2605.09943	no_html	0	auto_ignore	stub	ok	-	-
+2605.09965	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\microtypesetup	-
+2605.09990	no_bib	1	no		ok	-	-
+2605.10004	no_html	0	auto_ignore	stub	ok	-	-
+2605.10007	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:misdefined:#	-
+2605.10040	no_html	0	auto_ignore	stub	ok	-	-
+2605.10123	no_bib	0	no		ok	-	-
+2605.10135	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.10180	no_bib	0	auto_ignore	stub	ok	-	-
+2605.10232	no_html	3	yes	bbl,printbib	conversion_fatal	Error:latex:(tikz-cd)	-
+2605.10348	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.10351	no_bib	2	yes	bbl,bib,bibcmd,printbib	conversion_error	Error:undefined:\ifsetCustomMargin	-
+2605.10357	no_html	0	auto_ignore	stub	ok	-	-
+2605.10423	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\citealp	-
+2605.10449	no_bib	0	no		ok	-	-
+2605.10526	no_bib	2	yes	bib,bibcmd	conversion_error	Error:post:convert	-
+2605.10669	no_html	3	yes	thebib,bibcmd,bibitem	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.10685	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\REQUIRE	-
+2605.10708	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.10710	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\textthreesuperior	-
+2605.10745	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\group	-
+2605.10919	no_html	3	yes	bbl,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.11005	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.11190	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.11365	no_result	-	yes	bib,bibcmd	-	-	-
+2605.11458	no_html	0	auto_ignore	stub	ok	-	-
+2605.11470	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.11487	no_bib	1	no		ok	-	-
+2605.11677	no_bib	0	no		ok	-	-
+2605.11701	no_html	0	auto_ignore	stub	ok	-	-
+2605.11797	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:latex:(pgfplots)	-
+2605.11798	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\funding	-
+2605.11826	no_html	0	auto_ignore	stub	ok	-	-
+2605.11858	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.11929	no_bib	1	yes	bib,bibcmd	ok	Fatal:Stomach:Recursion	-
+2605.11952	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\PaperLanguage	-
+2605.12027	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.12085	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\theoremstyle	-
+2605.12090	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\cs	-
+2605.12091	no_html	3	yes	bib,printbib	conversion_fatal	Error:undefined:\lst@ifdisplaystyle	-
+2605.12095	no_html	3	yes	bbl,bib	conversion_fatal	Error:expected:\fi	-
+2605.12186	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\@end@tabular	-
+2605.12209	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:^	-
+2605.12212	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\protect	-
+2605.12234	no_html	3	yes	bib,bibcmd,bibitem	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.12279	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\cmdGR@vertex@L	-
+2605.12305	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.12387	no_bib	2	yes	thebib,bibitem	conversion_error	Error:undefined:\pgfplotsplothandlermesh@last@bb	-
+2605.12499	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:undefined:\csq@hook@nomultilang	-
+2605.12576	no_bib	0	no		ok	-	-
+2605.12601	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:latex:(tikzscale)	-
+2605.12626	no_bib	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\articletag	-
+2605.12687	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.12730	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:undefined:\setmathfont	-
+2605.12836	no_html	0	auto_ignore	stub	ok	-	-
+2605.12847	no_bib	0	no		ok	-	-
+2605.12911	no_html	3	yes	bib,printbib	conversion_fatal	Error:undefined:\hobbyinit	-
+2605.12930	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.12946	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.12963	no_bib	0	no		ok	-	-
+2605.13163	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:}	-
+2605.13270	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\ccode	-
+2605.13345	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\affiliations	-
+2605.13365	no_bib	1	no		ok	-	-
+2605.13397	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:_	-
+2605.13402	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:unexpected:\endgroup	-
+2605.13456	no_result	-	yes	bib,thebib,bibcmd,bibitem	-	-	-
+2605.13468	no_html	3	yes	thebib,bibitem	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.13649	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\cmsNoteHeader	-
+2605.13806	no_html	3	yes	bbl,printbib	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.13831	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\titleformat	-
+2605.13838	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.13886	no_html	0	auto_ignore	stub	ok	-	-
+2605.13918	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\upstairs	-
+2605.13945	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.13984	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:unexpected:\lx@end@inline@math	-
+2605.14136	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:latex:(animate)	-
+2605.14168	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\coltauthor	-
+2605.14255	no_bib	0	no		ok	-	-
+2605.14280	no_bib	2	yes	bbl,bib	conversion_error	Error:undefined:\PaperBibliographyStyle	-
+2605.14370	no_bib	2	no	bib	conversion_error	Error:unexpected:_	-
+2605.14374	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\caption	-
+2605.14428	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:undefined:\newkeytheorem	-
+2605.14493	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:unexpected:double-subscript	-
+2605.14513	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\setleftheadercontent	-
+2605.14550	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\shadowsize	-
+2605.14560	no_html	3	yes	thebib,bibitem	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.14576	no_bib	2	no		conversion_error	Error:undefined:\footer	-
+2605.14584	no_bib	2	yes	bib,bibcmd	conversion_error	Error:latex:(newunicodechar)	-
+2605.14611	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.14829	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:{tabularx}	-
+2605.14833	no_bib	0	no		ok	-	-
+2605.14902	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\DeclareSectionCommand	-
+2605.14973	no_html	3	yes	bbl,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.14974	no_bib	2	yes	bib,bibcmd	conversion_error	Error:latex:(newunicodechar)	-
+2605.14990	no_bib	1	yes	bib,bibcmd	ok	-	-
+2605.14996	no_bib	2	yes	bib,bibcmd	conversion_error	Error:latex:(tikz-cd)	-
+2605.15001	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.15014	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.15029	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:Recursion	-
+2605.15034	no_bib	1	no		ok	-	-
+2605.15098	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:^	-
+2605.15157	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.15317	no_bib	0	no		ok	-	-
+2605.15383	no_html	3	yes	bbl,bib	conversion_fatal	Error:latex:(pgfplots)	-
+2605.15407	no_html	2	yes	bib,bibcmd	conversion_error	Error:undefined:\declaretheorem	-
+2605.15421	empty_bib	1	yes	bbl,bib,bibcmd	ok	-	-
+2605.15431	empty_bib	1	yes	bib,bibcmd	ok	-	-
+2605.15522	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:_	-
+2605.15637	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.15678	no_bib	3	yes	thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:\nin	-
+2605.15702	no_bib	0	no		ok	-	-
+2605.15735	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.16014	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.16092	no_bib	2	yes	thebib,bibitem	conversion_error	Error:undefined:\urladdr	-
+2605.16162	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:&	-
+2605.16167	no_bib	0	no		ok	-	-
+2605.16277	no_bib	2	no		conversion_error	Error:undefined:\KOMAoption	-
+2605.16288	no_bib	0	no		ok	-	-
+2605.16335	no_bib	0	no		ok	-	-
+2605.16355	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.16409	no_bib	2	yes	bibcmd	conversion_error	Error:unexpected:_	-
+2605.16411	no_bib	2	no		conversion_error	Error:unexpected:_	-
+2605.16445	no_html	0	auto_ignore	stub	ok	-	-
+2605.16471	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.16534	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.16610	no_bib	2	yes	bib,bibcmd	conversion_error	Error:document:open_element_internal	-
+2605.16624	no_html	0	auto_ignore	stub	ok	-	-
+2605.16660	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:IfLimit	-
+2605.16685	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\endgroup	-
+2605.16687	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:}	-
+2605.16752	no_bib	2	yes	bib,bibcmd	conversion_error	Error:document:open_element_internal	-
+2605.16917	no_bib	2	yes	bib,bibcmd,printbib	conversion_error	Error:undefined:\svgsetup	-
+2605.16927	no_bib	2	yes	bib,thebib,bibcmd,bibitem	conversion_error	Error:undefined:\endfirsthead	-
+2605.17019	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:latex:(animate)	-
+2605.17121	no_bib	2	yes	thebib,bibitem	conversion_error	Error:post:parse	-
+2605.17164	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.17196	no_bib	0	no		ok	-	-
+2605.17220	no_bib	0	no		ok	-	-
+2605.17312	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:latex:(animate)	-
+2605.17437	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.17450	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.17530	no_html	3	yes	bbl,bib,thebib,bibitem	conversion_fatal	Error:undefined:\isPreprints	-
+2605.17554	no_html	0	auto_ignore	stub	ok	-	-
+2605.17564	no_bib	1	no		ok	-	-
+2605.17585	no_bib	0	no		ok	-	-
+2605.17587	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.17613	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.17616	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.17658	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.17696	no_bib	2	yes	bib,printbib	conversion_error	Error:unexpected:\endgroup	-
+2605.17770	no_html	0	auto_ignore	stub	ok	-	-
+2605.17783	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.17865	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\usepackage	-
+2605.17901	no_bib	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.17931	no_html	3	yes	thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:\frontmatter@init	-
+2605.18102	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.18144	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\corres	-
+2605.18158	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\endgroup	-
+2605.18285	no_result	-	yes	bib,bibcmd	-	-	-
+2605.18300	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:{contribution}	-
+2605.18400	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\@end@tabular	-
+2605.18426	no_bib	2	yes	bib,printbib	conversion_error	Error:post:parse	-
+2605.18507	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\moveto	-
+2605.18580	empty_bib	1	yes	bib,bibcmd	ok	-	-
+2605.18627	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\affiliations	-
+2605.18666	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:latex:(pgfplots)	-
+2605.18778	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:{CCSXML}	-
+2605.18826	no_bib	0	no		ok	-	-
+2605.18852	no_bib	0	no		ok	-	-
+2605.18887	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:{NiceTabular}	-
+2605.18900	no_bib	1	no		ok	-	-
+2605.18952	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.19009	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\doctype	-
+2605.19157	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:undefined:\hobbyinit	-
+2605.19180	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\tcb@insert@after@part	-
+2605.19236	no_bib	0	no		ok	-	-
+2605.19237	no_html	3	yes	bbl,bib,printbib	conversion_fatal	Error:unexpected:\emph	-
+2605.19416	no_html	0	auto_ignore	stub	ok	-	-
+2605.19500	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.19602	no_bib	2	yes	thebib,bibcmd,printbib,bibitem	conversion_error	Error:undefined:\newcounter	-
+2605.19714	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\fontspec_if_language:nT	-
+2605.19748	no_html	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.19817	no_bib	1	yes	bbl,bibcmd	ok	-	-
+2605.19848	no_html	0	auto_ignore	stub	ok	-	-
+2605.19917	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\endgroup	-
+2605.19954	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:undefined:{forest}	-
+2605.20029	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.20065	empty_bib	1	yes	bbl,bib,bibcmd	ok	-	-
+2605.20175	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.20312	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.20316	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\endgroup	-
+2605.20330	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.20504	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:latex:(tikz)	-
+2605.20527	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.20598	no_html	3	yes	bbl,bib,printbib	conversion_fatal	Error:undefined:\newbool	-
+2605.20679	no_bib	0	no		ok	-	-
+2605.20783	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.20817	no_bib	1	no		ok	-	-
+2605.20846	no_bib	2	yes	bib,bibcmd,printbib	conversion_error	Error:expected:}	-
+2605.20859	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.20919	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.20954	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.20958	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:_	-
+2605.20985	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.21013	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\usetikzlibrary	-
+2605.21024	no_html	3	yes	bib,printbib	conversion_fatal	Error:undefined:\roundcap	-
+2605.21086	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\CJKspace	-
+2605.21159	no_bib	2	yes	bib,thebib,bibcmd	conversion_error	Error:post:parse	-
+2605.21205	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:unexpected:\@end@tabular	-
+2605.21235	no_bib	0	auto_ignore	stub	ok	-	-
+2605.21273	no_html	0	auto_ignore	stub	ok	-	-
+2605.21339	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.21355	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\intercal	-
+2605.21425	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\else	-
+2605.21457	empty_bib	1	yes	bbl	ok	-	-
+2605.21535	no_bib	0	no		ok	-	-
+2605.21570	empty_bib	1	yes	bbl	ok	-	-
+2605.21599	no_bib	2	yes	bib,bibcmd	conversion_error	Error:expected:}	-
+2605.21636	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\clipbox	-
+2605.21675	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.21743	no_bib	0	no		ok	-	-
+2605.21750	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.21785	no_bib	2	no	bib	conversion_error	Error:undefined:\orcid	-
+2605.21818	no_bib	2	no		conversion_error	Error:undefined:\keepXColumns	-
+2605.21884	no_bib	0	no		ok	-	-
+2605.22014	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.22254	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.22264	no_bib	2	yes	thebib,bibitem	conversion_error	Error:xpath:findnodes	-
+2605.22335	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:\pgfplotsplothandlermesh@last@ba	-
+2605.22354	no_bib	1	no		ok	-	-
+2605.22427	no_html	3	yes	thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:\fancypagestyle	-
+2605.22441	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.22453	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:expected:\fi	-
+2605.22472	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\pgfplotsplothandlermesh@last@ba	-
+2605.22562	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\egroup	-
+2605.22705	no_html	0	auto_ignore	stub	ok	-	-
+2605.22765	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.22841	no_bib	0	no		ok	-	-
+2605.22850	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.22877	no_bib	1	no		ok	-	-
+2605.22889	no_bib	2	yes	bbl,bib	conversion_error	Error:missing_file:Sections/tables/table\textunderscoretrial	-
+2605.22927	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.22950	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:{assumption}	-
+2605.22954	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\vol	-
+2605.22983	empty_bib	2	yes_legacy		conversion_error	Error:undefined:\ocite	biblist,bibcs
+2605.22985	no_bib	2	no		conversion_error	Error:undefined:\uselogo	-
+2605.23105	no_html	0	auto_ignore	stub	ok	-	-
+2605.23112	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.23306	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\lx@add@frontmatter@until	-
+2605.23308	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.23358	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.23415	no_html	0	auto_ignore	stub	ok	-	-
+2605.23442	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\lxSVG@endscope	-
+2605.23465	no_bib	1	no		ok	-	-
+2605.23573	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\ack	-
+2605.23697	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:expected:\fi	-
+2605.23710	no_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\ex	-
+2605.23724	no_bib	1	yes	bib,printbib	ok	-	-
+2605.23734	no_bib	2	yes	bbl,printbib	conversion_error	Error:undefined:\newkeytheorem	-
+2605.23806	no_bib	2	yes_legacy		conversion_error	Error:unexpected:\endgroup	biblist,bibcs
+2605.23822	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\endgroup	-
+2605.23851	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:Recursion	-
+2605.23855	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\usephysicsmodule	-
+2605.23857	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:undefined:\ifthenelse	-
+2605.23901	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.24084	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\egroup	-
+2605.24108	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\lxSVG@endscope	-
+2605.24117	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.24139	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\egroup	-
+2605.24169	no_bib	0	no		ok	-	-
+2605.24188	no_bib	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:undefined:{longtblr}	-
+2605.24259	no_bib	1	no		ok	-	-
+2605.24308	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:missing_file:	-
+2605.24338	no_bib	2	yes	thebib,bibcmd,bibitem	conversion_error	Error:expected:}	-
+2605.24392	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:post:convert	-
+2605.24417	no_bib	2	yes	bib,bibcmd	conversion_error	Error:latex:(newunicodechar)	-
+2605.24616	no_html	0	auto_ignore	stub	ok	-	-
+2605.24719	empty_bib	1	yes	bib,bibcmd	ok	-	-
+2605.24728	no_bib	0	no		ok	-	-
+2605.24798	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\endgroup	-
+2605.24803	no_bib	2	yes	bib,thebib,bibcmd,bibitem	conversion_error	Error:unexpected:\endgroup	-
+2605.24842	no_bib	0	no		ok	-	-
+2605.24856	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.24970	empty_bib	1	yes	bib,bibcmd	ok	-	-
+2605.25035	no_html	3	yes	bbl,printbib	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.25047	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\end{lemma}	-
+2605.25087	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:}	-
+2605.25157	no_bib	1	yes	thebib,bibitem	ok	-	-
+2605.25159	no_bib	2	no		conversion_error	Error:undefined:\CJKaddEncHook	-
+2605.25400	no_html	3	yes	bbl,printbib	conversion_fatal	Error:undefined:\DeclareMultiCiteCommand	-
+2605.25549	no_bib	1	no		ok	-	-
+2605.25565	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.25587	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:}	-
+2605.25628	no_html	3	yes	bib,printbib	conversion_fatal	Error:unexpected:&	-
+2605.25844	no_bib	1	no		ok	-	-
+2605.25848	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.25879	no_bib	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\articletag	-
+2605.25896	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:missing_file:../diagrams/ARQuiverA	-
+2605.25955	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.25983	no_html	3	yes	bib,bibcmd	conversion_fatal	Fatal:Timeout:PushbackLimit	-
+2605.26022	no_html	3	yes	bbl,bib	conversion_fatal	Error:expected:\fi	-
+2605.26025	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\else	-
+2605.26202	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\ifKV@sseqdrop@circled	-
+2605.26205	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\hbox	-
+2605.26251	no_bib	2	yes_legacy	bib	conversion_error	Error:undefined:\journalcode	reference
+2605.26308	no_bib	3	yes	thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:{thebibliography*}	-
+2605.26436	no_html	0	auto_ignore	stub	ok	-	-
+2605.26555	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\noalign	-
+2605.26593	empty_bib	2	yes	thebib,bibitem	conversion_error	Error:malformed:ltx:biblist	-
+2605.26647	no_html	3	yes	bbl,bib,thebib,bibcmd,bibitem	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.26693	empty_bib	1	yes	bbl	ok	-	-
+2605.26753	no_bib	0	no		ok	-	-
+2605.26779	empty_bib	1	yes	bbl,bib,bibcmd	ok	-	-
+2605.26895	no_html	3	yes	bbl,bib,thebib,bibcmd,bibitem	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.26957	no_html	0	auto_ignore	stub	ok	-	-
+2605.27060	no_html	0	auto_ignore	stub	ok	-	-
+2605.27090	no_bib	1	yes	bbl,bibcmd	ok	-	-
+2605.27112	no_bib	2	yes	bib,bibcmd	conversion_error	Error:document:open_element_internal	-
+2605.27128	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:&	-
+2605.27152	empty_bib	2	yes_legacy		conversion_error	Error:malformed:ltx:biblist	biblist,bibcs
+2605.27172	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:&	-
+2605.27177	no_html	3	yes	bib,thebib,bibcmd,bibitem	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.27193	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.27211	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\begingroup	-
+2605.27223	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:undefined:\suppressAffiliations	-
+2605.27224	no_bib	1	yes	bbl,bibcmd	ok	-	-
+2605.27225	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\IfEqCase	-
+2605.27226	no_bib	1	yes	bbl,bibcmd	ok	-	-
+2605.27227	no_bib	1	yes	bbl,bibcmd	ok	-	-
+2605.27232	no_html	0	auto_ignore	stub	ok	-	-
+2605.27258	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\text	-
+2605.27263	no_bib	1	yes	bib,printbib	ok	-	-
+2605.27265	no_bib	1	yes_legacy		ok	-	bibcs
+2605.27287	no_bib	2	yes	bib,thebib,bibcmd,bibitem	conversion_error	Error:unexpected:\lx@begin@alignment	-
+2605.27339	no_bib	3	yes	bib,bibcmd	conversion_fatal	Error:latex:(tikz)	-
+2605.27380	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\affiliations	-
+2605.27399	no_bib	0	no		ok	-	-
+2605.27402	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:malformed:ltx:listingline	-
+2605.27419	no_bib	2	yes	bib,bibcmd	conversion_error	Error:unexpected:\omit	-
+2605.27481	no_bib	0	yes	bibcmd	ok	-	-
+2605.27536	empty_bib	1	yes	bbl,bibcmd	ok	-	-
+2605.27590	no_html	0	auto_ignore	stub	ok	-	-
+2605.27614	no_html	3	yes	bib,printbib	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.27767	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.27831	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\MH_if_boolean:nT	-
+2605.27966	no_bib	0	no		ok	-	-
+2605.27977	no_bib	2	no		conversion_error	Error:undefined:\monthyear	-
+2605.27979	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:^	-
+2605.28000	empty_bib	1	yes	bib,bibcmd	ok	-	-
+2605.28102	no_bib	1	no		ok	-	-
+2605.28119	no_html	0	auto_ignore	stub	ok	-	-
+2605.28128	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\CJKspace	-
+2605.28146	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\endgroup	-
+2605.28152	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:\end{figure}	-
+2605.28382	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.28547	no_bib	2	yes	bib,printbib	conversion_error	Error:latex:(cleveref)	-
+2605.28598	no_bib	1	yes	bib,thebib,bibcmd,bibitem	ok	-	-
+2605.28636	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\textdoublepipe	-
+2605.28723	no_bib	2	yes	bib,printbib	conversion_error	Error:unexpected:_	-
+2605.28799	no_bib	2	yes	bibitem	conversion_error	Error:expected:\fi	-
+2605.28833	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\email	-
+2605.28834	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\email	-
+2605.28893	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.28926	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:latex:(pgfkeys)	-
+2605.28935	no_bib	2	yes	bbl,bibcmd	conversion_error	Error:undefined:\lsthk@PreSet	-
+2605.29102	no_html	3	yes	thebib,bibcmd,bibitem	conversion_fatal	Error:undefined:\fancypagestyle	-
+2605.29137	no_bib	2	yes	bib,bibcmd,printbib	conversion_error	Error:undefined:{exerbox}	-
+2605.29354	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\thetcbcounter	-
+2605.29413	no_bib	2	no		conversion_error	Error:undefined:\monthyear	-
+2605.29470	no_html	0	auto_ignore	stub	ok	-	-
+2605.29514	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.29630	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:latex:(newunicodechar)	-
+2605.29750	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.29754	no_bib	1	yes	bib,bibcmd,printbib	ok	-	-
+2605.29774	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:undefined:\DeclareMathOperator	-
+2605.29818	no_html	3	yes	bib,printbib	conversion_fatal	Error:undefined:\NewSpotColorSpace	-
+2605.29846	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@end@inline@math	-
+2605.29899	no_bib	0	no		ok	-	-
+2605.29950	no_bib	1	no		ok	-	-
+2605.30017	no_bib	1	no		ok	-	-
+2605.30071	no_bib	0	no		ok	-	-
+2605.30096	no_bib	1	no		ok	-	-
+2605.30162	no_bib	1	no		ok	-	-
+2605.30170	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\egroup	-
+2605.30189	no_bib	2	no		conversion_error	Error:latex:(newunicodechar)	-
+2605.30258	no_bib	1	yes	bib,bibcmd,printbib	ok	Fatal:Stomach:MemoryBudget	-
+2605.30302	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\lx@begin@alignment	-
+2605.30377	no_bib	2	yes	bib,printbib	conversion_error	Error:undefined:\addbibresource	-
+2605.30420	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\lx@end@gen@matrix	-
+2605.30455	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:undefined:\ifSubfilesClassLoaded	-
+2605.30585	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:\egroup	-
+2605.30618	no_html	3	yes	thebib,bibitem	conversion_fatal	Error:unexpected:\hbox	-
+2605.30732	no_bib	3	yes	bib,printbib	conversion_fatal	Error:unexpected:\end{equation*}	-
+2605.30788	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:undefined:\setCJKmainfont	-
+2605.30883	empty_bib	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.31067	no_html	0	auto_ignore	stub	ok	-	-
+2605.31075	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-
+2605.31139	no_html	3	yes	bib,bibcmd	conversion_fatal	Error:unexpected:}	-
+2605.31214	no_bib	2	yes	thebib,bibitem	conversion_error	Error:unexpected:}	-
+2605.31304	no_html	3	yes	bbl,bibcmd	conversion_fatal	Error:unexpected:\noalign	-
+2605.31395	no_bib	1	no		ok	-	-
+2605.31475	no_bib	2	yes	bbl,bib,bibcmd	conversion_error	Error:latex:(newunicodechar)	-
+2605.31487	no_bib	0	no		ok	-	-
+2605.31581	empty_bib	2	yes	bib,bibcmd	conversion_error	Error:undefined:\affiliations	-
+2605.31604	no_html	3	yes	bbl,bib,bibcmd	conversion_fatal	Fatal:Timeout:TokenLimit	-

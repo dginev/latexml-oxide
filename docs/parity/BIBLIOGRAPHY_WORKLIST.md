@@ -5,6 +5,13 @@
 > MakeBibliography full-parity re-port (user directive 2026-07-04 — reuse TeX
 > interpretation, no special-case parser).
 >
+> **2026-07-29:** the corpus-wide *bibliography-absence* audit
+> ([`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md), row
+> R3) supersedes the "missing-references target list" item here as the
+> measured worklist — 52 299 corpus + 533 sandbox docs lacking every
+> `ltx_bibitem`, clustered into families F1–F12 with sprints S1–S10. Item 2
+> of the re-port (unisort, citestyle `AY`, …) remains tracked in this file.
+>
 > **State, 2026-07-27.** Re-port **items 1 and 3 are DONE**; the open work is
 > item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER)
 > and the missing-references target list. The `.bib`-as-DATA family closed as
