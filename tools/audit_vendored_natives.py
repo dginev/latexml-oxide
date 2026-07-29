@@ -141,9 +141,12 @@ AUDITED = {
     "system-deps": ("6.2.2",
         "src/tests/lib/libteststatic.a -- a test fixture.",
     ),
-    "clang-sys": ("1.8.1",
+    "clang-sys": ("1.9.1",
         "links = \"clang\": libclang is loaded by bindgen at BUILD time. No libclang "
-        "code enters our binary.",
+        "code enters our binary. (1.8.1 -> 1.9.1 re-audited 2026-07-29: license "
+        "Apache-2.0 unchanged (CRLF-only LICENSE.txt diff), zero native files, "
+        "build.rs still pure libclang discovery; adds clang 19/20 support + "
+        "search-path fixes.)",
     ),
     "prettyplease": ("0.2.37",
         "links = \"prettyplease02\" is the cargo version-lock trick, not a native "
