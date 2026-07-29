@@ -18,14 +18,14 @@ uses — then counts `ltx_bibitem` against what the source implies and what
 
 | | papers | entries |
 |---|---|---|
-| **Recovered** (0 → non-zero) | **230** | **17 059** |
-| Complete (`now == cited`) | 222 OK | |
+| **Recovered** (0 → non-zero) | **236** | **17 283** |
+| Complete (`now == cited`) | 228 OK | |
 | Short of what was cited (THIN) | 8 | |
-| Still empty | 298 | |
+| Still empty | 292 | |
 | No HTML | 5 | |
 
 Regression control: 20 papers whose bibliographies already worked reconvert
-with **identical** counts. `cargo test --tests`: **1771 passed, 0 failed**.
+with **identical** counts. `cargo test --tests`: **1773 passed, 0 failed**.
 
 ## Duplication audit
 
@@ -59,7 +59,7 @@ read as rendered text:
 - **2605.21570** (46) — 34 + 12 across its two bibunits, each matching that
   unit's own `\begin{thebibliography}{N}`
 
-## What is still empty (298), by first error
+## What is still empty (292), by first error
 
 *no error at all* 32 · `unexpected:\lx@begin@alignment` 28 ·
 `unexpected:\endgroup` 8 · `unexpected:\@end@tabular` 7 ·
@@ -80,7 +80,18 @@ surfaces and trips the error cap. That is the F2 pattern again — a real defect
 becoming visible — but it costs the partial output, so the underlying leak is
 worth its own fix.
 
-Alignment (28) and the 32 remaining silent papers are the next targets.
+`undefined:\setboolean` is also gone: all 6 were `\documentclass{pnas-new}`,
+whose class declares four booleans our binding did not
+(2606.29674 0 → 60, 2605.07504 0 → 53, 2606.02411 0 → 45).
+
+The alignment bucket (28) is diagnosed but deliberately NOT fixed here — see
+`repros/f7_alignment_fenced_amp/`. It is a 14-line reproducer, and the cause is
+engine-level: alignment rows are split on the **unexpanded** `&`, so any macro
+whose delimiter-fenced argument contains `&` leaks into the enclosing row. The
+physics binding already applies the documented remedy and the leak persists, and
+a plain user macro reproduces it, so the fix belongs to the alignment machinery —
+its own branch and corpus measurement, not this PR. The 32 silent papers are the
+other open front.
 
 ## Reproducing
 
