@@ -477,3 +477,42 @@ fn cluster_fnum_arg_hook() {
     "\\fnum@thmx did not supply the theorem header tag:\n{x}"
   );
 }
+
+/// A `robust` DefConstructor must revert under its ORIGINAL control sequence,
+/// not the munged one.
+///
+/// Perl `Package.pm` L1480-1481 gives a `robust` DefConstructor
+/// `alias => $cs` whenever the caller supplied no explicit alias. `robust`
+/// installs the real definition under `\ref` + a literal trailing SPACE —
+/// LaTeX2e's `\DeclareRobustCommand` idiom, where `\ref` expands to
+/// `\protect\ref␣` and `\ref␣` holds the body — so without that alias the
+/// whatsit reverts as `\ref␣` and the space rides into the `ltx:Math` `tex=`
+/// attribute, and from there into the MathML `alttext`, which is the
+/// screen-reader / no-MathML fallback. `\ref` is LaTeXML's only `robust`
+/// DefConstructor (the `robust` DefMath entries pass an explicit alias, and
+/// Perl deliberately does NOT apply this fallback to `DefPrimitiveI`, L1318).
+///
+/// Ground truth: same-host Perl LaTeXML 0.8.8 on this exact fixture emits all
+/// three `tex=` attributes byte-identically to the assertions below, with zero
+/// errors in both engines.
+#[test]
+fn cluster_robust_cs_reverts_unmunged() {
+  let x = convert_to_xml("tests/cluster_regressions/robust_cs_reversion.tex");
+  assert!(
+    !x.contains(r"\ref {"),
+    "a robust constructor reverted under its munged `\\ref ` name, so the \
+     trailing space leaked into tex= (and thence the MathML alttext):\n{x}"
+  );
+  // `\pageref` is `\let` to `\ref`, so it reverts as `\ref` too — both
+  // formulas therefore carry the identical reversion.
+  assert_eq!(
+    x.matches(r#"tex="x+\ref{sec:one}""#).count(),
+    2,
+    "expected \\ref and \\pageref to both revert as `x+\\ref{{sec:one}}`:\n{x}"
+  );
+  // And inside \text, where the reversion is nested one level deeper.
+  assert!(
+    x.contains(r#"tex="x+\text{see \ref{sec:one}}""#),
+    "the nested \\ref reversion inside \\text does not match Perl:\n{x}"
+  );
+}

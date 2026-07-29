@@ -641,25 +641,53 @@ residuals stay here so the live worklist keeps them visible:
   still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
 
-### `\ref`'s reversion emits a trailing space — OPEN, small (found 2026-07-29)
+### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 
-Rust writes `tex="x+\text{see \ref {sec:one}}"` where Perl writes
+Rust wrote `tex="x+\text{see \ref {sec:one}}"` where Perl writes
 `\ref{sec:one}` — a space between the control word and its `{`. Semantically
-equivalent TeX, but `tex=` flows into the MathML `alttext`, which is the
-screen-reader / no-MathML fallback, and into golden comparisons.
-**Already narrowed:** it is specific to `\ref` (`latex_constructs.rs:8219`, which
-has no explicit `reversion`, so the default is synthesized) — `\emph`, `\sqrt`
-and `\frac` are all byte-identical to Perl on the same document, so this is NOT a
-general control-word-before-brace rule in the serializer. Prime suspect is the
-`OptionalMatch:* Semiverbatim` parameter pair, since that is what distinguishes
-`\ref` from the clean cases. Witness: `docs/reproducers/` not needed — any
-document with `\ref` inside `\text` in math shows it; the minimal probe is
-`\( x + \text{see \ref{l}} \)` with a matching `\label{l}`. Found while
-end-to-end-diffing Perl vs Rust for R3/F17; it is **core-stage** (present in the
-core `tex=` attribute), unrelated to the MathML post layer, hence recorded rather
-than folded into that branch. Note the *inverse* bug — a Tokens round-trip
-**eating** a control word's terminating space — is a separate, already-fixed
-issue (`\bib@field@unknownasdata`, `SYNC_SESSIONS_2026-07.md`); do not conflate.
+equivalent TeX, but `tex=` flows into the MathML `alttext`, the screen-reader /
+no-MathML fallback, and into golden comparisons.
+
+**Root cause, and it is not a serializer bug.** `robust => true` installs the
+real definition under the MUNGED cs `\ref` + a literal trailing SPACE — LaTeX2e's
+`\DeclareRobustCommand` idiom, where `\ref` expands to `\protect\ref␣` and `\ref␣`
+holds the body (`def_robust_cs`, Perl `Package.pm:1143-1149 defRobustCS`). The
+name really does contain a space, and `Whatsit::revert` printed it. Perl avoids
+this in `DefConstructorI` (L1480-1481):
+
+```perl
+alias => (defined $options{alias} ? coerceCS($options{alias})
+          : ($options{robust} ? $cs : undef)),
+```
+
+i.e. the pre-munge cs becomes the alias, and reversion prefers the alias.
+`dialect.rs::def_constructor` never set it — note the **commented-out
+`csname_alias` block at `dialect.rs:729`** was an earlier attempt at exactly this,
+left disabled in the DefMath path.
+
+Scope is exactly `\ref` (plus `\pageref`, `Let!` to it): it is the tree's ONLY
+`robust` `DefConstructor!`. The `robust` DefMath entries (`tex_math.rs:1270/1273`,
+`\overbrace`/`\underbrace`) pass an explicit `alias`, which the fix's
+`if options.alias.is_none()` guard respects, and everything else `robust` is
+`DefMacro!`/`DefPrimitive!` — Perl deliberately does NOT apply this fallback to
+`DefPrimitiveI` (L1318), so neither do we.
+
+**The fix changes the reversion only.** The definition is still installed under
+the munged cs, so `get_cs_name()` still reports `\ref ` — code that identifies a
+whatsit by cs must keep accepting both spellings. `lxrdfa_sty.rs`'s
+`cs == "\\ref" || cs == "\\ref "` (L15, L118) is therefore still correct and was
+left alone; it is the fingerprint of someone hitting this before and papering
+over it. `get_cs_or_alias()` is the clean accessor.
+
+Guard `06_cluster_regressions::cluster_robust_cs_reverts_unmunged` over
+`tests/cluster_regressions/robust_cs_reversion.tex`, ground-truthed against
+same-host Perl 0.8.8: zero errors in both engines and all three `tex=` attributes
+byte-identical. Found by end-to-end-diffing Perl `latexml`+`latexmlpost` against
+the Rust pipeline while verifying R3/F17 — the post-stage golden could not have
+caught it, because that test feeds Perl's core XML into the Rust post stage.
+Note the *inverse* bug — a Tokens round-trip **eating** a control word's
+terminating space — is a separate, already-fixed issue
+(`\bib@field@unknownasdata`, `SYNC_SESSIONS_2026-07.md`); do not conflate.
 
 ## Open items — detail for the ranked rows
 
