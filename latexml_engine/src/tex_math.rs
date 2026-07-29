@@ -1924,7 +1924,7 @@ LoadDefinitions!({
                   // tests/graphics/graphrot.tex (wrapper vanished in spilled
                   // fragments); tests/encoding/latin1.xml (the fallback must
                   // NOT override a present box's negative verdict).
-                  let is_math_font = |font: &latexml_core::common::font::Font| {
+                  let is_math_font = |font: &Font| {
                     font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false)
                   };
                   match document.get_node_box(xmarg) {

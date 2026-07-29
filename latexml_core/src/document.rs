@@ -1473,7 +1473,7 @@ impl Document {
     let mut late = Vec::new();
     state::with_tag_property(tag, |tag_hash| {
       state::with_tag_property(pin!("ltx:*"), |all_hash| {
-        let mut collect =
+        let collect =
           |bucket: &mut Vec<TagConstructionClosure>, opts: Option<&tag::TagOptions>, key| {
             if let Some(v) = opts.and_then(|o| o.get(key)) {
               bucket.extend(v.iter().cloned());
@@ -3802,7 +3802,7 @@ impl Document {
     self.set_node(&wrapper);
     let qname = get_node_qname(&root);
     let box_opt = self.get_node_box(&root);
-    let (_prompt, late) = self.get_tag_action_list_parts(qname, tag::TagOptionName::AfterOpen);
+    let (_prompt, late) = self.get_tag_action_list_parts(qname, TagOptionName::AfterOpen);
     for action in late {
       action(self, &mut root, box_opt.as_ref())?;
     }

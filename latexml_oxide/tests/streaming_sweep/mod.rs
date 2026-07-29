@@ -77,8 +77,8 @@ pub fn sweep_dir(dir: &str) {
       let lo = byte.saturating_sub(120);
       divergent.push(format!(
         "{src}: output diverges at byte {byte}\n  eager   …{}…\n  streamed…{}…",
-        &eager_xml[lo..(byte + 120).min(eager_xml.len())].replace('\n', "\\n"),
-        &streamed_xml[lo..(byte + 120).min(streamed_xml.len())].replace('\n', "\\n"),
+        eager_xml[lo..(byte + 120).min(eager_xml.len())].replace('\n', "\\n"),
+        streamed_xml[lo..(byte + 120).min(streamed_xml.len())].replace('\n', "\\n"),
       ));
     }
   }

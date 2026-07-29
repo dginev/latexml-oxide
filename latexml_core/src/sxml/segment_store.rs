@@ -212,6 +212,7 @@ mod tests {
     SegmentMeta {
       depth:      2,
       noindent:   false,
+      section_id: None,
       font:       Some(String::from("italic")),
       namespaces: vec![(
         String::from("ltx"),

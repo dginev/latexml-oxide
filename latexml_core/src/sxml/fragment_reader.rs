@@ -177,6 +177,7 @@ mod tests {
     let meta = SegmentMeta {
       depth:      1,
       noindent:   false,
+      section_id: None,
       font:       None,
       namespaces: vec![(
         String::from("ltx"),
