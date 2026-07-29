@@ -54,7 +54,7 @@ Re-verify a row before planning on it (rule 1).
 |---|---|---|---|---|
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310; **CI all-green + mergeable, re-verified 2026-07-29** | nothing left but a review nudge — no code, no automatable step | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
-| **R3** | **Bibliography-absence campaign** (PR #444) — **10 fixes landed**, **241 of the 533** known articles recovered / 17 466 entries, re-verified by reconversion. **292 still empty, all characterized** — plan R3a-R3g below. Corpus scope 50 777 | **R3a next** | per-item | [`BIB_ABSENCE_AUDIT_2026-07-29.md`](parity/BIB_ABSENCE_AUDIT_2026-07-29.md), [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
+| **R3** | **Bibliography-absence campaign** (PR #444) — **12 fixes landed**, **256 of the 533** known articles recovered / 17 937 entries, re-verified by reconversion. **277 still empty, all characterized** — plan R3a-R3g below. Corpus scope 50 777 | **R3a next** | per-item | [`BIB_ABSENCE_AUDIT_2026-07-29.md`](parity/BIB_ABSENCE_AUDIT_2026-07-29.md), [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
@@ -64,7 +64,7 @@ Re-verify a row before planning on it (rule 1).
 | — | `\gls`/`\acrshort` in math mode (1705.10306) | **PARITY, blocked** on unrunnable Perl | — | do not chase; Open items |
 | — | Two-pass streaming split | **deferred by user decision 2026-07-06**; trigger = a <64 GB target appears | — | [`STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
 
-### R3 mini plan — the 292 remaining bibliography failures
+### R3 mini plan — the remaining bibliography failures
 
 Detail and per-paper rows: [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md).
 Red/green for every item is the bibliography length (0 = red); reconvert with
@@ -73,7 +73,7 @@ classes are singletons and the first error is often incidental.
 
 | # | item | papers | state |
 |---|---|---|---|
-| **R3a** | **biblatex, document complete** — resource declared in an unbound `.cls` never registers; OmniBus dep-mining takes a branch the document did not. Audit F4(c)/(d), witnesses 2605.23724, 2605.14990 | **29** | mechanism named, start here |
+| ~~R3a~~ **12 of 29 LANDED** (`\DeclareCiteCommand` now defines its command; `\addbibresource` harvested from a shipped class) — 17 left | **biblatex, document complete** — resource declared in an unbound `.cls` never registers; OmniBus dep-mining takes a branch the document did not. Audit F4(c)/(d), witnesses 2605.23724, 2605.14990 | **17 left** | R3b next |
 | **R3b** | **No diagnostic at all** — silent loss with a complete document. The class this audit exists to expose; overlaps R3a | **32** | needs first reproducers |
 | **R3c** | `\ce` inside a `p{}` column leaks a mode → `\@end@tabular` cannot close. 7-line repro in [`repros/f8_ce_in_p_column/`](parity/bib_absence_2026-07-29/repros/f8_ce_in_p_column/); mhchem is raw-loaded, so check Perl parity first | **7** | repro ready |
 | **R3d** | **Alignment rows split on the UNEXPANDED `&`**, so any macro with a delimiter-fenced `&` leaks. 14-line repro in [`repros/f7_alignment_fenced_amp/`](parity/bib_absence_2026-07-29/repros/f7_alignment_fenced_amp/). **Engine-level, own branch + corpus measurement** — not a bibliography patch | **28** | diagnosed, deferred |

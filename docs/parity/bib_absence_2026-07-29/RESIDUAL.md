@@ -1,11 +1,11 @@
-# The 292 remaining failures, fully characterized
+# The remaining failures, fully characterized
 
 Every paper of the 533-article known cohort that still has **zero**
-`class="ltx_bibitem"` after this PR. 241 are recovered; these 292 are not.
+`class="ltx_bibitem"` after this PR. **Refreshed after R3a.** 256 are recovered; **277** are not (272 EMPTY + 5 NOHTML).
 One row per paper in `residual_characterization.tsv.gz` —
 `id, first_error_class, nerrors, status, html_bytes, html_pct_of_src,
 source_bib_signal, bib_machinery` — every field derived from the paper's own run
-artifacts, so **no paper is unaccounted for** (292 rows, 292 papers).
+artifacts, so **no paper is unaccounted for** (one row per residual paper).
 
 Regenerate with `characterize.sh` (beside this file) over a `bib_recheck.sh`
 output directory.

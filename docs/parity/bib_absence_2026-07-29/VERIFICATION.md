@@ -18,14 +18,14 @@ uses — then counts `ltx_bibitem` against what the source implies and what
 
 | | papers | entries |
 |---|---|---|
-| **Recovered** (0 → non-zero) | **241** | **17 466** |
-| Complete (`now == cited`) | 233 OK | |
+| **Recovered** (0 → non-zero) | **256** | **17 937** |
+| Complete (`now == cited`) | 248 OK | |
 | Short of what was cited (THIN) | 8 | |
-| Still empty | 287 | |
+| Still empty | 272 | |
 | No HTML | 5 | |
 
 Regression control: 20 papers whose bibliographies already worked reconvert
-with **identical** counts. `cargo test --tests`: **1773 passed, 0 failed**.
+with **identical** counts. `cargo test --tests`: **1777 passed, 0 failed**.
 
 ## Duplication audit
 
@@ -59,7 +59,7 @@ read as rendered text:
 - **2605.21570** (46) — 34 + 12 across its two bibunits, each matching that
   unit's own `\begin{thebibliography}{N}`
 
-## What is still empty (287), by first error
+## What is still empty (272), by first error
 
 *no error at all* 32 · `unexpected:\lx@begin@alignment` 28 ·
 `unexpected:\endgroup` 8 · `unexpected:\@end@tabular` 7 ·
