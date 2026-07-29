@@ -41,14 +41,21 @@
 //!
 //! # Portability
 //!
-//! The wall-clock guard is portable (`std::thread` + `Instant`). The RAM guard
-//! samples RSS from `/proc/self/status` and is therefore **Linux-only** today;
-//! on other platforms [`process_rss_kb`](crate::watchdog::process_rss_kb)
-//! returns `None` and the memory ceiling
-//! is silently inactive (the time guard still works). LONG-TERM the guards
-//! should be fully portable — macOS via `task_info(TASK_BASIC_INFO)` and
-//! Windows via `GetProcessMemoryInfo` — so every supported OS gets the same
-//! reliable time + RAM defenses. Tracked as a portability follow-up.
+//! The wall-clock guard is portable (`std::thread` + `Instant`).
+//!
+//! **Portable:** [`total_memory_bytes`](crate::watchdog::total_memory_bytes) and [`available_disk_bytes`](crate::watchdog::available_disk_bytes) answer on
+//! Linux, macOS and Windows — `sysconf(_SC_PHYS_PAGES)`/`statvfs` are POSIX, and
+//! Windows uses `GlobalMemoryStatusEx`/`GetDiskFreeSpaceExW`. They back the
+//! machine-derived default ceiling ([`default_ceiling_mib`](crate::watchdog::default_ceiling_mib)) and the
+//! spill-headroom check, so those behave identically on every supported OS.
+//!
+//! **Still Linux-only:** [`process_rss_kb`](crate::watchdog::process_rss_kb) samples `/proc/self/status`, so the
+//! *enforcement* half of the RAM guard is inactive elsewhere — the ceiling is
+//! computed correctly but never checked, and only the time guard bites. Closing
+//! this needs macOS `task_info(TASK_BASIC_INFO)` and Windows
+//! `GetProcessMemoryInfo`; both are reachable through the crates this module
+//! already links, so it is a bounded follow-up rather than a new dependency
+//! question.
 
 use std::{
   sync::{
@@ -70,6 +77,130 @@ pub fn process_rss_kb() -> Option<u64> {
     }
   }
   None
+}
+
+/// Total physical RAM on this machine in bytes, or `None` if it cannot be
+/// determined.
+///
+/// Portable by construction: `sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE)`
+/// is POSIX and answers on both Linux and macOS, and Windows has
+/// `GlobalMemoryStatusEx`. No new dependency — `libc` and `windows-sys` are
+/// already in the tree.
+///
+/// Deliberately NOT `/proc/meminfo`: that would repeat the Linux-only mistake
+/// this module already carries in [`process_rss_kb`], which returns `None`
+/// everywhere else and so silently deactivates the memory ceiling on
+/// macOS/Windows.
+pub fn total_memory_bytes() -> Option<u64> {
+  #[cfg(unix)]
+  {
+    // SAFETY: `sysconf` is a pure query with no pointer arguments; a negative
+    // return means "unavailable", which we map to `None` rather than trusting.
+    let pages = unsafe { libc::sysconf(libc::_SC_PHYS_PAGES) };
+    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+    if pages > 0 && page_size > 0 {
+      return (pages as u64).checked_mul(page_size as u64);
+    }
+    None
+  }
+  #[cfg(windows)]
+  {
+    use windows_sys::Win32::System::SystemInformation::{
+      GLOBAL_MEMORY_STATUS_EX, GlobalMemoryStatusEx,
+    };
+    let mut status: GLOBAL_MEMORY_STATUS_EX = unsafe { std::mem::zeroed() };
+    status.dwLength = std::mem::size_of::<GLOBAL_MEMORY_STATUS_EX>() as u32;
+    // SAFETY: `status` is a correctly sized, zeroed struct with `dwLength` set,
+    // exactly as the API requires.
+    if unsafe { GlobalMemoryStatusEx(&mut status) } != 0 {
+      return Some(status.ullTotalPhys);
+    }
+    None
+  }
+  #[cfg(not(any(unix, windows)))]
+  {
+    None
+  }
+}
+
+/// The default per-conversion memory ceiling in MiB, derived from the machine.
+///
+/// `min(64 GiB, 90 % of physical RAM)`, falling back to
+/// [`FALLBACK_CEILING_MIB`] when the machine cannot be probed.
+///
+/// The previous default was a flat 6144 MiB regardless of hardware, which is
+/// simultaneously absurd on a 256 GB host (a conversion that would comfortably
+/// fit is refused) and over-generous on an 8 GB laptop (the box starts swapping
+/// before the guard ever fires). Both halves of the rule matter:
+///
+/// * **90 % of RAM** leaves the OS and everything else on the machine a share.
+///   A ceiling at 100 % is a promise the kernel will not keep.
+/// * **the 64 GiB cap** is not about this machine but about the *others*: in a
+///   parallel fleet the aggregate is `N_processes x ceiling`, so an uncapped
+///   fraction-of-RAM rule on a big host would let a busy fleet OOM it. The
+///   `cortex_worker` fleet overrides this with its own per-child ceiling
+///   anyway; the cap keeps the single-process default from being reckless.
+pub fn default_ceiling_mib() -> u64 {
+  const MIB: u64 = 1024 * 1024;
+  match total_memory_bytes() {
+    Some(total) => {
+      let ninety_percent = total / MIB * 9 / 10;
+      ninety_percent.clamp(1, MAX_DEFAULT_CEILING_MIB)
+    },
+    None => FALLBACK_CEILING_MIB,
+  }
+}
+
+/// Upper bound on the machine-derived default ceiling (64 GiB in MiB).
+pub const MAX_DEFAULT_CEILING_MIB: u64 = 64 * 1024;
+
+/// Ceiling used when the machine's RAM cannot be probed — the historical flat
+/// default, kept so an unprobeable platform behaves exactly as before rather
+/// than losing its guard entirely.
+pub const FALLBACK_CEILING_MIB: u64 = 6144;
+
+/// Free space in bytes on the filesystem holding `path`, or `None` if it cannot
+/// be determined. Used to check headroom before spilling intermediates to disk.
+pub fn available_disk_bytes(path: &std::path::Path) -> Option<u64> {
+  #[cfg(unix)]
+  {
+    use std::os::unix::ffi::OsStrExt;
+    let c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()?;
+    // SAFETY: zeroed `statvfs` is a valid initial state; `c_path` is a
+    // NUL-terminated string that outlives the call.
+    let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
+    if unsafe { libc::statvfs(c_path.as_ptr(), &mut stat) } != 0 {
+      return None;
+    }
+    // `f_bavail` is blocks available to unprivileged users — the honest figure,
+    // as `f_bfree` includes the root-reserved slice we cannot use.
+    (stat.f_bavail as u64).checked_mul(stat.f_frsize as u64)
+  }
+  #[cfg(windows)]
+  {
+    use std::os::windows::ffi::OsStrExt;
+
+    use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+    let mut wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+    wide.push(0);
+    let mut free_to_caller: u64 = 0;
+    // SAFETY: `wide` is NUL-terminated and outlives the call; the two unused
+    // out-parameters are passed as null, which the API permits.
+    let ok = unsafe {
+      GetDiskFreeSpaceExW(
+        wide.as_ptr(),
+        &mut free_to_caller,
+        std::ptr::null_mut(),
+        std::ptr::null_mut(),
+      )
+    };
+    (ok != 0).then_some(free_to_caller)
+  }
+  #[cfg(not(any(unix, windows)))]
+  {
+    let _ = path;
+    None
+  }
 }
 
 /// Exit code used when the wall-clock deadline is exceeded (standard `timeout`).
@@ -256,5 +387,69 @@ mod tests {
     let _w = Watchdog::new(60);
     thread::sleep(Duration::from_millis(50));
     // If the watchdog had fired, we'd be dead. We made it here → fine.
+  }
+
+  /// The ceiling is derived from the machine, so the machine must be probeable
+  /// on every platform we ship. A `None` here means the default silently falls
+  /// back to a flat number and the ceiling stops tracking the host — the exact
+  /// failure `process_rss_kb` already has on non-Linux.
+  #[test]
+  #[cfg(any(unix, windows))]
+  fn total_memory_is_probeable_and_plausible() {
+    let total = total_memory_bytes().expect("physical RAM must be probeable on unix/windows");
+    // No real machine we support has under 256 MiB, and none has over 100 TiB;
+    // a value outside that says the units are wrong, not that the host is odd.
+    assert!(
+      total > 256 * 1024 * 1024,
+      "implausibly small total RAM ({total} bytes) — check the unit conversion"
+    );
+    assert!(
+      total < 100 * 1024 * 1024 * 1024 * 1024,
+      "implausibly large total RAM ({total} bytes) — check the unit conversion"
+    );
+  }
+
+  /// `min(64 GiB, 90 % of RAM)`, and never zero — a zero ceiling would mean
+  /// "no limit" downstream (`resolve_rss_cap`), inverting the intent.
+  #[test]
+  fn default_ceiling_respects_both_halves_of_the_rule() {
+    let ceiling = default_ceiling_mib();
+    assert!(
+      ceiling > 0,
+      "a derived ceiling of 0 would read as 'unlimited'"
+    );
+    assert!(
+      ceiling <= MAX_DEFAULT_CEILING_MIB,
+      "derived {ceiling} MiB exceeds the {MAX_DEFAULT_CEILING_MIB} MiB cap; on a \
+       large host an uncapped fraction-of-RAM default would let a parallel fleet \
+       (N_processes x ceiling) OOM the machine"
+    );
+    if let Some(total) = total_memory_bytes() {
+      let ninety = total / (1024 * 1024) * 9 / 10;
+      assert_eq!(
+        ceiling,
+        ninety.clamp(1, MAX_DEFAULT_CEILING_MIB),
+        "ceiling should be min(cap, 90 % of RAM)"
+      );
+      assert!(
+        ceiling <= total / (1024 * 1024),
+        "the ceiling must leave the OS a share of physical RAM"
+      );
+    } else {
+      assert_eq!(ceiling, FALLBACK_CEILING_MIB);
+    }
+  }
+
+  /// Free-disk probing backs the spill-headroom check; if it cannot answer we
+  /// would have to spill blind.
+  #[test]
+  #[cfg(any(unix, windows))]
+  fn available_disk_is_probeable() {
+    let free = available_disk_bytes(std::path::Path::new("."))
+      .expect("free space must be probeable on unix/windows");
+    assert!(
+      free > 0,
+      "reported zero free space on the working directory"
+    );
   }
 }

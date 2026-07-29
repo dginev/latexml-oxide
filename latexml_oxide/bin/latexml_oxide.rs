@@ -237,18 +237,18 @@ struct Cli {
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 
-  /// Per-conversion memory ceiling in MiB (default: 6144 = 6 GiB). The single
-  /// memory knob: a cooperative guard raises a graceful Fatal as digestion
-  /// nears it, and a hard watchdog aborts the process (exit 137) at the
-  /// ceiling. Use 0 to disable memory limiting entirely. Also settable via the
-  /// `LATEXML_MAX_MEMORY` env var; this flag wins when both are given.
-  #[arg(
-    long,
-    value_name = "MIB",
-    env = "LATEXML_MAX_MEMORY",
-    default_value = "6144"
-  )]
-  max_memory: u64,
+  /// Per-conversion memory ceiling in MiB. Defaults to the machine: 90 % of
+  /// physical RAM, capped at 64 GiB (6144 if the machine cannot be probed).
+  /// The single memory knob: a cooperative guard raises a graceful Fatal as a
+  /// conversion nears it, and a hard watchdog aborts the process (exit 137) at
+  /// the ceiling. Use 0 to disable memory limiting entirely. Also settable via
+  /// the `LATEXML_MAX_MEMORY` env var; this flag wins when both are given.
+  ///
+  /// Left as `Option` so "unset" is distinguishable from an explicit value —
+  /// the default has to be computed from the host, which clap's static
+  /// `default_value` cannot express.
+  #[arg(long, value_name = "MIB", env = "LATEXML_MAX_MEMORY")]
+  max_memory: Option<u64>,
 
   /// Abort after processing this many tokens — guards against runaway macro
   /// expansion (default: 400M; env `LATEXML_TOKEN_LIMIT`, 0 disables).
@@ -396,6 +396,33 @@ fn custom_alloc_error_hook(layout: Layout) {
   process::exit(137);
 }
 
+/// Resolve the `--max-memory` ceiling in MiB.
+///
+/// `None` (flag and env both unset) means "derive it from this machine" —
+/// `min(64 GiB, 90 % of physical RAM)`, portable via
+/// `watchdog::default_ceiling_mib`. An explicit value is honoured verbatim,
+/// including `0` for "no limit".
+///
+/// The old behaviour was a flat 6144 MiB regardless of hardware: on a 256 GB
+/// host that refuses conversions which would fit comfortably, and on an 8 GB
+/// laptop the machine starts swapping long before the guard fires.
+fn resolve_max_memory(explicit: Option<u64>) -> u64 {
+  match explicit {
+    Some(mib) => mib,
+    None => {
+      let derived = latexml_core::watchdog::default_ceiling_mib();
+      log::debug!(
+        "--max-memory unset; derived {derived} MiB from this machine ({})",
+        match latexml_core::watchdog::total_memory_bytes() {
+          Some(t) => format!("{} MiB physical RAM", t / (1024 * 1024)),
+          None => "physical RAM unknown, using the fallback".to_string(),
+        }
+      );
+      derived
+    },
+  }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
   set_alloc_error_hook(custom_alloc_error_hook);
 
@@ -502,7 +529,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Persistent LSP Server mode — handle early before source file checks
   if cli.server {
     log::info!("Starting persistent LSP server...");
-    latexml::lsp_server::run_lsp_server(cli.timeout, cli.max_memory)?;
+    let max_memory = resolve_max_memory(cli.max_memory);
+    latexml::lsp_server::run_lsp_server(cli.timeout, max_memory)?;
     process::exit(0);
   }
 
@@ -769,10 +797,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // tight native loop in Marpa / libxml2 / libxslt). The Watchdog cancels
     // automatically on drop at end of main. `--max-memory` rides the same
     // Watchdog (it was previously a silent no-op outside `--server`).
-    let _watchdog = latexml_core::watchdog::Watchdog::with_limits(
-      cli.timeout,
-      cli.max_memory.saturating_mul(1024),
-    );
+    // Resolve the ceiling ONCE: unset means "derive it from this machine"
+    // (90 % of physical RAM, capped at 64 GiB), so both the hard Watchdog below
+    // and the cooperative fuse agree on the same number.
+    let max_memory = resolve_max_memory(cli.max_memory);
+    let _watchdog =
+      latexml_core::watchdog::Watchdog::with_limits(cli.timeout, max_memory.saturating_mul(1024));
     // `--max-memory` (or its `LATEXML_MAX_MEMORY` env) is the SINGLE memory
     // knob. The hard Watchdog ceiling above rides it directly; the cooperative
     // stomach RSS fuse is DERIVED from it (a fixed fraction below, leaving
@@ -782,8 +812,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // the user typed. That env still governs embedders which never parse CLI
     // flags and so never get here (the library test harness, the cortex_worker
     // fleet) — see `stomach::apply_memory_ceiling`.
-    latexml_core::stomach::apply_memory_ceiling(cli.max_memory);
-    if cli.max_memory == 0 {
+    latexml_core::stomach::apply_memory_ceiling(max_memory);
+    if max_memory == 0 {
       // Removing the surprise of one flag silently disabling two guards: say
       // so, out loud, when the whole memory limit is off.
       latexml_core::Warn!(

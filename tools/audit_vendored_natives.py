@@ -143,10 +143,10 @@ AUDITED = {
     ),
     "clang-sys": ("1.9.1",
         "links = \"clang\": libclang is loaded by bindgen at BUILD time. No libclang "
-        "code enters our binary. (1.8.1 -> 1.9.1 re-audited 2026-07-29: license "
-        "Apache-2.0 unchanged (CRLF-only LICENSE.txt diff), zero native files, "
-        "build.rs still pure libclang discovery; adds clang 19/20 support + "
-        "search-path fixes.)",
+        "code enters our binary. Re-verified at 1.9.1 (2026-07-29): file inventory "
+        "identical to the audited 1.8.1 apart from an added Cargo.lock, license still "
+        "Apache-2.0, links key unchanged, and build.rs compiles no C (no cc::Build). "
+        "The only native-ish file is tests/header.h, a test fixture.",
     ),
     "prettyplease": ("0.2.37",
         "links = \"prettyplease02\" is the cargo version-lock trick, not a native "

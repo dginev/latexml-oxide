@@ -26,7 +26,7 @@ Two co-equal targets drive current work:
    [`docs/performance/SOURCE_PROVENANCE.md`](docs/performance/SOURCE_PROVENANCE.md)).
 
 Current verification (tracked in `SYNC_STATUS.md`): `cargo test --tests` is
-**1696 passing** (2026-07-26, 94 targets, on `main` @ `e07548e6b3`; the two `latexml_post`
+**1760 passing** (2026-07-29, 105 targets, on `main` @ `d5684f0bcf`; the two `latexml_post`
 vector-SVG tests self-skip — silently, and *green* — unless `mutool` or
 `pdftocairo` is on PATH, so a green local run does not by itself prove that
 branch ran; CI installs poppler/mupdf). **A fully green suite still prints
