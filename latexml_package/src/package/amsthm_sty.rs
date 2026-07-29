@@ -214,7 +214,7 @@ LoadDefinitions!({
       // The template engine treats the `"font"` prop as the
       // element-font attribute (auto-binds to font= attr regardless of
       // placeholder name in the template).
-      let titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
+      let titlefont = title.get_font().ok().flatten().map(|f| (*f).clone());
       let mut map = SymHashMap::default();
       map.insert("title", title.into());
       if let Some(f) = titlefont {

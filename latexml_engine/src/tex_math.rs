@@ -328,7 +328,7 @@ fn script_sizer(
     script_size.2.value_of() as f64,
   );
   let (base_font_size, mathstyle) = if let Some(Stored::Digested(base)) = base_opt {
-    let bfont = base.get_font()?.map(|f| f.into_owned());
+    let bfont = base.get_font()?;
     let fs = bfont.as_ref().and_then(|f| f.get_size()).unwrap_or(10.0);
     let ms = bfont
       .as_ref()
@@ -1017,9 +1017,7 @@ LoadDefinitions!({
             }
         });
         whatsit.set_property("stretchy", true);
-        whatsit.set_font(Rc::new(
-          whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
-        ));
+        whatsit.set_font(whatsit.get_arg(1).unwrap().get_font()?.unwrap());
         // Set canonical reversion: \left + the user-facing delimiter token.
         // XToken expands \{ → \lx@text@lbrace during macro reading, so the stored
         // arg reverts to \lx@text@lbrace. Override with the canonical form.
@@ -1067,9 +1065,7 @@ LoadDefinitions!({
             }
         });
         whatsit.set_property("stretchy", true);
-        whatsit.set_font(Rc::new(
-          whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
-        ));
+        whatsit.set_font(whatsit.get_arg(1).unwrap().get_font()?.unwrap());
         // Set canonical reversion for brace delimiters (XToken expands \} → \lx@text@rbrace)
         let canonical = match entry.char {
           '{' => Some("\\right\\{"),

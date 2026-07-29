@@ -329,7 +329,7 @@ LoadDefinitions!({
       let title = digest(mouth::tokenize_internal(
         "{\\bfseries\\itshape Proof:}"
       ))?;
-      let titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
+      let titlefont = title.get_font().ok().flatten().map(|f| (*f).clone());
       // Digest `\qed` directly into a prop — the template references `#qed`
       // at body-end so the QED symbol lands inside <ltx:proof>.
       let qed = digest(mouth::tokenize_internal("\\qed"))?;

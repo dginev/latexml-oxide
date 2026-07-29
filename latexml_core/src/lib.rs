@@ -334,7 +334,7 @@ pub trait BoxOps: Object {
     Ok(None)
   }
   /// gets the associated font, if any
-  fn get_font(&self) -> Result<Option<Cow<'_, Font>>>;
+  fn get_font(&self) -> Result<Option<Rc<Font>>>;
   /// sets an associated font
   fn set_font(&mut self, _font: Rc<Font>) { /* no-op for types without font */
   }

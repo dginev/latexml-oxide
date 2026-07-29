@@ -2128,7 +2128,7 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
     && let Some(TagContent::Box(first)) = content.first()
     && let Ok(Some(f)) = first.get_font()
   {
-    font = Some(f.into_owned());
+    font = Some((*f).clone());
     attributes.insert("_force_font".to_string(), "true".to_string());
   }
   document.open_element(tag, Some(attributes), font.as_ref())?;
