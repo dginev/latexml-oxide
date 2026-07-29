@@ -30,7 +30,12 @@ flavor (`a.bib`–`d.bib`, `t.bib`, plus the 2605.01115 `mini.bib`) with driver
 entry); `f3_empty_arg_bbl/` — the empty-arg `\bibliography{}` + jobname-`.bbl`
 repro (`min5.tex`/`min5.bbl`, silent in Rust AND Perl).
 
-Regeneration: `scan_bib.sh` / `pass2.sh` / `pass2b.sh` / `marksweep.sh` — the
+`pass2c.sh` is the tightened re-check of the legacy signals: `pass2b.sh`
+matched `\references` inside longer control sequences (0704.0420's
+`\def\referencesz{…}`), and re-running it over the 17,055 `yes_legacy` rows
+drops 1,522 false positives.
+
+Regeneration: `scan_bib.sh` / `pass2.sh` / `pass2b.sh` / `pass2c.sh` / `marksweep.sh` — the
 actual sweep scripts, checked in beside this README (~20 min for pass 1 over
 the 2.79 M-doc corpus at 64-way parallelism; pass 2 ~35 min over the flagged
 set).

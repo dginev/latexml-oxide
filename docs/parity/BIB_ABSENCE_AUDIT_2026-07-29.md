@@ -12,6 +12,53 @@
 > [`bib_absence_2026-07-29/`](bib_absence_2026-07-29/) — one TSV per corpus:
 > `id, verdict, cortex_status, expect, srcsig, category, first_error_class`.
 
+## Campaign status (2026-07-29, second session)
+
+Five fixes landed, each measured on its cohort with `tools/bib_recheck.sh`
+(reconverts with the current binary under the fleet's own
+`cortex_worker --standalone` ar5iv profile and counts `ltx_bibitem` against
+what the source implies and what `MakeBibliography` says it cited):
+
+| sprint | fix | measured |
+|---|---|---|
+| **S2 / F1** | `$$` in a `.bib` field is no longer paired off as a display shift; balance counted per `$` character | **66 of the 69** `bibliography:convert` papers now build a bibliography (0 before), errors ~102 → 0. 2605.06069 0→497, 2605.16014 0→367, 2605.01115 0→31 |
+| **S1 / F2** | restored Perl's `Error:missing_file` raise in `make_bibliography.rs` | the 7 bibunits witnesses now report status 2 instead of telemetry `ok` — the loss became visible, which is what unblocked F3(c) |
+| **S3a / F3(a)** | empty-arg `\bibliography{}` still inputs `\jobname.bbl` (OXIDIZED_DESIGN #84) | **7 of 7**, 0 → 330/379/260/134/31/19/16 entries, each matching its `.bbl` exactly (GWTC-5 LIGO set) |
+| **S3c / F3(c)** | bibunits `\putbib` inputs the per-unit `bu<N>.bbl` (OXIDIZED_DESIGN #85) | **15 of 15**, all 0 before: 2606.28854 180, 2606.04416 79, 2605.21570 46 |
+| **S4 / F4(a)(b)** | `\refcontext` only eats a following group; `\addbibresource` takes its optional arg | 2606.11276 0→24, 2606.02676 0→93, 2605.27263 0→58 |
+
+Regression check: 20 papers whose bibliographies already worked reconvert with
+**identical** counts. Suite `cargo test --tests` 1765 passed / 0 failed.
+
+Two families are diagnosed but NOT fixed, with their dead ends recorded so they
+are not re-attempted:
+
+- **F12-amsrefs — a bare `\begin{biblist}` with no `{bibdiv}`.** `{bibdiv}` is
+  what supplies `<ltx:bibliography>`; without it every entry is rejected
+  (`<ltx:bibentry> isn't allowed in <ltx:section>`, once per entry) and the
+  References list is empty. Witness **0704.0808** (28 rejected entries); its
+  sibling 0704.2403, which writes `{bibdiv}`, converts cleanly (19 entries).
+  **Dead end 1:** `Tag!("ltx:bibliography", auto_open => true)` silences all 28
+  errors and then serializes an **empty document** (1.89 MB → 0 bytes) — the
+  auto-opened bibliography swallows the body. Perl carries that exact line
+  commented out (`amsppt.sty.ltxml` L350), which reads as the same finding.
+  **Dead end 2:** emitting the wrapper from `{biblist}` itself, conditionally
+  (`?#wrap(…)`) when no `{bibdiv}` is open — same empty document. The element
+  simply cannot open inside `ltx:section`; a real fix has to go through the
+  `BACKMATTER_ELEMENT` mapping that bibunits' `sectionbib` option uses.
+- **F4(c)(d)** — `\addbibresource` inside an unbound `.cls` is never registered
+  (2605.23724), and apa6 OmniBus dep-mining takes a biblatex branch the
+  document did not (2605.14990). Both still EMPTY.
+
+**Corrected legacy count.** The pass-2b classifier matched `\references` inside
+longer control sequences — 0704.0420 defines `\def\referencesz{…}`, a
+hand-rolled heading, and was counted as an aastex `references` environment. A
+tight re-check (`pass2c.sh`, word-boundary signals, amsrefs `\bib` required to
+have its 3-argument shape) over all 17,055 `yes_legacy` rows drops **1,522
+false positives (8.9%)**, leaving **15,533**: `\bib{}{}{}` 6,227, `biblist`
+6,187, `\listrefs` 4,305, `\reference` 3,901, `references` env 3,801, `\Refs`
+483. Corpus wrongly-missing therefore reads **50,777**, not 52,299.
+
 ## Method (fail-safe toward flagging)
 
 Two passes, both scripted (scan_bib.sh / pass2.sh, session scratchpad):
@@ -39,9 +86,9 @@ The result zips used: `oxidized_tex_to_html.sandbox-13.zip` (2605),
 |---|---|---|---|---|---|---|---|---|
 | 2605 (sandbox-13) | 30 079 | 29 454 (97.9%) | 625 (2.08%) | **255** (249 + 6 legacy) | 257 (53 = `%auto-ignore` stubs) | 69 `empty_bib` | 107 | 6 |
 | 2606 (sandbox-14) | 30 430 | 29 807 (98.0%) | 623 (2.05%) | **278** (272 + 6 legacy) | 213 (28 = stubs) | 79 `empty_bib` | 126 | 6 |
-| full corpus (2026-07 rerun) | 2 790 409 | 2 637 113 (94.5%) | 153 296 (5.5%) | **52 299** (35 835 + 16 464 legacy) | 56 588 (11 957 = stubs) | 12 994 `empty_bib` | ~64 500 | 3 135 |
+| full corpus (2026-07 rerun) | 2 790 409 | 2 637 113 (94.5%) | 153 296 (5.5%) | **50 777** (35 835 + 14 942 legacy; see the correction above) | 56 588 (11 957 = stubs) | 12 994 `empty_bib` | ~64 500 | 3 135 |
 
-**Corpus total actionable: 52 299 wrongly-missing (1.87% of all docs) + 18 919
+**Corpus total actionable: 50 777 wrongly-missing (1.82% of all docs) + 18 919
 lost-doc fatals with bib intent + 3 091 `no_result` with bib intent.** "Legacy"
 = source uses amsrefs/aastex/harvmac-era conventions (`\begin{biblist}`,
 `\bib{`, `\reference`, `\begin{references}`, `\listrefs`, `\Refs`) that the
@@ -318,15 +365,15 @@ the acceptance metric, re-measured on the witnesses named above.
 
 | sprint | family | scope & fix direction | est. size | recovers (sandbox pair / corpus proj.) |
 |---|---|---|---|---|
-| **S1 — Un-silence the loss** | F2 | Restore the two parity Error raises: `make_bibliography.rs:298-303` Info→Error (Perl `MakeBibliography.pm:139`); EOF-with-open-environment error. Consider Warning→Error for all-keys-`missing_keys`. Guards: the 2605.27226 / 2605.19817 / 2606.04416 witnesses must stop reporting `ok`. | small (1-2 days) | signal only, ~28 sandbox papers leave `ok`; unlocks honest telemetry for S2-S8 |
-| **S2 — `$$`-in-bib containment** | F1 | Treat `$$` in the bib restricted-horizontal context as TeX does; per-entry error containment at `\end{bib@entry}` (close dangling math/box frames, drop only that entry). Min-repros ready ([`bib_absence_2026-07-29/repros/f1_bib_cascade/`](bib_absence_2026-07-29/repros/f1_bib_cascade/), incl. `bibbisect.py`). | medium | ~69 papers + 68 fatals / pair; projected ~3 200 corpus-wide once the re-port binary ships |
-| **S3 — `.bbl` fidelity** | F3 | (a) empty-arg `\bibliography{}` → `\jobname.bbl` fallback (= latex.ltx, beyond-Perl-vs-broken doc); (b) REVTeX 4-2 `auto@bib` end-document `.bbl` input; (c) bibunits `\putbib` reads shipped `bu<N>.bbl`. PDF ground truth per config-driven rule. | medium | ~47 / pair; corpus: the 2 987 `bbl,bibcmd|empty_bib` + 1 084 `bbl,bibcmd|no_bib` silent blocks are the upper bound |
-| **S4 — biblatex bindings** | F4 | `\refcontext[]{}` must not eat `\printbibliography` (`biblatex_sty.rs:2193`); `\addbibresource[]` optional (`:1781`); resource registration from unbound-class dep-mining; apa6 branch fidelity. | small-medium | ~18 / pair + corpus `undefined:\addbibresource` 83, `\printbibliography` cluster |
+| ~~S1~~ ✅ **LANDED** | F2 | Restore the two parity Error raises: `make_bibliography.rs:298-303` Info→Error (Perl `MakeBibliography.pm:139`); EOF-with-open-environment error. Consider Warning→Error for all-keys-`missing_keys`. Guards: the 2605.27226 / 2605.19817 / 2606.04416 witnesses must stop reporting `ok`. | small (1-2 days) | signal only, ~28 sandbox papers leave `ok`; unlocks honest telemetry for S2-S8 |
+| ~~S2~~ ✅ **LANDED** (66/69) | F1 | Treat `$$` in the bib restricted-horizontal context as TeX does; per-entry error containment at `\end{bib@entry}` (close dangling math/box frames, drop only that entry). Min-repros ready ([`bib_absence_2026-07-29/repros/f1_bib_cascade/`](bib_absence_2026-07-29/repros/f1_bib_cascade/), incl. `bibbisect.py`). | medium | ~69 papers + 68 fatals / pair; projected ~3 200 corpus-wide once the re-port binary ships |
+| **S3** — (a) ✅ and (c) ✅ **LANDED**; (b) REVTeX `auto@bib` open | F3 | (a) empty-arg `\bibliography{}` → `\jobname.bbl` fallback (= latex.ltx, beyond-Perl-vs-broken doc); (b) REVTeX 4-2 `auto@bib` end-document `.bbl` input; (c) bibunits `\putbib` reads shipped `bu<N>.bbl`. PDF ground truth per config-driven rule. | medium | ~47 / pair; corpus: the 2 987 `bbl,bibcmd|empty_bib` + 1 084 `bbl,bibcmd|no_bib` silent blocks are the upper bound |
+| **S4** — (a)(b) ✅ **LANDED**; (c)(d) open | F4 | `\refcontext[]{}` must not eat `\printbibliography` (`biblatex_sty.rs:2193`); `\addbibresource[]` optional (`:1781`); resource registration from unbound-class dep-mining; apa6 branch fidelity. | small-medium | ~18 / pair + corpus `undefined:\addbibresource` 83, `\printbibliography` cluster |
 | **S5 — achemso `\iffalse`** | F6 | One preamble-path bug in the achemso/OmniBus route; body skipped as false branch. | small | 36 / pair; corpus `expected:\fi` 1 700 |
 | **S6 — Never discard a built document** | F7 | `document:convert` abort → salvage the partial DOM instead of the 1809-byte stub (recover-partial principle, cf. `fatal-stays-fatal` policy). | small-medium | 10 / pair; corpus 436 |
 | **S7 — Silent swallow / group leaks** | F5 | Runaway listings/verbatim; leaked `\bgroup` under ar5iv raw-load; alignment unclosed-group discard (close leaked groups at error or `\end{document}`); each sub-family needs min-repro first. Hardest, highest content-integrity value — bib is just the visible symptom. | large (own session per sub-family) | ~6 silent + alignment cohort / pair; corpus `\lx@begin@alignment` 2 356 |
 | **S8 — Post-stage robustness** | F8 | XPath growing-nodeset OOM, NULL XSLT context, `post:parse` null pointer on huge docs; also `<ltx:bibliography>`-in-XMath placement. | medium | ~13 diagnosed + 84-cohort tail / pair; corpus 520+177 |
-| **S9 — Legacy conventions** | F12 | Triage first: why do harvmac `\listrefs` / aastex `references` / amsrefs docs silently lose bibs despite Rust bindings (0704.0777, 0704.0420, 0704.0808 witnesses); then fix per convention. | triage then per-convention | corpus 16 464 (largest corpus family) |
+| **S9 — Legacy conventions** (15,533 after the false-positive correction; amsrefs sub-family diagnosed, 2 dead ends recorded) | F12 | Triage first: why do harvmac `\listrefs` / aastex `references` / amsrefs docs silently lose bibs despite Rust bindings (0704.0777, 0704.0420, 0704.0808 witnesses); then fix per convention. | triage then per-convention | corpus 16 464 (largest corpus family) |
 | **S10 — Surpass-tier rulings** | F9 | USER DECISION needed, not code: bind the aaai/iccc family (PDFs broken too — surpass-Perl territory), bibtex-true `\nocite{*}` (recorded PARITY 2026-07-14), read `bu*.bbl`(→S3c). Present measured tradeoffs, don't pre-decide. | discussion | ~66 / pair if all approved |
 | *(routed)* | F10 | Lost-doc fatals → existing fatal-mining mission (216 timeout + 166 flood / pair; the flood subset shrinks with S2). 8 `never_completed` no-result papers attached. | — | — |
 | *(routed)* | F11 | Decoy-toplevel selection (2606.01946) → cortex main-file-selection issue; 4 empty 2606 dirs → corpus-prep. | — | — |
