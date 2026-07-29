@@ -98,394 +98,390 @@
 <a href=#98 id=98 data-nosnippet>98</a>  // `\D1 … \D5` (a copy-paste slip from the adjacent `alt=` text, which has
 <a href=#99 id=99 data-nosnippet>99</a>  // plain `D1 … D5`) raised `Error:undefined:\D` for content we then dropped.
 <a href=#100 id=100 data-nosnippet>100</a>  //
-<a href=#101 id=101 data-nosnippet>101</a>  // Carried as `&lt;ltx:text class='ltx_nodisplay'&gt;`, NOT `&lt;ltx:note&gt;`:
-<a href=#102 id=102 data-nosnippet>102</a>  // `LaTeXML-meta-xhtml.xsl` decorates a note with `ltx_note_mark`, so the old
-<a href=#103 id=103 data-nosnippet>103</a>  // binding made a screen reader announce the figure as "†† : &lt;text&gt;".
+<a href=#101 id=101 data-nosnippet>101</a>  // `LaTeXML-common.xsl` L404-421 maps any `aria:*` attribute to `aria-*`
+<a href=#102 id=102 data-nosnippet>102</a>  // under HTML5, so setting them here needs no XSLT change. Which ARIA slot
+<a href=#103 id=103 data-nosnippet>103</a>  // each argument lands in is the `before_construct` table below.
 <a href=#104 id=104 data-nosnippet>104</a>  //
-<a href=#105 id=105 data-nosnippet>105</a>  // The float's caption stays its accessible NAME, so the description is
-<a href=#106 id=106 data-nosnippet>106</a>  // referenced with `aria:describedby`, never `aria:label` (which would
-<a href=#107 id=107 data-nosnippet>107</a>  // displace "Figure 1. caption text" as the name). `LaTeXML-common.xsl`
-<a href=#108 id=108 data-nosnippet>108</a>  // L404-421 maps any `aria:*` to `aria-*` under HTML5, so no XSLT change is
-<a href=#109 id=109 data-nosnippet>109</a>  // needed. User design ruling 2026-07-28.
-<a href=#110 id=110 data-nosnippet>110</a>  // `[short]` and `{long}` are two DISTINCT authored fields, so they get two
-<a href=#111 id=111 data-nosnippet>111</a>  // distinct elements — never concatenated into one. Merging them yields a
-<a href=#112 id=112 data-nosnippet>112</a>  // run-on ("Fly 1 and Fly 2 look identical. Fly 1 and fly 2 comparison
-<a href=#113 id=113 data-nosnippet>113</a>  // shows…") and destroys the distinction, so no consumer can tell which text
-<a href=#114 id=114 data-nosnippet>114</a>  // the author wrote as the brief alternative. `aria-describedby` takes a
-<a href=#115 id=115 data-nosnippet>115</a>  // SPACE-SEPARATED ID LIST and is announced in order, so both are referenced,
-<a href=#116 id=116 data-nosnippet>116</a>  // short first, each still individually addressable.
-<a href=#117 id=117 data-nosnippet>117</a>  //
-<a href=#118 id=118 data-nosnippet>118</a>  // The old binding emitted the short one ALONE, which is why
-<a href=#119 id=119 data-nosnippet>119</a>  // `t/complex/acm_aria` recorded "Fly 1 and Fly 2 look identical" and lost the
-<a href=#120 id=120 data-nosnippet>120</a>  // sentence that actually describes the figure.
-<a href=#121 id=121 data-nosnippet>121</a>  // Carried as `&lt;ltx:note&gt;` — the document builder places a note inside the
-<a href=#122 id=122 data-nosnippet>122</a>  // float's `&lt;caption&gt;`, where the old binding put it. An `&lt;ltx:text&gt;` is
-<a href=#123 id=123 data-nosnippet>123</a>  // INLINE, so the builder auto-opens a `&lt;p&gt;` for it, and a `&lt;p&gt;` at figure
-<a href=#124 id=124 data-nosnippet>124</a>  // level is tagged `ltx_figure_panel`, which makes the post-processor spin up
-<a href=#125 id=125 data-nosnippet>125</a>  // a whole `ltx_flex_figure`/`ltx_flex_cell` wrapper around two hidden spans
-<a href=#126 id=126 data-nosnippet>126</a>  // (inert, since the caption partitions it and the real subfigures keep their
-<a href=#127 id=127 data-nosnippet>127</a>  // width class, but pure noise in the output).
-<a href=#128 id=128 data-nosnippet>128</a>  //
-<a href=#129 id=129 data-nosnippet>129</a>  // The footnote decoration a note normally gets — the `†` mark and the
-<a href=#130 id=130 data-nosnippet>130</a>  // `&lt;role&gt;: ` type prefix — is suppressed for these by a dedicated template in
-<a href=#131 id=131 data-nosnippet>131</a>  // `LaTeXML-meta-xhtml.xsl` keyed on `ltx_acm_description`, so the referenced
-<a href=#132 id=132 data-nosnippet>132</a>  // text stays clean for assistive technology.
-<a href=#133 id=133 data-nosnippet>133</a>  //
-<a href=#134 id=134 data-nosnippet>134</a>  // The short description needs its OWN id, derived here rather than as
-<a href=#135 id=135 data-nosnippet>135</a>  // `#id-short` in the template: a `#name` hole runs to the end of the
-<a href=#136 id=136 data-nosnippet>136</a>  // identifier, so `#id-short` names a property called `id-short` (absent, so
-<a href=#137 id=137 data-nosnippet>137</a>  // it silently emits NO xml:id) instead of `#id` followed by a literal. That
-<a href=#138 id=138 data-nosnippet>138</a>  // produced a dangling `aria-describedby` — the reference resolved to nothing.
-<a href=#139 id=139 data-nosnippet>139</a>  // Ids use a `-short` suffix rather than a dotted one so they need no escaping
-<a href=#140 id=140 data-nosnippet>140</a>  // in a CSS selector.
-<a href=#141 id=141 data-nosnippet>141</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\Description[] Undigested"</span>,
-<a href=#142 id=142 data-nosnippet>142</a>    <span class="string">"^^?#1(&lt;ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'&gt;#1&lt;/ltx:note&gt;)()\
-<a href=#143 id=143 data-nosnippet>143</a>     &lt;ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'&gt;#2&lt;/ltx:note&gt;"</span>,
-<a href=#144 id=144 data-nosnippet>144</a>    properties =&gt; {
-<a href=#145 id=145 data-nosnippet>145</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">RefStepCounter!</span>(<span class="string">"acmlabel"</span>)<span class="question-mark">?</span>;
-<a href=#146 id=146 data-nosnippet>146</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.get(<span class="string">"id"</span>) {
-<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw">let </span>short = <span class="macro">format!</span>(<span class="string">"{id}-short"</span>);
-<a href=#148 id=148 data-nosnippet>148</a>        props.insert(<span class="string">"shortid"</span>, Stored::from(short));
-<a href=#149 id=149 data-nosnippet>149</a>      }
-<a href=#150 id=150 data-nosnippet>150</a>      <span class="comment">// Perl acmart.cls.ltxml L79 sets these so the hidden note claims no
-<a href=#151 id=151 data-nosnippet>151</a>      // layout space; carried over.
-<a href=#152 id=152 data-nosnippet>152</a>      </span>props.insert(<span class="string">"width"</span>, Stored::from(<span class="macro">Dimension!</span>(<span class="string">"0pt"</span>)));
-<a href=#153 id=153 data-nosnippet>153</a>      props.insert(<span class="string">"height"</span>, Stored::from(<span class="macro">Dimension!</span>(<span class="string">"0pt"</span>)));
-<a href=#154 id=154 data-nosnippet>154</a>      <span class="prelude-val">Ok</span>(props)
-<a href=#155 id=155 data-nosnippet>155</a>    },
-<a href=#156 id=156 data-nosnippet>156</a>    <span class="comment">// acmart's own documentation: "Unlike \caption, which is used alongside the
-<a href=#157 id=157 data-nosnippet>157</a>    // image, \Description is intended to be used INSTEAD OF the image." So a
-<a href=#158 id=158 data-nosnippet>158</a>    // `\Description` is a TEXT ALTERNATIVE, not supplementary prose — which in
-<a href=#159 id=159 data-nosnippet>159</a>    // ARIA is name-like (`aria-label`), not `aria-describedby` (announced in
-<a href=#160 id=160 data-nosnippet>160</a>    // ADDITION to the name). That also fixes the two arguments' roles: `[short]`
-<a href=#161 id=161 data-nosnippet>161</a>    // is the concise alternative, `{long}` the extended description.
+<a href=#105 id=105 data-nosnippet>105</a>  // `[short]` and `{long}` are two DISTINCT authored fields, so they get two
+<a href=#106 id=106 data-nosnippet>106</a>  // distinct elements — never concatenated into one. Merging them yields a
+<a href=#107 id=107 data-nosnippet>107</a>  // run-on ("Fly 1 and Fly 2 look identical. Fly 1 and fly 2 comparison
+<a href=#108 id=108 data-nosnippet>108</a>  // shows…") and destroys the distinction, so no consumer can tell which text
+<a href=#109 id=109 data-nosnippet>109</a>  // the author wrote as the brief alternative.
+<a href=#110 id=110 data-nosnippet>110</a>  //
+<a href=#111 id=111 data-nosnippet>111</a>  // The old binding emitted the short one ALONE, which is why
+<a href=#112 id=112 data-nosnippet>112</a>  // `t/complex/acm_aria` recorded "Fly 1 and Fly 2 look identical" and lost the
+<a href=#113 id=113 data-nosnippet>113</a>  // sentence that actually describes the figure.
+<a href=#114 id=114 data-nosnippet>114</a>  //
+<a href=#115 id=115 data-nosnippet>115</a>  // Carried as `&lt;ltx:note&gt;` — the document builder places a note inside the
+<a href=#116 id=116 data-nosnippet>116</a>  // float's `&lt;caption&gt;`, where the old binding put it. An `&lt;ltx:text&gt;` is
+<a href=#117 id=117 data-nosnippet>117</a>  // INLINE, so the builder auto-opens a `&lt;p&gt;` for it, and a `&lt;p&gt;` at figure
+<a href=#118 id=118 data-nosnippet>118</a>  // level is tagged `ltx_figure_panel`, which makes the post-processor spin up
+<a href=#119 id=119 data-nosnippet>119</a>  // a whole `ltx_flex_figure`/`ltx_flex_cell` wrapper around two hidden spans
+<a href=#120 id=120 data-nosnippet>120</a>  // (inert, since the caption partitions it and the real subfigures keep their
+<a href=#121 id=121 data-nosnippet>121</a>  // width class, but pure noise in the output).
+<a href=#122 id=122 data-nosnippet>122</a>  //
+<a href=#123 id=123 data-nosnippet>123</a>  // The footnote decoration a note normally gets — the `†` mark and the
+<a href=#124 id=124 data-nosnippet>124</a>  // `&lt;role&gt;: ` type prefix — is suppressed for these by a dedicated template in
+<a href=#125 id=125 data-nosnippet>125</a>  // `LaTeXML-meta-xhtml.xsl` keyed on `ltx_acm_description`, so the referenced
+<a href=#126 id=126 data-nosnippet>126</a>  // text stays clean for assistive technology.
+<a href=#127 id=127 data-nosnippet>127</a>  //
+<a href=#128 id=128 data-nosnippet>128</a>  // The short description gets its own id so it stays individually
+<a href=#129 id=129 data-nosnippet>129</a>  // addressable (nothing references it today — its text goes into
+<a href=#130 id=130 data-nosnippet>130</a>  // `aria-label` — but an anchor on authored content costs nothing). It is
+<a href=#131 id=131 data-nosnippet>131</a>  // derived in `properties` rather than written as `#id-short` in the
+<a href=#132 id=132 data-nosnippet>132</a>  // template, which does NOT work: a `#name` hole runs to the end of the
+<a href=#133 id=133 data-nosnippet>133</a>  // identifier, so `#id-short` names a property called `id-short` — absent,
+<a href=#134 id=134 data-nosnippet>134</a>  // so the element silently emits NO xml:id at all — instead of `#id`
+<a href=#135 id=135 data-nosnippet>135</a>  // followed by a literal `-short`. Ids use a `-short` suffix rather than a
+<a href=#136 id=136 data-nosnippet>136</a>  // dotted one so they need no escaping in a CSS selector.
+<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\Description[] Undigested"</span>,
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="string">"^^?#1(&lt;ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'&gt;#1&lt;/ltx:note&gt;)()\
+<a href=#139 id=139 data-nosnippet>139</a>     &lt;ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'&gt;#2&lt;/ltx:note&gt;"</span>,
+<a href=#140 id=140 data-nosnippet>140</a>    properties =&gt; {
+<a href=#141 id=141 data-nosnippet>141</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">RefStepCounter!</span>(<span class="string">"acmlabel"</span>)<span class="question-mark">?</span>;
+<a href=#142 id=142 data-nosnippet>142</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.get(<span class="string">"id"</span>) {
+<a href=#143 id=143 data-nosnippet>143</a>        <span class="kw">let </span>short = <span class="macro">format!</span>(<span class="string">"{id}-short"</span>);
+<a href=#144 id=144 data-nosnippet>144</a>        props.insert(<span class="string">"shortid"</span>, Stored::from(short));
+<a href=#145 id=145 data-nosnippet>145</a>      }
+<a href=#146 id=146 data-nosnippet>146</a>      <span class="comment">// Perl acmart.cls.ltxml L79 sets these so the hidden note claims no
+<a href=#147 id=147 data-nosnippet>147</a>      // layout space; carried over.
+<a href=#148 id=148 data-nosnippet>148</a>      </span>props.insert(<span class="string">"width"</span>, Stored::from(<span class="macro">Dimension!</span>(<span class="string">"0pt"</span>)));
+<a href=#149 id=149 data-nosnippet>149</a>      props.insert(<span class="string">"height"</span>, Stored::from(<span class="macro">Dimension!</span>(<span class="string">"0pt"</span>)));
+<a href=#150 id=150 data-nosnippet>150</a>      <span class="prelude-val">Ok</span>(props)
+<a href=#151 id=151 data-nosnippet>151</a>    },
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="comment">// acmart's own documentation: "Unlike \caption, which is used alongside the
+<a href=#153 id=153 data-nosnippet>153</a>    // image, \Description is intended to be used INSTEAD OF the image." So a
+<a href=#154 id=154 data-nosnippet>154</a>    // `\Description` is a TEXT ALTERNATIVE, not supplementary prose — which in
+<a href=#155 id=155 data-nosnippet>155</a>    // ARIA is name-like (`aria-label`), not `aria-describedby` (announced in
+<a href=#156 id=156 data-nosnippet>156</a>    // ADDITION to the name). That also fixes the two arguments' roles: `[short]`
+<a href=#157 id=157 data-nosnippet>157</a>    // is the concise alternative, `{long}` the extended description.
+<a href=#158 id=158 data-nosnippet>158</a>    //
+<a href=#159 id=159 data-nosnippet>159</a>    //   `\Description[s]{l}`  → aria-label = s, aria-describedby → l's block
+<a href=#160 id=160 data-nosnippet>160</a>    //   `\Description{l}`, l plain    → aria-label = l (it replaces the image)
+<a href=#161 id=161 data-nosnippet>161</a>    //   `\Description{l}`, l w/ markup → aria-describedby → l's block
 <a href=#162 id=162 data-nosnippet>162</a>    //
-<a href=#163 id=163 data-nosnippet>163</a>    //   `\Description[s]{l}`  → aria-label = s, aria-describedby → l's block
-<a href=#164 id=164 data-nosnippet>164</a>    //   `\Description{l}`, l plain    → aria-label = l (it replaces the image)
-<a href=#165 id=165 data-nosnippet>165</a>    //   `\Description{l}`, l w/ markup → aria-describedby → l's block
-<a href=#166 id=166 data-nosnippet>166</a>    //
-<a href=#167 id=167 data-nosnippet>167</a>    // The last case is why the argument is read `Undigested`: an `aria-label`
-<a href=#168 id=168 data-nosnippet>168</a>    // is a plain string and cannot carry markup, so we must inspect the tokens
-<a href=#169 id=169 data-nosnippet>169</a>    // to choose the slot BEFORE expanding anything. A control sequence (or an
-<a href=#170 id=170 data-nosnippet>170</a>    // active/`$`/`^`/`_` token) means real markup, so the block carries it.
-<a href=#171 id=171 data-nosnippet>171</a>    //
-<a href=#172 id=172 data-nosnippet>172</a>    // The block is always emitted, so the text stays addressable, but it is
-<a href=#173 id=173 data-nosnippet>173</a>    // referenced only when it is not already the label — otherwise the same
-<a href=#174 id=174 data-nosnippet>174</a>    // sentence would be both the name and the description. An unreferenced
-<a href=#175 id=175 data-nosnippet>175</a>    // hidden block is inert: `display:none` content is announced only when
-<a href=#176 id=176 data-nosnippet>176</a>    // something references it.
-<a href=#177 id=177 data-nosnippet>177</a>    //
-<a href=#178 id=178 data-nosnippet>178</a>    // acmart's NEW mechanism for the same purpose is `\includegraphics[alt=…]`
-<a href=#179 id=179 data-nosnippet>179</a>    // (switched on by `\DocumentMetadata`), handled in `graphicx_sty.rs` and
-<a href=#180 id=180 data-nosnippet>180</a>    // landing on the `&lt;img&gt;` itself. A document using BOTH — e.g.
-<a href=#181 id=181 data-nosnippet>181</a>    // arXiv:2607.21760, which repeats the same paragraph in each — will convey
-<a href=#182 id=182 data-nosnippet>182</a>    // it twice; that is the author's duplication across two documented
-<a href=#183 id=183 data-nosnippet>183</a>    // mechanisms, not something to second-guess here, and `\Description` is
-<a href=#184 id=184 data-nosnippet>184</a>    // scoped to the float with no reliable way to associate it with one image.
-<a href=#185 id=185 data-nosnippet>185</a>    </span>before_construct =&gt; sub[document, whatsit] {
-<a href=#186 id=186 data-nosnippet>186</a>      <span class="kw">let </span><span class="prelude-val">Some</span>(id) = whatsit.get_property(<span class="string">"id"</span>).map(|v| v.to_string()) <span class="kw">else </span>{
-<a href=#187 id=187 data-nosnippet>187</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#188 id=188 data-nosnippet>188</a>      };
-<a href=#189 id=189 data-nosnippet>189</a>      <span class="comment">// Does the long description contain markup, or is it plain text?
-<a href=#190 id=190 data-nosnippet>190</a>      </span><span class="kw">let </span>long_is_plain = whatsit
-<a href=#191 id=191 data-nosnippet>191</a>        .get_arg(<span class="number">2</span>)
-<a href=#192 id=192 data-nosnippet>192</a>        .and_then(|d| d.raw_tokens())
-<a href=#193 id=193 data-nosnippet>193</a>        .is_some_and(|tks| {
-<a href=#194 id=194 data-nosnippet>194</a>          tks.unlist_ref().iter().all(|t| {
-<a href=#195 id=195 data-nosnippet>195</a>            <span class="macro">matches!</span>(
-<a href=#196 id=196 data-nosnippet>196</a>              t.get_catcode(),
-<a href=#197 id=197 data-nosnippet>197</a>              Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::EOL
-<a href=#198 id=198 data-nosnippet>198</a>            )
-<a href=#199 id=199 data-nosnippet>199</a>          })
-<a href=#200 id=200 data-nosnippet>200</a>        });
-<a href=#201 id=201 data-nosnippet>201</a>      <span class="kw">let </span>short = whatsit.get_arg(<span class="number">1</span>).map(|d| d.to_attribute());
-<a href=#202 id=202 data-nosnippet>202</a>      <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>figure) = document.get_element() <span class="kw">else </span>{
-<a href=#203 id=203 data-nosnippet>203</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#204 id=204 data-nosnippet>204</a>      };
-<a href=#205 id=205 data-nosnippet>205</a>      <span class="kw">match </span>short {
-<a href=#206 id=206 data-nosnippet>206</a>        <span class="comment">// Concise alternative available: it labels, the long one describes.
-<a href=#207 id=207 data-nosnippet>207</a>        </span><span class="prelude-val">Some</span>(s) =&gt; {
-<a href=#208 id=208 data-nosnippet>208</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:label"</span>, <span class="kw-2">&amp;</span>s)<span class="question-mark">?</span>;
-<a href=#209 id=209 data-nosnippet>209</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:describedby"</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
-<a href=#210 id=210 data-nosnippet>210</a>        },
-<a href=#211 id=211 data-nosnippet>211</a>        <span class="comment">// Lone description: it stands in for the image, so it labels — unless
-<a href=#212 id=212 data-nosnippet>212</a>        // it carries markup an attribute cannot hold.
-<a href=#213 id=213 data-nosnippet>213</a>        </span><span class="prelude-val">None </span><span class="kw">if </span>long_is_plain =&gt; {
-<a href=#214 id=214 data-nosnippet>214</a>          <span class="kw">let </span>text = whatsit.get_arg(<span class="number">2</span>).map(|d| d.to_attribute()).unwrap_or_default();
-<a href=#215 id=215 data-nosnippet>215</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:label"</span>, <span class="kw-2">&amp;</span>text)<span class="question-mark">?</span>;
-<a href=#216 id=216 data-nosnippet>216</a>        },
-<a href=#217 id=217 data-nosnippet>217</a>        <span class="prelude-val">None </span>=&gt; {
-<a href=#218 id=218 data-nosnippet>218</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:describedby"</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
-<a href=#219 id=219 data-nosnippet>219</a>        },
-<a href=#220 id=220 data-nosnippet>220</a>      }
-<a href=#221 id=221 data-nosnippet>221</a>    }
-<a href=#222 id=222 data-nosnippet>222</a>  );
-<a href=#223 id=223 data-nosnippet>223</a>
-<a href=#224 id=224 data-nosnippet>224</a>  <span class="comment">//======================================================================
-<a href=#225 id=225 data-nosnippet>225</a>  // Use \author for EACH author, follow with \orcid, \affiliation, \email as needed.
-<a href=#226 id=226 data-nosnippet>226</a>  // Note that \affiliation can apply to all preceding authors without one
-<a href=#227 id=227 data-nosnippet>227</a>  // (Perl PR #2767)
-<a href=#228 id=228 data-nosnippet>228</a>  // Real acmart is \renewcommand\author[2][]: optional [short-name] (running
-<a href=#229 id=229 data-nosnippet>229</a>  // head only) + mandatory full name. Perl binds only \author{}, so a real
-<a href=#230 id=230 data-nosnippet>230</a>  // \author[F. Poli]{Federico Poli} leaks '[' and drops the name; accept the
-<a href=#231 id=231 data-nosnippet>231</a>  // optional short-name and drop it (beyond-Perl; the short name is a derived
-<a href=#232 id=232 data-nosnippet>232</a>  // running-head abbreviation, not new information).
-<a href=#233 id=233 data-nosnippet>233</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\author[]{}"</span>,              <span class="string">"\\lx@add@creator[role=author]{#2}"</span>);
-<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\editor{}"</span>,                <span class="string">"\\lx@add@creator[role=editor]{#1}"</span>);
-<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affiliation{}"</span>,           <span class="string">"\\lx@add@contact[role=affiliation,annotate=new]{#1}"</span>);
-<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\additionalaffiliation{}"</span>, <span class="string">"\\lx@add@contact[role=altaffiliation]{#1}"</span>);
-<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\email [] Semiverbatim"</span>,   <span class="string">"\\lx@add@contact[role=email,name={email: }]{#2}"</span>);
-<a href=#238 id=238 data-nosnippet>238</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>,                 <span class="string">"\\lx@add@contact[role=orcid, name={OrcID: }]{#1}"</span>);
-<a href=#239 id=239 data-nosnippet>239</a>
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="comment">//======================================================================
-<a href=#241 id=241 data-nosnippet>241</a>  // Internal structure to affiliation (Perl PR #2767: comma-joined parts;
-<a href=#242 id=242 data-nosnippet>242</a>  // empty parts skipped)
-<a href=#243 id=243 data-nosnippet>243</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@acm@addresspartsep"</span>, <span class="string">""</span>);
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@acm@addresspart{}{}"</span>,
-<a href=#245 id=245 data-nosnippet>245</a>    <span class="string">"\\ifx.#2.\\else\\lx@acm@addresspartsep\\def\\lx@acm@addresspartsep{,~}\\lx@acm@addresspart@{#1}{#2}\\fi"</span>);
-<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@acm@addresspart@{}{}"</span>,
-<a href=#247 id=247 data-nosnippet>247</a>    <span class="string">"&lt;ltx:text class='ltx_affiliation_#1' _noautoclose='1'&gt;#2&lt;/ltx:text&gt;"</span>,
-<a href=#248 id=248 data-nosnippet>248</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\position{}"</span>,      <span class="string">"\\lx@acm@addresspart{position}{#1}"</span>);
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\institution{}"</span>,   <span class="string">"\\lx@acm@addresspart{institution}{#1}"</span>);
-<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\department{}"</span>,    <span class="string">"\\lx@acm@addresspart{department}{#1}"</span>);
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\streetaddress{}"</span>, <span class="string">"\\lx@acm@addresspart{streetaddress}{#1}"</span>);
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\city{}"</span>,          <span class="string">"\\lx@acm@addresspart{city}{#1}"</span>);
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>,         <span class="string">"\\lx@acm@addresspart{state}{#1}"</span>);
-<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>,      <span class="string">"\\lx@acm@addresspart{postcode}{#1}"</span>);
-<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>,       <span class="string">"\\lx@acm@addresspart{country}{#1}"</span>);
+<a href=#163 id=163 data-nosnippet>163</a>    // The last case is why the argument is read `Undigested`: an `aria-label`
+<a href=#164 id=164 data-nosnippet>164</a>    // is a plain string and cannot carry markup, so we must inspect the tokens
+<a href=#165 id=165 data-nosnippet>165</a>    // to choose the slot BEFORE expanding anything. A control sequence (or an
+<a href=#166 id=166 data-nosnippet>166</a>    // active/`$`/`^`/`_` token) means real markup, so the block carries it.
+<a href=#167 id=167 data-nosnippet>167</a>    //
+<a href=#168 id=168 data-nosnippet>168</a>    // The block is always emitted, so the text stays addressable, but it is
+<a href=#169 id=169 data-nosnippet>169</a>    // referenced only when it is not already the label — otherwise the same
+<a href=#170 id=170 data-nosnippet>170</a>    // sentence would be both the name and the description. An unreferenced
+<a href=#171 id=171 data-nosnippet>171</a>    // hidden block is inert: `display:none` content is announced only when
+<a href=#172 id=172 data-nosnippet>172</a>    // something references it.
+<a href=#173 id=173 data-nosnippet>173</a>    //
+<a href=#174 id=174 data-nosnippet>174</a>    // acmart's NEW mechanism for the same purpose is `\includegraphics[alt=…]`
+<a href=#175 id=175 data-nosnippet>175</a>    // (switched on by `\DocumentMetadata`), handled in `graphicx_sty.rs` and
+<a href=#176 id=176 data-nosnippet>176</a>    // landing on the `&lt;img&gt;` itself. A document using BOTH — e.g.
+<a href=#177 id=177 data-nosnippet>177</a>    // arXiv:2607.21760, which repeats the same paragraph in each — will convey
+<a href=#178 id=178 data-nosnippet>178</a>    // it twice; that is the author's duplication across two documented
+<a href=#179 id=179 data-nosnippet>179</a>    // mechanisms, not something to second-guess here, and `\Description` is
+<a href=#180 id=180 data-nosnippet>180</a>    // scoped to the float with no reliable way to associate it with one image.
+<a href=#181 id=181 data-nosnippet>181</a>    </span>before_construct =&gt; sub[document, whatsit] {
+<a href=#182 id=182 data-nosnippet>182</a>      <span class="kw">let </span><span class="prelude-val">Some</span>(id) = whatsit.get_property(<span class="string">"id"</span>).map(|v| v.to_string()) <span class="kw">else </span>{
+<a href=#183 id=183 data-nosnippet>183</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#184 id=184 data-nosnippet>184</a>      };
+<a href=#185 id=185 data-nosnippet>185</a>      <span class="comment">// Does the long description contain markup, or is it plain text?
+<a href=#186 id=186 data-nosnippet>186</a>      </span><span class="kw">let </span>long_is_plain = whatsit
+<a href=#187 id=187 data-nosnippet>187</a>        .get_arg(<span class="number">2</span>)
+<a href=#188 id=188 data-nosnippet>188</a>        .and_then(|d| d.raw_tokens())
+<a href=#189 id=189 data-nosnippet>189</a>        .is_some_and(|tks| {
+<a href=#190 id=190 data-nosnippet>190</a>          tks.unlist_ref().iter().all(|t| {
+<a href=#191 id=191 data-nosnippet>191</a>            <span class="macro">matches!</span>(
+<a href=#192 id=192 data-nosnippet>192</a>              t.get_catcode(),
+<a href=#193 id=193 data-nosnippet>193</a>              Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::EOL
+<a href=#194 id=194 data-nosnippet>194</a>            )
+<a href=#195 id=195 data-nosnippet>195</a>          })
+<a href=#196 id=196 data-nosnippet>196</a>        });
+<a href=#197 id=197 data-nosnippet>197</a>      <span class="kw">let </span>short = whatsit.get_arg(<span class="number">1</span>).map(|d| d.to_attribute());
+<a href=#198 id=198 data-nosnippet>198</a>      <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>figure) = document.get_element() <span class="kw">else </span>{
+<a href=#199 id=199 data-nosnippet>199</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#200 id=200 data-nosnippet>200</a>      };
+<a href=#201 id=201 data-nosnippet>201</a>      <span class="kw">match </span>short {
+<a href=#202 id=202 data-nosnippet>202</a>        <span class="comment">// Concise alternative available: it labels, the long one describes.
+<a href=#203 id=203 data-nosnippet>203</a>        </span><span class="prelude-val">Some</span>(s) =&gt; {
+<a href=#204 id=204 data-nosnippet>204</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:label"</span>, <span class="kw-2">&amp;</span>s)<span class="question-mark">?</span>;
+<a href=#205 id=205 data-nosnippet>205</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:describedby"</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
+<a href=#206 id=206 data-nosnippet>206</a>        },
+<a href=#207 id=207 data-nosnippet>207</a>        <span class="comment">// Lone description: it stands in for the image, so it labels — unless
+<a href=#208 id=208 data-nosnippet>208</a>        // it carries markup an attribute cannot hold.
+<a href=#209 id=209 data-nosnippet>209</a>        </span><span class="prelude-val">None </span><span class="kw">if </span>long_is_plain =&gt; {
+<a href=#210 id=210 data-nosnippet>210</a>          <span class="kw">let </span>text = whatsit.get_arg(<span class="number">2</span>).map(|d| d.to_attribute()).unwrap_or_default();
+<a href=#211 id=211 data-nosnippet>211</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:label"</span>, <span class="kw-2">&amp;</span>text)<span class="question-mark">?</span>;
+<a href=#212 id=212 data-nosnippet>212</a>        },
+<a href=#213 id=213 data-nosnippet>213</a>        <span class="prelude-val">None </span>=&gt; {
+<a href=#214 id=214 data-nosnippet>214</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>figure, <span class="string">"aria:describedby"</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
+<a href=#215 id=215 data-nosnippet>215</a>        },
+<a href=#216 id=216 data-nosnippet>216</a>      }
+<a href=#217 id=217 data-nosnippet>217</a>    }
+<a href=#218 id=218 data-nosnippet>218</a>  );
+<a href=#219 id=219 data-nosnippet>219</a>
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="comment">//======================================================================
+<a href=#221 id=221 data-nosnippet>221</a>  // Use \author for EACH author, follow with \orcid, \affiliation, \email as needed.
+<a href=#222 id=222 data-nosnippet>222</a>  // Note that \affiliation can apply to all preceding authors without one
+<a href=#223 id=223 data-nosnippet>223</a>  // (Perl PR #2767)
+<a href=#224 id=224 data-nosnippet>224</a>  // Real acmart is \renewcommand\author[2][]: optional [short-name] (running
+<a href=#225 id=225 data-nosnippet>225</a>  // head only) + mandatory full name. Perl binds only \author{}, so a real
+<a href=#226 id=226 data-nosnippet>226</a>  // \author[F. Poli]{Federico Poli} leaks '[' and drops the name; accept the
+<a href=#227 id=227 data-nosnippet>227</a>  // optional short-name and drop it (beyond-Perl; the short name is a derived
+<a href=#228 id=228 data-nosnippet>228</a>  // running-head abbreviation, not new information).
+<a href=#229 id=229 data-nosnippet>229</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\author[]{}"</span>,              <span class="string">"\\lx@add@creator[role=author]{#2}"</span>);
+<a href=#230 id=230 data-nosnippet>230</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\editor{}"</span>,                <span class="string">"\\lx@add@creator[role=editor]{#1}"</span>);
+<a href=#231 id=231 data-nosnippet>231</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affiliation{}"</span>,           <span class="string">"\\lx@add@contact[role=affiliation,annotate=new]{#1}"</span>);
+<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\additionalaffiliation{}"</span>, <span class="string">"\\lx@add@contact[role=altaffiliation]{#1}"</span>);
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\email [] Semiverbatim"</span>,   <span class="string">"\\lx@add@contact[role=email,name={email: }]{#2}"</span>);
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>,                 <span class="string">"\\lx@add@contact[role=orcid, name={OrcID: }]{#1}"</span>);
+<a href=#235 id=235 data-nosnippet>235</a>
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="comment">//======================================================================
+<a href=#237 id=237 data-nosnippet>237</a>  // Internal structure to affiliation (Perl PR #2767: comma-joined parts;
+<a href=#238 id=238 data-nosnippet>238</a>  // empty parts skipped)
+<a href=#239 id=239 data-nosnippet>239</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@acm@addresspartsep"</span>, <span class="string">""</span>);
+<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@acm@addresspart{}{}"</span>,
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="string">"\\ifx.#2.\\else\\lx@acm@addresspartsep\\def\\lx@acm@addresspartsep{,~}\\lx@acm@addresspart@{#1}{#2}\\fi"</span>);
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@acm@addresspart@{}{}"</span>,
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="string">"&lt;ltx:text class='ltx_affiliation_#1' _noautoclose='1'&gt;#2&lt;/ltx:text&gt;"</span>,
+<a href=#244 id=244 data-nosnippet>244</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\position{}"</span>,      <span class="string">"\\lx@acm@addresspart{position}{#1}"</span>);
+<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\institution{}"</span>,   <span class="string">"\\lx@acm@addresspart{institution}{#1}"</span>);
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\department{}"</span>,    <span class="string">"\\lx@acm@addresspart{department}{#1}"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\streetaddress{}"</span>, <span class="string">"\\lx@acm@addresspart{streetaddress}{#1}"</span>);
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\city{}"</span>,          <span class="string">"\\lx@acm@addresspart{city}{#1}"</span>);
+<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>,         <span class="string">"\\lx@acm@addresspart{state}{#1}"</span>);
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>,      <span class="string">"\\lx@acm@addresspart{postcode}{#1}"</span>);
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>,       <span class="string">"\\lx@acm@addresspart{country}{#1}"</span>);
+<a href=#253 id=253 data-nosnippet>253</a>
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlenote{}"</span>,    <span class="string">"\\lx@add@pubnote[role=note]{#1}"</span>);
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subtitlenote{}"</span>, <span class="string">"\\lx@add@pubnote[role=note]{#1}"</span>);
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\authornote{}"</span>,   <span class="string">"\\lx@add@contact[role=note]{#1}"</span>);
 <a href=#257 id=257 data-nosnippet>257</a>
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlenote{}"</span>,    <span class="string">"\\lx@add@pubnote[role=note]{#1}"</span>);
-<a href=#259 id=259 data-nosnippet>259</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subtitlenote{}"</span>, <span class="string">"\\lx@add@pubnote[role=note]{#1}"</span>);
-<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\authornote{}"</span>,   <span class="string">"\\lx@add@contact[role=note]{#1}"</span>);
-<a href=#261 id=261 data-nosnippet>261</a>
-<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract"</span>,    <span class="string">"\\lx@begin@abstract"</span>);
-<a href=#263 id=263 data-nosnippet>263</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endabstract"</span>, <span class="string">"\\lx@end@abstract"</span>);
-<a href=#264 id=264 data-nosnippet>264</a>
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="comment">// Rust-only content preserves (Perl gobbles these)
-<a href=#266 id=266 data-nosnippet>266</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\shortauthors{}"</span>, <span class="string">"\\lx@add@frontmatter{ltx:note}[role=shortauthors]{#1}"</span>);
-<a href=#267 id=267 data-nosnippet>267</a>  def_macro_noop(<span class="string">"\\authornotemark[]"</span>)<span class="question-mark">?</span>;
-<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\authorsaddresses{}"</span>,
-<a href=#269 id=269 data-nosnippet>269</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}"</span>);
-<a href=#270 id=270 data-nosnippet>270</a>  def_macro_noop(<span class="string">"\\startPage"</span>)<span class="question-mark">?</span>;
-<a href=#271 id=271 data-nosnippet>271</a>  def_macro_noop(<span class="string">"\\settopmatter{}"</span>)<span class="question-mark">?</span>;
-<a href=#272 id=272 data-nosnippet>272</a>  def_macro_noop(<span class="string">"\\copyrightpermissionfootnoterule"</span>)<span class="question-mark">?</span>;
-<a href=#273 id=273 data-nosnippet>273</a>  def_macro_noop(<span class="string">"\\acmBadgeL"</span>)<span class="question-mark">?</span>;
-<a href=#274 id=274 data-nosnippet>274</a>
-<a href=#275 id=275 data-nosnippet>275</a>  <span class="comment">//======================================================================
-<a href=#276 id=276 data-nosnippet>276</a>  // Natbib cite aliases
-<a href=#277 id=277 data-nosnippet>277</a>  </span><span class="macro">Let!</span>(<span class="string">"\\citeN"</span>, <span class="string">"\\cite"</span>);
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">Let!</span>(<span class="string">"\\cite"</span>, <span class="string">"\\citep"</span>);
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">Let!</span>(<span class="string">"\\citeANP"</span>, <span class="string">"\\citeauthor"</span>);
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">Let!</span>(<span class="string">"\\citeNN"</span>, <span class="string">"\\citeyearpar"</span>);
-<a href=#281 id=281 data-nosnippet>281</a>  <span class="macro">Let!</span>(<span class="string">"\\citeyearNP"</span>, <span class="string">"\\citeyear"</span>);
-<a href=#282 id=282 data-nosnippet>282</a>  <span class="macro">Let!</span>(<span class="string">"\\citeyear"</span>, <span class="string">"\\citeyearpar"</span>);
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">Let!</span>(<span class="string">"\\citeNP"</span>, <span class="string">"\\citealt"</span>);
-<a href=#284 id=284 data-nosnippet>284</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\shortcite{}"</span>, <span class="string">"\\citeyear{#1}"</span>);
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">Let!</span>(<span class="string">"\\citeA"</span>, <span class="string">"\\citeauthor"</span>);
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\fulltextwidth" </span>=&gt; Dimension::from_str(<span class="string">"0pt"</span>)<span class="question-mark">?</span>);
-<a href=#288 id=288 data-nosnippet>288</a>
-<a href=#289 id=289 data-nosnippet>289</a>  <span class="comment">//======================================================================
-<a href=#290 id=290 data-nosnippet>290</a>  // Environments
-<a href=#291 id=291 data-nosnippet>291</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{printonly}"</span>, <span class="string">""</span>);
-<a href=#292 id=292 data-nosnippet>292</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{screenonly}"</span>, <span class="string">"#body"</span>);
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{anonsuppress}"</span>, <span class="string">""</span>);
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract"</span>,    <span class="string">"\\lx@begin@abstract"</span>);
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endabstract"</span>, <span class="string">"\\lx@end@abstract"</span>);
+<a href=#260 id=260 data-nosnippet>260</a>
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="comment">// Rust-only content preserves (Perl gobbles these)
+<a href=#262 id=262 data-nosnippet>262</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\shortauthors{}"</span>, <span class="string">"\\lx@add@frontmatter{ltx:note}[role=shortauthors]{#1}"</span>);
+<a href=#263 id=263 data-nosnippet>263</a>  def_macro_noop(<span class="string">"\\authornotemark[]"</span>)<span class="question-mark">?</span>;
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\authorsaddresses{}"</span>,
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}"</span>);
+<a href=#266 id=266 data-nosnippet>266</a>  def_macro_noop(<span class="string">"\\startPage"</span>)<span class="question-mark">?</span>;
+<a href=#267 id=267 data-nosnippet>267</a>  def_macro_noop(<span class="string">"\\settopmatter{}"</span>)<span class="question-mark">?</span>;
+<a href=#268 id=268 data-nosnippet>268</a>  def_macro_noop(<span class="string">"\\copyrightpermissionfootnoterule"</span>)<span class="question-mark">?</span>;
+<a href=#269 id=269 data-nosnippet>269</a>  def_macro_noop(<span class="string">"\\acmBadgeL"</span>)<span class="question-mark">?</span>;
+<a href=#270 id=270 data-nosnippet>270</a>
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="comment">//======================================================================
+<a href=#272 id=272 data-nosnippet>272</a>  // Natbib cite aliases
+<a href=#273 id=273 data-nosnippet>273</a>  </span><span class="macro">Let!</span>(<span class="string">"\\citeN"</span>, <span class="string">"\\cite"</span>);
+<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">Let!</span>(<span class="string">"\\cite"</span>, <span class="string">"\\citep"</span>);
+<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">Let!</span>(<span class="string">"\\citeANP"</span>, <span class="string">"\\citeauthor"</span>);
+<a href=#276 id=276 data-nosnippet>276</a>  <span class="macro">Let!</span>(<span class="string">"\\citeNN"</span>, <span class="string">"\\citeyearpar"</span>);
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">Let!</span>(<span class="string">"\\citeyearNP"</span>, <span class="string">"\\citeyear"</span>);
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">Let!</span>(<span class="string">"\\citeyear"</span>, <span class="string">"\\citeyearpar"</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">Let!</span>(<span class="string">"\\citeNP"</span>, <span class="string">"\\citealt"</span>);
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\shortcite{}"</span>, <span class="string">"\\citeyear{#1}"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="macro">Let!</span>(<span class="string">"\\citeA"</span>, <span class="string">"\\citeauthor"</span>);
+<a href=#282 id=282 data-nosnippet>282</a>
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\fulltextwidth" </span>=&gt; Dimension::from_str(<span class="string">"0pt"</span>)<span class="question-mark">?</span>);
+<a href=#284 id=284 data-nosnippet>284</a>
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="comment">//======================================================================
+<a href=#286 id=286 data-nosnippet>286</a>  // Environments
+<a href=#287 id=287 data-nosnippet>287</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{printonly}"</span>, <span class="string">""</span>);
+<a href=#288 id=288 data-nosnippet>288</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{screenonly}"</span>, <span class="string">"#body"</span>);
+<a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{anonsuppress}"</span>, <span class="string">""</span>);
+<a href=#290 id=290 data-nosnippet>290</a>
+<a href=#291 id=291 data-nosnippet>291</a>  <span class="comment">//======================================================================
+<a href=#292 id=292 data-nosnippet>292</a>  // CCS descriptions
+<a href=#293 id=293 data-nosnippet>293</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ccsdesc[]{}"</span>, <span class="string">"\\lx@add@pubnote[role=ccs,name={CCS:~}]{#2}"</span>);
 <a href=#294 id=294 data-nosnippet>294</a>
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="comment">//======================================================================
-<a href=#296 id=296 data-nosnippet>296</a>  // CCS descriptions
-<a href=#297 id=297 data-nosnippet>297</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ccsdesc[]{}"</span>, <span class="string">"\\lx@add@pubnote[role=ccs,name={CCS:~}]{#2}"</span>);
-<a href=#298 id=298 data-nosnippet>298</a>
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// Exclude CCSXML environment (Perl: defineExcluded(undef, 'CCSXML'))
-<a href=#300 id=300 data-nosnippet>300</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\excludecomment{CCSXML}"</span>);
-<a href=#301 id=301 data-nosnippet>301</a>
-<a href=#302 id=302 data-nosnippet>302</a>  <span class="comment">//======================================================================
-<a href=#303 id=303 data-nosnippet>303</a>  // Acknowledgements
-<a href=#304 id=304 data-nosnippet>304</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgmentsname"</span>, <span class="string">"Acknowledgements"</span>);
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="comment">// Perl L167-168 ships properties =&gt; sub { (name =&gt; Digest(T_CS('\acknowledgmentsname'))) }
-<a href=#306 id=306 data-nosnippet>306</a>  // so a user `\renewcommand{\acknowledgmentsname}{Danksagung}` localizes the
-<a href=#307 id=307 data-nosnippet>307</a>  // attribute. Rust previously hard-coded "Acknowledgements", ignoring any
-<a href=#308 id=308 data-nosnippet>308</a>  // override. Use DigestIf! pattern (same as listings_sty:2060) to resolve
-<a href=#309 id=309 data-nosnippet>309</a>  // dynamically. Inline `&lt;ltx:acknowledgements name='#name'&gt;` template
-<a href=#310 id=310 data-nosnippet>310</a>  // matches the Perl form.
-<a href=#311 id=311 data-nosnippet>311</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acks"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
-<a href=#312 id=312 data-nosnippet>312</a>    properties =&gt; {
-<a href=#313 id=313 data-nosnippet>313</a>      <span class="kw">let </span>name_toks = <span class="macro">DigestIf!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\acknowledgmentsname"</span>))<span class="question-mark">?</span>;
-<a href=#314 id=314 data-nosnippet>314</a>      <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; name_toks)
-<a href=#315 id=315 data-nosnippet>315</a>    });
-<a href=#316 id=316 data-nosnippet>316</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endacks"</span>, <span class="string">"&lt;/ltx:acknowledgements&gt;"</span>);
-<a href=#317 id=317 data-nosnippet>317</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\grantsponsor Semiverbatim {} Semiverbatim"</span>, <span class="string">"Sponsor #2 \\url{#3}"</span>);
-<a href=#318 id=318 data-nosnippet>318</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\grantnum OptionalSemiverbatim Semiverbatim {}"</span>, <span class="string">"Grant \\##3"</span>);
-<a href=#319 id=319 data-nosnippet>319</a>
-<a href=#320 id=320 data-nosnippet>320</a>  <span class="comment">//======================================================================
-<a href=#321 id=321 data-nosnippet>321</a>  // Float environments
-<a href=#322 id=322 data-nosnippet>322</a>  //
-<a href=#323 id=323 data-nosnippet>323</a>  // teaserfigure — real acmart DEFERS the teaser: `\newenvironment{teaserfigure}
-<a href=#324 id=324 data-nosnippet>324</a>  // {\Collect@Body\@saveteaser}{}` (cls L2202) stashes the body into
-<a href=#325 id=325 data-nosnippet>325</a>  // `\@teaserfigures`, and `\maketitle` renders it via `\@mkteasers` (cls L2240,
-<a href=#326 id=326 data-nosnippet>326</a>  // L2899) as the last part of the top-matter box — so in the PDF the teaser
-<a href=#327 id=327 data-nosnippet>327</a>  // appears AFTER the title+authors and BEFORE the abstract, not where the
-<a href=#328 id=328 data-nosnippet>328</a>  // environment is written (typically before `\maketitle`). Perl LaTeXML has no
-<a href=#329 id=329 data-nosnippet>329</a>  // teaserfigure binding at all, so any handling here is beyond-Perl.
-<a href=#330 id=330 data-nosnippet>330</a>  //
-<a href=#331 id=331 data-nosnippet>331</a>  // We DIGEST + CONSTRUCT the teaser in place (below) so `\label`/`\ref`,
-<a href=#332 id=332 data-nosnippet>332</a>  // `\caption` numbering, `xml:id` and `inlist` all resolve exactly as for a
-<a href=#333 id=333 data-nosnippet>333</a>  // normal float — the teaser in arXiv 2606.22880 is `\ref`-ed 6+ times, so the
-<a href=#334 id=334 data-nosnippet>334</a>  // figure node must own the label. The prior inline result merely landed in the
-<a href=#335 id=335 data-nosnippet>335</a>  // wrong PLACE (first `&lt;document&gt;` child, ahead of the title, because the env is
-<a href=#336 id=336 data-nosnippet>336</a>  // written before `\maketitle`). The `\lx@relocate@teaser` DOCUMENT_REWRITE rule
-<a href=#337 id=337 data-nosnippet>337</a>  // registered just below moves the finished node to just before the abstract
-<a href=#338 id=338 data-nosnippet>338</a>  // (user-directed 2026-07-13 — timing/position of `\maketitle`, no frontmatter
-<a href=#339 id=339 data-nosnippet>339</a>  // markup added over the figure).
-<a href=#340 id=340 data-nosnippet>340</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{teaserfigure}[]"</span>,
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
-<a href=#342 id=342 data-nosnippet>342</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>); },
-<a href=#343 id=343 data-nosnippet>343</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#344 id=344 data-nosnippet>344</a>    mode =&gt; <span class="string">"internal_vertical"
-<a href=#345 id=345 data-nosnippet>345</a>  </span>);
-<a href=#346 id=346 data-nosnippet>346</a>  <span class="comment">// Relocate the constructed teaser to acmart's top-matter position: immediately
-<a href=#347 id=347 data-nosnippet>347</a>  // before the abstract (PDF order: title, authors, teaser, abstract). Runs as a
-<a href=#348 id=348 data-nosnippet>348</a>  // post-construction DOM rewrite so the figure keeps its id/label/number — only
-<a href=#349 id=349 data-nosnippet>349</a>  // its position changes.
-<a href=#350 id=350 data-nosnippet>350</a>  //
-<a href=#351 id=351 data-nosnippet>351</a>  // We anchor on the ABSTRACT, not the teaser: the rewrite `replace` engine
-<a href=#352 id=352 data-nosnippet>352</a>  // unbinds the matched node AND every FOLLOWING sibling (re-appending them after
-<a href=#353 id=353 data-nosnippet>353</a>  // the closure), so matching the teaser — the first `&lt;document&gt;` child — would
-<a href=#354 id=354 data-nosnippet>354</a>  // detach the whole frontmatter and leave the teaser stuck at the front. The
-<a href=#355 id=355 data-nosnippet>355</a>  // abstract's PRECEDING siblings (the teaser, title, creators) stay bound, so we
-<a href=#356 id=356 data-nosnippet>356</a>  // move the still-bound teaser to just before the re-attached abstract. The
-<a href=#357 id=357 data-nosnippet>357</a>  // xpath predicate gates the rule to teaser-bearing documents only, so a plain
-<a href=#358 id=358 data-nosnippet>358</a>  // acmart abstract is untouched.
-<a href=#359 id=359 data-nosnippet>359</a>  </span><span class="macro">DefRewrite!</span>(
-<a href=#360 id=360 data-nosnippet>360</a>    xpath =&gt; <span class="string">"//ltx:abstract[//ltx:figure[contains(@class,'ltx_teaserfigure')]]"</span>,
-<a href=#361 id=361 data-nosnippet>361</a>    replace =&gt; sub[document, nodes] {
-<a href=#362 id=362 data-nosnippet>362</a>      <span class="kw">let </span>abs = nodes.pop().unwrap();
-<a href=#363 id=363 data-nosnippet>363</a>      <span class="comment">// Re-attach the abstract at its original parent (the rewrite engine set the
-<a href=#364 id=364 data-nosnippet>364</a>      // current node to that parent before calling us).
-<a href=#365 id=365 data-nosnippet>365</a>      </span>document.get_node_mut().add_child(abs)<span class="question-mark">?</span>;
-<a href=#366 id=366 data-nosnippet>366</a>      <span class="comment">// Move the still-bound teaser to just before the abstract.
-<a href=#367 id=367 data-nosnippet>367</a>      </span><span class="kw">let </span>teasers =
-<a href=#368 id=368 data-nosnippet>368</a>        document.findnodes(<span class="string">"//ltx:figure[contains(@class,'ltx_teaserfigure')]"</span>, <span class="prelude-val">None</span>);
-<a href=#369 id=369 data-nosnippet>369</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>teaser) = teasers.into_iter().next() {
-<a href=#370 id=370 data-nosnippet>370</a>        abs.add_prev_sibling(<span class="kw-2">&amp;mut </span>teaser)<span class="question-mark">?</span>;
-<a href=#371 id=371 data-nosnippet>371</a>      }
-<a href=#372 id=372 data-nosnippet>372</a>    });
-<a href=#373 id=373 data-nosnippet>373</a>
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{marginfigure}[]"</span>,
-<a href=#375 id=375 data-nosnippet>375</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
-<a href=#376 id=376 data-nosnippet>376</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>); },
-<a href=#377 id=377 data-nosnippet>377</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#378 id=378 data-nosnippet>378</a>    mode =&gt; <span class="string">"internal_vertical"
-<a href=#379 id=379 data-nosnippet>379</a>  </span>);
-<a href=#380 id=380 data-nosnippet>380</a>
-<a href=#381 id=381 data-nosnippet>381</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{margintable}[]"</span>,
-<a href=#382 id=382 data-nosnippet>382</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' class='ltx_margintable' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:table&gt;"</span>,
-<a href=#383 id=383 data-nosnippet>383</a>    before_digest =&gt; { before_float(<span class="string">"table"</span>, <span class="prelude-val">None</span>); },
-<a href=#384 id=384 data-nosnippet>384</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#385 id=385 data-nosnippet>385</a>    mode =&gt; <span class="string">"internal_vertical"
-<a href=#386 id=386 data-nosnippet>386</a>  </span>);
-<a href=#387 id=387 data-nosnippet>387</a>
-<a href=#388 id=388 data-nosnippet>388</a>  <span class="comment">//======================================================================
-<a href=#389 id=389 data-nosnippet>389</a>  // Sidebar — Perl L200-210
-<a href=#390 id=390 data-nosnippet>390</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sidebarname"</span>, <span class="string">"Sidebar"</span>);
-<a href=#391 id=391 data-nosnippet>391</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fnum@sidebar"</span>, <span class="string">"\\sidebarname\\nobreakspace\\thesidebar"</span>);
-<a href=#392 id=392 data-nosnippet>392</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@sidebar{}"</span>, <span class="string">"\\lx@tag{\\fnum@sidebar: }#1"</span>);
-<a href=#393 id=393 data-nosnippet>393</a>
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// Perl L204-210: the {sidebar} env wraps body in &lt;ltx:sidebar&gt;. The
-<a href=#395 id=395 data-nosnippet>395</a>  // Perl signature is `{}{} Undigested [] {}` — title, bio, id, mark.
-<a href=#396 id=396 data-nosnippet>396</a>  // Rust previously had no sidebar env defined so ACM papers using
-<a href=#397 id=397 data-nosnippet>397</a>  // `\begin{sidebar}{title}...\end{sidebar}` hit undefined-env.
-<a href=#398 id=398 data-nosnippet>398</a>  // Simplified template (Perl has the title / creator fields
-<a href=#399 id=399 data-nosnippet>399</a>  // commented out too, so #body is the practical payload). The
-<a href=#400 id=400 data-nosnippet>400</a>  // optional labels/id attributes resolve via LaTeXML's normal
-<a href=#401 id=401 data-nosnippet>401</a>  // xml:id/labels machinery on DefEnvironment bodies.
-<a href=#402 id=402 data-nosnippet>402</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{sidebar}{} Undigested [] {}"</span>,
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="string">"&lt;ltx:sidebar xml:id='#id'&gt;#body&lt;/ltx:sidebar&gt;"</span>);
-<a href=#404 id=404 data-nosnippet>404</a>
-<a href=#405 id=405 data-nosnippet>405</a>  <span class="comment">//======================================================================
-<a href=#406 id=406 data-nosnippet>406</a>  // Theorem styles via RawTeX
-<a href=#407 id=407 data-nosnippet>407</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainbodyfont{\itshape}"</span>);
-<a href=#408 id=408 data-nosnippet>408</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainindent{\parindent}"</span>);
-<a href=#409 id=409 data-nosnippet>409</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainheadfont{\scshape}"</span>);
-<a href=#410 id=410 data-nosnippet>410</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainnotefont{\@empty}"</span>);
-<a href=#411 id=411 data-nosnippet>411</a>
-<a href=#412 id=412 data-nosnippet>412</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheoremstyle{acmplain}%
-<a href=#413 id=413 data-nosnippet>413</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
-<a href=#414 id=414 data-nosnippet>414</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
-<a href=#415 id=415 data-nosnippet>415</a>  {\@acmplainbodyfont}{\@acmplainindent}{\@acmplainheadfont}{.}{.5em}%
-<a href=#416 id=416 data-nosnippet>416</a>  {\thmname{#1}\thmnumber{ #2}\thmnote{ {\@acmplainnotefont(#3)}}}"</span>);
-<a href=#417 id=417 data-nosnippet>417</a>
-<a href=#418 id=418 data-nosnippet>418</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionbodyfont{\normalfont}"</span>);
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionindent{\parindent}"</span>);
-<a href=#420 id=420 data-nosnippet>420</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionheadfont{\itshape}"</span>);
-<a href=#421 id=421 data-nosnippet>421</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionnotefont{\@empty}"</span>);
-<a href=#422 id=422 data-nosnippet>422</a>
-<a href=#423 id=423 data-nosnippet>423</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheoremstyle{acmdefinition}%
-<a href=#424 id=424 data-nosnippet>424</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
-<a href=#425 id=425 data-nosnippet>425</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
-<a href=#426 id=426 data-nosnippet>426</a>  {\@acmdefinitionbodyfont}{\@acmdefinitionindent}{\@acmdefinitionheadfont}{.}{.5em}%
-<a href=#427 id=427 data-nosnippet>427</a>  {\thmname{#1}\thmnumber{ #2}\thmnote{ {\@acmdefinitionnotefont(#3)}}}"</span>);
-<a href=#428 id=428 data-nosnippet>428</a>
-<a href=#429 id=429 data-nosnippet>429</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\theoremstyle{acmplain}"</span>);
-<a href=#430 id=430 data-nosnippet>430</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{theorem}{Theorem}[section]"</span>);
-<a href=#431 id=431 data-nosnippet>431</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{conjecture}[theorem]{Conjecture}"</span>);
-<a href=#432 id=432 data-nosnippet>432</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{proposition}[theorem]{Proposition}"</span>);
-<a href=#433 id=433 data-nosnippet>433</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{lemma}[theorem]{Lemma}"</span>);
-<a href=#434 id=434 data-nosnippet>434</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{corollary}[theorem]{Corollary}"</span>);
-<a href=#435 id=435 data-nosnippet>435</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\theoremstyle{acmdefinition}"</span>);
-<a href=#436 id=436 data-nosnippet>436</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{example}[theorem]{Example}"</span>);
-<a href=#437 id=437 data-nosnippet>437</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{definition}[theorem]{Definition}"</span>);
-<a href=#438 id=438 data-nosnippet>438</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\theoremstyle{acmplain}"</span>);
-<a href=#439 id=439 data-nosnippet>439</a>
-<a href=#440 id=440 data-nosnippet>440</a>  <span class="macro">Let!</span>(<span class="string">"\\proof"</span>, <span class="string">"\\@proof"</span>);
-<a href=#441 id=441 data-nosnippet>441</a>  <span class="macro">Let!</span>(<span class="string">"\\endproof"</span>, <span class="string">"\\end@proof"</span>);
-<a href=#442 id=442 data-nosnippet>442</a>
-<a href=#443 id=443 data-nosnippet>443</a>  <span class="comment">// acmart.cls L1902: \setcctype[version]{by-spec} sets the Creative
-<a href=#444 id=444 data-nosnippet>444</a>  // Commons license. Preserve the license spec as ltx:note.
-<a href=#445 id=445 data-nosnippet>445</a>  // Witnesses 2406.04861, 2406.09266.
-<a href=#446 id=446 data-nosnippet>446</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\setcctype[]{}"</span>,
-<a href=#447 id=447 data-nosnippet>447</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=cc-license]{#2}"</span>);
-<a href=#448 id=448 data-nosnippet>448</a>
-<a href=#449 id=449 data-nosnippet>449</a>  <span class="comment">// acmart conditional toggles — declare as conditionals so user
-<a href=#450 id=450 data-nosnippet>450</a>  // paper's \@printpermissiontrue / \@printccstrue / \@printcopyrighttrue
-<a href=#451 id=451 data-nosnippet>451</a>  // etc. don't error. The list mirrors `\newif` declarations in
-<a href=#452 id=452 data-nosnippet>452</a>  // acmart.cls (TL2025 L181-L200); paper-local extension styles such
-<a href=#453 id=453 data-nosnippet>453</a>  // as `popets.sty` (acmart-derived) flip these without re-declaring,
-<a href=#454 id=454 data-nosnippet>454</a>  // so we must predeclare all of them. Driver: arXiv-2503.08256v1
-<a href=#455 id=455 data-nosnippet>455</a>  // (popets/acmart) where `\@acmownedfalse`, `\@acmownedtrue`, and
-<a href=#456 id=456 data-nosnippet>456</a>  // `\@ACM@journal@bibstripfalse` came up undefined.
-<a href=#457 id=457 data-nosnippet>457</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@printpermission"</span>);
-<a href=#458 id=458 data-nosnippet>458</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printccs"</span>);
-<a href=#459 id=459 data-nosnippet>459</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printcopyright"</span>);
-<a href=#460 id=460 data-nosnippet>460</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printcopyrightbox"</span>);
-<a href=#461 id=461 data-nosnippet>461</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printfolios"</span>);
-<a href=#462 id=462 data-nosnippet>462</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@acmReview"</span>);
-<a href=#463 id=463 data-nosnippet>463</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@manuscript"</span>);
-<a href=#464 id=464 data-nosnippet>464</a>  <span class="comment">// \if@ACM@nonacm is NOT a newif in current acmart.cls, but some
-<a href=#465 id=465 data-nosnippet>465</a>  // papers (or older acmart versions) call `\@ACM@nonacmtrue` in the
-<a href=#466 id=466 data-nosnippet>466</a>  // preamble. Declare to avoid undefined errors. Witness 2211.10881.
-<a href=#467 id=467 data-nosnippet>467</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@nonacm"</span>);
-<a href=#468 id=468 data-nosnippet>468</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@journal"</span>);
-<a href=#469 id=469 data-nosnippet>469</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@journal@bibstrip"</span>);
-<a href=#470 id=470 data-nosnippet>470</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@journal@bibstrip@or@tog"</span>);
-<a href=#471 id=471 data-nosnippet>471</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@sigchiamode"</span>);
-<a href=#472 id=472 data-nosnippet>472</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@engage"</span>);
-<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@acmcp"</span>);
-<a href=#474 id=474 data-nosnippet>474</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@newfonts"</span>);
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@Description@present"</span>);
-<a href=#476 id=476 data-nosnippet>476</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@undescribed@images"</span>);
-<a href=#477 id=477 data-nosnippet>477</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@maketitle@typeset"</span>);
-<a href=#478 id=478 data-nosnippet>478</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@insideauthorgroup"</span>);
-<a href=#479 id=479 data-nosnippet>479</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@acmowned"</span>);
-<a href=#480 id=480 data-nosnippet>480</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@instpresent"</span>);
-<a href=#481 id=481 data-nosnippet>481</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@citypresent"</span>);
-<a href=#482 id=482 data-nosnippet>482</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@countrypresent"</span>);
-<a href=#483 id=483 data-nosnippet>483</a>
-<a href=#484 id=484 data-nosnippet>484</a>  <span class="comment">// acmart.cls L578: \def\@makefntext{\noindent\@makefnmark}.
-<a href=#485 id=485 data-nosnippet>485</a>  // Footnote helper used by acmart at L587/L600 in some path our
-<a href=#486 id=486 data-nosnippet>486</a>  // stub doesn't replicate; some templates probe it before our
-<a href=#487 id=487 data-nosnippet>487</a>  // explicit definition. Stub as a no-op so footnote processing
-<a href=#488 id=488 data-nosnippet>488</a>  // continues. Witness 2408.09084, 2408.03532 (sigconf papers).
-<a href=#489 id=489 data-nosnippet>489</a>  </span>def_macro_noop(<span class="string">"\\@makefntext"</span>)<span class="question-mark">?</span>;
-<a href=#490 id=490 data-nosnippet>490</a>});
+<a href=#295 id=295 data-nosnippet>295</a>  <span class="comment">// Exclude CCSXML environment (Perl: defineExcluded(undef, 'CCSXML'))
+<a href=#296 id=296 data-nosnippet>296</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\excludecomment{CCSXML}"</span>);
+<a href=#297 id=297 data-nosnippet>297</a>
+<a href=#298 id=298 data-nosnippet>298</a>  <span class="comment">//======================================================================
+<a href=#299 id=299 data-nosnippet>299</a>  // Acknowledgements
+<a href=#300 id=300 data-nosnippet>300</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgmentsname"</span>, <span class="string">"Acknowledgements"</span>);
+<a href=#301 id=301 data-nosnippet>301</a>  <span class="comment">// Perl L167-168 ships properties =&gt; sub { (name =&gt; Digest(T_CS('\acknowledgmentsname'))) }
+<a href=#302 id=302 data-nosnippet>302</a>  // so a user `\renewcommand{\acknowledgmentsname}{Danksagung}` localizes the
+<a href=#303 id=303 data-nosnippet>303</a>  // attribute. Rust previously hard-coded "Acknowledgements", ignoring any
+<a href=#304 id=304 data-nosnippet>304</a>  // override. Use DigestIf! pattern (same as listings_sty:2060) to resolve
+<a href=#305 id=305 data-nosnippet>305</a>  // dynamically. Inline `&lt;ltx:acknowledgements name='#name'&gt;` template
+<a href=#306 id=306 data-nosnippet>306</a>  // matches the Perl form.
+<a href=#307 id=307 data-nosnippet>307</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acks"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
+<a href=#308 id=308 data-nosnippet>308</a>    properties =&gt; {
+<a href=#309 id=309 data-nosnippet>309</a>      <span class="kw">let </span>name_toks = <span class="macro">DigestIf!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\acknowledgmentsname"</span>))<span class="question-mark">?</span>;
+<a href=#310 id=310 data-nosnippet>310</a>      <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; name_toks)
+<a href=#311 id=311 data-nosnippet>311</a>    });
+<a href=#312 id=312 data-nosnippet>312</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endacks"</span>, <span class="string">"&lt;/ltx:acknowledgements&gt;"</span>);
+<a href=#313 id=313 data-nosnippet>313</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\grantsponsor Semiverbatim {} Semiverbatim"</span>, <span class="string">"Sponsor #2 \\url{#3}"</span>);
+<a href=#314 id=314 data-nosnippet>314</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\grantnum OptionalSemiverbatim Semiverbatim {}"</span>, <span class="string">"Grant \\##3"</span>);
+<a href=#315 id=315 data-nosnippet>315</a>
+<a href=#316 id=316 data-nosnippet>316</a>  <span class="comment">//======================================================================
+<a href=#317 id=317 data-nosnippet>317</a>  // Float environments
+<a href=#318 id=318 data-nosnippet>318</a>  //
+<a href=#319 id=319 data-nosnippet>319</a>  // teaserfigure — real acmart DEFERS the teaser: `\newenvironment{teaserfigure}
+<a href=#320 id=320 data-nosnippet>320</a>  // {\Collect@Body\@saveteaser}{}` (cls L2202) stashes the body into
+<a href=#321 id=321 data-nosnippet>321</a>  // `\@teaserfigures`, and `\maketitle` renders it via `\@mkteasers` (cls L2240,
+<a href=#322 id=322 data-nosnippet>322</a>  // L2899) as the last part of the top-matter box — so in the PDF the teaser
+<a href=#323 id=323 data-nosnippet>323</a>  // appears AFTER the title+authors and BEFORE the abstract, not where the
+<a href=#324 id=324 data-nosnippet>324</a>  // environment is written (typically before `\maketitle`). Perl LaTeXML has no
+<a href=#325 id=325 data-nosnippet>325</a>  // teaserfigure binding at all, so any handling here is beyond-Perl.
+<a href=#326 id=326 data-nosnippet>326</a>  //
+<a href=#327 id=327 data-nosnippet>327</a>  // We DIGEST + CONSTRUCT the teaser in place (below) so `\label`/`\ref`,
+<a href=#328 id=328 data-nosnippet>328</a>  // `\caption` numbering, `xml:id` and `inlist` all resolve exactly as for a
+<a href=#329 id=329 data-nosnippet>329</a>  // normal float — the teaser in arXiv 2606.22880 is `\ref`-ed 6+ times, so the
+<a href=#330 id=330 data-nosnippet>330</a>  // figure node must own the label. The prior inline result merely landed in the
+<a href=#331 id=331 data-nosnippet>331</a>  // wrong PLACE (first `&lt;document&gt;` child, ahead of the title, because the env is
+<a href=#332 id=332 data-nosnippet>332</a>  // written before `\maketitle`). The `\lx@relocate@teaser` DOCUMENT_REWRITE rule
+<a href=#333 id=333 data-nosnippet>333</a>  // registered just below moves the finished node to just before the abstract
+<a href=#334 id=334 data-nosnippet>334</a>  // (user-directed 2026-07-13 — timing/position of `\maketitle`, no frontmatter
+<a href=#335 id=335 data-nosnippet>335</a>  // markup added over the figure).
+<a href=#336 id=336 data-nosnippet>336</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{teaserfigure}[]"</span>,
+<a href=#337 id=337 data-nosnippet>337</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
+<a href=#338 id=338 data-nosnippet>338</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>); },
+<a href=#339 id=339 data-nosnippet>339</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#340 id=340 data-nosnippet>340</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#341 id=341 data-nosnippet>341</a>  </span>);
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="comment">// Relocate the constructed teaser to acmart's top-matter position: immediately
+<a href=#343 id=343 data-nosnippet>343</a>  // before the abstract (PDF order: title, authors, teaser, abstract). Runs as a
+<a href=#344 id=344 data-nosnippet>344</a>  // post-construction DOM rewrite so the figure keeps its id/label/number — only
+<a href=#345 id=345 data-nosnippet>345</a>  // its position changes.
+<a href=#346 id=346 data-nosnippet>346</a>  //
+<a href=#347 id=347 data-nosnippet>347</a>  // We anchor on the ABSTRACT, not the teaser: the rewrite `replace` engine
+<a href=#348 id=348 data-nosnippet>348</a>  // unbinds the matched node AND every FOLLOWING sibling (re-appending them after
+<a href=#349 id=349 data-nosnippet>349</a>  // the closure), so matching the teaser — the first `&lt;document&gt;` child — would
+<a href=#350 id=350 data-nosnippet>350</a>  // detach the whole frontmatter and leave the teaser stuck at the front. The
+<a href=#351 id=351 data-nosnippet>351</a>  // abstract's PRECEDING siblings (the teaser, title, creators) stay bound, so we
+<a href=#352 id=352 data-nosnippet>352</a>  // move the still-bound teaser to just before the re-attached abstract. The
+<a href=#353 id=353 data-nosnippet>353</a>  // xpath predicate gates the rule to teaser-bearing documents only, so a plain
+<a href=#354 id=354 data-nosnippet>354</a>  // acmart abstract is untouched.
+<a href=#355 id=355 data-nosnippet>355</a>  </span><span class="macro">DefRewrite!</span>(
+<a href=#356 id=356 data-nosnippet>356</a>    xpath =&gt; <span class="string">"//ltx:abstract[//ltx:figure[contains(@class,'ltx_teaserfigure')]]"</span>,
+<a href=#357 id=357 data-nosnippet>357</a>    replace =&gt; sub[document, nodes] {
+<a href=#358 id=358 data-nosnippet>358</a>      <span class="kw">let </span>abs = nodes.pop().unwrap();
+<a href=#359 id=359 data-nosnippet>359</a>      <span class="comment">// Re-attach the abstract at its original parent (the rewrite engine set the
+<a href=#360 id=360 data-nosnippet>360</a>      // current node to that parent before calling us).
+<a href=#361 id=361 data-nosnippet>361</a>      </span>document.get_node_mut().add_child(abs)<span class="question-mark">?</span>;
+<a href=#362 id=362 data-nosnippet>362</a>      <span class="comment">// Move the still-bound teaser to just before the abstract.
+<a href=#363 id=363 data-nosnippet>363</a>      </span><span class="kw">let </span>teasers =
+<a href=#364 id=364 data-nosnippet>364</a>        document.findnodes(<span class="string">"//ltx:figure[contains(@class,'ltx_teaserfigure')]"</span>, <span class="prelude-val">None</span>);
+<a href=#365 id=365 data-nosnippet>365</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>teaser) = teasers.into_iter().next() {
+<a href=#366 id=366 data-nosnippet>366</a>        abs.add_prev_sibling(<span class="kw-2">&amp;mut </span>teaser)<span class="question-mark">?</span>;
+<a href=#367 id=367 data-nosnippet>367</a>      }
+<a href=#368 id=368 data-nosnippet>368</a>    });
+<a href=#369 id=369 data-nosnippet>369</a>
+<a href=#370 id=370 data-nosnippet>370</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{marginfigure}[]"</span>,
+<a href=#371 id=371 data-nosnippet>371</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
+<a href=#372 id=372 data-nosnippet>372</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>); },
+<a href=#373 id=373 data-nosnippet>373</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#374 id=374 data-nosnippet>374</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#375 id=375 data-nosnippet>375</a>  </span>);
+<a href=#376 id=376 data-nosnippet>376</a>
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{margintable}[]"</span>,
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' class='ltx_margintable' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:table&gt;"</span>,
+<a href=#379 id=379 data-nosnippet>379</a>    before_digest =&gt; { before_float(<span class="string">"table"</span>, <span class="prelude-val">None</span>); },
+<a href=#380 id=380 data-nosnippet>380</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#381 id=381 data-nosnippet>381</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#382 id=382 data-nosnippet>382</a>  </span>);
+<a href=#383 id=383 data-nosnippet>383</a>
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="comment">//======================================================================
+<a href=#385 id=385 data-nosnippet>385</a>  // Sidebar — Perl L200-210
+<a href=#386 id=386 data-nosnippet>386</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sidebarname"</span>, <span class="string">"Sidebar"</span>);
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fnum@sidebar"</span>, <span class="string">"\\sidebarname\\nobreakspace\\thesidebar"</span>);
+<a href=#388 id=388 data-nosnippet>388</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@sidebar{}"</span>, <span class="string">"\\lx@tag{\\fnum@sidebar: }#1"</span>);
+<a href=#389 id=389 data-nosnippet>389</a>
+<a href=#390 id=390 data-nosnippet>390</a>  <span class="comment">// Perl L204-210: the {sidebar} env wraps body in &lt;ltx:sidebar&gt;. The
+<a href=#391 id=391 data-nosnippet>391</a>  // Perl signature is `{}{} Undigested [] {}` — title, bio, id, mark.
+<a href=#392 id=392 data-nosnippet>392</a>  // Rust previously had no sidebar env defined so ACM papers using
+<a href=#393 id=393 data-nosnippet>393</a>  // `\begin{sidebar}{title}...\end{sidebar}` hit undefined-env.
+<a href=#394 id=394 data-nosnippet>394</a>  // Simplified template (Perl has the title / creator fields
+<a href=#395 id=395 data-nosnippet>395</a>  // commented out too, so #body is the practical payload). The
+<a href=#396 id=396 data-nosnippet>396</a>  // optional labels/id attributes resolve via LaTeXML's normal
+<a href=#397 id=397 data-nosnippet>397</a>  // xml:id/labels machinery on DefEnvironment bodies.
+<a href=#398 id=398 data-nosnippet>398</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{sidebar}{} Undigested [] {}"</span>,
+<a href=#399 id=399 data-nosnippet>399</a>    <span class="string">"&lt;ltx:sidebar xml:id='#id'&gt;#body&lt;/ltx:sidebar&gt;"</span>);
+<a href=#400 id=400 data-nosnippet>400</a>
+<a href=#401 id=401 data-nosnippet>401</a>  <span class="comment">//======================================================================
+<a href=#402 id=402 data-nosnippet>402</a>  // Theorem styles via RawTeX
+<a href=#403 id=403 data-nosnippet>403</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainbodyfont{\itshape}"</span>);
+<a href=#404 id=404 data-nosnippet>404</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainindent{\parindent}"</span>);
+<a href=#405 id=405 data-nosnippet>405</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainheadfont{\scshape}"</span>);
+<a href=#406 id=406 data-nosnippet>406</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmplainnotefont{\@empty}"</span>);
+<a href=#407 id=407 data-nosnippet>407</a>
+<a href=#408 id=408 data-nosnippet>408</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheoremstyle{acmplain}%
+<a href=#409 id=409 data-nosnippet>409</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
+<a href=#410 id=410 data-nosnippet>410</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
+<a href=#411 id=411 data-nosnippet>411</a>  {\@acmplainbodyfont}{\@acmplainindent}{\@acmplainheadfont}{.}{.5em}%
+<a href=#412 id=412 data-nosnippet>412</a>  {\thmname{#1}\thmnumber{ #2}\thmnote{ {\@acmplainnotefont(#3)}}}"</span>);
+<a href=#413 id=413 data-nosnippet>413</a>
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionbodyfont{\normalfont}"</span>);
+<a href=#415 id=415 data-nosnippet>415</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionindent{\parindent}"</span>);
+<a href=#416 id=416 data-nosnippet>416</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionheadfont{\itshape}"</span>);
+<a href=#417 id=417 data-nosnippet>417</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@acmdefinitionnotefont{\@empty}"</span>);
+<a href=#418 id=418 data-nosnippet>418</a>
+<a href=#419 id=419 data-nosnippet>419</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheoremstyle{acmdefinition}%
+<a href=#420 id=420 data-nosnippet>420</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
+<a href=#421 id=421 data-nosnippet>421</a>  {.5\baselineskip\@plus.2\baselineskip\@minus.2\baselineskip}%
+<a href=#422 id=422 data-nosnippet>422</a>  {\@acmdefinitionbodyfont}{\@acmdefinitionindent}{\@acmdefinitionheadfont}{.}{.5em}%
+<a href=#423 id=423 data-nosnippet>423</a>  {\thmname{#1}\thmnumber{ #2}\thmnote{ {\@acmdefinitionnotefont(#3)}}}"</span>);
+<a href=#424 id=424 data-nosnippet>424</a>
+<a href=#425 id=425 data-nosnippet>425</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\theoremstyle{acmplain}"</span>);
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{theorem}{Theorem}[section]"</span>);
+<a href=#427 id=427 data-nosnippet>427</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{conjecture}[theorem]{Conjecture}"</span>);
+<a href=#428 id=428 data-nosnippet>428</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{proposition}[theorem]{Proposition}"</span>);
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{lemma}[theorem]{Lemma}"</span>);
+<a href=#430 id=430 data-nosnippet>430</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{corollary}[theorem]{Corollary}"</span>);
+<a href=#431 id=431 data-nosnippet>431</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\theoremstyle{acmdefinition}"</span>);
+<a href=#432 id=432 data-nosnippet>432</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{example}[theorem]{Example}"</span>);
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newtheorem{definition}[theorem]{Definition}"</span>);
+<a href=#434 id=434 data-nosnippet>434</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\theoremstyle{acmplain}"</span>);
+<a href=#435 id=435 data-nosnippet>435</a>
+<a href=#436 id=436 data-nosnippet>436</a>  <span class="macro">Let!</span>(<span class="string">"\\proof"</span>, <span class="string">"\\@proof"</span>);
+<a href=#437 id=437 data-nosnippet>437</a>  <span class="macro">Let!</span>(<span class="string">"\\endproof"</span>, <span class="string">"\\end@proof"</span>);
+<a href=#438 id=438 data-nosnippet>438</a>
+<a href=#439 id=439 data-nosnippet>439</a>  <span class="comment">// acmart.cls L1902: \setcctype[version]{by-spec} sets the Creative
+<a href=#440 id=440 data-nosnippet>440</a>  // Commons license. Preserve the license spec as ltx:note.
+<a href=#441 id=441 data-nosnippet>441</a>  // Witnesses 2406.04861, 2406.09266.
+<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\setcctype[]{}"</span>,
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=cc-license]{#2}"</span>);
+<a href=#444 id=444 data-nosnippet>444</a>
+<a href=#445 id=445 data-nosnippet>445</a>  <span class="comment">// acmart conditional toggles — declare as conditionals so user
+<a href=#446 id=446 data-nosnippet>446</a>  // paper's \@printpermissiontrue / \@printccstrue / \@printcopyrighttrue
+<a href=#447 id=447 data-nosnippet>447</a>  // etc. don't error. The list mirrors `\newif` declarations in
+<a href=#448 id=448 data-nosnippet>448</a>  // acmart.cls (TL2025 L181-L200); paper-local extension styles such
+<a href=#449 id=449 data-nosnippet>449</a>  // as `popets.sty` (acmart-derived) flip these without re-declaring,
+<a href=#450 id=450 data-nosnippet>450</a>  // so we must predeclare all of them. Driver: arXiv-2503.08256v1
+<a href=#451 id=451 data-nosnippet>451</a>  // (popets/acmart) where `\@acmownedfalse`, `\@acmownedtrue`, and
+<a href=#452 id=452 data-nosnippet>452</a>  // `\@ACM@journal@bibstripfalse` came up undefined.
+<a href=#453 id=453 data-nosnippet>453</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@printpermission"</span>);
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printccs"</span>);
+<a href=#455 id=455 data-nosnippet>455</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printcopyright"</span>);
+<a href=#456 id=456 data-nosnippet>456</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printcopyrightbox"</span>);
+<a href=#457 id=457 data-nosnippet>457</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@printfolios"</span>);
+<a href=#458 id=458 data-nosnippet>458</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@acmReview"</span>);
+<a href=#459 id=459 data-nosnippet>459</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@manuscript"</span>);
+<a href=#460 id=460 data-nosnippet>460</a>  <span class="comment">// \if@ACM@nonacm is NOT a newif in current acmart.cls, but some
+<a href=#461 id=461 data-nosnippet>461</a>  // papers (or older acmart versions) call `\@ACM@nonacmtrue` in the
+<a href=#462 id=462 data-nosnippet>462</a>  // preamble. Declare to avoid undefined errors. Witness 2211.10881.
+<a href=#463 id=463 data-nosnippet>463</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@nonacm"</span>);
+<a href=#464 id=464 data-nosnippet>464</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@journal"</span>);
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@journal@bibstrip"</span>);
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@journal@bibstrip@or@tog"</span>);
+<a href=#467 id=467 data-nosnippet>467</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@sigchiamode"</span>);
+<a href=#468 id=468 data-nosnippet>468</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@engage"</span>);
+<a href=#469 id=469 data-nosnippet>469</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@acmcp"</span>);
+<a href=#470 id=470 data-nosnippet>470</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@newfonts"</span>);
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@Description@present"</span>);
+<a href=#472 id=472 data-nosnippet>472</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@undescribed@images"</span>);
+<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@maketitle@typeset"</span>);
+<a href=#474 id=474 data-nosnippet>474</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@insideauthorgroup"</span>);
+<a href=#475 id=475 data-nosnippet>475</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@acmowned"</span>);
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@instpresent"</span>);
+<a href=#477 id=477 data-nosnippet>477</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@citypresent"</span>);
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@ACM@countrypresent"</span>);
+<a href=#479 id=479 data-nosnippet>479</a>
+<a href=#480 id=480 data-nosnippet>480</a>  <span class="comment">// acmart.cls L578: \def\@makefntext{\noindent\@makefnmark}.
+<a href=#481 id=481 data-nosnippet>481</a>  // Footnote helper used by acmart at L587/L600 in some path our
+<a href=#482 id=482 data-nosnippet>482</a>  // stub doesn't replicate; some templates probe it before our
+<a href=#483 id=483 data-nosnippet>483</a>  // explicit definition. Stub as a no-op so footnote processing
+<a href=#484 id=484 data-nosnippet>484</a>  // continues. Witness 2408.09084, 2408.03532 (sigconf papers).
+<a href=#485 id=485 data-nosnippet>485</a>  </span>def_macro_noop(<span class="string">"\\@makefntext"</span>)<span class="question-mark">?</span>;
+<a href=#486 id=486 data-nosnippet>486</a>});
 </code></pre></div></section></main></body></html>
