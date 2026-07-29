@@ -930,7 +930,7 @@ impl DigestionAPI for Core {
         && avail < need
       {
         stomach::set_fragment_yield_budget(None);
-        return Err(latexml_core::common::error::Error {
+        return Err(Error {
           target:   ErrorTarget::Timeout,
           category: ErrorCategory::MemoryBudget,
           message:  s!(
