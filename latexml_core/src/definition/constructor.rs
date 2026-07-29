@@ -272,16 +272,36 @@ impl fmt::Display for Constructor {
 impl Object for Constructor {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Constructor") }
 }
-impl Definition for Constructor {
-  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
-  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
-  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
-  fn capture_body(&self) -> bool { self.capture_body }
-  fn get_sizer(&self) -> Option<SizingClosure> { self.sizer.clone() }
-  fn invoke(&self, _once_only: bool) -> Result<Tokens> { Ok(Tokens!()) }
-  /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
-  /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
+impl Constructor {
+  /// Digest through the `Rc<Constructor>` the state table already holds, instead
+  /// of deep-cloning the definition for every invocation.
+  ///
+  /// Every Whatsit keeps a back-reference to the definition that built it
+  /// ([`Whatsit::definition`]), and [`Definition::invoke_primitive`] fills that
+  /// slot with `Rc::new(self.clone())` — a **fresh deep clone per invocation**,
+  /// carrying the `Parameters` and all three `Vec<Rc<dyn Fn…>>` hook lists with
+  /// it. Those clones are not transient: a Whatsit lives in the digested tree
+  /// for the whole Build, so a document retains one private copy of the
+  /// constructor per construct it uses. Measured with dhat (2026-07-29, debug
+  /// profile, math-dense fixture): the `Rc<Constructor>` itself was 1,215 blocks
+  /// / 349,920 B — an exact 1:1 with the 1,215 constructor invocations — plus
+  /// 3,638 blocks / 314,816 B inside `<Constructor as Clone>::clone` for the
+  /// parameters and hook vectors.
+  ///
+  /// The state table's entry is `Stored::Constructor(Rc<Constructor>)`
+  /// (`common/store.rs`), so the invoker is already holding a shareable handle;
+  /// passing it through turns that whole per-invocation cost into a refcount
+  /// bump. Sharing is sound because the definition is immutable once installed —
+  /// nothing calls `Rc::get_mut` on it, and `PartialEq for Whatsit` compares
+  /// definitions **by value** (`*self.definition == *other.definition`), so a
+  /// shared handle compares exactly as a private clone did.
+  pub fn invoke_primitive_shared(me: &Rc<Constructor>) -> Result<Vec<Digested>> {
+    me.digest_to_whatsit(Rc::clone(me) as Rc<dyn Definition>)
+  }
+
+  /// The body of constructor digestion, parameterized by the handle to install
+  /// as the Whatsit's [`Whatsit::definition`] back-reference.
+  fn digest_to_whatsit(&self, definition: Rc<dyn Definition>) -> Result<Vec<Digested>> {
     Debug!("invoke_primitive for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
@@ -336,11 +356,18 @@ impl Definition for Constructor {
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
+    // Every field is named rather than `..Whatsit::default()`: the default
+    // builds a placeholder `Rc::new(Expandable::default())` for `definition`
+    // that this literal immediately overwrites, so the functional-update form
+    // allocated and dropped one `Rc<Expandable>` per constructor invocation
+    // (dhat 2026-07-29: 1,215 blocks / 145,800 B, again 1:1 with invocations).
     let mut whatsit = Whatsit {
-      definition: Rc::new(self.clone()),
+      definition,
       args,
       properties,
-      ..Whatsit::default()
+      reversion: None,
+      dual_reversion: None,
+      locator: None,
     };
     // Perl `Core/Definition/Constructor.pm` L106:
     //   `$props{locator} = $stomach->getGullet->getLocator`
@@ -401,6 +428,25 @@ impl Definition for Constructor {
     result.extend(post);
     result.extend(post_post);
     Ok(result)
+  }
+}
+
+impl Definition for Constructor {
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
+  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
+  fn capture_body(&self) -> bool { self.capture_body }
+  fn get_sizer(&self) -> Option<SizingClosure> { self.sizer.clone() }
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> { Ok(Tokens!()) }
+  /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
+  /// The whatsit which will be further processed to create the document.
+  ///
+  /// Allocates a fresh `Rc` for the Whatsit's back-reference. Callers that
+  /// already hold the state table's `Rc<Constructor>` should use
+  /// [`Constructor::invoke_primitive_shared`] instead, which reuses it — see
+  /// there for why that matters.
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
+    self.digest_to_whatsit(Rc::new(self.clone()))
   }
 
   fn get_cs(&self) -> Cow<'_, Token> { Cow::Borrowed(&self.cs) }
