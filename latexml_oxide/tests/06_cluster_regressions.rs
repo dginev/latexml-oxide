@@ -410,3 +410,70 @@ fn expl3_load_does_not_clobber_cedilla_accent() {
      (expected `_`=8, `:`=12, `~`=13):\n{x}"
   );
 }
+
+/// An author's `\fnum@<type>` redefined to TAKE AN ARGUMENT — the widely-copied
+/// "Fig. 1: → Fig. 1." hack. Real `\fnum@<type>` takes none, but LaTeX's
+/// `\@makecaption` is `\sbox\@tempboxa{#1: #2}`, so a one-argument version eats
+/// the `:` that follows; pdflatex accepts it (measured: 0 errors, renders
+/// "Figure 1. A caption.").
+///
+/// LaTeXML has no `:` TOKEN to eat — the separator is a tag ATTRIBUTE
+/// (`\lx@tag[][: ]`) — so the argument scan ran past the hook and swallowed the
+/// caption group's closing brace: the `<figure>` never closed and **every
+/// following section, the bibliography included, was absorbed into it**. That is
+/// the truncation mechanism behind witnesses 2605.01731 (18 figures x 3 errors)
+/// and 2605.12842 (10 x 3), both confirmed live on the fleet run. A 2026-07-14
+/// note put the breadth at 18 papers via a `grep 'lx@tag@intags'` proxy; that
+/// proxy re-measures to 23 papers over 2605+2606, only 2 of which carry this
+/// cause's signature — the symptom has several causes.
+///
+/// SHARED-FAILURE, not a Rust-only defect: same-host Perl 0.8.8 raises 9 errors
+/// on the two-hook form and Rust raised 7, so fixing it is a deliberate
+/// surpass — **OXIDIZED_DESIGN #85**, `KNOWN_PERL_ERRORS #68`. Pre-fix this
+/// fixture raised **10** errors.
+///
+/// All three `\csname fnum@…\endcsname` hooks are exercised: the caption one
+/// (`\lx@fnum@@`), the toc one (`\lx@fnum@toc@@`) and the theorem-header one
+/// (`latex_constructs.rs`).
+#[test]
+fn cluster_fnum_arg_hook() {
+  // `convert_to_xml` is the strict 0-error gate AND returns the XML.
+  let x = convert_to_xml("tests/cluster_regressions/fnum_arg_hook.tex");
+  // The figure closes, so what follows it is a SIBLING, not a descendant.
+  // This is the property that actually matters — an unclosed <figure> is what
+  // swallowed the rest of the document.
+  let bib = x
+    .find("<bibliography")
+    .expect("no bibliography element:\n{x}");
+  assert!(
+    x[..bib].contains("</figure>"),
+    "the <figure> must close before the bibliography — an open one absorbs it:\n{x}"
+  );
+  assert_eq!(
+    x.matches("<section").count(),
+    2,
+    "both sections should be siblings at top level:\n{x}"
+  );
+  assert!(
+    x.contains("Text after must survive"),
+    "the body after the figure was lost:\n{x}"
+  );
+  // Each arg-taking hook actually supplied the label it defines: the caption's
+  // `\figurename~\thefigure.`, the toccaption's bare `\thefigure.`, and the
+  // theorem's `\thethmx.` — none of them the default that fires when no
+  // `\fnum@<type>` exists.
+  // NBSP, not a space: the hook body is `\figurename~\thefigure.`, so the `~`
+  // is itself evidence that the author's definition ran rather than the default.
+  assert!(
+    x.contains("<tag close=\": \">Figure\u{a0}1.</tag>"),
+    "\\fnum@figure did not supply the caption tag:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag close=" ">1.</tag>"#),
+    "\\fnum@toc@figure did not supply the toccaption tag:\n{x}"
+  );
+  assert!(
+    x.contains("<theorem") && x.contains(r#"<tag>1.</tag>"#),
+    "\\fnum@thmx did not supply the theorem header tag:\n{x}"
+  );
+}
