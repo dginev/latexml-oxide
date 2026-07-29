@@ -3059,6 +3059,35 @@ Audit family F3(c) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026
 
 Guard: `bibunits_putbib_reads_the_per_unit_bbl`.
 
+### 86. The core `\cite` is locked against raw `.sty` redefinition
+
+arXiv submissions ship their conference style, and under `--includestyles`
+(the fleet's ar5iv profile) it is raw-loaded. aaai, iccc, flairs, kr,
+achicago, harvard and fixbib all `\def\cite`, and the replacement records no
+citation — so `MakeBibliography` selects nothing and the document renders an
+empty References section under bold `?` markers: *"N bibentries, **0 cited**"*.
+
+`\cite` now carries `locked => true`, exactly as natbib locks its own variants
+(`natbib.sty.ltxml` L151, L191, L225). Raw `.sty`/`.cls` and document-source
+redefinitions are ignored; native bindings still override freely, because
+binding loads run UNLOCKED (Perl `Package.pm:loadLTXML` L2318 →
+`local_state_unlocked_guard` in `binding/content.rs`).
+
+**Deliberately beyond both Perl and the PDF.** Perl raw-loads the same styles
+and loses the citations identically. The PDF has no reference list either —
+these submissions ship no `.bbl` and arXiv does not run bibtex — so the styles'
+own `\cite` never had a bibliography to point at. Keeping LaTeXML's semantic
+`ltx:cite` is what makes the HTML usable: the citation resolves, the reference
+list renders, and only the citation *label style* differs from what that
+class would have printed.
+
+13 of 15 measured witnesses recovered, every one 0 entries before: 2605.07102
+(0 → 50), 2606.21959 (0 → 54), 2605.00671 (0 → 44, the `\affiliations`
+cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
+[`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+
+Guard: `bib_raw_cite_redefinition_is_ignored`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

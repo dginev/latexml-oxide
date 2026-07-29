@@ -8716,7 +8716,7 @@ LoadDefinitions!({
 
     Ok(Invocation!(T_CS!("\\@@cite"),
       vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)]))
-  }, robust => true);
+  }, robust => true, locked => true);
 
   // Perl L4271-4278: \nocite — defer to document end for MakeBibliography
   DefMacro!("\\nocite{}", sub[args] {

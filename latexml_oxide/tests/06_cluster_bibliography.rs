@@ -85,6 +85,37 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// A raw `\def\cite` must not displace LaTeXML's binding.
+///
+/// arXiv submissions ship their conference style, and under `--includestyles`
+/// it is raw-loaded — aaai/iccc/flairs/kr/achicago/fixbib all `\def\cite`.
+/// The replacement records no citation, so MakeBibliography selects nothing
+/// and the References section renders empty while the body shows bold `?`
+/// markers: "N bibentries, **0 cited**". The core `\cite` is now `locked`,
+/// exactly as natbib locks its own variants (`natbib.sty.ltxml` L151), so raw
+/// `.sty`/`.cls` and document redefinitions are ignored while native bindings
+/// — which load UNLOCKED (`content.rs`, Perl `Package.pm:loadLTXML` L2318) —
+/// still override freely.
+///
+/// Deliberately beyond Perl, and beyond the PDF: these submissions ship no
+/// `.bbl` and arXiv does not run bibtex, so the official PDF has no reference
+/// list either. Keeping the semantic `ltx:cite` is what makes the HTML usable.
+/// 13 of 15 witnesses recovered, all 0 before: 2605.07102 (0 -> 50),
+/// 2606.21959 (0 -> 54), 2605.00671 (0 -> 44), 2605.09519 (0 -> 24).
+/// OXIDIZED_DESIGN #86; audit family F9(a).
+#[test]
+fn bib_raw_cite_redefinition_is_ignored() {
+  let x = convert_and_post("tests/cluster_regressions/bib_cite_clobber.tex");
+  assert!(
+    !x.contains("CLOBBERED"),
+    "a raw \\def\\cite displaced the binding:\n{x}"
+  );
+  assert!(
+    x.contains("<bibitem") || x.contains("bibitem"),
+    "the bibliography did not survive the clobber attempt:\n{x}"
+  );
+}
+
 /// A `refcontext` block must not eat the `\printbibliography` inside it, and
 /// `\addbibresource` must accept its optional argument.
 ///
