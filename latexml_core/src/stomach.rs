@@ -292,6 +292,44 @@ pub struct Stomach {
 #[thread_local]
 pub static STOMACH: Lazy<RefCell<Stomach>> = Lazy::new(|| RefCell::new(Stomach::default()));
 
+// ---- Fragment yield (streaming mode) -------------------------------------
+//
+// Deliberately OUTSIDE the `Stomach` struct: these are driver-level
+// configuration, like the RSS cap — `initialize_stomach` resets the digestion
+// state between documents but must not forget that the driver asked for
+// fragmented digestion.
+
+/// When `Some(n)`, `digest_next_body` may YIELD — return the boxes accumulated
+/// so far, gullet and State untouched — once the current level holds `n` boxes
+/// AND the position is a legal fragment seam. `None` (default) = eager.
+#[thread_local]
+static FRAGMENT_YIELD_BUDGET: Cell<Option<usize>> = Cell::new(None);
+/// Set on yield; read-and-cleared by the streaming driver to distinguish
+/// "more to come" from EOF.
+#[thread_local]
+static FRAGMENT_YIELDED: Cell<bool> = Cell::new(false);
+/// Total yields this conversion (telemetry + test probe).
+#[thread_local]
+static FRAGMENT_YIELD_COUNT: Cell<usize> = Cell::new(0);
+
+/// Ask digestion to yield at legal fragment seams once `budget` boxes have
+/// accumulated at the current level (`None` restores eager digestion). Set by
+/// the streaming pass-1 driver; the budget is a box COUNT — the driver derives
+/// it from the byte ceiling via the measured per-box footprint, the same basis
+/// as the box-list guards.
+pub fn set_fragment_yield_budget(budget: Option<usize>) {
+  FRAGMENT_YIELD_BUDGET.set(budget);
+  FRAGMENT_YIELDED.set(false);
+  FRAGMENT_YIELD_COUNT.set(0);
+}
+
+/// Did the last `digest_next_body` return because of the yield budget (rather
+/// than EOF / terminal / depth-drop)? Read-and-clear.
+pub fn take_fragment_yielded() -> bool { FRAGMENT_YIELDED.replace(false) }
+
+/// How many times digestion has yielded since the budget was last set.
+pub fn fragment_yield_count() -> usize { FRAGMENT_YIELD_COUNT.get() }
+
 macro_rules! stomach {
   () => {
     (*STOMACH).borrow()
@@ -1438,6 +1476,51 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     if init_depth > stomach!().boxing.len() {
       ran_out = false;
       break;
+    }
+    // Fragment yield (streaming pass 1): between top-level constructs, at a
+    // legal seam, hand back the boxes accumulated so far so the driver can
+    // build + spill and re-enter. Everything digestion carries — gullet mouth
+    // stack, State undo frames, mode, fonts — is thread-local and survives
+    // between `digest_next_body` calls by construction, so resuming is the
+    // same operation `digest_internal`'s outer loop already performs; the
+    // alignment early-return above is the established precedent for
+    // returning early with a partial list.
+    //
+    // Seam legality (probed 2026-07-29 on a real conversion, not assumed):
+    // only the DRIVER call — `digest_internal` is the one caller that enters
+    // with an empty boxing stack (`init_depth == 0`); constructor argument
+    // digests also pass `None` but always sit inside an open box. The boxing
+    // stack must be back at 0, and the mode VERTICAL-family: the document
+    // body runs in `internal_vertical` (the `\begin{document}` environment's
+    // mode — plain `vertical` occurs only before it), and at depth 0 that
+    // cannot be a vbox/minipage interior, which always sits at deeper boxing.
+    // A horizontal-mode cut would split the run `repack_horizontal` folds
+    // into one paragraph; alignment, math, and open conditionals must all be
+    // closed. A single construct larger than the whole budget simply digests
+    // through — the existing hard ceilings still protect.
+    //
+    // Checked AFTER the terminal/depth exits so a real exit always wins, and
+    // before the next `read_x_token` so nothing is consumed-then-unread.
+    if let Some(budget) = FRAGMENT_YIELD_BUDGET.get()
+      && init_depth == 0
+      && terminal_opt.is_none()
+      && alignment_opt.is_none()
+      && stomach!().box_list.len() >= budget
+      && stomach!().boxing.is_empty()
+      && lookup_alignment().is_none()
+      && !lookup_bool_sym(crate::pin!("IN_MATH"))
+      && open_conditional_count() == 0
+      && matches!(
+        lookup_string_from_sym(crate::pin!("MODE")).as_str(),
+        "vertical" | "internal_vertical"
+      )
+    {
+      FRAGMENT_YIELDED.set(true);
+      FRAGMENT_YIELD_COUNT.set(FRAGMENT_YIELD_COUNT.get() + 1);
+      // No EOF trailer (`ran_out` stays true only through the loop's own
+      // exhaustion path — we return before reaching it), and no
+      // `gullet::flush()`: both are end-of-input actions, and input remains.
+      return Ok(expire_local_box_list());
     }
   }
 

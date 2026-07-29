@@ -1,0 +1,35 @@
+\documentclass{article}
+\begin{document}
+
+First paragraph of plain prose, long enough to digest into several boxes of
+ordinary horizontal material before the paragraph ends.
+
+Second paragraph. The yield seam must only ever fall BETWEEN constructs like
+these, never inside one.
+
+\begin{itemize}
+\item An itemized point, digested inside the environment's own nested call.
+\item A second point, with inline math $a^2+b^2=c^2$ inside it.
+\end{itemize}
+
+Third paragraph, following the list, with inline math $\sum_{k=0}^n k =
+\frac{n(n+1)}{2}$ that must never be split by a yield.
+
+\begin{tabular}{ll}
+alpha & beta \\
+gamma & delta \\
+\end{tabular}
+
+Fourth paragraph, after the alignment. {\itshape A grouped stretch of italic
+text, spanning enough words to matter.} And a tail after the group.
+
+\begin{equation}
+\int_0^1 f(t)\,dt = F(1) - F(0)
+\end{equation}
+
+Fifth paragraph. More prose so several yield opportunities exist after the
+display equation has closed.
+
+Sixth paragraph, and the last one before the document ends.
+
+\end{document}
