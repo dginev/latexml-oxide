@@ -1370,3 +1370,91 @@ fn bib_preamble_defines_macros_for_the_whole_bibliography() {
     "@preamble: a preamble macro leaked into the output as source:\n{x}"
   );
 }
+/// The secondary `MakeBibliography` parity gaps of SYNC_STATUS R5 item 2, on one
+/// alpha-styled document: the swapped `citestyle` mapping, the disambiguation
+/// key read off the wrong name string, collating `unisort`, format-order
+/// numbering — and the fourth audit item that turned out NOT to be a gap. See
+/// `bib_alpha_style.tex` for the list and `bib_alpha_style_refs.bib` for why
+/// each entry is present.
+///
+/// Every expectation here is ground-truthed against same-host Perl LaTeXML
+/// 0.8.8 on this exact fixture, after which the two engines' bibliographies are
+/// byte-identical on it.
+#[test]
+fn cluster_bib_alpha_style_labels() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_alpha_style.tex");
+
+  // Every bibitem in document order, as (refnum class, refnum text).
+  let mut labels: Vec<(String, String)> = Vec::new();
+  let mut rest = x.as_str();
+  while let Some(i) = rest.find("<bibitem") {
+    let item_end = rest[i..]
+      .find("</bibitem>")
+      .map(|e| i + e)
+      .unwrap_or(rest.len());
+    let item = &rest[i..item_end];
+    if let Some(r) = item.find(r#"role="refnum""#) {
+      let tag_start = item[..r].rfind("<tag").expect("refnum tag start");
+      let tag = &item[tag_start..];
+      let class = tag
+        .find(r#"class=""#)
+        .map(|c| {
+          let c = tag_start + c + 7;
+          let e = item[c..].find('"').expect("class end") + c;
+          item[c..e].to_string()
+        })
+        .unwrap_or_default();
+      let open = tag.find('>').expect("tag open") + tag_start + 1;
+      let close = item[open..].find("</tag>").expect("tag close") + open;
+      labels.push((class, item[open..close].to_string()));
+    }
+    rest = &rest[item_end..];
+  }
+
+  // Gap 1 — `\bibliographystyle{alpha}` (CITE_STYLE=AY) is Perl's ABBREVIATED
+  // label branch, not the spelled-out author-year one.
+  assert!(
+    labels.iter().all(|(c, _)| c == "ltx_bib_abbrv"),
+    "every refnum should be an abbreviated alpha label, got {labels:?}\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_bib_author-year"),
+    "an alpha bibliography must not emit author-year refnums:\n{x}"
+  );
+
+  // Gap 4 — collation: `ångström` sorts between `adams` and `baker`, not after
+  // every ASCII letter as a codepoint sort would place it. (The numbering that
+  // rides on the same order is asserted by construction: the labels are read in
+  // document order.)
+  // Gap 2 — the two `Smith`-led entries share Perl's short-form `{ay}`, so they
+  // are disambiguated `a`/`b`; a full-author key never collides.
+  // Also covers the `make_alpha_label` char-boundary panic: `Ångström`'s
+  // multi-byte initial used to be byte-sliced.
+  let texts: Vec<&str> = labels.iter().map(|(_, t)| t.as_str()).collect();
+  assert_eq!(
+    texts,
+    vec!["ADA01", "\u{c5}NG02", "BAK03", "SBC99a", "SDE99b"],
+    "bibitem order and alpha labels:\n{x}"
+  );
+
+  // Gap 3 was NOT a gap — KNOWN_PERL_ERRORS #67. Perl's `do_year` reads the
+  // ARRAY `@…::SUFFIX` while `formatBibEntry` binds the SCALAR `$…::SUFFIX`,
+  // so the letter never reaches the entry body; same-host Perl 0.8.8 prints
+  // ` (1999)` here, and `alpha.bst` agrees. Pinned so a future reader of
+  // L613-615 does not "fix" it back.
+  for needle in ["An alpha study", "A beta study"] {
+    let i = x
+      .find(needle)
+      .unwrap_or_else(|| panic!("no entry titled {needle} in:\n{x}"));
+    let start = x[..i].rfind("<bibitem").expect("bibitem start");
+    let end = x[start..]
+      .find("</bibitem>")
+      .map(|e| start + e)
+      .unwrap_or(x.len());
+    let item = &x[start..end];
+    assert!(
+      item.contains("(1999)") && !item.contains("(1999a)") && !item.contains("(1999b)"),
+      "the entry body of {needle} should carry the bare year, as Perl does:\n{item}"
+    );
+  }
+}

@@ -5,10 +5,11 @@
 > MakeBibliography full-parity re-port (user directive 2026-07-04 — reuse TeX
 > interpretation, no special-case parser).
 >
-> **State, 2026-07-27.** Re-port **items 1 and 3 are DONE**; the open work is
-> item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER)
-> and the missing-references target list. The `.bib`-as-DATA family closed as
-> divergences **#73 #74 #75 #78 #79 #80**.
+> **State, 2026-07-29.** The MakeBibliography re-port is **DONE** — items 1, 2
+> and 3 all landed. The only open work in this file is the missing-references
+> target list. The `.bib`-as-DATA family closed as divergences
+> **#73 #74 #75 #78 #79 #80**; item 2's collation approximation is **#84** and
+> its one non-gap is **KNOWN_PERL_ERRORS #67**.
 >
 > **Two reading rules for this file.** (1) The three **INTERIM** blocks under the
 > re-port are HISTORY — every identifier they name was deleted with the string
@@ -822,11 +823,60 @@ FULL RE-PORT — item 1 LANDED 2026-07-26:
    Measured on `bib_field_no_url_package` (full pipeline, both engines):
    Rust **0 errors / 3 bibitems**, same-host `latexmlc` **7 errors / 3
    bibitems** with the note truncated. The gap is divergence #72.
-2. Secondary parity gaps from the audit: `unisort` (Unicode collation) vs
-   `Vec::sort()`; citestyle semantics swapped (`AY` should be the
-   abbreviated `[AA+yy]` label, not full author-year); `Formatter::Year`
-   drops the disambiguation `@SUFFIX`; document-global NUMBER across split
-   documents.
+2. **DONE 2026-07-29.** The four secondary parity gaps from the audit, plus a
+   fifth found while checking them and a latent panic the first fix made
+   reachable. All five live in `latexml_post/src/make_bibliography.rs`; the
+   whole set is guarded by
+   `06_cluster_bibliography::cluster_bib_alpha_style_labels` over
+   `cluster_regressions/bib_alpha_style.{tex,bib}`, whose every expectation was
+   ground-truthed against same-host Perl LaTeXML 0.8.8 — after which the Rust
+   and Perl bibliographies are **byte-identical** on that fixture (modulo the
+   pre-existing `biblist` id noted below).
+
+   * **citestyle semantics were SWAPPED** — the one with real corpus reach.
+     Perl L481-517 has exactly three branches: `numbers` → `[1]`; **`AY` → the
+     abbreviated `[AS64]` label** (class `ltx_bib_abbrv`); *anything else* →
+     spelled-out author-year. Rust read `AY` as author-year, `alpha` (a string
+     nothing emits) as the abbreviated one, and every unknown value as
+     `numbers`. Since `\bibliographystyle{alpha}` sets `CITE_STYLE=AY` (Perl
+     `$BIBSTYLES`, `latex_constructs.pool.ltxml` L3953-3961 — the Rust table
+     matches), **every alpha-styled document got the wrong label shape**, and
+     natbib's `super` fell to numbers instead of author-year.
+   * **`{ay}` and `{initial}` were keyed off the wrong name string.** Perl
+     computes two (L318-337): the full `$sortnames` keys the sort, the SHORT
+     `$names` ("Smith et al") keys disambiguation and the split-by-initial
+     bucket. Rust used the full form for all three, so two 3+-author entries
+     sharing a first author and year never collided and **neither was ever
+     given its `a`/`b` suffix**.
+   * **`unisort`** — now collates (primary-level UCA, no new dependency);
+     divergence **#84** records what that does and does not reproduce.
+   * **doc-global NUMBER** — was assigned in document-global sortkey order
+     inside `get_bib_entries`; Perl assigns it in FORMAT order (`local $NUMBER`
+     L55, `++$NUMBER` L418), which under `--splitbibliography` is
+     initial-major. Moved to `process`, walking the same order the biblists are
+     built in. Non-split output is unchanged (the two orders coincide); split
+     output now follows Perl whenever an entry's `initial` is not the first
+     letter of its sortkey, which `Post::initial`'s leading-non-letter skip
+     makes possible.
+   * **`Formatter::Year` does NOT drop a suffix** — the audit item was read off
+     the Perl source's sigil. `do_year` L613-615 reads the ARRAY `@…::SUFFIX`
+     while L417 binds the SCALAR `$…::SUFFIX`, so the letter never reached the
+     body in Perl either; measured Perl output is ` (1999)`, and `alpha.bst`
+     agrees. **KNOWN_PERL_ERRORS #67**; the non-emission is now pinned by the
+     guard so it is not "fixed" back.
+   * **`make_alpha_label` byte-indexed a UTF-8 string** — `aa.len() > 3` /
+     `&aa[..3]` over per-author initials, so a multi-byte initial (`Ångström`)
+     could panic on a char boundary. Character-based now, and the stray
+     `to_uppercase()` Perl's multi-name branch does not have is gone. Latent
+     before, reachable for every `alpha` document after the citestyle repair —
+     which is why it is in this change and not a follow-up.
+
+   **Found, not fixed (separate defect):** a Rust `<ltx:biblist>` carries
+   `xml:id` but no `fragid`, and the XSLT's `add_id` emits the HTML `id` from
+   `@fragid` only — so Perl's `<ul id="bib.L1">` comes out as a bare `<ul>` in
+   Rust. Pre-existing, unrelated to this change, and the XSLT template is
+   byte-identical between the engines, so the divergence is upstream of it in
+   whatever assigns `fragid` to a post-created node.
 3. **Field-interpretation whitelist — RESOLVED by item 1, not by widening the
    list.** Flagged by the 2026-07-05 commit review of `ede2bdcc2c`: the
    `.bib`→XML path in `make_bibliography.rs` digested only 13 fields

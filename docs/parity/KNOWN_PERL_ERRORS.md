@@ -2862,3 +2862,50 @@ byte-for-byte and so certified the defect.
 Candidate to upstream: swapping `#1`→`#2` is a one-token fix; the
 note-decoration and undigested-reading parts need the XSLT and parameter-type
 changes too.
+
+## 67. `do_year`'s bibliography disambiguation suffix is dead code — a sigil mismatch
+
+`LaTeXML/lib/LaTeXML/Post/MakeBibliography.pm` binds the entry's disambiguation
+letter as a **scalar** and reads it back as an **array**:
+
+```perl
+# L417, in formatBibEntry:
+local $LaTeXML::Post::MakeBibliography::SUFFIX = $$entry{suffix};
+# L613-615, in do_year:
+return (' (', @stuff, @LaTeXML::Post::MakeBibliography::SUFFIX, ')');
+```
+
+`$Pkg::SUFFIX` and `@Pkg::SUFFIX` are different Perl variables. The array is
+never assigned anywhere in the distribution (`grep -rn '@SUFFIX' LaTeXML/lib/`
+is empty), so it always interpolates to nothing and the letter never reaches the
+entry body — only the refnum label, which reads `$$entry{suffix}` directly.
+
+**Minimal trigger** — two entries sharing an author+year (`latexml_oxide/tests/
+cluster_regressions/bib_alpha_style.{tex,bib}`, entries `wide1`/`wide2`), under
+`\bibliographystyle{alpha}`. Same-host Perl LaTeXML 0.8.8 renders
+
+```html
+<span class="ltx_tag ltx_bib_abbrv …">[SBC99a]</span> … <span class="ltx_text ltx_bib_year"> (1999)</span>
+```
+
+— suffix on the label, bare year in the body.
+
+**Not fixed, in either engine, and that is deliberate.** The dead code's evident
+intent (a disambiguated body year) is what author-year styles like
+`apalike.bst` print, but the styles that actually reach this branch do not want
+it: `alpha.bst` prints the bare `1999` in the entry body, exactly as Perl
+already does. And Rust's author-year branch drops the first block's year
+outright (OXIDIZED_DESIGN #71), so "fixing" the sigil would change output *only*
+for the alpha and numeric styles — precisely where it would be wrong. Rust
+therefore matches Perl's behaviour, with the reason recorded at the seam
+(`make_bibliography.rs`, `Formatter::Year`) and pinned by
+`06_cluster_bibliography::cluster_bib_alpha_style_labels`.
+
+Worth knowing because the *source* reads as though the suffix is emitted: an
+audit item in `BIBLIOGRAPHY_WORKLIST.md` ("`Formatter::Year` drops the
+disambiguation `@SUFFIX`") was opened off that reading and closed only when the
+Perl output was measured.
+
+Candidate to upstream: deleting the dead `@…::SUFFIX` interpolation, or a
+style-conditional emission. Not a one-token `$`/`@` swap — that would change
+alpha-styled output for the worse.

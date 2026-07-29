@@ -55,7 +55,7 @@ Re-verify a row before planning on it (rule 1).
 | **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
-| **R5** | Bibliography targets + MakeBibliography re-port | **re-port items 1 and 3 LANDED**: a raw `.bib` is converted by the engine (recursive BibTeX session on the LIVE core state), the 727-line string route is deleted, the eager-tokenization gap that cost 151 papers is closed at the root, and the 13-field digest whitelist is gone — the `\bib@field@default@*` name sets now match Perl exactly (45 each). The 2026-07-27 follow-ups closed the `.bib`-as-DATA family (divergences #74/#78/#79/**#80**). Remaining: item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER) and the missing-references target list | **item 2 + targets** — the re-port itself is done | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
+| **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -65,7 +65,42 @@ Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
-- **2026-07-27 (latest) — the `unexpected:fi` fatal cluster: `\meaning` of a
+- **2026-07-29 (latest) — `\bibliographystyle{alpha}` produced the wrong label
+  shape, and duplicate author-years were never disambiguated.** R5 item 2, the
+  four secondary `MakeBibliography` parity gaps, all in
+  `latexml_post/src/make_bibliography.rs`. The reaching one: Perl branches on
+  `citestyle` three ways (L481-517) and **`AY` is the abbreviated `[AS64]`
+  label**, class `ltx_bib_abbrv` — Rust read `AY` as the spelled-out
+  author-year and `alpha`, a string nothing emits, as the abbreviated one, so
+  every `\bibliographystyle{alpha}` document got author-year refnums (and
+  natbib's `super` fell to numbers instead of author-year). Second: Perl keys
+  disambiguation and the split bucket off the SHORT name form (`"Smith et al"`,
+  L326-337) and only the SORT off the full names; Rust used the full names for
+  all three, so two 3+-author entries sharing a first author and year never
+  collided and **neither got its `a`/`b` suffix**. Third: `unisort` collates
+  (`Ångström` belongs between `Adams` and `Baker`, not after `Smith`) — ported
+  at UCA's primary level with no new dependency, divergence **#84**. Fourth:
+  `NUMBER` is assigned in FORMAT order, which is initial-major under
+  `--splitbibliography`, not in document-global sortkey order (non-split output
+  unchanged). Also fixed because the citestyle repair makes it reachable for
+  every alpha document: `make_alpha_label` byte-indexed the per-author initials
+  (`&aa[..3]`), a char-boundary panic on `Ångström`.
+  **One of the four was NOT a gap** — `Formatter::Year` correctly omits the
+  suffix. Perl's `do_year` reads the ARRAY `@…::SUFFIX` while `formatBibEntry`
+  binds the SCALAR `$…::SUFFIX`, so the letter never reached the body upstream
+  either; measured Perl prints ` (1999)` and `alpha.bst` agrees.
+  **KNOWN_PERL_ERRORS #67** — the audit item was read off the sigil, which is
+  the same "verify the file, not the recollection" trap R9-BST already records.
+  Every expectation ground-truthed against same-host Perl 0.8.8 on the fixture,
+  after which the two engines' bibliographies are byte-identical there. Guard
+  `06_cluster_bibliography::cluster_bib_alpha_style_labels` (verified RED on
+  the pre-fix tree: author-year classes, `Ångström` last, no suffixes).
+  **Found, not fixed:** a Rust `<ltx:biblist>` has `xml:id` but no `fragid`, and
+  `add_id` emits the HTML `id` from `@fragid` only, so Perl's `<ul id="bib.L1">`
+  is a bare `<ul>` here. Pre-existing; the XSLT is byte-identical between the
+  engines, so the cause is whatever assigns `fragid` to a post-created node.
+
+- **2026-07-27 — the `unexpected:fi` fatal cluster: `\meaning` of a
   `\chardef` token returned the internal class name.** GENUINE-RUST-ONLY,
   **18 papers, one cause.** Largest unclassified first-error cluster in the 186
   `Fatal:TooManyErrors` papers of sandbox-arxiv-2605+2606:
@@ -346,14 +381,16 @@ Re-verify a row before planning on it (rule 1).
   2606.13010 (arXiv/html_feedback#6624) now converts at 0 errors / 0 warnings /
   0 unparsed math. This file was compacted the same day — see the header.
 
-- `cargo test --tests`: **1760 passing / 105 targets, 0 failed, 0 ignored**
-  (2026-07-29, on `main` @ `d5684f0bcf`, dev box with ImageMagick + ghostscript +
-  poppler **and `mutool`** installed, so the vector-SVG branch really ran — both
-  `test_vector_svg_*` report ok, not skipped). Re-run before quoting: the count
-  moves with every PR that adds a guard. It rose from the long-quoted 1696 / 94
-  targets (2026-07-26 @ `e07548e6b3`) as #403…#419 and then #430/#432/#434/#435
-  landed — the last four adding `110_acmart_description_aria` and
-  `111_build_memory_guard`. Two claims carried here for weeks
+- `cargo test --tests`: **1763 passing / 106 targets, 0 failed, 0 ignored**
+  (2026-07-29, `main` @ `48de8eaa5f` plus the R5-item-2 guard, dev box with
+  ImageMagick + ghostscript + poppler **and `mutool`** installed, so the
+  vector-SVG branch really ran — both `test_vector_svg_*` report ok, not
+  skipped). Re-run before quoting: the count moves with every PR that adds a
+  guard. It rose from the long-quoted 1696 / 94 targets (2026-07-26 @
+  `e07548e6b3`) as #403…#419, then #430/#432/#434/#435 (adding
+  `110_acmart_description_aria` and `111_build_memory_guard`), then #442's
+  `109_preload_pi_attributes` — which is the 106th target, so a
+  "105 targets" quote predates it. Two claims carried here for weeks
   did **not** reproduce and have been dropped:
   `latexml_post::graphics::process_coalesces_only_matching_conversion_options`,
   long labelled "the one red, known local-only artifact", passes; and `mutool` is
