@@ -854,10 +854,11 @@ FULL RE-PORT — item 1 LANDED 2026-07-26:
      inside `get_bib_entries`; Perl assigns it in FORMAT order (`local $NUMBER`
      L55, `++$NUMBER` L418), which under `--splitbibliography` is
      initial-major. Moved to `process`, walking the same order the biblists are
-     built in. Non-split output is unchanged (the two orders coincide); split
-     output now follows Perl whenever an entry's `initial` is not the first
-     letter of its sortkey, which `Post::initial`'s leading-non-letter skip
-     makes possible.
+     built in. **This changes no output today** and the PR says so: `post.rs`
+     constructs the processor with `split = false` and `--splitbibliography` is
+     in the deferred CLI cluster, so the split branch is unreachable; the
+     non-split walk numbers in exactly the order the old pass did. It is a
+     correctness fix for when that flag lands.
    * **`Formatter::Year` does NOT drop a suffix** — the audit item was read off
      the Perl source's sigil. `do_year` L613-615 reads the ARRAY `@…::SUFFIX`
      while L417 binds the SCALAR `$…::SUFFIX`, so the letter never reached the

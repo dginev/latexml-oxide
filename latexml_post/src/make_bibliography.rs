@@ -611,22 +611,16 @@ impl MakeBibliography {
             let year = extract_four_digit_year(&date_content);
             entry.year = year.clone();
 
-            // Perl L330 selects the date for {ay} and the sortkey with the
-            // UNION xpath `ltx:bib-date[@role="publication"] | ltx:bib-type`
-            // (whichever comes first in document order), so a dateless entry
-            // sorts under its type ("techreport", …) rather than under the
-            // empty string. The label year (`entry.year`) keeps coming from
-            // the date alone, as in Perl, where the tags are built from their
-            // own `@year` nodes.
-            let date = if date_content.is_empty() {
-              PostDocument::findnodes_foreign("ltx:bib-type", bibentry)
-                .into_iter()
-                .next()
-                .map(|n| extract_four_digit_year(&n.get_content()))
-                .unwrap_or_default()
-            } else {
-              year.clone()
-            };
+            // The {ay}/sortkey date is the publication date ALONE, on purpose.
+            // Perl L330 unions it with `ltx:bib-type`
+            // (`ltx:bib-date[@role="publication"] | ltx:bib-type`, whichever
+            // comes first in document order); querying the two separately is a
+            // settled decision here, so that a `type` field cannot displace the
+            // year — see BIBLIOGRAPHY_WORKLIST, "bib-type is safe to emit".
+            // A "date else type" stand-in was written while porting the sortkey
+            // and REMOVED on review: it contradicts that decision, it is not
+            // Perl's rule anyway for an entry carrying both, and it would move
+            // sort keys (and with them numbering) with no test or witness.
 
             // Title
             let title = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
@@ -648,11 +642,11 @@ impl MakeBibliography {
             // that Perl groups as "Smith et al.1999" carry different coauthor
             // lists, so their full-name keys never collide and neither entry
             // ever got its `a`/`b` suffix.
-            entry.author_year = format!("{}.{}", short_names, date);
+            entry.author_year = format!("{}.{}", short_names, year);
             entry.initial = PostDocument::initial(&short_names, true);
 
             // Sort key — Perl L338, from the FULL sort-names.
-            let sort_key = format!("{}.{}.{}.{}", sort_names, date, title, bibkey).to_lowercase();
+            let sort_key = format!("{}.{}.{}.{}", sort_names, year, title, bibkey).to_lowercase();
             entry.sort_key = sort_key.clone();
 
             // Enqueue transitive citations
@@ -1485,8 +1479,17 @@ impl Processor for MakeBibliography {
       }
 
       // Read citation style from element attributes
+      // Perl L481 is `$STYLE{citestyle} || 'numbers'`, and `||` is falsy on the
+      // EMPTY string as well as on absent — so an empty attribute must reach
+      // `numbers`, not the `else` branch. Before the mapping repair below an
+      // empty value fell through to `_ => Numbers` by luck; with `_` now
+      // meaning author-year it has to be excluded explicitly, or the repair
+      // would introduce an unfaithfulness of its own. Our own engine cannot
+      // emit `citestyle=""` (`Document::set_attribute` skips empty values), but
+      // `latexml_post` also consumes XML it did not produce.
       let citestyle_str = bib
         .get_attribute("citestyle")
+        .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "numbers".to_string());
       // Perl L481-517 branches on exactly three cases, and the mapping was
       // inverted here: `AY` is the ABBREVIATED `[AS64]` label (L485, class
@@ -1530,6 +1533,14 @@ impl Processor for MakeBibliography {
       // the document-global sortkey order; the two coincide whenever an
       // entry's `initial` is the first letter of its sortkey, which is the
       // common case but not guaranteed (`initial` skips leading non-letters).
+      //
+      // NOTE ON REACH: `self.split` is currently always false — `post.rs`
+      // constructs this processor with `split = false` and
+      // `--splitbibliography` sits in the deferred CLI cluster. So moving the
+      // counter here changes NO production output today; the non-split walk
+      // numbers in the same order the old in-`get_bib_entries` pass did. It is
+      // done for when that flag lands, and because the counter belongs with
+      // the walk it counts.
       let mut number = 0u32;
 
       if self.split {
@@ -1549,9 +1560,15 @@ impl Processor for MakeBibliography {
         for initial in &initials {
           // Number this group, then format it — the order Perl's single
           // `++$NUMBER`-as-you-format walk produces.
+          // The keys came out of `entries` a few lines above, so a miss is a
+          // logic error, not input-dependent — `debug_assert` makes it loud in
+          // dev/test without risking a production abort (`maxperf` sets
+          // `panic = "abort"`). Incrementing INSIDE the lookup also means a
+          // miss could never silently burn a number and shift the whole list.
           for key in &by_initial[initial] {
-            number += 1;
+            debug_assert!(entries.contains_key(key), "grouped key {key} left entries");
             if let Some(entry) = entries.get_mut(key) {
+              number += 1;
               entry.number = number;
             }
           }
@@ -1568,8 +1585,9 @@ impl Processor for MakeBibliography {
         let mut sorted_keys: Vec<String> = entries.keys().cloned().collect();
         unisort(&mut sorted_keys);
         for key in &sorted_keys {
-          number += 1;
+          debug_assert!(entries.contains_key(key), "sorted key {key} left entries");
           if let Some(entry) = entries.get_mut(key) {
+            number += 1;
             entry.number = number;
           }
         }
