@@ -84,6 +84,42 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// achemso's `{tocentry}` must not swallow the rest of the document.
+///
+/// It used to be suppressed with `\begin{tocentry}` → `\iffalse` and
+/// `\end{tocentry}` → `\fi`. Conditional skipping matches `\fi` by MEANING and
+/// expands nothing on the way (TeX's rule, and `skip_conditional_body`'s), so
+/// an `\end{tocentry}` whose macro *body* is `\fi` is invisible to it: the skip
+/// ran to end of file and took the rest of the paper with it, `\bibliography`
+/// included. It surfaced as `Error:expected:\fi \iffalse` pointing at EOF,
+/// which reads like a source defect and is not one — the `\iffalse` was ours.
+///
+/// 42 of the 342 residual papers in the 2605+2606 bibliography-absence cohort
+/// lost their whole bibliography to this one line. Witness 2606.14933
+/// (0 -> 69 entries). Perl never reaches it: no achemso binding, OmniBus
+/// fallback, `{tocentry}` simply undefined.
+///
+/// Red/green is the bibliography length — 0 entries is red. The third
+/// assertion keeps the suppression honest: the graphic's text must stay out of
+/// the body.
+#[test]
+fn bib_achemso_tocentry_does_not_swallow_the_bibliography() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/bib_achemso_tocentry.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "{{tocentry}} swallowed the bibliography: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("Body cites"),
+    "the document body after {{tocentry}} was swallowed:\n{x}"
+  );
+  assert!(
+    !x.contains("graphic caption"),
+    "the tocentry graphic leaked into the body:\n{x}"
+  );
+}
+
 /// `\captionof{lstlisting}` must not swallow the rest of the document.
 ///
 /// Perl's binding wraps the caption in the named environment — "it isn't
