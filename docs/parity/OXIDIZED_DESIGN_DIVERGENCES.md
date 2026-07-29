@@ -3038,6 +3038,27 @@ F3(a) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
 
 Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
 
+### 85. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
+
+Same shape as #84, one level down. The real package
+(`bibunits.sty` L324-330) writes the optional argument to the bibunit `.aux`
+as a `\bibdata` record and then runs `\@input@{\@bibunitname.bbl}`
+**unconditionally** — the argument never decides whether the `.bbl` is read.
+
+Perl's binding (`bibunits.sty.ltxml` L78) expands `\putbib[#1]` to
+`\lx@bibliography[\bu@unitname]{…}`, i.e. the `.bib` route only. arXiv
+submissions ship the *generated* `bu1.bbl`/`bu2.bbl` precisely because arXiv
+does not run bibtex, and the named `.bib` is usually absent — so the lookup
+finds nothing and the References section renders empty. Rust prefers the
+shipped `.bbl` and keeps Perl's route as the fallback.
+
+15 papers measured across the 2605+2606 sandboxes, every one 0 entries before
+and complete after: 2606.04416 (79), 2606.28854 (180), 2605.21570 (46 = bu1's
+34 + bu2's 12, each matching its unit's own `\begin{thebibliography}{N}`).
+Audit family F3(c) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+
+Guard: `bibunits_putbib_reads_the_per_unit_bbl`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

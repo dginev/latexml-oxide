@@ -85,6 +85,30 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`.
+///
+/// The real package does exactly that (`bibunits.sty` L324-330): the optional
+/// argument only feeds the `.aux` `\bibdata` record, then
+/// `\@input@{\@bibunitname.bbl}` runs unconditionally — the same shape
+/// `\bibliography` has with `\jobname.bbl`. Perl's binding
+/// (`bibunits.sty.ltxml` L78) routes to `\lx@bibliography` only, so it looks
+/// for a `.bib` that arXiv submissions do not ship (they ship the generated
+/// `bu1.bbl`/`bu2.bbl`, because arXiv does not run bibtex) and the References
+/// section comes out empty.
+///
+/// 15 papers measured across the 2605+2606 sandboxes, every one 0 entries
+/// before and complete after — 2606.04416 (79), 2606.28854 (180), 2605.21570
+/// (46 = bu1's 34 + bu2's 12, matching each unit's own
+/// `\begin{thebibliography}{N}`). Audit family F3(c); OXIDIZED_DESIGN #85.
+#[test]
+fn bibunits_putbib_reads_the_per_unit_bbl() {
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bibunits.tex");
+  assert!(
+    x.contains("First unit reference"),
+    "\\putbib did not input bu1.bbl, got:\n{x}"
+  );
+}
+
 /// A bibliography file that cannot be found must be an **Error**, not an Info.
 ///
 /// Perl raises `Error:missing_file` (`Post/MakeBibliography.pm` L138-140) and
