@@ -580,6 +580,11 @@ fn streaming_pass2(
     let mut out = String::new();
     {
       let mut frag = Document::from_xml_document(frag_xml, node_fonts.clone())?;
+      log::info!(
+        "streaming pass2: segment {seg} ({} KB) parsed; RSS ~{} MB",
+        store.read_segment(seg).map(|t| t.len() / 1024).unwrap_or(0),
+        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+      );
       frag.scoped_rules_strict = true;
       // The segment text was pretty-printed by our serializer; re-parsing
       // turned that indentation into text nodes. Strip them (schema-symmetric
@@ -616,8 +621,15 @@ fn streaming_pass2(
       }
       apply_lx_declarations(&mut frag, meta.section_id.as_deref());
       if !nomath {
+        let rss0 = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
         let mut parser = MathParser::default();
         parser.parse_math(&mut frag)?;
+        log::info!(
+          "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
+          rss0,
+          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+          latexml_core::common::arena::len(),
+        );
         // Mirror the eager tail: mark failed formulae, renumber math ids
         // (per-Math, so fragment-local by construction).
         if !parser.failed_xmath_ids.is_empty() {
@@ -651,6 +663,10 @@ fn streaming_pass2(
       }
     }
     store.finalize_segment(seg, &out)?;
+    log::info!(
+      "streaming pass2: segment {seg} finalized+dropped; RSS ~{} MB",
+      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
+    );
   }
   Ok(())
 }
@@ -1084,6 +1100,29 @@ impl DigestionAPI for Core {
     // The spine's own rewrite phase must be strict too: its sections are
     // spilled placeholders, so a scope that "isn't here" is in a fragment.
     document.scoped_rules_strict = true;
+    if std::env::var_os("LXSXML_SPINE_PROBE").is_some() {
+      let mut inventory: rustc_hash::FxHashMap<String, usize> = rustc_hash::FxHashMap::default();
+      if let Some(root) = document.get_document().get_root_element() {
+        for c in root.get_child_nodes() {
+          *inventory.entry(c.get_name()).or_default() += 1;
+        }
+      }
+      eprintln!("SPINEPROBE root children: {inventory:?}");
+      for (i, xm) in document
+        .findnodes("//ltx:XMath", None)
+        .iter()
+        .take(3)
+        .enumerate()
+      {
+        let mut path = Vec::new();
+        let mut cur = Some(xm.clone());
+        while let Some(n) = cur {
+          path.push(n.get_name());
+          cur = n.get_parent();
+        }
+        eprintln!("SPINEPROBE xmath[{i}] ancestry: {path:?}");
+      }
+    }
     // The spine gets the normal whole-document tail; spilled content is
     // invisible to it (placeholders), so root-level passes act on the live
     // root exactly as in the eager path.

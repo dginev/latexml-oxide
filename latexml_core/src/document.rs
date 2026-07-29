@@ -3572,6 +3572,14 @@ impl Document {
 
   /// Spill one contiguous run of closed sibling elements as a single segment.
   /// Consumes (drains) `run`; on success the nodes are unlinked and freed.
+  /// Serialized-bytes ceiling per SEGMENT. A spill run is chunked so no
+  /// segment exceeds it (approximately — a single oversized subtree still
+  /// becomes one segment): pass 2 re-materializes a segment WHOLE, so the
+  /// segment size bounds pass-2 peak memory the way the yield budget bounds
+  /// pass 1. The witness's first RSS-triggered yield once spilled half the
+  /// document as ONE 512 MB segment, and pass 2 died re-parsing it.
+  const SEGMENT_CHUNK_BYTES: usize = 32 * 1024 * 1024;
+
   fn spill_run(
     &mut self,
     run: &mut Vec<Node>,
@@ -3582,30 +3590,6 @@ impl Document {
     index: &mut crate::sxml::FragmentIndex,
   ) -> Result<usize> {
     use crate::sxml::SegmentMeta;
-    // A spilled subtree can CONTAIN placeholders from earlier, deeper spills
-    // (a closing section swallows its paragraphs' placeholders). Serializing
-    // through `serialize_into` below INLINES those nested segments' raw text
-    // — outer and inner are both in the pre-finalize form, so the outer
-    // segment simply absorbs the inner one. Collect the swallowed ids first
-    // so they can be retired: their content now travels with the outer
-    // segment, and pass 2 must not process (or the assembly splice resolve)
-    // them independently.
-    let mut swallowed: Vec<crate::sxml::SegmentId> = Vec::new();
-    for node in run.iter() {
-      for ph in self.findnodes(
-        &s!(
-          "descendant-or-self::*[local-name()='{}']",
-          SPILL_PLACEHOLDER
-        ),
-        Some(node),
-      ) {
-        if let Some(r) = ph.get_attribute("ref")
-          && let Ok(n) = r.parse::<u32>()
-        {
-          swallowed.push(crate::sxml::SegmentId(n));
-        }
-      }
-    }
     // An element whose children are exclusively EMPTY text nodes serializes
     // as `<p></p>` — indistinguishable, after a parse round-trip, from a
     // childless `<p/>`. Mark such elements before serializing so pass 2 can
@@ -3631,56 +3615,91 @@ impl Document {
     for node in run.iter() {
       mark_empty_text_elements(node);
     }
-    // Serialize the run in the pre-finalize form, exactly as the eager
-    // serializer would emit it at this position (nested placeholders splice
-    // their segments' current — still unprocessed — text).
-    let mut xml = String::new();
-    for node in run.iter() {
-      self.serialize_into(&mut xml, node, depth, noindent, false);
-    }
-    let meta = SegmentMeta {
-      depth,
-      noindent,
-      font: None,
-      namespaces: namespaces.to_vec(),
-      section_id: section_id.clone(),
-    };
-    let store = self
-      .spill_store
-      .as_mut()
-      .expect("checked at spill_closed_subtrees entry");
-    let seg = store.write_segment(&xml, meta)?;
-    for inner in swallowed {
-      store.retire_segment(inner)?;
-    }
 
-    // Index + purge while the nodes are still alive, then placeholder + free.
-    for node in run.iter() {
-      self.index_and_purge_spilled(node, seg, index);
+    // Chunk the run so each segment stays under SEGMENT_CHUNK_BYTES of
+    // serialized text; every chunk gets its own segment + placeholder, so
+    // document order is preserved chunk-by-chunk.
+    let mut runs_spilled = 0usize;
+    let mut chunk: Vec<Node> = Vec::new();
+    let mut xml = String::new();
+    let all: Vec<Node> = run.drain(..).collect();
+    let total = all.len();
+    for (i, node) in all.into_iter().enumerate() {
+      // A spilled subtree can CONTAIN placeholders from earlier, deeper
+      // spills (a closing section swallows its paragraphs' placeholders).
+      // Serializing through `serialize_into` INLINES those nested segments'
+      // raw text — both are in the pre-finalize form, so the outer segment
+      // simply absorbs the inner one; the swallowed ids are then retired so
+      // pass 2 neither processes nor splices them independently.
+      let mut swallowed: Vec<crate::sxml::SegmentId> = Vec::new();
+      for ph in self.findnodes(
+        &s!(
+          "descendant-or-self::*[local-name()='{}']",
+          SPILL_PLACEHOLDER
+        ),
+        Some(&node),
+      ) {
+        if let Some(r) = ph.get_attribute("ref")
+          && let Ok(n) = r.parse::<u32>()
+        {
+          swallowed.push(crate::sxml::SegmentId(n));
+        }
+      }
+      self.serialize_into(&mut xml, &node, depth, noindent, false);
+      chunk.push(node);
+      for inner in &swallowed {
+        let store = self
+          .spill_store
+          .as_mut()
+          .expect("checked at spill_closed_subtrees entry");
+        store.retire_segment(*inner)?;
+      }
+      let last = i + 1 == total;
+      if xml.len() >= Self::SEGMENT_CHUNK_BYTES || last {
+        let meta = SegmentMeta {
+          depth,
+          noindent,
+          font: None,
+          namespaces: namespaces.to_vec(),
+          section_id: section_id.clone(),
+        };
+        let store = self
+          .spill_store
+          .as_mut()
+          .expect("checked at spill_closed_subtrees entry");
+        let seg = store.write_segment(&xml, meta)?;
+        xml.clear();
+        // Index + purge while the nodes are still alive, then placeholder +
+        // free.
+        for node in chunk.iter() {
+          self.index_and_purge_spilled(node, seg, index);
+        }
+        let spill_error = |details: String| Error {
+          target:   ErrorTarget::Document,
+          category: ErrorCategory::Libxml,
+          message:  s!("spill: {}", details),
+        };
+        let mut placeholder = Node::new(SPILL_PLACEHOLDER, None, &self.document)
+          .map_err(|()| spill_error(s!("cannot create the placeholder node")))?;
+        placeholder
+          .set_attribute("ref", &seg.to_string())
+          .map_err(|e| spill_error(s!("cannot mark the placeholder: {e}")))?;
+        chunk
+          .first_mut()
+          .expect("a flushed chunk is non-empty")
+          .add_prev_sibling(&mut placeholder)
+          .map_err(|e| spill_error(s!("cannot insert the placeholder: {e}")))?;
+        for node in chunk.drain(..) {
+          // `unlink_node` marks the wrapper RustOwned: the C subtree is freed
+          // when the last Rust handle drops (end of this iteration).
+          let mut node = node;
+          node.unlink_node();
+        }
+        SPILLED_SEGMENTS.set(SPILLED_SEGMENTS.get() + 1);
+        runs_spilled += 1;
+      }
     }
-    let spill_error = |details: String| Error {
-      target:   ErrorTarget::Document,
-      category: ErrorCategory::Libxml,
-      message:  s!("spill: {}", details),
-    };
-    let mut placeholder = Node::new(SPILL_PLACEHOLDER, None, &self.document)
-      .map_err(|()| spill_error(s!("cannot create the placeholder node")))?;
-    placeholder
-      .set_attribute("ref", &seg.to_string())
-      .map_err(|e| spill_error(s!("cannot mark the placeholder: {e}")))?;
-    run
-      .first_mut()
-      .expect("spill_run called with a non-empty run")
-      .add_prev_sibling(&mut placeholder)
-      .map_err(|e| spill_error(s!("cannot insert the placeholder: {e}")))?;
-    for node in run.drain(..) {
-      // `unlink_node` marks the wrapper RustOwned: the C subtree is freed when
-      // the last Rust handle drops (here, at the end of this iteration).
-      let mut node = node;
-      node.unlink_node();
-    }
-    SPILLED_SEGMENTS.set(SPILLED_SEGMENTS.get() + 1);
-    Ok(1)
+    Ok(runs_spilled)
   }
 
   /// Record a spilled subtree's ids and labels in the fragment index, and
