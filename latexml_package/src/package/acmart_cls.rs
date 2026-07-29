@@ -99,14 +99,17 @@ LoadDefinitions!({
   // plain `D1 … D5`) raised `Error:undefined:\D` for content we then dropped.
   //
   // `LaTeXML-common.xsl` L404-421 maps any `aria:*` attribute to `aria-*`
-  // under HTML5, so setting them here needs no XSLT change. Which ARIA slot
-  // each argument lands in is the `before_construct` table below.
+  // under HTML5, so setting them here needs no XSLT change. WHICH element
+  // they land on, and which slot each argument fills, is the
+  // `before_construct` table below.
   //
   // `[short]` and `{long}` are two DISTINCT authored fields, so they get two
   // distinct elements — never concatenated into one. Merging them yields a
   // run-on ("Fly 1 and Fly 2 look identical. Fly 1 and fly 2 comparison
   // shows…") and destroys the distinction, so no consumer can tell which text
-  // the author wrote as the brief alternative.
+  // the author wrote as the brief alternative. `aria-describedby` takes a
+  // SPACE-SEPARATED ID LIST and is announced in order, so where both are
+  // referenced it is short first, each still individually addressable.
   //
   // The old binding emitted the short one ALONE, which is why
   // `t/complex/acm_aria` recorded "Fly 1 and Fly 2 look identical" and lost the
@@ -125,15 +128,16 @@ LoadDefinitions!({
   // `LaTeXML-meta-xhtml.xsl` keyed on `ltx_acm_description`, so the referenced
   // text stays clean for assistive technology.
   //
-  // The short description gets its own id so it stays individually
-  // addressable (nothing references it today — its text goes into
-  // `aria-label` — but an anchor on authored content costs nothing). It is
-  // derived in `properties` rather than written as `#id-short` in the
-  // template, which does NOT work: a `#name` hole runs to the end of the
-  // identifier, so `#id-short` names a property called `id-short` — absent,
-  // so the element silently emits NO xml:id at all — instead of `#id`
-  // followed by a literal `-short`. Ids use a `-short` suffix rather than a
-  // dotted one so they need no escaping in a CSS selector.
+  // The short description needs its OWN id: it is referenced by
+  // `aria-describedby` whenever its text is not the one that became the
+  // image's `@alt`. It is derived in `properties` rather than written as
+  // `#id-short` in the template, which does NOT work: a `#name` hole runs to
+  // the end of the identifier, so `#id-short` names a property called
+  // `id-short` — absent, so the element silently emits NO xml:id at all —
+  // instead of `#id` followed by a literal `-short`. That produced a dangling
+  // `aria-describedby`, a reference resolving to nothing. Ids use a `-short`
+  // suffix rather than a dotted one so they need no escaping in a CSS
+  // selector.
   DefConstructor!("\\Description[] Undigested",
     "^^?#1(<ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'>#1</ltx:note>)()\
      <ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'>#2</ltx:note>",
@@ -151,33 +155,66 @@ LoadDefinitions!({
     },
     // acmart's own documentation: "Unlike \caption, which is used alongside the
     // image, \Description is intended to be used INSTEAD OF the image." So a
-    // `\Description` is a TEXT ALTERNATIVE, not supplementary prose — which in
-    // ARIA is name-like (`aria-label`), not `aria-describedby` (announced in
-    // ADDITION to the name). That also fixes the two arguments' roles: `[short]`
-    // is the concise alternative, `{long}` the extended description.
+    // `\Description` is a TEXT ALTERNATIVE — and the thing it is an alternative
+    // TO is the image, not the float. It therefore lands on the IMAGE:
     //
-    //   `\Description[s]{l}`  → aria-label = s, aria-describedby → l's block
-    //   `\Description{l}`, l plain    → aria-label = l (it replaces the image)
-    //   `\Description{l}`, l w/ markup → aria-describedby → l's block
+    //   `\Description[s]{l}`           → img @alt = s, aria-describedby → l
+    //   `\Description{l}`, l plain     → img @alt = l (it replaces the image)
+    //   `\Description{l}`, l w/ markup → img @alt untouched, describedby → l
     //
-    // The last case is why the argument is read `Undigested`: an `aria-label`
-    // is a plain string and cannot carry markup, so we must inspect the tokens
-    // to choose the slot BEFORE expanding anything. A control sequence (or an
+    // `@alt` (via `ltx:graphics/@description`, `LaTeXML-misc-xhtml.xsl` L167-171)
+    // rather than `aria-label`, because that is the attribute an `<img>` has for
+    // exactly this purpose and the one assistive technology expects there.
+    //
+    // NOT `aria:label` on the `<ltx:figure>`, which is what this binding did
+    // before: `aria-label` sets the accessible NAME, and a float's name is its
+    // caption, so labelling the figure with the description DISPLACED
+    // "Figure 1. caption text" and hid the caption from a screen reader
+    // (reviewer report, brucemiller/LaTeXML#430 r3674103638; the fix that
+    // review asks for is precisely "label + description should be attached to
+    // the first image in the figure … and the `<img>` tag eventually gets
+    // `@alt` and not `@aria-label`").
+    //
+    // The markup case is why the argument is read `Undigested`: `@alt` is a
+    // plain string and cannot carry markup, so we must inspect the tokens to
+    // choose the slot BEFORE expanding anything. A control sequence (or an
     // active/`$`/`^`/`_` token) means real markup, so the block carries it.
     //
     // The block is always emitted, so the text stays addressable, but it is
-    // referenced only when it is not already the label — otherwise the same
-    // sentence would be both the name and the description. An unreferenced
-    // hidden block is inert: `display:none` content is announced only when
-    // something references it.
+    // referenced only when it is not already the `@alt` — otherwise the same
+    // sentence would be announced twice. An unreferenced hidden block is inert:
+    // `display:none` content is announced only when something references it.
     //
-    // acmart's NEW mechanism for the same purpose is `\includegraphics[alt=…]`
+    // TWO CASES HAVE NO IMAGE TO USE. An author's annotation is never dropped,
+    // so it goes to the next best host — the enclosing float — as
+    // `aria:describedby`, which supplements the name instead of replacing it,
+    // so the caption survives either way. Both `Warn!`, because the result is
+    // second-best and the author can do something about it:
+    //
+    //  * No `ltx:graphics` in the float at all — a figure built from tabular,
+    //    text or TikZ content (`t/complex/acm_aria` is one), a `table` float,
+    //    or an empty one. There is no image to be the alternative to.
+    //  * MORE than one. A `\Description` is scoped to the whole float, so on a
+    //    multi-panel figure it describes the ensemble; making it panel 1's
+    //    `@alt` would assert that one sentence is the alternative for one
+    //    panel, which is a claim the author never made. The review says "the
+    //    first image"; we narrow that to the case where "first" is also "only",
+    //    where it is unambiguous.
+    //
+    // We can only see the graphics ALREADY BUILT when `\Description` is
+    // constructed, so a `\Description` written BEFORE its `\includegraphics`
+    // falls into the first case. That is the safe direction to fail — the
+    // description is still announced, just not as the image's alternative — the
+    // warning names it as a possible cause, and acmart's own documentation puts
+    // `\Description` after the graphic.
+    //
+    // acmart's NEWER mechanism for the same purpose is `\includegraphics[alt=…]`
     // (switched on by `\DocumentMetadata`), handled in `graphicx_sty.rs` and
-    // landing on the `<img>` itself. A document using BOTH — e.g.
-    // arXiv:2607.21760, which repeats the same paragraph in each — will convey
-    // it twice; that is the author's duplication across two documented
-    // mechanisms, not something to second-guess here, and `\Description` is
-    // scoped to the float with no reliable way to associate it with one image.
+    // landing on the same `description` attribute. When an author uses BOTH —
+    // e.g. arXiv:2607.21760, which repeats the same paragraph in each — the
+    // explicit `alt=` WINS: it names one image, while `\Description` names the
+    // float, so the more specific statement stands. `\Description` then only
+    // adds its `aria-describedby` references.
     before_construct => sub[document, whatsit] {
       let Some(id) = whatsit.get_property("id").map(|v| v.to_string()) else {
         return Ok(());
@@ -194,24 +231,81 @@ LoadDefinitions!({
             )
           })
         });
-      let short = whatsit.get_arg(1).map(|d| d.to_attribute());
+      // `\Description[]{…}` gives an empty optional argument, which the
+      // template's `?#1(…)` declines to emit — so there is no short note and
+      // no id to reference. Treat it as absent.
+      let short = whatsit
+        .get_arg(1)
+        .map(|d| d.to_attribute())
+        .filter(|s| !s.is_empty());
+      let short_id = whatsit.get_property("shortid").map(|v| v.to_string());
       let Some(mut figure) = document.get_element() else {
         return Ok(());
       };
-      match short {
-        // Concise alternative available: it labels, the long one describes.
-        Some(s) => {
-          document.set_attribute(&mut figure, "aria:label", &s)?;
-          document.set_attribute(&mut figure, "aria:describedby", &id)?;
+      let mut graphics = document.findnodes(".//ltx:graphics", Some(&figure));
+      // Exactly one image: it IS the figure, so the description is its
+      // alternative. Zero or several: see the note above, keep it on the float.
+      let lone_graphic = (graphics.len() == 1).then(|| graphics.remove(0));
+      let mut described_by: Vec<String> = Vec::new();
+      match lone_graphic {
+        Some(mut graphic) => {
+          // `\includegraphics[alt=…]` already spoke for this image; it is the
+          // more specific statement, so it stands.
+          let alt = if graphic.get_attribute("description").is_some() {
+            None
+          } else if short.is_some() {
+            short.clone()
+          } else if long_is_plain {
+            whatsit.get_arg(2).map(|d| d.to_attribute())
+          } else {
+            None
+          };
+          match alt {
+            // Something of ours became the alternative. Whatever did NOT is
+            // still worth announcing, so reference it.
+            Some(text) => {
+              document.set_attribute(&mut graphic, "description", &text)?;
+              if short.is_some() {
+                described_by.push(id);
+              }
+            },
+            // Nothing of ours is the alternative — the author's own `alt=`
+            // holds it, or the lone description carries markup. Reference
+            // everything we emitted.
+            None => {
+              if short.is_some() && let Some(sid) = short_id {
+                described_by.push(sid);
+              }
+              described_by.push(id);
+            },
+          }
+          if !described_by.is_empty() {
+            document.set_attribute(&mut graphic, "aria:describedby", &described_by.join(" "))?;
+          }
         },
-        // Lone description: it stands in for the image, so it labels — unless
-        // it carries markup an attribute cannot hold.
-        None if long_is_plain => {
-          let text = whatsit.get_arg(2).map(|d| d.to_attribute()).unwrap_or_default();
-          document.set_attribute(&mut figure, "aria:label", &text)?;
-        },
+        // Nowhere better to put it. Attach to the float rather than drop the
+        // author's annotation, and say so — the text is still announced, but
+        // not as the alternative for any one image, which is what a
+        // `\Description` is for.
         None => {
-          document.set_attribute(&mut figure, "aria:describedby", &id)?;
+          if short.is_some() && let Some(sid) = short_id {
+            described_by.push(sid);
+          }
+          described_by.push(id);
+          document.set_attribute(&mut figure, "aria:describedby", &described_by.join(" "))?;
+          let why = if graphics.is_empty() {
+            "the float has no image to describe (a table, or a \\Description \
+             written before its \\includegraphics)"
+          } else {
+            "the float has more than one image, so which one it describes is \
+             ambiguous"
+          };
+          Warn!("unexpected", "\\Description",
+            &s!("attached to the enclosing {} as aria:describedby, because {}. \
+                 The text is still announced, but it is not any image's alt \
+                 text; put a \\Description after the \\includegraphics it \
+                 describes, or use \\includegraphics[alt=...] per image",
+              figure.get_name(), why));
         },
       }
     }
