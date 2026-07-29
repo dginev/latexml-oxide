@@ -40,7 +40,7 @@
     pub(crate) preload_files: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;,
     pub(crate) search_paths: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;,
     pub(crate) timeout: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>,
-    pub(crate) max_memory: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>,
+    pub(crate) max_memory: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>&gt;,
     pub(crate) token_limit: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;,
     pub(crate) navigationtoc: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;,
     pub(crate) icon: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;,
@@ -140,11 +140,15 @@ embeddable inline snippet), <code>math</code> (just the math subtree), or <code>
 </div><span id="structfield.search_paths" class="structfield section-header"><a href="#structfield.search_paths" class="anchor field">§</a><code>search_paths: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></span><div class="docblock"><p>Add a directory to the file/package search path, like TEXINPUTS
 (repeatable).</p>
 </div><span id="structfield.timeout" class="structfield section-header"><a href="#structfield.timeout" class="anchor field">§</a><code>timeout: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a></code></span><div class="docblock"><p>Conversion timeout in seconds (default: 60). Use 0 to disable.</p>
-</div><span id="structfield.max_memory" class="structfield section-header"><a href="#structfield.max_memory" class="anchor field">§</a><code>max_memory: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a></code></span><div class="docblock"><p>Per-conversion memory ceiling in MiB (default: 6144 = 6 GiB). The single
-memory knob: a cooperative guard raises a graceful Fatal as digestion
-nears it, and a hard watchdog aborts the process (exit 137) at the
-ceiling. Use 0 to disable memory limiting entirely. Also settable via the
-<code>LATEXML_MAX_MEMORY</code> env var; this flag wins when both are given.</p>
+</div><span id="structfield.max_memory" class="structfield section-header"><a href="#structfield.max_memory" class="anchor field">§</a><code>max_memory: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>&gt;</code></span><div class="docblock"><p>Per-conversion memory ceiling in MiB. Defaults to the machine: 90 % of
+physical RAM, capped at 64 GiB (6144 if the machine cannot be probed).
+The single memory knob: a cooperative guard raises a graceful Fatal as a
+conversion nears it, and a hard watchdog aborts the process (exit 137) at
+the ceiling. Use 0 to disable memory limiting entirely. Also settable via
+the <code>LATEXML_MAX_MEMORY</code> env var; this flag wins when both are given.</p>
+<p>Left as <code>Option</code> so “unset” is distinguishable from an explicit value —
+the default has to be computed from the host, which clap’s static
+<code>default_value</code> cannot express.</p>
 </div><span id="structfield.token_limit" class="structfield section-header"><a href="#structfield.token_limit" class="anchor field">§</a><code>token_limit: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;</code></span><div class="docblock"><p>Abort after processing this many tokens — guards against runaway macro
 expansion (default: 400M; env <code>LATEXML_TOKEN_LIMIT</code>, 0 disables).</p>
 </div><span id="structfield.navigationtoc" class="structfield section-header"><a href="#structfield.navigationtoc" class="anchor field">§</a><code>navigationtoc: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></span><div class="docblock"><p>Navigation table-of-contents style: context or none.</p>
