@@ -2989,11 +2989,11 @@ review on brucemiller/LaTeXML#430 (`r3674103638`), which also asked for the
 `<img>` to receive `@alt` and not `@aria-label`. Nothing in this binding emits
 `aria-label` any more.
 
-Two shapes have no image to use. The author's annotation is never dropped, so
-it goes to the next best host — the enclosing float — as `aria:describedby`,
+Three shapes have no image to use. The author's annotation is never dropped, so
+it goes to the next best host — the enclosing element — as `aria:describedby`,
 which supplements the name rather than replacing it, so the caption survives
-either way. Both **`Warn!`**, since the result is second-best and the author
-can act on it:
+either way. All three **`Warn!`**, naming the actual cause, since the result is
+second-best and the author can act on it:
 
 * **no `ltx:graphics` in the float** — a figure built from tabular, text or
   TikZ content (which `t/complex/acm_aria` is), a `table` float, or an empty
@@ -3003,6 +3003,15 @@ can act on it:
   would assert that one sentence is the alternative for one panel, a claim the
   author never made. The review says "the first image"; we narrow that to the
   case where "first" is also "only", where it is unambiguous.
+* **outside any float** — a bare `\Description` in running text lands on
+  whatever element encloses it (a `<p>`, typically). Nothing to describe, but
+  the text is still carried.
+
+References ACCUMULATE rather than overwrite (`add_describedby`):
+`aria-describedby` is an id list, and a second `\Description` in the same float
+would otherwise write straight over the first one's reference, leaving that
+description sitting in the DOM announced by nothing — losing an annotation the
+author wrote.
 
 Only graphics **already built** are visible when `\Description` is constructed,
 so a `\Description` written *before* its `\includegraphics` falls into the

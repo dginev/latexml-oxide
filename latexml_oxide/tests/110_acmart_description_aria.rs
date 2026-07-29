@@ -257,3 +257,88 @@ fn description_becomes_the_images_alt_text() {
     "expected a clean conversion:\n{stderr}",
   );
 }
+
+/// Two malformed-but-real shapes that must still not lose what the author
+/// wrote. Both were regressions caught in review of the change that moved
+/// `\Description` onto the image.
+const TEX_ODD: &str = "\\documentclass[acmsmall]{acmart}\n\
+  \\usepackage{graphicx}\n\
+  \\begin{document}\n\
+  Loose text. \\Description[LOOSESHORT]{LOOSELONG text} more text.\n\
+  \\begin{figure}\\includegraphics{none}\n\
+  \\caption{TWICE}\n\
+  \\Description[FIRSTSHORT]{FIRSTLONG text}\\Description[SECONDSHORT]{SECONDLONG text}\n\
+  \\end{figure}\n\
+  \\end{document}\n";
+
+#[test]
+fn description_never_loses_an_annotation() {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("d.tex"), TEX_ODD).expect("write d.tex");
+  std::fs::write(workdir.path().join("none.png"), PNG).expect("write none.png");
+
+  let output = Command::new(bin)
+    .args([
+      "d.tex",
+      "--dest",
+      "d.html",
+      "--format",
+      "html5",
+      "--nocomments",
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr);
+  let html = std::fs::read_to_string(workdir.path().join("d.html")).unwrap_or_default();
+  assert!(!html.is_empty(), "no HTML produced:\n{stderr}");
+
+  // A \Description outside any float has no image AND no float to fall back to.
+  // It still has to land somewhere, and the warning has to name the real cause
+  // rather than blame a float that isn't there.
+  assert!(
+    html.contains("LOOSELONG"),
+    "a \\Description outside a float was dropped:\n{html}",
+  );
+  assert!(
+    stderr.contains("outside any figure or table"),
+    "the warning must name the actual cause, not a missing image:\n{stderr}",
+  );
+
+  // A SECOND \Description in the same float must not overwrite the first one's
+  // reference — `aria-describedby` is an id list, and a clobbered id leaves
+  // that description hidden in the DOM and announced by nothing.
+  let imgs = img_tags(&html);
+  let refs = attr(imgs[0], "aria-describedby").unwrap_or_default();
+  assert!(
+    refs.split_whitespace().count() >= 3,
+    "a second \\Description clobbered the first one's reference; expected the \
+     first long id plus both of the second's, got {refs:?}:\n{}",
+    imgs[0]
+  );
+  assert_eq!(
+    attr(imgs[0], "alt"),
+    Some("FIRSTSHORT"),
+    "the first \\Description should still own the alt:\n{}",
+    imgs[0]
+  );
+
+  // Everything referenced still resolves, and every authored text is present.
+  let ids: Vec<String> = html
+    .match_indices("id=\"")
+    .filter_map(|(i, _)| {
+      let rest = &html[i + 4..];
+      rest.find('"').map(|e| rest[..e].to_string())
+    })
+    .collect();
+  for r in refs.split_whitespace() {
+    assert!(
+      ids.iter().any(|id| id == r),
+      "aria-describedby references '{r}', which no element defines:\n{html}",
+    );
+  }
+  for text in ["FIRSTLONG", "SECONDSHORT", "SECONDLONG"] {
+    assert!(html.contains(text), "{text} was lost:\n{html}");
+  }
+}

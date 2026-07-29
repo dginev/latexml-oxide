@@ -5,6 +5,25 @@ use crate::{
   prelude::*,
 };
 
+/// Add `ids` to `node`'s `aria:describedby`, keeping whatever is already there.
+///
+/// `aria-describedby` is an id LIST, and a second `\Description` in the same
+/// float (or one alongside another that already wired the same host) would
+/// otherwise `set_attribute` straight over the first one's reference, leaving
+/// that description hidden in the DOM and announced by nothing — silently
+/// losing an annotation the author wrote. Existing ids keep their position,
+/// since order is announcement order.
+fn add_describedby(document: &mut Document, node: &mut Node, ids: &[String]) -> Result<()> {
+  let existing = node.get_attribute("aria:describedby").unwrap_or_default();
+  let mut refs: Vec<&str> = existing.split_whitespace().collect();
+  for id in ids {
+    if !refs.contains(&id.as_str()) {
+      refs.push(id);
+    }
+  }
+  document.set_attribute(node, "aria:describedby", &refs.join(" "))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: LoadClass('amsart', withoptions => 1)
@@ -280,32 +299,35 @@ LoadDefinitions!({
             },
           }
           if !described_by.is_empty() {
-            document.set_attribute(&mut graphic, "aria:describedby", &described_by.join(" "))?;
+            add_describedby(document, &mut graphic, &described_by)?;
           }
         },
-        // Nowhere better to put it. Attach to the float rather than drop the
-        // author's annotation, and say so — the text is still announced, but
-        // not as the alternative for any one image, which is what a
-        // `\Description` is for.
+        // Nowhere better to put it. Attach to the enclosing element rather than
+        // drop the author's annotation, and say so — the text is still
+        // announced, but not as the alternative for any one image, which is
+        // what a `\Description` is for.
         None => {
           if short.is_some() && let Some(sid) = short_id {
             described_by.push(sid);
           }
           described_by.push(id);
-          document.set_attribute(&mut figure, "aria:describedby", &described_by.join(" "))?;
-          let why = if graphics.is_empty() {
-            "the float has no image to describe (a table, or a \\Description \
-             written before its \\includegraphics)"
+          add_describedby(document, &mut figure, &described_by)?;
+          let host = figure.get_name();
+          let why = if !graphics.is_empty() {
+            s!("it holds more than one image, so which one is described is ambiguous")
+          } else if host == "figure" || host == "table" {
+            s!("the float has no image to describe (a table, or a \\Description \
+                written before its \\includegraphics)")
           } else {
-            "the float has more than one image, so which one it describes is \
-             ambiguous"
+            // Not a float at all — `\Description` outside a figure/table, where
+            // acmart's own `\@Description@present` bookkeeping expects it.
+            s!("it is outside any figure or table, so there is no image to describe")
           };
           Warn!("unexpected", "\\Description",
-            &s!("attached to the enclosing {} as aria:describedby, because {}. \
-                 The text is still announced, but it is not any image's alt \
-                 text; put a \\Description after the \\includegraphics it \
-                 describes, or use \\includegraphics[alt=...] per image",
-              figure.get_name(), why));
+            &s!("attached to the enclosing <{host}> as aria:describedby, because \
+                 {why}. The text is still announced, but it is not any image's \
+                 alt text; put a \\Description after the \\includegraphics it \
+                 describes, or use \\includegraphics[alt=...] per image"));
         },
       }
     }
