@@ -89,3 +89,16 @@ stacker = "0.1.24"
 # parser live here so both the compile-time codegen (latexml_codegen, which
 # depends on this crate) and the runtime interpreter consume one grammar.
 winnow = "1.0"
+
+# Portable machine-memory / free-disk probing (see `watchdog.rs`:
+# `total_memory_bytes`, `available_disk_bytes`). Both crates are already in the
+# dependency tree via other workspace members, so this adds no new
+# supply-chain surface — only a direct edge.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_System_SystemInformation",
+  "Win32_Storage_FileSystem",
+] }
