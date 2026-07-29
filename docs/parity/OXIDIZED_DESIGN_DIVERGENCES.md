@@ -3140,7 +3140,7 @@ Perl 0.8.8 raises **9** errors and pre-fix Rust raised **7**; pdflatex raises
 re-blessed.
 
 **Upstream.** Perl's definition is byte-identical, so the same one-token fix
-applies there; filed against `brucemiller/LaTeXML`. Also
+applies there — filed as **brucemiller/LaTeXML#2856**. Also
 `KNOWN_PERL_ERRORS.md` #68.
 
 Guard: `06_cluster_regressions::cluster_fnum_arg_hook`.

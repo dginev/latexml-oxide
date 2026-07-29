@@ -2925,8 +2925,8 @@ harmless empty group and reproducing pdflatex's result, while the 0-arg hooks
 that are the normal case are unaffected. Guard
 `06_cluster_regressions::cluster_fnum_arg_hook`.
 
-Candidate to upstream: the one-token change applies verbatim to the Perl
-definition, and to `\lx@fnum@toc@@` L1065-1066 and the theorem-header formatter
-alongside it. Note the fix does NOT reach the `close=": "` separator, so the
+Reported upstream as **brucemiller/LaTeXML#2856**: the one-token change applies
+verbatim to the Perl definition, and to `\lx@fnum@toc@@` L1065-1066 and the
+theorem-header formatter alongside it. Note the fix does NOT reach the `close=": "` separator, so the
 caption still reads `Figure 1.: A caption.` in both engines — closing that gap
 needs the tag attribute to become conditional, which is a larger change.
