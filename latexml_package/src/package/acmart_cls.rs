@@ -98,26 +98,20 @@ LoadDefinitions!({
   // `\D1 … \D5` (a copy-paste slip from the adjacent `alt=` text, which has
   // plain `D1 … D5`) raised `Error:undefined:\D` for content we then dropped.
   //
-  // Carried as `<ltx:text class='ltx_nodisplay'>`, NOT `<ltx:note>`:
-  // `LaTeXML-meta-xhtml.xsl` decorates a note with `ltx_note_mark`, so the old
-  // binding made a screen reader announce the figure as "†† : <text>".
+  // `LaTeXML-common.xsl` L404-421 maps any `aria:*` attribute to `aria-*`
+  // under HTML5, so setting them here needs no XSLT change. Which ARIA slot
+  // each argument lands in is the `before_construct` table below.
   //
-  // The float's caption stays its accessible NAME, so the description is
-  // referenced with `aria:describedby`, never `aria:label` (which would
-  // displace "Figure 1. caption text" as the name). `LaTeXML-common.xsl`
-  // L404-421 maps any `aria:*` to `aria-*` under HTML5, so no XSLT change is
-  // needed. User design ruling 2026-07-28.
   // `[short]` and `{long}` are two DISTINCT authored fields, so they get two
   // distinct elements — never concatenated into one. Merging them yields a
   // run-on ("Fly 1 and Fly 2 look identical. Fly 1 and fly 2 comparison
   // shows…") and destroys the distinction, so no consumer can tell which text
-  // the author wrote as the brief alternative. `aria-describedby` takes a
-  // SPACE-SEPARATED ID LIST and is announced in order, so both are referenced,
-  // short first, each still individually addressable.
+  // the author wrote as the brief alternative.
   //
   // The old binding emitted the short one ALONE, which is why
   // `t/complex/acm_aria` recorded "Fly 1 and Fly 2 look identical" and lost the
   // sentence that actually describes the figure.
+  //
   // Carried as `<ltx:note>` — the document builder places a note inside the
   // float's `<caption>`, where the old binding put it. An `<ltx:text>` is
   // INLINE, so the builder auto-opens a `<p>` for it, and a `<p>` at figure
@@ -131,13 +125,15 @@ LoadDefinitions!({
   // `LaTeXML-meta-xhtml.xsl` keyed on `ltx_acm_description`, so the referenced
   // text stays clean for assistive technology.
   //
-  // The short description needs its OWN id, derived here rather than as
-  // `#id-short` in the template: a `#name` hole runs to the end of the
-  // identifier, so `#id-short` names a property called `id-short` (absent, so
-  // it silently emits NO xml:id) instead of `#id` followed by a literal. That
-  // produced a dangling `aria-describedby` — the reference resolved to nothing.
-  // Ids use a `-short` suffix rather than a dotted one so they need no escaping
-  // in a CSS selector.
+  // The short description gets its own id so it stays individually
+  // addressable (nothing references it today — its text goes into
+  // `aria-label` — but an anchor on authored content costs nothing). It is
+  // derived in `properties` rather than written as `#id-short` in the
+  // template, which does NOT work: a `#name` hole runs to the end of the
+  // identifier, so `#id-short` names a property called `id-short` — absent,
+  // so the element silently emits NO xml:id at all — instead of `#id`
+  // followed by a literal `-short`. Ids use a `-short` suffix rather than a
+  // dotted one so they need no escaping in a CSS selector.
   DefConstructor!("\\Description[] Undigested",
     "^^?#1(<ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'>#1</ltx:note>)()\
      <ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'>#2</ltx:note>",
