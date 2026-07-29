@@ -2953,7 +2953,7 @@ Guards: `06_cluster_frontmatter::frontmatter_spconf_keywords`,
 `frontmatter_spconf_keywords_braced`, `frontmatter_spconf_twoauthors` (all via
 `convert_to_xml_contrib_clean`, so a returning error fails them).
 
-### 83. acmart `\Description` becomes the figure's ARIA text alternative
+### 83. acmart `\Description` becomes the image's text alternative
 
 acmart documents `\Description` as "used **instead of** the image" (unlike
 `\caption`, "used alongside" it), so it is a *text alternative*, not
@@ -2964,20 +2964,63 @@ mandatory one, so the long description is digested and then discarded
 (`\Description{L}` produced no output at all). Recorded as
 `KNOWN_PERL_ERRORS.md` #66.
 
-Rust maps the two arguments to the two ARIA slots a text alternative uses:
+The thing a `\Description` is an alternative **to** is the image, so that is
+where it lands — as `@alt`, via `ltx:graphics/@description`
+(`LaTeXML-misc-xhtml.xsl` L167-171):
 
 | source | HTML |
 |---|---|
-| `\Description[s]{l}` | `aria-label` = `s`, `aria-describedby` → `l`'s block |
-| `\Description{l}`, `l` plain | `aria-label` = `l` (it replaces the image) |
-| `\Description{l}`, `l` with markup | `aria-describedby` → `l`'s block |
+| `\Description[s]{l}` | `<img alt="s" aria-describedby=`→`l>` |
+| `\Description{l}`, `l` plain | `<img alt="l">` (it replaces the image) |
+| `\Description{l}`, `l` with markup | `<img aria-describedby=`→`l>`, alt unchanged |
+| any, when `\includegraphics[alt=…]` is also present | author's alt kept, both notes referenced |
 
 `[short]` is the concise alternative and `{long}` the extended description, so
-`aria-label` / `aria-describedby` is their natural pairing. A lone description
-labels, because it is what stands in for the image — unless it carries markup,
-which an attribute cannot hold.
+`@alt` / `aria-describedby` is their natural pairing. A lone description takes
+the `@alt`, because it is what stands in for the image — unless it carries
+markup, which an attribute cannot hold, and the generic `alt` fallback ("Refer
+to caption") stands instead.
 
-Choosing between those slots is why the argument is read **`Undigested`**
+**Not `aria:label` on the `<ltx:figure>`**, which an earlier revision of this
+divergence used. `aria-label` sets the accessible **name**, and a float's name
+is its caption, so labelling the figure with the description displaced
+"Figure 1. caption text" and hid the caption from a screen reader — reported in
+review on brucemiller/LaTeXML#430 (`r3674103638`), which also asked for the
+`<img>` to receive `@alt` and not `@aria-label`. Nothing in this binding emits
+`aria-label` any more.
+
+Three shapes have no image to use. The author's annotation is never dropped, so
+it goes to the next best host — the enclosing element — as `aria:describedby`,
+which supplements the name rather than replacing it, so the caption survives
+either way. All three **`Warn!`**, naming the actual cause, since the result is
+second-best and the author can act on it:
+
+* **no `ltx:graphics` in the float** — a figure built from tabular, text or
+  TikZ content (which `t/complex/acm_aria` is), a `table` float, or an empty
+  one. There is no image to be an alternative to.
+* **more than one** — a `\Description` is scoped to the whole float, so on a
+  multi-panel figure it describes the ensemble. Making it panel 1's `@alt`
+  would assert that one sentence is the alternative for one panel, a claim the
+  author never made. The review says "the first image"; we narrow that to the
+  case where "first" is also "only", where it is unambiguous.
+* **outside any float** — a bare `\Description` in running text lands on
+  whatever element encloses it (a `<p>`, typically). Nothing to describe, but
+  the text is still carried.
+
+References ACCUMULATE rather than overwrite (`add_describedby`):
+`aria-describedby` is an id list, and a second `\Description` in the same float
+would otherwise write straight over the first one's reference, leaving that
+description sitting in the DOM announced by nothing — losing an annotation the
+author wrote.
+
+Only graphics **already built** are visible when `\Description` is constructed,
+so a `\Description` written *before* its `\includegraphics` falls into the
+first case. That is the safe direction to fail — the description is still
+announced, just not as the image's alternative — the warning names it as a
+possible cause, and acmart's own documentation puts `\Description` after the
+graphic.
+
+Choosing between the slots is why the argument is read **`Undigested`**
 (`ExpansionLevel::Off`): the tokens must be inspected for control sequences
 *before* anything expands. That also means nothing inside a `\Description` is
 ever expanded — matching `acmart.cls` L895, which gobbles the argument, so
@@ -2989,10 +3032,12 @@ and four descriptions in its HTML.
 Both descriptions are emitted as separate `ltx:note`s with their own `xml:id`
 and class (`ltx_acm_description_short` / `ltx_acm_description`) — two distinct
 authored fields, so concatenating them into one element would produce a run-on
-no consumer could take apart. A block is referenced only when it is not already
-the label, so the same sentence is never both the name and the description; an
+no consumer could take apart. A block is referenced only when its text is not
+already the `@alt`, so the same sentence is never announced twice; an
 unreferenced hidden block is inert, since `display:none` content is announced
-only when something references it.
+only when something references it. Where both are referenced,
+`aria-describedby` takes a space-separated id list announced in order, short
+first.
 
 A dedicated template in `LaTeXML-meta-xhtml.xsl` strips the footnote
 scaffolding — the generic `ltx:note` rendering adds a `†` mark and a
@@ -3002,17 +3047,21 @@ and drops the `ltx_note` class, which these are not. Perl's `width`/`height`
 
 acmart's newer mechanism for the same purpose, `\includegraphics[alt=…]`
 (switched on by `\DocumentMetadata`), is handled separately in `graphicx_sty.rs`
-and lands on the `<img>` itself; we accept it unconditionally rather than gating
-it behind `\DocumentMetadata`, which is itself a no-op
-(`latex_constructs_rust_only.rs`). A document using BOTH mechanisms conveys the
-text twice — that is the author duplicating across two documented routes, and
-`\Description` is scoped to the float with no reliable way to associate it with
-one image.
+and sets the same `description` attribute; we accept it unconditionally rather
+than gating it behind `\DocumentMetadata`, which is itself a no-op
+(`latex_constructs_rust_only.rs`). When an author uses BOTH — e.g.
+arXiv:2607.21760, which repeats the same paragraph in each — the explicit
+`alt=` **wins**: it names one image, while `\Description` names the float, so
+the more specific statement stands and `\Description` only adds its
+`aria-describedby` references.
 
 Guard: `latexml_oxide/tests/complex/acm_aria.{tex,xml}` (re-blessed — it
-previously matched Perl byte-for-byte and so certified the defect) plus
-`110_acmart_description_aria.rs`, which asserts at the HTML level that all three
-rows of the table above hold and that no `aria-describedby` reference dangles.
+previously matched Perl byte-for-byte and so certified the defect; it has no
+graphics, so it pins the float-level branch) plus
+`110_acmart_description_aria.rs`, which drives six figures — one per branch
+above — through to HTML and asserts that each lands where the table says, that
+`aria-label` appears nowhere, that captions survive, and that no
+`aria-describedby` reference dangles.
 
 ## Known Upstream Perl Issues (brief)
 
