@@ -257,6 +257,80 @@ floor for graphics packages is raised to `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M`
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-07-29 — per-token guard overhead: one-borrow gullet read + duty-cycled cycle guard + pinned hot keys
+
+Fresh idle-box profiling pass (post-fleet), driven by an 82-paper
+`~/data/html_regressions` telemetry sweep (release binary; the corpus is
+regression-biased — digest 67% of its wall) and `perf` on its slowest
+witness **2405.14114** (pgfplots, 23.9 s, 96% digest, 200M+ token stream).
+Top self-time: `cycle_guard_checkpoint` **6.07%** + `read_resource_checkpoint`
+**4.16%** — the engine's own per-token safety guards costing ~10% of the
+conversion — plus per-call `arena::pin` interner traffic ~5% (repeated
+keys/paths) and `is_noexpand_family` ~2%.
+
+Three output-neutral changes landed (byte-identical HTML on both witnesses,
+suite 1756/0):
+
+1. **One-borrow combined read** (`gullet.rs::read_internal_token_checked`):
+   the per-token trio `read_resource_checkpoint` → `read_internal_token` →
+   `cycle_guard_checkpoint` (up to three thread-local `RefCell` borrows per
+   token) merged into a single `GULLET` borrow shared by all four reader
+   loops; limit breaches Fatal via `#[cold]` outlined helpers, messages and
+   debug dumps preserved verbatim; a breach still consumes no token.
+   `read_balanced` keeps comments in its result via a `CommentSink` param.
+2. **Duty-cycled active cycle guard**: above the activation floor the guard
+   fingerprints only 2048 of every 16384 tokens (ring reset at each ON-window
+   start). A genuine infinite loop is *persistent*, so detection stays
+   guaranteed within ~one duty period (~17k tokens — 4 orders of magnitude
+   under the 400M token-limit backstop); verified live,
+   `\def\y{}\def\x{\y\x}\x` still trips `Fatal:Timeout:Recursion` in 0.6 s.
+   A legit huge stream (pgfplots data plots run 200M+ tokens, past even the
+   150M graphics floor) stops paying a per-token fingerprint for the whole
+   remainder of the run.
+3. **Pinned hot keys** (mechanical `pin!`/`_sym` conversions): `Mouth` caches
+   `source_sym` at construction so `get_locator`/`get_locator_from_start`
+   build `Locator`s with zero interner probes (was: re-pin the source path
+   per call — per conditional, per box); `Conditional::invoke` uses
+   `pin!`-keyed `lookup_int_sym`/`assign_value_sym` for
+   `if_count`/`if_limit`/`tracingcommands`; `after_assignment` →
+   `remove_value_sym(pin!("afterAssignment"))`; `assign_internal`'s unscoped
+   path probes `get_prefix_sym(pin!("global"))`. New `_sym` siblings:
+   `lookup_int_sym`, `remove_value_sym`, `State::get_prefix_sym`,
+   `Locator::from_sym`.
+
+**Measured (same-session, interleaved best-of-3, release build):**
+2405.14114 **23.85 → 21.45 s (−10.1%)** (borrow-merge+duty-cycle −6.7%,
+pinned keys −3.4%), RSS flat ~690 MB, output byte-identical vs the pre-patch
+binary; 1911.09517 (math-parse-bound, guard inactive) 5.95 → 5.88 s, output
+identical. The 82-paper sweep sum went **192.2 → 185.6 s (−3.4%)** —
+indicative only (the before-sweep ran with mild co-load; single run per
+paper), with the digest tail carrying the win (2405.14114 −2.3 s, 2405.14573
+−1.6 s, 2404.05509 −1.3 s). Post-patch profile confirms: the three former
+functions (13.25% combined self-time) are one merged function at 9.01%, and
+`get_or_intern` dropped off the >1.2% list.
+
+**Profiling-method notes for this box** (Linux, hybrid P/E-core CPU):
+`perf_event_paranoid` is 4 — set to 1 via sudo for the session, restored
+after. perf emits TWO event tables (`cpu_atom`/`cpu_core`); the watchdog
+thread's 100 ms poll wakeups dominate the tiny `cpu_atom` table (66% of its
+samples) — a sampling artifact, not real CPU (`user+sys ≈ wall`); read the
+`cpu_core` table. DWARF call-graph decode yields empty user stacks here; use
+`--call-graph lbr`. callgrind records the main binary with an empty object
+name (all-`???` annotation) on this box — use perf instead.
+
+**Follow-up candidates (profiled, not yet done):**
+- `is_noexpand_family` string probe — now the top discretionary residual
+  (2.07% post-patch): record a "starts with `\special_relax`" bit per symbol
+  at intern time (arena-side bitvec) → bit test.
+- `install_definition` allocates + pins `"{cs}:locked"` per `\def`/`\let`
+  (~0.7% + churn; Perl pays the same — a side-set of locked syms needs an
+  assignment-hook design first).
+- `assign_internal` Global-scope undo-frame walk (~4% incl. hashbrown
+  `remove_entry` 1.85%) is faithful Perl State semantics (Perl also
+  Global-assigns `if_count` per conditional) — a typed `State` field for
+  LaTeXML-internal counters would be the "meaningful Rust types" translation,
+  but needs dump-filter + `if_stack` review before attempting.
+
 ### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
 
 Post-processing the 40 201-page `index.xml` witness (see

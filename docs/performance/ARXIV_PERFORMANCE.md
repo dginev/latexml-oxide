@@ -456,6 +456,32 @@ See the testbed table above (category + dominant phase per paper). Status legend
 > One entry per investigated hotspot: root cause, change, before→after delta,
 > output-neutrality (byte-identical XML) + test evidence. Newest first.
 
+### #5 — per-token guard overhead on huge token streams (pgfplots witness 2405.14114) — 2026-07-29
+- **Root cause:** two compounding fixed costs on the token-read hot path:
+  (a) every token read took up to three thread-local `RefCell` borrows —
+  `read_resource_checkpoint`, `read_internal_token`, `cycle_guard_checkpoint`
+  as separate functions; (b) once a stream passes the cycle-guard activation
+  floor (pgfplots data plots read 200M+ tokens, beyond even
+  `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150M`) the guard fingerprinted EVERY
+  remaining token for the rest of the run. perf self-time on the witness:
+  `cycle_guard_checkpoint` 6.07% + `read_resource_checkpoint` 4.16%.
+- **Change:** single-borrow `read_internal_token_checked()` shared by all four
+  reader loops (`#[cold]`-outlined limit fatals, messages preserved verbatim) +
+  duty-cycled guard activation (2048-on/14336-off, ring reset per ON-window —
+  persistent-loop detection preserved and verified live) + `pin!`-cached keys
+  on the per-conditional/per-assignment paths and a `Mouth::source_sym` cache
+  for locator building. Files: `latexml_core/src/{gullet,state,mouth}.rs`,
+  `latexml_core/src/definition/conditional.rs`,
+  `latexml_core/src/common/locator.rs`. Full detail:
+  [`PERFORMANCE.md`](PERFORMANCE.md) audit-log 2026-07-29.
+- **Before→after:** 2405.14114 **23.85 → 21.45 s (−10.1%)** (interleaved
+  best-of-3, RSS flat); 1911.09517 (math-bound) 5.95 → 5.88 s; 82-paper
+  regression-corpus sweep sum 192.2 → 185.6 s (−3.4%, indicative — single
+  runs), digest tail carrying the win.
+- **Output-neutral:** byte-identical HTML on both witnesses vs the pre-patch
+  binary (`diff -rq` clean); suite **1756/0**; `\def\y{}\def\x{\y\x}\x`
+  still trips `Fatal:Timeout:Recursion` in 0.6 s.
+
 ### #4 — XSLT `maketitle` per-title `//ltx:navigation` scan O(n²) (sandbox-2605 large books) — 2026-06-29
 - **Root cause:** `resources/XSLT/LaTeXML-structure-xhtml.xsl`'s `maketitle` gated the
   title's `\date` block with `not(//ltx:navigation/ltx:ref[@rel='up'])`. That `//`
