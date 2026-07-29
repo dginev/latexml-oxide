@@ -622,6 +622,20 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
     {
       breach = Some(Breach::PushbackLimit(limit));
     } else {
+      // Duty-cycled guard activation, computed BEFORE the read: the phase —
+      // and the ON-window-start ring reset — depends only on `progress`,
+      // which is already final for this iteration. An Exhausted read landing
+      // exactly on phase 1 must still reset the ring, or the next window
+      // would splice onto the previous ON-window's history (adversarial-
+      // review finding, 2026-07-29).
+      let duty_on = g.progress > g.cycle_guard_activate && {
+        let phase = (g.progress - g.cycle_guard_activate) & (CYCLE_GUARD_DUTY_PERIOD - 1);
+        if phase == 1 {
+          // ON-window start: drop any pre-gap history.
+          g.cycle_guard.reset();
+        }
+        (1..=CYCLE_GUARD_DUTY_ON).contains(&phase)
+      };
       if let CommentSink::Into(ref mut out) = sink {
         // read_balanced keeps comments in its result: flush comments stashed
         // by earlier reads before reading fresh ones (same order as the old
@@ -684,24 +698,17 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
             ring.push_back(format!("{token:?}"));
           });
         }
-        if g.progress > g.cycle_guard_activate {
-          let phase = (g.progress - g.cycle_guard_activate) & (CYCLE_GUARD_DUTY_PERIOD - 1);
-          if phase == 1 {
-            // ON-window start: drop any pre-gap history.
-            g.cycle_guard.reset();
-          }
-          if (1..=CYCLE_GUARD_DUTY_ON).contains(&phase) {
-            // Mix the reading-context serial into the fingerprint (see the
-            // `Gullet::ctx_serial` field doc): tokens read in different
-            // `reading_from_mouth` contexts can then never form a matching
-            // window, scoping cycle detection to ONE expansion context
-            // without destroying the outer context's history. The multiplier
-            // spreads the serial across the hash bits (splitmix64's odd
-            // constant).
-            let fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-            if let Some(period) = g.cycle_guard.push(fp) {
-              breach = Some(Breach::Cycle(period, token));
-            }
+        if duty_on {
+          // Mix the reading-context serial into the fingerprint (see the
+          // `Gullet::ctx_serial` field doc): tokens read in different
+          // `reading_from_mouth` contexts can then never form a matching
+          // window, scoping cycle detection to ONE expansion context
+          // without destroying the outer context's history. The multiplier
+          // spreads the serial across the hash bits (splitmix64's odd
+          // constant).
+          let fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+          if let Some(period) = g.cycle_guard.push(fp) {
+            breach = Some(Breach::Cycle(period, token));
           }
         }
         if breach.is_none() {
@@ -976,9 +983,9 @@ pub fn read_x_token(
     // limits and the expansion cycle guard entirely, and a `\def\x{a\x}`
     // runaway grinds to the multi-GB watchdog instead of a clean Fatal.
     let next_token = match read_internal_token_checked(CommentSink::Pending)? {
-      // No runtime ≡ nothing more to read (matches the old checkpoint's
-      // early end-of-input return; the autoclose peek below would conclude
-      // the same, one cold borrow later).
+      // No runtime ≡ nothing more to read. (The pre-merge code fell through
+      // to the exhausted branch below, whose autoclose peek — runtime gone ⇒
+      // not autoclose — concluded Ok(None); return that directly.)
       CheckedRead::NoRuntime => return Ok(None),
       CheckedRead::Exhausted => None,
       CheckedRead::Tok(t) => Some(t),
