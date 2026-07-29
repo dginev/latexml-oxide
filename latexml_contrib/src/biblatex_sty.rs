@@ -1778,7 +1778,15 @@ LoadDefinitions!({
   // invocation in a biblatex doc just records resources.
   // see arXiv:1502.02314 for a paper that left in classic \bibliography
   // alongside biblatex; both forms must end up populating the resource list.
-  DefPrimitive!("\\addbibresource{}", sub[(file_list_arg)] {
+  // The optional argument is real: `\blx@addbib` (biblatex L11285-11288) does
+  // `\@ifnextchar[` before reading the resource, so `\addbibresource[
+  // location=local]{refs.bib}` is valid biblatex. Without the `[]` in the
+  // signature the `[` was taken as the resource itself, corrupting the
+  // resource list and spilling `location=local]{refs.bib}` into the body —
+  // the bibliography then resolved to nothing. Its keys (`location`, `label`,
+  // `datatype`) are biber-side, so consuming and ignoring them is right here.
+  // Witness 2605.27263; audit family F4(b).
+  DefPrimitive!("\\addbibresource[]{}", sub[(_opts, file_list_arg)] {
     // Perl: split(/\s*,\s*/, ToString($_[1])) — split on commas and
     // strip surrounding whitespace.
     let raw = file_list_arg.to_string();
@@ -2186,11 +2194,29 @@ LoadDefinitions!({
   // biblatex internals commonly invoked by user preamble. Witnesses
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
   def_macro_noop("\\newrefsection[]")?;
-  def_macro_noop("\\newrefcontext[]")?;
   def_macro_noop("\\endrefcontext")?;
   def_macro_noop("\\refsection[]{}")?;
   def_macro_noop("\\endrefsection")?;
-  def_macro_noop("\\refcontext[]{}")?;
+
+  // `\refcontext`/`\newrefcontext` take an optional `[...]` and then a
+  // mandatory group ONLY IF one actually follows: `\refcontext@i` guards it
+  // with `\@ifnextchar\bgroup` and supplies `{}` itself otherwise (biblatex
+  // L10437-10445). Declaring the group unconditionally made the noop eat
+  // whatever came next — and what comes next is the whole point of the
+  // block:
+  //
+  //     \begin{refcontext}[sorting=nyt]
+  //         \printbibliography
+  //     \end{refcontext}
+  //
+  // swallowed `\printbibliography`, so the document lost its bibliography
+  // with no diagnostic at all. Witnesses 2606.11276, 2606.02676; audit
+  // family F4(a). (`\begin{refcontext}` routes through `\refcontext` and
+  // `\end{refcontext}` through `\endrefcontext`, so the environment form is
+  // covered by these two.)
+  DefMacro!("\\lx@biblatex@refcontext[]", "\\@ifnextchar\\bgroup{\\@gobble}{}");
+  Let!("\\refcontext", "\\lx@biblatex@refcontext");
+  Let!("\\newrefcontext", "\\lx@biblatex@refcontext");
 
   // biblatex L3408+ bibliography range separators. Define defensively.
   // NB: do NOT redefine \bibrangedash here — Perl L353 sets it to an en-dash

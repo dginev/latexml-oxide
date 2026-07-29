@@ -1,0 +1,15 @@
+% `\refcontext` takes its mandatory group ONLY IF one follows
+% (`\@ifnextchar\bgroup`, biblatex L10442-10445). Declaring it unconditionally
+% made the noop swallow the `\printbibliography` inside a refcontext block —
+% the whole bibliography, with no diagnostic. Also covers `\addbibresource`'s
+% optional argument (biblatex L11285-11288).
+% OXIDIZED_DESIGN F4(a)/(b); witnesses 2606.11276, 2606.02676, 2605.27263.
+\documentclass{article}
+\usepackage[style=apa]{biblatex}
+\addbibresource[location=local]{refs.bib}
+\begin{document}
+Cited: \parencite{smith2020}.
+\begin{refcontext}[sorting=nyt]
+\printbibliography
+\end{refcontext}
+\end{document}

@@ -85,6 +85,41 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// A `refcontext` block must not eat the `\printbibliography` inside it, and
+/// `\addbibresource` must accept its optional argument.
+///
+/// Both are argument-signature bugs in surrogate code Perl does not have.
+/// `\refcontext`/`\newrefcontext` read a mandatory group ONLY IF one follows —
+/// `\refcontext@i` guards it with `\@ifnextchar\bgroup` and supplies `{}`
+/// itself otherwise (biblatex L10437-10445) — so declaring the group
+/// unconditionally made the noop swallow whatever came next, which in the
+/// idiomatic block IS the bibliography:
+///
+/// ```text
+/// \begin{refcontext}[sorting=nyt]
+///     \printbibliography
+/// \end{refcontext}
+/// ```
+///
+/// And `\blx@addbib` does `\@ifnextchar[` before the resource
+/// (biblatex L11285-11288), so `\addbibresource[location=local]{refs.bib}` is
+/// valid; without the `[]` the `[` became the resource name.
+///
+/// Both lost the whole bibliography in silence. Witnesses 2606.11276 (0 -> 24
+/// entries), 2606.02676 (0 -> 93), 2605.27263 (0 -> 58). Audit family F4(a)/(b).
+#[test]
+fn biblatex_refcontext_block_keeps_its_printbibliography() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/refctx.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "refcontext swallowed \\printbibliography — no bibliography at all:\n{x}"
+  );
+  assert!(
+    x.contains("Smith"),
+    "the cited entry is missing from the bibliography:\n{x}"
+  );
+}
+
 /// bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`.
 ///
 /// The real package does exactly that (`bibunits.sty` L324-330): the optional
