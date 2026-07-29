@@ -676,6 +676,21 @@ impl Document {
     let props = props_opt.unwrap_or_default();
     let mut boxes = vec![Cow::Borrowed(object)];
     while let Some(front_box) = boxes.pop() {
+      // Cooperative guard tick — the SAME one the digestion loops run
+      // (`stomach.rs`, three sites). Build had none, and Build is where a large
+      // document actually peaks: measured 2026-07-29 on 800k words of plain
+      // prose, digest ends under 2 GB while Build takes it to 6.4 GB (54 % of
+      // wall, ~70 % of peak RSS). So `--max-memory` guarded only the cheap
+      // phase, and what a user hit was the HARD watchdog: SIGKILL, exit 137, no
+      // `Fatal:` line, no partial document — the 0-byte output reported against
+      // rc4 on a 131 MB source. The tick makes the ceiling cooperative here
+      // too, so an over-budget document degrades to a graceful Fatal that the
+      // caller can salvage from (`core_interface::convert_document`).
+      //
+      // Cost is negligible: `check_timeout` only samples RSS every ~1024 calls,
+      // and this loop already does far more work per iteration than a counter
+      // increment.
+      crate::stomach::check_timeout()?;
       match front_box.data() {
         List(list) => {
           // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
