@@ -6,7 +6,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <resource src="ltx-amsart.css" type="text/css"/>
-  <figure aria:labelledby="acmlabel1" inlist="lof" labels="LABEL:fig:one" xml:id="S0.F1">
+  <figure aria:describedby="acmlabel1" aria:label="Fly 1 and Fly 2 look identical" inlist="lof" labels="LABEL:fig:one" xml:id="S0.F1">
     <tags>
       <tag>Figure 1</tag>
       <tag role="autoref">Figure 1</tag>
@@ -20,6 +20,6 @@
       <p>example-b</p>
     </figure>
     <toccaption><tag close=" ">1</tag>caption text</toccaption>
-    <caption><tag close=". ">Figure 1</tag>caption text<note class="ltx_nodisplay" xml:id="acmlabel1">Fly 1 and Fly 2 look identical</note></caption>
+    <caption><tag close=". ">Figure 1</tag>caption text<note class="ltx_nodisplay ltx_acm_description_short" xml:id="acmlabel1-short">Fly 1 and Fly 2 look identical</note><note class="ltx_nodisplay ltx_acm_description" xml:id="acmlabel1">Fly 1 and fly 2 comparison shows identical length, wingspan, and overall bodily structure.</note></caption>
   </figure>
 </document>

@@ -85,17 +85,138 @@ LoadDefinitions!({
   RegisterDocumentNamespace!("aria", "http://www.w3.org/ns/wai-aria");
 
   NewCounter!("acmlabel", "");
-  // Perl: \Description[short]{long} — displays #1 (short desc) in the note
-  // properties: RefStepCounter('acmlabel') for xml:id
-  // beforeConstruct: sets aria:labelledby on parent figure element
-  DefConstructor!("\\Description[]{}", "^^<ltx:note xml:id='#id' class='ltx_nodisplay'>#1</ltx:note>",
-    properties => { RefStepCounter!("acmlabel") },
+  // `\Description[short]{long}` — acmart's accessible figure description
+  // (acmart.cls L895 gobbles both args; ACM requires the description, and HTML
+  // can carry it where PDF cannot, so we surface it rather than follow the
+  // class into discarding it).
+  //
+  // The MANDATORY long description is the real alt text, so it is what we
+  // emit. It is read `Undigested` — `ExpansionLevel::Off`, kept as
+  // `DigestedData::Postponed` tokens — so nothing inside it expands: the
+  // author never sees a defect there under pdflatex (the class gobbles it), so
+  // expanding it only manufactures errors. Witness arXiv:2607.21760, whose
+  // `\D1 … \D5` (a copy-paste slip from the adjacent `alt=` text, which has
+  // plain `D1 … D5`) raised `Error:undefined:\D` for content we then dropped.
+  //
+  // Carried as `<ltx:text class='ltx_nodisplay'>`, NOT `<ltx:note>`:
+  // `LaTeXML-meta-xhtml.xsl` decorates a note with `ltx_note_mark`, so the old
+  // binding made a screen reader announce the figure as "†† : <text>".
+  //
+  // The float's caption stays its accessible NAME, so the description is
+  // referenced with `aria:describedby`, never `aria:label` (which would
+  // displace "Figure 1. caption text" as the name). `LaTeXML-common.xsl`
+  // L404-421 maps any `aria:*` to `aria-*` under HTML5, so no XSLT change is
+  // needed. User design ruling 2026-07-28.
+  // `[short]` and `{long}` are two DISTINCT authored fields, so they get two
+  // distinct elements — never concatenated into one. Merging them yields a
+  // run-on ("Fly 1 and Fly 2 look identical. Fly 1 and fly 2 comparison
+  // shows…") and destroys the distinction, so no consumer can tell which text
+  // the author wrote as the brief alternative. `aria-describedby` takes a
+  // SPACE-SEPARATED ID LIST and is announced in order, so both are referenced,
+  // short first, each still individually addressable.
+  //
+  // The old binding emitted the short one ALONE, which is why
+  // `t/complex/acm_aria` recorded "Fly 1 and Fly 2 look identical" and lost the
+  // sentence that actually describes the figure.
+  // Carried as `<ltx:note>` — the document builder places a note inside the
+  // float's `<caption>`, where the old binding put it. An `<ltx:text>` is
+  // INLINE, so the builder auto-opens a `<p>` for it, and a `<p>` at figure
+  // level is tagged `ltx_figure_panel`, which makes the post-processor spin up
+  // a whole `ltx_flex_figure`/`ltx_flex_cell` wrapper around two hidden spans
+  // (inert, since the caption partitions it and the real subfigures keep their
+  // width class, but pure noise in the output).
+  //
+  // The footnote decoration a note normally gets — the `†` mark and the
+  // `<role>: ` type prefix — is suppressed for these by a dedicated template in
+  // `LaTeXML-meta-xhtml.xsl` keyed on `ltx_acm_description`, so the referenced
+  // text stays clean for assistive technology.
+  //
+  // The short description needs its OWN id, derived here rather than as
+  // `#id-short` in the template: a `#name` hole runs to the end of the
+  // identifier, so `#id-short` names a property called `id-short` (absent, so
+  // it silently emits NO xml:id) instead of `#id` followed by a literal. That
+  // produced a dangling `aria-describedby` — the reference resolved to nothing.
+  // Ids use a `-short` suffix rather than a dotted one so they need no escaping
+  // in a CSS selector.
+  DefConstructor!("\\Description[] Undigested",
+    "^^?#1(<ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'>#1</ltx:note>)()\
+     <ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'>#2</ltx:note>",
+    properties => {
+      let mut props = RefStepCounter!("acmlabel")?;
+      if let Some(id) = props.get("id") {
+        let short = format!("{id}-short");
+        props.insert("shortid", Stored::from(short));
+      }
+      // Perl acmart.cls.ltxml L79 sets these so the hidden note claims no
+      // layout space; carried over.
+      props.insert("width", Stored::from(Dimension!("0pt")));
+      props.insert("height", Stored::from(Dimension!("0pt")));
+      Ok(props)
+    },
+    // acmart's own documentation: "Unlike \caption, which is used alongside the
+    // image, \Description is intended to be used INSTEAD OF the image." So a
+    // `\Description` is a TEXT ALTERNATIVE, not supplementary prose — which in
+    // ARIA is name-like (`aria-label`), not `aria-describedby` (announced in
+    // ADDITION to the name). That also fixes the two arguments' roles: `[short]`
+    // is the concise alternative, `{long}` the extended description.
+    //
+    //   `\Description[s]{l}`  → aria-label = s, aria-describedby → l's block
+    //   `\Description{l}`, l plain    → aria-label = l (it replaces the image)
+    //   `\Description{l}`, l w/ markup → aria-describedby → l's block
+    //
+    // The last case is why the argument is read `Undigested`: an `aria-label`
+    // is a plain string and cannot carry markup, so we must inspect the tokens
+    // to choose the slot BEFORE expanding anything. A control sequence (or an
+    // active/`$`/`^`/`_` token) means real markup, so the block carries it.
+    //
+    // The block is always emitted, so the text stays addressable, but it is
+    // referenced only when it is not already the label — otherwise the same
+    // sentence would be both the name and the description. An unreferenced
+    // hidden block is inert: `display:none` content is announced only when
+    // something references it.
+    //
+    // acmart's NEW mechanism for the same purpose is `\includegraphics[alt=…]`
+    // (switched on by `\DocumentMetadata`), handled in `graphicx_sty.rs` and
+    // landing on the `<img>` itself. A document using BOTH — e.g.
+    // arXiv:2607.21760, which repeats the same paragraph in each — will convey
+    // it twice; that is the author's duplication across two documented
+    // mechanisms, not something to second-guess here, and `\Description` is
+    // scoped to the float with no reliable way to associate it with one image.
     before_construct => sub[document, whatsit] {
-      if let Some(id) = whatsit.get_property("id") {
-        let id_str = id.to_string();
-        if let Some(mut figure) = document.get_element() {
-          document.set_attribute(&mut figure, "aria:labelledby", &id_str)?;
-        }
+      let Some(id) = whatsit.get_property("id").map(|v| v.to_string()) else {
+        return Ok(());
+      };
+      // Does the long description contain markup, or is it plain text?
+      let long_is_plain = whatsit
+        .get_arg(2)
+        .and_then(|d| d.raw_tokens())
+        .is_some_and(|tks| {
+          tks.unlist_ref().iter().all(|t| {
+            matches!(
+              t.get_catcode(),
+              Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::EOL
+            )
+          })
+        });
+      let short = whatsit.get_arg(1).map(|d| d.to_attribute());
+      let Some(mut figure) = document.get_element() else {
+        return Ok(());
+      };
+      match short {
+        // Concise alternative available: it labels, the long one describes.
+        Some(s) => {
+          document.set_attribute(&mut figure, "aria:label", &s)?;
+          document.set_attribute(&mut figure, "aria:describedby", &id)?;
+        },
+        // Lone description: it stands in for the image, so it labels — unless
+        // it carries markup an attribute cannot hold.
+        None if long_is_plain => {
+          let text = whatsit.get_arg(2).map(|d| d.to_attribute()).unwrap_or_default();
+          document.set_attribute(&mut figure, "aria:label", &text)?;
+        },
+        None => {
+          document.set_attribute(&mut figure, "aria:describedby", &id)?;
+        },
       }
     }
   );

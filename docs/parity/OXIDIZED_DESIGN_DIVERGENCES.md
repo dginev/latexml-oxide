@@ -2953,6 +2953,67 @@ Guards: `06_cluster_frontmatter::frontmatter_spconf_keywords`,
 `frontmatter_spconf_keywords_braced`, `frontmatter_spconf_twoauthors` (all via
 `convert_to_xml_contrib_clean`, so a returning error fails them).
 
+### 83. acmart `\Description` becomes the figure's ARIA text alternative
+
+acmart documents `\Description` as "used **instead of** the image" (unlike
+`\caption`, "used alongside" it), so it is a *text alternative*, not
+supplementary prose. Perl (`acmart.cls.ltxml` L78-86) emits `#1` — the
+**optional short** description — into `<ltx:note class="ltx_nodisplay">` and
+points `aria:labelledby` at it. `#1` is the optional argument and `#2` the
+mandatory one, so the long description is digested and then discarded
+(`\Description{L}` produced no output at all). Recorded as
+`KNOWN_PERL_ERRORS.md` #66.
+
+Rust maps the two arguments to the two ARIA slots a text alternative uses:
+
+| source | HTML |
+|---|---|
+| `\Description[s]{l}` | `aria-label` = `s`, `aria-describedby` → `l`'s block |
+| `\Description{l}`, `l` plain | `aria-label` = `l` (it replaces the image) |
+| `\Description{l}`, `l` with markup | `aria-describedby` → `l`'s block |
+
+`[short]` is the concise alternative and `{long}` the extended description, so
+`aria-label` / `aria-describedby` is their natural pairing. A lone description
+labels, because it is what stands in for the image — unless it carries markup,
+which an attribute cannot hold.
+
+Choosing between those slots is why the argument is read **`Undigested`**
+(`ExpansionLevel::Off`): the tokens must be inspected for control sequences
+*before* anything expands. That also means nothing inside a `\Description` is
+ever expanded — matching `acmart.cls` L895, which gobbles the argument, so
+pdflatex never expands it either and an author cannot see a defect there.
+arXiv:2607.21760 went from `1 error` (an `Error:undefined:\D` on a copy-paste
+slip inside `\Description`) and **zero** figure descriptions, to **zero errors**
+and four descriptions in its HTML.
+
+Both descriptions are emitted as separate `ltx:note`s with their own `xml:id`
+and class (`ltx_acm_description_short` / `ltx_acm_description`) — two distinct
+authored fields, so concatenating them into one element would produce a run-on
+no consumer could take apart. A block is referenced only when it is not already
+the label, so the same sentence is never both the name and the description; an
+unreferenced hidden block is inert, since `display:none` content is announced
+only when something references it.
+
+A dedicated template in `LaTeXML-meta-xhtml.xsl` strips the footnote
+scaffolding — the generic `ltx:note` rendering adds a `†` mark and a
+`<role>: ` prefix, which landed in the computed accessible text ("†† : …") —
+and drops the `ltx_note` class, which these are not. Perl's `width`/`height`
+`Dimension(0)` are carried over unchanged.
+
+acmart's newer mechanism for the same purpose, `\includegraphics[alt=…]`
+(switched on by `\DocumentMetadata`), is handled separately in `graphicx_sty.rs`
+and lands on the `<img>` itself; we accept it unconditionally rather than gating
+it behind `\DocumentMetadata`, which is itself a no-op
+(`latex_constructs_rust_only.rs`). A document using BOTH mechanisms conveys the
+text twice — that is the author duplicating across two documented routes, and
+`\Description` is scoped to the float with no reliable way to associate it with
+one image.
+
+Guard: `latexml_oxide/tests/complex/acm_aria.{tex,xml}` (re-blessed — it
+previously matched Perl byte-for-byte and so certified the defect) plus
+`110_acmart_description_aria.rs`, which asserts at the HTML level that all three
+rows of the table above hold and that no `aria-describedby` reference dangles.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
