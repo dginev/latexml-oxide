@@ -229,5 +229,5 @@ EOF
 ## Related skills
 
 `canvas-triage` (is it really our bug?) · `min-repro` (shrink the MWE) ·
-`perl-port` / `port-from-perl` (the faithful fix) · `surpass-perl` (when Perl is
+`perl-port` (the faithful fix) · `surpass-perl` (when Perl is
 wrong too) · `start-session` (ground yourself first).

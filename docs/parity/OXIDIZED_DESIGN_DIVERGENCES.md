@@ -342,8 +342,10 @@ output. This is the primary source of remaining diffs in `tikz_3d_cone` and
 
 ### 21. No `tex=` Attribute on `<picture>` Elements
 
-**Decision:** The `tex=` attribute on `<ltx:picture>` elements is suppressed by default.
-It is only emitted when the environment variable `LATEXML_SVG_TEX_ATTRIBUTE=true` is set.
+**Decision:** The `tex=` attribute on `<ltx:picture>` elements is suppressed
+**unconditionally**. A `LATEXML_SVG_TEX_ATTRIBUTE=true` opt-in was designed but never
+implemented — the name appears in no source file (verified 2026-07-29), so there is no
+way to turn the attribute back on.
 
 **Perl behavior:** Perl emits a `tex=` attribute on `<picture>` containing the full TeX
 source of the tikz/pgf picture environment. This can be extremely long (thousands of
@@ -351,9 +353,8 @@ characters of raw pgf commands) and is not used by downstream consumers.
 
 **Rationale:** The `tex=` attribute on pictures is a debugging artifact. It inflates the
 XML output size significantly (often 10x the rest of the element) with raw pgf
-instructions that are illegible and serve no rendering or accessibility purpose. Making
-it opt-in via an environment variable keeps it available for debugging while producing
-cleaner default output.
+instructions that are illegible and serve no rendering or accessibility purpose.
+Suppressing it produces cleaner output at no cost to any downstream consumer.
 
 **Impact:** All tikz/pgf test reference XMLs omit the `tex=` attribute on `<picture>`
 elements. When copying test XMLs from Perl, strip `tex="..."` from `<picture>` tags.

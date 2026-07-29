@@ -107,9 +107,12 @@ panic = "unwind"
 # debuginfo and unstripped symbols, so `perf record` / `cargo flamegraph`
 # get function-level samples. Use:
 #   cargo build --profile bench --bin cortex_worker --features cortex
-#   perf record -F 99 -g --call-graph dwarf -o /tmp/perf.data \
-#     ./target/bench/cortex_worker --standalone …
+#   perf record -F 99 -g --call-graph lbr -o /tmp/perf.data \
+#     ./target/release/cortex_worker --standalone …
 #   perf report -i /tmp/perf.data
+# `bench` is a built-in profile, so its artifacts land in target/release/,
+# NOT target/bench/. Prefer `--call-graph lbr`: DWARF stack decode yields
+# empty user stacks on the dev laptop.
 [profile.bench]
 inherits = "release"
 debug = "full"
