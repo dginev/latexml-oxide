@@ -641,6 +641,26 @@ residuals stay here so the live worklist keeps them visible:
   still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
 
+### `\ref`'s reversion emits a trailing space — OPEN, small (found 2026-07-29)
+
+Rust writes `tex="x+\text{see \ref {sec:one}}"` where Perl writes
+`\ref{sec:one}` — a space between the control word and its `{`. Semantically
+equivalent TeX, but `tex=` flows into the MathML `alttext`, which is the
+screen-reader / no-MathML fallback, and into golden comparisons.
+**Already narrowed:** it is specific to `\ref` (`latex_constructs.rs:8219`, which
+has no explicit `reversion`, so the default is synthesized) — `\emph`, `\sqrt`
+and `\frac` are all byte-identical to Perl on the same document, so this is NOT a
+general control-word-before-brace rule in the serializer. Prime suspect is the
+`OptionalMatch:* Semiverbatim` parameter pair, since that is what distinguishes
+`\ref` from the clean cases. Witness: `docs/reproducers/` not needed — any
+document with `\ref` inside `\text` in math shows it; the minimal probe is
+`\( x + \text{see \ref{l}} \)` with a matching `\label{l}`. Found while
+end-to-end-diffing Perl vs Rust for R3/F17; it is **core-stage** (present in the
+core `tex=` attribute), unrelated to the MathML post layer, hence recorded rather
+than folded into that branch. Note the *inverse* bug — a Tokens round-trip
+**eating** a control word's terminating space — is a separate, already-fixed
+issue (`\bib@field@unknownasdata`, `SYNC_SESSIONS_2026-07.md`); do not conflate.
+
 ## Open items — detail for the ranked rows
 
 ### R1 — upstream `brucemiller/LaTeXML#2852`: a subfile's `\documentclass` options are not packages
