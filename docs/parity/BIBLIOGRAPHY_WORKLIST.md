@@ -540,7 +540,7 @@ the log). A `grep -rl '\begin{document}'` harness picks the first match, which
 for `2605.30360` was the decoy `proof.tex`, not `polyhist.tex` — that alone
 manufactured a false "still broken" verdict.
 
-#### `\renewcommand*{\fnum@figure}[1]` truncates the document — ANALYSED 2026-07-14, NOT fixed (needs a decision)
+#### `\renewcommand*{\fnum@figure}[1]` truncates the document — ✅ FIXED 2026-07-29 (surpass, OXIDIZED_DESIGN #85)
 
 Witness `2605.01731` (cas-sc): 18 figures × 3 errors
 (`\lx@tag@intags`/`\lx@tag`/`\end{figure}` "Attempt to end mode
@@ -567,13 +567,34 @@ LaTeXML has no `:` token to eat: `\format@title@figure` is
 a token. So `\csname fnum@figure\endcsname` (Base_Utility L1041-1043) grabs the
 group's closing `}` instead, wrecking the caption and cascading.
 
-This is **PARITY** — Perl's `\lx@fnum@@` is identical — so fixing it is a
-surpass-Perl divergence, and both engines are wrong vs the PDF. Candidate fix:
-expand as `\csname fnum@#1\endcsname{}` so an arg-taking `\fnum@<type>` eats a
-harmless empty group (reproducing pdflatex's result) while a normal 0-arg one
-just gains an empty group. **Not done**: `\lx@fnum@@` formats every figure/table
-caption in every document — blast radius far out of proportion to 18 papers, and
-release-week bias is stabilize. Needs a user decision + a full-suite diff.
+This is **PARITY** — Perl's `\lx@fnum@@` is identical — so fixing it was a
+surpass-Perl divergence, and both engines were wrong vs the PDF. **Landed
+2026-07-29** as the candidate fix this entry proposed: expand as `\csname
+fnum@#1\endcsname{}`, so an arg-taking `\fnum@<type>` eats a harmless empty
+group (reproducing pdflatex's result) while a 0-arg one just gains one.
+User-approved per the `surpass-perl` protocol, and extended to all three
+`fnum@` hooks — `\lx@fnum@@`, `\lx@fnum@toc@@` and the theorem-header
+formatter. `\lx@typerefnum@@` shares the shape but is deliberately excluded: no
+LaTeX kernel feeds it a separator token, so the pdflatex-compatibility argument
+does not reach it.
+
+**The blast-radius fear did not materialise, and that is the correction worth
+keeping.** This entry deferred the fix because "`\lx@fnum@@` formats every
+figure/table caption in every document". It does not: the changed branch fires
+only where `\fnum@<type>` is *defined*, and the untouched `\lx@@fnum@@` default
+is what serves nearly every caption. Measured full suite after the change:
+**106/106 targets, zero goldens re-blessed**. Guard fixture
+`cluster_regressions/fnum_arg_hook.tex` goes **10 errors -> 0** (all three
+hooks); same-host Perl 0.8.8 raises 9 on the two-hook form, pdflatex 0. Three
+real papers whose classes `\def\fnum@figure` (svjour3, aastex631, llncs) are
+byte-identical before vs after. **Breadth re-measured 2026-07-29 and reduced:**
+the `grep 'lx@tag@intags'` proxy behind "18 papers, 5 with no References" gives
+23 papers on the current fleet run, of which only 2 carry this cause's signature
+(2605.01731, 2605.12842) — the symptom has several causes.
+Caveat: the `close=": "` separator is untouched, so the caption still reads
+`Figure 1.: A caption.` — the win is error-freedom and an un-truncated
+document, not punctuation parity. Full record: OXIDIZED_DESIGN **#85** /
+KNOWN_PERL_ERRORS **#68**.
 
 Minimal repro (article + subfigure + the `\renewcommand*` above) reproduces the
 exact 3-error signature; `cas-sc` is NOT implicated (it was the first

@@ -2862,3 +2862,71 @@ byte-for-byte and so certified the defect.
 Candidate to upstream: swapping `#1`→`#2` is a one-token fix; the
 note-decoration and undigested-reading parts need the XSLT and parameter-type
 changes too.
+
+## 68. An arg-taking `\fnum@<type>` swallows the caption's closing brace and absorbs the rest of the document
+
+`LaTeXML/lib/LaTeXML/Engine/Base_Utility.pool.ltxml` L1041-1043 expands the
+author's caption-number hook bare:
+
+```perl
+DefMacro('\lx@fnum@@{}',
+  '{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}'
+    . '\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}');
+```
+
+Real `\fnum@<type>` takes no argument. But LaTeX's `\@makecaption` is
+`\sbox\@tempboxa{#1: #2}`, so a **one-argument** `\fnum@<type>` eats the `:`
+that follows it — which is exactly the point of the widely-copied "change
+`Fig. 1:` to `Fig. 1.`" hack:
+
+```tex
+\makeatletter
+\renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+\makeatother
+```
+
+LaTeXML has no `:` **token** to eat: its separator is a tag **attribute**
+(`\lx@tag[][: ]`, `latex_constructs.pool.ltxml` L3158-3159). So the argument
+scan runs past the hook and takes the caption group's closing brace instead. The
+`<figure>` never closes, and **every following section — the bibliography
+included — is absorbed into it**, which is why the symptom presents as a
+truncated document with no References section rather than as a bad caption.
+
+**Minimal trigger** (`latexml_oxide/tests/cluster_regressions/fnum_arg_hook.tex`
+covers all three hooks; plain `article` suffices — `cas-sc` is not implicated):
+
+```tex
+\documentclass{article}
+\makeatletter
+\renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+\makeatother
+\begin{document}
+\section{First}
+\begin{figure}\caption{A caption.}\end{figure}
+\section{Second}
+Text after the figure must survive.
+\end{document}
+```
+
+Measured on that input: **pdflatex 0 errors** (renders `Figure 1. A caption.`),
+**Perl LaTeXML 0.8.8 nine errors**, pre-fix Rust seven — same
+`\lx@tag@intags` / `\lx@tag` / `\end{figure}` "Attempt to end mode
+restricted_horizontal" signature in both engines. Witnesses `2605.01731`
+(18 figures × 3 errors) and `2605.12842` (10 × 3), both confirmed live on the
+current fleet run. **Breadth is smaller than once recorded:** a 2026-07-14 note
+claimed 18 papers from a `grep 'lx@tag@intags'` proxy; re-measured 2026-07-29
+that proxy gives 23 papers across sandbox-arxiv-2605+2606 (60,505 docs) of which
+only **2** carry this cause's actual signature — the symptom has several causes,
+so the proxy over-attributes.
+
+**Fixed in Rust** as a deliberate surpass — `OXIDIZED_DESIGN #85`: the hook is
+expanded as `\csname fnum@#1\endcsname{}`, giving an arg-taking definition a
+harmless empty group and reproducing pdflatex's result, while the 0-arg hooks
+that are the normal case are unaffected. Guard
+`06_cluster_regressions::cluster_fnum_arg_hook`.
+
+Candidate to upstream: the one-token change applies verbatim to the Perl
+definition, and to `\lx@fnum@toc@@` L1065-1066 and the theorem-header formatter
+alongside it. Note the fix does NOT reach the `close=": "` separator, so the
+caption still reads `Figure 1.: A caption.` in both engines — closing that gap
+needs the tag attribute to become conditional, which is a larger change.
