@@ -70,11 +70,14 @@ are not re-attempted:
 - **F4(c)(d)** — `\addbibresource` inside an unbound `.cls` is never registered
   (2605.23724), and apa6 OmniBus dep-mining takes a biblatex branch the
   document did not (2605.14990). Both still EMPTY.
-- **F6 — achemso, re-diagnosed and reduced to 8 lines.** The trigger is NOT the
+- **F6 — achemso, re-diagnosed and reduced to 5 lines.** The trigger is NOT the
   abstract gobbler the first pass blamed: achemso's `{tocentry}` leaves the
   conditional machinery broken, and the *next* conditional — a plain, balanced
-  `\iffalse … \fi` — reports "conditional fell off end", skipping the rest of
-  the document including `\bibliography`. Repro
+  document loses everything after it, including `\bibliography` — and it does
+  so with **no conditional of its own anywhere in the file**. The `\iffalse`
+  in the message is achemso's: `\acs@tocentry@print` (L1232-1246) defers the
+  entry with `\AtEndDocument{\if@twocolumn …\fi …\if@restonecol …\fi}`, and
+  a `\newif` boolean IS `\iffalse` when false. Repro
   [`repros/f6_tocentry_conditional/`](bib_absence_2026-07-29/repros/f6_tocentry_conditional/):
   pdflatex renders it and raises nothing; delete the `{tocentry}` block and we
   convert cleanly too. Suspect is `\acs@collect` (achemso.cls L1174-1211) —
