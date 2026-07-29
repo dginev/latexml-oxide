@@ -713,6 +713,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // PERL_INPUT_ENCODING, which the Mouth reads to decode source bytes
     // (default utf-8 when unset).
     inputencoding: cli.inputencoding.clone(),
+    // Wired by the --streaming flag / auto-activation in a later step of the
+    // streaming sprint; the eager path is unconditional until then.
+    streaming: None,
   };
   // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
   // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base

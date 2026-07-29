@@ -176,6 +176,7 @@ mod tests {
     let mut store = SegmentStore::create(&tmp).expect("store");
     let meta = SegmentMeta {
       depth:      1,
+      noindent:   false,
       font:       None,
       namespaces: vec![(
         String::from("ltx"),
@@ -190,7 +191,10 @@ mod tests {
       )
       .expect("write");
 
-    let mut reader = FragmentReader::open(&store.segment_path(id)).expect("open segment");
+    // Segment files are raw (splice-ready); streaming reads the wrapped form.
+    let wrapped_path = tmp.join("wrapped.xml");
+    std::fs::write(&wrapped_path, store.wrapped_segment(id).expect("wrap")).unwrap();
+    let mut reader = FragmentReader::open(&wrapped_path).expect("open segment");
     let mut titles = Vec::new();
     while let Some(doc) = reader.next_fragment().expect("stream") {
       let root = doc.get_root_element().unwrap();

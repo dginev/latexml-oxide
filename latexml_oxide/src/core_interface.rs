@@ -86,9 +86,29 @@ pub trait DigestionAPI {
     mode: Option<DigestionMode>,
     no_init: bool,
   ) -> Result<Digested>;
+  fn digest_setup(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+  ) -> Result<String>;
   fn digest_file(&mut self, request: String, options: DigestionOptions) -> Result<Digested>;
   fn digest_internal(&mut self) -> Result<Digested>; // used to be "finishDigestion"
   fn convert_file(&mut self, filepath: String) -> Result<Document>;
+  /// Streaming (fragmented) conversion: interleaved digest→build with
+  /// spill-to-disk, a streaming pass 2, and placeholder-spliced assembly.
+  /// The Perl-parity eager path is `digest` + `convert_document`; this is the
+  /// sanctioned bounded-memory divergence (OXIDIZED_DESIGN), activated only
+  /// via `Config::streaming`.
+  fn convert_streaming(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+    budget: usize,
+  ) -> Result<Document>;
   fn convert_document(&mut self, digested: Digested) -> Result<Document>;
   // Mocks
   /// Load preamble content. Perl: Core.pm loadPreamble
@@ -137,6 +157,487 @@ pub(crate) fn parse_preload_spec(preload: &str) -> (String, String, Vec<String>)
     None => (base.clone(), String::from("sty")),
   };
   (name, ext, options)
+}
+
+/// One guarded digestion step: `digest_next_body(None)` under the salvage
+/// policy `digest_internal` has always applied (extracted verbatim so the
+/// eager loop and the streaming driver share ONE policy). `Ok(true)` =
+/// continue; `Ok(false)` = a Fatal was recovered (announced + latched, boxes
+/// salvaged) and digestion must stop; `Err` = a resource fatal that must not
+/// be recovered.
+fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
+  match stomach::digest_next_body(None) {
+    Ok(next_bodies) => {
+      boxes.extend(next_bodies);
+      Ok(true)
+    },
+    Err(e) => {
+      // Re-raise MemoryBudget / wall-clock Timeout (Convert) errors:
+      // those are *resource* failures, not recoverable digestion
+      // hiccups. Catching them here would silently produce empty
+      // output for a runaway-loop paper, masking a real bug and
+      // inflating canvas pass rates with empty conversions.
+      // R35.A: ensure pathological inputs fail loudly (exit 1+)
+      // rather than silently turning into a zero-byte HTML.
+      use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+      // NOTE the target discrimination on `MemoryBudget`, which is
+      // deliberate rather than an oversight. `Timeout`-target is the RSS
+      // fuse: real resident memory is already at the ceiling, so
+      // continuing means allocating straight into an OOM — there is
+      // nothing to do but stop. `Stomach`-target is the box-list ceilings
+      // (`box_count_cap` / `box_bytes_budget` / boxing depth), where the
+      // salvage below CLEARS the offending accumulation and therefore
+      // itself frees the memory; recovering there is safe precisely
+      // because the hard RSS backstop above stays non-recoverable
+      // underneath it. So the stomach's memory guards stay on the recovery
+      // path — a graceful end with as much of the document as was already
+      // digested, and the Fatal announced and latched below.
+      if matches!(
+        (&e.target, &e.category),
+        (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)
+          | (ErrorTarget::Timeout, ErrorCategory::Convert)
+          | (ErrorTarget::Timeout, ErrorCategory::TokenLimit)
+          | (ErrorTarget::Timeout, ErrorCategory::PushbackLimit)
+      ) {
+        log::warn!(
+          "digest_internal: resource failure ({:?}/{:?}) — not recovering",
+          e.target,
+          e.category
+        );
+        return Err(e);
+      }
+      // The Err that landed here was raised at Fatal level. We recover
+      // BOXES from it (below) — Perl `finishDigestion` L219-220 — but a
+      // Fatal-level raise stays FATAL in the document's reported outcome:
+      // salvaging content is not licence to reclassify the verdict, and
+      // there is deliberately no auto-upgrade to Error severity here (user
+      // policy 2026-07-28). The one sanctioned demotion in this codebase is
+      // the bibliography's explicit `DEMOTE_FATALS` (`error.rs`), which is
+      // opt-in and scoped.
+      //
+      // `log_fatal()` is the single seam that does BOTH halves: it emits
+      // the standard `Fatal:<target>:<category>` line AND latches
+      // `LogStatus::Fatal`. This used to be a hand-rolled `log::error!`
+      // with a `Fatal:`-prefixed target, avoiding `log_fatal` for fear of
+      // "double-incrementing the counter" — unfounded, since the fatal
+      // status is a sticky BOOL (`error.rs` `note_status`, guarded by
+      // `fatal_status_is_sticky_and_returns_1`). The hand-rolled call used
+      // the raw `log`-crate macro, which never reaches `note_status`, so
+      // guard fatals raised as a plain `Err` by `stomach::check_timeout`
+      // (rather than through `Fatal!`) were never counted at all: the log
+      // carried a `Fatal:` line while the run summarised as `Conversion
+      // complete: No obvious problems`, status code 0 — "ok" to cortex.
+      // Guard: `101_fatal_salvages_partial_document`.
+      e.log_fatal();
+      log::warn!("digest_internal: error during recovery digestion: {:?}", e);
+      // Recover what the failed body already digested. Without this the
+      // "still produce partial output" intent above only worked when the
+      // failure landed in a LATER body — a Fatal inside the FIRST one left
+      // `boxes` empty and the run wrote a 39-byte empty document, losing a
+      // whole paper to one bad construct (arXiv:2508.07407 / ar5iv #556,
+      // one pathological `\tikz` picture).
+      //
+      // Scoped to the STOMACH box-cycle guard, deliberately. That guard
+      // fires while the token stream is still healthy — one construct is
+      // piling up boxes — so the surrounding document is sound and worth
+      // keeping, and the innermost level (the 50k-box repeating window) is
+      // exactly the construct to drop.
+      //
+      // It is NOT extended to the gullet's `Timeout:Recursion`, where the
+      // TOKEN stream is the thing looping: measured on arXiv:2605.25400,
+      // salvaging there revived a poisoned state that re-entered the same
+      // loop during build and turned an 8.7 s fatal into a 2 m 12 s
+      // wall-clock timeout writing a ZERO-byte file — strictly worse than
+      // the 39-byte stub, for a 1.7 KB gain on the one paper it helped.
+      // Same reasoning bars `TooManyErrors`; widening to either needs its
+      // own measurement, not an assumption that more salvage is better.
+      if matches!(e.target, ErrorTarget::Stomach) {
+        let salvaged = stomach::salvage_pending_box_lists(true);
+        if !salvaged.is_empty() {
+          log::info!(
+            "digest_internal: salvaged {} box(es) digested before the fatal",
+            salvaged.len()
+          );
+          boxes.extend(salvaged);
+        }
+      }
+      Ok(false)
+    },
+  }
+}
+
+/// The document head shared by the eager and streaming paths: a fresh
+/// [`Document`] with the schema model loaded and the preload PIs inserted
+/// (the front half of `convert_document`, extracted verbatim).
+fn build_document_head(preloads: &[String]) -> Result<Document> {
+  let mut document = Document::new();
+  {
+    // TODO: Can we disentangle the ownership to avoid the clone?
+    let paths_stored = state::get_search_paths();
+    let schema_paths = paths_stored
+      .iter()
+      .map(String::as_str)
+      .collect::<Vec<&str>>();
+    let default_model_load = model::with_schema_data(|schema_opt| match schema_opt {
+      None => true,
+      Some(v) => v.last() == Some(&pin!("LaTeXML")),
+    });
+    if default_model_load {
+      // Compile-time load of model AND indirect model. Single
+      // shared instantiation lives at `crate::load_latexml_default_model`
+      // so LTO can keep exactly one `_ModelLoader::build_model` in
+      // the final binary (~600 KiB per copy otherwise).
+      crate::load_latexml_default_model();
+    } else {
+      // Eager-load at runtime
+      model::load_schema(schema_paths.as_slice())?; // If needed?
+    }
+    if state::has_search_paths() {
+      {
+        if state::lookup_bool("INCLUDE_COMMENTS") {
+          let paths_string = state::with_search_paths(|paths| {
+            paths
+              .iter()
+              .map(String::as_str)
+              .collect::<Vec<&str>>()
+              .join(",")
+          });
+          let attributes = map! {s!("searchpaths") => paths_string};
+          document.insert_pi("latexml", Some(attributes))?;
+        }
+      }
+    }
+  }
+
+  for preload in preloads {
+    if preload.ends_with(".pool") {
+      continue;
+    }
+    let mut options: Option<String> = None;
+    LATEX_OPTION_REGEX.replace_all(preload, |refs: &Captures| -> String {
+      options = Some(refs.get(1).map_or("", |m| m.as_str()).to_string());
+      String::new()
+    });
+    if preload.ends_with(".cls") {
+      CLS_EXT_REGEX.replace_all(preload, "");
+      let attributes = map! {s!("class") => preload.to_string()};
+      document.insert_pi("latexml", Some(attributes))?;
+    } else {
+      STY_EXT_REGEX.replace_all(preload, "");
+      let attributes = map! {s!("package") => preload.to_string()};
+      document.insert_pi("latexml", Some(attributes))?;
+    }
+  }
+  Ok(document)
+}
+
+/// Load the source-adjacent `.latexml` rewrite-rules file, if present.
+/// Perl does this during initialization; we do it post-build so the rules can
+/// compile against the built document. Extracted so the streaming path can
+/// load rules BEFORE its pass 2 (fragments must see the complete rule set)
+/// without `finish_document` loading them a second time.
+fn load_source_latexml_rules() {
+  // Load .latexml file if it exists alongside the source .tex file.
+  // Perl does this automatically during initialization; we do it post-build
+  // so the rewrite rules can be compiled against the built document.
+  if let Some(Stored::String(source_sym)) = state::lookup_value("SOURCEFILE") {
+    let source_path = arena::with(source_sym, |s| s.to_string());
+    // Replace .tex extension with .latexml
+    let latexml_path = if source_path.ends_with(".tex") {
+      source_path.replace(".tex", ".latexml")
+    } else {
+      format!("{}.latexml", source_path)
+    };
+    if Path::new(&latexml_path).exists() {
+      let _ = load_latexml_file(&latexml_path);
+    }
+  }
+}
+
+/// The whole-document tail shared by both paths: rewrites, `\lxDeclare`
+/// application, math parsing, finalize, XMTok-id cleanup (the back half of
+/// `convert_document`, extracted verbatim). In streaming mode this runs on
+/// the live SPINE — spilled fragments received the same phases fragment-by-
+/// fragment in `streaming_pass2` beforehand.
+fn finish_document(document: &mut Document) -> Result<()> {
+  let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
+  if has_rewrites {
+    let _gp_rewrite = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
+    note_begin("Rewriting");
+    document.mark_xmnode_visibility()?;
+    document.load_labels_for_rewrite()?;
+    // TODO: What is the right way to do rewrites in a daemon-safe manner?
+    if let Some(Stored::VecDequeStored(rules)) = state::remove_value("DOCUMENT_REWRITE_RULES")
+      && let Some(root) = document.get_document().get_root_element()
+    {
+      apply_rewrite_rules(document, rules, &root)?;
+    }
+    note_end("Rewriting");
+  }
+
+  // Apply \lxDeclare declarations: set roles/names/meanings on matching XMTok elements.
+  // Must run BEFORE math parsing so the parser sees the updated roles.
+  apply_lx_declarations(document);
+
+  if !state::get_nomathparse_flag() {
+    // Telemetry: count formulae and time the whole Marpa parse pass.
+    // Per-formula bucket histogram requires per-call instrumentation
+    // inside latexml_math_parser::parser::parse_math; deferred.
+    let xmath_count = document.findnodes("//ltx:XMath", None).len() as u32;
+    latexml_core::telemetry::set_formulae(xmath_count);
+    let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
+    let mut parser = MathParser::default();
+    parser.parse_math(document)?;
+    drop(_gp);
+    // Post-parse: mark failed XMath nodes as unparsed.
+    // The parser's parse_kludge already handles OPEN/CLOSE wrapping + script attachment
+    // (parse_kludgeScripts_rec), so we only need to add the unparsed CSS class here.
+    if !parser.failed_xmath_ids.is_empty() {
+      for mut math_node in document.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
+        for xmath_child in document.findnodes("ltx:XMath", Some(&math_node)) {
+          if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
+            document.add_class(&mut math_node, "ltx_math_unparsed")?;
+            break;
+          }
+        }
+      }
+    }
+    // Renumber xml:ids inside parsed XMath subtrees to be sequential in document
+    // order. The Marpa parser explores multiple parse alternatives, consuming ID
+    // counter slots for pruned nodes. This pass reassigns IDs post-parse.
+    renumber_math_ids(document);
+    // Fill in \ltx@count@parses markers with actual parse tree counts.
+    // Each marker is <ltx:text _parsetrees_marker="true">0</ltx:text>.
+    // Find the preceding ltx:Math[@_parsetrees] and copy the count.
+    let markers = document.findnodes("//*[@_parsetrees_marker='true']", None);
+    for mut marker in markers {
+      let count = {
+        let preceding = document.findnodes("preceding::ltx:Math[@_parsetrees][1]", Some(&marker));
+        preceding
+          .into_iter()
+          .last()
+          .and_then(|m| m.get_attribute("_parsetrees"))
+          .unwrap_or_else(|| "0".to_string())
+      };
+      // Replace the text content with the actual count
+      for mut child in marker.get_child_nodes() {
+        child.unlink_node();
+      }
+      let _ = marker.append_text(&count);
+      // Remove the marker attribute
+      let _ = marker.remove_attribute("_parsetrees_marker");
+    }
+  }
+
+  note_begin("Finalizing");
+  document.finalize()?;
+  note_end("Finalizing");
+  // Perl core produces role="UNKNOWN" for single-letter math tokens.
+  // Per-document .latexml files set role="ID" via DefMathRewrite BEFORE parsing.
+  // We do NOT apply a blanket conversion — roles are set by rewrite rules only.
+  // Cleanup unreferenced xml:ids on XMTok elements generated by the math parser.
+  // Must run after finalize (which includes prune_xmduals that may transfer ids).
+  document.cleanup_unreferenced_xmtok_ids();
+  Ok(())
+}
+
+/// Compile and invoke a set of `DefRewrite`/`DefMathRewrite` rules against
+/// `root` (extracted verbatim from the eager Rewriting phase). The streaming
+/// pass 2 calls this once per FRAGMENT with a snapshot of the rule set — the
+/// S2 census showed the production corpus is subtree-local, so per-fragment
+/// application is equivalent; `label:`-scoped rules resolve through the
+/// fragment's `rewrite_labels`, pre-merged with the spilled-label index.
+fn apply_rewrite_rules(
+  document: &mut Document,
+  rules: std::collections::VecDeque<Stored>,
+  root: &libxml::tree::Node,
+) -> Result<()> {
+  // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
+  // state. (TODO: obviously, this could be avoided if they never needed mutable
+  // state. When do they?)
+  let mut rewrites = Vec::new();
+  for rule in rules {
+    if let Stored::Rewrite(mut rewrite_rule) = rule {
+      rewrite_rule.compile_clauses(document);
+      rewrites.push(rewrite_rule);
+    }
+  }
+  // 31 rules compiled for declare test; XPath matching issue prevents application
+  // Step 2: invoke the rewrite rules
+  // R35.D instrumentation: print per-rule timing if
+  // LATEXML_REWRITE_TIMING=1. Logs BEFORE the rule runs so we can
+  // identify the rule that hangs (the timeout watchdog kills
+  // mid-rule otherwise).
+  let trace_all = std::env::var_os("LATEXML_REWRITE_TIMING").is_some();
+  let n_rules = rewrites.len();
+  for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
+    // Build a useful one-line hint from the rule's options. The
+    // Debug impl on RewriteOptions is `<RewriteOptions>` only,
+    // so reach into the fields directly.
+    let opts = &rewrite_rule.options;
+    let mut xpath_hint = format!(
+      "select={:?} xpath={:?} regexp={:?} scope={:?} label={:?} clauses={}",
+      opts
+        .select
+        .as_deref()
+        .map(|s| s.chars().take(60).collect::<String>()),
+      opts
+        .xpath
+        .as_deref()
+        .map(|s| s.chars().take(60).collect::<String>()),
+      opts
+        .regexp
+        .as_deref()
+        .map(|s| s.chars().take(60).collect::<String>()),
+      opts.scope.as_ref().map(|_| "<scope>"),
+      opts.label.as_deref(),
+      rewrite_rule.clauses.len(),
+    );
+    // Dump compiled clauses by op + pattern preview (helps when
+    // the options struct itself is empty after compile_clauses
+    // moved them into the clauses vec).
+    for (ci, c) in rewrite_rule.clauses.iter().enumerate() {
+      use std::fmt::Write;
+      let _ = write!(
+        xpath_hint,
+        "\n    [{ci}] op={:?} pat={:?}",
+        c.op,
+        match &c.pattern {
+          latexml_core::rewrite::RewritePattern::String(s) =>
+            format!("Str({})", s.chars().take(120).collect::<String>()),
+          latexml_core::rewrite::RewritePattern::Tokens(_) => "Tokens(..)".into(),
+          latexml_core::rewrite::RewritePattern::Closure(_) => "Closure(..)".into(),
+          latexml_core::rewrite::RewritePattern::NodeList(n) => format!("NodeList({})", n.len()),
+          _ => "??".into(),
+        }
+      );
+    }
+    if trace_all {
+      eprintln!(
+        "[rewrite-timing] rule #{}/{} START :: {}",
+        idx, n_rules, xpath_hint
+      );
+      // Flush stderr so it appears even if the rule hangs
+      use std::io::Write;
+      let _ = std::io::stderr().flush();
+    }
+    let started = std::time::Instant::now();
+    rewrite_rule.invoke(document, root)?;
+    let elapsed = started.elapsed();
+    if trace_all {
+      eprintln!(
+        "[rewrite-timing] rule #{}/{} END {:.2?}",
+        idx, n_rules, elapsed
+      );
+    } else if elapsed > std::time::Duration::from_secs(5) {
+      eprintln!(
+        "[rewrite-timing] rule #{}/{} SLOW {:.2?} :: {}",
+        idx, n_rules, elapsed, xpath_hint
+      );
+    }
+  }
+  Ok(())
+}
+
+/// Streaming pass 2: give every spilled fragment the SAME whole-document tail
+/// the spine gets — rewrites, `\lxDeclare`, math parsing, per-fragment
+/// finalize — then store its final serialized text for the assembly splice.
+/// Runs after digestion finished (so the rewrite-rule set is complete) and
+/// before `finish_document` consumes the rules for the spine.
+fn streaming_pass2(
+  store: &mut latexml_core::sxml::SegmentStore,
+  index: &latexml_core::sxml::FragmentIndex,
+  node_fonts: &rustc_hash::FxHashMap<u64, latexml_core::common::font::Font>,
+) -> Result<()> {
+  use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+  // A non-consuming snapshot of the rules: `finish_document` will consume the
+  // live entry for the spine afterwards.
+  let rules_opt = match state::lookup_value("DOCUMENT_REWRITE_RULES") {
+    Some(Stored::VecDequeStored(rules)) => Some(rules),
+    _ => None,
+  };
+  let nomath = state::get_nomathparse_flag();
+  let segments: Vec<_> = store.ids().collect();
+  for seg in segments {
+    if store.is_retired(seg) {
+      // Inlined into an enclosing segment; its content is processed there.
+      continue;
+    }
+    let meta = store.meta(seg)?.clone();
+    // Segments are bounded (one spill run), so plain parsing is as bounded as
+    // streaming — and unlike `xmlTextReaderExpand`, it does not mint the
+    // libxml2 "default" namespace prefix for default-namespace content
+    // (`append_clone`'s doc-comment records the same trap). The streaming
+    // TextReader stays reserved for genuinely unbounded files (the post
+    // half's pass A over the whole core XML).
+    let frag_xml = libxml::parser::Parser::default()
+      .parse_string(&store.wrapped_segment(seg)?)
+      .map_err(|e| Error {
+        target:   ErrorTarget::Internal,
+        category: ErrorCategory::Libxml,
+        message:  s!("cannot re-parse spilled segment {seg}: {e}"),
+      })?;
+    let mut out = String::new();
+    {
+      let mut frag = Document::from_xml_document(frag_xml, node_fonts.clone())?;
+      // The segment text was pretty-printed by our serializer; re-parsing
+      // turned that indentation into text nodes. Strip them (schema-symmetric
+      // with how they were added) before any phase sees the tree.
+      if let Some(root) = frag.get_document().get_root_element() {
+        frag.strip_indentation_whitespace(&root);
+      }
+      if let Some(rules) = &rules_opt {
+        frag.mark_xmnode_visibility()?;
+        frag.load_labels_for_rewrite()?;
+        for (label, id) in index.labels() {
+          frag
+            .rewrite_labels
+            .entry(label.to_string())
+            .or_insert_with(|| id.to_string());
+        }
+        if let Some(root) = frag.get_document().get_root_element() {
+          apply_rewrite_rules(&mut frag, rules.clone(), &root)?;
+        }
+      }
+      apply_lx_declarations(&mut frag);
+      if !nomath {
+        let mut parser = MathParser::default();
+        parser.parse_math(&mut frag)?;
+        // Mirror the eager tail: mark failed formulae, renumber math ids
+        // (per-Math, so fragment-local by construction).
+        if !parser.failed_xmath_ids.is_empty() {
+          for mut math_node in frag.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
+            for xmath_child in frag.findnodes("ltx:XMath", Some(&math_node)) {
+              if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
+                frag.add_class(&mut math_node, "ltx_math_unparsed")?;
+                break;
+              }
+            }
+          }
+        }
+        renumber_math_ids(&mut frag);
+      }
+      // The per-fragment share of finalize: XMRef/XMDual pruning and the
+      // font/bookkeeping walk. The root-only passes (RDFa prefixes, namespace
+      // declarations, schema PI) belong to the SPINE root and must NOT touch
+      // a fragment root — they would change its serialization.
+      frag.prune_dangling_split_xmrefs()?;
+      frag.prune_xmduals()?;
+      if let Some(mut root) = frag.get_document().get_root_element() {
+        frag.finalize_subtree(&mut root)?;
+      }
+      frag.cleanup_unreferenced_xmtok_ids();
+      // The parsed root is the `_lxfragment` wrapper; the spilled subtrees are
+      // its children. Serialize each at the recorded position parameters.
+      if let Some(root) = frag.get_document().get_root_element() {
+        for child in root.get_child_nodes() {
+          out.push_str(&frag.serialize_aux(&child, meta.depth, meta.noindent, false));
+        }
+      }
+    }
+    store.finalize_segment(seg, &out)?;
+  }
+  Ok(())
 }
 
 impl DigestionAPI for Core {
@@ -218,6 +719,25 @@ impl DigestionAPI for Core {
     mode: Option<DigestionMode>,
     _no_init: bool,
   ) -> Result<Digested> {
+    let digestion_note = self.digest_setup(request, preamble, postamble, mode)?;
+    let list = self.digest_internal()?;
+    note_end(&digestion_note);
+    Ok(list)
+  }
+
+  /// The input-side half of [`DigestionAPI::digest`]: canonicalize the
+  /// request, seed SOURCEFILE/SOURCEDIRECTORY/SEARCHPATHS/`\jobname`, queue
+  /// postamble/source/preamble on the gullet. Returns the progress-note label
+  /// the caller must `note_end` when digestion completes. Shared by the eager
+  /// path and `convert_streaming` (which drives digestion itself,
+  /// fragment-by-fragment).
+  fn digest_setup(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+  ) -> Result<String> {
     let mut _ext = match &mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension()),
@@ -345,10 +865,7 @@ impl DigestionAPI for Core {
       }
     }
 
-    let list = self.digest_internal()?;
-    note_end(&digestion_note);
-
-    Ok(list)
+    Ok(digestion_note)
   }
 
   fn convert_file(&mut self, filepath: String) -> Result<Document> {
@@ -358,67 +875,103 @@ impl DigestionAPI for Core {
     }
   }
 
+  fn convert_streaming(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+    budget: usize,
+  ) -> Result<Document> {
+    use latexml_core::sxml::{FragmentIndex, SegmentStore};
+    let digestion_note = self.digest_setup(request, preamble, postamble, mode)?;
+    let mut document = build_document_head(&self.preload)?;
+    latexml_core::document::reset_spilled_segment_count();
+    // The spill area lives beside the source (same volume as the output in
+    // the by-far-common layout; the CLI wiring can pass the real destination
+    // when it lands). Falls back to the system temp dir for literal input.
+    let spill_anchor = match state::lookup_value("SOURCEDIRECTORY") {
+      Some(Stored::String(dir)) => arena::with(dir, |s: &str| std::path::PathBuf::from(s)),
+      _ => std::env::temp_dir(),
+    };
+    document.set_spill_store(SegmentStore::create(&spill_anchor)?);
+    let mut index = FragmentIndex::default();
+    stomach::set_fragment_yield_budget(Some(budget));
+
+    // Pass 1: interleaved digest → absorb → spill, at legal seams only.
+    loop {
+      let mut boxes = Vec::new();
+      let step = digest_step_guarded(&mut boxes);
+      let yielded = stomach::take_fragment_yielded();
+      let mut stopped = match step {
+        Ok(keep_going) => !keep_going,
+        Err(e) => {
+          stomach::set_fragment_yield_budget(None);
+          return Err(e); // resource fatal: same no-recover policy as eager
+        },
+      };
+      if !boxes.is_empty() {
+        let digested = Digested::from(List::new(boxes));
+        if let Err(e) = document.absorb(&digested, None) {
+          // Same Fatal contract as the eager Build: announce, latch, keep the
+          // partial document (recovery is a FEATURE of Fatal).
+          e.log_fatal();
+          log::warn!(
+            "convert_streaming: build stopped early ({:?}/{:?}) — keeping the document built so far",
+            e.target,
+            e.category
+          );
+          stopped = true;
+        }
+      }
+      document.spill_closed_subtrees(&mut index)?;
+      if stopped || (!yielded && !gullet::has_more_input()) {
+        break;
+      }
+    }
+    stomach::set_fragment_yield_budget(None);
+    gullet::flush();
+    note_end(&digestion_note);
+
+    // Interleaving moved the ROOT's `after_open` dispatch to fragment 1's
+    // absorb — before most of the document had digested — while the eager
+    // path guarantees every hook runs with digestion COMPLETE. The root is
+    // the one element structurally exposed to that shift (it opens before
+    // ~everything), so re-dispatch its after-open hooks now that digestion
+    // has finished: the registered hooks (root classes via `add_class` =
+    // deduped `add_ss_values`) are idempotent, so this converges to exactly
+    // the eager outcome. Witness: `DOCUMENT_CLASSES`'s `ltx_authors_1line`
+    // was assigned during `\maketitle` digestion and missed by the early
+    // dispatch, dropping the class from the root under streaming.
+    if let Some(mut root) = document.get_document().get_root_element() {
+      document.after_open(&mut root)?;
+    }
+
+    // The rule set must be complete before ANY rewrites run: the source's
+    // `.latexml` file loads only now (as in the eager path), and fragments
+    // must see it too — which is exactly why pass 1 applies no rewrites.
+    load_source_latexml_rules();
+    // Pass 2 mutates segments while fragment documents live independently, so
+    // it borrows the store OUT of the spine and hands it back for assembly.
+    let mut store = document
+      .take_spill_store()
+      .expect("attached above; nothing detaches it during pass 1");
+    let node_fonts = document.node_fonts.clone();
+    streaming_pass2(&mut store, &index, &node_fonts)?;
+    // The spine gets the normal whole-document tail; spilled content is
+    // invisible to it (placeholders), so root-level passes act on the live
+    // root exactly as in the eager path.
+    finish_document(&mut document)?;
+    // From here serialization splices the processed segments at their
+    // placeholders.
+    document.set_spill_store(store);
+    Ok(document)
+  }
+
   /// Restriction: convert_document runs on a single thread, and should never try branching out.
   fn convert_document(&mut self, digested: Digested) -> Result<Document> {
     note_begin("Building");
-    let mut document = Document::new();
-    {
-      // TODO: Can we disentangle the ownership to avoid the clone?
-      let paths_stored = state::get_search_paths();
-      let schema_paths = paths_stored
-        .iter()
-        .map(String::as_str)
-        .collect::<Vec<&str>>();
-      let default_model_load = model::with_schema_data(|schema_opt| match schema_opt {
-        None => true,
-        Some(v) => v.last() == Some(&pin!("LaTeXML")),
-      });
-      if default_model_load {
-        // Compile-time load of model AND indirect model. Single
-        // shared instantiation lives at `crate::load_latexml_default_model`
-        // so LTO can keep exactly one `_ModelLoader::build_model` in
-        // the final binary (~600 KiB per copy otherwise).
-        crate::load_latexml_default_model();
-      } else {
-        // Eager-load at runtime
-        model::load_schema(schema_paths.as_slice())?; // If needed?
-      }
-      if state::has_search_paths() {
-        {
-          if state::lookup_bool("INCLUDE_COMMENTS") {
-            let paths_string = state::with_search_paths(|paths| {
-              paths
-                .iter()
-                .map(String::as_str)
-                .collect::<Vec<&str>>()
-                .join(",")
-            });
-            let attributes = map! {s!("searchpaths") => paths_string};
-            document.insert_pi("latexml", Some(attributes))?;
-          }
-        }
-      }
-    }
-
-    for preload in &self.preload {
-      if preload.ends_with(".pool") {
-        continue;
-      }
-      let mut options: Option<String> = None;
-      LATEX_OPTION_REGEX.replace_all(preload, |refs: &Captures| -> String {
-        options = Some(refs.get(1).map_or("", |m| m.as_str()).to_string());
-        String::new()
-      });
-      if preload.ends_with(".cls") {
-        CLS_EXT_REGEX.replace_all(preload, "");
-        let attributes = map! {s!("class") => preload.to_string()};
-        document.insert_pi("latexml", Some(attributes))?;
-      } else {
-        STY_EXT_REGEX.replace_all(preload, "");
-        let attributes = map! {s!("package") => preload.to_string()};
-        document.insert_pi("latexml", Some(attributes))?;
-      }
-    }
+    let mut document = build_document_head(&self.preload)?;
     Debug!("Doc absorb: {:?}", digested);
 
     // A Build that runs out of budget KEEPS what it has already built. The
@@ -441,184 +994,8 @@ impl DigestionAPI for Core {
     }
     note_end("Building");
 
-    // Load .latexml file if it exists alongside the source .tex file.
-    // Perl does this automatically during initialization; we do it post-build
-    // so the rewrite rules can be compiled against the built document.
-    if let Some(Stored::String(source_sym)) = state::lookup_value("SOURCEFILE") {
-      let source_path = arena::with(source_sym, |s| s.to_string());
-      // Replace .tex extension with .latexml
-      let latexml_path = if source_path.ends_with(".tex") {
-        source_path.replace(".tex", ".latexml")
-      } else {
-        format!("{}.latexml", source_path)
-      };
-      if Path::new(&latexml_path).exists() {
-        let _ = load_latexml_file(&latexml_path);
-      }
-    }
-
-    let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
-    if has_rewrites {
-      let _gp_rewrite = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
-      note_begin("Rewriting");
-      document.mark_xmnode_visibility()?;
-      document.load_labels_for_rewrite()?;
-      // TODO: What is the right way to do rewrites in a daemon-safe manner?
-      if let Some(Stored::VecDequeStored(rules)) = state::remove_value("DOCUMENT_REWRITE_RULES")
-        && let Some(root) = document.get_document().get_root_element()
-      {
-        // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
-        // state. (TODO: obviously, this could be avoided if they never needed mutable
-        // state. When do they?)
-        let mut rewrites = Vec::new();
-        for rule in rules {
-          if let Stored::Rewrite(mut rewrite_rule) = rule {
-            rewrite_rule.compile_clauses(&mut document);
-            rewrites.push(rewrite_rule);
-          }
-        }
-        // 31 rules compiled for declare test; XPath matching issue prevents application
-        // Step 2: invoke the rewrite rules
-        // R35.D instrumentation: print per-rule timing if
-        // LATEXML_REWRITE_TIMING=1. Logs BEFORE the rule runs so we can
-        // identify the rule that hangs (the timeout watchdog kills
-        // mid-rule otherwise).
-        let trace_all = std::env::var_os("LATEXML_REWRITE_TIMING").is_some();
-        let n_rules = rewrites.len();
-        for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
-          // Build a useful one-line hint from the rule's options. The
-          // Debug impl on RewriteOptions is `<RewriteOptions>` only,
-          // so reach into the fields directly.
-          let opts = &rewrite_rule.options;
-          let mut xpath_hint = format!(
-            "select={:?} xpath={:?} regexp={:?} scope={:?} label={:?} clauses={}",
-            opts
-              .select
-              .as_deref()
-              .map(|s| s.chars().take(60).collect::<String>()),
-            opts
-              .xpath
-              .as_deref()
-              .map(|s| s.chars().take(60).collect::<String>()),
-            opts
-              .regexp
-              .as_deref()
-              .map(|s| s.chars().take(60).collect::<String>()),
-            opts.scope.as_ref().map(|_| "<scope>"),
-            opts.label.as_deref(),
-            rewrite_rule.clauses.len(),
-          );
-          // Dump compiled clauses by op + pattern preview (helps when
-          // the options struct itself is empty after compile_clauses
-          // moved them into the clauses vec).
-          for (ci, c) in rewrite_rule.clauses.iter().enumerate() {
-            use std::fmt::Write;
-            let _ = write!(
-              xpath_hint,
-              "\n    [{ci}] op={:?} pat={:?}",
-              c.op,
-              match &c.pattern {
-                latexml_core::rewrite::RewritePattern::String(s) =>
-                  format!("Str({})", s.chars().take(120).collect::<String>()),
-                latexml_core::rewrite::RewritePattern::Tokens(_) => "Tokens(..)".into(),
-                latexml_core::rewrite::RewritePattern::Closure(_) => "Closure(..)".into(),
-                latexml_core::rewrite::RewritePattern::NodeList(n) =>
-                  format!("NodeList({})", n.len()),
-                _ => "??".into(),
-              }
-            );
-          }
-          if trace_all {
-            eprintln!(
-              "[rewrite-timing] rule #{}/{} START :: {}",
-              idx, n_rules, xpath_hint
-            );
-            // Flush stderr so it appears even if the rule hangs
-            use std::io::Write;
-            let _ = std::io::stderr().flush();
-          }
-          let started = std::time::Instant::now();
-          rewrite_rule.invoke(&mut document, &root)?;
-          let elapsed = started.elapsed();
-          if trace_all {
-            eprintln!(
-              "[rewrite-timing] rule #{}/{} END {:.2?}",
-              idx, n_rules, elapsed
-            );
-          } else if elapsed > std::time::Duration::from_secs(5) {
-            eprintln!(
-              "[rewrite-timing] rule #{}/{} SLOW {:.2?} :: {}",
-              idx, n_rules, elapsed, xpath_hint
-            );
-          }
-        }
-      }
-      note_end("Rewriting");
-    }
-
-    // Apply \lxDeclare declarations: set roles/names/meanings on matching XMTok elements.
-    // Must run BEFORE math parsing so the parser sees the updated roles.
-    apply_lx_declarations(&mut document);
-
-    if !state::get_nomathparse_flag() {
-      // Telemetry: count formulae and time the whole Marpa parse pass.
-      // Per-formula bucket histogram requires per-call instrumentation
-      // inside latexml_math_parser::parser::parse_math; deferred.
-      let xmath_count = document.findnodes("//ltx:XMath", None).len() as u32;
-      latexml_core::telemetry::set_formulae(xmath_count);
-      let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
-      let mut parser = MathParser::default();
-      parser.parse_math(&mut document)?;
-      drop(_gp);
-      // Post-parse: mark failed XMath nodes as unparsed.
-      // The parser's parse_kludge already handles OPEN/CLOSE wrapping + script attachment
-      // (parse_kludgeScripts_rec), so we only need to add the unparsed CSS class here.
-      if !parser.failed_xmath_ids.is_empty() {
-        for mut math_node in document.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
-          for xmath_child in document.findnodes("ltx:XMath", Some(&math_node)) {
-            if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
-              document.add_class(&mut math_node, "ltx_math_unparsed")?;
-              break;
-            }
-          }
-        }
-      }
-      // Renumber xml:ids inside parsed XMath subtrees to be sequential in document
-      // order. The Marpa parser explores multiple parse alternatives, consuming ID
-      // counter slots for pruned nodes. This pass reassigns IDs post-parse.
-      renumber_math_ids(&mut document);
-      // Fill in \ltx@count@parses markers with actual parse tree counts.
-      // Each marker is <ltx:text _parsetrees_marker="true">0</ltx:text>.
-      // Find the preceding ltx:Math[@_parsetrees] and copy the count.
-      let markers = document.findnodes("//*[@_parsetrees_marker='true']", None);
-      for mut marker in markers {
-        let count = {
-          let preceding = document.findnodes("preceding::ltx:Math[@_parsetrees][1]", Some(&marker));
-          preceding
-            .into_iter()
-            .last()
-            .and_then(|m| m.get_attribute("_parsetrees"))
-            .unwrap_or_else(|| "0".to_string())
-        };
-        // Replace the text content with the actual count
-        for mut child in marker.get_child_nodes() {
-          child.unlink_node();
-        }
-        let _ = marker.append_text(&count);
-        // Remove the marker attribute
-        let _ = marker.remove_attribute("_parsetrees_marker");
-      }
-    }
-
-    note_begin("Finalizing");
-    document.finalize()?;
-    note_end("Finalizing");
-    // Perl core produces role="UNKNOWN" for single-letter math tokens.
-    // Per-document .latexml files set role="ID" via DefMathRewrite BEFORE parsing.
-    // We do NOT apply a blanket conversion — roles are set by rewrite rules only.
-    // Cleanup unreferenced xml:ids on XMTok elements generated by the math parser.
-    // Must run after finalize (which includes prune_xmduals that may transfer ids).
-    document.cleanup_unreferenced_xmtok_ids();
+    load_source_latexml_rules();
+    finish_document(&mut document)?;
     Ok(document)
   }
 
@@ -626,101 +1003,8 @@ impl DigestionAPI for Core {
     let mut boxes = Vec::new();
     while gullet::has_more_input() {
       // Perl finishDigestion L219-220: loop consuming input even after errors.
-      // Catch Fatal errors (TooManyErrors, etc.) so we can still produce partial output.
-      match stomach::digest_next_body(None) {
-        Ok(next_bodies) => boxes.extend(next_bodies),
-        Err(e) => {
-          // Re-raise MemoryBudget / wall-clock Timeout (Convert) errors:
-          // those are *resource* failures, not recoverable digestion
-          // hiccups. Catching them here would silently produce empty
-          // output for a runaway-loop paper, masking a real bug and
-          // inflating canvas pass rates with empty conversions.
-          // R35.A: ensure pathological inputs fail loudly (exit 1+)
-          // rather than silently turning into a zero-byte HTML.
-          use latexml_core::common::error::{ErrorCategory, ErrorTarget};
-          // NOTE the target discrimination on `MemoryBudget`, which is
-          // deliberate rather than an oversight. `Timeout`-target is the RSS
-          // fuse: real resident memory is already at the ceiling, so
-          // continuing means allocating straight into an OOM — there is
-          // nothing to do but stop. `Stomach`-target is the box-list ceilings
-          // (`box_count_cap` / `box_bytes_budget` / boxing depth), where the
-          // salvage below CLEARS the offending accumulation and therefore
-          // itself frees the memory; recovering there is safe precisely
-          // because the hard RSS backstop above stays non-recoverable
-          // underneath it. So the stomach's memory guards stay on the recovery
-          // path — a graceful end with as much of the document as was already
-          // digested, and the Fatal announced and latched below.
-          if matches!(
-            (&e.target, &e.category),
-            (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)
-              | (ErrorTarget::Timeout, ErrorCategory::Convert)
-              | (ErrorTarget::Timeout, ErrorCategory::TokenLimit)
-              | (ErrorTarget::Timeout, ErrorCategory::PushbackLimit)
-          ) {
-            log::warn!(
-              "digest_internal: resource failure ({:?}/{:?}) — not recovering",
-              e.target,
-              e.category
-            );
-            return Err(e);
-          }
-          // The Err that landed here was raised at Fatal level. We recover
-          // BOXES from it (below) — Perl `finishDigestion` L219-220 — but a
-          // Fatal-level raise stays FATAL in the document's reported outcome:
-          // salvaging content is not licence to reclassify the verdict, and
-          // there is deliberately no auto-upgrade to Error severity here (user
-          // policy 2026-07-28). The one sanctioned demotion in this codebase is
-          // the bibliography's explicit `DEMOTE_FATALS` (`error.rs`), which is
-          // opt-in and scoped.
-          //
-          // `log_fatal()` is the single seam that does BOTH halves: it emits
-          // the standard `Fatal:<target>:<category>` line AND latches
-          // `LogStatus::Fatal`. This used to be a hand-rolled `log::error!`
-          // with a `Fatal:`-prefixed target, avoiding `log_fatal` for fear of
-          // "double-incrementing the counter" — unfounded, since the fatal
-          // status is a sticky BOOL (`error.rs` `note_status`, guarded by
-          // `fatal_status_is_sticky_and_returns_1`). The hand-rolled call used
-          // the raw `log`-crate macro, which never reaches `note_status`, so
-          // guard fatals raised as a plain `Err` by `stomach::check_timeout`
-          // (rather than through `Fatal!`) were never counted at all: the log
-          // carried a `Fatal:` line while the run summarised as `Conversion
-          // complete: No obvious problems`, status code 0 — "ok" to cortex.
-          // Guard: `101_fatal_salvages_partial_document`.
-          e.log_fatal();
-          log::warn!("digest_internal: error during recovery digestion: {:?}", e);
-          // Recover what the failed body already digested. Without this the
-          // "still produce partial output" intent above only worked when the
-          // failure landed in a LATER body — a Fatal inside the FIRST one left
-          // `boxes` empty and the run wrote a 39-byte empty document, losing a
-          // whole paper to one bad construct (arXiv:2508.07407 / ar5iv #556,
-          // one pathological `\tikz` picture).
-          //
-          // Scoped to the STOMACH box-cycle guard, deliberately. That guard
-          // fires while the token stream is still healthy — one construct is
-          // piling up boxes — so the surrounding document is sound and worth
-          // keeping, and the innermost level (the 50k-box repeating window) is
-          // exactly the construct to drop.
-          //
-          // It is NOT extended to the gullet's `Timeout:Recursion`, where the
-          // TOKEN stream is the thing looping: measured on arXiv:2605.25400,
-          // salvaging there revived a poisoned state that re-entered the same
-          // loop during build and turned an 8.7 s fatal into a 2 m 12 s
-          // wall-clock timeout writing a ZERO-byte file — strictly worse than
-          // the 39-byte stub, for a 1.7 KB gain on the one paper it helped.
-          // Same reasoning bars `TooManyErrors`; widening to either needs its
-          // own measurement, not an assumption that more salvage is better.
-          if matches!(e.target, ErrorTarget::Stomach) {
-            let salvaged = stomach::salvage_pending_box_lists(true);
-            if !salvaged.is_empty() {
-              log::info!(
-                "digest_internal: salvaged {} box(es) digested before the fatal",
-                salvaged.len()
-              );
-              boxes.extend(salvaged);
-            }
-          }
-          break;
-        },
+      if !digest_step_guarded(&mut boxes)? {
+        break;
       }
     }
     gullet::flush();

@@ -119,6 +119,15 @@ pub struct Config {
   /// per-line decode; only affects byte→UTF-8 translation, never catcodes
   /// (for those, use the inputenc package). `None` ⇒ the utf-8 default.
   pub inputencoding:           Option<String>,
+  /// Streaming (fragmented) core conversion: `Some(budget)` interleaves
+  /// digest→build in fragments of ~`budget` boxes, spilling closed subtrees
+  /// to disk so peak RSS is bounded by fragment size instead of document
+  /// size. `None` (default) = the eager path — also the Perl-parity path
+  /// (Perl is strictly digest-all→build-all; interleaving is a sanctioned
+  /// divergence, activated only by the `--streaming` flag or when the
+  /// projected need exceeds the memory cap). The budget is a box count on
+  /// the same per-box basis as the box-list guards.
+  pub streaming:               Option<usize>,
 }
 impl Default for Config {
   fn default() -> Self {
@@ -140,6 +149,7 @@ impl Default for Config {
       nomathparse:             None,
       source_map:              None,
       inputencoding:           None,
+      streaming:               None,
     }
   }
 }

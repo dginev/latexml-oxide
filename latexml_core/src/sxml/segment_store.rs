@@ -1,18 +1,20 @@
 //! The on-disk spill area for fragmented conversion.
 //!
-//! A segment has two lifecycle stages, and the file's content differs between
-//! them on purpose:
+//! A segment file holds RAW, splice-ready text at every lifecycle stage —
+//! never a wrapper element. This is load-bearing: an enclosing subtree that
+//! spills LATER inlines an inner segment's file verbatim where its
+//! placeholder sits, so the file must always be exactly what belongs at that
+//! position in a serialization.
 //!
 //! 1. **Spilled** ([`SegmentStore::write_segment`]) — pass 1 stores the
-//!    pre-finalize serialization of one or more sibling subtrees, wrapped in a
-//!    `<_lxfragment>` root that carries the namespace declarations recorded in
-//!    the segment's [`SegmentMeta`]. Wrapped, the file is well-formed XML that
-//!    [`super::FragmentReader`] can stream.
-//! 2. **Processed** ([`SegmentStore::finalize_segment`]) — pass 2 replaces the
-//!    file with the fragment's FINAL output text (post-rewrite, post-finalize,
-//!    correctly indented, no wrapper). From then on the file is raw text that
-//!    the assembly splice appends verbatim where the fragment's placeholder
-//!    sits.
+//!    pre-finalize serialization of one or more sibling subtrees.
+//! 2. **Processed** ([`SegmentStore::finalize_segment`]) — pass 2 replaces
+//!    the file with the fragment's FINAL output text (post-rewrite,
+//!    post-finalize, correctly indented).
+//!
+//! Parsing a segment (pass 2) goes through [`SegmentStore::wrapped_segment`],
+//! which wraps the raw text in a `<_lxfragment>` root carrying the recorded
+//! namespace declarations — in memory, never on disk.
 //!
 //! The directory lives beside the destination file — same volume, so
 //! [`crate::watchdog::available_disk_bytes`] measures the filesystem the spill
@@ -22,7 +24,6 @@
 
 use std::{
   fs,
-  io::Write,
   path::{Path, PathBuf},
 };
 
@@ -43,6 +44,11 @@ pub struct SegmentMeta {
   /// Spine depth of the spilled subtree's insertion point (the depth the
   /// serializer must resume at for indentation to match the eager output).
   pub depth:      usize,
+  /// The spill parent's `noindent_children` — the `noindent` value the eager
+  /// serializer would have passed when recursing into these children
+  /// (schema-driven: whether the parent can contain `#PCDATA`). Pass-2
+  /// re-serialization must use the same value or indentation diverges.
+  pub noindent:   bool,
   /// The ancestor font context at the spill point, in `Font::to_string` form —
   /// the seed `finalize_rec` needs so per-fragment finalize resolves fonts
   /// exactly as the whole-document walk would have.
@@ -62,8 +68,13 @@ const SEGMENT_WRAPPER: &str = "_lxfragment";
 /// The on-disk spill area: numbered segment files plus their in-RAM metadata.
 #[derive(Debug)]
 pub struct SegmentStore {
-  dir:   PathBuf,
-  metas: Vec<SegmentMeta>,
+  dir:     PathBuf,
+  metas:   Vec<SegmentMeta>,
+  /// Segments whose text was INLINED into a later, enclosing segment (a
+  /// closing ancestor swallowed their placeholders): their content now
+  /// travels with the outer segment, so they must be neither processed in
+  /// pass 2 nor spliced at assembly.
+  retired: Vec<bool>,
 }
 
 impl SegmentStore {
@@ -77,7 +88,11 @@ impl SegmentStore {
     };
     let dir = parent.join(format!(".latexml-spill-{}", std::process::id()));
     fs::create_dir_all(&dir).map_err(|e| store_error(format!("create {}: {e}", dir.display())))?;
-    Ok(SegmentStore { dir, metas: Vec::new() })
+    Ok(SegmentStore {
+      dir,
+      metas: Vec::new(),
+      retired: Vec::new(),
+    })
   }
 
   /// Number of segments written so far.
@@ -96,29 +111,36 @@ impl SegmentStore {
     self.dir.join(format!("segment-{:06}.xml", id.0))
   }
 
-  /// Spill one or more serialized sibling subtrees as a new segment, wrapped
-  /// for stand-alone parsing with `meta`'s namespace declarations.
+  /// Spill one or more serialized sibling subtrees as a new segment (raw,
+  /// splice-ready text — see the module doc for why no wrapper is written).
   pub fn write_segment(&mut self, xml: &str, meta: SegmentMeta) -> Result<SegmentId> {
     let id = SegmentId(self.metas.len() as u32);
     let path = self.segment_path(id);
-    let file = fs::File::create(&path)
-      .map_err(|e| store_error(format!("create {}: {e}", path.display())))?;
-    let mut w = std::io::BufWriter::new(file);
-    let write = (|| -> std::io::Result<()> {
-      write!(w, "<{SEGMENT_WRAPPER}")?;
-      for (prefix, uri) in &meta.namespaces {
-        if prefix.is_empty() {
-          write!(w, " xmlns=\"{uri}\"")?;
-        } else {
-          write!(w, " xmlns:{prefix}=\"{uri}\"")?;
-        }
-      }
-      write!(w, ">{xml}</{SEGMENT_WRAPPER}>")?;
-      w.flush()
-    })();
-    write.map_err(|e| store_error(format!("write {}: {e}", path.display())))?;
+    fs::write(&path, xml).map_err(|e| store_error(format!("write {}: {e}", path.display())))?;
     self.metas.push(meta);
+    self.retired.push(false);
     Ok(id)
+  }
+
+  /// The segment's content wrapped for stand-alone PARSING: a `_lxfragment`
+  /// root carrying the namespace declarations recorded at spill time. Built
+  /// in memory — the file itself stays raw and splice-ready.
+  pub fn wrapped_segment(&self, id: SegmentId) -> Result<String> {
+    let meta = self.meta(id)?;
+    let mut out = String::with_capacity(256);
+    out.push('<');
+    out.push_str(SEGMENT_WRAPPER);
+    for (prefix, uri) in &meta.namespaces {
+      if prefix.is_empty() {
+        out.push_str(&format!(" xmlns=\"{uri}\""));
+      } else {
+        out.push_str(&format!(" xmlns:{prefix}=\"{uri}\""));
+      }
+    }
+    out.push('>');
+    out.push_str(&self.read_segment(id)?);
+    out.push_str(&format!("</{SEGMENT_WRAPPER}>"));
+    Ok(out)
   }
 
   /// Replace a spilled segment with its processed, splice-ready output text
@@ -134,6 +156,21 @@ impl SegmentStore {
     let _ = self.meta(id)?;
     let path = self.segment_path(id);
     fs::read_to_string(&path).map_err(|e| store_error(format!("read {}: {e}", path.display())))
+  }
+
+  /// Mark a segment retired: its text was inlined into an enclosing segment,
+  /// so pass 2 skips it and assembly never asks for it. The file is truncated
+  /// (the content lives in the outer segment now).
+  pub fn retire_segment(&mut self, id: SegmentId) -> Result<()> {
+    let _ = self.meta(id)?;
+    self.retired[id.0 as usize] = true;
+    let path = self.segment_path(id);
+    fs::write(&path, "").map_err(|e| store_error(format!("truncate {}: {e}", path.display())))
+  }
+
+  /// Was this segment inlined into an enclosing one?
+  pub fn is_retired(&self, id: SegmentId) -> bool {
+    self.retired.get(id.0 as usize).copied().unwrap_or(false)
   }
 
   /// The metadata recorded when the segment was spilled.
@@ -169,6 +206,7 @@ mod tests {
   fn meta_with_ns() -> SegmentMeta {
     SegmentMeta {
       depth:      2,
+      noindent:   false,
       font:       Some(String::from("italic")),
       namespaces: vec![(
         String::from("ltx"),
@@ -190,11 +228,14 @@ mod tests {
     let id = store.write_segment(xml, meta_with_ns()).expect("write");
     assert_eq!(store.len(), 1);
 
-    // Spilled form: wrapped, carries the namespace declaration, parseable.
-    let spilled = store.read_segment(id).expect("read");
-    assert!(spilled.starts_with("<_lxfragment"), "wrapped: {spilled}");
-    assert!(spilled.contains("xmlns:ltx=\"http://dlmf.nist.gov/LaTeXML\""));
-    assert!(spilled.contains("Gr\u{00fc}\u{00df}e \u{6570}\u{5b66}"));
+    // The FILE stays raw and splice-ready; the wrapped form is in-memory.
+    let raw = store.read_segment(id).expect("read");
+    assert_eq!(raw, xml, "file content is exactly the spilled text");
+    let wrapped = store.wrapped_segment(id).expect("wrap");
+    assert!(wrapped.starts_with("<_lxfragment"), "wrapped: {wrapped}");
+    assert!(wrapped.contains("xmlns:ltx=\"http://dlmf.nist.gov/LaTeXML\""));
+    assert!(wrapped.ends_with("</_lxfragment>"));
+    assert!(wrapped.contains("Gr\u{00fc}\u{00df}e \u{6570}\u{5b66}"));
 
     // Metadata survives.
     let meta = store.meta(id).expect("meta");

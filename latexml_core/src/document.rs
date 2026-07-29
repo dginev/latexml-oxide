@@ -119,10 +119,51 @@ pub struct Document {
   current_box_locator:         Option<Locator>,
   localized_box_locators:      Vec<Option<Locator>>,
   localized_fonts:             Vec<Rc<Font>>,
+  /// Streaming mode only: the store holding processed spilled segments. Set
+  /// by the streaming driver after pass 2; `serialize_into` then splices each
+  /// segment's text where its `<_spilled_ ref="N"/>` placeholder sits. `None`
+  /// on the eager path and on fragment documents.
+  spill_store:                 Option<crate::sxml::SegmentStore>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
 }
+
+/// Number of subtree runs spilled to disk this conversion (streaming mode;
+/// telemetry + test probe). Thread-local like the engine itself.
+#[thread_local]
+static SPILLED_SEGMENTS: std::cell::Cell<usize> = std::cell::Cell::new(0);
+
+/// How many segment runs the current conversion has spilled (0 = eager).
+pub fn spilled_segment_count() -> usize { SPILLED_SEGMENTS.get() }
+
+/// Reset the spill probe (the streaming driver calls this at conversion
+/// start; eager conversions never touch it).
+pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
+
+/// Element names whose closed instances may be spilled from ROOT level.
+/// Leading non-sectional root children (title, creators, abstract, resources)
+/// must stay live: the frontmatter fallback and `maybe_promote_leading_title`
+/// operate on them at end-of-build (`base_utilities.rs`).
+const ROOT_SPILLABLE: &[&str] = &[
+  "section",
+  "chapter",
+  "part",
+  "appendix",
+  "subsection",
+  "subsubsection",
+  "paragraph",
+  "subparagraph",
+  "bibliography",
+  "index",
+  "glossary",
+  "acknowledgements",
+  "pagination",
+];
+
+/// The placeholder element left in the live DOM where a spilled run sat.
+/// Never serialized: `serialize_into` splices the processed segment instead.
+pub(crate) const SPILL_PLACEHOLDER: &str = "_spilled_";
 impl Object for Document {
   fn get_locator(&self) -> Option<Locator> {
     self
@@ -169,8 +210,40 @@ impl Document {
       context:                     None,
       localized_boxes:             Vec::new(),
       localized_fonts:             Vec::new(),
+      spill_store:                 None,
     }
   }
+
+  /// Wrap an existing XML document (a streamed fragment from
+  /// [`crate::sxml::FragmentReader`]) as a `Document`, so the pass-2 phases —
+  /// rewrites, math parsing, per-fragment finalize — run on it with the same
+  /// machinery the eager path uses. The insertion point starts at the root;
+  /// the idstore is rebuilt from the fragment's own `xml:id`s; `node_fonts`
+  /// is seeded by the caller (the hash→Font table is conversion-global and
+  /// pointer-free, so sharing its contents is safe).
+  pub fn from_xml_document(doc: XmlDoc, node_fonts: HashMap<u64, Font>) -> Result<Self> {
+    crate::ensure_libxml_init();
+    let node = match doc.get_root_element() {
+      Some(root) => root,
+      None => doc.as_node(),
+    };
+    let mut document = Document {
+      document: doc,
+      node,
+      node_fonts,
+      ..Document::new_empty_fields()
+    };
+    if let Some(root) = document.document.get_root_element() {
+      document.record_node_ids(&root)?;
+    }
+    Ok(document)
+  }
+
+  /// The all-empty field set shared by [`Document::new`] and
+  /// [`Document::from_xml_document`] (functional-update base; the caller
+  /// overrides `document`/`node`/`node_fonts`). Not public: an empty scaffold
+  /// with a dangling default `node` is not a usable document on its own.
+  fn new_empty_fields() -> Self { Self::new() }
 
   /// Get the element at (or containing) the current insertion point.
   pub fn get_element(&self) -> Option<Node> {
@@ -1498,6 +1571,36 @@ impl Document {
       Some(NodeType::ElementNode) => {
         // Get the qualified name (prefix:localname) for namespace-prefixed elements
         let local_name = node.get_name();
+        // Streaming assembly: a spill placeholder serializes as the processed
+        // segment's text, spliced verbatim from disk (same depth/noindent by
+        // construction — the segment was serialized with the exact values this
+        // recursion carries here). A placeholder that cannot be resolved is
+        // LOST CONTENT: flag it loudly in the log AND the output, never drop
+        // it silently (fail toward flagging).
+        if local_name == SPILL_PLACEHOLDER {
+          let resolved = self
+            .spill_store
+            .as_ref()
+            .zip(node.get_attribute("ref"))
+            .and_then(|(store, r)| {
+              let seg = crate::sxml::SegmentId(r.parse::<u32>().ok()?);
+              store.read_segment(seg).ok()
+            });
+          match resolved {
+            Some(text) => out.push_str(&text),
+            None => {
+              // `Error!` can early-return and this serializer returns `()`,
+              // so raise through the logger; the marker keeps the loss
+              // visible in the output itself.
+              log::error!(
+                "Error:spill:unresolved a spilled segment could not be spliced back (ref={:?})",
+                node.get_attribute("ref")
+              );
+              out.push_str("<!-- latexml-oxide: LOST spilled segment -->\n");
+            },
+          }
+          return;
+        }
         let tag = if let Some(ns) = node.get_namespace() {
           let prefix = ns.get_prefix();
           if prefix.is_empty() {
@@ -3253,6 +3356,262 @@ impl Document {
     }
   }
 
+  //**********************************************************************
+  // Streaming (fragmented) conversion: spill closed subtrees to disk.
+
+  /// Spill closed subtrees to the segment store, freeing their DOM memory
+  /// (streaming pass 1).
+  ///
+  /// Walks the SPINE — root element down to the current insertion element —
+  /// and, at every level, spills the runs of closed element children that
+  /// precede the open (spine) child: serialize in the pre-finalize form with
+  /// the exact `(depth, noindent)` the eager serializer would use, write to
+  /// `store`, record every spilled `xml:id`/label in `index`, purge the
+  /// pointer-keyed registries (`idstore` via `unrecord_id`, `node_boxes` by
+  /// key — freed nodes' pointers can be REUSED, so a stale entry is not just
+  /// dangling but can mis-associate a box with a future node), replace the
+  /// run with one `<_spilled_ ref="N"/>` placeholder, and unlink+free the
+  /// nodes. Serialization at assembly time splices the processed segment
+  /// where the placeholder sits, so document order, nesting and
+  /// spine-attribute finality are preserved by construction.
+  ///
+  /// Two deliberate exclusions:
+  /// * ROOT-level children spill only when sectional ([`ROOT_SPILLABLE`]):
+  ///   the frontmatter fallback and `maybe_promote_leading_title` operate on
+  ///   the leading non-sectional root children at end-of-build.
+  /// * Children of the insertion element itself never spill: in-flight
+  ///   construction state may still reference recently built nodes.
+  ///
+  /// Returns the number of runs spilled.
+  pub fn spill_closed_subtrees(&mut self, index: &mut crate::sxml::FragmentIndex) -> Result<usize> {
+    debug_assert!(
+      self.spill_store.is_some(),
+      "spill_closed_subtrees needs the store attached (set_spill_store)"
+    );
+    let Some(root) = self.document.get_root_element() else {
+      return Ok(0);
+    };
+    // The spine, root-first. The insertion point may be a text node; start
+    // from its nearest element.
+    let mut spine: Vec<Node> = Vec::new();
+    let mut cursor = if self.node.get_type() == Some(NodeType::ElementNode) {
+      Some(self.node.clone())
+    } else {
+      self.node.get_parent()
+    };
+    while let Some(n) = cursor {
+      if n.get_type() != Some(NodeType::ElementNode) {
+        break;
+      }
+      cursor = n.get_parent();
+      spine.push(n);
+    }
+    spine.reverse();
+    if spine.first() != Some(&root) {
+      // The insertion point is outside the tree under the root (e.g. still at
+      // the document node): nothing is safely classifiable as closed.
+      return Ok(0);
+    }
+    let namespaces: Vec<(String, String)> = root
+      .get_namespace_declarations()
+      .iter()
+      .map(|ns| (ns.get_prefix(), ns.get_href()))
+      .collect();
+
+    let mut runs_spilled = 0usize;
+    for level in 0..spine.len().saturating_sub(1) {
+      let parent = spine[level].clone();
+      let barrier = spine[level + 1].clone();
+      // The serializer's recursion contract for children of `parent`
+      // (`serialize_into`: depth+1, parent's schema-driven noindent).
+      let noindent = {
+        let parent_qname = get_node_qname(&parent);
+        model::can_contain_sym(parent_qname, pin!("#PCDATA"))
+      };
+      let mut run: Vec<Node> = Vec::new();
+      for child in parent.get_child_nodes() {
+        if child == barrier {
+          break;
+        }
+        let eligible = child.get_type() == Some(NodeType::ElementNode)
+          && child.get_name() != SPILL_PLACEHOLDER
+          && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()));
+        if eligible {
+          run.push(child);
+        } else if !run.is_empty() {
+          // A non-eligible node interrupts the run: flush what precedes it so
+          // each placeholder replaces exactly the contiguous nodes it stands
+          // for, and document order is preserved around the interloper.
+          runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
+        } else {
+          run.clear();
+        }
+      }
+      if !run.is_empty() {
+        runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
+      }
+    }
+    Ok(runs_spilled)
+  }
+
+  /// Spill one contiguous run of closed sibling elements as a single segment.
+  /// Consumes (drains) `run`; on success the nodes are unlinked and freed.
+  fn spill_run(
+    &mut self,
+    run: &mut Vec<Node>,
+    depth: usize,
+    noindent: bool,
+    namespaces: &[(String, String)],
+    index: &mut crate::sxml::FragmentIndex,
+  ) -> Result<usize> {
+    use crate::sxml::SegmentMeta;
+    // A spilled subtree can CONTAIN placeholders from earlier, deeper spills
+    // (a closing section swallows its paragraphs' placeholders). Serializing
+    // through `serialize_into` below INLINES those nested segments' raw text
+    // — outer and inner are both in the pre-finalize form, so the outer
+    // segment simply absorbs the inner one. Collect the swallowed ids first
+    // so they can be retired: their content now travels with the outer
+    // segment, and pass 2 must not process (or the assembly splice resolve)
+    // them independently.
+    let mut swallowed: Vec<crate::sxml::SegmentId> = Vec::new();
+    for node in run.iter() {
+      for ph in self.findnodes(
+        &s!(
+          "descendant-or-self::*[local-name()='{}']",
+          SPILL_PLACEHOLDER
+        ),
+        Some(node),
+      ) {
+        if let Some(r) = ph.get_attribute("ref")
+          && let Ok(n) = r.parse::<u32>()
+        {
+          swallowed.push(crate::sxml::SegmentId(n));
+        }
+      }
+    }
+    // Serialize the run in the pre-finalize form, exactly as the eager
+    // serializer would emit it at this position (nested placeholders splice
+    // their segments' current — still unprocessed — text).
+    let mut xml = String::new();
+    for node in run.iter() {
+      self.serialize_into(&mut xml, node, depth, noindent, false);
+    }
+    let meta = SegmentMeta {
+      depth,
+      noindent,
+      font: None,
+      namespaces: namespaces.to_vec(),
+    };
+    let store = self
+      .spill_store
+      .as_mut()
+      .expect("checked at spill_closed_subtrees entry");
+    let seg = store.write_segment(&xml, meta)?;
+    for inner in swallowed {
+      store.retire_segment(inner)?;
+    }
+
+    // Index + purge while the nodes are still alive, then placeholder + free.
+    for node in run.iter() {
+      self.index_and_purge_spilled(node, seg, index);
+    }
+    let spill_error = |details: String| Error {
+      target:   ErrorTarget::Document,
+      category: ErrorCategory::Libxml,
+      message:  s!("spill: {}", details),
+    };
+    let mut placeholder = Node::new(SPILL_PLACEHOLDER, None, &self.document)
+      .map_err(|()| spill_error(s!("cannot create the placeholder node")))?;
+    placeholder
+      .set_attribute("ref", &seg.to_string())
+      .map_err(|e| spill_error(s!("cannot mark the placeholder: {e}")))?;
+    run
+      .first_mut()
+      .expect("spill_run called with a non-empty run")
+      .add_prev_sibling(&mut placeholder)
+      .map_err(|e| spill_error(s!("cannot insert the placeholder: {e}")))?;
+    for node in run.drain(..) {
+      // `unlink_node` marks the wrapper RustOwned: the C subtree is freed when
+      // the last Rust handle drops (here, at the end of this iteration).
+      let mut node = node;
+      node.unlink_node();
+    }
+    SPILLED_SEGMENTS.set(SPILLED_SEGMENTS.get() + 1);
+    Ok(1)
+  }
+
+  /// Record a spilled subtree's ids and labels in the fragment index, and
+  /// purge every registry holding a handle or pointer into it.
+  fn index_and_purge_spilled(
+    &mut self,
+    node: &Node,
+    seg: crate::sxml::SegmentId,
+    index: &mut crate::sxml::FragmentIndex,
+  ) {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return;
+    }
+    self.node_boxes.remove(&node.to_hashable());
+    let id_opt = node.get_attribute_ns("id", XML_NS);
+    if let Some(id) = &id_opt {
+      index.record_id(id, seg);
+      self.unrecord_id(id);
+      if let Some(labels) = node.get_attribute("labels") {
+        for label in labels.split_whitespace() {
+          index.record_label(label, id);
+        }
+      }
+    }
+    for child in node.get_child_nodes() {
+      self.index_and_purge_spilled(&child, seg, index);
+    }
+  }
+
+  /// Strip the whitespace our own pretty-printer added, after a serialized
+  /// fragment is re-parsed (streaming pass 2).
+  ///
+  /// `serialize_into` adds indentation/newlines ONLY inside elements whose
+  /// schema model cannot contain `#PCDATA` (`noindent_children`), so removing
+  /// whitespace-only text nodes in exactly those parents — the same
+  /// `model::can_contain_sym` query — recovers the original tree precisely.
+  /// PCDATA-capable parents were serialized inline (no added whitespace), so
+  /// their text children, including semantic spaces between inline elements,
+  /// are never touched. The unknown `_lxfragment` wrapper is not in the
+  /// model, so inter-subtree whitespace under it strips too.
+  pub fn strip_indentation_whitespace(&mut self, node: &Node) {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return;
+    }
+    let qname = get_node_qname(node);
+    let keeps_text = model::can_contain_sym(qname, pin!("#PCDATA"));
+    for child in node.get_child_nodes() {
+      match child.get_type() {
+        Some(NodeType::TextNode) => {
+          if !keeps_text && child.get_content().chars().all(char::is_whitespace) {
+            let mut ws = child;
+            ws.unlink_node();
+          }
+        },
+        Some(NodeType::ElementNode) => self.strip_indentation_whitespace(&child),
+        _ => {},
+      }
+    }
+  }
+
+  /// Attach the processed-segment store for serialization: from here on,
+  /// `serialize_into` splices each segment's output text where its
+  /// placeholder sits (streaming assembly).
+  pub fn set_spill_store(&mut self, store: crate::sxml::SegmentStore) {
+    self.spill_store = Some(store);
+  }
+
+  /// Detach the spill store (the streaming driver takes it out for pass 2 —
+  /// which mutates segments while fragment documents exist independently —
+  /// and re-attaches it for assembly).
+  pub fn take_spill_store(&mut self) -> Option<crate::sxml::SegmentStore> {
+    self.spill_store.take()
+  }
+
   /// Discard the in-memory `idstore` cache and rebuild it from the
   /// current DOM state. Historically guarded the 1605.08055 SIGSEGV
   /// where `mark_xmnode_visibility` dereferenced dangling lookup_id
@@ -3447,7 +3806,7 @@ impl Document {
   /// not author body, and the math parser has already absorbed the
   /// referenced cell into the visible XMArray branch — no glyph or
   /// formula material is lost.
-  fn prune_dangling_split_xmrefs(&mut self) -> Result<()> {
+  pub fn prune_dangling_split_xmrefs(&mut self) -> Result<()> {
     let xmrefs = self.findnodes("//ltx:XMRef[@_split_ref or @_mf_ref]", None);
     for xmref in xmrefs {
       let idref = match xmref.get_attribute("idref") {
@@ -3515,7 +3874,7 @@ impl Document {
   /// (according to markXMNodeVisibility)
   /// If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
   /// we could avoid re-marking, but we'd better be sure before removing nodes!
-  fn prune_xmduals(&mut self) -> Result<()> {
+  pub fn prune_xmduals(&mut self) -> Result<()> {
     // RE-mark visibility!
     self.mark_xmnode_visibility()?;
     // will reversing keep from problems removing nodes from trees that already have been removed?

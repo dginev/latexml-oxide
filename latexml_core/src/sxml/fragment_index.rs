@@ -62,6 +62,13 @@ impl FragmentIndex {
   /// The `xml:id` a spilled `label` resolves to, if any.
   pub fn label_id(&self, label: &str) -> Option<&str> { self.labels.get(label).map(String::as_str) }
 
+  /// All spilled `label → id` associations (merged into each fragment's — and
+  /// the spine's — `rewrite_labels` before rules run, so a `label:`-scoped
+  /// rule resolves no matter which fragment holds the label).
+  pub fn labels(&self) -> impl Iterator<Item = (&str, &str)> {
+    self.labels.iter().map(|(l, i)| (l.as_str(), i.as_str()))
+  }
+
   /// All RDFa prefix declarations contributed by spilled content.
   pub fn rdfa_prefixes(&self) -> impl Iterator<Item = (&str, &str)> {
     self

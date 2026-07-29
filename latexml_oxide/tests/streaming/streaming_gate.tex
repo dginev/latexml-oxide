@@ -1,0 +1,45 @@
+\documentclass{article}
+\title{Streaming Gate}
+\author{A.\ Author}
+\begin{document}
+\maketitle
+
+Opening paragraph before any section, with non-ASCII text: Gr\"u\ss e, na\"{\i}ve, \'etude.
+
+\section{First}\label{sec:first}
+
+A paragraph in the first section. See Section~\ref{sec:second} ahead and
+equation~\ref{eq:sum} below.
+
+\begin{equation}\label{eq:sum}
+\sum_{k=0}^{n} k = \frac{n(n+1)}{2}
+\end{equation}
+
+\subsection{Nested}\label{sec:nested}
+
+Deeper content with inline math $e^{i\pi}+1=0$ and a
+footnote\footnote{The footnote text, in the same paragraph as its mark.}
+inside the sentence.
+
+\subsubsection{Deepest}
+
+\begin{tabular}{lr}
+alpha & 1 \\
+beta  & 2 \\
+\end{tabular}
+
+A paragraph after the tabular. {\bfseries A bold group spanning
+words,} then the tail of the sentence.
+
+\section{Second}\label{sec:second}
+
+Back-reference to Section~\ref{sec:first} and to~\ref{sec:nested}.
+
+\begin{verbatim}
+verbatim  content   with   spacing
+and a second line
+\end{verbatim}
+
+Closing paragraph after the verbatim block.
+
+\end{document}

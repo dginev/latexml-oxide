@@ -314,6 +314,53 @@ impl Converter {
     // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
     // alarm($$opts{timeout});
     // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
+    // Streaming (fragmented) conversion: digest and build interleave inside
+    // `convert_streaming`, so the eager digest-then-build sequence below does
+    // not apply. TeX/Box outputs revert to eager — they serialize the DIGESTED
+    // list and never build a DOM, so there is nothing to fragment.
+    if let Some(budget) = self.opts.streaming
+      && !matches!(self.opts.format, OutputFormat::TeX | OutputFormat::Box)
+    {
+      let dom_result = {
+        let _g = telemetry::phase(Phase::Build);
+        self.core.convert_streaming(
+          source,
+          current_preamble,
+          current_postamble,
+          self.opts.mode.clone(),
+          budget,
+        )
+      };
+      let serialized = match dom_result {
+        Ok(dom) => {
+          let _g = telemetry::phase(Phase::Serialize);
+          dom.serialize_to_string()
+        },
+        Err(e) => {
+          // Same resource-fatal surfacing as the eager DOM arm below.
+          if matches!(e.target, ErrorTarget::Timeout) {
+            e.log_fatal();
+          } else {
+            let message = s!("{:?}", e);
+            let err = || {
+              Error!("document", "convert", message);
+              Ok(())
+            };
+            err().ok();
+          }
+          String::new()
+        },
+      };
+      self.runtime.status = get_status_message();
+      self.runtime.status_code = get_status_code();
+      return ConversionResponse {
+        result:      Some(serialized),
+        log:         self.flush_log(),
+        status:      self.runtime.status.clone(),
+        status_code: self.runtime.status_code,
+      };
+    }
+
     let digest_result = {
       let _g = telemetry::phase(Phase::Digest);
       self.core.digest(

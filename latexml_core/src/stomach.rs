@@ -318,9 +318,16 @@ static FRAGMENT_YIELD_COUNT: Cell<usize> = Cell::new(0);
 /// it from the byte ceiling via the measured per-box footprint, the same basis
 /// as the box-list guards.
 pub fn set_fragment_yield_budget(budget: Option<usize>) {
+  let enabling = budget.is_some();
   FRAGMENT_YIELD_BUDGET.set(budget);
   FRAGMENT_YIELDED.set(false);
-  FRAGMENT_YIELD_COUNT.set(0);
+  // The count is a per-conversion probe: reset when a driver ENABLES
+  // yielding, and preserved when it disables at end-of-digestion (the driver
+  // clears the budget before the tail phases, and telemetry/tests read the
+  // count after the conversion returns).
+  if enabling {
+    FRAGMENT_YIELD_COUNT.set(0);
+  }
 }
 
 /// Did the last `digest_next_body` return because of the yield budget (rather
