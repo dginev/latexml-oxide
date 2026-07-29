@@ -544,10 +544,17 @@ fn apply_rewrite_rules(
 /// finalize — then store its final serialized text for the assembly splice.
 /// Runs after digestion finished (so the rewrite-rule set is complete) and
 /// before `finish_document` consumes the rules for the spine.
+/// Root-level id counters (`_ID_counter_*` attrs) must run document-wide:
+/// eager mints `id1..idN` across the whole document in one walk, so pass 2
+/// seeds each fragment's parse wrapper with the counters carried out of the
+/// previous one (`counters` in/out), and the caller seeds the spine's tail
+/// from the final state (sweep witness tests/alignment/plainmath.tex, where
+/// every fragment restarted at `id1`).
 fn streaming_pass2(
   store: &mut latexml_core::sxml::SegmentStore,
   index: &latexml_core::sxml::FragmentIndex,
   node_fonts: &rustc_hash::FxHashMap<u64, latexml_core::common::font::Font>,
+  counters: &mut Vec<(String, String)>,
 ) -> Result<()> {
   use latexml_core::common::error::{ErrorCategory, ErrorTarget};
   // A non-consuming snapshot of the rules: `finish_document` will consume the
@@ -586,6 +593,16 @@ fn streaming_pass2(
         latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
       );
       frag.scoped_rules_strict = true;
+      // Judge the parse wrapper as the segment's REAL parent in schema
+      // decisions (empty-`ltx:text` collapse etc.) — see the field docs.
+      frag.fragment_parent_qname = meta.parent.as_deref().map(arena::pin);
+      // Seed the wrapper root with the carried root-level id counters, so
+      // fragment id minting continues the document-wide sequence.
+      if let Some(mut root) = frag.get_document().get_root_element() {
+        for (key, value) in counters.iter() {
+          let _ = root.set_attribute(key, value);
+        }
+      }
       // The segment text was pretty-printed by our serializer; re-parsing
       // turned that indentation into text nodes. Strip them (schema-symmetric
       // with how they were added) before any phase sees the tree.
@@ -628,7 +645,7 @@ fn streaming_pass2(
           "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
           rss0,
           latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
-          latexml_core::common::arena::len(),
+          arena::len(),
         );
         // Mirror the eager tail: mark failed formulae, renumber math ids
         // (per-Math, so fragment-local by construction).
@@ -659,6 +676,15 @@ fn streaming_pass2(
       if let Some(root) = frag.get_document().get_root_element() {
         for child in root.get_child_nodes() {
           out.push_str(&frag.serialize_aux(&child, meta.depth, meta.noindent, false));
+        }
+        // Carry the wrapper's root-level id counters to the next fragment
+        // (finalize deliberately leaves the wrapper's bookkeeping attrs in
+        // place — see finalize_rec's PostWork).
+        counters.clear();
+        for (key, value) in root.get_attributes() {
+          if key.starts_with("_ID_counter") {
+            counters.push((key, value));
+          }
         }
       }
     }
@@ -808,6 +834,17 @@ impl DigestionAPI for Core {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
+    // Book-scale sources legitimately expand past the arXiv-sized 400M
+    // runaway-token backstop; scale it to the input (never lowers, env
+    // override wins — see gullet::scale_token_limit_to_source).
+    let source_bytes = if pathname::is_literaldata(&request) {
+      request.len()
+    } else {
+      std::fs::metadata(&canonical_request)
+        .map(|m| m.len() as usize)
+        .unwrap_or(0)
+    };
+    gullet::scale_token_limit_to_source(source_bytes);
     let digestion_note = s!("Digesting {}", name);
     note_begin(&digestion_note);
     // $self->initializestate::$mode . ".pool", @{ $$self{preload} || [] }) unless
@@ -966,7 +1003,7 @@ impl DigestionAPI for Core {
     // ceiling — the box budget assumes a per-box footprint, and math-dense
     // content blows past it (witness: fuse at 18.8 GB with the box budget
     // untouched). The cap is bytes here (resolve_rss_cap basis).
-    if let Some(cap_bytes) = latexml_core::stomach::resolve_rss_cap() {
+    if let Some(cap_bytes) = stomach::resolve_rss_cap() {
       stomach::set_fragment_yield_rss_soft_kb(Some(cap_bytes / 1024 / 2));
     }
 
@@ -1096,7 +1133,26 @@ impl DigestionAPI for Core {
       .take_spill_store()
       .expect("attached above; nothing detaches it during pass 1");
     let node_fonts = document.node_fonts.clone();
-    streaming_pass2(&mut store, &index, &node_fonts)?;
+    // Root-level id counters run document-wide (see streaming_pass2's doc):
+    // seed pass 2 from the spine root's pass-1 state, and hand the final
+    // state back to the root so the spine's own tail continues the sequence.
+    let mut counters: Vec<(String, String)> = document
+      .get_document()
+      .get_root_element()
+      .map(|root| {
+        root
+          .get_attributes()
+          .into_iter()
+          .filter(|(k, _)| k.starts_with("_ID_counter"))
+          .collect()
+      })
+      .unwrap_or_default();
+    streaming_pass2(&mut store, &index, &node_fonts, &mut counters)?;
+    if let Some(mut root) = document.get_document().get_root_element() {
+      for (key, value) in &counters {
+        let _ = root.set_attribute(key, value);
+      }
+    }
     // The spine's own rewrite phase must be strict too: its sections are
     // spilled placeholders, so a scope that "isn't here" is in a fragment.
     document.scoped_rules_strict = true;

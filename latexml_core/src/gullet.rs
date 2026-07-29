@@ -188,20 +188,7 @@ static DEBUG_FATAL: Lazy<bool> = Lazy::new(debug_fatal_enabled);
 #[thread_local]
 pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
   RefCell::new(Gullet {
-    // Safety BACKSTOP against corrupted-macro-state loops (real runaways are cut
-    // far earlier by the cycle guards / pushback limit / byte budget, so erring
-    // high costs no detection latency). 400M = 5× the heaviest measured legit
-    // paper (math0402448, amsart + xy-pic, 80.2M end-of-run progress under the
-    // 2026-06-10 all-three-reader-loop accounting; the old "80M" figure predated
-    // that multi-counting). `LATEXML_TOKEN_LIMIT` overrides (0 disables).
-    token_limit: match std::env::var("LATEXML_TOKEN_LIMIT")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
-    {
-      Some(0) => None,
-      Some(n) => Some(n),
-      None => Some(400_000_000),
-    },
+    token_limit: default_token_limit(),
     // Explicit: `#[derive(Default)]` would set this to 0 (guard active from the
     // first token). Graphics packages raise it at load (see
     // `raise_cycle_guard_activate`).
@@ -269,11 +256,53 @@ macro_rules! runtime_mut {
 }
 
 /// Initialize (or reset, if reentrant) a Gullet to its default empty state
+/// The runaway-token BACKSTOP's baseline: real runaways are cut far earlier
+/// by the cycle guards / pushback limit / byte budget, so erring high costs
+/// no detection latency. 400M = 5× the heaviest measured legit arXiv paper
+/// (math0402448, amsart + xy-pic, 80.2M end-of-run progress under the
+/// 2026-06-10 all-three-reader-loop accounting; the old "80M" figure
+/// predated that multi-counting). `LATEXML_TOKEN_LIMIT` overrides
+/// (0 disables). Book-scale sources raise it proportionally per conversion
+/// — see [`scale_token_limit_to_source`].
+fn default_token_limit() -> Option<usize> {
+  match std::env::var("LATEXML_TOKEN_LIMIT")
+    .ok()
+    .and_then(|v| v.parse::<usize>().ok())
+  {
+    Some(0) => None,
+    Some(n) => Some(n),
+    None => Some(400_000_000),
+  }
+}
+
+/// Scale the runaway-token backstop to the SOURCE size. The 400M baseline is
+/// sized for arXiv-scale inputs; a book-scale source legitimately expands
+/// past it (witness: a 131 MB flat-index compilation died at 400M
+/// mid-digestion with no loop in sight, at a measured ~3+ tokens/byte and
+/// paper-class documents measured up to ~160 tokens/byte). ×200/byte keeps
+/// the ceiling finite — a true infinite loop still trips — while never
+/// LOWERING the baseline for small documents. An explicit
+/// `LATEXML_TOKEN_LIMIT` wins unchanged (including 0 = disabled).
+pub fn scale_token_limit_to_source(source_bytes: usize) {
+  if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {
+    return;
+  }
+  let scaled = source_bytes.saturating_mul(200).max(400_000_000);
+  let mut gullet = gullet_mut!();
+  if let Some(limit) = gullet.token_limit.as_mut() {
+    *limit = (*limit).max(scaled);
+  }
+}
+
 pub fn initialize_gullet() {
   let mut gullet = gullet_mut!();
   gullet.runtime = None;
   gullet.mouthstack = VecDeque::new();
   gullet.pending_comments = VecDeque::new();
+  // Fresh per-conversion backstop: a prior book-scale conversion in this
+  // reused thread-local engine must not leak its scaled token limit into
+  // the next document.
+  gullet.token_limit = default_token_limit();
   // Fresh per-conversion progress + cycle-guard history (the engine is a
   // thread-local singleton reused across conversions in the test harness).
   gullet.progress = 0;
