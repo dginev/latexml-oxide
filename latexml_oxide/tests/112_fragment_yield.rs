@@ -38,6 +38,8 @@ fn convert_with_budget(source: &str, budget: Option<usize>) -> (String, usize) {
       let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
       let cfg = Config {
         format: OutputFormat::XML,
+        // See streaming_sweep/mod.rs: match the production binding setup.
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
         ..Config::default()
       };
       let mut c = Converter::from_config(cfg);

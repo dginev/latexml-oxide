@@ -580,11 +580,26 @@ fn streaming_pass2(
     let mut out = String::new();
     {
       let mut frag = Document::from_xml_document(frag_xml, node_fonts.clone())?;
+      frag.scoped_rules_strict = true;
       // The segment text was pretty-printed by our serializer; re-parsing
       // turned that indentation into text nodes. Strip them (schema-symmetric
       // with how they were added) before any phase sees the tree.
       if let Some(root) = frag.get_document().get_root_element() {
         frag.strip_indentation_whitespace(&root);
+      }
+      // Restore empty text children the parse could not represent (spill-time
+      // `_lx_empty_text` markers — see `spill_run`): `<p></p>` must not
+      // collapse to `<p/>` across the round-trip.
+      for mut marked in frag.findnodes("//*[@_lx_empty_text]", None) {
+        let _ = marked.remove_attribute("_lx_empty_text");
+        if marked.get_child_nodes().is_empty() {
+          // `append_text("")` is a no-op (the fork guards on len > 0), so
+          // create a real text node and then empty it in place.
+          let _ = marked.append_text("x");
+          if let Some(mut text) = marked.get_first_child() {
+            let _ = text.set_content("");
+          }
+        }
       }
       if let Some(rules) = &rules_opt {
         frag.mark_xmnode_visibility()?;
@@ -970,6 +985,9 @@ impl DigestionAPI for Core {
       .expect("attached above; nothing detaches it during pass 1");
     let node_fonts = document.node_fonts.clone();
     streaming_pass2(&mut store, &index, &node_fonts)?;
+    // The spine's own rewrite phase must be strict too: its sections are
+    // spilled placeholders, so a scope that "isn't here" is in a fragment.
+    document.scoped_rules_strict = true;
     // The spine gets the normal whole-document tail; spilled content is
     // invisible to it (placeholders), so root-level passes act on the live
     // root exactly as in the eager path.

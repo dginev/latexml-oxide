@@ -34,6 +34,13 @@ fn convert(source: &str, streaming: Option<usize>) -> (String, usize, usize) {
       let cfg = Config {
         format: OutputFormat::XML,
         streaming,
+        // The contrib dispatcher the binaries install (see cluster/mod.rs):
+        // without it, contrib-provided bindings resolve to nothing here while
+        // working in production, and a fixture needing one degrades — in
+        // MODE-DEPENDENT shapes, which reads as a phantom streaming
+        // divergence (witness omnibus_natbib_bbl_sideload: 101 errors, an
+        // empty eager doc, a partial streamed one).
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
         ..Config::default()
       };
       let mut c = Converter::from_config(cfg);

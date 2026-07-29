@@ -128,6 +128,16 @@ pub struct Document {
   /// recorded at spill time — `set_rdfa_prefixes` scans the live DOM, and
   /// spilled usages would otherwise vanish from the root's `prefix=`.
   extra_rdfa_prefixes:         Vec<String>,
+  /// Streaming only: an UNRESOLVED `label:`/`id:` rewrite scope makes the
+  /// rule INERT instead of continuing unscoped. Perl (and the eager path)
+  /// continue with the remaining clauses on the same tree when a scope fails
+  /// to resolve — harmless there, because in a whole document a
+  /// `scope=section` id always resolves. In a fragment (or on the spine,
+  /// where sections are spilled placeholders) "not here" usually means "in
+  /// another fragment", and continuing unscoped applies the rule to
+  /// EVERYTHING — sweep witness tests/math/declare.tex, where section-7
+  /// declarations stamped section-1 math.
+  pub scoped_rules_strict:     bool,
   /// Streaming pass 1 only: suppress the ROOT element's `after_open` hook
   /// dispatch. Eager semantics guarantee every hook runs with digestion
   /// COMPLETE (build starts after digestion ends); interleaving would fire
@@ -225,6 +235,7 @@ impl Document {
       localized_fonts:             Vec::new(),
       spill_store:                 None,
       extra_rdfa_prefixes:         Vec::new(),
+      scoped_rules_strict:         false,
       defer_root_after_open:       false,
     }
   }
@@ -3579,6 +3590,31 @@ impl Document {
           swallowed.push(crate::sxml::SegmentId(n));
         }
       }
+    }
+    // An element whose children are exclusively EMPTY text nodes serializes
+    // as `<p></p>` — indistinguishable, after a parse round-trip, from a
+    // childless `<p/>`. Mark such elements before serializing so pass 2 can
+    // restore the empty text child and keep the round-trip exact (sweep
+    // witness tests/fonts/abxtest.tex).
+    fn mark_empty_text_elements(node: &Node) {
+      if node.get_type() != Some(NodeType::ElementNode) {
+        return;
+      }
+      let children = node.get_child_nodes();
+      if !children.is_empty()
+        && children
+          .iter()
+          .all(|c| c.get_type() == Some(NodeType::TextNode) && c.get_content().is_empty())
+      {
+        let mut n = node.clone();
+        let _ = n.set_attribute("_lx_empty_text", "1");
+      }
+      for child in children {
+        mark_empty_text_elements(&child);
+      }
+    }
+    for node in run.iter() {
+      mark_empty_text_elements(node);
     }
     // Serialize the run in the pre-finalize form, exactly as the eager
     // serializer would emit it at this position (nested placeholders splice

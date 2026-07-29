@@ -281,7 +281,17 @@ impl Rewrite {
             pattern:  RewritePattern::String(xpath),
           };
         }
-        // Label not found — ignore this clause
+        // Label not found. Perl continues with the remaining clauses
+        // unscoped; under streaming that would apply the rule everywhere
+        // (the label usually lives in another fragment), so strict mode
+        // makes the rule inert via an empty scope selection.
+        if document.scoped_rules_strict {
+          return RewriteClause {
+            compiled: true,
+            op:       RewriteOperator::Select,
+            pattern:  RewritePattern::NodeList(Vec::new()),
+          };
+        }
         return RewriteClause {
           compiled: true,
           op:       RewriteOperator::Ignore,
@@ -310,7 +320,14 @@ impl Rewrite {
             pattern:  RewritePattern::NodeList(scope_nodes),
           };
         }
-        // Scope not found — ignore this rule
+        // Scope not found — same strict-mode reasoning as the label branch.
+        if document.scoped_rules_strict {
+          return RewriteClause {
+            compiled: true,
+            op:       RewriteOperator::Select,
+            pattern:  RewritePattern::NodeList(Vec::new()),
+          };
+        }
         return RewriteClause {
           compiled: true,
           op:       RewriteOperator::Ignore,
