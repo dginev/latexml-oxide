@@ -49,6 +49,22 @@ are not re-attempted:
 - **F4(c)(d)** — `\addbibresource` inside an unbound `.cls` is never registered
   (2605.23724), and apa6 OmniBus dep-mining takes a biblatex branch the
   document did not (2605.14990). Both still EMPTY.
+- **F6 — achemso, re-diagnosed and reduced to 8 lines.** The trigger is NOT the
+  abstract gobbler the first pass blamed: achemso's `{tocentry}` leaves the
+  conditional machinery broken, and the *next* conditional — a plain, balanced
+  `\iffalse … \fi` — reports "conditional fell off end", skipping the rest of
+  the document including `\bibliography`. Repro
+  [`repros/f6_tocentry_conditional/`](bib_absence_2026-07-29/repros/f6_tocentry_conditional/):
+  pdflatex renders it and raises nothing; delete the `{tocentry}` block and we
+  convert cleanly too. Suspect is `\acs@collect` (achemso.cls L1174-1211) —
+  `\begingroup` + `\let\csname\@currenvir\endcsname` + the delimited
+  `\acs@collect@aux#1\end#2` scan + an `\ifx…\else…\expandafter` recursion
+  inside an `\edef`. **Settled dead ends, do not re-attempt:** a `\let` alias
+  of `\fi` is honoured (plain and inside a catcode-modified group);
+  `\endgroup` inside a conditional branch is handled correctly; the
+  `\edef`+`\expandafter` tail recursion transcribed on its own converts
+  cleanly. Worth 36 of the 42 sandbox `expected:\fi` papers and 1,700 corpus
+  first-errors.
 
 **Corrected legacy count.** The pass-2b classifier matched `\references` inside
 longer control sequences — 0704.0420 defines `\def\referencesz{…}`, a
@@ -369,7 +385,7 @@ the acceptance metric, re-measured on the witnesses named above.
 | ~~S2~~ ✅ **LANDED** (66/69) | F1 | Treat `$$` in the bib restricted-horizontal context as TeX does; per-entry error containment at `\end{bib@entry}` (close dangling math/box frames, drop only that entry). Min-repros ready ([`bib_absence_2026-07-29/repros/f1_bib_cascade/`](bib_absence_2026-07-29/repros/f1_bib_cascade/), incl. `bibbisect.py`). | medium | ~69 papers + 68 fatals / pair; projected ~3 200 corpus-wide once the re-port binary ships |
 | **S3** — (a) ✅ and (c) ✅ **LANDED**; (b) REVTeX `auto@bib` open | F3 | (a) empty-arg `\bibliography{}` → `\jobname.bbl` fallback (= latex.ltx, beyond-Perl-vs-broken doc); (b) REVTeX 4-2 `auto@bib` end-document `.bbl` input; (c) bibunits `\putbib` reads shipped `bu<N>.bbl`. PDF ground truth per config-driven rule. | medium | ~47 / pair; corpus: the 2 987 `bbl,bibcmd|empty_bib` + 1 084 `bbl,bibcmd|no_bib` silent blocks are the upper bound |
 | **S4** — (a)(b) ✅ **LANDED**; (c)(d) open | F4 | `\refcontext[]{}` must not eat `\printbibliography` (`biblatex_sty.rs:2193`); `\addbibresource[]` optional (`:1781`); resource registration from unbound-class dep-mining; apa6 branch fidelity. | small-medium | ~18 / pair + corpus `undefined:\addbibresource` 83, `\printbibliography` cluster |
-| **S5 — achemso `\iffalse`** | F6 | One preamble-path bug in the achemso/OmniBus route; body skipped as false branch. | small | 36 / pair; corpus `expected:\fi` 1 700 |
+| **S5 — achemso `\iffalse`** | F6 | **Re-diagnosed**: `{tocentry}`, not the abstract, breaks the next conditional — 8-line repro in `repros/f6_tocentry_conditional/`, three hypotheses already ruled out. Fix inside `\acs@collect`'s re-read machinery. | small | 36 / pair; corpus `expected:\fi` 1 700 |
 | **S6 — Never discard a built document** | F7 | `document:convert` abort → salvage the partial DOM instead of the 1809-byte stub (recover-partial principle, cf. `fatal-stays-fatal` policy). | small-medium | 10 / pair; corpus 436 |
 | **S7 — Silent swallow / group leaks** | F5 | Runaway listings/verbatim; leaked `\bgroup` under ar5iv raw-load; alignment unclosed-group discard (close leaked groups at error or `\end{document}`); each sub-family needs min-repro first. Hardest, highest content-integrity value — bib is just the visible symptom. | large (own session per sub-family) | ~6 silent + alignment cohort / pair; corpus `\lx@begin@alignment` 2 356 |
 | **S8 — Post-stage robustness** | F8 | XPath growing-nodeset OOM, NULL XSLT context, `post:parse` null pointer on huge docs; also `<ltx:bibliography>`-in-XMath placement. | medium | ~13 diagnosed + 84-cohort tail / pair; corpus 520+177 |

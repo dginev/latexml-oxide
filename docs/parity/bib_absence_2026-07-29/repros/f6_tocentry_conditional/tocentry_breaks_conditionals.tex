@@ -1,0 +1,32 @@
+% F6 minimal witness. achemso's `{tocentry}` leaves the conditional machinery
+% broken: the very next conditional — here a plain, perfectly balanced
+% `\iffalse ... \fi` — reports "conditional fell off end" and everything after
+% it is skipped, including the document's `\bibliography`.
+%
+% pdflatex renders TOCTEXT and BODYTEXT and raises nothing.
+% latexml-oxide: `Error:expected:\fi \iffalse`, and BODYTEXT is lost.
+%
+% Drop `\begin{tocentry}...\end{tocentry}` and the same document converts
+% cleanly, so the abstract gobbler (`\let\end\fi` + `\iffalse`, achemso.cls
+% L1138-1156) is NOT the trigger, despite being where the error surfaces in
+% real papers. The suspect is `\acs@collect` (achemso.cls L1174-1211), which
+% `{tocentry}` uses to re-read its body: `\begingroup` +
+% `\let\csname\@currenvir\endcsname` + the delimited `\acs@collect@aux#1\end#2`
+% scan + an `\ifx\end#2\else b\expandafter\acs@collect@begins@\fi` recursion
+% inside an `\edef`.
+%
+% Ruled out (do not re-attempt): a `\let` alias of `\fi` is honoured correctly,
+% both plain and inside a catcode-modified group; `\endgroup` inside a
+% conditional branch is handled correctly; the `\ifx…\else…\expandafter`
+% tail-recursion inside `\edef`, transcribed on its own, converts cleanly.
+%
+% Witnesses 2606.14933, 2605.00451, 2606.00264; 36 of the 42 `expected:\fi`
+% papers in the 2605+2606 sandboxes, 1,700 corpus first-errors.
+\documentclass[journal=jacsat,manuscript=article]{achemso}
+\begin{document}
+\begin{tocentry}
+TOCTEXT here.
+\end{tocentry}
+\iffalse SKIPPEDTEXT \fi
+BODYTEXT survives.
+\end{document}
