@@ -1931,13 +1931,15 @@ mod bib_resource_scan_tests {
   /// that class, so this scan is the only place the declaration is visible.
   #[test]
   fn harvests_addbibresource_from_a_shipped_class() {
-    assert_eq!(scan_bib_resources(r"\addbibresource{references.bib}"), vec![
-      "references.bib"
-    ]);
+    assert_eq!(
+      scan_bib_resources(r"\addbibresource{references.bib}"),
+      vec!["references.bib"]
+    );
     // A path, as journaleducation.cls writes it.
-    assert_eq!(scan_bib_resources(r"\addbibresource{letters/refs.bib}"), vec![
-      "letters/refs.bib"
-    ]);
+    assert_eq!(
+      scan_bib_resources(r"\addbibresource{letters/refs.bib}"),
+      vec!["letters/refs.bib"]
+    );
     // biblatex's optional argument is skipped, not treated as the resource.
     assert_eq!(
       scan_bib_resources(r"\addbibresource[location=local]{tau.bib}"),
@@ -2267,7 +2269,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // the value unread. Audit family F4(c); witnesses 2605.23724, 2605.00270,
   // 2605.02720.
   for res in scan_bib_resources(&code) {
-    let _ = push_value("biblatex_resources", Stored::String(crate::common::arena::pin(res)));
+    let _ = push_value("biblatex_resources", Stored::String(arena::pin(res)));
   }
 
   // Perl L2784-2785: Info iff EITHER list is non-empty; message lists
