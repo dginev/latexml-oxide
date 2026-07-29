@@ -1614,7 +1614,10 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         {
           assign_meaning(&token, relax_meaning, Some(Scope::Local));
         }
-        result = meaning.invoke_primitive()?;
+        // `meaning` IS the state table's `Rc<Constructor>`, so hand it to the
+        // Whatsit rather than letting `invoke_primitive` deep-clone the
+        // definition once per invocation (see `Constructor::invoke_primitive_shared`).
+        result = Constructor::invoke_primitive_shared(&meaning)?;
         if !meaning.is_prefix() {
           clear_prefixes(); // Clear prefixes unless we just set one.
         }

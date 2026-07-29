@@ -2822,12 +2822,17 @@ Confirmed on `LaTeXML/t/complex/acm_aria.tex` (whose golden `acm_aria.xml`
 records the defect) and on arXiv **2607.21760** — an ACM accessibility paper
 with four figures and zero descriptions in its HTML.
 
-**`aria:labelledby` is NOT one of the defects.** acmart's documentation says
-"Unlike `\caption`, which is used alongside the image, `\Description` is
+**`aria:labelledby` on the float is a second defect.** acmart's documentation
+says "Unlike `\caption`, which is used alongside the image, `\Description` is
 intended to be used **instead of** the image", i.e. it is a *text alternative*,
-which in ARIA is name-like. Pointing a name relation at it is defensible; what
-goes wrong is only that the referenced note holds the short form while the long
-form is gone.
+which in ARIA is name-like — so pointing a name relation at it reads as
+defensible, and this entry originally said so. It is not: `aria-labelledby`
+sets the accessible **name**, and a float's name is its caption, so the
+relation displaces "Figure 1. caption text" and hides the caption from a screen
+reader. The alternative also belongs to the *image*, not to the float that
+contains it. Reported in review on brucemiller/LaTeXML#430 (`r3674103638`);
+Rust now puts the text on the lone `ltx:graphics` as `@alt` and never emits a
+name relation (`OXIDIZED_DESIGN_DIVERGENCES.md` #83).
 
 Two further problems do stand:
 
@@ -2846,8 +2851,11 @@ Two further problems do stand:
 
 **Fixed in Rust, deliberately diverging** (`latexml_package/src/package/acmart_cls.rs`;
 see `OXIDIZED_DESIGN_DIVERGENCES.md` #83): the description is read `Undigested`
-so nothing inside it expands, the short form becomes `aria:label` and the long
-form an `aria:describedby` block, and a dedicated XSLT template strips the
+so nothing inside it expands; where the float holds a lone image the short form
+becomes that image's `@alt` and the long form an `aria:describedby` block, and
+where it holds none or several (an empty float, a table, a multi-panel figure)
+both stay referenced from the float itself — never as a name relation, so the
+caption is always what names the float. A dedicated XSLT template strips the
 footnote scaffolding. `acm_aria.xml` was re-blessed — it previously matched Perl
 byte-for-byte and so certified the defect.
 

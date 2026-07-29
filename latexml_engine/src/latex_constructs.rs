@@ -6974,7 +6974,9 @@ LoadDefinitions!({
     // (driver: 2306.16410 — paper hangs in token-limit when reading
     // `\citep{surís2023vipergpt}` after `\usepackage[T1]{fontenc}`,
     // because `\i` expands to `\T1-cmd \i \T1\i` which loops back to
-    // `\i` when `\T1-cmd` isn't defined).
+    // `\i` when `\T1-cmd` isn't defined. 2402.01687 (sigplan) was a
+    // suspected second driver of the same UTF-8-in-bib-key pattern,
+    // never confirmed — check it first if this cascade resurfaces).
     let enc_cmd = s!("\\{}-cmd", e);
     DefMacro!(T_CS!(enc_cmd), "{}{}", "#2");
 

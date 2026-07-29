@@ -215,6 +215,16 @@ byte-identical to the eager path on the whole test corpus. A streaming rewrite
 that silently drops a rule is exactly the kind of regression that greens a test
 suite and corrupts a corpus.
 
+**Settled dead-end — dropping the digested tree at the Build boundary.**
+`core_interface.rs` takes `digested: Digested` by value and last reads it at the
+`absorb` call, so the whole graph stays alive through Rewriting, Math Parsing and
+Finalizing; adding `drop(digested)` right after Build looks like a free
+multi-hundred-MB win. **It is not: measured 2026-07-29, interleaved A/B, release
+profile, 4.5 MB corpus — 6078/6073 MB baseline vs 6089/6080 MB with the drop,
+i.e. noise.** The reason is the whole point of S3: **peak RSS is reached _inside_
+Build**, so nothing done _after_ Build can lower it. Fragmenting has to happen
+within the digest→build loop, not around it. Do not re-attempt the outer drop.
+
 ---
 
 ## 5. Open questions
@@ -227,9 +237,38 @@ suite and corrupts a corpus.
    with no natural seam still needs bounding — section? A byte budget with a
    safe cut point? What happens to an alignment or math environment straddling
    the boundary?
-3. **Is the `Rc<Constructor>` per `invoke_token` (77,902 allocations on a 1.5 MB
-   slice) a real defect?** A definition should be looked up, not allocated per
-   invocation. Cheap to check, possibly a free win independent of this design.
+3. ~~**Is the `Rc<Constructor>` per `invoke_token` a real defect?**~~ **ANSWERED
+   2026-07-29, and the premise was wrong.** The *lookup* never allocated:
+   `Stored::Constructor` is already `Rc<Constructor>` (`common/store.rs`), so
+   `lookup_digestable_definition`'s `front.clone()` is a refcount bump. The
+   allocation was one level down, in `Constructor::invoke_primitive`, which built
+   the Whatsit's definition back-reference as `Rc::new(self.clone())` — a
+   **retained** deep clone (Whatsits live for the whole Build), 1:1 with
+   invocations, plus a placeholder `Rc<Expandable>` from `..Whatsit::default()`
+   that was overwritten immediately. Both fixed by routing the invoker's existing
+   handle through `Constructor::invoke_primitive_shared`. Measured: peak RSS
+   6074/6081 → 6041/6044 MB on a 4.5 MB math+prose corpus, wall unchanged,
+   output byte-identical. **Real but small — ~0.6%**, so it is a tidy-up, not a
+   lever on the 131 MB problem.
+
+   The same dhat run reorders the priorities for anyone optimizing constant
+   factors here (debug profile, math-dense fixture, so treat as shape not
+   absolute):
+   * `State::assign_internal`'s per-symbol `VecDeque<Stored>` growth is the
+     single largest byte consumer (52.2 MB / 181k blocks), and the State's own
+     top-level table adds 64.5 MB in 31 `with_capacity`/rehash blocks — together
+     ~26% of all bytes, from the binding store alone.
+   * The math parser (marpa ASF + `translate_node`) is 28.7% of blocks, 25.5% of
+     bytes, dominated by one 56-byte `Rc<Node<ByteToken>>` per parse node.
+   * The libxml/document layer is **block-heavy, byte-light** — ~44% of blocks
+     for ~8.6% of bytes — almost entirely 4–7 byte `String` copies out of
+     `Node::get_name` / `attr_node_value` / `get_properties`, i.e. FFI round
+     trips that re-copy tag and attribute names on every query. Caching qnames
+     would cut allocation *count*, not peak bytes.
+   * Caveat: dhat's stack depth cap (24) truncated the two largest block sites
+     (383k blocks of `format!`, 62k of `HashMap<String,String>::insert`) to no
+     project frame, so their callers are unattributed. Re-profile with a deeper
+     backtrace before chasing them.
 4. **Can the libxml2 DOM be made cheaper per node**, or is 5.7 KB/node simply
    what a `XMTok`-dense tree costs? If the latter, fragment size is bounded by
    node count rather than byte count, and the fragment policy must reflect that.
