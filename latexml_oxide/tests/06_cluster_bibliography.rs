@@ -84,6 +84,30 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// pnas-new must declare the booleans its own style files switch.
+///
+/// The real class does `\RequirePackage{xifthen}` (pnas-new.cls L97) and then
+/// `\newboolean{shortarticle}` and friends (L98-118). Our binding replaces the
+/// class, so it has to do both: without them the FIRST line of
+/// `pnasresearcharticle.sty` — `\setboolean{shortarticle}{true}` — raises
+/// `Error:undefined:\setboolean` and is defined as `<ltx:ERROR/>`, the
+/// article-type style unravels, and the document loses its tail with the
+/// bibliography in it. The class ships with the paper and is absent from TeX
+/// Live, so nothing else declares them.
+///
+/// 6 papers in the 2605+2606 cohort, every one `\documentclass{pnas-new}` and
+/// every one 0 entries before: 2606.02411 0 -> 45, 2606.29674 0 -> 60,
+/// 2605.07504 0 -> 53. Red/green is the bibliography length; 0 is red.
+#[test]
+fn bib_pnas_setboolean_keeps_the_document_tail() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/bib_pnas_setboolean.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "pnas \\setboolean failure swallowed the bibliography: {n} entries\n{x}"
+  );
+}
+
 /// achemso's `{tocentry}` must not swallow the rest of the document.
 ///
 /// It used to be suppressed with `\begin{tocentry}` → `\iffalse` and
