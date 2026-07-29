@@ -8250,10 +8250,25 @@ LoadDefinitions!({
 
   DefMacro!("\\lx@ifusebbl{}{}{}", sub[(bib_files_tks, bbl_clause, bib_clause)] {
     let bib_files = Expand!(bib_files_tks).to_string();
+    let jobname = Expand!(T_CS!("\\jobname")).to_string();
     if bib_files.is_empty() {
+      // Perl stops here (`latex_constructs.pool.ltxml` L3901,
+      // `return unless $bib_files;`) and so did this port — silently, in both
+      // engines. But real `latex.ltx` ends `\bibliography` with an
+      // UNCONDITIONAL `\@input@{\jobname.bbl}`, so `\bibliography{}` beside a
+      // shipped `<jobname>.bbl` renders the full reference list under
+      // pdflatex (measured: "References / [1] A. Uthor. A paper. 2020.", and
+      // the `\cite` resolves to [1]). Following latex.ltx here recovers the
+      // references instead of dropping them: 7 papers in the 2605+2606
+      // sandboxes, including the GWTC-5 LIGO set, all of which ship a
+      // jobname-matching `.bbl`. Witness 2605.27226 (repro
+      // `docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`).
+      // OXIDIZED_DESIGN #84; audit family F3(a).
+      if FindFile!(&jobname, type => "bbl").is_some() {
+        return Ok(bbl_clause);
+      }
       return Ok(Tokens!());
     }
-    let jobname = Expand!(T_CS!("\\jobname")).to_string();
     let bbl_path = FindFile!(&jobname, type => "bbl");
     // BIB_CONFIG is a list of phases; with bibconfig=bbl,bib: try bbl first, fall back to bib.
     // Default (bibtex option) is ['bib', 'bbl']; nobibtex sets ['bbl'].

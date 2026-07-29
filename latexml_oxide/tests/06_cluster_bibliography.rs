@@ -57,6 +57,34 @@ fn cluster_bbl_bib_precedence() {
   );
 }
 
+/// `\bibliography{}` — an EMPTY argument — still inputs `\jobname.bbl`, because
+/// that is what `latex.ltx` does: the argument feeds the `.aux` `\bibdata`
+/// record, not the decision to read the `.bbl`. Measured under pdflatex on
+/// `docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`: "References /
+/// [1] A. Uthor. A paper. 2020.", with `\cite` resolving to `[1]`.
+///
+/// Perl stops at `return unless $bib_files` (`latex_constructs.pool.ltxml`
+/// L3901) and says nothing, so the references are dropped in silence — this
+/// port did the same until OXIDIZED_DESIGN #84. 7 papers in the 2605+2606
+/// sandboxes share one template that writes `\bibliography{}` and ships the
+/// `.bbl` (the GWTC-5 LIGO set); witness 2605.27226.
+///
+/// The second half is the load-bearing one: with no `\jobname.bbl` on disk
+/// there is nothing to input, so neither clause may fire — an empty argument
+/// must not conjure a placeholder bibliography.
+#[test]
+fn bib_empty_argument_still_reads_the_jobname_bbl() {
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/emptyarg.tex");
+  assert!(
+    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "empty \\bibliography{{}} beside a <jobname>.bbl should read the bbl, got:\n{x}"
+  );
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/emptyargnobbl.tex");
+  assert!(
+    !x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
+  );
+}
 /// A bibliography file that cannot be found must be an **Error**, not an Info.
 ///
 /// Perl raises `Error:missing_file` (`Post/MakeBibliography.pm` L138-140) and

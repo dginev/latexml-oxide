@@ -3014,6 +3014,30 @@ previously matched Perl byte-for-byte and so certified the defect) plus
 `110_acmart_description_aria.rs`, which asserts at the HTML level that all three
 rows of the table above hold and that no `aria-describedby` reference dangles.
 
+### 84. `\bibliography{}` with an empty argument still inputs `\jobname.bbl`
+
+`latex.ltx` ends `\bibliography` with an **unconditional**
+`\@input@{\jobname.bbl}` — the argument only drives the `.aux` `\bibdata`
+record, not whether the `.bbl` is read. So `\bibliography{}` beside a shipped
+`<jobname>.bbl` renders the full reference list under pdflatex (measured:
+"References / [1] A. Uthor. A paper. 2020.", with `\cite` resolving to `[1]`).
+
+Perl returns before looking at anything (`latex_constructs.pool.ltxml` L3901,
+`return unless $bib_files;`) and raises no diagnostic, so the references are
+dropped in silence; this port mirrored that. Rust now follows `latex.ltx`
+instead: on an empty argument it takes the `.bbl` branch **when
+`\jobname.bbl` actually exists**, and otherwise still returns quietly.
+
+Ground truth is the arXiv PDF (bibliography formats are config-driven —
+`BIBLIOGRAPHY_WORKLIST.md`), and this is the shape where Rust and Perl agreed
+with each other but not with the PDF. 7 papers in the 2605+2606 sandboxes,
+including the GWTC-5 LIGO set, which share one template that writes
+`\bibliography{}` and ships the `.bbl`. Witness **2605.27226**; repro
+`docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`; audit family
+F3(a) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+
+Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

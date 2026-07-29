@@ -1,0 +1,9 @@
+% `\bibliography{}` with an EMPTY argument, beside a `<jobname>.bbl`.
+% latex.ltx ends \bibliography with an unconditional `\@input@{\jobname.bbl}`,
+% so pdflatex renders the reference list here; Perl returns early and drops it.
+% OXIDIZED_DESIGN #84. Witness 2605.27226 (the GWTC-5 LIGO template).
+\documentclass{article}
+\usepackage{latexml}
+\begin{document}
+\makeatletter\lx@ifusebbl{}{BBLCHOSEN}{BIBCHOSEN}\makeatother
+\end{document}
