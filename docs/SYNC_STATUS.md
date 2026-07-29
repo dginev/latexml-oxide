@@ -345,14 +345,14 @@ session of their own. Re-verify a row before planning on it (rule 1).
   2606.13010 (arXiv/html_feedback#6624) now converts at 0 errors / 0 warnings /
   0 unparsed math. This file was compacted the same day — see the header.
 
-- `cargo test --tests`: **1696 passing / 94 targets, 0 failed, 0 ignored**
-  — **STALE COUNT, re-run before quoting.** It is a 2026-07-26 measurement and
-  the seven PRs #403…#419 landed after it, several adding guards
-  (`filter_*` ×8, `escape_specials_*` ×6, `bib_preamble_*`, `bib_mathscinet_*`,
-  `bib_unmatched_dollar_*`), so the true figure is higher.
-  (2026-07-26, on `main` @ `e07548e6b3`, dev box with ImageMagick + ghostscript +
+- `cargo test --tests`: **1760 passing / 105 targets, 0 failed, 0 ignored**
+  (2026-07-29, on `main` @ `d5684f0bcf`, dev box with ImageMagick + ghostscript +
   poppler **and `mutool`** installed, so the vector-SVG branch really ran — both
-  `test_vector_svg_*` report ok, not skipped). Two claims carried here for weeks
+  `test_vector_svg_*` report ok, not skipped). Re-run before quoting: the count
+  moves with every PR that adds a guard. It rose from the long-quoted 1696 / 94
+  targets (2026-07-26 @ `e07548e6b3`) as #403…#419 and then #430/#432/#434/#435
+  landed — the last four adding `110_acmart_description_aria` and
+  `111_build_memory_guard`. Two claims carried here for weeks
   did **not** reproduce and have been dropped:
   `latexml_post::graphics::process_coalesces_only_matching_conversion_options`,
   long labelled "the one red, known local-only artifact", passes; and `mutool` is
@@ -366,6 +366,22 @@ session of their own. Re-verify a row before planning on it (rule 1).
   poppler/mupdf. (An earlier "one `latexml_post` graphics failure needs a host
   image tool" caveat was carried forward for weeks before being shown not to
   reproduce — no `latexml_post` test can produce it as written.)
+
+- **The next fleet rerun's fatal rate is NOT comparable to the 0.78% baseline**
+  (CLAUDE.md "Active priorities"). Two 2026-07-29 changes move it in opposite
+  directions, so read a delta as a measurement change first, a regression second:
+  * **#434 converts silent kills into counted fatals.** Build had no cooperative
+    `check_timeout()` — only digestion did — so an over-budget document was
+    SIGKILLed by the hard watchdog: exit 137, no `Fatal:` line, no summary, a
+    0-byte output. Those papers were never counted as fatals by a log-parsing
+    tally. They now end with `Fatal:Timeout:MemoryBudget`, a partial document,
+    and `Status:conversion:3`. **Fatal count goes UP with no behavior getting
+    worse** — in fact strictly better, since the partial output now survives.
+  * **#435 raises the default ceiling from a fixed 6144 MiB to 90% of machine
+    RAM** (`watchdog::default_ceiling_mib`, capped at 64 GiB). Fewer documents
+    reach any ceiling on a large box, pushing the rate DOWN — and the number is
+    now **host-dependent**, so two runs on different hardware are not comparable
+    unless `--max-memory` is pinned. Pin it when producing a baseline.
 
 - **2026-07-17 — crates.io: all code blockers cleared; tagged `0.7.4-rc4`.**
   `#[derive(LoadModel)]` reads `latexml_core`'s **embedded** RelaxNG table instead of
