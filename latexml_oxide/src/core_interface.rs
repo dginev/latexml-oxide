@@ -909,7 +909,40 @@ impl DigestionAPI for Core {
       Some(Stored::String(dir)) => arena::with(dir, |s: &str| std::path::PathBuf::from(s)),
       _ => std::env::temp_dir(),
     };
-    document.set_spill_store(SegmentStore::create(&spill_anchor)?);
+    let store = SegmentStore::create(&spill_anchor)?;
+    // Disk-headroom gate (user requirement 2026-07-29): the spill needs
+    // roughly the core-XML size on disk — measured ~12x the source bytes on
+    // math-heavy content — and a silent mid-conversion ENOSPC would be the
+    // OOM-kill failure mode all over again. Verify up front and raise a
+    // Fatal that NAMES the shortfall and the requirement, so the user can
+    // free space (or point --dest at a roomier volume) with numbers in hand.
+    {
+      use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+      const SPILL_BYTES_PER_SOURCE_BYTE: u64 = 16; // ~12x measured + slack
+      let src_bytes = match state::lookup_value("SOURCEFILE") {
+        Some(Stored::String(f)) => {
+          arena::with(f, |f| std::fs::metadata(f).map(|m| m.len()).unwrap_or(0))
+        },
+        _ => 0,
+      };
+      let need = src_bytes.saturating_mul(SPILL_BYTES_PER_SOURCE_BYTE);
+      if let Some(avail) = latexml_core::watchdog::available_disk_bytes(store.dir())
+        && avail < need
+      {
+        stomach::set_fragment_yield_budget(None);
+        return Err(latexml_core::common::error::Error {
+          target:   ErrorTarget::Timeout,
+          category: ErrorCategory::MemoryBudget,
+          message:  s!(
+            "streaming spill needs ~{} MB free under {} but only {} MB is available — free              disk space there, or convert with a destination on a roomier volume",
+            need / (1024 * 1024),
+            store.dir().display(),
+            avail / (1024 * 1024)
+          ),
+        });
+      }
+    }
+    document.set_spill_store(store);
     document.set_defer_root_after_open(true);
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
@@ -922,8 +955,28 @@ impl DigestionAPI for Core {
       let mut stopped = match step {
         Ok(keep_going) => !keep_going,
         Err(e) => {
-          stomach::set_fragment_yield_budget(None);
-          return Err(e); // resource fatal: same no-recover policy as eager
+          // Under EAGER digestion a resource fatal (the RSS fuse) is
+          // deliberately not recovered — continuing would allocate straight
+          // into an OOM. Under STREAMING the calculus inverts: stopping
+          // digestion here FREES the box list, the spill below releases the
+          // DOM, and the pipeline finishes on already-spilled content — so
+          // recovery is not just safe, it is the feature this mode exists
+          // for. The Fatal contract still holds: announce + latch the
+          // verdict, keep the partial document (user policy 2026-07-28).
+          e.log_fatal();
+          log::warn!(
+            "convert_streaming: digestion stopped by a resource fatal ({:?}/{:?}) — keeping              the document built so far",
+            e.target,
+            e.category
+          );
+          // Recover what the interrupted step had digested. Unlike the eager
+          // Stomach-target salvage, drop_innermost is FALSE: there is no
+          // runaway construct to excise here — the innermost level IS the
+          // healthy top-level accumulation, and the budget simply ran out.
+          // Safe because everything salvaged is absorbed, spilled and freed
+          // immediately below.
+          boxes.extend(stomach::salvage_pending_box_lists(false));
+          true
         },
       };
       if !boxes.is_empty() {

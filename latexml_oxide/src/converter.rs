@@ -353,6 +353,14 @@ impl Converter {
       };
       self.runtime.status = get_status_message();
       self.runtime.status_code = get_status_code();
+      // Same verdict fold as the shared tail below (which this arm bypasses):
+      // a fatal run must summarize as "failed", never "complete: N fatal".
+      let verb = if self.runtime.status_code == 3 {
+        "failed"
+      } else {
+        "complete"
+      };
+      Note!(s!("Conversion {}: {}", verb, self.runtime.status));
       return ConversionResponse {
         result:      Some(serialized),
         log:         self.flush_log(),

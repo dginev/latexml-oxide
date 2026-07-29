@@ -250,6 +250,17 @@ struct Cli {
   #[arg(long, value_name = "MIB", env = "LATEXML_MAX_MEMORY")]
   max_memory: Option<u64>,
 
+  /// Streaming (fragmented) conversion: digest and build interleave in
+  /// bounded fragments, closed subtrees spill to disk beside the source, and
+  /// a second, streaming pass finishes them — so peak memory is bounded by
+  /// fragment size instead of document size. Output is byte-identical to the
+  /// normal path (guarded by the 114_streaming_* sweep). Off by default;
+  /// also AUTO-activates when the projected memory need of a large source
+  /// exceeds the --max-memory ceiling, i.e. only where the normal path is
+  /// certain to exhaust memory anyway.
+  #[arg(long, env = "LATEXML_STREAMING")]
+  streaming: bool,
+
   /// Abort after processing this many tokens — guards against runaway macro
   /// expansion (default: 400M; env `LATEXML_TOKEN_LIMIT`, 0 disables).
   #[arg(long, value_name = "N")]
@@ -421,6 +432,31 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
       derived
     },
   }
+}
+
+/// Streaming activation (user policy 2026-07-29: flag + auto-when-doomed).
+///
+/// Forced by `--streaming`; otherwise auto-enabled only when the PROJECTED
+/// peak of the eager path exceeds the memory ceiling — measured ~1.84 GB of
+/// peak RSS per MB of math-heavy source on the 131 MB witness
+/// (`docs/performance/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
+/// documents that today would die at the ceiling with certainty. The returned
+/// budget is the pass-1 fragment yield threshold in BOXES: a quarter of the
+/// ceiling at the measured ~2.4 KB per retained box, so a fragment's boxes
+/// plus its DOM stay well under the cap while it is live.
+fn resolve_streaming(forced: bool, max_memory_mib: u64, source: &str) -> Option<usize> {
+  const PEAK_BYTES_PER_SOURCE_BYTE: u64 = 1900; // ~1.84 GB/MB, measured
+  const BYTES_PER_BOX: u64 = 2416; // stomach::BYTES_PER_LIGHT_BOX's basis
+  let auto = || {
+    let src_bytes = std::fs::metadata(source).map(|m| m.len()).ok()?;
+    let projected_mib = src_bytes.saturating_mul(PEAK_BYTES_PER_SOURCE_BYTE) / (1024 * 1024);
+    (projected_mib > max_memory_mib).then_some(())
+  };
+  if !forced && auto().is_none() {
+    return None;
+  }
+  let budget_boxes = (max_memory_mib.saturating_mul(1024 * 1024) / 4 / BYTES_PER_BOX) as usize;
+  Some(budget_boxes.max(1))
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -713,9 +749,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // PERL_INPUT_ENCODING, which the Mouth reads to decode source bytes
     // (default utf-8 when unset).
     inputencoding: cli.inputencoding.clone(),
-    // Wired by the --streaming flag / auto-activation in a later step of the
-    // streaming sprint; the eager path is unconditional until then.
-    streaming: None,
+    streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
   };
   // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
   // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base

@@ -100,6 +100,9 @@ impl SegmentStore {
     })
   }
 
+  /// The spill directory (for disk-headroom checks against its volume).
+  pub fn dir(&self) -> &Path { &self.dir }
+
   /// Number of segments written so far.
   pub fn len(&self) -> usize { self.metas.len() }
 
