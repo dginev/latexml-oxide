@@ -84,6 +84,32 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// `\DeclareCiteCommand` must actually define the command it declares.
+///
+/// It is biblatex's own API for a custom citation command and papers use it
+/// heavily. As a pure no-op it consumed its arguments and defined NOTHING, so
+/// every call raised `Error:undefined:\foo`, no citation record was made, and
+/// `MakeBibliography` reported "N bibentries, **0 cited**" over an empty
+/// References list — the bibliography was read and then discarded for want of a
+/// `\cite`. Witness 2605.02115 (`\DeclareCiteCommand{\citeq}` at main.tex
+/// L321, used 83 times): 14 entries read, 0 rendered; now 11 cited and
+/// rendered, and pdflatex renders the list too.
+///
+/// The declared command is aliased to biblatex's `\cite`, keeping the citation
+/// semantics and dropping only the author's bespoke label format.
+#[test]
+fn biblatex_declarecitecommand_defines_its_command() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/declarecite.tex");
+  assert!(
+    !x.contains("ERROR"),
+    "the declared cite command stayed undefined:\n{x}"
+  );
+  assert!(
+    x.contains("<bibitem") && x.contains("Smith"),
+    "citations made with the declared command did not select any entry:\n{x}"
+  );
+}
+
 /// docmute must strip an included stand-alone document's preamble and turn its
 /// `\end{document}` into `\endinput`.
 ///

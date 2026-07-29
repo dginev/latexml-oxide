@@ -1813,13 +1813,25 @@ LoadDefinitions!({
      \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
      \\catcode`\\&=4\\relax");
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
+    // DEDUPLICATE. The same `.bib` can be registered twice — a document that
+    // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares
+    // the same file, for instance — and naming it twice makes
+    // `\lx@bibliography` read it twice, which duplicates every entry. A
+    // bibliography that doubles looks like a win by entry count, so guard it
+    // here rather than trust the producers.
+    let mut seen: Vec<String> = Vec::new();
     let mut resources = Vec::new();
     while let Some(res) = pop_value("biblatex_resources")? {
+      let name = res.to_string();
+      if seen.contains(&name) {
+        continue;
+      }
+      seen.push(name.clone());
       if !resources.is_empty() {
         resources.push(T_OTHER!(","));
         resources.push(T_SPACE!());
       }
-      resources.push(T_OTHER!(res.to_string()));
+      resources.push(T_OTHER!(name));
     }
     Ok(Tokens!(
       T_CS!("\\biblatex@saved@bibliography"),
@@ -1867,7 +1879,31 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareListWrapperAlias{}{}")?;
   def_macro_noop("\\DeclareDelimcontextAlias{}{}")?;
   def_macro_noop("\\UndeclareDelimcontextAlias{}")?;
-  def_macro_noop("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}")?;
+  // `\DeclareCiteCommand{\foo}[wrapper]{pre}{loop}{sep}{post}` is biblatex's own
+  // API for declaring a citation command, and papers use it heavily. As a pure
+  // no-op it consumed the arguments and defined NOTHING, so the declared
+  // command stayed undefined: every call raised `Error:undefined:\foo`, no
+  // citation record was made, and `MakeBibliography` then reported
+  // "N bibentries, **0 cited**" and rendered an empty References list — the
+  // bibliography was read and then thrown away for want of a `\cite`.
+  //
+  // Witness 2605.02115: `\DeclareCiteCommand{\citeq}` at main.tex L321, used
+  // 83 times; 14 entries read, 0 cited, 0 rendered. pdflatex renders the list.
+  //
+  // The declared command is aliased to biblatex's `\cite`, which has the same
+  // `OptionalMatch:* [][] Semiverbatim` shape the family uses. That keeps the
+  // CITATION semantics — keys register, the reference resolves, the
+  // bibliography renders — and drops only the author's bespoke label
+  // formatting, which is the right trade for HTML. A redeclaration of an
+  // existing command (`\DeclareCiteCommand{\cite}{…}`, restyling) aliases it
+  // to itself and is harmless.
+  DefMacro!("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}",
+  sub[(_star, target, _wrapper, _precode, _loopcode, _sepcode, _postcode)] {
+    if let Some(tok) = target.clone().unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
+      Let!(tok, T_CS!("\\cite"));
+    }
+    Ok(Tokens!())
+  });
 
   // Perl L460-481
   def_macro_noop("\\DeclareBibliographyExtras{}")?;

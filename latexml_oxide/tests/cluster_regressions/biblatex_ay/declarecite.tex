@@ -1,0 +1,15 @@
+% `\DeclareCiteCommand` is biblatex's API for a custom cite command. As a no-op
+% it defined nothing, so the call errored, no citation registered, and
+% MakeBibliography reported "N bibentries, 0 cited" over an empty list.
+% Witness 2605.02115 (\citeq, used 83 times): 0 -> 11 entries.
+\documentclass{article}
+\usepackage[style=apa]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+\makeatletter
+\DeclareCiteCommand{\citeq}{\usebibmacro{prenote}}{\usebibmacro{citeindex}%
+  \usebibmacro{cite}}{\multicitedelim}{\usebibmacro{postnote}}
+\makeatother
+Cited via the declared command: \citeq{smith2020}.
+\printbibliography
+\end{document}

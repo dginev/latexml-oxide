@@ -1897,6 +1897,63 @@ pub fn require_package_with_options(name: &str) -> Result<()> {
 // declarations and route them through `require_package` / `load_class`
 // so the corresponding bindings get pulled in even when the original
 // file has no .ltxml binding.
+/// The `\addbibresource` names declared in a raw `.sty`/`.cls` body.
+///
+/// Split out of [`maybe_require_dependencies`] so the extraction is testable
+/// without state: it is the whole of the BEYOND-PERL behaviour described there.
+/// A comma-separated argument declares several resources at once, as biblatex
+/// allows.
+fn scan_bib_resources(code: &str) -> Vec<String> {
+  use once_cell::sync::Lazy;
+  use regex::Regex;
+  static BIBRES_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\addbibresource\s*(?:\[[^\]]*\])?\s*\{([^\}]*)\}").unwrap());
+  let mut out = Vec::new();
+  for cap in BIBRES_RE.captures_iter(code) {
+    for part in cap[1].split(',') {
+      let name = part.trim();
+      if !name.is_empty() && !out.iter().any(|o: &String| o == name) {
+        out.push(name.to_string());
+      }
+    }
+  }
+  out
+}
+
+#[cfg(test)]
+mod bib_resource_scan_tests {
+  use super::scan_bib_resources;
+
+  /// A journal class shipped with the paper declares the bibliography itself —
+  /// `journaleducation.cls` (witness 2605.23724, 0 -> 35 entries),
+  /// `cai26.cls` (2605.00270, 0 -> 25), `tau.cls` (2605.02720, 0 -> 31) — and
+  /// the document then only writes `\printbibliography`. We never interpret
+  /// that class, so this scan is the only place the declaration is visible.
+  #[test]
+  fn harvests_addbibresource_from_a_shipped_class() {
+    assert_eq!(scan_bib_resources(r"\addbibresource{references.bib}"), vec![
+      "references.bib"
+    ]);
+    // A path, as journaleducation.cls writes it.
+    assert_eq!(scan_bib_resources(r"\addbibresource{letters/refs.bib}"), vec![
+      "letters/refs.bib"
+    ]);
+    // biblatex's optional argument is skipped, not treated as the resource.
+    assert_eq!(
+      scan_bib_resources(r"\addbibresource[location=local]{tau.bib}"),
+      vec!["tau.bib"]
+    );
+    // Several resources, and repeats collapse — naming a `.bib` twice would
+    // make `\lx@bibliography` read it twice and double every entry.
+    assert_eq!(
+      scan_bib_resources("\\addbibresource{a.bib, b.bib}\n\\addbibresource{a.bib}"),
+      vec!["a.bib", "b.bib"]
+    );
+    // Nothing to harvest is the common case and must stay empty.
+    assert!(scan_bib_resources(r"\RequirePackage{biblatex}").is_empty());
+  }
+}
+
 fn maybe_require_dependencies(file: &str, ext_type: &str) {
   use once_cell::sync::Lazy;
   use regex::Regex;
@@ -2189,6 +2246,28 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
         classes.push((class, cap.get(1).map(|m| m.as_str().to_string())));
       }
     }
+  }
+
+  // BEYOND PERL: harvest `\addbibresource` too.
+  //
+  // A journal class shipped with the paper routinely declares the bibliography
+  // itself — `journaleducation.cls` has `\addbibresource{letters/refs.bib}`,
+  // `cai26.cls` has `references.bib`, `tau.cls` has `tau.bib` — and the
+  // document then only writes `\printbibliography`. We do not interpret that
+  // class (no binding, OmniBus fallback), so the resource was never registered
+  // and `\printbibliography` had nothing to print: no `MakeBibliography` line
+  // at all and an empty References section, even though the `.bib` ships with
+  // the paper. This scanner is already reading the file for its dependencies,
+  // so it is the one place that can see the declaration.
+  //
+  // Registering the name is enough — `\biblatex@printbibliography` pops the
+  // list and routes it through `\lx@bibliography`, which resolves the file (and
+  // deduplicates, so a document that ALSO declares the same resource does not
+  // get a doubled bibliography). Papers that never load biblatex simply leave
+  // the value unread. Audit family F4(c); witnesses 2605.23724, 2605.00270,
+  // 2605.02720.
+  for res in scan_bib_resources(&code) {
+    let _ = push_value("biblatex_resources", Stored::String(crate::common::arena::pin(res)));
   }
 
   // Perl L2784-2785: Info iff EITHER list is non-empty; message lists
