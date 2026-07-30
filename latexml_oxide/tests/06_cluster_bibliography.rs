@@ -1833,3 +1833,33 @@ fn bib_xpatch_does_not_truncate_the_document() {
     "the comment environment's body leaked into the output:\n{x}"
   );
 }
+
+/// A `&` inside a delimiter-fenced macro argument must not end an alignment cell.
+///
+/// `tex.web` §394 `macro_call` sets `align_state:=1000000` while it scans a
+/// macro's parameters, so an argument's `&` is an ordinary token. Neither Perl
+/// nor this port modelled that, and the brace form hid it — cell scanning skips
+/// balanced groups, but `(…)` is not a group. So `\myfence( a &0 \\ 0 &b )`
+/// inside an `eqnarray` split the row mid-argument, orphaned the fences, and the
+/// alignment could not close its group:
+/// `Error:unexpected:\lx@begin@alignment Attempt to close a group that switched
+/// to mode restricted_horizontal`. The document was truncated there and the
+/// bibliography went with it.
+///
+/// Perl raises the identical error (11 on the 14-line repro), so `pdflatex` —
+/// which renders it silently — is the ground truth. Divergence #90. This was the
+/// largest cluster of the 2026-07-29 bibliography-absence residual, 28 papers;
+/// witnesses 2605.05903 and 2007.06211 (revtex4-1 + physics `\mqty`).
+#[test]
+fn alignment_fenced_amp_does_not_split_a_row() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_alignment_fenced_amp.tex");
+  assert!(
+    x.contains("After the equation"),
+    "the fenced `&` truncated the document:\n{x}"
+  );
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "expected both bibitems past the alignment, got {n}\n{x}"
+  );
+}

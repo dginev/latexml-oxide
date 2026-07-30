@@ -359,6 +359,36 @@ incomplete, needs a PDF check), pgfkeys `/tikz/ForestGreen` (2606.02779),
 babel `slovak` (2606.30912). Guard
 `bib_xpatch_does_not_truncate_the_document`.
 
+**F13 — Tab marks were live while a macro argument was scanned (F7/R3d, the
+largest cluster). FIXED, beyond Perl.** `tex.web` §394 `macro_call` disables tab
+marks (`align_state:=1000000`) while scanning a macro's parameters; neither Perl
+nor this port did, so a `&` inside a **delimiter-fenced** argument reached the
+alignment as a cell break. `\mqty( b_0 &0 \\ 0 &b_1 )` in an `eqnarray` split
+the row mid-argument, orphaned the `\left(`/`\right)` fences, and the alignment
+then could not close its group — `Error:unexpected:\lx@begin@alignment Attempt
+to close a group that switched to mode restricted_horizontal` — truncating the
+document and its bibliography. The brace form was always safe because cell
+scanning skips balanced groups; `(…)` is not a group.
+
+**Perl raises the identical error** (11 on the 14-line repro, tail lost) — the
+earlier F7 write-up recorded our loss without ever running Perl, and called the
+fix "wide blast radius, needs its own branch". Measured against `pdflatex`
+(which renders it silently) the fix is a `SuppressedTabMarks` RAII guard armed
+only inside an alignment, on physics.sty's custom delimited reader
+`phys_read_arg` (where `\lx@physics@mat` consumes its fenced body): `\mqty`
+goes 11 errors → **0**, tail restored, with a correct 4×4 MathML table (4 rows,
+16 cells, `b_0..b_3` on the diagonal).
+
+**The general case remains open, and the earlier "wide blast radius" warning was
+right about why.** Arming the guard at `Parameters::read_arguments` — TeX's real
+`macro_call` site, which also cures a plain `\def\myfence(#1){…}` (12 errors →
+0) — regresses **5 tests**: `cells_test` (17 errors), `numprints_test`,
+`xytest_test`, `consort_flowchart_test`, `unit_tests_by_silviu_test`. That path
+is also how an alignment reads its own cell content, so suppressing tab marks
+across it stops cells terminating. Needs a way to tell a parameter scan from a
+cell-content read. Divergence #90, guard
+`alignment_fenced_amp_does_not_split_a_row`. **14 of the 28 recovered, 961 entries** (2606.16365 0->141 of a 157-entry `.bib`, 141 unique keys and no duplicates; 2606.31840 0->133; 2606.02744 0->119; witness 2605.05903 0->35 of 37). The other 14 — 12 non-physics plus 2 physics — all still fail on the same `\lx@begin@alignment`.
+
 **F11 — Harness/corpus-prep.** (a) Decoy-toplevel selection: cortex converts
 an IEEE-copyright stub `arXiv.tex` while `00README` lists the real
 `main_RAL.tex` (2606.01946). (b) 4 empty 2606 paper dirs with stray top-level

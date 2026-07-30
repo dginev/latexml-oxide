@@ -130,6 +130,50 @@ pub fn set_align_group_count(v: i32) {
 pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v); }
 pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }
 
+/// Disables tab marks for the lifetime of the guard, restoring the previous
+/// count on drop — `tex.web` §394 `macro_call`:
+///
+/// ```text
+/// align_state:=1000000; {disable tab marks, etc.}
+/// ```
+///
+/// TeX suppresses `&` and `\cr` while it scans a macro's parameters, so a tab
+/// mark inside an argument is an ordinary token. Without that, a `&` in a
+/// **delimiter-fenced** argument reaches the alignment as a cell break: for
+/// `\mqty( b_0 &0 \\ 0 &b_1 )` (physics.sty, witness 2605.05903) the row splits
+/// mid-argument and the alignment then cannot close its own group —
+/// `Error:unexpected:\lx@begin@alignment Attempt to close a group that switched
+/// to mode restricted_horizontal` — truncating the rest of the document. The
+/// brace form `\mqty{…}` was always safe because cell scanning skips balanced
+/// groups; `(…)` is not a group. Perl raises the identical error (11 of them on
+/// the 14-line repro), so this is beyond-Perl and `pdflatex`, which renders the
+/// repro silently, is the ground truth.
+///
+/// Only armed inside an alignment: outside one there are no tab marks to
+/// suppress, which keeps this off the hot path for every ordinary macro call.
+/// 28 papers of the 2026-07-29 bibliography-absence residual truncate here.
+pub struct SuppressedTabMarks(Option<i32>);
+
+impl SuppressedTabMarks {
+  pub fn for_argument_scan() -> Self {
+    if has_reading_alignment() {
+      let saved = align_group_count();
+      set_align_group_count(1_000_000);
+      Self(Some(saved))
+    } else {
+      Self(None)
+    }
+  }
+}
+
+impl Drop for SuppressedTabMarks {
+  fn drop(&mut self) {
+    if let Some(saved) = self.0 {
+      set_align_group_count(saved);
+    }
+  }
+}
+
 pub fn get_reading_alignment() -> Option<Digested> { locals!().reading_alignment.last().cloned() }
 pub fn has_reading_alignment() -> bool { !locals!().reading_alignment.is_empty() }
 pub fn local_reading_alignment(alignment: &Digested) {

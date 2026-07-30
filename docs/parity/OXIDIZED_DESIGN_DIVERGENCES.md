@@ -3305,3 +3305,52 @@ intentional design. See [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) for full 
 
 6. **`guessTableHeaders` heuristic** — Post-processing heuristic for table header
    detection can produce unexpected results on tables without intended headers.
+
+### 90. Tab marks are suppressed while a macro argument is scanned
+
+`tex.web` §394 `macro_call` sets `align_state:=1000000; {disable tab marks,
+etc.}` before it scans a macro's parameters, so a `&` or `\cr` **inside an
+argument** is an ordinary token and cannot end an alignment cell. Neither Perl
+LaTeXML nor this port modelled that: the cell break is decided in `readToken`
+purely on `ALIGN_STATE == 0` (`Gullet.pm` L320-324, ported at
+`gullet.rs` L837/L1043), so an argument's `&` reached the alignment.
+
+It only bites for a **delimiter-fenced** argument. `\mqty{a &b}` was always
+safe because cell scanning skips balanced groups — but `(…)` is not a group, so
+`\mqty( b_0 &0 \\ 0 &b_1 )` inside an `eqnarray` split the row mid-argument,
+orphaned the `\left(`/`\right)` fences, and the alignment could then not close
+its own group:
+
+```
+Error:unexpected:\lx@begin@alignment Attempt to close a group that switched to
+mode restricted_horizontal
+```
+
+The document was truncated there, so the bibliography went with it. All three
+conditions were needed: the fenced form, at least one `&` inside it, and an
+enclosing row with no `&` of its own.
+
+Rust arms a `SuppressedTabMarks` guard (`common/local_assignments.rs`) for the
+duration of a **custom delimited read** — currently physics.sty's
+`phys_read_arg`, which is where `\mqty` and friends consume their fenced body.
+It is only armed inside an alignment, so ordinary macro calls keep their hot
+path.
+
+**Scope is deliberately narrow.** Arming the same guard in
+`Parameters::read_arguments` — TeX's actual `macro_call` site, which would also
+cure a plain `\def\myfence(#1){…}` — regresses **5 tests**: `cells_test`
+(17 errors), `numprints_test`, `xytest_test`, `consort_flowchart_test`,
+`unit_tests_by_silviu_test`. That path is *also* how an alignment reads its own
+cell content here, so suppressing tab marks across it stops cells terminating.
+Curing the general case needs a way to distinguish a macro's parameter scan from
+a cell-content read; until then a fenced `&` in a plain user macro still splits
+the row (reproducer: `\def\myfence(#1){\left(\begin{array}{cc}#1\end{array}\right)}`,
+12 errors).
+
+**Beyond Perl.** Perl raises the identical error — 11 of them on the 14-line
+reproducer `repros/f7_alignment_fenced_amp/mqty_in_eqnarray.tex`, tail lost —
+so `pdflatex`, which renders it silently, is the ground truth. Witnesses
+**2605.05903** and **2007.06211** (revtex4-1 + physics). This was the largest
+single cluster of the 2026-07-29 bibliography-absence residual: **28 papers**,
+of which **14** recovered here (961 entries); the remaining 14 all still fail on the same `\lx@begin@alignment` via the general parameter path. Guard
+`alignment_fenced_amp_does_not_split_a_row`.
