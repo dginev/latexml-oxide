@@ -1791,3 +1791,42 @@ fn cluster_bib_alpha_style_labels() {
     );
   }
 }
+
+/// `\xpatchcmd` must not swallow the rest of the document.
+///
+/// xpatch is an expl3 package: each public command is a `\NewDocumentCommand`
+/// dispatching to `\xpatch_main:NN`, which re-reads the target's body delimited
+/// by a sentinel token list, `\c__xpatch_bizarre_tl` = `**)-(**/**]-[**`. With
+/// no binding, `--includestyles` raw-loaded it and that delimited scan ran to
+/// end-of-file, so everything after the first `\xpatchcmd` was discarded — with
+/// **zero** diagnostics.
+///
+/// Witness 2605.25157: `\xpatchcmd{\@tocline}` in the preamble, output truncated
+/// mid-proof at source line 1292 of 1749, its own `\begin{thebibliography}` with
+/// 33 `\bibitem`s never reached; now 33 entries and no errors. Perl truncates
+/// identically (it raises `Error:expected:Until:**)-(**/**]-[**` twice, so our
+/// silence was strictly worse) — beyond-Perl, ground truth the arXiv PDF.
+/// 10 papers of the 2605+2606 residual load xpatch.
+///
+/// The `comment` environment here is the original witness's shape and is what
+/// made the loss visible: its raw-line body skip found the mouth already at EOF
+/// and reported "Skipped comment (0 lines)".
+///
+/// Note what this guards: the runaway needs the RAW `.sty`, which only
+/// `--includestyles` loads, and a registered binding now wins over the raw load.
+/// So this pins the binding — that every `\x…` command is defined and leaves the
+/// document intact — which is what keeps the raw-load path unreachable.
+#[test]
+fn bib_xpatch_does_not_truncate_the_document() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_xpatch_truncation.tex");
+  assert!(
+    x.contains("After the comment block"),
+    "\\xpatchcmd swallowed the rest of the document:\n{x}"
+  );
+  let n = x.matches("<bibitem").count();
+  assert_eq!(n, 2, "expected both bibitems past the \\xpatchcmd, got {n}\n{x}");
+  assert!(
+    !x.contains("suppressed line"),
+    "the comment environment's body leaked into the output:\n{x}"
+  );
+}

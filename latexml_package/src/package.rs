@@ -486,6 +486,7 @@ pub mod xfrac_sty;
 pub mod xkeyval_sty;
 pub mod xkvview_sty;
 pub mod xparse_sty;
+pub mod xpatch_sty;
 pub mod xspace_sty;
 pub mod xunicode_sty;
 pub mod xurl_sty;

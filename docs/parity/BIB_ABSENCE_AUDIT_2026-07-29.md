@@ -333,6 +333,32 @@ Sandbox 382 `no_html` fatals: Fatal:Timeout 216, Fatal:TooManyErrors 166
 (some of the flood cases are F1 upstream). Corpus: 41 941 `no_html` status-3.
 Plus 8 papers with a source but NO result zip (`never_completed`).
 
+**F12 — expl3 sentinel-delimited runaway from a raw-loaded `xpatch.sty`.
+GENUINE RUST silence over a shared truncation.** xpatch is expl3: every public
+command is a `\NewDocumentCommand` dispatching to `\xpatch_main:NN`, which
+re-reads the target body delimited by `\c__xpatch_bizarre_tl` =
+`**)-(**/**]-[**`. Raw-loaded (the `--includestyles` ar5iv profile), that
+delimited scan runs to **end-of-file**, so everything after the first
+`\xpatchcmd` is discarded. Perl truncates identically but raises
+`Error:expected:Until:**)-(**/**]-[**` twice; **we raised zero errors** —
+strictly worse, and precisely the silent failure CLAUDE.md's signal-integrity
+rule forbids. Witness **2605.25157**: truncated mid-proof at source line 1292
+of 1749, its own `\begin{thebibliography}` with 33 `\bibitem`s never digested,
+`Skipped comment (0 lines)` the only trace (the `comment` env's raw-line skip
+found the mouth already at EOF). Fixed by a native
+`latexml_package/src/package/xpatch_sty.rs`: the indirection xpatch exists to
+pierce — a robust command's body living in `\<name><space>` — **does not exist
+here** (`\DeclareRobustCommand` marks the macro `robust => true`), so each
+`\x…` command is its etoolbox counterpart on the same derived name. 10 residual
+papers load xpatch; **5 recovered, 216 entries** (2605.25157 0→33 exact,
+2606.23302 0→58, 2605.03954 0→46 — it was the 4%-of-source truncation,
+2605.28547 0→36, 2606.30032 0→43). The other 5 have unrelated first causes:
+`\end{remark}` in internal_vertical (2606.16679), still-silent (2606.01320),
+a submission missing its own `PurdueThesis.cls` (2605.08378 — source
+incomplete, needs a PDF check), pgfkeys `/tikz/ForestGreen` (2606.02779),
+babel `slovak` (2606.30912). Guard
+`bib_xpatch_does_not_truncate_the_document`.
+
 **F11 — Harness/corpus-prep.** (a) Decoy-toplevel selection: cortex converts
 an IEEE-copyright stub `arXiv.tex` while `00README` lists the real
 `main_RAL.tex` (2606.01946). (b) 4 empty 2606 paper dirs with stray top-level
