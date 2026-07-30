@@ -1,0 +1,212 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/sxml/fragment_reader.rs`."><title>fragment_reader.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (1a833e165 2026-07-29)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/sxml/</div>fragment_reader.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Streaming iteration over an XML file, one top-level subtree at a time.
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! Wraps rust-libxml's `TextReader` (our fork; `xmlTextReaderExpand`
+<a href=#4 id=4 data-nosnippet>4</a>//! underneath): the reader walks the file event-by-event, and
+<a href=#5 id=5 data-nosnippet>5</a>//! [`FragmentReader::next_fragment`] materializes ONLY the current top-level
+<a href=#6 id=6 data-nosnippet>6</a>//! element's subtree as an owned, mutable [`Document`], then skips past it —
+<a href=#7 id=7 data-nosnippet>7</a>//! the rest of the file is never parsed into memory at once. This is the
+<a href=#8 id=8 data-nosnippet>8</a>//! "partially warm DOM" substrate of pass 2: each fragment gets real XPath,
+<a href=#9 id=9 data-nosnippet>9</a>//! rewrites, math parsing and finalize, at a peak cost of one fragment.
+<a href=#10 id=10 data-nosnippet>10</a>//!
+<a href=#11 id=11 data-nosnippet>11</a>//! XPath over a fragment document must use a context built from THAT
+<a href=#12 id=12 data-nosnippet>12</a>//! document's nodes (`Context::from_node`) — evaluating a node against
+<a href=#13 id=13 data-nosnippet>13</a>//! another document's context is the cross-doc trap recorded in
+<a href=#14 id=14 data-nosnippet>14</a>//! `xpath-cross-doc-context-node`.
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a></span><span class="kw">use </span>libxml::{reader::TextReader, readonly::RoNode, tree::Document};
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span><span class="kw">crate</span>::common::error::{Error, ErrorCategory, ErrorTarget, <span class="prelude-ty">Result</span>};
+<a href=#19 id=19 data-nosnippet>19</a>
+<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// Iterates the top-level subtrees of an XML file (the children of its root
+<a href=#21 id=21 data-nosnippet>21</a>/// element), materializing one owned [`Document`] at a time.
+<a href=#22 id=22 data-nosnippet>22</a></span><span class="kw">pub struct </span>FragmentReader {
+<a href=#23 id=23 data-nosnippet>23</a>  reader:  TextReader,
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="doccomment">/// Depth of the fragments to materialize: children of the document root sit
+<a href=#25 id=25 data-nosnippet>25</a>  /// at reader depth 1.
+<a href=#26 id=26 data-nosnippet>26</a>  </span>entered: bool,
+<a href=#27 id=27 data-nosnippet>27</a>}
+<a href=#28 id=28 data-nosnippet>28</a>
+<a href=#29 id=29 data-nosnippet>29</a><span class="kw">impl </span>FragmentReader {
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="doccomment">/// Open `path` for streaming. The file's root element (e.g. the
+<a href=#31 id=31 data-nosnippet>31</a>  /// `_lxfragment` wrapper of a spilled segment, or `ltx:document` of a full
+<a href=#32 id=32 data-nosnippet>32</a>  /// core-XML file) is consumed as the container; fragments are its children.
+<a href=#33 id=33 data-nosnippet>33</a>  </span><span class="kw">pub fn </span>open(path: <span class="kw-2">&amp;</span>std::path::Path) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+<a href=#34 id=34 data-nosnippet>34</a>    <span class="kw">let </span>reader = TextReader::from_file(<span class="kw-2">&amp;</span>path.to_string_lossy(), <span class="number">0</span>)
+<a href=#35 id=35 data-nosnippet>35</a>      .map_err(|()| reader_error(<span class="macro">format!</span>(<span class="string">"cannot open {}"</span>, path.display())))<span class="question-mark">?</span>;
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="prelude-val">Ok</span>(FragmentReader { reader, entered: <span class="bool-val">false </span>})
+<a href=#37 id=37 data-nosnippet>37</a>  }
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="doccomment">/// Advance to the next top-level element and materialize its whole subtree
+<a href=#40 id=40 data-nosnippet>40</a>  /// as an owned, mutable [`Document`]. Returns `Ok(None)` at the end of the
+<a href=#41 id=41 data-nosnippet>41</a>  /// container. Non-element content between fragments (whitespace, comments,
+<a href=#42 id=42 data-nosnippet>42</a>  /// PIs) is skipped.
+<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="kw">pub fn </span>next_fragment(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Document&gt;&gt; {
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="kw">loop </span>{
+<a href=#45 id=45 data-nosnippet>45</a>      <span class="kw">let </span>advanced = <span class="kw">if </span><span class="self">self</span>.entered &amp;&amp; <span class="self">self</span>.at_fragment() {
+<a href=#46 id=46 data-nosnippet>46</a>        <span class="comment">// We are positioned ON a fragment we already materialized: skip its
+<a href=#47 id=47 data-nosnippet>47</a>        // whole subtree without parsing it again.
+<a href=#48 id=48 data-nosnippet>48</a>        </span><span class="self">self</span>.reader.read_next()
+<a href=#49 id=49 data-nosnippet>49</a>      } <span class="kw">else </span>{
+<a href=#50 id=50 data-nosnippet>50</a>        <span class="self">self</span>.reader.read()
+<a href=#51 id=51 data-nosnippet>51</a>      }
+<a href=#52 id=52 data-nosnippet>52</a>      .map_err(|()| reader_error(String::from(<span class="string">"parse error while streaming"</span>)))<span class="question-mark">?</span>;
+<a href=#53 id=53 data-nosnippet>53</a>      <span class="kw">if </span>!advanced {
+<a href=#54 id=54 data-nosnippet>54</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#55 id=55 data-nosnippet>55</a>      }
+<a href=#56 id=56 data-nosnippet>56</a>      <span class="kw">if </span>!<span class="self">self</span>.entered {
+<a href=#57 id=57 data-nosnippet>57</a>        <span class="comment">// The first element event is the container root; descend into it.
+<a href=#58 id=58 data-nosnippet>58</a>        </span><span class="kw">if </span><span class="self">self</span>.reader.is_element() &amp;&amp; <span class="self">self</span>.reader.depth() == <span class="number">0 </span>{
+<a href=#59 id=59 data-nosnippet>59</a>          <span class="self">self</span>.entered = <span class="bool-val">true</span>;
+<a href=#60 id=60 data-nosnippet>60</a>        }
+<a href=#61 id=61 data-nosnippet>61</a>        <span class="kw">continue</span>;
+<a href=#62 id=62 data-nosnippet>62</a>      }
+<a href=#63 id=63 data-nosnippet>63</a>      <span class="kw">if </span><span class="self">self</span>.at_fragment() {
+<a href=#64 id=64 data-nosnippet>64</a>        <span class="kw">let </span>doc = <span class="self">self
+<a href=#65 id=65 data-nosnippet>65</a>          </span>.reader
+<a href=#66 id=66 data-nosnippet>66</a>          .expand_to_document()
+<a href=#67 id=67 data-nosnippet>67</a>          .ok_or_else(|| reader_error(String::from(<span class="string">"expand_to_document failed on a fragment"</span>)))<span class="question-mark">?</span>;
+<a href=#68 id=68 data-nosnippet>68</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(doc));
+<a href=#69 id=69 data-nosnippet>69</a>      }
+<a href=#70 id=70 data-nosnippet>70</a>      <span class="comment">// depth 0 again = the container's end-element event; anything deeper
+<a href=#71 id=71 data-nosnippet>71</a>      // than 1 cannot happen here (read_next skips whole subtrees).
+<a href=#72 id=72 data-nosnippet>72</a>    </span>}
+<a href=#73 id=73 data-nosnippet>73</a>  }
+<a href=#74 id=74 data-nosnippet>74</a>
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="doccomment">/// Positioned on a top-level element (a fragment root)?
+<a href=#76 id=76 data-nosnippet>76</a>  </span><span class="kw">fn </span>at_fragment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.reader.is_element() &amp;&amp; <span class="self">self</span>.reader.depth() == <span class="number">1 </span>}
+<a href=#77 id=77 data-nosnippet>77</a>
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="doccomment">/// Borrow the current subtree read-only without copying (valid only until
+<a href=#79 id=79 data-nosnippet>79</a>  /// the next advance) — for peeking at a fragment (name, attributes) before
+<a href=#80 id=80 data-nosnippet>80</a>  /// deciding to materialize it.
+<a href=#81 id=81 data-nosnippet>81</a>  </span><span class="kw">pub fn </span>peek(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RoNode&gt; { <span class="self">self</span>.reader.expand() }
+<a href=#82 id=82 data-nosnippet>82</a>}
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a><span class="kw">fn </span>reader_error(details: String) -&gt; Error {
+<a href=#85 id=85 data-nosnippet>85</a>  Error {
+<a href=#86 id=86 data-nosnippet>86</a>    target:   ErrorTarget::Internal,
+<a href=#87 id=87 data-nosnippet>87</a>    category: ErrorCategory::Libxml,
+<a href=#88 id=88 data-nosnippet>88</a>    message:  <span class="macro">format!</span>(<span class="string">"fragment-reader: {details}"</span>),
+<a href=#89 id=89 data-nosnippet>89</a>  }
+<a href=#90 id=90 data-nosnippet>90</a>}
+<a href=#91 id=91 data-nosnippet>91</a>
+<a href=#92 id=92 data-nosnippet>92</a><span class="attr">#[cfg(test)]
+<a href=#93 id=93 data-nosnippet>93</a></span><span class="kw">mod </span>tests {
+<a href=#94 id=94 data-nosnippet>94</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="kw">fn </span>write_fixture(name: <span class="kw-2">&amp;</span>str, content: <span class="kw-2">&amp;</span>str) -&gt; std::path::PathBuf {
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">let </span>path = std::env::temp_dir().join(<span class="macro">format!</span>(<span class="string">"lxsxml-reader-{}-{name}"</span>, std::process::id()));
+<a href=#98 id=98 data-nosnippet>98</a>    std::fs::write(<span class="kw-2">&amp;</span>path, content).unwrap();
+<a href=#99 id=99 data-nosnippet>99</a>    path
+<a href=#100 id=100 data-nosnippet>100</a>  }
+<a href=#101 id=101 data-nosnippet>101</a>
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="attr">#[test]
+<a href=#103 id=103 data-nosnippet>103</a>  </span><span class="kw">fn </span>iterates_fragments_one_at_a_time() {
+<a href=#104 id=104 data-nosnippet>104</a>    <span class="kw">let </span>path = write_fixture(
+<a href=#105 id=105 data-nosnippet>105</a>      <span class="string">"basic.xml"</span>,
+<a href=#106 id=106 data-nosnippet>106</a>      <span class="string">"&lt;_lxfragment xmlns:ltx=\"http://dlmf.nist.gov/LaTeXML\"&gt;\
+<a href=#107 id=107 data-nosnippet>107</a>       &lt;ltx:para xml:id=\"p1\"&gt;&lt;ltx:p&gt;first Gr\u{00fc}\u{00df}e&lt;/ltx:p&gt;&lt;/ltx:para&gt;\
+<a href=#108 id=108 data-nosnippet>108</a>       &lt;!-- a comment between fragments --&gt;\
+<a href=#109 id=109 data-nosnippet>109</a>       &lt;ltx:para xml:id=\"p2\"&gt;&lt;ltx:p&gt;second \u{6570}\u{5b66}&lt;/ltx:p&gt;&lt;/ltx:para&gt;\
+<a href=#110 id=110 data-nosnippet>110</a>       &lt;ltx:pagination role=\"newpage\"/&gt;\
+<a href=#111 id=111 data-nosnippet>111</a>       &lt;/_lxfragment&gt;"</span>,
+<a href=#112 id=112 data-nosnippet>112</a>    );
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">let </span><span class="kw-2">mut </span>reader = FragmentReader::open(<span class="kw-2">&amp;</span>path).expect(<span class="string">"open"</span>);
+<a href=#114 id=114 data-nosnippet>114</a>
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">let </span><span class="kw-2">mut </span>seen = Vec::new();
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(doc) = reader.next_fragment().expect(<span class="string">"stream"</span>) {
+<a href=#117 id=117 data-nosnippet>117</a>      <span class="kw">let </span>root = doc.get_root_element().expect(<span class="string">"fragment root"</span>);
+<a href=#118 id=118 data-nosnippet>118</a>      <span class="comment">// The fragment document is real and owned: namespace resolved, content
+<a href=#119 id=119 data-nosnippet>119</a>      // intact, XPath-able from its own context.
+<a href=#120 id=120 data-nosnippet>120</a>      </span><span class="macro">assert_eq!</span>(
+<a href=#121 id=121 data-nosnippet>121</a>        root.get_namespace().map(|ns| ns.get_href()),
+<a href=#122 id=122 data-nosnippet>122</a>        <span class="prelude-val">Some</span>(String::from(<span class="string">"http://dlmf.nist.gov/LaTeXML"</span>)),
+<a href=#123 id=123 data-nosnippet>123</a>        <span class="string">"fragment root keeps the wrapper-declared namespace"
+<a href=#124 id=124 data-nosnippet>124</a>      </span>);
+<a href=#125 id=125 data-nosnippet>125</a>      seen.push((root.get_name(), root.get_content()));
+<a href=#126 id=126 data-nosnippet>126</a>    }
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>path);
+<a href=#128 id=128 data-nosnippet>128</a>
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="macro">assert_eq!</span>(seen.len(), <span class="number">3</span>, <span class="string">"three fragments, comment skipped: {seen:?}"</span>);
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="macro">assert_eq!</span>(seen[<span class="number">0</span>].<span class="number">0</span>, <span class="string">"para"</span>);
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="macro">assert!</span>(seen[<span class="number">0</span>].<span class="number">1</span>.contains(<span class="string">"first Gr\u{00fc}\u{00df}e"</span>));
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="macro">assert_eq!</span>(seen[<span class="number">1</span>].<span class="number">0</span>, <span class="string">"para"</span>);
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="macro">assert!</span>(seen[<span class="number">1</span>].<span class="number">1</span>.contains(<span class="string">"second \u{6570}\u{5b66}"</span>));
+<a href=#134 id=134 data-nosnippet>134</a>    <span class="macro">assert_eq!</span>(seen[<span class="number">2</span>].<span class="number">0</span>, <span class="string">"pagination"</span>, <span class="string">"empty-element fragment survives"</span>);
+<a href=#135 id=135 data-nosnippet>135</a>  }
+<a href=#136 id=136 data-nosnippet>136</a>
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="attr">#[test]
+<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="kw">fn </span>fragment_documents_are_independent_and_mutable() {
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="kw">let </span>path = write_fixture(
+<a href=#140 id=140 data-nosnippet>140</a>      <span class="string">"mutable.xml"</span>,
+<a href=#141 id=141 data-nosnippet>141</a>      <span class="string">"&lt;root&gt;&lt;a n=\"1\"&gt;&lt;child/&gt;&lt;/a&gt;&lt;b n=\"2\"/&gt;&lt;/root&gt;"</span>,
+<a href=#142 id=142 data-nosnippet>142</a>    );
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">let </span><span class="kw-2">mut </span>reader = FragmentReader::open(<span class="kw-2">&amp;</span>path).expect(<span class="string">"open"</span>);
+<a href=#144 id=144 data-nosnippet>144</a>
+<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">let </span>doc_a = reader.next_fragment().expect(<span class="string">"stream"</span>).expect(<span class="string">"fragment a"</span>);
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">let </span><span class="kw-2">mut </span>root_a = doc_a.get_root_element().unwrap();
+<a href=#147 id=147 data-nosnippet>147</a>    <span class="comment">// Mutating fragment A must not disturb streaming of fragment B.
+<a href=#148 id=148 data-nosnippet>148</a>    </span>root_a.set_attribute(<span class="string">"mutated"</span>, <span class="string">"yes"</span>).expect(<span class="string">"mutable"</span>);
+<a href=#149 id=149 data-nosnippet>149</a>
+<a href=#150 id=150 data-nosnippet>150</a>    <span class="kw">let </span>doc_b = reader.next_fragment().expect(<span class="string">"stream"</span>).expect(<span class="string">"fragment b"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>    <span class="kw">let </span>root_b = doc_b.get_root_element().unwrap();
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="macro">assert_eq!</span>(root_b.get_name(), <span class="string">"b"</span>);
+<a href=#153 id=153 data-nosnippet>153</a>    <span class="macro">assert_eq!</span>(root_b.get_attribute(<span class="string">"n"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"2"</span>));
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="macro">assert_eq!</span>(root_a.get_attribute(<span class="string">"mutated"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"yes"</span>));
+<a href=#155 id=155 data-nosnippet>155</a>
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="macro">assert!</span>(
+<a href=#157 id=157 data-nosnippet>157</a>      reader.next_fragment().expect(<span class="string">"stream"</span>).is_none(),
+<a href=#158 id=158 data-nosnippet>158</a>      <span class="string">"exhausted"
+<a href=#159 id=159 data-nosnippet>159</a>    </span>);
+<a href=#160 id=160 data-nosnippet>160</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>path);
+<a href=#161 id=161 data-nosnippet>161</a>  }
+<a href=#162 id=162 data-nosnippet>162</a>
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="attr">#[test]
+<a href=#164 id=164 data-nosnippet>164</a>  </span><span class="kw">fn </span>open_missing_file_is_an_error() {
+<a href=#165 id=165 data-nosnippet>165</a>    <span class="kw">let </span>missing = std::env::temp_dir().join(<span class="string">"lxsxml-definitely-not-here.xml"</span>);
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="macro">assert!</span>(FragmentReader::open(<span class="kw-2">&amp;</span>missing).is_err());
+<a href=#167 id=167 data-nosnippet>167</a>  }
+<a href=#168 id=168 data-nosnippet>168</a>
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="attr">#[test]
+<a href=#170 id=170 data-nosnippet>170</a>  </span><span class="kw">fn </span>segment_store_round_trip_streams_back() {
+<a href=#171 id=171 data-nosnippet>171</a>    <span class="comment">// The integration the substrate exists for: spill via SegmentStore, read
+<a href=#172 id=172 data-nosnippet>172</a>    // back via FragmentReader.
+<a href=#173 id=173 data-nosnippet>173</a>    </span><span class="kw">use </span><span class="kw">crate</span>::sxml::{SegmentMeta, SegmentStore};
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="macro">format!</span>(<span class="string">"lxsxml-integ-{}"</span>, std::process::id()));
+<a href=#175 id=175 data-nosnippet>175</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>tmp).unwrap();
+<a href=#176 id=176 data-nosnippet>176</a>    <span class="kw">let </span><span class="kw-2">mut </span>store = SegmentStore::create(<span class="kw-2">&amp;</span>tmp).expect(<span class="string">"store"</span>);
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="kw">let </span>meta = SegmentMeta {
+<a href=#178 id=178 data-nosnippet>178</a>      depth:      <span class="number">1</span>,
+<a href=#179 id=179 data-nosnippet>179</a>      noindent:   <span class="bool-val">false</span>,
+<a href=#180 id=180 data-nosnippet>180</a>      section_id: <span class="prelude-val">None</span>,
+<a href=#181 id=181 data-nosnippet>181</a>      parent:     <span class="prelude-val">None</span>,
+<a href=#182 id=182 data-nosnippet>182</a>      ancestors:  <span class="macro">vec!</span>[],
+<a href=#183 id=183 data-nosnippet>183</a>      font:       <span class="prelude-val">None</span>,
+<a href=#184 id=184 data-nosnippet>184</a>      namespaces: <span class="macro">vec!</span>[(
+<a href=#185 id=185 data-nosnippet>185</a>        String::from(<span class="string">"ltx"</span>),
+<a href=#186 id=186 data-nosnippet>186</a>        String::from(<span class="string">"http://dlmf.nist.gov/LaTeXML"</span>),
+<a href=#187 id=187 data-nosnippet>187</a>      )],
+<a href=#188 id=188 data-nosnippet>188</a>    };
+<a href=#189 id=189 data-nosnippet>189</a>    <span class="kw">let </span>id = store
+<a href=#190 id=190 data-nosnippet>190</a>      .write_segment(
+<a href=#191 id=191 data-nosnippet>191</a>        <span class="string">"&lt;ltx:section xml:id=\"S1\"&gt;&lt;ltx:title&gt;One&lt;/ltx:title&gt;&lt;/ltx:section&gt;\
+<a href=#192 id=192 data-nosnippet>192</a>         &lt;ltx:section xml:id=\"S2\"&gt;&lt;ltx:title&gt;Two&lt;/ltx:title&gt;&lt;/ltx:section&gt;"</span>,
+<a href=#193 id=193 data-nosnippet>193</a>        meta,
+<a href=#194 id=194 data-nosnippet>194</a>      )
+<a href=#195 id=195 data-nosnippet>195</a>      .expect(<span class="string">"write"</span>);
+<a href=#196 id=196 data-nosnippet>196</a>
+<a href=#197 id=197 data-nosnippet>197</a>    <span class="comment">// Segment files are raw (splice-ready); streaming reads the wrapped form.
+<a href=#198 id=198 data-nosnippet>198</a>    </span><span class="kw">let </span>wrapped_path = tmp.join(<span class="string">"wrapped.xml"</span>);
+<a href=#199 id=199 data-nosnippet>199</a>    std::fs::write(<span class="kw-2">&amp;</span>wrapped_path, store.wrapped_segment(id).expect(<span class="string">"wrap"</span>)).unwrap();
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">let </span><span class="kw-2">mut </span>reader = FragmentReader::open(<span class="kw-2">&amp;</span>wrapped_path).expect(<span class="string">"open segment"</span>);
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="kw">let </span><span class="kw-2">mut </span>titles = Vec::new();
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(doc) = reader.next_fragment().expect(<span class="string">"stream"</span>) {
+<a href=#203 id=203 data-nosnippet>203</a>      <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#204 id=204 data-nosnippet>204</a>      <span class="macro">assert_eq!</span>(root.get_name(), <span class="string">"section"</span>);
+<a href=#205 id=205 data-nosnippet>205</a>      titles.push(root.get_content());
+<a href=#206 id=206 data-nosnippet>206</a>    }
+<a href=#207 id=207 data-nosnippet>207</a>    <span class="macro">assert_eq!</span>(titles, <span class="macro">vec!</span>[String::from(<span class="string">"One"</span>), String::from(<span class="string">"Two"</span>)]);
+<a href=#208 id=208 data-nosnippet>208</a>    drop(store);
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="kw">let _ </span>= std::fs::remove_dir_all(<span class="kw-2">&amp;</span>tmp);
+<a href=#210 id=210 data-nosnippet>210</a>  }
+<a href=#211 id=211 data-nosnippet>211</a>}
+</code></pre></div></section></main></body></html>

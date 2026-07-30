@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["FragmentIndex","FragmentReader","SegmentId","SegmentMeta","SegmentStore"]};
