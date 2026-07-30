@@ -161,6 +161,14 @@ cargo build --no-default-features --features runtime-bindings --profile maxperf 
 
 **Important:** A compile-time plugin discovers test suite files. When adding a new `[name].tex` / `[name].xml` test pair, run `cargo clean` to force rediscovery.
 
+**Run the suite with `cargo nextest run --workspace`.** `cargo test` runs each of
+the ~122 test binaries to completion before starting the next, parallelising only
+*within* a binary, so its wall floor is the ~398 s sum of them. nextest schedules
+every test as its own process across all cores. Measured back-to-back, same 1835
+tests, both green: **8:48 → 1:27 (6.1×)**. Coverage is identical — nextest skips
+doctests and this workspace has none. `cargo test --workspace --tests
+--no-fail-fast` remains valid and is still the way to read a per-binary tally.
+
 Gates: `cargo clippy --workspace --all-targets -- -D warnings` and `cargo doc
 --workspace` (rustdoc warnings are errors) are enforced by CI's `lint` job and the
 pre-push hook. Rustdoc matters more than it looks — a broken intra-doc link renders as

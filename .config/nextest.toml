@@ -1,0 +1,32 @@
+# cargo-nextest configuration.
+#
+# WHY: `cargo test` runs each test BINARY to completion before starting the
+# next, parallelising only *within* a binary. This workspace has 122 test
+# targets whose in-binary execution sums to ~398 s, so that sum is the wall
+# floor no matter how many cores are free. nextest schedules every test as its
+# own process across all cores, making the critical path the slowest single
+# TEST. Measured back-to-back on the same 128-core box, same 1835 tests, both
+# green: `cargo test` 8:48.38 vs `cargo nextest run` 1:26.76 — 6.1x.
+#
+# Coverage is unchanged: nextest does not run doctests, and this workspace has
+# ZERO doctests (`cargo test --doc --workspace` reports 0 passed), while CI
+# already invoked `cargo test --tests`, which excludes them too.
+
+[profile.default]
+# A failing run should report EVERY failure, not stop at the first binary —
+# the same reason the repo's canonical command carries `--no-fail-fast`.
+fail-fast = false
+failure-output = "immediate-final"
+
+[profile.ci]
+fail-fast = false
+failure-output = "immediate-final"
+# GitHub's ubuntu-latest/macos runners are 4 vCPU / 16 GB, and a conversion is
+# memory-hungry: keep the historical concurrency of `--test-threads=2`. Under
+# nextest each test is its own PROCESS, so this is also strictly kinder to the
+# RSS fuse than 2 threads sharing one process's address space.
+test-threads = 2
+# Surface a hung test instead of letting it eat the job timeout. The slowest
+# test here is ~86 s locally and CI builds at opt-level=0, so 60 s is a
+# "tell me", not a failure; 20 periods (20 min) is the hard stop.
+slow-timeout = { period = "60s", terminate-after = 20 }

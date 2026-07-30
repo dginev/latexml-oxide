@@ -125,9 +125,24 @@ jobs:
         run: tools/miri_check.sh
 
   test:
-    name: latexml-oxide CI
+    # Sharded across 4 runners. The suite's cost is ~398 s of in-binary
+    # execution spread over 122 test targets, and `cargo test` runs those
+    # targets SEQUENTIALLY — so the test step was 18.7 min on Linux / 29.4 min
+    # on macOS while compilation (warm rust-cache) was only 2.2 / 4.7 min.
+    # Splitting the test list across runners is the fix that does NOT raise
+    # per-runner memory: each shard still runs 2 tests at a time inside its own
+    # 16 GB (see `test-threads` in .config/nextest.toml). `--partition` is
+    # exact — measured 524 + 462 + 433 + 416 = 1835, the whole suite.
+    name: latexml-oxide CI (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    strategy:
+      # One shard's failure must not cancel the others: we want the FULL
+      # failure picture from a red run, the same reason the local command
+      # carries --no-fail-fast.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
@@ -147,7 +162,7 @@ jobs:
       #    codegen-units; the profile fix addresses that directly.
       #  * mold linker — ~2-4× faster than ld and streams symbols
       #    rather than slurping into RAM.
-      #  * --test-threads=2 — pgf/tikz cells can spike to GB-scale
+      #  * test concurrency of 2 — pgf/tikz cells can spike to GB-scale
       #    working sets; conservative parallelism leaves headroom.
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
@@ -217,11 +232,17 @@ jobs:
       # warm rust-cache hit this is a no-op; on a cold cache it's the main
       # memory-pressure phase and isolating it from the test phase is
       # what fits the job back inside the 16 GB runner budget.
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
       - name: build test binaries
-        run: cargo test --profile ci --tests --workspace --no-run
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --no-run
 
       - name: run tests
-        run: cargo test --profile ci --tests --workspace -- --test-threads=2
+        # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
+        # selects the NEXTEST profile (.config/nextest.toml). They are
+        # different knobs that happen to share a name.
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition count:${{ matrix.shard }}/4
 
   # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
   # same make-formats → build → run flow; only the platform deps differ:
@@ -234,12 +255,18 @@ jobs:
   # is documented in README.md but not gated here — it lacks the package set
   # the full suite needs.)
   macos:
-    name: latexml-oxide CI (macOS)
+    name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)
     runs-on: macos-15
     # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
     # RAM-tuned `ci` profile + jobs=2 apply; the cold build dominates, so
     # allow more wall-clock than the Linux leg.
     timeout-minutes: 120
+    # Sharded like the Linux leg, and this is where it pays most: macOS was the
+    # gating job at ~47 min, of which 29.4 min was the sequential test step.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
@@ -286,7 +313,13 @@ jobs:
         env:
           PROFILE: ci
         run: tools/make_formats.sh
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
       - name: build test binaries
-        run: cargo test --profile ci --tests --workspace --no-run
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --no-run
       - name: run tests
-        run: cargo test --profile ci --tests --workspace -- --test-threads=2
+        # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
+        # selects the NEXTEST profile (.config/nextest.toml). They are
+        # different knobs that happen to share a name.
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition count:${{ matrix.shard }}/4
