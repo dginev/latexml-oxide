@@ -1,10 +1,11 @@
 //! The on-disk spill area for fragmented conversion.
 //!
 //! A segment file holds RAW, splice-ready text at every lifecycle stage —
-//! never a wrapper element. This is load-bearing: an enclosing subtree that
-//! spills LATER inlines an inner segment's file verbatim where its
-//! placeholder sits, so the file must always be exactly what belongs at that
-//! position in a serialization.
+//! never a wrapper element. An enclosing subtree that spills LATER keeps its
+//! children's `<_spilled_ ref=…/>` placeholders as LITERAL elements in its
+//! own file (inlining them once rebuilt multi-GB segments out of chapter
+//! shells); the final assembly resolves placeholders recursively
+//! (`Document::splice_segment_text`).
 //!
 //! 1. **Spilled** ([`SegmentStore::write_segment`]) — pass 1 stores the
 //!    pre-finalize serialization of one or more sibling subtrees.
@@ -71,6 +72,14 @@ pub struct SegmentMeta {
   /// parent substitutes for it (witness: tests/digestion/dollar.tex kept an
   /// empty `<text>` around an inline-block that eager collapsed).
   pub parent:     Option<String>,
+  /// Every `xml:id` on the spilled run's ANCESTOR chain at the spill point.
+  /// A `label:`/`id:`-scoped rewrite whose scope node is one of these
+  /// ancestors covers the WHOLE fragment (the fragment sits inside the
+  /// scope subtree), but the node itself lives in another fragment — the
+  /// selection would come up empty (witness: tests/math/simplemath.tex,
+  /// where `label:sec:restricted` stamps `role=FUNCTION` inside a section
+  /// whose shell spills separately from its paragraphs).
+  pub ancestors:  Vec<String>,
 }
 
 /// The element wrapping a spilled segment's sibling subtrees. Matches the
@@ -83,10 +92,10 @@ const SEGMENT_WRAPPER: &str = "_lxfragment";
 pub struct SegmentStore {
   dir:     PathBuf,
   metas:   Vec<SegmentMeta>,
-  /// Segments whose text was INLINED into a later, enclosing segment (a
-  /// closing ancestor swallowed their placeholders): their content now
-  /// travels with the outer segment, so they must be neither processed in
-  /// pass 2 nor spliced at assembly.
+  /// Historical: segments inlined into an enclosing one. Nested spills now
+  /// stay nested (literal placeholders + recursive assembly splice), so
+  /// nothing retires in the current pipeline; the mechanism remains for the
+  /// store's API stability.
   retired: Vec<bool>,
 }
 
@@ -225,6 +234,7 @@ mod tests {
       noindent:   false,
       section_id: None,
       parent:     None,
+      ancestors:  vec![],
       font:       Some(String::from("italic")),
       namespaces: vec![(
         String::from("ltx"),

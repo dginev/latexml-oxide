@@ -593,6 +593,11 @@ fn streaming_pass2(
         latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
       );
       frag.scoped_rules_strict = true;
+      // A fragment re-emits the (nested) placeholders it contains; only the
+      // final assembly resolves them.
+      frag.literal_placeholders = true;
+      // An ancestor-scoped rewrite covers the whole fragment (field docs).
+      frag.fragment_ancestor_ids = meta.ancestors.iter().cloned().collect();
       // Judge the parse wrapper as the segment's REAL parent in schema
       // decisions (empty-`ltx:text` collapse etc.) — see the field docs.
       frag.fragment_parent_qname = meta.parent.as_deref().map(arena::pin);
@@ -997,6 +1002,9 @@ impl DigestionAPI for Core {
     }
     document.set_spill_store(store);
     document.set_defer_root_after_open(true);
+    // Pass 1 serializes placeholders literally (nested spills stay nested;
+    // the final assembly resolves them recursively — see the field docs).
+    document.literal_placeholders = true;
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
     // Soft-RSS yield: fire regardless of box count once RSS crosses a THIRD
@@ -1077,17 +1085,82 @@ impl DigestionAPI for Core {
       let bounded_mode = stomach::fragment_yield_count() > 0;
       if !finishing || bounded_mode {
         document.spill_closed_subtrees(&mut index)?;
+        // Self-healing: entries for nodes that build-time discard paths
+        // detached without purging pin whole Digested box trees (see
+        // sweep_stale_node_boxes). The threshold keeps the sweep rare and
+        // the map bounded; the post-spill spine mark is cheap.
+        if document.node_boxes.len() > 1_000_000 {
+          document.sweep_stale_node_boxes();
+        }
         // Rate-limited: a book-scale run yields MILLIONS of fragments, and
         // every log line lands in the in-RAM LOG_BUFFER — per-fragment
         // telemetry alone wrote a 1.37 GB log on the 131 MB witness,
         // feeding the very creep pass 1 exists to avoid.
         let fragments = stomach::fragment_yield_count();
+        // Hand freed spill memory back to the OS. The spilled DOM lives on
+        // GLIBC's heap (libxml2 allocates via libc malloc, NOT the Rust
+        // global allocator), and glibc keeps freed mid-heap pages mapped —
+        // measured on the 131 MB witness: every probed Rust collection flat,
+        // C live-heap 4.45 GB peak (heaptrack), yet RSS crept 22→36 GB into
+        // the fuse. `malloc_trim(0)` madvises free pages away (glibc ≥2.26
+        // releases mid-heap pages too, not just the top). Rate-limited: a
+        // trim walks the heap, and a book-scale run yields millions of
+        // fragments.
+        #[cfg(target_os = "linux")]
+        if fragments % 4096 == 0 {
+          unsafe {
+            libc::malloc_trim(0);
+          }
+        }
+        // The Rust-side analogue: mimalloc (the global allocator) retains
+        // freed pages; a forced collect purges them back to the OS. Gated
+        // off under dhat-heap, whose tracking allocator replaces mimalloc.
+        #[cfg(not(feature = "dhat-heap"))]
+        if fragments % 4096 == 0 {
+          unsafe {
+            libmimalloc_sys::mi_collect(true);
+          }
+        }
         if fragments.is_power_of_two() || fragments % 65536 == 0 {
+          let (index_ids, index_labels, _) = index.sizes();
+          // C-heap split (glibc only manages libxml2's allocations — Rust
+          // goes through mimalloc): uordblks = live C bytes, fordblks =
+          // freed-but-retained. Together with RSS this separates C live
+          // growth / C fragmentation / Rust growth.
+          #[cfg(target_os = "linux")]
+          let (c_live_mb, c_free_mb) = {
+            let mi = unsafe { libc::mallinfo2() };
+            (mi.uordblks / (1024 * 1024), mi.fordblks / (1024 * 1024))
+          };
+          #[cfg(not(target_os = "linux"))]
+          let (c_live_mb, c_free_mb) = (0usize, 0usize);
+          let spine_children = document
+            .get_document()
+            .get_root_element()
+            .map(|r| r.get_child_nodes().len())
+            .unwrap_or(0);
+          let (mouths, comments) = gullet::queue_sizes();
           log::info!(
-            "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB",
+            "streaming: undo {}; mouths {}; comments {}; node_boxes {}",
+            state::undo_depth(),
+            mouths,
+            comments,
+            document.node_boxes.len(),
+          );
+          log::info!(
+            "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB; C-live {} MB; C-free {} MB; root-children {}; idstore {}; index {}+{}; arena {}; fonts {}; pending {}",
             fragments,
             latexml_core::document::spilled_segment_count(),
             stomach::last_sampled_rss_kb() / 1024,
+            c_live_mb,
+            c_free_mb,
+            spine_children,
+            document.idstore.len(),
+            index_ids,
+            index_labels,
+            arena::len(),
+            document.node_fonts.len(),
+            document.pending.len(),
           );
         }
       }
@@ -1128,6 +1201,9 @@ impl DigestionAPI for Core {
       log::warn!(
         "convert_streaming: fatal stop — emitting the cheap partial (pass 2 and the finalize          tail skipped to avoid allocating at the memory ceiling)"
       );
+      // The partial's serialization must still RESOLVE placeholders (raw
+      // segments splice recursively) — literal mode was for pass 1 only.
+      document.literal_placeholders = false;
       return Ok(document);
     }
     // RDFa prefixes used inside spilled content: the finalize scan can no
@@ -1172,7 +1248,8 @@ impl DigestionAPI for Core {
     // root exactly as in the eager path.
     finish_document(&mut document)?;
     // From here serialization splices the processed segments at their
-    // placeholders.
+    // placeholders (recursively — pass 1 kept nested spills nested).
+    document.literal_placeholders = false;
     document.set_spill_store(store);
     Ok(document)
   }

@@ -69,6 +69,11 @@ impl FragmentIndex {
     self.labels.iter().map(|(l, i)| (l.as_str(), i.as_str()))
   }
 
+  /// Registry sizes `(ids, labels, rdfa)` — pass-1 telemetry.
+  pub fn sizes(&self) -> (usize, usize, usize) {
+    (self.ids.len(), self.labels.len(), self.rdfa_prefixes.len())
+  }
+
   /// All RDFa prefix declarations contributed by spilled content.
   pub fn rdfa_prefixes(&self) -> impl Iterator<Item = (&str, &str)> {
     self

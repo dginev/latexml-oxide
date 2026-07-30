@@ -179,6 +179,7 @@ mod tests {
       noindent:   false,
       section_id: None,
       parent:     None,
+      ancestors:  vec![],
       font:       None,
       namespaces: vec![(
         String::from("ltx"),

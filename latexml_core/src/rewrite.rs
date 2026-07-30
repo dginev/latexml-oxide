@@ -256,10 +256,28 @@ impl Rewrite {
     if op == RewriteOperator::Scope
       && let RewritePattern::String(scope_str) = &pattern
     {
+      // Streaming pass 2: a scope resolving to a fragment ANCESTOR covers
+      // the whole fragment — the scope node itself lives in another
+      // fragment, so the id-xpath below would select nothing (witness
+      // tests/math/simplemath.tex, `label:sec:restricted`).
+      let whole_fragment_scope = |document: &Document| RewriteClause {
+        compiled: true,
+        op:       RewriteOperator::Select,
+        pattern:  RewritePattern::NodeList(
+          document
+            .get_document()
+            .get_root_element()
+            .into_iter()
+            .collect(),
+        ),
+      };
       if let Some(label_part) = scope_str.strip_prefix("label:") {
         if let Some(id) = document.rewrite_labels.get(label_part).cloned() {
           if self.options.select_count.is_none() {
             self.options.select_count = Some(1);
+          }
+          if document.fragment_ancestor_ids.contains(&id) {
+            return whole_fragment_scope(document);
           }
           let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
           return RewriteClause {
@@ -273,6 +291,9 @@ impl Rewrite {
         if let Some(id) = document.rewrite_labels.get(&clean_key).cloned() {
           if self.options.select_count.is_none() {
             self.options.select_count = Some(1);
+          }
+          if document.fragment_ancestor_ids.contains(&id) {
+            return whole_fragment_scope(document);
           }
           let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
           return RewriteClause {
@@ -304,6 +325,9 @@ impl Rewrite {
         // Use get_property("id") for xml:id lookup (L2 workaround)
         // findnodes with @xml:id='...' fails in rust-libxml
         let target_id = id_part.to_string();
+        if document.fragment_ancestor_ids.contains(&target_id) {
+          return whole_fragment_scope(document);
+        }
         let scope_nodes: Vec<Node> = document
           .findnodes("descendant-or-self::*", None)
           .into_iter()

@@ -1542,6 +1542,9 @@ pub fn with_value_mut<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Stored>) -> R {
   caller(state_mut!().lookup_value_mut(key))
 }
+/// Undo-stack depth (open TeX groups) — pass-1 streaming telemetry.
+pub fn undo_depth() -> usize { state!().undo.len() }
+
 /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
 pub fn lookup_bool(key: &str) -> bool {
   let state = state!();

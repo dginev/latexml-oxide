@@ -516,6 +516,12 @@ pub fn flush_mouth() {
 // # Get the next pending comment token (if any)
 pub fn get_pending_comment() -> Option<Token> { gullet_mut!().pending_comments.pop_front() }
 
+/// Queue sizes `(mouthstack, pending_comments)` — pass-1 streaming telemetry.
+pub fn queue_sizes() -> (usize, usize) {
+  let gullet = gullet!();
+  (gullet.mouthstack.len(), gullet.pending_comments.len())
+}
+
 /// Note that every char (token) comes through here (maybe even twice, through args parsing),
 /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
 fn handle_template(

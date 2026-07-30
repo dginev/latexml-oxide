@@ -91,6 +91,12 @@ pub struct Document {
   pub node_boxes:              HashMap<usize, Digested>, // used to be _box attribute
   pub node_fonts:              HashMap<u64, Font>,       // used to be _font attribute
   pub idstore:                 HashMap<String, Node>,
+  /// Streaming pass 1: every `xml:id` moved out of `idstore` by a spill.
+  /// The GLOBAL half of id-collision dedup — a later build-time minting of
+  /// the same id must rename exactly as eager would have (witness: the
+  /// 131 MB book restarts chapter numbering per part, and the second `Ch1`
+  /// collided only with a SPILLED chapter).
+  pub spilled_ids:             rustc_hash::FxHashSet<String>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
   pub rewrite_labels:          HashMap<String, String>,
   // the following are internal "local"-based declarations in Perl
@@ -138,6 +144,18 @@ pub struct Document {
   /// EVERYTHING — sweep witness tests/math/declare.tex, where section-7
   /// declarations stamped section-1 math.
   pub scoped_rules_strict:     bool,
+  /// Streaming: serialize spill placeholders LITERALLY (`<_spilled_ ref=…/>`)
+  /// instead of splicing the segment text. True during pass 1 (a spilling
+  /// ancestor must keep its children's placeholders — inlining them rebuilt
+  /// multi-GB segments: an 841 MB and a 1.85 GB one on the 131 MB witness,
+  /// and pass 2 died re-parsing them) and on pass-2 fragment docs (which
+  /// re-emit the placeholders they contain). False only at final assembly,
+  /// where the splice resolves placeholders RECURSIVELY.
+  pub literal_placeholders:    bool,
+  /// Streaming pass 2 only: the fragment's ancestor `xml:id`s at spill time
+  /// (SegmentMeta::ancestors). A `label:`/`id:`-scoped rewrite whose scope
+  /// resolves to one of these covers the WHOLE fragment.
+  pub fragment_ancestor_ids:   rustc_hash::FxHashSet<String>,
   /// Streaming pass 2 only: the recorded qname of the fragment's REAL parent
   /// (SegmentMeta::parent). `finalize_rec` substitutes it for the
   /// `ltx:_lxfragment` parse wrapper in schema decisions, so top-level
@@ -228,6 +246,7 @@ impl Document {
       node_boxes:                  HashMap::default(),
       node_fonts:                  HashMap::default(),
       idstore:                     HashMap::default(),
+      spilled_ids:                 rustc_hash::FxHashSet::default(),
       rewrite_labels:              HashMap::default(),
       pending:                     Vec::new(),
       localized_constructed_nodes: Vec::new(),
@@ -243,6 +262,8 @@ impl Document {
       spill_store:                 None,
       extra_rdfa_prefixes:         Vec::new(),
       scoped_rules_strict:         false,
+      literal_placeholders:        false,
+      fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
       fragment_parent_qname:       None,
       defer_root_after_open:       false,
     }
@@ -1628,6 +1649,66 @@ impl Document {
     serialized
   }
 
+  /// Splice a processed segment's text into `out`, resolving NESTED
+  /// placeholders recursively (final assembly only). A segment spilled by a
+  /// closing ancestor keeps its children's `<_spilled_ ref=…/>` markers as
+  /// literal elements — inlining their text at spill time rebuilt multi-GB
+  /// segments that pass 2 could not re-materialize. Each literal marker
+  /// occupies either a full line (`indent + element + newline`, the
+  /// indenting serialization) or an exact element span (noindent contexts);
+  /// the inner segment text carries its own indentation/newline, so the
+  /// marker's surrounding whitespace is dropped — but ONLY when the marker
+  /// is line-positioned, so content spaces in noindent contexts survive.
+  /// `<` is escaped everywhere in serialized text/attribute content, so the
+  /// scan cannot match anything but real markers.
+  fn splice_segment_text(&self, out: &mut String, text: &str) {
+    let mut rest = text;
+    while let Some(pos) = rest.find("<_spilled_ ") {
+      let (before, from) = rest.split_at(pos);
+      let Some(elem_end) = from.find("/>").map(|e| e + 2) else {
+        break; // malformed marker: emit as-is below
+      };
+      let elem = &from[..elem_end];
+      let seg_opt = elem
+        .split_once("ref=\"")
+        .and_then(|(_, tail)| tail.split_once('"'))
+        .and_then(|(num, _)| num.parse::<u32>().ok())
+        .map(crate::sxml::SegmentId);
+      let inner = seg_opt.and_then(|seg| {
+        self
+          .spill_store
+          .as_ref()
+          .and_then(|store| store.read_segment(seg).ok())
+      });
+      let Some(inner) = inner else {
+        log::error!(
+          "Error:spill:unresolved a nested spilled segment could not be spliced ({elem})"
+        );
+        out.push_str(before);
+        out.push_str("<!-- latexml-oxide: LOST spilled segment -->\n");
+        rest = &from[elem_end..];
+        continue;
+      };
+      // Drop the marker's own line whitespace when line-positioned.
+      let mut cut = before.len();
+      while cut > 0 && before.as_bytes()[cut - 1] == b' ' {
+        cut -= 1;
+      }
+      let line_positioned = cut == 0 || before.as_bytes()[cut - 1] == b'\n';
+      if line_positioned {
+        out.push_str(&before[..cut]);
+      } else {
+        out.push_str(before);
+      }
+      self.splice_segment_text(out, &inner);
+      rest = &from[elem_end..];
+      if line_positioned && rest.starts_with('\n') {
+        rest = &rest[1..];
+      }
+    }
+    out.push_str(rest);
+  }
+
   /// Buffer-threaded core of [`serialize_aux`]. Writes the subtree directly into
   /// `out` instead of building (and re-copying) a fresh `String` per node — the
   /// recursive return-a-String pattern was the single largest byte source in the
@@ -1669,7 +1750,7 @@ impl Document {
         // recursion carries here). A placeholder that cannot be resolved is
         // LOST CONTENT: flag it loudly in the log AND the output, never drop
         // it silently (fail toward flagging).
-        if local_name == SPILL_PLACEHOLDER {
+        if local_name == SPILL_PLACEHOLDER && !self.literal_placeholders {
           let resolved = self
             .spill_store
             .as_ref()
@@ -1679,7 +1760,7 @@ impl Document {
               store.read_segment(seg).ok()
             });
           match resolved {
-            Some(text) => out.push_str(&text),
+            Some(text) => self.splice_segment_text(out, &text),
             None => {
               // `Error!` can early-return and this serializer returns `()`,
               // so raise through the logger; the marker keeps the loss
@@ -1693,6 +1774,8 @@ impl Document {
           }
           return;
         }
+        // (a literal_placeholders doc falls through: the placeholder is an
+        // ordinary childless element and serializes as itself)
         let tag = if let Some(ns) = node.get_namespace() {
           let prefix = ns.get_prefix();
           if prefix.is_empty() {
@@ -3337,7 +3420,23 @@ impl Document {
     } else {
       None
     };
-    let final_id = if let Some(prev) = prev_opt {
+    // The spilled half: an id that left the idstore with a spilled fragment
+    // is just as taken (its node is on disk, not in the tree).
+    let spilled_collision = prev_opt.is_none() && self.spilled_ids.contains(id);
+    let final_id = if spilled_collision {
+      let new_id = self.modify_id(id.to_owned());
+      Debug!(
+        "malformed",
+        "id",
+        s!(
+          "Duplicated attribute xml:id. Using id='{}' on <{}> id='{}' already set on a spilled fragment",
+          new_id,
+          arena::to_string(get_node_qname(node)),
+          id
+        )
+      );
+      new_id
+    } else if let Some(prev) = prev_opt {
       let badid = id;
       let new_id = self.modify_id(id.to_owned());
       // Concise node descriptions, mirroring Perl `Stringify($node)`
@@ -3671,33 +3770,17 @@ impl Document {
     for (i, node) in all.into_iter().enumerate() {
       // A spilled subtree can CONTAIN placeholders from earlier, deeper
       // spills (a closing section swallows its paragraphs' placeholders).
-      // Serializing through `serialize_into` INLINES those nested segments'
-      // raw text — both are in the pre-finalize form, so the outer segment
-      // simply absorbs the inner one; the swallowed ids are then retired so
-      // pass 2 neither processes nor splices them independently.
-      let mut swallowed: Vec<crate::sxml::SegmentId> = Vec::new();
-      for ph in self.findnodes(
-        &s!(
-          "descendant-or-self::*[local-name()='{}']",
-          SPILL_PLACEHOLDER
-        ),
-        Some(&node),
-      ) {
-        if let Some(r) = ph.get_attribute("ref")
-          && let Ok(n) = r.parse::<u32>()
-        {
-          swallowed.push(crate::sxml::SegmentId(n));
-        }
-      }
+      // They serialize LITERALLY (`literal_placeholders` is set for all of
+      // pass 1) and the final assembly's splice resolves them recursively —
+      // inlining them here instead once rebuilt an 841 MB and a 1.85 GB
+      // segment out of chapter shells on the 131 MB witness, and pass 2
+      // died re-materializing them.
+      debug_assert!(
+        self.literal_placeholders,
+        "spill_run must serialize placeholders literally (set for all of pass 1)"
+      );
       self.serialize_into(&mut xml, &node, depth, noindent, false);
       chunk.push(node);
-      for inner in &swallowed {
-        let store = self
-          .spill_store
-          .as_mut()
-          .expect("checked at spill_closed_subtrees entry");
-        store.retire_segment(*inner)?;
-      }
       let last = i + 1 == total;
       if xml.len() >= Self::SEGMENT_CHUNK_BYTES || last {
         let meta = SegmentMeta {
@@ -3710,6 +3793,19 @@ impl Document {
             .first()
             .and_then(|n| n.get_parent())
             .map(|p| arena::to_string(get_node_qname(&p))),
+          ancestors: {
+            // Every ancestor xml:id: a scope rooted at one of these covers
+            // the whole fragment (see SegmentMeta::ancestors).
+            let mut ids = Vec::new();
+            let mut cur = chunk.first().and_then(|n| n.get_parent());
+            while let Some(n) = cur {
+              if let Some(id) = n.get_attribute_ns("id", XML_NS) {
+                ids.push(id);
+              }
+              cur = n.get_parent();
+            }
+            ids
+          },
         };
         let store = self
           .spill_store
@@ -3770,10 +3866,13 @@ impl Document {
     seg: crate::sxml::SegmentId,
     index: &mut crate::sxml::FragmentIndex,
   ) {
+    // Box entries exist for TEXT nodes too (see purge_node_boxes_rec) —
+    // purge before the element gate or a prose-heavy document leaks a
+    // pinned `Digested` per spilled text node.
+    self.node_boxes.remove(&node.to_hashable());
     if node.get_type() != Some(NodeType::ElementNode) {
       return;
     }
-    self.node_boxes.remove(&node.to_hashable());
     for attr in [
       "about", "resource", "property", "typeof", "rel", "rev", "datatype",
     ] {
@@ -3789,6 +3888,7 @@ impl Document {
     if let Some(id) = &id_opt {
       index.record_id(id, seg);
       self.unrecord_id(id);
+      self.spilled_ids.insert(id.clone());
       if let Some(labels) = node.get_attribute("labels") {
         for label in labels.split_whitespace() {
           index.record_label(label, id);
@@ -3838,10 +3938,15 @@ impl Document {
   /// observed as spurious `<text font="italic">` wrappers the moment the
   /// math parser started freeing replaced trees promptly.
   pub fn purge_node_boxes_rec(&mut self, node: &Node) {
-    if node.get_type() != Some(NodeType::ElementNode) {
-      return;
-    }
+    // EVERY node type can carry an entry: absorbing text records the box
+    // against the TEXT node (`openText_internal`), and `get_node_box` never
+    // reads those — but an unpurged one pins its whole `Digested` forever.
+    // Measured: the dominant pass-1 creep on a 131 MB prose-heavy book
+    // (~11 GB of orphaned text-node boxes; every probed collection flat).
     self.node_boxes.remove(&node.to_hashable());
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return; // only elements have children to descend into
+    }
     for child in node.get_child_nodes() {
       self.purge_node_boxes_rec(&child);
     }
@@ -3869,6 +3974,33 @@ impl Document {
   pub fn discard_subtree(&mut self, node: Node) {
     self.purge_node_boxes_rec(&node);
     node.free_subtree();
+  }
+
+  /// Drop every `node_boxes` entry whose node is no longer IN this document
+  /// tree (streaming pass 1's self-healing sweep). Entries are written for
+  /// every constructed node and purged at the spill/discard chokepoints —
+  /// but dozens of build-time discard paths (alignment rearrangement above
+  /// all: 105k `align` environments on the 131 MB witness) detach nodes
+  /// without purging, and each stale entry pins a whole `Digested` box tree.
+  /// Measured: ~518k stale entries before the FIRST spill, growing past
+  /// 1.75M — the dominant residual pass-1 creep after the C-side frees.
+  /// A mark-and-retain against the live tree is immune to every such path,
+  /// including future ones. Runs when the map is large; the post-spill
+  /// spine is small, so the mark phase is cheap.
+  pub fn sweep_stale_node_boxes(&mut self) {
+    fn mark(node: &Node, live: &mut rustc_hash::FxHashSet<usize>) {
+      live.insert(node.to_hashable());
+      if node.get_type() == Some(NodeType::ElementNode) {
+        for child in node.get_child_nodes() {
+          mark(&child, live);
+        }
+      }
+    }
+    let mut live: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
+    if let Some(root) = self.document.get_root_element() {
+      mark(&root, &mut live);
+    }
+    self.node_boxes.retain(|k, _| live.contains(k));
   }
 
   /// Attach the processed-segment store for serialization: from here on,
@@ -4022,14 +4154,14 @@ impl Document {
   /// Sneaky option: try "ID_SUFFIX" as a suffix for id, first.
   /// Perl: sub modifyID (Document.pm lines 1483-1494)
   pub fn modify_id(&mut self, id: String) -> String {
-    if self.idstore.contains_key(&id) {
+    if self.idstore.contains_key(&id) || self.spilled_ids.contains(&id) {
       // Whoops! Already assigned!!!
       // Can we recover?
       let badid = id;
       // First try ID_SUFFIX if set
       if let Some(Stored::String(suffix)) = state::lookup_value("ID_SUFFIX") {
         let suffixed = s!("{}{}", badid, arena::to_string(suffix));
-        if !self.idstore.contains_key(&suffixed) {
+        if !self.idstore.contains_key(&suffixed) && !self.spilled_ids.contains(&suffixed) {
           return suffixed;
         }
       }
@@ -4037,7 +4169,7 @@ impl Document {
       // Gotta give up, eventually; is 3 letters enough?
       for s1 in 1_i64..=(26 * 26 * 26) {
         let candidate = s!("{}{}", badid, radix_alpha(s1));
-        if !self.idstore.contains_key(&candidate) {
+        if !self.idstore.contains_key(&candidate) && !self.spilled_ids.contains(&candidate) {
           return candidate;
         }
       }
