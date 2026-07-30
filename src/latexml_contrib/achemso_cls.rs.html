@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/achemso_cls.rs`."><title>achemso_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (1a833e165 2026-07-29)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>achemso_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for achemso.cls (ACS chemistry journals).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/achemso_cls.rs`."><title>achemso_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (1a833e165 2026-07-29)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>achemso_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for achemso.cls (ACS chemistry journals).
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! achemso.cls is an article-derivative for ACS journals. Provides
 <a href=#4 id=4 data-nosnippet>4</a>//! authorship/affiliation primitives (\affiliation, \alsoaffiliation,
@@ -66,23 +66,68 @@
 <a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// \acsSection — section opener with text becoming heading.
 <a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\acsSection{}"</span>, <span class="string">"\\section*{#1}"</span>);
 <a href=#68 id=68 data-nosnippet>68</a>
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="comment">// {tocentry} environment — table of contents image, suppress.
-<a href=#70 id=70 data-nosnippet>70</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{tocentry}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\iffalse"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{tocentry}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\fi"</span>);
-<a href=#72 id=72 data-nosnippet>72</a>
-<a href=#73 id=73 data-nosnippet>73</a>  <span class="comment">// {acknowledgement} — ACS-spelt acknowledgement section.
-<a href=#74 id=74 data-nosnippet>74</a>  </span><span class="macro">DefEnvironment!</span>(
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">"{acknowledgement}"</span>,
-<a href=#76 id=76 data-nosnippet>76</a>    <span class="string">"&lt;ltx:acknowledgements&gt;#body&lt;/ltx:acknowledgements&gt;"
-<a href=#77 id=77 data-nosnippet>77</a>  </span>);
-<a href=#78 id=78 data-nosnippet>78</a>
-<a href=#79 id=79 data-nosnippet>79</a>  <span class="comment">// achemso.cls extras commonly hit in ACS papers. The class L1087 sets
-<a href=#80 id=80 data-nosnippet>80</a>  // a section-numbering policy via `\SectionNumbersOn` (preamble only);
-<a href=#81 id=81 data-nosnippet>81</a>  // HTML rendering inherits LaTeX's default numbering so the toggle is
-<a href=#82 id=82 data-nosnippet>82</a>  // a no-op. L294 `\providecommand{\latin}[1]{#1}` is an identity
-<a href=#83 id=83 data-nosnippet>83</a>  // wrapper for italicized Latin abbreviations. Witness 2312.12737.
-<a href=#84 id=84 data-nosnippet>84</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\SectionNumbersOn"</span>, <span class="prelude-val">None</span>);
-<a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SectionNumbersOff"</span>, <span class="prelude-val">None</span>);
-<a href=#86 id=86 data-nosnippet>86</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\latin{}"</span>, <span class="string">"#1"</span>);
-<a href=#87 id=87 data-nosnippet>87</a>});
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="comment">// {tocentry} environment — the journal's table-of-contents graphic, which
+<a href=#70 id=70 data-nosnippet>70</a>  // does not belong in the body.
+<a href=#71 id=71 data-nosnippet>71</a>  //
+<a href=#72 id=72 data-nosnippet>72</a>  // It must NOT be suppressed with `\iffalse`…`\fi`. Conditional skipping
+<a href=#73 id=73 data-nosnippet>73</a>  // matches `\fi` by MEANING and expands nothing on the way (TeX's rule, and
+<a href=#74 id=74 data-nosnippet>74</a>  // ours — `skip_conditional_body` in `conditional.rs`), so an
+<a href=#75 id=75 data-nosnippet>75</a>  // `\end{tocentry}` whose macro *body* is `\fi` is invisible to it: the skip
+<a href=#76 id=76 data-nosnippet>76</a>  // ran to end of file and swallowed the rest of the paper, `\bibliography`
+<a href=#77 id=77 data-nosnippet>77</a>  // included. That one line cost 42 of the 342 residual papers in the
+<a href=#78 id=78 data-nosnippet>78</a>  // 2605+2606 bibliography-absence cohort their entire bibliography, and
+<a href=#79 id=79 data-nosnippet>79</a>  // showed up as `Error:expected:\fi \iffalse` pointing at EOF — which reads
+<a href=#80 id=80 data-nosnippet>80</a>  // like a source defect and is not one. Witnesses 2606.14933, 2605.00451,
+<a href=#81 id=81 data-nosnippet>81</a>  // 2606.00264; audit family F6.
+<a href=#82 id=82 data-nosnippet>82</a>  //
+<a href=#83 id=83 data-nosnippet>83</a>  // Perl never reaches this: it has no achemso binding at all and falls back
+<a href=#84 id=84 data-nosnippet>84</a>  // to OmniBus (`Warning:missing_file:achemso`), leaving `{tocentry}`
+<a href=#85 id=85 data-nosnippet>85</a>  // undefined. pdflatex of course renders these papers fine.
+<a href=#86 id=86 data-nosnippet>86</a>  //
+<a href=#87 id=87 data-nosnippet>87</a>  // Nor may the body simply be DIGESTED and dropped (`DefEnvironment!
+<a href=#88 id=88 data-nosnippet>88</a>  // ("{tocentry}", "")`): these graphics are TikZ/`\includegraphics` blocks
+<a href=#89 id=89 data-nosnippet>89</a>  // that error heavily out of context. Measured on the same cohort, that
+<a href=#90 id=90 data-nosnippet>90</a>  // turned three papers from "no bibliography" into no OUTPUT AT ALL —
+<a href=#91 id=91 data-nosnippet>91</a>  // 2606.08929, 2606.12056 and 2606.15422 went from 1 error to 513 and a
+<a href=#92 id=92 data-nosnippet>92</a>  // fatal (`\lxSVG@endscope`, `undefined:\@startsection`).
+<a href=#93 id=93 data-nosnippet>93</a>  //
+<a href=#94 id=94 data-nosnippet>94</a>  // So skip the body as RAW LINES, the way comment.sty's excluded
+<a href=#95 id=95 data-nosnippet>95</a>  // environments do (`comment_sty.rs`) — no digestion, no conditionals. The
+<a href=#96 id=96 data-nosnippet>96</a>  // `\end{tocentry}` is consumed as text, so it is deliberately left
+<a href=#97 id=97 data-nosnippet>97</a>  // undefined.
+<a href=#98 id=98 data-nosnippet>98</a>  </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{tocentry}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#99 id=99 data-nosnippet>99</a>  after_digest =&gt; {
+<a href=#100 id=100 data-nosnippet>100</a>    <span class="comment">// The rest of the `\begin{tocentry}` line — which may already carry the
+<a href=#101 id=101 data-nosnippet>101</a>    // matching `\end{tocentry}`, as the one-line form does.
+<a href=#102 id=102 data-nosnippet>102</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(first) = read_raw_line()
+<a href=#103 id=103 data-nosnippet>103</a>      &amp;&amp; first.contains(<span class="string">"\\end{tocentry}"</span>)
+<a href=#104 id=104 data-nosnippet>104</a>    {
+<a href=#105 id=105 data-nosnippet>105</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#106 id=106 data-nosnippet>106</a>    }
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">let </span><span class="kw-2">mut </span>nlines = <span class="number">0</span>;
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(line) = read_raw_line() {
+<a href=#109 id=109 data-nosnippet>109</a>      <span class="kw">if </span>line.contains(<span class="string">"\\end{tocentry}"</span>) {
+<a href=#110 id=110 data-nosnippet>110</a>        <span class="kw">break</span>;
+<a href=#111 id=111 data-nosnippet>111</a>      }
+<a href=#112 id=112 data-nosnippet>112</a>      nlines += <span class="number">1</span>;
+<a href=#113 id=113 data-nosnippet>113</a>    }
+<a href=#114 id=114 data-nosnippet>114</a>    note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"[Skipped tocentry ({nlines} lines)]"</span>));
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#116 id=116 data-nosnippet>116</a>  });
+<a href=#117 id=117 data-nosnippet>117</a>
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="comment">// {acknowledgement} — ACS-spelt acknowledgement section.
+<a href=#119 id=119 data-nosnippet>119</a>  </span><span class="macro">DefEnvironment!</span>(
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="string">"{acknowledgement}"</span>,
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="string">"&lt;ltx:acknowledgements&gt;#body&lt;/ltx:acknowledgements&gt;"
+<a href=#122 id=122 data-nosnippet>122</a>  </span>);
+<a href=#123 id=123 data-nosnippet>123</a>
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="comment">// achemso.cls extras commonly hit in ACS papers. The class L1087 sets
+<a href=#125 id=125 data-nosnippet>125</a>  // a section-numbering policy via `\SectionNumbersOn` (preamble only);
+<a href=#126 id=126 data-nosnippet>126</a>  // HTML rendering inherits LaTeX's default numbering so the toggle is
+<a href=#127 id=127 data-nosnippet>127</a>  // a no-op. L294 `\providecommand{\latin}[1]{#1}` is an identity
+<a href=#128 id=128 data-nosnippet>128</a>  // wrapper for italicized Latin abbreviations. Witness 2312.12737.
+<a href=#129 id=129 data-nosnippet>129</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\SectionNumbersOn"</span>, <span class="prelude-val">None</span>);
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SectionNumbersOff"</span>, <span class="prelude-val">None</span>);
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\latin{}"</span>, <span class="string">"#1"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>});
 </code></pre></div></section></main></body></html>

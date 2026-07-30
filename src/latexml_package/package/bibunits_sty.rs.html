@@ -117,23 +117,47 @@
 <a href=#117 id=117 data-nosnippet>117</a>    assign_value(<span class="string">"CITE_UNIT"</span>, pin(<span class="kw-2">&amp;</span>cite_unit), <span class="prelude-val">None</span>);
 <a href=#118 id=118 data-nosnippet>118</a>  });
 <a href=#119 id=119 data-nosnippet>119</a>
-<a href=#120 id=120 data-nosnippet>120</a>  <span class="macro">DefMacro!</span>(
-<a href=#121 id=121 data-nosnippet>121</a>    <span class="string">"\\putbib[]"</span>,
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="string">"\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}"
-<a href=#123 id=123 data-nosnippet>123</a>  </span>);
-<a href=#124 id=124 data-nosnippet>124</a>
-<a href=#125 id=125 data-nosnippet>125</a>  <span class="comment">// Perl: make \bibliography reset the backmatter element
-<a href=#126 id=126 data-nosnippet>126</a>  </span><span class="macro">Let!</span>(<span class="string">"\\bu@orig@bibliography"</span>, <span class="string">"\\bibliography"</span>);
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="comment">// Store original backmatter element for bibliography
-<a href=#128 id=128 data-nosnippet>128</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(orig) = lookup_mapping(<span class="string">"BACKMATTER_ELEMENT"</span>, <span class="string">"ltx:bibliography"</span>) {
-<a href=#129 id=129 data-nosnippet>129</a>    assign_value(<span class="string">"ORIG_BIBUNIT"</span>, orig, <span class="prelude-val">None</span>);
-<a href=#130 id=130 data-nosnippet>130</a>  }
-<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibliography"</span>, <span class="string">"\\lx@reset@bibunit\\bu@orig@bibliography"</span>);
-<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@reset@bibunit"</span>, <span class="prelude-val">None</span>,
-<a href=#133 id=133 data-nosnippet>133</a>  after_digest =&gt; {
-<a href=#134 id=134 data-nosnippet>134</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(orig) = lookup_value(<span class="string">"ORIG_BIBUNIT"</span>) {
-<a href=#135 id=135 data-nosnippet>135</a>      assign_mapping(<span class="string">"BACKMATTER_ELEMENT"</span>, <span class="string">"ltx:bibliography"</span>, <span class="prelude-val">Some</span>(orig));
-<a href=#136 id=136 data-nosnippet>136</a>    }
-<a href=#137 id=137 data-nosnippet>137</a>  });
-<a href=#138 id=138 data-nosnippet>138</a>});
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="comment">// Perl: `\putbib[]` -&gt; `\lx@bibliography[\bu@unitname]{...}`, i.e. the `.bib`
+<a href=#121 id=121 data-nosnippet>121</a>  // route only. But the real package inputs the per-unit `.bbl`
+<a href=#122 id=122 data-nosnippet>122</a>  // (`bibunits.sty` L324-330: the optional argument only feeds the `.aux`
+<a href=#123 id=123 data-nosnippet>123</a>  // `\bibdata` record, then `\@input@{\@bibunitname.bbl}` unconditionally) —
+<a href=#124 id=124 data-nosnippet>124</a>  // the exact shape `\bibliography` has with `\jobname.bbl`, and the reason
+<a href=#125 id=125 data-nosnippet>125</a>  // pdflatex renders these bibliographies. arXiv ships the generated
+<a href=#126 id=126 data-nosnippet>126</a>  // `bu1.bbl`/`bu2.bbl` precisely because it does not run bibtex, and the
+<a href=#127 id=127 data-nosnippet>127</a>  // named `.bib` is usually absent, so the `.bib` route finds nothing and the
+<a href=#128 id=128 data-nosnippet>128</a>  // References section comes out empty. Prefer the shipped `.bbl` and keep
+<a href=#129 id=129 data-nosnippet>129</a>  // Perl's route as the fallback. OXIDIZED_DESIGN #87; audit family F3(c),
+<a href=#130 id=130 data-nosnippet>130</a>  // witnesses 2606.04416, 2605.21570, 2605.26693.
+<a href=#131 id=131 data-nosnippet>131</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="string">"\\putbib[]"</span>,
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="string">"\\lx@bibunits@ifusebbl{\\input{\\bu@unitname.bbl}}\
+<a href=#134 id=134 data-nosnippet>134</a>     {\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}}"
+<a href=#135 id=135 data-nosnippet>135</a>  </span>);
+<a href=#136 id=136 data-nosnippet>136</a>
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="comment">// Takes the `.bbl` clause when `&lt;bibunitname&gt;.bbl` is on disk, else the
+<a href=#138 id=138 data-nosnippet>138</a>  // `.bib` clause. Mirrors `\lx@ifusebbl` (`latex_constructs.rs`), which does
+<a href=#139 id=139 data-nosnippet>139</a>  // the same test for `\jobname.bbl`.
+<a href=#140 id=140 data-nosnippet>140</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@bibunits@ifusebbl{}{}"</span>, sub[(bbl_clause, bib_clause)] {
+<a href=#141 id=141 data-nosnippet>141</a>    <span class="kw">let </span>unit = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\bu@unitname"</span>)).to_string();
+<a href=#142 id=142 data-nosnippet>142</a>    <span class="kw">if </span><span class="macro">FindFile!</span>(<span class="kw-2">&amp;</span>unit, <span class="kw">type </span>=&gt; <span class="string">"bbl"</span>).is_some() {
+<a href=#143 id=143 data-nosnippet>143</a>      <span class="prelude-val">Ok</span>(bbl_clause)
+<a href=#144 id=144 data-nosnippet>144</a>    } <span class="kw">else </span>{
+<a href=#145 id=145 data-nosnippet>145</a>      <span class="prelude-val">Ok</span>(bib_clause)
+<a href=#146 id=146 data-nosnippet>146</a>    }
+<a href=#147 id=147 data-nosnippet>147</a>  });
+<a href=#148 id=148 data-nosnippet>148</a>
+<a href=#149 id=149 data-nosnippet>149</a>  <span class="comment">// Perl: make \bibliography reset the backmatter element
+<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="macro">Let!</span>(<span class="string">"\\bu@orig@bibliography"</span>, <span class="string">"\\bibliography"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="comment">// Store original backmatter element for bibliography
+<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(orig) = lookup_mapping(<span class="string">"BACKMATTER_ELEMENT"</span>, <span class="string">"ltx:bibliography"</span>) {
+<a href=#153 id=153 data-nosnippet>153</a>    assign_value(<span class="string">"ORIG_BIBUNIT"</span>, orig, <span class="prelude-val">None</span>);
+<a href=#154 id=154 data-nosnippet>154</a>  }
+<a href=#155 id=155 data-nosnippet>155</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibliography"</span>, <span class="string">"\\lx@reset@bibunit\\bu@orig@bibliography"</span>);
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@reset@bibunit"</span>, <span class="prelude-val">None</span>,
+<a href=#157 id=157 data-nosnippet>157</a>  after_digest =&gt; {
+<a href=#158 id=158 data-nosnippet>158</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(orig) = lookup_value(<span class="string">"ORIG_BIBUNIT"</span>) {
+<a href=#159 id=159 data-nosnippet>159</a>      assign_mapping(<span class="string">"BACKMATTER_ELEMENT"</span>, <span class="string">"ltx:bibliography"</span>, <span class="prelude-val">Some</span>(orig));
+<a href=#160 id=160 data-nosnippet>160</a>    }
+<a href=#161 id=161 data-nosnippet>161</a>  });
+<a href=#162 id=162 data-nosnippet>162</a>});
 </code></pre></div></section></main></body></html>
