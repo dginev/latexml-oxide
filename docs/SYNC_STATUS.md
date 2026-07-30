@@ -1048,6 +1048,72 @@ for `XMTok` in any inline element's model, so a speculative change risks an
 unfaithful divergence. Repro + full notes:
 `docs/reproducers/glossaryref_math_xmtok.tex`.
 
+### (not ranked) Font-selection chain audit, 2026-07-30 — residuals
+
+Sweep of every `selectfont` occurrence in `LaTeXML/lib/LaTeXML/` (22 hits) plus the
+sibling primitives, done while fixing the family-as-encoding gap above. **The
+`\selectfont` question itself is CLOSED**: Perl has exactly one
+`DefPrimitive('\selectfont')` (`latex_constructs.pool.ltxml:5202`) and **no package
+or class anywhere redefines or `Let`s it**, so there is no second definition site to
+port. The 9 family/series/shape switches, `\normalfont`, `\verbatim@font`,
+`\usefont`, `subfigure`'s 6 font hooks, `\fontencoding`/`\f@encoding`,
+`\DeclareFontShape`/`Family`/`FixedFont`/`Encoding`/`Subset`, `\symbol`,
+`\fontsize`, `\Declare{Text,Old}FontCommand`, `\DeclareSymbolFontAlphabet` and
+`\try@load@fontshape` all verified faithful.
+
+What the sweep turned up is in *sibling* primitives — same subsystem, same class of
+symptom (a font attribute or glyph silently wrong, no diagnostic). Ranked, with
+verification status stated explicitly; **the unverified rows are single-agent claims
+with file:line, not established facts — re-verify before acting**:
+
+1. **`\char`/`\symbol` yield the EMPTY STRING in math mode** — VERIFIED by me
+   (`$\char65$`: Perl `<Math … text="A">`, Rust emits nothing at all).
+   `tex_character.rs` calls `font::decode_str(…, None, …)`, and `font::decode`
+   uses `Cow::Borrowed("")` when the font's encoding is `None` — which
+   `Font::math_default()` deliberately sets (`common/font.rs:624`). Perl's
+   `FontDecode` defaults `$font->getEncoding || 'OT1'` (`Package.pm:2874`).
+   Rust's own `content.rs:3374` sibling *does* default to OT1, so the two decode
+   paths are internally inconsistent. Also `code.value_of() as u8` truncates:
+   `\char300` wraps to 44 → `,`.
+2. **`\DeclareSymbolFont`'s encoding arg is not `ExpandedPartially`** — VERIFIED by
+   me (Perl `latex_constructs.pool.ltxml:2664` has it, Rust
+   `latex_constructs.rs:6881` does not). `\DeclareSymbolFont{operators}{\encodingdefault}{\rmdefault}{m}{n}`
+   is what `fontmath.ltx` writes, so Rust stores the literal `\encodingdefault` and
+   every dependent `\DeclareMathSymbol`/`\DeclareMathAccent` looks up a fontmap of
+   that name.
+3. **`DeclareFontMap`'s `(uppercase|lowercase|digit)_mathstyle` options are
+   unported** — VERIFIED write-only by me: `tex_fonts.rs` writes
+   `OMS_uppercase_mathstyle`, `amsb_fontmap.rs:2` records a dropped blackboard
+   `uppercase_mathstyle` in a comment, and nothing reads either key. Perl's
+   `FontDecode` (`Package.pm:2884-2889`) uses them to keep an alphanumeric as ASCII
+   while recording the semantic font change. Claimed-but-unmeasured consequence:
+   `$\cal A$` double-styles (U+1D49C *and* `font=caligraphic`) where Perl gives `A`
+   + caligraphic, and hands a non-ASCII letter to the grammar.
+4. **`\DeclareMathAlphabet` skips `lookupTeXFont`** — UNVERIFIED claim
+   (`latex_constructs.pool.ltxml:2677` vs `latex_constructs.rs:6957`): Rust stores
+   raw NFSS codes (`cmss`/`m`/`n`) where Perl maps them to the abstract
+   `sansserif`/`medium`/`upright`. Also missing Perl's `Info('ignore', …)` on the
+   already-defined branch.
+5. **`\mathversion{bold}` merges the text font, not `mathfont`** — UNVERIFIED claim
+   (`:5290` vs `latex_constructs.rs:10607`); Rust's `\boldmath`/`\unboldmath`
+   (`plain_base.rs:747`) reportedly get this right, so `\mathversion` would be the
+   odd one out. Unknown versions also swallowed instead of `Error`.
+6. **`\DeclareTextCommand`/`\ProvideTextCommand` don't install the encoding-dispatch
+   chain** — UNVERIFIED claim (`:2584`/`:2598` vs `latex_constructs.rs:6519`/`6538`):
+   the first encoding to declare a CS would win permanently. Kernel accents are
+   masked by the dump, so only *package*-declared text commands (tipa T3, T2A
+   extras, TS1 additions) would show it. Rust's `\DeclareTextSymbol` *does* install
+   the chain, so the two are claimed inconsistent.
+7. Lower: `\DeclareTextSymbol` decodes eagerly at declaration instead of installing a
+   deferred `CharDef` (loses the glyph permanently if the fontmap is not yet
+   loaded); `LoadFontMap` never emits Perl's `Info('fontmap', …)`;
+   `\DeclareErrorFont` is a bare no-op where Perl defines its arg as `\relax`;
+   `\textit@math` sets `\f@shape` to `i` vs Perl's `it` (both map to `italic`, so
+   cosmetic).
+
+`docs/parity/OXIDIZED_DESIGN.md` has no font section, so none of these is a
+documented divergence. Method and the two detection traps: [`WISDOM.md`](parity/WISDOM.md) §80.
+
 ## Parked families — pointers, not content
 
 Each outgrew this file and now lives on its own. Read the doc before starting;
