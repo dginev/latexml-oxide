@@ -2072,6 +2072,20 @@ fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<Str
   if encoding.is_empty() {
     return None;
   }
+  // The multichar table ships in the same binding as the map array, so it is
+  // absent until that binding is loaded. This lookup runs BEFORE `decode` —
+  // which is what triggers the load — so without preloading here, the very
+  // first decode for an encoding misses the table and silently falls back to
+  // the single-char array value.
+  //
+  // That is not merely a lost first call: `\DeclareTextSymbol` bakes the
+  // decoded result into a primitive body at DECLARATION time, in the preamble,
+  // before any `\fontencoding{T2B}` has loaded the map. So T2B slot 128 was
+  // frozen as `Ӷ` (U+04F6) instead of `Ӷ̶` (U+04F6 U+0336) — a different
+  // letter, its stroke dropped — for the rest of the document. Perl has no
+  // such hazard: `FontDecode` calls `LoadFontMap` first and then indexes one
+  // map whose slot already holds the whole string.
+  let _ = preload_font_map(&encoding);
   let mapname = format!("{encoding}_fontmap_multichar");
   with_value(&mapname, |val_opt| {
     if let Some(Stored::HashString(map)) = val_opt {
