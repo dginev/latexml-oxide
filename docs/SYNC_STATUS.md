@@ -56,7 +56,7 @@ Re-verify a row before planning on it (rule 1).
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
-| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN but **shrunk 2026-07-29**: `pmml_text_aux` ✅ and `outerWrapper` altimg/RDFa ✅ FIXED (the latter also needed a missing `CrossRef::fill_in_RDFa_refs`); three items CLOSED as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE); **3 remain**, all untested. A math-parser `scriptpos` bug found en route is **R8**, not this row | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
+| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN but **shrunk 2026-07-29**: `pmml_text_aux` ✅ and `outerWrapper` altimg/RDFa ✅ FIXED (the latter also needed a missing `CrossRef::fill_in_RDFa_refs`) and `pmml_scriptsize_padded` ✅; three items CLOSED as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE), `combineParallel` BLOCKED on the absent `--openmath`/`--mathimages`/`--mathsvg` formats; **1 remains** (`preprocess` hackplane1/nestmath). A math-parser `scriptpos` bug and a FUNCTION-APPLICATION over-insertion witness found en route are **other rows**, not this one | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, **PHASE 2 — do NOT start yet** (user directive 2026-07-29) | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -1102,12 +1102,47 @@ and `06_cluster_regressions::cluster_rdfa_math_subject` (RED pre-fix). End-to-en
 `\lxRDFa[//ltx:Math]{about=#thm1,property=…,typeof=…}` is now byte-identical to
 same-host Perl 0.8.8.
 
-**F17 — still open:** `combineParallel` `annotation-xml` non-mathml wrap
-(L123-127); `preprocess` `hackplane1`/`nestmath` unwired (L69-73) — note Perl
-exposes `--plane1`/`--hackplane1` in `latexmlpost` and Rust exposes **neither**,
-while `nestmath` has no CLI in Perl either, so it is effectively unreachable there
-too; `pmml_scriptsize_padded` embellishment padding (L926) — untested, needs the
-mid-script path.
+**F17 — `pmml_scriptsize_padded` embellishment padding ✅ FIXED 2026-07-29.**
+Perl L925-934, "This is to handle primed sums, etc.", plus the `emb_right`
+detection in `pmml_script_decipher` (L1015-1017) that feeds it. In
+`\mathop{X'}\limits_{p}^{q}` the prime is an embellishment of the **base**, not a
+script of the outer construct: Perl stops its downward walk on a post script found
+*below* a mid (under/over) script, keeps the embellished `Apply(post-sup, X, ')`
+as the base, and widens each limit with an invisible copy of the `'` so the limits
+centre over the `X` rather than over the whole `X'` box. Rust treated the prime as
+an outer postscript, which **inverted the nesting** — `msup` outside `munderover`
+instead of inside — and emitted no phantom at all.
+**Perl's `$emb_left` is dead code and is deliberately NOT represented**: 
+`pmml_script_decipher` declares it (L968) and returns it (L1022) but never assigns
+it, so the left-phantom arm of `pmml_scriptsize_padded` is unreachable upstream.
+Rust therefore threads a single `emb_right`.
+Guard `90_latexmlpost::mathprimed_post_test`, **0 diff lines**, verified RED
+pre-fix at **20** (the diff is exactly the inverted `msup`/`munderover` nesting).
+The fixture's two other formulas are negative cases that must gain no phantom.
+
+**F17 — `combineParallel` annotation-xml wrap: BLOCKED, not portable today.**
+Perl's two missing branches (L123-127) fire only for a **non-MathML** secondary —
+other XML, which needs that processor's own `outerWrapper`, or an image referred to
+by `src`. Rust registers exactly one parallel secondary, Content-MathML, whose
+mimetype takes the *first* branch. `open_math.rs` and `math_images.rs` exist as
+modules but are **wired into no pipeline** (`lib.rs:140` says so outright: "as
+MathImages when they are wired up to process_chain"), and Rust's CLI has **no
+`--openmath` / `--mathimages` / `--mathsvg`** at all where Perl's `latexmlpost` has
+all three. So porting the branches now would be untestable dead code; the
+prerequisite is that larger math-format feature. Recorded rather than written.
+
+**F17 — still open:** `preprocess` `hackplane1`/`nestmath` unwired (L69-73) — note
+Perl exposes `--plane1`/`--hackplane1` in `latexmlpost` and Rust exposes
+**neither**, while `nestmath` has no CLI in Perl either, so it is effectively
+unreachable there too.
+
+**Found, not fixed — a new witness for the FUNCTION APPLICATION over-insertion
+family.** `\[ \mathop{X'}\limits_{p}^{q} c \]`: Rust inserts `<m:mo>⁡</m:mo>`
+before the trailing factor where Perl juxtaposes. Same family as
+`opdecoration_post_test`'s `op_base_is_mo` rule, but a base shape that rule does
+not cover — here the base's presentation is a `munderover`, not a bare `mo`. The
+`mathprimed` fixture deliberately omits trailing operands so this does not mask the
+padding assertions.
 
 **Found, NOT F17 and NOT the post layer — a math-parser script-position bug.**
 `{}^{n}a_{i}`: Rust classifies the *trailing* `_{i}` as a **prescript**.

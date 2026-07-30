@@ -1710,7 +1710,7 @@ type ScriptPair = (Option<Node>, Option<Node>);
 ///
 /// Port of `pmml_script`.
 fn pmml_script_full(doc: &PostDocument, op: &Node, base: &Node, script: &Node) -> NodeData {
-  let (inner_base, pre_scripts, mid_scripts, post_scripts) =
+  let (inner_base, pre_scripts, mid_scripts, post_scripts, emb_right) =
     pmml_script_decipher(doc, op, base, script);
 
   // Perl `pmml_script` (L876-891) + `pmml_script_mid_layout` (L899-906):
@@ -1730,7 +1730,7 @@ fn pmml_script_full(doc: &PostDocument, op: &Node, base: &Node, script: &Node) -
   CURRENT_STYLE.with(|s| s.set(ostyle));
 
   // Apply mid scripts (under/over)
-  let base_mml = apply_mid_scripts(doc, base_mml, &mid_scripts);
+  let base_mml = apply_mid_scripts(doc, base_mml, &mid_scripts, emb_right.as_ref());
 
   // Apply pre/post scripts
   let layout = apply_multi_scripts(doc, base_mml, &pre_scripts, &post_scripts);
@@ -1760,10 +1760,22 @@ fn pmml_script_decipher(
   op: &Node,
   base: &Node,
   script: &Node,
-) -> (Node, Vec<ScriptPair>, Vec<ScriptPair>, Vec<ScriptPair>) {
+) -> (
+  Node,
+  Vec<ScriptPair>,
+  Vec<ScriptPair>,
+  Vec<ScriptPair>,
+  Option<Node>,
+) {
   let mut pre_scripts: Vec<ScriptPair> = Vec::new();
   let mut mid_scripts: Vec<ScriptPair> = Vec::new();
   let mut post_scripts: Vec<ScriptPair> = Vec::new();
+  // Perl's `$emb_right` — the base's RIGHT embellishment, used to phantom-pad
+  // the under/over scripts (L968, L1015-1017). Perl also declares `$emb_left`
+  // but NEVER assigns it, so that half of `pmml_scriptsize_padded` is dead code
+  // upstream and is deliberately not represented here.
+  let mut emb_right: Option<Node> = None;
+  let mut saw_mid = false;
 
   let role = op.get_attribute("role").unwrap_or_default();
   let pos_str = op
@@ -1787,7 +1799,10 @@ fn pmml_script_decipher(
 
   match pos {
     "pre" => pre_scripts.push(pair),
-    "mid" => mid_scripts.push(pair),
+    "mid" => {
+      saw_mid = true;
+      mid_scripts.push(pair)
+    },
     _ => post_scripts.push(pair),
   }
 
@@ -1858,6 +1873,7 @@ fn pmml_script_decipher(
         }
       },
       "mid" => {
+        saw_mid = true;
         if let Some(first) = mid_scripts.first_mut() {
           let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
           if slot.is_none() {
@@ -1870,6 +1886,18 @@ fn pmml_script_decipher(
         }
       },
       _ => {
+        // Perl L1015-1017: a POST script found BELOW a mid (under/over) script is
+        // not a script of the outer construct at all — it is an embellishment of
+        // the base, e.g. the prime in `\mathop{X'}\limits_{p}^{q}`. Record it for
+        // phantom padding and STOP the walk WITHOUT descending, so `current_base`
+        // stays the embellished `Apply(post-sup, X, ')` and renders whole. Without
+        // this the prime is treated as an outer postscript, which inverts the
+        // nesting (`msup` outside `munderover` instead of in) and leaves the limits
+        // uncentred over the primed base.
+        if saw_mid {
+          emb_right = Some(xscript.clone());
+          break;
+        }
         if let Some(first) = post_scripts.first_mut() {
           let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
           if slot.is_none() {
@@ -1886,7 +1914,13 @@ fn pmml_script_decipher(
     current_base = xbase.clone();
   }
 
-  (current_base, pre_scripts, mid_scripts, post_scripts)
+  (
+    current_base,
+    pre_scripts,
+    mid_scripts,
+    post_scripts,
+    emb_right,
+  )
 }
 
 /// Apply mid scripts (under/over) to a base.
@@ -1894,10 +1928,15 @@ fn apply_mid_scripts(
   doc: &PostDocument,
   mut base: NodeData,
   mid_scripts: &[ScriptPair],
+  emb_right: Option<&Node>,
 ) -> NodeData {
   for (sub_opt, sup_opt) in mid_scripts {
-    let under = sub_opt.as_ref().map(|s| pmml_scriptsize(doc, s));
-    let over = sup_opt.as_ref().map(|s| pmml_scriptsize(doc, s));
+    let under = sub_opt
+      .as_ref()
+      .map(|s| pmml_scriptsize_padded(doc, s, emb_right));
+    let over = sup_opt
+      .as_ref()
+      .map(|s| pmml_scriptsize_padded(doc, s, emb_right));
 
     base = match (under, over) {
       (Some(u), None) => NodeData::Element {
@@ -1919,6 +1958,34 @@ fn apply_mid_scripts(
     };
   }
   base
+}
+
+/// An under/over script at scriptsize, padded by a phantom of the base's right
+/// embellishment when there is one.
+///
+/// Port of `pmml_scriptsize_padded` (`MathML.pm` L925-934) — "This is to handle
+/// primed sums, etc." An `\mathop{X'}\limits_{p}^{q}` centres its limits on the
+/// whole `X′` box unless each limit is widened by an invisible copy of the `′`,
+/// which shifts them back over the `X` itself.
+///
+/// Perl's `$emb_left` arm is NOT ported: `pmml_script_decipher` declares
+/// `$emb_left` and never assigns it (L968 → L1022), so the left phantom is
+/// unreachable upstream. Only the right embellishment can occur, so this takes a
+/// single `emb_right`.
+fn pmml_scriptsize_padded(doc: &PostDocument, script: &Node, emb_right: Option<&Node>) -> NodeData {
+  let script_mml = pmml_scriptsize(doc, script);
+  match emb_right {
+    None => script_mml,
+    Some(emb) => NodeData::Element {
+      tag:        "m:mrow".to_string(),
+      attributes: None,
+      children:   vec![script_mml, NodeData::Element {
+        tag:        "m:mphantom".to_string(),
+        attributes: None,
+        children:   vec![pmml_scriptsize(doc, emb)],
+      }],
+    },
+  }
 }
 
 /// Apply pre/post scripts to a base.
