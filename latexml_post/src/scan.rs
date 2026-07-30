@@ -311,11 +311,22 @@ impl Scan {
       // title survives into the table of contents (issue #356). The string
       // form used for the page `<title>`/tooltip is derived on demand via
       // `title_text_content` in CrossRef::generate_title.
+      // `adopt_xml`, not a bare handle: the stored node must outlive this
+      // page's DOM (freed per-page under streaming). A failed copy degrades
+      // to the flattened text — a poorer TOC entry, never a dangling one.
       if let Some(title_node) = doc.findnode_at("ltx:title", node) {
-        sp.push("title", Value::from(title_node));
+        let value = self
+          .db
+          .adopt_xml(&title_node)
+          .unwrap_or_else(|| Value::from(title_text_content(&title_node).as_str()));
+        sp.push("title", value);
       }
       if let Some(toctitle_node) = doc.findnode_at("ltx:toctitle", node) {
-        sp.push("toctitle", Value::from(toctitle_node));
+        let value = self
+          .db
+          .adopt_xml(&toctitle_node)
+          .unwrap_or_else(|| Value::from(title_text_content(&toctitle_node).as_str()));
+        sp.push("toctitle", value);
       }
       if let Some(stub) = node.get_attribute("stub") {
         sp.push("stub", Value::from(stub));
@@ -626,15 +637,23 @@ impl Scan {
 
     let exists = self.db.lookup(&key).is_some();
     if !exists {
-      let mut props = vec![];
       // Perl registers `phrases => [@phrases]` — the ltx:indexphrase
       // NODES — so MakeIndex can key the tree off their `key`
       // attributes and re-render the phrases with their markup
       // (math inside an index phrase survives into the index).
-      props.push((
-        "phrases",
-        Value::List(phrases.iter().map(|n| Value::from(n.clone())).collect()),
-      ));
+      // Adopted BEFORE `register` borrows the entry: `adopt_xml` needs the
+      // DB itself, and the copies must outlive this page's DOM anyway. A
+      // failed copy degrades to the phrase's flattened text.
+      let adopted: Vec<Value> = phrases
+        .iter()
+        .map(|n| {
+          self
+            .db
+            .adopt_xml(n)
+            .unwrap_or_else(|| Value::from(n.get_content().as_str()))
+        })
+        .collect();
+      let mut props = vec![("phrases", Value::List(adopted))];
       if let Some(il) = inlist {
         props.push(("inlist", il));
       }
@@ -642,11 +661,20 @@ impl Scan {
     }
 
     if !see_also.is_empty() {
+      // Store the ltx:indexsee NODES (not their flattened text): MakeIndex
+      // needs the `name` attribute ("see"/"see also") and the phrase's inline
+      // markup to render the cross-reference. Adopted for the same
+      // lifetime reason as the phrases above.
+      let nodes: Vec<Value> = see_also
+        .iter()
+        .map(|n| {
+          self
+            .db
+            .adopt_xml(n)
+            .unwrap_or_else(|| Value::from(n.get_content().as_str()))
+        })
+        .collect();
       if let Some(entry) = self.db.lookup_mut(&key) {
-        // Store the ltx:indexsee NODES (not their flattened text):
-        // MakeIndex needs the `name` attribute ("see"/"see also") and
-        // the phrase's inline markup to render the cross-reference.
-        let nodes: Vec<Value> = see_also.iter().map(|n| Value::from(n.clone())).collect();
         entry.push_new("see_also", nodes);
       }
     } else if let Some(pid) = parent_id {
@@ -964,10 +992,12 @@ pub(crate) fn title_text_content(node: &Node) -> String {
   result
 }
 
-// NOTE: Perl uses cloneNode(1) for deep DOM copies. rust-libxml now provides
-// deep-copy on materialization (`PostDocument::add_xml_node`, wrapping
-// xmlDocCopyNode with cross-doc namespace reconciliation + xml:id
-// uniquification), so `Value::Xml(node)` is safe to store and later clone.
-// Section titles are kept as nodes (see `section_handler`); the derived string
-// form is `title_text_content`. Glossary `phrase`/`see_also` values are also
-// stored as `Value::Xml`.
+// NOTE: Perl uses cloneNode(1) for deep DOM copies. Every node stored in the
+// ObjectDB is ADOPTED first (`ObjectDB::adopt_xml` — a deep copy into a
+// DB-owned document), so stored values live exactly as long as the DB and
+// never dangle into a page document that streaming has freed. Consumers still
+// deep-copy on materialization (`PostDocument::add_xml_node`, with cross-doc
+// namespace reconciliation + xml:id uniquification). Section titles are kept
+// as nodes (see `section_handler`); the derived string form is
+// `title_text_content`. Index `phrases`/`see_also` values are also stored as
+// (adopted) `Value::Xml`.

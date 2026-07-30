@@ -77,6 +77,10 @@ pub fn get_ifframe() -> Option<Rc<RefCell<IfFrame>>> {
 }
 /// expires the most recent (originally Perl-local) `IfFrame`
 pub fn expire_ifframe() { locals_mut!().if_frames.pop(); }
+/// Number of currently open conditional frames (`\if…` whose `\fi` has not
+/// been digested yet). Zero at any clean point between top-level constructs —
+/// the fragment-yield seam predicate requires exactly that.
+pub fn open_conditional_count() -> usize { locals!().if_frames.len() }
 /// localizes a new current token. see `Stomach::invoke_token`
 pub fn local_current_token(token: Token) { locals_mut!().current_token.push(token); }
 /// expires the most recent (localized) current token.

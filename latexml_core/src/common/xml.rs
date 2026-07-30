@@ -284,6 +284,30 @@ pub fn get_prev_element(node_in: &Node) -> Option<Node> {
   }
   None
 }
+/// Walk `node`'s ancestor chain to the top. If the chain ends at a
+/// `Document` (or document-fragment) node the subtree is LIVE — part of a
+/// document tree — and `None` is returned; otherwise the topmost node is a
+/// DETACHED root and is returned. Callers use this to decide whether a
+/// source tree they are done with is theirs to free
+/// (`Document::discard_subtree`) or still reachable from a live document.
+pub fn detached_root(node: &Node) -> Option<Node> {
+  let mut cur = node.clone();
+  loop {
+    match cur.get_parent() {
+      None => return Some(cur),
+      Some(p)
+        if matches!(
+          p.get_type(),
+          Some(NodeType::DocumentNode) | Some(NodeType::DocumentFragNode)
+        ) =>
+      {
+        return None;
+      },
+      Some(p) => cur = p,
+    }
+  }
+}
+
 /// obtains all `Element` children of `node`, ignoring all other node types
 pub fn element_nodes(node: &Node) -> Vec<Node> {
   node

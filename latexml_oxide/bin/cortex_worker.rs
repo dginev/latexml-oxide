@@ -365,6 +365,7 @@ impl LatexmlWorker {
       source_map:              None,
       // Corpus sweeps don't override input decoding — default (UTF-8) applies.
       inputencoding:           None,
+      streaming:               None,
     };
 
     let mut converter = Converter::from_config(opts.clone());

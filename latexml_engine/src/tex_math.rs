@@ -1914,15 +1914,35 @@ LoadDefinitions!({
                 if from_attr.is_some() {
                   from_attr
                 } else {
-                  document.get_node_box(xmarg).and_then(|tbox| {
-                    tbox.get_font().ok().flatten().and_then(|font| {
-                      if font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false) {
+                  // The box's verdict is authoritative when the box exists —
+                  // including its NEGATIVE verdict (a non-math family yields
+                  // no wrapper: latin1's `²`/`³` text superscripts). Only when
+                  // the box is GONE — streaming pass 2, where `node_boxes` is
+                  // pointer-keyed and purged at spill — is the same fact
+                  // recovered from the enclosing `ltx:Math`'s `_font`. Sweep
+                  // witnesses: tests/structure/eqnums.tex,
+                  // tests/graphics/graphrot.tex (wrapper vanished in spilled
+                  // fragments); tests/encoding/latin1.xml (the fallback must
+                  // NOT override a present box's negative verdict).
+                  let is_math_font = |font: &Font| {
+                    font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false)
+                  };
+                  match document.get_node_box(xmarg) {
+                    Some(tbox) => tbox.get_font().ok().flatten().and_then(|font| {
+                      if is_math_font(&font) {
                         Some("italic".to_string())
                       } else {
                         None
                       }
-                    })
-                  })
+                    }),
+                    // Streaming pass 2: the box was purged at spill, but its
+                    // EXACT verdict was stamped on the XMArg then (see
+                    // `spill_run`) — an ancestor-font approximation
+                    // mis-wrapped text-mode superscripts (niceunits).
+                    None => xmarg
+                      .get_attribute("_boxfont_math")
+                      .map(|_| "italic".to_string()),
+                  }
                 }
               };
               document.open_element(qname, None, None)?;

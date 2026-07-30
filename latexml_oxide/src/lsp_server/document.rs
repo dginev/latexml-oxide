@@ -194,6 +194,7 @@ pub(crate) fn make_config(uri: &str) -> Config {
     source_map:              Some(true),
     // Server input is editor buffer text (already UTF-8); no override needed.
     inputencoding:           None,
+    streaming:               None,
   }
 }
 

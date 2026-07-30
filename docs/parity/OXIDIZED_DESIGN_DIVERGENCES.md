@@ -3201,3 +3201,20 @@ intentional design. See [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) for full 
 
 6. **`guessTableHeaders` heuristic** — Post-processing heuristic for table header
    detection can produce unexpected results on tables without intended headers.
+
+### 84. Equationgroup ids minted at digest time (ancestry-consistent prefixes)
+
+Perl mints the `@equationgroup` id (`RefStepID`) inside the alignment's
+container-open hook — at **absorb** time, after all digestion — so every
+group's id carries the **last** section's prefix: `LaTeXML/t/structure/
+eqnums.xml` stamps `S3.EGx1` on a group whose own rows are `S2.E*`. That
+violates the id design's own intent (in-order counter increase, id fragments
+mirroring the node's XML ancestry), and it made the eager and streaming
+(interleaved digest/build) pipelines disagree, since streaming absorbs with
+the *current* section counter.
+
+Rust mints at **digest** time in both pipelines (`latex_constructs.rs`
+eqnarray, `amsmath_sty.rs` gather/align): prefixes now match the group's
+actual ancestry (`S2.EGx1`, `S2.EGx2`, `S3.EGx3`, …) with the counter still
+strictly in document order. User ruling 2026-07-29. Goldens updated:
+`structure/eqnums`, `structure/amsarticle`, `math/sampler`, `ams/mathtools`.

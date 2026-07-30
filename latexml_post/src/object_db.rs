@@ -105,9 +105,11 @@ impl std::fmt::Display for Value {
   }
 }
 
-impl From<Node> for Value {
-  fn from(n: Node) -> Self { Value::Xml(n) }
-}
+// NOTE deliberately NO `impl From<Node> for Value`: a bare node handle points
+// into whichever document it came from, and storing one couples the DB's
+// validity to that document's lifetime (fatal under streaming, where page DOMs
+// are freed as soon as they are processed). Nodes enter the DB only through
+// `ObjectDB::adopt_xml`, which copies them into DB-owned storage.
 
 impl From<bool> for Value {
   fn from(b: bool) -> Self { Value::Bool(b) }
@@ -271,12 +273,42 @@ impl Entry {
 /// (the Perl version uses Berkeley DB via DB_File).
 pub struct ObjectDB {
   /// In-memory entry storage.
-  objects: HashMap<String, Entry>,
+  objects:  HashMap<String, Entry>,
+  /// Owners of every [`Value::Xml`] node the DB stores. A stored node used to
+  /// be a handle into the scanned page's own DOM, which made the DB's
+  /// lifetime silently depend on every page document staying resident — a
+  /// use-after-free the moment a streaming pipeline frees a processed page.
+  /// [`ObjectDB::adopt_xml`] deep-copies into a fresh document owned HERE, so
+  /// stored XML lives exactly as long as the DB, whatever happens to the
+  /// source. (Titles/phrases are small; the arena cost is negligible.)
+  xml_docs: Vec<libxml::tree::Document>,
 }
 
 impl ObjectDB {
   /// Create a new empty ObjectDB.
-  pub fn new() -> Self { ObjectDB { objects: HashMap::default() } }
+  pub fn new() -> Self {
+    ObjectDB {
+      objects:  HashMap::default(),
+      xml_docs: Vec::new(),
+    }
+  }
+
+  /// Adopt an XML node for storage: deep-copy it into a document the DB owns
+  /// and return the [`Value::Xml`] wrapping the copy. This is the ONLY way a
+  /// node enters the DB (`From<Node> for Value` was removed on purpose), so
+  /// no stored value can dangle into a page document that was freed.
+  ///
+  /// Uses `dup_node_into_new_doc` — an orphan deep copy into a fresh
+  /// document, sharing zero C-side state with the source, namespaces
+  /// reconciled (the same primitive `Split` page extraction relies on).
+  /// Returns `None` when the copy fails; callers should degrade to a string
+  /// form rather than store nothing, and never crash.
+  pub fn adopt_xml(&mut self, node: &Node) -> Option<Value> {
+    let doc = libxml::tree::Document::dup_node_into_new_doc(node).ok()?;
+    let copy = doc.get_root_element()?;
+    self.xml_docs.push(doc);
+    Some(Value::Xml(copy))
+  }
 
   /// Look up an entry by key.
   ///
@@ -426,6 +458,42 @@ mod tests {
     assert_eq!(db.status(), "0 objects");
     db.register("x", vec![]);
     assert_eq!(db.status(), "1 objects");
+  }
+
+  #[test]
+  fn adopted_xml_survives_source_document_drop() {
+    // The streaming contract: a stored XML value must stay valid after the
+    // page document it was scanned from is freed. Under the old
+    // `Value::Xml(source_node)` representation this was a use-after-free.
+    let parser = libxml::parser::Parser::default();
+    let source = parser
+      .parse_string(
+        "<title xmlns:m=\"http://www.w3.org/1998/Math/MathML\">\
+         The <m:mi>\u{03b1}</m:mi> section</title>",
+      )
+      .expect("parse source");
+    let title = source.get_root_element().expect("root");
+
+    let mut db = ObjectDB::new();
+    let adopted = db.adopt_xml(&title).expect("adopt");
+    db.register("ID:S1", vec![("title", adopted)]);
+    drop(source); // the page DOM goes away, as it will under streaming
+
+    let entry = db.lookup("ID:S1").expect("entry");
+    let node = entry.get_xml("title").expect("stored node");
+    assert_eq!(node.get_name(), "title");
+    assert_eq!(node.get_content(), "The \u{03b1} section");
+    // Markup survives adoption, not just flattened text: the MathML child is
+    // still an element in its namespace.
+    let mi = node
+      .get_child_nodes()
+      .into_iter()
+      .find(|c| c.get_name() == "mi")
+      .expect("m:mi child survives");
+    assert_eq!(
+      mi.get_namespace().map(|ns| ns.get_href()),
+      Some(String::from("http://www.w3.org/1998/Math/MathML"))
+    );
   }
 
   #[test]

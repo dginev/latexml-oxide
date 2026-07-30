@@ -183,7 +183,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
     </para>
     <para xml:id="S2.p2">
       <p>Mostly numbered, unnumbered before and after (w/eq=1)</p>
-      <equationgroup class="ltx_eqn_eqnarray" xml:id="S3.EGx1">
+      <equationgroup class="ltx_eqn_eqnarray" xml:id="S2.EGx1">
         <equation xml:id="S2.E2">
           <tags>
             <tag>(2)</tag>
@@ -340,7 +340,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
     </para>
     <para xml:id="S2.p3">
       <p>Unnumbered (w/eq=4)</p>
-      <equationgroup class="ltx_eqn_eqnarray" xml:id="S3.EGx2">
+      <equationgroup class="ltx_eqn_eqnarray" xml:id="S2.EGx2">
         <equation xml:id="S2.Ex12">
           <MathFork>
             <Math tex="\displaystyle N=\mbox{5}" text="N = [5]" xml:id="S2.Ex12.m4">
