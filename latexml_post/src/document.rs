@@ -16,7 +16,7 @@ use libxml::{
   xpath::Context as XPathContext,
 };
 use regex::Regex;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::radix::radix_alpha;
@@ -401,6 +401,31 @@ pub struct PostDocument {
   /// `drain_pending_unlinks` — does the actual unlink once all
   /// math-format passes have completed.
   pending_xmath_unlinks:       Vec<Node>,
+  /// Per-document memo for [`Self::add_navigation`]. The `ltx:navigation`
+  /// element, and the `(rel, idref)` pairs already under it.
+  ///
+  /// Perl `Post.pm:1409-1414` answers both questions with a whole-document
+  /// XPath on EVERY call — a `format!`-built duplicate probe (so it is
+  /// re-COMPILED each time) plus a `//ltx:navigation` walk. That is fine at
+  /// Perl's scale and ruinous at ours: `CrossRef::fill_in_relations` calls this
+  /// once per related page, measured at **406 calls per page** on the
+  /// 40,201-page witness — 16.3 M calls, 32.6 M XPath evaluations, and the
+  /// probe is O(refs already added) so it is quadratic *within* a page too.
+  /// Post-stage self-time profiling is dominated by exactly that: libxml2 XPath
+  /// machinery plus allocator churn (see `KNOWN_PERL_ERRORS.md` #69).
+  ///
+  /// The memo answers identically — it is seeded from the element's own `ltx:ref`
+  /// children, which is what `//ltx:navigation/ltx:ref` selects given the single
+  /// navigation element Perl's own `findnode` assumes.
+  nav_memo:                    Option<NavigationMemo>,
+}
+
+/// Memoized navigation state for one document — see [`PostDocument::nav_memo`].
+struct NavigationMemo {
+  /// The `ltx:navigation` element, revalidated cheaply before reuse.
+  element: Option<Node>,
+  /// `(rel, idref)` pairs already present, standing in for Perl's XPath probe.
+  refs:    FxHashSet<(String, String)>,
 }
 
 impl Drop for PostDocument {
@@ -497,6 +522,7 @@ impl PostDocument {
       cache: HashMap::default(),
       nocache: options.nocache,
       pending_xmath_unlinks: Vec::new(),
+      nav_memo: None,
     }
   }
 
@@ -1987,11 +2013,12 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::addNavigation`.
   pub fn add_navigation(&mut self, relation: &str, id: &str) {
-    let check_xpath = format!(
-      "//ltx:navigation/ltx:ref[@rel='{}'][@idref='{}']",
-      relation, id
-    );
-    if self.findnode(&check_xpath).is_some() {
+    // Perl `Post.pm:1409` probes for the duplicate with a whole-document XPath
+    // built by string interpolation. The memo answers the same question — see
+    // the `nav_memo` field docs for why the XPath form cannot stand at
+    // 16.3 M calls. `insert` returning false means the pair is already
+    // present, which is Perl's early `return`.
+    if self.navigation_ref_present(relation, id) {
       return;
     }
 
@@ -2005,9 +2032,10 @@ impl PostDocument {
       children:   vec![],
     };
 
-    match self.findnode("//ltx:navigation") {
+    match self.navigation_element() {
       Some(mut nav) => {
         self.add_nodes(&mut nav, &[ref_node]);
+        self.record_navigation_ref(relation, id);
       },
       _ => {
         if let Some(mut root) = self.get_document_element() {
@@ -2017,8 +2045,98 @@ impl PostDocument {
             children:   vec![ref_node],
           };
           self.add_nodes(&mut root, &[nav_node]);
+          // Adopt the element just created, so the next of this page's ~406
+          // calls does not re-walk the document looking for it.
+          let found = self.findnode("//ltx:navigation");
+          if let Some(memo) = self.nav_memo.as_mut() {
+            memo.element = found;
+          }
+          self.record_navigation_ref(relation, id);
         }
+        // No document element: nothing was added, so nothing is recorded —
+        // a later call must be free to retry, exactly as re-running Perl's
+        // XPath probe would.
       },
+    }
+  }
+
+  /// The document's `ltx:navigation` element, memoized (Perl re-runs
+  /// `findnode('//ltx:navigation')` per call — `Post.pm:1411`).
+  ///
+  /// The cached handle is revalidated before reuse: a node that has been
+  /// unlinked from the tree has no parent, and reusing it would append into a
+  /// detached subtree that never reaches the output. That check is one FFI
+  /// call against a full descendant-axis walk.
+  fn navigation_element(&mut self) -> Option<Node> {
+    if let Some(memo) = self.nav_memo.as_ref()
+      && let Some(nav) = memo.element.as_ref()
+      && nav.get_parent().is_some()
+    {
+      return Some(nav.clone());
+    }
+    let found = self.findnode("//ltx:navigation");
+    if let Some(memo) = self.nav_memo.as_mut() {
+      memo.element = found.clone();
+    }
+    found
+  }
+
+  /// Is this `(rel, idref)` pair already under a navigation element?
+  ///
+  /// Stands in for Perl's per-call duplicate XPath (`Post.pm:1409`), and must
+  /// answer identically. Three details earn their keep:
+  ///
+  /// * The seed reads **every** `ltx:navigation` element, because `//` in the
+  ///   Perl probe does — while insertion targets the FIRST, because Perl's
+  ///   `findnode` (`Post.pm:1411`) does. A page can arrive with navigation
+  ///   already populated: `Split` strips the source's navigation and copies it
+  ///   into each page (`split.rs:465`, `Split::add_navigation`).
+  /// * `ltx:ref` is namespace-qualified, so a `ref` in some other namespace
+  ///   must NOT seed the set.
+  /// * `ltx:TOC` / `ltx:title` also live under navigation and are not refs.
+  fn seed_navigation_memo(&mut self) {
+    if self.nav_memo.is_some() {
+      return;
+    }
+    let mut refs = FxHashSet::default();
+    let elements = self.findnodes("//ltx:navigation");
+    for nav in &elements {
+      for child in nav.get_child_nodes() {
+        if child.get_name() != "ref" {
+          continue;
+        }
+        // Strict: an unnamespaced `<ref>` does not match `ltx:ref` in XPath
+        // either, so it must not seed the set.
+        let in_ltx = child
+          .get_namespace()
+          .is_some_and(|ns| ns.get_href() == LTX_NSURI);
+        if !in_ltx {
+          continue;
+        }
+        if let (Some(rel), Some(idref)) = (child.get_attribute("rel"), child.get_attribute("idref"))
+        {
+          refs.insert((rel, idref));
+        }
+      }
+    }
+    self.nav_memo = Some(NavigationMemo {
+      element: elements.into_iter().next(),
+      refs,
+    });
+  }
+
+  fn navigation_ref_present(&mut self, relation: &str, id: &str) -> bool {
+    self.seed_navigation_memo();
+    self
+      .nav_memo
+      .as_ref()
+      .is_some_and(|memo| memo.refs.contains(&(relation.to_string(), id.to_string())))
+  }
+
+  /// Record a pair only once it has actually been added to the tree.
+  fn record_navigation_ref(&mut self, relation: &str, id: &str) {
+    if let Some(memo) = self.nav_memo.as_mut() {
+      memo.refs.insert((relation.to_string(), id.to_string()));
     }
   }
 
@@ -2246,6 +2364,155 @@ mod tests {
   /// libxml2 on a document small enough for XPath to answer reliably, so a
   /// grammar slip shows up as a mismatch rather than as silently different
   /// post-processing on large inputs.
+  /// `add_navigation` memoizes the navigation element and the `(rel, idref)`
+  /// pairs instead of re-running Perl's per-call XPath probe
+  /// (`Post.pm:1409-1414`). The dedup must stay EXACTLY Perl's, including for a
+  /// document that already carries navigation refs when it arrives — the case
+  /// the memo has to seed rather than assume empty.
+  #[test]
+  fn add_navigation_dedupes_including_preexisting_refs() {
+    let mut doc = make_test_doc(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
+         <navigation>\
+           <ref rel='chapter' idref='Ch1' show='toctitle'/>\
+           <title>ignored — not an ltx:ref</title>\
+         </navigation>\
+       </document>",
+    );
+
+    doc.add_navigation("chapter", "Ch1"); // already present -> no-op
+    doc.add_navigation("section", "S1"); // new
+    doc.add_navigation("section", "S1"); // duplicate of the one just added
+    doc.add_navigation("sidebar", "Ch1"); // same id, DIFFERENT rel -> distinct
+
+    let refs = doc.findnodes("//ltx:navigation/ltx:ref");
+    let mut pairs: Vec<(String, String)> = refs
+      .iter()
+      .map(|n| {
+        (
+          n.get_attribute("rel").unwrap_or_default(),
+          n.get_attribute("idref").unwrap_or_default(),
+        )
+      })
+      .collect();
+    pairs.sort();
+    assert_eq!(pairs, vec![
+      ("chapter".to_string(), "Ch1".to_string()),
+      ("section".to_string(), "S1".to_string()),
+      ("sidebar".to_string(), "Ch1".to_string()),
+    ]);
+    assert_eq!(
+      doc.findnodes("//ltx:navigation").len(),
+      1,
+      "the existing navigation element must be reused, not duplicated"
+    );
+  }
+
+  /// The same dedup, but starting from a document with NO navigation element:
+  /// the first call must create it and the memo must then adopt what it created.
+  /// D1: the Perl probe is `//ltx:navigation/ltx:ref[…]` — `//`, so refs under
+  /// a SECOND navigation element count as present too. `Split` really does put
+  /// navigation into pages (`split.rs:465`), so this shape is reachable.
+  /// Insertion still targets the FIRST element, as Perl's `findnode` does.
+  #[test]
+  fn add_navigation_sees_refs_under_every_navigation_element() {
+    let mut doc = make_test_doc(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
+         <navigation><ref rel='chapter' idref='Ch1'/></navigation>\
+         <section><navigation><ref rel='section' idref='S9'/></navigation></section>\
+       </document>",
+    );
+
+    doc.add_navigation("section", "S9"); // present under the SECOND element
+    doc.add_navigation("chapter", "Ch1"); // present under the FIRST
+
+    assert_eq!(
+      doc.findnodes("//ltx:navigation/ltx:ref").len(),
+      2,
+      "neither pair may be re-added; `//` spans both navigation elements"
+    );
+
+    doc.add_navigation("appendix", "A1"); // genuinely new
+    let first_nav_refs = doc.findnodes("//ltx:navigation").first().map(|n| {
+      n.get_child_nodes()
+        .iter()
+        .filter(|c| c.get_name() == "ref")
+        .count()
+    });
+    assert_eq!(
+      first_nav_refs,
+      Some(2),
+      "a new ref lands under the FIRST navigation element (Perl's findnode)"
+    );
+  }
+
+  /// D2: `ltx:ref` is namespace-qualified. A `<ref>` in a foreign namespace
+  /// does not match the Perl probe, so it must not suppress a real insert.
+  #[test]
+  fn add_navigation_ignores_a_foreign_namespace_ref_when_seeding() {
+    let mut doc = make_test_doc(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML' xmlns:other='http://example.org/other'>\
+         <navigation><other:ref rel='chapter' idref='Ch1'/></navigation>\
+       </document>",
+    );
+
+    doc.add_navigation("chapter", "Ch1");
+
+    assert_eq!(
+      doc.findnodes("//ltx:navigation/ltx:ref").len(),
+      1,
+      "the foreign-namespace ref is not an ltx:ref, so the real one must be added"
+    );
+  }
+
+  /// The memo must agree with the ORIGINAL XPath probe on every pair, for a
+  /// document that mixes pre-existing refs, foreign namespaces, and non-ref
+  /// children — this is the differential the refactor has to survive.
+  #[test]
+  fn navigation_memo_agrees_with_the_original_xpath_probe() {
+    let mut doc = make_test_doc(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML' xmlns:other='http://example.org/other'>\
+         <navigation>\
+           <ref rel='chapter' idref='Ch1'/>\
+           <title>t</title>\
+           <other:ref rel='section' idref='S1'/>\
+         </navigation>\
+       </document>",
+    );
+
+    for (rel, id) in [
+      ("chapter", "Ch1"), // present -> XPath finds it
+      ("section", "S1"),  // only in a FOREIGN ns -> XPath does NOT find it
+      ("title", "t"),     // not a ref at all
+      ("section", "S2"),  // absent
+    ] {
+      // The probe Perl runs, verbatim (Post.pm:1409).
+      let probe = format!("//ltx:navigation/ltx:ref[@rel='{}'][@idref='{}']", rel, id);
+      let xpath_says_present = doc.findnode(&probe).is_some();
+      let memo_says_present = doc.navigation_ref_present(rel, id);
+      assert_eq!(
+        memo_says_present, xpath_says_present,
+        "memo and XPath disagree about ({rel}, {id})"
+      );
+    }
+  }
+
+  #[test]
+  fn add_navigation_creates_then_reuses_the_navigation_element() {
+    let mut doc = make_test_doc("<document xmlns='http://dlmf.nist.gov/LaTeXML'><p/></document>");
+
+    doc.add_navigation("section", "S1");
+    doc.add_navigation("section", "S2");
+    doc.add_navigation("section", "S1"); // duplicate
+
+    assert_eq!(
+      doc.findnodes("//ltx:navigation").len(),
+      1,
+      "exactly one navigation element must be created"
+    );
+    assert_eq!(doc.findnodes("//ltx:navigation/ltx:ref").len(), 2);
+  }
+
   #[test]
   fn walk_union_agrees_with_xpath_on_every_supported_shape() {
     let doc = make_test_doc(
