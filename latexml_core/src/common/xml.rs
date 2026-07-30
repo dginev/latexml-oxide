@@ -335,10 +335,17 @@ pub fn closest_element(node: &Node) -> Option<Node> {
   if node.get_type() == Some(NodeType::ElementNode) {
     return Some(node.clone());
   }
-  while let Some(parent) = node.get_parent() {
+  // Walk UP. The cursor must advance: re-reading `node.get_parent()` every
+  // iteration spun forever on any non-element whose parent is also a
+  // non-element — a text node directly under the document being the reachable
+  // case (`xmlGetParent` of a top-level node is the DocumentNode, and only
+  // the document's own parent is NULL, which is what terminates this loop).
+  let mut current = node.clone();
+  while let Some(parent) = current.get_parent() {
     if parent.get_type() == Some(NodeType::ElementNode) {
       return Some(parent);
     }
+    current = parent;
   }
   None
 }
@@ -375,6 +382,30 @@ mod tests {
   fn namespace_constants() {
     assert_eq!(XML_NS, "http://www.w3.org/XML/1998/namespace");
     assert_eq!(XMLNS_NS, "http://www.w3.org/2000/xmlns/");
+  }
+
+  /// `closest_element` must TERMINATE when no element ancestor exists.
+  /// The walk used to re-read `node.get_parent()` without advancing a cursor,
+  /// so a non-element whose parent is also a non-element spun forever; a text
+  /// node parented by the DocumentNode is the reachable shape. If this
+  /// regresses the test hangs rather than fails — that is the symptom.
+  #[test]
+  fn closest_element_terminates_without_an_element_ancestor() {
+    let doc = Document::new().unwrap();
+    let mut doc_node = doc.as_node();
+    let mut stray = Node::new_text("stray", &doc).unwrap();
+    doc_node.add_child(&mut stray).unwrap();
+
+    assert_eq!(stray.get_type(), Some(NodeType::TextNode));
+    assert_ne!(
+      doc_node.get_type(),
+      Some(NodeType::ElementNode),
+      "the parent must be a non-element for this to exercise the walk"
+    );
+    assert!(
+      closest_element(&stray).is_none(),
+      "no element ancestor exists, so the walk must end at the document"
+    );
   }
 
   fn build_tree() -> (Document, Node) {
