@@ -466,15 +466,21 @@ mod tests {
        (N_processes x ceiling) OOM the machine"
     );
     if let Some(total) = total_memory_bytes() {
-      let ninety = total / (1024 * 1024) * 9 / 10;
+      let half = total / (1024 * 1024) / 2;
       assert_eq!(
         ceiling,
-        ninety.clamp(1, MAX_DEFAULT_CEILING_MIB),
-        "ceiling should be min(cap, 90 % of RAM)"
+        half.clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
+        "ceiling should be min(cap, HALF of RAM), floored"
       );
+      // Half of RAM, not 90 %: the cooperative fuse rides at 75 % of the
+      // ceiling, so at 90 % a 16 GB machine let one conversion reach 10.8 GiB
+      // before complaining — long after the session started swapping. This
+      // assertion is hardware-dependent by nature (it failed only on the
+      // smaller macOS runner, where the 64 GiB cap does not bind and the
+      // fraction is what shows).
       assert!(
-        ceiling <= total / (1024 * 1024),
-        "the ceiling must leave the OS a share of physical RAM"
+        ceiling <= total / (1024 * 1024) / 2 || ceiling == MIN_DEFAULT_CEILING_MIB,
+        "the ceiling must leave the OS the larger share of physical RAM"
       );
     } else {
       assert_eq!(ceiling, FALLBACK_CEILING_MIB);
