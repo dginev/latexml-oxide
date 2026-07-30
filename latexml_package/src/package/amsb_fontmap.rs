@@ -39,4 +39,26 @@ LoadDefinitions!({
     // 0x78-0x7F
     '\u{21B6}', '\u{21B7}', '\u{03DD}', '\u{03F0}', '\u{1D55C}', '\u{210F}', '\u{210F}', '\u{03F6}'
   ]);
+  // The six negated relations of `msbm`. Perl stores each as a TWO-character
+  // string — base glyph plus U+0338 COMBINING LONG SOLIDUS OVERLAY —
+  // (amsb.fontmap.ltxml L20, L21, L23). A Rust fontmap slot is a single
+  // `Option<char>` and cannot hold a pair, so the array above carries `None`
+  // at these positions and the pairs live here; `decode_str` consults this
+  // table before the array.
+  //
+  // Without it the slots decoded to NOTHING — verified against Perl 0.8.8 via
+  // `\fontencoding{AMSb}\selectfont\symbol{10}`, which yields U+2A7D U+0338 in
+  // Perl and an empty string in Rust. Note the common spellings `\nleqslant`,
+  // `\ngeqslant`, `\nleqq`, `\ngeqq`, `\nsubseteqq`, `\nsupseteqq` are NOT
+  // affected: `amssymb` binds those directly to explicit Unicode and never
+  // reaches the fontmap. Only direct slot access (`\symbol`/`\char` under this
+  // encoding) does.
+  DeclareFontMapMultichar!("AMSb", {
+    0x0Au8 => "\u{2A7D}\u{0338}",   // \nleqslant
+    0x0Bu8 => "\u{2A7E}\u{0338}",   // \ngeqslant
+    0x14u8 => "\u{2266}\u{0338}",   // \nleqq
+    0x15u8 => "\u{2267}\u{0338}",   // \ngeqq
+    0x22u8 => "\u{2AC5}\u{0338}",   // \nsubseteqq
+    0x23u8 => "\u{2AC6}\u{0338}",   // \nsupseteqq
+  });
 });
