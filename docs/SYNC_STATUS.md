@@ -999,6 +999,27 @@ work." The *reasoning* is still right (that paper loads no package and
 and its `KacNilpotentorbits` entry (`biblo.bib` L2059) is uncited. Still do not
 measure with it — now because it is silent, not because it is parity.
 
+### R3b — `m:menclose` is not in MathML Core — OPEN, deferred by user 2026-07-30
+
+We emit `m:menclose` for `\cancel` / `\boxed`
+(`latexml_post/src/mathml/presentation.rs` ~L520 and ~L918; Perl `MathML.pm`
+L339-341 and L1507-1513 do the same). **MathML Core removed the element**, and
+CLAUDE.md's standing rule is that our output targets Core. So this is a genuine
+open item, not a divergence to document away.
+
+It is deferred because unlike `<none/>` → empty `<mrow/>` there is **no
+mechanical replacement**, and the two notations we emit need different answers:
+- `notation="box"` (`\boxed`) → an `m:mrow` carrying a CSS border, which means
+  the border has to survive the XSLT and the stylesheet, not just the MathML;
+- `notation="updiagonalstrike"` (`\cancel`) → **no Core equivalent at all**.
+  Options are a drawn overlay or accepting a visual regression; neither is a
+  rename.
+
+So this is a rendering change, a golden change (`tests/post/mathgolden-post.xml`
+pins both today), and a deliberate divergence from Perl — it needs its own branch
+and its own decision on the strike case. **Do not fix it incidentally** while
+touching neighbouring pMML code.
+
 ### R3 — Presentation-MathML: F17 ✅ CLOSED 2026-07-29; F5 Linebreaker open
 
 Both from the archived MathML-post line audit

@@ -230,12 +230,10 @@ that argument once produced a wrong divergence entry justifying `<m:none/>`
 (OXIDIZED_DESIGN #86, since removed). MathML 3 defining it is not evidence Core
 kept it; check Core.
 
-Known residual: **`<m:menclose>` is still emitted** for `\cancel` / `\boxed`
-(`presentation.rs`, Perl `MathML.pm` L339-341 / L1507-1513). Core removed it and
-there is no mechanical replacement — `notation="box"` wants a CSS border on an
-`mrow`, the strike notations want no Core equivalent at all — so replacing it is a
-real rendering and golden change, not a rename. Left as-is pending a decision;
-don't "fix" it incidentally.
+Known residual: **`<m:menclose>` is still emitted** for `\cancel` / `\boxed`.
+Core removed it and there is no mechanical replacement, so it is a rendering +
+golden change needing its own branch — tracked as **`SYNC_STATUS.md` R3b**,
+deferred by user directive 2026-07-30. Don't "fix" it incidentally.
 
 ## Practical guidance
 
