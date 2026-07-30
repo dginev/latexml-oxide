@@ -952,7 +952,7 @@
 <a href=#952 id=952 data-nosnippet>952</a>  <span class="comment">// Perl: UTF(0xD7) = × MULTIPLICATION SIGN
 <a href=#953 id=953 data-nosnippet>953</a>  // Perl: font =&gt; { size =&gt; 'Big' } where rationalizeFontSize('Big') = 1.6 * DEFSIZE(10) = 16.0pt
 <a href=#954 id=954 data-nosnippet>954</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\bigtimes"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{00D7}"</span>, role =&gt; <span class="string">"MULOP"</span>, meaning =&gt; <span class="string">"times"</span>,
-<a href=#955 id=955 data-nosnippet>955</a>    font =&gt; { size =&gt; <span class="number">16.0 </span>},
+<a href=#955 id=955 data-nosnippet>955</a>    font =&gt; sub[_f] { <span class="prelude-val">Ok</span>(Font { size: <span class="prelude-val">Some</span>(font::rationalize_font_size(<span class="string">"Big"</span>)), ..Font::default() }) },
 <a href=#956 id=956 data-nosnippet>956</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
 <a href=#957 id=957 data-nosnippet>957</a>
 <a href=#958 id=958 data-nosnippet>958</a>  <span class="comment">//======================================================================
