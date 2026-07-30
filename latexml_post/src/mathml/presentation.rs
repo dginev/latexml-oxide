@@ -16,7 +16,7 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
 use super::operator_dictionary;
-use crate::document::{NodeData, PostDocument, element_children, element_children_iter};
+use crate::document::{NodeData, PostDocument, XMBranch, element_children, element_children_iter};
 
 // Thread-local flag for invisible times emission.
 // When false, U+2062 is replaced with U+200B (zero-width space).
@@ -364,8 +364,11 @@ fn is_embellishing_role(role: &str) -> bool {
   )
 }
 
-/// Default token content for invisible operators.
-fn default_token_content(role: &str) -> Option<&'static str> {
+/// Default token content for invisible operators — Perl's
+/// `%default_token_content`, consulted by `stylizeContent`'s empty-item
+/// failsafe. Shared with the `m:mtext` half of that function in the parent
+/// module, so the two arms cannot drift.
+pub(super) fn default_token_content(role: &str) -> Option<&'static str> {
   match role {
     "MULOP" => Some("\u{2062}"), // INVISIBLE TIMES
     "ADDOP" => Some("\u{2064}"), // INVISIBLE PLUS
@@ -1841,53 +1844,54 @@ fn pmml_script_decipher(
   let mut emb_right: Option<Node> = None;
   let mut saw_mid = false;
 
-  let role = op.get_attribute("role").unwrap_or_default();
-  let pos_str = op
-    .get_attribute("scriptpos")
-    .unwrap_or_else(|| "post0".to_string());
-  let pos = if pos_str.starts_with("pre") {
-    "pre"
-  } else if pos_str.starts_with("mid") {
-    "mid"
-  } else {
-    "post"
-  };
-  let is_sub = role.contains("SUB");
+  // Perl tracks the last level seen in each of the three groups, so that a
+  // script at a DIFFERENT nesting level starts a new pair instead of filling the
+  // free slot of the current one. Perl compares with `ne`, and the initials are
+  // the number 0 — which stringifies to "0" and so matches a literal `post0`.
+  let (mut pre_level, mut mid_level, mut post_level) =
+    ("0".to_string(), "0".to_string(), "0".to_string());
 
-  // Place first script
+  let (pos, level) = parse_scriptpos(op);
+  let is_sub = op.get_attribute("role").unwrap_or_default().contains("SUB");
+
+  // Place the first script.
   let pair = if is_sub {
     (Some(script.clone()), None)
   } else {
     (None, Some(script.clone()))
   };
-
   match pos {
-    "pre" => pre_scripts.push(pair),
-    "mid" => {
-      saw_mid = true;
-      mid_scripts.push(pair)
+    ScriptPos::Pre => {
+      pre_scripts.push(pair);
+      pre_level = level;
     },
-    _ => post_scripts.push(pair),
+    ScriptPos::Mid => {
+      saw_mid = true;
+      mid_scripts.push(pair);
+      mid_level = level;
+    },
+    ScriptPos::Post => {
+      post_scripts.push(pair);
+      post_level = level;
+    },
   }
 
-  // Walk down through nested scripts on the base
+  // Walk down through nested scripts on the base.
   let mut current_base = base.clone();
   loop {
-    // Realize XMRef
-    let realized = if doc.is_qname(&current_base, "ltx:XMRef") {
-      current_base
-        .get_attribute("idref")
-        .and_then(|id| doc.find_node_by_id(&id).cloned())
-        .unwrap_or_else(|| current_base.clone())
-    } else {
-      current_base.clone()
+    // Perl `$base = realize($base, 'presentation')` — note it ASSIGNS, so the
+    // base ultimately returned is the realized one, and the realization follows
+    // XMDual as well as XMRef.
+    let Some(realized) = doc.realize_xm_node_branch(&current_base, XMBranch::Presentation) else {
+      break;
     };
+    current_base = realized;
 
-    if !doc.is_qname(&realized, "ltx:XMApp") {
+    if !doc.is_qname(&current_base, "ltx:XMApp") {
       break;
     }
 
-    let children = element_children(&realized);
+    let children = element_children(&current_base);
     if children.len() < 3 {
       break;
     }
@@ -1903,53 +1907,35 @@ fn pmml_script_decipher(
       break;
     }
 
-    let xbase = &children[1];
+    let xbase = children[1].clone();
     let xscript = &children[2];
-    let xpos_str = xop
-      .get_attribute("scriptpos")
-      .unwrap_or_else(|| "post0".to_string());
-    let xpos = if xpos_str.starts_with("pre") {
-      "pre"
-    } else if xpos_str.starts_with("mid") {
-      "mid"
-    } else {
-      "post"
-    };
+    let (xpos, xlevel) = parse_scriptpos(xop);
     let x_is_sub = xrole.contains("SUB");
-    let xpair = if x_is_sub {
-      (Some(xscript.clone()), None)
-    } else {
-      (None, Some(xscript.clone()))
-    };
 
     match xpos {
-      "pre" => {
-        // Try to merge with existing pre pair
-        if let Some(last) = pre_scripts.last_mut() {
-          let slot = if x_is_sub { &mut last.0 } else { &mut last.1 };
-          if slot.is_none() {
-            *slot = if x_is_sub { xpair.0 } else { xpair.1 };
-          } else {
-            pre_scripts.push(xpair);
-          }
-        } else {
-          pre_scripts.push(xpair);
-        }
-      },
-      "mid" => {
+      // Prescripts accumulate outward-in, so Perl appends (`push`) and inspects
+      // the LAST pair; mid and post scripts accumulate inward-out, so it
+      // prepends (`unshift`) and inspects the FIRST.
+      ScriptPos::Pre => place_script(
+        &mut pre_scripts,
+        &mut pre_level,
+        xlevel,
+        x_is_sub,
+        xscript.clone(),
+        false,
+      ),
+      ScriptPos::Mid => {
         saw_mid = true;
-        if let Some(first) = mid_scripts.first_mut() {
-          let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
-          if slot.is_none() {
-            *slot = if x_is_sub { xpair.0 } else { xpair.1 };
-          } else {
-            mid_scripts.insert(0, xpair);
-          }
-        } else {
-          mid_scripts.push(xpair);
-        }
+        place_script(
+          &mut mid_scripts,
+          &mut mid_level,
+          xlevel,
+          x_is_sub,
+          xscript.clone(),
+          true,
+        );
       },
-      _ => {
+      ScriptPos::Post => {
         // Perl L1015-1017: a POST script found BELOW a mid (under/over) script is
         // not a script of the outer construct at all — it is an embellishment of
         // the base, e.g. the prime in `\mathop{X'}\limits_{p}^{q}`. Record it for
@@ -1962,20 +1948,18 @@ fn pmml_script_decipher(
           emb_right = Some(xscript.clone());
           break;
         }
-        if let Some(first) = post_scripts.first_mut() {
-          let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
-          if slot.is_none() {
-            *slot = if x_is_sub { xpair.0 } else { xpair.1 };
-          } else {
-            post_scripts.insert(0, xpair);
-          }
-        } else {
-          post_scripts.push(xpair);
-        }
+        place_script(
+          &mut post_scripts,
+          &mut post_level,
+          xlevel,
+          x_is_sub,
+          xscript.clone(),
+          true,
+        );
       },
     }
 
-    current_base = xbase.clone();
+    current_base = xbase;
   }
 
   (
@@ -1985,6 +1969,100 @@ fn pmml_script_decipher(
     post_scripts,
     emb_right,
   )
+}
+
+/// Where a script sits relative to its base — the keyword half of the
+/// `scriptpos` attribute.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ScriptPos {
+  /// Before the base, as an `m:mmultiscripts` prescript.
+  Pre,
+  /// Under/over the base, as `m:munder`/`m:mover`/`m:munderover`.
+  Mid,
+  /// After the base — the default, and the only one `m:msub`/`m:msup` express.
+  Post,
+}
+
+/// Split a `scriptpos` attribute into its position keyword and nesting level.
+///
+/// Port of Perl's
+/// `($op->getAttribute('scriptpos') || 'post0') =~ /^(pre|mid|post)?(\d+)?$/`.
+/// Both capture groups are optional, so a value with neither part (or one that
+/// does not match at all, leaving both undef) yields no keyword — which Perl's
+/// `$pos eq 'pre'` / `eq 'mid'` chain then falls through to post. The level is
+/// compared with `ne` against the running level, never arithmetically, so it
+/// stays a string here; a missing one is Perl's undef, i.e. `""`.
+fn parse_scriptpos(op: &Node) -> (ScriptPos, String) {
+  let raw = op
+    .get_attribute("scriptpos")
+    .unwrap_or_else(|| "post0".to_string());
+  let (pos, rest) = if let Some(rest) = raw.strip_prefix("pre") {
+    (ScriptPos::Pre, rest)
+  } else if let Some(rest) = raw.strip_prefix("mid") {
+    (ScriptPos::Mid, rest)
+  } else if let Some(rest) = raw.strip_prefix("post") {
+    (ScriptPos::Post, rest)
+  } else {
+    (ScriptPos::Post, raw.as_str())
+  };
+  // The regex is anchored, so a trailing remainder that is not all digits means
+  // the whole match failed: no keyword and no level.
+  if rest.is_empty() || rest.bytes().all(|b| b.is_ascii_digit()) {
+    (pos, rest.to_string())
+  } else {
+    (ScriptPos::Post, String::new())
+  }
+}
+
+/// Add one script to a pre/mid/post group, at the given nesting level.
+///
+/// Port of the shared shape of Perl `pmml_script_decipher` L1005-1020:
+/// ```text
+/// push/unshift(@list, [undef, undef]) if ($level ne $nl) || $list[END][$spos];
+/// $list[END][$spos] = $xscript; $level = $nl;
+/// ```
+/// A script starts a NEW pair when it would collide with the current pair's
+/// occupied slot **or** when it sits at a different nesting level — the latter
+/// being what keeps `{x_a}^b` a two-pair `m:mmultiscripts` (the `b` rides to the
+/// right of the whole `x_a` box) rather than collapsing to an `m:msubsup` that
+/// stacks the two.
+///
+/// `at_front` selects Perl's `unshift`/`$list[0]` (mid and post, which
+/// accumulate inward-out) over `push`/`$list[-1]` (pre).
+///
+/// One deliberate divergence: on an empty list Perl's pre arm evaluates
+/// `$pres[-1][$spos]` as undef and, if the levels happen to match, then dies
+/// assigning to `$pres[-1]`. Creating the pair is the obvious reading of the
+/// intent, and cannot differ from Perl anywhere Perl does not simply crash.
+fn place_script(
+  list: &mut Vec<ScriptPair>,
+  level: &mut String,
+  new_level: String,
+  is_sub: bool,
+  script: Node,
+  at_front: bool,
+) {
+  let slot_taken = |p: &ScriptPair| if is_sub { p.0.is_some() } else { p.1.is_some() };
+  let current = if at_front { list.first() } else { list.last() };
+  if current.is_none_or(slot_taken) || *level != new_level {
+    if at_front {
+      list.insert(0, (None, None));
+    } else {
+      list.push((None, None));
+    }
+  }
+  let pair = if at_front {
+    list.first_mut()
+  } else {
+    list.last_mut()
+  }
+  .expect("a pair was just ensured to exist");
+  if is_sub {
+    pair.0 = Some(script);
+  } else {
+    pair.1 = Some(script);
+  }
+  *level = new_level;
 }
 
 /// Apply mid scripts (under/over) to a base.
@@ -2061,16 +2139,12 @@ fn apply_multi_scripts(
   pre_scripts: &[ScriptPair],
   post_scripts: &[ScriptPair],
 ) -> NodeData {
-  // An absent script slot is `<m:none/>` — the element MathML defines for
-  // "no script in this position" (MathML 3 §3.4.7 / MathML Core). Perl fills it
-  // with an empty `<m:mrow/>` instead (`pmml_scriptsize` of an undefined slot),
-  // which is a presentational group that merely happens to be empty, leaving the
-  // intent to be inferred. Intentional divergence **OXIDIZED_DESIGN #86**; every
-  // occupied slot and the child ORDER (base, post pairs, `m:mprescripts`, pre
-  // pairs) match Perl, so a fully-populated tensor like `{}^{1}_{2}X^{3}_{4}` is
-  // byte-identical.
+  // An absent script slot is an empty `<m:mrow/>`, as Perl emits (`pmml_scriptsize`
+  // of an undefined slot). MathML Core **removed** `<m:none/>`; an empty `m:mrow`
+  // is the accepted placeholder for an omitted subtree, so this is both the
+  // faithful and the standards-current choice.
   let none_mml = || NodeData::Element {
-    tag:        "m:none".to_string(),
+    tag:        "m:mrow".to_string(),
     attributes: None,
     children:   vec![],
   };

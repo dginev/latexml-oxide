@@ -111,8 +111,9 @@ struct Cli {
   invisibletimes: bool,
 
   /// Remap styled alphanumerics to Unicode's Plane-1 Mathematical Alphanumeric
-  /// Symbols (the default). Overrides a profile that turned it off;
-  /// --noplane1 wins if both are given.
+  /// Symbols (the default). Overrides a profile that turned it off, and wins
+  /// over --noplane1 if both are given — as --invisibletimes does over its
+  /// negation.
   #[arg(long)]
   plane1: bool,
 

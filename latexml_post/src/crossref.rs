@@ -1331,12 +1331,17 @@ impl CrossRef {
   /// `Core/Document.pm:366`.)
   fn fill_in_rdfa_refs(&mut self, doc: &mut PostDocument) {
     for key in ["about", "resource"] {
-      let mut refs = doc.findnodes(&format!("//*[@{key}idref]"));
-      refs.extend(doc.findnodes(&format!("//*[@{key}labelref]")));
+      // One query with `or`, as Perl has it — two queries concatenated would
+      // visit a node carrying BOTH attributes twice and in the wrong order.
+      let refs = doc.findnodes(&format!("//*[@{key}idref or @{key}labelref]"));
       for ref_node in &refs {
         let mut ref_mut = ref_node.clone();
         let idref_attr = format!("{key}idref");
-        let mut id = ref_node.get_attribute(&idref_attr);
+        // Perl's `if (!$id)` and `if ($id)` are truth tests, so an empty
+        // `aboutidref=""` counts as absent rather than resolving to `about="#"`.
+        let mut id = ref_node
+          .get_attribute(&idref_attr)
+          .filter(|v| !v.is_empty());
 
         // A label reference resolves through the ObjectDB to an id, which is
         // written back so the `if let Some(id)` below treats both spellings

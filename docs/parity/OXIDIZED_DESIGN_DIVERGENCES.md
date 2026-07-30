@@ -3177,37 +3177,6 @@ applies there — filed as **brucemiller/LaTeXML#2856**. Also
 
 Guard: `06_cluster_regressions::cluster_fnum_arg_hook`.
 
-### 86. An absent `m:mmultiscripts` slot is `<m:none/>`, not an empty `<m:mrow/>`
-
-**Perl behavior.** `pmml_script_multi_layout` (`MathML.pm` L936-956) maps each
-script pair through `pmml_scriptsize($_->[0]), pmml_scriptsize($_->[1])`, and
-`pmml_scriptsize` of an undefined slot yields an **empty `<m:mrow/>`**. So
-`{}_{m}Y` — a pre-subscript with no matching pre-superscript — comes out as
-`<m:mmultiscripts><m:mi>Y</m:mi><m:mprescripts/><m:mi>m</m:mi><m:mrow/></m:mmultiscripts>`.
-
-**Rust behavior.** The empty slot is `<m:none/>`
-(`presentation.rs::apply_multi_scripts`, the `none_mml` closure):
-`…<m:mprescripts/><m:mi>m</m:mi><m:none/></m:mmultiscripts>`. Every occupied
-slot, and the child ORDER (base, post pairs, `m:mprescripts`, pre pairs), is
-identical to Perl.
-
-**Why.** `<m:none/>` is the element MathML defines for exactly this purpose — "no
-script in this position" — and is required by both MathML 3 §3.4.7 and MathML Core
-for `mmultiscripts` slots. An empty `<m:mrow/>` is a *presentational group that
-happens to be empty*: renderers must infer the intent, and assistive technology
-sees a group rather than a declared absence. Since `mmultiscripts` children are
-strictly positional pairs, using the designated element also makes the markup
-self-describing rather than relying on arity alone.
-
-**Scope.** Only the absent-slot filler differs; nothing else about the element
-changes, so a fully-populated tensor (`{}^{1}_{2}X^{3}_{4}`) is byte-identical
-between the engines — verified against same-host Perl 0.8.8.
-
-**Not to be confused with** the separate, still-open math-parser bug in which a
-trailing subscript is classified as a *prescript* (`{}^{n}a_{i}`); that one
-relocates a script rather than labelling an empty one, and is tracked in
-`SYNC_STATUS.md` under R3.
-
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not

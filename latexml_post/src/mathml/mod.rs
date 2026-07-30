@@ -346,7 +346,7 @@ impl MathProcessor for MathML {
       // rendered this formula, advertise the bitmap so a renderer without MathML
       // support can show it. `altimg-valign` carries the baseline offset and Perl
       // NEGATES the depth ("Note the sign!"): `imagedepth="5"` → `-5px`.
-      if let Some(src) = math.get_attribute("imagesrc") {
+      if let Some(src) = math.get_attribute("imagesrc").filter(|s| !s.is_empty()) {
         attrs.insert("altimg".to_string(), src);
         // Perl appends 'px' unconditionally once `imagesrc` is present, so a
         // missing `imagewidth` yields the literal `"px"` rather than omitting the
@@ -375,15 +375,15 @@ impl MathProcessor for MathML {
       }
 
       // RDFa (Perl L88-90): the Math element's own value, else the XMath's.
-      // Emitted only when non-empty — Perl's `$val ? ($_ => $val) : ()`.
+      // Perl's `$math->getAttribute($_) || $xmath->getAttribute($_)` is a TRUTH
+      // test, so an EMPTY value on the Math falls through to the XMath rather
+      // than shadowing it; the trailing `$val ? … : ()` then drops the pair if
+      // neither had one.
       for key in [
         "about", "resource", "property", "rel", "rev", "typeof", "datatype", "content",
       ] {
-        if let Some(val) = math
-          .get_attribute(key)
-          .or_else(|| xmath.get_attribute(key))
-          .filter(|v| !v.is_empty())
-        {
+        let non_empty = |n: &Node| n.get_attribute(key).filter(|v| !v.is_empty());
+        if let Some(val) = non_empty(&math).or_else(|| non_empty(xmath)) {
           attrs.insert(key.to_string(), val);
         }
       }
@@ -548,11 +548,15 @@ fn is_format_char(c: char) -> bool {
 ///
 /// `node` is `None` for a text node — Perl's non-`XML_ELEMENT_NODE` `$item`,
 /// which contributes no attributes of its own (`$iselement` is false).
+///
+/// Returns Perl's `($text, %mmlattr)` pair. The text can differ from the input
+/// only via the empty-item failsafe below; the caller that discards it (the
+/// raw-markup arm, Perl's `my ($ignore, %mmlattr)`) is doing what Perl does.
 fn stylize_text_content(
   node: Option<&Node>,
   attrs: &TextAttrs,
   text: &str,
-) -> HashMap<String, String> {
+) -> (String, HashMap<String, String>) {
   let attr_of = |name: &str| -> Option<String> {
     node
       .and_then(|n| n.get_attribute(name))
@@ -587,7 +591,40 @@ fn stylize_text_content(
     .or_else(|| attr_of("opacity"))
     .or_else(presentation::ctx_opacity);
   let mut class = attr_of("class");
+  // NB Perl reads `$attr{ccsstyle}` here (L686) — three c's, a typo for
+  // `cssstyle`, so the passed-in half never contributes and only the item's own
+  // attribute is ever seen. `%attr` carries no cssstyle on this path either way.
   let mut cssstyle = attr_of("cssstyle");
+
+  // Perl L707-713: the failsafe for an item with nothing to show. An invisible
+  // operator supplies its own character; anything else falls back to the item's
+  // name, meaning or role — or a literal `?` for a bare text node — and is
+  // painted red, since arriving here means something upstream emitted an empty
+  // token. The red usually does NOT survive: an all-empty fallback is caught by
+  // the Format test below, which clears the color again.
+  let role = attr_of("role");
+  let mut color = color;
+  let text = if text.is_empty() {
+    match role
+      .as_deref()
+      .and_then(presentation::default_token_content)
+    {
+      Some(default) => default.to_string(),
+      None => {
+        color = Some("red".to_string());
+        if node.is_some() {
+          attr_of("name")
+            .or_else(|| attr_of("meaning"))
+            .or(role)
+            .unwrap_or_default()
+        } else {
+          "?".to_string()
+        }
+      },
+    }
+  } else {
+    text.to_string()
+  };
 
   // Perl L744-745: purely-Format content (invisible times/apply/separator, …)
   // needs no visual styling attributes at all.
@@ -631,6 +668,12 @@ fn stylize_text_content(
   }
 
   let mut out: HashMap<String, String> = HashMap::default();
+  // Perl L770-771: text that is empty or purely invisible operators gets no
+  // size (nor stretchiness, which an `m:mtext` could not carry anyway). Note
+  // this is a NARROWER class than the `\p{Format}` test above — only the three
+  // invisible operators — so the two cannot be folded together.
+  let size = size.filter(|_| !text.chars().all(|c| matches!(c, '\u{2061}'..='\u{2063}')));
+
   // Perl L779-797: emit a size only when it differs from the style's nominal
   // size, re-expressed relative to a script context and converted to em. The
   // `stretchyhack` minsize/maxsize arm needs `$issymm`, which for a non-`m:mo`
@@ -657,7 +700,7 @@ fn stylize_text_content(
   if let Some(c) = class.filter(|c| !c.is_empty()) {
     out.insert("class".to_string(), c);
   }
-  out
+  (text, out)
 }
 
 /// Convert an XMHint spacing attribute to em value.
@@ -978,16 +1021,18 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node, attrs: &TextAttrs) -> Vec<
 
   match node.get_type() {
     Some(NodeType::TextNode) => {
-      // Perl L1035-1036: `s/^\s+/NBSP/` then `s/\s+$/NBSP/` — a leading or
-      // trailing whitespace RUN is REPLACED by a single NBSP, not trimmed away.
-      // (This arm used to `trim_start()` unconditionally and only then test the
-      // already-trimmed string with `starts_with(is_whitespace)`, which can
-      // never be true — so leading space was silently dropped instead of
-      // becoming the NBSP that keeps `$a \text{ and } b$` from closing up.)
-      let raw = node.get_content();
-      let head_trimmed = raw.trim_start();
-      let mut text = if head_trimmed.len() == raw.len() {
-        raw.clone()
+      // Perl stylizes the RAW content first (L1034) and only then rewrites the
+      // whitespace (L1035), so an empty text node reaches the failsafe as empty.
+      let (text, attributes) = stylize_text_content(None, attrs, &node.get_content());
+      // Perl L1035: `s/^\s+/NBSP/` then `s/\s+$/NBSP/` — a leading or trailing
+      // whitespace RUN is REPLACED by a single NBSP, not trimmed away. (This arm
+      // used to `trim_start()` unconditionally and only then test the
+      // already-trimmed string with `starts_with(is_whitespace)`, which can never
+      // be true — so leading space was silently dropped instead of becoming the
+      // NBSP that keeps `$a \text{ and } b$` from closing up.)
+      let head_trimmed = text.trim_start();
+      let mut text = if head_trimmed.len() == text.len() {
+        text.clone()
       } else {
         format!("\u{00A0}{head_trimmed}")
       };
@@ -995,7 +1040,6 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node, attrs: &TextAttrs) -> Vec<
       if tail_trimmed.len() != text.len() {
         text = format!("{tail_trimmed}\u{00A0}");
       }
-      let attributes = stylize_text_content(None, attrs, &text);
       vec![NodeData::Element {
         tag:        "m:mtext".to_string(),
         attributes: (!attributes.is_empty()).then_some(attributes),
@@ -1094,7 +1138,9 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node, attrs: &TextAttrs) -> Vec<
               "We're getting m:math nested within an m:mtext"
             );
           }
-          let attributes = stylize_text_content(Some(node), &attrs, &node.get_content());
+          // Perl `my ($ignore, %mmlattr) = …` — the raw subtree is carried over
+          // verbatim below, so only the attributes are wanted here.
+          let (_, attributes) = stylize_text_content(Some(node), &attrs, &node.get_content());
           let cloned = rebuild_text_subtree_with_doc(node, true, Some(doc))
             .unwrap_or_else(|| NodeData::Text("\u{00A0}".to_string()));
           vec![NodeData::Element {

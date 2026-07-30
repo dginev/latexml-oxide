@@ -313,7 +313,7 @@ Verified-and-landed items move to the ✅ list at the bottom.
 | `pmml_script` (L876) | PARTIAL | innerbase mstyle wrap (→F7) |
 | `pmml_script_mid_layout` (L893) | PARTIAL | NOMOVABLELIMITS + phantom padding (→F17) |
 | `pmml_scriptsize_padded` (L926) | MISSING | primed-sum limit centering (→F17) |
-| `pmml_script_multi_layout` (L936) | PARTIAL | empty slot `m:none` vs Perl empty mrow (→F17) |
+| `pmml_script_multi_layout` (L936) | ✅ | empty slot was `m:none`; now Perl's empty `m:mrow` (MathML Core removed `none`) |
 | `pmml_script_decipher` (L963) | PARTIAL | emb_left/emb_right + prelevel logic (→F17) |
 | `pmml_text_aux` (L1029) | PARTIAL | text-node styling + attr propagation (→F17) |
 | `adjust_spacing` (L1079) | PORTED | presentation.rs |

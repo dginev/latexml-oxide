@@ -1208,10 +1208,23 @@ partially-filled pre/post mix. **Belongs to the math-parser family (R8), deferre
 by user directive 2026-06-20 — do not fix in isolation**; recorded here with the
 repro so the witness is not lost. Minimal repro: `\( {}^{n}a_{i} \)`.
 
-Also recorded from this pass: Rust fills an absent `mmultiscripts` slot with
-`<m:none/>` where Perl uses an empty `<m:mrow/>` — Rust's is the element MathML
-defines for the purpose. Previously undocumented; now divergence
-**OXIDIZED_DESIGN #86**.
+Third witness from this pass, **not fixed** (math-parser family R8, deferred):
+`\( {{x_a}^b}_c \)` — a THREE-level script nest — fails to parse in Rust and
+comes out `class="ltx_math_unparsed"`, where Perl yields a three-pair
+`m:mmultiscripts`. One- and two-level nests (`{x_a}^b`, `{x^a}_b`) are
+byte-identical end to end, so the boundary is exactly at three. Note the
+post-stage guard `90_latexmlpost::scriptlevels_post_test` does NOT catch this: it
+feeds Perl's core XML to Rust's post stage, which handles the three-level shape
+correctly. Minimal repro: `\( {{x_a}^b}_c \)`.
+
+Also from this pass, and **fixed 2026-07-30**: Rust filled an absent
+`mmultiscripts` slot with `<m:none/>` where Perl uses an empty `<m:mrow/>`. This
+was briefly written up as an intentional divergence (OXIDIZED_DESIGN #86, since
+removed) on the mistaken grounds that `m:none` is the element MathML designates
+for an empty slot. **MathML Core removed `<none>`**; an empty `m:mrow` is the
+accepted placeholder for an omitted subtree, so Perl's spelling is both the
+faithful and the standards-current one. `apply_multi_scripts` now emits it.
+Guard: `90_latexmlpost::scriptlevels_post_test`.
 
 ### R6 — `ltx_env_<name>` env-markup class — PHASE 2, do NOT start yet
 **Deferred by user directive 2026-07-29: this waits until the parity and

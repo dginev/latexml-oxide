@@ -1662,9 +1662,48 @@ impl PostDocument {
     }
   }
 
-  /// Realize an XMRef/XMDual node: follow references to get the "real" node.
+  /// Realize an XMRef/XMDual node along a branch — Perl `realizeXMNode($node,
+  /// $branch)` (`Post.pm` L1436-1450), the two-argument form.
   ///
-  /// Port of `Post::Document::realizeXMNode`.
+  /// Unlike the branchless [`realize_xm_node`](Self::realize_xm_node) below,
+  /// this **loops**: an `XMRef` is followed to its target, an `XMDual` is
+  /// descended into the requested branch, and either may expose the other, so
+  /// resolution repeats until the node is neither. A dangling `idref` reports
+  /// the same `expected:id` error and yields `None`.
+  pub fn realize_xm_node_branch(&self, node: &Node, branch: XMBranch) -> Option<Node> {
+    let mut node = node.clone();
+    loop {
+      if self.is_qname(&node, "ltx:XMRef") {
+        let idref = node.get_attribute("idref")?;
+        match self.find_node_by_id(&idref) {
+          Some(target) => node = target.clone(),
+          None => {
+            Error!(
+              "expected",
+              "id",
+              "Cannot find a node with xml:id='{}'",
+              idref
+            );
+            return None;
+          },
+        }
+      } else if self.is_qname(&node, "ltx:XMDual") {
+        // Perl `my ($content, $presentation) = element_nodes($node)` — the two
+        // branches in that order. A malformed dual with a missing branch leaves
+        // Perl with an undef `$node`, ending the loop; `None` says the same.
+        let children = element_children(&node);
+        node = children.get(branch as usize)?.clone();
+      } else {
+        return Some(node);
+      }
+    }
+  }
+
+  /// Realize an XMRef node: follow the reference to get the "real" node.
+  ///
+  /// Port of `Post::Document::realizeXMNode`'s one-argument form (`Post.pm`
+  /// L1451-1456) — a single `XMRef` hop, leaving an `XMDual` alone. Callers that
+  /// need a specific branch want [`realize_xm_node_branch`](Self::realize_xm_node_branch).
   pub fn realize_xm_node(&self, node: &Node) -> Option<Node> {
     if self.is_qname(node, "ltx:XMRef") {
       let idref = node.get_attribute("idref")?;
@@ -1939,6 +1978,20 @@ pub enum NodeData {
   },
   /// A reference to an existing XML node (will be cloned when added).
   XmlNode(Node),
+}
+
+/// Which branch of an `ltx:XMDual` to follow — Perl's `$branch` string argument
+/// to `realizeXMNode`, which is only ever `'content'` or `'presentation'`.
+///
+/// The discriminants are the child positions Perl's
+/// `my ($content, $presentation) = element_nodes($node)` unpacks, so the enum
+/// indexes the children directly.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum XMBranch {
+  /// The semantic branch — the first child.
+  Content = 0,
+  /// The visual branch — the second child.
+  Presentation = 1,
 }
 
 /// Conjunction for joining node lists.
