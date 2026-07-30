@@ -12,11 +12,32 @@
 # ZERO doctests (`cargo test --doc --workspace` reports 0 passed), while CI
 # already invoked `cargo test --tests`, which excludes them too.
 
+# Tests that assert on the process's own RSS must never run beside each other.
+#
+# They drive a conversion to a `--max-memory` ceiling and require the COOPERATIVE
+# guard to name the breach (`Fatal:Timeout:MemoryBudget`). `cargo test` never ran
+# them concurrently — they live in different binaries, and binaries were
+# serialized — but nextest schedules across ALL binaries, so on a small runner
+# (macOS CI is 3 vCPU / 7 GB) the two of them overlapped, the machine went to
+# memory pressure, and the run died by a different path before the cooperative
+# guard could fire: non-zero exit but no Fatal line, failing
+# `115_streaming_cli` after 209 s. Caught by this change's own CI.
+#
+# `threads-required = "num-test-threads"` makes each of them occupy the WHOLE
+# concurrency budget, so it runs alone — exactly the guarantee `cargo test` gave
+# them implicitly. A `max-threads = 1` group would only stop the two from
+# overlapping EACH OTHER, leaving a heavy tikz/pgf sibling free to spike GBs
+# beside them, which is the same hazard by another name.
+
 [profile.default]
 # A failing run should report EVERY failure, not stop at the first binary —
 # the same reason the repo's canonical command carries `--no-fail-fast`.
 fail-fast = false
 failure-output = "immediate-final"
+
+[[profile.default.overrides]]
+filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) + test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
+threads-required = "num-test-threads"
 
 [profile.ci]
 fail-fast = false
@@ -30,3 +51,7 @@ test-threads = 2
 # test here is ~86 s locally and CI builds at opt-level=0, so 60 s is a
 # "tell me", not a failure; 20 periods (20 min) is the hard stop.
 slow-timeout = { period = "60s", terminate-after = 20 }
+
+[[profile.ci.overrides]]
+filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) + test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
+threads-required = "num-test-threads"
