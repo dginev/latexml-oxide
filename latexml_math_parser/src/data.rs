@@ -265,3 +265,36 @@ mod tests {
     MATH_IDSTORE.with(|cell| assert!(cell.borrow().is_none()));
   }
 }
+
+thread_local! {
+  /// Subtrees discarded during math parsing, retained until the parse finishes.
+  static PENDING_DISCARDS: RefCell<Vec<Node>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Detach `node` now, free it AFTER math parsing.
+///
+/// Freeing mid-parse is a use-after-free: the parse holds live `Node` handles
+/// in several places at once — the formula list `parse_math` collects up front,
+/// the `MATH_IDSTORE` snapshot, `LOSTNODES`, XMDual bookkeeping — and a freed
+/// node's memory is promptly recycled. The observed crash read a node name
+/// whose bytes had already become `_pvis`, an attribute name from a later
+/// allocation (witness 2605.00812, 344 formulae, dies on the 305th; 14 such
+/// fatals in the 2026-07-30 sandbox-arxiv-2605 rerun).
+///
+/// Chasing those references one at a time does not converge — purging the
+/// idstore snapshot alone still segfaulted. Deferring closes every window at
+/// once, and it is bounded: under streaming, math parsing runs per FRAGMENT,
+/// so the queue is fragment-sized, not document-sized.
+///
+/// The node is UNLINKED immediately, so the tree — and therefore the output —
+/// is exactly as if it had been freed here.
+pub fn defer_discard(mut node: Node) {
+  node.unlink();
+  PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
+}
+
+/// Hand back everything queued by [`defer_discard`], for the caller to free once
+/// no parse state references it.
+pub fn take_pending_discards() -> Vec<Node> {
+  PENDING_DISCARDS.with(|cell| std::mem::take(&mut *cell.borrow_mut()))
+}

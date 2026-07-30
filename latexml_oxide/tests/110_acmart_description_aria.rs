@@ -342,3 +342,65 @@ fn description_never_loses_an_annotation() {
     assert!(html.contains(text), "{text} was lost:\n{html}");
   }
 }
+
+/// A `\Description` in a TABLE float is the author doing exactly what acmart
+/// asks — a table has no image, so the table itself is where the description
+/// belongs. That must be reported as INFO, never as a warning.
+///
+/// It was a warning until 2026-07-30, and it dominated the regressions in that
+/// day's `sandbox-arxiv-2605` rerun: 27 of 45 sampled documents that fell from
+/// `no_problem` to `warning` carried this one message, purely for having a
+/// described table.
+const TEX_TABLE: &str = "\\documentclass[acmsmall]{acmart}\n\
+  \\usepackage{graphicx}\n\
+  \\begin{document}\n\
+  \\begin{table}\n\
+  \\caption{A table with no image in it}\n\
+  \\begin{tabular}{ll}a & b\\\\c & d\\end{tabular}\n\
+  \\Description[TABLESHORT]{TABLELONG description of the tabular data}\n\
+  \\end{table}\n\
+  \\end{document}\n";
+
+#[test]
+fn a_described_table_is_reported_as_info_not_a_warning() {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), TEX_TABLE).expect("write t.tex");
+
+  let output = Command::new(bin)
+    .args([
+      "t.tex",
+      "--dest",
+      "t.html",
+      "--format",
+      "html5",
+      "--nocomments",
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr);
+  let html = std::fs::read_to_string(workdir.path().join("t.html")).unwrap_or_default();
+  assert!(!html.is_empty(), "no HTML produced:\n{stderr}");
+
+  // The description must still be attached — this is a severity change, not a
+  // behaviour change.
+  assert!(
+    html.contains("aria-describedby="),
+    "the table must still carry the description:\n{html}",
+  );
+  assert!(
+    html.contains("TABLELONG"),
+    "the long description text must survive into the HTML:\n{html}",
+  );
+
+  // …and the paper must stay clean. A described table is not an anomaly.
+  assert!(
+    !stderr.contains("Warning:unexpected:\\Description"),
+    "a described TABLE must not warn — it is the expected shape:\n{stderr}",
+  );
+  assert!(
+    !stderr.contains("Error:"),
+    "expected a clean conversion:\n{stderr}",
+  );
+}
