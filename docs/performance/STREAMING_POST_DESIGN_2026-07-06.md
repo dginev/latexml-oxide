@@ -75,6 +75,49 @@ parse streamed from file. Landed on branch `harden-post-large-index`:
 > resident (~21.6 GB, up from the old ~7 GB one-unsplit-DOM). Lean-RSS is the
 > pending streaming split below; peak RSS was untouched by the CrossRef fix.
 
+## 2a. LANDED 2026-07-30: page-major rendering (PR #451)
+
+The memory problem turned out to be the *driver's loop nesting*, not the
+absence of file streaming. The driver was phase-major — `run_phase` over a
+`Vec<PostDocument>` for Scan, MakeIndex, MakeBibliography, CrossRef, Graphics,
+then MathML/XSLT, then a write loop — so every page stayed alive at every
+boundary, at ~1.6 MB of per-document overhead each (own `xmlDoc`, dictionary,
+id table, lazily-built caches). But only **Scan** needs global knowledge, and
+it emits *strings* into the ObjectDB; everything after it is page-local.
+
+So Scan runs globally (spilling each scanned page and freeing it), then pages
+are re-read one at a time through CrossRef → Graphics → MathML → XSLT → write
+→ drop. Peak became the one-time split DOM plus ONE page.
+
+Measured on `index.xml` (614 MB core XML, `--splitat=subsubsection`):
+
+| | before | after |
+|---|---|---|
+| outcome | exit 137, memory ceiling | **exit 0** |
+| peak RSS | 80 GB, linear in pages | **15.98 GB, flat** |
+| pages | **0** | **40,201** |
+| HTML | none | 2.25 GB |
+| errors | 6 silently-failed queries | **0** |
+
+Also fixed in the same PR: whole-document `//X[pred]` queries are answered by
+traversal (a closed predicate grammar) instead of a materialized node-set, and
+an unanswerable evaluation is an `Error` rather than an empty result — six such
+queries had been failing on this document, so post generated **no MathML, no
+crossrefs, no images** and wrote a 0-byte HTML while exiting 0.
+
+Markup verified against **Perl LaTeXML 0.8.8** on a ~10-page fragment of the
+witness at the same `--splitat`: identical page count, page names, and
+document-relation markup link-for-link. (That also proved the extra
+`<link rel="chapter">`/`"section"` relations on the big document are
+Perl-faithful content recovered by the query fix — the pre-change binary emits
+them too — and surfaced a pre-existing defect where navigation link text
+rendered `TEMPORARY_DOCUMENT_ID`, filed separately.)
+
+**What remains** for the streaming split below: peak still includes the
+one-time split DOM (~16 GB for this 614 MB input, so ~70 GB for a 2.66 GB
+core XML), because Split must parse the whole document to find page
+boundaries. Streaming that parse is the remaining lever.
+
 ## 3. Pending half — two-pass streaming split
 
 **Goal:** never build the whole DOM. Stream the file, materialize **one page
