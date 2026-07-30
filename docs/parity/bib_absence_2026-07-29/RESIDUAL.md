@@ -1,7 +1,7 @@
 # The remaining failures, fully characterized
 
 Every paper of the 533-article known cohort that still has **zero**
-`class="ltx_bibitem"` after this PR. **Refreshed after R3b's first fix.** 265 are recovered; **268** are not (263 EMPTY + 5 NOHTML).
+`class="ltx_bibitem"` after this PR. **Refreshed after the xpatch binding.** 270 are recovered; **263** are not (258 EMPTY + 5 NOHTML).
 One row per paper in `residual_characterization.tsv.gz` —
 `id, first_error_class, nerrors, status, html_bytes, html_pct_of_src,
 source_bib_signal, bib_machinery` — every field derived from the paper's own run
@@ -99,3 +99,47 @@ long tail, not a few big causes. The clusters worth naming:
    family A's 18 and family B's 12 overlap here.
 3. **The alignment cluster (28)** only with an engine-level change in its own
    branch.
+
+## Characterized single-witness cases (mechanism known, not fixed)
+
+**2606.01320 — a bibliography gated on a citation counter that our CS lock keeps
+at zero.** `ncpds.tex` L27-28 does `\newcounter{cite}` +
+`\pretocmd{\cite}{\stepcounter{cite}}{}{}`, then L2845 emits the bibliography
+only inside `\ifnum\value{cite}>0`. Our core `\cite` is `locked => true` (this
+PR's own #88 fix, commit `6f0e29477d`, which stopped raw conference styles —
+aaai, iccc, flairs, kr, achicago, harvard, fixbib — from clobbering it), so the
+hook's `\edef\cite{…}` is refused; the counter never leaves 0 and the whole
+bibliography is skipped. **etoolbox still reports the patch as succeeding**
+(measured: `\pretocmd`'s success branch runs, `\arabic{cite}` = 0) because
+`\ifdefmacro{\cite}` is true here and only the assignment is refused.
+
+The document is NOT truncated — L3972 is its last content line, followed only by
+`\end{example}`/`\end{appendices}`/`\end{document}`. Only 1 residual paper
+patches `\cite` this way and only 1 gates on the counter, so this was left
+unfixed rather than risk the clauses that recovered several papers.
+
+Remedy if it recurs at scale: let the etoolbox *hooks* (`\pretocmd`/`\apptocmd`,
+which embed the original via `\expandonce` and so are non-destructive) assign
+through the lock, while plain `\def`/`\renewcommand` from raw source stays
+refused. That needs an unlocked-assignment window at the `\etb@hooktocmd` site
+(`etoolbox_sty.rs` L1411) — `state_is_unlocked()` already exists as the gate.
+Do NOT simply unlock `\cite`.
+
+**Open, separate from the bibliography mission:** the diagnostic for a refused
+redefinition (`state.rs` L1169-1184, Perl `State.pm` L509-515
+`Info('ignore', …, "Ignoring redefinition of \cite")`) could not be made to
+appear in any output at `--verbosity=1..3`, though the lock demonstrably holds
+(a `\renewcommand{\cite}[1]{CLOBBERED}` in document source leaves no
+`CLOBBERED` in the result). `SOURCEFILE` *is* assigned
+(`core_interface.rs::establish_source_context`) and stores `Stored::String`, and
+the `\.(tex|bib)$` predicate should match, so the gap is in whether this path is
+reached at all for `\renewcommand`/`\edef` — worth a look, since a refused
+redefinition silently losing document behaviour is the failure mode
+CLAUDE.md's signal-integrity rule exists to prevent.
+
+**2605.08378 — submission missing its own class.** cortex converts `thesis.tex`,
+which is `\documentclass{PurdueThesis}`, and `PurdueThesis.cls` is **not in the
+zip** (the zip ships `packages/neurips_2025.sty` and a decoy `ap-mathematics.tex`
+that also has a `\begin{document}`). Hence `\ConfigureBibliography` undefined.
+Source incomplete; no local PDF to confirm against — check the arXiv PDF before
+counting it either way.
