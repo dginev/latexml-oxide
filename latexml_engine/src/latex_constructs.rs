@@ -6588,11 +6588,16 @@ LoadDefinitions!({
     // the 4 GiB OOM boundary. With this Perl-faithful chain in place,
     // mathtext's override produces an equivalent chain that terminates
     // at the same `\T2A\i` primitive.
-    let code_value = code.value_of() as u8;
+    // `u8::try_from`, not `as u8`: Perl hands the Number straight to
+    // `CharDef->new` and the decode indexes the map, so an out-of-range code
+    // yields no glyph. A truncating cast wrapped it onto a valid slot instead.
+    let code_value = u8::try_from(code.value_of()).ok();
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
-    if let Some(replacement_value) = font::decode(code_value, Some(encoding_str), false) {
+    if let Some(replacement_value) =
+      code_value.and_then(|c| font::decode(c, Some(encoding_str), false))
+    {
       // Encoding-specific carries the actual glyph.
       def_primitive(ecs, None, Some(PrimitiveBody::from(replacement_value)),
         PrimitiveOptions::default())?;
@@ -6878,7 +6883,14 @@ LoadDefinitions!({
   // The next font declaration commands are based on
   // http://tex.loria.fr/general/new/fntguide.html
   // we ignore font encoding
-  DefPrimitive!("\\DeclareSymbolFont{}{}{}{}{}",
+  // Perl: latex_constructs.pool.ltxml L2664 —
+  // `\DeclareSymbolFont{} ExpandedPartially {}{}{}`. The encoding argument is
+  // `ExpandedPartially` because `fontmath.ltx` and most font packages write
+  // `\DeclareSymbolFont{operators}{\encodingdefault}{\rmdefault}{m}{n}`. Read
+  // unexpanded, the literal string `\encodingdefault` lands in
+  // `fontdeclaration@operators`, and every dependent `\DeclareMathSymbol` /
+  // `\DeclareMathAccent` then looks up a fontmap by that name and finds none.
+  DefPrimitive!("\\DeclareSymbolFont{} ExpandedPartially {}{}{}",
   sub[(name, enc, family, series, shape)] {
     AssignValue!(&s!("fontdeclaration@{}", name),
       fontmap!(family => family.to_string(),
@@ -10497,7 +10509,11 @@ LoadDefinitions!({
     before_digest => { DefMacro!("\\f@shape", ""); });
   DefConstructor!("\\textit@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { shape => "italic" }, alias => "\\textit",
-    before_digest => { DefMacro!("\\f@shape", "i"); });
+    // Perl: `DefMacro('\f@shape', 'it')` (latex_constructs.pool.ltxml L5255) —
+    // `it`, not `i`. Both keys map to `italic` in FONT_SHAPE, so this is only
+    // visible to code that reads `\f@shape` textually; the sibling
+    // `\textsl@math`/`\textsc@math` already use Perl's `sl`/`sc`.
+    before_digest => { DefMacro!("\\f@shape", "it"); });
   DefConstructor!("\\textsl@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { shape => "slanted" }, alias => "\\textsl",
     before_digest => { DefMacro!("\\f@shape", "sl"); });

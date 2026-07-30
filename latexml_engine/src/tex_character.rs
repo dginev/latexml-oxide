@@ -43,13 +43,38 @@ LoadDefinitions!({
   });
 
   // Perl: $stomach->enterHorizontal; Box($glyph, $adjfont, ...)
+  //
+  // Perl calls `FontDecode` here (TeX_Character.pool.ltxml L32-36), and
+  // `FontDecode` defaults the encoding to OT1 when the current font carries
+  // none — `$encoding = $font->getEncoding || 'OT1'` (Package.pm L2877).
+  // `FontDecodeString` (Package.pm L2906) deliberately has NO such default,
+  // and `font::decode_str` is the port of *that* one. The distinction is
+  // load-bearing in MATH mode, where `Font::math_default()` sets
+  // `encoding: None` on purpose (common/font.rs): with no default, the map
+  // lookup ran against the empty encoding and `$\char65$` produced NOTHING,
+  // where Perl gives `A`. So resolve the encoding the way FontDecode does and
+  // pass it explicitly. We keep calling `decode_str` rather than
+  // `content::font_decode` because only `decode_str` honours Perl's
+  // multi-char map entries (the `_fontmap_multichar` side table, T1's "SS",
+  // and the NBSP-prefixed combining accents) — Rust's `Fontmap` slot is a
+  // single `Option<char>`, so that handling lives in the string wrapper.
   DefPrimitive!("\\char Number", sub[(number)] {
     enter_horizontal();
     let number_tks = number.revert().unwrap_or_default().unlist();
-    let decoded = match font::decode_str(number.value_of() as u8, None, false) {
-      None => pin!(""),
-      Some(s) => s
-    };
+    // `u8::try_from`, not `as u8`: Perl guards `$code < 0` and then indexes
+    // `$$map[$code]`, so an out-of-range code yields no glyph. A truncating
+    // cast instead WRAPPED it onto a valid slot — `\char300` came out as `,`
+    // (300 & 0xFF = 44) rather than as nothing.
+    //
+    // The encoding stays `None` on purpose. Passing it explicitly would
+    // suppress the family-specific map: both Perl and `font::decode` consult
+    // `<enc>_<family>_fontmap` only on the branch that looked the font up
+    // itself (Perl assigns `$font` solely inside `if (!$encoding)`), so an
+    // explicit encoding costs `\ttfamily\char11` its `OT1_typewriter` ↑.
+    let decoded = u8::try_from(number.value_of())
+      .ok()
+      .and_then(|code| font::decode_str(code, None, false))
+      .unwrap_or_else(|| pin!(""));
     Tbox::new(
      decoded,
      None,

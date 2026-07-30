@@ -1,0 +1,15 @@
+% `\char` decodes through Perl's FontDecode semantics, in math as in text.
+% Guard for two defects, both silent:
+%  - in MATH mode the encoding defaulted to nothing instead of OT1, so
+%    `$\char65$` produced NOTHING where Perl produces `A`;
+%  - the code was cast `as u8`, so an out-of-range `\char300` WRAPPED onto
+%    slot 44 and printed `,` instead of producing nothing.
+% Markers are prose so a failure shows which case broke.
+\documentclass{article}
+\begin{document}
+MATH[$\char65$] TEXT[\char65]
+
+OOBMATH[$\char300$] OOBTEXT[\char300]
+
+SYMBOL[$\symbol{65}$] ACCENT[\char19]
+\end{document}

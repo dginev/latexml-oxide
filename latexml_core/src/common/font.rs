@@ -2083,14 +2083,27 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
   let encoding = match encoding_opt {
     Some(enc) => Cow::Owned(enc),
     None => {
+      // Perl `FontDecode`: `$encoding = $font->getEncoding || 'OT1'`
+      // (Package.pm L2877). The `|| 'OT1'` is NOT shared with
+      // `FontDecodeString` (L2906), whose port is `decode_string` below and
+      // which deliberately keeps the empty fallback — do not "align" the two.
+      //
+      // This branch is the one `\char` reaches (via `decode_str`, encoding
+      // `None`). It matters in MATH mode, where `Font::math_default()` sets
+      // `encoding: None` on purpose: without the default, the lookup ran
+      // against the empty encoding and `$\char65$` decoded to NOTHING where
+      // Perl gives `A`. The default lives here, rather than at the call site,
+      // so the font stays in scope for the `<enc>_<family>_fontmap`
+      // refinement below — resolving the encoding earlier and passing it in
+      // would silently drop `\ttfamily`'s `OT1_typewriter` variant.
       font = lookup_font();
       if let Some(ref font) = font {
         match font.get_encoding() {
-          None => Cow::Borrowed(""),
+          None => Cow::Borrowed("OT1"),
           Some(encoding) => encoding.clone(),
         }
       } else {
-        Cow::Borrowed("")
+        Cow::Borrowed("OT1")
       }
     },
   };
