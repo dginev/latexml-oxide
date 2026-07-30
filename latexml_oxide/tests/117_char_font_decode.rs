@@ -101,3 +101,46 @@ fn char_decodes_through_ot1_in_math_and_does_not_wrap_out_of_range() {
      handling in font::decode_str is being bypassed"
   );
 }
+
+/// `\DeclareSymbolFont`'s encoding argument must be expanded before storage.
+///
+/// Perl reads it as `ExpandedPartially` (latex_constructs.pool.ltxml L2664)
+/// because `fontmath.ltx` and most font packages write
+/// `\DeclareSymbolFont{operators}{\encodingdefault}{\rmdefault}{m}{n}`. Read
+/// unexpanded, the literal `\encodingdefault` is stored as the encoding and
+/// every dependent `\DeclareMathSymbol` looks up a fontmap of that name,
+/// finds none, and falls back to the raw code — silently, with no diagnostic.
+///
+/// Verified against same-host Perl 0.8.8, which yields `A` and `Γ`.
+#[test]
+fn symbol_font_encoding_argument_is_expanded_before_storage() {
+  let r = convert_fixture("tests/cluster_regressions/symbolfont_encoding_expansion.tex");
+  let out = r
+    .result
+    .unwrap_or_else(|| {
+      panic!(
+        "conversion produced no result (status_code={})",
+        r.status_code
+      )
+    })
+    .to_string();
+
+  // Slot 65 is a decoy: an un-decoded raw code 65 IS ASCII `A`, so it looks
+  // right either way. Asserted anyway so a regression that breaks BOTH slots
+  // is distinguishable from one that breaks only the non-ASCII path.
+  assert_eq!(
+    marker(&out, "DECOY"),
+    "A",
+    "slot 65 of the declared symbol font did not decode"
+  );
+
+  // Slot 0 is the tell: `Γ` through OT1, U+FFFD when the encoding was stored
+  // as the unexpanded string `\encodingdefault`.
+  assert_eq!(
+    marker(&out, "TELL"),
+    "\u{0393}",
+    "slot 0 decoded to something other than `Γ` — `\\DeclareSymbolFont` is \
+     storing its encoding argument unexpanded again, so the fontmap lookup \
+     misses and the raw code leaks through (pre-fix this was U+FFFD)"
+  );
+}
