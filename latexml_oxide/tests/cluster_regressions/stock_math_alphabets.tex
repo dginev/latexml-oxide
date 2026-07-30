@@ -1,0 +1,9 @@
+% The STOCK math alphabets are bound directly in the pool and must NOT route
+% through `\DeclareMathAlphabet`. Companion to declaremathalphabet_props.tex:
+% that one pins the declared path, this one pins that the stock path stayed
+% off it. Same expected values in both, so a regression that reroutes the
+% stock alphabets through a broken declaration path is still caught.
+\documentclass{article}
+\begin{document}
+$\mathsf{A}$ $\mathbf{A}$ $\mathit{A}$
+\end{document}

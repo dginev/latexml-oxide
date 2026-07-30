@@ -1,0 +1,21 @@
+% `\DeclareMathAlphabet` must map its NFSS codes to LaTeXML's ABSTRACT font
+% properties, the way Perl's `lookupTeXFont` does — not store them raw.
+%
+% Storing them raw put the codes straight into the XML: `font="cmss m n"`
+% instead of `font="sansserif"`, and MathML then carried
+% `mathvariant="normal"` for every declared alphabet, so a sansserif/bold/
+% italic alphabet rendered upright.
+%
+% Only document- and package-declared alphabets route through here; the stock
+% \mathsf/\mathbf/\mathit are bound directly in the pool. Font packages
+% (fouriernc, mathpazo, newtxmath, …) declare their own, which is the real
+% population this protects.
+\documentclass{article}
+\makeatletter
+\DeclareMathAlphabet{\mysf}{OT1}{cmss}{m}{n}
+\DeclareMathAlphabet{\mybf}{OT1}{cmr}{bx}{n}
+\DeclareMathAlphabet{\myit}{OT1}{cmr}{m}{it}
+\makeatother
+\begin{document}
+$\mysf{A}$ $\mybf{A}$ $\myit{A}$
+\end{document}
