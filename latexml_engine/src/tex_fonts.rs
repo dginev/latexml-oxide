@@ -2,8 +2,7 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use crate::base_utilities::already_reported;
-use crate::prelude::*;
+use crate::{base_utilities::already_reported, prelude::*};
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -37,7 +37,12 @@ fn bbding_glyphs_decode_through_the_ding_family_fontmap() {
   let r = convert_fixture("tests/fonts/bbding.tex");
   let out = r
     .result
-    .unwrap_or_else(|| panic!("conversion produced no result (status_code={})", r.status_code))
+    .unwrap_or_else(|| {
+      panic!(
+        "conversion produced no result (status_code={})",
+        r.status_code
+      )
+    })
     .to_string();
 
   // \Checkmark \CheckmarkBold \XSolid \XSolidBold \XSolidBrush
