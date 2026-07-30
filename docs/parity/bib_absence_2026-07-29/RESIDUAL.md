@@ -143,3 +143,34 @@ zip** (the zip ships `packages/neurips_2025.sty` and a decoy `ap-mathematics.tex
 that also has a `\begin{document}`). Hence `\ConfigureBibliography` undefined.
 Source incomplete; no local PDF to confirm against — check the arXiv PDF before
 counting it either way.
+
+## R3a residual after the biblatex autoload (measured 2026-07-30)
+
+Fresh per-paper table: [`r3a_residual_2026-07-30.tsv.gz`](r3a_residual_2026-07-30.tsv.gz)
+— `id, now, want, cited, errors, first_error` for every biblatex-signal paper
+still empty, reconverted with the current binary. **Use it instead of the
+`residual_characterization` table for R3a**, which predates 16 fixes.
+
+**No cluster is left in R3a — the remainder is singletons and pairs with
+unrelated causes.** The three `Error:unexpected:_` papers looked like one family
+and are not: 2605.28723 is a quantikz `\lstick{\ket{0}_{a}}` cell, 2606.10150's
+error is mis-attributed to a bare `}` (real cause elsewhere), and 2606.28542 has
+`_` *inside* `$…$`, so math mode was already broken upstream of it.
+
+**Five papers read and cited their bibliography and still rendered nothing** —
+`now=0` with `cited>0`, each carrying 480-1002 errors, so the document collapses
+before the bibliography can be emitted. These are collateral truncation (F10),
+each blocked by its own first error, not a bibliography defect:
+
+| paper | cited | errors | first error |
+|---|---|---|---|
+| 2605.29137 | 274 | 558 | `{exerbox}` undefined |
+| 2605.21355 | 168 | 633 | `\intercal` undefined |
+| 2606.28542 | 32 | 506 | `unexpected:_` |
+| 2605.07772 | 19 | 1002 | `\usephysicsmodule` undefined |
+| 2606.12351 | 18 | 480 | `pNiceMatrix` unsupported in nicematrix |
+
+2605.21355 is **not** ours: it is `\documentclass{amsart}` with
+`%\usepackage{amssymb}` commented out, so `\intercal` is undefined under
+pdflatex too. `\intercal` itself is defined (`amssymb_sty.rs` L139, matching
+Perl `amssymb.sty.ltxml` L85) — check the source before suspecting the binding.
