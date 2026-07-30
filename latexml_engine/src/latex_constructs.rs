@@ -6595,11 +6595,19 @@ LoadDefinitions!({
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
+    // `decode_str`, not `decode`: a fontmap slot may hold MORE than one
+    // character. Perl's `FontDecode` returns the whole string
+    // (`$$map[$code]`), and Rust splits that across a single-`char` array plus
+    // the `_fontmap_multichar` side table — which only `decode_str` consults,
+    // along with T1's `SS` and the NBSP-prefixed combining accents. Decoding
+    // with `decode` silently dropped the second character: T2B slot 128 came
+    // out as `Ӷ` (U+04F6) instead of `Ӷ̶` (U+04F6 U+0336), i.e. a DIFFERENT
+    // letter with its stroke removed, where Perl keeps the pair.
     if let Some(replacement_value) =
-      code_value.and_then(|c| font::decode(c, Some(encoding_str), false))
+      code_value.and_then(|c| font::decode_str(c, Some(encoding_str), false))
     {
       // Encoding-specific carries the actual glyph.
-      def_primitive(ecs, None, Some(PrimitiveBody::from(replacement_value)),
+      def_primitive(ecs, None, Some(PrimitiveBody::String(replacement_value)),
         PrimitiveOptions::default())?;
     } else if IsDefinable!(&ecs) {
       // Can't decode: install no-op fallback so downstream chains find

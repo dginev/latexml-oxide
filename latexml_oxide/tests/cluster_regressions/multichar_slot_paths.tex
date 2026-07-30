@@ -1,0 +1,25 @@
+% A fontmap slot may hold MORE than one character (Perl returns the whole
+% string from `$$map[$code]`). Rust splits that across a single-char array plus
+% a `_fontmap_multichar` side table, so every decode path must consult BOTH.
+%
+% T2B slot 128 is U+04F6 + U+0336 (a stroked letter). Dropping the overlay
+% yields U+04F6 alone — a DIFFERENT letter.
+%
+% TS: \DeclareTextSymbol — decodes in the PREAMBLE, before any \fontencoding
+%     has loaded the T2B binding, and bakes the result into a primitive body.
+%     This is why the multichar lookup must preload the map itself.
+% SYM: \symbol at document time, when the map is already loaded — the easy
+%     path, which worked all along; here as a control.
+% MS: \DeclareMathSymbol — routes through mathchar's single-`char` decode.
+%     KNOWN REMAINING GAP, see the test.
+\documentclass{article}
+\makeatletter
+\DeclareTextSymbol{\mcA}{T2B}{128}
+\DeclareSymbolFont{myf}{T2B}{cmr}{m}{n}
+\DeclareMathSymbol{\mcM}{\mathord}{myf}{128}
+\makeatother
+\begin{document}
+TS[{\fontencoding{T2B}\selectfont\mcA}]
+SYM[{\fontencoding{T2B}\selectfont\symbol{128}}]
+MS[$\mcM$]
+\end{document}
