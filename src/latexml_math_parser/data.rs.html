@@ -265,4 +265,37 @@
 <a href=#265 id=265 data-nosnippet>265</a>    MATH_IDSTORE.with(|cell| <span class="macro">assert!</span>(cell.borrow().is_none()));
 <a href=#266 id=266 data-nosnippet>266</a>  }
 <a href=#267 id=267 data-nosnippet>267</a>}
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a><span class="macro">thread_local!</span> {
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="doccomment">/// Subtrees discarded during math parsing, retained until the parse finishes.
+<a href=#271 id=271 data-nosnippet>271</a>  </span><span class="kw">static </span>PENDING_DISCARDS: RefCell&lt;Vec&lt;Node&gt;&gt; = <span class="kw">const </span>{ RefCell::new(Vec::new()) };
+<a href=#272 id=272 data-nosnippet>272</a>}
+<a href=#273 id=273 data-nosnippet>273</a>
+<a href=#274 id=274 data-nosnippet>274</a><span class="doccomment">/// Detach `node` now, free it AFTER math parsing.
+<a href=#275 id=275 data-nosnippet>275</a>///
+<a href=#276 id=276 data-nosnippet>276</a>/// Freeing mid-parse is a use-after-free: the parse holds live `Node` handles
+<a href=#277 id=277 data-nosnippet>277</a>/// in several places at once — the formula list `parse_math` collects up front,
+<a href=#278 id=278 data-nosnippet>278</a>/// the `MATH_IDSTORE` snapshot, `LOSTNODES`, XMDual bookkeeping — and a freed
+<a href=#279 id=279 data-nosnippet>279</a>/// node's memory is promptly recycled. The observed crash read a node name
+<a href=#280 id=280 data-nosnippet>280</a>/// whose bytes had already become `_pvis`, an attribute name from a later
+<a href=#281 id=281 data-nosnippet>281</a>/// allocation (witness 2605.00812, 344 formulae, dies on the 305th; 14 such
+<a href=#282 id=282 data-nosnippet>282</a>/// fatals in the 2026-07-30 sandbox-arxiv-2605 rerun).
+<a href=#283 id=283 data-nosnippet>283</a>///
+<a href=#284 id=284 data-nosnippet>284</a>/// Chasing those references one at a time does not converge — purging the
+<a href=#285 id=285 data-nosnippet>285</a>/// idstore snapshot alone still segfaulted. Deferring closes every window at
+<a href=#286 id=286 data-nosnippet>286</a>/// once, and it is bounded: under streaming, math parsing runs per FRAGMENT,
+<a href=#287 id=287 data-nosnippet>287</a>/// so the queue is fragment-sized, not document-sized.
+<a href=#288 id=288 data-nosnippet>288</a>///
+<a href=#289 id=289 data-nosnippet>289</a>/// The node is UNLINKED immediately, so the tree — and therefore the output —
+<a href=#290 id=290 data-nosnippet>290</a>/// is exactly as if it had been freed here.
+<a href=#291 id=291 data-nosnippet>291</a></span><span class="kw">pub fn </span>defer_discard(<span class="kw-2">mut </span>node: Node) {
+<a href=#292 id=292 data-nosnippet>292</a>  node.unlink();
+<a href=#293 id=293 data-nosnippet>293</a>  PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
+<a href=#294 id=294 data-nosnippet>294</a>}
+<a href=#295 id=295 data-nosnippet>295</a>
+<a href=#296 id=296 data-nosnippet>296</a><span class="doccomment">/// Hand back everything queued by [`defer_discard`], for the caller to free once
+<a href=#297 id=297 data-nosnippet>297</a>/// no parse state references it.
+<a href=#298 id=298 data-nosnippet>298</a></span><span class="kw">pub fn </span>take_pending_discards() -&gt; Vec&lt;Node&gt; {
+<a href=#299 id=299 data-nosnippet>299</a>  PENDING_DISCARDS.with(|cell| std::mem::take(<span class="kw-2">&amp;mut *</span>cell.borrow_mut()))
+<a href=#300 id=300 data-nosnippet>300</a>}
 </code></pre></div></section></main></body></html>
