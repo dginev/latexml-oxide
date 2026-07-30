@@ -843,7 +843,7 @@ impl MathParser {
                 // Dropped for good — unrecord any id it carries, then free
                 // (an unlinked doc-owned node otherwise leaks).
                 document.unrecord_node_ids(&xmref);
-                document.discard_subtree(xmref);
+                crate::data::defer_discard(xmref);
                 unlinks += 1;
               },
               Some(new_id) => {
@@ -874,6 +874,34 @@ impl MathParser {
       // manipulation (findnodes/set_attribute) after parse_math breaks Marpa
       // grammar precomputation for subsequent test runs. Applied in caller instead.
       note_end("Math Parsing");
+    }
+    // Everything discarded during the parse is freed HERE, once no parse state
+    // can still reach it: the up-front formula list is exhausted, the
+    // `MATH_IDSTORE` snapshot is cleared, LOSTNODES is drained, and the kludge
+    // pass (which discards too) has run. Freeing at the discard sites instead
+    // is a use-after-free — see `crate::data::defer_discard`.
+    // A queued subtree can CONTAIN another queued node — the parse discards a
+    // wrapper and, separately, something inside it — so freeing naively double
+    // frees ("double free or corruption (out)"). Testing the inner entry
+    // afterwards does not work either: `free_subtree` neutralizes only the
+    // wrappers registered with the document, so an unregistered handle keeps a
+    // dangling pointer that still looks live.
+    //
+    // Record every pointer in a subtree BEFORE releasing it — while the memory
+    // is still valid to walk — and skip anything already covered.
+    let mut released: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
+    fn mark(node: &Node, released: &mut rustc_hash::FxHashSet<usize>) {
+      released.insert(node.to_hashable());
+      for child in node.get_child_nodes() {
+        mark(&child, released);
+      }
+    }
+    for node in crate::data::take_pending_discards() {
+      if released.contains(&node.to_hashable()) {
+        continue;
+      }
+      mark(&node, &mut released);
+      document.discard_subtree(node);
     }
     Ok(())
   }
@@ -976,7 +1004,7 @@ impl MathParser {
         let _ = new_app.add_child(&mut xmref);
         // replace_tree_free: new_app is a standalone built tree — copied
         // into place, then both it and the replaced XMRef are freed.
-        let _ = document.replace_tree_free(new_app, ref_node);
+        let _ = replace_tree_deferred(document, new_app, ref_node);
       }
     }
     Ok(())
@@ -1074,7 +1102,33 @@ impl MathParser {
     // foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
-    let mut p = xnode.get_parent().unwrap();
+    // The formula list is collected UP FRONT (`parse_math`'s `findnodes`), but
+    // parsing one formula can free another's node — the discard sites in this
+    // file free C-side memory now and neutralize the Rust wrappers with it
+    // (libxml 0.3.17 `free_subtree`; before that a discarded node merely
+    // leaked, so it stayed reachable and this could not be observed). A
+    // detached entry then reaches us with no parent, and this used to
+    // `unwrap()` — a PANIC that killed the whole conversion: 14 documents in
+    // the 2026-07-30 sandbox-arxiv-2605 rerun went error -> fatal on exactly
+    // this line, witness 2605.00812 (344 formulae, dies on the 305th).
+    //
+    // There is nothing to parse in a node that is no longer in the document,
+    // so skip it — but say so, because a formula vanishing from the tree is
+    // not something to pass over in silence.
+    let Some(mut p) = xnode.get_parent() else {
+      // A formula queued by `parse_math`'s up-front scan is no longer in the
+      // document. That must not happen now that discards are deferred
+      // (`crate::data::defer_discard`), so reaching here means the tree was
+      // mutated underneath the parse — and CONTINUING is the dangerous option:
+      // an earlier version of this guard skipped instead, kept parsing a
+      // corrupt tree, and turned a panic into a SIGSEGV. Stop this conversion
+      // cleanly, with a named cause and whatever output already exists.
+      fatal!(
+        XMath,
+        Malformed,
+        "an XMath node was detached before it could be parsed"
+      );
+    };
     match self.parse_rec(xnode, "Anything,", document)? {
       Some(result) => {
         // Add text representation to the containing Math element.
@@ -1182,13 +1236,13 @@ impl MathParser {
               .pop()
               .expect("append_tree appended the parse result");
             for child in old_children {
-              document.discard_subtree(child);
+              crate::data::defer_discard(child);
             }
             if let Some(root) = result_root {
               // The result was a standalone built tree (not one of the old
               // children); free it too — disjoint from the frees above (a
               // detached root has no parent, old children had one).
-              document.discard_subtree(root);
+              crate::data::defer_discard(root);
             }
           } else {
             // Replace the whole node for XMArg, XMWrap; preserve some attributes
@@ -1236,7 +1290,7 @@ impl MathParser {
               document.set_attribute(&mut result, &key, &value)?;
               // }
             }
-            if let Some(r) = document.replace_tree_free(result.clone(), node)? {
+            if let Some(r) = replace_tree_deferred(document, result.clone(), node)? {
               result = r;
             }
             // If replace_tree_free returns None, node was already detached
@@ -1473,14 +1527,14 @@ impl MathParser {
     }
     for child in &discarded {
       if !replacements.contains(child) {
-        document.discard_subtree(child.clone());
+        crate::data::defer_discard(child.clone());
       }
     }
     for shell in unwrapped_shells {
       // A fresh wrapper from the CLOSE branch; an ORIGINAL XMWrap child was
       // already freed through `discarded` above — don't free it twice.
       if !discarded.contains(&shell) {
-        document.discard_subtree(shell);
+        crate::data::defer_discard(shell);
       }
     }
     // D3b: the replacements re-parented above may carry xml:id attrs
@@ -1683,7 +1737,7 @@ impl MathParser {
           }
         }
         for root in garbage_roots {
-          document.discard_subtree(root);
+          crate::data::defer_discard(root);
         }
         let result = element_nodes(mathnode).remove(0);
         //END reparent.
@@ -3275,6 +3329,24 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
   } else {
     None
   }
+}
+
+/// `Document::replace_tree_free`, with the FREE deferred to the end of math
+/// parsing — see [`crate::data::defer_discard`] for why freeing mid-parse is a
+/// use-after-free. The tree ends up identical; only the moment of `xmlFreeNode`
+/// moves.
+fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Result<Option<Node>> {
+  // Resolve new's standalone root BEFORE the swap, exactly as
+  // `replace_tree_free` does — afterwards the chain may no longer be walkable.
+  let new_root = detached_root(&new);
+  let inserted = document.replace_tree(new, old.clone())?;
+  if inserted.is_some() {
+    crate::data::defer_discard(old);
+    if let Some(root) = new_root {
+      crate::data::defer_discard(root);
+    }
+  }
+  Ok(inserted)
 }
 
 #[cfg(test)]
