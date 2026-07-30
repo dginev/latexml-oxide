@@ -1,0 +1,57 @@
+# cargo-nextest configuration.
+#
+# WHY: `cargo test` runs each test BINARY to completion before starting the
+# next, parallelising only *within* a binary. This workspace has 122 test
+# targets whose in-binary execution sums to ~398 s, so that sum is the wall
+# floor no matter how many cores are free. nextest schedules every test as its
+# own process across all cores, making the critical path the slowest single
+# TEST. Measured back-to-back on the same 128-core box, same 1835 tests, both
+# green: `cargo test` 8:48.38 vs `cargo nextest run` 1:26.76 — 6.1x.
+#
+# Coverage is unchanged: nextest does not run doctests, and this workspace has
+# ZERO doctests (`cargo test --doc --workspace` reports 0 passed), while CI
+# already invoked `cargo test --tests`, which excludes them too.
+
+# Tests that assert on the process's own RSS must never run beside each other.
+#
+# They drive a conversion to a `--max-memory` ceiling and require the COOPERATIVE
+# guard to name the breach (`Fatal:Timeout:MemoryBudget`). `cargo test` never ran
+# them concurrently — they live in different binaries, and binaries were
+# serialized — but nextest schedules across ALL binaries, so on a small runner
+# (macOS CI is 3 vCPU / 7 GB) the two of them overlapped, the machine went to
+# memory pressure, and the run died by a different path before the cooperative
+# guard could fire: non-zero exit but no Fatal line, failing
+# `115_streaming_cli` after 209 s. Caught by this change's own CI.
+#
+# `threads-required = "num-test-threads"` makes each of them occupy the WHOLE
+# concurrency budget, so it runs alone — exactly the guarantee `cargo test` gave
+# them implicitly. A `max-threads = 1` group would only stop the two from
+# overlapping EACH OTHER, leaving a heavy tikz/pgf sibling free to spike GBs
+# beside them, which is the same hazard by another name.
+
+[profile.default]
+# A failing run should report EVERY failure, not stop at the first binary —
+# the same reason the repo's canonical command carries `--no-fail-fast`.
+fail-fast = false
+failure-output = "immediate-final"
+
+[[profile.default.overrides]]
+filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) + test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
+threads-required = "num-test-threads"
+
+[profile.ci]
+fail-fast = false
+failure-output = "immediate-final"
+# GitHub's ubuntu-latest/macos runners are 4 vCPU / 16 GB, and a conversion is
+# memory-hungry: keep the historical concurrency of `--test-threads=2`. Under
+# nextest each test is its own PROCESS, so this is also strictly kinder to the
+# RSS fuse than 2 threads sharing one process's address space.
+test-threads = 2
+# Surface a hung test instead of letting it eat the job timeout. The slowest
+# test here is ~86 s locally and CI builds at opt-level=0, so 60 s is a
+# "tell me", not a failure; 20 periods (20 min) is the hard stop.
+slow-timeout = { period = "60s", terminate-after = 20 }
+
+[[profile.ci.overrides]]
+filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) + test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
+threads-required = "num-test-threads"
