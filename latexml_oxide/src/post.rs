@@ -271,6 +271,9 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   // Error + status code.
   let fallback = || raw_xml.map(str::to_string).unwrap_or_default();
 
+  // Pass B re-parses each spilled page and must see the SAME searchpaths and
+  // site directory as this parse does.
+  let page_opts = doc_opts.clone();
   let parsed = match input {
     // `raw_xml` is `Some` for `Xml` input (the two arms above), so the default
     // is dead — kept only to avoid an `unwrap`.
@@ -407,6 +410,52 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   audit_end(t_scan);
   telemetry::phase_exit();
 
+  // ---- Pass A / Pass B boundary -------------------------------------------
+  //
+  // Scan is the ONLY phase that needs global knowledge: it visits every page
+  // and produces strings in the ObjectDB. Everything after it is page-local.
+  // The driver used to be phase-major (`for each phase { for each page }`),
+  // which keeps every page alive at every boundary — and a live page is not
+  // cheap: each is its own `xmlDoc` with its own dictionary, id table and
+  // lazily-built caches, measured at ~1.6 MB of per-document overhead. Across
+  // the 40,201 pages of a 614 MB core XML that alone grew RSS from 16 GB to
+  // 80 GB *during Scan*, wrote zero pages, and was killed by the ceiling.
+  //
+  // So: spill each scanned page to disk, free it, and render page-by-page
+  // below. Peak becomes the one-time split DOM plus ONE page. Spilling (rather
+  // than re-deriving pages from the source) keeps Scan's per-page
+  // `location`/`pageid` registration byte-identical — those semantics were
+  // themselves the fix for empty cross-document TOCs, so they are the wrong
+  // thing to restructure here.
+  let page_spill = match tempfile::Builder::new().prefix("latexml-post-").tempdir() {
+    Ok(dir) => dir,
+    Err(e) => {
+      post_error(
+        "post",
+        &format!("cannot create the page spill directory: {e}"),
+      );
+      return fallback();
+    },
+  };
+  // (path, destination, destination_directory) — the metadata that does NOT
+  // survive an XML round-trip and must be restored in pass B.
+  let mut spilled_pages: Vec<(std::path::PathBuf, Option<String>, Option<String>)> =
+    Vec::with_capacity(docs.len());
+  for (i, d) in docs.drain(..).enumerate() {
+    let path = page_spill.path().join(format!("page-{i:07}.xml"));
+    if let Err(e) = std::fs::write(&path, d.to_xml_string()) {
+      post_error("post", &format!("cannot spill page {i}: {e}"));
+      return fallback();
+    }
+    spilled_pages.push((
+      path,
+      d.get_destination().map(String::from),
+      d.get_destination_directory().map(String::from),
+    ));
+    // `d` drops here: one page's worth of DOM and caches released before the
+    // next is touched.
+  }
+
   // Phase 2b: MakeIndex (Perl LaTeXML.pm L466-470)
   //   Runs BEFORE MakeBibliography in Perl. Populates `<ltx:indexlist>`
   //   inside `<ltx:index>` placeholders and `<ltx:glossarylist>` inside
@@ -414,17 +463,6 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   //   entries Scan registered in the ObjectDB. Without this pass, glossary
   //   sections render empty in HTML (witness: tests/structure/glossary.tex).
   let mut indexer = latexml_post::make_index::MakeIndex::new(scanner.db, false, false);
-  telemetry::phase_enter(Phase::PostScan);
-  let t_idx = audit_start("MakeIndex");
-  docs = match run_phase(docs, &mut indexer, "MakeIndex") {
-    Ok(d) => d,
-    Err(()) => {
-      telemetry::phase_exit();
-      return fallback();
-    },
-  };
-  audit_end(t_idx);
-  telemetry::phase_exit();
 
   // Phase 3: MakeBibliography
   //
@@ -433,58 +471,25 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   // model loader — so `latexml_post` declares the hook and we fill it in here,
   // on the thread that is about to run the pipeline.
   crate::bib_session::install();
-  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(indexer.db, false);
-  telemetry::phase_enter(Phase::Bibliography);
-  let t_bib = audit_start("MakeBibliography");
-  docs = match run_phase(docs, &mut bibmaker, "MakeBibliography") {
-    Ok(d) => d,
-    Err(()) => {
-      telemetry::phase_exit();
-      return fallback();
-    },
-  };
-  audit_end(t_bib);
-  telemetry::phase_exit();
 
-  // Phase 4: CrossRef
-  let mut crossref = latexml_post::crossref::CrossRef::new(
-    bibmaker.db,
-    latexml_post::crossref::UrlStyle::File,
-    true,
-  );
-  if let Some(navtoc) = navigationtoc {
-    crossref.set_navigation_toc(navtoc);
-  }
-  telemetry::phase_enter(Phase::Crossref);
-  let t_xref = audit_start("CrossRef");
-  docs = match run_phase(docs, &mut crossref, "CrossRef") {
-    Ok(d) => d,
-    Err(()) => {
-      telemetry::phase_exit();
-      return fallback();
-    },
+  // Phase 4: CrossRef — built only once the bibliography sweep has handed the
+  // ObjectDB baton on (see `sweep_pages`), so nothing holds two owners of it.
+  let build_crossref = |db| {
+    let mut crossref =
+      latexml_post::crossref::CrossRef::new(db, latexml_post::crossref::UrlStyle::File, true);
+    if let Some(navtoc) = navigationtoc {
+      crossref.set_navigation_toc(navtoc);
+    }
+    crossref
   };
-  audit_end(t_xref);
-  telemetry::phase_exit();
 
   // Phase 5: Graphics (Perl `graphicimages!` → `dographics`, default on).
   // `--nographicimages` skips the phase wholesale, leaving the raw
   // `<ltx:graphics>` references in the output untouched.
-  if graphicimages {
-    let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
-      .with_svg_threshold_kb(graphics_svg_threshold_kb);
-    telemetry::phase_enter(Phase::Graphics);
-    let t_gfx = audit_start("Graphics");
-    docs = match run_phase(docs, &mut graphics_proc, "Graphics") {
-      Ok(d) => d,
-      Err(()) => {
-        telemetry::phase_exit();
-        return fallback();
-      },
-    };
-    audit_end(t_gfx);
-    telemetry::phase_exit();
-  }
+  let mut graphics_proc = graphicimages.then(|| {
+    latexml_post::graphics::Graphics::new(None, true)
+      .with_svg_threshold_kb(graphics_svg_threshold_kb)
+  });
 
   // Phase 3: MathML + XSLT
   let mut post = latexml_post::Post::new();
@@ -628,64 +633,166 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   // post-Split list above; ProcessChain just needs to fan MathML/XSLT
   // across it.
   let is_html_out = stylesheet.is_some_and(|s| s.contains("html"));
-  let t_chain = audit_start("process_chain");
-  let chain_result = post.process_chain(docs, &mut processors);
-  audit_end(t_chain);
-  let results = match chain_result {
-    Ok(r) => r,
-    Err(e) => {
-      post_error("convert", &format!("Post-processing failed: {e}"));
-      return fallback();
-    },
+
+  // ---- Pass B: render one page at a time, then FREE it --------------------
+  //
+  // Document-major, not phase-major: each page goes through MakeIndex ->
+  // MakeBibliography -> CrossRef -> Graphics -> MathML -> XSLT -> write, and
+  // is dropped before the next is parsed. Every one of these phases is
+  // page-local; only Scan (pass A, above) needed the whole document, and it
+  // left its results in the ObjectDB as strings. Peak is therefore ONE page
+  // plus the index, whatever the page count.
+  //
+  // Failure semantics change deliberately: pages that finish are already on
+  // disk, so a later failure leaves a partial site rather than nothing. That
+  // matches how a resource Fatal already keeps partial core output.
+  let mut run_page_phase = |doc: PostDocument,
+                            proc: &mut dyn Processor,
+                            label: &'static str|
+   -> Result<Vec<PostDocument>, ()> {
+    let nodes = proc.to_process(&doc);
+    if nodes.is_empty() {
+      return Ok(vec![doc]);
+    }
+    proc.process(doc, nodes).map_err(|e| {
+      post_error(label, &format!("{label} failed: {e}"));
+    })
   };
 
-  // Serialize + write each doc IMMEDIATELY in the loop (rather than
-  // collecting first then writing). Multi-doc PostDocument cleanup has
-  // a known libxml2 idcache use-after-free at process exit (see the
-  // SVG-processor note above this block) that can intermittently SIGSEGV
-  // after the last doc has been serialized. Writing eagerly inside the
-  // iteration means even if cleanup later trips, every page that finished
-  // post-processing is already on disk. The first doc's content is
-  // returned so the caller can also write it to --dest in non-split mode.
-  let mut main_output: Option<String> = None;
-  let n = results.len();
-  for doc in results.into_iter() {
-    let dest = doc.get_destination().map(String::from);
-    let t_serialize = audit_start("to_xml_string");
-    // `serialize_whatsout` is a no-op (returns full doc) for the
-    // default `Whatsout::Document`; for Fragment / Math it returns
-    // the extracted subtree serialized via libxml `node_to_string`.
-    let output = latexml_post::extract::serialize_whatsout(&doc, whatsout);
-    audit_end(t_serialize);
-    let output = if is_html_out {
-      finalize_html5(output, &svg_fragments)
-    } else {
-      output
-    };
-    let output = if schemadocs && is_html_out {
-      latexml_post::schema_docs::process_page(&output)
-    } else {
-      output
-    };
-    // Write each doc to disk inside the loop. The single-file caller
-    // also writes the first doc's content to --dest; the redundant write
-    // is harmless and ensures the file is on disk even if a later libxml2
-    // cleanup tripwire fires.
-    if let Some(path) = dest.as_deref() {
-      if let Some(parent) = std::path::Path::new(path).parent()
-        && !parent.as_os_str().is_empty()
-      {
-        let _ = std::fs::create_dir_all(parent);
+  // The ObjectDB is a BATON: MakeIndex, MakeBibliography and CrossRef each take
+  // it by value in turn, so they cannot be alive simultaneously. Each therefore
+  // gets its own sweep over the spilled pages — still ONE page resident at a
+  // time. A page is only re-spilled when its phase actually had work
+  // (`to_process` non-empty), which for index/bibliography placeholders is a
+  // handful of pages out of tens of thousands, so the sweeps cost a parse each
+  // and almost no writes.
+  fn sweep_pages(
+    pages: &[(std::path::PathBuf, Option<String>, Option<String>)],
+    opts: &PostDocumentOptions,
+    proc: &mut dyn Processor,
+    label: &'static str,
+  ) -> Result<(), ()> {
+    for (path, dest, dest_dir) in pages {
+      let path_str = path.to_string_lossy().into_owned();
+      let mut page = PostDocument::new_from_file(&path_str, opts.clone()).map_err(|e| {
+        post_error("post", &format!("cannot re-read a spilled page: {e}"));
+      })?;
+      page.destination = dest.clone();
+      page.destination_directory = dest_dir.clone();
+      let nodes = proc.to_process(&page);
+      if nodes.is_empty() {
+        continue; // untouched: the spill on disk is still current
       }
-      if let Err(e) = std::fs::write(path, &output) {
-        post_error("write", &format!("failed to write page {path}: {e}"));
+      let processed = proc.process(page, nodes).map_err(|e| {
+        post_error(label, &format!("{label} failed: {e}"));
+      })?;
+      // A phase may split one page into several (an index page beside its
+      // host); the extras are written by their own destination in pass B, so
+      // re-spill each under the original path only for the first and append
+      // the rest as additional spills is NOT needed here: MakeIndex and
+      // MakeBibliography fill placeholders in place and return the same page.
+      for d in processed.iter().take(1) {
+        if let Err(e) = std::fs::write(path, d.to_xml_string()) {
+          post_error("post", &format!("cannot re-spill a page: {e}"));
+          return Err(());
+        }
       }
     }
-    if main_output.is_none() {
-      main_output = Some(output);
-    }
-    let _ = n;
+    Ok(())
   }
+
+  if sweep_pages(&spilled_pages, &page_opts, &mut indexer, "MakeIndex").is_err() {
+    return fallback();
+  }
+  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(indexer.db, false);
+  if sweep_pages(
+    &spilled_pages,
+    &page_opts,
+    &mut bibmaker,
+    "MakeBibliography",
+  )
+  .is_err()
+  {
+    return fallback();
+  }
+  let mut crossref = build_crossref(bibmaker.db);
+
+  let mut main_output: Option<String> = None;
+  let t_pages = audit_start("render_pages");
+  for (path, dest, dest_dir) in spilled_pages {
+    let path_str = path.to_string_lossy().into_owned();
+    let mut page = match PostDocument::new_from_file(&path_str, page_opts.clone()) {
+      Ok(mut d) => {
+        d.destination = dest;
+        d.destination_directory = dest_dir;
+        d
+      },
+      Err(e) => {
+        post_error("post", &format!("cannot re-read a spilled page: {e}"));
+        return fallback();
+      },
+    };
+    // Free the spill as soon as it is parsed: for a 40k-page document the
+    // spill area is the size of the core XML, and it need not outlive its page.
+    let _ = std::fs::remove_file(&path);
+
+    // CrossRef resolves this page's references out of the completed ObjectDB,
+    // and its navigation/TOC work reads the DB rather than sibling pages — so
+    // it is page-local once pass A has finished.
+    let mut staged = match run_page_phase(page, &mut crossref, "CrossRef") {
+      Ok(out) => out,
+      Err(()) => return fallback(),
+    };
+    if let Some(gfx) = graphics_proc.as_mut() {
+      let mut next = Vec::with_capacity(staged.len());
+      for d in staged.drain(..) {
+        match run_page_phase(d, gfx, "Graphics") {
+          Ok(out) => next.extend(out),
+          Err(()) => return fallback(),
+        }
+      }
+      staged = next;
+    }
+
+    let rendered = match post.process_chain(staged, &mut processors) {
+      Ok(r) => r,
+      Err(e) => {
+        post_error("convert", &format!("Post-processing failed: {e}"));
+        return fallback();
+      },
+    };
+
+    for doc in rendered {
+      let dest = doc.get_destination().map(String::from);
+      let output = latexml_post::extract::serialize_whatsout(&doc, whatsout);
+      let output = if is_html_out {
+        finalize_html5(output, &svg_fragments)
+      } else {
+        output
+      };
+      let output = if schemadocs && is_html_out {
+        latexml_post::schema_docs::process_page(&output)
+      } else {
+        output
+      };
+      if let Some(path) = dest.as_deref() {
+        if let Some(parent) = std::path::Path::new(path).parent()
+          && !parent.as_os_str().is_empty()
+        {
+          let _ = std::fs::create_dir_all(parent);
+        }
+        if let Err(e) = std::fs::write(path, &output) {
+          post_error("write", &format!("failed to write page {path}: {e}"));
+        }
+      }
+      if main_output.is_none() {
+        main_output = Some(output);
+      }
+      // `doc` drops here — the whole point.
+    }
+  }
+  audit_end(t_pages);
+  drop(page_spill);
 
   main_output.unwrap_or_else(fallback)
 }
