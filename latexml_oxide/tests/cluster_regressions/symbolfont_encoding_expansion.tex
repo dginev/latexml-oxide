@@ -1,0 +1,18 @@
+% `\DeclareSymbolFont`'s encoding argument must be EXPANDED before it is
+% stored. This is the `fontmath.ltx` idiom verbatim: the encoding arrives as a
+% macro, not a literal. Read unexpanded, the string `\encodingdefault` lands in
+% `fontdeclaration@myops`, and every dependent `\DeclareMathSymbol` then looks
+% up a fontmap by that name and finds none — silently, with no diagnostic.
+%
+% Slot 0 is the tell. Un-decoded it becomes U+FFFD; through OT1 it is `Γ`.
+% Slot 65 is a decoy: a raw code 65 IS ASCII `A`, so it looks correct either
+% way and would have hidden the defect on its own.
+\documentclass{article}
+\makeatletter
+\DeclareSymbolFont{myops}{\encodingdefault}{\rmdefault}{m}{n}
+\DeclareMathSymbol{\myA}{\mathalpha}{myops}{65}
+\DeclareMathSymbol{\myGam}{\mathalpha}{myops}{0}
+\makeatother
+\begin{document}
+DECOY[$\myA$] TELL[$\myGam$]
+\end{document}
