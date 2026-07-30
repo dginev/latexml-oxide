@@ -257,12 +257,20 @@ struct Cli {
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 
-  /// Per-conversion memory ceiling in MiB. Defaults to the machine: 90 % of
-  /// physical RAM, capped at 64 GiB (6144 if the machine cannot be probed).
-  /// The single memory knob: a cooperative guard raises a graceful Fatal as a
-  /// conversion nears it, and a hard watchdog aborts the process (exit 137) at
-  /// the ceiling. Use 0 to disable memory limiting entirely. Also settable via
-  /// the `LATEXML_MAX_MEMORY` env var; this flag wins when both are given.
+  /// The RAM budget for this conversion, in MiB — the one memory knob.
+  /// Defaults to the machine: HALF of physical RAM, capped at 64 GiB (2048
+  /// floor; 6144 if the machine cannot be probed).
+  ///
+  /// Everything else follows from it. A conversion works within the budget,
+  /// spilling completed parts of the document to disk as it approaches it, so
+  /// a document far larger than RAM still converts (see --streaming). Nearing
+  /// the budget anyway raises a graceful Fatal that keeps the partial output,
+  /// and a hard watchdog aborts the process (exit 137) at the ceiling itself.
+  ///
+  /// Use 0 to lift the ceiling: nothing will abort the conversion for memory,
+  /// but spilling still engages (derived from physical RAM) — "do not kill me"
+  /// is not "let the machine run out". Also settable via the
+  /// `LATEXML_MAX_MEMORY` env var; this flag wins when both are given.
   ///
   /// Left as `Option` so "unset" is distinguishable from an explicit value —
   /// the default has to be computed from the host, which clap's static
@@ -278,8 +286,12 @@ struct Cli {
   /// also AUTO-activates when the projected memory need of a large source
   /// exceeds the --max-memory ceiling, i.e. only where the normal path is
   /// certain to exhaust memory anyway.
-  #[arg(long, env = "LATEXML_STREAMING")]
-  streaming: bool,
+  ///
+  /// `--streaming=false` (or `LATEXML_STREAMING=false`) disables BOTH the flag
+  /// and the auto-activation, forcing the eager path even for a document
+  /// projected to exhaust the ceiling.
+  #[arg(long, env = "LATEXML_STREAMING", num_args = 0..=1, default_missing_value = "true")]
+  streaming: Option<bool>,
 
   /// Abort after processing this many tokens — guards against runaway macro
   /// expansion (default: 400M; env `LATEXML_TOKEN_LIMIT`, 0 disables).
@@ -460,7 +472,11 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// peak of the eager path exceeds the memory ceiling — measured ~1.84 GB of
 /// peak RSS per MB of math-heavy source on the 131 MB witness
 /// (`docs/performance/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
-/// documents that today would die at the ceiling with certainty. The returned
+/// documents that today would die at the ceiling with certainty. An explicit
+/// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH — the
+/// escape hatch for a caller who would rather have the eager path's Fatal
+/// than a fragmented conversion, and the only way to A/B the two paths on a
+/// document large enough for auto to fire. The returned
 /// budget is the pass-1 fragment yield threshold in BOXES: an eighth of the
 /// ceiling at the measured ~2.4 KB per retained box. The bite must leave REAL
 /// headroom under the RSS fuse (75% of the ceiling): a fragment's live cost
@@ -469,19 +485,114 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// per-run bookkeeping (FragmentIndex, spine) creeps monotonically — on the
 /// 131 MB witness at a 48 GB ceiling, a quarter-bite steadied at ~33 GB and
 /// the ~5 GB creep then walked it into the 37.7 GB fuse.
-fn resolve_streaming(forced: bool, max_memory_mib: u64, source: &str) -> Option<usize> {
+fn resolve_streaming(requested: Option<bool>, max_memory_mib: u64, source: &str) -> Option<usize> {
   const PEAK_BYTES_PER_SOURCE_BYTE: u64 = 1900; // ~1.84 GB/MB, measured
   const BYTES_PER_BOX: u64 = 2416; // stomach::BYTES_PER_LIGHT_BOX's basis
-  let auto = || {
-    let src_bytes = std::fs::metadata(source).map(|m| m.len()).ok()?;
-    let projected_mib = src_bytes.saturating_mul(PEAK_BYTES_PER_SOURCE_BYTE) / (1024 * 1024);
-    (projected_mib > max_memory_mib).then_some(())
+  // `--max-memory=0` disables the death ceiling, but the machine is still
+  // finite and such a document may still need to spill. Judge — and size
+  // fragments — against the ceiling we WOULD have derived. Without this the
+  // arithmetic degenerated: `projected > 0` always fired, and
+  // `0 / 8 / 2416 -> max(1)` gave a ONE-BOX budget, i.e. a yield after every
+  // box.
+  let yardstick_mib = if max_memory_mib == 0 {
+    latexml_core::watchdog::default_ceiling_mib()
+  } else {
+    max_memory_mib
   };
-  if !forced && auto().is_none() {
-    return None;
+  // Compare against the cooperative FUSE, not the ceiling: death happens at
+  // 75% of the ceiling, so comparing against the ceiling left a band
+  // (0.75-1.0x) that was judged "fits", took the eager path, and was then
+  // killed by the fuse — 8.1-10.8 MB of source on a 16 GB laptop.
+  let fuse_mib = latexml_core::stomach::soft_cap_from_ceiling(yardstick_mib) / (1024 * 1024);
+  let auto = || {
+    let projected_mib =
+      projected_source_bytes(source).saturating_mul(PEAK_BYTES_PER_SOURCE_BYTE) / (1024 * 1024);
+    (projected_mib > fuse_mib).then_some(())
+  };
+  match requested {
+    // Explicit opt-out: never stream, not even when projected to die.
+    Some(false) => return None,
+    Some(true) => {},
+    None if auto().is_none() => return None,
+    None => {},
   }
-  let budget_boxes = (max_memory_mib.saturating_mul(1024 * 1024) / 8 / BYTES_PER_BOX) as usize;
+  let budget_boxes = (yardstick_mib.saturating_mul(1024 * 1024) / 8 / BYTES_PER_BOX) as usize;
   Some(budget_boxes.max(1))
+}
+
+/// The byte size the memory projection must reason from: the DOCUMENT, not the
+/// main file.
+///
+/// A 2 KB `index.tex` that `\input`s a thousand chapters is a half-gigabyte
+/// document, but `metadata(main).len()` projects it at 2 KB — "fits easily" —
+/// and the eager path then dies on it. When the main file actually names an
+/// inclusion command, sum the source tree (`.tex`/`.ltx`/`.bbl`) instead.
+///
+/// Gated on the command being present so a SELF-CONTAINED paper sitting in a
+/// directory of unused alternates (a common arXiv bundle shape) still projects
+/// as itself and keeps the eager path.
+///
+/// Known limitation: an inclusion assembled by macro expansion
+/// (`\myinput{ch1}`) names no literal command and is not detected; such a
+/// document needs an explicit `--streaming`.
+fn projected_source_bytes(source: &str) -> u64 {
+  /// Enough of the main file to see its inclusion commands without reading a
+  /// 131 MB self-contained source in full (whose own size already dominates).
+  const SCAN_BYTES: u64 = 4 * 1024 * 1024;
+  /// Backstop against a pathological tree (a home directory as source dir).
+  const WALK_ENTRIES: usize = 50_000;
+  const INCLUSION_COMMANDS: [&str; 6] = [
+    "\\input",
+    "\\include",
+    "\\import",
+    "\\subimport",
+    "\\subfile",
+    "\\includeonly",
+  ];
+
+  let own = std::fs::metadata(source).map(|m| m.len()).unwrap_or(0);
+  let Some(dir) = Path::new(source).parent() else {
+    return own;
+  };
+  let mut head = Vec::new();
+  if File::open(source)
+    .map(|f| f.take(SCAN_BYTES).read_to_end(&mut head))
+    .is_err()
+  {
+    return own;
+  }
+  let head = String::from_utf8_lossy(&head);
+  if !INCLUSION_COMMANDS.iter().any(|cmd| head.contains(cmd)) {
+    return own;
+  }
+  let mut total = 0u64;
+  let mut seen = 0usize;
+  let mut stack = vec![dir.to_path_buf()];
+  while let Some(d) = stack.pop() {
+    let Ok(entries) = std::fs::read_dir(&d) else {
+      continue;
+    };
+    for entry in entries.flatten() {
+      seen += 1;
+      if seen > WALK_ENTRIES {
+        return total.max(own);
+      }
+      match entry.file_type() {
+        Ok(t) if t.is_dir() => stack.push(entry.path()),
+        Ok(t) if t.is_file() => {
+          let path = entry.path();
+          if matches!(
+            path.extension().and_then(|e| e.to_str()),
+            Some("tex" | "ltx" | "bbl")
+          ) {
+            total = total.saturating_add(entry.metadata().map(|m| m.len()).unwrap_or(0));
+          }
+        },
+        _ => {},
+      }
+    }
+  }
+  total.max(own)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -1432,3 +1543,99 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
 // `add_dir_to_zip` here and the parallel pair in `cortex_worker.rs`
 // have been replaced by a single shared implementation — mirrors
 // Perl `LaTeXML::Post::Pack`.
+
+#[cfg(test)]
+mod streaming_activation_tests {
+  use std::io::Write;
+
+  use super::*;
+
+  fn write(dir: &Path, name: &str, bytes: usize) -> std::path::PathBuf {
+    let path = dir.join(name);
+    let mut f = File::create(&path).expect("create fixture");
+    f.write_all(&vec![b'x'; bytes]).expect("write fixture");
+    path
+  }
+
+  /// A small main file that `\input`s its chapters is a BIG document: the
+  /// estimate must be the tree, or auto-activation sends a half-gigabyte book
+  /// down the eager path to its death.
+  #[test]
+  fn inclusion_fan_out_projects_the_whole_tree() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    write(tmp.path(), "ch1.tex", 400_000);
+    write(tmp.path(), "ch2.tex", 400_000);
+    let main = tmp.path().join("main.tex");
+    std::fs::write(&main, "\\documentclass{book}\\input{ch1}\\input{ch2}\n").expect("write main");
+    let projected = projected_source_bytes(main.to_str().unwrap());
+    assert!(
+      projected > 800_000,
+      "expected the tree's ~800 KB, got {projected}"
+    );
+  }
+
+  /// ...but a SELF-CONTAINED paper sitting in a directory of unused alternates
+  /// (a common arXiv bundle shape) must still project as itself, or it would be
+  /// pushed onto the fragmented path for no reason.
+  #[test]
+  fn self_contained_source_ignores_its_neighbours() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    write(tmp.path(), "old-version.tex", 900_000);
+    let main = tmp.path().join("paper.tex");
+    std::fs::write(
+      &main,
+      "\\documentclass{article}\\begin{document}x\\end{document}\n",
+    )
+    .expect("write main");
+    let projected = projected_source_bytes(main.to_str().unwrap());
+    assert!(
+      projected < 100_000,
+      "a self-contained paper must project as itself, got {projected}"
+    );
+  }
+
+  /// `--max-memory=0` lifts the ceiling; it must not collapse the fragment
+  /// budget to a single box (which spilled after every box) nor lose the
+  /// watermark.
+  #[test]
+  fn zero_ceiling_keeps_a_workable_budget() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let main = write(tmp.path(), "src.tex", 1024);
+    let budget = resolve_streaming(Some(true), 0, main.to_str().unwrap())
+      .expect("forced streaming yields a budget");
+    assert!(
+      budget > 10_000,
+      "a no-ceiling run must size fragments from the derived ceiling, got {budget} boxes"
+    );
+  }
+
+  /// The explicit opt-out wins over auto-activation, however doomed the
+  /// document looks — the only way to demand the eager path.
+  #[test]
+  fn explicit_false_defeats_auto_activation() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let main = write(tmp.path(), "huge.tex", 4_000_000);
+    // Tiny ceiling: the projection dwarfs it, so auto would certainly fire.
+    assert!(resolve_streaming(None, 16, main.to_str().unwrap()).is_some());
+    assert!(resolve_streaming(Some(false), 16, main.to_str().unwrap()).is_none());
+  }
+
+  /// Activation keys on the cooperative FUSE, not the ceiling: a document
+  /// projected into the 0.75-1.0x band was judged "fits" and then killed by
+  /// the fuse.
+  #[test]
+  fn activation_uses_the_fuse_not_the_ceiling() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    // 1 MiB of source projects to ~1900 MiB. A 2048 MiB ceiling "fits" it,
+    // but the fuse sits at 1536 MiB — which it does not.
+    let main = write(tmp.path(), "band.tex", 1024 * 1024);
+    assert!(
+      resolve_streaming(None, 2048, main.to_str().unwrap()).is_some(),
+      "a projection above the fuse must stream even when it is below the ceiling"
+    );
+    assert!(
+      resolve_streaming(None, 8192, main.to_str().unwrap()).is_none(),
+      "a projection comfortably under the fuse must stay eager"
+    );
+  }
+}

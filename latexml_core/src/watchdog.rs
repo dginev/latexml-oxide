@@ -152,31 +152,45 @@ pub fn total_memory_bytes() -> Option<u64> {
 
 /// The default per-conversion memory ceiling in MiB, derived from the machine.
 ///
-/// `min(64 GiB, 90 % of physical RAM)`, falling back to
-/// [`FALLBACK_CEILING_MIB`] when the machine cannot be probed.
+/// `min(64 GiB, HALF of physical RAM)`, floored at
+/// [`MIN_DEFAULT_CEILING_MIB`], falling back to [`FALLBACK_CEILING_MIB`] when
+/// the machine cannot be probed. One sentence for users: *a conversion uses at
+/// most half your RAM, never more than 64 GiB.*
 ///
-/// The previous default was a flat 6144 MiB regardless of hardware, which is
-/// simultaneously absurd on a 256 GB host (a conversion that would comfortably
-/// fit is refused) and over-generous on an 8 GB laptop (the box starts swapping
-/// before the guard ever fires). Both halves of the rule matter:
+/// The default was a flat 6144 MiB regardless of hardware — absurd on a 256 GB
+/// host and over-generous on a laptop — and then 90 % of RAM, which is
+/// laptop-hostile for a different reason: the cooperative fuse rides at 75 % of
+/// the ceiling, so on a 16 GB machine one conversion was allowed to reach
+/// **10.8 GiB** before we so much as complained, by which point the user's
+/// session has been swapping for a long time. Half of RAM is the design point
+/// for a 16 GB baseline laptop:
 ///
-/// * **90 % of RAM** leaves the OS and everything else on the machine a share.
-///   A ceiling at 100 % is a promise the kernel will not keep.
-/// * **the 64 GiB cap** is not about this machine but about the *others*: in a
-///   parallel fleet the aggregate is `N_processes x ceiling`, so an uncapped
-///   fraction-of-RAM rule on a big host would let a busy fleet OOM it. The
-///   `cortex_worker` fleet overrides this with its own per-child ceiling
-///   anyway; the cap keeps the single-process default from being reckless.
+/// | RAM | ceiling | fuse (75 %) | spill watermark |
+/// |---|---|---|---|
+/// | 16 GB | 8 GiB | 6 GiB | 2 GiB |
+/// | 32 GB | 16 GiB | 12 GiB | 4 GiB |
+/// | 96 GB | 48 GiB | 36 GiB | 12 GiB |
+///
+/// The 96 GB row is not a guess: 48 GiB is the ceiling under which the 131 MB
+/// witness was measured to convert end-to-end (28.1 GB peak), so the default
+/// reproduces a validated configuration on the reporter's own hardware.
+///
+/// The **64 GiB cap** is not about this machine but about the *others*: in a
+/// parallel fleet the aggregate is `N_processes x ceiling`, so an uncapped
+/// fraction-of-RAM rule on a big host would let a busy fleet OOM it. The
+/// `cortex_worker` fleet overrides this with its own per-child ceiling anyway;
+/// the cap keeps the single-process default from being reckless.
 pub fn default_ceiling_mib() -> u64 {
   const MIB: u64 = 1024 * 1024;
   match total_memory_bytes() {
-    Some(total) => {
-      let ninety_percent = total / MIB * 9 / 10;
-      ninety_percent.clamp(1, MAX_DEFAULT_CEILING_MIB)
-    },
+    Some(total) => (total / MIB / 2).clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
     None => FALLBACK_CEILING_MIB,
   }
 }
+
+/// Floor for the machine-derived default, so a small container still gets a
+/// workable budget rather than a ceiling no conversion can fit under.
+pub const MIN_DEFAULT_CEILING_MIB: u64 = 2048;
 
 /// Upper bound on the machine-derived default ceiling (64 GiB in MiB).
 pub const MAX_DEFAULT_CEILING_MIB: u64 = 64 * 1024;
@@ -452,15 +466,21 @@ mod tests {
        (N_processes x ceiling) OOM the machine"
     );
     if let Some(total) = total_memory_bytes() {
-      let ninety = total / (1024 * 1024) * 9 / 10;
+      let half = total / (1024 * 1024) / 2;
       assert_eq!(
         ceiling,
-        ninety.clamp(1, MAX_DEFAULT_CEILING_MIB),
-        "ceiling should be min(cap, 90 % of RAM)"
+        half.clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
+        "ceiling should be min(cap, HALF of RAM), floored"
       );
+      // Half of RAM, not 90 %: the cooperative fuse rides at 75 % of the
+      // ceiling, so at 90 % a 16 GB machine let one conversion reach 10.8 GiB
+      // before complaining — long after the session started swapping. This
+      // assertion is hardware-dependent by nature (it failed only on the
+      // smaller macOS runner, where the 64 GiB cap does not bind and the
+      // fraction is what shows).
       assert!(
-        ceiling <= total / (1024 * 1024),
-        "the ceiling must leave the OS a share of physical RAM"
+        ceiling <= total / (1024 * 1024) / 2 || ceiling == MIN_DEFAULT_CEILING_MIB,
+        "the ceiling must leave the OS the larger share of physical RAM"
       );
     } else {
       assert_eq!(ceiling, FALLBACK_CEILING_MIB);

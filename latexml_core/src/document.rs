@@ -3702,7 +3702,24 @@ impl Document {
   /// segment size bounds pass-2 peak memory the way the yield budget bounds
   /// pass 1. The witness's first RSS-triggered yield once spilled half the
   /// document as ONE 512 MB segment, and pass 2 died re-parsing it.
-  const SEGMENT_CHUNK_BYTES: usize = 32 * 1024 * 1024;
+  fn segment_chunk_bytes() -> usize {
+    /// Validated on the 131 MB witness; also the point past which a single
+    /// segment's re-parse dominates pass 2 regardless of the machine.
+    const MAX: usize = 32 * 1024 * 1024;
+    /// Below this, per-segment overhead (parse, index merge, reserialize)
+    /// outweighs the memory saved.
+    const MIN: usize = 4 * 1024 * 1024;
+    /// Serialized bytes → live DOM, measured: 18.6 MB of core XML
+    /// materialized as ~1,346 MB of libxml2 DOM on a witness slice.
+    const DOM_EXPANSION: u64 = 72;
+    match crate::stomach::spill_watermark_bytes() {
+      // Pass 2 re-materializes ONE segment whole, so a chunk must fit the
+      // same watermark pass 1 respects — otherwise the phase that exists to
+      // bound memory becomes the phase that blows it on a small machine.
+      Some(watermark) => ((watermark / DOM_EXPANSION) as usize).clamp(MIN, MAX),
+      None => MAX,
+    }
+  }
 
   fn spill_run(
     &mut self,
@@ -3759,9 +3776,10 @@ impl Document {
       }
     }
 
-    // Chunk the run so each segment stays under SEGMENT_CHUNK_BYTES of
+    // Chunk the run so each segment stays under `segment_chunk_bytes()` of
     // serialized text; every chunk gets its own segment + placeholder, so
     // document order is preserved chunk-by-chunk.
+    let chunk_ceiling = Self::segment_chunk_bytes();
     let mut runs_spilled = 0usize;
     let mut chunk: Vec<Node> = Vec::new();
     let mut xml = String::new();
@@ -3782,7 +3800,7 @@ impl Document {
       self.serialize_into(&mut xml, &node, depth, noindent, false);
       chunk.push(node);
       let last = i + 1 == total;
-      if xml.len() >= Self::SEGMENT_CHUNK_BYTES || last {
+      if xml.len() >= chunk_ceiling || last {
         let meta = SegmentMeta {
           depth,
           noindent,

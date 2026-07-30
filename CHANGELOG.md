@@ -126,6 +126,21 @@
     bled comment styling down the file.
   - **Very large documents use far less memory** — peak RSS 9.05 → 5.99 GB on a
     232K-line book, wall time unchanged.
+  - **A document far larger than RAM converts** — the core stage builds and
+    releases the document in fragments, spilling completed parts to disk, so
+    peak memory follows fragment size rather than document size. A 131 MB
+    5-million-line book that could not be converted at all now completes within
+    a 48 GB budget (28.1 GB peak, 2.66 GB of XML). Output is byte-identical to
+    the normal path.
+  - **`--max-memory` is the budget, and everything follows from it** — the
+    graceful-Fatal fuse, the point where spilling begins, and the fragment size
+    are all derived, so no two memory settings can contradict each other. The
+    default is now half of physical RAM (2 GiB floor, 64 GiB cap) rather than
+    90 %, which on a 16 GB laptop had let one conversion reach 10.8 GiB before
+    complaining. `--max-memory=0` lifts the ceiling but still spills.
+    `--streaming` forces fragmentation, `--streaming=false` forces the plain
+    path, and large multi-file documents are recognised by their whole source
+    tree instead of the main file's size alone.
   - **`--max-memory` is the single memory knob**, `0` disables limiting entirely,
     and no environment variable can countermand it. The stomach's box-list
     ceilings now ride it too — they were fixed constants, so `--max-memory=0`
