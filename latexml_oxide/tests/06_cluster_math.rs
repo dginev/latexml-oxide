@@ -266,3 +266,43 @@ fn cluster_ext_arrow_braced_mkern() {
     "text after the display must stay OUTSIDE the math, in its own paragraph:\n{x}"
   );
 }
+
+/// A chain of POST scripts on one base must fold to arbitrary depth, and must
+/// not care whether two adjacent scripts are the same KIND.
+///
+/// Perl's `addScripts` (`MathGrammar` L419-423) recurses on
+/// `POSTSUPERSCRIPT`/`POSTSUBSCRIPT` with no depth bound and no alternation
+/// requirement. Rust had hand-unrolled it to exactly two, alternating
+/// (`scripted_factor_r2 = r12 postsuperarg | r11 postsubarg`), so **four whole
+/// shapes fell out of the grammar and rendered `ltx_math_unparsed`**: the
+/// same-kind repeats `{x^a}^b` and `{x_a}_b`, and every chain of three or more
+/// such as `{{x_a}^b}_c`. Braces are what make these reachable — bare `x^a^b` is
+/// rejected by TeX as "Double superscript" and never reaches the parser, which
+/// is why the depth cap looked harmless.
+///
+/// Ground truth: same-host Perl LaTeXML 0.8.8 parses all six, and after the fix
+/// the `XMath` trees and the resulting Presentation MathML are byte-identical to
+/// Perl's for every one of them.
+#[test]
+fn cluster_script_chain_depth() {
+  let x = convert_to_xml("tests/cluster_regressions/script_chain_depth.tex");
+  assert!(
+    !x.contains("ltx_math_unparsed"),
+    "a braced script chain failed to parse:\n{x}"
+  );
+  // An unfolded chain leaves the pre-parse POSTSUBSCRIPT/POSTSUPERSCRIPT roles
+  // sitting as siblings of the base; a folded one has SUBSCRIPTOP/SUPERSCRIPTOP
+  // operator tokens instead.
+  assert!(
+    !x.contains(r#"role="POSTSUPERSCRIPT""#) && !x.contains(r#"role="POSTSUBSCRIPT""#),
+    "post-script markers survived unfolded, so the chain rule did not apply:\n{x}"
+  );
+  // Depth is carried by `scriptpos`, numbered from the OUTERMOST script inward,
+  // so the four-deep formula must reach `post4`.
+  for level in ["post1", "post2", "post3", "post4"] {
+    assert!(
+      x.contains(&format!(r#"scriptpos="{level}""#)),
+      "no script nested at {level}; the chain folded shallower than the source:\n{x}"
+    );
+  }
+}

@@ -1208,14 +1208,19 @@ partially-filled pre/post mix. **Belongs to the math-parser family (R8), deferre
 by user directive 2026-06-20 — do not fix in isolation**; recorded here with the
 repro so the witness is not lost. Minimal repro: `\( {}^{n}a_{i} \)`.
 
-Third witness from this pass, **not fixed** (math-parser family R8, deferred):
-`\( {{x_a}^b}_c \)` — a THREE-level script nest — fails to parse in Rust and
-comes out `class="ltx_math_unparsed"`, where Perl yields a three-pair
-`m:mmultiscripts`. One- and two-level nests (`{x_a}^b`, `{x^a}_b`) are
-byte-identical end to end, so the boundary is exactly at three. Note the
-post-stage guard `90_latexmlpost::scriptlevels_post_test` does NOT catch this: it
-feeds Perl's core XML to Rust's post stage, which handles the three-level shape
-correctly. Minimal repro: `\( {{x_a}^b}_c \)`.
+Third from this pass, **fixed 2026-07-30**: a braced script chain would not fold
+past depth two, nor across two scripts of the SAME kind. `scripted_factor_r2`
+(`latexml_math_parser/src/grammar/builder.rs`) hand-unrolled Perl's `addScripts`
+(`MathGrammar` L419-423) to exactly two, alternating —
+`r12 postsuperarg | r11 postsubarg` — where Perl recurses with no depth bound and
+no alternation requirement. Four shapes therefore rendered `ltx_math_unparsed`:
+`{x^a}^b`, `{x_a}_b`, `{{x_a}^b}_c`, `{{{x_a}^b}_c}^d`. Braces are what make
+these reachable, which is why the cap survived: bare `x^a^b` is rejected by TeX
+as "Double superscript" and never reaches the parser. Now left-recursive and
+unbounded; the derivation stays unique, so no new ambiguity to prune. `XMath` and
+pMML are byte-identical to Perl for all of them, and a controlled A/B on
+`equality_big.tex` and `ams/mathtools.tex` shows no measurable parse-time change.
+Guard: `06_cluster_math::cluster_script_chain_depth`.
 
 Also from this pass, and **fixed 2026-07-30**: Rust filled an absent
 `mmultiscripts` slot with `<m:none/>` where Perl uses an empty `<m:mrow/>`. This

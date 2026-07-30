@@ -989,8 +989,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_factor_l2 postsubarg => postfix_script
         | fenced_factor postsubarg => postfix_script;
       scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
-      scripted_factor_r2 = scripted_factor_r12 postsuperarg => postfix_script
-        | scripted_factor_r11 postsubarg => postfix_script;
+      // TWO OR MORE post-scripts, chained left-recursively. Perl's `addScripts`
+      // (`MathGrammar` L419-423) recurses without a depth bound and without
+      // caring which KIND of script it just consumed, so `{x^a}^b` (two supers)
+      // and `{{x_a}^b}_c` (three scripts) are ordinary parses there. This used to
+      // be hand-unrolled to exactly two, alternating —
+      // `r12 postsuperarg | r11 postsubarg` — which made every same-kind repeat
+      // and every chain of three or more `ltx_math_unparsed`. `x^a^b` without
+      // braces is not a counter-example: TeX rejects that as "Double superscript"
+      // long before the parser sees it, so the depth cap was buying nothing.
+      //
+      // Left recursion keeps the derivation unique — each script attaches to
+      // everything to its left, in order — so this adds no ambiguity for the
+      // grammar to prune. It also does not disturb the float-before-post
+      // collection order noted above, which is about `scripted_factor_l*` vs
+      // `_r*`, not about chain depth.
+      scripted_factor_r2 = scripted_factor_r1 postsuperarg => postfix_script
+        | scripted_factor_r1 postsubarg => postfix_script
+        | scripted_factor_r2 postsuperarg => postfix_script
+        | scripted_factor_r2 postsubarg => postfix_script;
       factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.

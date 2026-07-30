@@ -1,0 +1,17 @@
+\documentclass{article}
+\begin{document}
+% Braced re-scripting builds a chain of POST scripts on one base. The grammar
+% must chain them without bound (Perl `addScripts`, MathGrammar L419-423), and
+% without caring whether two adjacent scripts are the same KIND.
+%
+% Same-kind repeats — impossible without the braces, since TeX rejects bare
+% `x^a^b` as "Double superscript":
+\[ {x^a}^b \]
+\[ {x_a}_b \]
+% Alternating pairs, which already worked:
+\[ {x_a}^b \]
+\[ {x^a}_b \]
+% Three and four deep:
+\[ {{x_a}^b}_c \]
+\[ {{{x_a}^b}_c}^d \]
+\end{document}

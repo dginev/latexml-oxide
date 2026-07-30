@@ -186,11 +186,11 @@ fn scriptlevels_post_test() {
   // `latexmlpost --keepXMath --pmml --noscan --nocrossref` on the identical core
   // XML — byte-identical, no adjustments.
   //
-  // CAVEAT on the three-level case: this harness feeds PERL's core XML to Rust's
-  // post stage, so it proves the post stage only. End to end, Rust's math parser
-  // still fails on `{{x_a}^b}_c` and emits `class="ltx_math_unparsed"`; the
-  // one- and two-level formulas here ARE byte-identical end to end. That parser
-  // gap belongs to the deferred R8 family — see SYNC_STATUS.
+  // Note this harness feeds PERL's core XML to Rust's post stage, so on its own
+  // it proves the post stage only. All four formulas are byte-identical END TO
+  // END as well; the core-stage half — the grammar chaining a script run of any
+  // depth — is guarded separately by
+  // `06_cluster_math::cluster_script_chain_depth`.
   post_test("scriptlevels", 0);
 }
 
