@@ -207,6 +207,36 @@ truth for macro-expanded diagnostics.
 - **Color: visual equivalence**: Colors are compared by variant+values, not reference identity. `\color{black}` in a black context produces no `color="#000000"` attribute. See OXIDIZED_DESIGN #20.
 - **No `tex=` on `<picture>`**: The `tex=` attribute on `<ltx:picture>` is suppressed **unconditionally**. The `LATEXML_SVG_TEX_ATTRIBUTE=true` escape hatch was designed but never implemented — the name appears in no source file, so don't go looking for it. See OXIDIZED_DESIGN #21.
 
+## MathML output targets MathML Core
+
+**We emit modern MathML Core, which has a deliberately reduced element set.** When
+a construct can be expressed with a Core element or with one Core removed, use the
+Core one — even if Perl emits the removed element, and even if the removed element
+reads as more "semantic". Browsers implement Core; anything outside it is dead
+markup that renders as a fallback at best.
+
+Removed by Core, and what to emit instead:
+
+| Removed | Emit instead |
+|---|---|
+| `<none/>` (absent `mmultiscripts` slot) | empty `<mrow/>` — the accepted placeholder for an omitted subtree |
+| `<mfenced>` | `<mrow>` with explicit `<mo>` fences |
+| `<mlabeledtr>` | `<mtr>`, label handled outside the table |
+| `<maligngroup>`, `<malignmark>`, `<mglyph>` | nothing — drop |
+| `<mstack>`, `<mlongdiv>`, `<msline>`, `<mscarries>`, `<mscarry>`, `<msgroup>`, `<msrow>` | nothing — elementary-math layout is out of scope |
+
+Do **not** reason from "MathML 3 defines an element for exactly this purpose" —
+that argument once produced a wrong divergence entry justifying `<m:none/>`
+(OXIDIZED_DESIGN #86, since removed). MathML 3 defining it is not evidence Core
+kept it; check Core.
+
+Known residual: **`<m:menclose>` is still emitted** for `\cancel` / `\boxed`
+(`presentation.rs`, Perl `MathML.pm` L339-341 / L1507-1513). Core removed it and
+there is no mechanical replacement — `notation="box"` wants a CSS border on an
+`mrow`, the strike notations want no Core equivalent at all — so replacing it is a
+real rendering and golden change, not a rename. Left as-is pending a decision;
+don't "fix" it incidentally.
+
 ## Practical guidance
 
 - **Canvas signal integrity — fail toward flagging errors.** A failure to parse a
