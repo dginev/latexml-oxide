@@ -97,6 +97,10 @@ static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
     "put"   => fontmap!(family => "serif"),      "bch"   => fontmap!(family => "serif"),
     "psy"   => fontmap!(family => "symbol"),     "pzd"   => fontmap!(family => "dingbats"),
     "ccr"   => fontmap!(family => "serif"),      "ccy"   => fontmap!(family => "symbol"),
+    // Computer Concrete text (Perl Common/Font.pm L92). Sits with `ccr` here
+    // rather than beside its Perl neighbours `ccm`/`ccitt` below, which this
+    // table groups as math fonts.
+    "cct"   => fontmap!(family => "serif"),
     "cmbr"  => fontmap!(family => "sansserif"),  "cmtl"  => fontmap!(family => "typewriter"),
     "cmbrs" => fontmap!(family => "symbol"),     "ul9"   => fontmap!(family => "typewriter"),
     "txr"   => fontmap!(family => "serif"),      "txss"  => fontmap!(family => "sansserif"),
