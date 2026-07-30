@@ -516,6 +516,11 @@ fn resolve_streaming(requested: Option<bool>, max_memory_mib: u64, source: &str)
     None if auto().is_none() => return None,
     None => {},
   }
+  // The eighth is MEASURED, not guessed, and shrinking it buys nothing: on the
+  // 19.8 MB witness at an 8192 MiB ceiling, divisors 8/16/32 peak at
+  // 4747/4719/4714 MB with an invariant ramp (3788/3784/3787 MB at fragment 2)
+  // and byte-identical output. Peak there is a STARTUP TRANSIENT that this knob
+  // does not size — see task #158.
   let budget_boxes = (yardstick_mib.saturating_mul(1024 * 1024) / 8 / BYTES_PER_BOX) as usize;
   Some(budget_boxes.max(1))
 }

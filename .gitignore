@@ -49,6 +49,13 @@ resources/dumps/*
 # conversion logs, ad-hoc notes. None belong in the repo.
 arxiv-examples/
 *.latexml.log
+# Streaming spill areas. A fragmented conversion writes segment files beside
+# its SOURCE, so converting anything from inside a checkout drops a
+# `.latexml-spill-<pid>/` here — and those segments are the DOCUMENT's own
+# content. Never committable: user documents are private, and even our own
+# fixtures' spill is pure build residue. Removed on clean exit; a hard kill
+# strands it under this self-describing name.
+.latexml-spill-*/
 USER_OK.md
 
 # Local Claude Code settings and ad-hoc HTML conversion outputs.

@@ -273,24 +273,47 @@ impl Entry {
 /// (the Perl version uses Berkeley DB via DB_File).
 pub struct ObjectDB {
   /// In-memory entry storage.
-  objects:  HashMap<String, Entry>,
-  /// Owners of every [`Value::Xml`] node the DB stores. A stored node used to
-  /// be a handle into the scanned page's own DOM, which made the DB's
-  /// lifetime silently depend on every page document staying resident — a
-  /// use-after-free the moment a streaming pipeline frees a processed page.
-  /// [`ObjectDB::adopt_xml`] deep-copies into a fresh document owned HERE, so
-  /// stored XML lives exactly as long as the DB, whatever happens to the
-  /// source. (Titles/phrases are small; the arena cost is negligible.)
-  xml_docs: Vec<libxml::tree::Document>,
+  objects:    HashMap<String, Entry>,
+  /// The ONE document owning every [`Value::Xml`] node the DB stores. A
+  /// stored node used to be a handle into the scanned page's own DOM, which
+  /// made the DB's lifetime silently depend on every page document staying
+  /// resident — a use-after-free the moment a streaming pipeline frees a
+  /// processed page. [`ObjectDB::adopt_xml`] deep-copies into this document
+  /// instead, so stored XML lives exactly as long as the DB, whatever happens
+  /// to the source.
+  ///
+  /// **One document, not one per value.** The first cut retained a whole fresh
+  /// `xmlDoc` per adopted node, and Scan adopts a `title` and `toctitle` for
+  /// every object it registers: on a 614 MB core XML (200,403 objects) that is
+  /// tens of thousands of documents — each with its own dictionary and
+  /// structure — to hold a few MB of title markup. Measured, that regressed
+  /// the split post-processing of that input from ~21 GB peak (completing over
+  /// 40,201 pages) to **67 GB and a memory-ceiling kill with zero pages
+  /// written**. Titles really are small; `xmlDoc`s are not.
+  xml_holder: Option<libxml::tree::Document>,
 }
 
 impl ObjectDB {
   /// Create a new empty ObjectDB.
   pub fn new() -> Self {
     ObjectDB {
-      objects:  HashMap::default(),
-      xml_docs: Vec::new(),
+      objects:    HashMap::default(),
+      xml_holder: None,
     }
+  }
+
+  /// The DB's holding document, created on first adoption (so a DB that
+  /// stores no XML allocates none), with a root element to parent the copies
+  /// under — an unparented node would not be reached by the holder's own
+  /// `xmlFreeDoc` either.
+  fn xml_holder_mut(&mut self) -> Option<&mut libxml::tree::Document> {
+    if self.xml_holder.is_none() {
+      let mut doc = libxml::tree::Document::new().ok()?;
+      let root = Node::new("_objectdb_", None, &doc).ok()?;
+      doc.set_root_element(&root);
+      self.xml_holder = Some(doc);
+    }
+    self.xml_holder.as_mut()
   }
 
   /// Adopt an XML node for storage: deep-copy it into a document the DB owns
@@ -298,16 +321,29 @@ impl ObjectDB {
   /// node enters the DB (`From<Node> for Value` was removed on purpose), so
   /// no stored value can dangle into a page document that was freed.
   ///
-  /// Uses `dup_node_into_new_doc` — an orphan deep copy into a fresh
-  /// document, sharing zero C-side state with the source, namespaces
-  /// reconciled (the same primitive `Split` page extraction relies on).
+  /// Two hops, because the fork's copy primitives pull in opposite
+  /// directions: `dup_node_into_new_doc` copies from a LINKED source but only
+  /// into a fresh document, while `import_node` copies into an EXISTING
+  /// document but rejects a linked source. So: copy out to a scratch
+  /// document, detach, copy into the holder, and free the scratch copy —
+  /// an unlinked doc-owned node is freed by nobody (the rust-libxml `Linkage`
+  /// rule behind `Node::free_subtree`), so dropping the scratch document
+  /// alone would leak it. A one-hop version wants a fork method that copies
+  /// from a linked source into an existing document; that is a publish + dep
+  /// bump, and this is a regression fix.
+  ///
   /// Returns `None` when the copy fails; callers should degrade to a string
   /// form rather than store nothing, and never crash.
   pub fn adopt_xml(&mut self, node: &Node) -> Option<Value> {
-    let doc = libxml::tree::Document::dup_node_into_new_doc(node).ok()?;
-    let copy = doc.get_root_element()?;
-    self.xml_docs.push(doc);
-    Some(Value::Xml(copy))
+    let scratch = libxml::tree::Document::dup_node_into_new_doc(node).ok()?;
+    let mut extracted = scratch.get_root_element()?;
+    extracted.unlink_node();
+    let holder = self.xml_holder_mut()?;
+    let mut adopted = holder.import_node(&mut extracted).ok()?;
+    let mut root = holder.get_root_element()?;
+    root.add_child(&mut adopted).ok()?;
+    extracted.free_subtree();
+    Some(Value::Xml(adopted))
   }
 
   /// Look up an entry by key.
@@ -458,6 +494,42 @@ mod tests {
     assert_eq!(db.status(), "0 objects");
     db.register("x", vec![]);
     assert_eq!(db.status(), "1 objects");
+  }
+
+  #[test]
+  fn many_adoptions_share_one_holding_document() {
+    // The regression this guards: one `xmlDoc` per adopted value. Scan adopts
+    // a title (and toctitle) per registered object, so a book-scale document
+    // adopted tens of thousands of times — measured, that took split
+    // post-processing of a 614 MB core XML from ~21 GB to 67 GB and a
+    // memory-ceiling kill. Every copy must live in ONE document, and all of
+    // them must still be readable after the sources are gone.
+    let parser = libxml::parser::Parser::default();
+    let mut db = ObjectDB::new();
+    let mut sources = Vec::new();
+    for i in 0..64 {
+      let doc = parser
+        .parse_string(format!("<title>Section <em>{i}</em></title>").as_bytes())
+        .expect("parse source");
+      let root = doc.get_root_element().expect("root");
+      let adopted = db.adopt_xml(&root).expect("adopt");
+      db.register(&format!("ID:S{i}"), vec![("title", adopted)]);
+      sources.push(doc);
+    }
+    drop(sources); // every page DOM goes away
+    for i in 0..64 {
+      let entry = db.lookup(&format!("ID:S{i}")).expect("entry");
+      let node = entry.get_xml("title").expect("stored node");
+      assert_eq!(node.get_content(), format!("Section {i}"));
+    }
+    // All 64 copies are children of the single holder root, which is what
+    // keeps the retained cost constant instead of linear in objects.
+    let holder = db
+      .xml_holder
+      .as_ref()
+      .expect("holder exists after adoption");
+    let root = holder.get_root_element().expect("holder root");
+    assert_eq!(root.get_child_elements().len(), 64);
   }
 
   #[test]
