@@ -173,6 +173,151 @@ fn cond_matches(cond: &SplitCond, node: &Node) -> bool {
   }
 }
 
+/// One arm of a limit-safe whole-document query: an element-name test plus a
+/// conjunction of predicate atoms, all evaluated by traversal.
+#[derive(Debug)]
+struct WalkArm {
+  /// `None` = `*` (any element); `Some(localname)` = an `ltx:` element.
+  name:  Option<String>,
+  /// Disjunctive normal form: OR of AND-groups, so both `[@a and not(@b)]`
+  /// and `[@a or @b]` are expressible. An empty outer vec = no predicate.
+  preds: Vec<Vec<WalkPred>>,
+}
+
+/// The predicate atoms the post-processing queries actually use. Deliberately
+/// a closed set: an unrecognised shape falls back to real XPath rather than
+/// being approximated.
+#[derive(Debug)]
+enum WalkPred {
+  HasAttr(String),
+  NoAttr(String),
+  /// `not(ancestor::ltx:NAME)`
+  NoAncestor(String),
+  /// `not(ltx:NAME)` — no such child element
+  NoChild(String),
+}
+
+/// Parse the whole-document shapes post-processing evaluates on every page and
+/// every document: `//NAME[pred and pred…]`, `*` or `ltx:`-prefixed, unioned
+/// with `|`. Returns `None` for anything outside the grammar, so unusual
+/// queries keep going through libxml2 unchanged.
+///
+/// Why parse at all: as XPath, `//*[@idref]` makes libxml2 materialize a
+/// node-set over EVERY element first, which on a large document both costs
+/// O(document) memory and trips the 10M node-set ceiling — at which point the
+/// evaluation returns NULL and the caller cannot tell "no matches" from
+/// "could not answer". Measured on a 614 MB core XML: six such queries all
+/// failed, post produced a 0-byte HTML, and the run still exited 0. A walk
+/// allocates only the matches and cannot hit the ceiling.
+fn parse_walk_union(union_xpath: &str) -> Option<Vec<WalkArm>> {
+  let mut arms = Vec::new();
+  for raw in union_xpath.split('|') {
+    let arm = raw.trim().strip_prefix("//")?;
+    let (name_part, pred_part) = match arm.split_once('[') {
+      Some((n, p)) => (n.trim(), Some(p.strip_suffix(']')?.trim())),
+      None => (arm.trim(), None),
+    };
+    let name = match name_part {
+      "*" => None,
+      other => Some(other.strip_prefix("ltx:")?.to_string()),
+    };
+    let is_ncname = |n: &str| {
+      !n.is_empty()
+        && n
+          .chars()
+          .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    };
+    if let Some(n) = &name
+      && !is_ncname(n)
+    {
+      return None;
+    }
+    let mut preds: Vec<Vec<WalkPred>> = Vec::new();
+    if let Some(pred) = pred_part {
+      // `or` binds looser than `and`, so split on it first: each disjunct is a
+      // conjunction of atoms. Mixed precedence beyond that (parentheses) is
+      // outside the grammar and falls through to XPath.
+      if pred.contains('(') && pred.contains(" or ") && pred.contains(" and ") {
+        return None;
+      }
+      for disjunct in pred.split(" or ") {
+        let mut group = Vec::new();
+        for cond in disjunct.split(" and ") {
+          let cond = cond.trim();
+          let parsed = if let Some(attr) = cond.strip_prefix("@") {
+            is_ncname(attr).then(|| WalkPred::HasAttr(attr.to_string()))
+          } else if let Some(inner) = cond.strip_prefix("not(").and_then(|c| c.strip_suffix(")")) {
+            let inner = inner.trim();
+            if let Some(attr) = inner.strip_prefix("@") {
+              is_ncname(attr).then(|| WalkPred::NoAttr(attr.to_string()))
+            } else if let Some(n) = inner.strip_prefix("ancestor::ltx:") {
+              is_ncname(n).then(|| WalkPred::NoAncestor(n.to_string()))
+            } else if let Some(n) = inner.strip_prefix("ltx:") {
+              is_ncname(n).then(|| WalkPred::NoChild(n.to_string()))
+            } else {
+              None
+            }
+          } else {
+            None
+          };
+          group.push(parsed?);
+        }
+        preds.push(group);
+      }
+    }
+    arms.push(WalkArm { name, preds });
+  }
+  (!arms.is_empty()).then_some(arms)
+}
+
+/// Does `node` satisfy this arm? Name test first — it is a string compare,
+/// while the namespace check wraps a `Namespace` and the ancestor/child atoms
+/// walk.
+fn walk_arm_matches(arm: &WalkArm, node: &Node) -> bool {
+  if let Some(want) = &arm.name
+    && (node.get_name() != *want || !is_ltx(node))
+  {
+    return false;
+  }
+  if arm.preds.is_empty() {
+    return true;
+  }
+  arm.preds.iter().any(|group| {
+    group.iter().all(|pred| match pred {
+      WalkPred::HasAttr(a) => node.has_attribute(a),
+      WalkPred::NoAttr(a) => !node.has_attribute(a),
+      WalkPred::NoAncestor(n) => {
+        let mut cur = node.get_parent();
+        while let Some(p) = cur {
+          if p.get_type() == Some(NodeType::ElementNode) && p.get_name() == *n && is_ltx(&p) {
+            return false;
+          }
+          cur = p.get_parent();
+        }
+        true
+      },
+      WalkPred::NoChild(n) => !node
+        .get_child_elements()
+        .iter()
+        .any(|c| c.get_name() == *n && is_ltx(c)),
+    })
+  })
+}
+
+/// Limit-safe pre-order walk collecting every element matching ANY arm, in
+/// document order, each element pushed at most once — the same contract an
+/// XPath union has.
+fn collect_walk_matches(node: &Node, arms: &[WalkArm], out: &mut Vec<Node>) {
+  if node.get_type() == Some(NodeType::ElementNode)
+    && arms.iter().any(|arm| walk_arm_matches(arm, node))
+  {
+    out.push(node.clone());
+  }
+  for child in node.get_child_nodes() {
+    collect_walk_matches(&child, arms, out);
+  }
+}
+
 /// True when `node` satisfies `arm` (an unconditional arm always matches).
 fn arm_matches(arm: &SplitArm, node: &Node) -> bool {
   arm.any_of.is_empty() || arm.any_of.iter().any(|c| cond_matches(c, node))
@@ -705,6 +850,21 @@ impl PostDocument {
     // instead of silently becoming an empty `vec![]` that corrupts downstream
     // passes. An empty match set is still `Ok`, so this fires only on a real
     // abort (CLAUDE.md: fail toward flagging errors).
+    // Whole-document `//NAME[pred]` shapes are answered by TRAVERSAL, never by
+    // a materialized node-set: as XPath they cost O(document) memory and trip
+    // libxml2's 10M node-set ceiling, at which point the evaluation returns
+    // NULL and cannot be distinguished from "nothing matched" (measured: six
+    // such queries failed on a 614 MB core XML and post wrote a 0-byte file
+    // while exiting 0). Unrecognised shapes fall through to libxml2 unchanged.
+    if context_node.is_none()
+      && let Some(arms) = parse_walk_union(xpath)
+      && let Some(root) = self.document.get_root_element()
+    {
+      let mut out = Vec::new();
+      collect_walk_matches(&root, &arms, &mut out);
+      return out;
+    }
+
     let result = if let Some(node) = context_node {
       ctx.node_evaluate_checked(xpath, node)
     } else {
@@ -731,10 +891,15 @@ impl PostDocument {
     match result {
       Ok(obj) => obj.get_nodes_as_vec(),
       Err(e) => {
-        Warn!(
+        // NOT a warning, and NOT "no matches": an evaluation that could not be
+        // answered is a failure to know, and downstream passes that treat it as
+        // an empty set silently drop content (CLAUDE.md: fail toward flagging
+        // errors). Raising it as an Error puts it in the tally and the exit
+        // code, so a run like the 0-byte-HTML one cannot report success.
+        Error!(
           "post",
           "xpath",
-          "XPath evaluation failed for `{}`: {} — treating as no matches",
+          "XPath evaluation failed for `{}`: {} — results are INCOMPLETE for this pass",
           xpath,
           e
         );
@@ -2074,6 +2239,87 @@ mod tests {
 
   fn make_test_doc(xml: &str) -> PostDocument {
     PostDocument::new_from_string(xml, PostDocumentOptions::default()).unwrap()
+  }
+
+  /// The traversal path must return EXACTLY what XPath returns — same nodes,
+  /// same document order — for every shape it claims. Compared against
+  /// libxml2 on a document small enough for XPath to answer reliably, so a
+  /// grammar slip shows up as a mismatch rather than as silently different
+  /// post-processing on large inputs.
+  #[test]
+  fn walk_union_agrees_with_xpath_on_every_supported_shape() {
+    let doc = make_test_doc(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
+         <ref href='u1'/>\
+         <ref href='u2' idref='i1'/>\
+         <ref labelref='L1'/>\
+         <graphics/>\
+         <graphics imagesrc='a.png'/>\
+         <Math id='m1'><XMath><Math id='inner'/></XMath></Math>\
+         <index/>\
+         <index><indexlist/></index>\
+         <glossary/>\
+         <p idref='i2'/>\
+         <XMDual _cvis='1'/>\
+         <XMDual _pvis='1'/>\
+         <XMDual _cvis='1' _pvis='1'/>\
+         <XMDual/>\
+       </document>",
+    );
+    for xpath in [
+      "//*[@idref]",
+      "//*[@labelref]",
+      "//ltx:ref[@href and not(@idref) and not(@labelref)]",
+      "//ltx:graphics[not(@imagesrc)]",
+      "//ltx:Math[not(ancestor::ltx:Math)]",
+      "//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]",
+      "//ltx:ref",
+      // Disjunction: post asks this one on every document (XMDual visibility).
+      "//*[@_cvis or @_pvis]",
+      "//ltx:ref[@href or @idref]",
+    ] {
+      let arms = parse_walk_union(xpath)
+        .unwrap_or_else(|| panic!("`{xpath}` must be inside the walk grammar"));
+      let mut walked = Vec::new();
+      collect_walk_matches(&doc.get_document_element().unwrap(), &arms, &mut walked);
+      // The XPath side deliberately goes through the same public entry point,
+      // which routes recognised shapes to the walk — so compare against
+      // libxml2 directly instead.
+      let ctx = libxml::xpath::Context::new(&doc.document).expect("ctx");
+      ctx.register_namespace("ltx", LTX_NSURI).expect("ns");
+      let root = doc.get_document_element().unwrap();
+      let expected: Vec<String> = ctx
+        .node_evaluate(xpath, &root)
+        .expect("xpath evaluates on a small doc")
+        .get_nodes_as_vec()
+        .iter()
+        .map(|n| format!("{}#{:?}", n.get_name(), n.get_attribute("id")))
+        .collect();
+      let got: Vec<String> = walked
+        .iter()
+        .map(|n| format!("{}#{:?}", n.get_name(), n.get_attribute("id")))
+        .collect();
+      assert_eq!(got, expected, "walk disagrees with XPath for `{xpath}`");
+    }
+  }
+
+  /// A shape outside the grammar must NOT be approximated — it has to fall
+  /// through to real XPath, or a query would silently answer wrongly.
+  #[test]
+  fn unsupported_shapes_are_not_claimed_by_the_walk() {
+    for xpath in [
+      "//ltx:section/ltx:title",            // a path, not a //NAME test
+      "//ltx:ref[position()=1]",            // function predicate
+      "descendant::ltx:navigation",         // relative axis
+      "//svg:svg",                          // non-ltx prefix
+      "//ltx:Math[not(ancestor::svg:svg)]", // non-ltx in the atom
+      "//ltx:ref[(@a or @b) and @c]",       // parenthesised precedence
+    ] {
+      assert!(
+        parse_walk_union(xpath).is_none(),
+        "`{xpath}` must fall through to XPath, not be walked"
+      );
+    }
   }
 
   #[test]
