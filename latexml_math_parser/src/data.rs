@@ -32,7 +32,11 @@ pub fn clear_math_idstore() {
 /// and `resolve_xmref` already falls back to a DOM walk for a genuine miss.
 pub fn purge_math_idstore_subtree(node: &Node) {
   fn collect(node: &Node, ids: &mut Vec<String>) {
-    if let Some(id) = node.get_attribute("xml:id") {
+    // `get_attribute("xml:id")` is the footgun the lint ratchet guards: libxml2
+    // stores xml:id as local name `id` in the XML namespace, so the
+    // string-keyed form can match NOTHING and the purge would silently collect
+    // no ids at all. Same accessor `find_by_xml_id` below already uses.
+    if let Some(id) = node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
       ids.push(id);
     }
     for child in node.get_child_nodes() {

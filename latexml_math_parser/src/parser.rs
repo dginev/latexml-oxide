@@ -3322,7 +3322,6 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
   }
 }
 
-
 /// Release subtrees queued by [`crate::data::defer_discard`], skipping any that
 /// still contains a formula the parse has not reached.
 ///
