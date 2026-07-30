@@ -989,155 +989,172 @@
 <a href=#989 id=989 data-nosnippet>989</a>        | scripted_factor_l2 postsubarg =&gt; postfix_script
 <a href=#990 id=990 data-nosnippet>990</a>        | fenced_factor postsubarg =&gt; postfix_script;
 <a href=#991 id=991 data-nosnippet>991</a>      scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
-<a href=#992 id=992 data-nosnippet>992</a>      scripted_factor_r2 = scripted_factor_r12 postsuperarg =&gt; postfix_script
-<a href=#993 id=993 data-nosnippet>993</a>        | scripted_factor_r11 postsubarg =&gt; postfix_script;
-<a href=#994 id=994 data-nosnippet>994</a>      factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
-<a href=#995 id=995 data-nosnippet>995</a>
-<a href=#996 id=996 data-nosnippet>996</a>      <span class="comment">// Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
-<a href=#997 id=997 data-nosnippet>997</a>      // Must come after scripted_factor_r1/r2 are defined (forward reference not allowed).
-<a href=#998 id=998 data-nosnippet>998</a>      </span>prescripted_factor_post_r += postsuperarg scripted_factor_r1 =&gt; prefix_script_pre
-<a href=#999 id=999 data-nosnippet>999</a>        | postsuperarg scripted_factor_r2 =&gt; prefix_script_pre;
-<a href=#1000 id=1000 data-nosnippet>1000</a>      prescripted_factor_post_l += postsubarg scripted_factor_r1 =&gt; prefix_script_pre
-<a href=#1001 id=1001 data-nosnippet>1001</a>        | postsubarg scripted_factor_r2 =&gt; prefix_script_pre;
-<a href=#1002 id=1002 data-nosnippet>1002</a>
-<a href=#1003 id=1003 data-nosnippet>1003</a>      <span class="comment">// Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
-<a href=#1004 id=1004 data-nosnippet>1004</a>      // These are bigops with post-scripts that still act as prefix operators.
-<a href=#1005 id=1005 data-nosnippet>1005</a>      // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
-<a href=#1006 id=1006 data-nosnippet>1006</a>      // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
-<a href=#1007 id=1007 data-nosnippet>1007</a>      // Use bigop-specific script tokens when available (from lexer),
-<a href=#1008 id=1008 data-nosnippet>1008</a>      // fall back to generic POSTSUBSCRIPT/POSTSUPERSCRIPT for compatibility
-<a href=#1009 id=1009 data-nosnippet>1009</a>      // Single-script bigop: one sub or one super
-<a href=#1010 id=1010 data-nosnippet>1010</a>      </span>scripted_bigop_r1 = any_bigop bigopsuparg =&gt; postfix_script
-<a href=#1011 id=1011 data-nosnippet>1011</a>        | any_bigop bigopsubarg =&gt; postfix_script
-<a href=#1012 id=1012 data-nosnippet>1012</a>        | any_bigop postsuperarg =&gt; postfix_script
-<a href=#1013 id=1013 data-nosnippet>1013</a>        | any_bigop postsubarg =&gt; postfix_script;
-<a href=#1014 id=1014 data-nosnippet>1014</a>      scripted_bigop = scripted_bigop_r1
-<a href=#1015 id=1015 data-nosnippet>1015</a>        | scripted_bigop_r1 bigopsuparg =&gt; postfix_script
-<a href=#1016 id=1016 data-nosnippet>1016</a>        | scripted_bigop_r1 bigopsubarg =&gt; postfix_script
-<a href=#1017 id=1017 data-nosnippet>1017</a>        | scripted_bigop_r1 postsuperarg =&gt; postfix_script
-<a href=#1018 id=1018 data-nosnippet>1018</a>        | scripted_bigop_r1 postsubarg =&gt; postfix_script;
-<a href=#1019 id=1019 data-nosnippet>1019</a>      <span class="comment">// Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
-<a href=#1020 id=1020 data-nosnippet>1020</a>      // moreOpArgFactors chains factors with MulOp or invisible times.
-<a href=#1021 id=1021 data-nosnippet>1021</a>      //
-<a href=#1022 id=1022 data-nosnippet>1022</a>      // bigop_application absorbs `term` (not just tight_term) because:
-<a href=#1023 id=1023 data-nosnippet>1023</a>      // - Nested bigops: ∑∑∑ a_{ij}b_{jk}c_{ki} needs each ∑ to absorb the next
-<a href=#1024 id=1024 data-nosnippet>1024</a>      // - bigop_application is lifted to term level, so inner bigops are terms
-<a href=#1025 id=1025 data-nosnippet>1025</a>      // M2 investigation: restricting to tight_term breaks nested bigops (calculus test).
-<a href=#1026 id=1026 data-nosnippet>1026</a>      // The semantic pruning already handles the ∑ a + b case correctly.
-<a href=#1027 id=1027 data-nosnippet>1027</a>      </span>bigop_application = any_bigop term =&gt; prefix_apply
-<a href=#1028 id=1028 data-nosnippet>1028</a>        | scripted_bigop term =&gt; prefix_apply
-<a href=#1029 id=1029 data-nosnippet>1029</a>        | composed_bigop term =&gt; prefix_apply;
-<a href=#1030 id=1030 data-nosnippet>1030</a>      <span class="comment">// Lift bigop_application to term level (not expression level).
-<a href=#1031 id=1031 data-nosnippet>1031</a>      // This avoids exponential Marpa ambiguity when ADDOP precedes BIGOP
-<a href=#1032 id=1032 data-nosnippet>1032</a>      // (e.g. a+\neg b). At term level, `term addop expression` handles
-<a href=#1033 id=1033 data-nosnippet>1033</a>      // `a + \neg b` with a single derivation path.
-<a href=#1034 id=1034 data-nosnippet>1034</a>      // On its LEFT, invisible_times still works: 2∫ x dx via tight_term rules.
-<a href=#1035 id=1035 data-nosnippet>1035</a>      // On its RIGHT, addop/relop follow naturally: ∫ x dx + y → ∫(x*dx) + y.
-<a href=#1036 id=1036 data-nosnippet>1036</a>      </span>term += bigop_application;
-<a href=#1037 id=1037 data-nosnippet>1037</a>      <span class="comment">// Bigop after invisible times: 1/2∫ f dx → (1/2)*∫(f*dx)
-<a href=#1038 id=1038 data-nosnippet>1038</a>      // Perl: Factor moreFactors handles consecutive factors via InvisibleTimes.
-<a href=#1039 id=1039 data-nosnippet>1039</a>      // Since bigop_application is at term level (not tight_term), juxtaposition
-<a href=#1040 id=1040 data-nosnippet>1040</a>      // between a tight_term and a bigop_application needs an explicit rule.
-<a href=#1041 id=1041 data-nosnippet>1041</a>      </span>term += tight_term bigop_application =&gt; apply_invisible_times;
-<a href=#1042 id=1042 data-nosnippet>1042</a>      <span class="comment">// Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx)
-<a href=#1043 id=1043 data-nosnippet>1043</a>      </span>term += term mulop bigop_application =&gt; infix_apply_nary;
-<a href=#1044 id=1044 data-nosnippet>1044</a>      <span class="comment">// BARE bigop as the LEFT operand of a binary mul-op: `\partial/\partial t`
-<a href=#1045 id=1045 data-nosnippet>1045</a>      // (Leibniz partial-derivative notation, pervasive in physics) → Perl
-<a href=#1046 id=1046 data-nosnippet>1046</a>      // `partial-differential / partial-differential@(t)`. A bigop normally MUST
-<a href=#1047 id=1047 data-nosnippet>1047</a>      // apply (`bigop_application = any_bigop term`), so a bigop directly followed
-<a href=#1048 id=1048 data-nosnippet>1048</a>      // by `/` had no rule → `ltx_math_unparsed` (Rust-only; Perl treats `\partial`
-<a href=#1049 id=1049 data-nosnippet>1049</a>      // as a bare factor). This rule fires ONLY when a DIVIDE-mulop (`/`)
-<a href=#1050 id=1050 data-nosnippet>1050</a>      // IMMEDIATELY follows the bigop — where `bigop_application` cannot match (the
-<a href=#1051 id=1051 data-nosnippet>1051</a>      // next token is an operator, not a term) — so it adds no competing parse for
-<a href=#1052 id=1052 data-nosnippet>1052</a>      // the normal `\partial t` apply case. Scoped to `divide` (NOT all `mulop`):
-<a href=#1053 id=1053 data-nosnippet>1053</a>      // scoping to `mulop` regressed `\partial \times B` (Perl keeps it a flat
-<a href=#1054 id=1054 data-nosnippet>1054</a>      // product), so restrict to `/`. See SYNC_STATUS math-coverage notes.
-<a href=#1055 id=1055 data-nosnippet>1055</a>      </span>term += any_bigop divide term =&gt; infix_apply;
-<a href=#1056 id=1056 data-nosnippet>1056</a>      <span class="comment">// Scripted bigops can also appear as standalone statements
-<a href=#1057 id=1057 data-nosnippet>1057</a>      </span>statement += scripted_bigop;
-<a href=#1058 id=1058 data-nosnippet>1058</a>
-<a href=#1059 id=1059 data-nosnippet>1059</a>      <span class="comment">// Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
-<a href=#1060 id=1060 data-nosnippet>1060</a>      // Handles patterns like {}_a^b\sum_c^d x where floating scripts
-<a href=#1061 id=1061 data-nosnippet>1061</a>      // attach as pre-scripts to the following operator.
-<a href=#1062 id=1062 data-nosnippet>1062</a>      // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
-<a href=#1063 id=1063 data-nosnippet>1063</a>      // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
-<a href=#1064 id=1064 data-nosnippet>1064</a>      </span>prescripted_bigop_inner = scripted_bigop | scripted_bigop_r1 | any_bigop;
-<a href=#1065 id=1065 data-nosnippet>1065</a>      <span class="comment">// FLOAT script wrapping a bigop as pre-script
-<a href=#1066 id=1066 data-nosnippet>1066</a>      // Perl: preScripted['bigop'] / preScripted['INTOP']
-<a href=#1067 id=1067 data-nosnippet>1067</a>      </span>prescripted_bigop = floatsuperarg prescripted_bigop_inner =&gt; prefix_script
-<a href=#1068 id=1068 data-nosnippet>1068</a>        | floatsubarg prescripted_bigop_inner =&gt; prefix_script
-<a href=#1069 id=1069 data-nosnippet>1069</a>        <span class="comment">// Recursive: chain multiple floating scripts before bigop
-<a href=#1070 id=1070 data-nosnippet>1070</a>        </span>| floatsuperarg prescripted_bigop =&gt; prefix_script
-<a href=#1071 id=1071 data-nosnippet>1071</a>        | floatsubarg prescripted_bigop =&gt; prefix_script;
-<a href=#1072 id=1072 data-nosnippet>1072</a>      <span class="comment">// POST script used as pre-script (forced 'pre', no _wasfloat).
-<a href=#1073 id=1073 data-nosnippet>1073</a>      // Only used INSIDE prescripted_bigop (always FLOAT-wrapped outside),
-<a href=#1074 id=1074 data-nosnippet>1074</a>      // so they can't incorrectly match bare post-scripts as pre-scripts.
-<a href=#1075 id=1075 data-nosnippet>1075</a>      // Perl: parse_kludgeScripts_rec calls NewScript($base, $y, 'pre') for POST
-<a href=#1076 id=1076 data-nosnippet>1076</a>      // scripts that follow a FLOAT from the same empty {} base.
-<a href=#1077 id=1077 data-nosnippet>1077</a>      </span>prescripted_bigop += postsuperarg prescripted_bigop_inner =&gt; prefix_script_pre
-<a href=#1078 id=1078 data-nosnippet>1078</a>        | postsubarg prescripted_bigop_inner =&gt; prefix_script_pre
-<a href=#1079 id=1079 data-nosnippet>1079</a>        | postsuperarg prescripted_bigop =&gt; prefix_script_pre
-<a href=#1080 id=1080 data-nosnippet>1080</a>        | postsubarg prescripted_bigop =&gt; prefix_script_pre;
-<a href=#1081 id=1081 data-nosnippet>1081</a>      tight_term += prescripted_bigop tight_term =&gt; prefix_apply;
-<a href=#1082 id=1082 data-nosnippet>1082</a>      tight_term += prescripted_bigop factor =&gt; prefix_apply;
-<a href=#1083 id=1083 data-nosnippet>1083</a>      statement += prescripted_bigop;
-<a href=#1084 id=1084 data-nosnippet>1084</a>
-<a href=#1085 id=1085 data-nosnippet>1085</a>      <span class="comment">// Perl MathGrammar L259-260: moreFactors: evalAtOp maybeEvalAt
-<a href=#1086 id=1086 data-nosnippet>1086</a>      // "evaluated at" — a|_{x=0}, f(x)|_{x=0}^{x=1}, \left.xyz\right|_{0}^{2}
-<a href=#1087 id=1087 data-nosnippet>1087</a>      // evalAtOp: VERTBAR:| (standalone pipe) — CLOSE:| from \right| handled separately
-<a href=#1088 id=1088 data-nosnippet>1088</a>      </span>tight_term += tight_term singlevertbar postsubarg =&gt; eval_at
-<a href=#1089 id=1089 data-nosnippet>1089</a>        | tight_term singlevertbar postsubarg postsuperarg =&gt; eval_at
-<a href=#1090 id=1090 data-nosnippet>1090</a>        | tight_term singlevertbar postsuperarg postsubarg =&gt; eval_at
-<a href=#1091 id=1091 data-nosnippet>1091</a>        <span class="comment">// CLOSE:| from \right| also triggers eval-at
-<a href=#1092 id=1092 data-nosnippet>1092</a>        </span>| tight_term close_pipe postsubarg =&gt; eval_at
-<a href=#1093 id=1093 data-nosnippet>1093</a>        | tight_term close_pipe postsubarg postsuperarg =&gt; eval_at
-<a href=#1094 id=1094 data-nosnippet>1094</a>        | tight_term close_pipe postsuperarg postsubarg =&gt; eval_at
-<a href=#1095 id=1095 data-nosnippet>1095</a>        <span class="comment">// \left.expr\right|_… — the closing \right| is stretchy VERTBAR
-<a href=#1096 id=1096 data-nosnippet>1096</a>        // tagged RIGHT_STRETCHY_VERTBAR by the lexer (util.rs) via the
-<a href=#1097 id=1097 data-nosnippet>1097</a>        // `role_side="right"` property set in `\@right` (tex_math.rs).
-<a href=#1098 id=1098 data-nosnippet>1098</a>        // The `\left.` null-delimiter doesn't appear in the lexeme
-<a href=#1099 id=1099 data-nosnippet>1099</a>        // stream, so the resulting shape is `tight_term RIGHT_STRETCHY_VERTBAR
-<a href=#1100 id=1100 data-nosnippet>1100</a>        // postsubarg`. The undirected variant covers legacy DOM input
-<a href=#1101 id=1101 data-nosnippet>1101</a>        // or code paths that bypassed `\@right`.
-<a href=#1102 id=1102 data-nosnippet>1102</a>        </span>| tight_term right_stretchy_vertbar postsubarg =&gt; eval_at
-<a href=#1103 id=1103 data-nosnippet>1103</a>        | tight_term right_stretchy_vertbar postsubarg postsuperarg =&gt; eval_at
-<a href=#1104 id=1104 data-nosnippet>1104</a>        | tight_term right_stretchy_vertbar postsuperarg postsubarg =&gt; eval_at
-<a href=#1105 id=1105 data-nosnippet>1105</a>        | tight_term undirected_stretchy_vertbar postsubarg =&gt; eval_at
-<a href=#1106 id=1106 data-nosnippet>1106</a>        | tight_term undirected_stretchy_vertbar postsubarg postsuperarg =&gt; eval_at
-<a href=#1107 id=1107 data-nosnippet>1107</a>        | tight_term undirected_stretchy_vertbar postsuperarg postsubarg =&gt; eval_at;
-<a href=#1108 id=1108 data-nosnippet>1108</a>
-<a href=#1109 id=1109 data-nosnippet>1109</a>      anyop = addop | mulop | binop | relop | arrow | metarelop
-<a href=#1110 id=1110 data-nosnippet>1110</a>        | bigop | sumop | intop
-<a href=#1111 id=1111 data-nosnippet>1111</a>        | limitop | diffop | vertbar | supop
-<a href=#1112 id=1112 data-nosnippet>1112</a>        | modifierop | composed_bigop | operator | compound_operator;
-<a href=#1113 id=1113 data-nosnippet>1113</a>
-<a href=#1114 id=1114 data-nosnippet>1114</a>      anyscript = floatsuperscript | floatsubscript
-<a href=#1115 id=1115 data-nosnippet>1115</a>        <span class="comment">// Standalone floating script pairs (no base: {}^c_d or {}_d^c)
-<a href=#1116 id=1116 data-nosnippet>1116</a>        // Perl: NewScript(NewScript(Absent(), super, 'post'), sub, 'post')
-<a href=#1117 id=1117 data-nosnippet>1117</a>        </span>| floatsuperscript postsubarg =&gt; postfix_script
-<a href=#1118 id=1118 data-nosnippet>1118</a>        | floatsubscript postsuperarg =&gt; postfix_script;
-<a href=#1119 id=1119 data-nosnippet>1119</a>
-<a href=#1120 id=1120 data-nosnippet>1120</a>      <span class="comment">// Operators that CANNOT start a valid expression — leading orphans
-<a href=#1121 id=1121 data-nosnippet>1121</a>      // from tabular fragments where LHS is on a preceding row.
-<a href=#1122 id=1122 data-nosnippet>1122</a>      // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
-<a href=#1123 id=1123 data-nosnippet>1123</a>      // These already have valid prefix interpretations inside expressions.
-<a href=#1124 id=1124 data-nosnippet>1124</a>      </span>orphan_op = mulop | binop | diffop | supop | modifierop;
-<a href=#1125 id=1125 data-nosnippet>1125</a>      <span class="comment">// Perf (Fix 2): `formula_list` removed from `anything` alternatives.
-<a href=#1126 id=1126 data-nosnippet>1126</a>      // formula_list is L3-internal (a fenced body), not L0. `statements`
-<a href=#1127 id=1127 data-nosnippet>1127</a>      // covers bare top-level comma-separated items via `list_apply` with
-<a href=#1128 id=1128 data-nosnippet>1128</a>      // equivalent semantics (formula_list_apply delegates to list_apply
-<a href=#1129 id=1129 data-nosnippet>1129</a>      // for non-relational items).
-<a href=#1130 id=1130 data-nosnippet>1130</a>      </span>anything = formulae | statements | anyop | anyscript |
-<a href=#1131 id=1131 data-nosnippet>1131</a>        anyop anyop =&gt; compound_operator_2 |
-<a href=#1132 id=1132 data-nosnippet>1132</a>        <span class="comment">// Perl MathGrammar L81: leading orphan operator (tabular fragment).
-<a href=#1133 id=1133 data-nosnippet>1133</a>        // Only at the start rule (anything) — not recursive, not inside subexpressions.
-<a href=#1134 id=1134 data-nosnippet>1134</a>        </span>orphan_op statements =&gt; prefix_relop_apply
-<a href=#1135 id=1135 data-nosnippet>1135</a>    );
-<a href=#1136 id=1136 data-nosnippet>1136</a>  <span class="comment">// | term_argument postsuperarg tex_argument  =&gt; post_script
-<a href=#1137 id=1137 data-nosnippet>1137</a>  // | term_argument postsubscript tex_argument    =&gt; post_script
-<a href=#1138 id=1138 data-nosnippet>1138</a>  </span><span class="macro">start!</span>(anything);
-<a href=#1139 id=1139 data-nosnippet>1139</a>
-<a href=#1140 id=1140 data-nosnippet>1140</a>  <span class="comment">// Also prepare the tree builder rules here (for now)
-<a href=#1141 id=1141 data-nosnippet>1141</a>  </span><span class="prelude-val">Ok</span>((<span class="macro">grammar!</span>(), <span class="macro">actions!</span>(), <span class="macro">builder!</span>()))
-<a href=#1142 id=1142 data-nosnippet>1142</a>}
+<a href=#992 id=992 data-nosnippet>992</a>      <span class="comment">// TWO OR MORE post-scripts, chained left-recursively. Perl's `addScripts`
+<a href=#993 id=993 data-nosnippet>993</a>      // (`MathGrammar` L419-423) recurses without a depth bound and without
+<a href=#994 id=994 data-nosnippet>994</a>      // caring which KIND of script it just consumed, so `{x^a}^b` (two supers)
+<a href=#995 id=995 data-nosnippet>995</a>      // and `{{x_a}^b}_c` (three scripts) are ordinary parses there. This used to
+<a href=#996 id=996 data-nosnippet>996</a>      // be hand-unrolled to exactly two, alternating —
+<a href=#997 id=997 data-nosnippet>997</a>      // `r12 postsuperarg | r11 postsubarg` — which made every same-kind repeat
+<a href=#998 id=998 data-nosnippet>998</a>      // and every chain of three or more `ltx_math_unparsed`. `x^a^b` without
+<a href=#999 id=999 data-nosnippet>999</a>      // braces is not a counter-example: TeX rejects that as "Double superscript"
+<a href=#1000 id=1000 data-nosnippet>1000</a>      // long before the parser sees it, so the depth cap was buying nothing.
+<a href=#1001 id=1001 data-nosnippet>1001</a>      //
+<a href=#1002 id=1002 data-nosnippet>1002</a>      // Left recursion keeps the derivation unique — each script attaches to
+<a href=#1003 id=1003 data-nosnippet>1003</a>      // everything to its left, in order — so this adds no ambiguity for the
+<a href=#1004 id=1004 data-nosnippet>1004</a>      // grammar to prune. It also does not disturb the float-before-post
+<a href=#1005 id=1005 data-nosnippet>1005</a>      // collection order noted above, which is about `scripted_factor_l*` vs
+<a href=#1006 id=1006 data-nosnippet>1006</a>      // `_r*`, not about chain depth.
+<a href=#1007 id=1007 data-nosnippet>1007</a>      </span>scripted_factor_r2 = scripted_factor_r1 postsuperarg =&gt; postfix_script
+<a href=#1008 id=1008 data-nosnippet>1008</a>        | scripted_factor_r1 postsubarg =&gt; postfix_script
+<a href=#1009 id=1009 data-nosnippet>1009</a>        | scripted_factor_r2 postsuperarg =&gt; postfix_script
+<a href=#1010 id=1010 data-nosnippet>1010</a>        | scripted_factor_r2 postsubarg =&gt; postfix_script;
+<a href=#1011 id=1011 data-nosnippet>1011</a>      factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
+<a href=#1012 id=1012 data-nosnippet>1012</a>
+<a href=#1013 id=1013 data-nosnippet>1013</a>      <span class="comment">// Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
+<a href=#1014 id=1014 data-nosnippet>1014</a>      // Must come after scripted_factor_r1/r2 are defined (forward reference not allowed).
+<a href=#1015 id=1015 data-nosnippet>1015</a>      </span>prescripted_factor_post_r += postsuperarg scripted_factor_r1 =&gt; prefix_script_pre
+<a href=#1016 id=1016 data-nosnippet>1016</a>        | postsuperarg scripted_factor_r2 =&gt; prefix_script_pre;
+<a href=#1017 id=1017 data-nosnippet>1017</a>      prescripted_factor_post_l += postsubarg scripted_factor_r1 =&gt; prefix_script_pre
+<a href=#1018 id=1018 data-nosnippet>1018</a>        | postsubarg scripted_factor_r2 =&gt; prefix_script_pre;
+<a href=#1019 id=1019 data-nosnippet>1019</a>
+<a href=#1020 id=1020 data-nosnippet>1020</a>      <span class="comment">// Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
+<a href=#1021 id=1021 data-nosnippet>1021</a>      // These are bigops with post-scripts that still act as prefix operators.
+<a href=#1022 id=1022 data-nosnippet>1022</a>      // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
+<a href=#1023 id=1023 data-nosnippet>1023</a>      // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
+<a href=#1024 id=1024 data-nosnippet>1024</a>      // Use bigop-specific script tokens when available (from lexer),
+<a href=#1025 id=1025 data-nosnippet>1025</a>      // fall back to generic POSTSUBSCRIPT/POSTSUPERSCRIPT for compatibility
+<a href=#1026 id=1026 data-nosnippet>1026</a>      // Single-script bigop: one sub or one super
+<a href=#1027 id=1027 data-nosnippet>1027</a>      </span>scripted_bigop_r1 = any_bigop bigopsuparg =&gt; postfix_script
+<a href=#1028 id=1028 data-nosnippet>1028</a>        | any_bigop bigopsubarg =&gt; postfix_script
+<a href=#1029 id=1029 data-nosnippet>1029</a>        | any_bigop postsuperarg =&gt; postfix_script
+<a href=#1030 id=1030 data-nosnippet>1030</a>        | any_bigop postsubarg =&gt; postfix_script;
+<a href=#1031 id=1031 data-nosnippet>1031</a>      scripted_bigop = scripted_bigop_r1
+<a href=#1032 id=1032 data-nosnippet>1032</a>        | scripted_bigop_r1 bigopsuparg =&gt; postfix_script
+<a href=#1033 id=1033 data-nosnippet>1033</a>        | scripted_bigop_r1 bigopsubarg =&gt; postfix_script
+<a href=#1034 id=1034 data-nosnippet>1034</a>        | scripted_bigop_r1 postsuperarg =&gt; postfix_script
+<a href=#1035 id=1035 data-nosnippet>1035</a>        | scripted_bigop_r1 postsubarg =&gt; postfix_script;
+<a href=#1036 id=1036 data-nosnippet>1036</a>      <span class="comment">// Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
+<a href=#1037 id=1037 data-nosnippet>1037</a>      // moreOpArgFactors chains factors with MulOp or invisible times.
+<a href=#1038 id=1038 data-nosnippet>1038</a>      //
+<a href=#1039 id=1039 data-nosnippet>1039</a>      // bigop_application absorbs `term` (not just tight_term) because:
+<a href=#1040 id=1040 data-nosnippet>1040</a>      // - Nested bigops: ∑∑∑ a_{ij}b_{jk}c_{ki} needs each ∑ to absorb the next
+<a href=#1041 id=1041 data-nosnippet>1041</a>      // - bigop_application is lifted to term level, so inner bigops are terms
+<a href=#1042 id=1042 data-nosnippet>1042</a>      // M2 investigation: restricting to tight_term breaks nested bigops (calculus test).
+<a href=#1043 id=1043 data-nosnippet>1043</a>      // The semantic pruning already handles the ∑ a + b case correctly.
+<a href=#1044 id=1044 data-nosnippet>1044</a>      </span>bigop_application = any_bigop term =&gt; prefix_apply
+<a href=#1045 id=1045 data-nosnippet>1045</a>        | scripted_bigop term =&gt; prefix_apply
+<a href=#1046 id=1046 data-nosnippet>1046</a>        | composed_bigop term =&gt; prefix_apply;
+<a href=#1047 id=1047 data-nosnippet>1047</a>      <span class="comment">// Lift bigop_application to term level (not expression level).
+<a href=#1048 id=1048 data-nosnippet>1048</a>      // This avoids exponential Marpa ambiguity when ADDOP precedes BIGOP
+<a href=#1049 id=1049 data-nosnippet>1049</a>      // (e.g. a+\neg b). At term level, `term addop expression` handles
+<a href=#1050 id=1050 data-nosnippet>1050</a>      // `a + \neg b` with a single derivation path.
+<a href=#1051 id=1051 data-nosnippet>1051</a>      // On its LEFT, invisible_times still works: 2∫ x dx via tight_term rules.
+<a href=#1052 id=1052 data-nosnippet>1052</a>      // On its RIGHT, addop/relop follow naturally: ∫ x dx + y → ∫(x*dx) + y.
+<a href=#1053 id=1053 data-nosnippet>1053</a>      </span>term += bigop_application;
+<a href=#1054 id=1054 data-nosnippet>1054</a>      <span class="comment">// Bigop after invisible times: 1/2∫ f dx → (1/2)*∫(f*dx)
+<a href=#1055 id=1055 data-nosnippet>1055</a>      // Perl: Factor moreFactors handles consecutive factors via InvisibleTimes.
+<a href=#1056 id=1056 data-nosnippet>1056</a>      // Since bigop_application is at term level (not tight_term), juxtaposition
+<a href=#1057 id=1057 data-nosnippet>1057</a>      // between a tight_term and a bigop_application needs an explicit rule.
+<a href=#1058 id=1058 data-nosnippet>1058</a>      </span>term += tight_term bigop_application =&gt; apply_invisible_times;
+<a href=#1059 id=1059 data-nosnippet>1059</a>      <span class="comment">// Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx)
+<a href=#1060 id=1060 data-nosnippet>1060</a>      </span>term += term mulop bigop_application =&gt; infix_apply_nary;
+<a href=#1061 id=1061 data-nosnippet>1061</a>      <span class="comment">// BARE bigop as the LEFT operand of a binary mul-op: `\partial/\partial t`
+<a href=#1062 id=1062 data-nosnippet>1062</a>      // (Leibniz partial-derivative notation, pervasive in physics) → Perl
+<a href=#1063 id=1063 data-nosnippet>1063</a>      // `partial-differential / partial-differential@(t)`. A bigop normally MUST
+<a href=#1064 id=1064 data-nosnippet>1064</a>      // apply (`bigop_application = any_bigop term`), so a bigop directly followed
+<a href=#1065 id=1065 data-nosnippet>1065</a>      // by `/` had no rule → `ltx_math_unparsed` (Rust-only; Perl treats `\partial`
+<a href=#1066 id=1066 data-nosnippet>1066</a>      // as a bare factor). This rule fires ONLY when a DIVIDE-mulop (`/`)
+<a href=#1067 id=1067 data-nosnippet>1067</a>      // IMMEDIATELY follows the bigop — where `bigop_application` cannot match (the
+<a href=#1068 id=1068 data-nosnippet>1068</a>      // next token is an operator, not a term) — so it adds no competing parse for
+<a href=#1069 id=1069 data-nosnippet>1069</a>      // the normal `\partial t` apply case. Scoped to `divide` (NOT all `mulop`):
+<a href=#1070 id=1070 data-nosnippet>1070</a>      // scoping to `mulop` regressed `\partial \times B` (Perl keeps it a flat
+<a href=#1071 id=1071 data-nosnippet>1071</a>      // product), so restrict to `/`. See SYNC_STATUS math-coverage notes.
+<a href=#1072 id=1072 data-nosnippet>1072</a>      </span>term += any_bigop divide term =&gt; infix_apply;
+<a href=#1073 id=1073 data-nosnippet>1073</a>      <span class="comment">// Scripted bigops can also appear as standalone statements
+<a href=#1074 id=1074 data-nosnippet>1074</a>      </span>statement += scripted_bigop;
+<a href=#1075 id=1075 data-nosnippet>1075</a>
+<a href=#1076 id=1076 data-nosnippet>1076</a>      <span class="comment">// Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
+<a href=#1077 id=1077 data-nosnippet>1077</a>      // Handles patterns like {}_a^b\sum_c^d x where floating scripts
+<a href=#1078 id=1078 data-nosnippet>1078</a>      // attach as pre-scripts to the following operator.
+<a href=#1079 id=1079 data-nosnippet>1079</a>      // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
+<a href=#1080 id=1080 data-nosnippet>1080</a>      // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
+<a href=#1081 id=1081 data-nosnippet>1081</a>      </span>prescripted_bigop_inner = scripted_bigop | scripted_bigop_r1 | any_bigop;
+<a href=#1082 id=1082 data-nosnippet>1082</a>      <span class="comment">// FLOAT script wrapping a bigop as pre-script
+<a href=#1083 id=1083 data-nosnippet>1083</a>      // Perl: preScripted['bigop'] / preScripted['INTOP']
+<a href=#1084 id=1084 data-nosnippet>1084</a>      </span>prescripted_bigop = floatsuperarg prescripted_bigop_inner =&gt; prefix_script
+<a href=#1085 id=1085 data-nosnippet>1085</a>        | floatsubarg prescripted_bigop_inner =&gt; prefix_script
+<a href=#1086 id=1086 data-nosnippet>1086</a>        <span class="comment">// Recursive: chain multiple floating scripts before bigop
+<a href=#1087 id=1087 data-nosnippet>1087</a>        </span>| floatsuperarg prescripted_bigop =&gt; prefix_script
+<a href=#1088 id=1088 data-nosnippet>1088</a>        | floatsubarg prescripted_bigop =&gt; prefix_script;
+<a href=#1089 id=1089 data-nosnippet>1089</a>      <span class="comment">// POST script used as pre-script (forced 'pre', no _wasfloat).
+<a href=#1090 id=1090 data-nosnippet>1090</a>      // Only used INSIDE prescripted_bigop (always FLOAT-wrapped outside),
+<a href=#1091 id=1091 data-nosnippet>1091</a>      // so they can't incorrectly match bare post-scripts as pre-scripts.
+<a href=#1092 id=1092 data-nosnippet>1092</a>      // Perl: parse_kludgeScripts_rec calls NewScript($base, $y, 'pre') for POST
+<a href=#1093 id=1093 data-nosnippet>1093</a>      // scripts that follow a FLOAT from the same empty {} base.
+<a href=#1094 id=1094 data-nosnippet>1094</a>      </span>prescripted_bigop += postsuperarg prescripted_bigop_inner =&gt; prefix_script_pre
+<a href=#1095 id=1095 data-nosnippet>1095</a>        | postsubarg prescripted_bigop_inner =&gt; prefix_script_pre
+<a href=#1096 id=1096 data-nosnippet>1096</a>        | postsuperarg prescripted_bigop =&gt; prefix_script_pre
+<a href=#1097 id=1097 data-nosnippet>1097</a>        | postsubarg prescripted_bigop =&gt; prefix_script_pre;
+<a href=#1098 id=1098 data-nosnippet>1098</a>      tight_term += prescripted_bigop tight_term =&gt; prefix_apply;
+<a href=#1099 id=1099 data-nosnippet>1099</a>      tight_term += prescripted_bigop factor =&gt; prefix_apply;
+<a href=#1100 id=1100 data-nosnippet>1100</a>      statement += prescripted_bigop;
+<a href=#1101 id=1101 data-nosnippet>1101</a>
+<a href=#1102 id=1102 data-nosnippet>1102</a>      <span class="comment">// Perl MathGrammar L259-260: moreFactors: evalAtOp maybeEvalAt
+<a href=#1103 id=1103 data-nosnippet>1103</a>      // "evaluated at" — a|_{x=0}, f(x)|_{x=0}^{x=1}, \left.xyz\right|_{0}^{2}
+<a href=#1104 id=1104 data-nosnippet>1104</a>      // evalAtOp: VERTBAR:| (standalone pipe) — CLOSE:| from \right| handled separately
+<a href=#1105 id=1105 data-nosnippet>1105</a>      </span>tight_term += tight_term singlevertbar postsubarg =&gt; eval_at
+<a href=#1106 id=1106 data-nosnippet>1106</a>        | tight_term singlevertbar postsubarg postsuperarg =&gt; eval_at
+<a href=#1107 id=1107 data-nosnippet>1107</a>        | tight_term singlevertbar postsuperarg postsubarg =&gt; eval_at
+<a href=#1108 id=1108 data-nosnippet>1108</a>        <span class="comment">// CLOSE:| from \right| also triggers eval-at
+<a href=#1109 id=1109 data-nosnippet>1109</a>        </span>| tight_term close_pipe postsubarg =&gt; eval_at
+<a href=#1110 id=1110 data-nosnippet>1110</a>        | tight_term close_pipe postsubarg postsuperarg =&gt; eval_at
+<a href=#1111 id=1111 data-nosnippet>1111</a>        | tight_term close_pipe postsuperarg postsubarg =&gt; eval_at
+<a href=#1112 id=1112 data-nosnippet>1112</a>        <span class="comment">// \left.expr\right|_… — the closing \right| is stretchy VERTBAR
+<a href=#1113 id=1113 data-nosnippet>1113</a>        // tagged RIGHT_STRETCHY_VERTBAR by the lexer (util.rs) via the
+<a href=#1114 id=1114 data-nosnippet>1114</a>        // `role_side="right"` property set in `\@right` (tex_math.rs).
+<a href=#1115 id=1115 data-nosnippet>1115</a>        // The `\left.` null-delimiter doesn't appear in the lexeme
+<a href=#1116 id=1116 data-nosnippet>1116</a>        // stream, so the resulting shape is `tight_term RIGHT_STRETCHY_VERTBAR
+<a href=#1117 id=1117 data-nosnippet>1117</a>        // postsubarg`. The undirected variant covers legacy DOM input
+<a href=#1118 id=1118 data-nosnippet>1118</a>        // or code paths that bypassed `\@right`.
+<a href=#1119 id=1119 data-nosnippet>1119</a>        </span>| tight_term right_stretchy_vertbar postsubarg =&gt; eval_at
+<a href=#1120 id=1120 data-nosnippet>1120</a>        | tight_term right_stretchy_vertbar postsubarg postsuperarg =&gt; eval_at
+<a href=#1121 id=1121 data-nosnippet>1121</a>        | tight_term right_stretchy_vertbar postsuperarg postsubarg =&gt; eval_at
+<a href=#1122 id=1122 data-nosnippet>1122</a>        | tight_term undirected_stretchy_vertbar postsubarg =&gt; eval_at
+<a href=#1123 id=1123 data-nosnippet>1123</a>        | tight_term undirected_stretchy_vertbar postsubarg postsuperarg =&gt; eval_at
+<a href=#1124 id=1124 data-nosnippet>1124</a>        | tight_term undirected_stretchy_vertbar postsuperarg postsubarg =&gt; eval_at;
+<a href=#1125 id=1125 data-nosnippet>1125</a>
+<a href=#1126 id=1126 data-nosnippet>1126</a>      anyop = addop | mulop | binop | relop | arrow | metarelop
+<a href=#1127 id=1127 data-nosnippet>1127</a>        | bigop | sumop | intop
+<a href=#1128 id=1128 data-nosnippet>1128</a>        | limitop | diffop | vertbar | supop
+<a href=#1129 id=1129 data-nosnippet>1129</a>        | modifierop | composed_bigop | operator | compound_operator;
+<a href=#1130 id=1130 data-nosnippet>1130</a>
+<a href=#1131 id=1131 data-nosnippet>1131</a>      anyscript = floatsuperscript | floatsubscript
+<a href=#1132 id=1132 data-nosnippet>1132</a>        <span class="comment">// Standalone floating script pairs (no base: {}^c_d or {}_d^c)
+<a href=#1133 id=1133 data-nosnippet>1133</a>        // Perl: NewScript(NewScript(Absent(), super, 'post'), sub, 'post')
+<a href=#1134 id=1134 data-nosnippet>1134</a>        </span>| floatsuperscript postsubarg =&gt; postfix_script
+<a href=#1135 id=1135 data-nosnippet>1135</a>        | floatsubscript postsuperarg =&gt; postfix_script;
+<a href=#1136 id=1136 data-nosnippet>1136</a>
+<a href=#1137 id=1137 data-nosnippet>1137</a>      <span class="comment">// Operators that CANNOT start a valid expression — leading orphans
+<a href=#1138 id=1138 data-nosnippet>1138</a>      // from tabular fragments where LHS is on a preceding row.
+<a href=#1139 id=1139 data-nosnippet>1139</a>      // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
+<a href=#1140 id=1140 data-nosnippet>1140</a>      // These already have valid prefix interpretations inside expressions.
+<a href=#1141 id=1141 data-nosnippet>1141</a>      </span>orphan_op = mulop | binop | diffop | supop | modifierop;
+<a href=#1142 id=1142 data-nosnippet>1142</a>      <span class="comment">// Perf (Fix 2): `formula_list` removed from `anything` alternatives.
+<a href=#1143 id=1143 data-nosnippet>1143</a>      // formula_list is L3-internal (a fenced body), not L0. `statements`
+<a href=#1144 id=1144 data-nosnippet>1144</a>      // covers bare top-level comma-separated items via `list_apply` with
+<a href=#1145 id=1145 data-nosnippet>1145</a>      // equivalent semantics (formula_list_apply delegates to list_apply
+<a href=#1146 id=1146 data-nosnippet>1146</a>      // for non-relational items).
+<a href=#1147 id=1147 data-nosnippet>1147</a>      </span>anything = formulae | statements | anyop | anyscript |
+<a href=#1148 id=1148 data-nosnippet>1148</a>        anyop anyop =&gt; compound_operator_2 |
+<a href=#1149 id=1149 data-nosnippet>1149</a>        <span class="comment">// Perl MathGrammar L81: leading orphan operator (tabular fragment).
+<a href=#1150 id=1150 data-nosnippet>1150</a>        // Only at the start rule (anything) — not recursive, not inside subexpressions.
+<a href=#1151 id=1151 data-nosnippet>1151</a>        </span>orphan_op statements =&gt; prefix_relop_apply
+<a href=#1152 id=1152 data-nosnippet>1152</a>    );
+<a href=#1153 id=1153 data-nosnippet>1153</a>  <span class="comment">// | term_argument postsuperarg tex_argument  =&gt; post_script
+<a href=#1154 id=1154 data-nosnippet>1154</a>  // | term_argument postsubscript tex_argument    =&gt; post_script
+<a href=#1155 id=1155 data-nosnippet>1155</a>  </span><span class="macro">start!</span>(anything);
+<a href=#1156 id=1156 data-nosnippet>1156</a>
+<a href=#1157 id=1157 data-nosnippet>1157</a>  <span class="comment">// Also prepare the tree builder rules here (for now)
+<a href=#1158 id=1158 data-nosnippet>1158</a>  </span><span class="prelude-val">Ok</span>((<span class="macro">grammar!</span>(), <span class="macro">actions!</span>(), <span class="macro">builder!</span>()))
+<a href=#1159 id=1159 data-nosnippet>1159</a>}
 </code></pre></div></section></main></body></html>
