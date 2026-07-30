@@ -952,7 +952,7 @@ LoadDefinitions!({
   // Perl: UTF(0xD7) = × MULTIPLICATION SIGN
   // Perl: font => { size => 'Big' } where rationalizeFontSize('Big') = 1.6 * DEFSIZE(10) = 16.0pt
   DefMath!("\\bigtimes", None, "\u{00D7}", role => "MULOP", meaning => "times",
-    font => { size => 16.0 },
+    font => sub[_f] { Ok(Font { size: Some(font::rationalize_font_size("Big")), ..Font::default() }) },
     dynamic_scriptpos => true);
 
   //======================================================================
