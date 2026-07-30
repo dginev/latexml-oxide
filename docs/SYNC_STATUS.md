@@ -88,7 +88,34 @@ classes are singletons and the first error is often incidental.
 
 ## Current status
 
-- **2026-07-29 (latest) — an arg-taking `\fnum@<type>` absorbed the rest of the document
+- **2026-07-30 (latest) — a font selected by FAMILY decoded through OT1, emitting the
+  slot's TEXT character, at zero errors.** Rust's `\selectfont` was missing Perl's
+  middle branch (`latex_constructs.pool.ltxml` L5207-5209): when the family is not a
+  known typeface, `LoadFontMap($family)` and, on success, `MergeFont(encoding =>
+  $family)`. `bbding`'s `\dingfamily` is `\fontencoding{U}\fontfamily{ding}\selectfont`
+  and no `u.fontmap` exists, so that branch is the *only* path from family `ding` to
+  `ding_fontmap` — which was therefore **dead code**, correct table and registered
+  loader notwithstanding. Every `\@chooseSymbol{N}` fell to the OT1 fallback: `'045`
+  (`\XSolidBrush`) became a literal `%`, `'041` (`\Checkmark`) became `!`.
+  **Invisible to every log-based signal** — witness 2503.04421 converted at
+  `Status:conversion:0`, zero `Error:`/`Warning:`, telemetry `errors:0`, while 28 cells
+  spanning the "pretrained?" column of *both* its main results tables inverted their
+  meaning. Fixed with the branch plus Perl's three `reported_unrecognized_font_*`
+  report-once guards (`already_reported`, `latexml_engine/src/base_utilities.rs`), which
+  had turned one unrecognized family into 28 identical `Info` lines; the same guard on
+  `\lx@fontencoding` takes `Info:missing_font_encoding:U` from 28 to 1.
+  Post-fix the witness is **99.92% token-identical** to same-host Perl 0.8.8 (10 trivial
+  hunks: an affiliation comma, invisible-times placement) with dingbat counts matching
+  exactly, 15 ✗ / 13 ✓ on both sides. Guards:
+  `latexml_oxide/tests/fonts/bbding.{tex,xml}` (golden verified against Perl) and
+  `tests/116_bbding_family_fontmap.rs`; method + the `pdftotext`-agrees-with-the-bug
+  trap in [`WISDOM.md`](parity/WISDOM.md) §80.
+  Still open, same defect class: `DeclareFontMap`'s
+  `(uppercase|lowercase|digit)_mathstyle` options are unported — Rust writes
+  `OMS_uppercase_mathstyle` and `amsb_fontmap.rs` comments out a dropped
+  `uppercase_mathstyle => { family => 'blackboard' }`, but nothing reads either key.
+
+- **2026-07-29 — an arg-taking `\fnum@<type>` absorbed the rest of the document
   into an unclosed `<figure>`.** The one concrete, analysed-but-unfixed item of
   R5's "missing references" family, parked since 2026-07-14 on "needs a user
   decision + a full-suite diff". Both are now done: user-approved per the
@@ -1351,6 +1378,72 @@ for the `\DeclareMathOperator` case? text PCDATA?), and there is **no precedent*
 for `XMTok` in any inline element's model, so a speculative change risks an
 unfaithful divergence. Repro + full notes:
 `docs/reproducers/glossaryref_math_xmtok.tex`.
+
+### (not ranked) Font-selection chain audit, 2026-07-30 — residuals
+
+Sweep of every `selectfont` occurrence in `LaTeXML/lib/LaTeXML/` (22 hits) plus the
+sibling primitives, done while fixing the family-as-encoding gap above. **The
+`\selectfont` question itself is CLOSED**: Perl has exactly one
+`DefPrimitive('\selectfont')` (`latex_constructs.pool.ltxml:5202`) and **no package
+or class anywhere redefines or `Let`s it**, so there is no second definition site to
+port. The 9 family/series/shape switches, `\normalfont`, `\verbatim@font`,
+`\usefont`, `subfigure`'s 6 font hooks, `\fontencoding`/`\f@encoding`,
+`\DeclareFontShape`/`Family`/`FixedFont`/`Encoding`/`Subset`, `\symbol`,
+`\fontsize`, `\Declare{Text,Old}FontCommand`, `\DeclareSymbolFontAlphabet` and
+`\try@load@fontshape` all verified faithful.
+
+What the sweep turned up is in *sibling* primitives — same subsystem, same class of
+symptom (a font attribute or glyph silently wrong, no diagnostic). Ranked, with
+verification status stated explicitly; **the unverified rows are single-agent claims
+with file:line, not established facts — re-verify before acting**:
+
+1. **`\char`/`\symbol` yield the EMPTY STRING in math mode** — VERIFIED by me
+   (`$\char65$`: Perl `<Math … text="A">`, Rust emits nothing at all).
+   `tex_character.rs` calls `font::decode_str(…, None, …)`, and `font::decode`
+   uses `Cow::Borrowed("")` when the font's encoding is `None` — which
+   `Font::math_default()` deliberately sets (`common/font.rs:624`). Perl's
+   `FontDecode` defaults `$font->getEncoding || 'OT1'` (`Package.pm:2874`).
+   Rust's own `content.rs:3374` sibling *does* default to OT1, so the two decode
+   paths are internally inconsistent. Also `code.value_of() as u8` truncates:
+   `\char300` wraps to 44 → `,`.
+2. **`\DeclareSymbolFont`'s encoding arg is not `ExpandedPartially`** — VERIFIED by
+   me (Perl `latex_constructs.pool.ltxml:2664` has it, Rust
+   `latex_constructs.rs:6881` does not). `\DeclareSymbolFont{operators}{\encodingdefault}{\rmdefault}{m}{n}`
+   is what `fontmath.ltx` writes, so Rust stores the literal `\encodingdefault` and
+   every dependent `\DeclareMathSymbol`/`\DeclareMathAccent` looks up a fontmap of
+   that name.
+3. **`DeclareFontMap`'s `(uppercase|lowercase|digit)_mathstyle` options are
+   unported** — VERIFIED write-only by me: `tex_fonts.rs` writes
+   `OMS_uppercase_mathstyle`, `amsb_fontmap.rs:2` records a dropped blackboard
+   `uppercase_mathstyle` in a comment, and nothing reads either key. Perl's
+   `FontDecode` (`Package.pm:2884-2889`) uses them to keep an alphanumeric as ASCII
+   while recording the semantic font change. Claimed-but-unmeasured consequence:
+   `$\cal A$` double-styles (U+1D49C *and* `font=caligraphic`) where Perl gives `A`
+   + caligraphic, and hands a non-ASCII letter to the grammar.
+4. **`\DeclareMathAlphabet` skips `lookupTeXFont`** — UNVERIFIED claim
+   (`latex_constructs.pool.ltxml:2677` vs `latex_constructs.rs:6957`): Rust stores
+   raw NFSS codes (`cmss`/`m`/`n`) where Perl maps them to the abstract
+   `sansserif`/`medium`/`upright`. Also missing Perl's `Info('ignore', …)` on the
+   already-defined branch.
+5. **`\mathversion{bold}` merges the text font, not `mathfont`** — UNVERIFIED claim
+   (`:5290` vs `latex_constructs.rs:10607`); Rust's `\boldmath`/`\unboldmath`
+   (`plain_base.rs:747`) reportedly get this right, so `\mathversion` would be the
+   odd one out. Unknown versions also swallowed instead of `Error`.
+6. **`\DeclareTextCommand`/`\ProvideTextCommand` don't install the encoding-dispatch
+   chain** — UNVERIFIED claim (`:2584`/`:2598` vs `latex_constructs.rs:6519`/`6538`):
+   the first encoding to declare a CS would win permanently. Kernel accents are
+   masked by the dump, so only *package*-declared text commands (tipa T3, T2A
+   extras, TS1 additions) would show it. Rust's `\DeclareTextSymbol` *does* install
+   the chain, so the two are claimed inconsistent.
+7. Lower: `\DeclareTextSymbol` decodes eagerly at declaration instead of installing a
+   deferred `CharDef` (loses the glyph permanently if the fontmap is not yet
+   loaded); `LoadFontMap` never emits Perl's `Info('fontmap', …)`;
+   `\DeclareErrorFont` is a bare no-op where Perl defines its arg as `\relax`;
+   `\textit@math` sets `\f@shape` to `i` vs Perl's `it` (both map to `italic`, so
+   cosmetic).
+
+`docs/parity/OXIDIZED_DESIGN.md` has no font section, so none of these is a
+documented divergence. Method and the two detection traps: [`WISDOM.md`](parity/WISDOM.md) §80.
 
 ## Parked families — pointers, not content
 

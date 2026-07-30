@@ -1,0 +1,25 @@
+\documentclass{article}
+% A font selected by FAMILY must decode through that family's fontmap.
+%
+% This is verbatim what bbding.sty's \dingfamily expands to
+% (\fontencoding{U}\fontfamily{ding}\selectfont) and what \@chooseSymbol{N}
+% does with it. Spelled out rather than \usepackage{bbding} on purpose:
+% bbding.sty ships in texlive-fonts-extra, which CI deliberately does not
+% install, and a fixture that silently loses its package would assert nothing.
+% The engine never reads a .fd file for this — the `ding` fontmap is compiled
+% in — so the raw form needs no TeX Live package at all.
+%
+% Slots '041-'045 are \Checkmark \CheckmarkBold \XSolid \XSolidBold
+% \XSolidBrush. Without the family-as-encoding branch in \selectfont these
+% fall back to OT1 and emit that slot's TEXT character: "! " # $ %".
+% Witness 2503.04421, whose two results tables read %/! instead of ✗/✓.
+\begin{document}
+Marks: {\fontencoding{U}\fontfamily{ding}\selectfont
+  \symbol{'041}\ \symbol{'042}\ \symbol{'043}\ \symbol{'044}\ \symbol{'045}}
+
+Slots: {\fontencoding{U}\fontfamily{ding}\selectfont
+  \symbol{'001}\ \symbol{'010}\ \symbol{'014}\ \symbol{'021}\ \symbol{'027}}
+
+Nested: \textbf{bold {\fontencoding{U}\fontfamily{ding}\selectfont\symbol{'041}}}
+and \emph{italic {\fontencoding{U}\fontfamily{ding}\selectfont\symbol{'045}}}
+\end{document}

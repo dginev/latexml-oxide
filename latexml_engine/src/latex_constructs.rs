@@ -16,7 +16,7 @@ use latexml_core::{
 ///**********************************************************************
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
-use crate::base_utilities::insert_frontmatter;
+use crate::base_utilities::{already_reported, insert_frontmatter};
 use crate::{
   prelude::*,
   tex_box::{FramedOptions, framed_properties},
@@ -10446,25 +10446,47 @@ LoadDefinitions!({
   // is functionally equivalent for LaTeXML's XML output.
   DefMacro!("\\@fontswitch{}{}", "\\ifmmode #2\\relax\\else #1 \\fi");
 
+  // Perl: latex_constructs.pool.ltxml L5204-5222.
+  //
+  // `already_reported` mirrors Perl's `reported_unrecognized_font_*` guard:
+  // an unrecognized family/series/shape is announced ONCE per document,
+  // globally, not once per `\selectfont`. Before this, 2503.04421 emitted
+  // 28 identical `Info:unexpected:ding` lines — one per table cell.
+  //
+  // The middle `LoadFontMap($family)` branch is load-bearing for the whole
+  // family of dingbat/symbol packages that select a font by FAMILY rather
+  // than by encoding: bbding's `\dingfamily` is
+  // `\fontencoding{U}\fontfamily{ding}\selectfont`, and there is no
+  // `u.fontmap` — so the glyph can only be decoded by treating the family
+  // name as the encoding and consulting `ding.fontmap`. Without it,
+  // `\XSolidBrush` (`\@chooseSymbol{'045}`) fell through to the OT1
+  // fallback and silently emitted that slot's TEXT character, `%`
+  // (witness 2503.04421: 28 result-table cells read `%`/`!` instead of
+  // ✗/✓). Same shape as Perl's own comment: this is a hack, but it is the
+  // hack Perl commits to.
   DefPrimitive!("\\selectfont", {
     let family = Expand!(T_CS!("\\f@family")).to_string();
     let series = Expand!(T_CS!("\\f@series")).to_string();
     let shape = Expand!(T_CS!("\\f@shape")).to_string();
     if let Some(sh) = font::lookup_font_family(&family) {
       MergeFont!(sh.clone());
-    } else {
+    } else if load_font_map(&family).is_some() {
+      // Special case hack: Tentatively treat family as the encoding!
+      // (typically "U" encoding)
+      MergeFont!(encoding => family);
+    } else if !already_reported(&s!("reported_unrecognized_font_family_{family}")) {
       let message = s!("Unrecognized font family {:?}.", family);
       Info!("unexpected", family, message);
     }
     if let Some(sh) = font::lookup_font_series(&series) {
       MergeFont!(sh.clone());
-    } else {
+    } else if !already_reported(&s!("reported_unrecognized_font_series_{series}")) {
       let message = s!("Unrecognized font series {:?}.", series);
       Info!("unexpected", series, message);
     }
     if let Some(sh) = font::lookup_font_shape(&shape) {
       MergeFont!(sh.clone());
-    } else {
+    } else if !already_reported(&s!("reported_unrecognized_font_shape_{shape}")) {
       let message = s!("Unrecognized font shape {:?}.", shape);
       Info!("unexpected", shape, message);
     }

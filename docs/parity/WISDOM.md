@@ -2881,3 +2881,56 @@ Rules when freeing at a discard site:
 Heaptrack discipline that found it: profile the STREAMING run (fragment
 docs die before exit, so alive-at-exit ≈ true leak with stacks); an eager
 run's exit snapshot conflates the live final DOM with the leak.
+
+---
+
+## 80. A font selected by FAMILY reaches its glyphs only through `\selectfont`'s family-as-encoding branch — so a `*_fontmap.rs` can be fully populated, registered, and still dead
+
+`DeclareFontMap` parks every map in ONE namespace keyed by *encoding*
+(`<enc>_fontmap`; a `family =>` option only ever *refines* it as
+`<enc>_<family>_fontmap`). But several packages select their font by family and
+carry an encoding nothing maps: `bbding`'s `\dingfamily` is
+`\fontencoding{U}\fontfamily{ding}\selectfont`, and no `u.fontmap` exists in
+either implementation. The only path from `ding` to `ding_fontmap` is Perl's
+own hack in `\selectfont` (`latex_constructs.pool.ltxml` L5207-5209):
+
+```perl
+elsif (LoadFontMap($family)) {
+  # Special case hack: Tentatively treat family as the encoding! (typically "U" encoding)
+  MergeFont(encoding => $family); }
+```
+
+Rust lacked that branch, so `ding_fontmap.rs` was **dead code** — correct
+table, registered loader, and no reachable caller. Every `\@chooseSymbol{N}`
+fell to the OT1 fallback and emitted OT1 slot N's *text* character.
+
+**Method, two durable parts:**
+
+1. **To decide whether a declared fontmap is live, grep for who ever SETS its
+   encoding** — `MergeFont!(encoding => …)` — not for its loader registration.
+   A `pub mod x_fontmap;` plus a `("x","fontmap",…)` row plus a populated table
+   look exactly like a working feature. Ask what assigns the encoding.
+2. **This failure mode is invisible to every log-based signal.** The witness
+   converted at `Status:conversion:0` with zero `Error:`/`Warning:` lines and
+   telemetry `errors:0`, while 28 cells of its two main results tables read `%`
+   and `!` instead of ✗ and ✓ — an OT1 slot's text character is ordinary
+   content, so nothing downstream can flag it. The only signals that catch it
+   are a glyph-level diff against Perl and a `.tex`/`.xml` golden.
+
+**Trap when reaching for ground truth:** `pdftotext` on the pdflatex output
+prints the *same* wrong characters (`! " # $ %`), because symbol fonts like
+`ding` ship no `ToUnicode` map and extraction falls back to raw slot codes
+33-37. So the PDF's text layer is NOT usable ground truth for a symbol font —
+it agrees with the bug. Compare glyphs against Perl, or read the rendered page.
+
+Witness 2503.04421. Guards: `latexml_oxide/tests/fonts/bbding.{tex,xml}` and
+`tests/116_bbding_family_fontmap.rs`. The same primitive also lacked Perl's
+`reported_unrecognized_font_*` report-once guards (`already_reported` in
+`latexml_engine/src/base_utilities.rs`), which had turned one unrecognized
+family into 28 identical `Info` lines.
+
+Settled dead end: Perl's `DeclareFontMap` `(uppercase|lowercase|digit)_mathstyle`
+options are a *separate* unported gap — Rust writes `OMS_uppercase_mathstyle`
+(`tex_fonts.rs`) and `amsb_fontmap.rs` records a dropped
+`uppercase_mathstyle => { family => 'blackboard' }` in a comment, but nothing
+reads either key. Same defect class, not fixed here.
