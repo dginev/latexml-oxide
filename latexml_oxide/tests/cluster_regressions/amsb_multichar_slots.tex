@@ -1,0 +1,23 @@
+% The six negated relations of `msbm` are stored by Perl as TWO-character
+% strings (base + U+0338 COMBINING LONG SOLIDUS OVERLAY). A Rust fontmap slot
+% is a single Option<char>, so they must be carried by a companion
+% DeclareFontMapMultichar! table — without it these slots decoded to NOTHING.
+%
+% Reached by DIRECT slot access under the AMSb encoding. The common spellings
+% \nleqslant, \ngeqslant, \nleqq, \ngeqq, \nsubseteqq, \nsupseteqq are bound
+% by amssymb straight to explicit Unicode and never touch the fontmap, so they
+% are NOT a guard for this — checked, and they were correct all along.
+%
+% OK[] is the control: a single-char slot on the same path, which worked
+% before and after, so a failure here means the whole path broke, not the
+% multichar table.
+\documentclass{article}
+\begin{document}
+S10[{\fontencoding{AMSb}\selectfont\symbol{10}}]
+S11[{\fontencoding{AMSb}\selectfont\symbol{11}}]
+S20[{\fontencoding{AMSb}\selectfont\symbol{20}}]
+S21[{\fontencoding{AMSb}\selectfont\symbol{21}}]
+S34[{\fontencoding{AMSb}\selectfont\symbol{34}}]
+S35[{\fontencoding{AMSb}\selectfont\symbol{35}}]
+OK[{\fontencoding{AMSb}\selectfont\symbol{65}}]
+\end{document}
