@@ -2842,3 +2842,42 @@ And it must be inert where undefined CSes are *expected*: `LATEXML_INI_MODE`
 `SUPPRESS_UNDEFINED_ERRORS` (bulk raw loads with forward references).
 See `latexml_engine/src/latex_kernel.rs`; the defect it fixes is
 `KNOWN_PERL_ERRORS.md` #64.
+
+## 79. Discarding DOM means FREEING it: rust-libxml unlink is not a destructor, and `append_tree` copies
+
+Two facts compose into this port's largest single memory sink (~1.4 MB per
+math formula; most of a 63.7 GB eager peak on a 19.8 MB book):
+
+1. **`unlink()` / `unbind_node()` / `unlink_node()` are aliases and none
+   frees a doc-owned node.** The wrapper's `Drop` is a no-op while
+   `node->doc` is set, and `xmlFreeDoc` reclaims only what is reachable from
+   the root — an unlinked-but-never-reattached subtree is freed by NOBODY.
+2. **`Document::append_tree` re-CREATES every node** (faithful to Perl
+   `appendTree`), so every `replace_tree`/parse-replacement abandons its
+   entire SOURCE tree. Perl's refcount GC collects those; Rust must free.
+
+The discard primitive is `Document::discard_subtree` → fork
+`Node::free_subtree` (libxml 0.3.17): frees the C subtree immediately and
+NEUTRALIZES every registered wrapper (shared `node_ptr` nulled). The
+`set_rust_owned`-and-drop route is a trap: any stray clone in a long-lived
+collection (`constructed_nodes`, an idstore epoch) defers the free past the
+owning document's `xmlFreeDoc` — then `xmlFreeNode` reads the freed doc's
+dictionary (SIGSEGV in `xmlDictOwns`; observed at the 113 gate).
+
+Rules when freeing at a discard site:
+* **COPY FIRST, free after** — the replacement can sit INSIDE the tree being
+  discarded (`parse_single`'s single-child shortcut; tex_box's
+  foreignObject-to-grandchild replace).
+* **Ids are the caller's business, not the primitive's**: the copy re-records
+  the SAME id strings, so unrecording at free time would kill the fresh
+  entries. Unrecord BEFORE the copy.
+* **Dedupe garbage by detached root** (`common::xml::detached_root`) — moved
+  originals live inside the built tree; freeing both "roots" is a double
+  free, and a chain ending at a Document node means NOT YOURS to free.
+* **Purge ptr-keyed registries first** (`node_boxes`): freed addresses are
+  reused, and a stale entry mis-associates a box with an unrelated new node
+  (surfaced as phantom `<text font="italic">` wrappers).
+
+Heaptrack discipline that found it: profile the STREAMING run (fragment
+docs die before exit, so alive-at-exit ≈ true leak with stacks); an eager
+run's exit snapshot conflates the live final DOM with the leak.

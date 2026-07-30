@@ -638,6 +638,15 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
       }
     }
   }
+  // Release the saved node handles: every `assign_value` here PUSHES onto the
+  // key's binding stack (build-time assignments sit outside digestion groups,
+  // so nothing ever pops them), and each retained `Stored::Node` pins its
+  // whole document — under streaming, a pinned handle into a SPILLED subtree
+  // even blocks the `xmlFreeNode` the spill relies on. Overwrite with `None`
+  // so the C trees can go; the (empty) stack entries themselves are the cheap
+  // part (dhat: 288 B each).
+  assign_value("ALIGNING_NODE", Stored::None, None);
+  assign_value("ALIGNING_PREV_CHILD", Stored::None, None);
   Ok(())
 }
 
@@ -1011,14 +1020,21 @@ pub fn eqnarray_bindings() -> Result<()> {
   let mut properties = SymHashMap::default();
   properties.insert("preserve_structure", Stored::Bool(true));
   // Use custom alignment hooks for equationgroup/equation/_Capture_
+  // Perl: my %attr = RefStepID('@equationgroup') — but Perl runs it inside the
+  // container-open hook, i.e. at ABSORB time, after ALL digestion: every
+  // group's id gets the LAST section's prefix (S3.EGx1 for a group whose own
+  // rows are S2.E*). Minting HERE, at digest time, keeps the group's section
+  // prefix consistent with its rows — and makes the eager and streaming
+  // (interleaved) pipelines agree byte-for-byte. Sanctioned divergence from
+  // Perl, user ruling 2026-07-29: OXIDIZED_DESIGN #91.
+  let group_id: Option<String> = ref_step_id("@equationgroup")
+    .ok()
+    .and_then(|props| props.get("id").map(ToString::to_string));
   let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
-    open_container: Rc::new(|document, mut props| {
-      // Perl: my %attr = RefStepID('@equationgroup');
-      if let Ok(id_props) = ref_step_id("@equationgroup")
-        && let Some(id) = id_props.get("id")
-      {
-        props.insert(String::from("xml:id"), id.to_string());
+    open_container: Rc::new(move |document, mut props| {
+      if let Some(id) = &group_id {
+        props.insert(String::from("xml:id"), id.clone());
       }
       props.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
       document

@@ -48,7 +48,7 @@ are not re-attempted:
   `BACKMATTER_ELEMENT` mapping that bibunits' `sectionbib` option uses.
 - **F3(b) — REVTeX `auto@bib`: ATTEMPTED AND WITHDRAWN, do not re-apply as is.**
   `\appdef\class@enddocumenthook{\auto@bib}` (revtex4-2.cls L5972) runs
-  `\bibliography{}` (L7275-7291), so with #84 in place an end-document hook
+  `\bibliography{}` (L7275-7291), so with #86 in place an end-document hook
   recovers a manuscript that never calls `\bibliography` — witness 2605.03978,
   0 → 22 entries. It was reverted because the hook cannot yet be guarded
   correctly against emitting a SECOND list:

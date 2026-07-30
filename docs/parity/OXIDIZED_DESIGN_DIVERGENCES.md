@@ -3203,7 +3203,7 @@ Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
 
 ### 87. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
 
-Same shape as #84, one level down. The real package
+Same shape as #86, one level down. The real package
 (`bibunits.sty` L324-330) writes the optional argument to the bibunit `.aux`
 as a `\bibdata` record and then runs `\@input@{\@bibunitname.bbl}`
 **unconditionally** — the argument never decides whether the `.bbl` is read.
@@ -3354,3 +3354,20 @@ so `pdflatex`, which renders it silently, is the ground truth. Witnesses
 single cluster of the 2026-07-29 bibliography-absence residual: **28 papers**,
 of which **14** recovered here (961 entries); the remaining 14 all still fail on the same `\lx@begin@alignment` via the general parameter path. Guard
 `alignment_fenced_amp_does_not_split_a_row`.
+
+### 91. Equationgroup ids minted at digest time (ancestry-consistent prefixes)
+
+Perl mints the `@equationgroup` id (`RefStepID`) inside the alignment's
+container-open hook — at **absorb** time, after all digestion — so every
+group's id carries the **last** section's prefix: `LaTeXML/t/structure/
+eqnums.xml` stamps `S3.EGx1` on a group whose own rows are `S2.E*`. That
+violates the id design's own intent (in-order counter increase, id fragments
+mirroring the node's XML ancestry), and it made the eager and streaming
+(interleaved digest/build) pipelines disagree, since streaming absorbs with
+the *current* section counter.
+
+Rust mints at **digest** time in both pipelines (`latex_constructs.rs`
+eqnarray, `amsmath_sty.rs` gather/align): prefixes now match the group's
+actual ancestry (`S2.EGx1`, `S2.EGx2`, `S3.EGx3`, …) with the counter still
+strictly in document order. User ruling 2026-07-29. Goldens updated:
+`structure/eqnums`, `structure/amsarticle`, `math/sampler`, `ams/mathtools`.

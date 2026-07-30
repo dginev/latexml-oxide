@@ -8,8 +8,20 @@ use crate::common::{error::*, xml::XML_NS};
 pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> {
   let children = node.get_child_elements();
   if children.is_empty() {
-    let prev_opt = node.get_prev_element_sibling();
-    if prev_opt.is_none() || get_node_qname(&prev_opt.unwrap()) != crate::pin!("ltx:para") {
+    let prev_is_para = match node.get_prev_element_sibling() {
+      None => false,
+      Some(prev) => {
+        if prev.get_name() == "_spilled_" {
+          // Streaming pass 1: earlier siblings were spilled; the placeholder
+          // records the LAST spilled node's qname (see `spill_run`) so this
+          // test matches what the eager walk would have seen.
+          prev.get_attribute("last").as_deref() == Some("ltx:para")
+        } else {
+          get_node_qname(&prev) == crate::pin!("ltx:para")
+        }
+      },
+    };
+    if !prev_is_para {
       // If `node` WAS the 1st child
       document.add_class(&mut node.get_parent().unwrap(), "ltx_pruned_first")?;
     }

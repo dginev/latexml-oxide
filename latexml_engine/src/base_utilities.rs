@@ -2125,6 +2125,92 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   Ok(())
 }
 
+/// Streaming: insert frontmatter that arrived AFTER the in-document insertion
+/// point had already been absorbed.
+///
+/// Eager conversion runs every `insert_frontmatter` with digestion complete
+/// (build starts after digestion ends), so the `\maketitle`-time insertion
+/// sees the whole document's frontmatter. Interleaved pass 1 runs it
+/// mid-digestion — with the REAL builder navigation, so paragraph splitting
+/// and ids come out exactly as eager — but anything queued after that moment
+/// (an abstract following `\maketitle` in an AMS-style document; sweep
+/// witnesses tests/structure/amsarticle.tex, titlepage.tex) misses the
+/// consumption. Those late arrivals re-populate the `frontmatter` state hash;
+/// this inserts them at their canonical slot — after the last frontmatter
+/// element already placed — by re-running `insert_frontmatter` there
+/// (element order within it is canonical, not arrival order).
+pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
+  debug_assert!(!document.root_after_open_deferred());
+  let has_late = with_value(
+    "frontmatter",
+    |v| matches!(v, Some(Stored::HashTagData(h)) if !h.is_empty()),
+  ) || with_value(
+    "frontmatter_raw",
+    |v| matches!(v, Some(Stored::FrontmatterRaw(q)) if !q.is_empty()),
+  );
+  if !has_late || !lookup_bool("frontmatter_done") {
+    // Nothing late, or nothing was ever inserted early — in the latter case
+    // the root's deferred late hook performs the one-and-only insertion.
+    return Ok(());
+  }
+  // Anchor: the late elements' CANONICAL slot among the frontmatter already
+  // placed — `insert_frontmatter` emits in `FRONTMATTER_ELEMENTS` order, so a
+  // late abstract belongs between an existing date and existing keywords
+  // (sweep witness tests/structure/amsarticle.tex), not after everything.
+  // ROOT CHILDREN only: `//ltx:title` would also match every SECTION's
+  // title, and the last of those anchors the insertion deep inside the body.
+  // If several late kinds straddle an existing kind they clump at the first
+  // late kind's slot — the byte-parity gate guards the day that case
+  // materializes.
+  let existing = document.findnodes(
+    &FRONTMATTER_ELEMENTS
+      .iter()
+      .map(|q| format!("/ltx:document/{q}"))
+      .collect::<Vec<_>>()
+      .join(" | "),
+    None,
+  );
+  let Some(last) = existing.last() else {
+    return Ok(());
+  };
+  let rank = |qname: &str| {
+    FRONTMATTER_ELEMENTS
+      .iter()
+      .position(|q| *q == qname)
+      .unwrap_or(usize::MAX)
+  };
+  let min_late_rank = with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(h)) => h.keys().map(|k| rank(k)).min(),
+    _ => None,
+  })
+  .unwrap_or(usize::MAX);
+  let displaced = existing.iter().find(|node| {
+    let qname = format!("ltx:{}", node.get_name());
+    rank(&qname) > min_late_rank
+  });
+  let savenode = document.get_node().clone();
+  let wrapper = match displaced {
+    // Canonically later frontmatter exists: insert right before it.
+    Some(next) => document.insert_element_before(next, "ltx:_Capture_", None)?,
+    // Everything placed is canonically earlier: insert after the last.
+    None => match last.get_next_sibling() {
+      Some(next) => document.insert_element_before(&next, "ltx:_Capture_", None)?,
+      None => {
+        let mut parent = last
+          .get_parent()
+          .expect("a frontmatter element always has a parent");
+        document.open_element_at(&mut parent, "ltx:_Capture_", None, None)?
+      },
+    },
+  };
+  document.set_node(&wrapper);
+  assign_value("frontmatter_done", false, Some(Scope::Global));
+  insert_frontmatter(document)?;
+  document.unwrap_nodes(wrapper)?;
+  document.set_node(&savenode);
+  Ok(())
+}
+
 /// Insert one frontmatter entry `[tag, {attr}, @content]`.
 /// Perl: insertFrontMatter_rec($document, $item) for the ARRAY case.
 fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<()> {

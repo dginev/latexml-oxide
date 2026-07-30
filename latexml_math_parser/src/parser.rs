@@ -840,7 +840,10 @@ impl MathParser {
           if let Some(idref) = xmref.get_attribute("idref") {
             match resolve(&idref) {
               Some(new_id) if new_id.is_empty() => {
-                xmref.unlink();
+                // Dropped for good — unrecord any id it carries, then free
+                // (an unlinked doc-owned node otherwise leaks).
+                document.unrecord_node_ids(&xmref);
+                document.discard_subtree(xmref);
                 unlinks += 1;
               },
               Some(new_id) => {
@@ -971,7 +974,9 @@ impl MathParser {
           let _ = xmref.set_namespace(ns);
         }
         let _ = new_app.add_child(&mut xmref);
-        let _ = document.replace_tree(new_app, ref_node);
+        // replace_tree_free: new_app is a standalone built tree — copied
+        // into place, then both it and the replaced XMRef are freed.
+        let _ = document.replace_tree_free(new_app, ref_node);
       }
     }
     Ok(())
@@ -1156,17 +1161,35 @@ impl MathParser {
             // Replace the content of XMath with parsed result
             self.n_parsed += 1;
             note_progress(&s!("[{}]", self.n_parsed));
+            // Unrecord the old content's ids BEFORE the copy below, so the
+            // copy's freshly recorded entries (same id strings) survive.
             for el_node in element_nodes(&node) {
               document.unrecord_node_ids(&el_node);
             }
-            // unbindNode followed by (append|replace)Tree (which removes ID's) should
-            // be safe
-            for mut child in node.get_child_nodes() {
-              child.unbind_node();
-            }
+            // COPY FIRST, free after: `result` may itself be an original
+            // child of this XMath (parse_single's single-node shortcut), so
+            // the old children must stay intact while append_tree serializes
+            // the copy. append_tree re-CREATES every node (Perl appendTree
+            // parity), so after the copy both the old children and result's
+            // own built tree are garbage — and a mere unlink leaks them for
+            // good (rust-libxml Linkage: a detached doc-owned node is freed
+            // by NOBODY; measured ~1.4 MB/formula, ~1.8 GB per 32 MB
+            // streaming segment, and the same mass inflates eager runs).
+            let result_root = detached_root(&result);
+            let old_children = node.get_child_nodes();
             document.append_tree(&mut node, vec![result])?;
-            let mut new_element_children = element_nodes(&node);
-            result = new_element_children.remove(0);
+            result = element_nodes(&node)
+              .pop()
+              .expect("append_tree appended the parse result");
+            for child in old_children {
+              document.discard_subtree(child);
+            }
+            if let Some(root) = result_root {
+              // The result was a standalone built tree (not one of the old
+              // children); free it too — disjoint from the frees above (a
+              // detached root has no parent, old children had one).
+              document.discard_subtree(root);
+            }
           } else {
             // Replace the whole node for XMArg, XMWrap; preserve some attributes
             //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
@@ -1213,10 +1236,11 @@ impl MathParser {
               document.set_attribute(&mut result, &key, &value)?;
               // }
             }
-            if let Some(r) = document.replace_tree(result.clone(), node)? {
+            if let Some(r) = document.replace_tree_free(result.clone(), node)? {
               result = r;
             }
-            // If replace_tree returns None, node was already detached; keep result as-is.
+            // If replace_tree_free returns None, node was already detached
+            // (nothing copied, nothing freed); keep result as-is.
             // Danger: the above code replaced the id on the parsed result with the one from
             // XMArg,.. If there are any references to `resultid`, we need to point them
             // to `newid`!
@@ -1417,25 +1441,47 @@ impl MathParser {
     // Perl L558-563: at top level, unwrap top-level XMWraps (extract children).
     // Perl iterates all pairs and extracts children of any array-rep XMWrap.
     let mut replacements = Vec::new();
+    let mut unwrapped_shells = Vec::new();
     for node in result_nodes {
       if node.get_name() == "XMWrap" {
-        // Unwrap: extract children
+        // Unwrap: extract children; the shell is garbage once they are
+        // re-attached below (freed there, after the severing).
         for child in node.get_child_nodes() {
           replacements.push(child);
         }
+        unwrapped_shells.push(node);
       } else {
         replacements.push(node);
       }
     }
 
-    // Rebuild: clear mathnode, then add replacement nodes.
+    // Rebuild: clear mathnode, then add replacement nodes. The replacements
+    // may BE original children (a pair that stayed put) or sit inside fresh
+    // wrappers, so the order is: detach everything, re-attach the
+    // replacements (severing them from any discarded shell), and only THEN
+    // free what remains detached — a mere unlink would leak it for good
+    // (rust-libxml Linkage; see Document::discard_subtree).
     document.unrecord_node_ids(mathnode);
-    for mut child in mathnode.get_child_nodes() {
-      child.unbind_node();
+    let mut discarded = mathnode.get_child_nodes();
+    for child in discarded.iter_mut() {
+      child.unlink_node();
     }
-    for mut node in replacements {
+    for node in &replacements {
+      let mut node = node.clone();
       node.unlink_node();
       mathnode.add_child(&mut node).ok();
+    }
+    for child in &discarded {
+      if !replacements.contains(child) {
+        document.discard_subtree(child.clone());
+      }
+    }
+    for shell in unwrapped_shells {
+      // A fresh wrapper from the CLOSE branch; an ORIGINAL XMWrap child was
+      // already freed through `discarded` above — don't free it twice.
+      if !discarded.contains(&shell) {
+        document.discard_subtree(shell);
+      }
     }
     // D3b: the replacements re-parented above may carry xml:id attrs
     // whose idstore entries were cleared by the `unrecord_node_ids`
@@ -1604,11 +1650,12 @@ impl MathParser {
         for child_el in element_nodes(mathnode) {
           document.unrecord_node_ids(&child_el);
         }
-        for mut node in mathnode.get_child_nodes() {
+        let old_children = mathnode.get_child_nodes();
+        for mut node in old_children.iter().cloned() {
           node.unlink();
         }
         let new_xml_tree = parse_tree.into_xmath(mathnode, &mut nodes, document)?;
-        document.append_tree(mathnode, vec![new_xml_tree])?;
+        document.append_tree(mathnode, vec![new_xml_tree.clone()])?;
         // Resolve _xmkey references: match XMRef[@_xmkey] to elements with same _xmkey
         resolve_xmkeys(mathnode, document)?;
         // Detect orphaned IDs: any pre-snapshot ID that no longer resolves
@@ -1619,6 +1666,24 @@ impl MathParser {
           if document.lookup_id(pre_id).is_none() {
             crate::data::record_replacement(pre_id, "__LOSTNODE__");
           }
+        }
+        // Free the sources: after the copy above, the pre-parse content and
+        // the built parse tree are both garbage (append_tree re-creates
+        // every node; Perl drops the sources by refcount, Rust must free —
+        // see Document::discard_subtree). into_xmath MOVES some original
+        // children into the built tree, so dedupe by detached ROOT and free
+        // each root exactly once. Ids were unrecorded before the copy;
+        // punct_nodes were detached before this snapshot and stay live.
+        let mut garbage_roots: Vec<Node> = Vec::new();
+        for cand in std::iter::once(&new_xml_tree).chain(old_children.iter()) {
+          if let Some(root) = detached_root(cand)
+            && !garbage_roots.contains(&root)
+          {
+            garbage_roots.push(root);
+          }
+        }
+        for root in garbage_roots {
+          document.discard_subtree(root);
         }
         let result = element_nodes(mathnode).remove(0);
         //END reparent.

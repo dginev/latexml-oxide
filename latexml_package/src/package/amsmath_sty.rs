@@ -70,14 +70,18 @@ fn ams_rearrangeable_bindings(
       xml_attributes.insert(String::from("rowsep"), cur_jot.to_string());
     }
   }
+  // Digest-time group-id mint — same reasoning and ruling as the eqnarray
+  // site (`latex_constructs.rs`, OXIDIZED_DESIGN #91): Perl mints at absorb
+  // time and stamps every group with the LAST section's prefix.
+  let group_id: Option<String> = ref_step_id("@equationgroup")
+    .ok()
+    .and_then(|props| props.get("id").map(ToString::to_string));
   // Create alignment with equationgroup/equation/_Capture_ hooks
   let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
     open_container: Rc::new(move |document, mut props| {
-      if let Ok(id_props) = ref_step_id("@equationgroup")
-        && let Some(id) = id_props.get("id")
-      {
-        props.insert(String::from("xml:id"), id.to_string());
+      if let Some(id) = &group_id {
+        props.insert(String::from("xml:id"), id.clone());
       }
       // Merge xml_attributes into props
       // (attributes passed at creation time)
