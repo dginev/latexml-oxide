@@ -120,6 +120,11 @@ Verified-and-landed items move to the ✅ list at the bottom.
   Lesson: witness diffs must be traced to producer vs consumer before
   patching the post side.
 
+> **Re-measured 2026-07-29 — three of the F17 items below are settled as
+> do-not-port/N-A, and the ADDOP flatten is DEAD IN PERL (porting it would create
+> a divergence). See `SYNC_STATUS.md` R3 for the evidence; do not work this bullet
+> without reading that first.**
+
 - **F17 — smaller pmml gaps:** `pmml_infix` ADDOP flatten via `pmml_unrow`
   (L639-644) absent; `pmml_scriptsize_padded` (L926, primed-sum limit
   centering) + `pmml_script_decipher` emb_left/emb_right absent;
@@ -298,7 +303,7 @@ Verified-and-landed items move to the ✅ list at the bottom.
 | `pmml_maybe_resize` (L525) | DEAD | mod.rs port unwired (→F9) |
 | `filter_row` (L577) | MISSING | `_ignorable` drop (→F11) |
 | `pmml_row` (L581) | PARTIAL | no filter_row (→F11) |
-| `pmml_unrow` (L586) | DEAD | needed by ADDOP flatten (→F17) |
+| `pmml_unrow` (L586) | DEAD — **and dead in PERL too** (2026-07-29): `associateNode` stamps `_sourced` on every `pmml()` result, so its empty-attrs guard never passes. Do NOT port. | ~~needed by ADDOP flatten (→F17)~~ |
 | `pmml_parenthesize` (L594) | PARTIAL | no usemfenced branch; no synthesized OPEN/CLOSE mo (→F17) |
 | `pmml_punctuate` (L611) | N-A | dead in Perl too ("never used?") |
 | `pmml_infix` (L626) | PARTIAL | ADDOP flatten missing (→F17) |

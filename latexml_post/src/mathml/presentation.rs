@@ -1930,6 +1930,14 @@ fn apply_multi_scripts(
   pre_scripts: &[ScriptPair],
   post_scripts: &[ScriptPair],
 ) -> NodeData {
+  // An absent script slot is `<m:none/>` — the element MathML defines for
+  // "no script in this position" (MathML 3 §3.4.7 / MathML Core). Perl fills it
+  // with an empty `<m:mrow/>` instead (`pmml_scriptsize` of an undefined slot),
+  // which is a presentational group that merely happens to be empty, leaving the
+  // intent to be inferred. Intentional divergence **OXIDIZED_DESIGN #86**; every
+  // occupied slot and the child ORDER (base, post pairs, `m:mprescripts`, pre
+  // pairs) match Perl, so a fully-populated tensor like `{}^{1}_{2}X^{3}_{4}` is
+  // byte-identical.
   let none_mml = || NodeData::Element {
     tag:        "m:none".to_string(),
     attributes: None,

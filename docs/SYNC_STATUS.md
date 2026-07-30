@@ -56,7 +56,7 @@ Re-verify a row before planning on it (rule 1).
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
-| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN; F17's `pmml_text_aux` item ✅ **FIXED 2026-07-29**. The rest of F17 is a list of individually-scoped items, each with a Perl `MathML.pm` line | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
+| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN but **shrunk 2026-07-29**: `pmml_text_aux` ✅ FIXED; three items CLOSED as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE); 4 remain, all untested. A math-parser `scriptpos` bug found en route is **R8**, not this row | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, **PHASE 2 — do NOT start yet** (user directive 2026-07-29) | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -1040,14 +1040,62 @@ same-host Perl 0.8.8 `latexmlpost --keepXMath --pmml` on the identical core XML,
 and the test was verified RED pre-fix at **18 diff lines**. The fixture exercises
 every arm of the function.
 
-**F17 — remaining items** (each with its Perl line in the archive): `pmml_infix`
-ADDOP flatten via `pmml_unrow` (L639-644); `pmml_scriptsize_padded` primed-sum
-limit centering (L926) + `pmml_script_decipher` emb_left/emb_right;
-`Apply:?:formulae` has no pMML arm (renders the phantom op); `outerWrapper`
-altimg/RDFa attrs (L82-89); `combineParallel` `annotation-xml` non-mathml wrap
-(L123-127); `preprocess` plane1/hackplane1/nestmath config unwired (L69-73).
-`pmml_parenthesize`'s missing `usemfenced` branch is **probably N-A** (obsolete
-`m:mfenced`) — confirm before porting.
+**F17 — three items CLOSED as do-not-port 2026-07-29**, each settled by running
+both engines rather than by reading the audit. Do not re-open without a witness:
+
+- **`pmml_infix` ADDOP flatten via `pmml_unrow` (L639-644) — DEAD IN PERL; porting
+  it would CREATE a divergence.** `pmml_unrow` only unwraps an `m:mrow` whose
+  attribute hash is empty (`!scalar(keys %{ $$mml[1] })`, L586-592), but
+  `Post.pm:524-525 associateNode` stamps `_sourced => 1` on **every** `pmml()`
+  result unconditionally — so the guard can never pass and the flatten never
+  fires. Measured: `a+b-c+d-e+f` left-nests in both engines and Perl emits **5
+  nested `m:mrow`s**, byte-identical to Rust. (`{a+b}+c` and `a+{b+c}` look flat
+  in both, but that is the *parser* producing a flat n-ary `XMApp(+,a,b,c)`, not
+  the flatten.) The archive's "`pmml_unrow` DEAD" note was right about Rust and
+  understated: it is dead in Perl too.
+- **`Apply:?:formulae` pMML arm — N-A.** Output already byte-identical
+  (`a=b, c=d` / `x=1; y=2` / `p=q.`, 2 `meaning="formulae"` nodes). Perl wraps
+  `formulae` in an **XMDual** (`MathParser.pm:1446`) whose *presentation* branch is
+  an `XMWrap` of the original tokens, so the phantom op never reaches pMML on
+  either side. `multirelation` likewise already identical.
+- **`pmml_parenthesize`'s `usemfenced` branch — N-A, confirmed.** `usemfenced` is
+  never set anywhere in Perl LaTeXML: no CLI option, no constructor argument — the
+  only three mentions are the comment (L58), the read (L602) and the POD (L2075).
+  `m:mfenced` is also gone from MathML Core.
+
+**F17 — still open:** `outerWrapper` altimg + RDFa attrs (L82-89; needs
+`--mathimages` for `imagesrc`, or lxRDFa for `about`/`resource`/… — untested, do
+not assume); `combineParallel` `annotation-xml` non-mathml wrap (L123-127);
+`preprocess` `hackplane1`/`nestmath` unwired (L69-73) — note Perl exposes
+`--plane1`/`--hackplane1` in `latexmlpost` and Rust exposes **neither**, while
+`nestmath` has no CLI in Perl either, so it is effectively unreachable there too;
+`pmml_scriptsize_padded` embellishment padding (L926) — untested, needs the
+mid-script path.
+
+**Found, NOT F17 and NOT the post layer — a math-parser script-position bug.**
+`{}^{n}a_{i}`: Rust classifies the *trailing* `_{i}` as a **prescript**.
+
+| engine | parse |
+|---|---|
+| Perl | `Apply(SUPERSCRIPTOP pre1, Apply(SUBSCRIPTOP post1, a, i), n)` — `n` pre-sup, `i` post-sub ✓ |
+| Rust | `Apply(SUBSCRIPTOP pre2, Apply(SUPERSCRIPTOP pre1, a, n), i)` — both `pre` ✗ |
+
+The post stage is faithful: `pmml_script_decipher` and `apply_multi_scripts`
+reproduce Perl's algorithm, and fed Perl's core XML they agree. Because the
+*parser* mislabels `scriptpos`, the pMML comes out
+`<m:mi>a</m:mi><m:mprescripts/><m:mi>i</m:mi><m:mi>n</m:mi>` — `a_i` rendered as
+`{}_i^n a`, a **relocated subscript**, not merely different padding. Reachable
+from ordinary input: found via `\sum'_{i=1}^{n} a_i`, whose `{}^{n}` empty-base
+superscript produces the same shape. A fully-populated tensor
+(`{}^{1}_{2}X^{3}_{4}`) is byte-identical, so the fault is specific to a
+partially-filled pre/post mix. **Belongs to the math-parser family (R8), deferred
+by user directive 2026-06-20 — do not fix in isolation**; recorded here with the
+repro so the witness is not lost. Minimal repro: `\( {}^{n}a_{i} \)`.
+
+Also recorded from this pass: Rust fills an absent `mmultiscripts` slot with
+`<m:none/>` where Perl uses an empty `<m:mrow/>` — Rust's is the element MathML
+defines for the purpose. Previously undocumented; now divergence
+**OXIDIZED_DESIGN #86**.
 
 ### R6 — `ltx_env_<name>` env-markup class — PHASE 2, do NOT start yet
 **Deferred by user directive 2026-07-29: this waits until the parity and
