@@ -15,6 +15,30 @@ use crate::prelude::*;
 /// produces `Some(empty Parameters)`. Both yield the same `nargs = 0`
 /// downstream, but keeping the None form preserves struct-level parity
 /// for any consumer that distinguishes.
+/// The absolute font size Perl's `font => { size => '<symbolic>' }` resolves to.
+///
+/// Perl stores the SYMBOLIC name in the font spec and rationalizes it inside
+/// `Font::new` (`Common/Font.pm` L266), so `rationalizeFontSize` runs at font
+/// construction and multiplies by `DEFSIZE()` — which reads `NOMINAL_FONT_SIZE`
+/// from state at that moment. Rust's `Font::size` is an `Option<f64>`, so the
+/// symbolic name cannot survive into the struct and the multiplication has to
+/// happen here instead.
+///
+/// It must still happen at DIGEST time, not at pool-load time, which is why the
+/// call sites pass this through a `font => sub[_f]` closure rather than a
+/// literal. Hard-coding the product (`size => 12.0`, i.e. `1.2 * 10`) baked in
+/// the *default* `NOMINAL_FONT_SIZE`, so a class that changes it — `a0poster`
+/// sets 25, in both engines — got delimiters sized against the wrong body text:
+/// `\big(` came out at 48% instead of 120%, i.e. SMALLER than the surrounding
+/// text rather than half again as large. pdflatex renders `\big(` visibly
+/// larger than an adjacent `(`, and Perl agrees at 120%.
+fn symbolic_font_size(symbolic: &str) -> Font {
+  Font {
+    size: Some(font::rationalize_font_size(symbolic)),
+    ..Font::default()
+  }
+}
+
 fn def_math_atom(cs: &str, present: &str, role: Option<&str>, meaning: Option<&str>) -> Result<()> {
   let cs_tok = T_CS!(cs);
   let mut opts = MathPrimitiveOptions::default();
@@ -953,13 +977,13 @@ LoadDefinitions!({
   // in map and set name/meaning (but don't change role or stretchy).
   // Perl: font => { size => 'big' } where 'big' → 1.2 * DEFSIZE(10) = 12.0 absolute pt.
   // Named sizes map to absolute values, NOT scale factors.
-  DefConstructor!("\\big TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
+  DefConstructor!("\\big TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
-  DefConstructor!("\\Big TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
+  DefConstructor!("\\Big TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
-  DefConstructor!("\\bigg TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
+  DefConstructor!("\\bigg TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
-  DefConstructor!("\\Bigg TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
+  DefConstructor!("\\Bigg TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
 
   // sub addDelimiterRole {
@@ -978,32 +1002,32 @@ LoadDefinitions!({
   // Sized delimiters with role assignment (l=OPEN, m=MIDDLE, r=CLOSE)
   // Perl: font => { size => 'big' } where rationalizeFontSize('big') = 1.2 * DEFSIZE(10) = 12.0pt
   // Named sizes are absolute, not relative — must use `size` (not `scale`).
-  DefConstructor!("\\bigl TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
+  DefConstructor!("\\bigl TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\bigm TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
+  DefConstructor!("\\bigm TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\bigr TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
+  DefConstructor!("\\bigr TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\Bigl TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
+  DefConstructor!("\\Bigl TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\Bigm TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
+  DefConstructor!("\\Bigm TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\Bigr TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
+  DefConstructor!("\\Bigr TeXDelimiter",  "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Big")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\biggl TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
+  DefConstructor!("\\biggl TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\biggm TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
+  DefConstructor!("\\biggm TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\biggr TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
+  DefConstructor!("\\biggr TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\Biggl TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
+  DefConstructor!("\\Biggl TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\Biggm TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
+  DefConstructor!("\\Biggm TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\Biggr TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
+  DefConstructor!("\\Biggr TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(symbolic_font_size("Bigg")) },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   Let!(&T_CS!("\\vert"), T_OTHER!("|"));

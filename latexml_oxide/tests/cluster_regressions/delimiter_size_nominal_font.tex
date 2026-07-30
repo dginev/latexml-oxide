@@ -1,0 +1,13 @@
+% `\big`/`\Big`/… sizes are SYMBOLIC in Perl (`font => { size => 'big' }`) and
+% get multiplied by DEFSIZE() — i.e. NOMINAL_FONT_SIZE read from state — inside
+% Font::new. Rust's Font::size is an f64, so the multiplication happens at the
+% binding, and it must happen at DIGEST time, not pool-load time.
+%
+% a0poster sets NOMINAL_FONT_SIZE to 25 (both engines). With the product
+% hardcoded as 1.2*10=12.0pt, `\big(` came out at 12/25 = 48% — SMALLER than
+% body text — instead of 120%. pdflatex renders `\big(` visibly larger than an
+% adjacent `(`, and Perl gives 120%/160%.
+\documentclass{a0poster}
+\begin{document}
+$\big( x \big)$ $\Big[ y \Big]$
+\end{document}
