@@ -67,8 +67,12 @@ use std::{
 };
 
 /// Current resident set size of this process in KiB, or `None` if it can't be
-/// determined (non-Linux, or `/proc` unavailable). Reads `VmRSS` from
-/// `/proc/self/status`. Cheap enough to poll a few times a second.
+/// determined. Linux reads `VmRSS` from `/proc/self/status`; macOS asks
+/// libproc (`proc_pidinfo`/`PROC_PIDTASKINFO`) — without it the whole
+/// `--max-memory` ceiling silently did not exist on macOS, and the
+/// `115_streaming_cli` Fatal-contract guard caught exactly that on macOS CI
+/// (an over-budget run exited 0). Cheap enough to poll a few times a second.
+#[cfg(target_os = "linux")]
 pub fn process_rss_kb() -> Option<u64> {
   let status = std::fs::read_to_string("/proc/self/status").ok()?;
   for line in status.lines() {
@@ -78,6 +82,29 @@ pub fn process_rss_kb() -> Option<u64> {
   }
   None
 }
+
+/// macOS: libproc task info; `pti_resident_size` is in BYTES.
+#[cfg(target_os = "macos")]
+pub fn process_rss_kb() -> Option<u64> {
+  let mut info: libc::proc_taskinfo = unsafe { std::mem::zeroed() };
+  let size = std::mem::size_of::<libc::proc_taskinfo>() as libc::c_int;
+  // SAFETY: proc_pidinfo fills at most `size` bytes of the zeroed struct we
+  // own; a short or negative return is handled below.
+  let got = unsafe {
+    libc::proc_pidinfo(
+      std::process::id() as libc::c_int,
+      libc::PROC_PIDTASKINFO,
+      0,
+      (&raw mut info).cast::<libc::c_void>(),
+      size,
+    )
+  };
+  (got == size).then(|| info.pti_resident_size / 1024)
+}
+
+/// Other platforms: unknown — the cooperative memory ceiling stays inactive.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+pub fn process_rss_kb() -> Option<u64> { None }
 
 /// Total physical RAM on this machine in bytes, or `None` if it cannot be
 /// determined.
