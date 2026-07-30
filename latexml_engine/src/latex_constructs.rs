@@ -6966,14 +6966,31 @@ LoadDefinitions!({
   // Rust double-superscript, Perl clean). Faithful parity: leave them
   // undefined, exactly like the Perl runtime.
   // DeclareMathAlphabet: define math font command if not already defined
+  // Perl: latex_constructs.pool.ltxml L2677-2687. The arguments are NFSS
+  // codes, and Perl maps them to LaTeXML's abstract font properties through
+  // `lookupTeXFont` (Common/Font.pm L230-239) — the same
+  // family/series/shape tables `\selectfont` consults. Storing the raw codes
+  // instead put them straight into the XML: `\DeclareMathAlphabet{\mysf}{OT1}
+  // {cmss}{m}{n}` emitted `font="cmss m n"` where Perl emits
+  // `font="sansserif"`, and MathML then carried `mathvariant="normal"` for
+  // every such alphabet — so a declared sansserif/bold/italic alphabet
+  // rendered upright. `lookup_tex_font` was already a faithful port of
+  // `lookupTeXFont`, with no callers.
+  //
+  // Only DOCUMENT- and PACKAGE-declared alphabets were affected: the stock
+  // `\mathsf`/`\mathbf`/`\mathit`/`\mathrm` are bound directly in the pool and
+  // never route through here. Font packages (fouriernc, mathpazo, newtxmath, …)
+  // do declare their own.
   DefPrimitive!("\\DeclareMathAlphabet{}{}{}{}{}", sub[(cs, _enc, family, series, shape)] {
     let cs_tok = T_CS!(cs.to_string());
-    if !IsDefined!(&cs_tok) {
-      let font : Option<Font> = Some(fontmap!(
-        family => family.to_string(),
-        series => series.to_string(),
-        shape  => shape.to_string()
-      ));
+    // We won't override this, e.g. \mathrm by fouriernc.sty
+    if IsDefined!(&cs_tok) {
+      let csname = cs.to_string();
+      let message = s!("Ignoring redefinition (\\DeclareMathAlphabet) of '{csname}'");
+      Info!("ignore", csname, message);
+    } else {
+      let font : Option<Font> = Some(font::lookup_tex_font(
+        &family.to_string(), &series.to_string(), &shape.to_string()));
       DefPrimitive!(cs_tok, None, None, font => font);
     }
   });
