@@ -313,21 +313,35 @@ LoadDefinitions!({
           described_by.push(id);
           add_describedby(document, &mut figure, &described_by)?;
           let host = figure.get_name();
-          let why = if !graphics.is_empty() {
-            s!("it holds more than one image, so which one is described is ambiguous")
-          } else if host == "figure" || host == "table" {
-            s!("the float has no image to describe (a table, or a \\Description \
-                written before its \\includegraphics)")
+          if graphics.is_empty() && host == "table" {
+            // NOT a fallback: a table float has no image BY CONSTRUCTION, and
+            // acmart asks for a `\Description` on every float — so the table
+            // itself is where the description belongs, and this is the author
+            // doing the right thing. Warning here demoted otherwise-clean
+            // papers: 27 of 45 sampled `no_problem -> warning` regressions in
+            // the 2026-07-30 sandbox-arxiv-2605 rerun were this one message.
+            // Report it (the attachment point is worth knowing), as INFO.
+            Info!("aria", "\\Description",
+              &s!("attached to the enclosing <table> as aria:describedby — a \
+                   table has no image to describe, so this is where the \
+                   description belongs"));
           } else {
-            // Not a float at all — `\Description` outside a figure/table, where
-            // acmart's own `\@Description@present` bookkeeping expects it.
-            s!("it is outside any figure or table, so there is no image to describe")
-          };
-          Warn!("unexpected", "\\Description",
-            &s!("attached to the enclosing <{host}> as aria:describedby, because \
-                 {why}. The text is still announced, but it is not any image's \
-                 alt text; put a \\Description after the \\includegraphics it \
-                 describes, or use \\includegraphics[alt=...] per image"));
+            let why = if !graphics.is_empty() {
+              s!("it holds more than one image, so which one is described is ambiguous")
+            } else if host == "figure" {
+              s!("the float has no image to describe (a \\Description written \
+                  before its \\includegraphics, or a figure with no graphic)")
+            } else {
+              // Not a float at all — `\Description` outside a figure/table,
+              // where acmart's own `\@Description@present` bookkeeping expects it.
+              s!("it is outside any figure or table, so there is no image to describe")
+            };
+            Warn!("unexpected", "\\Description",
+              &s!("attached to the enclosing <{host}> as aria:describedby, because \
+                   {why}. The text is still announced, but it is not any image's \
+                   alt text; put a \\Description after the \\includegraphics it \
+                   describes, or use \\includegraphics[alt=...] per image"));
+          }
         },
       }
     }
