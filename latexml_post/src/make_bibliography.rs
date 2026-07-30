@@ -589,10 +589,26 @@ impl MakeBibliography {
           {
             queue.push(bibkey.to_string());
           }
-        } else if cite_star {
-          queue.push(bibkey.to_string());
         }
       }
+    }
+
+    // `\nocite{*}` asks for the WHOLE library — that is bibtex's own semantic
+    // for the star key, and `cited_keys` above already returns None for it so
+    // every entry is read. Queue them all.
+    //
+    // Queueing per BIBLABEL record cannot do this: in a document whose only
+    // citation is `\nocite{*}` the sole record IS `*`, Step 3 skips that key by
+    // name, and the result was "N bibentries, **0 cited**" over an empty
+    // References list — while `pdflatex`+`bibtex` on the same source prints the
+    // full list. 7 papers of the 2605+2606 residual are `\nocite{*}`-only;
+    // 6-line reproducer: `\nocite{*}` + `\bibliography{t}` with a 2-entry
+    // `.bib` gave 0 items against bibtex's 2. Perl skips the star key the same
+    // way (`MakeBibliography.pm` L279-313), so this is deliberately BEYOND Perl.
+    if cite_star {
+      let mut all: Vec<String> = entries.values().map(|e| e.bib_key.clone()).collect();
+      all.sort();
+      queue.extend(all);
     }
 
     // Step 3: Process queue — transitively include cited entries.

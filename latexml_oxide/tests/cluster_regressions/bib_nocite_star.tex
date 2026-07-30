@@ -1,0 +1,12 @@
+% `\nocite{*}` asks for the WHOLE library — bibtex's own semantic for the star
+% key. Queueing per BIBLABEL record could never do that: in a document whose
+% only citation is `\nocite{*}` the sole record IS `*`, which Step 3 skips by
+% name, so the result was "N bibentries, 0 cited" over an empty References list
+% while pdflatex+bibtex printed the full list. Red/green is the bibliography
+% length; 0 is red. 7 papers of the residual, e.g. 2605.24970 (0 -> 46).
+\documentclass{article}
+\begin{document}
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{bib_nocite_star}
+\end{document}

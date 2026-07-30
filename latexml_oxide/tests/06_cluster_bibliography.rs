@@ -84,6 +84,32 @@ fn bib_empty_argument_still_reads_the_jobname_bbl() {
     "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
   );
 }
+/// `\nocite{*}` includes the whole library, as bibtex does.
+///
+/// Queueing per BIBLABEL record cannot express that: in a document whose only
+/// citation is `\nocite{*}` the sole record IS `*`, Step 3 skips that key by
+/// name, and the outcome was "N bibentries, **0 cited**" over an empty
+/// References list — while `pdflatex`+`bibtex` on the same source prints the
+/// full list (measured 2 against our 0 on a 2-entry `.bib`).
+///
+/// Perl skips the star key the same way (`MakeBibliography.pm` L279-313), so
+/// this is deliberately beyond Perl. 7 papers of the 2605+2606 residual are
+/// `\nocite{*}`-only, all recovered: 2605.24970 0 -> 46, 2606.05528 0 -> 42,
+/// 2605.28000 0 -> 39.
+#[test]
+fn bib_nocite_star_includes_the_whole_library() {
+  let x = convert_and_post("tests/cluster_regressions/bib_nocite_star.tex");
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "\\nocite{{*}} did not include the whole library: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("First starred entry") && x.contains("Second starred entry"),
+    "an uncited-but-starred entry is missing:\n{x}"
+  );
+}
+
 /// `\DeclareCiteCommand` must actually define the command it declares.
 ///
 /// It is biblatex's own API for a custom citation command and papers use it
