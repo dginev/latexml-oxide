@@ -439,19 +439,27 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   };
   // (path, destination, destination_directory) — the metadata that does NOT
   // survive an XML round-trip and must be restored in pass B.
-  let mut spilled_pages: Vec<(std::path::PathBuf, Option<String>, Option<String>)> =
-    Vec::with_capacity(docs.len());
+  // Plus a flag per page: does it carry an index/glossary/bibliography
+  // placeholder? Recorded HERE, while the page is already parsed, so the two
+  // baton sweeps below visit only the handful of pages that have work instead
+  // of re-parsing every page twice (~80 k redundant parses on a 40 k-page
+  // document).
+  let mut spilled_pages: Vec<SpilledPage> = Vec::with_capacity(docs.len());
   for (i, d) in docs.drain(..).enumerate() {
     let path = page_spill.path().join(format!("page-{i:07}.xml"));
     if let Err(e) = std::fs::write(&path, d.to_xml_string()) {
       post_error("post", &format!("cannot spill page {i}: {e}"));
       return fallback();
     }
-    spilled_pages.push((
+    spilled_pages.push(SpilledPage {
+      needs_index: !d
+        .findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
+        .is_empty(),
+      needs_bib: !d.findnodes("//ltx:bibliography").is_empty(),
       path,
-      d.get_destination().map(String::from),
-      d.get_destination_directory().map(String::from),
-    ));
+      destination: d.get_destination().map(String::from),
+      destination_directory: d.get_destination_directory().map(String::from),
+    });
     // `d` drops here: one page's worth of DOM and caches released before the
     // next is touched.
   }
@@ -646,9 +654,9 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   // Failure semantics change deliberately: pages that finish are already on
   // disk, so a later failure leaves a partial site rather than nothing. That
   // matches how a resource Fatal already keeps partial core output.
-  let mut run_page_phase = |doc: PostDocument,
-                            proc: &mut dyn Processor,
-                            label: &'static str|
+  let run_page_phase = |doc: PostDocument,
+                        proc: &mut dyn Processor,
+                        label: &'static str|
    -> Result<Vec<PostDocument>, ()> {
     let nodes = proc.to_process(&doc);
     if nodes.is_empty() {
@@ -667,12 +675,18 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   // handful of pages out of tens of thousands, so the sweeps cost a parse each
   // and almost no writes.
   fn sweep_pages(
-    pages: &[(std::path::PathBuf, Option<String>, Option<String>)],
+    pages: &[SpilledPage],
     opts: &PostDocumentOptions,
     proc: &mut dyn Processor,
     label: &'static str,
+    selector: fn(&SpilledPage) -> bool,
   ) -> Result<(), ()> {
-    for (path, dest, dest_dir) in pages {
+    for page_meta in pages.iter().filter(|p| selector(p)) {
+      let (path, dest, dest_dir) = (
+        &page_meta.path,
+        &page_meta.destination,
+        &page_meta.destination_directory,
+      );
       let path_str = path.to_string_lossy().into_owned();
       let mut page = PostDocument::new_from_file(&path_str, opts.clone()).map_err(|e| {
         post_error("post", &format!("cannot re-read a spilled page: {e}"));
@@ -701,7 +715,11 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     Ok(())
   }
 
-  if sweep_pages(&spilled_pages, &page_opts, &mut indexer, "MakeIndex").is_err() {
+  if sweep_pages(&spilled_pages, &page_opts, &mut indexer, "MakeIndex", |p| {
+    p.needs_index
+  })
+  .is_err()
+  {
     return fallback();
   }
   let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(indexer.db, false);
@@ -710,6 +728,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     &page_opts,
     &mut bibmaker,
     "MakeBibliography",
+    |p| p.needs_bib,
   )
   .is_err()
   {
@@ -719,9 +738,15 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
 
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
-  for (path, dest, dest_dir) in spilled_pages {
+  for SpilledPage {
+    path,
+    destination: dest,
+    destination_directory: dest_dir,
+    ..
+  } in spilled_pages
+  {
     let path_str = path.to_string_lossy().into_owned();
-    let mut page = match PostDocument::new_from_file(&path_str, page_opts.clone()) {
+    let page = match PostDocument::new_from_file(&path_str, page_opts.clone()) {
       Ok(mut d) => {
         d.destination = dest;
         d.destination_directory = dest_dir;
@@ -795,6 +820,18 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   drop(page_spill);
 
   main_output.unwrap_or_else(fallback)
+}
+
+/// One page spilled between the post pipeline's two passes: where its XML
+/// lives, the metadata that does NOT survive an XML round-trip, and whether it
+/// carries the placeholders the two ObjectDB-baton sweeps look for (recorded in
+/// pass A, while the page is already parsed).
+struct SpilledPage {
+  path:                  std::path::PathBuf,
+  destination:           Option<String>,
+  destination_directory: Option<String>,
+  needs_index:           bool,
+  needs_bib:             bool,
 }
 
 /// Re-derive SVG fragments from a parsed document (the file-input equivalent of
