@@ -43,11 +43,6 @@ unused_qualifications = "warn"
 # [patch.crates-io]
 # marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
-# TEMPORARY (remove before the PR — publish libxml 0.3.17 and bump instead):
-# in-flight `Node::free_subtree` development against the local fork checkout.
-[patch.crates-io]
-libxml = { path = "/home/deyan/git/rust-libxml" }
-
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
