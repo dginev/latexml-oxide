@@ -1077,12 +1077,19 @@ impl DigestionAPI for Core {
       let bounded_mode = stomach::fragment_yield_count() > 0;
       if !finishing || bounded_mode {
         document.spill_closed_subtrees(&mut index)?;
-        log::info!(
-          "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB",
-          stomach::fragment_yield_count(),
-          latexml_core::document::spilled_segment_count(),
-          stomach::last_sampled_rss_kb() / 1024,
-        );
+        // Rate-limited: a book-scale run yields MILLIONS of fragments, and
+        // every log line lands in the in-RAM LOG_BUFFER — per-fragment
+        // telemetry alone wrote a 1.37 GB log on the 131 MB witness,
+        // feeding the very creep pass 1 exists to avoid.
+        let fragments = stomach::fragment_yield_count();
+        if fragments.is_power_of_two() || fragments % 65536 == 0 {
+          log::info!(
+            "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB",
+            fragments,
+            latexml_core::document::spilled_segment_count(),
+            stomach::last_sampled_rss_kb() / 1024,
+          );
+        }
       }
       if finishing {
         break;
@@ -1160,29 +1167,6 @@ impl DigestionAPI for Core {
     // The spine's own rewrite phase must be strict too: its sections are
     // spilled placeholders, so a scope that "isn't here" is in a fragment.
     document.scoped_rules_strict = true;
-    if std::env::var_os("LXSXML_SPINE_PROBE").is_some() {
-      let mut inventory: rustc_hash::FxHashMap<String, usize> = rustc_hash::FxHashMap::default();
-      if let Some(root) = document.get_document().get_root_element() {
-        for c in root.get_child_nodes() {
-          *inventory.entry(c.get_name()).or_default() += 1;
-        }
-      }
-      eprintln!("SPINEPROBE root children: {inventory:?}");
-      for (i, xm) in document
-        .findnodes("//ltx:XMath", None)
-        .iter()
-        .take(3)
-        .enumerate()
-      {
-        let mut path = Vec::new();
-        let mut cur = Some(xm.clone());
-        while let Some(n) = cur {
-          path.push(n.get_name());
-          cur = n.get_parent();
-        }
-        eprintln!("SPINEPROBE xmath[{i}] ancestry: {path:?}");
-      }
-    }
     // The spine gets the normal whole-document tail; spilled content is
     // invisible to it (placeholders), so root-level passes act on the live
     // root exactly as in the eager path.
