@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath"?>
+<?latexml package="xcolor"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:m="http://www.w3.org/1998/Math/MathML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="a\text{ and }b" text="a * [ and ] * b" xml:id="p1.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMText> and </XMText>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath><m:math alttext="a\text{ and }b" display="inline"><m:mrow><m:mi>a</m:mi><m:mo>⁢</m:mo><m:mtext> and </m:mtext><m:mo>⁢</m:mo><m:mi>b</m:mi></m:mrow></m:math></Math></p>
+  </para>
+  <para xml:id="p2">
+    <p><Math mode="inline" tex="x+{\color[rgb]{1,0,0}\text{red words}}" text="x + [red words]" xml:id="p2.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMText><text color="#FF0000">red words</text></XMText>
+          </XMApp>
+        </XMath><m:math alttext="x+{\color[rgb]{1,0,0}\text{red words}}" display="inline"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mtext mathcolor="#FF0000">red words</m:mtext></m:mrow></m:math></Math></p>
+  </para>
+  <para xml:id="p3">
+    <p><Math mode="inline" tex="x+\text{{bold} then {sans} then {caps}}" text="x + [bold then sans then caps]" xml:id="p3.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMText><text font="bold">bold</text> then <text font="sansserif">sans</text> then <text font="smallcaps">caps</text></XMText>
+          </XMApp>
+        </XMath><m:math alttext="x+\text{{bold} then {sans} then {caps}}" display="inline"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mrow><m:mtext class="ltx_mathvariant_bold">bold</m:mtext><m:mtext> then </m:mtext><m:mtext class="ltx_mathvariant_sans-serif">sans</m:mtext><m:mtext> then </m:mtext><m:mtext class="ltx_font_smallcaps">caps</m:mtext></m:mrow></m:mrow></m:math></Math></p>
+  </para>
+  <para xml:id="p4">
+    <p><Math mode="inline" tex="x+\text{\small smaller}" text="x + [smaller]" xml:id="p4.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMText><text fontsize="90%">smaller</text></XMText>
+          </XMApp>
+        </XMath><m:math alttext="x+\text{\small smaller}" display="inline"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mtext mathsize="0.900em">smaller</m:mtext></m:mrow></m:math></Math></p>
+  </para>
+  <para xml:id="p5">
+    <p><Math mode="inline" tex="x+\text{if $y&gt;0$ then}" text="x + [if &gt;y0 then]" xml:id="p5.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMText>if <Math mode="inline" tex="y&gt;0" text="y &gt; 0" xml:id="p5.m1.m1">
+                <XMath>
+                  <XMApp>
+                    <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                    <XMTok meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                </XMath>
+              </Math> then</XMText>
+          </XMApp>
+        </XMath><m:math alttext="x+\text{if $y&gt;0$ then}" display="inline"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mrow><m:mtext>if </m:mtext><m:mrow><m:mi>y</m:mi><m:mo>&gt;</m:mo><m:mn>0</m:mn></m:mrow><m:mtext> then</m:mtext></m:mrow></m:mrow></m:math></Math></p>
+  </para>
+  <para xml:id="p6">
+    <p><Math mode="inline" tex="x+\text{\framebox{boxed}}" text="x + [boxed]" xml:id="p6.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMText cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">boxed</XMText>
+          </XMApp>
+        </XMath><m:math alttext="x+\text{\framebox{boxed}}" display="inline"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mtext class="ltx_framed_rectangle" style="border-color: #000000">boxed</m:mtext></m:mrow></m:math></Math></p>
+  </para>
+  <para xml:id="p7">
+    <p><Math mode="inline" tex="x+\text{see \ref{sec:one}}" text="x + [see ]" xml:id="p7.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMText>see <ref labelref="LABEL:sec:one"/></XMText>
+          </XMApp>
+        </XMath><m:math alttext="x+\text{see \ref{sec:one}}" display="inline"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mrow><m:mtext>see </m:mtext><m:mtext><ref labelref="LABEL:sec:one"/></m:mtext></m:mrow></m:mrow></m:math></Math></p>
+  </para>
+  <section inlist="toc" labels="LABEL:sec:one" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>One</title>
+  </section>
+</document>

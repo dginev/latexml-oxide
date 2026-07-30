@@ -47,6 +47,11 @@ pub struct PostOptions<'a> {
   pub css_files:                 &'a [String],
   pub js_files:                  &'a [String],
   pub noinvisibletimes:          bool,
+  /// Remap styled alphanumerics to Unicode Plane-1 (Perl `--plane1`, default on).
+  pub plane1:                    bool,
+  /// Remap only the poorly-supported variants, to their simpler form
+  /// (Perl `--hackplane1`); implies `plane1`.
+  pub hackplane1:                bool,
   pub mathtex:                   bool,
   pub navigationtoc:             Option<&'a str>,
   pub schemadocs:                bool,
@@ -197,6 +202,8 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     css_files,
     js_files,
     noinvisibletimes,
+    plane1,
+    hackplane1,
     mathtex,
     navigationtoc,
     schemadocs,
@@ -495,6 +502,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     let mut presentation = latexml_post::mathml::MathML::new_presentation()
       .with_keep_xmath(keep_xmath)
       .with_invisible_times(!noinvisibletimes)
+      .with_plane1(plane1, hackplane1)
       .with_mathtex(mathtex)
       .with_intent_literal(intent_literal);
     if cmml {
@@ -502,6 +510,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
         latexml_post::mathml::MathML::new_content()
           .with_keep_xmath(keep_xmath)
           .with_invisible_times(!noinvisibletimes)
+          .with_plane1(plane1, hackplane1)
           .secondary(),
       )]);
     }
@@ -511,7 +520,8 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     processors.push(Box::new(
       latexml_post::mathml::MathML::new_content()
         .with_keep_xmath(keep_xmath)
-        .with_invisible_times(!noinvisibletimes),
+        .with_invisible_times(!noinvisibletimes)
+        .with_plane1(plane1, hackplane1),
     ));
   }
   if let Some(xsl_path) = stylesheet {

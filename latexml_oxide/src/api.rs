@@ -121,6 +121,8 @@ pub fn convert_to_html(tex: &str) -> Result<String, String> {
       css_files:                 &[],
       js_files:                  &[],
       noinvisibletimes:          false,
+      plane1:                    true,
+      hackplane1:                false,
       mathtex:                   false,
       navigationtoc:             None,
       schemadocs:                false,

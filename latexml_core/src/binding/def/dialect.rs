@@ -965,12 +965,40 @@ pub fn def_constructor(
   cs: Token,
   paramlist: Option<Parameters>,
   compiled_replacement: Option<ReplacementClosure>,
-  options: ConstructorOptions,
+  mut options: ConstructorOptions,
 ) {
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*latexml_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope;
   let cs = if options.robust {
+    // Perl Package.pm L1480-1481:
+    //   alias => (defined $options{alias} ? coerceCS($options{alias})
+    //             : ($options{robust} ? $cs : undef)),
+    // A `robust` definition is installed under the MUNGED cs — LaTeX2e's
+    // `\DeclareRobustCommand` idiom, where `\ref` becomes `\protect\ref␣` and
+    // the real definition lives at `\ref␣`, with a literal trailing space in the
+    // name. The reversion must still print the original `\ref`, so absent an
+    // explicit alias the pre-munge cs becomes one (`Whatsit::revert` prefers the
+    // alias over `get_cs`).
+    //
+    // Without this, every robust constructor reverted with its munged name and
+    // the trailing space rode into user-visible output: `\ref{sec:one}` became
+    // `tex="\ref {sec:one}"` on `ltx:Math`, and through that the MathML
+    // `alttext` — the screen-reader / no-MathML fallback.
+    //
+    // This changes the REVERSION only. The definition is still installed under
+    // the munged cs, so `get_cs_name()` still reports `\ref ` and code that
+    // identifies a whatsit by its cs must keep accepting both spellings (see
+    // `lxrdfa_sty.rs`'s `cs == "\\ref" || cs == "\\ref "`, or use
+    // `get_cs_or_alias`). Only the alias is clean.
+    //
+    // Note this fallback is DefConstructor-only in Perl: `DefPrimitiveI`
+    // (L1318) deliberately passes `undef` when no alias is given, and the
+    // DefMath family has its own rule (`defmath_common_constructor_options`
+    // L1703 sets `alias => $cs` unconditionally).
+    if options.alias.is_none() {
+      options.alias = Some(cs.with_cs_name(ToString::to_string));
+    }
     def_robust_cs(cs, options.locked, scope).expect("def_robust_cs for constructor failed")
   } else {
     cs

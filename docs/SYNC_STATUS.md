@@ -57,7 +57,8 @@ Re-verify a row before planning on it (rule 1).
 | **R3** | **Bibliography-absence campaign** (PR #444) — **16 fixes landed**, **291 of the 533** known articles recovered / 20 338 entries, re-verified by reconversion. **242 still empty, all characterized** — plan R3a-R3g below. Corpus scope 50 777 | **R3a next** | per-item | [`BIB_ABSENCE_AUDIT_2026-07-29.md`](parity/BIB_ABSENCE_AUDIT_2026-07-29.md), [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
-| **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
+| **R3** | Presentation-MathML **F17 ✅ CLOSED 2026-07-29**; **F5** Linebreaker still open | F17 fully settled: 4 fixed (`pmml_text_aux`, `outerWrapper` altimg/RDFa + the missing `CrossRef::fill_in_RDFa_refs`, `pmml_scriptsize_padded`, `preprocess` plane1 + new `--plane1`/`--noplane1`/`--hackplane1`), 3 closed as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE), `combineParallel` BLOCKED on the absent `--openmath`/`--mathimages`/`--mathsvg`, `nestmath` unreachable in both engines. **What remains on this row is F5 alone.** A math-parser `scriptpos` bug and a FUNCTION-APPLICATION over-insertion witness found en route are **other rows** | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
+| **R6** | `ltx_env_<name>` env-markup class | user-requested, **PHASE 2 — do NOT start yet** (user directive 2026-07-29) | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
 | **R9** | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | parked; several carry explicit "do NOT start". The `.bst` row's "`.bst` files *vendor macro definitions*" premise was **RETRACTED 2026-07-27** (`alpha.bst` has zero `Dbar`; the macro is `mathscinet.sty`'s) — it survives on label style / sort order / **field selection**, and the prerequisite is a corpus measurement of the `.bib`+`.bst`-with-no-`.bbl` population | **family** | [`DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md), and R9-BST below |
@@ -645,18 +646,70 @@ Two completed diagnostic snapshots were dated + archived; their still-open
 residuals stay here so the live worklist keeps them visible:
 
 - **MathML-post line audit** (sweep complete; →
-  `archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`). Open feature-gaps: **F5**
-  Linebreaker (full feature gap — the sketch used the wrong strategy), **F11**
-  Hint width normalization, **F14** multirelation + lt-or-approx cMML, **F15**
-  continued-fraction, **F16** OperatorDictionary Cat A/B data holes + U+2A50
-  misclassification + fence U+0331, **F17** formulae pMML arm, plus PARTIAL
-  inherited-context bindings on `pmml_top`/`pmml_parenthesize`/`stylizeContent`.
+  `archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`). **This list was stale until
+  2026-07-29** — it named F11/F14/F15/F16 as open when the archive marks all four
+  ✅ and the code confirms it (`filter_row` in `mathml/mod.rs`, `do_cfrac` in
+  `presentation.rs`, the `0x2A50`→Cat C / `0x27A1` / `0x0331` rows plus their
+  guard in `operator_dictionary.rs`). **F17 is now also CLOSED (2026-07-29)** — see
+  R3 for the per-item disposition. What is genuinely open is **F5** Linebreaker
+  (full feature gap — the sketch used the wrong strategy; needs a port-or-drop
+  scope decision), the **F14 residual** (`m:share` hrefs use the primary ID
+  suffix; the `MATHPROCESSOR->IDSuffix` secondary-suffix wiring is unconnected),
+  and PARTIAL inherited-context bindings on `pmml_top`/`pmml_parenthesize`.
   (Content-MathML items obey the defer-to-a-dedicated-session directive above.)
 - **arXiv velocity-fork audit** (items 1–4 landed 2026-07-03; →
   `archive/ARXIV_FORK_AUDIT_2026-07-03.md`). Sole residual: **item G** —
   `readBalanced` drops comment tokens (fork `4e1578d1`); Rust `read_balanced`
   still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
+
+### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
+
+Rust wrote `tex="x+\text{see \ref {sec:one}}"` where Perl writes
+`\ref{sec:one}` — a space between the control word and its `{`. Semantically
+equivalent TeX, but `tex=` flows into the MathML `alttext`, the screen-reader /
+no-MathML fallback, and into golden comparisons.
+
+**Root cause, and it is not a serializer bug.** `robust => true` installs the
+real definition under the MUNGED cs `\ref` + a literal trailing SPACE — LaTeX2e's
+`\DeclareRobustCommand` idiom, where `\ref` expands to `\protect\ref␣` and `\ref␣`
+holds the body (`def_robust_cs`, Perl `Package.pm:1143-1149 defRobustCS`). The
+name really does contain a space, and `Whatsit::revert` printed it. Perl avoids
+this in `DefConstructorI` (L1480-1481):
+
+```perl
+alias => (defined $options{alias} ? coerceCS($options{alias})
+          : ($options{robust} ? $cs : undef)),
+```
+
+i.e. the pre-munge cs becomes the alias, and reversion prefers the alias.
+`dialect.rs::def_constructor` never set it — note the **commented-out
+`csname_alias` block at `dialect.rs:729`** was an earlier attempt at exactly this,
+left disabled in the DefMath path.
+
+Scope is exactly `\ref` (plus `\pageref`, `Let!` to it): it is the tree's ONLY
+`robust` `DefConstructor!`. The `robust` DefMath entries (`tex_math.rs:1270/1273`,
+`\overbrace`/`\underbrace`) pass an explicit `alias`, which the fix's
+`if options.alias.is_none()` guard respects, and everything else `robust` is
+`DefMacro!`/`DefPrimitive!` — Perl deliberately does NOT apply this fallback to
+`DefPrimitiveI` (L1318), so neither do we.
+
+**The fix changes the reversion only.** The definition is still installed under
+the munged cs, so `get_cs_name()` still reports `\ref ` — code that identifies a
+whatsit by cs must keep accepting both spellings. `lxrdfa_sty.rs`'s
+`cs == "\\ref" || cs == "\\ref "` (L15, L118) is therefore still correct and was
+left alone; it is the fingerprint of someone hitting this before and papering
+over it. `get_cs_or_alias()` is the clean accessor.
+
+Guard `06_cluster_regressions::cluster_robust_cs_reverts_unmunged` over
+`tests/cluster_regressions/robust_cs_reversion.tex`, ground-truthed against
+same-host Perl 0.8.8: zero errors in both engines and all three `tex=` attributes
+byte-identical. Found by end-to-end-diffing Perl `latexml`+`latexmlpost` against
+the Rust pipeline while verifying R3/F17 — the post-stage golden could not have
+caught it, because that test feeds Perl's core XML into the Rust post stage.
+Note the *inverse* bug — a Tokens round-trip **eating** a control word's
+terminating space — is a separate, already-fixed issue
+(`\bib@field@unknownasdata`, `SYNC_SESSIONS_2026-07.md`); do not conflate.
 
 ## Open items — detail for the ranked rows
 
@@ -968,7 +1021,283 @@ work." The *reasoning* is still right (that paper loads no package and
 and its `KacNilpotentorbits` entry (`biblo.bib` L2059) is uncited. Still do not
 measure with it — now because it is silent, not because it is parity.
 
-### R6 — `ltx_env_<name>` env-markup class — PLANNED, needs its own branch (churns every test XML)
+### R3b — `m:menclose` is not in MathML Core — OPEN, deferred by user 2026-07-30
+
+We emit `m:menclose` for `\cancel` / `\boxed`
+(`latexml_post/src/mathml/presentation.rs` ~L520 and ~L918; Perl `MathML.pm`
+L339-341 and L1507-1513 do the same). **MathML Core removed the element**, and
+CLAUDE.md's standing rule is that our output targets Core. So this is a genuine
+open item, not a divergence to document away.
+
+It is deferred because unlike `<none/>` → empty `<mrow/>` there is **no
+mechanical replacement**, and the two notations we emit need different answers:
+- `notation="box"` (`\boxed`) → an `m:mrow` carrying a CSS border, which means
+  the border has to survive the XSLT and the stylesheet, not just the MathML;
+- `notation="updiagonalstrike"` (`\cancel`) → **no Core equivalent at all**.
+  Options are a drawn overlay or accepting a visual regression; neither is a
+  rename.
+
+So this is a rendering change, a golden change (`tests/post/mathgolden-post.xml`
+pins both today), and a deliberate divergence from Perl — it needs its own branch
+and its own decision on the strike case. **Do not fix it incidentally** while
+touching neighbouring pMML code.
+
+### R3 — Presentation-MathML: F17 ✅ CLOSED 2026-07-29; F5 Linebreaker open
+
+Both from the archived MathML-post line audit
+(`archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`); read the F17 bullet there for
+the per-item Perl line references. **F17 was a list, not a family** — each item
+individually scoped — and every one is now settled: **4 fixed, 3 do-not-port/N-A,
+1 blocked, 1 unreachable in both engines.** The detail below is kept because most
+of the value is in the *negative* results: three items would have introduced a
+divergence or dead code if ported on the audit's word. **What remains on this row
+is F5**, which is a family and needs a port-or-drop decision before any code.
+
+The method that produced those negatives is the durable lesson: **run both engines
+on the item before porting it.** Reading the audit alone would have yielded a
+worse tree.
+
+**F17 — `pmml_text_aux` styling ✅ FIXED 2026-07-29.** `pmml_text_aux` took no
+`%attr` at all (Perl `MathML.pm` L1029, L1041-1045 threads font / fontsize /
+color / backgroundcolor / opacity down from each enclosing `ltx:*` element), so
+**every `<m:mtext>` came out unstyled**: `\textcolor{red}{\text{…}}` in math lost
+its color, `\text{\textbf{…}}` lost its `ltx_mathvariant_bold` class,
+`\text{\small …}` lost its `mathsize`. Two more defects in the same function:
+- a **leading whitespace run was dropped instead of becoming an NBSP** — the arm
+  called `trim_start()` and only then tested the *already-trimmed* string with
+  `starts_with(char::is_whitespace)`, which can never be true, so `$a \text{ and
+  } b$` closed up on the left (Perl L1035 is `s/^\s+/NBSP/` — replace, not trim);
+- an `ltx:Math` inside an `XMText` whose `XMath` was already converted on an
+  earlier pass returned `vec![]`, **silently dropping the formula**; Perl
+  (L1051-1052) hands back the existing `m:math`'s children. Note the fallback
+  must find that `m:math` by **namespace URI, not the `m:` prefix** — this
+  processor is what introduces MathML, so `m:` is not yet in the document's XPath
+  context and an XPath lookup would no-op.
+Also added the `framed`/`framecolor` guard on the `ltx:text` arm plus its
+`pmml_maybe_resize` (L1057-1059), and the `unexpected:nested-math` warning
+(L1070-1072). Perl's `delete $mmlattr{stretchy}` (L1069) has **nothing to port**:
+`%props` is filled only for `m:mo` and `$stretchy` is cleared for every other tag
+(L764-767), so it is belt-and-braces over an already-absent attribute.
+**The dead second copy of `stylizeContent` is gone.** `mathml/mod.rs` carried a
+~245-line tag-generic `stylize_content` that **nothing called** — the live token
+half had grown separately inside `presentation::pmml_token_inner` — so its `m:mo`
+arm had drifted out of parity unnoticed (always-emitted `_lspace`/`_rspace`, no
+`stretchyhack`, size compared against a hardcoded `"100%"`). It is now the live,
+`%attr`-threading `m:mtext` half, `stylize_text_content`, and its doc comment
+states the split so neither half grows the other's branches.
+Guard `90_latexmlpost::mtextstyle_post_test`, **0 diff lines** — the golden is
+same-host Perl 0.8.8 `latexmlpost --keepXMath --pmml` on the identical core XML,
+and the test was verified RED pre-fix at **18 diff lines**. The fixture exercises
+every arm of the function.
+
+**F17 — three items CLOSED as do-not-port 2026-07-29**, each settled by running
+both engines rather than by reading the audit. Do not re-open without a witness:
+
+- **`pmml_infix` ADDOP flatten via `pmml_unrow` (L639-644) — DEAD IN PERL; porting
+  it would CREATE a divergence.** `pmml_unrow` only unwraps an `m:mrow` whose
+  attribute hash is empty (`!scalar(keys %{ $$mml[1] })`, L586-592), but
+  `Post.pm:524-525 associateNode` stamps `_sourced => 1` on **every** `pmml()`
+  result unconditionally — so the guard can never pass and the flatten never
+  fires. Measured: `a+b-c+d-e+f` left-nests in both engines and Perl emits **5
+  nested `m:mrow`s**, byte-identical to Rust. (`{a+b}+c` and `a+{b+c}` look flat
+  in both, but that is the *parser* producing a flat n-ary `XMApp(+,a,b,c)`, not
+  the flatten.) The archive's "`pmml_unrow` DEAD" note was right about Rust and
+  understated: it is dead in Perl too.
+- **`Apply:?:formulae` pMML arm — N-A.** Output already byte-identical
+  (`a=b, c=d` / `x=1; y=2` / `p=q.`, 2 `meaning="formulae"` nodes). Perl wraps
+  `formulae` in an **XMDual** (`MathParser.pm:1446`) whose *presentation* branch is
+  an `XMWrap` of the original tokens, so the phantom op never reaches pMML on
+  either side. `multirelation` likewise already identical.
+- **`pmml_parenthesize`'s `usemfenced` branch — N-A, confirmed.** `usemfenced` is
+  never set anywhere in Perl LaTeXML: no CLI option, no constructor argument — the
+  only three mentions are the comment (L58), the read (L602) and the POD (L2075).
+  `m:mfenced` is also gone from MathML Core.
+
+**F17 — `outerWrapper` altimg + RDFa ✅ FIXED 2026-07-29, and it needed a second
+fix in CrossRef.** `outer_wrapper` (`mathml/mod.rs`) emitted only
+`display`/`alttext`/`class`, dropping two whole attribute families that Perl
+copies onto `<m:math>` (L81-90):
+
+- **the image fallback** — `altimg`, `altimg-width`, `altimg-height`,
+  `altimg-valign`, from the Math's `imagesrc`/`imagewidth`/`imageheight`/
+  `imagedepth`. This is the entire point of `--mathimages`: a renderer without
+  MathML support had nothing to fall back to. Perl NEGATES the depth ("Note the
+  sign!"), so `imagedepth="5"` → `altimg-valign="-5px"`, and omits that attribute
+  for a falsy depth rather than emitting a bare `-px`.
+- **the RDFa set** — `about resource property rel rev typeof datatype content`,
+  from the Math element or else the XMath. A document annotating a formula with
+  `lxRDFa` lost the annotation at the MathML boundary.
+
+**The RDFa half was only half-fixed by that**, which end-to-end diffing caught:
+`property`/`typeof` appeared but `about` did not, because `lxRDFa` records an
+intra-document subject as **`aboutidref`** (the URL is not knowable until the
+document is split — `LaTeXML-common.rnc` L301) and Rust had **no port of
+`CrossRef.pm::fill_in_RDFa_refs`** (L372-398) to resolve it. Now added, in Perl's
+pass position (after `fill_in_refs`, before `fill_in_bibrefs`), covering both
+`about`/`resource` and both the `…idref` and `…labelref` spellings. A DB-known id
+becomes a real URL via `generate_url`; an unknown one still becomes a bare `#id`,
+because per Perl's own comment "RDF 'id' need not be real, valid, ids!!!".
+Perl's trailing `set_RDFa_prefixes` re-run is deliberately NOT ported: this pass
+only ever writes absolute URLs or `#id` fragments, never prefixed CURIEs, so there
+is no new prefix to declare, and prefix management already happens core-side
+(`latexml_core::document::set_rdfa_prefixes`, as in Perl `Core/Document.pm:366`).
+One Perl quirk mirrored rather than fixed: with `imagesrc` present but
+`imagewidth` absent, Perl emits `altimg-width="px"` — unreachable via
+`--mathimages`, which always sets both, so diverging would cost byte-parity for
+nothing.
+Guards: `90_latexmlpost::mathouter_post_test` (Perl golden, **0 diff lines**, RED
+pre-fix at 4 — the fixture also pins the two negative cases: a formula with
+neither family gains nothing, and an image with no depth omits `altimg-valign`)
+and `06_cluster_regressions::cluster_rdfa_math_subject` (RED pre-fix). End-to-end
+`\lxRDFa[//ltx:Math]{about=#thm1,property=…,typeof=…}` is now byte-identical to
+same-host Perl 0.8.8.
+
+**F17 — `pmml_scriptsize_padded` embellishment padding ✅ FIXED 2026-07-29.**
+Perl L925-934, "This is to handle primed sums, etc.", plus the `emb_right`
+detection in `pmml_script_decipher` (L1015-1017) that feeds it. In
+`\mathop{X'}\limits_{p}^{q}` the prime is an embellishment of the **base**, not a
+script of the outer construct: Perl stops its downward walk on a post script found
+*below* a mid (under/over) script, keeps the embellished `Apply(post-sup, X, ')`
+as the base, and widens each limit with an invisible copy of the `'` so the limits
+centre over the `X` rather than over the whole `X'` box. Rust treated the prime as
+an outer postscript, which **inverted the nesting** — `msup` outside `munderover`
+instead of inside — and emitted no phantom at all.
+**Perl's `$emb_left` is dead code and is deliberately NOT represented**: 
+`pmml_script_decipher` declares it (L968) and returns it (L1022) but never assigns
+it, so the left-phantom arm of `pmml_scriptsize_padded` is unreachable upstream.
+Rust therefore threads a single `emb_right`.
+Guard `90_latexmlpost::mathprimed_post_test`, **0 diff lines**, verified RED
+pre-fix at **20** (the diff is exactly the inverted `msup`/`munderover` nesting).
+The fixture's two other formulas are negative cases that must gain no phantom.
+
+**F17 — `combineParallel` annotation-xml wrap: BLOCKED, not portable today.**
+Perl's two missing branches (L123-127) fire only for a **non-MathML** secondary —
+other XML, which needs that processor's own `outerWrapper`, or an image referred to
+by `src`. Rust registers exactly one parallel secondary, Content-MathML, whose
+mimetype takes the *first* branch. `open_math.rs` and `math_images.rs` exist as
+modules but are **wired into no pipeline** (`lib.rs:140` says so outright: "as
+MathImages when they are wired up to process_chain"), and Rust's CLI has **no
+`--openmath` / `--mathimages` / `--mathsvg`** at all where Perl's `latexmlpost` has
+all three. So porting the branches now would be untestable dead code; the
+prerequisite is that larger math-format feature. Recorded rather than written.
+
+**F17 — `preprocess` plane1 config ✅ FIXED 2026-07-29 — F17 IS NOW CLOSED.**
+`MathML::plane1` existed as a struct field, was set `true` by both constructors,
+and was **never read**: the token path remapped to Plane-1 unconditionally. So
+`--noplane1` could not have worked even if the flag had existed, and `hackplane1`
+was absent altogether. Perl `stylizeContent` L734-736 picks the variant to remap
+*with*:
+
+```perl
+my $u_variant = $variant
+  && ($plane1hack ? $plane1hackable{$variant}
+  : ($plane1 ? $variant : undef));
+```
+
+Now ported, with `%plane1hackable` (L659-664) and Perl's `hackplane1 ⇒ plane1`
+implication (L71). New CLI: **`--plane1` / `--noplane1` / `--hackplane1`**, which
+Rust previously lacked entirely where `latexmlpost` has `plane1!` and
+`hackplane1!`. Measured against same-host Perl 0.8.8 on
+`\mathcal{A}+\mathfrak{B}+\mathbb{C}+\mathbf{D}+\mathbf{\mathcal{E}}` — **all three
+modes byte-identical**:
+
+| mode | `\mathcal{A}` | `\mathbf{D}` | `\mathbf{\mathcal{E}}` |
+|---|---|---|---|
+| default | `𝒜` | `𝐃` | `ℰ` |
+| `--noplane1` | `A` + `mathvariant="script"` | `D` + `mathvariant="bold"` | `E` + variant |
+| `--hackplane1` | `𝒜` | `D` + `mathvariant="bold"` | `ℰ` (plain script) |
+
+`--hackplane1` leaves `\mathbf{D}` alone because `bold` is absent from
+`%plane1hackable` — the table exists precisely so the doubly-styled blocks
+(bold-script, bold-fraktur) degrade to the plain codepoint no font is missing.
+Guard `90_latexmlpost::plane1_modes_match_perl` drives the real processor (so the
+`set_plane1` handoff in `convert_node` is exercised, not just the builder) and
+asserts the negative side too — `mathvariant="bold"` must appear *exactly* when
+`\mathbf` did not remap, so a build emitting both codepoint and attribute fails.
+Verified RED by neutering `plane1_target_variant` to the old unconditional
+`Some(variant)`; note the guard cannot be red-checked by stashing the whole fix,
+because the `with_plane1` builder it calls arrives with it.
+
+**`nestmath` deliberately NOT ported**: it has no CLI in Perl either (only
+`preprocess`'s `$$self{nestmath} = 0` default and the `ltx:XMText` branch at
+L497-500), so nothing can turn it on in either engine. Porting it would add an
+unreachable second `XMText` arm.
+
+**Found, not fixed — a new witness for the FUNCTION APPLICATION over-insertion
+family.** `\[ \mathop{X'}\limits_{p}^{q} c \]`: Rust inserts `<m:mo>⁡</m:mo>`
+before the trailing factor where Perl juxtaposes. Same family as
+`opdecoration_post_test`'s `op_base_is_mo` rule, but a base shape that rule does
+not cover — here the base's presentation is a `munderover`, not a bare `mo`. The
+`mathprimed` fixture deliberately omits trailing operands so this does not mask the
+padding assertions.
+
+**Found, NOT F17 and NOT the post layer — a math-parser script-position bug.**
+`{}^{n}a_{i}`: Rust classifies the *trailing* `_{i}` as a **prescript**.
+
+| engine | parse |
+|---|---|
+| Perl | `Apply(SUPERSCRIPTOP pre1, Apply(SUBSCRIPTOP post1, a, i), n)` — `n` pre-sup, `i` post-sub ✓ |
+| Rust | `Apply(SUBSCRIPTOP pre2, Apply(SUPERSCRIPTOP pre1, a, n), i)` — both `pre` ✗ |
+
+The post stage is faithful: `pmml_script_decipher` and `apply_multi_scripts`
+reproduce Perl's algorithm, and fed Perl's core XML they agree. Because the
+*parser* mislabels `scriptpos`, the pMML comes out
+`<m:mi>a</m:mi><m:mprescripts/><m:mi>i</m:mi><m:mi>n</m:mi>` — `a_i` rendered as
+`{}_i^n a`, a **relocated subscript**, not merely different padding. Reachable
+from ordinary input: found via `\sum'_{i=1}^{n} a_i`, whose `{}^{n}` empty-base
+superscript produces the same shape. A fully-populated tensor
+(`{}^{1}_{2}X^{3}_{4}`) is byte-identical, so the fault is specific to a
+partially-filled pre/post mix. **Belongs to the math-parser family (R8), deferred
+by user directive 2026-06-20 — do not fix in isolation**; recorded here with the
+repro so the witness is not lost. Minimal repro: `\( {}^{n}a_{i} \)`.
+
+Third from this pass, **fixed 2026-07-30**: a braced script chain would not fold
+past depth two, nor across two scripts of the SAME kind. `scripted_factor_r2`
+(`latexml_math_parser/src/grammar/builder.rs`) hand-unrolled Perl's `addScripts`
+(`MathGrammar` L419-423) to exactly two, alternating —
+`r12 postsuperarg | r11 postsubarg` — where Perl recurses with no depth bound and
+no alternation requirement. Four shapes therefore rendered `ltx_math_unparsed`:
+`{x^a}^b`, `{x_a}_b`, `{{x_a}^b}_c`, `{{{x_a}^b}_c}^d`. Braces are what make
+these reachable, which is why the cap survived: bare `x^a^b` is rejected by TeX
+as "Double superscript" and never reaches the parser. Now left-recursive and
+unbounded; the derivation stays unique, so no new ambiguity to prune. `XMath` and
+pMML are byte-identical to Perl for all of them, and a controlled A/B on
+`equality_big.tex` and `ams/mathtools.tex` shows no measurable parse-time change.
+Guard: `06_cluster_math::cluster_script_chain_depth`.
+
+Also from this pass, and **fixed 2026-07-30**: Rust filled an absent
+`mmultiscripts` slot with `<m:none/>` where Perl uses an empty `<m:mrow/>`. This
+was briefly written up as an intentional divergence (OXIDIZED_DESIGN #86, since
+removed) on the mistaken grounds that `m:none` is the element MathML designates
+for an empty slot. **MathML Core removed `<none>`**; an empty `m:mrow` is the
+accepted placeholder for an omitted subtree, so Perl's spelling is both the
+faithful and the standards-current one. `apply_multi_scripts` now emits it.
+Guard: `90_latexmlpost::scriptlevels_post_test`.
+
+### R6 — `ltx_env_<name>` env-markup class — PHASE 2, do NOT start yet
+**Deferred by user directive 2026-07-29: this waits until the parity and
+first-arXiv-release milestones are done.** It is a beyond-Perl styling
+enhancement, not a parity gap, and its golden churn (an additive class on every
+env element in nearly every test XML) would sit on top of release-critical work.
+Pick it up only after those milestones land — then on its own branch.
+
+Design notes, kept so the analysis is not re-derived:
+- `Document::open_element` (`latexml_core/src/document.rs`) is the single funnel
+  for element creation, so one armed-in-`before_construct` /
+  consumed-by-first-`open_element` slot on `Document` tags exactly the env's
+  wrapper element. That survives the schema's auto-open/auto-close (which defeats
+  a parent-anchor + child-count mark for `figure`/`table`) and needs **no** node
+  gid — so the "needs a globally-unique monotonic node gid" prerequisite below
+  applies only to the raw `\newenvironment` half.
+- Name sanitizing is already available: `clean_class_name` (Perl
+  `Package.pm:527 CleanClassName`), giving `figure*` → `ltx_env_figure`.
+- 302 of 305 `DefEnvironment!` sites are template-based and 3 are closures; both
+  paths funnel through `open_element`, so one hook covers all of them.
+- `add_class` merges with a template's existing `class` and is schema-filtered,
+  so `minipage` would become `class="ltx_env_minipage ltx_minipage"`.
+- Golden churn is mechanical via `tools/maketests.sh` (`LATEXML_BLESS=1`), with a
+  filtered diff to prove only `class=` changed.
+
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
 with `class="ltx_env_<name>"` so custom/minipage-like envs (e.g. `SideBySideExample`)
 become responsively styleable in CSS instead of fixed-width minipages. **MUST be on a

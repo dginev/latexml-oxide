@@ -120,6 +120,11 @@ Verified-and-landed items move to the ✅ list at the bottom.
   Lesson: witness diffs must be traced to producer vs consumer before
   patching the post side.
 
+> **Re-measured 2026-07-29 — three of the F17 items below are settled as
+> do-not-port/N-A, and the ADDOP flatten is DEAD IN PERL (porting it would create
+> a divergence). See `SYNC_STATUS.md` R3 for the evidence; do not work this bullet
+> without reading that first.**
+
 - **F17 — smaller pmml gaps:** `pmml_infix` ADDOP flatten via `pmml_unrow`
   (L639-644) absent; `pmml_scriptsize_padded` (L926, primed-sum limit
   centering) + `pmml_script_decipher` emb_left/emb_right absent;
@@ -163,6 +168,21 @@ Verified-and-landed items move to the ✅ list at the bottom.
   `find_inherited_attribute` (walking up to the Document node read a
   misaligned ns field — the known rust-libxml class; element-type guard,
   Perl-faithful).
+
+- **F17a ✅ (2026-07-29)** — `pmml_text_aux` now threads Perl's `%attr`
+  (L1029, L1041-1045), so an `m:mtext` keeps the font/fontsize/color/
+  backgroundcolor/opacity of the `ltx:text` that wrapped it — previously EVERY
+  `m:mtext` was unstyled. Same function, two more: a leading whitespace run was
+  `trim_start()`ed away rather than replaced by an NBSP (L1035), and an
+  already-converted nested `ltx:Math` returned nothing instead of the existing
+  `m:math`'s children (L1051-1052), silently dropping the formula. Plus the
+  `framed`/`framecolor` guard + `pmml_maybe_resize` on the `ltx:text` arm and the
+  `unexpected:nested-math` warning. `delete $mmlattr{stretchy}` (L1069) is N-A:
+  `%props` is `m:mo`-only and `$stretchy` is cleared for other tags (L764-767).
+  Killed the ~245-line DEAD second copy of `stylizeContent` in `mathml/mod.rs`
+  (nothing called it, so its `m:mo` arm had silently drifted); it is now the live
+  `m:mtext` half. Guard `90_latexmlpost::mtextstyle_post_test` — 0 diff lines vs
+  same-host Perl 0.8.8, verified RED pre-fix at 18. See SYNC_STATUS R3.
 
 - **F15 ✅ (2026-07-02)** — `do_cfrac` ported in full (denominator-sum last-
   term pull-up: trailing `\cdots`, nested-cfrac recursion, invisible-times
@@ -283,7 +303,7 @@ Verified-and-landed items move to the ✅ list at the bottom.
 | `pmml_maybe_resize` (L525) | DEAD | mod.rs port unwired (→F9) |
 | `filter_row` (L577) | MISSING | `_ignorable` drop (→F11) |
 | `pmml_row` (L581) | PARTIAL | no filter_row (→F11) |
-| `pmml_unrow` (L586) | DEAD | needed by ADDOP flatten (→F17) |
+| `pmml_unrow` (L586) | DEAD — **and dead in PERL too** (2026-07-29): `associateNode` stamps `_sourced` on every `pmml()` result, so its empty-attrs guard never passes. Do NOT port. | ~~needed by ADDOP flatten (→F17)~~ |
 | `pmml_parenthesize` (L594) | PARTIAL | no usemfenced branch; no synthesized OPEN/CLOSE mo (→F17) |
 | `pmml_punctuate` (L611) | N-A | dead in Perl too ("never used?") |
 | `pmml_infix` (L626) | PARTIAL | ADDOP flatten missing (→F17) |
@@ -293,7 +313,7 @@ Verified-and-landed items move to the ✅ list at the bottom.
 | `pmml_script` (L876) | PARTIAL | innerbase mstyle wrap (→F7) |
 | `pmml_script_mid_layout` (L893) | PARTIAL | NOMOVABLELIMITS + phantom padding (→F17) |
 | `pmml_scriptsize_padded` (L926) | MISSING | primed-sum limit centering (→F17) |
-| `pmml_script_multi_layout` (L936) | PARTIAL | empty slot `m:none` vs Perl empty mrow (→F17) |
+| `pmml_script_multi_layout` (L936) | ✅ | empty slot was `m:none`; now Perl's empty `m:mrow` (MathML Core removed `none`) |
 | `pmml_script_decipher` (L963) | PARTIAL | emb_left/emb_right + prelevel logic (→F17) |
 | `pmml_text_aux` (L1029) | PARTIAL | text-node styling + attr propagation (→F17) |
 | `adjust_spacing` (L1079) | PORTED | presentation.rs |

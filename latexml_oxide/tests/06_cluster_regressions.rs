@@ -9,7 +9,9 @@
 //! `06_cluster_toc_navigation`, `06_cluster_standalone_subfiles`.
 
 mod cluster;
-use cluster::{convert_clean, convert_expecting_errors, convert_log, convert_to_xml};
+use cluster::{
+  convert_and_post_clean, convert_clean, convert_expecting_errors, convert_log, convert_to_xml,
+};
 
 #[test]
 fn cluster_nbsp_csname() { convert_clean("tests/cluster_regressions/nbsp_csname.tex"); }
@@ -476,4 +478,71 @@ fn cluster_fnum_arg_hook() {
     x.contains("<theorem") && x.contains(r#"<tag>1.</tag>"#),
     "\\fnum@thmx did not supply the theorem header tag:\n{x}"
   );
+}
+
+/// A `robust` DefConstructor must revert under its ORIGINAL control sequence,
+/// not the munged one.
+///
+/// Perl `Package.pm` L1480-1481 gives a `robust` DefConstructor
+/// `alias => $cs` whenever the caller supplied no explicit alias. `robust`
+/// installs the real definition under `\ref` + a literal trailing SPACE —
+/// LaTeX2e's `\DeclareRobustCommand` idiom, where `\ref` expands to
+/// `\protect\ref␣` and `\ref␣` holds the body — so without that alias the
+/// whatsit reverts as `\ref␣` and the space rides into the `ltx:Math` `tex=`
+/// attribute, and from there into the MathML `alttext`, which is the
+/// screen-reader / no-MathML fallback. `\ref` is LaTeXML's only `robust`
+/// DefConstructor (the `robust` DefMath entries pass an explicit alias, and
+/// Perl deliberately does NOT apply this fallback to `DefPrimitiveI`, L1318).
+///
+/// Ground truth: same-host Perl LaTeXML 0.8.8 on this exact fixture emits all
+/// three `tex=` attributes byte-identically to the assertions below, with zero
+/// errors in both engines.
+#[test]
+fn cluster_robust_cs_reverts_unmunged() {
+  let x = convert_to_xml("tests/cluster_regressions/robust_cs_reversion.tex");
+  assert!(
+    !x.contains(r"\ref {"),
+    "a robust constructor reverted under its munged `\\ref ` name, so the \
+     trailing space leaked into tex= (and thence the MathML alttext):\n{x}"
+  );
+  // `\pageref` is `\let` to `\ref`, so it reverts as `\ref` too — both
+  // formulas therefore carry the identical reversion.
+  assert_eq!(
+    x.matches(r#"tex="x+\ref{sec:one}""#).count(),
+    2,
+    "expected \\ref and \\pageref to both revert as `x+\\ref{{sec:one}}`:\n{x}"
+  );
+  // And inside \text, where the reversion is nested one level deeper.
+  assert!(
+    x.contains(r#"tex="x+\text{see \ref{sec:one}}""#),
+    "the nested \\ref reversion inside \\text does not match Perl:\n{x}"
+  );
+}
+
+/// CrossRef must resolve an RDFa `aboutidref` into a real `about`.
+///
+/// `lxRDFa.sty` records an intra-document RDFa subject as `aboutidref` rather
+/// than a URL, because the URL is not knowable until the document has been split
+/// — `LaTeXML-common.rnc` L301: "it will be converted to `aboutidref` and `about`
+/// during post-processing". Rust had no port of Perl's
+/// `CrossRef.pm::fill_in_RDFa_refs` (L372-398), so that conversion never
+/// happened: the `aboutidref` survived into the output where nothing reads it,
+/// and the RDFa triple lost its SUBJECT entirely.
+///
+/// The companion half — `outerWrapper` copying `about`/`property`/`typeof`/… onto
+/// `<m:math>` — is guarded by `90_latexmlpost::mathouter_post_test` against a
+/// Perl golden. Together they make `\lxRDFa[//ltx:Math]{about=#thm1,…}`
+/// byte-identical to same-host Perl 0.8.8 end to end, `about="#thm1"` included.
+#[test]
+fn cluster_rdfa_math_subject() {
+  let x = convert_and_post_clean("tests/cluster_regressions/rdfa_math_subject.tex");
+  assert!(
+    x.contains(r##"about="#thm1""##),
+    "CrossRef did not resolve `aboutidref` into `about`, so the RDFa subject is \
+     lost (no port of fill_in_RDFa_refs):\n{x}"
+  );
+  // The author-visible attributes that ride along must survive too.
+  for attr in [r#"property="ex:formula""#, r#"typeof="ex:Eq""#] {
+    assert!(x.contains(attr), "missing RDFa attribute {attr}:\n{x}");
+  }
 }

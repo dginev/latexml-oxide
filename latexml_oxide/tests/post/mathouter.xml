@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>The RDFa set, plus an image fallback, on a display formula:
+      <Math mode="display" class="ltx_my_math" tex="x+y" text="x + y"
+            about="#thm1" resource="#eq1" property="ex:formula" rel="ex:partOf"
+            rev="ex:hasPart" typeof="ex:Equation" datatype="xsd:string"
+            content="x plus y"
+            imagesrc="eq1.png" imagewidth="42" imageheight="17" imagedepth="5"
+            xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+    </p>
+    <p>An inline formula with NO image and NO RDFa, so neither attribute family
+      may be invented:
+      <Math mode="inline" tex="z" text="z" xml:id="p1.m2">
+        <XMath>
+          <XMTok font="italic" role="UNKNOWN">z</XMTok>
+        </XMath>
+      </Math>
+    </p>
+    <p>An image with NO depth, so altimg-valign must be omitted rather than
+      emitted as a bare minus sign:
+      <Math mode="inline" tex="w" text="w" imagesrc="eq2.png" imagewidth="9"
+            imageheight="8" xml:id="p1.m3">
+        <XMath>
+          <XMTok font="italic" role="UNKNOWN">w</XMTok>
+        </XMath>
+      </Math>
+    </p>
+  </para>
+</document>

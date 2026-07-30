@@ -16,12 +16,26 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
 use super::operator_dictionary;
-use crate::document::{NodeData, PostDocument, element_children, element_children_iter};
+use crate::document::{NodeData, PostDocument, XMBranch, element_children, element_children_iter};
 
 // Thread-local flag for invisible times emission.
 // When false, U+2062 is replaced with U+200B (zero-width space).
 thread_local! {
   static INVISIBLE_TIMES: Cell<bool> = const { Cell::new(true) };
+  /// Whether to remap styled alphanumerics into Unicode's Plane-1 Mathematical
+  /// Alphanumeric Symbols. Perl `$$MATHPROCESSOR{plane1}`, defaulted to 1 in
+  /// `preprocess` (L70) and negatable with `latexmlpost --noplane1`. When off, the
+  /// text stays ASCII and the style is carried by a `mathvariant` attribute
+  /// instead — which some renderers and screen readers handle far better than the
+  /// Plane-1 codepoints, whose font coverage is patchy.
+  static PLANE1: Cell<bool> = const { Cell::new(true) };
+  /// Perl `$$MATHPROCESSOR{hackplane1}` (`--hackplane1`): remap only the variants
+  /// in `plane1_hackable`, and to the SIMPLER variant it names. This exists
+  /// because the doubly-styled blocks (bold-script, bold-fraktur) are the worst
+  /// supported of all, so `\mathbf{\mathcal{E}}` is better served by the plain
+  /// script codepoint than by a bold-script one no font will have. Implies
+  /// `plane1` (Perl L71).
+  static HACK_PLANE1: Cell<bool> = const { Cell::new(false) };
   /// Inherited style context (Perl `pmml_top` L278-285 binds
   /// $LaTeXML::MathML::FONT/COLOR/BGCOLOR/OPACITY from the XMath node's
   /// ancestor chain; `pmml` L332-335 locally rebinds them from each node on
@@ -48,6 +62,44 @@ thread_local! {
 pub fn set_invisible_times(emit: bool) { INVISIBLE_TIMES.with(|f| f.set(emit)); }
 
 fn get_invisible_times() -> bool { INVISIBLE_TIMES.with(|f| f.get()) }
+
+/// Set the Plane-1 remapping mode (called by the MathML processor before
+/// rendering). Mirrors Perl `preprocess` L69-71: `hackplane1` implies `plane1`.
+pub fn set_plane1(plane1: bool, hack_plane1: bool) {
+  PLANE1.with(|f| f.set(plane1 || hack_plane1));
+  HACK_PLANE1.with(|f| f.set(hack_plane1));
+}
+
+/// Perl `%plane1hackable` (L659-664) — the mathvariants worth remapping under
+/// `--hackplane1`, each mapped to the simpler variant to remap it AS. A variant
+/// absent from this table is left un-remapped in hack mode, which is the whole
+/// point: `bold` stays `mathvariant="bold"` on ASCII rather than becoming 𝐃.
+fn plane1_hackable(variant: &str) -> Option<&'static str> {
+  match variant {
+    "script" | "bold-script" => Some("script"),
+    "fraktur" | "bold-fraktur" => Some("fraktur"),
+    "double-struck" => Some("double-struck"),
+    _ => None,
+  }
+}
+
+/// The variant to actually remap with, or `None` to skip remapping entirely.
+///
+/// Port of Perl `stylizeContent` L734-736:
+/// ```text
+/// my $u_variant = $variant
+///   && ($plane1hack ? $plane1hackable{$variant}
+///   : ($plane1 ? $variant : undef));
+/// ```
+fn plane1_target_variant(variant: &str) -> Option<&str> {
+  if HACK_PLANE1.with(|f| f.get()) {
+    plane1_hackable(variant)
+  } else if PLANE1.with(|f| f.get()) {
+    Some(variant)
+  } else {
+    None
+  }
+}
 
 /// The contextual font size (e.g. "100%", "70%", "50%") implied by the current math style.
 /// A token whose own `fontsize` equals this needs no explicit `mathsize` attribute.
@@ -312,8 +364,11 @@ fn is_embellishing_role(role: &str) -> bool {
   )
 }
 
-/// Default token content for invisible operators.
-fn default_token_content(role: &str) -> Option<&'static str> {
+/// Default token content for invisible operators — Perl's
+/// `%default_token_content`, consulted by `stylizeContent`'s empty-item
+/// failsafe. Shared with the `m:mtext` half of that function in the parent
+/// module, so the two arms cannot drift.
+pub(super) fn default_token_content(role: &str) -> Option<&'static str> {
   match role {
     "MULOP" => Some("\u{2062}"), // INVISIBLE TIMES
     "ADDOP" => Some("\u{2064}"), // INVISIBLE PLUS
@@ -427,6 +482,27 @@ pub(super) fn bind_cmml_top_context(doc: &PostDocument, xmath: &Node) {
 /// The inherited font context, for the content side's ci stylization
 /// (Perl stylizeContent's `|| $LaTeXML::MathML::FONT` fallback).
 pub(super) fn ctx_font() -> Option<String> { ctx_get(&CTX_FONT) }
+
+/// The inherited color context (Perl `|| $LaTeXML::MathML::COLOR`).
+pub(super) fn ctx_color() -> Option<String> { ctx_get(&CTX_COLOR) }
+
+/// The inherited background-color context (Perl `|| $LaTeXML::MathML::BGCOLOR`).
+pub(super) fn ctx_bgcolor() -> Option<String> { ctx_get(&CTX_BGCOLOR) }
+
+/// The inherited opacity context (Perl `|| $LaTeXML::MathML::OPACITY`).
+pub(super) fn ctx_opacity() -> Option<String> { ctx_get(&CTX_OPACITY) }
+
+/// The current style's nominal size, as a percentage string — Perl's
+/// `$LaTeXML::MathML::SIZE || 'text'` comparand in `stylizeContent` L779-781.
+pub(super) fn context_size() -> &'static str { current_context_size() }
+
+/// `resolve_token_size`, for the `m:mtext` arm of `stylizeContent`.
+pub(super) fn resolve_size(s: String) -> String { resolve_token_size(s) }
+
+/// `pmml_maybe_resize`, for the `ltx:text` arm of `pmml_text_aux` (Perl L1059).
+pub(super) fn maybe_resize(doc: &PostDocument, node: &Node, result: NodeData) -> NodeData {
+  pmml_maybe_resize(doc, node, result)
+}
 
 /// Core dispatch: convert a single XMath node to Presentation MathML.
 ///
@@ -594,7 +670,7 @@ fn pmml_inner(doc: &PostDocument, node: &Node) -> NodeData {
         if let Some(child) = node.get_first_child() {
           let mut current = Some(child);
           while let Some(ref c) = current {
-            children.extend(super::pmml_text_aux(doc, c));
+            children.extend(super::pmml_text_aux(doc, c, &super::TextAttrs::default()));
             current = c.get_next_sibling();
           }
         }
@@ -1109,16 +1185,28 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
       variant = Some("normal"); // multi-char mi without font → normal
     }
 
-    // Plane 1 Unicode conversion
-    if let Some(v) = variant {
-      if tag != "m:mtext" {
-        if let Some(u_text) = unicode::unicode_convert(&text, v) {
-          if !u_text.is_empty() || text.is_empty() {
-            text = u_text;
-            variant = None; // character carries style
-          }
-        }
-      }
+    // Plane 1 Unicode conversion. Perl L734-737 picks the variant to remap WITH:
+    // under `--hackplane1` only the `plane1_hackable` variants remap (and to the
+    // simpler variant named there), under the default `plane1` the variant itself,
+    // and under `--noplane1` nothing remaps — the text stays ASCII and the
+    // `mathvariant` attribute emitted below carries the style instead. `m:mtext`
+    // never remaps at all.
+    if let Some(v) = variant
+      && tag != "m:mtext"
+      && let Some(u_variant) = plane1_target_variant(v)
+      && let Some(u_text) = unicode::unicode_convert(&text, u_variant)
+      && (!u_text.is_empty() || text.is_empty())
+    {
+      text = u_text;
+      // Perl L739-740 keeps a BOLD variant when the hack downgraded it (e.g.
+      // `bold-script` remapped as `script` still deserves `mathvariant="bold"`,
+      // since the codepoint carries only the script-ness); otherwise the
+      // character carries the whole style and the attribute is dropped.
+      variant = if u_variant != v && v.starts_with("bold") {
+        Some("bold")
+      } else {
+        None
+      };
     }
 
     // Emit remaining variant attribute
@@ -1689,7 +1777,7 @@ type ScriptPair = (Option<Node>, Option<Node>);
 ///
 /// Port of `pmml_script`.
 fn pmml_script_full(doc: &PostDocument, op: &Node, base: &Node, script: &Node) -> NodeData {
-  let (inner_base, pre_scripts, mid_scripts, post_scripts) =
+  let (inner_base, pre_scripts, mid_scripts, post_scripts, emb_right) =
     pmml_script_decipher(doc, op, base, script);
 
   // Perl `pmml_script` (L876-891) + `pmml_script_mid_layout` (L899-906):
@@ -1709,7 +1797,7 @@ fn pmml_script_full(doc: &PostDocument, op: &Node, base: &Node, script: &Node) -
   CURRENT_STYLE.with(|s| s.set(ostyle));
 
   // Apply mid scripts (under/over)
-  let base_mml = apply_mid_scripts(doc, base_mml, &mid_scripts);
+  let base_mml = apply_mid_scripts(doc, base_mml, &mid_scripts, emb_right.as_ref());
 
   // Apply pre/post scripts
   let layout = apply_multi_scripts(doc, base_mml, &pre_scripts, &post_scripts);
@@ -1739,55 +1827,71 @@ fn pmml_script_decipher(
   op: &Node,
   base: &Node,
   script: &Node,
-) -> (Node, Vec<ScriptPair>, Vec<ScriptPair>, Vec<ScriptPair>) {
+) -> (
+  Node,
+  Vec<ScriptPair>,
+  Vec<ScriptPair>,
+  Vec<ScriptPair>,
+  Option<Node>,
+) {
   let mut pre_scripts: Vec<ScriptPair> = Vec::new();
   let mut mid_scripts: Vec<ScriptPair> = Vec::new();
   let mut post_scripts: Vec<ScriptPair> = Vec::new();
+  // Perl's `$emb_right` — the base's RIGHT embellishment, used to phantom-pad
+  // the under/over scripts (L968, L1015-1017). Perl also declares `$emb_left`
+  // but NEVER assigns it, so that half of `pmml_scriptsize_padded` is dead code
+  // upstream and is deliberately not represented here.
+  let mut emb_right: Option<Node> = None;
+  let mut saw_mid = false;
 
-  let role = op.get_attribute("role").unwrap_or_default();
-  let pos_str = op
-    .get_attribute("scriptpos")
-    .unwrap_or_else(|| "post0".to_string());
-  let pos = if pos_str.starts_with("pre") {
-    "pre"
-  } else if pos_str.starts_with("mid") {
-    "mid"
-  } else {
-    "post"
-  };
-  let is_sub = role.contains("SUB");
+  // Perl tracks the last level seen in each of the three groups, so that a
+  // script at a DIFFERENT nesting level starts a new pair instead of filling the
+  // free slot of the current one. Perl compares with `ne`, and the initials are
+  // the number 0 — which stringifies to "0" and so matches a literal `post0`.
+  let (mut pre_level, mut mid_level, mut post_level) =
+    ("0".to_string(), "0".to_string(), "0".to_string());
 
-  // Place first script
+  let (pos, level) = parse_scriptpos(op);
+  let is_sub = op.get_attribute("role").unwrap_or_default().contains("SUB");
+
+  // Place the first script.
   let pair = if is_sub {
     (Some(script.clone()), None)
   } else {
     (None, Some(script.clone()))
   };
-
   match pos {
-    "pre" => pre_scripts.push(pair),
-    "mid" => mid_scripts.push(pair),
-    _ => post_scripts.push(pair),
+    ScriptPos::Pre => {
+      pre_scripts.push(pair);
+      pre_level = level;
+    },
+    ScriptPos::Mid => {
+      saw_mid = true;
+      mid_scripts.push(pair);
+      mid_level = level;
+    },
+    ScriptPos::Post => {
+      post_scripts.push(pair);
+      post_level = level;
+    },
   }
 
-  // Walk down through nested scripts on the base
+  // Walk down through nested scripts on the base.
   let mut current_base = base.clone();
   loop {
-    // Realize XMRef
-    let realized = if doc.is_qname(&current_base, "ltx:XMRef") {
-      current_base
-        .get_attribute("idref")
-        .and_then(|id| doc.find_node_by_id(&id).cloned())
-        .unwrap_or_else(|| current_base.clone())
-    } else {
-      current_base.clone()
+    // Perl `$base = realize($base, 'presentation')` — note it ASSIGNS, so the
+    // base ultimately returned is the realized one, and the realization follows
+    // XMDual as well as XMRef.
+    let Some(realized) = doc.realize_xm_node_branch(&current_base, XMBranch::Presentation) else {
+      break;
     };
+    current_base = realized;
 
-    if !doc.is_qname(&realized, "ltx:XMApp") {
+    if !doc.is_qname(&current_base, "ltx:XMApp") {
       break;
     }
 
-    let children = element_children(&realized);
+    let children = element_children(&current_base);
     if children.len() < 3 {
       break;
     }
@@ -1803,69 +1907,162 @@ fn pmml_script_decipher(
       break;
     }
 
-    let xbase = &children[1];
+    let xbase = children[1].clone();
     let xscript = &children[2];
-    let xpos_str = xop
-      .get_attribute("scriptpos")
-      .unwrap_or_else(|| "post0".to_string());
-    let xpos = if xpos_str.starts_with("pre") {
-      "pre"
-    } else if xpos_str.starts_with("mid") {
-      "mid"
-    } else {
-      "post"
-    };
+    let (xpos, xlevel) = parse_scriptpos(xop);
     let x_is_sub = xrole.contains("SUB");
-    let xpair = if x_is_sub {
-      (Some(xscript.clone()), None)
-    } else {
-      (None, Some(xscript.clone()))
-    };
 
     match xpos {
-      "pre" => {
-        // Try to merge with existing pre pair
-        if let Some(last) = pre_scripts.last_mut() {
-          let slot = if x_is_sub { &mut last.0 } else { &mut last.1 };
-          if slot.is_none() {
-            *slot = if x_is_sub { xpair.0 } else { xpair.1 };
-          } else {
-            pre_scripts.push(xpair);
-          }
-        } else {
-          pre_scripts.push(xpair);
-        }
+      // Prescripts accumulate outward-in, so Perl appends (`push`) and inspects
+      // the LAST pair; mid and post scripts accumulate inward-out, so it
+      // prepends (`unshift`) and inspects the FIRST.
+      ScriptPos::Pre => place_script(
+        &mut pre_scripts,
+        &mut pre_level,
+        xlevel,
+        x_is_sub,
+        xscript.clone(),
+        false,
+      ),
+      ScriptPos::Mid => {
+        saw_mid = true;
+        place_script(
+          &mut mid_scripts,
+          &mut mid_level,
+          xlevel,
+          x_is_sub,
+          xscript.clone(),
+          true,
+        );
       },
-      "mid" => {
-        if let Some(first) = mid_scripts.first_mut() {
-          let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
-          if slot.is_none() {
-            *slot = if x_is_sub { xpair.0 } else { xpair.1 };
-          } else {
-            mid_scripts.insert(0, xpair);
-          }
-        } else {
-          mid_scripts.push(xpair);
+      ScriptPos::Post => {
+        // Perl L1015-1017: a POST script found BELOW a mid (under/over) script is
+        // not a script of the outer construct at all — it is an embellishment of
+        // the base, e.g. the prime in `\mathop{X'}\limits_{p}^{q}`. Record it for
+        // phantom padding and STOP the walk WITHOUT descending, so `current_base`
+        // stays the embellished `Apply(post-sup, X, ')` and renders whole. Without
+        // this the prime is treated as an outer postscript, which inverts the
+        // nesting (`msup` outside `munderover` instead of in) and leaves the limits
+        // uncentred over the primed base.
+        if saw_mid {
+          emb_right = Some(xscript.clone());
+          break;
         }
-      },
-      _ => {
-        if let Some(first) = post_scripts.first_mut() {
-          let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
-          if slot.is_none() {
-            *slot = if x_is_sub { xpair.0 } else { xpair.1 };
-          } else {
-            post_scripts.insert(0, xpair);
-          }
-        } else {
-          post_scripts.push(xpair);
-        }
+        place_script(
+          &mut post_scripts,
+          &mut post_level,
+          xlevel,
+          x_is_sub,
+          xscript.clone(),
+          true,
+        );
       },
     }
 
-    current_base = xbase.clone();
+    current_base = xbase;
   }
 
-  (current_base, pre_scripts, mid_scripts, post_scripts)
+  (
+    current_base,
+    pre_scripts,
+    mid_scripts,
+    post_scripts,
+    emb_right,
+  )
+}
+
+/// Where a script sits relative to its base — the keyword half of the
+/// `scriptpos` attribute.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ScriptPos {
+  /// Before the base, as an `m:mmultiscripts` prescript.
+  Pre,
+  /// Under/over the base, as `m:munder`/`m:mover`/`m:munderover`.
+  Mid,
+  /// After the base — the default, and the only one `m:msub`/`m:msup` express.
+  Post,
+}
+
+/// Split a `scriptpos` attribute into its position keyword and nesting level.
+///
+/// Port of Perl's
+/// `($op->getAttribute('scriptpos') || 'post0') =~ /^(pre|mid|post)?(\d+)?$/`.
+/// Both capture groups are optional, so a value with neither part (or one that
+/// does not match at all, leaving both undef) yields no keyword — which Perl's
+/// `$pos eq 'pre'` / `eq 'mid'` chain then falls through to post. The level is
+/// compared with `ne` against the running level, never arithmetically, so it
+/// stays a string here; a missing one is Perl's undef, i.e. `""`.
+fn parse_scriptpos(op: &Node) -> (ScriptPos, String) {
+  let raw = op
+    .get_attribute("scriptpos")
+    .unwrap_or_else(|| "post0".to_string());
+  let (pos, rest) = if let Some(rest) = raw.strip_prefix("pre") {
+    (ScriptPos::Pre, rest)
+  } else if let Some(rest) = raw.strip_prefix("mid") {
+    (ScriptPos::Mid, rest)
+  } else if let Some(rest) = raw.strip_prefix("post") {
+    (ScriptPos::Post, rest)
+  } else {
+    (ScriptPos::Post, raw.as_str())
+  };
+  // The regex is anchored, so a trailing remainder that is not all digits means
+  // the whole match failed: no keyword and no level.
+  if rest.is_empty() || rest.bytes().all(|b| b.is_ascii_digit()) {
+    (pos, rest.to_string())
+  } else {
+    (ScriptPos::Post, String::new())
+  }
+}
+
+/// Add one script to a pre/mid/post group, at the given nesting level.
+///
+/// Port of the shared shape of Perl `pmml_script_decipher` L1005-1020:
+/// ```text
+/// push/unshift(@list, [undef, undef]) if ($level ne $nl) || $list[END][$spos];
+/// $list[END][$spos] = $xscript; $level = $nl;
+/// ```
+/// A script starts a NEW pair when it would collide with the current pair's
+/// occupied slot **or** when it sits at a different nesting level — the latter
+/// being what keeps `{x_a}^b` a two-pair `m:mmultiscripts` (the `b` rides to the
+/// right of the whole `x_a` box) rather than collapsing to an `m:msubsup` that
+/// stacks the two.
+///
+/// `at_front` selects Perl's `unshift`/`$list[0]` (mid and post, which
+/// accumulate inward-out) over `push`/`$list[-1]` (pre).
+///
+/// One deliberate divergence: on an empty list Perl's pre arm evaluates
+/// `$pres[-1][$spos]` as undef and, if the levels happen to match, then dies
+/// assigning to `$pres[-1]`. Creating the pair is the obvious reading of the
+/// intent, and cannot differ from Perl anywhere Perl does not simply crash.
+fn place_script(
+  list: &mut Vec<ScriptPair>,
+  level: &mut String,
+  new_level: String,
+  is_sub: bool,
+  script: Node,
+  at_front: bool,
+) {
+  let slot_taken = |p: &ScriptPair| if is_sub { p.0.is_some() } else { p.1.is_some() };
+  let current = if at_front { list.first() } else { list.last() };
+  if current.is_none_or(slot_taken) || *level != new_level {
+    if at_front {
+      list.insert(0, (None, None));
+    } else {
+      list.push((None, None));
+    }
+  }
+  let pair = if at_front {
+    list.first_mut()
+  } else {
+    list.last_mut()
+  }
+  .expect("a pair was just ensured to exist");
+  if is_sub {
+    pair.0 = Some(script);
+  } else {
+    pair.1 = Some(script);
+  }
+  *level = new_level;
 }
 
 /// Apply mid scripts (under/over) to a base.
@@ -1873,10 +2070,15 @@ fn apply_mid_scripts(
   doc: &PostDocument,
   mut base: NodeData,
   mid_scripts: &[ScriptPair],
+  emb_right: Option<&Node>,
 ) -> NodeData {
   for (sub_opt, sup_opt) in mid_scripts {
-    let under = sub_opt.as_ref().map(|s| pmml_scriptsize(doc, s));
-    let over = sup_opt.as_ref().map(|s| pmml_scriptsize(doc, s));
+    let under = sub_opt
+      .as_ref()
+      .map(|s| pmml_scriptsize_padded(doc, s, emb_right));
+    let over = sup_opt
+      .as_ref()
+      .map(|s| pmml_scriptsize_padded(doc, s, emb_right));
 
     base = match (under, over) {
       (Some(u), None) => NodeData::Element {
@@ -1900,6 +2102,34 @@ fn apply_mid_scripts(
   base
 }
 
+/// An under/over script at scriptsize, padded by a phantom of the base's right
+/// embellishment when there is one.
+///
+/// Port of `pmml_scriptsize_padded` (`MathML.pm` L925-934) — "This is to handle
+/// primed sums, etc." An `\mathop{X'}\limits_{p}^{q}` centres its limits on the
+/// whole `X′` box unless each limit is widened by an invisible copy of the `′`,
+/// which shifts them back over the `X` itself.
+///
+/// Perl's `$emb_left` arm is NOT ported: `pmml_script_decipher` declares
+/// `$emb_left` and never assigns it (L968 → L1022), so the left phantom is
+/// unreachable upstream. Only the right embellishment can occur, so this takes a
+/// single `emb_right`.
+fn pmml_scriptsize_padded(doc: &PostDocument, script: &Node, emb_right: Option<&Node>) -> NodeData {
+  let script_mml = pmml_scriptsize(doc, script);
+  match emb_right {
+    None => script_mml,
+    Some(emb) => NodeData::Element {
+      tag:        "m:mrow".to_string(),
+      attributes: None,
+      children:   vec![script_mml, NodeData::Element {
+        tag:        "m:mphantom".to_string(),
+        attributes: None,
+        children:   vec![pmml_scriptsize(doc, emb)],
+      }],
+    },
+  }
+}
+
 /// Apply pre/post scripts to a base.
 ///
 /// Port of `pmml_script_multi_layout`.
@@ -1909,8 +2139,12 @@ fn apply_multi_scripts(
   pre_scripts: &[ScriptPair],
   post_scripts: &[ScriptPair],
 ) -> NodeData {
+  // An absent script slot is an empty `<m:mrow/>`, as Perl emits (`pmml_scriptsize`
+  // of an undefined slot). MathML Core **removed** `<m:none/>`; an empty `m:mrow`
+  // is the accepted placeholder for an omitted subtree, so this is both the
+  // faithful and the standards-current choice.
   let none_mml = || NodeData::Element {
-    tag:        "m:none".to_string(),
+    tag:        "m:mrow".to_string(),
     attributes: None,
     children:   vec![],
   };

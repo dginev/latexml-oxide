@@ -1,0 +1,21 @@
+% Guard for the `robust => true` reversion alias (Perl Package.pm L1480-1481).
+%
+% `\ref` is LaTeXML's only `robust` DefConstructor. `robust` installs the real
+% definition under the MUNGED cs `\ref<space>` — LaTeX2e's \DeclareRobustCommand
+% idiom, where `\ref` expands to `\protect\ref<space>` — so without an alias the
+% whatsit reverts under that munged name and the trailing space rides into the
+% `tex=` attribute (and thence the MathML `alttext`, the screen-reader fallback).
+%
+% Same-host Perl LaTeXML 0.8.8 on this file: tex="x+\ref{sec:one}" — no space.
+% `\pageref` is `\let` to `\ref`, so it reverts as `\ref` in both engines.
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\section{One}\label{sec:one}
+
+\( x + \ref{sec:one} \)
+
+\( x + \pageref{sec:one} \)
+
+\( x + \text{see \ref{sec:one}} \)
+\end{document}
