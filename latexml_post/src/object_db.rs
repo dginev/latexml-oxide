@@ -273,7 +273,7 @@ impl Entry {
 /// (the Perl version uses Berkeley DB via DB_File).
 pub struct ObjectDB {
   /// In-memory entry storage.
-  objects:  HashMap<String, Entry>,
+  objects:    HashMap<String, Entry>,
   /// The ONE document owning every [`Value::Xml`] node the DB stores. A
   /// stored node used to be a handle into the scanned page's own DOM, which
   /// made the DB's lifetime silently depend on every page document staying
@@ -524,7 +524,10 @@ mod tests {
     }
     // All 64 copies are children of the single holder root, which is what
     // keeps the retained cost constant instead of linear in objects.
-    let holder = db.xml_holder.as_ref().expect("holder exists after adoption");
+    let holder = db
+      .xml_holder
+      .as_ref()
+      .expect("holder exists after adoption");
     let root = holder.get_root_element().expect("holder root");
     assert_eq!(root.get_child_elements().len(), 64);
   }
