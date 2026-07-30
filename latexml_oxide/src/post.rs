@@ -723,15 +723,18 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     return fallback();
   }
   let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(indexer.db, false);
-  if sweep_pages(
+  telemetry::phase_enter(Phase::Bibliography);
+  let t_bib = audit_start("MakeBibliography");
+  let bib_result = sweep_pages(
     &spilled_pages,
     &page_opts,
     &mut bibmaker,
     "MakeBibliography",
     |p| p.needs_bib,
-  )
-  .is_err()
-  {
+  );
+  audit_end(t_bib);
+  telemetry::phase_exit();
+  if bib_result.is_err() {
     return fallback();
   }
   let mut crossref = build_crossref(bibmaker.db);
@@ -764,17 +767,33 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     // CrossRef resolves this page's references out of the completed ObjectDB,
     // and its navigation/TOC work reads the DB rather than sibling pages — so
     // it is page-local once pass A has finished.
-    let mut staged = match run_page_phase(page, &mut crossref, "CrossRef") {
+    telemetry::phase_enter(Phase::Crossref);
+    let t_xref = audit_start("CrossRef");
+    let xref = run_page_phase(page, &mut crossref, "CrossRef");
+    audit_end(t_xref);
+    telemetry::phase_exit();
+    let mut staged = match xref {
       Ok(out) => out,
       Err(()) => return fallback(),
     };
     if let Some(gfx) = graphics_proc.as_mut() {
+      telemetry::phase_enter(Phase::Graphics);
+      let t_gfx = audit_start("Graphics");
       let mut next = Vec::with_capacity(staged.len());
+      let mut failed = false;
       for d in staged.drain(..) {
         match run_page_phase(d, gfx, "Graphics") {
           Ok(out) => next.extend(out),
-          Err(()) => return fallback(),
+          Err(()) => {
+            failed = true;
+            break;
+          },
         }
+      }
+      audit_end(t_gfx);
+      telemetry::phase_exit();
+      if failed {
+        return fallback();
       }
       staged = next;
     }
