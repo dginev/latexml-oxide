@@ -11,6 +11,20 @@
 > **#73 #74 #75 #78 #79 #80**; item 2's collation approximation is **#84** and
 > its one non-gap is **KNOWN_PERL_ERRORS #67**.
 >
+> **2026-07-29 (audit).** The corpus-wide *bibliography-absence* audit
+> ([`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md), row
+> R3) **supersedes the missing-references target list** — the one item this
+> file still calls open — as the measured worklist: **50 777 corpus + 533
+> sandbox** docs lacking every `ltx_bibitem`, clustered into families F1–F12.
+> Ten fixes have landed against it (divergences #86-#89 among them); 241 of the
+> 533 known articles are recovered and re-verified, and the residual is
+> characterised in that doc rather than here.
+>
+> **State, 2026-07-27.** Re-port **items 1 and 3 are DONE**; the open work is
+> item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER)
+> and the missing-references target list. The `.bib`-as-DATA family closed as
+> divergences **#73 #74 #75 #78 #79 #80**.
+>
 > **Two reading rules for this file.** (1) The three **INTERIM** blocks under the
 > re-port are HISTORY — every identifier they name was deleted with the string
 > route; they are kept for the properties, witnesses and traps that outlive the

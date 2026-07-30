@@ -1,0 +1,17 @@
+% docmute lets a paper \input files that are each a complete document. It must
+% strip the included preamble and turn the included \end{document} into
+% \endinput — otherwise the included preamble leaks (\usepackage errors) and its
+% \end{document} ends the OUTER document, discarding everything after the
+% \input, bibliography included. Red/green is the bibliography length; 0 is red.
+% Witness 2606.09184 (0 -> 18 entries; pdflatex renders 17 under "References").
+\documentclass{article}
+\usepackage{docmute}
+\begin{document}
+BEFORETEXT.
+\input{inner_standalone.tex}
+AFTERTEXT reached. Cites \cite{a,b}.
+\begin{thebibliography}{9}
+\bibitem{a} A.~Uthor. \newblock First. \newblock 2020.
+\bibitem{b} B.~Writer. \newblock Second. \newblock 2021.
+\end{thebibliography}
+\end{document}

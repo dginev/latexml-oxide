@@ -28,6 +28,28 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("authblk");
   RequirePackage!("natbib");
+  // pnas-new.cls L97 `\RequirePackage{xifthen}`, then L98-118 declares the
+  // four booleans its own style files switch. Without them the FIRST line of
+  // `pnasresearcharticle.sty` — `\setboolean{shortarticle}{true}` at L7 —
+  // hits `Error:undefined:\setboolean` and is defined as `<ltx:ERROR/>`;
+  // the article-type style then unravels and the document loses its tail,
+  // bibliography included. 6 papers in the 2605+2606 bibliography-absence
+  // cohort, all `\documentclass{pnas-new}`: 2606.02411, 2606.13799,
+  // 2605.03599, 2605.07504, 2606.26469, 2606.29674.
+  //
+  // `ifthen` is raw-loaded from texmf (`ifthen_sty.rs` mirrors Perl's
+  // `noltxml` passthrough), which is what supplies `\newboolean`,
+  // `\setboolean` and `\ifthenelse`. The class ships with the paper and is
+  // absent from TeX Live, so nothing else declares these.
+  RequirePackage!("ifthen");
+  RawTeX!(
+    r"\newboolean{shortarticle}%
+\newboolean{singlecolumn}%
+\newboolean{displaywatermark}%
+\newboolean{displaycopyright}%
+\setboolean{displaywatermark}{true}%
+\setboolean{displaycopyright}{false}"
+  );
   // pnas-new.cls L17+ requires extarticle, lmodern, helvet, fontenc,
   // lettrine, ifpdf, ifxetex, tikz, mdframed, draftwatermark, textcomp,
   // colortbl, booktabs, algorithm, algpseudocode, changepage, geometry,

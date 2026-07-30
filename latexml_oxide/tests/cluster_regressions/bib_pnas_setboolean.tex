@@ -1,0 +1,16 @@
+% pnas-new.cls L97 does \RequirePackage{xifthen} and L98-118 declares the four
+% booleans its own style files switch. Our binding replaces the class, so it
+% must declare them too: without \setboolean the FIRST line of
+% pnasresearcharticle.sty (\setboolean{shortarticle}{true}) errors, the
+% article-type style unravels, and the document loses its tail — bibliography
+% included. Red/green is the bibliography length; 0 is red.
+% Witnesses 2606.02411 (0 -> 45 entries), 2606.29674 (0 -> 60), 6 papers total.
+\documentclass[9pt,twocolumn,twoside]{pnas-new}
+\begin{document}
+\setboolean{shortarticle}{true}
+Body cites \cite{knuth,lamport}.
+\begin{thebibliography}{9}
+\bibitem{knuth} D.~Knuth. \newblock The TeXbook. \newblock 1984.
+\bibitem{lamport} L.~Lamport. \newblock LaTeX. \newblock 1994.
+\end{thebibliography}
+\end{document}

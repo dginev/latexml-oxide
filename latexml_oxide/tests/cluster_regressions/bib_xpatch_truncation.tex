@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage{xpatch}
+\usepackage{comment}
+\makeatletter
+\xpatchcmd{\@tocline}
+{\hfil\hbox to\@pnumwidth{\@tocpagenum{#7}}\par}
+{\ifnum#1<0\hfill\else\dotfill\fi\hbox to\@pnumwidth{\@tocpagenum{#7}}\par}
+{}{}
+\makeatother
+\begin{document}
+Before the patched region.
+\begin{comment}
+suppressed line one
+suppressed line two
+\end{comment}
+After the comment block.
+\begin{thebibliography}{9}
+\bibitem{k1} First xpatch entry.
+\bibitem{k2} Second xpatch entry.
+\end{thebibliography}
+\end{document}

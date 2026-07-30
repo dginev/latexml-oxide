@@ -1,0 +1,17 @@
+% A shipped conference style that `\def`s its own `\cite` must not displace
+% LaTeXML's binding: the replacement records no citation, so MakeBibliography
+% selects nothing and the References section renders empty ("N bibentries, 0
+% cited"). The core `\cite` is `locked`, exactly as natbib locks its own
+% variants (`natbib.sty.ltxml` L151), so a raw `.sty`/`.cls` or document
+% redefinition is ignored while native bindings (which load UNLOCKED) still
+% override freely. OXIDIZED_DESIGN #88; audit family F9(a).
+\documentclass{article}
+\makeatletter
+\def\cite#1{[CLOBBERED]}
+\makeatother
+\begin{document}
+See \cite{knuth}.
+\begin{thebibliography}{9}
+\bibitem{knuth} D.~Knuth. \newblock The TeXbook. \newblock 1984.
+\end{thebibliography}
+\end{document}

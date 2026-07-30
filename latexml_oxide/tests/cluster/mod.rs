@@ -124,8 +124,44 @@ pub fn convert_and_post_clean(source: &str) -> String {
   out
 }
 
+/// [`convert_and_post_clean`] with the contrib bindings dispatched.
+///
+/// biblatex lives in `latexml_contrib`, so a bibliography guard that needs it
+/// must come through here: under the plain config the dispatcher has no entry
+/// and raw TeX loading is off, so `\addbibresource` stays undefined and the
+/// document merely reports `Warning:missing_file:biblatex`. That is what makes a
+/// biblatex guard silently unable to see its own feature.
+pub fn convert_and_post_contrib_clean(source: &str) -> String {
+  let xml = convert_to_xml_contrib_clean(source);
+  latexml_core::util::logger::bind_log();
+  let out = post_with(&xml, None);
+  let log = latexml_core::util::logger::flush_log();
+  let n = latexml::util::test::error_count(&log);
+  assert_eq!(
+    n, 0,
+    "{source}: POST stage logged {n} Error:<class>: markers\n{log}"
+  );
+  out
+}
+
 /// the upstream LaTeXML#2316 / arXiv-fork behavior where frontmatter
 /// (abstract/acknowledgements/bibliography) joins the navigation TOC.
+/// Like [`convert_and_post`], but returns the ANSI-free POST-stage log
+/// alongside the XML instead of gating on it.
+///
+/// [`convert_and_post_clean`] asserts the post stage logged NO errors, which is
+/// the right gate for "the bibliography built cleanly". The opposite assertion
+/// — that a diagnostic WAS raised — needs the log itself, and post_with is
+/// private, so a guard cannot bind `LOG_BUFFER` around it from the outside.
+/// Used by the guards for dropped raises (audit family F2).
+pub fn convert_and_post_logging(source: &str) -> (String, String) {
+  let xml = convert_to_xml(source);
+  latexml_core::util::logger::bind_log();
+  let out = post_with(&xml, None);
+  let log = latexml_core::util::logger::flush_log();
+  (out, log)
+}
+
 pub fn convert_and_post_navtoc(source: &str) -> String {
   convert_and_post_opts(source, Some("context"))
 }

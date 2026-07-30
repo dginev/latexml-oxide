@@ -3177,6 +3177,110 @@ applies there — filed as **brucemiller/LaTeXML#2856**. Also
 
 Guard: `06_cluster_regressions::cluster_fnum_arg_hook`.
 
+### 86. `\bibliography{}` with an empty argument still inputs `\jobname.bbl`
+
+`latex.ltx` ends `\bibliography` with an **unconditional**
+`\@input@{\jobname.bbl}` — the argument only drives the `.aux` `\bibdata`
+record, not whether the `.bbl` is read. So `\bibliography{}` beside a shipped
+`<jobname>.bbl` renders the full reference list under pdflatex (measured:
+"References / [1] A. Uthor. A paper. 2020.", with `\cite` resolving to `[1]`).
+
+Perl returns before looking at anything (`latex_constructs.pool.ltxml` L3901,
+`return unless $bib_files;`) and raises no diagnostic, so the references are
+dropped in silence; this port mirrored that. Rust now follows `latex.ltx`
+instead: on an empty argument it takes the `.bbl` branch **when
+`\jobname.bbl` actually exists**, and otherwise still returns quietly.
+
+Ground truth is the arXiv PDF (bibliography formats are config-driven —
+`BIBLIOGRAPHY_WORKLIST.md`), and this is the shape where Rust and Perl agreed
+with each other but not with the PDF. 7 papers in the 2605+2606 sandboxes,
+including the GWTC-5 LIGO set, which share one template that writes
+`\bibliography{}` and ships the `.bbl`. Witness **2605.27226**; repro
+`docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`; audit family
+F3(a) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+
+Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
+
+### 87. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
+
+Same shape as #86, one level down. The real package
+(`bibunits.sty` L324-330) writes the optional argument to the bibunit `.aux`
+as a `\bibdata` record and then runs `\@input@{\@bibunitname.bbl}`
+**unconditionally** — the argument never decides whether the `.bbl` is read.
+
+Perl's binding (`bibunits.sty.ltxml` L78) expands `\putbib[#1]` to
+`\lx@bibliography[\bu@unitname]{…}`, i.e. the `.bib` route only. arXiv
+submissions ship the *generated* `bu1.bbl`/`bu2.bbl` precisely because arXiv
+does not run bibtex, and the named `.bib` is usually absent — so the lookup
+finds nothing and the References section renders empty. Rust prefers the
+shipped `.bbl` and keeps Perl's route as the fallback.
+
+15 papers measured across the 2605+2606 sandboxes, every one 0 entries before
+and complete after: 2606.04416 (79), 2606.28854 (180), 2605.21570 (46 = bu1's
+34 + bu2's 12, each matching its unit's own `\begin{thebibliography}{N}`).
+Audit family F3(c) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+
+Guard: `bibunits_putbib_reads_the_per_unit_bbl`.
+
+### 88. The core `\cite` is locked against raw `.sty` redefinition
+
+arXiv submissions ship their conference style, and under `--includestyles`
+(the fleet's ar5iv profile) it is raw-loaded. aaai, iccc, flairs, kr,
+achicago, harvard and fixbib all `\def\cite`, and the replacement records no
+citation — so `MakeBibliography` selects nothing and the document renders an
+empty References section under bold `?` markers: *"N bibentries, **0 cited**"*.
+
+`\cite` now carries `locked => true`, exactly as natbib locks its own variants
+(`natbib.sty.ltxml` L151, L191, L225). Raw `.sty`/`.cls` and document-source
+redefinitions are ignored; native bindings still override freely, because
+binding loads run UNLOCKED (Perl `Package.pm:loadLTXML` L2318 →
+`local_state_unlocked_guard` in `binding/content.rs`).
+
+**Deliberately beyond both Perl and the PDF.** Perl raw-loads the same styles
+and loses the citations identically. The PDF has no reference list either —
+these submissions ship no `.bbl` and arXiv does not run bibtex — so the styles'
+own `\cite` never had a bibliography to point at. Keeping LaTeXML's semantic
+`ltx:cite` is what makes the HTML usable: the citation resolves, the reference
+list renders, and only the citation *label style* differs from what that
+class would have printed.
+
+13 of 15 measured witnesses recovered, every one 0 entries before: 2605.07102
+(0 → 50), 2606.21959 (0 → 54), 2605.00671 (0 → 44, the `\affiliations`
+cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
+[`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
+
+Guard: `bib_raw_cite_redefinition_is_ignored`.
+
+### 89. `\captionof` does not open a verbatim-bodied environment
+
+Perl hosts the faked caption inside the named environment — *"it isn't
+necessarily IN a figure or any float, so we'll wrap it in an otherwise empty
+one!"* (`caption.sty.ltxml` L124-125, `\@captionof@` →
+`\begin{#1}…\end{#1}`). That is fatal when the environment reads its body
+verbatim: `\captionof{lstlisting}{…}` becomes
+`\begin{lstlisting}…\end{lstlisting}`, and listings scans the **raw input**
+for its terminator, never the token stream. It finds none, and swallows the
+rest of the file — the document tail, `\bibliography` included, comes out as
+line-numbered listing text.
+
+Real caption.sty never opens the environment: `\caption@of` is
+`\setcaptiontype*{#2}#1` (caption.sty L391) — it only sets the caption type.
+So for the verbatim-bodied environments (`VERBATIM_BODY_ENVS` in
+`caption_sty.rs`: lstlisting, verbatim, fancyvrb's Verbatim family, minted,
+alltt) Rust emits the caption alone, letting `\@caption@` carry the type for
+numbering; such a `\captionof` is in practice already inside a float, which is
+what pdflatex shows. Every other type keeps Perl's wrapper, since that is what
+gives an unfloated `\captionof{figure}` its container.
+
+Witness **2606.08339**: one `\captionof{lstlisting}{PROMISE.yml}` cost the
+paper all 30 of its bibliography entries (measured 0 → 30, and the swallowed
+tail restored). pdflatex renders that paper correctly and its source has four
+balanced `lstlisting` pairs, so the runaway was ours. Audit family F5 in
+[`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md); reduction
+notes in `bib_absence_2026-07-29/repros/f5_captionof_swallow/`.
+
+Guard: `bib_captionof_verbatim_env_does_not_swallow_the_bibliography`.
+
 ## Known Upstream Perl Issues (brief)
 
 These are behaviors in the original Perl LaTeXML that are bugs or limitations, not
@@ -3202,7 +3306,56 @@ intentional design. See [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) for full 
 6. **`guessTableHeaders` heuristic** — Post-processing heuristic for table header
    detection can produce unexpected results on tables without intended headers.
 
-### 84. Equationgroup ids minted at digest time (ancestry-consistent prefixes)
+### 90. Tab marks are suppressed while a macro argument is scanned
+
+`tex.web` §394 `macro_call` sets `align_state:=1000000; {disable tab marks,
+etc.}` before it scans a macro's parameters, so a `&` or `\cr` **inside an
+argument** is an ordinary token and cannot end an alignment cell. Neither Perl
+LaTeXML nor this port modelled that: the cell break is decided in `readToken`
+purely on `ALIGN_STATE == 0` (`Gullet.pm` L320-324, ported at
+`gullet.rs` L837/L1043), so an argument's `&` reached the alignment.
+
+It only bites for a **delimiter-fenced** argument. `\mqty{a &b}` was always
+safe because cell scanning skips balanced groups — but `(…)` is not a group, so
+`\mqty( b_0 &0 \\ 0 &b_1 )` inside an `eqnarray` split the row mid-argument,
+orphaned the `\left(`/`\right)` fences, and the alignment could then not close
+its own group:
+
+```
+Error:unexpected:\lx@begin@alignment Attempt to close a group that switched to
+mode restricted_horizontal
+```
+
+The document was truncated there, so the bibliography went with it. All three
+conditions were needed: the fenced form, at least one `&` inside it, and an
+enclosing row with no `&` of its own.
+
+Rust arms a `SuppressedTabMarks` guard (`common/local_assignments.rs`) for the
+duration of a **custom delimited read** — currently physics.sty's
+`phys_read_arg`, which is where `\mqty` and friends consume their fenced body.
+It is only armed inside an alignment, so ordinary macro calls keep their hot
+path.
+
+**Scope is deliberately narrow.** Arming the same guard in
+`Parameters::read_arguments` — TeX's actual `macro_call` site, which would also
+cure a plain `\def\myfence(#1){…}` — regresses **5 tests**: `cells_test`
+(17 errors), `numprints_test`, `xytest_test`, `consort_flowchart_test`,
+`unit_tests_by_silviu_test`. That path is *also* how an alignment reads its own
+cell content here, so suppressing tab marks across it stops cells terminating.
+Curing the general case needs a way to distinguish a macro's parameter scan from
+a cell-content read; until then a fenced `&` in a plain user macro still splits
+the row (reproducer: `\def\myfence(#1){\left(\begin{array}{cc}#1\end{array}\right)}`,
+12 errors).
+
+**Beyond Perl.** Perl raises the identical error — 11 of them on the 14-line
+reproducer `repros/f7_alignment_fenced_amp/mqty_in_eqnarray.tex`, tail lost —
+so `pdflatex`, which renders it silently, is the ground truth. Witnesses
+**2605.05903** and **2007.06211** (revtex4-1 + physics). This was the largest
+single cluster of the 2026-07-29 bibliography-absence residual: **28 papers**,
+of which **14** recovered here (961 entries); the remaining 14 all still fail on the same `\lx@begin@alignment` via the general parameter path. Guard
+`alignment_fenced_amp_does_not_split_a_row`.
+
+### 91. Equationgroup ids minted at digest time (ancestry-consistent prefixes)
 
 Perl mints the `@equationgroup` id (`RefStepID`) inside the alignment's
 container-open hook — at **absorb** time, after all digestion — so every

@@ -308,7 +308,9 @@ const BIB_DATA_CARET: &str = "\\textasciicircum{}";
 /// `06_cluster_bibliography::bib_field_specials_are_data_not_tex`:
 ///
 /// * **Math.** `_`/`^` inside `$…$` are a real subscript and superscript, so
-///   math spans are skipped. `$`/`$$` toggle; `\(`/`\[` open and `\)`/`\]` close.
+///   math spans are skipped. Every `$` toggles — a bib entry is
+///   `restricted_horizontal`, where `$$` is never a display shift; `\(`/`\[`
+///   open and `\)`/`\]` close.
 /// * **Idempotency.** Most `.bib` files already write `\&`, `\%`, `\_`,
 ///   `\textasciicircum`. A backslash therefore consumes the next character as a
 ///   pair and neither is re-examined, so `\&` stays `\&` and `\^{}` stays
@@ -389,6 +391,9 @@ fn scan_bib_data_specials(value: &str, demote: &[usize]) -> (String, Vec<bool>) 
   let mut toggles: Vec<bool> = Vec::new();
   let mut chars = value.chars().peekable();
   let mut in_math = false;
+  // Whether the currently-open math span was opened by a `$$` pair, so that
+  // only such a span is closed by a pair (TeX's own rule).
+  let mut math_is_display = false;
   while let Some(c) = chars.next() {
     match c {
       '\\' => {
@@ -428,21 +433,59 @@ fn scan_bib_data_specials(value: &str, demote: &[usize]) -> (String, Vec<bool>) 
         }
       },
       '$' => {
-        // `$$` is one display delimiter, not two toggles.
-        let doubled = chars.peek() == Some(&'$');
+        // Display-ness is decided when math OPENS, exactly as TeX decides it:
+        // `$$` in text is one display shift, but while math is already open the
+        // first `$` CLOSES it and the next opens the following span. So
+        // `$x$$y$` is two ADJACENT inline formulas — pdflatex on a `\bibitem`
+        // carrying it renders "a xy b" with no error — and only a pair that
+        // opened as a display is closed by a pair.
+        //
+        // BALANCE, though, is counted per `$` CHARACTER, because that is what
+        // digestion sees: `bib@entry` is `restricted_horizontal`, where
+        // `\lx@dollar@default` never reads a second `$` as a display shift
+        // (`TeX_Math.pool.ltxml` L64-67 → `tex_math.rs`), so every character
+        // toggles. Counting a display pair as ONE toggle made `$x$$y$` look
+        // odd, and the odd-count balancer then demoted a REAL math shift to
+        // `\$`, leaving math open to the end of the entry. That leak crosses
+        // `\end{bib@entry}`, lands every later element in `<ltx:XMath>` and
+        // trips the 100-error cap: 66 of the 69 `bibliography:convert` papers
+        // in the 2605+2606 sandboxes, all from exporter mangles like
+        // `$\{$Multi-Turn$\}$$\{$LLM$\}$` (Google Scholar) or
+        // `${\mathrm{La}}_{2}$${\mathrm{CuO}}_{4}$` (APS). Witnesses 2605.01115,
+        // 2605.00125, 2605.03129, 2605.27979; audit
+        // `docs/parity/BIB_ABSENCE_AUDIT_2026-07-29.md` family F1.
+        let doubled = if in_math {
+          math_is_display && chars.peek() == Some(&'$')
+        } else {
+          chars.peek() == Some(&'$')
+        };
         if doubled {
           chars.next();
         }
-        let ordinal = toggles.len();
+        // One toggle entry per `$` character. The interior of a pair can never
+        // be the digit tell — the character after it is the other `$`.
+        let first = toggles.len();
+        if doubled {
+          toggles.push(false);
+        }
         toggles.push(chars.peek().is_some_and(char::is_ascii_digit));
-        if demote.contains(&ordinal) {
-          // Data, not a math shift: emit the character and stay in whatever
-          // mode we were in.
-          out.push_str(if doubled { "\\$\\$" } else { "\\$" });
-        } else {
-          out.push('$');
-          if doubled {
-            out.push('$');
+        let live = (first..toggles.len())
+          .filter(|o| !demote.contains(o))
+          .count();
+        for ordinal in first..toggles.len() {
+          // Demoted: data, not a math shift — emit the character and stay in
+          // whatever mode we were in.
+          out.push_str(if demote.contains(&ordinal) {
+            "\\$"
+          } else {
+            "$"
+          });
+        }
+        // A live pair is one display shift; otherwise each live character is
+        // its own toggle, so an even number of them cancels out.
+        if if doubled { live == 2 } else { live == 1 } {
+          if !in_math {
+            math_is_display = doubled;
           }
           in_math = !in_math;
         }
@@ -2906,6 +2949,40 @@ mod tests {
       escape_bib_data_specials("costs $10 and $x$"),
       r"costs \$10 and $x$"
     );
+  }
+
+  /// Two ADJACENT inline formulas are four toggles, not three: `$x$$y$` is how
+  /// exporters spell a juxtaposition, and TeX reads the middle `$$` as
+  /// close-then-open (a bib entry is `restricted_horizontal`, so there is no
+  /// display math to pair off). Pairing them made the count odd and demoted a
+  /// real math shift, leaving math open for the rest of the bibliography —
+  /// audit family F1, witnesses 2605.01115 / 2605.00125 / 2605.03129.
+  #[test]
+  fn escape_specials_adjacent_inline_math_is_two_spans_not_a_display() {
+    assert_eq!(escape_bib_data_specials("a $x$$y$ b"), "a $x$$y$ b");
+    // Google Scholar's brace mangle (2605.03129) and backslash mangle
+    // (2605.00125), plus the APS exporter juxtaposition (2605.27979).
+    assert_eq!(
+      escape_bib_data_specials(r"The crescendo $\{$Multi-Turn$\}$$\{$LLM$\}$ attack"),
+      r"The crescendo $\{$Multi-Turn$\}$$\{$LLM$\}$ attack"
+    );
+    assert_eq!(
+      escape_bib_data_specials(r"${\mathrm{La}}_{2}$${\mathrm{CuO}}_{4}$"),
+      r"${\mathrm{La}}_{2}$${\mathrm{CuO}}_{4}$"
+    );
+    // The scripting rule still holds across the seam: `_` between the two
+    // spans is text, inside them it is a subscript.
+    assert_eq!(
+      escape_bib_data_specials("$a_1$_mid_$b_2$"),
+      r"$a_1$\_mid\_$b_2$"
+    );
+  }
+
+  /// A display pair contributes TWO characters to the balance, so a field that
+  /// mixes one with a stray `$` still comes out even for digestion.
+  #[test]
+  fn escape_specials_display_pair_counts_two_toward_balance() {
+    assert_eq!(escape_bib_data_specials("$$a$$ and $b"), r"$$a$$ and \$b");
   }
 
   #[test]

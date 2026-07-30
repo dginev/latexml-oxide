@@ -1,0 +1,9 @@
+% `\bibliography{}` with an empty argument and NO `<jobname>.bbl` on disk:
+% there is nothing to input, so neither clause fires and nothing is said —
+% the quiet Perl behaviour is still right when no `.bbl` exists.
+% Companion to `emptyarg.tex`; OXIDIZED_DESIGN #84.
+\documentclass{article}
+\usepackage{latexml}
+\begin{document}
+\makeatletter\lx@ifusebbl{}{BBLCHOSEN}{BIBCHOSEN}\makeatother
+\end{document}

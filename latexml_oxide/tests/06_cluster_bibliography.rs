@@ -6,8 +6,9 @@
 
 mod cluster;
 use cluster::{
-  convert_and_post, convert_and_post_clean, convert_to_xml, convert_to_xml_ar5iv,
-  convert_to_xml_contrib, convert_to_xml_contrib_clean,
+  convert_and_post, convert_and_post_clean, convert_and_post_contrib_clean,
+  convert_and_post_logging, convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib,
+  convert_to_xml_contrib_clean,
 };
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
@@ -55,6 +56,339 @@ fn cluster_bbl_bib_precedence() {
     "ar5iv bbl-first config without .bbl should fall back to bib, got:\n{x}"
   );
 }
+
+/// `\bibliography{}` — an EMPTY argument — still inputs `\jobname.bbl`, because
+/// that is what `latex.ltx` does: the argument feeds the `.aux` `\bibdata`
+/// record, not the decision to read the `.bbl`. Measured under pdflatex on
+/// `docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`: "References /
+/// [1] A. Uthor. A paper. 2020.", with `\cite` resolving to `[1]`.
+///
+/// Perl stops at `return unless $bib_files` (`latex_constructs.pool.ltxml`
+/// L3901) and says nothing, so the references are dropped in silence — this
+/// port did the same until OXIDIZED_DESIGN #86. 7 papers in the 2605+2606
+/// sandboxes share one template that writes `\bibliography{}` and ships the
+/// `.bbl` (the GWTC-5 LIGO set); witness 2605.27226.
+///
+/// The second half is the load-bearing one: with no `\jobname.bbl` on disk
+/// there is nothing to input, so neither clause may fire — an empty argument
+/// must not conjure a placeholder bibliography.
+#[test]
+fn bib_empty_argument_still_reads_the_jobname_bbl() {
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/emptyarg.tex");
+  assert!(
+    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "empty \\bibliography{{}} beside a <jobname>.bbl should read the bbl, got:\n{x}"
+  );
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/emptyargnobbl.tex");
+  assert!(
+    !x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "empty \\bibliography{{}} without a .bbl should choose neither, got:\n{x}"
+  );
+}
+/// `\nocite{*}` includes the whole library, as bibtex does.
+///
+/// Queueing per BIBLABEL record cannot express that: in a document whose only
+/// citation is `\nocite{*}` the sole record IS `*`, Step 3 skips that key by
+/// name, and the outcome was "N bibentries, **0 cited**" over an empty
+/// References list — while `pdflatex`+`bibtex` on the same source prints the
+/// full list (measured 2 against our 0 on a 2-entry `.bib`).
+///
+/// Perl skips the star key the same way (`MakeBibliography.pm` L279-313), so
+/// this is deliberately beyond Perl. 7 papers of the 2605+2606 residual are
+/// `\nocite{*}`-only, all recovered: 2605.24970 0 -> 46, 2606.05528 0 -> 42,
+/// 2605.28000 0 -> 39.
+#[test]
+fn bib_nocite_star_includes_the_whole_library() {
+  let x = convert_and_post("tests/cluster_regressions/bib_nocite_star.tex");
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "\\nocite{{*}} did not include the whole library: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("First starred entry") && x.contains("Second starred entry"),
+    "an uncited-but-starred entry is missing:\n{x}"
+  );
+}
+
+/// `\DeclareCiteCommand` must actually define the command it declares.
+///
+/// It is biblatex's own API for a custom citation command and papers use it
+/// heavily. As a pure no-op it consumed its arguments and defined NOTHING, so
+/// every call raised `Error:undefined:\foo`, no citation record was made, and
+/// `MakeBibliography` reported "N bibentries, **0 cited**" over an empty
+/// References list — the bibliography was read and then discarded for want of a
+/// `\cite`. Witness 2605.02115 (`\DeclareCiteCommand{\citeq}` at main.tex
+/// L321, used 83 times): 14 entries read, 0 rendered; now 11 cited and
+/// rendered, and pdflatex renders the list too.
+///
+/// The declared command is aliased to biblatex's `\cite`, keeping the citation
+/// semantics and dropping only the author's bespoke label format.
+#[test]
+fn biblatex_declarecitecommand_defines_its_command() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/declarecite.tex");
+  assert!(
+    !x.contains("ERROR"),
+    "the declared cite command stayed undefined:\n{x}"
+  );
+  assert!(
+    x.contains("<bibitem") && x.contains("Smith"),
+    "citations made with the declared command did not select any entry:\n{x}"
+  );
+}
+
+/// docmute must strip an included stand-alone document's preamble and turn its
+/// `\end{document}` into `\endinput`.
+///
+/// docmute exists so a paper can `\input` files that are each a complete
+/// document. The real package hooks `\let\documentclass=…` and
+/// `\renewenvironment{document}`; neither reaches us, because `\begin{document}`
+/// and `\end{document}` are their own control sequences here rather than the
+/// `document` environment docmute patches — so raw-loading docmute.sty is inert.
+/// The included preamble then leaks (`\usepackage … can only appear in the
+/// preamble`, once per line) and the included `\end{document}` terminates the
+/// OUTER document, discarding everything after the `\input` with the
+/// bibliography in it.
+///
+/// Witness 2606.09184: 0 -> 18 entries, and pdflatex renders 17 under
+/// "References" from a clean extract. 6 papers in the residual load docmute.
+/// Perl has no docmute binding either, so this is surpass-Perl with the arXiv
+/// PDF as ground truth. Red/green is the bibliography length; 0 is red.
+#[test]
+fn bib_docmute_input_keeps_the_outer_document() {
+  let x = convert_to_xml("tests/cluster_regressions/docmute/outer.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "docmute: the included \\end{{document}} ended the outer document: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("AFTERTEXT reached"),
+    "content after the \\input was discarded:\n{x}"
+  );
+  // The included body must still be spliced in — stripping the preamble must
+  // not throw away the file's content.
+  assert!(
+    x.contains("INNERBODY"),
+    "the included document's body was lost:\n{x}"
+  );
+}
+
+/// pnas-new must declare the booleans its own style files switch.
+///
+/// The real class does `\RequirePackage{xifthen}` (pnas-new.cls L97) and then
+/// `\newboolean{shortarticle}` and friends (L98-118). Our binding replaces the
+/// class, so it has to do both: without them the FIRST line of
+/// `pnasresearcharticle.sty` — `\setboolean{shortarticle}{true}` — raises
+/// `Error:undefined:\setboolean` and is defined as `<ltx:ERROR/>`, the
+/// article-type style unravels, and the document loses its tail with the
+/// bibliography in it. The class ships with the paper and is absent from TeX
+/// Live, so nothing else declares them.
+///
+/// 6 papers in the 2605+2606 cohort, every one `\documentclass{pnas-new}` and
+/// every one 0 entries before: 2606.02411 0 -> 45, 2606.29674 0 -> 60,
+/// 2605.07504 0 -> 53. Red/green is the bibliography length; 0 is red.
+#[test]
+fn bib_pnas_setboolean_keeps_the_document_tail() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/bib_pnas_setboolean.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "pnas \\setboolean failure swallowed the bibliography: {n} entries\n{x}"
+  );
+}
+
+/// achemso's `{tocentry}` must not swallow the rest of the document.
+///
+/// It used to be suppressed with `\begin{tocentry}` → `\iffalse` and
+/// `\end{tocentry}` → `\fi`. Conditional skipping matches `\fi` by MEANING and
+/// expands nothing on the way (TeX's rule, and `skip_conditional_body`'s), so
+/// an `\end{tocentry}` whose macro *body* is `\fi` is invisible to it: the skip
+/// ran to end of file and took the rest of the paper with it, `\bibliography`
+/// included. It surfaced as `Error:expected:\fi \iffalse` pointing at EOF,
+/// which reads like a source defect and is not one — the `\iffalse` was ours.
+///
+/// 42 of the 342 residual papers in the 2605+2606 bibliography-absence cohort
+/// lost their whole bibliography to this one line. Witness 2606.14933
+/// (0 -> 69 entries). Perl never reaches it: no achemso binding, OmniBus
+/// fallback, `{tocentry}` simply undefined.
+///
+/// The body is skipped as RAW LINES (comment.sty's idiom), not digested:
+/// digesting it and dropping the result turned three papers from "no
+/// bibliography" into no OUTPUT at all — 2606.08929, 2606.12056, 2606.15422
+/// went from 1 error to 513 and a fatal, because these graphics are TikZ /
+/// `\includegraphics` blocks that error out of context.
+///
+/// Red/green is the bibliography length — 0 entries is red. The third
+/// assertion keeps the suppression honest: the graphic's text must stay out of
+/// the body.
+#[test]
+fn bib_achemso_tocentry_does_not_swallow_the_bibliography() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/bib_achemso_tocentry.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "{{tocentry}} swallowed the bibliography: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("Body cites"),
+    "the document body after {{tocentry}} was swallowed:\n{x}"
+  );
+  assert!(
+    !x.contains("graphic caption"),
+    "the tocentry graphic leaked into the body:\n{x}"
+  );
+}
+
+/// `\captionof{lstlisting}` must not swallow the rest of the document.
+///
+/// Perl's binding wraps the caption in the named environment — "it isn't
+/// necessarily IN a figure or any float, so we'll wrap it in an otherwise empty
+/// one!" (`caption.sty.ltxml` L124-125) — which is fatal when that environment
+/// reads its body verbatim: `\begin{lstlisting}` makes listings scan the raw
+/// INPUT for `\end{lstlisting}`, never the token stream, so it finds no
+/// terminator and consumes the rest of the file. The tail — `\bibliography`
+/// included — comes out as line-numbered listing text.
+///
+/// Real caption.sty never opens the environment: `\caption@of` is
+/// `\setcaptiontype*{#2}#1` (caption.sty L391), i.e. it only sets the type, and
+/// pdflatex renders such papers correctly.
+///
+/// The red/green signal is the bibliography length — 0 entries is red. Witness
+/// 2606.08339: one such line cost all 30 of its entries (verified 0 -> 30).
+/// OXIDIZED_DESIGN #89.
+#[test]
+fn bib_captionof_verbatim_env_does_not_swallow_the_bibliography() {
+  let x = convert_to_xml("tests/cluster_regressions/bib_captionof_listing.tex");
+  let n = x.matches("<bibitem").count();
+  assert!(
+    n >= 2,
+    "\\captionof{{lstlisting}} swallowed the bibliography: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("Tail text after the figure"),
+    "the document tail after the figure was swallowed:\n{x}"
+  );
+}
+
+/// A raw `\def\cite` must not displace LaTeXML's binding.
+///
+/// arXiv submissions ship their conference style, and under `--includestyles`
+/// it is raw-loaded — aaai/iccc/flairs/kr/achicago/fixbib all `\def\cite`.
+/// The replacement records no citation, so MakeBibliography selects nothing
+/// and the References section renders empty while the body shows bold `?`
+/// markers: "N bibentries, **0 cited**". The core `\cite` is now `locked`,
+/// exactly as natbib locks its own variants (`natbib.sty.ltxml` L151), so raw
+/// `.sty`/`.cls` and document redefinitions are ignored while native bindings
+/// — which load UNLOCKED (`content.rs`, Perl `Package.pm:loadLTXML` L2318) —
+/// still override freely.
+///
+/// Deliberately beyond Perl, and beyond the PDF: these submissions ship no
+/// `.bbl` and arXiv does not run bibtex, so the official PDF has no reference
+/// list either. Keeping the semantic `ltx:cite` is what makes the HTML usable.
+/// 13 of 15 witnesses recovered, all 0 before: 2605.07102 (0 -> 50),
+/// 2606.21959 (0 -> 54), 2605.00671 (0 -> 44), 2605.09519 (0 -> 24).
+/// OXIDIZED_DESIGN #88; audit family F9(a).
+#[test]
+fn bib_raw_cite_redefinition_is_ignored() {
+  let x = convert_and_post("tests/cluster_regressions/bib_cite_clobber.tex");
+  assert!(
+    !x.contains("CLOBBERED"),
+    "a raw \\def\\cite displaced the binding:\n{x}"
+  );
+  assert!(
+    x.contains("<bibitem") || x.contains("bibitem"),
+    "the bibliography did not survive the clobber attempt:\n{x}"
+  );
+}
+
+/// A `refcontext` block must not eat the `\printbibliography` inside it, and
+/// `\addbibresource` must accept its optional argument.
+///
+/// Both are argument-signature bugs in surrogate code Perl does not have.
+/// `\refcontext`/`\newrefcontext` read a mandatory group ONLY IF one follows —
+/// `\refcontext@i` guards it with `\@ifnextchar\bgroup` and supplies `{}`
+/// itself otherwise (biblatex L10437-10445) — so declaring the group
+/// unconditionally made the noop swallow whatever came next, which in the
+/// idiomatic block IS the bibliography:
+///
+/// ```text
+/// \begin{refcontext}[sorting=nyt]
+///     \printbibliography
+/// \end{refcontext}
+/// ```
+///
+/// And `\blx@addbib` does `\@ifnextchar[` before the resource
+/// (biblatex L11285-11288), so `\addbibresource[location=local]{refs.bib}` is
+/// valid; without the `[]` the `[` became the resource name.
+///
+/// Both lost the whole bibliography in silence. Witnesses 2606.11276 (0 -> 24
+/// entries), 2606.02676 (0 -> 93), 2605.27263 (0 -> 58). Audit family F4(a)/(b).
+#[test]
+fn biblatex_refcontext_block_keeps_its_printbibliography() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/refctx.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "refcontext swallowed \\printbibliography — no bibliography at all:\n{x}"
+  );
+  assert!(
+    x.contains("Smith"),
+    "the cited entry is missing from the bibliography:\n{x}"
+  );
+}
+
+/// bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`.
+///
+/// The real package does exactly that (`bibunits.sty` L324-330): the optional
+/// argument only feeds the `.aux` `\bibdata` record, then
+/// `\@input@{\@bibunitname.bbl}` runs unconditionally — the same shape
+/// `\bibliography` has with `\jobname.bbl`. Perl's binding
+/// (`bibunits.sty.ltxml` L78) routes to `\lx@bibliography` only, so it looks
+/// for a `.bib` that arXiv submissions do not ship (they ship the generated
+/// `bu1.bbl`/`bu2.bbl`, because arXiv does not run bibtex) and the References
+/// section comes out empty.
+///
+/// 15 papers measured across the 2605+2606 sandboxes, every one 0 entries
+/// before and complete after — 2606.04416 (79), 2606.28854 (180), 2605.21570
+/// (46 = bu1's 34 + bu2's 12, matching each unit's own
+/// `\begin{thebibliography}{N}`). Audit family F3(c); OXIDIZED_DESIGN #87.
+#[test]
+fn bibunits_putbib_reads_the_per_unit_bbl() {
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bibunits.tex");
+  assert!(
+    x.contains("First unit reference"),
+    "\\putbib did not input bu1.bbl, got:\n{x}"
+  );
+}
+
+/// A bibliography file that cannot be found must be an **Error**, not an Info.
+///
+/// Perl raises `Error:missing_file` (`Post/MakeBibliography.pm` L138-140) and
+/// then falls through to the `Info:expected` below it, so both reach the log.
+/// This port hoisted the raw-`.bib` lookup out of that branch and lost the
+/// raise, leaving only the Info — which is why a whole family of lost
+/// bibliographies reported telemetry `ok` and stayed invisible to every
+/// error-keyed sweep: 14 silent papers in the 2605+2606 sandboxes and 691
+/// corpus-wide. Witness 2606.04416 (bibunits — the shipped `bu1.bbl` is never
+/// consulted and the named `.bib` does not exist; Perl loses the bibliography
+/// too, but says so). Audit family F2.
+#[test]
+fn bib_missing_file_is_an_error_not_just_an_info() {
+  let (_xml, log) = convert_and_post_logging("tests/cluster_regressions/bib_missing_file.tex");
+  assert!(
+    log.contains("Error:missing_file:"),
+    "a missing bibliography must raise Error:missing_file, log was:\n{log}"
+  );
+  // The name that could not be resolved has to be in the message — a bare
+  // "couldn't find a bibliography" is not actionable for a multi-`.bib`
+  // document. (Perl's `Info:expected` fallthrough is emitted too, but Info
+  // sits below this harness's log threshold, so it is not asserted here.)
+  assert!(
+    log.contains("no_such_bibliography_file"),
+    "the raise must name the unresolved bibliography, log was:\n{log}"
+  );
+}
+
 /// A biber `.bbl` with more than one `\datalist` (biblatex's apa style asks for
 /// two sorting schemes, so the same references are emitted twice) used to hang
 /// the engine: each `\enddatalist` expands to a bare
@@ -1457,4 +1791,114 @@ fn cluster_bib_alpha_style_labels() {
       "the entry body of {needle} should carry the bare year, as Perl does:\n{item}"
     );
   }
+}
+
+/// `\xpatchcmd` must not swallow the rest of the document.
+///
+/// xpatch is an expl3 package: each public command is a `\NewDocumentCommand`
+/// dispatching to `\xpatch_main:NN`, which re-reads the target's body delimited
+/// by a sentinel token list, `\c__xpatch_bizarre_tl` = `**)-(**/**]-[**`. With
+/// no binding, `--includestyles` raw-loaded it and that delimited scan ran to
+/// end-of-file, so everything after the first `\xpatchcmd` was discarded — with
+/// **zero** diagnostics.
+///
+/// Witness 2605.25157: `\xpatchcmd{\@tocline}` in the preamble, output truncated
+/// mid-proof at source line 1292 of 1749, its own `\begin{thebibliography}` with
+/// 33 `\bibitem`s never reached; now 33 entries and no errors. Perl truncates
+/// identically (it raises `Error:expected:Until:**)-(**/**]-[**` twice, so our
+/// silence was strictly worse) — beyond-Perl, ground truth the arXiv PDF.
+/// 10 papers of the 2605+2606 residual load xpatch.
+///
+/// The `comment` environment here is the original witness's shape and is what
+/// made the loss visible: its raw-line body skip found the mouth already at EOF
+/// and reported "Skipped comment (0 lines)".
+///
+/// Note what this guards: the runaway needs the RAW `.sty`, which only
+/// `--includestyles` loads, and a registered binding now wins over the raw load.
+/// So this pins the binding — that every `\x…` command is defined and leaves the
+/// document intact — which is what keeps the raw-load path unreachable.
+#[test]
+fn bib_xpatch_does_not_truncate_the_document() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_xpatch_truncation.tex");
+  assert!(
+    x.contains("After the comment block"),
+    "\\xpatchcmd swallowed the rest of the document:\n{x}"
+  );
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "expected both bibitems past the \\xpatchcmd, got {n}\n{x}"
+  );
+  assert!(
+    !x.contains("suppressed line"),
+    "the comment environment's body leaked into the output:\n{x}"
+  );
+}
+
+/// A `&` inside a delimiter-fenced macro argument must not end an alignment cell.
+///
+/// `tex.web` §394 `macro_call` sets `align_state:=1000000` while it scans a
+/// macro's parameters, so an argument's `&` is an ordinary token. Neither Perl
+/// nor this port modelled that, and the brace form hid it — cell scanning skips
+/// balanced groups, but `(…)` is not a group. So `\myfence( a &0 \\ 0 &b )`
+/// inside an `eqnarray` split the row mid-argument, orphaned the fences, and the
+/// alignment could not close its group:
+/// `Error:unexpected:\lx@begin@alignment Attempt to close a group that switched
+/// to mode restricted_horizontal`. The document was truncated there and the
+/// bibliography went with it.
+///
+/// Perl raises the identical error (11 on the 14-line repro), so `pdflatex` —
+/// which renders it silently — is the ground truth. Divergence #90. This was the
+/// largest cluster of the 2026-07-29 bibliography-absence residual, 28 papers;
+/// witnesses 2605.05903 and 2007.06211 (revtex4-1 + physics `\mqty`).
+#[test]
+fn alignment_fenced_amp_does_not_split_a_row() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_alignment_fenced_amp.tex");
+  assert!(
+    x.contains("After the equation"),
+    "the fenced `&` truncated the document:\n{x}"
+  );
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "expected both bibitems past the alignment, got {n}\n{x}"
+  );
+}
+
+/// A class we have no binding for must still get biblatex when the document
+/// asks for it.
+///
+/// A paper whose CLASS loads biblatex on its behalf never writes
+/// `\usepackage{biblatex}` itself. With no binding for that class the document
+/// falls back to OmniBus, `\addbibresource` is undefined, and the bibliography
+/// is lost outright. `maybe_require_dependencies` does scan the shipped `.cls`
+/// text for `\RequirePackage` names, but cannot resolve one built from macros —
+/// now-journal.cls L267 asks for `now-\now@journalkey-biblatex` — and under
+/// OmniBus that line never executes either.
+///
+/// OmniBus now `def_autoload`s biblatex from `\addbibresource` and
+/// `\printbibliography`: both are biblatex-only and neither overlaps the natbib
+/// trigger list beside it, so no document can pull in both backends this way.
+/// Perl autoloads natbib but never biblatex (`OmniBus.cls.ltxml` L48-51), so
+/// this is beyond Perl.
+///
+/// 7 papers of the 2026-07-29 residual recovered, 548 entries: 2606.06995
+/// 0 -> 250, 2606.06922 0 -> 76, 2606.10538 0 -> 66, 2605.09073 0 -> 59,
+/// 2605.01204 0 -> 46 (`\documentclass[sip,biber]{now-journal}`), 2605.06766
+/// 0 -> 46, 2605.30377 0 -> 5 (which cites exactly 5 keys of a 19-entry
+/// `.bib` — bibtex emits only what is cited). Four of those had an unrelated
+/// first error (`\alsoaffiliation`, `\maintitleauthorlist`), a reminder that the
+/// first error is often incidental to the loss.
+#[test]
+fn bib_biblatex_autoloads_under_an_unbound_class() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/bib_biblatex_autoload.tex");
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "biblatex did not autoload under the fallback class: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("autoloaded biblatex entry") && x.contains("second autoloaded entry"),
+    "the autoloaded entries did not render their titles:\n{x}"
+  );
 }

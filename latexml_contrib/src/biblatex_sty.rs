@@ -1778,7 +1778,15 @@ LoadDefinitions!({
   // invocation in a biblatex doc just records resources.
   // see arXiv:1502.02314 for a paper that left in classic \bibliography
   // alongside biblatex; both forms must end up populating the resource list.
-  DefPrimitive!("\\addbibresource{}", sub[(file_list_arg)] {
+  // The optional argument is real: `\blx@addbib` (biblatex L11285-11288) does
+  // `\@ifnextchar[` before reading the resource, so `\addbibresource[
+  // location=local]{refs.bib}` is valid biblatex. Without the `[]` in the
+  // signature the `[` was taken as the resource itself, corrupting the
+  // resource list and spilling `location=local]{refs.bib}` into the body —
+  // the bibliography then resolved to nothing. Its keys (`location`, `label`,
+  // `datatype`) are biber-side, so consuming and ignoring them is right here.
+  // Witness 2605.27263; audit family F4(b).
+  DefPrimitive!("\\addbibresource[]{}", sub[(_opts, file_list_arg)] {
     // Perl: split(/\s*,\s*/, ToString($_[1])) — split on commas and
     // strip surrounding whitespace.
     let raw = file_list_arg.to_string();
@@ -1805,13 +1813,25 @@ LoadDefinitions!({
      \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
      \\catcode`\\&=4\\relax");
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
+    // DEDUPLICATE. The same `.bib` can be registered twice — a document that
+    // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares
+    // the same file, for instance — and naming it twice makes
+    // `\lx@bibliography` read it twice, which duplicates every entry. A
+    // bibliography that doubles looks like a win by entry count, so guard it
+    // here rather than trust the producers.
+    let mut seen: Vec<String> = Vec::new();
     let mut resources = Vec::new();
     while let Some(res) = pop_value("biblatex_resources")? {
+      let name = res.to_string();
+      if seen.contains(&name) {
+        continue;
+      }
+      seen.push(name.clone());
       if !resources.is_empty() {
         resources.push(T_OTHER!(","));
         resources.push(T_SPACE!());
       }
-      resources.push(T_OTHER!(res.to_string()));
+      resources.push(T_OTHER!(name));
     }
     Ok(Tokens!(
       T_CS!("\\biblatex@saved@bibliography"),
@@ -1859,7 +1879,31 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareListWrapperAlias{}{}")?;
   def_macro_noop("\\DeclareDelimcontextAlias{}{}")?;
   def_macro_noop("\\UndeclareDelimcontextAlias{}")?;
-  def_macro_noop("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}")?;
+  // `\DeclareCiteCommand{\foo}[wrapper]{pre}{loop}{sep}{post}` is biblatex's own
+  // API for declaring a citation command, and papers use it heavily. As a pure
+  // no-op it consumed the arguments and defined NOTHING, so the declared
+  // command stayed undefined: every call raised `Error:undefined:\foo`, no
+  // citation record was made, and `MakeBibliography` then reported
+  // "N bibentries, **0 cited**" and rendered an empty References list — the
+  // bibliography was read and then thrown away for want of a `\cite`.
+  //
+  // Witness 2605.02115: `\DeclareCiteCommand{\citeq}` at main.tex L321, used
+  // 83 times; 14 entries read, 0 cited, 0 rendered. pdflatex renders the list.
+  //
+  // The declared command is aliased to biblatex's `\cite`, which has the same
+  // `OptionalMatch:* [][] Semiverbatim` shape the family uses. That keeps the
+  // CITATION semantics — keys register, the reference resolves, the
+  // bibliography renders — and drops only the author's bespoke label
+  // formatting, which is the right trade for HTML. A redeclaration of an
+  // existing command (`\DeclareCiteCommand{\cite}{…}`, restyling) aliases it
+  // to itself and is harmless.
+  DefMacro!("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}",
+  sub[(_star, target, _wrapper, _precode, _loopcode, _sepcode, _postcode)] {
+    if let Some(tok) = target.clone().unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
+      Let!(tok, T_CS!("\\cite"));
+    }
+    Ok(Tokens!())
+  });
 
   // Perl L460-481
   def_macro_noop("\\DeclareBibliographyExtras{}")?;
@@ -2186,11 +2230,29 @@ LoadDefinitions!({
   // biblatex internals commonly invoked by user preamble. Witnesses
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
   def_macro_noop("\\newrefsection[]")?;
-  def_macro_noop("\\newrefcontext[]")?;
   def_macro_noop("\\endrefcontext")?;
   def_macro_noop("\\refsection[]{}")?;
   def_macro_noop("\\endrefsection")?;
-  def_macro_noop("\\refcontext[]{}")?;
+
+  // `\refcontext`/`\newrefcontext` take an optional `[...]` and then a
+  // mandatory group ONLY IF one actually follows: `\refcontext@i` guards it
+  // with `\@ifnextchar\bgroup` and supplies `{}` itself otherwise (biblatex
+  // L10437-10445). Declaring the group unconditionally made the noop eat
+  // whatever came next — and what comes next is the whole point of the
+  // block:
+  //
+  //     \begin{refcontext}[sorting=nyt]
+  //         \printbibliography
+  //     \end{refcontext}
+  //
+  // swallowed `\printbibliography`, so the document lost its bibliography
+  // with no diagnostic at all. Witnesses 2606.11276, 2606.02676; audit
+  // family F4(a). (`\begin{refcontext}` routes through `\refcontext` and
+  // `\end{refcontext}` through `\endrefcontext`, so the environment form is
+  // covered by these two.)
+  DefMacro!("\\lx@biblatex@refcontext[]", "\\@ifnextchar\\bgroup{\\@gobble}{}");
+  Let!("\\refcontext", "\\lx@biblatex@refcontext");
+  Let!("\\newrefcontext", "\\lx@biblatex@refcontext");
 
   // biblatex L3408+ bibliography range separators. Define defensively.
   // NB: do NOT redefine \bibrangedash here — Perl L353 sets it to an en-dash

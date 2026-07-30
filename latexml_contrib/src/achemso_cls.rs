@@ -66,9 +66,54 @@ LoadDefinitions!({
   // \acsSection — section opener with text becoming heading.
   DefMacro!("\\acsSection{}", "\\section*{#1}");
 
-  // {tocentry} environment — table of contents image, suppress.
-  DefMacro!(T_CS!("\\begin{tocentry}"), None, "\\iffalse");
-  DefMacro!(T_CS!("\\end{tocentry}"), None, "\\fi");
+  // {tocentry} environment — the journal's table-of-contents graphic, which
+  // does not belong in the body.
+  //
+  // It must NOT be suppressed with `\iffalse`…`\fi`. Conditional skipping
+  // matches `\fi` by MEANING and expands nothing on the way (TeX's rule, and
+  // ours — `skip_conditional_body` in `conditional.rs`), so an
+  // `\end{tocentry}` whose macro *body* is `\fi` is invisible to it: the skip
+  // ran to end of file and swallowed the rest of the paper, `\bibliography`
+  // included. That one line cost 42 of the 342 residual papers in the
+  // 2605+2606 bibliography-absence cohort their entire bibliography, and
+  // showed up as `Error:expected:\fi \iffalse` pointing at EOF — which reads
+  // like a source defect and is not one. Witnesses 2606.14933, 2605.00451,
+  // 2606.00264; audit family F6.
+  //
+  // Perl never reaches this: it has no achemso binding at all and falls back
+  // to OmniBus (`Warning:missing_file:achemso`), leaving `{tocentry}`
+  // undefined. pdflatex of course renders these papers fine.
+  //
+  // Nor may the body simply be DIGESTED and dropped (`DefEnvironment!
+  // ("{tocentry}", "")`): these graphics are TikZ/`\includegraphics` blocks
+  // that error heavily out of context. Measured on the same cohort, that
+  // turned three papers from "no bibliography" into no OUTPUT AT ALL —
+  // 2606.08929, 2606.12056 and 2606.15422 went from 1 error to 513 and a
+  // fatal (`\lxSVG@endscope`, `undefined:\@startsection`).
+  //
+  // So skip the body as RAW LINES, the way comment.sty's excluded
+  // environments do (`comment_sty.rs`) — no digestion, no conditionals. The
+  // `\end{tocentry}` is consumed as text, so it is deliberately left
+  // undefined.
+  DefConstructor!(T_CS!("\\begin{tocentry}"), None, None,
+  after_digest => {
+    // The rest of the `\begin{tocentry}` line — which may already carry the
+    // matching `\end{tocentry}`, as the one-line form does.
+    if let Some(first) = read_raw_line()
+      && first.contains("\\end{tocentry}")
+    {
+      return Ok(Vec::new());
+    }
+    let mut nlines = 0;
+    while let Some(line) = read_raw_line() {
+      if line.contains("\\end{tocentry}") {
+        break;
+      }
+      nlines += 1;
+    }
+    note_progress(&s!("[Skipped tocentry ({nlines} lines)]"));
+    Ok(Vec::new())
+  });
 
   // {acknowledgement} — ACS-spelt acknowledgement section.
   DefEnvironment!(

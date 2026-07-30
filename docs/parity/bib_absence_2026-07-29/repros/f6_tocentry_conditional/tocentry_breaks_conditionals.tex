@@ -1,0 +1,47 @@
+% F6 minimal witness — 5 lines, no class options, no abstract, and no
+% conditional of its own. `\begin{tocentry}` alone loses the rest of the
+% document, including its `\bibliography`.
+%
+%   pdflatex: renders TOC and BODYTEXT, raises nothing.
+%   latexml-oxide: `Error:expected:\fi \iffalse`, BODYTEXT absent.
+%
+% Remove the `{tocentry}` line and the same document converts cleanly, so the
+% abstract gobbler (`\let\end\fi` + `\iffalse`, achemso.cls L1138-1156) is NOT
+% involved despite being where the error surfaces in real papers.
+%
+% Where the `\iffalse` comes from: `\acs@tocentry@print` (achemso.cls
+% L1232-1246) defers the entry with
+% `\AtEndDocument{\if@twocolumn …\else …\fi …\if@restonecol …\fi}`, and
+% `\if@twocolumn` is a `\newif` boolean — i.e. literally `\iffalse` when
+% false. So the unterminated conditional is achemso's own, reached through
+% `\acs@collect` (L1174-1211), which re-reads the environment body via
+% `\begingroup` + `\let\csname\@currenvir\endcsname` + a delimited
+% `\acs@collect@aux#1\end#2` scan + an `\ifx…\else…\expandafter…\fi`
+% recursion inside an `\edef`.
+%
+% Settled dead ends — all measured, do NOT re-attempt:
+%   * a `\let` alias of `\fi` is honoured, plain and inside a
+%     catcode-modified group;
+%   * `\endgroup` inside a conditional branch is handled correctly;
+%   * the `\ifx…\else…\expandafter…\fi` tail recursion inside `\edef`,
+%     transcribed on its own, converts cleanly — including with several real
+%     recursion steps (the first attempt terminated on the first comparison
+%     and proved nothing);
+%   * a delimited `\long\def\grab#1\end#2` scan followed by a conditional is
+%     fine;
+%   * `\AtEndDocument{\if@twocolumn …\else …\fi}` is fine on its own, with the
+%     real branch bodies (`\@restonecoltrue\onecolumn` / `\newpage`), from
+%     inside a `\begingroup`, and with a `\gdef` in the deferred list.
+%
+% Next step is engine instrumentation of the if_stack across `\acs@collect`,
+% not more black-box bisection: the skip loop matches `\fi` by comparing
+% if-frames (`conditional.rs` skip_conditional_body), so a stale or
+% mismatched frame would make a perfectly balanced `\fi` fail to close.
+%
+% Witnesses 2606.14933, 2605.00451, 2606.00264; 42 of the 342 residual papers
+% in the 2605+2606 cohort, 1,700 corpus first-errors.
+\documentclass{achemso}
+\begin{document}
+\begin{tocentry}TOC\end{tocentry}
+BODYTEXT
+\end{document}

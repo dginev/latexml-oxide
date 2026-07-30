@@ -1,0 +1,20 @@
+% F8 minimal witness — 7 lines. `\ce{...}` inside a `p{}` tabular column leaks a
+% mode, so `\end{tabular}` cannot close its group and the document is truncated
+% from there: everything after, `\bibliography` included, is lost.
+%
+%   pdflatex: renders "BN" and TAILTEXT, raises nothing.
+%   latexml-oxide: `Error:unexpected:\@end@tabular Attempt to close a group that
+%   switched to mode horizontal`, followed by `\lx@tabular@p@ Attempt to end
+%   mode internal_vertical`; TAILTEXT absent.
+%
+% 7 papers of the bibliography-absence residual, first error `\@end@tabular`.
+% Witness 2605.12186 (RSC/PCCP template: an abstract full of `\ce{BN}` inside
+% `\begin{tabular}{m{4.5cm} p{13.5cm}}` in the `\twocolumn[...]` argument).
+\documentclass{article}
+\usepackage[version=3]{mhchem}
+\begin{document}
+\begin{tabular}{p{5cm}}
+\ce{BN} y \\
+\end{tabular}
+TAILTEXT here.
+\end{document}

@@ -71,7 +71,7 @@ fn ams_rearrangeable_bindings(
     }
   }
   // Digest-time group-id mint — same reasoning and ruling as the eqnarray
-  // site (`latex_constructs.rs`, OXIDIZED_DESIGN #84): Perl mints at absorb
+  // site (`latex_constructs.rs`, OXIDIZED_DESIGN #91): Perl mints at absorb
   // time and stamps every group with the LAST section's prefix.
   let group_id: Option<String> = ref_step_id("@equationgroup")
     .ok()

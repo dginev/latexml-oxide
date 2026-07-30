@@ -117,10 +117,34 @@ LoadDefinitions!({
     assign_value("CITE_UNIT", pin(&cite_unit), None);
   });
 
+  // Perl: `\putbib[]` -> `\lx@bibliography[\bu@unitname]{...}`, i.e. the `.bib`
+  // route only. But the real package inputs the per-unit `.bbl`
+  // (`bibunits.sty` L324-330: the optional argument only feeds the `.aux`
+  // `\bibdata` record, then `\@input@{\@bibunitname.bbl}` unconditionally) —
+  // the exact shape `\bibliography` has with `\jobname.bbl`, and the reason
+  // pdflatex renders these bibliographies. arXiv ships the generated
+  // `bu1.bbl`/`bu2.bbl` precisely because it does not run bibtex, and the
+  // named `.bib` is usually absent, so the `.bib` route finds nothing and the
+  // References section comes out empty. Prefer the shipped `.bbl` and keep
+  // Perl's route as the fallback. OXIDIZED_DESIGN #87; audit family F3(c),
+  // witnesses 2606.04416, 2605.21570, 2605.26693.
   DefMacro!(
     "\\putbib[]",
-    "\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}"
+    "\\lx@bibunits@ifusebbl{\\input{\\bu@unitname.bbl}}\
+     {\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}}"
   );
+
+  // Takes the `.bbl` clause when `<bibunitname>.bbl` is on disk, else the
+  // `.bib` clause. Mirrors `\lx@ifusebbl` (`latex_constructs.rs`), which does
+  // the same test for `\jobname.bbl`.
+  DefMacro!("\\lx@bibunits@ifusebbl{}{}", sub[(bbl_clause, bib_clause)] {
+    let unit = Expand!(T_CS!("\\bu@unitname")).to_string();
+    if FindFile!(&unit, type => "bbl").is_some() {
+      Ok(bbl_clause)
+    } else {
+      Ok(bib_clause)
+    }
+  });
 
   // Perl: make \bibliography reset the backmatter element
   Let!("\\bu@orig@bibliography", "\\bibliography");

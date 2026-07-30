@@ -1172,11 +1172,13 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       if arena::with(*s, |txt| {
         txt == "Anonymous String" || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
       }) {
-        Info!(
-          "ignore",
-          lock_key,
-          s!("Ignoring redefinition of {lock_key}")
-        );
+        // Perl `State.pm` L514 reports the CS itself — `Ignoring redefinition
+        // of \cite` — not the lookup key. Reporting `lock_key` here named a
+        // control sequence that does not exist (`\cite:locked`), so the one
+        // diagnostic for a refused redefinition did not grep for the command
+        // it was about.
+        let cs_name = token.with_cs_name(ToString::to_string);
+        Info!("ignore", cs_name, s!("Ignoring redefinition of {cs_name}"));
       }
     }
   } else {

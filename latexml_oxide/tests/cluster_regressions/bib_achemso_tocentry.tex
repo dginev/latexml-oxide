@@ -1,0 +1,15 @@
+% achemso's {tocentry} must not be suppressed with `\iffalse`…`\fi`.
+% Conditional skipping matches `\fi` by MEANING and expands nothing, so an
+% `\end{tocentry}` whose macro body is `\fi` is invisible to it: the skip runs
+% to end of file and swallows the rest of the paper, `\bibliography` included.
+% Red/green is the bibliography length — 0 entries is red.
+% Witness 2606.14933 (0 -> 69 entries); audit family F6.
+\documentclass{achemso}
+\begin{document}
+\begin{tocentry}A graphic caption\end{tocentry}
+Body cites \cite{knuth,lamport}.
+\begin{thebibliography}{9}
+\bibitem{knuth} D.~Knuth. \newblock The TeXbook. \newblock 1984.
+\bibitem{lamport} L.~Lamport. \newblock LaTeX. \newblock 1994.
+\end{thebibliography}
+\end{document}

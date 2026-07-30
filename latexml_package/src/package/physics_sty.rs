@@ -108,6 +108,14 @@ fn phys_read_arg(
   required: bool,
   delimiters: fn(&str) -> Option<&'static str>,
 ) -> Result<(Option<Tokens>, Option<Token>, Option<Token>)> {
+  // tex.web §394: tab marks are disabled while a macro's argument is scanned.
+  // This reads the fenced `(…)`/`[…]` body of `\mqty` and friends straight from
+  // the input, so without the guard an inner `&` reaches an enclosing alignment
+  // as a cell break — `\mqty( b_0 &0 \\ 0 &b_1 )` in an `eqnarray` splits the
+  // row mid-argument and the alignment cannot close its group (witnesses
+  // 2605.05903, 2007.06211). `Parameters::read_arguments` arms the same guard
+  // for declared parameters, but this is a custom delimited read.
+  let _tabs = SuppressedTabMarks::for_argument_scan();
   let next = read_token()?;
   if let Some(ref t) = next {
     if t.get_catcode() == Catcode::BEGIN {

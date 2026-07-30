@@ -1,5 +1,23 @@
 use crate::prelude::*;
 
+/// Environments whose body is read VERBATIM from the raw input, so `\captionof`
+/// must not open one to host its caption — the terminator it would need is in
+/// the token stream, where such an environment never looks. See
+/// `\@captionof@` below.
+const VERBATIM_BODY_ENVS: &[&str] = &[
+  "lstlisting",
+  "lstlisting*",
+  "verbatim",
+  "verbatim*",
+  "Verbatim",
+  "Verbatim*",
+  "BVerbatim",
+  "LVerbatim",
+  "SaveVerbatim",
+  "minted",
+  "alltt",
+];
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: caption.sty.ltxml
@@ -243,7 +261,47 @@ LoadDefinitions!({
   DefMacro!("\\captionof", "\\@ifstar{\\@scaptionof}{\\@captionof}");
   DefMacro!("\\@captionof{}[]{}", r"\@ifnextchar\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}");
   DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label Semiverbatim", r"\@captionof@{#1}{#2}{#3\label{#4}}");
-  DefMacro!("\\@captionof@{}{}{}", r"\begin{#1}\@caption@{#1}{#2}{#3}\end{#1}");
+  // Perl wraps the caption in the named environment — "it isn't necessarily IN
+  // a figure or any float, so we'll wrap it in an otherwise empty one!"
+  // (`caption.sty.ltxml` L124-125) — and that is FATAL when the environment
+  // reads its body verbatim. `\captionof{lstlisting}{…}` expands to
+  // `\begin{lstlisting}…\end{lstlisting}`, but listings scans the raw INPUT for
+  // its terminator, never the token stream, so it finds no `\end{lstlisting}`
+  // and swallows the rest of the file: the document tail — `\bibliography`
+  // included — comes out as line-numbered listing text. Witness 2606.08339,
+  // where one such line costs the whole bibliography (0 entries; 30 once this
+  // construct stops running away). pdflatex renders that paper correctly, and
+  // real caption.sty never opens the environment at all — `\caption@of` is
+  // `\setcaptiontype*{#2}#1` (caption.sty L391), i.e. it only sets the type.
+  //
+  // So for a verbatim-bodied type, emit just the caption. `\@caption@` carries
+  // the type through for numbering and the construct is normally already
+  // inside a float (it is in the witness), which is what pdflatex shows.
+  // Non-verbatim types keep Perl's wrapper, since that is what gives an
+  // unfloated `\captionof{figure}` its container. OXIDIZED_DESIGN #89.
+  DefMacro!("\\@captionof@{}{}{}", sub[(ty, opt, text)] {
+    let name = ty.to_string();
+    let mut out = Vec::new();
+    if !VERBATIM_BODY_ENVS.contains(&name.trim()) {
+      out.push(T_CS!("\\begin"));
+      out.push(T_BEGIN!());
+      out.extend(ExplodeText!(name.trim()));
+      out.push(T_END!());
+    }
+    out.push(T_CS!("\\@caption@"));
+    for arg in [&ty, &opt, &text] {
+      out.push(T_BEGIN!());
+      out.extend(arg.clone().unlist());
+      out.push(T_END!());
+    }
+    if !VERBATIM_BODY_ENVS.contains(&name.trim()) {
+      out.push(T_CS!("\\end"));
+      out.push(T_BEGIN!());
+      out.extend(ExplodeText!(name.trim()));
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
   DefMacro!("\\@scaptionof{}{}", r"\begin{#1*}\@scaption{#2}\end{#1*}");
 
   def_macro_noop("\\clearcaptionsetup")?;
