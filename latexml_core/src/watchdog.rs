@@ -182,10 +182,61 @@ pub fn total_memory_bytes() -> Option<u64> {
 /// the cap keeps the single-process default from being reckless.
 pub fn default_ceiling_mib() -> u64 {
   const MIB: u64 = 1024 * 1024;
-  match total_memory_bytes() {
+  match effective_memory_bytes() {
     Some(total) => (total / MIB / 2).clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
     None => FALLBACK_CEILING_MIB,
   }
+}
+
+/// Memory this PROCESS may actually use: physical RAM, capped by the cgroup
+/// limit when one is in force.
+///
+/// `total_memory_bytes` reports the HOST's RAM (`sysconf(_SC_PHYS_PAGES)`),
+/// which is blind to containers — so `docker run -m 4g` on a 258 GB host chose
+/// a 64 GiB ceiling and a 48 GiB cooperative fuse, neither of which the process
+/// could ever reach. The kernel killed it at 4 GB instead: exit 137, no output,
+/// no `Fatal:` line — exactly the failure the graceful guard exists to replace.
+/// The cortex fleet is only accidentally safe here, because it pins every child
+/// with `--max-rss-mb`; a plain containerized CLI user is not.
+fn effective_memory_bytes() -> Option<u64> {
+  let physical = total_memory_bytes();
+  match (physical, cgroup_limit_bytes()) {
+    (Some(p), Some(c)) => Some(p.min(c)),
+    (p, None) => p,
+    (None, c) => c,
+  }
+}
+
+/// The cgroup memory limit, v2 then v1, or `None` when unlimited/unreadable.
+///
+/// Both spell "unlimited" in their own way: v2 writes the literal `max`, v1
+/// writes a huge sentinel (`u64::MAX` rounded down to a page multiple), so a
+/// value at or above the host's RAM is treated as no limit rather than as a
+/// bound worth honouring.
+fn cgroup_limit_bytes() -> Option<u64> {
+  let v2 = std::fs::read_to_string("/sys/fs/cgroup/memory.max").ok();
+  let v1 = || std::fs::read_to_string("/sys/fs/cgroup/memory/memory.limit_in_bytes").ok();
+  let raw = v2.or_else(v1)?;
+  interpret_cgroup_limit(&raw, total_memory_bytes())
+}
+
+/// Decide what a cgroup limit file MEANS. Split out from the file read so the
+/// rules are testable without a container: the reachable spellings of
+/// "unlimited" are what make this subtle.
+fn interpret_cgroup_limit(raw: &str, physical: Option<u64>) -> Option<u64> {
+  let text = raw.trim();
+  // cgroup v2 spells unlimited literally.
+  if text == "max" {
+    return None;
+  }
+  let limit = text.parse::<u64>().ok()?;
+  // cgroup v1 spells it as a huge sentinel, and a "limit" at or above the
+  // host's RAM bounds nothing — treat both as no limit rather than as a
+  // ceiling worth honouring.
+  if limit == 0 || physical.is_some_and(|phys| limit >= phys) {
+    return None;
+  }
+  Some(limit)
 }
 
 /// Floor for the machine-derived default, so a small container still gets a
@@ -374,6 +425,41 @@ impl Drop for Watchdog {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The cgroup limit decides the ceiling in a container, so each way of
+  /// spelling "unlimited" has to be recognised — otherwise a sentinel is
+  /// mistaken for a 8 EiB budget, or `max` for a parse failure.
+  #[test]
+  fn cgroup_limit_recognises_every_unlimited_spelling() {
+    const PHYS: Option<u64> = Some(258 * 1024 * 1024 * 1024);
+
+    // cgroup v2: the literal word.
+    assert_eq!(interpret_cgroup_limit("max\n", PHYS), None);
+    // cgroup v1: a huge sentinel (u64::MAX rounded to a page multiple).
+    assert_eq!(interpret_cgroup_limit("9223372036854771712", PHYS), None);
+    // A limit at or above physical RAM bounds nothing (258 GiB exactly, and
+    // above).
+    assert_eq!(interpret_cgroup_limit("277025390592", PHYS), None);
+    assert_eq!(interpret_cgroup_limit("281474976710656", PHYS), None);
+    // Garbage is not a limit.
+    assert_eq!(interpret_cgroup_limit("", PHYS), None);
+    assert_eq!(interpret_cgroup_limit("nonsense", PHYS), None);
+    assert_eq!(interpret_cgroup_limit("0", PHYS), None);
+
+    // A REAL limit is honoured — this is the `docker run -m 4g` case that was
+    // being ignored, leaving the process to be OOM-killed at 4 GB while its
+    // cooperative fuse sat at 48 GiB.
+    let four_gib = 4 * 1024 * 1024 * 1024;
+    assert_eq!(
+      interpret_cgroup_limit(&four_gib.to_string(), PHYS),
+      Some(four_gib)
+    );
+    // …and trailing whitespace from the sysfs read must not defeat it.
+    assert_eq!(
+      interpret_cgroup_limit(&format!("{four_gib}\n"), PHYS),
+      Some(four_gib)
+    );
+  }
 
   #[test]
   fn watchdog_zero_timeout_is_noop() {
