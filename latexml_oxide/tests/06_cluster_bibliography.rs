@@ -1824,7 +1824,10 @@ fn bib_xpatch_does_not_truncate_the_document() {
     "\\xpatchcmd swallowed the rest of the document:\n{x}"
   );
   let n = x.matches("<bibitem").count();
-  assert_eq!(n, 2, "expected both bibitems past the \\xpatchcmd, got {n}\n{x}");
+  assert_eq!(
+    n, 2,
+    "expected both bibitems past the \\xpatchcmd, got {n}\n{x}"
+  );
   assert!(
     !x.contains("suppressed line"),
     "the comment environment's body leaked into the output:\n{x}"
