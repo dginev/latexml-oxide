@@ -1445,6 +1445,34 @@ LoadDefinitions!({
 // Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml L106-132.
 // Splits a token list by delimiter tokens, respecting brace nesting and math mode.
 
+/// Has this diagnostic already been reported? Marks `key` reported either way.
+///
+/// Port of Perl's report-once diagnostic idiom, e.g. `\selectfont`
+/// (latex_constructs.pool.ltxml L5210-5211):
+///
+/// ```perl
+/// elsif (!LookupValue("reported_unrecognized_font_family_$family")) {
+///   AssignValue("reported_unrecognized_font_family_$family", 1, 'global');
+///   Info('unexpected', $family, $_[0], "Unrecognized font family '$family'."); }
+/// ```
+///
+/// So a caller reads `if !already_reported(&key) { Info!(…) }`, mirroring the
+/// Perl `elsif`. An unrecognized font family/series/shape — or a missing font
+/// encoding — is announced once per document, not once per occurrence: the
+/// font switch that provokes it typically sits inside a macro that a document
+/// expands in every table cell (witness 2503.04421, whose `\XSolidBrush`
+/// column produced 28 identical `Info:unexpected:ding` lines).
+///
+/// Global scope, as in Perl: the suppression has to outlive the group the
+/// diagnostic fired in, or a grouped `{\dingfamily …}` reports again each time.
+pub fn already_reported(key: &str) -> bool {
+  if lookup_bool(key) {
+    return true;
+  }
+  assign_value(key, true, Some(Scope::Global));
+  false
+}
+
 /// Join token groups with a conjunction token between them.
 ///
 /// Port of Perl `JoinTokens($conjunction, @things)` (Base_Utility.pool.ltxml L142-148).

@@ -1,0 +1,14 @@
+\documentclass{article}
+% bbding selects its font by FAMILY (\dingfamily is
+% \fontencoding{U}\fontfamily{ding}\selectfont) and there is no u.fontmap,
+% so every glyph here can only be decoded by treating the family name as
+% the encoding and consulting ding.fontmap. Regression guard for the
+% 2503.04421 result tables, which rendered \XSolidBrush as a literal `%'.
+\usepackage{bbding}
+\begin{document}
+Marks: \Checkmark\ \CheckmarkBold\ \XSolid\ \XSolidBold\ \XSolidBrush
+
+Slots: \ScissorRight\ \Phone\ \Envelope\ \HandRight\ \PencilRight
+
+Nested: \textbf{bold \Checkmark} and \emph{italic \XSolidBrush}
+\end{document}

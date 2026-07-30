@@ -2,6 +2,7 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
+use crate::base_utilities::already_reported;
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -348,8 +349,18 @@ LoadDefinitions!({
     if load_font_map(&encoding).is_some() {
       MergeFont!(encoding => encoding);
     } else {
-      Info!("missing_font_encoding", encoding,
-        "Couldn't find font encoding, falling back to OT1");
+      // Report once per encoding, not once per switch. Perl has no Info
+      // here at all (TeX_Fonts.pool.ltxml L169-176); its equivalent
+      // message comes from `LoadFontMap` as `Info:fontmap:<enc>`, which
+      // fires at most once because the `<enc>_fontmap_failed_to_load`
+      // flag short-circuits every later call (Package.pm L2920-2927).
+      // `preload_font_map` ports that flag but not the message, so
+      // without this guard the Rust-side Info outnumbers Perl's by the
+      // number of font switches (28 to 1 on 2503.04421).
+      if !already_reported(&s!("reported_missing_font_encoding_{encoding}")) {
+        Info!("missing_font_encoding", encoding,
+          "Couldn't find font encoding, falling back to OT1");
+      }
       // Default to OT1 encoding if no map found
       MergeFont!(encoding => "OT1");
     }
