@@ -1381,6 +1381,92 @@ unfaithful divergence. Repro + full notes:
 
 ### (not ranked) Font-selection chain audit, 2026-07-30 — residuals
 
+**STATUS 2026-07-30, end of day: 6 of the audit's findings are FIXED and merged
+(PRs #450, #452, #453, #454, #455, #456). What is left is recorded below.**
+
+Every merged fix was re-verified against same-host Perl 0.8.8 on the fully merged
+binary: 8 of 10 scenarios byte-identical, the two exceptions being the two gaps
+listed under "Still open" — i.e. nothing diverges that was not already known.
+Witness 2503.04421 sits at 99.922% token similarity with dingbats matching exactly
+(15 ✗ / 13 ✓ both sides).
+
+**The recurring shape, and the reason this section exists.** Four of the six fixes
+were the SAME defect class: a faithfully translated helper with **zero callers** —
+`ding_fontmap.rs`, `font::decode_str`'s FontDecode variant, `font::lookup_tex_font`,
+`font::rationalize_font_size`. The tables and functions were correct; nothing
+invoked them, and the fallback output stayed plausible, so no test could see it.
+**The compiler already catches this — if visibility is honest.** A `pub fn` in a
+library crate is public API, so `dead_code` stays silent no matter how unreachable
+it is. Mark an internal helper `pub(crate)` and rustc says
+`function \`x\` is never used` — which CI's `cargo clippy --workspace
+--all-targets -- -D warnings` turns into a hard failure. Verified on
+`font_decode_string`. So the rule is not "run an audit", it is **do not write
+`pub` on a helper that is not cross-crate API**; the four dead helpers were all
+over-exposed, which is exactly what silenced the lint.
+
+Two caveats, because a clean lint is not proof of wiring:
+- It cannot see a dead *binding module*. `ding_fontmap.rs` was reachable only if
+  something assigned `encoding = "ding"`, which `\selectfont` derives dynamically
+  from the family. For declared tables ask instead: *what assigns the key this
+  table is filed under?*
+- It cannot see a call graph wired to the WRONG live node. `\char` called
+  `decode_str` when it needed the `FontDecode` sibling — the two differ by a
+  single `|| 'OT1'`. Nothing is uncalled; only reading both Perl definitions
+  catches it.
+
+#### Two known-bad values PINNED by tests — do not "fix" by loosening the assert
+
+These assert today's WRONG output on purpose, so that repairing the underlying bug
+turns the test red and forces an update. Each says so in its own doc comment.
+
+- `120_multichar_slot_paths.rs::declare_math_symbol_still_drops_the_overlay_known_gap`
+  — `\DeclareMathSymbol` routes through `mathchar.rs`, whose `props.glyph` is
+  `Option<char>`, so a two-character slot loses its combining mark: T2B 128 gives
+  `Ӷ` where Perl gives `Ӷ̶` (U+04F6 U+0336). Fixing it means making that field a
+  string, a real type change through the math-char pipeline.
+- `118_delimiter_size_nominal_font.rs` pins **4 `Error:expected:<variable>`** from
+  `a0poster` — Rust-only, Perl 0.8.8 emits **zero** on the same input. Unrelated to
+  delimiter sizing; nobody has diagnosed it.
+
+#### Still open, with verification status
+
+- **`\cal ABC` collapses to one `<mi>`** and drops `class="ltx_font_mathcaligraphic"`
+  — VERIFIED by me. Perl emits three `<mi>` elements, Rust one containing `𝒜ℬ𝒞`.
+  This is the `<enc>_<category>_mathstyle` gap: Perl's `FontDecode`
+  (`Package.pm` L2884-2889) keeps the alphanumeric as ASCII and records the semantic
+  font; Rust decodes to the styled codepoint. NOT a searchability issue — both
+  engines emit styled Unicode in the final HTML, which is the MathML-Core-correct
+  answer; the defect is the token grouping and the missing class.
+- **No base font map for encoding `U`** — VERIFIED by me, and **SHARED with Perl**,
+  not a port gap. `U` is the catch-all for every symbol font (`manfnt`,
+  `latexsym`/`lasy`, `mathdesign`, XY-pic, `mathx`, `MnSymbol`), so they decode
+  through the OT1 fallback and print that slot's TEXT character. Reproduce with
+  `--includestyles` (the ar5iv profile) — it does NOT appear in the default profile:
+  `\usepackage{manfnt}` + `\dbend` gives `¨` (U+00A8) in **both** engines.
+  Structural: because the family lookup is nested inside
+  `if let Some(map) = load_font_map(encoding)` — byte-faithful to Perl — a
+  `U_lasy_fontmap` can never be consulted until `U` itself has a base map. Corpus
+  base rate: 2.0% of 547 sampled papers emit any font diagnostic at all, and the
+  log census is a LOWER bound because a family-map miss on a mapped encoding is
+  completely silent.
+- **`\mathversion{bold}` merges the text font instead of `mathfont`** — UNVERIFIED
+  single-agent claim (`latex_constructs.pool.ltxml` L5290 vs
+  `latex_constructs.rs`). Rust's `\boldmath`/`\unboldmath` reportedly get this
+  right, so `\mathversion` would be the odd one out.
+- **`\DeclareTextCommand`/`\ProvideTextCommand` don't install the encoding-dispatch
+  chain** — UNVERIFIED single-agent claim. Kernel accents are masked by the dump, so
+  only package-declared text commands (tipa T3, T2A extras, TS1 additions) would show
+  it. Rust's `\DeclareTextSymbol` *does* install the chain.
+- **Slot-by-slot table parity**: 4048 slots compared across all 24 maps, reported as
+  0 wrong characters / 0 off-by-N / 0 extra. I verified the AMSb subset myself; the
+  remaining totals are a single-agent claim (its Perl parser was cross-validated by
+  running real `perl`, and `ding[0x21]`=U+2713 was hand-checked).
+- One `fontsize="40%"` element differs in count under `a0poster` (Perl 4, Rust 3),
+  before and after the delimiter fix. Unexplained.
+
+#### The original sweep (kept for its file:line pointers)
+
+
 Sweep of every `selectfont` occurrence in `LaTeXML/lib/LaTeXML/` (22 hits) plus the
 sibling primitives, done while fixing the family-as-encoding gap above. **The
 `\selectfont` question itself is CLOSED**: Perl has exactly one
