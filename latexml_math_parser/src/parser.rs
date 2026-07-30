@@ -684,7 +684,14 @@ impl MathParser {
       // this call. A leftover from a previous document on the same thread
       // would cross-pollinate `idref` rewrites here.
       crate::data::clear_lost_nodes();
+      // Formulas still queued for parsing. A discarded subtree CONTAINING one
+      // of them must be held back, so the per-formula drain consults this.
+      // Maintained incrementally — rebuilding it per formula would be O(n^2),
+      // and the 131 MB witness has ~500k formulas.
+      let mut queued: rustc_hash::FxHashSet<usize> =
+        xmath_nodes.iter().map(|n| n.to_hashable()).collect();
       for math in xmath_nodes {
+        queued.remove(&math.to_hashable());
         let math_ref = math.clone();
         // Per-formula timing feeds the math_parse_buckets histogram in
         // telemetry. ~20 ns Instant cost per formula is negligible vs Marpa.
@@ -709,6 +716,14 @@ impl MathParser {
         {
           let _ = math_parent.set_attribute("_parsetrees", &self.last_parsetrees_count.to_string());
         }
+        // Release THIS formula's garbage now rather than at end-of-document.
+        // Deferring everything to the end fixed the use-after-free but cost
+        // +67% eager peak (35.7 -> 59.9 GB on the 19.8 MB witness), because
+        // eager runs ONE `parse_math` for a whole document. A formula boundary
+        // is the earliest SAFE point: this formula's parse is complete, so the
+        // intra-formula references that made freeing at the discard site
+        // segfault are gone.
+        drain_pending_discards(document, &queued);
       }
       crate::data::clear_math_idstore();
 
@@ -875,34 +890,10 @@ impl MathParser {
       // grammar precomputation for subsequent test runs. Applied in caller instead.
       note_end("Math Parsing");
     }
-    // Everything discarded during the parse is freed HERE, once no parse state
-    // can still reach it: the up-front formula list is exhausted, the
-    // `MATH_IDSTORE` snapshot is cleared, LOSTNODES is drained, and the kludge
-    // pass (which discards too) has run. Freeing at the discard sites instead
-    // is a use-after-free — see `crate::data::defer_discard`.
-    // A queued subtree can CONTAIN another queued node — the parse discards a
-    // wrapper and, separately, something inside it — so freeing naively double
-    // frees ("double free or corruption (out)"). Testing the inner entry
-    // afterwards does not work either: `free_subtree` neutralizes only the
-    // wrappers registered with the document, so an unregistered handle keeps a
-    // dangling pointer that still looks live.
-    //
-    // Record every pointer in a subtree BEFORE releasing it — while the memory
-    // is still valid to walk — and skip anything already covered.
-    let mut released: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
-    fn mark(node: &Node, released: &mut rustc_hash::FxHashSet<usize>) {
-      released.insert(node.to_hashable());
-      for child in node.get_child_nodes() {
-        mark(&child, released);
-      }
-    }
-    for node in crate::data::take_pending_discards() {
-      if released.contains(&node.to_hashable()) {
-        continue;
-      }
-      mark(&node, &mut released);
-      document.discard_subtree(node);
-    }
+    // Whatever the kludge pass discarded (it runs after the loop), plus any
+    // subtree the per-formula drain had to hold back. Nothing can reference
+    // them now: the formula list is exhausted and the snapshot is cleared.
+    drain_pending_discards(document, &rustc_hash::FxHashSet::default());
     Ok(())
   }
 
@@ -3328,6 +3319,47 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
     item.get_attribute(key)
   } else {
     None
+  }
+}
+
+
+/// Release subtrees queued by [`crate::data::defer_discard`], skipping any that
+/// still contains a formula the parse has not reached.
+///
+/// Two hazards, each of which cost an iteration to find:
+///
+/// * a queued subtree can CONTAIN another queued node, so freeing naively
+///   double frees ("double free or corruption (out)"). Testing an entry
+///   afterwards does not help — `free_subtree` neutralizes only the wrappers
+///   registered with the document, so an unregistered handle keeps a dangling
+///   pointer that still looks live. Every pointer is therefore recorded BEFORE
+///   release, while the memory is still safe to walk.
+/// * a subtree holding a not-yet-parsed formula must be held back whole, or
+///   that formula is freed before its turn.
+///
+/// Ids leave the `MATH_IDSTORE` snapshot with the nodes, so a later XMRef
+/// cannot resolve into released memory.
+fn drain_pending_discards(document: &mut Document, queued: &rustc_hash::FxHashSet<usize>) {
+  fn mark(node: &Node, seen: &mut rustc_hash::FxHashSet<usize>) {
+    seen.insert(node.to_hashable());
+    for child in node.get_child_nodes() {
+      mark(&child, seen);
+    }
+  }
+  let mut released: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
+  for node in crate::data::take_pending_discards() {
+    if released.contains(&node.to_hashable()) {
+      continue;
+    }
+    let mut ptrs = rustc_hash::FxHashSet::default();
+    mark(&node, &mut ptrs);
+    if !queued.is_empty() && ptrs.iter().any(|p| queued.contains(p)) {
+      crate::data::requeue_pending_discard(node);
+      continue;
+    }
+    crate::data::purge_math_idstore_subtree(&node);
+    released.extend(ptrs);
+    document.discard_subtree(node);
   }
 }
 
