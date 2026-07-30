@@ -17,6 +17,16 @@
 //! converted with status 0 and zero `Error:` lines, so nothing but a
 //! fidelity check catches this.
 //!
+//! The fixture spells out `\fontencoding{U}\fontfamily{ding}\selectfont`
+//! rather than loading `bbding.sty`, because `bbding` ships in
+//! `texlive-fonts-extra`, which CI deliberately does not install — a fixture
+//! that quietly lost its package would assert nothing. (It did: the first
+//! version of this test went red on CI with an empty `Marks:` paragraph and
+//! `Warning:missing_file:bbding`, while passing locally.) The expansion is
+//! verbatim what `\dingfamily` produces, and the engine reads no `.fd` file
+//! for it — the `ding` fontmap is compiled in — so the raw form needs no TeX
+//! Live package at all.
+//!
 //! Golden glyphs verified against Perl LaTeXML 0.8.8 on the same host.
 //! Dump-independent (the fontmap bindings are compiled in).
 use latexml::util::test::convert_fixture;
@@ -33,8 +43,8 @@ fn paragraph_text(out: &str, label: &str) -> String {
 }
 
 #[test]
-fn bbding_glyphs_decode_through_the_ding_family_fontmap() {
-  let r = convert_fixture("tests/fonts/bbding.tex");
+fn ding_family_glyphs_decode_through_the_family_fontmap() {
+  let r = convert_fixture("tests/fonts/ding_family_fontmap.tex");
   let out = r
     .result
     .unwrap_or_else(|| {
