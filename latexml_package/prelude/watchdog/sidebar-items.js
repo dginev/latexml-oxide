@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["EXIT_OOM","EXIT_TIMEOUT","FALLBACK_CEILING_MIB","MAX_DEFAULT_CEILING_MIB"],"fn":["available_disk_bytes","default_ceiling_mib","process_rss_kb","set_pre_exit_hook","total_memory_bytes"],"struct":["Watchdog"]};
+window.SIDEBAR_ITEMS = {"constant":["EXIT_OOM","EXIT_TIMEOUT","FALLBACK_CEILING_MIB","MAX_DEFAULT_CEILING_MIB","MIN_DEFAULT_CEILING_MIB"],"fn":["available_disk_bytes","default_ceiling_mib","process_rss_kb","set_pre_exit_hook","total_memory_bytes"],"struct":["Watchdog"]};
