@@ -552,9 +552,7 @@ impl Document {
         was_forcefont: bool,
       },
       PostWork {
-        node:              Node,
-        /// Bookkeeping attribute names captured during Enter, before tree modifications
-        bookkeeping_attrs: Vec<String>,
+        node: Node,
       },
     }
 
@@ -654,22 +652,18 @@ impl Document {
           }
           self.set_local_font(Rc::new(declared_font.into_owned()));
 
-          // Capture bookkeeping attribute names now, before tree modifications.
-          // This avoids calling get_attributes() later when the attribute list
-          // might be corrupted by replace_node operations.
-          let bookkeeping_attrs: Vec<String> = current
-            .get_attributes()
-            .into_keys()
-            .filter(|name| name.starts_with('_'))
-            .collect();
-
           // Process children using the snapshot from get_child_nodes().
           // Element children are deferred to the stack; text children are handled inline.
           // PostWork is pushed first (runs after all children), then children in reverse.
-          stack.push(Work::PostWork {
-            node: current.clone(),
-            bookkeeping_attrs,
-          });
+          //
+          // No attribute snapshot is taken here: PostWork deliberately
+          // re-derives the bookkeeping set at its own time (see the comment
+          // there — descendant `generate_id` calls write `_ID_counter_*` onto
+          // this node AFTER Enter). Capturing it here cost a full
+          // `get_attributes()` HashMap plus a String per attribute on every
+          // node — ~10M nodes on the streaming witness — and the result was
+          // never read.
+          stack.push(Work::PostWork { node: current.clone() });
 
           let children = current.get_child_nodes();
           // Collect work items forward, then push in reverse for left-to-right processing
@@ -737,14 +731,11 @@ impl Document {
             }
           }
         },
-        Work::PostWork {
-          mut node,
-          bookkeeping_attrs: _captured_at_enter,
-        } => {
+        Work::PostWork { mut node } => {
           // Mirrors Perl `Document.pm:452`: at finalize time, ANY attribute
           // whose name starts with `_` is internal bookkeeping and gets
-          // stripped. Re-derive the set at PostWork time rather than relying
-          // on the captured-at-Enter snapshot, because descendant
+          // stripped. The set MUST be derived here, at PostWork time, and not
+          // captured back at Enter, because descendant
           // `generate_id` calls can write `_ID_counter_<prefix>_` attributes
           // ONTO the current node (their nearest-id-bearing ancestor) during
           // child traversal — those late-added attrs were missing from the
