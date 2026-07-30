@@ -1107,7 +1107,7 @@ impl DigestionAPI for Core {
         // trim walks the heap, and a book-scale run yields millions of
         // fragments.
         #[cfg(target_os = "linux")]
-        if fragments % 4096 == 0 {
+        if fragments.is_multiple_of(4096) {
           unsafe {
             libc::malloc_trim(0);
           }
@@ -1116,12 +1116,12 @@ impl DigestionAPI for Core {
         // freed pages; a forced collect purges them back to the OS. Gated
         // off under dhat-heap, whose tracking allocator replaces mimalloc.
         #[cfg(not(feature = "dhat-heap"))]
-        if fragments % 4096 == 0 {
+        if fragments.is_multiple_of(4096) {
           unsafe {
             libmimalloc_sys::mi_collect(true);
           }
         }
-        if fragments.is_power_of_two() || fragments % 65536 == 0 {
+        if fragments.is_power_of_two() || fragments.is_multiple_of(65536) {
           let (index_ids, index_labels, _) = index.sizes();
           // C-heap split (glibc only manages libxml2's allocations — Rust
           // goes through mimalloc): uordblks = live C bytes, fordblks =

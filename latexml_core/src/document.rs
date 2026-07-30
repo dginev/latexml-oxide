@@ -3573,7 +3573,7 @@ impl Document {
   /// spine-attribute finality are preserved by construction.
   ///
   /// Two deliberate exclusions:
-  /// * ROOT-level children spill only when sectional ([`ROOT_SPILLABLE`]):
+  /// * ROOT-level children spill only when sectional (`ROOT_SPILLABLE`):
   ///   the frontmatter fallback and `maybe_promote_leading_title` operate on
   ///   the leading non-sectional root children at end-of-build.
   /// * Children of the insertion element itself never spill: in-flight

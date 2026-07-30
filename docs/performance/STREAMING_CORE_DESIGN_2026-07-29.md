@@ -15,7 +15,19 @@ witness (release, same host): **eager 63.7 → 34.9 GB peak** (wall 8:27
 unchanged); **streamed at a 24 GB cap: completes at 16.97 GB peak, 8:28**
 (pre-fix: hard SIGKILL at 24.6 GB; pre-fix streaming overhead +38% — gone).
 Streaming also avoids eager's 3 libxml2-XPath node-set-capacity errors on
-the 613 MB output. Remaining production numbers tracked in SYNC_STATUS.
+the 613 MB output.
+**PRODUCTION PROOF (2026-07-30): the 131 MB witness itself CONVERTS** at
+`--streaming --max-memory 48000`: exit 0, **peak RSS 28.1 GB** (pass 1
+bounded ~15 GB over 25M yields / 482k segments; pass 2 ~19.5 GB steady),
+wall 1:10, **2.66 GB well-formed XML**, zero duplicate ids, one real error
+(`{nowrap}` undefined — issue 297's binding, not a streaming defect). The
+composed levers beyond the leak fix: the `node_boxes` stale-entry sweep
+(build-time discards — alignment rearrangement above all — leaked pinned
+`Digested` trees), nested spills kept NESTED (literal placeholders +
+recursive assembly splice — inlining had rebuilt an 841 MB and a 1.85 GB
+segment out of chapter shells), the spilled-id dedup half
+(`Document::spilled_ids`), `malloc_trim`/`mi_collect` give-back, and a
+source-scaled runaway-token backstop (×200/byte).
 **Companion to** [`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md),
 which covers the *post-processing* half (splitting an already-built DOM) and was
 deferred with the condition *"Revisit only if a <64 GB target appears."* That
