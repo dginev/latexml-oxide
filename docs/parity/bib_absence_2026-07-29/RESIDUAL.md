@@ -1,7 +1,7 @@
 # The remaining failures, fully characterized
 
 Every paper of the 533-article known cohort that still has **zero**
-`class="ltx_bibitem"` after this PR. **Refreshed after R3a.** 256 are recovered; **277** are not (272 EMPTY + 5 NOHTML).
+`class="ltx_bibitem"` after this PR. **Refreshed after R3b's first fix.** 265 are recovered; **268** are not (263 EMPTY + 5 NOHTML).
 One row per paper in `residual_characterization.tsv.gz` —
 `id, first_error_class, nerrors, status, html_bytes, html_pct_of_src,
 source_bib_signal, bib_machinery` — every field derived from the paper's own run
