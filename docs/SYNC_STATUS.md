@@ -454,8 +454,10 @@ Re-verify a row before planning on it (rule 1).
     tally. They now end with `Fatal:Timeout:MemoryBudget`, a partial document,
     and `Status:conversion:3`. **Fatal count goes UP with no behavior getting
     worse** — in fact strictly better, since the partial output now survives.
-  * **#435 raises the default ceiling from a fixed 6144 MiB to 90% of machine
-    RAM** (`watchdog::default_ceiling_mib`, capped at 64 GiB). Fewer documents
+  * **#435 raises the default ceiling from a fixed 6144 MiB to a fraction of
+    machine RAM** (`watchdog::default_ceiling_mib`, capped at 64 GiB; the
+    fraction was 90% until 2026-07-30, now HALF — see the streaming-core
+    design doc for why 90% was laptop-hostile). Fewer documents
     reach any ceiling on a large box, pushing the rate DOWN — and the number is
     now **host-dependent**, so two runs on different hardware are not comparable
     unless `--max-memory` is pinned. Pin it when producing a baseline.

@@ -71,6 +71,29 @@ pub fn soft_cap_from_ceiling(max_memory_mib: u64) -> u64 {
   (max_memory_mib.saturating_mul(3) / 4).saturating_mul(1024 * 1024)
 }
 
+/// The RAM watermark, in bytes, at which streaming pass 1 begins spilling
+/// closed subtrees to disk — the second derived quantity of the single
+/// `--max-memory` knob, and deliberately NOT a flag of its own (a watermark a
+/// user could raise above the fuse would Fatal before it ever spilled).
+///
+/// **A third of the cooperative fuse.** Not a half: the yields fire only at
+/// legal seams (a large alignment digests straight through any threshold), the
+/// RSS sample lags by up to 1024 guard ticks, and per-run bookkeeping creeps
+/// monotonically — measured on the 131 MB witness, a half-of-fuse watermark
+/// steadied pass 1 around 33 GB and the creep then walked it into the 37.7 GB
+/// fuse and died, where a third completed at 28.1 GB peak.
+///
+/// **With `--max-memory=0` there is no fuse to divide, and the watermark must
+/// still exist**: disabling the death ceiling says "do not kill me", not "let
+/// the machine run out". Fall back to an eighth of physical RAM, which lands
+/// the same 12 GiB on a 96 GB host that the validated 48 GiB ceiling derives.
+pub fn spill_watermark_bytes() -> Option<u64> {
+  match resolve_rss_cap() {
+    Some(fuse) => Some(fuse / 3),
+    None => crate::watchdog::total_memory_bytes().map(|ram| ram / 8),
+  }
+}
+
 /// Apply the single `--max-memory` ceiling (MiB) to this thread's cooperative
 /// soft fuse, so the one knob means the same thing on every conversion path.
 ///

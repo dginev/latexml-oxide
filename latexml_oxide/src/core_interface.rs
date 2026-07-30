@@ -165,6 +165,21 @@ pub(crate) fn parse_preload_spec(preload: &str) -> (String, String, Vec<String>)
 /// continue; `Ok(false)` = a Fatal was recovered (announced + latched, boxes
 /// salvaged) and digestion must stop; `Err` = a resource fatal that must not
 /// be recovered.
+/// Can we create files in `dir`? Probes by creating and removing a uniquely
+/// named entry — the only answer that is true for the actual operation, since
+/// permission bits, read-only mounts, and full filesystems all present
+/// differently and `metadata().permissions()` sees none of them reliably.
+fn dir_is_writable(dir: &Path) -> bool {
+  let probe = dir.join(format!(".latexml-writable-{}", std::process::id()));
+  match std::fs::File::create(&probe) {
+    Ok(_) => {
+      let _ = std::fs::remove_file(&probe);
+      true
+    },
+    Err(_) => false,
+  }
+}
+
 fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
   match stomach::digest_next_body(None) {
     Ok(next_bodies) => {
@@ -982,11 +997,28 @@ impl DigestionAPI for Core {
     let digestion_note = self.digest_setup(request, preamble, postamble, mode)?;
     let mut document = build_document_head(&self.preload)?;
     latexml_core::document::reset_spilled_segment_count();
-    // The spill area lives beside the source (same volume as the output in
-    // the by-far-common layout; the CLI wiring can pass the real destination
-    // when it lands). Falls back to the system temp dir for literal input.
+    // The spill area lives beside the source when that directory is WRITABLE
+    // (same volume as the output in the by-far-common layout, so the
+    // disk-headroom check measures the filesystem the spill actually
+    // consumes), else the system temp dir. The writability test is not
+    // hypothetical: auto-activation fires on exactly the large documents that
+    // get processed from read-only trees — an arXiv bulk mount, a CI
+    // checkout — and creating the directory unconditionally failed the whole
+    // conversion there. Literal input has no source directory at all.
     let spill_anchor = match state::lookup_value("SOURCEDIRECTORY") {
-      Some(Stored::String(dir)) => arena::with(dir, |s: &str| std::path::PathBuf::from(s)),
+      Some(Stored::String(dir)) => {
+        let dir = arena::with(dir, |s: &str| std::path::PathBuf::from(s));
+        if dir_is_writable(&dir) {
+          dir
+        } else {
+          log::info!(
+            "streaming: {} is not writable; spilling to {} instead",
+            dir.display(),
+            std::env::temp_dir().display()
+          );
+          std::env::temp_dir()
+        }
+      },
       _ => std::env::temp_dir(),
     };
     let store = SegmentStore::create(&spill_anchor)?;
@@ -1029,16 +1061,13 @@ impl DigestionAPI for Core {
     document.literal_placeholders = true;
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
-    // Soft-RSS yield: fire regardless of box count once RSS crosses a THIRD
-    // of the fuse — the box budget assumes a per-box footprint, and
-    // math-dense content blows past it (witness: fuse at 18.8 GB with the
-    // box budget untouched). A third, not half: the sampled-RSS check lags,
-    // yields wait for a legal seam (a big alignment digests un-yieldingly),
-    // and per-run bookkeeping creeps — half-of-fuse steadied the 131 MB
-    // witness only ~5 GB under the fuse and the creep closed the gap. The
-    // cap is bytes here (resolve_rss_cap basis).
-    if let Some(cap_bytes) = stomach::resolve_rss_cap() {
-      stomach::set_fragment_yield_rss_soft_kb(Some(cap_bytes / 1024 / 3));
+    // Soft-RSS yield: fire regardless of box count once RSS crosses the
+    // watermark — the box budget assumes a per-box footprint, and math-dense
+    // content blows past it (witness: fuse at 18.8 GB with the box budget
+    // untouched). `spill_watermark_bytes` owns the policy, including the
+    // `--max-memory=0` case where there is no fuse to divide.
+    if let Some(watermark) = stomach::spill_watermark_bytes() {
+      stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
     }
 
     // Pass 1: interleaved digest → absorb → spill, at legal seams only.

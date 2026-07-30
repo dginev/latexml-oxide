@@ -200,15 +200,65 @@ structure is fine, it is the *residency* that must change.
 
 ---
 
+## 3a. The user-facing interface (settled 2026-07-30)
+
+**`--max-memory <MiB>` is the budget and the only memory number.** Everything
+else derives from it, so the two cannot contradict each other:
+
+| derived quantity | rule | why that number |
+|---|---|---|
+| cooperative fuse | 75 % of the budget | graceful Fatal with partial output before the hard watchdog |
+| spill watermark | a third of the fuse | a HALF steadied pass 1 ~5 GB under the fuse on the 131 MB witness and the bookkeeping creep then walked it in and died |
+| fragment budget | budget ÷ 8, in boxes | leaves room for the DOM built from those boxes (~1.4x) plus creep |
+| pass-2 segment chunk | watermark ÷ 72, clamped 4-32 MB | measured serialized-to-DOM expansion, so pass 2 respects the budget pass 1 did |
+
+Two escapes, no third memory flag: **`--streaming`** forces fragmentation,
+**`--streaming=false`** forces the eager path (before this, auto-activation
+could not be turned off at all). A `--spill-at` watermark flag was considered
+and **rejected**: lowering `--max-memory` already moves the watermark and the
+ceiling together, preserving the validated ratio, whereas an independent
+watermark could be set above the fuse — a run that Fatals before it ever
+spills.
+
+**`--max-memory=0`** lifts the death ceiling only. Spilling still engages,
+judged against the ceiling that would have been derived and with a watermark
+taken from physical RAM (RAM ÷ 8): *"do not kill me"* is not *"let the machine
+run out"*. Before this the arithmetic degenerated — `projected > 0` always
+fired and `0 / 8 / 2416` floored to a ONE-BOX budget, i.e. a spill after every
+box, with no watermark at all.
+
+**Activation compares against the fuse, and estimates the DOCUMENT.** Against
+the ceiling there was a band (0.75-1.0x) judged "fits" that the fuse then
+killed — 8.1-10.8 MB of source on a 16 GB machine. And the estimate read the
+main file's length, so a 2 KB `index.tex` that `\input`s a thousand chapters
+projected as 2 KB; it now sums the source tree's `.tex`/`.ltx`/`.bbl` bytes
+when the main file names an inclusion command — gated on that command so a
+self-contained paper among unused alternates keeps the eager path. Guards:
+`streaming_activation_tests` in `bin/latexml_oxide.rs`. Known limitation: an
+inclusion assembled by macro expansion names no literal command and needs an
+explicit `--streaming`.
+
+**Why the projection survives at all**, rather than arming the fragmented
+driver for every document: measured on 16 stratified sandbox papers (three
+interleaved rounds each), always-on is FREE in time — 16/16 byte-identical,
+median wall -1.3 % (p90 +7.5 %, inside per-paper spread), peak RSS +0.2 % —
+but the interleaved driver differs from eager in root-hook ordering,
+per-step resource folding and deferred frontmatter. That difference is
+byte-identity-tested across the sweep suites, not true by construction, so
+ordinary documents keep the eager path (user ruling 2026-07-30).
+
 ## 3. Memory-ceiling policy (user requirement, 2026-07-29)
 
 Build XML in RAM up to a ceiling, then spill to disk:
 
-* **Ceiling = min(64 GB, 90 % of machine RAM)** — not the current fixed
-  6144 MiB default, which is absurd on a 256 GB host and too generous on an 8 GB
-  laptop. **We do not detect machine RAM or swap at all today**; `/proc/meminfo`
-  (`MemTotal`, `MemAvailable`, `SwapTotal`, `SwapFree`) is the Linux source, and
-  the detection must degrade gracefully on macOS/Windows.
+* **Ceiling = min(64 GiB, HALF of machine RAM)**, floored at 2048 MiB
+  (`watchdog::default_ceiling_mib`). The rule was 90 % until 2026-07-30, which
+  is laptop-hostile once you follow it through: the cooperative fuse rides at
+  75 % of the ceiling, so a 16 GB machine let one conversion reach **10.8 GiB**
+  before complaining — long after the user's session started swapping. Half of
+  RAM is the 16 GB-baseline design point (8 GiB ceiling / 6 GiB fuse / 2 GiB
+  spill watermark) and lands a 96 GB host on **48 GiB**, the ceiling under
+  which the 131 MB witness was measured to convert (28.1 GB peak).
 * **Before spilling, verify disk headroom.** If neither RAM nor disk suffices,
   raise a `Fatal` that *names the shortfall and the requirement* — the user can
   add swap or free disk, but only if we tell them how much. A silent OOM kill is
