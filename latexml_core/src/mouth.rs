@@ -15,7 +15,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
-  common::{error::*, locator::Locator, numeric_ops::NumericOps, object::Object},
+  common::{arena::SymStr, error::*, locator::Locator, numeric_ops::NumericOps, object::Object},
   state::*,
   token::*,
   tokens::{NO_TOKENS, TeXString, Tokens},
@@ -95,6 +95,11 @@ pub struct Mouth {
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
   source:                 String,
+  /// `source` pre-interned at construction, so per-token / per-conditional
+  /// locator building ([`Object::get_locator`], [`Mouth::get_locator_from_start`])
+  /// is pure field copies instead of an interner probe over the path string.
+  /// `source` is never mutated after construction, so the two cannot drift.
+  source_sym:             SymStr,
   shortsource:            String,
   skipping_spaces:        bool,
   // pub handle : Option<File>,
@@ -134,6 +139,7 @@ impl Default for Mouth {
       chars:                  VecDeque::new(),
       nchars:                 0,
       source:                 String::from("Anonymous String"),
+      source_sym:             crate::pin!("Anonymous String"),
       shortsource:            s!("String"),
       // handle : None,
       foodtype:               FoodType::File,
@@ -168,8 +174,8 @@ impl Object for Mouth {
     // internal colno counter is 0-indexed (character array index), so we add 1
     // when producing the Locator for error-message display.
     // A Mouth always has a position, so this is always `Some`.
-    Some(Locator::new(
-      &self.source,
+    Some(Locator::from_sym(
+      self.source_sym,
       from_line as u32,
       (from_column + 1) as u32,
       to_line as u32,
@@ -279,12 +285,14 @@ impl Mouth {
       },
       Some(opts) => {
         let shortsource = opts.shortsource.unwrap_or_else(|| s!("String"));
+        let source = opts.source.unwrap_or_default();
         Mouth {
           foodtype: opts.foodtype.unwrap_or(FoodType::Literal),
           fordefinitions: opts.fordefinitions,
           at_letter: opts.at_letter,
           notes: opts.notes,
-          source: opts.source.unwrap_or_default(),
+          source_sym: crate::common::arena::pin(&source),
+          source,
           shortsource,
           ..Mouth::default()
         }
@@ -887,11 +895,8 @@ impl Mouth {
         #[cfg(feature = "token-locators")]
         if let Some(mut token) = Mouth::dispatch_char(self, ch, cc) {
           let (line, col0) = self.last_token_start;
-          token.loc = crate::token::push_token_origin(
-            crate::common::arena::pin(&self.source),
-            line as u32,
-            (col0 + 1) as u32,
-          );
+          token.loc =
+            crate::token::push_token_origin(self.source_sym, line as u32, (col0 + 1) as u32);
           return Some(token);
         } // Else, repeat till we get something or run out.
       }
@@ -1143,8 +1148,8 @@ impl Mouth {
   /// 1-indexed columns, matching `get_locator`.
   pub fn get_locator_from_start(&self) -> Locator {
     let (from_line, from_col0) = self.last_token_start;
-    Locator::new(
-      &self.source,
+    Locator::from_sym(
+      self.source_sym,
       from_line as u32,
       (from_col0 + 1) as u32,
       self.lineno as u32,

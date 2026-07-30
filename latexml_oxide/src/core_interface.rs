@@ -27,7 +27,7 @@ use latexml_core::{
 };
 use latexml_math_parser::MathParser;
 use once_cell::sync::Lazy;
-use regex::{Captures, Regex};
+use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
@@ -52,8 +52,8 @@ use latexml_package::prelude::{
   InputDefinitionOptions, InputOptions, input_content, input_definitions,
 };
 
-static CLS_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.cls$").unwrap());
-static STY_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.sty$").unwrap());
+/// Perl `Core.pm` L272 `s/^\[([^\]]*)\]//` — the preload option bracket, which
+/// comes at the *front* of the spec (`[twocolumn,11pt]article.cls`).
 static LATEX_OPTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\[([^\]]*)\]").unwrap());
 
 // Regex for parsing DefMathRewrite calls from .latexml files
@@ -313,20 +313,42 @@ fn build_document_head(preloads: &[String]) -> Result<Document> {
     if preload.ends_with(".pool") {
       continue;
     }
-    let mut options: Option<String> = None;
-    LATEX_OPTION_REGEX.replace_all(preload, |refs: &Captures| -> String {
-      options = Some(refs.get(1).map_or("", |m| m.as_str()).to_string());
-      String::new()
-    });
-    if preload.ends_with(".cls") {
-      CLS_EXT_REGEX.replace_all(preload, "");
-      let attributes = map! {s!("class") => preload.to_string()};
-      document.insert_pi("latexml", Some(attributes))?;
-    } else {
-      STY_EXT_REGEX.replace_all(preload, "");
-      let attributes = map! {s!("package") => preload.to_string()};
-      document.insert_pi("latexml", Some(attributes))?;
+    // Perl `Core.pm` L268-277 rewrites `$preload` IN PLACE with `s///`, so
+    // the option bracket and the `.cls`/`.sty` suffix are gone from the
+    // string that becomes the attribute value, and the captured options ride
+    // along as a second attribute. `Regex::replace_all` RETURNS a new string
+    // rather than mutating its input, so discarding the result — as this loop
+    // did until 2026-07-29 — stripped nothing at all:
+    // `--preload=[twocolumn,11pt]article.cls` emitted
+    // `<?latexml class="[twocolumn,11pt]article.cls"?>` where Perl emits
+    // `<?latexml class="article" options="twocolumn,11pt"?>`.
+    //
+    // Deliberately NOT routed through `parse_preload_spec` above: that
+    // splits on the LAST `.` and so would also eat a non-package extension
+    // (`--preload=mystyle.tex` -> `package="mystyle"`), while Perl strips
+    // only the two literal suffixes and leaves anything else attached. It
+    // also trims/drops empty options, where Perl passes `$1` verbatim.
+    let mut spec: &str = preload;
+    let mut options: &str = "";
+    if let Some(bracket) = LATEX_OPTION_REGEX.captures(spec) {
+      options = bracket.get(1).map_or("", |m| m.as_str());
+      spec = &spec[bracket.get(0).map_or(0, |m| m.end())..];
     }
+    let mut attributes: HashMap<String, String> = HashMap::default();
+    // Perl's `($options ? (options => $options) : ())`: an empty bracket
+    // (`[]name.sty`) is falsy, so it contributes no attribute at all.
+    if !options.is_empty() {
+      attributes.insert(s!("options"), options.to_string());
+    }
+    if let Some(class) = spec.strip_suffix(".cls") {
+      attributes.insert(s!("class"), class.to_string());
+    } else {
+      attributes.insert(
+        s!("package"),
+        spec.strip_suffix(".sty").unwrap_or(spec).to_string(),
+      );
+    }
+    document.insert_pi("latexml", Some(attributes))?;
   }
   Ok(document)
 }

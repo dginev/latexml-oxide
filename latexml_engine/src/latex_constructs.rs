@@ -1547,7 +1547,12 @@ pub fn define_new_theorem(
       "#1"
     };
     let fmt_str = s!(
-      "{{\\the\\thm@headfont\\lx@tag{{\\csname fnum@{thmset_str}\\endcsname}}{{{note_part}}}\\the\\thm@headpunct}}"
+      // The `{}` after `\endcsname` is OXIDIZED_DESIGN #85 — see `\lx@fnum@@`
+      // in `base_utilities.rs`. A theorem set's `\fnum@<set>` reaches the same
+      // trap: an author redefinition that takes an argument (to eat LaTeX's
+      // separator token) otherwise scans past the hook and swallows the tag
+      // group's closing brace.
+      "{{\\the\\thm@headfont\\lx@tag{{\\csname fnum@{thmset_str}\\endcsname{{}}}}{{{note_part}}}\\the\\thm@headpunct}}"
     );
     let params = parse_parameters("{}", &format_cs_token, true)?;
     DefMacro!(
@@ -6990,7 +6995,9 @@ LoadDefinitions!({
     // (driver: 2306.16410 — paper hangs in token-limit when reading
     // `\citep{surís2023vipergpt}` after `\usepackage[T1]{fontenc}`,
     // because `\i` expands to `\T1-cmd \i \T1\i` which loops back to
-    // `\i` when `\T1-cmd` isn't defined).
+    // `\i` when `\T1-cmd` isn't defined. 2402.01687 (sigplan) was a
+    // suspected second driver of the same UTF-8-in-bib-key pattern,
+    // never confirmed — check it first if this cascade resurfaces).
     let enc_cmd = s!("\\{}-cmd", e);
     DefMacro!(T_CS!(enc_cmd), "{}{}", "#2");
 

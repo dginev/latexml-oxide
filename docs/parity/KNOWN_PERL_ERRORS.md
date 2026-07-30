@@ -2822,12 +2822,17 @@ Confirmed on `LaTeXML/t/complex/acm_aria.tex` (whose golden `acm_aria.xml`
 records the defect) and on arXiv **2607.21760** — an ACM accessibility paper
 with four figures and zero descriptions in its HTML.
 
-**`aria:labelledby` is NOT one of the defects.** acmart's documentation says
-"Unlike `\caption`, which is used alongside the image, `\Description` is
+**`aria:labelledby` on the float is a second defect.** acmart's documentation
+says "Unlike `\caption`, which is used alongside the image, `\Description` is
 intended to be used **instead of** the image", i.e. it is a *text alternative*,
-which in ARIA is name-like. Pointing a name relation at it is defensible; what
-goes wrong is only that the referenced note holds the short form while the long
-form is gone.
+which in ARIA is name-like — so pointing a name relation at it reads as
+defensible, and this entry originally said so. It is not: `aria-labelledby`
+sets the accessible **name**, and a float's name is its caption, so the
+relation displaces "Figure 1. caption text" and hides the caption from a screen
+reader. The alternative also belongs to the *image*, not to the float that
+contains it. Reported in review on brucemiller/LaTeXML#430 (`r3674103638`);
+Rust now puts the text on the lone `ltx:graphics` as `@alt` and never emits a
+name relation (`OXIDIZED_DESIGN_DIVERGENCES.md` #83).
 
 Two further problems do stand:
 
@@ -2846,11 +2851,128 @@ Two further problems do stand:
 
 **Fixed in Rust, deliberately diverging** (`latexml_package/src/package/acmart_cls.rs`;
 see `OXIDIZED_DESIGN_DIVERGENCES.md` #83): the description is read `Undigested`
-so nothing inside it expands, the short form becomes `aria:label` and the long
-form an `aria:describedby` block, and a dedicated XSLT template strips the
+so nothing inside it expands; where the float holds a lone image the short form
+becomes that image's `@alt` and the long form an `aria:describedby` block, and
+where it holds none or several (an empty float, a table, a multi-panel figure)
+both stay referenced from the float itself — never as a name relation, so the
+caption is always what names the float. A dedicated XSLT template strips the
 footnote scaffolding. `acm_aria.xml` was re-blessed — it previously matched Perl
 byte-for-byte and so certified the defect.
 
 Candidate to upstream: swapping `#1`→`#2` is a one-token fix; the
 note-decoration and undigested-reading parts need the XSLT and parameter-type
 changes too.
+
+## 67. `do_year`'s bibliography disambiguation suffix is dead code — a sigil mismatch
+
+`LaTeXML/lib/LaTeXML/Post/MakeBibliography.pm` binds the entry's disambiguation
+letter as a **scalar** and reads it back as an **array**:
+
+```perl
+# L417, in formatBibEntry:
+local $LaTeXML::Post::MakeBibliography::SUFFIX = $$entry{suffix};
+# L613-615, in do_year:
+return (' (', @stuff, @LaTeXML::Post::MakeBibliography::SUFFIX, ')');
+```
+
+`$Pkg::SUFFIX` and `@Pkg::SUFFIX` are different Perl variables. The array is
+never assigned anywhere in the distribution (`grep -rn '@SUFFIX' LaTeXML/lib/`
+is empty), so it always interpolates to nothing and the letter never reaches the
+entry body — only the refnum label, which reads `$$entry{suffix}` directly.
+
+**Minimal trigger** — two entries sharing an author+year (`latexml_oxide/tests/
+cluster_regressions/bib_alpha_style.{tex,bib}`, entries `wide1`/`wide2`), under
+`\bibliographystyle{alpha}`. Same-host Perl LaTeXML 0.8.8 renders
+
+```html
+<span class="ltx_tag ltx_bib_abbrv …">[SBC99a]</span> … <span class="ltx_text ltx_bib_year"> (1999)</span>
+```
+
+— suffix on the label, bare year in the body.
+
+**Not fixed, in either engine, and that is deliberate.** The dead code's evident
+intent (a disambiguated body year) is what author-year styles like
+`apalike.bst` print, but the styles that actually reach this branch do not want
+it: `alpha.bst` prints the bare `1999` in the entry body, exactly as Perl
+already does. And Rust's author-year branch drops the first block's year
+outright (OXIDIZED_DESIGN #71), so "fixing" the sigil would change output *only*
+for the alpha and numeric styles — precisely where it would be wrong. Rust
+therefore matches Perl's behaviour, with the reason recorded at the seam
+(`make_bibliography.rs`, `Formatter::Year`) and pinned by
+`06_cluster_bibliography::cluster_bib_alpha_style_labels`.
+
+Worth knowing because the *source* reads as though the suffix is emitted: an
+audit item in `BIBLIOGRAPHY_WORKLIST.md` ("`Formatter::Year` drops the
+disambiguation `@SUFFIX`") was opened off that reading and closed only when the
+Perl output was measured.
+
+Candidate to upstream: deleting the dead `@…::SUFFIX` interpolation, or a
+style-conditional emission. Not a one-token `$`/`@` swap — that would change
+alpha-styled output for the worse.
+## 68. An arg-taking `\fnum@<type>` swallows the caption's closing brace and absorbs the rest of the document
+
+`LaTeXML/lib/LaTeXML/Engine/Base_Utility.pool.ltxml` L1041-1043 expands the
+author's caption-number hook bare:
+
+```perl
+DefMacro('\lx@fnum@@{}',
+  '{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}'
+    . '\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}');
+```
+
+Real `\fnum@<type>` takes no argument. But LaTeX's `\@makecaption` is
+`\sbox\@tempboxa{#1: #2}`, so a **one-argument** `\fnum@<type>` eats the `:`
+that follows it — which is exactly the point of the widely-copied "change
+`Fig. 1:` to `Fig. 1.`" hack:
+
+```tex
+\makeatletter
+\renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+\makeatother
+```
+
+LaTeXML has no `:` **token** to eat: its separator is a tag **attribute**
+(`\lx@tag[][: ]`, `latex_constructs.pool.ltxml` L3158-3159). So the argument
+scan runs past the hook and takes the caption group's closing brace instead. The
+`<figure>` never closes, and **every following section — the bibliography
+included — is absorbed into it**, which is why the symptom presents as a
+truncated document with no References section rather than as a bad caption.
+
+**Minimal trigger** (`latexml_oxide/tests/cluster_regressions/fnum_arg_hook.tex`
+covers all three hooks; plain `article` suffices — `cas-sc` is not implicated):
+
+```tex
+\documentclass{article}
+\makeatletter
+\renewcommand*{\fnum@figure}[1]{\figurename~\thefigure.}
+\makeatother
+\begin{document}
+\section{First}
+\begin{figure}\caption{A caption.}\end{figure}
+\section{Second}
+Text after the figure must survive.
+\end{document}
+```
+
+Measured on that input: **pdflatex 0 errors** (renders `Figure 1. A caption.`),
+**Perl LaTeXML 0.8.8 nine errors**, pre-fix Rust seven — same
+`\lx@tag@intags` / `\lx@tag` / `\end{figure}` "Attempt to end mode
+restricted_horizontal" signature in both engines. Witnesses `2605.01731`
+(18 figures × 3 errors) and `2605.12842` (10 × 3), both confirmed live on the
+current fleet run. **Breadth is smaller than once recorded:** a 2026-07-14 note
+claimed 18 papers from a `grep 'lx@tag@intags'` proxy; re-measured 2026-07-29
+that proxy gives 23 papers across sandbox-arxiv-2605+2606 (60,505 docs) of which
+only **2** carry this cause's actual signature — the symptom has several causes,
+so the proxy over-attributes.
+
+**Fixed in Rust** as a deliberate surpass — `OXIDIZED_DESIGN #85`: the hook is
+expanded as `\csname fnum@#1\endcsname{}`, giving an arg-taking definition a
+harmless empty group and reproducing pdflatex's result, while the 0-arg hooks
+that are the normal case are unaffected. Guard
+`06_cluster_regressions::cluster_fnum_arg_hook`.
+
+Reported upstream as **brucemiller/LaTeXML#2856**: the one-token change applies
+verbatim to the Perl definition, and to `\lx@fnum@toc@@` L1065-1066 and the
+theorem-header formatter alongside it. Note the fix does NOT reach the `close=": "` separator, so the
+caption still reads `Figure 1.: A caption.` in both engines — closing that gap
+needs the tag attribute to become conditional, which is a larger change.

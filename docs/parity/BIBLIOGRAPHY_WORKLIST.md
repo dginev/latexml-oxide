@@ -5,10 +5,11 @@
 > MakeBibliography full-parity re-port (user directive 2026-07-04 — reuse TeX
 > interpretation, no special-case parser).
 >
-> **State, 2026-07-27.** Re-port **items 1 and 3 are DONE**; the open work is
-> item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER)
-> and the missing-references target list. The `.bib`-as-DATA family closed as
-> divergences **#73 #74 #75 #78 #79 #80**.
+> **State, 2026-07-29.** The MakeBibliography re-port is **DONE** — items 1, 2
+> and 3 all landed. The only open work in this file is the missing-references
+> target list. The `.bib`-as-DATA family closed as divergences
+> **#73 #74 #75 #78 #79 #80**; item 2's collation approximation is **#84** and
+> its one non-gap is **KNOWN_PERL_ERRORS #67**.
 >
 > **Two reading rules for this file.** (1) The three **INTERIM** blocks under the
 > re-port are HISTORY — every identifier they name was deleted with the string
@@ -540,7 +541,7 @@ the log). A `grep -rl '\begin{document}'` harness picks the first match, which
 for `2605.30360` was the decoy `proof.tex`, not `polyhist.tex` — that alone
 manufactured a false "still broken" verdict.
 
-#### `\renewcommand*{\fnum@figure}[1]` truncates the document — ANALYSED 2026-07-14, NOT fixed (needs a decision)
+#### `\renewcommand*{\fnum@figure}[1]` truncates the document — ✅ FIXED 2026-07-29 (surpass, OXIDIZED_DESIGN #85)
 
 Witness `2605.01731` (cas-sc): 18 figures × 3 errors
 (`\lx@tag@intags`/`\lx@tag`/`\end{figure}` "Attempt to end mode
@@ -567,13 +568,34 @@ LaTeXML has no `:` token to eat: `\format@title@figure` is
 a token. So `\csname fnum@figure\endcsname` (Base_Utility L1041-1043) grabs the
 group's closing `}` instead, wrecking the caption and cascading.
 
-This is **PARITY** — Perl's `\lx@fnum@@` is identical — so fixing it is a
-surpass-Perl divergence, and both engines are wrong vs the PDF. Candidate fix:
-expand as `\csname fnum@#1\endcsname{}` so an arg-taking `\fnum@<type>` eats a
-harmless empty group (reproducing pdflatex's result) while a normal 0-arg one
-just gains an empty group. **Not done**: `\lx@fnum@@` formats every figure/table
-caption in every document — blast radius far out of proportion to 18 papers, and
-release-week bias is stabilize. Needs a user decision + a full-suite diff.
+This is **PARITY** — Perl's `\lx@fnum@@` is identical — so fixing it was a
+surpass-Perl divergence, and both engines were wrong vs the PDF. **Landed
+2026-07-29** as the candidate fix this entry proposed: expand as `\csname
+fnum@#1\endcsname{}`, so an arg-taking `\fnum@<type>` eats a harmless empty
+group (reproducing pdflatex's result) while a 0-arg one just gains one.
+User-approved per the `surpass-perl` protocol, and extended to all three
+`fnum@` hooks — `\lx@fnum@@`, `\lx@fnum@toc@@` and the theorem-header
+formatter. `\lx@typerefnum@@` shares the shape but is deliberately excluded: no
+LaTeX kernel feeds it a separator token, so the pdflatex-compatibility argument
+does not reach it.
+
+**The blast-radius fear did not materialise, and that is the correction worth
+keeping.** This entry deferred the fix because "`\lx@fnum@@` formats every
+figure/table caption in every document". It does not: the changed branch fires
+only where `\fnum@<type>` is *defined*, and the untouched `\lx@@fnum@@` default
+is what serves nearly every caption. Measured full suite after the change:
+**106/106 targets, zero goldens re-blessed**. Guard fixture
+`cluster_regressions/fnum_arg_hook.tex` goes **10 errors -> 0** (all three
+hooks); same-host Perl 0.8.8 raises 9 on the two-hook form, pdflatex 0. Three
+real papers whose classes `\def\fnum@figure` (svjour3, aastex631, llncs) are
+byte-identical before vs after. **Breadth re-measured 2026-07-29 and reduced:**
+the `grep 'lx@tag@intags'` proxy behind "18 papers, 5 with no References" gives
+23 papers on the current fleet run, of which only 2 carry this cause's signature
+(2605.01731, 2605.12842) — the symptom has several causes.
+Caveat: the `close=": "` separator is untouched, so the caption still reads
+`Figure 1.: A caption.` — the win is error-freedom and an un-truncated
+document, not punctuation parity. Full record: OXIDIZED_DESIGN **#85** /
+KNOWN_PERL_ERRORS **#68**.
 
 Minimal repro (article + subfigure + the `\renewcommand*` above) reproduces the
 exact 3-error signature; `cas-sc` is NOT implicated (it was the first
@@ -822,11 +844,61 @@ FULL RE-PORT — item 1 LANDED 2026-07-26:
    Measured on `bib_field_no_url_package` (full pipeline, both engines):
    Rust **0 errors / 3 bibitems**, same-host `latexmlc` **7 errors / 3
    bibitems** with the note truncated. The gap is divergence #72.
-2. Secondary parity gaps from the audit: `unisort` (Unicode collation) vs
-   `Vec::sort()`; citestyle semantics swapped (`AY` should be the
-   abbreviated `[AA+yy]` label, not full author-year); `Formatter::Year`
-   drops the disambiguation `@SUFFIX`; document-global NUMBER across split
-   documents.
+2. **DONE 2026-07-29.** The four secondary parity gaps from the audit, plus a
+   fifth found while checking them and a latent panic the first fix made
+   reachable. All five live in `latexml_post/src/make_bibliography.rs`; the
+   whole set is guarded by
+   `06_cluster_bibliography::cluster_bib_alpha_style_labels` over
+   `cluster_regressions/bib_alpha_style.{tex,bib}`, whose every expectation was
+   ground-truthed against same-host Perl LaTeXML 0.8.8 — after which the Rust
+   and Perl bibliographies are **byte-identical** on that fixture (modulo the
+   pre-existing `biblist` id noted below).
+
+   * **citestyle semantics were SWAPPED** — the one with real corpus reach.
+     Perl L481-517 has exactly three branches: `numbers` → `[1]`; **`AY` → the
+     abbreviated `[AS64]` label** (class `ltx_bib_abbrv`); *anything else* →
+     spelled-out author-year. Rust read `AY` as author-year, `alpha` (a string
+     nothing emits) as the abbreviated one, and every unknown value as
+     `numbers`. Since `\bibliographystyle{alpha}` sets `CITE_STYLE=AY` (Perl
+     `$BIBSTYLES`, `latex_constructs.pool.ltxml` L3953-3961 — the Rust table
+     matches), **every alpha-styled document got the wrong label shape**, and
+     natbib's `super` fell to numbers instead of author-year.
+   * **`{ay}` and `{initial}` were keyed off the wrong name string.** Perl
+     computes two (L318-337): the full `$sortnames` keys the sort, the SHORT
+     `$names` ("Smith et al") keys disambiguation and the split-by-initial
+     bucket. Rust used the full form for all three, so two 3+-author entries
+     sharing a first author and year never collided and **neither was ever
+     given its `a`/`b` suffix**.
+   * **`unisort`** — now collates (primary-level UCA, no new dependency);
+     divergence **#84** records what that does and does not reproduce.
+   * **doc-global NUMBER** — was assigned in document-global sortkey order
+     inside `get_bib_entries`; Perl assigns it in FORMAT order (`local $NUMBER`
+     L55, `++$NUMBER` L418), which under `--splitbibliography` is
+     initial-major. Moved to `process`, walking the same order the biblists are
+     built in. **This changes no output today** and the PR says so: `post.rs`
+     constructs the processor with `split = false` and `--splitbibliography` is
+     in the deferred CLI cluster, so the split branch is unreachable; the
+     non-split walk numbers in exactly the order the old pass did. It is a
+     correctness fix for when that flag lands.
+   * **`Formatter::Year` does NOT drop a suffix** — the audit item was read off
+     the Perl source's sigil. `do_year` L613-615 reads the ARRAY `@…::SUFFIX`
+     while L417 binds the SCALAR `$…::SUFFIX`, so the letter never reached the
+     body in Perl either; measured Perl output is ` (1999)`, and `alpha.bst`
+     agrees. **KNOWN_PERL_ERRORS #67**; the non-emission is now pinned by the
+     guard so it is not "fixed" back.
+   * **`make_alpha_label` byte-indexed a UTF-8 string** — `aa.len() > 3` /
+     `&aa[..3]` over per-author initials, so a multi-byte initial (`Ångström`)
+     could panic on a char boundary. Character-based now, and the stray
+     `to_uppercase()` Perl's multi-name branch does not have is gone. Latent
+     before, reachable for every `alpha` document after the citestyle repair —
+     which is why it is in this change and not a follow-up.
+
+   **Found, not fixed (separate defect):** a Rust `<ltx:biblist>` carries
+   `xml:id` but no `fragid`, and the XSLT's `add_id` emits the HTML `id` from
+   `@fragid` only — so Perl's `<ul id="bib.L1">` comes out as a bare `<ul>` in
+   Rust. Pre-existing, unrelated to this change, and the XSLT template is
+   byte-identical between the engines, so the divergence is upstream of it in
+   whatever assigns `fragid` to a post-created node.
 3. **Field-interpretation whitelist — RESOLVED by item 1, not by widening the
    list.** Flagged by the 2026-07-05 commit review of `ede2bdcc2c`: the
    `.bib`→XML path in `make_bibliography.rs` digested only 13 fields

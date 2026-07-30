@@ -590,30 +590,16 @@ impl MakeBibliography {
         Some(mut entry) => {
           // Extract metadata from bibentry XML node (if available)
           if let Some(ref bibentry) = entry.bibentry {
+            // Perl L318-328 computes TWO name strings and uses them for
+            // different things: `$sortnames` (every "Surname Givenname",
+            // joined) keys the sort, while `$names` (the SHORT form — "A and
+            // B", "A et al") keys `{ay}` and `{initial}`. `extract_names`
+            // already carries Perl's bib-key → bib-title fallback (both
+            // strings then hold the same text), so no second fallback chain is
+            // needed here.
             let (sort_names, short_names, _full_names) = extract_names(doc, bibentry);
             entry.sort_names = sort_names.clone();
-            entry.authors_short = short_names;
-
-            let names_for_sort = if sort_names.is_empty() {
-              // Try bib-key or bib-title as fallback
-              match PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
-                .into_iter()
-                .next()
-              {
-                Some(key_node) => key_node.get_content(),
-                _ => {
-                  match PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
-                    .into_iter()
-                    .next()
-                  {
-                    Some(title_node) => title_node.get_content(),
-                    _ => bibkey.clone(),
-                  }
-                },
-              }
-            } else {
-              sort_names
-            };
+            entry.authors_short = short_names.clone();
 
             // Year
             let date_content =
@@ -624,6 +610,17 @@ impl MakeBibliography {
                 .unwrap_or_default();
             let year = extract_four_digit_year(&date_content);
             entry.year = year.clone();
+
+            // The {ay}/sortkey date is the publication date ALONE, on purpose.
+            // Perl L330 unions it with `ltx:bib-type`
+            // (`ltx:bib-date[@role="publication"] | ltx:bib-type`, whichever
+            // comes first in document order); querying the two separately is a
+            // settled decision here, so that a `type` field cannot displace the
+            // year — see BIBLIOGRAPHY_WORKLIST, "bib-type is safe to emit".
+            // A "date else type" stand-in was written while porting the sortkey
+            // and REMOVED on review: it contradicts that decision, it is not
+            // Perl's rule anyway for an entry carrying both, and it would move
+            // sort keys (and with them numbering) with no test or witness.
 
             // Title
             let title = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
@@ -639,13 +636,17 @@ impl MakeBibliography {
               .unwrap_or_else(|| "misc".to_string());
             entry.entry_type = entry_type;
 
-            // Author+year for suffix detection
-            entry.author_year = format!("{}.{}", names_for_sort, year);
-            entry.initial = PostDocument::initial(&names_for_sort, true);
+            // Author+year for suffix detection — Perl L336 `"$names.$date"`,
+            // i.e. the SHORT names. Using the full sort-names here silently
+            // disabled disambiguation for every 3+-author paper: two entries
+            // that Perl groups as "Smith et al.1999" carry different coauthor
+            // lists, so their full-name keys never collide and neither entry
+            // ever got its `a`/`b` suffix.
+            entry.author_year = format!("{}.{}", short_names, year);
+            entry.initial = PostDocument::initial(&short_names, true);
 
-            // Sort key
-            let sort_key =
-              format!("{}.{}.{}.{}", names_for_sort, year, title, bibkey).to_lowercase();
+            // Sort key — Perl L338, from the FULL sort-names.
+            let sort_key = format!("{}.{}.{}.{}", sort_names, year, title, bibkey).to_lowercase();
             entry.sort_key = sort_key.clone();
 
             // Enqueue transitive citations
@@ -755,8 +756,9 @@ impl MakeBibliography {
     );
 
     // Step 5: Sort and detect duplicate author+year → assign suffixes.
+    // Perl L357 `$doc->unisort(keys %$included)`.
     let mut sorted_keys: Vec<String> = included.keys().cloned().collect();
-    sorted_keys.sort();
+    unisort(&mut sorted_keys);
 
     // Port of suffix detection: track by author_year, assign suffixes when duplicated.
     let mut ay_last: HashMap<String, String> = HashMap::default(); // ay → last sort_key with this ay
@@ -794,14 +796,10 @@ impl MakeBibliography {
       }
     }
 
-    // Assign numbers in sort order
-    let mut number = 0u32;
-    for key in &sorted_keys {
-      number += 1;
-      if let Some(entry) = included.get_mut(key) {
-        entry.number = number;
-      }
-    }
+    // Numbering is NOT done here: Perl assigns it in FORMAT order
+    // (`++$NUMBER` inside `formatBibEntry` L418), which is initial-major once
+    // `--splitbibliography` is on. It happens in `process`, alongside the walk
+    // that builds the biblists.
 
     (included, bib_docs)
   }
@@ -836,11 +834,12 @@ impl MakeBibliography {
       format!("{}.L1", bib_id)
     };
 
-    let mut sorted_keys: Vec<&String> = entries.keys().collect();
-    sorted_keys.sort();
+    // Perl L398 `$doc->unisort(keys %$entries)`.
+    let mut sorted_keys: Vec<String> = entries.keys().cloned().collect();
+    unisort(&mut sorted_keys);
     let items: Vec<NodeData> = sorted_keys
       .iter()
-      .filter_map(|key| entries.get(*key))
+      .filter_map(|key| entries.get(key))
       .map(|entry| self.format_bib_entry(doc, bib_id, entry, style))
       .collect();
 
@@ -1308,14 +1307,22 @@ impl MakeBibliography {
         surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
       }
       if surnames.len() > 1 {
-        let mut aa: String = surnames
+        // Perl L497-500: `join('', map { substr($_->textContent, 0, 1) })`,
+        // truncated to `substr($aa, 0, 3) . "+"` past three. Both are
+        // CHARACTER operations, and neither uppercases — only the single-name
+        // branch below carries Perl's `uc`. Byte indexing here used to panic
+        // outright on a multi-byte initial (`Ångström`), which the citestyle
+        // repair makes reachable for every `\bibliographystyle{alpha}`
+        // document rather than the handful that spelled the style `alpha`.
+        let initials: Vec<char> = surnames
           .iter()
-          .map(|n| n.get_content().chars().next().unwrap_or('?').to_string())
+          .map(|n| n.get_content().chars().next().unwrap_or('?'))
           .collect();
-        if aa.len() > 3 {
-          aa = format!("{}+", &aa[..3]);
+        if initials.len() > 3 {
+          format!("{}+", initials[..3].iter().collect::<String>())
+        } else {
+          initials.iter().collect::<String>()
         }
-        aa.to_uppercase()
       } else if !surnames.is_empty() {
         let text = surnames[0].get_content();
         text.chars().take(3).collect::<String>().to_uppercase()
@@ -1472,17 +1479,35 @@ impl Processor for MakeBibliography {
       }
 
       // Read citation style from element attributes
+      // Perl L481 is `$STYLE{citestyle} || 'numbers'`, and `||` is falsy on the
+      // EMPTY string as well as on absent — so an empty attribute must reach
+      // `numbers`, not the `else` branch. Before the mapping repair below an
+      // empty value fell through to `_ => Numbers` by luck; with `_` now
+      // meaning author-year it has to be excluded explicitly, or the repair
+      // would introduce an unfaithfulness of its own. Our own engine cannot
+      // emit `citestyle=""` (`Document::set_attribute` skips empty values), but
+      // `latexml_post` also consumes XML it did not produce.
       let citestyle_str = bib
         .get_attribute("citestyle")
+        .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "numbers".to_string());
+      // Perl L481-517 branches on exactly three cases, and the mapping was
+      // inverted here: `AY` is the ABBREVIATED `[AS64]` label (L485, class
+      // `ltx_bib_abbrv`), NOT the spelled-out author-year one, and ANY other
+      // non-`numbers` value takes the author-year `else` branch rather than
+      // falling back to numbers. `\bibliographystyle{alpha}` sets
+      // `CITE_STYLE=AY` (`latex_constructs.rs::lookup_bibstyle_params`, Perl
+      // `$BIBSTYLES` L3953-3961), so every alpha-styled document was getting
+      // author-year refnums where Perl — and the `.bst` the author chose —
+      // give `[AS64]`.
       let style = match citestyle_str.as_str() {
-        "AY" | "authoryear" | "author-year" => CitationStyle::AuthorYear,
-        "alpha" | "Alpha" => CitationStyle::Alpha,
-        _ => CitationStyle::Numbers,
+        "numbers" => CitationStyle::Numbers,
+        "AY" => CitationStyle::Alpha,
+        _ => CitationStyle::AuthorYear,
       };
 
       // bib_docs must be kept alive as long as entries (bibentry Nodes reference them)
-      let (entries, _bib_docs) = self.get_bib_entries(&doc, bib);
+      let (mut entries, _bib_docs) = self.get_bib_entries(&doc, bib);
       if entries.is_empty() {
         Info!(
           "bibliography",
@@ -1501,28 +1526,71 @@ impl Processor for MakeBibliography {
         })
         .unwrap_or_else(|| "bib".to_string());
 
+      // Perl `local $LaTeXML::Post::MakeBibliography::NUMBER = 0` (L55) —
+      // reset per `ltx:bibliography`, then incremented once per entry as it is
+      // FORMATTED (L418). Under `--splitbibliography` that walk is
+      // initial-major, so the counter follows the initial groups rather than
+      // the document-global sortkey order; the two coincide whenever an
+      // entry's `initial` is the first letter of its sortkey, which is the
+      // common case but not guaranteed (`initial` skips leading non-letters).
+      //
+      // NOTE ON REACH: `self.split` is currently always false — `post.rs`
+      // constructs this processor with `split = false` and
+      // `--splitbibliography` sits in the deferred CLI cluster. So moving the
+      // counter here changes NO production output today; the non-split walk
+      // numbers in the same order the old in-`get_bib_entries` pass did. It is
+      // done for when that flag lands, and because the counter belongs with
+      // the walk it counts.
+      let mut number = 0u32;
+
       if self.split {
         // Split by initial letter
-        let mut by_initial: HashMap<String, HashMap<String, &BibEntryData>> = HashMap::default();
+        let mut by_initial: HashMap<String, Vec<String>> = HashMap::default();
         for (key, entry) in &entries {
           by_initial
             .entry(entry.initial.clone())
             .or_default()
-            .insert(key.clone(), entry);
+            .push(key.clone());
         }
-        let mut initials: Vec<&String> = by_initial.keys().collect();
+        let mut initials: Vec<String> = by_initial.keys().cloned().collect();
         initials.sort();
-        for initial in initials {
+        for group in by_initial.values_mut() {
+          unisort(group);
+        }
+        for initial in &initials {
+          // Number this group, then format it — the order Perl's single
+          // `++$NUMBER`-as-you-format walk produces.
+          // The keys came out of `entries` a few lines above, so a miss is a
+          // logic error, not input-dependent — `debug_assert` makes it loud in
+          // dev/test without risking a production abort (`maxperf` sets
+          // `panic = "abort"`). Incrementing INSIDE the lookup also means a
+          // miss could never silently burn a number and shift the whole list.
+          for key in &by_initial[initial] {
+            debug_assert!(entries.contains_key(key), "grouped key {key} left entries");
+            if let Some(entry) = entries.get_mut(key) {
+              number += 1;
+              entry.number = number;
+            }
+          }
           // Build a subset HashMap for this initial
           let subset: HashMap<String, BibEntryData> = by_initial[initial]
             .iter()
-            .map(|(k, e)| (k.clone(), clone_entry(e)))
+            .filter_map(|k| entries.get(k).map(|e| (k.clone(), clone_entry(e))))
             .collect();
           let biblist = self.make_bibliography_list(&doc, &bib_id, Some(initial), &subset, &style);
           let mut bib_mut = bib.clone();
           doc.add_nodes(&mut bib_mut, &[biblist]);
         }
       } else {
+        let mut sorted_keys: Vec<String> = entries.keys().cloned().collect();
+        unisort(&mut sorted_keys);
+        for key in &sorted_keys {
+          debug_assert!(entries.contains_key(key), "sorted key {key} left entries");
+          if let Some(entry) = entries.get_mut(key) {
+            number += 1;
+            entry.number = number;
+          }
+        }
         let biblist = self.make_bibliography_list(&doc, &bib_id, None, &entries, &style);
         let mut bib_mut = bib.clone();
         doc.add_nodes(&mut bib_mut, &[biblist]);
@@ -2509,7 +2577,16 @@ fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> 
       result
     },
     Formatter::Year => {
-      let suffix = ""; // Suffix is handled elsewhere
+      // NO disambiguation suffix here, deliberately — see KNOWN_PERL_ERRORS
+      // #67. Perl `do_year` (L613-615) reads `@…::SUFFIX`, the ARRAY, while
+      // `formatBibEntry` L417 binds `$…::SUFFIX`, the SCALAR: two different
+      // Perl variables, so the array is always empty and the letter never
+      // reaches the entry body. Measured, not assumed — same-host Perl 0.8.8
+      // on `bib_alpha_style.tex` prints `[SBC99a]` as the label and ` (1999)`
+      // as the body year. `alpha.bst` agrees, so this is the right output and
+      // there is no gap to close; the audit item that flagged one was read off
+      // the sigil.
+      let suffix = "";
       let content: Vec<NodeData> = nodes
         .iter()
         .map(|n| {
@@ -2738,6 +2815,43 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
 
 // ======================================================================
 // Utility functions
+
+/// Sort bibliography sort-keys the way Perl's `Post::unisort` does.
+///
+/// Perl (`Post.pm` L1399-1403) hands the keys to a `Unicode::Collate::Locale`
+/// built with `variable => 'non-ignorable'` and `upper_before_lower => 1` — a
+/// full UCA collation, so `Šmith` lands next to `Smith` rather than after every
+/// ASCII letter, which is what a plain codepoint `sort()` produces.
+///
+/// **Documented approximation** (OXIDIZED_DESIGN #84): we reproduce UCA's
+/// PRIMARY level for Latin script only — NFD-decompose, drop the combining
+/// marks, case-fold — and break ties on the raw string. That is exact for
+/// accented Latin (the input this actually sees: author surnames and titles).
+/// Perl's `upper_before_lower` needs no counterpart because it is MOOT: the
+/// sort keys are `to_lowercase()`d when built, so no comparison here can see a
+/// case difference. It diverges from Perl for script-crossing orders,
+/// non-decomposable letters (`Ø`, `Æ`, `Ł`) and locale tailorings — none of
+/// which a DUCET table could be added for without a new dependency carrying
+/// embedded collation data. `Post.pm` L123-128 shows Perl itself falling back
+/// to a codepoint `DumbCollator` when `Unicode::Collate` is unavailable, so a
+/// documented approximation stays inside the range of behaviours Perl ships.
+///
+/// The sort is otherwise total and deterministic: equal primary keys fall back
+/// to the raw key, and the raw keys are the (unique) hash keys of the entry
+/// map.
+fn unisort(keys: &mut [String]) {
+  keys.sort_by_cached_key(|k| (collation_primary_key(k), k.clone()));
+}
+
+/// The primary-level collation weight of a sort-key: NFD, combining marks
+/// dropped, case-folded. See [`unisort`].
+fn collation_primary_key(s: &str) -> String {
+  use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
+  s.nfd()
+    .filter(|c| !is_combining_mark(*c))
+    .flat_map(char::to_lowercase)
+    .collect()
+}
 
 /// Extract author names from a bibentry node.
 ///

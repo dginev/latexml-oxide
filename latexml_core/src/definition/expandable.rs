@@ -314,9 +314,11 @@ impl Expandable {
       paramlist,
       expansion,
       // locator           => $source->getLocator,
-      is_protected: traits.protected || get_prefix("protected"),
-      is_outer: traits.outer || get_prefix("outer"),
-      is_long: traits.long || get_prefix("long"),
+      // Hot path: Expandable::new fires on every \def/\edef; pin!-cached keys
+      // skip the per-call arena probe (same policy as Conditional::invoke).
+      is_protected: traits.protected || get_prefix_sym(crate::pin!("protected")),
+      is_outer: traits.outer || get_prefix_sym(crate::pin!("outer")),
+      is_long: traits.long || get_prefix_sym(crate::pin!("long")),
       has_cc_arg,
       alias: traits.alias,
       ..Expandable::default()

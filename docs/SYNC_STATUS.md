@@ -46,15 +46,16 @@ families).*
 ## Ranked worklist — start here
 
 Ordered by: **does it reproduce today** → **is a real user affected** → **is it
-unblocked** → **effort**. Rows R1–R2 are small and self-contained; R4+ need a
-session of their own. Re-verify a row before planning on it (rule 1).
+unblocked** → **effort**. R1 is small and self-contained; R2's cheap half landed
+2026-07-29 and what remains of it, like R4+, needs a session of its own.
+Re-verify a row before planning on it (rule 1).
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
-| **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310 | minutes — chase review, no code | Open items |
-| **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-25 (1 error with `--preload=article.cls`, 0 without) | small–medium, self-contained | Open items |
+| **R1** | Upstream `brucemiller/LaTeXML#2852` — subfile `\documentclass` options | **OPEN upstream**, ours merged as #310; **CI all-green + mergeable, re-verified 2026-07-29** | nothing left but a review nudge — no code, no automatable step | Open items |
+| **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
-| **R5** | Bibliography targets + MakeBibliography re-port | **re-port items 1 and 3 LANDED**: a raw `.bib` is converted by the engine (recursive BibTeX session on the LIVE core state), the 727-line string route is deleted, the eager-tokenization gap that cost 151 papers is closed at the root, and the 13-field digest whitelist is gone — the `\bib@field@default@*` name sets now match Perl exactly (45 each). The 2026-07-27 follow-ups closed the `.bib`-as-DATA family (divergences #74/#78/#79/**#80**). Remaining: item 2 (unisort, citestyle `AY`, `Formatter::Year` suffix, doc-global NUMBER) and the missing-references target list | **item 2 + targets** — the re-port itself is done | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
+| **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, PLANNED | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -65,7 +66,80 @@ session of their own. Re-verify a row before planning on it (rule 1).
 
 ## Current status
 
+- **2026-07-29 (latest) — an arg-taking `\fnum@<type>` absorbed the rest of the document
+  into an unclosed `<figure>`.** The one concrete, analysed-but-unfixed item of
+  R5's "missing references" family, parked since 2026-07-14 on "needs a user
+  decision + a full-suite diff". Both are now done: user-approved per the
+  `surpass-perl` protocol, and the full-suite diff is **empty**.
+  LaTeX's `\@makecaption` is `\sbox\@tempboxa{#1: #2}`, so the widely-copied
+  "`Fig. 1:` → `Fig. 1.`" hack — `\renewcommand*{\fnum@figure}[1]{...}` — works
+  under pdflatex by having the hook eat that `:` **token**. LaTeXML's separator
+  is a tag **attribute** (`\lx@tag[][: ]`), so the argument scan ran past the
+  hook and took the caption group's closing brace: the `<figure>` never closed
+  and every following section, **the bibliography included**, was absorbed into
+  it. That is the truncation mechanism, not a bad caption.
+  Fixed by expanding the hook as `\csname fnum@#1\endcsname{}` at all three
+  `fnum@` sites (`\lx@fnum@@`, `\lx@fnum@toc@@`, the theorem-header formatter);
+  `\lx@typerefnum@@` shares the shape and is deliberately excluded — no LaTeX
+  kernel feeds it a separator token. **SHARED-FAILURE, so this is a surpass**:
+  pdflatex 0 errors, same-host Perl 0.8.8 **9**, pre-fix Rust **7** on the
+  two-hook minimal form; the three-hook guard fixture goes **10 → 0**.
+  **The deferral's premise was wrong and that is the lesson**: "`\lx@fnum@@`
+  formats every figure/table caption in every document" — it does not. The
+  changed branch fires only where `\fnum@<type>` is *defined*; the untouched
+  `\lx@@fnum@@` default serves nearly every caption. Measured blast radius:
+  **106/106 targets, zero goldens re-blessed**, and three real papers whose
+  classes `\def\fnum@figure` (svjour3, aastex631, llncs) are byte-identical
+  before vs after.
+  **A second recorded claim did NOT survive re-measurement.** The 2026-07-14
+  note said "18 papers corpus-wide, 5 with no References", counted by
+  `grep 'lx@tag@intags'`. Live against the current fleet run that proxy gives
+  **23** papers over 2605+2606 (60,505 docs), but only **2** carry this cause's
+  actual signature — 2605.01731 (18 figures × 3 errors, confirmed live) and
+  2605.12842 (10 × 3). `\lx@tag@intags` has several causes; the proxy
+  over-attributes, and the "5 with no References" sub-claim is withdrawn. The
+  fix is justified on being right and free, not on breadth. Does NOT fix the
+  `close=": "` separator, so the caption still reads `Figure 1.: A caption.`.
+  OXIDIZED_DESIGN **#85**, KNOWN_PERL_ERRORS **#68**, guard
+  `06_cluster_regressions::cluster_fnum_arg_hook`.
+
 - **2026-07-27 (latest) — the `unexpected:fi` fatal cluster: `\meaning` of a
+- **2026-07-29 — `\bibliographystyle{alpha}` produced the wrong label
+  shape, and duplicate author-years were never disambiguated.** R5 item 2, the
+  four secondary `MakeBibliography` parity gaps, all in
+  `latexml_post/src/make_bibliography.rs`. The reaching one: Perl branches on
+  `citestyle` three ways (L481-517) and **`AY` is the abbreviated `[AS64]`
+  label**, class `ltx_bib_abbrv` — Rust read `AY` as the spelled-out
+  author-year and `alpha`, a string nothing emits, as the abbreviated one, so
+  every `\bibliographystyle{alpha}` document got author-year refnums (and
+  natbib's `super` fell to numbers instead of author-year). Second: Perl keys
+  disambiguation and the split bucket off the SHORT name form (`"Smith et al"`,
+  L326-337) and only the SORT off the full names; Rust used the full names for
+  all three, so two 3+-author entries sharing a first author and year never
+  collided and **neither got its `a`/`b` suffix**. Third: `unisort` collates
+  (`Ångström` belongs between `Adams` and `Baker`, not after `Smith`) — ported
+  at UCA's primary level with no new dependency, divergence **#84**. Fourth:
+  `NUMBER` is assigned in FORMAT order, which is initial-major under
+  `--splitbibliography`, not in document-global sortkey order (non-split output
+  unchanged). Also fixed because the citestyle repair makes it reachable for
+  every alpha document: `make_alpha_label` byte-indexed the per-author initials
+  (`&aa[..3]`), a char-boundary panic on `Ångström`.
+  **One of the four was NOT a gap** — `Formatter::Year` correctly omits the
+  suffix. Perl's `do_year` reads the ARRAY `@…::SUFFIX` while `formatBibEntry`
+  binds the SCALAR `$…::SUFFIX`, so the letter never reached the body upstream
+  either; measured Perl prints ` (1999)` and `alpha.bst` agrees.
+  **KNOWN_PERL_ERRORS #67** — the audit item was read off the sigil, which is
+  the same "verify the file, not the recollection" trap R9-BST already records.
+  Every expectation ground-truthed against same-host Perl 0.8.8 on the fixture,
+  after which the two engines' bibliographies are byte-identical there. Guard
+  `06_cluster_bibliography::cluster_bib_alpha_style_labels` (verified RED on
+  the pre-fix tree: author-year classes, `Ångström` last, no suffixes).
+  **Found, not fixed:** a Rust `<ltx:biblist>` has `xml:id` but no `fragid`, and
+  `add_id` emits the HTML `id` from `@fragid` only, so Perl's `<ul id="bib.L1">`
+  is a bare `<ul>` here. Pre-existing; the XSLT is byte-identical between the
+  engines, so the cause is whatever assigns `fragid` to a post-created node.
+
+- **2026-07-27 — the `unexpected:fi` fatal cluster: `\meaning` of a
   `\chardef` token returned the internal class name.** GENUINE-RUST-ONLY,
   **18 papers, one cause.** Largest unclassified first-error cluster in the 186
   `Fatal:TooManyErrors` papers of sandbox-arxiv-2605+2606:
@@ -346,14 +420,16 @@ session of their own. Re-verify a row before planning on it (rule 1).
   2606.13010 (arXiv/html_feedback#6624) now converts at 0 errors / 0 warnings /
   0 unparsed math. This file was compacted the same day — see the header.
 
-- `cargo test --tests`: **1760 passing / 105 targets, 0 failed, 0 ignored**
-  (2026-07-29, on `main` @ `d5684f0bcf`, dev box with ImageMagick + ghostscript +
-  poppler **and `mutool`** installed, so the vector-SVG branch really ran — both
-  `test_vector_svg_*` report ok, not skipped). Re-run before quoting: the count
-  moves with every PR that adds a guard. It rose from the long-quoted 1696 / 94
-  targets (2026-07-26 @ `e07548e6b3`) as #403…#419 and then #430/#432/#434/#435
-  landed — the last four adding `110_acmart_description_aria` and
-  `111_build_memory_guard`. Two claims carried here for weeks
+- `cargo test --tests`: **1763 passing / 106 targets, 0 failed, 0 ignored**
+  (2026-07-29, `main` @ `48de8eaa5f` plus the R5-item-2 guard, dev box with
+  ImageMagick + ghostscript + poppler **and `mutool`** installed, so the
+  vector-SVG branch really ran — both `test_vector_svg_*` report ok, not
+  skipped). Re-run before quoting: the count moves with every PR that adds a
+  guard. It rose from the long-quoted 1696 / 94 targets (2026-07-26 @
+  `e07548e6b3`) as #403…#419, then #430/#432/#434/#435 (adding
+  `110_acmart_description_aria` and `111_build_memory_guard`), then #442's
+  `109_preload_pi_attributes` — which is the 106th target, so a
+  "105 targets" quote predates it. Two claims carried here for weeks
   did **not** reproduce and have been dropped:
   `latexml_post::graphics::process_coalesces_only_matching_conversion_options`,
   long labelled "the one red, known local-only artifact", passes; and `mutool` is
@@ -565,8 +641,13 @@ residuals stay here so the live worklist keeps them visible:
 
 ### R1 — upstream `brucemiller/LaTeXML#2852`: a subfile's `\documentclass` options are not packages
 
-**OPEN upstream** (state checked 2026-07-25); **our half is already merged as PR
-#310**, so nothing is pending here in this repo. The allowlist was hand-split on
+**OPEN upstream**; **our half is already merged as PR #310**, so nothing is
+pending here in this repo. **CI re-verified 2026-07-29: all 15 checks SUCCESS**
+(TeX Live none/2021/2022/2023/2024/2025 × Perl 5.34-5.42, Linux + Windows),
+`mergeable`, not a draft, **zero reviews**, untouched since 2026-07-20. So the
+code side of this row is done and green; what is left is a review nudge to the
+maintainer, which is a human-voice action, not a task to automate. The
+allowlist was hand-split on
 `,` and missed every valued form (`[varwidth=5cm]` → `Error:undefined:{varwidth}`,
 pdflatex clean); it now reads `OptionalKeyVals` and matches on the key. The same
 fix is ported to Perl (`OptionalKeyVals` + `getPairs`) with a `t/structure` case
@@ -575,7 +656,10 @@ ask for review** — no code work expected. *(This entry read "PR #310 … Ready
 merge" until 2026-07-25, long after it merged.)*
 
 
-### R2 — `--preload=<cls>` alone trips the hook stack; class-name divergence — OPEN (re-verified 2026-07-25)
+### R2 — `--preload=<cls>` alone trips the hook stack — OPEN (re-verified 2026-07-29)
+
+*(The "class-name divergence" this heading used to also name was the second
+divergence below; it is fixed. Only the hook stack is still open.)*
 
 **Symptom.** `--preload=<any>.cls` prints `LaTeX hooks Error: Extra \PopDefaultHookLabel`
 (article/book/report; `.sty` clean; `\documentclass` clean; `LATEXML_NODUMP=1` clean).
@@ -637,11 +721,39 @@ adopted, make it conditional on the pool being unloaded and LOG it. (b) Pair the
 push's actual *meaning* rather than to definedness. (c) Make the pool load before any
 handleoptions push. (b)/(c) address the cause.
 
-**Second divergence, same area.** `\documentclass{article}` → `<?latexml class="article"?>`
-but `--preload=article.cls` → `<?latexml class="article.cls"?>`; **Perl emits
-`class="article"` for both.** Otherwise the two paths' output is byte-identical, so the
-preload does load `article_cls.rs` correctly; `parse_preload_spec` splits correctly to
-`("article","cls")`, so the extension is re-attached further in.
+**(c) collapses into (a) — checked 2026-07-29.** The pool load is not *ours* to reorder:
+`LoadPool('LaTeX')` is the **class binding's own first statement**, in Perl
+(`article.cls.ltxml` L5) exactly as in Rust (`article_cls.rs:4`), and it runs *inside*
+`InputDefinitions`, i.e. after the `\@pushfilename`. Perl's ordering is therefore
+identical to ours — Perl is silent only for the dump reason above. So "load the pool
+earlier" means hoisting it out of the binding, which is the same Rust-only divergence
+that got (a) rejected. That leaves (b), or a TeX-side repair of the stack at the moment
+`LoadPool` swaps `\@pushfilename`'s meaning underneath an already-open frame.
+
+**Second divergence, same area — ✅ FIXED 2026-07-29.** It was wider than recorded here:
+the preload-PI loop (`core_interface.rs`, the `for preload in &self.preload` block) is a
+translation of Perl `Core.pm` L268-277, whose three `s///` rewrite `$preload` **in place**.
+`Regex::replace_all` *returns* the rewritten string instead, and all three results were
+discarded, so **nothing was ever stripped and no `options` attribute was ever emitted**:
+
+| `--preload=` | was | Perl (and now) |
+|---|---|---|
+| `article.cls` | `class="article.cls"` | `class="article"` |
+| `[twocolumn,11pt]article.cls` | `class="[twocolumn,11pt]article.cls"` | `class="article" options="twocolumn,11pt"` |
+| `[dvipsnames]color.sty` | `package="[dvipsnames]color.sty"` | `package="color" options="dvipsnames"` |
+
+**Not cosmetic:** `latexml_post`'s `find_documentclass_and_packages` parses these PIs and
+`latex_images.rs:pre_preamble` emits the result as a literal `\documentclass[…]{…}` /
+`\usepackage[…]{…}`, so `--mathimages`/`--graphicimages` on any preload-driven conversion
+was writing `\documentclass{article.cls}` and losing every preload option.
+
+Fixed by stripping the bracket and the suffix off a `&str` cursor, Perl-faithfully:
+only the two literal `.cls`/`.sty` suffixes (so `mystyle.tex` keeps its extension, as in
+Perl), and an empty bracket contributes no attribute (Perl's `($options ? … : ())` is
+falsy on `""`). Deliberately **not** routed through `parse_preload_spec`, which splits on
+the last `.` and would eat any extension. Guard: `109_preload_pi_attributes.rs`, a
+six-shape table whose every expectation was ground-truthed byte-for-byte against Perl
+LaTeXML 0.8.8 on the same input.
 
 ### R4 — biblatex `.bbl` TokenLimit loop, 2605.17646 — ✅ FIXED 2026-07-25
 
