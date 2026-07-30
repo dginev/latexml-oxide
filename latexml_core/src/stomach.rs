@@ -88,6 +88,17 @@ pub fn soft_cap_from_ceiling(max_memory_mib: u64) -> u64 {
 /// the machine run out". Fall back to an eighth of physical RAM, which lands
 /// the same 12 GiB on a 96 GB host that the validated 48 GiB ceiling derives.
 pub fn spill_watermark_bytes() -> Option<u64> {
+  // Calibration override (`LATEXML_SPILL_AT_MIB`), deliberately env-only and
+  // NOT a CLI flag: a user-settable watermark could be raised above the fuse,
+  // producing a run that Fatals before it ever spills. It exists so the
+  // fuse-fraction below can be re-derived by measurement rather than argued.
+  if let Some(mib) = std::env::var("LATEXML_SPILL_AT_MIB")
+    .ok()
+    .and_then(|v| v.parse::<u64>().ok())
+    .filter(|mib| *mib > 0)
+  {
+    return Some(mib.saturating_mul(1024 * 1024));
+  }
   match resolve_rss_cap() {
     Some(fuse) => Some(fuse / 3),
     None => crate::watchdog::total_memory_bytes().map(|ram| ram / 8),
