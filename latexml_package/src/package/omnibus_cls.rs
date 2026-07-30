@@ -70,6 +70,26 @@ LoadDefinitions!({
     def_autoload(trigger, "natbib")?;
   }
 
+  // Beyond Perl (Perl autoloads natbib but never biblatex): the same treatment
+  // for biblatex's two unambiguous document-level commands.
+  //
+  // A paper whose CLASS loads biblatex on its behalf never says
+  // `\usepackage{biblatex}` itself, so when the class has no binding and lands
+  // here, `\addbibresource` is undefined and the bibliography is lost outright.
+  // `maybe_require_dependencies` does scan the shipped `.cls` text for
+  // `\RequirePackage` names, but cannot resolve a name built from macros —
+  // now-journal.cls L267 is
+  // `\IfFileExists{now-\now@journalkey-biblatex.sty}{\RequirePackage{now-\now@journalkey-biblatex}}{\RequirePackage{now-biblatex}}`,
+  // and under OmniBus that line never executes either. Witnesses 2605.01204
+  // (`\documentclass[sip,biber]{now-journal}`) and 2605.30377.
+  //
+  // Only these two: both are biblatex-only, and neither overlaps the natbib
+  // trigger list above, so a document cannot pull in both backends through
+  // them.
+  for trigger in ["\\addbibresource", "\\printbibliography"] {
+    def_autoload(trigger, "biblatex")?;
+  }
+
   // Perl L52-57: save original \bibitem; redefine to auto-load natbib if the
   // argument uses \protect\citeauthoryear.
   Let!("\\lx@OmniBus@saved@bibitem", "\\bibitem");

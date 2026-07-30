@@ -389,6 +389,39 @@ across it stops cells terminating. Needs a way to tell a parameter scan from a
 cell-content read. Divergence #90, guard
 `alignment_fenced_amp_does_not_split_a_row`. **14 of the 28 recovered, 961 entries** (2606.16365 0->141 of a 157-entry `.bib`, 141 unique keys and no duplicates; 2606.31840 0->133; 2606.02744 0->119; witness 2605.05903 0->35 of 37). The other 14 — 12 non-physics plus 2 physics — all still fail on the same `\lx@begin@alignment`.
 
+**F14 — a class that loads biblatex for the document, with no binding of its
+own. FIXED, beyond Perl.** A paper whose CLASS loads biblatex never writes
+`\usepackage{biblatex}` itself; with no binding for that class it falls back to
+OmniBus, `\addbibresource` is undefined, and the bibliography is lost outright.
+`maybe_require_dependencies` does scan the shipped `.cls` text for
+`\RequirePackage` names but cannot resolve one built from macros —
+now-journal.cls L267 is
+`\IfFileExists{now-\now@journalkey-biblatex.sty}{\RequirePackage{now-\now@journalkey-biblatex}}{\RequirePackage{now-biblatex}}`
+— and under OmniBus that line never executes either.
+
+OmniBus now `def_autoload`s biblatex from `\addbibresource` and
+`\printbibliography` (both biblatex-only; neither overlaps the natbib trigger
+list beside it, so no document can pull in both backends this way). Perl
+autoloads natbib but never biblatex (`OmniBus.cls.ltxml` L48-51), so this is
+beyond Perl. **7 papers, 548 entries**: 2606.06995 0→250, 2606.06922 0→76,
+2606.10538 0→66, 2605.09073 0→59, 2605.01204 0→46
+(`\documentclass[sip,biber]{now-journal}`), 2605.06766 0→46, 2605.30377 0→5
+(which cites exactly 5 keys of a 19-entry `.bib` — bibtex emits only what is
+cited). Every count ≤ `want`, six of seven equal to `cited`.
+
+**Four of the seven had an unrelated first error** — `\alsoaffiliation`,
+`\maintitleauthorlist`, `\DeclareNameAlias` — so first-error clustering
+scattered one cause across four buckets. Guard
+`bib_biblatex_autoloads_under_an_unbound_class`.
+
+**Harness trap this exposed: a biblatex guard cannot see its own feature under
+the plain config.** biblatex lives in `latexml_contrib`, so with the default
+dispatcher `\addbibresource` stays undefined and the run reports only
+`Warning:missing_file:biblatex … raw TeX loading is off`. The new
+`convert_and_post_contrib_clean` helper is the core+post equivalent of
+`convert_to_xml_contrib`. (Checked: the PR's four earlier biblatex guards all
+already used `convert_to_xml_contrib`, so none were vacuous.)
+
 **F11 — Harness/corpus-prep.** (a) Decoy-toplevel selection: cortex converts
 an IEEE-copyright stub `arXiv.tex` while `00README` lists the real
 `main_RAL.tex` (2606.01946). (b) 4 empty 2606 paper dirs with stray top-level

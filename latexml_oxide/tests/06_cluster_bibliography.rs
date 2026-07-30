@@ -6,8 +6,9 @@
 
 mod cluster;
 use cluster::{
-  convert_and_post, convert_and_post_clean, convert_and_post_logging, convert_to_xml,
-  convert_to_xml_ar5iv, convert_to_xml_contrib, convert_to_xml_contrib_clean,
+  convert_and_post, convert_and_post_clean, convert_and_post_contrib_clean,
+  convert_and_post_logging, convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib,
+  convert_to_xml_contrib_clean,
 };
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
@@ -1861,5 +1862,43 @@ fn alignment_fenced_amp_does_not_split_a_row() {
   assert_eq!(
     n, 2,
     "expected both bibitems past the alignment, got {n}\n{x}"
+  );
+}
+
+/// A class we have no binding for must still get biblatex when the document
+/// asks for it.
+///
+/// A paper whose CLASS loads biblatex on its behalf never writes
+/// `\usepackage{biblatex}` itself. With no binding for that class the document
+/// falls back to OmniBus, `\addbibresource` is undefined, and the bibliography
+/// is lost outright. `maybe_require_dependencies` does scan the shipped `.cls`
+/// text for `\RequirePackage` names, but cannot resolve one built from macros —
+/// now-journal.cls L267 asks for `now-\now@journalkey-biblatex` — and under
+/// OmniBus that line never executes either.
+///
+/// OmniBus now `def_autoload`s biblatex from `\addbibresource` and
+/// `\printbibliography`: both are biblatex-only and neither overlaps the natbib
+/// trigger list beside it, so no document can pull in both backends this way.
+/// Perl autoloads natbib but never biblatex (`OmniBus.cls.ltxml` L48-51), so
+/// this is beyond Perl.
+///
+/// 7 papers of the 2026-07-29 residual recovered, 548 entries: 2606.06995
+/// 0 -> 250, 2606.06922 0 -> 76, 2606.10538 0 -> 66, 2605.09073 0 -> 59,
+/// 2605.01204 0 -> 46 (`\documentclass[sip,biber]{now-journal}`), 2605.06766
+/// 0 -> 46, 2605.30377 0 -> 5 (which cites exactly 5 keys of a 19-entry
+/// `.bib` — bibtex emits only what is cited). Four of those had an unrelated
+/// first error (`\alsoaffiliation`, `\maintitleauthorlist`), a reminder that the
+/// first error is often incidental to the loss.
+#[test]
+fn bib_biblatex_autoloads_under_an_unbound_class() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/bib_biblatex_autoload.tex");
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "biblatex did not autoload under the fallback class: {n} entries\n{x}"
+  );
+  assert!(
+    x.contains("autoloaded biblatex entry") && x.contains("second autoloaded entry"),
+    "the autoloaded entries did not render their titles:\n{x}"
   );
 }

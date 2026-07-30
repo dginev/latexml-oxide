@@ -18,10 +18,10 @@ uses — then counts `ltx_bibitem` against what the source implies and what
 
 | | papers | entries |
 |---|---|---|
-| **Recovered** (0 → non-zero) | **284** | **19 790** |
-| Complete (`now == cited`) | 276 OK | |
+| **Recovered** (0 → non-zero) | **291** | **20 338** |
+| Complete (`now == cited`) | 283 OK | |
 | Short of what was cited (THIN) | 8 | |
-| Still empty | 244 | |
+| Still empty | 237 | |
 | No HTML | 5 | |
 
 Regression control: 20 papers whose bibliographies already worked reconvert
@@ -67,7 +67,7 @@ read as rendered text:
 - **2605.21570** (46) — 34 + 12 across its two bibunits, each matching that
   unit's own `\begin{thebibliography}{N}`
 
-## What is still empty (244), by first error
+## What is still empty (237), by first error
 
 *no error at all* 32 · `unexpected:\lx@begin@alignment` 28 ·
 `unexpected:\endgroup` 8 · `unexpected:\@end@tabular` 7 ·
