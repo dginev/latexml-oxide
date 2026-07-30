@@ -1,0 +1,18 @@
+% Guard for the RDFa path across the core->post boundary, both halves of which
+% were broken (see `cluster_rdfa_math_subject`).
+%
+% `\lxRDFa[xpath]{...}` puts RDFa attributes on the node the xpath selects — here
+% the `ltx:Math` itself, which is what makes this a test of `outerWrapper` rather
+% than of `ltx:text` wrapping (`\lxRDFAnnotate` wraps instead, and would not
+% exercise it). `about=#thm1` is recorded by lxRDFa as `aboutidref`, because the
+% real URL is not knowable until the document is split; CrossRef must resolve it.
+%
+% Same-host Perl LaTeXML 0.8.8 on this file emits, on <m:math>:
+%   about="#thm1" alttext="x+y" display="inline" property="ex:formula" typeof="ex:Eq"
+% and Rust is now byte-identical there.
+\documentclass{article}
+\usepackage{lxRDFa}
+\begin{document}
+\( x+y \)
+\lxRDFa[//ltx:Math]{property=ex:formula,about=#thm1,typeof=ex:Eq}
+\end{document}

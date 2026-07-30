@@ -9,7 +9,9 @@
 //! `06_cluster_toc_navigation`, `06_cluster_standalone_subfiles`.
 
 mod cluster;
-use cluster::{convert_clean, convert_expecting_errors, convert_log, convert_to_xml};
+use cluster::{
+  convert_and_post_clean, convert_clean, convert_expecting_errors, convert_log, convert_to_xml,
+};
 
 #[test]
 fn cluster_nbsp_csname() { convert_clean("tests/cluster_regressions/nbsp_csname.tex"); }
@@ -515,4 +517,32 @@ fn cluster_robust_cs_reverts_unmunged() {
     x.contains(r#"tex="x+\text{see \ref{sec:one}}""#),
     "the nested \\ref reversion inside \\text does not match Perl:\n{x}"
   );
+}
+
+/// CrossRef must resolve an RDFa `aboutidref` into a real `about`.
+///
+/// `lxRDFa.sty` records an intra-document RDFa subject as `aboutidref` rather
+/// than a URL, because the URL is not knowable until the document has been split
+/// — `LaTeXML-common.rnc` L301: "it will be converted to `aboutidref` and `about`
+/// during post-processing". Rust had no port of Perl's
+/// `CrossRef.pm::fill_in_RDFa_refs` (L372-398), so that conversion never
+/// happened: the `aboutidref` survived into the output where nothing reads it,
+/// and the RDFa triple lost its SUBJECT entirely.
+///
+/// The companion half — `outerWrapper` copying `about`/`property`/`typeof`/… onto
+/// `<m:math>` — is guarded by `90_latexmlpost::mathouter_post_test` against a
+/// Perl golden. Together they make `\lxRDFa[//ltx:Math]{about=#thm1,…}`
+/// byte-identical to same-host Perl 0.8.8 end to end, `about="#thm1"` included.
+#[test]
+fn cluster_rdfa_math_subject() {
+  let x = convert_and_post_clean("tests/cluster_regressions/rdfa_math_subject.tex");
+  assert!(
+    x.contains(r##"about="#thm1""##),
+    "CrossRef did not resolve `aboutidref` into `about`, so the RDFa subject is \
+     lost (no port of fill_in_RDFa_refs):\n{x}"
+  );
+  // The author-visible attributes that ride along must survive too.
+  for attr in [r#"property="ex:formula""#, r#"typeof="ex:Eq""#] {
+    assert!(x.contains(attr), "missing RDFa attribute {attr}:\n{x}");
+  }
 }

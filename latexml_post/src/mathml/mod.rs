@@ -323,6 +323,52 @@ impl MathProcessor for MathML {
       if let Some(class) = math.get_attribute("class") {
         attrs.insert("class".to_string(), class);
       }
+
+      // Image fallback (Perl L81-87): when the `--mathimages` post-processor has
+      // rendered this formula, advertise the bitmap so a renderer without MathML
+      // support can show it. `altimg-valign` carries the baseline offset and Perl
+      // NEGATES the depth ("Note the sign!"): `imagedepth="5"` → `-5px`.
+      if let Some(src) = math.get_attribute("imagesrc") {
+        attrs.insert("altimg".to_string(), src);
+        // Perl appends 'px' unconditionally once `imagesrc` is present, so a
+        // missing `imagewidth` yields the literal `"px"` rather than omitting the
+        // attribute. Mirrored: `--mathimages` always sets both dimensions, so the
+        // quirk is unreachable in practice, and diverging here would cost
+        // byte-parity for no gain.
+        attrs.insert(
+          "altimg-width".to_string(),
+          format!("{}px", math.get_attribute("imagewidth").unwrap_or_default()),
+        );
+        attrs.insert(
+          "altimg-height".to_string(),
+          format!(
+            "{}px",
+            math.get_attribute("imageheight").unwrap_or_default()
+          ),
+        );
+        // Perl-falsy depth (absent, empty, or "0") omits the attribute entirely
+        // rather than emitting a bare "-px" or "-0px".
+        if let Some(depth) = math
+          .get_attribute("imagedepth")
+          .filter(|d| !d.is_empty() && d != "0")
+        {
+          attrs.insert("altimg-valign".to_string(), format!("-{depth}px"));
+        }
+      }
+
+      // RDFa (Perl L88-90): the Math element's own value, else the XMath's.
+      // Emitted only when non-empty — Perl's `$val ? ($_ => $val) : ()`.
+      for key in [
+        "about", "resource", "property", "rel", "rev", "typeof", "datatype", "content",
+      ] {
+        if let Some(val) = math
+          .get_attribute(key)
+          .or_else(|| xmath.get_attribute(key))
+          .filter(|v| !v.is_empty())
+        {
+          attrs.insert(key.to_string(), val);
+        }
+      }
     }
 
     // ar5iv.sty.ltxml: intent=":literal" for all math elements

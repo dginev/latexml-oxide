@@ -56,7 +56,7 @@ Re-verify a row before planning on it (rule 1).
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
-| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN but **shrunk 2026-07-29**: `pmml_text_aux` ✅ FIXED; three items CLOSED as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE); 4 remain, all untested. A math-parser `scriptpos` bug found en route is **R8**, not this row | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
+| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN but **shrunk 2026-07-29**: `pmml_text_aux` ✅ and `outerWrapper` altimg/RDFa ✅ FIXED (the latter also needed a missing `CrossRef::fill_in_RDFa_refs`); three items CLOSED as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE); **3 remain**, all untested. A math-parser `scriptpos` bug found en route is **R8**, not this row | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, **PHASE 2 — do NOT start yet** (user directive 2026-07-29) | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -1063,13 +1063,50 @@ both engines rather than by reading the audit. Do not re-open without a witness:
   only three mentions are the comment (L58), the read (L602) and the POD (L2075).
   `m:mfenced` is also gone from MathML Core.
 
-**F17 — still open:** `outerWrapper` altimg + RDFa attrs (L82-89; needs
-`--mathimages` for `imagesrc`, or lxRDFa for `about`/`resource`/… — untested, do
-not assume); `combineParallel` `annotation-xml` non-mathml wrap (L123-127);
-`preprocess` `hackplane1`/`nestmath` unwired (L69-73) — note Perl exposes
-`--plane1`/`--hackplane1` in `latexmlpost` and Rust exposes **neither**, while
-`nestmath` has no CLI in Perl either, so it is effectively unreachable there too;
-`pmml_scriptsize_padded` embellishment padding (L926) — untested, needs the
+**F17 — `outerWrapper` altimg + RDFa ✅ FIXED 2026-07-29, and it needed a second
+fix in CrossRef.** `outer_wrapper` (`mathml/mod.rs`) emitted only
+`display`/`alttext`/`class`, dropping two whole attribute families that Perl
+copies onto `<m:math>` (L81-90):
+
+- **the image fallback** — `altimg`, `altimg-width`, `altimg-height`,
+  `altimg-valign`, from the Math's `imagesrc`/`imagewidth`/`imageheight`/
+  `imagedepth`. This is the entire point of `--mathimages`: a renderer without
+  MathML support had nothing to fall back to. Perl NEGATES the depth ("Note the
+  sign!"), so `imagedepth="5"` → `altimg-valign="-5px"`, and omits that attribute
+  for a falsy depth rather than emitting a bare `-px`.
+- **the RDFa set** — `about resource property rel rev typeof datatype content`,
+  from the Math element or else the XMath. A document annotating a formula with
+  `lxRDFa` lost the annotation at the MathML boundary.
+
+**The RDFa half was only half-fixed by that**, which end-to-end diffing caught:
+`property`/`typeof` appeared but `about` did not, because `lxRDFa` records an
+intra-document subject as **`aboutidref`** (the URL is not knowable until the
+document is split — `LaTeXML-common.rnc` L301) and Rust had **no port of
+`CrossRef.pm::fill_in_RDFa_refs`** (L372-398) to resolve it. Now added, in Perl's
+pass position (after `fill_in_refs`, before `fill_in_bibrefs`), covering both
+`about`/`resource` and both the `…idref` and `…labelref` spellings. A DB-known id
+becomes a real URL via `generate_url`; an unknown one still becomes a bare `#id`,
+because per Perl's own comment "RDF 'id' need not be real, valid, ids!!!".
+Perl's trailing `set_RDFa_prefixes` re-run is deliberately NOT ported: this pass
+only ever writes absolute URLs or `#id` fragments, never prefixed CURIEs, so there
+is no new prefix to declare, and prefix management already happens core-side
+(`latexml_core::document::set_rdfa_prefixes`, as in Perl `Core/Document.pm:366`).
+One Perl quirk mirrored rather than fixed: with `imagesrc` present but
+`imagewidth` absent, Perl emits `altimg-width="px"` — unreachable via
+`--mathimages`, which always sets both, so diverging would cost byte-parity for
+nothing.
+Guards: `90_latexmlpost::mathouter_post_test` (Perl golden, **0 diff lines**, RED
+pre-fix at 4 — the fixture also pins the two negative cases: a formula with
+neither family gains nothing, and an image with no depth omits `altimg-valign`)
+and `06_cluster_regressions::cluster_rdfa_math_subject` (RED pre-fix). End-to-end
+`\lxRDFa[//ltx:Math]{about=#thm1,property=…,typeof=…}` is now byte-identical to
+same-host Perl 0.8.8.
+
+**F17 — still open:** `combineParallel` `annotation-xml` non-mathml wrap
+(L123-127); `preprocess` `hackplane1`/`nestmath` unwired (L69-73) — note Perl
+exposes `--plane1`/`--hackplane1` in `latexmlpost` and Rust exposes **neither**,
+while `nestmath` has no CLI in Perl either, so it is effectively unreachable there
+too; `pmml_scriptsize_padded` embellishment padding (L926) — untested, needs the
 mid-script path.
 
 **Found, NOT F17 and NOT the post layer — a math-parser script-position bug.**

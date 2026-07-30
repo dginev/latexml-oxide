@@ -1302,6 +1302,76 @@ impl CrossRef {
     }
   }
 
+  /// Resolve the RDFa subject/object references — `aboutidref`/`aboutlabelref`
+  /// into `about`, and `resourceidref`/`resourcelabelref` into `resource`.
+  ///
+  /// Port of `CrossRef.pm::fill_in_RDFa_refs` (L372-398), and runs in Perl's
+  /// position: after `fill_in_refs`, before `fill_in_bibrefs`.
+  ///
+  /// `lxRDFa.sty` deliberately records an intra-document RDFa subject as an
+  /// `…idref`/`…labelref` pair rather than a URL, because the URL is not knowable
+  /// until the document has been split and paginated — see the
+  /// `LaTeXML-common.rnc` L301 note, "it will be converted to `aboutidref` and
+  /// `about` during post-processing". Without this pass that conversion never
+  /// happened, so `\lxRDFa{about=#thm1}` produced an `aboutidref` that no
+  /// consumer reads and **no `about` at all** — the RDFa triple lost its subject.
+  /// Visible on math once `outer_wrapper` began copying `about` onto `<m:math>`:
+  /// Perl emits `about="#thm1"` there and Rust emitted nothing.
+  ///
+  /// An id that the ObjectDB knows becomes a real (possibly cross-page) URL via
+  /// `generate_url`; an id it does not know still becomes a bare `#id` fragment,
+  /// because — as Perl's comment puts it — "RDF 'id' need not be real, valid,
+  /// ids!!!": an author may name a subject that is not a document node at all.
+  ///
+  /// Perl also re-runs `set_RDFa_prefixes` at the end. Not ported, and it cannot
+  /// matter here: this pass only ever writes `about`/`resource` values that are
+  /// absolute URLs or `#id` fragments, never prefixed CURIEs, so there is no new
+  /// prefix to declare. (Prefix management itself already happens core-side, in
+  /// `latexml_core::document::set_rdfa_prefixes`, as it does in Perl's
+  /// `Core/Document.pm:366`.)
+  fn fill_in_rdfa_refs(&mut self, doc: &mut PostDocument) {
+    for key in ["about", "resource"] {
+      let mut refs = doc.findnodes(&format!("//*[@{key}idref]"));
+      refs.extend(doc.findnodes(&format!("//*[@{key}labelref]")));
+      for ref_node in &refs {
+        let mut ref_mut = ref_node.clone();
+        let idref_attr = format!("{key}idref");
+        let mut id = ref_node.get_attribute(&idref_attr);
+
+        // A label reference resolves through the ObjectDB to an id, which is
+        // written back so the `if let Some(id)` below treats both spellings
+        // alike (Perl L379-387).
+        if id.is_none()
+          && let Some(label) = ref_node.get_attribute(&format!("{key}labelref"))
+        {
+          if let Some(entry) = self.db.lookup(&label)
+            && let Some(resolved) = entry.get_string("id")
+          {
+            ref_mut.set_attribute(&idref_attr, resolved).ok();
+            id = Some(resolved.to_string());
+          }
+          if id.is_none() {
+            self.note_missing("warn", &format!("Target for {key} Label"), &label);
+          }
+        }
+
+        // Never overwrite an `about`/`resource` the author gave outright.
+        if let Some(ref id_str) = id
+          && ref_mut.get_attribute(key).is_none()
+        {
+          let value = if self.db.lookup(&format!("ID:{id_str}")).is_some() {
+            self.generate_url(doc, id_str)
+          } else {
+            Some(format!("#{id_str}"))
+          };
+          if let Some(value) = value {
+            ref_mut.set_attribute(key, &value).ok();
+          }
+        }
+      }
+    }
+  }
+
   fn fill_in_bibrefs(&mut self, doc: &mut PostDocument) {
     let bibrefs = doc.findnodes("//ltx:bibref");
     for bibref in &bibrefs {
@@ -1543,6 +1613,7 @@ impl Processor for CrossRef {
     self.fill_in_frags(&doc);
     self.fill_in_glossaryrefs(&mut doc);
     self.fill_in_refs(&mut doc);
+    self.fill_in_rdfa_refs(&mut doc);
     self.fill_in_bibrefs(&mut doc);
     self.fill_in_mathlinks(&doc);
     self.copy_resources(&doc);
