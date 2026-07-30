@@ -59,6 +59,8 @@ fn html_from(xml: &str) -> String {
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,
+    plane1:                    true,
+    hackplane1:                false,
     mathtex:                   false,
     navigationtoc:             None,
     schemadocs:                false,

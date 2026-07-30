@@ -22,6 +22,20 @@ use crate::document::{NodeData, PostDocument, element_children, element_children
 // When false, U+2062 is replaced with U+200B (zero-width space).
 thread_local! {
   static INVISIBLE_TIMES: Cell<bool> = const { Cell::new(true) };
+  /// Whether to remap styled alphanumerics into Unicode's Plane-1 Mathematical
+  /// Alphanumeric Symbols. Perl `$$MATHPROCESSOR{plane1}`, defaulted to 1 in
+  /// `preprocess` (L70) and negatable with `latexmlpost --noplane1`. When off, the
+  /// text stays ASCII and the style is carried by a `mathvariant` attribute
+  /// instead — which some renderers and screen readers handle far better than the
+  /// Plane-1 codepoints, whose font coverage is patchy.
+  static PLANE1: Cell<bool> = const { Cell::new(true) };
+  /// Perl `$$MATHPROCESSOR{hackplane1}` (`--hackplane1`): remap only the variants
+  /// in `plane1_hackable`, and to the SIMPLER variant it names. This exists
+  /// because the doubly-styled blocks (bold-script, bold-fraktur) are the worst
+  /// supported of all, so `\mathbf{\mathcal{E}}` is better served by the plain
+  /// script codepoint than by a bold-script one no font will have. Implies
+  /// `plane1` (Perl L71).
+  static HACK_PLANE1: Cell<bool> = const { Cell::new(false) };
   /// Inherited style context (Perl `pmml_top` L278-285 binds
   /// $LaTeXML::MathML::FONT/COLOR/BGCOLOR/OPACITY from the XMath node's
   /// ancestor chain; `pmml` L332-335 locally rebinds them from each node on
@@ -48,6 +62,44 @@ thread_local! {
 pub fn set_invisible_times(emit: bool) { INVISIBLE_TIMES.with(|f| f.set(emit)); }
 
 fn get_invisible_times() -> bool { INVISIBLE_TIMES.with(|f| f.get()) }
+
+/// Set the Plane-1 remapping mode (called by the MathML processor before
+/// rendering). Mirrors Perl `preprocess` L69-71: `hackplane1` implies `plane1`.
+pub fn set_plane1(plane1: bool, hack_plane1: bool) {
+  PLANE1.with(|f| f.set(plane1 || hack_plane1));
+  HACK_PLANE1.with(|f| f.set(hack_plane1));
+}
+
+/// Perl `%plane1hackable` (L659-664) — the mathvariants worth remapping under
+/// `--hackplane1`, each mapped to the simpler variant to remap it AS. A variant
+/// absent from this table is left un-remapped in hack mode, which is the whole
+/// point: `bold` stays `mathvariant="bold"` on ASCII rather than becoming 𝐃.
+fn plane1_hackable(variant: &str) -> Option<&'static str> {
+  match variant {
+    "script" | "bold-script" => Some("script"),
+    "fraktur" | "bold-fraktur" => Some("fraktur"),
+    "double-struck" => Some("double-struck"),
+    _ => None,
+  }
+}
+
+/// The variant to actually remap with, or `None` to skip remapping entirely.
+///
+/// Port of Perl `stylizeContent` L734-736:
+/// ```text
+/// my $u_variant = $variant
+///   && ($plane1hack ? $plane1hackable{$variant}
+///   : ($plane1 ? $variant : undef));
+/// ```
+fn plane1_target_variant(variant: &str) -> Option<&str> {
+  if HACK_PLANE1.with(|f| f.get()) {
+    plane1_hackable(variant)
+  } else if PLANE1.with(|f| f.get()) {
+    Some(variant)
+  } else {
+    None
+  }
+}
 
 /// The contextual font size (e.g. "100%", "70%", "50%") implied by the current math style.
 /// A token whose own `fontsize` equals this needs no explicit `mathsize` attribute.
@@ -1130,16 +1182,28 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
       variant = Some("normal"); // multi-char mi without font → normal
     }
 
-    // Plane 1 Unicode conversion
-    if let Some(v) = variant {
-      if tag != "m:mtext" {
-        if let Some(u_text) = unicode::unicode_convert(&text, v) {
-          if !u_text.is_empty() || text.is_empty() {
-            text = u_text;
-            variant = None; // character carries style
-          }
-        }
-      }
+    // Plane 1 Unicode conversion. Perl L734-737 picks the variant to remap WITH:
+    // under `--hackplane1` only the `plane1_hackable` variants remap (and to the
+    // simpler variant named there), under the default `plane1` the variant itself,
+    // and under `--noplane1` nothing remaps — the text stays ASCII and the
+    // `mathvariant` attribute emitted below carries the style instead. `m:mtext`
+    // never remaps at all.
+    if let Some(v) = variant
+      && tag != "m:mtext"
+      && let Some(u_variant) = plane1_target_variant(v)
+      && let Some(u_text) = unicode::unicode_convert(&text, u_variant)
+      && (!u_text.is_empty() || text.is_empty())
+    {
+      text = u_text;
+      // Perl L739-740 keeps a BOLD variant when the hack downgraded it (e.g.
+      // `bold-script` remapped as `script` still deserves `mathvariant="bold"`,
+      // since the codepoint carries only the script-ness); otherwise the
+      // character carries the whole style and the attribute is dropped.
+      variant = if u_variant != v && v.starts_with("bold") {
+        Some("bold")
+      } else {
+        None
+      };
     }
 
     // Emit remaining variant attribute

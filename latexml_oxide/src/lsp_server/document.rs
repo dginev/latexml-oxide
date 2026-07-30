@@ -138,6 +138,8 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,
+    plane1:                    true,
+    hackplane1:                false,
     mathtex:                   false,
     navigationtoc:             None,
     schemadocs:                false,

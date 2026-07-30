@@ -151,6 +151,8 @@ fn post_with(xml: &str, navigationtoc: Option<&str>) -> String {
     css_files: &[],
     js_files: &[],
     noinvisibletimes: false,
+    plane1: true,
+    hackplane1: false,
     mathtex: false,
     navigationtoc,
     schemadocs: false,

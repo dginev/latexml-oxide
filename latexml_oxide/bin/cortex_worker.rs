@@ -411,6 +411,8 @@ impl LatexmlWorker {
       css_files:                 &[],
       js_files:                  &[],
       noinvisibletimes:          self.profile.noinvisibletimes,
+      plane1:                    true,
+      hackplane1:                false,
       mathtex:                   self.profile.mathtex,
       navigationtoc:             None,
       split:                     false,

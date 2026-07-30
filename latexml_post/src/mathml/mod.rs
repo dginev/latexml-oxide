@@ -36,8 +36,14 @@ pub struct MathML {
   is_secondary:    bool,
   /// Whether to produce Content MathML (vs Presentation).
   content_mathml:  bool,
-  /// Whether to use plane1 Unicode characters for styled identifiers.
+  /// Whether to remap styled alphanumerics to Unicode's Plane-1 Mathematical
+  /// Alphanumeric Symbols. Perl `$$MATHPROCESSOR{plane1}`, default on
+  /// (`preprocess` L70); `--noplane1` keeps ASCII + a `mathvariant` attribute.
   plane1:          bool,
+  /// Perl `$$MATHPROCESSOR{hackplane1}` (`--hackplane1`): remap only the
+  /// variants in `plane1_hackable`, and to the simpler variant named there.
+  /// Implies `plane1` (Perl L71).
+  hack_plane1:     bool,
   /// Whether to enable line-breaking.
   linebreaking:    bool,
   /// Line width for line-breaking.
@@ -71,6 +77,7 @@ impl MathML {
       is_secondary:    false,
       content_mathml:  false,
       plane1:          true,
+      hack_plane1:     false,
       linebreaking:    false,
       line_width:      80,
       keep_xmath:      false,
@@ -88,6 +95,7 @@ impl MathML {
       is_secondary:    false,
       content_mathml:  true,
       plane1:          true,
+      hack_plane1:     false,
       linebreaking:    false,
       line_width:      80,
       keep_xmath:      false,
@@ -123,6 +131,15 @@ impl MathML {
   /// Perl: --noinvisibletimes
   pub fn with_invisible_times(mut self, emit: bool) -> Self {
     self.invisible_times = emit;
+    self
+  }
+
+  /// Set the Plane-1 remapping mode. `plane1` off keeps ASCII text plus a
+  /// `mathvariant` attribute; `hack_plane1` remaps only the poorly-supported
+  /// variants and implies `plane1`. Perl `--plane1` / `--hackplane1`.
+  pub fn with_plane1(mut self, plane1: bool, hack_plane1: bool) -> Self {
+    self.plane1 = plane1;
+    self.hack_plane1 = hack_plane1;
     self
   }
 
@@ -173,6 +190,7 @@ impl MathProcessor for MathML {
   fn convert_node(&self, doc: &PostDocument, xmath: &Node) -> Option<MathConversion> {
     // Set invisible_times flag for rendering
     presentation::set_invisible_times(self.invisible_times);
+    presentation::set_plane1(self.plane1, self.hack_plane1);
 
     let xml = if self.content_mathml {
       content::convert_to_cmml(doc, xmath)

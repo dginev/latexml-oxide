@@ -258,3 +258,77 @@ fn mathgolden_post_test() {
   // ZERO diff lines: byte-identical to reference-tree Perl.
   post_test("mathgolden", 0);
 }
+
+/// The three Plane-1 remapping modes, each byte-checked against same-host Perl
+/// LaTeXML 0.8.8 (`latexmlpost --pmml`, `--noplane1`, `--hackplane1`).
+///
+/// MathML-post audit F17 — `preprocess` (`MathML.pm` L66-74) never wired its
+/// config through. `MathML::plane1` existed as a struct field but was **never
+/// read**: the token path remapped unconditionally, so `--noplane1` could not
+/// have worked even if the flag had existed, and `hackplane1` was absent
+/// entirely. Perl `stylizeContent` L734-736 picks the variant to remap WITH:
+///
+/// ```text
+/// my $u_variant = $variant
+///   && ($plane1hack ? $plane1hackable{$variant}
+///   : ($plane1 ? $variant : undef));
+/// ```
+///
+/// Driven through the real `MathML` processor rather than a unit call, so the
+/// `set_plane1` handoff in `convert_node` is exercised too — a builder that set
+/// the field without the thread-local reaching the token path would pass a
+/// narrower test.
+#[test]
+fn plane1_modes_match_perl() {
+  let input = std::fs::read_to_string(format!("{DIR}/plane1.xml")).expect("read plane1.xml");
+
+  // (plane1, hack_plane1) → the expected `<m:mi>` run, in document order.
+  // `\mathcal{A} \mathfrak{B} \mathbb{C} \mathbf{D} \mathbf{\mathcal{E}}`.
+  let cases: [(bool, bool, &[&str]); 3] = [
+    // Default: everything remaps, the codepoint carries the style, no mathvariant.
+    (true, false, &["𝒜", "𝔅", "ℂ", "𝐃", "ℰ"]),
+    // --noplane1: ASCII kept, style carried by `mathvariant` instead.
+    (false, false, &["A", "B", "C", "D", "E"]),
+    // --hackplane1: only script/fraktur/double-struck remap — `bold` is absent
+    // from Perl's `%plane1hackable`, so `\mathbf{D}` stays ASCII+mathvariant,
+    // while `\mathbf{\mathcal{E}}` remaps as PLAIN script (the whole point: no
+    // font has a bold-script block).
+    (true, true, &["𝒜", "𝔅", "ℂ", "D", "ℰ"]),
+  ];
+
+  for (plane1, hack, expected) in cases {
+    let doc = PostDocument::new_from_string(&input, PostDocumentOptions::default())
+      .expect("parse plane1.xml");
+    let mut post = Post::new();
+    let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(
+      MathML::new_presentation().with_plane1(plane1, hack),
+    )];
+    let actual = post
+      .process_chain(vec![doc], &mut processors)
+      .expect("post-processing failed")[0]
+      .to_xml_string();
+
+    let mis: Vec<&str> = expected
+      .iter()
+      .copied()
+      .filter(|t| {
+        !actual.contains(&format!("<m:mi>{t}</m:mi>")) && !actual.contains(&format!(">{t}</m:mi>"))
+      })
+      .collect();
+    assert!(
+      mis.is_empty(),
+      "plane1={plane1} hack={hack}: missing token(s) {mis:?}\n{actual}"
+    );
+
+    // The mathvariant attribute and the remapped codepoint are mutually
+    // exclusive per token, so assert the negative side too — otherwise a build
+    // that emitted BOTH would pass on the positive checks alone.
+    let has_bold_variant = actual.contains(r#"mathvariant="bold""#);
+    assert_eq!(
+      has_bold_variant,
+      !plane1 || hack,
+      "plane1={plane1} hack={hack}: mathvariant=\"bold\" presence is wrong — it \
+       must appear exactly when \\mathbf did NOT remap:\n{actual}"
+    );
+  }
+}

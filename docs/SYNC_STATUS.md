@@ -56,7 +56,7 @@ Re-verify a row before planning on it (rule 1).
 | **R2** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified 2026-07-29 (1 error with `--preload=article.cls`, 0 without). The row's *second* divergence — the preload PI kept `[opts]`/`.cls` and never emitted `options=` — is ✅ **FIXED 2026-07-29** | hook half is **not** small: five measured dead ends, `(c)` now collapsed into the rejected `(a)`, and any real fix is TeX-side | Open items |
 | **R4** | biblatex `.bbl` `TokenLimit` loop (2605.17646) | ✅ **FIXED 2026-07-25** — self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl | — | Open items |
 | **R5** | Bibliography targets + MakeBibliography re-port | **the re-port is DONE** — items 1 and 3 landed 2026-07-26/27 (recursive BibTeX session on the LIVE core state, the 727-line string route deleted, the 13-field digest whitelist gone: the `\bib@field@default@*` name sets match Perl exactly, 45 each; `.bib`-as-DATA closed as divergences #74/#78/#79/**#80**), and **item 2 landed 2026-07-29** (citestyle `AY`, short-name `{ay}`, collating `unisort`, format-order NUMBER). Remaining: the missing-references target list | **targets only** | [`BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) |
-| **R3** | Presentation-MathML audit gaps **F17** (+ **F5** Linebreaker) | OPEN but **shrunk 2026-07-29**: `pmml_text_aux` ✅ and `outerWrapper` altimg/RDFa ✅ FIXED (the latter also needed a missing `CrossRef::fill_in_RDFa_refs`) and `pmml_scriptsize_padded` ✅; three items CLOSED as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE), `combineParallel` BLOCKED on the absent `--openmath`/`--mathimages`/`--mathsvg` formats; **1 remains** (`preprocess` hackplane1/nestmath). A math-parser `scriptpos` bug and a FUNCTION-APPLICATION over-insertion witness found en route are **other rows**, not this one | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
+| **R3** | Presentation-MathML **F17 ✅ CLOSED 2026-07-29**; **F5** Linebreaker still open | F17 fully settled: 4 fixed (`pmml_text_aux`, `outerWrapper` altimg/RDFa + the missing `CrossRef::fill_in_RDFa_refs`, `pmml_scriptsize_padded`, `preprocess` plane1 + new `--plane1`/`--noplane1`/`--hackplane1`), 3 closed as do-not-port/N-A (ADDOP flatten is dead in Perl too — porting would DIVERGE), `combineParallel` BLOCKED on the absent `--openmath`/`--mathimages`/`--mathsvg`, `nestmath` unreachable in both engines. **What remains on this row is F5 alone.** A math-parser `scriptpos` bug and a FUNCTION-APPLICATION over-insertion witness found en route are **other rows** | **per item, small**; F5 alone is a **family** needing a scope decision | Open items |
 | **R6** | `ltx_env_<name>` env-markup class | user-requested, **PHASE 2 — do NOT start yet** (user directive 2026-07-29) | medium code, **large golden churn** → own branch | Open items |
 | **R7** | Beyond-Perl performance levers BP-1…BP-6 | POST-RELEASE; internal order BP-2 → BP-3 → BP-1 | **family** | [`BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) |
 | **R8** | Content-MathML / math-parser gaps | **deferred by user directive 2026-06-20** | **family** — do not pick off in isolation | [`CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
@@ -628,12 +628,12 @@ residuals stay here so the live worklist keeps them visible:
   2026-07-29** — it named F11/F14/F15/F16 as open when the archive marks all four
   ✅ and the code confirms it (`filter_row` in `mathml/mod.rs`, `do_cfrac` in
   `presentation.rs`, the `0x2A50`→Cat C / `0x27A1` / `0x0331` rows plus their
-  guard in `operator_dictionary.rs`). What is genuinely open is **R3**: **F17**
-  (a list of smaller pMML gaps) and **F5** Linebreaker (full feature gap — the
-  sketch used the wrong strategy; needs a port-or-drop scope decision). Also
-  still open: the **F14 residual** (`m:share` hrefs use the primary ID suffix;
-  the `MATHPROCESSOR->IDSuffix` secondary-suffix wiring is unconnected) and
-  PARTIAL inherited-context bindings on `pmml_top`/`pmml_parenthesize`.
+  guard in `operator_dictionary.rs`). **F17 is now also CLOSED (2026-07-29)** — see
+  R3 for the per-item disposition. What is genuinely open is **F5** Linebreaker
+  (full feature gap — the sketch used the wrong strategy; needs a port-or-drop
+  scope decision), the **F14 residual** (`m:share` hrefs use the primary ID
+  suffix; the `MATHPROCESSOR->IDSuffix` secondary-suffix wiring is unconnected),
+  and PARTIAL inherited-context bindings on `pmml_top`/`pmml_parenthesize`.
   (Content-MathML items obey the defer-to-a-dedicated-session directive above.)
 - **arXiv velocity-fork audit** (items 1–4 landed 2026-07-03; →
   `archive/ARXIV_FORK_AUDIT_2026-07-03.md`). Sole residual: **item G** —
@@ -999,13 +999,20 @@ work." The *reasoning* is still right (that paper loads no package and
 and its `KacNilpotentorbits` entry (`biblo.bib` L2059) is uncited. Still do not
 measure with it — now because it is silent, not because it is parity.
 
-### R3 — Presentation-MathML audit gaps F17, and F5 Linebreaker
+### R3 — Presentation-MathML: F17 ✅ CLOSED 2026-07-29; F5 Linebreaker open
 
 Both from the archived MathML-post line audit
 (`archive/MATHML_POST_LINE_AUDIT_2026-07-05.md`); read the F17 bullet there for
-the per-item Perl line references. **F17 is a list, not a family** — each item is
-individually scoped and separately landable. **F5 is a family** and needs a
-port-or-drop decision before any code.
+the per-item Perl line references. **F17 was a list, not a family** — each item
+individually scoped — and every one is now settled: **4 fixed, 3 do-not-port/N-A,
+1 blocked, 1 unreachable in both engines.** The detail below is kept because most
+of the value is in the *negative* results: three items would have introduced a
+divergence or dead code if ported on the audit's word. **What remains on this row
+is F5**, which is a family and needs a port-or-drop decision before any code.
+
+The method that produced those negatives is the durable lesson: **run both engines
+on the item before porting it.** Reading the audit alone would have yielded a
+worse tree.
 
 **F17 — `pmml_text_aux` styling ✅ FIXED 2026-07-29.** `pmml_text_aux` took no
 `%attr` at all (Perl `MathML.pm` L1029, L1041-1045 threads font / fontsize /
@@ -1131,10 +1138,47 @@ MathImages when they are wired up to process_chain"), and Rust's CLI has **no
 all three. So porting the branches now would be untestable dead code; the
 prerequisite is that larger math-format feature. Recorded rather than written.
 
-**F17 — still open:** `preprocess` `hackplane1`/`nestmath` unwired (L69-73) — note
-Perl exposes `--plane1`/`--hackplane1` in `latexmlpost` and Rust exposes
-**neither**, while `nestmath` has no CLI in Perl either, so it is effectively
-unreachable there too.
+**F17 — `preprocess` plane1 config ✅ FIXED 2026-07-29 — F17 IS NOW CLOSED.**
+`MathML::plane1` existed as a struct field, was set `true` by both constructors,
+and was **never read**: the token path remapped to Plane-1 unconditionally. So
+`--noplane1` could not have worked even if the flag had existed, and `hackplane1`
+was absent altogether. Perl `stylizeContent` L734-736 picks the variant to remap
+*with*:
+
+```perl
+my $u_variant = $variant
+  && ($plane1hack ? $plane1hackable{$variant}
+  : ($plane1 ? $variant : undef));
+```
+
+Now ported, with `%plane1hackable` (L659-664) and Perl's `hackplane1 ⇒ plane1`
+implication (L71). New CLI: **`--plane1` / `--noplane1` / `--hackplane1`**, which
+Rust previously lacked entirely where `latexmlpost` has `plane1!` and
+`hackplane1!`. Measured against same-host Perl 0.8.8 on
+`\mathcal{A}+\mathfrak{B}+\mathbb{C}+\mathbf{D}+\mathbf{\mathcal{E}}` — **all three
+modes byte-identical**:
+
+| mode | `\mathcal{A}` | `\mathbf{D}` | `\mathbf{\mathcal{E}}` |
+|---|---|---|---|
+| default | `𝒜` | `𝐃` | `ℰ` |
+| `--noplane1` | `A` + `mathvariant="script"` | `D` + `mathvariant="bold"` | `E` + variant |
+| `--hackplane1` | `𝒜` | `D` + `mathvariant="bold"` | `ℰ` (plain script) |
+
+`--hackplane1` leaves `\mathbf{D}` alone because `bold` is absent from
+`%plane1hackable` — the table exists precisely so the doubly-styled blocks
+(bold-script, bold-fraktur) degrade to the plain codepoint no font is missing.
+Guard `90_latexmlpost::plane1_modes_match_perl` drives the real processor (so the
+`set_plane1` handoff in `convert_node` is exercised, not just the builder) and
+asserts the negative side too — `mathvariant="bold"` must appear *exactly* when
+`\mathbf` did not remap, so a build emitting both codepoint and attribute fails.
+Verified RED by neutering `plane1_target_variant` to the old unconditional
+`Some(variant)`; note the guard cannot be red-checked by stashing the whole fix,
+because the `with_plane1` builder it calls arrives with it.
+
+**`nestmath` deliberately NOT ported**: it has no CLI in Perl either (only
+`preprocess`'s `$$self{nestmath} = 0` default and the `ltx:XMText` branch at
+L497-500), so nothing can turn it on in either engine. Porting it would add an
+unreachable second `XMText` arm.
 
 **Found, not fixed — a new witness for the FUNCTION APPLICATION over-insertion
 family.** `\[ \mathop{X'}\limits_{p}^{q} c \]`: Rust inserts `<m:mo>⁡</m:mo>`

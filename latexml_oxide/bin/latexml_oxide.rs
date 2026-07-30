@@ -110,6 +110,25 @@ struct Cli {
   #[arg(long)]
   invisibletimes: bool,
 
+  /// Remap styled alphanumerics to Unicode's Plane-1 Mathematical Alphanumeric
+  /// Symbols (the default). Overrides a profile that turned it off;
+  /// --noplane1 wins if both are given.
+  #[arg(long)]
+  plane1: bool,
+
+  /// Keep styled alphanumerics as ASCII and carry the style in a `mathvariant`
+  /// attribute instead of remapping to Plane-1 codepoints, whose font coverage
+  /// is patchy and which some screen readers announce poorly.
+  #[arg(long)]
+  noplane1: bool,
+
+  /// Remap to Plane-1 only for the variants whose doubly-styled blocks are
+  /// worst supported (script, fraktur, double-struck), and to the simpler
+  /// variant: `\mathbf{\mathcal{E}}` becomes the plain script codepoint rather
+  /// than a bold-script one no font has. Implies --plane1.
+  #[arg(long)]
+  hackplane1: bool,
+
   /// Suppress the built-in CSS/JS resources.
   #[arg(long)]
   nodefaultresources: bool,
@@ -1042,6 +1061,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           js_files: &cli.js_files,
           noinvisibletimes: cli.noinvisibletimes && !cli.invisibletimes,
           mathtex: cli.mathtex && !cli.nomathtex,
+          // Perl `preprocess` L70-71: plane1 defaults ON, and --hackplane1
+          // implies it. `--plane1` is the explicit re-affirmation that wins over
+          // `--noplane1`, mirroring the invisibletimes pair above.
+          plane1: !cli.noplane1 || cli.plane1 || cli.hackplane1,
+          hackplane1: cli.hackplane1,
           navigationtoc: cli.navigationtoc.as_deref(),
           schemadocs: cli.schemadocs,
           split: split_enabled,
