@@ -41,6 +41,12 @@
     plus a subprocess fallback here).
   - **Every conversion log records the file-resolution backend** — `in-process`,
     `subprocess kpsewhich`, or `unavailable`.
+  - **Dingbat and symbol fonts selected by family render their glyphs** instead
+    of the OT1 slot's text character — `bbding`'s `\XSolidBrush` was silently
+    coming out as `%` and `\Checkmark` as `!`, inverting whole comparison-table
+    columns at zero reported errors. An unrecognized font family, series or
+    shape is also now announced once per document rather than once per font
+    switch.
   - **ar5iv corpus fixes** (2026-07 issue sprint) — `xcolor` `dvipsnames` as a
     global class option, `\sidecaptionvpos`, verbatim `\newtcblisting` bodies,
     `agujournal2019` end-matter, `blkarray` (recovering papers that hit

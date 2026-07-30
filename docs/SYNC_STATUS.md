@@ -87,7 +87,34 @@ classes are singletons and the first error is often incidental.
 
 ## Current status
 
-- **2026-07-29 (latest) — an arg-taking `\fnum@<type>` absorbed the rest of the document
+- **2026-07-30 (latest) — a font selected by FAMILY decoded through OT1, emitting the
+  slot's TEXT character, at zero errors.** Rust's `\selectfont` was missing Perl's
+  middle branch (`latex_constructs.pool.ltxml` L5207-5209): when the family is not a
+  known typeface, `LoadFontMap($family)` and, on success, `MergeFont(encoding =>
+  $family)`. `bbding`'s `\dingfamily` is `\fontencoding{U}\fontfamily{ding}\selectfont`
+  and no `u.fontmap` exists, so that branch is the *only* path from family `ding` to
+  `ding_fontmap` — which was therefore **dead code**, correct table and registered
+  loader notwithstanding. Every `\@chooseSymbol{N}` fell to the OT1 fallback: `'045`
+  (`\XSolidBrush`) became a literal `%`, `'041` (`\Checkmark`) became `!`.
+  **Invisible to every log-based signal** — witness 2503.04421 converted at
+  `Status:conversion:0`, zero `Error:`/`Warning:`, telemetry `errors:0`, while 28 cells
+  spanning the "pretrained?" column of *both* its main results tables inverted their
+  meaning. Fixed with the branch plus Perl's three `reported_unrecognized_font_*`
+  report-once guards (`already_reported`, `latexml_engine/src/base_utilities.rs`), which
+  had turned one unrecognized family into 28 identical `Info` lines; the same guard on
+  `\lx@fontencoding` takes `Info:missing_font_encoding:U` from 28 to 1.
+  Post-fix the witness is **99.92% token-identical** to same-host Perl 0.8.8 (10 trivial
+  hunks: an affiliation comma, invisible-times placement) with dingbat counts matching
+  exactly, 15 ✗ / 13 ✓ on both sides. Guards:
+  `latexml_oxide/tests/fonts/bbding.{tex,xml}` (golden verified against Perl) and
+  `tests/116_bbding_family_fontmap.rs`; method + the `pdftotext`-agrees-with-the-bug
+  trap in [`WISDOM.md`](parity/WISDOM.md) §80.
+  Still open, same defect class: `DeclareFontMap`'s
+  `(uppercase|lowercase|digit)_mathstyle` options are unported — Rust writes
+  `OMS_uppercase_mathstyle` and `amsb_fontmap.rs` comments out a dropped
+  `uppercase_mathstyle => { family => 'blackboard' }`, but nothing reads either key.
+
+- **2026-07-29 — an arg-taking `\fnum@<type>` absorbed the rest of the document
   into an unclosed `<figure>`.** The one concrete, analysed-but-unfixed item of
   R5's "missing references" family, parked since 2026-07-14 on "needs a user
   decision + a full-suite diff". Both are now done: user-approved per the
