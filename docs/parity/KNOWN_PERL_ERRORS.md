@@ -2976,3 +2976,33 @@ verbatim to the Perl definition, and to `\lx@fnum@toc@@` L1065-1066 and the
 theorem-header formatter alongside it. Note the fix does NOT reach the `close=": "` separator, so the
 caption still reads `Figure 1.: A caption.` in both engines — closing that gap
 needs the tag attribute to become conditional, which is a larger change.
+
+## 69. `fill_in_relations` walks EVERY ancestor's siblings — quadratic navigation on a split mega-document
+
+Upstream `LaTeXML/lib/LaTeXML/Post/CrossRef.pm` L106-122 emits a `<link rel=…>`
+for the siblings of the page, then of its parent, then of its grandparent, with
+no bound — and carries its own acknowledgement of the cost:
+
+```perl
+# Firstly, look at siblings of this page, then at siblings of parent,
+# then those of grandparent, etc.
+# In a large/complex site, this gets way too much. But how to prune?
+while ($xentry = $self->getParentPage($xentry)) {
+  foreach my $sib ($self->getChildPages($xentry)) { … addNavigation … } }
+```
+
+Measured on the 131 MB witness split at `subsubsection` (40,201 pages): **406
+`<link rel=…>` per page**, i.e. **16.3 M relation links**, and at ~55 KB/page
+they are the bulk of the 2.25 GB of HTML. The CrossRef phase is **77.9 % of the
+whole post run** (1227.9 s of 1576 s attributed; XSLT 17.0 %, MathML-pres 2.3 %)
+— ~30.5 ms per page. Engine telemetry (`--telemetry-out`) is how the phase split
+was obtained; this box's PMU has no branch-stack sampling, so `perf --call-graph
+lbr` cannot profile here.
+
+**This is faithful, and pruning it would be a divergence.** The Rust port
+(`latexml_post/src/crossref.rs::fill_in_relations`, the `while let Some(parent) =
+self.get_parent_page_id(&xentry)` loop) reproduces the walk exactly, including
+the `primary` → element-name relation and the `sidebar` fallback. Only the
+*cost per link* is ours to optimize (`child_pages` is already memoized); the
+*number* of links is Perl's answer and must stay. A future "optimization" that
+bounds the ancestor walk needs a surpass-Perl decision, not a perf argument.

@@ -259,6 +259,11 @@ Build XML in RAM up to a ceiling, then spill to disk:
   RAM is the 16 GB-baseline design point (8 GiB ceiling / 6 GiB fuse / 2 GiB
   spill watermark) and lands a 96 GB host on **48 GiB**, the ceiling under
   which the 131 MB witness was measured to convert (28.1 GB peak).
+  Machine RAM comes from `sysconf(_SC_PHYS_PAGES)` (Windows:
+  `GlobalMemoryStatusEx`). **Known gap: that probe reports the HOST's RAM and is
+  blind to cgroup limits**, so a memory-limited container picks a ceiling far
+  above its real budget and is OOM-killed instead of getting the graceful
+  Fatal — task #157.
 * **Before spilling, verify disk headroom.** If neither RAM nor disk suffices,
   raise a `Fatal` that *names the shortfall and the requirement* — the user can
   add swap or free disk, but only if we tell them how much. A silent OOM kill is
@@ -266,12 +271,11 @@ Build XML in RAM up to a ceiling, then spill to disk:
 * Swap is a fallback, not a plan: this host has 258 GB RAM but only 8 GB swap, so
   "let it swap" would not have saved the witness.
 
-Related bug, independent of this design: **the Build phase has no cooperative
-memory guard.** `check_timeout()` is called from exactly three sites, all in
-`stomach.rs` digestion loops; `document.rs` has none. Since Build is where memory
-peaks (~54 % of time, ~70 % of peak), `--max-memory` on a large document produces
-a hard watchdog abort — exit 137, no output, no `Fatal:` line. Fix that first; it
-is small and helps every oversized document.
+Related bug, independent of this design — **FIXED** (task #140, merged): the
+Build phase had no cooperative memory guard, so `--max-memory` on a large
+document produced a hard watchdog abort (exit 137, no output, no `Fatal:` line)
+rather than a graceful one. `document.rs` now checks alongside the three
+`stomach.rs` digestion sites.
 
 ---
 
