@@ -351,22 +351,14 @@ impl Converter {
           String::new()
         },
       };
-      self.runtime.status = get_status_message();
-      self.runtime.status_code = get_status_code();
-      // Same verdict fold as the shared tail below (which this arm bypasses):
-      // a fatal run must summarize as "failed", never "complete: N fatal".
-      let verb = if self.runtime.status_code == 3 {
-        "failed"
-      } else {
-        "complete"
-      };
-      Note!(s!("Conversion {}: {}", verb, self.runtime.status));
-      return ConversionResponse {
-        result:      Some(serialized),
-        log:         self.flush_log(),
-        status:      self.runtime.status.clone(),
-        status_code: self.runtime.status_code,
-      };
+      // The SHARED tail, not a hand-copy of parts of it: this arm used to
+      // reproduce only the verdict fold and silently skip the rest — so a
+      // streamed run emitted no MARPA_ASF_STATS line (measured: the 131 MB
+      // witness under MARPA_ASF_STATS=1 produced zero stats), and a streamed
+      // `--source-map` run emitted `data:sourcepos` tags with NO decoder
+      // table in the log. Streaming auto-activates on exactly the large
+      // documents where both matter.
+      return self.finish_response(serialized);
     }
 
     let digest_result = {
@@ -525,6 +517,23 @@ impl Converter {
     // else { $serialized = $result; }                              // Compressed case
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
+    self.finish_response(serialized)
+  }
+
+  /// The SHARED conversion tail: instrumentation flush (ASF stats, the
+  /// `--source-map` decoder table), the Perl-faithful completion `Note!`, and
+  /// response assembly. Every arm of `convert` must end here — the streaming
+  /// arm used to return early with a hand-copy of the verdict fold alone,
+  /// silently skipping the rest (no `MARPA_ASF_STATS` line, and a streamed
+  /// `--source-map` run emitted `data:sourcepos` tags with no decoder ring).
+  ///
+  /// Recomputes `status`/`status_code` (idempotent reads of the REPORT
+  /// counters), so diagnostics raised during serialization itself still reach
+  /// the reported verdict — the streaming arm always did this; the eager path
+  /// previously froze status before serializing.
+  fn finish_response(&mut self, serialized: String) -> ConversionResponse {
+    self.runtime.status = get_status_message();
+    self.runtime.status_code = get_status_code();
     if self.opts.verbosity >= 0 {
       Debug!("arena", "strings_allocated", arena::len());
       // Final token-read progress: the calibration basis for `token_limit`
