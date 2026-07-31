@@ -99,6 +99,13 @@ pub struct Document {
   pub spilled_ids:             rustc_hash::FxHashSet<String>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
   pub rewrite_labels:          HashMap<String, String>,
+  /// Document-wide labels SHARED by every streaming pass-2 fragment, consulted
+  /// only when `rewrite_labels` misses. Pass 2 used to copy the whole spilled
+  /// index into each fragment's own map, which is quadratic in document size:
+  /// 28,068 labels × 459,579 segments on the 131 MB witness = 12.9 billion
+  /// String allocations. Frag-local labels still win, preserving exactly the
+  /// `entry().or_insert_with()` precedence that copy had.
+  pub rewrite_labels_shared:   Option<Rc<HashMap<String, String>>>,
   // the following are internal "local"-based declarations in Perl
   localized_constructed_nodes: Vec<Vec<Node>>,
   constructed_nodes:           Vec<Node>,
@@ -152,6 +159,25 @@ pub struct Document {
   /// re-emit the placeholders they contain). False only at final assembly,
   /// where the splice resolves placeholders RECURSIVELY.
   pub literal_placeholders:    bool,
+  /// Serialize spill segments FLAT — no indentation, no decorative newlines.
+  ///
+  /// A spilled segment's text is an intermediate: pass 2 re-parses it,
+  /// processes it, and re-serializes with `serialize_aux` at the recorded
+  /// depth, and only THAT text reaches the output. The indentation pass 1 used
+  /// to emit was therefore generated, written to disk, read back, materialized
+  /// as libxml2 text nodes, deleted again by `strip_indentation_whitespace`,
+  /// and finally regenerated — pure round-trip tax.
+  ///
+  /// Measured on the 131 MB witness: **51.2% of serialized bytes are leading
+  /// whitespace + newlines** (189.4 MB of 381.5 MB sampled, 6,092,937 lines).
+  /// Over ~2.45 GB of segment text that is ~1.2 GB generated and written, read
+  /// back, and ~40M text nodes allocated in pass 2's parse — which
+  /// `strip_indentation_whitespace` then `unlink_node`s, and unlink does not
+  /// free, so they are orphaned for the fragment's lifetime.
+  ///
+  /// Set for pass 1 only. Fragment documents in pass 2 are separate `Document`s
+  /// and default to `false`, so the OUTPUT keeps its formatting exactly.
+  pub spill_flat:              bool,
   /// Streaming pass 2 only: the fragment's ancestor `xml:id`s at spill time
   /// (SegmentMeta::ancestors). A `label:`/`id:`-scoped rewrite whose scope
   /// resolves to one of these covers the WHOLE fragment.
@@ -248,6 +274,7 @@ impl Document {
       idstore:                     HashMap::default(),
       spilled_ids:                 rustc_hash::FxHashSet::default(),
       rewrite_labels:              HashMap::default(),
+      rewrite_labels_shared:       None,
       pending:                     Vec::new(),
       localized_constructed_nodes: Vec::new(),
       constructed_nodes:           Vec::new(),
@@ -263,6 +290,7 @@ impl Document {
       extra_rdfa_prefixes:         Vec::new(),
       scoped_rules_strict:         false,
       literal_placeholders:        false,
+      spill_flat:                  false,
       fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
       fragment_parent_qname:       None,
       defer_root_after_open:       false,
@@ -1719,6 +1747,12 @@ impl Document {
         out.push_str("  ");
       }
     }
+    // `spill_flat` means "emit no decorative whitespace", which is exactly what
+    // `noindent` already means at every emission site — so fold it in ONCE here
+    // rather than testing it at each. It suppresses formatting only; the
+    // schema-driven `noindent_children` still governs mixed content, whose
+    // whitespace is meaningful and was never indented anyway.
+    let noindent = noindent || self.spill_flat;
 
     match node.get_type() {
       Some(NodeType::DocumentNode) => {
@@ -1857,6 +1891,7 @@ impl Document {
           model::can_contain_sym(node_qname, pin!("#PCDATA"))
         };
 
+        let noindent_children = noindent_children || self.spill_flat;
         if !noindent {
           push_indent(out, depth);
         }
@@ -3694,8 +3729,32 @@ impl Document {
   /// pass 1. The witness's first RSS-triggered yield once spilled half the
   /// document as ONE 512 MB segment, and pass 2 died re-parsing it.
   fn segment_chunk_bytes() -> usize {
-    /// Validated on the 131 MB witness; also the point past which a single
-    /// segment's re-parse dominates pass 2 regardless of the machine.
+    // Calibration override (`LATEXML_SEGMENT_CHUNK_MIB`), deliberately env-only
+    // and NOT a CLI flag — the same reasoning as `LATEXML_SPILL_AT_MIB`, and
+    // for the same reason: MAX below is an ARGUED constant, not a measured one.
+    //
+    // Its stated basis is a TIME claim ("the point past which a single
+    // segment's re-parse dominates pass 2"), but the pass-2 tail is linear in
+    // fragment size — `prune_dangling_split_xmrefs`, `prune_xmduals`,
+    // `mark_xmnode_visibility` and `cleanup_unreferenced_xmtok_ids` are each
+    // one `findnodes` plus an O(1)-per-node loop, `finalize_subtree` is a
+    // recursive walk, and the rewrite rule set is fixed. Larger segments
+    // should also SUIT the allocator, which is the largest single profile
+    // category (~16.5%): fewer, bigger alloc/free cycles.
+    //
+    // Note what the derivation below wants: at --max-memory 48000 it computes
+    // watermark/72 = 166 MB and MAX then clamps it to 32 MB. This knob exists
+    // so that ceiling can be swept rather than argued.
+    if let Some(mib) = std::env::var("LATEXML_SEGMENT_CHUNK_MIB")
+      .ok()
+      .and_then(|v| v.parse::<usize>().ok())
+      .filter(|mib| *mib > 0)
+    {
+      return mib.saturating_mul(1024 * 1024);
+    }
+    /// Validated on the 131 MB witness. The accompanying claim that a single
+    /// segment's re-parse dominates pass 2 past this point is NOT substantiated
+    /// by the pass-2 tail, which is linear — see the override above.
     const MAX: usize = 32 * 1024 * 1024;
     /// Below this, per-segment overhead (parse, index merge, reserialize)
     /// outweighs the memory saved.
@@ -3909,36 +3968,13 @@ impl Document {
     }
   }
 
-  /// Strip the whitespace our own pretty-printer added, after a serialized
-  /// fragment is re-parsed (streaming pass 2).
-  ///
-  /// `serialize_into` adds indentation/newlines ONLY inside elements whose
-  /// schema model cannot contain `#PCDATA` (`noindent_children`), so removing
-  /// whitespace-only text nodes in exactly those parents — the same
-  /// `model::can_contain_sym` query — recovers the original tree precisely.
-  /// PCDATA-capable parents were serialized inline (no added whitespace), so
-  /// their text children, including semantic spaces between inline elements,
-  /// are never touched. The unknown `_lxfragment` wrapper is not in the
-  /// model, so inter-subtree whitespace under it strips too.
-  pub fn strip_indentation_whitespace(&mut self, node: &Node) {
-    if node.get_type() != Some(NodeType::ElementNode) {
-      return;
-    }
-    let qname = get_node_qname(node);
-    let keeps_text = model::can_contain_sym(qname, pin!("#PCDATA"));
-    for child in node.get_child_nodes() {
-      match child.get_type() {
-        Some(NodeType::TextNode) => {
-          if !keeps_text && child.get_content().chars().all(char::is_whitespace) {
-            let mut ws = child;
-            ws.unlink_node();
-          }
-        },
-        Some(NodeType::ElementNode) => self.strip_indentation_whitespace(&child),
-        _ => {},
-      }
-    }
-  }
+  // `strip_indentation_whitespace` lived here until `spill_flat` (its only
+  // caller was streaming pass 2): it deleted the whitespace-only text nodes
+  // our own pretty-printer had added to spill segments, via the same
+  // `model::can_contain_sym(#PCDATA)` query the serializer indents by. Flat
+  // spill serialization means those nodes are never created, so the
+  // generate-then-undo pair is gone. It also `unlink_node`d rather than
+  // freed — the orphan-leak trap — so do not resurrect it as-is.
 
   /// Remove the pointer-keyed `node_boxes` entries for `node` and its whole
   /// subtree. MANDATORY before freeing nodes mid-conversion: a freed node's
@@ -5734,6 +5770,23 @@ impl Document {
   #[cfg(feature = "token-locators")]
   pub fn set_current_box_locator(&mut self, loc: Option<Locator>) {
     self.current_box_locator = loc;
+  }
+
+  /// Resolve a rewrite label: this document's own labels first, then the
+  /// shared document-wide map a streaming fragment carries
+  /// (`rewrite_labels_shared`). The two-level lookup replaces copying the
+  /// whole label index into every fragment — see the field docs.
+  pub fn lookup_rewrite_label(&self, key: &str) -> Option<String> {
+    self
+      .rewrite_labels
+      .get(key)
+      .or_else(|| {
+        self
+          .rewrite_labels_shared
+          .as_ref()
+          .and_then(|shared| shared.get(key))
+      })
+      .cloned()
   }
 
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {

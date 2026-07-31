@@ -272,7 +272,7 @@ impl Rewrite {
         ),
       };
       if let Some(label_part) = scope_str.strip_prefix("label:") {
-        if let Some(id) = document.rewrite_labels.get(label_part).cloned() {
+        if let Some(id) = document.lookup_rewrite_label(label_part) {
           if self.options.select_count.is_none() {
             self.options.select_count = Some(1);
           }
@@ -288,7 +288,7 @@ impl Rewrite {
         }
         // Try with LABEL: prefix (clean_label adds it)
         let clean_key = format!("LABEL:{}", label_part);
-        if let Some(id) = document.rewrite_labels.get(&clean_key).cloned() {
+        if let Some(id) = document.lookup_rewrite_label(&clean_key) {
           if self.options.select_count.is_none() {
             self.options.select_count = Some(1);
           }

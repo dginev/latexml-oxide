@@ -1,4 +1,7 @@
-use std::cell::RefCell;
+use std::{
+  cell::RefCell,
+  sync::atomic::{AtomicBool, Ordering},
+};
 
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
 
@@ -36,6 +39,41 @@ static LOGGER: LatexmlLogger = LatexmlLogger;
 /// appended here (without ANSI colors) in addition to stderr.
 #[thread_local]
 static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
+
+/// Does stderr currently sit at the start of a line?
+///
+/// A diagnostic record must begin on a fresh line so CorTeX's line-anchored
+/// parser (`^Error:`/`^Warning:`/`^Info:`) matches and the record never glues
+/// onto an in-flight progress note like `(Loading "foo.sty"… )`, which is
+/// written WITHOUT a trailing newline. That guarantee used to be bought with an
+/// unconditional leading `\n` on every record — which emits a BLANK line
+/// whenever stderr was already at line start, i.e. almost always.
+///
+/// Measured on the 131 MB witness: **1,440,571 of 3,142,509 captured stderr
+/// lines (45.8%) were blank**, matching the record count almost exactly. The
+/// `LOG_BUFFER` path never had this bug — it tests `ends_with('\n')` — so the
+/// on-disk `.latexml.log` and the captured stderr disagreed on line count.
+///
+/// Tracking line-start state reproduces the guarantee at half the bytes.
+///
+/// **Process-global, not `#[thread_local]`, and mutated under the stderr lock.**
+/// stderr is one shared descriptor: `cortex_worker --pool-size N` runs N
+/// conversion threads in one process, and `logger::capture` exists precisely to
+/// run conversions on worker threads. A per-thread flag would let thread A skip
+/// its leading newline believing the cursor is at line start while thread B had
+/// left it mid-line — gluing a record onto B's output, where CorTeX's
+/// `^Error:`/`^Warning:` anchor then misses it entirely. That is a silent
+/// error-count loss, the exact failure this project's signal-integrity rule
+/// forbids (false negatives hide regressions). The unconditional leading `\n`
+/// was robust to that by construction, so the replacement has to be too:
+/// check-write-set happens as one critical section holding the stderr lock.
+static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
+
+/// Tell the logger that stderr is back at line start. For the `Note!` /
+/// `NoteLog!` macros, which write to stderr directly via `println_stderr!`
+/// rather than through `log::Log` — without this the next diagnostic record
+/// could emit a spurious leading newline.
+pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.store(true, Ordering::Release); }
 
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
@@ -194,7 +232,18 @@ impl log::Log for LatexmlLogger {
         {
           append_note(log, &strip_ansi(&note));
         }
-        print_stderr!("{}", note);
+        // Write and publish the cursor state under ONE stderr lock, so a
+        // concurrent diagnostic record cannot observe a stale flag.
+        {
+          use std::io::Write;
+          let mut err = std::io::stderr().lock();
+          let _ = err.write_all(note.as_bytes());
+          let _ = err.flush();
+          // A note carries no trailing newline of its own unless its text ends
+          // in one (`note_begin` opens with a leading '\n'), so record where it
+          // left the cursor for the next diagnostic record.
+          STDERR_AT_LINE_START.store(note.ends_with('\n'), Ordering::Release);
+        }
         return;
       }
       let category_object = if record_target.is_empty() {
@@ -268,10 +317,26 @@ impl log::Log for LatexmlLogger {
       // Colorize for an interactive terminal only; when stderr is redirected
       // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
       // grep-clean (matches the captured `.latexml.log` buffer above).
-      if stderr_use_color() {
-        println_stderr!("\n{}", painted_message);
-      } else {
-        println_stderr!("\n{}", strip_ansi(&painted_message));
+      // Break onto a fresh line ONLY when a note left the cursor mid-line —
+      // an unconditional leading '\n' was 45.8% of the witness's log (see
+      // STDERR_AT_LINE_START). One critical section: read the flag, write, and
+      // republish it while holding the stderr lock, so the "record starts at
+      // line start" guarantee survives concurrent loggers.
+      {
+        use std::io::Write;
+        let text = if stderr_use_color() {
+          painted_message
+        } else {
+          strip_ansi(&painted_message)
+        };
+        let mut err = std::io::stderr().lock();
+        if !STDERR_AT_LINE_START.load(Ordering::Acquire) {
+          let _ = err.write_all(b"\n");
+        }
+        let _ = err.write_all(text.as_bytes());
+        let _ = err.write_all(b"\n");
+        let _ = err.flush();
+        STDERR_AT_LINE_START.store(true, Ordering::Release);
       }
     }
   }

@@ -71,6 +71,84 @@ pub fn soft_cap_from_ceiling(max_memory_mib: u64) -> u64 {
   (max_memory_mib.saturating_mul(3) / 4).saturating_mul(1024 * 1024)
 }
 
+/// Minimum boxes that must accumulate before the **soft-RSS** yield branch may
+/// fire (the box-budget branch is unaffected and still yields on its own).
+///
+/// The soft-RSS test is a LEVEL test with no hysteresis: `rss > watermark`. A
+/// document whose irreducible resident floor sits above the watermark therefore
+/// latches it on permanently and yields at every legal seam, accumulating
+/// almost nothing between yields. Measured on the 131 MB witness at
+/// `--max-memory 48000` (watermark 12 GB, pass-1 RSS 13.3-14.9 GB — above it
+/// for the entire run): **24,051,712 yields** producing **459,579 segments
+/// averaging 5.5 KB**, against a box budget of ~2.0 M boxes that would on its
+/// own have yielded ~12 times. The same binary on a witness that never crosses
+/// its watermark yields **8** times.
+///
+/// A floor restores the trigger's intent — "respond to memory pressure sooner
+/// than the box budget would" — without the degenerate per-seam case. 1024
+/// boxes is ~2.5 MB of box memory at the measured 2416 B/box, i.e. negligible
+/// against any watermark large enough to matter, so the pressure response stays
+/// effectively immediate while the yield count drops by ~3 orders of magnitude.
+///
+/// **The floor is waived under real pressure** — see `soft_yield_is_urgent`.
+/// The soft-RSS branch exists because "the box budget alone assumes a per-box
+/// footprint; on content whose real cost per box is higher (math-dense trees),
+/// RSS crosses the ceiling long before the box count does". A floor that
+/// applied unconditionally would blunt that valve for exactly the pathological
+/// input it was added for: 1024 boxes of ordinary content is ~2.5 MB, but 1024
+/// boxes of something pathological is unbounded, and the fuse could fire inside
+/// one un-yielded window. So above a higher RSS mark the floor is ignored.
+///
+/// Env-overridable for calibration only (`LATEXML_SOFT_YIELD_MIN_BOXES`),
+/// deliberately not a CLI flag — same reasoning as `LATEXML_SPILL_AT_MIB`.
+/// Override the soft-RSS floor directly, bypassing the env lookup. For tests
+/// that need to drive the degenerate (floor = 1) and fixed (floor = N) regimes
+/// in one process — see `115_soft_yield_floor`.
+pub fn set_soft_yield_min_boxes(boxes: usize) { SOFT_YIELD_MIN_BOXES.set(Some(boxes)); }
+
+/// Is memory pressure URGENT enough to waive the soft-yield floor?
+///
+/// Halfway from the spill watermark to the cooperative fuse. Below this the
+/// floor applies and yields stay coarse; above it every legal seam yields, as
+/// before this floor existed — so a document whose per-box footprint is wildly
+/// larger than the 2416 B the box budget assumes still gets the immediate
+/// response the soft-RSS branch was introduced to provide, instead of Fatal-ing
+/// inside a 1024-box window.
+fn soft_yield_is_urgent(rss_kb: u64) -> bool {
+  soft_yield_urgency(rss_kb, spill_watermark_bytes(), resolve_rss_cap())
+}
+
+/// The pure predicate behind [`soft_yield_is_urgent`], split out so the
+/// arithmetic is unit-testable (an integration test would need a real RSS cap
+/// near the test process's actual footprint — flaky by construction on the
+/// 16 GB CI runner). `watermark`/`fuse` in bytes, `rss_kb` in KiB.
+fn soft_yield_urgency(rss_kb: u64, watermark: Option<u64>, fuse: Option<u64>) -> bool {
+  match (watermark, fuse) {
+    (Some(watermark), Some(fuse)) if fuse > watermark => {
+      rss_kb.saturating_mul(1024) >= watermark + (fuse - watermark) / 2
+    },
+    // No fuse to divide (`--max-memory=0`): the floor always applies, matching
+    // the watermark fallback's own "no ceiling to race" reasoning.
+    _ => false,
+  }
+}
+
+/// Cached: this sits on the per-seam yield predicate, which the 131 MB witness
+/// evaluates tens of millions of times — an `std::env::var` there would be its
+/// own hotspot.
+pub fn soft_yield_min_boxes() -> usize {
+  const DEFAULT: usize = 1024;
+  if let Some(cached) = SOFT_YIELD_MIN_BOXES.get() {
+    return cached;
+  }
+  let resolved = std::env::var("LATEXML_SOFT_YIELD_MIN_BOXES")
+    .ok()
+    .and_then(|v| v.parse::<usize>().ok())
+    .unwrap_or(DEFAULT);
+  SOFT_YIELD_MIN_BOXES.set(Some(resolved));
+  resolved
+}
+
 /// The RAM watermark, in bytes, at which streaming pass 1 begins spilling
 /// closed subtrees to disk — the second derived quantity of the single
 /// `--max-memory` knob, and deliberately NOT a flag of its own (a watermark a
@@ -354,6 +432,9 @@ static FRAGMENT_YIELD_COUNT: Cell<usize> = Cell::new(0);
 /// during early fragments while the 2.6M-box budget sat untouched.
 #[thread_local]
 static FRAGMENT_YIELD_RSS_SOFT_KB: Cell<Option<u64>> = Cell::new(None);
+/// Resolved-once floor for the soft-RSS branch — see [`soft_yield_min_boxes`].
+#[thread_local]
+static SOFT_YIELD_MIN_BOXES: Cell<Option<usize>> = Cell::new(None);
 /// The most recent RSS sample from `check_timeout`'s 1024-call cadence, so
 /// the yield predicate reads a cell instead of `/proc`.
 #[thread_local]
@@ -1565,10 +1646,24 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       && init_depth == 0
       && terminal_opt.is_none()
       && alignment_opt.is_none()
-      && (stomach!().box_list.len() >= budget
-        || FRAGMENT_YIELD_RSS_SOFT_KB
-          .get()
-          .is_some_and(|soft| LAST_SAMPLED_RSS_KB.get() > soft))
+      && {
+        // The box budget yields on its own. The soft-RSS branch additionally
+        // requires a MINIMUM accumulation: it is a level test (`rss > soft`)
+        // with no hysteresis, so a document whose resident floor sits above
+        // the watermark latches it on for the whole run and yields at every
+        // seam with nothing accumulated — see `soft_yield_min_boxes` for the
+        // measured degeneracy (24 M yields / 5.5 KB segments on the witness).
+        let accumulated = stomach!().box_list.len();
+        let rss_kb = LAST_SAMPLED_RSS_KB.get();
+        accumulated >= budget
+          || (FRAGMENT_YIELD_RSS_SOFT_KB
+            .get()
+            .is_some_and(|soft| rss_kb > soft)
+            // The floor is waived once pressure is urgent, so pathological
+            // per-box footprints keep the immediate response this branch
+            // exists to give (`soft_yield_is_urgent`).
+            && (accumulated >= soft_yield_min_boxes() || soft_yield_is_urgent(rss_kb)))
+      }
       && stomach!().boxing.is_empty()
       && lookup_alignment().is_none()
       && !lookup_bool_sym(crate::pin!("IN_MATH"))
@@ -2008,7 +2103,7 @@ pub fn get_script_level() -> usize {
 mod memory_cap_tests {
   use super::{
     apply_memory_ceiling, box_bytes_budget, box_count_cap, resolve_rss_cap, set_memory_cap,
-    soft_cap_from_ceiling,
+    soft_cap_from_ceiling, soft_yield_urgency,
   };
 
   // The box-list ceilings are memory ceilings, so they must ride the SAME
@@ -2113,5 +2208,37 @@ mod memory_cap_tests {
     // guard below it (fixing the old fixed-4.5 GB decoupling).
     assert!(soft_cap_from_ceiling(2000) < 2000 * 1024 * 1024);
     assert!(soft_cap_from_ceiling(20000) > 6144 * 1024 * 1024);
+  }
+
+  /// The soft-yield floor waiver: waived at/above the watermark→fuse midpoint,
+  /// applied below it, and never waived when either bound is absent or
+  /// degenerate. Guards the safety valve `soft_yield_min_boxes` sits on — a
+  /// pathological per-box footprint must regain per-seam yielding before the
+  /// fuse fires inside one un-yielded window.
+  #[test]
+  fn soft_yield_floor_waiver_boundaries() {
+    const MB: u64 = 1024 * 1024;
+    let wm = Some(12_000 * MB); // the witness's watermark at --max-memory 48000
+    let fuse = Some(36_000 * MB); // and its fuse; midpoint = 24_000 MB
+    let mark_kb = 24_000 * 1024;
+    assert!(
+      !soft_yield_urgency(mark_kb - 1, wm, fuse),
+      "below the midpoint the floor applies"
+    );
+    assert!(
+      soft_yield_urgency(mark_kb, wm, fuse),
+      "at the midpoint the floor is waived"
+    );
+    assert!(soft_yield_urgency(mark_kb + 1, wm, fuse), "above it too");
+    // --max-memory=0 shapes: no fuse, no watermark, or fuse <= watermark
+    // (a calibration LATEXML_SPILL_AT_MIB above the fuse) — never urgent.
+    assert!(!soft_yield_urgency(u64::MAX / 1024, wm, None));
+    assert!(!soft_yield_urgency(u64::MAX / 1024, None, fuse));
+    assert!(
+      !soft_yield_urgency(u64::MAX / 1024, fuse, wm),
+      "fuse below watermark is degenerate"
+    );
+    // saturating_mul: an absurd rss_kb must not overflow into false.
+    assert!(soft_yield_urgency(u64::MAX, wm, fuse));
   }
 }

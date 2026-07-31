@@ -232,6 +232,11 @@ pub fn incr_formulae() { STATE.with(|s| s.borrow_mut().formulae += 1); }
 /// invoked over all `<XMath>` nodes).
 pub fn set_formulae(n: u32) { STATE.with(|s| s.borrow_mut().formulae = n); }
 
+/// Add to the formulae count. For streaming pass 2, which parses math one
+/// SEGMENT at a time and so never knows the document-wide count up front —
+/// `set_formulae` there would record only the last segment's tally.
+pub fn add_formulae(n: u32) { STATE.with(|s| s.borrow_mut().formulae += n); }
+
 /// Record one math parse: total time and number of successful parses
 /// returned (the Marpa parser may produce multiple ASF derivations
 /// for one input). Updates the histogram bucket for the elapsed time.
@@ -293,6 +298,18 @@ pub fn set_child_rusage_us(user: u64, sys: u64) {
 /// Take the current telemetry record, replacing it with a fresh
 /// default. Use at end-of-process to serialize the result.
 pub fn take() -> Telemetry { STATE.with(|s| std::mem::take(&mut *s.borrow_mut())) }
+
+/// Reset per-conversion telemetry WITHOUT reading it.
+///
+/// `take` is the only other reset, and it is called from the binaries' end-of-job
+/// finalizers — which return early when no telemetry sink is configured
+/// (`write_telemetry_record`: `let Some(path) = path else { return }`). So in a
+/// process that converts repeatedly with telemetry off (the `--server` LSP, a
+/// test harness), state carried over between documents. That was self-correcting
+/// while every counter was `set`; it is not once any counter accumulates —
+/// streaming's `add_formulae` must sum across segments, so it would sum across
+/// DOCUMENTS too. Phase timings had the same latent flaw.
+pub fn reset() { STATE.with(|s| *s.borrow_mut() = Telemetry::default()); }
 
 /// Read-only view for tests / instrumented assertions.
 pub fn with<R>(f: impl FnOnce(&Telemetry) -> R) -> R { STATE.with(|s| f(&s.borrow())) }
@@ -519,5 +536,32 @@ mod tests {
     assert!(json.contains("\\\"weird\\\""));
     assert!(json.contains("\\n"));
     assert!(json.contains("\\t"));
+  }
+
+  /// `reset` must zero accumulating state without a sink configured. The only
+  /// other reset is `take()`, which the binaries skip when no telemetry path is
+  /// set — and streaming's `add_formulae` ACCUMULATES, so without this a
+  /// long-lived process (the `--server` LSP, a worker pool thread) would sum
+  /// formulae and phase time across documents.
+  #[test]
+  fn reset_clears_accumulating_state() {
+    add_formulae(100);
+    phase_enter(Phase::MathParse);
+    phase_exit();
+    with(|t| {
+      assert_eq!(t.formulae, 100);
+    });
+    reset();
+    with(|t| {
+      assert_eq!(
+        t.formulae, 0,
+        "formulae must not survive a conversion boundary"
+      );
+      assert_eq!(
+        t.phase_us,
+        [0; Phase::COUNT],
+        "phase time must not survive either"
+      );
+    });
   }
 }

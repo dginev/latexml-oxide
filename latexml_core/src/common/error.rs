@@ -716,6 +716,7 @@ macro_rules! Note {
     {
       let msg = $input;
       $crate::println_stderr!("{msg}");
+      $crate::util::logger::mark_stderr_at_line_start();
     }
   };
 }
@@ -728,6 +729,7 @@ macro_rules! NoteLog {
     {
       let msg = $input;
       $crate::println_stderr!("{msg}");
+      $crate::util::logger::mark_stderr_at_line_start();
     }
   };
 }

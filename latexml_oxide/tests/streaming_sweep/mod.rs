@@ -13,8 +13,24 @@
 use latexml::converter::Converter;
 use latexml_core::common::{Config, OutputFormat};
 
+/// A suite's binding dispatcher. A plain `fn` pointer, not an `Rc`, because it
+/// crosses into the conversion thread — the `Rc` is built on the far side.
+pub type DispatchFn = fn(&str) -> Option<latexml_core::common::error::Result<()>>;
+
 /// One conversion in a fresh thread. Returns (xml, error_count).
 pub fn convert(source: &str, streaming: Option<usize>) -> (String, usize) {
+  convert_with(source, streaming, latexml_contrib::dispatch)
+}
+
+/// `convert`, with the suite's own binding dispatcher. A fixture whose
+/// bindings are a TEST helper rather than a contrib entry (grouping's
+/// `scopemacro.latexml`) degrades under the plain contrib dispatcher, and a
+/// degraded fixture proves nothing about streaming.
+pub fn convert_with(
+  source: &str,
+  streaming: Option<usize>,
+  dispatch: DispatchFn,
+) -> (String, usize) {
   let source = source.to_string();
   std::thread::Builder::new()
     .stack_size(64 * 1024 * 1024)
@@ -30,7 +46,7 @@ pub fn convert(source: &str, streaming: Option<usize>) -> (String, usize) {
         // MODE-DEPENDENT shapes, which reads as a phantom streaming
         // divergence (witness omnibus_natbib_bbl_sideload: 101 errors, an
         // empty eager doc, a partial streamed one).
-        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        extra_bindings_dispatch: Some(std::rc::Rc::new(dispatch)),
         ..Config::default()
       };
       let mut c = Converter::from_config(cfg);
@@ -53,7 +69,9 @@ pub fn convert(source: &str, streaming: Option<usize>) -> (String, usize) {
     .expect("conversion thread panicked")
 }
 
-pub fn sweep_dir(dir: &str) {
+pub fn sweep_dir(dir: &str) { sweep_dir_with(dir, latexml_contrib::dispatch) }
+
+pub fn sweep_dir_with(dir: &str, dispatch: DispatchFn) {
   let mut fixtures: Vec<_> = std::fs::read_dir(dir)
     .unwrap_or_else(|e| panic!("cannot read {dir}: {e}"))
     .filter_map(|e| e.ok().map(|e| e.path()))
@@ -67,8 +85,8 @@ pub fn sweep_dir(dir: &str) {
   let mut divergent: Vec<String> = Vec::new();
   for path in fixtures {
     let src = path.to_string_lossy().into_owned();
-    let (eager_xml, eager_errs) = convert(&src, None);
-    let (streamed_xml, streamed_errs) = convert(&src, Some(3));
+    let (eager_xml, eager_errs) = convert_with(&src, None, dispatch);
+    let (streamed_xml, streamed_errs) = convert_with(&src, Some(3), dispatch);
     if eager_errs != streamed_errs {
       divergent.push(format!(
         "{src}: error count diverges (eager {eager_errs}, streamed {streamed_errs})"

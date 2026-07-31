@@ -421,7 +421,12 @@ fn finish_document(document: &mut Document) -> Result<()> {
     // Per-formula bucket histogram requires per-call instrumentation
     // inside latexml_math_parser::parser::parse_math; deferred.
     let xmath_count = document.findnodes("//ltx:XMath", None).len() as u32;
-    latexml_core::telemetry::set_formulae(xmath_count);
+    // ADD, not set: `finish_document` runs on the streaming SPINE *after*
+    // `streaming_pass2` has already counted every spilled fragment's formulae,
+    // so a plain `set` here would clobber the segment tallies and report only
+    // the spine's own — near zero on a document that spilled most of itself.
+    // Eager is unaffected: the counter starts at 0 and this runs once.
+    latexml_core::telemetry::add_formulae(xmath_count);
     let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
     let mut parser = MathParser::default();
     parser.parse_math(document)?;
@@ -602,7 +607,33 @@ fn streaming_pass2(
   };
   let nomath = state::get_nomathparse_flag();
   let segments: Vec<_> = store.ids().collect();
-  for seg in segments {
+  // The spilled-label index is the SAME for every fragment, so build it once
+  // and share it (Document::rewrite_labels_shared, consulted on a local miss).
+  // Copying it into each fragment's own map instead was quadratic: 28,068
+  // labels × 459,579 segments on the 131 MB witness = 12.9 billion String
+  // allocations, and it dominated pass 2.
+  let shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>> =
+    rules_opt.is_some().then(|| {
+      Rc::new(
+        index
+          .labels()
+          .map(|(label, id)| (label.to_string(), id.to_string()))
+          .collect::<rustc_hash::FxHashMap<_, _>>(),
+      )
+    });
+  // Rate-limited exactly like the pass-1 telemetry next door (see the
+  // `is_power_of_two() || is_multiple_of(65536)` gate in `convert_streaming`):
+  // the 131 MB witness spills 459,579 segments, and three ungated `info!` per
+  // segment wrote 1.38 M lines — 44% of a 161 MB log — into the in-RAM
+  // LOG_BUFFER that pass 1 exists to keep bounded. Dense at the start so short
+  // runs and tests still see every line, logarithmic after, 64k floor.
+  //
+  // The ARGUMENTS must stay inside the gate, not just the macro: each probe
+  // reads /proc/self/status, and the `parsed` line re-reads the whole segment
+  // off disk purely to print its size.
+  fn telemetry_due(n: usize) -> bool { n.is_power_of_two() || n.is_multiple_of(65536) }
+  for (seg_idx, seg) in segments.into_iter().enumerate() {
+    let due = telemetry_due(seg_idx + 1);
     if store.is_retired(seg) {
       // Inlined into an enclosing segment; its content is processed there.
       continue;
@@ -624,11 +655,13 @@ fn streaming_pass2(
     let mut out = String::new();
     {
       let mut frag = Document::from_xml_document(frag_xml, node_fonts.clone())?;
-      log::info!(
-        "streaming pass2: segment {seg} ({} KB) parsed; RSS ~{} MB",
-        store.read_segment(seg).map(|t| t.len() / 1024).unwrap_or(0),
-        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
-      );
+      if due {
+        log::info!(
+          "streaming pass2: segment {seg} ({} KB) parsed; RSS ~{} MB",
+          store.read_segment(seg).map(|t| t.len() / 1024).unwrap_or(0),
+          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+        );
+      }
       frag.scoped_rules_strict = true;
       // A fragment re-emits the (nested) placeholders it contains; only the
       // final assembly resolves them.
@@ -645,12 +678,10 @@ fn streaming_pass2(
           let _ = root.set_attribute(key, value);
         }
       }
-      // The segment text was pretty-printed by our serializer; re-parsing
-      // turned that indentation into text nodes. Strip them (schema-symmetric
-      // with how they were added) before any phase sees the tree.
-      if let Some(root) = frag.get_document().get_root_element() {
-        frag.strip_indentation_whitespace(&root);
-      }
+      // No strip needed: pass 1 serializes segments FLAT (`spill_flat`), so
+      // the indentation text nodes this used to delete are never created.
+      // `strip_indentation_whitespace` unlinked them, and unlink does not
+      // free — they were orphaned for the fragment's lifetime.
       // Restore empty text children the parse could not represent (spill-time
       // `_lx_empty_text` markers — see `spill_run`): `<p></p>` must not
       // collapse to `<p/>` across the round-trip.
@@ -666,29 +697,49 @@ fn streaming_pass2(
         }
       }
       if let Some(rules) = &rules_opt {
+        // `Phase::Rewrite` is taken in `finish_document`, which only ever runs
+        // on the SPINE — pass 2 calls `apply_rewrite_rules` directly, so every
+        // fragment's rewrite work was unattributed.
+        let _gp_rewrite = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
         frag.mark_xmnode_visibility()?;
         frag.load_labels_for_rewrite()?;
-        for (label, id) in index.labels() {
-          frag
-            .rewrite_labels
-            .entry(label.to_string())
-            .or_insert_with(|| id.to_string());
-        }
+        // Share the prebuilt index rather than copying it in; a frag-local
+        // label still wins, exactly as the `or_insert_with` copy ensured.
+        frag.rewrite_labels_shared = shared_labels.clone();
         if let Some(root) = frag.get_document().get_root_element() {
           apply_rewrite_rules(&mut frag, rules.clone(), &root)?;
         }
       }
       apply_lx_declarations(&mut frag, meta.section_id.as_deref());
       if !nomath {
-        let rss0 = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
+        // Only probed when the line will actually be emitted — this read used
+        // to sit outside the macro, so its /proc cost was paid on every
+        // segment even at `--quiet`.
+        let rss0 = if due {
+          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
+        } else {
+          0
+        };
+        // Same telemetry the EAGER path records (see the `//ltx:XMath` count
+        // and `Phase::MathParse` guard above). Streaming recorded neither,
+        // while `record_math_parse` inside the parser kept firing — so a
+        // streamed job's telemetry.json showed thousands of
+        // `math_parse_attempts` against `formulae: 0` and a near-zero
+        // `phase_math_parse_us`, systematically, on the biggest papers.
+        // Accumulated across segments, since pass 2 parses each separately.
+        latexml_core::telemetry::add_formulae(frag.findnodes("//ltx:XMath", None).len() as u32);
+        let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
         let mut parser = MathParser::default();
         parser.parse_math(&mut frag)?;
-        log::info!(
-          "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
-          rss0,
-          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
-          arena::len(),
-        );
+        drop(_gp);
+        if due {
+          log::info!(
+            "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
+            rss0,
+            latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+            arena::len(),
+          );
+        }
         // Mirror the eager tail: mark failed formulae, renumber math ids
         // (per-Math, so fragment-local by construction).
         if !parser.failed_xmath_ids.is_empty() {
@@ -716,6 +767,7 @@ fn streaming_pass2(
       // The parsed root is the `_lxfragment` wrapper; the spilled subtrees are
       // its children. Serialize each at the recorded position parameters.
       if let Some(root) = frag.get_document().get_root_element() {
+        let _gp_ser = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Serialize);
         for child in root.get_child_nodes() {
           out.push_str(&frag.serialize_aux(&child, meta.depth, meta.noindent, false));
         }
@@ -731,10 +783,12 @@ fn streaming_pass2(
       }
     }
     store.finalize_segment(seg, &out)?;
-    log::info!(
-      "streaming pass2: segment {seg} finalized+dropped; RSS ~{} MB",
-      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
-    );
+    if due {
+      log::info!(
+        "streaming pass2: segment {seg} finalized+dropped; RSS ~{} MB",
+        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
+      );
+    }
   }
   Ok(())
 }
@@ -743,6 +797,12 @@ impl DigestionAPI for Core {
   fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()> {
     // reset the error REPORT singleton
     error::initialize_report();
+    // Per-conversion notice state in the math parser (the persistent
+    // cortex_worker converts many documents per process).
+    latexml_math_parser::reset_conversion_notices();
+    // Same reason: the only other telemetry reset is `take()`, which the
+    // binaries skip entirely when no telemetry sink is configured.
+    latexml_core::telemetry::reset();
     // reset localized variables (if_frames, current_token, align state, etc.)
     latexml_core::common::local_assignments::initialize_localized();
     // now handle conversion state
@@ -1059,6 +1119,10 @@ impl DigestionAPI for Core {
     // Pass 1 serializes placeholders literally (nested spills stay nested;
     // the final assembly resolves them recursively — see the field docs).
     document.literal_placeholders = true;
+    // Spill segments are an intermediate that pass 2 re-serializes; the
+    // indentation pass 1 used to emit was generated, written, read back,
+    // parsed into ~40M text nodes and then deleted again. See `spill_flat`.
+    document.spill_flat = true;
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
     // Soft-RSS yield: fire regardless of box count once RSS crosses the
@@ -1070,11 +1134,26 @@ impl DigestionAPI for Core {
       stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
     }
 
+    // Phase clock. A streamed run's cost splits across pass 1 (digest →
+    // absorb → spill), pass 2 (per-segment tail) and assembly, and the log
+    // carried NO timing at all — the 131 MB witness's 70-minute wall could
+    // only be attributed by extrapolating between two segment checkpoints, or
+    // by running a paired control binary for another 70 minutes. One elapsed
+    // figure per phase seam makes every run self-attributing.
+    let phase_clock = std::time::Instant::now();
     // Pass 1: interleaved digest → absorb → spill, at legal seams only.
     let mut fatal_stop = false;
     loop {
       let mut boxes = Vec::new();
-      let step = digest_step_guarded(&mut boxes);
+      let step = {
+        // Streaming had NO telemetry phases at all — every `phase()` guard in
+        // the tree is on the eager path — so `TELEMETRY.md`'s "sum of phase
+        // wall ≈ total wall, median ≥ 0.92" was silently unmet for every
+        // streamed conversion. Reuse the eager phases rather than adding
+        // streaming-specific ones: pass 1 IS digest + build, interleaved.
+        let _g = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Digest);
+        digest_step_guarded(&mut boxes)
+      };
       let yielded = stomach::take_fragment_yielded();
       let mut stopped = match step {
         Ok(keep_going) => !keep_going,
@@ -1106,6 +1185,7 @@ impl DigestionAPI for Core {
       };
       if !boxes.is_empty() {
         let digested = Digested::from(List::new(boxes));
+        let _g_build = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Build);
         if let Err(e) = document.absorb(&digested, None) {
           // Same Fatal contract as the eager Build: announce, latch, keep the
           // partial document (recovery is a FEATURE of Fatal).
@@ -1223,6 +1303,14 @@ impl DigestionAPI for Core {
     stomach::set_fragment_yield_rss_soft_kb(None);
     gullet::flush();
     note_end(&digestion_note);
+    let pass1_elapsed = phase_clock.elapsed();
+    log::info!(
+      "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) spilled, RSS ~{} MB",
+      pass1_elapsed,
+      stomach::fragment_yield_count(),
+      latexml_core::document::spilled_segment_count(),
+      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+    );
 
     // The ROOT's after-open hooks were DEFERRED during pass 1
     // (`set_defer_root_after_open`): eager semantics guarantee every hook
@@ -1255,6 +1343,9 @@ impl DigestionAPI for Core {
       // The partial's serialization must still RESOLVE placeholders (raw
       // segments splice recursively) — literal mode was for pass 1 only.
       document.literal_placeholders = false;
+      // Flat serialization was for the spill INTERMEDIATE only — the output
+      // keeps its formatting.
+      document.spill_flat = false;
       return Ok(document);
     }
     // RDFa prefixes used inside spilled content: the finalize scan can no
@@ -1285,7 +1376,15 @@ impl DigestionAPI for Core {
           .collect()
       })
       .unwrap_or_default();
+    let pass2_start = phase_clock.elapsed();
     streaming_pass2(&mut store, &index, &node_fonts, &mut counters)?;
+    log::info!(
+      "streaming: PASS 2 done in {:.1?} ({:.1?} cumulative) — {} segment(s), RSS ~{} MB",
+      phase_clock.elapsed().saturating_sub(pass2_start),
+      phase_clock.elapsed(),
+      latexml_core::document::spilled_segment_count(),
+      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+    );
     if let Some(mut root) = document.get_document().get_root_element() {
       for (key, value) in &counters {
         let _ = root.set_attribute(key, value);
@@ -1301,6 +1400,9 @@ impl DigestionAPI for Core {
     // From here serialization splices the processed segments at their
     // placeholders (recursively — pass 1 kept nested spills nested).
     document.literal_placeholders = false;
+    // Flat serialization was for the spill INTERMEDIATE only; the spine and
+    // the spliced segment text must carry the normal output formatting.
+    document.spill_flat = false;
     document.set_spill_store(store);
     Ok(document)
   }
