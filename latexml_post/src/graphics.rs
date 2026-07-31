@@ -2569,10 +2569,14 @@ impl Processor for Graphics {
 #[cfg(test)]
 mod tests {
   use super::*;
-  // `EnvGuard` (env mutation, serialised + restored) and `TempDir`
-  // (unique name, removed on drop including on panic) are shared with
-  // `graphics_cache::tests`; see that module for the rationale.
-  use crate::test_env::{EnvGuard, TempDir};
+  // `EnvGuard` (env mutation, serialised + restored) and `TempDir` (unique
+  // name, removed on drop including on panic) are shared with
+  // `graphics_cache::tests`; see that module for the rationale. `EnvGuard` is
+  // only referenced by the `#[cfg(unix)]` density test below, so gate its
+  // import the same way or it reads as unused on Windows (`-D warnings`).
+  #[cfg(unix)]
+  use crate::test_env::EnvGuard;
+  use crate::test_env::TempDir;
 
   /// `run_with_timeout` kills the child and returns `None` when the
   /// process exceeds the deadline. Uses `sleep` as a stand-in for any

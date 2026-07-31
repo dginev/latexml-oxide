@@ -68,7 +68,11 @@ fn fixture(
   let doc = work.path().join("doc");
   std::fs::create_dir_all(&doc).unwrap();
   std::fs::write(doc.join("index.tex"), tex).unwrap();
-  let texinputs = format!(".:{}//:", work.path().join("texmf").display());
+  // kpathsea's path-list separator is `;` on Windows — `:` collides with the
+  // drive letter (`C:\...`) — and `:` everywhere else. The `//` recursive suffix
+  // is the same on both.
+  let sep = if cfg!(windows) { ";" } else { ":" };
+  let texinputs = format!(".{sep}{}//{sep}", work.path().join("texmf").display());
   (work, doc, texinputs)
 }
 

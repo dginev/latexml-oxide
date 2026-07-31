@@ -49,13 +49,11 @@
 //! machine-derived default ceiling ([`default_ceiling_mib`](crate::watchdog::default_ceiling_mib)) and the
 //! spill-headroom check, so those behave identically on every supported OS.
 //!
-//! **Still Linux-only:** [`process_rss_kb`](crate::watchdog::process_rss_kb) samples `/proc/self/status`, so the
-//! *enforcement* half of the RAM guard is inactive elsewhere — the ceiling is
-//! computed correctly but never checked, and only the time guard bites. Closing
-//! this needs macOS `task_info(TASK_BASIC_INFO)` and Windows
-//! `GetProcessMemoryInfo`; both are reachable through the crates this module
-//! already links, so it is a bounded follow-up rather than a new dependency
-//! question.
+//! **Enforcement, also portable:** [`process_rss_kb`](crate::watchdog::process_rss_kb) — the half that actually
+//! checks live usage against the ceiling — answers on all three: Linux samples
+//! `/proc/self/status`, macOS asks libproc (`proc_pidinfo`), and Windows uses
+//! `GetProcessMemoryInfo`. So the memory ceiling is both computed *and* checked
+//! on every supported OS; other targets fall back to `None` (time guard only).
 
 use std::{
   sync::{
@@ -102,8 +100,31 @@ pub fn process_rss_kb() -> Option<u64> {
   (got == size).then(|| info.pti_resident_size / 1024)
 }
 
+/// Windows: `GetProcessMemoryInfo`'s `WorkingSetSize` is this process's resident
+/// set — the RSS analog the cooperative ceiling needs. Without it the whole
+/// `--max-memory` ceiling silently did not exist on Windows (exactly as it did
+/// not on macOS before the libproc arm), and the `115_streaming_cli`
+/// Fatal-contract guard caught it: an over-budget run exited 0. `windows-sys` is
+/// already linked, and the `K32`-prefixed forwarder lives in kernel32, so this
+/// adds no new DLL import to the self-contained release binary.
+#[cfg(windows)]
+pub fn process_rss_kb() -> Option<u64> {
+  use windows_sys::Win32::System::{
+    ProcessStatus::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS},
+    Threading::GetCurrentProcess,
+  };
+  let mut counters: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
+  counters.cb = size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
+  // SAFETY: `counters` is a correctly sized, zeroed struct with `cb` set, as the
+  // API requires; `GetCurrentProcess` returns a pseudo-handle needing no close.
+  if unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut counters, counters.cb) } != 0 {
+    return Some(counters.WorkingSetSize as u64 / 1024);
+  }
+  None
+}
+
 /// Other platforms: unknown — the cooperative memory ceiling stays inactive.
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 pub fn process_rss_kb() -> Option<u64> { None }
 
 /// Total physical RAM on this machine in bytes, or `None` if it cannot be
@@ -141,7 +162,7 @@ pub fn total_memory_bytes() -> Option<u64> {
     // workflow, on a tag, days after the code landed. See task #164.
     use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
     let mut status: MEMORYSTATUSEX = unsafe { std::mem::zeroed() };
-    status.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+    status.dwLength = size_of::<MEMORYSTATUSEX>() as u32;
     // SAFETY: `status` is a correctly sized, zeroed struct with `dwLength` set,
     // exactly as the API requires.
     if unsafe { GlobalMemoryStatusEx(&mut status) } != 0 {

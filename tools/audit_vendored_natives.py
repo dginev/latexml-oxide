@@ -131,7 +131,7 @@ AUDITED = {
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
     ),
-    "ar_archive_writer": ("0.5.2",
+    "ar_archive_writer": ("0.5.3",
         "reference/*.cpp -- LLVM's originals kept beside the Rust reimplementation for "
         "reference; not compiled, not linked.",
     ),
