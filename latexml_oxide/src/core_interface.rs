@@ -602,7 +602,36 @@ fn streaming_pass2(
   };
   let nomath = state::get_nomathparse_flag();
   let segments: Vec<_> = store.ids().collect();
-  for seg in segments {
+  // The spilled-label index is the SAME for every fragment, so build it once
+  // and share it (Document::rewrite_labels_shared, consulted on a local miss).
+  // Copying it into each fragment's own map instead was quadratic: 28,068
+  // labels × 459,579 segments on the 131 MB witness = 12.9 billion String
+  // allocations, and it dominated pass 2.
+  let shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>> = rules_opt
+    .is_some()
+    .then(|| {
+      Rc::new(
+        index
+          .labels()
+          .map(|(label, id)| (label.to_string(), id.to_string()))
+          .collect::<rustc_hash::FxHashMap<_, _>>(),
+      )
+    });
+  // Rate-limited exactly like the pass-1 telemetry next door (see the
+  // `is_power_of_two() || is_multiple_of(65536)` gate in `convert_streaming`):
+  // the 131 MB witness spills 459,579 segments, and three ungated `info!` per
+  // segment wrote 1.38 M lines — 44% of a 161 MB log — into the in-RAM
+  // LOG_BUFFER that pass 1 exists to keep bounded. Dense at the start so short
+  // runs and tests still see every line, logarithmic after, 64k floor.
+  //
+  // The ARGUMENTS must stay inside the gate, not just the macro: each probe
+  // reads /proc/self/status, and the `parsed` line re-reads the whole segment
+  // off disk purely to print its size.
+  fn telemetry_due(n: usize) -> bool {
+    n.is_power_of_two() || n.is_multiple_of(65536)
+  }
+  for (seg_idx, seg) in segments.into_iter().enumerate() {
+    let due = telemetry_due(seg_idx + 1);
     if store.is_retired(seg) {
       // Inlined into an enclosing segment; its content is processed there.
       continue;
@@ -624,11 +653,13 @@ fn streaming_pass2(
     let mut out = String::new();
     {
       let mut frag = Document::from_xml_document(frag_xml, node_fonts.clone())?;
-      log::info!(
-        "streaming pass2: segment {seg} ({} KB) parsed; RSS ~{} MB",
-        store.read_segment(seg).map(|t| t.len() / 1024).unwrap_or(0),
-        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
-      );
+      if due {
+        log::info!(
+          "streaming pass2: segment {seg} ({} KB) parsed; RSS ~{} MB",
+          store.read_segment(seg).map(|t| t.len() / 1024).unwrap_or(0),
+          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+        );
+      }
       frag.scoped_rules_strict = true;
       // A fragment re-emits the (nested) placeholders it contains; only the
       // final assembly resolves them.
@@ -668,27 +699,33 @@ fn streaming_pass2(
       if let Some(rules) = &rules_opt {
         frag.mark_xmnode_visibility()?;
         frag.load_labels_for_rewrite()?;
-        for (label, id) in index.labels() {
-          frag
-            .rewrite_labels
-            .entry(label.to_string())
-            .or_insert_with(|| id.to_string());
-        }
+        // Share the prebuilt index rather than copying it in; a frag-local
+        // label still wins, exactly as the `or_insert_with` copy ensured.
+        frag.rewrite_labels_shared = shared_labels.clone();
         if let Some(root) = frag.get_document().get_root_element() {
           apply_rewrite_rules(&mut frag, rules.clone(), &root)?;
         }
       }
       apply_lx_declarations(&mut frag, meta.section_id.as_deref());
       if !nomath {
-        let rss0 = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
+        // Only probed when the line will actually be emitted — this read used
+        // to sit outside the macro, so its /proc cost was paid on every
+        // segment even at `--quiet`.
+        let rss0 = if due {
+          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
+        } else {
+          0
+        };
         let mut parser = MathParser::default();
         parser.parse_math(&mut frag)?;
-        log::info!(
-          "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
-          rss0,
-          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
-          arena::len(),
-        );
+        if due {
+          log::info!(
+            "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
+            rss0,
+            latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+            arena::len(),
+          );
+        }
         // Mirror the eager tail: mark failed formulae, renumber math ids
         // (per-Math, so fragment-local by construction).
         if !parser.failed_xmath_ids.is_empty() {
@@ -731,10 +768,12 @@ fn streaming_pass2(
       }
     }
     store.finalize_segment(seg, &out)?;
-    log::info!(
-      "streaming pass2: segment {seg} finalized+dropped; RSS ~{} MB",
-      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
-    );
+    if due {
+      log::info!(
+        "streaming pass2: segment {seg} finalized+dropped; RSS ~{} MB",
+        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
+      );
+    }
   }
   Ok(())
 }

@@ -99,6 +99,13 @@ pub struct Document {
   pub spilled_ids:             rustc_hash::FxHashSet<String>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
   pub rewrite_labels:          HashMap<String, String>,
+  /// Document-wide labels SHARED by every streaming pass-2 fragment, consulted
+  /// only when `rewrite_labels` misses. Pass 2 used to copy the whole spilled
+  /// index into each fragment's own map, which is quadratic in document size:
+  /// 28,068 labels × 459,579 segments on the 131 MB witness = 12.9 billion
+  /// String allocations. Frag-local labels still win, preserving exactly the
+  /// `entry().or_insert_with()` precedence that copy had.
+  pub rewrite_labels_shared:   Option<Rc<HashMap<String, String>>>,
   // the following are internal "local"-based declarations in Perl
   localized_constructed_nodes: Vec<Vec<Node>>,
   constructed_nodes:           Vec<Node>,
@@ -248,6 +255,7 @@ impl Document {
       idstore:                     HashMap::default(),
       spilled_ids:                 rustc_hash::FxHashSet::default(),
       rewrite_labels:              HashMap::default(),
+      rewrite_labels_shared:       None,
       pending:                     Vec::new(),
       localized_constructed_nodes: Vec::new(),
       constructed_nodes:           Vec::new(),
@@ -5734,6 +5742,23 @@ impl Document {
   #[cfg(feature = "token-locators")]
   pub fn set_current_box_locator(&mut self, loc: Option<Locator>) {
     self.current_box_locator = loc;
+  }
+
+  /// Resolve a rewrite label: this document's own labels first, then the
+  /// shared document-wide map a streaming fragment carries
+  /// (`rewrite_labels_shared`). The two-level lookup replaces copying the
+  /// whole label index into every fragment — see the field docs.
+  pub fn lookup_rewrite_label(&self, key: &str) -> Option<String> {
+    self
+      .rewrite_labels
+      .get(key)
+      .or_else(|| {
+        self
+          .rewrite_labels_shared
+          .as_ref()
+          .and_then(|shared| shared.get(key))
+      })
+      .cloned()
   }
 
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {
