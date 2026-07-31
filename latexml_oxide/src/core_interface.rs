@@ -681,12 +681,10 @@ fn streaming_pass2(
           let _ = root.set_attribute(key, value);
         }
       }
-      // The segment text was pretty-printed by our serializer; re-parsing
-      // turned that indentation into text nodes. Strip them (schema-symmetric
-      // with how they were added) before any phase sees the tree.
-      if let Some(root) = frag.get_document().get_root_element() {
-        frag.strip_indentation_whitespace(&root);
-      }
+      // No strip needed: pass 1 serializes segments FLAT (`spill_flat`), so
+      // the indentation text nodes this used to delete are never created.
+      // `strip_indentation_whitespace` unlinked them, and unlink does not
+      // free — they were orphaned for the fragment's lifetime.
       // Restore empty text children the parse could not represent (spill-time
       // `_lx_empty_text` markers — see `spill_run`): `<p></p>` must not
       // collapse to `<p/>` across the round-trip.
@@ -1121,6 +1119,10 @@ impl DigestionAPI for Core {
     // Pass 1 serializes placeholders literally (nested spills stay nested;
     // the final assembly resolves them recursively — see the field docs).
     document.literal_placeholders = true;
+    // Spill segments are an intermediate that pass 2 re-serializes; the
+    // indentation pass 1 used to emit was generated, written, read back,
+    // parsed into ~40M text nodes and then deleted again. See `spill_flat`.
+    document.spill_flat = true;
     let mut index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
     // Soft-RSS yield: fire regardless of box count once RSS crosses the
@@ -1341,6 +1343,9 @@ impl DigestionAPI for Core {
       // The partial's serialization must still RESOLVE placeholders (raw
       // segments splice recursively) — literal mode was for pass 1 only.
       document.literal_placeholders = false;
+      // Flat serialization was for the spill INTERMEDIATE only — the output
+      // keeps its formatting.
+      document.spill_flat = false;
       return Ok(document);
     }
     // RDFa prefixes used inside spilled content: the finalize scan can no
@@ -1395,6 +1400,9 @@ impl DigestionAPI for Core {
     // From here serialization splices the processed segments at their
     // placeholders (recursively — pass 1 kept nested spills nested).
     document.literal_placeholders = false;
+    // Flat serialization was for the spill INTERMEDIATE only; the spine and
+    // the spliced segment text must carry the normal output formatting.
+    document.spill_flat = false;
     document.set_spill_store(store);
     Ok(document)
   }

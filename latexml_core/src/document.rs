@@ -159,6 +159,25 @@ pub struct Document {
   /// re-emit the placeholders they contain). False only at final assembly,
   /// where the splice resolves placeholders RECURSIVELY.
   pub literal_placeholders:    bool,
+  /// Serialize spill segments FLAT — no indentation, no decorative newlines.
+  ///
+  /// A spilled segment's text is an intermediate: pass 2 re-parses it,
+  /// processes it, and re-serializes with `serialize_aux` at the recorded
+  /// depth, and only THAT text reaches the output. The indentation pass 1 used
+  /// to emit was therefore generated, written to disk, read back, materialized
+  /// as libxml2 text nodes, deleted again by `strip_indentation_whitespace`,
+  /// and finally regenerated — pure round-trip tax.
+  ///
+  /// Measured on the 131 MB witness: **51.2% of serialized bytes are leading
+  /// whitespace + newlines** (189.4 MB of 381.5 MB sampled, 6,092,937 lines).
+  /// Over ~2.45 GB of segment text that is ~1.2 GB generated and written, read
+  /// back, and ~40M text nodes allocated in pass 2's parse — which
+  /// `strip_indentation_whitespace` then `unlink_node`s, and unlink does not
+  /// free, so they are orphaned for the fragment's lifetime.
+  ///
+  /// Set for pass 1 only. Fragment documents in pass 2 are separate `Document`s
+  /// and default to `false`, so the OUTPUT keeps its formatting exactly.
+  pub spill_flat:              bool,
   /// Streaming pass 2 only: the fragment's ancestor `xml:id`s at spill time
   /// (SegmentMeta::ancestors). A `label:`/`id:`-scoped rewrite whose scope
   /// resolves to one of these covers the WHOLE fragment.
@@ -271,6 +290,7 @@ impl Document {
       extra_rdfa_prefixes:         Vec::new(),
       scoped_rules_strict:         false,
       literal_placeholders:        false,
+      spill_flat:                  false,
       fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
       fragment_parent_qname:       None,
       defer_root_after_open:       false,
@@ -1727,6 +1747,12 @@ impl Document {
         out.push_str("  ");
       }
     }
+    // `spill_flat` means "emit no decorative whitespace", which is exactly what
+    // `noindent` already means at every emission site — so fold it in ONCE here
+    // rather than testing it at each. It suppresses formatting only; the
+    // schema-driven `noindent_children` still governs mixed content, whose
+    // whitespace is meaningful and was never indented anyway.
+    let noindent = noindent || self.spill_flat;
 
     match node.get_type() {
       Some(NodeType::DocumentNode) => {
@@ -1865,6 +1891,7 @@ impl Document {
           model::can_contain_sym(node_qname, pin!("#PCDATA"))
         };
 
+        let noindent_children = noindent_children || self.spill_flat;
         if !noindent {
           push_indent(out, depth);
         }
@@ -3702,8 +3729,32 @@ impl Document {
   /// pass 1. The witness's first RSS-triggered yield once spilled half the
   /// document as ONE 512 MB segment, and pass 2 died re-parsing it.
   fn segment_chunk_bytes() -> usize {
-    /// Validated on the 131 MB witness; also the point past which a single
-    /// segment's re-parse dominates pass 2 regardless of the machine.
+    // Calibration override (`LATEXML_SEGMENT_CHUNK_MIB`), deliberately env-only
+    // and NOT a CLI flag — the same reasoning as `LATEXML_SPILL_AT_MIB`, and
+    // for the same reason: MAX below is an ARGUED constant, not a measured one.
+    //
+    // Its stated basis is a TIME claim ("the point past which a single
+    // segment's re-parse dominates pass 2"), but the pass-2 tail is linear in
+    // fragment size — `prune_dangling_split_xmrefs`, `prune_xmduals`,
+    // `mark_xmnode_visibility` and `cleanup_unreferenced_xmtok_ids` are each
+    // one `findnodes` plus an O(1)-per-node loop, `finalize_subtree` is a
+    // recursive walk, and the rewrite rule set is fixed. Larger segments
+    // should also SUIT the allocator, which is the largest single profile
+    // category (~16.5%): fewer, bigger alloc/free cycles.
+    //
+    // Note what the derivation below wants: at --max-memory 48000 it computes
+    // watermark/72 = 166 MB and MAX then clamps it to 32 MB. This knob exists
+    // so that ceiling can be swept rather than argued.
+    if let Some(mib) = std::env::var("LATEXML_SEGMENT_CHUNK_MIB")
+      .ok()
+      .and_then(|v| v.parse::<usize>().ok())
+      .filter(|mib| *mib > 0)
+    {
+      return mib.saturating_mul(1024 * 1024);
+    }
+    /// Validated on the 131 MB witness. The accompanying claim that a single
+    /// segment's re-parse dominates pass 2 past this point is NOT substantiated
+    /// by the pass-2 tail, which is linear — see the override above.
     const MAX: usize = 32 * 1024 * 1024;
     /// Below this, per-segment overhead (parse, index merge, reserialize)
     /// outweighs the memory saved.
