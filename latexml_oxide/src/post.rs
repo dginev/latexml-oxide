@@ -378,6 +378,20 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   ) -> Result<Vec<PostDocument>, ()> {
     let mut out: Vec<PostDocument> = Vec::with_capacity(docs.len());
     for d in docs {
+      // Cooperative memory check per document, so a phase that grows across
+      // many documents degrades gracefully instead of being hard-killed.
+      //
+      // MEASURED LIMIT, so nobody reads more into this than it delivers: on the
+      // 614 MB witness at `--max-memory 6000` the ceiling is breached BEFORE
+      // this loop is reached — the one-time parse + split DOM alone exceeds it,
+      // so the run still ends at the hard watchdog (exit 137, zero pages). No
+      // cooperative check inside the phases can catch that; bounding it is
+      // task #147 (streaming the split parse). What this DOES cover is the
+      // document whose growth happens across the phase itself.
+      if let Err(e) = latexml_core::stomach::check_timeout() {
+        post_error(label, &format!("{label} stopped: {}", e.message));
+        return Err(());
+      }
       let nodes = proc.to_process(&d);
       if nodes.is_empty() {
         out.push(d);
@@ -741,6 +755,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
 
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
+  let mut pages_rendered = 0usize;
   for SpilledPage {
     path,
     destination: dest,
@@ -748,6 +763,25 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     ..
   } in spilled_pages
   {
+    // The cooperative memory guard, at the one seam post has: a page boundary.
+    //
+    // Nothing in latexml_post or this driver consulted it — `check_timeout`
+    // appeared ZERO times across both — so an oversized post run was killed by
+    // the hard watchdog at 100% of the ceiling (exit 137, `Fatal:oom:rss …
+    // exceeded the … ceiling`) with nothing on disk, where the design promise
+    // is a named Fatal at 75% plus whatever finished. Measured on the 131 MB
+    // witness at `--max-memory 48000`: post died at 48,002 MiB having written
+    // ZERO pages. Same shape as the Build phase before it got a guard.
+    //
+    // Stopping HERE is cheap and honest: pages already rendered are already
+    // written, so the run ends with a real, if partial, site.
+    if let Err(e) = latexml_core::stomach::check_timeout() {
+      post_error(
+        "post",
+        &format!("stopping after {pages_rendered} page(s): {}", e.message),
+      );
+      break;
+    }
     let path_str = path.to_string_lossy().into_owned();
     let page = match PostDocument::new_from_file(&path_str, page_opts.clone()) {
       Ok(mut d) => {
@@ -825,6 +859,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
         {
           let _ = std::fs::create_dir_all(parent);
         }
+        pages_rendered += 1;
         if let Err(e) = std::fs::write(path, &output) {
           post_error("write", &format!("failed to write page {path}: {e}"));
         }
