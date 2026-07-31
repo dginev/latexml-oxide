@@ -43,13 +43,11 @@ Linux, macOS and Windows — <code>sysconf(_SC_PHYS_PAGES)</code>/<code>statvfs<
 Windows uses <code>GlobalMemoryStatusEx</code>/<code>GetDiskFreeSpaceExW</code>. They back the
 machine-derived default ceiling (<a href="fn.default_ceiling_mib.html" title="fn latexml_package::prelude::watchdog::default_ceiling_mib"><code>default_ceiling_mib</code></a>) and the
 spill-headroom check, so those behave identically on every supported OS.</p>
-<p><strong>Still Linux-only:</strong> <a href="fn.process_rss_kb.html" title="fn latexml_package::prelude::watchdog::process_rss_kb"><code>process_rss_kb</code></a> samples <code>/proc/self/status</code>, so the
-<em>enforcement</em> half of the RAM guard is inactive elsewhere — the ceiling is
-computed correctly but never checked, and only the time guard bites. Closing
-this needs macOS <code>task_info(TASK_BASIC_INFO)</code> and Windows
-<code>GetProcessMemoryInfo</code>; both are reachable through the crates this module
-already links, so it is a bounded follow-up rather than a new dependency
-question.</p>
+<p><strong>Enforcement, also portable:</strong> <a href="fn.process_rss_kb.html" title="fn latexml_package::prelude::watchdog::process_rss_kb"><code>process_rss_kb</code></a> — the half that actually
+checks live usage against the ceiling — answers on all three: Linux samples
+<code>/proc/self/status</code>, macOS asks libproc (<code>proc_pidinfo</code>), and Windows uses
+<code>GetProcessMemoryInfo</code>. So the memory ceiling is both computed <em>and</em> checked
+on every supported OS; other targets fall back to <code>None</code> (time guard only).</p>
 </div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Watchdog.html" title="struct latexml_package::prelude::watchdog::Watchdog">Watchdog</a></dt></dl><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.EXIT_OOM.html" title="constant latexml_package::prelude::watchdog::EXIT_OOM">EXIT_<wbr>OOM</a></dt><dd>Exit code used when the memory ceiling is exceeded (128 + SIGKILL).</dd><dt><a class="constant" href="constant.EXIT_TIMEOUT.html" title="constant latexml_package::prelude::watchdog::EXIT_TIMEOUT">EXIT_<wbr>TIMEOUT</a></dt><dd>Exit code used when the wall-clock deadline is exceeded (standard <code>timeout</code>).</dd><dt><a class="constant" href="constant.FALLBACK_CEILING_MIB.html" title="constant latexml_package::prelude::watchdog::FALLBACK_CEILING_MIB">FALLBACK_<wbr>CEILING_<wbr>MIB</a></dt><dd>Ceiling used when the machine’s RAM cannot be probed — the historical flat
 default, kept so an unprobeable platform behaves exactly as before rather
 than losing its guard entirely.</dd><dt><a class="constant" href="constant.MAX_DEFAULT_CEILING_MIB.html" title="constant latexml_package::prelude::watchdog::MAX_DEFAULT_CEILING_MIB">MAX_<wbr>DEFAULT_<wbr>CEILING_<wbr>MIB</a></dt><dd>Upper bound on the machine-derived default ceiling (64 GiB in MiB).</dd><dt><a class="constant" href="constant.MIN_DEFAULT_CEILING_MIB.html" title="constant latexml_package::prelude::watchdog::MIN_DEFAULT_CEILING_MIB">MIN_<wbr>DEFAULT_<wbr>CEILING_<wbr>MIB</a></dt><dd>Floor for the machine-derived default, so a small container still gets a
