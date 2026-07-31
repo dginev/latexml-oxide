@@ -656,3 +656,26 @@ Output-size regression fixtures: `0809.3849`, `0908.3201`, `1003.0368`,
 0.71 s release (full post-processing) vs pdflatex idle ~1.11 s — 3.13× margin
 on the 2.22 s gate. Re-measure under the SYNC_STATUS "Acceptance gates" recipe
 after any large landing; flag if margin < 1.5×.
+
+## Closed investigations 2026-07-31 (131 MB witness campaign) — do not re-attempt without new conditions
+
+Both measured on `flat_index.tex` at `--max-memory 48000`, maxperf, against the
+campaign baseline (32:56 wall / 1942.9 s user, md5 `df589fcfd8…`; full series in
+the STREAMING_CORE_DESIGN "PERF CONSOLIDATION" entry).
+
+- **libxml2→mimalloc routing (`xmlMemSetup`): CLOSED — slower, reverted.**
+  36:20 (+10%) vs a pre-registered >10%-faster keep bar. Not allocator
+  overhead: the routing changed the RSS trajectory and the soft-RSS yield
+  trigger feeds on RSS — 1,507 → 1,738,832 yields, 6,050 → 37,945 segments,
+  and per-segment overhead ate the win. Peak RSS **−19%** (31.5 → 25.5 GB) is
+  real: re-attempt ONLY for a memory-bound target, with segmentation pinned
+  (fixed `LATEXML_SPILL_AT_MIB`/floor) so the trigger cannot confound. Fork
+  branch `feat-xml-mem-setup` (rust-libxml, unmerged) has the wrapper ready.
+- **MathParse ambiguity reduction: CLOSED — no lever exists on this workload.**
+  The hybrid dispatch routes by RAW Marpa ambiguity (unambiguous → cheap
+  tree-iter, no ASF). On the 19.9 MB witness slice the ASF never executed at
+  all (`MARPA_ASF_STATS` snapshot `None` — that IS the measurement); on
+  `si.tex` ASF engages but `max_factorings=1`. There is no
+  discarded-enumeration pile to prune. MathParse's measured 41% ≈ 1.55 ms per
+  formula of recognition + tree build + semantics + FFI: constant-factor
+  levers only, no ≥40% single technique in the current architecture.
