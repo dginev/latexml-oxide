@@ -73,9 +73,7 @@ static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 /// `NoteLog!` macros, which write to stderr directly via `println_stderr!`
 /// rather than through `log::Log` — without this the next diagnostic record
 /// could emit a spurious leading newline.
-pub fn mark_stderr_at_line_start() {
-  STDERR_AT_LINE_START.store(true, Ordering::Release);
-}
+pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.store(true, Ordering::Release); }
 
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }

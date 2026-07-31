@@ -553,8 +553,15 @@ mod tests {
     });
     reset();
     with(|t| {
-      assert_eq!(t.formulae, 0, "formulae must not survive a conversion boundary");
-      assert_eq!(t.phase_us, [0; Phase::COUNT], "phase time must not survive either");
+      assert_eq!(
+        t.formulae, 0,
+        "formulae must not survive a conversion boundary"
+      );
+      assert_eq!(
+        t.phase_us,
+        [0; Phase::COUNT],
+        "phase time must not survive either"
+      );
     });
   }
 }

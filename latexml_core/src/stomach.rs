@@ -2221,14 +2221,23 @@ mod memory_cap_tests {
     let wm = Some(12_000 * MB); // the witness's watermark at --max-memory 48000
     let fuse = Some(36_000 * MB); // and its fuse; midpoint = 24_000 MB
     let mark_kb = 24_000 * 1024;
-    assert!(!soft_yield_urgency(mark_kb - 1, wm, fuse), "below the midpoint the floor applies");
-    assert!(soft_yield_urgency(mark_kb, wm, fuse), "at the midpoint the floor is waived");
+    assert!(
+      !soft_yield_urgency(mark_kb - 1, wm, fuse),
+      "below the midpoint the floor applies"
+    );
+    assert!(
+      soft_yield_urgency(mark_kb, wm, fuse),
+      "at the midpoint the floor is waived"
+    );
     assert!(soft_yield_urgency(mark_kb + 1, wm, fuse), "above it too");
     // --max-memory=0 shapes: no fuse, no watermark, or fuse <= watermark
     // (a calibration LATEXML_SPILL_AT_MIB above the fuse) — never urgent.
     assert!(!soft_yield_urgency(u64::MAX / 1024, wm, None));
     assert!(!soft_yield_urgency(u64::MAX / 1024, None, fuse));
-    assert!(!soft_yield_urgency(u64::MAX / 1024, fuse, wm), "fuse below watermark is degenerate");
+    assert!(
+      !soft_yield_urgency(u64::MAX / 1024, fuse, wm),
+      "fuse below watermark is degenerate"
+    );
     // saturating_mul: an absurd rss_kb must not overflow into false.
     assert!(soft_yield_urgency(u64::MAX, wm, fuse));
   }

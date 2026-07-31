@@ -612,9 +612,8 @@ fn streaming_pass2(
   // Copying it into each fragment's own map instead was quadratic: 28,068
   // labels × 459,579 segments on the 131 MB witness = 12.9 billion String
   // allocations, and it dominated pass 2.
-  let shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>> = rules_opt
-    .is_some()
-    .then(|| {
+  let shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>> =
+    rules_opt.is_some().then(|| {
       Rc::new(
         index
           .labels()
@@ -632,9 +631,7 @@ fn streaming_pass2(
   // The ARGUMENTS must stay inside the gate, not just the macro: each probe
   // reads /proc/self/status, and the `parsed` line re-reads the whole segment
   // off disk purely to print its size.
-  fn telemetry_due(n: usize) -> bool {
-    n.is_power_of_two() || n.is_multiple_of(65536)
-  }
+  fn telemetry_due(n: usize) -> bool { n.is_power_of_two() || n.is_multiple_of(65536) }
   for (seg_idx, seg) in segments.into_iter().enumerate() {
     let due = telemetry_due(seg_idx + 1);
     if store.is_retired(seg) {
