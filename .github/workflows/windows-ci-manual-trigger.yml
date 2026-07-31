@@ -6,14 +6,34 @@
 # NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
 # job is stably green).
 #
-# MANUAL-ONLY (`workflow_dispatch`) by choice: this private repo meters
-# Windows Actions minutes at 2×, so the job is run deliberately from the
-# Actions tab rather than on every push. (It is NOT dispatch-only because
-# of any access block — the earlier `Repository access blocked` failures
-# were GitHub failing to fetch the dead `teatimeguest/setup-texlive-action`,
-# whose account went 404; fixed below by moving to the TeX-Live org. The
-# account runs metered jobs fine — the macOS 10× CI leg proves it.) Restore
-# the on-push trigger any time; kept manual to control Windows spend.
+# TWO jobs, two triggers:
+#
+#   `test`  — the full build + suite. MANUAL (`workflow_dispatch`) still: it
+#             installs TeX Live and runs every test, which is ~an hour of
+#             wall-clock, so it stays deliberate.
+#   `check` — a COMPILE ONLY (`cargo check`), fired automatically when a file
+#             carrying `#[cfg(windows)]` code changes, plus weekly.
+#
+# Why `check` exists: 0.7.5-rc4's release failed its Windows leg on a symbol
+# that windows-sys had renamed. That line had NEVER compiled — CI builds
+# Linux and macOS only, so the RELEASE workflow, running on a tag, was its
+# first Windows compile, three days after it landed. A path-triggered compile
+# catches that class in the PR that introduces it. A commit-message convention
+# was considered and rejected: it depends on remembering it, exactly when
+# attention is elsewhere.
+#
+# The weekly `schedule` covers what paths structurally cannot — a dependency
+# renaming a symbol with no file of ours changing.
+#
+# On cost: an earlier version of this comment said the repo "meters Windows
+# Actions minutes at 2×". That was true when it was PRIVATE. The repository is
+# public, and GitHub bills nothing for standard runners on public repos
+# (larger runners are still charged, which is why this uses `windows-latest`).
+# The real budget here is queue time and the 20-concurrent-job cap, not money.
+#
+# (Historical note: the old `Repository access blocked` failures were GitHub
+# failing to fetch the dead `teatimeguest/setup-texlive-action`, whose account
+# went 404 — fixed by moving to the TeX-Live org, not an access problem.)
 #
 # Mirrors the macos job's flow (deps → dumps → build → test) with the
 # Windows specifics learned during local bring-up (2026-07-12):
@@ -23,8 +43,24 @@
 #   * `ci` profile (no LTO — release-profile LTO costs ~2 min per test exe)
 on:
   workflow_dispatch:
+  pull_request:
+    # Every file that carries `#[cfg(windows)]`/`windows_sys` code, plus the
+    # manifests that pin the Windows crates. Keep this list in step with
+    #   grep -rl 'cfg(windows)\|windows_sys' --include=*.rs .
+    paths:
+      - 'latexml_core/src/watchdog.rs'
+      - 'latexml_core/src/util/pathname.rs'
+      - 'latexml_post/src/xslt.rs'
+      - 'latexml_post/src/graphics.rs'
+      - 'latexml_oxide/src/util/test.rs'
+      - '**/Cargo.toml'
+      - '.github/workflows/windows-ci-manual-trigger.yml'
+  schedule:
+    # Mondays 04:00 UTC — catches a dependency renaming a symbol when no file
+    # of ours changed, which no path filter can see.
+    - cron: '0 4 * * 1'
 
-name: Windows CI (manual)
+name: Windows CI
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,6 +68,8 @@ concurrency:
 
 jobs:
   test:
+    # Full suite stays deliberate — dispatch only.
+    if: github.event_name == 'workflow_dispatch'
     name: build + test (x86_64-pc-windows-msvc)
     runs-on: windows-latest
     timeout-minutes: 120
@@ -109,3 +147,41 @@ jobs:
         run: cargo test --profile ci --tests --workspace --no-run
       - name: run tests
         run: cargo test --profile ci --tests --workspace -- --test-threads=2
+
+  # COMPILE ONLY. No TeX Live, no dumps, no tests — just enough to prove the
+  # Windows arms still typecheck against the crates we pin. This is the job
+  # that would have caught 0.7.5-rc4's `GLOBAL_MEMORY_STATUS_EX` in its PR.
+  check:
+    if: github.event_name != 'workflow_dispatch'
+    name: cargo check (x86_64-pc-windows-msvc)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+      VCPKG_TRIPLET: x64-windows-static-md
+      VCPKGRS_TRIPLET: x64-windows-static-md
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: windows-check
+      - name: cache vcpkg installed tree
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
+          key: vcpkg-${{ env.VCPKG_TRIPLET }}-libxml2-libxslt-v1
+      - name: vcpkg install libxml2 + libxslt (static)
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg" install `
+            "libxml2:$env:VCPKG_TRIPLET" "libxslt:$env:VCPKG_TRIPLET"
+      - name: export vcpkg root
+        run: '"VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV'
+      # `--all-targets` so tests and benches are typechecked too: they carry
+      # their own `#[cfg(windows)]` arms (util/test.rs among them).
+      - name: cargo check
+        run: cargo check --workspace --all-targets --profile ci
