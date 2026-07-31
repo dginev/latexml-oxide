@@ -421,7 +421,12 @@ fn finish_document(document: &mut Document) -> Result<()> {
     // Per-formula bucket histogram requires per-call instrumentation
     // inside latexml_math_parser::parser::parse_math; deferred.
     let xmath_count = document.findnodes("//ltx:XMath", None).len() as u32;
-    latexml_core::telemetry::set_formulae(xmath_count);
+    // ADD, not set: `finish_document` runs on the streaming SPINE *after*
+    // `streaming_pass2` has already counted every spilled fragment's formulae,
+    // so a plain `set` here would clobber the segment tallies and report only
+    // the spine's own — near zero on a document that spilled most of itself.
+    // Eager is unaffected: the counter starts at 0 and this runs once.
+    latexml_core::telemetry::add_formulae(xmath_count);
     let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
     let mut parser = MathParser::default();
     parser.parse_math(document)?;
@@ -697,6 +702,10 @@ fn streaming_pass2(
         }
       }
       if let Some(rules) = &rules_opt {
+        // `Phase::Rewrite` is taken in `finish_document`, which only ever runs
+        // on the SPINE — pass 2 calls `apply_rewrite_rules` directly, so every
+        // fragment's rewrite work was unattributed.
+        let _gp_rewrite = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
         frag.mark_xmnode_visibility()?;
         frag.load_labels_for_rewrite()?;
         // Share the prebuilt index rather than copying it in; a frag-local
@@ -716,8 +725,18 @@ fn streaming_pass2(
         } else {
           0
         };
+        // Same telemetry the EAGER path records (see the `//ltx:XMath` count
+        // and `Phase::MathParse` guard above). Streaming recorded neither,
+        // while `record_math_parse` inside the parser kept firing — so a
+        // streamed job's telemetry.json showed thousands of
+        // `math_parse_attempts` against `formulae: 0` and a near-zero
+        // `phase_math_parse_us`, systematically, on the biggest papers.
+        // Accumulated across segments, since pass 2 parses each separately.
+        latexml_core::telemetry::add_formulae(frag.findnodes("//ltx:XMath", None).len() as u32);
+        let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
         let mut parser = MathParser::default();
         parser.parse_math(&mut frag)?;
+        drop(_gp);
         if due {
           log::info!(
             "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
@@ -753,6 +772,7 @@ fn streaming_pass2(
       // The parsed root is the `_lxfragment` wrapper; the spilled subtrees are
       // its children. Serialize each at the recorded position parameters.
       if let Some(root) = frag.get_document().get_root_element() {
+        let _gp_ser = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Serialize);
         for child in root.get_child_nodes() {
           out.push_str(&frag.serialize_aux(&child, meta.depth, meta.noindent, false));
         }
@@ -1112,11 +1132,26 @@ impl DigestionAPI for Core {
       stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
     }
 
+    // Phase clock. A streamed run's cost splits across pass 1 (digest →
+    // absorb → spill), pass 2 (per-segment tail) and assembly, and the log
+    // carried NO timing at all — the 131 MB witness's 70-minute wall could
+    // only be attributed by extrapolating between two segment checkpoints, or
+    // by running a paired control binary for another 70 minutes. One elapsed
+    // figure per phase seam makes every run self-attributing.
+    let phase_clock = std::time::Instant::now();
     // Pass 1: interleaved digest → absorb → spill, at legal seams only.
     let mut fatal_stop = false;
     loop {
       let mut boxes = Vec::new();
-      let step = digest_step_guarded(&mut boxes);
+      let step = {
+        // Streaming had NO telemetry phases at all — every `phase()` guard in
+        // the tree is on the eager path — so `TELEMETRY.md`'s "sum of phase
+        // wall ≈ total wall, median ≥ 0.92" was silently unmet for every
+        // streamed conversion. Reuse the eager phases rather than adding
+        // streaming-specific ones: pass 1 IS digest + build, interleaved.
+        let _g = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Digest);
+        digest_step_guarded(&mut boxes)
+      };
       let yielded = stomach::take_fragment_yielded();
       let mut stopped = match step {
         Ok(keep_going) => !keep_going,
@@ -1148,6 +1183,7 @@ impl DigestionAPI for Core {
       };
       if !boxes.is_empty() {
         let digested = Digested::from(List::new(boxes));
+        let _g_build = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Build);
         if let Err(e) = document.absorb(&digested, None) {
           // Same Fatal contract as the eager Build: announce, latch, keep the
           // partial document (recovery is a FEATURE of Fatal).
@@ -1265,6 +1301,14 @@ impl DigestionAPI for Core {
     stomach::set_fragment_yield_rss_soft_kb(None);
     gullet::flush();
     note_end(&digestion_note);
+    let pass1_elapsed = phase_clock.elapsed();
+    log::info!(
+      "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) spilled, RSS ~{} MB",
+      pass1_elapsed,
+      stomach::fragment_yield_count(),
+      latexml_core::document::spilled_segment_count(),
+      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+    );
 
     // The ROOT's after-open hooks were DEFERRED during pass 1
     // (`set_defer_root_after_open`): eager semantics guarantee every hook
@@ -1327,7 +1371,15 @@ impl DigestionAPI for Core {
           .collect()
       })
       .unwrap_or_default();
+    let pass2_start = phase_clock.elapsed();
     streaming_pass2(&mut store, &index, &node_fonts, &mut counters)?;
+    log::info!(
+      "streaming: PASS 2 done in {:.1?} ({:.1?} cumulative) — {} segment(s), RSS ~{} MB",
+      phase_clock.elapsed().saturating_sub(pass2_start),
+      phase_clock.elapsed(),
+      latexml_core::document::spilled_segment_count(),
+      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+    );
     if let Some(mut root) = document.get_document().get_root_element() {
       for (key, value) in &counters {
         let _ = root.set_attribute(key, value);

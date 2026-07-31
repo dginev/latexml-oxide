@@ -232,6 +232,11 @@ pub fn incr_formulae() { STATE.with(|s| s.borrow_mut().formulae += 1); }
 /// invoked over all `<XMath>` nodes).
 pub fn set_formulae(n: u32) { STATE.with(|s| s.borrow_mut().formulae = n); }
 
+/// Add to the formulae count. For streaming pass 2, which parses math one
+/// SEGMENT at a time and so never knows the document-wide count up front —
+/// `set_formulae` there would record only the last segment's tally.
+pub fn add_formulae(n: u32) { STATE.with(|s| s.borrow_mut().formulae += n); }
+
 /// Record one math parse: total time and number of successful parses
 /// returned (the Marpa parser may produce multiple ASF derivations
 /// for one input). Updates the histogram bucket for the elapsed time.
