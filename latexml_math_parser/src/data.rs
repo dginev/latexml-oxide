@@ -24,6 +24,36 @@ pub fn clear_math_idstore() {
   });
 }
 
+/// Drop every id under `node` from the snapshot, before that subtree is released.
+///
+/// The snapshot holds live `Node` handles, so a released subtree must not stay
+/// reachable through it — `resolve_xmref` would hand back freed memory. A
+/// purged id simply fails to resolve, which is what "the node is gone" means,
+/// and `resolve_xmref` already falls back to a DOM walk for a genuine miss.
+pub fn purge_math_idstore_subtree(node: &Node) {
+  fn collect(node: &Node, ids: &mut Vec<String>) {
+    // `get_attribute("xml:id")` is the footgun the lint ratchet guards: libxml2
+    // stores xml:id as local name `id` in the XML namespace, so the
+    // string-keyed form can match NOTHING and the purge would silently collect
+    // no ids at all. Same accessor `find_by_xml_id` below already uses.
+    if let Some(id) = node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
+      ids.push(id);
+    }
+    for child in node.get_child_nodes() {
+      collect(&child, ids);
+    }
+  }
+  MATH_IDSTORE.with(|cell| {
+    let mut borrow = cell.borrow_mut();
+    let Some(store) = borrow.as_mut() else { return };
+    let mut ids = Vec::new();
+    collect(node, &mut ids);
+    for id in ids {
+      store.remove(&id);
+    }
+  });
+}
+
 // Thread-local LOSTNODES map: lost_id → kept_id. Perl
 // `MathParser::ReplacedBy` (MathParser.pm L1562-1588) records that a node
 // was structurally absorbed by another node during semantics rules — e.g.
@@ -297,4 +327,10 @@ pub fn defer_discard(mut node: Node) {
 /// no parse state references it.
 pub fn take_pending_discards() -> Vec<Node> {
   PENDING_DISCARDS.with(|cell| std::mem::take(&mut *cell.borrow_mut()))
+}
+
+/// Put back a subtree that cannot be released yet — it still contains a formula
+/// the parse has not reached.
+pub fn requeue_pending_discard(node: Node) {
+  PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
 }
