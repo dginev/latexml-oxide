@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
 
@@ -36,6 +36,30 @@ static LOGGER: LatexmlLogger = LatexmlLogger;
 /// appended here (without ANSI colors) in addition to stderr.
 #[thread_local]
 static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
+
+/// Does stderr currently sit at the start of a line?
+///
+/// A diagnostic record must begin on a fresh line so CorTeX's line-anchored
+/// parser (`^Error:`/`^Warning:`/`^Info:`) matches and the record never glues
+/// onto an in-flight progress note like `(Loading "foo.sty"… )`, which is
+/// written WITHOUT a trailing newline. That guarantee used to be bought with an
+/// unconditional leading `\n` on every record — which emits a BLANK line
+/// whenever stderr was already at line start, i.e. almost always.
+///
+/// Measured on the 131 MB witness: **1,440,571 of 3,142,509 captured stderr
+/// lines (45.8%) were blank**, matching the record count almost exactly. The
+/// `LOG_BUFFER` path never had this bug — it tests `ends_with('\n')` — so the
+/// on-disk `.latexml.log` and the captured stderr disagreed on line count.
+///
+/// Tracking line-start state reproduces the guarantee at half the bytes.
+#[thread_local]
+static STDERR_AT_LINE_START: Cell<bool> = Cell::new(true);
+
+/// Tell the logger that stderr is back at line start. For the `Note!` /
+/// `NoteLog!` macros, which write to stderr directly via `println_stderr!`
+/// rather than through `log::Log` — without this the next diagnostic record
+/// could emit a spurious leading newline.
+pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.set(true); }
 
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
@@ -195,6 +219,10 @@ impl log::Log for LatexmlLogger {
           append_note(log, &strip_ansi(&note));
         }
         print_stderr!("{}", note);
+        // A note carries no trailing newline of its own unless its text ends
+        // in one (`note_begin` opens with a leading '\n'), so record where it
+        // left the cursor for the next diagnostic record.
+        STDERR_AT_LINE_START.set(note.ends_with('\n'));
         return;
       }
       let category_object = if record_target.is_empty() {
@@ -268,11 +296,16 @@ impl log::Log for LatexmlLogger {
       // Colorize for an interactive terminal only; when stderr is redirected
       // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
       // grep-clean (matches the captured `.latexml.log` buffer above).
+      // Break onto a fresh line ONLY when a note left the cursor mid-line —
+      // an unconditional leading '\n' was 45.8% of the witness's log (see
+      // STDERR_AT_LINE_START). `println_stderr!` supplies the trailing one.
+      let lead = if STDERR_AT_LINE_START.get() { "" } else { "\n" };
       if stderr_use_color() {
-        println_stderr!("\n{}", painted_message);
+        println_stderr!("{}{}", lead, painted_message);
       } else {
-        println_stderr!("\n{}", strip_ansi(&painted_message));
+        println_stderr!("{}{}", lead, strip_ansi(&painted_message));
       }
+      STDERR_AT_LINE_START.set(true);
     }
   }
 

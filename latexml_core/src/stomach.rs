@@ -92,6 +92,11 @@ pub fn soft_cap_from_ceiling(max_memory_mib: u64) -> u64 {
 ///
 /// Env-overridable for calibration only (`LATEXML_SOFT_YIELD_MIN_BOXES`),
 /// deliberately not a CLI flag — same reasoning as `LATEXML_SPILL_AT_MIB`.
+/// Override the soft-RSS floor directly, bypassing the env lookup. For tests
+/// that need to drive the degenerate (floor = 1) and fixed (floor = N) regimes
+/// in one process — see `115_soft_yield_floor`.
+pub fn set_soft_yield_min_boxes(boxes: usize) { SOFT_YIELD_MIN_BOXES.set(Some(boxes)); }
+
 /// Cached: this sits on the per-seam yield predicate, which the 131 MB witness
 /// evaluates tens of millions of times — an `std::env::var` there would be its
 /// own hotspot.

@@ -251,7 +251,17 @@ struct AmbiguityAuditCounts {
 thread_local! {
   static AMBIGUITY_AUDIT_COUNTS: RefCell<AmbiguityAuditCounts> =
     RefCell::new(AmbiguityAuditCounts::default());
+  /// Has the "LOSTNODES cleanup … skipped" no-op already been reported this
+  /// conversion? Streaming calls `parse_math` once per SEGMENT, so without
+  /// this the constant line repeats per segment — see the emit site.
+  static LOSTNODES_NOOP_REPORTED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
+
+/// Reset per-CONVERSION notice state. Must be called when a new conversion
+/// begins on a thread that already ran one (the persistent `cortex_worker`
+/// converts many documents per process), or the second document silently
+/// loses notices the first one emitted.
+pub fn reset_conversion_notices() { LOSTNODES_NOOP_REPORTED.set(false); }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 // `Accepted(XM)` is the hot/common variant; boxing it to equalize variant
@@ -877,7 +887,15 @@ impl MathParser {
             lost.len()
           )
         );
-      } else {
+      } else if !LOSTNODES_NOOP_REPORTED.get() {
+        // Report the no-op ONCE per conversion. Eager parses math once, so it
+        // still sees exactly the line it always did; streaming parses per
+        // SEGMENT, where the witness emitted this constant string 60,083
+        // times — 180,249 log lines (with its two locator trailers) saying
+        // nothing happened. Suppressing the repeats rather than the line
+        // keeps `Info!`'s `note_status` side effect, so a document's reported
+        // status cannot shift from log visibility alone.
+        LOSTNODES_NOOP_REPORTED.set(true);
         latexml_core::Info!(
           "cleanup",
           "xmref",
