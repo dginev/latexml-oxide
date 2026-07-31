@@ -272,7 +272,7 @@
 <a href=#272 id=272 data-nosnippet>272</a>        ),
 <a href=#273 id=273 data-nosnippet>273</a>      };
 <a href=#274 id=274 data-nosnippet>274</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(label_part) = scope_str.strip_prefix(<span class="string">"label:"</span>) {
-<a href=#275 id=275 data-nosnippet>275</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = document.rewrite_labels.get(label_part).cloned() {
+<a href=#275 id=275 data-nosnippet>275</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = document.lookup_rewrite_label(label_part) {
 <a href=#276 id=276 data-nosnippet>276</a>          <span class="kw">if </span><span class="self">self</span>.options.select_count.is_none() {
 <a href=#277 id=277 data-nosnippet>277</a>            <span class="self">self</span>.options.select_count = <span class="prelude-val">Some</span>(<span class="number">1</span>);
 <a href=#278 id=278 data-nosnippet>278</a>          }
@@ -288,7 +288,7 @@
 <a href=#288 id=288 data-nosnippet>288</a>        }
 <a href=#289 id=289 data-nosnippet>289</a>        <span class="comment">// Try with LABEL: prefix (clean_label adds it)
 <a href=#290 id=290 data-nosnippet>290</a>        </span><span class="kw">let </span>clean_key = <span class="macro">format!</span>(<span class="string">"LABEL:{}"</span>, label_part);
-<a href=#291 id=291 data-nosnippet>291</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = document.rewrite_labels.get(<span class="kw-2">&amp;</span>clean_key).cloned() {
+<a href=#291 id=291 data-nosnippet>291</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = document.lookup_rewrite_label(<span class="kw-2">&amp;</span>clean_key) {
 <a href=#292 id=292 data-nosnippet>292</a>          <span class="kw">if </span><span class="self">self</span>.options.select_count.is_none() {
 <a href=#293 id=293 data-nosnippet>293</a>            <span class="self">self</span>.options.select_count = <span class="prelude-val">Some</span>(<span class="number">1</span>);
 <a href=#294 id=294 data-nosnippet>294</a>          }
