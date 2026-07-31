@@ -138,6 +138,33 @@
     5-million-line book that could not be converted at all now completes within
     a 48 GB budget (28.1 GB peak, 2.66 GB of XML). Output is byte-identical to
     the normal path.
+  - **Post-processing no longer holds the whole site in memory** — pages are
+    scanned once, then rendered and written one at a time, so peak memory
+    follows a single page instead of the page count. A 40,201-page document
+    that grew to 80 GB and wrote nothing now completes flat at 16 GB, and the
+    stage is 2.5x faster (27:04 -> 10:48) with byte-identical output.
+  - **A query that cannot be answered is an error, not an empty result** —
+    whole-document XPath silently returned "no matches" when libxml2 refused
+    it, so on a large document nothing was cross-referenced, no MathML was
+    generated, and a 0-byte page was written with a success exit code. Those
+    queries are now answered by traversal, and a genuine failure says so.
+  - **Math parsing no longer frees nodes it is still using** — discarded
+    subtrees are released at a formula boundary rather than at the discard
+    site. The use-after-free behind this crashed 22 papers in a
+    30,000-document corpus run, and its formulas were real content, not
+    garbage. Releasing per formula also uses **less** memory than before the
+    fix: a 19.8 MB book peaks 7% lower streamed and 9% lower on the plain
+    path.
+  - **A `\Description` on a table is expected, not a defect** — acmart asks for
+    one on every float and a table has no image, so attaching the description
+    to the table is reported as information rather than a warning that demoted
+    otherwise-clean papers.
+  - **A memory limit set by a container is honoured** — the ceiling was derived
+    from the host's RAM, so a memory-limited container chose a budget it could
+    never reach and was killed by the kernel instead of stopping gracefully.
+  - **Post-processing stops gracefully rather than being killed** — it had no
+    cooperative memory check at all, so an oversized run died at the hard
+    ceiling with nothing written; pages that finish are now kept.
   - **`--max-memory` is the budget, and everything follows from it** — the
     graceful-Fatal fuse, the point where spilling begins, and the fragment size
     are all derived, so no two memory settings can contradict each other. The
