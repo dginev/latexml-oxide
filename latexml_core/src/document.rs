@@ -3968,36 +3968,13 @@ impl Document {
     }
   }
 
-  /// Strip the whitespace our own pretty-printer added, after a serialized
-  /// fragment is re-parsed (streaming pass 2).
-  ///
-  /// `serialize_into` adds indentation/newlines ONLY inside elements whose
-  /// schema model cannot contain `#PCDATA` (`noindent_children`), so removing
-  /// whitespace-only text nodes in exactly those parents — the same
-  /// `model::can_contain_sym` query — recovers the original tree precisely.
-  /// PCDATA-capable parents were serialized inline (no added whitespace), so
-  /// their text children, including semantic spaces between inline elements,
-  /// are never touched. The unknown `_lxfragment` wrapper is not in the
-  /// model, so inter-subtree whitespace under it strips too.
-  pub fn strip_indentation_whitespace(&mut self, node: &Node) {
-    if node.get_type() != Some(NodeType::ElementNode) {
-      return;
-    }
-    let qname = get_node_qname(node);
-    let keeps_text = model::can_contain_sym(qname, pin!("#PCDATA"));
-    for child in node.get_child_nodes() {
-      match child.get_type() {
-        Some(NodeType::TextNode) => {
-          if !keeps_text && child.get_content().chars().all(char::is_whitespace) {
-            let mut ws = child;
-            ws.unlink_node();
-          }
-        },
-        Some(NodeType::ElementNode) => self.strip_indentation_whitespace(&child),
-        _ => {},
-      }
-    }
-  }
+  // `strip_indentation_whitespace` lived here until `spill_flat` (its only
+  // caller was streaming pass 2): it deleted the whitespace-only text nodes
+  // our own pretty-printer had added to spill segments, via the same
+  // `model::can_contain_sym(#PCDATA)` query the serializer indents by. Flat
+  // spill serialization means those nodes are never created, so the
+  // generate-then-undo pair is gone. It also `unlink_node`d rather than
+  // freed — the orphan-leak trap — so do not resurrect it as-is.
 
   /// Remove the pointer-keyed `node_boxes` entries for `node` and its whole
   /// subtree. MANDATORY before freeing nodes mid-conversion: a freed node's

@@ -537,4 +537,24 @@ mod tests {
     assert!(json.contains("\\n"));
     assert!(json.contains("\\t"));
   }
+
+  /// `reset` must zero accumulating state without a sink configured. The only
+  /// other reset is `take()`, which the binaries skip when no telemetry path is
+  /// set — and streaming's `add_formulae` ACCUMULATES, so without this a
+  /// long-lived process (the `--server` LSP, a worker pool thread) would sum
+  /// formulae and phase time across documents.
+  #[test]
+  fn reset_clears_accumulating_state() {
+    add_formulae(100);
+    phase_enter(Phase::MathParse);
+    phase_exit();
+    with(|t| {
+      assert_eq!(t.formulae, 100);
+    });
+    reset();
+    with(|t| {
+      assert_eq!(t.formulae, 0, "formulae must not survive a conversion boundary");
+      assert_eq!(t.phase_us, [0; Phase::COUNT], "phase time must not survive either");
+    });
+  }
 }

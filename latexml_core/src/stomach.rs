@@ -115,7 +115,15 @@ pub fn set_soft_yield_min_boxes(boxes: usize) { SOFT_YIELD_MIN_BOXES.set(Some(bo
 /// response the soft-RSS branch was introduced to provide, instead of Fatal-ing
 /// inside a 1024-box window.
 fn soft_yield_is_urgent(rss_kb: u64) -> bool {
-  match (spill_watermark_bytes(), resolve_rss_cap()) {
+  soft_yield_urgency(rss_kb, spill_watermark_bytes(), resolve_rss_cap())
+}
+
+/// The pure predicate behind [`soft_yield_is_urgent`], split out so the
+/// arithmetic is unit-testable (an integration test would need a real RSS cap
+/// near the test process's actual footprint — flaky by construction on the
+/// 16 GB CI runner). `watermark`/`fuse` in bytes, `rss_kb` in KiB.
+fn soft_yield_urgency(rss_kb: u64, watermark: Option<u64>, fuse: Option<u64>) -> bool {
+  match (watermark, fuse) {
     (Some(watermark), Some(fuse)) if fuse > watermark => {
       rss_kb.saturating_mul(1024) >= watermark + (fuse - watermark) / 2
     },
@@ -2095,7 +2103,7 @@ pub fn get_script_level() -> usize {
 mod memory_cap_tests {
   use super::{
     apply_memory_ceiling, box_bytes_budget, box_count_cap, resolve_rss_cap, set_memory_cap,
-    soft_cap_from_ceiling,
+    soft_cap_from_ceiling, soft_yield_urgency,
   };
 
   // The box-list ceilings are memory ceilings, so they must ride the SAME
@@ -2200,5 +2208,28 @@ mod memory_cap_tests {
     // guard below it (fixing the old fixed-4.5 GB decoupling).
     assert!(soft_cap_from_ceiling(2000) < 2000 * 1024 * 1024);
     assert!(soft_cap_from_ceiling(20000) > 6144 * 1024 * 1024);
+  }
+
+  /// The soft-yield floor waiver: waived at/above the watermark→fuse midpoint,
+  /// applied below it, and never waived when either bound is absent or
+  /// degenerate. Guards the safety valve `soft_yield_min_boxes` sits on — a
+  /// pathological per-box footprint must regain per-seam yielding before the
+  /// fuse fires inside one un-yielded window.
+  #[test]
+  fn soft_yield_floor_waiver_boundaries() {
+    const MB: u64 = 1024 * 1024;
+    let wm = Some(12_000 * MB); // the witness's watermark at --max-memory 48000
+    let fuse = Some(36_000 * MB); // and its fuse; midpoint = 24_000 MB
+    let mark_kb = 24_000 * 1024;
+    assert!(!soft_yield_urgency(mark_kb - 1, wm, fuse), "below the midpoint the floor applies");
+    assert!(soft_yield_urgency(mark_kb, wm, fuse), "at the midpoint the floor is waived");
+    assert!(soft_yield_urgency(mark_kb + 1, wm, fuse), "above it too");
+    // --max-memory=0 shapes: no fuse, no watermark, or fuse <= watermark
+    // (a calibration LATEXML_SPILL_AT_MIB above the fuse) — never urgent.
+    assert!(!soft_yield_urgency(u64::MAX / 1024, wm, None));
+    assert!(!soft_yield_urgency(u64::MAX / 1024, None, fuse));
+    assert!(!soft_yield_urgency(u64::MAX / 1024, fuse, wm), "fuse below watermark is degenerate");
+    // saturating_mul: an absurd rss_kb must not overflow into false.
+    assert!(soft_yield_urgency(u64::MAX, wm, fuse));
   }
 }

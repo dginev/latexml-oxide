@@ -28,6 +28,27 @@ recursive assembly splice — inlining had rebuilt an 841 MB and a 1.85 GB
 segment out of chapter shells), the spilled-id dedup half
 (`Document::spilled_ids`), `malloc_trim`/`mi_collect` give-back, and a
 source-scaled runaway-token backstop (×200/byte).
+
+**PERF CONSOLIDATION (2026-07-31, branch `perf-streaming-pass2-segment-coalescing`):
+the same witness/run now completes in 32:56 wall / 1942.9 s user CPU** (from
+1:10:29 / 4125.8 s — −53 %; ≈14.8 s/MB, below the 21 s/MB eager curve), peak
+31.5 GB @ the same 48 GB cap, output byte-identical to the unmodified base
+commit (md5-verified against a paired control build). Log: 3,142,509 → 26,283
+lines (−99.2 %). Levers, in landed order: pass 2 shares one label index instead
+of copying 28,068 labels × 459k segments (12.9 G String allocs); segment
+telemetry gated like pass 1's; the **soft-yield floor** (the dominant
+structural fix — see the derivation table); logger stops emitting a blank line
+per record (45.8 % of the log; also process-correct now, `AtomicBool` under the
+stderr lock); streaming phases report to telemetry (`Digest` was 0 µs on every
+streamed job, `formulae` clobbered — phase-sum/wall now 0.99–1.00); **flat
+spill serialization** (51.2 % of intermediate bytes were indentation). Measured
+phase split of the 32:56 run: MathParse 41.1 %, Build 28.6 %, Digest 22.4 %,
+Rewrite 5.4 %, Serialize 2.3 % — MathParse (523,676 formulae) is the only
+remaining ≥40 % block; the next lever of that size is ambiguity reduction, not
+constant-factor work. Warning counts are NOT segmentation-invariant (11,414 /
+11,397 / 11,390 across runs, output identical) — per-segment log duplication.
+Known cosmetic residual: the Fatal-partial path splices flat segments into an
+indented spine (well-formed; no test covers partial output).
 **Companion to** [`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md),
 which covers the *post-processing* half (splitting an already-built DOM) and was
 deferred with the condition *"Revisit only if a <64 GB target appears."* That
@@ -210,7 +231,10 @@ else derives from it, so the two cannot contradict each other:
 | cooperative fuse | 75 % of the budget | graceful Fatal with partial output before the hard watchdog |
 | spill watermark | a third of the fuse | a HALF steadied pass 1 ~5 GB under the fuse on the 131 MB witness and the bookkeeping creep then walked it in and died |
 | fragment budget | budget ÷ 8, in boxes | leaves room for the DOM built from those boxes (~1.4x) plus creep |
-| pass-2 segment chunk | watermark ÷ 72, clamped 4-32 MB | measured serialized-to-DOM expansion, so pass 2 respects the budget pass 1 did |
+| soft-yield floor | 1024 boxes before the RSS-triggered yield may fire (`stomach.rs::soft_yield_min_boxes`, calibration env `LATEXML_SOFT_YIELD_MIN_BOXES`) | the RSS trigger is a LEVEL test with no hysteresis: a document whose resident floor sits above the watermark latches it on and yields at EVERY seam — 24,051,712 yields / 459k segments averaging 5.5 KB on the witness, vs 1,507 / 6,050 with the floor. Guard `115_soft_yield_floor` (red-tested) |
+| floor waiver | floor ignored at RSS ≥ watermark + (fuse − watermark)/2 | the RSS branch exists for content whose per-box cost dwarfs the 2416 B/box the budget assumes; 1024 such boxes are unbounded, so under real pressure per-seam yielding returns. Guard `soft_yield_floor_waiver_boundaries` |
+| pass-2 segment chunk | watermark ÷ 72, clamped 4-32 MB (calibration env `LATEXML_SEGMENT_CHUNK_MIB`) | measured serialized-to-DOM expansion, so pass 2 respects the budget pass 1 did. NOTE: with the floor at 1024 the ceiling never binds (segments run ~0.4 KB × floor); the 32 MB MAX's "re-parse dominates" claim is unsubstantiated — the pass-2 tail is linear |
+| spill serialization | FLAT (`Document::spill_flat`) — no indentation in the intermediate | 51.2 % of segment bytes were indentation+newlines: generated, written, re-parsed into ~40 M text nodes, deleted (`unlink` = orphaned, never freed), regenerated. Output formatting untouched — pass-2 fragments re-serialize normally. Removing it cut the witness 44:56 → 32:56 |
 
 Two escapes, no third memory flag: **`--streaming`** forces fragmentation,
 **`--streaming=false`** forces the eager path (before this, auto-activation

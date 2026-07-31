@@ -2934,3 +2934,29 @@ options are a *separate* unported gap — Rust writes `OMS_uppercase_mathstyle`
 (`tex_fonts.rs`) and `amsb_fontmap.rs` records a dropped
 `uppercase_mathstyle => { family => 'blackboard' }` in a comment, but nothing
 reads either key. Same defect class, not fixed here.
+
+## 81. Before optimizing a per-item cost, check whether the item COUNT is a degenerate trigger — and a level-test with no floor is one
+
+The 131 MB witness's 70-minute streamed conversion looked like "per-segment
+costs × 459,579 segments"; two plausible per-segment optimizations (cache the
+Marpa grammar, skip the spill walk) profiled at ~0 % because the real defect
+was upstream: the soft-RSS yield trigger is a LEVEL test (`rss > watermark`,
+`stomach.rs`), and a document whose irreducible resident floor sits above the
+watermark latches it permanently — yielding at every legal seam, 24,051,712
+times, producing 5.5 KB segments. A 1024-box accumulation floor (waived again
+at `watermark + (fuse−watermark)/2` so the pathological-footprint valve
+survives) cut yields ~16,000× and segments ~76×. Guards:
+`115_soft_yield_floor` (red-tested), `soft_yield_floor_waiver_boundaries`.
+
+Method, both directions: (1) when a per-item cost dominates, ask what sets the
+item count before optimizing the item — the count may be one latched predicate;
+(2) the attribution instrument must exist before the argument — every
+`telemetry::phase()` guard sat on the eager path, so streamed runs reported
+Digest = 0 µs and the 70 minutes could only be attributed by paired control
+runs. One phase-guarded run then settled it: MathParse 41 %, Build 29 %,
+Digest 22 % — and killed two more speculative optimizations. Companion waste
+pattern, same fix-shape as #79: anything GENERATED then UNDONE is pure tax —
+the spill intermediates carried 51.2 % indentation that pass 2 re-parsed into
+~40 M text nodes and deleted (`spill_flat` now skips both halves; the deleted
+`strip_indentation_whitespace` also orphaned every node it unlinked, the #79
+trap).
