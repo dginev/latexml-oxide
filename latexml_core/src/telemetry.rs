@@ -299,6 +299,18 @@ pub fn set_child_rusage_us(user: u64, sys: u64) {
 /// default. Use at end-of-process to serialize the result.
 pub fn take() -> Telemetry { STATE.with(|s| std::mem::take(&mut *s.borrow_mut())) }
 
+/// Reset per-conversion telemetry WITHOUT reading it.
+///
+/// `take` is the only other reset, and it is called from the binaries' end-of-job
+/// finalizers — which return early when no telemetry sink is configured
+/// (`write_telemetry_record`: `let Some(path) = path else { return }`). So in a
+/// process that converts repeatedly with telemetry off (the `--server` LSP, a
+/// test harness), state carried over between documents. That was self-correcting
+/// while every counter was `set`; it is not once any counter accumulates —
+/// streaming's `add_formulae` must sum across segments, so it would sum across
+/// DOCUMENTS too. Phase timings had the same latent flaw.
+pub fn reset() { STATE.with(|s| *s.borrow_mut() = Telemetry::default()); }
+
 /// Read-only view for tests / instrumented assertions.
 pub fn with<R>(f: impl FnOnce(&Telemetry) -> R) -> R { STATE.with(|s| f(&s.borrow())) }
 

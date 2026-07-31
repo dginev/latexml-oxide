@@ -803,6 +803,9 @@ impl DigestionAPI for Core {
     // Per-conversion notice state in the math parser (the persistent
     // cortex_worker converts many documents per process).
     latexml_math_parser::reset_conversion_notices();
+    // Same reason: the only other telemetry reset is `take()`, which the
+    // binaries skip entirely when no telemetry sink is configured.
+    latexml_core::telemetry::reset();
     // reset localized variables (if_frames, current_token, align state, etc.)
     latexml_core::common::local_assignments::initialize_localized();
     // now handle conversion state

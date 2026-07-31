@@ -1,4 +1,7 @@
-use std::cell::{Cell, RefCell};
+use std::{
+  cell::RefCell,
+  sync::atomic::{AtomicBool, Ordering},
+};
 
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
 
@@ -52,14 +55,27 @@ static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
 /// on-disk `.latexml.log` and the captured stderr disagreed on line count.
 ///
 /// Tracking line-start state reproduces the guarantee at half the bytes.
-#[thread_local]
-static STDERR_AT_LINE_START: Cell<bool> = Cell::new(true);
+///
+/// **Process-global, not `#[thread_local]`, and mutated under the stderr lock.**
+/// stderr is one shared descriptor: `cortex_worker --pool-size N` runs N
+/// conversion threads in one process, and `logger::capture` exists precisely to
+/// run conversions on worker threads. A per-thread flag would let thread A skip
+/// its leading newline believing the cursor is at line start while thread B had
+/// left it mid-line — gluing a record onto B's output, where CorTeX's
+/// `^Error:`/`^Warning:` anchor then misses it entirely. That is a silent
+/// error-count loss, the exact failure this project's signal-integrity rule
+/// forbids (false negatives hide regressions). The unconditional leading `\n`
+/// was robust to that by construction, so the replacement has to be too:
+/// check-write-set happens as one critical section holding the stderr lock.
+static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 
 /// Tell the logger that stderr is back at line start. For the `Note!` /
 /// `NoteLog!` macros, which write to stderr directly via `println_stderr!`
 /// rather than through `log::Log` — without this the next diagnostic record
 /// could emit a spurious leading newline.
-pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.set(true); }
+pub fn mark_stderr_at_line_start() {
+  STDERR_AT_LINE_START.store(true, Ordering::Release);
+}
 
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
@@ -218,11 +234,18 @@ impl log::Log for LatexmlLogger {
         {
           append_note(log, &strip_ansi(&note));
         }
-        print_stderr!("{}", note);
-        // A note carries no trailing newline of its own unless its text ends
-        // in one (`note_begin` opens with a leading '\n'), so record where it
-        // left the cursor for the next diagnostic record.
-        STDERR_AT_LINE_START.set(note.ends_with('\n'));
+        // Write and publish the cursor state under ONE stderr lock, so a
+        // concurrent diagnostic record cannot observe a stale flag.
+        {
+          use std::io::Write;
+          let mut err = std::io::stderr().lock();
+          let _ = err.write_all(note.as_bytes());
+          let _ = err.flush();
+          // A note carries no trailing newline of its own unless its text ends
+          // in one (`note_begin` opens with a leading '\n'), so record where it
+          // left the cursor for the next diagnostic record.
+          STDERR_AT_LINE_START.store(note.ends_with('\n'), Ordering::Release);
+        }
         return;
       }
       let category_object = if record_target.is_empty() {
@@ -298,14 +321,25 @@ impl log::Log for LatexmlLogger {
       // grep-clean (matches the captured `.latexml.log` buffer above).
       // Break onto a fresh line ONLY when a note left the cursor mid-line —
       // an unconditional leading '\n' was 45.8% of the witness's log (see
-      // STDERR_AT_LINE_START). `println_stderr!` supplies the trailing one.
-      let lead = if STDERR_AT_LINE_START.get() { "" } else { "\n" };
-      if stderr_use_color() {
-        println_stderr!("{}{}", lead, painted_message);
-      } else {
-        println_stderr!("{}{}", lead, strip_ansi(&painted_message));
+      // STDERR_AT_LINE_START). One critical section: read the flag, write, and
+      // republish it while holding the stderr lock, so the "record starts at
+      // line start" guarantee survives concurrent loggers.
+      {
+        use std::io::Write;
+        let text = if stderr_use_color() {
+          painted_message
+        } else {
+          strip_ansi(&painted_message)
+        };
+        let mut err = std::io::stderr().lock();
+        if !STDERR_AT_LINE_START.load(Ordering::Acquire) {
+          let _ = err.write_all(b"\n");
+        }
+        let _ = err.write_all(text.as_bytes());
+        let _ = err.write_all(b"\n");
+        let _ = err.flush();
+        STDERR_AT_LINE_START.store(true, Ordering::Release);
       }
-      STDERR_AT_LINE_START.set(true);
     }
   }
 
