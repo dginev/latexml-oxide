@@ -155,6 +155,17 @@
     garbage. Releasing per formula also uses **less** memory than before the
     fix: a 19.8 MB book peaks 7% lower streamed and 9% lower on the plain
     path.
+  - **Very large documents convert 2.1x faster** — the 131 MB / 5-million-line
+    book drops from 70 to 33 minutes, byte-identical output. A memory-pressure
+    trigger had been fragmenting the work into 459,000 tiny segments (and the
+    intermediate spill text was half indentation, written only to be deleted);
+    the work now flows in ~6,000 sensible pieces, serialized flat.
+  - **Conversion logs shrink ~100x on such runs** (3.1 million lines → 26,000):
+    every message carried a spurious blank line, and per-segment progress now
+    reports at milestones instead of three lines per segment.
+  - **Streamed conversions report where the time went** — per-phase wall time
+    (digest, build, math parse, …) lands in telemetry and two summary lines;
+    previously the streamed path reported no phase timing at all.
   - **A `\Description` on a table is expected, not a defect** — acmart asks for
     one on every float and a table has no image, so attaching the description
     to the table is reported as information rather than a warning that demoted
