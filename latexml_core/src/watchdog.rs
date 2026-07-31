@@ -132,11 +132,16 @@ pub fn total_memory_bytes() -> Option<u64> {
   }
   #[cfg(windows)]
   {
-    use windows_sys::Win32::System::SystemInformation::{
-      GLOBAL_MEMORY_STATUS_EX, GlobalMemoryStatusEx,
-    };
-    let mut status: GLOBAL_MEMORY_STATUS_EX = unsafe { std::mem::zeroed() };
-    status.dwLength = std::mem::size_of::<GLOBAL_MEMORY_STATUS_EX>() as u32;
+    // `MEMORYSTATUSEX` is what windows-sys calls this, mirroring the Win32
+    // header. This arm originally said `GLOBAL_MEMORY_STATUS_EX` — a spelling
+    // from a different generation of the bindings — while Cargo.toml pinned
+    // `windows-sys = "0.61"`, so it never matched the version it declared and
+    // has NEVER compiled. It survived because CI builds Linux and macOS only:
+    // the first Windows compile of this file was the 0.7.5-rc4 RELEASE
+    // workflow, on a tag, days after the code landed. See task #164.
+    use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    let mut status: MEMORYSTATUSEX = unsafe { std::mem::zeroed() };
+    status.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
     // SAFETY: `status` is a correctly sized, zeroed struct with `dwLength` set,
     // exactly as the API requires.
     if unsafe { GlobalMemoryStatusEx(&mut status) } != 0 {
