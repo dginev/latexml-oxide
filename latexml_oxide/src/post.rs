@@ -188,7 +188,92 @@ pub fn run_post_processing_from_file(path: &str, opts: &PostOptions) -> String {
   run_post_processing_impl(PostInput::File(path), opts)
 }
 
+/// The in-memory parse ceiling: libxml2's `xmlReadMemory` takes the buffer
+/// length as a C `int`, so a handoff string of `i32::MAX` bytes or more
+/// CANNOT be parsed from memory — it fails with "Document too large for
+/// i32". First witness to cross it: the 131 MB book's 2.68 GB core XML,
+/// single-invocation `.tex → .htm` (laptop UAT 2026-07-31; the streamed
+/// assembly exists only as serialized text, so post must re-parse it).
+/// Above the ceiling the handoff spills to a temp file beside the
+/// destination and takes the `PostInput::File` arm — the streaming-reader
+/// path that already parses this very document in the two-invocation flow.
+///
+/// Env-overridable for tests only (`LATEXML_POST_MEM_PARSE_LIMIT`): a real
+/// 2-GiB-plus fixture is not something CI can allocate, so the guard test
+/// drives the spill path with a tiny limit instead.
+fn post_mem_parse_limit() -> usize {
+  std::env::var("LATEXML_POST_MEM_PARSE_LIMIT")
+    .ok()
+    .and_then(|v| v.parse::<usize>().ok())
+    .unwrap_or(i32::MAX as usize)
+}
+
+/// Write an oversized handoff to a temp file for the streaming file parser.
+/// Beside the destination when there is one (writing to the destination
+/// directory is always allowed), else the system temp dir.
+fn spill_oversized_xml(xml: &str, opts: &PostOptions) -> std::io::Result<std::path::PathBuf> {
+  let dir = opts
+    .destination
+    .and_then(|d| {
+      std::path::Path::new(d)
+        .parent()
+        .map(std::path::Path::to_path_buf)
+    })
+    .filter(|d| !d.as_os_str().is_empty())
+    .unwrap_or_else(std::env::temp_dir);
+  let path = dir.join(format!("latexml-post-handoff-{}.xml", std::process::id()));
+  std::fs::write(&path, xml)?;
+  Ok(path)
+}
+
 fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
+  // Oversized in-memory handoff → spill + streaming file parse (see
+  // `post_mem_parse_limit`). The temp file is removed on every exit path by
+  // the guard; a spill failure falls through to the memory parse, whose own
+  // error reporting then names the real problem.
+  let mut _spill_cleanup: Option<std::path::PathBuf> = None;
+  let spilled_path: Option<String>;
+  let input = match input {
+    PostInput::Xml(xml) if xml.len() >= post_mem_parse_limit() => {
+      match spill_oversized_xml(xml, opts) {
+        Ok(path) => {
+          // Operationally worth a line: a multi-GB temp file just appeared
+          // beside the destination. Also the guard test's engagement proof —
+          // without it a silently-failing spill would fall back to the memory
+          // parse and the test would pass vacuously.
+          latexml_core::Info!(
+            "post",
+            "spill",
+            format!(
+              "oversized handoff ({} bytes) spilled to {}",
+              xml.len(),
+              path.display()
+            )
+          );
+          spilled_path = Some(path.to_string_lossy().into_owned());
+          _spill_cleanup = Some(path);
+          PostInput::File(spilled_path.as_deref().expect("just set"))
+        },
+        Err(e) => {
+          latexml_core::Info!(
+            "post",
+            "spill",
+            format!("could not spill an oversized handoff ({e}); parsing from memory")
+          );
+          PostInput::Xml(xml)
+        },
+      }
+    },
+    other => other,
+  };
+  let result = run_post_processing_inner(input, opts);
+  if let Some(path) = _spill_cleanup {
+    let _ = std::fs::remove_file(path);
+  }
+  result
+}
+
+fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   let PostOptions {
     pmml,
     cmml,
