@@ -185,11 +185,22 @@ impl Split {
           intoc = true;
         }
       }
-      // Copy xml:lang and backgroundcolor from ancestors
+      // Copy xml:lang and backgroundcolor from ancestors (Perl Split.pm's
+      // inheritable-attribute loop). `get_attribute("xml:lang")` alone can
+      // miss the namespaced form (`xml:` attributes live in the XML
+      // namespace — the same trap `get_xml_id` guards), which silently
+      // skipped the copy: the XPath found the ancestor, the read returned
+      // None, and split pages lost their inherited language. Caught by the
+      // streaming-split parity gate (118_streaming_split_parity).
       for attr in &["xml:lang", "backgroundcolor"] {
         let xpath = format!("ancestor-or-self::*[@{}][1]", attr);
         if let Some(anc) = doc.findnode_at(&xpath, node) {
-          if let Some(val) = anc.get_attribute(attr) {
+          let val = anc.get_attribute(attr).or_else(|| {
+            attr
+              .strip_prefix("xml:")
+              .and_then(|local| anc.get_attribute_ns(local, "http://www.w3.org/XML/1998/namespace"))
+          });
+          if let Some(val) = val {
             let mut node_mut = node.clone();
             node_mut.set_attribute(attr, &val).ok();
           }

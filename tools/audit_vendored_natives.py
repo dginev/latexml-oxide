@@ -131,7 +131,7 @@ AUDITED = {
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
     ),
-    "ar_archive_writer": ("0.5.3",
+    "ar_archive_writer": ("0.5.2",
         "reference/*.cpp -- LLVM's originals kept beside the Rust reimplementation for "
         "reference; not compiled, not linked.",
     ),
@@ -185,7 +185,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": ("0.3.17",
+    "libxml": ("0.3.18",
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- which the crate's own "
         "'MIT OR Apache-2.0' does not name. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "

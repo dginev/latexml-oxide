@@ -51,11 +51,21 @@ fn remap_fragid(id: &str, new_id: &str, fragid: &str) -> String {
 /// The LaTeXML namespace URI.
 pub const LTX_NSURI: &str = "http://dlmf.nist.gov/LaTeXML";
 
+/// The crate-default leniency (recover, noerror, nowarning) plus
+/// `XML_PARSE_HUGE` — see [`PostDocument::new_from_file`] for why post's
+/// parses must relax libxml2's hard limits.
+fn huge_parse_options() -> libxml::parser::ParserOptions<'static> {
+  libxml::parser::ParserOptions {
+    huge: true,
+    ..Default::default()
+  }
+}
+
 /// True when `node` is an element in the LaTeXML (`ltx:`) namespace.
 ///
 /// The namespace lookup wraps a `Namespace`, so callers should gate it behind a
 /// cheaper localname check on the hot path (see [`collect_split_pages`]).
-fn is_ltx(node: &Node) -> bool {
+pub(crate) fn is_ltx(node: &Node) -> bool {
   node
     .get_namespace()
     .map(|ns| ns.get_href() == LTX_NSURI)
@@ -92,16 +102,16 @@ fn scan_ids_and_pis(node: &Node, ids: &mut Vec<(String, Node)>, pis: &mut Vec<St
 
 /// One arm of a `--splitat` page union: an `ltx:` element localname plus an
 /// optional disjunctive predicate. Mirrors the arms `make_splitpaths` emits.
-struct SplitArm {
+pub(crate) struct SplitArm {
   /// `ltx:` element localname (e.g. `"section"`, `"index"`).
-  element: String,
+  pub(crate) element: String,
   /// Disjunction of conditions; empty ⇒ the element is unconditionally a page.
-  any_of:  Vec<SplitCond>,
+  pub(crate) any_of:  Vec<SplitCond>,
 }
 
 /// A single predicate condition inside a [`SplitArm`] — the only two forms
 /// `make_splitpaths` ever generates.
-enum SplitCond {
+pub(crate) enum SplitCond {
   /// `preceding-sibling::ltx:NAME`
   PrecedingSibling(String),
   /// `parent::ltx:NAME`
@@ -113,7 +123,7 @@ enum SplitCond {
 /// outside this narrow grammar, so the caller can fall back to raw XPath for a
 /// custom `--splitpaths` (which only matters on small documents, where XPath is
 /// limit-safe anyway).
-fn parse_split_union(union_xpath: &str) -> Option<Vec<SplitArm>> {
+pub(crate) fn parse_split_union(union_xpath: &str) -> Option<Vec<SplitArm>> {
   let mut arms = Vec::new();
   for raw in union_xpath.split('|') {
     let arm = raw.trim();
@@ -154,7 +164,7 @@ fn parse_split_union(union_xpath: &str) -> Option<Vec<SplitArm>> {
 
 /// Evaluate one predicate condition against `node` (Rust equivalent of the
 /// `preceding-sibling::ltx:NAME` / `parent::ltx:NAME` XPath primitives).
-fn cond_matches(cond: &SplitCond, node: &Node) -> bool {
+pub(crate) fn cond_matches(cond: &SplitCond, node: &Node) -> bool {
   match cond {
     SplitCond::PrecedingSibling(name) => {
       let mut sib = node.get_prev_sibling();
@@ -319,14 +329,14 @@ fn collect_walk_matches(node: &Node, arms: &[WalkArm], out: &mut Vec<Node>) {
 }
 
 /// True when `node` satisfies `arm` (an unconditional arm always matches).
-fn arm_matches(arm: &SplitArm, node: &Node) -> bool {
+pub(crate) fn arm_matches(arm: &SplitArm, node: &Node) -> bool {
   arm.any_of.is_empty() || arm.any_of.iter().any(|c| cond_matches(c, node))
 }
 
 /// Limit-safe pre-order walk collecting the page nodes selected by `arms`, in
 /// document order (no duplicates: each element is tested and pushed at most
 /// once). Replaces XPath evaluation of the split union.
-fn collect_split_pages(node: &Node, arms: &[SplitArm], out: &mut Vec<Node>) {
+pub(crate) fn collect_split_pages(node: &Node, arms: &[SplitArm], out: &mut Vec<Node>) {
   let mut child = node.get_first_child();
   while let Some(c) = child {
     if c.get_type() == Some(NodeType::ElementNode) {
@@ -578,10 +588,19 @@ impl PostDocument {
   /// Create from an XML file.
   ///
   /// Port of `Post::Document::newFromFile`.
+  ///
+  /// Parses with `XML_PARSE_HUGE` (on top of the crate's default
+  /// recover/noerror/nowarning): without it, libxml2's hard limits corrupt a
+  /// multi-GB parse well before any real malformation — the per-document
+  /// dictionary cap poisons the ID table (hundreds of thousands of bogus
+  /// "ID X already defined" reports for ids that occur exactly once,
+  /// witnessed at ~1.47 GB into the 131 MB book's core XML) and the parse
+  /// dies outright at ~1.71 GB. Post input is our own core serialization,
+  /// not attacker-authored XML, so relaxing the limits is safe.
   pub fn new_from_file(path: &str, options: PostDocumentOptions) -> Result<Self, String> {
     let parser = XmlParser::default();
     let doc = parser
-      .parse_file(path)
+      .parse_file_with_options(path, huge_parse_options())
       .map_err(|e| format!("Failed to parse '{}': {}", path, e))?;
     let mut opts = options;
     if opts.source.is_none() {
@@ -601,7 +620,7 @@ impl PostDocument {
   pub fn new_from_string(xml: &str, options: PostDocumentOptions) -> Result<Self, String> {
     let parser = XmlParser::default();
     let doc = parser
-      .parse_string(xml)
+      .parse_string_with_options(xml, huge_parse_options())
       .map_err(|e| format!("Failed to parse XML string: {}", e))?;
     let mut opts = options;
     if opts.source_directory.is_none() {

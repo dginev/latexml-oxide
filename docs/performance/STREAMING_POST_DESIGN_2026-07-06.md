@@ -1,14 +1,44 @@
 # Streaming post-processing for very large split documents — design + staged plan
 
-**Date:** 2026-07-06
-**Status:** foundation landed, **and the eager path's time bottleneck is now
-fixed** (CrossRef O(n²)→O(n), commit `4ec2587993`): a full `index.xml` run
-dropped **42 min 50 s → 2 min 18 s**. The two-pass streaming split is **deferred
-indefinitely** (user decision 2026-07-06): keep the simplicity of eager
-whole-DOM loading for as long as we can — the reporter's target has >64 GB RAM,
-so the ~21.6 GB peak is a non-issue for now, and the run is now fast as well as
-correct. **Revisit only if a <64 GB target appears.** The rest of this doc is
-the preserved design for that eventual work.
+**Date:** 2026-07-06 (§3 status updated 2026-07-31)
+**Status:** **the two-pass streaming split (§3) is IMPLEMENTED** —
+`latexml_post/src/stream_split.rs` + the front-end selection in
+`latexml_oxide/src/post.rs` (branch `feat-streaming-post-split`). The
+deferral's revisit trigger ("a <64 GB target appears") fired on 2026-07-31:
+the 131 MB witness's 2.68 GB core XML OOM'd a 31 GB laptop *during the
+whole-DOM parse* (>22 GB and >26.6 GB under two caps, exit 137, zero pages) —
+no configuration reaches success there. The implementation deviates from the
+§3.2 sketch in one structural way: instead of expanding page subtrees and
+running Scan inline (post-order), the stream **assembles each page's XML as
+text and spills it at page close**, then a separate **pre-order Scan sweep**
+re-parses one spilled page at a time — preserving Scan's order-sensitive
+semantics (SITE_ROOT from the first page, ancestor-before-descendant parent
+inference, `children` list order) byte-for-byte. Wrapper subtrees (non-page
+elements containing pages, e.g. back-matter) take a mini-DOM descent via
+`TextReader::expand_to_document`. Parity gate (§3.3):
+`latexml_oxide/tests/118_streaming_split_parity.rs` — byte-identical rendered
+pages vs the DOM split on a fixture exercising run adjacency, TOC
+suppression, `inlist="toc"` lookahead, wrapper descent, unnamed pages,
+template copies and inherited attributes. Gate: auto for file input ≥ 1 GiB
+(`LATEXML_POST_STREAM_SPLIT=1/0` forces; `LATEXML_POST_STREAM_THRESHOLD`
+tunes). The gate also exposed and fixed a latent DOM-split defect (inherited
+`xml:lang` copy silently skipped — namespaced-attribute read) and a
+rust-libxml one (`expand_to_document` minted a `default:` prefix onto
+default-namespace content; fixed in libxml 0.3.18 with three new reader
+APIs: `attributes_qname`, `value`/`is_empty_element`/`event`, `outer_xml`).
+**Witness proof (2026-07-31, this laptop, maxperf):** `flat_index.xml`
+(2.68 GB core XML) `--splitat=subsubsection --max-memory=26000` → exit 0,
+**115,519 pages, 11 GB HTML, 37:31 wall, 17.4 GB peak RSS** (split ~1 min at
+~0.6 GB; Scan sweep to ~3 GB; the render loop dominates and retains
+~150 KB/page — follow-up below). Baseline: the whole-DOM parse alone
+exceeded 26.6 GB with zero pages written.
+
+Follow-ups (perf only, not correctness): (a) the render loop's ~150 KB/page
+retention (ObjectDB is ~3 GB of it; the per-page `DocOwnedNode` drip on
+id-dense math pages is the suspect — a `set_linked()` relink API in
+rust-libxml would remove it); (b) serialize the core→post handoff flat
+(`spill_flat`-style) to halve the streamed bytes — measured 50.9 % of the
+witness's core XML is decorative indentation.
 **Supersedes the resume half of** the original `HANDOFF.md` (large-index-database
 hardening). Companion to `docs/reproducers/` witness `~/scratch/nasser/index.xml`
 (614 MB, ~7M nodes, 40 000 one-equation sections, `--splitat=section`).
