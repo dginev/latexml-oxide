@@ -166,6 +166,12 @@
   - **Streamed conversions report where the time went** — per-phase wall time
     (digest, build, math parse, …) lands in telemetry and two summary lines;
     previously the streamed path reported no phase timing at all.
+  - **A document whose XML exceeds 2 GiB post-processes instead of failing** —
+    libxml2's in-memory parser takes its length as a 32-bit int, so the 131 MB
+    book's 2.68 GB core XML died at the core→post handoff (`Document too large
+    for i32`) and echoed raw XML into the `.htm`. Oversized handoffs now spill
+    to a temp file beside the destination and parse through the streaming file
+    reader.
   - **A `\Description` on a table is expected, not a defect** — acmart asks for
     one on every float and a table has no image, so attaching the description
     to the table is reported as information rather than a warning that demoted
