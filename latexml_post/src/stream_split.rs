@@ -300,6 +300,11 @@ impl Splitter {
           let ltx = ns.as_deref() == Some(LTX_NSURI);
           let empty = reader.is_empty_element();
           if self.levels.is_empty() {
+            if !self.metas.is_empty() {
+              // A second top-level element (recover-mode oddity): opening a
+              // "root" again would clobber the root spill's slot. Fail loud.
+              return Err("multiple root elements in stream".to_string());
+            }
             // The root element (a root matching a split arm is NOT a page:
             // the DOM path filters pages to those with a grandparent).
             let attrs = reader.attributes_qname();
@@ -794,14 +799,13 @@ impl Splitter {
   /// `ltx:navigation` to excise)? Over-triggering costs one expand+copy, not
   /// correctness.
   fn needs_dom_descent(&self, outer: &str) -> bool {
-    if outer.contains("<navigation") || outer.contains(":navigation") {
+    if contains_element_probe(outer, "navigation") {
       return true;
     }
-    self.arms.iter().any(|arm| {
-      let bare = format!("<{}", arm.element);
-      let prefixed = format!(":{}", arm.element);
-      outer.contains(&bare) || outer.contains(&prefixed)
-    })
+    self
+      .arms
+      .iter()
+      .any(|arm| contains_element_probe(outer, &arm.element))
   }
 
   /// Run the split surgery on an owned mini-document (a wrapper subtree):
@@ -1344,6 +1348,36 @@ fn xml_ns_attr(node: &Node, localname: &str) -> Option<String> {
     .or_else(|| node.get_attribute(&format!("xml:{localname}")))
 }
 
+/// Conservative substring probe for "this serialized fragment may contain an
+/// element with `localname`": matches `<localname` or `<pfx:localname`
+/// followed by a name-boundary character, so `<indexmark` does NOT register
+/// as `<index` (a real document's `\\index` markers would otherwise trigger a
+/// mini-DOM descent per paragraph). Text content cannot introduce `<`
+/// (escaped), so `<`-anchored matches are always element starts;
+/// `:`-anchored matches can over-trigger on text (harmless — descent is
+/// correct, just slower).
+fn contains_element_probe(outer: &str, localname: &str) -> bool {
+  let boundary = |rest: &str| {
+    rest
+      .as_bytes()
+      .first()
+      .is_none_or(|b| matches!(b, b' ' | b'\t' | b'\n' | b'\r' | b'>' | b'/'))
+  };
+  let bare = format!("<{localname}");
+  for (at, _) in outer.match_indices(&bare) {
+    if boundary(&outer[at + bare.len()..]) {
+      return true;
+    }
+  }
+  let prefixed = format!(":{localname}");
+  for (at, _) in outer.match_indices(&prefixed) {
+    if boundary(&outer[at + prefixed.len()..]) {
+      return true;
+    }
+  }
+  false
+}
+
 /// Does this serialized fragment contain an `ltx:TOC` with `lists` exactly
 /// `"toc"`? (The DOM probe is `@lists='toc'`, exact equality; generated TOCs
 /// never match — they carry no `lists`.)
@@ -1772,6 +1806,22 @@ mod tests {
         page.destination
       );
     }
+  }
+
+  #[test]
+  fn element_probe_respects_name_boundaries() {
+    // `<indexmark>` must NOT register as an `index` element…
+    assert!(!contains_element_probe(
+      "<p><indexmark k=\"x\"/></p>",
+      "index"
+    ));
+    // …while real starts do, in every tag shape and prefixed form.
+    assert!(contains_element_probe("<p><index r=\"1\"/></p>", "index"));
+    assert!(contains_element_probe("<index>", "index"));
+    assert!(contains_element_probe("<index/>", "index"));
+    assert!(contains_element_probe("<ltx:index>x</ltx:index>", "index"));
+    assert!(!contains_element_probe("<subsubsection>", "subsection"));
+    assert!(!contains_element_probe("plain text", "section"));
   }
 
   #[test]
