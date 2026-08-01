@@ -185,7 +185,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": ("0.3.18",
+    "libxml": ("0.3.19",
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- which the crate's own "
         "'MIT OR Apache-2.0' does not name. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "

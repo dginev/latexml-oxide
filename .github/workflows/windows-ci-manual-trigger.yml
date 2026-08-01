@@ -163,6 +163,14 @@ jobs:
       RUST_BACKTRACE: "1"
       VCPKG_TRIPLET: x64-windows-static-md
       VCPKGRS_TRIPLET: x64-windows-static-md
+      # This job is COMPILE ONLY on a TeX-less runner, which is precisely the
+      # case kpathsea's build-script toolchain check exists to catch at
+      # runtime-deployment time — and precisely its documented bypass:
+      # "Building on a machine without TeX for deployment to one with it?"
+      # Without this, the job dies in kpathsea's build script ("no usable TeX
+      # backend") before checking anything — it has NEVER been green.
+      # The `build + test` job installs TeX Live and keeps the check armed.
+      KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
