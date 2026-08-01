@@ -1,0 +1,70 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Streaming split: partition a huge core XML file into per-page spill files without ever building the whole-document DOM."><title>latexml_post::stream_split - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (ad3d0bc14 2026-07-31)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module stream_split</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_post/index.html">latexml_<wbr>post</a><span class="version">0.3.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module stream_<wbr>split</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#fidelity-contract" title="Fidelity contract">Fidelity contract</a></li><li><a href="#wrapper-descent" title="Wrapper descent">Wrapper descent</a></li><li><a href="#out-of-scope-fail-loud-not-wrong" title="Out of scope (fail loud, not wrong)">Out of scope (fail loud, not wrong)</a></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>post</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_post</a></div><h1>Module <span>stream_<wbr>split</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_post/stream_split.rs.html#1-1834">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Streaming split: partition a huge core XML <strong>file</strong> into per-page spill
+files without ever building the whole-document DOM.</p>
+<p>The DOM <code>Split</code> processor (<a href="../split/struct.Split.html" title="struct latexml_post::split::Split"><code>crate::split::Split</code></a>, port of Perl
+<code>Post::Split</code>) needs the entire document parsed first — measured at ~16 GB
+for a 614 MB core XML, and past what a 32 GB host can parse at all for the
+131 MB book witness’s 2.68 GB core XML (OOM before Split, zero pages
+written; laptop UAT 2026-07-31). This module is the
+<code>STREAMING_POST_DESIGN_2026-07-06.md</code> §3 front-end: a
+[<code>libxml::reader::TextReader</code>] pull-parse over the file, materializing one
+<em>non-page</em> subtree at a time, assembling each page’s XML as text and
+spilling it the moment the page closes. Peak memory is the open ancestor
+chain plus one content subtree.</p>
+<h2 id="fidelity-contract"><a class="doc-anchor" href="#fidelity-contract">§</a>Fidelity contract</h2>
+<p>The spill files must re-parse into the same per-page DOMs the whole-DOM
+pipeline (parse → <code>Split::process</code> → per-page spill) produces — the parity
+gate is byte-equality of the final rendered pages across the two paths
+(guard: <code>latexml_oxide/tests/118_streaming_split_parity.rs</code>). Every quirk
+of <code>Split::process_pages</code> is replicated deliberately:</p>
+<ul>
+<li><strong>Run adjacency.</strong> A TOC (<code>&lt;ltx:TOC&gt;&lt;ltx:toclist class="ltx_toclist_X"&gt;</code>)
+is emitted per maximal run of <em>adjacent</em> page siblings; ANY intervening
+sibling node — whitespace text included — breaks a run, exactly as the
+<code>entries[0].node == removed[0]</code> check does. (<code>ltx:navigation</code> siblings do
+NOT break runs: the DOM path excises them before any page surgery.)</li>
+<li><strong>TOC suppression probe.</strong> A run’s TOC is suppressed iff an
+<code>ltx:TOC[@lists='toc']</code> (exact match — generated TOCs carry no <code>lists</code>)
+already occurs among the parent’s descendants <em>at flush time</em>, i.e. in
+content preceding the run.</li>
+<li><strong><code>inlist="toc"</code> propagation</strong> is per <em>tree level</em> (all page children of
+one page, across different DOM parents), with the DOM path’s substring
+semantics (<code>inlist.contains("toc")</code>). It needs lookahead, so the
+attribute is patched into already-written spill files afterwards
+(<code>Splitter::patch_inlist_toc</code>).</li>
+<li><strong><code>new_document</code> template copies</strong>: every page gets the <code>&lt;?latexml …?&gt;</code>
+PIs, the document’s <code>ltx:resource</code> elements, the root’s direct
+<code>ltx:date</code> children (only when the page has no direct <code>ltx:date</code>), the
+root <code>class</code> merged into its own — in exactly that order — then the
+saved <code>ltx:navigation</code> elements.</li>
+<li><strong>Inherited attributes</strong> (<code>xml:lang</code>, <code>backgroundcolor</code>): nearest
+ancestor-or-self value, copied onto each page root.</li>
+<li><strong>Naming</strong> ports <code>Split::{presort,prename,get_page_name}</code> including the
+<code>FOO{n}</code> unnamed-page counter and its name-level-then-descend ordering.</li>
+<li>The root page gets <code>xml:id="TEMPORARY_DOCUMENT_ID"</code> when it has no id
+(the Writer removes it later), and pre-order spill order is the DOM
+path’s docs order (root first, each page before its descendants).</li>
+</ul>
+<h2 id="wrapper-descent"><a class="doc-anchor" href="#wrapper-descent">§</a>Wrapper descent</h2>
+<p>A non-page subtree that <em>contains</em> page matches (e.g. a back-matter
+wrapper holding <code>ltx:appendix</code> pages) or <code>ltx:navigation</code> elements cannot
+be bulk-copied: it is expanded to an owned mini-document
+([<code>TextReader::expand_to_document</code>]) and the same split surgery runs on
+that DOM — page matches are pre-collected on the intact subtree (the DOM
+path evaluates its predicates before any surgery), nested pages are
+unlinked and written, TOC elements are inserted in place, and the
+remaining shell is serialized into the enclosing page. Detection is a
+conservative substring probe (<code>Splitter::needs_dom_descent</code>) —
+over-triggering costs one expand+copy, never correctness.</p>
+<h2 id="out-of-scope-fail-loud-not-wrong"><a class="doc-anchor" href="#out-of-scope-fail-loud-not-wrong">§</a>Out of scope (fail loud, not wrong)</h2>
+<ul>
+<li>Documents whose <code>ltx</code> namespace mapping cannot be resolved from the
+declaration stack error out with a pointer to
+<code>LATEXML_POST_STREAM_SPLIT=0</code> (the whole-DOM path).</li>
+<li><code>ltx:resource</code> elements / <code>&lt;?latexml?&gt;</code> PIs first appearing <em>after</em> a
+page has been written cannot retroactively reach it; a <code>Warn</code> flags the
+(never observed in practice) case.</li>
+</ul>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.StreamSplitOutcome.html" title="struct latexml_post::stream_split::StreamSplitOutcome">Stream<wbr>Split<wbr>Outcome</a></dt><dd>Result of a successful streaming split.</dd><dt><a class="struct" href="struct.StreamedSplitPage.html" title="struct latexml_post::stream_split::StreamedSplitPage">Streamed<wbr>Split<wbr>Page</a></dt><dd>One spilled page, in pre-order (index 0 is the root page).</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.stream_split.html" title="fn latexml_post::stream_split::stream_split">stream_<wbr>split</a></dt><dd>Split a core-XML file into per-page spill files, streaming.</dd><dt><a class="fn" href="fn.supports_union.html" title="fn latexml_post::stream_split::supports_union">supports_<wbr>union</a></dt><dd>Can this <code>--splitpath</code> union be evaluated by the streaming split? (The
+<code>make_splitpaths</code> grammar parses; a custom hand-written XPath may not.)
+The driver gates on this so a genuine mid-stream failure can be told apart
+from “not applicable”.</dd></dl></section></div></main></body></html>
