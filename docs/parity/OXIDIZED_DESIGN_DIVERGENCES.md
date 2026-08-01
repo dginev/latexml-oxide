@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#83**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#93**.
 
 ---
 
@@ -3371,3 +3371,28 @@ eqnarray, `amsmath_sty.rs` gather/align): prefixes now match the group's
 actual ancestry (`S2.EGx1`, `S2.EGx2`, `S3.EGx3`, …) with the counter still
 strictly in document order. User ruling 2026-07-29. Goldens updated:
 `structure/eqnums`, `structure/amsarticle`, `math/sampler`, `ams/mathtools`.
+
+### 92. Display equations carry a 1em vertical CSS margin
+
+Vanilla `LaTeXML.css` (upstream master included, checked 2026-08-01) gives the
+display-math containers no vertical margin: `.ltx_eqn_table` is
+`display:table; width:100%; border-collapse:collapse;` (L244) and
+`.ltx_eqn_div` (the unaligned rendering, L241) likewise has none. Text
+paragraphs get their spacing from the UA's `p { margin:1em 0 }` collapsing
+through `div.ltx_para`, so two adjacent displays render **touching** (issue
+#473 MWE: two `\[…\]` in a row) — identically in Perl 0.8.8 and Rust
+(same-host check: same body elements and classes, differing only in
+whitespace serialization and the sanctioned #18 invisible-operator; same
+CSS). pdflatex is the ground
+truth and separates displays with `\abovedisplayskip`/`\belowdisplayskip`
+≈ 1em of the body font (10pt @ 10pt, 12pt @ 12pt).
+
+The bundled stylesheet adds a local delta:
+`.ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }`.
+`1em` (not ar5iv's `0.65rem`) because it collapses with the UA `<p>` margins
+through the `ltx_para` wrappers: measured headless-Chrome gaps
+(text→eqn / eqn→eqn / eqn→text) go 16/0/16 px → uniform 16/16/16 px, i.e.
+the text↔display gap is unchanged (no doubling) while display↔display gains
+the paragraph rhythm. Guard:
+`witnessed_css_delta::equation_display_margin_delta_stays_present`
+(`latexml_post/src/xslt.rs`).

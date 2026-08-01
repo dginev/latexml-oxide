@@ -35,6 +35,9 @@
     binding kind degrades to a neutral result and reports a clean `Error:`.
   - **Default HTML styling re-synced to vanilla `LaTeXML.css`** — justified text,
     `\underline`/`\overline` and verbatim no-wrap are back; `.htm` infers HTML5.
+  - **Adjacent display equations are vertically separated** — the bundled CSS
+    now carries TeX's display skips (1em, collapsing with paragraph margins),
+    so back-to-back `\[…\]` displays no longer render touching (issue 473).
   - **A stale or empty stylesheet in the output directory is overwritten** instead
     of leaving the page unstyled.
   - **Split output (`--splitat`) styles every page** and carries the document date
