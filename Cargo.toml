@@ -222,9 +222,3 @@ incremental = false
 debug = false
 strip = "symbols"
 
-# TEMPORARY (feat-streaming-post-split): local override for the libxml 0.3.18
-# reader additions (attributes_qname/value/is_empty_element/outer_xml). To be
-# REMOVED before merge, once libxml 0.3.18 is published to crates.io and the
-# workspace version requirement is bumped.
-[patch.crates-io]
-libxml = { path = "/home/deyan/git/rust-libxml" }
