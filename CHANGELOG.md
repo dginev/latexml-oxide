@@ -2,6 +2,24 @@
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
+  - **Book-scale split documents render on commodity RAM** — post-processing no
+    longer parses the whole document as one DOM before splitting: past 1 GiB of
+    core XML, a streaming front-end spills each page as the file streams by and
+    scans them one at a time, byte-identical to the whole-DOM split. First
+    witness across the line: a 131 MB book's 2.68 GB core XML → 115,519 pages /
+    11 GB of HTML in 37½ minutes at 17.4 GB peak on a 31 GB laptop — previously
+    an out-of-memory kill with zero pages written.
+  - **Multi-gigabyte post-processing inputs parse trustworthily** — libxml2's
+    hard limits (absent `XML_PARSE_HUGE`) silently corrupted any parse past
+    ~1.4 GB (hundreds of thousands of phantom `ID already defined` errors for
+    ids that occur exactly once) and killed it outright at ~1.7 GB. All
+    post-processing parses now lift those limits.
+  - **A 2 GiB-plus core→post handoff no longer dies on libxml2's i32 buffer
+    ceiling** — the single-invocation `.tex → .html` flow spills the handoff to
+    disk beside the destination and streams it.
+  - **Split pages inherit `xml:lang`** from their ancestors, as Perl does — the
+    copy had been silently skipped (namespaced-attribute read).
+
   - **The runtime (Rhai) binding API reaches feature-parity with the compile-time
     macros** — definition lookup and digest/construct hooks, the same flexary
     option bags, definitions registered from a running body, external commands,
