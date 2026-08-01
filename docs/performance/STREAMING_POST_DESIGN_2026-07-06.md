@@ -33,6 +33,20 @@ APIs: `attributes_qname`, `value`/`is_empty_element`/`event`, `outer_xml`).
 ~150 KB/page — follow-up below). Baseline: the whole-DOM parse alone
 exceeded 26.6 GB with zero pages written.
 
+**Ceilings that remain (pre-existing, verified identical on the rc4 binary,
+2026-08-01):** a page (or an unsplit whole document) too large for libxslt
+fails its transform ("XSLT transformation failed: Unknown error applying
+stylesheet") — measured at a ~260 MB chapter page (`--splitat=chapter`) and
+at a 300 MB unsplit document; both split paths fail IDENTICALLY (parity
+holds in the failure case: same 5 of 6 pages written, same Error). The
+unsplit-giant case additionally stacks the whole-DOM RAM cost and the
+2 GiB `xmlBuffer` output ceiling. Splitting at a granularity that keeps
+pages libxslt-sized (section and below for this witness) is the supported
+mode at book scale. Note also the driver's standing signal-integrity wart:
+a failed post run writes an EMPTY destination with process exit 0 (the
+Error is in the log and the status code) — improving the CLI exit policy is
+a separate decision.
+
 Follow-ups (perf only, not correctness): (a) the render loop's ~150 KB/page
 retention (ObjectDB is ~3 GB of it; the per-page `DocOwnedNode` drip on
 id-dense math pages is the suspect — a `set_linked()` relink API in
