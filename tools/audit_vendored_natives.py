@@ -97,6 +97,11 @@ TARGET_ARGS = [arg for t in RELEASE_TARGETS for arg in ("--target", t)]
 # Crates whose native code has been audited by hand. Keep in sync with
 # LICENSE_INVENTORY.md D.2. A crate here is NOT necessarily a licensing problem --
 # it means someone checked what it compiles and recorded the answer.
+def _audited_versions(entry):
+    """An AUDITED version field is a single version or a tuple of them."""
+    return entry if isinstance(entry, tuple) else (entry,)
+
+
 AUDITED = {
     # ---- Crates whose native code REACHES A SHIPPED BINARY. These drive disclosures.
     "zeromq-src": ("0.2.6+4.3.4",
@@ -131,7 +136,11 @@ AUDITED = {
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
     ),
-    "ar_archive_writer": ("0.5.3",
+    # Both versions audited: the same uncompiled reference/*.cpp shape.
+    # (A tuple lists every audited version — needed because the lockfile is
+    # gitignored, so different machines/CI can resolve different compatible
+    # versions during a release window and the audit must hold on all of them.)
+    "ar_archive_writer": (("0.5.2", "0.5.3"),
         "reference/*.cpp -- LLVM's originals kept beside the Rust reimplementation for "
         "reference; not compiled, not linked.",
     ),
@@ -185,7 +194,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": ("0.3.17",
+    "libxml": ("0.3.19",
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- which the crate's own "
         "'MIT OR Apache-2.0' does not name. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "
@@ -528,7 +537,7 @@ def main():
     rebumped = {
         k: AUDITED[k[0]][0]
         for k in found
-        if k[0] in AUDITED and k[1] != AUDITED[k[0]][0]
+        if k[0] in AUDITED and k[1] not in _audited_versions(AUDITED[k[0]][0])
     }
     stale = [n for n in AUDITED if n not in {k[0] for k in found}]
 
@@ -536,7 +545,8 @@ def main():
         print("ERROR: audited crate(s) changed version — the recorded verdict may no longer hold:")
         print()
         for (name, got), was in sorted(rebumped.items()):
-            print(f"  {name}: audited at v{was}, tree has v{got}")
+            versions = ", ".join(f"v{v}" for v in _audited_versions(was))
+            print(f"  {name}: audited at {versions}, tree has v{got}")
             print(f"      recorded: {AUDITED[name][1][:100]}...")
         print()
         print("A version bump can swap the vendored library (and its license) entirely.")

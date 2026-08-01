@@ -208,6 +208,207 @@ fn post_mem_parse_limit() -> usize {
     .unwrap_or(i32::MAX as usize)
 }
 
+/// The size at which a *split* run prefers the streaming split front-end
+/// (`latexml_post::stream_split`) over the whole-DOM parse. Default 1 GiB: a
+/// core XML that large parses to a ~20+ GB DOM (measured ~16 GB for 614 MB),
+/// where the streaming front-end peaks at one content subtree. Test override:
+/// `LATEXML_POST_STREAM_THRESHOLD` (bytes).
+fn stream_split_threshold() -> u64 {
+  std::env::var("LATEXML_POST_STREAM_THRESHOLD")
+    .ok()
+    .and_then(|v| v.parse::<u64>().ok())
+    .unwrap_or(1 << 30)
+}
+
+/// Gate for the streaming split: `LATEXML_POST_STREAM_SPLIT=1` forces it on
+/// (any size), `=0` disables it, unset engages it automatically for files at
+/// or above [`stream_split_threshold`] — where the whole-DOM parse is beyond
+/// commodity-RAM hosts anyway (the 131 MB witness's 2.68 GB core XML OOM'd a
+/// 31 GB laptop *during the parse*, 0 pages written).
+fn stream_split_gate(path: &str) -> bool {
+  match std::env::var("LATEXML_POST_STREAM_SPLIT").as_deref() {
+    Ok("0") => false,
+    Ok(_) => true,
+    Err(_) => std::fs::metadata(path)
+      .map(|m| m.len() >= stream_split_threshold())
+      .unwrap_or(false),
+  }
+}
+
+/// `--splitnaming` → `SplitNaming`, shared by the DOM and streaming split
+/// front-ends so the two cannot disagree.
+fn resolve_split_naming(split_naming: Option<&str>) -> latexml_post::split::SplitNaming {
+  use latexml_post::split::SplitNaming;
+  match split_naming {
+    Some("id") | None => SplitNaming::Id,
+    Some("idrelative") => SplitNaming::IdRelative,
+    Some("label") => SplitNaming::Label,
+    Some("labelrelative") => SplitNaming::LabelRelative,
+    Some(other) => {
+      Warn!(
+        "post",
+        "split",
+        format!("Unknown splitnaming '{other}', using 'id'")
+      );
+      SplitNaming::Id
+    },
+  }
+}
+
+/// Destination directory for a page pathname (empty parent → ".", mirroring
+/// `PostDocument`'s internal derivation).
+fn destination_directory_of(destination: &str) -> Option<String> {
+  std::path::Path::new(destination).parent().map(|p| {
+    let s = p.to_string_lossy();
+    if s.is_empty() {
+      ".".to_string()
+    } else {
+      s.into_owned()
+    }
+  })
+}
+
+/// Everything the shared pipeline tail needs, produced without the whole-DOM
+/// parse: pages spilled by the streaming split, pre-order-scanned into the
+/// ObjectDB.
+struct StreamedFront {
+  spilled_pages:  Vec<SpilledPage>,
+  db:             ObjectDB,
+  svg_fragments:  Vec<(String, String)>,
+  intent_literal: bool,
+}
+
+/// Attempt the streaming split front-end (`latexml_post::stream_split`).
+///
+/// `Ok(None)` = not applicable (the union matched no pages, or the stream
+/// could not be split faithfully — already reported) → the caller falls back
+/// to the whole-DOM pipeline. `Err(())` = a hard failure after pages were in
+/// flight (I/O, resource ceiling), already reported via `post_error`; the
+/// caller bails out.
+fn try_streaming_front(
+  path: &str,
+  split_xpath: &str,
+  split_naming: Option<&str>,
+  destination: Option<&str>,
+  page_opts: &PostDocumentOptions,
+  spill_dir: &std::path::Path,
+) -> Result<Option<StreamedFront>, ()> {
+  let naming = resolve_split_naming(split_naming);
+  telemetry::phase_enter(Phase::Split);
+  let outcome =
+    latexml_post::stream_split::stream_split(path, split_xpath, naming, destination, spill_dir);
+  telemetry::phase_exit();
+  let outcome = match outcome {
+    Ok(Some(o)) => o,
+    Ok(None) => return Ok(None),
+    Err(e) => {
+      // Fail toward flagging: the whole-DOM fallback may well OOM on an input
+      // this large, but a loud failure beats a silently wrong result — and
+      // beats the whole-DOM fallback, whose parse of a threshold-sized file
+      // is a guaranteed OOM on commodity RAM (witnessed: a mid-stream error
+      // fell back into a 2.68 GB whole-DOM parse that grew past a 26 GB
+      // ceiling with zero pages to show). The unions this front-end cannot
+      // evaluate never reach here — the caller gates on `supports_union`.
+      post_error("split", &format!("streaming split failed: {e}"));
+      return Err(());
+    },
+  };
+  // The engagement marker the parity/threshold tests assert on.
+  Info!(
+    "post",
+    "stream-split",
+    s!(
+      "streaming split engaged for '{}': {} pages",
+      path,
+      outcome.pages.len()
+    )
+  );
+  note_progress(&format!("Split into {} documents", outcome.pages.len()));
+  let intent_literal = outcome
+    .latexml_pis
+    .iter()
+    .any(|pi| pi.contains("package=\"ar5iv"));
+  let svg_fragments = extract_svg_fragments(&outcome.picture_xml);
+
+  // Pre-order Scan sweep over the spilled pages — the streaming equivalent of
+  // `run_phase(docs, Scan)` + the driver's spill loop, ONE page resident at a
+  // time. The order is semantic, not cosmetic: SITE_ROOT is taken from the
+  // first page scanned (the root page), an ancestor must be in the DB before
+  // its descendants (Scan's parent inference falls back to SITE_ROOT
+  // otherwise), and each parent's `children` list follows scan order — all
+  // three feed CrossRef's navigation.
+  telemetry::phase_enter(Phase::PostScan);
+  let mut scanner = latexml_post::scan::Scan::new(ObjectDB::new());
+  let mut spilled: Vec<SpilledPage> = Vec::with_capacity(outcome.pages.len());
+  for page in &outcome.pages {
+    if let Err(e) = latexml_core::stomach::check_timeout() {
+      post_error("Scan", &format!("Scan stopped: {}", e.message));
+      telemetry::phase_exit();
+      return Err(());
+    }
+    let path_str = page.path.to_string_lossy().into_owned();
+    let page_doc = match PostDocument::new_from_file(&path_str, page_opts.clone()) {
+      Ok(mut d) => {
+        d.destination = Some(page.destination.clone());
+        d.destination_directory = destination_directory_of(&page.destination);
+        d
+      },
+      Err(e) => {
+        post_error("post", &format!("cannot read a streamed page: {e}"));
+        telemetry::phase_exit();
+        return Err(());
+      },
+    };
+    // Scan's only page mutation: a root without an id gets
+    // `xml:id="Document"`. Detect it so the spill is refreshed (pass B
+    // re-parses pages from disk and must see what Scan registered).
+    let root_unnamed = page_doc
+      .get_document_element()
+      .and_then(|r| latexml_post::document::get_xml_id(&r))
+      .is_none();
+    let nodes = scanner.to_process(&page_doc);
+    let processed = if nodes.is_empty() {
+      vec![page_doc]
+    } else {
+      match scanner.process(page_doc, nodes) {
+        Ok(p) => p,
+        Err(e) => {
+          post_error("Scan", &format!("Scan failed: {e}"));
+          telemetry::phase_exit();
+          return Err(());
+        },
+      }
+    };
+    for d in processed {
+      if root_unnamed && let Err(e) = std::fs::write(&page.path, d.to_xml_string()) {
+        post_error(
+          "post",
+          &format!("cannot refresh a streamed page spill: {e}"),
+        );
+        telemetry::phase_exit();
+        return Err(());
+      }
+      spilled.push(SpilledPage {
+        needs_index:           !d
+          .findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
+          .is_empty(),
+        needs_bib:             !d.findnodes("//ltx:bibliography").is_empty(),
+        path:                  page.path.clone(),
+        destination:           Some(page.destination.clone()),
+        destination_directory: destination_directory_of(&page.destination),
+      });
+      // The page's DOM drops here — one resident at a time.
+    }
+  }
+  telemetry::phase_exit();
+  Ok(Some(StreamedFront {
+    spilled_pages: spilled,
+    db: scanner.db,
+    svg_fragments,
+    intent_literal,
+  }))
+}
+
 /// Write an oversized handoff to a temp file for the streaming file parser.
 /// Beside the destination when there is one (writing to the destination
 /// directory is always allowed), else the system temp dir.
@@ -233,8 +434,15 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
   // error reporting then names the real problem.
   let mut _spill_cleanup: Option<std::path::PathBuf> = None;
   let spilled_path: Option<String>;
+  // A handoff below the i32 ceiling but at/above the streaming-split
+  // threshold also spills when splitting is on: only the `File` arm can take
+  // the streaming split, and a memory parse of a multi-GB handoff is the OOM
+  // this work removes.
+  let spill_for_streaming = |len: usize| opts.split && len as u64 >= stream_split_threshold();
   let input = match input {
-    PostInput::Xml(xml) if xml.len() >= post_mem_parse_limit() => {
+    PostInput::Xml(xml)
+      if xml.len() >= post_mem_parse_limit() || spill_for_streaming(xml.len()) =>
+    {
       match spill_oversized_xml(xml, opts) {
         Ok(path) => {
           // Operationally worth a line: a multi-GB temp file just appeared
@@ -334,8 +542,6 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     }
   };
 
-  telemetry::phase_enter(Phase::PostXmlParse);
-  let t_parse = audit_start("PostDocument parse");
   // `raw_xml` holds the in-memory serialization — `Some` only for `Xml` input.
   // `File` input streams from disk and never holds it, so `raw_xml` is `None`
   // and the three raw-string features (empty-doc substitution, SVG extraction,
@@ -359,174 +565,22 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   // Pass B re-parses each spilled page and must see the SAME searchpaths and
   // site directory as this parse does.
   let page_opts = doc_opts.clone();
-  let parsed = match input {
-    // `raw_xml` is `Some` for `Xml` input (the two arms above), so the default
-    // is dead — kept only to avoid an `unwrap`.
-    PostInput::Xml(_) => PostDocument::new_from_string(raw_xml.unwrap_or("<document/>"), doc_opts),
-    PostInput::File(path) => PostDocument::new_from_file(path, doc_opts),
-  };
-  let doc = match parsed {
-    Ok(d) => d,
-    Err(e) => {
-      post_error("parse", &format!("failed to parse XML: {e}"));
-      telemetry::phase_exit();
-      return fallback();
-    },
-  };
-  audit_end(t_parse);
-  telemetry::phase_exit();
 
-  // SVG extraction reads the pre-post XML before any in-tree mutation; do it
-  // once up-front so the regex-based fragment table is valid for every split
-  // sub-document below. In-memory input scans the string; File input locates
-  // pictures via a limit-safe `//ltx:picture` DOM query and serializes only
-  // those (never the whole file) — most large documents have none.
-  let t_svg = audit_start("SVG extraction");
-  let svg_fragments = match raw_xml {
-    Some(xml) => extract_svg_fragments(xml),
-    None => extract_svg_fragments_from_doc(&doc),
+  // The per-page spill directory, created up front: BOTH front-ends (the
+  // streaming split and the whole-DOM parse) write their pages into it.
+  // Beside the destination when there is one — the same volume the output
+  // lands on (and NOT the system temp dir, which can be a RAM-backed tmpfs:
+  // a 40k-page document spills the whole core XML's worth of pages here).
+  let mut spill_builder = tempfile::Builder::new();
+  spill_builder.prefix(".latexml-post-pages-");
+  let page_spill = match destination
+    .and_then(|d| std::path::Path::new(d).parent())
+    .filter(|p| !p.as_os_str().is_empty() && p.is_dir())
+  {
+    Some(dest_dir) => spill_builder.tempdir_in(dest_dir),
+    None => spill_builder.tempdir(),
   };
-  audit_end(t_svg);
-
-  // ar5iv sniff: the ar5iv package emits literal-intent MathML. In-memory input
-  // checks the raw string; file input checks the parsed doc's `<?latexml
-  // package="ar5iv"?>` PI. Computed here — before Split moves `doc` into `docs`.
-  let intent_literal = match raw_xml {
-    Some(xml) => xml.contains("package=\"ar5iv"),
-    None => doc
-      .processing_instructions()
-      .iter()
-      .any(|pi| pi.contains("package=\"ar5iv")),
-  };
-
-  // Perl-faithful pipeline order (latexmlpost L223-242):
-  //   Split → Scan → MakeBibliography → CrossRef → Graphics → ...
-  // Split runs FIRST so each downstream pass sees the per-page
-  // destination. With the previous order (Scan before Split), every
-  // entry's `location` was the root document and CrossRef built every
-  // ref as a within-page anchor — the user-visible TOC links pointed
-  // at `#Ch1` instead of `Ch1.html`.
-  //
-  // Phase 1: Split (only attributes time when --split is on)
-  let mut docs: Vec<PostDocument> = if split {
-    telemetry::phase_enter(Phase::Split);
-    let result = if let Some(xpath) = split_xpath {
-      let naming = match split_naming {
-        Some("id") | None => latexml_post::split::SplitNaming::Id,
-        Some("idrelative") => latexml_post::split::SplitNaming::IdRelative,
-        Some("label") => latexml_post::split::SplitNaming::Label,
-        Some("labelrelative") => latexml_post::split::SplitNaming::LabelRelative,
-        Some(other) => {
-          Warn!(
-            "post",
-            "split",
-            format!("Unknown splitnaming '{other}', using 'id'")
-          );
-          latexml_post::split::SplitNaming::Id
-        },
-      };
-      let mut splitter = latexml_post::split::Split::new(xpath, naming, false);
-      let split_nodes = splitter.to_process(&doc);
-      match splitter.process(doc, split_nodes) {
-        Ok(docs) => {
-          if docs.len() > 1 {
-            note_progress(&format!("Split into {} documents", docs.len()));
-          }
-          Ok(docs)
-        },
-        Err(e) => {
-          post_error("split", &format!("Split failed: {e}"));
-          Err(())
-        },
-      }
-    } else {
-      Ok(vec![doc])
-    };
-    telemetry::phase_exit();
-    match result {
-      Ok(ds) => ds,
-      Err(()) => return fallback(),
-    }
-  } else {
-    vec![doc]
-  };
-
-  // Helper: run one processor across every doc in a Vec, mirroring
-  // Perl Post.pm:50-65's `foreach $proc { @newdocs = ... }` loop.
-  // Each processor's per-doc `process` may return multiple docs (only
-  // Split actually does, and we've already run Split above), so the
-  // inner result is flattened back into `docs`.
-  fn run_phase<P: Processor + ?Sized>(
-    docs: Vec<PostDocument>,
-    proc: &mut P,
-    label: &'static str,
-  ) -> Result<Vec<PostDocument>, ()> {
-    let mut out: Vec<PostDocument> = Vec::with_capacity(docs.len());
-    for d in docs {
-      // Cooperative memory check per document, so a phase that grows across
-      // many documents degrades gracefully instead of being hard-killed.
-      //
-      // MEASURED LIMIT, so nobody reads more into this than it delivers: on the
-      // 614 MB witness at `--max-memory 6000` the ceiling is breached BEFORE
-      // this loop is reached — the one-time parse + split DOM alone exceeds it,
-      // so the run still ends at the hard watchdog (exit 137, zero pages). No
-      // cooperative check inside the phases can catch that; bounding it is
-      // task #147 (streaming the split parse). What this DOES cover is the
-      // document whose growth happens across the phase itself.
-      if let Err(e) = latexml_core::stomach::check_timeout() {
-        post_error(label, &format!("{label} stopped: {}", e.message));
-        return Err(());
-      }
-      let nodes = proc.to_process(&d);
-      if nodes.is_empty() {
-        out.push(d);
-        continue;
-      }
-      match proc.process(d, nodes) {
-        Ok(processed) => out.extend(processed),
-        Err(e) => {
-          post_error(label, &format!("{label} failed: {e}"));
-          return Err(());
-        },
-      }
-    }
-    Ok(out)
-  }
-
-  // Phase 2: Scan — runs on EACH sub-document so its entries register
-  // the per-page `location` and `pageid`. Single shared ObjectDB so
-  // the later CrossRef pass can resolve cross-doc refs.
-  let mut scanner = latexml_post::scan::Scan::new(ObjectDB::new());
-  telemetry::phase_enter(Phase::PostScan);
-  let t_scan = audit_start("Scan");
-  docs = match run_phase(docs, &mut scanner, "Scan") {
-    Ok(d) => d,
-    Err(()) => {
-      telemetry::phase_exit();
-      return fallback();
-    },
-  };
-  audit_end(t_scan);
-  telemetry::phase_exit();
-
-  // ---- Pass A / Pass B boundary -------------------------------------------
-  //
-  // Scan is the ONLY phase that needs global knowledge: it visits every page
-  // and produces strings in the ObjectDB. Everything after it is page-local.
-  // The driver used to be phase-major (`for each phase { for each page }`),
-  // which keeps every page alive at every boundary — and a live page is not
-  // cheap: each is its own `xmlDoc` with its own dictionary, id table and
-  // lazily-built caches, measured at ~1.6 MB of per-document overhead. Across
-  // the 40,201 pages of a 614 MB core XML that alone grew RSS from 16 GB to
-  // 80 GB *during Scan*, wrote zero pages, and was killed by the ceiling.
-  //
-  // So: spill each scanned page to disk, free it, and render page-by-page
-  // below. Peak becomes the one-time split DOM plus ONE page. Spilling (rather
-  // than re-deriving pages from the source) keeps Scan's per-page
-  // `location`/`pageid` registration byte-identical — those semantics were
-  // themselves the fix for empty cross-document TOCs, so they are the wrong
-  // thing to restructure here.
-  let page_spill = match tempfile::Builder::new().prefix("latexml-post-").tempdir() {
+  let page_spill = match page_spill {
     Ok(dir) => dir,
     Err(e) => {
       post_error(
@@ -536,32 +590,237 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       return fallback();
     },
   };
-  // (path, destination, destination_directory) — the metadata that does NOT
-  // survive an XML round-trip and must be restored in pass B.
-  // Plus a flag per page: does it carry an index/glossary/bibliography
-  // placeholder? Recorded HERE, while the page is already parsed, so the two
-  // baton sweeps below visit only the handful of pages that have work instead
-  // of re-parsing every page twice (~80 k redundant parses on a 40 k-page
-  // document).
-  let mut spilled_pages: Vec<SpilledPage> = Vec::with_capacity(docs.len());
-  for (i, d) in docs.drain(..).enumerate() {
-    let path = page_spill.path().join(format!("page-{i:07}.xml"));
-    if let Err(e) = std::fs::write(&path, d.to_xml_string()) {
-      post_error("post", &format!("cannot spill page {i}: {e}"));
-      return fallback();
-    }
-    spilled_pages.push(SpilledPage {
-      needs_index: !d
-        .findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
-        .is_empty(),
-      needs_bib: !d.findnodes("//ltx:bibliography").is_empty(),
+
+  // ---- Front-end selection --------------------------------------------------
+  //
+  // For a *file* input that will be split and is past the streaming threshold
+  // (or force-enabled), the streaming split front-end produces the spilled
+  // pages + scanned ObjectDB without ever parsing the whole document — the
+  // whole-DOM parse of a 2.68 GB core XML needs ~30+ GB and OOM'd a 31 GB
+  // host before Split ran (laptop UAT 2026-07-31). Everything downstream of
+  // this block is shared between the two front-ends.
+  let streamed: Option<StreamedFront> = if let PostInput::File(path) = input
+    && split
+    && destination.is_some()
+    && let Some(xpath) = split_xpath.as_deref()
+    && latexml_post::stream_split::supports_union(xpath)
+    && stream_split_gate(path)
+  {
+    match try_streaming_front(
       path,
-      destination: d.get_destination().map(String::from),
-      destination_directory: d.get_destination_directory().map(String::from),
-    });
-    // `d` drops here: one page's worth of DOM and caches released before the
-    // next is touched.
-  }
+      xpath,
+      split_naming,
+      destination,
+      &page_opts,
+      page_spill.path(),
+    ) {
+      Ok(front) => front,
+      Err(()) => return fallback(),
+    }
+  } else {
+    None
+  };
+
+  #[allow(unused_mut)] // the whole-DOM arm pushes; the streamed arm assigns whole
+  let mut spilled_pages: Vec<SpilledPage>;
+  let db: ObjectDB;
+  let svg_fragments: Vec<(String, String)>;
+  let intent_literal: bool;
+  if let Some(front) = streamed {
+    spilled_pages = front.spilled_pages;
+    db = front.db;
+    svg_fragments = front.svg_fragments;
+    intent_literal = front.intent_literal;
+  } else {
+    // ==== Whole-DOM front-end (the pre-existing pipeline, indentation kept) ====
+    telemetry::phase_enter(Phase::PostXmlParse);
+    let t_parse = audit_start("PostDocument parse");
+    let parsed = match input {
+      // `raw_xml` is `Some` for `Xml` input (the two arms above), so the default
+      // is dead — kept only to avoid an `unwrap`.
+      PostInput::Xml(_) => {
+        PostDocument::new_from_string(raw_xml.unwrap_or("<document/>"), doc_opts)
+      },
+      PostInput::File(path) => PostDocument::new_from_file(path, doc_opts),
+    };
+    let doc = match parsed {
+      Ok(d) => d,
+      Err(e) => {
+        post_error("parse", &format!("failed to parse XML: {e}"));
+        telemetry::phase_exit();
+        return fallback();
+      },
+    };
+    audit_end(t_parse);
+    telemetry::phase_exit();
+
+    // SVG extraction reads the pre-post XML before any in-tree mutation; do it
+    // once up-front so the regex-based fragment table is valid for every split
+    // sub-document below. In-memory input scans the string; File input locates
+    // pictures via a limit-safe `//ltx:picture` DOM query and serializes only
+    // those (never the whole file) — most large documents have none.
+    let t_svg = audit_start("SVG extraction");
+    svg_fragments = match raw_xml {
+      Some(xml) => extract_svg_fragments(xml),
+      None => extract_svg_fragments_from_doc(&doc),
+    };
+    audit_end(t_svg);
+
+    // ar5iv sniff: the ar5iv package emits literal-intent MathML. In-memory input
+    // checks the raw string; file input checks the parsed doc's `<?latexml
+    // package="ar5iv"?>` PI. Computed here — before Split moves `doc` into `docs`.
+    intent_literal = match raw_xml {
+      Some(xml) => xml.contains("package=\"ar5iv"),
+      None => doc
+        .processing_instructions()
+        .iter()
+        .any(|pi| pi.contains("package=\"ar5iv")),
+    };
+
+    // Perl-faithful pipeline order (latexmlpost L223-242):
+    //   Split → Scan → MakeBibliography → CrossRef → Graphics → ...
+    // Split runs FIRST so each downstream pass sees the per-page
+    // destination. With the previous order (Scan before Split), every
+    // entry's `location` was the root document and CrossRef built every
+    // ref as a within-page anchor — the user-visible TOC links pointed
+    // at `#Ch1` instead of `Ch1.html`.
+    //
+    // Phase 1: Split (only attributes time when --split is on)
+    let mut docs: Vec<PostDocument> = if split {
+      telemetry::phase_enter(Phase::Split);
+      let result = if let Some(xpath) = split_xpath {
+        let naming = resolve_split_naming(split_naming);
+        let mut splitter = latexml_post::split::Split::new(xpath, naming, false);
+        let split_nodes = splitter.to_process(&doc);
+        match splitter.process(doc, split_nodes) {
+          Ok(docs) => {
+            if docs.len() > 1 {
+              note_progress(&format!("Split into {} documents", docs.len()));
+            }
+            Ok(docs)
+          },
+          Err(e) => {
+            post_error("split", &format!("Split failed: {e}"));
+            Err(())
+          },
+        }
+      } else {
+        Ok(vec![doc])
+      };
+      telemetry::phase_exit();
+      match result {
+        Ok(ds) => ds,
+        Err(()) => return fallback(),
+      }
+    } else {
+      vec![doc]
+    };
+
+    // Helper: run one processor across every doc in a Vec, mirroring
+    // Perl Post.pm:50-65's `foreach $proc { @newdocs = ... }` loop.
+    // Each processor's per-doc `process` may return multiple docs (only
+    // Split actually does, and we've already run Split above), so the
+    // inner result is flattened back into `docs`.
+    fn run_phase<P: Processor + ?Sized>(
+      docs: Vec<PostDocument>,
+      proc: &mut P,
+      label: &'static str,
+    ) -> Result<Vec<PostDocument>, ()> {
+      let mut out: Vec<PostDocument> = Vec::with_capacity(docs.len());
+      for d in docs {
+        // Cooperative memory check per document, so a phase that grows across
+        // many documents degrades gracefully instead of being hard-killed.
+        //
+        // MEASURED LIMIT, so nobody reads more into this than it delivers: on the
+        // 614 MB witness at `--max-memory 6000` the ceiling is breached BEFORE
+        // this loop is reached — the one-time parse + split DOM alone exceeds it,
+        // so the run still ends at the hard watchdog (exit 137, zero pages). No
+        // cooperative check inside the phases can catch that; bounding it is
+        // task #147 (streaming the split parse). What this DOES cover is the
+        // document whose growth happens across the phase itself.
+        if let Err(e) = latexml_core::stomach::check_timeout() {
+          post_error(label, &format!("{label} stopped: {}", e.message));
+          return Err(());
+        }
+        let nodes = proc.to_process(&d);
+        if nodes.is_empty() {
+          out.push(d);
+          continue;
+        }
+        match proc.process(d, nodes) {
+          Ok(processed) => out.extend(processed),
+          Err(e) => {
+            post_error(label, &format!("{label} failed: {e}"));
+            return Err(());
+          },
+        }
+      }
+      Ok(out)
+    }
+
+    // Phase 2: Scan — runs on EACH sub-document so its entries register
+    // the per-page `location` and `pageid`. Single shared ObjectDB so
+    // the later CrossRef pass can resolve cross-doc refs.
+    let mut scanner = latexml_post::scan::Scan::new(ObjectDB::new());
+    telemetry::phase_enter(Phase::PostScan);
+    let t_scan = audit_start("Scan");
+    docs = match run_phase(docs, &mut scanner, "Scan") {
+      Ok(d) => d,
+      Err(()) => {
+        telemetry::phase_exit();
+        return fallback();
+      },
+    };
+    audit_end(t_scan);
+    telemetry::phase_exit();
+
+    // ---- Pass A / Pass B boundary -------------------------------------------
+    //
+    // Scan is the ONLY phase that needs global knowledge: it visits every page
+    // and produces strings in the ObjectDB. Everything after it is page-local.
+    // The driver used to be phase-major (`for each phase { for each page }`),
+    // which keeps every page alive at every boundary — and a live page is not
+    // cheap: each is its own `xmlDoc` with its own dictionary, id table and
+    // lazily-built caches, measured at ~1.6 MB of per-document overhead. Across
+    // the 40,201 pages of a 614 MB core XML that alone grew RSS from 16 GB to
+    // 80 GB *during Scan*, wrote zero pages, and was killed by the ceiling.
+    //
+    // So: spill each scanned page to disk (into the shared `page_spill` dir
+    // created before front-end selection), free it, and render page-by-page
+    // below. Peak becomes the one-time split DOM plus ONE page. Spilling (rather
+    // than re-deriving pages from the source) keeps Scan's per-page
+    // `location`/`pageid` registration byte-identical — those semantics were
+    // themselves the fix for empty cross-document TOCs, so they are the wrong
+    // thing to restructure here.
+    //
+    // (path, destination, destination_directory) — the metadata that does NOT
+    // survive an XML round-trip and must be restored in pass B.
+    // Plus a flag per page: does it carry an index/glossary/bibliography
+    // placeholder? Recorded HERE, while the page is already parsed, so the two
+    // baton sweeps below visit only the handful of pages that have work instead
+    // of re-parsing every page twice (~80 k redundant parses on a 40 k-page
+    // document).
+    spilled_pages = Vec::with_capacity(docs.len());
+    for (i, d) in docs.drain(..).enumerate() {
+      let path = page_spill.path().join(format!("page-{i:07}.xml"));
+      if let Err(e) = std::fs::write(&path, d.to_xml_string()) {
+        post_error("post", &format!("cannot spill page {i}: {e}"));
+        return fallback();
+      }
+      spilled_pages.push(SpilledPage {
+        needs_index: !d
+          .findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
+          .is_empty(),
+        needs_bib: !d.findnodes("//ltx:bibliography").is_empty(),
+        path,
+        destination: d.get_destination().map(String::from),
+        destination_directory: d.get_destination_directory().map(String::from),
+      });
+      // `d` drops here: one page's worth of DOM and caches released before the
+      // next is touched.
+    }
+    db = scanner.db;
+  } // ==== end of the whole-DOM front-end ====
 
   // Phase 2b: MakeIndex (Perl LaTeXML.pm L466-470)
   //   Runs BEFORE MakeBibliography in Perl. Populates `<ltx:indexlist>`
@@ -569,7 +828,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   //   `<ltx:glossary>` placeholders, using the `GLOSSARY:*` / `INDEX:*`
   //   entries Scan registered in the ObjectDB. Without this pass, glossary
   //   sections render empty in HTML (witness: tests/structure/glossary.tex).
-  let mut indexer = latexml_post::make_index::MakeIndex::new(scanner.db, false, false);
+  let mut indexer = latexml_post::make_index::MakeIndex::new(db, false, false);
 
   // Phase 3: MakeBibliography
   //

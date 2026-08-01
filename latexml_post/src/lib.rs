@@ -61,6 +61,7 @@ pub mod picture_images;
 pub mod scan;
 pub mod schema_docs;
 pub mod split;
+pub mod stream_split;
 pub mod svg;
 pub mod tex_math;
 pub mod unicode;
