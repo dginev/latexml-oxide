@@ -225,4 +225,41 @@ mod tests {
     let _ = fs::remove_file(&tmp);
     assert!(result.is_err(), "unknown record kinds must fail loudly");
   }
+
+  /// Both `xml:id` attribute forms must be readable at spill-indexing time:
+  /// parsed nodes carry the namespaced attribute, CONSTRUCTED nodes carry a
+  /// plain attribute literally named "xml:id". The namespace-only read
+  /// registered 865 of 23,654 spilled labels on the 131 MB witness — no
+  /// error anywhere, the fragment index just went missing.
+  #[test]
+  fn xml_id_readable_in_both_attribute_forms() {
+    use libxml::{parser::Parser, tree::Node};
+
+    // Parsed form: xml:id arrives namespaced.
+    let parsed = Parser::default()
+      .parse_string(r#"<r xmlns="urn:x"><s xml:id="parsed.id"/></r>"#)
+      .expect("parse");
+    let s_node = parsed
+      .get_root_element()
+      .and_then(|r| r.get_first_element_child())
+      .expect("child");
+    assert_eq!(
+      crate::document::Document::node_xml_id_any_form(&s_node).as_deref(),
+      Some("parsed.id"),
+      "namespaced form must read"
+    );
+
+    // Constructed form: set_attribute stores a plain "xml:id" attribute.
+    let built = Parser::default().parse_string("<r/>").expect("parse shell");
+    let mut root = built.get_root_element().expect("root");
+    let mut child = Node::new("s", None, &built).expect("node");
+    child.set_attribute("xml:id", "built.id").expect("attr");
+    root.add_child(&mut child).expect("attach");
+    assert_eq!(
+      crate::document::Document::node_xml_id_any_form(&child).as_deref(),
+      Some("built.id"),
+      "the plain constructed form must read too — a namespace-only read \
+       silently misses every builder-constructed node"
+    );
+  }
 }

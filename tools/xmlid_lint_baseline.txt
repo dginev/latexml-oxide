@@ -1,6 +1,7 @@
 latexml_core/src/document.rs	&& !current.has_attribute("xml:id")
 latexml_core/src/document.rs	&& !dual.has_attribute("xml:id")
 latexml_core/src/document.rs	&& let Some(id) = pres.get_attribute("xml:id")
+latexml_core/src/document.rs	.or_else(|| node.get_attribute("xml:id"))
 latexml_core/src/document.rs	if let Some(id) = node.get_attribute("xml:id") {
 latexml_core/src/document.rs	let _ = pres.remove_attribute("xml:id");
 latexml_core/src/document.rs	let _ = tok.remove_attribute("xml:id");
