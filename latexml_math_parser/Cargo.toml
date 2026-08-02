@@ -20,7 +20,7 @@ crate-type = ["lib"]
 token-locators = ["latexml_core/token-locators"]
 
 [dependencies]
-libxml = "0.3.19"
+libxml = "0.3.21"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 log = "0.4"
 # dginev/marpa fork, published as `marpa-asf`; `package` alias keeps `marpa::`.

@@ -571,12 +571,7 @@ impl Converter {
     // this note even when status_code == 3; fold in bin/latexml's verdict here so
     // a fatal run reports "failed", never the self-contradictory "complete: N fatal
     // error". Success cases (status_code < 3) stay byte-identical.
-    let verb = if self.runtime.status_code == 3 {
-      "failed"
-    } else {
-      "complete"
-    };
-    Note!(s!("Conversion {}: {}", verb, self.runtime.status));
+    Note!(s!("{}", conversion_verdict(self.runtime.status_code)));
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 

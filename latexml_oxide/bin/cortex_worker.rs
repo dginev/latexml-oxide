@@ -452,7 +452,7 @@ impl LatexmlWorker {
     // `PostOutcome.status_code` is already the combined core+post code (the REPORT counter is not
     // reset between phases); `max()` with the core code is the documented belt-and-suspenders.
     let status_code = response.status_code.max(post.status_code);
-    let status_str = format!("Status:conversion:{}", status_code);
+    let status_str = latexml_core::common::error::conversion_status_line(status_code);
     let html = post.html;
     // Emit the total job wall-time as a CorTeX log message so the dispatcher persists it: CorTeX
     // parses `Info:runtime_ms:<N>` into log_infos (category=runtime_ms, what=N, details=empty), so
