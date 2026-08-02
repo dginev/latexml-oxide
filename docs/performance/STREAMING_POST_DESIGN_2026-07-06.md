@@ -319,6 +319,20 @@ wall. Audit conclusions (file:line verified 2026-08-02) that fix the design:
   4. N from the headroom rule: each child holds one page + one db copy, so
      N ≈ clamp(available_ram / db_rss, 1, cores); respect the cortex nesting
      caution (`graphics.rs:2189-2204`) — inside a cortex fleet default N=1.
+* **Measured phase shares** (witness `--telemetry-out`, 2026-08-03, maxperf
+  at `69ec59620f`, wall 5065 s): core ≈ 2549 s — math_parse **1289 s (50.6%
+  of core)**, build 872 s, digest 296 s, rewrite 92 s; post ≈ 2288 s — XSLT
+  **944 s**, CrossRef **738 s** (far larger than earlier estimates), split
+  277 s, MathML-Pres 139 s, scan 113 s, serialize 48 s. 523,676 formulae /
+  509,958 parse attempts. Consequences: (a) the worker-process pool covers
+  crossref+mathml+xslt+serialize ≈ 1868 s → ~234 s at 8 workers; (b)
+  parallel MATH PARSING is confirmed as the top core lever (1289 → ~160 s
+  at 8 threads, needs a Send grammar/State snapshot — own design);
+  (c) CrossRef's 738 s also invites algorithmic attention independent of
+  parallelism (child-page memo hit rates on a 115k-page db).
+  Telemetry-record wiring gap noted: its own warnings/errors/db_objects/
+  output_bytes fields read 0 despite the 12,094-warning verdict — the JSON
+  record snapshots before the fold; small follow-up.
 * **Rejected:** making ObjectDB Send + thread pool with serial XSLT (cap
   ~2.5×, large refactor for a small ceiling); hoisting XSLT to the main
   thread with worker-produced DOM strings (still serializes the 60% share).
