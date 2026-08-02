@@ -615,6 +615,15 @@ fn projected_source_bytes(source: &str) -> u64 {
 fn main() -> Result<(), Box<dyn Error>> {
   set_alloc_error_hook(custom_alloc_error_hook);
 
+  // Hidden page-render worker mode (streaming-post design §6): a parent
+  // conversion doing process-parallel page rendering re-invokes this very
+  // binary with `LATEXML_RENDER_WORKER` pointing at a page-range manifest.
+  // Dispatched before ANY CLI handling so the worker path can never drift
+  // into a normal conversion; it exits with its own status protocol.
+  if let Ok(manifest) = std::env::var("LATEXML_RENDER_WORKER") {
+    process::exit(latexml::render_workers::worker_main(&manifest));
+  }
+
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
   // stack during finalize/post-processing. See cortex_worker.rs for

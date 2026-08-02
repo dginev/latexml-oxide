@@ -122,3 +122,135 @@ fn midscale_streams_splits_and_reports_faithfully() {
     "expected >150 split pages (40 sections x 5 subsections), got {pages}"
   );
 }
+
+/// Sorted basenames of the split `*.html` pages in `dir`.
+fn html_pages(dir: &Path) -> Vec<String> {
+  let mut pages: Vec<String> = std::fs::read_dir(dir)
+    .expect("readdir")
+    .filter_map(|e| e.ok())
+    .map(|e| e.file_name().to_string_lossy().into_owned())
+    .filter(|n| n.ends_with(".html"))
+    .collect();
+  pages.sort();
+  pages
+}
+
+/// Run the midscale conversion in `workdir`; `render_jobs` engages the
+/// process-parallel page renderer. Same args both ways — the ONLY variable is
+/// the jobs knob.
+fn run_midscale(workdir: &Path, render_jobs: Option<&str>) -> std::process::Output {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let tex = generate_midscale(workdir);
+  let mut cmd = Command::new(bin);
+  cmd
+    .args([
+      &tex,
+      "--dest=midscale.html",
+      "--format=html5",
+      "--splitat=subsection",
+      "--log=midscale.log",
+      "--timeout=1200",
+    ])
+    .env("LATEXML_POST_STREAM_SPLIT", "1")
+    // The serial baseline must really be serial, whatever the ambient env.
+    .env_remove("LATEXML_RENDER_JOBS")
+    .current_dir(workdir);
+  if let Some(jobs) = render_jobs {
+    cmd.env("LATEXML_RENDER_JOBS", jobs);
+  }
+  cmd.output().expect("spawn latexml_oxide")
+}
+
+/// The process-parallel page renderer (LATEXML_RENDER_JOBS) must be an
+/// invisible optimization: same page set, byte-identical pages, and a
+/// lossless diagnostic fold — the anchored CORE warning survives as the
+/// parent's combined verdict and canonical trailing status line.
+#[test]
+fn midscale_parallel_render_matches_serial() {
+  let serial_dir = tempfile::tempdir().expect("tempdir");
+  let parallel_dir = tempfile::tempdir().expect("tempdir");
+
+  let serial = run_midscale(serial_dir.path(), None);
+  let parallel = run_midscale(parallel_dir.path(), Some("3"));
+  let serial_stderr = String::from_utf8_lossy(&serial.stderr);
+  let parallel_stderr = String::from_utf8_lossy(&parallel.stderr);
+
+  assert_eq!(
+    serial.status.code(),
+    Some(0),
+    "serial run must succeed — stderr tail:\n{}",
+    serial_stderr
+      .lines()
+      .rev()
+      .take(12)
+      .collect::<Vec<_>>()
+      .join("\n")
+  );
+  assert_eq!(
+    parallel.status.code(),
+    Some(0),
+    "parallel run must succeed — stderr tail:\n{}",
+    parallel_stderr
+      .lines()
+      .rev()
+      .take(12)
+      .collect::<Vec<_>>()
+      .join("\n")
+  );
+
+  // The parallel path must actually engage — otherwise this test would pass
+  // vacuously as serial-vs-serial (canvas signal-integrity rule).
+  assert!(
+    parallel_stderr.contains("parallel page render engaged"),
+    "the parallel worker path must engage under LATEXML_RENDER_JOBS=3"
+  );
+
+  // Same set of split pages…
+  let serial_pages = html_pages(serial_dir.path());
+  let parallel_pages = html_pages(parallel_dir.path());
+  assert!(
+    serial_pages.len() > 150,
+    "expected >150 split pages, got {}",
+    serial_pages.len()
+  );
+  assert_eq!(
+    serial_pages, parallel_pages,
+    "serial and parallel runs must produce the same page set"
+  );
+
+  // …and byte-identical content for a spread of sample pages: first, last,
+  // and three interior picks across the sorted order.
+  let n = serial_pages.len();
+  for idx in [0, n / 4, n / 2, 3 * n / 4, n - 1] {
+    let name = &serial_pages[idx];
+    let a = std::fs::read(serial_dir.path().join(name)).expect("serial page read");
+    let b = std::fs::read(parallel_dir.path().join(name)).expect("parallel page read");
+    assert!(
+      a == b,
+      "page {name} must be byte-identical between serial and parallel renders"
+    );
+  }
+
+  // The diagnostic fold is lossless: the one anchored CORE warning (raised in
+  // the parent, not a worker) still drives the combined verdict…
+  let last = parallel_stderr
+    .lines()
+    .rev()
+    .find(|l| !l.trim().is_empty())
+    .unwrap_or("");
+  assert!(
+    last.contains("Conversion complete: 1 warning"),
+    "parallel run must keep the anchored 1-warning verdict as the final line, got: {last}"
+  );
+  // …and the persisted log still ENDS with the canonical combined status.
+  let log = std::fs::read_to_string(parallel_dir.path().join("midscale.log")).expect("log written");
+  let log_last = log
+    .lines()
+    .rev()
+    .find(|l| !l.trim().is_empty())
+    .unwrap_or("");
+  assert_eq!(
+    log_last, "Status:conversion:1",
+    "the parallel run's log must end with the canonical combined status"
+  );
+}
