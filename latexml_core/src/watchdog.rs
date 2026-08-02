@@ -176,41 +176,129 @@ pub fn total_memory_bytes() -> Option<u64> {
   }
 }
 
-/// The default per-conversion memory ceiling in MiB, derived from the machine.
+/// The default per-conversion memory ceiling in MiB, derived from the machine
+/// **as it is right now**.
 ///
-/// `min(64 GiB, HALF of physical RAM)`, floored at
-/// [`MIN_DEFAULT_CEILING_MIB`], falling back to [`FALLBACK_CEILING_MIB`] when
-/// the machine cannot be probed. One sentence for users: *a conversion uses at
-/// most half your RAM, never more than 64 GiB.*
+/// `min(64 GiB, 90 % of AVAILABLE RAM at startup)`, never above the
+/// cgroup-capped total, floored at [`MIN_DEFAULT_CEILING_MIB`]. When
+/// availability cannot be probed the rule falls back to half of the
+/// (cgroup-capped) total, and to [`FALLBACK_CEILING_MIB`] when nothing can be
+/// probed at all. One sentence for users: *a conversion may use most of the
+/// RAM that is actually free when it starts, never more than 64 GiB.*
 ///
-/// The default was a flat 6144 MiB regardless of hardware — absurd on a 256 GB
-/// host and over-generous on a laptop — and then 90 % of RAM, which is
-/// laptop-hostile for a different reason: the cooperative fuse rides at 75 % of
-/// the ceiling, so on a 16 GB machine one conversion was allowed to reach
-/// **10.8 GiB** before we so much as complained, by which point the user's
-/// session has been swapping for a long time. Half of RAM is the design point
-/// for a 16 GB baseline laptop:
-///
-/// | RAM | ceiling | fuse (75 %) | spill watermark |
-/// |---|---|---|---|
-/// | 16 GB | 8 GiB | 6 GiB | 2 GiB |
-/// | 32 GB | 16 GiB | 12 GiB | 4 GiB |
-/// | 96 GB | 48 GiB | 36 GiB | 12 GiB |
-///
-/// The 96 GB row is not a guess: 48 GiB is the ceiling under which the 131 MB
-/// witness was measured to convert end-to-end (28.1 GB peak), so the default
-/// reproduces a validated configuration on the reporter's own hardware.
+/// History of the rule (each step measured, none guessed):
+/// - flat 6144 MiB — absurd on a 256 GB host, over-generous on a laptop;
+/// - 90 % of TOTAL RAM — laptop-hostile: blind to what the session already
+///   uses, it let one conversion push a busy 16 GB machine deep into swap;
+/// - half of TOTAL RAM — laptop-safe but wasteful the other way: on the 31 GB
+///   witness laptop it derives ~15.5 GiB while the machine sits idle with
+///   ~28 GB free, and the 131 MB witness (24.2 GB core peak) then dies at a
+///   fuse it did not need to meet (user directive 2026-08-01: "we can
+///   comfortably use up to 24 GB here");
+/// - 90 % of AVAILABLE — self-adjusting: on that idle laptop it derives
+///   ~25 GiB, and on the same laptop with a browser session holding 6 GB it
+///   derives roughly what the half-of-total rule chose. `MemAvailable` is the
+///   kernel's own estimate of what is reclaimable without swapping, so "the
+///   session starts swapping long before the guard fires" — the failure that
+///   killed the 90 %-of-total rule — cannot recur by construction.
 ///
 /// The **64 GiB cap** is not about this machine but about the *others*: in a
 /// parallel fleet the aggregate is `N_processes x ceiling`, so an uncapped
 /// fraction-of-RAM rule on a big host would let a busy fleet OOM it. The
 /// `cortex_worker` fleet overrides this with its own per-child ceiling anyway;
 /// the cap keeps the single-process default from being reckless.
+///
+/// Startup-derived, deliberately: the figure is resolved once and becomes the
+/// run's `--max-memory`, so a neighbours' later allocations cannot move a
+/// running conversion's fuse mid-flight.
 pub fn default_ceiling_mib() -> u64 {
+  derive_ceiling_mib(available_memory_bytes(), effective_memory_bytes())
+}
+
+/// The pure arithmetic behind [`default_ceiling_mib`], split out so the rule
+/// is unit-testable without controlling the test host's actual memory state.
+fn derive_ceiling_mib(available: Option<u64>, effective_total: Option<u64>) -> u64 {
   const MIB: u64 = 1024 * 1024;
-  match effective_memory_bytes() {
-    Some(total) => (total / MIB / 2).clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
-    None => FALLBACK_CEILING_MIB,
+  let candidate = match (available, effective_total) {
+    // Headroom rule: 90 % of what is free right now, never above what the
+    // process may use at all (the cgroup-capped total).
+    (Some(avail), Some(total)) => (avail / MIB * 9 / 10).min(total / MIB),
+    (Some(avail), None) => avail / MIB * 9 / 10,
+    // Availability unknown (exotic platform): the conservative half-of-total
+    // rule this default previously shipped.
+    (None, Some(total)) => total / MIB / 2,
+    (None, None) => return FALLBACK_CEILING_MIB,
+  };
+  candidate.clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB)
+}
+
+/// RAM available for new allocations right now, in bytes, or `None` when the
+/// platform offers no honest answer.
+///
+/// "Available" here means the OS's own estimate of what a new consumer can
+/// take **without pushing the machine into swap** — not merely "free", which
+/// undercounts by excluding reclaimable caches:
+/// - Linux: `MemAvailable` from `/proc/meminfo`, the kernel's purpose-built
+///   estimate (free + reclaimable page cache − watermarks). This is the one
+///   legitimate use of `/proc/meminfo` in this module — availability has no
+///   `sysconf` spelling — and it degrades safely: `None` on any other Unix,
+///   which the ceiling rule answers with the half-of-total fallback.
+/// - Windows: `GlobalMemoryStatusEx`'s `ullAvailPhys`, the direct analog.
+/// - macOS: `host_statistics64` free + inactive pages — inactive is macOS's
+///   reclaimable class, the moral equivalent of Linux's page cache share.
+pub fn available_memory_bytes() -> Option<u64> {
+  #[cfg(target_os = "linux")]
+  {
+    let meminfo = std::fs::read_to_string("/proc/meminfo").ok()?;
+    for line in meminfo.lines() {
+      if let Some(rest) = line.strip_prefix("MemAvailable:") {
+        let kb = rest.split_whitespace().next()?.parse::<u64>().ok()?;
+        return kb.checked_mul(1024);
+      }
+    }
+    None
+  }
+  #[cfg(target_os = "macos")]
+  {
+    let mut stats: libc::vm_statistics64 = unsafe { std::mem::zeroed() };
+    let mut count = (size_of::<libc::vm_statistics64>() / size_of::<libc::integer_t>())
+      as libc::mach_msg_type_number_t;
+    // SAFETY: `stats` is a correctly sized, zeroed struct and `count` names
+    // its capacity in `integer_t` units, exactly as the API requires;
+    // `mach_host_self` returns a send right that need not be deallocated for
+    // a one-shot query in a short-lived process.
+    let kr = unsafe {
+      libc::host_statistics64(
+        libc::mach_host_self(),
+        libc::HOST_VM_INFO64,
+        (&raw mut stats).cast::<libc::integer_t>(),
+        &mut count,
+      )
+    };
+    if kr != libc::KERN_SUCCESS {
+      return None;
+    }
+    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+    if page_size <= 0 {
+      return None;
+    }
+    (stats.free_count as u64 + stats.inactive_count as u64).checked_mul(page_size as u64)
+  }
+  #[cfg(windows)]
+  {
+    use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    let mut status: MEMORYSTATUSEX = unsafe { std::mem::zeroed() };
+    status.dwLength = size_of::<MEMORYSTATUSEX>() as u32;
+    // SAFETY: `status` is a correctly sized, zeroed struct with `dwLength`
+    // set, exactly as the API requires.
+    if unsafe { GlobalMemoryStatusEx(&mut status) } != 0 {
+      return Some(status.ullAvailPhys);
+    }
+    None
+  }
+  #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
+  {
+    None
   }
 }
 
@@ -562,8 +650,11 @@ mod tests {
     );
   }
 
-  /// `min(64 GiB, 90 % of RAM)`, and never zero — a zero ceiling would mean
-  /// "no limit" downstream (`resolve_rss_cap`), inverting the intent.
+  /// The live probes compose sanely: never zero (a zero ceiling would mean
+  /// "no limit" downstream, `resolve_rss_cap`), never above the fleet cap,
+  /// never above what the process may use at all. The exact fraction is
+  /// asserted on the pure function below, not here — the live machine's
+  /// availability moves between the probe and any re-probe.
   #[test]
   fn default_ceiling_respects_both_halves_of_the_rule() {
     let ceiling = default_ceiling_mib();
@@ -578,24 +669,60 @@ mod tests {
        (N_processes x ceiling) OOM the machine"
     );
     if let Some(total) = total_memory_bytes() {
-      let half = total / (1024 * 1024) / 2;
-      assert_eq!(
-        ceiling,
-        half.clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
-        "ceiling should be min(cap, HALF of RAM), floored"
-      );
-      // Half of RAM, not 90 %: the cooperative fuse rides at 75 % of the
-      // ceiling, so at 90 % a 16 GB machine let one conversion reach 10.8 GiB
-      // before complaining — long after the session started swapping. This
-      // assertion is hardware-dependent by nature (it failed only on the
-      // smaller macOS runner, where the 64 GiB cap does not bind and the
-      // fraction is what shows).
       assert!(
-        ceiling <= total / (1024 * 1024) / 2 || ceiling == MIN_DEFAULT_CEILING_MIB,
-        "the ceiling must leave the OS the larger share of physical RAM"
+        ceiling <= (total / (1024 * 1024)).max(MIN_DEFAULT_CEILING_MIB),
+        "the ceiling ({ceiling} MiB) cannot exceed physical RAM"
       );
-    } else {
+    }
+    if total_memory_bytes().is_none() && available_memory_bytes().is_none() {
       assert_eq!(ceiling, FALLBACK_CEILING_MIB);
+    }
+  }
+
+  /// The headroom rule, case by case (user directive 2026-08-01: default to
+  /// actual machine headroom — the 26000-vs-32000 hand-tuning episode on the
+  /// 131 MB witness showed how sharp the manual edge is).
+  #[test]
+  fn ceiling_rule_is_ninety_percent_of_available_with_fallbacks() {
+    const GIB: u64 = 1024 * 1024 * 1024;
+    // Idle 31 GB laptop, ~28 GB available: 90 % of available, NOT half of
+    // total — the difference is the witness converting by default or dying.
+    assert_eq!(derive_ceiling_mib(Some(28 * GIB), Some(31 * GIB)), 25804);
+    // Busy 16 GB laptop with ~9 GB available: the rule self-adjusts to
+    // roughly what half-of-total used to choose.
+    assert_eq!(derive_ceiling_mib(Some(9 * GIB), Some(16 * GIB)), 8294);
+    // Availability above the cgroup-capped total (host-wide MemAvailable seen
+    // from inside a small container): the total binds.
+    assert_eq!(derive_ceiling_mib(Some(28 * GIB), Some(4 * GIB)), 4 * 1024);
+    // No availability probe: the conservative half-of-total fallback.
+    assert_eq!(derive_ceiling_mib(None, Some(16 * GIB)), 8 * 1024);
+    // Huge host: the 64 GiB fleet cap binds.
+    assert_eq!(
+      derive_ceiling_mib(Some(200 * GIB), Some(256 * GIB)),
+      MAX_DEFAULT_CEILING_MIB
+    );
+    // Tiny container: the floor binds rather than deriving an unusable sliver.
+    assert_eq!(
+      derive_ceiling_mib(Some(GIB), Some(2 * GIB)),
+      MIN_DEFAULT_CEILING_MIB
+    );
+    // Nothing probeable: the historical flat default.
+    assert_eq!(derive_ceiling_mib(None, None), FALLBACK_CEILING_MIB);
+  }
+
+  /// The availability probe answers on every CI platform (Linux, macOS,
+  /// Windows) and the figure is plausible: nonzero, and no more than total.
+  #[test]
+  fn available_memory_probe_is_plausible() {
+    let Some(avail) = available_memory_bytes() else {
+      panic!("availability probe must answer on Linux/macOS/Windows CI");
+    };
+    assert!(avail > 0, "zero available RAM on a running machine");
+    if let Some(total) = total_memory_bytes() {
+      assert!(
+        avail <= total,
+        "available ({avail}) cannot exceed total ({total})"
+      );
     }
   }
 
