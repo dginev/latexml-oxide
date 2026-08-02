@@ -2,6 +2,29 @@
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
+  - **A book-scale document converts `.tex → .html` in ONE invocation on a
+    31 GB laptop** — the 131 MB witness end-to-end in 1:17 at a 22.95 GiB peak:
+    115,519 pages, exit 0, zero errors. The render loop is now memory-flat
+    (~3 KB/page, was ~150 KB/page): `Node::get_namespaces` in the libxml
+    binding leaked its `xmlGetNsList` array on every call since the crate's
+    beginning — fixed upstream in libxml 0.3.21, which this build requires.
+  - **The run's LAST line is the combined core+post verdict** — a core Fatal
+    stays the final word even after thousands of per-page post lines
+    (`Conversion failed: …`, exit 1), `--log` files and archive `status`
+    members end with the canonical `Status:conversion:N` (the max of the core
+    and post phases), so downstream frameworks derive severity from one line.
+  - **The final tally counts every printed diagnostic, losslessly** — the
+    same 131 MB run used to log 12,105 `Warning:` lines and report
+    "2 warnings": raw log-crate emissions (chief among them the math
+    parser's) bypassed the counters entirely. All diagnostics now flow
+    through ONE Perl-shaped vehicle (count + emit + caps + taxonomy), raw
+    log-crate diagnostics are lint-banned in the workspace, `Fatal:` lines
+    are never suppressed at any verbosity, and what a reader greps from the
+    log is what the verdict reports.
+  - **`--max-memory` unset now follows actual machine headroom** — 90% of
+    AVAILABLE RAM at startup (cgroup-capped, 64 GiB max) instead of half of
+    total, so an idle machine converts large documents by default while a busy
+    one still self-limits; hand-tuning the ceiling is no longer needed.
   - **Book-scale split documents render on commodity RAM** — post-processing no
     longer parses the whole document as one DOM before splitting: past 1 GiB of
     core XML, a streaming front-end spills each page as the file streams by and
