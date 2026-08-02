@@ -626,6 +626,16 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let mut _dhat = Some(dhat::Profiler::new_heap());
 
   let wall_start = std::time::Instant::now();
+  // Set when the post-processing phase runs; drives the end-of-run combined
+  // verdict (see the exit guard at the bottom of `main`).
+  let mut post_ran = false;
+  // The max of the per-phase status codes (core `ConversionResponse` and
+  // `PostOutcome`). The live REPORT counter is *usually* identical — it is
+  // shared across the phases — but a phase can carry a status FORCED outside
+  // the counter (a `catch_unwind`-trapped panic maps to a fatal code without
+  // a REPORT increment), so every final-status declaration folds
+  // `max(REPORT, phase codes)`, exactly as cortex_worker does.
+  let mut phase_status_max: usize = 0;
   let cli = Cli::parse();
 
   // Kick off kpathsea pre-init in a background thread. Force-runs
@@ -1034,6 +1044,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       converter.convert(source)
     };
     let _ = &source_for_post; // keep alive for post-processing
+    phase_status_max = phase_status_max.max(response.status_code);
     // Post-phase log (Graphics/MathML/XSLT) captured by
     // `run_post_processing_logged`; written after the core log into --log / the
     // archive log so BOTH conversion phases reach the persisted log (SYNC_STATUS
@@ -1131,6 +1142,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       };
 
       if do_post {
+        post_ran = true;
         // Perl LaTeXML.pm:429 passes opts{sourcedirectory} to Post as
         // `sourceDirectory`; when omitted, Post derives it from the source
         // filename (Post.pm:727-729). Mirror that: honour `--sourcedirectory`
@@ -1250,6 +1262,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           latexml::post::run_post_processing_logged(&xml, &post_opts)
         };
         let output = post.html;
+        phase_status_max = phase_status_max.max(post.status_code);
+        // The canonical combined verdict, identical to cortex_worker's fold
+        // (Perl LaTeXML.pm L631-634 `max(core, post)`): the framework at
+        // ~/git/cortex derives a task's final severity from the LAST
+        // `Status:conversion:N` in the log — and defaults to Fatal when the
+        // line is missing — so every executable must end its log with the
+        // combined line, and archive `status` members must carry the same
+        // canonical string (this one carried the human-readable core-only
+        // message instead).
+        let combined_status_code =
+          latexml_core::common::error::get_status_code().max(phase_status_max);
+        let combined_status_line =
+          latexml_core::common::error::conversion_status_line(combined_status_code);
         post_log = post.log;
         if let Some(zip_dest) = zip_dest {
           // whatsout=archive: pack the full document + resources into a ZIP.
@@ -1271,8 +1296,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             html_filename: &html_name,
             html: &output,
             log_filename: Some(&log_name),
-            log: &assemble_conversion_log(&response.log, &post_log),
-            status: &response.status,
+            log: &format!(
+              "{}\n{}",
+              assemble_conversion_log(&response.log, &post_log).trim_end(),
+              combined_status_line
+            ),
+            status: &combined_status_line,
             resource_dir,
             telemetry_json: None,
             source_date_epoch,
@@ -1297,11 +1326,29 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // concatenating — both are already-allocated and large for real
       // articles, so a merged `format!` would allocate a third copy of their
       // combined size on the conversion path.
+      // Perl parity (and the cortex contract): the `Status:conversion:N`
+      // line is the LAST line of the log, carrying the combined core+post
+      // verdict — the REPORT counter is shared across both phases, so
+      // reading it here (after post) IS the combined code.
+      let status_line = format!(
+        "\n{}\n",
+        latexml_core::common::error::conversion_status_line(
+          latexml_core::common::error::get_status_code().max(phase_status_max)
+        )
+      );
       if post_log.is_empty() {
-        latexml_post::writer::write_output_segments(&[response.log.as_str()], Some(log_path))?;
+        latexml_post::writer::write_output_segments(
+          &[response.log.trim_end_matches('\n'), &status_line],
+          Some(log_path),
+        )?;
       } else {
         latexml_post::writer::write_output_segments(
-          &[response.log.as_str(), "\n", post_log.as_str()],
+          &[
+            response.log.trim_end_matches('\n'),
+            "\n",
+            post_log.trim_end_matches('\n'),
+            &status_line,
+          ],
           Some(log_path),
         )?;
       }
@@ -1318,7 +1365,21 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Read the global status (thread-local REPORT, as cortex_worker does) — `response`
   // is scoped to the conversion branch. Match bin/latexml's exit(1) exactly;
   // status_code 2 ("errors but recoverable") stays a 0 exit, as in Perl.
-  let final_status_code = latexml_core::common::error::get_status_code();
+  let final_status_code = latexml_core::common::error::get_status_code().max(phase_status_max);
+  // The end-of-run verdict: the LAST line of a conversion names the COMBINED
+  // core+post outcome. The core prints its own verdict when it finishes, but
+  // on a post-processing run thousands of per-page lines follow it — a
+  // mid-scroll "Conversion failed:" is exactly how a memory-Fatal'd partial
+  // masqueraded as a successful site (131 MB witness UAT 2026-08-01:
+  // truncated at Ch6, 1,572 plausible pages, silent exit 1). Also printed for
+  // a non-post fatal, where repeating the verdict as the final line is cheap
+  // emphasis. Guard: 119_final_status_report.
+  if post_ran || final_status_code >= 3 {
+    eprintln!(
+      "{}",
+      latexml_core::common::error::conversion_verdict(final_status_code)
+    );
+  }
   if final_status_code >= 3 {
     write_telemetry_record(
       cli.telemetry_out.as_deref(),

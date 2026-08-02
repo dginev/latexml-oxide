@@ -3867,7 +3867,11 @@ impl Document {
             let mut ids = Vec::new();
             let mut cur = chunk.first().and_then(|n| n.get_parent());
             while let Some(n) = cur {
-              if let Some(id) = n.get_attribute_ns("id", XML_NS) {
+              // Both attribute forms — constructed ancestors carry the plain
+              // one (see `node_xml_id_any_form`); a namespace-only read left
+              // these lists near-empty, so label/id-scoped rules could not
+              // cover their fragments.
+              if let Some(id) = Self::node_xml_id_any_form(&n) {
                 ids.push(id);
               }
               cur = n.get_parent();
@@ -3926,6 +3930,22 @@ impl Document {
     Ok(runs_spilled)
   }
 
+  /// A node's `xml:id` in EITHER attribute form. Nodes CONSTRUCTED by the
+  /// builder carry a plain attribute literally named `"xml:id"`
+  /// (`set_attribute` does not namespace it), while nodes PARSED from XML
+  /// carry the namespaced form — so a namespace-only read silently misses
+  /// every constructed node. Witness (131 MB book, 2026-08-01): spill-time
+  /// indexing registered 865 of 23,654 spilled labels, gutting the fragment
+  /// index for `label:`/`id:`-scoped rewrites and spilled-id dedup — with no
+  /// error anywhere, because a missing id is indistinguishable from an
+  /// id-less node. The same trap, in the parsed direction, is
+  /// `latexml_post::document::get_xml_id`.
+  pub(crate) fn node_xml_id_any_form(node: &Node) -> Option<String> {
+    node
+      .get_attribute_ns("id", XML_NS)
+      .or_else(|| node.get_attribute("xml:id"))
+  }
+
   /// Record a spilled subtree's ids and labels in the fragment index, and
   /// purge every registry holding a handle or pointer into it.
   fn index_and_purge_spilled(
@@ -3952,7 +3972,7 @@ impl Document {
         }
       }
     }
-    let id_opt = node.get_attribute_ns("id", XML_NS);
+    let id_opt = Self::node_xml_id_any_form(node);
     if let Some(id) = &id_opt {
       index.record_id(id, seg);
       self.unrecord_id(id);

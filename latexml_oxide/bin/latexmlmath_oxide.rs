@@ -282,5 +282,19 @@ fn real_main() -> Result<()> {
       process::exit(1);
     },
   }
+  // End-of-run verdict guard, as in the main CLI: a Fatal raised anywhere in
+  // the conversion (and recovered into a result) must not exit 0 — the
+  // framework side treats a fatal-status run as failed, and so must we.
+  // Single-phase binary: the math post-conversions run in-process against the
+  // same shared REPORT counter, so reading it here IS the complete
+  // max-across-phases fold (there is no separate `PostOutcome` to fold in).
+  let final_status_code = latexml_core::common::error::get_status_code();
+  if final_status_code >= 3 {
+    eprintln!(
+      "{}",
+      latexml_core::common::error::conversion_verdict(final_status_code)
+    );
+    process::exit(1);
+  }
   Ok(())
 }

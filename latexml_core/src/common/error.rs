@@ -276,6 +276,28 @@ pub fn take_last_resource_fatal() -> Option<Error> {
 /// Build a status message matching Perl's `getStatusMessage()`.
 /// Format: "N warnings; M errors; K fatal error; L undefined macros[\foo, \bar]; P missing
 /// files[x.sty]" Returns "No obvious problems" when no issues detected.
+/// The canonical machine-readable conversion-status line, `Status:conversion:N`.
+///
+/// The contract every multi-phase executable ends its log with: the cortex
+/// framework derives a task's final severity from the LAST such line in the
+/// log (and defaults to Fatal when it is absent), so `code` must be the
+/// combined `max(core, post)` verdict. Shared here so the CLI, the worker and
+/// the archive `status` member can never drift in format.
+pub fn conversion_status_line(code: usize) -> String { format!("Status:conversion:{code}") }
+
+/// The human-readable end-of-run verdict: `Conversion complete|failed: <counts>`.
+///
+/// `failed` iff `code` is fatal (>= 3), mirroring Perl LaTeXML's summary
+/// line. Callers pass their combined `max(core, post)` code; the counts come
+/// from the shared REPORT counter via [`get_status_message`].
+pub fn conversion_verdict(code: usize) -> String {
+  format!(
+    "Conversion {}: {}",
+    if code >= 3 { "failed" } else { "complete" },
+    get_status_message()
+  )
+}
+
 pub fn get_status_message() -> String {
   let report = REPORT.borrow();
   let mut parts = Vec::new();
