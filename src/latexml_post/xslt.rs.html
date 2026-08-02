@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/xslt.rs`."><title>xslt.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (ad3d0bc14 2026-07-31)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>xslt.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! XSLT transformation processor.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/xslt.rs`."><title>xslt.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (73dc9167f 2026-08-01)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>xslt.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! XSLT transformation processor.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `LaTeXML::Post::XSLT`.
 <a href=#4 id=4 data-nosnippet>4</a>//! Applies an XSLT stylesheet to transform the document (e.g., LaTeXML XML → HTML5).
@@ -1142,29 +1142,43 @@
 <a href=#1142 id=1142 data-nosnippet>1142</a>
 <a href=#1143 id=1143 data-nosnippet>1143</a><span class="attr">#[cfg(test)]
 <a href=#1144 id=1144 data-nosnippet>1144</a></span><span class="kw">mod </span>witnessed_css_delta {
-<a href=#1145 id=1145 data-nosnippet>1145</a>  <span class="doccomment">//! Guards the ONE intentional non-vanilla rule in the bundled default
+<a href=#1145 id=1145 data-nosnippet>1145</a>  <span class="doccomment">//! Guards the intentional non-vanilla rules in the bundled default
 <a href=#1146 id=1146 data-nosnippet>1146</a>  //! `LaTeXML.css`: a tcolorbox/minipage foreignobject top-alignment rule
-<a href=#1147 id=1147 data-nosnippet>1147</a>  //! (arXiv **2605.02240**). The rest of the stylesheet is a straight adoption
-<a href=#1148 id=1148 data-nosnippet>1148</a>  //! of upstream vanilla (#312), which we do NOT assert here — the Perl
-<a href=#1149 id=1149 data-nosnippet>1149</a>  //! `LaTeXML/` reference tree is not shipped in the crate, so there is no
-<a href=#1150 id=1150 data-nosnippet>1150</a>  //! ground truth to diff against, and re-sync fidelity is a human/`cp`
-<a href=#1151 id=1151 data-nosnippet>1151</a>  //! responsibility. This test exists only so that a future "re-vanilla" sweep
-<a href=#1152 id=1152 data-nosnippet>1152</a>  //! can't silently drop the witnessed local delta.
-<a href=#1153 id=1153 data-nosnippet>1153</a>  </span><span class="kw">use </span><span class="kw">super</span>::embedded_resources;
-<a href=#1154 id=1154 data-nosnippet>1154</a>
-<a href=#1155 id=1155 data-nosnippet>1155</a>  <span class="attr">#[test]
-<a href=#1156 id=1156 data-nosnippet>1156</a>  </span><span class="kw">fn </span>witnessed_minipage_delta_stays_present() {
-<a href=#1157 id=1157 data-nosnippet>1157</a>    <span class="kw">let </span>css = std::str::from_utf8(
-<a href=#1158 id=1158 data-nosnippet>1158</a>      embedded_resources::lookup(<span class="string">"LaTeXML.css"</span>).expect(<span class="string">"LaTeXML.css is bundled"</span>),
-<a href=#1159 id=1159 data-nosnippet>1159</a>    )
-<a href=#1160 id=1160 data-nosnippet>1160</a>    .expect(<span class="string">"LaTeXML.css is valid UTF-8"</span>);
-<a href=#1161 id=1161 data-nosnippet>1161</a>    <span class="macro">assert!</span>(
-<a href=#1162 id=1162 data-nosnippet>1162</a>      css.contains(<span class="string">"2605.02240"</span>)
-<a href=#1163 id=1163 data-nosnippet>1163</a>        &amp;&amp; css.contains(
-<a href=#1164 id=1164 data-nosnippet>1164</a>          <span class="string">".ltx_foreignobject_container:has( &gt; .ltx_foreignobject_content &gt; .ltx_minipage)"
-<a href=#1165 id=1165 data-nosnippet>1165</a>        </span>),
-<a href=#1166 id=1166 data-nosnippet>1166</a>      <span class="string">"the witnessed minipage top-alignment delta (2605.02240) is missing from LaTeXML.css"</span>,
-<a href=#1167 id=1167 data-nosnippet>1167</a>    );
-<a href=#1168 id=1168 data-nosnippet>1168</a>  }
-<a href=#1169 id=1169 data-nosnippet>1169</a>}
+<a href=#1147 id=1147 data-nosnippet>1147</a>  //! (arXiv **2605.02240**) and the display-equation vertical margin
+<a href=#1148 id=1148 data-nosnippet>1148</a>  //! (issue **#473**). The rest of the stylesheet is a straight adoption
+<a href=#1149 id=1149 data-nosnippet>1149</a>  //! of upstream vanilla (#312), which we do NOT assert here — the Perl
+<a href=#1150 id=1150 data-nosnippet>1150</a>  //! `LaTeXML/` reference tree is not shipped in the crate, so there is no
+<a href=#1151 id=1151 data-nosnippet>1151</a>  //! ground truth to diff against, and re-sync fidelity is a human/`cp`
+<a href=#1152 id=1152 data-nosnippet>1152</a>  //! responsibility. These tests exist only so that a future "re-vanilla"
+<a href=#1153 id=1153 data-nosnippet>1153</a>  //! sweep can't silently drop a witnessed local delta.
+<a href=#1154 id=1154 data-nosnippet>1154</a>  </span><span class="kw">use </span><span class="kw">super</span>::embedded_resources;
+<a href=#1155 id=1155 data-nosnippet>1155</a>
+<a href=#1156 id=1156 data-nosnippet>1156</a>  <span class="kw">fn </span>bundled_latexml_css() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#1157 id=1157 data-nosnippet>1157</a>    std::str::from_utf8(embedded_resources::lookup(<span class="string">"LaTeXML.css"</span>).expect(<span class="string">"LaTeXML.css is bundled"</span>))
+<a href=#1158 id=1158 data-nosnippet>1158</a>      .expect(<span class="string">"LaTeXML.css is valid UTF-8"</span>)
+<a href=#1159 id=1159 data-nosnippet>1159</a>  }
+<a href=#1160 id=1160 data-nosnippet>1160</a>
+<a href=#1161 id=1161 data-nosnippet>1161</a>  <span class="attr">#[test]
+<a href=#1162 id=1162 data-nosnippet>1162</a>  </span><span class="kw">fn </span>witnessed_minipage_delta_stays_present() {
+<a href=#1163 id=1163 data-nosnippet>1163</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1164 id=1164 data-nosnippet>1164</a>    <span class="macro">assert!</span>(
+<a href=#1165 id=1165 data-nosnippet>1165</a>      css.contains(<span class="string">"2605.02240"</span>)
+<a href=#1166 id=1166 data-nosnippet>1166</a>        &amp;&amp; css.contains(
+<a href=#1167 id=1167 data-nosnippet>1167</a>          <span class="string">".ltx_foreignobject_container:has( &gt; .ltx_foreignobject_content &gt; .ltx_minipage)"
+<a href=#1168 id=1168 data-nosnippet>1168</a>        </span>),
+<a href=#1169 id=1169 data-nosnippet>1169</a>      <span class="string">"the witnessed minipage top-alignment delta (2605.02240) is missing from LaTeXML.css"</span>,
+<a href=#1170 id=1170 data-nosnippet>1170</a>    );
+<a href=#1171 id=1171 data-nosnippet>1171</a>  }
+<a href=#1172 id=1172 data-nosnippet>1172</a>
+<a href=#1173 id=1173 data-nosnippet>1173</a>  <span class="attr">#[test]
+<a href=#1174 id=1174 data-nosnippet>1174</a>  </span><span class="kw">fn </span>equation_display_margin_delta_stays_present() {
+<a href=#1175 id=1175 data-nosnippet>1175</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1176 id=1176 data-nosnippet>1176</a>    <span class="macro">assert!</span>(
+<a href=#1177 id=1177 data-nosnippet>1177</a>      css.contains(<span class="string">"#473"</span>)
+<a href=#1178 id=1178 data-nosnippet>1178</a>        &amp;&amp; css.contains(<span class="string">".ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }"</span>),
+<a href=#1179 id=1179 data-nosnippet>1179</a>      <span class="string">"the display-equation vertical-margin delta (issue #473) is missing from LaTeXML.css: \
+<a href=#1180 id=1180 data-nosnippet>1180</a>       adjacent display equations would render touching, unlike TeX's \\abovedisplayskip"</span>,
+<a href=#1181 id=1181 data-nosnippet>1181</a>    );
+<a href=#1182 id=1182 data-nosnippet>1182</a>  }
+<a href=#1183 id=1183 data-nosnippet>1183</a>}
 </code></pre></div></section></main></body></html>
