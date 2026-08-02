@@ -258,8 +258,9 @@ struct Cli {
   timeout: u64,
 
   /// The RAM budget for this conversion, in MiB — the one memory knob.
-  /// Defaults to the machine: HALF of physical RAM, capped at 64 GiB (2048
-  /// floor; 6144 if the machine cannot be probed).
+  /// Defaults to the machine as it is right now: 90% of AVAILABLE RAM at
+  /// startup, capped at 64 GiB (2048 floor; half of total RAM if
+  /// availability cannot be probed, 6144 if nothing can be).
   ///
   /// Everything else follows from it. A conversion works within the budget,
   /// spilling completed parts of the document to disk as it approaches it, so
@@ -268,7 +269,7 @@ struct Cli {
   /// and a hard watchdog aborts the process (exit 137) at the ceiling itself.
   ///
   /// Use 0 to lift the ceiling: nothing will abort the conversion for memory,
-  /// but spilling still engages (derived from physical RAM) — "do not kill me"
+  /// but spilling still engages (derived from the machine) — "do not kill me"
   /// is not "let the machine run out". Also settable via the
   /// `LATEXML_MAX_MEMORY` env var; this flag wins when both are given.
   ///
@@ -441,10 +442,10 @@ fn custom_alloc_error_hook(layout: Layout) {
 
 /// Resolve the `--max-memory` ceiling in MiB.
 ///
-/// `None` (flag and env both unset) means "derive it from this machine" —
-/// `min(64 GiB, 90 % of physical RAM)`, portable via
-/// `watchdog::default_ceiling_mib`. An explicit value is honoured verbatim,
-/// including `0` for "no limit".
+/// `None` (flag and env both unset) means "derive it from this machine as it
+/// is right now" — `min(64 GiB, 90 % of AVAILABLE RAM)`, portable via
+/// `watchdog::default_ceiling_mib` (rule and fallbacks documented there). An
+/// explicit value is honoured verbatim, including `0` for "no limit".
 ///
 /// The old behaviour was a flat 6144 MiB regardless of hardware: on a 256 GB
 /// host that refuses conversions which would fit comfortably, and on an 8 GB
@@ -456,9 +457,20 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
       let derived = latexml_core::watchdog::default_ceiling_mib();
       log::debug!(
         "--max-memory unset; derived {derived} MiB from this machine ({})",
-        match latexml_core::watchdog::total_memory_bytes() {
-          Some(t) => format!("{} MiB physical RAM", t / (1024 * 1024)),
-          None => "physical RAM unknown, using the fallback".to_string(),
+        match (
+          latexml_core::watchdog::available_memory_bytes(),
+          latexml_core::watchdog::total_memory_bytes(),
+        ) {
+          (Some(a), Some(t)) => format!(
+            "{} MiB available of {} MiB physical RAM",
+            a / (1024 * 1024),
+            t / (1024 * 1024)
+          ),
+          (None, Some(t)) => format!(
+            "availability unknown, {} MiB physical RAM",
+            t / (1024 * 1024)
+          ),
+          _ => "physical RAM unknown, using the fallback".to_string(),
         }
       );
       derived

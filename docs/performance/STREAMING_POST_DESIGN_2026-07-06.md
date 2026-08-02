@@ -261,3 +261,64 @@ intermediate XML to a temp file after Split, **free the DOM**, then re-read +
 process + write + free one page at a time. Halves peak (~15.6 GB → ~7–8 GB) with
 no navigation reimplementation, but still builds the full DOM once (not <7 GB).
 Not "streaming" — a fallback only.
+
+## 6. Next: parallel page rendering (roadmap gap 3, designed 2026-08-02)
+
+Pass B renders ~115k witness pages serially in ~37 min; XSLT is ~60% of that
+wall. Audit conclusions (file:line verified 2026-08-02) that fix the design:
+
+* **In-process page threads are blocked twice.** (1) `ObjectDB` is `!Send`:
+  `Value::Xml(libxml::tree::Node)` is `Rc<RefCell<_>>`, plus the `xml_holder`
+  document (`latexml_post/src/object_db.rs:274-292`). (2) `XSLT::process`
+  serializes the whole transform behind a process-wide `XSLT_LOCK`
+  (`latexml_post/src/xslt.rs:643-662`) because libxslt/libxml2 keep
+  non-thread-safe process-global state (input-callback + EXSLT registries,
+  error context, dictionaries) — concurrent transforms were WITNESSED
+  deadlocking (`52_source_map` under `cargo test`). With XSLT pinned serial,
+  Amdahl caps any thread pool at ~2.5×. Do not re-attempt threads without
+  first making ObjectDB Send AND settling libxslt global state — both.
+* **Chosen shape: process-level page-range workers.** Child processes get
+  fresh libxslt globals (no lock contention, no Send constraints) and per-page
+  isolation for free. Plan:
+  1. ObjectDB file persistence (currently none — `object_db.rs:272` "no
+     external DB persistence"): **SQLite via rusqlite `bundled`** (user +
+     assistant design session 2026-08-02). Why SQLite over the field: the
+     worker handoff needs cross-process page-cache sharing (mmap'd reads make
+     N children share ONE physical db copy — kills the N×db RAM term), and
+     the Perl `--dbfile` parity case needs transactional per-entry updates —
+     Perl's ObjectDB is a Berkeley-DB tied hash with Storable-frozen entries,
+     i.e. the precedent IS an embedded keyed store, not a snapshot. Bundled
+     sqlite adds no new toolchain requirement (we already cc-build libxml2/
+     libxslt) and the artifact is `sqlite3`-CLI-inspectable. Ranked out:
+     redb (weak cross-process story, buys only purity), LMDB/heed (map-size
+     preallocation misfits an unknown-size artifact), rkyv+mmap (no
+     incremental update — wrong for the parity case), sled (unmaintained),
+     serde-into-HashMap (full copy per child — the exact memory problem).
+     Schema: `entries(key TEXT PRIMARY KEY, props BLOB)` (postcard-encoded
+     property map, `Value::Xml` as serialized XML re-adopted via `adopt_xml`)
+     + a metadata table. Staleness: the handoff db is a per-run temp artifact
+     (no staleness by construction); the cross-run dbfile carries
+     `PRAGMA user_version` (schema), the writer's binary version, and
+     per-entry source-document + scan-timestamp provenance so re-scanning a
+     document first deletes its stale entries (mirror Perl ObjectDB.pm
+     timestamp semantics — read it first, record divergences in
+     OXIDIZED_DESIGN). Lookup cost is a non-issue: ~µs/row against 19 ms/page
+     XSLT; benchmark child open + end-to-end render vs in-memory baseline on
+     the witness before landing (`perf-check`).
+  2. A hidden worker mode in the `latexml` binary (env-gated, not a public
+     flag): read db + a page-range manifest of spilled page paths, run the
+     per-page pipeline (CrossRef → Graphics → MathML → XSLT → write), emit
+     `Status:conversion:N` last — the parent max-folds child statuses exactly
+     as core/post statuses already fold (`conversion_status_line` contract).
+  3. Parent: after the index/bib baton sweeps, spill db, partition pages,
+     spawn N children, stream/append their stderr+logs in child order
+     (deterministic fold, mirroring `graphics.rs:2444-2447`), keep
+     `check_timeout`/telemetry on the parent only
+     (`stomach.rs:22-37` deadline and `telemetry.rs:168-209` stacks are
+     thread- and process-local; workers time out via their own watchdog).
+  4. N from the headroom rule: each child holds one page + one db copy, so
+     N ≈ clamp(available_ram / db_rss, 1, cores); respect the cortex nesting
+     caution (`graphics.rs:2189-2204`) — inside a cortex fleet default N=1.
+* **Rejected:** making ObjectDB Send + thread pool with serial XSLT (cap
+  ~2.5×, large refactor for a small ceiling); hoisting XSLT to the main
+  thread with worker-produced DOM strings (still serializes the 60% share).
