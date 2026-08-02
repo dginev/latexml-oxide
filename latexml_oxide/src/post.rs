@@ -1180,6 +1180,26 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         libmimalloc_sys::mi_collect(true);
       }
     }
+    // Retention triage probe (`LATEXML_POST_MEMDIAG=1`): splits the render
+    // loop's RSS growth into live-C (libxml2/libxslt allocations still
+    // reachable), free-but-mapped C, and "everything else" (Rust/mimalloc +
+    // mmap). One run with this told the ~144 KB/page term apart from the
+    // three candidates the first fixes addressed.
+    #[cfg(target_os = "linux")]
+    if pages_rendered > 0
+      && pages_rendered.is_multiple_of(1024)
+      && std::env::var("LATEXML_POST_MEMDIAG").is_ok()
+    {
+      let mi = unsafe { libc::mallinfo2() };
+      let rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
+      eprintln!(
+        "memdiag: pages={} RSS={}MB C-live={}MB C-free={}MB",
+        pages_rendered,
+        rss_mb,
+        mi.uordblks / (1024 * 1024),
+        mi.fordblks / (1024 * 1024)
+      );
+    }
     let path_str = path.to_string_lossy().into_owned();
     let page = match PostDocument::new_from_file(&path_str, page_opts.clone()) {
       Ok(mut d) => {
