@@ -291,8 +291,8 @@ fn real_main() -> Result<()> {
   let final_status_code = latexml_core::common::error::get_status_code();
   if final_status_code >= 3 {
     eprintln!(
-      "Conversion failed: {}",
-      latexml_core::common::error::get_status_message()
+      "{}",
+      latexml_core::common::error::conversion_verdict(final_status_code)
     );
     process::exit(1);
   }

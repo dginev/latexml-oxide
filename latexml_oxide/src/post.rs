@@ -268,10 +268,22 @@ fn destination_directory_of(destination: &str) -> Option<String> {
   })
 }
 
-/// Everything the shared pipeline tail needs, produced without the whole-DOM
-/// parse: pages spilled by the streaming split, pre-order-scanned into the
-/// ObjectDB.
-struct StreamedFront {
+/// The two placeholder probes recorded per page WHILE it is parsed, so the
+/// ObjectDB-baton sweeps (MakeIndex, MakeBibliography) re-read only the
+/// handful of pages that actually carry work.
+fn page_placeholder_probes(d: &PostDocument) -> (bool, bool) {
+  (
+    !d.findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
+      .is_empty(),
+    !d.findnodes("//ltx:bibliography").is_empty(),
+  )
+}
+
+/// Everything the shared pipeline tail (MakeIndex → sweeps → page-major
+/// render) needs from a front-end: spilled pages plus the scanned ObjectDB.
+/// Produced by BOTH front-ends — the streaming split and the whole-DOM
+/// parse+Split+Scan.
+struct PostFront {
   spilled_pages:  Vec<SpilledPage>,
   db:             ObjectDB,
   svg_fragments:  Vec<(String, String)>,
@@ -292,7 +304,7 @@ fn try_streaming_front(
   destination: Option<&str>,
   page_opts: &PostDocumentOptions,
   spill_dir: &std::path::Path,
-) -> Result<Option<StreamedFront>, ()> {
+) -> Result<Option<PostFront>, ()> {
   let naming = resolve_split_naming(split_naming);
   telemetry::phase_enter(Phase::Split);
   let outcome =
@@ -388,20 +400,19 @@ fn try_streaming_front(
         telemetry::phase_exit();
         return Err(());
       }
+      let (needs_index, needs_bib) = page_placeholder_probes(&d);
       spilled.push(SpilledPage {
-        needs_index:           !d
-          .findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
-          .is_empty(),
-        needs_bib:             !d.findnodes("//ltx:bibliography").is_empty(),
-        path:                  page.path.clone(),
-        destination:           Some(page.destination.clone()),
+        needs_index,
+        needs_bib,
+        path: page.path.clone(),
+        destination: Some(page.destination.clone()),
         destination_directory: destination_directory_of(&page.destination),
       });
       // The page's DOM drops here — one resident at a time.
     }
   }
   telemetry::phase_exit();
-  Ok(Some(StreamedFront {
+  Ok(Some(PostFront {
     spilled_pages: spilled,
     db: scanner.db,
     svg_fragments,
@@ -599,7 +610,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   // whole-DOM parse of a 2.68 GB core XML needs ~30+ GB and OOM'd a 31 GB
   // host before Split ran (laptop UAT 2026-07-31). Everything downstream of
   // this block is shared between the two front-ends.
-  let streamed: Option<StreamedFront> = if let PostInput::File(path) = input
+  let streamed: Option<PostFront> = if let PostInput::File(path) = input
     && split
     && destination.is_some()
     && let Some(xpath) = split_xpath.as_deref()
@@ -621,16 +632,8 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     None
   };
 
-  #[allow(unused_mut)] // the whole-DOM arm pushes; the streamed arm assigns whole
-  let mut spilled_pages: Vec<SpilledPage>;
-  let db: ObjectDB;
-  let svg_fragments: Vec<(String, String)>;
-  let intent_literal: bool;
-  if let Some(front) = streamed {
-    spilled_pages = front.spilled_pages;
-    db = front.db;
-    svg_fragments = front.svg_fragments;
-    intent_literal = front.intent_literal;
+  let front = if let Some(front) = streamed {
+    front
   } else {
     // ==== Whole-DOM front-end (the pre-existing pipeline, indentation kept) ====
     telemetry::phase_enter(Phase::PostXmlParse);
@@ -660,7 +663,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     // pictures via a limit-safe `//ltx:picture` DOM query and serializes only
     // those (never the whole file) — most large documents have none.
     let t_svg = audit_start("SVG extraction");
-    svg_fragments = match raw_xml {
+    let svg_fragments = match raw_xml {
       Some(xml) => extract_svg_fragments(xml),
       None => extract_svg_fragments_from_doc(&doc),
     };
@@ -669,7 +672,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     // ar5iv sniff: the ar5iv package emits literal-intent MathML. In-memory input
     // checks the raw string; file input checks the parsed doc's `<?latexml
     // package="ar5iv"?>` PI. Computed here — before Split moves `doc` into `docs`.
-    intent_literal = match raw_xml {
+    let intent_literal = match raw_xml {
       Some(xml) => xml.contains("package=\"ar5iv"),
       None => doc
         .processing_instructions()
@@ -800,18 +803,17 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     // baton sweeps below visit only the handful of pages that have work instead
     // of re-parsing every page twice (~80 k redundant parses on a 40 k-page
     // document).
-    spilled_pages = Vec::with_capacity(docs.len());
+    let mut spilled_pages = Vec::with_capacity(docs.len());
     for (i, d) in docs.drain(..).enumerate() {
       let path = page_spill.path().join(format!("page-{i:07}.xml"));
       if let Err(e) = std::fs::write(&path, d.to_xml_string()) {
         post_error("post", &format!("cannot spill page {i}: {e}"));
         return fallback();
       }
+      let (needs_index, needs_bib) = page_placeholder_probes(&d);
       spilled_pages.push(SpilledPage {
-        needs_index: !d
-          .findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
-          .is_empty(),
-        needs_bib: !d.findnodes("//ltx:bibliography").is_empty(),
+        needs_index,
+        needs_bib,
         path,
         destination: d.get_destination().map(String::from),
         destination_directory: d.get_destination_directory().map(String::from),
@@ -819,8 +821,19 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       // `d` drops here: one page's worth of DOM and caches released before the
       // next is touched.
     }
-    db = scanner.db;
-  } // ==== end of the whole-DOM front-end ====
+    PostFront {
+      spilled_pages,
+      db: scanner.db,
+      svg_fragments,
+      intent_literal,
+    }
+  }; // ==== end of the whole-DOM front-end ====
+  let PostFront {
+    spilled_pages,
+    db,
+    svg_fragments,
+    intent_literal,
+  } = front;
 
   // Phase 2b: MakeIndex (Perl LaTeXML.pm L466-470)
   //   Runs BEFORE MakeBibliography in Perl. Populates `<ltx:indexlist>`

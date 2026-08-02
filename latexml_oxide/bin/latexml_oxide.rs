@@ -1273,7 +1273,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // message instead).
         let combined_status_code =
           latexml_core::common::error::get_status_code().max(phase_status_max);
-        let combined_status_line = format!("Status:conversion:{combined_status_code}");
+        let combined_status_line =
+          latexml_core::common::error::conversion_status_line(combined_status_code);
         post_log = post.log;
         if let Some(zip_dest) = zip_dest {
           // whatsout=archive: pack the full document + resources into a ZIP.
@@ -1330,8 +1331,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // verdict — the REPORT counter is shared across both phases, so
       // reading it here (after post) IS the combined code.
       let status_line = format!(
-        "\nStatus:conversion:{}\n",
-        latexml_core::common::error::get_status_code().max(phase_status_max)
+        "\n{}\n",
+        latexml_core::common::error::conversion_status_line(
+          latexml_core::common::error::get_status_code().max(phase_status_max)
+        )
       );
       if post_log.is_empty() {
         latexml_post::writer::write_output_segments(
@@ -1372,15 +1375,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // a non-post fatal, where repeating the verdict as the final line is cheap
   // emphasis. Guard: 119_final_status_report.
   if post_ran || final_status_code >= 3 {
-    let verb = if final_status_code >= 3 {
-      "failed"
-    } else {
-      "complete"
-    };
     eprintln!(
-      "Conversion {}: {}",
-      verb,
-      latexml_core::common::error::get_status_message()
+      "{}",
+      latexml_core::common::error::conversion_verdict(final_status_code)
     );
   }
   if final_status_code >= 3 {

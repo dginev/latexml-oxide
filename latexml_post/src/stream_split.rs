@@ -497,8 +497,7 @@ impl Splitter {
     let bg = attr_value(&attrs, "backgroundcolor").or_else(|| parent_level.bg.clone());
     let idx = self.metas.len();
     let xml_id = attr_value(&attrs, "xml:id");
-    if let Some(id) = &xml_id {
-      let id = id.clone();
+    if let Some(id) = xml_id.clone() {
       self.top().run_toc.push(id);
     }
     self.top().run_active = true;
@@ -675,6 +674,21 @@ impl Splitter {
     }
   }
 
+  /// The namespace declarations in scope from the OPEN levels (root first),
+  /// first declaration per prefix winning — what a standalone page file must
+  /// re-declare for its content to re-parse identically.
+  fn enclosing_decls(&self) -> Vec<(String, String)> {
+    let mut decls: Vec<(String, String)> = Vec::new();
+    for lvl in &self.levels {
+      for (p, u) in &lvl.ns_decls {
+        if !decls.iter().any(|(dp, _)| dp == p) {
+          decls.push((p.clone(), u.clone()));
+        }
+      }
+    }
+    decls
+  }
+
   fn write_page_spill(&mut self, level: Level, idx: usize) -> Result<(), String> {
     let mut attrs = level.attrs.clone();
     // Inherited attributes: nearest ancestor-or-self, appended when absent
@@ -709,14 +723,7 @@ impl Splitter {
     // The standalone page file must re-declare every namespace its content
     // may reference: the enclosing declarations (root + open ancestors) the
     // element does not redeclare itself.
-    let mut decls: Vec<(String, String)> = Vec::new();
-    for lvl in &self.levels {
-      for (p, u) in &lvl.ns_decls {
-        if !decls.iter().any(|(dp, _)| dp == p) {
-          decls.push((p.clone(), u.clone()));
-        }
-      }
-    }
+    let mut decls = self.enclosing_decls();
     let own_decls = decl_attrs(&level.attrs);
     decls.retain(|(p, _)| !own_decls.iter().any(|(op, _)| op == p));
     let qname = self.qname_for(&level);
@@ -890,7 +897,7 @@ impl Splitter {
             let entries = std::mem::take(&mut run_toc);
             self.dom_insert_toc(doc, node, Some(&child), &node_name, &entries)?;
           }
-          run_toc.clear();
+          run_toc.clear(); // ids of a suppressed run are discarded, as in the DOM path
         }
         if child.get_type() == Some(NodeType::ElementNode) {
           let serialized = doc.node_to_string(&child);
@@ -1024,14 +1031,7 @@ impl Splitter {
       }
     }
     self.metas[idx].class_appended = class_appended;
-    let mut decls: Vec<(String, String)> = Vec::new();
-    for lvl in &self.levels {
-      for (p, u) in &lvl.ns_decls {
-        if !decls.iter().any(|(dp, _)| dp == p) {
-          decls.push((p.clone(), u.clone()));
-        }
-      }
-    }
+    let decls = self.enclosing_decls();
     amend_serialized_page(
       &mut serialized,
       &decls,
