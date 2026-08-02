@@ -195,11 +195,15 @@ AUDITED = {
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
     "libxml": ("0.3.21",
-        "Binds libxml2 -- (c) Daniel Veillard, MIT -- which the crate's own "
-        "'MIT OR Apache-2.0' does not name. Linked via pkg-config + rustc-link-lib "
+        "Binds libxml2 -- (c) Daniel Veillard, MIT -- whom the crate's own 'MIT' "
+        "field does not name as holder. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "
         "(tools/build_static_libxml.sh, built --without-zlib/lzma/icu so nothing else "
-        "comes with it). Permissive, so no relink duty. Attributed in NOTICES 3.1."
+        "comes with it). Permissive, so no relink duty. Attributed in NOTICES 3.1. "
+        "0.3.19 -> 0.3.21 diffed 2026-08-02 (crates.io tarballs): pure-Rust wrapper "
+        "changes only (set_linked visibility, get_namespaces array free); build.rs "
+        "still link-only, zero cc::Build, no native files, license field 'MIT' "
+        "unchanged."
     ),
     "libxslt": ("0.1.5",
         "Binds libxslt/libexslt -- (c) Daniel Veillard, MIT -- same shape as libxml "
