@@ -282,6 +282,20 @@
 <a href=#282 id=282 data-nosnippet>282</a>      process::exit(<span class="number">1</span>);
 <a href=#283 id=283 data-nosnippet>283</a>    },
 <a href=#284 id=284 data-nosnippet>284</a>  }
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="prelude-val">Ok</span>(())
-<a href=#286 id=286 data-nosnippet>286</a>}
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="comment">// End-of-run verdict guard, as in the main CLI: a Fatal raised anywhere in
+<a href=#286 id=286 data-nosnippet>286</a>  // the conversion (and recovered into a result) must not exit 0 — the
+<a href=#287 id=287 data-nosnippet>287</a>  // framework side treats a fatal-status run as failed, and so must we.
+<a href=#288 id=288 data-nosnippet>288</a>  // Single-phase binary: the math post-conversions run in-process against the
+<a href=#289 id=289 data-nosnippet>289</a>  // same shared REPORT counter, so reading it here IS the complete
+<a href=#290 id=290 data-nosnippet>290</a>  // max-across-phases fold (there is no separate `PostOutcome` to fold in).
+<a href=#291 id=291 data-nosnippet>291</a>  </span><span class="kw">let </span>final_status_code = latexml_core::common::error::get_status_code();
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="kw">if </span>final_status_code &gt;= <span class="number">3 </span>{
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="macro">eprintln!</span>(
+<a href=#294 id=294 data-nosnippet>294</a>      <span class="string">"{}"</span>,
+<a href=#295 id=295 data-nosnippet>295</a>      latexml_core::common::error::conversion_verdict(final_status_code)
+<a href=#296 id=296 data-nosnippet>296</a>    );
+<a href=#297 id=297 data-nosnippet>297</a>    process::exit(<span class="number">1</span>);
+<a href=#298 id=298 data-nosnippet>298</a>  }
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="prelude-val">Ok</span>(())
+<a href=#300 id=300 data-nosnippet>300</a>}
 </code></pre></div></section></main></body></html>
