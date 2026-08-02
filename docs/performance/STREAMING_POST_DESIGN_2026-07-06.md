@@ -333,6 +333,14 @@ wall. Audit conclusions (file:line verified 2026-08-02) that fix the design:
   Telemetry-record wiring gap noted: its own warnings/errors/db_objects/
   output_bytes fields read 0 despite the 12,094-warning verdict — the JSON
   record snapshots before the fold; small follow-up.
+* **MEASURED (PR #490, 2026-08-03): 8 render workers take the witness post
+  pass 37:31 → 12:17 wall (3.05×)** — all 115,519 pages, exit 0, clean
+  verdict/status fold, parent peak RSS 3.0 GB (rendering left the parent
+  process; the whole fleet ran inside a 28 GB cgroup). The remaining 12:17
+  is dominated by the still-serial prologue (split scan + index/bib sweeps
+  + db save + spawn) plus ~6 min of parallel render — matching the ~5-8 min
+  prediction from the phase shares. Byte-parity: sampled pages identical to
+  the serial baseline; the mid-scale harness pins it systematically.
 * **Rejected:** making ObjectDB Send + thread pool with serial XSLT (cap
   ~2.5×, large refactor for a small ceiling); hoisting XSLT to the main
   thread with worker-produced DOM strings (still serializes the 60% share).
