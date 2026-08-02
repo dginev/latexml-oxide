@@ -1180,5 +1180,18 @@
 <a href=#1180 id=1180 data-nosnippet>1180</a>       adjacent display equations would render touching, unlike TeX's \\abovedisplayskip"</span>,
 <a href=#1181 id=1181 data-nosnippet>1181</a>    );
 <a href=#1182 id=1182 data-nosnippet>1182</a>  }
-<a href=#1183 id=1183 data-nosnippet>1183</a>}
+<a href=#1183 id=1183 data-nosnippet>1183</a>
+<a href=#1184 id=1184 data-nosnippet>1184</a>  <span class="attr">#[test]
+<a href=#1185 id=1185 data-nosnippet>1185</a>  </span><span class="kw">fn </span>verbatim_whitespace_delta_stays_present() {
+<a href=#1186 id=1186 data-nosnippet>1186</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1187 id=1187 data-nosnippet>1187</a>    <span class="macro">assert!</span>(
+<a href=#1188 id=1188 data-nosnippet>1188</a>      css.contains(<span class="string">"#431"</span>)
+<a href=#1189 id=1189 data-nosnippet>1189</a>        &amp;&amp; css.contains(<span class="string">".ltx_verbatim { white-space:pre; }"</span>)
+<a href=#1190 id=1190 data-nosnippet>1190</a>        &amp;&amp; css.contains(<span class="string">".ltx_text.ltx_verbatim.ltx_inline-block"</span>),
+<a href=#1191 id=1191 data-nosnippet>1191</a>      <span class="string">"the verbatim whitespace/line-block delta (issue #431) is missing from LaTeXML.css: \
+<a href=#1192 id=1192 data-nosnippet>1192</a>       plain verbatim would collapse to one line under vanilla's nowrap, and fancyvrb \
+<a href=#1193 id=1193 data-nosnippet>1193</a>       source lines would reflow side-by-side with their indentation collapsed"</span>,
+<a href=#1194 id=1194 data-nosnippet>1194</a>    );
+<a href=#1195 id=1195 data-nosnippet>1195</a>  }
+<a href=#1196 id=1196 data-nosnippet>1196</a>}
 </code></pre></div></section></main></body></html>
