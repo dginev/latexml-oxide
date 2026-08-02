@@ -629,6 +629,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Set when the post-processing phase runs; drives the end-of-run combined
   // verdict (see the exit guard at the bottom of `main`).
   let mut post_ran = false;
+  // The max of the per-phase status codes (core `ConversionResponse` and
+  // `PostOutcome`). The live REPORT counter is *usually* identical — it is
+  // shared across the phases — but a phase can carry a status FORCED outside
+  // the counter (a `catch_unwind`-trapped panic maps to a fatal code without
+  // a REPORT increment), so every final-status declaration folds
+  // `max(REPORT, phase codes)`, exactly as cortex_worker does.
+  let mut phase_status_max: usize = 0;
   let cli = Cli::parse();
 
   // Kick off kpathsea pre-init in a background thread. Force-runs
@@ -1037,6 +1044,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       converter.convert(source)
     };
     let _ = &source_for_post; // keep alive for post-processing
+    phase_status_max = phase_status_max.max(response.status_code);
     // Post-phase log (Graphics/MathML/XSLT) captured by
     // `run_post_processing_logged`; written after the core log into --log / the
     // archive log so BOTH conversion phases reach the persisted log (SYNC_STATUS
@@ -1254,6 +1262,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           latexml::post::run_post_processing_logged(&xml, &post_opts)
         };
         let output = post.html;
+        phase_status_max = phase_status_max.max(post.status_code);
         // The canonical combined verdict, identical to cortex_worker's fold
         // (Perl LaTeXML.pm L631-634 `max(core, post)`): the framework at
         // ~/git/cortex derives a task's final severity from the LAST
@@ -1263,7 +1272,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // canonical string (this one carried the human-readable core-only
         // message instead).
         let combined_status_code =
-          latexml_core::common::error::get_status_code().max(post.status_code);
+          latexml_core::common::error::get_status_code().max(phase_status_max);
         let combined_status_line = format!("Status:conversion:{combined_status_code}");
         post_log = post.log;
         if let Some(zip_dest) = zip_dest {
@@ -1322,7 +1331,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // reading it here (after post) IS the combined code.
       let status_line = format!(
         "\nStatus:conversion:{}\n",
-        latexml_core::common::error::get_status_code()
+        latexml_core::common::error::get_status_code().max(phase_status_max)
       );
       if post_log.is_empty() {
         latexml_post::writer::write_output_segments(
@@ -1353,7 +1362,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Read the global status (thread-local REPORT, as cortex_worker does) — `response`
   // is scoped to the conversion branch. Match bin/latexml's exit(1) exactly;
   // status_code 2 ("errors but recoverable") stays a 0 exit, as in Perl.
-  let final_status_code = latexml_core::common::error::get_status_code();
+  let final_status_code = latexml_core::common::error::get_status_code().max(phase_status_max);
   // The end-of-run verdict: the LAST line of a conversion names the COMBINED
   // core+post outcome. The core prints its own verdict when it finishes, but
   // on a post-processing run thousands of per-page lines follow it — a
