@@ -294,6 +294,32 @@ mod tests {
     clear_math_idstore();
     MATH_IDSTORE.with(|cell| assert!(cell.borrow().is_none()));
   }
+
+  #[test]
+  fn stale_handles_from_a_dead_document_are_swept_without_panic() {
+    // A pooled-worker thread's PRIOR conversion aborted math parsing (resource
+    // fatal or caught panic), leaving deferred-discard and idstore handles
+    // whose document is gone. Pre-sweep, the next paper's first drain walked
+    // them and panicked in libxml's ptr_as_option on the dead docref — the
+    // three fleet-only panic:caught fatals of the 2026-08-02 rc4 sweep
+    // (2605.08935, 2606.01083, 2606.22705). The sweep must neutralize
+    // wrapper-only: no traversal, no FFI free against the reclaimed C tree.
+    let doc = parse(r#"<XMApp><XMTok role="ADDOP"/></XMApp>"#);
+    let r = root(&doc);
+    let child = r.get_first_element_child().expect("child exists");
+    let mut store: FxHashMap<String, Node> = FxHashMap::default();
+    store.insert("t1".to_string(), child.clone());
+    set_math_idstore(store);
+    defer_discard(child);
+    drop(r);
+    drop(doc);
+    let swept = sweep_stale_math_state();
+    assert_eq!(swept, 2, "one pending discard + one idstore entry");
+    PENDING_DISCARDS.with(|cell| assert!(cell.borrow().is_empty()));
+    MATH_IDSTORE.with(|cell| assert!(cell.borrow().is_none()));
+    // Idempotent on a clean thread.
+    assert_eq!(sweep_stale_math_state(), 0);
+  }
 }
 
 thread_local! {
@@ -333,4 +359,42 @@ pub fn take_pending_discards() -> Vec<Node> {
 /// the parse has not reached.
 pub fn requeue_pending_discard(node: Node) {
   PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
+}
+
+/// Sweep residue a PRIOR conversion left in this thread's math-parser state.
+///
+/// The pooled `cortex_worker` reuses threads across papers with no thread-state
+/// reset, and an aborted math parse — a propagated resource fatal, or a panic
+/// caught by the worker's per-task isolation — can exit without draining
+/// [`PENDING_DISCARDS`] or the `MATH_IDSTORE` snapshot. Those `Node` handles
+/// then outlive their document: the next paper's first traversal panics in
+/// libxml's `ptr_as_option` on the dead docref (witnesses 2605.08935,
+/// 2606.01083, 2606.22705 — the three fleet-only `panic:caught` fatals of the
+/// 2026-08-02 rc4 sweep), and even dropping a stale `Unlinked` wrapper reads
+/// the freed C node. `set_linked()` is wrapper-only bookkeeping (public since
+/// libxml 0.3.20 for exactly this teardown shape), so marking each handle
+/// linked first makes the drop a no-op at the FFI layer — the dead document
+/// already reclaimed the C memory.
+///
+/// Returns the number of stale handles swept, for the caller's `Info` line —
+/// the paper being converted is innocent, so this must never raise an error
+/// against it.
+pub fn sweep_stale_math_state() -> usize {
+  let mut swept = 0;
+  PENDING_DISCARDS.with(|cell| {
+    let stale = std::mem::take(&mut *cell.borrow_mut());
+    swept += stale.len();
+    for node in &stale {
+      node.set_linked();
+    }
+  });
+  MATH_IDSTORE.with(|cell| {
+    if let Some(stale) = cell.borrow_mut().take() {
+      swept += stale.len();
+      for node in stale.values() {
+        node.set_linked();
+      }
+    }
+  });
+  swept
 }

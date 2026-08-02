@@ -679,6 +679,23 @@ impl MathParser {
 
   pub fn parse_math(&mut self, document: &mut Document) -> Result<()> {
     self.clear();
+    // A prior conversion on this pooled-worker thread may have aborted math
+    // parsing (resource fatal, or a panic caught by per-task isolation)
+    // without draining its deferred-discard queue / idstore snapshot; those
+    // handles' document is gone, and touching them panics in libxml's
+    // ptr_as_option (fleet witnesses 2605.08935, 2606.01083, 2606.22705).
+    // Sweep wrapper-only before touching THIS document's math. Info, not
+    // Error: the paper being converted is innocent of the residue.
+    let stale = crate::data::sweep_stale_math_state();
+    if stale > 0 {
+      latexml_core::Info!(
+        "cleanup",
+        "stale_math_state",
+        format!(
+          "swept {stale} math-parser node handles left by an aborted prior conversion on this thread"
+        )
+      );
+    }
     self.cleanup_scripts(document)?;
     let xmath_selector = "descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]";
     let xmath_nodes = document.findnodes(xmath_selector, None);
@@ -709,9 +726,16 @@ impl MathParser {
         let t0 = std::time::Instant::now();
         if let Err(e) = self.parse(math, document) {
           // Aborting math parsing (a propagated resource fatal — P1-4):
-          // clear the thread-local idstore (cloned libxml Node pointers)
-          // before unwinding, or they leak into the next conversion of this
+          // drain the deferred-discard queue NOW, while this document is
+          // still alive — this early return skips the post-loop drain, and
+          // the stale handles then panic the NEXT paper on a pooled worker
+          // thread (libxml ptr_as_option dead-docref; fleet witnesses
+          // 2605.08935, 2606.01083, 2606.22705). Drain before clearing the
+          // idstore so the drain's id-sync still sees the snapshot. Then
+          // clear the idstore (cloned libxml Node pointers) before
+          // unwinding, or they leak into the next conversion of this
           // persistent --server / test-harness thread.
+          drain_pending_discards(document, &rustc_hash::FxHashSet::default());
           crate::data::clear_math_idstore();
           note_end("Math Parsing");
           return Err(e);
