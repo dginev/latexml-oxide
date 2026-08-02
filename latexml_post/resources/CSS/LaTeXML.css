@@ -508,6 +508,13 @@ foreignObject {
 .ltx_foreignobject_container:has( > .ltx_foreignobject_content > .ltx_minipage) {
     align-items:start;
 }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #473): TeX puts
+   \abovedisplayskip/\belowdisplayskip glue (~1em of the body font) around
+   displayed math, but vanilla's display containers carry no margin, so two
+   adjacent displays render touching. 1em collapses with the UA's 1em <p>
+   margins through the ltx_para wrappers, keeping text<->display and
+   display<->display gaps uniform (no doubling next to text). */
+.ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {
     display:block;

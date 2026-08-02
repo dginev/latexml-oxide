@@ -3006,3 +3006,37 @@ the `primary` → element-name relation and the `sidebar` fallback. Only the
 *cost per link* is ours to optimize (`child_pages` is already memoized); the
 *number* of links is Perl's answer and must stay. A future "optimization" that
 bounds the ancestor walk needs a surpass-Perl decision, not a perf argument.
+
+## 70. Default CSS renders adjacent display equations touching (no display skips)
+
+Upstream's default `LaTeXML.css` (v0.8.8 and master, checked 2026-08-01) gives
+the display-math containers (`.ltx_eqn_table` L244, `.ltx_eqn_div` L241) no
+vertical margin. Text paragraphs are spaced by the UA's `p { margin:1em 0 }`
+collapsing through `div.ltx_para`; equation tables have no such margin, so two
+displays with no text between them render with a 0px gap — where pdflatex
+inserts `\abovedisplayskip`/`\belowdisplayskip` (~1em of the body font).
+
+Minimal trigger (issue #473):
+
+```tex
+\documentclass[12pt]{article}
+\begin{document}
+\[ A = B \]
+
+\[ s(s^2+10s+24) \]
+\end{document}
+```
+
+Same-host Perl 0.8.8 and latexml-oxide emit the same body markup for this MWE
+(identical elements and classes; only whitespace serialization and the
+sanctioned OXIDIZED_DESIGN #18 invisible-operator differ) with the same
+vanilla CSS — and Perl's own HTML+CSS artifacts, rendered as-is, measure a
+**0.0 px** gap between the two displays (headless Chrome,
+`getBoundingClientRect`, 2026-08-01). The touching rendering is Perl-origin,
+unreported upstream (tracker searched 2026-08-01; nearest are #2438
+intra-alignment spacing and #572 display-math paragraph breaking), and the
+ar5iv fork hit and fixed this exact rule downstream in its site CSS instead
+(`ar5iv-css/css/ar5iv.css` `.ltx_eqn_table { margin: 0.65rem auto }`, a value
+calibrated to ar5iv's own paragraph rhythm rather than the UA's 1em). Rust resolves
+it with a bundled-CSS local delta (OXIDIZED_DESIGN divergence #92):
+`.ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }`.
