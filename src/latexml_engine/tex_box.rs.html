@@ -2,7 +2,7 @@
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
 <a href=#4 id=4 data-nosnippet>4</a>
-<a href=#5 id=5 data-nosnippet>5</a></span><span class="kw">use </span>latexml_core::common::numeric_ops::round_to;
+<a href=#5 id=5 data-nosnippet>5</a></span><span class="kw">use </span>latexml_core::common::{error::emit_warn, numeric_ops::round_to};
 <a href=#6 id=6 data-nosnippet>6</a>
 <a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#8 id=8 data-nosnippet>8</a>
@@ -1393,12 +1393,16 @@
 <a href=#1393 id=1393 data-nosnippet>1393</a>    <span class="prelude-val">Some</span>(Stored::Tokens(tokens)) =&gt; unread(tokens),
 <a href=#1394 id=1394 data-nosnippet>1394</a>    <span class="prelude-val">Some</span>(Stored::Token(token)) =&gt; unread_one(token),
 <a href=#1395 id=1395 data-nosnippet>1395</a>    <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; {},
-<a href=#1396 id=1396 data-nosnippet>1396</a>    <span class="prelude-val">Some</span>(other) =&gt; <span class="macro">log::warn!</span>(<span class="string">"afterAssignment should be a token, got: {}"</span>, other),
-<a href=#1397 id=1397 data-nosnippet>1397</a>  };
-<a href=#1398 id=1398 data-nosnippet>1398</a>  <span class="comment">// AND, insert any extra tokens passed in, due to everyhbox or everyvbox
-<a href=#1399 id=1399 data-nosnippet>1399</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(everybox) = everybox_opt {
-<a href=#1400 id=1400 data-nosnippet>1400</a>    unread(everybox);
-<a href=#1401 id=1401 data-nosnippet>1401</a>  }
-<a href=#1402 id=1402 data-nosnippet>1402</a>  <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-<a href=#1403 id=1403 data-nosnippet>1403</a>}
+<a href=#1396 id=1396 data-nosnippet>1396</a>    <span class="prelude-val">Some</span>(other) =&gt; emit_warn(
+<a href=#1397 id=1397 data-nosnippet>1397</a>      <span class="string">"internal"</span>,
+<a href=#1398 id=1398 data-nosnippet>1398</a>      <span class="string">"after_assignment"</span>,
+<a href=#1399 id=1399 data-nosnippet>1399</a>      <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"afterAssignment should be a token, got: {other}"</span>),
+<a href=#1400 id=1400 data-nosnippet>1400</a>    ),
+<a href=#1401 id=1401 data-nosnippet>1401</a>  };
+<a href=#1402 id=1402 data-nosnippet>1402</a>  <span class="comment">// AND, insert any extra tokens passed in, due to everyhbox or everyvbox
+<a href=#1403 id=1403 data-nosnippet>1403</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(everybox) = everybox_opt {
+<a href=#1404 id=1404 data-nosnippet>1404</a>    unread(everybox);
+<a href=#1405 id=1405 data-nosnippet>1405</a>  }
+<a href=#1406 id=1406 data-nosnippet>1406</a>  <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+<a href=#1407 id=1407 data-nosnippet>1407</a>}
 </code></pre></div></section></main></body></html>

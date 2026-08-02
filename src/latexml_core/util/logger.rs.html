@@ -269,171 +269,304 @@
 <a href=#269 id=269 data-nosnippet>269</a>        }
 <a href=#270 id=270 data-nosnippet>270</a>      };
 <a href=#271 id=271 data-nosnippet>271</a>
-<a href=#272 id=272 data-nosnippet>272</a>      <span class="kw">let </span>message = <span class="kw">if </span>severity.is_empty() {
-<a href=#273 id=273 data-nosnippet>273</a>        <span class="macro">s!</span>(<span class="string">"{} "</span>, category_object)
-<a href=#274 id=274 data-nosnippet>274</a>      } <span class="kw">else </span>{
-<a href=#275 id=275 data-nosnippet>275</a>        <span class="macro">s!</span>(<span class="string">"{}:{} "</span>, severity, category_object)
-<a href=#276 id=276 data-nosnippet>276</a>      };
-<a href=#277 id=277 data-nosnippet>277</a>      <span class="kw">let </span>painted_message = <span class="kw">match </span>record.level() {
-<a href=#278 id=278 data-nosnippet>278</a>        Level::Info =&gt; message,
-<a href=#279 id=279 data-nosnippet>279</a>        Level::Warn =&gt; paint(ANSI_YELLOW, <span class="kw-2">&amp;</span>message),
-<a href=#280 id=280 data-nosnippet>280</a>        Level::Error =&gt; paint(ANSI_RED, <span class="kw-2">&amp;</span>message),
-<a href=#281 id=281 data-nosnippet>281</a>        Level::Debug =&gt; paint(ANSI_GREEN, <span class="kw-2">&amp;</span>message),
-<a href=#282 id=282 data-nosnippet>282</a>        <span class="kw">_ </span>=&gt; paint(ANSI_WHITE, <span class="kw-2">&amp;</span>message),
-<a href=#283 id=283 data-nosnippet>283</a>      } + <span class="kw-2">&amp;</span>details.to_string();
-<a href=#284 id=284 data-nosnippet>284</a>
-<a href=#285 id=285 data-nosnippet>285</a>      <span class="comment">// Capture to log buffer if active (strip ANSI for clean log text).
-<a href=#286 id=286 data-nosnippet>286</a>      // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
-<a href=#287 id=287 data-nosnippet>287</a>      // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)
-<a href=#288 id=288 data-nosnippet>288</a>      // matches and the record never glues onto an in-flight progress note
-<a href=#289 id=289 data-nosnippet>289</a>      // (notes no longer force a trailing newline — see append_note).
-<a href=#290 id=290 data-nosnippet>290</a>      </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>buf) = LOG_BUFFER.try_borrow_mut()
-<a href=#291 id=291 data-nosnippet>291</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>log) = <span class="kw-2">*</span>buf
-<a href=#292 id=292 data-nosnippet>292</a>      {
-<a href=#293 id=293 data-nosnippet>293</a>        <span class="kw">if </span>!log.is_empty() &amp;&amp; !log.ends_with(<span class="string">'\n'</span>) {
-<a href=#294 id=294 data-nosnippet>294</a>          log.push(<span class="string">'\n'</span>);
-<a href=#295 id=295 data-nosnippet>295</a>        }
-<a href=#296 id=296 data-nosnippet>296</a>        log.push_str(<span class="kw-2">&amp;</span>strip_ansi(<span class="kw-2">&amp;</span>painted_message));
-<a href=#297 id=297 data-nosnippet>297</a>        <span class="comment">// Exactly one trailing newline — a multi-detail message (e.g.
-<a href=#298 id=298 data-nosnippet>298</a>        // `Info:…loaded …\n\tat …\n\tIn …`) already ends with '\n', so an
-<a href=#299 id=299 data-nosnippet>299</a>        // unconditional push would double it into a blank line before the next
-<a href=#300 id=300 data-nosnippet>300</a>        // `(Loading …` note.
-<a href=#301 id=301 data-nosnippet>301</a>        </span><span class="kw">if </span>!log.ends_with(<span class="string">'\n'</span>) {
-<a href=#302 id=302 data-nosnippet>302</a>          log.push(<span class="string">'\n'</span>);
-<a href=#303 id=303 data-nosnippet>303</a>        }
-<a href=#304 id=304 data-nosnippet>304</a>      }
-<a href=#305 id=305 data-nosnippet>305</a>
-<a href=#306 id=306 data-nosnippet>306</a>      <span class="comment">// Use `\n` (not `\r`) to guarantee each log line starts on a fresh
-<a href=#307 id=307 data-nosnippet>307</a>      // line in both TTY and file output. The previous `\r` prefix made
-<a href=#308 id=308 data-nosnippet>308</a>      // log lines visually overlay any in-flight progress indicator like
-<a href=#309 id=309 data-nosnippet>309</a>      // `(Loading "foo.sty" definitions... )` — convenient in a terminal
-<a href=#310 id=310 data-nosnippet>310</a>      // but produced `(...)&lt;CR&gt;Error:...` byte sequences in log files,
-<a href=#311 id=311 data-nosnippet>311</a>      // breaking line-anchored counts in canvas harnesses
-<a href=#312 id=312 data-nosnippet>312</a>      // (`grep -cE '^...Error:'` silently returned 0 even when errors
-<a href=#313 id=313 data-nosnippet>313</a>      // were present). Trade-off: progress indicators in a TTY no longer
-<a href=#314 id=314 data-nosnippet>314</a>      // get overwritten, but they were not really self-erasing anyway
-<a href=#315 id=315 data-nosnippet>315</a>      // (they always emitted ` )` to close their parens), so the visual
-<a href=#316 id=316 data-nosnippet>316</a>      // change is small.
-<a href=#317 id=317 data-nosnippet>317</a>      // Colorize for an interactive terminal only; when stderr is redirected
-<a href=#318 id=318 data-nosnippet>318</a>      // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
-<a href=#319 id=319 data-nosnippet>319</a>      // grep-clean (matches the captured `.latexml.log` buffer above).
-<a href=#320 id=320 data-nosnippet>320</a>      // Break onto a fresh line ONLY when a note left the cursor mid-line —
-<a href=#321 id=321 data-nosnippet>321</a>      // an unconditional leading '\n' was 45.8% of the witness's log (see
-<a href=#322 id=322 data-nosnippet>322</a>      // STDERR_AT_LINE_START). One critical section: read the flag, write, and
-<a href=#323 id=323 data-nosnippet>323</a>      // republish it while holding the stderr lock, so the "record starts at
-<a href=#324 id=324 data-nosnippet>324</a>      // line start" guarantee survives concurrent loggers.
-<a href=#325 id=325 data-nosnippet>325</a>      </span>{
-<a href=#326 id=326 data-nosnippet>326</a>        <span class="kw">use </span>std::io::Write;
-<a href=#327 id=327 data-nosnippet>327</a>        <span class="kw">let </span>text = <span class="kw">if </span>stderr_use_color() {
-<a href=#328 id=328 data-nosnippet>328</a>          painted_message
-<a href=#329 id=329 data-nosnippet>329</a>        } <span class="kw">else </span>{
-<a href=#330 id=330 data-nosnippet>330</a>          strip_ansi(<span class="kw-2">&amp;</span>painted_message)
-<a href=#331 id=331 data-nosnippet>331</a>        };
-<a href=#332 id=332 data-nosnippet>332</a>        <span class="kw">let </span><span class="kw-2">mut </span>err = std::io::stderr().lock();
-<a href=#333 id=333 data-nosnippet>333</a>        <span class="kw">if </span>!STDERR_AT_LINE_START.load(Ordering::Acquire) {
-<a href=#334 id=334 data-nosnippet>334</a>          <span class="kw">let _ </span>= err.write_all(<span class="string">b"\n"</span>);
-<a href=#335 id=335 data-nosnippet>335</a>        }
-<a href=#336 id=336 data-nosnippet>336</a>        <span class="kw">let _ </span>= err.write_all(text.as_bytes());
-<a href=#337 id=337 data-nosnippet>337</a>        <span class="kw">let _ </span>= err.write_all(<span class="string">b"\n"</span>);
-<a href=#338 id=338 data-nosnippet>338</a>        <span class="kw">let _ </span>= err.flush();
-<a href=#339 id=339 data-nosnippet>339</a>        STDERR_AT_LINE_START.store(<span class="bool-val">true</span>, Ordering::Release);
-<a href=#340 id=340 data-nosnippet>340</a>      }
-<a href=#341 id=341 data-nosnippet>341</a>    }
-<a href=#342 id=342 data-nosnippet>342</a>  }
-<a href=#343 id=343 data-nosnippet>343</a>
-<a href=#344 id=344 data-nosnippet>344</a>  <span class="kw">fn </span>flush(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
-<a href=#345 id=345 data-nosnippet>345</a>}
-<a href=#346 id=346 data-nosnippet>346</a>
-<a href=#347 id=347 data-nosnippet>347</a><span class="doccomment">/// initialize the logger at a given verbosity `level`
-<a href=#348 id=348 data-nosnippet>348</a>///
-<a href=#349 id=349 data-nosnippet>349</a>/// Returns the underlying `SetLoggerError` if another `log` global logger
-<a href=#350 id=350 data-nosnippet>350</a>/// is already installed (e.g. an embedder set up `tracing-log` first).
-<a href=#351 id=351 data-nosnippet>351</a>/// Callers can decide whether to ignore that — the in-process `bind_log` /
-<a href=#352 id=352 data-nosnippet>352</a>/// `flush_log` buffers are independent of the `log` crate sink and keep
-<a href=#353 id=353 data-nosnippet>353</a>/// working either way.
-<a href=#354 id=354 data-nosnippet>354</a></span><span class="kw">pub fn </span>init(level: LevelFilter) -&gt; <span class="prelude-ty">Result</span>&lt;(), SetLoggerError&gt; {
-<a href=#355 id=355 data-nosnippet>355</a>  log::set_logger(<span class="kw-2">&amp;</span>LOGGER)<span class="question-mark">?</span>;
-<a href=#356 id=356 data-nosnippet>356</a>  log::set_max_level(level);
-<a href=#357 id=357 data-nosnippet>357</a>  <span class="prelude-val">Ok</span>(())
-<a href=#358 id=358 data-nosnippet>358</a>}
-<a href=#359 id=359 data-nosnippet>359</a>
-<a href=#360 id=360 data-nosnippet>360</a><span class="attr">#[cfg(test)]
-<a href=#361 id=361 data-nosnippet>361</a></span><span class="kw">mod </span>tests {
-<a href=#362 id=362 data-nosnippet>362</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#363 id=363 data-nosnippet>363</a>
-<a href=#364 id=364 data-nosnippet>364</a>  <span class="attr">#[test]
-<a href=#365 id=365 data-nosnippet>365</a>  </span><span class="kw">fn </span>append_note_inline_and_no_blank_lines() {
-<a href=#366 id=366 data-nosnippet>366</a>    <span class="comment">// note_begin opens a fresh line; note_end / note_progress stay inline.
-<a href=#367 id=367 data-nosnippet>367</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>b = String::new();
-<a href=#368 id=368 data-nosnippet>368</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"\n(Loading keyval.sty..."</span>); <span class="comment">// note_begin (buffer empty: no leading blank)
-<a href=#369 id=369 data-nosnippet>369</a>    </span>append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">" )"</span>); <span class="comment">// note_end inline
-<a href=#370 id=370 data-nosnippet>370</a>    </span><span class="macro">assert_eq!</span>(b, <span class="string">"(Loading keyval.sty... )"</span>);
-<a href=#371 id=371 data-nosnippet>371</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"\n(Loading graphics.sty..."</span>); <span class="comment">// mid-line: keep the break
-<a href=#372 id=372 data-nosnippet>372</a>    </span>append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">" )"</span>);
-<a href=#373 id=373 data-nosnippet>373</a>    <span class="macro">assert_eq!</span>(b, <span class="string">"(Loading keyval.sty... )\n(Loading graphics.sty... )"</span>);
-<a href=#374 id=374 data-nosnippet>374</a>    <span class="comment">// page markers chain inline
-<a href=#375 id=375 data-nosnippet>375</a>    </span>append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"\n410 formulae ..."</span>);
-<a href=#376 id=376 data-nosnippet>376</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"[1]"</span>);
-<a href=#377 id=377 data-nosnippet>377</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"[2]"</span>);
-<a href=#378 id=378 data-nosnippet>378</a>    <span class="macro">assert!</span>(b.ends_with(<span class="string">"410 formulae ...[1][2]"</span>));
-<a href=#379 id=379 data-nosnippet>379</a>    <span class="comment">// a leading '\n' note after a buffer already at line-start collapses (no blank line)
-<a href=#380 id=380 data-nosnippet>380</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>c = String::from(<span class="string">"Info:foo\n"</span>);
-<a href=#381 id=381 data-nosnippet>381</a>    append_note(<span class="kw-2">&amp;mut </span>c, <span class="string">"\n(Building..."</span>);
-<a href=#382 id=382 data-nosnippet>382</a>    <span class="macro">assert_eq!</span>(c, <span class="string">"Info:foo\n(Building..."</span>);
-<a href=#383 id=383 data-nosnippet>383</a>  }
-<a href=#384 id=384 data-nosnippet>384</a>
-<a href=#385 id=385 data-nosnippet>385</a>  <span class="attr">#[test]
-<a href=#386 id=386 data-nosnippet>386</a>  </span><span class="kw">fn </span>strip_ansi_removes_color_codes() {
-<a href=#387 id=387 data-nosnippet>387</a>    <span class="comment">// ESC [ ... m should vanish; other content preserved.
-<a href=#388 id=388 data-nosnippet>388</a>    </span><span class="kw">let </span>red = <span class="string">"\x1b[31mhello\x1b[0m"</span>;
-<a href=#389 id=389 data-nosnippet>389</a>    <span class="macro">assert_eq!</span>(strip_ansi(red), <span class="string">"hello"</span>);
-<a href=#390 id=390 data-nosnippet>390</a>  }
-<a href=#391 id=391 data-nosnippet>391</a>
-<a href=#392 id=392 data-nosnippet>392</a>  <span class="attr">#[test]
-<a href=#393 id=393 data-nosnippet>393</a>  </span><span class="kw">fn </span>strip_ansi_noop_on_plain() {
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="macro">assert_eq!</span>(strip_ansi(<span class="string">"plain text"</span>), <span class="string">"plain text"</span>);
-<a href=#395 id=395 data-nosnippet>395</a>    <span class="macro">assert_eq!</span>(strip_ansi(<span class="string">""</span>), <span class="string">""</span>);
-<a href=#396 id=396 data-nosnippet>396</a>  }
-<a href=#397 id=397 data-nosnippet>397</a>
-<a href=#398 id=398 data-nosnippet>398</a>  <span class="attr">#[test]
-<a href=#399 id=399 data-nosnippet>399</a>  </span><span class="kw">fn </span>strip_ansi_multiple_sequences() {
-<a href=#400 id=400 data-nosnippet>400</a>    <span class="kw">let </span>s = <span class="string">"\x1b[31merror:\x1b[0m \x1b[33mwarning\x1b[0m"</span>;
-<a href=#401 id=401 data-nosnippet>401</a>    <span class="macro">assert_eq!</span>(strip_ansi(s), <span class="string">"error: warning"</span>);
-<a href=#402 id=402 data-nosnippet>402</a>  }
-<a href=#403 id=403 data-nosnippet>403</a>
-<a href=#404 id=404 data-nosnippet>404</a>  <span class="attr">#[test]
-<a href=#405 id=405 data-nosnippet>405</a>  </span><span class="kw">fn </span>strip_ansi_preserves_unicode() {
-<a href=#406 id=406 data-nosnippet>406</a>    <span class="kw">let </span>s = <span class="string">"\x1b[31mαβγ\x1b[0m"</span>;
-<a href=#407 id=407 data-nosnippet>407</a>    <span class="macro">assert_eq!</span>(strip_ansi(s), <span class="string">"αβγ"</span>);
-<a href=#408 id=408 data-nosnippet>408</a>  }
-<a href=#409 id=409 data-nosnippet>409</a>
-<a href=#410 id=410 data-nosnippet>410</a>  <span class="attr">#[test]
-<a href=#411 id=411 data-nosnippet>411</a>  </span><span class="kw">fn </span>strip_ansi_handles_incomplete_escape() {
-<a href=#412 id=412 data-nosnippet>412</a>    <span class="comment">// Unterminated ESC[ sequence — we should not hang.
-<a href=#413 id=413 data-nosnippet>413</a>    // Current impl: scan until 'm' is found. If never found, consumes
-<a href=#414 id=414 data-nosnippet>414</a>    // the rest of the input. Document that behavior.
-<a href=#415 id=415 data-nosnippet>415</a>    </span><span class="kw">let </span>s = <span class="string">"\x1b[1;31m hello"</span>;
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="comment">// The scan consumes characters until 'm' is found → the 'm' in the
-<a href=#417 id=417 data-nosnippet>417</a>    // escape closes, then " hello" remains.
-<a href=#418 id=418 data-nosnippet>418</a>    </span><span class="macro">assert_eq!</span>(strip_ansi(s), <span class="string">" hello"</span>);
-<a href=#419 id=419 data-nosnippet>419</a>  }
-<a href=#420 id=420 data-nosnippet>420</a>
-<a href=#421 id=421 data-nosnippet>421</a>  <span class="attr">#[test]
-<a href=#422 id=422 data-nosnippet>422</a>  </span><span class="kw">fn </span>bind_log_and_flush_log_roundtrip() {
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="comment">// Before bind_log, flush_log returns empty.
-<a href=#424 id=424 data-nosnippet>424</a>    // After bind_log, the buffer is active but empty until a log
-<a href=#425 id=425 data-nosnippet>425</a>    // message arrives. Since we can't easily exercise the Log impl
-<a href=#426 id=426 data-nosnippet>426</a>    // without initializing a global logger, just verify the
-<a href=#427 id=427 data-nosnippet>427</a>    // capture-buffer lifecycle primitives.
-<a href=#428 id=428 data-nosnippet>428</a>    </span><span class="kw">let </span>before = flush_log();
-<a href=#429 id=429 data-nosnippet>429</a>    <span class="macro">assert!</span>(before.is_empty(), <span class="string">"no active buffer → empty flush"</span>);
-<a href=#430 id=430 data-nosnippet>430</a>
-<a href=#431 id=431 data-nosnippet>431</a>    bind_log();
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="kw">let </span>after = flush_log();
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="macro">assert!</span>(
-<a href=#434 id=434 data-nosnippet>434</a>      after.is_empty(),
-<a href=#435 id=435 data-nosnippet>435</a>      <span class="string">"empty buffer is still empty after bind/flush with no log traffic"
-<a href=#436 id=436 data-nosnippet>436</a>    </span>);
-<a href=#437 id=437 data-nosnippet>437</a>  }
-<a href=#438 id=438 data-nosnippet>438</a>}
+<a href=#272 id=272 data-nosnippet>272</a>      <span class="comment">// Tally every printed diagnostic record that was NOT emitted by a
+<a href=#273 id=273 data-nosnippet>273</a>      // counting macro (those count at raise time, even under output
+<a href=#274 id=274 data-nosnippet>274</a>      // suppression — the MAX_ERRORS cap depends on that). This is the
+<a href=#275 id=275 data-nosnippet>275</a>      // lossless half of the tally contract: any `Warning:`/`Error:` line
+<a href=#276 id=276 data-nosnippet>276</a>      // this backend prints from a raw `log::warn!`/`log::error!` call now
+<a href=#277 id=277 data-nosnippet>277</a>      // registers in `REPORT`, so the final "Conversion complete: N
+<a href=#278 id=278 data-nosnippet>278</a>      // warnings" agrees with what a reader greps from the log. Witness:
+<a href=#279 id=279 data-nosnippet>279</a>      // the 131 MB witness logged 12,105 `Warning:` lines (12,103 of them
+<a href=#280 id=280 data-nosnippet>280</a>      // the math parser's raw `log_math_warn!`) and reported "2 warnings".
+<a href=#281 id=281 data-nosnippet>281</a>      </span>{
+<a href=#282 id=282 data-nosnippet>282</a>        <span class="kw">use </span><span class="kw">crate</span>::common::error::{LogStatus, note_status_from_logger};
+<a href=#283 id=283 data-nosnippet>283</a>        <span class="kw">let </span>status = <span class="kw">if </span>category_object.starts_with(<span class="string">"Fatal:"</span>) {
+<a href=#284 id=284 data-nosnippet>284</a>          <span class="prelude-val">Some</span>(LogStatus::Fatal)
+<a href=#285 id=285 data-nosnippet>285</a>        } <span class="kw">else </span>{
+<a href=#286 id=286 data-nosnippet>286</a>          <span class="kw">match </span>record.level() {
+<a href=#287 id=287 data-nosnippet>287</a>            Level::Warn =&gt; <span class="prelude-val">Some</span>(LogStatus::Warning),
+<a href=#288 id=288 data-nosnippet>288</a>            Level::Error =&gt; <span class="prelude-val">Some</span>(LogStatus::Error),
+<a href=#289 id=289 data-nosnippet>289</a>            Level::Info =&gt; <span class="prelude-val">Some</span>(LogStatus::Info),
+<a href=#290 id=290 data-nosnippet>290</a>            Level::Debug =&gt; <span class="prelude-val">Some</span>(LogStatus::Debug),
+<a href=#291 id=291 data-nosnippet>291</a>            <span class="comment">// No Trace counter exists; Trace records stay uncounted.
+<a href=#292 id=292 data-nosnippet>292</a>            </span>Level::Trace =&gt; <span class="prelude-val">None</span>,
+<a href=#293 id=293 data-nosnippet>293</a>          }
+<a href=#294 id=294 data-nosnippet>294</a>        };
+<a href=#295 id=295 data-nosnippet>295</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(status) = status {
+<a href=#296 id=296 data-nosnippet>296</a>          note_status_from_logger(status);
+<a href=#297 id=297 data-nosnippet>297</a>        }
+<a href=#298 id=298 data-nosnippet>298</a>      }
+<a href=#299 id=299 data-nosnippet>299</a>      <span class="kw">let </span>message = <span class="kw">if </span>severity.is_empty() {
+<a href=#300 id=300 data-nosnippet>300</a>        <span class="macro">s!</span>(<span class="string">"{} "</span>, category_object)
+<a href=#301 id=301 data-nosnippet>301</a>      } <span class="kw">else </span>{
+<a href=#302 id=302 data-nosnippet>302</a>        <span class="macro">s!</span>(<span class="string">"{}:{} "</span>, severity, category_object)
+<a href=#303 id=303 data-nosnippet>303</a>      };
+<a href=#304 id=304 data-nosnippet>304</a>      <span class="kw">let </span>painted_message = <span class="kw">match </span>record.level() {
+<a href=#305 id=305 data-nosnippet>305</a>        Level::Info =&gt; message,
+<a href=#306 id=306 data-nosnippet>306</a>        Level::Warn =&gt; paint(ANSI_YELLOW, <span class="kw-2">&amp;</span>message),
+<a href=#307 id=307 data-nosnippet>307</a>        Level::Error =&gt; paint(ANSI_RED, <span class="kw-2">&amp;</span>message),
+<a href=#308 id=308 data-nosnippet>308</a>        Level::Debug =&gt; paint(ANSI_GREEN, <span class="kw-2">&amp;</span>message),
+<a href=#309 id=309 data-nosnippet>309</a>        <span class="kw">_ </span>=&gt; paint(ANSI_WHITE, <span class="kw-2">&amp;</span>message),
+<a href=#310 id=310 data-nosnippet>310</a>      } + <span class="kw-2">&amp;</span>details.to_string();
+<a href=#311 id=311 data-nosnippet>311</a>
+<a href=#312 id=312 data-nosnippet>312</a>      <span class="comment">// Capture to log buffer if active (strip ANSI for clean log text).
+<a href=#313 id=313 data-nosnippet>313</a>      // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
+<a href=#314 id=314 data-nosnippet>314</a>      // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)
+<a href=#315 id=315 data-nosnippet>315</a>      // matches and the record never glues onto an in-flight progress note
+<a href=#316 id=316 data-nosnippet>316</a>      // (notes no longer force a trailing newline — see append_note).
+<a href=#317 id=317 data-nosnippet>317</a>      </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>buf) = LOG_BUFFER.try_borrow_mut()
+<a href=#318 id=318 data-nosnippet>318</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>log) = <span class="kw-2">*</span>buf
+<a href=#319 id=319 data-nosnippet>319</a>      {
+<a href=#320 id=320 data-nosnippet>320</a>        <span class="kw">if </span>!log.is_empty() &amp;&amp; !log.ends_with(<span class="string">'\n'</span>) {
+<a href=#321 id=321 data-nosnippet>321</a>          log.push(<span class="string">'\n'</span>);
+<a href=#322 id=322 data-nosnippet>322</a>        }
+<a href=#323 id=323 data-nosnippet>323</a>        log.push_str(<span class="kw-2">&amp;</span>strip_ansi(<span class="kw-2">&amp;</span>painted_message));
+<a href=#324 id=324 data-nosnippet>324</a>        <span class="comment">// Exactly one trailing newline — a multi-detail message (e.g.
+<a href=#325 id=325 data-nosnippet>325</a>        // `Info:…loaded …\n\tat …\n\tIn …`) already ends with '\n', so an
+<a href=#326 id=326 data-nosnippet>326</a>        // unconditional push would double it into a blank line before the next
+<a href=#327 id=327 data-nosnippet>327</a>        // `(Loading …` note.
+<a href=#328 id=328 data-nosnippet>328</a>        </span><span class="kw">if </span>!log.ends_with(<span class="string">'\n'</span>) {
+<a href=#329 id=329 data-nosnippet>329</a>          log.push(<span class="string">'\n'</span>);
+<a href=#330 id=330 data-nosnippet>330</a>        }
+<a href=#331 id=331 data-nosnippet>331</a>      }
+<a href=#332 id=332 data-nosnippet>332</a>
+<a href=#333 id=333 data-nosnippet>333</a>      <span class="comment">// Use `\n` (not `\r`) to guarantee each log line starts on a fresh
+<a href=#334 id=334 data-nosnippet>334</a>      // line in both TTY and file output. The previous `\r` prefix made
+<a href=#335 id=335 data-nosnippet>335</a>      // log lines visually overlay any in-flight progress indicator like
+<a href=#336 id=336 data-nosnippet>336</a>      // `(Loading "foo.sty" definitions... )` — convenient in a terminal
+<a href=#337 id=337 data-nosnippet>337</a>      // but produced `(...)&lt;CR&gt;Error:...` byte sequences in log files,
+<a href=#338 id=338 data-nosnippet>338</a>      // breaking line-anchored counts in canvas harnesses
+<a href=#339 id=339 data-nosnippet>339</a>      // (`grep -cE '^...Error:'` silently returned 0 even when errors
+<a href=#340 id=340 data-nosnippet>340</a>      // were present). Trade-off: progress indicators in a TTY no longer
+<a href=#341 id=341 data-nosnippet>341</a>      // get overwritten, but they were not really self-erasing anyway
+<a href=#342 id=342 data-nosnippet>342</a>      // (they always emitted ` )` to close their parens), so the visual
+<a href=#343 id=343 data-nosnippet>343</a>      // change is small.
+<a href=#344 id=344 data-nosnippet>344</a>      // Colorize for an interactive terminal only; when stderr is redirected
+<a href=#345 id=345 data-nosnippet>345</a>      // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
+<a href=#346 id=346 data-nosnippet>346</a>      // grep-clean (matches the captured `.latexml.log` buffer above).
+<a href=#347 id=347 data-nosnippet>347</a>      // Break onto a fresh line ONLY when a note left the cursor mid-line —
+<a href=#348 id=348 data-nosnippet>348</a>      // an unconditional leading '\n' was 45.8% of the witness's log (see
+<a href=#349 id=349 data-nosnippet>349</a>      // STDERR_AT_LINE_START). One critical section: read the flag, write, and
+<a href=#350 id=350 data-nosnippet>350</a>      // republish it while holding the stderr lock, so the "record starts at
+<a href=#351 id=351 data-nosnippet>351</a>      // line start" guarantee survives concurrent loggers.
+<a href=#352 id=352 data-nosnippet>352</a>      </span>{
+<a href=#353 id=353 data-nosnippet>353</a>        <span class="kw">use </span>std::io::Write;
+<a href=#354 id=354 data-nosnippet>354</a>        <span class="kw">let </span>text = <span class="kw">if </span>stderr_use_color() {
+<a href=#355 id=355 data-nosnippet>355</a>          painted_message
+<a href=#356 id=356 data-nosnippet>356</a>        } <span class="kw">else </span>{
+<a href=#357 id=357 data-nosnippet>357</a>          strip_ansi(<span class="kw-2">&amp;</span>painted_message)
+<a href=#358 id=358 data-nosnippet>358</a>        };
+<a href=#359 id=359 data-nosnippet>359</a>        <span class="kw">let </span><span class="kw-2">mut </span>err = std::io::stderr().lock();
+<a href=#360 id=360 data-nosnippet>360</a>        <span class="kw">if </span>!STDERR_AT_LINE_START.load(Ordering::Acquire) {
+<a href=#361 id=361 data-nosnippet>361</a>          <span class="kw">let _ </span>= err.write_all(<span class="string">b"\n"</span>);
+<a href=#362 id=362 data-nosnippet>362</a>        }
+<a href=#363 id=363 data-nosnippet>363</a>        <span class="kw">let _ </span>= err.write_all(text.as_bytes());
+<a href=#364 id=364 data-nosnippet>364</a>        <span class="kw">let _ </span>= err.write_all(<span class="string">b"\n"</span>);
+<a href=#365 id=365 data-nosnippet>365</a>        <span class="kw">let _ </span>= err.flush();
+<a href=#366 id=366 data-nosnippet>366</a>        STDERR_AT_LINE_START.store(<span class="bool-val">true</span>, Ordering::Release);
+<a href=#367 id=367 data-nosnippet>367</a>      }
+<a href=#368 id=368 data-nosnippet>368</a>    }
+<a href=#369 id=369 data-nosnippet>369</a>  }
+<a href=#370 id=370 data-nosnippet>370</a>
+<a href=#371 id=371 data-nosnippet>371</a>  <span class="kw">fn </span>flush(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
+<a href=#372 id=372 data-nosnippet>372</a>}
+<a href=#373 id=373 data-nosnippet>373</a>
+<a href=#374 id=374 data-nosnippet>374</a><span class="doccomment">/// initialize the logger at a given verbosity `level`
+<a href=#375 id=375 data-nosnippet>375</a>///
+<a href=#376 id=376 data-nosnippet>376</a>/// Returns the underlying `SetLoggerError` if another `log` global logger
+<a href=#377 id=377 data-nosnippet>377</a>/// is already installed (e.g. an embedder set up `tracing-log` first).
+<a href=#378 id=378 data-nosnippet>378</a>/// Callers can decide whether to ignore that — the in-process `bind_log` /
+<a href=#379 id=379 data-nosnippet>379</a>/// `flush_log` buffers are independent of the `log` crate sink and keep
+<a href=#380 id=380 data-nosnippet>380</a>/// working either way.
+<a href=#381 id=381 data-nosnippet>381</a></span><span class="kw">pub fn </span>init(level: LevelFilter) -&gt; <span class="prelude-ty">Result</span>&lt;(), SetLoggerError&gt; {
+<a href=#382 id=382 data-nosnippet>382</a>  log::set_logger(<span class="kw-2">&amp;</span>LOGGER)<span class="question-mark">?</span>;
+<a href=#383 id=383 data-nosnippet>383</a>  log::set_max_level(level);
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="prelude-val">Ok</span>(())
+<a href=#385 id=385 data-nosnippet>385</a>}
+<a href=#386 id=386 data-nosnippet>386</a>
+<a href=#387 id=387 data-nosnippet>387</a><span class="attr">#[cfg(test)]
+<a href=#388 id=388 data-nosnippet>388</a></span><span class="kw">mod </span>tests {
+<a href=#389 id=389 data-nosnippet>389</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#390 id=390 data-nosnippet>390</a>
+<a href=#391 id=391 data-nosnippet>391</a>  <span class="attr">#[test]
+<a href=#392 id=392 data-nosnippet>392</a>  </span><span class="kw">fn </span>append_note_inline_and_no_blank_lines() {
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="comment">// note_begin opens a fresh line; note_end / note_progress stay inline.
+<a href=#394 id=394 data-nosnippet>394</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>b = String::new();
+<a href=#395 id=395 data-nosnippet>395</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"\n(Loading keyval.sty..."</span>); <span class="comment">// note_begin (buffer empty: no leading blank)
+<a href=#396 id=396 data-nosnippet>396</a>    </span>append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">" )"</span>); <span class="comment">// note_end inline
+<a href=#397 id=397 data-nosnippet>397</a>    </span><span class="macro">assert_eq!</span>(b, <span class="string">"(Loading keyval.sty... )"</span>);
+<a href=#398 id=398 data-nosnippet>398</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"\n(Loading graphics.sty..."</span>); <span class="comment">// mid-line: keep the break
+<a href=#399 id=399 data-nosnippet>399</a>    </span>append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">" )"</span>);
+<a href=#400 id=400 data-nosnippet>400</a>    <span class="macro">assert_eq!</span>(b, <span class="string">"(Loading keyval.sty... )\n(Loading graphics.sty... )"</span>);
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="comment">// page markers chain inline
+<a href=#402 id=402 data-nosnippet>402</a>    </span>append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"\n410 formulae ..."</span>);
+<a href=#403 id=403 data-nosnippet>403</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"[1]"</span>);
+<a href=#404 id=404 data-nosnippet>404</a>    append_note(<span class="kw-2">&amp;mut </span>b, <span class="string">"[2]"</span>);
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="macro">assert!</span>(b.ends_with(<span class="string">"410 formulae ...[1][2]"</span>));
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="comment">// a leading '\n' note after a buffer already at line-start collapses (no blank line)
+<a href=#407 id=407 data-nosnippet>407</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>c = String::from(<span class="string">"Info:foo\n"</span>);
+<a href=#408 id=408 data-nosnippet>408</a>    append_note(<span class="kw-2">&amp;mut </span>c, <span class="string">"\n(Building..."</span>);
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="macro">assert_eq!</span>(c, <span class="string">"Info:foo\n(Building..."</span>);
+<a href=#410 id=410 data-nosnippet>410</a>  }
+<a href=#411 id=411 data-nosnippet>411</a>
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="doccomment">/// The lossless-tally contract (user directive 2026-08-02): every printed
+<a href=#413 id=413 data-nosnippet>413</a>  /// diagnostic record counts exactly once, whether it came from a counting
+<a href=#414 id=414 data-nosnippet>414</a>  /// macro (raise-time count, logger skips) or a raw `log::warn!`-family call
+<a href=#415 id=415 data-nosnippet>415</a>  /// (logger counts). Defect this pins: the 131 MB witness logged 12,105
+<a href=#416 id=416 data-nosnippet>416</a>  /// `Warning:` lines — 12,103 from the math parser's raw `log_math_warn!` —
+<a href=#417 id=417 data-nosnippet>417</a>  /// and the final verdict said "2 warnings".
+<a href=#418 id=418 data-nosnippet>418</a>  ///
+<a href=#419 id=419 data-nosnippet>419</a>  /// One test, not several: the global logger and the thread-local `REPORT`
+<a href=#420 id=420 data-nosnippet>420</a>  /// are both process/thread state, and cargo runs sibling `#[test]`s on
+<a href=#421 id=421 data-nosnippet>421</a>  /// separate threads — but a SINGLE test body sees one thread and one
+<a href=#422 id=422 data-nosnippet>422</a>  /// deterministic sequence.
+<a href=#423 id=423 data-nosnippet>423</a>  </span><span class="attr">#[test]
+<a href=#424 id=424 data-nosnippet>424</a>  </span><span class="kw">fn </span>raw_log_records_count_and_macro_records_do_not_double_count() {
+<a href=#425 id=425 data-nosnippet>425</a>    <span class="kw">use </span><span class="kw">crate</span>::common::error::{
+<a href=#426 id=426 data-nosnippet>426</a>      LogStatus, get_status, initialize_report, macro_diag_guard, note_status,
+<a href=#427 id=427 data-nosnippet>427</a>      note_status_from_logger,
+<a href=#428 id=428 data-nosnippet>428</a>    };
+<a href=#429 id=429 data-nosnippet>429</a>    <span class="comment">// Another test may have installed the logger already; counting rides
+<a href=#430 id=430 data-nosnippet>430</a>    // note_status_from_logger either way, so drive it exactly as
+<a href=#431 id=431 data-nosnippet>431</a>    // `LatexmlLogger::log` does rather than through the global sink.
+<a href=#432 id=432 data-nosnippet>432</a>    </span>initialize_report();
+<a href=#433 id=433 data-nosnippet>433</a>
+<a href=#434 id=434 data-nosnippet>434</a>    <span class="comment">// Raw record: the logger's tally path counts it.
+<a href=#435 id=435 data-nosnippet>435</a>    </span>note_status_from_logger(LogStatus::Warning);
+<a href=#436 id=436 data-nosnippet>436</a>    <span class="macro">assert_eq!</span>(get_status(LogStatus::Warning), <span class="number">1</span>, <span class="string">"raw warning must count"</span>);
+<a href=#437 id=437 data-nosnippet>437</a>
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="comment">// Macro-emitted record: raise-time count happens under the guard, and
+<a href=#439 id=439 data-nosnippet>439</a>    // the logger's observation of the same record must be a no-op.
+<a href=#440 id=440 data-nosnippet>440</a>    </span>{
+<a href=#441 id=441 data-nosnippet>441</a>      <span class="kw">let </span>_g = macro_diag_guard();
+<a href=#442 id=442 data-nosnippet>442</a>      note_status(LogStatus::Warning, <span class="prelude-val">None</span>); <span class="comment">// what the macro does
+<a href=#443 id=443 data-nosnippet>443</a>      </span>note_status_from_logger(LogStatus::Warning); <span class="comment">// what the logger then sees
+<a href=#444 id=444 data-nosnippet>444</a>    </span>}
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="macro">assert_eq!</span>(
+<a href=#446 id=446 data-nosnippet>446</a>      get_status(LogStatus::Warning),
+<a href=#447 id=447 data-nosnippet>447</a>      <span class="number">2</span>,
+<a href=#448 id=448 data-nosnippet>448</a>      <span class="string">"a macro warning counts once, not twice"
+<a href=#449 id=449 data-nosnippet>449</a>    </span>);
+<a href=#450 id=450 data-nosnippet>450</a>
+<a href=#451 id=451 data-nosnippet>451</a>    <span class="comment">// Nested guards (Error! escalating into Fatal!) keep the marker set.
+<a href=#452 id=452 data-nosnippet>452</a>    </span>{
+<a href=#453 id=453 data-nosnippet>453</a>      <span class="kw">let </span>_outer = macro_diag_guard();
+<a href=#454 id=454 data-nosnippet>454</a>      {
+<a href=#455 id=455 data-nosnippet>455</a>        <span class="kw">let </span>_inner = macro_diag_guard();
+<a href=#456 id=456 data-nosnippet>456</a>      }
+<a href=#457 id=457 data-nosnippet>457</a>      note_status_from_logger(LogStatus::Error);
+<a href=#458 id=458 data-nosnippet>458</a>    }
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="macro">assert_eq!</span>(
+<a href=#460 id=460 data-nosnippet>460</a>      get_status(LogStatus::Error),
+<a href=#461 id=461 data-nosnippet>461</a>      <span class="number">0</span>,
+<a href=#462 id=462 data-nosnippet>462</a>      <span class="string">"the logger stays muted for the whole macro emission, even after a \
+<a href=#463 id=463 data-nosnippet>463</a>       nested guard drops"
+<a href=#464 id=464 data-nosnippet>464</a>    </span>);
+<a href=#465 id=465 data-nosnippet>465</a>
+<a href=#466 id=466 data-nosnippet>466</a>    <span class="comment">// Raw error and a raw Fatal-target record (log_fatal's shape when some
+<a href=#467 id=467 data-nosnippet>467</a>    // future caller bypasses it): the error counts, the fatal latches.
+<a href=#468 id=468 data-nosnippet>468</a>    </span>note_status_from_logger(LogStatus::Error);
+<a href=#469 id=469 data-nosnippet>469</a>    note_status_from_logger(LogStatus::Fatal);
+<a href=#470 id=470 data-nosnippet>470</a>    <span class="macro">assert_eq!</span>(get_status(LogStatus::Error), <span class="number">1</span>);
+<a href=#471 id=471 data-nosnippet>471</a>    <span class="macro">assert_eq!</span>(get_status(LogStatus::Fatal), <span class="number">1</span>, <span class="string">"raw fatal latches sticky"</span>);
+<a href=#472 id=472 data-nosnippet>472</a>    initialize_report();
+<a href=#473 id=473 data-nosnippet>473</a>  }
+<a href=#474 id=474 data-nosnippet>474</a>
+<a href=#475 id=475 data-nosnippet>475</a>  <span class="doccomment">/// Suppression semantics (user decision 2026-08-03): Debug/Info/Warning
+<a href=#476 id=476 data-nosnippet>476</a>  /// records are muted under suppression, but Error and Fatal EMIT
+<a href=#477 id=477 data-nosnippet>477</a>  /// UNCONDITIONALLY — cortex-class frameworks aggregate success rates from
+<a href=#478 id=478 data-nosnippet>478</a>  /// `Error:`/`Fatal:` lines, and a suppressed error would vanish from that
+<a href=#479 id=479 data-nosnippet>479</a>  /// measurement while still counting locally. Counts accrue either way.
+<a href=#480 id=480 data-nosnippet>480</a>  </span><span class="attr">#[test]
+<a href=#481 id=481 data-nosnippet>481</a>  </span><span class="kw">fn </span>suppression_never_mutes_error_or_fatal() {
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="kw">use </span><span class="kw">crate</span>::common::error::{
+<a href=#483 id=483 data-nosnippet>483</a>      LogStatus, emit_record, get_status, initialize_report, set_suppress_log_output,
+<a href=#484 id=484 data-nosnippet>484</a>    };
+<a href=#485 id=485 data-nosnippet>485</a>    initialize_report();
+<a href=#486 id=486 data-nosnippet>486</a>    <span class="kw">let _ </span>= log::set_logger(<span class="kw-2">&amp;</span>LOGGER); <span class="comment">// ok if another test installed it
+<a href=#487 id=487 data-nosnippet>487</a>    </span>log::set_max_level(LevelFilter::Warn);
+<a href=#488 id=488 data-nosnippet>488</a>    <span class="kw">let </span>prev = set_suppress_log_output(<span class="bool-val">true</span>);
+<a href=#489 id=489 data-nosnippet>489</a>
+<a href=#490 id=490 data-nosnippet>490</a>    bind_log();
+<a href=#491 id=491 data-nosnippet>491</a>    emit_record(LogStatus::Warning, <span class="string">"quiet:warn"</span>, <span class="string">"muted warning"</span>);
+<a href=#492 id=492 data-nosnippet>492</a>    emit_record(LogStatus::Error, <span class="string">"loud:error"</span>, <span class="string">"unmutable error"</span>);
+<a href=#493 id=493 data-nosnippet>493</a>    emit_record(LogStatus::Fatal, <span class="string">"Fatal:loud:fatal "</span>, <span class="string">"unmutable fatal"</span>);
+<a href=#494 id=494 data-nosnippet>494</a>    <span class="kw">let </span>captured = flush_log();
+<a href=#495 id=495 data-nosnippet>495</a>
+<a href=#496 id=496 data-nosnippet>496</a>    set_suppress_log_output(prev);
+<a href=#497 id=497 data-nosnippet>497</a>    <span class="macro">assert!</span>(
+<a href=#498 id=498 data-nosnippet>498</a>      !captured.contains(<span class="string">"muted warning"</span>),
+<a href=#499 id=499 data-nosnippet>499</a>      <span class="string">"suppression must mute Warning records, captured:\n{captured}"
+<a href=#500 id=500 data-nosnippet>500</a>    </span>);
+<a href=#501 id=501 data-nosnippet>501</a>    <span class="macro">assert!</span>(
+<a href=#502 id=502 data-nosnippet>502</a>      captured.contains(<span class="string">"Error:loud:error unmutable error"</span>),
+<a href=#503 id=503 data-nosnippet>503</a>      <span class="string">"Error must emit under suppression, captured:\n{captured}"
+<a href=#504 id=504 data-nosnippet>504</a>    </span>);
+<a href=#505 id=505 data-nosnippet>505</a>    <span class="comment">// (Fatal targets carry their own trailing space, so the formatter's
+<a href=#506 id=506 data-nosnippet>506</a>    // separator makes it two — match the pieces, not the join.)
+<a href=#507 id=507 data-nosnippet>507</a>    </span><span class="macro">assert!</span>(
+<a href=#508 id=508 data-nosnippet>508</a>      captured.contains(<span class="string">"Fatal:loud:fatal"</span>) &amp;&amp; captured.contains(<span class="string">"unmutable fatal"</span>),
+<a href=#509 id=509 data-nosnippet>509</a>      <span class="string">"Fatal must emit under suppression, captured:\n{captured}"
+<a href=#510 id=510 data-nosnippet>510</a>    </span>);
+<a href=#511 id=511 data-nosnippet>511</a>    <span class="comment">// Counts accrue regardless of emission.
+<a href=#512 id=512 data-nosnippet>512</a>    </span><span class="macro">assert_eq!</span>(get_status(LogStatus::Warning), <span class="number">1</span>);
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="macro">assert_eq!</span>(get_status(LogStatus::Error), <span class="number">1</span>);
+<a href=#514 id=514 data-nosnippet>514</a>    <span class="macro">assert_eq!</span>(get_status(LogStatus::Fatal), <span class="number">1</span>);
+<a href=#515 id=515 data-nosnippet>515</a>    initialize_report();
+<a href=#516 id=516 data-nosnippet>516</a>  }
+<a href=#517 id=517 data-nosnippet>517</a>
+<a href=#518 id=518 data-nosnippet>518</a>  <span class="attr">#[test]
+<a href=#519 id=519 data-nosnippet>519</a>  </span><span class="kw">fn </span>strip_ansi_removes_color_codes() {
+<a href=#520 id=520 data-nosnippet>520</a>    <span class="comment">// ESC [ ... m should vanish; other content preserved.
+<a href=#521 id=521 data-nosnippet>521</a>    </span><span class="kw">let </span>red = <span class="string">"\x1b[31mhello\x1b[0m"</span>;
+<a href=#522 id=522 data-nosnippet>522</a>    <span class="macro">assert_eq!</span>(strip_ansi(red), <span class="string">"hello"</span>);
+<a href=#523 id=523 data-nosnippet>523</a>  }
+<a href=#524 id=524 data-nosnippet>524</a>
+<a href=#525 id=525 data-nosnippet>525</a>  <span class="attr">#[test]
+<a href=#526 id=526 data-nosnippet>526</a>  </span><span class="kw">fn </span>strip_ansi_noop_on_plain() {
+<a href=#527 id=527 data-nosnippet>527</a>    <span class="macro">assert_eq!</span>(strip_ansi(<span class="string">"plain text"</span>), <span class="string">"plain text"</span>);
+<a href=#528 id=528 data-nosnippet>528</a>    <span class="macro">assert_eq!</span>(strip_ansi(<span class="string">""</span>), <span class="string">""</span>);
+<a href=#529 id=529 data-nosnippet>529</a>  }
+<a href=#530 id=530 data-nosnippet>530</a>
+<a href=#531 id=531 data-nosnippet>531</a>  <span class="attr">#[test]
+<a href=#532 id=532 data-nosnippet>532</a>  </span><span class="kw">fn </span>strip_ansi_multiple_sequences() {
+<a href=#533 id=533 data-nosnippet>533</a>    <span class="kw">let </span>s = <span class="string">"\x1b[31merror:\x1b[0m \x1b[33mwarning\x1b[0m"</span>;
+<a href=#534 id=534 data-nosnippet>534</a>    <span class="macro">assert_eq!</span>(strip_ansi(s), <span class="string">"error: warning"</span>);
+<a href=#535 id=535 data-nosnippet>535</a>  }
+<a href=#536 id=536 data-nosnippet>536</a>
+<a href=#537 id=537 data-nosnippet>537</a>  <span class="attr">#[test]
+<a href=#538 id=538 data-nosnippet>538</a>  </span><span class="kw">fn </span>strip_ansi_preserves_unicode() {
+<a href=#539 id=539 data-nosnippet>539</a>    <span class="kw">let </span>s = <span class="string">"\x1b[31mαβγ\x1b[0m"</span>;
+<a href=#540 id=540 data-nosnippet>540</a>    <span class="macro">assert_eq!</span>(strip_ansi(s), <span class="string">"αβγ"</span>);
+<a href=#541 id=541 data-nosnippet>541</a>  }
+<a href=#542 id=542 data-nosnippet>542</a>
+<a href=#543 id=543 data-nosnippet>543</a>  <span class="attr">#[test]
+<a href=#544 id=544 data-nosnippet>544</a>  </span><span class="kw">fn </span>strip_ansi_handles_incomplete_escape() {
+<a href=#545 id=545 data-nosnippet>545</a>    <span class="comment">// Unterminated ESC[ sequence — we should not hang.
+<a href=#546 id=546 data-nosnippet>546</a>    // Current impl: scan until 'm' is found. If never found, consumes
+<a href=#547 id=547 data-nosnippet>547</a>    // the rest of the input. Document that behavior.
+<a href=#548 id=548 data-nosnippet>548</a>    </span><span class="kw">let </span>s = <span class="string">"\x1b[1;31m hello"</span>;
+<a href=#549 id=549 data-nosnippet>549</a>    <span class="comment">// The scan consumes characters until 'm' is found → the 'm' in the
+<a href=#550 id=550 data-nosnippet>550</a>    // escape closes, then " hello" remains.
+<a href=#551 id=551 data-nosnippet>551</a>    </span><span class="macro">assert_eq!</span>(strip_ansi(s), <span class="string">" hello"</span>);
+<a href=#552 id=552 data-nosnippet>552</a>  }
+<a href=#553 id=553 data-nosnippet>553</a>
+<a href=#554 id=554 data-nosnippet>554</a>  <span class="attr">#[test]
+<a href=#555 id=555 data-nosnippet>555</a>  </span><span class="kw">fn </span>bind_log_and_flush_log_roundtrip() {
+<a href=#556 id=556 data-nosnippet>556</a>    <span class="comment">// Before bind_log, flush_log returns empty.
+<a href=#557 id=557 data-nosnippet>557</a>    // After bind_log, the buffer is active but empty until a log
+<a href=#558 id=558 data-nosnippet>558</a>    // message arrives. Since we can't easily exercise the Log impl
+<a href=#559 id=559 data-nosnippet>559</a>    // without initializing a global logger, just verify the
+<a href=#560 id=560 data-nosnippet>560</a>    // capture-buffer lifecycle primitives.
+<a href=#561 id=561 data-nosnippet>561</a>    </span><span class="kw">let </span>before = flush_log();
+<a href=#562 id=562 data-nosnippet>562</a>    <span class="macro">assert!</span>(before.is_empty(), <span class="string">"no active buffer → empty flush"</span>);
+<a href=#563 id=563 data-nosnippet>563</a>
+<a href=#564 id=564 data-nosnippet>564</a>    bind_log();
+<a href=#565 id=565 data-nosnippet>565</a>    <span class="kw">let </span>after = flush_log();
+<a href=#566 id=566 data-nosnippet>566</a>    <span class="macro">assert!</span>(
+<a href=#567 id=567 data-nosnippet>567</a>      after.is_empty(),
+<a href=#568 id=568 data-nosnippet>568</a>      <span class="string">"empty buffer is still empty after bind/flush with no log traffic"
+<a href=#569 id=569 data-nosnippet>569</a>    </span>);
+<a href=#570 id=570 data-nosnippet>570</a>  }
+<a href=#571 id=571 data-nosnippet>571</a>}
 </code></pre></div></section></main></body></html>

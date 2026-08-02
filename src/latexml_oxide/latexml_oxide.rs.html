@@ -12,7 +12,7 @@
 <a href=#12 id=12 data-nosnippet>12</a>
 <a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>clap::Parser;
 <a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span>latexml::converter::Converter;
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
+<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat, error::emit_info};
 <a href=#16 id=16 data-nosnippet>16</a>
 <a href=#17 id=17 data-nosnippet>17</a><span class="doccomment">/// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
 <a href=#18 id=18 data-nosnippet>18</a>/// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
@@ -727,7 +727,7 @@
 <a href=#727 id=727 data-nosnippet>727</a>
 <a href=#728 id=728 data-nosnippet>728</a>  <span class="comment">// Persistent LSP Server mode — handle early before source file checks
 <a href=#729 id=729 data-nosnippet>729</a>  </span><span class="kw">if </span>cli.server {
-<a href=#730 id=730 data-nosnippet>730</a>    <span class="macro">log::info!</span>(<span class="string">"Starting persistent LSP server..."</span>);
+<a href=#730 id=730 data-nosnippet>730</a>    emit_info(<span class="string">"lsp"</span>, <span class="string">"server"</span>, <span class="string">"Starting persistent LSP server..."</span>);
 <a href=#731 id=731 data-nosnippet>731</a>    <span class="kw">let </span>max_memory = resolve_max_memory(cli.max_memory);
 <a href=#732 id=732 data-nosnippet>732</a>    latexml::lsp_server::run_lsp_server(cli.timeout, max_memory)<span class="question-mark">?</span>;
 <a href=#733 id=733 data-nosnippet>733</a>    process::exit(<span class="number">0</span>);
