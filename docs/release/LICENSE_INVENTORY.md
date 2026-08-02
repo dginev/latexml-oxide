@@ -214,7 +214,7 @@ original five signals despite being the largest native surface in the binary.
 | **libmarpa 8.6.2** | `libmarpa-sys` (git, `dginev/marpa`) | `MIT OR Apache-2.0` | `marpa.c`/`marpa_ami.c`/`marpa_codes.c` → **MIT** © 2018 Jeffrey Kegler; `marpa_avl.c`/`marpa_tavl.c` (Ben Pfaff's libavl) → **LGPL-3.0+** © FSF; `marpa_obs.c` (GNU obstack) → **LGPL-2.1+** © FSF | §3.3 |
 | **mimalloc** | `libmimalloc-sys` | `MIT` + crate-root `LICENSE.txt` © 2019 **Octavian Oncescu** (the wrapper author) | `c_src/mimalloc/**` → **MIT** © 2018-2025 **Microsoft Corporation, Daan Leijen** — a different holder than the harvested text | §3.4 |
 | **libkpathsea** | `kpathsea_sys` | `MIT OR Apache-2.0`, **no LICENSE file** | kpathsea C at `KPSE_REF` → **LGPL-2.1+** © Karl Berry, Olaf Weber et al. | §3.2 |
-| libxml2 / libxslt | `libxml` / `libxslt` | `MIT OR Apache-2.0` | system libxml2/libxslt/libexslt → **MIT** © Daniel Veillard — static in release | §3.1 |
+| libxml2 / libxslt | `libxml` / `libxslt` | `MIT` (naming the wrapper, not Veillard) | system libxml2/libxslt/libexslt → **MIT** © Daniel Veillard — static in release | §3.1 |
 
 How each evades the automated gate:
 - **libmarpa** vendors a **tarball**, so its `COPYING`/`COPYING.LESSER` are invisible
