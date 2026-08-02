@@ -207,15 +207,18 @@ AUDITED = {
         "OUT of the closure. If that flag is ever dropped, an LGPL library enters the "
         "static link and 3.5's relink note must cover it. Attributed in NOTICES 3.1."
     ),
-    "psm": ("0.1.31",
+    "psm": (("0.1.31", "0.1.32"),
         "Compiles its own portable stack-manipulation asm shims, and ships a prebuilt "
         "wasm32.o (a target we do not release). Own copyright, covered by the crate's "
         "own MIT OR Apache-2.0 -- no third-party native code, so cargo-about's "
-        "per-crate text is accurate. No separate notice owed."
+        "per-crate text is accurate. No separate notice owed. 0.1.31 -> 0.1.32 diffed "
+        "2026-08-02: metadata only (rust-version floor), shims byte-identical."
     ),
-    "stacker": ("0.1.24", 
+    "stacker": (("0.1.24", "0.1.25"),
         "Compiles its own small C shim (src/arch/windows.c -> GetCurrentFiber). Own "
-        "copyright, covered by the crate's own MIT OR Apache-2.0. No notice owed."
+        "copyright, covered by the crate's own MIT OR Apache-2.0. No notice owed. "
+        "0.1.24 -> 0.1.25 diffed 2026-08-02: windows.c unchanged; build.rs branch "
+        "restructure and a target_os=motor cfg, no new native code."
     ),
 }
 
