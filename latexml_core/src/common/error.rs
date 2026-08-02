@@ -72,9 +72,11 @@ pub fn note_status_from_logger(status: LogStatus) {
   note_status(status, None);
 }
 
-/// When true, Error!/Warn!/Info! macros still count in the report
-/// but do **not** emit anything to stderr/log.
-/// Used by tests that are known to produce errors in both Perl and Rust.
+/// When true, Debug!/Info!/Warn! (and their emit_* forms) still count in
+/// the report but do **not** emit anything to stderr/log. `Error!`/`Fatal!`
+/// are NOT suppressible — they emit unconditionally (user decision
+/// 2026-08-03), so success-rate aggregation (cortex) never loses them.
+/// Used by tests/dump-builds that deliberately exercise noisy paths.
 #[thread_local]
 static SUPPRESS_LOG_OUTPUT: std::cell::Cell<bool> = std::cell::Cell::new(false);
 
@@ -155,9 +157,10 @@ pub fn note_consecutive_error(key: &str) -> usize {
 /// The ONE emission primitive every diagnostic flows through (DRY pass,
 /// user directive 2026-08-02): count on the emitting thread's `REPORT`,
 /// then log with the pre-formatted `target`, respecting output suppression —
-/// EXCEPT for `Fatal` records, which are never suppressed: the release
-/// dump-build gate and every success-rate measurement grep for `Fatal:`
-/// lines, so muting them would hide exactly the signal those exist for.
+/// EXCEPT for `Error` and `Fatal` records, which are emitted UNCONDITIONALLY
+/// (user decision 2026-08-03): frameworks such as cortex aggregate success
+/// rates from `Error:`/`Fatal:` lines, so muting either would hide exactly
+/// the signal they measure. Suppression mutes Debug/Info/Warning only.
 /// The `MacroDiagGuard` marks the emission so the logger backend does not
 /// count it a second time.
 pub fn emit_record(status: LogStatus, target: &str, message: &str) {
@@ -168,9 +171,9 @@ pub fn emit_record(status: LogStatus, target: &str, message: &str) {
     LogStatus::Warning => log::Level::Warn,
     _ => log::Level::Error,
   };
-  let is_fatal = matches!(status, LogStatus::Fatal);
+  let unconditional = matches!(status, LogStatus::Error | LogStatus::Fatal);
   note_status(status, None);
-  if is_fatal || !is_log_output_suppressed() {
+  if unconditional || !is_log_output_suppressed() {
     log::log!(target: target, level, "{message}");
   }
 }

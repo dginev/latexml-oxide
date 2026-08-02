@@ -472,6 +472,49 @@ mod tests {
     initialize_report();
   }
 
+  /// Suppression semantics (user decision 2026-08-03): Debug/Info/Warning
+  /// records are muted under suppression, but Error and Fatal EMIT
+  /// UNCONDITIONALLY — cortex-class frameworks aggregate success rates from
+  /// `Error:`/`Fatal:` lines, and a suppressed error would vanish from that
+  /// measurement while still counting locally. Counts accrue either way.
+  #[test]
+  fn suppression_never_mutes_error_or_fatal() {
+    use crate::common::error::{
+      LogStatus, emit_record, get_status, initialize_report, set_suppress_log_output,
+    };
+    initialize_report();
+    let _ = log::set_logger(&LOGGER); // ok if another test installed it
+    log::set_max_level(LevelFilter::Warn);
+    let prev = set_suppress_log_output(true);
+
+    bind_log();
+    emit_record(LogStatus::Warning, "quiet:warn", "muted warning");
+    emit_record(LogStatus::Error, "loud:error", "unmutable error");
+    emit_record(LogStatus::Fatal, "Fatal:loud:fatal ", "unmutable fatal");
+    let captured = flush_log();
+
+    set_suppress_log_output(prev);
+    assert!(
+      !captured.contains("muted warning"),
+      "suppression must mute Warning records, captured:\n{captured}"
+    );
+    assert!(
+      captured.contains("Error:loud:error unmutable error"),
+      "Error must emit under suppression, captured:\n{captured}"
+    );
+    // (Fatal targets carry their own trailing space, so the formatter's
+    // separator makes it two — match the pieces, not the join.)
+    assert!(
+      captured.contains("Fatal:loud:fatal") && captured.contains("unmutable fatal"),
+      "Fatal must emit under suppression, captured:\n{captured}"
+    );
+    // Counts accrue regardless of emission.
+    assert_eq!(get_status(LogStatus::Warning), 1);
+    assert_eq!(get_status(LogStatus::Error), 1);
+    assert_eq!(get_status(LogStatus::Fatal), 1);
+    initialize_report();
+  }
+
   #[test]
   fn strip_ansi_removes_color_codes() {
     // ESC [ ... m should vanish; other content preserved.
