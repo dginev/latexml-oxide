@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#93**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#94**.
 
 ---
 
@@ -3396,3 +3396,36 @@ the text↔display gap is unchanged (no doubling) while display↔display gains
 the paragraph rhythm. Guard:
 `witnessed_css_delta::equation_display_margin_delta_stays_present`
 (`latexml_post/src/xslt.rs`).
+
+### 93. Verbatim renders true-to-source: `white-space:pre` + one line per row
+
+Vanilla `LaTeXML.css:454` sets `.ltx_verbatim { text-align:left;
+white-space:nowrap; }`. Because author CSS beats the UA stylesheet, that
+`nowrap` overrides `pre { white-space:pre }`, so a plain `{verbatim}` block
+collapses to a **single line** (measured: the 4-line `<pre>` renders 15 px
+tall, one line, headless Chrome 2026-08-02), and fancyvrb's per-line spans
+lose leading indentation and runs of spaces, flowing side-by-side two-up in
+a wide window. Perl 0.8.8 renders identically (same markup, same CSS);
+pdflatex is the ground truth and preserves all of it. ar5iv fixed the `<pre>`
+half downstream by dropping the `nowrap` (`ar5iv-css/css/ar5iv.css:2949`).
+Recorded as KNOWN_PERL_ERRORS #71.
+
+The bundled stylesheet adds a local delta (issue #431):
+`.ltx_verbatim { white-space:pre; }` (keeps nowrap's no-wrapping, restores
+newlines/indentation/spacing) and
+`.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0;
+min-height:1lh; }` (one fancyvrb source line per row, blank lines keep a
+line's height, no inherited paragraph indent). Only the fancyvrb binding
+puts `ltx_verbatim` on an inline-block text span, so inline `\verb`
+(`<code>`, no `ltx_inline-block`) is untouched. Measured after: each line on
+its own row, `    print(i)` keeps its 4-space indent, `<pre>` renders 4
+lines. Guard: `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+
+One serialization nuance, same entry: Perl nests two wrappers per line
+(`<text font="typewriter" width="345.0pt"><text class="ltx_verbatim"
+width="345.0pt">…`), an artifact of its box construction; Rust's
+`\lx@add@cssclass` — like Perl's, "add class to the current element" —
+merges onto the one line box: `<text class="ltx_verbatim" font="typewriter"
+width="345.0pt">…`. Same attributes, same semantics, one element instead of
+two; no upstream `t/` golden pins the nested form. Golden:
+`tokenize/fancyvrb.xml`.

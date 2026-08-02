@@ -1180,4 +1180,17 @@ mod witnessed_css_delta {
        adjacent display equations would render touching, unlike TeX's \\abovedisplayskip",
     );
   }
+
+  #[test]
+  fn verbatim_whitespace_delta_stays_present() {
+    let css = bundled_latexml_css();
+    assert!(
+      css.contains("#431")
+        && css.contains(".ltx_verbatim { white-space:pre; }")
+        && css.contains(".ltx_text.ltx_verbatim.ltx_inline-block"),
+      "the verbatim whitespace/line-block delta (issue #431) is missing from LaTeXML.css: \
+       plain verbatim would collapse to one line under vanilla's nowrap, and fancyvrb \
+       source lines would reflow side-by-side with their indentation collapsed",
+    );
+  }
 }

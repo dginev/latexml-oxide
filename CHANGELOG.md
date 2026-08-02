@@ -38,6 +38,11 @@
   - **Adjacent display equations are vertically separated** — the bundled CSS
     now carries TeX's display skips (1em, collapsing with paragraph margins),
     so back-to-back `\[…\]` displays no longer render touching (issue 473).
+  - **Verbatim renders true to the source** — fancyvrb `Verbatim` lines each
+    keep their own row, indentation and spacing (the binding's per-line
+    `ltx_verbatim` class had been dropped in porting), and the bundled CSS
+    replaces vanilla's `nowrap` — which collapsed a plain `{verbatim}` block
+    to a single line — with true `pre` whitespace (issue 431).
   - **A stale or empty stylesheet in the output directory is overwritten** instead
     of leaving the page unstyled.
   - **Split output (`--splitat`) styles every page** and carries the document date
