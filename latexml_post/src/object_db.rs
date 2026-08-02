@@ -1015,6 +1015,79 @@ mod tests {
     assert_eq!(db.len(), 3);
   }
 
+  /// The concurrency contract the layer exists for (parallel page-render
+  /// workers): N readers attach the SAME file while a writer commits — WAL
+  /// keeps readers unblocked on their snapshot — and a second writer rides
+  /// out the first's transaction via busy_timeout instead of failing with
+  /// SQLITE_BUSY. ObjectDB itself is !Send (libxml values), so each thread
+  /// builds its OWN handle inside the thread — exactly the worker model.
+  #[test]
+  fn dbfile_concurrent_readers_and_writer_contention() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dbfile = dir.path().join("site.db");
+    {
+      let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("seed");
+      for i in 0..500 {
+        db.register(&format!("k{i}"), vec![("v", Value::Int(i))]);
+      }
+      assert_eq!(db.finish().expect("seed finish"), 500);
+    }
+
+    // Writer-vs-writer: hold an IMMEDIATE transaction on a raw connection,
+    // then finish() a second writer — busy_timeout must ride it out.
+    let blocker = rusqlite::Connection::open(&dbfile).expect("blocker open");
+    blocker
+      .execute_batch("BEGIN IMMEDIATE; UPDATE entries SET props = props WHERE key = 'k0';")
+      .expect("blocker tx");
+    let release = std::thread::spawn(move || {
+      std::thread::sleep(std::time::Duration::from_millis(300));
+      blocker.execute_batch("COMMIT;").expect("blocker commit");
+    });
+    let mut writer = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("writer");
+    writer.register("k0", vec![("v", Value::Int(-1))]);
+    let t0 = std::time::Instant::now();
+    assert_eq!(
+      writer.finish().expect("contended finish succeeds"),
+      1,
+      "the second writer stores its one change after the blocker commits"
+    );
+    assert!(
+      t0.elapsed() < std::time::Duration::from_secs(9),
+      "finish waited out the blocker, not the full timeout"
+    );
+    release.join().expect("blocker thread");
+
+    // N concurrent readers, each with its own attach, racing a live writer.
+    std::thread::scope(|scope| {
+      let dbfile = &dbfile;
+      let mut handles = Vec::new();
+      for _ in 0..4 {
+        handles.push(scope.spawn(move || {
+          for _ in 0..10 {
+            let db = ObjectDB::attach(dbfile, DbAttachOptions {
+              readonly: true,
+              ..Default::default()
+            })
+            .expect("reader attaches during writes");
+            assert_eq!(db.len(), 500, "readers always see a full snapshot");
+            assert!(db.lookup("k42").is_some());
+          }
+        }));
+      }
+      scope.spawn(move || {
+        for round in 0..10 {
+          let mut db =
+            ObjectDB::attach(dbfile, DbAttachOptions::default()).expect("writer attaches");
+          db.register("k1", vec![("v", Value::Int(1000 + round))]);
+          db.finish().expect("interleaved writer finish");
+        }
+      });
+      for h in handles {
+        h.join().expect("reader thread");
+      }
+    });
+  }
+
   /// Staleness contract: a format-version mismatch REFUSES the file with a
   /// named error — never a silent reinterpretation.
   #[test]
