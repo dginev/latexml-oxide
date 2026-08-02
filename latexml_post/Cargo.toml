@@ -21,7 +21,7 @@ name = "latexml_post"
 crate-type = ["lib"]
 
 [dependencies]
-libxml = "0.3.19"
+libxml = "0.3.20"
 libxslt = "0.1.5"
 log = "0.4"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10

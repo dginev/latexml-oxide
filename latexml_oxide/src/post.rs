@@ -354,7 +354,19 @@ fn try_streaming_front(
   let mut spilled: Vec<SpilledPage> = Vec::with_capacity(outcome.pages.len());
   for page in &outcome.pages {
     if let Err(e) = latexml_core::stomach::check_timeout() {
-      post_error("Scan", &format!("Scan stopped: {}", e.message));
+      // FATAL, not Error: a scan stopped partway means the delivered site
+      // would be silently truncated (user decision 2026-08-02 — a resource
+      // stop that truncates the deliverable carries fatal severity).
+      Info!(
+        "post",
+        "stopped",
+        s!(
+          "Scan stopped after {} of {} pages",
+          spilled.len(),
+          outcome.pages.len()
+        )
+      );
+      e.log_fatal();
       telemetry::phase_exit();
       return Err(());
     }
@@ -742,7 +754,9 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         // task #147 (streaming the split parse). What this DOES cover is the
         // document whose growth happens across the phase itself.
         if let Err(e) = latexml_core::stomach::check_timeout() {
-          post_error(label, &format!("{label} stopped: {}", e.message));
+          // FATAL, not Error — see the render-loop stop below.
+          Info!("post", "stopped", s!("{label} stopped mid-phase"));
+          e.log_fatal();
           return Err(());
         }
         let nodes = proc.to_process(&d);
@@ -1133,11 +1147,38 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     // Stopping HERE is cheap and honest: pages already rendered are already
     // written, so the run ends with a real, if partial, site.
     if let Err(e) = latexml_core::stomach::check_timeout() {
-      post_error(
+      // FATAL, not Error (user decision 2026-08-02): a render stopped at
+      // page N of M is a TRUNCATED deliverable — the same severity class as
+      // the core's cheap-partial handoff. The pages already written stay on
+      // disk (a real, if partial, site), the verdict says failed, and the
+      // combined status the framework reads is 3. Witness that motivated
+      // it: the joint 131 MB run stopped at 56,088 of 115,519 pages with
+      // Error-class severity and process exit 0.
+      Info!(
         "post",
-        &format!("stopping after {pages_rendered} page(s): {}", e.message),
+        "stopped",
+        s!("render stopped after {pages_rendered} page(s); partial site preserved")
       );
+      e.log_fatal();
       break;
+    }
+    // Hand freed page memory back to the OS, exactly as core pass 1 does
+    // (core_interface.rs, same rationale): every page cycles a full DOM +
+    // XSLT result through GLIBC's heap (libxml2/libxslt allocate via libc,
+    // not the Rust allocator), and glibc keeps freed mid-heap pages mapped —
+    // the render loop's measured ~152 KB/page RSS growth on the 131 MB
+    // witness is dominated by exactly this class, and it is what pushed the
+    // single-invocation run over the memory fuse at page 56,088 of 115,519.
+    // Rate-limited: a trim walks the heap.
+    if pages_rendered > 0 && pages_rendered.is_multiple_of(512) {
+      #[cfg(target_os = "linux")]
+      unsafe {
+        libc::malloc_trim(0);
+      }
+      #[cfg(not(feature = "dhat-heap"))]
+      unsafe {
+        libmimalloc_sys::mi_collect(true);
+      }
     }
     let path_str = path.to_string_lossy().into_owned();
     let page = match PostDocument::new_from_file(&path_str, page_opts.clone()) {

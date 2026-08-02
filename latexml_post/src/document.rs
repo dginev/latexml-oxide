@@ -465,7 +465,13 @@ impl Drop for PostDocument {
   /// rather than leaking.
   fn drop(&mut self) {
     for (_, node) in std::mem::take(&mut self.idcache) {
-      let _kept = crate::doc_owned_node::DocOwnedNode::new(node);
+      // The document owns the C memory; the wrapper must not free it even if
+      // intermediate processing `unlink_node`ed this entry. `set_linked`
+      // (libxml 0.3.20) declares exactly that, replacing the historical
+      // `DocOwnedNode` leak-wrapper (~100+ bytes per id-cache entry per
+      // document — a real term at 115k documents per process). Entries whose
+      // subtree was `free_subtree`d are already-neutralized no-ops here.
+      node.set_linked();
     }
   }
 }
@@ -1687,14 +1693,15 @@ impl PostDocument {
   /// in-place wrapping pattern.
   pub fn drain_pending_xmath_unlinks(&mut self) {
     let pending = std::mem::take(&mut self.pending_xmath_unlinks);
-    for mut node in pending {
-      // Detach the (still-parented) subtree. If a prior processor
-      // already unlinked it (shouldn't happen with this API but
-      // defensive), libxml's `unlink_node` is idempotent.
-      if node.get_parent().is_some() {
-        node.unlink();
-      }
-      let _kept = crate::doc_owned_node::DocOwnedNode::new(node);
+    for node in pending {
+      // Detach AND FREE the subtree (`free_subtree` unlinks first; it also
+      // neutralizes every registered wrapper into the subtree, id-cache
+      // entries included, so no stale handle can double-free). The previous
+      // `DocOwnedNode` wrapper only suppressed the wrapper's drop — the
+      // detached XMath C subtree itself was left unreachable-but-mapped,
+      // i.e. LEAKED per formula per page: a leading term of the measured
+      // ~152 KB/page render retention on the math-dense 131 MB witness.
+      node.free_subtree();
     }
   }
 
