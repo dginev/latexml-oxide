@@ -515,6 +515,20 @@ foreignObject {
    margins through the ltx_para wrappers, keeping text<->display and
    display<->display gaps uniform (no doubling next to text). */
 .ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #431): vanilla's
+   `.ltx_verbatim { white-space:nowrap }` (kept above) overrides the UA `pre`
+   rule, so a plain {verbatim} <pre> collapses to ONE line, and fancyvrb's
+   per-line spans lose their leading indentation and runs of spaces. `pre`
+   keeps nowrap's no-wrapping and preserves them all. */
+.ltx_verbatim { white-space:pre; }
+/* fancyvrb typesets each source line as a width-limited box — a span with
+   ltx_text + ltx_verbatim + ltx_inline-block (\FancyVerbFormatLine binding
+   hack) — and inline-blocks flow side-by-side in a wide window. One source
+   line per row; blank source lines keep a line's height; the enclosing
+   paragraph's text-indent must not shift lines. Only fancyvrb lines carry
+   ltx_verbatim on an inline-block text span — inline \verb is a <code>
+   without ltx_inline-block, so it is untouched. */
+.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; }
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {
     display:block;

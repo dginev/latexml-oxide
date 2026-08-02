@@ -3040,3 +3040,40 @@ ar5iv fork hit and fixed this exact rule downstream in its site CSS instead
 calibrated to ar5iv's own paragraph rhythm rather than the UA's 1em). Rust resolves
 it with a bundled-CSS local delta (OXIDIZED_DESIGN divergence #92):
 `.ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }`.
+
+## 71. Default CSS destroys verbatim rendering (`white-space:nowrap` on `.ltx_verbatim`)
+
+Upstream's default `LaTeXML.css` (v0.8.8 and master) sets `.ltx_verbatim
+{ text-align:left; white-space:nowrap; }`. Author CSS beats the UA
+stylesheet, so on a plain `{verbatim}` `<pre class="ltx_verbatim">` the
+`nowrap` overrides `pre { white-space:pre }` and the whole block renders as
+ONE line (measured 2026-08-02, headless Chrome: a 4-line block renders 15 px
+tall). On fancyvrb's per-line spans, `nowrap` collapses leading indentation
+and runs of spaces, and the fixed-width inline-blocks flow side-by-side in a
+wide window instead of one line per row.
+
+Minimal trigger (issue #431):
+
+```tex
+\documentclass{book}
+\usepackage{fancyvrb}
+\begin{document}
+\begin{Verbatim}
+TEST 1  ABC
+
+    print(i)
+\end{Verbatim}
+\begin{verbatim}
+PLAIN 1
+PLAIN 2
+\end{verbatim}
+\end{document}
+```
+
+Same-host Perl 0.8.8 renders identically (measured on its own HTML+CSS
+artifacts); the flagship deployments never see it because they override the
+CSS — ar5iv drops the `nowrap` (`ar5iv.css:2949`). Rust resolves it with a
+bundled-CSS local delta (OXIDIZED_DESIGN divergence #93). Note Perl's
+fancyvrb binding itself is fine (`fancyvrb.sty.ltxml` adds the per-line
+`ltx_verbatim` class); the Rust port of that binding had dropped the hack
+and now carries it.

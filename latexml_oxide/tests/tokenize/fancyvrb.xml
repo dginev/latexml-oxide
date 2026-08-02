@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="book" options="12pt"?>
+<?latexml package="fancyvrb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-book.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><text class="ltx_verbatim" font="typewriter" width="345.0pt">TEST 1  ABC</text><text class="ltx_verbatim" font="typewriter" width="345.0pt">TEST 2</text><text class="ltx_verbatim" width="345.0pt"/><text class="ltx_verbatim" font="typewriter" width="345.0pt">TEST 3</text><text class="ltx_verbatim" width="345.0pt"/><text class="ltx_verbatim" font="typewriter" width="345.0pt">for i in range(10):</text><text class="ltx_verbatim" font="typewriter" width="345.0pt">    print(i)</text></p>
+  </para>
+  <para xml:id="p2">
+    <p>Between text.</p>
+  </para>
+  <para xml:id="p3">
+    <verbatim font="typewriter">
+PLAIN 1  DOUBLE
+PLAIN 2
+
+    indented plain
+</verbatim>
+  </para>
+</document>
