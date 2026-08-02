@@ -211,6 +211,19 @@ AUDITED = {
         "OUT of the closure. If that flag is ever dropped, an LGPL library enters the "
         "static link and 3.5's relink note must cover it. Attributed in NOTICES 3.1."
     ),
+    "vcpkg": ("0.2.15",
+        "Build-dependency of libsqlite3-sys: a pure-Rust LOCATOR for vcpkg-installed "
+        "system libraries on Windows. Compiles nothing and vendors no C; with our "
+        "`bundled` sqlite it is not even consulted at build time. Flagged only for "
+        "its test fixtures. No code enters the shipped binary; no notice owed."
+    ),
+    "libsqlite3-sys": ("0.38.1",
+        "Bundles the SQLite amalgamation (sqlite3.c) behind rusqlite's `bundled` "
+        "feature, compiled in for the ObjectDB --dbfile store. SQLite is PUBLIC "
+        "DOMAIN by explicit dedication (the 'blessing' header in sqlite3.c) -- no "
+        "license obligations, no notice owed; the crate's own MIT covers the "
+        "bindings. Diffed 2026-08-03 at adoption."
+    ),
     "psm": (("0.1.31", "0.1.32"),
         "Compiles its own portable stack-manipulation asm shims, and ships a prebuilt "
         "wasm32.o (a target we do not release). Own copyright, covered by the crate's "
