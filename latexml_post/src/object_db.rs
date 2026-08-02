@@ -376,7 +376,20 @@ impl ObjectDB {
   /// Remove an entry.
   ///
   /// Port of `ObjectDB::unregister`.
-  pub fn unregister(&mut self, key: &str) { self.objects.remove(key); }
+  pub fn unregister(&mut self, key: &str) {
+    self.objects.remove(key);
+    // Perl ObjectDB.pm:183: "Must remove external entry (if any) as well,
+    // else it'll get pulled back in!" — without this the key resurrects on
+    // the next attach (review 2026-08-03 finding #1).
+    if let Some(external) = &mut self.external {
+      external.baseline.remove(key);
+      if !external.readonly {
+        let _ = external
+          .conn
+          .execute("DELETE FROM entries WHERE key = ?1", rusqlite::params![key]);
+      }
+    }
+  }
 
   /// Get all keys, sorted.
   ///
@@ -457,6 +470,9 @@ impl ObjectDB {
   /// Attach (and load) an external SQLite object store — Perl
   /// `ObjectDB->new(dbfile => …)`.
   pub fn attach(dbfile: &std::path::Path, options: DbAttachOptions) -> Result<Self, String> {
+    if options.clean && options.readonly {
+      return Err("dbfile: clean requires write access (Perl always opens O_RDWR)".to_string());
+    }
     if options.clean && dbfile.exists() {
       latexml_core::common::error::emit_warn(
         "expected",
@@ -472,10 +488,41 @@ impl ObjectDB {
       rusqlite::Connection::open(dbfile)
     }
     .map_err(|e| format!("cannot attach DB {}: {e}", dbfile.display()))?;
+    // Concurrent workers are this layer's purpose: WAL lets N readers overlap
+    // one writer, and a busy timeout rides out a writer's commit instead of
+    // failing mid-transaction with SQLITE_BUSY.
+    if !options.readonly {
+      let _ = conn.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(()));
+    }
+    conn
+      .busy_timeout(std::time::Duration::from_secs(10))
+      .map_err(|e| format!("cannot set busy_timeout: {e}"))?;
 
     let version: i64 = conn
       .query_row("PRAGMA user_version", [], |r| r.get(0))
       .map_err(|e| format!("cannot read user_version: {e}"))?;
+    let entries_table: bool = conn
+      .query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='entries'",
+        [],
+        |r| r.get::<_, i64>(0),
+      )
+      .map(|n| n > 0)
+      .unwrap_or(false);
+    let any_table: bool = conn
+      .query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table'",
+        [],
+        |r| r.get::<_, i64>(0),
+      )
+      .map(|n| n > 0)
+      .unwrap_or(false);
+    if version == 0 && any_table && !entries_table {
+      return Err(format!(
+        "{} is a SQLite file but not an ObjectDB (no entries table) — refusing to adopt it",
+        dbfile.display()
+      ));
+    }
     if version == 0 && !options.readonly {
       conn
         .execute_batch(&format!(
@@ -511,9 +558,15 @@ impl ObjectDB {
         .map_err(|e| format!("cannot scan entries: {e}"))?;
       for row in rows {
         let (key, props) = row.map_err(|e| format!("bad row: {e}"))?;
-        let entry = db.decode_entry(&key, &props)?;
-        db.objects.insert(key.clone(), entry);
-        baseline.insert(key, props);
+        // One bad row must not poison the whole file (review finding #4):
+        // warn with the key and skip; the on-disk row stays as it was.
+        match db.decode_entry(&key, &props) {
+          Ok(entry) => {
+            db.objects.insert(key.clone(), entry);
+            baseline.insert(key, props);
+          },
+          Err(e) => latexml_core::common::error::emit_warn("malformed", "dbfile_entry", &e),
+        }
       }
       drop(stmt);
     }
@@ -535,23 +588,34 @@ impl ObjectDB {
     if external.readonly {
       return Ok(0);
     }
-    let encoded: Vec<(String, String)> = self
-      .objects
-      .iter()
-      .map(|(key, entry)| (key.clone(), self.encode_entry(entry)))
-      .filter(|(key, props)| external.baseline.get(key) != Some(props))
-      .collect();
+    // Stream: encode → compare → insert per entry inside one transaction, so
+    // peak memory is ONE encoded entry, not the whole changed set (review
+    // finding #5 — the baseline copy itself is dropped with `external` at
+    // the end of this function).
+    let mut stored = 0usize;
     let mut conn = external.conn;
     let tx = conn
       .transaction()
       .map_err(|e| format!("cannot begin dbfile transaction: {e}"))?;
-    for (key, props) in &encoded {
+    for (key, entry) in &self.objects {
+      let props = {
+        let map: serde_json::Map<String, serde_json::Value> = entry
+          .values
+          .iter()
+          .map(|(k, v)| (k.clone(), value_to_json_with(self.xml_holder.as_ref(), v)))
+          .collect();
+        serde_json::Value::Object(map).to_string()
+      };
+      if external.baseline.get(key) == Some(&props) {
+        continue;
+      }
       tx.execute(
         "INSERT INTO entries(key, props) VALUES (?1, ?2)
          ON CONFLICT(key) DO UPDATE SET props = excluded.props",
         rusqlite::params![key, props],
       )
       .map_err(|e| format!("cannot store entry {key}: {e}"))?;
+      stored += 1;
     }
     tx.execute(
       "INSERT INTO meta(key, value) VALUES ('latexml_version', ?1)
@@ -561,17 +625,7 @@ impl ObjectDB {
     .map_err(|e| format!("cannot store meta: {e}"))?;
     tx.commit()
       .map_err(|e| format!("cannot commit dbfile: {e}"))?;
-    Ok(encoded.len())
-  }
-
-  /// JSON-encode one entry's property map (the `props` column).
-  fn encode_entry(&self, entry: &Entry) -> String {
-    let map: serde_json::Map<String, serde_json::Value> = entry
-      .values
-      .iter()
-      .map(|(k, v)| (k.clone(), self.value_to_json(v)))
-      .collect();
-    serde_json::Value::Object(map).to_string()
+    Ok(stored)
   }
 
   /// Tagged, self-describing encoding — one-key objects so `Hash` values
@@ -579,27 +633,7 @@ impl ObjectDB {
   /// int, `{"b":…}` bool, `{"l":[…]}` list, `{"h":{…}}` hash, `{"x":"<…>"}`
   /// serialized XML, JSON `null` for `Null`.
   fn value_to_json(&self, value: &Value) -> serde_json::Value {
-    use serde_json::{Value as J, json};
-    match value {
-      Value::String(s) => json!({ "s": s }),
-      Value::Int(i) => json!({ "i": i }),
-      Value::Bool(b) => json!({ "b": b }),
-      Value::Null => J::Null,
-      Value::List(items) => {
-        json!({ "l": items.iter().map(|v| self.value_to_json(v)).collect::<Vec<_>>() })
-      },
-      Value::Hash(map) => {
-        json!({ "h": map.iter().map(|(k, v)| (k.clone(), self.value_to_json(v))).collect::<serde_json::Map<_, _>>() })
-      },
-      Value::Xml(node) => {
-        let xml = self
-          .xml_holder
-          .as_ref()
-          .map(|doc| doc.node_to_string(node))
-          .unwrap_or_default();
-        json!({ "x": xml })
-      },
-    }
+    value_to_json_with(self.xml_holder.as_ref(), value)
   }
 
   fn decode_entry(&mut self, key: &str, props: &str) -> Result<Entry, String> {
@@ -629,7 +663,10 @@ impl ObjectDB {
     {
       return match (tag.as_str(), inner) {
         ("s", J::String(s)) => Ok(Value::String(s.clone())),
-        ("i", J::Number(n)) => Ok(Value::Int(n.as_i64().unwrap_or_default())),
+        ("i", J::Number(n)) => n
+          .as_i64()
+          .map(Value::Int)
+          .ok_or_else(|| format!("entry {key}: non-integer numeric value {n}")),
         ("b", J::Bool(b)) => Ok(Value::Bool(*b)),
         ("l", J::Array(items)) => Ok(Value::List(
           items
@@ -659,6 +696,30 @@ impl ObjectDB {
       };
     }
     Err(format!("entry {key}: malformed value object"))
+  }
+}
+
+/// Tagged, self-describing encoding (see [`ObjectDB::value_to_json`]); a free
+/// function so `finish` can encode while iterating `self.objects`.
+fn value_to_json_with(holder: Option<&libxml::tree::Document>, value: &Value) -> serde_json::Value {
+  use serde_json::{Value as J, json};
+  match value {
+    Value::String(s) => json!({ "s": s }),
+    Value::Int(i) => json!({ "i": i }),
+    Value::Bool(b) => json!({ "b": b }),
+    Value::Null => J::Null,
+    Value::List(items) => {
+      json!({ "l": items.iter().map(|v| value_to_json_with(holder, v)).collect::<Vec<_>>() })
+    },
+    Value::Hash(map) => {
+      json!({ "h": map.iter().map(|(k, v)| (k.clone(), value_to_json_with(holder, v))).collect::<serde_json::Map<_, _>>() })
+    },
+    Value::Xml(node) => {
+      let xml = holder
+        .map(|doc| doc.node_to_string(node))
+        .unwrap_or_default();
+      json!({ "x": xml })
+    },
   }
 }
 
@@ -895,6 +956,28 @@ mod tests {
       "adopted XML content round-trips"
     );
     assert_eq!(reloaded.finish().expect("readonly finish"), 0);
+
+    // XML idempotence (review finding #3): re-attach READ-WRITE and finish —
+    // if serialize→adopt→serialize is not byte-stable, the XML entry rewrites
+    // on every finish and the changed-only contract silently degrades to
+    // rewrite-everything.
+    let mut again = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach rw");
+    assert_eq!(
+      again.finish().expect("idempotent finish"),
+      0,
+      "an untouched XML-bearing entry must not re-store"
+    );
+
+    // unregister must delete the STORED row too (Perl ObjectDB.pm:183:
+    // "else it'll get pulled back in!").
+    let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach 3");
+    db.unregister("doc1#s1");
+    db.finish().expect("finish after unregister");
+    let db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach 4");
+    assert!(
+      db.lookup("doc1#s1").is_none(),
+      "an unregistered key must not resurrect on re-attach"
+    );
   }
 
   /// Perl `finish` stores only entries that DIFFER from what the file holds
