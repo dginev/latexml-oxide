@@ -8,7 +8,10 @@ use std::{
   os::unix::io::FromRawFd,
 };
 
-use latexml_core::BoxOps;
+use latexml_core::{
+  BoxOps,
+  common::error::{emit_error, emit_info, emit_warn},
+};
 use serde_json::Value;
 
 use super::*;
@@ -641,7 +644,11 @@ impl Server {
       && deps_still_current(&self.warmed_source_deps, &self.open_buffers);
 
     if !cache_hit {
-      log::info!("Warming preamble cache for {uri}");
+      emit_info(
+        "lsp",
+        "preamble",
+        &format!("Warming preamble cache for {uri}"),
+      );
       self.invalidate_cache();
       latexml_core::state::reset_thread_state();
 
@@ -668,7 +675,11 @@ impl Server {
           self.warmed_source_deps = warmup_dep_snapshot(&self.open_buffers, &root_path);
         },
         Err(e) => {
-          log::error!("Preamble warmup failed ({e}); falling back to in-process");
+          emit_error(
+            "lsp",
+            "preamble",
+            &format!("Preamble warmup failed ({e}); falling back to in-process"),
+          );
           return WarmResult::Done(self.convert_in_process(uri, text));
         },
       }
@@ -685,7 +696,7 @@ impl Server {
       match spawn_body_child(uri, offset_lines, body, warmed, timeout, self.max_rss_kb) {
         Ok(v) => v,
         Err(e) => {
-          log::error!("{e}; falling back to in-process");
+          emit_error("lsp", "fork", &format!("{e}; falling back to in-process"));
           return WarmResult::Done(self.convert_in_process(uri, text));
         },
       };
@@ -739,7 +750,11 @@ fn dispatch(
   let request = match parse_json(body_str) {
     Ok(v) => v,
     Err(e) => {
-      log::error!("Failed to parse incoming JSON: {e}");
+      emit_error(
+        "lsp",
+        "protocol",
+        &format!("Failed to parse incoming JSON: {e}"),
+      );
       return Ok(true);
     },
   };
@@ -844,7 +859,11 @@ fn dispatch(
           &error_response(id, -32601.0, format!("Method '{other}' not found")),
         )?;
       } else {
-        log::warn!("Unhandled LSP notification: {other}");
+        emit_warn(
+          "lsp",
+          "protocol",
+          &format!("Unhandled LSP notification: {other}"),
+        );
       }
     },
   }
@@ -906,7 +925,11 @@ fn convert_trigger(
       Ok(t) => t,
       Err(e) => {
         // Degrade to v1 behavior: convert the buffer standalone.
-        log::warn!("cannot read project root {root_str} ({e}); converting the buffer standalone");
+        emit_warn(
+          "lsp",
+          "project_root",
+          &format!("cannot read project root {root_str} ({e}); converting the buffer standalone"),
+        );
         text.to_string()
       },
     }

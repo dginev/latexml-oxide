@@ -1,4 +1,7 @@
-use latexml_core::common::color::{self, Color, color_from_model_spec};
+use latexml_core::common::{
+  color::{self, Color, color_from_model_spec},
+  error::emit_error,
+};
 
 use crate::prelude::*;
 
@@ -166,14 +169,11 @@ pub fn lookup_color_obj(name: &str) -> Color {
         Stored::String(pin(color::BLACK.to_stored())),
         None,
       );
-      note_status(LogStatus::Error, None);
-      if !is_log_output_suppressed() {
-        log::error!(
-          target: &format!("unexpected:{}", name),
-          "Can't find color named '{}'; assuming Black",
-          name
-        );
-      }
+      emit_error(
+        "unexpected",
+        name,
+        &format!("Can't find color named '{name}'; assuming Black"),
+      );
       color::BLACK
     },
   }

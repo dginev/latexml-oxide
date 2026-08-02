@@ -122,11 +122,17 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
   // a `Fatal:` in the log REQUIRES the fatal verdict, and no `Fatal:` forbids
   // it. (The verdict is `(Finalizing... )`-prefixed, hence `ends_with`.)
   if stderr.contains("Fatal:") {
+    // "1 warning; 1 fatal error", not "1 fatal error" alone: the salvage
+    // path's own `Warning:…digest_internal` note is a raw `log::warn!`, and
+    // since the lossless-tally fix (2026-08-02) every printed diagnostic
+    // record counts — the warning's presence in the tally is that fix
+    // working, not tally noise.
     assert!(
-      verdict.ends_with("Conversion failed: 1 fatal error"),
-      "the log reports a Fatal, so the final status must be exactly \
-       \"Conversion failed: 1 fatal error\" — recovering boxes is not a \
-       licence to reclassify the verdict. Got:\n  {verdict}\n{stderr}",
+      verdict.ends_with("Conversion failed: 1 warning; 1 fatal error"),
+      "the log reports a Fatal (and the salvage warning), so the final \
+       status must be exactly \"Conversion failed: 1 warning; 1 fatal \
+       error\" — recovering boxes is not a licence to reclassify the \
+       verdict. Got:\n  {verdict}\n{stderr}",
     );
   } else {
     assert!(

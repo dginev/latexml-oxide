@@ -20,7 +20,7 @@ use crate::{
     BindingDispatcher, LabelMappingHook,
     arena::{self, SymHashMap, SymStr},
     dimension::Dimension,
-    error::*,
+    error::{emit_warn, *},
     font::Font,
     glue::Glue,
     model::{self, IndirectModel, Model, compute_indirect_model_aux},
@@ -1402,11 +1402,19 @@ pub fn checkin_value(key: &str, value: Stored) {
   match state_mut!().value.get_mut(&arena::pin(key)) {
     None => {
       // Key was never assigned — silently ignore the checkin
-      log::warn!("checkin_value called for unknown key '{key}'");
+      emit_warn(
+        "internal",
+        "state",
+        &format!("checkin_value called for unknown key '{key}'"),
+      );
     },
     Some(vvec) => match vvec.front_mut() {
       None => {
-        log::warn!("checkin_value called with empty value stack for key '{key}'");
+        emit_warn(
+          "internal",
+          "state",
+          &format!("checkin_value called with empty value stack for key '{key}'"),
+        );
       },
       Some(found) => {
         match found {
@@ -1882,7 +1890,9 @@ pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Option<Dimension> {
   use std::str::FromStr;
   // Obvious dimension string? (Perl: /^[0-9\+\-\.]\w\w+$/)
   let mut chars = cs.chars();
-  let obvious = matches!(chars.next(), Some(c) if c.is_ascii_digit() || matches!(c, '+' | '-' | '.'))
+  let leading_sign_or_digit =
+    matches!(chars.next(), Some(c) if c.is_ascii_digit() || matches!(c, '+' | '-' | '.'));
+  let obvious = leading_sign_or_digit
     && cs.chars().count() >= 3
     && chars.all(|c| c.is_alphanumeric() || c == '_');
   if obvious && let Ok(d) = Dimension::from_str(cs) {

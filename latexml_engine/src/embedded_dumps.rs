@@ -47,6 +47,7 @@ use std::{
   path::PathBuf,
 };
 
+use latexml_core::common::error::emit_warn;
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -147,10 +148,13 @@ fn decompressed_dump(year: u32, kind: &'static str, gz: &[u8]) -> Option<&'stati
       let mut decoder = flate2::read::GzDecoder::new(gz);
       let mut buf = String::with_capacity(gz.len() * 5); // ~4.7× ratio + slack
       if decoder.read_to_string(&mut buf).is_err() {
-        log::warn!(
-          "[embedded_dumps] gunzip failed for {kind} TL{year} ({} bytes); \
-           falling back to no embedded dump",
-          gz.len()
+        emit_warn(
+          "internal",
+          "embedded_dumps",
+          &format!(
+            "gunzip failed for {kind} TL{year} ({} bytes); falling back to no embedded dump",
+            gz.len()
+          ),
         );
         return None;
       }

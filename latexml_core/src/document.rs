@@ -18,7 +18,7 @@ use crate::{
   BoxOps, Digested, DigestedData, Tbox, TexMode,
   common::{
     arena::{self, SymHashMap, SymStr},
-    error::*,
+    error::{emit_error, emit_warn, *},
     font::{FONT_TEXT_DEFAULT, Font},
     locator::Locator,
     model,
@@ -1700,8 +1700,10 @@ impl Document {
           .and_then(|store| store.read_segment(seg).ok())
       });
       let Some(inner) = inner else {
-        log::error!(
-          "Error:spill:unresolved a nested spilled segment could not be spliced ({elem})"
+        emit_error(
+          "spill",
+          "unresolved",
+          &format!("a nested spilled segment could not be spliced ({elem})"),
         );
         out.push_str(before);
         out.push_str("<!-- latexml-oxide: LOST spilled segment -->\n");
@@ -1790,9 +1792,13 @@ impl Document {
               // `Error!` can early-return and this serializer returns `()`,
               // so raise through the logger; the marker keeps the loss
               // visible in the output itself.
-              log::error!(
-                "Error:spill:unresolved a spilled segment could not be spliced back (ref={:?})",
-                node.get_attribute("ref")
+              emit_error(
+                "spill",
+                "unresolved",
+                &format!(
+                  "a spilled segment could not be spliced back (ref={:?})",
+                  node.get_attribute("ref")
+                ),
               );
               out.push_str("<!-- latexml-oxide: LOST spilled segment -->\n");
             },
@@ -4238,9 +4244,10 @@ impl Document {
           return candidate;
         }
       }
-      log::error!(
-        "malformed:id: Automatic incrementing of ID counters failed for '{}'",
-        badid
+      emit_error(
+        "malformed",
+        "id",
+        &format!("Automatic incrementing of ID counters failed for '{badid}'"),
       );
       badid
     } else {
@@ -5289,7 +5296,11 @@ impl Document {
           // Skip XML comments during cloning (Perl also skips them in most contexts)
         },
         other => {
-          log::warn!("append_clone_aux: skipping unsupported {other:?} node type");
+          emit_warn(
+            "internal",
+            "document",
+            &format!("append_clone_aux: skipping unsupported {other:?} node type"),
+          );
         },
       };
     }

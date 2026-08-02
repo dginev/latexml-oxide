@@ -4,6 +4,7 @@
 
 use std::io::BufRead;
 
+use latexml_core::common::error::emit_error;
 use serde_json::Value;
 
 use super::*;
@@ -52,7 +53,11 @@ pub fn run(timeout_secs: u64, max_rss_kb: u64) -> Result<(), Box<dyn std::error:
     let request = match parse_json(&body_str) {
       Ok(v) => v,
       Err(e) => {
-        log::error!("Failed to parse incoming JSON: {e}");
+        emit_error(
+          "lsp",
+          "protocol",
+          &format!("Failed to parse incoming JSON: {e}"),
+        );
         continue;
       },
     };

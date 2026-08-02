@@ -15,7 +15,13 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
-  common::{arena::SymStr, error::*, locator::Locator, numeric_ops::NumericOps, object::Object},
+  common::{
+    arena::SymStr,
+    error::{emit_warn, *},
+    locator::Locator,
+    numeric_ops::NumericOps,
+    object::Object,
+  },
   state::*,
   token::*,
   tokens::{NO_TOKENS, TeXString, Tokens},
@@ -435,10 +441,18 @@ impl Mouth {
   }
   fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
   fn open_http(&mut self, url: &str) {
-    log::warn!("HTTP input not supported: {url}");
+    emit_warn(
+      "unsupported",
+      "http_input",
+      &format!("HTTP input not supported: {url}"),
+    );
   }
   fn open_https(&mut self, url: &str) {
-    log::warn!("HTTPS input not supported: {url}");
+    emit_warn(
+      "unsupported",
+      "http_input",
+      &format!("HTTPS input not supported: {url}"),
+    );
   }
   // fn open_binding(&mut self, _content: &str) {}
 

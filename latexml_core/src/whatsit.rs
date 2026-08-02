@@ -8,7 +8,7 @@ use crate::{
   common::{
     arena::{self, SymHashMap as HashMap},
     dimension::Dimension,
-    error::*,
+    error::{emit_warn, *},
     font::Font,
     locator::Locator,
     object::Object,
@@ -120,7 +120,11 @@ impl Whatsit {
   /// Returns None for n == 0 (defensive — Perl convention uses 1-based indexing).
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     if n == 0 {
-      log::warn!("get_arg(0) called — Perl convention uses 1-based indexing");
+      emit_warn(
+        "internal",
+        "get_arg",
+        "get_arg(0) called — Perl convention uses 1-based indexing",
+      );
       return None;
     }
     match self.args.get(n - 1) {

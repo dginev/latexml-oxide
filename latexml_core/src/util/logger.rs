@@ -269,6 +269,33 @@ impl log::Log for LatexmlLogger {
         }
       };
 
+      // Tally every printed diagnostic record that was NOT emitted by a
+      // counting macro (those count at raise time, even under output
+      // suppression — the MAX_ERRORS cap depends on that). This is the
+      // lossless half of the tally contract: any `Warning:`/`Error:` line
+      // this backend prints from a raw `log::warn!`/`log::error!` call now
+      // registers in `REPORT`, so the final "Conversion complete: N
+      // warnings" agrees with what a reader greps from the log. Witness:
+      // the 131 MB witness logged 12,105 `Warning:` lines (12,103 of them
+      // the math parser's raw `log_math_warn!`) and reported "2 warnings".
+      {
+        use crate::common::error::{LogStatus, note_status_from_logger};
+        let status = if category_object.starts_with("Fatal:") {
+          Some(LogStatus::Fatal)
+        } else {
+          match record.level() {
+            Level::Warn => Some(LogStatus::Warning),
+            Level::Error => Some(LogStatus::Error),
+            Level::Info => Some(LogStatus::Info),
+            Level::Debug => Some(LogStatus::Debug),
+            // No Trace counter exists; Trace records stay uncounted.
+            Level::Trace => None,
+          }
+        };
+        if let Some(status) = status {
+          note_status_from_logger(status);
+        }
+      }
       let message = if severity.is_empty() {
         s!("{} ", category_object)
       } else {
@@ -380,6 +407,112 @@ mod tests {
     let mut c = String::from("Info:foo\n");
     append_note(&mut c, "\n(Building...");
     assert_eq!(c, "Info:foo\n(Building...");
+  }
+
+  /// The lossless-tally contract (user directive 2026-08-02): every printed
+  /// diagnostic record counts exactly once, whether it came from a counting
+  /// macro (raise-time count, logger skips) or a raw `log::warn!`-family call
+  /// (logger counts). Defect this pins: the 131 MB witness logged 12,105
+  /// `Warning:` lines — 12,103 from the math parser's raw `log_math_warn!` —
+  /// and the final verdict said "2 warnings".
+  ///
+  /// One test, not several: the global logger and the thread-local `REPORT`
+  /// are both process/thread state, and cargo runs sibling `#[test]`s on
+  /// separate threads — but a SINGLE test body sees one thread and one
+  /// deterministic sequence.
+  #[test]
+  fn raw_log_records_count_and_macro_records_do_not_double_count() {
+    use crate::common::error::{
+      LogStatus, get_status, initialize_report, macro_diag_guard, note_status,
+      note_status_from_logger,
+    };
+    // Another test may have installed the logger already; counting rides
+    // note_status_from_logger either way, so drive it exactly as
+    // `LatexmlLogger::log` does rather than through the global sink.
+    initialize_report();
+
+    // Raw record: the logger's tally path counts it.
+    note_status_from_logger(LogStatus::Warning);
+    assert_eq!(get_status(LogStatus::Warning), 1, "raw warning must count");
+
+    // Macro-emitted record: raise-time count happens under the guard, and
+    // the logger's observation of the same record must be a no-op.
+    {
+      let _g = macro_diag_guard();
+      note_status(LogStatus::Warning, None); // what the macro does
+      note_status_from_logger(LogStatus::Warning); // what the logger then sees
+    }
+    assert_eq!(
+      get_status(LogStatus::Warning),
+      2,
+      "a macro warning counts once, not twice"
+    );
+
+    // Nested guards (Error! escalating into Fatal!) keep the marker set.
+    {
+      let _outer = macro_diag_guard();
+      {
+        let _inner = macro_diag_guard();
+      }
+      note_status_from_logger(LogStatus::Error);
+    }
+    assert_eq!(
+      get_status(LogStatus::Error),
+      0,
+      "the logger stays muted for the whole macro emission, even after a \
+       nested guard drops"
+    );
+
+    // Raw error and a raw Fatal-target record (log_fatal's shape when some
+    // future caller bypasses it): the error counts, the fatal latches.
+    note_status_from_logger(LogStatus::Error);
+    note_status_from_logger(LogStatus::Fatal);
+    assert_eq!(get_status(LogStatus::Error), 1);
+    assert_eq!(get_status(LogStatus::Fatal), 1, "raw fatal latches sticky");
+    initialize_report();
+  }
+
+  /// Suppression semantics (user decision 2026-08-03): Debug/Info/Warning
+  /// records are muted under suppression, but Error and Fatal EMIT
+  /// UNCONDITIONALLY — cortex-class frameworks aggregate success rates from
+  /// `Error:`/`Fatal:` lines, and a suppressed error would vanish from that
+  /// measurement while still counting locally. Counts accrue either way.
+  #[test]
+  fn suppression_never_mutes_error_or_fatal() {
+    use crate::common::error::{
+      LogStatus, emit_record, get_status, initialize_report, set_suppress_log_output,
+    };
+    initialize_report();
+    let _ = log::set_logger(&LOGGER); // ok if another test installed it
+    log::set_max_level(LevelFilter::Warn);
+    let prev = set_suppress_log_output(true);
+
+    bind_log();
+    emit_record(LogStatus::Warning, "quiet:warn", "muted warning");
+    emit_record(LogStatus::Error, "loud:error", "unmutable error");
+    emit_record(LogStatus::Fatal, "Fatal:loud:fatal ", "unmutable fatal");
+    let captured = flush_log();
+
+    set_suppress_log_output(prev);
+    assert!(
+      !captured.contains("muted warning"),
+      "suppression must mute Warning records, captured:\n{captured}"
+    );
+    assert!(
+      captured.contains("Error:loud:error unmutable error"),
+      "Error must emit under suppression, captured:\n{captured}"
+    );
+    // (Fatal targets carry their own trailing space, so the formatter's
+    // separator makes it two — match the pieces, not the join.)
+    assert!(
+      captured.contains("Fatal:loud:fatal") && captured.contains("unmutable fatal"),
+      "Fatal must emit under suppression, captured:\n{captured}"
+    );
+    // Counts accrue regardless of emission.
+    assert_eq!(get_status(LogStatus::Warning), 1);
+    assert_eq!(get_status(LogStatus::Error), 1);
+    assert_eq!(get_status(LogStatus::Fatal), 1);
+    initialize_report();
   }
 
   #[test]

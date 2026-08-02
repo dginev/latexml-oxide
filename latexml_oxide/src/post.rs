@@ -6,7 +6,7 @@
 
 use latexml_core::{
   Info, Warn,
-  common::error::{LogStatus, note_progress, note_status},
+  common::error::{emit_error, note_progress},
   s,
   telemetry::{self, Phase},
 };
@@ -113,10 +113,7 @@ pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
 /// digester's `Result<_, error::Error>` functions. The post-processing entry
 /// points return `String`/`Result<_, ()>`, so we log+count directly with no
 /// control-flow side effect.
-fn post_error(object: &str, message: &str) {
-  note_status(LogStatus::Error, None);
-  log::error!(target: &format!("post:{object}"), "{message}");
-}
+fn post_error(object: &str, message: &str) { emit_error("post", object, message); }
 
 /// Result of [`run_post_processing_logged`]: the serialized HTML plus the
 /// post-phase log text and status code, mirroring Perl `LaTeXML.pm`'s

@@ -2,7 +2,7 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use latexml_core::common::numeric_ops::round_to;
+use latexml_core::common::{error::emit_warn, numeric_ops::round_to};
 
 use crate::prelude::*;
 
@@ -1393,7 +1393,11 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
     Some(Stored::Tokens(tokens)) => unread(tokens),
     Some(Stored::Token(token)) => unread_one(token),
     None | Some(Stored::None) => {},
-    Some(other) => log::warn!("afterAssignment should be a token, got: {}", other),
+    Some(other) => emit_warn(
+      "internal",
+      "after_assignment",
+      &format!("afterAssignment should be a token, got: {other}"),
+    ),
   };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {

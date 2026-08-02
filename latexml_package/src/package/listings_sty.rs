@@ -1,4 +1,5 @@
 use base64::Engine as _;
+use latexml_core::common::error::emit_warn;
 
 use crate::prelude::*;
 
@@ -288,7 +289,11 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
       }
     })
   } else {
-    log::warn!("Can't read listings file '{}'", filename);
+    emit_warn(
+      "missing_file",
+      "listings",
+      &format!("Can't read listings file '{filename}'"),
+    );
     None
   }
 }
@@ -1395,9 +1400,13 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
   while !ctx.listing.is_empty() {
     // Loop guard — must make progress on every step
     if ctx.listing == prev_listing {
-      log::warn!(
-        "lstProcess_internal failed to make progress. Content: '{}'",
-        &ctx.listing[..ctx.listing.len().min(60)]
+      emit_warn(
+        "internal",
+        "listings",
+        &format!(
+          "lstProcess_internal failed to make progress. Content: '{}'",
+          &ctx.listing[..ctx.listing.len().min(60)]
+        ),
       );
       ctx.listing.clear();
       break;

@@ -294,9 +294,10 @@ macro_rules! prop_digested {
       ),
       None => Vec::new(),
       other => {
-        log::warn!(
-          "Please extend the api_macros::prop_digested macro to support: {:?}",
-          other
+        $crate::common::error::emit_warn(
+          "unimplemented",
+          "prop_digested",
+          &format!("Please extend the api_macros::prop_digested macro to support: {other:?}"),
         );
         // Return empty vec instead of panicking
         Vec::new()

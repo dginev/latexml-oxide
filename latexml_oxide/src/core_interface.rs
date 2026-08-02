@@ -8,7 +8,7 @@ use latexml_core::{
 use latexml_core::{
   common::{
     DigestionMode, arena,
-    error::{self, Result, note_begin, note_end},
+    error::{self, Result, emit_info, emit_warn, note_begin, note_end},
     model,
     store::Stored,
   },
@@ -214,10 +214,13 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
           | (ErrorTarget::Timeout, ErrorCategory::TokenLimit)
           | (ErrorTarget::Timeout, ErrorCategory::PushbackLimit)
       ) {
-        log::warn!(
-          "digest_internal: resource failure ({:?}/{:?}) — not recovering",
-          e.target,
-          e.category
+        emit_warn(
+          "recovery",
+          "digest_internal",
+          &format!(
+            "digest_internal: resource failure ({:?}/{:?}) — not recovering",
+            e.target, e.category
+          ),
         );
         return Err(e);
       }
@@ -244,7 +247,11 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // complete: No obvious problems`, status code 0 — "ok" to cortex.
       // Guard: `101_fatal_salvages_partial_document`.
       e.log_fatal();
-      log::warn!("digest_internal: error during recovery digestion: {:?}", e);
+      emit_warn(
+        "recovery",
+        "digest_internal",
+        &format!("digest_internal: error during recovery digestion: {:?}", e),
+      );
       // Recover what the failed body already digested. Without this the
       // "still produce partial output" intent above only worked when the
       // failure landed in a LATER body — a Fatal inside the FIRST one left
@@ -269,9 +276,13 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       if matches!(e.target, ErrorTarget::Stomach) {
         let salvaged = stomach::salvage_pending_box_lists(true);
         if !salvaged.is_empty() {
-          log::info!(
-            "digest_internal: salvaged {} box(es) digested before the fatal",
-            salvaged.len()
+          emit_info(
+            "recovery",
+            "digest_internal",
+            &format!(
+              "digest_internal: salvaged {} box(es) digested before the fatal",
+              salvaged.len()
+            ),
           );
           boxes.extend(salvaged);
         }
@@ -656,10 +667,14 @@ fn streaming_pass2(
     {
       let mut frag = Document::from_xml_document(frag_xml, node_fonts.clone())?;
       if due {
-        log::info!(
-          "streaming pass2: segment {seg} ({} KB) parsed; RSS ~{} MB",
-          store.read_segment(seg).map(|t| t.len() / 1024).unwrap_or(0),
-          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+        emit_info(
+          "streaming",
+          "progress",
+          &format!(
+            "streaming pass2: segment {seg} ({} KB) parsed; RSS ~{} MB",
+            store.read_segment(seg).map(|t| t.len() / 1024).unwrap_or(0),
+            latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+          ),
         );
       }
       frag.scoped_rules_strict = true;
@@ -733,11 +748,15 @@ fn streaming_pass2(
         parser.parse_math(&mut frag)?;
         drop(_gp);
         if due {
-          log::info!(
-            "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
-            rss0,
-            latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
-            arena::len(),
+          emit_info(
+            "streaming",
+            "progress",
+            &format!(
+              "streaming pass2: segment {seg} math done; RSS {} -> {} MB; arena {} syms",
+              rss0,
+              latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+              arena::len(),
+            ),
           );
         }
         // Mirror the eager tail: mark failed formulae, renumber math ids
@@ -784,9 +803,13 @@ fn streaming_pass2(
     }
     store.finalize_segment(seg, &out)?;
     if due {
-      log::info!(
-        "streaming pass2: segment {seg} finalized+dropped; RSS ~{} MB",
-        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
+      emit_info(
+        "streaming",
+        "progress",
+        &format!(
+          "streaming pass2: segment {seg} finalized+dropped; RSS ~{} MB",
+          latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024
+        ),
       );
     }
   }
@@ -1071,10 +1094,14 @@ impl DigestionAPI for Core {
         if dir_is_writable(&dir) {
           dir
         } else {
-          log::info!(
-            "streaming: {} is not writable; spilling to {} instead",
-            dir.display(),
-            std::env::temp_dir().display()
+          emit_info(
+            "streaming",
+            "progress",
+            &format!(
+              "streaming: {} is not writable; spilling to {} instead",
+              dir.display(),
+              std::env::temp_dir().display()
+            ),
           );
           std::env::temp_dir()
         }
@@ -1106,7 +1133,7 @@ impl DigestionAPI for Core {
           target:   ErrorTarget::Timeout,
           category: ErrorCategory::MemoryBudget,
           message:  s!(
-            "streaming spill needs ~{} MB free under {} but only {} MB is available — free              disk space there, or convert with a destination on a roomier volume",
+            "streaming spill needs ~{} MB free under {} but only {} MB is available — free disk space there, or convert with a destination on a roomier volume",
             need / (1024 * 1024),
             store.dir().display(),
             avail / (1024 * 1024)
@@ -1167,10 +1194,13 @@ impl DigestionAPI for Core {
           // for. The Fatal contract still holds: announce + latch the
           // verdict, keep the partial document (user policy 2026-07-28).
           e.log_fatal();
-          log::warn!(
-            "convert_streaming: digestion stopped by a resource fatal ({:?}/{:?}) — keeping              the document built so far",
-            e.target,
-            e.category
+          emit_warn(
+            "internal",
+            "core_interface",
+            &format!(
+              "convert_streaming: digestion stopped by a resource fatal ({:?}/{:?}) — keeping the document built so far",
+              e.target, e.category
+            ),
           );
           // Recover what the interrupted step had digested. Unlike the eager
           // Stomach-target salvage, drop_innermost is FALSE: there is no
@@ -1190,10 +1220,13 @@ impl DigestionAPI for Core {
           // Same Fatal contract as the eager Build: announce, latch, keep the
           // partial document (recovery is a FEATURE of Fatal).
           e.log_fatal();
-          log::warn!(
-            "convert_streaming: build stopped early ({:?}/{:?}) — keeping the document built so far",
-            e.target,
-            e.category
+          emit_warn(
+            "internal",
+            "core_interface",
+            &format!(
+              "convert_streaming: build stopped early ({:?}/{:?}) — keeping the document built so far",
+              e.target, e.category
+            ),
           );
           fatal_stop = true;
           stopped = true;
@@ -1271,27 +1304,35 @@ impl DigestionAPI for Core {
             .map(|r| r.get_child_nodes().len())
             .unwrap_or(0);
           let (mouths, comments) = gullet::queue_sizes();
-          log::info!(
-            "streaming: undo {}; mouths {}; comments {}; node_boxes {}",
-            state::undo_depth(),
-            mouths,
-            comments,
-            document.node_boxes.len(),
+          emit_info(
+            "streaming",
+            "progress",
+            &format!(
+              "streaming: undo {}; mouths {}; comments {}; node_boxes {}",
+              state::undo_depth(),
+              mouths,
+              comments,
+              document.node_boxes.len(),
+            ),
           );
-          log::info!(
-            "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB; C-live {} MB; C-free {} MB; root-children {}; idstore {}; index {}+{}; arena {}; fonts {}; pending {}",
-            fragments,
-            latexml_core::document::spilled_segment_count(),
-            stomach::last_sampled_rss_kb() / 1024,
-            c_live_mb,
-            c_free_mb,
-            spine_children,
-            document.idstore.len(),
-            index_ids,
-            index_labels,
-            arena::len(),
-            document.node_fonts.len(),
-            document.pending.len(),
+          emit_info(
+            "streaming",
+            "progress",
+            &format!(
+              "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB; C-live {} MB; C-free {} MB; root-children {}; idstore {}; index {}+{}; arena {}; fonts {}; pending {}",
+              fragments,
+              latexml_core::document::spilled_segment_count(),
+              stomach::last_sampled_rss_kb() / 1024,
+              c_live_mb,
+              c_free_mb,
+              spine_children,
+              document.idstore.len(),
+              index_ids,
+              index_labels,
+              arena::len(),
+              document.node_fonts.len(),
+              document.pending.len(),
+            ),
           );
         }
       }
@@ -1304,12 +1345,16 @@ impl DigestionAPI for Core {
     gullet::flush();
     note_end(&digestion_note);
     let pass1_elapsed = phase_clock.elapsed();
-    log::info!(
-      "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) spilled, RSS ~{} MB",
-      pass1_elapsed,
-      stomach::fragment_yield_count(),
-      latexml_core::document::spilled_segment_count(),
-      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+    emit_info(
+      "streaming",
+      "progress",
+      &format!(
+        "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) spilled, RSS ~{} MB",
+        pass1_elapsed,
+        stomach::fragment_yield_count(),
+        latexml_core::document::spilled_segment_count(),
+        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+      ),
     );
 
     // The ROOT's after-open hooks were DEFERRED during pass 1
@@ -1337,8 +1382,10 @@ impl DigestionAPI for Core {
       // form — well-formed XML that still carries `_`-bookkeeping attributes,
       // which a salvaged partial is allowed to. The verdict is already
       // latched Fatal.
-      log::warn!(
-        "convert_streaming: fatal stop — emitting the cheap partial (pass 2 and the finalize          tail skipped to avoid allocating at the memory ceiling)"
+      emit_warn(
+        "internal",
+        "core_interface",
+        "convert_streaming: fatal stop — emitting the cheap partial (pass 2 and the finalize tail skipped to avoid allocating at the memory ceiling)",
       );
       // The partial's serialization must still RESOLVE placeholders (raw
       // segments splice recursively) — literal mode was for pass 1 only.
@@ -1378,12 +1425,16 @@ impl DigestionAPI for Core {
       .unwrap_or_default();
     let pass2_start = phase_clock.elapsed();
     streaming_pass2(&mut store, &index, &node_fonts, &mut counters)?;
-    log::info!(
-      "streaming: PASS 2 done in {:.1?} ({:.1?} cumulative) — {} segment(s), RSS ~{} MB",
-      phase_clock.elapsed().saturating_sub(pass2_start),
-      phase_clock.elapsed(),
-      latexml_core::document::spilled_segment_count(),
-      latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+    emit_info(
+      "streaming",
+      "progress",
+      &format!(
+        "streaming: PASS 2 done in {:.1?} ({:.1?} cumulative) — {} segment(s), RSS ~{} MB",
+        phase_clock.elapsed().saturating_sub(pass2_start),
+        phase_clock.elapsed(),
+        latexml_core::document::spilled_segment_count(),
+        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+      ),
     );
     if let Some(mut root) = document.get_document().get_root_element() {
       for (key, value) in &counters {
@@ -1424,11 +1475,14 @@ impl DigestionAPI for Core {
     // run still reports as failed and never masquerades as clean.
     if let Err(e) = document.absorb(&digested, None) {
       e.log_fatal();
-      log::warn!(
-        "convert_document: build stopped early ({:?}/{:?}) — keeping the \
+      emit_warn(
+        "internal",
+        "core_interface",
+        &format!(
+          "convert_document: build stopped early ({:?}/{:?}) — keeping the \
          document built so far",
-        e.target,
-        e.category
+          e.target, e.category
+        ),
       );
     }
     note_end("Building");

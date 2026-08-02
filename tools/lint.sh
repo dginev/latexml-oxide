@@ -112,6 +112,12 @@ run "xml:id accessor ratchet" \
   "a new string-keyed xml: accessor landed; use the *_ns form" -- \
   tools/lint_xmlid_accessor.sh
 
+# 1b. Single diagnostic vehicle: no raw log::{info,warn,error}! in workspace
+#     crates (bypasses tally, caps, suppression, taxonomy).
+run "raw log-diagnostic ban" \
+  "use Info!/Warn!/Error!/Fatal! or emit_{info,warn,error,fatal}" -- \
+  tools/lint_raw_log_diag.sh
+
 # 2. Formatting must already be applied (check, don't rewrite).
 run "rustfmt (check)" \
   "run: cargo fmt --all" -- \

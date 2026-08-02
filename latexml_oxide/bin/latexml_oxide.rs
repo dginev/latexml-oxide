@@ -12,7 +12,7 @@ use std::{
 
 use clap::Parser;
 use latexml::converter::Converter;
-use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
+use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat, error::emit_info};
 
 /// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
 /// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
@@ -727,7 +727,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // Persistent LSP Server mode — handle early before source file checks
   if cli.server {
-    log::info!("Starting persistent LSP server...");
+    emit_info("lsp", "server", "Starting persistent LSP server...");
     let max_memory = resolve_max_memory(cli.max_memory);
     latexml::lsp_server::run_lsp_server(cli.timeout, max_memory)?;
     process::exit(0);
