@@ -89,7 +89,40 @@ classes are singletons and the first error is often incidental.
 
 ## Current status
 
-- **2026-07-30 (latest) — a font selected by FAMILY decoded through OT1, emitting the
+- **2026-08-02 (latest) — rc4-recut full rerun of sandbox-arxiv-2605+2606 (60,505
+  docs): success at parity, every recorded fatal-witness set improved, one new
+  REAL cluster (a fleet-only libxml panic ×3) and one REAL seed (Perl-0-vs-
+  Rust-101 error floods).** Fleet: fresh `maxperf-cortex` worker on main
+  `69ec59620f`, 72 workers, both corpora drained in ~1 h. Headline (2605 /
+  2606): no_problem 6,078/6,359 · warning 19,744/19,724 · error 3,991/4,102 ·
+  fatal 266/241. The huge `no_problem→warning` shift (2605: 16,791→6,078 np,
+  9,043→19,744 warn vs the prior run) is **#484's lossless diagnostic tally
+  recording mostly math warnings that were previously lost — visibility, not
+  regression** (owner-confirmed; do not chase).
+  **Witness sets** (per-id via `api/corpus/…/document/`): the 17
+  `Fatal:TooManyErrors` papers are now ALL plain `error` at 1–10 errors; the
+  bxcoloremoji 18/18 non-fatal (2605.14271 at its recorded post-fix 12); the
+  `\lx@tag@intags` pair resolved (2605.12842 warning; 2605.01731 one unrelated
+  `undefined:\nequiv`); the flip-4 all `warning`/0-error.
+  **Fatal clusters** (sampled 8 each, `parity_check.sh` 180 s, protocol
+  cluster-classify):
+  | cluster | size | verdict |
+  |---|---|---|
+  | `panic:caught` | 3 | **REAL, fleet-pool-only** — all three (2605.08935, 2606.01083, 2606.22705) panic at libxml-0.3.21 `node.rs:1292` `ptr_as_option` `.upgrade().unwrap()` on a dead docref (Node handle outliving its dropped Document). NOT reproducible in 11 local attempts: CLI unpacked/zip, `cortex_worker --standalone` (all 3 papers), forced timeouts — standalone's timeout is a hard process exit, so only the pooled ZMQ fleet's per-thread recycle/abort teardown can order the drop. Fix paths: inspect the worker recycle + #480/#484 teardown for a Node-across-Document-drop site; and/or fork-harden `ptr_as_option` (dead docref → `None` + debug assert, family of the NULL-FFI hardening). |
+  | `TooManyErrors:MaxLimit(100)` | 117 | **MIXED, REAL seed** — 4/8 REAL incl. **2605.22927 and 2606.11121: Perl 0 errors vs Rust 101-capped flood** (also 2606.01136 P63/R101, 2605.10685 P7/R101); 3/8 both-capped (uncomparable), 1 Rust-win. Root-cause the two P=0 witnesses first; cap-bucket ⇒ sub-group by first-error class before scoping. |
+  | `Stomach:Recursion` | 55 | **MIXED** — 3/8 REAL-by-count (2605.17696 R144/P56, 2606.05321 R35/P15, 2606.08524 R94/P50), 2 Rust-wins, 1 Perl-capped, 1 shared-timeout, 1 clean. NOTE: none hit the recursion *fatal* locally — the fleet's memory-governed guard levels are part of the trigger; sub-group by next-error class. |
+  | `Timeout:PushbackLimit` | 120 | **Environmental/policy** — 3/8 both-clean locally (same binary!), 3 Rust-wins/shared, 1 trivial R2-vs-P1. Fleet budget caps, not conversion bugs. |
+  | `Timeout:TokenLimit` | 88 | **Not a bug cluster** — 7/8 Rust-wins (P 3–101+ vs R 0–2) but 6/8 with local `RUST_TIMEOUT` partials: legitimately heavy papers, Rust cleaner-but-slow; perf domain. |
+  | `cortex:never_completed` | 26 | **Fleet-environmental** — 0/8 REAL, 5/8 Rust-wins, 2 both-clean; the known pattern. |
+  Rust-wins recorded this round (do NOT "fix"): 2606.31920, 2605.27614,
+  2606.28450, 2605.16450, 2605.03102, 2606.28253, 2605.16752, 2606.19764,
+  2605.22335, 2606.26525, 2606.15193, 2606.25331, 2606.31502, 2606.28434,
+  2605.26647, 2605.26895, 2605.15001, 2606.18685.
+  **Actionable queue from this round**: (1) the libxml panic teardown (above);
+  (2) `2605.22927`/`2606.11121` Perl-0-vs-Rust-101 floods; (3) the
+  Stomach:Recursion REAL trio. Everything else is policy/perf/upstream.
+
+- **2026-07-30 — a font selected by FAMILY decoded through OT1, emitting the
   slot's TEXT character, at zero errors.** Rust's `\selectfont` was missing Perl's
   middle branch (`latex_constructs.pool.ltxml` L5207-5209): when the family is not a
   known typeface, `LoadFontMap($family)` and, on success, `MergeFont(encoding =>
