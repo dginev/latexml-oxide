@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Value"],"struct":["Entry","ObjectDB"]};
+window.SIDEBAR_ITEMS = {"constant":["DBFILE_FORMAT_VERSION"],"enum":["Value"],"struct":["DbAttachOptions","Entry","ObjectDB"]};
