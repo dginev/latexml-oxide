@@ -6,8 +6,12 @@
 //! `latexml_post` does not need to import `latexml_core::common::error`
 //! just to emit diagnostics. The macro names deliberately shadow the
 //! identically-named macros from `latexml_core` — same shape (`(category,
-//! object, …)`), simpler implementation (no error-cap → Fatal unwinding,
-//! no location trace appended). They DO bump the shared `latexml_core`
+//! object, …)`), no location trace appended. Since the single-vehicle
+//! rework, post's `Error!` DOES participate in the MAX_ERRORS /
+//! consecutive-error caps via `emit_error` — the cap latches the sticky
+//! fatal and CONTINUES (no unwind channel here), where Perl's Post neither
+//! counts nor caps ($STATE-gated) and its Fatal dies. Deliberate
+//! divergence, recorded in OXIDIZED_DESIGN. They DO bump the shared `latexml_core`
 //! `REPORT` status counters via `note_status`, so a post-processing
 //! `Warn!`/`Error!`/`Fatal!` raises the conversion's `status_code` exactly
 //! like a core-phase one — the run's severity is the combined worst of the

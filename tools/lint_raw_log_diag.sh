@@ -26,7 +26,7 @@ cd "$(dirname "$0")/.."
 
 ALLOW_RE='^(latexml_core/src/common/error\.rs|latexml_core/src/util/logger\.rs)'
 
-violations=$(grep -rn --include="*.rs" -E 'log::(info|warn|error)!' \
+violations=$(grep -rn --include="*.rs" -E '(log::(info|warn|error|log)!|^\s*use log::(info|warn|error)\b)' \
   latexml_core/src latexml_engine/src latexml_package/src latexml_contrib/src \
   latexml_post/src latexml_oxide/src latexml_oxide/bin latexml_math_parser/src \
   cortex_worker/src 2>/dev/null \

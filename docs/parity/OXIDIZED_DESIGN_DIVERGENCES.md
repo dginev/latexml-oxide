@@ -3429,3 +3429,22 @@ merges onto the one line box: `<text class="ltx_verbatim" font="typewriter"
 width="345.0pt">…`. Same attributes, same semantics, one element instead of
 two; no upstream `t/` golden pins the nested form. Golden:
 `tokenize/fancyvrb.xml`.
+
+### 94. Post-processing errors cap at MAX_ERRORS; the cap latches instead of dying
+
+Perl's error cap lives in `Common/Error.pm:372` behind `$STATE &&` — and Post
+runs with `$STATE` undef, so Perl post-processing neither counts toward nor
+triggers `too_many_errors`, and a post error storm runs unbounded. Since the
+single-vehicle diagnostics rework (#484 + the cap-latch fix), Rust post
+`Error!` flows through `emit_error`, which applies the same MAX_ERRORS (100)
+and consecutive-error (500) caps as the core phase. Second divergence in the
+same seam: on crossing a cap, Perl `Fatal` **dies**; `emit_error` has no
+unwind channel (its callers return `String`/`Option`, not `Result`), so it
+emits `Fatal:TooManyErrors`, latches the sticky fatal — the run **continues**
+and keeps writing pages, but the verdict, exit code, and
+`Status:conversion:3` all report the fatal. Rationale: a partial site plus an
+honest fatal beats Perl's nothing-plus-death; the cap keeps a post storm from
+producing a million-line log. The latch is guarded by the sticky fatal (fires
+once, robust to skipped checks), and the runaway (consecutive) diagnosis is
+tested before the total cap so its message is reachable. Guards:
+`suppression_never_mutes_error_or_fatal`, `119_final_status_report`.
