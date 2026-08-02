@@ -65,6 +65,7 @@ macro_rules! Info {
     $crate::Info!($category, $object, "{}", $msg)
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {{
+    let __diag_guard = latexml_core::common::error::macro_diag_guard();
     latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Info, None);
     log::info!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   }};
@@ -76,6 +77,7 @@ macro_rules! Warn {
     $crate::Warn!($category, $object, "{}", $msg)
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {{
+    let __diag_guard = latexml_core::common::error::macro_diag_guard();
     latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Warning, None);
     log::warn!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   }};
@@ -87,6 +89,7 @@ macro_rules! Error {
     $crate::Error!($category, $object, "{}", $msg)
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {{
+    let __diag_guard = latexml_core::common::error::macro_diag_guard();
     latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Error, None);
     log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   }};
@@ -98,6 +101,7 @@ macro_rules! Fatal {
     $crate::Fatal!($category, $object, "{}", $msg)
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {{
+    let __diag_guard = latexml_core::common::error::macro_diag_guard();
     latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Fatal, None);
     let __m = format!($fmt, $($arg)+);
     log::error!(target: &format!("Fatal:{}:{}", $category, $object), "{}", __m);

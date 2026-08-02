@@ -177,3 +177,43 @@ fn clean_post_run_ends_with_a_complete_verdict() {
     "a post run must END on its combined verdict, got: {very_last}"
   );
 }
+
+/// The lossless-tally contract at the binary level (user directive
+/// 2026-08-02): a diagnostic emitted via a raw `log::warn!` — here
+/// `mouth.rs`'s deterministic "HTTP input not supported" — must register in
+/// the final verdict's count, not just print. Defect this pins: the 131 MB
+/// witness logged 12,105 `Warning:` lines (12,103 of them the math parser's
+/// raw `log_math_warn!`) while the verdict said "2 warnings".
+#[test]
+fn raw_log_warnings_register_in_the_final_verdict() {
+  let workdir = tempfile::tempdir().expect("tempdir");
+  let tex = workdir.path().join("rawwarn.tex");
+  std::fs::write(
+    &tex,
+    "\\documentclass{article}\\begin{document}\n\
+     \\input{http://example.com/nonexistent.tex}\nText.\n\\end{document}\n",
+  )
+  .expect("fixture written");
+  let (stderr, code) = run(
+    &[
+      &tex.to_string_lossy(),
+      "--dest=rawwarn.html",
+      "--format=html5",
+    ],
+    workdir.path(),
+  );
+  assert_eq!(
+    code, 0,
+    "warnings alone do not fail a run — stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains("Warning:latexml_core::mouth HTTP input not supported"),
+    "the raw-log warning line must print"
+  );
+  let (last_verdict, _) = last_lines(&stderr);
+  let verdict = last_verdict.expect("verdict line present");
+  assert!(
+    verdict.contains("Conversion complete: 1 warning"),
+    "the raw-log warning must be COUNTED in the verdict, got: {verdict}"
+  );
+}

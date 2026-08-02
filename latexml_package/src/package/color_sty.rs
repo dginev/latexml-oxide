@@ -166,6 +166,7 @@ pub fn lookup_color_obj(name: &str) -> Color {
         Stored::String(pin(color::BLACK.to_stored())),
         None,
       );
+      let _diag_guard = macro_diag_guard();
       note_status(LogStatus::Error, None);
       if !is_log_output_suppressed() {
         log::error!(

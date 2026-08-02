@@ -114,6 +114,7 @@ pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
 /// points return `String`/`Result<_, ()>`, so we log+count directly with no
 /// control-flow side effect.
 fn post_error(object: &str, message: &str) {
+  let _diag_guard = latexml_core::common::error::macro_diag_guard();
   note_status(LogStatus::Error, None);
   log::error!(target: &format!("post:{object}"), "{message}");
 }

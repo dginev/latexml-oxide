@@ -34,6 +34,44 @@ pub enum LogStatus {
 #[thread_local]
 pub static REPORT: Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
 
+/// Depth of diagnostic-macro emission on this thread (see [`macro_diag_guard`]).
+/// A depth counter, not a bool: `Error!` can raise `Fatal!` inside its own
+/// scope (the too-many-errors escalation), nesting two guards.
+#[thread_local]
+static MACRO_DIAG_DEPTH: std::cell::Cell<u32> = std::cell::Cell::new(0);
+
+/// RAII marker: "the log record currently being emitted comes from a
+/// diagnostic macro that already counted itself via [`note_status`]".
+///
+/// The tally has TWO producers which must never overlap: the macros
+/// (`Info!`/`Warn!`/`Error!`/`Fatal!`/`Debug!`) count at RAISE time — even when
+/// output is suppressed, which the `MAX_ERRORS` cap depends on — and the
+/// logger backend counts every OTHER record it prints (raw `log::warn!` and
+/// friends, which previously printed `Warning:` lines that no counter ever
+/// saw: the 131 MB witness logged 12,105 `Warning:` lines and reported
+/// "2 warnings"). This guard is how the logger tells the two apart.
+pub struct MacroDiagGuard(());
+impl Drop for MacroDiagGuard {
+  fn drop(&mut self) { MACRO_DIAG_DEPTH.set(MACRO_DIAG_DEPTH.get().saturating_sub(1)); }
+}
+#[must_use = "the guard must live across the log emission it marks"]
+pub fn macro_diag_guard() -> MacroDiagGuard {
+  MACRO_DIAG_DEPTH.set(MACRO_DIAG_DEPTH.get() + 1);
+  MacroDiagGuard(())
+}
+
+/// Count a diagnostic record observed by the logger backend, unless it was
+/// emitted by a macro (already counted at raise time) or the report is
+/// mid-borrow (a raw log call from inside a `report_mut!` scope must not
+/// panic the conversion over a tally increment — matching the logger's own
+/// `try_borrow` discipline for `LOG_BUFFER`).
+pub fn note_status_from_logger(status: LogStatus) {
+  if MACRO_DIAG_DEPTH.get() > 0 || REPORT.try_borrow_mut().is_err() {
+    return;
+  }
+  note_status(status, None);
+}
+
 /// When true, Error!/Warn!/Info! macros still count in the report
 /// but do **not** emit anything to stderr/log.
 /// Used by tests that are known to produce errors in both Perl and Rust.
@@ -478,6 +516,7 @@ pub fn debug_enabled(name: &str) -> bool {
 macro_rules! DebugFeature {
   ($feature:literal, $($arg:tt)*) => {{
     if $crate::common::error::debug_enabled($feature) {
+      let __diag_guard = $crate::common::error::macro_diag_guard();
       $crate::common::error::note_status(
         $crate::common::error::LogStatus::Debug, None);
       use log::debug;
@@ -489,6 +528,7 @@ macro_rules! DebugFeature {
 #[macro_export]
 macro_rules! Debug {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
@@ -496,6 +536,7 @@ macro_rules! Debug {
       $crate::generate_message!($message))
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
@@ -503,6 +544,7 @@ macro_rules! Debug {
       $crate::generate_message!($message, $($details),*))
   }};
   ($($simple:expr_2021),*) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
@@ -514,6 +556,7 @@ macro_rules! Debug {
 #[macro_export]
 macro_rules! Info {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Info, None);
     use log::info;
@@ -521,6 +564,7 @@ macro_rules! Info {
       $crate::generate_message!($message))
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
+  let __diag_guard = $crate::common::error::macro_diag_guard();
   $crate::common::error::note_status(
     $crate::common::error::LogStatus::Info, None);
     use log::info;
@@ -528,6 +572,7 @@ macro_rules! Info {
     $crate::generate_message!($message, $($details),*))
   }};
   ($($simple:expr_2021),*) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Info, None);
     use log::info;
@@ -539,6 +584,7 @@ macro_rules! Info {
 #[macro_export]
 macro_rules! Warn {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -548,6 +594,7 @@ macro_rules! Warn {
     }
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -564,6 +611,7 @@ macro_rules! Error {
     $crate::Error!($category,$object,$message,"")
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
+    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Error, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -633,12 +681,14 @@ macro_rules! Fatal {
       // but never latch the document's sticky fatal. The Err return below
       // still aborts the failing digestion; its caller degrades
       // gracefully. A document must not be lost to a broken bibliography.
+      let __diag_guard = $crate::common::error::macro_diag_guard();
       $crate::common::error::note_status($crate::common::error::LogStatus::Error, None);
       if !$crate::common::error::is_log_output_suppressed() {
         use log::error;
         error!(target: "demoted_fatal", "{}", $message);
       }
     } else {
+      let __diag_guard = $crate::common::error::macro_diag_guard();
       $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
     }
     {
@@ -867,6 +917,9 @@ impl fmt::Display for Error {
 impl Error {
   pub fn log_fatal(&self) {
     let target_str = s!("Fatal:{:?}:{:?} ", self.target, self.category);
+    // This emission is accounted by the note_status below — mark it so the
+    // logger backend does not also treat it as a raw record.
+    let __diag_guard = macro_diag_guard();
     use log::error;
     error!(target: &target_str, "{}", self.message);
     // Mark the global report as fatal so cortex_worker's exit code is
