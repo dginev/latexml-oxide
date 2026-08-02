@@ -179,9 +179,10 @@ fn clean_post_run_ends_with_a_complete_verdict() {
 }
 
 /// The lossless-tally contract at the binary level (user directive
-/// 2026-08-02): a diagnostic emitted via a raw `log::warn!` — here
-/// `mouth.rs`'s deterministic "HTTP input not supported" — must register in
-/// the final verdict's count, not just print. Defect this pins: the 131 MB
+/// 2026-08-02): `mouth.rs`'s deterministic "HTTP input not supported"
+/// warning — a raw `log::warn!` before the single-vehicle migration, an
+/// `emit_warn` after it — must register in the final verdict's count, not
+/// just print. Defect this pins: the 131 MB
 /// witness logged 12,105 `Warning:` lines (12,103 of them the math parser's
 /// raw `log_math_warn!`) while the verdict said "2 warnings".
 #[test]
@@ -207,7 +208,7 @@ fn raw_log_warnings_register_in_the_final_verdict() {
     "warnings alone do not fail a run — stderr:\n{stderr}"
   );
   assert!(
-    stderr.contains("Warning:latexml_core::mouth HTTP input not supported"),
+    stderr.contains("Warning:unsupported:http_input HTTP input not supported"),
     "the raw-log warning line must print"
   );
   let (last_verdict, _) = last_lines(&stderr);
@@ -215,5 +216,36 @@ fn raw_log_warnings_register_in_the_final_verdict() {
   assert!(
     verdict.contains("Conversion complete: 1 warning"),
     "the raw-log warning must be COUNTED in the verdict, got: {verdict}"
+  );
+}
+
+/// Error and Fatal messages are the success-rate signal — they must reach the
+/// log at ANY verbosity (user directive 2026-08-02). The quietest CLI mapping
+/// floors the level filter at `Warn`, so `Fatal:`/`Error:` records always
+/// flow; this pins that floor — if someone maps quiet to `LevelFilter::Error`
+/// or `Off`, the Fatal line or the verdict would vanish and this test names
+/// the contract being broken. (`-q` is a plain bool flag — quietest mode.)
+#[test]
+fn quiet_mode_still_reports_error_and_fatal() {
+  let workdir = tempfile::tempdir().expect("tempdir");
+  let tex = fatal_fixture(workdir.path());
+  let (stderr, code) = run(
+    &[&tex, "--dest=toomany.html", "--format=html5", "-q"],
+    workdir.path(),
+  );
+  assert_eq!(code, 1, "a fatal conversion must exit 1 even at -q");
+  assert!(
+    stderr.contains("Fatal:TooManyErrors"),
+    "the Fatal line must print at any verbosity — stderr tail:\n{}",
+    stderr.lines().rev().take(6).collect::<Vec<_>>().join("\n")
+  );
+  assert!(
+    stderr.contains("Error:undefined:"),
+    "Error lines must print at any verbosity"
+  );
+  let (_, very_last) = last_lines(&stderr);
+  assert!(
+    very_last.contains("Conversion failed"),
+    "the failure verdict stays the last line at -q, got: {very_last}"
   );
 }

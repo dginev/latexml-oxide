@@ -17,6 +17,7 @@ use std::{
   time::SystemTime,
 };
 
+use latexml_core::common::error::emit_warn;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap;
@@ -215,9 +216,13 @@ pub(crate) fn resolve_root(
     if ov.exists() || ov == buffer_path {
       return ov;
     }
-    log::warn!(
-      "rootDocument override {} does not exist; ignoring",
-      ov.display()
+    emit_warn(
+      "lsp",
+      "root_document",
+      &format!(
+        "rootDocument override {} does not exist; ignoring",
+        ov.display()
+      ),
     );
   }
   if let Some(t) = text {

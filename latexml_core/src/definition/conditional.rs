@@ -9,7 +9,11 @@ use libxml::tree::Node;
 // use crate::common::numeric_ops::NumericOps;
 use crate::Digested;
 use crate::{
-  common::{error::*, locator::Locator, object::Object},
+  common::{
+    error::{emit_warn, *},
+    locator::Locator,
+    object::Object,
+  },
   definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure},
   document::Document,
   gullet,
@@ -355,7 +359,11 @@ impl Conditional {
         Some(Stored::VecDequeStored(s)) => s.len(),
         _ => 0,
       });
-      log::warn!("\\else encountered with no active if-frame (stack_len={stack_len})");
+      emit_warn(
+        "unexpected",
+        "else",
+        &format!("\\else encountered with no active if-frame (stack_len={stack_len})"),
+      );
     }
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {

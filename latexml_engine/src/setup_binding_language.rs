@@ -1560,10 +1560,13 @@ macro_rules! DefKeyVal {
   }};
   ($keyset:expr_2021, $key:expr_2021, $vtype:expr_2021, $default:expr_2021, $options:tt) => {{
     // TODO: explicit $options with prefix logic — for now ignore options and use default prefix
-    log::warn!(
-      "DefKeyVal with explicit options not fully ported, ignoring options for {}/{}",
-      $keyset,
-      $key
+    latexml_core::common::error::emit_warn(
+      "unimplemented",
+      "DefKeyVal",
+      &format!(
+        "DefKeyVal with explicit options not fully ported, ignoring options for {}/{}",
+        $keyset, $key
+      ),
     );
     ::latexml_core::keyval::define(KeyvalConfig {
       prefix: "KV",

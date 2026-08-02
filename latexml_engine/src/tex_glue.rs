@@ -1,6 +1,8 @@
 //! TeX Glue
 //!
 //! Core TeX Implementation for LaTeXML
+use latexml_core::common::error::emit_warn;
+
 use crate::prelude::*;
 static UNICODE_EM_SPACES: [(f64, char); 7] = [
   // Spaces to fake spacing, with width in ems
@@ -262,7 +264,11 @@ LoadDefinitions!({
             if let Stored::Dimension(ref width_d) = *width_stored {
               return *width_d;
             } else {
-              log::warn!("Unexpected type of \"width\" value in State: {width_stored:?}");
+              emit_warn(
+                "internal",
+                "state",
+                &format!("Unexpected type of \"width\" value in State: {width_stored:?}"),
+              );
               break;
             }
           } else {

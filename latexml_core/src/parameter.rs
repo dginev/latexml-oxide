@@ -11,7 +11,7 @@ use crate::{
   Digested,
   common::{
     arena::{self, SymStr},
-    error::*,
+    error::{emit_warn, *},
     object::Object,
   },
   definition::{
@@ -276,7 +276,11 @@ impl Parameter {
     self.inner = self.inner.map(|inner_ps| match inner_ps.clone().init() {
       Ok(ps) => ps,
       Err(e) => {
-        log::warn!("inner parameter init failed: {e}");
+        emit_warn(
+          "internal",
+          "parameter",
+          &format!("inner parameter init failed: {e}"),
+        );
         inner_ps
       },
     });

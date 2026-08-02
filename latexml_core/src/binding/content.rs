@@ -11,7 +11,7 @@ use crate::{
   common::{
     arena,
     arena::SymStr,
-    error::*,
+    error::{emit_error, *},
     font::{Font, Fontmap},
     model,
   },
@@ -3175,9 +3175,13 @@ pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
     let_i(if_token, &target, scope);
     return;
   }
-  log::error!(
-    "Expected a conditional defined by \\newif, got '{}'",
-    if_token.stringify()
+  emit_error(
+    "expected",
+    "newif",
+    &format!(
+      "Expected a conditional defined by \\newif, got '{}'",
+      if_token.stringify()
+    ),
   );
 }
 

@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
 
 use latexml_core::{
-  alignment::template::TemplateConfig, common::xml::is_descendant_or_self, digested::DigestedData,
+  alignment::template::TemplateConfig,
+  common::{error::emit_warn, xml::is_descendant_or_self},
+  digested::DigestedData,
 };
 
 ///**********************************************************************
@@ -773,7 +775,11 @@ pub fn before_equation() -> Result<()> {
       match numbering.get("counter") {
         Some(Stored::String(v)) => to_string(*v),
         Some(other) => {
-          log::warn!("eq counter should be stored as string, was instead: {other:?}");
+          emit_warn(
+            "internal",
+            "state",
+            &format!("eq counter should be stored as string, was instead: {other:?}"),
+          );
           String::from("equation")
         },
         _ => String::from("equation"),

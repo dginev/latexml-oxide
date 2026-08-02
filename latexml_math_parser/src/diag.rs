@@ -1,8 +1,9 @@
 //! Diagnostic emission for `latexml_math_parser`.
 //!
-//! Mirrors the contract of `latexml_post::diag` and
-//! `latexml_core::common::error::Error!` so the converter's log harness
-//! aggregates math-parser emissions identically to engine + post stages:
+//! Thin forwarding wrappers over the SINGLE diagnostic vehicle
+//! (`latexml_core::common::error::emit_*`), so math-parser emissions count in
+//! the conversion tally and aggregate in cortex identically to engine + post
+//! stages:
 //!
 //!   `target = "<class>:<object>"`  →  `Error:<class>:<object> <message>`
 //!
@@ -13,37 +14,40 @@
 //!   * `Fatal('expected', 'MathGrammar', …)` — MathParser.pm:56 (grammar load)
 //!   * `Fatal('malformed', '<XMath>', …)`   — MathParser.pm:280 (bad parent)
 //!
-//! Like `latexml_post::diag`, we don't reuse `latexml_core::common::error::Error!`
-//! because that macro early-returns `Err(LatexmlError)` on max-errors /
-//! runaway-loop, and math-parser functions return diverse types
-//! (`String`, `Option<…>`, etc.), not `Result<_, LatexmlError>`.
+//! We don't reuse `latexml_core::common::error::Error!` because that macro
+//! early-returns `Err(LatexmlError)` on max-errors / runaway-loop, and
+//! math-parser functions return diverse types (`String`, `Option<…>`, etc.),
+//! not `Result<_, LatexmlError>` — exactly the gap `emit_error` exists for.
+//! These used to call raw `log::warn!`/`log::error!`, which printed
+//! `Warning:`/`Error:` lines that no counter ever saw: the 131 MB witness
+//! logged 12,103 math warnings and reported "2 warnings".
 
 #[macro_export]
 macro_rules! log_math_error {
   ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
-    log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+    latexml_core::common::error::emit_error(&format!("{}", $category), &format!("{}", $object), &format!("{}", $msg))
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
-    log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+    latexml_core::common::error::emit_error(&format!("{}", $category), &format!("{}", $object), &format!($fmt, $($arg)+))
   };
 }
 
 #[macro_export]
 macro_rules! log_math_warn {
   ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
-    log::warn!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+    latexml_core::common::error::emit_warn(&format!("{}", $category), &format!("{}", $object), &format!("{}", $msg))
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
-    log::warn!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+    latexml_core::common::error::emit_warn(&format!("{}", $category), &format!("{}", $object), &format!($fmt, $($arg)+))
   };
 }
 
 #[macro_export]
 macro_rules! log_math_info {
   ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
-    log::info!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+    latexml_core::common::error::emit_info(&format!("{}", $category), &format!("{}", $object), &format!("{}", $msg))
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
-    log::info!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+    latexml_core::common::error::emit_info(&format!("{}", $category), &format!("{}", $object), &format!($fmt, $($arg)+))
   };
 }

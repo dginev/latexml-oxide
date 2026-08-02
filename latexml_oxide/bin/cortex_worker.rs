@@ -22,6 +22,8 @@ use std::{
   sync::atomic::{AtomicU64, Ordering},
 };
 
+use latexml_core::common::error::{emit_error, emit_warn};
+
 /// Per-process allocator. Default is **mimalloc** (lock-free per-thread heaps,
 /// avoids glibc's arena-mutex contention). Building with `--features jemalloc`
 /// swaps in **jemalloc**, whose decay-based background purging returns freed
@@ -670,9 +672,12 @@ impl Worker for LatexmlWorker {
           },
           None => ("conversion", "caught", es.as_str()),
         };
-        log::warn!(
-          target: "cortex_worker",
-          "conversion of {arxiv_id} failed ({category}:{what}): {message}; returning a Fatal result archive"
+        emit_warn(
+          "cortex_worker",
+          "failed",
+          &format!(
+            "conversion of {arxiv_id} failed ({category}:{what}): {message}; returning a Fatal result archive"
+          ),
         );
         write_failure_zip(&arxiv_id, category, what, message)?
       },
@@ -687,16 +692,22 @@ impl Worker for LatexmlWorker {
           s.set(n);
           n
         });
-        log::error!(
-          target: "cortex_worker",
-          "PANIC caught converting {arxiv_id} (consecutive: {streak}/{MAX_CONSECUTIVE_PANICS}): {msg}"
+        emit_error(
+          "cortex_worker",
+          "panic",
+          &format!(
+            "PANIC caught converting {arxiv_id} (consecutive: {streak}/{MAX_CONSECUTIVE_PANICS}): {msg}"
+          ),
         );
         if streak >= MAX_CONSECUTIVE_PANICS {
-          log::error!(
-            target: "cortex_worker",
-            "{MAX_CONSECUTIVE_PANICS} consecutive panics — engine state is likely corrupted; \
-             exiting (code 70) for a clean supervisor restart. The dispatcher's lease reaper \
-             re-leases the in-flight task to another worker."
+          emit_error(
+            "cortex_worker",
+            "panic",
+            &format!(
+              "{MAX_CONSECUTIVE_PANICS} consecutive panics — engine state is likely corrupted; \
+               exiting (code 70) for a clean supervisor restart. The dispatcher's lease reaper \
+               re-leases the in-flight task to another worker."
+            ),
           );
           process::exit(70);
         }

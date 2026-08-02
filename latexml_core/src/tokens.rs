@@ -9,8 +9,14 @@ use quote::{ToTokens, TokenStreamExt, quote};
 use crate::{
   Digested,
   common::{
-    dimension::Dimension, error::*, float::Float, glue::Glue, mudimension::MuDimension,
-    muglue::MuGlue, number::Number, numeric_ops::NumericOps,
+    dimension::Dimension,
+    error::{emit_warn, *},
+    float::Float,
+    glue::Glue,
+    mudimension::MuDimension,
+    muglue::MuGlue,
+    number::Number,
+    numeric_ops::NumericOps,
   },
   definition::argument::ArgWrap,
   fmt,
@@ -99,7 +105,11 @@ impl From<Tokens> for Token {
       // means a stringly-typed binding slot received a multi-token value
       // (e.g. a macro argument coerced into a single-token slot). The
       // first token preserves TEx's "grab a single token" semantics.
-      log::warn!("multi-token Tokens cast into single Token: {ts:?}");
+      emit_warn(
+        "internal",
+        "tokens",
+        &format!("multi-token Tokens cast into single Token: {ts:?}"),
+      );
       ts.0.remove(0)
     }
   }
@@ -112,7 +122,11 @@ impl<'a> From<&'a Tokens> for Token {
     } else if ts.0.len() == 1 {
       ts.0[0]
     } else {
-      log::warn!("multi-token Tokens cast into single Token: {ts:?}");
+      emit_warn(
+        "internal",
+        "tokens",
+        &format!("multi-token Tokens cast into single Token: {ts:?}"),
+      );
       ts.0[0]
     }
   }

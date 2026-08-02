@@ -7,7 +7,13 @@ use rustc_hash::FxHashMap as HashMap;
 use super::keyval::{has_keyval, keyval_get, keyval_qname};
 use crate::{
   BoxOps, Digested, NO_PROPERTIES,
-  common::{arena::SymHashMap, error::*, font::Font, object::Object, store::Stored},
+  common::{
+    arena::SymHashMap,
+    error::{emit_warn, *},
+    font::Font,
+    object::Object,
+    store::Stored,
+  },
   definition::argument::ArgWrap,
   document::Document,
   gullet::{self, ExpansionLevel},
@@ -144,7 +150,11 @@ impl BoxOps for KeyVals {
   }
   fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Owned(self.to_string())) }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
-    log::warn!("set_property on KeyVals not supported");
+    emit_warn(
+      "internal",
+      "keyvals",
+      "set_property on KeyVals not supported",
+    );
   }
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
   fn get_font(&self) -> Result<Option<std::rc::Rc<Font>>> { Ok(None) } // TODO
@@ -1006,7 +1016,11 @@ impl KeyVals {
         },
         ArgWrap::Token(vtk) => tks.push(vtk),
         other => {
-          log::warn!("Unexpected ArgWrap variant in KeyVals revert: {:?}", other);
+          emit_warn(
+            "internal",
+            "keyvals",
+            &format!("Unexpected ArgWrap variant in KeyVals revert: {other:?}"),
+          );
         },
       }
     }

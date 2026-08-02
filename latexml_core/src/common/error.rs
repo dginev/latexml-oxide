@@ -152,6 +152,105 @@ pub fn note_consecutive_error(key: &str) -> usize {
   }
 }
 
+/// The ONE emission primitive every diagnostic flows through (DRY pass,
+/// user directive 2026-08-02): count on the emitting thread's `REPORT`,
+/// then log with the pre-formatted `target`, respecting output suppression —
+/// EXCEPT for `Fatal` records, which are never suppressed: the release
+/// dump-build gate and every success-rate measurement grep for `Fatal:`
+/// lines, so muting them would hide exactly the signal those exist for.
+/// The `MacroDiagGuard` marks the emission so the logger backend does not
+/// count it a second time.
+pub fn emit_record(status: LogStatus, target: &str, message: &str) {
+  let _diag_guard = macro_diag_guard();
+  let level = match status {
+    LogStatus::Debug => log::Level::Debug,
+    LogStatus::Info => log::Level::Info,
+    LogStatus::Warning => log::Level::Warn,
+    _ => log::Level::Error,
+  };
+  let is_fatal = matches!(status, LogStatus::Fatal);
+  note_status(status, None);
+  if is_fatal || !is_log_output_suppressed() {
+    log::log!(target: target, level, "{message}");
+  }
+}
+
+/// The single diagnostic vehicle, function form — for contexts that cannot
+/// use the `Error!`/`Warn!`/`Info!` macros because those are return-based
+/// (`Error!` escalates to `Fatal!`, which `return Err(...)`s, so it only
+/// typechecks in `Result<_, error::Error>` functions).
+///
+/// Perl LaTeXML has exactly one emission vehicle per severity (`Error.pm`),
+/// which is what lets its tally and cortex's aggregation be lossless by
+/// construction. These functions restore that property for Rust's
+/// non-`Result` contexts (post-processing drivers, workers, the LSP server):
+/// they count, emit with a proper `category:object` target, respect output
+/// suppression, and participate in the runaway circuit-breakers — everything
+/// the raw `log::warn!`-family calls they replace silently skipped. Raw
+/// `log::*!` diagnostics are BANNED in workspace crates (see
+/// `tools/lint_raw_log_diag.sh`); the logger backend's own tally
+/// (`note_status_from_logger`) remains only as the net for FOREIGN crates
+/// logging through the `log` facade, which can never use this vehicle.
+pub fn emit_info(category: &str, object: &str, message: &str) {
+  emit_record(LogStatus::Info, &format!("{category}:{object}"), message);
+}
+
+/// See [`emit_info`].
+pub fn emit_warn(category: &str, object: &str, message: &str) {
+  emit_record(LogStatus::Warning, &format!("{category}:{object}"), message);
+}
+
+/// See [`emit_info`]. Unlike the `Error!` macro this cannot escalate by
+/// `return`ing — there is no `Err` channel in the contexts it serves — so
+/// when the error count or the consecutive-error count crosses its cap it
+/// emits the `Fatal:TooManyErrors` record and latches the sticky fatal
+/// instead: the run continues (its caller has no unwind path) but the
+/// conversion's verdict and status code report the fatal honestly.
+pub fn emit_error(category: &str, object: &str, message: &str) {
+  emit_record(LogStatus::Error, &format!("{category}:{object}"), message);
+  if is_demote_fatals() {
+    return;
+  }
+  let maxerrors = match crate::state::try_lookup_int("MAX_ERRORS") {
+    None => usize::MAX, // STATE contended: skip the check for this error
+    Some(v) if v > 0 => v as usize,
+    Some(_) => 100,
+  };
+  let consec = note_consecutive_error(&format!("{category}:{object}"));
+  let over_total = get_status(LogStatus::Error) > maxerrors;
+  let over_consec = consec > MAX_CONSECUTIVE_ERRORS;
+  // Latch exactly at the crossing, not on every error past it.
+  if (over_total && get_status(LogStatus::Error) == maxerrors + 1)
+    || (over_consec && consec == MAX_CONSECUTIVE_ERRORS + 1)
+  {
+    emit_fatal(
+      "TooManyErrors",
+      "MaxLimit",
+      &format!(
+        "Too many errors (> {})!",
+        if over_total {
+          maxerrors
+        } else {
+          MAX_CONSECUTIVE_ERRORS
+        }
+      ),
+    );
+  }
+}
+
+/// See [`emit_info`]. Latches the sticky fatal and emits the canonical
+/// `Fatal:<category>:<object>` line — NEVER suppressed (see [`emit_record`]).
+/// The CALLER owns any early-exit control flow (e.g. `latexml_post`'s
+/// `Fatal!` returns its own `PostError` after this) — a fatal, unlike an
+/// error, needs no cap bookkeeping.
+pub fn emit_fatal(category: &str, object: &str, message: &str) {
+  emit_record(
+    LogStatus::Fatal,
+    &format!("Fatal:{category}:{object} "),
+    message,
+  );
+}
+
 /// Reset the consecutive-error tracker (called from initialize_report).
 fn reset_consecutive_error_tracker() {
   *LAST_ERROR_KEY.borrow_mut() = None;
@@ -528,20 +627,16 @@ macro_rules! DebugFeature {
 #[macro_export]
 macro_rules! Debug {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
-    let __diag_guard = $crate::common::error::macro_diag_guard();
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Debug, None);
-    use log::debug;
-    debug!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message))
+    $crate::common::error::emit_record(
+      $crate::common::error::LogStatus::Debug,
+      &format!("{}:{}", $category, $object),
+      &$crate::generate_message!($message))
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-    let __diag_guard = $crate::common::error::macro_diag_guard();
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Debug, None);
-    use log::debug;
-    debug!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, $($details),*))
+    $crate::common::error::emit_record(
+      $crate::common::error::LogStatus::Debug,
+      &format!("{}:{}", $category, $object),
+      &$crate::generate_message!($message, $($details),*))
   }};
   ($($simple:expr_2021),*) => {{
     let __diag_guard = $crate::common::error::macro_diag_guard();
@@ -556,20 +651,14 @@ macro_rules! Debug {
 #[macro_export]
 macro_rules! Info {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
-    let __diag_guard = $crate::common::error::macro_diag_guard();
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Info, None);
-    use log::info;
-    info!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message))
+    $crate::common::error::emit_info(
+      &format!("{}", $category), &format!("{}", $object),
+      &$crate::generate_message!($message))
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-  let __diag_guard = $crate::common::error::macro_diag_guard();
-  $crate::common::error::note_status(
-    $crate::common::error::LogStatus::Info, None);
-    use log::info;
-    info!(target: &format!("{}:{}", $category, $object), "{}",
-    $crate::generate_message!($message, $($details),*))
+    $crate::common::error::emit_info(
+      &format!("{}", $category), &format!("{}", $object),
+      &$crate::generate_message!($message, $($details),*))
   }};
   ($($simple:expr_2021),*) => {{
     let __diag_guard = $crate::common::error::macro_diag_guard();
@@ -584,24 +673,14 @@ macro_rules! Info {
 #[macro_export]
 macro_rules! Warn {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
-    let __diag_guard = $crate::common::error::macro_diag_guard();
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Warning, None);
-    if !$crate::common::error::is_log_output_suppressed() {
-      use log::warn;
-      warn!(target: &format!("{}:{}", $category, $object), "{}",
-        $crate::generate_message!($message))
-    }
+    $crate::common::error::emit_warn(
+      &format!("{}", $category), &format!("{}", $object),
+      &$crate::generate_message!($message))
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-    let __diag_guard = $crate::common::error::macro_diag_guard();
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Warning, None);
-    if !$crate::common::error::is_log_output_suppressed() {
-      use log::warn;
-      warn!(target: &format!("{}:{}", $category, $object), "{}",
-        $crate::generate_message!($message, $($details),*))
-    }
+    $crate::common::error::emit_warn(
+      &format!("{}", $category), &format!("{}", $object),
+      &$crate::generate_message!($message, $($details),*))
   }}
 }
 
@@ -611,14 +690,11 @@ macro_rules! Error {
     $crate::Error!($category,$object,$message,"")
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-    let __diag_guard = $crate::common::error::macro_diag_guard();
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Error, None);
-    if !$crate::common::error::is_log_output_suppressed() {
-      use log::error;
-      error!(target: &format!("{}:{}", $category, $object), "{}",
-        $crate::generate_message!($message, $($details),*));
-    }
+    $crate::common::error::emit_record(
+      $crate::common::error::LogStatus::Error,
+      &format!("{}:{}", $category, $object),
+      &$crate::generate_message!($message, $($details),*),
+    );
     // In the fatal-demotion scope (bibliography post-processing) the
     // too-many/consecutive-error escalations are SKIPPED: their Fatal!
     // would demote back into an Error, turning the circuit-breaker into
@@ -681,14 +757,12 @@ macro_rules! Fatal {
       // but never latch the document's sticky fatal. The Err return below
       // still aborts the failing digestion; its caller degrades
       // gracefully. A document must not be lost to a broken bibliography.
-      let __diag_guard = $crate::common::error::macro_diag_guard();
-      $crate::common::error::note_status($crate::common::error::LogStatus::Error, None);
-      if !$crate::common::error::is_log_output_suppressed() {
-        use log::error;
-        error!(target: "demoted_fatal", "{}", $message);
-      }
+      $crate::common::error::emit_record(
+        $crate::common::error::LogStatus::Error,
+        "demoted_fatal",
+        &format!("{}", $message),
+      );
     } else {
-      let __diag_guard = $crate::common::error::macro_diag_guard();
       $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
     }
     {
@@ -916,18 +990,16 @@ impl fmt::Display for Error {
 
 impl Error {
   pub fn log_fatal(&self) {
-    let target_str = s!("Fatal:{:?}:{:?} ", self.target, self.category);
-    // This emission is accounted by the note_status below — mark it so the
-    // logger backend does not also treat it as a raw record.
-    let __diag_guard = macro_diag_guard();
-    use log::error;
-    error!(target: &target_str, "{}", self.message);
-    // Mark the global report as fatal so cortex_worker's exit code is
-    // 3 (conversion failure) instead of 0 (success). Without this,
-    // `Fatal:Timeout:MemoryBudget` etc. printed but the runtime
-    // status_code stayed at 0 — canvas would classify the worker as
-    // OK with an empty HTML output. R35.A.
-    note_status(LogStatus::Fatal, None);
+    // One primitive does both halves: the `Fatal:<target>:<category>` line
+    // AND the sticky `LogStatus::Fatal` latch. Without the latch,
+    // `Fatal:Timeout:MemoryBudget` etc. printed but the runtime status_code
+    // stayed at 0 — canvas would classify the worker as OK with an empty
+    // HTML output. R35.A.
+    emit_record(
+      LogStatus::Fatal,
+      &s!("Fatal:{:?}:{:?} ", self.target, self.category),
+      &self.message,
+    );
   }
   pub fn todo() -> Self {
     Error {

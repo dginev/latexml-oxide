@@ -3,6 +3,8 @@
 //!
 //! Full semantic port: number parsing, formatting with XMDual semantics,
 //! unit parsing/formatting, options system, table columns.
+use latexml_core::common::error::emit_error;
+
 use crate::{prelude::*, xmath_helpers::*};
 
 /// Read the control-sequence argument of a siunitx `\Declare…` primitive,
@@ -36,10 +38,12 @@ fn read_si_declare_cs() -> Result<Token> {
 /// format contract while staying type-compatible.
 macro_rules! six_log_error {
   ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
-    log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+    emit_error(
+      &format!("{}", $category), &format!("{}", $object), &format!("{}", $msg))
   };
   ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
-    log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+    emit_error(
+      &format!("{}", $category), &format!("{}", $object), &format!($fmt, $($arg)+))
   };
 }
 
