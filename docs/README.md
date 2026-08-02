@@ -50,6 +50,7 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 | Doc | What it is |
 |-----|------------|
 | [`parity/WISDOM.md`](parity/WISDOM.md) | Tactical insights about system internals — check here to avoid re-introducing known bugs. |
+| [`parity/CODE_REVIEW_2026-08-03.md`](parity/CODE_REVIEW_2026-08-03.md) | Frozen multi-lens review of the 2026-08 status/diagnostics/persistence campaign — findings + recommendations |
 | [`parity/KNOWN_PERL_ERRORS.md`](parity/KNOWN_PERL_ERRORS.md) | Upstream Perl LaTeXML issues; check first when investigating a test failure. |
 | [`parity/DUMP_DESIGN.md`](parity/DUMP_DESIGN.md) | Kernel dump precompilation (strict LoadFormat mutual exclusivity, unconditional apply). |
 | [`parity/BINDING_DSL_ARCHITECTURE.md`](parity/BINDING_DSL_ARCHITECTURE.md) | Binding-definition DSL: shared `ConstructorBuilder` spine, compile-time + runtime front-ends. |

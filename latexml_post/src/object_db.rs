@@ -291,6 +291,9 @@ pub struct ObjectDB {
   /// 40,201 pages) to **67 GB and a memory-ceiling kill with zero pages
   /// written**. Titles really are small; `xmlDoc`s are not.
   xml_holder: Option<libxml::tree::Document>,
+  /// The attached external store, when this DB was opened via
+  /// [`ObjectDB::attach`] (Perl `--dbfile`); `None` for purely in-memory use.
+  external:   Option<ExternalDb>,
 }
 
 impl ObjectDB {
@@ -299,6 +302,7 @@ impl ObjectDB {
     ObjectDB {
       objects:    HashMap::default(),
       xml_holder: None,
+      external:   None,
     }
   }
 
@@ -372,7 +376,20 @@ impl ObjectDB {
   /// Remove an entry.
   ///
   /// Port of `ObjectDB::unregister`.
-  pub fn unregister(&mut self, key: &str) { self.objects.remove(key); }
+  pub fn unregister(&mut self, key: &str) {
+    self.objects.remove(key);
+    // Perl ObjectDB.pm:183: "Must remove external entry (if any) as well,
+    // else it'll get pulled back in!" — without this the key resurrects on
+    // the next attach (review 2026-08-03 finding #1).
+    if let Some(external) = &mut self.external {
+      external.baseline.remove(key);
+      if !external.readonly {
+        let _ = external
+          .conn
+          .execute("DELETE FROM entries WHERE key = ?1", rusqlite::params![key]);
+      }
+    }
+  }
 
   /// Get all keys, sorted.
   ///
@@ -402,6 +419,308 @@ impl ObjectDB {
 
 impl Default for ObjectDB {
   fn default() -> Self { Self::new() }
+}
+
+// ======================================================================
+// Perl `--dbfile` parity: SQLite persistence (design 2026-08-02, docs/
+// performance/STREAMING_POST_DESIGN_2026-07-06.md §6). Faithful to the
+// OBSERVABLE contract of `LaTeXML::Util::ObjectDB` (ObjectDB.pm):
+// `new(dbfile)` attaches a keyed store (creating it unless readonly),
+// `lookup`/`getKeys` see the union of stored + registered entries, and
+// `finish` writes back ONLY entries that differ from what is stored
+// (ObjectDB.pm `sub finish`: `next if compare_hash($row, thaw($stored))`),
+// then detaches. One deliberate internal divergence: Perl thaws entries
+// lazily per `lookup` because Berkeley DB reads are cheap point-lookups;
+// we load eagerly at attach — SQLite reads the whole table in one scan,
+// every consumer (CrossRef's nav/TOC walks) touches most keys anyway, and
+// eager load keeps `lookup(&self)` free of interior mutability.
+//
+// Storage: `entries(key TEXT PRIMARY KEY, props TEXT)` with the property
+// map JSON-encoded (Perl uses Storable `nfreeze`; JSON keeps the artifact
+// `sqlite3`-CLI-inspectable, which Storable never was), plus a `meta`
+// table and `PRAGMA user_version` for staleness: a format-version mismatch
+// refuses the file rather than limping (caller decides to rebuild).
+// `Value::Xml` round-trips as serialized XML, re-adopted into the reader's
+// own holder document via the same `adopt_xml` copy discipline Scan uses.
+
+/// Bump when the on-disk encoding changes shape. Mismatched files are
+/// refused at `attach` — never silently reinterpreted.
+pub const DBFILE_FORMAT_VERSION: i64 = 1;
+
+/// The attached external store: connection plus the as-stored JSON of every
+/// loaded entry, so `finish` can implement Perl's changed-only write-back
+/// by string comparison instead of re-reading the table.
+struct ExternalDb {
+  conn:     rusqlite::Connection,
+  readonly: bool,
+  baseline: HashMap<String, String>,
+}
+
+/// Options for [`ObjectDB::attach`], mirroring Perl `ObjectDB::new`'s
+/// `dbfile`/`clean`/`readonly` knobs.
+#[derive(Default)]
+pub struct DbAttachOptions {
+  /// Delete any existing file first (Perl `clean => 1`).
+  pub clean:    bool,
+  /// Open for reading only; `finish` will not write (Perl `readonly`).
+  pub readonly: bool,
+}
+
+impl ObjectDB {
+  /// Attach (and load) an external SQLite object store — Perl
+  /// `ObjectDB->new(dbfile => …)`.
+  pub fn attach(dbfile: &std::path::Path, options: DbAttachOptions) -> Result<Self, String> {
+    if options.clean && options.readonly {
+      return Err("dbfile: clean requires write access (Perl always opens O_RDWR)".to_string());
+    }
+    if options.clean && dbfile.exists() {
+      latexml_core::common::error::emit_warn(
+        "expected",
+        "dbfile",
+        &format!("Removing Object database file {}!", dbfile.display()),
+      );
+      std::fs::remove_file(dbfile)
+        .map_err(|e| format!("cannot remove {}: {e}", dbfile.display()))?;
+    }
+    let conn = if options.readonly {
+      rusqlite::Connection::open_with_flags(dbfile, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+    } else {
+      rusqlite::Connection::open(dbfile)
+    }
+    .map_err(|e| format!("cannot attach DB {}: {e}", dbfile.display()))?;
+    // Concurrent workers are this layer's purpose: WAL lets N readers overlap
+    // one writer, and a busy timeout rides out a writer's commit instead of
+    // failing mid-transaction with SQLITE_BUSY.
+    if !options.readonly {
+      let _ = conn.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(()));
+    }
+    conn
+      .busy_timeout(std::time::Duration::from_secs(10))
+      .map_err(|e| format!("cannot set busy_timeout: {e}"))?;
+
+    let version: i64 = conn
+      .query_row("PRAGMA user_version", [], |r| r.get(0))
+      .map_err(|e| format!("cannot read user_version: {e}"))?;
+    let entries_table: bool = conn
+      .query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='entries'",
+        [],
+        |r| r.get::<_, i64>(0),
+      )
+      .map(|n| n > 0)
+      .unwrap_or(false);
+    let any_table: bool = conn
+      .query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table'",
+        [],
+        |r| r.get::<_, i64>(0),
+      )
+      .map(|n| n > 0)
+      .unwrap_or(false);
+    if version == 0 && any_table && !entries_table {
+      return Err(format!(
+        "{} is a SQLite file but not an ObjectDB (no entries table) — refusing to adopt it",
+        dbfile.display()
+      ));
+    }
+    if version == 0 && !options.readonly {
+      conn
+        .execute_batch(&format!(
+          "PRAGMA user_version = {DBFILE_FORMAT_VERSION};
+           CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+           CREATE TABLE IF NOT EXISTS entries(key TEXT PRIMARY KEY, props TEXT NOT NULL);"
+        ))
+        .map_err(|e| format!("cannot initialize {}: {e}", dbfile.display()))?;
+    } else if version != 0 && version != DBFILE_FORMAT_VERSION {
+      return Err(format!(
+        "object database {} has format version {version}, this binary reads {DBFILE_FORMAT_VERSION} — rebuild it (--dbfile with a clean run)",
+        dbfile.display()
+      ));
+    }
+
+    let mut db = ObjectDB::new();
+    let mut baseline = HashMap::default();
+    // A fresh readonly file has no tables; treat as empty rather than erroring.
+    let table_exists: bool = conn
+      .query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='entries'",
+        [],
+        |r| r.get::<_, i64>(0),
+      )
+      .map(|n| n > 0)
+      .unwrap_or(false);
+    if table_exists {
+      let mut stmt = conn
+        .prepare("SELECT key, props FROM entries")
+        .map_err(|e| format!("cannot read entries: {e}"))?;
+      let rows = stmt
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+        .map_err(|e| format!("cannot scan entries: {e}"))?;
+      for row in rows {
+        let (key, props) = row.map_err(|e| format!("bad row: {e}"))?;
+        // One bad row must not poison the whole file (review finding #4):
+        // warn with the key and skip; the on-disk row stays as it was.
+        match db.decode_entry(&key, &props) {
+          Ok(entry) => {
+            db.objects.insert(key.clone(), entry);
+            baseline.insert(key, props);
+          },
+          Err(e) => latexml_core::common::error::emit_warn("malformed", "dbfile_entry", &e),
+        }
+      }
+      drop(stmt);
+    }
+    db.external = Some(ExternalDb {
+      conn,
+      readonly: options.readonly,
+      baseline,
+    });
+    Ok(db)
+  }
+
+  /// Write back changed entries and detach — Perl `ObjectDB::finish`.
+  /// Returns how many entries were stored. Idempotent: a second call (or a
+  /// call on a never-attached DB) stores nothing.
+  pub fn finish(&mut self) -> Result<usize, String> {
+    let Some(external) = self.external.take() else {
+      return Ok(0);
+    };
+    if external.readonly {
+      return Ok(0);
+    }
+    // Stream: encode → compare → insert per entry inside one transaction, so
+    // peak memory is ONE encoded entry, not the whole changed set (review
+    // finding #5 — the baseline copy itself is dropped with `external` at
+    // the end of this function).
+    let mut stored = 0usize;
+    let mut conn = external.conn;
+    let tx = conn
+      .transaction()
+      .map_err(|e| format!("cannot begin dbfile transaction: {e}"))?;
+    for (key, entry) in &self.objects {
+      let props = {
+        let map: serde_json::Map<String, serde_json::Value> = entry
+          .values
+          .iter()
+          .map(|(k, v)| (k.clone(), value_to_json_with(self.xml_holder.as_ref(), v)))
+          .collect();
+        serde_json::Value::Object(map).to_string()
+      };
+      if external.baseline.get(key) == Some(&props) {
+        continue;
+      }
+      tx.execute(
+        "INSERT INTO entries(key, props) VALUES (?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET props = excluded.props",
+        rusqlite::params![key, props],
+      )
+      .map_err(|e| format!("cannot store entry {key}: {e}"))?;
+      stored += 1;
+    }
+    tx.execute(
+      "INSERT INTO meta(key, value) VALUES ('latexml_version', ?1)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      rusqlite::params![env!("CARGO_PKG_VERSION")],
+    )
+    .map_err(|e| format!("cannot store meta: {e}"))?;
+    tx.commit()
+      .map_err(|e| format!("cannot commit dbfile: {e}"))?;
+    Ok(stored)
+  }
+
+  /// Tagged, self-describing encoding — one-key objects so `Hash` values
+  /// can never be confused with the wrapper: `{"s":…}` string, `{"i":…}`
+  /// int, `{"b":…}` bool, `{"l":[…]}` list, `{"h":{…}}` hash, `{"x":"<…>"}`
+  /// serialized XML, JSON `null` for `Null`.
+  fn value_to_json(&self, value: &Value) -> serde_json::Value {
+    value_to_json_with(self.xml_holder.as_ref(), value)
+  }
+
+  fn decode_entry(&mut self, key: &str, props: &str) -> Result<Entry, String> {
+    let parsed: serde_json::Value =
+      serde_json::from_str(props).map_err(|e| format!("entry {key} is not valid JSON: {e}"))?;
+    let serde_json::Value::Object(map) = parsed else {
+      return Err(format!("entry {key} is not a JSON object"));
+    };
+    let mut entry = Entry::new(key);
+    for (attr, jv) in map {
+      let value = self.json_to_value(&jv, key)?;
+      entry.set_value(&attr, value);
+    }
+    Ok(entry)
+  }
+
+  fn json_to_value(&mut self, jv: &serde_json::Value, key: &str) -> Result<Value, String> {
+    use serde_json::Value as J;
+    let J::Object(o) = jv else {
+      return match jv {
+        J::Null => Ok(Value::Null),
+        other => Err(format!("entry {key}: unexpected bare JSON value {other}")),
+      };
+    };
+    if let Some((tag, inner)) = o.iter().next()
+      && o.len() == 1
+    {
+      return match (tag.as_str(), inner) {
+        ("s", J::String(s)) => Ok(Value::String(s.clone())),
+        ("i", J::Number(n)) => n
+          .as_i64()
+          .map(Value::Int)
+          .ok_or_else(|| format!("entry {key}: non-integer numeric value {n}")),
+        ("b", J::Bool(b)) => Ok(Value::Bool(*b)),
+        ("l", J::Array(items)) => Ok(Value::List(
+          items
+            .iter()
+            .map(|v| self.json_to_value(v, key))
+            .collect::<Result<Vec<_>, _>>()?,
+        )),
+        ("h", J::Object(map)) => {
+          let mut out = HashMap::default();
+          for (k, v) in map {
+            out.insert(k.clone(), self.json_to_value(v, key)?);
+          }
+          Ok(Value::Hash(out))
+        },
+        ("x", J::String(xml)) => {
+          let parsed = libxml::parser::Parser::default()
+            .parse_string(xml)
+            .map_err(|e| format!("entry {key}: stored XML does not parse: {e}"))?;
+          let root = parsed
+            .get_root_element()
+            .ok_or_else(|| format!("entry {key}: stored XML is empty"))?;
+          self
+            .adopt_xml(&root)
+            .ok_or_else(|| format!("entry {key}: could not adopt stored XML"))
+        },
+        (tag, _) => Err(format!("entry {key}: unknown value tag '{tag}'")),
+      };
+    }
+    Err(format!("entry {key}: malformed value object"))
+  }
+}
+
+/// Tagged, self-describing encoding (see [`ObjectDB::value_to_json`]); a free
+/// function so `finish` can encode while iterating `self.objects`.
+fn value_to_json_with(holder: Option<&libxml::tree::Document>, value: &Value) -> serde_json::Value {
+  use serde_json::{Value as J, json};
+  match value {
+    Value::String(s) => json!({ "s": s }),
+    Value::Int(i) => json!({ "i": i }),
+    Value::Bool(b) => json!({ "b": b }),
+    Value::Null => J::Null,
+    Value::List(items) => {
+      json!({ "l": items.iter().map(|v| value_to_json_with(holder, v)).collect::<Vec<_>>() })
+    },
+    Value::Hash(map) => {
+      json!({ "h": map.iter().map(|(k, v)| (k.clone(), value_to_json_with(holder, v))).collect::<serde_json::Map<_, _>>() })
+    },
+    Value::Xml(node) => {
+      let xml = holder
+        .map(|doc| doc.node_to_string(node))
+        .unwrap_or_default();
+      json!({ "x": xml })
+    },
+  }
 }
 
 #[cfg(test)]
@@ -578,5 +897,222 @@ mod tests {
     assert!(Value::Int(42).is_truthy());
     assert!(!Value::List(vec![]).is_truthy());
     assert!(Value::List(vec![Value::Int(1)]).is_truthy());
+  }
+
+  /// Perl `--dbfile` parity: a DB round-trips through its SQLite file —
+  /// scalars, lists, nested hashes, and adopted XML (re-adopted into the
+  /// READER's holder document, never a dangling node).
+  #[test]
+  fn dbfile_round_trips_all_value_shapes() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dbfile = dir.path().join("site.db");
+
+    let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach fresh");
+    let title_doc = libxml::parser::Parser::default()
+      .parse_string("<ltx:text xmlns:ltx=\"http://dlmf.nist.gov/LaTeXML\">A <ltx:emph>title</ltx:emph></ltx:text>")
+      .expect("title parses");
+    let title = db
+      .adopt_xml(&title_doc.get_root_element().expect("root"))
+      .expect("adopted");
+    db.register("doc1#s1", vec![
+      ("type", Value::String("ltx:section".into())),
+      ("pageid", Value::Int(3)),
+      ("fresh", Value::Bool(true)),
+      (
+        "children",
+        Value::List(vec![
+          Value::String("doc1#s1.p1".into()),
+          Value::String("doc1#s1.p2".into()),
+        ]),
+      ),
+      (
+        "referrers",
+        Value::Hash({
+          let mut h = HashMap::default();
+          h.insert("doc2".to_string(), Value::String("ref".into()));
+          h
+        }),
+      ),
+      ("title", title),
+      ("missing", Value::Null),
+    ]);
+    let stored = db.finish().expect("finish writes");
+    assert_eq!(stored, 1, "one changed entry stored");
+
+    let mut reloaded = ObjectDB::attach(&dbfile, DbAttachOptions {
+      readonly: true,
+      ..Default::default()
+    })
+    .expect("attach readonly");
+    let entry = reloaded.lookup("doc1#s1").expect("entry survives");
+    assert_eq!(entry.get_string("type"), Some("ltx:section"));
+    assert!(matches!(entry.get_value("pageid"), Some(Value::Int(3))));
+    assert!(matches!(entry.get_value("fresh"), Some(Value::Bool(true))));
+    assert_eq!(entry.get_children(), vec!["doc1#s1.p1", "doc1#s1.p2"]);
+    assert!(matches!(entry.get_value("referrers"), Some(Value::Hash(_))));
+    let title = entry.get_xml("title").expect("XML value survives");
+    assert!(
+      title.get_content().contains("A title"),
+      "adopted XML content round-trips"
+    );
+    assert_eq!(reloaded.finish().expect("readonly finish"), 0);
+
+    // XML idempotence (review finding #3): re-attach READ-WRITE and finish —
+    // if serialize→adopt→serialize is not byte-stable, the XML entry rewrites
+    // on every finish and the changed-only contract silently degrades to
+    // rewrite-everything.
+    let mut again = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach rw");
+    assert_eq!(
+      again.finish().expect("idempotent finish"),
+      0,
+      "an untouched XML-bearing entry must not re-store"
+    );
+
+    // unregister must delete the STORED row too (Perl ObjectDB.pm:183:
+    // "else it'll get pulled back in!").
+    let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach 3");
+    db.unregister("doc1#s1");
+    db.finish().expect("finish after unregister");
+    let db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach 4");
+    assert!(
+      db.lookup("doc1#s1").is_none(),
+      "an unregistered key must not resurrect on re-attach"
+    );
+  }
+
+  /// Perl `finish` stores only entries that DIFFER from what the file holds
+  /// (ObjectDB.pm: `next if compare_hash(...)`) — re-finishing an unchanged
+  /// DB writes nothing; touching one entry writes exactly one.
+  #[test]
+  fn dbfile_finish_writes_only_changes() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dbfile = dir.path().join("site.db");
+    let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("attach");
+    db.register("a", vec![("v", Value::Int(1))]);
+    db.register("b", vec![("v", Value::Int(2))]);
+    assert_eq!(db.finish().expect("first finish"), 2);
+
+    let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("re-attach");
+    assert_eq!(
+      db.finish().expect("no-op finish"),
+      0,
+      "unchanged DB stores nothing"
+    );
+
+    let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("re-attach 2");
+    db.register("b", vec![("v", Value::Int(99))]);
+    db.register("c", vec![("v", Value::Int(3))]);
+    assert_eq!(
+      db.finish().expect("delta finish"),
+      2,
+      "one changed + one new"
+    );
+    let db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("re-attach 3");
+    assert!(matches!(
+      db.lookup("b").and_then(|e| e.get_value("v")),
+      Some(Value::Int(99))
+    ));
+    assert_eq!(db.len(), 3);
+  }
+
+  /// The concurrency contract the layer exists for (parallel page-render
+  /// workers): N readers attach the SAME file while a writer commits — WAL
+  /// keeps readers unblocked on their snapshot — and a second writer rides
+  /// out the first's transaction via busy_timeout instead of failing with
+  /// SQLITE_BUSY. ObjectDB itself is !Send (libxml values), so each thread
+  /// builds its OWN handle inside the thread — exactly the worker model.
+  #[test]
+  fn dbfile_concurrent_readers_and_writer_contention() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dbfile = dir.path().join("site.db");
+    {
+      let mut db = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("seed");
+      for i in 0..500 {
+        db.register(&format!("k{i}"), vec![("v", Value::Int(i))]);
+      }
+      assert_eq!(db.finish().expect("seed finish"), 500);
+    }
+
+    // Writer-vs-writer: hold an IMMEDIATE transaction on a raw connection,
+    // then finish() a second writer — busy_timeout must ride it out.
+    let blocker = rusqlite::Connection::open(&dbfile).expect("blocker open");
+    blocker
+      .execute_batch("BEGIN IMMEDIATE; UPDATE entries SET props = props WHERE key = 'k0';")
+      .expect("blocker tx");
+    let release = std::thread::spawn(move || {
+      std::thread::sleep(std::time::Duration::from_millis(300));
+      blocker.execute_batch("COMMIT;").expect("blocker commit");
+    });
+    let mut writer = ObjectDB::attach(&dbfile, DbAttachOptions::default()).expect("writer");
+    writer.register("k0", vec![("v", Value::Int(-1))]);
+    let t0 = std::time::Instant::now();
+    assert_eq!(
+      writer.finish().expect("contended finish succeeds"),
+      1,
+      "the second writer stores its one change after the blocker commits"
+    );
+    assert!(
+      t0.elapsed() < std::time::Duration::from_secs(9),
+      "finish waited out the blocker, not the full timeout"
+    );
+    release.join().expect("blocker thread");
+
+    // N concurrent readers, each with its own attach, racing a live writer.
+    std::thread::scope(|scope| {
+      let dbfile = &dbfile;
+      let mut handles = Vec::new();
+      for _ in 0..4 {
+        handles.push(scope.spawn(move || {
+          for _ in 0..10 {
+            let db = ObjectDB::attach(dbfile, DbAttachOptions {
+              readonly: true,
+              ..Default::default()
+            })
+            .expect("reader attaches during writes");
+            assert_eq!(db.len(), 500, "readers always see a full snapshot");
+            assert!(db.lookup("k42").is_some());
+          }
+        }));
+      }
+      scope.spawn(move || {
+        for round in 0..10 {
+          let mut db =
+            ObjectDB::attach(dbfile, DbAttachOptions::default()).expect("writer attaches");
+          db.register("k1", vec![("v", Value::Int(1000 + round))]);
+          db.finish().expect("interleaved writer finish");
+        }
+      });
+      for h in handles {
+        h.join().expect("reader thread");
+      }
+    });
+  }
+
+  /// Staleness contract: a format-version mismatch REFUSES the file with a
+  /// named error — never a silent reinterpretation.
+  #[test]
+  fn dbfile_version_mismatch_is_refused() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dbfile = dir.path().join("site.db");
+    {
+      let conn = rusqlite::Connection::open(&dbfile).expect("open");
+      conn
+        .execute_batch("PRAGMA user_version = 999;")
+        .expect("stamp");
+    }
+    let err = ObjectDB::attach(&dbfile, DbAttachOptions::default())
+      .err()
+      .expect("mismatched version must refuse");
+    assert!(
+      err.contains("format version 999"),
+      "names the found version: {err}"
+    );
+    // `clean` is the sanctioned rebuild path (Perl `clean => 1`).
+    let db = ObjectDB::attach(&dbfile, DbAttachOptions {
+      clean: true,
+      ..Default::default()
+    })
+    .expect("clean rebuild attaches");
+    assert!(db.is_empty());
   }
 }
