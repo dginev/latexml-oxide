@@ -3030,6 +3030,13 @@ Minimal trigger (issue #473):
 Same-host Perl 0.8.8 and latexml-oxide emit the same body markup for this MWE
 (identical elements and classes; only whitespace serialization and the
 sanctioned OXIDIZED_DESIGN #18 invisible-operator differ) with the same
-vanilla CSS — the touching rendering is Perl-origin. Rust resolves
+vanilla CSS — and Perl's own HTML+CSS artifacts, rendered as-is, measure a
+**0.0 px** gap between the two displays (headless Chrome,
+`getBoundingClientRect`, 2026-08-01). The touching rendering is Perl-origin,
+unreported upstream (tracker searched 2026-08-01; nearest are #2438
+intra-alignment spacing and #572 display-math paragraph breaking), and the
+ar5iv fork hit and fixed this exact rule downstream in its site CSS instead
+(`ar5iv-css/css/ar5iv.css` `.ltx_eqn_table { margin: 0.65rem auto }`, a value
+calibrated to ar5iv's own paragraph rhythm rather than the UA's 1em). Rust resolves
 it with a bundled-CSS local delta (OXIDIZED_DESIGN divergence #92):
 `.ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }`.
