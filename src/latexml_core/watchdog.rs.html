@@ -176,440 +176,567 @@
 <a href=#176 id=176 data-nosnippet>176</a>  </span>}
 <a href=#177 id=177 data-nosnippet>177</a>}
 <a href=#178 id=178 data-nosnippet>178</a>
-<a href=#179 id=179 data-nosnippet>179</a><span class="doccomment">/// The default per-conversion memory ceiling in MiB, derived from the machine.
-<a href=#180 id=180 data-nosnippet>180</a>///
-<a href=#181 id=181 data-nosnippet>181</a>/// `min(64 GiB, HALF of physical RAM)`, floored at
-<a href=#182 id=182 data-nosnippet>182</a>/// [`MIN_DEFAULT_CEILING_MIB`], falling back to [`FALLBACK_CEILING_MIB`] when
-<a href=#183 id=183 data-nosnippet>183</a>/// the machine cannot be probed. One sentence for users: *a conversion uses at
-<a href=#184 id=184 data-nosnippet>184</a>/// most half your RAM, never more than 64 GiB.*
-<a href=#185 id=185 data-nosnippet>185</a>///
-<a href=#186 id=186 data-nosnippet>186</a>/// The default was a flat 6144 MiB regardless of hardware — absurd on a 256 GB
-<a href=#187 id=187 data-nosnippet>187</a>/// host and over-generous on a laptop — and then 90 % of RAM, which is
-<a href=#188 id=188 data-nosnippet>188</a>/// laptop-hostile for a different reason: the cooperative fuse rides at 75 % of
-<a href=#189 id=189 data-nosnippet>189</a>/// the ceiling, so on a 16 GB machine one conversion was allowed to reach
-<a href=#190 id=190 data-nosnippet>190</a>/// **10.8 GiB** before we so much as complained, by which point the user's
-<a href=#191 id=191 data-nosnippet>191</a>/// session has been swapping for a long time. Half of RAM is the design point
-<a href=#192 id=192 data-nosnippet>192</a>/// for a 16 GB baseline laptop:
-<a href=#193 id=193 data-nosnippet>193</a>///
-<a href=#194 id=194 data-nosnippet>194</a>/// | RAM | ceiling | fuse (75 %) | spill watermark |
-<a href=#195 id=195 data-nosnippet>195</a>/// |---|---|---|---|
-<a href=#196 id=196 data-nosnippet>196</a>/// | 16 GB | 8 GiB | 6 GiB | 2 GiB |
-<a href=#197 id=197 data-nosnippet>197</a>/// | 32 GB | 16 GiB | 12 GiB | 4 GiB |
-<a href=#198 id=198 data-nosnippet>198</a>/// | 96 GB | 48 GiB | 36 GiB | 12 GiB |
-<a href=#199 id=199 data-nosnippet>199</a>///
-<a href=#200 id=200 data-nosnippet>200</a>/// The 96 GB row is not a guess: 48 GiB is the ceiling under which the 131 MB
-<a href=#201 id=201 data-nosnippet>201</a>/// witness was measured to convert end-to-end (28.1 GB peak), so the default
-<a href=#202 id=202 data-nosnippet>202</a>/// reproduces a validated configuration on the reporter's own hardware.
-<a href=#203 id=203 data-nosnippet>203</a>///
-<a href=#204 id=204 data-nosnippet>204</a>/// The **64 GiB cap** is not about this machine but about the *others*: in a
-<a href=#205 id=205 data-nosnippet>205</a>/// parallel fleet the aggregate is `N_processes x ceiling`, so an uncapped
-<a href=#206 id=206 data-nosnippet>206</a>/// fraction-of-RAM rule on a big host would let a busy fleet OOM it. The
-<a href=#207 id=207 data-nosnippet>207</a>/// `cortex_worker` fleet overrides this with its own per-child ceiling anyway;
-<a href=#208 id=208 data-nosnippet>208</a>/// the cap keeps the single-process default from being reckless.
-<a href=#209 id=209 data-nosnippet>209</a></span><span class="kw">pub fn </span>default_ceiling_mib() -&gt; u64 {
-<a href=#210 id=210 data-nosnippet>210</a>  <span class="kw">const </span>MIB: u64 = <span class="number">1024 </span>* <span class="number">1024</span>;
-<a href=#211 id=211 data-nosnippet>211</a>  <span class="kw">match </span>effective_memory_bytes() {
-<a href=#212 id=212 data-nosnippet>212</a>    <span class="prelude-val">Some</span>(total) =&gt; (total / MIB / <span class="number">2</span>).clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
-<a href=#213 id=213 data-nosnippet>213</a>    <span class="prelude-val">None </span>=&gt; FALLBACK_CEILING_MIB,
-<a href=#214 id=214 data-nosnippet>214</a>  }
-<a href=#215 id=215 data-nosnippet>215</a>}
-<a href=#216 id=216 data-nosnippet>216</a>
-<a href=#217 id=217 data-nosnippet>217</a><span class="doccomment">/// Memory this PROCESS may actually use: physical RAM, capped by the cgroup
-<a href=#218 id=218 data-nosnippet>218</a>/// limit when one is in force.
-<a href=#219 id=219 data-nosnippet>219</a>///
-<a href=#220 id=220 data-nosnippet>220</a>/// `total_memory_bytes` reports the HOST's RAM (`sysconf(_SC_PHYS_PAGES)`),
-<a href=#221 id=221 data-nosnippet>221</a>/// which is blind to containers — so `docker run -m 4g` on a 258 GB host chose
-<a href=#222 id=222 data-nosnippet>222</a>/// a 64 GiB ceiling and a 48 GiB cooperative fuse, neither of which the process
-<a href=#223 id=223 data-nosnippet>223</a>/// could ever reach. The kernel killed it at 4 GB instead: exit 137, no output,
-<a href=#224 id=224 data-nosnippet>224</a>/// no `Fatal:` line — exactly the failure the graceful guard exists to replace.
-<a href=#225 id=225 data-nosnippet>225</a>/// The cortex fleet is only accidentally safe here, because it pins every child
-<a href=#226 id=226 data-nosnippet>226</a>/// with `--max-rss-mb`; a plain containerized CLI user is not.
-<a href=#227 id=227 data-nosnippet>227</a></span><span class="kw">fn </span>effective_memory_bytes() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#228 id=228 data-nosnippet>228</a>  <span class="kw">let </span>physical = total_memory_bytes();
-<a href=#229 id=229 data-nosnippet>229</a>  <span class="kw">match </span>(physical, cgroup_limit_bytes()) {
-<a href=#230 id=230 data-nosnippet>230</a>    (<span class="prelude-val">Some</span>(p), <span class="prelude-val">Some</span>(c)) =&gt; <span class="prelude-val">Some</span>(p.min(c)),
-<a href=#231 id=231 data-nosnippet>231</a>    (p, <span class="prelude-val">None</span>) =&gt; p,
-<a href=#232 id=232 data-nosnippet>232</a>    (<span class="prelude-val">None</span>, c) =&gt; c,
-<a href=#233 id=233 data-nosnippet>233</a>  }
-<a href=#234 id=234 data-nosnippet>234</a>}
-<a href=#235 id=235 data-nosnippet>235</a>
-<a href=#236 id=236 data-nosnippet>236</a><span class="doccomment">/// The cgroup memory limit, v2 then v1, or `None` when unlimited/unreadable.
+<a href=#179 id=179 data-nosnippet>179</a><span class="doccomment">/// The default per-conversion memory ceiling in MiB, derived from the machine
+<a href=#180 id=180 data-nosnippet>180</a>/// **as it is right now**.
+<a href=#181 id=181 data-nosnippet>181</a>///
+<a href=#182 id=182 data-nosnippet>182</a>/// `min(64 GiB, 90 % of AVAILABLE RAM at startup)`, never above the
+<a href=#183 id=183 data-nosnippet>183</a>/// cgroup-capped total, floored at [`MIN_DEFAULT_CEILING_MIB`]. When
+<a href=#184 id=184 data-nosnippet>184</a>/// availability cannot be probed the rule falls back to half of the
+<a href=#185 id=185 data-nosnippet>185</a>/// (cgroup-capped) total, and to [`FALLBACK_CEILING_MIB`] when nothing can be
+<a href=#186 id=186 data-nosnippet>186</a>/// probed at all. One sentence for users: *a conversion may use most of the
+<a href=#187 id=187 data-nosnippet>187</a>/// RAM that is actually free when it starts, never more than 64 GiB.*
+<a href=#188 id=188 data-nosnippet>188</a>///
+<a href=#189 id=189 data-nosnippet>189</a>/// History of the rule (each step measured, none guessed):
+<a href=#190 id=190 data-nosnippet>190</a>/// - flat 6144 MiB — absurd on a 256 GB host, over-generous on a laptop;
+<a href=#191 id=191 data-nosnippet>191</a>/// - 90 % of TOTAL RAM — laptop-hostile: blind to what the session already
+<a href=#192 id=192 data-nosnippet>192</a>///   uses, it let one conversion push a busy 16 GB machine deep into swap;
+<a href=#193 id=193 data-nosnippet>193</a>/// - half of TOTAL RAM — laptop-safe but wasteful the other way: on the 31 GB
+<a href=#194 id=194 data-nosnippet>194</a>///   witness laptop it derives ~15.5 GiB while the machine sits idle with
+<a href=#195 id=195 data-nosnippet>195</a>///   ~28 GB free, and the 131 MB witness (24.2 GB core peak) then dies at a
+<a href=#196 id=196 data-nosnippet>196</a>///   fuse it did not need to meet (user directive 2026-08-01: "we can
+<a href=#197 id=197 data-nosnippet>197</a>///   comfortably use up to 24 GB here");
+<a href=#198 id=198 data-nosnippet>198</a>/// - 90 % of AVAILABLE — self-adjusting: on that idle laptop it derives
+<a href=#199 id=199 data-nosnippet>199</a>///   ~25 GiB, and on the same laptop with a browser session holding 6 GB it
+<a href=#200 id=200 data-nosnippet>200</a>///   derives roughly what the half-of-total rule chose. `MemAvailable` is the
+<a href=#201 id=201 data-nosnippet>201</a>///   kernel's own estimate of what is reclaimable without swapping, so "the
+<a href=#202 id=202 data-nosnippet>202</a>///   session starts swapping long before the guard fires" — the failure that
+<a href=#203 id=203 data-nosnippet>203</a>///   killed the 90 %-of-total rule — cannot recur by construction.
+<a href=#204 id=204 data-nosnippet>204</a>///
+<a href=#205 id=205 data-nosnippet>205</a>/// The **64 GiB cap** is not about this machine but about the *others*: in a
+<a href=#206 id=206 data-nosnippet>206</a>/// parallel fleet the aggregate is `N_processes x ceiling`, so an uncapped
+<a href=#207 id=207 data-nosnippet>207</a>/// fraction-of-RAM rule on a big host would let a busy fleet OOM it. The
+<a href=#208 id=208 data-nosnippet>208</a>/// `cortex_worker` fleet overrides this with its own per-child ceiling anyway;
+<a href=#209 id=209 data-nosnippet>209</a>/// the cap keeps the single-process default from being reckless.
+<a href=#210 id=210 data-nosnippet>210</a>///
+<a href=#211 id=211 data-nosnippet>211</a>/// Startup-derived, deliberately: the figure is resolved once and becomes the
+<a href=#212 id=212 data-nosnippet>212</a>/// run's `--max-memory`, so a neighbours' later allocations cannot move a
+<a href=#213 id=213 data-nosnippet>213</a>/// running conversion's fuse mid-flight.
+<a href=#214 id=214 data-nosnippet>214</a></span><span class="kw">pub fn </span>default_ceiling_mib() -&gt; u64 {
+<a href=#215 id=215 data-nosnippet>215</a>  derive_ceiling_mib(available_memory_bytes(), effective_memory_bytes())
+<a href=#216 id=216 data-nosnippet>216</a>}
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a><span class="doccomment">/// The pure arithmetic behind [`default_ceiling_mib`], split out so the rule
+<a href=#219 id=219 data-nosnippet>219</a>/// is unit-testable without controlling the test host's actual memory state.
+<a href=#220 id=220 data-nosnippet>220</a></span><span class="kw">fn </span>derive_ceiling_mib(available: <span class="prelude-ty">Option</span>&lt;u64&gt;, effective_total: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; u64 {
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="kw">const </span>MIB: u64 = <span class="number">1024 </span>* <span class="number">1024</span>;
+<a href=#222 id=222 data-nosnippet>222</a>  <span class="kw">let </span>candidate = <span class="kw">match </span>(available, effective_total) {
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="comment">// Headroom rule: 90 % of what is free right now, never above what the
+<a href=#224 id=224 data-nosnippet>224</a>    // process may use at all (the cgroup-capped total).
+<a href=#225 id=225 data-nosnippet>225</a>    </span>(<span class="prelude-val">Some</span>(avail), <span class="prelude-val">Some</span>(total)) =&gt; (avail / MIB * <span class="number">9 </span>/ <span class="number">10</span>).min(total / MIB),
+<a href=#226 id=226 data-nosnippet>226</a>    (<span class="prelude-val">Some</span>(avail), <span class="prelude-val">None</span>) =&gt; avail / MIB * <span class="number">9 </span>/ <span class="number">10</span>,
+<a href=#227 id=227 data-nosnippet>227</a>    <span class="comment">// Availability unknown (exotic platform): the conservative half-of-total
+<a href=#228 id=228 data-nosnippet>228</a>    // rule this default previously shipped.
+<a href=#229 id=229 data-nosnippet>229</a>    </span>(<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(total)) =&gt; total / MIB / <span class="number">2</span>,
+<a href=#230 id=230 data-nosnippet>230</a>    (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="kw">return </span>FALLBACK_CEILING_MIB,
+<a href=#231 id=231 data-nosnippet>231</a>  };
+<a href=#232 id=232 data-nosnippet>232</a>  candidate.clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB)
+<a href=#233 id=233 data-nosnippet>233</a>}
+<a href=#234 id=234 data-nosnippet>234</a>
+<a href=#235 id=235 data-nosnippet>235</a><span class="doccomment">/// RAM available for new allocations right now, in bytes, or `None` when the
+<a href=#236 id=236 data-nosnippet>236</a>/// platform offers no honest answer.
 <a href=#237 id=237 data-nosnippet>237</a>///
-<a href=#238 id=238 data-nosnippet>238</a>/// Both spell "unlimited" in their own way: v2 writes the literal `max`, v1
-<a href=#239 id=239 data-nosnippet>239</a>/// writes a huge sentinel (`u64::MAX` rounded down to a page multiple), so a
-<a href=#240 id=240 data-nosnippet>240</a>/// value at or above the host's RAM is treated as no limit rather than as a
-<a href=#241 id=241 data-nosnippet>241</a>/// bound worth honouring.
-<a href=#242 id=242 data-nosnippet>242</a></span><span class="kw">fn </span>cgroup_limit_bytes() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#243 id=243 data-nosnippet>243</a>  <span class="kw">let </span>v2 = std::fs::read_to_string(<span class="string">"/sys/fs/cgroup/memory.max"</span>).ok();
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="kw">let </span>v1 = || std::fs::read_to_string(<span class="string">"/sys/fs/cgroup/memory/memory.limit_in_bytes"</span>).ok();
-<a href=#245 id=245 data-nosnippet>245</a>  <span class="kw">let </span>raw = v2.or_else(v1)<span class="question-mark">?</span>;
-<a href=#246 id=246 data-nosnippet>246</a>  interpret_cgroup_limit(<span class="kw-2">&amp;</span>raw, total_memory_bytes())
-<a href=#247 id=247 data-nosnippet>247</a>}
-<a href=#248 id=248 data-nosnippet>248</a>
-<a href=#249 id=249 data-nosnippet>249</a><span class="doccomment">/// Decide what a cgroup limit file MEANS. Split out from the file read so the
-<a href=#250 id=250 data-nosnippet>250</a>/// rules are testable without a container: the reachable spellings of
-<a href=#251 id=251 data-nosnippet>251</a>/// "unlimited" are what make this subtle.
-<a href=#252 id=252 data-nosnippet>252</a></span><span class="kw">fn </span>interpret_cgroup_limit(raw: <span class="kw-2">&amp;</span>str, physical: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="kw">let </span>text = raw.trim();
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="comment">// cgroup v2 spells unlimited literally.
-<a href=#255 id=255 data-nosnippet>255</a>  </span><span class="kw">if </span>text == <span class="string">"max" </span>{
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#257 id=257 data-nosnippet>257</a>  }
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="kw">let </span>limit = text.parse::&lt;u64&gt;().ok()<span class="question-mark">?</span>;
-<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// cgroup v1 spells it as a huge sentinel, and a "limit" at or above the
-<a href=#260 id=260 data-nosnippet>260</a>  // host's RAM bounds nothing — treat both as no limit rather than as a
-<a href=#261 id=261 data-nosnippet>261</a>  // ceiling worth honouring.
-<a href=#262 id=262 data-nosnippet>262</a>  </span><span class="kw">if </span>limit == <span class="number">0 </span>|| physical.is_some_and(|phys| limit &gt;= phys) {
-<a href=#263 id=263 data-nosnippet>263</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#264 id=264 data-nosnippet>264</a>  }
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="prelude-val">Some</span>(limit)
-<a href=#266 id=266 data-nosnippet>266</a>}
-<a href=#267 id=267 data-nosnippet>267</a>
-<a href=#268 id=268 data-nosnippet>268</a><span class="doccomment">/// Floor for the machine-derived default, so a small container still gets a
-<a href=#269 id=269 data-nosnippet>269</a>/// workable budget rather than a ceiling no conversion can fit under.
-<a href=#270 id=270 data-nosnippet>270</a></span><span class="kw">pub const </span>MIN_DEFAULT_CEILING_MIB: u64 = <span class="number">2048</span>;
-<a href=#271 id=271 data-nosnippet>271</a>
-<a href=#272 id=272 data-nosnippet>272</a><span class="doccomment">/// Upper bound on the machine-derived default ceiling (64 GiB in MiB).
-<a href=#273 id=273 data-nosnippet>273</a></span><span class="kw">pub const </span>MAX_DEFAULT_CEILING_MIB: u64 = <span class="number">64 </span>* <span class="number">1024</span>;
-<a href=#274 id=274 data-nosnippet>274</a>
-<a href=#275 id=275 data-nosnippet>275</a><span class="doccomment">/// Ceiling used when the machine's RAM cannot be probed — the historical flat
-<a href=#276 id=276 data-nosnippet>276</a>/// default, kept so an unprobeable platform behaves exactly as before rather
-<a href=#277 id=277 data-nosnippet>277</a>/// than losing its guard entirely.
-<a href=#278 id=278 data-nosnippet>278</a></span><span class="kw">pub const </span>FALLBACK_CEILING_MIB: u64 = <span class="number">6144</span>;
-<a href=#279 id=279 data-nosnippet>279</a>
-<a href=#280 id=280 data-nosnippet>280</a><span class="doccomment">/// Free space in bytes on the filesystem holding `path`, or `None` if it cannot
-<a href=#281 id=281 data-nosnippet>281</a>/// be determined. Used to check headroom before spilling intermediates to disk.
-<a href=#282 id=282 data-nosnippet>282</a></span><span class="kw">pub fn </span>available_disk_bytes(path: <span class="kw-2">&amp;</span>std::path::Path) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="attr">#[cfg(unix)]
-<a href=#284 id=284 data-nosnippet>284</a>  </span>{
-<a href=#285 id=285 data-nosnippet>285</a>    <span class="kw">use </span>std::os::unix::ffi::OsStrExt;
-<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">let </span>c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()<span class="question-mark">?</span>;
-<a href=#287 id=287 data-nosnippet>287</a>    <span class="comment">// SAFETY: zeroed `statvfs` is a valid initial state; `c_path` is a
-<a href=#288 id=288 data-nosnippet>288</a>    // NUL-terminated string that outlives the call.
-<a href=#289 id=289 data-nosnippet>289</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>stat: libc::statvfs = <span class="kw">unsafe </span>{ std::mem::zeroed() };
-<a href=#290 id=290 data-nosnippet>290</a>    <span class="kw">if unsafe </span>{ libc::statvfs(c_path.as_ptr(), <span class="kw-2">&amp;mut </span>stat) } != <span class="number">0 </span>{
-<a href=#291 id=291 data-nosnippet>291</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#292 id=292 data-nosnippet>292</a>    }
-<a href=#293 id=293 data-nosnippet>293</a>    <span class="comment">// `f_bavail` is blocks available to unprivileged users — the honest figure,
-<a href=#294 id=294 data-nosnippet>294</a>    // as `f_bfree` includes the root-reserved slice we cannot use.
-<a href=#295 id=295 data-nosnippet>295</a>    </span>(stat.f_bavail <span class="kw">as </span>u64).checked_mul(stat.f_frsize <span class="kw">as </span>u64)
-<a href=#296 id=296 data-nosnippet>296</a>  }
-<a href=#297 id=297 data-nosnippet>297</a>  <span class="attr">#[cfg(windows)]
-<a href=#298 id=298 data-nosnippet>298</a>  </span>{
-<a href=#299 id=299 data-nosnippet>299</a>    <span class="kw">use </span>std::os::windows::ffi::OsStrExt;
-<a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a>    <span class="kw">use </span>windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
-<a href=#302 id=302 data-nosnippet>302</a>    <span class="kw">let </span><span class="kw-2">mut </span>wide: Vec&lt;u16&gt; = path.as_os_str().encode_wide().collect();
-<a href=#303 id=303 data-nosnippet>303</a>    wide.push(<span class="number">0</span>);
-<a href=#304 id=304 data-nosnippet>304</a>    <span class="kw">let </span><span class="kw-2">mut </span>free_to_caller: u64 = <span class="number">0</span>;
-<a href=#305 id=305 data-nosnippet>305</a>    <span class="comment">// SAFETY: `wide` is NUL-terminated and outlives the call; the two unused
-<a href=#306 id=306 data-nosnippet>306</a>    // out-parameters are passed as null, which the API permits.
-<a href=#307 id=307 data-nosnippet>307</a>    </span><span class="kw">let </span>ok = <span class="kw">unsafe </span>{
-<a href=#308 id=308 data-nosnippet>308</a>      GetDiskFreeSpaceExW(
-<a href=#309 id=309 data-nosnippet>309</a>        wide.as_ptr(),
-<a href=#310 id=310 data-nosnippet>310</a>        <span class="kw-2">&amp;mut </span>free_to_caller,
-<a href=#311 id=311 data-nosnippet>311</a>        std::ptr::null_mut(),
-<a href=#312 id=312 data-nosnippet>312</a>        std::ptr::null_mut(),
-<a href=#313 id=313 data-nosnippet>313</a>      )
-<a href=#314 id=314 data-nosnippet>314</a>    };
-<a href=#315 id=315 data-nosnippet>315</a>    (ok != <span class="number">0</span>).then_some(free_to_caller)
-<a href=#316 id=316 data-nosnippet>316</a>  }
-<a href=#317 id=317 data-nosnippet>317</a>  <span class="attr">#[cfg(not(any(unix, windows)))]
-<a href=#318 id=318 data-nosnippet>318</a>  </span>{
-<a href=#319 id=319 data-nosnippet>319</a>    <span class="kw">let _ </span>= path;
-<a href=#320 id=320 data-nosnippet>320</a>    <span class="prelude-val">None
-<a href=#321 id=321 data-nosnippet>321</a>  </span>}
+<a href=#238 id=238 data-nosnippet>238</a>/// "Available" here means the OS's own estimate of what a new consumer can
+<a href=#239 id=239 data-nosnippet>239</a>/// take **without pushing the machine into swap** — not merely "free", which
+<a href=#240 id=240 data-nosnippet>240</a>/// undercounts by excluding reclaimable caches:
+<a href=#241 id=241 data-nosnippet>241</a>/// - Linux: `MemAvailable` from `/proc/meminfo`, the kernel's purpose-built
+<a href=#242 id=242 data-nosnippet>242</a>///   estimate (free + reclaimable page cache − watermarks). This is the one
+<a href=#243 id=243 data-nosnippet>243</a>///   legitimate use of `/proc/meminfo` in this module — availability has no
+<a href=#244 id=244 data-nosnippet>244</a>///   `sysconf` spelling — and it degrades safely: `None` on any other Unix,
+<a href=#245 id=245 data-nosnippet>245</a>///   which the ceiling rule answers with the half-of-total fallback.
+<a href=#246 id=246 data-nosnippet>246</a>/// - Windows: `GlobalMemoryStatusEx`'s `ullAvailPhys`, the direct analog.
+<a href=#247 id=247 data-nosnippet>247</a>/// - macOS: `host_statistics64` free + inactive pages — inactive is macOS's
+<a href=#248 id=248 data-nosnippet>248</a>///   reclaimable class, the moral equivalent of Linux's page cache share.
+<a href=#249 id=249 data-nosnippet>249</a></span><span class="kw">pub fn </span>available_memory_bytes() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#250 id=250 data-nosnippet>250</a>  <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+<a href=#251 id=251 data-nosnippet>251</a>  </span>{
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="kw">let </span>meminfo = std::fs::read_to_string(<span class="string">"/proc/meminfo"</span>).ok()<span class="question-mark">?</span>;
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">for </span>line <span class="kw">in </span>meminfo.lines() {
+<a href=#254 id=254 data-nosnippet>254</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(rest) = line.strip_prefix(<span class="string">"MemAvailable:"</span>) {
+<a href=#255 id=255 data-nosnippet>255</a>        <span class="kw">let </span>kb = rest.split_whitespace().next()<span class="question-mark">?</span>.parse::&lt;u64&gt;().ok()<span class="question-mark">?</span>;
+<a href=#256 id=256 data-nosnippet>256</a>        <span class="kw">return </span>kb.checked_mul(<span class="number">1024</span>);
+<a href=#257 id=257 data-nosnippet>257</a>      }
+<a href=#258 id=258 data-nosnippet>258</a>    }
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="prelude-val">None
+<a href=#260 id=260 data-nosnippet>260</a>  </span>}
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="attr">#[cfg(target_os = <span class="string">"macos"</span>)]
+<a href=#262 id=262 data-nosnippet>262</a>  </span>{
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="kw">let </span><span class="kw-2">mut </span>stats: libc::vm_statistics64 = <span class="kw">unsafe </span>{ std::mem::zeroed() };
+<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">let </span><span class="kw-2">mut </span>count = (size_of::&lt;libc::vm_statistics64&gt;() / size_of::&lt;libc::integer_t&gt;())
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="kw">as </span>libc::mach_msg_type_number_t;
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="comment">// SAFETY: `stats` is a correctly sized, zeroed struct and `count` names
+<a href=#267 id=267 data-nosnippet>267</a>    // its capacity in `integer_t` units, exactly as the API requires;
+<a href=#268 id=268 data-nosnippet>268</a>    // `mach_host_self` returns a send right that need not be deallocated for
+<a href=#269 id=269 data-nosnippet>269</a>    // a one-shot query in a short-lived process.
+<a href=#270 id=270 data-nosnippet>270</a>    </span><span class="kw">let </span>kr = <span class="kw">unsafe </span>{
+<a href=#271 id=271 data-nosnippet>271</a>      libc::host_statistics64(
+<a href=#272 id=272 data-nosnippet>272</a>        libc::mach_host_self(),
+<a href=#273 id=273 data-nosnippet>273</a>        libc::HOST_VM_INFO64,
+<a href=#274 id=274 data-nosnippet>274</a>        (<span class="kw-2">&amp;</span><span class="kw">raw </span><span class="kw-2">mut </span>stats).cast::&lt;libc::integer_t&gt;(),
+<a href=#275 id=275 data-nosnippet>275</a>        <span class="kw-2">&amp;mut </span>count,
+<a href=#276 id=276 data-nosnippet>276</a>      )
+<a href=#277 id=277 data-nosnippet>277</a>    };
+<a href=#278 id=278 data-nosnippet>278</a>    <span class="kw">if </span>kr != libc::KERN_SUCCESS {
+<a href=#279 id=279 data-nosnippet>279</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#280 id=280 data-nosnippet>280</a>    }
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="kw">let </span>page_size = <span class="kw">unsafe </span>{ libc::sysconf(libc::_SC_PAGESIZE) };
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="kw">if </span>page_size &lt;= <span class="number">0 </span>{
+<a href=#283 id=283 data-nosnippet>283</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#284 id=284 data-nosnippet>284</a>    }
+<a href=#285 id=285 data-nosnippet>285</a>    (stats.free_count <span class="kw">as </span>u64 + stats.inactive_count <span class="kw">as </span>u64).checked_mul(page_size <span class="kw">as </span>u64)
+<a href=#286 id=286 data-nosnippet>286</a>  }
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="attr">#[cfg(windows)]
+<a href=#288 id=288 data-nosnippet>288</a>  </span>{
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">use </span>windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="kw">let </span><span class="kw-2">mut </span>status: MEMORYSTATUSEX = <span class="kw">unsafe </span>{ std::mem::zeroed() };
+<a href=#291 id=291 data-nosnippet>291</a>    status.dwLength = size_of::&lt;MEMORYSTATUSEX&gt;() <span class="kw">as </span>u32;
+<a href=#292 id=292 data-nosnippet>292</a>    <span class="comment">// SAFETY: `status` is a correctly sized, zeroed struct with `dwLength`
+<a href=#293 id=293 data-nosnippet>293</a>    // set, exactly as the API requires.
+<a href=#294 id=294 data-nosnippet>294</a>    </span><span class="kw">if unsafe </span>{ GlobalMemoryStatusEx(<span class="kw-2">&amp;mut </span>status) } != <span class="number">0 </span>{
+<a href=#295 id=295 data-nosnippet>295</a>      <span class="kw">return </span><span class="prelude-val">Some</span>(status.ullAvailPhys);
+<a href=#296 id=296 data-nosnippet>296</a>    }
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="prelude-val">None
+<a href=#298 id=298 data-nosnippet>298</a>  </span>}
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="attr">#[cfg(not(any(target_os = <span class="string">"linux"</span>, target_os = <span class="string">"macos"</span>, windows)))]
+<a href=#300 id=300 data-nosnippet>300</a>  </span>{
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="prelude-val">None
+<a href=#302 id=302 data-nosnippet>302</a>  </span>}
+<a href=#303 id=303 data-nosnippet>303</a>}
+<a href=#304 id=304 data-nosnippet>304</a>
+<a href=#305 id=305 data-nosnippet>305</a><span class="doccomment">/// Memory this PROCESS may actually use: physical RAM, capped by the cgroup
+<a href=#306 id=306 data-nosnippet>306</a>/// limit when one is in force.
+<a href=#307 id=307 data-nosnippet>307</a>///
+<a href=#308 id=308 data-nosnippet>308</a>/// `total_memory_bytes` reports the HOST's RAM (`sysconf(_SC_PHYS_PAGES)`),
+<a href=#309 id=309 data-nosnippet>309</a>/// which is blind to containers — so `docker run -m 4g` on a 258 GB host chose
+<a href=#310 id=310 data-nosnippet>310</a>/// a 64 GiB ceiling and a 48 GiB cooperative fuse, neither of which the process
+<a href=#311 id=311 data-nosnippet>311</a>/// could ever reach. The kernel killed it at 4 GB instead: exit 137, no output,
+<a href=#312 id=312 data-nosnippet>312</a>/// no `Fatal:` line — exactly the failure the graceful guard exists to replace.
+<a href=#313 id=313 data-nosnippet>313</a>/// The cortex fleet is only accidentally safe here, because it pins every child
+<a href=#314 id=314 data-nosnippet>314</a>/// with `--max-rss-mb`; a plain containerized CLI user is not.
+<a href=#315 id=315 data-nosnippet>315</a></span><span class="kw">fn </span>effective_memory_bytes() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#316 id=316 data-nosnippet>316</a>  <span class="kw">let </span>physical = total_memory_bytes();
+<a href=#317 id=317 data-nosnippet>317</a>  <span class="kw">match </span>(physical, cgroup_limit_bytes()) {
+<a href=#318 id=318 data-nosnippet>318</a>    (<span class="prelude-val">Some</span>(p), <span class="prelude-val">Some</span>(c)) =&gt; <span class="prelude-val">Some</span>(p.min(c)),
+<a href=#319 id=319 data-nosnippet>319</a>    (p, <span class="prelude-val">None</span>) =&gt; p,
+<a href=#320 id=320 data-nosnippet>320</a>    (<span class="prelude-val">None</span>, c) =&gt; c,
+<a href=#321 id=321 data-nosnippet>321</a>  }
 <a href=#322 id=322 data-nosnippet>322</a>}
 <a href=#323 id=323 data-nosnippet>323</a>
-<a href=#324 id=324 data-nosnippet>324</a><span class="doccomment">/// Exit code used when the wall-clock deadline is exceeded (standard `timeout`).
-<a href=#325 id=325 data-nosnippet>325</a></span><span class="kw">pub const </span>EXIT_TIMEOUT: i32 = <span class="number">124</span>;
-<a href=#326 id=326 data-nosnippet>326</a><span class="doccomment">/// Exit code used when the memory ceiling is exceeded (128 + SIGKILL).
-<a href=#327 id=327 data-nosnippet>327</a></span><span class="kw">pub const </span>EXIT_OOM: i32 = <span class="number">137</span>;
-<a href=#328 id=328 data-nosnippet>328</a>
-<a href=#329 id=329 data-nosnippet>329</a><span class="doccomment">/// Handle to a watchdog thread. Cancels on drop.
-<a href=#330 id=330 data-nosnippet>330</a>///
-<a href=#331 id=331 data-nosnippet>331</a>/// `Watchdog::new(0)` is a no-op — produces a handle that does nothing. This
-<a href=#332 id=332 data-nosnippet>332</a>/// lets call-sites set a watchdog conditionally without special-casing the
-<a href=#333 id=333 data-nosnippet>333</a>/// "no timeout" branch.
-<a href=#334 id=334 data-nosnippet>334</a>/// Optional hook to run from the watchdog thread immediately before
-<a href=#335 id=335 data-nosnippet>335</a>/// `exit(124)`. Used by `cortex_worker --standalone` to write a
-<a href=#336 id=336 data-nosnippet>336</a>/// structured `Status:conversion:3` placeholder to `--output` so the
-<a href=#337 id=337 data-nosnippet>337</a>/// timeout produces a usable failure artifact instead of a missing
-<a href=#338 id=338 data-nosnippet>338</a>/// file. Set once at startup via `set_pre_exit_hook`; the hook is
-<a href=#339 id=339 data-nosnippet>339</a>/// invoked exactly once. Zero overhead on the happy path — only the
-<a href=#340 id=340 data-nosnippet>340</a>/// watchdog firing reads it.
-<a href=#341 id=341 data-nosnippet>341</a></span><span class="kw">type </span>PreExitHook = Box&lt;<span class="kw">dyn </span>FnOnce() + Send + <span class="lifetime">'static</span>&gt;;
-<a href=#342 id=342 data-nosnippet>342</a>
-<a href=#343 id=343 data-nosnippet>343</a><span class="kw">static </span>PRE_EXIT_HOOK: std::sync::OnceLock&lt;std::sync::Mutex&lt;<span class="prelude-ty">Option</span>&lt;PreExitHook&gt;&gt;&gt; =
-<a href=#344 id=344 data-nosnippet>344</a>  std::sync::OnceLock::new();
-<a href=#345 id=345 data-nosnippet>345</a>
-<a href=#346 id=346 data-nosnippet>346</a><span class="kw">pub fn </span>set_pre_exit_hook(hook: PreExitHook) {
-<a href=#347 id=347 data-nosnippet>347</a>  <span class="kw">let </span>cell = PRE_EXIT_HOOK.get_or_init(|| std::sync::Mutex::new(<span class="prelude-val">None</span>));
-<a href=#348 id=348 data-nosnippet>348</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>guard) = cell.lock() {
-<a href=#349 id=349 data-nosnippet>349</a>    <span class="kw-2">*</span>guard = <span class="prelude-val">Some</span>(hook);
-<a href=#350 id=350 data-nosnippet>350</a>  }
-<a href=#351 id=351 data-nosnippet>351</a>}
-<a href=#352 id=352 data-nosnippet>352</a>
-<a href=#353 id=353 data-nosnippet>353</a><span class="kw">fn </span>run_pre_exit_hook() {
-<a href=#354 id=354 data-nosnippet>354</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(cell) = PRE_EXIT_HOOK.get()
-<a href=#355 id=355 data-nosnippet>355</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>guard) = cell.lock()
-<a href=#356 id=356 data-nosnippet>356</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(hook) = guard.take()
-<a href=#357 id=357 data-nosnippet>357</a>  {
-<a href=#358 id=358 data-nosnippet>358</a>    hook();
-<a href=#359 id=359 data-nosnippet>359</a>  }
-<a href=#360 id=360 data-nosnippet>360</a>}
-<a href=#361 id=361 data-nosnippet>361</a>
-<a href=#362 id=362 data-nosnippet>362</a><span class="kw">pub struct </span>Watchdog {
-<a href=#363 id=363 data-nosnippet>363</a>  cancelled: Arc&lt;AtomicBool&gt;,
-<a href=#364 id=364 data-nosnippet>364</a>}
-<a href=#365 id=365 data-nosnippet>365</a>
-<a href=#366 id=366 data-nosnippet>366</a><span class="kw">impl </span>Watchdog {
-<a href=#367 id=367 data-nosnippet>367</a>  <span class="doccomment">/// Create a wall-clock-only watchdog. `timeout_secs = 0` disables it.
-<a href=#368 id=368 data-nosnippet>368</a>  /// Equivalent to [`Watchdog::with_limits(timeout_secs, 0)`].
-<a href=#369 id=369 data-nosnippet>369</a>  </span><span class="kw">pub fn </span>new(timeout_secs: u64) -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::with_limits(timeout_secs, <span class="number">0</span>) }
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a>  <span class="doccomment">/// Create a watchdog guarding a wall-clock deadline **and** a resident-memory
-<a href=#372 id=372 data-nosnippet>372</a>  /// ceiling. `timeout_secs = 0` disables the time guard; `max_rss_kb = 0`
-<a href=#373 id=373 data-nosnippet>373</a>  /// disables the memory guard. With both `0` this is a no-op handle.
-<a href=#374 id=374 data-nosnippet>374</a>  ///
-<a href=#375 id=375 data-nosnippet>375</a>  /// The thread polls `cancelled`, the deadline, and RSS every `poll_interval`.
-<a href=#376 id=376 data-nosnippet>376</a>  /// On a time breach it exits [`EXIT_TIMEOUT`]; on a memory breach,
-<a href=#377 id=377 data-nosnippet>377</a>  /// [`EXIT_OOM`]. The memory guard is inactive where [`process_rss_kb`]
-<a href=#378 id=378 data-nosnippet>378</a>  /// returns `None` (non-Linux); see the module portability note.
-<a href=#379 id=379 data-nosnippet>379</a>  </span><span class="kw">pub fn </span>with_limits(timeout_secs: u64, max_rss_kb: u64) -&gt; <span class="self">Self </span>{
-<a href=#380 id=380 data-nosnippet>380</a>    <span class="kw">let </span>cancelled = Arc::new(AtomicBool::new(<span class="bool-val">false</span>));
-<a href=#381 id=381 data-nosnippet>381</a>    <span class="kw">if </span>timeout_secs &gt; <span class="number">0 </span>|| max_rss_kb &gt; <span class="number">0 </span>{
-<a href=#382 id=382 data-nosnippet>382</a>      <span class="kw">let </span>c = cancelled.clone();
-<a href=#383 id=383 data-nosnippet>383</a>      thread::Builder::new()
-<a href=#384 id=384 data-nosnippet>384</a>        .name(<span class="string">"latexml-watchdog"</span>.to_string())
-<a href=#385 id=385 data-nosnippet>385</a>        .spawn(<span class="kw">move </span>|| <span class="self">Self</span>::run(c, timeout_secs, max_rss_kb))
-<a href=#386 id=386 data-nosnippet>386</a>        .expect(<span class="string">"watchdog thread spawn failed"</span>);
-<a href=#387 id=387 data-nosnippet>387</a>    }
-<a href=#388 id=388 data-nosnippet>388</a>    <span class="self">Self </span>{ cancelled }
-<a href=#389 id=389 data-nosnippet>389</a>  }
-<a href=#390 id=390 data-nosnippet>390</a>
-<a href=#391 id=391 data-nosnippet>391</a>  <span class="kw">fn </span>run(cancelled: Arc&lt;AtomicBool&gt;, timeout_secs: u64, max_rss_kb: u64) {
-<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">let </span>deadline = (timeout_secs &gt; <span class="number">0</span>).then(|| Instant::now() + Duration::from_secs(timeout_secs));
-<a href=#393 id=393 data-nosnippet>393</a>    <span class="kw">let </span>poll_interval = Duration::from_millis(<span class="number">100</span>);
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="kw">loop </span>{
-<a href=#395 id=395 data-nosnippet>395</a>      <span class="kw">if </span>cancelled.load(Ordering::Relaxed) {
-<a href=#396 id=396 data-nosnippet>396</a>        <span class="kw">return</span>; <span class="comment">// cancelled: graceful exit.
-<a href=#397 id=397 data-nosnippet>397</a>      </span>}
-<a href=#398 id=398 data-nosnippet>398</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(deadline) = deadline
-<a href=#399 id=399 data-nosnippet>399</a>        &amp;&amp; Instant::now() &gt;= deadline
-<a href=#400 id=400 data-nosnippet>400</a>      {
-<a href=#401 id=401 data-nosnippet>401</a>        <span class="kw">if </span>cancelled.load(Ordering::Relaxed) {
-<a href=#402 id=402 data-nosnippet>402</a>          <span class="kw">return</span>;
-<a href=#403 id=403 data-nosnippet>403</a>        }
-<a href=#404 id=404 data-nosnippet>404</a>        <span class="macro">eprintln!</span>(
-<a href=#405 id=405 data-nosnippet>405</a>          <span class="string">"Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process"
-<a href=#406 id=406 data-nosnippet>406</a>        </span>);
-<a href=#407 id=407 data-nosnippet>407</a>        <span class="comment">// Run the optional pre-exit hook (e.g. cortex_worker writing a
-<a href=#408 id=408 data-nosnippet>408</a>        // structured Status:conversion:3 placeholder to its --output path)
-<a href=#409 id=409 data-nosnippet>409</a>        // BEFORE exiting. The hook is invoked at most once per process.
-<a href=#410 id=410 data-nosnippet>410</a>        </span>run_pre_exit_hook();
-<a href=#411 id=411 data-nosnippet>411</a>        <span class="comment">// `std::process::exit(124)` instead of `abort()`: the watchdog must
-<a href=#412 id=412 data-nosnippet>412</a>        // terminate the whole process (the worker thread is presumed wedged
-<a href=#413 id=413 data-nosnippet>413</a>        // in a tight loop that won't observe a cooperative cancel), but
-<a href=#414 id=414 data-nosnippet>414</a>        // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
-<a href=#415 id=415 data-nosnippet>415</a>        // the shell. `exit(124)` (standard timeout exit code) runs atexit
-<a href=#416 id=416 data-nosnippet>416</a>        // handlers, flushes stderr, and leaves a clean exit signal the
-<a href=#417 id=417 data-nosnippet>417</a>        // parent harness can interpret as "paper timed out" without
-<a href=#418 id=418 data-nosnippet>418</a>        // conflating it with a Rust panic / memory corruption. Witnesses:
-<a href=#419 id=419 data-nosnippet>419</a>        // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
-<a href=#420 id=420 data-nosnippet>420</a>        // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
-<a href=#421 id=421 data-nosnippet>421</a>        // 2026-05-13 588-paper sweep.
-<a href=#422 id=422 data-nosnippet>422</a>        </span>std::process::exit(EXIT_TIMEOUT);
-<a href=#423 id=423 data-nosnippet>423</a>      }
-<a href=#424 id=424 data-nosnippet>424</a>      <span class="kw">if </span>max_rss_kb &gt; <span class="number">0
-<a href=#425 id=425 data-nosnippet>425</a>        </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(rss) = process_rss_kb()
-<a href=#426 id=426 data-nosnippet>426</a>        &amp;&amp; rss &gt; max_rss_kb
-<a href=#427 id=427 data-nosnippet>427</a>      {
-<a href=#428 id=428 data-nosnippet>428</a>        <span class="kw">if </span>cancelled.load(Ordering::Relaxed) {
-<a href=#429 id=429 data-nosnippet>429</a>          <span class="kw">return</span>;
-<a href=#430 id=430 data-nosnippet>430</a>        }
-<a href=#431 id=431 data-nosnippet>431</a>        <span class="macro">eprintln!</span>(
-<a href=#432 id=432 data-nosnippet>432</a>          <span class="string">"Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting process"</span>,
-<a href=#433 id=433 data-nosnippet>433</a>          rss / <span class="number">1024</span>,
-<a href=#434 id=434 data-nosnippet>434</a>          max_rss_kb / <span class="number">1024
-<a href=#435 id=435 data-nosnippet>435</a>        </span>);
-<a href=#436 id=436 data-nosnippet>436</a>        run_pre_exit_hook();
-<a href=#437 id=437 data-nosnippet>437</a>        std::process::exit(EXIT_OOM);
-<a href=#438 id=438 data-nosnippet>438</a>      }
-<a href=#439 id=439 data-nosnippet>439</a>      thread::sleep(poll_interval);
-<a href=#440 id=440 data-nosnippet>440</a>    }
-<a href=#441 id=441 data-nosnippet>441</a>  }
-<a href=#442 id=442 data-nosnippet>442</a>
-<a href=#443 id=443 data-nosnippet>443</a>  <span class="doccomment">/// Explicitly cancel the watchdog. Idempotent.
-<a href=#444 id=444 data-nosnippet>444</a>  </span><span class="kw">pub fn </span>cancel(<span class="kw-2">&amp;</span><span class="self">self</span>) { <span class="self">self</span>.cancelled.store(<span class="bool-val">true</span>, Ordering::Relaxed); }
-<a href=#445 id=445 data-nosnippet>445</a>}
-<a href=#446 id=446 data-nosnippet>446</a>
-<a href=#447 id=447 data-nosnippet>447</a><span class="kw">impl </span>Drop <span class="kw">for </span>Watchdog {
-<a href=#448 id=448 data-nosnippet>448</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.cancel(); }
-<a href=#449 id=449 data-nosnippet>449</a>}
-<a href=#450 id=450 data-nosnippet>450</a>
-<a href=#451 id=451 data-nosnippet>451</a><span class="attr">#[cfg(test)]
-<a href=#452 id=452 data-nosnippet>452</a></span><span class="kw">mod </span>tests {
-<a href=#453 id=453 data-nosnippet>453</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#454 id=454 data-nosnippet>454</a>
-<a href=#455 id=455 data-nosnippet>455</a>  <span class="doccomment">/// The cgroup limit decides the ceiling in a container, so each way of
-<a href=#456 id=456 data-nosnippet>456</a>  /// spelling "unlimited" has to be recognised — otherwise a sentinel is
-<a href=#457 id=457 data-nosnippet>457</a>  /// mistaken for a 8 EiB budget, or `max` for a parse failure.
-<a href=#458 id=458 data-nosnippet>458</a>  </span><span class="attr">#[test]
-<a href=#459 id=459 data-nosnippet>459</a>  </span><span class="kw">fn </span>cgroup_limit_recognises_every_unlimited_spelling() {
-<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">const </span>PHYS: <span class="prelude-ty">Option</span>&lt;u64&gt; = <span class="prelude-val">Some</span>(<span class="number">258 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
-<a href=#461 id=461 data-nosnippet>461</a>
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="comment">// cgroup v2: the literal word.
-<a href=#463 id=463 data-nosnippet>463</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"max\n"</span>, PHYS), <span class="prelude-val">None</span>);
-<a href=#464 id=464 data-nosnippet>464</a>    <span class="comment">// cgroup v1: a huge sentinel (u64::MAX rounded to a page multiple).
-<a href=#465 id=465 data-nosnippet>465</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"9223372036854771712"</span>, PHYS), <span class="prelude-val">None</span>);
-<a href=#466 id=466 data-nosnippet>466</a>    <span class="comment">// A limit at or above physical RAM bounds nothing (258 GiB exactly, and
-<a href=#467 id=467 data-nosnippet>467</a>    // above).
-<a href=#468 id=468 data-nosnippet>468</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"277025390592"</span>, PHYS), <span class="prelude-val">None</span>);
-<a href=#469 id=469 data-nosnippet>469</a>    <span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"281474976710656"</span>, PHYS), <span class="prelude-val">None</span>);
-<a href=#470 id=470 data-nosnippet>470</a>    <span class="comment">// Garbage is not a limit.
-<a href=#471 id=471 data-nosnippet>471</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">""</span>, PHYS), <span class="prelude-val">None</span>);
-<a href=#472 id=472 data-nosnippet>472</a>    <span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"nonsense"</span>, PHYS), <span class="prelude-val">None</span>);
-<a href=#473 id=473 data-nosnippet>473</a>    <span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"0"</span>, PHYS), <span class="prelude-val">None</span>);
-<a href=#474 id=474 data-nosnippet>474</a>
-<a href=#475 id=475 data-nosnippet>475</a>    <span class="comment">// A REAL limit is honoured — this is the `docker run -m 4g` case that was
-<a href=#476 id=476 data-nosnippet>476</a>    // being ignored, leaving the process to be OOM-killed at 4 GB while its
-<a href=#477 id=477 data-nosnippet>477</a>    // cooperative fuse sat at 48 GiB.
-<a href=#478 id=478 data-nosnippet>478</a>    </span><span class="kw">let </span>four_gib = <span class="number">4 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
-<a href=#479 id=479 data-nosnippet>479</a>    <span class="macro">assert_eq!</span>(
-<a href=#480 id=480 data-nosnippet>480</a>      interpret_cgroup_limit(<span class="kw-2">&amp;</span>four_gib.to_string(), PHYS),
-<a href=#481 id=481 data-nosnippet>481</a>      <span class="prelude-val">Some</span>(four_gib)
-<a href=#482 id=482 data-nosnippet>482</a>    );
-<a href=#483 id=483 data-nosnippet>483</a>    <span class="comment">// …and trailing whitespace from the sysfs read must not defeat it.
-<a href=#484 id=484 data-nosnippet>484</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#485 id=485 data-nosnippet>485</a>      interpret_cgroup_limit(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{four_gib}\n"</span>), PHYS),
-<a href=#486 id=486 data-nosnippet>486</a>      <span class="prelude-val">Some</span>(four_gib)
-<a href=#487 id=487 data-nosnippet>487</a>    );
-<a href=#488 id=488 data-nosnippet>488</a>  }
-<a href=#489 id=489 data-nosnippet>489</a>
-<a href=#490 id=490 data-nosnippet>490</a>  <span class="attr">#[test]
-<a href=#491 id=491 data-nosnippet>491</a>  </span><span class="kw">fn </span>watchdog_zero_timeout_is_noop() {
-<a href=#492 id=492 data-nosnippet>492</a>    <span class="comment">// timeout_secs=0 should NOT spawn a thread and NOT abort.
-<a href=#493 id=493 data-nosnippet>493</a>    </span><span class="kw">let </span>w = Watchdog::new(<span class="number">0</span>);
-<a href=#494 id=494 data-nosnippet>494</a>    <span class="macro">assert!</span>(
-<a href=#495 id=495 data-nosnippet>495</a>      !w.cancelled.load(Ordering::Relaxed),
-<a href=#496 id=496 data-nosnippet>496</a>      <span class="string">"initial cancelled state is false"
-<a href=#497 id=497 data-nosnippet>497</a>    </span>);
-<a href=#498 id=498 data-nosnippet>498</a>    <span class="comment">// Dropping is safe — there's no live thread to interact with.
-<a href=#499 id=499 data-nosnippet>499</a>    </span>drop(w);
-<a href=#500 id=500 data-nosnippet>500</a>  }
-<a href=#501 id=501 data-nosnippet>501</a>
-<a href=#502 id=502 data-nosnippet>502</a>  <span class="attr">#[test]
-<a href=#503 id=503 data-nosnippet>503</a>  </span><span class="kw">fn </span>watchdog_cancel_is_idempotent() {
-<a href=#504 id=504 data-nosnippet>504</a>    <span class="kw">let </span>w = Watchdog::new(<span class="number">60</span>);
-<a href=#505 id=505 data-nosnippet>505</a>    w.cancel();
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="macro">assert!</span>(w.cancelled.load(Ordering::Relaxed));
-<a href=#507 id=507 data-nosnippet>507</a>    <span class="comment">// Calling again is a no-op.
-<a href=#508 id=508 data-nosnippet>508</a>    </span>w.cancel();
-<a href=#509 id=509 data-nosnippet>509</a>    <span class="macro">assert!</span>(w.cancelled.load(Ordering::Relaxed));
-<a href=#510 id=510 data-nosnippet>510</a>  }
-<a href=#511 id=511 data-nosnippet>511</a>
-<a href=#512 id=512 data-nosnippet>512</a>  <span class="attr">#[test]
-<a href=#513 id=513 data-nosnippet>513</a>  </span><span class="kw">fn </span>watchdog_drop_cancels() {
-<a href=#514 id=514 data-nosnippet>514</a>    <span class="kw">let </span>cancelled_ref = {
-<a href=#515 id=515 data-nosnippet>515</a>      <span class="kw">let </span>w = Watchdog::new(<span class="number">60</span>);
-<a href=#516 id=516 data-nosnippet>516</a>      <span class="comment">// Grab a reference to the atomic so we can inspect post-drop.
-<a href=#517 id=517 data-nosnippet>517</a>      </span>w.cancelled.clone()
-<a href=#518 id=518 data-nosnippet>518</a>    }; <span class="comment">// w dropped here
-<a href=#519 id=519 data-nosnippet>519</a>    </span><span class="macro">assert!</span>(
-<a href=#520 id=520 data-nosnippet>520</a>      cancelled_ref.load(Ordering::Relaxed),
-<a href=#521 id=521 data-nosnippet>521</a>      <span class="string">"drop should set cancelled=true"
-<a href=#522 id=522 data-nosnippet>522</a>    </span>);
-<a href=#523 id=523 data-nosnippet>523</a>  }
-<a href=#524 id=524 data-nosnippet>524</a>
-<a href=#525 id=525 data-nosnippet>525</a>  <span class="attr">#[test]
-<a href=#526 id=526 data-nosnippet>526</a>  </span><span class="kw">fn </span>watchdog_explicit_cancel_before_drop() {
-<a href=#527 id=527 data-nosnippet>527</a>    <span class="comment">// Pre-drop cancellation is also reflected on the clone.
-<a href=#528 id=528 data-nosnippet>528</a>    </span><span class="kw">let </span>w = Watchdog::new(<span class="number">60</span>);
-<a href=#529 id=529 data-nosnippet>529</a>    <span class="kw">let </span>cancelled_ref = w.cancelled.clone();
-<a href=#530 id=530 data-nosnippet>530</a>    w.cancel();
-<a href=#531 id=531 data-nosnippet>531</a>    <span class="macro">assert!</span>(cancelled_ref.load(Ordering::Relaxed));
-<a href=#532 id=532 data-nosnippet>532</a>    <span class="comment">// Explicit drop after cancel remains idempotent.
-<a href=#533 id=533 data-nosnippet>533</a>    </span>drop(w);
-<a href=#534 id=534 data-nosnippet>534</a>    <span class="macro">assert!</span>(cancelled_ref.load(Ordering::Relaxed));
-<a href=#535 id=535 data-nosnippet>535</a>  }
-<a href=#536 id=536 data-nosnippet>536</a>
-<a href=#537 id=537 data-nosnippet>537</a>  <span class="attr">#[test]
-<a href=#538 id=538 data-nosnippet>538</a>  </span><span class="kw">fn </span>watchdog_long_timeout_doesnt_fire_quickly() {
-<a href=#539 id=539 data-nosnippet>539</a>    <span class="comment">// 60-second timeout shouldn't fire during a 50 ms sleep.
-<a href=#540 id=540 data-nosnippet>540</a>    </span><span class="kw">let </span>_w = Watchdog::new(<span class="number">60</span>);
-<a href=#541 id=541 data-nosnippet>541</a>    thread::sleep(Duration::from_millis(<span class="number">50</span>));
-<a href=#542 id=542 data-nosnippet>542</a>    <span class="comment">// If the watchdog had fired, we'd be dead. We made it here → fine.
-<a href=#543 id=543 data-nosnippet>543</a>  </span>}
-<a href=#544 id=544 data-nosnippet>544</a>
-<a href=#545 id=545 data-nosnippet>545</a>  <span class="doccomment">/// The ceiling is derived from the machine, so the machine must be probeable
-<a href=#546 id=546 data-nosnippet>546</a>  /// on every platform we ship. A `None` here means the default silently falls
-<a href=#547 id=547 data-nosnippet>547</a>  /// back to a flat number and the ceiling stops tracking the host — the exact
-<a href=#548 id=548 data-nosnippet>548</a>  /// failure `process_rss_kb` already has on non-Linux.
-<a href=#549 id=549 data-nosnippet>549</a>  </span><span class="attr">#[test]
-<a href=#550 id=550 data-nosnippet>550</a>  #[cfg(any(unix, windows))]
-<a href=#551 id=551 data-nosnippet>551</a>  </span><span class="kw">fn </span>total_memory_is_probeable_and_plausible() {
-<a href=#552 id=552 data-nosnippet>552</a>    <span class="kw">let </span>total = total_memory_bytes().expect(<span class="string">"physical RAM must be probeable on unix/windows"</span>);
-<a href=#553 id=553 data-nosnippet>553</a>    <span class="comment">// No real machine we support has under 256 MiB, and none has over 100 TiB;
-<a href=#554 id=554 data-nosnippet>554</a>    // a value outside that says the units are wrong, not that the host is odd.
-<a href=#555 id=555 data-nosnippet>555</a>    </span><span class="macro">assert!</span>(
-<a href=#556 id=556 data-nosnippet>556</a>      total &gt; <span class="number">256 </span>* <span class="number">1024 </span>* <span class="number">1024</span>,
-<a href=#557 id=557 data-nosnippet>557</a>      <span class="string">"implausibly small total RAM ({total} bytes) — check the unit conversion"
-<a href=#558 id=558 data-nosnippet>558</a>    </span>);
-<a href=#559 id=559 data-nosnippet>559</a>    <span class="macro">assert!</span>(
-<a href=#560 id=560 data-nosnippet>560</a>      total &lt; <span class="number">100 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>,
-<a href=#561 id=561 data-nosnippet>561</a>      <span class="string">"implausibly large total RAM ({total} bytes) — check the unit conversion"
-<a href=#562 id=562 data-nosnippet>562</a>    </span>);
-<a href=#563 id=563 data-nosnippet>563</a>  }
-<a href=#564 id=564 data-nosnippet>564</a>
-<a href=#565 id=565 data-nosnippet>565</a>  <span class="doccomment">/// `min(64 GiB, 90 % of RAM)`, and never zero — a zero ceiling would mean
-<a href=#566 id=566 data-nosnippet>566</a>  /// "no limit" downstream (`resolve_rss_cap`), inverting the intent.
-<a href=#567 id=567 data-nosnippet>567</a>  </span><span class="attr">#[test]
-<a href=#568 id=568 data-nosnippet>568</a>  </span><span class="kw">fn </span>default_ceiling_respects_both_halves_of_the_rule() {
-<a href=#569 id=569 data-nosnippet>569</a>    <span class="kw">let </span>ceiling = default_ceiling_mib();
-<a href=#570 id=570 data-nosnippet>570</a>    <span class="macro">assert!</span>(
-<a href=#571 id=571 data-nosnippet>571</a>      ceiling &gt; <span class="number">0</span>,
-<a href=#572 id=572 data-nosnippet>572</a>      <span class="string">"a derived ceiling of 0 would read as 'unlimited'"
-<a href=#573 id=573 data-nosnippet>573</a>    </span>);
-<a href=#574 id=574 data-nosnippet>574</a>    <span class="macro">assert!</span>(
-<a href=#575 id=575 data-nosnippet>575</a>      ceiling &lt;= MAX_DEFAULT_CEILING_MIB,
-<a href=#576 id=576 data-nosnippet>576</a>      <span class="string">"derived {ceiling} MiB exceeds the {MAX_DEFAULT_CEILING_MIB} MiB cap; on a \
-<a href=#577 id=577 data-nosnippet>577</a>       large host an uncapped fraction-of-RAM default would let a parallel fleet \
-<a href=#578 id=578 data-nosnippet>578</a>       (N_processes x ceiling) OOM the machine"
-<a href=#579 id=579 data-nosnippet>579</a>    </span>);
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(total) = total_memory_bytes() {
-<a href=#581 id=581 data-nosnippet>581</a>      <span class="kw">let </span>half = total / (<span class="number">1024 </span>* <span class="number">1024</span>) / <span class="number">2</span>;
-<a href=#582 id=582 data-nosnippet>582</a>      <span class="macro">assert_eq!</span>(
-<a href=#583 id=583 data-nosnippet>583</a>        ceiling,
-<a href=#584 id=584 data-nosnippet>584</a>        half.clamp(MIN_DEFAULT_CEILING_MIB, MAX_DEFAULT_CEILING_MIB),
-<a href=#585 id=585 data-nosnippet>585</a>        <span class="string">"ceiling should be min(cap, HALF of RAM), floored"
-<a href=#586 id=586 data-nosnippet>586</a>      </span>);
-<a href=#587 id=587 data-nosnippet>587</a>      <span class="comment">// Half of RAM, not 90 %: the cooperative fuse rides at 75 % of the
-<a href=#588 id=588 data-nosnippet>588</a>      // ceiling, so at 90 % a 16 GB machine let one conversion reach 10.8 GiB
-<a href=#589 id=589 data-nosnippet>589</a>      // before complaining — long after the session started swapping. This
-<a href=#590 id=590 data-nosnippet>590</a>      // assertion is hardware-dependent by nature (it failed only on the
-<a href=#591 id=591 data-nosnippet>591</a>      // smaller macOS runner, where the 64 GiB cap does not bind and the
-<a href=#592 id=592 data-nosnippet>592</a>      // fraction is what shows).
-<a href=#593 id=593 data-nosnippet>593</a>      </span><span class="macro">assert!</span>(
-<a href=#594 id=594 data-nosnippet>594</a>        ceiling &lt;= total / (<span class="number">1024 </span>* <span class="number">1024</span>) / <span class="number">2 </span>|| ceiling == MIN_DEFAULT_CEILING_MIB,
-<a href=#595 id=595 data-nosnippet>595</a>        <span class="string">"the ceiling must leave the OS the larger share of physical RAM"
-<a href=#596 id=596 data-nosnippet>596</a>      </span>);
-<a href=#597 id=597 data-nosnippet>597</a>    } <span class="kw">else </span>{
-<a href=#598 id=598 data-nosnippet>598</a>      <span class="macro">assert_eq!</span>(ceiling, FALLBACK_CEILING_MIB);
-<a href=#599 id=599 data-nosnippet>599</a>    }
-<a href=#600 id=600 data-nosnippet>600</a>  }
-<a href=#601 id=601 data-nosnippet>601</a>
-<a href=#602 id=602 data-nosnippet>602</a>  <span class="doccomment">/// Free-disk probing backs the spill-headroom check; if it cannot answer we
-<a href=#603 id=603 data-nosnippet>603</a>  /// would have to spill blind.
-<a href=#604 id=604 data-nosnippet>604</a>  </span><span class="attr">#[test]
-<a href=#605 id=605 data-nosnippet>605</a>  #[cfg(any(unix, windows))]
-<a href=#606 id=606 data-nosnippet>606</a>  </span><span class="kw">fn </span>available_disk_is_probeable() {
-<a href=#607 id=607 data-nosnippet>607</a>    <span class="kw">let </span>free = available_disk_bytes(std::path::Path::new(<span class="string">"."</span>))
-<a href=#608 id=608 data-nosnippet>608</a>      .expect(<span class="string">"free space must be probeable on unix/windows"</span>);
-<a href=#609 id=609 data-nosnippet>609</a>    <span class="macro">assert!</span>(
-<a href=#610 id=610 data-nosnippet>610</a>      free &gt; <span class="number">0</span>,
-<a href=#611 id=611 data-nosnippet>611</a>      <span class="string">"reported zero free space on the working directory"
-<a href=#612 id=612 data-nosnippet>612</a>    </span>);
-<a href=#613 id=613 data-nosnippet>613</a>  }
-<a href=#614 id=614 data-nosnippet>614</a>}
+<a href=#324 id=324 data-nosnippet>324</a><span class="doccomment">/// The cgroup memory limit, v2 then v1, or `None` when unlimited/unreadable.
+<a href=#325 id=325 data-nosnippet>325</a>///
+<a href=#326 id=326 data-nosnippet>326</a>/// Both spell "unlimited" in their own way: v2 writes the literal `max`, v1
+<a href=#327 id=327 data-nosnippet>327</a>/// writes a huge sentinel (`u64::MAX` rounded down to a page multiple), so a
+<a href=#328 id=328 data-nosnippet>328</a>/// value at or above the host's RAM is treated as no limit rather than as a
+<a href=#329 id=329 data-nosnippet>329</a>/// bound worth honouring.
+<a href=#330 id=330 data-nosnippet>330</a></span><span class="kw">fn </span>cgroup_limit_bytes() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#331 id=331 data-nosnippet>331</a>  <span class="kw">let </span>v2 = std::fs::read_to_string(<span class="string">"/sys/fs/cgroup/memory.max"</span>).ok();
+<a href=#332 id=332 data-nosnippet>332</a>  <span class="kw">let </span>v1 = || std::fs::read_to_string(<span class="string">"/sys/fs/cgroup/memory/memory.limit_in_bytes"</span>).ok();
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="kw">let </span>raw = v2.or_else(v1)<span class="question-mark">?</span>;
+<a href=#334 id=334 data-nosnippet>334</a>  interpret_cgroup_limit(<span class="kw-2">&amp;</span>raw, total_memory_bytes())
+<a href=#335 id=335 data-nosnippet>335</a>}
+<a href=#336 id=336 data-nosnippet>336</a>
+<a href=#337 id=337 data-nosnippet>337</a><span class="doccomment">/// Decide what a cgroup limit file MEANS. Split out from the file read so the
+<a href=#338 id=338 data-nosnippet>338</a>/// rules are testable without a container: the reachable spellings of
+<a href=#339 id=339 data-nosnippet>339</a>/// "unlimited" are what make this subtle.
+<a href=#340 id=340 data-nosnippet>340</a></span><span class="kw">fn </span>interpret_cgroup_limit(raw: <span class="kw-2">&amp;</span>str, physical: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#341 id=341 data-nosnippet>341</a>  <span class="kw">let </span>text = raw.trim();
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="comment">// cgroup v2 spells unlimited literally.
+<a href=#343 id=343 data-nosnippet>343</a>  </span><span class="kw">if </span>text == <span class="string">"max" </span>{
+<a href=#344 id=344 data-nosnippet>344</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#345 id=345 data-nosnippet>345</a>  }
+<a href=#346 id=346 data-nosnippet>346</a>  <span class="kw">let </span>limit = text.parse::&lt;u64&gt;().ok()<span class="question-mark">?</span>;
+<a href=#347 id=347 data-nosnippet>347</a>  <span class="comment">// cgroup v1 spells it as a huge sentinel, and a "limit" at or above the
+<a href=#348 id=348 data-nosnippet>348</a>  // host's RAM bounds nothing — treat both as no limit rather than as a
+<a href=#349 id=349 data-nosnippet>349</a>  // ceiling worth honouring.
+<a href=#350 id=350 data-nosnippet>350</a>  </span><span class="kw">if </span>limit == <span class="number">0 </span>|| physical.is_some_and(|phys| limit &gt;= phys) {
+<a href=#351 id=351 data-nosnippet>351</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#352 id=352 data-nosnippet>352</a>  }
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="prelude-val">Some</span>(limit)
+<a href=#354 id=354 data-nosnippet>354</a>}
+<a href=#355 id=355 data-nosnippet>355</a>
+<a href=#356 id=356 data-nosnippet>356</a><span class="doccomment">/// Floor for the machine-derived default, so a small container still gets a
+<a href=#357 id=357 data-nosnippet>357</a>/// workable budget rather than a ceiling no conversion can fit under.
+<a href=#358 id=358 data-nosnippet>358</a></span><span class="kw">pub const </span>MIN_DEFAULT_CEILING_MIB: u64 = <span class="number">2048</span>;
+<a href=#359 id=359 data-nosnippet>359</a>
+<a href=#360 id=360 data-nosnippet>360</a><span class="doccomment">/// Upper bound on the machine-derived default ceiling (64 GiB in MiB).
+<a href=#361 id=361 data-nosnippet>361</a></span><span class="kw">pub const </span>MAX_DEFAULT_CEILING_MIB: u64 = <span class="number">64 </span>* <span class="number">1024</span>;
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a><span class="doccomment">/// Ceiling used when the machine's RAM cannot be probed — the historical flat
+<a href=#364 id=364 data-nosnippet>364</a>/// default, kept so an unprobeable platform behaves exactly as before rather
+<a href=#365 id=365 data-nosnippet>365</a>/// than losing its guard entirely.
+<a href=#366 id=366 data-nosnippet>366</a></span><span class="kw">pub const </span>FALLBACK_CEILING_MIB: u64 = <span class="number">6144</span>;
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a><span class="doccomment">/// Free space in bytes on the filesystem holding `path`, or `None` if it cannot
+<a href=#369 id=369 data-nosnippet>369</a>/// be determined. Used to check headroom before spilling intermediates to disk.
+<a href=#370 id=370 data-nosnippet>370</a></span><span class="kw">pub fn </span>available_disk_bytes(path: <span class="kw-2">&amp;</span>std::path::Path) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#371 id=371 data-nosnippet>371</a>  <span class="attr">#[cfg(unix)]
+<a href=#372 id=372 data-nosnippet>372</a>  </span>{
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">use </span>std::os::unix::ffi::OsStrExt;
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw">let </span>c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()<span class="question-mark">?</span>;
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="comment">// SAFETY: zeroed `statvfs` is a valid initial state; `c_path` is a
+<a href=#376 id=376 data-nosnippet>376</a>    // NUL-terminated string that outlives the call.
+<a href=#377 id=377 data-nosnippet>377</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>stat: libc::statvfs = <span class="kw">unsafe </span>{ std::mem::zeroed() };
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">if unsafe </span>{ libc::statvfs(c_path.as_ptr(), <span class="kw-2">&amp;mut </span>stat) } != <span class="number">0 </span>{
+<a href=#379 id=379 data-nosnippet>379</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#380 id=380 data-nosnippet>380</a>    }
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="comment">// `f_bavail` is blocks available to unprivileged users — the honest figure,
+<a href=#382 id=382 data-nosnippet>382</a>    // as `f_bfree` includes the root-reserved slice we cannot use.
+<a href=#383 id=383 data-nosnippet>383</a>    </span>(stat.f_bavail <span class="kw">as </span>u64).checked_mul(stat.f_frsize <span class="kw">as </span>u64)
+<a href=#384 id=384 data-nosnippet>384</a>  }
+<a href=#385 id=385 data-nosnippet>385</a>  <span class="attr">#[cfg(windows)]
+<a href=#386 id=386 data-nosnippet>386</a>  </span>{
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="kw">use </span>std::os::windows::ffi::OsStrExt;
+<a href=#388 id=388 data-nosnippet>388</a>
+<a href=#389 id=389 data-nosnippet>389</a>    <span class="kw">use </span>windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="kw">let </span><span class="kw-2">mut </span>wide: Vec&lt;u16&gt; = path.as_os_str().encode_wide().collect();
+<a href=#391 id=391 data-nosnippet>391</a>    wide.push(<span class="number">0</span>);
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">let </span><span class="kw-2">mut </span>free_to_caller: u64 = <span class="number">0</span>;
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="comment">// SAFETY: `wide` is NUL-terminated and outlives the call; the two unused
+<a href=#394 id=394 data-nosnippet>394</a>    // out-parameters are passed as null, which the API permits.
+<a href=#395 id=395 data-nosnippet>395</a>    </span><span class="kw">let </span>ok = <span class="kw">unsafe </span>{
+<a href=#396 id=396 data-nosnippet>396</a>      GetDiskFreeSpaceExW(
+<a href=#397 id=397 data-nosnippet>397</a>        wide.as_ptr(),
+<a href=#398 id=398 data-nosnippet>398</a>        <span class="kw-2">&amp;mut </span>free_to_caller,
+<a href=#399 id=399 data-nosnippet>399</a>        std::ptr::null_mut(),
+<a href=#400 id=400 data-nosnippet>400</a>        std::ptr::null_mut(),
+<a href=#401 id=401 data-nosnippet>401</a>      )
+<a href=#402 id=402 data-nosnippet>402</a>    };
+<a href=#403 id=403 data-nosnippet>403</a>    (ok != <span class="number">0</span>).then_some(free_to_caller)
+<a href=#404 id=404 data-nosnippet>404</a>  }
+<a href=#405 id=405 data-nosnippet>405</a>  <span class="attr">#[cfg(not(any(unix, windows)))]
+<a href=#406 id=406 data-nosnippet>406</a>  </span>{
+<a href=#407 id=407 data-nosnippet>407</a>    <span class="kw">let _ </span>= path;
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="prelude-val">None
+<a href=#409 id=409 data-nosnippet>409</a>  </span>}
+<a href=#410 id=410 data-nosnippet>410</a>}
+<a href=#411 id=411 data-nosnippet>411</a>
+<a href=#412 id=412 data-nosnippet>412</a><span class="doccomment">/// Exit code used when the wall-clock deadline is exceeded (standard `timeout`).
+<a href=#413 id=413 data-nosnippet>413</a></span><span class="kw">pub const </span>EXIT_TIMEOUT: i32 = <span class="number">124</span>;
+<a href=#414 id=414 data-nosnippet>414</a><span class="doccomment">/// Exit code used when the memory ceiling is exceeded (128 + SIGKILL).
+<a href=#415 id=415 data-nosnippet>415</a></span><span class="kw">pub const </span>EXIT_OOM: i32 = <span class="number">137</span>;
+<a href=#416 id=416 data-nosnippet>416</a>
+<a href=#417 id=417 data-nosnippet>417</a><span class="doccomment">/// Handle to a watchdog thread. Cancels on drop.
+<a href=#418 id=418 data-nosnippet>418</a>///
+<a href=#419 id=419 data-nosnippet>419</a>/// `Watchdog::new(0)` is a no-op — produces a handle that does nothing. This
+<a href=#420 id=420 data-nosnippet>420</a>/// lets call-sites set a watchdog conditionally without special-casing the
+<a href=#421 id=421 data-nosnippet>421</a>/// "no timeout" branch.
+<a href=#422 id=422 data-nosnippet>422</a>/// Optional hook to run from the watchdog thread immediately before
+<a href=#423 id=423 data-nosnippet>423</a>/// `exit(124)`. Used by `cortex_worker --standalone` to write a
+<a href=#424 id=424 data-nosnippet>424</a>/// structured `Status:conversion:3` placeholder to `--output` so the
+<a href=#425 id=425 data-nosnippet>425</a>/// timeout produces a usable failure artifact instead of a missing
+<a href=#426 id=426 data-nosnippet>426</a>/// file. Set once at startup via `set_pre_exit_hook`; the hook is
+<a href=#427 id=427 data-nosnippet>427</a>/// invoked exactly once. Zero overhead on the happy path — only the
+<a href=#428 id=428 data-nosnippet>428</a>/// watchdog firing reads it.
+<a href=#429 id=429 data-nosnippet>429</a></span><span class="kw">type </span>PreExitHook = Box&lt;<span class="kw">dyn </span>FnOnce() + Send + <span class="lifetime">'static</span>&gt;;
+<a href=#430 id=430 data-nosnippet>430</a>
+<a href=#431 id=431 data-nosnippet>431</a><span class="kw">static </span>PRE_EXIT_HOOK: std::sync::OnceLock&lt;std::sync::Mutex&lt;<span class="prelude-ty">Option</span>&lt;PreExitHook&gt;&gt;&gt; =
+<a href=#432 id=432 data-nosnippet>432</a>  std::sync::OnceLock::new();
+<a href=#433 id=433 data-nosnippet>433</a>
+<a href=#434 id=434 data-nosnippet>434</a><span class="kw">pub fn </span>set_pre_exit_hook(hook: PreExitHook) {
+<a href=#435 id=435 data-nosnippet>435</a>  <span class="kw">let </span>cell = PRE_EXIT_HOOK.get_or_init(|| std::sync::Mutex::new(<span class="prelude-val">None</span>));
+<a href=#436 id=436 data-nosnippet>436</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>guard) = cell.lock() {
+<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw-2">*</span>guard = <span class="prelude-val">Some</span>(hook);
+<a href=#438 id=438 data-nosnippet>438</a>  }
+<a href=#439 id=439 data-nosnippet>439</a>}
+<a href=#440 id=440 data-nosnippet>440</a>
+<a href=#441 id=441 data-nosnippet>441</a><span class="kw">fn </span>run_pre_exit_hook() {
+<a href=#442 id=442 data-nosnippet>442</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(cell) = PRE_EXIT_HOOK.get()
+<a href=#443 id=443 data-nosnippet>443</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>guard) = cell.lock()
+<a href=#444 id=444 data-nosnippet>444</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(hook) = guard.take()
+<a href=#445 id=445 data-nosnippet>445</a>  {
+<a href=#446 id=446 data-nosnippet>446</a>    hook();
+<a href=#447 id=447 data-nosnippet>447</a>  }
+<a href=#448 id=448 data-nosnippet>448</a>}
+<a href=#449 id=449 data-nosnippet>449</a>
+<a href=#450 id=450 data-nosnippet>450</a><span class="kw">pub struct </span>Watchdog {
+<a href=#451 id=451 data-nosnippet>451</a>  cancelled: Arc&lt;AtomicBool&gt;,
+<a href=#452 id=452 data-nosnippet>452</a>}
+<a href=#453 id=453 data-nosnippet>453</a>
+<a href=#454 id=454 data-nosnippet>454</a><span class="kw">impl </span>Watchdog {
+<a href=#455 id=455 data-nosnippet>455</a>  <span class="doccomment">/// Create a wall-clock-only watchdog. `timeout_secs = 0` disables it.
+<a href=#456 id=456 data-nosnippet>456</a>  /// Equivalent to [`Watchdog::with_limits(timeout_secs, 0)`].
+<a href=#457 id=457 data-nosnippet>457</a>  </span><span class="kw">pub fn </span>new(timeout_secs: u64) -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::with_limits(timeout_secs, <span class="number">0</span>) }
+<a href=#458 id=458 data-nosnippet>458</a>
+<a href=#459 id=459 data-nosnippet>459</a>  <span class="doccomment">/// Create a watchdog guarding a wall-clock deadline **and** a resident-memory
+<a href=#460 id=460 data-nosnippet>460</a>  /// ceiling. `timeout_secs = 0` disables the time guard; `max_rss_kb = 0`
+<a href=#461 id=461 data-nosnippet>461</a>  /// disables the memory guard. With both `0` this is a no-op handle.
+<a href=#462 id=462 data-nosnippet>462</a>  ///
+<a href=#463 id=463 data-nosnippet>463</a>  /// The thread polls `cancelled`, the deadline, and RSS every `poll_interval`.
+<a href=#464 id=464 data-nosnippet>464</a>  /// On a time breach it exits [`EXIT_TIMEOUT`]; on a memory breach,
+<a href=#465 id=465 data-nosnippet>465</a>  /// [`EXIT_OOM`]. The memory guard is inactive where [`process_rss_kb`]
+<a href=#466 id=466 data-nosnippet>466</a>  /// returns `None` (non-Linux); see the module portability note.
+<a href=#467 id=467 data-nosnippet>467</a>  </span><span class="kw">pub fn </span>with_limits(timeout_secs: u64, max_rss_kb: u64) -&gt; <span class="self">Self </span>{
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="kw">let </span>cancelled = Arc::new(AtomicBool::new(<span class="bool-val">false</span>));
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="kw">if </span>timeout_secs &gt; <span class="number">0 </span>|| max_rss_kb &gt; <span class="number">0 </span>{
+<a href=#470 id=470 data-nosnippet>470</a>      <span class="kw">let </span>c = cancelled.clone();
+<a href=#471 id=471 data-nosnippet>471</a>      thread::Builder::new()
+<a href=#472 id=472 data-nosnippet>472</a>        .name(<span class="string">"latexml-watchdog"</span>.to_string())
+<a href=#473 id=473 data-nosnippet>473</a>        .spawn(<span class="kw">move </span>|| <span class="self">Self</span>::run(c, timeout_secs, max_rss_kb))
+<a href=#474 id=474 data-nosnippet>474</a>        .expect(<span class="string">"watchdog thread spawn failed"</span>);
+<a href=#475 id=475 data-nosnippet>475</a>    }
+<a href=#476 id=476 data-nosnippet>476</a>    <span class="self">Self </span>{ cancelled }
+<a href=#477 id=477 data-nosnippet>477</a>  }
+<a href=#478 id=478 data-nosnippet>478</a>
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="kw">fn </span>run(cancelled: Arc&lt;AtomicBool&gt;, timeout_secs: u64, max_rss_kb: u64) {
+<a href=#480 id=480 data-nosnippet>480</a>    <span class="kw">let </span>deadline = (timeout_secs &gt; <span class="number">0</span>).then(|| Instant::now() + Duration::from_secs(timeout_secs));
+<a href=#481 id=481 data-nosnippet>481</a>    <span class="kw">let </span>poll_interval = Duration::from_millis(<span class="number">100</span>);
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="kw">loop </span>{
+<a href=#483 id=483 data-nosnippet>483</a>      <span class="kw">if </span>cancelled.load(Ordering::Relaxed) {
+<a href=#484 id=484 data-nosnippet>484</a>        <span class="kw">return</span>; <span class="comment">// cancelled: graceful exit.
+<a href=#485 id=485 data-nosnippet>485</a>      </span>}
+<a href=#486 id=486 data-nosnippet>486</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(deadline) = deadline
+<a href=#487 id=487 data-nosnippet>487</a>        &amp;&amp; Instant::now() &gt;= deadline
+<a href=#488 id=488 data-nosnippet>488</a>      {
+<a href=#489 id=489 data-nosnippet>489</a>        <span class="kw">if </span>cancelled.load(Ordering::Relaxed) {
+<a href=#490 id=490 data-nosnippet>490</a>          <span class="kw">return</span>;
+<a href=#491 id=491 data-nosnippet>491</a>        }
+<a href=#492 id=492 data-nosnippet>492</a>        <span class="macro">eprintln!</span>(
+<a href=#493 id=493 data-nosnippet>493</a>          <span class="string">"Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process"
+<a href=#494 id=494 data-nosnippet>494</a>        </span>);
+<a href=#495 id=495 data-nosnippet>495</a>        <span class="comment">// Run the optional pre-exit hook (e.g. cortex_worker writing a
+<a href=#496 id=496 data-nosnippet>496</a>        // structured Status:conversion:3 placeholder to its --output path)
+<a href=#497 id=497 data-nosnippet>497</a>        // BEFORE exiting. The hook is invoked at most once per process.
+<a href=#498 id=498 data-nosnippet>498</a>        </span>run_pre_exit_hook();
+<a href=#499 id=499 data-nosnippet>499</a>        <span class="comment">// `std::process::exit(124)` instead of `abort()`: the watchdog must
+<a href=#500 id=500 data-nosnippet>500</a>        // terminate the whole process (the worker thread is presumed wedged
+<a href=#501 id=501 data-nosnippet>501</a>        // in a tight loop that won't observe a cooperative cancel), but
+<a href=#502 id=502 data-nosnippet>502</a>        // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
+<a href=#503 id=503 data-nosnippet>503</a>        // the shell. `exit(124)` (standard timeout exit code) runs atexit
+<a href=#504 id=504 data-nosnippet>504</a>        // handlers, flushes stderr, and leaves a clean exit signal the
+<a href=#505 id=505 data-nosnippet>505</a>        // parent harness can interpret as "paper timed out" without
+<a href=#506 id=506 data-nosnippet>506</a>        // conflating it with a Rust panic / memory corruption. Witnesses:
+<a href=#507 id=507 data-nosnippet>507</a>        // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
+<a href=#508 id=508 data-nosnippet>508</a>        // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
+<a href=#509 id=509 data-nosnippet>509</a>        // 2026-05-13 588-paper sweep.
+<a href=#510 id=510 data-nosnippet>510</a>        </span>std::process::exit(EXIT_TIMEOUT);
+<a href=#511 id=511 data-nosnippet>511</a>      }
+<a href=#512 id=512 data-nosnippet>512</a>      <span class="kw">if </span>max_rss_kb &gt; <span class="number">0
+<a href=#513 id=513 data-nosnippet>513</a>        </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(rss) = process_rss_kb()
+<a href=#514 id=514 data-nosnippet>514</a>        &amp;&amp; rss &gt; max_rss_kb
+<a href=#515 id=515 data-nosnippet>515</a>      {
+<a href=#516 id=516 data-nosnippet>516</a>        <span class="kw">if </span>cancelled.load(Ordering::Relaxed) {
+<a href=#517 id=517 data-nosnippet>517</a>          <span class="kw">return</span>;
+<a href=#518 id=518 data-nosnippet>518</a>        }
+<a href=#519 id=519 data-nosnippet>519</a>        <span class="macro">eprintln!</span>(
+<a href=#520 id=520 data-nosnippet>520</a>          <span class="string">"Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting process"</span>,
+<a href=#521 id=521 data-nosnippet>521</a>          rss / <span class="number">1024</span>,
+<a href=#522 id=522 data-nosnippet>522</a>          max_rss_kb / <span class="number">1024
+<a href=#523 id=523 data-nosnippet>523</a>        </span>);
+<a href=#524 id=524 data-nosnippet>524</a>        run_pre_exit_hook();
+<a href=#525 id=525 data-nosnippet>525</a>        std::process::exit(EXIT_OOM);
+<a href=#526 id=526 data-nosnippet>526</a>      }
+<a href=#527 id=527 data-nosnippet>527</a>      thread::sleep(poll_interval);
+<a href=#528 id=528 data-nosnippet>528</a>    }
+<a href=#529 id=529 data-nosnippet>529</a>  }
+<a href=#530 id=530 data-nosnippet>530</a>
+<a href=#531 id=531 data-nosnippet>531</a>  <span class="doccomment">/// Explicitly cancel the watchdog. Idempotent.
+<a href=#532 id=532 data-nosnippet>532</a>  </span><span class="kw">pub fn </span>cancel(<span class="kw-2">&amp;</span><span class="self">self</span>) { <span class="self">self</span>.cancelled.store(<span class="bool-val">true</span>, Ordering::Relaxed); }
+<a href=#533 id=533 data-nosnippet>533</a>}
+<a href=#534 id=534 data-nosnippet>534</a>
+<a href=#535 id=535 data-nosnippet>535</a><span class="kw">impl </span>Drop <span class="kw">for </span>Watchdog {
+<a href=#536 id=536 data-nosnippet>536</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.cancel(); }
+<a href=#537 id=537 data-nosnippet>537</a>}
+<a href=#538 id=538 data-nosnippet>538</a>
+<a href=#539 id=539 data-nosnippet>539</a><span class="attr">#[cfg(test)]
+<a href=#540 id=540 data-nosnippet>540</a></span><span class="kw">mod </span>tests {
+<a href=#541 id=541 data-nosnippet>541</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#542 id=542 data-nosnippet>542</a>
+<a href=#543 id=543 data-nosnippet>543</a>  <span class="doccomment">/// The cgroup limit decides the ceiling in a container, so each way of
+<a href=#544 id=544 data-nosnippet>544</a>  /// spelling "unlimited" has to be recognised — otherwise a sentinel is
+<a href=#545 id=545 data-nosnippet>545</a>  /// mistaken for a 8 EiB budget, or `max` for a parse failure.
+<a href=#546 id=546 data-nosnippet>546</a>  </span><span class="attr">#[test]
+<a href=#547 id=547 data-nosnippet>547</a>  </span><span class="kw">fn </span>cgroup_limit_recognises_every_unlimited_spelling() {
+<a href=#548 id=548 data-nosnippet>548</a>    <span class="kw">const </span>PHYS: <span class="prelude-ty">Option</span>&lt;u64&gt; = <span class="prelude-val">Some</span>(<span class="number">258 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
+<a href=#549 id=549 data-nosnippet>549</a>
+<a href=#550 id=550 data-nosnippet>550</a>    <span class="comment">// cgroup v2: the literal word.
+<a href=#551 id=551 data-nosnippet>551</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"max\n"</span>, PHYS), <span class="prelude-val">None</span>);
+<a href=#552 id=552 data-nosnippet>552</a>    <span class="comment">// cgroup v1: a huge sentinel (u64::MAX rounded to a page multiple).
+<a href=#553 id=553 data-nosnippet>553</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"9223372036854771712"</span>, PHYS), <span class="prelude-val">None</span>);
+<a href=#554 id=554 data-nosnippet>554</a>    <span class="comment">// A limit at or above physical RAM bounds nothing (258 GiB exactly, and
+<a href=#555 id=555 data-nosnippet>555</a>    // above).
+<a href=#556 id=556 data-nosnippet>556</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"277025390592"</span>, PHYS), <span class="prelude-val">None</span>);
+<a href=#557 id=557 data-nosnippet>557</a>    <span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"281474976710656"</span>, PHYS), <span class="prelude-val">None</span>);
+<a href=#558 id=558 data-nosnippet>558</a>    <span class="comment">// Garbage is not a limit.
+<a href=#559 id=559 data-nosnippet>559</a>    </span><span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">""</span>, PHYS), <span class="prelude-val">None</span>);
+<a href=#560 id=560 data-nosnippet>560</a>    <span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"nonsense"</span>, PHYS), <span class="prelude-val">None</span>);
+<a href=#561 id=561 data-nosnippet>561</a>    <span class="macro">assert_eq!</span>(interpret_cgroup_limit(<span class="string">"0"</span>, PHYS), <span class="prelude-val">None</span>);
+<a href=#562 id=562 data-nosnippet>562</a>
+<a href=#563 id=563 data-nosnippet>563</a>    <span class="comment">// A REAL limit is honoured — this is the `docker run -m 4g` case that was
+<a href=#564 id=564 data-nosnippet>564</a>    // being ignored, leaving the process to be OOM-killed at 4 GB while its
+<a href=#565 id=565 data-nosnippet>565</a>    // cooperative fuse sat at 48 GiB.
+<a href=#566 id=566 data-nosnippet>566</a>    </span><span class="kw">let </span>four_gib = <span class="number">4 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
+<a href=#567 id=567 data-nosnippet>567</a>    <span class="macro">assert_eq!</span>(
+<a href=#568 id=568 data-nosnippet>568</a>      interpret_cgroup_limit(<span class="kw-2">&amp;</span>four_gib.to_string(), PHYS),
+<a href=#569 id=569 data-nosnippet>569</a>      <span class="prelude-val">Some</span>(four_gib)
+<a href=#570 id=570 data-nosnippet>570</a>    );
+<a href=#571 id=571 data-nosnippet>571</a>    <span class="comment">// …and trailing whitespace from the sysfs read must not defeat it.
+<a href=#572 id=572 data-nosnippet>572</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#573 id=573 data-nosnippet>573</a>      interpret_cgroup_limit(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{four_gib}\n"</span>), PHYS),
+<a href=#574 id=574 data-nosnippet>574</a>      <span class="prelude-val">Some</span>(four_gib)
+<a href=#575 id=575 data-nosnippet>575</a>    );
+<a href=#576 id=576 data-nosnippet>576</a>  }
+<a href=#577 id=577 data-nosnippet>577</a>
+<a href=#578 id=578 data-nosnippet>578</a>  <span class="attr">#[test]
+<a href=#579 id=579 data-nosnippet>579</a>  </span><span class="kw">fn </span>watchdog_zero_timeout_is_noop() {
+<a href=#580 id=580 data-nosnippet>580</a>    <span class="comment">// timeout_secs=0 should NOT spawn a thread and NOT abort.
+<a href=#581 id=581 data-nosnippet>581</a>    </span><span class="kw">let </span>w = Watchdog::new(<span class="number">0</span>);
+<a href=#582 id=582 data-nosnippet>582</a>    <span class="macro">assert!</span>(
+<a href=#583 id=583 data-nosnippet>583</a>      !w.cancelled.load(Ordering::Relaxed),
+<a href=#584 id=584 data-nosnippet>584</a>      <span class="string">"initial cancelled state is false"
+<a href=#585 id=585 data-nosnippet>585</a>    </span>);
+<a href=#586 id=586 data-nosnippet>586</a>    <span class="comment">// Dropping is safe — there's no live thread to interact with.
+<a href=#587 id=587 data-nosnippet>587</a>    </span>drop(w);
+<a href=#588 id=588 data-nosnippet>588</a>  }
+<a href=#589 id=589 data-nosnippet>589</a>
+<a href=#590 id=590 data-nosnippet>590</a>  <span class="attr">#[test]
+<a href=#591 id=591 data-nosnippet>591</a>  </span><span class="kw">fn </span>watchdog_cancel_is_idempotent() {
+<a href=#592 id=592 data-nosnippet>592</a>    <span class="kw">let </span>w = Watchdog::new(<span class="number">60</span>);
+<a href=#593 id=593 data-nosnippet>593</a>    w.cancel();
+<a href=#594 id=594 data-nosnippet>594</a>    <span class="macro">assert!</span>(w.cancelled.load(Ordering::Relaxed));
+<a href=#595 id=595 data-nosnippet>595</a>    <span class="comment">// Calling again is a no-op.
+<a href=#596 id=596 data-nosnippet>596</a>    </span>w.cancel();
+<a href=#597 id=597 data-nosnippet>597</a>    <span class="macro">assert!</span>(w.cancelled.load(Ordering::Relaxed));
+<a href=#598 id=598 data-nosnippet>598</a>  }
+<a href=#599 id=599 data-nosnippet>599</a>
+<a href=#600 id=600 data-nosnippet>600</a>  <span class="attr">#[test]
+<a href=#601 id=601 data-nosnippet>601</a>  </span><span class="kw">fn </span>watchdog_drop_cancels() {
+<a href=#602 id=602 data-nosnippet>602</a>    <span class="kw">let </span>cancelled_ref = {
+<a href=#603 id=603 data-nosnippet>603</a>      <span class="kw">let </span>w = Watchdog::new(<span class="number">60</span>);
+<a href=#604 id=604 data-nosnippet>604</a>      <span class="comment">// Grab a reference to the atomic so we can inspect post-drop.
+<a href=#605 id=605 data-nosnippet>605</a>      </span>w.cancelled.clone()
+<a href=#606 id=606 data-nosnippet>606</a>    }; <span class="comment">// w dropped here
+<a href=#607 id=607 data-nosnippet>607</a>    </span><span class="macro">assert!</span>(
+<a href=#608 id=608 data-nosnippet>608</a>      cancelled_ref.load(Ordering::Relaxed),
+<a href=#609 id=609 data-nosnippet>609</a>      <span class="string">"drop should set cancelled=true"
+<a href=#610 id=610 data-nosnippet>610</a>    </span>);
+<a href=#611 id=611 data-nosnippet>611</a>  }
+<a href=#612 id=612 data-nosnippet>612</a>
+<a href=#613 id=613 data-nosnippet>613</a>  <span class="attr">#[test]
+<a href=#614 id=614 data-nosnippet>614</a>  </span><span class="kw">fn </span>watchdog_explicit_cancel_before_drop() {
+<a href=#615 id=615 data-nosnippet>615</a>    <span class="comment">// Pre-drop cancellation is also reflected on the clone.
+<a href=#616 id=616 data-nosnippet>616</a>    </span><span class="kw">let </span>w = Watchdog::new(<span class="number">60</span>);
+<a href=#617 id=617 data-nosnippet>617</a>    <span class="kw">let </span>cancelled_ref = w.cancelled.clone();
+<a href=#618 id=618 data-nosnippet>618</a>    w.cancel();
+<a href=#619 id=619 data-nosnippet>619</a>    <span class="macro">assert!</span>(cancelled_ref.load(Ordering::Relaxed));
+<a href=#620 id=620 data-nosnippet>620</a>    <span class="comment">// Explicit drop after cancel remains idempotent.
+<a href=#621 id=621 data-nosnippet>621</a>    </span>drop(w);
+<a href=#622 id=622 data-nosnippet>622</a>    <span class="macro">assert!</span>(cancelled_ref.load(Ordering::Relaxed));
+<a href=#623 id=623 data-nosnippet>623</a>  }
+<a href=#624 id=624 data-nosnippet>624</a>
+<a href=#625 id=625 data-nosnippet>625</a>  <span class="attr">#[test]
+<a href=#626 id=626 data-nosnippet>626</a>  </span><span class="kw">fn </span>watchdog_long_timeout_doesnt_fire_quickly() {
+<a href=#627 id=627 data-nosnippet>627</a>    <span class="comment">// 60-second timeout shouldn't fire during a 50 ms sleep.
+<a href=#628 id=628 data-nosnippet>628</a>    </span><span class="kw">let </span>_w = Watchdog::new(<span class="number">60</span>);
+<a href=#629 id=629 data-nosnippet>629</a>    thread::sleep(Duration::from_millis(<span class="number">50</span>));
+<a href=#630 id=630 data-nosnippet>630</a>    <span class="comment">// If the watchdog had fired, we'd be dead. We made it here → fine.
+<a href=#631 id=631 data-nosnippet>631</a>  </span>}
+<a href=#632 id=632 data-nosnippet>632</a>
+<a href=#633 id=633 data-nosnippet>633</a>  <span class="doccomment">/// The ceiling is derived from the machine, so the machine must be probeable
+<a href=#634 id=634 data-nosnippet>634</a>  /// on every platform we ship. A `None` here means the default silently falls
+<a href=#635 id=635 data-nosnippet>635</a>  /// back to a flat number and the ceiling stops tracking the host — the exact
+<a href=#636 id=636 data-nosnippet>636</a>  /// failure `process_rss_kb` already has on non-Linux.
+<a href=#637 id=637 data-nosnippet>637</a>  </span><span class="attr">#[test]
+<a href=#638 id=638 data-nosnippet>638</a>  #[cfg(any(unix, windows))]
+<a href=#639 id=639 data-nosnippet>639</a>  </span><span class="kw">fn </span>total_memory_is_probeable_and_plausible() {
+<a href=#640 id=640 data-nosnippet>640</a>    <span class="kw">let </span>total = total_memory_bytes().expect(<span class="string">"physical RAM must be probeable on unix/windows"</span>);
+<a href=#641 id=641 data-nosnippet>641</a>    <span class="comment">// No real machine we support has under 256 MiB, and none has over 100 TiB;
+<a href=#642 id=642 data-nosnippet>642</a>    // a value outside that says the units are wrong, not that the host is odd.
+<a href=#643 id=643 data-nosnippet>643</a>    </span><span class="macro">assert!</span>(
+<a href=#644 id=644 data-nosnippet>644</a>      total &gt; <span class="number">256 </span>* <span class="number">1024 </span>* <span class="number">1024</span>,
+<a href=#645 id=645 data-nosnippet>645</a>      <span class="string">"implausibly small total RAM ({total} bytes) — check the unit conversion"
+<a href=#646 id=646 data-nosnippet>646</a>    </span>);
+<a href=#647 id=647 data-nosnippet>647</a>    <span class="macro">assert!</span>(
+<a href=#648 id=648 data-nosnippet>648</a>      total &lt; <span class="number">100 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>,
+<a href=#649 id=649 data-nosnippet>649</a>      <span class="string">"implausibly large total RAM ({total} bytes) — check the unit conversion"
+<a href=#650 id=650 data-nosnippet>650</a>    </span>);
+<a href=#651 id=651 data-nosnippet>651</a>  }
+<a href=#652 id=652 data-nosnippet>652</a>
+<a href=#653 id=653 data-nosnippet>653</a>  <span class="doccomment">/// The live probes compose sanely: never zero (a zero ceiling would mean
+<a href=#654 id=654 data-nosnippet>654</a>  /// "no limit" downstream, `resolve_rss_cap`), never above the fleet cap,
+<a href=#655 id=655 data-nosnippet>655</a>  /// never above what the process may use at all. The exact fraction is
+<a href=#656 id=656 data-nosnippet>656</a>  /// asserted on the pure function below, not here — the live machine's
+<a href=#657 id=657 data-nosnippet>657</a>  /// availability moves between the probe and any re-probe.
+<a href=#658 id=658 data-nosnippet>658</a>  </span><span class="attr">#[test]
+<a href=#659 id=659 data-nosnippet>659</a>  </span><span class="kw">fn </span>default_ceiling_respects_both_halves_of_the_rule() {
+<a href=#660 id=660 data-nosnippet>660</a>    <span class="kw">let </span>ceiling = default_ceiling_mib();
+<a href=#661 id=661 data-nosnippet>661</a>    <span class="macro">assert!</span>(
+<a href=#662 id=662 data-nosnippet>662</a>      ceiling &gt; <span class="number">0</span>,
+<a href=#663 id=663 data-nosnippet>663</a>      <span class="string">"a derived ceiling of 0 would read as 'unlimited'"
+<a href=#664 id=664 data-nosnippet>664</a>    </span>);
+<a href=#665 id=665 data-nosnippet>665</a>    <span class="macro">assert!</span>(
+<a href=#666 id=666 data-nosnippet>666</a>      ceiling &lt;= MAX_DEFAULT_CEILING_MIB,
+<a href=#667 id=667 data-nosnippet>667</a>      <span class="string">"derived {ceiling} MiB exceeds the {MAX_DEFAULT_CEILING_MIB} MiB cap; on a \
+<a href=#668 id=668 data-nosnippet>668</a>       large host an uncapped fraction-of-RAM default would let a parallel fleet \
+<a href=#669 id=669 data-nosnippet>669</a>       (N_processes x ceiling) OOM the machine"
+<a href=#670 id=670 data-nosnippet>670</a>    </span>);
+<a href=#671 id=671 data-nosnippet>671</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(total) = total_memory_bytes() {
+<a href=#672 id=672 data-nosnippet>672</a>      <span class="macro">assert!</span>(
+<a href=#673 id=673 data-nosnippet>673</a>        ceiling &lt;= (total / (<span class="number">1024 </span>* <span class="number">1024</span>)).max(MIN_DEFAULT_CEILING_MIB),
+<a href=#674 id=674 data-nosnippet>674</a>        <span class="string">"the ceiling ({ceiling} MiB) cannot exceed physical RAM"
+<a href=#675 id=675 data-nosnippet>675</a>      </span>);
+<a href=#676 id=676 data-nosnippet>676</a>    }
+<a href=#677 id=677 data-nosnippet>677</a>    <span class="kw">if </span>total_memory_bytes().is_none() &amp;&amp; available_memory_bytes().is_none() {
+<a href=#678 id=678 data-nosnippet>678</a>      <span class="macro">assert_eq!</span>(ceiling, FALLBACK_CEILING_MIB);
+<a href=#679 id=679 data-nosnippet>679</a>    }
+<a href=#680 id=680 data-nosnippet>680</a>  }
+<a href=#681 id=681 data-nosnippet>681</a>
+<a href=#682 id=682 data-nosnippet>682</a>  <span class="doccomment">/// The headroom rule, case by case (user directive 2026-08-01: default to
+<a href=#683 id=683 data-nosnippet>683</a>  /// actual machine headroom — the 26000-vs-32000 hand-tuning episode on the
+<a href=#684 id=684 data-nosnippet>684</a>  /// 131 MB witness showed how sharp the manual edge is).
+<a href=#685 id=685 data-nosnippet>685</a>  </span><span class="attr">#[test]
+<a href=#686 id=686 data-nosnippet>686</a>  </span><span class="kw">fn </span>ceiling_rule_is_ninety_percent_of_available_with_fallbacks() {
+<a href=#687 id=687 data-nosnippet>687</a>    <span class="kw">const </span>GIB: u64 = <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
+<a href=#688 id=688 data-nosnippet>688</a>    <span class="comment">// Idle 31 GB laptop, ~28 GB available: 90 % of available, NOT half of
+<a href=#689 id=689 data-nosnippet>689</a>    // total — the difference is the witness converting by default or dying.
+<a href=#690 id=690 data-nosnippet>690</a>    </span><span class="macro">assert_eq!</span>(derive_ceiling_mib(<span class="prelude-val">Some</span>(<span class="number">28 </span>* GIB), <span class="prelude-val">Some</span>(<span class="number">31 </span>* GIB)), <span class="number">25804</span>);
+<a href=#691 id=691 data-nosnippet>691</a>    <span class="comment">// Busy 16 GB laptop with ~9 GB available: the rule self-adjusts to
+<a href=#692 id=692 data-nosnippet>692</a>    // roughly what half-of-total used to choose.
+<a href=#693 id=693 data-nosnippet>693</a>    </span><span class="macro">assert_eq!</span>(derive_ceiling_mib(<span class="prelude-val">Some</span>(<span class="number">9 </span>* GIB), <span class="prelude-val">Some</span>(<span class="number">16 </span>* GIB)), <span class="number">8294</span>);
+<a href=#694 id=694 data-nosnippet>694</a>    <span class="comment">// Availability above the cgroup-capped total (host-wide MemAvailable seen
+<a href=#695 id=695 data-nosnippet>695</a>    // from inside a small container): the total binds.
+<a href=#696 id=696 data-nosnippet>696</a>    </span><span class="macro">assert_eq!</span>(derive_ceiling_mib(<span class="prelude-val">Some</span>(<span class="number">28 </span>* GIB), <span class="prelude-val">Some</span>(<span class="number">4 </span>* GIB)), <span class="number">4 </span>* <span class="number">1024</span>);
+<a href=#697 id=697 data-nosnippet>697</a>    <span class="comment">// No availability probe: the conservative half-of-total fallback.
+<a href=#698 id=698 data-nosnippet>698</a>    </span><span class="macro">assert_eq!</span>(derive_ceiling_mib(<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="number">16 </span>* GIB)), <span class="number">8 </span>* <span class="number">1024</span>);
+<a href=#699 id=699 data-nosnippet>699</a>    <span class="comment">// Huge host: the 64 GiB fleet cap binds.
+<a href=#700 id=700 data-nosnippet>700</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#701 id=701 data-nosnippet>701</a>      derive_ceiling_mib(<span class="prelude-val">Some</span>(<span class="number">200 </span>* GIB), <span class="prelude-val">Some</span>(<span class="number">256 </span>* GIB)),
+<a href=#702 id=702 data-nosnippet>702</a>      MAX_DEFAULT_CEILING_MIB
+<a href=#703 id=703 data-nosnippet>703</a>    );
+<a href=#704 id=704 data-nosnippet>704</a>    <span class="comment">// Tiny container: the floor binds rather than deriving an unusable sliver.
+<a href=#705 id=705 data-nosnippet>705</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#706 id=706 data-nosnippet>706</a>      derive_ceiling_mib(<span class="prelude-val">Some</span>(GIB), <span class="prelude-val">Some</span>(<span class="number">2 </span>* GIB)),
+<a href=#707 id=707 data-nosnippet>707</a>      MIN_DEFAULT_CEILING_MIB
+<a href=#708 id=708 data-nosnippet>708</a>    );
+<a href=#709 id=709 data-nosnippet>709</a>    <span class="comment">// Nothing probeable: the historical flat default.
+<a href=#710 id=710 data-nosnippet>710</a>    </span><span class="macro">assert_eq!</span>(derive_ceiling_mib(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>), FALLBACK_CEILING_MIB);
+<a href=#711 id=711 data-nosnippet>711</a>  }
+<a href=#712 id=712 data-nosnippet>712</a>
+<a href=#713 id=713 data-nosnippet>713</a>  <span class="doccomment">/// The availability probe answers on every CI platform (Linux, macOS,
+<a href=#714 id=714 data-nosnippet>714</a>  /// Windows) and the figure is plausible: nonzero, and no more than total.
+<a href=#715 id=715 data-nosnippet>715</a>  </span><span class="attr">#[test]
+<a href=#716 id=716 data-nosnippet>716</a>  </span><span class="kw">fn </span>available_memory_probe_is_plausible() {
+<a href=#717 id=717 data-nosnippet>717</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(avail) = available_memory_bytes() <span class="kw">else </span>{
+<a href=#718 id=718 data-nosnippet>718</a>      <span class="macro">panic!</span>(<span class="string">"availability probe must answer on Linux/macOS/Windows CI"</span>);
+<a href=#719 id=719 data-nosnippet>719</a>    };
+<a href=#720 id=720 data-nosnippet>720</a>    <span class="macro">assert!</span>(avail &gt; <span class="number">0</span>, <span class="string">"zero available RAM on a running machine"</span>);
+<a href=#721 id=721 data-nosnippet>721</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(total) = total_memory_bytes() {
+<a href=#722 id=722 data-nosnippet>722</a>      <span class="macro">assert!</span>(
+<a href=#723 id=723 data-nosnippet>723</a>        avail &lt;= total,
+<a href=#724 id=724 data-nosnippet>724</a>        <span class="string">"available ({avail}) cannot exceed total ({total})"
+<a href=#725 id=725 data-nosnippet>725</a>      </span>);
+<a href=#726 id=726 data-nosnippet>726</a>    }
+<a href=#727 id=727 data-nosnippet>727</a>  }
+<a href=#728 id=728 data-nosnippet>728</a>
+<a href=#729 id=729 data-nosnippet>729</a>  <span class="doccomment">/// Free-disk probing backs the spill-headroom check; if it cannot answer we
+<a href=#730 id=730 data-nosnippet>730</a>  /// would have to spill blind.
+<a href=#731 id=731 data-nosnippet>731</a>  </span><span class="attr">#[test]
+<a href=#732 id=732 data-nosnippet>732</a>  #[cfg(any(unix, windows))]
+<a href=#733 id=733 data-nosnippet>733</a>  </span><span class="kw">fn </span>available_disk_is_probeable() {
+<a href=#734 id=734 data-nosnippet>734</a>    <span class="kw">let </span>free = available_disk_bytes(std::path::Path::new(<span class="string">"."</span>))
+<a href=#735 id=735 data-nosnippet>735</a>      .expect(<span class="string">"free space must be probeable on unix/windows"</span>);
+<a href=#736 id=736 data-nosnippet>736</a>    <span class="macro">assert!</span>(
+<a href=#737 id=737 data-nosnippet>737</a>      free &gt; <span class="number">0</span>,
+<a href=#738 id=738 data-nosnippet>738</a>      <span class="string">"reported zero free space on the working directory"
+<a href=#739 id=739 data-nosnippet>739</a>    </span>);
+<a href=#740 id=740 data-nosnippet>740</a>  }
+<a href=#741 id=741 data-nosnippet>741</a>}
 </code></pre></div></section></main></body></html>
