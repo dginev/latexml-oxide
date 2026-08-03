@@ -20,7 +20,7 @@
 //! The directory lives beside the destination file — same volume, so
 //! [`crate::watchdog::available_disk_bytes`] measures the filesystem the spill
 //! actually consumes — and is removed on [`Drop`]. After a hard kill the
-//! directory survives; its name (`.latexml-spill-<pid>`) is deliberately
+//! directory survives; its name (`.latexml-spill-<pid>-<seq>`) is deliberately
 //! self-describing so a user knows what to delete.
 
 use std::{
@@ -108,7 +108,16 @@ impl SegmentStore {
     } else {
       dest.parent().unwrap_or_else(|| Path::new("."))
     };
-    let dir = parent.join(format!(".latexml-spill-{}", std::process::id()));
+    // Pid alone is NOT unique: two concurrent streaming conversions in one
+    // process with destinations in the same parent (in-process test harnesses;
+    // any embedder running conversions on several threads) would share the
+    // directory, and the first store's Drop removes it under the other
+    // (witness: 113_streaming_core's two byte-identity tests under plain
+    // `cargo test`, which shares one process — segment-store write ENOENT).
+    // A process-wide sequence keeps the name self-describing AND unique.
+    static SPILL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = SPILL_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let dir = parent.join(format!(".latexml-spill-{}-{seq}", std::process::id()));
     fs::create_dir_all(&dir).map_err(|e| store_error(format!("create {}: {e}", dir.display())))?;
     Ok(SegmentStore {
       dir,

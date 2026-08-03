@@ -66,6 +66,31 @@ fn convert(source: &str, streaming: Option<usize>) -> (String, usize, usize) {
     .expect("conversion thread panicked")
 }
 
+/// The math-dense variant of the byte-identity gate: many formulas across
+/// yield seams — chained ambiguous relations, elisions, XMDual-heavy
+/// fractions/arrays, and `\label`/`\ref` between fragments (the idstore/XMRef
+/// path). Guards the per-segment `parse_math` lifecycle: the deferred-discard
+/// queue and idstore snapshot must be empty at every healthy segment
+/// boundary, so the stale-state entry sweep (`sweep_stale_math_state`, the
+/// pooled-worker dead-docref panic fix) stays a no-op and cannot touch memory
+/// a later fragment's parse still needs.
+#[test]
+fn streaming_math_dense_is_byte_identical_to_eager() {
+  let source = "tests/streaming/math_dense.tex";
+
+  let (eager_xml, eager_yields, eager_spills) = convert(source, None);
+  assert_eq!(eager_yields, 0, "eager must not yield");
+  assert_eq!(eager_spills, 0, "eager must not spill");
+
+  let (streamed_xml, yields, spills) = convert(source, Some(3));
+  assert!(yields > 0, "streaming must actually yield");
+  assert!(spills > 0, "streaming must actually spill closed subtrees");
+  assert_eq!(
+    eager_xml, streamed_xml,
+    "math-dense streaming output must be byte-identical to eager"
+  );
+}
+
 #[test]
 fn streaming_is_byte_identical_to_eager() {
   let source = "tests/streaming/streaming_gate.tex";

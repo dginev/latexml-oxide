@@ -1,0 +1,54 @@
+\documentclass{article}
+\begin{document}
+\section{Dense inline}
+
+A paragraph with a run of inline formulas: $a^2+b^2=c^2$, $e^{i\pi}+1=0$,
+$f(x) = x^2 - 3x + 2$, $g(f(x))$, $x(y+z)$ against $f(y+z)$, and the chained
+relations $a < b < c \leq d$ and $0 \leq \epsilon < \delta < 1$ that the
+grammar parses ambiguously before pruning.
+
+Elisions and big operators inline: $1 + 2 + \cdots + n = \frac{n(n+1)}{2}$,
+$x_1, x_2, \ldots, x_n$, $\sum_{k=1}^{n} k^2$, $\prod_{j=0}^{m} (1 - q^j)$,
+$\int_a^b f(t)\,dt$, and a nested radical $\sqrt{1+\sqrt{1+\sqrt{2}}}$.
+
+\section{Numbered displays with cross-references}
+
+\begin{equation}\label{eq:sum}
+\sum_{k=0}^{n} c_k\, x^k (1-x)^{n-k} = S_n(x)
+\end{equation}
+
+Prose between displays so a yield seam can fall here, referring back to
+(\ref{eq:sum}) from the same fragment.
+
+\begin{equation}\label{eq:int}
+\int_0^1 \frac{dt}{1+t^2} = \frac{\pi}{4}
+\end{equation}
+
+\section{References across fragments}
+
+This section refers back across a section boundary to (\ref{eq:sum}) and
+(\ref{eq:int}), exercising id resolution over the spill seam. More inline
+material: $\lim_{x\to 0} \frac{\sin x}{x} = 1$, $\max(a, \min(b, c))$,
+$|x - y| \leq |x| + |y|$, and $\langle u, v \rangle = \sum_i u_i v_i$.
+
+\begin{equation}\label{eq:frac}
+\frac{\frac{a}{b} + \frac{c}{d}}{\frac{e}{f} - \frac{g}{h}}
+  = \frac{(ad+bc)fh}{(eh-fg)bd}
+\end{equation}
+
+An array-shaped display, then a reference forward was avoided but
+(\ref{eq:frac}) is used immediately:
+\begin{equation}
+A = \left(\begin{array}{cc} \alpha & \beta \\ \gamma & \delta \end{array}\right),
+\qquad \det A = \alpha\delta - \beta\gamma
+\end{equation}
+
+\section{Tail density}
+
+A closing run so several fragments carry formulas: $\phi = \frac{1+\sqrt{5}}{2}$,
+$\phi^2 = \phi + 1$, $2^{2^{2^2}} = 65536$, $\sin^2\theta + \cos^2\theta = 1$,
+$\tan\theta = \frac{\sin\theta}{\cos\theta}$, $n! = n\,(n-1)!$,
+$F_n = F_{n-1} + F_{n-2}$, and finally
+$\left(\sum_i a_i b_i\right)^2 \leq \left(\sum_i a_i^2\right)\left(\sum_i b_i^2\right)$.
+
+\end{document}
