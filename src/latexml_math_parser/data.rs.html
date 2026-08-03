@@ -294,44 +294,108 @@
 <a href=#294 id=294 data-nosnippet>294</a>    clear_math_idstore();
 <a href=#295 id=295 data-nosnippet>295</a>    MATH_IDSTORE.with(|cell| <span class="macro">assert!</span>(cell.borrow().is_none()));
 <a href=#296 id=296 data-nosnippet>296</a>  }
-<a href=#297 id=297 data-nosnippet>297</a>}
-<a href=#298 id=298 data-nosnippet>298</a>
-<a href=#299 id=299 data-nosnippet>299</a><span class="macro">thread_local!</span> {
-<a href=#300 id=300 data-nosnippet>300</a>  <span class="doccomment">/// Subtrees discarded during math parsing, retained until the parse finishes.
-<a href=#301 id=301 data-nosnippet>301</a>  </span><span class="kw">static </span>PENDING_DISCARDS: RefCell&lt;Vec&lt;Node&gt;&gt; = <span class="kw">const </span>{ RefCell::new(Vec::new()) };
-<a href=#302 id=302 data-nosnippet>302</a>}
-<a href=#303 id=303 data-nosnippet>303</a>
-<a href=#304 id=304 data-nosnippet>304</a><span class="doccomment">/// Detach `node` now, free it AFTER math parsing.
-<a href=#305 id=305 data-nosnippet>305</a>///
-<a href=#306 id=306 data-nosnippet>306</a>/// Freeing mid-parse is a use-after-free: the parse holds live `Node` handles
-<a href=#307 id=307 data-nosnippet>307</a>/// in several places at once — the formula list `parse_math` collects up front,
-<a href=#308 id=308 data-nosnippet>308</a>/// the `MATH_IDSTORE` snapshot, `LOSTNODES`, XMDual bookkeeping — and a freed
-<a href=#309 id=309 data-nosnippet>309</a>/// node's memory is promptly recycled. The observed crash read a node name
-<a href=#310 id=310 data-nosnippet>310</a>/// whose bytes had already become `_pvis`, an attribute name from a later
-<a href=#311 id=311 data-nosnippet>311</a>/// allocation (witness 2605.00812, 344 formulae, dies on the 305th; 14 such
-<a href=#312 id=312 data-nosnippet>312</a>/// fatals in the 2026-07-30 sandbox-arxiv-2605 rerun).
-<a href=#313 id=313 data-nosnippet>313</a>///
-<a href=#314 id=314 data-nosnippet>314</a>/// Chasing those references one at a time does not converge — purging the
-<a href=#315 id=315 data-nosnippet>315</a>/// idstore snapshot alone still segfaulted. Deferring closes every window at
-<a href=#316 id=316 data-nosnippet>316</a>/// once, and it is bounded: under streaming, math parsing runs per FRAGMENT,
-<a href=#317 id=317 data-nosnippet>317</a>/// so the queue is fragment-sized, not document-sized.
-<a href=#318 id=318 data-nosnippet>318</a>///
-<a href=#319 id=319 data-nosnippet>319</a>/// The node is UNLINKED immediately, so the tree — and therefore the output —
-<a href=#320 id=320 data-nosnippet>320</a>/// is exactly as if it had been freed here.
-<a href=#321 id=321 data-nosnippet>321</a></span><span class="kw">pub fn </span>defer_discard(<span class="kw-2">mut </span>node: Node) {
-<a href=#322 id=322 data-nosnippet>322</a>  node.unlink();
-<a href=#323 id=323 data-nosnippet>323</a>  PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
-<a href=#324 id=324 data-nosnippet>324</a>}
-<a href=#325 id=325 data-nosnippet>325</a>
-<a href=#326 id=326 data-nosnippet>326</a><span class="doccomment">/// Hand back everything queued by [`defer_discard`], for the caller to free once
-<a href=#327 id=327 data-nosnippet>327</a>/// no parse state references it.
-<a href=#328 id=328 data-nosnippet>328</a></span><span class="kw">pub fn </span>take_pending_discards() -&gt; Vec&lt;Node&gt; {
-<a href=#329 id=329 data-nosnippet>329</a>  PENDING_DISCARDS.with(|cell| std::mem::take(<span class="kw-2">&amp;mut *</span>cell.borrow_mut()))
-<a href=#330 id=330 data-nosnippet>330</a>}
-<a href=#331 id=331 data-nosnippet>331</a>
-<a href=#332 id=332 data-nosnippet>332</a><span class="doccomment">/// Put back a subtree that cannot be released yet — it still contains a formula
-<a href=#333 id=333 data-nosnippet>333</a>/// the parse has not reached.
-<a href=#334 id=334 data-nosnippet>334</a></span><span class="kw">pub fn </span>requeue_pending_discard(node: Node) {
-<a href=#335 id=335 data-nosnippet>335</a>  PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
-<a href=#336 id=336 data-nosnippet>336</a>}
+<a href=#297 id=297 data-nosnippet>297</a>
+<a href=#298 id=298 data-nosnippet>298</a>  <span class="attr">#[test]
+<a href=#299 id=299 data-nosnippet>299</a>  </span><span class="kw">fn </span>stale_handles_from_a_dead_document_are_swept_without_panic() {
+<a href=#300 id=300 data-nosnippet>300</a>    <span class="comment">// A pooled-worker thread's PRIOR conversion aborted math parsing (resource
+<a href=#301 id=301 data-nosnippet>301</a>    // fatal or caught panic), leaving deferred-discard and idstore handles
+<a href=#302 id=302 data-nosnippet>302</a>    // whose document is gone. Pre-sweep, the next paper's first drain walked
+<a href=#303 id=303 data-nosnippet>303</a>    // them and panicked in libxml's ptr_as_option on the dead docref — the
+<a href=#304 id=304 data-nosnippet>304</a>    // three fleet-only panic:caught fatals of the 2026-08-02 rc4 sweep
+<a href=#305 id=305 data-nosnippet>305</a>    // (2605.08935, 2606.01083, 2606.22705). The sweep must neutralize
+<a href=#306 id=306 data-nosnippet>306</a>    // wrapper-only: no traversal, no FFI free against the reclaimed C tree.
+<a href=#307 id=307 data-nosnippet>307</a>    </span><span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMApp&gt;&lt;XMTok role="ADDOP"/&gt;&lt;/XMApp&gt;"#</span>);
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="kw">let </span>r = root(<span class="kw-2">&amp;</span>doc);
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="kw">let </span>child = r.get_first_element_child().expect(<span class="string">"child exists"</span>);
+<a href=#310 id=310 data-nosnippet>310</a>    <span class="kw">let </span><span class="kw-2">mut </span>store: FxHashMap&lt;String, Node&gt; = FxHashMap::default();
+<a href=#311 id=311 data-nosnippet>311</a>    store.insert(<span class="string">"t1"</span>.to_string(), child.clone());
+<a href=#312 id=312 data-nosnippet>312</a>    set_math_idstore(store);
+<a href=#313 id=313 data-nosnippet>313</a>    defer_discard(child);
+<a href=#314 id=314 data-nosnippet>314</a>    drop(r);
+<a href=#315 id=315 data-nosnippet>315</a>    drop(doc);
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="kw">let </span>swept = sweep_stale_math_state();
+<a href=#317 id=317 data-nosnippet>317</a>    <span class="macro">assert_eq!</span>(swept, <span class="number">2</span>, <span class="string">"one pending discard + one idstore entry"</span>);
+<a href=#318 id=318 data-nosnippet>318</a>    PENDING_DISCARDS.with(|cell| <span class="macro">assert!</span>(cell.borrow().is_empty()));
+<a href=#319 id=319 data-nosnippet>319</a>    MATH_IDSTORE.with(|cell| <span class="macro">assert!</span>(cell.borrow().is_none()));
+<a href=#320 id=320 data-nosnippet>320</a>    <span class="comment">// Idempotent on a clean thread.
+<a href=#321 id=321 data-nosnippet>321</a>    </span><span class="macro">assert_eq!</span>(sweep_stale_math_state(), <span class="number">0</span>);
+<a href=#322 id=322 data-nosnippet>322</a>  }
+<a href=#323 id=323 data-nosnippet>323</a>}
+<a href=#324 id=324 data-nosnippet>324</a>
+<a href=#325 id=325 data-nosnippet>325</a><span class="macro">thread_local!</span> {
+<a href=#326 id=326 data-nosnippet>326</a>  <span class="doccomment">/// Subtrees discarded during math parsing, retained until the parse finishes.
+<a href=#327 id=327 data-nosnippet>327</a>  </span><span class="kw">static </span>PENDING_DISCARDS: RefCell&lt;Vec&lt;Node&gt;&gt; = <span class="kw">const </span>{ RefCell::new(Vec::new()) };
+<a href=#328 id=328 data-nosnippet>328</a>}
+<a href=#329 id=329 data-nosnippet>329</a>
+<a href=#330 id=330 data-nosnippet>330</a><span class="doccomment">/// Detach `node` now, free it AFTER math parsing.
+<a href=#331 id=331 data-nosnippet>331</a>///
+<a href=#332 id=332 data-nosnippet>332</a>/// Freeing mid-parse is a use-after-free: the parse holds live `Node` handles
+<a href=#333 id=333 data-nosnippet>333</a>/// in several places at once — the formula list `parse_math` collects up front,
+<a href=#334 id=334 data-nosnippet>334</a>/// the `MATH_IDSTORE` snapshot, `LOSTNODES`, XMDual bookkeeping — and a freed
+<a href=#335 id=335 data-nosnippet>335</a>/// node's memory is promptly recycled. The observed crash read a node name
+<a href=#336 id=336 data-nosnippet>336</a>/// whose bytes had already become `_pvis`, an attribute name from a later
+<a href=#337 id=337 data-nosnippet>337</a>/// allocation (witness 2605.00812, 344 formulae, dies on the 305th; 14 such
+<a href=#338 id=338 data-nosnippet>338</a>/// fatals in the 2026-07-30 sandbox-arxiv-2605 rerun).
+<a href=#339 id=339 data-nosnippet>339</a>///
+<a href=#340 id=340 data-nosnippet>340</a>/// Chasing those references one at a time does not converge — purging the
+<a href=#341 id=341 data-nosnippet>341</a>/// idstore snapshot alone still segfaulted. Deferring closes every window at
+<a href=#342 id=342 data-nosnippet>342</a>/// once, and it is bounded: under streaming, math parsing runs per FRAGMENT,
+<a href=#343 id=343 data-nosnippet>343</a>/// so the queue is fragment-sized, not document-sized.
+<a href=#344 id=344 data-nosnippet>344</a>///
+<a href=#345 id=345 data-nosnippet>345</a>/// The node is UNLINKED immediately, so the tree — and therefore the output —
+<a href=#346 id=346 data-nosnippet>346</a>/// is exactly as if it had been freed here.
+<a href=#347 id=347 data-nosnippet>347</a></span><span class="kw">pub fn </span>defer_discard(<span class="kw-2">mut </span>node: Node) {
+<a href=#348 id=348 data-nosnippet>348</a>  node.unlink();
+<a href=#349 id=349 data-nosnippet>349</a>  PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
+<a href=#350 id=350 data-nosnippet>350</a>}
+<a href=#351 id=351 data-nosnippet>351</a>
+<a href=#352 id=352 data-nosnippet>352</a><span class="doccomment">/// Hand back everything queued by [`defer_discard`], for the caller to free once
+<a href=#353 id=353 data-nosnippet>353</a>/// no parse state references it.
+<a href=#354 id=354 data-nosnippet>354</a></span><span class="kw">pub fn </span>take_pending_discards() -&gt; Vec&lt;Node&gt; {
+<a href=#355 id=355 data-nosnippet>355</a>  PENDING_DISCARDS.with(|cell| std::mem::take(<span class="kw-2">&amp;mut *</span>cell.borrow_mut()))
+<a href=#356 id=356 data-nosnippet>356</a>}
+<a href=#357 id=357 data-nosnippet>357</a>
+<a href=#358 id=358 data-nosnippet>358</a><span class="doccomment">/// Put back a subtree that cannot be released yet — it still contains a formula
+<a href=#359 id=359 data-nosnippet>359</a>/// the parse has not reached.
+<a href=#360 id=360 data-nosnippet>360</a></span><span class="kw">pub fn </span>requeue_pending_discard(node: Node) {
+<a href=#361 id=361 data-nosnippet>361</a>  PENDING_DISCARDS.with(|cell| cell.borrow_mut().push(node));
+<a href=#362 id=362 data-nosnippet>362</a>}
+<a href=#363 id=363 data-nosnippet>363</a>
+<a href=#364 id=364 data-nosnippet>364</a><span class="doccomment">/// Sweep residue a PRIOR conversion left in this thread's math-parser state.
+<a href=#365 id=365 data-nosnippet>365</a>///
+<a href=#366 id=366 data-nosnippet>366</a>/// The pooled `cortex_worker` reuses threads across papers with no thread-state
+<a href=#367 id=367 data-nosnippet>367</a>/// reset, and an aborted math parse — a propagated resource fatal, or a panic
+<a href=#368 id=368 data-nosnippet>368</a>/// caught by the worker's per-task isolation — can exit without draining
+<a href=#369 id=369 data-nosnippet>369</a>/// [`PENDING_DISCARDS`] or the `MATH_IDSTORE` snapshot. Those `Node` handles
+<a href=#370 id=370 data-nosnippet>370</a>/// then outlive their document: the next paper's first traversal panics in
+<a href=#371 id=371 data-nosnippet>371</a>/// libxml's `ptr_as_option` on the dead docref (witnesses 2605.08935,
+<a href=#372 id=372 data-nosnippet>372</a>/// 2606.01083, 2606.22705 — the three fleet-only `panic:caught` fatals of the
+<a href=#373 id=373 data-nosnippet>373</a>/// 2026-08-02 rc4 sweep), and even dropping a stale `Unlinked` wrapper reads
+<a href=#374 id=374 data-nosnippet>374</a>/// the freed C node. `set_linked()` is wrapper-only bookkeeping (public since
+<a href=#375 id=375 data-nosnippet>375</a>/// libxml 0.3.20 for exactly this teardown shape), so marking each handle
+<a href=#376 id=376 data-nosnippet>376</a>/// linked first makes the drop a no-op at the FFI layer — the dead document
+<a href=#377 id=377 data-nosnippet>377</a>/// already reclaimed the C memory.
+<a href=#378 id=378 data-nosnippet>378</a>///
+<a href=#379 id=379 data-nosnippet>379</a>/// Returns the number of stale handles swept, for the caller's `Info` line —
+<a href=#380 id=380 data-nosnippet>380</a>/// the paper being converted is innocent, so this must never raise an error
+<a href=#381 id=381 data-nosnippet>381</a>/// against it.
+<a href=#382 id=382 data-nosnippet>382</a></span><span class="kw">pub fn </span>sweep_stale_math_state() -&gt; usize {
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="kw">let </span><span class="kw-2">mut </span>swept = <span class="number">0</span>;
+<a href=#384 id=384 data-nosnippet>384</a>  PENDING_DISCARDS.with(|cell| {
+<a href=#385 id=385 data-nosnippet>385</a>    <span class="kw">let </span>stale = std::mem::take(<span class="kw-2">&amp;mut *</span>cell.borrow_mut());
+<a href=#386 id=386 data-nosnippet>386</a>    swept += stale.len();
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="kw">for </span>node <span class="kw">in </span><span class="kw-2">&amp;</span>stale {
+<a href=#388 id=388 data-nosnippet>388</a>      node.set_linked();
+<a href=#389 id=389 data-nosnippet>389</a>    }
+<a href=#390 id=390 data-nosnippet>390</a>  });
+<a href=#391 id=391 data-nosnippet>391</a>  MATH_IDSTORE.with(|cell| {
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(stale) = cell.borrow_mut().take() {
+<a href=#393 id=393 data-nosnippet>393</a>      swept += stale.len();
+<a href=#394 id=394 data-nosnippet>394</a>      <span class="kw">for </span>node <span class="kw">in </span>stale.values() {
+<a href=#395 id=395 data-nosnippet>395</a>        node.set_linked();
+<a href=#396 id=396 data-nosnippet>396</a>      }
+<a href=#397 id=397 data-nosnippet>397</a>    }
+<a href=#398 id=398 data-nosnippet>398</a>  });
+<a href=#399 id=399 data-nosnippet>399</a>  swept
+<a href=#400 id=400 data-nosnippet>400</a>}
 </code></pre></div></section></main></body></html>
