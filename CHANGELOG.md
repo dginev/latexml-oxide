@@ -2,6 +2,15 @@
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
+  - **Page rendering runs in parallel worker processes** — after the
+    document-wide scan, N workers (LATEXML_RENDER_JOBS, self-clamped to the
+    machine's actual memory headroom) render page ranges concurrently,
+    byte-identical to the serial path. Measured on the 131 MB witness:
+    post-processing 37:31 → 12:17 (3.05×) at 8 workers on a fresh parent;
+    the full single-invocation `.tex → .html` run 1:24 → **1:00:34** with the
+    self-sized fleet on a 31 GB laptop, exit 0, all 115,519 pages. The
+    ObjectDB behind it gained a SQLite store (Perl `--dbfile` heritage,
+    WAL-concurrent, `sqlite3`-CLI-inspectable).
   - **A book-scale document converts `.tex → .html` in ONE invocation on a
     31 GB laptop** — the 131 MB witness end-to-end in 1:17 at a 22.95 GiB peak:
     115,519 pages, exit 0, zero errors. The render loop is now memory-flat
