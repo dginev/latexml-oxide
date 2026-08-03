@@ -423,7 +423,7 @@
 <a href=#423 id=423 data-nosnippet>423</a>      <span class="macro">Warn!</span>(
 <a href=#424 id=424 data-nosnippet>424</a>        <span class="string">"split"</span>,
 <a href=#425 id=425 data-nosnippet>425</a>        <span class="string">"stream"</span>,
-<a href=#426 id=426 data-nosnippet>426</a>        <span class="string">"{} appeared after the first page was written; already-spilled pages do not carry it"</span>,
+<a href=#426 id=426 data-nosnippet>426</a>        <span class="string">"{} appeared after the first page was written; already-staged pages do not carry it"</span>,
 <a href=#427 id=427 data-nosnippet>427</a>        what
 <a href=#428 id=428 data-nosnippet>428</a>      );
 <a href=#429 id=429 data-nosnippet>429</a>    }
@@ -1591,245 +1591,249 @@
 <a href=#1591 id=1591 data-nosnippet>1591</a>  value: <span class="kw-2">&amp;</span>str,
 <a href=#1592 id=1592 data-nosnippet>1592</a>  before_appended_class: bool,
 <a href=#1593 id=1593 data-nosnippet>1593</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#1594 id=1594 data-nosnippet>1594</a>  <span class="kw">let </span>content = std::fs::read_to_string(file)
-<a href=#1595 id=1595 data-nosnippet>1595</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot read spill {} for patching: {e}"</span>, file.display()))<span class="question-mark">?</span>;
-<a href=#1596 id=1596 data-nosnippet>1596</a>  <span class="comment">// Locate the root element: the first `&lt;` not opening a PI or comment.
-<a href=#1597 id=1597 data-nosnippet>1597</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>pos = <span class="number">0</span>;
-<a href=#1598 id=1598 data-nosnippet>1598</a>  <span class="kw">let </span>root_start = <span class="kw">loop </span>{
-<a href=#1599 id=1599 data-nosnippet>1599</a>    <span class="kw">let </span>rel = content[pos..]
-<a href=#1600 id=1600 data-nosnippet>1600</a>      .find(<span class="string">'&lt;'</span>)
-<a href=#1601 id=1601 data-nosnippet>1601</a>      .ok_or_else(|| <span class="string">"no root tag in spill"</span>.to_string())<span class="question-mark">?</span>;
-<a href=#1602 id=1602 data-nosnippet>1602</a>    <span class="kw">let </span>at = pos + rel;
-<a href=#1603 id=1603 data-nosnippet>1603</a>    <span class="kw">if </span>content[at..].starts_with(<span class="string">"&lt;?"</span>) {
-<a href=#1604 id=1604 data-nosnippet>1604</a>      pos = at + content[at..].find(<span class="string">"?&gt;"</span>).ok_or(<span class="string">"unterminated PI"</span>)<span class="question-mark">? </span>+ <span class="number">2</span>;
-<a href=#1605 id=1605 data-nosnippet>1605</a>    } <span class="kw">else if </span>content[at..].starts_with(<span class="string">"&lt;!--"</span>) {
-<a href=#1606 id=1606 data-nosnippet>1606</a>      pos = at + content[at..].find(<span class="string">"--&gt;"</span>).ok_or(<span class="string">"unterminated comment"</span>)<span class="question-mark">? </span>+ <span class="number">3</span>;
-<a href=#1607 id=1607 data-nosnippet>1607</a>    } <span class="kw">else </span>{
-<a href=#1608 id=1608 data-nosnippet>1608</a>      <span class="kw">break </span>at;
-<a href=#1609 id=1609 data-nosnippet>1609</a>    }
-<a href=#1610 id=1610 data-nosnippet>1610</a>  };
-<a href=#1611 id=1611 data-nosnippet>1611</a>  <span class="kw">let </span>tag_end = root_start
-<a href=#1612 id=1612 data-nosnippet>1612</a>    + first_tag_end(<span class="kw-2">&amp;</span>content[root_start..]).ok_or_else(|| <span class="string">"malformed root tag"</span>.to_string())<span class="question-mark">?</span>;
-<a href=#1613 id=1613 data-nosnippet>1613</a>  <span class="kw">let </span>tag_self_close_adjust = <span class="kw">if </span>content[..tag_end].ends_with(<span class="string">'/'</span>) {
-<a href=#1614 id=1614 data-nosnippet>1614</a>    tag_end - <span class="number">1
-<a href=#1615 id=1615 data-nosnippet>1615</a>  </span>} <span class="kw">else </span>{
-<a href=#1616 id=1616 data-nosnippet>1616</a>    tag_end
-<a href=#1617 id=1617 data-nosnippet>1617</a>  };
-<a href=#1618 id=1618 data-nosnippet>1618</a>  <span class="kw">let </span>insert_at = <span class="kw">if </span>before_appended_class {
-<a href=#1619 id=1619 data-nosnippet>1619</a>    content[root_start..tag_end]
-<a href=#1620 id=1620 data-nosnippet>1620</a>      .rfind(<span class="string">" class=\""</span>)
-<a href=#1621 id=1621 data-nosnippet>1621</a>      .map(|rel| root_start + rel)
-<a href=#1622 id=1622 data-nosnippet>1622</a>      .unwrap_or(tag_self_close_adjust)
-<a href=#1623 id=1623 data-nosnippet>1623</a>  } <span class="kw">else </span>{
-<a href=#1624 id=1624 data-nosnippet>1624</a>    tag_self_close_adjust
-<a href=#1625 id=1625 data-nosnippet>1625</a>  };
-<a href=#1626 id=1626 data-nosnippet>1626</a>  <span class="kw">let </span><span class="kw-2">mut </span>patched = String::with_capacity(content.len() + <span class="number">16</span>);
-<a href=#1627 id=1627 data-nosnippet>1627</a>  patched.push_str(<span class="kw-2">&amp;</span>content[..insert_at]);
-<a href=#1628 id=1628 data-nosnippet>1628</a>  patched.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">" {}=\"{}\""</span>, name, attr_escape(value)));
-<a href=#1629 id=1629 data-nosnippet>1629</a>  patched.push_str(<span class="kw-2">&amp;</span>content[insert_at..]);
-<a href=#1630 id=1630 data-nosnippet>1630</a>  std::fs::write(file, patched).map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot rewrite spill: {e}"</span>))
-<a href=#1631 id=1631 data-nosnippet>1631</a>}
-<a href=#1632 id=1632 data-nosnippet>1632</a>
-<a href=#1633 id=1633 data-nosnippet>1633</a><span class="kw">fn </span>write_spill(path: <span class="kw-2">&amp;</span>Path, content: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#1634 id=1634 data-nosnippet>1634</a>  <span class="kw">let </span><span class="kw-2">mut </span>f = std::fs::File::create(path)
-<a href=#1635 id=1635 data-nosnippet>1635</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot create spill {}: {e}"</span>, path.display()))<span class="question-mark">?</span>;
-<a href=#1636 id=1636 data-nosnippet>1636</a>  f.write_all(content.as_bytes())
-<a href=#1637 id=1637 data-nosnippet>1637</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot write spill {}: {e}"</span>, path.display()))
-<a href=#1638 id=1638 data-nosnippet>1638</a>}
-<a href=#1639 id=1639 data-nosnippet>1639</a>
-<a href=#1640 id=1640 data-nosnippet>1640</a><span class="attr">#[cfg(test)]
-<a href=#1641 id=1641 data-nosnippet>1641</a></span><span class="kw">mod </span>tests {
-<a href=#1642 id=1642 data-nosnippet>1642</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#1594 id=1594 data-nosnippet>1594</a>  <span class="kw">let </span>content = std::fs::read_to_string(file).map_err(|e| {
+<a href=#1595 id=1595 data-nosnippet>1595</a>    <span class="macro">format!</span>(
+<a href=#1596 id=1596 data-nosnippet>1596</a>      <span class="string">"cannot read staged page {} for patching: {e}"</span>,
+<a href=#1597 id=1597 data-nosnippet>1597</a>      file.display()
+<a href=#1598 id=1598 data-nosnippet>1598</a>    )
+<a href=#1599 id=1599 data-nosnippet>1599</a>  })<span class="question-mark">?</span>;
+<a href=#1600 id=1600 data-nosnippet>1600</a>  <span class="comment">// Locate the root element: the first `&lt;` not opening a PI or comment.
+<a href=#1601 id=1601 data-nosnippet>1601</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>pos = <span class="number">0</span>;
+<a href=#1602 id=1602 data-nosnippet>1602</a>  <span class="kw">let </span>root_start = <span class="kw">loop </span>{
+<a href=#1603 id=1603 data-nosnippet>1603</a>    <span class="kw">let </span>rel = content[pos..]
+<a href=#1604 id=1604 data-nosnippet>1604</a>      .find(<span class="string">'&lt;'</span>)
+<a href=#1605 id=1605 data-nosnippet>1605</a>      .ok_or_else(|| <span class="string">"no root tag in spill"</span>.to_string())<span class="question-mark">?</span>;
+<a href=#1606 id=1606 data-nosnippet>1606</a>    <span class="kw">let </span>at = pos + rel;
+<a href=#1607 id=1607 data-nosnippet>1607</a>    <span class="kw">if </span>content[at..].starts_with(<span class="string">"&lt;?"</span>) {
+<a href=#1608 id=1608 data-nosnippet>1608</a>      pos = at + content[at..].find(<span class="string">"?&gt;"</span>).ok_or(<span class="string">"unterminated PI"</span>)<span class="question-mark">? </span>+ <span class="number">2</span>;
+<a href=#1609 id=1609 data-nosnippet>1609</a>    } <span class="kw">else if </span>content[at..].starts_with(<span class="string">"&lt;!--"</span>) {
+<a href=#1610 id=1610 data-nosnippet>1610</a>      pos = at + content[at..].find(<span class="string">"--&gt;"</span>).ok_or(<span class="string">"unterminated comment"</span>)<span class="question-mark">? </span>+ <span class="number">3</span>;
+<a href=#1611 id=1611 data-nosnippet>1611</a>    } <span class="kw">else </span>{
+<a href=#1612 id=1612 data-nosnippet>1612</a>      <span class="kw">break </span>at;
+<a href=#1613 id=1613 data-nosnippet>1613</a>    }
+<a href=#1614 id=1614 data-nosnippet>1614</a>  };
+<a href=#1615 id=1615 data-nosnippet>1615</a>  <span class="kw">let </span>tag_end = root_start
+<a href=#1616 id=1616 data-nosnippet>1616</a>    + first_tag_end(<span class="kw-2">&amp;</span>content[root_start..]).ok_or_else(|| <span class="string">"malformed root tag"</span>.to_string())<span class="question-mark">?</span>;
+<a href=#1617 id=1617 data-nosnippet>1617</a>  <span class="kw">let </span>tag_self_close_adjust = <span class="kw">if </span>content[..tag_end].ends_with(<span class="string">'/'</span>) {
+<a href=#1618 id=1618 data-nosnippet>1618</a>    tag_end - <span class="number">1
+<a href=#1619 id=1619 data-nosnippet>1619</a>  </span>} <span class="kw">else </span>{
+<a href=#1620 id=1620 data-nosnippet>1620</a>    tag_end
+<a href=#1621 id=1621 data-nosnippet>1621</a>  };
+<a href=#1622 id=1622 data-nosnippet>1622</a>  <span class="kw">let </span>insert_at = <span class="kw">if </span>before_appended_class {
+<a href=#1623 id=1623 data-nosnippet>1623</a>    content[root_start..tag_end]
+<a href=#1624 id=1624 data-nosnippet>1624</a>      .rfind(<span class="string">" class=\""</span>)
+<a href=#1625 id=1625 data-nosnippet>1625</a>      .map(|rel| root_start + rel)
+<a href=#1626 id=1626 data-nosnippet>1626</a>      .unwrap_or(tag_self_close_adjust)
+<a href=#1627 id=1627 data-nosnippet>1627</a>  } <span class="kw">else </span>{
+<a href=#1628 id=1628 data-nosnippet>1628</a>    tag_self_close_adjust
+<a href=#1629 id=1629 data-nosnippet>1629</a>  };
+<a href=#1630 id=1630 data-nosnippet>1630</a>  <span class="kw">let </span><span class="kw-2">mut </span>patched = String::with_capacity(content.len() + <span class="number">16</span>);
+<a href=#1631 id=1631 data-nosnippet>1631</a>  patched.push_str(<span class="kw-2">&amp;</span>content[..insert_at]);
+<a href=#1632 id=1632 data-nosnippet>1632</a>  patched.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">" {}=\"{}\""</span>, name, attr_escape(value)));
+<a href=#1633 id=1633 data-nosnippet>1633</a>  patched.push_str(<span class="kw-2">&amp;</span>content[insert_at..]);
+<a href=#1634 id=1634 data-nosnippet>1634</a>  std::fs::write(file, patched).map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot rewrite spill: {e}"</span>))
+<a href=#1635 id=1635 data-nosnippet>1635</a>}
+<a href=#1636 id=1636 data-nosnippet>1636</a>
+<a href=#1637 id=1637 data-nosnippet>1637</a><span class="kw">fn </span>write_spill(path: <span class="kw-2">&amp;</span>Path, content: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#1638 id=1638 data-nosnippet>1638</a>  <span class="kw">let </span><span class="kw-2">mut </span>f = std::fs::File::create(path)
+<a href=#1639 id=1639 data-nosnippet>1639</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot create spill {}: {e}"</span>, path.display()))<span class="question-mark">?</span>;
+<a href=#1640 id=1640 data-nosnippet>1640</a>  f.write_all(content.as_bytes())
+<a href=#1641 id=1641 data-nosnippet>1641</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot write spill {}: {e}"</span>, path.display()))
+<a href=#1642 id=1642 data-nosnippet>1642</a>}
 <a href=#1643 id=1643 data-nosnippet>1643</a>
-<a href=#1644 id=1644 data-nosnippet>1644</a>  <span class="attr">#[test]
-<a href=#1645 id=1645 data-nosnippet>1645</a>  </span><span class="kw">fn </span>escaping_matches_libxml() {
-<a href=#1646 id=1646 data-nosnippet>1646</a>    <span class="macro">assert_eq!</span>(
-<a href=#1647 id=1647 data-nosnippet>1647</a>      attr_escape(<span class="string">"a&lt;b&gt;&amp;\"c\"\nd\te\r"</span>),
-<a href=#1648 id=1648 data-nosnippet>1648</a>      <span class="string">"a&amp;lt;b&amp;gt;&amp;amp;&amp;quot;c&amp;quot;&amp;#10;d&amp;#9;e&amp;#13;"
-<a href=#1649 id=1649 data-nosnippet>1649</a>    </span>);
-<a href=#1650 id=1650 data-nosnippet>1650</a>    <span class="macro">assert_eq!</span>(text_escape(<span class="string">"a&lt;b&gt;&amp;c\r"</span>), <span class="string">"a&amp;lt;b&amp;gt;&amp;amp;c&amp;#13;"</span>);
-<a href=#1651 id=1651 data-nosnippet>1651</a>  }
-<a href=#1652 id=1652 data-nosnippet>1652</a>
-<a href=#1653 id=1653 data-nosnippet>1653</a>  <span class="attr">#[test]
-<a href=#1654 id=1654 data-nosnippet>1654</a>  </span><span class="kw">fn </span>first_tag_end_skips_gt_inside_quotes() {
-<a href=#1655 id=1655 data-nosnippet>1655</a>    <span class="macro">assert_eq!</span>(first_tag_end(<span class="string">r#"&lt;x a="1&gt;2"&gt;rest&lt;/x&gt;"#</span>), <span class="prelude-val">Some</span>(<span class="number">10</span>));
-<a href=#1656 id=1656 data-nosnippet>1656</a>    <span class="macro">assert_eq!</span>(first_tag_end(<span class="string">"&lt;x/&gt;"</span>), <span class="prelude-val">Some</span>(<span class="number">3</span>));
-<a href=#1657 id=1657 data-nosnippet>1657</a>    <span class="macro">assert_eq!</span>(first_tag_end(<span class="string">"&lt;never-closed"</span>), <span class="prelude-val">None</span>);
-<a href=#1658 id=1658 data-nosnippet>1658</a>  }
-<a href=#1659 id=1659 data-nosnippet>1659</a>
-<a href=#1660 id=1660 data-nosnippet>1660</a>  <span class="attr">#[test]
-<a href=#1661 id=1661 data-nosnippet>1661</a>  </span><span class="kw">fn </span>probe_lists_toc_is_exact() {
-<a href=#1662 id=1662 data-nosnippet>1662</a>    <span class="macro">assert!</span>(probe_lists_toc(<span class="string">r#"&lt;p&gt;&lt;TOC lists="toc"&gt;&lt;t/&gt;&lt;/TOC&gt;&lt;/p&gt;"#</span>));
-<a href=#1663 id=1663 data-nosnippet>1663</a>    <span class="macro">assert!</span>(probe_lists_toc(<span class="string">r#"&lt;ltx:TOC lists="toc"/&gt;"#</span>));
-<a href=#1664 id=1664 data-nosnippet>1664</a>    <span class="comment">// Generated TOCs (no lists attribute) never match.
-<a href=#1665 id=1665 data-nosnippet>1665</a>    </span><span class="macro">assert!</span>(!probe_lists_toc(<span class="string">r#"&lt;TOC&gt;&lt;toclist class="c"/&gt;&lt;/TOC&gt;"#</span>));
-<a href=#1666 id=1666 data-nosnippet>1666</a>    <span class="comment">// Exact equality: 'toc lof' does not match the @lists='toc' probe.
-<a href=#1667 id=1667 data-nosnippet>1667</a>    </span><span class="macro">assert!</span>(!probe_lists_toc(<span class="string">r#"&lt;TOC lists="toc lof"/&gt;"#</span>));
-<a href=#1668 id=1668 data-nosnippet>1668</a>  }
-<a href=#1669 id=1669 data-nosnippet>1669</a>
-<a href=#1670 id=1670 data-nosnippet>1670</a>  <span class="attr">#[test]
-<a href=#1671 id=1671 data-nosnippet>1671</a>  </span><span class="kw">fn </span>amend_injects_attrs_and_trailer() {
-<a href=#1672 id=1672 data-nosnippet>1672</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="string">r#"&lt;section xml:id="S1"&gt;&lt;p&gt;t&lt;/p&gt;&lt;/section&gt;"#</span>.to_string();
-<a href=#1673 id=1673 data-nosnippet>1673</a>    amend_serialized_page(
-<a href=#1674 id=1674 data-nosnippet>1674</a>      <span class="kw-2">&amp;mut </span>s,
-<a href=#1675 id=1675 data-nosnippet>1675</a>      <span class="kw-2">&amp;</span>[(String::new(), <span class="string">"urn:ns"</span>.to_string())],
-<a href=#1676 id=1676 data-nosnippet>1676</a>      <span class="kw-2">&amp;</span>[(<span class="string">"xml:lang"</span>.to_string(), <span class="string">"en"</span>.to_string())],
-<a href=#1677 id=1677 data-nosnippet>1677</a>      <span class="prelude-val">None</span>,
-<a href=#1678 id=1678 data-nosnippet>1678</a>      <span class="string">"&lt;date&gt;d&lt;/date&gt;"</span>,
-<a href=#1679 id=1679 data-nosnippet>1679</a>    )
-<a href=#1680 id=1680 data-nosnippet>1680</a>    .unwrap();
-<a href=#1681 id=1681 data-nosnippet>1681</a>    <span class="comment">// Additions (declarations + attributes) append after the original
-<a href=#1682 id=1682 data-nosnippet>1682</a>    // attributes; declaration position within a tag is semantically free.
-<a href=#1683 id=1683 data-nosnippet>1683</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#1684 id=1684 data-nosnippet>1684</a>      s,
-<a href=#1685 id=1685 data-nosnippet>1685</a>      <span class="string">r#"&lt;section xml:id="S1" xmlns="urn:ns" xml:lang="en"&gt;&lt;p&gt;t&lt;/p&gt;&lt;date&gt;d&lt;/date&gt;&lt;/section&gt;"#
-<a href=#1686 id=1686 data-nosnippet>1686</a>    </span>);
-<a href=#1687 id=1687 data-nosnippet>1687</a>  }
-<a href=#1688 id=1688 data-nosnippet>1688</a>
-<a href=#1689 id=1689 data-nosnippet>1689</a>  <span class="attr">#[test]
-<a href=#1690 id=1690 data-nosnippet>1690</a>  </span><span class="kw">fn </span>amend_reopens_self_closed_page_for_trailer() {
-<a href=#1691 id=1691 data-nosnippet>1691</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="string">"&lt;chapter/&gt;"</span>.to_string();
-<a href=#1692 id=1692 data-nosnippet>1692</a>    amend_serialized_page(<span class="kw-2">&amp;mut </span>s, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[], <span class="prelude-val">None</span>, <span class="string">"&lt;x/&gt;"</span>).unwrap();
-<a href=#1693 id=1693 data-nosnippet>1693</a>    <span class="macro">assert_eq!</span>(s, <span class="string">"&lt;chapter&gt;&lt;x/&gt;&lt;/chapter&gt;"</span>);
-<a href=#1694 id=1694 data-nosnippet>1694</a>  }
-<a href=#1695 id=1695 data-nosnippet>1695</a>
-<a href=#1696 id=1696 data-nosnippet>1696</a>  <span class="attr">#[test]
-<a href=#1697 id=1697 data-nosnippet>1697</a>  </span><span class="kw">fn </span>amend_merges_class() {
-<a href=#1698 id=1698 data-nosnippet>1698</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="string">r#"&lt;section class="own"&gt;&lt;p/&gt;&lt;/section&gt;"#</span>.to_string();
-<a href=#1699 id=1699 data-nosnippet>1699</a>    amend_serialized_page(<span class="kw-2">&amp;mut </span>s, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[], <span class="prelude-val">Some</span>(<span class="string">"root"</span>), <span class="string">""</span>).unwrap();
-<a href=#1700 id=1700 data-nosnippet>1700</a>    <span class="macro">assert_eq!</span>(s, <span class="string">r#"&lt;section class="own root"&gt;&lt;p/&gt;&lt;/section&gt;"#</span>);
-<a href=#1701 id=1701 data-nosnippet>1701</a>  }
-<a href=#1702 id=1702 data-nosnippet>1702</a>
-<a href=#1703 id=1703 data-nosnippet>1703</a>  <span class="attr">#[test]
-<a href=#1704 id=1704 data-nosnippet>1704</a>  </span><span class="kw">fn </span>patch_inserts_before_appended_class() {
-<a href=#1705 id=1705 data-nosnippet>1705</a>    <span class="kw">let </span>dir = std::env::temp_dir();
-<a href=#1706 id=1706 data-nosnippet>1706</a>    <span class="kw">let </span>file = dir.join(<span class="macro">format!</span>(<span class="string">"lxo-patch-test-{}.xml"</span>, std::process::id()));
-<a href=#1707 id=1707 data-nosnippet>1707</a>    std::fs::write(
-<a href=#1708 id=1708 data-nosnippet>1708</a>      <span class="kw-2">&amp;</span>file,
-<a href=#1709 id=1709 data-nosnippet>1709</a>      <span class="string">"&lt;?xml version=\"1.0\"?&gt;\n&lt;?latexml p?&gt;\n&lt;section xml:id=\"S1\" class=\"root\"&gt;&lt;p/&gt;&lt;/section&gt;\n"</span>,
-<a href=#1710 id=1710 data-nosnippet>1710</a>    )
-<a href=#1711 id=1711 data-nosnippet>1711</a>    .unwrap();
-<a href=#1712 id=1712 data-nosnippet>1712</a>    patch_spill_root_tag(<span class="kw-2">&amp;</span>file, <span class="string">"inlist"</span>, <span class="string">"toc"</span>, <span class="bool-val">true</span>).unwrap();
-<a href=#1713 id=1713 data-nosnippet>1713</a>    <span class="kw">let </span>out = std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap();
-<a href=#1714 id=1714 data-nosnippet>1714</a>    <span class="macro">assert!</span>(
-<a href=#1715 id=1715 data-nosnippet>1715</a>      out.contains(<span class="string">r#"&lt;section xml:id="S1" inlist="toc" class="root"&gt;"#</span>),
-<a href=#1716 id=1716 data-nosnippet>1716</a>      <span class="string">"patched tag order wrong: {out}"
-<a href=#1717 id=1717 data-nosnippet>1717</a>    </span>);
-<a href=#1718 id=1718 data-nosnippet>1718</a>    <span class="comment">// Without the appended-class flag, the attribute lands last.
-<a href=#1719 id=1719 data-nosnippet>1719</a>    </span>std::fs::write(
-<a href=#1720 id=1720 data-nosnippet>1720</a>      <span class="kw-2">&amp;</span>file,
-<a href=#1721 id=1721 data-nosnippet>1721</a>      <span class="string">"&lt;?xml version=\"1.0\"?&gt;\n&lt;section xml:id=\"S1\" class=\"own\"&gt;&lt;p/&gt;&lt;/section&gt;\n"</span>,
-<a href=#1722 id=1722 data-nosnippet>1722</a>    )
-<a href=#1723 id=1723 data-nosnippet>1723</a>    .unwrap();
-<a href=#1724 id=1724 data-nosnippet>1724</a>    patch_spill_root_tag(<span class="kw-2">&amp;</span>file, <span class="string">"inlist"</span>, <span class="string">"toc"</span>, <span class="bool-val">false</span>).unwrap();
-<a href=#1725 id=1725 data-nosnippet>1725</a>    <span class="kw">let </span>out = std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap();
-<a href=#1726 id=1726 data-nosnippet>1726</a>    <span class="macro">assert!</span>(
-<a href=#1727 id=1727 data-nosnippet>1727</a>      out.contains(<span class="string">r#"&lt;section xml:id="S1" class="own" inlist="toc"&gt;"#</span>),
-<a href=#1728 id=1728 data-nosnippet>1728</a>      <span class="string">"patched tag order wrong: {out}"
-<a href=#1729 id=1729 data-nosnippet>1729</a>    </span>);
-<a href=#1730 id=1730 data-nosnippet>1730</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>file).ok();
-<a href=#1731 id=1731 data-nosnippet>1731</a>  }
-<a href=#1732 id=1732 data-nosnippet>1732</a>
-<a href=#1733 id=1733 data-nosnippet>1733</a>  <span class="attr">#[test]
-<a href=#1734 id=1734 data-nosnippet>1734</a>  </span><span class="kw">fn </span>collect_pictures_extracts_spans() {
-<a href=#1735 id=1735 data-nosnippet>1735</a>    <span class="kw">let </span><span class="kw-2">mut </span>buf = String::new();
-<a href=#1736 id=1736 data-nosnippet>1736</a>    collect_pictures(
-<a href=#1737 id=1737 data-nosnippet>1737</a>      <span class="string">r#"&lt;p&gt;x&lt;/p&gt;&lt;picture xml:id="p1"&gt;&lt;g/&gt;&lt;/picture&gt;&lt;q/&gt;&lt;picture xml:id="p2"/&gt;...&lt;/picture&gt;"#</span>,
-<a href=#1738 id=1738 data-nosnippet>1738</a>      <span class="kw-2">&amp;mut </span>buf,
-<a href=#1739 id=1739 data-nosnippet>1739</a>    );
-<a href=#1740 id=1740 data-nosnippet>1740</a>    <span class="macro">assert!</span>(buf.starts_with(<span class="string">r#"&lt;picture xml:id="p1"&gt;&lt;g/&gt;&lt;/picture&gt;"#</span>));
-<a href=#1741 id=1741 data-nosnippet>1741</a>  }
-<a href=#1742 id=1742 data-nosnippet>1742</a>
-<a href=#1743 id=1743 data-nosnippet>1743</a>  <span class="doccomment">/// End-to-end mini split: a wrapper (backmatter) page must carry the ltx
-<a href=#1744 id=1744 data-nosnippet>1744</a>  /// namespace declaration in its spill, or the XSLT will not recognize it.
-<a href=#1745 id=1745 data-nosnippet>1745</a>  </span><span class="attr">#[test]
-<a href=#1746 id=1746 data-nosnippet>1746</a>  </span><span class="kw">fn </span>wrapper_page_spill_is_namespaced() {
-<a href=#1747 id=1747 data-nosnippet>1747</a>    <span class="kw">let </span>dir = tempfile::tempdir().unwrap();
-<a href=#1748 id=1748 data-nosnippet>1748</a>    <span class="kw">let </span>src = dir.path().join(<span class="string">"mini.xml"</span>);
-<a href=#1749 id=1749 data-nosnippet>1749</a>    std::fs::write(
-<a href=#1750 id=1750 data-nosnippet>1750</a>      <span class="kw-2">&amp;</span>src,
-<a href=#1751 id=1751 data-nosnippet>1751</a>      <span class="string">r#"&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-<a href=#1752 id=1752 data-nosnippet>1752</a>&lt;document xmlns="http://dlmf.nist.gov/LaTeXML" class="rc"&gt;
-<a href=#1753 id=1753 data-nosnippet>1753</a>  &lt;title&gt;T&lt;/title&gt;
-<a href=#1754 id=1754 data-nosnippet>1754</a>  &lt;chapter xml:id="C1"&gt;&lt;title&gt;One&lt;/title&gt;&lt;para xml:id="C1.p1"&gt;&lt;p&gt;x&lt;/p&gt;&lt;/para&gt;&lt;/chapter&gt;
-<a href=#1755 id=1755 data-nosnippet>1755</a>  &lt;backmatter&gt;
-<a href=#1756 id=1756 data-nosnippet>1756</a>    &lt;section xml:id="BM.S1"&gt;&lt;title&gt;BS&lt;/title&gt;&lt;/section&gt;
-<a href=#1757 id=1757 data-nosnippet>1757</a>    &lt;appendix xml:id="A1"&gt;&lt;title&gt;App&lt;/title&gt;&lt;/appendix&gt;
-<a href=#1758 id=1758 data-nosnippet>1758</a>  &lt;/backmatter&gt;
-<a href=#1759 id=1759 data-nosnippet>1759</a>&lt;/document&gt;
-<a href=#1760 id=1760 data-nosnippet>1760</a>"#</span>,
-<a href=#1761 id=1761 data-nosnippet>1761</a>    )
-<a href=#1762 id=1762 data-nosnippet>1762</a>    .unwrap();
-<a href=#1763 id=1763 data-nosnippet>1763</a>    <span class="kw">let </span>spill = dir.path().join(<span class="string">"spill"</span>);
-<a href=#1764 id=1764 data-nosnippet>1764</a>    std::fs::create_dir(<span class="kw-2">&amp;</span>spill).unwrap();
-<a href=#1765 id=1765 data-nosnippet>1765</a>    <span class="kw">let </span>union = <span class="string">"//ltx:section | //ltx:chapter | //ltx:appendix[preceding-sibling::ltx:section or parent::ltx:chapter]"</span>;
-<a href=#1766 id=1766 data-nosnippet>1766</a>    <span class="kw">let </span>outcome = stream_split(
-<a href=#1767 id=1767 data-nosnippet>1767</a>      <span class="kw-2">&amp;</span>src.to_string_lossy(),
-<a href=#1768 id=1768 data-nosnippet>1768</a>      union,
-<a href=#1769 id=1769 data-nosnippet>1769</a>      SplitNaming::Id,
-<a href=#1770 id=1770 data-nosnippet>1770</a>      <span class="prelude-val">Some</span>(<span class="string">"out/mini.html"</span>),
-<a href=#1771 id=1771 data-nosnippet>1771</a>      <span class="kw-2">&amp;</span>spill,
-<a href=#1772 id=1772 data-nosnippet>1772</a>    )
-<a href=#1773 id=1773 data-nosnippet>1773</a>    .expect(<span class="string">"split runs"</span>)
-<a href=#1774 id=1774 data-nosnippet>1774</a>    .expect(<span class="string">"split produces pages"</span>);
-<a href=#1775 id=1775 data-nosnippet>1775</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = outcome
-<a href=#1776 id=1776 data-nosnippet>1776</a>      .pages
-<a href=#1777 id=1777 data-nosnippet>1777</a>      .iter()
-<a href=#1778 id=1778 data-nosnippet>1778</a>      .map(|p| p.destination.as_str())
-<a href=#1779 id=1779 data-nosnippet>1779</a>      .collect();
-<a href=#1780 id=1780 data-nosnippet>1780</a>    <span class="macro">assert_eq!</span>(
-<a href=#1781 id=1781 data-nosnippet>1781</a>      names,
-<a href=#1782 id=1782 data-nosnippet>1782</a>      <span class="macro">vec!</span>[
-<a href=#1783 id=1783 data-nosnippet>1783</a>        <span class="string">"out/mini.html"</span>,
-<a href=#1784 id=1784 data-nosnippet>1784</a>        <span class="string">"out/C1.html"</span>,
-<a href=#1785 id=1785 data-nosnippet>1785</a>        <span class="string">"out/BM.S1.html"</span>,
-<a href=#1786 id=1786 data-nosnippet>1786</a>        <span class="string">"out/A1.html"
-<a href=#1787 id=1787 data-nosnippet>1787</a>      </span>],
-<a href=#1788 id=1788 data-nosnippet>1788</a>      <span class="string">"pre-order destinations"
-<a href=#1789 id=1789 data-nosnippet>1789</a>    </span>);
-<a href=#1790 id=1790 data-nosnippet>1790</a>    <span class="kw">for </span>page <span class="kw">in </span><span class="kw-2">&amp;</span>outcome.pages[<span class="number">1</span>..] {
-<a href=#1791 id=1791 data-nosnippet>1791</a>      <span class="kw">let </span>content = std::fs::read_to_string(<span class="kw-2">&amp;</span>page.path).unwrap();
-<a href=#1792 id=1792 data-nosnippet>1792</a>      <span class="macro">assert!</span>(
-<a href=#1793 id=1793 data-nosnippet>1793</a>        content.contains(<span class="string">"xmlns=\"http://dlmf.nist.gov/LaTeXML\""</span>),
-<a href=#1794 id=1794 data-nosnippet>1794</a>        <span class="string">"page {} must declare the ltx namespace:\n{content}"</span>,
-<a href=#1795 id=1795 data-nosnippet>1795</a>        page.destination
-<a href=#1796 id=1796 data-nosnippet>1796</a>      );
-<a href=#1797 id=1797 data-nosnippet>1797</a>      <span class="comment">// Reparse: root element must be in the ltx namespace.
-<a href=#1798 id=1798 data-nosnippet>1798</a>      </span><span class="kw">let </span>doc = libxml::parser::Parser::default()
-<a href=#1799 id=1799 data-nosnippet>1799</a>        .parse_string(<span class="kw-2">&amp;</span>content)
-<a href=#1800 id=1800 data-nosnippet>1800</a>        .expect(<span class="string">"page reparses"</span>);
-<a href=#1801 id=1801 data-nosnippet>1801</a>      <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#1802 id=1802 data-nosnippet>1802</a>      <span class="macro">assert_eq!</span>(
-<a href=#1803 id=1803 data-nosnippet>1803</a>        root.get_namespace().map(|n| n.get_href()),
-<a href=#1804 id=1804 data-nosnippet>1804</a>        <span class="prelude-val">Some</span>(LTX_NSURI.to_string()),
-<a href=#1805 id=1805 data-nosnippet>1805</a>        <span class="string">"page {} root not in ltx namespace:\n{content}"</span>,
-<a href=#1806 id=1806 data-nosnippet>1806</a>        page.destination
-<a href=#1807 id=1807 data-nosnippet>1807</a>      );
-<a href=#1808 id=1808 data-nosnippet>1808</a>    }
-<a href=#1809 id=1809 data-nosnippet>1809</a>  }
-<a href=#1810 id=1810 data-nosnippet>1810</a>
-<a href=#1811 id=1811 data-nosnippet>1811</a>  <span class="attr">#[test]
-<a href=#1812 id=1812 data-nosnippet>1812</a>  </span><span class="kw">fn </span>element_probe_respects_name_boundaries() {
-<a href=#1813 id=1813 data-nosnippet>1813</a>    <span class="comment">// `&lt;indexmark&gt;` must NOT register as an `index` element…
-<a href=#1814 id=1814 data-nosnippet>1814</a>    </span><span class="macro">assert!</span>(!contains_element_probe(
-<a href=#1815 id=1815 data-nosnippet>1815</a>      <span class="string">"&lt;p&gt;&lt;indexmark k=\"x\"/&gt;&lt;/p&gt;"</span>,
-<a href=#1816 id=1816 data-nosnippet>1816</a>      <span class="string">"index"
-<a href=#1817 id=1817 data-nosnippet>1817</a>    </span>));
-<a href=#1818 id=1818 data-nosnippet>1818</a>    <span class="comment">// …while real starts do, in every tag shape and prefixed form.
-<a href=#1819 id=1819 data-nosnippet>1819</a>    </span><span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;p&gt;&lt;index r=\"1\"/&gt;&lt;/p&gt;"</span>, <span class="string">"index"</span>));
-<a href=#1820 id=1820 data-nosnippet>1820</a>    <span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;index&gt;"</span>, <span class="string">"index"</span>));
-<a href=#1821 id=1821 data-nosnippet>1821</a>    <span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;index/&gt;"</span>, <span class="string">"index"</span>));
-<a href=#1822 id=1822 data-nosnippet>1822</a>    <span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;ltx:index&gt;x&lt;/ltx:index&gt;"</span>, <span class="string">"index"</span>));
-<a href=#1823 id=1823 data-nosnippet>1823</a>    <span class="macro">assert!</span>(!contains_element_probe(<span class="string">"&lt;subsubsection&gt;"</span>, <span class="string">"subsection"</span>));
-<a href=#1824 id=1824 data-nosnippet>1824</a>    <span class="macro">assert!</span>(!contains_element_probe(<span class="string">"plain text"</span>, <span class="string">"section"</span>));
-<a href=#1825 id=1825 data-nosnippet>1825</a>  }
-<a href=#1826 id=1826 data-nosnippet>1826</a>
-<a href=#1827 id=1827 data-nosnippet>1827</a>  <span class="attr">#[test]
-<a href=#1828 id=1828 data-nosnippet>1828</a>  </span><span class="kw">fn </span>pi_bodies_extracted() {
-<a href=#1829 id=1829 data-nosnippet>1829</a>    <span class="macro">assert_eq!</span>(
-<a href=#1830 id=1830 data-nosnippet>1830</a>      extract_pi_bodies(<span class="string">r#"&lt;a&gt;&lt;?latexml package="x"?&gt;&lt;?other y?&gt;&lt;?latexml class="c"?&gt;&lt;/a&gt;"#</span>),
-<a href=#1831 id=1831 data-nosnippet>1831</a>      <span class="macro">vec!</span>[<span class="string">r#"package="x""#</span>.to_string(), <span class="string">r#"class="c""#</span>.to_string()]
-<a href=#1832 id=1832 data-nosnippet>1832</a>    );
-<a href=#1833 id=1833 data-nosnippet>1833</a>  }
-<a href=#1834 id=1834 data-nosnippet>1834</a>}
+<a href=#1644 id=1644 data-nosnippet>1644</a><span class="attr">#[cfg(test)]
+<a href=#1645 id=1645 data-nosnippet>1645</a></span><span class="kw">mod </span>tests {
+<a href=#1646 id=1646 data-nosnippet>1646</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#1647 id=1647 data-nosnippet>1647</a>
+<a href=#1648 id=1648 data-nosnippet>1648</a>  <span class="attr">#[test]
+<a href=#1649 id=1649 data-nosnippet>1649</a>  </span><span class="kw">fn </span>escaping_matches_libxml() {
+<a href=#1650 id=1650 data-nosnippet>1650</a>    <span class="macro">assert_eq!</span>(
+<a href=#1651 id=1651 data-nosnippet>1651</a>      attr_escape(<span class="string">"a&lt;b&gt;&amp;\"c\"\nd\te\r"</span>),
+<a href=#1652 id=1652 data-nosnippet>1652</a>      <span class="string">"a&amp;lt;b&amp;gt;&amp;amp;&amp;quot;c&amp;quot;&amp;#10;d&amp;#9;e&amp;#13;"
+<a href=#1653 id=1653 data-nosnippet>1653</a>    </span>);
+<a href=#1654 id=1654 data-nosnippet>1654</a>    <span class="macro">assert_eq!</span>(text_escape(<span class="string">"a&lt;b&gt;&amp;c\r"</span>), <span class="string">"a&amp;lt;b&amp;gt;&amp;amp;c&amp;#13;"</span>);
+<a href=#1655 id=1655 data-nosnippet>1655</a>  }
+<a href=#1656 id=1656 data-nosnippet>1656</a>
+<a href=#1657 id=1657 data-nosnippet>1657</a>  <span class="attr">#[test]
+<a href=#1658 id=1658 data-nosnippet>1658</a>  </span><span class="kw">fn </span>first_tag_end_skips_gt_inside_quotes() {
+<a href=#1659 id=1659 data-nosnippet>1659</a>    <span class="macro">assert_eq!</span>(first_tag_end(<span class="string">r#"&lt;x a="1&gt;2"&gt;rest&lt;/x&gt;"#</span>), <span class="prelude-val">Some</span>(<span class="number">10</span>));
+<a href=#1660 id=1660 data-nosnippet>1660</a>    <span class="macro">assert_eq!</span>(first_tag_end(<span class="string">"&lt;x/&gt;"</span>), <span class="prelude-val">Some</span>(<span class="number">3</span>));
+<a href=#1661 id=1661 data-nosnippet>1661</a>    <span class="macro">assert_eq!</span>(first_tag_end(<span class="string">"&lt;never-closed"</span>), <span class="prelude-val">None</span>);
+<a href=#1662 id=1662 data-nosnippet>1662</a>  }
+<a href=#1663 id=1663 data-nosnippet>1663</a>
+<a href=#1664 id=1664 data-nosnippet>1664</a>  <span class="attr">#[test]
+<a href=#1665 id=1665 data-nosnippet>1665</a>  </span><span class="kw">fn </span>probe_lists_toc_is_exact() {
+<a href=#1666 id=1666 data-nosnippet>1666</a>    <span class="macro">assert!</span>(probe_lists_toc(<span class="string">r#"&lt;p&gt;&lt;TOC lists="toc"&gt;&lt;t/&gt;&lt;/TOC&gt;&lt;/p&gt;"#</span>));
+<a href=#1667 id=1667 data-nosnippet>1667</a>    <span class="macro">assert!</span>(probe_lists_toc(<span class="string">r#"&lt;ltx:TOC lists="toc"/&gt;"#</span>));
+<a href=#1668 id=1668 data-nosnippet>1668</a>    <span class="comment">// Generated TOCs (no lists attribute) never match.
+<a href=#1669 id=1669 data-nosnippet>1669</a>    </span><span class="macro">assert!</span>(!probe_lists_toc(<span class="string">r#"&lt;TOC&gt;&lt;toclist class="c"/&gt;&lt;/TOC&gt;"#</span>));
+<a href=#1670 id=1670 data-nosnippet>1670</a>    <span class="comment">// Exact equality: 'toc lof' does not match the @lists='toc' probe.
+<a href=#1671 id=1671 data-nosnippet>1671</a>    </span><span class="macro">assert!</span>(!probe_lists_toc(<span class="string">r#"&lt;TOC lists="toc lof"/&gt;"#</span>));
+<a href=#1672 id=1672 data-nosnippet>1672</a>  }
+<a href=#1673 id=1673 data-nosnippet>1673</a>
+<a href=#1674 id=1674 data-nosnippet>1674</a>  <span class="attr">#[test]
+<a href=#1675 id=1675 data-nosnippet>1675</a>  </span><span class="kw">fn </span>amend_injects_attrs_and_trailer() {
+<a href=#1676 id=1676 data-nosnippet>1676</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="string">r#"&lt;section xml:id="S1"&gt;&lt;p&gt;t&lt;/p&gt;&lt;/section&gt;"#</span>.to_string();
+<a href=#1677 id=1677 data-nosnippet>1677</a>    amend_serialized_page(
+<a href=#1678 id=1678 data-nosnippet>1678</a>      <span class="kw-2">&amp;mut </span>s,
+<a href=#1679 id=1679 data-nosnippet>1679</a>      <span class="kw-2">&amp;</span>[(String::new(), <span class="string">"urn:ns"</span>.to_string())],
+<a href=#1680 id=1680 data-nosnippet>1680</a>      <span class="kw-2">&amp;</span>[(<span class="string">"xml:lang"</span>.to_string(), <span class="string">"en"</span>.to_string())],
+<a href=#1681 id=1681 data-nosnippet>1681</a>      <span class="prelude-val">None</span>,
+<a href=#1682 id=1682 data-nosnippet>1682</a>      <span class="string">"&lt;date&gt;d&lt;/date&gt;"</span>,
+<a href=#1683 id=1683 data-nosnippet>1683</a>    )
+<a href=#1684 id=1684 data-nosnippet>1684</a>    .unwrap();
+<a href=#1685 id=1685 data-nosnippet>1685</a>    <span class="comment">// Additions (declarations + attributes) append after the original
+<a href=#1686 id=1686 data-nosnippet>1686</a>    // attributes; declaration position within a tag is semantically free.
+<a href=#1687 id=1687 data-nosnippet>1687</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#1688 id=1688 data-nosnippet>1688</a>      s,
+<a href=#1689 id=1689 data-nosnippet>1689</a>      <span class="string">r#"&lt;section xml:id="S1" xmlns="urn:ns" xml:lang="en"&gt;&lt;p&gt;t&lt;/p&gt;&lt;date&gt;d&lt;/date&gt;&lt;/section&gt;"#
+<a href=#1690 id=1690 data-nosnippet>1690</a>    </span>);
+<a href=#1691 id=1691 data-nosnippet>1691</a>  }
+<a href=#1692 id=1692 data-nosnippet>1692</a>
+<a href=#1693 id=1693 data-nosnippet>1693</a>  <span class="attr">#[test]
+<a href=#1694 id=1694 data-nosnippet>1694</a>  </span><span class="kw">fn </span>amend_reopens_self_closed_page_for_trailer() {
+<a href=#1695 id=1695 data-nosnippet>1695</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="string">"&lt;chapter/&gt;"</span>.to_string();
+<a href=#1696 id=1696 data-nosnippet>1696</a>    amend_serialized_page(<span class="kw-2">&amp;mut </span>s, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[], <span class="prelude-val">None</span>, <span class="string">"&lt;x/&gt;"</span>).unwrap();
+<a href=#1697 id=1697 data-nosnippet>1697</a>    <span class="macro">assert_eq!</span>(s, <span class="string">"&lt;chapter&gt;&lt;x/&gt;&lt;/chapter&gt;"</span>);
+<a href=#1698 id=1698 data-nosnippet>1698</a>  }
+<a href=#1699 id=1699 data-nosnippet>1699</a>
+<a href=#1700 id=1700 data-nosnippet>1700</a>  <span class="attr">#[test]
+<a href=#1701 id=1701 data-nosnippet>1701</a>  </span><span class="kw">fn </span>amend_merges_class() {
+<a href=#1702 id=1702 data-nosnippet>1702</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="string">r#"&lt;section class="own"&gt;&lt;p/&gt;&lt;/section&gt;"#</span>.to_string();
+<a href=#1703 id=1703 data-nosnippet>1703</a>    amend_serialized_page(<span class="kw-2">&amp;mut </span>s, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[], <span class="prelude-val">Some</span>(<span class="string">"root"</span>), <span class="string">""</span>).unwrap();
+<a href=#1704 id=1704 data-nosnippet>1704</a>    <span class="macro">assert_eq!</span>(s, <span class="string">r#"&lt;section class="own root"&gt;&lt;p/&gt;&lt;/section&gt;"#</span>);
+<a href=#1705 id=1705 data-nosnippet>1705</a>  }
+<a href=#1706 id=1706 data-nosnippet>1706</a>
+<a href=#1707 id=1707 data-nosnippet>1707</a>  <span class="attr">#[test]
+<a href=#1708 id=1708 data-nosnippet>1708</a>  </span><span class="kw">fn </span>patch_inserts_before_appended_class() {
+<a href=#1709 id=1709 data-nosnippet>1709</a>    <span class="kw">let </span>dir = std::env::temp_dir();
+<a href=#1710 id=1710 data-nosnippet>1710</a>    <span class="kw">let </span>file = dir.join(<span class="macro">format!</span>(<span class="string">"lxo-patch-test-{}.xml"</span>, std::process::id()));
+<a href=#1711 id=1711 data-nosnippet>1711</a>    std::fs::write(
+<a href=#1712 id=1712 data-nosnippet>1712</a>      <span class="kw-2">&amp;</span>file,
+<a href=#1713 id=1713 data-nosnippet>1713</a>      <span class="string">"&lt;?xml version=\"1.0\"?&gt;\n&lt;?latexml p?&gt;\n&lt;section xml:id=\"S1\" class=\"root\"&gt;&lt;p/&gt;&lt;/section&gt;\n"</span>,
+<a href=#1714 id=1714 data-nosnippet>1714</a>    )
+<a href=#1715 id=1715 data-nosnippet>1715</a>    .unwrap();
+<a href=#1716 id=1716 data-nosnippet>1716</a>    patch_spill_root_tag(<span class="kw-2">&amp;</span>file, <span class="string">"inlist"</span>, <span class="string">"toc"</span>, <span class="bool-val">true</span>).unwrap();
+<a href=#1717 id=1717 data-nosnippet>1717</a>    <span class="kw">let </span>out = std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap();
+<a href=#1718 id=1718 data-nosnippet>1718</a>    <span class="macro">assert!</span>(
+<a href=#1719 id=1719 data-nosnippet>1719</a>      out.contains(<span class="string">r#"&lt;section xml:id="S1" inlist="toc" class="root"&gt;"#</span>),
+<a href=#1720 id=1720 data-nosnippet>1720</a>      <span class="string">"patched tag order wrong: {out}"
+<a href=#1721 id=1721 data-nosnippet>1721</a>    </span>);
+<a href=#1722 id=1722 data-nosnippet>1722</a>    <span class="comment">// Without the appended-class flag, the attribute lands last.
+<a href=#1723 id=1723 data-nosnippet>1723</a>    </span>std::fs::write(
+<a href=#1724 id=1724 data-nosnippet>1724</a>      <span class="kw-2">&amp;</span>file,
+<a href=#1725 id=1725 data-nosnippet>1725</a>      <span class="string">"&lt;?xml version=\"1.0\"?&gt;\n&lt;section xml:id=\"S1\" class=\"own\"&gt;&lt;p/&gt;&lt;/section&gt;\n"</span>,
+<a href=#1726 id=1726 data-nosnippet>1726</a>    )
+<a href=#1727 id=1727 data-nosnippet>1727</a>    .unwrap();
+<a href=#1728 id=1728 data-nosnippet>1728</a>    patch_spill_root_tag(<span class="kw-2">&amp;</span>file, <span class="string">"inlist"</span>, <span class="string">"toc"</span>, <span class="bool-val">false</span>).unwrap();
+<a href=#1729 id=1729 data-nosnippet>1729</a>    <span class="kw">let </span>out = std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap();
+<a href=#1730 id=1730 data-nosnippet>1730</a>    <span class="macro">assert!</span>(
+<a href=#1731 id=1731 data-nosnippet>1731</a>      out.contains(<span class="string">r#"&lt;section xml:id="S1" class="own" inlist="toc"&gt;"#</span>),
+<a href=#1732 id=1732 data-nosnippet>1732</a>      <span class="string">"patched tag order wrong: {out}"
+<a href=#1733 id=1733 data-nosnippet>1733</a>    </span>);
+<a href=#1734 id=1734 data-nosnippet>1734</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>file).ok();
+<a href=#1735 id=1735 data-nosnippet>1735</a>  }
+<a href=#1736 id=1736 data-nosnippet>1736</a>
+<a href=#1737 id=1737 data-nosnippet>1737</a>  <span class="attr">#[test]
+<a href=#1738 id=1738 data-nosnippet>1738</a>  </span><span class="kw">fn </span>collect_pictures_extracts_spans() {
+<a href=#1739 id=1739 data-nosnippet>1739</a>    <span class="kw">let </span><span class="kw-2">mut </span>buf = String::new();
+<a href=#1740 id=1740 data-nosnippet>1740</a>    collect_pictures(
+<a href=#1741 id=1741 data-nosnippet>1741</a>      <span class="string">r#"&lt;p&gt;x&lt;/p&gt;&lt;picture xml:id="p1"&gt;&lt;g/&gt;&lt;/picture&gt;&lt;q/&gt;&lt;picture xml:id="p2"/&gt;...&lt;/picture&gt;"#</span>,
+<a href=#1742 id=1742 data-nosnippet>1742</a>      <span class="kw-2">&amp;mut </span>buf,
+<a href=#1743 id=1743 data-nosnippet>1743</a>    );
+<a href=#1744 id=1744 data-nosnippet>1744</a>    <span class="macro">assert!</span>(buf.starts_with(<span class="string">r#"&lt;picture xml:id="p1"&gt;&lt;g/&gt;&lt;/picture&gt;"#</span>));
+<a href=#1745 id=1745 data-nosnippet>1745</a>  }
+<a href=#1746 id=1746 data-nosnippet>1746</a>
+<a href=#1747 id=1747 data-nosnippet>1747</a>  <span class="doccomment">/// End-to-end mini split: a wrapper (backmatter) page must carry the ltx
+<a href=#1748 id=1748 data-nosnippet>1748</a>  /// namespace declaration in its spill, or the XSLT will not recognize it.
+<a href=#1749 id=1749 data-nosnippet>1749</a>  </span><span class="attr">#[test]
+<a href=#1750 id=1750 data-nosnippet>1750</a>  </span><span class="kw">fn </span>wrapper_page_spill_is_namespaced() {
+<a href=#1751 id=1751 data-nosnippet>1751</a>    <span class="kw">let </span>dir = tempfile::tempdir().unwrap();
+<a href=#1752 id=1752 data-nosnippet>1752</a>    <span class="kw">let </span>src = dir.path().join(<span class="string">"mini.xml"</span>);
+<a href=#1753 id=1753 data-nosnippet>1753</a>    std::fs::write(
+<a href=#1754 id=1754 data-nosnippet>1754</a>      <span class="kw-2">&amp;</span>src,
+<a href=#1755 id=1755 data-nosnippet>1755</a>      <span class="string">r#"&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+<a href=#1756 id=1756 data-nosnippet>1756</a>&lt;document xmlns="http://dlmf.nist.gov/LaTeXML" class="rc"&gt;
+<a href=#1757 id=1757 data-nosnippet>1757</a>  &lt;title&gt;T&lt;/title&gt;
+<a href=#1758 id=1758 data-nosnippet>1758</a>  &lt;chapter xml:id="C1"&gt;&lt;title&gt;One&lt;/title&gt;&lt;para xml:id="C1.p1"&gt;&lt;p&gt;x&lt;/p&gt;&lt;/para&gt;&lt;/chapter&gt;
+<a href=#1759 id=1759 data-nosnippet>1759</a>  &lt;backmatter&gt;
+<a href=#1760 id=1760 data-nosnippet>1760</a>    &lt;section xml:id="BM.S1"&gt;&lt;title&gt;BS&lt;/title&gt;&lt;/section&gt;
+<a href=#1761 id=1761 data-nosnippet>1761</a>    &lt;appendix xml:id="A1"&gt;&lt;title&gt;App&lt;/title&gt;&lt;/appendix&gt;
+<a href=#1762 id=1762 data-nosnippet>1762</a>  &lt;/backmatter&gt;
+<a href=#1763 id=1763 data-nosnippet>1763</a>&lt;/document&gt;
+<a href=#1764 id=1764 data-nosnippet>1764</a>"#</span>,
+<a href=#1765 id=1765 data-nosnippet>1765</a>    )
+<a href=#1766 id=1766 data-nosnippet>1766</a>    .unwrap();
+<a href=#1767 id=1767 data-nosnippet>1767</a>    <span class="kw">let </span>spill = dir.path().join(<span class="string">"spill"</span>);
+<a href=#1768 id=1768 data-nosnippet>1768</a>    std::fs::create_dir(<span class="kw-2">&amp;</span>spill).unwrap();
+<a href=#1769 id=1769 data-nosnippet>1769</a>    <span class="kw">let </span>union = <span class="string">"//ltx:section | //ltx:chapter | //ltx:appendix[preceding-sibling::ltx:section or parent::ltx:chapter]"</span>;
+<a href=#1770 id=1770 data-nosnippet>1770</a>    <span class="kw">let </span>outcome = stream_split(
+<a href=#1771 id=1771 data-nosnippet>1771</a>      <span class="kw-2">&amp;</span>src.to_string_lossy(),
+<a href=#1772 id=1772 data-nosnippet>1772</a>      union,
+<a href=#1773 id=1773 data-nosnippet>1773</a>      SplitNaming::Id,
+<a href=#1774 id=1774 data-nosnippet>1774</a>      <span class="prelude-val">Some</span>(<span class="string">"out/mini.html"</span>),
+<a href=#1775 id=1775 data-nosnippet>1775</a>      <span class="kw-2">&amp;</span>spill,
+<a href=#1776 id=1776 data-nosnippet>1776</a>    )
+<a href=#1777 id=1777 data-nosnippet>1777</a>    .expect(<span class="string">"split runs"</span>)
+<a href=#1778 id=1778 data-nosnippet>1778</a>    .expect(<span class="string">"split produces pages"</span>);
+<a href=#1779 id=1779 data-nosnippet>1779</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = outcome
+<a href=#1780 id=1780 data-nosnippet>1780</a>      .pages
+<a href=#1781 id=1781 data-nosnippet>1781</a>      .iter()
+<a href=#1782 id=1782 data-nosnippet>1782</a>      .map(|p| p.destination.as_str())
+<a href=#1783 id=1783 data-nosnippet>1783</a>      .collect();
+<a href=#1784 id=1784 data-nosnippet>1784</a>    <span class="macro">assert_eq!</span>(
+<a href=#1785 id=1785 data-nosnippet>1785</a>      names,
+<a href=#1786 id=1786 data-nosnippet>1786</a>      <span class="macro">vec!</span>[
+<a href=#1787 id=1787 data-nosnippet>1787</a>        <span class="string">"out/mini.html"</span>,
+<a href=#1788 id=1788 data-nosnippet>1788</a>        <span class="string">"out/C1.html"</span>,
+<a href=#1789 id=1789 data-nosnippet>1789</a>        <span class="string">"out/BM.S1.html"</span>,
+<a href=#1790 id=1790 data-nosnippet>1790</a>        <span class="string">"out/A1.html"
+<a href=#1791 id=1791 data-nosnippet>1791</a>      </span>],
+<a href=#1792 id=1792 data-nosnippet>1792</a>      <span class="string">"pre-order destinations"
+<a href=#1793 id=1793 data-nosnippet>1793</a>    </span>);
+<a href=#1794 id=1794 data-nosnippet>1794</a>    <span class="kw">for </span>page <span class="kw">in </span><span class="kw-2">&amp;</span>outcome.pages[<span class="number">1</span>..] {
+<a href=#1795 id=1795 data-nosnippet>1795</a>      <span class="kw">let </span>content = std::fs::read_to_string(<span class="kw-2">&amp;</span>page.path).unwrap();
+<a href=#1796 id=1796 data-nosnippet>1796</a>      <span class="macro">assert!</span>(
+<a href=#1797 id=1797 data-nosnippet>1797</a>        content.contains(<span class="string">"xmlns=\"http://dlmf.nist.gov/LaTeXML\""</span>),
+<a href=#1798 id=1798 data-nosnippet>1798</a>        <span class="string">"page {} must declare the ltx namespace:\n{content}"</span>,
+<a href=#1799 id=1799 data-nosnippet>1799</a>        page.destination
+<a href=#1800 id=1800 data-nosnippet>1800</a>      );
+<a href=#1801 id=1801 data-nosnippet>1801</a>      <span class="comment">// Reparse: root element must be in the ltx namespace.
+<a href=#1802 id=1802 data-nosnippet>1802</a>      </span><span class="kw">let </span>doc = libxml::parser::Parser::default()
+<a href=#1803 id=1803 data-nosnippet>1803</a>        .parse_string(<span class="kw-2">&amp;</span>content)
+<a href=#1804 id=1804 data-nosnippet>1804</a>        .expect(<span class="string">"page reparses"</span>);
+<a href=#1805 id=1805 data-nosnippet>1805</a>      <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#1806 id=1806 data-nosnippet>1806</a>      <span class="macro">assert_eq!</span>(
+<a href=#1807 id=1807 data-nosnippet>1807</a>        root.get_namespace().map(|n| n.get_href()),
+<a href=#1808 id=1808 data-nosnippet>1808</a>        <span class="prelude-val">Some</span>(LTX_NSURI.to_string()),
+<a href=#1809 id=1809 data-nosnippet>1809</a>        <span class="string">"page {} root not in ltx namespace:\n{content}"</span>,
+<a href=#1810 id=1810 data-nosnippet>1810</a>        page.destination
+<a href=#1811 id=1811 data-nosnippet>1811</a>      );
+<a href=#1812 id=1812 data-nosnippet>1812</a>    }
+<a href=#1813 id=1813 data-nosnippet>1813</a>  }
+<a href=#1814 id=1814 data-nosnippet>1814</a>
+<a href=#1815 id=1815 data-nosnippet>1815</a>  <span class="attr">#[test]
+<a href=#1816 id=1816 data-nosnippet>1816</a>  </span><span class="kw">fn </span>element_probe_respects_name_boundaries() {
+<a href=#1817 id=1817 data-nosnippet>1817</a>    <span class="comment">// `&lt;indexmark&gt;` must NOT register as an `index` element…
+<a href=#1818 id=1818 data-nosnippet>1818</a>    </span><span class="macro">assert!</span>(!contains_element_probe(
+<a href=#1819 id=1819 data-nosnippet>1819</a>      <span class="string">"&lt;p&gt;&lt;indexmark k=\"x\"/&gt;&lt;/p&gt;"</span>,
+<a href=#1820 id=1820 data-nosnippet>1820</a>      <span class="string">"index"
+<a href=#1821 id=1821 data-nosnippet>1821</a>    </span>));
+<a href=#1822 id=1822 data-nosnippet>1822</a>    <span class="comment">// …while real starts do, in every tag shape and prefixed form.
+<a href=#1823 id=1823 data-nosnippet>1823</a>    </span><span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;p&gt;&lt;index r=\"1\"/&gt;&lt;/p&gt;"</span>, <span class="string">"index"</span>));
+<a href=#1824 id=1824 data-nosnippet>1824</a>    <span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;index&gt;"</span>, <span class="string">"index"</span>));
+<a href=#1825 id=1825 data-nosnippet>1825</a>    <span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;index/&gt;"</span>, <span class="string">"index"</span>));
+<a href=#1826 id=1826 data-nosnippet>1826</a>    <span class="macro">assert!</span>(contains_element_probe(<span class="string">"&lt;ltx:index&gt;x&lt;/ltx:index&gt;"</span>, <span class="string">"index"</span>));
+<a href=#1827 id=1827 data-nosnippet>1827</a>    <span class="macro">assert!</span>(!contains_element_probe(<span class="string">"&lt;subsubsection&gt;"</span>, <span class="string">"subsection"</span>));
+<a href=#1828 id=1828 data-nosnippet>1828</a>    <span class="macro">assert!</span>(!contains_element_probe(<span class="string">"plain text"</span>, <span class="string">"section"</span>));
+<a href=#1829 id=1829 data-nosnippet>1829</a>  }
+<a href=#1830 id=1830 data-nosnippet>1830</a>
+<a href=#1831 id=1831 data-nosnippet>1831</a>  <span class="attr">#[test]
+<a href=#1832 id=1832 data-nosnippet>1832</a>  </span><span class="kw">fn </span>pi_bodies_extracted() {
+<a href=#1833 id=1833 data-nosnippet>1833</a>    <span class="macro">assert_eq!</span>(
+<a href=#1834 id=1834 data-nosnippet>1834</a>      extract_pi_bodies(<span class="string">r#"&lt;a&gt;&lt;?latexml package="x"?&gt;&lt;?other y?&gt;&lt;?latexml class="c"?&gt;&lt;/a&gt;"#</span>),
+<a href=#1835 id=1835 data-nosnippet>1835</a>      <span class="macro">vec!</span>[<span class="string">r#"package="x""#</span>.to_string(), <span class="string">r#"class="c""#</span>.to_string()]
+<a href=#1836 id=1836 data-nosnippet>1836</a>    );
+<a href=#1837 id=1837 data-nosnippet>1837</a>  }
+<a href=#1838 id=1838 data-nosnippet>1838</a>}
 </code></pre></div></section></main></body></html>
