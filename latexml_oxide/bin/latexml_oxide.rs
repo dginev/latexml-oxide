@@ -822,6 +822,34 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     source
   };
 
+  // Perl latexmlc parity (bin/latexmlc L103-120): ALWAYS write a conversion
+  // log — `--log` names it, otherwise `<jobname>.latexml.log` in the current
+  // directory (literal/anonymous sources fall back to plain `latexml.log`),
+  // and a pre-existing file is removed up front so the log is always this
+  // run's. The archive output packs its log into the zip instead, exactly as
+  // before. Reported missing on the 0.7.5-rc5 witness UAT (2026-08-03): a
+  // fatal scrolled away with nothing on disk to consult.
+  let cli_log: Option<String> = cli.log.clone().or_else(|| {
+    // Dump-building (`--init`) is not a conversion; no default log there.
+    if cli.init.is_some() {
+      return None;
+    }
+    let name = if source.starts_with("literal:") {
+      "latexml.log".to_string()
+    } else {
+      match Path::new(&source).file_stem().and_then(|s| s.to_str()) {
+        Some(stem) => format!("{stem}.latexml.log"),
+        None => "latexml.log".to_string(),
+      }
+    };
+    Some(name)
+  });
+  if let Some(ref lp) = cli_log
+    && Path::new(lp).is_file()
+  {
+    let _ = std::fs::remove_file(lp);
+  }
+
   // Some arXiv source archives ship a PDF mis-named with a `.tex` extension
   // (e.g. 2301.04210.tex). Perl LaTeXML detects the `%PDF-` magic and bails
   // with a single Fatal; without this guard the binary catcode-tokenizes
@@ -1340,7 +1368,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
     // --log: write conversion log to file (skip if already packed into
     // the ZIP by the archive output stage).
-    if let Some(ref log_path) = cli.log
+    if let Some(ref log_path) = cli_log
       && !is_archive_out
     {
       // Write the core log and the post-phase log sequentially rather than

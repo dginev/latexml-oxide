@@ -249,3 +249,35 @@ fn quiet_mode_still_reports_error_and_fatal() {
     "the failure verdict stays the last line at -q, got: {very_last}"
   );
 }
+
+/// Perl latexmlc parity (bin/latexmlc L103-120, reported on the rc5 witness
+/// UAT): with `--log` unset a conversion ALWAYS writes
+/// `<jobname>.latexml.log` in the working directory, ending with the
+/// canonical combined status line — so a fatal that scrolled off stderr can
+/// always be consulted on disk.
+#[test]
+fn default_latexml_log_is_written_like_perl() {
+  let workdir = tempfile::tempdir().expect("tempdir");
+  let tex = fatal_fixture(workdir.path());
+  let (_, code) = run(
+    &[&tex, "--dest=toomany.html", "--format=html5"],
+    workdir.path(),
+  );
+  assert_eq!(code, 1);
+  let log_path = workdir.path().join("toomany.latexml.log");
+  let log = std::fs::read_to_string(&log_path)
+    .unwrap_or_else(|e| panic!("default log {} must exist: {e}", log_path.display()));
+  assert!(
+    log.contains("Fatal:TooManyErrors"),
+    "the fatal must be consultable in the default log"
+  );
+  let last = log
+    .lines()
+    .rev()
+    .find(|l| !l.trim().is_empty())
+    .unwrap_or("");
+  assert_eq!(
+    last, "Status:conversion:3",
+    "default log ends with the status line"
+  );
+}
