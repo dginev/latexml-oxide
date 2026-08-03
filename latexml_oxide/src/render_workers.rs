@@ -280,9 +280,52 @@ pub(crate) fn parallel_render(
   }
   manifest.dbfile = dbfile.clone();
 
+  // Clamp the fleet to ACTUAL headroom (witness OOM 2026-08-03: a joint run
+  // carries ~15 GB of core residual into post, and 8 workers each
+  // eager-loading a 1.82M-object db blew a 30 GB cgroup at spawn — the
+  // post-only measurement survived only because its parent was fresh). Free
+  // what the allocators will give back first, then estimate each worker at
+  // ~3x the on-disk db (eager JSON decode + libxml holder + one page) plus a
+  // fixed floor, and size the fleet from the smaller of MemAvailable and the
+  // distance to this run's own memory fuse. Degrade to fewer workers — or
+  // decline to engage — rather than let the kernel choose a victim.
+  #[cfg(target_os = "linux")]
+  unsafe {
+    libc::malloc_trim(0);
+  }
+  #[cfg(not(feature = "dhat-heap"))]
+  unsafe {
+    libmimalloc_sys::mi_collect(true);
+  }
+  let db_bytes = std::fs::metadata(&dbfile).map(|m| m.len()).unwrap_or(0);
+  let per_worker = db_bytes.saturating_mul(3).max(256 * 1024 * 1024);
+  let mut budget = latexml_core::watchdog::available_memory_bytes().unwrap_or(u64::MAX);
+  if let Some(cap) = latexml_core::stomach::resolve_rss_cap() {
+    // Budget against the cooperative FUSE (75% of the hard cap), where the
+    // graceful stop fires — not the cap itself, where the watchdog kills.
+    let fuse = cap / 4 * 3;
+    let rss = latexml_core::watchdog::process_rss_kb().unwrap_or(0) * 1024;
+    budget = budget.min(fuse.saturating_sub(rss));
+  }
+  let affordable = (budget / per_worker) as usize;
+  let jobs = jobs.min(total_pages).min(affordable);
+  if jobs < 2 {
+    Info!(
+      "post",
+      "parallel-render",
+      s!(
+        "parallel render declined: headroom {} MB affords {} worker(s) at ~{} MB each — staying serial",
+        budget / (1024 * 1024),
+        affordable,
+        per_worker / (1024 * 1024)
+      )
+    );
+    cleanup_handoff(&dbfile, &[]);
+    return None;
+  }
+
   // Contiguous chunks preserve page order: worker 0 owns the first pages, so
   // the fold below (and the first page's main-output read) is deterministic.
-  let jobs = jobs.min(total_pages);
   let chunk_size = total_pages.div_ceil(jobs);
   let first_destination = pages.first().and_then(|p| p.destination.clone());
   let mut manifest_paths: Vec<PathBuf> = Vec::with_capacity(jobs);
