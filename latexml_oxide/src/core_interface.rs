@@ -661,7 +661,7 @@ fn streaming_pass2(
       .map_err(|e| Error {
         target:   ErrorTarget::Internal,
         category: ErrorCategory::Libxml,
-        message:  s!("cannot re-parse spilled segment {seg}: {e}"),
+        message:  s!("cannot re-parse staged segment {seg}: {e}"),
       })?;
     let mut out = String::new();
     {
@@ -1319,7 +1319,7 @@ impl DigestionAPI for Core {
             "streaming",
             "progress",
             &format!(
-              "streaming: fragment {} absorbed; {} segment(s) spilled; RSS ~{} MB; C-live {} MB; C-free {} MB; root-children {}; idstore {}; index {}+{}; arena {}; fonts {}; pending {}",
+              "streaming: fragment {} absorbed; {} segment(s) staged to disk; RSS ~{} MB; C-live {} MB; C-free {} MB; root-children {}; idstore {}; index {}+{}; arena {}; fonts {}; pending {}",
               fragments,
               latexml_core::document::spilled_segment_count(),
               stomach::last_sampled_rss_kb() / 1024,
@@ -1349,7 +1349,7 @@ impl DigestionAPI for Core {
       "streaming",
       "progress",
       &format!(
-        "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) spilled, RSS ~{} MB",
+        "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) staged to disk, RSS ~{} MB",
         pass1_elapsed,
         stomach::fragment_yield_count(),
         latexml_core::document::spilled_segment_count(),

@@ -423,7 +423,7 @@ impl Splitter {
       Warn!(
         "split",
         "stream",
-        "{} appeared after the first page was written; already-spilled pages do not carry it",
+        "{} appeared after the first page was written; already-staged pages do not carry it",
         what
       );
     }
@@ -1591,8 +1591,12 @@ fn patch_spill_root_tag(
   value: &str,
   before_appended_class: bool,
 ) -> Result<(), String> {
-  let content = std::fs::read_to_string(file)
-    .map_err(|e| format!("cannot read spill {} for patching: {e}", file.display()))?;
+  let content = std::fs::read_to_string(file).map_err(|e| {
+    format!(
+      "cannot read staged page {} for patching: {e}",
+      file.display()
+    )
+  })?;
   // Locate the root element: the first `<` not opening a PI or comment.
   let mut pos = 0;
   let root_start = loop {

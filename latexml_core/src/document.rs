@@ -1703,10 +1703,10 @@ impl Document {
         emit_error(
           "spill",
           "unresolved",
-          &format!("a nested spilled segment could not be spliced ({elem})"),
+          &format!("a nested disk-staged segment could not be spliced back ({elem})"),
         );
         out.push_str(before);
-        out.push_str("<!-- latexml-oxide: LOST spilled segment -->\n");
+        out.push_str("<!-- latexml-oxide: LOST staged segment -->\n");
         rest = &from[elem_end..];
         continue;
       };
@@ -1796,11 +1796,11 @@ impl Document {
                 "spill",
                 "unresolved",
                 &format!(
-                  "a spilled segment could not be spliced back (ref={:?})",
+                  "a disk-staged segment could not be spliced back (ref={:?})",
                   node.get_attribute("ref")
                 ),
               );
-              out.push_str("<!-- latexml-oxide: LOST spilled segment -->\n");
+              out.push_str("<!-- latexml-oxide: LOST staged segment -->\n");
             },
           }
           return;
@@ -3461,7 +3461,7 @@ impl Document {
         "malformed",
         "id",
         s!(
-          "Duplicated attribute xml:id. Using id='{}' on <{}> id='{}' already set on a spilled fragment",
+          "Duplicated attribute xml:id. Using id='{}' on <{}> id='{}' already set on a disk-staged fragment",
           new_id,
           arena::to_string(get_node_qname(node)),
           id
@@ -3899,7 +3899,7 @@ impl Document {
         let spill_error = |details: String| Error {
           target:   ErrorTarget::Document,
           category: ErrorCategory::Libxml,
-          message:  s!("spill: {}", details),
+          message:  s!("segment staging: {}", details),
         };
         let mut placeholder = Node::new(SPILL_PLACEHOLDER, None, &self.document)
           .map_err(|()| spill_error(s!("cannot create the placeholder node")))?;
