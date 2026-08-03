@@ -589,6 +589,27 @@ impl Graphics {
     }
   }
 
+  /// Read a *source* graphic's intrinsic dimensions, dispatching on type.
+  ///
+  /// Port of Perl `Util/Image.pm:image_size` (L86-97), which sizes ANY
+  /// supported source type — there Image::Magick covers SVG. The
+  /// `imagesize` crate is raster-only, so SVG dispatches to
+  /// `read_svg_dimensions` (already the SVG-dims reader on the PDF→SVG
+  /// convert path). Without this, a web-native SVG going through the
+  /// trivial-copy path got NO imagewidth/imageheight and rendered at
+  /// intrinsic size, ignoring `\includegraphics[width=…]` (issue 498).
+  fn read_source_dimensions(path: &str) -> Option<(u32, u32)> {
+    let is_svg = Path::new(path)
+      .extension()
+      .and_then(|e| e.to_str())
+      .is_some_and(|e| e.eq_ignore_ascii_case("svg"));
+    if is_svg {
+      Self::read_svg_dimensions(path)
+    } else {
+      Self::read_image_dimensions(path)
+    }
+  }
+
   /// Parse `angle=N` from graphicx options. Returns angle normalised
   /// to one of {0, 90, 180, 270} when within 5° of those targets,
   /// otherwise the raw float (rotation of arbitrary angles is
@@ -2508,11 +2529,14 @@ impl Processor for Graphics {
                 .to_string_lossy()
                 .to_string()
             });
-            // Plan::Copy fires only for raster sources (web-native PNG
-            // / JPG / GIF) where `dest_type == src_ext`. graphicx
-            // `angle=` rotation IS meaningful here — the source carries
-            // no PDF /Rotate metadata to pre-rotate from. Apply via
-            // convert.
+            // Plan::Copy fires for web-native sources (PNG / JPG / GIF
+            // / SVG) where `dest_type == src_ext`. graphicx `angle=`
+            // rotation IS meaningful here — the source carries no PDF
+            // /Rotate metadata to pre-rotate from. Apply via convert.
+            // (For an SVG source this rasterizes through IM's SVG
+            // delegate; Perl instead drops non-scaling transforms on
+            // non-raster images with a "Cannot (yet) apply complex
+            // transforms" warning, Graphics.pm L266-271.)
             // Perl semantics (Util/Image.pm:image_graphicx_complex
             // L390-394): IM `Rotate` with `degrees => -$a1` — graphicx
             // angle is CCW; convert -rotate is CW; negate to match.
@@ -2524,7 +2548,18 @@ impl Processor for Graphics {
             copy_dedup.insert(key, rel.clone());
             rel
           };
-          let (w, h) = apply_transforms(options, Self::read_image_dimensions(source));
+          let raw_dims = Self::read_source_dimensions(source);
+          if raw_dims.is_none() {
+            // Perl Graphics.pm L310-312 (triv_scaling, image module present
+            // but size unusable): warn rather than silently omitting.
+            Warn!(
+              "expected",
+              "image",
+              "Couldn't get usable image size for {}",
+              source
+            );
+          }
+          let (w, h) = apply_transforms(options, raw_dims);
           Self::set_graphic_src(&mut node_mut, &rel, w, h);
         },
         Plan::Convert { idx, options, job_id } => {
