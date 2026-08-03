@@ -183,6 +183,7 @@ dhat = { version = "0.3", optional = true }
 # retain-the-high-water default — the property a persistent conversion worker
 # needs. Used for the mimalloc-vs-jemalloc A/B and the recommended harness build.
 tikv-jemallocator = { version = "0.7", optional = true }
+serde = { version = "1.0.229", features = ["derive"] }
 
 [dev-dependencies]
 # Line-diff engine for tests/90_latexmlpost.rs's golden comparison — the

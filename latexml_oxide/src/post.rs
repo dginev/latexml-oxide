@@ -20,6 +20,25 @@ use once_cell::sync::Lazy;
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static POST_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
+/// Start an audit timer when `LATEXML_POST_AUDIT` is set. Module-level (not a
+/// closure) so [`render_spilled_page`] — shared by the serial driver and the
+/// parallel render worker — can use the identical instrumentation.
+fn audit_start(name: &str) -> Option<(String, std::time::Instant)> {
+  if *POST_AUDIT {
+    Some((name.to_string(), std::time::Instant::now()))
+  } else {
+    None
+  }
+}
+
+/// Report an audit timer started by [`audit_start`] (no-op when audit is off).
+fn audit_end(started: Option<(String, std::time::Instant)>) {
+  if let Some((name, t0)) = started {
+    let ms = t0.elapsed().as_millis();
+    Info!("audit", "phase", s!("{} took {}ms", name, ms));
+  }
+}
+
 /// Options for the post-processing pipeline.
 pub struct PostOptions<'a> {
   pub pmml:                      bool,
@@ -547,21 +566,6 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   if let Some(site_dir) = site_directory {
     doc_opts.site_directory = Some(site_dir.to_string());
   }
-  let audit = *POST_AUDIT;
-  let audit_start = |name: &str| -> Option<(String, std::time::Instant)> {
-    if audit {
-      Some((name.to_string(), std::time::Instant::now()))
-    } else {
-      None
-    }
-  };
-  let audit_end = |started: Option<(String, std::time::Instant)>| {
-    if let Some((name, t0)) = started {
-      let ms = t0.elapsed().as_millis();
-      Info!("audit", "phase", s!("{} took {}ms", name, ms));
-    }
-  };
-
   // `raw_xml` holds the in-memory serialization — `Some` only for `Xml` input.
   // `File` input streams from disk and never holds it, so `raw_xml` is `None`
   // and the three raw-string features (empty-doc substitution, SVG extraction,
@@ -876,13 +880,13 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   // Phase 5: Graphics (Perl `graphicimages!` → `dographics`, default on).
   // `--nographicimages` skips the phase wholesale, leaving the raw
   // `<ltx:graphics>` references in the output untouched.
-  let mut graphics_proc = graphicimages.then(|| {
+  let graphics_proc = graphicimages.then(|| {
     latexml_post::graphics::Graphics::new(None, true)
       .with_svg_threshold_kb(graphics_svg_threshold_kb)
   });
 
   // Phase 3: MathML + XSLT
-  let mut post = latexml_post::Post::new();
+  let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
 
   // `intent_literal` was computed up-front (before Split consumed `doc`).
@@ -919,6 +923,11 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         .with_plane1(plane1, hackplane1),
     ));
   }
+  // Clones of the fully-resolved XSLT inputs for the parallel-render worker
+  // manifest — `XSLT::new` consumes the real map/vec below, and by the time
+  // the pass-B driver decides between serial and parallel they are gone.
+  let mut manifest_xslt_params: Vec<(String, String)> = Vec::new();
+  let mut manifest_searchpaths: Vec<String> = Vec::new();
   if let Some(xsl_path) = stylesheet {
     let mut searchpaths = vec![".".to_string()];
     if let Ok(exe) = std::env::current_exe()
@@ -1000,6 +1009,11 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         xslt_params.insert(key.to_string(), format!("\"{}\"", value));
       }
     }
+    manifest_xslt_params = xslt_params
+      .iter()
+      .map(|(k, v)| (k.clone(), v.clone()))
+      .collect();
+    manifest_searchpaths = searchpaths.clone();
     match latexml_post::xslt::XSLT::new(
       xsl_path,
       xslt_params,
@@ -1036,18 +1050,8 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   // Failure semantics change deliberately: pages that finish are already on
   // disk, so a later failure leaves a partial site rather than nothing. That
   // matches how a resource Fatal already keeps partial core output.
-  let run_page_phase = |doc: PostDocument,
-                        proc: &mut dyn Processor,
-                        label: &'static str|
-   -> Result<Vec<PostDocument>, ()> {
-    let nodes = proc.to_process(&doc);
-    if nodes.is_empty() {
-      return Ok(vec![doc]);
-    }
-    proc.process(doc, nodes).map_err(|e| {
-      post_error(label, &format!("{label} failed: {e}"));
-    })
-  };
+  // (The per-page pipeline itself lives in `render_spilled_page`, shared with
+  // the process-parallel worker in `crate::render_workers`.)
 
   // The ObjectDB is a BATON: MakeIndex, MakeBibliography and CrossRef each take
   // it by value in turn, so they cannot be alive simultaneously. Each therefore
@@ -1119,7 +1123,90 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   if bib_result.is_err() {
     return fallback();
   }
-  let mut crossref = build_crossref(bibmaker.db);
+  // ---- Parallel pass B: process-level page-range workers (design §6) ------
+  //
+  // Env-gated (`LATEXML_RENDER_JOBS`, default 1 = the serial path below,
+  // unchanged), and only past a minimum page count — below it the db save +
+  // child spawn overhead beats the win. The ObjectDB is COMPLETE here (Scan,
+  // MakeIndex and MakeBibliography have all run), so it is saved once as a
+  // SQLite file and each worker attaches it readonly; the workers run the
+  // identical `render_spilled_page` pipeline over contiguous page ranges and
+  // the parent folds their diagnostics deterministically, in chunk order.
+  let render_jobs = crate::render_workers::render_jobs();
+  if render_jobs > 1 && spilled_pages.len() >= crate::render_workers::MIN_PAGES_FOR_PARALLEL {
+    let page_jobs: Vec<crate::render_workers::PageJob> = spilled_pages
+      .iter()
+      .map(|p| crate::render_workers::PageJob {
+        path:                  p.path.clone(),
+        destination:           p.destination.clone(),
+        destination_directory: p.destination_directory.clone(),
+      })
+      .collect();
+    let manifest = crate::render_workers::RenderManifest {
+      // Filled in by `parallel_render` once the db is saved.
+      dbfile: std::path::PathBuf::new(),
+      navigation_toc: navigationtoc.map(String::from),
+      graphicimages,
+      graphics_svg_threshold_kb,
+      pmml,
+      cmml,
+      keep_xmath,
+      invisible_times: !noinvisibletimes,
+      plane1,
+      hackplane1,
+      mathtex,
+      intent_literal,
+      stylesheet: stylesheet.map(String::from),
+      xslt_params: manifest_xslt_params,
+      nodefaultresources,
+      searchpaths: manifest_searchpaths,
+      is_html_out,
+      svg_fragments: svg_fragments.clone(),
+      schemadocs,
+      whatsout: whatsout.as_cli().to_string(),
+      page_opts: (&page_opts).into(),
+      pages: Vec::new(),
+    };
+    let t_pages = audit_start("render_pages");
+    let outcome = crate::render_workers::parallel_render(
+      manifest,
+      page_jobs,
+      render_jobs,
+      page_spill.path(),
+      &bibmaker.db,
+    );
+    audit_end(t_pages);
+    if let Some(result) = outcome {
+      Info!(
+        "post",
+        "parallel-render",
+        s!(
+          "parallel render finished: {} of {} page(s) written",
+          result.pages_rendered,
+          spilled_pages.len()
+        )
+      );
+      drop(page_spill);
+      return result.main_output.unwrap_or_else(fallback);
+    }
+    // Setup failed BEFORE any worker spawned (already reported): fall through
+    // to the serial render — the spilled pages are untouched on disk.
+  }
+
+  let crossref = build_crossref(bibmaker.db);
+  let ctx = PageRenderCtx {
+    page_opts: page_opts.clone(),
+    is_html_out,
+    svg_fragments,
+    schemadocs,
+    whatsout,
+  };
+  let mut procs = PageProcessors {
+    crossref,
+    graphics: graphics_proc,
+    post,
+    processors,
+  };
 
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
@@ -1197,77 +1284,11 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         mi.fordblks / (1024 * 1024)
       );
     }
-    let path_str = path.to_string_lossy().into_owned();
-    let page = match PostDocument::new_from_file(&path_str, page_opts.clone()) {
-      Ok(mut d) => {
-        d.destination = dest;
-        d.destination_directory = dest_dir;
-        d
-      },
-      Err(e) => {
-        post_error("post", &format!("cannot re-read a spilled page: {e}"));
-        return fallback();
-      },
-    };
-    // Free the spill as soon as it is parsed: for a 40k-page document the
-    // spill area is the size of the core XML, and it need not outlive its page.
-    let _ = std::fs::remove_file(&path);
-
-    // CrossRef resolves this page's references out of the completed ObjectDB,
-    // and its navigation/TOC work reads the DB rather than sibling pages — so
-    // it is page-local once pass A has finished.
-    telemetry::phase_enter(Phase::Crossref);
-    let t_xref = audit_start("CrossRef");
-    let xref = run_page_phase(page, &mut crossref, "CrossRef");
-    audit_end(t_xref);
-    telemetry::phase_exit();
-    let mut staged = match xref {
-      Ok(out) => out,
+    let outputs = match render_spilled_page(&path, &mut procs, &ctx, dest, dest_dir) {
+      Ok(o) => o,
       Err(()) => return fallback(),
     };
-    if let Some(gfx) = graphics_proc.as_mut() {
-      telemetry::phase_enter(Phase::Graphics);
-      let t_gfx = audit_start("Graphics");
-      let mut next = Vec::with_capacity(staged.len());
-      let mut failed = false;
-      for d in staged.drain(..) {
-        match run_page_phase(d, gfx, "Graphics") {
-          Ok(out) => next.extend(out),
-          Err(()) => {
-            failed = true;
-            break;
-          },
-        }
-      }
-      audit_end(t_gfx);
-      telemetry::phase_exit();
-      if failed {
-        return fallback();
-      }
-      staged = next;
-    }
-
-    let rendered = match post.process_chain(staged, &mut processors) {
-      Ok(r) => r,
-      Err(e) => {
-        post_error("convert", &format!("Post-processing failed: {e}"));
-        return fallback();
-      },
-    };
-
-    for doc in rendered {
-      let dest = doc.get_destination().map(String::from);
-      let output = latexml_post::extract::serialize_whatsout(&doc, whatsout);
-      let output = if is_html_out {
-        finalize_html5(output, &svg_fragments)
-      } else {
-        output
-      };
-      let output = if schemadocs && is_html_out {
-        latexml_post::schema_docs::process_page(&output)
-      } else {
-        output
-      };
+    for (dest, output) in outputs {
       if let Some(path) = dest.as_deref() {
         if let Some(parent) = std::path::Path::new(path).parent()
           && !parent.as_os_str().is_empty()
@@ -1282,13 +1303,141 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       if main_output.is_none() {
         main_output = Some(output);
       }
-      // `doc` drops here — the whole point.
     }
   }
   audit_end(t_pages);
   drop(page_spill);
 
   main_output.unwrap_or_else(fallback)
+}
+
+/// The per-page processor set for pass B — everything [`render_spilled_page`]
+/// mutates. Bundled so the serial driver and the process-parallel worker
+/// ([`crate::render_workers`]) share ONE pipeline implementation and cannot
+/// drift.
+pub(crate) struct PageProcessors {
+  pub(crate) crossref:   latexml_post::crossref::CrossRef,
+  pub(crate) graphics:   Option<latexml_post::graphics::Graphics>,
+  pub(crate) post:       latexml_post::Post,
+  pub(crate) processors: Vec<Box<dyn Processor>>,
+}
+
+/// The read-only per-run context for pass B page rendering, shared by every
+/// page of one conversion (serial driver or one parallel worker).
+pub(crate) struct PageRenderCtx {
+  /// Clone-source for each page's `PostDocument` parse — carries the same
+  /// searchpaths/site-directory the pass-A parse used.
+  pub(crate) page_opts:     PostDocumentOptions,
+  pub(crate) is_html_out:   bool,
+  pub(crate) svg_fragments: Vec<(String, String)>,
+  pub(crate) schemadocs:    bool,
+  pub(crate) whatsout:      latexml_post::extract::Whatsout,
+}
+
+/// Run one page-local phase (CrossRef / Graphics) over one page, mirroring
+/// `run_phase` for a single document. Failures are reported via [`post_error`].
+fn run_page_phase(
+  doc: PostDocument,
+  proc: &mut dyn Processor,
+  label: &'static str,
+) -> Result<Vec<PostDocument>, ()> {
+  let nodes = proc.to_process(&doc);
+  if nodes.is_empty() {
+    return Ok(vec![doc]);
+  }
+  proc.process(doc, nodes).map_err(|e| {
+    post_error(label, &format!("{label} failed: {e}"));
+  })
+}
+
+/// The pass-B per-page pipeline: parse one spilled page (deleting the spill
+/// file as soon as it is parsed), run CrossRef → Graphics → MathML/XSLT, and
+/// return the finalized `(destination, output)` pairs for the caller to write.
+/// Exactly the body the serial render loop ran in place before the
+/// process-parallel split — phase order, telemetry and audit calls included —
+/// so the serial path stays byte-identical (guard:
+/// `118_streaming_split_parity`). `Err(())` means the failure was already
+/// reported via [`post_error`] (or a phase's own diagnostics).
+pub(crate) fn render_spilled_page(
+  path: &std::path::Path,
+  procs: &mut PageProcessors,
+  ctx: &PageRenderCtx,
+  destination: Option<String>,
+  destination_directory: Option<String>,
+) -> Result<Vec<(Option<String>, String)>, ()> {
+  let path_str = path.to_string_lossy().into_owned();
+  let page = match PostDocument::new_from_file(&path_str, ctx.page_opts.clone()) {
+    Ok(mut d) => {
+      d.destination = destination;
+      d.destination_directory = destination_directory;
+      d
+    },
+    Err(e) => {
+      post_error("post", &format!("cannot re-read a spilled page: {e}"));
+      return Err(());
+    },
+  };
+  // Free the spill as soon as it is parsed: for a 40k-page document the
+  // spill area is the size of the core XML, and it need not outlive its page.
+  let _ = std::fs::remove_file(path);
+
+  // CrossRef resolves this page's references out of the completed ObjectDB,
+  // and its navigation/TOC work reads the DB rather than sibling pages — so
+  // it is page-local once pass A has finished.
+  telemetry::phase_enter(Phase::Crossref);
+  let t_xref = audit_start("CrossRef");
+  let xref = run_page_phase(page, &mut procs.crossref, "CrossRef");
+  audit_end(t_xref);
+  telemetry::phase_exit();
+  let mut staged = xref?;
+  if let Some(gfx) = procs.graphics.as_mut() {
+    telemetry::phase_enter(Phase::Graphics);
+    let t_gfx = audit_start("Graphics");
+    let mut next = Vec::with_capacity(staged.len());
+    let mut failed = false;
+    for d in staged.drain(..) {
+      match run_page_phase(d, gfx, "Graphics") {
+        Ok(out) => next.extend(out),
+        Err(()) => {
+          failed = true;
+          break;
+        },
+      }
+    }
+    audit_end(t_gfx);
+    telemetry::phase_exit();
+    if failed {
+      return Err(());
+    }
+    staged = next;
+  }
+
+  let rendered = match procs.post.process_chain(staged, &mut procs.processors) {
+    Ok(r) => r,
+    Err(e) => {
+      post_error("convert", &format!("Post-processing failed: {e}"));
+      return Err(());
+    },
+  };
+
+  let mut outputs = Vec::with_capacity(rendered.len());
+  for doc in rendered {
+    let dest = doc.get_destination().map(String::from);
+    let output = latexml_post::extract::serialize_whatsout(&doc, ctx.whatsout);
+    let output = if ctx.is_html_out {
+      finalize_html5(output, &ctx.svg_fragments)
+    } else {
+      output
+    };
+    let output = if ctx.schemadocs && ctx.is_html_out {
+      latexml_post::schema_docs::process_page(&output)
+    } else {
+      output
+    };
+    outputs.push((dest, output));
+    // `doc` drops here — the whole point.
+  }
+  Ok(outputs)
 }
 
 /// One page spilled between the post pipeline's two passes: where its XML

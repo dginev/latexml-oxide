@@ -68,6 +68,18 @@ impl Whatsout {
     }
   }
 
+  /// The canonical CLI tag for this variant — round-trips through
+  /// [`Whatsout::from_cli`]. Used to serialize the mode across a process
+  /// boundary (the parallel page-render worker manifest).
+  pub fn as_cli(self) -> &'static str {
+    match self {
+      Whatsout::Document => "document",
+      Whatsout::Fragment => "fragment",
+      Whatsout::Math => "math",
+      Whatsout::Archive => "archive",
+    }
+  }
+
   /// Whether this mode bundles the output into a zip archive (Perl
   /// `pack_collection` `whatsout =~ /^archive/`). The binary's output
   /// stage branches on this to call [`crate::pack::pack_archive`].
@@ -455,5 +467,21 @@ mod tests {
       node.get_attribute("typeof").as_deref(),
       Some("ScholarlyArticle")
     );
+  }
+
+  #[test]
+  fn whatsout_cli_tag_round_trips() {
+    for w in [
+      Whatsout::Document,
+      Whatsout::Fragment,
+      Whatsout::Math,
+      Whatsout::Archive,
+    ] {
+      assert_eq!(
+        Whatsout::from_cli(w.as_cli()),
+        Some(w),
+        "as_cli must round-trip through from_cli for {w:?}"
+      );
+    }
   }
 }

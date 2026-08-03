@@ -13,6 +13,7 @@ pub mod ini_tex;
 pub mod lsp_server;
 pub mod main_tex;
 pub mod post;
+pub mod render_workers;
 pub mod util;
 
 /// Load the embedded LaTeXML schema (compile-time) into the runtime

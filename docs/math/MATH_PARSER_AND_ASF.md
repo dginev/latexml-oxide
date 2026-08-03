@@ -475,3 +475,33 @@ Final acceptance numbers:
 | Ambiguity hotspots research | [`docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](../archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md) |
 | marpa-side perf doc | [`~/git/marpa/docs/ASF_PERFORMANCE_FINDINGS.md`](https://github.com/dginev/marpa/blob/master/docs/ASF_PERFORMANCE_FINDINGS.md) |
 | Pre-flight ambiguity oracle | `Parser::ambiguity_metric(tokens)` and `Bocage::ambiguity_metric()` |
+
+## Parallel math parsing — DEFERRED (user decision 2026-08-03), spike plan recorded
+
+Not on the critical path: cortex saturates cores across papers, so per-paper
+math parallelism is fleet-neutral — it pays only on the single-huge-document
+showcase (witness: 1289 s of core = 50.6% — would drop to ~160 s at 8
+workers). Do NOT implement without running this spike first.
+
+**The one maintainable shape** (any State-sharing approach is a settled
+dead-end): a frozen-phase formula pipeline. The conversion thread extracts
+each formula into an owned Send job (plain strings + role enums — NO arena
+ids, NO libxml nodes); long-lived parser threads each own their OWN grammar +
+arena + scratch (one thread-local world per worker, no Mutex); owned ASTs
+reintegrate in submission order on the conversion thread (determinism +
+ambiguity-dedup stay serial; diagnostics fold via capture/replay_captured).
+
+**Spike gates (~1 day, both must pass or deep-defer permanently):**
+1. Confirm State is effectively frozen during the math-parse phase: Perl
+   parses math post-digestion over the built document; verify our per-segment
+   pass-2 parse reads no LIVE State mid-parse (roles are assigned at
+   digestion). A live read anywhere = fail.
+2. Enumerate the semantics rules' State reads: must be a short, stable list
+   snapshotable into a compile-enforced job struct. Open-ended = fail.
+   Mechanical sub-check: vendored libmarpa 8.6.2 globals-free for independent
+   per-thread grammar instances (designed reentrant; one grammar per worker
+   sidesteps shared-grammar questions).
+
+**If gates pass**: opt-in LATEXML_MATH_PARSE_JOBS + a permanent canary mode
+that runs both paths and diffs ASTs (the parity guard no test suite would
+otherwise provide). Record either outcome here.

@@ -578,6 +578,52 @@ impl ObjectDB {
     Ok(db)
   }
 
+  /// Persist this IN-MEMORY db as a fresh dbfile (the parallel-render
+  /// handoff: the parent scans/sweeps in memory, saves once, and each worker
+  /// attaches the file readonly). Unlike [`ObjectDB::finish`] this does not
+  /// consume the attachment state — the db stays usable in memory, and any
+  /// existing file at `path` is replaced.
+  pub fn save_as(&self, path: &std::path::Path) -> Result<usize, String> {
+    if path.exists() {
+      std::fs::remove_file(path).map_err(|e| format!("cannot replace {}: {e}", path.display()))?;
+    }
+    let mut conn = rusqlite::Connection::open(path)
+      .map_err(|e| format!("cannot create dbfile {}: {e}", path.display()))?;
+    let _ = conn.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(()));
+    conn
+      .execute_batch(&format!(
+        "PRAGMA user_version = {DBFILE_FORMAT_VERSION};
+         CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+         CREATE TABLE entries(key TEXT PRIMARY KEY, props TEXT NOT NULL);"
+      ))
+      .map_err(|e| format!("cannot initialize {}: {e}", path.display()))?;
+    let tx = conn
+      .transaction()
+      .map_err(|e| format!("cannot begin save_as transaction: {e}"))?;
+    let mut stored = 0usize;
+    for (key, entry) in &self.objects {
+      let map: serde_json::Map<String, serde_json::Value> = entry
+        .values
+        .iter()
+        .map(|(k, v)| (k.clone(), value_to_json_with(self.xml_holder.as_ref(), v)))
+        .collect();
+      tx.execute(
+        "INSERT INTO entries(key, props) VALUES (?1, ?2)",
+        rusqlite::params![key, serde_json::Value::Object(map).to_string()],
+      )
+      .map_err(|e| format!("cannot store entry {key}: {e}"))?;
+      stored += 1;
+    }
+    tx.execute(
+      "INSERT INTO meta(key, value) VALUES ('latexml_version', ?1)",
+      rusqlite::params![env!("CARGO_PKG_VERSION")],
+    )
+    .map_err(|e| format!("cannot store meta: {e}"))?;
+    tx.commit()
+      .map_err(|e| format!("cannot commit save_as: {e}"))?;
+    Ok(stored)
+  }
+
   /// Write back changed entries and detach — Perl `ObjectDB::finish`.
   /// Returns how many entries were stored. Idempotent: a second call (or a
   /// call on a never-attached DB) stores nothing.
