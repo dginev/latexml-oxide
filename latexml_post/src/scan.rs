@@ -18,11 +18,17 @@ use crate::{
 ///
 /// Port of `LaTeXML::Post::Scan`.
 pub struct Scan {
-  name:    String,
+  name:             String,
   /// Reference to the shared ObjectDB.
-  pub db:  ObjectDB,
+  pub db:           ObjectDB,
   /// Root document id for the current scan.
-  page_id: Option<String>,
+  page_id:          Option<String>,
+  /// Object-count threshold at which the next `Scan: DBStatus:` line is due —
+  /// the line logs when the count PASSES a power of two, not per page. A
+  /// per-page line (Perl's verbosity-gated `NoteProgressDetailed`) wrote
+  /// 115k+ near-identical lines on a book-scale split; exponential backoff
+  /// keeps the growth curve visible in ~20 lines (user directive 2026-08-03).
+  db_status_due_at: usize,
 }
 
 /// Collected properties for a scanned element, ready for DB registration.
@@ -45,6 +51,7 @@ impl Scan {
       name: "Scan".to_string(),
       db,
       page_id: None,
+      db_status_due_at: 1,
     }
   }
 
@@ -903,7 +910,12 @@ impl Processor for Scan {
       }
     }
 
-    Info!("scan", "db_status", "Scan: DBStatus: {}", self.db.status());
+    // Exponential backoff: log only when the object count passes the next
+    // power of two (see the `db_status_due_at` field docs).
+    if self.db.len() >= self.db_status_due_at {
+      Info!("scan", "db_status", "Scan: DBStatus: {}", self.db.status());
+      self.db_status_due_at = (self.db.len() + 1).next_power_of_two();
+    }
     Ok(vec![doc])
   }
 }
