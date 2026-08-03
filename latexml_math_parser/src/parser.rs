@@ -31,6 +31,25 @@ use crate::{
   util::{filter_hints, node_to_grammar_lexemes_from},
 };
 
+thread_local! {
+  /// Conversion-wide ordinal behind the `[N]` math-progress markers.
+  /// Deliberately NOT a `MathParser` field: streaming pass 2 builds a fresh
+  /// parser per staged fragment, and a per-instance counter restarted the
+  /// bracket sequence at `[1]` in every fragment. Thread-local like the rest
+  /// of the engine state (core runs one conversion per thread); reset once
+  /// per conversion by [`reset_conversion_notices`] (called from
+  /// `core_interface::initialize_singletons`), so a pooled `--server` /
+  /// test-harness thread does not inherit the previous document's count.
+  static FORMULA_ORDINAL: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Advance and return the conversion-wide formula ordinal (1-based).
+fn next_formula_ordinal() -> usize {
+  let n = FORMULA_ORDINAL.get() + 1;
+  FORMULA_ORDINAL.set(n);
+  n
+}
+
 /// Fallback table for formulas the Marpa grammar cannot yet parse.
 /// Maps tex attribute → text attribute for known test formulas.
 /// TODO: Remove entries as grammar coverage improves.
@@ -261,7 +280,10 @@ thread_local! {
 /// begins on a thread that already ran one (the persistent `cortex_worker`
 /// converts many documents per process), or the second document silently
 /// loses notices the first one emitted.
-pub fn reset_conversion_notices() { LOSTNODES_NOOP_REPORTED.set(false); }
+pub fn reset_conversion_notices() {
+  LOSTNODES_NOOP_REPORTED.set(false);
+  FORMULA_ORDINAL.set(0);
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 // `Accepted(XM)` is the hot/common variant; boxing it to equalize variant
@@ -425,7 +447,6 @@ pub struct MathParser {
   maybe_functions:           SymHashMap<usize>,
   /// XMath nodes that failed to parse (stored as hashable IDs for post-parse class marking)
   pub failed_xmath_ids:      Vec<usize>,
-  n_parsed:                  usize,
   /// Grammar tree count from the last successful parse (for \ltx@count@parses)
   pub last_parsetrees_count: usize,
   /// Hashes of the distinct formula token streams that have already emitted an `ambiguous_math` /
@@ -462,7 +483,6 @@ impl Default for MathParser {
       // punctuation: HashMap::default(),
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
-      n_parsed: 0,
       last_parsetrees_count: 0,
       warned_formulas: HashSet::new(),
       suppress_unparsed_warning: false,
@@ -1076,7 +1096,6 @@ impl MathParser {
     self.unknowns = SymHashMap::default();
     self.maybe_functions = SymHashMap::default();
     self.failed_xmath_ids = Vec::new();
-    self.n_parsed = 0;
   }
   // our %EXCLUDED_PRETTYNAME_ATTRIBUTES = (fontsize => 1, opacity => 1);
 
@@ -1245,9 +1264,13 @@ impl MathParser {
         Some(mut result) => {
           *self.passed.entry_sym(tag).or_insert(0) += 1;
           if tag == pin!("ltx:XMath") {
-            // Replace the content of XMath with parsed result
-            self.n_parsed += 1;
-            note_progress(&s!("[{}]", self.n_parsed));
+            // Replace the content of XMath with parsed result. The `[N]`
+            // progress markers count CONVERSION-wide, not per parser
+            // instance: streaming pass 2 builds a fresh `MathParser` per
+            // staged fragment, and a per-instance counter restarted the
+            // bracket sequence at `[1]` in every fragment — useless for
+            // judging global progress on a 500k-formula document.
+            note_progress(&s!("[{}]", next_formula_ordinal()));
             // Unrecord the old content's ids BEFORE the copy below, so the
             // copy's freshly recorded entries (same id strings) survive.
             for el_node in element_nodes(&node) {

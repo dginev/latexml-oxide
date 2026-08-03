@@ -421,10 +421,7 @@ fn try_streaming_front(
     };
     for d in processed {
       if root_unnamed && let Err(e) = std::fs::write(&page.path, d.to_xml_string()) {
-        post_error(
-          "post",
-          &format!("cannot refresh a streamed page spill: {e}"),
-        );
+        post_error("post", &format!("cannot refresh a disk-staged page: {e}"));
         telemetry::phase_exit();
         return Err(());
       }
@@ -492,7 +489,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
             "post",
             "spill",
             format!(
-              "oversized handoff ({} bytes) spilled to {}",
+              "oversized handoff ({} bytes) staged to {}",
               xml.len(),
               path.display()
             )
@@ -505,7 +502,7 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
           latexml_core::Info!(
             "post",
             "spill",
-            format!("could not spill an oversized handoff ({e}); parsing from memory")
+            format!("could not stage an oversized handoff to disk ({e}); parsing from memory")
           );
           PostInput::Xml(xml)
         },
@@ -609,7 +606,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     Err(e) => {
       post_error(
         "post",
-        &format!("cannot create the page spill directory: {e}"),
+        &format!("cannot create the page staging directory: {e}"),
       );
       return fallback();
     },
@@ -822,7 +819,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     for (i, d) in docs.drain(..).enumerate() {
       let path = page_spill.path().join(format!("page-{i:07}.xml"));
       if let Err(e) = std::fs::write(&path, d.to_xml_string()) {
-        post_error("post", &format!("cannot spill page {i}: {e}"));
+        post_error("post", &format!("cannot stage page {i} to disk: {e}"));
         return fallback();
       }
       let (needs_index, needs_bib) = page_placeholder_probes(&d);
@@ -1075,7 +1072,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       );
       let path_str = path.to_string_lossy().into_owned();
       let mut page = PostDocument::new_from_file(&path_str, opts.clone()).map_err(|e| {
-        post_error("post", &format!("cannot re-read a spilled page: {e}"));
+        post_error("post", &format!("cannot re-read a disk-staged page: {e}"));
       })?;
       page.destination = dest.clone();
       page.destination_directory = dest_dir.clone();
@@ -1093,7 +1090,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       // MakeBibliography fill placeholders in place and return the same page.
       for d in processed.iter().take(1) {
         if let Err(e) = std::fs::write(path, d.to_xml_string()) {
-          post_error("post", &format!("cannot re-spill a page: {e}"));
+          post_error("post", &format!("cannot re-stage a page to disk: {e}"));
           return Err(());
         }
       }
@@ -1373,7 +1370,7 @@ pub(crate) fn render_spilled_page(
       d
     },
     Err(e) => {
-      post_error("post", &format!("cannot re-read a spilled page: {e}"));
+      post_error("post", &format!("cannot re-read a disk-staged page: {e}"));
       return Err(());
     },
   };
