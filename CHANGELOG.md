@@ -2,6 +2,26 @@
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
+  - **A conversion always writes `<jobname>.latexml.log`** — Perl `latexmlc`
+    parity: with `--log` unset the log lands in the working directory
+    (`latexml.log` for literal input), replacing any stale copy, and still
+    ends with the canonical `Status:conversion:N` verdict line. rc5's first
+    artifacts wrote no log at all unless `--log` was passed.
+  - **A memory Fatal now says what to do** — the cooperative-fuse message
+    names the 75% fuse and the `--max-memory` ceiling it derives from, and
+    advises raising it: hitting the fuse is a known need of large documents
+    (peak scales with macro expansion and math density, not source bytes),
+    not an anomaly. The run then ends with `Info:memory:peak` — the
+    kernel-tracked peak RSS, the honest lower bound on what THIS document
+    needs — in stderr and just above the log's status tail. Clean runs stay
+    quiet.
+  - **Large-document logs got humane** — disk staging is by design, so the
+    alarming "spilled" wording is gone ("459,579 segment(s) staged to disk");
+    the `[N]` math-progress markers count conversion-wide instead of
+    restarting at `[1]` in every streamed fragment; and `Scan: DBStatus:`
+    backs off exponentially (logs when the object count passes a power of
+    two), ~20 lines where a book-scale split wrote 115k+.
+
   - **Page rendering runs in parallel worker processes** — after the
     document-wide scan, N workers (LATEXML_RENDER_JOBS, self-clamped to the
     machine's actual memory headroom) render page ranges concurrently,
