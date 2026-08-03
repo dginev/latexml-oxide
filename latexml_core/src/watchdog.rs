@@ -127,6 +127,91 @@ pub fn process_rss_kb() -> Option<u64> {
 #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 pub fn process_rss_kb() -> Option<u64> { None }
 
+/// Kernel-tracked PEAK resident set of this process in KiB (`VmHWM`), or `None`
+/// if it can't be determined. Unlike [`process_rss_kb`]'s point-in-time sample,
+/// this is the true high-water mark over the whole process lifetime — no
+/// sampling cadence can miss a spike — which makes it the honest basis for the
+/// end-of-run "this document needed N" report ([`peak_memory_report`]).
+#[cfg(target_os = "linux")]
+pub fn process_peak_rss_kb() -> Option<u64> {
+  let status = std::fs::read_to_string("/proc/self/status").ok()?;
+  for line in status.lines() {
+    if let Some(rest) = line.strip_prefix("VmHWM:") {
+      return rest.split_whitespace().next()?.parse::<u64>().ok();
+    }
+  }
+  None
+}
+
+/// macOS: `getrusage(RUSAGE_SELF)`; `ru_maxrss` is in BYTES on Darwin.
+#[cfg(target_os = "macos")]
+pub fn process_peak_rss_kb() -> Option<u64> {
+  let mut usage: libc::rusage = unsafe { std::mem::zeroed() };
+  // SAFETY: getrusage fills the zeroed struct we own; a nonzero return is
+  // handled below.
+  if unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut usage) } == 0 {
+    return Some(usage.ru_maxrss as u64 / 1024);
+  }
+  None
+}
+
+/// Windows: `PeakWorkingSetSize` from the same `GetProcessMemoryInfo` call that
+/// backs [`process_rss_kb`].
+#[cfg(windows)]
+pub fn process_peak_rss_kb() -> Option<u64> {
+  use windows_sys::Win32::System::{
+    ProcessStatus::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS},
+    Threading::GetCurrentProcess,
+  };
+  let mut counters: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
+  counters.cb = size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
+  // SAFETY: `counters` is a correctly sized, zeroed struct with `cb` set, as the
+  // API requires; `GetCurrentProcess` returns a pseudo-handle needing no close.
+  if unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut counters, counters.cb) } != 0 {
+    return Some(counters.PeakWorkingSetSize as u64 / 1024);
+  }
+  None
+}
+
+/// Other platforms: no peak available — the report line is simply omitted.
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
+pub fn process_peak_rss_kb() -> Option<u64> { None }
+
+/// Latched by the cooperative memory fuse when it raises its
+/// `Timeout:MemoryBudget` Fatal (`stomach::check_timeout`), read at end of run
+/// by [`peak_memory_report`]. An `AtomicBool` static, not a thread-local: the
+/// fuse fires on the conversion thread while the binary's end-of-run reporting
+/// runs on the main thread.
+static MEMORY_FATAL_SEEN: AtomicBool = AtomicBool::new(false);
+
+/// Record that a memory-budget Fatal fired, so the end-of-run report knows
+/// memory was actually the problem.
+pub fn note_memory_fatal() { MEMORY_FATAL_SEEN.store(true, Ordering::Relaxed); }
+
+/// The end-of-run memory report — emitted ONLY when a memory-budget Fatal
+/// fired during the run (user directive 2026-08-03: alert when needed, stay
+/// quiet on clean runs). `None` otherwise, or when no peak is measurable.
+///
+/// It reports the kernel-tracked peak and says the document needs MORE — never
+/// a specific sufficient figure, because none is knowable from a truncated
+/// run: the fuse clamped the peak at 75% of the ceiling, and the streaming
+/// spill watermark itself derives from the ceiling, so the true requirement
+/// can only be found by rerunning higher. A document's need scales with macro
+/// expansion and math density, not source bytes (the 131 MB math-dense
+/// witness needs ~23 GB resident just to stream through core), so this
+/// measured figure is the only honest lower bound there is.
+pub fn peak_memory_report() -> Option<String> {
+  if !MEMORY_FATAL_SEEN.load(Ordering::Relaxed) {
+    return None;
+  }
+  let peak_kb = process_peak_rss_kb()?;
+  Some(format!(
+    "peak memory {} MB was not enough: this document needs a higher --max-memory ceiling \
+     (0 disables the limit) and enough free RAM",
+    peak_kb / 1024,
+  ))
+}
+
 /// Total physical RAM on this machine in bytes, or `None` if it cannot be
 /// determined.
 ///
@@ -517,7 +602,9 @@ impl Watchdog {
           return;
         }
         eprintln!(
-          "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting process",
+          "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting \
+           process. This document needs a larger ceiling: rerun with a higher --max-memory on a \
+           machine with enough free RAM.",
           rss / 1024,
           max_rss_kb / 1024
         );

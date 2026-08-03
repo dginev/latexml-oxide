@@ -1340,14 +1340,22 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           let source_date_epoch = std::env::var("SOURCE_DATE_EPOCH")
             .ok()
             .and_then(|s| s.trim().parse::<u64>().ok());
+          // Emitted only after a memory-budget Fatal (`peak_memory_report`
+          // is `None` otherwise): the measured peak rides just above the
+          // status tail so the packed log records what the article needed —
+          // see the identical placement in the `--log` file write below.
+          let peak_log = latexml_core::watchdog::peak_memory_report()
+            .map(|body| format!("Info:memory:peak {body}\n"))
+            .unwrap_or_default();
           latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
             zip_path: &zip_dest,
             html_filename: &html_name,
             html: &output,
             log_filename: Some(&log_name),
             log: &format!(
-              "{}\n{}",
+              "{}\n{}{}",
               assemble_conversion_log(&response.log, &post_log).trim_end(),
+              peak_log,
               combined_status_line
             ),
             status: &combined_status_line,
@@ -1385,9 +1393,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           latexml_core::common::error::get_status_code().max(phase_status_max)
         )
       );
+      // Emitted only after a memory-budget Fatal: the kernel-tracked peak,
+      // recorded in the log as the honest lower bound on what THIS article
+      // needs — a figure the user has no other way to learn.
+      let peak_line = latexml_core::watchdog::peak_memory_report()
+        .map(|body| format!("\nInfo:memory:peak {body}"))
+        .unwrap_or_default();
       if post_log.is_empty() {
         latexml_post::writer::write_output_segments(
-          &[response.log.trim_end_matches('\n'), &status_line],
+          &[
+            response.log.trim_end_matches('\n'),
+            &peak_line,
+            &status_line,
+          ],
           Some(log_path),
         )?;
       } else {
@@ -1396,6 +1414,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             response.log.trim_end_matches('\n'),
             "\n",
             post_log.trim_end_matches('\n'),
+            &peak_line,
             &status_line,
           ],
           Some(log_path),
@@ -1415,6 +1434,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // is scoped to the conversion branch. Match bin/latexml's exit(1) exactly;
   // status_code 2 ("errors but recoverable") stays a 0 exit, as in Perl.
   let final_status_code = latexml_core::common::error::get_status_code().max(phase_status_max);
+  // The stderr copy of the peak-memory report — present only when a
+  // memory-budget Fatal fired, so clean runs stay quiet. Info-level: `-q`
+  // mutes it, the log file above keeps it regardless. Placed before the
+  // verdict so the verdict stays the run's final word (101/119 guards).
+  if let Some(body) = latexml_core::watchdog::peak_memory_report() {
+    emit_info("memory", "peak", &body);
+  }
   // The end-of-run verdict: the LAST line of a conversion names the COMBINED
   // core+post outcome. The core prints its own verdict when it finishes, but
   // on a post-processing run thousands of per-page lines follow it — a

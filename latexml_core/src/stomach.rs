@@ -339,13 +339,26 @@ pub fn check_timeout() -> Result<()> {
               let bt = std::backtrace::Backtrace::force_capture();
               eprintln!("{bt}");
             }
+            // The actionable half of the message is a KNOWN NEED, not an
+            // anomaly: a document's peak scales with macro expansion and math
+            // density (the 131 MB witness needs ~23 GB resident just to
+            // stream through core), so the honest advice is "raise the
+            // ceiling", plus the derived flag value so the user knows which
+            // number they are raising — the cap here is the 75% fuse, not
+            // the `--max-memory` figure they typed. The latch lets the
+            // binary's end-of-run report add the kernel-tracked peak
+            // (`watchdog::peak_memory_report`, emitted only when this fired).
+            crate::watchdog::note_memory_fatal();
             fatal!(
               Timeout,
               MemoryBudget,
               format!(
-                "Memory budget exceeded: RSS {} MB > cap {} MB",
+                "Memory budget exceeded: RSS {} MB > cap {} MB (the cooperative fuse at 75% of \
+                 --max-memory={}). This document needs a larger ceiling: rerun with a higher \
+                 --max-memory on a machine with enough free RAM.",
                 rss_bytes / 1_000_000,
-                cap / 1_000_000
+                cap / 1_000_000,
+                (cap * 4).div_ceil(3 * 1024 * 1024),
               )
             );
           }
