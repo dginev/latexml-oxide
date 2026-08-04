@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["image_candidates","image_graphicx_sizer","parse_bbox","read_image_dimensions","read_pdf_page_box"]};
+window.SIDEBAR_ITEMS = {"fn":["image_candidates","image_graphicx_sizer","parse_bbox","read_image_dimensions","read_pdf_page_box","read_svg_viewport_px","svg_attr_len_px","svg_attr_value","svg_root_tag"]};

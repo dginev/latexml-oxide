@@ -593,64 +593,381 @@
 <a href=#593 id=593 data-nosnippet>593</a>/// as CSS px). Gives at least a correct aspect ratio, which is all a `width=`-ed
 <a href=#594 id=594 data-nosnippet>594</a>/// inclusion needs. `None` if the file isn't an SVG or has no usable geometry.
 <a href=#595 id=595 data-nosnippet>595</a></span><span class="kw">fn </span>read_svg_size_pt(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, f64)&gt; {
-<a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">use </span>std::io::Read;
-<a href=#597 id=597 data-nosnippet>597</a>  <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).ok()<span class="question-mark">?</span>;
-<a href=#598 id=598 data-nosnippet>598</a>  <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0u8</span>; <span class="number">8192</span>];
-<a href=#599 id=599 data-nosnippet>599</a>  <span class="kw">let </span>n = file.read(<span class="kw-2">&amp;mut </span>buf).ok()<span class="question-mark">?</span>;
-<a href=#600 id=600 data-nosnippet>600</a>  <span class="kw">let </span>head = String::from_utf8_lossy(<span class="kw-2">&amp;</span>buf[..n]);
-<a href=#601 id=601 data-nosnippet>601</a>  <span class="kw">let </span>svg_at = head.find(<span class="string">"&lt;svg"</span>)<span class="question-mark">?</span>;
-<a href=#602 id=602 data-nosnippet>602</a>  <span class="kw">let </span>tag_end = head[svg_at..].find(<span class="string">'&gt;'</span>)<span class="question-mark">? </span>+ svg_at;
-<a href=#603 id=603 data-nosnippet>603</a>  <span class="kw">let </span>tag = <span class="kw-2">&amp;</span>head[svg_at..tag_end];
-<a href=#604 id=604 data-nosnippet>604</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(w), <span class="prelude-val">Some</span>(h)) = (
-<a href=#605 id=605 data-nosnippet>605</a>    svg_attr_len_pt(tag, <span class="string">"width"</span>),
-<a href=#606 id=606 data-nosnippet>606</a>    svg_attr_len_pt(tag, <span class="string">"height"</span>),
-<a href=#607 id=607 data-nosnippet>607</a>  ) {
-<a href=#608 id=608 data-nosnippet>608</a>    <span class="kw">return </span><span class="prelude-val">Some</span>((w, h));
-<a href=#609 id=609 data-nosnippet>609</a>  }
-<a href=#610 id=610 data-nosnippet>610</a>  <span class="kw">let </span>vb = svg_attr_value(tag, <span class="string">"viewBox"</span>)<span class="question-mark">?</span>;
-<a href=#611 id=611 data-nosnippet>611</a>  <span class="kw">let </span><span class="kw-2">mut </span>it = vb
-<a href=#612 id=612 data-nosnippet>612</a>    .split(|c: char| c.is_whitespace() || c == <span class="string">','</span>)
-<a href=#613 id=613 data-nosnippet>613</a>    .filter(|s| !s.is_empty());
-<a href=#614 id=614 data-nosnippet>614</a>  <span class="kw">let </span>(_x, _y) = (it.next()<span class="question-mark">?</span>, it.next()<span class="question-mark">?</span>);
-<a href=#615 id=615 data-nosnippet>615</a>  <span class="kw">let </span>vw = it.next()<span class="question-mark">?</span>.parse::&lt;f64&gt;().ok()<span class="question-mark">?</span>;
-<a href=#616 id=616 data-nosnippet>616</a>  <span class="kw">let </span>vh = it.next()<span class="question-mark">?</span>.parse::&lt;f64&gt;().ok()<span class="question-mark">?</span>;
-<a href=#617 id=617 data-nosnippet>617</a>  <span class="comment">// viewBox user units ≈ CSS px (1/96"); convert to pt for a plausible scale.
-<a href=#618 id=618 data-nosnippet>618</a>  </span><span class="prelude-val">Some</span>((vw * <span class="number">72.27 </span>/ <span class="number">96.0</span>, vh * <span class="number">72.27 </span>/ <span class="number">96.0</span>))
-<a href=#619 id=619 data-nosnippet>619</a>}
-<a href=#620 id=620 data-nosnippet>620</a>
-<a href=#621 id=621 data-nosnippet>621</a><span class="doccomment">/// Value of `name="…"` in an XML start tag.
-<a href=#622 id=622 data-nosnippet>622</a></span><span class="kw">fn </span>svg_attr_value&lt;<span class="lifetime">'a</span>&gt;(tag: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt; {
-<a href=#623 id=623 data-nosnippet>623</a>  <span class="kw">let </span>key = tag.find(name)<span class="question-mark">?</span>;
-<a href=#624 id=624 data-nosnippet>624</a>  <span class="kw">let </span>after = <span class="kw-2">&amp;</span>tag[key + name.len()..];
-<a href=#625 id=625 data-nosnippet>625</a>  <span class="kw">let </span>after = after.trim_start();
-<a href=#626 id=626 data-nosnippet>626</a>  <span class="kw">let </span>after = after.strip_prefix(<span class="string">'='</span>)<span class="question-mark">?</span>.trim_start();
-<a href=#627 id=627 data-nosnippet>627</a>  <span class="kw">let </span>quote = after.chars().next()<span class="question-mark">?</span>;
-<a href=#628 id=628 data-nosnippet>628</a>  <span class="kw">if </span>quote != <span class="string">'"' </span>&amp;&amp; quote != <span class="string">'\'' </span>{
-<a href=#629 id=629 data-nosnippet>629</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#630 id=630 data-nosnippet>630</a>  }
-<a href=#631 id=631 data-nosnippet>631</a>  <span class="kw">let </span>body = <span class="kw-2">&amp;</span>after[<span class="number">1</span>..];
-<a href=#632 id=632 data-nosnippet>632</a>  <span class="kw">let </span>end = body.find(quote)<span class="question-mark">?</span>;
-<a href=#633 id=633 data-nosnippet>633</a>  <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>body[..end])
+<a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">let </span>head = read_head_lossy(path)<span class="question-mark">?</span>;
+<a href=#597 id=597 data-nosnippet>597</a>  <span class="kw">let </span>tag = svg_root_tag(<span class="kw-2">&amp;</span>head)<span class="question-mark">?</span>;
+<a href=#598 id=598 data-nosnippet>598</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(w), <span class="prelude-val">Some</span>(h)) = (
+<a href=#599 id=599 data-nosnippet>599</a>    svg_attr_len_pt(tag, <span class="string">"width"</span>),
+<a href=#600 id=600 data-nosnippet>600</a>    svg_attr_len_pt(tag, <span class="string">"height"</span>),
+<a href=#601 id=601 data-nosnippet>601</a>  ) {
+<a href=#602 id=602 data-nosnippet>602</a>    <span class="kw">return </span><span class="prelude-val">Some</span>((w, h));
+<a href=#603 id=603 data-nosnippet>603</a>  }
+<a href=#604 id=604 data-nosnippet>604</a>  <span class="kw">let </span>(vw, vh) = svg_viewbox_extent(tag)<span class="question-mark">?</span>;
+<a href=#605 id=605 data-nosnippet>605</a>  <span class="comment">// viewBox user units ≈ CSS px (1/96"); convert to pt for a plausible scale.
+<a href=#606 id=606 data-nosnippet>606</a>  </span><span class="prelude-val">Some</span>((px_to_pt(vw), px_to_pt(vh)))
+<a href=#607 id=607 data-nosnippet>607</a>}
+<a href=#608 id=608 data-nosnippet>608</a>
+<a href=#609 id=609 data-nosnippet>609</a><span class="doccomment">/// SVG **viewport** size in CSS px, as a browser would take it: the `viewBox`
+<a href=#610 id=610 data-nosnippet>610</a>/// extent when there is one, else the root `width`/`height` lengths.
+<a href=#611 id=611 data-nosnippet>611</a>///
+<a href=#612 id=612 data-nosnippet>612</a>/// This is the sizing basis for `imagewidth`/`imageheight` in
+<a href=#613 id=613 data-nosnippet>613</a>/// `LaTeXML::Post::Graphics` — where Perl asks Image::Magick, which renders the
+<a href=#614 id=614 data-nosnippet>614</a>/// SVG and reports the raster it produced.
+<a href=#615 id=615 data-nosnippet>615</a>///
+<a href=#616 id=616 data-nosnippet>616</a>/// **The viewBox comes first here, and that is deliberate** — the opposite of
+<a href=#617 id=617 data-nosnippet>617</a>/// `read_svg_size_pt`, which wants the natural *typeset* size. Both of our own
+<a href=#618 id=618 data-nosnippet>618</a>/// PDF→SVG converters emit a `viewBox` alongside pt-valued `width`/`height`
+<a href=#619 id=619 data-nosnippet>619</a>/// (`pdftocairo -svg`: `width="612pt" height="792pt" viewBox="0 0 612 792"`;
+<a href=#620 id=620 data-nosnippet>620</a>/// `mutool draw -F svg`: `width="612" height="792" viewBox="0 0 612 792"`), so
+<a href=#621 id=621 data-nosnippet>621</a>/// preferring the lengths would silently rescale every PDF-derived figure in the
+<a href=#622 id=622 data-nosnippet>622</a>/// corpus by 96/72 = 1.33×. The viewBox keeps them at their long-standing pixel
+<a href=#623 id=623 data-nosnippet>623</a>/// size, and for a `width=`-ed inclusion only the aspect ratio matters anyway.
+<a href=#624 id=624 data-nosnippet>624</a></span><span class="kw">pub fn </span>read_svg_viewport_px(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;(u32, u32)&gt; {
+<a href=#625 id=625 data-nosnippet>625</a>  <span class="kw">let </span>head = read_head_lossy(path)<span class="question-mark">?</span>;
+<a href=#626 id=626 data-nosnippet>626</a>  <span class="kw">let </span>tag = svg_root_tag(<span class="kw-2">&amp;</span>head)<span class="question-mark">?</span>;
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="kw">let </span>(w, h) = svg_viewbox_extent(tag).or_else(|| {
+<a href=#628 id=628 data-nosnippet>628</a>    <span class="prelude-val">Some</span>((
+<a href=#629 id=629 data-nosnippet>629</a>      svg_attr_len_px(tag, <span class="string">"width"</span>)<span class="question-mark">?</span>,
+<a href=#630 id=630 data-nosnippet>630</a>      svg_attr_len_px(tag, <span class="string">"height"</span>)<span class="question-mark">?</span>,
+<a href=#631 id=631 data-nosnippet>631</a>    ))
+<a href=#632 id=632 data-nosnippet>632</a>  })<span class="question-mark">?</span>;
+<a href=#633 id=633 data-nosnippet>633</a>  <span class="prelude-val">Some</span>((w.round().max(<span class="number">1.0</span>) <span class="kw">as </span>u32, h.round().max(<span class="number">1.0</span>) <span class="kw">as </span>u32))
 <a href=#634 id=634 data-nosnippet>634</a>}
 <a href=#635 id=635 data-nosnippet>635</a>
-<a href=#636 id=636 data-nosnippet>636</a><span class="doccomment">/// An SVG length attribute converted to pt, iff it carries an absolute unit.
-<a href=#637 id=637 data-nosnippet>637</a>/// Unitless/`%` values return `None` (the caller falls back to the viewBox).
-<a href=#638 id=638 data-nosnippet>638</a></span><span class="kw">fn </span>svg_attr_len_pt(tag: <span class="kw-2">&amp;</span>str, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt; {
-<a href=#639 id=639 data-nosnippet>639</a>  <span class="kw">let </span>raw = svg_attr_value(tag, name)<span class="question-mark">?</span>.trim();
-<a href=#640 id=640 data-nosnippet>640</a>  <span class="kw">let </span>(num, unit) = raw.split_at(
-<a href=#641 id=641 data-nosnippet>641</a>    raw
-<a href=#642 id=642 data-nosnippet>642</a>      .find(|c: char| c.is_alphabetic() || c == <span class="string">'%'</span>)
-<a href=#643 id=643 data-nosnippet>643</a>      .unwrap_or(raw.len()),
-<a href=#644 id=644 data-nosnippet>644</a>  );
-<a href=#645 id=645 data-nosnippet>645</a>  <span class="kw">let </span>v = num.trim().parse::&lt;f64&gt;().ok()<span class="question-mark">?</span>;
-<a href=#646 id=646 data-nosnippet>646</a>  <span class="kw">match </span>unit.trim() {
-<a href=#647 id=647 data-nosnippet>647</a>    <span class="string">"pt" </span>=&gt; <span class="prelude-val">Some</span>(v),
-<a href=#648 id=648 data-nosnippet>648</a>    <span class="string">"px" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">72.27 </span>/ <span class="number">96.0</span>),
-<a href=#649 id=649 data-nosnippet>649</a>    <span class="string">"in" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">72.27</span>),
-<a href=#650 id=650 data-nosnippet>650</a>    <span class="string">"cm" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">72.27 </span>/ <span class="number">2.54</span>),
-<a href=#651 id=651 data-nosnippet>651</a>    <span class="string">"mm" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">72.27 </span>/ <span class="number">25.4</span>),
-<a href=#652 id=652 data-nosnippet>652</a>    <span class="string">"pc" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">12.0</span>),
-<a href=#653 id=653 data-nosnippet>653</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>, <span class="comment">// unitless, %, em, ex, … → fall back to the viewBox
-<a href=#654 id=654 data-nosnippet>654</a>  </span>}
-<a href=#655 id=655 data-nosnippet>655</a>}
+<a href=#636 id=636 data-nosnippet>636</a><span class="doccomment">/// The leading bytes of a file, decoded lossily. Bounded: an SVG can be
+<a href=#637 id=637 data-nosnippet>637</a>/// hundreds of MB, and every geometry attribute we want lives in the root tag.
+<a href=#638 id=638 data-nosnippet>638</a>/// Lossy rather than strict UTF-8 so a latin-1 preamble still yields a
+<a href=#639 id=639 data-nosnippet>639</a>/// readable root tag (and so a multi-byte sequence split by the read boundary
+<a href=#640 id=640 data-nosnippet>640</a>/// degrades to U+FFFD instead of failing the whole read).
+<a href=#641 id=641 data-nosnippet>641</a></span><span class="kw">fn </span>read_head_lossy(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#642 id=642 data-nosnippet>642</a>  <span class="kw">use </span>std::io::Read;
+<a href=#643 id=643 data-nosnippet>643</a>  <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).ok()<span class="question-mark">?</span>;
+<a href=#644 id=644 data-nosnippet>644</a>  <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0u8</span>; <span class="number">8192</span>];
+<a href=#645 id=645 data-nosnippet>645</a>  <span class="kw">let </span>n = file.read(<span class="kw-2">&amp;mut </span>buf).ok()<span class="question-mark">?</span>;
+<a href=#646 id=646 data-nosnippet>646</a>  <span class="prelude-val">Some</span>(String::from_utf8_lossy(<span class="kw-2">&amp;</span>buf[..n]).into_owned())
+<a href=#647 id=647 data-nosnippet>647</a>}
+<a href=#648 id=648 data-nosnippet>648</a>
+<a href=#649 id=649 data-nosnippet>649</a><span class="doccomment">/// The root `&lt;svg …&gt;` start tag within `head`, quote-aware so a `&gt;` inside an
+<a href=#650 id=650 data-nosnippet>650</a>/// attribute value doesn't end the tag early. Skipping to `&lt;svg` also steps over
+<a href=#651 id=651 data-nosnippet>651</a>/// the `&lt;?xml …?&gt;` prolog, comments and any DOCTYPE — otherwise the prolog's
+<a href=#652 id=652 data-nosnippet>652</a>/// `?&gt;` would be mistaken for the end of the start tag.
+<a href=#653 id=653 data-nosnippet>653</a></span><span class="kw">pub fn </span>svg_root_tag(head: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt; {
+<a href=#654 id=654 data-nosnippet>654</a>  <span class="kw">let </span>start = head.find(<span class="string">"&lt;svg"</span>)<span class="question-mark">?</span>;
+<a href=#655 id=655 data-nosnippet>655</a>  <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>head[start..];
+<a href=#656 id=656 data-nosnippet>656</a>  <span class="kw">let </span><span class="kw-2">mut </span>quote: <span class="prelude-ty">Option</span>&lt;char&gt; = <span class="prelude-val">None</span>;
+<a href=#657 id=657 data-nosnippet>657</a>  <span class="kw">for </span>(i, c) <span class="kw">in </span>rest.char_indices() {
+<a href=#658 id=658 data-nosnippet>658</a>    <span class="kw">match </span>quote {
+<a href=#659 id=659 data-nosnippet>659</a>      <span class="prelude-val">Some</span>(q) <span class="kw">if </span>c == q =&gt; quote = <span class="prelude-val">None</span>,
+<a href=#660 id=660 data-nosnippet>660</a>      <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; {},
+<a href=#661 id=661 data-nosnippet>661</a>      <span class="prelude-val">None </span><span class="kw">if </span>c == <span class="string">'"' </span>|| c == <span class="string">'\'' </span>=&gt; quote = <span class="prelude-val">Some</span>(c),
+<a href=#662 id=662 data-nosnippet>662</a>      <span class="prelude-val">None </span><span class="kw">if </span>c == <span class="string">'&gt;' </span>=&gt; <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>rest[..i]),
+<a href=#663 id=663 data-nosnippet>663</a>      <span class="prelude-val">None </span>=&gt; {},
+<a href=#664 id=664 data-nosnippet>664</a>    }
+<a href=#665 id=665 data-nosnippet>665</a>  }
+<a href=#666 id=666 data-nosnippet>666</a>  <span class="prelude-val">None
+<a href=#667 id=667 data-nosnippet>667</a></span>}
+<a href=#668 id=668 data-nosnippet>668</a>
+<a href=#669 id=669 data-nosnippet>669</a><span class="doccomment">/// Value of the `name="…"` / `name='…'` attribute in an XML start tag.
+<a href=#670 id=670 data-nosnippet>670</a>///
+<a href=#671 id=671 data-nosnippet>671</a>/// The attribute **name is matched whole**: a bare substring search reads
+<a href=#672 id=672 data-nosnippet>672</a>/// `stroke-width="2"` — legal on a root `&lt;svg&gt;` — as `width`, which is how a
+<a href=#673 id=673 data-nosnippet>673</a>/// 634×805 drawing once measured 2×805.
+<a href=#674 id=674 data-nosnippet>674</a></span><span class="kw">pub fn </span>svg_attr_value&lt;<span class="lifetime">'a</span>&gt;(tag: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt; {
+<a href=#675 id=675 data-nosnippet>675</a>  <span class="kw">let </span><span class="kw-2">mut </span>from = <span class="number">0</span>;
+<a href=#676 id=676 data-nosnippet>676</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(hit) = tag[from..].find(name) {
+<a href=#677 id=677 data-nosnippet>677</a>    <span class="kw">let </span>at = from + hit;
+<a href=#678 id=678 data-nosnippet>678</a>    from = at + name.len();
+<a href=#679 id=679 data-nosnippet>679</a>    <span class="comment">// Left boundary: the name must start an attribute, not end another one
+<a href=#680 id=680 data-nosnippet>680</a>    // (`stroke-width`) — so what precedes it is whitespace, or the `&lt;svg`.
+<a href=#681 id=681 data-nosnippet>681</a>    </span><span class="kw">let </span>preceded_ok = tag[..at]
+<a href=#682 id=682 data-nosnippet>682</a>      .chars()
+<a href=#683 id=683 data-nosnippet>683</a>      .next_back()
+<a href=#684 id=684 data-nosnippet>684</a>      .is_some_and(|c| c.is_whitespace());
+<a href=#685 id=685 data-nosnippet>685</a>    <span class="kw">if </span>!preceded_ok {
+<a href=#686 id=686 data-nosnippet>686</a>      <span class="kw">continue</span>;
+<a href=#687 id=687 data-nosnippet>687</a>    }
+<a href=#688 id=688 data-nosnippet>688</a>    <span class="comment">// Right boundary: `=` (optionally spaced) then a quoted value.
+<a href=#689 id=689 data-nosnippet>689</a>    </span><span class="kw">let </span>after = tag[from..].trim_start();
+<a href=#690 id=690 data-nosnippet>690</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(after) = after.strip_prefix(<span class="string">'='</span>) <span class="kw">else </span>{
+<a href=#691 id=691 data-nosnippet>691</a>      <span class="kw">continue</span>;
+<a href=#692 id=692 data-nosnippet>692</a>    };
+<a href=#693 id=693 data-nosnippet>693</a>    <span class="kw">let </span>after = after.trim_start();
+<a href=#694 id=694 data-nosnippet>694</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(q) = after.chars().next() <span class="kw">else </span>{
+<a href=#695 id=695 data-nosnippet>695</a>      <span class="kw">continue</span>;
+<a href=#696 id=696 data-nosnippet>696</a>    };
+<a href=#697 id=697 data-nosnippet>697</a>    <span class="kw">if </span>q != <span class="string">'"' </span>&amp;&amp; q != <span class="string">'\'' </span>{
+<a href=#698 id=698 data-nosnippet>698</a>      <span class="kw">continue</span>;
+<a href=#699 id=699 data-nosnippet>699</a>    }
+<a href=#700 id=700 data-nosnippet>700</a>    <span class="kw">let </span>body = <span class="kw-2">&amp;</span>after[q.len_utf8()..];
+<a href=#701 id=701 data-nosnippet>701</a>    <span class="kw">let </span>end = body.find(q)<span class="question-mark">?</span>;
+<a href=#702 id=702 data-nosnippet>702</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>body[..end]);
+<a href=#703 id=703 data-nosnippet>703</a>  }
+<a href=#704 id=704 data-nosnippet>704</a>  <span class="prelude-val">None
+<a href=#705 id=705 data-nosnippet>705</a></span>}
+<a href=#706 id=706 data-nosnippet>706</a>
+<a href=#707 id=707 data-nosnippet>707</a><span class="doccomment">/// `(width, height)` extent of the root `viewBox`, in user units (≈ CSS px).
+<a href=#708 id=708 data-nosnippet>708</a>/// Per the SVG grammar the four numbers are comma-**and/or**-whitespace
+<a href=#709 id=709 data-nosnippet>709</a>/// separated, so `viewBox="0,0,634,805"` must parse like `"0 0 634 805"`.
+<a href=#710 id=710 data-nosnippet>710</a></span><span class="kw">fn </span>svg_viewbox_extent(tag: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, f64)&gt; {
+<a href=#711 id=711 data-nosnippet>711</a>  <span class="kw">let </span>vb = svg_attr_value(tag, <span class="string">"viewBox"</span>)<span class="question-mark">?</span>;
+<a href=#712 id=712 data-nosnippet>712</a>  <span class="kw">let </span><span class="kw-2">mut </span>it = vb
+<a href=#713 id=713 data-nosnippet>713</a>    .split(|c: char| c.is_whitespace() || c == <span class="string">','</span>)
+<a href=#714 id=714 data-nosnippet>714</a>    .filter(|s| !s.is_empty());
+<a href=#715 id=715 data-nosnippet>715</a>  <span class="kw">let </span>(_x, _y) = (it.next()<span class="question-mark">?</span>, it.next()<span class="question-mark">?</span>);
+<a href=#716 id=716 data-nosnippet>716</a>  <span class="kw">let </span>vw = it.next()<span class="question-mark">?</span>.parse::&lt;f64&gt;().ok()<span class="question-mark">?</span>;
+<a href=#717 id=717 data-nosnippet>717</a>  <span class="kw">let </span>vh = it.next()<span class="question-mark">?</span>.parse::&lt;f64&gt;().ok()<span class="question-mark">?</span>;
+<a href=#718 id=718 data-nosnippet>718</a>  <span class="prelude-val">Some</span>((vw, vh))
+<a href=#719 id=719 data-nosnippet>719</a>}
+<a href=#720 id=720 data-nosnippet>720</a>
+<a href=#721 id=721 data-nosnippet>721</a><span class="doccomment">/// An SVG length attribute in CSS px. A unitless value is user units, i.e. px.
+<a href=#722 id=722 data-nosnippet>722</a>/// `None` for anything that isn't an absolute length (`%`, `em`, `ex`, …) —
+<a href=#723 id=723 data-nosnippet>723</a>/// those are resolved against a viewport we don't have, so the caller must fall
+<a href=#724 id=724 data-nosnippet>724</a>/// back to the viewBox rather than treat the bare number as pixels.
+<a href=#725 id=725 data-nosnippet>725</a></span><span class="kw">pub fn </span>svg_attr_len_px(tag: <span class="kw-2">&amp;</span>str, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt; {
+<a href=#726 id=726 data-nosnippet>726</a>  svg_len_px(svg_attr_value(tag, name)<span class="question-mark">?</span>)
+<a href=#727 id=727 data-nosnippet>727</a>}
+<a href=#728 id=728 data-nosnippet>728</a>
+<a href=#729 id=729 data-nosnippet>729</a><span class="doccomment">/// An SVG length attribute converted to pt, iff it carries an absolute unit.
+<a href=#730 id=730 data-nosnippet>730</a>/// Unitless/`%` values return `None` (the caller falls back to the viewBox) —
+<a href=#731 id=731 data-nosnippet>731</a>/// unlike [`svg_attr_len_px`], a unitless value is *not* accepted here: without
+<a href=#732 id=732 data-nosnippet>732</a>/// a unit there is no natural typeset size to report, only a scale.
+<a href=#733 id=733 data-nosnippet>733</a></span><span class="kw">fn </span>svg_attr_len_pt(tag: <span class="kw-2">&amp;</span>str, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt; {
+<a href=#734 id=734 data-nosnippet>734</a>  <span class="kw">let </span>raw = svg_attr_value(tag, name)<span class="question-mark">?</span>.trim();
+<a href=#735 id=735 data-nosnippet>735</a>  <span class="kw">if </span>!raw.ends_with(|c: char| c.is_alphabetic()) {
+<a href=#736 id=736 data-nosnippet>736</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#737 id=737 data-nosnippet>737</a>  }
+<a href=#738 id=738 data-nosnippet>738</a>  <span class="prelude-val">Some</span>(px_to_pt(svg_len_px(raw)<span class="question-mark">?</span>))
+<a href=#739 id=739 data-nosnippet>739</a>}
+<a href=#740 id=740 data-nosnippet>740</a>
+<a href=#741 id=741 data-nosnippet>741</a><span class="doccomment">/// Parse an SVG/CSS length into CSS px (1/96"), or `None` if it carries no
+<a href=#742 id=742 data-nosnippet>742</a>/// absolute unit. Unitless = user units = px.
+<a href=#743 id=743 data-nosnippet>743</a></span><span class="kw">fn </span>svg_len_px(raw: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt; {
+<a href=#744 id=744 data-nosnippet>744</a>  <span class="kw">let </span>raw = raw.trim();
+<a href=#745 id=745 data-nosnippet>745</a>  <span class="comment">// Split the number from its unit — but `6.34e2` must not split at the
+<a href=#746 id=746 data-nosnippet>746</a>  // exponent's `e`, which would silently read 634 as 6.
+<a href=#747 id=747 data-nosnippet>747</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>split = raw.len();
+<a href=#748 id=748 data-nosnippet>748</a>  <span class="kw">for </span>(i, c) <span class="kw">in </span>raw.char_indices() {
+<a href=#749 id=749 data-nosnippet>749</a>    <span class="kw">if </span>(c.is_alphabetic() || c == <span class="string">'%'</span>) &amp;&amp; !is_exponent(<span class="kw-2">&amp;</span>raw[i..]) {
+<a href=#750 id=750 data-nosnippet>750</a>      split = i;
+<a href=#751 id=751 data-nosnippet>751</a>      <span class="kw">break</span>;
+<a href=#752 id=752 data-nosnippet>752</a>    }
+<a href=#753 id=753 data-nosnippet>753</a>  }
+<a href=#754 id=754 data-nosnippet>754</a>  <span class="kw">let </span>(num, unit) = raw.split_at(split);
+<a href=#755 id=755 data-nosnippet>755</a>  <span class="kw">let </span>v = num.trim().parse::&lt;f64&gt;().ok()<span class="question-mark">?</span>;
+<a href=#756 id=756 data-nosnippet>756</a>  <span class="kw">match </span>unit.trim() {
+<a href=#757 id=757 data-nosnippet>757</a>    <span class="string">"" </span>| <span class="string">"px" </span>=&gt; <span class="prelude-val">Some</span>(v),
+<a href=#758 id=758 data-nosnippet>758</a>    <span class="string">"pt" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">96.0 </span>/ <span class="number">72.0</span>),
+<a href=#759 id=759 data-nosnippet>759</a>    <span class="string">"in" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">96.0</span>),
+<a href=#760 id=760 data-nosnippet>760</a>    <span class="string">"cm" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">96.0 </span>/ <span class="number">2.54</span>),
+<a href=#761 id=761 data-nosnippet>761</a>    <span class="string">"mm" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">96.0 </span>/ <span class="number">25.4</span>),
+<a href=#762 id=762 data-nosnippet>762</a>    <span class="string">"pc" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">16.0</span>),
+<a href=#763 id=763 data-nosnippet>763</a>    <span class="string">"Q" </span>=&gt; <span class="prelude-val">Some</span>(v * <span class="number">96.0 </span>/ <span class="number">101.6</span>),
+<a href=#764 id=764 data-nosnippet>764</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>, <span class="comment">// %, em, ex, rem, vw, … → no absolute length
+<a href=#765 id=765 data-nosnippet>765</a>  </span>}
+<a href=#766 id=766 data-nosnippet>766</a>}
+<a href=#767 id=767 data-nosnippet>767</a>
+<a href=#768 id=768 data-nosnippet>768</a><span class="doccomment">/// Does this trailing fragment start an exponent (`e-3`, `E+10`) rather than a
+<a href=#769 id=769 data-nosnippet>769</a>/// unit?
+<a href=#770 id=770 data-nosnippet>770</a></span><span class="kw">fn </span>is_exponent(tail: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#771 id=771 data-nosnippet>771</a>  <span class="kw">let </span><span class="kw-2">mut </span>cs = tail.chars();
+<a href=#772 id=772 data-nosnippet>772</a>  <span class="macro">matches!</span>(cs.next(), <span class="prelude-val">Some</span>(<span class="string">'e'</span>) | <span class="prelude-val">Some</span>(<span class="string">'E'</span>))
+<a href=#773 id=773 data-nosnippet>773</a>    &amp;&amp; cs
+<a href=#774 id=774 data-nosnippet>774</a>      .next()
+<a href=#775 id=775 data-nosnippet>775</a>      .is_some_and(|c| c.is_ascii_digit() || c == <span class="string">'+' </span>|| c == <span class="string">'-'</span>)
+<a href=#776 id=776 data-nosnippet>776</a>}
+<a href=#777 id=777 data-nosnippet>777</a>
+<a href=#778 id=778 data-nosnippet>778</a><span class="doccomment">/// CSS px (1/96") → TeX pt (1/72.27").
+<a href=#779 id=779 data-nosnippet>779</a></span><span class="kw">fn </span>px_to_pt(px: f64) -&gt; f64 { px * <span class="number">72.27 </span>/ <span class="number">96.0 </span>}
+<a href=#780 id=780 data-nosnippet>780</a>
+<a href=#781 id=781 data-nosnippet>781</a><span class="attr">#[cfg(test)]
+<a href=#782 id=782 data-nosnippet>782</a></span><span class="kw">mod </span>svg_geometry_tests {
+<a href=#783 id=783 data-nosnippet>783</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#784 id=784 data-nosnippet>784</a>
+<a href=#785 id=785 data-nosnippet>785</a>  <span class="doccomment">/// Write `content` to a uniquely-named temp `.svg` and hand back the path.
+<a href=#786 id=786 data-nosnippet>786</a>  </span><span class="kw">fn </span>svg_file(name: <span class="kw-2">&amp;</span>str, content: <span class="kw-2">&amp;</span>str) -&gt; PathBuf {
+<a href=#787 id=787 data-nosnippet>787</a>    <span class="kw">let </span>path = std::env::temp_dir().join(<span class="macro">format!</span>(<span class="string">"lximg-{}-{name}.svg"</span>, std::process::id()));
+<a href=#788 id=788 data-nosnippet>788</a>    std::fs::write(<span class="kw-2">&amp;</span>path, content).expect(<span class="string">"write svg fixture"</span>);
+<a href=#789 id=789 data-nosnippet>789</a>    path
+<a href=#790 id=790 data-nosnippet>790</a>  }
+<a href=#791 id=791 data-nosnippet>791</a>
+<a href=#792 id=792 data-nosnippet>792</a>  <span class="attr">#[test]
+<a href=#793 id=793 data-nosnippet>793</a>  </span><span class="kw">fn </span>root_tag_skips_the_prolog_and_stops_at_the_real_tag_end() {
+<a href=#794 id=794 data-nosnippet>794</a>    <span class="kw">let </span>head = <span class="string">"&lt;?xml version=\"1.0\"?&gt;\n&lt;!-- a &gt; in a comment --&gt;\n&lt;svg width=\"3\"&gt;\n&lt;rect/&gt;"</span>;
+<a href=#795 id=795 data-nosnippet>795</a>    <span class="macro">assert_eq!</span>(svg_root_tag(head), <span class="prelude-val">Some</span>(<span class="string">"&lt;svg width=\"3\""</span>));
+<a href=#796 id=796 data-nosnippet>796</a>    <span class="comment">// A `&gt;` inside an attribute value must not end the start tag.
+<a href=#797 id=797 data-nosnippet>797</a>    </span><span class="kw">let </span>quoted = <span class="string">r#"&lt;svg desc="a &gt; b" width="3"&gt;&lt;rect/&gt;"#</span>;
+<a href=#798 id=798 data-nosnippet>798</a>    <span class="macro">assert_eq!</span>(svg_root_tag(quoted), <span class="prelude-val">Some</span>(<span class="string">r#"&lt;svg desc="a &gt; b" width="3""#</span>));
+<a href=#799 id=799 data-nosnippet>799</a>    <span class="macro">assert_eq!</span>(svg_root_tag(<span class="string">"no svg here"</span>), <span class="prelude-val">None</span>);
+<a href=#800 id=800 data-nosnippet>800</a>  }
+<a href=#801 id=801 data-nosnippet>801</a>
+<a href=#802 id=802 data-nosnippet>802</a>  <span class="doccomment">/// A bare substring search reads `stroke-width` as `width`. Both attribute
+<a href=#803 id=803 data-nosnippet>803</a>  /// orders, since the bug only bites when the decoy comes first.
+<a href=#804 id=804 data-nosnippet>804</a>  </span><span class="attr">#[test]
+<a href=#805 id=805 data-nosnippet>805</a>  </span><span class="kw">fn </span>attr_value_matches_whole_names_not_substrings() {
+<a href=#806 id=806 data-nosnippet>806</a>    <span class="kw">let </span>decoy_first = <span class="string">r#"&lt;svg stroke-width="2" width="634" height="805""#</span>;
+<a href=#807 id=807 data-nosnippet>807</a>    <span class="macro">assert_eq!</span>(svg_attr_value(decoy_first, <span class="string">"width"</span>), <span class="prelude-val">Some</span>(<span class="string">"634"</span>));
+<a href=#808 id=808 data-nosnippet>808</a>    <span class="macro">assert_eq!</span>(svg_attr_value(decoy_first, <span class="string">"stroke-width"</span>), <span class="prelude-val">Some</span>(<span class="string">"2"</span>));
+<a href=#809 id=809 data-nosnippet>809</a>    <span class="kw">let </span>decoy_last = <span class="string">r#"&lt;svg width="634" stroke-width="2""#</span>;
+<a href=#810 id=810 data-nosnippet>810</a>    <span class="macro">assert_eq!</span>(svg_attr_value(decoy_last, <span class="string">"width"</span>), <span class="prelude-val">Some</span>(<span class="string">"634"</span>));
+<a href=#811 id=811 data-nosnippet>811</a>    <span class="comment">// A name that appears only as a suffix of another attribute is absent.
+<a href=#812 id=812 data-nosnippet>812</a>    </span><span class="macro">assert_eq!</span>(svg_attr_value(<span class="string">r#"&lt;svg stroke-width="2""#</span>, <span class="string">"width"</span>), <span class="prelude-val">None</span>);
+<a href=#813 id=813 data-nosnippet>813</a>  }
+<a href=#814 id=814 data-nosnippet>814</a>
+<a href=#815 id=815 data-nosnippet>815</a>  <span class="attr">#[test]
+<a href=#816 id=816 data-nosnippet>816</a>  </span><span class="kw">fn </span>attr_value_reads_both_quote_styles() {
+<a href=#817 id=817 data-nosnippet>817</a>    <span class="kw">let </span>single = <span class="string">r#"&lt;svg xmlns='http://www.w3.org/2000/svg' width='634' height='805'"#</span>;
+<a href=#818 id=818 data-nosnippet>818</a>    <span class="macro">assert_eq!</span>(svg_attr_value(single, <span class="string">"width"</span>), <span class="prelude-val">Some</span>(<span class="string">"634"</span>));
+<a href=#819 id=819 data-nosnippet>819</a>    <span class="macro">assert_eq!</span>(svg_attr_value(single, <span class="string">"height"</span>), <span class="prelude-val">Some</span>(<span class="string">"805"</span>));
+<a href=#820 id=820 data-nosnippet>820</a>    <span class="comment">// Spaces around `=` are legal XML.
+<a href=#821 id=821 data-nosnippet>821</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#822 id=822 data-nosnippet>822</a>      svg_attr_value(<span class="string">r#"&lt;svg width = "634""#</span>, <span class="string">"width"</span>),
+<a href=#823 id=823 data-nosnippet>823</a>      <span class="prelude-val">Some</span>(<span class="string">"634"</span>)
+<a href=#824 id=824 data-nosnippet>824</a>    );
+<a href=#825 id=825 data-nosnippet>825</a>  }
+<a href=#826 id=826 data-nosnippet>826</a>
+<a href=#827 id=827 data-nosnippet>827</a>  <span class="doccomment">/// The unit table, in CSS px (1in = 96px). Every absolute unit SVG allows,
+<a href=#828 id=828 data-nosnippet>828</a>  /// plus the three shapes that must NOT be read as a pixel count.
+<a href=#829 id=829 data-nosnippet>829</a>  </span><span class="attr">#[test]
+<a href=#830 id=830 data-nosnippet>830</a>  </span><span class="kw">fn </span>len_px_converts_absolute_units_and_rejects_relative_ones() {
+<a href=#831 id=831 data-nosnippet>831</a>    <span class="kw">let </span>cases: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="prelude-ty">Option</span>&lt;f64&gt;)] = <span class="kw-2">&amp;</span>[
+<a href=#832 id=832 data-nosnippet>832</a>      (<span class="string">"634"</span>, <span class="prelude-val">Some</span>(<span class="number">634.0</span>)), <span class="comment">// unitless = user units = px
+<a href=#833 id=833 data-nosnippet>833</a>      </span>(<span class="string">"634px"</span>, <span class="prelude-val">Some</span>(<span class="number">634.0</span>)),
+<a href=#834 id=834 data-nosnippet>834</a>      (<span class="string">"10cm"</span>, <span class="prelude-val">Some</span>(<span class="number">377.952_755_905_511_8</span>)),
+<a href=#835 id=835 data-nosnippet>835</a>      (<span class="string">"7.5cm"</span>, <span class="prelude-val">Some</span>(<span class="number">283.464_566_929_133_84</span>)),
+<a href=#836 id=836 data-nosnippet>836</a>      (<span class="string">"100mm"</span>, <span class="prelude-val">Some</span>(<span class="number">377.952_755_905_511_8</span>)),
+<a href=#837 id=837 data-nosnippet>837</a>      (<span class="string">"4in"</span>, <span class="prelude-val">Some</span>(<span class="number">384.0</span>)),
+<a href=#838 id=838 data-nosnippet>838</a>      (<span class="string">"72pt"</span>, <span class="prelude-val">Some</span>(<span class="number">96.0</span>)),
+<a href=#839 id=839 data-nosnippet>839</a>      (<span class="string">"6pc"</span>, <span class="prelude-val">Some</span>(<span class="number">96.0</span>)),
+<a href=#840 id=840 data-nosnippet>840</a>      (<span class="string">"6.34e2"</span>, <span class="prelude-val">Some</span>(<span class="number">634.0</span>)), <span class="comment">// exponent, not a `e` unit
+<a href=#841 id=841 data-nosnippet>841</a>      </span>(<span class="string">"-5"</span>, <span class="prelude-val">Some</span>(-<span class="number">5.0</span>)),
+<a href=#842 id=842 data-nosnippet>842</a>      (<span class="string">"100%"</span>, <span class="prelude-val">None</span>), <span class="comment">// resolved against a viewport we don't have
+<a href=#843 id=843 data-nosnippet>843</a>      </span>(<span class="string">"2em"</span>, <span class="prelude-val">None</span>),
+<a href=#844 id=844 data-nosnippet>844</a>      (<span class="string">"50vw"</span>, <span class="prelude-val">None</span>),
+<a href=#845 id=845 data-nosnippet>845</a>      (<span class="string">""</span>, <span class="prelude-val">None</span>),
+<a href=#846 id=846 data-nosnippet>846</a>      (<span class="string">"wide"</span>, <span class="prelude-val">None</span>),
+<a href=#847 id=847 data-nosnippet>847</a>    ];
+<a href=#848 id=848 data-nosnippet>848</a>    <span class="kw">for </span>(raw, want) <span class="kw">in </span>cases {
+<a href=#849 id=849 data-nosnippet>849</a>      <span class="kw">match </span>(svg_len_px(raw), want) {
+<a href=#850 id=850 data-nosnippet>850</a>        (<span class="prelude-val">Some</span>(got), <span class="prelude-val">Some</span>(w)) =&gt; <span class="macro">assert!</span>(
+<a href=#851 id=851 data-nosnippet>851</a>          (got - w).abs() &lt; <span class="number">1e-9</span>,
+<a href=#852 id=852 data-nosnippet>852</a>          <span class="string">"svg_len_px({raw:?}) = {got}, want {w}"
+<a href=#853 id=853 data-nosnippet>853</a>        </span>),
+<a href=#854 id=854 data-nosnippet>854</a>        (got, want) =&gt; <span class="macro">assert_eq!</span>(
+<a href=#855 id=855 data-nosnippet>855</a>          got.is_none(),
+<a href=#856 id=856 data-nosnippet>856</a>          want.is_none(),
+<a href=#857 id=857 data-nosnippet>857</a>          <span class="string">"svg_len_px({raw:?}) = {got:?}"
+<a href=#858 id=858 data-nosnippet>858</a>        </span>),
+<a href=#859 id=859 data-nosnippet>859</a>      }
+<a href=#860 id=860 data-nosnippet>860</a>    }
+<a href=#861 id=861 data-nosnippet>861</a>  }
+<a href=#862 id=862 data-nosnippet>862</a>
+<a href=#863 id=863 data-nosnippet>863</a>  <span class="doccomment">/// Both of our PDF→SVG converters emit `viewBox` **and** root lengths. The
+<a href=#864 id=864 data-nosnippet>864</a>  /// viewport reader must keep reporting the viewBox extent for them — taking
+<a href=#865 id=865 data-nosnippet>865</a>  /// pdftocairo's `612pt` instead would rescale every PDF-derived figure in the
+<a href=#866 id=866 data-nosnippet>866</a>  /// corpus by 96/72. Root tags copied verbatim from the tools.
+<a href=#867 id=867 data-nosnippet>867</a>  </span><span class="attr">#[test]
+<a href=#868 id=868 data-nosnippet>868</a>  </span><span class="kw">fn </span>viewport_px_is_stable_for_our_own_converter_output() {
+<a href=#869 id=869 data-nosnippet>869</a>    <span class="kw">let </span>pdftocairo = svg_file(
+<a href=#870 id=870 data-nosnippet>870</a>      <span class="string">"pdftocairo"</span>,
+<a href=#871 id=871 data-nosnippet>871</a>      <span class="string">r#"&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+<a href=#872 id=872 data-nosnippet>872</a>&lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="612pt" height="792pt" viewBox="0 0 612 792"&gt;
+<a href=#873 id=873 data-nosnippet>873</a>&lt;defs/&gt;&lt;/svg&gt;"#</span>,
+<a href=#874 id=874 data-nosnippet>874</a>    );
+<a href=#875 id=875 data-nosnippet>875</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>pdftocairo), <span class="prelude-val">Some</span>((<span class="number">612</span>, <span class="number">792</span>)));
+<a href=#876 id=876 data-nosnippet>876</a>    <span class="kw">let </span>mutool = svg_file(
+<a href=#877 id=877 data-nosnippet>877</a>      <span class="string">"mutool"</span>,
+<a href=#878 id=878 data-nosnippet>878</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" width="612" height="792" viewBox="0 0 612 792"&gt;
+<a href=#879 id=879 data-nosnippet>879</a>&lt;defs/&gt;&lt;/svg&gt;"#</span>,
+<a href=#880 id=880 data-nosnippet>880</a>    );
+<a href=#881 id=881 data-nosnippet>881</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>mutool), <span class="prelude-val">Some</span>((<span class="number">612</span>, <span class="number">792</span>)));
+<a href=#882 id=882 data-nosnippet>882</a>    <span class="kw">let _ </span>= std::fs::remove_file(pdftocairo);
+<a href=#883 id=883 data-nosnippet>883</a>    <span class="kw">let _ </span>= std::fs::remove_file(mutool);
+<a href=#884 id=884 data-nosnippet>884</a>  }
+<a href=#885 id=885 data-nosnippet>885</a>
+<a href=#886 id=886 data-nosnippet>886</a>  <span class="doccomment">/// Without a viewBox the root lengths are the viewport — and they must be
+<a href=#887 id=887 data-nosnippet>887</a>  /// *converted*, not truncated. Reading `10cm` as 10 px is how a poster-sized
+<a href=#888 id=888 data-nosnippet>888</a>  /// drawing became a 10-pixel thumbnail (issue 498 follow-up).
+<a href=#889 id=889 data-nosnippet>889</a>  </span><span class="attr">#[test]
+<a href=#890 id=890 data-nosnippet>890</a>  </span><span class="kw">fn </span>viewport_px_converts_unit_bearing_lengths_when_there_is_no_viewbox() {
+<a href=#891 id=891 data-nosnippet>891</a>    <span class="kw">let </span>cm = svg_file(
+<a href=#892 id=892 data-nosnippet>892</a>      <span class="string">"cm"</span>,
+<a href=#893 id=893 data-nosnippet>893</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg" width="10cm" height="7.5cm"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>,
+<a href=#894 id=894 data-nosnippet>894</a>    );
+<a href=#895 id=895 data-nosnippet>895</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>cm), <span class="prelude-val">Some</span>((<span class="number">378</span>, <span class="number">283</span>)));
+<a href=#896 id=896 data-nosnippet>896</a>    <span class="kw">let </span>inch = svg_file(<span class="string">"in"</span>, <span class="string">r#"&lt;svg width="4in" height="2in"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>);
+<a href=#897 id=897 data-nosnippet>897</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>inch), <span class="prelude-val">Some</span>((<span class="number">384</span>, <span class="number">192</span>)));
+<a href=#898 id=898 data-nosnippet>898</a>    <span class="kw">let </span>quoted = svg_file(
+<a href=#899 id=899 data-nosnippet>899</a>      <span class="string">"sq"</span>,
+<a href=#900 id=900 data-nosnippet>900</a>      <span class="string">r#"&lt;svg xmlns='http://www.w3.org/2000/svg' width='634' height='805'&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>,
+<a href=#901 id=901 data-nosnippet>901</a>    );
+<a href=#902 id=902 data-nosnippet>902</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>quoted), <span class="prelude-val">Some</span>((<span class="number">634</span>, <span class="number">805</span>)));
+<a href=#903 id=903 data-nosnippet>903</a>    <span class="kw">let </span>decoy = svg_file(
+<a href=#904 id=904 data-nosnippet>904</a>      <span class="string">"decoy"</span>,
+<a href=#905 id=905 data-nosnippet>905</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="634" height="805"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>,
+<a href=#906 id=906 data-nosnippet>906</a>    );
+<a href=#907 id=907 data-nosnippet>907</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>decoy), <span class="prelude-val">Some</span>((<span class="number">634</span>, <span class="number">805</span>)));
+<a href=#908 id=908 data-nosnippet>908</a>    <span class="kw">for </span>p <span class="kw">in </span>[cm, inch, quoted, decoy] {
+<a href=#909 id=909 data-nosnippet>909</a>      <span class="kw">let _ </span>= std::fs::remove_file(p);
+<a href=#910 id=910 data-nosnippet>910</a>    }
+<a href=#911 id=911 data-nosnippet>911</a>  }
+<a href=#912 id=912 data-nosnippet>912</a>
+<a href=#913 id=913 data-nosnippet>913</a>  <span class="doccomment">/// A percentage-sized root with no viewBox has no intrinsic pixel size at
+<a href=#914 id=914 data-nosnippet>914</a>  /// all. `None` is the whole point: the caller then emits no width/height and
+<a href=#915 id=915 data-nosnippet>915</a>  /// the browser sizes the image itself, which is strictly better than
+<a href=#916 id=916 data-nosnippet>916</a>  /// asserting `width="100"`.
+<a href=#917 id=917 data-nosnippet>917</a>  </span><span class="attr">#[test]
+<a href=#918 id=918 data-nosnippet>918</a>  </span><span class="kw">fn </span>viewport_px_declines_relative_lengths_rather_than_inventing_pixels() {
+<a href=#919 id=919 data-nosnippet>919</a>    <span class="kw">let </span>pct = svg_file(<span class="string">"pct"</span>, <span class="string">r#"&lt;svg width="100%" height="100%"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>);
+<a href=#920 id=920 data-nosnippet>920</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>pct), <span class="prelude-val">None</span>);
+<a href=#921 id=921 data-nosnippet>921</a>    <span class="kw">let </span>none = svg_file(
+<a href=#922 id=922 data-nosnippet>922</a>      <span class="string">"bare"</span>,
+<a href=#923 id=923 data-nosnippet>923</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>,
+<a href=#924 id=924 data-nosnippet>924</a>    );
+<a href=#925 id=925 data-nosnippet>925</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>none), <span class="prelude-val">None</span>);
+<a href=#926 id=926 data-nosnippet>926</a>    <span class="kw">for </span>p <span class="kw">in </span>[pct, none] {
+<a href=#927 id=927 data-nosnippet>927</a>      <span class="kw">let _ </span>= std::fs::remove_file(p);
+<a href=#928 id=928 data-nosnippet>928</a>    }
+<a href=#929 id=929 data-nosnippet>929</a>  }
+<a href=#930 id=930 data-nosnippet>930</a>
+<a href=#931 id=931 data-nosnippet>931</a>  <span class="doccomment">/// The SVG grammar allows comma-separated viewBox numbers.
+<a href=#932 id=932 data-nosnippet>932</a>  </span><span class="attr">#[test]
+<a href=#933 id=933 data-nosnippet>933</a>  </span><span class="kw">fn </span>viewport_px_parses_a_comma_separated_viewbox() {
+<a href=#934 id=934 data-nosnippet>934</a>    <span class="kw">let </span>comma = svg_file(<span class="string">"comma"</span>, <span class="string">r#"&lt;svg viewBox="0,0,634,805"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>);
+<a href=#935 id=935 data-nosnippet>935</a>    <span class="macro">assert_eq!</span>(read_svg_viewport_px(<span class="kw-2">&amp;</span>comma), <span class="prelude-val">Some</span>((<span class="number">634</span>, <span class="number">805</span>)));
+<a href=#936 id=936 data-nosnippet>936</a>    <span class="kw">let _ </span>= std::fs::remove_file(comma);
+<a href=#937 id=937 data-nosnippet>937</a>  }
+<a href=#938 id=938 data-nosnippet>938</a>
+<a href=#939 id=939 data-nosnippet>939</a>  <span class="doccomment">/// `read_svg_size_pt` keeps the opposite precedence — absolute lengths first,
+<a href=#940 id=940 data-nosnippet>940</a>  /// viewBox second — because it answers "how big would this typeset?", not
+<a href=#941 id=941 data-nosnippet>941</a>  /// "how many pixels is the viewport?".
+<a href=#942 id=942 data-nosnippet>942</a>  </span><span class="attr">#[test]
+<a href=#943 id=943 data-nosnippet>943</a>  </span><span class="kw">fn </span>size_pt_prefers_absolute_lengths_then_falls_back_to_the_viewbox() {
+<a href=#944 id=944 data-nosnippet>944</a>    <span class="comment">// 4in = 288.something TeX pt (72.27/in).
+<a href=#945 id=945 data-nosnippet>945</a>    </span><span class="kw">let </span>inch = svg_file(
+<a href=#946 id=946 data-nosnippet>946</a>      <span class="string">"pt_in"</span>,
+<a href=#947 id=947 data-nosnippet>947</a>      <span class="string">r#"&lt;svg width="4in" height="2in" viewBox="0 0 10 5"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>,
+<a href=#948 id=948 data-nosnippet>948</a>    );
+<a href=#949 id=949 data-nosnippet>949</a>    <span class="kw">let </span>(w, h) = read_svg_size_pt(<span class="kw-2">&amp;</span>inch).expect(<span class="string">"absolute lengths"</span>);
+<a href=#950 id=950 data-nosnippet>950</a>    <span class="macro">assert!</span>((w - <span class="number">4.0 </span>* <span class="number">72.27</span>).abs() &lt; <span class="number">1e-9</span>, <span class="string">"w = {w}"</span>);
+<a href=#951 id=951 data-nosnippet>951</a>    <span class="macro">assert!</span>((h - <span class="number">2.0 </span>* <span class="number">72.27</span>).abs() &lt; <span class="number">1e-9</span>, <span class="string">"h = {h}"</span>);
+<a href=#952 id=952 data-nosnippet>952</a>    <span class="comment">// SVG `pt` is a PostScript big point (1/72"), NOT a TeX pt (1/72.27") — so
+<a href=#953 id=953 data-nosnippet>953</a>    // `72pt` is one inch, i.e. 72.27 TeX pt. The old reader equated the two
+<a href=#954 id=954 data-nosnippet>954</a>    // units and under-reported every pt-sized SVG by 0.375%.
+<a href=#955 id=955 data-nosnippet>955</a>    </span><span class="kw">let </span>bigpt = svg_file(<span class="string">"pt_pt"</span>, <span class="string">r#"&lt;svg width="72pt" height="36pt"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>);
+<a href=#956 id=956 data-nosnippet>956</a>    <span class="kw">let </span>(w, h) = read_svg_size_pt(<span class="kw-2">&amp;</span>bigpt).expect(<span class="string">"pt lengths"</span>);
+<a href=#957 id=957 data-nosnippet>957</a>    <span class="macro">assert!</span>((w - <span class="number">72.27</span>).abs() &lt; <span class="number">1e-9</span>, <span class="string">"w = {w}"</span>);
+<a href=#958 id=958 data-nosnippet>958</a>    <span class="macro">assert!</span>((h - <span class="number">72.27 </span>/ <span class="number">2.0</span>).abs() &lt; <span class="number">1e-9</span>, <span class="string">"h = {h}"</span>);
+<a href=#959 id=959 data-nosnippet>959</a>    <span class="kw">let _ </span>= std::fs::remove_file(bigpt);
+<a href=#960 id=960 data-nosnippet>960</a>    <span class="comment">// Unitless lengths are only a scale — the viewBox wins.
+<a href=#961 id=961 data-nosnippet>961</a>    </span><span class="kw">let </span>unitless = svg_file(
+<a href=#962 id=962 data-nosnippet>962</a>      <span class="string">"pt_vb"</span>,
+<a href=#963 id=963 data-nosnippet>963</a>      <span class="string">r#"&lt;svg width="634" height="805" viewBox="0 0 96 48"&gt;&lt;rect/&gt;&lt;/svg&gt;"#</span>,
+<a href=#964 id=964 data-nosnippet>964</a>    );
+<a href=#965 id=965 data-nosnippet>965</a>    <span class="kw">let </span>(w, h) = read_svg_size_pt(<span class="kw-2">&amp;</span>unitless).expect(<span class="string">"viewBox fallback"</span>);
+<a href=#966 id=966 data-nosnippet>966</a>    <span class="macro">assert!</span>((w - <span class="number">72.27</span>).abs() &lt; <span class="number">1e-9</span>, <span class="string">"w = {w}"</span>);
+<a href=#967 id=967 data-nosnippet>967</a>    <span class="macro">assert!</span>((h - <span class="number">72.27 </span>/ <span class="number">2.0</span>).abs() &lt; <span class="number">1e-9</span>, <span class="string">"h = {h}"</span>);
+<a href=#968 id=968 data-nosnippet>968</a>    <span class="kw">for </span>p <span class="kw">in </span>[inch, unitless] {
+<a href=#969 id=969 data-nosnippet>969</a>      <span class="kw">let _ </span>= std::fs::remove_file(p);
+<a href=#970 id=970 data-nosnippet>970</a>    }
+<a href=#971 id=971 data-nosnippet>971</a>  }
+<a href=#972 id=972 data-nosnippet>972</a>}
 </code></pre></div></section></main></body></html>

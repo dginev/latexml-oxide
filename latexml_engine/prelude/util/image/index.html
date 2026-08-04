@@ -11,4 +11,11 @@ operations in a post-processing pass.</p>
 Supports PNG, JPEG, and EPS (PostScript BoundingBox).</dd><dt><a class="fn" href="fn.read_pdf_page_box.html" title="fn latexml_engine::prelude::util::image::read_pdf_page_box">read_<wbr>pdf_<wbr>page_<wbr>box</a></dt><dd>Read a PDF’s page box (width, height) in bp — CropBox (pdfTeX’s default),
 else MediaBox. Pure Rust, no external tool (this is what pdfTeX’s built-in
 reader does). Shared with <code>LaTeXML::Post::Graphics</code>. <code>None</code> when neither box
-appears as raw bytes (e.g. compressed into an object stream).</dd></dl></section></div></main></body></html>
+appears as raw bytes (e.g. compressed into an object stream).</dd><dt><a class="fn" href="fn.read_svg_viewport_px.html" title="fn latexml_engine::prelude::util::image::read_svg_viewport_px">read_<wbr>svg_<wbr>viewport_<wbr>px</a></dt><dd>SVG <strong>viewport</strong> size in CSS px, as a browser would take it: the <code>viewBox</code>
+extent when there is one, else the root <code>width</code>/<code>height</code> lengths.</dd><dt><a class="fn" href="fn.svg_attr_len_px.html" title="fn latexml_engine::prelude::util::image::svg_attr_len_px">svg_<wbr>attr_<wbr>len_<wbr>px</a></dt><dd>An SVG length attribute in CSS px. A unitless value is user units, i.e. px.
+<code>None</code> for anything that isn’t an absolute length (<code>%</code>, <code>em</code>, <code>ex</code>, …) —
+those are resolved against a viewport we don’t have, so the caller must fall
+back to the viewBox rather than treat the bare number as pixels.</dd><dt><a class="fn" href="fn.svg_attr_value.html" title="fn latexml_engine::prelude::util::image::svg_attr_value">svg_<wbr>attr_<wbr>value</a></dt><dd>Value of the <code>name="…"</code> / <code>name='…'</code> attribute in an XML start tag.</dd><dt><a class="fn" href="fn.svg_root_tag.html" title="fn latexml_engine::prelude::util::image::svg_root_tag">svg_<wbr>root_<wbr>tag</a></dt><dd>The root <code>&lt;svg …&gt;</code> start tag within <code>head</code>, quote-aware so a <code>&gt;</code> inside an
+attribute value doesn’t end the tag early. Skipping to <code>&lt;svg</code> also steps over
+the <code>&lt;?xml …?&gt;</code> prolog, comments and any DOCTYPE — otherwise the prolog’s
+<code>?&gt;</code> would be mistaken for the end of the start tag.</dd></dl></section></div></main></body></html>
