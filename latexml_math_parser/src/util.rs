@@ -509,6 +509,21 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           },
         };
 
+        // Perl `createXMRefs` (Package.pm L1557-1561): "clone an XMRef
+        // rather than create an XMRef to an XMRef" — reuse the target's
+        // idref so a content branch never points at a presentation-side
+        // reference. Without this branch the ref-to-a-ref shape reaches
+        // the output (Perl's whole golden corpus has zero of them).
+        if node.get_name() == "XMRef"
+          && let Some(idref) = node.get_attribute("idref")
+        {
+          refs.push(XM::Ref(XProps {
+            id: Some(Cow::Owned(idref)),
+            ..XProps::default()
+          }));
+          continue;
+        }
+
         // NS-aware read (xml:id = local "id" in XML_NS; the bare
         // get_attribute("xml:id") form always returns None, which sent
         // every node — id or not — through the generate_id branch).

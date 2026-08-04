@@ -4487,113 +4487,106 @@ Then a switch of tag forms.</p>
     <title><tag close=" ">9</tag>Multlines</title>
     <para xml:id="S9.p1">
       <equation>
-        <Math mode="display" tex="p(x)=3x^{6}+14x^{5}y+590x^{4}y^{2}+19x^{3}y^{3}\\&#10;-12x^{2}y^{4}-12xy^{5}+2y^{6}-a^{3}b^{3}" text="p@(delimited-@([])) = (((3 * x ^ 6 + 14 * x ^ 5 * y + 590 * x ^ 4 * y ^ 2 + 19 * x ^ 3 * y ^ 3) - 12 * x ^ 2 * y ^ 4 - 12 * x * y ^ 5) + 2 * y ^ 6) - a ^ 3 * b ^ 3" xml:id="S9.p1.m1">
+        <Math mode="display" tex="p(x)=3x^{6}+14x^{5}y+590x^{4}y^{2}+19x^{3}y^{3}\\&#10;-12x^{2}y^{4}-12xy^{5}+2y^{6}-a^{3}b^{3}" text="p@(delimited-@(x)) = (((3 * x ^ 6 + 14 * x ^ 5 * y + 590 * x ^ 4 * y ^ 2 + 19 * x ^ 3 * y ^ 3) - 12 * x ^ 2 * y ^ 4 - 12 * x * y ^ 5) + 2 * y ^ 6) - a ^ 3 * b ^ 3" xml:id="S9.p1.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMRef idref="S9.p1.m1.2"/>
+                <XMRef idref="S9.p1.m1.1"/>
                 <XMApp>
-                  <XMRef idref="S9.p1.m1.3"/>
-                  <XMDual>
-                    <XMApp>
-                      <XMTok meaning="delimited-"/>
-                      <XMRef idref="S9.p1.m1.1"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMRef idref="S9.p1.m1.4"/>
-                      <XMRef idref="S9.p1.m1.5" xml:id="S9.p1.m1.1"/>
-                      <XMRef idref="S9.p1.m1.6"/>
-                    </XMWrap>
-                  </XMDual>
+                  <XMRef idref="S9.p1.m1.2"/>
+                  <XMApp>
+                    <XMTok meaning="delimited-"/>
+                    <XMRef idref="S9.p1.m1.4"/>
+                  </XMApp>
                 </XMApp>
                 <XMApp>
-                  <XMRef idref="S9.p1.m1.25"/>
+                  <XMRef idref="S9.p1.m1.24"/>
                   <XMApp>
-                    <XMRef idref="S9.p1.m1.26"/>
+                    <XMRef idref="S9.p1.m1.25"/>
                     <XMApp>
-                      <XMRef idref="S9.p1.m1.27"/>
+                      <XMRef idref="S9.p1.m1.26"/>
                       <XMApp>
-                        <XMRef idref="S9.p1.m1.7"/>
+                        <XMRef idref="S9.p1.m1.6"/>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMRef idref="S9.p1.m1.8"/>
+                          <XMRef idref="S9.p1.m1.7"/>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                            <XMRef idref="S9.p1.m1.8"/>
                             <XMRef idref="S9.p1.m1.9"/>
-                            <XMRef idref="S9.p1.m1.10"/>
                           </XMApp>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMRef idref="S9.p1.m1.11"/>
+                          <XMRef idref="S9.p1.m1.10"/>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                            <XMRef idref="S9.p1.m1.11"/>
                             <XMRef idref="S9.p1.m1.12"/>
-                            <XMRef idref="S9.p1.m1.13"/>
                           </XMApp>
+                          <XMRef idref="S9.p1.m1.13"/>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMRef idref="S9.p1.m1.14"/>
-                        </XMApp>
-                        <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMRef idref="S9.p1.m1.15"/>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                            <XMRef idref="S9.p1.m1.15"/>
                             <XMRef idref="S9.p1.m1.16"/>
-                            <XMRef idref="S9.p1.m1.17"/>
                           </XMApp>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                            <XMRef idref="S9.p1.m1.17"/>
                             <XMRef idref="S9.p1.m1.18"/>
-                            <XMRef idref="S9.p1.m1.19"/>
                           </XMApp>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMRef idref="S9.p1.m1.20"/>
+                          <XMRef idref="S9.p1.m1.19"/>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                            <XMRef idref="S9.p1.m1.20"/>
                             <XMRef idref="S9.p1.m1.21"/>
-                            <XMRef idref="S9.p1.m1.22"/>
                           </XMApp>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                            <XMRef idref="S9.p1.m1.22"/>
                             <XMRef idref="S9.p1.m1.23"/>
-                            <XMRef idref="S9.p1.m1.24"/>
                           </XMApp>
                         </XMApp>
                       </XMApp>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                        <XMRef idref="S9.p1.m1.28"/>
+                        <XMRef idref="S9.p1.m1.27"/>
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                          <XMRef idref="S9.p1.m1.28"/>
                           <XMRef idref="S9.p1.m1.29"/>
-                          <XMRef idref="S9.p1.m1.30"/>
                         </XMApp>
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                          <XMRef idref="S9.p1.m1.30"/>
                           <XMRef idref="S9.p1.m1.31"/>
-                          <XMRef idref="S9.p1.m1.32"/>
                         </XMApp>
                       </XMApp>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMRef idref="S9.p1.m1.32"/>
                         <XMRef idref="S9.p1.m1.33"/>
-                        <XMRef idref="S9.p1.m1.34"/>
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                          <XMRef idref="S9.p1.m1.34"/>
                           <XMRef idref="S9.p1.m1.35"/>
-                          <XMRef idref="S9.p1.m1.36"/>
                         </XMApp>
                       </XMApp>
                     </XMApp>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMRef idref="S9.p1.m1.37"/>
+                      <XMRef idref="S9.p1.m1.36"/>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                        <XMRef idref="S9.p1.m1.37"/>
                         <XMRef idref="S9.p1.m1.38"/>
-                        <XMRef idref="S9.p1.m1.39"/>
                       </XMApp>
                     </XMApp>
                   </XMApp>
@@ -4601,13 +4594,13 @@ Then a switch of tag forms.</p>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                      <XMRef idref="S9.p1.m1.39"/>
                       <XMRef idref="S9.p1.m1.40"/>
-                      <XMRef idref="S9.p1.m1.41"/>
                     </XMApp>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                      <XMRef idref="S9.p1.m1.41"/>
                       <XMRef idref="S9.p1.m1.42"/>
-                      <XMRef idref="S9.p1.m1.43"/>
                     </XMApp>
                   </XMApp>
                 </XMApp>
@@ -4616,62 +4609,62 @@ Then a switch of tag forms.</p>
                 <XMRow>
                   <XMCell align="left">
                     <XMApp>
-                      <XMTok meaning="equals" role="RELOP" xml:id="S9.p1.m1.2">=</XMTok>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S9.p1.m1.1">=</XMTok>
                       <XMApp>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.3">p</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.2">p</XMTok>
                         <XMWrap>
-                          <XMTok role="OPEN" stretchy="false" xml:id="S9.p1.m1.4">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.5">x</XMTok>
-                          <XMTok role="CLOSE" stretchy="false" xml:id="S9.p1.m1.6">)</XMTok>
+                          <XMTok role="OPEN" stretchy="false">(</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.4">x</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
                         </XMWrap>
                       </XMApp>
                       <XMApp>
-                        <XMTok meaning="plus" role="ADDOP" xml:id="S9.p1.m1.7">+</XMTok>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="S9.p1.m1.6">+</XMTok>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok meaning="3" role="NUMBER" xml:id="S9.p1.m1.8">3</XMTok>
+                          <XMTok meaning="3" role="NUMBER" xml:id="S9.p1.m1.7">3</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.9">x</XMTok>
-                            <XMTok fontsize="70%" meaning="6" role="NUMBER" xml:id="S9.p1.m1.10">6</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.8">x</XMTok>
+                            <XMTok fontsize="70%" meaning="6" role="NUMBER" xml:id="S9.p1.m1.9">6</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok meaning="14" role="NUMBER" xml:id="S9.p1.m1.11">14</XMTok>
+                          <XMTok meaning="14" role="NUMBER" xml:id="S9.p1.m1.10">14</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.12">x</XMTok>
-                            <XMTok fontsize="70%" meaning="5" role="NUMBER" xml:id="S9.p1.m1.13">5</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.11">x</XMTok>
+                            <XMTok fontsize="70%" meaning="5" role="NUMBER" xml:id="S9.p1.m1.12">5</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.14">y</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.13">y</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok meaning="590" role="NUMBER" xml:id="S9.p1.m1.15">590</XMTok>
+                          <XMTok meaning="590" role="NUMBER" xml:id="S9.p1.m1.14">590</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.16">x</XMTok>
-                            <XMTok fontsize="70%" meaning="4" role="NUMBER" xml:id="S9.p1.m1.17">4</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.15">x</XMTok>
+                            <XMTok fontsize="70%" meaning="4" role="NUMBER" xml:id="S9.p1.m1.16">4</XMTok>
                           </XMApp>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.18">y</XMTok>
-                            <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S9.p1.m1.19">2</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.17">y</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S9.p1.m1.18">2</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok meaning="19" role="NUMBER" xml:id="S9.p1.m1.20">19</XMTok>
+                          <XMTok meaning="19" role="NUMBER" xml:id="S9.p1.m1.19">19</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.21">x</XMTok>
-                            <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.22">3</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.20">x</XMTok>
+                            <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.21">3</XMTok>
                           </XMApp>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.23">y</XMTok>
-                            <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.24">3</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.22">y</XMTok>
+                            <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.23">3</XMTok>
                           </XMApp>
                         </XMApp>
                       </XMApp>
@@ -4681,46 +4674,46 @@ Then a switch of tag forms.</p>
                 <XMRow>
                   <XMCell align="right">
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP" xml:id="S9.p1.m1.25">-</XMTok>
+                      <XMTok meaning="minus" role="ADDOP" xml:id="S9.p1.m1.24">-</XMTok>
                       <XMApp>
-                        <XMTok meaning="plus" role="ADDOP" xml:id="S9.p1.m1.26">+</XMTok>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="S9.p1.m1.25">+</XMTok>
                         <XMApp>
                           <XMTok meaning="minus" role="ADDOP">-</XMTok>
                           <XMApp>
-                            <XMTok meaning="minus" role="ADDOP" xml:id="S9.p1.m1.27">-</XMTok>
+                            <XMTok meaning="minus" role="ADDOP" xml:id="S9.p1.m1.26">-</XMTok>
                             <XMApp>
                               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                              <XMTok meaning="12" role="NUMBER" xml:id="S9.p1.m1.28">12</XMTok>
+                              <XMTok meaning="12" role="NUMBER" xml:id="S9.p1.m1.27">12</XMTok>
                               <XMApp>
                                 <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.29">x</XMTok>
-                                <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S9.p1.m1.30">2</XMTok>
+                                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.28">x</XMTok>
+                                <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S9.p1.m1.29">2</XMTok>
                               </XMApp>
                               <XMApp>
                                 <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.31">y</XMTok>
-                                <XMTok fontsize="70%" meaning="4" role="NUMBER" xml:id="S9.p1.m1.32">4</XMTok>
+                                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.30">y</XMTok>
+                                <XMTok fontsize="70%" meaning="4" role="NUMBER" xml:id="S9.p1.m1.31">4</XMTok>
                               </XMApp>
                             </XMApp>
                           </XMApp>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok meaning="12" role="NUMBER" xml:id="S9.p1.m1.33">12</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.34">x</XMTok>
+                            <XMTok meaning="12" role="NUMBER" xml:id="S9.p1.m1.32">12</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.33">x</XMTok>
                             <XMApp>
                               <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.35">y</XMTok>
-                              <XMTok fontsize="70%" meaning="5" role="NUMBER" xml:id="S9.p1.m1.36">5</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.34">y</XMTok>
+                              <XMTok fontsize="70%" meaning="5" role="NUMBER" xml:id="S9.p1.m1.35">5</XMTok>
                             </XMApp>
                           </XMApp>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok meaning="2" role="NUMBER" xml:id="S9.p1.m1.37">2</XMTok>
+                          <XMTok meaning="2" role="NUMBER" xml:id="S9.p1.m1.36">2</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.38">y</XMTok>
-                            <XMTok fontsize="70%" meaning="6" role="NUMBER" xml:id="S9.p1.m1.39">6</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.37">y</XMTok>
+                            <XMTok fontsize="70%" meaning="6" role="NUMBER" xml:id="S9.p1.m1.38">6</XMTok>
                           </XMApp>
                         </XMApp>
                       </XMApp>
@@ -4728,13 +4721,13 @@ Then a switch of tag forms.</p>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.40">a</XMTok>
-                          <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.41">3</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.39">a</XMTok>
+                          <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.40">3</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.42">b</XMTok>
-                          <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.43">3</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.41">b</XMTok>
+                          <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S9.p1.m1.42">3</XMTok>
                         </XMApp>
                       </XMApp>
                     </XMApp>

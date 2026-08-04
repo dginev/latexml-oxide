@@ -726,22 +726,21 @@ residuals stay here so the live worklist keeps them visible:
   still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
 
-### Bibliography anchor-id residuals (2026-08-04, exposed by the xml:id bare-read sweep)
+### `ltx:biblist` loses its `xml:id` between post and HTML — OPEN (2026-08-04)
 
-The sweep made `formatBibEntry`'s id scheme faithful (Perl MakeBibliography.pm
-L407-415: `s/^bib//`, prepend bibid — previously the NS-blind read forced every
-bibitem onto the `.bibN` numbering fallback). Two upstream-of-that-site parity
-gaps became visible on a plain BibTeX doc (`\bibliography{b}`, `\cite`):
+Perl emits `<ul id="bib.L1" class="ltx_biblist">`; we emit the `<ul>` with no
+id. Not an id-minting bug: `make_bib_list` sets it (make_bibliography.rs:886)
+and it IS present in our post XML (`<biblist xml:id="bib.L1">`, seen in
+`06_cluster_bibliography::bib_entry_ids_are_bib_rooted_like_perl`'s output), so
+it is dropped on the XSLT side. Bibitem anchors themselves match Perl exactly
+(`bib.bibN`) since the `n_bibliographies` fix below.
 
-- **Bibitem anchor prefix**: ours `biba.bibN`, Perl `bib.bibN`. Our recursive
-  `.bib` session mints bibentry ids under a root prefix `a` where Perl's
-  subdocument yields `bib.bibN`-shaped ids. Links stay self-consistent
-  (`href="#biba.bib1"` ↔ `id="biba.bib1"`) — only the anchor spelling differs.
-- **`<ul class="ltx_biblist">` misses its id** (Perl: `bib.L1`).
-  `make_bib_list` sets one (make_bibliography.rs:886) but it does not survive
-  to HTML.
+Sibling observation, untriaged: `--format=xml` output carries no `ltx:bibitem`
+elements at all, while `--format=html5` renders the bibliography — so the two
+format paths run different post chains. Check before trusting an `xml`-format
+dump as a bibliography oracle.
 
-Both live in the bibliography session's id minting, not the accessor layer.
+### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 
 ### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 

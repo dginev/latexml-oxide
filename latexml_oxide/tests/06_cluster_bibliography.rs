@@ -1902,3 +1902,47 @@ fn bib_biblatex_autoloads_under_an_unbound_class() {
     "the autoloaded entries did not render their titles:\n{x}"
   );
 }
+
+/// The recursive `.bib` session must mint `bib`-rooted entry ids, so a
+/// single-bibliography document's anchors come out `bib.bibN` — byte-identical
+/// to same-host Perl (`<li id="bib.bib1">`).
+///
+/// Perl builds a FRESH State per `.bib` (`MakeBibliography.pm` L181-215), so
+/// its inner session always sees `n_bibliographies == 0` and names ids
+/// `bib<radix_alpha(0)>` = `bib`. We deliberately SHARE the live State
+/// (`bib_session.rs` module docs — the enhancement Perl's own comment asks
+/// for), which leaked the outer document's count into
+/// `begin_bibliography_clean` (`latex_constructs.rs:2392-2398`): the inner
+/// session saw 1, minted `biba`, and every anchor came out `biba.bibN` — the
+/// SECOND slot of the multi-bibliography sequence, on a document with one
+/// bibliography. `bib_session::convert` now hides that count for the duration
+/// of the recursive digestion.
+///
+/// Post then strips `^bib` and re-prepends the OUTER bibliography's id
+/// (`MakeBibliography.pm` L407-415), which is why the inner ids must be
+/// `bib`-rooted whichever bibliography they land in — `structure/crazybib`
+/// covers the multi-bibliography sequence (`bib` / `biba` / `bibb`).
+#[test]
+fn bib_entry_ids_are_bib_rooted_like_perl() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_abstract_percent.tex");
+  assert!(
+    x.contains(r#"xml:id="bib.bib1""#),
+    "first bibitem must be bib.bib1 (Perl parity), got ids: {:?}",
+    x.match_indices("xml:id=\"bib")
+      .map(|(i, _)| x[i..(i + 24).min(x.len())].to_string())
+      .take(6)
+      .collect::<Vec<_>>()
+  );
+  assert!(
+    !x.contains(r#"xml:id="biba."#),
+    "no entry may use the SECOND bibliography's prefix in a one-bibliography document"
+  );
+  // The citation links must agree with the anchors they point at.
+  for n in 1..=4 {
+    let id = format!("bib.bib{n}");
+    assert!(
+      x.contains(&format!(r#"xml:id="{id}""#)),
+      "missing bibitem anchor {id}"
+    );
+  }
+}
