@@ -970,3 +970,351 @@ mod svg_geometry_tests {
     }
   }
 }
+
+/// Characterization tests for the engine-side image sizing pipeline.
+///
+/// **These pin behaviour, not correctness.** Several of the numbers below are
+/// known to disagree with pdflatex — an EPS BoundingBox is read as pixels, a
+/// PNG is assumed to be 100 dpi, an SVG 96 dpi, and a box is quantized to whole
+/// device pixels. They are recorded exactly as they are today so that the
+/// planned unification of the sizing pipeline (one probe, one resolution
+/// policy, one graphicx algebra) has to declare every change it makes instead
+/// of drifting silently. When a value here changes, that is a decision, and the
+/// comment above it says which way the current number leans.
+///
+/// Measured references, same 200x100 figure in each format, `\the\wd0` with no
+/// graphicx options, recorded 2026-08-04:
+///
+/// | source              | pdflatex   | Perl LaTeXML | here       |
+/// |---------------------|------------|--------------|------------|
+/// | PNG 200x100 px      | 200.7495pt | 144.54pt     | 144.54pt   |
+/// | EPS BBox 200x100 bp | -          | (no sizer)   | 144.54pt   |
+/// | PDF 200x100 bp      | 200.7495pt | (no sizer)   | 200.75pt   |
+/// | SVG viewBox 200x100 | -          | (no sizer)   | 150.5625pt |
+#[cfg(test)]
+mod sizing_characterization_tests {
+  use super::*;
+
+  fn fixture(name: &str, bytes: &[u8]) -> PathBuf {
+    let path = std::env::temp_dir().join(format!("lxsize-{}-{name}", std::process::id()));
+    std::fs::write(&path, bytes).expect("write fixture");
+    path
+  }
+
+  /// A PNG header with the given IHDR dimensions. `read_image_dimensions` reads
+  /// a fixed 32-byte prefix and takes bytes 16..24 as width/height, so an
+  /// honest signature + IHDR is the whole contract; no CRC is consulted.
+  fn png_header(w: u32, h: u32) -> Vec<u8> {
+    let mut v = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+    v.extend_from_slice(&13u32.to_be_bytes());
+    v.extend_from_slice(b"IHDR");
+    v.extend_from_slice(&w.to_be_bytes());
+    v.extend_from_slice(&h.to_be_bytes());
+    v.extend_from_slice(&[0x08, 0x02, 0x00, 0x00, 0x00]);
+    v.extend_from_slice(&[0u8; 16]); // pad past the 32-byte read_exact
+    v
+  }
+
+  /// A JPEG with a single SOF0 frame header. The reader scans markers for
+  /// 0xC0..=0xCF (minus DHT/JPG/DAC) and takes height then width, big-endian.
+  fn jpeg_header(w: u16, h: u16) -> Vec<u8> {
+    let mut v = vec![0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08];
+    v.extend_from_slice(&h.to_be_bytes());
+    v.extend_from_slice(&w.to_be_bytes());
+    v.extend_from_slice(&[0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01]);
+    v.extend_from_slice(&[0xFF, 0xD9]);
+    v.extend_from_slice(&[0u8; 16]);
+    v
+  }
+
+  // ── layer 1: what each format probe returns, and in which unit ────────
+
+  /// PNG and JPEG report true device pixels; EPS reports **bp** through the
+  /// same `(u32, u32)` channel. Nothing in the type distinguishes them, which
+  /// is the defect the unification is meant to remove — pinned here so the
+  /// removal is visible.
+  #[test]
+  fn read_image_dimensions_returns_pixels_for_raster_and_bp_for_eps() {
+    let png = fixture("dims.png", &png_header(200, 100));
+    assert_eq!(read_image_dimensions(&png), Some((200, 100)), "PNG IHDR px");
+
+    let jpg = fixture("dims.jpg", &jpeg_header(640, 480));
+    assert_eq!(read_image_dimensions(&jpg), Some((640, 480)), "JPEG SOF px");
+
+    // 200 x 100 **bp**, handed back as if it were 200 x 100 pixels.
+    let eps = fixture(
+      "dims.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_image_dimensions(&eps),
+      Some((200, 100)),
+      "EPS bp-as-px"
+    );
+
+    // HiResBoundingBox wins over BoundingBox when both are present.
+    let hires = fixture(
+      "hires.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n\
+        %%HiResBoundingBox: 0 0 199.5 99.4\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_image_dimensions(&hires),
+      Some((200, 99)),
+      "HiRes wins, rounded"
+    );
+
+    // Formats this reader does not know stay `None` — that is what routes a
+    // PDF or an SVG to the `natural_size_pt` fallback.
+    let pdf = fixture(
+      "dims1.pdf",
+      b"%PDF-1.4\n1 0 obj\n<< /MediaBox [0 0 200 100] >>\nendobj\n",
+    );
+    assert_eq!(
+      read_image_dimensions(&pdf),
+      None,
+      "PDF is not this reader's job"
+    );
+  }
+
+  /// The PDF page box: CropBox is pdfTeX's default and wins over MediaBox; a
+  /// box that is not visible in the plaintext bytes yields `None`.
+  ///
+  /// That last case is not hypothetical. Across 14 real PDFs in this repo, 5
+  /// returned `None` here, correlating exactly with `ObjStm` (object-stream)
+  /// compression — the default for `%PDF-1.5` and later, which is what modern
+  /// pdflatex emits. Those figures reach the engine with a 0x0 natural box.
+  #[test]
+  fn read_pdf_page_box_prefers_cropbox_and_gives_up_on_compressed_objects() {
+    let media = fixture("m.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n");
+    assert_eq!(read_pdf_page_box(&media), Some((200.0, 100.0)));
+
+    let both = fixture(
+      "b.pdf",
+      b"%PDF-1.4\n<< /MediaBox [0 0 612 792] /CropBox [0 0 200 100] >>\n",
+    );
+    assert_eq!(
+      read_pdf_page_box(&both),
+      Some((200.0, 100.0)),
+      "CropBox wins"
+    );
+
+    // Non-zero origin: the box is the extent, not the corner.
+    let offset = fixture("o.pdf", b"%PDF-1.4\n<< /MediaBox [10 20 210 120] >>\n");
+    assert_eq!(read_pdf_page_box(&offset), Some((200.0, 100.0)));
+
+    // No plaintext box — the object-stream case.
+    let hidden = fixture(
+      "h.pdf",
+      b"%PDF-1.5\n<< /Type /ObjStm /N 12 >>\nstream\n...\n",
+    );
+    assert_eq!(read_pdf_page_box(&hidden), None);
+  }
+
+  /// `natural_size_pt` is the only place a file-read number is actually
+  /// converted from its own unit into TeX pt — and it uses a different
+  /// resolution per format: PDF at 72 (bp), SVG at 96 (CSS px).
+  #[test]
+  fn natural_size_pt_uses_72_for_pdf_and_96_for_svg() {
+    let pdf = fixture("n.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n");
+    let (w, h) = natural_size_pt(&pdf).expect("pdf box");
+    assert!((w - 200.0 * 72.27 / 72.0).abs() < 1e-9, "w = {w}"); // 200.75
+    assert!((h - 100.0 * 72.27 / 72.0).abs() < 1e-9, "h = {h}");
+
+    let svg = fixture("n.svg", br#"<svg viewBox="0 0 200 100"><rect/></svg>"#);
+    let (w, h) = natural_size_pt(&svg).expect("svg viewport");
+    assert!((w - 200.0 * 72.27 / 96.0).abs() < 1e-9, "w = {w}"); // 150.5625
+    assert!((h - 100.0 * 72.27 / 96.0).abs() < 1e-9, "h = {h}");
+
+    // A raster file has no page box and no SVG root: `None`, so the caller
+    // keeps whatever the pixel reader gave it.
+    let png = fixture("n.png", &png_header(200, 100));
+    assert_eq!(natural_size_pt(&png), None);
+  }
+
+  // ── layer 3a: the pt-space algebra (fallback branch) ──────────────────
+
+  /// `graphicx_box_pt` works in pt throughout and never quantizes, so an
+  /// explicit `width=100pt` comes out as exactly 100pt. Compare
+  /// `sizer_quantizes_the_box_to_whole_device_pixels` below, which is the
+  /// px-space algebra answering the *same* request with 99.7326pt.
+  #[test]
+  fn graphicx_box_pt_table() {
+    let pt = |d: Dimension| d.value_of() as f64 / 65536.0;
+    let case = |opts: &str| {
+      let (w, h) = graphicx_box_pt(200.0, 100.0, opts);
+      (pt(w), pt(h))
+    };
+    let near = |got: (f64, f64), want: (f64, f64), label: &str| {
+      assert!(
+        (got.0 - want.0).abs() < 1e-3 && (got.1 - want.1).abs() < 1e-3,
+        "{label}: got {got:?}, want {want:?}"
+      );
+    };
+    near(case(""), (200.0, 100.0), "no options = natural size");
+    near(
+      case("width=100pt"),
+      (100.0, 50.0),
+      "width= drives height by aspect",
+    );
+    near(
+      case("height=25pt"),
+      (50.0, 25.0),
+      "height= drives width by aspect",
+    );
+    near(
+      case("totalheight=25pt"),
+      (50.0, 25.0),
+      "totalheight aliases height",
+    );
+    near(case("scale=0.5"), (100.0, 50.0), "scale=");
+    near(
+      case("width=100pt,height=80pt"),
+      (100.0, 80.0),
+      "both, no keepaspect",
+    );
+    // keepaspectratio drops the more extreme request and fits inside the box.
+    near(
+      case("width=100pt,height=80pt,keepaspectratio"),
+      (100.0, 50.0),
+      "keepaspectratio fits width",
+    );
+    near(
+      case("width=400pt,height=80pt,keepaspectratio"),
+      (160.0, 80.0),
+      "keepaspectratio fits height",
+    );
+    // An explicit width wins over scale (scale is only consulted when neither
+    // width nor height is given).
+    near(
+      case("scale=2,width=100pt"),
+      (100.0, 50.0),
+      "width beats scale",
+    );
+    // Units other than pt parse through `Dimension::from_str`.
+    near(case("width=1in"), (72.27, 36.135), "in parses");
+    // A degenerate natural size cannot supply the missing dimension.
+    let (w, h) = graphicx_box_pt(0.0, 0.0, "width=100pt");
+    near((pt(w), pt(h)), (100.0, 0.0), "zero natural height");
+  }
+
+  // ── layer 3b: the px-space algebra, and the whole seam ────────────────
+
+  /// Drive the real entry point, `image_graphicx_sizer`, with an absolute
+  /// candidate path so no `SOURCEDIRECTORY` is needed. Returns cached
+  /// (width, height) in pt.
+  fn sizer_pt(path: &Path, options: &str) -> (f64, f64) {
+    let mut w = Whatsit::default();
+    w.set_property("candidates", path.to_string_lossy().to_string());
+    w.set_property("options", options.to_string());
+    image_graphicx_sizer(&mut w);
+    let get = |k: &str| match w.get_property(k).map(|c| c.into_owned()) {
+      Some(Stored::Dimension(d)) => d.value_of() as f64 / 65536.0,
+      other => panic!("{k} was {other:?}"),
+    };
+    (get("cached_width"), get("cached_height"))
+  }
+
+  /// **The whole engine-side seam, as one matrix.** Same 200x100 figure in
+  /// four containers, eight option strings, `cached_width`/`cached_height` in
+  /// pt. This is the table the unified pipeline has to reproduce, row by row,
+  /// or explicitly change.
+  ///
+  /// What each surprising row records:
+  ///
+  /// * **Four resolutions.** With no options the same figure is 144.54pt as a
+  ///   PNG or EPS (100 dpi), 200.75pt as a PDF (72 dpi, i.e. bp), 150.5625pt as
+  ///   an SVG (96 dpi, CSS px), and 0 as a PDF whose page box sits in an object
+  ///   stream. pdflatex says 200.7495pt for the PNG and the PDF alike.
+  /// * **Two algebras.** PNG/EPS take the px-space branch, PDF/SVG the pt-space
+  ///   `graphicx_box_pt` fallback. They answer `width=100pt` differently:
+  ///   99.7326 vs 100.0, because the px branch quantizes the box to a whole
+  ///   device pixel (100pt -> 99.6265bp -> 137.848 px -> ceil 138 -> 99.7326pt).
+  /// * **They also disagree on aspect.** Bare `width=100pt` leaves the height
+  ///   at its natural value on the px branch (72.27) but scales it on the pt
+  ///   branch (50.0). Real documents rarely see this: `graphicx_sty` injects
+  ///   `keepaspectratio=true` for a single-dimension request, which is the row
+  ///   above it. It is pinned because it is a live divergence, not because it
+  ///   is reachable from ordinary LaTeX.
+  /// * **`angle=` never affects the box** on either branch — neither algebra
+  ///   implements the rotate op, so a rotated figure reserves its unrotated
+  ///   width. pdflatex swaps the dimensions.
+  /// * **The last-resort branch** (unreadable page box) honours an explicit
+  ///   `width=`/`height=` and reports 0 for the dimension not asked for.
+  #[test]
+  fn sizer_matrix_across_formats_and_options() {
+    let png = fixture("m.png", &png_header(200, 100));
+    let eps = fixture(
+      "m.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n",
+    );
+    let pdf = fixture("m.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n");
+    let svg = fixture("m.svg", br#"<svg viewBox="0 0 200 100"><rect/></svg>"#);
+    let objstm = fixture("m2.pdf", b"%PDF-1.5\n<< /Type /ObjStm >>\nstream\n..\n");
+
+    // (source, options, expected width pt, expected height pt)
+    #[rustfmt::skip]
+    let matrix: &[(&str, &str, f64, f64)] = &[
+      // px-space branch: raster pixels, and an EPS BoundingBox read as pixels.
+      ("png", "",                                 144.5400,  72.2700),
+      ("png", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
+      ("png", "width=100pt",                       99.7326,  72.2700),
+      ("png", "scale=0.5",                         72.2700,  36.1350),
+      ("png", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
+      ("png", "width=100pt,height=80pt",           99.7326,  80.2197),
+      ("png", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("png", "angle=90",                         144.5400,  72.2700),
+      ("eps", "",                                 144.5400,  72.2700),
+      ("eps", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
+      ("eps", "width=100pt",                       99.7326,  72.2700),
+      ("eps", "scale=0.5",                         72.2700,  36.1350),
+      ("eps", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
+      ("eps", "width=100pt,height=80pt",           99.7326,  80.2197),
+      ("eps", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("eps", "angle=90",                         144.5400,  72.2700),
+      // pt-space branch: the `natural_size_pt` fallback, no quantization.
+      ("pdf", "",                                 200.7500, 100.3750),
+      ("pdf", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
+      ("pdf", "width=100pt",                      100.0000,  50.0000),
+      ("pdf", "scale=0.5",                        100.3750,  50.1875),
+      ("pdf", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
+      ("pdf", "width=100pt,height=80pt",          100.0000,  80.0000),
+      ("pdf", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("pdf", "angle=90",                         200.7500, 100.3750),
+      ("svg", "",                                 150.5625,  75.2812),
+      ("svg", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
+      ("svg", "width=100pt",                      100.0000,  50.0000),
+      ("svg", "scale=0.5",                         75.2812,  37.6406),
+      ("svg", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
+      ("svg", "width=100pt,height=80pt",          100.0000,  80.0000),
+      ("svg", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("svg", "angle=90",                         150.5625,  75.2812),
+      // last resort: nothing measurable, only an explicit request is honoured.
+      ("objstm", "",                                0.0000,   0.0000),
+      ("objstm", "width=100pt,keepaspectratio=true", 100.0000, 0.0000),
+      ("objstm", "width=100pt",                    100.0000,   0.0000),
+      ("objstm", "scale=0.5",                        0.0000,   0.0000),
+      ("objstm", "height=25pt,keepaspectratio=true", 0.0000,  25.0000),
+      ("objstm", "width=100pt,height=80pt",        100.0000,  80.0000),
+      ("objstm", "width=1in,keepaspectratio=true",  72.2700,   0.0000),
+      ("objstm", "angle=90",                         0.0000,   0.0000),
+    ];
+
+    for (src, opts, want_w, want_h) in matrix {
+      let path = match *src {
+        "png" => &png,
+        "eps" => &eps,
+        "pdf" => &pdf,
+        "svg" => &svg,
+        _ => &objstm,
+      };
+      let (w, h) = sizer_pt(path, opts);
+      // 1e-3 pt is ~1/70000 inch: far tighter than any behaviour change, loose
+      // enough to survive `Dimension`'s fixed-point round trip.
+      assert!(
+        (w - want_w).abs() < 1e-3 && (h - want_h).abs() < 1e-3,
+        "{src} [{opts}]: got ({w:.4}, {h:.4}), pinned ({want_w:.4}, {want_h:.4})"
+      );
+    }
+  }
+}

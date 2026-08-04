@@ -2997,6 +2997,180 @@ endobj
     );
   }
 
+  /// Characterization matrix for the post-side graphicx algebra.
+  ///
+  /// **Pins behaviour, not correctness.** `apply_graphicx_transforms` works in
+  /// device pixels at the effective DPI (100 unless a `<?latexml DPI=?>` PI
+  /// says otherwise) and is a *separate* implementation from the engine's
+  /// `image_graphicx_sizer`; the two disagree, and the disagreements are
+  /// recorded here so the planned unification has to resolve them deliberately.
+  ///
+  /// Source is 200x100 px throughout, DPI 100. What the surprising rows record:
+  ///
+  /// * `width=100pt` -> 139 px. 100pt = 99.6265bp; x 100/72.27 = 137.85;
+  ///   but the engine's px branch ceils to 138. The extra pixel is the
+  ///   post pass converting via a slightly different expression.
+  /// * `angle=90` **does** swap the box here (100x200) while the engine leaves
+  ///   it at 200x100 — the engine implements no rotate op at all.
+  /// * `width=1in` and `width=2cm` are **ignored** (200x100 unchanged): the
+  ///   value parser only strips a `pt`/`px` suffix. This is unreachable from
+  ///   ordinary LaTeX — `graphicx_sty` normalizes every dimension to pt before
+  ///   it reaches the `options` attribute (`width=2cm` arrives as
+  ///   `width=56.9055pt`, verified) — so it is defensive behaviour, pinned to
+  ///   stay honest about what the parser actually accepts.
+  /// * The `width=137.9979pt` row is issue 498's own witness: 191 px.
+  #[test]
+  fn apply_graphicx_transforms_matrix() {
+    #[rustfmt::skip]
+    let matrix: &[(&str, u32, u32)] = &[
+      ("",                                     200, 100),
+      ("width=100pt",                          139,  70),
+      ("width=100pt,keepaspectratio=true",     139,  70),
+      ("scale=0.5",                            100,  50),
+      ("height=25pt,keepaspectratio=true",      70,  35),
+      ("width=100pt,height=80pt",              139, 111),
+      ("width=1in,keepaspectratio=true",       200, 100), // unit dropped
+      ("width=2cm",                            200, 100), // unit dropped
+      ("angle=90",                             100, 200), // engine does NOT do this
+      ("width=137.9979pt,keepaspectratio=true", 191,  96), // issue 498 witness
+    ];
+    for (opts, want_w, want_h) in matrix {
+      let got = Graphics::apply_graphicx_transforms(200, 100, opts, 100);
+      assert_eq!(got, (*want_w, *want_h), "options {opts:?}");
+    }
+  }
+
+  /// `parse_angle_option`'s doc claims it normalizes to {0,90,180,270} when
+  /// within 5 degrees. It does not — every value comes back raw. Pinned as it
+  /// behaves; the doc comment is the thing that is wrong.
+  #[test]
+  fn parse_angle_option_returns_the_raw_angle() {
+    for (opts, want) in [
+      ("angle=90", Some(90.0)),
+      ("angle=-90", Some(-90.0)),
+      ("angle=88", Some(88.0)), // NOT snapped to 90
+      ("angle=45", Some(45.0)),
+      ("angle=180", Some(180.0)),
+      ("angle=0.2", Some(0.2)), // below the 0.5 threshold callers apply
+      ("angle=272", Some(272.0)),
+      ("", None),
+      ("width=100pt", None),
+    ] {
+      assert_eq!(Graphics::parse_angle_option(opts), want, "options {opts:?}");
+    }
+  }
+
+  /// Which reader a source reaches, and what it can measure. EPS answers
+  /// `None` here: the post raster reader is the `imagesize` crate, which has no
+  /// PostScript support, so an EPS is never sized on the trivial-copy path — it
+  /// always goes through `Plan::Convert` and is measured from the produced PNG.
+  #[test]
+  fn read_source_dimensions_dispatch_matrix() {
+    let tmp = TempDir::new("post_dispatch");
+    let svg = tmp.join("a.svg");
+    std::fs::write(&svg, r#"<svg viewBox="0 0 200 100"><rect/></svg>"#).unwrap();
+    let svg_upper = tmp.join("B.SVG");
+    std::fs::write(&svg_upper, r#"<svg viewBox="0 0 60 40"><rect/></svg>"#).unwrap();
+    let png = tmp.join("c.png");
+    std::fs::write(&png, ONE_PIXEL_PNG).unwrap();
+    let eps = tmp.join("d.eps");
+    std::fs::write(
+      &eps,
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n",
+    )
+    .unwrap();
+
+    let dims = |p: &Path| Graphics::read_source_dimensions(p.to_str().unwrap());
+    assert_eq!(dims(&svg), Some((200, 100)), "svg via viewBox");
+    assert_eq!(
+      dims(&svg_upper),
+      Some((60, 40)),
+      "extension match is case-insensitive"
+    );
+    assert_eq!(dims(&png), Some((1, 1)), "png via imagesize");
+    assert_eq!(dims(&eps), None, "EPS is unmeasurable here, by design");
+  }
+
+  /// The three `%%BoundingBox` shapes the PS reader accepts. Values are bp; the
+  /// two-value form returns the extent, the full form the raw corners.
+  #[test]
+  fn postscript_bounding_box_forms() {
+    let tmp = TempDir::new("post_psbbox");
+    let offset = tmp.join("o.eps");
+    std::fs::write(
+      &offset,
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 10 20 210 120\n",
+    )
+    .unwrap();
+    assert_eq!(
+      read_postscript_bounding_box(offset.to_str().unwrap()),
+      Some((200.0, 100.0)),
+      "extent, not corners"
+    );
+    assert_eq!(
+      read_postscript_bounding_box_full(offset.to_str().unwrap()),
+      Some((10.0, 20.0, 200.0, 100.0)),
+      "full form is (llx, lly, width, height) — NOT (llx,lly,urx,ury)"
+    );
+    // The deferred `(atend)` form: the real numbers appear later in the file.
+    let atend = tmp.join("a.eps");
+    std::fs::write(
+      &atend,
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: (atend)\nstuff\n%%BoundingBox: 0 0 300 150\n",
+    )
+    .unwrap();
+    assert_eq!(
+      read_postscript_bounding_box(atend.to_str().unwrap()),
+      Some((300.0, 150.0))
+    );
+  }
+
+  /// Rasterization density is a *quality* knob, independent of the sizing DPI:
+  /// `DEFAULT_RASTER_DENSITY` (120) unless the source's own box is large enough
+  /// that rendering at 120 would exceed `MAX_RASTER_DIMENSION_PX`.
+  #[test]
+  fn raster_density_is_capped_by_source_box_size() {
+    let tmp = TempDir::new("post_density");
+    let small = tmp.join("s.eps");
+    std::fs::write(
+      &small,
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n",
+    )
+    .unwrap();
+    assert_eq!(
+      Graphics::raster_density_for_source(small.to_str().unwrap()),
+      120
+    );
+
+    let pdf = tmp.join("s.pdf");
+    std::fs::write(&pdf, "%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n").unwrap();
+    assert_eq!(
+      Graphics::raster_density_for_source(pdf.to_str().unwrap()),
+      120
+    );
+
+    // No measurable box (a raster source) — the default stands.
+    let png = tmp.join("s.png");
+    std::fs::write(&png, ONE_PIXEL_PNG).unwrap();
+    assert_eq!(
+      Graphics::raster_density_for_source(png.to_str().unwrap()),
+      120
+    );
+
+    // A 2000bp-wide source at 120 dpi would be 3333 px, over the 2048 cap, so
+    // the density drops to floor(2048 * 72 / 2000) = 73.
+    let big = tmp.join("b.eps");
+    std::fs::write(
+      &big,
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 2000 1000\n",
+    )
+    .unwrap();
+    assert_eq!(
+      Graphics::raster_density_for_source(big.to_str().unwrap()),
+      73
+    );
+  }
+
   /// Smallest valid PNG: 1×1, 8-bit RGB. `imagesize` reads its IHDR, so the
   /// sizing half of `Plan::Copy` succeeds and no `expected:image` warn fires.
   const ONE_PIXEL_PNG: &[u8] = &[
