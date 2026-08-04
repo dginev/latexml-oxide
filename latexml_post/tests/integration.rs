@@ -501,13 +501,12 @@ fn test_svg_source_sized_and_aspect_classed() {
       Some("191"),
       "{id}: imagewidth must be the option-scaled width, not missing/intrinsic"
     );
-    // Heights auto-scale by each source's aspect ratio:
-    //   g1: ceil(805 × 137.9979/(634·72.27/100)) = 243
-    //   g2: ceil(80 × 137.9979/(62·72.27/100)) = 247
-    // (Perl-with-ImageMagick lands within a pixel — 242/246 — via its
-    // pt→bp detour in image_graphicx_trivial; the port's accepted
-    // transform math ceils once, one px above, for every Copy source.)
-    let want_h = if id == "g1" { "243" } else { "247" };
+    // Heights auto-scale by each source's aspect ratio. These are
+    // Perl-with-ImageMagick's own numbers: since 2026-08-04 the post pass
+    // shares the engine's algebra, which includes Perl's pt→bp step in
+    // `image_graphicx_trivial`, so the one-pixel divergence this test used to
+    // record (243/247) is gone.
+    let want_h = if id == "g1" { "242" } else { "246" };
     assert_eq!(
       node.get_attribute("imageheight").as_deref(),
       Some(want_h),

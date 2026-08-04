@@ -150,10 +150,11 @@ fn an_explicit_width_is_quantized_on_the_raster_branch_only() {
     ("fig.pdf", "width=100pt"),
     ("fig.svg", "width=100pt"),
     ("fig.png", "scale=0.5"),
-    // `angle=` never affects the reserved box on either branch: neither
-    // algebra implements a rotate op, so a sideways figure still reserves its
-    // unrotated width. pdflatex swaps the two dimensions.
+    // `angle=` rotates the reserved box, as Perl has always done
+    // (`Util/Image.pm` L238-242) and we did not until 2026-08-04. Perl on
+    // these exact inputs: 72.27pt x 144.54pt, and 153.30782pt square at 45.
     ("fig.png", "angle=90"),
+    ("fig.png", "angle=45"),
   ]);
   assert_eq!(row(&xml, 0), "99.7326pt 49.8663pt", "PNG width=100pt");
   assert_eq!(row(&xml, 1), "100.0pt 50.0pt", "PDF width=100pt");
@@ -161,7 +162,12 @@ fn an_explicit_width_is_quantized_on_the_raster_branch_only() {
   assert_eq!(row(&xml, 3), "72.27pt 36.135pt", "PNG scale=0.5");
   assert_eq!(
     row(&xml, 4),
-    "144.54pt 72.27pt",
-    "PNG angle=90 — box unrotated"
+    "72.27pt 144.54pt",
+    "PNG angle=90 — Perl parity"
+  );
+  assert_eq!(
+    row(&xml, 5),
+    "153.30782pt 153.30782pt",
+    "PNG angle=45 — the rotated bounding box, Perl parity"
   );
 }

@@ -627,107 +627,42 @@ impl Graphics {
     None
   }
 
-  /// Parse graphicx options and apply transforms to image dimensions.
-  /// Port of Perl's `getTransform` + `image_graphicx_trivial`.
+  /// Apply the graphicx options to a measured pixel size.
   ///
-  /// Handles: scale=N, width=Npt, height=Npt, keepaspectratio, angle=N.
+  /// Delegates to the shared algebra in `latexml_core::util::image` — the port
+  /// of Perl `image_graphicx_size` (`Util/Image.pm` L221-256) — so the pixel
+  /// count written into the HTML and the box the engine reserved come from one
+  /// implementation. Pixel space, hence `DPI/72.27` per bp and Perl's `ceil` at
+  /// each step.
+  ///
+  /// Two behaviours changed when this stopped being its own implementation, both
+  /// toward Perl:
+  ///
+  /// * **Option values now go through `to_bp` first.** The local parser stripped
+  ///   a `pt` suffix and used the number as-is, skipping Perl's pt->bp step, so
+  ///   every explicit size came out up to one pixel wider than the engine's box
+  ///   for the same request (`width=100pt`: 139 px here vs 138 in the engine).
+  ///   It also silently ignored every unit that was not `pt`/`px`.
+  /// * **Rotation is the true bounding box**, not a 90/270 axis swap. That
+  ///   matches what `convert -rotate` actually writes to disk for an oblique
+  ///   angle. Witness for the rotation mattering at all: 1303.5091 Figs 5-7,
+  ///   `[angle=90,scale=0.75]`, which rendered upside-down before any of it —
+  ///   still correct here, since Perl orders a rotation after the scaling
+  ///   whenever a sizing option is present.
+  ///
+  /// Witness for the width-only path: astro-ph0005397 Fig 11 (sfh_burst), where
+  /// feeding the unscaled raw height back through displayed square sources as
+  /// 4:1 ribbons.
   fn apply_graphicx_transforms(raw_w: u32, raw_h: u32, options: &str, dpi: u32) -> (u32, u32) {
-    let dppt = dpi as f64 / 72.27; // dots per point
-
-    // angle=N — for axis-aligned rotations (90, -90, 180, 270, ...),
-    // swap width/height so the HTML's imagewidth/imageheight attrs
-    // match the rotated physical image. Driver: 1303.5091 Figs 5-7
-    // use `[angle=90,scale=0.75]` and rendered upside-down without
-    // this swap.
-    let angle = Self::parse_angle_option(options).unwrap_or(0.0);
-    let rot_mod = ((angle.rem_euclid(360.0) + 0.5).floor() as i32 % 360 + 360) % 360;
-    let (mut w, mut h) = if rot_mod == 90 || rot_mod == 270 {
-      (raw_h as f64, raw_w as f64)
-    } else {
-      (raw_w as f64, raw_h as f64)
-    };
-
-    // Parse options as key=value pairs
-    let mut scale: Option<f64> = None;
-    let mut target_width: Option<f64> = None;
-    let mut target_height: Option<f64> = None;
-    let mut keep_aspect = false;
-
-    for opt in options.split(',') {
-      let opt = opt.trim();
-      if let Some((key, val)) = opt.split_once('=') {
-        let key = key.trim();
-        let val = val.trim();
-        match key {
-          "scale" => {
-            scale = val.parse::<f64>().ok();
-          },
-          "width" => {
-            // Parse dimension: "345.0pt" or "345pt" or bare number
-            let val = val.trim_end_matches("pt").trim_end_matches("px");
-            target_width = val.parse::<f64>().ok();
-          },
-          "height" => {
-            let val = val.trim_end_matches("pt").trim_end_matches("px");
-            target_height = val.parse::<f64>().ok();
-          },
-          "keepaspectratio" => {
-            keep_aspect = val == "true" || val == "1" || val.is_empty();
-          },
-          _ => {},
-        }
-      } else if opt == "keepaspectratio" {
-        keep_aspect = true;
-      }
-    }
-
-    // Apply transforms (matching Perl's image_graphicx_trivial).
-    //
-    // graphicx semantics (texbook L182 of graphics.dtx):
-    //   * scale=S         — both dims × S
-    //   * width=W only    — preserve aspect: height auto-scales by W/raw_w
-    //   * height=H only   — preserve aspect: width auto-scales by H/raw_h
-    //   * width=W height=H (no keepaspectratio) — stretch independently
-    //   * +keepaspectratio — use the more constraining dimension
-    //
-    // Earlier Rust port did `th = target_height.unwrap_or(h / dppt)` in the
-    // width-only path, which fed the unscaled raw height back through and
-    // emitted `width=W height=raw_pixels` — visibly wrong (square sources
-    // displayed as 4:1 ribbons; witness astro-ph0005397 Fig 11 sfh_burst).
-    if let Some(s) = scale {
-      w *= s;
-      h *= s;
-    } else {
-      match (target_width, target_height) {
-        (Some(tw), Some(th)) if keep_aspect => {
-          let scale_w = tw / (w / dppt);
-          let scale_h = th / (h / dppt);
-          let s = scale_w.min(scale_h);
-          w = (w / dppt * s * dppt).ceil();
-          h = (h / dppt * s * dppt).ceil();
-        },
-        (Some(tw), Some(th)) => {
-          w = (tw * dppt).ceil();
-          h = (th * dppt).ceil();
-        },
-        (Some(tw), None) => {
-          // width-only: auto-scale height proportionally.
-          let s = tw / (w / dppt);
-          w = (tw * dppt).ceil();
-          h = (h * s).ceil();
-        },
-        (None, Some(th)) => {
-          // height-only: auto-scale width proportionally.
-          let s = th / (h / dppt);
-          h = (th * dppt).ceil();
-          w = (w * s).ceil();
-        },
-        (None, None) => {
-          // No dimension hints — keep raw pixel size.
-        },
-      }
-    }
-
+    let ops = latexml_core::util::image::parse_graphicx_options(options);
+    let (w, h) = latexml_core::util::image::apply_graphicx_ops(
+      raw_w as f64,
+      raw_h as f64,
+      &ops,
+      dpi as f64 / 72.27,
+      true,
+    );
+    // An image attribute of 0 is useless to a browser; keep at least one pixel.
     (w.max(1.0) as u32, h.max(1.0) as u32)
   }
 
@@ -3005,39 +2940,56 @@ endobj
   /// `image_graphicx_sizer`; the two disagree, and the disagreements are
   /// recorded here so the planned unification has to resolve them deliberately.
   ///
-  /// Source is 200x100 px throughout, DPI 100. What the surprising rows record:
+  /// Source is 200x100 px throughout, DPI 100. Notes on individual rows:
   ///
-  /// * `width=100pt` -> 139 px. 100pt = 99.6265bp; x 100/72.27 = 137.85;
-  ///   but the engine's px branch ceils to 138. The extra pixel is the
-  ///   post pass converting via a slightly different expression.
-  /// * `angle=90` **does** swap the box here (100x200) while the engine leaves
-  ///   it at 200x100 — the engine implements no rotate op at all.
-  /// * `width=1in` and `width=2cm` are **ignored** (200x100 unchanged): the
-  ///   value parser only strips a `pt`/`px` suffix. This is unreachable from
-  ///   ordinary LaTeX — `graphicx_sty` normalizes every dimension to pt before
-  ///   it reaches the `options` attribute (`width=2cm` arrives as
-  ///   `width=56.9055pt`, verified) — so it is defensive behaviour, pinned to
-  ///   stay honest about what the parser actually accepts.
-  /// * The `width=137.9979pt` row is issue 498's own witness: 191 px.
+  /// * `width=100pt` -> 138 px: 100pt = 99.6265bp, x 100/72.27 = 137.85, ceil.
+  ///   Until 2026-08-04 this read 139, because the local parser skipped Perl's
+  ///   pt->bp step and multiplied the raw 100 — so the HTML pixel count and the
+  ///   engine's reserved box disagreed by a pixel on every explicit size.
+  /// * `width=1in` / `width=2cm` are honoured since the same date; the local
+  ///   parser only knew `pt` and `px` and silently dropped anything else. This
+  ///   is unreachable from ordinary LaTeX either way — `graphicx_sty`
+  ///   normalizes to pt first (`width=2cm` arrives as `width=56.9055pt`,
+  ///   verified) — so it is defensive behaviour, pinned to stay honest about
+  ///   what the parser accepts.
+  /// * `angle=90` swaps the box, and now does so via the true rotated bounding
+  ///   box rather than a 90/270 special case, which is also what
+  ///   `convert -rotate` writes for an oblique angle.
+  /// * The `width=137.9979pt` row is issue 498's own witness: 191 px, unmoved
+  ///   by any of the above.
   #[test]
   fn apply_graphicx_transforms_matrix() {
     #[rustfmt::skip]
     let matrix: &[(&str, u32, u32)] = &[
       ("",                                     200, 100),
-      ("width=100pt",                          139,  70),
-      ("width=100pt,keepaspectratio=true",     139,  70),
+      ("width=100pt",                          138,  69),
+      ("width=100pt,keepaspectratio=true",     138,  69),
       ("scale=0.5",                            100,  50),
-      ("height=25pt,keepaspectratio=true",      70,  35),
-      ("width=100pt,height=80pt",              139, 111),
-      ("width=1in,keepaspectratio=true",       200, 100), // unit dropped
-      ("width=2cm",                            200, 100), // unit dropped
-      ("angle=90",                             100, 200), // engine does NOT do this
+      ("height=25pt,keepaspectratio=true",      69,  35),
+      ("width=100pt,height=80pt",              138, 111),
+      ("width=1in,keepaspectratio=true",       100,  50), // 1in at DPI 100
+      ("width=2cm",                             79,  40), // 2cm = 0.787in
+      ("angle=90",                             100, 200),
       ("width=137.9979pt,keepaspectratio=true", 191,  96), // issue 498 witness
     ];
+    // Report every divergence at once: when this matrix moves it is normally
+    // because a shared rule changed, and the whole delta is the signal.
+    let mut deltas = Vec::new();
     for (opts, want_w, want_h) in matrix {
       let got = Graphics::apply_graphicx_transforms(200, 100, opts, 100);
-      assert_eq!(got, (*want_w, *want_h), "options {opts:?}");
+      if got != (*want_w, *want_h) {
+        deltas.push(format!(
+          "  [{opts}] pinned ({want_w}, {want_h})  got {got:?}"
+        ));
+      }
     }
+    assert!(
+      deltas.is_empty(),
+      "{} of {} pinned rows moved:\n{}",
+      deltas.len(),
+      matrix.len(),
+      deltas.join("\n")
+    );
   }
 
   /// `parse_angle_option`'s doc claims it normalizes to {0,90,180,270} when

@@ -160,6 +160,279 @@ pub fn image_candidates(path: &str) -> String {
   candidates.join(",")
 }
 
+/// One graphicx transformation, as compiled from the option string.
+///
+/// Port of the `@transform` list Perl `image_graphicx_parse` builds
+/// (`Util/Image.pm` L142-196). Lengths are in **bp**, the unit `to_bp` yields,
+/// and angles in degrees counter-clockwise, as graphicx states them.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GraphicxOp {
+  /// `page=N` — which page of a multi-page source to take.
+  Page(u32),
+  /// `trim=l b r t` — amounts to remove from each edge.
+  Trim {
+    l: f64,
+    b: f64,
+    r: f64,
+    t: f64,
+  },
+  /// `viewport=llx lly urx ury` — an absolute box (Perl's `clip` op).
+  Clip {
+    l: f64,
+    b: f64,
+    r: f64,
+    t: f64,
+  },
+  /// `angle=N`, counter-clockwise.
+  Rotate(f64),
+  Reflect,
+  /// `scale=`/`xscale=`/`yscale=`.
+  Scale {
+    x: f64,
+    y: f64,
+  },
+  /// `width=`/`height=`/`totalheight=`. A dimension left `None` is derived
+  /// from the other through the aspect ratio; Perl spells that as a 999999
+  /// sentinel with `keep_aspect` forced on (L188-189).
+  ScaleTo {
+    w:           Option<f64>,
+    h:           Option<f64>,
+    keep_aspect: bool,
+  },
+}
+
+/// A TeX/graphicx length in **bp**. Port of Perl `to_bp` + `%BP_conversions`
+/// (`Util/Image.pm` L198-210), including its `true`-prefix strip (`truept`) and
+/// its "unknown unit counts as bp" fallback. A value that is not a length at
+/// all yields 1, exactly as Perl's `else { return 1 }` does.
+pub fn to_bp(x: &str) -> f64 {
+  let x = x.trim();
+  let split = x
+    .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '+' && c != '-')
+    .unwrap_or(x.len());
+  let (num, unit) = x.split_at(split);
+  let Ok(v) = num.parse::<f64>() else {
+    return 1.0;
+  };
+  let unit = unit.trim().strip_prefix("true").unwrap_or(unit.trim());
+  let factor = match unit {
+    "" | "bp" => 1.0,
+    "pt" => 72.0 / 72.27,
+    "pc" => 12.0 * 72.0 / 72.27,
+    "in" => 72.0,
+    "cm" => 72.0 / 2.54,
+    "mm" => 72.0 / 25.4,
+    "dd" => (72.0 / 72.27) * (1238.0 / 1157.0),
+    "cc" => 12.0 * (72.0 / 72.27) * (1238.0 / 1157.0),
+    "sp" => 72.0 / 72.27 / 65536.0,
+    // Perl: `($u && $BP_conversions{$u}) || 1` — an unrecognised unit falls
+    // back to a factor of 1, i.e. the number is taken as bp.
+    _ => 1.0,
+  };
+  v * factor
+}
+
+/// Compile a graphicx option string into the transformation sequence.
+///
+/// Port of Perl `image_graphicx_parse` (`Util/Image.pm` L142-196). The order
+/// matters and is Perl's: rotation comes **before** scaling when no sizing
+/// option was given at all (`$rotfirst`), and after it otherwise.
+///
+/// `pc` differs from Perl by design: Perl's table has `pc => 12/72.27`, which
+/// is 12 *TeX pt* expressed in bp only if you also drop the pt→bp step — a pica
+/// is 12 pt, so the factor is `12 * 72/72.27`. Perl's value makes a 1pc box
+/// 0.166bp instead of 11.955bp. Ours is the correct one; no test in the corpus
+/// exercised `pc`.
+pub fn parse_graphicx_options(options: &str) -> Vec<GraphicxOp> {
+  let (mut width, mut height) = (None, None);
+  let (mut xscale, mut yscale) = (None, None);
+  let (mut aspect, mut angle, mut page) = (false, 0.0f64, None);
+  let (mut viewport, mut is_trim) = (None, false);
+  for opt in options.split(',') {
+    let opt = opt.trim();
+    if opt.is_empty() {
+      continue;
+    }
+    let (key, val) = match opt.split_once('=') {
+      Some((k, v)) => (k.trim(), v.trim()),
+      None => (opt, ""),
+    };
+    let box4 = |v: &str| {
+      let n: Vec<f64> = v.split_whitespace().map(to_bp).collect();
+      if n.len() == 4 {
+        Some((n[0], n[1], n[2], n[3]))
+      } else {
+        None
+      }
+    };
+    match key {
+      "width" => width = Some(to_bp(val)),
+      "height" | "totalheight" => height = Some(to_bp(val)),
+      "scale" => {
+        let s = val.parse::<f64>().ok();
+        xscale = s;
+        yscale = s;
+      },
+      "xscale" => xscale = val.parse::<f64>().ok(),
+      "yscale" => yscale = val.parse::<f64>().ok(),
+      "angle" => angle = val.parse::<f64>().unwrap_or(0.0),
+      "keepaspectratio" => aspect = val != "false",
+      "page" => page = val.parse::<u32>().ok(),
+      "viewport" => {
+        viewport = box4(val);
+        is_trim = false;
+      },
+      "trim" => {
+        viewport = box4(val);
+        is_trim = true;
+      },
+      _ => {},
+    }
+  }
+  // Perl L168: rotation precedes scaling only when nothing sizes the image.
+  let rot_first = width.is_none() && height.is_none() && xscale.is_none() && yscale.is_none();
+
+  let mut ops = Vec::new();
+  if let Some(p) = page {
+    ops.push(GraphicxOp::Page(p));
+  }
+  if let Some((a, b, c, d)) = viewport {
+    ops.push(if is_trim {
+      GraphicxOp::Trim { l: a, b, r: c, t: d }
+    } else {
+      GraphicxOp::Clip { l: a, b, r: c, t: d }
+    });
+  }
+  if rot_first && angle != 0.0 {
+    ops.push(GraphicxOp::Rotate(angle));
+  }
+  match (width, height, xscale, yscale) {
+    // Perl L187-189: a single dimension forces aspect preservation, whatever
+    // `keepaspectratio` said.
+    (Some(w), Some(h), ..) => ops.push(GraphicxOp::ScaleTo {
+      w:           Some(w),
+      h:           Some(h),
+      keep_aspect: aspect,
+    }),
+    (Some(w), None, ..) => ops.push(GraphicxOp::ScaleTo {
+      w:           Some(w),
+      h:           None,
+      keep_aspect: true,
+    }),
+    (None, Some(h), ..) => ops.push(GraphicxOp::ScaleTo {
+      w:           None,
+      h:           Some(h),
+      keep_aspect: true,
+    }),
+    (None, None, Some(x), Some(y)) => ops.push(GraphicxOp::Scale { x, y }),
+    (None, None, Some(x), None) => ops.push(GraphicxOp::Scale { x, y: 1.0 }),
+    (None, None, None, Some(y)) => ops.push(GraphicxOp::Scale { x: 1.0, y }),
+    (None, None, None, None) => {},
+  }
+  if !rot_first && angle != 0.0 {
+    ops.push(GraphicxOp::Rotate(angle));
+  }
+  ops
+}
+
+/// Apply a compiled transformation sequence to a natural size.
+///
+/// Port of Perl `image_graphicx_size` (`Util/Image.pm` L221-256), generalised
+/// over the output unit so the engine and the post-processor share one algebra:
+///
+/// * `units_per_bp` scales a bp-valued option into the caller's unit —
+///   `DPI/72.27` for device pixels (Perl's `$dppt`), `72.27/72` for TeX pt.
+/// * `quantize` applies Perl's `ceil` at each sizing step. True in pixel space,
+///   where a fractional device pixel is meaningless; false in pt space, where
+///   rounding the box to 1/100 inch would be a needless loss of precision.
+///
+/// `Page` is a selector, not a geometric transform, so it is skipped here —
+/// callers read it out separately.
+pub fn apply_graphicx_ops(
+  mut w: f64,
+  mut h: f64,
+  ops: &[GraphicxOp],
+  units_per_bp: f64,
+  quantize: bool,
+) -> (f64, f64) {
+  let round = |v: f64| if quantize { v.ceil() } else { v };
+  for op in ops {
+    match *op {
+      GraphicxOp::Page(_) | GraphicxOp::Reflect => {},
+      GraphicxOp::Scale { x, y } => {
+        w = round(w * x);
+        h = round(h * y);
+      },
+      GraphicxOp::ScaleTo { w: rw, h: rh, keep_aspect } => {
+        let (tw, th) = (rw.map(|v| v * units_per_bp), rh.map(|v| v * units_per_bp));
+        match (tw, th) {
+          (Some(tw), Some(th)) if keep_aspect => {
+            // Perl L234 `return unless $w && $h` — a degenerate natural size
+            // carries no aspect ratio to preserve, and Perl abandons the whole
+            // computation rather than guess. The sizer then reports 0.
+            if w <= 0.0 || h <= 0.0 {
+              return (0.0, 0.0);
+            }
+            // Perl L233-236: honour the less extreme request, so the result
+            // fits inside the requested box.
+            if tw / w < th / h {
+              h = h * tw / w;
+              w = tw;
+            } else {
+              w = w * th / h;
+              h = th;
+            }
+            w = round(w);
+            h = round(h);
+          },
+          (Some(tw), Some(th)) => {
+            w = round(tw);
+            h = round(th);
+          },
+          // A single dimension always preserves aspect (Perl compiles it as a
+          // scale-to with a 999999 sentinel and `keep_aspect` forced on), so
+          // the same degenerate-size bail applies.
+          (Some(tw), None) => {
+            if w <= 0.0 || h <= 0.0 {
+              return (0.0, 0.0);
+            }
+            h = round(h * tw / w);
+            w = round(tw);
+          },
+          (None, Some(th)) => {
+            if w <= 0.0 || h <= 0.0 {
+              return (0.0, 0.0);
+            }
+            w = round(w * th / h);
+            h = round(th);
+          },
+          (None, None) => {},
+        }
+      },
+      GraphicxOp::Rotate(deg) => {
+        // Perl L239-242: `$rad = -$a1 * pi/180`, then the axis-aligned bounding
+        // box of the rotated rectangle. Not quantized — Perl does not ceil here.
+        let rad = -deg * std::f64::consts::PI / 180.0;
+        let (s, c) = (rad.sin(), rad.cos());
+        let (nw, nh) = ((w * c).abs() + (h * s).abs(), (w * s).abs() + (h * c).abs());
+        w = nw;
+        h = nh;
+      },
+      GraphicxOp::Trim { l, b, r, t } => {
+        // Perl L248-250: shrink by the trimmed edges.
+        w = round(w - (l + r) * units_per_bp);
+        h = round(h - (t + b) * units_per_bp);
+      },
+      GraphicxOp::Clip { l, b, r, t } => {
+        // Perl L252-253: the viewport box IS the new extent.
+        w = round((r - l) * units_per_bp);
+        h = round((t - b) * units_per_bp);
+      },
+    }
+  }
+  (w.max(0.0), h.max(0.0))
+}
+
 /// Perl: `image_graphicx_sizer($whatsit)` (Util::Image L259-272).
 ///
 /// Reads image dimensions from `candidates`, applies the `options` string
@@ -260,89 +533,15 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 
   // Apply graphicx options (height, width, scale, keepaspectratio)
   // Perl: image_graphicx_size applies parsed transformations
-  let dppt = dpi / 72.27; // dots per point
-  let mut w = img_w;
-  let mut h = img_h;
-
-  // Parse options string for simple cases
-  // Perl: image_graphicx_parse uses to_bp() to convert dimensions to big points (1/72 inch)
-  let mut req_w: Option<f64> = None; // in bp (big points)
-  let mut req_h: Option<f64> = None; // in bp
-  let mut keep_ratio = false;
-  let mut scale: Option<f64> = None;
-
-  for opt in options.split(',') {
-    let opt = opt.trim();
-    if let Some(val) = opt.strip_prefix("width=") {
-      if let Ok(dim) = <Dimension as std::str::FromStr>::from_str(val.trim()) {
-        // to_bp: convert pt to bp (1bp = 1/72 inch, 1pt = 1/72.27 inch)
-        req_w = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
-      }
-    } else if let Some(val) = opt.strip_prefix("height=") {
-      if let Ok(dim) = <Dimension as std::str::FromStr>::from_str(val.trim()) {
-        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
-      }
-    } else if let Some(val) = opt.strip_prefix("totalheight=") {
-      if let Ok(dim) = <Dimension as std::str::FromStr>::from_str(val.trim()) {
-        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
-      }
-    } else if opt.starts_with("keepaspectratio") {
-      keep_ratio = true;
-    } else if let Some(val) = opt.strip_prefix("scale=") {
-      scale = val.trim().parse::<f64>().ok();
-    }
-  }
-
-  // Apply transformations (matching Perl image_graphicx_size logic)
-  if let Some(s) = scale {
-    w = (w * s).ceil();
-    h = (h * s).ceil();
-  }
-  if req_w.is_some() || req_h.is_some() {
-    let target_w = req_w.map(|rw| rw * dppt);
-    let target_h = req_h.map(|rh| rh * dppt);
-    if keep_ratio {
-      match (target_w, target_h) {
-        (Some(tw), Some(th)) => {
-          // Both specified with keepaspectratio: use the more restrictive
-          if w > 0.0 && h > 0.0 {
-            if tw / w < th / h {
-              let th2 = h * tw / w;
-              w = tw;
-              h = th2;
-            } else {
-              let tw2 = w * th / h;
-              w = tw2;
-              h = th;
-            }
-          }
-        },
-        (Some(tw), None) => {
-          if w > 0.0 {
-            h = h * tw / w;
-            w = tw;
-          }
-        },
-        (None, Some(th)) => {
-          if h > 0.0 {
-            w = w * th / h;
-            h = th;
-          }
-        },
-        (None, None) => {},
-      }
-    } else {
-      if let Some(tw) = target_w {
-        w = tw;
-      }
-      if let Some(th) = target_h {
-        h = th;
-      }
-    }
-  }
-  // Perl: ceil pixel dimensions after applying transforms
-  w = w.ceil();
-  h = h.ceil();
+  // Perl `image_graphicx_size` (Util/Image.pm L221-256) works in device pixels
+  // with `$dppt = DPI/72.27`, and derives the box from it at L271.
+  let (w, h) = apply_graphicx_ops(
+    img_w,
+    img_h,
+    &parse_graphicx_options(&options),
+    dpi / 72.27,
+    true,
+  );
 
   // Convert pixel dimensions back to points, then to scaled points (sp)
   let width_pt = w * 72.27 / dpi;
@@ -507,47 +706,17 @@ fn pt_to_dim(pt: f64) -> Dimension { Dimension::new((pt * 65536.0).round() as i6
 /// `\the\wd` under pdflatex: an explicit `width=` sets the box width outright,
 /// the natural size only supplying the missing dimension via the aspect ratio.
 fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
-  let dim_pt = |v: &str| {
-    <Dimension as std::str::FromStr>::from_str(v.trim())
-      .ok()
-      .map(|d| d.value_of() as f64 / 65536.0)
-  };
-  let (mut w_opt, mut h_opt, mut scale, mut keep) = (None, None, None, false);
-  for opt in options.split(',') {
-    let opt = opt.trim();
-    if let Some(v) = opt.strip_prefix("width=") {
-      w_opt = dim_pt(v);
-    } else if let Some(v) = opt.strip_prefix("height=") {
-      h_opt = dim_pt(v);
-    } else if let Some(v) = opt.strip_prefix("totalheight=") {
-      h_opt = dim_pt(v);
-    } else if let Some(v) = opt.strip_prefix("scale=") {
-      scale = v.trim().parse::<f64>().ok();
-    } else if opt.starts_with("keepaspectratio") {
-      keep = true;
-    }
-  }
-  let (bw, bh) = match (w_opt, h_opt) {
-    (Some(w), Some(h)) => {
-      // Both requested: `keepaspectratio` fits within the box, dropping the more
-      // extreme request (Perl `image_graphicx_size` scale-to, a3 branch).
-      if keep && nw > 0.0 && nh > 0.0 {
-        if w / nw < h / nh {
-          (w, nh * w / nw)
-        } else {
-          (nw * h / nh, h)
-        }
-      } else {
-        (w, h)
-      }
-    },
-    (Some(w), None) => (w, if nw > 0.0 { nh * w / nw } else { 0.0 }),
-    (None, Some(h)) => (if nh > 0.0 { nw * h / nh } else { 0.0 }, h),
-    (None, None) => match scale {
-      Some(s) => (nw * s, nh * s),
-      None => (nw, nh),
-    },
-  };
+  // The same algebra as the pixel branch, in pt and without quantization:
+  // options arrive in bp, and 1bp = 72.27/72 pt. Rounding a typeset box to a
+  // whole device pixel — which is what the pixel branch's `ceil` amounts to —
+  // would throw away four digits of a TeX dimension for nothing.
+  let (bw, bh) = apply_graphicx_ops(
+    nw,
+    nh,
+    &parse_graphicx_options(options),
+    72.27 / 72.0,
+    false,
+  );
   (pt_to_dim(bw), pt_to_dim(bh))
 }
 
@@ -1193,9 +1362,11 @@ mod sizing_characterization_tests {
     );
     // Units other than pt parse through `Dimension::from_str`.
     near(case("width=1in"), (72.27, 36.135), "in parses");
-    // A degenerate natural size cannot supply the missing dimension.
+    // A degenerate natural size carries no aspect ratio, and a lone `width=`
+    // always wants one — Perl abandons the computation rather than guess
+    // (`Util/Image.pm` L234), reporting nothing, i.e. a zero box.
     let (w, h) = graphicx_box_pt(0.0, 0.0, "width=100pt");
-    near((pt(w), pt(h)), (100.0, 0.0), "zero natural height");
+    near((pt(w), pt(h)), (0.0, 0.0), "zero natural height");
   }
 
   // ── layer 3b: the px-space algebra, and the whole seam ────────────────
@@ -1230,15 +1401,17 @@ mod sizing_characterization_tests {
   ///   `graphicx_box_pt` fallback. They answer `width=100pt` differently:
   ///   99.7326 vs 100.0, because the px branch quantizes the box to a whole
   ///   device pixel (100pt -> 99.6265bp -> 137.848 px -> ceil 138 -> 99.7326pt).
-  /// * **They also disagree on aspect.** Bare `width=100pt` leaves the height
-  ///   at its natural value on the px branch (72.27) but scales it on the pt
-  ///   branch (50.0). Real documents rarely see this: `graphicx_sty` injects
-  ///   `keepaspectratio=true` for a single-dimension request, which is the row
-  ///   above it. It is pinned because it is a live divergence, not because it
-  ///   is reachable from ordinary LaTeX.
-  /// * **`angle=` never affects the box** on either branch — neither algebra
-  ///   implements the rotate op, so a rotated figure reserves its unrotated
-  ///   width. pdflatex swaps the dimensions.
+  /// * **A single dimension always preserves aspect**, on both branches, as
+  ///   Perl does by compiling `width=` alone into a scale-to with a 999999
+  ///   sentinel and `keep_aspect` forced on (`Util/Image.pm` L188-189). Until
+  ///   2026-08-04 the px branch left the height at its natural value; the
+  ///   `keepaspectratio=true` that `graphicx_sty` injects had been hiding it
+  ///   from ordinary LaTeX.
+  /// * **`angle=` rotates the reserved box** (Perl L238-242). Until 2026-08-04
+  ///   neither branch implemented the op, so a sideways figure reserved its
+  ///   unrotated width — a Rust-only gap, since Perl has always rotated:
+  ///   measured `angle=90` on the PNG gives Perl 72.27 x 144.54, and that is
+  ///   now what this matrix pins.
   /// * **The last-resort branch** (unreadable page box) honours an explicit
   ///   `width=`/`height=` and reports 0 for the dimension not asked for.
   #[test]
@@ -1258,20 +1431,20 @@ mod sizing_characterization_tests {
       // px-space branch: raster pixels, and an EPS BoundingBox read as pixels.
       ("png", "",                                 144.5400,  72.2700),
       ("png", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
-      ("png", "width=100pt",                       99.7326,  72.2700),
+      ("png", "width=100pt",                       99.7326,  49.8663),
       ("png", "scale=0.5",                         72.2700,  36.1350),
       ("png", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
       ("png", "width=100pt,height=80pt",           99.7326,  80.2197),
       ("png", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
-      ("png", "angle=90",                         144.5400,  72.2700),
+      ("png", "angle=90",                          72.2700, 144.5400),
       ("eps", "",                                 144.5400,  72.2700),
       ("eps", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
-      ("eps", "width=100pt",                       99.7326,  72.2700),
+      ("eps", "width=100pt",                       99.7326,  49.8663),
       ("eps", "scale=0.5",                         72.2700,  36.1350),
       ("eps", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
       ("eps", "width=100pt,height=80pt",           99.7326,  80.2197),
       ("eps", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
-      ("eps", "angle=90",                         144.5400,  72.2700),
+      ("eps", "angle=90",                          72.2700, 144.5400),
       // pt-space branch: the `natural_size_pt` fallback, no quantization.
       ("pdf", "",                                 200.7500, 100.3750),
       ("pdf", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
@@ -1280,7 +1453,7 @@ mod sizing_characterization_tests {
       ("pdf", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
       ("pdf", "width=100pt,height=80pt",          100.0000,  80.0000),
       ("pdf", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
-      ("pdf", "angle=90",                         200.7500, 100.3750),
+      ("pdf", "angle=90",                         100.3750, 200.7500),
       ("svg", "",                                 150.5625,  75.2812),
       ("svg", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
       ("svg", "width=100pt",                      100.0000,  50.0000),
@@ -1288,7 +1461,7 @@ mod sizing_characterization_tests {
       ("svg", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
       ("svg", "width=100pt,height=80pt",          100.0000,  80.0000),
       ("svg", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
-      ("svg", "angle=90",                         150.5625,  75.2812),
+      ("svg", "angle=90",                          75.2812, 150.5625),
       // last resort: nothing measurable, only an explicit request is honoured.
       ("objstm", "",                                0.0000,   0.0000),
       ("objstm", "width=100pt,keepaspectratio=true", 100.0000, 0.0000),
@@ -1300,6 +1473,10 @@ mod sizing_characterization_tests {
       ("objstm", "angle=90",                         0.0000,   0.0000),
     ];
 
+    // Report EVERY divergence, not just the first: when this matrix moves it is
+    // usually because a shared rule changed, and the whole delta is the useful
+    // signal.
+    let mut deltas = Vec::new();
     for (src, opts, want_w, want_h) in matrix {
       let path = match *src {
         "png" => &png,
@@ -1311,10 +1488,18 @@ mod sizing_characterization_tests {
       let (w, h) = sizer_pt(path, opts);
       // 1e-3 pt is ~1/70000 inch: far tighter than any behaviour change, loose
       // enough to survive `Dimension`'s fixed-point round trip.
-      assert!(
-        (w - want_w).abs() < 1e-3 && (h - want_h).abs() < 1e-3,
-        "{src} [{opts}]: got ({w:.4}, {h:.4}), pinned ({want_w:.4}, {want_h:.4})"
-      );
+      if (w - want_w).abs() >= 1e-3 || (h - want_h).abs() >= 1e-3 {
+        deltas.push(format!(
+          "  {src:<7} [{opts}]\n      pinned ({want_w:.4}, {want_h:.4})  got ({w:.4}, {h:.4})"
+        ));
+      }
     }
+    assert!(
+      deltas.is_empty(),
+      "{} of {} pinned rows moved:\n{}",
+      deltas.len(),
+      matrix.len(),
+      deltas.join("\n")
+    );
   }
 }
