@@ -160,6 +160,291 @@ pub fn image_candidates(path: &str) -> String {
   candidates.join(",")
 }
 
+/// One graphicx transformation, as compiled from the option string.
+///
+/// Port of the `@transform` list Perl `image_graphicx_parse` builds
+/// (`Util/Image.pm` L142-196). Lengths are in **bp**, the unit `to_bp` yields,
+/// and angles in degrees counter-clockwise, as graphicx states them.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GraphicxOp {
+  /// `page=N` — which page of a multi-page source to take.
+  Page(u32),
+  /// `trim=l b r t` — amounts to remove from each edge.
+  Trim {
+    l: f64,
+    b: f64,
+    r: f64,
+    t: f64,
+  },
+  /// `viewport=llx lly urx ury` — an absolute box (Perl's `clip` op).
+  Clip {
+    l: f64,
+    b: f64,
+    r: f64,
+    t: f64,
+  },
+  /// `angle=N`, counter-clockwise.
+  Rotate(f64),
+  Reflect,
+  /// `scale=`/`xscale=`/`yscale=`.
+  Scale {
+    x: f64,
+    y: f64,
+  },
+  /// `width=`/`height=`/`totalheight=`. A dimension left `None` is derived
+  /// from the other through the aspect ratio; Perl spells that as a 999999
+  /// sentinel with `keep_aspect` forced on (L188-189).
+  ScaleTo {
+    w:           Option<f64>,
+    h:           Option<f64>,
+    keep_aspect: bool,
+  },
+}
+
+/// A TeX/graphicx length in **bp**. Port of Perl `to_bp` + `%BP_conversions`
+/// (`Util/Image.pm` L198-210), including its `true`-prefix strip (`truept`) and
+/// its "unknown unit counts as bp" fallback. A value that is not a length at
+/// all yields 1, exactly as Perl's `else { return 1 }` does.
+pub fn to_bp(x: &str) -> f64 {
+  let x = x.trim();
+  let split = x
+    .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '+' && c != '-')
+    .unwrap_or(x.len());
+  let (num, unit) = x.split_at(split);
+  let Ok(v) = num.parse::<f64>() else {
+    return 1.0;
+  };
+  let unit = unit.trim().strip_prefix("true").unwrap_or(unit.trim());
+  let factor = match unit {
+    "" | "bp" => 1.0,
+    "pt" => 72.0 / 72.27,
+    "pc" => 12.0 * 72.0 / 72.27,
+    "in" => 72.0,
+    "cm" => 72.0 / 2.54,
+    "mm" => 72.0 / 25.4,
+    "dd" => (72.0 / 72.27) * (1238.0 / 1157.0),
+    "cc" => 12.0 * (72.0 / 72.27) * (1238.0 / 1157.0),
+    "sp" => 72.0 / 72.27 / 65536.0,
+    // Perl: `($u && $BP_conversions{$u}) || 1` — an unrecognised unit falls
+    // back to a factor of 1, i.e. the number is taken as bp.
+    _ => 1.0,
+  };
+  v * factor
+}
+
+/// Compile a graphicx option string into the transformation sequence.
+///
+/// Port of Perl `image_graphicx_parse` (`Util/Image.pm` L142-196). Key order
+/// matters and is Perl's, in two ways:
+///
+/// * A rotation is applied **before** scaling when no sizing option preceded
+///   the `angle` in the source string, and after it otherwise. Perl decides
+///   this the instant it parses `angle` (`$rotfirst = !($width || $height ||
+///   $xscale || $yscale)`, L168), from the keys seen *so far* — so
+///   `angle=90,width=100pt` rotates then scales, while `width=100pt,angle=90`
+///   scales then rotates. graphicx really behaves this way and pdflatex agrees:
+///   the first is ~100x200, the second ~50x100 for a 200x100 source. We capture
+///   `rot_first` at the same point, not from the final key set.
+///
+/// `pc` differs from Perl by design: Perl's table has `pc => 12/72.27`, which
+/// is 12 *TeX pt* expressed in bp only if you also drop the pt→bp step — a pica
+/// is 12 pt, so the factor is `12 * 72/72.27`. Perl's value makes a 1pc box
+/// 0.166bp instead of 11.955bp. Ours is the correct one; no test in the corpus
+/// exercised `pc`.
+pub fn parse_graphicx_options(options: &str) -> Vec<GraphicxOp> {
+  let (mut width, mut height) = (None, None);
+  let (mut xscale, mut yscale) = (None, None);
+  let (mut aspect, mut angle, mut page) = (false, 0.0f64, None);
+  let (mut viewport, mut is_trim) = (None, false);
+  // Set the instant `angle` is parsed, from the sizing keys seen so far — NOT
+  // recomputed from the final key set. Perl `image_graphicx_parse` L168.
+  let mut rot_first = false;
+  for opt in options.split(',') {
+    let opt = opt.trim();
+    if opt.is_empty() {
+      continue;
+    }
+    let (key, val) = match opt.split_once('=') {
+      Some((k, v)) => (k.trim(), v.trim()),
+      None => (opt, ""),
+    };
+    let box4 = |v: &str| {
+      let n: Vec<f64> = v.split_whitespace().map(to_bp).collect();
+      if n.len() == 4 {
+        Some((n[0], n[1], n[2], n[3]))
+      } else {
+        None
+      }
+    };
+    match key {
+      "width" => width = Some(to_bp(val)),
+      "height" | "totalheight" => height = Some(to_bp(val)),
+      "scale" => {
+        let s = val.parse::<f64>().ok();
+        xscale = s;
+        yscale = s;
+      },
+      "xscale" => xscale = val.parse::<f64>().ok(),
+      "yscale" => yscale = val.parse::<f64>().ok(),
+      "angle" => {
+        angle = val.parse::<f64>().unwrap_or(0.0);
+        rot_first = width.is_none() && height.is_none() && xscale.is_none() && yscale.is_none();
+      },
+      "keepaspectratio" => aspect = val != "false",
+      "page" => page = val.parse::<u32>().ok(),
+      "viewport" => {
+        viewport = box4(val);
+        is_trim = false;
+      },
+      "trim" => {
+        viewport = box4(val);
+        is_trim = true;
+      },
+      _ => {},
+    }
+  }
+
+  let mut ops = Vec::new();
+  if let Some(p) = page {
+    ops.push(GraphicxOp::Page(p));
+  }
+  if let Some((a, b, c, d)) = viewport {
+    ops.push(if is_trim {
+      GraphicxOp::Trim { l: a, b, r: c, t: d }
+    } else {
+      GraphicxOp::Clip { l: a, b, r: c, t: d }
+    });
+  }
+  if rot_first && angle != 0.0 {
+    ops.push(GraphicxOp::Rotate(angle));
+  }
+  match (width, height, xscale, yscale) {
+    // Perl L187-189: a single dimension forces aspect preservation, whatever
+    // `keepaspectratio` said.
+    (Some(w), Some(h), ..) => ops.push(GraphicxOp::ScaleTo {
+      w:           Some(w),
+      h:           Some(h),
+      keep_aspect: aspect,
+    }),
+    (Some(w), None, ..) => ops.push(GraphicxOp::ScaleTo {
+      w:           Some(w),
+      h:           None,
+      keep_aspect: true,
+    }),
+    (None, Some(h), ..) => ops.push(GraphicxOp::ScaleTo {
+      w:           None,
+      h:           Some(h),
+      keep_aspect: true,
+    }),
+    (None, None, Some(x), Some(y)) => ops.push(GraphicxOp::Scale { x, y }),
+    (None, None, Some(x), None) => ops.push(GraphicxOp::Scale { x, y: 1.0 }),
+    (None, None, None, Some(y)) => ops.push(GraphicxOp::Scale { x: 1.0, y }),
+    (None, None, None, None) => {},
+  }
+  if !rot_first && angle != 0.0 {
+    ops.push(GraphicxOp::Rotate(angle));
+  }
+  ops
+}
+
+/// Apply a compiled transformation sequence to a natural size.
+///
+/// Port of Perl `image_graphicx_size` (`Util/Image.pm` L221-256), generalised
+/// over the output unit so the engine and the post-processor share one algebra:
+///
+/// * `units_per_bp` scales a bp-valued option into the caller's unit —
+///   `DPI/72.27` for device pixels (Perl's `$dppt`), `72.27/72` for TeX pt.
+/// * `quantize` applies Perl's `ceil` at each sizing step. True in pixel space,
+///   where a fractional device pixel is meaningless; false in pt space, where
+///   rounding the box to 1/100 inch would be a needless loss of precision.
+///
+/// `Page` is a selector, not a geometric transform, so it is skipped here —
+/// callers read it out separately.
+pub fn apply_graphicx_ops(
+  mut w: f64,
+  mut h: f64,
+  ops: &[GraphicxOp],
+  units_per_bp: f64,
+  quantize: bool,
+) -> (f64, f64) {
+  let round = |v: f64| if quantize { v.ceil() } else { v };
+  for op in ops {
+    match *op {
+      GraphicxOp::Page(_) | GraphicxOp::Reflect => {},
+      GraphicxOp::Scale { x, y } => {
+        w = round(w * x);
+        h = round(h * y);
+      },
+      GraphicxOp::ScaleTo { w: rw, h: rh, keep_aspect } => {
+        let (tw, th) = (rw.map(|v| v * units_per_bp), rh.map(|v| v * units_per_bp));
+        match (tw, th) {
+          (Some(tw), Some(th)) if keep_aspect => {
+            // Perl L234 `return unless $w && $h` — a degenerate natural size
+            // carries no aspect ratio to preserve, and Perl abandons the whole
+            // computation rather than guess. The sizer then reports 0.
+            if w <= 0.0 || h <= 0.0 {
+              return (0.0, 0.0);
+            }
+            // Perl L233-236: honour the less extreme request, so the result
+            // fits inside the requested box.
+            if tw / w < th / h {
+              h = h * tw / w;
+              w = tw;
+            } else {
+              w = w * th / h;
+              h = th;
+            }
+            w = round(w);
+            h = round(h);
+          },
+          (Some(tw), Some(th)) => {
+            w = round(tw);
+            h = round(th);
+          },
+          // A single dimension always preserves aspect (Perl compiles it as a
+          // scale-to with a 999999 sentinel and `keep_aspect` forced on), so
+          // the same degenerate-size bail applies.
+          (Some(tw), None) => {
+            if w <= 0.0 || h <= 0.0 {
+              return (0.0, 0.0);
+            }
+            h = round(h * tw / w);
+            w = round(tw);
+          },
+          (None, Some(th)) => {
+            if w <= 0.0 || h <= 0.0 {
+              return (0.0, 0.0);
+            }
+            w = round(w * th / h);
+            h = round(th);
+          },
+          (None, None) => {},
+        }
+      },
+      GraphicxOp::Rotate(deg) => {
+        // Perl L239-242: `$rad = -$a1 * pi/180`, then the axis-aligned bounding
+        // box of the rotated rectangle. Not quantized — Perl does not ceil here.
+        let rad = -deg * std::f64::consts::PI / 180.0;
+        let (s, c) = (rad.sin(), rad.cos());
+        let (nw, nh) = ((w * c).abs() + (h * s).abs(), (w * s).abs() + (h * c).abs());
+        w = nw;
+        h = nh;
+      },
+      GraphicxOp::Trim { l, b, r, t } => {
+        // Perl L248-250: shrink by the trimmed edges.
+        w = round(w - (l + r) * units_per_bp);
+        h = round(h - (t + b) * units_per_bp);
+      },
+      GraphicxOp::Clip { l, b, r, t } => {
+        // Perl L252-253: the viewport box IS the new extent.
+        w = round((r - l) * units_per_bp);
+        h = round((t - b) * units_per_bp);
+      },
+    }
+  }
+  (w.max(0.0), h.max(0.0))
+}
+
 /// Perl: `image_graphicx_sizer($whatsit)` (Util::Image L259-272).
 ///
 /// Reads image dimensions from `candidates`, applies the `options` string
@@ -260,89 +545,15 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 
   // Apply graphicx options (height, width, scale, keepaspectratio)
   // Perl: image_graphicx_size applies parsed transformations
-  let dppt = dpi / 72.27; // dots per point
-  let mut w = img_w;
-  let mut h = img_h;
-
-  // Parse options string for simple cases
-  // Perl: image_graphicx_parse uses to_bp() to convert dimensions to big points (1/72 inch)
-  let mut req_w: Option<f64> = None; // in bp (big points)
-  let mut req_h: Option<f64> = None; // in bp
-  let mut keep_ratio = false;
-  let mut scale: Option<f64> = None;
-
-  for opt in options.split(',') {
-    let opt = opt.trim();
-    if let Some(val) = opt.strip_prefix("width=") {
-      if let Ok(dim) = <Dimension as std::str::FromStr>::from_str(val.trim()) {
-        // to_bp: convert pt to bp (1bp = 1/72 inch, 1pt = 1/72.27 inch)
-        req_w = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
-      }
-    } else if let Some(val) = opt.strip_prefix("height=") {
-      if let Ok(dim) = <Dimension as std::str::FromStr>::from_str(val.trim()) {
-        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
-      }
-    } else if let Some(val) = opt.strip_prefix("totalheight=") {
-      if let Ok(dim) = <Dimension as std::str::FromStr>::from_str(val.trim()) {
-        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
-      }
-    } else if opt.starts_with("keepaspectratio") {
-      keep_ratio = true;
-    } else if let Some(val) = opt.strip_prefix("scale=") {
-      scale = val.trim().parse::<f64>().ok();
-    }
-  }
-
-  // Apply transformations (matching Perl image_graphicx_size logic)
-  if let Some(s) = scale {
-    w = (w * s).ceil();
-    h = (h * s).ceil();
-  }
-  if req_w.is_some() || req_h.is_some() {
-    let target_w = req_w.map(|rw| rw * dppt);
-    let target_h = req_h.map(|rh| rh * dppt);
-    if keep_ratio {
-      match (target_w, target_h) {
-        (Some(tw), Some(th)) => {
-          // Both specified with keepaspectratio: use the more restrictive
-          if w > 0.0 && h > 0.0 {
-            if tw / w < th / h {
-              let th2 = h * tw / w;
-              w = tw;
-              h = th2;
-            } else {
-              let tw2 = w * th / h;
-              w = tw2;
-              h = th;
-            }
-          }
-        },
-        (Some(tw), None) => {
-          if w > 0.0 {
-            h = h * tw / w;
-            w = tw;
-          }
-        },
-        (None, Some(th)) => {
-          if h > 0.0 {
-            w = w * th / h;
-            h = th;
-          }
-        },
-        (None, None) => {},
-      }
-    } else {
-      if let Some(tw) = target_w {
-        w = tw;
-      }
-      if let Some(th) = target_h {
-        h = th;
-      }
-    }
-  }
-  // Perl: ceil pixel dimensions after applying transforms
-  w = w.ceil();
-  h = h.ceil();
+  // Perl `image_graphicx_size` (Util/Image.pm L221-256) works in device pixels
+  // with `$dppt = DPI/72.27`, and derives the box from it at L271.
+  let (w, h) = apply_graphicx_ops(
+    img_w,
+    img_h,
+    &parse_graphicx_options(&options),
+    dpi / 72.27,
+    true,
+  );
 
   // Convert pixel dimensions back to points, then to scaled points (sp)
   let width_pt = w * 72.27 / dpi;
@@ -507,64 +718,112 @@ fn pt_to_dim(pt: f64) -> Dimension { Dimension::new((pt * 65536.0).round() as i6
 /// `\the\wd` under pdflatex: an explicit `width=` sets the box width outright,
 /// the natural size only supplying the missing dimension via the aspect ratio.
 fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
-  let dim_pt = |v: &str| {
-    <Dimension as std::str::FromStr>::from_str(v.trim())
-      .ok()
-      .map(|d| d.value_of() as f64 / 65536.0)
-  };
-  let (mut w_opt, mut h_opt, mut scale, mut keep) = (None, None, None, false);
-  for opt in options.split(',') {
-    let opt = opt.trim();
-    if let Some(v) = opt.strip_prefix("width=") {
-      w_opt = dim_pt(v);
-    } else if let Some(v) = opt.strip_prefix("height=") {
-      h_opt = dim_pt(v);
-    } else if let Some(v) = opt.strip_prefix("totalheight=") {
-      h_opt = dim_pt(v);
-    } else if let Some(v) = opt.strip_prefix("scale=") {
-      scale = v.trim().parse::<f64>().ok();
-    } else if opt.starts_with("keepaspectratio") {
-      keep = true;
-    }
-  }
-  let (bw, bh) = match (w_opt, h_opt) {
-    (Some(w), Some(h)) => {
-      // Both requested: `keepaspectratio` fits within the box, dropping the more
-      // extreme request (Perl `image_graphicx_size` scale-to, a3 branch).
-      if keep && nw > 0.0 && nh > 0.0 {
-        if w / nw < h / nh {
-          (w, nh * w / nw)
-        } else {
-          (nw * h / nh, h)
-        }
-      } else {
-        (w, h)
-      }
-    },
-    (Some(w), None) => (w, if nw > 0.0 { nh * w / nw } else { 0.0 }),
-    (None, Some(h)) => (if nh > 0.0 { nw * h / nh } else { 0.0 }, h),
-    (None, None) => match scale {
-      Some(s) => (nw * s, nh * s),
-      None => (nw, nh),
-    },
-  };
+  // The same algebra as the pixel branch, in pt and without quantization:
+  // options arrive in bp, and 1bp = 72.27/72 pt. Rounding a typeset box to a
+  // whole device pixel — which is what the pixel branch's `ceil` amounts to —
+  // would throw away four digits of a TeX dimension for nothing.
+  let (bw, bh) = apply_graphicx_ops(
+    nw,
+    nh,
+    &parse_graphicx_options(options),
+    72.27 / 72.0,
+    false,
+  );
   (pt_to_dim(bw), pt_to_dim(bh))
 }
 
 /// Read a PDF's page box (width, height) in bp — CropBox (pdfTeX's default),
 /// else MediaBox. Pure Rust, no external tool (this is what pdfTeX's built-in
-/// reader does). Shared with `LaTeXML::Post::Graphics`. `None` when neither box
-/// appears as raw bytes (e.g. compressed into an object stream).
+/// reader does). Shared with `LaTeXML::Post::Graphics`.
+///
+/// Looks in the raw bytes first, then inside object streams. `%PDF-1.5` and
+/// later — everything current pdflatex emits — may put the page tree in a
+/// `/Type /ObjStm` stream, where the box tokens do not appear as raw bytes at
+/// all: measured over 14 real PDFs in this repo, 5 were unreadable without this
+/// second pass, and `ObjStm` presence predicted it exactly.
+///
+/// **First box wins**, in file order, as the raw-byte scan has always done. A
+/// correct answer for page N would mean resolving the page tree through the
+/// xref stream; for the figures `\includegraphics` pulls in, which are
+/// single-page, the first box is the page's own (or the `/Pages` node's, which
+/// it inherits).
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
   let bytes = std::fs::read(path).ok()?;
-  // Fast-fail before the (whole-file) UTF-8 conversion: modern PDFs often
-  // compress the page dictionary into an object stream, so the box tokens never
-  // appear as raw bytes.
-  if byte_find(&bytes, b"/CropBox").is_none() && byte_find(&bytes, b"/MediaBox").is_none() {
-    return None;
+  if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
+    let content = String::from_utf8_lossy(&bytes);
+    if let Some(box_) =
+      parse_pdf_box(&content, "/CropBox").or_else(|| parse_pdf_box(&content, "/MediaBox"))
+    {
+      return Some(box_);
+    }
   }
-  let content = String::from_utf8_lossy(&bytes);
-  parse_pdf_box(&content, "/CropBox").or_else(|| parse_pdf_box(&content, "/MediaBox"))
+  let inflated = inflate_object_streams(&bytes)?;
+  parse_pdf_box(&inflated, "/CropBox").or_else(|| parse_pdf_box(&inflated, "/MediaBox"))
+}
+
+/// Concatenate the inflated contents of every `/Type /ObjStm` in `bytes`.
+///
+/// Deliberately not a PDF parser: it finds object-stream dictionaries, takes the
+/// `stream`…`endstream` payload that follows each, and inflates it. That is
+/// enough to expose the page dictionary, and it stops well short of xref-stream
+/// parsing and object resolution — which is what a real page-N lookup would
+/// need, and is not what a figure's natural size is worth.
+///
+/// Only `/FlateDecode` streams are attempted (the only filter pdflatex, Ghost-
+/// script, Cairo or matplotlib use for object streams), and only the first
+/// [`MAX_OBJSTM_SCAN`] of them, so a pathological file cannot turn a size probe
+/// into an unbounded decompression.
+fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
+  use std::io::Read;
+
+  /// Enough for any real document; a figure PDF has one or two.
+  const MAX_OBJSTM_SCAN: usize = 64;
+  /// Per-stream inflate ceiling, so a zip bomb cannot be handed to us as a
+  /// figure. A page dictionary is a few hundred bytes.
+  const MAX_INFLATED: u64 = 8 << 20;
+
+  let mut out = String::new();
+  let mut from = 0;
+  let mut seen = 0;
+  while seen < MAX_OBJSTM_SCAN {
+    let Some(hit) = byte_find(&bytes[from..], b"/ObjStm") else {
+      break;
+    };
+    let at = from + hit;
+    from = at + b"/ObjStm".len();
+    seen += 1;
+    // The dictionary ends at `stream`, optionally followed by CR, then LF.
+    let Some(rel) = byte_find(&bytes[at..], b"stream") else {
+      continue;
+    };
+    let dict = &bytes[at..at + rel];
+    if byte_find(dict, b"/FlateDecode").is_none() {
+      continue;
+    }
+    let mut start = at + rel + b"stream".len();
+    if bytes.get(start) == Some(&b'\r') {
+      start += 1;
+    }
+    if bytes.get(start) == Some(&b'\n') {
+      start += 1;
+    }
+    let end = byte_find(&bytes[start..], b"endstream").map_or(bytes.len(), |e| start + e);
+    let mut buf = Vec::new();
+    if flate2::read::ZlibDecoder::new(&bytes[start..end])
+      .take(MAX_INFLATED)
+      .read_to_end(&mut buf)
+      .is_err()
+      && buf.is_empty()
+    {
+      // A truncated or mis-delimited stream still yields the bytes decoded
+      // before the error, and the page dictionary sits at the front — so an
+      // error is only fatal when nothing at all came out.
+      continue;
+    }
+    out.push_str(&String::from_utf8_lossy(&buf));
+    out.push('\n');
+  }
+  (!out.is_empty()).then_some(out)
 }
 
 /// Parse `TOKEN [ llx lly urx ury ]` from PDF content, returning `(w, h)`.
@@ -968,5 +1227,440 @@ mod svg_geometry_tests {
     for p in [inch, unitless] {
       let _ = std::fs::remove_file(p);
     }
+  }
+}
+
+/// Characterization tests for the engine-side image sizing pipeline.
+///
+/// **These pin behaviour, not correctness.** Several of the numbers below are
+/// known to disagree with pdflatex — an EPS BoundingBox is read as pixels, a
+/// PNG is assumed to be 100 dpi, an SVG 96 dpi, and a box is quantized to whole
+/// device pixels. They are recorded exactly as they are today so that the
+/// planned unification of the sizing pipeline (one probe, one resolution
+/// policy, one graphicx algebra) has to declare every change it makes instead
+/// of drifting silently. When a value here changes, that is a decision, and the
+/// comment above it says which way the current number leans.
+///
+/// Measured references, same 200x100 figure in each format, `\the\wd0` with no
+/// graphicx options, recorded 2026-08-04:
+///
+/// | source              | pdflatex   | Perl LaTeXML | here       |
+/// |---------------------|------------|--------------|------------|
+/// | PNG 200x100 px      | 200.7495pt | 144.54pt     | 144.54pt   |
+/// | EPS BBox 200x100 bp | -          | (no sizer)   | 144.54pt   |
+/// | PDF 200x100 bp      | 200.7495pt | (no sizer)   | 200.75pt   |
+/// | SVG viewBox 200x100 | -          | (no sizer)   | 150.5625pt |
+#[cfg(test)]
+mod sizing_characterization_tests {
+  use super::*;
+
+  fn fixture(name: &str, bytes: &[u8]) -> PathBuf {
+    let path = std::env::temp_dir().join(format!("lxsize-{}-{name}", std::process::id()));
+    std::fs::write(&path, bytes).expect("write fixture");
+    path
+  }
+
+  /// A minimal `%PDF-1.5` whose only object is a Flate-compressed object stream
+  /// carrying `payload` — the shape pdflatex emits for a page tree since 1.5.
+  fn objstm_pdf(payload: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut enc = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    enc.write_all(payload).expect("deflate");
+    let body = enc.finish().expect("finish");
+    let mut pdf = Vec::from(
+      &b"%PDF-1.5\n1 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode >>\nstream\n"[..],
+    );
+    pdf.extend_from_slice(&body);
+    pdf.extend_from_slice(b"\nendstream\nendobj\n");
+    pdf
+  }
+
+  /// A PNG header with the given IHDR dimensions. `read_image_dimensions` reads
+  /// a fixed 32-byte prefix and takes bytes 16..24 as width/height, so an
+  /// honest signature + IHDR is the whole contract; no CRC is consulted.
+  fn png_header(w: u32, h: u32) -> Vec<u8> {
+    let mut v = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+    v.extend_from_slice(&13u32.to_be_bytes());
+    v.extend_from_slice(b"IHDR");
+    v.extend_from_slice(&w.to_be_bytes());
+    v.extend_from_slice(&h.to_be_bytes());
+    v.extend_from_slice(&[0x08, 0x02, 0x00, 0x00, 0x00]);
+    v.extend_from_slice(&[0u8; 16]); // pad past the 32-byte read_exact
+    v
+  }
+
+  /// A JPEG with a single SOF0 frame header. The reader scans markers for
+  /// 0xC0..=0xCF (minus DHT/JPG/DAC) and takes height then width, big-endian.
+  fn jpeg_header(w: u16, h: u16) -> Vec<u8> {
+    let mut v = vec![0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08];
+    v.extend_from_slice(&h.to_be_bytes());
+    v.extend_from_slice(&w.to_be_bytes());
+    v.extend_from_slice(&[0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01]);
+    v.extend_from_slice(&[0xFF, 0xD9]);
+    v.extend_from_slice(&[0u8; 16]);
+    v
+  }
+
+  // ── layer 1: what each format probe returns, and in which unit ────────
+
+  /// PNG and JPEG report true device pixels; EPS reports **bp** through the
+  /// same `(u32, u32)` channel. Nothing in the type distinguishes them, which
+  /// is the defect the unification is meant to remove — pinned here so the
+  /// removal is visible.
+  #[test]
+  fn read_image_dimensions_returns_pixels_for_raster_and_bp_for_eps() {
+    let png = fixture("dims.png", &png_header(200, 100));
+    assert_eq!(read_image_dimensions(&png), Some((200, 100)), "PNG IHDR px");
+
+    let jpg = fixture("dims.jpg", &jpeg_header(640, 480));
+    assert_eq!(read_image_dimensions(&jpg), Some((640, 480)), "JPEG SOF px");
+
+    // 200 x 100 **bp**, handed back as if it were 200 x 100 pixels.
+    let eps = fixture(
+      "dims.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_image_dimensions(&eps),
+      Some((200, 100)),
+      "EPS bp-as-px"
+    );
+
+    // HiResBoundingBox wins over BoundingBox when both are present.
+    let hires = fixture(
+      "hires.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n\
+        %%HiResBoundingBox: 0 0 199.5 99.4\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_image_dimensions(&hires),
+      Some((200, 99)),
+      "HiRes wins, rounded"
+    );
+
+    // Formats this reader does not know stay `None` — that is what routes a
+    // PDF or an SVG to the `natural_size_pt` fallback.
+    let pdf = fixture(
+      "dims1.pdf",
+      b"%PDF-1.4\n1 0 obj\n<< /MediaBox [0 0 200 100] >>\nendobj\n",
+    );
+    assert_eq!(
+      read_image_dimensions(&pdf),
+      None,
+      "PDF is not this reader's job"
+    );
+  }
+
+  /// The PDF page box: CropBox is pdfTeX's default and wins over MediaBox, and
+  /// a box compressed into an object stream is inflated and read.
+  ///
+  /// That last case is not hypothetical. Across 14 real PDFs in this repo, 5
+  /// returned `None` before the object-stream pass, correlating exactly with
+  /// `ObjStm` — the default for `%PDF-1.5` and later, which is what modern
+  /// pdflatex emits — and those figures reached the engine with a 0x0 natural
+  /// box. All 14 now match `pdfinfo` exactly.
+  #[test]
+  fn read_pdf_page_box_prefers_cropbox_and_reaches_into_object_streams() {
+    let media = fixture("m.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n");
+    assert_eq!(read_pdf_page_box(&media), Some((200.0, 100.0)));
+
+    let both = fixture(
+      "b.pdf",
+      b"%PDF-1.4\n<< /MediaBox [0 0 612 792] /CropBox [0 0 200 100] >>\n",
+    );
+    assert_eq!(
+      read_pdf_page_box(&both),
+      Some((200.0, 100.0)),
+      "CropBox wins"
+    );
+
+    // Non-zero origin: the box is the extent, not the corner.
+    let offset = fixture("o.pdf", b"%PDF-1.4\n<< /MediaBox [10 20 210 120] >>\n");
+    assert_eq!(read_pdf_page_box(&offset), Some((200.0, 100.0)));
+
+    // A real object stream: the box exists only as deflated bytes.
+    let objstm = fixture(
+      "h.pdf",
+      &objstm_pdf(b"5 0 << /Type /Page /MediaBox [0 0 200 100] >>"),
+    );
+    assert_eq!(read_pdf_page_box(&objstm), Some((200.0, 100.0)));
+
+    // A CropBox inside the stream still wins over a MediaBox beside it.
+    let cropped = fixture(
+      "hc.pdf",
+      &objstm_pdf(b"5 0 << /MediaBox [0 0 612 792] /CropBox [0 0 200 100] >>"),
+    );
+    assert_eq!(read_pdf_page_box(&cropped), Some((200.0, 100.0)));
+
+    // Nothing readable anywhere: an object stream we cannot inflate.
+    let opaque = fixture(
+      "ho.pdf",
+      b"%PDF-1.5\n<< /Type /ObjStm /N 12 /Filter /FlateDecode >>\nstream\nnot-zlib\nendstream\n",
+    );
+    assert_eq!(read_pdf_page_box(&opaque), None);
+  }
+
+  /// `natural_size_pt` is the only place a file-read number is actually
+  /// converted from its own unit into TeX pt — and it uses a different
+  /// resolution per format: PDF at 72 (bp), SVG at 96 (CSS px).
+  #[test]
+  fn natural_size_pt_uses_72_for_pdf_and_96_for_svg() {
+    let pdf = fixture("n.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n");
+    let (w, h) = natural_size_pt(&pdf).expect("pdf box");
+    assert!((w - 200.0 * 72.27 / 72.0).abs() < 1e-9, "w = {w}"); // 200.75
+    assert!((h - 100.0 * 72.27 / 72.0).abs() < 1e-9, "h = {h}");
+
+    let svg = fixture("n.svg", br#"<svg viewBox="0 0 200 100"><rect/></svg>"#);
+    let (w, h) = natural_size_pt(&svg).expect("svg viewport");
+    assert!((w - 200.0 * 72.27 / 96.0).abs() < 1e-9, "w = {w}"); // 150.5625
+    assert!((h - 100.0 * 72.27 / 96.0).abs() < 1e-9, "h = {h}");
+
+    // A raster file has no page box and no SVG root: `None`, so the caller
+    // keeps whatever the pixel reader gave it.
+    let png = fixture("n.png", &png_header(200, 100));
+    assert_eq!(natural_size_pt(&png), None);
+  }
+
+  /// The compiled op *sequence* depends on where `angle` sits relative to the
+  /// sizing keys — the ordering graphicx and pdflatex both honour. Pinned at the
+  /// parse layer so the rule is guarded without a rasterizer: `angle` before a
+  /// sizing key rotates first, after it rotates last, and a rotation with no
+  /// sizing key at all rotates first.
+  #[test]
+  fn parse_orders_rotation_by_key_position() {
+    use GraphicxOp::*;
+    let w100 = ScaleTo {
+      w:           Some(to_bp("100pt")),
+      h:           None,
+      keep_aspect: true,
+    };
+    assert_eq!(
+      parse_graphicx_options("angle=90,width=100pt"),
+      vec![Rotate(90.0), w100.clone()],
+      "angle first -> rotate then scale"
+    );
+    assert_eq!(
+      parse_graphicx_options("width=100pt,angle=90"),
+      vec![w100, Rotate(90.0)],
+      "width first -> scale then rotate"
+    );
+    assert_eq!(
+      parse_graphicx_options("angle=90"),
+      vec![Rotate(90.0)],
+      "no sizing key -> rotate first (trivially)"
+    );
+    // scale is a sizing key too, so it flips the order the same way.
+    assert_eq!(
+      parse_graphicx_options("angle=90,scale=2")[0],
+      Rotate(90.0),
+      "angle before scale -> rotate first"
+    );
+    assert_eq!(
+      parse_graphicx_options("scale=2,angle=90")[1],
+      Rotate(90.0),
+      "angle after scale -> rotate last"
+    );
+  }
+
+  // ── layer 3a: the pt-space algebra (fallback branch) ──────────────────
+
+  /// `graphicx_box_pt` works in pt throughout and never quantizes, so an
+  /// explicit `width=100pt` comes out as exactly 100pt. Compare
+  /// `sizer_quantizes_the_box_to_whole_device_pixels` below, which is the
+  /// px-space algebra answering the *same* request with 99.7326pt.
+  #[test]
+  fn graphicx_box_pt_table() {
+    let pt = |d: Dimension| d.value_of() as f64 / 65536.0;
+    let case = |opts: &str| {
+      let (w, h) = graphicx_box_pt(200.0, 100.0, opts);
+      (pt(w), pt(h))
+    };
+    let near = |got: (f64, f64), want: (f64, f64), label: &str| {
+      assert!(
+        (got.0 - want.0).abs() < 1e-3 && (got.1 - want.1).abs() < 1e-3,
+        "{label}: got {got:?}, want {want:?}"
+      );
+    };
+    near(case(""), (200.0, 100.0), "no options = natural size");
+    near(
+      case("width=100pt"),
+      (100.0, 50.0),
+      "width= drives height by aspect",
+    );
+    near(
+      case("height=25pt"),
+      (50.0, 25.0),
+      "height= drives width by aspect",
+    );
+    near(
+      case("totalheight=25pt"),
+      (50.0, 25.0),
+      "totalheight aliases height",
+    );
+    near(case("scale=0.5"), (100.0, 50.0), "scale=");
+    near(
+      case("width=100pt,height=80pt"),
+      (100.0, 80.0),
+      "both, no keepaspect",
+    );
+    // keepaspectratio drops the more extreme request and fits inside the box.
+    near(
+      case("width=100pt,height=80pt,keepaspectratio"),
+      (100.0, 50.0),
+      "keepaspectratio fits width",
+    );
+    near(
+      case("width=400pt,height=80pt,keepaspectratio"),
+      (160.0, 80.0),
+      "keepaspectratio fits height",
+    );
+    // An explicit width wins over scale (scale is only consulted when neither
+    // width nor height is given).
+    near(
+      case("scale=2,width=100pt"),
+      (100.0, 50.0),
+      "width beats scale",
+    );
+    // Units other than pt parse through `Dimension::from_str`.
+    near(case("width=1in"), (72.27, 36.135), "in parses");
+    // A degenerate natural size carries no aspect ratio, and a lone `width=`
+    // always wants one — Perl abandons the computation rather than guess
+    // (`Util/Image.pm` L234), reporting nothing, i.e. a zero box.
+    let (w, h) = graphicx_box_pt(0.0, 0.0, "width=100pt");
+    near((pt(w), pt(h)), (0.0, 0.0), "zero natural height");
+  }
+
+  // ── layer 3b: the px-space algebra, and the whole seam ────────────────
+
+  /// Drive the real entry point, `image_graphicx_sizer`, with an absolute
+  /// candidate path so no `SOURCEDIRECTORY` is needed. Returns cached
+  /// (width, height) in pt.
+  fn sizer_pt(path: &Path, options: &str) -> (f64, f64) {
+    let mut w = Whatsit::default();
+    w.set_property("candidates", path.to_string_lossy().to_string());
+    w.set_property("options", options.to_string());
+    image_graphicx_sizer(&mut w);
+    let get = |k: &str| match w.get_property(k).map(|c| c.into_owned()) {
+      Some(Stored::Dimension(d)) => d.value_of() as f64 / 65536.0,
+      other => panic!("{k} was {other:?}"),
+    };
+    (get("cached_width"), get("cached_height"))
+  }
+
+  /// **The whole engine-side seam, as one matrix.** Same 200x100 figure in
+  /// four containers, eight option strings, `cached_width`/`cached_height` in
+  /// pt. This is the table the unified pipeline has to reproduce, row by row,
+  /// or explicitly change.
+  ///
+  /// What each surprising row records:
+  ///
+  /// * **Four resolutions.** With no options the same figure is 144.54pt as a
+  ///   PNG or EPS (100 dpi), 200.75pt as a PDF (72 dpi, i.e. bp), 150.5625pt as
+  ///   an SVG (96 dpi, CSS px), and 0 as a PDF whose page box sits in an object
+  ///   stream. pdflatex says 200.7495pt for the PNG and the PDF alike.
+  /// * **Two algebras.** PNG/EPS take the px-space branch, PDF/SVG the pt-space
+  ///   `graphicx_box_pt` fallback. They answer `width=100pt` differently:
+  ///   99.7326 vs 100.0, because the px branch quantizes the box to a whole
+  ///   device pixel (100pt -> 99.6265bp -> 137.848 px -> ceil 138 -> 99.7326pt).
+  /// * **A single dimension always preserves aspect**, on both branches, as
+  ///   Perl does by compiling `width=` alone into a scale-to with a 999999
+  ///   sentinel and `keep_aspect` forced on (`Util/Image.pm` L188-189). Until
+  ///   2026-08-04 the px branch left the height at its natural value; the
+  ///   `keepaspectratio=true` that `graphicx_sty` injects had been hiding it
+  ///   from ordinary LaTeX.
+  /// * **`angle=` rotates the reserved box** (Perl L238-242). Until 2026-08-04
+  ///   neither branch implemented the op, so a sideways figure reserved its
+  ///   unrotated width — a Rust-only gap, since Perl has always rotated:
+  ///   measured `angle=90` on the PNG gives Perl 72.27 x 144.54, and that is
+  ///   now what this matrix pins.
+  /// * **The last-resort branch** (unreadable page box) honours an explicit
+  ///   `width=`/`height=` and reports 0 for the dimension not asked for.
+  #[test]
+  fn sizer_matrix_across_formats_and_options() {
+    let png = fixture("m.png", &png_header(200, 100));
+    let eps = fixture(
+      "m.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n",
+    );
+    let pdf = fixture("m.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n");
+    let svg = fixture("m.svg", br#"<svg viewBox="0 0 200 100"><rect/></svg>"#);
+    let objstm = fixture("m2.pdf", b"%PDF-1.5\n<< /Type /ObjStm >>\nstream\n..\n");
+
+    // (source, options, expected width pt, expected height pt)
+    #[rustfmt::skip]
+    let matrix: &[(&str, &str, f64, f64)] = &[
+      // px-space branch: raster pixels, and an EPS BoundingBox read as pixels.
+      ("png", "",                                 144.5400,  72.2700),
+      ("png", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
+      ("png", "width=100pt",                       99.7326,  49.8663),
+      ("png", "scale=0.5",                         72.2700,  36.1350),
+      ("png", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
+      ("png", "width=100pt,height=80pt",           99.7326,  80.2197),
+      ("png", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("png", "angle=90",                          72.2700, 144.5400),
+      ("eps", "",                                 144.5400,  72.2700),
+      ("eps", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
+      ("eps", "width=100pt",                       99.7326,  49.8663),
+      ("eps", "scale=0.5",                         72.2700,  36.1350),
+      ("eps", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
+      ("eps", "width=100pt,height=80pt",           99.7326,  80.2197),
+      ("eps", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("eps", "angle=90",                          72.2700, 144.5400),
+      // pt-space branch: the `natural_size_pt` fallback, no quantization.
+      ("pdf", "",                                 200.7500, 100.3750),
+      ("pdf", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
+      ("pdf", "width=100pt",                      100.0000,  50.0000),
+      ("pdf", "scale=0.5",                        100.3750,  50.1875),
+      ("pdf", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
+      ("pdf", "width=100pt,height=80pt",          100.0000,  80.0000),
+      ("pdf", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("pdf", "angle=90",                         100.3750, 200.7500),
+      ("svg", "",                                 150.5625,  75.2812),
+      ("svg", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
+      ("svg", "width=100pt",                      100.0000,  50.0000),
+      ("svg", "scale=0.5",                         75.2812,  37.6406),
+      ("svg", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
+      ("svg", "width=100pt,height=80pt",          100.0000,  80.0000),
+      ("svg", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
+      ("svg", "angle=90",                          75.2812, 150.5625),
+      // last resort: nothing measurable, only an explicit request is honoured.
+      ("objstm", "",                                0.0000,   0.0000),
+      ("objstm", "width=100pt,keepaspectratio=true", 100.0000, 0.0000),
+      ("objstm", "width=100pt",                    100.0000,   0.0000),
+      ("objstm", "scale=0.5",                        0.0000,   0.0000),
+      ("objstm", "height=25pt,keepaspectratio=true", 0.0000,  25.0000),
+      ("objstm", "width=100pt,height=80pt",        100.0000,  80.0000),
+      ("objstm", "width=1in,keepaspectratio=true",  72.2700,   0.0000),
+      ("objstm", "angle=90",                         0.0000,   0.0000),
+    ];
+
+    // Report EVERY divergence, not just the first: when this matrix moves it is
+    // usually because a shared rule changed, and the whole delta is the useful
+    // signal.
+    let mut deltas = Vec::new();
+    for (src, opts, want_w, want_h) in matrix {
+      let path = match *src {
+        "png" => &png,
+        "eps" => &eps,
+        "pdf" => &pdf,
+        "svg" => &svg,
+        _ => &objstm,
+      };
+      let (w, h) = sizer_pt(path, opts);
+      // 1e-3 pt is ~1/70000 inch: far tighter than any behaviour change, loose
+      // enough to survive `Dimension`'s fixed-point round trip.
+      if (w - want_w).abs() >= 1e-3 || (h - want_h).abs() >= 1e-3 {
+        deltas.push(format!(
+          "  {src:<7} [{opts}]\n      pinned ({want_w:.4}, {want_h:.4})  got ({w:.4}, {h:.4})"
+        ));
+      }
+    }
+    assert!(
+      deltas.is_empty(),
+      "{} of {} pinned rows moved:\n{}",
+      deltas.len(),
+      matrix.len(),
+      deltas.join("\n")
+    );
   }
 }
