@@ -1960,3 +1960,46 @@ fn bib_entry_ids_are_bib_rooted_like_perl() {
     "biblist must receive a fragid, or the HTML <ul> loses its id entirely"
   );
 }
+
+/// Id-bearing markup CLONED INTO a bibliography entry (here `$E=mc^2$` in a
+/// title) must keep an id all the way to HTML.
+///
+/// Perl's `Collector::rescan` (Collector.pm L97, called from
+/// MakeBibliography.pm L71/L78) re-runs the whole Scan over the generated
+/// bibliography, so such nodes get an ObjectDB entry — which is the
+/// precondition `CrossRef::fill_in_frags` needs before it stamps `fragid`,
+/// and the HTML5 XSLT emits the HTML `id` from `@fragid` alone. This port has
+/// no rescan, so the cloned `ltx:Math` reached HTML with no id at all
+/// (measured against same-host Perl 0.8.8, which emits `bib.bib1.m1a`).
+/// MakeBibliography now registers every id-bearing node of the generated
+/// subtree.
+///
+/// The id NAME is allowed to differ from Perl's: Perl's trailing `a` is a
+/// `uniquifyID` artifact of cloning while the source bibentry still carried
+/// the same id, which it then deletes. What must hold is that the node keeps
+/// an id and that nothing dangles.
+#[test]
+fn bib_entry_cloned_markup_keeps_its_id() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_title_math.tex");
+  let math_ids: Vec<&str> = x
+    .match_indices("<Math")
+    .filter_map(|(i, _)| {
+      let tail = &x[i..(i + 200).min(x.len())];
+      tail
+        .find("xml:id=\"")
+        .map(|j| &tail[j + 8..])
+        .and_then(|s| s.find('"').map(|e| &s[..e]))
+    })
+    .collect();
+  assert!(
+    math_ids.iter().any(|id| id.starts_with("bib.")),
+    "the math cloned into the bib title must keep a bib-rooted xml:id, got {math_ids:?}"
+  );
+  // …and the fragid that turns it into an HTML id.
+  for id in math_ids.iter().filter(|i| i.starts_with("bib.")) {
+    assert!(
+      x.contains(&format!(r#"fragid="{id}""#)),
+      "cloned bib markup {id} must receive a fragid"
+    );
+  }
+}

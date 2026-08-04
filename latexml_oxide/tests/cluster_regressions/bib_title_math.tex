@@ -1,0 +1,10 @@
+% Guard for id preservation through the bibliography clone path: the math and
+% the emphasis in the .bib title are id-bearing markup CLONED into the
+% generated bibliography, and must keep an id (and hence a fragid) in HTML.
+% Perl gets this from Collector::rescan; see bib_entry_cloned_markup_keeps_its_id.
+\documentclass{article}
+\begin{document}
+Cite \cite{mathy}.
+\bibliographystyle{plain}
+\bibliography{bib_title_math}
+\end{document}

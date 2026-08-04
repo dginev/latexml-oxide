@@ -1690,23 +1690,46 @@ impl Processor for MakeBibliography {
       }
     }
 
-    // Register the enclosing `ltx:biblist` too — Perl's Scan runs AFTER
-    // MakeBibliography and registers EVERY id'd node, which is what lets
-    // `CrossRef::fill_in_frags` ("Any nodes with an ID will get a fragid",
-    // CrossRef.pm L312-324) stamp `fragid` on it. This port registers the
-    // bibitems by hand at this seam but never the list, so the list alone
-    // reached HTML with no `id` — the XSLT's `add_id` emits the HTML `id`
-    // from `@fragid` only, so Perl's `<ul id="bib.L1">` was a bare `<ul>`
-    // here (SYNC_STATUS "Found, not fixed", 2026-07-28).
-    for list_node in doc.findnodes("//ltx:biblist") {
-      let Some(list_id) = crate::document::get_xml_id(&list_node) else {
+    // Stand in for Perl's rescan of the generated subtree.
+    //
+    // Perl `Collector::rescan` (Collector.pm L97) re-runs the WHOLE Scan over
+    // the post-MakeBibliography document (called at MakeBibliography.pm L71,
+    // L78), so every id-bearing node in the generated bibliography — the
+    // enclosing `ltx:biblist`, and any id'd markup CLONED IN from a bibentry
+    // (an `ltx:Math` in a title, a styled `ltx:text`, …) — lands in the
+    // ObjectDB. That entry is what `CrossRef::fill_in_frags` ("Any nodes with
+    // an ID will get a fragid", CrossRef.pm L312-324) needs before it will
+    // stamp `fragid`, and the HTML5 XSLT's `add_id` emits the HTML `id` from
+    // `@fragid` ALONE. So an unregistered node reaches HTML with NO id.
+    //
+    // This port hand-registers the bibitems just above (Perl's Scan is what
+    // registers them there) but nothing else, so both classes were lost:
+    // Perl's `<ul id="bib.L1">` was a bare `<ul>` here, and a `$…$` inside a
+    // bib title lost the `bib.bib1.m1a` id Perl emits (measured on same-host
+    // 0.8.8). Registering the whole generated subtree covers both.
+    //
+    // Deliberately narrower than Perl's rescan: this restores the id/fragid
+    // half only. It does NOT re-derive `labels`, relations or the richer
+    // per-type values a full Scan would, and it never overwrites an entry
+    // that already exists — the bibitem registrations above (which carry
+    // `type`/`number`) win. Wiring a real `Collector::rescan` is tracked in
+    // SYNC_STATUS.
+    let location = doc.site_relative_destination().unwrap_or_default();
+    for node in doc.findnodes("//ltx:bibliography//*[@xml:id]") {
+      let Some(id) = crate::document::get_xml_id(&node) else {
         continue;
       };
-      let location = doc.site_relative_destination().unwrap_or_default();
-      self.db.register(&format!("ID:{}", list_id), vec![
-        ("type", crate::object_db::Value::from("ltx:biblist")),
+      let key = format!("ID:{}", id);
+      if self.db.lookup(&key).is_some() {
+        continue; // already registered (bibitems, and anything Scan saw)
+      }
+      let qname = doc
+        .get_qname(&node)
+        .unwrap_or_else(|| "ltx:text".to_string());
+      self.db.register(&key, vec![
+        ("type", crate::object_db::Value::from(qname.as_str())),
         ("location", crate::object_db::Value::from(location.as_str())),
-        ("fragid", crate::object_db::Value::from(list_id.as_str())),
+        ("fragid", crate::object_db::Value::from(id.as_str())),
       ]);
     }
 

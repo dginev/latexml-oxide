@@ -734,6 +734,73 @@ residuals stay here so the live worklist keeps them visible:
   still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
 
+### `fragid` parity audit — id preservation (2026-08-04)
+
+Full Perl↔Rust comparison of the `fragid` mechanism, since `fragid` — not
+`xml:id` — is what the HTML5 XSLT's `add_id` emits the HTML `id` from, so a
+node with an `xml:id` but no `fragid` reaches HTML with **no id at all**.
+`CrossRef::fill_in_frags` (CrossRef.pm L312-324) is the assigner and is
+faithfully ported; it stamps only nodes carrying an ObjectDB `ID:` entry.
+
+**Measured end state** (same-host Perl 0.8.8, id-rich document with sections,
+labels, footnotes, equation/align, table, figure, refs): HTML id sets are
+`24 rust / 23 perl`, **zero ids present in Perl and missing here**, zero
+dangling in-page anchors in either engine; the one extra is our `abstract1`
+(we make the abstract linkable, Perl does not). Under `--splitat=section` the
+per-page sets match exactly (`S1.html` 22/22) with no broken cross-page
+anchors. Witness dirs under the session scratchpad.
+
+**Two audit claims did NOT survive checking** — do not re-chase:
+- *"Scan skips XM* descendants ⇒ hrefless `<m:share/>` in all Content MathML"*:
+  **refuted for documents.** A `$a<b<c$` document emits
+  `<share href="#p1.m1.sh1">` in BOTH engines, byte-identical. The hrefless
+  `<share/>` appears only in the standalone `latexmlmath_oxide --cmml` path —
+  where Perl's `latexmlmath` emits `href="#Ex1.m1.sh1"` pointing at **nothing**
+  (its own output has zero ids). Shared limitation, Perl's arguably worse (a
+  dangling href vs a missing one). Not a Rust-only gap.
+- *"`generate_node_id`'s fragid half is missing"*: **present and faithful**
+  (document.rs:1361-1366 vs Post.pm L1490-1492). It was merely never reached,
+  because the parent walk above it used a bare `xml:id` read that always
+  missed; the accessor sweep activated it.
+
+**Fixed here:** id-bearing markup CLONED into a generated bibliography (an
+`ltx:Math` in a `.bib` title) reached HTML with no id, because Perl's
+`Collector::rescan` (Collector.pm L97, called from MakeBibliography.pm L71/78)
+re-runs the whole Scan over the generated subtree and we have no rescan.
+MakeBibliography now registers every id-bearing node of that subtree
+(id/fragid half only, never overwriting an existing entry). Witness went
+`4 rust / 5 perl` ids → `5 / 5`. Guards:
+`06_cluster_bibliography::{bib_entry_ids_are_bib_rooted_like_perl,
+bib_entry_cloned_markup_keeps_its_id}` (both red-checked).
+
+**Still open, ranked** (each verified as real code, blast radius NOT
+re-measured except where noted):
+1. **No `Collector::rescan`.** The fix above is a bibliography-local stand-in.
+   The general wiring — re-run `Scan` from `MakeIndex`/`MakeBibliography` —
+   also restores `labels`/relations/per-type values a full Scan derives, and
+   would let the three ad-hoc registrations be deleted. Blocked on `Scan`
+   owning its `ObjectDB` by value (`scan.rs:49`), so it needs a borrow-based
+   or take/restore refactor.
+2. **`associateNode` (Post.pm L508-585) unported** — generated MathML/OpenMath
+   nodes carry no `xml:id`, so `convertedIDs` and pmml↔cmml parallel
+   cross-linking do not exist. This is also the only real caller of
+   `generate_node_id`, which currently has **zero callers**.
+3. **`in_page_id` lacks the `labelids` branch** (Scan.pm L176-184) — affects
+   `--splitnaming=label*` only; `Scan::new` takes no options to carry it.
+4. **`in_page_id` lacks the `split_from_id` fallback** (Scan.pm L191-192);
+   `PostDocument::split_from_id` exists but is read by nobody and is never set
+   on streaming pages. Anchor-naming only — links stay self-consistent.
+5. **`strip_ref_display_fragids`** (crossref.rs:131) is Rust-only and matches
+   `//ltx:ref//*[@fragid]` wholesale, so genuine id'd content inside an
+   `ltx:ref` loses its fragid too. Narrow it to ids absent from the ObjectDB.
+6. **`make_sub_collection_documents` returns `vec![]`** (collector.rs:141) —
+   `--splitindex`/`--splitbibliography` drop every entry past the first
+   initial. Note its only callers are its own unit tests, one of which is
+   named `…_currently_returns_empty`, so the accessor fix landed there is
+   inert until this is implemented.
+7. **Glossary term/description flattened to text** (make_index.rs:553-596)
+   where Perl deep-clones the phrase markup with suffix `glo`, keeping ids.
+
 ### `--format=xml` emits no `ltx:bibitem` — untriaged (2026-08-04)
 
 `--format=xml` output carries no `ltx:bibitem` elements at all, while
