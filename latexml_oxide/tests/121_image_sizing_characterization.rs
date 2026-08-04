@@ -193,3 +193,38 @@ fn an_explicit_width_is_quantized_on_the_raster_branch_only() {
     "PNG angle=45 — the rotated bounding box, Perl parity"
   );
 }
+
+/// graphicx applies a rotation before or after scaling depending on whether the
+/// `angle` key precedes the sizing key in the source string, and Perl replicates
+/// it (`image_graphicx_parse` sets `$rotfirst` from the keys seen up to `angle`,
+/// L168). This is not a quirk to smooth over: pdflatex behaves the same way, so
+/// getting it wrong reserves visibly wrong space for every rotated-and-sized
+/// figure. All four rows were verified against Perl 0.8.8 on the same input;
+/// three match to the digit.
+#[test]
+fn rotation_order_depends_on_key_order_like_perl_and_pdflatex() {
+  let xml = sizes(&[
+    ("fig.png", "angle=90,width=100pt"),
+    ("fig.png", "width=100pt,angle=90"),
+    ("fig.png", "scale=0.5,angle=90"),
+    ("fig.png", "angle=90,scale=0.5"),
+  ]);
+  // angle first: rotate 200x100 -> 100x200, then width=100pt scales it (aspect
+  // preserved) -> ~100x200pt. Perl: 99.7326 x 199.4652, exact.
+  assert_eq!(row(&xml, 0), "99.7326pt 199.4652pt", "angle then width");
+  // width first: scale to 100pt (-> ~138x69 px), then rotate -> swapped.
+  // Perl: 49.8663 x 99.7326, exact.
+  assert_eq!(row(&xml, 1), "49.8663pt 99.7326pt", "width then angle");
+  // Uniform scale commutes with rotation; both orders agree with Perl exactly.
+  assert_eq!(row(&xml, 2), "36.135pt 72.27pt", "scale then angle");
+  // angle then scale: rotate-then-scale. Width matches Perl (36.8577); the
+  // height is the one intentional sub-pixel divergence. Perl's truncated pi
+  // (3.1415926) leaves a ~2.7e-6 residual on the 200px edge that its ceil
+  // rounds UP to 101 px (72.9927pt); Rust's real pi keeps it at 100 px
+  // (72.27pt), the geometrically correct, pdflatex-consistent value.
+  assert_eq!(
+    row(&xml, 3),
+    "36.8577pt 72.27pt",
+    "angle then scale — real pi, not Perl's 72.9927"
+  );
+}

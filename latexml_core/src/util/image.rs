@@ -234,9 +234,17 @@ pub fn to_bp(x: &str) -> f64 {
 
 /// Compile a graphicx option string into the transformation sequence.
 ///
-/// Port of Perl `image_graphicx_parse` (`Util/Image.pm` L142-196). The order
-/// matters and is Perl's: rotation comes **before** scaling when no sizing
-/// option was given at all (`$rotfirst`), and after it otherwise.
+/// Port of Perl `image_graphicx_parse` (`Util/Image.pm` L142-196). Key order
+/// matters and is Perl's, in two ways:
+///
+/// * A rotation is applied **before** scaling when no sizing option preceded
+///   the `angle` in the source string, and after it otherwise. Perl decides
+///   this the instant it parses `angle` (`$rotfirst = !($width || $height ||
+///   $xscale || $yscale)`, L168), from the keys seen *so far* — so
+///   `angle=90,width=100pt` rotates then scales, while `width=100pt,angle=90`
+///   scales then rotates. graphicx really behaves this way and pdflatex agrees:
+///   the first is ~100x200, the second ~50x100 for a 200x100 source. We capture
+///   `rot_first` at the same point, not from the final key set.
 ///
 /// `pc` differs from Perl by design: Perl's table has `pc => 12/72.27`, which
 /// is 12 *TeX pt* expressed in bp only if you also drop the pt→bp step — a pica
@@ -248,6 +256,9 @@ pub fn parse_graphicx_options(options: &str) -> Vec<GraphicxOp> {
   let (mut xscale, mut yscale) = (None, None);
   let (mut aspect, mut angle, mut page) = (false, 0.0f64, None);
   let (mut viewport, mut is_trim) = (None, false);
+  // Set the instant `angle` is parsed, from the sizing keys seen so far — NOT
+  // recomputed from the final key set. Perl `image_graphicx_parse` L168.
+  let mut rot_first = false;
   for opt in options.split(',') {
     let opt = opt.trim();
     if opt.is_empty() {
@@ -275,7 +286,10 @@ pub fn parse_graphicx_options(options: &str) -> Vec<GraphicxOp> {
       },
       "xscale" => xscale = val.parse::<f64>().ok(),
       "yscale" => yscale = val.parse::<f64>().ok(),
-      "angle" => angle = val.parse::<f64>().unwrap_or(0.0),
+      "angle" => {
+        angle = val.parse::<f64>().unwrap_or(0.0);
+        rot_first = width.is_none() && height.is_none() && xscale.is_none() && yscale.is_none();
+      },
       "keepaspectratio" => aspect = val != "false",
       "page" => page = val.parse::<u32>().ok(),
       "viewport" => {
@@ -289,8 +303,6 @@ pub fn parse_graphicx_options(options: &str) -> Vec<GraphicxOp> {
       _ => {},
     }
   }
-  // Perl L168: rotation precedes scaling only when nothing sizes the image.
-  let rot_first = width.is_none() && height.is_none() && xscale.is_none() && yscale.is_none();
 
   let mut ops = Vec::new();
   if let Some(p) = page {
@@ -1407,6 +1419,47 @@ mod sizing_characterization_tests {
     // keeps whatever the pixel reader gave it.
     let png = fixture("n.png", &png_header(200, 100));
     assert_eq!(natural_size_pt(&png), None);
+  }
+
+  /// The compiled op *sequence* depends on where `angle` sits relative to the
+  /// sizing keys — the ordering graphicx and pdflatex both honour. Pinned at the
+  /// parse layer so the rule is guarded without a rasterizer: `angle` before a
+  /// sizing key rotates first, after it rotates last, and a rotation with no
+  /// sizing key at all rotates first.
+  #[test]
+  fn parse_orders_rotation_by_key_position() {
+    use GraphicxOp::*;
+    let w100 = ScaleTo {
+      w:           Some(to_bp("100pt")),
+      h:           None,
+      keep_aspect: true,
+    };
+    assert_eq!(
+      parse_graphicx_options("angle=90,width=100pt"),
+      vec![Rotate(90.0), w100.clone()],
+      "angle first -> rotate then scale"
+    );
+    assert_eq!(
+      parse_graphicx_options("width=100pt,angle=90"),
+      vec![w100, Rotate(90.0)],
+      "width first -> scale then rotate"
+    );
+    assert_eq!(
+      parse_graphicx_options("angle=90"),
+      vec![Rotate(90.0)],
+      "no sizing key -> rotate first (trivially)"
+    );
+    // scale is a sizing key too, so it flips the order the same way.
+    assert_eq!(
+      parse_graphicx_options("angle=90,scale=2")[0],
+      Rotate(90.0),
+      "angle before scale -> rotate first"
+    );
+    assert_eq!(
+      parse_graphicx_options("scale=2,angle=90")[1],
+      Rotate(90.0),
+      "angle after scale -> rotate last"
+    );
   }
 
   // ── layer 3a: the pt-space algebra (fallback branch) ──────────────────

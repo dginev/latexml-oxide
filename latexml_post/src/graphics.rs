@@ -645,10 +645,11 @@ impl Graphics {
   ///   It also silently ignored every unit that was not `pt`/`px`.
   /// * **Rotation is the true bounding box**, not a 90/270 axis swap. That
   ///   matches what `convert -rotate` actually writes to disk for an oblique
-  ///   angle. Witness for the rotation mattering at all: 1303.5091 Figs 5-7,
-  ///   `[angle=90,scale=0.75]`, which rendered upside-down before any of it —
-  ///   still correct here, since Perl orders a rotation after the scaling
-  ///   whenever a sizing option is present.
+  ///   angle. It is ordered relative to scaling by key order, as Perl and
+  ///   graphicx do — see `parse_graphicx_options`. Witness for the rotation
+  ///   mattering at all: 1303.5091 Figs 5-7, `[angle=90,scale=0.75]`, which
+  ///   rendered upside-down before any of it — still correct here: a uniform
+  ///   scale commutes with a rotation, so its order does not change the box.
   ///
   /// Witness for the width-only path: astro-ph0005397 Fig 11 (sfh_burst), where
   /// feeding the unscaled raw height back through displayed square sources as
