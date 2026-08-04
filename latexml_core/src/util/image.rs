@@ -722,18 +722,96 @@ fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
 
 /// Read a PDF's page box (width, height) in bp — CropBox (pdfTeX's default),
 /// else MediaBox. Pure Rust, no external tool (this is what pdfTeX's built-in
-/// reader does). Shared with `LaTeXML::Post::Graphics`. `None` when neither box
-/// appears as raw bytes (e.g. compressed into an object stream).
+/// reader does). Shared with `LaTeXML::Post::Graphics`.
+///
+/// Looks in the raw bytes first, then inside object streams. `%PDF-1.5` and
+/// later — everything current pdflatex emits — may put the page tree in a
+/// `/Type /ObjStm` stream, where the box tokens do not appear as raw bytes at
+/// all: measured over 14 real PDFs in this repo, 5 were unreadable without this
+/// second pass, and `ObjStm` presence predicted it exactly.
+///
+/// **First box wins**, in file order, as the raw-byte scan has always done. A
+/// correct answer for page N would mean resolving the page tree through the
+/// xref stream; for the figures `\includegraphics` pulls in, which are
+/// single-page, the first box is the page's own (or the `/Pages` node's, which
+/// it inherits).
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
   let bytes = std::fs::read(path).ok()?;
-  // Fast-fail before the (whole-file) UTF-8 conversion: modern PDFs often
-  // compress the page dictionary into an object stream, so the box tokens never
-  // appear as raw bytes.
-  if byte_find(&bytes, b"/CropBox").is_none() && byte_find(&bytes, b"/MediaBox").is_none() {
-    return None;
+  if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
+    let content = String::from_utf8_lossy(&bytes);
+    if let Some(box_) =
+      parse_pdf_box(&content, "/CropBox").or_else(|| parse_pdf_box(&content, "/MediaBox"))
+    {
+      return Some(box_);
+    }
   }
-  let content = String::from_utf8_lossy(&bytes);
-  parse_pdf_box(&content, "/CropBox").or_else(|| parse_pdf_box(&content, "/MediaBox"))
+  let inflated = inflate_object_streams(&bytes)?;
+  parse_pdf_box(&inflated, "/CropBox").or_else(|| parse_pdf_box(&inflated, "/MediaBox"))
+}
+
+/// Concatenate the inflated contents of every `/Type /ObjStm` in `bytes`.
+///
+/// Deliberately not a PDF parser: it finds object-stream dictionaries, takes the
+/// `stream`…`endstream` payload that follows each, and inflates it. That is
+/// enough to expose the page dictionary, and it stops well short of xref-stream
+/// parsing and object resolution — which is what a real page-N lookup would
+/// need, and is not what a figure's natural size is worth.
+///
+/// Only `/FlateDecode` streams are attempted (the only filter pdflatex, Ghost-
+/// script, Cairo or matplotlib use for object streams), and only the first
+/// [`MAX_OBJSTM_SCAN`] of them, so a pathological file cannot turn a size probe
+/// into an unbounded decompression.
+fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
+  use std::io::Read;
+
+  /// Enough for any real document; a figure PDF has one or two.
+  const MAX_OBJSTM_SCAN: usize = 64;
+  /// Per-stream inflate ceiling, so a zip bomb cannot be handed to us as a
+  /// figure. A page dictionary is a few hundred bytes.
+  const MAX_INFLATED: u64 = 8 << 20;
+
+  let mut out = String::new();
+  let mut from = 0;
+  let mut seen = 0;
+  while seen < MAX_OBJSTM_SCAN {
+    let Some(hit) = byte_find(&bytes[from..], b"/ObjStm") else {
+      break;
+    };
+    let at = from + hit;
+    from = at + b"/ObjStm".len();
+    seen += 1;
+    // The dictionary ends at `stream`, optionally followed by CR, then LF.
+    let Some(rel) = byte_find(&bytes[at..], b"stream") else {
+      continue;
+    };
+    let dict = &bytes[at..at + rel];
+    if byte_find(dict, b"/FlateDecode").is_none() {
+      continue;
+    }
+    let mut start = at + rel + b"stream".len();
+    if bytes.get(start) == Some(&b'\r') {
+      start += 1;
+    }
+    if bytes.get(start) == Some(&b'\n') {
+      start += 1;
+    }
+    let end = byte_find(&bytes[start..], b"endstream").map_or(bytes.len(), |e| start + e);
+    let mut buf = Vec::new();
+    if flate2::read::ZlibDecoder::new(&bytes[start..end])
+      .take(MAX_INFLATED)
+      .read_to_end(&mut buf)
+      .is_err()
+      && buf.is_empty()
+    {
+      // A truncated or mis-delimited stream still yields the bytes decoded
+      // before the error, and the page dictionary sits at the front — so an
+      // error is only fatal when nothing at all came out.
+      continue;
+    }
+    out.push_str(&String::from_utf8_lossy(&buf));
+    out.push('\n');
+  }
+  (!out.is_empty()).then_some(out)
 }
 
 /// Parse `TOKEN [ llx lly urx ury ]` from PDF content, returning `(w, h)`.
@@ -1170,6 +1248,21 @@ mod sizing_characterization_tests {
     path
   }
 
+  /// A minimal `%PDF-1.5` whose only object is a Flate-compressed object stream
+  /// carrying `payload` — the shape pdflatex emits for a page tree since 1.5.
+  fn objstm_pdf(payload: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut enc = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    enc.write_all(payload).expect("deflate");
+    let body = enc.finish().expect("finish");
+    let mut pdf = Vec::from(
+      &b"%PDF-1.5\n1 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode >>\nstream\n"[..],
+    );
+    pdf.extend_from_slice(&body);
+    pdf.extend_from_slice(b"\nendstream\nendobj\n");
+    pdf
+  }
+
   /// A PNG header with the given IHDR dimensions. `read_image_dimensions` reads
   /// a fixed 32-byte prefix and takes bytes 16..24 as width/height, so an
   /// honest signature + IHDR is the whole contract; no CRC is consulted.
@@ -1246,15 +1339,16 @@ mod sizing_characterization_tests {
     );
   }
 
-  /// The PDF page box: CropBox is pdfTeX's default and wins over MediaBox; a
-  /// box that is not visible in the plaintext bytes yields `None`.
+  /// The PDF page box: CropBox is pdfTeX's default and wins over MediaBox, and
+  /// a box compressed into an object stream is inflated and read.
   ///
   /// That last case is not hypothetical. Across 14 real PDFs in this repo, 5
-  /// returned `None` here, correlating exactly with `ObjStm` (object-stream)
-  /// compression — the default for `%PDF-1.5` and later, which is what modern
-  /// pdflatex emits. Those figures reach the engine with a 0x0 natural box.
+  /// returned `None` before the object-stream pass, correlating exactly with
+  /// `ObjStm` — the default for `%PDF-1.5` and later, which is what modern
+  /// pdflatex emits — and those figures reached the engine with a 0x0 natural
+  /// box. All 14 now match `pdfinfo` exactly.
   #[test]
-  fn read_pdf_page_box_prefers_cropbox_and_gives_up_on_compressed_objects() {
+  fn read_pdf_page_box_prefers_cropbox_and_reaches_into_object_streams() {
     let media = fixture("m.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 200 100] >>\n");
     assert_eq!(read_pdf_page_box(&media), Some((200.0, 100.0)));
 
@@ -1272,12 +1366,26 @@ mod sizing_characterization_tests {
     let offset = fixture("o.pdf", b"%PDF-1.4\n<< /MediaBox [10 20 210 120] >>\n");
     assert_eq!(read_pdf_page_box(&offset), Some((200.0, 100.0)));
 
-    // No plaintext box — the object-stream case.
-    let hidden = fixture(
+    // A real object stream: the box exists only as deflated bytes.
+    let objstm = fixture(
       "h.pdf",
-      b"%PDF-1.5\n<< /Type /ObjStm /N 12 >>\nstream\n...\n",
+      &objstm_pdf(b"5 0 << /Type /Page /MediaBox [0 0 200 100] >>"),
     );
-    assert_eq!(read_pdf_page_box(&hidden), None);
+    assert_eq!(read_pdf_page_box(&objstm), Some((200.0, 100.0)));
+
+    // A CropBox inside the stream still wins over a MediaBox beside it.
+    let cropped = fixture(
+      "hc.pdf",
+      &objstm_pdf(b"5 0 << /MediaBox [0 0 612 792] /CropBox [0 0 200 100] >>"),
+    );
+    assert_eq!(read_pdf_page_box(&cropped), Some((200.0, 100.0)));
+
+    // Nothing readable anywhere: an object stream we cannot inflate.
+    let opaque = fixture(
+      "ho.pdf",
+      b"%PDF-1.5\n<< /Type /ObjStm /N 12 /Filter /FlateDecode >>\nstream\nnot-zlib\nendstream\n",
+    );
+    assert_eq!(read_pdf_page_box(&opaque), None);
   }
 
   /// `natural_size_pt` is the only place a file-read number is actually

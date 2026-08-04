@@ -26,9 +26,12 @@
 //! (L271) — which is why an unscaled raster typesets 28% smaller than pdflatex
 //! makes it.
 //!
-//! The PDF-with-object-streams row is not a contrived case: `%PDF-1.5` and
-//! later put the page tree in a compressed object stream by default, which our
-//! byte-level reader cannot see, and the figure then reserves no space at all.
+//! A fifth row covers a PDF whose page tree lives in a compressed object
+//! stream — the `%PDF-1.5` default, so most figures pdflatex produces. The
+//! byte-level reader could not see it and the figure reserved no space at all;
+//! since 2026-08-04 the stream is inflated and the row matches the plain PDF.
+//! Measured over 14 real PDFs in this repo: 5 failed that way before, all 14
+//! match `pdfinfo` now.
 
 use std::{path::Path, process::Command};
 
@@ -44,6 +47,21 @@ fn png_header(w: u32, h: u32) -> Vec<u8> {
   v.extend_from_slice(&[0x08, 0x02, 0x00, 0x00, 0x00]);
   v.extend_from_slice(&[0u8; 16]);
   v
+}
+
+/// A minimal `%PDF-1.5` whose only object is a Flate-compressed object stream
+/// carrying `payload` — the shape pdflatex has emitted by default since PDF 1.5.
+fn objstm_pdf(payload: &[u8]) -> Vec<u8> {
+  use std::io::Write;
+  let mut enc = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+  enc.write_all(payload).expect("deflate");
+  let body = enc.finish().expect("finish");
+  let mut pdf = Vec::from(
+    &b"%PDF-1.5\n1 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode >>\nstream\n"[..],
+  );
+  pdf.extend_from_slice(&body);
+  pdf.extend_from_slice(b"\nendstream\nendobj\n");
+  pdf
 }
 
 /// Convert `doc` and return the body text, with the `\the\wd`/`\the\ht` probes
@@ -65,12 +83,11 @@ fn sizes(probes: &[(&str, &str)]) -> String {
     "%PDF-1.4\n1 0 obj\n<< /Type /Page /MediaBox [0 0 200 100] >>\nendobj\n",
   )
   .unwrap();
-  // A page tree hidden in an object stream, as pdflatex emits by default for
-  // PDF 1.5+. Nothing here is readable as plaintext `/MediaBox`.
+  // A page tree inside a real Flate-compressed object stream, as pdflatex emits
+  // by default for PDF 1.5+. The box appears nowhere in the plaintext bytes.
   std::fs::write(
     dir.join("objstm.pdf"),
-    "%PDF-1.5\n1 0 obj\n<< /Type /ObjStm /N 8 /First 52 /Filter /FlateDecode >>\nstream\n\
-     (compressed payload; no plaintext page box)\nendstream\nendobj\n",
+    objstm_pdf(b"5 0 << /Type /Page /MediaBox [0 0 200 100] >>"),
   )
   .unwrap();
   std::fs::write(
@@ -134,8 +151,13 @@ fn natural_box_size_differs_per_source_format() {
   assert_eq!(row(&xml, 2), "200.75pt 100.375pt", "PDF");
   // 200 viewBox user units read as CSS px: 200 * 72.27/96.
   assert_eq!(row(&xml, 3), "150.5625pt 75.28125pt", "SVG");
-  // Page box unreadable — the figure reserves nothing.
-  assert_eq!(row(&xml, 4), "0.0pt 0.0pt", "PDF with object streams");
+  // Same 200 bp box, reachable only by inflating the object stream. Until
+  // 2026-08-04 this row read "0.0pt 0.0pt" — the figure reserved nothing.
+  assert_eq!(
+    row(&xml, 4),
+    "200.75pt 100.375pt",
+    "PDF with object streams"
+  );
 }
 
 /// With an explicit `width=`, the two sizing algebras still disagree — the

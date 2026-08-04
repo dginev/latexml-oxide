@@ -50,6 +50,10 @@ codegen = ["dep:proc-macro2", "dep:quote"]
 token-locators = []
 
 [dependencies]
+# Inflating PDF object streams to reach a page box (`util::image`). Already a
+# direct dependency of latexml_engine / latexml_post / latexml_oxide, so this
+# adds no crate to the tree.
+flate2 = "1"
 once_cell = "1.17.0"
 # Trimmed regex unicode features — see DEP-10 note in
 # latexml_codegen/Cargo.toml. Same set across the workspace.
