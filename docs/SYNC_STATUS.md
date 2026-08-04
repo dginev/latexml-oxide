@@ -809,6 +809,38 @@ format paths do not run the same post chain. Not yet diagnosed; check before
 trusting an `xml`-format dump as a bibliography oracle. (The `ltx:biblist`
 `fragid` gap noticed alongside it is FIXED — see the 2026-07-28 entry above.)
 
+### Streaming diverges on a fancyvrb `fontsize=` + `numbers=` Verbatim — untriaged (2026-08-04)
+
+Under a small streaming budget the XML is **not** byte-identical to the eager
+path when a fancyvrb verbatim carries `fontsize=` **and** `numbers=` together.
+Either option alone is clean; the pair is not. Nothing package-load-related is
+involved — the minimal repro needs only `fancyvrb`:
+
+```tex
+\documentclass{article}
+\usepackage{fancyvrb}
+\begin{document}
+\begin{Verbatim}[fontsize=\small,numbers=left]
+alpha
+beta
+\end{Verbatim}
+\end{document}
+```
+
+Dropped into `latexml_oxide/tests/cluster_regressions/` it fails
+`114_streaming_cluster_regressions::streaming_matches_eager_on_cluster_regressions`
+("output diverges at byte 440"), inside the line-number box
+(`<text font="serif" fontsize="56%" width="0.0pt">1\u2003\u2009</text>`). The
+CLI cannot reach the sweep's aggressive 3-box budget (`--streaming` sizes the
+budget from `--max-memory`, and a ceiling small enough trips the RSS fuse
+first), so reproduce through `streaming_sweep::convert_with(src, Some(3), …)`
+or by running the built sweep binary — it globs the fixture dir at RUNTIME, so
+a fixture can be added/removed without a rebuild.
+
+Found while adding the #500 guard; the #500 fixtures were narrowed to
+`fontsize=` alone rather than pinning this. Unrelated to #500 (no keyval /
+xkeyval / standalone in the repro).
+
 ### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 
 ### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
