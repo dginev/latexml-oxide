@@ -1,0 +1,19 @@
+\documentclass{article}
+\begin{document}
+% text spacing (dimension_to_spaces path — the #504 case, generalized)
+A\hspace{20pt}B \hskip 15pt C \quad D\,E\;F \kern 4pt G
+% a rule and phantoms whose size derives from the current font
+X\rule{2ex}{1ex}Y \hphantom{WWW} \phantom{Z}
+% fill leaders
+one\hfill two\dotfill three\hrulefill four
+% a font shift BEFORE more spacing, so a construction-time read would see it
+{\large L\quad L\hspace{1em}L} M\,M
+% math-mode spacing (→ XMHint width)
+$a\quad b\,c\;d\qquad e$
+% paragraph column + intercol spacing, then a trailing font shift
+\begin{tabular}{p{3cm}l}
+p\quad col & r\hspace{1em}col \\
+\end{tabular}
+\small
+Trailing text after the whole document has shifted to \verb|\small|.
+\end{document}

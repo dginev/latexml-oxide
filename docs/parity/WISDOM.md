@@ -2960,3 +2960,39 @@ the spill intermediates carried 51.2 % indentation that pass 2 re-parsed into
 ~40 M text nodes and deleted (`spill_flat` now skips both halves; the deleted
 `strip_indentation_whitespace` also orphaned every node it unlinked, the #79
 trap).
+
+## 82. Streaming byte-identity is a MECHANICAL ORACLE for construction-time live-state reads — and the audited class is contained to one fixed site
+
+A `DefConstructor` body runs at CONSTRUCTION (XML-build) time, not digest time.
+The eager path builds after the whole document is digested (so a live
+`lookup_font()`/`lookup_value()` there sees the document's FINAL state); the
+streaming path builds mid-document (sees LOCAL state). **So any constructor-body
+read of mutable STATE that shapes output diverges eager-vs-streaming, and the
+`114_streaming_*::streaming_matches_eager_on_*` sweep catches it — but ONLY where
+a fixture exercises the construct.** #504 (`tex_glue::dimension_to_spaces` sizing
+a faked space off the live font, [OXIDIZED_DESIGN #96]) was found only after a
+fixture was added; the mechanism was blind to it until then. Fixture coverage is
+the gap, not the sweep.
+
+**Audit method (reusable).** Two complementary passes:
+- *Static:* classify every `lookup_font()`/`lookup_value()` call by enclosing
+  scope — a `sub[document, …]` constructor body is a suspect; `properties`/
+  `sizer`/`after_digest`/`getter` closures and `DefPrimitive` bodies are
+  digest-time (live font is CORRECT there); free helper fns need per-caller
+  classification (the dangerous shape is a helper reading live font that is
+  CALLED FROM a constructor — exactly `dimension_to_spaces`). A ~40-line Python
+  walk-back-to-nearest-header script does this in one pass.
+- *Dynamic:* a probe battery — each construction-time-sensitive construct
+  (spacing, `\rule`, `\phantom`, fills, math spacing, `p{}` intercol, `\kern`)
+  followed by a font-size shift (the #504 witness pattern) — run through the
+  sweep, which reports the first diverging byte.
+
+**Finding (2026-08-04).** Of 85 `lookup_font()` sites, ZERO are output-shaping
+reads in a constructor body (the one flagged was a `properties` closure false
+positive). Every other read is digest-time-correct: unit resolution
+(`em_value`/`mu_to_pt`/`convert_unit`), font decode (`decode`/`merge_font`/
+`font_decode`), and colour helpers all inside `DefPrimitive`/`properties`
+bodies. #504's `dimension_to_spaces` was the SOLE instance. Guard:
+`114_streaming_cluster_regressions` over
+`tests/cluster_regressions/streaming_construction_time_spacing.tex` (one fixture
+covering the whole class) + `faked_space_is_sized_by_the_font_it_was_digested_in`.
