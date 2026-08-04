@@ -434,8 +434,9 @@ fn test_xslt_cache_reuse_produces_identical_output() {
 /// different sizes.
 #[test]
 fn test_svg_source_sized_and_aspect_classed() {
-  let work = std::env::temp_dir().join(format!("latexml_svg_size_test_{}", std::process::id()));
-  std::fs::create_dir_all(&work).expect("mkdir work");
+  // RAII: the directory goes away even if an assertion below panics.
+  let workdir = tempfile::tempdir().expect("tempdir");
+  let work = workdir.path();
 
   // Witness shape from issue 498's image_1.svg: xml prolog + viewBox.
   let svg1 = work.join("fig_viewbox.svg");
@@ -518,6 +519,90 @@ fn test_svg_source_sized_and_aspect_classed() {
       "{id}: aspect class missing/wrong (class was '{class}')"
     );
   }
+}
 
-  let _ = std::fs::remove_dir_all(&work);
+/// The companion to the test above, for the case where sizing this way can make
+/// things *worse* than not sizing at all: an SVG whose root lengths carry a unit
+/// and which has **no** viewBox, included with no graphicx options.
+///
+/// There is nothing to scale against, so whatever the reader measures goes
+/// straight into `imagewidth`/`imageheight`. A reader that drops the unit calls
+/// a 10 cm × 7.5 cm drawing "10 × 8" and the browser renders a 10-pixel
+/// thumbnail — worse than the pre-issue-498 behaviour, which wrote no
+/// attributes at all and let the browser use the SVG's own intrinsic size.
+///
+/// The percentage-sized source is the other half of the contract: it has no
+/// intrinsic pixel size, so the correct answer is to write nothing and leave the
+/// sizing to the browser.
+#[test]
+fn test_unit_bearing_svg_without_viewbox_is_converted_not_truncated() {
+  let workdir = tempfile::tempdir().expect("tempdir");
+  let work = workdir.path();
+
+  let cm = work.join("metric.svg");
+  std::fs::write(
+    &cm,
+    r#"<?xml version="1.0" encoding="UTF-8"?>
+<svg width="10cm" height="7.5cm" xmlns="http://www.w3.org/2000/svg">
+ <rect x="0" y="0" width="100%" height="100%" fill="green"/>
+</svg>"#,
+  )
+  .expect("write cm svg");
+  let pct = work.join("fluid.svg");
+  std::fs::write(
+    &pct,
+    r#"<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+ <rect x="0" y="0" width="10" height="10" fill="grey"/>
+</svg>"#,
+  )
+  .expect("write pct svg");
+
+  let xml = format!(
+    r#"<?xml version="1.0"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
+  <graphics graphic="metric" candidates="{}" options="" xml:id="g1"/>
+  <graphics graphic="fluid" candidates="{}" options="" xml:id="g2"/>
+</document>"#,
+    cm.display(),
+    pct.display()
+  );
+  let doc_opts = PostDocumentOptions {
+    destination: Some(work.join("out.html").display().to_string()),
+    source_directory: Some(work.display().to_string()),
+    ..Default::default()
+  };
+  let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
+  let mut graphics = latexml_post::graphics::Graphics::new(None, true);
+  let nodes = graphics.to_process(&doc);
+  assert_eq!(nodes.len(), 2, "two graphics nodes expected");
+  let out = graphics.process(doc, nodes).expect("graphics process");
+  let doc = out.into_iter().next().expect("doc back");
+
+  for node in &doc.findnodes("//ltx:graphics") {
+    let id = latexml_post::document::get_xml_id(node).unwrap_or_default();
+    let (w, h) = (
+      node.get_attribute("imagewidth"),
+      node.get_attribute("imageheight"),
+    );
+    if id == "g1" {
+      // 10cm = 10/2.54 in = 378 px; 7.5cm = 283 px.
+      assert_eq!(
+        (w.as_deref(), h.as_deref()),
+        (Some("378"), Some("283")),
+        "a cm-sized SVG must be measured in pixels, not stripped of its unit"
+      );
+      let class = node.get_attribute("class").unwrap_or_default();
+      assert!(
+        class.contains("ltx_img_landscape"),
+        "g1: 378×283 is landscape (class was '{class}')"
+      );
+    } else {
+      assert_eq!(
+        (w, h),
+        (None, None),
+        "a percentage-sized SVG has no intrinsic pixel size — write nothing and \
+         let the browser size it"
+      );
+    }
+  }
 }

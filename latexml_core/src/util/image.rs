@@ -593,20 +593,121 @@ fn byte_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 /// as CSS px). Gives at least a correct aspect ratio, which is all a `width=`-ed
 /// inclusion needs. `None` if the file isn't an SVG or has no usable geometry.
 fn read_svg_size_pt(path: &Path) -> Option<(f64, f64)> {
-  use std::io::Read;
-  let mut file = std::fs::File::open(path).ok()?;
-  let mut buf = [0u8; 8192];
-  let n = file.read(&mut buf).ok()?;
-  let head = String::from_utf8_lossy(&buf[..n]);
-  let svg_at = head.find("<svg")?;
-  let tag_end = head[svg_at..].find('>')? + svg_at;
-  let tag = &head[svg_at..tag_end];
+  let head = read_head_lossy(path)?;
+  let tag = svg_root_tag(&head)?;
   if let (Some(w), Some(h)) = (
     svg_attr_len_pt(tag, "width"),
     svg_attr_len_pt(tag, "height"),
   ) {
     return Some((w, h));
   }
+  let (vw, vh) = svg_viewbox_extent(tag)?;
+  // viewBox user units ≈ CSS px (1/96"); convert to pt for a plausible scale.
+  Some((px_to_pt(vw), px_to_pt(vh)))
+}
+
+/// SVG **viewport** size in CSS px, as a browser would take it: the `viewBox`
+/// extent when there is one, else the root `width`/`height` lengths.
+///
+/// This is the sizing basis for `imagewidth`/`imageheight` in
+/// `LaTeXML::Post::Graphics` — where Perl asks Image::Magick, which renders the
+/// SVG and reports the raster it produced.
+///
+/// **The viewBox comes first here, and that is deliberate** — the opposite of
+/// `read_svg_size_pt`, which wants the natural *typeset* size. Both of our own
+/// PDF→SVG converters emit a `viewBox` alongside pt-valued `width`/`height`
+/// (`pdftocairo -svg`: `width="612pt" height="792pt" viewBox="0 0 612 792"`;
+/// `mutool draw -F svg`: `width="612" height="792" viewBox="0 0 612 792"`), so
+/// preferring the lengths would silently rescale every PDF-derived figure in the
+/// corpus by 96/72 = 1.33×. The viewBox keeps them at their long-standing pixel
+/// size, and for a `width=`-ed inclusion only the aspect ratio matters anyway.
+pub fn read_svg_viewport_px(path: &Path) -> Option<(u32, u32)> {
+  let head = read_head_lossy(path)?;
+  let tag = svg_root_tag(&head)?;
+  let (w, h) = svg_viewbox_extent(tag).or_else(|| {
+    Some((
+      svg_attr_len_px(tag, "width")?,
+      svg_attr_len_px(tag, "height")?,
+    ))
+  })?;
+  Some((w.round().max(1.0) as u32, h.round().max(1.0) as u32))
+}
+
+/// The leading bytes of a file, decoded lossily. Bounded: an SVG can be
+/// hundreds of MB, and every geometry attribute we want lives in the root tag.
+/// Lossy rather than strict UTF-8 so a latin-1 preamble still yields a
+/// readable root tag (and so a multi-byte sequence split by the read boundary
+/// degrades to U+FFFD instead of failing the whole read).
+fn read_head_lossy(path: &Path) -> Option<String> {
+  use std::io::Read;
+  let mut file = std::fs::File::open(path).ok()?;
+  let mut buf = [0u8; 8192];
+  let n = file.read(&mut buf).ok()?;
+  Some(String::from_utf8_lossy(&buf[..n]).into_owned())
+}
+
+/// The root `<svg …>` start tag within `head`, quote-aware so a `>` inside an
+/// attribute value doesn't end the tag early. Skipping to `<svg` also steps over
+/// the `<?xml …?>` prolog, comments and any DOCTYPE — otherwise the prolog's
+/// `?>` would be mistaken for the end of the start tag.
+pub fn svg_root_tag(head: &str) -> Option<&str> {
+  let start = head.find("<svg")?;
+  let rest = &head[start..];
+  let mut quote: Option<char> = None;
+  for (i, c) in rest.char_indices() {
+    match quote {
+      Some(q) if c == q => quote = None,
+      Some(_) => {},
+      None if c == '"' || c == '\'' => quote = Some(c),
+      None if c == '>' => return Some(&rest[..i]),
+      None => {},
+    }
+  }
+  None
+}
+
+/// Value of the `name="…"` / `name='…'` attribute in an XML start tag.
+///
+/// The attribute **name is matched whole**: a bare substring search reads
+/// `stroke-width="2"` — legal on a root `<svg>` — as `width`, which is how a
+/// 634×805 drawing once measured 2×805.
+pub fn svg_attr_value<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+  let mut from = 0;
+  while let Some(hit) = tag[from..].find(name) {
+    let at = from + hit;
+    from = at + name.len();
+    // Left boundary: the name must start an attribute, not end another one
+    // (`stroke-width`) — so what precedes it is whitespace, or the `<svg`.
+    let preceded_ok = tag[..at]
+      .chars()
+      .next_back()
+      .is_some_and(|c| c.is_whitespace());
+    if !preceded_ok {
+      continue;
+    }
+    // Right boundary: `=` (optionally spaced) then a quoted value.
+    let after = tag[from..].trim_start();
+    let Some(after) = after.strip_prefix('=') else {
+      continue;
+    };
+    let after = after.trim_start();
+    let Some(q) = after.chars().next() else {
+      continue;
+    };
+    if q != '"' && q != '\'' {
+      continue;
+    }
+    let body = &after[q.len_utf8()..];
+    let end = body.find(q)?;
+    return Some(&body[..end]);
+  }
+  None
+}
+
+/// `(width, height)` extent of the root `viewBox`, in user units (≈ CSS px).
+/// Per the SVG grammar the four numbers are comma-**and/or**-whitespace
+/// separated, so `viewBox="0,0,634,805"` must parse like `"0 0 634 805"`.
+fn svg_viewbox_extent(tag: &str) -> Option<(f64, f64)> {
   let vb = svg_attr_value(tag, "viewBox")?;
   let mut it = vb
     .split(|c: char| c.is_whitespace() || c == ',')
@@ -614,42 +715,258 @@ fn read_svg_size_pt(path: &Path) -> Option<(f64, f64)> {
   let (_x, _y) = (it.next()?, it.next()?);
   let vw = it.next()?.parse::<f64>().ok()?;
   let vh = it.next()?.parse::<f64>().ok()?;
-  // viewBox user units ≈ CSS px (1/96"); convert to pt for a plausible scale.
-  Some((vw * 72.27 / 96.0, vh * 72.27 / 96.0))
+  Some((vw, vh))
 }
 
-/// Value of `name="…"` in an XML start tag.
-fn svg_attr_value<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
-  let key = tag.find(name)?;
-  let after = &tag[key + name.len()..];
-  let after = after.trim_start();
-  let after = after.strip_prefix('=')?.trim_start();
-  let quote = after.chars().next()?;
-  if quote != '"' && quote != '\'' {
-    return None;
-  }
-  let body = &after[1..];
-  let end = body.find(quote)?;
-  Some(&body[..end])
+/// An SVG length attribute in CSS px. A unitless value is user units, i.e. px.
+/// `None` for anything that isn't an absolute length (`%`, `em`, `ex`, …) —
+/// those are resolved against a viewport we don't have, so the caller must fall
+/// back to the viewBox rather than treat the bare number as pixels.
+pub fn svg_attr_len_px(tag: &str, name: &str) -> Option<f64> {
+  svg_len_px(svg_attr_value(tag, name)?)
 }
 
 /// An SVG length attribute converted to pt, iff it carries an absolute unit.
-/// Unitless/`%` values return `None` (the caller falls back to the viewBox).
+/// Unitless/`%` values return `None` (the caller falls back to the viewBox) —
+/// unlike [`svg_attr_len_px`], a unitless value is *not* accepted here: without
+/// a unit there is no natural typeset size to report, only a scale.
 fn svg_attr_len_pt(tag: &str, name: &str) -> Option<f64> {
   let raw = svg_attr_value(tag, name)?.trim();
-  let (num, unit) = raw.split_at(
-    raw
-      .find(|c: char| c.is_alphabetic() || c == '%')
-      .unwrap_or(raw.len()),
-  );
+  if !raw.ends_with(|c: char| c.is_alphabetic()) {
+    return None;
+  }
+  Some(px_to_pt(svg_len_px(raw)?))
+}
+
+/// Parse an SVG/CSS length into CSS px (1/96"), or `None` if it carries no
+/// absolute unit. Unitless = user units = px.
+fn svg_len_px(raw: &str) -> Option<f64> {
+  let raw = raw.trim();
+  // Split the number from its unit — but `6.34e2` must not split at the
+  // exponent's `e`, which would silently read 634 as 6.
+  let mut split = raw.len();
+  for (i, c) in raw.char_indices() {
+    if (c.is_alphabetic() || c == '%') && !is_exponent(&raw[i..]) {
+      split = i;
+      break;
+    }
+  }
+  let (num, unit) = raw.split_at(split);
   let v = num.trim().parse::<f64>().ok()?;
   match unit.trim() {
-    "pt" => Some(v),
-    "px" => Some(v * 72.27 / 96.0),
-    "in" => Some(v * 72.27),
-    "cm" => Some(v * 72.27 / 2.54),
-    "mm" => Some(v * 72.27 / 25.4),
-    "pc" => Some(v * 12.0),
-    _ => None, // unitless, %, em, ex, … → fall back to the viewBox
+    "" | "px" => Some(v),
+    "pt" => Some(v * 96.0 / 72.0),
+    "in" => Some(v * 96.0),
+    "cm" => Some(v * 96.0 / 2.54),
+    "mm" => Some(v * 96.0 / 25.4),
+    "pc" => Some(v * 16.0),
+    "Q" => Some(v * 96.0 / 101.6),
+    _ => None, // %, em, ex, rem, vw, … → no absolute length
+  }
+}
+
+/// Does this trailing fragment start an exponent (`e-3`, `E+10`) rather than a
+/// unit?
+fn is_exponent(tail: &str) -> bool {
+  let mut cs = tail.chars();
+  matches!(cs.next(), Some('e') | Some('E'))
+    && cs
+      .next()
+      .is_some_and(|c| c.is_ascii_digit() || c == '+' || c == '-')
+}
+
+/// CSS px (1/96") → TeX pt (1/72.27").
+fn px_to_pt(px: f64) -> f64 { px * 72.27 / 96.0 }
+
+#[cfg(test)]
+mod svg_geometry_tests {
+  use super::*;
+
+  /// Write `content` to a uniquely-named temp `.svg` and hand back the path.
+  fn svg_file(name: &str, content: &str) -> PathBuf {
+    let path = std::env::temp_dir().join(format!("lximg-{}-{name}.svg", std::process::id()));
+    std::fs::write(&path, content).expect("write svg fixture");
+    path
+  }
+
+  #[test]
+  fn root_tag_skips_the_prolog_and_stops_at_the_real_tag_end() {
+    let head = "<?xml version=\"1.0\"?>\n<!-- a > in a comment -->\n<svg width=\"3\">\n<rect/>";
+    assert_eq!(svg_root_tag(head), Some("<svg width=\"3\""));
+    // A `>` inside an attribute value must not end the start tag.
+    let quoted = r#"<svg desc="a > b" width="3"><rect/>"#;
+    assert_eq!(svg_root_tag(quoted), Some(r#"<svg desc="a > b" width="3""#));
+    assert_eq!(svg_root_tag("no svg here"), None);
+  }
+
+  /// A bare substring search reads `stroke-width` as `width`. Both attribute
+  /// orders, since the bug only bites when the decoy comes first.
+  #[test]
+  fn attr_value_matches_whole_names_not_substrings() {
+    let decoy_first = r#"<svg stroke-width="2" width="634" height="805""#;
+    assert_eq!(svg_attr_value(decoy_first, "width"), Some("634"));
+    assert_eq!(svg_attr_value(decoy_first, "stroke-width"), Some("2"));
+    let decoy_last = r#"<svg width="634" stroke-width="2""#;
+    assert_eq!(svg_attr_value(decoy_last, "width"), Some("634"));
+    // A name that appears only as a suffix of another attribute is absent.
+    assert_eq!(svg_attr_value(r#"<svg stroke-width="2""#, "width"), None);
+  }
+
+  #[test]
+  fn attr_value_reads_both_quote_styles() {
+    let single = r#"<svg xmlns='http://www.w3.org/2000/svg' width='634' height='805'"#;
+    assert_eq!(svg_attr_value(single, "width"), Some("634"));
+    assert_eq!(svg_attr_value(single, "height"), Some("805"));
+    // Spaces around `=` are legal XML.
+    assert_eq!(
+      svg_attr_value(r#"<svg width = "634""#, "width"),
+      Some("634")
+    );
+  }
+
+  /// The unit table, in CSS px (1in = 96px). Every absolute unit SVG allows,
+  /// plus the three shapes that must NOT be read as a pixel count.
+  #[test]
+  fn len_px_converts_absolute_units_and_rejects_relative_ones() {
+    let cases: &[(&str, Option<f64>)] = &[
+      ("634", Some(634.0)), // unitless = user units = px
+      ("634px", Some(634.0)),
+      ("10cm", Some(377.952_755_905_511_8)),
+      ("7.5cm", Some(283.464_566_929_133_84)),
+      ("100mm", Some(377.952_755_905_511_8)),
+      ("4in", Some(384.0)),
+      ("72pt", Some(96.0)),
+      ("6pc", Some(96.0)),
+      ("6.34e2", Some(634.0)), // exponent, not a `e` unit
+      ("-5", Some(-5.0)),
+      ("100%", None), // resolved against a viewport we don't have
+      ("2em", None),
+      ("50vw", None),
+      ("", None),
+      ("wide", None),
+    ];
+    for (raw, want) in cases {
+      match (svg_len_px(raw), want) {
+        (Some(got), Some(w)) => assert!(
+          (got - w).abs() < 1e-9,
+          "svg_len_px({raw:?}) = {got}, want {w}"
+        ),
+        (got, want) => assert_eq!(
+          got.is_none(),
+          want.is_none(),
+          "svg_len_px({raw:?}) = {got:?}"
+        ),
+      }
+    }
+  }
+
+  /// Both of our PDF→SVG converters emit `viewBox` **and** root lengths. The
+  /// viewport reader must keep reporting the viewBox extent for them — taking
+  /// pdftocairo's `612pt` instead would rescale every PDF-derived figure in the
+  /// corpus by 96/72. Root tags copied verbatim from the tools.
+  #[test]
+  fn viewport_px_is_stable_for_our_own_converter_output() {
+    let pdftocairo = svg_file(
+      "pdftocairo",
+      r#"<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="612pt" height="792pt" viewBox="0 0 612 792">
+<defs/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&pdftocairo), Some((612, 792)));
+    let mutool = svg_file(
+      "mutool",
+      r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" width="612" height="792" viewBox="0 0 612 792">
+<defs/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&mutool), Some((612, 792)));
+    let _ = std::fs::remove_file(pdftocairo);
+    let _ = std::fs::remove_file(mutool);
+  }
+
+  /// Without a viewBox the root lengths are the viewport — and they must be
+  /// *converted*, not truncated. Reading `10cm` as 10 px is how a poster-sized
+  /// drawing became a 10-pixel thumbnail (issue 498 follow-up).
+  #[test]
+  fn viewport_px_converts_unit_bearing_lengths_when_there_is_no_viewbox() {
+    let cm = svg_file(
+      "cm",
+      r#"<svg xmlns="http://www.w3.org/2000/svg" width="10cm" height="7.5cm"><rect/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&cm), Some((378, 283)));
+    let inch = svg_file("in", r#"<svg width="4in" height="2in"><rect/></svg>"#);
+    assert_eq!(read_svg_viewport_px(&inch), Some((384, 192)));
+    let quoted = svg_file(
+      "sq",
+      r#"<svg xmlns='http://www.w3.org/2000/svg' width='634' height='805'><rect/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&quoted), Some((634, 805)));
+    let decoy = svg_file(
+      "decoy",
+      r#"<svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="634" height="805"><rect/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&decoy), Some((634, 805)));
+    for p in [cm, inch, quoted, decoy] {
+      let _ = std::fs::remove_file(p);
+    }
+  }
+
+  /// A percentage-sized root with no viewBox has no intrinsic pixel size at
+  /// all. `None` is the whole point: the caller then emits no width/height and
+  /// the browser sizes the image itself, which is strictly better than
+  /// asserting `width="100"`.
+  #[test]
+  fn viewport_px_declines_relative_lengths_rather_than_inventing_pixels() {
+    let pct = svg_file("pct", r#"<svg width="100%" height="100%"><rect/></svg>"#);
+    assert_eq!(read_svg_viewport_px(&pct), None);
+    let none = svg_file(
+      "bare",
+      r#"<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&none), None);
+    for p in [pct, none] {
+      let _ = std::fs::remove_file(p);
+    }
+  }
+
+  /// The SVG grammar allows comma-separated viewBox numbers.
+  #[test]
+  fn viewport_px_parses_a_comma_separated_viewbox() {
+    let comma = svg_file("comma", r#"<svg viewBox="0,0,634,805"><rect/></svg>"#);
+    assert_eq!(read_svg_viewport_px(&comma), Some((634, 805)));
+    let _ = std::fs::remove_file(comma);
+  }
+
+  /// `read_svg_size_pt` keeps the opposite precedence — absolute lengths first,
+  /// viewBox second — because it answers "how big would this typeset?", not
+  /// "how many pixels is the viewport?".
+  #[test]
+  fn size_pt_prefers_absolute_lengths_then_falls_back_to_the_viewbox() {
+    // 4in = 288.something TeX pt (72.27/in).
+    let inch = svg_file(
+      "pt_in",
+      r#"<svg width="4in" height="2in" viewBox="0 0 10 5"><rect/></svg>"#,
+    );
+    let (w, h) = read_svg_size_pt(&inch).expect("absolute lengths");
+    assert!((w - 4.0 * 72.27).abs() < 1e-9, "w = {w}");
+    assert!((h - 2.0 * 72.27).abs() < 1e-9, "h = {h}");
+    // SVG `pt` is a PostScript big point (1/72"), NOT a TeX pt (1/72.27") — so
+    // `72pt` is one inch, i.e. 72.27 TeX pt. The old reader equated the two
+    // units and under-reported every pt-sized SVG by 0.375%.
+    let bigpt = svg_file("pt_pt", r#"<svg width="72pt" height="36pt"><rect/></svg>"#);
+    let (w, h) = read_svg_size_pt(&bigpt).expect("pt lengths");
+    assert!((w - 72.27).abs() < 1e-9, "w = {w}");
+    assert!((h - 72.27 / 2.0).abs() < 1e-9, "h = {h}");
+    let _ = std::fs::remove_file(bigpt);
+    // Unitless lengths are only a scale — the viewBox wins.
+    let unitless = svg_file(
+      "pt_vb",
+      r#"<svg width="634" height="805" viewBox="0 0 96 48"><rect/></svg>"#,
+    );
+    let (w, h) = read_svg_size_pt(&unitless).expect("viewBox fallback");
+    assert!((w - 72.27).abs() < 1e-9, "w = {w}");
+    assert!((h - 72.27 / 2.0).abs() < 1e-9, "h = {h}");
+    for p in [inch, unitless] {
+      let _ = std::fs::remove_file(p);
+    }
   }
 }

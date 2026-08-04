@@ -1208,61 +1208,22 @@ impl Graphics {
     status
   }
 
-  /// Parse SVG viewBox ("minX minY width height") and return (width, height).
-  /// Falls back to `width`/`height` root attributes if viewBox is missing.
-  /// Returns None on parse failure so callers can skip dimension attributes.
+  /// The SVG viewport in pixels — `viewBox` extent, else the root
+  /// `width`/`height` lengths. `None` when the geometry can't be recovered, so
+  /// callers omit the dimension attributes entirely (a browser then sizes the
+  /// image itself, which beats writing a wrong number).
+  ///
+  /// Delegates to `latexml_core::util::image`, which owns the SVG root-tag
+  /// parsing for both the engine and this pass — Perl likewise keeps one
+  /// `Util::Image` shared by `Core` and `Post`. The former local parser read
+  /// only double-quoted attributes, matched `stroke-width` as `width`, and
+  /// truncated units (`10cm` → 10 px); it also slurped the entire file to find
+  /// a root tag that lives in its first few hundred bytes. Witness for the
+  /// bounded, lossy read: 1307.4573 (xfig-pstex_t paper, multi-byte characters
+  /// in the SVG preamble) — a FATAL_101 panic when a fixed 2048-byte slice cut
+  /// a UTF-8 sequence.
   fn read_svg_dimensions(path: &str) -> Option<(u32, u32)> {
-    let content = std::fs::read_to_string(path).ok()?;
-    // Look at just the root <svg> opening tag (first ~2 KB is enough).
-    // We must skip the optional `<?xml … ?>` prolog and any `<!-- … -->`
-    // or `<!DOCTYPE …>` preamble — otherwise `find('>')` matches the
-    // prolog's `?>` instead of the root tag.
-    // UTF-8-safe slice: if the 2048-byte mark falls mid-codepoint, walk
-    // forward to the next char boundary so the slice is always valid.
-    // Witness: 1307.4573 (xfig-pstex_t paper with multi-byte chars in
-    // SVG preamble metadata) — previously FATAL_101 panic at
-    // graphics.rs:957 from `&content[..2048]` cutting a UTF-8 sequence.
-    let head_end = {
-      let mut end = content.len().min(2048);
-      while end < content.len() && !content.is_char_boundary(end) {
-        end += 1;
-      }
-      end
-    };
-    let head = &content[..head_end];
-    let svg_start = head.find("<svg")?;
-    let svg_rest = &head[svg_start..];
-    let svg_tag_end = svg_rest.find('>')?;
-    let root = &svg_rest[..=svg_tag_end];
-    let extract = |attr: &str| -> Option<String> {
-      let key = format!("{}=\"", attr);
-      let start = root.find(&key)? + key.len();
-      let rest = &root[start..];
-      let end = rest.find('"')?;
-      Some(rest[..end].to_string())
-    };
-    let parse_dim = |s: &str| -> Option<f64> {
-      let s = s.trim();
-      // Strip trailing unit if present (pt, px, mm, etc.)
-      let numeric_end = s
-        .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
-        .unwrap_or(s.len());
-      s[..numeric_end].parse::<f64>().ok()
-    };
-    if let Some(vb) = extract("viewBox") {
-      let parts: Vec<&str> = vb.split_whitespace().collect();
-      if parts.len() == 4 {
-        if let (Some(w), Some(h)) = (parse_dim(parts[2]), parse_dim(parts[3])) {
-          return Some((w.round().max(1.0) as u32, h.round().max(1.0) as u32));
-        }
-      }
-    }
-    let w = extract("width").as_deref().and_then(parse_dim);
-    let h = extract("height").as_deref().and_then(parse_dim);
-    match (w, h) {
-      (Some(w), Some(h)) => Some((w.round().max(1.0) as u32, h.round().max(1.0) as u32)),
-      _ => None,
-    }
+    latexml_core::util::image::read_svg_viewport_px(Path::new(path))
   }
 
   /// Decide whether the vector-SVG path should be attempted for this PDF
@@ -2533,15 +2494,36 @@ impl Processor for Graphics {
             // / SVG) where `dest_type == src_ext`. graphicx `angle=`
             // rotation IS meaningful here — the source carries no PDF
             // /Rotate metadata to pre-rotate from. Apply via convert.
-            // (For an SVG source this rasterizes through IM's SVG
-            // delegate; Perl instead drops non-scaling transforms on
-            // non-raster images with a "Cannot (yet) apply complex
-            // transforms" warning, Graphics.pm L266-271.)
             // Perl semantics (Util/Image.pm:image_graphicx_complex
             // L390-394): IM `Rotate` with `degrees => -$a1` — graphicx
             // angle is CCW; convert -rotate is CW; negate to match.
+            //
+            // ... but ONLY for a raster source. Perl `Post/Graphics.pm`
+            // L264-271 refuses every non-scaling transform on a type
+            // whose `raster` property is false, warns `limitation`, and
+            // trivializes the transform so plain scaling still applies.
+            // Rotating an SVG here would hand `convert` a vector source
+            // and a `.svg` destination: IM rasterizes through its SVG
+            // delegate and writes that raster back out under the .svg
+            // name, so the bundle ends up with a file that is no longer
+            // the drawing it claims to be. The scaling half is unaffected
+            // — `apply_transforms` below still runs.
             let angle = Self::parse_angle_option(options).unwrap_or(0.0);
-            if angle.abs() > 0.5 {
+            let is_raster = self
+              .type_properties
+              .get(ext_from_path(source))
+              .and_then(|p| p.raster)
+              .unwrap_or(true);
+            if angle.abs() > 0.5 && !is_raster {
+              Warn!(
+                "limitation",
+                "graphics",
+                "Cannot (yet) apply complex transforms to non-raster images: dropping angle={} \
+                 for {}",
+                angle,
+                source
+              );
+            } else if angle.abs() > 0.5 {
               let dest_full = PathBuf::from(&dest_dir).join(&rel);
               Self::rotate_image_inplace(&dest_full.to_string_lossy(), -angle);
             }
@@ -2780,7 +2762,10 @@ endobj
     );
   }
 
-  /// SVG viewBox parsing extracts width/height.
+  /// SVG viewBox parsing extracts width/height — and, when both are present,
+  /// the viewBox wins over the root lengths. That precedence is load-bearing:
+  /// `pdftocairo -svg` writes `width="612pt" … viewBox="0 0 612 792"`, so
+  /// preferring the lengths would rescale every PDF-derived figure by 96/72.
   #[test]
   fn read_svg_dimensions_parses_viewbox() {
     let dir = TempDir::new("svg_dim");
@@ -2797,7 +2782,11 @@ endobj
     assert_eq!(dims, (640, 480));
   }
 
-  /// Falls back to width/height attrs when viewBox is missing.
+  /// Falls back to width/height attrs when viewBox is missing — **converting**
+  /// the unit, not truncating it. `123.7pt` is 123.7/72 in = 164.9 px; the
+  /// previous reader dropped the `pt` and called it 124 px, so a `\includegraphics`
+  /// of this file rendered at three quarters of its size (and, for `cm`/`in`
+  /// sources, at a small fraction of it — issue 498 follow-up).
   #[test]
   fn read_svg_dimensions_falls_back_to_width_height() {
     let dir = TempDir::new("svg_dim_fallback");
@@ -2810,7 +2799,23 @@ endobj
     )
     .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
-    assert_eq!(dims, (124, 99));
+    assert_eq!(dims, (165, 133));
+  }
+
+  /// The no-usable-geometry case must stay `None` all the way through, so the
+  /// caller writes no `imagewidth`/`imageheight` at all. Emitting a bogus
+  /// number here is worse than emitting nothing: with no attributes the browser
+  /// uses the SVG's own intrinsic size, which is right.
+  #[test]
+  fn read_svg_dimensions_declines_a_percentage_sized_root() {
+    let dir = TempDir::new("svg_dim_pct");
+    let tmp = dir.join("dims.svg");
+    std::fs::write(
+      &tmp,
+      r#"<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><rect/></svg>"#,
+    )
+    .unwrap();
+    assert_eq!(Graphics::read_svg_dimensions(tmp.to_str().unwrap()), None);
   }
 
   /// Three `<graphics>` nodes over one source: two share `options`, one
@@ -2899,6 +2904,111 @@ endobj
     assert_eq!(out.matches(r#"imagesrc="plot.png""#).count(), 2);
     assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
   }
+
+  /// `angle=` on a **non-raster** source must not reach `convert`.
+  ///
+  /// Perl `Post/Graphics.pm` L264-271 refuses non-scaling transforms on a type
+  /// whose `raster` property is false, warns `limitation`, and trivializes the
+  /// transform. Rust's `svg` entry carries `raster: Some(false)` but nothing
+  /// read it, so `Plan::Copy` handed IM a vector source and a `.svg`
+  /// destination — IM rasterizes via its SVG delegate and writes the raster
+  /// back under the `.svg` name, leaving the bundle with a file that is no
+  /// longer the drawing it claims to be.
+  ///
+  /// A fake `convert` on PATH makes this observable without ImageMagick: it
+  /// logs its arguments and overwrites its destination, so "never invoked" is
+  /// the absence of a log AND an unchanged destination file. The raster half of
+  /// the contract still has to hold, so the same document rotates a PNG.
+  #[test]
+  #[cfg(unix)]
+  fn rotation_is_dropped_for_non_raster_sources_but_kept_for_raster() {
+    use std::os::unix::fs::PermissionsExt;
+
+    use crate::{
+      document::{PostDocument, PostDocumentOptions},
+      graphics_cache::CachePolicy,
+    };
+
+    let tmp = TempDir::new("graphics_nonraster_rotate");
+    let svg_body = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40"><rect/></svg>"#;
+    let svg = tmp.join("draw.svg");
+    std::fs::write(&svg, svg_body).unwrap();
+    // A 1×1 PNG: enough for `imagesize`, and a raster type, so it MUST rotate.
+    let png = tmp.join("dot.png");
+    std::fs::write(&png, ONE_PIXEL_PNG).unwrap();
+
+    let log = tmp.join("convert.log");
+    let fake_convert = tmp.join("convert");
+    std::fs::write(
+      &fake_convert,
+      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/convert.log\"\n\
+       for a in \"$@\"; do d=\"$a\"; done\nprintf x > \"$d\"\nexit 0\n",
+    )
+    .unwrap();
+    let mut perms = std::fs::metadata(&fake_convert).unwrap().permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&fake_convert, perms).unwrap();
+
+    let old_path = std::env::var("PATH").unwrap_or_default();
+    let mut env = EnvGuard::acquire();
+    env.set("PATH", &format!("{}:{}", tmp.path().display(), old_path));
+
+    let dest = tmp.join("sub").join("out.html");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    let xml = format!(
+      r#"<?xml version="1.0"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
+  <graphics graphic="draw" candidates="{}" options="angle=90" xml:id="g1"/>
+  <graphics graphic="dot" candidates="{}" options="angle=90" xml:id="g2"/>
+</document>"#,
+      svg.display(),
+      png.display()
+    );
+    let doc_opts = PostDocumentOptions {
+      destination: Some(dest.display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    assert_eq!(nodes.len(), 2);
+    graphics.process(doc, nodes).unwrap();
+
+    let out_svg = dest.parent().unwrap().join("draw.svg");
+    assert_eq!(
+      std::fs::read_to_string(&out_svg).ok().as_deref(),
+      Some(svg_body),
+      "the copied SVG must be the original drawing, not a `convert` rewrite"
+    );
+    // One line per invocation; the rotate line names its source AND its
+    // `.rotated` scratch file, so match lines rather than occurrences.
+    let invocations = std::fs::read_to_string(&log).unwrap_or_default();
+    let calls_for = |name: &str| invocations.lines().filter(|l| l.contains(name)).count();
+    assert_eq!(
+      calls_for("draw.svg"),
+      0,
+      "`convert` must not be invoked for a non-raster source; log was:\n{invocations}"
+    );
+    assert_eq!(
+      calls_for("dot.png"),
+      1,
+      "a raster source with angle= must still be rotated; log was:\n{invocations}"
+    );
+  }
+
+  /// Smallest valid PNG: 1×1, 8-bit RGB. `imagesize` reads its IHDR, so the
+  /// sizing half of `Plan::Copy` succeeds and no `expected:image` warn fires.
+  const ONE_PIXEL_PNG: &[u8] = &[
+    0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, // signature
+    0x00, 0x00, 0x00, 0x0d, b'I', b'H', b'D', b'R', // IHDR length + type
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1 × 1
+    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde, // bit depth/colour + CRC
+    0x00, 0x00, 0x00, 0x0c, b'I', b'D', b'A', b'T', // IDAT length + type
+    0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00, 0x18, 0xdd, 0x8d,
+    0xb0, // deflate stream + CRC
+    0x00, 0x00, 0x00, 0x00, b'I', b'E', b'N', b'D', 0xae, 0x42, 0x60, 0x82,
+  ];
 
   /// A post-processing diagnostic raised on a WORKER THREAD must reach the MAIN
   /// thread's bound log AND register in the main `REPORT` status counters — both
