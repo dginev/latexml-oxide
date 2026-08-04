@@ -1945,4 +1945,18 @@ fn bib_entry_ids_are_bib_rooted_like_perl() {
       "missing bibitem anchor {id}"
     );
   }
+
+  // The enclosing biblist needs a `fragid` as well as an `xml:id`: the HTML5
+  // XSLT's `add_id` emits the HTML `id` from `@fragid` ALONE, and `fragid` is
+  // stamped by `CrossRef::fill_in_frags` only for nodes carrying an ObjectDB
+  // `ID:` entry. Without MakeBibliography registering the list, Perl's
+  // `<ul id="bib.L1" class="ltx_biblist">` came out here as a bare `<ul>`.
+  assert!(
+    x.contains(r#"xml:id="bib.L1""#),
+    "biblist must keep its xml:id"
+  );
+  assert!(
+    x.contains(r#"fragid="bib.L1""#),
+    "biblist must receive a fragid, or the HTML <ul> loses its id entirely"
+  );
 }

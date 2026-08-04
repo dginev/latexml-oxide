@@ -217,10 +217,18 @@ classes are singletons and the first error is often incidental.
   after which the two engines' bibliographies are byte-identical there. Guard
   `06_cluster_bibliography::cluster_bib_alpha_style_labels` (verified RED on
   the pre-fix tree: author-year classes, `Ångström` last, no suffixes).
-  **Found, not fixed:** a Rust `<ltx:biblist>` has `xml:id` but no `fragid`, and
-  `add_id` emits the HTML `id` from `@fragid` only, so Perl's `<ul id="bib.L1">`
-  is a bare `<ul>` here. Pre-existing; the XSLT is byte-identical between the
-  engines, so the cause is whatever assigns `fragid` to a post-created node.
+  **Found, then fixed 2026-08-04:** a Rust `<ltx:biblist>` had `xml:id` but no
+  `fragid`, and `add_id` emits the HTML `id` from `@fragid` only, so Perl's
+  `<ul id="bib.L1">` was a bare `<ul>` here. The `fragid` assigner is
+  `CrossRef::fill_in_frags` ("Any nodes with an ID will get a fragid",
+  CrossRef.pm L312-324) — faithfully ported — which stamps only nodes that have
+  an `ID:<id>` ObjectDB entry. Perl's Scan runs AFTER MakeBibliography and
+  registers every id'd node; our port hand-registers the *bibitems* at that
+  seam (because Perl's Scan is what registers them) but never the enclosing
+  list, so the list alone had no entry. MakeBibliography now registers each
+  `ltx:biblist` too. Output `<ul id="bib.L1" class="ltx_biblist">` is
+  byte-identical to same-host Perl. Guard:
+  `06_cluster_bibliography::bib_entry_ids_are_bib_rooted_like_perl`.
 
 - **2026-07-27 — the `unexpected:fi` fatal cluster: `\meaning` of a
   `\chardef` token returned the internal class name.** GENUINE-RUST-ONLY,
@@ -726,19 +734,13 @@ residuals stay here so the live worklist keeps them visible:
   still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
   (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
 
-### `ltx:biblist` loses its `xml:id` between post and HTML — OPEN (2026-08-04)
+### `--format=xml` emits no `ltx:bibitem` — untriaged (2026-08-04)
 
-Perl emits `<ul id="bib.L1" class="ltx_biblist">`; we emit the `<ul>` with no
-id. Not an id-minting bug: `make_bib_list` sets it (make_bibliography.rs:886)
-and it IS present in our post XML (`<biblist xml:id="bib.L1">`, seen in
-`06_cluster_bibliography::bib_entry_ids_are_bib_rooted_like_perl`'s output), so
-it is dropped on the XSLT side. Bibitem anchors themselves match Perl exactly
-(`bib.bibN`) since the `n_bibliographies` fix below.
-
-Sibling observation, untriaged: `--format=xml` output carries no `ltx:bibitem`
-elements at all, while `--format=html5` renders the bibliography — so the two
-format paths run different post chains. Check before trusting an `xml`-format
-dump as a bibliography oracle.
+`--format=xml` output carries no `ltx:bibitem` elements at all, while
+`--format=html5` on the same source renders the bibliography — so the two
+format paths do not run the same post chain. Not yet diagnosed; check before
+trusting an `xml`-format dump as a bibliography oracle. (The `ltx:biblist`
+`fragid` gap noticed alongside it is FIXED — see the 2026-07-28 entry above.)
 
 ### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 

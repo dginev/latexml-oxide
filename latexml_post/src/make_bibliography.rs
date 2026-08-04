@@ -1690,6 +1690,26 @@ impl Processor for MakeBibliography {
       }
     }
 
+    // Register the enclosing `ltx:biblist` too — Perl's Scan runs AFTER
+    // MakeBibliography and registers EVERY id'd node, which is what lets
+    // `CrossRef::fill_in_frags` ("Any nodes with an ID will get a fragid",
+    // CrossRef.pm L312-324) stamp `fragid` on it. This port registers the
+    // bibitems by hand at this seam but never the list, so the list alone
+    // reached HTML with no `id` — the XSLT's `add_id` emits the HTML `id`
+    // from `@fragid` only, so Perl's `<ul id="bib.L1">` was a bare `<ul>`
+    // here (SYNC_STATUS "Found, not fixed", 2026-07-28).
+    for list_node in doc.findnodes("//ltx:biblist") {
+      let Some(list_id) = crate::document::get_xml_id(&list_node) else {
+        continue;
+      };
+      let location = doc.site_relative_destination().unwrap_or_default();
+      self.db.register(&format!("ID:{}", list_id), vec![
+        ("type", crate::object_db::Value::from("ltx:biblist")),
+        ("location", crate::object_db::Value::from(location.as_str())),
+        ("fragid", crate::object_db::Value::from(list_id.as_str())),
+      ]);
+    }
+
     // Remove any remaining bibentry elements (they've been converted to bibitems)
     let bibentries = doc.findnodes("//ltx:bibentry");
     if !bibentries.is_empty() {

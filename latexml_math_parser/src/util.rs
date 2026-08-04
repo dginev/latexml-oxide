@@ -514,11 +514,16 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
         // idref so a content branch never points at a presentation-side
         // reference. Without this branch the ref-to-a-ref shape reaches
         // the output (Perl's whole golden corpus has zero of them).
-        if node.get_name() == "XMRef"
-          && let Some(idref) = node.get_attribute("idref")
-        {
+        if node.get_name() == "XMRef" {
+          // Carry BOTH spellings, as Perl does — `_xmkey` is the deferred
+          // form used before ids exist, `idref` the resolved one, and either
+          // may be absent. Taking this branch unconditionally matters: on a
+          // key-only XMRef, falling through would mint an xml:id ON the ref
+          // and reference THAT, which is the ref-to-a-ref this branch exists
+          // to prevent.
           refs.push(XM::Ref(XProps {
-            id: Some(Cow::Owned(idref)),
+            id: node.get_attribute("idref").map(Cow::Owned),
+            xmkey: node.get_attribute("_xmkey").map(Cow::Owned),
             ..XProps::default()
           }));
           continue;
