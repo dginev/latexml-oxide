@@ -546,3 +546,42 @@ fn cluster_rdfa_math_subject() {
     assert!(x.contains(attr), "missing RDFa attribute {attr}:\n{x}");
   }
 }
+
+/// A faked space's glyph run must be sized by the font the skip was DIGESTED
+/// in, not by whatever font happens to be current when the document is BUILT.
+///
+/// `tex_glue::dimension_to_spaces` expresses a width in **ems** and picks
+/// Unicode space glyphs to match, so the answer depends entirely on which font
+/// supplies the em. Perl `TeX_Glue.pool.ltxml` L44 reads the live
+/// `LookupValue('font')` — inside a constructor that is the font at CONSTRUCTION
+/// time, i.e. whatever the document ends in, since Perl builds only after the
+/// whole document is digested. Appending `\small` before `\end{document}`
+/// therefore changes the glyph chosen for a skip that occurred pages earlier.
+///
+/// That ambient read made the result depend on WHEN the build ran, which broke
+/// the eager/streaming byte-identity invariant outright: streaming builds
+/// mid-document, so it read the local font. Rust now uses the whatsit's own
+/// font (OXIDIZED_DESIGN #96, KNOWN_PERL_ERRORS #74) — deterministic, and the
+/// glyph run finally approximates the true pt width in the font that actually
+/// renders it.
+///
+/// The witness is fancyvrb's line number: the `numbers=left` skip is digested
+/// inside the NUMBER's font (`fontsize="56%"`), while `fontsize=\small` makes
+/// the surrounding verbatim differ from both that and the document default —
+/// three distinct sizes, so every candidate font gives a different answer.
+/// `06_cluster_regressions` fixtures are also swept by
+/// `114_streaming_cluster_regressions`, which is what pins eager == streaming;
+/// this test pins the VALUE, so a future "match Perl here" cannot quietly
+/// restore the ambient read while keeping the sweep green.
+#[test]
+fn faked_space_is_sized_by_the_font_it_was_digested_in() {
+  let xml = convert_to_xml("tests/cluster_regressions/fancyvrb_fontsize_numbers.tex");
+  // Two em-quads + a three-per-em, measured in the 56% line-number font.
+  // Perl 0.8.8 emits `1\u{2003}\u{2009}` here — one em-quad + a thin space,
+  // measured in the document's FINAL font, which is not the font that renders
+  // these glyphs. The divergence is intentional; see the doc comment.
+  assert!(
+    xml.contains("1\u{2003}\u{2003}\u{2004}</text>"),
+    "the line-number skip must be sized by the line-number font:\n{xml}"
+  );
+}

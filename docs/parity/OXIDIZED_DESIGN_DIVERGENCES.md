@@ -3484,3 +3484,45 @@ the pretense was protecting.
 **Upstream**: <https://github.com/brucemiller/LaTeXML/issues/2864>.
 
 **Guard**: `06_cluster_standalone_subfiles::keyval_internals_survive_xkeyval_preloading_it`.
+### 96. A faked space is sized by the font it was DIGESTED in, not the ambient one
+
+`tex_glue::dimension_to_spaces` renders a width as a run of Unicode space
+glyphs, and it does the arithmetic in **ems** — so which font supplies the em
+decides the answer completely.
+
+**Perl behavior**: `TeX_Glue.pool.ltxml` L44 reads the live
+`LookupValue('font')`. In a `DefConstructor` that is the font at CONSTRUCTION
+time, and Perl builds only after the whole document is digested — so it is
+whatever font the document *ends* in. Appending `\small` before
+`\end{document}` changes the glyph chosen for a skip that occurred pages
+earlier (verified same-host on the witness below: `U+2009` → `U+2004`).
+
+**Rust behavior**: the constructor and whatsit call sites (`\hskip`, `\kern`,
+`\lx@text@intercol`, `digested_to_text`) pass the whatsit's own
+`props["font"]` / `get_font()`. Digest-time callers (`\hspace`, `\hglue`, the
+tabskip Tbox) keep the ambient read, where `lookup_font()` already IS the
+digest font. One site keeps the ambient read for lack of an alternative:
+`cleanup_math`'s `<ltx:XMHint>` records only `width`, never a font.
+
+**Why**: the ambient read made the output depend on WHEN the build ran, which
+broke the eager/streaming byte-identity invariant outright — streaming builds
+mid-document, so it read the local font and emitted `U+2004` where the eager
+path emitted Perl's `U+2009`. There is no way to make streaming reproduce
+"the font the document will end in"; the only deterministic choice is the
+font the skip actually occurred in. That is also the *correct* one: the glyph
+run is an approximation of a fixed pt width, and it is only a good
+approximation when measured in the font that will render those glyphs.
+
+**Witness**: `latexml_oxide/tests/cluster_regressions/fancyvrb_fontsize_numbers.tex`
+— a `numbers=left` line-number skip, digested in the number's `56%` font,
+inside a `fontsize=\small` verbatim, inside a default-size document: three
+distinct sizes, so every candidate font gives a different answer. Rust emits
+`1␣␣␣` (`U+2003 U+2003 U+2004`); Perl emits `1␣␣` (`U+2003 U+2009`).
+
+**Cost**: zero golden churn — the full suite was 1885/1885 with no fixture
+updates, so no existing test exercised a skip whose digest font differed from
+the document's final font.
+
+**Guards**: `06_cluster_regressions::faked_space_is_sized_by_the_font_it_was_digested_in`
+pins the value; `114_streaming_cluster_regressions::streaming_matches_eager_on_cluster_regressions`
+pins eager == streaming (it is what caught the defect).

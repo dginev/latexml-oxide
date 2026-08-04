@@ -50,7 +50,12 @@ LoadDefinitions!({
       // Add space to document
       // Use the precise Unicode space mapping from tex_glue (matching Perl's TeX_Glue algorithm),
       // not the simple threshold version from base_functions.
-      let spaces = super::tex_glue::dimension_to_spaces(length);
+      // The whatsit's OWN font — see tex_glue::dimension_to_spaces.
+      let font = match props.get("font") {
+        Some(Stored::Font(f)) => Some(Rc::clone(f)),
+        _ => None,
+      };
+      let spaces = super::tex_glue::dimension_to_spaces(length, font.as_deref());
       document.absorb_string(&spaces, &SymHashMap::default())?;
     }
   },

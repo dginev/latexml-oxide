@@ -809,37 +809,36 @@ format paths do not run the same post chain. Not yet diagnosed; check before
 trusting an `xml`-format dump as a bibliography oracle. (The `ltx:biblist`
 `fragid` gap noticed alongside it is FIXED — see the 2026-07-28 entry above.)
 
-### Streaming diverges on a fancyvrb `fontsize=` + `numbers=` Verbatim — untriaged (2026-08-04)
+### Streaming diverged on a fancyvrb `fontsize=` + `numbers=` Verbatim — ✅ FIXED 2026-08-04
 
-Under a small streaming budget the XML is **not** byte-identical to the eager
-path when a fancyvrb verbatim carries `fontsize=` **and** `numbers=` together.
-Either option alone is clean; the pair is not. Nothing package-load-related is
-involved — the minimal repro needs only `fancyvrb`:
+Under a small streaming budget the XML was **not** byte-identical to the eager
+path when a fancyvrb verbatim carried `fontsize=` **and** `numbers=` together
+(either alone was clean). Root cause was **not** package-load-related, despite
+being found while guarding #500: `tex_glue::dimension_to_spaces` renders a width
+as Unicode space glyphs and does the arithmetic in **ems**, but read the live
+`lookup_font()` from callers that are `DefConstructor`s — i.e. CONSTRUCTION
+time. The eager path builds only after the whole document is digested, so that
+is the font the document *ends* in; appending `\small` before `\end{document}`
+changes the glyph chosen for a skip pages earlier (Perl 0.8.8 too — it has the
+same read, `TeX_Glue.pool.ltxml` L44). Depending on WHEN the build ran is what
+broke byte-identity: streaming builds mid-document, read the local font, and
+emitted U+2004 where eager emitted Perl's U+2009.
 
-```tex
-\documentclass{article}
-\usepackage{fancyvrb}
-\begin{document}
-\begin{Verbatim}[fontsize=\small,numbers=left]
-alpha
-beta
-\end{Verbatim}
-\end{document}
-```
+Fixed by passing the whatsit's own digest-time font at the constructor/whatsit
+sites (`\hskip`, `\kern`, `\lx@text@intercol`, `digested_to_text`); digest-time
+callers keep the ambient read, which is already the digest font. Surpass-Perl
+divergence [OXIDIZED_DESIGN #96](parity/OXIDIZED_DESIGN_DIVERGENCES.md),
+Perl-side record [KNOWN_PERL_ERRORS #74](parity/KNOWN_PERL_ERRORS.md). Zero
+golden churn. Guards:
+`06_cluster_regressions::faked_space_is_sized_by_the_font_it_was_digested_in`
+(value) and `114_streaming_cluster_regressions::streaming_matches_eager_on_cluster_regressions`
+(eager == streaming; it caught the defect).
 
-Dropped into `latexml_oxide/tests/cluster_regressions/` it fails
-`114_streaming_cluster_regressions::streaming_matches_eager_on_cluster_regressions`
-("output diverges at byte 440"), inside the line-number box
-(`<text font="serif" fontsize="56%" width="0.0pt">1\u2003\u2009</text>`). The
-CLI cannot reach the sweep's aggressive 3-box budget (`--streaming` sizes the
-budget from `--max-memory`, and a ceiling small enough trips the RSS fuse
-first), so reproduce through `streaming_sweep::convert_with(src, Some(3), …)`
-or by running the built sweep binary — it globs the fixture dir at RUNTIME, so
-a fixture can be added/removed without a rebuild.
-
-Found while adding the #500 guard; the #500 fixtures were narrowed to
-`fontsize=` alone rather than pinning this. Unrelated to #500 (no keyval /
-xkeyval / standalone in the repro).
+**Reproduction note worth keeping:** the CLI cannot reach the sweep's aggressive
+3-box budget — `--streaming` sizes the budget from `--max-memory`, and a ceiling
+small enough trips the RSS fuse first. Drive `streaming_sweep::convert_with(src,
+Some(3), …)`, or run the built sweep binary directly: it globs its fixture dir at
+RUNTIME, so fixtures can be added or removed without a rebuild.
 
 ### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 
