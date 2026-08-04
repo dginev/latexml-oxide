@@ -47,3 +47,22 @@ the `$$`-in-`.bib` cascade (family F1) was pinned.
 Perl raw-loads the same package, so this is very likely a shared limit rather
 than a Rust-only regression — worth confirming with same-host Perl before
 deciding how far to surpass.
+
+## CONFIRMED SHARED-FAILURE (2026-08-04)
+
+Re-triaged on today's binaries. The earlier "very likely shared" is now
+**confirmed**: the valid comparison needs `--includestyles` on the Perl side,
+because Perl does **not** interpret a raw `.sty` without it (bare `latexml`
+reports `missing file[mhchem.sty]` + `undefined:\ce`, so `\ce` is inert and the
+tabular closes — a false "Perl is clean"). With `latexml --includestyles`
+Perl 0.8.8 raw-loads mhchem exactly as Rust does and produces the
+**byte-identical cascade**: 7 errors, `\@end@tabular` (horizontal) → `\endgroup`
+→ `\lx@begin@alignment` (internal_vertical ×3) → `\@@tabular`
+(restricted_horizontal), TAILTEXT lost. Same error count, same order.
+
+Verdict: **SHARED-FAILURE, surpass-only.** Any fix (mode-robust `\ce`, or an
+`mhchem.sty.ltxml`-equivalent binding handling `\ce` cleanly) is a surpass-Perl
+divergence needing the three qualifying tests + user escalation — NOT a straight
+parity fix. Deprioritized until a surpass decision is taken. The sibling
+`\ce`-in-`align*` residual noted in `mhchem_sty.rs` is the same family and a fix
+should address both.
