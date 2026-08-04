@@ -984,7 +984,15 @@ fn seealso_partition_aux(node: &Node) -> Vec<SeeChunk> {
         if name == "text" || name == "emph" {
           // Recurse, re-wrapping each sub-chunk in the styling element
           // so delimiters can split styled phrases (Perl does the same).
-          let attrs: HashMap<String, String> = ch.get_properties().into_iter().collect();
+          // Drop the source node's id ("id" is how get_properties()
+          // reports xml:id): the styling wrapper is CLONED once per
+          // sub-chunk, and copying the id onto every clone would mint
+          // schema-invalid duplicate xml:ids.
+          let attrs: HashMap<String, String> = ch
+            .get_properties()
+            .into_iter()
+            .filter(|(k, _)| k != "id" && k != "xml:id" && k != "fragid")
+            .collect();
           for sub in seealso_partition_aux(&ch) {
             result.push(SeeChunk {
               key: sub.key,

@@ -226,16 +226,20 @@ mod tests {
     assert!(result.is_err(), "unknown record kinds must fail loudly");
   }
 
-  /// Both `xml:id` attribute forms must be readable at spill-indexing time:
-  /// parsed nodes carry the namespaced attribute, CONSTRUCTED nodes carry a
-  /// plain attribute literally named "xml:id". The namespace-only read
-  /// registered 865 of 23,654 spilled labels on the 131 MB witness — no
-  /// error anywhere, the fragment index just went missing.
+  /// `xml:id` must be readable at spill-indexing time however the node was
+  /// produced. MECHANISM CORRECTION (2026-08-04, probed against libxml
+  /// 0.3.21): BOTH construction paths store the attribute NAMESPACED —
+  /// `set_attribute("xml:id", …)` resolves the predefined `xml` prefix via
+  /// `xmlSetProp`, exactly like parsing does — so this test's two branches
+  /// both exercise `node_xml_id_any_form`'s `get_attribute_ns` arm, and its
+  /// bare-read fallback is defensive dead code. (The comment that previously
+  /// claimed constructed nodes carry a plain-named attribute does not
+  /// reproduce; see `node_xml_id_any_form`'s doc.)
   #[test]
   fn xml_id_readable_in_both_attribute_forms() {
     use libxml::{parser::Parser, tree::Node};
 
-    // Parsed form: xml:id arrives namespaced.
+    // Parsed: xml:id arrives namespaced.
     let parsed = Parser::default()
       .parse_string(r#"<r xmlns="urn:x"><s xml:id="parsed.id"/></r>"#)
       .expect("parse");
@@ -249,17 +253,21 @@ mod tests {
       "namespaced form must read"
     );
 
-    // Constructed form: set_attribute stores a plain "xml:id" attribute.
+    // Constructed: set_attribute ALSO stores the namespaced form.
     let built = Parser::default().parse_string("<r/>").expect("parse shell");
     let mut root = built.get_root_element().expect("root");
     let mut child = Node::new("s", None, &built).expect("node");
     child.set_attribute("xml:id", "built.id").expect("attr");
     root.add_child(&mut child).expect("attach");
     assert_eq!(
+      child.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"),
+      Some("built.id".to_string()),
+      "set_attribute must namespace xml:id (probed libxml 0.3.21 behavior)"
+    );
+    assert_eq!(
       crate::document::Document::node_xml_id_any_form(&child).as_deref(),
       Some("built.id"),
-      "the plain constructed form must read too — a namespace-only read \
-       silently misses every builder-constructed node"
+      "constructed form must read through the helper too"
     );
   }
 }

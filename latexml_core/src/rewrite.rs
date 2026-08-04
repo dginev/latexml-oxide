@@ -251,6 +251,23 @@ impl Rewrite {
         pattern,
       };
     }
+    // Perl Rewrite.pm L288-297: a `label` clause COMPILES to a select on the
+    // labeled node's xml:id (via getLabelID) — it has no runtime behavior.
+    // `scope => "label:<label>"` compiles through the identical getLabelID
+    // path (L300-302), so delegate to that branch below. (The former runtime
+    // Label arm instead tried to RECORD the current node's id under the
+    // label — not Perl semantics, and dead anyway: its bare
+    // get_attribute("xml:id") read always returned None.)
+    if op == RewriteOperator::Label
+      && let RewritePattern::String(label_str) = &pattern
+    {
+      let as_scope = RewriteClause {
+        compiled: false,
+        op:       RewriteOperator::Scope,
+        pattern:  RewritePattern::String(format!("label:{label_str}")),
+      };
+      return self.compile_clause(document, as_scope);
+    }
     // scope => 'label:...' compiles to select with xpath via label ID resolution
     // Perl: $op = 'select'; $pattern = ["descendant-or-self::*[@xml:id='<id>']", 1];
     if op == RewriteOperator::Scope
@@ -679,14 +696,9 @@ impl Rewrite {
           }
         },
         Label => {
-          // Label clause stores the label on the node. Perl: $$self{label} usage.
-          // Typically compiled away in compile_clause, but if it reaches here, record it.
-          if let RewritePattern::String(label_str) = pattern {
-            let id = tree.get_attribute("xml:id").unwrap_or_default();
-            if !id.is_empty() {
-              document.rewrite_labels.insert(label_str.clone(), id);
-            }
-          }
+          // Unreachable once compiled: compile_clause lowers Label to a
+          // Select via the scope "label:…" path (Perl Rewrite.pm L288-297 —
+          // a label clause has NO runtime behavior). Defensive pass-through.
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
         Trace => {

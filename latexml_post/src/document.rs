@@ -1324,11 +1324,13 @@ impl PostDocument {
       return Some(id);
     }
 
-    // Find the closest parent with an ID
+    // Find the closest parent with an ID (NS-aware — the bare read always
+    // missed, so generated ids silently lost their parent prefix, e.g.
+    // "fn1" instead of "S2.fn1")
     let mut parent_node = node.get_parent();
     let mut pid = String::new();
     while let Some(ref p) = parent_node {
-      if let Some(id) = p.get_attribute("xml:id") {
+      if let Some(id) = get_xml_id(p) {
         pid = id;
         break;
       }
@@ -1661,7 +1663,9 @@ impl PostDocument {
     for node in nodes {
       if node.get_type() == Some(NodeType::ElementNode) {
         for idd in self.findnodes_at("descendant-or-self::*[@xml:id]", Some(node)) {
-          if let Some(id) = idd.get_attribute("xml:id") {
+          // NS-aware read — the bare form always returned None, so no id
+          // was ever marked reusable and generate_node_id skipped reuse.
+          if let Some(id) = get_xml_id(&idd) {
             self.idcache_reusable.insert(id, true);
           }
         }

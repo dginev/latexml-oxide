@@ -9,10 +9,11 @@
 # Full analysis: docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
 #
 # This lint FAILS when a NEW `*_{attribute,property}("xml:...")` read/has/remove
-# accessor appears (one not in the checked-in baseline). The 53 pre-existing
-# sites are baselined (most are masked by `.or_else(get_property("id"))` or a
-# paired `_ns` call — see the audit); we ratchet so no NEW footgun lands without
-# review, without churning the working masked sites.
+# accessor appears (one not in the checked-in baseline). The remaining baselined
+# sites are masked by `.or_else(get_property("id"))` or a paired `_ns` call —
+# see the audit; the load-bearing bare reads were migrated in the 2026-08-04
+# sweep. We ratchet so no NEW footgun lands without review, without churning
+# the working masked sites.
 #
 # Usage:
 #   tools/lint_xmlid_accessor.sh           # check; exit 1 on a new violation

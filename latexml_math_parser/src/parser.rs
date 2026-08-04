@@ -990,7 +990,10 @@ impl MathParser {
       if !SCRIPT_RE.is_match(&role) {
         continue;
       }
-      let appid = match app.get_attribute("xml:id") {
+      // NS-aware read: xml:id is stored namespaced (local "id" in XML_NS);
+      // the bare get_attribute("xml:id") form always returns None, which
+      // silently disabled this whole pass (every iteration bailed here).
+      let appid = match app.get_attribute_ns("id", XML_NS) {
         Some(id) => id,
         None => continue,
       };
@@ -1005,22 +1008,39 @@ impl MathParser {
         Some(child) => child,
         None => continue,
       };
-      // Ensure the script has an xml:id so we can create XMRef to it
-      if script.get_attribute("xml:id").is_none() {
-        let _ = document.generate_id(&mut script, "");
-      }
-      let script_id = match script.get_attribute("xml:id") {
-        Some(id) => id,
-        None => continue,
+      // Perl builds the replacement ref via `createXMRefs` (Package.pm
+      // L1544-1575), which for an XMRef child clones the ref's target
+      // instead of creating a ref-to-a-ref; mirror that branch. (The
+      // XMHint branch — clone the ephemeral hint without id — is not
+      // mirrored: a hint as the sole script child does not occur in the
+      // XM stream this pass sees.)
+      let script_id = if script.get_name() == "XMRef" {
+        match script.get_attribute("idref") {
+          Some(idref) => idref,
+          None => continue,
+        }
+      } else {
+        // Ensure the script has an xml:id so we can create XMRef to it
+        if script.get_attribute_ns("id", XML_NS).is_none() {
+          let _ = document.generate_id(&mut script, "");
+        }
+        match script.get_attribute_ns("id", XML_NS) {
+          Some(id) => id,
+          None => continue,
+        }
       };
-      // Unregister the app's id and remove the attribute
+      // Unregister the app's id and remove the attribute (NS-aware —
+      // the bare remove_attribute("xml:id") is a silent no-op)
       document.unrecord_id(&appid);
-      let _ = app.remove_attribute("xml:id");
-      // Collect app attributes (except xml:id, which we already removed)
+      let _ = app.remove_attribute_ns("id", XML_NS);
+      // Collect app attributes (except the id, which we already removed).
+      // get_attributes() reports xml:id under its LOCAL name "id", so
+      // filter both spellings — copying the old id onto every replacement
+      // XMApp would mint duplicate ids the moment this pass fires.
       let attrs: Vec<(String, String)> = app
         .get_attributes()
         .into_iter()
-        .filter(|(name, _)| name != "xml:id")
+        .filter(|(name, _)| name != "xml:id" && name != "id")
         .collect();
       let ns = app.get_namespace();
       // Replace each ref with an XMApp containing an XMRef to the script
@@ -1321,9 +1341,9 @@ impl MathParser {
             // //   $attr{font} = $font->specialize($content); } }
             // // } else {
             attr.remove("_font");
-            // TODO: See the namespaced attribute issue for libxml's wrapper:
-            //  https://github.com/KWARC/rust-libxml/issues/104
-            // until then, HACK ids.
+            // get_attributes() reports xml:id under its LOCAL name "id";
+            // re-key it as "xml:id" so document.set_attribute (which
+            // namespaces that spelling) re-installs it correctly below.
             let newid = attr.remove("id");
             if let Some(ref nid) = newid {
               attr.insert(String::from("xml:id"), nid.to_owned());
@@ -1337,9 +1357,11 @@ impl MathParser {
                 continue;
               }
               if key == "xml:id" {
-                // Since we're moving the id...bookkeeping
+                // Since we're moving the id...bookkeeping. NS-aware remove
+                // (the node is replaced and freed just below, so this is
+                // hygiene, not behavior — but the bare form was a no-op).
                 document.unrecord_id(&value);
-                node.remove_attribute("xml:id")?;
+                node.remove_attribute_ns("id", XML_NS)?;
               }
               // TODO: is the array/XM case still relevant?
               // if ($isarr) { $$result[1]{$key} = $value; } else {
@@ -1752,7 +1774,10 @@ impl MathParser {
         let mut pre_replacement_ids: Vec<String> = Vec::new();
         for child_el in element_nodes(mathnode) {
           for descendant in document.findnodes("descendant-or-self::*[@xml:id]", Some(&child_el)) {
-            if let Some(id) = descendant.get_attribute("xml:id") {
+            // NS-aware read — the bare get_attribute("xml:id") form always
+            // returned None here, leaving the snapshot empty and the
+            // orphan-detection loop below permanently disabled.
+            if let Some(id) = descendant.get_attribute_ns("id", XML_NS) {
               pre_replacement_ids.push(id);
             }
           }

@@ -11,7 +11,7 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
-  document::{NodeData, PostDocument},
+  document::{NodeData, PostDocument, get_xml_id},
   processor::{ProcessResult, Processor},
 };
 
@@ -69,7 +69,9 @@ pub fn make_sub_collection_documents(
   let _root_tag = doc
     .get_qname(root)
     .unwrap_or_else(|| "ltx:index".to_string());
-  let root_id = root.get_attribute("xml:id").unwrap_or_default();
+  // NS-aware read — the bare form always returned None, so every
+  // sub-collection page id was built from an EMPTY root id (".B"-style).
+  let root_id = get_xml_id(root).unwrap_or_default();
 
   // Build (id, initial) pairs for each sub-collection
   let ids: Vec<(String, &str)> = initials

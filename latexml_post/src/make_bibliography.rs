@@ -899,8 +899,10 @@ impl MakeBibliography {
     style: &CitationStyle,
   ) -> NodeData {
     // ID generation: match Perl's $id =~ s/^bib//; $id = $bibid . $id;
+    // (MakeBibliography.pm L407-415; NS-aware read — the bare form always
+    // returned None, so every bibitem fell to the .bibN numbering fallback)
     let id = if let Some(ref bibentry) = entry.bibentry {
-      let orig_id = bibentry.get_attribute("xml:id").unwrap_or_default();
+      let orig_id = crate::document::get_xml_id(bibentry).unwrap_or_default();
       if orig_id.is_empty() {
         // No xml:id on bibentry (e.g. from raw .bib parsing) — use number
         format!("{}.bib{}", bib_id, entry.number)
@@ -1555,12 +1557,15 @@ impl Processor for MakeBibliography {
         continue;
       }
 
-      let bib_id = bib
-        .get_attribute("xml:id")
+      // Perl MakeBibliography.pm L393-394: bib's id, else the document
+      // element's id, else the literal 'bib'. NS-aware reads — the bare
+      // forms always fell through to the literal.
+      let bib_id = crate::document::get_xml_id(bib)
         .or_else(|| {
           doc
             .get_document_element()
-            .and_then(|r| r.get_attribute("xml:id"))
+            .as_ref()
+            .and_then(crate::document::get_xml_id)
         })
         .unwrap_or_else(|| "bib".to_string());
 
@@ -1649,9 +1654,9 @@ impl Processor for MakeBibliography {
         .unwrap_or_else(|| "bibliography".to_string());
       for entry in entries.values() {
         let cited_key = entry.cited_key.as_deref().unwrap_or(&entry.bib_key);
-        // Compute the same ID as format_bib_entry
+        // Compute the same ID as format_bib_entry (NS-aware, same as there)
         let bibitem_id = if let Some(ref bibentry) = entry.bibentry {
-          let orig_id = bibentry.get_attribute("xml:id").unwrap_or_default();
+          let orig_id = crate::document::get_xml_id(bibentry).unwrap_or_default();
           if orig_id.is_empty() {
             format!("{}.bib{}", bib_id, entry.number)
           } else {
