@@ -28,9 +28,32 @@ static REVERT_SKIPS: [(f64, &str); 6] = [
   (2.000, "\\qquad"),     // double em
 ];
 
-/// String of spacing chars with width roughly equivalent to $dimen
-pub(crate) fn dimension_to_spaces(dimen: Dimension) -> String {
-  let fs = lookup_font().unwrap().get_size().unwrap_or(1.0); // 1 em
+/// String of spacing chars with width roughly equivalent to $dimen.
+///
+/// `font` is the font the skip was DIGESTED in — pass `Some` wherever it is
+/// known, i.e. from every CONSTRUCTOR (`props["font"]`) and from any whatsit
+/// (`get_font`). It matters because the width is expressed in **ems**, so the
+/// glyph chosen depends entirely on which font supplies the em.
+///
+/// Perl `TeX_Glue.pool.ltxml` L44 reads the *live* `LookupValue('font')` here
+/// instead. In a constructor that is the font at CONSTRUCTION time — i.e. the
+/// one the document happens to end in, since Perl builds only after the whole
+/// document is digested. Appending `\small` before `\end{document}` therefore
+/// changes the space glyph chosen for a skip that occurred pages earlier. Rust
+/// diverges deliberately (OXIDIZED_DESIGN #96): the ambient global made the
+/// result depend on WHEN the build ran, which broke the eager/streaming
+/// byte-identity invariant outright — streaming builds mid-document, so it read
+/// the local font and produced U+2004 where the eager path produced Perl's
+/// U+2009 (guard `streaming_matches_eager_on_cluster_regressions`, fixture
+/// `fancyvrb_fontsize_numbers.tex`).
+///
+/// `None` keeps the old ambient read, and is correct for the DIGEST-time
+/// callers, where `lookup_font()` already IS the digest font.
+pub(crate) fn dimension_to_spaces(dimen: Dimension, font: Option<&Font>) -> String {
+  let fs = match font {
+    Some(f) => f.get_size().unwrap_or(1.0),
+    None => lookup_font().unwrap().get_size().unwrap_or(1.0), // 1 em
+  };
   let mut ems = dimen.pt_value(None) / fs;
   let mut s = String::default();
   for (w, space_char) in UNICODE_EM_SPACES.into_iter().rev() {
@@ -117,7 +140,12 @@ LoadDefinitions!({
       // Without this branch, `\qquad` after `,` lost its `rpadding="20.0pt"`.
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_attribute())))?;
     } else {
-      let spaces = dimension_to_spaces(length);
+      // The whatsit's OWN font, not the ambient one — see dimension_to_spaces.
+      let font = match props.get("font") {
+        Some(Stored::Font(f)) => Some(Rc::clone(f)),
+        _ => None,
+      };
+      let spaces = dimension_to_spaces(length, font.as_deref());
       document.absorb_string(&spaces, &SymHashMap::default())?;
     }
   },

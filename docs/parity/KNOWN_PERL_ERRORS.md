@@ -3168,3 +3168,45 @@ as latexml-oxide issue #500, where Rust hit it on a plain
 `standalone.sty` L107's `\RequirePackage{xkeyval}`, which
 `standalone.sty.ltxml` omits. Filed upstream as
 <https://github.com/brucemiller/LaTeXML/issues/2864>.
+## 74. `DimensionToSpaces` sizes a faked space by the font the document ENDS in
+
+`TeX_Glue.pool.ltxml` L43-45:
+
+```perl
+sub DimensionToSpaces {
+  my ($dimen) = @_;
+  my $fs      = LookupValue('font')->getSize;         # 1 em
+  my $ems     = $dimen->ptValue / $fs;
+```
+
+The width is converted to **ems**, so the font supplying the em decides which
+Unicode space glyphs come out. But `DimensionToSpaces` is called from
+`DefConstructor` bodies (`\hskip` L66-79, `\kern`, `\lx@intercol`), which run
+in the CONSTRUCTION phase — after the entire document is digested. At that
+point `LookupValue('font')` is no longer the font the skip occurred in; it is
+whatever font the document happens to end in.
+
+Minimal trigger — the same file twice, differing only in a trailing `\small`
+that is nowhere near the skip:
+
+```tex
+\documentclass{article}
+\usepackage{fancyvrb}
+\begin{document}
+\begin{Verbatim}[fontsize=\small,numbers=left]
+alpha
+\end{Verbatim}
+\end{document}
+```
+
+gives `1\x{2003}\x{2009}` for the line-number skip; adding `\small` on the line
+before `\end{document}` gives `1\x{2003}\x{2004}` instead. The skip did not
+move and its width did not change — only the document's final font did.
+
+The consequence is not merely instability: because the glyph run is an
+*approximation of a fixed pt width*, measuring it in a font that will not
+render it makes the rendered spacing wrong by the font-size ratio.
+
+**Rust fixes this** by passing the whatsit's own digest-time font — see
+OXIDIZED_DESIGN #96, where the defect surfaced as an eager/streaming
+byte-identity break.

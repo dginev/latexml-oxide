@@ -1543,7 +1543,12 @@ pub fn digested_to_text(d: &Digested) -> Result<String> {
       let w = w.borrow();
       match w.get_property("width").as_deref() {
         Some(Stored::Dimension(width)) => {
-          out.push_str(&super::tex_glue::dimension_to_spaces(*width));
+          // The whatsit's OWN font — see tex_glue::dimension_to_spaces.
+          let font = w.get_font()?;
+          out.push_str(&super::tex_glue::dimension_to_spaces(
+            *width,
+            font.as_deref(),
+          ));
         },
         _ => {
           out.push_str(&w.get_string()?);
@@ -3262,7 +3267,13 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
             }
           });
           if let Some(dim) = dim_opt {
-            let spaces = super::tex_glue::dimension_to_spaces(dim);
+            // No font to thread: this runs over an already-built
+            // `<ltx:XMHint>`, which records only `width` — the digest font is
+            // not on the element. Keeps the ambient read (and with it the
+            // WHEN-dependence described in tex_glue::dimension_to_spaces);
+            // reachable only for math hints, which the streaming sweep has
+            // never caught diverging.
+            let spaces = super::tex_glue::dimension_to_spaces(dim, None);
             if !spaces.is_empty()
               && let Ok(text_node) = Node::new_text(&spaces, &document.document)
             {
@@ -4075,9 +4086,13 @@ fn either_case_token(token: Token, is_upper: bool) -> Token {
 /// caller, dropping the math-mode space marker between `^{...}` and a
 /// following `'` — surfacing as the false `unexpected:double-superscript`
 /// in hep-th9601176 (`\Si^{\mu\nu}\hs{0.25}'(p)`).
+///
+/// Both callers (`\hglue`, `\hspace`) are `DefPrimitive`s, i.e. DIGEST time,
+/// where `lookup_font()` already IS the font in effect — so the ambient read
+/// is the right one and no font is threaded through.
 pub fn dimension_to_spaces<T: NumericOps>(dimen: T) -> Cow<'static, str> {
   let dim = Dimension::new(dimen.value_of());
-  Cow::Owned(super::tex_glue::dimension_to_spaces(dim))
+  Cow::Owned(super::tex_glue::dimension_to_spaces(dim, None))
 }
 
 pub fn aligning_environment(

@@ -437,7 +437,12 @@ LoadDefinitions!({
     if let Some(width) = props.get("width") {
       let dim: Option<Dimension> = width.into();
       if let Some(d) = dim {
-        let s = crate::tex_glue::dimension_to_spaces(d);
+        // The whatsit's OWN font — see tex_glue::dimension_to_spaces.
+        let font = match props.get("font") {
+          Some(Stored::Font(f)) => Some(Rc::clone(f)),
+          _ => None,
+        };
+        let s = crate::tex_glue::dimension_to_spaces(d, font.as_deref());
         if !s.is_empty() {
           document.absorb_string(&s, &SymHashMap::default())?;
         }
@@ -1150,7 +1155,9 @@ pub fn extract_alignment_column(
     && skip.value_of() != 0
   {
     let dim = Dimension::new(skip.value_of());
-    let spaces = crate::tex_glue::dimension_to_spaces(dim);
+    // DIGEST time: `lookup_font()` already IS this box's font (it is the very
+    // font the Tbox below is built with), so the ambient read is correct here.
+    let spaces = crate::tex_glue::dimension_to_spaces(dim, None);
     if !spaces.is_empty() {
       let tbox = Tbox {
         text: pin(&spaces),
