@@ -3448,3 +3448,39 @@ producing a million-line log. The latch is guarded by the sticky fatal (fires
 once, robust to skipped checks), and the runaway (consecutive) diagnosis is
 tested before the total cap so its message is reachable. Guards:
 `suppression_never_mutes_error_or_fatal`, `119_final_status_report`.
+
+### 95. `xkeyval` really loads `keyval`, instead of only pretending to
+
+Perl's `xkeyval.sty.ltxml` L23 sets `AssignValue('keyval.sty_loaded' => 1,
+'global')` — "pretend keyval loaded too" — so that keyval's plain
+`\setkeys`/`\define@key` can never clobber xkeyval's extended ones. But that
+flag is what `Package.pm:loadLTXML` L2328-2330 and `loadTeXDefinitions` L2363
+gate on, so it also suppresses the **raw** `keyval.sty` that
+`keyval.sty.ltxml` reads via `InputDefinitions('keyval', noltxml => 1)`. Every
+keyval internal lives only there: `\KV@do`, `\KV@split`, `\KV@errx`,
+`\KV@@sp@def`, … No binding defines them, in either engine.
+
+Raw packages call those internals directly — `fancyvrb.sty` L112-117
+`\FV@UseKeyValues` expands `\KV@do` — so after xkeyval, `\KV@do` is undefined
+and `\DefineVerbatimEnvironment` reports `Error:undefined:\KV@do` (issue #500).
+Perl behaves identically once xkeyval is loaded first (KNOWN_PERL_ERRORS #73);
+Rust reaches it on the reporter's `standalone`-then-`fancyvrb` MWE because
+`standalone_sty.rs` carries the beyond-Perl `RequirePackage!("xkeyval")` of real
+`standalone.sty` L107, which Perl's `standalone.sty.ltxml` omits.
+
+**Rust behavior**: `xkeyval_sty.rs` opens with `RequirePackage!("keyval")` and
+drops the pretense. Real `xkeyval.sty` L39 `\input xkeyval` pulls in the
+bundle's own `keyval.tex`, which defines `\KV@do` at L52 — loading xkeyval in
+real LaTeX genuinely provides keyval, so this is the faithful shape, not an
+invention. Ordering is real xkeyval's: keyval first, xkeyval's extended
+definitions after, so xkeyval still wins; and since `RequirePackage` sets
+`keyval.sty_loaded` itself, a later `\RequirePackage{keyval}` remains the no-op
+the pretense was protecting.
+
+**Witnesses**: issue #500's MWE (`standalone` + `fancyvrb` +
+`\DefineVerbatimEnvironment`); the same MWE with an explicit
+`\usepackage{xkeyval}`, which Perl 0.8.8 also fails.
+
+**Upstream**: <https://github.com/brucemiller/LaTeXML/issues/2864>.
+
+**Guard**: `06_cluster_standalone_subfiles::keyval_internals_survive_xkeyval_preloading_it`.

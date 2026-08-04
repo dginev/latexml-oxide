@@ -306,3 +306,56 @@ fn includefrom_takes_directory_and_file() {
     "\\subincludefrom{{dir}}{{file}} silently dropped the included file:\n{xml}"
   );
 }
+
+/// Issue #500: `\usepackage{standalone}` before `\usepackage{fancyvrb}` made
+/// `\DefineVerbatimEnvironment` report `Error:undefined:\KV@do`; swapping the
+/// two `\usepackage` lines made it go away.
+///
+/// `\KV@do` lives ONLY in raw `keyval.sty` (L31) — no LaTeXML binding defines
+/// it; both engines get it from `InputDefinitions('keyval', noltxml => 1)`. The
+/// `xkeyval` binding used to only *pretend* keyval was loaded
+/// (`AssignValue('keyval.sty_loaded' => 1)`, Perl `xkeyval.sty.ltxml` L23),
+/// which turns every later `\RequirePackage{keyval}` into a no-op — so raw
+/// `fancyvrb.sty`'s `\FV@UseKeyValues` (L112-117) called a `\KV@do` that never
+/// got defined. Rust reached it first because `standalone_sty.rs` carries the
+/// beyond-Perl `RequirePackage!("xkeyval")` of real `standalone.sty` L107.
+/// Fixed at the root: xkeyval now really loads keyval, as real `xkeyval.sty`
+/// L39 does via the bundle's `keyval.tex` (OXIDIZED_DESIGN #95).
+///
+/// The options argument must be NON-empty — `{\n  }` tokenizes to one space —
+/// or `\ifx\FV@KeyValues\@empty` short-circuits and `\KV@do` is never reached.
+#[test]
+fn keyval_internals_survive_xkeyval_preloading_it() {
+  // The issue's MWE, verbatim: standalone (→ xkeyval) before fancyvrb.
+  let log = convert_log("tests/cluster_regressions/standalone_fancyvrb_keyval.tex");
+  assert!(
+    !log.contains("KV@do"),
+    "#500: \\DefineVerbatimEnvironment after `standalone` must not lose \
+     keyval's \\KV@do:\n{log}"
+  );
+  assert!(
+    convert_to_xml("tests/cluster_regressions/standalone_fancyvrb_keyval.tex")
+      .contains("text in a custom verbatim"),
+    "#500: the custom verbatim environment lost its body"
+  );
+
+  // The root, reachable without standalone — this half Perl 0.8.8 also gets
+  // wrong (KNOWN_PERL_ERRORS #73), so it is an intentional surpass. Its options
+  // are VALUED, which additionally drives keyval's key-lookup branch
+  // (`\KV@split` → `\csname KV@FV@fontsize\endcsname`) rather than only
+  // `\KV@do`'s existence.
+  assert!(
+    convert_to_xml("tests/cluster_regressions/xkeyval_fancyvrb_keyval.tex")
+      .contains("text in a custom verbatim"),
+    "#500: explicit \\usepackage{{xkeyval}} before fancyvrb must keep \\KV@do"
+  );
+
+  // The order the reporter found working must stay working: loading keyval
+  // first and xkeyval second must still leave xkeyval's extended \setkeys in
+  // charge (real xkeyval overrides keyval, never the reverse).
+  assert!(
+    convert_to_xml("tests/cluster_regressions/fancyvrb_standalone_keyval.tex")
+      .contains("text in a custom verbatim"),
+    "#500: the already-working `fancyvrb` then `standalone` order regressed"
+  );
+}

@@ -4,8 +4,27 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Pretend keyval loaded too
-  AssignValue!("keyval.sty_loaded" => 1, Some(Scope::Global));
+  // Really load keyval, the way real `xkeyval.sty` does — OXIDIZED_DESIGN #95.
+  //
+  // Perl `xkeyval.sty.ltxml` L23 instead only PRETENDS
+  // (`AssignValue('keyval.sty_loaded' => 1, 'global')`), so that keyval's plain
+  // `\setkeys`/`\define@key` can never clobber the extended ones below. But that
+  // flag is exactly what `Package.pm:loadLTXML` L2328-2330 and
+  // `loadTeXDefinitions` L2363 gate on, so it also suppresses the RAW
+  // `keyval.sty` that `keyval.sty.ltxml` reads — and keyval's internals live
+  // ONLY there. `\KV@do` (keyval.sty L31) is the witness: raw `fancyvrb.sty`
+  // L112-117 `\FV@UseKeyValues` calls it directly, so a document loading
+  // xkeyval before fancyvrb lost it and `\DefineVerbatimEnvironment` reported
+  // `Error:undefined:\KV@do` (issue #500; Perl 0.8.8 errors identically —
+  // KNOWN_PERL_ERRORS #73). Real xkeyval has no such gap: `xkeyval.sty` L39
+  // `\input xkeyval` pulls in the bundle's own `keyval.tex`, which defines
+  // `\KV@do` at L52 — i.e. loading xkeyval genuinely provides keyval.
+  //
+  // Ordering is the real xkeyval's: keyval FIRST, then the extended
+  // `\setkeys`/`\define@key`/… below override it. `RequirePackage` also sets
+  // `keyval.sty_loaded`, so a later `\RequirePackage{keyval}` stays a no-op and
+  // xkeyval keeps the last word, exactly as the pretense intended.
+  RequirePackage!("keyval");
 
   // `\XKV@ifundefined{<csname>}{<undefined>}{<defined>}` — xkeyval's group-safe
   // existence test (xkvutils.tex L59, e-TeX branch). Our binding REPLACES

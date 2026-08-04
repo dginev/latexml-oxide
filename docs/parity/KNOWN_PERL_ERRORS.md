@@ -3112,3 +3112,59 @@ when that phrase is itself styled. **Rust implements the intent instead**
 (`make_index.rs::seealso_partition_aux` copies the real attributes), minus the
 id attributes: the wrapper is cloned once per sub-chunk, so copying `xml:id`
 would mint duplicate ids — which Perl's bug incidentally also avoids.
+
+## 73. `xkeyval.sty.ltxml`'s "pretend keyval loaded" also suppresses raw `keyval.sty`, so `\KV@do` and friends never exist
+
+`xkeyval.sty.ltxml` L23:
+
+```perl
+AssignValue('keyval.sty_loaded' => 1, 'global');    # pretend keyval loaded too.
+```
+
+The intent is sound — keyval's plain `\setkeys`/`\define@key` must not clobber
+xkeyval's extended ones. The problem is that `keyval.sty_loaded` is the flag
+BOTH load paths gate on: `Package.pm:loadLTXML` L2328-2330 (the binding) and
+`loadTeXDefinitions` L2363 (the raw file). `keyval.sty.ltxml` gets keyval's
+internals from `InputDefinitions('keyval', noltxml => 1)`, i.e. from the raw
+`keyval.sty`; after the pretense that read never happens, and nothing else
+defines `\KV@do` (keyval.sty L31), `\KV@split`, `\KV@errx` or `\KV@@sp@def`.
+
+Raw packages LaTeXML reads call those internals directly. `fancyvrb.sty`
+L112-117:
+
+```tex
+\def\FV@UseKeyValues{%
+  \ifx\FV@KeyValues\@empty\else
+    \def\KV@prefix{KV@FV@}%
+    \expandafter\KV@do\FV@KeyValues,\relax,%
+```
+
+Trigger (same-host Perl 0.8.8 ⇒ `Error:undefined:\KV@do`, 1 error):
+
+```tex
+\documentclass{article}
+\usepackage{xkeyval}
+\usepackage{fancyvrb}
+\DefineVerbatimEnvironment{myBox}{Verbatim}{
+}
+\begin{document}
+\begin{myBox}
+text
+\end{myBox}
+\end{document}
+```
+
+The options argument must be non-empty — `{\n  }` tokenizes to one space —
+or `\ifx\FV@KeyValues\@empty` short-circuits before `\KV@do` is reached.
+
+Real LaTeX has no such gap: `xkeyval.sty` L39 `\input xkeyval` pulls in the
+xkeyval bundle's own `keyval.tex`, whose L52 defines `\KV@do`. Loading xkeyval
+genuinely provides keyval there.
+
+**Rust fixes this** by loading keyval for real before xkeyval's own
+definitions, exactly as `xkeyval.sty` does — see OXIDIZED_DESIGN #95. Reported
+as latexml-oxide issue #500, where Rust hit it on a plain
+`standalone`+`fancyvrb` preamble: `standalone_sty.rs` carries real
+`standalone.sty` L107's `\RequirePackage{xkeyval}`, which
+`standalone.sty.ltxml` omits. Filed upstream as
+<https://github.com/brucemiller/LaTeXML/issues/2864>.
