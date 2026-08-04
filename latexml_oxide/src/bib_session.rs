@@ -224,11 +224,35 @@ fn convert(request: &BibConversionRequest) -> Option<PostDocument> {
     // thread-local State the outer document uses, so leaving it installed
     // would leak into any later `.bib` in this process.
     latexml_engine::pre_bibtex::set_wanted_keys(request.wanted_keys.clone());
+    // Hide the OUTER document's bibliography count for the duration of the
+    // recursive digestion — the one value reusing the live State would
+    // otherwise leak (see the module docs for why the State is shared).
+    // `{bibtex@bibliography}` runs `begin_bibliography_clean`, which does
+    // `n_bibliographies += 1` and names the session's ids
+    // `<docid>bib<radix_alpha(n-1)>` (latex_constructs.rs:2392-2398). Perl
+    // builds a FRESH State per `.bib` (MakeBibliography.pm:181-215), so its
+    // inner session always sees 0 and mints `bib.bibN`; sharing ours made the
+    // FIRST `.bib` of a one-bibliography document mint `biba.bibN` — the
+    // second slot of the multi-bibliography sequence. Post then strips `^bib`
+    // and re-prepends the OUTER bibid (MakeBibliography.pm:407-415), which is
+    // exactly why the inner ids must be `bib`-rooted regardless of which
+    // bibliography they end up in.
+    let outer_n_bibliographies = latexml_core::state::lookup_int("n_bibliographies");
+    latexml_core::state::assign_value(
+      "n_bibliographies",
+      0,
+      Some(latexml_core::state::Scope::Global),
+    );
     let digested = core.digest_file(source.clone(), DigestionOptions {
       mode: Some(DigestionMode::BibTeX),
       noinitialize: Some(true),
       ..DigestionOptions::default()
     });
+    latexml_core::state::assign_value(
+      "n_bibliographies",
+      outer_n_bibliographies,
+      Some(latexml_core::state::Scope::Global),
+    );
     latexml_engine::pre_bibtex::clear_wanted_keys();
     let digested = digested?;
     let document = core.convert_document(digested)?;

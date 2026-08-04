@@ -1902,3 +1902,104 @@ fn bib_biblatex_autoloads_under_an_unbound_class() {
     "the autoloaded entries did not render their titles:\n{x}"
   );
 }
+
+/// The recursive `.bib` session must mint `bib`-rooted entry ids, so a
+/// single-bibliography document's anchors come out `bib.bibN` — byte-identical
+/// to same-host Perl (`<li id="bib.bib1">`).
+///
+/// Perl builds a FRESH State per `.bib` (`MakeBibliography.pm` L181-215), so
+/// its inner session always sees `n_bibliographies == 0` and names ids
+/// `bib<radix_alpha(0)>` = `bib`. We deliberately SHARE the live State
+/// (`bib_session.rs` module docs — the enhancement Perl's own comment asks
+/// for), which leaked the outer document's count into
+/// `begin_bibliography_clean` (`latex_constructs.rs:2392-2398`): the inner
+/// session saw 1, minted `biba`, and every anchor came out `biba.bibN` — the
+/// SECOND slot of the multi-bibliography sequence, on a document with one
+/// bibliography. `bib_session::convert` now hides that count for the duration
+/// of the recursive digestion.
+///
+/// Post then strips `^bib` and re-prepends the OUTER bibliography's id
+/// (`MakeBibliography.pm` L407-415), which is why the inner ids must be
+/// `bib`-rooted whichever bibliography they land in — `structure/crazybib`
+/// covers the multi-bibliography sequence (`bib` / `biba` / `bibb`).
+#[test]
+fn bib_entry_ids_are_bib_rooted_like_perl() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_abstract_percent.tex");
+  assert!(
+    x.contains(r#"xml:id="bib.bib1""#),
+    "first bibitem must be bib.bib1 (Perl parity), got ids: {:?}",
+    x.match_indices("xml:id=\"bib")
+      .map(|(i, _)| x[i..(i + 24).min(x.len())].to_string())
+      .take(6)
+      .collect::<Vec<_>>()
+  );
+  assert!(
+    !x.contains(r#"xml:id="biba."#),
+    "no entry may use the SECOND bibliography's prefix in a one-bibliography document"
+  );
+  // The citation links must agree with the anchors they point at.
+  for n in 1..=4 {
+    let id = format!("bib.bib{n}");
+    assert!(
+      x.contains(&format!(r#"xml:id="{id}""#)),
+      "missing bibitem anchor {id}"
+    );
+  }
+
+  // The enclosing biblist needs a `fragid` as well as an `xml:id`: the HTML5
+  // XSLT's `add_id` emits the HTML `id` from `@fragid` ALONE, and `fragid` is
+  // stamped by `CrossRef::fill_in_frags` only for nodes carrying an ObjectDB
+  // `ID:` entry. Without MakeBibliography registering the list, Perl's
+  // `<ul id="bib.L1" class="ltx_biblist">` came out here as a bare `<ul>`.
+  assert!(
+    x.contains(r#"xml:id="bib.L1""#),
+    "biblist must keep its xml:id"
+  );
+  assert!(
+    x.contains(r#"fragid="bib.L1""#),
+    "biblist must receive a fragid, or the HTML <ul> loses its id entirely"
+  );
+}
+
+/// Id-bearing markup CLONED INTO a bibliography entry (here `$E=mc^2$` in a
+/// title) must keep an id all the way to HTML.
+///
+/// Perl's `Collector::rescan` (Collector.pm L97, called from
+/// MakeBibliography.pm L71/L78) re-runs the whole Scan over the generated
+/// bibliography, so such nodes get an ObjectDB entry — which is the
+/// precondition `CrossRef::fill_in_frags` needs before it stamps `fragid`,
+/// and the HTML5 XSLT emits the HTML `id` from `@fragid` alone. This port has
+/// no rescan, so the cloned `ltx:Math` reached HTML with no id at all
+/// (measured against same-host Perl 0.8.8, which emits `bib.bib1.m1a`).
+/// MakeBibliography now registers every id-bearing node of the generated
+/// subtree.
+///
+/// The id NAME is allowed to differ from Perl's: Perl's trailing `a` is a
+/// `uniquifyID` artifact of cloning while the source bibentry still carried
+/// the same id, which it then deletes. What must hold is that the node keeps
+/// an id and that nothing dangles.
+#[test]
+fn bib_entry_cloned_markup_keeps_its_id() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_title_math.tex");
+  let math_ids: Vec<&str> = x
+    .match_indices("<Math")
+    .filter_map(|(i, _)| {
+      let tail = &x[i..(i + 200).min(x.len())];
+      tail
+        .find("xml:id=\"")
+        .map(|j| &tail[j + 8..])
+        .and_then(|s| s.find('"').map(|e| &s[..e]))
+    })
+    .collect();
+  assert!(
+    math_ids.iter().any(|id| id.starts_with("bib.")),
+    "the math cloned into the bib title must keep a bib-rooted xml:id, got {math_ids:?}"
+  );
+  // …and the fragid that turns it into an HTML id.
+  for id in math_ids.iter().filter(|i| i.starts_with("bib.")) {
+    assert!(
+      x.contains(&format!(r#"fragid="{id}""#)),
+      "cloned bib markup {id} must receive a fragid"
+    );
+  }
+}

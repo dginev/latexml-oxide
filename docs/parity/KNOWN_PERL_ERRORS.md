@@ -3077,3 +3077,38 @@ bundled-CSS local delta (OXIDIZED_DESIGN divergence #93). Note Perl's
 fancyvrb binding itself is fine (`fancyvrb.sty.ltxml` adds the per-line
 `ltx_verbatim` class); the Rust port of that binding had dropped the hack
 and now carries it.
+
+## 72. `seealsoPartition_aux` keys its attribute hash on attribute NODES — the styling attributes it means to copy are lost
+
+`Post/MakeIndex.pm` L445, re-wrapping a `\see`/`\seealso` phrase's styling
+element around each partitioned sub-chunk:
+
+```perl
+my $attr = { map { ($_ => $ch->getAttribute($_)) } $ch->attributes };
+push(@result, map { [$$_[0], [$tag, $attr, cdr($_)]] } seealsoPartition_aux($doc, $ch));
+```
+
+`$ch->attributes` yields attribute **nodes**, not names. Used as hash keys they
+stringify to their serialized form, and `getAttribute($node)` then looks up an
+attribute by that same junk string and finds nothing. So `%$attr` is a hash of
+unusable keys mapped to `undef` — the `ltx:text`/`ltx:emph` wrapper is rebuilt
+with none of the attributes the line is written to preserve (`font`, `class`,
+…). The intended read is `$_->nodeName` (or `getQName`), as the sibling
+`mergeAttributes` (`Post.pm` L1303-1305) does correctly.
+
+Measured (same-host `XML::LibXML`):
+
+```perl
+my $doc = XML::LibXML->load_xml(string => q{<r><t role="x" font="bold" xml:id="i1">hi</t></r>});
+my ($ch) = $doc->documentElement->childNodes;
+my $attr = { map { ($_ => $ch->getAttribute($_)) } $ch->attributes };
+#   [ font="bold"]  => (undef)
+#   [ role="x"]     => (undef)
+#   [ xml:id="i1"]  => (undef)
+```
+
+Low impact — it only degrades styling inside a see/seealso phrase, and only
+when that phrase is itself styled. **Rust implements the intent instead**
+(`make_index.rs::seealso_partition_aux` copies the real attributes), minus the
+id attributes: the wrapper is cloned once per sub-chunk, so copying `xml:id`
+would mint duplicate ids — which Perl's bug incidentally also avoids.

@@ -509,7 +509,30 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           },
         };
 
-        match node.get_attribute("xml:id") {
+        // Perl `createXMRefs` (Package.pm L1557-1561): "clone an XMRef
+        // rather than create an XMRef to an XMRef" — reuse the target's
+        // idref so a content branch never points at a presentation-side
+        // reference. Without this branch the ref-to-a-ref shape reaches
+        // the output (Perl's whole golden corpus has zero of them).
+        if node.get_name() == "XMRef" {
+          // Carry BOTH spellings, as Perl does — `_xmkey` is the deferred
+          // form used before ids exist, `idref` the resolved one, and either
+          // may be absent. Taking this branch unconditionally matters: on a
+          // key-only XMRef, falling through would mint an xml:id ON the ref
+          // and reference THAT, which is the ref-to-a-ref this branch exists
+          // to prevent.
+          refs.push(XM::Ref(XProps {
+            id: node.get_attribute("idref").map(Cow::Owned),
+            xmkey: node.get_attribute("_xmkey").map(Cow::Owned),
+            ..XProps::default()
+          }));
+          continue;
+        }
+
+        // NS-aware read (xml:id = local "id" in XML_NS; the bare
+        // get_attribute("xml:id") form always returns None, which sent
+        // every node — id or not — through the generate_id branch).
+        match node.get_attribute_ns("id", latexml_core::common::xml::XML_NS) {
           //  already has id, so refer to it.
           Some(id) => refs.push(XM::Ref(XProps {
             id: Some(Cow::Owned(id)),
@@ -518,11 +541,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           None => {
             // Generate xml:id for this node so we can reference it
             document.generate_id(&mut node.clone(), "")?;
-            let generated_id = node
-              .get_attribute("xml:id")
-              .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
-              .or_else(|| node.get_attribute("id"));
-            if let Some(id) = generated_id {
+            if let Some(id) = node.get_attribute_ns("id", latexml_core::common::xml::XML_NS) {
               refs.push(XM::Ref(XProps {
                 id: Some(Cow::Owned(id)),
                 ..XProps::default()

@@ -3936,16 +3936,20 @@ impl Document {
     Ok(runs_spilled)
   }
 
-  /// A node's `xml:id` in EITHER attribute form. Nodes CONSTRUCTED by the
-  /// builder carry a plain attribute literally named `"xml:id"`
-  /// (`set_attribute` does not namespace it), while nodes PARSED from XML
-  /// carry the namespaced form — so a namespace-only read silently misses
-  /// every constructed node. Witness (131 MB book, 2026-08-01): spill-time
-  /// indexing registered 865 of 23,654 spilled labels, gutting the fragment
-  /// index for `label:`/`id:`-scoped rewrites and spilled-id dedup — with no
-  /// error anywhere, because a missing id is indistinguishable from an
-  /// id-less node. The same trap, in the parsed direction, is
-  /// `latexml_post::document::get_xml_id`.
+  /// A node's `xml:id`, namespace-aware with a defensive plain-name fallback.
+  ///
+  /// MECHANISM CORRECTION (2026-08-04, empirically probed against libxml
+  /// 0.3.21): `set_attribute("xml:id", …)` DOES namespace the attribute
+  /// (`xmlSetProp` resolves the predefined `xml` prefix), so builder-
+  /// CONSTRUCTED nodes and PARSED nodes both store the namespaced form and
+  /// `get_attribute_ns("id", XML_NS)` reads both; no code path in this
+  /// workspace produces a literal-named "xml:id" attribute. The earlier
+  /// claim here that constructed nodes carry the plain form does not
+  /// reproduce. The 131 MB-book witness (2026-08-01: spill-time indexing
+  /// registered 865 of 23,654 labels) was fixed by the commit that added
+  /// this helper, but the missing-id mechanism was misattributed; the bare
+  /// fallback is kept as belt (it is dead under the probed model, and
+  /// harmless).
   pub(crate) fn node_xml_id_any_form(node: &Node) -> Option<String> {
     node
       .get_attribute_ns("id", XML_NS)
@@ -4525,21 +4529,17 @@ impl Document {
     let c_name = with_node_qname(&content, |n| n.to_string());
     let p_name = with_node_qname(&presentation, |n| n.to_string());
 
-    // Case 1: Quick fix — merge two tokens
+    // Case 1: Quick fix — merge two tokens (Perl compactXMDual L1588-1593).
+    // Perl has NO id cleanup here: mergeAttributes deliberately TRANSFERS the
+    // content/dual xml:id onto the surviving presentation token (unRecordID +
+    // recordID, L1308-1313), keeping refs to that id resolvable. A former
+    // Rust-only "remove the leaked content id" block contradicted that — and
+    // was dead anyway (its bare has/get/remove_attribute("xml:id") calls
+    // always missed the namespaced attribute).
     if c_name == "ltx:XMTok" && p_name == "ltx:XMTok" {
       let mut pres = presentation;
-      let pres_had_id = pres.has_attribute("xml:id");
       self.merge_attributes(&content, &mut pres, Some(&CONTENT_TRANSFER))?;
       self.merge_attributes(&dual, &mut pres, Some(&DUAL_TRANSFER))?;
-      // If presentation didn't originally have an xml:id and the dual doesn't either,
-      // remove the content's xml:id that leaked through merge_attributes
-      if !pres_had_id
-        && !dual.has_attribute("xml:id")
-        && let Some(id) = pres.get_attribute("xml:id")
-      {
-        self.unrecord_id(&id);
-        let _ = pres.remove_attribute("xml:id");
-      }
       // Unlink presentation from dual before replacing, since presentation is a child of dual
       pres.unlink();
       self.replace_node(dual, vec![pres])?;

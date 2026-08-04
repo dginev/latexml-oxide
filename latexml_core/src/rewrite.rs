@@ -251,6 +251,23 @@ impl Rewrite {
         pattern,
       };
     }
+    // Perl Rewrite.pm L288-297: a `label` clause COMPILES to a select on the
+    // labeled node's xml:id (via getLabelID) — it has no runtime behavior.
+    // `scope => "label:<label>"` compiles through the identical getLabelID
+    // path (L300-302), so delegate to that branch below. (The former runtime
+    // Label arm instead tried to RECORD the current node's id under the
+    // label — not Perl semantics, and dead anyway: its bare
+    // get_attribute("xml:id") read always returned None.)
+    if op == RewriteOperator::Label
+      && let RewritePattern::String(label_str) = &pattern
+    {
+      let as_scope = RewriteClause {
+        compiled: false,
+        op:       RewriteOperator::Scope,
+        pattern:  RewritePattern::String(format!("label:{label_str}")),
+      };
+      return self.compile_clause(document, as_scope);
+    }
     // scope => 'label:...' compiles to select with xpath via label ID resolution
     // Perl: $op = 'select'; $pattern = ["descendant-or-self::*[@xml:id='<id>']", 1];
     if op == RewriteOperator::Scope
@@ -679,14 +696,9 @@ impl Rewrite {
           }
         },
         Label => {
-          // Label clause stores the label on the node. Perl: $$self{label} usage.
-          // Typically compiled away in compile_clause, but if it reaches here, record it.
-          if let RewritePattern::String(label_str) = pattern {
-            let id = tree.get_attribute("xml:id").unwrap_or_default();
-            if !id.is_empty() {
-              document.rewrite_labels.insert(label_str.clone(), id);
-            }
-          }
+          // Unreachable once compiled: compile_clause lowers Label to a
+          // Select via the scope "label:…" path (Perl Rewrite.pm L288-297 —
+          // a label clause has NO runtime behavior). Defensive pass-through.
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
         Trace => {
@@ -1203,5 +1215,75 @@ fn mark_seen_rec(node: &Node) {
     if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
       mark_seen_rec(&child);
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::document::Document;
+
+  /// A `label` clause must COMPILE AWAY into a Select on the labeled node's
+  /// `xml:id` — Perl `Rewrite.pm::compileClause` L288-297:
+  /// `$op = 'select'; $pattern = ["descendant-or-self::*[\@xml:id='" .
+  ///  $self->getLabelID($pattern) . "']", 1];`
+  ///
+  /// It has no runtime behavior in Perl. The former Rust runtime arm instead
+  /// tried to RECORD the current node's id under the label — not Perl
+  /// semantics, and dead anyway (its bare `get_attribute("xml:id")` read
+  /// always returned None). `label => …` is reachable only from the Rhai
+  /// `DefRewrite(#{label: …})` option bag, so this unit test is its only
+  /// coverage.
+  #[test]
+  fn label_clause_compiles_to_a_select_on_the_labeled_id() {
+    let mut document = Document::new();
+    document
+      .rewrite_labels
+      .insert("LABEL:eq.one".to_string(), "S1.E2".to_string());
+
+    let mut rule = Rewrite::new("text", RewriteOptions {
+      label: Some("eq.one".to_string()),
+      ..RewriteOptions::default()
+    });
+    assert!(
+      matches!(
+        rule.clauses.first().map(|c| c.op),
+        Some(RewriteOperator::Label)
+      ),
+      "a label option must start life as a Label clause"
+    );
+    rule.compile_clauses(&mut document);
+
+    match rule.clauses.first() {
+      Some(RewriteClause {
+        op: RewriteOperator::Select,
+        pattern: RewritePattern::String(xpath),
+        ..
+      }) => assert_eq!(xpath, "descendant-or-self::*[@xml:id='S1.E2']"),
+      other => panic!("label must lower to a Select on the labeled id, got {other:?}"),
+    }
+    // Perl sets the select count to 1 in the same breath (L297's trailing `1`).
+    assert_eq!(rule.options.select_count, Some(1));
+  }
+
+  /// An UNKNOWN label falls through to `Ignore`, so the remaining clauses
+  /// still apply to the current tree — preserving the pre-lowering behavior
+  /// on a miss (Perl errors and yields an empty-id xpath, which selects
+  /// nothing; the strict streaming path mirrors that with an empty NodeList).
+  #[test]
+  fn unknown_label_falls_through_to_ignore() {
+    let mut document = Document::new();
+    let mut rule = Rewrite::new("text", RewriteOptions {
+      label: Some("nope".to_string()),
+      ..RewriteOptions::default()
+    });
+    rule.compile_clauses(&mut document);
+    assert!(
+      matches!(
+        rule.clauses.first().map(|c| c.op),
+        Some(RewriteOperator::Ignore)
+      ),
+      "an unresolvable label must not silently restrict the rule"
+    );
   }
 }

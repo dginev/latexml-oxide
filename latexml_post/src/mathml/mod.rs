@@ -1255,10 +1255,18 @@ pub fn rebuild_text_subtree_with_doc(
       // Matches Perl convertXMTextContent (Post.pm L479-483); the
       // `fragid → xml:id` remap requires the MathProcessor's IDSuffix
       // which this helper does not receive — drop both here rather
-      // than forge a wrong id.
+      // than forge a wrong id. NOTE: get_attributes() reports xml:id
+      // under its LOCAL name "id", so that spelling must be skipped
+      // too — it used to leak through as a plain id= duplicate. The
+      // namespace probe keeps a GENUINE plain `id` (the model grants
+      // one to `ltx:bib-identifier`/`ltx:bib-review`, carrying a
+      // DOI/ISSN) from being dropped along with it.
+      let has_xml_id = node
+        .get_attribute_ns("id", latexml_core::common::xml::XML_NS)
+        .is_some();
       let mut attrs: HashMap<String, String> = HashMap::default();
       for (k, v) in node.get_attributes() {
-        if k.starts_with('_') || k == "xml:id" || k == "fragid" {
+        if k.starts_with('_') || k == "xml:id" || k == "fragid" || (k == "id" && has_xml_id) {
           continue;
         }
         attrs.insert(k, v);

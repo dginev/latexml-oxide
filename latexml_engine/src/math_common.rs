@@ -642,7 +642,9 @@ LoadDefinitions!({
         string_map!("role" => "ENCLOSE", "enclose" => "updiagonalstrike",
         "meaning" => "not", "_box" => not_node.to_hashable()), None)?;
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
-        not_node.remove_attribute("xml:id")?;
+        // NS-aware remove (the bare form was a silent no-op — masked only
+        // because the rewrite discards not_node after this closure).
+        not_node.remove_attribute_ns("id", XML_NS)?;
         document.unrecord_id(&id);
         document.set_attribute(&mut strike, "xml:id", &id)?;
       }

@@ -984,7 +984,27 @@ fn seealso_partition_aux(node: &Node) -> Vec<SeeChunk> {
         if name == "text" || name == "emph" {
           // Recurse, re-wrapping each sub-chunk in the styling element
           // so delimiters can split styled phrases (Perl does the same).
-          let attrs: HashMap<String, String> = ch.get_properties().into_iter().collect();
+          // Drop the source node's id ("id" is how get_properties()
+          // reports xml:id): the styling wrapper is CLONED once per
+          // sub-chunk, and copying the id onto every clone would mint
+          // schema-invalid duplicate xml:ids. The namespace probe keeps a
+          // GENUINE plain `id` attribute (model-granted on a few bib
+          // elements) from being dropped along with it.
+          //
+          // Perl copies the attributes here — or means to: its
+          // `map { ($_ => $ch->getAttribute($_)) } $ch->attributes`
+          // (MakeIndex.pm L445) keys the hash on attribute NODES, which
+          // stringify to ` role="x"`-style junk with undef values, so it
+          // copies nothing usable. We implement the intent, minus the ids.
+          // KNOWN_PERL_ERRORS #72.
+          let ch_has_xml_id = ch
+            .get_attribute_ns("id", latexml_core::common::xml::XML_NS)
+            .is_some();
+          let attrs: HashMap<String, String> = ch
+            .get_properties()
+            .into_iter()
+            .filter(|(k, _)| k != "xml:id" && k != "fragid" && !(k == "id" && ch_has_xml_id))
+            .collect();
           for sub in seealso_partition_aux(&ch) {
             result.push(SeeChunk {
               key: sub.key,

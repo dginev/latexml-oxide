@@ -23,7 +23,7 @@ use std::{
 use libxml::tree::{Node, SaveOptions};
 
 use crate::{
-  document::PostDocument,
+  document::{PostDocument, get_xml_id},
   processor::{PostError, ProcessResult, Processor},
 };
 
@@ -147,10 +147,14 @@ impl Processor for Writer {
       doc.get_document_mut().remove_internal_subset();
     }
 
-    // Remove TEMPORARY_DOCUMENT_ID if present (Perl Writer.pm L41-42)
-    if let Some(id) = root.get_attribute("xml:id") {
+    // Remove TEMPORARY_DOCUMENT_ID if present (Perl Writer.pm L41-42).
+    // NS-aware forms: the bare get/remove_attribute("xml:id") pair silently
+    // no-opped, so this last-chance strip never fired (the split path
+    // removes the temp id earlier via core_interface, but this writer-side
+    // guard is the one Perl relies on).
+    if let Some(id) = get_xml_id(&root) {
       if id == "TEMPORARY_DOCUMENT_ID" {
-        let _ = root.remove_attribute("xml:id");
+        let _ = root.remove_attribute_ns("id", latexml_core::common::xml::XML_NS);
       }
     }
 
