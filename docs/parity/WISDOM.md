@@ -1007,6 +1007,24 @@ proper path to parity is:
 Verify fix against `moderncv/cs_cv.tex` + any other `\vspace`-using
 regression tests before landing. Without step 1, step 2 breaks moderncv.
 
+**Update (2026-08-05, issue #508):** `\vspace` is now the faithful DefMacro
+form (`latex_constructs.rs:9241`, `'\vskip #2\relax'`), but step 1 is still
+open — Rust's `\vskip` does **not** fire the vertical break that leaves
+horizontal mode and closes an open `<ltx:p>`. **Witness: arXiv 2302.11635**
+(IEEEtran transmag `figure*`, `\hrulefill\vspace*{4pt}` between minipage rows).
+Perl's `\vspace*` closes the `<p>` so the following captioned minipages become
+separate `<ltx:figure>`s (0 errors); Rust keeps them inside the `<p>`, so
+`insert_block` renames the capture to a plain `<ltx:block>` and the enclosed
+`<ltx:caption>`/`<ltx:toccaption>` are malformed there (4 `malformed:` errors —
+the same class Perl emits on the reduced, `\vspace`-less construct). Minimal
+repro: a `figure` with `\hrulefill\vspace*{4pt}` and two captioned minipages;
+Perl 0 with `\vspace*`, 4 without. Until step 1 lands, 2302.11635 shows these 4
+errors. A prior `Tag('ltx:block', auto_close=>true)` band-aid **masked** them by
+letting the caption escape the block, but that broke an author's explicit
+`<ltx:block>` wrapper on any body `\par` (#508) and produced reordered,
+non-Perl-faithful output; it was removed. See the note in
+`latex_constructs.rs` just after the `ltx:bibblock` Tags.
+
 ## 40. `\#`/`\&`/`\%`/`\$` Def*-kind mismatch is intentional mode-split
 
 **Context:** Perl `plain_base.pool.ltxml` L70-76 defines each as a
