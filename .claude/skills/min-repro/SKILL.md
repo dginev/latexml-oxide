@@ -2,11 +2,15 @@
 name: min-repro
 description: >
   Reduce a confirmed failing arXiv paper to a minimal, self-contained reproducer
-  (and optionally a regression-test fixture). Use after canvas-triage confirms a
-  GENUINE-RUST-ONLY failure, or whenever you need the smallest .tex that still
-  triggers a specific error/crash. Pairs with tools/bisect_repro.sh and
-  first_error.sh. Invoke for "minimize this paper", "make a reproducer for X",
-  "shrink to a failing case", "/min-repro".
+  (and optionally a regression-test fixture), AND isolate which single construct
+  or token causes it via a known-good control twin (e.g. `\vspace*` vs `\par`).
+  Use after canvas-triage confirms a GENUINE-RUST-ONLY failure, whenever you need
+  the smallest .tex that still triggers a specific error/crash, or to pinpoint the
+  culprit token behind a Rust-vs-Perl divergence and turn it into the red test.
+  Pairs with tools/bisect_repro.sh and first_error.sh. Invoke for "minimize this
+  paper", "make a reproducer for X", "shrink to a failing case", "which
+  token/construct causes X", "isolate the cause", "make a standalone repro",
+  "/min-repro".
 ---
 
 Goal: the smallest `.tex` that still emits the **canary** (the exact error
@@ -37,6 +41,20 @@ paper; `canary` optional and defaults to the first error).
 (`/usr/local/bin/latexml repro.tex`, verbose — never `--quiet`) on the same host.
 A faithful reproducer should still show the Rust-only delta; if Perl now errors
 too, the reduction changed the semantics — back off the last cut.
+
+**5 — Isolate the CAUSE with a control variable** (turns a minimal failure into a
+*diagnosis*, and often straight into the red test). Once reduced, produce a
+near-identical twin that differs by **one token** and is expected to *work* — a
+known-good control for the same operation. The delta between the failing case and
+its control pinpoints the culprit and rules out everything they share (schema,
+surrounding bindings, the harness). Witness: `\hrulefill\vspace*{4pt}` (fails,
+paragraph not closed) vs `\hrulefill\par` (works) proved the bug was the
+paragraph-terminator's *arrival*, not `\vskip`/the schema — and the pair became
+the guard (`50_structure::vspace_closes_leader_para`). Good controls: the
+explicit form of an implicit action (`\par` for `\vspace*`), a sibling macro that
+shares the machinery, or the same input one nesting level out. When the failure is
+"X doesn't happen," the control is the case where X *does* — compare their runtime
+state at the decision point (see `perl-port` §1b, "instrument the gate").
 
 ## Where the reproducer lands
 

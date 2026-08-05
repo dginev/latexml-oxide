@@ -1,12 +1,19 @@
 ---
 name: perl-port
 description: >
-  Faithfully translate or fix a LaTeXML binding (macro / primitive / constructor
-  / column type / package) from the Perl source to Rust. Use whenever you write
-  or change engine/package code that mirrors Perl LaTeXML — porting a new .pool
-  entry, binding a package, or aligning a definition to Perl semantics. Enforces
-  "read the Perl source first" and the divergence policy. Invoke for "port \foo",
-  "translate this .pool entry", "bind package X", "make Y match Perl",
+  Faithfully translate, fix, or ROOT-CAUSE a LaTeXML binding (macro / primitive /
+  constructor / column type / package) from the Perl source to Rust — including
+  why an existing binding still diverges from Perl or real LaTeX when it already
+  looks faithful to the `.pool` (LaTeXML's `.pool`/`.ltxml` is a reimplementation
+  that sometimes SIMPLIFIES the kernel — check `latex.ltx`/`<pkg>.sty` and
+  `tex.web`, not just LaTeXML). Use whenever you write, change, or debug
+  engine/package code that mirrors Perl LaTeXML — porting a `.pool` entry, binding
+  a package, aligning a definition to Perl semantics, or chasing a structural /
+  mode / paragraph-break divergence to its root. Enforces "read the Perl (and
+  kernel) source first" and the divergence policy. Invoke for "port \foo",
+  "translate this .pool entry", "bind package X", "make Y match Perl", "why does
+  Rust differ from Perl on \foo", "this construct is malformed / renders wrong vs
+  LaTeX", "a primitive isn't firing", "root-cause this parity divergence",
   "/perl-port".
 ---
 
@@ -24,10 +31,37 @@ description: >
 | Core machinery (Mouth/Gullet/Stomach/Document/State) | `LaTeXML/lib/LaTeXML/Core/*.pm` |
 | The `Def*` API itself | `LaTeXML/lib/LaTeXML/Package.pm` |
 | TeX ground truth (when Perl is itself emulating TeX) | `background/tex.web`, `background/texbook.tex` |
+| **Real LaTeX / package source** — LaTeXML's `.pool`/`.ltxml` is a *reimplementation*, occasionally **simplified** | `kpsewhich latex.ltx` (kernel) · `kpsewhich <pkg>.sty` — the actual `\def`s |
 
 Quote the Perl line range in a comment next to the Rust port (the codebase does
 this consistently, e.g. `// Perl L2734-2752`) so the next reader can diff against
 the source.
+
+### 1b — When a faithful-looking binding still diverges from Perl
+
+Two techniques that repeatedly cut a multi-hour dig to minutes (witness: the
+`\hrulefill\vspace*` float bug, arXiv 2302.11635, [OXIDIZED_DESIGN #97] /
+WISDOM #38):
+
+- **Diff the LaTeXML binding against the REAL kernel def early.** `Perl is ground
+  truth` has one exception: LaTeXML's `.pool`/`.sty.ltxml` sometimes *simplifies*
+  the kernel macro (drops a `\leavevmode`, `\kern\z@`, `\relax`, a mode switch…).
+  Perl may still be correct because its core machinery *compensates* for the
+  omission; Rust's may not, so Rust diverges while its binding looks byte-faithful
+  to the `.pool`. When Perl behaves right and Rust wrong on a construct whose
+  binding you've already confirmed matches the `.pool`, run `kpsewhich latex.ltx`
+  (or `<pkg>.sty`) and grep the real `\def` — a token LaTeXML dropped is a prime
+  suspect. Restoring the kernel definition is *more* faithful (record it in
+  `OXIDIZED_DESIGN.md`), and it fixes the root instead of the symptom.
+- **A mode/state-gated primitive that "doesn't fire" → suspect the UPSTREAM
+  setter, not the primitive.** Instrument the *gate itself* (an env-gated
+  `eprintln!` of the condition inputs — e.g. `MODE`/`BOUND_MODE` at the
+  `if mode=="horizontal"` check). If the gate is correctly false, the binding is
+  faithful and the bug is whatever *should* have set that state earlier
+  (`\leavevmode`/`enterHorizontal` here). Don't keep re-reading the primitive that
+  didn't fire — it's the victim, not the culprit. `background/tex.web` states the
+  real gate (e.g. `hmode+vskip: head_for_vmode` — `\vskip` ends a paragraph only
+  *in horizontal mode*), which tells you which state must be true upstream.
 
 ## 2 — Find the Rust home: `docs/parity/ORGANIZATION.md`
 

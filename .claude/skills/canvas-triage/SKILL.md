@@ -1,13 +1,17 @@
 ---
 name: canvas-triage
 description: >
-  Triage a failing/suspicious arXiv paper and decide whether its errors are a
-  GENUINE Rust regression or parity with Perl LaTeXML. Use when investigating a
-  conversion error/fatal, a "Rust-only" candidate from cortex, a sandbox/canvas
-  failure, or any "is this a real bug vs. parity?" question. Pairs with
-  tools/parity_check.sh, triage_failure.sh, first_error.sh and the cortex
-  document/<id> API. Invoke for "triage this paper", "is 1234.5678 a regression",
-  "classify this failure vs Perl", "/canvas-triage".
+  Triage a failing/suspicious arXiv paper and decide whether its errors — or a
+  structural / rendering difference from LaTeX — are a GENUINE Rust regression or
+  parity with Perl LaTeXML. Use when investigating a conversion error/fatal, a
+  "Rust-only" candidate from cortex, a sandbox/canvas failure, a construct that
+  comes out malformed or laid out differently than LaTeX, or any "is this a real
+  bug vs. parity?" question. This is the classification GATE before the
+  min-repro → perl-port fix chain. Pairs with tools/parity_check.sh,
+  triage_failure.sh, first_error.sh and the cortex document/<id> API. Invoke for
+  "triage this paper", "is 1234.5678 a regression", "classify this failure vs
+  Perl", "why does this render differently from LaTeX", "is this our bug or
+  Perl's", "/canvas-triage".
 ---
 
 The output of this skill is a **classification**, not a fix. Only one verdict —
