@@ -1,0 +1,24 @@
+\documentclass{article}
+
+\usepackage{hyperref}
+\numberwithin{equation}{section}
+
+% Documented hyperref idiom (hyperref manual): a delimited-argument
+% redefinition of \equationautorefname that wraps the equation number in
+% parens, so \autoref{eq} renders as "(1.1)" rather than "Equation 1.1".
+% This relies on hyperref feeding  \equationautorefname ~<number>\null  where
+% the separator is the ACTIVE ~ (catcode 13) and \null terminates the number.
+% Witness: ar5iv #607 (arXiv 2607.12124).
+\def\equationautorefname~#1\null{(#1)\null}
+
+\begin{document}
+
+\section{First}\label{sec:first}
+
+\begin{equation}\label{eq:a}a=b\end{equation}
+
+\begin{equation}\label{eq:b}c=d\end{equation}
+
+See \autoref{eq:a} and \autoref{eq:b} in \autoref{sec:first}.
+
+\end{document}
