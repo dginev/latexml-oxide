@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#94**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#99**.
 
 ---
 
@@ -3557,3 +3557,33 @@ where it makes Rust match BOTH Perl's output and the LaTeX kernel. 2302.11635:
 
 **Guards**: `50_structure::vspace_closes_leader_para_test` (the `\vspace*` vs
 `\par` control pair). Cross-ref WISDOM #38.
+
+### 98. `\autoref` feeds the number as `\<type>autorefname~<number>\null` (active `~`), enabling the delimited-arg idiom
+
+**Perl** (`hyperref.sty.ltxml` L373-382, `\lx@autorefnum@@`): builds the autoref
+text as `\<type>autorefname \nobreakspace \the<counter>` — a *control-sequence*
+separator and **no trailing `\null`**.
+
+**Rust** (`hyperref_sty.rs` `\lx@autorefnum@@`) instead mirrors the real hyperref
+kernel (`hyperref.sty` L8211-8268, `\HyRef@autosetref`/`\HyRef@testreftype`),
+feeding `\<type>autorefname` + the **active `~`** (catcode 13, `\noexpand~`,
+L8247) + the number + **`\null`** (L8226).
+
+**Why**: the hyperref manual documents the delimited-argument idiom
+`\def\equationautorefname~#1\null{(#1)\null}` to wrap an equation's autoref number
+in parens → `(1.1)`. It works only if the stream after `\equationautorefname` is
+`~<number>\null` with the *active* tilde as the delimiter and `\null` as the
+terminator. Perl's `\nobreakspace` (a CS) never matches the `~` delimiter and the
+missing `\null` is never found, so **both** engines emitted the broken
+`() 1.1` (empty parens + a dangling number). This is a SHARED-FAILURE that Perl
+LaTeXML also exhibits; the user sanctioned surpassing it.
+
+**Cost**: no golden churn on the default path — active `~` is bound to `\lx@NBSP`
+(the same nbsp `\u{00A0}`@0.333em as `\nobreakspace`→`\lx@nobreakspace`) and the
+trailing `\null` (=`\hbox{}`) digests to nothing, so `Equation 1.1` / `section 1`
+render unchanged (`50_structure::autoref_test`).
+
+**Guards**: `50_structure::autoref_delimited_test` (the `\def\equationautorefname~#1\null`
+idiom → `(1.1)`/`(1.2)` while a sibling `section` autoref stays `section 1`);
+`50_structure::autoref_test` (default path unchanged). Witness: ar5iv #607
+(arXiv **2607.12124**).

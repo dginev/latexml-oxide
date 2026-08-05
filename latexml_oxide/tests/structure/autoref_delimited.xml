@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="hyperref"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" labels="LABEL:sec:first" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="autoref">section 1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>First</title>
+    <para xml:id="S1.p1">
+      <equation labels="LABEL:eq:a" xml:id="S1.E1">
+        <tags>
+          <tag>(1.1)</tag>
+          <tag role="autoref">(1.1)</tag>
+          <tag role="refnum">1.1</tag>
+        </tags>
+        <Math mode="display" tex="a=b" text="a = b" xml:id="S1.E1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+    <para xml:id="S1.p2">
+      <equation labels="LABEL:eq:b" xml:id="S1.E2">
+        <tags>
+          <tag>(1.2)</tag>
+          <tag role="autoref">(1.2)</tag>
+          <tag role="refnum">1.2</tag>
+        </tags>
+        <Math mode="display" tex="c=d" text="c = d" xml:id="S1.E2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+    <para xml:id="S1.p3">
+      <p>See <ref class="ltx_refmacro_autoref" labelref="LABEL:eq:a" show="autoref"/> and <ref class="ltx_refmacro_autoref" labelref="LABEL:eq:b" show="autoref"/> in <ref class="ltx_refmacro_autoref" labelref="LABEL:sec:first" show="autoref"/>.</p>
+    </para>
+  </section>
+</document>

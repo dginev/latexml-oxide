@@ -679,10 +679,28 @@ LoadDefinitions!({
     Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
   });
 
+  // Surpass-perl: mirror real hyperref's `\HyRef@autosetref` /
+  // `\HyRef@testreftype` (hyperref.sty:8211-8268) rather than Perl LaTeXML's
+  // simplified `\lx@autorefnum@@` (hyperref.sty.ltxml:373-382). Real hyperref
+  // feeds the autoref text as
+  //     \<type>autorefname  <ACTIVE ~>  <number>  \null
+  // where the separator is the ACTIVE `~` (catcode 13, `\noexpand~`, line 8247)
+  // and a trailing `\null` (line 8226) terminates it. That exact shape is what
+  // the documented delimited-argument idiom
+  //     \def\equationautorefname~#1\null{(#1)\null}
+  // consumes to wrap the number in parens → `(1.1)`. Perl LaTeXML used
+  // `\nobreakspace` (a control sequence, not the active `~`) with no trailing
+  // `\null`, so the idiom's `~` delimiter never matched and its `\null`
+  // terminator was never found — BOTH engines emitted the broken `() 1.1`.
+  // Active `~` is bound to `\lx@NBSP` (same nbsp `\u{00A0}`@0.333em as
+  // `\nobreakspace`→`\lx@nobreakspace`), so the default `Equation 1.1` /
+  // `section 1` rendering is unchanged; the trailing `\null` (=`\hbox{}`)
+  // digests to nothing. Witness: ar5iv #607 (arXiv 2607.12124).
+  // See docs/parity/OXIDIZED_DESIGN.md.
   DefMacro!("\\lx@autorefnum@@{}", sub[(ttype)] {
     let type_s  = ttype.unwrap().to_string();
     let mut tokens = if lookup_definition(&T_CS!(s!("\\{type_s}autorefname")))?.is_some() {
-      vec![T_CS!(format!("\\{type_s}autorefname")), T_CS!("\\nobreakspace")]
+      vec![T_CS!(format!("\\{type_s}autorefname")), T_ACTIVE!('~')]
     } else {
       Vec::new()
     };
@@ -696,6 +714,7 @@ LoadDefinitions!({
       tokens.push(pcounter);
     }
     tokens.push(thecounter);
+    tokens.push(T_CS!("\\null"));
     Tokens::new(tokens)
   });
 
