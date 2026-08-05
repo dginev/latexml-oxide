@@ -1,0 +1,20 @@
+% Regression fixture (branch fix-vskip-leavehorizontal-par).
+% Invariant: `\vspace*`/`\vskip` in a vertical container must END the current
+% paragraph, exactly like an explicit `\par` — via the internal `\par` that
+% `leaveHorizontal` injects. fig1 (\vspace*) MUST come out identical to fig2
+% (\par): the leader closes its own <p>, a <break/> follows, and the trailing
+% text is a SEPARATE <p>. The bug merges the leader and "Second" into one <p>
+% (the injected \par is sequenced ahead of the leader <p>'s materialization, so
+% its close no-ops). Witness: arXiv 2302.11635, where the un-closed <p> traps a
+% captioned minipage as a schema-invalid <caption>-in-<block>. See WISDOM #38.
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\hrulefill\vspace*{4pt}
+Second
+\end{figure}
+\begin{figure}
+\hrulefill\par
+Third
+\end{figure}
+\end{document}
