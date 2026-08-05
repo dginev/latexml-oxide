@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="nowrap"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <block class="nowrap">
+      <p>A</p>
+      <p>B</p>
+    </block>
+    <block class="nowrap">
+      <p>A
+B</p>
+    </block>
+    <block class="nowrap">
+      <p>A<break/>B</p>
+    </block>
+  </para>
+</document>

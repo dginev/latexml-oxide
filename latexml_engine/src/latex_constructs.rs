@@ -8661,19 +8661,18 @@ LoadDefinitions!({
   Let!("\\newblock", "\\lx@bibnewblock");
   Tag!("ltx:bibitem",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
-  // `<ltx:block>` is the schema's "generic block fallback" — it appears as
-  // the rename target in `insert_block` when no more-specific candidate
-  // (figure/logical-block/sectional-block) can hold the content. When the
-  // content includes a `<caption>` (which `<block>` can't contain) but the
-  // context is an open `<p>` (which forces is_inline=true and rules out
-  // `<figure>`), the rename leaves caption inside `<block>` inside `<p>` —
-  // a schema error in both Rust and Perl. Marking `<block>` as
-  // `auto_close => true` lets `find_insertion_point` escape the wayward
-  // `<block>` later (when, say, an outer paragraph break lands).
-  // Driver: 2302.11635 IEEEtran transmag float with `\hrulefill` between
-  // minipage rows. Perl's vspace happens to fire `\par` at the right
-  // moment; Rust's doesn't, and we'd otherwise emit malformed XML.
-  Tag!("ltx:block", auto_close => true);
+  // NOTE: `ltx:block` deliberately has NO `auto_close` Tag, matching Perl (no
+  // `Tag('ltx:block', autoClose=>1)` anywhere in the .ltxml sources). An
+  // author's explicit `<ltx:block>` wrapper — e.g. a `DefEnvironment` body
+  // template `<ltx:block>#body</ltx:block>` — must survive a paragraph break in
+  // its body, holding the successive `<ltx:p>`s (issue #508). A prior blanket
+  // `auto_close => true` here let `\par`'s `maybe_close_element("ltx:para")`
+  // climb through such a block and over-close it, splitting the body — the #508
+  // bug. It was added to mask a wayward `<ltx:block>` in `insert_block` (arXiv
+  // 2302.11635), but Perl's `insertBlock` (TeX_Box.pool L516) produces that same
+  // plain `<ltx:block>` and Perl reports the identical malformed-close there —
+  // so the blanket Tag was an unfaithful band-aid, not parity. See
+  // `base_utilities.rs::insert_block`.
 
   //----------------------------------------------------------------------
   // We've got the same problem as LaTeX: Lather, Rinse, Repeat.
