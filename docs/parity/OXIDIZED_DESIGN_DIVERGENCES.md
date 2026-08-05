@@ -3526,3 +3526,34 @@ the document's final font.
 **Guards**: `06_cluster_regressions::faked_space_is_sized_by_the_font_it_was_digested_in`
 pins the value; `114_streaming_cluster_regressions::streaming_matches_eager_on_cluster_regressions`
 pins eager == streaming (it is what caught the defect).
+
+### 97. `\hrulefill`/`\dotfill` restore the LaTeX kernel's `\leavevmode`
+
+**Perl** (`plain_constructs.pool.ltxml` L86-87): `\hrulefill` → `\leaders\hrule\hfill`,
+`\dotfill` → `\leaders\hbox{.}\hfill` — dropping the leading `\leavevmode` and
+trailing `\kern\z@` of the real LaTeX kernel (`latex.ltx` L643-644:
+`\def\hrulefill{\leavevmode\leaders\hrule\hfill\kern\z@}`).
+
+**Rust** uses the kernel definitions verbatim (with `\leavevmode\…\kern\z@`).
+
+**Why**: `\hrule` is a vertical-mode command and the fill leader is horizontal,
+so LaTeX enters horizontal mode FIRST (`\leavevmode` starts the paragraph). Only
+then does a following `\vskip`/`\vspace*` fire TeX's `head_for_vmode` (tex.web
+L21160 `hmode+vskip: head_for_vmode`) — the internal `\par` that ends the
+paragraph. Perl gets away without the `\leavevmode` because `\hfill`'s
+`enterHorizontal` (an `inplace` MODE assignment) persists past `\leaders` (a
+`bounded` constructor); Rust's `bounded` reverts it, so after `\hrulefill` the
+mode was `internal_vertical`, `leaveHorizontal` never fired, the leader's
+`<ltx:p>` never closed, and the next float panel merged into it — a
+schema-invalid `<caption>`-in-`<block>` (arXiv **2302.11635**), and, more
+generally, a *silent* paragraph-merge in any float with `\hrulefill\vspace*`
+between rows. Restoring the kernel definition fixes the root faithfully; where
+`\hrulefill` is used mid-line (already horizontal) the `\leavevmode` is a no-op,
+so output is byte-identical to Perl.
+
+**Cost**: no golden churn — the `\leavevmode` only bites in vertical contexts,
+where it makes Rust match BOTH Perl's output and the LaTeX kernel. 2302.11635:
+4 errors → 0, 10 `<figure>` / 0 `<block>` (Perl-identical structure).
+
+**Guards**: `50_structure::vspace_closes_leader_para_test` (the `\vspace*` vs
+`\par` control pair). Cross-ref WISDOM #38.

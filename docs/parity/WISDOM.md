@@ -1007,23 +1007,35 @@ proper path to parity is:
 Verify fix against `moderncv/cs_cv.tex` + any other `\vspace`-using
 regression tests before landing. Without step 1, step 2 breaks moderncv.
 
-**Update (2026-08-05, issue #508):** `\vspace` is now the faithful DefMacro
-form (`latex_constructs.rs:9241`, `'\vskip #2\relax'`), but step 1 is still
-open — Rust's `\vskip` does **not** fire the vertical break that leaves
-horizontal mode and closes an open `<ltx:p>`. **Witness: arXiv 2302.11635**
-(IEEEtran transmag `figure*`, `\hrulefill\vspace*{4pt}` between minipage rows).
-Perl's `\vspace*` closes the `<p>` so the following captioned minipages become
-separate `<ltx:figure>`s (0 errors); Rust keeps them inside the `<p>`, so
-`insert_block` renames the capture to a plain `<ltx:block>` and the enclosed
-`<ltx:caption>`/`<ltx:toccaption>` are malformed there (4 `malformed:` errors —
-the same class Perl emits on the reduced, `\vspace`-less construct). Minimal
-repro: a `figure` with `\hrulefill\vspace*{4pt}` and two captioned minipages;
-Perl 0 with `\vspace*`, 4 without. Until step 1 lands, 2302.11635 shows these 4
-errors. A prior `Tag('ltx:block', auto_close=>true)` band-aid **masked** them by
-letting the caption escape the block, but that broke an author's explicit
-`<ltx:block>` wrapper on any body `\par` (#508) and produced reordered,
-non-Perl-faithful output; it was removed. See the note in
-`latex_constructs.rs` just after the `ltx:bibblock` Tags.
+**Update (2026-08-05):** `\vspace` is now the faithful DefMacro form
+(`latex_constructs.rs:9241`, `'\vskip #2\relax'`).
+
+**RESOLVED (2026-08-05) — the "step 1" diagnosis above was WRONG.** `\vskip`'s
+`leaveHorizontal` binding is *faithful*; the bug was upstream. **Witness: arXiv
+2302.11635** (IEEEtran `figure*`, `\hrulefill\vspace*{4pt}` between minipage
+rows): the captioned minipages after the `\vspace*` came out inside the leader's
+`<ltx:p>` as a schema-invalid `<caption>`-in-`<block>` (4 `malformed:` errors),
+where Perl makes them separate `<ltx:figure>`s (0 errors). Root cause: **Rust
+was `internal_vertical`, not `horizontal`, at the `\vskip`** — so
+`leaveHorizontal` *correctly* declined to fire (`hmode+vskip: head_for_vmode` is
+gated on horizontal mode, tex.web L21160). The real defect was that
+**LaTeXML's `\hrulefill` dropped the LaTeX kernel's leading `\leavevmode`**
+(latex.ltx L643); `\hrule` is a vertical-mode command, so without `\leavevmode`
+nothing enters horizontal mode. Perl survived because `\hfill`'s
+`enterHorizontal` (`inplace`) persists past `\leaders` (a `bounded`
+constructor); Rust's `bounded` reverts it (isolated: bare `\hfill` *does*
+persist; `\leaders`-wrapped does not). Fix: restore the kernel definition —
+`\hrulefill` → `\leavevmode\leaders\hrule\hfill\kern\z@` (and `\dotfill`
+likewise), `plain_constructs.rs`, [OXIDIZED_DESIGN #97](OXIDIZED_DESIGN_DIVERGENCES.md).
+2302.11635: 4 errors → 0, 10 `<figure>`/0 `<block>` (Perl-identical). The old
+note's feared moderncv landmine never fired — the fix doesn't touch `\vskip`, so
+`82_moderncv::cs_cv_test` stays green. Guard:
+`50_structure::vspace_closes_leader_para_test` (`\vspace*` vs `\par` control).
+
+Method takeaway (durable): when a mode-gated primitive "doesn't fire," suspect
+the UPSTREAM mode-setter, not the primitive. And check the **real LaTeX kernel
+definition** (latex.ltx) — LaTeXML's `.pool` macros are sometimes simplified
+(dropped `\leavevmode`/`\kern\z@`), and the port should follow the kernel.
 
 ## 40. `\#`/`\&`/`\%`/`\$` Def*-kind mismatch is intentional mode-split
 

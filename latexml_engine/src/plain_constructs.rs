@@ -171,8 +171,20 @@ LoadDefinitions!({
 
   //======================================================================
   // Perl: plain_constructs.pool.ltxml L86-91
-  DefMacro!("\\hrulefill", "\\leaders\\hrule\\hfill");
-  DefMacro!("\\dotfill", "\\leaders\\hbox{.}\\hfill");
+  // Faithful to the real LaTeX kernel (latex.ltx L643/L644), NOT Perl's
+  // `plain_constructs.pool.ltxml` L86-87 which drops the leading `\leavevmode`
+  // and trailing `\kern\z@`. The `\leavevmode` is load-bearing: `\hrule` is a
+  // vertical-mode command and the fill leader is horizontal, so LaTeX enters
+  // horizontal mode FIRST (starts the paragraph). Only then does a following
+  // `\vskip`/`\vspace*` fire TeX's `head_for_vmode` (tex.web L21160:
+  // `hmode+vskip: head_for_vmode`) — the `\par` that ends the paragraph. Perl
+  // gets away without it because `\hfill`'s `enterHorizontal` persists past
+  // `\leaders` (a `bounded` constructor); Rust's does not, so the paragraph
+  // never closed and a following float panel merged into the leader's `<p>`
+  // (arXiv 2302.11635, WISDOM #38). Restoring the kernel definition fixes the
+  // root, faithfully. Divergence recorded in OXIDIZED_DESIGN.
+  DefMacro!("\\hrulefill", "\\leavevmode\\leaders\\hrule\\hfill\\kern\\z@");
+  DefMacro!("\\dotfill", "\\leavevmode\\leaders\\hbox{.}\\hfill\\kern\\z@");
   DefMath!("\\leftarrowfill", None, "\u{2190}", role => "ARROW", stretchy => true);
   DefMath!("\\rightarrowfill", None, "\u{2192}", role => "ARROW", stretchy => true);
   DefMath!("\\upbracefill", None, "\u{23DF}", role => "ARROW", stretchy => true);
