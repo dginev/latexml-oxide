@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <figure xml:id="fig1">
+    <p class="ltx_figure_panel"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
+    <break class="ltx_break"/>
+    <p class="ltx_figure_panel">Second</p>
+  </figure>
+  <figure xml:id="fig2">
+    <p class="ltx_figure_panel"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
+    <break class="ltx_break"/>
+    <p class="ltx_figure_panel">Third</p>
+  </figure>
+</document>
