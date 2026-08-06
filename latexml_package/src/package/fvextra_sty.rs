@@ -33,4 +33,16 @@ LoadDefinitions!({
   InputDefinitions!("fvextra", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   RawTeX!(r"\let\FV@Break\relax");
+
+  // fvextra L2249 `\def\FancyVerbFormatLine#1{#1}` OVERWRITES the ltx_verbatim
+  // css-class hook that fancyvrb_sty.rs installs on `\FancyVerbFormatLine` (via
+  // `\lx@add@cssclass{ltx_verbatim}`). fvextra runs its `\def` AFTER
+  // `\RequirePackage{fancyvrb}`, so a Verbatim loaded once fvextra is present
+  // lost `class="ltx_verbatim"` — and with it `white-space:pre` — collapsing to
+  // ordinary typewriter text (issue #502). Re-install the hook over fvextra's
+  // redefinition (with the scanner relaxed above, `\FancyVerbFormatLine` is
+  // just the per-line formatter, so wrapping it is safe).
+  Let!("\\lx@save@FancyVerbFormatLine", "\\FancyVerbFormatLine");
+  DefMacro!("\\FancyVerbFormatLine{}",
+    "\\lx@add@cssclass{ltx_verbatim}\\lx@save@FancyVerbFormatLine{#1}");
 });

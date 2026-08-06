@@ -94,7 +94,10 @@
     keep their own row, indentation and spacing (the binding's per-line
     `ltx_verbatim` class had been dropped in porting), and the bundled CSS
     replaces vanilla's `nowrap` — which collapsed a plain `{verbatim}` block
-    to a single line — with true `pre` whitespace (issue 431).
+    to a single line — with true `pre` whitespace (issue 431). Loading
+    `fvextra` no longer strips that class: fvextra redefines
+    `\FancyVerbFormatLine` after requiring fancyvrb, so its hook is now
+    re-installed over the redefinition (issue 502).
   - **A stale or empty stylesheet in the output directory is overwritten** instead
     of leaving the page unstyled.
   - **Split output (`--splitat`) styles every page** and carries the document date

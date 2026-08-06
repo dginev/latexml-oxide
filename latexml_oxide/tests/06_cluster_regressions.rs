@@ -44,6 +44,23 @@ fn cluster_cmidrule_cline_let() {
 fn cluster_fvextra_breakanywhere() {
   convert_clean("tests/cluster_regressions/fvextra_breakanywhere.tex");
 }
+/// fvextra loaded after fancyvrb must NOT strip the `ltx_verbatim` css class
+/// from `Verbatim` lines. `fancyvrb_sty.rs` installs the class by wrapping
+/// `\FancyVerbFormatLine` (`\lx@add@cssclass{ltx_verbatim}…`); fvextra.sty L2249
+/// then `\def\FancyVerbFormatLine#1{#1}` overwrites that wrapper, so every line
+/// loaded after fvextra lost `class="ltx_verbatim"` (and its `white-space:pre`)
+/// — the verbatim collapsed to ordinary typewriter text, silently, 0 errors.
+/// `fvextra_sty.rs` re-installs the hook over fvextra's redefinition. Witness:
+/// issue #502 (fancyvrb + fvextra; pre-fix 0 `ltx_verbatim`, post-fix one per line).
+#[test]
+fn cluster_fvextra_preserves_ltx_verbatim() {
+  let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");
+  assert!(
+    xml.contains(r#"class="ltx_verbatim""#),
+    "fvextra clobbered the ltx_verbatim class — its `\\def\\FancyVerbFormatLine` \
+     overwrote the fancyvrb hook, so verbatim lines lose white-space:pre:\n{xml}"
+  );
+}
 /// An unbound class (->OmniBus) whose `.bbl` `\bibitem[\protect\citeauthoryear…]`
 /// side-loads natbib must not leave a body `\citep` looping. The side-load runs
 /// inside the `thebibliography` group, so natbib's `\citep` would be popped on
