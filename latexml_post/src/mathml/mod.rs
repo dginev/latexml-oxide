@@ -1127,17 +1127,15 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node, attrs: &TextAttrs) -> Vec<
           // resolution recovers the canonical `ltx:` prefix on
           // default-namespace elements.
           //
-          // Perl L1067-1072 also stylizes this `m:mtext` from the accumulated
-          // %attr and warns `unexpected:nested-math` when the raw subtree still
-          // contains an `ltx:Math` (an `m:math` inside an `m:mtext` is invalid
-          // MathML, but dropping the formula would be worse).
-          if doc.findnode_at(".//ltx:Math", node).is_some() {
-            crate::Warn!(
-              "unexpected",
-              "nested-math",
-              "We're getting m:math nested within an m:mtext"
-            );
-          }
+          // Perl L1067-1072 stylizes this `m:mtext` from the accumulated %attr
+          // and — when the raw subtree still holds an `ltx:Math` — warns
+          // `unexpected:nested-math` and leaves the content-MathML unconverted,
+          // which renders operator-first (garbled) in the browser. We instead
+          // convert any nested `ltx:Math` in `rebuild_text_subtree_with_doc`
+          // below (to a self-contained inline `<m:math>` — see
+          // `nested_ltx_math_to_inline_mathml`), so a `\parbox`/`\mbox`-with-math
+          // in math renders correctly (arXiv html_feedback #6847). Surpass-Perl;
+          // see OXIDIZED_DESIGN #101.
           // Perl `my ($ignore, %mmlattr) = …` — the raw subtree is carried over
           // verbatim below, so only the attributes are wanted here.
           let (_, attributes) = stylize_text_content(Some(node), &attrs, &node.get_content());
@@ -1155,6 +1153,44 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node, attrs: &TextAttrs) -> Vec<
   }
 }
 
+/// Convert a nested `ltx:Math` — a `$...$` inside a text box (`\parbox`/`\mbox`/
+/// `\text`) that itself sits in math — into a self-contained INLINE `<m:math>`
+/// element, or `None` if the Math is empty.
+///
+/// Why a full `<m:math>` rather than the bare presentation `convert_to_pmml`
+/// returns: this node lands inside the text box's HTML (`ltx:inline-block` /
+/// `ltx:text` → `<span>`), and per HTML5's MathML text-integration-point rules a
+/// bare `<mrow>` inside that HTML is parsed as HTML and renders as flat text —
+/// not math (subscripts/superscripts/calligraphic lost). The `<math>` re-enters
+/// MathML context. Nested math is always inline (a `$...$`), so `display=inline`;
+/// `alttext`/`class` ride from the `ltx:Math`. The top-level pass gets the same
+/// wrapper from `MathProcessor::outer_wrapper`; this is its nested analogue
+/// (arXiv html_feedback #6847 / OXIDIZED_DESIGN #101).
+fn nested_ltx_math_to_inline_mathml(doc: &PostDocument, math_node: &Node) -> Option<NodeData> {
+  let inner = match doc.findnode_at("ltx:XMath", math_node) {
+    Some(xmath) => presentation::convert_to_pmml(doc, &xmath),
+    // No XMath left => already converted on an earlier pass; its `<m:math>` is
+    // already a full element, so reuse it as-is.
+    None => {
+      return element_child_named(math_node, MML_URI, "math")
+        .and_then(|mml| rebuild_text_subtree_with_doc(&mml, true, Some(doc)));
+    },
+  };
+  let mut attrs: HashMap<String, String> = HashMap::default();
+  attrs.insert("display".to_string(), "inline".to_string());
+  if let Some(tex) = math_node.get_attribute("tex") {
+    attrs.insert("alttext".to_string(), tex);
+  }
+  if let Some(class) = math_node.get_attribute("class") {
+    attrs.insert("class".to_string(), class);
+  }
+  Some(NodeData::Element {
+    tag:        "m:math".to_string(),
+    attributes: Some(attrs),
+    children:   vec![inner],
+  })
+}
+
 /// Eagerly materialize an XMText-or-picture subtree into owned NodeData.
 ///
 /// Port of `LaTeXML::Post::MathProcessor::convertXMTextContent`
@@ -1168,10 +1204,11 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node, attrs: &TextAttrs) -> Vec<
 ///
 /// When `convert_spaces` is true, leading/trailing whitespace on text
 /// nodes is replaced with NBSP so the rendered MathML does not collapse
-/// the space. Nested `ltx:Math` would in Perl re-enter the MathML
-/// converter; we preserve it as a plain element subtree here (same
-/// limitation as the enclosing pmml_text_aux path: nested math in
-/// mtext is uncommon, and the XSLT stage can still render it).
+/// the space. A nested `ltx:Math` (a `$...$` inside a text box that itself
+/// sits in math) is CONVERTED to presentation MathML by
+/// `rebuild_text_subtree_with_doc` rather than cloned raw — see the
+/// reentrancy note there (arXiv html_feedback #6847); Perl leaves it raw and
+/// warns `unexpected:nested-math`, which renders operator-first (garbled).
 pub fn convert_xm_text_content(
   doc: &PostDocument,
   node: &Node,
@@ -1225,6 +1262,21 @@ pub fn rebuild_text_subtree_with_doc(
       Some(NodeData::Text(text))
     },
     Some(NodeType::ElementNode) => {
+      // A nested `ltx:Math` — a `$...$` inside a \parbox/\mbox/inline-block that
+      // itself sits in math. The top-level pass skipped it
+      // (`//ltx:Math[not(ancestor::ltx:Math)]`), so cloning it verbatim leaks
+      // unconverted `<ltx:XMath>` content-MathML into the HTML, which the browser
+      // renders in operator-first document order (garbled, arXiv html_feedback
+      // #6847 / arXiv:2608.05024). Convert it here instead. Needs `doc` for
+      // URI→prefix + the ancestor style/font context; the doc-less
+      // `rebuild_text_subtree` callers keep the verbatim clone (they never carry
+      // nested math). See OXIDIZED_DESIGN #101.
+      if let Some(d) = doc
+        && d.get_qname(node).as_deref() == Some("ltx:Math")
+        && let Some(mml) = nested_ltx_math_to_inline_mathml(d, node)
+      {
+        return Some(mml);
+      }
       let tag = {
         let local = node.get_name();
         match node.get_namespace() {
