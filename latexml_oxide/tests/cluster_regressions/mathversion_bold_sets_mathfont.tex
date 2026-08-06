@@ -1,0 +1,16 @@
+% \mathversion{bold} must switch the MATH font (like \boldmath), not merge the
+% text font. Pre-fix it used MergeFont! (which merges the text `font` value), so
+% math never went bold. `p`/`s` stay plain math italic; grouped `q`
+% (\mathversion{bold}) and `r` (\boldmath reference) must both be bold italic.
+% The `{...}` groups isolate the `local` mathfont assignment so the reset is
+% clean. Perl latex_constructs.pool.ltxml L5290-5297 (== plain_base L612-617).
+\documentclass{article}
+\begin{document}
+Plain: $p$
+
+Grouped mathversion: {\mathversion{bold}$q$}
+
+Boldmath reference: {\boldmath$r$}
+
+After groups: $s$
+\end{document}
