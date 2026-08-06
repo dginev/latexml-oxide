@@ -46,9 +46,9 @@ families).*
 ## Ranked worklist — start here
 
 Ordered by: **does it reproduce today** → **is a real user affected** → **is it
-unblocked** → **effort**. R1 is small and self-contained; R2's cheap half landed
-2026-07-29 and what remains of it, like R4+, needs a session of its own.
-Re-verify a row before planning on it (rule 1).
+unblocked** → **effort**. R1 is a review nudge (no code); R2's cheap half landed
+2026-07-29 and what remains of it, like the R5+ rows, needs a session of its own
+(R4 itself is ✅ FIXED). Re-verify a row before planning on it (rule 1).
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
@@ -77,7 +77,7 @@ classes are singletons and the first error is often incidental.
 | # | item | papers | state |
 |---|---|---|---|
 | ~~R3a~~ **19 of 29 LANDED** (`\DeclareCiteCommand` defines its command; `\addbibresource` harvested from a shipped class; **OmniBus now autoloads biblatex from `\addbibresource`/`\printbibliography`** — 7 papers, 548 entries, for classes that load biblatex themselves but have no binding, e.g. now-journal.cls building the package name from macros). Four of those 7 had an unrelated first error, so first-error clustering had scattered one cause across four buckets | **biblatex, document-level** | 10 left |
-| **R3b** | **No diagnostic at all** — silent loss, complete document. **12 of 31 LANDED**: `\nocite{*}` now includes the whole library as bibtex does (7), and a native `xpatch.sty` binding stopped an expl3 sentinel-delimited scan from eating the document to EOF (5 — audit F12; the 10 xpatch papers' other 5 causes are each unrelated and listed there). Of the rest, **15 have real `\cite` calls** (chase these) and **4 cite nothing at all** (0 entries is correct — exclude). Two are characterized-but-unfixed with the remedy written down in `RESIDUAL.md`: 2606.01320 (bibliography gated on a cite counter our CS lock keeps at 0) and 2605.08378 (submission ships no `PurdueThesis.cls`) | **15 left** | next |
+| **R3b** | **No diagnostic at all** — silent loss, complete document. **13 of 31 LANDED**: `\nocite{*}` now includes the whole library as bibtex does (7), a native `xpatch.sty` binding stopped an expl3 sentinel-delimited scan from eating the document to EOF (5 — audit F12; the 10 xpatch papers' other 5 causes are each unrelated and listed there), and **2606.01320's `\pretocmd{\cite}{\stepcounter{cite}}` now assigns through the core `\cite` CS-lock** (2026-08-05; etoolbox hooks are non-destructive, so they open a scoped unlock window — divergence #88; guard `06_cluster_bibliography::etoolbox_pretocmd_assigns_through_cite_lock`). Of the rest, **14 have real `\cite` calls** (chase these) and **4 cite nothing at all** (0 entries is correct — exclude). One is characterized-but-unfixed with the remedy written down in `RESIDUAL.md`: 2605.08378 (submission ships no `PurdueThesis.cls`) | **14 left** | next |
 | **R3c** | `\ce` inside a `p{}` column leaks a mode → `\@end@tabular` cannot close. 7-line repro in [`repros/f8_ce_in_p_column/`](parity/bib_absence_2026-07-29/repros/f8_ce_in_p_column/). **CONFIRMED SHARED (2026-08-04):** `latexml --includestyles` raw-loads mhchem and gives the byte-identical 7-error cascade (bare Perl was a false-clean — it can't find raw mhchem without `--includestyles`, so `\ce` was inert). **Surpass-only** — mode-robust `\ce` or an mhchem binding, needs the 3 qualifying tests + user escalation; deprioritized | **7** | ✅ triaged → surpass-only |
 | **R3d** | **PARTLY FIXED — 14 of 28, 961 entries.** A `&` inside a **delimiter-fenced** macro argument split the alignment row and truncated the document. `tex.web` §394 `macro_call` disables tab marks while scanning parameters; we — and Perl, which raises the identical error — did not. `SuppressedTabMarks` armed inside alignments on physics.sty's `phys_read_arg` fixes the 16 `\mqty` users. The general `Parameters::read_arguments` site is TeX-correct but regresses 5 tests (`cells_test` 17 errors, `numprints_test`, `xytest_test`, `consort_flowchart_test`, `unit_tests_by_silviu_test`) because that path also reads alignment cell content — needs a parameter-scan-vs-cell-read distinction. Divergence #90 | **12 left** | needs the distinction |
 | **R3e** | `N bibentries, 0 cited` — citation records never attach, so an empty References heading renders. The raw-`\cite`-clobber half landed as #88; this is the narrower residue | **22** | needs a reproducer |
@@ -731,8 +731,9 @@ residuals stay here so the live worklist keeps them visible:
 - **arXiv velocity-fork audit** (items 1–4 landed 2026-07-03; →
   `archive/ARXIV_FORK_AUDIT_2026-07-03.md`). Sole residual: **item G** —
   `readBalanced` drops comment tokens (fork `4e1578d1`); Rust `read_balanced`
-  still flushes `pending_comments` (gullet.rs ~L1170). Low urgency
-  (`INCLUDE_COMMENTS=false` default); port at the next gullet-seam session.
+  still keeps comments in its result via `CommentSink::Into` (gullet.rs ~L1363,
+  `CommentSink` at ~L565). Low urgency (`INCLUDE_COMMENTS=false` default); port
+  at the next gullet-seam session.
 
 ### `fragid` parity audit — id preservation (2026-08-04)
 
@@ -788,8 +789,9 @@ re-measured except where noted):
 3. **`in_page_id` lacks the `labelids` branch** (Scan.pm L176-184) — affects
    `--splitnaming=label*` only; `Scan::new` takes no options to carry it.
 4. **`in_page_id` lacks the `split_from_id` fallback** (Scan.pm L191-192);
-   `PostDocument::split_from_id` exists but is read by nobody and is never set
-   on streaming pages. Anchor-naming only — links stay self-consistent.
+   `PostDocument::split_from_id` is read by nobody (the `in_page_id` fallback is
+   missing). It IS set on eager split subdocs (`document.rs:709`) but never on
+   streaming pages. Anchor-naming only — links stay self-consistent.
 5. **`strip_ref_display_fragids`** (crossref.rs:131) is Rust-only and matches
    `//ltx:ref//*[@fragid]` wholesale, so genuine id'd content inside an
    `ltx:ref` loses its fragid too. Narrow it to ids absent from the ObjectDB.
@@ -839,8 +841,6 @@ golden churn. Guards:
 small enough trips the RSS fuse first. Drive `streaming_sweep::convert_with(src,
 Some(3), …)`, or run the built sweep binary directly: it globs its fixture dir at
 RUNTIME, so fixtures can be added or removed without a rebuild.
-
-### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 
 ### A `robust` DefConstructor reverted under its munged cs — ✅ FIXED 2026-07-29
 
@@ -984,7 +984,7 @@ that got (a) rejected. That leaves (b), or a TeX-side repair of the stack at the
 `LoadPool` swaps `\@pushfilename`'s meaning underneath an already-open frame.
 
 **Second divergence, same area — ✅ FIXED 2026-07-29.** It was wider than recorded here:
-the preload-PI loop (`core_interface.rs`, the `for preload in &self.preload` block) is a
+the preload-PI loop (`core_interface.rs`, the `for preload in preloads` block) is a
 translation of Perl `Core.pm` L268-277, whose three `s///` rewrite `$preload` **in place**.
 `Regex::replace_all` *returns* the rewritten string instead, and all three results were
 discarded, so **nothing was ever stripped and no `options` attribute was ever emitted**:
@@ -1036,7 +1036,7 @@ structure same-host Perl produces, which takes 33.7 s and reports **59 errors**.
 only because Perl's biblatex binding never defines `\printbibliography`, so Perl
 never reads a real `.bbl` this way. Mechanism, minimal trigger and the
 upstream-candidate note: `KNOWN_PERL_ERRORS.md` #57. Guard
-`06_cluster_regressions::cluster_biblatex_two_datalists`.
+`06_cluster_bibliography::cluster_biblatex_two_datalists`.
 
 **Follow-up the same day — the witness is now error-free.** Two more gaps it
 surfaced, both landed:
@@ -1057,7 +1057,7 @@ surfaced, both landed:
   equation — the `\quad` half is load-bearing: relaxing it too made
   `tests/math/sampler`'s `\displaystyle=f(x)+\phantom{g(x)}+h(x)` parse
   *wrongly* rather than not at all. Guard
-  `06_cluster_regressions::cluster_leading_relop_comma_list`.
+  `06_cluster_math::cluster_leading_relop_comma_list`.
 
 **Then the residual math gaps too (user-directed, same day) — the witness is now
 0 errors AND 0 unparsed formulas.** Two grammar additions, both measured against
@@ -1599,14 +1599,15 @@ turns the test red and forces an update. Each says so in its own doc comment.
   base rate: 2.0% of 547 sampled papers emit any font diagnostic at all, and the
   log census is a LOWER bound because a family-map miss on a mapped encoding is
   completely silent.
-- **`\mathversion{bold}` merges the text font instead of `mathfont`** — UNVERIFIED
-  single-agent claim (`latex_constructs.pool.ltxml` L5290 vs
-  `latex_constructs.rs`). Rust's `\boldmath`/`\unboldmath` reportedly get this
-  right, so `\mathversion` would be the odd one out.
+- **`\mathversion{bold}` merges the text font instead of `mathfont`** — VERIFIED
+  still-broken 2026-08-05 (`latex_constructs.pool.ltxml` L5290 vs
+  `latex_constructs.rs:10653`). Rust's `\boldmath`/`\unboldmath` get this
+  right, so `\mathversion` is the odd one out. (Same item as sweep #5 below.)
 - **`\DeclareTextCommand`/`\ProvideTextCommand` don't install the encoding-dispatch
-  chain** — UNVERIFIED single-agent claim. Kernel accents are masked by the dump, so
-  only package-declared text commands (tipa T3, T2A extras, TS1 additions) would show
-  it. Rust's `\DeclareTextSymbol` *does* install the chain.
+  chain** — VERIFIED still-broken 2026-08-05 (`latex_constructs.rs:6525`/`6544`).
+  Kernel accents are masked by the dump, so only package-declared text commands
+  (tipa T3, T2A extras, TS1 additions) would show it. Rust's `\DeclareTextSymbol`
+  *does* install the chain. (Same item as sweep #6 below.)
 - **Slot-by-slot table parity**: 4048 slots compared across all 24 maps, reported as
   0 wrong characters / 0 off-by-N / 0 extra. I verified the AMSb subset myself; the
   remaining totals are a single-agent claim (its Perl parser was cross-validated by
@@ -1633,21 +1634,22 @@ symptom (a font attribute or glyph silently wrong, no diagnostic). Ranked, with
 verification status stated explicitly; **the unverified rows are single-agent claims
 with file:line, not established facts — re-verify before acting**:
 
-1. **`\char`/`\symbol` yield the EMPTY STRING in math mode** — VERIFIED by me
-   (`$\char65$`: Perl `<Math … text="A">`, Rust emits nothing at all).
-   `tex_character.rs` calls `font::decode_str(…, None, …)`, and `font::decode`
-   uses `Cow::Borrowed("")` when the font's encoding is `None` — which
-   `Font::math_default()` deliberately sets (`common/font.rs:624`). Perl's
-   `FontDecode` defaults `$font->getEncoding || 'OT1'` (`Package.pm:2874`).
-   Rust's own `content.rs:3374` sibling *does* default to OT1, so the two decode
-   paths are internally inconsistent. Also `code.value_of() as u8` truncates:
-   `\char300` wraps to 44 → `,`.
-2. **`\DeclareSymbolFont`'s encoding arg is not `ExpandedPartially`** — VERIFIED by
-   me (Perl `latex_constructs.pool.ltxml:2664` has it, Rust
-   `latex_constructs.rs:6881` does not). `\DeclareSymbolFont{operators}{\encodingdefault}{\rmdefault}{m}{n}`
-   is what `fontmath.ltx` writes, so Rust stores the literal `\encodingdefault` and
-   every dependent `\DeclareMathSymbol`/`\DeclareMathAccent` looks up a fontmap of
-   that name.
+1. **`\char`/`\symbol` yield the EMPTY STRING in math mode** — ✅ **FIXED**
+   (re-verified 2026-08-05; guard
+   `117_char_font_decode::char_decodes_through_ot1_in_math_and_does_not_wrap_out_of_range`,
+   ground-truthed vs Perl 0.8.8). `font::decode` defaults the encoding to `OT1`
+   when the current font carries none — matching Perl `FontDecode`
+   `$font->getEncoding || 'OT1'` (`common/font.rs:2103-2126`, `Package.pm:2877`);
+   `decode_str`/`FontDecodeString` keep the deliberate empty fallback, so the
+   asymmetry is intended — do NOT "align" them. `\char` uses `u8::try_from`, not
+   `as u8`, so out-of-range `\char300` yields nothing like Perl instead of `,`
+   (`tex_character.rs:61-84`).
+2. **`\DeclareSymbolFont`'s encoding arg is `ExpandedPartially`** — ✅ **FIXED**
+   (guard `117_char_font_decode::symbol_font_encoding_argument_is_expanded_before_storage`).
+   `latex_constructs.rs:6907` declares `\DeclareSymbolFont{} ExpandedPartially
+   {}{}{}` (Perl `latex_constructs.pool.ltxml:2664`), so the `\encodingdefault`
+   that `fontmath.ltx` writes expands before storage and dependent
+   `\DeclareMathSymbol`/`\DeclareMathAccent` lookups hit the right fontmap.
 3. **`DeclareFontMap`'s `(uppercase|lowercase|digit)_mathstyle` options are
    unported** — VERIFIED write-only by me: `tex_fonts.rs` writes
    `OMS_uppercase_mathstyle`, `amsb_fontmap.rs:2` records a dropped blackboard
@@ -1656,27 +1658,33 @@ with file:line, not established facts — re-verify before acting**:
    while recording the semantic font change. Claimed-but-unmeasured consequence:
    `$\cal A$` double-styles (U+1D49C *and* `font=caligraphic`) where Perl gives `A`
    + caligraphic, and hands a non-ASCII letter to the grammar.
-4. **`\DeclareMathAlphabet` skips `lookupTeXFont`** — UNVERIFIED claim
-   (`latex_constructs.pool.ltxml:2677` vs `latex_constructs.rs:6957`): Rust stores
-   raw NFSS codes (`cmss`/`m`/`n`) where Perl maps them to the abstract
-   `sansserif`/`medium`/`upright`. Also missing Perl's `Info('ignore', …)` on the
-   already-defined branch.
-5. **`\mathversion{bold}` merges the text font, not `mathfont`** — UNVERIFIED claim
-   (`:5290` vs `latex_constructs.rs:10607`); Rust's `\boldmath`/`\unboldmath`
-   (`plain_base.rs:747`) reportedly get this right, so `\mathversion` would be the
-   odd one out. Unknown versions also swallowed instead of `Error`.
+4. **`\DeclareMathAlphabet` skips `lookupTeXFont`** — ✅ **FIXED** (re-verified
+   2026-08-05): `latex_constructs.rs:7006` calls
+   `font::lookup_tex_font(&family, &series, &shape)` (the abstract
+   `sansserif`/`medium`/`upright` mapping, not raw NFSS codes) and `:7004` emits
+   `Info!("ignore", …)` on the already-defined branch — matching Perl
+   `latex_constructs.pool.ltxml:2677`. The def is at `latex_constructs.rs:6998`
+   (`:6957` is now `\new@internalmathalphabet`).
+5. **`\mathversion{bold}` merges the text font, not `mathfont`** — VERIFIED
+   still-broken 2026-08-05 (`:5290` vs `latex_constructs.rs:10653`:
+   `"bold" => MergeFont!(forcebold => true)` merges the TEXT `font` value, where
+   Perl `AssignValue(mathfont => …merge(forcebold))`); Rust's
+   `\boldmath`/`\unboldmath` (`plain_base.rs:747`) get this right, so
+   `\mathversion` is the odd one out. Unknown versions also swallowed
+   (`_ => {}`) instead of `Error`.
 6. **`\DeclareTextCommand`/`\ProvideTextCommand` don't install the encoding-dispatch
-   chain** — UNVERIFIED claim (`:2584`/`:2598` vs `latex_constructs.rs:6519`/`6538`):
-   the first encoding to declare a CS would win permanently. Kernel accents are
-   masked by the dump, so only *package*-declared text commands (tipa T3, T2A
-   extras, TS1 additions) would show it. Rust's `\DeclareTextSymbol` *does* install
-   the chain, so the two are claimed inconsistent.
+   chain** — VERIFIED still-broken 2026-08-05 (`:2584`/`:2598` vs
+   `latex_constructs.rs:6525`/`6544`, which bind the bare `\cs` to the raw
+   first-encoding expansion): the first encoding to declare a CS wins permanently.
+   Kernel accents are masked by the dump, so only *package*-declared text commands
+   (tipa T3, T2A extras, TS1 additions) show it. Rust's `\DeclareTextSymbol`
+   (`:6624`) *does* install the chain, so the two are inconsistent.
 7. Lower: `\DeclareTextSymbol` decodes eagerly at declaration instead of installing a
    deferred `CharDef` (loses the glyph permanently if the fontmap is not yet
    loaded); `LoadFontMap` never emits Perl's `Info('fontmap', …)`;
-   `\DeclareErrorFont` is a bare no-op where Perl defines its arg as `\relax`;
-   `\textit@math` sets `\f@shape` to `i` vs Perl's `it` (both map to `italic`, so
-   cosmetic).
+   `\DeclareErrorFont` is a bare no-op where Perl defines its arg as `\relax`.
+   (The `\textit@math` `\f@shape` `i`-vs-`it` sub-item is ✅ FIXED —
+   `latex_constructs.rs:10568` now assigns `it`.)
 
 `docs/parity/OXIDIZED_DESIGN.md` has no font section, so none of these is a
 documented divergence. Method and the two detection traps: [`WISDOM.md`](parity/WISDOM.md) §80.
@@ -1714,14 +1722,16 @@ several carry explicit "do NOT start" directives.
     Rust is error-clean and schema-valid. **Re-witnessed + root-confirmed
     2026-06-27** (0704.0001, 0704.0017 via the corrected structural diff): NOT
     merely cosmetic — the panel `<graphics>` WIDTHS also diverge (Rust 303.5pt vs
-    Perl 241.5pt, ~1.257×), so figure sizing is visibly affected. Root: Perl's
-    `arrange_panels_and_breaks` (`latex_constructs.pool.ltxml:3229-3295`) does a
-    full box-metric panel layout — it inserts `<break class="ltx_break">` and wraps
-    panels using `getNodeBox($child)->getWidth` vs `float_width`; Rust's
-    counterpart (`latex_constructs.rs:1784-1869`) is explicitly **"Simplified: mark
-    panel children with the class"** and skips the break/block arrangement. A
-    faithful port DEPENDS on matching box widths → the deep box session (sibling of
-    the `\resizebox` panel-width item below), not a loop-tick fix.
+    Perl 241.5pt, ~1.257×), so figure sizing is visibly affected.
+    **The break/block-arrangement half LANDED (PR #273, 2026-07-05):**
+    `arrange_panels` (`latex_constructs.rs` ~1967, doc-comment "Faithful port of
+    Perl's `arrange_panels_and_breaks`") now inserts `<ltx:break class="ltx_break"/>`
+    (`insert_break_before` ~1944) and does the block/merge arrangement, wired in at
+    three float call sites — so the old "Simplified: mark panel children with the
+    class" state is gone. What remains OPEN is only the box-WIDTH divergence (tied
+    to the deep box session / the `\resizebox` panel-width item below); re-witness
+    1108.0198 / 0704.0001 / 0704.0017 to confirm whether widths still diverge now
+    that the arrangement is ported.
 - **`\resizebox` panel scale-VALUE divergence**: in `complex/figure_mixed_content`
   two panels get a different computed natural width (xscale 1.13 vs 0.88). The
   construct in ISOLATION matches exactly (both xscale=1.9685); the divergence

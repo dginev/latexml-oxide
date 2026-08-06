@@ -3249,7 +3249,20 @@ class would have printed.
 cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
 
-Guard: `bib_raw_cite_redefinition_is_ignored`.
+**Exception — non-destructive etoolbox hooks assign through the lock
+(2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
+re-`\edef`/`\let` the target but preserve the original via `\expandonce#2`, so
+they only WRAP a definition — they cannot displace it the way a raw `\def\cite`
+does. Refusing them silently drops legitimate hooks: witness ar5iv 2606.01320
+does `\pretocmd{\cite}{\stepcounter{cite}}` then gates its whole bibliography on
+`\ifnum\value{cite}>0`, and the refused assignment left the counter at 0 and the
+References vanished with no diagnostic. The etoolbox binding therefore opens a
+scoped unlock window (`state_is_unlocked()`) around JUST the hook's assignment to
+`#2` — `\lx@etb@unlock`/`\lx@etb@relock` in `etoolbox_sty.rs`; a plain
+`\def`/`\renewcommand` from raw source is outside the window and stays refused.
+
+Guards: `bib_raw_cite_redefinition_is_ignored` (raw redefinition refused) and
+`etoolbox_pretocmd_assigns_through_cite_lock` (non-destructive hook allowed).
 
 ### 89. `\captionof` does not open a verbatim-bodied environment
 
