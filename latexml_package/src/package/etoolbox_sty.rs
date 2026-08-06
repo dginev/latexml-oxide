@@ -60,6 +60,29 @@ LoadDefinitions!({
   DefMacro!("\\csgdef{}", "\\expandafter\\gdef\\csname #1\\endcsname");
   DefMacro!("\\csxdef{}", "\\expandafter\\xdef\\csname #1\\endcsname");
 
+  // `\lx@etb@unlock` / `\lx@etb@relock` — a matched push/pop of the
+  // "assign through the CS lock" flag (`state_is_unlocked()`, consumed by
+  // `install_definition`). The core `\cite` family is `locked => true`
+  // (divergence #88, commit 6f0e29477d) so a raw conference style's
+  // `\def\cite` / `\renewcommand\cite` cannot clobber our binding. etoolbox's
+  // `\pretocmd` / `\apptocmd` are the opposite case: they re-`\edef` / `\let`
+  // the target but PRESERVE the original via `\expandonce#2`, so they only WRAP
+  // it — non-destructive. Refusing them silently drops legitimate hooks:
+  // witness ar5iv 2606.01320 does `\pretocmd{\cite}{\stepcounter{cite}}` then
+  // gates its whole bibliography on `\ifnum\value{cite}>0`; the refused
+  // assignment left the counter at 0 and the References vanished with no
+  // diagnostic. So the hook opens a window around JUST its assignment to `#2`
+  // (`\etb@hooktocmd`'s `\edef#2` and `\etb@hooktocmd@i`'s `\let#2`); a plain
+  // `\def` / `\renewcommand` from raw source is OUTSIDE the window and stays
+  // refused. NOT a Perl port — the lock is Rust-only, so this accommodation is
+  // too. Do NOT unlock `\cite` itself.
+  DefPrimitive!("\\lx@etb@unlock", {
+    local_state_unlocked(true);
+  });
+  DefPrimitive!("\\lx@etb@relock", {
+    expire_state_unlocked();
+  });
+
   // RawTeX! (not TeX!): this block contains `\ifdefmacro`, `\ifdefprefix`,
   // `\ifdefparam` etc. whose `\edef` bodies end with a literal `&` token
   // used as a delimited-param delimiter. At runtime, etoolbox has set
@@ -1427,12 +1450,14 @@ LoadDefinitions!({
                 {\etb@dbg@fail{hsh}\@secondoftwo}}
               {\etb@dbg@fail{tok}\@secondoftwo}}
           {\etb@dbg@info{prl}%
+            \lx@etb@unlock
             \ifdefprotected{#2}
               {\etb@dbg@info{pro}%
               \etb@dbg@succ{red}%
               \protected}
               {\etb@dbg@succ{red}}%
             \edef#2{#1{\expandonce#2}{\unexpanded{#3}}}%
+            \lx@etb@relock
             \@firstoftwo}}
         {\etb@dbg@fail{mac}\@secondoftwo}}}
 
@@ -1445,7 +1470,9 @@ LoadDefinitions!({
       \noexpand\etb@resrvda\meaning#2&}}%
   \etb@resrvda
   \etb@patchcmd@scantoks\etb@resrvda
+  \lx@etb@unlock
   \let#2\etb@resrvda
+  \lx@etb@relock
   \undef\etb@resrvda}
 
 \long\def\etb@append#1#2{#1#2}

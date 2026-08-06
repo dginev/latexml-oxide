@@ -302,6 +302,26 @@ fn bib_raw_cite_redefinition_is_ignored() {
   );
 }
 
+/// The flip side of `bib_raw_cite_redefinition_is_ignored`: etoolbox's
+/// `\pretocmd`/`\apptocmd` on the LOCKED core `\cite` must assign THROUGH the
+/// lock. Unlike a raw `\def\cite`/`\renewcommand\cite` (which stays refused),
+/// the hooks wrap the original via `\expandonce#2`, so they are non-destructive
+/// and legitimate. Witness ar5iv 2606.01320 does
+/// `\pretocmd{\cite}{\stepcounter{cite}}` then gates its whole bibliography on
+/// `\ifnum\value{cite}>0`; pre-fix the refused assignment left the counter at 0
+/// and the References vanished with no diagnostic. The hook opens a scoped
+/// unlock window (`\lx@etb@unlock`/`\lx@etb@relock`, `etoolbox_sty.rs`). The
+/// lock is Rust-only (OXIDIZED_DESIGN #88), so this accommodation is too.
+#[test]
+fn etoolbox_pretocmd_assigns_through_cite_lock() {
+  let x = convert_to_xml("tests/cluster_regressions/etoolbox_pretocmd_cite_counter.tex");
+  assert!(
+    x.contains("GATED-REFERENCES-VISIBLE"),
+    "\\pretocmd{{\\cite}}{{\\stepcounter{{cite}}}} was refused by the \\cite \
+     CS-lock, so the counter stayed 0 and the counter-gated content vanished:\n{x}"
+  );
+}
+
 /// A `refcontext` block must not eat the `\printbibliography` inside it, and
 /// `\addbibresource` must accept its optional argument.
 ///

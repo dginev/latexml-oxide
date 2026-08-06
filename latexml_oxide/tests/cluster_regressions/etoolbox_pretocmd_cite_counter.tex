@@ -1,0 +1,19 @@
+% ar5iv 2606.01320 (arXiv 2606.01320): a bibliography gated on a citation
+% counter. `ncpds.tex` does \newcounter{cite} + \pretocmd{\cite}{\stepcounter
+% {cite}} then emits the whole bibliography only inside \ifnum\value{cite}>0.
+% The core \cite is locked (OXIDIZED_DESIGN #88) against raw \def/\renewcommand
+% clobbering, but etoolbox's \pretocmd/\apptocmd are NON-DESTRUCTIVE (they wrap
+% the original via \expandonce), so they must be allowed to assign through the
+% lock. Pre-fix the assignment was refused, the counter stayed 0, and the gated
+% References vanished with NO diagnostic (a silent-loss failure).
+\documentclass{article}
+\usepackage{etoolbox}
+\newcounter{cite}
+\pretocmd{\cite}{\stepcounter{cite}}{}{}
+\begin{document}
+Body text \cite{foo}.
+
+\ifnum\value{cite}>0
+GATED-REFERENCES-VISIBLE
+\fi
+\end{document}

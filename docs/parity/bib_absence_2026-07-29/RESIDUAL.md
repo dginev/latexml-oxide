@@ -102,8 +102,8 @@ long tail, not a few big causes. The clusters worth naming:
 
 ## Characterized single-witness cases (mechanism known, not fixed)
 
-**2606.01320 — a bibliography gated on a citation counter that our CS lock keeps
-at zero.** `ncpds.tex` L27-28 does `\newcounter{cite}` +
+**2606.01320 — ✅ FIXED 2026-08-05 — a bibliography gated on a citation counter
+that our CS lock kept at zero.** `ncpds.tex` L27-28 does `\newcounter{cite}` +
 `\pretocmd{\cite}{\stepcounter{cite}}{}{}`, then L2845 emits the bibliography
 only inside `\ifnum\value{cite}>0`. Our core `\cite` is `locked => true` (this
 PR's own #88 fix, commit `6f0e29477d`, which stopped raw conference styles —
@@ -114,16 +114,16 @@ bibliography is skipped. **etoolbox still reports the patch as succeeding**
 `\ifdefmacro{\cite}` is true here and only the assignment is refused.
 
 The document is NOT truncated — L3972 is its last content line, followed only by
-`\end{example}`/`\end{appendices}`/`\end{document}`. Only 1 residual paper
-patches `\cite` this way and only 1 gates on the counter, so this was left
-unfixed rather than risk the clauses that recovered several papers.
+`\end{example}`/`\end{appendices}`/`\end{document}`.
 
-Remedy if it recurs at scale: let the etoolbox *hooks* (`\pretocmd`/`\apptocmd`,
-which embed the original via `\expandonce` and so are non-destructive) assign
-through the lock, while plain `\def`/`\renewcommand` from raw source stays
-refused. That needs an unlocked-assignment window at the `\etb@hooktocmd` site
-(`etoolbox_sty.rs` L1411) — `state_is_unlocked()` already exists as the gate.
-Do NOT simply unlock `\cite`.
+**Fix (2026-08-05):** the etoolbox *hooks* (`\pretocmd`/`\apptocmd`, which embed
+the original via `\expandonce` and so are non-destructive) now assign through the
+lock, while a plain `\def`/`\renewcommand` from raw source stays refused. The
+`\etb@hooktocmd` / `\etb@hooktocmd@i` assignment sites open a scoped unlock
+window (`\lx@etb@unlock`/`\lx@etb@relock`, `etoolbox_sty.rs`) around JUST the
+assignment to `#2`; `\cite` itself is NOT unlocked. Extends OXIDIZED_DESIGN #88;
+guard `06_cluster_bibliography::etoolbox_pretocmd_assigns_through_cite_lock`
+(the min-repro's `\ifnum\value{cite}>0`-gated content now renders).
 
 **Open, separate from the bibliography mission:** the diagnostic for a refused
 redefinition (`state.rs` L1169-1184, Perl `State.pm` L509-515
