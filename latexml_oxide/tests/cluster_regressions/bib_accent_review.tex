@@ -1,0 +1,13 @@
+% Regression guard for issue #410: a MathSciNet/review .bib field whose
+% space-form cedilla accent `\c c` (as in `Fran\c cois`) must NOT weld into an
+% undefined `\ccois` control sequence when the recursive BibTeX session digests
+% the entry — the control-word-terminating space must survive. The AUTHOR field
+% renders "François"; every digested field (incl. the non-rendered MRREVIEWER)
+% must stay 0-error. Witness arXiv:2605.11579 (`MRREVIEWER = {Fran\c cois\
+% Digne}`). Was GENUINE-RUST-ONLY; same-host Perl 0.8.8 renders "François" too.
+\documentclass{article}
+\begin{document}
+Cited \cite{Digne93}.
+\bibliographystyle{alpha}
+\bibliography{bib_accent_review}
+\end{document}
