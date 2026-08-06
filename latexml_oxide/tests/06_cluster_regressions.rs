@@ -585,3 +585,38 @@ fn faked_space_is_sized_by_the_font_it_was_digested_in() {
     "the line-number skip must be sized by the line-number font:\n{xml}"
   );
 }
+
+/// `\mathversion{bold}` switches the MATH font, exactly like `\boldmath`
+/// (`plain_base.rs`) — Perl `latex_constructs.pool.ltxml` L5290-5297,
+/// `AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => N))`. It
+/// was using `MergeFont!`, which merges the current *text* `font` value, so
+/// `\mathversion{bold}` never reached the math font; and an unknown version fell
+/// to a silent `_ => {}` where Perl raises `Error('unexpected', …)`. The `{...}`
+/// groups isolate the `local` assignment so `p`/`s` stay plain math italic.
+#[test]
+fn mathversion_switches_the_mathfont_like_boldmath() {
+  let xml = convert_to_xml("tests/cluster_regressions/mathversion_bold_sets_mathfont.tex");
+  // q (grouped \mathversion{bold}) must match r (grouped \boldmath): both bold.
+  assert!(
+    xml.contains(r#"<XMTok font="bold italic" role="UNKNOWN">q</XMTok>"#),
+    "\\mathversion{{bold}} did not bold the math font — MergeFont! merges the \
+     TEXT font, leaving math un-bold:\n{xml}"
+  );
+  assert!(
+    xml.contains(r#"<XMTok font="bold italic" role="UNKNOWN">r</XMTok>"#),
+    "\\boldmath reference is not bold — the test premise is broken:\n{xml}"
+  );
+  // p and s, outside any bold group, must NOT be bold (clean local-scope reset).
+  assert!(
+    xml.contains(r#"<XMTok font="italic" role="UNKNOWN">p</XMTok>"#)
+      && xml.contains(r#"<XMTok font="italic" role="UNKNOWN">s</XMTok>"#),
+    "plain math outside the bold groups must stay italic, not bold:\n{xml}"
+  );
+
+  // An unknown version raises Error('unexpected', …) (Perl L5297); pre-fix the
+  // `_ => {}` arm swallowed it (0 errors), so "exactly 1 error" is the guard.
+  let _ = convert_expecting_errors(
+    "tests/cluster_regressions/mathversion_unknown_version_errors.tex",
+    1,
+  );
+}

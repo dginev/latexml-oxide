@@ -10640,7 +10640,6 @@ LoadDefinitions!({
       before_digest => { Digest!(font_toks.clone())?; });
   });
 
-  // Perl L5341-5348: \mathversion — switches between bold/normal math fonts
   // Perl L5373: \newfont{cmd}{fontname} — legacy LaTeX font command
   DefMacro!("\\newfont{}{}", "\\font#1=#2\\relax");
   // Perl L5375: \normalcolor — default no-op (overridden by color.sty)
@@ -10649,13 +10648,24 @@ LoadDefinitions!({
   // Perl L5364: \math@version default
   DefMacro!("\\math@version", "normal");
 
-  // Perl L5341-5348: \mathversion — switches between bold/normal math fonts
+  // Perl latex_constructs.pool.ltxml L5290-5297: \mathversion switches the
+  // MATHFONT — `AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold
+  // => N), 'local')` — exactly as \boldmath/\unboldmath do (plain_base.rs
+  // L748-762). It was using `MergeFont!`, which merges the current *text* `font`
+  // value, so `\mathversion{bold}` never reached the math font; and an unknown
+  // version fell to `_ => {}`, silently swallowed where Perl raises
+  // `Error('unexpected', …)`. Both now match Perl. (\mathversion has no
+  // `forbidMath`, unlike \boldmath/\unboldmath — Perl doesn't either.)
   DefPrimitive!("\\mathversion{}", sub[(version)] {
-    let v = version.to_string();
-    match v.trim() {
-      "bold" => { MergeFont!(forcebold => true); },
-      "normal" => { MergeFont!(forcebold => false); },
-      _ => {},
+    let set_forcebold = |bold: bool| {
+      let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(bold), ..Font::default() });
+      assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    };
+    match version.to_string().trim() {
+      "bold" => set_forcebold(true),
+      "normal" => set_forcebold(false),
+      other => { Error!("unexpected", other, s!("Unknown math version '{other}'")); },
     }
   });
 

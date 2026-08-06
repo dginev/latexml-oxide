@@ -1,0 +1,7 @@
+% \mathversion with an unknown version must raise Error('unexpected', …) —
+% Perl latex_constructs.pool.ltxml L5297. Pre-fix the `_ => {}` arm swallowed it
+% (0 errors, silent). Expected: exactly 1 error.
+\documentclass{article}
+\begin{document}
+$x$ \mathversion{wobble} $y$
+\end{document}

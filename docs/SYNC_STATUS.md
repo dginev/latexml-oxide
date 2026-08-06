@@ -1599,10 +1599,8 @@ turns the test red and forces an update. Each says so in its own doc comment.
   base rate: 2.0% of 547 sampled papers emit any font diagnostic at all, and the
   log census is a LOWER bound because a family-map miss on a mapped encoding is
   completely silent.
-- **`\mathversion{bold}` merges the text font instead of `mathfont`** — VERIFIED
-  still-broken 2026-08-05 (`latex_constructs.pool.ltxml` L5290 vs
-  `latex_constructs.rs:10653`). Rust's `\boldmath`/`\unboldmath` get this
-  right, so `\mathversion` is the odd one out. (Same item as sweep #5 below.)
+- **`\mathversion{bold}` merges the text font instead of `mathfont`** — ✅ **FIXED
+  2026-08-05** (see sweep #5 below).
 - **`\DeclareTextCommand`/`\ProvideTextCommand` don't install the encoding-dispatch
   chain** — VERIFIED still-broken 2026-08-05 (`latex_constructs.rs:6525`/`6544`).
   Kernel accents are masked by the dump, so only package-declared text commands
@@ -1665,13 +1663,14 @@ with file:line, not established facts — re-verify before acting**:
    `Info!("ignore", …)` on the already-defined branch — matching Perl
    `latex_constructs.pool.ltxml:2677`. The def is at `latex_constructs.rs:6998`
    (`:6957` is now `\new@internalmathalphabet`).
-5. **`\mathversion{bold}` merges the text font, not `mathfont`** — VERIFIED
-   still-broken 2026-08-05 (`:5290` vs `latex_constructs.rs:10653`:
-   `"bold" => MergeFont!(forcebold => true)` merges the TEXT `font` value, where
-   Perl `AssignValue(mathfont => …merge(forcebold))`); Rust's
-   `\boldmath`/`\unboldmath` (`plain_base.rs:747`) get this right, so
-   `\mathversion` is the odd one out. Unknown versions also swallowed
-   (`_ => {}`) instead of `Error`.
+5. **`\mathversion{bold}` merges the text font, not `mathfont`** — ✅ **FIXED
+   2026-08-05** (`latex_constructs.rs:10653`). It was `MergeFont!(forcebold =>
+   true)` (merges the current TEXT `font`), so math never went bold; now it does
+   `AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => N),
+   'local')` exactly like `\boldmath`/`\unboldmath` (Perl
+   `latex_constructs.pool.ltxml` L5290-5297), and an unknown version raises
+   `Error('unexpected', …)` instead of the silent `_ => {}`. Guard
+   `06_cluster_regressions::mathversion_switches_the_mathfont_like_boldmath`.
 6. **`\DeclareTextCommand`/`\ProvideTextCommand` don't install the encoding-dispatch
    chain** — VERIFIED still-broken 2026-08-05 (`:2584`/`:2598` vs
    `latex_constructs.rs:6525`/`6544`, which bind the bare `\cs` to the raw
