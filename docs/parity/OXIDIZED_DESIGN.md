@@ -9,7 +9,7 @@ This file is the **index + overview**. The detail lives in a themed family:
 
 | Theme file | What it holds |
 |---|---|
-| [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) | The numbered **Intentional Divergences from Perl** (`#1–#15`, `#17–#18`, `#19–#98`) + a brief Known-Upstream-Perl-Issues list. Code comments cite these as `OXIDIZED_DESIGN #N`. |
+| [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) | The numbered **Intentional Divergences from Perl** (`#1–#15`, `#17–#18`, `#19–#100`) + a brief Known-Upstream-Perl-Issues list. Code comments cite these as `OXIDIZED_DESIGN #N`. |
 | [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md) | Marpa math-parser design: `#16` design rules + the grammar-rule cluster `#7–#18`. |
 | [OXIDIZED_DESIGN_TYPES.md](OXIDIZED_DESIGN_TYPES.md) | Type-system improvements (behavior-neutral) + tactical internal pitfalls. |
 | [OXIDIZED_DESIGN_FUTURE_WORK.md](OXIDIZED_DESIGN_FUTURE_WORK.md) | Beyond-parity directions not yet built. |
@@ -18,7 +18,7 @@ This file is the **index + overview**. The detail lives in a themed family:
 > `.rs` comments reference them — so they are kept verbatim, which means three
 > quirks: (1) the numbers are **not globally unique** (the math cluster `#7–#18`
 > collides by value with divergences `#7–#18`); (2) a code-referenced number
-> resolves to the file above that owns that *topic* — most (`#1–#15`, `#19–#98`)
+> resolves to the file above that owns that *topic* — most (`#1–#15`, `#19–#100`)
 > are in DIVERGENCES, the math ones (incl. the code-referenced **`#18` = f(x)
 > "Speculative function application"**) are in MATH; (3) **`#76` is a retired
 > number** — its entry was consolidated into `#74` and the number was not

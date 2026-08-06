@@ -2,6 +2,15 @@
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
+  - **`geometry`-driven tcolorbox/tikz graphics size to the real page width, and
+    `\tcbline`-segmented boxes measure their height correctly.** Page geometry now
+    feeds the *measured SVG picture* width — never the reflowable HTML flow — so a
+    full-text-width figure keeps its PDF aspect and its panels sit side-by-side
+    instead of collapsing to 2:1; `\setkeys*` silently ignores geometry's
+    unimplemented keys. Separately, a text-mode `{...}` group that ends a paragraph
+    (as `\tcbline` does) now repacks that paragraph at digestion, so a segmented box
+    no longer over-counts its content height by a line per character.
+    (arXiv:2605.29955 Fig 1.)
   - **A conversion always writes `<jobname>.latexml.log`** — Perl `latexmlc`
     parity: with `--log` unset the log lands in the working directory
     (`latexml.log` for literal input), replacing any stale copy, and still

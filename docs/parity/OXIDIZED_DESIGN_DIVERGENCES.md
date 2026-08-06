@@ -3600,3 +3600,102 @@ render unchanged (`50_structure::autoref_test`).
 idiom → `(1.1)`/`(1.2)` while a sibling `section` autoref stays `section 1`);
 `50_structure::autoref_test` (default path unchanged). Witness: ar5iv #607
 (arXiv **2607.12124**).
+
+### 99. `geometry` sizes measured SVG graphics (not the HTML flow)
+
+**Perl** (`geometry.sty.ltxml` L27-59) makes every geometry macro a no-op —
+*"AND, in the end, they're all ignored!"* — so `\textwidth` keeps the class
+default (345pt) no matter what margins the document asks for. That is correct
+for the **reflowable HTML body**: page geometry is meaningless when the browser
+reflows the column. Rust keeps it for the flow — a `\rule{0.5\linewidth}`, a
+text minipage, `\includegraphics[width=\linewidth]` are all class-default-sized,
+byte-identical to Perl.
+
+**Rust divergence**: a *measured SVG graphic* that reads `\linewidth` — a
+`tcolorbox`, `tikzpicture`, or bare `pgfpicture` — is emitted as a fixed-size
+`<svg>` whose aspect ratio is **baked at conversion time**. Ignoring the real
+page width there makes such a box `0.495\linewidth = 0.495 × 345pt` instead of
+the `0.495 × 472pt` the PDF draws (letterpaper − the class's 2.5cm margins). The
+too-narrow interior over-wraps the content, ≈doubling the box height (aspect
+2:1 vs the PDF's ~4:1) and pushing text through the border. Witness
+**arXiv:2605.29955** Fig 1 (two side-by-side statement/proof cards). Perl has
+the same 2:1 boxes — it is a shared under-fidelity, not a Rust regression — so
+this is a beyond-Perl improvement toward the PDF, opted into by the user.
+
+**Mechanism** (`geometry_sty.rs`): parse the margin/paper keys (via `\setkeys*`,
+so the ~40 unimplemented keys are silently ignored — divergence-adjacent fix to
+`\setkeys*` in `keyval_sty.rs`), compute `\Gm@tw`/`\Gm@th`, and at
+`\AtBeginDocument` prepend an SVG-scope injector to `\tcolorbox` (the whole
+tcolorbox family funnels through it — `\newtcolorbox` envs call `\tcolorbox`),
+`\tikzpicture`, and `\pgfpicture`. The injector raises `\linewidth`/`\hsize`/
+`\columnwidth`/`\textwidth` to `\Gm@tw` **only when `\linewidth=\textwidth`**
+(top level) so a locally-reduced `\linewidth` (nesting minipage/parbox) is
+preserved, and only inside the picture's group so the surrounding HTML flow is
+never touched. Whole feature is gated on `geometry` being loaded — zero effect
+on documents that do not use it. A paper-class binding that omitted geometry as
+"visual-only" must now load it with the class's margins to benefit
+(`fairmeta_cls.rs`, which is why the boxes were 2:1 before).
+
+Because the panels become geometry-sized but the figure's float width
+(`arrange_panels`, div. #62 / WISDOM #62) is captured from `\hsize` in the HTML
+flow (345pt), the two bases would disagree and two `0.495\linewidth` boxes that
+sit side-by-side in the PDF would wrap to separate rows. `after_float`
+(`latex_constructs.rs`) therefore captures the **arrangement** float width as
+`\Gm@tw` when the float spans the full text width — the row threshold only, the
+float's HTML content stays class-default.
+
+**Known residual**: a `\ttfamily` code box (2605.29955 Fig 1 right card) can
+still poke a few px past its border — the browser's monospace is wider than
+cmtt10, forcing one extra wrap the engine did not measure. Shared with Perl
+(whose box is likewise near-overflow), orthogonal to geometry, and much reduced
+by this change (~22px → ~6px). Tracked with the foreignObject em-basis follow-up
+(WISDOM #47).
+
+**Guards**: `122_geometry_svg_sizing::geometry_sizes_svg_but_not_html_flow`
+(tcolorbox SVG widens to the geometry `\linewidth`; a sibling `\rule` stays
+class-default; the `--ltx-fo-*` em sizing survives).
+
+### 100. A text-mode `{...}` group that breaks a paragraph repacks the outer paragraph at digestion
+
+**Perl** `Core/Stomach.pm` `T_BEGIN` (`Engine/TeX_Box.pool` L30-42): a text-mode
+`{...}` flows its content FLAT into the enclosing list (`push($open);
+$stomach->digestUntil()`, no localization), so a `\par` inside the group
+`repackHorizontal`s the ENCLOSING paragraph. `computeBoxesSize` (Font.pm
+L667-682) then never sees a run of loose character boxes in a vertical list —
+every box it meets is already a packed paragraph `List`, a rule, or a vskip.
+
+**Rust** digests a text-mode `{...}` into a **localized** box-list — `tex_box.rs`
+`DefPrimitive!("{")` calls `digest_next_body`, returning the group as a `List`.
+The downstream pgf/tikz/box-capture bindings are built around that `List`
+representation, so a faithful flat `digestUntil` port is NOT viable — it regresses
+them engine-wide (the #99 tcolorbox path went 111→192pt on the experiment).
+Consequence of the localization: a `\par` INSIDE a text-mode group (e.g.
+`\tcbline@`'s `{\parskip\z@\par\nointerlineskip}`) repacks only the empty inner
+list, leaving the outer paragraph's characters LOOSE (no `mode` property).
+`computeBoxesSize` counted each loose glyph as its own vertical line — one
+`\baselineskip` per extra glyph — inflating tcolorbox/tikz SVG heights
+(`xxx\tcbline yyy` @ width=100pt measured **111.03pt** vs Perl **77.82pt**;
+arXiv:2605.29955 Fig 1).
+
+**Divergence** ("R2", `tex_box.rs` `{` primitive): reproduce Perl's END STATE
+without its flat digestion. When the `{` primitive is entered mid-paragraph
+(`MODE=horizontal`, vertical `BOUND_MODE`) and its digested body **resumed
+vertical mode** (contains a `\par` whatsit — a box whose `mode` ends in
+`vertical`), call `repack_horizontal()` after the group closes. That packs the
+outer paragraph's now-restored loose run into a `mode="horizontal"` `List` — the
+same structure Perl's flat `\par` would have produced — so `compute_boxes_size`
+runs the pure Perl one-line-per-box algorithm (no measurement-layer change) and
+lands on 77.82pt, an exact Perl match. The guard is narrow: ordinary inline
+`{...}`, math groups, and groups entered in vertical mode never satisfy both
+conditions, so only the rare `\par`-inside-a-text-group idiom is touched. (The
+box-list divergence has NO other observable symptom — the DOM absorption already
+coalesces the loose boxes into one `<ltx:p>`, verified; measurement was the sole
+consumer that didn't.)
+
+**Guard**: `123_tcbline_nointerlineskip::tcbline_box_not_over_measured`
+(`xxx\tcbline yyy` @ width=100pt sizes to < 90pt, i.e. Perl's 77.82 not the
+pre-fix 111.03). Do not confuse with #99's *known residual* (a `\ttfamily` box
+poking a few px past its border): that is the TeX-realm-vs-SVG **font impedance
+mismatch** (drawn shapes frozen at TeX-font metrics while only the foreignObject
+text reflows in the client), a structural limitation tracked with WISDOM #47 —
+orthogonal to this repack fix.
