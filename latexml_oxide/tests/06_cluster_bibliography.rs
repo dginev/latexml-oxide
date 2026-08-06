@@ -2023,3 +2023,30 @@ fn bib_entry_cloned_markup_keeps_its_id() {
     );
   }
 }
+
+/// Issue #410: a space-form cedilla accent `\c c` in a `.bib` field — the
+/// MathSciNet `Fran\c cois` idiom — must digest to "François", NOT weld into an
+/// undefined `\ccois` control sequence (the control-word-terminating space
+/// dropped). The recursive BibTeX session digests EVERY field of a cited entry
+/// including the non-rendered `MRREVIEWER`, so a weld surfaces as an
+/// `undefined:\ccois` Error that `convert_and_post_clean`'s 0-error gate
+/// catches; the rendered AUTHOR field pins the visible "François". This was
+/// GENUINE-RUST-ONLY at filing (same-host Perl 0.8.8 renders "François"); the
+/// expl3-cedilla catcode fix + the bib-absence campaign resolved it, and this
+/// guards the `.bib` field path specifically (the `expl3_accent_catcode` test
+/// only covers the INLINE accent, not the BibTeX session). Witness
+/// arXiv:2605.11579 (`MRREVIEWER = {Fran\c cois\ Digne}`, 9 errors + empty
+/// bibliography → 0 errors + 36 cited entries).
+#[test]
+fn cluster_bib_review_field_cedilla_not_welded() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_accent_review.tex");
+  assert!(
+    x.contains("François"),
+    "the .bib AUTHOR `Digne, Fran\\c cois` must render François:\n{x}"
+  );
+  assert!(
+    !x.contains("ccois"),
+    "the space-form accent `\\c c` welded into an undefined `\\ccois` \
+     (control-word-terminating space lost in the .bib field path):\n{x}"
+  );
+}
