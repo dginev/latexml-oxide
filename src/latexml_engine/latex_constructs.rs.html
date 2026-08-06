@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex_constructs.rs`."><title>latex_constructs.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (1ed2df61a 2026-08-04)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>latex_constructs.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-5"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::collections::VecDeque;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex_constructs.rs`."><title>latex_constructs.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-650bd49d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.0-nightly (7608eb7b0 2026-08-05)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-d4bd101e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>latex_constructs.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-5"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::collections::VecDeque;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>latexml_core::{
 <a href=#4 id=4 data-nosnippet>4</a>  alignment::template::TemplateConfig,
@@ -10640,724 +10640,734 @@
 <a href=#10640 id=10640 data-nosnippet>10640</a>      before_digest =&gt; { <span class="macro">Digest!</span>(font_toks.clone())<span class="question-mark">?</span>; });
 <a href=#10641 id=10641 data-nosnippet>10641</a>  });
 <a href=#10642 id=10642 data-nosnippet>10642</a>
-<a href=#10643 id=10643 data-nosnippet>10643</a>  <span class="comment">// Perl L5341-5348: \mathversion — switches between bold/normal math fonts
-<a href=#10644 id=10644 data-nosnippet>10644</a>  // Perl L5373: \newfont{cmd}{fontname} — legacy LaTeX font command
-<a href=#10645 id=10645 data-nosnippet>10645</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newfont{}{}"</span>, <span class="string">"\\font#1=#2\\relax"</span>);
-<a href=#10646 id=10646 data-nosnippet>10646</a>  <span class="comment">// Perl L5375: \normalcolor — default no-op (overridden by color.sty)
-<a href=#10647 id=10647 data-nosnippet>10647</a>  </span><span class="macro">Let!</span>(<span class="string">"\\normalcolor"</span>, <span class="string">"\\relax"</span>);
-<a href=#10648 id=10648 data-nosnippet>10648</a>
-<a href=#10649 id=10649 data-nosnippet>10649</a>  <span class="comment">// Perl L5364: \math@version default
-<a href=#10650 id=10650 data-nosnippet>10650</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\math@version"</span>, <span class="string">"normal"</span>);
-<a href=#10651 id=10651 data-nosnippet>10651</a>
-<a href=#10652 id=10652 data-nosnippet>10652</a>  <span class="comment">// Perl L5341-5348: \mathversion — switches between bold/normal math fonts
-<a href=#10653 id=10653 data-nosnippet>10653</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\mathversion{}"</span>, sub[(version)] {
-<a href=#10654 id=10654 data-nosnippet>10654</a>    <span class="kw">let </span>v = version.to_string();
-<a href=#10655 id=10655 data-nosnippet>10655</a>    <span class="kw">match </span>v.trim() {
-<a href=#10656 id=10656 data-nosnippet>10656</a>      <span class="string">"bold" </span>=&gt; { <span class="macro">MergeFont!</span>(forcebold =&gt; <span class="bool-val">true</span>); },
-<a href=#10657 id=10657 data-nosnippet>10657</a>      <span class="string">"normal" </span>=&gt; { <span class="macro">MergeFont!</span>(forcebold =&gt; <span class="bool-val">false</span>); },
-<a href=#10658 id=10658 data-nosnippet>10658</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#10659 id=10659 data-nosnippet>10659</a>    }
-<a href=#10660 id=10660 data-nosnippet>10660</a>  });
-<a href=#10661 id=10661 data-nosnippet>10661</a>
-<a href=#10662 id=10662 data-nosnippet>10662</a>  <span class="comment">//======================================================================
-<a href=#10663 id=10663 data-nosnippet>10663</a>  // C.15.3 Special Symbol
-<a href=#10664 id=10664 data-nosnippet>10664</a>  //======================================================================
-<a href=#10665 id=10665 data-nosnippet>10665</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\symbol{}"</span>, <span class="string">"\\char#1\\relax"</span>);
-<a href=#10666 id=10666 data-nosnippet>10666</a>
-<a href=#10667 id=10667 data-nosnippet>10667</a>  <span class="comment">// These in LaTeX, but not in the book...
-<a href=#10668 id=10668 data-nosnippet>10668</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textdollar"</span>, <span class="string">"$"</span>);
-<a href=#10669 id=10669 data-nosnippet>10669</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textemdash"</span>, <span class="string">"\u{2014}"</span>); <span class="comment">// EM DASH
-<a href=#10670 id=10670 data-nosnippet>10670</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textendash"</span>, <span class="string">"\u{2013}"</span>); <span class="comment">// EN DASH
-<a href=#10671 id=10671 data-nosnippet>10671</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textexclamdown"</span>, <span class="string">"\u{00A1}"</span>); <span class="comment">// INVERTED EXCLAMATION MARK
-<a href=#10672 id=10672 data-nosnippet>10672</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquestiondown"</span>, <span class="string">"\u{00BF}"</span>); <span class="comment">// INVERTED QUESTION MARK
-<a href=#10673 id=10673 data-nosnippet>10673</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquotedblleft"</span>, <span class="string">"\u{201C}"</span>); <span class="comment">// LEFT DOUBLE QUOTATION MARK
-<a href=#10674 id=10674 data-nosnippet>10674</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquotedblright"</span>, <span class="string">"\u{201D}"</span>); <span class="comment">// RIGHT DOUBLE QUOTATION MARK
-<a href=#10675 id=10675 data-nosnippet>10675</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquotedbl"</span>, <span class="string">"\""</span>); <span class="comment">// plain ascii DOUBLE QUOTATION
-<a href=#10676 id=10676 data-nosnippet>10676</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquoteleft"</span>, <span class="string">"\u{2018}"</span>); <span class="comment">// LEFT SINGLE QUOTATION MARK
-<a href=#10677 id=10677 data-nosnippet>10677</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquoteright"</span>, <span class="string">"\u{2019}"</span>); <span class="comment">// RIGHT SINGLE QUOTATION MARK
-<a href=#10678 id=10678 data-nosnippet>10678</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textsterling"</span>, <span class="string">"\u{00A3}"</span>); <span class="comment">// POUND SIGN
-<a href=#10679 id=10679 data-nosnippet>10679</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textasteriskcentered"</span>, <span class="string">"*"</span>);
-<a href=#10680 id=10680 data-nosnippet>10680</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbackslash"</span>, <span class="string">"\u{005C}"</span>); <span class="comment">// REVERSE SOLIDUS
-<a href=#10681 id=10681 data-nosnippet>10681</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textbar"</span>, <span class="string">"|"</span>);
-<a href=#10682 id=10682 data-nosnippet>10682</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbraceleft"</span>, <span class="string">"{"</span>);
-<a href=#10683 id=10683 data-nosnippet>10683</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbraceright"</span>, <span class="string">"}"</span>);
-<a href=#10684 id=10684 data-nosnippet>10684</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbullet"</span>, <span class="string">"\u{2022}"</span>); <span class="comment">// BULLET
-<a href=#10685 id=10685 data-nosnippet>10685</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textdaggerdbl"</span>, <span class="string">"\u{2021}"</span>); <span class="comment">// DOUBLE DAGGER
-<a href=#10686 id=10686 data-nosnippet>10686</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textdagger"</span>, <span class="string">"\u{2020}"</span>); <span class="comment">// DAGGER
-<a href=#10687 id=10687 data-nosnippet>10687</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textparagraph"</span>, <span class="string">"\u{00B6}"</span>); <span class="comment">// PILCROW SIGN
-<a href=#10688 id=10688 data-nosnippet>10688</a>  // \textperiodcentered defined in `latex_constructs_rust_only.rs` (Perl
-<a href=#10689 id=10689 data-nosnippet>10689</a>  // uses it but never defines it — Perl-side gap noted in rust_only.rs).
-<a href=#10690 id=10690 data-nosnippet>10690</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textsection"</span>, <span class="string">"\u{00A7}"</span>); <span class="comment">// SECTION SIGN
-<a href=#10691 id=10691 data-nosnippet>10691</a>  // Perl: DefPrimitive('\textcircled {}', sub { ... })
-<a href=#10692 id=10692 data-nosnippet>10692</a>  // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD
-<a href=#10693 id=10693 data-nosnippet>10693</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textcircled {}"</span>, sub[(arg)] {
-<a href=#10694 id=10694 data-nosnippet>10694</a>    <span class="kw">let </span>text = arg.to_string();
-<a href=#10695 id=10695 data-nosnippet>10695</a>    <span class="kw">let </span>content = unicode_enclosed_alphanumeric(<span class="kw-2">&amp;</span>text)
-<a href=#10696 id=10696 data-nosnippet>10696</a>      .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"{}\u{20DD}"</span>, text));
-<a href=#10697 id=10697 data-nosnippet>10697</a>    <span class="kw">let </span>in_math = lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>));
-<a href=#10698 id=10698 data-nosnippet>10698</a>    <span class="kw">let </span>is_number = !text.is_empty() &amp;&amp; text.chars().all(|c| c.is_ascii_digit());
-<a href=#10699 id=10699 data-nosnippet>10699</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
-<a href=#10700 id=10700 data-nosnippet>10700</a>    <span class="kw">if </span>in_math {
-<a href=#10701 id=10701 data-nosnippet>10701</a>      props.insert(<span class="string">"role"</span>, Stored::from(<span class="kw">if </span>is_number { <span class="string">"NUMBER" </span>} <span class="kw">else </span>{ <span class="string">"UNKNOWN" </span>}));
-<a href=#10702 id=10702 data-nosnippet>10702</a>      props.insert(<span class="string">"meaning"</span>, Stored::from(<span class="macro">format!</span>(<span class="string">"circled-{}"</span>, text)));
-<a href=#10703 id=10703 data-nosnippet>10703</a>    }
-<a href=#10704 id=10704 data-nosnippet>10704</a>    Tbox::new(pin(<span class="kw-2">&amp;</span>content), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#10705 id=10705 data-nosnippet>10705</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\textcircled"</span>), <span class="macro">vec!</span>[arg]),
-<a href=#10706 id=10706 data-nosnippet>10706</a>      props)
-<a href=#10707 id=10707 data-nosnippet>10707</a>  });
-<a href=#10708 id=10708 data-nosnippet>10708</a>  <span class="comment">// From latex_constructs.pool.ltxml
-<a href=#10709 id=10709 data-nosnippet>10709</a>  </span><span class="macro">DefAccent!</span>(<span class="string">"\\k"</span>, <span class="string">'\u{0328}'</span>, <span class="string">"\u{02DB}"</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING OGONEK &amp; OGONEK
-<a href=#10710 id=10710 data-nosnippet>10710</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textless"</span>, <span class="string">"&lt;"</span>);
-<a href=#10711 id=10711 data-nosnippet>10711</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textgreater"</span>, <span class="string">"&gt;"</span>);
-<a href=#10712 id=10712 data-nosnippet>10712</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textcopyright"</span>, <span class="string">"\u{00A9}"</span>); <span class="comment">// COPYRIGHT SIGN
-<a href=#10713 id=10713 data-nosnippet>10713</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textasciicircum"</span>, <span class="string">"^"</span>);
-<a href=#10714 id=10714 data-nosnippet>10714</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textasciitilde"</span>, <span class="string">"~"</span>);
-<a href=#10715 id=10715 data-nosnippet>10715</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textcompwordmark"</span>, <span class="string">""</span>); <span class="comment">// ???
-<a href=#10716 id=10716 data-nosnippet>10716</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textcapitalcompwordmark"</span>, <span class="string">""</span>); <span class="comment">// ???
-<a href=#10717 id=10717 data-nosnippet>10717</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textascendercompwordmark"</span>, <span class="string">""</span>); <span class="comment">// ???
-<a href=#10718 id=10718 data-nosnippet>10718</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textunderscore"</span>, <span class="string">"_"</span>);
-<a href=#10719 id=10719 data-nosnippet>10719</a>  <span class="comment">// SYMBOL FOR SPACE;  Not really the right symbol!
-<a href=#10720 id=10720 data-nosnippet>10720</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textvisiblespace"</span>, <span class="string">"\u{2423}"</span>);
-<a href=#10721 id=10721 data-nosnippet>10721</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textellipsis"</span>, <span class="string">"\u{2026}"</span>); <span class="comment">// HORIZONTAL ELLIPSIS
-<a href=#10722 id=10722 data-nosnippet>10722</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textregistered"</span>, <span class="string">"\u{00AE}"</span>); <span class="comment">// REGISTERED SIGN
-<a href=#10723 id=10723 data-nosnippet>10723</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\texttrademark"</span>, <span class="string">"\u{2122}"</span>); <span class="comment">// TRADE MARK SIGN
-<a href=#10724 id=10724 data-nosnippet>10724</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\textsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
-<a href=#10725 id=10725 data-nosnippet>10725</a>  <span class="comment">// Perl L5424-5425: locked variant for \@makefnmark
-<a href=#10726 id=10726 data-nosnippet>10726</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@textsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,
-<a href=#10727 id=10727 data-nosnippet>10727</a>    mode =&gt; <span class="string">"text"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#10728 id=10728 data-nosnippet>10728</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\textsubscript{}"</span>, <span class="string">"&lt;ltx:sub&gt;#1&lt;/ltx:sub&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
-<a href=#10729 id=10729 data-nosnippet>10729</a>  <span class="comment">// This is something coming from xetex/xelatex ? Why define this way?
-<a href=#10730 id=10730 data-nosnippet>10730</a>  //DefConstructor!("\\realsuperscript{}', "&lt;ltx:text yoffset='0.5em'
-<a href=#10731 id=10731 data-nosnippet>10731</a>  // _noautoclose='1'&gt;#1&lt;/ltx:text&gt;");
-<a href=#10732 id=10732 data-nosnippet>10732</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\realsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
-<a href=#10733 id=10733 data-nosnippet>10733</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textordfeminine"</span>, <span class="string">"\u{00AA}"</span>); <span class="comment">// FEMININE ORDINAL INDICATOR
-<a href=#10734 id=10734 data-nosnippet>10734</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textordmasculine"</span>, <span class="string">"\u{00BA}"</span>); <span class="comment">// MASCULINE ORDINAL INDICATOR
-<a href=#10735 id=10735 data-nosnippet>10735</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\SS"</span>, <span class="string">"SS"</span>); <span class="comment">// ?
-<a href=#10736 id=10736 data-nosnippet>10736</a>
-<a href=#10737 id=10737 data-nosnippet>10737</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dag"</span>, <span class="string">"\\ifmmode{\\dagger}\\else\\textdagger\\fi"</span>);
-<a href=#10738 id=10738 data-nosnippet>10738</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ddag"</span>, <span class="string">"\\ifmmode{\\ddagger}\\else\\textdaggerdbl\\fi"</span>);
-<a href=#10739 id=10739 data-nosnippet>10739</a>
-<a href=#10740 id=10740 data-nosnippet>10740</a>  <span class="comment">// Real LaTeX (latex.ltx) defines `\sqrtsign` as a MACRO: `\def\sqrtsign{\radical"270370\relax}`.
-<a href=#10741 id=10741 data-nosnippet>10741</a>  // `\meaning\sqrtsign` is therefore `macro:-&gt;\radical "270370\relax ` — note the TWO catcode-12
-<a href=#10742 id=10742 data-nosnippet>10742</a>  // backslashes (`\radical`, `\relax`). mdwmath's catcode-tricky `\sq@readrad #1"#2\#3` parses
-<a href=#10743 id=10743 data-nosnippet>10743</a>  // exactly this: #1 up to `"` = `macro:-&gt;\radical `, #2 up to the `\` of `\relax` = `270370`,
-<a href=#10744 id=10744 data-nosnippet>10744</a>  // #3 up to `\relax`. LaTeXML had `\sqrtsign` as a 1-arg square-root *constructor*, whose meaning
-<a href=#10745 id=10745 data-nosnippet>10745</a>  // lacked that structure → `\sq@readrad` ran away consuming `\endgroup`, leaving `\` at catcode-12
-<a href=#10746 id=10746 data-nosnippet>10746</a>  // and corrupting every later `\def` (43 `#`-to-Stomach leaks; ~1080 canvas papers; SHARED w/ Perl).
-<a href=#10747 id=10747 data-nosnippet>10747</a>  // Match real LaTeX. `\sqrt` does its own construction; nothing in core calls `\sqrtsign{…}`.
-<a href=#10748 id=10748 data-nosnippet>10748</a>  </span><span class="macro">TeX!</span>(<span class="string">r#"\def\sqrtsign{\radical"270370\relax}"#</span>);
+<a href=#10643 id=10643 data-nosnippet>10643</a>  <span class="comment">// Perl L5373: \newfont{cmd}{fontname} — legacy LaTeX font command
+<a href=#10644 id=10644 data-nosnippet>10644</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newfont{}{}"</span>, <span class="string">"\\font#1=#2\\relax"</span>);
+<a href=#10645 id=10645 data-nosnippet>10645</a>  <span class="comment">// Perl L5375: \normalcolor — default no-op (overridden by color.sty)
+<a href=#10646 id=10646 data-nosnippet>10646</a>  </span><span class="macro">Let!</span>(<span class="string">"\\normalcolor"</span>, <span class="string">"\\relax"</span>);
+<a href=#10647 id=10647 data-nosnippet>10647</a>
+<a href=#10648 id=10648 data-nosnippet>10648</a>  <span class="comment">// Perl L5364: \math@version default
+<a href=#10649 id=10649 data-nosnippet>10649</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\math@version"</span>, <span class="string">"normal"</span>);
+<a href=#10650 id=10650 data-nosnippet>10650</a>
+<a href=#10651 id=10651 data-nosnippet>10651</a>  <span class="comment">// Perl latex_constructs.pool.ltxml L5290-5297: \mathversion switches the
+<a href=#10652 id=10652 data-nosnippet>10652</a>  // MATHFONT — `AssignValue(mathfont =&gt; LookupValue('mathfont')-&gt;merge(forcebold
+<a href=#10653 id=10653 data-nosnippet>10653</a>  // =&gt; N), 'local')` — exactly as \boldmath/\unboldmath do (plain_base.rs
+<a href=#10654 id=10654 data-nosnippet>10654</a>  // L748-762). It was using `MergeFont!`, which merges the current *text* `font`
+<a href=#10655 id=10655 data-nosnippet>10655</a>  // value, so `\mathversion{bold}` never reached the math font; and an unknown
+<a href=#10656 id=10656 data-nosnippet>10656</a>  // version fell to `_ =&gt; {}`, silently swallowed where Perl raises
+<a href=#10657 id=10657 data-nosnippet>10657</a>  // `Error('unexpected', …)`. Both now match Perl. (\mathversion has no
+<a href=#10658 id=10658 data-nosnippet>10658</a>  // `forbidMath`, unlike \boldmath/\unboldmath — Perl doesn't either.)
+<a href=#10659 id=10659 data-nosnippet>10659</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\mathversion{}"</span>, sub[(version)] {
+<a href=#10660 id=10660 data-nosnippet>10660</a>    <span class="kw">let </span>set_forcebold = |bold: bool| {
+<a href=#10661 id=10661 data-nosnippet>10661</a>      <span class="kw">let </span>mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+<a href=#10662 id=10662 data-nosnippet>10662</a>      <span class="kw">let </span>merged = mf.merge(Font { forcebold: <span class="prelude-val">Some</span>(bold), ..Font::default() });
+<a href=#10663 id=10663 data-nosnippet>10663</a>      assign_value(<span class="string">"mathfont"</span>, Stored::Font(Rc::new(merged)), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#10664 id=10664 data-nosnippet>10664</a>    };
+<a href=#10665 id=10665 data-nosnippet>10665</a>    <span class="kw">match </span>version.to_string().trim() {
+<a href=#10666 id=10666 data-nosnippet>10666</a>      <span class="string">"bold" </span>=&gt; set_forcebold(<span class="bool-val">true</span>),
+<a href=#10667 id=10667 data-nosnippet>10667</a>      <span class="string">"normal" </span>=&gt; set_forcebold(<span class="bool-val">false</span>),
+<a href=#10668 id=10668 data-nosnippet>10668</a>      other =&gt; { <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, other, <span class="macro">s!</span>(<span class="string">"Unknown math version '{other}'"</span>)); },
+<a href=#10669 id=10669 data-nosnippet>10669</a>    }
+<a href=#10670 id=10670 data-nosnippet>10670</a>  });
+<a href=#10671 id=10671 data-nosnippet>10671</a>
+<a href=#10672 id=10672 data-nosnippet>10672</a>  <span class="comment">//======================================================================
+<a href=#10673 id=10673 data-nosnippet>10673</a>  // C.15.3 Special Symbol
+<a href=#10674 id=10674 data-nosnippet>10674</a>  //======================================================================
+<a href=#10675 id=10675 data-nosnippet>10675</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\symbol{}"</span>, <span class="string">"\\char#1\\relax"</span>);
+<a href=#10676 id=10676 data-nosnippet>10676</a>
+<a href=#10677 id=10677 data-nosnippet>10677</a>  <span class="comment">// These in LaTeX, but not in the book...
+<a href=#10678 id=10678 data-nosnippet>10678</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textdollar"</span>, <span class="string">"$"</span>);
+<a href=#10679 id=10679 data-nosnippet>10679</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textemdash"</span>, <span class="string">"\u{2014}"</span>); <span class="comment">// EM DASH
+<a href=#10680 id=10680 data-nosnippet>10680</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textendash"</span>, <span class="string">"\u{2013}"</span>); <span class="comment">// EN DASH
+<a href=#10681 id=10681 data-nosnippet>10681</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textexclamdown"</span>, <span class="string">"\u{00A1}"</span>); <span class="comment">// INVERTED EXCLAMATION MARK
+<a href=#10682 id=10682 data-nosnippet>10682</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquestiondown"</span>, <span class="string">"\u{00BF}"</span>); <span class="comment">// INVERTED QUESTION MARK
+<a href=#10683 id=10683 data-nosnippet>10683</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquotedblleft"</span>, <span class="string">"\u{201C}"</span>); <span class="comment">// LEFT DOUBLE QUOTATION MARK
+<a href=#10684 id=10684 data-nosnippet>10684</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquotedblright"</span>, <span class="string">"\u{201D}"</span>); <span class="comment">// RIGHT DOUBLE QUOTATION MARK
+<a href=#10685 id=10685 data-nosnippet>10685</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquotedbl"</span>, <span class="string">"\""</span>); <span class="comment">// plain ascii DOUBLE QUOTATION
+<a href=#10686 id=10686 data-nosnippet>10686</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquoteleft"</span>, <span class="string">"\u{2018}"</span>); <span class="comment">// LEFT SINGLE QUOTATION MARK
+<a href=#10687 id=10687 data-nosnippet>10687</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textquoteright"</span>, <span class="string">"\u{2019}"</span>); <span class="comment">// RIGHT SINGLE QUOTATION MARK
+<a href=#10688 id=10688 data-nosnippet>10688</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textsterling"</span>, <span class="string">"\u{00A3}"</span>); <span class="comment">// POUND SIGN
+<a href=#10689 id=10689 data-nosnippet>10689</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textasteriskcentered"</span>, <span class="string">"*"</span>);
+<a href=#10690 id=10690 data-nosnippet>10690</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbackslash"</span>, <span class="string">"\u{005C}"</span>); <span class="comment">// REVERSE SOLIDUS
+<a href=#10691 id=10691 data-nosnippet>10691</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textbar"</span>, <span class="string">"|"</span>);
+<a href=#10692 id=10692 data-nosnippet>10692</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbraceleft"</span>, <span class="string">"{"</span>);
+<a href=#10693 id=10693 data-nosnippet>10693</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbraceright"</span>, <span class="string">"}"</span>);
+<a href=#10694 id=10694 data-nosnippet>10694</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textbullet"</span>, <span class="string">"\u{2022}"</span>); <span class="comment">// BULLET
+<a href=#10695 id=10695 data-nosnippet>10695</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textdaggerdbl"</span>, <span class="string">"\u{2021}"</span>); <span class="comment">// DOUBLE DAGGER
+<a href=#10696 id=10696 data-nosnippet>10696</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textdagger"</span>, <span class="string">"\u{2020}"</span>); <span class="comment">// DAGGER
+<a href=#10697 id=10697 data-nosnippet>10697</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textparagraph"</span>, <span class="string">"\u{00B6}"</span>); <span class="comment">// PILCROW SIGN
+<a href=#10698 id=10698 data-nosnippet>10698</a>  // \textperiodcentered defined in `latex_constructs_rust_only.rs` (Perl
+<a href=#10699 id=10699 data-nosnippet>10699</a>  // uses it but never defines it — Perl-side gap noted in rust_only.rs).
+<a href=#10700 id=10700 data-nosnippet>10700</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textsection"</span>, <span class="string">"\u{00A7}"</span>); <span class="comment">// SECTION SIGN
+<a href=#10701 id=10701 data-nosnippet>10701</a>  // Perl: DefPrimitive('\textcircled {}', sub { ... })
+<a href=#10702 id=10702 data-nosnippet>10702</a>  // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD
+<a href=#10703 id=10703 data-nosnippet>10703</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textcircled {}"</span>, sub[(arg)] {
+<a href=#10704 id=10704 data-nosnippet>10704</a>    <span class="kw">let </span>text = arg.to_string();
+<a href=#10705 id=10705 data-nosnippet>10705</a>    <span class="kw">let </span>content = unicode_enclosed_alphanumeric(<span class="kw-2">&amp;</span>text)
+<a href=#10706 id=10706 data-nosnippet>10706</a>      .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"{}\u{20DD}"</span>, text));
+<a href=#10707 id=10707 data-nosnippet>10707</a>    <span class="kw">let </span>in_math = lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>));
+<a href=#10708 id=10708 data-nosnippet>10708</a>    <span class="kw">let </span>is_number = !text.is_empty() &amp;&amp; text.chars().all(|c| c.is_ascii_digit());
+<a href=#10709 id=10709 data-nosnippet>10709</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
+<a href=#10710 id=10710 data-nosnippet>10710</a>    <span class="kw">if </span>in_math {
+<a href=#10711 id=10711 data-nosnippet>10711</a>      props.insert(<span class="string">"role"</span>, Stored::from(<span class="kw">if </span>is_number { <span class="string">"NUMBER" </span>} <span class="kw">else </span>{ <span class="string">"UNKNOWN" </span>}));
+<a href=#10712 id=10712 data-nosnippet>10712</a>      props.insert(<span class="string">"meaning"</span>, Stored::from(<span class="macro">format!</span>(<span class="string">"circled-{}"</span>, text)));
+<a href=#10713 id=10713 data-nosnippet>10713</a>    }
+<a href=#10714 id=10714 data-nosnippet>10714</a>    Tbox::new(pin(<span class="kw-2">&amp;</span>content), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#10715 id=10715 data-nosnippet>10715</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\textcircled"</span>), <span class="macro">vec!</span>[arg]),
+<a href=#10716 id=10716 data-nosnippet>10716</a>      props)
+<a href=#10717 id=10717 data-nosnippet>10717</a>  });
+<a href=#10718 id=10718 data-nosnippet>10718</a>  <span class="comment">// From latex_constructs.pool.ltxml
+<a href=#10719 id=10719 data-nosnippet>10719</a>  </span><span class="macro">DefAccent!</span>(<span class="string">"\\k"</span>, <span class="string">'\u{0328}'</span>, <span class="string">"\u{02DB}"</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING OGONEK &amp; OGONEK
+<a href=#10720 id=10720 data-nosnippet>10720</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textless"</span>, <span class="string">"&lt;"</span>);
+<a href=#10721 id=10721 data-nosnippet>10721</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textgreater"</span>, <span class="string">"&gt;"</span>);
+<a href=#10722 id=10722 data-nosnippet>10722</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textcopyright"</span>, <span class="string">"\u{00A9}"</span>); <span class="comment">// COPYRIGHT SIGN
+<a href=#10723 id=10723 data-nosnippet>10723</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textasciicircum"</span>, <span class="string">"^"</span>);
+<a href=#10724 id=10724 data-nosnippet>10724</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textasciitilde"</span>, <span class="string">"~"</span>);
+<a href=#10725 id=10725 data-nosnippet>10725</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textcompwordmark"</span>, <span class="string">""</span>); <span class="comment">// ???
+<a href=#10726 id=10726 data-nosnippet>10726</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textcapitalcompwordmark"</span>, <span class="string">""</span>); <span class="comment">// ???
+<a href=#10727 id=10727 data-nosnippet>10727</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textascendercompwordmark"</span>, <span class="string">""</span>); <span class="comment">// ???
+<a href=#10728 id=10728 data-nosnippet>10728</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textunderscore"</span>, <span class="string">"_"</span>);
+<a href=#10729 id=10729 data-nosnippet>10729</a>  <span class="comment">// SYMBOL FOR SPACE;  Not really the right symbol!
+<a href=#10730 id=10730 data-nosnippet>10730</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textvisiblespace"</span>, <span class="string">"\u{2423}"</span>);
+<a href=#10731 id=10731 data-nosnippet>10731</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textellipsis"</span>, <span class="string">"\u{2026}"</span>); <span class="comment">// HORIZONTAL ELLIPSIS
+<a href=#10732 id=10732 data-nosnippet>10732</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textregistered"</span>, <span class="string">"\u{00AE}"</span>); <span class="comment">// REGISTERED SIGN
+<a href=#10733 id=10733 data-nosnippet>10733</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\texttrademark"</span>, <span class="string">"\u{2122}"</span>); <span class="comment">// TRADE MARK SIGN
+<a href=#10734 id=10734 data-nosnippet>10734</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\textsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
+<a href=#10735 id=10735 data-nosnippet>10735</a>  <span class="comment">// Perl L5424-5425: locked variant for \@makefnmark
+<a href=#10736 id=10736 data-nosnippet>10736</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@textsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,
+<a href=#10737 id=10737 data-nosnippet>10737</a>    mode =&gt; <span class="string">"text"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#10738 id=10738 data-nosnippet>10738</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\textsubscript{}"</span>, <span class="string">"&lt;ltx:sub&gt;#1&lt;/ltx:sub&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
+<a href=#10739 id=10739 data-nosnippet>10739</a>  <span class="comment">// This is something coming from xetex/xelatex ? Why define this way?
+<a href=#10740 id=10740 data-nosnippet>10740</a>  //DefConstructor!("\\realsuperscript{}', "&lt;ltx:text yoffset='0.5em'
+<a href=#10741 id=10741 data-nosnippet>10741</a>  // _noautoclose='1'&gt;#1&lt;/ltx:text&gt;");
+<a href=#10742 id=10742 data-nosnippet>10742</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\realsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
+<a href=#10743 id=10743 data-nosnippet>10743</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textordfeminine"</span>, <span class="string">"\u{00AA}"</span>); <span class="comment">// FEMININE ORDINAL INDICATOR
+<a href=#10744 id=10744 data-nosnippet>10744</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textordmasculine"</span>, <span class="string">"\u{00BA}"</span>); <span class="comment">// MASCULINE ORDINAL INDICATOR
+<a href=#10745 id=10745 data-nosnippet>10745</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\SS"</span>, <span class="string">"SS"</span>); <span class="comment">// ?
+<a href=#10746 id=10746 data-nosnippet>10746</a>
+<a href=#10747 id=10747 data-nosnippet>10747</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dag"</span>, <span class="string">"\\ifmmode{\\dagger}\\else\\textdagger\\fi"</span>);
+<a href=#10748 id=10748 data-nosnippet>10748</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ddag"</span>, <span class="string">"\\ifmmode{\\ddagger}\\else\\textdaggerdbl\\fi"</span>);
 <a href=#10749 id=10749 data-nosnippet>10749</a>
-<a href=#10750 id=10750 data-nosnippet>10750</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathparagraph"</span>, <span class="string">"\u{00B6}"</span>);
-<a href=#10751 id=10751 data-nosnippet>10751</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsection"</span>, <span class="string">"\u{00A7}"</span>);
-<a href=#10752 id=10752 data-nosnippet>10752</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathdollar"</span>, <span class="string">"$"</span>);
-<a href=#10753 id=10753 data-nosnippet>10753</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsterling"</span>, <span class="string">"\u{00A3}"</span>);
-<a href=#10754 id=10754 data-nosnippet>10754</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathunderscore"</span>, <span class="string">"_"</span>);
-<a href=#10755 id=10755 data-nosnippet>10755</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathellipsis"</span>, <span class="string">"\u{2026}"</span>);
-<a href=#10756 id=10756 data-nosnippet>10756</a>
-<a href=#10757 id=10757 data-nosnippet>10757</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml — glyph pieces that also work as delimiters
-<a href=#10758 id=10758 data-nosnippet>10758</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"|"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
-<a href=#10759 id=10759 data-nosnippet>10759</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2225}"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
-<a href=#10760 id=10760 data-nosnippet>10760</a>
-<a href=#10761 id=10761 data-nosnippet>10761</a>  <span class="comment">// The following are glyph "pieces"...
-<a href=#10762 id=10762 data-nosnippet>10762</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceld"</span>, <span class="string">"\u{239D}"</span>); <span class="comment">//   left brace down part
-<a href=#10763 id=10763 data-nosnippet>10763</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracelu"</span>, <span class="string">"\u{239B}"</span>); <span class="comment">//   left brace up part
-<a href=#10764 id=10764 data-nosnippet>10764</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracerd"</span>, <span class="string">"\u{23A0}"</span>); <span class="comment">//   right brace down part
-<a href=#10765 id=10765 data-nosnippet>10765</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceru"</span>, <span class="string">"\u{239E}"</span>); <span class="comment">//   right brace up part
+<a href=#10750 id=10750 data-nosnippet>10750</a>  <span class="comment">// Real LaTeX (latex.ltx) defines `\sqrtsign` as a MACRO: `\def\sqrtsign{\radical"270370\relax}`.
+<a href=#10751 id=10751 data-nosnippet>10751</a>  // `\meaning\sqrtsign` is therefore `macro:-&gt;\radical "270370\relax ` — note the TWO catcode-12
+<a href=#10752 id=10752 data-nosnippet>10752</a>  // backslashes (`\radical`, `\relax`). mdwmath's catcode-tricky `\sq@readrad #1"#2\#3` parses
+<a href=#10753 id=10753 data-nosnippet>10753</a>  // exactly this: #1 up to `"` = `macro:-&gt;\radical `, #2 up to the `\` of `\relax` = `270370`,
+<a href=#10754 id=10754 data-nosnippet>10754</a>  // #3 up to `\relax`. LaTeXML had `\sqrtsign` as a 1-arg square-root *constructor*, whose meaning
+<a href=#10755 id=10755 data-nosnippet>10755</a>  // lacked that structure → `\sq@readrad` ran away consuming `\endgroup`, leaving `\` at catcode-12
+<a href=#10756 id=10756 data-nosnippet>10756</a>  // and corrupting every later `\def` (43 `#`-to-Stomach leaks; ~1080 canvas papers; SHARED w/ Perl).
+<a href=#10757 id=10757 data-nosnippet>10757</a>  // Match real LaTeX. `\sqrt` does its own construction; nothing in core calls `\sqrtsign{…}`.
+<a href=#10758 id=10758 data-nosnippet>10758</a>  </span><span class="macro">TeX!</span>(<span class="string">r#"\def\sqrtsign{\radical"270370\relax}"#</span>);
+<a href=#10759 id=10759 data-nosnippet>10759</a>
+<a href=#10760 id=10760 data-nosnippet>10760</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathparagraph"</span>, <span class="string">"\u{00B6}"</span>);
+<a href=#10761 id=10761 data-nosnippet>10761</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsection"</span>, <span class="string">"\u{00A7}"</span>);
+<a href=#10762 id=10762 data-nosnippet>10762</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathdollar"</span>, <span class="string">"$"</span>);
+<a href=#10763 id=10763 data-nosnippet>10763</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsterling"</span>, <span class="string">"\u{00A3}"</span>);
+<a href=#10764 id=10764 data-nosnippet>10764</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathunderscore"</span>, <span class="string">"_"</span>);
+<a href=#10765 id=10765 data-nosnippet>10765</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathellipsis"</span>, <span class="string">"\u{2026}"</span>);
 <a href=#10766 id=10766 data-nosnippet>10766</a>
-<a href=#10767 id=10767 data-nosnippet>10767</a>  // Perl: plain_constructs.pool.ltxml
-<a href=#10768 id=10768 data-nosnippet>10768</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\cdotp"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{22C5}"</span>, role =&gt; <span class="string">"MULOP"</span>);
-<a href=#10769 id=10769 data-nosnippet>10769</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ldotp"</span>, <span class="prelude-val">None</span>, <span class="string">"."</span>, role =&gt; <span class="string">"MULOP"</span>);
-<a href=#10770 id=10770 data-nosnippet>10770</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml — intop/ointop with dynamic scriptpos/mathstyle
-<a href=#10771 id=10771 data-nosnippet>10771</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\intop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222B}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"integral"</span>,
-<a href=#10772 id=10772 data-nosnippet>10772</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
-<a href=#10773 id=10773 data-nosnippet>10773</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ointop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222E}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"contour-integral"</span>,
-<a href=#10774 id=10774 data-nosnippet>10774</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
-<a href=#10775 id=10775 data-nosnippet>10775</a>
-<a href=#10776 id=10776 data-nosnippet>10776</a>  <span class="comment">// WHat are these? They look like superscripted parentheses, or combining accents!
-<a href=#10777 id=10777 data-nosnippet>10777</a>  // \lhook
-<a href=#10778 id=10778 data-nosnippet>10778</a>  // \rhook
-<a href=#10779 id=10779 data-nosnippet>10779</a>  </span><span class="macro">Let!</span>(<span class="string">"\\gets"</span>, <span class="string">"\\leftarrow"</span>);
-<a href=#10780 id=10780 data-nosnippet>10780</a>
-<a href=#10781 id=10781 data-nosnippet>10781</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lmoustache"</span>, <span class="string">"\u{23B0}"</span>);
-<a href=#10782 id=10782 data-nosnippet>10782</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\rmoustache"</span>, <span class="string">"\u{23B1}"</span>);
-<a href=#10783 id=10783 data-nosnippet>10783</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml
-<a href=#10784 id=10784 data-nosnippet>10784</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\mapstochar"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{21A6}"</span>, role =&gt; <span class="string">"ARROW"</span>, meaning =&gt; <span class="string">"maps-to"</span>);
-<a href=#10785 id=10785 data-nosnippet>10785</a>  <span class="macro">DefMath!</span>(<span class="string">"\\owns"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{220B}"</span>, role =&gt; <span class="string">"RELOP"</span>, meaning =&gt; <span class="string">"contains"</span>);
-<a href=#10786 id=10786 data-nosnippet>10786</a>
-<a href=#10787 id=10787 data-nosnippet>10787</a>  <span class="comment">// \symbol lookup symbol in font by index?
-<a href=#10788 id=10788 data-nosnippet>10788</a>
-<a href=#10789 id=10789 data-nosnippet>10789</a>  // Perl: latex_constructs.pool.ltxml L5805
-<a href=#10790 id=10790 data-nosnippet>10790</a>  </span><span class="macro">Let!</span>(<span class="string">"\\mathalpha"</span>, <span class="string">"\\relax"</span>);
-<a href=#10791 id=10791 data-nosnippet>10791</a>
-<a href=#10792 id=10792 data-nosnippet>10792</a>  <span class="comment">// Perl latex_constructs.pool.ltxml L5937-5938:
-<a href=#10793 id=10793 data-nosnippet>10793</a>  // LaTeX now includes textcomp by default.
-<a href=#10794 id=10794 data-nosnippet>10794</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"textcomp"</span>);
-<a href=#10795 id=10795 data-nosnippet>10795</a>
-<a href=#10796 id=10796 data-nosnippet>10796</a>  <span class="comment">//======================================================================
-<a href=#10797 id=10797 data-nosnippet>10797</a>  // Perl latex_constructs.pool.ltxml L5941-5993: Case-changing
-<a href=#10798 id=10798 data-nosnippet>10798</a>  //======================================================================
-<a href=#10799 id=10799 data-nosnippet>10799</a>
-<a href=#10800 id=10800 data-nosnippet>10800</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#10801 id=10801 data-nosnippet>10801</a>    <span class="string">"\\@uclclist"</span>,
-<a href=#10802 id=10802 data-nosnippet>10802</a>    <span class="string">r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
-<a href=#10803 id=10803 data-nosnippet>10803</a>  </span>);
-<a href=#10804 id=10804 data-nosnippet>10804</a>
-<a href=#10805 id=10805 data-nosnippet>10805</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@prepare@case@mapping"</span>, {
-<a href=#10806 id=10806 data-nosnippet>10806</a>    assign_mapping(<span class="string">"text_uppercase"</span>, <span class="string">"\\i "</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"I"</span>)));
-<a href=#10807 id=10807 data-nosnippet>10807</a>    assign_mapping(<span class="string">"text_uppercase"</span>, <span class="string">"\\j "</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"J"</span>)));
-<a href=#10808 id=10808 data-nosnippet>10808</a>    <span class="comment">// Perl (latex_constructs.pool L5546-5550):
-<a href=#10809 id=10809 data-nosnippet>10809</a>    //   my @pairs = $STATE-&gt;lookupDefinition(T_CS('\@uclclist'))
-<a href=#10810 id=10810 data-nosnippet>10810</a>    //                     -&gt;getExpansion-&gt;unlist;
-<a href=#10811 id=10811 data-nosnippet>10811</a>    // — reads the RAW expansion body, NOT further expanded. Critical when
-<a href=#10812 id=10812 data-nosnippet>10812</a>    // the pair members (\ae, \oe, ...) are robust-wrapped: deep-expanding
-<a href=#10813 id=10813 data-nosnippet>10813</a>    // would unfold each to `\protect &lt;cs-munged&gt;`, shifting pair indices
-<a href=#10814 id=10814 data-nosnippet>10814</a>    // and mis-registering the case mapping.
-<a href=#10815 id=10815 data-nosnippet>10815</a>    </span><span class="kw">let </span>pairs: Vec&lt;Token&gt; = <span class="kw">match </span>lookup_definition_stored(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@uclclist"</span>))<span class="question-mark">? </span>{
-<a href=#10816 id=10816 data-nosnippet>10816</a>      <span class="prelude-val">Some</span>(Stored::Expandable(exp)) =&gt; <span class="kw">match </span>exp.get_expansion() {
-<a href=#10817 id=10817 data-nosnippet>10817</a>        <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) =&gt; tks.clone().unlist(),
-<a href=#10818 id=10818 data-nosnippet>10818</a>        <span class="kw">_ </span>=&gt; Vec::new(),
-<a href=#10819 id=10819 data-nosnippet>10819</a>      },
-<a href=#10820 id=10820 data-nosnippet>10820</a>      <span class="kw">_ </span>=&gt; Vec::new(),
-<a href=#10821 id=10821 data-nosnippet>10821</a>    };
-<a href=#10822 id=10822 data-nosnippet>10822</a>    <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
-<a href=#10823 id=10823 data-nosnippet>10823</a>    <span class="kw">while </span>i + <span class="number">1 </span>&lt; pairs.len() {
-<a href=#10824 id=10824 data-nosnippet>10824</a>      <span class="kw">let </span>lower = pairs[i];
-<a href=#10825 id=10825 data-nosnippet>10825</a>      <span class="kw">let </span>upper = pairs[i + <span class="number">1</span>];
-<a href=#10826 id=10826 data-nosnippet>10826</a>      <span class="kw">let </span>lower_key = lower.with_str(|s| <span class="macro">format!</span>(<span class="string">"{} "</span>, s));
-<a href=#10827 id=10827 data-nosnippet>10827</a>      <span class="kw">let </span>upper_key = upper.with_str(|s| <span class="macro">format!</span>(<span class="string">"{} "</span>, s));
-<a href=#10828 id=10828 data-nosnippet>10828</a>      assign_mapping(<span class="string">"text_uppercase"</span>, <span class="kw-2">&amp;</span>lower_key, <span class="prelude-val">Some</span>(upper));
-<a href=#10829 id=10829 data-nosnippet>10829</a>      assign_mapping(<span class="string">"text_lowercase"</span>, <span class="kw-2">&amp;</span>upper_key, <span class="prelude-val">Some</span>(lower));
-<a href=#10830 id=10830 data-nosnippet>10830</a>      i += <span class="number">2</span>;
-<a href=#10831 id=10831 data-nosnippet>10831</a>    }
-<a href=#10832 id=10832 data-nosnippet>10832</a>  });
-<a href=#10833 id=10833 data-nosnippet>10833</a>
-<a href=#10834 id=10834 data-nosnippet>10834</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\AddToNoCaseChangeList DefToken"</span>, sub[(cs)] {
-<a href=#10835 id=10835 data-nosnippet>10835</a>    <span class="kw">let </span>key = cs.with_str(|s| s.trim_end().to_string());
-<a href=#10836 id=10836 data-nosnippet>10836</a>    assign_mapping(<span class="string">"text_case_exclude"</span>, <span class="kw-2">&amp;</span>key, <span class="prelude-val">Some</span>(<span class="bool-val">true</span>));
-<a href=#10837 id=10837 data-nosnippet>10837</a>  });
-<a href=#10838 id=10838 data-nosnippet>10838</a>
-<a href=#10839 id=10839 data-nosnippet>10839</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NoCaseChange {}"</span>, <span class="string">"#1"</span>, robust =&gt; <span class="bool-val">true</span>);
-<a href=#10840 id=10840 data-nosnippet>10840</a>
-<a href=#10841 id=10841 data-nosnippet>10841</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@latex@changecase {} GeneralText"</span>, sub[(case, tokens)] {
-<a href=#10842 id=10842 data-nosnippet>10842</a>    <span class="kw">let </span>req_case = <span class="macro">Expand!</span>(case).to_string().to_lowercase();
-<a href=#10843 id=10843 data-nosnippet>10843</a>    <span class="prelude-val">Ok</span>(Tokens::new(lx_change_case_tokens(<span class="kw-2">&amp;</span>req_case, <span class="kw-2">&amp;</span>tokens)<span class="question-mark">?</span>))
-<a href=#10844 id=10844 data-nosnippet>10844</a>  });
-<a href=#10845 id=10845 data-nosnippet>10845</a>
-<a href=#10846 id=10846 data-nosnippet>10846</a>  <span class="macro">TeX!</span>(
-<a href=#10847 id=10847 data-nosnippet>10847</a>    <span class="string">r"\AddToNoCaseChangeList{\NoCaseChange}%
-<a href=#10848 id=10848 data-nosnippet>10848</a>\AddToNoCaseChangeList{\label}%
-<a href=#10849 id=10849 data-nosnippet>10849</a>\AddToNoCaseChangeList{\ref}%
-<a href=#10850 id=10850 data-nosnippet>10850</a>\AddToNoCaseChangeList{\cite}%
-<a href=#10851 id=10851 data-nosnippet>10851</a>\AddToNoCaseChangeList{\ensuremath}%
-<a href=#10852 id=10852 data-nosnippet>10852</a>\AddToNoCaseChangeList{\@ensuremath}%
-<a href=#10853 id=10853 data-nosnippet>10853</a>\AddToNoCaseChangeList{\thanks}%"
-<a href=#10854 id=10854 data-nosnippet>10854</a>  </span>);
+<a href=#10767 id=10767 data-nosnippet>10767</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml — glyph pieces that also work as delimiters
+<a href=#10768 id=10768 data-nosnippet>10768</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"|"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
+<a href=#10769 id=10769 data-nosnippet>10769</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2225}"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
+<a href=#10770 id=10770 data-nosnippet>10770</a>
+<a href=#10771 id=10771 data-nosnippet>10771</a>  <span class="comment">// The following are glyph "pieces"...
+<a href=#10772 id=10772 data-nosnippet>10772</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceld"</span>, <span class="string">"\u{239D}"</span>); <span class="comment">//   left brace down part
+<a href=#10773 id=10773 data-nosnippet>10773</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracelu"</span>, <span class="string">"\u{239B}"</span>); <span class="comment">//   left brace up part
+<a href=#10774 id=10774 data-nosnippet>10774</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracerd"</span>, <span class="string">"\u{23A0}"</span>); <span class="comment">//   right brace down part
+<a href=#10775 id=10775 data-nosnippet>10775</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceru"</span>, <span class="string">"\u{239E}"</span>); <span class="comment">//   right brace up part
+<a href=#10776 id=10776 data-nosnippet>10776</a>
+<a href=#10777 id=10777 data-nosnippet>10777</a>  // Perl: plain_constructs.pool.ltxml
+<a href=#10778 id=10778 data-nosnippet>10778</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\cdotp"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{22C5}"</span>, role =&gt; <span class="string">"MULOP"</span>);
+<a href=#10779 id=10779 data-nosnippet>10779</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ldotp"</span>, <span class="prelude-val">None</span>, <span class="string">"."</span>, role =&gt; <span class="string">"MULOP"</span>);
+<a href=#10780 id=10780 data-nosnippet>10780</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml — intop/ointop with dynamic scriptpos/mathstyle
+<a href=#10781 id=10781 data-nosnippet>10781</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\intop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222B}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"integral"</span>,
+<a href=#10782 id=10782 data-nosnippet>10782</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
+<a href=#10783 id=10783 data-nosnippet>10783</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ointop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222E}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"contour-integral"</span>,
+<a href=#10784 id=10784 data-nosnippet>10784</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
+<a href=#10785 id=10785 data-nosnippet>10785</a>
+<a href=#10786 id=10786 data-nosnippet>10786</a>  <span class="comment">// WHat are these? They look like superscripted parentheses, or combining accents!
+<a href=#10787 id=10787 data-nosnippet>10787</a>  // \lhook
+<a href=#10788 id=10788 data-nosnippet>10788</a>  // \rhook
+<a href=#10789 id=10789 data-nosnippet>10789</a>  </span><span class="macro">Let!</span>(<span class="string">"\\gets"</span>, <span class="string">"\\leftarrow"</span>);
+<a href=#10790 id=10790 data-nosnippet>10790</a>
+<a href=#10791 id=10791 data-nosnippet>10791</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lmoustache"</span>, <span class="string">"\u{23B0}"</span>);
+<a href=#10792 id=10792 data-nosnippet>10792</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\rmoustache"</span>, <span class="string">"\u{23B1}"</span>);
+<a href=#10793 id=10793 data-nosnippet>10793</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml
+<a href=#10794 id=10794 data-nosnippet>10794</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\mapstochar"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{21A6}"</span>, role =&gt; <span class="string">"ARROW"</span>, meaning =&gt; <span class="string">"maps-to"</span>);
+<a href=#10795 id=10795 data-nosnippet>10795</a>  <span class="macro">DefMath!</span>(<span class="string">"\\owns"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{220B}"</span>, role =&gt; <span class="string">"RELOP"</span>, meaning =&gt; <span class="string">"contains"</span>);
+<a href=#10796 id=10796 data-nosnippet>10796</a>
+<a href=#10797 id=10797 data-nosnippet>10797</a>  <span class="comment">// \symbol lookup symbol in font by index?
+<a href=#10798 id=10798 data-nosnippet>10798</a>
+<a href=#10799 id=10799 data-nosnippet>10799</a>  // Perl: latex_constructs.pool.ltxml L5805
+<a href=#10800 id=10800 data-nosnippet>10800</a>  </span><span class="macro">Let!</span>(<span class="string">"\\mathalpha"</span>, <span class="string">"\\relax"</span>);
+<a href=#10801 id=10801 data-nosnippet>10801</a>
+<a href=#10802 id=10802 data-nosnippet>10802</a>  <span class="comment">// Perl latex_constructs.pool.ltxml L5937-5938:
+<a href=#10803 id=10803 data-nosnippet>10803</a>  // LaTeX now includes textcomp by default.
+<a href=#10804 id=10804 data-nosnippet>10804</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"textcomp"</span>);
+<a href=#10805 id=10805 data-nosnippet>10805</a>
+<a href=#10806 id=10806 data-nosnippet>10806</a>  <span class="comment">//======================================================================
+<a href=#10807 id=10807 data-nosnippet>10807</a>  // Perl latex_constructs.pool.ltxml L5941-5993: Case-changing
+<a href=#10808 id=10808 data-nosnippet>10808</a>  //======================================================================
+<a href=#10809 id=10809 data-nosnippet>10809</a>
+<a href=#10810 id=10810 data-nosnippet>10810</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#10811 id=10811 data-nosnippet>10811</a>    <span class="string">"\\@uclclist"</span>,
+<a href=#10812 id=10812 data-nosnippet>10812</a>    <span class="string">r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
+<a href=#10813 id=10813 data-nosnippet>10813</a>  </span>);
+<a href=#10814 id=10814 data-nosnippet>10814</a>
+<a href=#10815 id=10815 data-nosnippet>10815</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@prepare@case@mapping"</span>, {
+<a href=#10816 id=10816 data-nosnippet>10816</a>    assign_mapping(<span class="string">"text_uppercase"</span>, <span class="string">"\\i "</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"I"</span>)));
+<a href=#10817 id=10817 data-nosnippet>10817</a>    assign_mapping(<span class="string">"text_uppercase"</span>, <span class="string">"\\j "</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"J"</span>)));
+<a href=#10818 id=10818 data-nosnippet>10818</a>    <span class="comment">// Perl (latex_constructs.pool L5546-5550):
+<a href=#10819 id=10819 data-nosnippet>10819</a>    //   my @pairs = $STATE-&gt;lookupDefinition(T_CS('\@uclclist'))
+<a href=#10820 id=10820 data-nosnippet>10820</a>    //                     -&gt;getExpansion-&gt;unlist;
+<a href=#10821 id=10821 data-nosnippet>10821</a>    // — reads the RAW expansion body, NOT further expanded. Critical when
+<a href=#10822 id=10822 data-nosnippet>10822</a>    // the pair members (\ae, \oe, ...) are robust-wrapped: deep-expanding
+<a href=#10823 id=10823 data-nosnippet>10823</a>    // would unfold each to `\protect &lt;cs-munged&gt;`, shifting pair indices
+<a href=#10824 id=10824 data-nosnippet>10824</a>    // and mis-registering the case mapping.
+<a href=#10825 id=10825 data-nosnippet>10825</a>    </span><span class="kw">let </span>pairs: Vec&lt;Token&gt; = <span class="kw">match </span>lookup_definition_stored(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@uclclist"</span>))<span class="question-mark">? </span>{
+<a href=#10826 id=10826 data-nosnippet>10826</a>      <span class="prelude-val">Some</span>(Stored::Expandable(exp)) =&gt; <span class="kw">match </span>exp.get_expansion() {
+<a href=#10827 id=10827 data-nosnippet>10827</a>        <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) =&gt; tks.clone().unlist(),
+<a href=#10828 id=10828 data-nosnippet>10828</a>        <span class="kw">_ </span>=&gt; Vec::new(),
+<a href=#10829 id=10829 data-nosnippet>10829</a>      },
+<a href=#10830 id=10830 data-nosnippet>10830</a>      <span class="kw">_ </span>=&gt; Vec::new(),
+<a href=#10831 id=10831 data-nosnippet>10831</a>    };
+<a href=#10832 id=10832 data-nosnippet>10832</a>    <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#10833 id=10833 data-nosnippet>10833</a>    <span class="kw">while </span>i + <span class="number">1 </span>&lt; pairs.len() {
+<a href=#10834 id=10834 data-nosnippet>10834</a>      <span class="kw">let </span>lower = pairs[i];
+<a href=#10835 id=10835 data-nosnippet>10835</a>      <span class="kw">let </span>upper = pairs[i + <span class="number">1</span>];
+<a href=#10836 id=10836 data-nosnippet>10836</a>      <span class="kw">let </span>lower_key = lower.with_str(|s| <span class="macro">format!</span>(<span class="string">"{} "</span>, s));
+<a href=#10837 id=10837 data-nosnippet>10837</a>      <span class="kw">let </span>upper_key = upper.with_str(|s| <span class="macro">format!</span>(<span class="string">"{} "</span>, s));
+<a href=#10838 id=10838 data-nosnippet>10838</a>      assign_mapping(<span class="string">"text_uppercase"</span>, <span class="kw-2">&amp;</span>lower_key, <span class="prelude-val">Some</span>(upper));
+<a href=#10839 id=10839 data-nosnippet>10839</a>      assign_mapping(<span class="string">"text_lowercase"</span>, <span class="kw-2">&amp;</span>upper_key, <span class="prelude-val">Some</span>(lower));
+<a href=#10840 id=10840 data-nosnippet>10840</a>      i += <span class="number">2</span>;
+<a href=#10841 id=10841 data-nosnippet>10841</a>    }
+<a href=#10842 id=10842 data-nosnippet>10842</a>  });
+<a href=#10843 id=10843 data-nosnippet>10843</a>
+<a href=#10844 id=10844 data-nosnippet>10844</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\AddToNoCaseChangeList DefToken"</span>, sub[(cs)] {
+<a href=#10845 id=10845 data-nosnippet>10845</a>    <span class="kw">let </span>key = cs.with_str(|s| s.trim_end().to_string());
+<a href=#10846 id=10846 data-nosnippet>10846</a>    assign_mapping(<span class="string">"text_case_exclude"</span>, <span class="kw-2">&amp;</span>key, <span class="prelude-val">Some</span>(<span class="bool-val">true</span>));
+<a href=#10847 id=10847 data-nosnippet>10847</a>  });
+<a href=#10848 id=10848 data-nosnippet>10848</a>
+<a href=#10849 id=10849 data-nosnippet>10849</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NoCaseChange {}"</span>, <span class="string">"#1"</span>, robust =&gt; <span class="bool-val">true</span>);
+<a href=#10850 id=10850 data-nosnippet>10850</a>
+<a href=#10851 id=10851 data-nosnippet>10851</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@latex@changecase {} GeneralText"</span>, sub[(case, tokens)] {
+<a href=#10852 id=10852 data-nosnippet>10852</a>    <span class="kw">let </span>req_case = <span class="macro">Expand!</span>(case).to_string().to_lowercase();
+<a href=#10853 id=10853 data-nosnippet>10853</a>    <span class="prelude-val">Ok</span>(Tokens::new(lx_change_case_tokens(<span class="kw-2">&amp;</span>req_case, <span class="kw-2">&amp;</span>tokens)<span class="question-mark">?</span>))
+<a href=#10854 id=10854 data-nosnippet>10854</a>  });
 <a href=#10855 id=10855 data-nosnippet>10855</a>
-<a href=#10856 id=10856 data-nosnippet>10856</a>  <span class="comment">// Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase
-<a href=#10857 id=10857 data-nosnippet>10857</a>  // Pre-define the UTF@*octets@noexpand CSes that the bodies below
-<a href=#10858 id=10858 data-nosnippet>10858</a>  // unconditionally `\let` to `\@empty`. Without these the `\edef`
-<a href=#10859 id=10859 data-nosnippet>10859</a>  // partial-expansion auto-defines them as `&lt;ltx:ERROR/&gt;` (unexpected
-<a href=#10860 id=10860 data-nosnippet>10860</a>  // for a guard meant to prevent expansion within case-change). Real
-<a href=#10861 id=10861 data-nosnippet>10861</a>  // TeX's `\let&lt;undef&gt;\@empty` is a no-op without error; mirror that
-<a href=#10862 id=10862 data-nosnippet>10862</a>  // by stubbing them as `\@empty` ahead of `\edef`. inputenc.sty
-<a href=#10863 id=10863 data-nosnippet>10863</a>  // overrides these when utf8 encoding is active.
-<a href=#10864 id=10864 data-nosnippet>10864</a>  </span><span class="macro">Let!</span>(<span class="string">"\\UTF@two@octets@noexpand"</span>, <span class="string">"\\@empty"</span>);
-<a href=#10865 id=10865 data-nosnippet>10865</a>  <span class="macro">Let!</span>(<span class="string">"\\UTF@three@octets@noexpand"</span>, <span class="string">"\\@empty"</span>);
-<a href=#10866 id=10866 data-nosnippet>10866</a>  <span class="macro">Let!</span>(<span class="string">"\\UTF@four@octets@noexpand"</span>, <span class="string">"\\@empty"</span>);
-<a href=#10867 id=10867 data-nosnippet>10867</a>  <span class="macro">TeX!</span>(
-<a href=#10868 id=10868 data-nosnippet>10868</a>    <span class="string">r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
-<a href=#10869 id=10869 data-nosnippet>10869</a>  \lx@prepare@case@mapping%
-<a href=#10870 id=10870 data-nosnippet>10870</a>  \def\({$}\let\)\(%
-<a href=#10871 id=10871 data-nosnippet>10871</a>  \def\i{I}\def\j{J}%
-<a href=#10872 id=10872 data-nosnippet>10872</a>  \let\UTF@two@octets@noexpand\@empty
-<a href=#10873 id=10873 data-nosnippet>10873</a>  \let\UTF@three@octets@noexpand\@empty
-<a href=#10874 id=10874 data-nosnippet>10874</a>  \let\UTF@four@octets@noexpand\@empty
-<a href=#10875 id=10875 data-nosnippet>10875</a>  \edef\reserved@a{\lx@latex@changecase{upper}{#1}}%
-<a href=#10876 id=10876 data-nosnippet>10876</a>  \reserved@a
-<a href=#10877 id=10877 data-nosnippet>10877</a>}}
-<a href=#10878 id=10878 data-nosnippet>10878</a>\DeclareRobustCommand{\MakeLowercase}[1]{{%
+<a href=#10856 id=10856 data-nosnippet>10856</a>  <span class="macro">TeX!</span>(
+<a href=#10857 id=10857 data-nosnippet>10857</a>    <span class="string">r"\AddToNoCaseChangeList{\NoCaseChange}%
+<a href=#10858 id=10858 data-nosnippet>10858</a>\AddToNoCaseChangeList{\label}%
+<a href=#10859 id=10859 data-nosnippet>10859</a>\AddToNoCaseChangeList{\ref}%
+<a href=#10860 id=10860 data-nosnippet>10860</a>\AddToNoCaseChangeList{\cite}%
+<a href=#10861 id=10861 data-nosnippet>10861</a>\AddToNoCaseChangeList{\ensuremath}%
+<a href=#10862 id=10862 data-nosnippet>10862</a>\AddToNoCaseChangeList{\@ensuremath}%
+<a href=#10863 id=10863 data-nosnippet>10863</a>\AddToNoCaseChangeList{\thanks}%"
+<a href=#10864 id=10864 data-nosnippet>10864</a>  </span>);
+<a href=#10865 id=10865 data-nosnippet>10865</a>
+<a href=#10866 id=10866 data-nosnippet>10866</a>  <span class="comment">// Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase
+<a href=#10867 id=10867 data-nosnippet>10867</a>  // Pre-define the UTF@*octets@noexpand CSes that the bodies below
+<a href=#10868 id=10868 data-nosnippet>10868</a>  // unconditionally `\let` to `\@empty`. Without these the `\edef`
+<a href=#10869 id=10869 data-nosnippet>10869</a>  // partial-expansion auto-defines them as `&lt;ltx:ERROR/&gt;` (unexpected
+<a href=#10870 id=10870 data-nosnippet>10870</a>  // for a guard meant to prevent expansion within case-change). Real
+<a href=#10871 id=10871 data-nosnippet>10871</a>  // TeX's `\let&lt;undef&gt;\@empty` is a no-op without error; mirror that
+<a href=#10872 id=10872 data-nosnippet>10872</a>  // by stubbing them as `\@empty` ahead of `\edef`. inputenc.sty
+<a href=#10873 id=10873 data-nosnippet>10873</a>  // overrides these when utf8 encoding is active.
+<a href=#10874 id=10874 data-nosnippet>10874</a>  </span><span class="macro">Let!</span>(<span class="string">"\\UTF@two@octets@noexpand"</span>, <span class="string">"\\@empty"</span>);
+<a href=#10875 id=10875 data-nosnippet>10875</a>  <span class="macro">Let!</span>(<span class="string">"\\UTF@three@octets@noexpand"</span>, <span class="string">"\\@empty"</span>);
+<a href=#10876 id=10876 data-nosnippet>10876</a>  <span class="macro">Let!</span>(<span class="string">"\\UTF@four@octets@noexpand"</span>, <span class="string">"\\@empty"</span>);
+<a href=#10877 id=10877 data-nosnippet>10877</a>  <span class="macro">TeX!</span>(
+<a href=#10878 id=10878 data-nosnippet>10878</a>    <span class="string">r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
 <a href=#10879 id=10879 data-nosnippet>10879</a>  \lx@prepare@case@mapping%
 <a href=#10880 id=10880 data-nosnippet>10880</a>  \def\({$}\let\)\(%
-<a href=#10881 id=10881 data-nosnippet>10881</a>  \let\UTF@two@octets@noexpand\@empty
-<a href=#10882 id=10882 data-nosnippet>10882</a>  \let\UTF@three@octets@noexpand\@empty
-<a href=#10883 id=10883 data-nosnippet>10883</a>  \let\UTF@four@octets@noexpand\@empty
-<a href=#10884 id=10884 data-nosnippet>10884</a>  \edef\reserved@a{\lx@latex@changecase{lower}{#1}}%
-<a href=#10885 id=10885 data-nosnippet>10885</a>  \reserved@a
-<a href=#10886 id=10886 data-nosnippet>10886</a>}}
-<a href=#10887 id=10887 data-nosnippet>10887</a>\DeclareRobustCommand{\MakeTitlecase}[1]{{%
-<a href=#10888 id=10888 data-nosnippet>10888</a>  \lx@prepare@case@mapping%
-<a href=#10889 id=10889 data-nosnippet>10889</a>  \def\({$}\let\)\(%
-<a href=#10890 id=10890 data-nosnippet>10890</a>  \let\UTF@two@octets@noexpand\@empty
-<a href=#10891 id=10891 data-nosnippet>10891</a>  \let\UTF@three@octets@noexpand\@empty
-<a href=#10892 id=10892 data-nosnippet>10892</a>  \let\UTF@four@octets@noexpand\@empty
-<a href=#10893 id=10893 data-nosnippet>10893</a>  \edef\reserved@a{\lx@latex@changecase{sentence}{#1}}%
-<a href=#10894 id=10894 data-nosnippet>10894</a>  \reserved@a
-<a href=#10895 id=10895 data-nosnippet>10895</a>}}
-<a href=#10896 id=10896 data-nosnippet>10896</a>\protected@edef\MakeUppercase#1{\MakeUppercase{#1}}
-<a href=#10897 id=10897 data-nosnippet>10897</a>\protected@edef\MakeLowercase#1{\MakeLowercase{#1}}
-<a href=#10898 id=10898 data-nosnippet>10898</a>\protected@edef\MakeTitlecase#1{\MakeTitlecase{#1}}"
-<a href=#10899 id=10899 data-nosnippet>10899</a>  </span>);
-<a href=#10900 id=10900 data-nosnippet>10900</a>
-<a href=#10901 id=10901 data-nosnippet>10901</a>  <span class="comment">// Perl L5913,5916: fixltx2e defaults
-<a href=#10902 id=10902 data-nosnippet>10902</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eminnershape"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#10903 id=10903 data-nosnippet>10903</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\TextOrMath{}{}"</span>, <span class="string">"\\ifmmode#2\\else#1\\fi"</span>);
-<a href=#10904 id=10904 data-nosnippet>10904</a>
-<a href=#10905 id=10905 data-nosnippet>10905</a>  <span class="comment">//======================================================================
-<a href=#10906 id=10906 data-nosnippet>10906</a>  // Semi-undocumented commands
-<a href=#10907 id=10907 data-nosnippet>10907</a>  // Perl: latex_constructs.pool.ltxml various locations
-<a href=#10908 id=10908 data-nosnippet>10908</a>  //======================================================================
-<a href=#10909 id=10909 data-nosnippet>10909</a>
-<a href=#10910 id=10910 data-nosnippet>10910</a>  // Hacky version matches multiple chars! but does NOT expand
-<a href=#10911 id=10911 data-nosnippet>10911</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@ifnext@n {}{}{}"</span>, sub[(tokens,if_toks,else_toks)] {
-<a href=#10912 id=10912 data-nosnippet>10912</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = VecDeque::from(tokens.unlist());
-<a href=#10913 id=10913 data-nosnippet>10913</a>    <span class="kw">let </span><span class="kw-2">mut </span>read = Vec::new();
+<a href=#10881 id=10881 data-nosnippet>10881</a>  \def\i{I}\def\j{J}%
+<a href=#10882 id=10882 data-nosnippet>10882</a>  \let\UTF@two@octets@noexpand\@empty
+<a href=#10883 id=10883 data-nosnippet>10883</a>  \let\UTF@three@octets@noexpand\@empty
+<a href=#10884 id=10884 data-nosnippet>10884</a>  \let\UTF@four@octets@noexpand\@empty
+<a href=#10885 id=10885 data-nosnippet>10885</a>  \edef\reserved@a{\lx@latex@changecase{upper}{#1}}%
+<a href=#10886 id=10886 data-nosnippet>10886</a>  \reserved@a
+<a href=#10887 id=10887 data-nosnippet>10887</a>}}
+<a href=#10888 id=10888 data-nosnippet>10888</a>\DeclareRobustCommand{\MakeLowercase}[1]{{%
+<a href=#10889 id=10889 data-nosnippet>10889</a>  \lx@prepare@case@mapping%
+<a href=#10890 id=10890 data-nosnippet>10890</a>  \def\({$}\let\)\(%
+<a href=#10891 id=10891 data-nosnippet>10891</a>  \let\UTF@two@octets@noexpand\@empty
+<a href=#10892 id=10892 data-nosnippet>10892</a>  \let\UTF@three@octets@noexpand\@empty
+<a href=#10893 id=10893 data-nosnippet>10893</a>  \let\UTF@four@octets@noexpand\@empty
+<a href=#10894 id=10894 data-nosnippet>10894</a>  \edef\reserved@a{\lx@latex@changecase{lower}{#1}}%
+<a href=#10895 id=10895 data-nosnippet>10895</a>  \reserved@a
+<a href=#10896 id=10896 data-nosnippet>10896</a>}}
+<a href=#10897 id=10897 data-nosnippet>10897</a>\DeclareRobustCommand{\MakeTitlecase}[1]{{%
+<a href=#10898 id=10898 data-nosnippet>10898</a>  \lx@prepare@case@mapping%
+<a href=#10899 id=10899 data-nosnippet>10899</a>  \def\({$}\let\)\(%
+<a href=#10900 id=10900 data-nosnippet>10900</a>  \let\UTF@two@octets@noexpand\@empty
+<a href=#10901 id=10901 data-nosnippet>10901</a>  \let\UTF@three@octets@noexpand\@empty
+<a href=#10902 id=10902 data-nosnippet>10902</a>  \let\UTF@four@octets@noexpand\@empty
+<a href=#10903 id=10903 data-nosnippet>10903</a>  \edef\reserved@a{\lx@latex@changecase{sentence}{#1}}%
+<a href=#10904 id=10904 data-nosnippet>10904</a>  \reserved@a
+<a href=#10905 id=10905 data-nosnippet>10905</a>}}
+<a href=#10906 id=10906 data-nosnippet>10906</a>\protected@edef\MakeUppercase#1{\MakeUppercase{#1}}
+<a href=#10907 id=10907 data-nosnippet>10907</a>\protected@edef\MakeLowercase#1{\MakeLowercase{#1}}
+<a href=#10908 id=10908 data-nosnippet>10908</a>\protected@edef\MakeTitlecase#1{\MakeTitlecase{#1}}"
+<a href=#10909 id=10909 data-nosnippet>10909</a>  </span>);
+<a href=#10910 id=10910 data-nosnippet>10910</a>
+<a href=#10911 id=10911 data-nosnippet>10911</a>  <span class="comment">// Perl L5913,5916: fixltx2e defaults
+<a href=#10912 id=10912 data-nosnippet>10912</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eminnershape"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#10913 id=10913 data-nosnippet>10913</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\TextOrMath{}{}"</span>, <span class="string">"\\ifmmode#2\\else#1\\fi"</span>);
 <a href=#10914 id=10914 data-nosnippet>10914</a>
-<a href=#10915 id=10915 data-nosnippet>10915</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = read_token()<span class="question-mark">? </span>{
-<a href=#10916 id=10916 data-nosnippet>10916</a>      <span class="comment">// Stop as soon as we've matched the full token sequence —
-<a href=#10917 id=10917 data-nosnippet>10917</a>      // otherwise the `toks[0]` index panics on the next iteration
-<a href=#10918 id=10918 data-nosnippet>10918</a>      // (arxiv 1608.08252 hit this with a matching prefix followed
-<a href=#10919 id=10919 data-nosnippet>10919</a>      // by arbitrary tokens in the stream).
-<a href=#10920 id=10920 data-nosnippet>10920</a>      </span><span class="kw">if </span>toks.is_empty() {
-<a href=#10921 id=10921 data-nosnippet>10921</a>        read.push(t);
-<a href=#10922 id=10922 data-nosnippet>10922</a>        <span class="kw">break</span>;
-<a href=#10923 id=10923 data-nosnippet>10923</a>      }
-<a href=#10924 id=10924 data-nosnippet>10924</a>      <span class="kw">if </span>t == toks[<span class="number">0</span>] {
-<a href=#10925 id=10925 data-nosnippet>10925</a>        toks.pop_front();
-<a href=#10926 id=10926 data-nosnippet>10926</a>        read.push(t);
-<a href=#10927 id=10927 data-nosnippet>10927</a>      } <span class="kw">else </span>{
-<a href=#10928 id=10928 data-nosnippet>10928</a>        read.push(t);
-<a href=#10929 id=10929 data-nosnippet>10929</a>        <span class="kw">break</span>;
-<a href=#10930 id=10930 data-nosnippet>10930</a>      }
-<a href=#10931 id=10931 data-nosnippet>10931</a>    }
-<a href=#10932 id=10932 data-nosnippet>10932</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="kw">if </span>toks.is_empty() {
-<a href=#10933 id=10933 data-nosnippet>10933</a>      if_toks.unlist()
-<a href=#10934 id=10934 data-nosnippet>10934</a>    } <span class="kw">else </span>{
-<a href=#10935 id=10935 data-nosnippet>10935</a>      else_toks.unlist()
-<a href=#10936 id=10936 data-nosnippet>10936</a>    };
-<a href=#10937 id=10937 data-nosnippet>10937</a>    result.extend(read);
-<a href=#10938 id=10938 data-nosnippet>10938</a>    <span class="prelude-val">Ok</span>(Tokens::new(result))
-<a href=#10939 id=10939 data-nosnippet>10939</a>  });
-<a href=#10940 id=10940 data-nosnippet>10940</a>
-<a href=#10941 id=10941 data-nosnippet>10941</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifstar {}{}"</span>, sub[(if_toks,else_toks)] {
-<a href=#10942 id=10942 data-nosnippet>10942</a>    <span class="kw">let </span>next_opt = read_non_space()<span class="question-mark">?</span>;
-<a href=#10943 id=10943 data-nosnippet>10943</a>    <span class="kw">if </span>next_opt == <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)) {
-<a href=#10944 id=10944 data-nosnippet>10944</a>      <span class="prelude-val">Ok</span>(if_toks)
-<a href=#10945 id=10945 data-nosnippet>10945</a>    } <span class="kw">else </span>{
-<a href=#10946 id=10946 data-nosnippet>10946</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = else_toks.unlist();
-<a href=#10947 id=10947 data-nosnippet>10947</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(next) = next_opt {
-<a href=#10948 id=10948 data-nosnippet>10948</a>        result.push(next);
-<a href=#10949 id=10949 data-nosnippet>10949</a>      }
-<a href=#10950 id=10950 data-nosnippet>10950</a>      <span class="prelude-val">Ok</span>(Tokens::new(result))
-<a href=#10951 id=10951 data-nosnippet>10951</a>    }
-<a href=#10952 id=10952 data-nosnippet>10952</a>  });
-<a href=#10953 id=10953 data-nosnippet>10953</a>
-<a href=#10954 id=10954 data-nosnippet>10954</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@dblarg {}"</span>, <span class="string">r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}"</span>);
-<a href=#10955 id=10955 data-nosnippet>10955</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@xdblarg {}{}"</span>, <span class="string">r"#1[{#2}]{#2}"</span>);
-<a href=#10956 id=10956 data-nosnippet>10956</a>
-<a href=#10957 id=10957 data-nosnippet>10957</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@testopt{}{}"</span>, sub[(cmd, option)] {
-<a href=#10958 id=10958 data-nosnippet>10958</a>    <span class="kw">if </span>if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
-<a href=#10959 id=10959 data-nosnippet>10959</a>      <span class="prelude-val">Ok</span>(cmd)
-<a href=#10960 id=10960 data-nosnippet>10960</a>    } <span class="kw">else </span>{
-<a href=#10961 id=10961 data-nosnippet>10961</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(cmd.unlist(), <span class="macro">T_OTHER!</span>(<span class="string">"["</span>), option.unlist(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
-<a href=#10962 id=10962 data-nosnippet>10962</a>    }
-<a href=#10963 id=10963 data-nosnippet>10963</a>  });
-<a href=#10964 id=10964 data-nosnippet>10964</a>  <span class="macro">TeX!</span>(
-<a href=#10965 id=10965 data-nosnippet>10965</a>    <span class="string">r"
-<a href=#10966 id=10966 data-nosnippet>10966</a>  \def\@protected@testopt#1{%%
-<a href=#10967 id=10967 data-nosnippet>10967</a>    \ifx\protect\@typeset@protect
-<a href=#10968 id=10968 data-nosnippet>10968</a>      \expandafter\@testopt
-<a href=#10969 id=10969 data-nosnippet>10969</a>    \else
-<a href=#10970 id=10970 data-nosnippet>10970</a>      \@x@protect#1%
-<a href=#10971 id=10971 data-nosnippet>10971</a>    \fi}"
-<a href=#10972 id=10972 data-nosnippet>10972</a>  </span>);
-<a href=#10973 id=10973 data-nosnippet>10973</a>
-<a href=#10974 id=10974 data-nosnippet>10974</a>  <span class="macro">Let!</span>(<span class="string">"\\l@ngrel@x"</span>, <span class="string">"\\relax"</span>);
-<a href=#10975 id=10975 data-nosnippet>10975</a>  <span class="macro">DefMacro!</span>(
-<a href=#10976 id=10976 data-nosnippet>10976</a>    <span class="string">"\\@star@or@long{}"</span>,
-<a href=#10977 id=10977 data-nosnippet>10977</a>    <span class="string">r"\@ifstar{\let\l@ngrel@x\relax#1}{\let\l@ngrel@x\long#1}"
-<a href=#10978 id=10978 data-nosnippet>10978</a>  </span>);
-<a href=#10979 id=10979 data-nosnippet>10979</a>
-<a href=#10980 id=10980 data-nosnippet>10980</a>  <span class="macro">TeX!</span>(
-<a href=#10981 id=10981 data-nosnippet>10981</a>    <span class="string">r"
-<a href=#10982 id=10982 data-nosnippet>10982</a>  \def\in@#1#2{%
-<a href=#10983 id=10983 data-nosnippet>10983</a>  \def\in@@##1#1##2##3\in@@{%
-<a href=#10984 id=10984 data-nosnippet>10984</a>    \ifx\in@##2\in@false\else\in@true\fi}%
-<a href=#10985 id=10985 data-nosnippet>10985</a>  \in@@#2#1\in@\in@@}
-<a href=#10986 id=10986 data-nosnippet>10986</a>  \newif\ifin@"
-<a href=#10987 id=10987 data-nosnippet>10987</a>  </span>);
-<a href=#10988 id=10988 data-nosnippet>10988</a>
-<a href=#10989 id=10989 data-nosnippet>10989</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\IfFileExists{}{}{}"</span>, sub[(file, if_tks, else_tks)] {
-<a href=#10990 id=10990 data-nosnippet>10990</a>    <span class="kw">let </span>file_string = <span class="macro">Expand!</span>(file).to_string();
-<a href=#10991 id=10991 data-nosnippet>10991</a>    <span class="comment">// Disk-search variant first (matches Perl FindFile default).
-<a href=#10992 id=10992 data-nosnippet>10992</a>    </span><span class="kw">let </span>found = find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>).is_some()
-<a href=#10993 id=10993 data-nosnippet>10993</a>      <span class="comment">// Then binding-only fallback (notex=true): pgf's
-<a href=#10994 id=10994 data-nosnippet>10994</a>      // `\IfFileExists{pgfsys-latexml.def}` and similar driver-file probes
-<a href=#10995 id=10995 data-nosnippet>10995</a>      // need to discover compiled-in bindings (.def/.sty/.cls registered
-<a href=#10996 id=10996 data-nosnippet>10996</a>      // via `latexml_package::package`). Without this fallback the
-<a href=#10997 id=10997 data-nosnippet>10997</a>      // notex=false disk search returns None for binding-only files,
-<a href=#10998 id=10998 data-nosnippet>10998</a>      // pgf bails with "Driver file ... not found", and the entire
-<a href=#10999 id=10999 data-nosnippet>10999</a>      // tikz/pgf rendering pipeline fails (11 PGF/tikz tests + 10k_sandbox
-<a href=#11000 id=11000 data-nosnippet>11000</a>      // pgf-using papers).
-<a href=#11001 id=11001 data-nosnippet>11001</a>      </span>|| find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">Some</span>(FindFileOptions {
-<a href=#11002 id=11002 data-nosnippet>11002</a>          notex: <span class="bool-val">true</span>, ..Default::default()
-<a href=#11003 id=11003 data-nosnippet>11003</a>        })).is_some();
-<a href=#11004 id=11004 data-nosnippet>11004</a>    <span class="kw">if </span>found {
-<a href=#11005 id=11005 data-nosnippet>11005</a>      <span class="kw">let </span>found_str = <span class="macro">s!</span>(<span class="string">"\"{file_string}\" "</span>);
-<a href=#11006 id=11006 data-nosnippet>11006</a>      def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@filef@und"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(found_str.into()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#11007 id=11007 data-nosnippet>11007</a>      if_tks
-<a href=#11008 id=11008 data-nosnippet>11008</a>    } <span class="kw">else </span>{
-<a href=#11009 id=11009 data-nosnippet>11009</a>      else_tks
-<a href=#11010 id=11010 data-nosnippet>11010</a>    }
-<a href=#11011 id=11011 data-nosnippet>11011</a>  });
-<a href=#11012 id=11012 data-nosnippet>11012</a>
-<a href=#11013 id=11013 data-nosnippet>11013</a>  <span class="comment">// \IfFormatAtLeastTF stub lives in `latex_constructs_rust_only.rs` (loads
-<a href=#11014 id=11014 data-nosnippet>11014</a>  // last). Removed duplicate identical-body DefMacro here.
-<a href=#11015 id=11015 data-nosnippet>11015</a>
-<a href=#11016 id=11016 data-nosnippet>11016</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\InputIfFileExists{}{}{}"</span>, sub[(file, if_tks, else_tks)] {
-<a href=#11017 id=11017 data-nosnippet>11017</a>    <span class="kw">let </span>file_tks = <span class="macro">Expand!</span>(file);
-<a href=#11018 id=11018 data-nosnippet>11018</a>    <span class="kw">let </span>file_string = file_tks.to_string();
-<a href=#11019 id=11019 data-nosnippet>11019</a>    <span class="comment">// Disk-search first (matches Perl FindFile default), then
-<a href=#11020 id=11020 data-nosnippet>11020</a>    // binding-only fallback (notex=true) so registered .ldf / .def
-<a href=#11021 id=11021 data-nosnippet>11021</a>    // bindings shipped via latexml_package are discoverable. Without
-<a href=#11022 id=11022 data-nosnippet>11022</a>    // the fallback, babel.sty L4175 `\InputIfFileExists{italian.ldf}`
-<a href=#11023 id=11023 data-nosnippet>11023</a>    // returns "not found" even though we ship `italian.ldf` as a
-<a href=#11024 id=11024 data-nosnippet>11024</a>    // compile-time binding — and babel errors with "Unknown option
-<a href=#11025 id=11025 data-nosnippet>11025</a>    // 'italian'". Witness: 38 papers across recent stages with
-<a href=#11026 id=11026 data-nosnippet>11026</a>    // missing-on-disk babel-language packages (italian/spanish/
-<a href=#11027 id=11027 data-nosnippet>11027</a>    // portuges/brazil/...).
-<a href=#11028 id=11028 data-nosnippet>11028</a>    </span><span class="kw">let </span>found = find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>).is_some()
-<a href=#11029 id=11029 data-nosnippet>11029</a>      || find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">Some</span>(FindFileOptions {
-<a href=#11030 id=11030 data-nosnippet>11030</a>          notex: <span class="bool-val">true</span>, ..Default::default()
-<a href=#11031 id=11031 data-nosnippet>11031</a>        })).is_some();
-<a href=#11032 id=11032 data-nosnippet>11032</a>    <span class="kw">if </span>found {
-<a href=#11033 id=11033 data-nosnippet>11033</a>      <span class="kw">let </span>found_str = <span class="macro">s!</span>(<span class="string">"\"{file_string}\" "</span>);
-<a href=#11034 id=11034 data-nosnippet>11034</a>      def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@filef@und"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(found_str.into()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#11035 id=11035 data-nosnippet>11035</a>      <span class="macro">Tokens!</span>(if_tks, <span class="macro">T_CS!</span>(<span class="string">"\\@addtofilelist"</span>), <span class="macro">T_BEGIN!</span>(), file_tks.clone(), <span class="macro">T_END!</span>(),
-<a href=#11036 id=11036 data-nosnippet>11036</a>        <span class="macro">T_CS!</span>(<span class="string">"\\ltx@input"</span>), <span class="macro">T_BEGIN!</span>(), file_tks, <span class="macro">T_END!</span>())
-<a href=#11037 id=11037 data-nosnippet>11037</a>    } <span class="kw">else </span>{
-<a href=#11038 id=11038 data-nosnippet>11038</a>      else_tks
-<a href=#11039 id=11039 data-nosnippet>11039</a>    }
-<a href=#11040 id=11040 data-nosnippet>11040</a>  });
-<a href=#11041 id=11041 data-nosnippet>11041</a>
-<a href=#11042 id=11042 data-nosnippet>11042</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifdefinable DefToken {}"</span>, sub[(token, iftoken)] {
-<a href=#11043 id=11043 data-nosnippet>11043</a>    <span class="kw">if </span>is_definable(<span class="kw-2">&amp;</span>token) {
-<a href=#11044 id=11044 data-nosnippet>11044</a>      iftoken.unlist()
-<a href=#11045 id=11045 data-nosnippet>11045</a>    } <span class="kw">else </span>{
-<a href=#11046 id=11046 data-nosnippet>11046</a>      <span class="kw">let </span>token_str = token.to_string();
-<a href=#11047 id=11047 data-nosnippet>11047</a>      <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="macro">ExplodeText!</span>(token_str);
-<a href=#11048 id=11048 data-nosnippet>11048</a>      <span class="kw">if </span>token_str.starts_with(<span class="string">'\\'</span>) {
-<a href=#11049 id=11049 data-nosnippet>11049</a>        s.remove(<span class="number">0</span>);
-<a href=#11050 id=11050 data-nosnippet>11050</a>      }
-<a href=#11051 id=11051 data-nosnippet>11051</a>      <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\reserved@a"</span>), <span class="prelude-val">None</span>, Tokens::new(s));
-<a href=#11052 id=11052 data-nosnippet>11052</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@notdefinable"</span>)]
-<a href=#11053 id=11053 data-nosnippet>11053</a>    }
-<a href=#11054 id=11054 data-nosnippet>11054</a>  });
-<a href=#11055 id=11055 data-nosnippet>11055</a>
-<a href=#11056 id=11056 data-nosnippet>11056</a>  <span class="macro">Let!</span>(<span class="string">"\\@@ifdefinable"</span>, <span class="string">"\\@ifdefinable"</span>);
-<a href=#11057 id=11057 data-nosnippet>11057</a>
-<a href=#11058 id=11058 data-nosnippet>11058</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@rc@ifdefinable DefToken {}"</span>, sub[(_token, iftoken)] {
-<a href=#11059 id=11059 data-nosnippet>11059</a>    <span class="macro">Let!</span>(<span class="string">"\\@ifdefinable"</span>, <span class="string">"\\@@ifdefinable"</span>);
-<a href=#11060 id=11060 data-nosnippet>11060</a>    iftoken.unlist()
-<a href=#11061 id=11061 data-nosnippet>11061</a>  });
-<a href=#11062 id=11062 data-nosnippet>11062</a>
-<a href=#11063 id=11063 data-nosnippet>11063</a>  <span class="macro">DefMacro!</span>(
-<a href=#11064 id=11064 data-nosnippet>11064</a>    <span class="string">"\\@notdefinable"</span>,
-<a href=#11065 id=11065 data-nosnippet>11065</a>    <span class="prelude-val">None</span>,
-<a href=#11066 id=11066 data-nosnippet>11066</a>    <span class="string">r###"\@latex@error{%
-<a href=#11067 id=11067 data-nosnippet>11067</a>    Command \@backslashchar\reserved@a\space
-<a href=#11068 id=11068 data-nosnippet>11068</a>    already defined.
-<a href=#11069 id=11069 data-nosnippet>11069</a>    Or name \@backslashchar\@qend... illegal, see p.192 of the manual}
-<a href=#11070 id=11070 data-nosnippet>11070</a>  "###
-<a href=#11071 id=11071 data-nosnippet>11071</a>  </span>);
+<a href=#10915 id=10915 data-nosnippet>10915</a>  <span class="comment">//======================================================================
+<a href=#10916 id=10916 data-nosnippet>10916</a>  // Semi-undocumented commands
+<a href=#10917 id=10917 data-nosnippet>10917</a>  // Perl: latex_constructs.pool.ltxml various locations
+<a href=#10918 id=10918 data-nosnippet>10918</a>  //======================================================================
+<a href=#10919 id=10919 data-nosnippet>10919</a>
+<a href=#10920 id=10920 data-nosnippet>10920</a>  // Hacky version matches multiple chars! but does NOT expand
+<a href=#10921 id=10921 data-nosnippet>10921</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@ifnext@n {}{}{}"</span>, sub[(tokens,if_toks,else_toks)] {
+<a href=#10922 id=10922 data-nosnippet>10922</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = VecDeque::from(tokens.unlist());
+<a href=#10923 id=10923 data-nosnippet>10923</a>    <span class="kw">let </span><span class="kw-2">mut </span>read = Vec::new();
+<a href=#10924 id=10924 data-nosnippet>10924</a>
+<a href=#10925 id=10925 data-nosnippet>10925</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = read_token()<span class="question-mark">? </span>{
+<a href=#10926 id=10926 data-nosnippet>10926</a>      <span class="comment">// Stop as soon as we've matched the full token sequence —
+<a href=#10927 id=10927 data-nosnippet>10927</a>      // otherwise the `toks[0]` index panics on the next iteration
+<a href=#10928 id=10928 data-nosnippet>10928</a>      // (arxiv 1608.08252 hit this with a matching prefix followed
+<a href=#10929 id=10929 data-nosnippet>10929</a>      // by arbitrary tokens in the stream).
+<a href=#10930 id=10930 data-nosnippet>10930</a>      </span><span class="kw">if </span>toks.is_empty() {
+<a href=#10931 id=10931 data-nosnippet>10931</a>        read.push(t);
+<a href=#10932 id=10932 data-nosnippet>10932</a>        <span class="kw">break</span>;
+<a href=#10933 id=10933 data-nosnippet>10933</a>      }
+<a href=#10934 id=10934 data-nosnippet>10934</a>      <span class="kw">if </span>t == toks[<span class="number">0</span>] {
+<a href=#10935 id=10935 data-nosnippet>10935</a>        toks.pop_front();
+<a href=#10936 id=10936 data-nosnippet>10936</a>        read.push(t);
+<a href=#10937 id=10937 data-nosnippet>10937</a>      } <span class="kw">else </span>{
+<a href=#10938 id=10938 data-nosnippet>10938</a>        read.push(t);
+<a href=#10939 id=10939 data-nosnippet>10939</a>        <span class="kw">break</span>;
+<a href=#10940 id=10940 data-nosnippet>10940</a>      }
+<a href=#10941 id=10941 data-nosnippet>10941</a>    }
+<a href=#10942 id=10942 data-nosnippet>10942</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="kw">if </span>toks.is_empty() {
+<a href=#10943 id=10943 data-nosnippet>10943</a>      if_toks.unlist()
+<a href=#10944 id=10944 data-nosnippet>10944</a>    } <span class="kw">else </span>{
+<a href=#10945 id=10945 data-nosnippet>10945</a>      else_toks.unlist()
+<a href=#10946 id=10946 data-nosnippet>10946</a>    };
+<a href=#10947 id=10947 data-nosnippet>10947</a>    result.extend(read);
+<a href=#10948 id=10948 data-nosnippet>10948</a>    <span class="prelude-val">Ok</span>(Tokens::new(result))
+<a href=#10949 id=10949 data-nosnippet>10949</a>  });
+<a href=#10950 id=10950 data-nosnippet>10950</a>
+<a href=#10951 id=10951 data-nosnippet>10951</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifstar {}{}"</span>, sub[(if_toks,else_toks)] {
+<a href=#10952 id=10952 data-nosnippet>10952</a>    <span class="kw">let </span>next_opt = read_non_space()<span class="question-mark">?</span>;
+<a href=#10953 id=10953 data-nosnippet>10953</a>    <span class="kw">if </span>next_opt == <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)) {
+<a href=#10954 id=10954 data-nosnippet>10954</a>      <span class="prelude-val">Ok</span>(if_toks)
+<a href=#10955 id=10955 data-nosnippet>10955</a>    } <span class="kw">else </span>{
+<a href=#10956 id=10956 data-nosnippet>10956</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = else_toks.unlist();
+<a href=#10957 id=10957 data-nosnippet>10957</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(next) = next_opt {
+<a href=#10958 id=10958 data-nosnippet>10958</a>        result.push(next);
+<a href=#10959 id=10959 data-nosnippet>10959</a>      }
+<a href=#10960 id=10960 data-nosnippet>10960</a>      <span class="prelude-val">Ok</span>(Tokens::new(result))
+<a href=#10961 id=10961 data-nosnippet>10961</a>    }
+<a href=#10962 id=10962 data-nosnippet>10962</a>  });
+<a href=#10963 id=10963 data-nosnippet>10963</a>
+<a href=#10964 id=10964 data-nosnippet>10964</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@dblarg {}"</span>, <span class="string">r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}"</span>);
+<a href=#10965 id=10965 data-nosnippet>10965</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@xdblarg {}{}"</span>, <span class="string">r"#1[{#2}]{#2}"</span>);
+<a href=#10966 id=10966 data-nosnippet>10966</a>
+<a href=#10967 id=10967 data-nosnippet>10967</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@testopt{}{}"</span>, sub[(cmd, option)] {
+<a href=#10968 id=10968 data-nosnippet>10968</a>    <span class="kw">if </span>if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
+<a href=#10969 id=10969 data-nosnippet>10969</a>      <span class="prelude-val">Ok</span>(cmd)
+<a href=#10970 id=10970 data-nosnippet>10970</a>    } <span class="kw">else </span>{
+<a href=#10971 id=10971 data-nosnippet>10971</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(cmd.unlist(), <span class="macro">T_OTHER!</span>(<span class="string">"["</span>), option.unlist(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
+<a href=#10972 id=10972 data-nosnippet>10972</a>    }
+<a href=#10973 id=10973 data-nosnippet>10973</a>  });
+<a href=#10974 id=10974 data-nosnippet>10974</a>  <span class="macro">TeX!</span>(
+<a href=#10975 id=10975 data-nosnippet>10975</a>    <span class="string">r"
+<a href=#10976 id=10976 data-nosnippet>10976</a>  \def\@protected@testopt#1{%%
+<a href=#10977 id=10977 data-nosnippet>10977</a>    \ifx\protect\@typeset@protect
+<a href=#10978 id=10978 data-nosnippet>10978</a>      \expandafter\@testopt
+<a href=#10979 id=10979 data-nosnippet>10979</a>    \else
+<a href=#10980 id=10980 data-nosnippet>10980</a>      \@x@protect#1%
+<a href=#10981 id=10981 data-nosnippet>10981</a>    \fi}"
+<a href=#10982 id=10982 data-nosnippet>10982</a>  </span>);
+<a href=#10983 id=10983 data-nosnippet>10983</a>
+<a href=#10984 id=10984 data-nosnippet>10984</a>  <span class="macro">Let!</span>(<span class="string">"\\l@ngrel@x"</span>, <span class="string">"\\relax"</span>);
+<a href=#10985 id=10985 data-nosnippet>10985</a>  <span class="macro">DefMacro!</span>(
+<a href=#10986 id=10986 data-nosnippet>10986</a>    <span class="string">"\\@star@or@long{}"</span>,
+<a href=#10987 id=10987 data-nosnippet>10987</a>    <span class="string">r"\@ifstar{\let\l@ngrel@x\relax#1}{\let\l@ngrel@x\long#1}"
+<a href=#10988 id=10988 data-nosnippet>10988</a>  </span>);
+<a href=#10989 id=10989 data-nosnippet>10989</a>
+<a href=#10990 id=10990 data-nosnippet>10990</a>  <span class="macro">TeX!</span>(
+<a href=#10991 id=10991 data-nosnippet>10991</a>    <span class="string">r"
+<a href=#10992 id=10992 data-nosnippet>10992</a>  \def\in@#1#2{%
+<a href=#10993 id=10993 data-nosnippet>10993</a>  \def\in@@##1#1##2##3\in@@{%
+<a href=#10994 id=10994 data-nosnippet>10994</a>    \ifx\in@##2\in@false\else\in@true\fi}%
+<a href=#10995 id=10995 data-nosnippet>10995</a>  \in@@#2#1\in@\in@@}
+<a href=#10996 id=10996 data-nosnippet>10996</a>  \newif\ifin@"
+<a href=#10997 id=10997 data-nosnippet>10997</a>  </span>);
+<a href=#10998 id=10998 data-nosnippet>10998</a>
+<a href=#10999 id=10999 data-nosnippet>10999</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\IfFileExists{}{}{}"</span>, sub[(file, if_tks, else_tks)] {
+<a href=#11000 id=11000 data-nosnippet>11000</a>    <span class="kw">let </span>file_string = <span class="macro">Expand!</span>(file).to_string();
+<a href=#11001 id=11001 data-nosnippet>11001</a>    <span class="comment">// Disk-search variant first (matches Perl FindFile default).
+<a href=#11002 id=11002 data-nosnippet>11002</a>    </span><span class="kw">let </span>found = find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>).is_some()
+<a href=#11003 id=11003 data-nosnippet>11003</a>      <span class="comment">// Then binding-only fallback (notex=true): pgf's
+<a href=#11004 id=11004 data-nosnippet>11004</a>      // `\IfFileExists{pgfsys-latexml.def}` and similar driver-file probes
+<a href=#11005 id=11005 data-nosnippet>11005</a>      // need to discover compiled-in bindings (.def/.sty/.cls registered
+<a href=#11006 id=11006 data-nosnippet>11006</a>      // via `latexml_package::package`). Without this fallback the
+<a href=#11007 id=11007 data-nosnippet>11007</a>      // notex=false disk search returns None for binding-only files,
+<a href=#11008 id=11008 data-nosnippet>11008</a>      // pgf bails with "Driver file ... not found", and the entire
+<a href=#11009 id=11009 data-nosnippet>11009</a>      // tikz/pgf rendering pipeline fails (11 PGF/tikz tests + 10k_sandbox
+<a href=#11010 id=11010 data-nosnippet>11010</a>      // pgf-using papers).
+<a href=#11011 id=11011 data-nosnippet>11011</a>      </span>|| find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">Some</span>(FindFileOptions {
+<a href=#11012 id=11012 data-nosnippet>11012</a>          notex: <span class="bool-val">true</span>, ..Default::default()
+<a href=#11013 id=11013 data-nosnippet>11013</a>        })).is_some();
+<a href=#11014 id=11014 data-nosnippet>11014</a>    <span class="kw">if </span>found {
+<a href=#11015 id=11015 data-nosnippet>11015</a>      <span class="kw">let </span>found_str = <span class="macro">s!</span>(<span class="string">"\"{file_string}\" "</span>);
+<a href=#11016 id=11016 data-nosnippet>11016</a>      def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@filef@und"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(found_str.into()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#11017 id=11017 data-nosnippet>11017</a>      if_tks
+<a href=#11018 id=11018 data-nosnippet>11018</a>    } <span class="kw">else </span>{
+<a href=#11019 id=11019 data-nosnippet>11019</a>      else_tks
+<a href=#11020 id=11020 data-nosnippet>11020</a>    }
+<a href=#11021 id=11021 data-nosnippet>11021</a>  });
+<a href=#11022 id=11022 data-nosnippet>11022</a>
+<a href=#11023 id=11023 data-nosnippet>11023</a>  <span class="comment">// \IfFormatAtLeastTF stub lives in `latex_constructs_rust_only.rs` (loads
+<a href=#11024 id=11024 data-nosnippet>11024</a>  // last). Removed duplicate identical-body DefMacro here.
+<a href=#11025 id=11025 data-nosnippet>11025</a>
+<a href=#11026 id=11026 data-nosnippet>11026</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\InputIfFileExists{}{}{}"</span>, sub[(file, if_tks, else_tks)] {
+<a href=#11027 id=11027 data-nosnippet>11027</a>    <span class="kw">let </span>file_tks = <span class="macro">Expand!</span>(file);
+<a href=#11028 id=11028 data-nosnippet>11028</a>    <span class="kw">let </span>file_string = file_tks.to_string();
+<a href=#11029 id=11029 data-nosnippet>11029</a>    <span class="comment">// Disk-search first (matches Perl FindFile default), then
+<a href=#11030 id=11030 data-nosnippet>11030</a>    // binding-only fallback (notex=true) so registered .ldf / .def
+<a href=#11031 id=11031 data-nosnippet>11031</a>    // bindings shipped via latexml_package are discoverable. Without
+<a href=#11032 id=11032 data-nosnippet>11032</a>    // the fallback, babel.sty L4175 `\InputIfFileExists{italian.ldf}`
+<a href=#11033 id=11033 data-nosnippet>11033</a>    // returns "not found" even though we ship `italian.ldf` as a
+<a href=#11034 id=11034 data-nosnippet>11034</a>    // compile-time binding — and babel errors with "Unknown option
+<a href=#11035 id=11035 data-nosnippet>11035</a>    // 'italian'". Witness: 38 papers across recent stages with
+<a href=#11036 id=11036 data-nosnippet>11036</a>    // missing-on-disk babel-language packages (italian/spanish/
+<a href=#11037 id=11037 data-nosnippet>11037</a>    // portuges/brazil/...).
+<a href=#11038 id=11038 data-nosnippet>11038</a>    </span><span class="kw">let </span>found = find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>).is_some()
+<a href=#11039 id=11039 data-nosnippet>11039</a>      || find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">Some</span>(FindFileOptions {
+<a href=#11040 id=11040 data-nosnippet>11040</a>          notex: <span class="bool-val">true</span>, ..Default::default()
+<a href=#11041 id=11041 data-nosnippet>11041</a>        })).is_some();
+<a href=#11042 id=11042 data-nosnippet>11042</a>    <span class="kw">if </span>found {
+<a href=#11043 id=11043 data-nosnippet>11043</a>      <span class="kw">let </span>found_str = <span class="macro">s!</span>(<span class="string">"\"{file_string}\" "</span>);
+<a href=#11044 id=11044 data-nosnippet>11044</a>      def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@filef@und"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(found_str.into()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#11045 id=11045 data-nosnippet>11045</a>      <span class="macro">Tokens!</span>(if_tks, <span class="macro">T_CS!</span>(<span class="string">"\\@addtofilelist"</span>), <span class="macro">T_BEGIN!</span>(), file_tks.clone(), <span class="macro">T_END!</span>(),
+<a href=#11046 id=11046 data-nosnippet>11046</a>        <span class="macro">T_CS!</span>(<span class="string">"\\ltx@input"</span>), <span class="macro">T_BEGIN!</span>(), file_tks, <span class="macro">T_END!</span>())
+<a href=#11047 id=11047 data-nosnippet>11047</a>    } <span class="kw">else </span>{
+<a href=#11048 id=11048 data-nosnippet>11048</a>      else_tks
+<a href=#11049 id=11049 data-nosnippet>11049</a>    }
+<a href=#11050 id=11050 data-nosnippet>11050</a>  });
+<a href=#11051 id=11051 data-nosnippet>11051</a>
+<a href=#11052 id=11052 data-nosnippet>11052</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifdefinable DefToken {}"</span>, sub[(token, iftoken)] {
+<a href=#11053 id=11053 data-nosnippet>11053</a>    <span class="kw">if </span>is_definable(<span class="kw-2">&amp;</span>token) {
+<a href=#11054 id=11054 data-nosnippet>11054</a>      iftoken.unlist()
+<a href=#11055 id=11055 data-nosnippet>11055</a>    } <span class="kw">else </span>{
+<a href=#11056 id=11056 data-nosnippet>11056</a>      <span class="kw">let </span>token_str = token.to_string();
+<a href=#11057 id=11057 data-nosnippet>11057</a>      <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="macro">ExplodeText!</span>(token_str);
+<a href=#11058 id=11058 data-nosnippet>11058</a>      <span class="kw">if </span>token_str.starts_with(<span class="string">'\\'</span>) {
+<a href=#11059 id=11059 data-nosnippet>11059</a>        s.remove(<span class="number">0</span>);
+<a href=#11060 id=11060 data-nosnippet>11060</a>      }
+<a href=#11061 id=11061 data-nosnippet>11061</a>      <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\reserved@a"</span>), <span class="prelude-val">None</span>, Tokens::new(s));
+<a href=#11062 id=11062 data-nosnippet>11062</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@notdefinable"</span>)]
+<a href=#11063 id=11063 data-nosnippet>11063</a>    }
+<a href=#11064 id=11064 data-nosnippet>11064</a>  });
+<a href=#11065 id=11065 data-nosnippet>11065</a>
+<a href=#11066 id=11066 data-nosnippet>11066</a>  <span class="macro">Let!</span>(<span class="string">"\\@@ifdefinable"</span>, <span class="string">"\\@ifdefinable"</span>);
+<a href=#11067 id=11067 data-nosnippet>11067</a>
+<a href=#11068 id=11068 data-nosnippet>11068</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@rc@ifdefinable DefToken {}"</span>, sub[(_token, iftoken)] {
+<a href=#11069 id=11069 data-nosnippet>11069</a>    <span class="macro">Let!</span>(<span class="string">"\\@ifdefinable"</span>, <span class="string">"\\@@ifdefinable"</span>);
+<a href=#11070 id=11070 data-nosnippet>11070</a>    iftoken.unlist()
+<a href=#11071 id=11071 data-nosnippet>11071</a>  });
 <a href=#11072 id=11072 data-nosnippet>11072</a>
-<a href=#11073 id=11073 data-nosnippet>11073</a>  <span class="comment">// Sundry
-<a href=#11074 id=11074 data-nosnippet>11074</a>  // Perl latex_constructs.pool L5771: DefPrimitiveI('\textprime', undef, UTF(0xB4))
-<a href=#11075 id=11075 data-nosnippet>11075</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textprime"</span>, <span class="string">"\u{00B4}"</span>); <span class="comment">// ACUTE ACCENT
-<a href=#11076 id=11076 data-nosnippet>11076</a>  </span><span class="macro">Let!</span>(<span class="string">"\\endgraf"</span>, <span class="string">"\\par"</span>);
-<a href=#11077 id=11077 data-nosnippet>11077</a>  <span class="macro">Let!</span>(<span class="string">"\\endline"</span>, <span class="string">"\\cr"</span>);
-<a href=#11078 id=11078 data-nosnippet>11078</a>  def_macro_noop(<span class="string">"\\fileversion"</span>)<span class="question-mark">?</span>;
-<a href=#11079 id=11079 data-nosnippet>11079</a>  def_macro_noop(<span class="string">"\\filedate"</span>)<span class="question-mark">?</span>;
-<a href=#11080 id=11080 data-nosnippet>11080</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\chaptername"</span>, <span class="string">"Chapter"</span>);
-<a href=#11081 id=11081 data-nosnippet>11081</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\partname"</span>, <span class="string">"Part"</span>);
-<a href=#11082 id=11082 data-nosnippet>11082</a>  <span class="comment">// \appendixname already defined earlier in this file (DefMacro `Appendix` at the
-<a href=#11083 id=11083 data-nosnippet>11083</a>  // C.4.4 appendix block); avoid duplicate identical re-definition.
-<a href=#11084 id=11084 data-nosnippet>11084</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#11085 id=11085 data-nosnippet>11085</a>    <span class="string">"\\sectiontyperefname"</span>,
-<a href=#11086 id=11086 data-nosnippet>11086</a>    <span class="string">"\\lx@sectionsign\\lx@ignorehardspaces"
-<a href=#11087 id=11087 data-nosnippet>11087</a>  </span>);
-<a href=#11088 id=11088 data-nosnippet>11088</a>  <span class="macro">DefMacro!</span>(
-<a href=#11089 id=11089 data-nosnippet>11089</a>    <span class="string">"\\subsectiontyperefname"</span>,
-<a href=#11090 id=11090 data-nosnippet>11090</a>    <span class="string">"\\lx@sectionsign\\lx@ignorehardspaces"
-<a href=#11091 id=11091 data-nosnippet>11091</a>  </span>);
-<a href=#11092 id=11092 data-nosnippet>11092</a>  <span class="macro">DefMacro!</span>(
-<a href=#11093 id=11093 data-nosnippet>11093</a>    <span class="string">"\\subsubsectiontyperefname"</span>,
-<a href=#11094 id=11094 data-nosnippet>11094</a>    <span class="string">"\\lx@sectionsign\\lx@ignorehardspaces"
-<a href=#11095 id=11095 data-nosnippet>11095</a>  </span>);
-<a href=#11096 id=11096 data-nosnippet>11096</a>  <span class="macro">DefMacro!</span>(
-<a href=#11097 id=11097 data-nosnippet>11097</a>    <span class="string">"\\paragraphtyperefname"</span>,
-<a href=#11098 id=11098 data-nosnippet>11098</a>    <span class="string">"\\lx@paragraphsign\\lx@ignorehardspaces"
-<a href=#11099 id=11099 data-nosnippet>11099</a>  </span>);
-<a href=#11100 id=11100 data-nosnippet>11100</a>  <span class="macro">DefMacro!</span>(
-<a href=#11101 id=11101 data-nosnippet>11101</a>    <span class="string">"\\subparagraphtyperefname"</span>,
-<a href=#11102 id=11102 data-nosnippet>11102</a>    <span class="string">"\\lx@paragraphsign\\lx@ignorehardspaces"
-<a href=#11103 id=11103 data-nosnippet>11103</a>  </span>);
-<a href=#11104 id=11104 data-nosnippet>11104</a>
-<a href=#11105 id=11105 data-nosnippet>11105</a>  <span class="comment">//======================================================================
-<a href=#11106 id=11106 data-nosnippet>11106</a>  // Perl latex_constructs.pool.ltxml L5796-5800: aux file stubs
-<a href=#11107 id=11107 data-nosnippet>11107</a>  //======================================================================
-<a href=#11108 id=11108 data-nosnippet>11108</a>  </span>def_macro_noop(<span class="string">"\\bibdata{}"</span>)<span class="question-mark">?</span>;
-<a href=#11109 id=11109 data-nosnippet>11109</a>  def_macro_noop(<span class="string">"\\bibcite{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#11110 id=11110 data-nosnippet>11110</a>  def_macro_noop(<span class="string">"\\citation{}"</span>)<span class="question-mark">?</span>;
-<a href=#11111 id=11111 data-nosnippet>11111</a>  def_macro_noop(<span class="string">"\\contentsline{}{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#11112 id=11112 data-nosnippet>11112</a>  def_macro_noop(<span class="string">"\\newlabel{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#11113 id=11113 data-nosnippet>11113</a>
-<a href=#11114 id=11114 data-nosnippet>11114</a>  <span class="comment">// Perl L5804-5806
-<a href=#11115 id=11115 data-nosnippet>11115</a>  </span><span class="macro">Let!</span>(<span class="string">"\\mathgroup"</span>, <span class="string">"\\fam"</span>);
-<a href=#11116 id=11116 data-nosnippet>11116</a>
-<a href=#11117 id=11117 data-nosnippet>11117</a>  <span class="comment">// Perl L5808-5821: nocorr, text@command, check@ic stubs
-<a href=#11118 id=11118 data-nosnippet>11118</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\nocorrlist"</span>, <span class="prelude-val">None</span>, <span class="string">".,"</span>);
-<a href=#11119 id=11119 data-nosnippet>11119</a>  <span class="macro">Let!</span>(<span class="string">"\\nocorr"</span>, <span class="string">"\\relax"</span>);
-<a href=#11120 id=11120 data-nosnippet>11120</a>  <span class="macro">Let!</span>(<span class="string">"\\check@icl"</span>, <span class="string">"\\@empty"</span>);
-<a href=#11121 id=11121 data-nosnippet>11121</a>  <span class="macro">Let!</span>(<span class="string">"\\check@icr"</span>, <span class="string">"\\@empty"</span>);
-<a href=#11122 id=11122 data-nosnippet>11122</a>  <span class="macro">Let!</span>(<span class="string">"\\curr@math@size"</span>, <span class="string">"\\@empty"</span>);
-<a href=#11123 id=11123 data-nosnippet>11123</a>  def_macro_noop(<span class="string">"\\text@command{}"</span>)<span class="question-mark">?</span>;
-<a href=#11124 id=11124 data-nosnippet>11124</a>  def_macro_noop(<span class="string">"\\check@nocorr@ Until:\\nocorr Until:\\@nil"</span>)<span class="question-mark">?</span>;
-<a href=#11125 id=11125 data-nosnippet>11125</a>  <span class="macro">TeX!</span>(<span class="string">"\\newif\\ifmaybe@ic"</span>);
-<a href=#11126 id=11126 data-nosnippet>11126</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@ic"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#11127 id=11127 data-nosnippet>11127</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@ic@"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#11128 id=11128 data-nosnippet>11128</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sw@slant"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#11129 id=11129 data-nosnippet>11129</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fix@penalty"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#11130 id=11130 data-nosnippet>11130</a>
-<a href=#11131 id=11131 data-nosnippet>11131</a>  <span class="comment">// Perl L5814: \mathhexbox
-<a href=#11132 id=11132 data-nosnippet>11132</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\mathhexbox {}{}{}"</span>, sub[(a, b, c)] {
-<a href=#11133 id=11133 data-nosnippet>11133</a>    <span class="kw">let </span>n = a.to_string().trim().parse::&lt;i32&gt;().unwrap_or(<span class="number">0</span>) * <span class="number">256
-<a href=#11134 id=11134 data-nosnippet>11134</a>      </span>+ b.to_string().trim().parse::&lt;i32&gt;().unwrap_or(<span class="number">0</span>) * <span class="number">16
-<a href=#11135 id=11135 data-nosnippet>11135</a>      </span>+ c.to_string().trim().parse::&lt;i32&gt;().unwrap_or(<span class="number">0</span>);
-<a href=#11136 id=11136 data-nosnippet>11136</a>    <span class="kw">let </span>(glyph, _font) = font_decode(n, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#11137 id=11137 data-nosnippet>11137</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(ch) = glyph {
-<a href=#11138 id=11138 data-nosnippet>11138</a>      <span class="macro">vec!</span>[Tbox::new(pin_char(ch), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), SymHashMap::default()).into()]
-<a href=#11139 id=11139 data-nosnippet>11139</a>    } <span class="kw">else </span>{
-<a href=#11140 id=11140 data-nosnippet>11140</a>      Vec::new()
-<a href=#11141 id=11141 data-nosnippet>11141</a>    }
-<a href=#11142 id=11142 data-nosnippet>11142</a>  });
-<a href=#11143 id=11143 data-nosnippet>11143</a>
-<a href=#11144 id=11144 data-nosnippet>11144</a>  <span class="comment">// \extrafloats (modern LaTeX 2015+; no Perl pool source) lives in
-<a href=#11145 id=11145 data-nosnippet>11145</a>  // `latex_constructs_rust_only.rs`. Identical-body duplicate removed here.
-<a href=#11146 id=11146 data-nosnippet>11146</a>
-<a href=#11147 id=11147 data-nosnippet>11147</a>  //======================================================================
-<a href=#11148 id=11148 data-nosnippet>11148</a>  // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
-<a href=#11149 id=11149 data-nosnippet>11149</a>  // Pre-declare hyphenation languages for babel's \iflanguage checks
-<a href=#11150 id=11150 data-nosnippet>11150</a>  //======================================================================
-<a href=#11151 id=11151 data-nosnippet>11151</a>  </span><span class="macro">TeX!</span>(
-<a href=#11152 id=11152 data-nosnippet>11152</a>    <span class="string">r"\newlanguage\l@english
-<a href=#11153 id=11153 data-nosnippet>11153</a>\newlanguage\l@usenglishmax
-<a href=#11154 id=11154 data-nosnippet>11154</a>\newlanguage\l@USenglish
-<a href=#11155 id=11155 data-nosnippet>11155</a>\newlanguage\l@dumylang
-<a href=#11156 id=11156 data-nosnippet>11156</a>\newlanguage\l@nohyphenation
-<a href=#11157 id=11157 data-nosnippet>11157</a>\newlanguage\l@arabic
-<a href=#11158 id=11158 data-nosnippet>11158</a>\newlanguage\l@basque
-<a href=#11159 id=11159 data-nosnippet>11159</a>\newlanguage\l@bulgarian
-<a href=#11160 id=11160 data-nosnippet>11160</a>\newlanguage\l@coptic
-<a href=#11161 id=11161 data-nosnippet>11161</a>\newlanguage\l@welsh
-<a href=#11162 id=11162 data-nosnippet>11162</a>\newlanguage\l@czech
-<a href=#11163 id=11163 data-nosnippet>11163</a>\newlanguage\l@slovak
-<a href=#11164 id=11164 data-nosnippet>11164</a>\newlanguage\l@german
-<a href=#11165 id=11165 data-nosnippet>11165</a>\newlanguage\l@ngerman
-<a href=#11166 id=11166 data-nosnippet>11166</a>\newlanguage\l@danish
-<a href=#11167 id=11167 data-nosnippet>11167</a>\newlanguage\l@esperanto
-<a href=#11168 id=11168 data-nosnippet>11168</a>\newlanguage\l@spanish
-<a href=#11169 id=11169 data-nosnippet>11169</a>\newlanguage\l@catalan
-<a href=#11170 id=11170 data-nosnippet>11170</a>\newlanguage\l@galician
-<a href=#11171 id=11171 data-nosnippet>11171</a>\newlanguage\l@estonian
-<a href=#11172 id=11172 data-nosnippet>11172</a>\newlanguage\l@farsi
-<a href=#11173 id=11173 data-nosnippet>11173</a>\newlanguage\l@finnish
-<a href=#11174 id=11174 data-nosnippet>11174</a>\newlanguage\l@french
-<a href=#11175 id=11175 data-nosnippet>11175</a>\newlanguage\l@greek
-<a href=#11176 id=11176 data-nosnippet>11176</a>\newlanguage\l@monogreek
-<a href=#11177 id=11177 data-nosnippet>11177</a>\newlanguage\l@ancientgreek
-<a href=#11178 id=11178 data-nosnippet>11178</a>\newlanguage\l@croatian
-<a href=#11179 id=11179 data-nosnippet>11179</a>\newlanguage\l@hungarian
-<a href=#11180 id=11180 data-nosnippet>11180</a>\newlanguage\l@interlingua
-<a href=#11181 id=11181 data-nosnippet>11181</a>\newlanguage\l@ibycus
-<a href=#11182 id=11182 data-nosnippet>11182</a>\newlanguage\l@indonesian
-<a href=#11183 id=11183 data-nosnippet>11183</a>\newlanguage\l@icelandic
-<a href=#11184 id=11184 data-nosnippet>11184</a>\newlanguage\l@italian
-<a href=#11185 id=11185 data-nosnippet>11185</a>\newlanguage\l@latin
-<a href=#11186 id=11186 data-nosnippet>11186</a>\newlanguage\l@mongolian
-<a href=#11187 id=11187 data-nosnippet>11187</a>\newlanguage\l@dutch
-<a href=#11188 id=11188 data-nosnippet>11188</a>\newlanguage\l@norsk
-<a href=#11189 id=11189 data-nosnippet>11189</a>\newlanguage\l@polish
-<a href=#11190 id=11190 data-nosnippet>11190</a>\newlanguage\l@portuguese
-<a href=#11191 id=11191 data-nosnippet>11191</a>\newlanguage\l@pinyin
-<a href=#11192 id=11192 data-nosnippet>11192</a>\newlanguage\l@romanian
-<a href=#11193 id=11193 data-nosnippet>11193</a>\newlanguage\l@russian
-<a href=#11194 id=11194 data-nosnippet>11194</a>\newlanguage\l@slovenian
-<a href=#11195 id=11195 data-nosnippet>11195</a>\newlanguage\l@uppersorbian
-<a href=#11196 id=11196 data-nosnippet>11196</a>\newlanguage\l@serbian
-<a href=#11197 id=11197 data-nosnippet>11197</a>\newlanguage\l@swedish
-<a href=#11198 id=11198 data-nosnippet>11198</a>\newlanguage\l@turkish
-<a href=#11199 id=11199 data-nosnippet>11199</a>\newlanguage\l@ukenglish
-<a href=#11200 id=11200 data-nosnippet>11200</a>\newlanguage\l@ukrainiane"
-<a href=#11201 id=11201 data-nosnippet>11201</a>  </span>);
-<a href=#11202 id=11202 data-nosnippet>11202</a>
-<a href=#11203 id=11203 data-nosnippet>11203</a>  <span class="comment">// Perl latex_constructs: \protected@write
-<a href=#11204 id=11204 data-nosnippet>11204</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\protected@write{Number}{}{}"</span>, sub[(_port, prelude, _tokens)] {
-<a href=#11205 id=11205 data-nosnippet>11205</a>    bgroup();
-<a href=#11206 id=11206 data-nosnippet>11206</a>    <span class="macro">Let!</span>(<span class="string">"\\thepage"</span>, <span class="string">"\\relax"</span>);
-<a href=#11207 id=11207 data-nosnippet>11207</a>    <span class="kw">let </span>_digested = digest(prelude)<span class="question-mark">?</span>;
-<a href=#11208 id=11208 data-nosnippet>11208</a>    egroup()<span class="question-mark">?</span>;
-<a href=#11209 id=11209 data-nosnippet>11209</a>  });
-<a href=#11210 id=11210 data-nosnippet>11210</a>
-<a href=#11211 id=11211 data-nosnippet>11211</a>  <span class="comment">// \@@end — saved TeX \end primitive
-<a href=#11212 id=11212 data-nosnippet>11212</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@@end"</span>, {
-<a href=#11213 id=11213 data-nosnippet>11213</a>    <span class="kw">if </span>!lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"INTERPRETING_DEFINITIONS"</span>)) {
-<a href=#11214 id=11214 data-nosnippet>11214</a>      flush();
-<a href=#11215 id=11215 data-nosnippet>11215</a>    }
-<a href=#11216 id=11216 data-nosnippet>11216</a>  });
-<a href=#11217 id=11217 data-nosnippet>11217</a>
-<a href=#11218 id=11218 data-nosnippet>11218</a>  <span class="comment">//======================================================================
-<a href=#11219 id=11219 data-nosnippet>11219</a>  // Closure-backed primitives — Perl: latex_constructs.pool.ltxml L5645-5766.
-<a href=#11220 id=11220 data-nosnippet>11220</a>  // These MUST live in `_constructs` (always loaded), not `_base` (optional
-<a href=#11221 id=11221 data-nosnippet>11221</a>  // under Perl's LoadFormat mutual-exclusivity). Their closures cannot be
-<a href=#11222 id=11222 data-nosnippet>11222</a>  // serialized into the kernel dump; defining them here guarantees they
-<a href=#11223 id=11223 data-nosnippet>11223</a>  // exist whether or not the dump short-circuits `_base`.
-<a href=#11224 id=11224 data-nosnippet>11224</a>  //
-<a href=#11225 id=11225 data-nosnippet>11225</a>  // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
-<a href=#11226 id=11226 data-nosnippet>11226</a>  // unblock `LATEXML_DUMP_ONLY=1` paths (see SYNC_STATUS D0 v3.f).
+<a href=#11073 id=11073 data-nosnippet>11073</a>  <span class="macro">DefMacro!</span>(
+<a href=#11074 id=11074 data-nosnippet>11074</a>    <span class="string">"\\@notdefinable"</span>,
+<a href=#11075 id=11075 data-nosnippet>11075</a>    <span class="prelude-val">None</span>,
+<a href=#11076 id=11076 data-nosnippet>11076</a>    <span class="string">r###"\@latex@error{%
+<a href=#11077 id=11077 data-nosnippet>11077</a>    Command \@backslashchar\reserved@a\space
+<a href=#11078 id=11078 data-nosnippet>11078</a>    already defined.
+<a href=#11079 id=11079 data-nosnippet>11079</a>    Or name \@backslashchar\@qend... illegal, see p.192 of the manual}
+<a href=#11080 id=11080 data-nosnippet>11080</a>  "###
+<a href=#11081 id=11081 data-nosnippet>11081</a>  </span>);
+<a href=#11082 id=11082 data-nosnippet>11082</a>
+<a href=#11083 id=11083 data-nosnippet>11083</a>  <span class="comment">// Sundry
+<a href=#11084 id=11084 data-nosnippet>11084</a>  // Perl latex_constructs.pool L5771: DefPrimitiveI('\textprime', undef, UTF(0xB4))
+<a href=#11085 id=11085 data-nosnippet>11085</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textprime"</span>, <span class="string">"\u{00B4}"</span>); <span class="comment">// ACUTE ACCENT
+<a href=#11086 id=11086 data-nosnippet>11086</a>  </span><span class="macro">Let!</span>(<span class="string">"\\endgraf"</span>, <span class="string">"\\par"</span>);
+<a href=#11087 id=11087 data-nosnippet>11087</a>  <span class="macro">Let!</span>(<span class="string">"\\endline"</span>, <span class="string">"\\cr"</span>);
+<a href=#11088 id=11088 data-nosnippet>11088</a>  def_macro_noop(<span class="string">"\\fileversion"</span>)<span class="question-mark">?</span>;
+<a href=#11089 id=11089 data-nosnippet>11089</a>  def_macro_noop(<span class="string">"\\filedate"</span>)<span class="question-mark">?</span>;
+<a href=#11090 id=11090 data-nosnippet>11090</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\chaptername"</span>, <span class="string">"Chapter"</span>);
+<a href=#11091 id=11091 data-nosnippet>11091</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\partname"</span>, <span class="string">"Part"</span>);
+<a href=#11092 id=11092 data-nosnippet>11092</a>  <span class="comment">// \appendixname already defined earlier in this file (DefMacro `Appendix` at the
+<a href=#11093 id=11093 data-nosnippet>11093</a>  // C.4.4 appendix block); avoid duplicate identical re-definition.
+<a href=#11094 id=11094 data-nosnippet>11094</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#11095 id=11095 data-nosnippet>11095</a>    <span class="string">"\\sectiontyperefname"</span>,
+<a href=#11096 id=11096 data-nosnippet>11096</a>    <span class="string">"\\lx@sectionsign\\lx@ignorehardspaces"
+<a href=#11097 id=11097 data-nosnippet>11097</a>  </span>);
+<a href=#11098 id=11098 data-nosnippet>11098</a>  <span class="macro">DefMacro!</span>(
+<a href=#11099 id=11099 data-nosnippet>11099</a>    <span class="string">"\\subsectiontyperefname"</span>,
+<a href=#11100 id=11100 data-nosnippet>11100</a>    <span class="string">"\\lx@sectionsign\\lx@ignorehardspaces"
+<a href=#11101 id=11101 data-nosnippet>11101</a>  </span>);
+<a href=#11102 id=11102 data-nosnippet>11102</a>  <span class="macro">DefMacro!</span>(
+<a href=#11103 id=11103 data-nosnippet>11103</a>    <span class="string">"\\subsubsectiontyperefname"</span>,
+<a href=#11104 id=11104 data-nosnippet>11104</a>    <span class="string">"\\lx@sectionsign\\lx@ignorehardspaces"
+<a href=#11105 id=11105 data-nosnippet>11105</a>  </span>);
+<a href=#11106 id=11106 data-nosnippet>11106</a>  <span class="macro">DefMacro!</span>(
+<a href=#11107 id=11107 data-nosnippet>11107</a>    <span class="string">"\\paragraphtyperefname"</span>,
+<a href=#11108 id=11108 data-nosnippet>11108</a>    <span class="string">"\\lx@paragraphsign\\lx@ignorehardspaces"
+<a href=#11109 id=11109 data-nosnippet>11109</a>  </span>);
+<a href=#11110 id=11110 data-nosnippet>11110</a>  <span class="macro">DefMacro!</span>(
+<a href=#11111 id=11111 data-nosnippet>11111</a>    <span class="string">"\\subparagraphtyperefname"</span>,
+<a href=#11112 id=11112 data-nosnippet>11112</a>    <span class="string">"\\lx@paragraphsign\\lx@ignorehardspaces"
+<a href=#11113 id=11113 data-nosnippet>11113</a>  </span>);
+<a href=#11114 id=11114 data-nosnippet>11114</a>
+<a href=#11115 id=11115 data-nosnippet>11115</a>  <span class="comment">//======================================================================
+<a href=#11116 id=11116 data-nosnippet>11116</a>  // Perl latex_constructs.pool.ltxml L5796-5800: aux file stubs
+<a href=#11117 id=11117 data-nosnippet>11117</a>  //======================================================================
+<a href=#11118 id=11118 data-nosnippet>11118</a>  </span>def_macro_noop(<span class="string">"\\bibdata{}"</span>)<span class="question-mark">?</span>;
+<a href=#11119 id=11119 data-nosnippet>11119</a>  def_macro_noop(<span class="string">"\\bibcite{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#11120 id=11120 data-nosnippet>11120</a>  def_macro_noop(<span class="string">"\\citation{}"</span>)<span class="question-mark">?</span>;
+<a href=#11121 id=11121 data-nosnippet>11121</a>  def_macro_noop(<span class="string">"\\contentsline{}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#11122 id=11122 data-nosnippet>11122</a>  def_macro_noop(<span class="string">"\\newlabel{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#11123 id=11123 data-nosnippet>11123</a>
+<a href=#11124 id=11124 data-nosnippet>11124</a>  <span class="comment">// Perl L5804-5806
+<a href=#11125 id=11125 data-nosnippet>11125</a>  </span><span class="macro">Let!</span>(<span class="string">"\\mathgroup"</span>, <span class="string">"\\fam"</span>);
+<a href=#11126 id=11126 data-nosnippet>11126</a>
+<a href=#11127 id=11127 data-nosnippet>11127</a>  <span class="comment">// Perl L5808-5821: nocorr, text@command, check@ic stubs
+<a href=#11128 id=11128 data-nosnippet>11128</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\nocorrlist"</span>, <span class="prelude-val">None</span>, <span class="string">".,"</span>);
+<a href=#11129 id=11129 data-nosnippet>11129</a>  <span class="macro">Let!</span>(<span class="string">"\\nocorr"</span>, <span class="string">"\\relax"</span>);
+<a href=#11130 id=11130 data-nosnippet>11130</a>  <span class="macro">Let!</span>(<span class="string">"\\check@icl"</span>, <span class="string">"\\@empty"</span>);
+<a href=#11131 id=11131 data-nosnippet>11131</a>  <span class="macro">Let!</span>(<span class="string">"\\check@icr"</span>, <span class="string">"\\@empty"</span>);
+<a href=#11132 id=11132 data-nosnippet>11132</a>  <span class="macro">Let!</span>(<span class="string">"\\curr@math@size"</span>, <span class="string">"\\@empty"</span>);
+<a href=#11133 id=11133 data-nosnippet>11133</a>  def_macro_noop(<span class="string">"\\text@command{}"</span>)<span class="question-mark">?</span>;
+<a href=#11134 id=11134 data-nosnippet>11134</a>  def_macro_noop(<span class="string">"\\check@nocorr@ Until:\\nocorr Until:\\@nil"</span>)<span class="question-mark">?</span>;
+<a href=#11135 id=11135 data-nosnippet>11135</a>  <span class="macro">TeX!</span>(<span class="string">"\\newif\\ifmaybe@ic"</span>);
+<a href=#11136 id=11136 data-nosnippet>11136</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@ic"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#11137 id=11137 data-nosnippet>11137</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@ic@"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#11138 id=11138 data-nosnippet>11138</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sw@slant"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#11139 id=11139 data-nosnippet>11139</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fix@penalty"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#11140 id=11140 data-nosnippet>11140</a>
+<a href=#11141 id=11141 data-nosnippet>11141</a>  <span class="comment">// Perl L5814: \mathhexbox
+<a href=#11142 id=11142 data-nosnippet>11142</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\mathhexbox {}{}{}"</span>, sub[(a, b, c)] {
+<a href=#11143 id=11143 data-nosnippet>11143</a>    <span class="kw">let </span>n = a.to_string().trim().parse::&lt;i32&gt;().unwrap_or(<span class="number">0</span>) * <span class="number">256
+<a href=#11144 id=11144 data-nosnippet>11144</a>      </span>+ b.to_string().trim().parse::&lt;i32&gt;().unwrap_or(<span class="number">0</span>) * <span class="number">16
+<a href=#11145 id=11145 data-nosnippet>11145</a>      </span>+ c.to_string().trim().parse::&lt;i32&gt;().unwrap_or(<span class="number">0</span>);
+<a href=#11146 id=11146 data-nosnippet>11146</a>    <span class="kw">let </span>(glyph, _font) = font_decode(n, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#11147 id=11147 data-nosnippet>11147</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(ch) = glyph {
+<a href=#11148 id=11148 data-nosnippet>11148</a>      <span class="macro">vec!</span>[Tbox::new(pin_char(ch), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), SymHashMap::default()).into()]
+<a href=#11149 id=11149 data-nosnippet>11149</a>    } <span class="kw">else </span>{
+<a href=#11150 id=11150 data-nosnippet>11150</a>      Vec::new()
+<a href=#11151 id=11151 data-nosnippet>11151</a>    }
+<a href=#11152 id=11152 data-nosnippet>11152</a>  });
+<a href=#11153 id=11153 data-nosnippet>11153</a>
+<a href=#11154 id=11154 data-nosnippet>11154</a>  <span class="comment">// \extrafloats (modern LaTeX 2015+; no Perl pool source) lives in
+<a href=#11155 id=11155 data-nosnippet>11155</a>  // `latex_constructs_rust_only.rs`. Identical-body duplicate removed here.
+<a href=#11156 id=11156 data-nosnippet>11156</a>
+<a href=#11157 id=11157 data-nosnippet>11157</a>  //======================================================================
+<a href=#11158 id=11158 data-nosnippet>11158</a>  // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
+<a href=#11159 id=11159 data-nosnippet>11159</a>  // Pre-declare hyphenation languages for babel's \iflanguage checks
+<a href=#11160 id=11160 data-nosnippet>11160</a>  //======================================================================
+<a href=#11161 id=11161 data-nosnippet>11161</a>  </span><span class="macro">TeX!</span>(
+<a href=#11162 id=11162 data-nosnippet>11162</a>    <span class="string">r"\newlanguage\l@english
+<a href=#11163 id=11163 data-nosnippet>11163</a>\newlanguage\l@usenglishmax
+<a href=#11164 id=11164 data-nosnippet>11164</a>\newlanguage\l@USenglish
+<a href=#11165 id=11165 data-nosnippet>11165</a>\newlanguage\l@dumylang
+<a href=#11166 id=11166 data-nosnippet>11166</a>\newlanguage\l@nohyphenation
+<a href=#11167 id=11167 data-nosnippet>11167</a>\newlanguage\l@arabic
+<a href=#11168 id=11168 data-nosnippet>11168</a>\newlanguage\l@basque
+<a href=#11169 id=11169 data-nosnippet>11169</a>\newlanguage\l@bulgarian
+<a href=#11170 id=11170 data-nosnippet>11170</a>\newlanguage\l@coptic
+<a href=#11171 id=11171 data-nosnippet>11171</a>\newlanguage\l@welsh
+<a href=#11172 id=11172 data-nosnippet>11172</a>\newlanguage\l@czech
+<a href=#11173 id=11173 data-nosnippet>11173</a>\newlanguage\l@slovak
+<a href=#11174 id=11174 data-nosnippet>11174</a>\newlanguage\l@german
+<a href=#11175 id=11175 data-nosnippet>11175</a>\newlanguage\l@ngerman
+<a href=#11176 id=11176 data-nosnippet>11176</a>\newlanguage\l@danish
+<a href=#11177 id=11177 data-nosnippet>11177</a>\newlanguage\l@esperanto
+<a href=#11178 id=11178 data-nosnippet>11178</a>\newlanguage\l@spanish
+<a href=#11179 id=11179 data-nosnippet>11179</a>\newlanguage\l@catalan
+<a href=#11180 id=11180 data-nosnippet>11180</a>\newlanguage\l@galician
+<a href=#11181 id=11181 data-nosnippet>11181</a>\newlanguage\l@estonian
+<a href=#11182 id=11182 data-nosnippet>11182</a>\newlanguage\l@farsi
+<a href=#11183 id=11183 data-nosnippet>11183</a>\newlanguage\l@finnish
+<a href=#11184 id=11184 data-nosnippet>11184</a>\newlanguage\l@french
+<a href=#11185 id=11185 data-nosnippet>11185</a>\newlanguage\l@greek
+<a href=#11186 id=11186 data-nosnippet>11186</a>\newlanguage\l@monogreek
+<a href=#11187 id=11187 data-nosnippet>11187</a>\newlanguage\l@ancientgreek
+<a href=#11188 id=11188 data-nosnippet>11188</a>\newlanguage\l@croatian
+<a href=#11189 id=11189 data-nosnippet>11189</a>\newlanguage\l@hungarian
+<a href=#11190 id=11190 data-nosnippet>11190</a>\newlanguage\l@interlingua
+<a href=#11191 id=11191 data-nosnippet>11191</a>\newlanguage\l@ibycus
+<a href=#11192 id=11192 data-nosnippet>11192</a>\newlanguage\l@indonesian
+<a href=#11193 id=11193 data-nosnippet>11193</a>\newlanguage\l@icelandic
+<a href=#11194 id=11194 data-nosnippet>11194</a>\newlanguage\l@italian
+<a href=#11195 id=11195 data-nosnippet>11195</a>\newlanguage\l@latin
+<a href=#11196 id=11196 data-nosnippet>11196</a>\newlanguage\l@mongolian
+<a href=#11197 id=11197 data-nosnippet>11197</a>\newlanguage\l@dutch
+<a href=#11198 id=11198 data-nosnippet>11198</a>\newlanguage\l@norsk
+<a href=#11199 id=11199 data-nosnippet>11199</a>\newlanguage\l@polish
+<a href=#11200 id=11200 data-nosnippet>11200</a>\newlanguage\l@portuguese
+<a href=#11201 id=11201 data-nosnippet>11201</a>\newlanguage\l@pinyin
+<a href=#11202 id=11202 data-nosnippet>11202</a>\newlanguage\l@romanian
+<a href=#11203 id=11203 data-nosnippet>11203</a>\newlanguage\l@russian
+<a href=#11204 id=11204 data-nosnippet>11204</a>\newlanguage\l@slovenian
+<a href=#11205 id=11205 data-nosnippet>11205</a>\newlanguage\l@uppersorbian
+<a href=#11206 id=11206 data-nosnippet>11206</a>\newlanguage\l@serbian
+<a href=#11207 id=11207 data-nosnippet>11207</a>\newlanguage\l@swedish
+<a href=#11208 id=11208 data-nosnippet>11208</a>\newlanguage\l@turkish
+<a href=#11209 id=11209 data-nosnippet>11209</a>\newlanguage\l@ukenglish
+<a href=#11210 id=11210 data-nosnippet>11210</a>\newlanguage\l@ukrainiane"
+<a href=#11211 id=11211 data-nosnippet>11211</a>  </span>);
+<a href=#11212 id=11212 data-nosnippet>11212</a>
+<a href=#11213 id=11213 data-nosnippet>11213</a>  <span class="comment">// Perl latex_constructs: \protected@write
+<a href=#11214 id=11214 data-nosnippet>11214</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\protected@write{Number}{}{}"</span>, sub[(_port, prelude, _tokens)] {
+<a href=#11215 id=11215 data-nosnippet>11215</a>    bgroup();
+<a href=#11216 id=11216 data-nosnippet>11216</a>    <span class="macro">Let!</span>(<span class="string">"\\thepage"</span>, <span class="string">"\\relax"</span>);
+<a href=#11217 id=11217 data-nosnippet>11217</a>    <span class="kw">let </span>_digested = digest(prelude)<span class="question-mark">?</span>;
+<a href=#11218 id=11218 data-nosnippet>11218</a>    egroup()<span class="question-mark">?</span>;
+<a href=#11219 id=11219 data-nosnippet>11219</a>  });
+<a href=#11220 id=11220 data-nosnippet>11220</a>
+<a href=#11221 id=11221 data-nosnippet>11221</a>  <span class="comment">// \@@end — saved TeX \end primitive
+<a href=#11222 id=11222 data-nosnippet>11222</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@@end"</span>, {
+<a href=#11223 id=11223 data-nosnippet>11223</a>    <span class="kw">if </span>!lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"INTERPRETING_DEFINITIONS"</span>)) {
+<a href=#11224 id=11224 data-nosnippet>11224</a>      flush();
+<a href=#11225 id=11225 data-nosnippet>11225</a>    }
+<a href=#11226 id=11226 data-nosnippet>11226</a>  });
 <a href=#11227 id=11227 data-nosnippet>11227</a>
-<a href=#11228 id=11228 data-nosnippet>11228</a>  // Perl L5645
-<a href=#11229 id=11229 data-nosnippet>11229</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@onlypreamble{}"</span>, {
-<a href=#11230 id=11230 data-nosnippet>11230</a>    only_preamble(<span class="string">"\\@onlypreamble"</span>)<span class="question-mark">?</span>;
-<a href=#11231 id=11231 data-nosnippet>11231</a>  });
-<a href=#11232 id=11232 data-nosnippet>11232</a>
-<a href=#11233 id=11233 data-nosnippet>11233</a>  <span class="comment">// Perl L5646-5648
-<a href=#11234 id=11234 data-nosnippet>11234</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\GenericError{}{}{}{}"</span>, sub[(arg1,arg2,arg3,arg4)] {
-<a href=#11235 id=11235 data-nosnippet>11235</a>    <span class="comment">// Perl passes ALL four args; make_generic_message peels the first as
-<a href=#11236 id=11236 data-nosnippet>11236</a>    // the message $type (the `(pkgname)` prefix) and joins the rest.
-<a href=#11237 id=11237 data-nosnippet>11237</a>    </span>make_generic_message(<span class="string">"\\GenericError"</span>, <span class="macro">vec!</span>[arg1, arg2, arg3, arg4], <span class="string">"error"</span>)<span class="question-mark">?</span>;
-<a href=#11238 id=11238 data-nosnippet>11238</a>  });
-<a href=#11239 id=11239 data-nosnippet>11239</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\GenericWarning{}{}"</span>, sub[(arg1,arg2)] {
-<a href=#11240 id=11240 data-nosnippet>11240</a>    make_generic_message(<span class="string">"\\GenericWarning"</span>, <span class="macro">vec!</span>[arg1,arg2], <span class="string">"warn"</span>)<span class="question-mark">?</span>;
+<a href=#11228 id=11228 data-nosnippet>11228</a>  <span class="comment">//======================================================================
+<a href=#11229 id=11229 data-nosnippet>11229</a>  // Closure-backed primitives — Perl: latex_constructs.pool.ltxml L5645-5766.
+<a href=#11230 id=11230 data-nosnippet>11230</a>  // These MUST live in `_constructs` (always loaded), not `_base` (optional
+<a href=#11231 id=11231 data-nosnippet>11231</a>  // under Perl's LoadFormat mutual-exclusivity). Their closures cannot be
+<a href=#11232 id=11232 data-nosnippet>11232</a>  // serialized into the kernel dump; defining them here guarantees they
+<a href=#11233 id=11233 data-nosnippet>11233</a>  // exist whether or not the dump short-circuits `_base`.
+<a href=#11234 id=11234 data-nosnippet>11234</a>  //
+<a href=#11235 id=11235 data-nosnippet>11235</a>  // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
+<a href=#11236 id=11236 data-nosnippet>11236</a>  // unblock `LATEXML_DUMP_ONLY=1` paths (see SYNC_STATUS D0 v3.f).
+<a href=#11237 id=11237 data-nosnippet>11237</a>
+<a href=#11238 id=11238 data-nosnippet>11238</a>  // Perl L5645
+<a href=#11239 id=11239 data-nosnippet>11239</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@onlypreamble{}"</span>, {
+<a href=#11240 id=11240 data-nosnippet>11240</a>    only_preamble(<span class="string">"\\@onlypreamble"</span>)<span class="question-mark">?</span>;
 <a href=#11241 id=11241 data-nosnippet>11241</a>  });
-<a href=#11242 id=11242 data-nosnippet>11242</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\GenericInfo{}{}"</span>, sub[(arg1,arg2)] {
-<a href=#11243 id=11243 data-nosnippet>11243</a>    make_generic_message(<span class="string">"\\GenericInfo"</span>, <span class="macro">vec!</span>[arg1,arg2], <span class="string">"info"</span>)<span class="question-mark">?</span>;
-<a href=#11244 id=11244 data-nosnippet>11244</a>  });
-<a href=#11245 id=11245 data-nosnippet>11245</a>
-<a href=#11246 id=11246 data-nosnippet>11246</a>  <span class="comment">// `\ltx@hard@MessageBreak` is the literal newline target used by
-<a href=#11247 id=11247 data-nosnippet>11247</a>  // `make_generic_message` to convert `\MessageBreak`-separated lines
-<a href=#11248 id=11248 data-nosnippet>11248</a>  // in `\GenericInfo`/`\GenericWarning`/`\GenericError` messages.
-<a href=#11249 id=11249 data-nosnippet>11249</a>  // Originally defined in `latex_base.rs:287`, but `latex_base` is
-<a href=#11250 id=11250 data-nosnippet>11250</a>  // replaced by `latex_dump` in dump path — so the DefMacro doesn't
-<a href=#11251 id=11251 data-nosnippet>11251</a>  // run there and `\ltx@hard@MessageBreak` is undefined. When
-<a href=#11252 id=11252 data-nosnippet>11252</a>  // `make_generic_message` then calls `let_i(\MessageBreak,
-<a href=#11253 id=11253 data-nosnippet>11253</a>  // \ltx@hard@MessageBreak)`, the let-target is undefined → meaning
-<a href=#11254 id=11254 data-nosnippet>11254</a>  // becomes Stored::None → `\MessageBreak` becomes undefined for the
-<a href=#11255 id=11255 data-nosnippet>11255</a>  // remainder of the digestion. The next babel info message
-<a href=#11256 id=11256 data-nosnippet>11256</a>  // \ltx@hard@MessageBreak lives in `latex_constructs_rust_only.rs`
-<a href=#11257 id=11257 data-nosnippet>11257</a>  // (not in any Perl latex_*.pool.ltxml; covers both dump and NODUMP
-<a href=#11258 id=11258 data-nosnippet>11258</a>  // paths since rust_only.rs runs last).
-<a href=#11259 id=11259 data-nosnippet>11259</a>
-<a href=#11260 id=11260 data-nosnippet>11260</a>  // Perl L5650 — re-let `\MessageBreak` to `\relax` here, post-dump.
-<a href=#11261 id=11261 data-nosnippet>11261</a>  // Defensive parity with Perl's exact placement.
-<a href=#11262 id=11262 data-nosnippet>11262</a>  </span><span class="macro">Let!</span>(<span class="string">"\\MessageBreak"</span>, <span class="string">"\\relax"</span>);
-<a href=#11263 id=11263 data-nosnippet>11263</a>
-<a href=#11264 id=11264 data-nosnippet>11264</a>  <span class="comment">// Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
-<a href=#11265 id=11265 data-nosnippet>11265</a>  </span>def_macro_noop(<span class="string">"\\@setsize{}{}{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#11266 id=11266 data-nosnippet>11266</a>
-<a href=#11267 id=11267 data-nosnippet>11267</a>  <span class="comment">// Perl L5654-5666 — kernel CSes the comment in latex_base.rs:572-575
-<a href=#11268 id=11268 data-nosnippet>11268</a>  // promised would live here. Without these, `\on@line` (used by
-<a href=#11269 id=11269 data-nosnippet>11269</a>  // `\@latex@error`/`\@warning` and our own `\@currenvline` block at
-<a href=#11270 id=11270 data-nosnippet>11270</a>  // L8219) and friends are auto-defined as `&lt;ltx:ERROR/&gt;`, leaking
-<a href=#11271 id=11271 data-nosnippet>11271</a>  // raw `#` parameters into the Stomach (witness 1610.05489 + ~17 more).
-<a href=#11272 id=11272 data-nosnippet>11272</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#11273 id=11273 data-nosnippet>11273</a>    <span class="string">"\\hexnumber@ {}"</span>,
-<a href=#11274 id=11274 data-nosnippet>11274</a>    <span class="string">r"\ifcase\number#1 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or 8\or 9\or A\or B\or C\or D\or E\or F\fi"
-<a href=#11275 id=11275 data-nosnippet>11275</a>  </span>);
-<a href=#11276 id=11276 data-nosnippet>11276</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\on@line"</span>, <span class="string">r" on input line \the\inputlineno"</span>);
-<a href=#11277 id=11277 data-nosnippet>11277</a>  <span class="macro">Let!</span>(<span class="string">"\\@warning"</span>, <span class="string">"\\@latex@warning"</span>);
-<a href=#11278 id=11278 data-nosnippet>11278</a>  <span class="macro">Let!</span>(<span class="string">"\\@@warning"</span>, <span class="string">"\\@latex@warning@no@line"</span>);
-<a href=#11279 id=11279 data-nosnippet>11279</a>  def_macro_noop(<span class="string">"\\G@refundefinedtrue"</span>)<span class="question-mark">?</span>;
-<a href=#11280 id=11280 data-nosnippet>11280</a>  <span class="macro">DefMacro!</span>(
-<a href=#11281 id=11281 data-nosnippet>11281</a>    <span class="string">"\\@nomath{}"</span>,
-<a href=#11282 id=11282 data-nosnippet>11282</a>    <span class="string">r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi"
-<a href=#11283 id=11283 data-nosnippet>11283</a>  </span>);
-<a href=#11284 id=11284 data-nosnippet>11284</a>  <span class="macro">DefMacro!</span>(
-<a href=#11285 id=11285 data-nosnippet>11285</a>    <span class="string">"\\@font@warning{}"</span>,
-<a href=#11286 id=11286 data-nosnippet>11286</a>    <span class="string">r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
-<a href=#11287 id=11287 data-nosnippet>11287</a>  </span>);
-<a href=#11288 id=11288 data-nosnippet>11288</a>
-<a href=#11289 id=11289 data-nosnippet>11289</a>  <span class="comment">// Perl L5765-5766
-<a href=#11290 id=11290 data-nosnippet>11290</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\makeatletter"</span>, {
-<a href=#11291 id=11291 data-nosnippet>11291</a>    <span class="macro">AssignCatcode!</span>(<span class="string">'@'</span>, Catcode::LETTER, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#11292 id=11292 data-nosnippet>11292</a>  });
-<a href=#11293 id=11293 data-nosnippet>11293</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\makeatother"</span>, {
-<a href=#11294 id=11294 data-nosnippet>11294</a>    <span class="macro">AssignCatcode!</span>(<span class="string">'@'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#11295 id=11295 data-nosnippet>11295</a>  });
-<a href=#11296 id=11296 data-nosnippet>11296</a>
-<a href=#11297 id=11297 data-nosnippet>11297</a>  <span class="comment">// Perl L5670-5673 — font size stubs. Token-list bodies (Perl:
-<a href=#11298 id=11298 data-nosnippet>11298</a>  // `Tokens()` = empty) that swallow their args. Relocated from
-<a href=#11299 id=11299 data-nosnippet>11299</a>  // latex_base.rs 2026-04-18 for Perl-parity AND so they round-trip
-<a href=#11300 id=11300 data-nosnippet>11300</a>  // through the dump under LATEXML_DUMP_ONLY=1 (the dump reader's
-<a href=#11301 id=11301 data-nosnippet>11301</a>  // @-internal safety filter rejects public-CS macros, so public
-<a href=#11302 id=11302 data-nosnippet>11302</a>  // kernel CSes like `\fontsize` must live in always-loaded
-<a href=#11303 id=11303 data-nosnippet>11303</a>  // `_constructs.rs`).
-<a href=#11304 id=11304 data-nosnippet>11304</a>  </span>def_macro_noop(<span class="string">"\\check@mathfonts"</span>)<span class="question-mark">?</span>;
-<a href=#11305 id=11305 data-nosnippet>11305</a>  def_macro_noop(<span class="string">"\\fontsize{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#11306 id=11306 data-nosnippet>11306</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@setfontsize{}{}{}"</span>, <span class="string">"\\let\\@currsize#1"</span>);
-<a href=#11307 id=11307 data-nosnippet>11307</a>
-<a href=#11308 id=11308 data-nosnippet>11308</a>  <span class="comment">// Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
-<a href=#11309 id=11309 data-nosnippet>11309</a>  // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
-<a href=#11310 id=11310 data-nosnippet>11310</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@ifnextchar DefToken {}{}"</span>, sub[(token, t_if, t_else)] {
-<a href=#11311 id=11311 data-nosnippet>11311</a>    <span class="kw">let </span>next = read_non_space()<span class="question-mark">?</span>;
-<a href=#11312 id=11312 data-nosnippet>11312</a>    <span class="kw">let </span>next_test = <span class="kw">match </span>next {
-<a href=#11313 id=11313 data-nosnippet>11313</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>n) =&gt; <span class="macro">XEquals!</span>(<span class="kw-2">&amp;</span>token, n),
-<a href=#11314 id=11314 data-nosnippet>11314</a>      <span class="prelude-val">None </span>=&gt; <span class="macro">XEquals!</span>(<span class="kw-2">&amp;</span>token, <span class="kw-2">&amp;*</span>TOKEN_END)
-<a href=#11315 id=11315 data-nosnippet>11315</a>    };
-<a href=#11316 id=11316 data-nosnippet>11316</a>    <span class="kw">let </span>which = <span class="kw">if </span>next_test { t_if } <span class="kw">else </span>{ t_else };
-<a href=#11317 id=11317 data-nosnippet>11317</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = which.substitute_parameters(<span class="kw-2">&amp;</span>[]).unlist();
-<a href=#11318 id=11318 data-nosnippet>11318</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t_next) = next {
-<a href=#11319 id=11319 data-nosnippet>11319</a>      result.push(t_next);
-<a href=#11320 id=11320 data-nosnippet>11320</a>    }
-<a href=#11321 id=11321 data-nosnippet>11321</a>    result
-<a href=#11322 id=11322 data-nosnippet>11322</a>  });
-<a href=#11323 id=11323 data-nosnippet>11323</a>  <span class="macro">Let!</span>(<span class="string">"\\kernel@ifnextchar"</span>, <span class="string">"\\@ifnextchar"</span>);
-<a href=#11324 id=11324 data-nosnippet>11324</a>
-<a href=#11325 id=11325 data-nosnippet>11325</a>  <span class="comment">// Re-establish the engine `\hline` override after dump load.
-<a href=#11326 id=11326 data-nosnippet>11326</a>  // Mirrors `TeX_Tables.pool.ltxml`'s `DefMacro('\hline', '\noalign{\@@alignment@hline}')`
-<a href=#11327 id=11327 data-nosnippet>11327</a>  // which Rust port has at `tex_tables.rs:418` (TeX.pool baseline). However:
-<a href=#11328 id=11328 data-nosnippet>11328</a>  // CLAUDE.md "Unconditional dump apply" → the dump's M-line for `\hline`
-<a href=#11329 id=11329 data-nosnippet>11329</a>  // (latex.ltx's `\def\hline{\noalign{...\hrule...\@xhline}}`) overwrites
-<a href=#11330 id=11330 data-nosnippet>11330</a>  // the engine version on dump-load. The macro expansion emits a literal
-<a href=#11331 id=11331 data-nosnippet>11331</a>  // `\hrule` inside `&lt;td&gt;` (Constructor at `tex_box.rs:1100`) instead of
-<a href=#11332 id=11332 data-nosnippet>11332</a>  // setting `border="t"` on the next row, breaking ~30 tabular tests
-<a href=#11333 id=11333 data-nosnippet>11333</a>  // (lettercase, ot1/t1/t2*/ts1/ly1, latin*, cp*, applemac, longtable,
-<a href=#11334 id=11334 data-nosnippet>11334</a>  // array, colortbls, tabular, supertabular, morse, cells, ntheorem, …).
-<a href=#11335 id=11335 data-nosnippet>11335</a>  //
-<a href=#11336 id=11336 data-nosnippet>11336</a>  // This is NOT a Rust-only divergence — same definition as
-<a href=#11337 id=11337 data-nosnippet>11337</a>  // `tex_tables.rs:418` and Perl's `TeX_Tables.pool.ltxml`. The only
-<a href=#11338 id=11338 data-nosnippet>11338</a>  // divergence is location: pragmatic late re-install after dump-load,
-<a href=#11339 id=11339 data-nosnippet>11339</a>  // since under unconditional-dump-apply the only way for the engine
-<a href=#11340 id=11340 data-nosnippet>11340</a>  // override to survive is to apply it AFTER the dump has been read.
-<a href=#11341 id=11341 data-nosnippet>11341</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hline"</span>, <span class="string">r"\noalign{\@@alignment@hline}"</span>);
-<a href=#11342 id=11342 data-nosnippet>11342</a>
-<a href=#11343 id=11343 data-nosnippet>11343</a>  <span class="comment">// Re-establish the engine `\documentstyle` impl after dump load. Same
-<a href=#11344 id=11344 data-nosnippet>11344</a>  // pattern as `\hline` above: under unconditional dump-apply the dump's
-<a href=#11345 id=11345 data-nosnippet>11345</a>  // `\documentstyle` body — `\input{latex209.def}\documentclass` — wins
-<a href=#11346 id=11346 data-nosnippet>11346</a>  // over the engine `Let \documentstyle = \lx@documentstyle@impl` from
-<a href=#11347 id=11347 data-nosnippet>11347</a>  // `tex_job.rs:279`. That dump body routes everything through
-<a href=#11348 id=11348 data-nosnippet>11348</a>  // `\documentclass`, which calls `load_class(name, opts,
-<a href=#11349 id=11349 data-nosnippet>11349</a>  // after=\AtBeginDocument\warn@unusedclassoptions)` — DROPPING the
-<a href=#11350 id=11350 data-nosnippet>11350</a>  // `\compat@loadpackages` after-hook our `\documentstyle` impl
-<a href=#11351 id=11351 data-nosnippet>11351</a>  // installs. Symptom: `\documentstyle[multicol,...]{revtex}` doesn't
-<a href=#11352 id=11352 data-nosnippet>11352</a>  // route the `multicol` option to `RequirePackage{multicol}`, leaving
-<a href=#11353 id=11353 data-nosnippet>11353</a>  // `\multicols`/`\multicolsep` undefined. Witness: cond-mat0109091.
-<a href=#11354 id=11354 data-nosnippet>11354</a>  //
-<a href=#11355 id=11355 data-nosnippet>11355</a>  // The Let-restore in `tex.rs` `\@load@latex@pool` only fires when an
-<a href=#11356 id=11356 data-nosnippet>11356</a>  // autoload trigger CS (\documentclass, \usepackage, …) is invoked
-<a href=#11357 id=11357 data-nosnippet>11357</a>  // AFTER engine init — but `\documentstyle` is not in the trigger
-<a href=#11358 id=11358 data-nosnippet>11358</a>  // list, so a paper whose first command is `\documentstyle` never
-<a href=#11359 id=11359 data-nosnippet>11359</a>  // gets the restore. Doing it here, at the end of the
-<a href=#11360 id=11360 data-nosnippet>11360</a>  // bootstrap → dump → constructs flow, guarantees our impl wins.
-<a href=#11361 id=11361 data-nosnippet>11361</a>  </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
-<a href=#11362 id=11362 data-nosnippet>11362</a>});
+<a href=#11242 id=11242 data-nosnippet>11242</a>
+<a href=#11243 id=11243 data-nosnippet>11243</a>  <span class="comment">// Perl L5646-5648
+<a href=#11244 id=11244 data-nosnippet>11244</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\GenericError{}{}{}{}"</span>, sub[(arg1,arg2,arg3,arg4)] {
+<a href=#11245 id=11245 data-nosnippet>11245</a>    <span class="comment">// Perl passes ALL four args; make_generic_message peels the first as
+<a href=#11246 id=11246 data-nosnippet>11246</a>    // the message $type (the `(pkgname)` prefix) and joins the rest.
+<a href=#11247 id=11247 data-nosnippet>11247</a>    </span>make_generic_message(<span class="string">"\\GenericError"</span>, <span class="macro">vec!</span>[arg1, arg2, arg3, arg4], <span class="string">"error"</span>)<span class="question-mark">?</span>;
+<a href=#11248 id=11248 data-nosnippet>11248</a>  });
+<a href=#11249 id=11249 data-nosnippet>11249</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\GenericWarning{}{}"</span>, sub[(arg1,arg2)] {
+<a href=#11250 id=11250 data-nosnippet>11250</a>    make_generic_message(<span class="string">"\\GenericWarning"</span>, <span class="macro">vec!</span>[arg1,arg2], <span class="string">"warn"</span>)<span class="question-mark">?</span>;
+<a href=#11251 id=11251 data-nosnippet>11251</a>  });
+<a href=#11252 id=11252 data-nosnippet>11252</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\GenericInfo{}{}"</span>, sub[(arg1,arg2)] {
+<a href=#11253 id=11253 data-nosnippet>11253</a>    make_generic_message(<span class="string">"\\GenericInfo"</span>, <span class="macro">vec!</span>[arg1,arg2], <span class="string">"info"</span>)<span class="question-mark">?</span>;
+<a href=#11254 id=11254 data-nosnippet>11254</a>  });
+<a href=#11255 id=11255 data-nosnippet>11255</a>
+<a href=#11256 id=11256 data-nosnippet>11256</a>  <span class="comment">// `\ltx@hard@MessageBreak` is the literal newline target used by
+<a href=#11257 id=11257 data-nosnippet>11257</a>  // `make_generic_message` to convert `\MessageBreak`-separated lines
+<a href=#11258 id=11258 data-nosnippet>11258</a>  // in `\GenericInfo`/`\GenericWarning`/`\GenericError` messages.
+<a href=#11259 id=11259 data-nosnippet>11259</a>  // Originally defined in `latex_base.rs:287`, but `latex_base` is
+<a href=#11260 id=11260 data-nosnippet>11260</a>  // replaced by `latex_dump` in dump path — so the DefMacro doesn't
+<a href=#11261 id=11261 data-nosnippet>11261</a>  // run there and `\ltx@hard@MessageBreak` is undefined. When
+<a href=#11262 id=11262 data-nosnippet>11262</a>  // `make_generic_message` then calls `let_i(\MessageBreak,
+<a href=#11263 id=11263 data-nosnippet>11263</a>  // \ltx@hard@MessageBreak)`, the let-target is undefined → meaning
+<a href=#11264 id=11264 data-nosnippet>11264</a>  // becomes Stored::None → `\MessageBreak` becomes undefined for the
+<a href=#11265 id=11265 data-nosnippet>11265</a>  // remainder of the digestion. The next babel info message
+<a href=#11266 id=11266 data-nosnippet>11266</a>  // \ltx@hard@MessageBreak lives in `latex_constructs_rust_only.rs`
+<a href=#11267 id=11267 data-nosnippet>11267</a>  // (not in any Perl latex_*.pool.ltxml; covers both dump and NODUMP
+<a href=#11268 id=11268 data-nosnippet>11268</a>  // paths since rust_only.rs runs last).
+<a href=#11269 id=11269 data-nosnippet>11269</a>
+<a href=#11270 id=11270 data-nosnippet>11270</a>  // Perl L5650 — re-let `\MessageBreak` to `\relax` here, post-dump.
+<a href=#11271 id=11271 data-nosnippet>11271</a>  // Defensive parity with Perl's exact placement.
+<a href=#11272 id=11272 data-nosnippet>11272</a>  </span><span class="macro">Let!</span>(<span class="string">"\\MessageBreak"</span>, <span class="string">"\\relax"</span>);
+<a href=#11273 id=11273 data-nosnippet>11273</a>
+<a href=#11274 id=11274 data-nosnippet>11274</a>  <span class="comment">// Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
+<a href=#11275 id=11275 data-nosnippet>11275</a>  </span>def_macro_noop(<span class="string">"\\@setsize{}{}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#11276 id=11276 data-nosnippet>11276</a>
+<a href=#11277 id=11277 data-nosnippet>11277</a>  <span class="comment">// Perl L5654-5666 — kernel CSes the comment in latex_base.rs:572-575
+<a href=#11278 id=11278 data-nosnippet>11278</a>  // promised would live here. Without these, `\on@line` (used by
+<a href=#11279 id=11279 data-nosnippet>11279</a>  // `\@latex@error`/`\@warning` and our own `\@currenvline` block at
+<a href=#11280 id=11280 data-nosnippet>11280</a>  // L8219) and friends are auto-defined as `&lt;ltx:ERROR/&gt;`, leaking
+<a href=#11281 id=11281 data-nosnippet>11281</a>  // raw `#` parameters into the Stomach (witness 1610.05489 + ~17 more).
+<a href=#11282 id=11282 data-nosnippet>11282</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#11283 id=11283 data-nosnippet>11283</a>    <span class="string">"\\hexnumber@ {}"</span>,
+<a href=#11284 id=11284 data-nosnippet>11284</a>    <span class="string">r"\ifcase\number#1 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or 8\or 9\or A\or B\or C\or D\or E\or F\fi"
+<a href=#11285 id=11285 data-nosnippet>11285</a>  </span>);
+<a href=#11286 id=11286 data-nosnippet>11286</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\on@line"</span>, <span class="string">r" on input line \the\inputlineno"</span>);
+<a href=#11287 id=11287 data-nosnippet>11287</a>  <span class="macro">Let!</span>(<span class="string">"\\@warning"</span>, <span class="string">"\\@latex@warning"</span>);
+<a href=#11288 id=11288 data-nosnippet>11288</a>  <span class="macro">Let!</span>(<span class="string">"\\@@warning"</span>, <span class="string">"\\@latex@warning@no@line"</span>);
+<a href=#11289 id=11289 data-nosnippet>11289</a>  def_macro_noop(<span class="string">"\\G@refundefinedtrue"</span>)<span class="question-mark">?</span>;
+<a href=#11290 id=11290 data-nosnippet>11290</a>  <span class="macro">DefMacro!</span>(
+<a href=#11291 id=11291 data-nosnippet>11291</a>    <span class="string">"\\@nomath{}"</span>,
+<a href=#11292 id=11292 data-nosnippet>11292</a>    <span class="string">r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi"
+<a href=#11293 id=11293 data-nosnippet>11293</a>  </span>);
+<a href=#11294 id=11294 data-nosnippet>11294</a>  <span class="macro">DefMacro!</span>(
+<a href=#11295 id=11295 data-nosnippet>11295</a>    <span class="string">"\\@font@warning{}"</span>,
+<a href=#11296 id=11296 data-nosnippet>11296</a>    <span class="string">r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
+<a href=#11297 id=11297 data-nosnippet>11297</a>  </span>);
+<a href=#11298 id=11298 data-nosnippet>11298</a>
+<a href=#11299 id=11299 data-nosnippet>11299</a>  <span class="comment">// Perl L5765-5766
+<a href=#11300 id=11300 data-nosnippet>11300</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\makeatletter"</span>, {
+<a href=#11301 id=11301 data-nosnippet>11301</a>    <span class="macro">AssignCatcode!</span>(<span class="string">'@'</span>, Catcode::LETTER, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#11302 id=11302 data-nosnippet>11302</a>  });
+<a href=#11303 id=11303 data-nosnippet>11303</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\makeatother"</span>, {
+<a href=#11304 id=11304 data-nosnippet>11304</a>    <span class="macro">AssignCatcode!</span>(<span class="string">'@'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#11305 id=11305 data-nosnippet>11305</a>  });
+<a href=#11306 id=11306 data-nosnippet>11306</a>
+<a href=#11307 id=11307 data-nosnippet>11307</a>  <span class="comment">// Perl L5670-5673 — font size stubs. Token-list bodies (Perl:
+<a href=#11308 id=11308 data-nosnippet>11308</a>  // `Tokens()` = empty) that swallow their args. Relocated from
+<a href=#11309 id=11309 data-nosnippet>11309</a>  // latex_base.rs 2026-04-18 for Perl-parity AND so they round-trip
+<a href=#11310 id=11310 data-nosnippet>11310</a>  // through the dump under LATEXML_DUMP_ONLY=1 (the dump reader's
+<a href=#11311 id=11311 data-nosnippet>11311</a>  // @-internal safety filter rejects public-CS macros, so public
+<a href=#11312 id=11312 data-nosnippet>11312</a>  // kernel CSes like `\fontsize` must live in always-loaded
+<a href=#11313 id=11313 data-nosnippet>11313</a>  // `_constructs.rs`).
+<a href=#11314 id=11314 data-nosnippet>11314</a>  </span>def_macro_noop(<span class="string">"\\check@mathfonts"</span>)<span class="question-mark">?</span>;
+<a href=#11315 id=11315 data-nosnippet>11315</a>  def_macro_noop(<span class="string">"\\fontsize{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#11316 id=11316 data-nosnippet>11316</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@setfontsize{}{}{}"</span>, <span class="string">"\\let\\@currsize#1"</span>);
+<a href=#11317 id=11317 data-nosnippet>11317</a>
+<a href=#11318 id=11318 data-nosnippet>11318</a>  <span class="comment">// Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
+<a href=#11319 id=11319 data-nosnippet>11319</a>  // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
+<a href=#11320 id=11320 data-nosnippet>11320</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@ifnextchar DefToken {}{}"</span>, sub[(token, t_if, t_else)] {
+<a href=#11321 id=11321 data-nosnippet>11321</a>    <span class="kw">let </span>next = read_non_space()<span class="question-mark">?</span>;
+<a href=#11322 id=11322 data-nosnippet>11322</a>    <span class="kw">let </span>next_test = <span class="kw">match </span>next {
+<a href=#11323 id=11323 data-nosnippet>11323</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>n) =&gt; <span class="macro">XEquals!</span>(<span class="kw-2">&amp;</span>token, n),
+<a href=#11324 id=11324 data-nosnippet>11324</a>      <span class="prelude-val">None </span>=&gt; <span class="macro">XEquals!</span>(<span class="kw-2">&amp;</span>token, <span class="kw-2">&amp;*</span>TOKEN_END)
+<a href=#11325 id=11325 data-nosnippet>11325</a>    };
+<a href=#11326 id=11326 data-nosnippet>11326</a>    <span class="kw">let </span>which = <span class="kw">if </span>next_test { t_if } <span class="kw">else </span>{ t_else };
+<a href=#11327 id=11327 data-nosnippet>11327</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = which.substitute_parameters(<span class="kw-2">&amp;</span>[]).unlist();
+<a href=#11328 id=11328 data-nosnippet>11328</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t_next) = next {
+<a href=#11329 id=11329 data-nosnippet>11329</a>      result.push(t_next);
+<a href=#11330 id=11330 data-nosnippet>11330</a>    }
+<a href=#11331 id=11331 data-nosnippet>11331</a>    result
+<a href=#11332 id=11332 data-nosnippet>11332</a>  });
+<a href=#11333 id=11333 data-nosnippet>11333</a>  <span class="macro">Let!</span>(<span class="string">"\\kernel@ifnextchar"</span>, <span class="string">"\\@ifnextchar"</span>);
+<a href=#11334 id=11334 data-nosnippet>11334</a>
+<a href=#11335 id=11335 data-nosnippet>11335</a>  <span class="comment">// Re-establish the engine `\hline` override after dump load.
+<a href=#11336 id=11336 data-nosnippet>11336</a>  // Mirrors `TeX_Tables.pool.ltxml`'s `DefMacro('\hline', '\noalign{\@@alignment@hline}')`
+<a href=#11337 id=11337 data-nosnippet>11337</a>  // which Rust port has at `tex_tables.rs:418` (TeX.pool baseline). However:
+<a href=#11338 id=11338 data-nosnippet>11338</a>  // CLAUDE.md "Unconditional dump apply" → the dump's M-line for `\hline`
+<a href=#11339 id=11339 data-nosnippet>11339</a>  // (latex.ltx's `\def\hline{\noalign{...\hrule...\@xhline}}`) overwrites
+<a href=#11340 id=11340 data-nosnippet>11340</a>  // the engine version on dump-load. The macro expansion emits a literal
+<a href=#11341 id=11341 data-nosnippet>11341</a>  // `\hrule` inside `&lt;td&gt;` (Constructor at `tex_box.rs:1100`) instead of
+<a href=#11342 id=11342 data-nosnippet>11342</a>  // setting `border="t"` on the next row, breaking ~30 tabular tests
+<a href=#11343 id=11343 data-nosnippet>11343</a>  // (lettercase, ot1/t1/t2*/ts1/ly1, latin*, cp*, applemac, longtable,
+<a href=#11344 id=11344 data-nosnippet>11344</a>  // array, colortbls, tabular, supertabular, morse, cells, ntheorem, …).
+<a href=#11345 id=11345 data-nosnippet>11345</a>  //
+<a href=#11346 id=11346 data-nosnippet>11346</a>  // This is NOT a Rust-only divergence — same definition as
+<a href=#11347 id=11347 data-nosnippet>11347</a>  // `tex_tables.rs:418` and Perl's `TeX_Tables.pool.ltxml`. The only
+<a href=#11348 id=11348 data-nosnippet>11348</a>  // divergence is location: pragmatic late re-install after dump-load,
+<a href=#11349 id=11349 data-nosnippet>11349</a>  // since under unconditional-dump-apply the only way for the engine
+<a href=#11350 id=11350 data-nosnippet>11350</a>  // override to survive is to apply it AFTER the dump has been read.
+<a href=#11351 id=11351 data-nosnippet>11351</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hline"</span>, <span class="string">r"\noalign{\@@alignment@hline}"</span>);
+<a href=#11352 id=11352 data-nosnippet>11352</a>
+<a href=#11353 id=11353 data-nosnippet>11353</a>  <span class="comment">// Re-establish the engine `\documentstyle` impl after dump load. Same
+<a href=#11354 id=11354 data-nosnippet>11354</a>  // pattern as `\hline` above: under unconditional dump-apply the dump's
+<a href=#11355 id=11355 data-nosnippet>11355</a>  // `\documentstyle` body — `\input{latex209.def}\documentclass` — wins
+<a href=#11356 id=11356 data-nosnippet>11356</a>  // over the engine `Let \documentstyle = \lx@documentstyle@impl` from
+<a href=#11357 id=11357 data-nosnippet>11357</a>  // `tex_job.rs:279`. That dump body routes everything through
+<a href=#11358 id=11358 data-nosnippet>11358</a>  // `\documentclass`, which calls `load_class(name, opts,
+<a href=#11359 id=11359 data-nosnippet>11359</a>  // after=\AtBeginDocument\warn@unusedclassoptions)` — DROPPING the
+<a href=#11360 id=11360 data-nosnippet>11360</a>  // `\compat@loadpackages` after-hook our `\documentstyle` impl
+<a href=#11361 id=11361 data-nosnippet>11361</a>  // installs. Symptom: `\documentstyle[multicol,...]{revtex}` doesn't
+<a href=#11362 id=11362 data-nosnippet>11362</a>  // route the `multicol` option to `RequirePackage{multicol}`, leaving
+<a href=#11363 id=11363 data-nosnippet>11363</a>  // `\multicols`/`\multicolsep` undefined. Witness: cond-mat0109091.
+<a href=#11364 id=11364 data-nosnippet>11364</a>  //
+<a href=#11365 id=11365 data-nosnippet>11365</a>  // The Let-restore in `tex.rs` `\@load@latex@pool` only fires when an
+<a href=#11366 id=11366 data-nosnippet>11366</a>  // autoload trigger CS (\documentclass, \usepackage, …) is invoked
+<a href=#11367 id=11367 data-nosnippet>11367</a>  // AFTER engine init — but `\documentstyle` is not in the trigger
+<a href=#11368 id=11368 data-nosnippet>11368</a>  // list, so a paper whose first command is `\documentstyle` never
+<a href=#11369 id=11369 data-nosnippet>11369</a>  // gets the restore. Doing it here, at the end of the
+<a href=#11370 id=11370 data-nosnippet>11370</a>  // bootstrap → dump → constructs flow, guarantees our impl wins.
+<a href=#11371 id=11371 data-nosnippet>11371</a>  </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
+<a href=#11372 id=11372 data-nosnippet>11372</a>});
 </code></pre></div></section></main></body></html>
