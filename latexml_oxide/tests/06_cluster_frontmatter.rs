@@ -258,3 +258,61 @@ fn frontmatter_mrm_author() {
     "MRM affiliation content missing:\n{x}"
   );
 }
+
+/// Springer-Nature `sn-jnl.cls` with a single **shared unnumbered** `\affil`
+/// (the witness's shape): all three authors render as clean personnames, and
+/// the one affiliation must attach to the author creators as a
+/// `<contact role="affiliation">`, NOT float off as a top-level
+/// `<note role="affiliation">` dagger orphan attached to nobody.
+/// arXiv/html_feedback#534, witness 2204.04741.
+#[test]
+fn frontmatter_sn_jnl_shared_affil() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_sn_jnl_affil.tex");
+  assert!(
+    x.matches("<personname>").count() >= 3,
+    "sn-jnl: expected 3 author personnames:\n{x}"
+  );
+  assert!(
+    x.contains("Asare") && x.contains("Nagappan") && x.contains("Asokan"),
+    "sn-jnl author names missing:\n{x}"
+  );
+  // The affiliation is a structured contact attached to the authors...
+  assert!(
+    x.contains("<contact")
+      && x.contains("role=\"affiliation\"")
+      && x.contains("University of Waterloo"),
+    "sn-jnl shared affiliation is not a structured <contact role=affiliation>:\n{x}"
+  );
+  // ...on ALL three authors (a single shared \affil → annotate=all), not just
+  // the last creator...
+  assert!(
+    x.matches("role=\"affiliation\"").count() >= 3,
+    "sn-jnl shared affiliation did not attach to all three authors:\n{x}"
+  );
+  // ...not an orphaned top-level note (the pre-fix bug).
+  assert!(
+    !x.contains("<note role=\"affiliation\""),
+    "sn-jnl affiliation leaked as an orphaned top-level note:\n{x}"
+  );
+}
+
+/// `sn-jnl.cls` with **numbered** `\author[N]` / `\affil[N]`: both affiliations
+/// render as structured `<contact role="affiliation">` (matched to authors by
+/// the id label), not orphaned notes. Guards the general numbered form beside
+/// the shared form above.
+#[test]
+fn frontmatter_sn_jnl_numbered_affil() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_sn_jnl_affil_numbered.tex");
+  assert!(
+    x.contains("University of Foo") && x.contains("University of Bar"),
+    "sn-jnl numbered affiliation content dropped:\n{x}"
+  );
+  assert!(
+    x.contains("<contact") && x.contains("role=\"affiliation\""),
+    "sn-jnl numbered affiliations are not structured contacts:\n{x}"
+  );
+  assert!(
+    !x.contains("<note role=\"affiliation\""),
+    "sn-jnl numbered affiliation leaked as an orphaned top-level note:\n{x}"
+  );
+}
