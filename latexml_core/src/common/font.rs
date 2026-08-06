@@ -1529,7 +1529,11 @@ impl Font {
     // inter-line adjustment, e.g. \vskip / \hrule).
     let mut lines: Vec<[i64; 4]> = Vec::new();
     if mode_str.ends_with("vertical") {
-      // Perl: For vertical, ALL boxes are lines.
+      // Perl: For vertical, ALL boxes are lines. (Rust makes the box-list match
+      // Perl's structure BEFORE this point: a text-mode `{...}` group that
+      // breaks a paragraph repacks the outer paragraph at digestion — see
+      // `tex_box.rs` `{` primitive R2 / OXIDIZED_DESIGN #100 — so no run of loose
+      // characters ever reaches here to be mis-counted one-line-per-glyph.)
       for bx in boxes {
         if bx.has_property("isEmpty") {
           continue;

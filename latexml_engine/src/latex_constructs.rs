@@ -1863,7 +1863,29 @@ pub fn after_float(whatsit: &mut Whatsit) {
   // afterClose hook to size the per-row layout — NOT the ambient \hsize at
   // construction time, which may have been restored to an unrelated value.
   if let Ok(Some(hsize)) = lookup_register("\\hsize", Vec::new()) {
-    whatsit.set_property("floatwidth", Stored::from(hsize));
+    // geometry SVG-scope (geometry_sty / OXIDIZED_DESIGN #99): when the page
+    // geometry defined a wider text width than the class default (`\Gm@tw`) and
+    // this float spans the full text width, size the PANEL ARRANGEMENT to that
+    // width. The panels are geometry-sized SVG pictures (their `\linewidth` was
+    // raised inside the picture), so the per-row overflow threshold must be on
+    // the same basis or two `0.495\linewidth` boxes that sit side-by-side in the
+    // PDF would wrap to separate rows. Only the arrangement threshold changes —
+    // the float's HTML content keeps the class-default width.
+    let mut floatwidth = hsize.clone();
+    if let (Ok(Some(gm_tw)), Ok(Some(doctw))) = (
+      lookup_register("\\Gm@tw", Vec::new()),
+      lookup_register("\\Gm@doctw", Vec::new()),
+    ) {
+      // Full-column float only: compare against the class-default column width
+      // \Gm@doctw (captured at geometry load), not the live \textwidth — a
+      // minipage sets \textwidth=\linewidth locally, so the live compare would
+      // mis-fire inside one.
+      let (h, g, d) = (hsize.value_of(), gm_tw.clone().value_of(), doctw.value_of());
+      if h == d && g > h {
+        floatwidth = gm_tw;
+      }
+    }
+    whatsit.set_property("floatwidth", Stored::from(floatwidth));
   }
   rescue_caption_counters(&captype, whatsit);
   assign_value(

@@ -18,8 +18,25 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   // Dependency packages the class \RequirePackage's and the paper body relies
   // on (those with bindings / user-facing commands). Purely-cosmetic layout
-  // packages (geometry, microtype, setspace, parskip, titlesec, …) are omitted
-  // — they are visual no-ops in LaTeXML and OmniBus degrades gracefully.
+  // packages (microtype, setspace, parskip, titlesec, …) are omitted — they are
+  // visual no-ops in LaTeXML and OmniBus degrades gracefully.
+  //
+  // geometry is NOT purely cosmetic: it sizes measured SVG graphics (the class
+  // draws its Figure-1 statement/proof cards as `width=0.495\linewidth`
+  // tcolorboxes). With geometry omitted, \linewidth stays at the 345pt article
+  // default instead of the class's ~472pt, so the boxes come out ~2x too tall
+  // and text runs through the border (2605.29955 Fig 1). Load it with the
+  // class's own margins (fairmeta.cls L15) so geometry_sty's SVG-scope hook
+  // sizes those boxes to match the PDF. PassOptions before the require (Perl
+  // idiom) so the option list reaches geometry's \ProcessOptions at load time.
+  pass_options("geometry", "sty", vec![
+    s!("top=2.25cm"),
+    s!("bottom=2.5cm"),
+    s!("left=2.5cm"),
+    s!("right=2.5cm"),
+    s!("columnsep=0.65cm"),
+  ])?;
+  RequirePackage!("geometry");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");
@@ -39,9 +56,6 @@ LoadDefinitions!({
   // \tcbuselibrary{most} loads the enhanced/breakable/skins keys.
   pass_options("tcolorbox", "sty", vec![s!("most")])?;
   RequirePackage!("tcolorbox");
-
-  // \geometry{...} — page-geometry hint; visual-only, gobble the arg.
-  def_macro_noop("\\geometry{}")?;
 
   // Class palette (\color{metafg} is used by the abstract box).
   Digest!("\\definecolor{metablue}{HTML}{E2EFEF}")?;

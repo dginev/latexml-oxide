@@ -359,6 +359,16 @@ LoadDefinitions!({
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
   DefPrimitive!("{", {
+    // R2: were we mid-paragraph when this group opened? If so, the characters
+    // typeset so far belong to the OUTER paragraph. Perl's text-mode `{...}`
+    // flows FLAT (`digestUntil`), so a grouped `\par` repacks them; Rust
+    // localizes the group (below), hiding them from the inner `\par`. Captured
+    // BEFORE `bgroup` (the matching `}` restores mode via `egroup`).
+    let mid_para = {
+      let mode = lookup_string_from_sym(pin!("MODE"));
+      let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
+      mode == "horizontal" && bound.ends_with("vertical")
+    };
     bgroup();
     let open = Tbox::new(
       pin!(""),
@@ -373,6 +383,23 @@ LoadDefinitions!({
       TexMode::Text
     });
     let body = digest_next_body(None)?;
+    // R2: if this text-mode group actually broke a paragraph (its digested body
+    // resumed vertical mode — i.e. contains a `\par` whatsit), repack the outer
+    // paragraph's now-restored loose run NOW, so the box-list matches Perl's flat
+    // digestion (packed paragraph List, not loose chars). Gated on `mid_para` and
+    // non-math, so ordinary inline `{...}` groups and math groups are untouched;
+    // fires only for the rare `\par`-inside-text-group idiom (`\tcbline@`'s
+    // `{\parskip\z@\par\nointerlineskip}`). See OXIDIZED_DESIGN #100.
+    if mid_para
+      && !lookup_bool_sym(pin!("IN_MATH"))
+      && body.iter().any(|b| {
+        b.get_property("mode")
+          .map(|m| m.to_string().ends_with("vertical"))
+          .unwrap_or(false)
+      })
+    {
+      repack_horizontal();
+    }
     let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
     let mut font = None;
