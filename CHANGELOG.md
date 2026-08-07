@@ -2,6 +2,12 @@
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
+  - **arXiv HTML-feedback fidelity fixes.** Title-page `\date{...}` renders bare,
+    without the surrounding parentheses (arXiv html_feedback 1934); `\parbox`/`\mbox`
+    math nested inside math converts to presentation MathML instead of garbled raw
+    content-MathML (arXiv html_feedback 6847); and Springer-Nature `sn-jnl.cls`
+    author affiliations attach to their authors instead of floating off as an
+    orphaned note (arXiv html_feedback 534).
   - **`geometry`-driven tcolorbox/tikz graphics size to the real page width, and
     `\tcbline`-segmented boxes measure their height correctly.** Page geometry now
     feeds the *measured SVG picture* width — never the reflowable HTML flow — so a

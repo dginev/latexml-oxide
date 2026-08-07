@@ -1,10 +1,11 @@
-# Floating nightly, deliberately (2026-07-03): we track the latest nightly
-# everywhere — dev, CI, and dependent workspaces (ar5iv-editor) — so fmt/
-# clippy/codegen drift surfaces immediately instead of at release time.
-# (The project requires nightly — latexml_core uses #![feature(thread_local)];
-# see CLAUDE.md.) If release-day reproducibility is ever needed again, pin a
-# dated nightly here and CI follows automatically (workflows run plain
-# `cargo`, resolved through this file).
+# Pinned nightly for the 0.7.5-rc6 release (2026-08-06). Nightlies in the window
+# (2026-07-27, 2026-08-04] regressed fat-LTO rustc RSS to >200 GB and OOM-kill the
+# `maxperf` release build (issue #512); nightly-2026-07-27 is the last-known-good
+# (5.3 GB fat-LTO). CI and the tag-triggered release both resolve their toolchain
+# through this file (the 0.7.0 release used the same dated-pin mechanism), so this
+# freezes every leg on the good nightly. Revert to floating `channel = "nightly"`
+# once a fixed nightly lands and #512 closes. (The project requires nightly —
+# latexml_core uses #![feature(thread_local)]; see CLAUDE.md.)
 [toolchain]
-channel = "nightly"
+channel = "nightly-2026-07-27"
 components = ["rustfmt", "clippy", "rust-src"]
