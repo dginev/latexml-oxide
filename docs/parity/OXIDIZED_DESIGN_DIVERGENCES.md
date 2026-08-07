@@ -3700,6 +3700,41 @@ mismatch** (drawn shapes frozen at TeX-font metrics while only the foreignObject
 text reflows in the client), a structural limitation tracked with WISDOM #47 —
 orthogonal to this repack fix.
 
+### 101. Math nested inside a text box that itself sits in math is converted, not left raw
+
+**Perl** `Post/MathML.pm` `pmml_text_aux` (L1063-1073): when an `ltx:XMText`
+(the atom a `\parbox`/`\mbox`/`\text` becomes inside math) contains an element
+Perl does not special-case — e.g. the `ltx:inline-block` a `\parbox` produces —
+Perl clones that subtree **verbatim** and warns `unexpected:nested-math`. The
+inline `$...$` inside are `ltx:Math` nodes the top-level pass already skipped
+(`//ltx:Math[not(ancestor::ltx:Math)]`), so their `<ltx:XMath>` content-MathML
+survives to the browser, which renders the tokens in **document (operator-first)
+order** — `A\in\mathcal L` comes out `∈AL`. A SHARED FAILURE: both engines
+produce the identical garbling (arXiv:2608.05024, arXiv html_feedback #6847 —
+three `\Delta_k(S):=\sup\{…:\parbox{…}{$A\in…$,\\$B\in…$}\}` displays).
+
+**Divergence** (surpass-Perl): `rebuild_text_subtree_with_doc`
+(`latexml_post/src/mathml/mod.rs`) — the shared XMText-subtree materializer —
+now CONVERTS a nested `ltx:Math` to a self-contained inline `<m:math>` element
+(`nested_ltx_math_to_inline_mathml`) instead of cloning its `<ltx:XMath>` raw,
+so the parbox's inline math renders as real math in reading order (`A ∈ ℒ(…)`,
+subscripts and all). The `<math>` wrapper is load-bearing: the parbox becomes an
+HTML `<span class="ltx_inline-block">`, and `span` is an HTML5 MathML-**breakout**
+tag, so a bare `<mrow>` there would be parsed as HTML and render as flat text —
+the `<math>` re-enters MathML context. (The top-level pass gets the equivalent
+wrapper from `MathProcessor::outer_wrapper`; this is its nested analogue. The
+sibling direct-child case — a nested `ltx:Math` DIRECTLY in an `m:mtext`, as
+`\text{$x$}` yields — needs no wrapper because `<mrow>` in `<mtext>` stays
+MathML, so `pmml_text_aux`'s `ltx:Math` arm deliberately keeps the bare form.)
+This requires `convert_to_pmml` to be **reentrancy-safe**: it overwrites the
+inherited style/font/color thread-locals, so it now snapshots and restores them,
+letting a nested conversion run mid-outer-conversion without corrupting the outer
+math's remaining tokens. The `unexpected:nested-math` warning is retired.
+
+**Guard**: `124_parbox_nested_math::parbox_nested_math_converts_to_presentation_mathml`
+(full-pipeline binary run: no `XMTok`/`XMApp` leaks into the HTML, and the
+operand `A` precedes the relation `∈` inside the parbox).
+
 ### 102. The title-page date renders bare, with no surrounding parentheses
 
 **Perl** `resources/XSLT/LaTeXML-structure-xhtml.xsl`, the `dates` named

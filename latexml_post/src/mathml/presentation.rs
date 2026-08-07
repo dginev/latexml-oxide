@@ -399,6 +399,18 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
 /// Entry point for Presentation MathML conversion.
 /// Port of `MathML::Presentation::convertNode` + `pmml_top`.
 pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
+  // Reentrancy-safe: `convert_to_pmml` can run WHILE an outer conversion is in
+  // progress — a nested `ltx:Math` inside a \parbox/\mbox/inline-block that
+  // itself sits in math (arXiv html_feedback #6847). This function overwrites
+  // the inherited style/context thread-locals below, so snapshot them on entry
+  // and restore on exit; otherwise the outer conversion resumes with the
+  // nested math's style/font and mangles its remaining tokens.
+  let saved_style = CURRENT_STYLE.with(|s| s.get());
+  let saved_font = CTX_FONT.with(|c| c.borrow().clone());
+  let saved_color = CTX_COLOR.with(|c| c.borrow().clone());
+  let saved_bgcolor = CTX_BGCOLOR.with(|c| c.borrow().clone());
+  let saved_opacity = CTX_OPACITY.with(|c| c.borrow().clone());
+
   // Perl Presentation.pm `convertNode` L20-21 + `pmml_top`: display-mode math
   // starts in displaystyle, everything else in textstyle. Both are 100% size,
   // but the mathstyle transitions (m:mstyle wraps for \tfrac/\dfrac/
@@ -444,6 +456,13 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   adjust_spacing(&mut result);
   // Clean up internal _role/_lspace/_rspace before serialization
   clean_internal_attrs(&mut result);
+
+  // Restore the caller's inherited context (see the reentrancy note above).
+  CURRENT_STYLE.with(|s| s.set(saved_style));
+  ctx_set(&CTX_FONT, saved_font);
+  ctx_set(&CTX_COLOR, saved_color);
+  ctx_set(&CTX_BGCOLOR, saved_bgcolor);
+  ctx_set(&CTX_OPACITY, saved_opacity);
   result
 }
 
