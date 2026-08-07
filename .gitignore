@@ -70,6 +70,7 @@ USER_OK.md
 !.claude/skills/canvas-triage/
 !.claude/skills/cluster-classify/
 !.claude/skills/min-repro/
+!.claude/skills/next-release/
 !.claude/skills/perf-check/
 !.claude/skills/perl-port/
 !.claude/skills/resolve-issue/
