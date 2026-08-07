@@ -785,7 +785,11 @@
         <xsl:apply-templates select="." mode="begin">
           <xsl:with-param name="context" select="$context"/>
         </xsl:apply-templates>
-        <xsl:text>(</xsl:text>
+        <!-- arXiv html_feedback #1934 / OXIDIZED_DESIGN #102: render the date
+             bare, with no surrounding parentheses. No LaTeX puts parens around
+             \date (titlepage or inline), so the long-standing LaTeXML `(date)`
+             convention is a pure fidelity gap vs the PDF. Surpass-Perl: Perl's
+             XSLT still emits the parens here. -->
         <!-- Next best thing to a sensible sorting? -->
         <xsl:apply-templates select="$dates[not(@name)]" mode="intitle">
           <xsl:with-param name="context" select="$context"/>
@@ -793,7 +797,6 @@
         <xsl:apply-templates select="$dates[@name]" mode="intitle">
           <xsl:with-param name="context" select="$context"/>
         </xsl:apply-templates>
-        <xsl:text>)</xsl:text>
         <xsl:apply-templates select="." mode="end">
           <xsl:with-param name="context" select="$context"/>
         </xsl:apply-templates>
