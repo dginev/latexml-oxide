@@ -3734,3 +3734,27 @@ math's remaining tokens. The `unexpected:nested-math` warning is retired.
 **Guard**: `124_parbox_nested_math::parbox_nested_math_converts_to_presentation_mathml`
 (full-pipeline binary run: no `XMTok`/`XMApp` leaks into the HTML, and the
 operand `A` precedes the relation `∈` inside the parbox).
+
+### 102. The title-page date renders bare, with no surrounding parentheses
+
+**Perl** `resources/XSLT/LaTeXML-structure-xhtml.xsl`, the `dates` named
+template: it wraps every combined dates `<div class="ltx_dates">`
+in literal `(`…`)` (`<xsl:text>(</xsl:text>` … `<xsl:text>)</xsl:text>`), so a
+title-page `\date{August 1, 2024}` renders as `(August 1, 2024)`. This is a
+long-standing LaTeXML web-output convention, ported verbatim; same-host Perl
+`latexmlc` emits the identical parens. But no LaTeX puts parentheses around
+`\date` — titlepage or inline — so the parens are a pure fidelity gap vs the
+PDF (arXiv html_feedback #1934, arXiv:2408.08811). Note: ar5iv only neutralizes
+`\today` (the auto compile-date), not an author's explicit `\date`, so the date
+itself is legitimate content — only its parenthesization is wrong.
+
+**Divergence** (surpass-Perl): drop the two paren text nodes from the `dates`
+template so the date renders bare (`August 1, 2024`). The core XML is unchanged
+(`<date role="creation">August 1, 2024</date>` — the parens were never there);
+this is purely a rendering change, XSLT-only, so no core-XML golden moves and the
+`ltx:date` source-locator path (`52_source_map`) is untouched (it asserts on
+`data-sourcepos`, not the paren text).
+
+**Guard**: `125_date_no_parens::date_renders_without_surrounding_parens`
+(full-pipeline binary run: the `ltx_dates` div keeps the date text but carries no
+`(`/`)`).

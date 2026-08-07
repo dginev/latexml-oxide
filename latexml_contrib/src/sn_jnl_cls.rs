@@ -75,33 +75,38 @@ LoadDefinitions!({
   def_macro_noop("\\theHfigure{}")?;
   def_macro_noop("\\theHtable{}")?;
 
-  // Author-block — preserve author-supplied affiliation / equalcont /
-  // presentaddress content as ltx:note frontmatter.
+  // Author-block — attach author names, affiliations and emails to structured
+  // `<ltx:creator>`/`<ltx:contact>` frontmatter, NOT loose top-level notes.
+  // Mirrors jheppub_sty.rs (the Perl PR #2767 labeled-affiliation pattern).
   //
-  // sn-jnl.cls defines `\author` to dispatch on `\@ifstar` to either
-  // `\@@corrauthor` (corresponding author) or `\@@author` (regular).
-  // We collapse both to the core `\author{#name}` semantics — we don't
-  // distinguish corresponding from regular in the output.
+  // sn-jnl.cls (the witness cls) defines `\author*[N]{name}` (`\@ifstar` →
+  // corresponding vs regular; the optional `[N]` is the affiliation-id list) and
+  // `\affil*[N]{text}`. We collapse the corresponding-vs-regular star (both
+  // become role=author) — we don't distinguish it in the output.
   //
-  // CAVEAT (root-cause for 2306.11901): our DefMacro prototype parser
-  // treats the `*` immediately after `\author` as a Token parameter
-  // (literal star), NOT as a CS suffix. So a naive
-  //   `DefMacro!("\\author*[]{}", "\\author{#2}")`
-  // overrides `\author` to *require* a literal star and then the body
-  // `\author{#2}` calls itself with the empty optional `#2`, recursing
-  // forever on `\author{X}` (which has no star and no [opt]). Use
-  // `OptionalMatch:*` so the star is optional, save the core `\author`
-  // first, and forward to it with the full `[opt]{name}` shape so the
-  // body never re-enters this stub.
-  let_i(&T_CS!("\\lx@sn@core@author"), &T_CS!("\\author"), None);
+  // `OptionalMatch:*` (not a literal `\author*`): our DefMacro prototype parser
+  // treats a `*` immediately after `\author` as a literal Token parameter, not a
+  // CS suffix, so `\author*[]{}` would force a mandatory star and (via a naive
+  // self-forwarding body) recurse forever on a plain `\author{X}` — the
+  // root-cause for 2306.11901. `OptionalMatch:*` makes the star optional, and the
+  // body forwards to `\lx@add@creator` (never re-enters `\author`). The optional
+  // `[N]` becomes the creator's `annotations` (the affiliation ids it references).
   DefMacro!(
     "\\author OptionalMatch:* []{}",
-    "\\lx@sn@core@author[#2]{#3}"
+    "\\lx@add@creator[annotations={#2}]{#3}"
   );
-  DefMacro!(
-    "\\affil OptionalMatch:* []{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#3}"
+  // `\affil*[N]{text}`: attach as a structured `ltx:contact[role=affiliation]`
+  // ON the author creators, not an orphaned top-level `ltx:note`. The numbered
+  // form links by id (contact label <-> the author's annotations); the
+  // unnumbered shared form (a single `\affil` for all authors — the witness's
+  // shape) uses `annotate=all` to attach to every preceding creator.
+  // arXiv/html_feedback#534, witness 2204.04741.
+  RawTeX!(
+    r#"\def\lx@sn@affil#1#2{\def\lx@sn@affil@id{#1}%
+\ifx\lx@sn@affil@id\@empty\lx@add@contact[role=affiliation,annotate=all]{#2}%
+\else\lx@add@contact[role=affiliation,label={#1}]{#2}\fi}"#
   );
+  DefMacro!("\\affil OptionalMatch:* []{}", "\\lx@sn@affil{#2}{#3}");
   DefMacro!(
     "\\equalcont{}",
     "\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
