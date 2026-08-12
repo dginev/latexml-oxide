@@ -18,11 +18,19 @@ version = 2
 # crates are denied by default under advisories schema v2.
 yanked = "deny"
 # Add `"RUSTSEC-YYYY-NNNN"` here (with a comment justifying it) only when an
-# advisory is reviewed and accepted as not-applicable. Currently none:
-# the `cortex`-only `pericortex` dep used to drag in tempdir/ansi_term (three
-# advisories), but that was fixed at the source (cortex-peripherals 60bec10:
-# tempdir→tempfile, ansi_term→inline ANSI), so the graph is clean outright.
-ignore = []
+# advisory is reviewed and accepted as not-applicable.
+# (History: the `cortex`-only `pericortex` dep used to drag in tempdir/ansi_term
+# (three advisories), fixed at the source in cortex-peripherals 60bec10 —
+# tempdir→tempfile, ansi_term→inline ANSI — so those need no entry here.)
+ignore = [
+  # smartstring is UNMAINTAINED (repo archived 2026-05-03), not vulnerable — no
+  # CVE, just no upstream maintenance. It is rhai's `ImmutableString` backing
+  # type, a hard transitive dep of rhai 1.25.1 (the latest release), so it cannot
+  # be dropped without dropping rhai. rhai reaches the graph ONLY via the opt-in
+  # `runtime-bindings` feature; the production cortex_worker builds rhai-free, so
+  # smartstring never enters the arXiv-conversion binary. Reviewed 2026-08-12.
+  "RUSTSEC-2026-0249",
+]
 
 [licenses]
 version = 2
