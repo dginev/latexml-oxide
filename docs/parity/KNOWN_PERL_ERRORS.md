@@ -3211,7 +3211,7 @@ render it makes the rendered spacing wrong by the font-size ratio.
 OXIDIZED_DESIGN #96, where the defect surfaced as an eager/streaming
 byte-identity break.
 
-## 75. A lazy single-`\author`-block with `\\[1em]` breaks scrambles authors, affiliations and emails — in BOTH engines
+## 75. A lazy single-`\author`-block with `\\[1em]` breaks scrambles authors, affiliations and emails (Perl; Rust surpasses)
 
 `Base_Utility.pool.ltxml` (the `\lx@add@authors` splitter, `base_utilities.rs`
 L870-878) splits an author block on `\\`, `\quad`, `\and`, `,` and guesses
@@ -3240,13 +3240,20 @@ Carol White\textsuperscript{1} \\[1em]
 \end{document}
 ```
 
-Perl LaTeXML 0.8.8 and latexml-oxide emit **byte-identical** garbled frontmatter:
-`[1em]` leaks (`Italy[1em]`, `<personname>[1em]`), the affiliation lines become
-phantom `Dept. of Foo` / `University of Pisa` / `Italy` authors, and the shared
-`\texttt{}` email line lands inside one affiliation contact. Because both engines
-misbehave identically, this is upstream parity, not a Rust divergence. A faithful
-improvement (consume the `\\` optional arg in the splitter; recognise a lazy
-`\textsuperscript`-labeled block; treat the shared trailing email/affiliation as
-document-shared rather than per-author) is a **beyond-Perl** change to shared
-frontmatter machinery — its own ticket, kept off the LNCS `\institute` fix
-(#6881). Witness arXiv:2605.23553 (`arxiv.org/html/2605.23553v1`).
+Perl LaTeXML 0.8.8 emits garbled frontmatter: `[1em]` leaks (`Italy[1em]`,
+`<personname>[1em]`), the affiliation lines become phantom `Dept. of Foo` /
+`University of Pisa` / `Italy` authors, and the shared `\texttt{}` email line
+lands inside one affiliation contact. latexml-oxide originally reproduced this
+byte-for-byte (upstream parity, not a Rust divergence).
+
+**Rust now surpasses Perl here.** `\lx@add@authors` / `\lx@add@affiliations`
+(`base_utilities.rs`) gained `strip_linebreak_options` (consume the `*`/`[len]`
+after a `\\` row-break token before splitting — so no `[1em]` leak, and the
+following `\textsuperscript` stays at the line front, keeping the comma-bearing
+address one affiliation instead of phantom authors) and `line_is_email_list` + a
+3-way line kind (a marker-less pure-address line becomes its own `role=email`
+contact, shown once, instead of being welded into an affiliation). The witness
+now yields clean structured frontmatter (3 authors, affiliations matched by
+superscript, emails as `role=email`). Guard:
+`06_cluster_frontmatter::frontmatter_ieee_linebreak_optarg`. Witness
+arXiv:2605.23553 (`arxiv.org/html/2605.23553v1`).
