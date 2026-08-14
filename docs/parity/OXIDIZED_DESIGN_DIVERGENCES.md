@@ -3758,3 +3758,38 @@ this is purely a rendering change, XSLT-only, so no core-XML golden moves and th
 **Guard**: `125_date_no_parens::date_renders_without_surrounding_parens`
 (full-pipeline binary run: the `ltx_dates` div keeps the date text but carries no
 `(`/`)`).
+
+### 103. A `longtable` `\caption` leaves no stray empty body row
+
+**Perl** In real `longtable.sty` the caption is **one full-width row**:
+`\LT@makecaption` emits `\LT@mcol\LT@cols c{…}` (`longtable.sty:476`) and
+`\LT@mcol` is `\multicolumn` (`longtable.sty:127`) — i.e. a single
+`\multicolumn{ncols}{c}{caption}` cell spanning every column, terminated by the
+user's `\\`. LaTeXML instead **hoists** the caption text into a semantic
+`<ltx:caption>` (correct for HTML) but models the row with the plain column
+template rather than a `\multicolumn`, so the now-textless row degrades into a
+line of empty per-column `<ltx:td>` cells instead of vanishing. Same-host Perl
+0.8.8 keeps that stray empty `<ltx:tr>` **byte-for-byte** (so it is parity, not a
+Rust-only defect); pdflatex renders the caption as spanning text with **no** blank
+body row (issue #534, reporter nasser1; the reporter's screenshot shows the
+spurious bordered cell above the header). The stray row only manifests when the
+caption sits in the table **body** — inside `\endfirsthead`/`\endhead` the grab
+machinery already discards it (`tests/alignment/longtable.{tex,xml}` shows the
+clean head-grabbed case, unchanged by this fix).
+
+**Divergence** (surpass-Perl): because the whole row was only ever the caption,
+drop it entire. `\lx@longtable@caption@` sets the existing `LONGTABLE_KILL_NEXT`
+row-discard flag (the very flag `\lx@longtable@kill@flag` uses for `\kill`); the
+caption's terminating `\\` (vtype `cr`) consumes it in `tex_tables.rs` and pops
+the just-ended empty row via `remove_row`. Uniform across caption position
+(start/middle/end) and body-vs-grabbed-head; the caption text is still hoisted
+(and, in a grabbed head/foot, still moves `LONGTABLE_CAPTIONS→…_HEAD_CAPTIONS`
+before the grab). `longtable_bindings` resets the flag per table so a malformed
+caption-without-`\\` cannot leak the drop into the next table's first row. A
+mid-table caption flanked by two `\hline`s correctly coalesces to a double rule
+(`border="…tt"`) once its row is gone — the two rules were really there.
+
+**Guard**: `53_alignment::longtable_caption_test`
+(`tests/alignment/longtable_caption.{tex,xml}` — four longtables exercising
+caption at start+`\hline`, start without rules, middle, and end; the golden has
+no stray empty caption row in any).

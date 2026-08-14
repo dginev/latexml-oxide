@@ -1,0 +1,36 @@
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+
+% Case A (#534): caption at the START, followed by \hline
+\begin{longtable}{|p{1in}|p{1in}|p{1in}|p{1in}|}
+\caption{Caption at start}\label{cap-start}\\\hline
+& Position & Momentum & Hamiltonian\\\hline
+A&B&C&D\\\hline
+\end{longtable}
+
+% Case B: caption at the START, no rules ("without trim")
+\begin{longtable}{p{1in}p{1in}p{1in}p{1in}}
+\caption{Caption no rules}\label{cap-norules}\\
+& Position & Momentum & Hamiltonian\\
+A&B&C&D\\
+\end{longtable}
+
+% Case C: caption in the MIDDLE
+\begin{longtable}{|p{1in}|p{1in}|p{1in}|p{1in}|}
+\hline
+& Position & Momentum & Hamiltonian\\\hline
+A&B&C&D\\\hline
+\caption{Caption in middle}\label{cap-middle}\\\hline
+E&F&G&H\\\hline
+\end{longtable}
+
+% Case D: caption at the END
+\begin{longtable}{|p{1in}|p{1in}|p{1in}|p{1in}|}
+\hline
+& Position & Momentum & Hamiltonian\\\hline
+A&B&C&D\\\hline
+\caption{Caption at end}\label{cap-end}\\
+\end{longtable}
+
+\end{document}

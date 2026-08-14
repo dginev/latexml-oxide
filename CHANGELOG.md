@@ -39,6 +39,11 @@
     and rebuild the crate, every time. Each is now emitted only for a source
     checkout, so a git/workspace build tracks them exactly as before (including
     dump staleness) while a crates.io build stays cached (#528).
+  - **A `longtable` `\caption` no longer leaves a stray empty row above the
+    header.** The caption text is hoisted into `<ltx:caption>`, but the body row
+    it occupied was left as empty cells (a bordered blank line vs the header —
+    Perl does the same). The now-textless caption row is dropped via the existing
+    `\kill` row-discard path, uniformly wherever the caption sits (#534).
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
