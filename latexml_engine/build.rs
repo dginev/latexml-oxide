@@ -38,6 +38,13 @@ fn main() {
   let out_dir = env::var("OUT_DIR").unwrap();
   let engine_dir = Path::new(&manifest_dir).join("src");
   let dumps_dir = Path::new(&manifest_dir).join("../resources/dumps");
+  // Are we building inside the source workspace (dev / CI / release), or from an
+  // unpacked crates.io tarball? The workspace manifest one level up is the
+  // reliable discriminator: it is present in every checkout and never in a
+  // registry unpack (whose parent holds sibling crate dirs, no Cargo.toml). We
+  // gate the `../resources/dumps` directory-tracking `rerun-if-changed` on THIS,
+  // not on the dumps dir's own existence — see the note at the emit site (#528).
+  let in_workspace = Path::new(&manifest_dir).join("../Cargo.toml").exists();
 
   // Ensure both dump module files exist (Perl: plain_dump + latex_dump).
   // These just `include!` the generated loader from OUT_DIR.
@@ -55,12 +62,22 @@ fn main() {
   // in a manifest. The manifest is `include!`d by `embedded_dumps.rs` which
   // turns each file into an `include_str!`.
   //
-  // Track the dumps DIRECTORY itself, not just the files found in it: a fresh
-  // checkout builds dumpless (no resources/dumps/ yet), and without this
-  // directive a later `tools/make_formats.sh` would never trigger a re-embed —
-  // every test binary would silently stay dumpless. (Per-file directives below
-  // cover content changes; this one covers files appearing/disappearing.)
-  println!("cargo:rerun-if-changed={}", dumps_dir.display());
+  // Track the dumps DIRECTORY itself, not just the files found in it, so that a
+  // `tools/make_formats.sh` (or `release-dumps.yml`) that writes new dumps —
+  // INCLUDING the first-ever generation into a not-yet-existing dir — re-triggers
+  // the embed on the next build (per-file directives below cover content changes;
+  // this one covers files appearing/disappearing). Emit it in the workspace even
+  // when the dir is currently absent: that is what lets its later appearance be
+  // seen. This is emphatically NOT guarded on `dumps_dir.exists()` — that would
+  // silently drop staleness tracking on a cached dumpless build (the deploy
+  // Dockerfile's persistent `target/` cache mount), leaving a stale/empty embed
+  // when dumps later appear. Guard on `in_workspace` instead: a crates.io build
+  // has no workspace and no `../resources/dumps`, so a `rerun-if-changed` on that
+  // absent path (which would rebuild the crate every invocation) is skipped
+  // there and ONLY there (#528).
+  if in_workspace {
+    println!("cargo:rerun-if-changed={}", dumps_dir.display());
+  }
   let mut manifest_entries: Vec<(u32, String, String, String)> = Vec::new();
   if let Ok(entries) = std::fs::read_dir(&dumps_dir) {
     let mut years: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
@@ -294,8 +311,13 @@ fn resolve_dump_path(prefer: Option<u32>) -> Option<(std::path::PathBuf, u32)> {
   println!("cargo:rerun-if-env-changed=LATEXML_DUMP_DIR");
   println!("cargo:rerun-if-env-changed=LATEXML_NODUMP");
   println!("cargo:rerun-if-changed=build.rs");
-  // Also re-run when new versioned dumps appear / disappear in the dir.
-  println!("cargo:rerun-if-changed={}", dumps_dir.display());
+  // Also re-run when new versioned dumps appear / disappear in the dir — emitted
+  // in the workspace even when the dir is currently absent, so a first-ever
+  // generation is seen; skipped only in a crates.io build (see the #528 note
+  // above).
+  if in_workspace {
+    println!("cargo:rerun-if-changed={}", dumps_dir.display());
+  }
 }
 
 /// 64-bit FNV-1a hash over the concatenation of every gzipped dump

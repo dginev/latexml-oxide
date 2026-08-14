@@ -32,6 +32,13 @@
     schema table (as `<externalRef>` already did) when the file is not on disk,
     so `RelaxNGSchema("myschema.rng")` that pulls in the bundled LaTeXML modules
     works in an installed binary; the no-extension URN form resolves too (#538).
+  - **`cargo build`/`check` no longer rebuilds the crates on every invocation when
+    consumed from crates.io.** Three build scripts emitted `cargo:rerun-if-changed`
+    for `../` paths (`../.git/HEAD`, `../resources/dumps`, `../.githooks/pre-push`)
+    that are absent from a published tarball — which makes Cargo re-run the script,
+    and rebuild the crate, every time. Each is now emitted only for a source
+    checkout, so a git/workspace build tracks them exactly as before (including
+    dump staleness) while a crates.io build stays cached (#528).
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
