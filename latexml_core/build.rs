@@ -15,9 +15,17 @@ use std::{
 };
 
 fn main() {
-  // Re-run when the git ref moves (commit, checkout, etc.)
-  println!("cargo:rerun-if-changed=../.git/HEAD");
-  println!("cargo:rerun-if-changed=../.git/refs/heads");
+  // Re-run when the git ref moves (commit, checkout, etc.) — but ONLY emit these
+  // directives when the path actually exists. A `rerun-if-changed` pointing at a
+  // path absent from the build tree makes Cargo treat this script's output as
+  // perpetually stale and re-run it — rebuilding the crate — on EVERY `cargo`
+  // invocation. A crates.io tarball has no `.git`, so an unconditional directive
+  // there rebuilds latexml_core constantly (#528).
+  for git_ref in ["../.git/HEAD", "../.git/refs/heads"] {
+    if Path::new(git_ref).exists() {
+      println!("cargo:rerun-if-changed={git_ref}");
+    }
+  }
   // Also re-run if the env override changes
   println!("cargo:rerun-if-env-changed=LATEXML_GIT_SHA_OVERRIDE");
 

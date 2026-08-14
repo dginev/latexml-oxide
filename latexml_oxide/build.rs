@@ -62,9 +62,15 @@ fn probe_texlive() {
 
 fn install_git_hooks() {
   // Re-run only when this script or the hook itself changes (keeps it off the
-  // hot incremental-rebuild path once core.hooksPath is set).
+  // hot incremental-rebuild path once core.hooksPath is set). Guard the hook path
+  // on existence: `../.githooks/pre-push` is absent from a crates.io tarball, and
+  // a `rerun-if-changed` on a non-existent path makes Cargo re-run this script —
+  // rebuilding the top crate — on every invocation, regardless of the no-op body
+  // below (#528).
   println!("cargo:rerun-if-changed=build.rs");
-  println!("cargo:rerun-if-changed=../.githooks/pre-push");
+  if Path::new("../.githooks/pre-push").exists() {
+    println!("cargo:rerun-if-changed=../.githooks/pre-push");
+  }
 
   // CARGO_MANIFEST_DIR is <repo>/latexml_oxide; the repo root is its parent.
   let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") else {
