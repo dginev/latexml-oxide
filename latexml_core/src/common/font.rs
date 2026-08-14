@@ -45,11 +45,13 @@ static DEFCOLOR: Color = color::BLACK;
 // These are intentionally None in text_default/math_default.
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
-/// Perl: sub defsize() { return $STATE->lookupValue('NOMINAL_FONT_SIZE') || 10; }
-/// Reads NOMINAL_FONT_SIZE from state, defaulting to 10.0.
+/// Perl: sub DEFSIZE() { return $STATE->lookupValue('NOMINAL_FONT_SIZE') || 10; }
+/// Reads NOMINAL_FONT_SIZE from state, defaulting to 10.0. Perl uses the value
+/// directly as a float (`Common/Font.pm:44`) — the `11pt` class option is
+/// `10.95` (LaTeX's `\@xipt`), so this must NOT truncate via `lookup_int` (#542).
 fn defsize() -> f64 {
-  let v = lookup_int("NOMINAL_FONT_SIZE");
-  if v > 0 { v as f64 } else { 10.0 }
+  let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
+  if v > 0.0 { v } else { 10.0 }
 }
 
 pub const TEXT_FONTS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "amsa", "amsb"];
@@ -2295,6 +2297,31 @@ mod tests {
   #[test]
   fn relative_font_size_half_is_50() {
     assert_eq!(relative_font_size(5.0, 10.0), "50%");
+  }
+
+  /// #542: NOMINAL_FONT_SIZE is a float, not an integer — the `11pt` class option
+  /// is `10.95` (LaTeX's `\@xipt`), which the reader must not truncate. Perl
+  /// `DEFSIZE` reads `lookupValue('NOMINAL_FONT_SIZE')` directly as a float
+  /// (`Common/Font.pm:44`); the Rust reader used to go through `lookup_int`.
+  #[test]
+  fn defsize_preserves_fractional_nominal_font_size() {
+    use crate::{
+      common::float::Float,
+      state::{State, StateOptions, assign_value, set_state},
+    };
+    set_state(State::new(StateOptions::default()));
+    // Unset → default 10.
+    assert_eq!(defsize(), 10.0, "defsize defaults to 10 when unset");
+    // 11pt → 10.95, the fractional value the old lookup_int truncated to 10.
+    assign_value("NOMINAL_FONT_SIZE", Float(10.95), None);
+    assert_eq!(
+      defsize(),
+      10.95,
+      "defsize preserves the fractional 11pt size"
+    );
+    // An integral float still reads back cleanly.
+    assign_value("NOMINAL_FONT_SIZE", Float(12.0), None);
+    assert_eq!(defsize(), 12.0, "12pt reads back as 12.0");
   }
 
   #[test]

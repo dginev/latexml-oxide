@@ -390,8 +390,13 @@ LoadDefinitions!({
   // but to change the current font used in boxes.
   // (some of these were defined on different pages? or even latex...)
 
-  // Ideally, we should set these sizes from class files
-  AssignValue!("NOMINAL_FONT_SIZE", 10);
+  // Ideally, we should set these sizes from class files.
+  // Store a Float, not an int: `defsize` reads this via `lookup_float` (#542), so
+  // keep the assign type matching the lookup type — a fractional size (11pt =
+  // 10.95) written here or by a class option then round-trips. (`lookup_float`
+  // does widen a stored Int, but `lookup_int` would NOT discover a stored Float,
+  // so the write and reader must agree.)
+  AssignValue!("NOMINAL_FONT_SIZE", Float(10.0));
 
   // Perl plain_base.pool.ltxml L371 (shadowed L369's declarative form):
   //   DefPrimitiveI('\mit', undef, sub {

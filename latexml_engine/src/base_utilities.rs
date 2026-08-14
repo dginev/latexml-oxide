@@ -2042,8 +2042,10 @@ fn maybe_promote_leading_title(document: &mut Document) -> Result<()> {
     return Ok(());
   };
   let nominal = {
-    let v = lookup_int("NOMINAL_FONT_SIZE");
-    if v > 0 { v as f64 } else { 10.0 }
+    // #542: NOMINAL_FONT_SIZE is a float (11pt = 10.95), not an int — mirror
+    // `common::font::defsize`, which reads it via lookup_float, not lookup_int.
+    let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
+    if v > 0.0 { v } else { 10.0 }
   };
   if title_p.get_content().trim().is_empty()
     || !descendant_has_display_font(document, &title_p, nominal)

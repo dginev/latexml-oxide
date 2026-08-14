@@ -67,7 +67,8 @@ LoadDefinitions!({
 \else \relax
 \fi");
 
-  AssignValue!("NOMINAL_FONT_SIZE", 25);
+  // Float, not int — `defsize` reads via `lookup_float` (#542); see plain_base.
+  AssignValue!("NOMINAL_FONT_SIZE", Float(25.0));
   DefPrimitive!("\\tiny",         None, font => {size => 12 });
   DefPrimitive!("\\scriptsize",   None, font => {size => 14.4 });
   DefPrimitive!("\\footnotesize", None, font => {size => 17.28 });
