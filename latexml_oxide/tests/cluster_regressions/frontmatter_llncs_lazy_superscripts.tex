@@ -1,0 +1,15 @@
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+% LNCS shape (c): ONE block, no \and, hand-typed superscript labels with a \quad
+% separator between the two institutions (witness 2606.19939). The shared
+% \lx@add@affiliations parser splits on \quad/\\ and reads the $^N$ markers as
+% the affiliation labels that \inst{N} links to.
+\author{Alice Smith\inst{1} \and Bob Jones\inst{2}}
+\institute{
+$^1$University of Foo\quad $^2$Institute of Bar\\
+\email{alice@foo.edu, bob@bar.edu}\\
+}
+\maketitle
+Body.
+\end{document}

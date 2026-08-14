@@ -3210,3 +3210,43 @@ render it makes the rendered spacing wrong by the font-size ratio.
 **Rust fixes this** by passing the whatsit's own digest-time font — see
 OXIDIZED_DESIGN #96, where the defect surfaced as an eager/streaming
 byte-identity break.
+
+## 75. A lazy single-`\author`-block with `\\[1em]` breaks scrambles authors, affiliations and emails — in BOTH engines
+
+`Base_Utility.pool.ltxml` (the `\lx@add@authors` splitter, `base_utilities.rs`
+L870-878) splits an author block on `\\`, `\quad`, `\and`, `,` and guesses
+author-vs-affiliation from superscript position. Two of its own comments flag the
+limits: *"This is a mess!"* and *"matching `\\` this way fails to catch
+`\\[1em]`, so really should Let it"*. The `\\` **control sequence** is the split
+token, so a `\\[1em]` leaves its optional-length `[1em]` at the head of the next
+segment, where it leaks as literal text; and a comma-list affiliation line
+(`Dept. of Foo, University of Pisa, Italy`) is split into phantom `<personname>`
+creators.
+
+Minimal trigger (IEEEtran — the class is already bound; this is **not** a missing
+binding):
+
+```tex
+\documentclass[12pt,onecolumn]{IEEEtran}
+\begin{document}
+\author{
+Alice Smith\textsuperscript{1,2}, Bob Jones\textsuperscript{3}, \\
+Carol White\textsuperscript{1} \\[1em]
+\textsuperscript{1}Dept. of Foo, University of Pisa, Italy \\
+\textsuperscript{2}Naval Centre, La Spezia, Italy \\[1em]
+\texttt{alice@unipi.it, bob@unipd.it,}\\ \texttt{carol@unipi.it}
+}
+\title{T}\maketitle
+\end{document}
+```
+
+Perl LaTeXML 0.8.8 and latexml-oxide emit **byte-identical** garbled frontmatter:
+`[1em]` leaks (`Italy[1em]`, `<personname>[1em]`), the affiliation lines become
+phantom `Dept. of Foo` / `University of Pisa` / `Italy` authors, and the shared
+`\texttt{}` email line lands inside one affiliation contact. Because both engines
+misbehave identically, this is upstream parity, not a Rust divergence. A faithful
+improvement (consume the `\\` optional arg in the splitter; recognise a lazy
+`\textsuperscript`-labeled block; treat the shared trailing email/affiliation as
+document-shared rather than per-author) is a **beyond-Perl** change to shared
+frontmatter machinery — its own ticket, kept off the LNCS `\institute` fix
+(#6881). Witness arXiv:2605.23553 (`arxiv.org/html/2605.23553v1`).
