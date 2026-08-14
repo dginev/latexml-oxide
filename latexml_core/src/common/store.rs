@@ -851,6 +851,13 @@ impl From<Cow<'_, Font>> for Stored {
 impl From<Number> for Stored {
   fn from(value: Number) -> Self { Stored::Number(value) }
 }
+// A distinct slot from `From<f64>` above, which FLOORS to an integer `Number`
+// (TeX registers are integral). A `Float` value keeps its fraction — the only
+// path that stores `Stored::Float`, so an `AssignFloat` binding must build a
+// `Float`, not lean on `f64 -> Stored`.
+impl From<Float> for Stored {
+  fn from(value: Float) -> Self { Stored::Float(value) }
+}
 impl From<Dimension> for Stored {
   fn from(value: Dimension) -> Self { Stored::Dimension(value) }
 }
@@ -1027,6 +1034,12 @@ impl<'a> From<&'a Stored> for Option<Number> {
   fn from(value: &'a Stored) -> Option<Number> {
     match value {
       Stored::Number(n) => Some(*n),
+      // A `Float` narrows to an integer `Number` through `Float::value_of`
+      // (truncation toward zero, the crate's canonical Float->i64), the same
+      // `value_of` narrowing the dimension family uses just below. NB this is
+      // *not* the `floor` that `From<f64> for Stored` applies — they agree for
+      // non-negative values (the only ones stored here in practice).
+      Stored::Float(f) => Some(Number::new(f.value_of())),
       Stored::Dimension(n) => Some(Number::new(n.value_of())),
       Stored::Glue(n) => Some(Number::new(n.value_of())),
       Stored::MuDimension(n) => Some(Number::new(n.value_of())),
@@ -1035,6 +1048,22 @@ impl<'a> From<&'a Stored> for Option<Number> {
         eprintln!("TODO: auto-cast of Stored to Number attempted on {other:?}");
         None
       },
+    }
+  }
+}
+
+// The counterpart of the `Option<Number>` narrowing above, kept lenient in the
+// same spirit: a stored `Float` reads as itself, and the integral numerics
+// widen to `Float` (`Number`/`Int`), so `lookup_float` sees a value assigned
+// either way. Non-numeric variants are `None` (no eprintln — an optional typed
+// read, not a coercion error).
+impl<'a> From<&'a Stored> for Option<Float> {
+  fn from(value: &'a Stored) -> Option<Float> {
+    match value {
+      Stored::Float(f) => Some(*f),
+      Stored::Number(n) => Some(Float::new(n.value_of())),
+      Stored::Int(i) => Some(Float(*i as f64)),
+      _ => None,
     }
   }
 }

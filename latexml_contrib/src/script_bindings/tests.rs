@@ -89,6 +89,64 @@ fn pool_surface_state_counters_tokens() {
   assert_eq!(lookup_str("ws:kv2"), "rust", "GetKeyVals map access");
 }
 
+/// #543: typed `Assign*` counterparts to the typed `Lookup*` readers, plus the
+/// `LookupFloat`/`AssignFloat` pair. Before this, a Rhai binding could *read* a
+/// number/bool/float out of State (`LookupNumber`/`LookupBool`/`LookupFloat`)
+/// but could only ever *assign* a string — so a value written from a script was
+/// invisible to the typed readers. Round-trip each typed pair through a real
+/// script, and confirm the native-side variant really landed (not a string, and
+/// — the #542 case — a float that keeps its fraction rather than truncating).
+#[test]
+fn typed_assign_roundtrip() {
+  use latexml_core::state;
+  fresh_state();
+  load_script(
+    r##"
+      AssignNumber("ta:n", 7);
+      AssignFloat("ta:f", 10.95);
+      AssignBool("ta:b", true);
+      AssignString("ta:s", "hi");
+      // 3-arg scoped forms: global so they survive the script's own group.
+      AssignNumber("ta:ng", 42, "global");
+      AssignFloat("ta:fg", 3.5, "global");
+
+      // Round-trip each value back THROUGH the bindings (not just the Rust
+      // side). Range/equality witnesses dodge float-formatting fragility.
+      assign_global("ta:n_ok", if LookupNumber("ta:n") == 7 { "ok" } else { "bad" });
+      assign_global("ta:f_ok", if LookupFloat("ta:f") > 10.9 && LookupFloat("ta:f") < 11.0 { "ok" } else { "bad" });
+      assign_global("ta:b_ok", if LookupBool("ta:b") { "ok" } else { "bad" });
+      assign_global("ta:s_ok", if LookupString("ta:s") == "hi" { "ok" } else { "bad" });
+    "##,
+  )
+  .expect("typed-assign surface script should load cleanly");
+  // Through-the-binding round-trips.
+  assert_eq!(lookup_str("ta:n_ok"), "ok", "AssignNumber -> LookupNumber");
+  assert_eq!(
+    lookup_str("ta:f_ok"),
+    "ok",
+    "AssignFloat -> LookupFloat keeps the fraction"
+  );
+  assert_eq!(lookup_str("ta:b_ok"), "ok", "AssignBool -> LookupBool");
+  assert_eq!(lookup_str("ta:s_ok"), "ok", "AssignString -> LookupString");
+  // Native-side witnesses: the typed variant really landed, and 10.95 kept its
+  // fraction (a bare `f64 -> Stored` would floor it to 10 — issue #542).
+  assert_eq!(
+    state::lookup_number("ta:n").map(|n| n.0),
+    Some(7),
+    "ta:n is a Number(7)"
+  );
+  let f = state::lookup_float("ta:f").expect("ta:f is a Float");
+  assert!(
+    (f.0 - 10.95).abs() < 1e-9,
+    "AssignFloat stored 10.95, got {}",
+    f.0
+  );
+  assert!(state::lookup_bool("ta:b"), "ta:b is Bool(true)");
+  // 3-arg global forms survive the script's top-level group.
+  assert_eq!(state::lookup_number("ta:ng").map(|n| n.0), Some(42));
+  assert!((state::lookup_float("ta:fg").expect("ta:fg").0 - 3.5).abs() < 1e-9);
+}
+
 /// Wave-B definition forms: DefRegister (count + dimen), DefConditional
 /// (Rhai test driven from real TeX), DefKeyVal, DefLigature, DefMath.
 #[test]

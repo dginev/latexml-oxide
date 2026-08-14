@@ -134,8 +134,8 @@ AUDITED = {
         "object code. 1.4.0 -> 1.4.2 diffed 2026-08-12: detect_compiler_family.c "
         "byte-identical, still the only native file, license MIT OR Apache-2.0 "
         "unchanged. 1.4.2 -> 1.4.3 diffed 2026-08-14: detect_compiler_family.c "
-        "md5-identical, still the only native file, license unchanged (only the "
-        "find-msvc-tools build-dep bumped 0.1.10 -> 0.1.11).",
+        "byte-identical (sha 97ca4b021495), still the only native file, license "
+        "MIT OR Apache-2.0 unchanged.",
     ),
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
