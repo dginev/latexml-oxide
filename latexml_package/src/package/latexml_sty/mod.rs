@@ -212,26 +212,42 @@ LoadDefinitions!({
     }
   }
 
-  // Save image scaling parameters as processing instructions.
-  // Perl: DefKeyVal with code => AtBeginDocument(\lx@save@parameter{key}{value})
-  // Perl stores state under uppercase `DPI` but the keyval is lowercase
-  // `dpi`, so lookup uses the keyval (user-facing) name, and the PI emits
-  // under the uppercase Perl-internal convention for DPI only.
+  // Perl latexml.sty.ltxml L86-96: \lx@save@parameter{key}{value} records a
+  // conversion parameter as a <?latexml key="value"?> processing instruction
+  // (issue #536, reporter xworld21). It is a public-ish `@`-internal hook — a
+  // document or package may call it directly — and the image-scaling options
+  // below schedule it. The Rust binding previously never defined it, so a direct
+  // call errored `undefined:\lx@save@parameter` and the options' PIs were
+  // silently dropped (the earlier code assigned a `PI@latexml@…` state value
+  // that nothing consumed). Mirror `\graphicspath`'s insertPI constructor.
+  DefConstructor!("\\lx@save@parameter{}{}", sub[document, args, _props] {
+    let key = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+    if !key.is_empty() {
+      let value = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let mut attrs = HashMap::default();
+      attrs.insert(key, value);
+      document.insert_pi("latexml", Some(attrs))?;
+    }
+  });
+  // Image-scaling options → a PI each, deferred to \begin{document} exactly as
+  // Perl (AtBeginDocument(\lx@save@parameter{PI_NAME}{value})). The keyval name
+  // is lowercase `dpi` but the PI name is uppercase `DPI` (Perl
+  // `$STATE->assignValue(DPI => …)`); the other three keep their name.
   for (kv_name, pi_name) in &[
     ("dpi", "DPI"),
     ("magnify", "magnify"),
     ("upsample", "upsample"),
     ("zoomout", "zoomout"),
   ] {
-    let key = s!("KV@LTXML@{}", kv_name);
-    if let Some(v) = lookup_value(&key) {
+    if let Some(v) = lookup_value(&s!("KV@LTXML@{}", kv_name)) {
       let val = v.to_string().trim().to_string();
       if !val.is_empty() {
-        assign_value(
-          &s!("PI@latexml@{}", pi_name),
-          Stored::String(pin(&val)),
-          Some(Scope::Global),
-        );
+        at_begin_document(Invocation!(T_CS!("\\lx@save@parameter"), vec![
+          Some(mouth::tokenize_internal(TeXString::assembled(
+            pi_name.to_string()
+          ))),
+          Some(mouth::tokenize_internal(TeXString::assembled(val))),
+        ]))?;
       }
     }
   }
