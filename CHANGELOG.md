@@ -27,6 +27,11 @@
     `11pt` class option's `10.95`), matching Perl's `DEFSIZE`, and the default is
     now stored as a float so the assign type matches the lookup — a value assigned
     for `11pt` round-trips instead of flooring to 10 (#542).
+  - **Custom RelaxNG schemas resolve `urn:x-LaTeXML:RelaxNG:` includes.** A
+    `<include href="urn:x-LaTeXML:RelaxNG:…">` now falls back to the embedded
+    schema table (as `<externalRef>` already did) when the file is not on disk,
+    so `RelaxNGSchema("myschema.rng")` that pulls in the bundled LaTeXML modules
+    works in an installed binary; the no-extension URN form resolves too (#538).
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
