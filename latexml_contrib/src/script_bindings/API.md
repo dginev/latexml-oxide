@@ -35,7 +35,7 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-99 functions, 130 calls.
+101 functions, 134 calls.
 
 | call | documentation |
 |---|---|
@@ -49,6 +49,8 @@ Called at the top level of a binding file, or from inside any body.
 | `AssignNumber(string, int)`<br>`AssignNumber(string, int, string)` | Bind a key to an integer (Number) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignString(string, string)`<br>`AssignString(string, string, string)` | Bind a key to a string value, with a scope (the typed twin of `AssignValue`). ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignValue(string, string)`<br>`AssignValue(string, string, string)` | Bind a key in the value table, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
+| `AtBeginDocument(Tokens)`<br>`AtBeginDocument(string)` | Queue TeX source (or a Tokens value) to run at `\begin{document}`. ([`push_value`](latexml_core::state::push_value)) |
+| `AtEndDocument(Tokens)`<br>`AtEndDocument(string)` | Queue TeX source (or a Tokens value) to run at `\end{document}`. ([`push_value`](latexml_core::state::push_value)) |
 | `Command(string) -> Command` | Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`. |
 | `CounterValue(string) -> int` | The current value of a counter. ([`counter_value`](latexml_core::binding::counter::dialect::counter_value)) |
 | `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |
