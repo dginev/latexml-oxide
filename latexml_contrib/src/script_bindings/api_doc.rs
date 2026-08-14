@@ -133,6 +133,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "AppendSearchPath",
+    Doc::Rust(
+      "Append a directory to the input search path (searched after existing paths).",
+      "latexml_core::state::add_search_path",
+    ),
+  ),
+  (
     "AssignBool",
     Doc::Rust(
       "Bind a key to a boolean value, with a scope.",
@@ -482,6 +489,20 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "PopValue",
+    Doc::Rust(
+      "Pop and return the last value of a value-table list (`()` if empty).",
+      "latexml_core::state::pop_value",
+    ),
+  ),
+  (
+    "PrependSearchPath",
+    Doc::Rust(
+      "Prepend a directory to the input search path (searched first).",
+      "latexml_core::state::search_paths_push_front",
+    ),
+  ),
+  (
     "ProcessOptions",
     Doc::Rust(
       "Execute the declared options — in declaration order, or (`*`) in the order passed.",
@@ -507,6 +528,13 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "Advance the progress indicator; a no-op in this port.",
       "latexml_core::common::error::progress_step",
+    ),
+  ),
+  (
+    "PushValue",
+    Doc::Rust(
+      "Push a value onto a value-table list, creating it (global) if absent.",
+      "latexml_core::state::push_value",
     ),
   ),
   (
@@ -608,6 +636,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "ShiftValue",
+    Doc::Rust(
+      "Remove and return the first value of a value-table list (`()` if empty).",
+      "latexml_core::state::shift_value",
+    ),
+  ),
+  (
     "SkipSpaces",
     Doc::Rust(
       "Discard any run of spaces at the head of the input.",
@@ -678,6 +713,13 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "Tokens back to the TeX source that could have produced them.",
       "latexml_core::tokens::Tokens::untex",
+    ),
+  ),
+  (
+    "UnshiftValue",
+    Doc::Rust(
+      "Prepend a value to a value-table list, creating it (global) if absent.",
+      "latexml_core::state::unshift_value",
     ),
   ),
   (

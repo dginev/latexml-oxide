@@ -147,6 +147,84 @@ fn typed_assign_roundtrip() {
   assert!((state::lookup_float("ta:fg").expect("ta:fg").0 - 3.5).abs() < 1e-9);
 }
 
+/// #540: the value-table list family (`PushValue`/`PopValue`/`UnshiftValue`/
+/// `ShiftValue`, Perl `Package.pm` L265-279) plus the dedicated search-path
+/// bindings. The reporter wanted to append a directory to `SEARCHPATHS`, but in
+/// the Rust port `SEARCHPATHS` is NOT a value-table key — it is `State.search_paths`
+/// (a field, consumed by `find_file`) — so `PushValue("SEARCHPATHS", dir)` would
+/// be a silent no-op. The dedicated `PrependSearchPath`/`AppendSearchPath` reach
+/// the real field; `PushValue` serves value-table lists like `GRAPHICSPATHS`.
+#[test]
+fn pushvalue_family_and_search_paths() {
+  use latexml_core::state;
+  fresh_state();
+  load_script(
+    r##"
+      // Value-table list family: push/pop/unshift/shift a global queue.
+      PushValue("l540", "a");
+      PushValue("l540", "b");
+      PushValue("l540", "c");            // ["a","b","c"]
+      let p = PopValue("l540");          // "c"  -> ["a","b"]
+      assign_global("l540:pop_ok", if p == "c" { "ok" } else { "bad" });
+      UnshiftValue("l540", "z");         // ["z","a","b"]
+      let s = ShiftValue("l540");        // "z"  -> ["a","b"]
+      assign_global("l540:shift_ok", if s == "z" { "ok" } else { "bad" });
+
+      // Dedicated search-path bindings (SEARCHPATHS is a field, not value-table).
+      PrependSearchPath("/540/prepended");
+      AppendSearchPath("/540/appended");
+
+      // GRAPHICSPATHS *is* value-table-backed, so PushValue reaches it (the
+      // recommended pattern where the target really is a value-table list).
+      PushValue("GRAPHICSPATHS", "/540/gfx");
+    "##,
+  )
+  .expect("pushvalue-family script should load cleanly");
+  // Through-the-binding return values.
+  assert_eq!(
+    lookup_str("l540:pop_ok"),
+    "ok",
+    "PopValue returns the last pushed"
+  );
+  assert_eq!(
+    lookup_str("l540:shift_ok"),
+    "ok",
+    "ShiftValue returns the unshifted front"
+  );
+  // Native-side witness: the queue is [a,b] after push*3 + pop + unshift + shift.
+  let items = state::lookup_value("l540")
+    .and_then(|v| v.list_items())
+    .expect("l540 is a list value");
+  assert_eq!(
+    items,
+    vec!["a".to_string(), "b".to_string()],
+    "final queue = [a,b]"
+  );
+  // Native-side witness: the search-path FIELD moved (not the value table).
+  let paths = state::get_search_paths();
+  assert_eq!(
+    paths.first().map(String::as_str),
+    Some("/540/prepended"),
+    "PrependSearchPath puts the dir first, got {paths:?}"
+  );
+  assert!(
+    paths.iter().any(|p| p == "/540/appended"),
+    "AppendSearchPath adds the dir, got {paths:?}"
+  );
+  // The documented divergence: a value-table `SEARCHPATHS` key stays absent, so
+  // `PushValue("SEARCHPATHS", …)` would never reach file resolution.
+  assert!(
+    state::lookup_value("SEARCHPATHS").is_none(),
+    "SEARCHPATHS is not value-table-backed in the Rust port"
+  );
+  // ...but GRAPHICSPATHS is, so PushValue onto it does reach file resolution.
+  assert!(
+    state::get_graphics_paths().iter().any(|p| p == "/540/gfx"),
+    "PushValue reaches the value-table-backed GRAPHICSPATHS, got {:?}",
+    state::get_graphics_paths()
+  );
+}
+
 /// Wave-B definition forms: DefRegister (count + dimen), DefConditional
 /// (Rhai test driven from real TeX), DefKeyVal, DefLigature, DefMath.
 #[test]

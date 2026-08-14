@@ -8,6 +8,11 @@
     `LookupNumber`/`LookupBool`/`LookupString`; and a new `LookupFloat`/`AssignFloat`
     pair (plus internal `state::lookup_float`) carries fractional values a
     `Number` would truncate (#543).
+  - **Runtime Rhai bindings gain the list-value family and search-path control.**
+    `PushValue`/`PopValue`/`UnshiftValue`/`ShiftValue` expose the Perl `@values`
+    list-op set (e.g. for `GRAPHICSPATHS`), and `PrependSearchPath`/`AppendSearchPath`
+    add an input directory — the Rust port keeps `SEARCHPATHS` in a dedicated field,
+    not the value table, so these reach file resolution where `PushValue` would not (#540).
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
