@@ -19,6 +19,9 @@
     `AtEndDocument` (TeX source or a `Tokens` body) queue work onto the
     `@at@begin@document`/`@at@end@document` lists the engine runs at
     `\begin{document}`/`\end{document}`, mirroring Perl `Package.pm` (#539).
+  - **The `document` handle gains `insertPI`.** A `.rhai` constructor body can
+    emit a processing instruction (a target, with optional attribute map) under
+    the Perl name `$document->insertPI` (#537).
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 

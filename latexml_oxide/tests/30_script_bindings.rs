@@ -102,6 +102,13 @@ const SAMPLE: &str = r##"
   // Processing-instruction template (the class/package PI dialect shape).
   DefConstructor("\\mypi{}", "<?mypi data=\"#1\"?>");
 
+  // The imperative `document.insertPI` method (#537), vs \mypi's template form.
+  // Exercises both overloads: bare target, and target + attribute map.
+  DefConstructor("\\rhpi", |document| {
+    document.insertPI("rhpibare");
+    document.insertPI("rhpi", #{ data: "imperative" });
+  });
+
   // Environment, template form — a 1:1 port of latex_base's {quote}
   // (latex_constructs.rs L5019): the template's #body hole receives the
   // digested environment body.
@@ -310,7 +317,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
     "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} \\rwvictim{OLD} ",
-    "\\rhrawhtml \\rhfragment ",
+    "\\rhrawhtml \\rhfragment \\rhpi ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -414,6 +421,15 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("<?mypi") && xml.contains("data=\"d1\""),
     "PI template (\\mypi) did not emit; xml=\n{xml}"
+  );
+  // document.insertPI method (#537), both overloads: bare target + target/attrs.
+  assert!(
+    xml.contains("<?rhpi") && xml.contains("data=\"imperative\""),
+    "document.insertPI(target, attrs) did not emit its PI; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("<?rhpibare"),
+    "document.insertPI(target) bare form did not emit its PI; xml=\n{xml}"
   );
   // DefEnvironment, template form ({quote} port): #body lands inside the element.
   assert!(
