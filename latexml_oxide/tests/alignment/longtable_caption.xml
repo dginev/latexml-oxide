@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="longtable"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <table inlist="lot" labels="LABEL:cap-start" xml:id="S0.T1">
+    <tags>
+      <tag>Table 1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">Table 1</tag>
+    </tags>
+    <caption><tag close=": ">Table 1</tag>Caption at start</caption>
+    <toccaption><tag close=" ">1</tag>Caption at start</toccaption>
+    <tabular>
+      <tr>
+        <td align="left" border="l r t" vattach="top"/>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Position</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Momentum</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Hamiltonian</p>
+          </inline-block></td>
+      </tr>
+      <tr>
+        <td align="left" border="b l r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>A</p>
+          </inline-block></td>
+        <td align="left" border="b r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>B</p>
+          </inline-block></td>
+        <td align="left" border="b r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>C</p>
+          </inline-block></td>
+        <td align="left" border="b r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>D</p>
+          </inline-block></td>
+      </tr>
+    </tabular>
+  </table>
+  <table inlist="lot" labels="LABEL:cap-norules" xml:id="S0.T2">
+    <tags>
+      <tag>Table 2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">Table 2</tag>
+    </tags>
+    <caption><tag close=": ">Table 2</tag>Caption no rules</caption>
+    <toccaption><tag close=" ">2</tag>Caption no rules</toccaption>
+    <tabular>
+      <tr>
+        <td align="left" vattach="top"/>
+        <td align="left" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Position</p>
+          </inline-block></td>
+        <td align="left" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Momentum</p>
+          </inline-block></td>
+        <td align="left" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Hamiltonian</p>
+          </inline-block></td>
+      </tr>
+      <tr>
+        <td align="left" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>A</p>
+          </inline-block></td>
+        <td align="left" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>B</p>
+          </inline-block></td>
+        <td align="left" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>C</p>
+          </inline-block></td>
+        <td align="left" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>D</p>
+          </inline-block></td>
+      </tr>
+    </tabular>
+  </table>
+  <table inlist="lot" labels="LABEL:cap-middle" xml:id="S0.T3">
+    <tags>
+      <tag>Table 3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">Table 3</tag>
+    </tags>
+    <caption><tag close=": ">Table 3</tag>Caption in middle</caption>
+    <toccaption><tag close=" ">3</tag>Caption in middle</toccaption>
+    <tabular>
+      <tr>
+        <td align="left" border="l r t" vattach="top"/>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Position</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Momentum</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Hamiltonian</p>
+          </inline-block></td>
+      </tr>
+      <tr>
+        <td align="left" border="l r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>A</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>B</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>C</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>D</p>
+          </inline-block></td>
+      </tr>
+      <tr>
+        <td align="left" border="b l r tt" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>E</p>
+          </inline-block></td>
+        <td align="left" border="b r tt" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>F</p>
+          </inline-block></td>
+        <td align="left" border="b r tt" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>G</p>
+          </inline-block></td>
+        <td align="left" border="b r tt" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>H</p>
+          </inline-block></td>
+      </tr>
+    </tabular>
+  </table>
+  <table inlist="lot" labels="LABEL:cap-end" xml:id="S0.T4">
+    <tags>
+      <tag>Table 4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">Table 4</tag>
+    </tags>
+    <caption><tag close=": ">Table 4</tag>Caption at end</caption>
+    <toccaption><tag close=" ">4</tag>Caption at end</toccaption>
+    <tabular>
+      <tr>
+        <td align="left" border="l r t" vattach="top"/>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Position</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Momentum</p>
+          </inline-block></td>
+        <td align="left" border="r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>Hamiltonian</p>
+          </inline-block></td>
+      </tr>
+      <tr>
+        <td align="left" border="b l r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>A</p>
+          </inline-block></td>
+        <td align="left" border="b r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>B</p>
+          </inline-block></td>
+        <td align="left" border="b r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>C</p>
+          </inline-block></td>
+        <td align="left" border="b r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+            <p>D</p>
+          </inline-block></td>
+      </tr>
+    </tabular>
+  </table>
+</document>
