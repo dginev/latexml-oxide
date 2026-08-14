@@ -1,0 +1,24 @@
+\documentclass[12pt,onecolumn]{IEEEtran}
+\begin{document}
+% IEEEtran lazy single-\author block (witness 2605.23553): superscript-labeled
+% author names, then superscript-labeled affiliation lines, separated by
+% \\[1em] row breaks. The optional-length `[1em]` on `\\` must be consumed (not
+% leak as literal text), and its presence must not push a following
+% \textsuperscript past the author/affiliation position threshold and turn a
+% comma-bearing affiliation line into phantom "University of Pisa"/"Italy"
+% authors.
+\author{
+Alice Smith\textsuperscript{1,2}, Bob Jones\textsuperscript{3}, \\
+Carol White\textsuperscript{1} \\[1em]
+
+\textsuperscript{1}Dept. of Foo, University of Pisa, Italy \\
+\textsuperscript{2}Naval Centre, La Spezia, Italy \\
+\textsuperscript{3}Dept. of Bar, University of Padua, Italy \\[1em]
+
+\texttt{alice@unipi.it, bob@unipd.it,}\\
+\texttt{carol@unipi.it}
+}
+\title{T}
+\maketitle
+Body.
+\end{document}

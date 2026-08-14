@@ -880,6 +880,13 @@ LoadDefinitions!({
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
     let mut calls: Vec<Token> = Vec::new();
     dequeue_front_matter("ltx:creator", &[("role", "author")]);
+    // Consume any `\\[len]` / `\\*[len]` row-break optionals up front so the line
+    // splits below see a bare `\\` (KNOWN_PERL_ERRORS #75, witness 2605.23553). This
+    // also runs ahead of the tabular/minipage fallback: that fallback is a
+    // last-resort escape hatch for author markup we cannot structure, and its
+    // `<tabular>`-in-`<personname>` output is a presentational artifact we do not
+    // want in frontmatter anyway, so there is nothing to preserve by skipping it.
+    let stuff = strip_linebreak_options(stuff);
     // If too much formatting, fall back to unstructured author content
     let stuff_string = stuff.to_string();
     if stuff_string.contains("{tabular}")
@@ -889,46 +896,59 @@ LoadDefinitions!({
       calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(stuff)]).unlist());
     } else if position_of(&stuff, &authorsup_markers()).is_some() {
       let lines = split_tokens(stuff, author_affil_splits());
-      // entries of (is_author, line)
-      let mut entries: Vec<(bool, Tokens)> = Vec::new();
+      let mut entries: Vec<(AuthorLineKind, Tokens)> = Vec::new();
       for line in lines {
         if line.is_empty() {
           continue;
         }
         match position_of(&line, &authorsup_markers()) {
           None => {
-            // No marker?
-            if let Some(last) = entries.last_mut() {
+            // A marker-less line that is purely a list of email addresses is a
+            // SHARED email line (\texttt{a@x, b@y}) covering all the authors, not
+            // a continuation of the previous affiliation — give it its own email
+            // contact so it is shown once instead of being welded into an
+            // affiliation's text (KNOWN_PERL_ERRORS #75, witness 2605.23553).
+            if line_is_email_list(&line) {
+              entries.push((AuthorLineKind::Email, line));
+            } else if let Some(last) = entries.last_mut() {
               // continues previous entry; Append
               let mut appended = last.1.clone().unlist();
               appended.extend(line.unlist());
               last.1 = Tokens::new(appended);
             } else {
-              entries.push((true, line)); // safest to assume author?
+              entries.push((AuthorLineKind::Author, line)); // safest to assume author?
             }
           },
           Some(p) if p < 8 => {
             // Close to front? assume affiliation
-            entries.push((false, line));
+            entries.push((AuthorLineKind::Affiliation, line));
           },
           Some(_) => {
             // Marker sits far from the front: an author line. Split it into the
             // individual creators it names (see split_author_line).
             for author in split_author_line(line) {
-              entries.push((true, author));
+              entries.push((AuthorLineKind::Author, author));
             }
           },
         }
       }
-      for (is_author, line) in entries {
-        if is_author {
-          let withsup = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]);
-          calls.extend(
-            Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(withsup)]).unlist());
-        } else {
-          let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
-          calls.extend(
-            Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
+      for (kind, line) in entries {
+        match kind {
+          AuthorLineKind::Author => {
+            let withsup = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]);
+            calls.extend(
+              Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(withsup)]).unlist());
+          },
+          AuthorLineKind::Affiliation => {
+            let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
+            calls.extend(
+              Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
+          },
+          AuthorLineKind::Email => {
+            // Same routing the no-superscript arm uses for a bare email line.
+            calls.extend(
+              Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(line)]).unlist());
+          },
         }
       }
     } else {
@@ -1004,6 +1024,8 @@ LoadDefinitions!({
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     let mut calls: Vec<Token> = Vec::new();
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
+    // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
+    let stuff = strip_linebreak_options(stuff);
     let with_sup = position_of(&stuff, &authorsup_markers()).is_some();
     for line in split_tokens(stuff, affil_splits()) {
       // Skip empty segments (e.g. a trailing \\ or a line that was wholly
@@ -3815,6 +3837,61 @@ fn affil_splits() -> Vec<SplitDelim> {
 }
 fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
 
+/// Drop the optional `*` and `[<len>]` that follow a `\\` line-break token in an
+/// author/affiliation block, before the block is split into lines. The
+/// author/affiliation splitters key on the bare `\\` control sequence, so a
+/// `\\[1em]` (or `\\*[1em]`) would otherwise orphan `[1em]` at the head of the
+/// next segment — where it leaks as literal `[1em]` text AND, by pushing a
+/// following `\textsuperscript` past the author-vs-affiliation position
+/// threshold, flips a comma-bearing affiliation line into phantom author
+/// creators. Perl's own `\lx@add@authors` flags this exact gap ("matching `\\`
+/// this way fails to catch `\\[1em]`, so really should Let it") but never fixes
+/// it, so both engines garble it identically; consuming it here is a beyond-Perl
+/// improvement (KNOWN_PERL_ERRORS #75, witness arXiv:2605.23553). The `[...]` is
+/// matched only as a balanced OTHER-catcode bracket group immediately following
+/// the `\\`, so ordinary bracketed content elsewhere in a name/affiliation is
+/// untouched.
+fn strip_linebreak_options(tokens: Tokens) -> Tokens {
+  let src = tokens.unlist();
+  let n = src.len();
+  let mut out: Vec<Token> = Vec::with_capacity(n);
+  let brk = T_CS!("\\\\");
+  let mut i = 0;
+  while i < n {
+    out.push(src[i]);
+    if src[i] == brk {
+      let mut j = i + 1;
+      let mut consumed = false;
+      if j < n && src[j] == T_OTHER!("*") {
+        j += 1;
+        consumed = true;
+      }
+      if j < n && src[j] == T_OTHER!("[") {
+        let mut k = j + 1;
+        let mut depth = 1usize;
+        while k < n && depth > 0 {
+          if src[k] == T_OTHER!("[") {
+            depth += 1;
+          } else if src[k] == T_OTHER!("]") {
+            depth -= 1;
+          }
+          k += 1;
+        }
+        if depth == 0 {
+          j = k;
+          consumed = true;
+        }
+      }
+      if consumed {
+        i = j;
+        continue;
+      }
+    }
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
 /// Does this token list *begin* with a NUMERIC affiliation superscript mark
 /// (`$^{1}…` / `$^1…` / `\textsuperscript{1}…`)? This is the signature of the
 /// arXiv "`\thanks` abuse" idiom (affiliations smuggled into an author
@@ -3899,6 +3976,38 @@ fn line_is_email(line: &Tokens) -> bool {
   }
   let v = visible.trim();
   !v.is_empty() && v.contains('@') && !v.chars().any(|c| c.is_whitespace())
+}
+
+/// A marker-less line that is *purely* a list of email addresses — a shared
+/// `\texttt{a@x, b@y,}` / `\email{...}` line covering all authors. Like
+/// [`line_is_email`] but tolerates a comma-separated list (and the trailing
+/// comma authors often leave): every non-empty comma item must itself carry '@'.
+/// A prose affiliation line ("Dept. of Foo, University of Pisa, Italy") has no
+/// '@' and is rejected, so this never misclassifies an address as an email.
+fn line_is_email_list(line: &Tokens) -> bool {
+  let mut visible = String::new();
+  for t in line.unlist_ref() {
+    if t.code == Catcode::LETTER || t.code == Catcode::OTHER {
+      t.with_str(|s| visible.push_str(s));
+    } else if t.code == Catcode::SPACE {
+      visible.push(' ');
+    }
+  }
+  let v = visible.trim();
+  v.contains('@')
+    && v
+      .split(',')
+      .map(str::trim)
+      .filter(|p| !p.is_empty())
+      .all(|p| p.contains('@') && !p.chars().any(char::is_whitespace))
+}
+
+/// Line role within a superscript-labeled author block (see `\lx@add@authors`).
+#[derive(Clone, Copy, PartialEq)]
+enum AuthorLineKind {
+  Author,
+  Affiliation,
+  Email,
 }
 
 /// Converts tokens to a string in the fashion of \message and others
