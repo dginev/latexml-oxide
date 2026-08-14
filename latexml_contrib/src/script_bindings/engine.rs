@@ -229,8 +229,9 @@ pub(super) fn make_engine() -> Engine {
       .map(|n| n.0)
       .unwrap_or(0)
   });
-  // The fractional reader `LookupNumber` can't be — a value assigned with
-  // `AssignFloat` (e.g. NOMINAL_FONT_SIZE = 10.95) reads back whole (#542/#543).
+  // The fractional reader `LookupNumber` cannot be: a value assigned with
+  // `AssignFloat` (e.g. NOMINAL_FONT_SIZE = 10.95) would read back whole
+  // through `LookupNumber`, so scripts that need the fraction use this (#542/#543).
   engine.register_fn("LookupFloat", |k: &str| -> f64 {
     latexml_core::state::lookup_float(k)
       .map(|f| f.0)

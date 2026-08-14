@@ -1034,8 +1034,11 @@ impl<'a> From<&'a Stored> for Option<Number> {
   fn from(value: &'a Stored) -> Option<Number> {
     match value {
       Stored::Number(n) => Some(*n),
-      // A `Float` reads back as an integer `Number` by truncation, mirroring
-      // `f64 -> Stored` (floor) and how the dimension family narrows below.
+      // A `Float` narrows to an integer `Number` through `Float::value_of`
+      // (truncation toward zero, the crate's canonical Float->i64), the same
+      // `value_of` narrowing the dimension family uses just below. NB this is
+      // *not* the `floor` that `From<f64> for Stored` applies — they agree for
+      // non-negative values (the only ones stored here in practice).
       Stored::Float(f) => Some(Number::new(f.value_of())),
       Stored::Dimension(n) => Some(Number::new(n.value_of())),
       Stored::Glue(n) => Some(Number::new(n.value_of())),
