@@ -203,26 +203,30 @@ pub(super) fn make_engine() -> Engine {
   // The Perl `@values` list-value family (Package.pm L265-279 -> State.pm L218):
   // a value-table key holds a queue that these push/pop/unshift/shift. Always
   // GLOBAL scope, auto-vivifying the list if absent — matching Perl, which takes
-  // no scope argument. `LookupValue` reads the queue back as a Rhai array (#540).
-  // NB `SEARCHPATHS` is NOT such a key in the Rust port (it is `State.search_paths`,
-  // a field) — use `PrependSearchPath`/`AppendSearchPath` below for input dirs;
-  // `GRAPHICSPATHS` IS value-table-backed, so `PushValue` reaches it.
-  engine.register_fn("PushValue", |k: &str, v: &str| {
+  // no scope argument. Perl's `PushValue` is untyped and the Rust State layer
+  // holds any `Stored`, so `PushValue`/`UnshiftValue` take any Rhai-representable
+  // value (string/int/float/bool/`Tokens`/digested handle) and `PopValue`/
+  // `ShiftValue` return it with its type preserved (#540). `LookupValue` reads
+  // the whole queue back as a Rhai array. NB `SEARCHPATHS` is NOT such a key in
+  // the Rust port (it is `State.search_paths`, a field) — use `PrependSearchPath`/
+  // `AppendSearchPath` below for input dirs; `GRAPHICSPATHS` IS value-table-backed,
+  // so `PushValue` reaches it.
+  engine.register_fn("PushValue", |k: &str, v: Dynamic| {
     // Returns Ok(()) always; the wrong-type BUG path self-reports via Error!.
-    let _ = latexml_core::state::push_value(k, v.to_string());
+    let _ = latexml_core::state::push_value(k, dynamic_to_stored(v));
   });
-  engine.register_fn("UnshiftValue", |k: &str, v: &str| {
-    latexml_core::state::unshift_value(k, vec![v.to_string()]);
+  engine.register_fn("UnshiftValue", |k: &str, v: Dynamic| {
+    latexml_core::state::unshift_value(k, vec![dynamic_to_stored(v)]);
   });
   engine.register_fn("PopValue", |k: &str| -> Dynamic {
     match latexml_core::state::pop_value(k) {
-      Ok(Some(popped)) => stored_to_dynamic(popped),
+      Ok(Some(popped)) => popped_stored_to_dynamic(popped),
       _ => Dynamic::UNIT,
     }
   });
   engine.register_fn("ShiftValue", |k: &str| -> Dynamic {
     match latexml_core::state::shift_value(k) {
-      Ok(Some(shifted)) => stored_to_dynamic(shifted),
+      Ok(Some(shifted)) => popped_stored_to_dynamic(shifted),
       _ => Dynamic::UNIT,
     }
   });

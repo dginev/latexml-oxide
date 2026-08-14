@@ -225,6 +225,55 @@ fn pushvalue_family_and_search_paths() {
   );
 }
 
+/// #540 (generalized): the list ops carry any Rhai-representable value, not just
+/// strings. An int/float/bool round-trips as its own type (not stringified), and
+/// a `Tokens` value survives a push/pop cycle. Perl's `PushValue` is untyped and
+/// the State layer holds any `Stored`; only the binding used to narrow to strings.
+#[test]
+fn pushvalue_preserves_types() {
+  fresh_state();
+  load_script(
+    r##"
+      PushValue("tv", 7);                            // int
+      PushValue("tv", 2.5);                          // float
+      PushValue("tv", true);                         // bool
+      PushValue("tv", TokenizeInternal("\\alpha"));  // Tokens
+      // Pop back LIFO: Tokens, bool, float, int.
+      let t = PopValue("tv");
+      let b = PopValue("tv");
+      let f = PopValue("tv");
+      let i = PopValue("tv");
+      assign_global("tv:tok", if UnTeX(t).contains("alpha") { "ok" } else { "bad" });
+      assign_global("tv:bool", if b { "ok" } else { "bad" });
+      assign_global("tv:float", if f == 2.5 { "ok" } else { "bad" });
+      assign_global("tv:int", if i == 7 { "ok" } else { "bad" });
+      // The point of the generalization: a popped int is an i64, NOT a string.
+      assign_global("tv:int_type", type_of(i));
+
+      // A digested handle survives the round-trip too (separate key, to keep the
+      // LIFO ordering above intact).
+      PushValue("tvd", DigestText("qq"));
+      let d = PopValue("tvd");
+      assign_global("tvd:ok", if ToString(d) == "qq" { "ok" } else { "bad" });
+    "##,
+  )
+  .expect("typed-push script should load cleanly");
+  assert_eq!(
+    lookup_str("tv:tok"),
+    "ok",
+    "Tokens survive a push/pop cycle"
+  );
+  assert_eq!(lookup_str("tv:bool"), "ok", "bool round-trips as bool");
+  assert_eq!(lookup_str("tv:float"), "ok", "float round-trips as float");
+  assert_eq!(lookup_str("tv:int"), "ok", "int round-trips as int");
+  assert_eq!(
+    lookup_str("tv:int_type"),
+    "i64",
+    "a popped int is a typed i64, not a stringified value"
+  );
+  assert_eq!(lookup_str("tvd:ok"), "ok", "a digested handle round-trips");
+}
+
 /// Wave-B definition forms: DefRegister (count + dimen), DefConditional
 /// (Rhai test driven from real TeX), DefKeyVal, DefLigature, DefMath.
 #[test]

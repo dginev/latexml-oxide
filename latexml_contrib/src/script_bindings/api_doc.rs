@@ -491,7 +491,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "PopValue",
     Doc::Rust(
-      "Pop and return the last value of a value-table list (`()` if empty).",
+      "Pop and return the last value of a value-table list, type preserved (`()` if empty).",
       "latexml_core::state::pop_value",
     ),
   ),
@@ -533,7 +533,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "PushValue",
     Doc::Rust(
-      "Push a value onto a value-table list, creating it (global) if absent.",
+      "Push a value (string/int/float/bool/Tokens) onto a value-table list, creating it (global) if absent.",
       "latexml_core::state::push_value",
     ),
   ),
@@ -638,7 +638,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "ShiftValue",
     Doc::Rust(
-      "Remove and return the first value of a value-table list (`()` if empty).",
+      "Remove and return the first value of a value-table list, type preserved (`()` if empty).",
       "latexml_core::state::shift_value",
     ),
   ),
@@ -718,7 +718,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "UnshiftValue",
     Doc::Rust(
-      "Prepend a value to a value-table list, creating it (global) if absent.",
+      "Prepend a value (string/int/float/bool/Tokens) to a value-table list, creating it (global) if absent.",
       "latexml_core::state::unshift_value",
     ),
   ),
