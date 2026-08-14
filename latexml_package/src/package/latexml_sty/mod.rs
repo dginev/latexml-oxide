@@ -673,15 +673,25 @@ LoadDefinitions!({
      </ltx:text>",
     enter_horizontal => true);
 
-  // Perl latexml.sty.ltxml L136-139: \LaTeXMLversion / \LaTeXMLrevision
-  // expand to $LaTeXML::VERSION / $LaTeXML::Version::REVISION via
-  // ExplodeText. Rust's DefMacro! proc-macro requires a literal body —
-  // CARGO_PKG_VERSION can't be env!()'d through it — so we hard-code
-  // the latexml_package crate version (kept in sync by humans). Revision
-  // is left empty (no git rev exposed at runtime); that makes
+  // Perl latexml.sty.ltxml L136-139: \LaTeXMLversion / \LaTeXMLrevision expand
+  // to $LaTeXML::VERSION / $LaTeXML::Version::REVISION via ExplodeText. The Rust
+  // analog of $LaTeXML::VERSION is the LATEXML_VERSION state value, seeded at
+  // session init from the latexml_oxide *binary's* own three-part crate version
+  // (core_interface.rs) — the same source the Rhai `LaTeXMLVersion()` binding and
+  // the XSLT `LATEXML_VERSION` parameter read. latexml.sty is loaded at runtime (a
+  // user `\usepackage{latexml}`, never dumped) and session init sets the value
+  // before any package loads, so reading it here yields the running binary's
+  // version. (Issue #541: this used to hard-code a stale "0.4.0" — latexml_package
+  // cannot env!() the binary's version, and latexml_contrib's 0.4.0 is not it.)
+  // Revision is left empty (no git rev exposed at runtime); that makes
   // \LaTeXMLfullversion collapse to just the version string via the
   // `\ifx\expandafter.\LaTeXMLrevision.` guard.
-  DefMacro!("\\LaTeXMLversion", "0.4.0");
+  def_macro(
+    T_CS!("\\LaTeXMLversion"),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(lookup_string("LATEXML_VERSION"))),
+    None,
+  )?;
   def_macro_noop("\\LaTeXMLrevision")?;
   DefMacro!(
     "\\LaTeXMLfullversion",
