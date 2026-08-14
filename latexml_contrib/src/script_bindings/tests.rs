@@ -147,6 +147,133 @@ fn typed_assign_roundtrip() {
   assert!((state::lookup_float("ta:fg").expect("ta:fg").0 - 3.5).abs() < 1e-9);
 }
 
+/// #540: the value-table list family (`PushValue`/`PopValue`/`UnshiftValue`/
+/// `ShiftValue`, Perl `Package.pm` L265-279) plus the dedicated search-path
+/// bindings. The reporter wanted to append a directory to `SEARCHPATHS`, but in
+/// the Rust port `SEARCHPATHS` is NOT a value-table key — it is `State.search_paths`
+/// (a field, consumed by `find_file`) — so `PushValue("SEARCHPATHS", dir)` would
+/// be a silent no-op. The dedicated `PrependSearchPath`/`AppendSearchPath` reach
+/// the real field; `PushValue` serves value-table lists like `GRAPHICSPATHS`.
+#[test]
+fn pushvalue_family_and_search_paths() {
+  use latexml_core::state;
+  fresh_state();
+  load_script(
+    r##"
+      // Value-table list family: push/pop/unshift/shift a global queue.
+      PushValue("l540", "a");
+      PushValue("l540", "b");
+      PushValue("l540", "c");            // ["a","b","c"]
+      let p = PopValue("l540");          // "c"  -> ["a","b"]
+      assign_global("l540:pop_ok", if p == "c" { "ok" } else { "bad" });
+      UnshiftValue("l540", "z");         // ["z","a","b"]
+      let s = ShiftValue("l540");        // "z"  -> ["a","b"]
+      assign_global("l540:shift_ok", if s == "z" { "ok" } else { "bad" });
+
+      // Dedicated search-path bindings (SEARCHPATHS is a field, not value-table).
+      PrependSearchPath("/540/prepended");
+      AppendSearchPath("/540/appended");
+
+      // GRAPHICSPATHS *is* value-table-backed, so PushValue reaches it (the
+      // recommended pattern where the target really is a value-table list).
+      PushValue("GRAPHICSPATHS", "/540/gfx");
+    "##,
+  )
+  .expect("pushvalue-family script should load cleanly");
+  // Through-the-binding return values.
+  assert_eq!(
+    lookup_str("l540:pop_ok"),
+    "ok",
+    "PopValue returns the last pushed"
+  );
+  assert_eq!(
+    lookup_str("l540:shift_ok"),
+    "ok",
+    "ShiftValue returns the unshifted front"
+  );
+  // Native-side witness: the queue is [a,b] after push*3 + pop + unshift + shift.
+  let items = state::lookup_value("l540")
+    .and_then(|v| v.list_items())
+    .expect("l540 is a list value");
+  assert_eq!(
+    items,
+    vec!["a".to_string(), "b".to_string()],
+    "final queue = [a,b]"
+  );
+  // Native-side witness: the search-path FIELD moved (not the value table).
+  let paths = state::get_search_paths();
+  assert_eq!(
+    paths.first().map(String::as_str),
+    Some("/540/prepended"),
+    "PrependSearchPath puts the dir first, got {paths:?}"
+  );
+  assert!(
+    paths.iter().any(|p| p == "/540/appended"),
+    "AppendSearchPath adds the dir, got {paths:?}"
+  );
+  // The documented divergence: a value-table `SEARCHPATHS` key stays absent, so
+  // `PushValue("SEARCHPATHS", …)` would never reach file resolution.
+  assert!(
+    state::lookup_value("SEARCHPATHS").is_none(),
+    "SEARCHPATHS is not value-table-backed in the Rust port"
+  );
+  // ...but GRAPHICSPATHS is, so PushValue onto it does reach file resolution.
+  assert!(
+    state::get_graphics_paths().iter().any(|p| p == "/540/gfx"),
+    "PushValue reaches the value-table-backed GRAPHICSPATHS, got {:?}",
+    state::get_graphics_paths()
+  );
+}
+
+/// #540 (generalized): the list ops carry any Rhai-representable value, not just
+/// strings. An int/float/bool round-trips as its own type (not stringified), and
+/// a `Tokens` value survives a push/pop cycle. Perl's `PushValue` is untyped and
+/// the State layer holds any `Stored`; only the binding used to narrow to strings.
+#[test]
+fn pushvalue_preserves_types() {
+  fresh_state();
+  load_script(
+    r##"
+      PushValue("tv", 7);                            // int
+      PushValue("tv", 2.5);                          // float
+      PushValue("tv", true);                         // bool
+      PushValue("tv", TokenizeInternal("\\alpha"));  // Tokens
+      // Pop back LIFO: Tokens, bool, float, int.
+      let t = PopValue("tv");
+      let b = PopValue("tv");
+      let f = PopValue("tv");
+      let i = PopValue("tv");
+      assign_global("tv:tok", if UnTeX(t).contains("alpha") { "ok" } else { "bad" });
+      assign_global("tv:bool", if b { "ok" } else { "bad" });
+      assign_global("tv:float", if f == 2.5 { "ok" } else { "bad" });
+      assign_global("tv:int", if i == 7 { "ok" } else { "bad" });
+      // The point of the generalization: a popped int is an i64, NOT a string.
+      assign_global("tv:int_type", type_of(i));
+
+      // A digested handle survives the round-trip too (separate key, to keep the
+      // LIFO ordering above intact).
+      PushValue("tvd", DigestText("qq"));
+      let d = PopValue("tvd");
+      assign_global("tvd:ok", if ToString(d) == "qq" { "ok" } else { "bad" });
+    "##,
+  )
+  .expect("typed-push script should load cleanly");
+  assert_eq!(
+    lookup_str("tv:tok"),
+    "ok",
+    "Tokens survive a push/pop cycle"
+  );
+  assert_eq!(lookup_str("tv:bool"), "ok", "bool round-trips as bool");
+  assert_eq!(lookup_str("tv:float"), "ok", "float round-trips as float");
+  assert_eq!(lookup_str("tv:int"), "ok", "int round-trips as int");
+  assert_eq!(
+    lookup_str("tv:int_type"),
+    "i64",
+    "a popped int is a typed i64, not a stringified value"
+  );
+  assert_eq!(lookup_str("tvd:ok"), "ok", "a digested handle round-trips");
+}
+
 /// Wave-B definition forms: DefRegister (count + dimen), DefConditional
 /// (Rhai test driven from real TeX), DefKeyVal, DefLigature, DefMath.
 #[test]

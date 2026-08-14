@@ -35,11 +35,12 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-93 functions, 124 calls.
+99 functions, 130 calls.
 
 | call | documentation |
 |---|---|
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
+| `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
 | `AssignBool(string, bool)`<br>`AssignBool(string, bool, string)` | Bind a key to a boolean value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignCatcode(string, int)` | Set a character's category code. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
 | `AssignFloat(string, float)`<br>`AssignFloat(string, float, string)` | Bind a key to a fractional (float) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
@@ -96,10 +97,13 @@ Called at the top level of a binding file, or from inside any body.
 | `NoteSTDERR(string)` | Write a progress note to stderr as well as the log. |
 | `ParseXML(string) -> array` | Parse a markup chunk into nodes; a bare fragment is fine. ([`parse_fragment`](latexml_core::common::xml::parse_fragment)) |
 | `PassOptions(string, string, array)` | Forward options to a package or class not yet loaded. ([`pass_options`](latexml_core::binding::content::pass_options)) |
+| `PopValue(string) -> ?` | Pop and return the last value of a value-table list, type preserved (`()` if empty). ([`pop_value`](latexml_core::state::pop_value)) |
+| `PrependSearchPath(string)` | Prepend a directory to the input search path (searched first). ([`search_paths_push_front`](latexml_core::state::search_paths_push_front)) |
 | `ProcessOptions()`<br>`ProcessOptions(bool)` | Execute the declared options — in declaration order, or (`*`) in the order passed. ([`process_options`](latexml_core::binding::content::process_options)) |
 | `ProgressSpindown(string)` | Close a named progress stage in the log. ([`note_end`](latexml_core::common::error::note_end)) |
 | `ProgressSpinup(string)` | Open a named progress stage in the log. ([`note_begin`](latexml_core::common::error::note_begin)) |
 | `ProgressStep(string)` | Advance the progress indicator; a no-op in this port. ([`progress_step`](latexml_core::common::error::progress_step)) |
+| `PushValue(string, ?)` | Push a value (string/int/float/bool/Tokens) onto a value-table list, creating it (global) if absent. ([`push_value`](latexml_core::state::push_value)) |
 | `RawTeX(string)` | Process a chunk of literal TeX as definitions. ([`raw_tex`](latexml_core::stomach::raw_tex)) |
 | `ReadArg() -> string` | Read one TeX argument: a token, or a braced group. ([`read_arg`](latexml_core::gullet::read_arg)) |
 | `ReadOptional() -> string` | Read a LaTeX optional `[…]` argument, or a default. ([`read_optional`](latexml_core::gullet::read_optional)) |
@@ -114,6 +118,7 @@ Called at the top level of a binding file, or from inside any body.
 | `RequireResource(string)`<br>`RequireResource(string, map)` | Attach a CSS or JavaScript resource to the document. ([`require_resource`](latexml_core::binding::content::require_resource)) |
 | `ResetCounter(string)` | Reset a counter to zero. ([`reset_counter`](latexml_core::binding::counter::dialect::reset_counter)) |
 | `Revert(Digested) -> Tokens` | A digested value back to the source tokens that made it. ([`Digested::revert`](latexml_core::digested::Digested::revert)) |
+| `ShiftValue(string) -> ?` | Remove and return the first value of a value-table list, type preserved (`()` if empty). ([`shift_value`](latexml_core::state::shift_value)) |
 | `SkipSpaces()` | Discard any run of spaces at the head of the input. ([`skip_spaces`](latexml_core::gullet::skip_spaces)) |
 | `StepCounter(string)` | Step a counter; usually you want `RefStepCounter` instead. ([`step_counter`](latexml_core::binding::counter::dialect::step_counter)) |
 | `T_CS(string) -> Tokens` | One control-sequence token, wrapped as `Tokens` so it composes with `Digest`/`Expand`. |
@@ -125,6 +130,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Tokenize(string) -> Tokens` | Tokenize a string under the standard catcode table. ([`tokenize`](latexml_core::mouth::tokenize)) |
 | `TokenizeInternal(string) -> Tokens` | Tokenize a string under the style-file table, where `@` is a letter. ([`tokenize_internal`](latexml_core::mouth::tokenize_internal)) |
 | `UnTeX(Tokens) -> string` | Tokens back to the TeX source that could have produced them. ([`Tokens::untex`](latexml_core::tokens::Tokens::untex)) |
+| `UnshiftValue(string, ?)` | Prepend a value (string/int/float/bool/Tokens) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
 | `Warn(string, string, string)` | Log a `Warning:` with the given category and object. |
 | `XEquals(string, string) -> bool` | Whether two control sequences have the same meaning. ([`x_equals`](latexml_core::state::x_equals)) |
 | `assign_global(string, string)` | [`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group. |

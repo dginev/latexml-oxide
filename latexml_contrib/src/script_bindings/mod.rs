@@ -609,6 +609,49 @@ fn stored_to_dynamic(v: Stored) -> Dynamic {
   }
 }
 
+/// Marshal a Rhai value INTO a `Stored` for the value-table list ops
+/// (`PushValue`/`UnshiftValue`). The inverse of [`popped_stored_to_dynamic`].
+/// Perl's `PushValue` is untyped; the Rust State layer holds any `Stored`, so we
+/// preserve every Rhai-representable type — string, int, float, bool, `Tokens`,
+/// and a digested handle. There is no Rhai value for `Dimension`/`Glue`/`Font`/…,
+/// so those are unreachable from a script; anything unrecognized falls back to
+/// its string form (#540).
+fn dynamic_to_stored(v: Dynamic) -> Stored {
+  if v.is_string() {
+    v.into_string().unwrap_or_default().into()
+  } else if let Ok(i) = v.as_int() {
+    Stored::Int(i)
+  } else if let Ok(f) = v.as_float() {
+    Stored::Float(Float(f))
+  } else if let Ok(b) = v.as_bool() {
+    Stored::Bool(b)
+  } else if let Some(tokens) = v.clone().try_cast::<Tokens>() {
+    Stored::Tokens(tokens)
+  } else if let Some(digested) = v.clone().try_cast::<Digested>() {
+    Stored::Digested(digested)
+  } else {
+    v.to_string().into()
+  }
+}
+
+/// Marshal a popped/shifted `Stored` back to a *typed* Rhai value — the
+/// type-preserving counterpart of [`stored_to_dynamic`], used only by
+/// `PopValue`/`ShiftValue` so a pushed int/float/`Tokens` round-trips as itself
+/// rather than as text. (`stored_to_dynamic` stays string-leaning because it
+/// also marshals counter/whatsit property maps, which expect that.)
+fn popped_stored_to_dynamic(v: Stored) -> Dynamic {
+  match v {
+    Stored::String(s) => Dynamic::from(arena::to_string(s)),
+    Stored::Bool(b) => Dynamic::from(b),
+    Stored::Int(i) => Dynamic::from(i),
+    Stored::Number(n) => Dynamic::from(n.0),
+    Stored::Float(f) => Dynamic::from(f.0),
+    Stored::Tokens(t) => Dynamic::from(t),
+    Stored::Digested(d) => Dynamic::from(d),
+    other => Dynamic::from(other.to_string()),
+  }
+}
+
 /// Marshal a digested macro argument into a Rhai value. Every argument is passed
 /// as its TeX-source string (authors parse it in-script as needed).
 fn arg_to_dynamic(arg: ArgWrap) -> Dynamic { Dynamic::from(arg.to_string()) }

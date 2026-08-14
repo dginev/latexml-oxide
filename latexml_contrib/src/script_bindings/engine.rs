@@ -200,6 +200,46 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("AssignString", |k: &str, v: &str, scope: &str| {
     latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
   });
+  // The Perl `@values` list-value family (Package.pm L265-279 -> State.pm L218):
+  // a value-table key holds a queue that these push/pop/unshift/shift. Always
+  // GLOBAL scope, auto-vivifying the list if absent — matching Perl, which takes
+  // no scope argument. Perl's `PushValue` is untyped and the Rust State layer
+  // holds any `Stored`, so `PushValue`/`UnshiftValue` take any Rhai-representable
+  // value (string/int/float/bool/`Tokens`/digested handle) and `PopValue`/
+  // `ShiftValue` return it with its type preserved (#540). `LookupValue` reads
+  // the whole queue back as a Rhai array. NB `SEARCHPATHS` is NOT such a key in
+  // the Rust port (it is `State.search_paths`, a field) — use `PrependSearchPath`/
+  // `AppendSearchPath` below for input dirs; `GRAPHICSPATHS` IS value-table-backed,
+  // so `PushValue` reaches it.
+  engine.register_fn("PushValue", |k: &str, v: Dynamic| {
+    // Returns Ok(()) always; the wrong-type BUG path self-reports via Error!.
+    let _ = latexml_core::state::push_value(k, dynamic_to_stored(v));
+  });
+  engine.register_fn("UnshiftValue", |k: &str, v: Dynamic| {
+    latexml_core::state::unshift_value(k, vec![dynamic_to_stored(v)]);
+  });
+  engine.register_fn("PopValue", |k: &str| -> Dynamic {
+    match latexml_core::state::pop_value(k) {
+      Ok(Some(popped)) => popped_stored_to_dynamic(popped),
+      _ => Dynamic::UNIT,
+    }
+  });
+  engine.register_fn("ShiftValue", |k: &str| -> Dynamic {
+    match latexml_core::state::shift_value(k) {
+      Ok(Some(shifted)) => popped_stored_to_dynamic(shifted),
+      _ => Dynamic::UNIT,
+    }
+  });
+  // Input search paths. Perl keeps these in the `SEARCHPATHS` value and prepends
+  // via `UnshiftValue`; the Rust port keeps them in `State.search_paths` (read by
+  // `find_file`), so a script mutates them through these dedicated bindings, not
+  // `PushValue`. Prepend = searched first (Perl's `SEARCHPATHS` semantics).
+  engine.register_fn("PrependSearchPath", |dir: &str| {
+    latexml_core::state::search_paths_push_front(dir.to_string());
+  });
+  engine.register_fn("AppendSearchPath", |dir: &str| {
+    latexml_core::state::add_search_path(dir.to_string());
+  });
   engine.register_fn("LookupString", |k: &str| -> String {
     latexml_core::state::lookup_string(k)
   });
