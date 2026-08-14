@@ -145,7 +145,7 @@ Called at the top level of a binding file, or from inside any body.
 
 Reached through the `document` handle a constructor body receives as its first argument — Perl's `$document->method`.
 
-24 functions, 33 calls.
+25 functions, 35 calls.
 
 | call | documentation |
 |---|---|
@@ -162,6 +162,7 @@ Reached through the `document` handle a constructor body receives as its first a
 | `getElement() -> Node?` | The element at, or containing, the insertion point. ([`Document::get_element`](latexml_core::document::Document::get_element)) |
 | `getNode() -> Node` | The current insertion point. ([`Document::get_node`](latexml_core::document::Document::get_node)) |
 | `insertElement(string) -> Node`<br>`insertElement(string, Digested) -> Node`<br>`insertElement(string, Digested, map) -> Node`<br>`insertElement(string, map) -> Node` | Open, absorb and close in one step; returns the new element. ([`Document::insert_element`](latexml_core::document::Document::insert_element)) |
+| `insertPI(string)`<br>`insertPI(string, map)` | Insert a processing instruction: a target, with optional attributes. ([`Document::insert_pi`](latexml_core::document::Document::insert_pi)) |
 | `insertXML(Node)`<br>`insertXML(array)`<br>`insertXML(string)` | Splice ALREADY-PARSED nodes in at the insertion point. ([`Document::insert_nodes`](latexml_core::document::Document::insert_nodes)) |
 | `maybeCloseElement(string)` | Close an element if it is open and closeable; otherwise do nothing. ([`Document::maybe_close_element`](latexml_core::document::Document::maybe_close_element)) |
 | `openElement(string)` | Open an element and make it the insertion point. ([`Document::open_element`](latexml_core::document::Document::open_element)) |
