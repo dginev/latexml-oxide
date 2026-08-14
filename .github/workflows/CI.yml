@@ -126,7 +126,8 @@ jobs:
 
   test:
     # Sharded across 4 runners. The suite's cost is ~398 s of in-binary
-    # execution spread over 122 test targets, and `cargo test` runs those
+    # execution spread over the test targets (consolidated 2026-08 into fewer,
+    # concern-grouped `cluster_*` binaries), and `cargo test` runs those
     # targets SEQUENTIALLY — so the test step was 18.7 min on Linux / 29.4 min
     # on macOS while compilation (warm rust-cache) was only 2.2 / 4.7 min.
     # Splitting the test list across runners is the fix that does NOT raise

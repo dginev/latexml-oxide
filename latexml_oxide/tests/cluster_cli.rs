@@ -1,0 +1,1368 @@
+//! CLI / output-shape / telemetry smoke tests.
+//!
+//! Auto-consolidated test binary: each former file is an inline `mod`
+//! below, body preserved verbatim, merged into one link unit for CI
+//! economy. All members are subprocess- or few-conversion tests, so
+//! co-locating them in one process stays far under the RSS fuse.
+
+mod hello {
+  use latexml::converter::Converter;
+  use latexml_core::common::{Config, OutputFormat};
+
+  #[test]
+  fn can_convert_hello() {
+    assert!(latexml_core::util::logger::init(log::LevelFilter::Warn).is_ok());
+    let hello_source = "tests/hello/hello.tex";
+    let html_config = Config {
+      format: OutputFormat::HTML5,
+      ..Config::default()
+    };
+    let mut converter = Converter::from_config(html_config);
+    converter.initialize_session().expect("can initialize.");
+
+    let conversion_result = converter.convert(hello_source.to_string());
+    assert!(conversion_result.result.is_some());
+    let response = conversion_result;
+    assert!(response.result.is_some());
+    assert!(response.status_code == 0);
+    assert_eq!(response.status, "No obvious problems");
+  }
+}
+
+mod single_binary_smoke {
+  //! Smoke test for the prebuilt-binary distribution.
+  //!
+  //! Builds, locates, and runs the `latexml_oxide` binary from a temp
+  //! directory that has *no access* to the project's `resources/` tree,
+  //! then asserts that:
+  //!
+  //! 1. Conversion succeeds and produces the HTML file at the requested destination.
+  //! 2. The bundled CSS files referenced in the HTML actually land in the destination directory (via
+  //!    the embedded resource fallback).
+  //!
+  //! Catches regressions where someone re-introduces a disk-only resource
+  //! lookup path on the post-processing pipeline. Without the embedded
+  //! fallback this test fails by either dropping the CSS files or
+  //! emitting a "missing_file" warning for `LaTeXML.css`/`ltx-article.css`.
+  //!
+  //! The binary path comes from cargo's `CARGO_BIN_EXE_latexml_oxide`
+  //! env var, set automatically for integration tests that import a
+  //! crate which produces a binary target.
+
+  use std::{path::Path, process::Command};
+
+  const HELLO_TEX: &str = "\\documentclass{article}\n\
+                           \\begin{document}\n\
+                           Hello World!\n\
+                           \\end{document}\n";
+
+  #[test]
+  fn binary_runs_without_source_tree() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(
+      Path::new(bin).is_file(),
+      "test harness did not stage binary at {}",
+      bin,
+    );
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let tex_path = workdir.path().join("hello.tex");
+    let html_path = workdir.path().join("hello.html");
+    std::fs::write(&tex_path, HELLO_TEX).expect("write hello.tex");
+
+    // Run the binary with the tempdir as cwd so resource lookups can't
+    // accidentally pick up the project tree via "." in the search path.
+    let output = Command::new(bin)
+      .arg(tex_path.file_name().unwrap())
+      .arg("--dest")
+      .arg(html_path.file_name().unwrap())
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    assert!(
+      output.status.success(),
+      "binary exited with status {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+
+    // Output HTML present and references the expected CSS files.
+    let html = std::fs::read_to_string(&html_path).expect("read hello.html");
+    assert!(
+      html.contains("LaTeXML.css"),
+      "expected LaTeXML.css reference in HTML, got:\n{html}",
+    );
+    assert!(
+      html.contains("ltx-article.css"),
+      "expected ltx-article.css reference in HTML, got:\n{html}",
+    );
+
+    // The CSS files themselves must have been materialised alongside
+    // the HTML — that's the post-XSLT copy_resource step's job, and
+    // it pulls from the embedded table when `resources/CSS/` isn't on
+    // disk.
+    let css_main = workdir.path().join("LaTeXML.css");
+    let css_article = workdir.path().join("ltx-article.css");
+    assert!(
+      css_main.is_file(),
+      "expected LaTeXML.css next to hello.html, missing at {}",
+      css_main.display(),
+    );
+    assert!(
+      css_article.is_file(),
+      "expected ltx-article.css next to hello.html, missing at {}",
+      css_article.display(),
+    );
+
+    // Sanity: CSS content is non-empty and looks like CSS.
+    let css_main_content = std::fs::read_to_string(&css_main).expect("read LaTeXML.css");
+    assert!(
+      css_main_content.contains("{") && !css_main_content.is_empty(),
+      "LaTeXML.css looks empty or invalid",
+    );
+  }
+}
+
+mod telemetry {
+  //! Integration test for telemetry foundation (docs/performance/TELEMETRY.md §6 acceptance).
+  //!
+  //! Runs a real Converter conversion on hello.tex and verifies:
+  //! 1. The telemetry struct is populated with non-zero phase totals where applicable.
+  //! 2. `sum(phase_us) / wall_us >= 0.85` (loose for tiny doc; the §6.5 tighter ≥0.92 acceptance is
+  //!    for the 100-paper sample, not unit tests).
+  //! 3. The hand-written JSON serializer produces valid JSON.
+
+  use latexml::converter::Converter;
+  use latexml_core::{
+    common::{Config, OutputFormat},
+    telemetry::{self, Phase},
+  };
+
+  #[test]
+  fn telemetry_populates_on_hello_conversion() {
+    // Each #[test] runs on a fresh thread, so thread-local STATE/STACK
+    // start zeroed. No tear-down needed.
+    // logger::init may fail on the second test in the same binary (already
+    // installed). Either outcome is fine for our purposes here.
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+
+    let wall_start = std::time::Instant::now();
+    let html_config = Config {
+      format: OutputFormat::HTML5,
+      ..Config::default()
+    };
+    let mut converter = Converter::from_config(html_config);
+    converter.initialize_session().expect("can initialize.");
+    let response = converter.convert("tests/hello/hello.tex".to_string());
+    assert!(response.result.is_some(), "conversion failed");
+    assert_eq!(response.status_code, 0);
+    let wall_us = wall_start.elapsed().as_micros() as u64;
+
+    // Snapshot phase totals.
+    let (phase_us, telem_wall_us) = telemetry::with(|t| (t.phase_us, t.wall_us));
+    let _ = telem_wall_us; // wall_us is set by binary at exit; not in this in-process path
+
+    // At least one of the post-Bootstrap phases must have run during
+    // convert(): Digest is the canonical entry. Bootstrap may be 0 if
+    // initialize_session() ran before the guard was wrapped (lazy init).
+    assert!(
+      phase_us[Phase::Digest as usize] > 0,
+      "Digest phase wasn't recorded; phase_us = {:?}",
+      phase_us
+    );
+    assert!(
+      phase_us[Phase::Build as usize] > 0,
+      "Build phase wasn't recorded; phase_us = {:?}",
+      phase_us
+    );
+
+    // Telemetry recorded real per-phase timings (this test's purpose: phases
+    // POPULATE — already pinned by the Digest/Build assertions above). A
+    // wall-clock RATIO is deliberately NOT asserted: the in-process
+    // `wall_start.elapsed()` includes scheduler preemption, which under
+    // concurrent `cargo test` load inflates wall far above phase work for a
+    // tiny doc (observed 0.49 vs the old 0.5 bound — flaky, not a regression).
+    // Production phase-coverage (≥0.92) is measured out-of-process on real
+    // papers; see docs/performance/TELEMETRY.md §6.5.
+    let sum_phase: u64 = phase_us.iter().sum();
+    assert!(
+      sum_phase > 0,
+      "no phase time recorded; phase_us = {phase_us:?}"
+    );
+    let _ = wall_us; // measured for context; not asserted (preemption-sensitive)
+  }
+
+  #[test]
+  fn telemetry_json_round_trip_on_real_conversion() {
+    // logger::init may fail on the second test in the same binary (already
+    // installed). Either outcome is fine for our purposes here.
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let html_config = Config {
+      format: OutputFormat::HTML5,
+      ..Config::default()
+    };
+    let mut converter = Converter::from_config(html_config);
+    converter.initialize_session().expect("can initialize.");
+    let _ = converter.convert("tests/hello/hello.tex".to_string());
+
+    // Set the binary-side identifiers so the JSON has stable structure.
+    telemetry::set_paper_id("hello");
+    telemetry::set_host("test-host");
+    telemetry::set_category("ok");
+    telemetry::set_exit_code(0);
+    telemetry::set_wall_us(1_000_000); // dummy
+
+    let record = telemetry::take();
+    let json = record.to_json_line();
+
+    // Structural invariants
+    assert!(json.starts_with('{') && json.ends_with('}'), "json: {json}");
+    assert!(json.contains("\"paper_id\":\"hello\""));
+    assert!(json.contains("\"category\":\"ok\""));
+    assert!(json.contains("\"schema_version\":1"));
+    // All 17 phase aliases present
+    for p in [
+      "bootstrap",
+      "digest",
+      "build",
+      "rewrite",
+      "math_parse",
+      "post_xml_parse",
+      "post_scan",
+      "bibliography",
+      "crossref",
+      "graphics",
+      "math_images",
+      "mathml_pres",
+      "mathml_cont",
+      "split",
+      "xslt",
+      "html5_fixups",
+      "serialize",
+    ] {
+      let needle = format!("\"phase_{p}_us\":");
+      assert!(json.contains(&needle), "missing field {needle} in: {json}");
+    }
+  }
+}
+
+mod cli_css_resource_copy {
+  //! Regression test: CLI `--css` resources are searched on `--path` and
+  //! COPIED into the destination directory.
+  //!
+  //! Before the fix, `--css=foo.css --path=DIR` emitted a `<link>` to `foo.css`
+  //! in the HTML but never searched `--path` for the file nor copied it, so the
+  //! page rendered unstyled (the file simply wasn't there next to the HTML).
+  //!
+  //! `--nodefaultresources` is orthogonal and must NOT suppress CLI-specified
+  //! resources — it only drops the bundled defaults (`LaTeXML.css` /
+  //! `ltx-article.css`). This test pins both halves: with
+  //! `--nodefaultresources` set, the custom `--css` file is still copied, while
+  //! the bundled defaults are not.
+  //!
+  //! Faithful to Perl `LaTeXML::Post::XSLT::process` L71-78 (the CSS/JAVASCRIPT
+  //! param copy, which sits OUTSIDE the `noresources` guard).
+
+  use std::{path::Path, process::Command};
+
+  const HELLO_TEX: &str = "\\documentclass{article}\n\
+                           \\begin{document}\n\
+                           Hello World!\n\
+                           \\end{document}\n";
+
+  const CUSTOM_CSS: &str = "/* oxide-test-marker */\nbody { color: rebeccapurple; }\n";
+
+  #[test]
+  fn cli_css_is_searched_on_path_and_copied_even_with_nodefaultresources() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    // The custom CSS lives in a subdirectory reachable ONLY via `--path`.
+    let cssdir = workdir.path().join("styles");
+    std::fs::create_dir(&cssdir).expect("mkdir styles");
+    std::fs::write(cssdir.join("mystyle.css"), CUSTOM_CSS).expect("write mystyle.css");
+
+    let tex_path = workdir.path().join("hello.tex");
+    let html_path = workdir.path().join("hello.html");
+    std::fs::write(&tex_path, HELLO_TEX).expect("write hello.tex");
+
+    let output = Command::new(bin)
+      .arg(tex_path.file_name().unwrap())
+      .arg("--dest")
+      .arg(html_path.file_name().unwrap())
+      .arg("--format")
+      .arg("html5")
+      .arg("--css")
+      .arg("mystyle.css")
+      .arg("--path")
+      .arg(&cssdir)
+      .arg("--nodefaultresources")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+
+    // The HTML links the custom CSS.
+    let html = std::fs::read_to_string(&html_path).expect("read hello.html");
+    assert!(
+      html.contains("mystyle.css"),
+      "expected mystyle.css link in HTML, got:\n{html}",
+    );
+
+    // THE FIX: the file is searched on `--path` and copied into the destination
+    // directory (next to the HTML), even though `--nodefaultresources` is set.
+    let copied = workdir.path().join("mystyle.css");
+    assert!(
+      copied.is_file(),
+      "expected mystyle.css copied next to hello.html (the --css/--path copy), \
+       missing at {}\nstderr:\n{}",
+      copied.display(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+    assert_eq!(
+      std::fs::read_to_string(&copied).expect("read copied css"),
+      CUSTOM_CSS,
+      "copied CSS content should match the source on --path",
+    );
+
+    // The custom file came from `--path`, NOT the embedded table, so there must
+    // be no `missing_file` warning for it.
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      !stderr.contains("missing_file") || !stderr.contains("mystyle.css"),
+      "unexpected missing_file warning for mystyle.css:\n{stderr}",
+    );
+
+    // `--nodefaultresources` must still suppress the bundled defaults.
+    assert!(
+      !workdir.path().join("LaTeXML.css").exists(),
+      "--nodefaultresources should suppress bundled LaTeXML.css",
+    );
+  }
+
+  /// The copied CSS's LOCAL `@import` targets are followed recursively, with
+  /// their subdirectory structure recreated under the destination so the
+  /// cascade still resolves (the ar5iv "glowup" pattern: `ar5iv.css` →
+  /// `@import "./ar5iv/*.css"`). Remote (`https://…`) imports are left alone.
+  #[test]
+  fn cli_css_local_imports_are_recursively_copied_with_subdirs() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let styles = workdir.path().join("styles");
+    std::fs::create_dir_all(styles.join("layer")).expect("mkdir styles/layer");
+    // main.css imports a LOCAL sub-file (in a subdir) and a REMOTE sheet.
+    std::fs::write(
+      styles.join("main.css"),
+      "@import url(\"./layer/part.css\") layer(base);\n\
+       @import url('https://example.invalid/remote.css');\n\
+       body { color: red; }\n",
+    )
+    .expect("write main.css");
+    let part_css = "/* part marker */\np { margin: 0; }\n";
+    std::fs::write(styles.join("layer").join("part.css"), part_css).expect("write part.css");
+
+    let tex_path = workdir.path().join("hello.tex");
+    std::fs::write(&tex_path, HELLO_TEX).expect("write hello.tex");
+
+    let output = Command::new(bin)
+      .arg("hello.tex")
+      .arg("--dest")
+      .arg("hello.html")
+      .arg("--format")
+      .arg("html5")
+      .arg("--css")
+      .arg("main.css")
+      .arg("--path")
+      .arg(&styles)
+      .arg("--nodefaultresources")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+
+    // Top-level CSS copied next to the HTML (flattened to its basename)...
+    assert!(
+      workdir.path().join("main.css").is_file(),
+      "main.css not copied next to hello.html",
+    );
+
+    // ...and the LOCAL @import target was followed AND its subdirectory was
+    // recreated under the destination, so `./layer/part.css` resolves.
+    let imported = workdir.path().join("layer").join("part.css");
+    assert!(
+      imported.is_file(),
+      "expected @import target recreated at {} (subdir structure preserved)\nstderr:\n{}",
+      imported.display(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+    assert_eq!(
+      std::fs::read_to_string(&imported).expect("read imported part.css"),
+      part_css,
+      "recursively-copied @import content should match the source",
+    );
+
+    // The remote @import must NOT have been fetched/written locally.
+    assert!(
+      !workdir.path().join("remote.css").exists(),
+      "remote @import should be left untouched, not copied locally",
+    );
+  }
+}
+
+mod dest_htm_infers_html5 {
+  //! Regression pin: a `.htm` destination extension infers `--format=html5`,
+  //! exactly like `.html`.
+  //!
+  //! `bin/latexml_oxide.rs` maps `"html" | "htm" => "html5"` (Perl Config.pm
+  //! L435), lowercased so `.HTM` works too — so `--dest=index.htm` with no
+  //! explicit `--format` must produce a post-processed HTML5 page (DOCTYPE +
+  //! `<link>`ed, copied `LaTeXML.css`), NOT the raw-XML default. This pins the
+  //! `.htm` half, which every other CLI test exercises only via `.html`; it is
+  //! the exact invocation shape from GitHub #312 (`--dest=index.htm`).
+
+  use std::{path::Path, process::Command};
+
+  const HELLO_TEX: &str = "\\documentclass{article}\n\
+                           \\begin{document}\n\
+                           Hello World!\n\
+                           \\end{document}\n";
+
+  #[test]
+  fn dest_htm_extension_infers_html5_and_copies_css() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("hello.tex"), HELLO_TEX).expect("write hello.tex");
+
+    // Nasser's invocation shape: `.htm` destination, NO explicit --format.
+    let output = Command::new(bin)
+      .arg("hello.tex")
+      .arg("--dest")
+      .arg("hello.htm")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+
+    // The `.htm` extension must have inferred html5 → a post-processed HTML page,
+    // not the raw-XML fallback.
+    let html = std::fs::read_to_string(workdir.path().join("hello.htm")).expect("read hello.htm");
+    assert!(
+      html.contains("<!DOCTYPE html>"),
+      "a .htm destination should infer html5 (DOCTYPE html), got:\n{html}",
+    );
+    assert!(
+      html.contains("LaTeXML.css"),
+      "html5 output should link LaTeXML.css, got:\n{html}",
+    );
+
+    // ...and the html5 pipeline copies the bundled default stylesheet next to it.
+    assert!(
+      workdir.path().join("LaTeXML.css").is_file(),
+      "expected LaTeXML.css copied next to hello.htm (html5 resource copy)",
+    );
+  }
+}
+
+mod kpathsea_backend_resolution {
+  //! Regression guard for issue #304's mechanism: file resolution must survive a
+  //! process that cannot resolve a `kpsewhich` executable.
+  //!
+  //! Before kpathsea 0.3.4, `Kpaths::new()` returned `Err` whenever `kpsewhich`
+  //! was unresolvable *from this process* — absent from its PATH (as opposed to
+  //! the user's interactive shell), a stale `KPSEWHICH`, not executable, or a
+  //! `kpsewhich.exe` beside a Linux binary under WSL — and `select_kpaths()`
+  //! discarded that error with `.ok()?`. The linked libkpathsea was then never
+  //! initialized, so EVERY lookup returned `None` while embedded bindings and
+  //! dumps kept the conversion working. The only symptom was `Can't find TeX
+  //! file X`, indistinguishable from a genuinely absent file.
+  //!
+  //! Runs the binary as a subprocess, because the backend is chosen once per
+  //! process and cannot be re-selected from inside a test.
+
+  use std::{fs, process::Command};
+
+  /// `\input`s a file reachable ONLY through kpathsea's `TEXINPUTS` handling —
+  /// not via `--path`, which is resolved Rust-side and would bypass the backend
+  /// entirely (exactly how the reporter's workaround masked the problem).
+  const MAIN_TEX: &str = "\\documentclass{article}\n\
+                          \\input{lxo_probe_304}\n\
+                          \\begin{document}\n\
+                          \\lxoprobe\n\
+                          \\end{document}\n";
+
+  /// Requires a host TeX installation, which is optional for latexml-oxide, so
+  /// this is `ignore`d rather than failed where none exists — and `ignore` rather
+  /// than an early `return`, so the skip is visible in the test summary instead
+  /// of reporting green while asserting nothing. It further assumes a linked
+  /// libkpathsea (the default wherever `libkpathsea` is present at build time);
+  /// on a subprocess-only build the deliberately-broken `KPSEWHICH` below leaves
+  /// no backend at all, which is a different scenario than the one guarded here.
+  #[test]
+  #[cfg_attr(
+    not(building_with_texlive),
+    ignore = "requires a TeX Live installation"
+  )]
+  fn texinputs_resolves_without_a_resolvable_kpsewhich() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let dir = std::env::temp_dir().join(format!("lxo_kpse_backend_{}", std::process::id()));
+    let include = dir.join("include");
+    fs::create_dir_all(&include).unwrap();
+    fs::write(
+      include.join("lxo_probe_304.tex"),
+      "\\newcommand\\lxoprobe{PROBE-OK}\n",
+    )
+    .unwrap();
+    fs::write(dir.join("main.tex"), MAIN_TEX).unwrap();
+
+    let sep = if cfg!(windows) { ';' } else { ':' };
+    let out = Command::new(bin)
+      .current_dir(&dir)
+      .arg("--destination=out.xml")
+      .arg("main.tex")
+      .env("TEXINPUTS", format!("{}{sep}", include.display()))
+      // No `kpsewhich` reachable: the condition that used to disable the linked
+      // libkpathsea outright. `KPSEWHICH` is honored ahead of PATH by the
+      // kpathsea crate, so pointing it at a nonexistent file is enough, and
+      // unlike clearing PATH it stays portable.
+      .env("KPSEWHICH", "/nonexistent/definitely-not-kpsewhich")
+      .output()
+      .expect("failed to run latexml_oxide");
+
+    let log = String::from_utf8_lossy(&out.stderr).into_owned();
+    let produced = fs::read_to_string(dir.join("out.xml")).unwrap_or_default();
+    let _ = fs::remove_dir_all(&dir);
+
+    assert!(
+      !log.contains("Error:missing_file:lxo_probe_304"),
+      "the TEXINPUTS-only include must resolve with no usable kpsewhich; log:\n{log}"
+    );
+    assert!(
+      produced.contains("PROBE-OK"),
+      "the included macro must have been expanded; log:\n{log}"
+    );
+    // The backend line is what makes a future report self-diagnosing: whatever
+    // the outcome, the log must say which resolver was in play.
+    assert!(
+      log.contains("kpathsea:backend"),
+      "every conversion log must record the resolved kpathsea backend; log:\n{log}"
+    );
+  }
+}
+
+mod stale_css_overwrite {
+  //! Regression for GitHub #312: a stale/empty `LaTeXML.css` / `ltx-article.css`
+  //! already sitting in the destination must be OVERWRITTEN with the bundled
+  //! stylesheet, not left as-is.
+  //!
+  //! The reporter had empty `.css` files left by an earlier failed run. Because
+  //! the destination directory (== the source directory here) is on the resource
+  //! search path, `copy_resource` *found the stale destination file itself* and
+  //! `fs::copy`'d it onto itself — truncating it to empty — instead of writing the
+  //! embedded canonical CSS. The browser then loaded empty CSS and the math
+  //! rendered flush-left. The `path != dest` guard was a string compare that can't
+  //! detect the same file reached via a different path string.
+
+  use std::{path::Path, process::Command};
+
+  const HELLO_TEX: &str = "\\documentclass{article}\n\
+                           \\begin{document}\n\
+                           Hello World! $E=mc^2$\n\
+                           \\end{document}\n";
+
+  #[test]
+  fn stale_css_in_dest_is_overwritten_with_bundled() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let p = workdir.path();
+    std::fs::write(p.join("hello.tex"), HELLO_TEX).expect("write hello.tex");
+    // Reporter's exact setup: stale stylesheets already in the destination (==
+    // source) directory, which is on the resource search path — one empty, one
+    // with junk content, to catch both the truncate-to-empty and skip variants.
+    std::fs::write(p.join("LaTeXML.css"), b"").expect("write empty LaTeXML.css");
+    std::fs::write(p.join("ltx-article.css"), b"/* STALE LEFTOVER */").expect("write stale css");
+
+    let output = Command::new(bin)
+      .arg("hello.tex")
+      .arg("--dest")
+      .arg("hello.html")
+      .current_dir(p)
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+
+    let latexml_css = std::fs::read_to_string(p.join("LaTeXML.css")).expect("read LaTeXML.css");
+    let article_css =
+      std::fs::read_to_string(p.join("ltx-article.css")).expect("read ltx-article.css");
+
+    assert!(
+      latexml_css.len() > 1000 && latexml_css.contains("ltx_"),
+      "a stale/empty LaTeXML.css in the dest must be overwritten with the bundled \
+       stylesheet, got {} bytes:\n{latexml_css}",
+      latexml_css.len(),
+    );
+    assert!(
+      !article_css.contains("STALE") && article_css.contains("ltx_"),
+      "a stale ltx-article.css in the dest must be overwritten with the bundled \
+       stylesheet, got:\n{article_css}",
+    );
+  }
+}
+
+mod whatsinout {
+  //! End-to-end `--whatsin` / `--whatsout` CLI coverage (Perl
+  //! `LaTeXML::Util::Pack` + `LaTeXML.pm` driver logic).
+  //!
+  //! Exercises the binary the way a user invokes it, asserting the
+  //! shape of the output for each `whatsout` mode:
+  //!
+  //! * `document` (default) → full HTML page (has `<head>`).
+  //! * `fragment` → embeddable snippet (no page chrome).
+  //! * `archive` → a zip bundle (HTML + status), with a placeholder `<source>.zip` destination when
+  //!   `--dest` is omitted (Perl LaTeXML.pm:185-187).
+  //!
+  //! Run via the prebuilt-binary harness (`CARGO_BIN_EXE_latexml_oxide`),
+  //! like `001_single_binary_smoke.rs`.
+
+  use std::{io::Read, path::Path, process::Command};
+
+  const HELLO_TEX: &str = "\\documentclass{article}\n\
+                           \\begin{document}\n\
+                           Hello World!\n\
+                           \\end{document}\n";
+
+  /// Spawn the binary in `cwd` with `args`, returning the captured output.
+  fn run(cwd: &Path, args: &[&str]) -> std::process::Output {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    Command::new(bin)
+      .args(args)
+      .current_dir(cwd)
+      .output()
+      .expect("spawn latexml_oxide")
+  }
+
+  fn stderr_of(out: &std::process::Output) -> String {
+    String::from_utf8_lossy(&out.stderr).to_string()
+  }
+
+  #[test]
+  fn whatsout_document_is_full_page() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("hello.tex"), HELLO_TEX).unwrap();
+    let out = run(work.path(), &["hello.tex", "--dest", "doc.html"]);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{}",
+      out.status.code(),
+      stderr_of(&out)
+    );
+    let html = std::fs::read_to_string(work.path().join("doc.html")).expect("read doc.html");
+    assert!(html.contains("Hello World"), "missing body text:\n{html}");
+    // A full document carries the page chrome (`<head>`…`</head>`).
+    assert!(
+      html.contains("<head") && html.contains("</head>"),
+      "document output should be a full HTML page with a <head>:\n{html}"
+    );
+  }
+
+  #[test]
+  fn whatsin_math_wraps_literal_as_mathml() {
+    // `--whatsin=math` must digest the literal AS math (Perl LaTeXML.pm:166-168
+    // wraps it `\begin{document}\ensuremathfollows … \ensuremathpreceeds\end{document}`,
+    // and those macros open/close `\(…\)`). Before the automath port, the wrapper
+    // macros were no-ops, so `\sqrt{x}` became a bare `<ltx:XMApp>` outside any
+    // `<ltx:Math>` container → `malformed:ltx:XMApp isn't allowed` → no MathML.
+    let work = tempfile::tempdir().expect("tempdir");
+    let out = run(work.path(), &[
+      "literal:\\sqrt{x}",
+      "--whatsin=math",
+      "--format=html5",
+      "--dest",
+      "m.html",
+    ]);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{}",
+      out.status.code(),
+      stderr_of(&out)
+    );
+    let html = std::fs::read_to_string(work.path().join("m.html")).expect("read m.html");
+    assert!(
+      html.contains("msqrt"),
+      "expected MathML <msqrt> from `--whatsin=math`:\n{html}"
+    );
+  }
+
+  #[test]
+  fn whatsout_fragment_strips_page_chrome() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("hello.tex"), HELLO_TEX).unwrap();
+    let out = run(work.path(), &[
+      "hello.tex",
+      "--whatsout",
+      "fragment",
+      "--dest",
+      "frag.html",
+    ]);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{}",
+      out.status.code(),
+      stderr_of(&out)
+    );
+    let frag = std::fs::read_to_string(work.path().join("frag.html")).expect("read frag.html");
+    assert!(frag.contains("Hello World"), "missing body text:\n{frag}");
+    // An embeddable fragment must NOT carry the full-page `<head>`/`<html>`
+    // wrapper — that is the whole point of `--whatsout=fragment`.
+    assert!(
+      !frag.contains("<head") && !frag.contains("<html"),
+      "fragment output must not carry page chrome:\n{frag}"
+    );
+  }
+
+  #[test]
+  fn whatsout_archive_writes_zip_bundle() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("hello.tex"), HELLO_TEX).unwrap();
+    let out = run(work.path(), &[
+      "hello.tex",
+      "--whatsout",
+      "archive",
+      "--dest",
+      "bundle.zip",
+    ]);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{}",
+      out.status.code(),
+      stderr_of(&out)
+    );
+    let zip_path = work.path().join("bundle.zip");
+    assert!(zip_path.is_file(), "expected bundle.zip on disk");
+
+    let f = std::fs::File::open(&zip_path).unwrap();
+    let mut archive = zip::ZipArchive::new(f).expect("valid zip");
+    let names: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().to_string())
+      .collect();
+    assert!(
+      names.iter().any(|n| n == "bundle.html"),
+      "zip should contain bundle.html; names: {names:?}"
+    );
+    assert!(
+      names.iter().any(|n| n == "status"),
+      "zip should contain a status entry; names: {names:?}"
+    );
+    // The bundled HTML is the full document.
+    let mut html = String::new();
+    archive
+      .by_name("bundle.html")
+      .unwrap()
+      .read_to_string(&mut html)
+      .unwrap();
+    assert!(
+      html.contains("Hello World"),
+      "bundled HTML missing body:\n{html}"
+    );
+  }
+
+  #[test]
+  fn whatsout_archive_defaults_destination_to_source_zip() {
+    // Perl LaTeXML.pm:185-187: `--whatsout=archive` with no `--dest`
+    // invents `<source-name>.zip`.
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("paper.tex"), HELLO_TEX).unwrap();
+    let out = run(work.path(), &["paper.tex", "--whatsout", "archive"]);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{}",
+      out.status.code(),
+      stderr_of(&out)
+    );
+    let zip_path = work.path().join("paper.zip");
+    assert!(
+      zip_path.is_file(),
+      "expected placeholder paper.zip on disk; stderr:\n{}",
+      stderr_of(&out)
+    );
+    // With no --dest/--format an archive still defaults to an html5 web
+    // bundle: `paper.html` inside, carrying the body text.
+    let f = std::fs::File::open(&zip_path).unwrap();
+    let mut archive = zip::ZipArchive::new(f).expect("valid zip");
+    let names: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().to_string())
+      .collect();
+    assert!(
+      names.iter().any(|n| n == "paper.html"),
+      "placeholder zip should contain paper.html; names: {names:?}"
+    );
+    let mut html = String::new();
+    archive
+      .by_name("paper.html")
+      .unwrap()
+      .read_to_string(&mut html)
+      .unwrap();
+    assert!(
+      html.contains("Hello World"),
+      "bundled HTML missing body:\n{html}"
+    );
+  }
+}
+
+mod cli_options_consumed {
+  //! CLI drift guard — every option declared in the `Cli` struct must actually
+  //! be consumed by the binary, and no option may be hidden from `--help`.
+  //!
+  //! WHY THIS EXISTS. `Cli` derives `Debug`, and the generated `Debug` impl reads
+  //! every field. That read suppresses rustc's `dead_code` "field is never read"
+  //! lint, so a parsed-but-ignored option — a no-op flag still printed in
+  //! `--help` — compiles clean even under `-D warnings`. This test restores the
+  //! guarantee by scanning the binary source: it fails if any `Cli` field is
+  //! never used as `cli.<field>`.
+  //!
+  //! Historical no-ops this would have caught: `--inputencoding`,
+  //! `--sitedirectory`, `--sourcedirectory` — all three were declared for Perl
+  //! CLI parity but never wired, so they parsed and were silently ignored (fixed
+  //! 2026-07-16; see `git log` for the wiring commit).
+  //!
+  //! The second test enforces the reverse direction (available ⇒ documented):
+  //! the struct must declare no clap `hide`/`skip` attribute, so `--help` always
+  //! lists every option the binary parses.
+
+  use regex::Regex;
+
+  /// The binary's own source — the single source of truth for the option set
+  /// (clap generates `--help` from this struct's doc-comments).
+  const SRC: &str = include_str!("../bin/latexml_oxide.rs");
+
+  /// Return the `{ ... }` body of `struct Cli`, located by brace matching so a
+  /// nested `{}` in a field type or attribute can't confuse it.
+  fn cli_struct_body(src: &str) -> &str {
+    let decl = src
+      .find("struct Cli")
+      .expect("`struct Cli` present in the binary");
+    let open = decl + src[decl..].find('{').expect("opening brace of Cli");
+    let bytes = src.as_bytes();
+    let mut depth = 0usize;
+    for i in open..bytes.len() {
+      match bytes[i] {
+        b'{' => depth += 1,
+        b'}' => {
+          depth -= 1;
+          if depth == 0 {
+            return &src[open + 1..i];
+          }
+        },
+        _ => {},
+      }
+    }
+    panic!("unbalanced braces while scanning the Cli struct");
+  }
+
+  /// Field identifiers declared in the struct body. Skips attribute lines
+  /// (`#[...]`), doc/line comments (`///`, `//`), and blank lines; a field line
+  /// is `name: Type,` whose name is a bare snake_case identifier.
+  fn cli_fields(body: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    for raw in body.lines() {
+      let line = raw.trim();
+      if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
+        continue;
+      }
+      if let Some((name, _rest)) = line.split_once(':') {
+        let name = name.trim();
+        // A real field name is snake_case only; anything with `=`, `"`, `(`, or
+        // spaces (e.g. an attribute arg like `long = "x"`) fails this and is
+        // skipped — those lines only reach here inside a multi-line `#[arg(...)]`.
+        if !name.is_empty()
+          && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c == '_' || c.is_ascii_digit())
+        {
+          fields.push(name.to_string());
+        }
+      }
+    }
+    fields
+  }
+
+  /// Whether the binary reads `cli.<field>` anywhere. Whitespace-tolerant because
+  /// rustfmt frequently splits the access across lines (`cli\n    .field`).
+  fn is_consumed(field: &str) -> bool {
+    let re = Regex::new(&format!(r"\bcli\s*\.\s*{}\b", regex::escape(field))).expect("valid regex");
+    re.is_match(SRC)
+  }
+
+  #[test]
+  fn every_cli_option_is_consumed() {
+    let body = cli_struct_body(SRC);
+    let fields = cli_fields(body);
+
+    // Sanity: we actually found the option set, not an empty/garbled parse.
+    assert!(
+      fields.len() > 50,
+      "expected the full Cli option set (>50 fields); found {}: {:?}",
+      fields.len(),
+      fields
+    );
+
+    // The matcher must discriminate — a genuinely-consumed field is found, and a
+    // bogus name is not (otherwise the guard would vacuously pass).
+    assert!(
+      is_consumed("source_positional"),
+      "self-check failed: `source_positional` IS consumed but the matcher missed it"
+    );
+    assert!(
+      !is_consumed("definitely_not_a_field_zzz"),
+      "self-check failed: a nonexistent field must not match"
+    );
+
+    let dead: Vec<&str> = fields
+      .iter()
+      .filter(|f| !is_consumed(f))
+      .map(String::as_str)
+      .collect();
+    assert!(
+      dead.is_empty(),
+      "these CLI options are parsed but NEVER consumed — no-op flags still shown \
+       in --help: {dead:?}\n\
+       Wire each to behavior (read `cli.<field>` somewhere) or remove the field \
+       from the Cli struct. The Debug derive masks the dead_code warning, so this \
+       test is the only thing that catches them."
+    );
+  }
+
+  #[test]
+  fn no_cli_option_is_hidden_from_help() {
+    let body = cli_struct_body(SRC);
+    // Consider only clap attribute lines (`#[...]`), so a `hide`/`skip` in a
+    // doc-comment (e.g. "Skip post-processing") isn't a false positive.
+    let attrs: String = body
+      .lines()
+      .map(str::trim)
+      .filter(|l| l.starts_with("#["))
+      .collect::<Vec<_>>()
+      .join("\n");
+    let re = Regex::new(r"\b(hide|hide_long_help|skip)\b").expect("valid regex");
+    assert!(
+      !re.is_match(&attrs),
+      "a Cli arg attribute uses `hide`/`skip`, which would parse an option but \
+       omit it from --help (breaking available ⇒ documented). Remove it, or \
+       update this guard deliberately if a hidden option is truly intended."
+    );
+  }
+}
+
+mod preload_pi_attributes {
+  //! The `<?latexml class=…?>` / `<?latexml package=…?>` PIs that a `--preload`
+  //! contributes to the document.
+  //!
+  //! Perl `Core.pm` L268-277 rewrites the preload spec IN PLACE with `s///`
+  //! before it becomes an attribute value: the leading `[…]` option bracket and a
+  //! `.cls`/`.sty` suffix are stripped off, and the bracket's contents come back
+  //! as a separate `options` attribute. The Rust port used `Regex::replace_all`,
+  //! which *returns* the rewritten string instead of mutating its input, and
+  //! discarded every result — so nothing was ever stripped and the options
+  //! attribute was never emitted (`SYNC_STATUS.md` R2, second divergence; the
+  //! entry recorded only the `.cls` half of it).
+  //!
+  //! Every expectation below was ground-truthed against Perl LaTeXML 0.8.8 on the
+  //! same input, not just read off `Core.pm`.
+
+  use std::{path::Path, process::Command};
+
+  /// No `\documentclass` — a preloaded class is the point of the exercise, and
+  /// this is the exact input the Perl comparison was run on.
+  const DOC: &str = "\\begin{document}\nHello.\n\\end{document}\n";
+
+  fn preload_pi(spec: &str) -> String {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("p.tex"), DOC).expect("write p.tex");
+    let output = Command::new(bin)
+      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
+      .arg(format!("--preload={spec}"))
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_else(|e| {
+      let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+      panic!("no output for --preload={spec}: {e}\n{stderr}");
+    });
+    xml
+      .lines()
+      .find(|l| l.starts_with("<?latexml class=") || l.starts_with("<?latexml package="))
+      .unwrap_or("<<no class/package PI>>")
+      .to_string()
+  }
+
+  #[test]
+  fn preload_spec_is_stripped_to_its_bare_name_in_the_pi() {
+    // (spec, expected PI) — verbatim Perl LaTeXML 0.8.8 output.
+    let cases = [
+      ("article.cls", "<?latexml class=\"article\"?>"),
+      (
+        "[twocolumn,11pt]article.cls",
+        "<?latexml class=\"article\" options=\"twocolumn,11pt\"?>",
+      ),
+      (
+        "[dvipsnames]color.sty",
+        "<?latexml package=\"color\" options=\"dvipsnames\"?>",
+      ),
+      ("color.sty", "<?latexml package=\"color\"?>"),
+      // An empty bracket is FALSY in Perl, so it contributes no attribute.
+      ("[]color.sty", "<?latexml package=\"color\"?>"),
+      // Only the two literal package suffixes are stripped — anything else stays
+      // attached. This is why the loop cannot reuse `parse_preload_spec`, which
+      // splits on the last `.` and would emit `package="mystyle"` here.
+      ("mystyle.tex", "<?latexml package=\"mystyle.tex\"?>"),
+    ];
+    for (spec, expected) in cases {
+      assert_eq!(preload_pi(spec), expected, "--preload={spec}");
+    }
+  }
+}
+
+mod stale_autoload_no_runaway {
+  //! Regression test: a stale autoload trigger must not spin the gullet.
+  //!
+  //! `def_autoload` (`latexml_engine/src/tex.rs`) installs a trigger CS that, on
+  //! first use, loads its package and re-emits itself so the real definition runs.
+  //! When the package is ALREADY loaded the closure just re-emits, on the
+  //! assumption that a real definition is now in place — true for the case that
+  //! branch was written for (a *different* CS `\let` to the trigger, e.g.
+  //! `\varmathbb`, arXiv:2310.13684).
+  //!
+  //! But `<pkg>.sty_loaded` is assigned GLOBALLY while the package's macros are
+  //! installed at the current frame. Load a package or class inside a group and
+  //! the group pops the macros while the flag survives, leaving the globally
+  //! installed trigger as the only definition of the CS. It then re-emits
+  //! *itself*, forever — and emits no `Error:`, so `too_many_errors` never caps
+  //! it and the run grinds to the token limit (~42 s) with an empty document.
+  //!
+  //! Real LaTeX refuses the premise outright ("! LaTeX Error: Loading a class or
+  //! package in a group", latex.ltx `\@fileswithoptions` L18700), and same-host
+  //! Perl LaTeXML reports a plain `Error:undefined:\theoremstyle` in ~1.2 s. So
+  //! the fix clears the stale trigger and lets the CS take the ordinary bounded
+  //! undefined path.
+  //!
+  //! Witnesses: arXiv:2606.21610 (the Overleaf/Springer conditional
+  //! `\IfFileExists{sn-jnl.cls}{\documentclass…}` template) 42.9 s
+  //! `Fatal:Timeout:TokenLimit` → 0.2 s bounded; arXiv:2605.21013 43.1 s → 0.2 s.
+  //! Both are `STABILITY_WITNESSES.md` Cluster H.
+  //!
+  //! Binary-driven (fresh process) because the property under test is
+  //! process-level: a bounded wall clock and a terminating conversion.
+
+  use std::{path::Path, process::Command, time::Instant};
+
+  /// `\usepackage` inside a group: amsthm's macros are installed on the group's
+  /// frame and popped at `}`, but `amsthm.sty_loaded` stays set — so the
+  /// `\theoremstyle` autoload trigger (tex.rs `def_autoload("\\theoremstyle",
+  /// "amsthm")`) is left stale.
+  const STALE_TRIGGER_TEX: &str = "\\documentclass{article}\n\
+    {\\usepackage{amsthm}}\n\
+    \\begin{document}\n\
+    \\theoremstyle{plain}\n\
+    x\n\
+    \\end{document}\n";
+
+  #[test]
+  fn stale_autoload_trigger_does_not_run_away() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("st.tex"), STALE_TRIGGER_TEX).expect("write st.tex");
+
+    let started = Instant::now();
+    let output = Command::new(bin)
+      .args(["st.tex", "--dest", "st.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let elapsed = started.elapsed();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // The bug's signature is the runaway, so assert on it directly rather than on
+    // wall clock alone (a loaded CI box can be slow for honest reasons).
+    assert!(
+      !stderr.contains("Timeout:TokenLimit") && !stderr.contains("Timeout:IfLimit"),
+      "stale autoload trigger ran away to a resource limit:\n{stderr}",
+    );
+    // A generous ceiling: the pre-fix binary needed ~42 s to reach the 400M-token
+    // limit, the fixed one finishes in ~0.2 s. Anything under 30 s means the loop
+    // is gone, without making the test flaky on a busy machine.
+    assert!(
+      elapsed.as_secs() < 30,
+      "conversion took {elapsed:?} — expected well under a second, \
+       which suggests the autoload loop is back",
+    );
+
+    // Perl's verdict on the same input is a single undefined-CS error; ours must
+    // be that too. Asserting the error is PRESENT (not absent) is deliberate:
+    // the group really did discard amsthm's definitions, so reporting `\theoremstyle`
+    // as undefined is the honest outcome — silently swallowing it would be a
+    // downgrade, not a fix.
+    assert!(
+      stderr.contains("Error:undefined:\\theoremstyle"),
+      "expected the bounded `Error:undefined:\\theoremstyle` Perl also reports:\n{stderr}",
+    );
+
+    let xml = std::fs::read_to_string(workdir.path().join("st.xml")).expect("read st.xml");
+    assert!(
+      xml.contains('x') && xml.len() > 200,
+      "document body was lost — the runaway used to leave a 39-byte stub:\n{xml}",
+    );
+  }
+}
+
+mod arxiv_sty_defers_to_bundled {
+  //! Guard for the configuration gate in `latexml_contrib/src/arxiv_sty.rs`.
+  //!
+  //! `arxiv.sty` is BUNDLED with the paper, so its contents vary: the binding
+  //! exists only to supply `\keywords` & friends in configurations that do not
+  //! raw-load style files. Whenever raw loading IS available (`--includestyles`
+  //! / the ar5iv profile) the binding must hand control straight back to the
+  //! paper's own file — otherwise every arxiv.sty paper silently loses that
+  //! file's `\@maketitle`, `abstract`/`table` redefinitions and section
+  //! formatting. Witnesses 2605.02338 and 2605.10111 convert byte-identically
+  //! before and after the binding under `--preload=ar5iv.sty` because of this.
+  //!
+  //! The bundled fixture below names its keyword label `Bundled-keywords`,
+  //! which the Rust fallback never emits (it says `Keywords`, arxiv.sty L44).
+  //! So the assertion distinguishes "raw file won" from "binding shadowed it".
+  //! `tests/contrib/arxiv_keywords.{tex,xml}` covers the complementary bare
+  //! case, where the binding is the only source of `\keywords`.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{arxiv}\n\
+    \\begin{document}\n\
+    \\keywords{alpha \\and beta}\n\
+    \\end{document}\n";
+
+  /// A stand-in for the paper-bundled file: only the `\keywords` pair, with a
+  /// label the binding's own fallback cannot produce.
+  const STY: &str = "\\NeedsTeXFormat{LaTeX2e}\n\
+    \\ProcessOptions\\relax\n\
+    \\def\\keywordname{{\\bfseries Bundled-keywords}}\n\
+    \\def\\keywords#1{\\par\\noindent\\keywordname\\enspace\\ignorespaces#1\\par}\n";
+
+  #[test]
+  fn arxiv_binding_defers_to_the_bundled_sty_under_includestyles() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
+    std::fs::write(workdir.path().join("arxiv.sty"), STY).expect("write arxiv.sty");
+
+    let output = Command::new(bin)
+      .arg("a.tex")
+      .arg("--dest")
+      .arg("a.xml")
+      .arg("--nocomments")
+      .arg("--includestyles")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{stderr}",
+      output.status.code(),
+    );
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "arxiv.sty + \\keywords should be error-clean, stderr had errors:\n{stderr}",
+    );
+
+    let xml = std::fs::read_to_string(workdir.path().join("a.xml")).expect("read a.xml");
+    assert!(
+      xml.contains("Bundled-keywords"),
+      "the paper's own arxiv.sty must still define \\keywords under \
+       --includestyles; the binding shadowed it:\n{xml}",
+    );
+  }
+}
+
+mod date_no_parens {
+  //! The title-page date must render WITHOUT surrounding parentheses — full
+  //! pipeline (runs XSLT).
+  //!
+  //! arXiv html_feedback #1934 (arXiv:2408.08811v1): the title-page date showed as
+  //! `(August 1, 2024)`. LaTeXML's `dates` XSLT template
+  //! (`LaTeXML-structure-xhtml.xsl`) historically wrapped every date div in
+  //! `(...)` — a convention with no pdflatex counterpart (no LaTeX puts parens
+  //! around `\date`, titlepage or not). Removed for PDF fidelity, a surpass-Perl
+  //! divergence (OXIDIZED_DESIGN #102; same-host Perl still parenthesizes).
+  //!
+  //! The parens are added at the XSLT stage, so the in-process `Converter`
+  //! (`06_cluster_regressions.rs`) — which stops at Core XML — cannot see them;
+  //! this drives the binary end-to-end, like `cluster_xslt_split.rs`.
+
+  use std::{path::Path, process::Command};
+
+  fn run(cwd: &Path, args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(args)
+      .current_dir(cwd)
+      .output()
+      .expect("spawn latexml_oxide")
+  }
+
+  const TEX: &str = "\\documentclass{article}\n\
+     \\title{A Title}\n\
+     \\author{An Author}\n\
+     \\date{August 1, 2024}\n\
+     \\begin{document}\\maketitle\\end{document}\n";
+
+  #[test]
+  fn date_renders_without_surrounding_parens() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("d.tex"), TEX).unwrap();
+    let out = run(work.path(), &["d.tex", "--dest", "d.html"]);
+    assert!(
+      out.status.success(),
+      "conversion failed (status {:?}):\n{}",
+      out.status.code(),
+      String::from_utf8_lossy(&out.stderr)
+    );
+    let html = std::fs::read_to_string(work.path().join("d.html")).expect("read d.html");
+
+    // Isolate the dates div.
+    let at = html
+      .find("ltx_dates")
+      .expect("no ltx_dates div in output — the date was lost");
+    let tail = &html[at..];
+    let end = tail.find("</div>").expect("unterminated ltx_dates div");
+    let dates = &tail[..end];
+
+    // The author's date is preserved…
+    assert!(
+      dates.contains("August 1, 2024"),
+      "the date content was lost:\n{dates}"
+    );
+    // …but WITHOUT the LaTeXML-ism parentheses that no PDF shows.
+    assert!(
+      !dates.contains('(') && !dates.contains(')'),
+      "the date is still wrapped in parentheses — the `dates` XSLT template's \
+       `(`/`)` were not removed:\n{dates}"
+    );
+  }
+}
+
+mod latexml_sty_save_parameter {
+  //! `\lx@save@parameter{key}{value}` → a `<?latexml key="value"?>` processing
+  //! instruction (Perl `latexml.sty.ltxml` L86-96): the constructor inserts the
+  //! PI, and the `dpi`/`magnify`/`upsample`/`zoomout` package options schedule it
+  //! at `\begin{document}`. The Rust `latexml_sty` binding never defined it — so a
+  //! direct call errored `undefined:\lx@save@parameter`, and the image-scaling
+  //! options silently dropped their PIs (they assigned a dead `PI@latexml@…` state
+  //! value that nothing ever emitted). Issue #536 (reporter xworld21).
+  //!
+  //! Expectations ground-truthed against Perl LaTeXML 0.8.8 on the same input.
+
+  use std::{path::Path, process::Command};
+
+  /// Convert `tex` through the binary; return `(core-xml, ansi-stripped stderr)`.
+  fn convert(tex: &str) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("p.tex"), tex).expect("write p.tex");
+    let output = Command::new(bin)
+      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_default();
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    (xml, stderr)
+  }
+
+  /// The four image-scaling options each save their value as a `<?latexml …?>` PI
+  /// (Perl emits `DPI` uppercase; the other three keep the keyval name).
+  #[test]
+  fn latexml_sty_image_scaling_options_emit_pis() {
+    let (xml, stderr) = convert(
+      "\\documentclass{article}\n\
+       \\usepackage[dpi=300,magnify=1.5,upsample=2,zoomout=3]{latexml}\n\
+       \\begin{document}Hello.\\end{document}\n",
+    );
+    assert!(
+      xml.contains("<?latexml DPI=\"300\"?>"),
+      "DPI PI missing:\n{xml}"
+    );
+    assert!(
+      xml.contains("<?latexml magnify=\"1.5\"?>"),
+      "magnify PI missing:\n{xml}"
+    );
+    assert!(
+      xml.contains("<?latexml upsample=\"2\"?>"),
+      "upsample PI missing:\n{xml}"
+    );
+    assert!(
+      xml.contains("<?latexml zoomout=\"3\"?>"),
+      "zoomout PI missing:\n{xml}"
+    );
+    assert!(
+      !stderr.contains("undefined"),
+      "unexpected undefined:\n{stderr}"
+    );
+  }
+
+  /// A direct `\lx@save@parameter{key}{value}` emits its PI and does not error.
+  #[test]
+  fn latexml_sty_save_parameter_direct_call() {
+    let (xml, stderr) = convert(
+      "\\documentclass{article}\n\
+       \\usepackage{latexml}\n\
+       \\makeatletter\\lx@save@parameter{foo}{bar}\\makeatother\n\
+       \\begin{document}Hello.\\end{document}\n",
+    );
+    assert!(
+      xml.contains("<?latexml foo=\"bar\"?>"),
+      "direct-call PI missing:\n{xml}"
+    );
+    assert!(
+      !stderr.contains("is not defined") && !stderr.contains("undefined:\\lx@save@parameter"),
+      "\\lx@save@parameter still undefined:\n{stderr}"
+    );
+  }
+}

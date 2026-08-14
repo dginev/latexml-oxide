@@ -392,7 +392,7 @@ the high-error RUST-BETTER papers (surpass-Perl, real-LaTeX-correct).
    INCLUDE_STYLES=true). So fairmeta needs **no** `--includestyles`/ar5iv preload:
    49 → 0. No new flag; restricts the existing Rust-only guard to its real case.
    **Harness note:** the guard is a fresh-process **binary-driven** test
-   (`92_fairmeta_frontmatter`), not an in-process `tests/contrib` fixture — loading
+   (`cluster_frontmatter_classes.rs`, module `fairmeta_frontmatter`), not an in-process `tests/contrib` fixture — loading
    a `LoadClass!("OmniBus")` `.cls` then `reset_thread_engine`-ing between files
    (as `can_contrib` does) reads a pre-reset `SymStr` from an unresettable `pin!`
    cache and aborts (the documented one-conversion-per-thread contract). Fresh

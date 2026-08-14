@@ -1,0 +1,1740 @@
+//! Single-shot package / engine regression guards.
+//!
+//! Auto-consolidated test binary: each former file is an inline `mod`
+//! below, body preserved verbatim, merged into one link unit for CI
+//! economy. All members are subprocess- or few-conversion tests, so
+//! co-locating them in one process stays far under the RSS fuse.
+
+mod cluster;
+mod common;
+
+mod href_edef_loop {
+  //! `\href` inside `\edef`/`\xdef` must not infinite-loop.
+  //!
+  //! Root cause (2110.10227): LaTeXML defines `\href` as an expandable macro
+  //! whose body re-emits `\href` itself (for the `\lx@hyper@url@` constructor's
+  //! reversion argument). In a partial-expansion context (`\edef`/`\xdef`) that
+  //! re-emitted `\href` is expanded again and again — an unbounded expansion
+  //! loop. ems-journal.sty's `\Emsaffil` → `\build@ffil` does
+  //! `\xdef\ems@temp{… \href{mailto:…}{\mbox{…}} …}`, so raw-loading the class
+  //! (INCLUDE_STYLES=true, as ar5iv does) drove the loop to a
+  //! `Fatal:Timeout:PushbackLimit` / `Fatal:Stomach:Recursion`.
+  //!
+  //! Fix: mark `\href` `protected => true`. In real hyperref `\href` is a robust
+  //! command (`\DeclareRobustCommand`/`\protected`), so `\edef` leaves the
+  //! literal `\href{…}{…}` untouched. At top-level digestion (`fully_expand`)
+  //! protected macros still expand, so normal `\href` is unchanged. Perl LaTeXML
+  //! omits the flag and *hangs* on this input — this is a surpass-Perl
+  //! robustness win that is also faithful to real-TeX semantics.
+  //!
+  //! Dump-independent: the hyperref binding (and `\href`) is compiled in.
+  use latexml::util::test::convert_fixture;
+
+  #[test]
+  fn href_inside_xdef_does_not_loop() {
+    let r = convert_fixture("tests/cluster_regressions/href_edef_loop.tex");
+
+    // The loop manifested as a fatal recursion/timeout abort with no result.
+    assert!(
+      r.result.is_some(),
+      "conversion produced no result — the \\href-in-\\xdef expansion loop \
+       likely re-triggered (status_code={})",
+      r.status_code
+    );
+    assert!(
+      !r.log.contains("PushbackLimit") && !r.log.contains("Infinite digestion loop"),
+      "detected an infinite-expansion / infinite-digestion fatal in the log — \
+       `\\href` is expanding inside `\\xdef` again (it must be protected)"
+    );
+    // status_code 3 == fatal; the protected `\href` keeps this well below.
+    assert!(
+      r.status_code < 3,
+      "conversion hit a fatal (status_code={}) — expected a clean run",
+      r.status_code
+    );
+  }
+}
+
+mod href_semiverbatim_loop {
+  //! `\href` inside a **Semiverbatim** argument must not infinite-loop.
+  //!
+  //! The other half of the defect [`58_href_edef_loop`](../58_href_edef_loop.rs)
+  //! guards. LaTeXML expands `\href{u}{t}` to
+  //! `\lx@hyper@url@\href{}{}{u}{t}` — the re-emitted `\href` exists only to fill
+  //! the constructor's reversion slot `#1`. PR "href protected" stopped the
+  //! `\edef`/`\xdef` re-expansion by marking `\href` `protected`, but ONE seam
+  //! legitimately expands protected macros: `Parameter::digest`'s semiverbatim
+  //! pre-expansion (Perl `Core/Parameter.pm` L123-132, "If semiverbatim, Expand
+  //! (before digest), so tokens can be neutralized") reads with
+  //! `fully_expand = true` (Perl `Core/Gullet.pm` L408-409). That pass linearizes
+  //! tokens one at a time and never reaches `\lx@hyper@url@`'s parameter list, so
+  //! it expanded the re-emitted `\href` as an ordinary macro — forever.
+  //!
+  //! Reached from a `.bib`: `\bib@field@default@doi` reads `Semiverbatim`, and
+  //! INSPIRE exports DOIs as `doi = {\href{https://doi.org/…}{…}}`. Witnesses
+  //! 2605.00181, 2605.19650, 2606.06645 — all three took
+  //! `Fatal:Timeout:Recursion` ("a window of 6 token(s) repeated 100+ times")
+  //! during the recursive bibliography session and lost the whole bibliography;
+  //! the fatal aborted the document. Perl `latexmlc` **hangs** on the same input
+  //! (rc=124 after 300 s on the 7-line reproducer), so this is a shared upstream
+  //! bug — see `docs/parity/KNOWN_PERL_ERRORS.md`.
+  //!
+  //! Fix: the reversion slot carries the command NAME as an OTHER-catcode token
+  //! instead of the live control sequence, exactly as the sibling `\url` path
+  //! (`\lx@hyper@url`) has always done. Inert to every expansion regime, and
+  //! stringifies/reverts identically — so the self-reference is structurally
+  //! impossible rather than dependent on a flag one seam is entitled to ignore.
+  use crate::cluster::convert_and_post_clean;
+
+  /// The runaway manifested as a `Fatal:` with no bibliography at all;
+  /// `convert_and_post_clean` asserts zero POST-stage `Error:` markers, which is
+  /// where the recursive `.bib` session reports (a core-only guard was blind to
+  /// this — see the helper's doc).
+  #[test]
+  fn href_in_semiverbatim_bib_field_does_not_loop() {
+    let x = convert_and_post_clean("tests/cluster_regressions/bib_href_in_identifier_field.tex");
+
+    // Both entries must survive. Before the fix the session died on the first
+    // one and `MakeBibliography` fell back to no bibliography whatsoever.
+    assert!(
+      x.contains("<bibitem") || x.contains("bibitem"),
+      "no bibliography at all — the \\href expansion loop likely re-triggered:\n{x}"
+    );
+    for needle in ["A Paper With A Wrapped DOI", "A Flux Concentrator"] {
+      assert!(
+        x.contains(needle),
+        "{needle:?} missing from the bibliography:\n{x}"
+      );
+    }
+    // The DOI field still produces its identifier element — the fix must not
+    // have silenced the runaway by dropping the field. (What the identifier
+    // *reads* is a separate, pre-existing matter: a link macro inside a
+    // Semiverbatim field stringifies with its command name, and `\url` in the
+    // same position has always done the same. Not asserted here.)
+    // `MakeBibliography` rewrites `ltx:bib-identifier[@scheme='doi']` into the
+    // entry's external link, so the surviving marker in POST output is the
+    // `dx.doi.org` href it builds.
+    assert!(
+      x.contains("dx.doi.org"),
+      "the wrapped DOI field produced no doi link:\n{x}"
+    );
+  }
+}
+
+mod natbib_label_dotless_i {
+  //! natbib `\bibitem` label with a dotless-i (`\i`) must not infinite-loop.
+  //!
+  //! Root cause (2111.00584, revtex4-1 + aipnum `.bbl`): natbib's
+  //! `\lx@NAT@parselabel` fully-expands a "bare" bibitem label (to locate the
+  //! `(year)` paren). Under `[T1]{fontenc}` (here via mathptmx) the LaTeX kernel
+  //! redefines `\i` to the `\@changed@cmd` dispatcher `\T1-cmd \i \T1\i`, whose
+  //! typeset branch re-injects `\i` through
+  //! `\csname\cf@encoding\string\i\endcsname`. Under full `Expand!` that
+  //! re-expands forever → `Fatal:Timeout:PushbackLimit` + a box-list runaway,
+  //! and the aborted bibliography then emits dozens of
+  //! `malformed:ltx:bibitem in <ltx:bibblock>` errors. Perl's `Expand`
+  //! (natbib.sty.ltxml:564) happens to terminate on these; ours did not.
+  //!
+  //! Fix: extend `\lx@NAT@parselabel`'s "don't force-expand" guard (already
+  //! covering `\cite`/`\href`/`\bibinfo`) to text-encoding symbol commands
+  //! (`\i`, `\j`, `\ss`, `\oe`, …). The `(year)` is always a literal paren in
+  //! natbib/BibTeX output, so the raw label is sufficient.
+  //!
+  //! Fixture faithfulness: the label wraps its author in `\citenamefont`, which
+  //! is supplied by the revtex4-1 `.bbl` `\providecommand` preamble
+  //! (aipnum4-1.bst), NOT by natbib/revtex. The distilled reproducer originally
+  //! dropped that preamble, so the conversion logged a (parity, both-engine)
+  //! `undefined:\citenamefont` Error that the test silently tolerated. Restoring
+  //! the preamble mirrors a real `.bbl`, drops the run to 0 errors, AND
+  //! strengthens the guard test — `\citenamefont{…}` now expands to the dotless
+  //! `\i` inside `\lx@NAT@parselabel`, the exact path that must not loop.
+  //!
+  //! Conditional: needs the kernel dump (so expl3/pgf load cleanly) AND
+  //! revtex4-1 + mathptmx + pgfplots installed (the exact package set drives
+  //! the encoding state into the looping `\T1-cmd` form).
+  use latexml::util::test::{convert_fixture, dump_available, kpse_has};
+
+  #[test]
+  fn natbib_dotless_i_label_does_not_loop() {
+    if !dump_available() {
+      eprintln!(
+        "SKIP natbib_dotless_i_label_does_not_loop: no latex kernel dump \
+         in resources/dumps/ (run tools/make_formats.sh)"
+      );
+      return;
+    }
+    if !kpse_has("revtex4-1.cls") || !kpse_has("mathptmx.sty") || !kpse_has("pgfplots.sty") {
+      eprintln!(
+        "SKIP natbib_dotless_i_label_does_not_loop: revtex4-1/mathptmx/pgfplots \
+         not installed in the host TeX tree"
+      );
+      return;
+    }
+
+    let r = convert_fixture("tests/cluster_regressions/natbib_label_dotless_i.tex");
+
+    assert!(
+      r.result.is_some(),
+      "conversion produced no result — the `\\i`-in-natbib-label expansion loop \
+       likely re-triggered (status_code={})",
+      r.status_code
+    );
+    assert!(
+      !r.log.contains("PushbackLimit") && !r.log.contains("Infinite digestion loop"),
+      "detected an infinite-expansion / infinite-digestion fatal — \
+       `\\lx@NAT@parselabel` is force-expanding a text-encoding symbol again"
+    );
+    assert!(
+      r.status_code < 3,
+      "conversion hit a fatal (status_code={}) — expected a clean run",
+      r.status_code
+    );
+    // Strict: the faithful `.bbl` `\providecommand` preamble (aipnum4-1.bst)
+    // supplies `\citenamefont` et al., so the conversion is now fully clean.
+    // Previously the distilled fixture dropped that preamble and silently
+    // tolerated an `undefined:\citenamefont` Error — a passing test that emitted
+    // an error. Assert 0 so any future regression (a re-emerging loop-recovery
+    // error, or a real binding gap) fails here rather than hiding in the log.
+    let n_errors = latexml::util::test::error_count(&r.log);
+    assert_eq!(
+      n_errors, 0,
+      "expected 0 errors but the conversion log carried {n_errors} Error:<class>: \
+       markers (status_code={})",
+      r.status_code
+    );
+  }
+}
+
+mod nul_byte_input {
+  //! A stray NUL byte in the input must not abort the conversion.
+  //!
+  //! Real-world `.bbl` files carry stray NULs from BibTeX `\"u`-mangling
+  //! (witness astro-ph0004127's spie4012-01a.bbl). Since commit 88f8bd44ce the
+  //! NUL default catcode is 12/OTHER (matching Perl, so `` `^^@ `` reads 0),
+  //! which lets the NUL survive tokenization — and a NUL inside math reaches
+  //! `Document::set_attribute` (the `tex=` reversion), where libxml's
+  //! `CString::new(value)` panics on the interior NUL (libxml node.rs:639),
+  //! killing the whole conversion (a process abort under the maxperf
+  //! `panic=abort` build). PR #249 review finding P0-1.
+  //!
+  //! The fix sanitizes XML-invalid characters at the serialization sinks, so
+  //! catcode-12 Perl parity is kept while serialization stays total.
+  //!
+  //! Dump-independent.
+  use latexml::util::test::convert_fixture;
+
+  #[test]
+  fn nul_byte_in_math_does_not_abort() {
+    // The conversion runs in-process: a libxml CString panic would unwind
+    // through (and fail) this test directly.
+    let r = convert_fixture("tests/cluster_regressions/nul_byte_input.tex");
+
+    let out = r
+      .result
+      .unwrap_or_else(|| {
+        panic!(
+          "conversion produced no result (status_code={}) — the NUL byte \
+           likely aborted serialization",
+          r.status_code
+        )
+      })
+      .to_string();
+    assert!(
+      r.status_code < 3,
+      "conversion hit a fatal (status_code={}) on a stray NUL byte",
+      r.status_code
+    );
+    // The surrounding content must survive...
+    assert!(
+      out.contains("Before") && out.contains("after"),
+      "document text around the NUL was lost"
+    );
+    // ...and no literal NUL may reach the XML (it is not a valid XML 1.0 char).
+    assert!(
+      !out.contains('\u{0000}'),
+      "a literal NUL byte leaked into the XML output (invalid XML 1.0)"
+    );
+  }
+}
+
+mod deferred_load_retry {
+  //! Regression test for the package-load "deferred miss must not poison a later
+  //! raw-load" parity fix (`content.rs`).
+  //!
+  //! `nicematrix` faithfully `\RequirePackage{pgfcore}` (nicematrix.sty:23), which
+  //! has no binding — so bare (INCLUDE_STYLES off) it "misses". Then
+  //! `tcolorbox[most]` raw-loads and its `skins` library also needs pgfcore, this
+  //! time under INCLUDE_STYLES=true (a raw read turns it on). Before the fix the
+  //! Rust-only `_load_attempted` guard from nicematrix's deferred miss permanently
+  //! blocked tcolorbox's pgfcore load → ~49 spurious `\pgf…`/`#`-token errors. The
+  //! fix sets `_load_attempted` only when raw-loading was actually possible, so the
+  //! later load retries — matching pdflatex, which loads pgfcore in either order.
+  //!
+  //! Driven through the binary (fresh process) so tcolorbox can raw-load its
+  //! library files from the host texmf; no `--includestyles`/preload needed.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{nicematrix}\n\
+    \\usepackage[most]{tcolorbox}\n\
+    \\begin{document}\n\
+    \\begin{tcolorbox}[enhanced,breakable]Hello box\\end{tcolorbox}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn deferred_pgfcore_miss_does_not_poison_tcolorbox_skins() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
+
+    let output = Command::new(bin)
+      .arg("d.tex")
+      .arg("--dest")
+      .arg("d.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{stderr}",
+      output.status.code(),
+    );
+    // The nicematrix-then-tcolorbox order must be error-clean (was ~49 pgf errors).
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "nicematrix-then-tcolorbox[most] should be error-clean, stderr had errors:\n{stderr}",
+    );
+    // Sanity: the box content still made it through.
+    let xml = std::fs::read_to_string(workdir.path().join("d.xml")).expect("read d.xml");
+    assert!(xml.contains("Hello box"), "tcolorbox body missing:\n{xml}");
+  }
+}
+
+mod newtcblisting_verbatim {
+  //! Regression test: a `\newtcblisting`-defined code box captures its body
+  //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).
+  //!
+  //! The tcolorbox `listings` library's `\newtcblisting` reads its body as a code
+  //! listing. The raw library's body capture did not integrate with LaTeXML's
+  //! verbatim reader, so the listing ran past its `\end{name}` and swallowed the
+  //! following content — a `\section` after the box ended up nested inside
+  //! `<ltx:verbatim>` (`<ltx:section> isn't allowed in <ltx:verbatim>`) and the
+  //! document failed to close. The binding now delegates `\newtcblisting` to
+  //! listings' `\lstnewenvironment`, whose verbatim reader terminates correctly.
+  //!
+  //! Binary-driven (fresh process) so tcolorbox can raw-load its library files.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage[most]{tcolorbox}\n\
+    \\tcbuselibrary{listings}\n\
+    \\newtcblisting{mycodebox}[1][]{listing only,#1}\n\
+    \\begin{document}\n\
+    \\section{First}\n\
+    \\begin{mycodebox}\n\
+    some code line\n\
+    another line\n\
+    \\end{mycodebox}\n\
+    \\section{Second}\n\
+    Text after the box.\n\
+    \\end{document}\n";
+
+  #[test]
+  fn newtcblisting_body_is_verbatim_and_closes() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+
+    let output = Command::new(bin)
+      .arg("t.tex")
+      .arg("--dest")
+      .arg("t.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{stderr}",
+      output.status.code(),
+    );
+    // No malformed-nesting / unclosed errors: the box body must not swallow the
+    // following section.
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "newtcblisting box should close cleanly, stderr had errors:\n{stderr}",
+    );
+
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    // The second section and the text after the box survive OUTSIDE the listing.
+    assert!(
+      xml.contains("Text after the box"),
+      "content after the box was swallowed by the listing:\n{xml}",
+    );
+    // Two real sections are present (the second didn't get eaten).
+    assert_eq!(
+      xml.matches("<section").count(),
+      2,
+      "expected 2 sections (First, Second) outside the box:\n{xml}",
+    );
+  }
+}
+
+mod fatal_salvages_partial_document {
+  //! Regression test: a recoverable Fatal must not throw away the document.
+  //!
+  //! `digest_internal` (`latexml_oxide/src/core_interface.rs`) deliberately keeps
+  //! consuming input after a recoverable Fatal so it can "still produce partial
+  //! output" — Perl's `finishDigestion` L219-220. That intent silently only
+  //! worked when the failure landed in a LATER body: `digest_next_body`
+  //! accumulates into the stomach's `box_list` and hands it back only on the
+  //! success path, so a Fatal inside the FIRST body left the caller's `boxes`
+  //! empty and the run wrote a **39-byte empty document**.
+  //!
+  //! One pathological `\tikz` picture therefore cost a whole paper. Witnesses,
+  //! all ar5iv user reports and all previously 0-byte:
+  //!   * 2508.07407 (#556) → 31 KB (title/authors/abstract recovered)
+  //!   * 2405.19920 (#522) → 1.82 MB, 6 sections + 80 bibitems — essentially the
+  //!     complete paper, where same-host Perl produces **nothing** in 5 minutes
+  //!   * 2501.10235 (#551) → 1.7 KB
+  //!
+  //! `stomach::salvage_pending_box_lists` unwinds the stranded levels. For the
+  //! runaway guards (`Stomach:Recursion`) the innermost level IS the pathology —
+  //! a repeating window grown past 50k boxes — so it is dropped and the suspended
+  //! outer levels are kept: drop the offending construct, keep the document.
+
+  use std::{path::Path, process::Command};
+
+  /// Text before, then the `calc`-coordinate `\tikz` picture that drives the
+  /// box-cycle guard (reduced from arXiv:2508.07407), then text after.
+  const RECURSION_TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{tikz}\n\
+    \\usetikzlibrary{shapes.symbols,calc,positioning}\n\
+    \\begin{document}\n\
+    \\section{Before the bad picture}\n\
+    UNIQUEMARKERBEFORE some ordinary prose that must survive.\n\
+    \n\
+    \\tikz[baseline=(env.base),node distance=4mm]{%\n\
+      \\node[cloud, draw, inner sep=13pt, minimum width=40mm, minimum height=20mm] (env) {Env};\n\
+      \\node[circle, draw, minimum size=6mm] (A1) at ($(env.west)+(10mm,6mm)$) {};\n\
+      \\node[circle, draw, minimum size=6mm] (A2) at ($(env.east)+(-10mm,6mm)$) {};\n\
+      \\node[circle, draw, minimum size=6mm] (A3) at ($(env.north)+(0,-24mm)$) {};\n\
+      \\draw[->, thick] (A1) -- (A2);\n\
+      \\draw[->, thick] (A2) -- (A3);\n\
+      \\draw[->, thick] (A3) -- (A1);\n\
+    }\n\
+    \n\
+    \\end{document}\n";
+
+  #[test]
+  fn recoverable_fatal_keeps_the_already_digested_document() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("rec.tex"), RECURSION_TEX).expect("write rec.tex");
+
+    let output = Command::new(bin)
+      .args([
+        "rec.tex",
+        "--dest",
+        "rec.xml",
+        "--nocomments",
+        "--timeout",
+        "120",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    let xml = std::fs::read_to_string(workdir.path().join("rec.xml")).unwrap_or_default();
+
+    // The Fatal MUST still be reported — salvaging partial output is not a
+    // licence to downgrade the diagnostic. If a future fix makes this input
+    // convert outright the assertion below still holds and this one should be
+    // revisited deliberately, not deleted.
+    assert!(
+      stderr.contains("Fatal:") || xml.contains("UNIQUEMARKERBEFORE"),
+      "expected either the Fatal to be reported or the document to convert:\n{stderr}",
+    );
+
+    // The point of the test: content digested BEFORE the pathological construct
+    // survives. Pre-fix this file was 39 bytes with the prose gone.
+    assert!(
+      xml.contains("UNIQUEMARKERBEFORE"),
+      "prose preceding the runaway construct was lost — the whole document was \
+       thrown away by one bad picture (rec.xml is {} bytes):\n{xml}",
+      xml.len(),
+    );
+    assert!(
+      xml.len() > 400,
+      "output is a {}-byte stub, so nothing was salvaged:\n{xml}",
+      xml.len(),
+    );
+
+    // ...and the SUMMARY must agree with the log. Recovering boxes is NOT a
+    // licence to reclassify the verdict: a Fatal-level raise stays Fatal in the
+    // document's reported outcome (user policy 2026-07-28), and the graceful
+    // salvage below is a *feature* of that Fatal, not a downgrade of it.
+    //
+    // `digest_internal` used to emit its recovered Fatal with the raw
+    // `log::error!` macro rather than `Error::log_fatal`, so nothing reached
+    // `note_status` and the tally stayed empty: this very input printed
+    // `Fatal:Stomach:Recursion` and then signed off with "Conversion complete:
+    // No obvious problems" — status code 0, i.e. "ok" to cortex (which reads
+    // `get_status_code`) and clean to any check that does not scrape the log. A
+    // run that reports a Fatal and summarises as problem-free is the false
+    // negative CLAUDE.md forbids outright.
+    // There is exactly one verdict line (`converter.rs`, folding in
+    // `bin/latexml:127`'s failed/complete choice), and it is the run's FINAL
+    // word — so assert its exact text and its position, not merely that the word
+    // "fatal" occurs somewhere in the stream.
+    let verdict = stderr
+      .lines()
+      .find(|l| l.contains("Conversion failed:") || l.contains("Conversion complete:"))
+      .unwrap_or_else(|| panic!("no conversion verdict line in stderr:\n{stderr}"));
+    let tail: Vec<&str> = stderr.lines().rev().take(5).collect();
+    assert!(
+      tail.contains(&verdict),
+      "the verdict is not among the last 5 lines of stderr, so it is not the \
+       final status:\n{stderr}",
+    );
+
+    // Both directions, so neither seam can drift from the other again:
+    // a `Fatal:` in the log REQUIRES the fatal verdict, and no `Fatal:` forbids
+    // it. (The verdict is `(Finalizing... )`-prefixed, hence `ends_with`.)
+    if stderr.contains("Fatal:") {
+      // "1 warning; 1 fatal error", not "1 fatal error" alone: the salvage
+      // path's own `Warning:…digest_internal` note is a raw `log::warn!`, and
+      // since the lossless-tally fix (2026-08-02) every printed diagnostic
+      // record counts — the warning's presence in the tally is that fix
+      // working, not tally noise.
+      assert!(
+        verdict.ends_with("Conversion failed: 1 warning; 1 fatal error"),
+        "the log reports a Fatal (and the salvage warning), so the final \
+         status must be exactly \"Conversion failed: 1 warning; 1 fatal \
+         error\" — recovering boxes is not a licence to reclassify the \
+         verdict. Got:\n  {verdict}\n{stderr}",
+      );
+    } else {
+      assert!(
+        !verdict.contains("fatal"),
+        "the final status claims a fatal that never appears in the log:\n  \
+         {verdict}\n{stderr}",
+      );
+    }
+
+    // And the runaway's own boxes must NOT be grafted in: the guard trips at
+    // 50k repeated boxes, so salvaging that level would produce a vast garbage
+    // document rather than a small honest one.
+    assert!(
+      xml.len() < 2_000_000,
+      "output is {} bytes — the runaway box window looks like it was salvaged \
+       into the document instead of dropped",
+      xml.len(),
+    );
+  }
+}
+
+mod aligned_overset_includestyles {
+  //! Regression test for the `aligned-overset` raw-load breaking amsmath
+  //! alignments (`latexml_contrib/src/aligned_overset_sty.rs`).
+  //!
+  //! `aligned-overset.sty` is an expl3 package that rewrites `\overset`/`\underset`
+  //! to wrap themselves in `\group_align_safe_begin: … \group_align_safe_end:`
+  //! around an `\hbox_set:` box measurement — purely to re-centre the accent on the
+  //! cell's alignment point, a PDF-visual cosmetic with no MathML meaning. When the
+  //! raw `.sty` is loaded (INCLUDE_STYLES / the ar5iv profile — bare it is ignored),
+  //! an `\overset` inside an `align` cell fires `\lx@begin@alignment Attempt to close
+  //! a group that switched to mode math`, corrupts math mode for the rest of the
+  //! block, and cascades into hundreds of `unexpected:_`/`^`. Witness 2203.05327
+  //! (ar5iv): 411 errors → 0 with the near-no-op binding, which keeps amsmath's
+  //! `\overset`/`\underset` and drops the cosmetic.
+  //!
+  //! Driven through the binary with `--includestyles` so the contrib binding must
+  //! pre-empt the host-texmf raw `.sty` (the exact ar5iv path). Without the binding
+  //! this run emits ~15 `\lx@begin@alignment`/`unexpected:_` errors.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{amsmath,aligned-overset}\n\
+    \\newcommand{\\tor}{\\text{Tor}}\n\
+    \\begin{document}\n\
+    \\begin{align}\n\
+    a\\overset{\\text{}}{=}0,&& \\tor^S_{q}(M,C_p)=0.\n\
+    \\end{align}\n\
+    After the align: $H_{q}(P_\\bullet)=0$ stays math.\n\
+    \\end{document}\n";
+
+  #[test]
+  fn aligned_overset_rawload_does_not_break_amsmath_alignment() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
+
+    let output = Command::new(bin)
+      .arg("a.tex")
+      .arg("--dest")
+      .arg("a.xml")
+      .arg("--nocomments")
+      .arg("--includestyles")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{stderr}",
+      output.status.code(),
+    );
+    // The near-no-op binding must pre-empt the raw expl3 `.sty`; the alignment is
+    // then error-clean (was ~15 `\lx@begin@alignment`/`unexpected:_` errors).
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "aligned-overset + \\overset-in-align should be error-clean, stderr had errors:\n{stderr}",
+    );
+    // Sanity: the overset and the post-align subscript both made it into MathML.
+    let xml = std::fs::read_to_string(workdir.path().join("a.xml")).expect("read a.xml");
+    assert!(
+      xml.contains("OVERACCENT"),
+      "\\overset should still emit an OVERACCENT mover:\n{xml}",
+    );
+  }
+}
+
+mod lstinputlisting_range_crlf {
+  //! Regression tests: `\lstinputlisting` over an externally-read source file —
+  //! a truncating line range, and CRLF line terminators.
+  //!
+  //! Witness: arXiv 2412.04705 (arXiv/html_feedback#6735, "Wrong code snippet in
+  //! html display"), whose `\inputpython` wraps
+  //! `\lstinputlisting[firstline=32,lastline=35,...]` over CRLF Python sources.
+  //! Both defects are shared with Perl LaTeXML; see OXIDIZED_DESIGN #68 / #69 and
+  //! `KNOWN_PERL_ERRORS.md`.
+  //!
+  //! 1. **Truncating range** (`listings_sty.rs` "Remove trailing empty lines").
+  //!    `lastline=N` on a file with MORE than N lines cut the generated token
+  //!    vector at `emptyfrom`, discarding `}` tokens that closed groups opened
+  //!    BEFORE the cut — measured discarded tail on the witness:
+  //!    `["\@lst@startline", "{", "}", "}", "}", "}", "\@lst@endline"]`, three of
+  //!    them closers. The listing body was emitted with unclosed groups, so
+  //!    `\@@listings@block` read its arguments off the end of the DOCUMENT and
+  //!    everything after the listing was swallowed.
+  //!
+  //! 2. **CRLF** (`listings_read_raw_file`). Every end-of-line test in the
+  //!    listings processor is written against `\n`; a `\r` before it defeats them,
+  //!    so a line comment never terminates and its STYLE (not its class — the
+  //!    `ltx_lst_comment` wrapper does close) bleeds over every following line.
+  //!    pdflatex on the witness renders only the `#` line in comment green
+  //!    (9 green vs 69 black glyph groups); both LaTeXML engines painted the whole
+  //!    snippet green.
+  //!
+  //! Binary-driven (fresh process) so the listing file is read from disk.
+
+  use std::{path::Path, process::Command};
+
+  /// CRLF on purpose — this is half of what is under test.
+  const DATA_PY: &str = "# a comment line\r\nvalue = 1\r\nother = 2\r\nlast = 3\r\n";
+
+  fn convert(tex: &str, data: &str) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("data.py"), data).expect("write data.py");
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{stderr}",
+      output.status.code(),
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    (xml, stderr)
+  }
+
+  /// Collect the text of each `<listingline>`, in order.
+  fn listing_lines(xml: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for chunk in xml.split("<listingline").skip(1) {
+      let Some(end) = chunk.find("</listingline>") else {
+        continue;
+      };
+      out.push(chunk[..end].to_string());
+    }
+    out
+  }
+
+  fn strip_tags(fragment: &str) -> String {
+    let mut text = String::new();
+    let mut in_tag = false;
+    for ch in fragment.chars() {
+      match ch {
+        '<' => in_tag = true,
+        '>' => in_tag = false,
+        c if !in_tag => text.push(c),
+        _ => {},
+      }
+    }
+    text
+  }
+
+  #[test]
+  fn lastline_shorter_than_file_does_not_swallow_the_document() {
+    // `lastline=3` over a 4-line file: the truncation path is exercised.
+    let tex = "\\documentclass{article}\n\
+      \\usepackage{listings}\n\
+      \\begin{document}\n\
+      \\lstinputlisting[lastline=3]{data.py}\n\
+      Text after the listing.\n\
+      \\end{document}\n";
+    let (xml, stderr) = convert(tex, DATA_PY);
+
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "truncating lastline should convert cleanly, stderr had:\n{stderr}",
+    );
+    // The document continues after the listing — the unbalanced body used to make
+    // `\@@listings@block` read its arguments to EOF, losing everything after it.
+    assert!(
+      xml.contains("Text after the listing"),
+      "content after the listing was swallowed:\n{xml}",
+    );
+    let lines = listing_lines(&xml);
+    assert_eq!(
+      lines.len(),
+      3,
+      "expected exactly lines 1..3 of the file, got {}:\n{xml}",
+      lines.len()
+    );
+    assert!(
+      strip_tags(&lines[2]).contains("other = 2"),
+      "third listing line should be the file's line 3:\n{}",
+      strip_tags(&lines[2])
+    );
+    assert!(
+      !xml.contains("last = 3"),
+      "line 4 is past lastline=3 and must not appear:\n{xml}",
+    );
+  }
+
+  #[test]
+  fn crlf_line_comment_style_does_not_bleed_past_its_line() {
+    // `\r\n` terminators: only the `#` line is a comment. The class wrapper always
+    // closed correctly; it is the STYLE that used to leak, so assert on `font`.
+    let tex = "\\documentclass{article}\n\
+      \\usepackage{listings}\n\
+      \\lstdefinestyle{s}{morecomment=[l]{\\#},commentstyle=\\itshape}\n\
+      \\begin{document}\n\
+      \\lstinputlisting[style=s]{data.py}\n\
+      \\end{document}\n";
+    let (xml, stderr) = convert(tex, DATA_PY);
+
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "CRLF listing should convert cleanly, stderr had:\n{stderr}",
+    );
+    let lines = listing_lines(&xml);
+    assert_eq!(lines.len(), 4, "expected all 4 file lines:\n{xml}");
+
+    assert!(
+      lines[0].contains("font=\"italic\""),
+      "the comment line should carry the commentstyle:\n{}",
+      lines[0]
+    );
+    for (i, line) in lines.iter().enumerate().skip(1) {
+      assert!(
+        !line.contains("font=\"italic\""),
+        "line {} is code, but the comment style bled into it:\n{line}",
+        i + 1
+      );
+    }
+  }
+}
+
+mod bib_field_digest_once {
+  //! Regression test: a bibliography field value is digested EXACTLY ONCE.
+  //!
+  //! The original defect was two digesting paths in the since-deleted
+  //! `convert_bib_file_to_xml` string route — `interpret_tex_markup` (XML
+  //! fragment, so `\url`/`\href`/font switches survive) and `interpret_tex_text`
+  //! (plain string) — both run over the SAME value, so every error that field
+  //! raised was reported twice and every macro side effect ran twice. That route
+  //! is gone (`BIBLIOGRAPHY_WORKLIST.md` re-port item 1: the recursive `.bib`
+  //! session replaced it), but the PROPERTY it violated is a standing one for
+  //! whatever route is current, and it is cheap to keep pinned.
+  //!
+  //! This is guarded by counting `Error:` lines rather than by inspecting the XML,
+  //! because the duplicate is invisible in the output — the rendered entry looked
+  //! perfectly fine while the document's error count silently doubled. Error
+  //! counts are the canvas pass/fail signal, so inflating them is a real defect.
+  //!
+  //! Binary-driven: the count has to come from the conversion log.
+
+  use std::{path::Path, process::Command};
+
+  /// Two properties this fixture must have, both learned the hard way:
+  ///
+  /// * The probe must raise its error on EVERY digest. An undefined macro will
+  ///   NOT do: it is defined as `<ltx:ERROR/>` on first sight and is therefore
+  ///   silently self-healing on a second pass, so an undefined-macro fixture
+  ///   passes even with the bug present. `\hline` in a `note` is the probe — it
+  ///   expands to `\noalign`, which is a CONTEXT error (`\noalign cannot be used
+  ///   here`) with nothing to memoize, so a second digest counts a second time.
+  ///   Verified: two entries each carrying one `\hline` produce exactly 2.
+  /// * The value must contain a BACKSLASH. The interpretation paths short-circuit
+  ///   on a value with no `\`, `~` or `$`, so a punctuation-only probe never
+  ///   digests at all and the test goes vacuously green (observed: "digested 0
+  ///   times"). `\textbf` is the carrier in the second entry because it needs no
+  ///   package.
+  ///
+  /// `_` and `^` were the two earlier probes and neither can be one any more:
+  /// OXIDIZED_DESIGN #74 escapes `_ & # %` and `^` in a `.bib` field as DATA, so
+  /// `note={a _ … ^ …}` now renders the literal characters and raises nothing.
+  /// The `a2` entry keeps both of them as the standing check that the escaping did
+  /// not disturb the once-only property — it must contribute ZERO errors — while
+  /// `a1`'s `\hline` is the live probe.
+  const BIB: &str = r"@article{a1, author={Doe, J.}, title={T}, year={2020},
+    note={a \hline \textbf{b}} }
+  @article{a2, author={Roe, R.}, title={T2}, year={2021},
+    note={x _ y ^ z \textbf{w}} }
+  ";
+
+  const TEX: &str = r"\documentclass{article}
+  \begin{document}
+  See \cite{a1,a2}.
+  \bibliographystyle{plain}
+  \bibliography{refs}
+  \end{document}
+  ";
+
+  #[test]
+  fn bib_field_errors_are_reported_once_not_once_per_digest() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("refs.bib"), BIB).expect("write refs.bib");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.html",
+        "--format=html5",
+        "--nocomments",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    // ANSI-strip before counting: a naive grep over coloured output matches zero
+    // and would make this test vacuously green.
+    let stderr = strip_ansi(&String::from_utf8_lossy(&output.stderr));
+
+    let needle = "\\noalign cannot be used here";
+    let n = stderr.matches(needle).count();
+    assert_eq!(
+      n, 1,
+      "the field was digested {n} times, not once — bibliography errors are \
+       being multiplied into the document's error count.\nstderr:\n{stderr}"
+    );
+    // `_` and `^` are DATA in a `.bib` field (OXIDIZED_DESIGN #74), so `a2` must
+    // raise nothing. Asserted rather than dropped: if the escaping ever regresses
+    // this catches it here too, and once-per-digest would show up as a count of 2.
+    for script in ['_', '^'] {
+      let n = stderr
+        .matches(&format!("Script {script} can only appear in math mode"))
+        .count();
+      assert_eq!(
+        n, 0,
+        "a `{script}` in a bib field is data and must raise nothing, got {n}.\n\
+         stderr:\n{stderr}"
+      );
+    }
+  }
+
+  fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+      if c == '\u{1b}' && chars.peek() == Some(&'[') {
+        for c in chars.by_ref() {
+          if c.is_ascii_alphabetic() {
+            break;
+          }
+        }
+      } else {
+        out.push(c);
+      }
+    }
+    out
+  }
+}
+
+mod silence_keeps_diagnostics {
+  //! `silence.sty` must never cost us a real diagnostic
+  //! (`latexml_contrib/src/silence_sty.rs`).
+  //!
+  //! Unlike the `arxiv.sty` sibling, the silence binding is deliberately NOT
+  //! gated on `INCLUDE_STYLES`: it pre-empts the raw `.sty` in every
+  //! configuration. The reason is measurable. The real silence.sty rebinds
+  //! `\PackageError` / `\ClassError` / `\@latex@error` / `\GenericError`
+  //! (silence.sty L582-599) so that `\ErrorsOff` drops messages before they
+  //! are printed — and under LaTeXML those are the very definitions that turn
+  //! a package's error into an `Error:` line. Measured on the fixture below,
+  //! same-host Perl 0.8.8 with `--includestyles` reports **0 errors**; without
+  //! `\usepackage{silence}` the same document reports **1**. The raw load
+  //! silently downgrades a genuine diagnostic.
+  //!
+  //! The binding models only what silence contributes to the *document*
+  //! (nothing) and leaves the error/warning definitions alone, so the
+  //! diagnostic survives. This test pins that: the run must still report the
+  //! `boompkg` error even with silence loaded and `\ErrorsOff` in force.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{silence}\n\
+    \\ErrorsOff\n\
+    \\usepackage{boompkg}\n\
+    \\begin{document}\n\
+    x\n\
+    \\end{document}\n";
+
+  const STY: &str = "\\ProvidesPackage{boompkg}\n\
+    \\PackageError{boompkg}{Deliberate boom}{}\n";
+
+  #[test]
+  fn silence_errorsoff_does_not_swallow_a_package_error() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
+    std::fs::write(workdir.path().join("boompkg.sty"), STY).expect("write boompkg.sty");
+
+    let output = Command::new(bin)
+      .arg("a.tex")
+      .arg("--dest")
+      .arg("a.xml")
+      .arg("--nocomments")
+      .arg("--includestyles")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      stderr.contains("Deliberate boom"),
+      "silence + \\ErrorsOff must not suppress the boompkg error:\n{stderr}",
+    );
+  }
+}
+
+mod preclass_kernel_autoload {
+  //! The on-undefined LaTeX-kernel autoload and its two hard boundaries.
+  //!
+  //! `latexml_engine/src/latex_kernel.rs` loads `LaTeX.pool` when an *undefined*
+  //! control sequence turns out to be one the ambient kernel dump defines, so a
+  //! document may use a kernel command before `\documentclass` — as real LaTeX
+  //! allows, since `latex.ltx` IS the format. The happy path is guarded by the
+  //! `tests/structure/preclass_*.tex+.xml` pairs (`preclass_iffileexists_test`,
+  //! `preclass_kernel_cs_test`).
+  //!
+  //! This file guards the two places the mechanism must deliberately stay out of.
+  //! Both are binary-driven (fresh process) because they are process-level modes.
+
+  use std::{path::Path, process::Command};
+
+  /// The witness idiom (arXiv 2605.25877, 2606.06905): `\IfFileExists` is not on
+  /// Perl's `TeX.pool.ltxml` L33-56 trigger list, so without the autoload the
+  /// conditional collapses and the *rejected* branch's class is what gets picked.
+  const PRECLASS_TEX: &str = concat!(
+    "\\IfFileExists{ltxo-no-such-class.cls}",
+    "{\\documentclass{ltxo-no-such-class}}{\\documentclass{article}}\n",
+    "\\begin{document}\n",
+    "Selected the fallback class.\n",
+    "\\end{document}\n"
+  );
+
+  fn convert(env: &[(&str, &str)]) -> String {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("p.tex"), PRECLASS_TEX).expect("write p.tex");
+    let mut cmd = Command::new(bin);
+    cmd
+      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
+      .current_dir(workdir.path());
+    for (k, v) in env {
+      cmd.env(k, v);
+    }
+    let output = cmd.output().expect("spawn latexml_oxide");
+    // The logger TTY-gates colours, so a piped stderr is ANSI-free; strip anyway
+    // (project signal-integrity rule — never let a parse miss hide a diagnostic).
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_default();
+    format!("{stderr}\n<<<XML>>>\n{xml}")
+  }
+
+  /// Baseline for the two negative tests below: with a dump present the autoload
+  /// fires, the FALSE branch's class wins, and nothing is reported undefined.
+  #[test]
+  fn pre_documentclass_kernel_cs_selects_the_right_class() {
+    let out = convert(&[]);
+    assert!(
+      !out.contains("Error:undefined:\\IfFileExists"),
+      "\\IfFileExists before \\documentclass must autoload the LaTeX kernel:\n{out}"
+    );
+    assert!(
+      out.contains("<?latexml class=\"article\"?>"),
+      "the \\IfFileExists FALSE branch must select `article`:\n{out}"
+    );
+  }
+
+  /// `LoadFormat('latex')` has two mutually exclusive branches (CLAUDE.md durable
+  /// parity rule 1). On the degraded one there is no dump to test membership
+  /// against, so the autoload must not fire at all and behaviour must stay
+  /// exactly as it was before the mechanism existed: the Perl `TeX.pool` L33-56
+  /// trigger list is the only thing that loads the format, and `\IfFileExists` —
+  /// which is not on it — is reported undefined.
+  ///
+  /// This asserts a *limitation on purpose*. If the no-dump branch ever gains a
+  /// membership oracle of its own, change this test deliberately; do not delete
+  /// it to make a run green.
+  #[test]
+  fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
+    let out = convert(&[("LATEXML_NODUMP", "1")]);
+    assert!(
+      out.contains("Error:undefined:\\IfFileExists"),
+      "with LATEXML_NODUMP the kernel autoload has no oracle and must stay inert:\n{out}"
+    );
+  }
+}
+
+mod acmart_description_aria {
+  //! acmart `\Description` must reach the **HTML** as a usable text alternative.
+  //!
+  //! The core-XML fixture (`tests/complex/acm_aria.{tex,xml}`) pins the
+  //! image-less shape, but everything that makes this feature actually work for a
+  //! screen reader happens in post-processing: the description has to become the
+  //! image's `@alt`, `aria:describedby` has to survive as `aria-describedby`, the
+  //! referenced ids have to resolve, and the referenced text has to be clean. A
+  //! core-only test is green on all of those failing.
+  //!
+  //! What this guards, all of which were broken before (see
+  //! `KNOWN_PERL_ERRORS.md` #66, `OXIDIZED_DESIGN_DIVERGENCES.md` #83):
+  //!   * the MANDATORY long description reached no output at all — Perl's
+  //!     binding emits `#1`, the OPTIONAL short one, and drops `#2`
+  //!   * the relation was `aria:labelledby`, then `aria:label`, on the FLOAT.
+  //!     Both set the accessible NAME, so both displaced the caption — the
+  //!     reviewer report that prompted the current shape
+  //!     (brucemiller/LaTeXML#430 r3674103638). The text alternative belongs on
+  //!     the image, as `@alt`; nothing here may emit `aria-label` at all.
+  //!   * the note carried footnote scaffolding, so the announced text began
+  //!     "†† : " (`ltx_note_mark` twice, then an `ltx_note_type` prefix)
+  //!   * an intermediate fix emitted the short description with NO id, leaving
+  //!     `aria-describedby` pointing at nothing — hence the dangling-ref check
+
+  use std::{path::Path, process::Command};
+
+  /// A real (1×1) PNG, so `\includegraphics` produces an `<img>` rather than a
+  /// missing-file diagnostic — the whole point here is where the alt text lands.
+  const PNG: &[u8] = include_bytes!("graphics/none.png");
+
+  /// One figure per branch of the mapping in OXIDIZED_DESIGN_DIVERGENCES #83.
+  /// The first four are the primary path (a lone image in the float); the last
+  /// two are the cases that keep the wiring on the float.
+  const TEX: &str = "\\documentclass[acmsmall]{acmart}\n\
+    \\usepackage{graphicx}\n\
+    \\begin{document}\n\
+    \\begin{figure}\\includegraphics{none}\n\
+    \\caption{CAPTIONONE}\n\
+    \\Description[SHORTDESC]{LONGDESC with \\emph{markup} inside}\n\
+    \\end{figure}\n\
+    \\begin{figure}\\includegraphics{none}\n\
+    \\caption{CAPTIONTWO}\n\
+    \\Description{LONELYLONGDESC}\n\
+    \\end{figure}\n\
+    \\begin{figure}\\includegraphics{none}\n\
+    \\caption{CAPTIONTHREE}\n\
+    \\Description{MARKUPDESC with \\emph{emphasis}}\n\
+    \\end{figure}\n\
+    \\begin{figure}\\includegraphics[alt={AUTHORALT}]{none}\n\
+    \\caption{CAPTIONFOUR}\n\
+    \\Description[SHORTFOUR]{LONGFOUR text}\n\
+    \\end{figure}\n\
+    \\begin{figure}\\includegraphics{none}\\includegraphics{none}\n\
+    \\caption{CAPTIONFIVE}\n\
+    \\Description[SHORTFIVE]{LONGFIVE text}\n\
+    \\end{figure}\n\
+    \\begin{figure}NOIMAGEHERE\n\
+    \\caption{CAPTIONSIX}\n\
+    \\Description[SHORTSIX]{LONGSIX text}\n\
+    \\end{figure}\n\
+    \\end{document}\n";
+
+  /// Every `<img ...>` in the document, in order.
+  fn img_tags(html: &str) -> Vec<&str> {
+    html
+      .match_indices("<img ")
+      .filter_map(|(i, _)| html[i..].find('>').map(|e| &html[i..i + e + 1]))
+      .collect()
+  }
+
+  /// The value of `attr` on `tag`, if present.
+  fn attr<'a>(tag: &'a str, attr: &str) -> Option<&'a str> {
+    let needle = format!("{attr}=\"");
+    let start = tag.find(&needle)? + needle.len();
+    let rest = &tag[start..];
+    rest.find('"').map(|e| &rest[..e])
+  }
+
+  #[test]
+  fn description_becomes_the_images_alt_text() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
+    std::fs::write(workdir.path().join("none.png"), PNG).expect("write none.png");
+
+    let output = Command::new(bin)
+      .args([
+        "d.tex",
+        "--dest",
+        "d.html",
+        "--format",
+        "html5",
+        "--nocomments",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let html = std::fs::read_to_string(workdir.path().join("d.html")).unwrap_or_default();
+    assert!(!html.is_empty(), "no HTML produced:\n{stderr}");
+
+    // 0. NOTHING here may set an accessible NAME. `aria-label` on the float was
+    //    the reported defect: it replaces the name, and a figure's name is its
+    //    caption, so the caption stopped being announced.
+    assert!(
+      !html.contains("aria-label"),
+      "\\Description must never set an accessible name — that displaces the \
+       caption (brucemiller/LaTeXML#430 r3674103638):\n{html}",
+    );
+    for caption in ["CAPTIONONE", "CAPTIONTWO", "CAPTIONSIX"] {
+      assert!(
+        html.contains(caption),
+        "caption {caption} vanished:\n{html}"
+      );
+    }
+
+    // 1. The long description — the alternative ACM mandates — must be present.
+    for text in ["LONGDESC", "LONELYLONGDESC", "MARKUPDESC", "LONGSIX"] {
+      assert!(
+        html.contains(text),
+        "the description {text} never reached the HTML:\n{stderr}",
+      );
+    }
+
+    let imgs = img_tags(&html);
+    assert!(
+      imgs.len() >= 6,
+      "expected an <img> per graphic, saw {}:\n{html}",
+      imgs.len()
+    );
+
+    // 2. A lone image in the float IS what the description is an alternative to,
+    //    so it carries it — as `@alt`, the attribute an <img> has for exactly
+    //    this, not `aria-label`. `[short]` is the concise alternative; a lone
+    //    plain `{long}` stands in directly.
+    assert_eq!(
+      attr(imgs[0], "alt"),
+      Some("SHORTDESC"),
+      "the short description should be the image's alt:\n{}",
+      imgs[0]
+    );
+    assert_eq!(
+      attr(imgs[1], "alt"),
+      Some("LONELYLONGDESC"),
+      "a lone plain description should become the alt directly:\n{}",
+      imgs[1]
+    );
+
+    // 3. A lone description carrying MARKUP cannot go in an attribute, so the alt
+    //    keeps the generic fallback and the text is referenced as a block.
+    assert_eq!(
+      attr(imgs[2], "alt"),
+      Some("Refer to caption"),
+      "markup cannot live in an alt attribute; it must fall back to a block:\n{}",
+      imgs[2]
+    );
+    assert!(
+      attr(imgs[2], "aria-describedby").is_some(),
+      "a markup-bearing description must still be referenced:\n{}",
+      imgs[2]
+    );
+
+    // 4. An explicit `\includegraphics[alt=…]` names ONE image while \Description
+    //    names the float, so the more specific statement wins and we only add
+    //    references — never clobber the author's alt.
+    assert_eq!(
+      attr(imgs[3], "alt"),
+      Some("AUTHORALT"),
+      "an explicit alt= must survive a competing \\Description:\n{}",
+      imgs[3]
+    );
+    let refs_four = attr(imgs[3], "aria-describedby").unwrap_or_default();
+    assert_eq!(
+      refs_four.split_whitespace().count(),
+      2,
+      "with the alt already taken, BOTH descriptions should be referenced:\n{}",
+      imgs[3]
+    );
+
+    // 5. Several images: the description covers the ensemble, so it stays on the
+    //    float rather than being asserted as panel 1's alternative.
+    for img in &imgs[4..6] {
+      assert_eq!(
+        attr(img, "alt"),
+        Some("Refer to caption"),
+        "a multi-panel figure's description must not be claimed by one panel:\n{img}",
+      );
+    }
+    assert!(
+      html.contains("aria-describedby=\"acmlabel5-short acmlabel5\""),
+      "a multi-image float should carry the references itself:\n{html}",
+    );
+    // …and the image-less float likewise, which is the acm_aria fixture's shape.
+    assert!(
+      html.contains("aria-describedby=\"acmlabel6-short acmlabel6\""),
+      "an image-less float should carry the references itself:\n{html}",
+    );
+
+    // 5b. Falling back to the float is second-best, so it is announced — but ONLY
+    //     then. Exactly the two floats above may warn; the four lone-image
+    //     figures must be silent, or every ordinary ACM paper turns noisy.
+    let warnings = stderr.matches("Warning:unexpected:\\Description").count();
+    assert_eq!(
+      warnings, 2,
+      "expected a warning for the multi-image and the image-less float, and \
+       silence for the four that found their image:\n{stderr}",
+    );
+    for reason in ["more than one image", "no image to describe"] {
+      assert!(
+        stderr.contains(reason),
+        "the warning should say WHY it fell back ({reason}):\n{stderr}",
+      );
+    }
+
+    // 6. EVERY aria-describedby reference resolves to a real id. An unresolved
+    //    reference is silently inert — the description is simply never announced.
+    let ids: Vec<String> = html
+      .match_indices("id=\"")
+      .filter_map(|(i, _)| {
+        let rest = &html[i + 4..];
+        rest.find('"').map(|e| rest[..e].to_string())
+      })
+      .collect();
+    let mut checked = 0;
+    for (i, _) in html.match_indices("aria-describedby=\"") {
+      let rest = &html[i + 18..];
+      let end = rest.find('"').expect("unterminated aria-describedby");
+      for r in rest[..end].split_whitespace() {
+        assert!(
+          ids.iter().any(|id| id == r),
+          "aria-describedby references '{r}', which no element defines:\n{html}",
+        );
+        checked += 1;
+      }
+    }
+    assert!(
+      checked >= 6,
+      "expected a reference per describing figure, saw {checked}"
+    );
+
+    // 7. The referenced text is CLEAN: no footnote scaffolding, which would
+    //    otherwise be announced as part of the description.
+    for marker in ["ltx_note_mark", "ltx_note_type"] {
+      assert!(
+        !html.contains(marker),
+        "the description carries footnote scaffolding ({marker}), which lands in \
+         the announced accessible description:\n{html}",
+      );
+    }
+
+    // 8. And the whole thing converts cleanly — reading the description
+    //    `Undigested` means nothing inside it is expanded, so no error can be
+    //    manufactured from content pdflatex never expands either.
+    assert!(
+      !stderr.contains("Error:"),
+      "expected a clean conversion:\n{stderr}",
+    );
+  }
+
+  /// Two malformed-but-real shapes that must still not lose what the author
+  /// wrote. Both were regressions caught in review of the change that moved
+  /// `\Description` onto the image.
+  const TEX_ODD: &str = "\\documentclass[acmsmall]{acmart}\n\
+    \\usepackage{graphicx}\n\
+    \\begin{document}\n\
+    Loose text. \\Description[LOOSESHORT]{LOOSELONG text} more text.\n\
+    \\begin{figure}\\includegraphics{none}\n\
+    \\caption{TWICE}\n\
+    \\Description[FIRSTSHORT]{FIRSTLONG text}\\Description[SECONDSHORT]{SECONDLONG text}\n\
+    \\end{figure}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn description_never_loses_an_annotation() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("d.tex"), TEX_ODD).expect("write d.tex");
+    std::fs::write(workdir.path().join("none.png"), PNG).expect("write none.png");
+
+    let output = Command::new(bin)
+      .args([
+        "d.tex",
+        "--dest",
+        "d.html",
+        "--format",
+        "html5",
+        "--nocomments",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let html = std::fs::read_to_string(workdir.path().join("d.html")).unwrap_or_default();
+    assert!(!html.is_empty(), "no HTML produced:\n{stderr}");
+
+    // A \Description outside any float has no image AND no float to fall back to.
+    // It still has to land somewhere, and the warning has to name the real cause
+    // rather than blame a float that isn't there.
+    assert!(
+      html.contains("LOOSELONG"),
+      "a \\Description outside a float was dropped:\n{html}",
+    );
+    assert!(
+      stderr.contains("outside any figure or table"),
+      "the warning must name the actual cause, not a missing image:\n{stderr}",
+    );
+
+    // A SECOND \Description in the same float must not overwrite the first one's
+    // reference — `aria-describedby` is an id list, and a clobbered id leaves
+    // that description hidden in the DOM and announced by nothing.
+    let imgs = img_tags(&html);
+    let refs = attr(imgs[0], "aria-describedby").unwrap_or_default();
+    assert!(
+      refs.split_whitespace().count() >= 3,
+      "a second \\Description clobbered the first one's reference; expected the \
+       first long id plus both of the second's, got {refs:?}:\n{}",
+      imgs[0]
+    );
+    assert_eq!(
+      attr(imgs[0], "alt"),
+      Some("FIRSTSHORT"),
+      "the first \\Description should still own the alt:\n{}",
+      imgs[0]
+    );
+
+    // Everything referenced still resolves, and every authored text is present.
+    let ids: Vec<String> = html
+      .match_indices("id=\"")
+      .filter_map(|(i, _)| {
+        let rest = &html[i + 4..];
+        rest.find('"').map(|e| rest[..e].to_string())
+      })
+      .collect();
+    for r in refs.split_whitespace() {
+      assert!(
+        ids.iter().any(|id| id == r),
+        "aria-describedby references '{r}', which no element defines:\n{html}",
+      );
+    }
+    for text in ["FIRSTLONG", "SECONDSHORT", "SECONDLONG"] {
+      assert!(html.contains(text), "{text} was lost:\n{html}");
+    }
+  }
+
+  /// A `\Description` in a TABLE float is the author doing exactly what acmart
+  /// asks — a table has no image, so the table itself is where the description
+  /// belongs. That must be reported as INFO, never as a warning.
+  ///
+  /// It was a warning until 2026-07-30, and it dominated the regressions in that
+  /// day's `sandbox-arxiv-2605` rerun: 27 of 45 sampled documents that fell from
+  /// `no_problem` to `warning` carried this one message, purely for having a
+  /// described table.
+  const TEX_TABLE: &str = "\\documentclass[acmsmall]{acmart}\n\
+    \\usepackage{graphicx}\n\
+    \\begin{document}\n\
+    \\begin{table}\n\
+    \\caption{A table with no image in it}\n\
+    \\begin{tabular}{ll}a & b\\\\c & d\\end{tabular}\n\
+    \\Description[TABLESHORT]{TABLELONG description of the tabular data}\n\
+    \\end{table}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn a_described_table_is_reported_as_info_not_a_warning() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX_TABLE).expect("write t.tex");
+
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.html",
+        "--format",
+        "html5",
+        "--nocomments",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let html = std::fs::read_to_string(workdir.path().join("t.html")).unwrap_or_default();
+    assert!(!html.is_empty(), "no HTML produced:\n{stderr}");
+
+    // The description must still be attached — this is a severity change, not a
+    // behaviour change.
+    assert!(
+      html.contains("aria-describedby="),
+      "the table must still carry the description:\n{html}",
+    );
+    assert!(
+      html.contains("TABLELONG"),
+      "the long description text must survive into the HTML:\n{html}",
+    );
+
+    // …and the paper must stay clean. A described table is not an anomaly.
+    assert!(
+      !stderr.contains("Warning:unexpected:\\Description"),
+      "a described TABLE must not warn — it is the expected shape:\n{stderr}",
+    );
+    assert!(
+      !stderr.contains("Error:"),
+      "expected a clean conversion:\n{stderr}",
+    );
+  }
+}
+
+mod stex_raw_ltxml {
+  //! Raw-loading a style package under `--includestyles` must (a) never read a
+  //! Perl `.ltxml` binding as TeX, and (b) restore the `standalone → currfile →
+  //! filehook` dependency chain so the package-file hooks exist.
+  //!
+  //! Origin: raw `stex.sty` (sTeX 3.x) under the ar5iv config. stex ships BOTH
+  //! `stex.sty` (real TeX) and `stex.sty.ltxml` (a Perl LaTeXML binding) in TeX
+  //! Live, and `stex.sty` uses `\AtEndOfPackageFile` (filehook, reached via
+  //! standalone → currfile) and `\define@key` (xkeyval). Two bugs surfaced:
+  //!   1. `find_file` returned `stex.sty.ltxml` (kpsewhich lists it) ahead of the
+  //!      raw `stex.sty`, and the raw-loader tokenized the Perl source as TeX
+  //!      (`$out =~ s/^\s+//;` → "Script ^…", `\DefMacroI`/`\stex@backend`
+  //!      undefined). latexml-oxide can never read a `.ltxml`; binding availability
+  //!      is decided by the dispatcher, not a `.ltxml` on disk.
+  //!   2. the simplified `standalone` binding dropped standalone.sty's unconditional
+  //!      `\RequirePackage{xkeyval}` / `\RequirePackage{currfile}` (→ filehook), so
+  //!      `\AtEndOfPackageFile` / `\define@key` were undefined.
+
+  use std::{path::Path, process::Command};
+
+  use crate::common::strip_ansi;
+
+  fn convert(work: &Path, doc: &str) -> String {
+    std::fs::write(work.join("doc.tex"), doc).expect("write doc.tex");
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["--includestyles", "--dest", "doc.xml", "doc.tex"])
+      .current_dir(work)
+      .output()
+      .expect("spawn latexml_oxide");
+    strip_ansi(&String::from_utf8_lossy(&out.stderr))
+  }
+
+  fn error_count(log: &str) -> usize {
+    log
+      .lines()
+      .filter(|l| l.starts_with("Error:") || l.starts_with("Fatal:"))
+      .count()
+  }
+
+  fn kpsewhich_has(name: &str) -> bool {
+    Command::new("kpsewhich")
+      .arg(name)
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false)
+  }
+
+  /// Self-contained (all bindings are compiled in — no TeX Live package needed):
+  /// under `--includestyles`, `\usepackage{standalone}` must pull in the
+  /// `xkeyval` + `currfile → filehook` chain so `\AtEndOfPackageFile` is defined.
+  #[test]
+  fn standalone_under_includestyles_provides_filehook_hooks() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let log = convert(
+      work.path(),
+      "\\documentclass{article}\n\
+       \\usepackage{standalone}\n\
+       \\AtEndOfPackageFile{graphicx}{\\typeout{DEFERRED}}\n\
+       \\begin{document}\nHello.\n\\end{document}\n",
+    );
+    assert!(
+      !log.contains("AtEndOfPackageFile") && !log.contains("define@key"),
+      "standalone under --includestyles must define the filehook/xkeyval hooks \
+       (standalone → currfile → filehook, standalone → xkeyval); log:\n{log}"
+    );
+    assert_eq!(
+      error_count(&log),
+      0,
+      "expected a clean conversion; log:\n{log}"
+    );
+  }
+
+  /// The real witness: raw `stex.sty` must load — never its Perl `stex.sty.ltxml`
+  /// — and convert cleanly. Skipped where TeX Live lacks stex.
+  #[test]
+  fn raw_stex_sty_loads_not_the_perl_ltxml() {
+    if !kpsewhich_has("stex.sty") || !kpsewhich_has("stex.sty.ltxml") {
+      eprintln!("stex.sty / stex.sty.ltxml not in TeX Live — skipping");
+      return;
+    }
+    let work = tempfile::tempdir().expect("tempdir");
+    let log = convert(
+      work.path(),
+      "\\documentclass{article}\n\\usepackage{stex}\n\
+       \\begin{document}\nHello sTeX.\n\\end{document}\n",
+    );
+    // The Perl binding must never be read as TeX.
+    assert!(
+      !log.contains("stex.sty.ltxml"),
+      "the Perl stex.sty.ltxml must never be read (latexml-oxide can't read .ltxml); log:\n{log}"
+    );
+    assert!(
+      !log.contains("DefMacroI") && !log.contains("stex@backend"),
+      "Perl-syntax-as-TeX errors present — the .ltxml was misread; log:\n{log}"
+    );
+    // And the raw load (stex → standalone → currfile → filehook, xkeyval) is clean.
+    assert_eq!(
+      error_count(&log),
+      0,
+      "raw stex.sty must convert with 0 errors; log:\n{log}"
+    );
+  }
+}
+
+mod texinputs_usepackage {
+  //! GitHub #345: `\usepackage{X}` must find a runtime `X.sty.rhai` binding placed
+  //! in a texmf tree on `$TEXINPUTS` — the same way `\input{file}` already resolves
+  //! files there — without needing an explicit `--path`.
+  //!
+  //! The `.rhai` discovery (`converter.rs::rhai_dispatch`) searched the local
+  //! search paths ONLY (`--path` + the source dir) and skipped kpsewhich, which is
+  //! what honours `$TEXINPUTS`. kpsewhich locates a `.sty.rhai` on TEXINPUTS just
+  //! fine (the extension is irrelevant to a `//` recursive search), so consulting
+  //! it closes the `\input`-works-but-`\usepackage`-doesn't asymmetry the reporter
+  //! hit.
+  //!
+  //! The TeX-tree probe is the **last** tier of the binding chain, not the first:
+  //! a `.rhai` beside your document is an *override*, one that merely sits in a
+  //! texmf tree only *fills a gap*. The two `..._shadow_...` tests below pin both
+  //! halves of that split — see `converter.rs::install_binding_dispatch`.
+
+  use std::{path::Path, process::Command};
+
+  use crate::common::strip_ansi;
+
+  /// Deliberately not a real CTAN package name: the fixture must be absent from
+  /// every host texmf tree, or the "no binding" leg would resolve a real `.sty`.
+  const PKG: &str = "lxonowrap";
+
+  /// Marker text a loaded `.rhai` emits, so "did this binding run?" is a single
+  /// unambiguous substring rather than an inference from the package name.
+  fn binding(marker: &str) -> String {
+    format!("DefEnvironment(\"{{{PKG}}}\", \"<ltx:block class='{marker}'>#body</ltx:block>\");\n")
+  }
+
+  const DOC: &str = "\\documentclass[12pt]{book}\n\
+                     \\usepackage{lxonowrap}\n\
+                     \\begin{document}\n\
+                     \\begin{lxonowrap}wrapped text\\end{lxonowrap}\n\
+                     \\end{document}\n";
+
+  /// Convert `index.tex` in `dir`, returning (ANSI-free log, output HTML).
+  fn convert(dir: &Path, texinputs: Option<&str>) -> (String, String) {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"));
+    cmd
+      .args(["--dest", "index.html", "index.tex"])
+      .current_dir(dir);
+    match texinputs {
+      Some(paths) => cmd.env("TEXINPUTS", paths),
+      // Set it to just `.` rather than leaving it unset: an ambient `$TEXINPUTS`
+      // from the developer's shell must not be what decides the negative test.
+      None => cmd.env("TEXINPUTS", "."),
+    };
+    let out = cmd.output().expect("spawn latexml_oxide");
+    let html = std::fs::read_to_string(dir.join("index.html")).unwrap_or_default();
+    (strip_ansi(&String::from_utf8_lossy(&out.stderr)), html)
+  }
+
+  /// A texmf tree holding `<name>` with `content`, plus a `doc/` dir holding
+  /// `index.tex`. Returns (tempdir, doc path, `$TEXINPUTS` value reaching it).
+  fn fixture(
+    name: &str,
+    content: &str,
+    tex: &str,
+  ) -> (tempfile::TempDir, std::path::PathBuf, String) {
+    let work = tempfile::tempdir().expect("tempdir");
+    // Buried a few levels deep, so only the recursive `//` search reaches it.
+    let styles = work.path().join("texmf/tex/latex/mystyles");
+    std::fs::create_dir_all(&styles).unwrap();
+    std::fs::write(styles.join(name), content).unwrap();
+    let doc = work.path().join("doc");
+    std::fs::create_dir_all(&doc).unwrap();
+    std::fs::write(doc.join("index.tex"), tex).unwrap();
+    // kpathsea's path-list separator is `;` on Windows — `:` collides with the
+    // drive letter (`C:\...`) — and `:` everywhere else. The `//` recursive suffix
+    // is the same on both.
+    let sep = if cfg!(windows) { ";" } else { ":" };
+    let texinputs = format!(".{sep}{}//{sep}", work.path().join("texmf").display());
+    (work, doc, texinputs)
+  }
+
+  /// A `<pkg>.sty.rhai` under a `$TEXINPUTS` texmf tree (recursive `//`, no
+  /// `--path`) must be discovered and loaded by `\usepackage{<pkg>}`.
+  #[cfg_attr(
+    not(building_with_texlive),
+    ignore = "requires a TeX Live installation (kpsewhich resolves $TEXINPUTS)"
+  )]
+  #[test]
+  fn usepackage_finds_rhai_binding_on_texinputs() {
+    let (_work, doc, texinputs) = fixture(&format!("{PKG}.sty.rhai"), &binding("lxo-loaded"), DOC);
+    let (log, html) = convert(&doc, Some(&texinputs));
+
+    assert!(
+      !log.contains(&format!("missing_file:{PKG}")),
+      "\\usepackage{{{PKG}}} must resolve {PKG}.sty.rhai via TEXINPUTS (no --path); log:\n{log}"
+    );
+    // The binding actually RAN: its constructor emitted the block. Asserting the
+    // marker class (not the package name) is what makes this discriminating —
+    // the undefined-environment fallback also prints the package name, into an
+    // `ltx_ERROR` span, which is exactly what `..._is_undefined_without_texinputs`
+    // pins below.
+    assert!(
+      html.contains("lxo-loaded") && html.contains("wrapped text"),
+      "the {PKG} environment (from the TEXINPUTS .rhai) should render its block; html:\n{html}"
+    );
+    assert!(
+      !html.contains("ltx_ERROR"),
+      "a loaded binding leaves no error node in the document; html:\n{html}"
+    );
+  }
+
+  /// The negative control for the assertions above: with the tree off
+  /// `$TEXINPUTS`, the very same document must FAIL, and must fail without
+  /// producing the marker. Without this, "html contains the package name" would
+  /// pass on a broken binary too — the undefined-environment recovery emits
+  /// `<span class="ltx_ERROR undefined">{lxonowrap}</span>`.
+  #[test]
+  fn package_is_undefined_without_texinputs() {
+    let (_work, doc, _texinputs) = fixture(&format!("{PKG}.sty.rhai"), &binding("lxo-loaded"), DOC);
+    let (log, html) = convert(&doc, None);
+
+    assert!(
+      log.contains(&format!("missing_file:{PKG}")),
+      "with no TEXINPUTS there is nothing to find; log:\n{log}"
+    );
+    assert!(
+      !html.contains("lxo-loaded") && html.contains("ltx_ERROR"),
+      "the failing conversion must not produce the marker; html:\n{html}"
+    );
+  }
+
+  /// Authority half of the tier split: a `.rhai` that merely sits on the TeX tree
+  /// FILLS A GAP — it must not displace a compiled binding of the same name.
+  /// Before the TeX-tree probe was demoted to the last tier, a stray
+  /// `amsmath.sty.rhai` anywhere on `$TEXINPUTS` replaced the whole compiled
+  /// `amsmath` binding, and `\begin{align}` became an undefined `\align`.
+  #[cfg_attr(
+    not(building_with_texlive),
+    ignore = "requires a TeX Live installation (kpsewhich resolves $TEXINPUTS)"
+  )]
+  #[test]
+  fn texmf_rhai_does_not_shadow_a_compiled_binding() {
+    let (_work, doc, texinputs) = fixture(
+      "amsmath.sty.rhai",
+      "DefMacro(\"\\\\lxoprobe\", \"TEXMF-RHAI-WON\");\n",
+      "\\documentclass{article}\n\
+       \\usepackage{amsmath}\n\
+       \\begin{document}\n\
+       \\begin{align}a&=b\\end{align}\n\
+       \\end{document}\n",
+    );
+    let (log, html) = convert(&doc, Some(&texinputs));
+
+    assert!(
+      !log.contains("undefined:\\align") && !log.contains("unexpected:&"),
+      "the compiled amsmath binding must still win over a texmf .rhai; log:\n{log}"
+    );
+    assert!(
+      !html.contains("TEXMF-RHAI-WON"),
+      "the texmf .rhai must not have been loaded at all; html:\n{html}"
+    );
+  }
+
+  /// Cost/authority half kept intact: a `.rhai` in the document's own directory
+  /// still overrides the compiled binding of the same name (the documented
+  /// tier-1 behaviour — `script_bindings_plan.md` §7).
+  #[test]
+  fn local_rhai_still_overrides_a_compiled_binding() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let doc = work.path().join("doc");
+    std::fs::create_dir_all(&doc).unwrap();
+    std::fs::write(
+      doc.join("amsmath.sty.rhai"),
+      "DefMacro(\"\\\\lxoprobe\", \"LOCAL-RHAI-WON\");\n",
+    )
+    .unwrap();
+    std::fs::write(
+      doc.join("index.tex"),
+      "\\documentclass{article}\n\
+       \\usepackage{amsmath}\n\
+       \\begin{document}\n\
+       \\lxoprobe\n\
+       \\end{document}\n",
+    )
+    .unwrap();
+    let (_log, html) = convert(&doc, None);
+
+    assert!(
+      html.contains("LOCAL-RHAI-WON"),
+      "a .rhai beside the document overrides the compiled binding; html:\n{html}"
+    );
+  }
+}
