@@ -48,6 +48,7 @@ use latexml_core::{
     def_parser::parse_prototype,
     dimension::Dimension,
     error::{Error, Result},
+    float::Float,
     number::Number,
     numeric_ops::NumericOps,
     object::Object,

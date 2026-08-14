@@ -21,6 +21,7 @@ use crate::{
     arena::{self, SymHashMap, SymStr},
     dimension::Dimension,
     error::{emit_warn, *},
+    float::Float,
     font::Font,
     glue::Glue,
     model::{self, IndirectModel, Model, compute_indirect_model_aux},
@@ -1695,6 +1696,18 @@ pub fn assign_font(font: Rc<Font>, scope: Option<Scope>) {
 
 /// a variant of `lookup_value` that casts the value into `Number`
 pub fn lookup_number(key: &str) -> Option<Number> {
+  match state!().lookup_value(key) {
+    None | Some(Stored::None) => None,
+    Some(v) => v.into(),
+  }
+}
+/// a variant of `lookup_value` that casts the value into `Float`
+///
+/// The float counterpart of [`lookup_number`]. `Float` isn't a TeX register
+/// type (see `common::float`), but binding authors need a fractional read/write
+/// pair — e.g. `NOMINAL_FONT_SIZE` at the `11pt` class option is `10.95`, which
+/// [`lookup_number`]/[`lookup_int`] would truncate to `10` (issue #542).
+pub fn lookup_float(key: &str) -> Option<Float> {
   match state!().lookup_value(key) {
     None | Some(Stored::None) => None,
     Some(v) => v.into(),

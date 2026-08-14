@@ -1,5 +1,14 @@
 # Change Log
 
+## [Unreleased]
+
+  - **Runtime Rhai bindings can assign typed values, not just strings.** New
+    `AssignNumber`/`AssignFloat`/`AssignBool`/`AssignString` complete the typed
+    `Assign*` family so a value written from a script reads back through
+    `LookupNumber`/`LookupBool`/`LookupString`; and a new `LookupFloat`/`AssignFloat`
+    pair (plus internal `state::lookup_float`) carries fractional values a
+    `Number` would truncate (#543).
+
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
   - **arXiv HTML-feedback fidelity fixes.** Title-page `\date{...}` renders bare,
