@@ -31,7 +31,7 @@ and the conversion continues.</p>
 closure-registered functions; only the accepted types are.</p>
 <h3 id="global-functions"><a class="doc-anchor" href="#global-functions">§</a>Global functions</h3>
 <p>Called at the top level of a binding file, or from inside any body.</p>
-<p>99 functions, 130 calls.</p>
+<p>101 functions, 134 calls.</p>
 <div><table><thead><tr><th>call</th><th>documentation</th></tr></thead><tbody>
 <tr><td><code>AddToCounter(string, int)</code></td><td>Add a number to a counter. (<a href="../../../latexml_core/binding/counter/dialect/fn.add_to_counter.html" title="fn latexml_core::binding::counter::dialect::add_to_counter"><code>add_to_counter</code></a>)</td></tr>
 <tr><td><code>AppendSearchPath(string)</code></td><td>Append a directory to the input search path (searched after existing paths). (<a href="../../../latexml_core/state/fn.add_search_path.html" title="fn latexml_core::state::add_search_path"><code>add_search_path</code></a>)</td></tr>
@@ -43,6 +43,8 @@ closure-registered functions; only the accepted types are.</p>
 <tr><td><code>AssignNumber(string, int)</code><br><code>AssignNumber(string, int, string)</code></td><td>Bind a key to an integer (Number) value, with a scope. (<a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a>)</td></tr>
 <tr><td><code>AssignString(string, string)</code><br><code>AssignString(string, string, string)</code></td><td>Bind a key to a string value, with a scope (the typed twin of <code>AssignValue</code>). (<a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a>)</td></tr>
 <tr><td><code>AssignValue(string, string)</code><br><code>AssignValue(string, string, string)</code></td><td>Bind a key in the value table, with a scope. (<a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a>)</td></tr>
+<tr><td><code>AtBeginDocument(Tokens)</code><br><code>AtBeginDocument(string)</code></td><td>Queue TeX source (or a Tokens value) to run at <code>\begin{document}</code>. (<a href="../../../latexml_core/state/fn.push_value.html" title="fn latexml_core::state::push_value"><code>push_value</code></a>)</td></tr>
+<tr><td><code>AtEndDocument(Tokens)</code><br><code>AtEndDocument(string)</code></td><td>Queue TeX source (or a Tokens value) to run at <code>\end{document}</code>. (<a href="../../../latexml_core/state/fn.push_value.html" title="fn latexml_core::state::push_value"><code>push_value</code></a>)</td></tr>
 <tr><td><code>Command(string) -&gt; Command</code></td><td>Start a <code>std::process::Command</code> builder. A Rhai-only shim; nothing runs until <code>output()</code>.</td></tr>
 <tr><td><code>CounterValue(string) -&gt; int</code></td><td>The current value of a counter. (<a href="../../../latexml_core/binding/counter/dialect/fn.counter_value.html" title="fn latexml_core::binding::counter::dialect::counter_value"><code>counter_value</code></a>)</td></tr>
 <tr><td><code>DeclareOption(Fn)</code><br><code>DeclareOption(string, Fn)</code><br><code>DeclareOption(string, string)</code></td><td>Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl <code>DeclareOption(undef, sub {...})</code>).</td></tr>
