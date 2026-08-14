@@ -61,6 +61,53 @@ fn frontmatter_ieee_membership_no_phantom() {
     "IEEEmembership leaked as a phantom creator:\n{x}"
   );
 }
+/// IEEEtran lazy single-`\author` block with `\\[1em]` row breaks (witness
+/// 2605.23553, arXiv/html_feedback; KNOWN_PERL_ERRORS #75). The optional-length
+/// `[1em]` on `\\` must be consumed, not leak as literal `[1em]` text; and its
+/// removal keeps the following `\textsuperscript` at the front of the
+/// affiliation line so the comma-bearing address is NOT reclassified into
+/// phantom "University of Pisa"/"Italy" author creators. Beyond-Perl: Perl 0.8.8
+/// garbles this identically (its own `\lx@add@authors` flags the gap).
+#[test]
+fn frontmatter_ieee_linebreak_optarg() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_linebreak_optarg.tex");
+  // The `\\[1em]` length must not leak as literal text anywhere.
+  assert!(
+    !x.contains("[1em]"),
+    "\\\\[1em] optional length leaked as text:\n{x}"
+  );
+  // The three authors are clean personnames.
+  assert!(
+    x.contains("<personname>Alice Smith")
+      && x.contains("<personname>Bob Jones")
+      && x.contains("<personname>Carol White"),
+    "IEEE lazy-block authors missing/unstructured:\n{x}"
+  );
+  // The affiliation lines stay affiliations, not comma-split into phantom authors.
+  assert!(
+    !x.contains("<personname>University of Pisa")
+      && !x.contains("<personname>Italy")
+      && !x.contains("<personname>University of Padua"),
+    "affiliation address commas mis-split into phantom authors:\n{x}"
+  );
+  // The affiliation content still survives (attached as affiliation contacts).
+  assert!(
+    x.contains("University of Pisa") && x.contains("University of Padua"),
+    "affiliation content dropped:\n{x}"
+  );
+  // The shared \texttt{} email line becomes its own email contact, shown once —
+  // not welded into an affiliation's text.
+  assert!(
+    x.contains("role=\"email\"") && x.contains("alice@unipi.it"),
+    "shared email line not routed to an email contact:\n{x}"
+  );
+  // The email must not be glued onto an affiliation's content (the pre-fix bug
+  // was `…Padua, Italy<text font=\"typewriter\">alice@…` inside role=affiliation).
+  assert!(
+    !x.contains("Italy<text"),
+    "email welded into affiliation text instead of its own contact:\n{x}"
+  );
+}
 /// Modern Interspeech.cls `\name[affiliation={1,*}]{First}{Last}` (2-arg): the
 /// author renders as "First Last"; the `[affiliation=…]` optarg must not leak a
 /// `[` creator or `\name`. Interspeech2024 resolves here by version-stripping.
