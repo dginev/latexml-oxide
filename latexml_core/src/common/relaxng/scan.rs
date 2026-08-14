@@ -79,29 +79,8 @@ pub fn scan_external(
   search_paths: &[&Path],
 ) -> Result<Vec<Pattern>, ScanError> {
   let parser = XmlParser::default();
-  let (path, xml_doc): (PathBuf, XmlDocument) = match find_file(name, search_paths) {
-    Some(p) => {
-      let doc = parser
-        .parse_file(p.to_str().unwrap_or(""))
-        .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
-      (p, doc)
-    },
-    None => {
-      // Strip the URN scheme the same way `find_file` does, so the
-      // embed-table key matches what `build.rs` recorded under
-      // `resources/RelaxNG/`.
-      let embed_key = match name.strip_prefix("urn:x-LaTeXML:RelaxNG:") {
-        Some(rest) => rest.replace(':', "/"),
-        None => name.to_string(),
-      };
-      let bytes = super::embedded::lookup(&embed_key)
-        .ok_or_else(|| ScanError::FileNotFound(name.to_string()))?;
-      let doc = parser
-        .parse_string(bytes)
-        .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
-      (PathBuf::from(&embed_key), doc)
-    },
-  };
+  // Disk-then-embedded resolution, shared with the `rng:include` handler (#538).
+  let (path, xml_doc): (PathBuf, XmlDocument) = resolve_schema_ref(&parser, name, search_paths)?;
   let root = xml_doc
     .get_root_readonly()
     .ok_or_else(|| ScanError::Parse("empty document".into()))?;
@@ -433,12 +412,10 @@ fn scan_grammar_item(
     "rng:include" => {
       let href = node.get_attribute("href").unwrap_or_default();
       let paths: Vec<&Path> = ctx.search_paths.clone();
-      // Find + parse the included file.
-      let path = find_file(&href, &paths).ok_or_else(|| ScanError::FileNotFound(href.clone()))?;
-      let parser = XmlParser::default();
-      let xml_doc = parser
-        .parse_file(path.to_str().unwrap_or(""))
-        .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
+      // Resolve disk-then-embedded, exactly as `scan_external` does — so a
+      // `urn:x-LaTeXML:RelaxNG:` include resolves from the embedded table when
+      // `resources/RelaxNG/` is not on disk (installed binary) (#538).
+      let (path, xml_doc) = resolve_schema_ref(&XmlParser::default(), &href, &paths)?;
       let inner_root = xml_doc
         .get_root_readonly()
         .ok_or_else(|| ScanError::Parse("empty include".into()))?;
@@ -622,11 +599,51 @@ fn strip_rng_ext(name: &str) -> String {
 /// separators into path separators so e.g.
 /// `urn:x-LaTeXML:RelaxNG:svg:svg11.rng` → `svg/svg11.rng` lookup.
 ///
-/// Disk-only — embedded schemas are handled at the [`scan_external`]
-/// level by consulting the [`super::embedded::lookup`] table when
-/// `find_file` returns `None`. Keeping this function disk-only means
-/// developer-tree edits and system-installed schemas continue to win
-/// over the bundled copies.
+/// Resolve a RelaxNG schema reference — a filename or a `urn:x-LaTeXML:RelaxNG:`
+/// URN — to a parsed document. Disk first (via [`find_file`]), then the embedded
+/// table ([`super::embedded::lookup`]). Mirrors Perl's `RelaxNG->new`
+/// (`Common/XML/RelaxNG.pm:28-51`), which BOTH `scanExternal` and the `rng:include`
+/// handler call — so an `<include>` and an `<externalRef>` resolve identically
+/// (#538; before, only `scan_external` consulted the embedded table). Perl
+/// appends `.rng` when absent (`RelaxNG.pm:33`); we do the same for the embedded
+/// key so `urn:x-LaTeXML:RelaxNG:LaTeXML` (no extension) resolves.
+///
+/// The URN is stripped to a bare relative path in Rust and the embedded lookup
+/// keys on that — a `urn:` is never handed to libxml2 for URI composition, so the
+/// resolution is identical on macOS and Linux (whose libxml2 differ there).
+fn resolve_schema_ref(
+  parser: &XmlParser,
+  name: &str,
+  search_paths: &[&Path],
+) -> Result<(PathBuf, XmlDocument), ScanError> {
+  if let Some(p) = find_file(name, search_paths) {
+    let doc = parser
+      .parse_file(p.to_str().unwrap_or(""))
+      .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
+    return Ok((p, doc));
+  }
+  // Not on disk — fall back to the embedded table. Strip the URN scheme the same
+  // way `find_file` does so the key matches what `build.rs` recorded under
+  // `resources/RelaxNG/`, and append `.rng` when absent (Perl `RelaxNG.pm:33`).
+  let mut embed_key = match name.strip_prefix("urn:x-LaTeXML:RelaxNG:") {
+    Some(rest) => rest.replace(':', "/"),
+    None => name.to_string(),
+  };
+  if !embed_key.ends_with(".rng") {
+    embed_key.push_str(".rng");
+  }
+  let bytes =
+    super::embedded::lookup(&embed_key).ok_or_else(|| ScanError::FileNotFound(name.to_string()))?;
+  let doc = parser
+    .parse_string(bytes)
+    .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
+  Ok((PathBuf::from(&embed_key), doc))
+}
+
+/// Disk-only — embedded schemas are handled by [`resolve_schema_ref`], which
+/// consults the [`super::embedded::lookup`] table when `find_file` returns
+/// `None`. Keeping this function disk-only means developer-tree edits and
+/// system-installed schemas continue to win over the bundled copies.
 fn find_file(name: &str, search_paths: &[&Path]) -> Option<PathBuf> {
   let bare = match name.strip_prefix("urn:x-LaTeXML:RelaxNG:") {
     Some(rest) => rest.replace(':', "/"),
@@ -717,6 +734,36 @@ mod tests {
       _ => unreachable!(),
     };
     assert!(matches_combination(&start_body[0], CombineOp::Choice));
+  }
+
+  /// #538: a `<include href="urn:x-LaTeXML:RelaxNG:…">` must resolve from the
+  /// embedded schema table when the file is not on disk (the installed-binary
+  /// path — `resources/RelaxNG/` is absent, and `scan_string` uses empty search
+  /// paths). Before the fix the `rng:include` arm used disk-only `find_file` and
+  /// failed `FileNotFound`, while `externalRef`/`scan_external` had the embedded
+  /// fallback — an asymmetry Perl doesn't have (both go through `RelaxNG->new`).
+  #[test]
+  fn rng_include_resolves_urn_via_embedded() {
+    // Extension form (as written in the bundled LaTeXML.rng).
+    let xml = r#"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0">
+        <include href="urn:x-LaTeXML:RelaxNG:LaTeXML-common.rng"/>
+      </grammar>
+    "#;
+    let mut rng = Relaxng::default();
+    scan_string(&mut rng, xml)
+      .expect("urn include (with .rng) should resolve from the embedded table");
+
+    // No-extension form (the issue title: `urn:x-LaTeXML:RelaxNG:LaTeXML`).
+    // Perl appends `.rng` (Common/XML/RelaxNG.pm:33), so this must resolve too.
+    let xml_noext = r#"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0">
+        <include href="urn:x-LaTeXML:RelaxNG:LaTeXML-common"/>
+      </grammar>
+    "#;
+    let mut rng2 = Relaxng::default();
+    scan_string(&mut rng2, xml_noext)
+      .expect("no-extension urn include should resolve (.rng appended)");
   }
 
   #[test]
