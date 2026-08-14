@@ -328,6 +328,47 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::stomach::raw_tex(text).map_err(rhai_err)
     },
   );
+  // Document-lifecycle hooks (Perl `Package.pm` `AtBeginDocument`/`AtEndDocument`,
+  // L2815/L2830). Each pushes a Tokens body onto the value-table list the engine
+  // digests at `\begin{document}`/`\end{document}` — mirroring the native macros
+  // in `latex_constructs.rs` (which `push_value` onto `@at@begin@document`/
+  // `@at@end@document`). Accept TeX source (via `TokenizeInternal`, so `@` is a
+  // letter as Perl's string path does) or a `Tokens` value (#539). The Perl
+  // CODE-ref form is not exposed; a script can `DefMacro` a CS and hook that.
+  // `AtEndOfPackage`/`AtEndOfClass`/`AtBeginDvi` are TeX-macro-level (`AddToMacro`
+  // / no-op), reachable via `RawTeX`.
+  engine.register_fn(
+    "AtBeginDocument",
+    |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value(
+        "@at@begin@document",
+        mouth::tokenize_internal(TeXString::assembled(text.to_string())),
+      )
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "AtBeginDocument",
+    |tokens: Tokens| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value("@at@begin@document", tokens).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "AtEndDocument",
+    |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value(
+        "@at@end@document",
+        mouth::tokenize_internal(TeXString::assembled(text.to_string())),
+      )
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "AtEndDocument",
+    |tokens: Tokens| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value("@at@end@document", tokens).map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "TeX",
     |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {

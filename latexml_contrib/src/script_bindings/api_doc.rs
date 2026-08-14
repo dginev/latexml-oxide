@@ -196,6 +196,20 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "AtBeginDocument",
+    Doc::Rust(
+      "Queue TeX source (or a Tokens value) to run at `\\begin{document}`.",
+      "latexml_core::state::push_value",
+    ),
+  ),
+  (
+    "AtEndDocument",
+    Doc::Rust(
+      "Queue TeX source (or a Tokens value) to run at `\\end{document}`.",
+      "latexml_core::state::push_value",
+    ),
+  ),
+  (
     "Command",
     Doc::Note(
       "Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`.",

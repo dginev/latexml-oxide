@@ -274,6 +274,44 @@ fn pushvalue_preserves_types() {
   assert_eq!(lookup_str("tvd:ok"), "ok", "a digested handle round-trips");
 }
 
+/// #539: LaTeX document hooks exposed to Rhai. `AtBeginDocument`/`AtEndDocument`
+/// push a Tokens body onto the `@at@begin@document`/`@at@end@document` value-table
+/// lists (Perl `Package.pm` L2815/L2830; native macro `latex_constructs.rs:3368`),
+/// which the engine digests at `\begin{document}`/`\end{document}`. Both a
+/// TeX-source string and a `Tokens` value are accepted.
+#[test]
+fn document_hooks_at_begin_end() {
+  use latexml_core::state;
+  fresh_state();
+  load_script(
+    r##"
+      AtBeginDocument("\\def\\hookbegin{B}");
+      AtBeginDocument(TokenizeInternal("\\relax"));  // Tokens overload
+      AtEndDocument("\\def\\hookend{E}");
+    "##,
+  )
+  .expect("document-hooks script should load cleanly");
+  // The hooks landed on the value-table keys the engine consumes at \begin/\end.
+  let begin = state::lookup_tokens("@at@begin@document")
+    .expect("@at@begin@document hook list exists")
+    .to_string();
+  assert!(
+    begin.contains("hookbegin"),
+    "AtBeginDocument pushed the string body, got: {begin}"
+  );
+  assert!(
+    begin.contains("relax"),
+    "AtBeginDocument Tokens overload pushed too, got: {begin}"
+  );
+  let end = state::lookup_tokens("@at@end@document")
+    .expect("@at@end@document hook list exists")
+    .to_string();
+  assert!(
+    end.contains("hookend"),
+    "AtEndDocument pushed the body, got: {end}"
+  );
+}
+
 /// Wave-B definition forms: DefRegister (count + dimen), DefConditional
 /// (Rhai test driven from real TeX), DefKeyVal, DefLigature, DefMath.
 #[test]

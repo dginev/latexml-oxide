@@ -15,6 +15,10 @@
     cycle. `PrependSearchPath`/`AppendSearchPath` add an input directory: the Rust
     port keeps `SEARCHPATHS` in a dedicated field, not the value table, so these
     reach file resolution where `PushValue` would not (#540).
+  - **Runtime Rhai bindings expose the document hooks.** `AtBeginDocument`/
+    `AtEndDocument` (TeX source or a `Tokens` body) queue work onto the
+    `@at@begin@document`/`@at@end@document` lists the engine runs at
+    `\begin{document}`/`\end{document}`, mirroring Perl `Package.pm` (#539).
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
