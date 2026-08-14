@@ -6,7 +6,7 @@
 //!
 //! Siblings, all sharing [`mod cluster`](cluster): `06_cluster_math`,
 //! `06_cluster_bibliography`, `06_cluster_frontmatter`,
-//! `06_cluster_toc_navigation`, `06_cluster_standalone_subfiles`.
+//! `cluster_xslt_split` (was `06_cluster_toc_navigation`), `06_cluster_standalone_subfiles`.
 
 mod cluster;
 use cluster::{

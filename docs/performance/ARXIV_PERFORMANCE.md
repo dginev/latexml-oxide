@@ -35,7 +35,7 @@ usable main `.tex`). Two output-neutral fixes did it:
   canonical loop-safe `def_autoload`. (Commit `3b5cd8651a`.)
 - **Hotspot #2 — Cluster B (14 papers, XSLT):** `f:seclev-aux` O(n²) heading-level
   computation (`//` descendant scans per heading). Memoized to global variables.
-  (Commit `1172569034`; regression guard `07_xslt_seclev_levels.rs`.)
+  (Commit `1172569034`; regression guard `cluster_xslt_split.rs`.)
 
 Net: the slowest-100 set went from "100 papers pinned at the timeout wall" to a
 0.7 s median. No test regressions (suite 1480/0 → +1 guard). The two slowest

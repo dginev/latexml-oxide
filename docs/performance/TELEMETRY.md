@@ -311,7 +311,7 @@ Pure stdlib + `gzip` + `json`. No pandas dep.
 
 ### Step 7 — regression tests
 
-**Landed as `latexml_oxide/tests/001_telemetry.rs`** (the two file names planned
+**Landed as `latexml_oxide/tests/cluster_cli.rs` (module `telemetry`)** (the two file names planned
 here were never created — this step is a design sketch, the tree is the truth):
 * `telemetry_populates_on_hello_conversion` — converts `tests/hello/hello.tex`
   in-process and asserts the `Digest` and `Build` phase totals are non-zero.
@@ -372,7 +372,7 @@ work continues on a single branch.
 | 4 | `latexml_oxide --telemetry-out=<path>` flag + helper. | Steps 4+5 commit | ✅ |
 | 5 | `latexml_core/build.rs` bakes `LATEXML_GIT_SHA`. | Steps 4+5 commit | ✅ |
 | 6 | `tools/perf_phase_summary.py` reads JSONL[.gz] OR a directory of cortex_worker output ZIPs. Reports per-phase share, top-5 by phase, sum-of-phase / wall distribution, ≥0.92 acceptance count. | Step 6 commit | ✅ |
-| 7 | `tests/001_telemetry.rs`: 2 integration tests (populate + JSON round-trip). | with Step 1 + 17-phase commit | ✅ |
+| 7 | `cluster_cli.rs` (module `telemetry`): 2 integration tests (populate + JSON round-trip). | with Step 1 + 17-phase commit | ✅ |
 | 8 | `tools/perf_compare.py` paired A/B comparator (Δwall, per-phase Δ%, regression list >15%, distribution). | Step 8 commit | ✅ |
 
 Smoke test on `0704.0023` (real arxiv paper): wall=1.35s, sum-of-

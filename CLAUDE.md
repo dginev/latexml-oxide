@@ -101,8 +101,8 @@ emulates and adapts.
 
 All active docs live in `docs/`, grouped into themed subdirectories that mirror the
 two mission targets. **[`docs/README.md`](docs/README.md)** is the single index: a
-multi-level TOC, then a **Per-file detail** section saying what each doc is for and
-when to read it. Read it when you need to find or place a doc.
+multi-level, themed table of contents saying what each doc is for and when to read
+it. Read it when you need to find or place a doc.
 
 **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) is the start-here worklist** for both
 targets (ranked rows R1…R9 — take the top unblocked one). Labels there have gone
@@ -117,7 +117,7 @@ squash-merges.
 - When an upstream Perl error is identified, record it. Fix in Rust if simple; otherwise keep as-is.
 - **Diagnostic-snapshot naming.** Docs capturing a point-in-time diagnostic — `*_TRIAGE`, `*_HOTSPOTS`, `*_AUDIT`, `*_ANALYSIS`, `*_BISECT` — **must carry a date in the filename** (`NAME_YYYY-MM-DD.md`), from their last commit, so a frozen study cannot masquerade as a live worklist. *Living* worklists are exempt even when the name reads like a diagnostic. When such a worklist's mission completes, date it, move it to `docs/archive/`, and lift any live residual into `SYNC_STATUS.md`.
 - **Record the conclusion, not the play-by-play.** State the defect, its cause, the fix, and the guard test names — not how it was found or what was tried on which day. Keep what is expensive to re-derive: witness arXiv ids, `file:line` into the Perl source, minimal trigger examples, named guards, identifiers a reader would otherwise grep for, measured figures with their basis, and settled dead-ends (one line each, so they are not re-attempted). Cut connective tissue, not identifiers.
-- Keep **[`docs/README.md`](docs/README.md)** current — both its TOC table and its **Per-file detail** section — when adding, renaming, merging, or archiving a doc.
+- Keep **[`docs/README.md`](docs/README.md)** current — its themed TOC tables — when adding, renaming, merging, or archiving a doc.
 
 ## Skills (`.claude/skills/`)
 
@@ -161,13 +161,21 @@ cargo build --no-default-features --features runtime-bindings --profile maxperf 
 
 **Important:** A compile-time plugin discovers test suite files. When adding a new `[name].tex` / `[name].xml` test pair, run `cargo clean` to force rediscovery.
 
-**Run the suite with `cargo nextest run --workspace`.** `cargo test` runs each of
-the ~122 test binaries to completion before starting the next, parallelising only
-*within* a binary, so its wall floor is the ~398 s sum of them. nextest schedules
-every test as its own process across all cores. Measured back-to-back, same 1835
-tests, both green: **8:48 → 1:27 (6.1×)**. Coverage is identical — nextest skips
-doctests and this workspace has none. `cargo test --workspace --tests
---no-fail-fast` remains valid and is still the way to read a per-binary tally.
+**Run the suite with `cargo nextest run --workspace`.** `cargo test` runs each
+test binary to completion before starting the next, parallelising only *within* a
+binary, so its wall floor is the sum of them (measured ~398 s across the former
+~122 binaries). nextest schedules every test as its own process across all cores;
+measured back-to-back, same ~1835 tests, both green: **8:48 → 1:27 (6.1×)**.
+Coverage is identical — nextest skips doctests and this workspace has none. `cargo
+test --workspace --tests --no-fail-fast` remains valid and is still the way to read
+a per-binary tally. **Test binaries are grouped by concern**: single/double-test
+files were consolidated 2026-08 into `cluster_*.rs` binaries (one link unit per
+subsystem — `cluster_cli`, `cluster_fontmap`, `cluster_xslt_split`,
+`cluster_package_guards`, `cluster_sizing`, `cluster_frontmatter_classes`, plus the
+existing `06_cluster_*`) to cut link steps. **Do NOT merge the fixture-sweep
+binaries** (`tex_tests!` harness stubs, `114_streaming_*`): each is a separate
+process on purpose — co-locating their many conversions in one `cargo test` process
+accretes unreclaimable libxml2 residue past the RSS fuse (see `streaming_sweep/mod.rs`).
 
 Gates: `cargo clippy --workspace --all-targets -- -D warnings` and `cargo doc
 --workspace` (rustdoc warnings are errors) are enforced by CI's `lint` job and the
