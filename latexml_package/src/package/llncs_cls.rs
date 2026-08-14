@@ -46,31 +46,48 @@ LoadDefinitions!({
   // into a single creator (witness 2606.19939: "Hiuyi Cheng \\ Dezhi Peng").
   DefMacro!("\\author{}",
     "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,\\\\}{#1}");
-  // Single \institute, with multiple institutions separated by \and.
-  // The n-th institution is attached to the author which has that n in its \inst labels.
+  // Single \institute, with multiple institutions separated by \and (Perl
+  // llncs.cls.ltxml L46-48). The n-th institution is attached to the author
+  // which has that n in its \inst labels.
   //
-  // Two shapes occur in the wild and need different splitting:
-  //  (a) Well-formed: institutions separated by \and, each possibly with an
-  //      internal "\\" line break between its name and its \email/\url
-  //      (witness 2605.16562). Here we MUST split on \and ONLY -- splitting on
-  //      "\\" too would break each institution into name + email as separate
-  //      affiliations and mis-align the labelseq with \inst{N}, scrambling which
-  //      author gets which affiliation/email. \email inside an affiliation
-  //      inherits that affiliation's label, so it attaches to the right authors.
-  //  (b) Lazy: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
+  // Perl splits on \and ONLY, and each piece is ONE affiliation
+  // (\lx@llncs@affiliation -> \lx@add@affiliation, singular, no further split).
+  // Three shapes occur in the wild:
+  //  (a) Well-formed \and-separated institutions, each possibly with an internal
+  //      "\\" break between its name and its \email/\url (witness 2605.16562).
+  //      Faithful \and-split; \email inside an affiliation inherits that
+  //      affiliation's label, so it attaches to the matching \inst{N} authors.
+  //  (b) Single institution, no \and, "\\"-separating the name from a SHARED
+  //      \email covering every author (witness 2608.11332, arXiv/html_feedback
+  //      #6881). This is Perl's plain case: it must stay ONE affiliation so the
+  //      trailing \email inherits its "affiliation:1" label and lands on all the
+  //      \inst{1} authors. Splitting the "\\" here (the pre-fix bug) put the
+  //      \email in its own "affiliation:2" contact that no author carries, so it
+  //      mislanded on a single creator and left an empty affiliation stub.
+  //  (c) Lazy: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
   //      (witness 2606.19939). Upstream makes a single affiliation = the whole
   //      block attached to every \inst{1} author (duplicating it) while \inst{2}+
   //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). The shared
   //      \lx@add@affiliations parser handles this: it splits on \quad/\qquad/\\
   //      and extracts each superscript as the affiliation label \inst{N} links to.
-  // So: branch on whether \and is present.
+  // So: clear, then \and-split (a)+(b) UNLESS there is no \and AND superscript
+  // markers are present (c) -- the only shape that needs the multi-parser.
   DefMacro!("\\institute{}",
-    "\\in@{\\and}{#1}\\ifin@\
-       \\lx@clear@frontmatter{ltx:contact}[role=affiliation]\
-       \\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}\
-     \\else\
-       \\lx@add@affiliations[labelseq={affiliation}]{#1}\
-     \\fi");
+    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\
+     \\lx@llncs@institute@dispatch{#1}");
+  DefMacro!("\\lx@llncs@institute@split{}", "\\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}");
+  DefMacro!("\\lx@llncs@institute@sup{}",   "\\lx@add@affiliations[labelseq={affiliation}]{#1}");
+  DefMacro!("\\lx@llncs@institute@dispatch{}", sub[(body)] {
+    let has_and = position_of(&body, &[T_CS!("\\and")]).is_some();
+    // Same markers \lx@add@affiliations keys its superscript-label branch on.
+    let has_sup = position_of(&body, &[T_SUPER!(), T_CS!("\\textsuperscript")]).is_some();
+    let target = if !has_and && has_sup {
+      T_CS!("\\lx@llncs@institute@sup")     // shape (c): lazy superscript-labeled block
+    } else {
+      T_CS!("\\lx@llncs@institute@split")   // shapes (a)+(b): \and-split, single stays one
+    };
+    Ok(Invocation!(target, vec![Some(body)]))
+  });
   DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
   DefMacro!("\\inst{}",                 "\\lx@request@frontmatter@annotation[affiliation]{#1}");
   // \orcidID should be used within each author in \author

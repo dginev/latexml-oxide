@@ -296,6 +296,102 @@ fn frontmatter_sn_jnl_shared_affil() {
   );
 }
 
+/// LNCS `llncs.cls`: several authors all bound to ONE `\institute` via
+/// `\inst{1}`, whose body is the shared affiliation line followed by a single
+/// shared `\email{\{a,b\}@host}` covering every author. Both the affiliation
+/// AND the email are `\lx@annotate@frontmatter` contacts that must attach to
+/// EACH creator carrying the `affiliation:1` label (the email inherits that
+/// label from the enclosing pending affiliation entry, Perl
+/// `Base_Utility.pool.ltxml` L498-500), not land on a single author. And the
+/// pending affiliation stub must not surface as an empty
+/// `<contact role="affiliation"/>`. arXiv/html_feedback#6881, witness 2608.11332.
+#[test]
+fn frontmatter_llncs_institute_shared_email() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_shared_email.tex");
+  assert!(
+    x.matches("<personname>").count() >= 2,
+    "llncs: expected 2 author personnames:\n{x}"
+  );
+  assert!(
+    x.contains("Alice Smith") && x.contains("Bob Jones"),
+    "llncs author names missing:\n{x}"
+  );
+  // The shared affiliation attaches to BOTH authors...
+  assert!(
+    x.matches(">Some University</contact>").count() >= 2,
+    "llncs shared affiliation did not attach to both authors:\n{x}"
+  );
+  // ...and so does the shared email...
+  assert!(
+    x.matches("role=\"email\"").count() >= 2,
+    "llncs shared email did not attach to both authors:\n{x}"
+  );
+  assert!(
+    x.matches(">{alice,bob}@univ.edu</contact>").count() >= 2,
+    "llncs shared email content missing on both authors:\n{x}"
+  );
+  // ...with no empty pending-stub affiliation leaking through.
+  assert!(
+    !x.contains("role=\"affiliation\"/>") && !x.contains("role=\"affiliation\"></contact>"),
+    "llncs pending affiliation stub leaked as an empty contact:\n{x}"
+  );
+}
+
+/// LNCS shape (a): well-formed `\and`-separated institutions, each with an
+/// internal `\\` break between its name and its own `\email`. Each author's
+/// `\inst{N}` binds it to the N-th institution; the per-institution email
+/// inherits that affiliation's label. Guards that the `\and`-split path stays
+/// faithful beside the single-institute fix. Witness 2605.16562.
+#[test]
+fn frontmatter_llncs_and_separated_institutes() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_and_institutes.tex");
+  assert!(
+    x.matches("<personname>").count() >= 2,
+    "llncs \\and: expected 2 author personnames:\n{x}"
+  );
+  assert!(
+    x.contains("University of Foo") && x.contains("Institute of Bar"),
+    "llncs \\and affiliations dropped:\n{x}"
+  );
+  // Each institution's email lands (one per author), so both addresses appear as
+  // structured emails and neither institution is split off the wrong author.
+  assert!(
+    x.matches("role=\"email\"").count() >= 2
+      && x.contains(">alice@foo.edu</contact>")
+      && x.contains(">bob@bar.edu</contact>"),
+    "llncs \\and per-institution emails not structured onto both authors:\n{x}"
+  );
+  assert!(
+    !x.contains("role=\"affiliation\"/>"),
+    "llncs \\and split leaked an empty affiliation stub:\n{x}"
+  );
+}
+
+/// LNCS shape (c): ONE block, no `\and`, hand-typed `$^N$` superscript labels
+/// with a `\quad` separator — the lazy multi-institution form the shared
+/// `\lx@add@affiliations` parser splits by superscript (a beyond-Perl
+/// improvement; upstream dumps the whole block on the first author only). The
+/// superscript-presence dispatch must still route here, NOT to the single-
+/// affiliation path. Witness 2606.19939.
+#[test]
+fn frontmatter_llncs_lazy_superscript_institutes() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_lazy_superscripts.tex");
+  assert!(
+    x.matches("<personname>").count() >= 2,
+    "llncs lazy: expected 2 author personnames:\n{x}"
+  );
+  // Both institutions survive as affiliation content (the block was split, not
+  // collapsed into one creator or dropped).
+  assert!(
+    x.contains("University of Foo") && x.contains("Institute of Bar"),
+    "llncs lazy superscript institutions dropped:\n{x}"
+  );
+  assert!(
+    x.contains("role=\"affiliation\""),
+    "llncs lazy affiliations are not structured contacts:\n{x}"
+  );
+}
+
 /// `sn-jnl.cls` with **numbered** `\author[N]` / `\affil[N]`: both affiliations
 /// render as structured `<contact role="affiliation">` (matched to authors by
 /// the id label), not orphaned notes. Guards the general numbered form beside
