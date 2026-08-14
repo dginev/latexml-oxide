@@ -167,6 +167,39 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("AssignValue", |k: &str, v: &str, scope: &str| {
     latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
   });
+  // Typed `Assign*` counterparts to the typed `Lookup*` readers below (#543).
+  // Before these, a binding could only ever assign a *string*, so a value
+  // written from a script was invisible to `LookupNumber`/`LookupBool`/
+  // `LookupFloat`. Each stores the matching `Stored` variant explicitly — in
+  // particular `AssignFloat` builds a `Float` (keeping the fraction) rather than
+  // an integer `Number`, which a bare `f64 -> Stored` would floor. 2-arg = TeX
+  // default scope (as `AssignValue`), 3-arg takes "local"/"global".
+  engine.register_fn("AssignNumber", |k: &str, v: i64| {
+    latexml_core::state::assign_value(k, Number(v), None);
+  });
+  engine.register_fn("AssignNumber", |k: &str, v: i64, scope: &str| {
+    latexml_core::state::assign_value(k, Number(v), scope_of(scope));
+  });
+  engine.register_fn("AssignFloat", |k: &str, v: f64| {
+    latexml_core::state::assign_value(k, Float(v), None);
+  });
+  engine.register_fn("AssignFloat", |k: &str, v: f64, scope: &str| {
+    latexml_core::state::assign_value(k, Float(v), scope_of(scope));
+  });
+  engine.register_fn("AssignBool", |k: &str, v: bool| {
+    latexml_core::state::assign_value(k, v, None);
+  });
+  engine.register_fn("AssignBool", |k: &str, v: bool, scope: &str| {
+    latexml_core::state::assign_value(k, v, scope_of(scope));
+  });
+  // Explicit string counterpart to `LookupString` (equivalent to `AssignValue`,
+  // named for a symmetric typed family).
+  engine.register_fn("AssignString", |k: &str, v: &str| {
+    latexml_core::state::assign_value(k, v.to_string(), None);
+  });
+  engine.register_fn("AssignString", |k: &str, v: &str, scope: &str| {
+    latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
+  });
   engine.register_fn("LookupString", |k: &str| -> String {
     latexml_core::state::lookup_string(k)
   });
@@ -195,6 +228,13 @@ pub(super) fn make_engine() -> Engine {
     latexml_core::state::lookup_number(k)
       .map(|n| n.0)
       .unwrap_or(0)
+  });
+  // The fractional reader `LookupNumber` can't be — a value assigned with
+  // `AssignFloat` (e.g. NOMINAL_FONT_SIZE = 10.95) reads back whole (#542/#543).
+  engine.register_fn("LookupFloat", |k: &str| -> f64 {
+    latexml_core::state::lookup_float(k)
+      .map(|f| f.0)
+      .unwrap_or(0.0)
   });
   engine.register_fn("LookupBool", |k: &str| -> bool {
     latexml_core::state::lookup_bool(k)

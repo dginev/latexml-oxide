@@ -35,14 +35,18 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-88 functions, 115 calls.
+93 functions, 124 calls.
 
 | call | documentation |
 |---|---|
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
+| `AssignBool(string, bool)`<br>`AssignBool(string, bool, string)` | Bind a key to a boolean value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignCatcode(string, int)` | Set a character's category code. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
+| `AssignFloat(string, float)`<br>`AssignFloat(string, float, string)` | Bind a key to a fractional (float) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignMapping(string, string, string)` | Bind one key inside a named mapping. ([`assign_mapping`](latexml_core::state::assign_mapping)) |
 | `AssignMeaning(string, string)` | Make a control sequence mean a definition, or another token. ([`assign_meaning`](latexml_core::state::assign_meaning)) |
+| `AssignNumber(string, int)`<br>`AssignNumber(string, int, string)` | Bind a key to an integer (Number) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
+| `AssignString(string, string)`<br>`AssignString(string, string, string)` | Bind a key to a string value, with a scope (the typed twin of `AssignValue`). ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignValue(string, string)`<br>`AssignValue(string, string, string)` | Bind a key in the value table, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `Command(string) -> Command` | Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`. |
 | `CounterValue(string) -> int` | The current value of a counter. ([`counter_value`](latexml_core::binding::counter::dialect::counter_value)) |
@@ -79,6 +83,7 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupBool(string) -> bool` | Read a value as a boolean. ([`lookup_bool`](latexml_core::state::lookup_bool)) |
 | `LookupCatcode(string) -> int` | The category code currently in force for a character. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
 | `LookupDefinition(string) -> Definition?` | Fetch an installed definition so hooks can be pushed onto it; `()` when undefined. |
+| `LookupFloat(string) -> float` | Read a value as a fractional (float) number, keeping the fraction `LookupNumber` would truncate. ([`lookup_float`](latexml_core::state::lookup_float)) |
 | `LookupMapping(string, string) -> string` | Read one key out of a named mapping. ([`with_mapping`](latexml_core::state::with_mapping)) |
 | `LookupMeaning(string) -> string` | What a token means right now: its definition, or itself. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
 | `LookupNumber(string) -> int` | Read a value as a number. ([`lookup_number`](latexml_core::state::lookup_number)) |

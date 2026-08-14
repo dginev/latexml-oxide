@@ -133,10 +133,24 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "AssignBool",
+    Doc::Rust(
+      "Bind a key to a boolean value, with a scope.",
+      "latexml_core::state::assign_value",
+    ),
+  ),
+  (
     "AssignCatcode",
     Doc::Rust(
       "Set a character's category code.",
       "latexml_core::state::assign_catcode",
+    ),
+  ),
+  (
+    "AssignFloat",
+    Doc::Rust(
+      "Bind a key to a fractional (float) value, with a scope.",
+      "latexml_core::state::assign_value",
     ),
   ),
   (
@@ -151,6 +165,20 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "Make a control sequence mean a definition, or another token.",
       "latexml_core::state::assign_meaning",
+    ),
+  ),
+  (
+    "AssignNumber",
+    Doc::Rust(
+      "Bind a key to an integer (Number) value, with a scope.",
+      "latexml_core::state::assign_value",
+    ),
+  ),
+  (
+    "AssignString",
+    Doc::Rust(
+      "Bind a key to a string value, with a scope (the typed twin of `AssignValue`).",
+      "latexml_core::state::assign_value",
     ),
   ),
   (
@@ -367,6 +395,13 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "LookupDefinition",
     Doc::Note("Fetch an installed definition so hooks can be pushed onto it; `()` when undefined."),
+  ),
+  (
+    "LookupFloat",
+    Doc::Rust(
+      "Read a value as a fractional (float) number, keeping the fraction `LookupNumber` would truncate.",
+      "latexml_core::state::lookup_float",
+    ),
   ),
   (
     "LookupMapping",
@@ -1305,6 +1340,7 @@ fn simplify_type(raw: &str) -> String {
     "alloc::string::String" => "string".into(),
     "alloc::vec::Vec<rhai::types::dynamic::Dynamic>" => "array".into(),
     "i64" => "int".into(),
+    "f64" => "float".into(),
     "rhai::types::dynamic::Dynamic" | "types::dynamic::Dynamic" => "?".into(),
     _ => {
       // A BTreeMap<SmartString, Dynamic> is Rhai's `map`; the rest just lose
