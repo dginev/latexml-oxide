@@ -903,6 +903,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "insertPI",
+    Doc::Rust(
+      "Insert a processing instruction: a target, with optional attributes.",
+      "latexml_core::document::Document::insert_pi",
+    ),
+  ),
+  (
     "insertXML",
     Doc::Rust(
       "Splice ALREADY-PARSED nodes in at the insertion point.",

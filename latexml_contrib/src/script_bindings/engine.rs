@@ -1402,6 +1402,27 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // insertPI (Perl `insertPI`, Document.pm:703) — insert a `<?op attr=".."?>`
+  // processing instruction: a bare target, or a target + attribute map (#537).
+  engine.register_fn(
+    "insertPI",
+    |_d: &mut DocProxy, op: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        doc.insert_pi(op, None).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
+  engine.register_fn(
+    "insertPI",
+    |_d: &mut DocProxy, op: &str, attrib: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      let attrib = attribute_map(attrib);
+      with_doc(|doc, _props| {
+        doc.insert_pi(op, Some(attrib)).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
 
   // openElementAt/closeElementAt (Perl Document.pm:1830-1884) — build at an
   // explicit node instead of the current insertion point.
