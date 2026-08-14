@@ -22,6 +22,11 @@
   - **The `document` handle gains `insertPI`.** A `.rhai` constructor body can
     emit a processing instruction (a target, with optional attribute map) under
     the Perl name `$document->insertPI` (#537).
+  - **`NOMINAL_FONT_SIZE` is read and stored as a float, not truncated to an
+    integer.** The default-font-size reader preserves a fractional value (e.g. the
+    `11pt` class option's `10.95`), matching Perl's `DEFSIZE`, and the default is
+    now stored as a float so the assign type matches the lookup — a value assigned
+    for `11pt` round-trips instead of flooring to 10 (#542).
 
 ## [0.7.5] (Rhai binding API; bibliography content recovery; wider math coverage; large-document memory; default-CSS sync; ar5iv corpus fixes)
 
