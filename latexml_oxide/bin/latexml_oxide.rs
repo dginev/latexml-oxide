@@ -474,18 +474,73 @@ fn chosen_by_clap(pos: bool, neg: bool) -> Option<bool> {
   pos.then_some(true).or(neg.then_some(false))
 }
 
-/// Decide whether output splitting is enabled, faithful to Perl
-/// `Common/Config.pm` L124-130.
+/// The `--opt`/`--noopt` flag pairs resolved once from the raw [`Cli`], mirroring
+/// Perl `Common/Config.pm`'s `_prepare_options` (L369): every pair is collapsed to
+/// its rightmost-wins value (via [`chosen_by_clap`]) and its static default applied
+/// here, in **one place**, instead of re-deciding at each construction site.
 ///
-/// `split!` is last-wins (via [`chosen_by_clap`]). The value options
-/// `--splitat`/`--splitpath`/`--splitnaming` each do `split = 1 unless defined
-/// split`, i.e. they turn splitting on **only when neither `--split` nor
-/// `--nosplit` ever appeared** — a split! always overwrites, a split* never
-/// overwrites a decided value. So the only order that matters is among the
-/// split! pair (which clap resolves); a split* merely supplies the default.
-fn resolve_split(cli: &Cli) -> bool {
-  chosen_by_clap(cli.split, cli.nosplit)
-    .unwrap_or(cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some())
+/// Two options — `post` and `pmml` — carry a *format-dependent* default (post is
+/// implied by an HTML destination/requested reps; pmml is defaulted on by the
+/// format), so this keeps only the user's explicit tri-state choice for them and
+/// leaves the default to be applied where the output format is known — exactly as
+/// Perl resolves `format` first, then the post-format defaults, within the same
+/// `_prepare_options`. Every other pair has a static default and is fully resolved.
+struct ResolvedOptions {
+  /// Core tri-states (`None` ⇒ leave the engine/state default untouched).
+  include_comments:   Option<bool>,
+  nomathparse:        Option<bool>,
+  number_sections:    Option<bool>,
+  /// Whether output splitting is enabled (Perl `split!` + `split*`-implies rule).
+  split_enabled:      bool,
+  /// User's explicit `--post`/`--nopost` choice; format-dependent default applied
+  /// at the post-processing site.
+  post:               Option<bool>,
+  /// User's explicit `--pmml`/`--nopmml` choice; format-dependent default applied
+  /// at the post-processing site.
+  pmml:               Option<bool>,
+  /// Post reps/flags with static defaults, fully resolved.
+  cmml:               bool,
+  keep_xmath:         bool,
+  mathtex:            bool,
+  noinvisibletimes:   bool,
+  plane1:             bool,
+  nodefaultresources: bool,
+  graphicimages:      bool,
+}
+
+impl ResolvedOptions {
+  /// Resolve all `--opt`/`--noopt` pairs from the parsed [`Cli`] — the single
+  /// `_prepare_options`-shaped step. The `chosen_by_clap` folds live only here.
+  fn from_cli(cli: &Cli) -> Self {
+    ResolvedOptions {
+      // Perl Core.pm L45 `comments!`; `noparse`/`parse` (mathparse); `numbersections!`
+      // (default on). `None` leaves the setting unset (Rust comments default OFF —
+      // OXIDIZED_DESIGN #2).
+      include_comments:   chosen_by_clap(cli.comments, cli.nocomments),
+      nomathparse:        chosen_by_clap(cli.nomathparse, cli.mathparse),
+      number_sections:    chosen_by_clap(cli.numbersections, cli.nonumbersections),
+      // Perl `Common/Config.pm` L124-130: `split!` is last-wins; the value options
+      // `--splitat`/`--splitpath`/`--splitnaming` do `split = 1 unless defined split`,
+      // i.e. they enable splitting ONLY when neither `--split` nor `--nosplit`
+      // decided it (a split! always overwrites; a split* never overwrites a decided
+      // value, so only the split! pair's order — which clap resolves — matters).
+      split_enabled:      chosen_by_clap(cli.split, cli.nosplit)
+        .unwrap_or(cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some()),
+      post:               chosen_by_clap(cli.post, cli.nopost),
+      pmml:               chosen_by_clap(cli.pmml, cli.nopmml),
+      cmml:               chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
+      keep_xmath:         chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
+      mathtex:            chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
+      noinvisibletimes:   chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
+      // Perl `MathML.pm` L70: `--hackplane1` forces plane1 on; otherwise the
+      // pair is last-wins over a default-on.
+      plane1:             cli.hackplane1
+        || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
+      nodefaultresources: chosen_by_clap(cli.nodefaultresources, cli.defaultresources)
+        .unwrap_or(false),
+      graphicimages:      chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
+    }
+  }
 }
 
 /// Resolve the `--max-memory` ceiling in MiB.
@@ -706,6 +761,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // `max(REPORT, phase codes)`, exactly as cortex_worker does.
   let mut phase_status_max: usize = 0;
   let cli = Cli::parse();
+  // Perl `_prepare_options`: collapse every `--opt`/`--noopt` pair to its
+  // rightmost-wins value once, up front. The rest of `real_main` reads `resolved`
+  // rather than re-deciding at each site.
+  let resolved = ResolvedOptions::from_cli(&cli);
 
   // Kick off kpathsea pre-init in a background thread. Force-runs
   // `kpathsea_init_db` + per-format `kpathsea_init_format` so the
@@ -965,16 +1024,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     preload,
     search_paths,
-    // Perl Core.pm L45: INCLUDE_COMMENTS (`comments!`, last-wins). Left unset
-    // when neither is given so the Rust default (OFF — OXIDIZED_DESIGN #2) holds.
-    include_comments: chosen_by_clap(cli.comments, cli.nocomments),
+    // Perl Core.pm L45 INCLUDE_COMMENTS / L63-65 mathparse — resolved once in
+    // `ResolvedOptions`. `None` leaves the setting unset (Rust comments default
+    // OFF — OXIDIZED_DESIGN #2).
+    include_comments: resolved.include_comments,
     // Perl Core.pm L43: STRICT; L55-57: INCLUDE_STYLES/INCLUDE_CLASSES.
     strict: if cli.strict { Some(true) } else { None },
     include_styles: if cli.includestyles { Some(true) } else { None },
-    // Perl `noparse`/`parse` (mathparse), last-wins. `Some(true)` disables
-    // math parsing, `Some(false)` explicitly enables it (the default), `None`
-    // leaves it unset.
-    nomathparse: chosen_by_clap(cli.nomathparse, cli.mathparse),
+    nomathparse: resolved.nomathparse,
     // `--source-map` flag OR `LATEXML_SOURCE_MAP` env enables locator
     // tracking + emission; otherwise leave unset (off). The env reads
     // once here, off the hot path. See `docs/performance/SOURCE_PROVENANCE.md`.
@@ -1033,7 +1090,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Perl `numbersections!` (default on), last-wins between the pair. `Some(true)`
   // ⇒ number sections (no_number_sections=false); `Some(false)` ⇒ suppress them;
   // `None` leaves the setting untouched.
-  if let Some(number_sections) = chosen_by_clap(cli.numbersections, cli.nonumbersections) {
+  if let Some(number_sections) = resolved.number_sections {
     latexml_core::state::assign_value(
       "no_number_sections",
       !number_sections,
@@ -1192,14 +1249,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // Matches the always-on post-processing behaviour of the now-
       // retired `latexmlpost_oxide` binary.
       let xml_input_mode = is_xml_input(&source_for_post);
-      // Build split XPath from --splitat, faithful to Perl `split!` last-wins +
-      // "split* implies split unless already decided" (see `resolve_split`).
-      let split_enabled = resolve_split(&cli);
-      // `--post`/`--nopost` (Perl `post!`) is last-wins; when neither is given,
-      // post-processing is implied by the requested representations/format.
-      let do_post = chosen_by_clap(cli.post, cli.nopost).unwrap_or(
-        cli.pmml
-          || cli.cmml
+      let split_enabled = resolved.split_enabled;
+      // Perl `post!` is last-wins (resolved in `ResolvedOptions`); its
+      // format-dependent default — post is implied by requested reps / an
+      // HTML-ish destination — is applied here, where the format is known.
+      let do_post = resolved.post.unwrap_or(
+        resolved.pmml.unwrap_or(false)
+          || resolved.cmml
           || effective_stylesheet.is_some()
           || is_html_format
           || split_enabled
@@ -1286,17 +1342,17 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // latexmlpost_oxide's default was "if no --pmml AND no
         // --stylesheet, default pmml = true". Apply the same rule for
         // XML-input mode so `latexml_oxide foo.xml --dest out.html`
-        // does something useful out of the box.
-        let default_pmml_for_xml_input =
-          xml_input_mode && !cli.pmml && effective_stylesheet.is_none();
+        // does something useful out of the box. (`resolved.pmml` is `None` here
+        // — else this default branch is not taken — so no `!cli.pmml` guard.)
+        let default_pmml_for_xml_input = xml_input_mode && effective_stylesheet.is_none();
         let post_opts = PostOptions {
-          // The `--pmml`/`--nopmml` pair (Perl add/removeMathFormat) is
-          // last-wins; when neither is given, a rep may be defaulted on by the
-          // format.
-          pmml: chosen_by_clap(cli.pmml, cli.nopmml)
-            .unwrap_or(cli.post || is_html_format || default_pmml_for_xml_input),
-          cmml: chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
-          keep_xmath: chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
+          // `--pmml`/`--nopmml` is last-wins (resolved in `ResolvedOptions`); when
+          // neither is given, a rep may be defaulted on by the format/--post.
+          pmml: resolved.pmml.unwrap_or(
+            resolved.post.unwrap_or(false) || is_html_format || default_pmml_for_xml_input,
+          ),
+          cmml: resolved.cmml,
+          keep_xmath: resolved.keep_xmath,
           stylesheet: effective_stylesheet.as_deref(),
           destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
@@ -1304,16 +1360,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           // destination's directory (document.rs / Perl Config.pm L466-469).
           site_directory: cli.sitedirectory.as_deref(),
           search_paths: &cli.search_paths,
-          nodefaultresources: chosen_by_clap(cli.nodefaultresources, cli.defaultresources)
-            .unwrap_or(false),
+          nodefaultresources: resolved.nodefaultresources,
           css_files: &cli.css_files,
           js_files: &cli.js_files,
-          noinvisibletimes: chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes)
-            .unwrap_or(false),
-          mathtex: chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
-          // Perl `preprocess` L70-71: plane1 defaults ON, and --hackplane1
-          // implies it. `--plane1`/`--noplane1` is otherwise last-wins.
-          plane1: cli.hackplane1 || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
+          noinvisibletimes: resolved.noinvisibletimes,
+          mathtex: resolved.mathtex,
+          plane1: resolved.plane1,
           hackplane1: cli.hackplane1,
           navigationtoc: cli.navigationtoc.as_deref(),
           schemadocs: cli.schemadocs,
@@ -1322,7 +1374,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           split_naming: cli.splitnaming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
-          graphicimages: chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
+          graphicimages: resolved.graphicimages,
           // Perl `if ($timestamp)`: "0" (and empty) means "omit the timestamp".
           timestamp: cli
             .timestamp
@@ -1826,6 +1878,9 @@ mod boolean_flag_last_wins_tests {
     Cli::parse_from(argv)
   }
 
+  /// Resolved `split_enabled` for a flag list — exercises the real resolution path.
+  fn split_on(flags: &[&str]) -> bool { ResolvedOptions::from_cli(&cli(flags)).split_enabled }
+
   #[test]
   fn chosen_by_clap_reads_back_the_resolved_pair() {
     assert_eq!(chosen_by_clap(true, false), Some(true));
@@ -1837,11 +1892,11 @@ mod boolean_flag_last_wins_tests {
   /// earlier one, in either order and repeatedly — clap keeps only the last.
   #[test]
   fn split_pair_is_last_wins() {
-    assert!(!resolve_split(&cli(&["--split", "--nosplit"])));
-    assert!(resolve_split(&cli(&["--nosplit", "--split"])));
+    assert!(!split_on(&["--split", "--nosplit"]));
+    assert!(split_on(&["--nosplit", "--split"]));
     // Appending once more flips it again — "global flags + file-specific flags".
-    assert!(!resolve_split(&cli(&["--nosplit", "--split", "--nosplit"])));
-    assert!(resolve_split(&cli(&["--split", "--nosplit", "--split"])));
+    assert!(!split_on(&["--nosplit", "--split", "--nosplit"]));
+    assert!(split_on(&["--split", "--nosplit", "--split"]));
   }
 
   /// Perl `Common/Config.pm` L124-130: a `--split*` value option turns splitting
@@ -1849,16 +1904,16 @@ mod boolean_flag_last_wins_tests {
   #[test]
   fn split_value_options_imply_split_only_when_undecided() {
     // Undecided: any split* enables splitting.
-    assert!(resolve_split(&cli(&["--splitat", "section"])));
-    assert!(resolve_split(&cli(&["--splitpath", "//ltx:section"])));
-    assert!(resolve_split(&cli(&["--splitnaming", "id"])));
+    assert!(split_on(&["--splitat", "section"]));
+    assert!(split_on(&["--splitpath", "//ltx:section"]));
+    assert!(split_on(&["--splitnaming", "id"]));
     // An explicit --nosplit decides it; split* cannot re-enable, either order.
-    assert!(!resolve_split(&cli(&["--nosplit", "--splitat", "section"])));
-    assert!(!resolve_split(&cli(&["--splitat", "section", "--nosplit"])));
+    assert!(!split_on(&["--nosplit", "--splitat", "section"]));
+    assert!(!split_on(&["--splitat", "section", "--nosplit"]));
     // An explicit --split stays on.
-    assert!(resolve_split(&cli(&["--split", "--splitat", "section"])));
+    assert!(split_on(&["--split", "--splitat", "section"]));
     // Neither split! nor split*: off.
-    assert!(!resolve_split(&cli(&[])));
+    assert!(!split_on(&[]));
   }
 
   /// Every negatable pair resolves to its rightmost occurrence. Guards each
@@ -1925,5 +1980,40 @@ mod boolean_flag_last_wins_tests {
       chosen_by_clap(c.graphicimages, c.nographicimages),
       Some(true)
     );
+  }
+
+  /// The single `_prepare_options`-shaped resolve folds the whole `Cli` at once:
+  /// static defaults for untouched pairs, rightmost-wins for the given ones.
+  #[test]
+  fn resolved_options_applies_defaults_and_last_wins() {
+    // No flags: default-on options on, default-off off, tri-states unset.
+    let r = ResolvedOptions::from_cli(&cli(&[]));
+    assert!(r.plane1, "plane1 defaults ON");
+    assert!(r.graphicimages, "graphicimages defaults ON");
+    assert!(!r.cmml);
+    assert!(!r.keep_xmath);
+    assert!(!r.mathtex);
+    assert!(!r.noinvisibletimes);
+    assert!(!r.nodefaultresources);
+    assert!(!r.split_enabled);
+    assert_eq!(r.post, None);
+    assert_eq!(r.pmml, None);
+    assert_eq!(r.include_comments, None);
+    assert_eq!(r.nomathparse, None);
+    assert_eq!(r.number_sections, None);
+
+    // Rightmost-wins flows through the resolve step.
+    assert!(
+      ResolvedOptions::from_cli(&cli(&["--nographicimages", "--graphicimages"])).graphicimages
+    );
+    assert!(!ResolvedOptions::from_cli(&cli(&["--plane1", "--noplane1"])).plane1);
+    assert_eq!(
+      ResolvedOptions::from_cli(&cli(&["--pmml", "--nopmml"])).pmml,
+      Some(false)
+    );
+    assert!(ResolvedOptions::from_cli(&cli(&["--nosplit", "--split"])).split_enabled);
+
+    // --hackplane1 forces plane1 on even against a later --noplane1 (Perl MathML.pm L70).
+    assert!(ResolvedOptions::from_cli(&cli(&["--noplane1", "--hackplane1"])).plane1);
   }
 }
