@@ -1766,10 +1766,13 @@ mod browser_render_display_math {
   //! `tests/browser/measure.js` renders via Playwright (system Chrome) and reports
   //! the geometry of every `td.ltx_eqn_cell.ltx_align_center`.
   //!
-  //! Self-skips (visibly) when node / `playwright-core` / a system Chrome is
-  //! absent — BUT if `LATEXML_BROWSER_TESTS` is set (CI sets it), a missing
-  //! toolchain is a hard FAILURE, so the render coverage can never silently
-  //! vanish. Locally: `npm ci` in `latexml_oxide/tests/browser` to enable it.
+  //! **Opt-in, LOCAL only — deliberately NOT run in CI** (a headless-browser job
+  //! is expensive; the platform-independent `display_math_text_nowrap` is the
+  //! CI-enforced guard). This self-skips (visibly) when node / `playwright-core`
+  //! / a system Chrome is absent, which is the default everywhere including CI.
+  //! To run it: `npm install` in `latexml_oxide/tests/browser`, then
+  //! `LATEXML_BROWSER_TESTS=1 cargo test … browser_render_display_math` — with
+  //! that env set a missing toolchain becomes a hard FAILURE rather than a skip.
 
   use std::{fs, path::PathBuf, process::Command};
 

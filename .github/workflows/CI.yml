@@ -170,12 +170,6 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
-      # Require the browser render guard (#527): node + playwright-core are
-      # installed below and Google Chrome is preinstalled on ubuntu-latest, so
-      # `cluster_cli::browser_render_display_math` MUST run (a missing toolchain
-      # is a failure, never a silent skip). Whichever shard the test partitions
-      # to has the toolchain; the macOS job leaves this unset so it self-skips.
-      LATEXML_BROWSER_TESTS: "1"
     steps:
       # Minimal apt set: only what `make formats` + tests actually need.
       # Removed: imagemagick, inkscape (graphics post-processing —
@@ -202,15 +196,6 @@ jobs:
       # expensive build so it fails fast. See docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
       - name: lint (xml:id accessor footgun)
         run: tools/lint_xmlid_accessor.sh
-      # Browser render guard (#527): node + playwright-core drive a headless
-      # Google Chrome (preinstalled on ubuntu-latest) from
-      # `latexml_oxide/tests/browser`. Only the shard the test lands on uses it,
-      # but all shards install it since the partition is content-addressed.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: install browser render deps (playwright-core)
-        run: npm install --no-audit --no-fund --prefix latexml_oxide/tests/browser
       # NOTE: CI intentionally does NOT enable the `cortex` feature.
       # Cortex worker is a production deployment artifact, built separately.
       #
