@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="-x" text="- x" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="minus" role="ADDOP">-</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="a-b" text="a - b" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="minus" role="ADDOP">-</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="a=-b" text="a = - b" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="a=+b" text="a = + b" xml:id="p1.m4">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="a\leq-b" text="a &lt;= - b" xml:id="p1.m5">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math></p>
+    <equationgroup class="ltx_eqn_align" xml:id="S0.EGx1">
+      <equation xml:id="S0.Ex1">
+        <MathFork>
+          <Math tex="\displaystyle x=-x" text="x = - x" xml:id="S0.Ex1.m3">
+            <XMath>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMath>
+          </Math>
+          <MathBranch>
+            <td align="right"><Math mode="inline" tex="\displaystyle x" text="x" xml:id="S0.Ex1.m1">
+                <XMath>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMath>
+              </Math></td>
+            <td align="left"><Math mode="inline" tex="\displaystyle=-x" text="absent = - x" xml:id="S0.Ex1.m2">
+                <XMath>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMath>
+              </Math></td>
+          </MathBranch>
+        </MathFork>
+      </equation>
+      <equation xml:id="S0.Ex2">
+        <MathFork>
+          <Math tex="\displaystyle y=x" text="y = x" xml:id="S0.Ex2.m3">
+            <XMath>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMath>
+          </Math>
+          <MathBranch>
+            <td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.Ex2.m1">
+                <XMath>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMath>
+              </Math></td>
+            <td align="left"><Math mode="inline" tex="\displaystyle=x" text="absent = x" xml:id="S0.Ex2.m2">
+                <XMath>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMath>
+              </Math></td>
+          </MathBranch>
+        </MathFork>
+      </equation>
+    </equationgroup>
+  </para>
+</document>

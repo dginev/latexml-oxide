@@ -123,6 +123,33 @@ fn simplemath_post_test() {
 }
 
 #[test]
+fn unaryminus_post_test() {
+  // Issue #535, the POST-PROCESSING layer (presentation MathML + spacewalk). A
+  // unary operator after a relation must keep the medium space to the RIGHT of
+  // the relation. The prefix `−`/`+` was rendered with INFIX ADDOP dictionary
+  // spacing (lspace 0.278em) instead of PREFIX (lspace 0); the spacewalk then
+  // saw two adjacent operators wanting no TeX space between them (Rel→Bin = 0)
+  // but 0.556em of dictionary spacing, and zeroed BOTH the relation's rspace and
+  // the operator's lspace — collapsing the gap. Perl `pmml_infix` (MathML.pm
+  // L632-635) renders a single-argument infix operator via
+  // `pmml_mo($op, role => 'OPERATOR')`, selecting the PREFIX entry (lspace 0) and
+  // recording no `_role`, so the golden's operators carry no spacing overrides —
+  // byte-identical to same-host Perl (verified on all four non-absent cases).
+  //
+  // The fixture spans the behavior band so a regression surfaces here, at the
+  // presentation layer, distinct from the front-half guard `40_math::unary_minus`
+  // (core-XMath arity/roles) and the dictionary-contract unit test
+  // `operator_dictionary::tests::prefix_role_zeroes_left_spacing_that_infix_role_keeps`:
+  //   - `a=-b`  unary minus after `=`  → nested `<mrow><mo>−</mo>…` (prefix, 0 space)
+  //   - `a-b`   BINARY minus           → flat `<mi>a</mi><mo>−</mo><mi>b</mi>` (infix,
+  //             MED via position) — proves the fix does NOT over-apply to binaries
+  //   - `a=+b`  unary PLUS after `=`   → generality beyond minus
+  //   - `a≤-b`  unary minus after `≤`  → generality beyond `=`
+  //   - `=-x`   absent LHS continuation (the `align`/`&=` row shape)
+  post_test("unaryminus", 0);
+}
+
+#[test]
 fn opdecoration_post_test() {
   // FUNCTION APPLICATION (⁡) over-insertion: an operator whose presentation is an
   // <m:mo> (∇, ∂, ∑, ∫, …) must juxtapose its argument (∇ϕ, ∂f, ∑a, ∫g) — NOT

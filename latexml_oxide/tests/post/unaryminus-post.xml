@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:m="http://www.w3.org/1998/Math/MathML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <title>Unary minus after a relation (issue 535)</title>
+  <para xml:id="p1">
+    <p>Unary minus after a relation <Math mode="inline" tex="a=-b" text="a = - b" xml:id="p1.m1"><XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath><m:math alttext="a=-b" display="inline"><m:mrow><m:mi>a</m:mi><m:mo>=</m:mo><m:mrow><m:mo>−</m:mo><m:mi>b</m:mi></m:mrow></m:mrow></m:math></Math>; a genuine BINARY minus must keep its infix spacing <Math mode="inline" tex="a-b" text="a - b" xml:id="p1.m2"><XMath>
+          <XMApp>
+            <XMTok meaning="minus" role="ADDOP">-</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath><m:math alttext="a-b" display="inline"><m:mrow><m:mi>a</m:mi><m:mo>−</m:mo><m:mi>b</m:mi></m:mrow></m:math></Math>; a unary PLUS after a relation <Math mode="inline" tex="a=+b" text="a = + b" xml:id="p1.m3"><XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath><m:math alttext="a=+b" display="inline"><m:mrow><m:mi>a</m:mi><m:mo>=</m:mo><m:mrow><m:mo>+</m:mo><m:mi>b</m:mi></m:mrow></m:mrow></m:math></Math>; a unary minus after a non-equals relation <Math mode="inline" tex="a\leq-b" text="a &lt;= - b" xml:id="p1.m4"><XMath>
+          <XMApp>
+            <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath><m:math alttext="a\leq-b" display="inline"><m:mrow><m:mi>a</m:mi><m:mo>≤</m:mo><m:mrow><m:mo>−</m:mo><m:mi>b</m:mi></m:mrow></m:mrow></m:math></Math>; and an align-style continuation with an absent left operand <Math mode="inline" tex="=-x" text="absent = - x" xml:id="p1.m5"><XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok meaning="absent"/>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath><m:math alttext="=-x" display="inline"><m:mrow><m:mphantom/><m:mo>=</m:mo><m:mrow><m:mo>−</m:mo><m:mi>x</m:mi></m:mrow></m:mrow></m:math></Math>.</p>
+  </para>
+</document>
