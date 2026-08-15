@@ -4019,7 +4019,51 @@ text without the fix). Both render on one line with it.
   above is the CI gate); self-skips unless `npm install`ed in `tests/browser` and
   run with `LATEXML_BROWSER_TESTS=1`. Verified red→green: reverting the CSS rule
   fails it at 74px-tall (pure) / 35px-overflow (mixed).
-### 110. fancyvrb `frame=single` renders as a semantic box, not raw rules
+
+### 110. Publication metadata pubnotes render outside the title `<h1>`, not inside it
+
+**Perl** `LaTeXML-structure-xhtml.xsl` `maketitle` collects **every** `ltx:pubnote`
+into a "footnote-like block" *inside* the title `<h{level}>` (a `†`-collapsed hover
+popup). Class bindings route a lot through `\lx@add@pubnote`: acmart
+(`acmart.cls.ltxml` L59-70) maps `\acmConference`/`\acmDOI`/`\acmISBN`/
+`\acmJournal`/`\acmVolume`/… all to `pubnote`s. So the `<h1 class="ltx_title">`
+ends up containing the conference/DOI/ISBN text (behind a stray `†` on the
+heading) — publication metadata leaking into the title element. Same-host Perl
+0.8.8 produces the identical structure. Not acmart-specific: IEEEtran and other
+class bindings route the same way. Issue arXiv/html_feedback#6886, witnesses
+arXiv:2410.20027 + 2603.16021 + 2601.14324 (acmart) and 2509.09112 (IEEEtran) —
+all four `<h1>` (and `<head><title>`) titles are clean after the fix.
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): split the pubnotes by
+role in `maketitle`. Genuine title **footnotes** — `\thanks`, `\titlenote`/
+`\subtitlenote` (`role='note'`/`'thanks'`) — stay inside the `<h1>`, matching
+author intent (a `\thanks` *is* a title footnote). Publication **metadata**
+(everything else) moves to a **sibling** `<span class="ltx_pubnotes
+ltx_pubnotes_meta">` block after the title, so the `<h1>` holds only the title
+text (and its real footnotes). The `pubnotes` XSLT template is parametrized with
+a `notes` node-set; no core/XML change, and non-pubnote papers are byte-identical.
+For arXiv:2410.20027 the `<h1>` is now just "Agentic Feedback Loop Modeling
+Improves Recommendation and User Simulation" (was …+"Conference: … DOI: …" + a
+stray `†`), verified with headless Chrome under ar5iv.css. The ar5iv stylesheet
+styling of the moved `ltx_pubnotes_meta` block — the inherited dagger
+hover-popup on narrow viewports, promoted to always-visible right-margin
+marginalia on wide (`>= 96rem`, sized from the real available margin so it never
+overflows) — is `dginev/ar5iv-css#45`.
+
+The HTML `<head><title>` is clean of notes by construction, independent of this
+`<h1>` fix: the engine extracts every note out of `\title{}` into **sibling**
+`<pubnote>` elements (a `\thanks` nested in the title lands as a `role='thanks'`
+sibling), so the core `<title>` node — and the navigation title the head
+`<title>` derives from — carry only title text.
+
+**Guards**: `cluster_cli::title_pubnote_pollution::title_h1_excludes_metadata_pubnotes_keeps_footnotes`
+(a `\lx@add@pubnote[role=conference/doi/note]` fixture: metadata not in the `<h1>`,
+the `role=note` footnote kept in it, the metadata in an `ltx_pubnotes_meta`
+sibling after it) and `…::head_title_excludes_all_note_content` (a `\thanks` in
+`\title{}` + metadata pubnotes: the head `<title>` keeps the title text and no
+note/metadata text; verified red under a note-injecting head-title mutation).
+
+### 111. fancyvrb `frame=single` renders as a semantic box, not raw rules
 
 **Perl** LaTeXML raw-loads `fancyvrb.sty` and lets its frame machinery run: `frame=single`
 selects the `@Single` hooks (`fancyvrb.sty:776`) that draw the frame with `\vrule`/`\hrule`

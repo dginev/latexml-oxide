@@ -130,9 +130,10 @@ half — the fix repaired both, and both now have guards.)
 - `cargo +nightly clippy --workspace --all-targets -- -D warnings` and
   `cargo +nightly fmt --all` (the pre-push hook enforces both, not tests).
 - Perl parity re-confirmed on the witness (verbose, same host).
-- **Docs:** refresh `docs/release/ISSUE_AUDIT.md`; if the root cause was an
-  upstream Perl bug, record it in `KNOWN_PERL_ERRORS.md`; a sanctioned divergence
-  ⇒ add the `OXIDIZED_DESIGN.md` entry in the same change.
+- **Docs:** if the root cause was an upstream Perl bug, record it in
+  `KNOWN_PERL_ERRORS.md`; a sanctioned divergence ⇒ add the `OXIDIZED_DESIGN.md`
+  entry in the same change. (Per-issue outcomes are NOT logged in a doc — the
+  merged PR + closed GitHub issue are the record.)
 - Commit on the ticket branch (Step 0), message referencing the issue
   (`fix #N: …`). Delete/park `TICKET_APPROACH.md` — it does not ship.
 
@@ -222,8 +223,8 @@ EOF
   add/rename/move a doc (CLAUDE.md "Rules for these docs"). Prefer refactoring the
   owning doc over a new orphan file.
 - **Type 4 (other)** — if it's a question, answer from the code; if out-of-scope
-  (host TeX package, DTD, `--feature` not built), say so plainly and cite
-  `ISSUE_AUDIT.md` / CLAUDE.md scope. Escalate genuine ambiguity to the user
+  (host TeX package, DTD, `--feature` not built), say so plainly and cite the
+  CLAUDE.md scope. Escalate genuine ambiguity to the user
   rather than guessing the intent.
 
 ## Related skills

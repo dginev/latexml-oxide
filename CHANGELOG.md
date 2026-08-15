@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+  - **A paper's title no longer absorbs publication metadata.** Class frontmatter
+    such as acmart's `\acmConference`/`\acmDOI`/`\acmISBN` was rendered *inside*
+    the title `<h1>` (a stray dagger hover on the heading), leaking metadata into
+    the title element. Now only genuine title footnotes (`\thanks`/`\titlenote`)
+    stay on the title; publication metadata renders as a separate block after it
+    (arXiv/html_feedback#6886).
   - **A `\text{…}`-only display equation renders on one line.** `\[\text{The
     solution is not valid}\]` collapsed to one word per line: the display
     equation's content cell (`ltx_eqn_cell`) lacked the `white-space:nowrap` that

@@ -1882,3 +1882,136 @@ mod browser_render_display_math {
     }
   }
 }
+
+mod title_pubnote_pollution {
+  //! arXiv/html_feedback#6886: publication METADATA pubnotes (conference, DOI,
+  //! ISBN, journal, …) were nested inside the title `<h1 class="ltx_title">`,
+  //! leaking frontmatter into the title (a stray dagger on the heading + the
+  //! metadata living in the title DOM). Vanilla LaTeXML's `maketitle` "collects
+  //! ALL pubnotes into the title"; we diverge (OXIDIZED_DESIGN) — only genuine
+  //! title FOOTNOTES (`\thanks`, `\titlenote` ⇒ role note/thanks) stay in the
+  //! `<h1>`; metadata pubnotes move to a sibling `ltx_pubnotes_meta` block.
+  //!
+  //! Deterministic without acmart: `\lx@add@pubnote[role=…]` is the exact API
+  //! acmart maps `\acmConference`/`\acmDOI`/… onto.
+
+  use std::{fs, process::Command};
+
+  const DOC: &str = "\\documentclass{article}\n\
+                     \\makeatletter\n\
+                     \\lx@add@pubnote[role=conference]{Proc. of Something 2025}\n\
+                     \\lx@add@pubnote[role=doi]{10.1/xyz}\n\
+                     \\lx@add@pubnote[role=note]{A title footnote.}\n\
+                     \\makeatother\n\
+                     \\title{My Paper Title}\n\
+                     \\author{An Author}\n\
+                     \\begin{document}\\maketitle Body.\\end{document}\n";
+
+  #[test]
+  fn title_h1_excludes_metadata_pubnotes_keeps_footnotes() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+    let out = Command::new(bin)
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    let h1 = html
+      .find("<h1")
+      .and_then(|i| html[i..].find("</h1>").map(|j| &html[i..i + j]))
+      .unwrap_or("");
+
+    // The metadata (conference/DOI) must NOT pollute the title heading …
+    assert!(
+      !h1.contains("Proc. of Something") && !h1.contains("10.1/xyz"),
+      "publication metadata leaked into the <h1> title (#6886);\nh1=\n{h1}\nstderr=\n{stderr}"
+    );
+    // … but a genuine title footnote (\thanks/\titlenote ⇒ role=note) stays in it.
+    assert!(
+      h1.contains("A title footnote"),
+      "the role=note title footnote should remain on the title;\nh1=\n{h1}"
+    );
+    // The metadata moves to a sibling `ltx_pubnotes_meta` block AFTER the <h1>.
+    let (h1_close, meta) = (html.find("</h1>"), html.find("ltx_pubnotes_meta"));
+    assert!(
+      matches!((h1_close, meta), (Some(h), Some(m)) if m > h)
+        && html.contains("Proc. of Something"),
+      "metadata pubnotes must render as an ltx_pubnotes_meta block after the title;\nhtml=\n{html}"
+    );
+  }
+
+  /// The HTML `<head><title>` (browser tab / SEO / bookmark text) must carry
+  /// ONLY the title text — never any note content. Notes (`\thanks`, footnotes)
+  /// and publication metadata (conference/DOI) are meant to display visually in
+  /// the body only. This holds by construction: the engine extracts every note
+  /// out of `\title{}` into sibling `<pubnote>` elements, so the core `<title>`
+  /// node — and the navigation title the head `<title>` derives from — are
+  /// clean. This guard locks that in against a regression that let note text
+  /// flow back into the head title (e.g. a template switched to a
+  /// note-including flatten, or notes re-parented under `<title>`).
+  ///
+  /// A `\thanks` INSIDE `\title{}` is the strongest case: it is a note that TeX
+  /// nests within the title group, yet it must still be extracted and kept out
+  /// of the head `<title>`.
+  #[test]
+  fn head_title_excludes_all_note_content() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    // \thanks nested in the title + metadata pubnotes + a plain title footnote.
+    let doc = "\\documentclass{article}\n\
+               \\makeatletter\n\
+               \\lx@add@pubnote[role=conference]{Proc. of Something 2025}\n\
+               \\lx@add@pubnote[role=doi]{10.1/xyz}\n\
+               \\makeatother\n\
+               \\title{My Paper Title\\thanks{Secret Funding Note}}\n\
+               \\author{An Author}\n\
+               \\begin{document}\\maketitle Body.\\end{document}\n";
+    fs::write(root.join("doc.tex"), doc).unwrap();
+    let out = Command::new(bin)
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    // Isolate the HEAD <title>…</title> (not the body <h1 class="ltx_title">).
+    let head_title = html
+      .find("<title>")
+      .and_then(|i| {
+        html[i + 7..]
+          .find("</title>")
+          .map(|j| &html[i + 7..i + 7 + j])
+      })
+      .expect("HTML must have a <head><title>");
+
+    // The title text is present …
+    assert!(
+      head_title.contains("My Paper Title"),
+      "head <title> lost the actual title text;\n<title>={head_title:?}\nstderr=\n{stderr}"
+    );
+    // … and NONE of the note / metadata content leaked into it.
+    for leak in [
+      "Secret Funding Note",
+      "Proc. of Something",
+      "10.1/xyz",
+      "Thanks",
+    ] {
+      assert!(
+        !head_title.contains(leak),
+        "note/metadata {leak:?} leaked into the head <title> \
+         (must be body-visual only);\n<title>={head_title:?}"
+      );
+    }
+  }
+}

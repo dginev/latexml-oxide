@@ -3055,3 +3055,27 @@ by raw-loading the `\@currname` request (`DIR/pkg`) directly — as Perl does (n
 binding → raw-loads the path) — not by injecting `DIR/` into SEARCHPATHS (which
 also grants non-LaTeX auto-sibling resolution the `import` package exists to
 provide). Witness 2510.09534 (`AISTATS/aistats2026`).
+
+## 83. Deferred CLI flags stay hard parse errors, not accept-and-warn stubs (option C)
+
+**Decision (2026-07-09, issue #191; salvaged from the retired `ISSUE_AUDIT.md`).**
+The authoritative CLI spec is Perl `getopt_specification` (`Common/Config.pm`,
+~82 canonical omni options; the `latexmlc` union). A flag whose engine feature
+does **not** yet exist is left as a clap *"unexpected argument"* ERROR — never an
+accept-and-warn stub — because a strict parser must never report misleading
+success for an absent feature. Each flag is wired only when its feature lands
+(e.g. `--includestyles`→`INCLUDE_STYLES`, `--timestamp`/`--icon`→ the XSLT
+`TIMESTAMP`/`ICON` params, `--nographicimages`→ gate the Graphics phase). The
+parser-library question the issue raised is settled: **clap 4 derive**.
+
+Durable deferrals (feature absent by design or blocked, so the flag stays a hard
+error): `--profile`/`--mode` → planned as **TOML** profiles deserialized into the
+clap option struct, not Perl `.opt` ([`OXIDIZED_DESIGN_FUTURE_WORK.md`](OXIDIZED_DESIGN_FUTURE_WORK.md)
+"TOML profiles"); `--validate`/`--novalidate` waits on the rust-libxml fork's safe
+RelaxNG interface (`Post::Document::validate()` is a stub); `--svg` is **redundant**
+— the HTML5 XSLT already renders `<ltx:picture>` as inline `<svg>`, so the
+standalone `svg.rs` post-processor would only produce divergent, unverified output;
+`--output` is an intentional non-goal (we keep `--destination`/`--dest`). Everything
+else absent (mathimages/dvipng pipeline, jats/html4/tex/box outputs, crossref/
+bibliography/index cluster, DTD-gated `--omitdoctype`, daemon mode) is a feature
+gap kept as a hard error, revisited per-flag as the feature lands.

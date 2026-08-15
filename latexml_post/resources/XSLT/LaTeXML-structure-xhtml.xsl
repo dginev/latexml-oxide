@@ -449,13 +449,33 @@
       <xsl:apply-templates>
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
-      <!-- collect all pubnotes into a footnote-like block -->
-      <xsl:if test="parent::*/ltx:pubnote">
+      <!-- Only genuine title FOOTNOTES (\thanks, \titlenote/\subtitlenote →
+           role note/thanks) belong INSIDE the <h1>. Publication METADATA
+           (conference, DOI, ISBN, journal, volume, …) does not — nesting it in
+           the title element leaks frontmatter into the title (a stray dagger on
+           the heading + the metadata living in the <h1> DOM). See
+           arXiv/html_feedback#6886; divergence from vanilla LaTeXML's
+           "collect ALL pubnotes into the title" (OXIDIZED_DESIGN). -->
+      <xsl:variable name="titlenotes"
+                    select="parent::*/ltx:pubnote[@role='note' or @role='thanks']"/>
+      <xsl:if test="$titlenotes">
       <xsl:call-template name="pubnotes">
         <xsl:with-param name="context" select="$innercontext"/>
+        <xsl:with-param name="notes" select="$titlenotes"/>
       </xsl:call-template>
       </xsl:if>
     </xsl:element>
+    <!-- Publication metadata pubnotes as a SIBLING block after the title. -->
+    <xsl:variable name="metanotes"
+                  select="parent::*/ltx:pubnote[not(@role='note' or @role='thanks')]"/>
+    <xsl:if test="$metanotes">
+      <xsl:text>&#x0A;</xsl:text>
+      <xsl:call-template name="pubnotes">
+        <xsl:with-param name="context" select="$context"/>
+        <xsl:with-param name="notes" select="$metanotes"/>
+        <xsl:with-param name="extra_class" select="'ltx_pubnotes_meta'"/>
+      </xsl:call-template>
+    </xsl:if>
     <!-- include parent's subtitle, author & date (if any)-->
     <xsl:apply-templates select="../ltx:subtitle" mode="intitle">
       <xsl:with-param name="context" select="$context"/>
@@ -482,11 +502,21 @@
 
   <xsl:template name="pubnotes">
     <xsl:param name="context"/>
+    <!-- Which pubnotes to render (a node-set); default = all, for callers that
+         do not split them. `extra_class` distinguishes the metadata block that
+         maketitle now emits OUTSIDE the title from the in-title footnote block. -->
+    <xsl:param name="notes" select="parent::*/ltx:pubnote"/>
+    <xsl:param name="extra_class" select="''"/>
     <xsl:element name="span" namespace="{$html_ns}">
-      <xsl:attribute name="class">ltx_pubnotes</xsl:attribute>
+      <xsl:attribute name="class">
+        <xsl:text>ltx_pubnotes</xsl:text>
+        <xsl:if test="$extra_class != ''">
+          <xsl:value-of select="concat(' ',$extra_class)"/>
+        </xsl:if>
+      </xsl:attribute>
       <xsl:element name="span" namespace="{$html_ns}">
         <xsl:attribute name="class">ltx_pubnotes_content</xsl:attribute>
-        <xsl:apply-templates select="parent::*/ltx:pubnote" mode="intitle">
+        <xsl:apply-templates select="$notes" mode="intitle">
           <xsl:with-param name="context" select="$context"/>
         </xsl:apply-templates>
       </xsl:element>

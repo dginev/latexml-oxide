@@ -3361,7 +3361,7 @@ line 2
 
 Same-host Perl 0.8.8 renders the identical broken frame (headless-Chrome screenshots match); the
 lualatex PDF draws a proper rectangle. Perl-origin, unreported upstream. Rust **surpasses**
-(OXIDIZED_DESIGN #110): redefine the `@Single` frame hooks so the frame becomes an
+(OXIDIZED_DESIGN #111): redefine the `@Single` frame hooks so the frame becomes an
 `ltx_framed_rectangle` box (framesep→padding, framerule→border, fvextra background→background),
 dropping the raw rules and the stray line. Guard:
 `00_tokenize` `tests/tokenize/fancyvrb_frame.{tex,xml}`.

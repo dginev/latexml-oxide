@@ -27,7 +27,7 @@ Three rules that keep this file honest:
 1. **Verify a status label before acting on it — and before deleting it.** Four
    entries here have pointed at work that did not exist: a `13 commits NOT
    PUSHED` banner (merged as PR #323), a "#312 → render under MathJax 4" step
-   (issue closed; `ISSUE_AUDIT.md` calls that screenshot out of scope), a
+   (issue closed; that screenshot was out of scope), a
    `CLI options (#191) — ACTIVE` heading (issue closed), and a "PR #310 … ready
    to merge" line (already merged). Check the **named guard test** in the tree,
    or `gh issue view <N>` / `gh pr view <N>`. **SHA-ancestry does not work** as a

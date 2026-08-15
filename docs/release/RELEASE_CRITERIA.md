@@ -310,7 +310,7 @@ validation contract.
   (+`--mode`) and the feature-tied long tail (mathimages, svg, jats,
   crossref/index, daemon) — kept as **hard parse errors, not stubbed** (option C).
   `--output` is an intentional non-goal. Full detail in
-  [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md).
+  [`WISDOM.md`](../parity/WISDOM.md) #83.
 - **Single-binary smoke test exists** (`tests/001_single_binary_smoke.rs`) —
   §7 is promote/extend, not create.
 - **BibTeX is ported** (Phases 1–8, [`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](../archive/BIBTEX_PORT_PLAN_2026-06-20.md));

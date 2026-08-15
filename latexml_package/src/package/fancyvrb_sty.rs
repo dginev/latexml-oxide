@@ -32,7 +32,7 @@ LoadDefinitions!({
   // collapsed to one wrapper background). rulecolor keeps the default black border.
   // Only `frame=single` is remapped here (the case in issue #525); the `@Lines`
   // topline/bottomline/lines variants still draw raw rules — a follow-up.
-  // OXIDIZED_DESIGN #110.
+  // OXIDIZED_DESIGN #111.
   RawTeX!(concat!(
     r"\def\FV@BeginListFrame@Single{",
     r"\edef\lx@fv@sep{\the\dimexpr\FV@FrameSep\relax}",
