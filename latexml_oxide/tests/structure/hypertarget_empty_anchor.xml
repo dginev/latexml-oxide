@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="hyperref"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><anchor xml:id="a">A visible target</anchor> in text.</p>
+  </para>
+  <para xml:id="p2">
+    <p>Before <anchor xml:id="b"/>after empty target in text.</p>
+  </para>
+  <note mark="1" role="footnotetext" xml:id="footnotex1"><anchor xml:id="c"/>Empty at head of note.</note>
+  <note mark="2" role="footnotetext" xml:id="footnotex2"><anchor xml:id="d">visible</anchor>Non-empty at head of note.</note>
+</document>

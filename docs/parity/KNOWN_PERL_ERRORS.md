@@ -3257,3 +3257,34 @@ now yields clean structured frontmatter (3 authors, affiliations matched by
 superscript, emails as `role=email`). Guard:
 `06_cluster_frontmatter::frontmatter_ieee_linebreak_optarg`. Witness
 arXiv:2605.23553 (`arxiv.org/html/2605.23553v1`).
+
+## 76. An empty `\hypertarget{id}{}` at the head of `\footnotetext` breaks the note (Perl; Rust surpasses)
+
+`hyperref.sty.ltxml`'s `localized_anchor` (L238, the `afterConstruct` of
+`\hypertarget`/`\hyperdef`) DFS-walks from the current node and wraps the first
+node `ltx:anchor` may contain, with no empty-content short-circuit and no
+open-node guard. An **empty** `\hypertarget{id}{}` therefore localizes onto
+unrelated surrounding content, and at the head of a floating `ltx:note` (the
+"linked footnote" idiom) it wraps and prematurely **closes** the open note —
+emptying it and orphaning the footnote text — with `Error:malformed:ltx:anchor` +
+`Error:malformed:ltx:note`.
+
+Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\footnotetext[1]{\hypertarget{x}{}Footnote text after a hypertarget anchor.}
+\end{document}
+```
+
+Perl LaTeXML 0.8.8 emits `<anchor xml:id="x"><note …/></anchor>Footnote text…`
+(2 errors); mid-paragraph an empty `\hypertarget` likewise wraps the preceding
+run (`<anchor>Before </anchor>after`). Rust **surpasses** (OXIDIZED_DESIGN #104):
+two general guards in `localized_anchor` — empty content ⇒ a bare destination
+anchor, and never wrap a still-open node — yield
+`<note …><anchor xml:id="x"/>Footnote text…</note>` with 0 errors, non-empty
+targets unchanged. Issue #526; upstream-fileable against `brucemiller/LaTeXML`.
+Guard: `50_structure::hypertarget_empty_anchor_test`. Witness
+arXiv:2607.16395v1 (revtex4-2, `\linkedfootnotetext`).
