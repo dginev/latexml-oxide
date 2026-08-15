@@ -149,11 +149,10 @@ fn typed_assign_roundtrip() {
 
 /// #540: the value-table list family (`PushValue`/`PopValue`/`UnshiftValue`/
 /// `ShiftValue`, Perl `Package.pm` L265-279) plus the dedicated search-path
-/// bindings. The reporter wanted to append a directory to `SEARCHPATHS`, but in
-/// the Rust port `SEARCHPATHS` is NOT a value-table key — it is `State.search_paths`
-/// (a field, consumed by `find_file`) — so `PushValue("SEARCHPATHS", dir)` would
-/// be a silent no-op. The dedicated `PrependSearchPath`/`AppendSearchPath` reach
-/// the real field; `PushValue` serves value-table lists like `GRAPHICSPATHS`.
+/// bindings. As of #561 `SEARCHPATHS` is itself a group-scoped value-table list
+/// (like `GRAPHICSPATHS`, and like Perl's default-local `AssignValue`), so both
+/// the dedicated `PrependSearchPath`/`AppendSearchPath` bindings and a plain
+/// `PushValue("SEARCHPATHS", dir)` reach the list `find_file` resolves against.
 #[test]
 fn pushvalue_family_and_search_paths() {
   use latexml_core::state;
@@ -201,7 +200,7 @@ fn pushvalue_family_and_search_paths() {
     vec!["a".to_string(), "b".to_string()],
     "final queue = [a,b]"
   );
-  // Native-side witness: the search-path FIELD moved (not the value table).
+  // Native-side witness: the group-scoped SEARCHPATHS value-table list moved.
   let paths = state::get_search_paths();
   assert_eq!(
     paths.first().map(String::as_str),

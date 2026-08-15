@@ -268,9 +268,11 @@ pub struct State {
   pub input_encoding:          Option<String>,
   // strict: bool,
   // include_comments: bool,
-  /// current paths to search for TeX inputs
+  /// Seed only for the group-scoped `SEARCHPATHS` value-table list (read once at
+  /// construction to seed it); live lookups go through [`get_search_paths`].
   pub search_paths:            VecDeque<String>,
-  /// current paths to search for graphics
+  /// Seed only for the group-scoped `GRAPHICSPATHS` value-table list (read once at
+  /// construction to seed it); live lookups go through [`get_graphics_paths`].
   pub graphics_paths:          VecDeque<String>,
   // include_styles: bool,
   /// flag to disable math parsing
