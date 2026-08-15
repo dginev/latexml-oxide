@@ -6,7 +6,7 @@
   <resource src="ltx-article.css" type="text/css"/>
   <title>Unary minus after a relation (issue 535)</title>
   <para xml:id="p1">
-    <p>Both operands present <Math mode="inline" tex="a=-b" text="a = - b" xml:id="p1.m1">
+    <p>Unary minus after a relation <Math mode="inline" tex="a=-b" text="a = - b" xml:id="p1.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -17,7 +17,37 @@
             </XMApp>
           </XMApp>
         </XMath>
-      </Math>, and an align-style continuation with an absent left operand <Math mode="inline" tex="=-x" text="absent = - x" xml:id="p1.m2">
+      </Math>; a genuine BINARY minus must keep its infix spacing <Math mode="inline" tex="a-b" text="a - b" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="minus" role="ADDOP">-</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>; a unary PLUS after a relation <Math mode="inline" tex="a=+b" text="a = + b" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>; a unary minus after a non-equals relation <Math mode="inline" tex="a\leq-b" text="a &lt;= - b" xml:id="p1.m4">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>; and an align-style continuation with an absent left operand <Math mode="inline" tex="=-x" text="absent = - x" xml:id="p1.m5">
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>

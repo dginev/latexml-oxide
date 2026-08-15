@@ -539,6 +539,31 @@ mod tests {
     assert!(!props.stretchy);
   }
 
+  /// Issue #535 contract: the SAME operator glyph yields PREFIX spacing
+  /// (lspace 0) when looked up as a unary `OPERATOR` and INFIX spacing (MED)
+  /// as a binary `ADDOP`. `pmml_infix`'s single-argument branch depends on this
+  /// split — it re-looks-up a unary minus/plus as `OPERATOR` so the prefix form
+  /// (lspace 0) is chosen, otherwise the spacewalk collapses `= -x`. `−` is the
+  /// Unicode MINUS (U+2212) that `pmml_token_inner` normalizes `-` to before the
+  /// dictionary lookup.
+  #[test]
+  fn prefix_role_zeroes_left_spacing_that_infix_role_keeps() {
+    for glyph in ["\u{2212}", "+"] {
+      let prefix = opdict_lookup(glyph, "OPERATOR");
+      let infix = opdict_lookup(glyph, "ADDOP");
+      assert_eq!(prefix.lspace, 0.0, "{glyph} prefix (OPERATOR) lspace");
+      assert!(
+        (infix.lspace - MED).abs() < 0.001,
+        "{glyph} infix (ADDOP) lspace should be MED"
+      );
+      // The whole point: prefix hugs its operand where infix would not.
+      assert!(
+        infix.lspace > prefix.lspace,
+        "{glyph}: infix must reserve more left space than prefix"
+      );
+    }
+  }
+
   #[test]
   fn test_opdict_lookup_open_paren() {
     let props = opdict_lookup("(", "OPEN");
