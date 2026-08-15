@@ -1503,23 +1503,65 @@ fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String 
   let mut output = VOID_SELF_CLOSE_RE
     .replace_all(&output, "<$1$2>")
     .to_string();
+  // SVG fragment injection into the empty `ltx_picture` placeholder spans.
+  //
+  // WHY this is a string splice and not a DOM operation (issue #398).
+  // The SVG must land AFTER the XSLT stage (it is collected separately by
+  // `extract_svg_fragments` / the streaming split), and the obvious DOM
+  // alternative — re-parse the SVG fragment and append it under the placeholder
+  // node before serialization — was deliberately abandoned: it tripped a
+  // libxml2 use-after-free in `PostDocument` cleanup (see the note on
+  // `extract_svg_fragments`). So we splice into the serialized string instead.
+  //
+  // The original splice hard-coded the placeholder as `<span id="…"
+  // class="ltx_picture"…>` — coupled to id-before-class order AND double quotes,
+  // neither guaranteed by a serializer. Measured (issue #398): on every LIVE
+  // input the coupling holds — the XSLT emits `id` (add_id) then `class`
+  // (add_classes is the first thing add_attributes does), and libxml2 preserves
+  // insertion order and always double-quotes — so no real break was
+  // demonstrable; the fragility is latent. We keep the string splice (the DOM
+  // refactor is not worth re-entering the use-after-free for a latent concern)
+  // but make the MATCH robust so a future serializer/XSLT change cannot silently
+  // break it: match any empty `<span>` whose class contains `ltx_picture`,
+  // regardless of attribute order or quote style, and look the fragment up by
+  // the id found inside.
+  //
+  // WHEN TO REVISIT (do the real DOM refactor and delete this splice):
+  //   * once the fork's `PostDocument` cleanup no longer use-after-frees on an
+  //     inserted subtree (rust-libxml; we have fixed adjacent UAF/NULL-deref
+  //     bugs there this year) — then inject the SVG as child nodes of the
+  //     placeholder in the post-XSLT DOM (`doc`, before `serialize_whatsout`),
+  //     which also lets the void-element normalization above move to a proper
+  //     HTML serializer;
+  //   * or if a demonstrated attribute-order/quote break ever appears (none
+  //     today) — that would raise the priority from latent to real.
   if !svg_fragments.is_empty() {
-    for (pic_id, svg_html) in svg_fragments {
-      let pattern = format!(
-        r#"<span id="{}" class="ltx_picture"([^>]*)></span>"#,
-        regex::escape(pic_id)
-      );
-      if let Ok(re) = regex::Regex::new(&pattern) {
-        output = re
-          .replace(&output, |caps: &regex::Captures| {
-            format!(
-              r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
-              pic_id, &caps[1], svg_html
-            )
-          })
-          .to_string();
-      }
-    }
+    static EMPTY_PICTURE_SPAN: LazyLock<regex::Regex> = LazyLock::new(|| {
+      // An empty `<span …></span>` carrying `ltx_picture` as a whole class
+      // token, in a single- or double-quoted class value, with the other
+      // attributes (notably `id`) in ANY position.
+      regex::Regex::new(
+        r#"<span\b(?P<attrs>[^>]*\bclass\s*=\s*(?:"[^"]*\bltx_picture\b[^"]*"|'[^']*\bltx_picture\b[^']*')[^>]*)></span>"#,
+      )
+      .unwrap()
+    });
+    static SPAN_ID: LazyLock<regex::Regex> =
+      LazyLock::new(|| regex::Regex::new(r#"\bid\s*=\s*(?:"([^"]+)"|'([^']+)')"#).unwrap());
+    output = EMPTY_PICTURE_SPAN
+      .replace_all(&output, |caps: &regex::Captures| {
+        let attrs = &caps["attrs"];
+        let id = SPAN_ID
+          .captures(attrs)
+          .and_then(|c| c.get(1).or_else(|| c.get(2)))
+          .map(|m| m.as_str());
+        match id.and_then(|id| svg_fragments.iter().find(|(fid, _)| fid == id)) {
+          // Preserve the placeholder's own attributes verbatim; only fill it.
+          Some((_, svg_html)) => format!("<span{attrs}>{svg_html}</span>"),
+          // A picture span we have no fragment for — leave it untouched.
+          None => caps[0].to_string(),
+        }
+      })
+      .to_string();
   }
   output
 }
@@ -1737,5 +1779,63 @@ fn parse_tex_dim(s: &str) -> Option<f64> {
     rest.parse::<f64>().ok()
   } else {
     s.parse::<f64>().ok()
+  }
+}
+
+#[cfg(test)]
+mod finalize_html5_splice_tests {
+  //! #398: the `ltx_picture` SVG splice must fill the placeholder span
+  //! regardless of the serialized attribute ORDER or QUOTE style — the coupling
+  //! the original `<span id="…" class="ltx_picture"…>` regex had. No live input
+  //! perturbs the order today (the XSLT emits id-then-class, libxml2 preserves
+  //! order and double-quotes), so these craft the perturbations directly to keep
+  //! the match robust against a future serializer/XSLT change. The old regex
+  //! FAILED cases 2-4 (class-first / single-quotes / an attribute between id and
+  //! class); the hardened match passes them.
+  use super::finalize_html5;
+
+  fn splice(span: &str) -> String {
+    finalize_html5(span.to_string(), &[(
+      "p1".to_string(),
+      "<svg>OK</svg>".to_string(),
+    )])
+  }
+
+  #[test]
+  fn splice_is_attribute_order_and_quote_agnostic() {
+    // 1. Canonical (id-first, double-quote) — the only shape seen live.
+    assert!(splice(r#"<span id="p1" class="ltx_picture"></span>"#).contains("<svg>OK</svg>"));
+    // 2. class BEFORE id — the old regex required id-then-class.
+    assert!(splice(r#"<span class="ltx_picture" id="p1"></span>"#).contains("<svg>OK</svg>"));
+    // 3. single quotes — the old regex hard-coded double quotes.
+    assert!(splice(r#"<span id='p1' class='ltx_picture'></span>"#).contains("<svg>OK</svg>"));
+    // 4. an attribute BETWEEN id and class — the old regex needed them adjacent.
+    assert!(
+      splice(r#"<span id="p1" style="color:red" class="ltx_picture"></span>"#)
+        .contains("<svg>OK</svg>")
+    );
+    // The placeholder's own attributes are preserved (only the content is filled).
+    assert!(
+      splice(r#"<span class="ltx_picture" id="p1"></span>"#).contains(r#"class="ltx_picture""#)
+    );
+  }
+
+  #[test]
+  fn splice_leaves_non_targets_alone() {
+    // Not a picture span → untouched.
+    assert_eq!(
+      splice(r#"<span id="p1" class="ltx_note"></span>"#),
+      r#"<span id="p1" class="ltx_note"></span>"#
+    );
+    // A picture span with an id we have NO fragment for → untouched.
+    assert_eq!(
+      splice(r#"<span id="other" class="ltx_picture"></span>"#),
+      r#"<span id="other" class="ltx_picture"></span>"#
+    );
+    // `ltx_picture` must be a whole class token, not a substring.
+    assert_eq!(
+      splice(r#"<span id="p1" class="ltx_picturewide"></span>"#),
+      r#"<span id="p1" class="ltx_picturewide"></span>"#
+    );
   }
 }

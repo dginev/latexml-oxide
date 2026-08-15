@@ -4014,10 +4014,11 @@ text without the fix). Both render on one line with it.
   the **rendered** guarantee: Playwright (system Chrome, `tests/browser/measure.js`)
   measures the cell geometry and asserts both displays are one line tall
   (`cellHeight < 40px` — catches stacking) and un-clipped (`scrollWidth −
-  clientWidth ≤ 2px` — catches the mixed overflow). Runs on Linux CI
-  (`LATEXML_BROWSER_TESTS=1` + node/playwright installed), self-skips where the
-  toolchain is absent. Verified red→green: reverting the CSS rule fails it at
-  74px-tall (pure) / 35px-overflow (mixed).
+  clientWidth ≤ 2px` — catches the mixed overflow). **Opt-in / local only** — a
+  headless-browser job is expensive, so it is NOT run in CI (the structural guard
+  above is the CI gate); self-skips unless `npm install`ed in `tests/browser` and
+  run with `LATEXML_BROWSER_TESTS=1`. Verified red→green: reverting the CSS rule
+  fails it at 74px-tall (pure) / 35px-overflow (mixed).
 ### 110. fancyvrb `frame=single` renders as a semantic box, not raw rules
 
 **Perl** LaTeXML raw-loads `fancyvrb.sty` and lets its frame machinery run: `frame=single`
