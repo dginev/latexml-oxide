@@ -3868,3 +3868,33 @@ consumes it separately.
 (`tests/structure/enumitem_leftmargin.{tex,xml}` — `leftmargin=*` enumerate +
 itemize ⇒ the flush class, `leftmargin=2em` ⇒ the custom property, and a plain
 enumerate with no attribute).
+
+### 106. `parskip.sty` sets `\parindent=0` (no-indent paragraphs) instead of a no-op
+
+**Perl** `parskip.sty.ltxml` is an **empty stub** (`package …Pool; …; 1;` — "Nothing
+to do here, really"): `\usepackage{parskip}` has no effect, so the first-line
+indent the package exists to remove is left in place (issue #558, reporter
+nasser1; same-host Perl 0.8.8 identical ⇒ SHARED-FAILURE). Ground truth is the
+real package: `parskip.sty` v2.0h `\setlength\parindent{0pt}` (L58, default
+`indent=0pt`) and `\parskip=.5\baselineskip plus 2pt` (L51-54).
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): the binding
+(`parskip_sty.rs`) ports the real package's length assignments. `\parindent=0`
+is the load-bearing part — the paragraph machinery flips every subsequent
+paragraph to the existing `ltx_noindent` class when the `\parindent` register is
+zero (`tex_paragraph.rs`, the boolean no-indent toggle), exactly as a manual
+`\setlength{\parindent}{0pt}` already does; the CSS then suppresses the first-line
+indent (`.ltx_noindent > .ltx_p:first-child { text-indent:0 }`). `\parskip` is set
+for faithfulness but its glue is not typeset into HTML (LaTeXML has no
+inter-paragraph margin — true here and for a manual `\setlength`). Visible in
+classes that indent paragraphs (book/report `.ltx_para > .ltx_p:first-child`);
+inert in `article`, which does not indent. **Out of scope (separate issues):**
+parskip's vertical *spacing* as a themeable feature, and that the *first*
+paragraph never receives `ltx_noindent`. Package options (`skip`/`indent`,
+kvoptions) are not yet handled — the no-option default is the common (reported)
+case.
+
+**Guard**: `50_structure::parskip_test`
+(`tests/structure/parskip.{tex,xml}` — `\usepackage{parskip}` + three paragraphs;
+the 2nd and 3rd carry `class="ltx_noindent"`, which the empty-stub binding did
+not emit).
