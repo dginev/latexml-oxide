@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="enumitem"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <enumerate class="ltx_leftmargin_flush" xml:id="S0.I1">
+      <item xml:id="S0.I1.i1">
+        <tags>
+          <tag>1.</tag>
+          <tag role="refnum">1</tag>
+          <tag role="typerefnum">item 1</tag>
+        </tags>
+        <para xml:id="S0.I1.i1.p1">
+          <p>flush one.</p>
+        </para>
+      </item>
+      <item xml:id="S0.I1.i2">
+        <tags>
+          <tag>2.</tag>
+          <tag role="refnum">2</tag>
+          <tag role="typerefnum">item 2</tag>
+        </tags>
+        <para xml:id="S0.I1.i2.p1">
+          <p>flush two.</p>
+        </para>
+      </item>
+    </enumerate>
+    <enumerate cssstyle="--ltx-enum-leftmargin:2em" xml:id="S0.I2">
+      <item xml:id="S0.I2.i1">
+        <tags>
+          <tag>1.</tag>
+          <tag role="refnum">1</tag>
+          <tag role="typerefnum">item 1</tag>
+        </tags>
+        <para xml:id="S0.I2.i1.p1">
+          <p>dim one.</p>
+        </para>
+      </item>
+    </enumerate>
+    <itemize class="ltx_leftmargin_flush" xml:id="S0.I3">
+      <item xml:id="S0.I3.i1">
+        <tags>
+          <tag>•</tag>
+          <tag role="typerefnum">1st item</tag>
+        </tags>
+        <para xml:id="S0.I3.i1.p1">
+          <p>flush item.</p>
+        </para>
+      </item>
+    </itemize>
+    <enumerate xml:id="S0.I4">
+      <item xml:id="S0.I4.i1">
+        <tags>
+          <tag>1.</tag>
+          <tag role="refnum">1</tag>
+          <tag role="typerefnum">item 1</tag>
+        </tags>
+        <para xml:id="S0.I4.i1.p1">
+          <p>plain one.</p>
+        </para>
+      </item>
+    </enumerate>
+  </para>
+</document>

@@ -3835,3 +3835,36 @@ guards).
 (`tests/structure/hypertarget_empty_anchor.{tex,xml}` — non-empty in text, empty
 in text, empty at head of note, non-empty at head of note; the golden is clean
 with 0 errors across all four).
+
+### 105. enumitem `leftmargin` is surfaced for CSS theming, not silently dropped
+
+**Perl** `enumitem.sty.ltxml:54` groups `leftmargin` (with `align`, `left`,
+`labelindent`, `itemindent`, `labelsep`, penalties…) under `# IGNORED: Alignment,
+Positioning, penalties`: the key is `DefKeyVal`'d only to consume its value, never
+applied. This is a deliberate design choice — LaTeXML targets rich *structural*
+HTML themeable by CSS on logical roles, not a transcription of print
+micro-typesetting (which rarely reflows well responsively). So both engines drop
+positioning keys; `\begin{enumerate}[leftmargin=*]` renders with the default
+indent (issue #559, reporter nasser1).
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): we keep the same
+structural stance but expose `leftmargin` on the emitted `<ltx:enumerate>` /
+`<ltx:itemize>` / `<ltx:description>` so a stylesheet *can* act on it, split by
+kind (`enumitem_sty.rs::begin_enum_itemize`):
+- `leftmargin=*` (the flush *mode* — a boolean-like toggle) ⇒ a semantic
+  `class="ltx_leftmargin_flush"` a theme can target;
+- `leftmargin=<dim>` (a *length*) ⇒ a `cssstyle="--ltx-enum-leftmargin:<dim>"`
+  CSS custom property.
+The default stylesheets consume both — `.ltx_itemize, .ltx_enumerate {
+margin-left: var(--ltx-enum-leftmargin, 1em) }` plus `.ltx_leftmargin_flush {
+--ltx-enum-leftmargin: 0 }` (ltx-article/book/report.css). Lists without a
+`leftmargin` key emit **no** attribute (the constructor omits an absent-property
+attribute), so existing output is byte-identical — zero golden churn. The
+`--ltx-*` custom property follows the ar5iv-css public-surface convention
+(`~/git/ar5iv-css` `docs/rfc_latexml_custom_properties.md`); the ar5iv stylesheet
+consumes it separately.
+
+**Guard**: `50_structure::enumitem_leftmargin_test`
+(`tests/structure/enumitem_leftmargin.{tex,xml}` — `leftmargin=*` enumerate +
+itemize ⇒ the flush class, `leftmargin=2em` ⇒ the custom property, and a plain
+enumerate with no attribute).
