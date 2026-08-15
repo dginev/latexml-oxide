@@ -141,4 +141,5 @@ the compat reader isn't worth the surface area.)
 (`include_str!`/`include_dir!`) per the self-contained-binary principle,
 with a disk override (`<NAME>.toml`); keep `$LATEXMLINPUTS` expansion in
 `path`; keep `--mode` as an alias for `--profile`.
-Tracked under issue #191 in [`ISSUE_AUDIT.md`](../release/ISSUE_AUDIT.md).
+Tracked under issue #191; the CLI-coverage decision (option C) is in
+[`WISDOM.md`](WISDOM.md) #83.
