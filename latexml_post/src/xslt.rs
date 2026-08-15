@@ -1207,4 +1207,18 @@ mod witnessed_css_delta {
        box and scatter across the page instead of scrolling within the cell",
     );
   }
+
+  #[test]
+  fn framed_verbatim_responsive_delta_stays_present() {
+    let css = bundled_latexml_css();
+    assert!(
+      css.contains("#525")
+        && css.contains(
+          ".ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }"
+        ),
+      "the framed-verbatim responsive-containment delta (issue #525) is missing from \
+       LaTeXML.css: a fancyvrb frame=single box spans the print \\linewidth and would push \
+       its border off-screen and scroll the whole page on a phone",
+    );
+  }
 }

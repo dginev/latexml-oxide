@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="fancyvrb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><text class="ltx_framed_verbatim" cssstyle="border-width:0.5pt;padding:6.0pt" framed="rectangle"><text class="ltx_verbatim" font="typewriter" width="345.0pt">line 1</text><text class="ltx_verbatim" font="typewriter" width="345.0pt">line 2</text></text></p>
+  </para>
+  <para xml:id="p2">
+    <p><text class="ltx_framed_verbatim ltx_verbatim" cssstyle="border-width:0.4pt;padding:3.0pt" font="typewriter" framed="rectangle" width="345.0pt">only line</text></p>
+  </para>
+</document>

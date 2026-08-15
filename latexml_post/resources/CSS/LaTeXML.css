@@ -549,6 +549,16 @@ foreignObject {
    ltx_verbatim on an inline-block text span — inline \verb is a <code>
    without ltx_inline-block, so it is untouched. */
 .ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #525): a
+   fancyvrb `frame=single` box (emitted by fancyvrb_sty.rs as an
+   ltx_framed_rectangle carrying this class) spans the print \linewidth
+   (~460px). Being a shrink-to-fit inline-block of non-wrapping verbatim lines,
+   on a phone viewport it would push its right border off-screen and scroll the
+   whole page. Cap it at the viewport and scroll over-long lines WITHIN the box
+   (the containment .ltx_listing uses for code, OXIDIZED_DESIGN #110); border-box
+   keeps the border+padding inside the cap. Desktop/tablet render at \linewidth
+   unchanged. */
+.ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {
     display:block;

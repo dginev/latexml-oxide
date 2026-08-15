@@ -4062,3 +4062,44 @@ the `role=note` footnote kept in it, the metadata in an `ltx_pubnotes_meta`
 sibling after it) and `…::head_title_excludes_all_note_content` (a `\thanks` in
 `\title{}` + metadata pubnotes: the head `<title>` keeps the title text and no
 note/metadata text; verified red under a note-injecting head-title mutation).
+
+### 111. fancyvrb `frame=single` renders as a semantic box, not raw rules
+
+**Perl** LaTeXML raw-loads `fancyvrb.sty` and lets its frame machinery run: `frame=single`
+selects the `@Single` hooks (`fancyvrb.sty:776`) that draw the frame with `\vrule`/`\hrule`
+(top/bottom `\FV@SingleFrameLine` L869-904, per-line side rules L948-963, the sep box
+`\FV@SingleFrameSep` L929-947). LaTeXML captures those as literal `<ltx:rule>` elements
+that never reconstruct into an HTML box — so the frame renders as disconnected line
+fragments, not a rectangle — and the bottom `\FV@SingleFrameSep` box (only ink = two side
+`\vrule`s, no text) surfaces as a **stray empty line** below the last line. fvextra's
+`backgroundcolor` (a per-line `\colorbox` strip, `fvextra.sty:2547`) is likewise not
+captured. Issue #525 (reporter nasser1: frame not drawn, extra trailing line, backgroundcolor
+ignored). Same-host Perl 0.8.8 is byte-identical (SHARED-FAILURE); the lualatex PDF draws a
+proper frame.
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): redefine fancyvrb's `@Single` frame
+hooks in the binding (`fancyvrb_sty.rs`) so `\FV@BeginListFrame` **opens** an
+`ltx_framed_rectangle` box and `\FV@EndListFrame` **closes** it (both fire exactly once around
+the whole line set, inside `\FV@List`/`\FV@EndList`'s single group), neutralizing the per-line
+side rules — which drops the raw `<rule>` elements AND the stray sep line in one move.
+`framesep`→`padding`, `framerule`→`border-width`, fvextra `\FancyVerbBackgroundColor`→
+`background` (its per-line strip collapsed to one wrapper background; the key is also ported in
+`fvextra_sty.rs` so it works on a host fvextra predating the feature — the TL fvextra loaded in
+CI errors `keyval: backgroundcolor undefined` otherwise). `rulecolor` keeps the default black
+border. Only per-instance VALUES are inline (`cssstyle` border-width/padding/background); the
+box reuses the existing `ltx_framed_rectangle` semantics for the border and carries a dedicated
+`ltx_framed_verbatim` class for the fixed **responsive** behaviour — `max-width:100%;
+overflow-x:auto; box-sizing:border-box` in a bundled-CSS delta (`LaTeXML.css` + ar5iv-css
+mirror). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
+but is a shrink-to-fit inline-block of non-wrapping verbatim lines, so on a phone viewport it
+would push its right border off-screen and scroll the whole page; the class caps it at the
+viewport and scrolls over-long lines *within* the box (the containment `.ltx_listing` uses for
+code, and the #533 delta for math). **Scoped to `frame=single`** (the issue's case); the
+`@Lines` `topline`/`bottomline`/`lines` variants still draw raw rules — a follow-up.
+
+**Guards**: `00_tokenize` fixture `tests/tokenize/fancyvrb_frame.{tex,xml}` — two `Verbatim`s
+(`frame=single` with explicit framerule/framesep, and `frame=single`+`backgroundcolor=yellow`):
+the golden has two `framed="rectangle" class="ltx_framed_verbatim"` boxes with the right
+`border-width`/`padding`/`background` cssstyle and **zero** `<ltx:rule>` elements; plus
+`latexml_post::xslt::witnessed_css_delta::framed_verbatim_responsive_delta_stays_present`
+(the `.ltx_framed_verbatim` responsive rule stays in the bundled `LaTeXML.css`).
