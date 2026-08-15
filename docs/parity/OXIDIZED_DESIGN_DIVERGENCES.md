@@ -3976,3 +3976,45 @@ only — zero core/XML/HTML change, no golden churn.
 (asserts the bundled `LaTeXML.css` keeps the `#533` selectors + declaration, so a
 future re-vanilla sweep cannot silently drop it — same shape as the #473/#431
 CSS-delta guards).
+
+### 109. A `\text{…}`-only display equation nowraps its cell (renders on one line)
+
+**Perl** `LaTeXML.css` gives every aligned *table* cell `white-space:nowrap`
+(`.ltx_td.ltx_align_{left,right,center}`, `.ltx_th…`) but NOT the equation cell
+(`.ltx_eqn_cell`). A single display equation `\[…\]` puts its content in an
+`ltx_eqn_cell` with an alignment class and NO `ltx_td`, laid out between two
+50%-width centering pad cells inside a `width:100%` `ltx_eqn_table`. For ordinary
+math that is fine (a `<math>`/image is atomic and unwrappable), but `\[\text{The
+solution is not valid}\]` digests to `ltx_markedasmath` **text** — which *is*
+wrappable — so the center cell collapsed to its min-content and the text stacked
+one word per line. `\begin{align*}` is unaffected because its content sits in a
+real `ltx:td` (`ltx_td.ltx_align_right`), which already nowraps. Same-host Perl
+0.8.8 reproduces the broken stacking byte-for-byte (issue #527, reporter nasser1).
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): `LaTeXML.css` gives
+`ltx_eqn_cell` the **same** nowrap-with-`ltx_wrap`-optout treatment as `ltx_td`/
+`ltx_th`, for `ltx_align_left`/`right`/`center` — so a display equation renders on
+one line regardless of whether its content is real math or marked-as-math text,
+and a very wide display overflows/scrolls (standard) rather than reflowing into a
+column. CSS-only: the emitted HTML is byte-identical (zero golden churn); a
+too-wide equation was already the behavior for `align*` and real math. Upstream-
+fileable (`brucemiller/LaTeXML`, not yet filed).
+
+Covers both content shapes that reach the centering cell: a pure `\text{}` display
+(a bare `ltx_markedasmath` run — **stacks** one word per line without the fix) and
+mixed math+text `\[x^2+\text{…}=y^2\]` (a `<math>` with `<mtext>` — **clips** its
+text without the fix). Both render on one line with it.
+
+**Guards** (two levels):
+- `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css` —
+  platform-independent structural guard: both displays land in the
+  `ltx_eqn_cell ltx_align_center` cell, and the destination `LaTeXML.css` carries
+  the `.ltx_eqn_cell.ltx_align_center` nowrap rule.
+- `cluster_cli::browser_render_display_math::display_math_renders_on_one_line_without_clipping` —
+  the **rendered** guarantee: Playwright (system Chrome, `tests/browser/measure.js`)
+  measures the cell geometry and asserts both displays are one line tall
+  (`cellHeight < 40px` — catches stacking) and un-clipped (`scrollWidth −
+  clientWidth ≤ 2px` — catches the mixed overflow). Runs on Linux CI
+  (`LATEXML_BROWSER_TESTS=1` + node/playwright installed), self-skips where the
+  toolchain is absent. Verified red→green: reverting the CSS rule fails it at
+  74px-tall (pure) / 35px-overflow (mixed).

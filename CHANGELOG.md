@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+  - **A `\text{…}`-only display equation renders on one line.** `\[\text{The
+    solution is not valid}\]` collapsed to one word per line: the display
+    equation's content cell (`ltx_eqn_cell`) lacked the `white-space:nowrap` that
+    aligned table cells get, so its wrappable marked-as-math text was squeezed
+    between the centering pad cells. `LaTeXML.css` now gives the equation cell the
+    same nowrap-with-`ltx_wrap`-optout as a table cell (CSS-only; output HTML
+    unchanged). Shared bug with Perl (#527).
   - **Natural-size figures scale with the text (font-relative `em` sizing).** A
     figure included at its natural size (no `width=`/`scale=`) from a vector source
     — a PDF page box, an EPS/PS BoundingBox, or an SVG — is now sized in `em` (its

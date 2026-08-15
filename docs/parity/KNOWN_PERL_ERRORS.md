@@ -3321,3 +3321,20 @@ overflow-x:auto; max-width:100% }` — the equation becomes a block scroll
 container that stays within its cell (scrolling horizontally when too wide),
 mirrored in `ar5iv-css`. Normal full-width display math is untouched. Guard:
 `latexml_post::xslt::witnessed_css_delta::constrained_equation_overflow_delta_stays_present`.
+
+## 78. A `\text{…}`-only display equation `\[…\]` stacks one word per line (Perl; Rust surpasses)
+
+**Trigger:** `\[\text{The solution is not valid}\]`.
+
+Perl's `LaTeXML.css` applies `white-space:nowrap` to aligned *table* cells
+(`.ltx_td`/`.ltx_th` with `.ltx_align_{left,right,center}`) but not to the
+equation content cell (`.ltx_eqn_cell`). A single display equation lays its
+content in an `ltx_eqn_cell` (no `ltx_td`) between two 50%-width centering pad
+cells of a `width:100%` `ltx_eqn_table`. Real math is unwrappable so this is
+invisible; but a `\text{}`-only display digests to *wrappable* `ltx_markedasmath`
+text, which then collapses to min-content — one word per line. `\begin{align*}`
+is unaffected (its content is a real `ltx_td`, already nowrapped). Same-host Perl
+0.8.8 reproduces the stacking byte-for-byte. Rust surpasses by extending the
+nowrap rule to `.ltx_eqn_cell` ([OXIDIZED_DESIGN #109]). Issue #527;
+upstream-fileable against `brucemiller/LaTeXML`. Guard:
+`cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`.

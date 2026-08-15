@@ -1,0 +1,9 @@
+{
+  "name": "latexml-oxide-browser-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Headless-browser render assertions for layout-sensitive conversions (see measure.js, issue #527). Run `npm ci` here; the Rust test self-skips when this or a system Chrome is absent.",
+  "dependencies": {
+    "playwright-core": "^1.40.0"
+  }
+}
