@@ -1366,3 +1366,61 @@ mod latexml_sty_save_parameter {
     );
   }
 }
+
+#[cfg(feature = "runtime-bindings")]
+mod rhai_loading_path {
+  //! Issue #560: a runtime `.rhai` binding must announce its actual on-disk
+  //! path — `(Loading .../mybinding.sty.rhai... )` — not the synthesized
+  //! compiled-module proxy name `mybinding_sty.rs`. The path is more useful to
+  //! a user and closer to Perl, whose load note carries the real binding file.
+  //! Compiled-in bindings (no file) keep the `_sty.rs`/`_cls.rs` proxy name.
+
+  use std::{path::Path, process::Command};
+
+  #[test]
+  fn loads_rhai_binding_by_real_path_not_synthesized_name() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    // A runtime binding next to the source — resolved via the LocalPaths tier
+    // of the dispatcher chain (converter.rs `rhai_dispatch`).
+    std::fs::write(
+      workdir.path().join("mybinding.sty.rhai"),
+      "DefMacro(\"\\\\mybindinghook\", \"\");\n",
+    )
+    .expect("write mybinding.sty.rhai");
+    std::fs::write(
+      workdir.path().join("doc.tex"),
+      "\\documentclass{article}\n\
+       \\usepackage{mybinding}\n\
+       \\begin{document}\\mybindinghook Hi\\end{document}\n",
+    )
+    .expect("write doc.tex");
+
+    let output = Command::new(bin)
+      .arg("doc.tex")
+      .arg("--dest")
+      .arg("doc.html")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+    // The load note goes to stderr at default verbosity.
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+      stderr.contains("Loading") && stderr.contains("mybinding.sty.rhai"),
+      "expected the real `.rhai` path in the load note, got:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains("mybinding_sty.rs"),
+      "load note still shows the synthesized module name, not the real path:\n{stderr}"
+    );
+  }
+}

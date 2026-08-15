@@ -17,7 +17,7 @@ use crate::{
   Digested, DigestedData,
   alignment::Alignment,
   common::{
-    BindingDispatcher, LabelMappingHook,
+    BindingDispatcher, LabelMappingHook, ResolvingBindingDispatcher,
     arena::{self, SymHashMap, SymStr},
     dimension::Dimension,
     error::{emit_warn, *},
@@ -295,8 +295,9 @@ pub struct State {
   /// relies on (`lsp_server/overlay.rs::warmup_dep_snapshot`).
   pub opened_sources:          HashSet<SymStr>,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
-  /// A dispatcher routing to the compiled code of the in-distro latexml bindings
-  pub bindings_dispatch:       Option<BindingDispatcher>,
+  /// The installed binding-resolution chain — reports the source path it loaded
+  /// from (for a `.rhai` file binding), or `None` for a compiled-in binding.
+  pub bindings_dispatch:       Option<ResolvingBindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
   /// All `(name, ext)` pairs for compile-time bindings the dispatchers can
@@ -3354,11 +3355,13 @@ pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<
   }
 }
 
-pub fn get_bindings_dispatch() -> Option<BindingDispatcher> { state!().bindings_dispatch.clone() }
+pub fn get_bindings_dispatch() -> Option<ResolvingBindingDispatcher> {
+  state!().bindings_dispatch.clone()
+}
 pub fn get_extra_bindings_dispatch() -> Option<BindingDispatcher> {
   state!().extra_bindings_dispatch.clone()
 }
-pub fn set_bindings_dispatch(dispatcher: BindingDispatcher) {
+pub fn set_bindings_dispatch(dispatcher: ResolvingBindingDispatcher) {
   let mut state = state_mut!();
   state.bindings_dispatch = Some(dispatcher);
 }

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+  - **A runtime `.rhai` binding's load note prints its real file path.** Loading
+    `mybinding.sty.rhai` now announces `(Loading …/mybinding.sty.rhai… )` instead
+    of the synthesized `mybinding_sty.rs` proxy name — more useful, and closer to
+    Perl, which names the actual binding file. The resolved path is threaded
+    through the binding-dispatch result rather than a State side-channel;
+    compiled-in bindings (no file) keep their module-proxy name (#560).
   - **Runtime Rhai bindings can assign typed values, not just strings.** New
     `AssignNumber`/`AssignFloat`/`AssignBool`/`AssignString` complete the typed
     `Assign*` family so a value written from a script reads back through

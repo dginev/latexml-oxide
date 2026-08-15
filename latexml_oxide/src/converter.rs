@@ -3,8 +3,8 @@ use std::rc::Rc;
 use latexml_core::{
   Core, CoreOptions, Debug, Error, Fatal, Info, Note,
   common::{
-    BindingDispatcher, Config, DataSize, DigestionMode, OutputFormat, arena, error::*,
-    object::Object,
+    BindingDispatcher, BindingSource, Config, DataSize, DigestionMode, OutputFormat, arena,
+    error::*, object::Object,
   },
   digested::Digested,
   document::Document,
@@ -38,7 +38,7 @@ enum RhaiScope {
 /// through to the next tier of the chain.
 /// See `docs/parity/script_bindings_plan.md` §7.
 #[cfg(feature = "runtime-bindings")]
-fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<()>> {
+fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource>> {
   use latexml_core::{
     binding::content::{FindFileOptions, find_file},
     state::record_opened_source,
@@ -70,7 +70,11 @@ fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<()>> {
   // stale macros survive every reconversion. Recording the resolved path lets
   // the cache invalidate on the file's mtime change.
   record_opened_source(arena::pin(&path));
-  Some(latexml_contrib::script_bindings::load_file(&path).map(|_| ()))
+  // #560: report the resolved on-disk path as the load's `BindingSource`, so
+  // the "(Loading …)" note names the real `.rhai` file rather than the
+  // synthesized `<name>_sty.rs` compiled-module proxy name — more useful, and
+  // closer to Perl, which names the actual binding file.
+  Some(latexml_contrib::script_bindings::load_file(&path).map(|_| Some(path)))
 }
 
 /// Install the binding-resolution **priority chain** as the single dispatcher
@@ -104,13 +108,15 @@ pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
     if let Some(result) = rhai_dispatch(request, RhaiScope::LocalPaths) {
       return Some(result);
     }
+    // The compiled tiers (contrib `extra`, then `latexml_package`) load
+    // in-memory bindings with no source file, so they report `None` source.
     if let Some(extra) = extra.as_ref()
       && let Some(result) = extra(request)
     {
-      return Some(result);
+      return Some(result.map(|()| None));
     }
     if let Some(result) = latexml_package::dispatch(request) {
-      return Some(result);
+      return Some(result.map(|()| None));
     }
     #[cfg(feature = "runtime-bindings")]
     if let Some(result) = rhai_dispatch(request, RhaiScope::TeXTree) {

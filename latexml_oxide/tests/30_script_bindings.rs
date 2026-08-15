@@ -305,7 +305,9 @@ fn script_binding_macro_and_constructor_convert() {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
   state::add_binding_names(latexml_package::binding_names());
   state::set_extra_bindings_dispatch(Rc::new(script_dispatch));
 
@@ -635,7 +637,9 @@ fn lookup_definition_pushes_construct_hooks_end_to_end() {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
   state::add_binding_names(latexml_package::binding_names());
   state::set_extra_bindings_dispatch(Rc::new(hook_dispatch));
 
@@ -803,7 +807,9 @@ fn document_xml_api_matches_the_compile_time_surface() {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
   state::add_binding_names(latexml_package::binding_names());
   state::set_extra_bindings_dispatch(Rc::new(xmlapi_dispatch));
 
@@ -989,7 +995,9 @@ fn a_throwing_script_body_degrades_only_its_binding() {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
   state::add_binding_names(latexml_package::binding_names());
   state::set_extra_bindings_dispatch(Rc::new(throw_dispatch));
 
@@ -1067,7 +1075,9 @@ fn option_bag_digest_hooks_end_to_end() {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
   state::add_binding_names(latexml_package::binding_names());
   state::set_extra_bindings_dispatch(Rc::new(optbag_dispatch));
 
@@ -1148,7 +1158,9 @@ fn malformed_insert_xml_degrades_the_binding_not_the_conversion() {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
   state::add_binding_names(latexml_package::binding_names());
   state::set_extra_bindings_dispatch(Rc::new(badxml_dispatch));
 
@@ -1195,14 +1207,15 @@ fn script_binding_discovered_from_file() {
   use latexml::converter::Converter;
   use latexml_core::common::{Config, OutputFormat};
 
-  let dir = std::env::temp_dir().join("lx_rhai_discovery");
-  std::fs::create_dir_all(&dir).expect("tempdir");
+  // Auto-cleaning, uniquely-named temp dir (RAII: removed on drop, incl. panic),
+  // so the fixture never leaks into /tmp or collides across runs.
+  let dir = tempfile::tempdir().expect("tempdir");
   std::fs::write(
-    dir.join("lxdisc.sty.rhai"),
+    dir.path().join("lxdisc.sty.rhai"),
     r#"DefMacro("\\discmark", || "DISCOVERED");"#,
   )
   .expect("write rhai");
-  let tex = dir.join("disc.tex");
+  let tex = dir.path().join("disc.tex");
   std::fs::write(
     &tex,
     "\\documentclass{article}\\usepackage{lxdisc}\\begin{document}\\discmark\\end{document}",

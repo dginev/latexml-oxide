@@ -78,7 +78,36 @@ impl DigestionMode {
   }
 }
 
+/// A compiled-binding dispatcher: given a request name, either declines
+/// (`None`, so the next resolution tier is tried) or reports the load outcome
+/// (`Some(Ok(()))` / `Some(Err(_))`). It resolves *compiled-in* bindings, which
+/// have no source file, so it carries no path — the load note announces such a
+/// binding by its module-proxy name (`<name>_sty.rs`).
 pub type BindingDispatcher = Rc<dyn Fn(&str) -> Option<Result<()>>>;
+
+/// The on-disk source a binding was loaded from, when it has one: `Some(path)`
+/// for a runtime *file* binding (e.g. a `.rhai` script), `None` for a
+/// compiled-in binding. Threaded through the resolving dispatcher's result so
+/// the "(Loading …)" note can name the real path (#560) — rather than a State
+/// side-channel.
+pub type BindingSource = Option<String>;
+
+/// The **resolving** binding dispatcher installed as the single, ordered
+/// resolution chain (see `converter::install_binding_dispatch`). Unlike a bare
+/// [`BindingDispatcher`], a successful load reports the [`BindingSource`] it
+/// loaded from, so a file binding announces its real path and a compiled one
+/// its proxy name.
+pub type ResolvingBindingDispatcher = Rc<dyn Fn(&str) -> Option<Result<BindingSource>>>;
+
+/// Lift a **native** (compiled-in) binding dispatcher — one with no source file
+/// to name — into a [`ResolvingBindingDispatcher`]: a successful load reports
+/// `None` source, so the caller announces it by its module-proxy name. Pairs
+/// with the runtime `rhai_dispatch` tier, which reports the real `.rhai` path.
+pub fn native_dispatcher(
+  f: impl Fn(&str) -> Option<Result<()>> + 'static,
+) -> ResolvingBindingDispatcher {
+  Rc::new(move |request| f(request).map(|r| r.map(|()| None)))
+}
 
 /// Perl: LABEL_MAPPING_HOOK => sub { ($label, $ctr, $norefnum) => ($refnum, $id) }
 /// Returns (optional refnum string, optional id string)
