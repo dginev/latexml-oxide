@@ -1683,3 +1683,58 @@ mod em_figure_sizing {
     );
   }
 }
+
+mod display_math_text_nowrap {
+  //! #527: `\[ \text{…} \]` — a display equation whose whole content is `\text{}`
+  //! renders as `ltx_markedasmath` text in the centered equation cell. That cell
+  //! is an `ltx_eqn_cell ltx_align_center` with NO `ltx_td`, so it was missing the
+  //! nowrap that aligned table cells (`ltx_td`/`ltx_th`) get; squeezed between the
+  //! two 50%-width centering pad cells of the width:100% `ltx_eqn_table`, the
+  //! wrappable text collapsed to one word per line ("The / solution / is not /
+  //! valid"). SHARED-FAILURE with same-host Perl → surpass-Perl: LaTeXML.css now
+  //! gives `ltx_eqn_cell` the same nowrap-with-`ltx_wrap`-optout as a table cell.
+  //!
+  //! CI has no browser, so this guards the two pieces the (headless-Chrome-verified)
+  //! fix rests on: the emitted cell structure the rule must target, and the
+  //! stylesheet copied to the destination carrying the rule.
+
+  use std::{fs, process::Command};
+
+  const DOC: &str = "\\documentclass[12pt]{article}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\[\n\\text{The solution is not valid}\n\\]\n\
+                     \\end{document}\n";
+
+  #[test]
+  fn display_math_text_cell_gets_nowrap_css() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+
+    let output = Command::new(bin)
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("failed to run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
+    let css = fs::read_to_string(root.join("LaTeXML.css")).unwrap_or_default();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // (1) The display-math content lands in a centered equation cell (no `ltx_td`)
+    // around the markedasmath text — the exact structure the nowrap rule targets.
+    assert!(
+      html.contains("class=\"ltx_eqn_cell ltx_align_center\"") && html.contains("ltx_markedasmath"),
+      "expected a centered equation cell around the markedasmath text;\nhtml=\n{html}\nstderr=\n{stderr}"
+    );
+    // (2) The destination stylesheet gives that cell nowrap, so it cannot collapse
+    // between the 50% centering pads. Without it the text wraps one word per line.
+    assert!(
+      css.contains(".ltx_eqn_cell.ltx_align_center { white-space:nowrap; }"),
+      "LaTeXML.css must nowrap the centered equation cell (#527); rule missing"
+    );
+  }
+}

@@ -3288,3 +3288,20 @@ anchor, and never wrap a still-open node — yield
 targets unchanged. Issue #526; upstream-fileable against `brucemiller/LaTeXML`.
 Guard: `50_structure::hypertarget_empty_anchor_test`. Witness
 arXiv:2607.16395v1 (revtex4-2, `\linkedfootnotetext`).
+
+## 77. A `\text{…}`-only display equation `\[…\]` stacks one word per line (Perl; Rust surpasses)
+
+**Trigger:** `\[\text{The solution is not valid}\]`.
+
+Perl's `LaTeXML.css` applies `white-space:nowrap` to aligned *table* cells
+(`.ltx_td`/`.ltx_th` with `.ltx_align_{left,right,center}`) but not to the
+equation content cell (`.ltx_eqn_cell`). A single display equation lays its
+content in an `ltx_eqn_cell` (no `ltx_td`) between two 50%-width centering pad
+cells of a `width:100%` `ltx_eqn_table`. Real math is unwrappable so this is
+invisible; but a `\text{}`-only display digests to *wrappable* `ltx_markedasmath`
+text, which then collapses to min-content — one word per line. `\begin{align*}`
+is unaffected (its content is a real `ltx_td`, already nowrapped). Same-host Perl
+0.8.8 reproduces the stacking byte-for-byte. Rust surpasses by extending the
+nowrap rule to `.ltx_eqn_cell` ([OXIDIZED_DESIGN #108]). Issue #527;
+upstream-fileable against `brucemiller/LaTeXML`. Guard:
+`cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`.

@@ -3944,3 +3944,34 @@ figures), 1601.00046 + 0704.0052 (EPS) — all with 0 graphics errors.
 **Guard**: `cluster_cli::em_figure_sizing::natural_vector_figure_is_em_sized_author_sized_stays_pixels`
 (a minimal `/MediaBox`-only PDF sizes to `10.037em/5.019em`; `[width=]`/`[scale=]`
 siblings stay on the pixel path).
+
+### 108. A `\text{…}`-only display equation nowraps its cell (renders on one line)
+
+**Perl** `LaTeXML.css` gives every aligned *table* cell `white-space:nowrap`
+(`.ltx_td.ltx_align_{left,right,center}`, `.ltx_th…`) but NOT the equation cell
+(`.ltx_eqn_cell`). A single display equation `\[…\]` puts its content in an
+`ltx_eqn_cell` with an alignment class and NO `ltx_td`, laid out between two
+50%-width centering pad cells inside a `width:100%` `ltx_eqn_table`. For ordinary
+math that is fine (a `<math>`/image is atomic and unwrappable), but `\[\text{The
+solution is not valid}\]` digests to `ltx_markedasmath` **text** — which *is*
+wrappable — so the center cell collapsed to its min-content and the text stacked
+one word per line. `\begin{align*}` is unaffected because its content sits in a
+real `ltx:td` (`ltx_td.ltx_align_right`), which already nowraps. Same-host Perl
+0.8.8 reproduces the broken stacking byte-for-byte (issue #527, reporter nasser1).
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): `LaTeXML.css` gives
+`ltx_eqn_cell` the **same** nowrap-with-`ltx_wrap`-optout treatment as `ltx_td`/
+`ltx_th`, for `ltx_align_left`/`right`/`center` — so a display equation renders on
+one line regardless of whether its content is real math or marked-as-math text,
+and a very wide display overflows/scrolls (standard) rather than reflowing into a
+column. CSS-only: the emitted HTML is byte-identical (zero golden churn); a
+too-wide equation was already the behavior for `align*` and real math. Upstream-
+fileable (`brucemiller/LaTeXML`, not yet filed).
+
+Verified with headless Chrome: `\[\text{…}\]` renders "The solution is not valid"
+on one centered line (was four stacked words).
+
+**Guard**: `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`
+(CI has no browser, so it asserts the two pieces the fix rests on: the emitted
+`ltx_eqn_cell ltx_align_center` cell around the `ltx_markedasmath` text, and the
+destination `LaTeXML.css` carrying the `.ltx_eqn_cell.ltx_align_center` nowrap rule).

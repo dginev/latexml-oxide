@@ -216,12 +216,18 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_align_floatleft  { float:left; }
 .ltx_align_floatright { float:right; }
 
-.ltx_td.ltx_align_left,   .ltx_th.ltx_align_left,
-.ltx_td.ltx_align_right,  .ltx_th.ltx_align_right,
-.ltx_td.ltx_align_center, .ltx_th.ltx_align_center { white-space:nowrap; }
-.ltx_td.ltx_align_left.ltx_wrap,   .ltx_th.ltx_align_left.ltx_wrap,
-.ltx_td.ltx_align_right.ltx_wrap,  .ltx_th.ltx_align_right.ltx_wrap,
-.ltx_td.ltx_align_center.ltx_wrap, .ltx_th.ltx_align_center.ltx_wrap,
+.ltx_td.ltx_align_left,   .ltx_th.ltx_align_left,   .ltx_eqn_cell.ltx_align_left,
+.ltx_td.ltx_align_right,  .ltx_th.ltx_align_right,  .ltx_eqn_cell.ltx_align_right,
+.ltx_td.ltx_align_center, .ltx_th.ltx_align_center, .ltx_eqn_cell.ltx_align_center { white-space:nowrap; }
+/* #527: a display equation `\[…\]` (and fleqn/constraint variants) puts its
+   content in an `ltx_eqn_cell` with an alignment class but NO `ltx_td`, so it
+   was missing the nowrap above. Between the two 50%-width centering pad cells of
+   the width:100% `ltx_eqn_table`, a `\text{…}`-only display (`ltx_markedasmath`,
+   which unlike real math is wrappable) then collapsed to one word per line.
+   Give the equation cell the same nowrap-with-`ltx_wrap`-optout as a table cell. */
+.ltx_td.ltx_align_left.ltx_wrap,   .ltx_th.ltx_align_left.ltx_wrap,   .ltx_eqn_cell.ltx_align_left.ltx_wrap,
+.ltx_td.ltx_align_right.ltx_wrap,  .ltx_th.ltx_align_right.ltx_wrap,  .ltx_eqn_cell.ltx_align_right.ltx_wrap,
+.ltx_td.ltx_align_center.ltx_wrap, .ltx_th.ltx_align_center.ltx_wrap, .ltx_eqn_cell.ltx_align_center.ltx_wrap,
 .ltx_td.ltx_align_justify,  .ltx_th.ltx_align_justify { white-space:normal; }
 
 .ltx_tabular .ltx_tabular { width:100%; }
