@@ -3365,3 +3365,23 @@ lualatex PDF draws a proper rectangle. Perl-origin, unreported upstream. Rust **
 `ltx_framed_rectangle` box (framesep→padding, framerule→border, fvextra background→background),
 dropping the raw rules and the stray line. Guard:
 `00_tokenize` `tests/tokenize/fancyvrb_frame.{tex,xml}`.
+
+## 80. `pdfcol.sty` undefined → `\pdfcolInitStack` error (Rust surpasses)
+
+Neither Perl nor Rust LaTeXML ships a `pdfcol.sty.ltxml`. `pdfcol` is a pdfTeX colour-stack
+manager pulled in transitively by tcolorbox's `breakable` library (`\tcbuselibrary{breakable}`).
+With no binding, `\pdfcolInitStack` / `\pdfcolIfStackExists` / `\pdfcolSwitchStack` /
+`\pdfcolSetCurrentColor` / `\pdfcolSetCurrent` are undefined, so a breakable coloured tcolorbox
+reports `Error:undefined:\pdfcolInitStack` and leaks the args as body text. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{pdfcol}
+\begin{document}\pdfcolInitStack{main}\end{document}
+```
+
+Same-host Perl (TL2025) errors identically (`1 error; 1 undefined macro[\pdfcolInitStack]`).
+Issue #531 (reporter nasser1). Perl-origin, unreported upstream. Rust **surpasses**
+(OXIDIZED_DESIGN #112): `pdfcol_sty.rs` ports pdfcol.sty's own "disabled" fallback (all commands
+no-op, `\pdfcolIfStackExists` takes the false branch) — a PDF colour stack has no HTML output.
+Guard: `06_cluster_regressions::cluster_pdfcol_stub_no_undefined`.
