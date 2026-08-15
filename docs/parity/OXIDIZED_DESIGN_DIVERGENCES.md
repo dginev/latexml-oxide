@@ -4029,8 +4029,10 @@ popup). Class bindings route a lot through `\lx@add@pubnote`: acmart
 `\acmJournal`/`\acmVolume`/… all to `pubnote`s. So the `<h1 class="ltx_title">`
 ends up containing the conference/DOI/ISBN text (behind a stray `†` on the
 heading) — publication metadata leaking into the title element. Same-host Perl
-0.8.8 produces the identical structure (issue arXiv/html_feedback#6886, witness
-arXiv:2410.20027 — acmart sigconf).
+0.8.8 produces the identical structure. Not acmart-specific: IEEEtran and other
+class bindings route the same way. Issue arXiv/html_feedback#6886, witnesses
+arXiv:2410.20027 + 2603.16021 (acmart) and 2509.09112 (IEEEtran) — all three
+`<h1>` titles are clean after the fix.
 
 **Divergence** (surpass-Perl, user-approved 2026-08-15): split the pubnotes by
 role in `maketitle`. Genuine title **footnotes** — `\thanks`, `\titlenote`/
