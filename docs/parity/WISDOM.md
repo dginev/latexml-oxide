@@ -8,175 +8,94 @@ knowledge about how the system works that can prevent future mistakes.
 
 ## 1. DefMacro! double-packing: compile-time vs runtime pack_parameters
 
-**Discovery:** The `Error:misdefined:expansion` warning fired on every document
-for `\displaylines` (an alignment-template macro with `##\hfil` in its body).
-
-**Analysis:** `DefMacro!("\\displaylines{}", r"..##..")` compiles the expansion
-at build time via `compile_expansion!` in `tokenizeable.rs` line 31, which calls
-`pack_parameters()`. This converts `##` → single `#` (PARAM) and `#1` → ARG(1).
-The packed tokens are stored in the compiled binary.
-
-At runtime, `def_macro()` → `Expandable::new()` (line 225 of `expandable.rs`)
-calls `pack_parameters()` **again** unless `nopack_parameters: true` is set.
-The second packing sees `#` (PARAM) followed by `\hfil` (CS) — the `#` is now
-an alignment cell marker, not a parameter — and fires the warning.
-
-**Fix:** All `DefMacro!` branches using `compile_expansion!` must set
-`nopack_parameters: true` in `ExpandableOptions`. This is specific to
-`DefMacro!` — `DefConstructor!` uses `compile_tokenize!` (no packing), and
-`DefPrimitive!` uses closures/strings (no packing).
-
-**Key insight:** Any macro whose expansion is pre-compiled at build time must
-skip runtime packing. Check this whenever adding new compile-time expansion paths.
+A `DefMacro!` whose expansion is pre-compiled via `compile_expansion!`
+(`tokenizeable.rs:31`) packs `##`→`#`(PARAM) / `#1`→ARG at build time; at runtime
+`def_macro()` → `Expandable::new()` (`expandable.rs:225`) packs it **again**
+unless `nopack_parameters: true`, re-reading the packed `#\hfil` as an
+alignment-cell marker → `Error:misdefined:expansion` (witness `\displaylines`).
+**Fix:** every `DefMacro!` branch using `compile_expansion!` sets
+`nopack_parameters: true`. (`DefConstructor!`/`compile_tokenize!` and
+`DefPrimitive!`/closures don't pack — this is `DefMacro!`-specific; check it for
+any new compile-time expansion path.)
 
 ---
 
 ## 2. Font::merge() must NOT call specialize()
 
-**Discovery:** `\font\mybf=cmb10` followed by `\mybf Hello` did not produce
-`<text font="bold">Hello</text>` — the bold series was silently reset to medium.
-
-**Analysis:** `Font::merge()` was calling `specialize(font_name)` with the font
-filename "cmb10". `specialize` examines Unicode properties of its argument text.
-"cmb10" contains digit characters which fall into the "Other Symbol" branch,
-which resets `series` to "medium" and `shape` to "upright".
-
-In Perl, `merge()` has an **optional** `specialize` parameter (passed explicitly,
-e.g. `merge(specialize => $text)`). It is NOT called by default. In Rust, someone
-added `specialize(font_name)` in the merge code path, which was incorrect —
-font filenames are not rendered text.
-
-**Fix:** Remove `specialize()` from `merge()`. `specialize()` should only be
-called at `TBox::new()` time (tbox.rs line 131) with actual rendered text content.
-
-**Key insight:** `specialize()` is a text-classification function, not a font-
-metadata function. Never call it with font names, filenames, or CS names.
+`specialize(text)` classifies Unicode properties of *rendered text*. A Rust
+`merge()` wrongly called `specialize(font_name)` on the filename "cmb10" — its
+digits hit the "Other Symbol" branch, silently resetting `series` bold→medium
+(`\font\mybf=cmb10 \mybf Hello` lost its bold). Perl's `merge()` takes
+`specialize` only as an explicit optional arg, never by default. **Fix:** remove
+`specialize()` from `merge()`; call it only at `TBox::new()` (`tbox.rs:131`) with
+real text. Never pass it a font/file/CS name.
 
 ---
 
 ## 3. Catcode::CS vs Catcode::ESCAPE distinction
 
-**Discovery:** Token matching code using `cc == Catcode::ESCAPE` failed because
-control sequence tokens have `Catcode::CS`, not `Catcode::ESCAPE`.
-
-**Analysis:** `ESCAPE` (catcode 0) is the backslash character itself — it's the
-input character catcode. `CS` is the catcode of a fully-formed control sequence
-token (e.g. `\foo`). When the tokenizer reads `\foo`, it produces a single token
-with catcode `CS`, not a token with catcode `ESCAPE` followed by letter tokens.
-
-**Key insight:** Use `cc.is_active_or_cs()` to test for CS/ACTIVE tokens.
-Never compare `cc == Catcode::ESCAPE` when looking for control sequences.
+`ESCAPE` (catcode 0) is the backslash INPUT character; `CS` is the catcode of a
+formed control-sequence token (`\foo` tokenizes to ONE `CS` token, not `ESCAPE` +
+letters). **Test CS/active tokens with `cc.is_active_or_cs()`, never
+`cc == Catcode::ESCAPE`.**
 
 ---
 
 ## 4. RegisterType::PartialEq trap: Number == CharDef
 
-**Discovery:** `register == RegisterType::Number` matched CharDef registers
-due to custom `PartialEq` implementation.
-
-**Analysis:** The `PartialEq` impl for `RegisterType` treats `CharDef` as equal
-to `Number` (since char defs are numerically-valued). This means `if register !=
-RegisterType::Number` does NOT exclude CharDef.
-
-**Fix:** Use `matches!(register, RegisterType::Number)` pattern matching instead
-of `==`/`!=` operators to distinguish the variants correctly.
+`RegisterType`'s custom `PartialEq` treats `CharDef` as equal to `Number` (char
+defs are numerically valued), so `register != RegisterType::Number` does NOT
+exclude `CharDef`. **Use `matches!(register, RegisterType::Number)`, not `==`/`!=`.**
 
 ---
 
 ## 5. at_letter catcode restore: None vs Some(OTHER)
 
-**Discovery:** `\makeatletter` made `@` a letter, but `\makeatother` didn't
-restore it — `@` stayed as LETTER permanently.
-
-**Analysis:** `at_letter()` saves the old catcode with
-`saved = state::lookup_catcode('@')`. When `@` isn't in the catcode table
-(using default catcode OTHER), `lookup_catcode` returns `None`. The restore
-function then calls `state::assign_catcode('@', saved)` where `saved` is `None`,
-which is a no-op — it doesn't set the catcode back to OTHER.
-
-**Fix:** Use `unwrap_or(Catcode::OTHER)` when restoring — `None` means "was
-using default OTHER catcode", so restore to OTHER explicitly.
-
-**Key insight:** State lookups returning `None` for defaults is a common pattern.
-Always consider what `None` means in context — it might mean "default value"
-rather than "no value".
+`at_letter()` saves `@`'s old catcode via `lookup_catcode('@')`, which returns
+`None` when `@` uses its default catcode OTHER (absent from the table). Restoring
+with `assign_catcode('@', None)` is a no-op, so `\makeatother` left `@` a LETTER
+forever. **Fix:** `unwrap_or(Catcode::OTHER)` on restore. General lesson: a state
+lookup returning `None` often means "default value," not "no value" — decide what
+`None` means in context.
 
 ---
 
 ## 6. Sizer string parsing: `#property_name` vs `#digit`
 
-**Discovery:** Nested tabulars (tabtab_test) lost their 3rd column — the inner
-tabular whatsit reported width=0, causing `normalize_prune_columns` to remove it.
-
-**Analysis:** `\lx@begin@alignment` has `sizer => "#alignment"`. In Perl,
-`Whatsit::computeSize` (Whatsit.pm L257-260) parses sizer strings with
-`$sizer =~ /^(#\w+)*$/` — each `#token` is checked: if numeric, `getArg($n)`;
-if alphabetic, look up `$$props{$name}`.
-
-In Rust, `IntoOption<Option<SizingClosure>> for &str` (traits.rs) only handled
-`#digit` — `"alignment".parse::<usize>()` failed and defaulted to arg 1 via
-`unwrap_or(1)`. So `sizer => "#alignment"` was silently computing size of arg 1
-(the optional `[]` arg) instead of the alignment property.
-
-**Fix:** Rewrote the sizer string parser to match Perl: parse each `#word` as
-either numeric (arg lookup) or alphabetic (property lookup). Supports compound
-patterns like `#1#2` as well.
-
-**Key insight:** Any time `parse::<usize>().unwrap_or(default)` is used on user-
-provided strings, verify the default makes sense. Silent fallbacks can mask bugs
-for months — the sizer was returning (0,0,0) which just happened to trigger
-column pruning instead of panicking.
+Perl `Whatsit::computeSize` (Whatsit.pm L257-260) parses a sizer string as
+`(#\w+)*` — each `#token` is an ARG lookup if numeric, else a PROPERTY lookup.
+Rust's `IntoOption<Option<SizingClosure>> for &str` (traits.rs) only handled
+`#digit`, so `sizer => "#alignment"` failed `"alignment".parse::<usize>()` and
+silently `unwrap_or(1)`'d — measuring arg 1 (the optional `[]`) instead of the
+alignment property, returning (0,0,0) → `normalize_prune_columns` dropped the
+column (nested tabtab_test lost its 3rd column). **Fix:** parse each `#word` as
+numeric (arg) or alphabetic (property); supports compound `#1#2`. Lesson: verify
+the `default` in any `parse::<usize>().unwrap_or(default)` over user strings —
+silent fallbacks mask bugs for months.
 
 ---
 
 ## 7. `align_group_count` (`$ALIGN_STATE`): scan-level only, retract on unread
 
-**Discovery:** Nested `\vbox{\halign{...}}` inside an outer `\halign` caused
-outer column-end tokens (`&`, `\cr`) to not fire `handle_template`, because
-`align_group_count` was >0 when it should have been 0.
-
-**Root cause (two bugs):**
-
-1. **`unread_one` didn't adjust agc.** Perl's `unread()` sub (Gullet.pm L340-359)
-   always adjusts `$ALIGN_STATE` for `{` and `}` tokens, whether unreading one
-   or many tokens. Rust had `unread_one` (no adjustment) and `unread_vec` (with
-   adjustment). Functions like `skip_spaces()` → `read_non_space()` read `{` via
-   `read_token()` (incrementing agc), then unread it via `unread_one` (no
-   decrement). The `{` would be re-read later, double-incrementing.
-
-2. **`stomach::bgroup()/egroup()` adjusted agc.** Perl's bgroup/egroup
-   (Stomach.pm L327-342) do NOT touch `$ALIGN_STATE`. It's tracked only at the
-   scan level (in `readToken`/`readXToken`). The Rust code had
-   `increment_align_group_count()` in `bgroup()` and `decrement_align_group_count()`
-   in `egroup()`, causing double-counting for every `{`/`}` pair.
-
-**Fix:** Added agc adjustment to `unread_one` for BEGIN/END tokens. Removed agc
-tracking from `bgroup()`/`egroup()`.
-
-**Key insight:** `$ALIGN_STATE` is a scan-level concept (TeX §309). It must be
-incremented/decremented exactly once per `{`/`}` token as it passes through
-`readToken` or `readXToken`, and must be retracted when tokens are unread.
-The stomach's group machinery is a separate concern.
+`$ALIGN_STATE` (TeX §309) must be incremented/decremented exactly once per `{`/`}`
+as it passes `readToken`/`readXToken`, and retracted when tokens are unread — the
+stomach's group machinery is a separate concern. Nested `\vbox{\halign{...}}`
+inside an outer `\halign` mis-fired `handle_template` (agc >0 when it should be 0)
+from two bugs: (1) `unread_one` didn't adjust agc for BEGIN/END (Perl `unread`,
+Gullet.pm L340-359, always does), so `skip_spaces` reading `{` then unreading it
+via `unread_one` double-incremented on re-read; (2) `stomach::bgroup()/egroup()`
+adjusted agc, but Perl's (Stomach.pm L327-342) do NOT. **Fix:** add agc adjustment
+to `unread_one` for BEGIN/END; remove it from `bgroup()`/`egroup()`.
 
 ---
 
 ## 8. Rust macros cannot dispatch on type — Vec<Token> vs Token vs &[Token]
 
-**Discovery:** Attempting to create unified macros that accept both single tokens
-and token sequences leads to compilation errors because Rust's `macro_rules!`
-operates on syntax patterns, not types.
-
-**Analysis:** Unlike Perl where `Tokens()` can accept scalars, arrays, or objects
-and figure it out at runtime, Rust macros expand before type information is
-available. The `Tokens!()` macro works via `Into<Vec<Token>>` trait, which works
-for types that implement the conversion. But you can't write a single macro
-invocation that conditionally handles `Token`, `Vec<Token>`, `Tokens`, and
-`&[Token]` differently — the macro expander doesn't know the types.
-
-**Workaround:** When building token sequences from mixed sources (static tokens
-plus dynamic `Vec<Token>` from `.revert()` etc.), use explicit `Vec<Token>`
-construction with `extend()` instead of trying to stuff everything into
-`Tokens!()`:
+`macro_rules!` expands on syntax before types are known, so unlike Perl's runtime
+`Tokens()`, one `Tokens!()` invocation can't conditionally handle `Token` /
+`Vec<Token>` / `Tokens` / `&[Token]`. When building token sequences from mixed
+static + dynamic (`.revert()`) sources, fall back to imperative `Vec<Token>` +
+`extend()`/`push()`, then `Tokens::new(toks)` — don't fight the macro:
 ```rust
 let mut toks: Vec<Token> = vec![T_CS!("\\hbox"), T_BEGIN!()];
 toks.extend(content.revert());
@@ -184,218 +103,99 @@ toks.push(T_END!());
 stomach::digest(Tokens::new(toks))?;
 ```
 
-**Key insight:** When the `Tokens!()` macro doesn't cooperate with a particular
-type, fall back to imperative `Vec<Token>` construction. Don't fight the macro.
-
 ---
 
 ## 9. arena::with pattern for zero-allocation string access
 
-**Principle:** Prefer `arena::with(sym, |s| ...)` over `arena::to_string(sym)`
-when you only need a `&str` reference temporarily.
-
-**Analysis:** The string interner stores all interned strings (SymStr/SymbolU32)
-in a thread-local arena. `arena::to_string(sym)` resolves the symbol and
-allocates a new `String` on the heap. `arena::with(sym, |s| ...)` borrows
-the string directly from the arena with zero allocation — the `&str` lives
-only for the duration of the closure.
-
-**When to use each:**
-- `arena::with(sym, |s| ...)` — when the result depends on `&str` and can
-  be computed inline (e.g., comparisons, `set_property(key, val)`, formatting)
-- `arena::with2(s1, s2, |a, b| ...)` — when you need two symbols resolved
-- `arena::to_string(sym)` — only when you need an owned `String` that outlives
-  the current scope (e.g., storing in a `HashMap<String, ...>`)
-
-**Key insight:** Every `arena::to_string` is a heap allocation. In hot paths
-(per-token, per-column, per-row), this adds up. The `with` pattern is always
-preferable when the string use is short-lived.
+The interner stores strings in a thread-local arena. `arena::to_string(sym)`
+heap-allocates a new `String`; `arena::with(sym, |s| …)` (and `with2` for two
+symbols) borrows the `&str` for the closure's duration, zero-alloc. Prefer `with`
+whenever the use is short-lived (comparisons, `set_property`, formatting) — in
+per-token/column/row hot paths the allocations add up. Use `to_string` only for an
+owned `String` that outlives the scope (e.g. a `HashMap<String,…>` key).
 
 ---
 
 ## 10. Porting RawTeX() blocks: copy bravely and exactly
 
-**Principle:** Perl `RawTeX()` calls should be ported as `RawTeX!()` in Rust with
-the exact same TeX string content. Even very large blocks of raw TeX code should
-be copied over directly — the TeX layer should always match the Perl exactly
-unless there is a specific technical problem (e.g. Rust string escaping).
-
-**Why:** The TeX code in `RawTeX()` blocks is already debugged and tested in Perl.
-It defines internal macros, counters, lengths, and environments at the TeX level.
-Attempting to "Rustify" these blocks or selectively port pieces introduces
-subtle divergences. The Rust `RawTeX!()` macro feeds the string through the
-tokenizer/expander just as Perl does, so fidelity is essentially free.
-
-**Key insight:** Do not be intimidated by large `RawTeX()` blocks. The cost of
-porting them is just copy-paste; the cost of NOT porting them is missing
-definitions that later cause test failures in seemingly unrelated places.
+Port Perl `RawTeX()` as Rust `RawTeX!()` with the identical TeX string — even
+large blocks. The code is already debugged in Perl and the macro feeds it through
+the same tokenizer/expander, so fidelity is free; "Rustifying" or selectively
+porting pieces introduces subtle divergences that surface as unrelated test
+failures later. The cost of porting is copy-paste; the cost of NOT is missing
+definitions.
 
 ---
 
 ## 11. Parameter prototype conventions: `{}` vs named parameter types
 
-**Principle:** In LaTeXML's Perl prototype strings, `{}` means "read a Plain
-balanced group". A named parameter type (like `Token`, `Number`, `Variable`)
-is identified by its bare name in the prototype, NOT wrapped in braces.
-
-**Example:** `DefMacro!("\\foo Token", ...)` reads one Token parameter.
-Writing `DefMacro!("\\foo {Token}", ...)` would read a Plain balanced group
-and the word "Token" would be literal body content, not a parameter type.
-
-**Analysis:** The prototype parser (`def_parser.rs`) distinguishes between:
-- `{}` → Plain parameter reader (reads balanced `{...}` group)
-- `[]` → Optional parameter reader (reads `[...]` if present)
-- `Token` → named parameter type (looked up in PARAMETER_TYPES table)
-- `[Number]` → Optional parameter with inner Number reparsing
-
-When porting from Perl, be careful: `DefMacro('\foo{}', ...)` in Perl is
-equivalent to `DefMacro!("\\foo {}", ...)` in Rust — the `{}` is a parameter
-spec, not literal braces.
-
-**Key insight:** If a macro argument isn't being read correctly, check whether
-the prototype has `{}` (Plain reader) when it should have a named type, or
-vice versa. The `{}` braces in prototypes always mean "read a balanced group".
+In a LaTeXML prototype string, `{}` means "read a Plain balanced group"; a named
+type (`Token`, `Number`, `Variable`) is its bare name, NOT braced. So
+`DefMacro!("\\foo Token", …)` reads a Token param, while `"\\foo {Token}"` reads a
+group and treats "Token" as literal body. `def_parser.rs` distinguishes `{}`
+(Plain reader), `[]` (Optional), `Token` (named type from PARAMETER_TYPES),
+`[Number]` (Optional with inner Number reparse). Perl `DefMacro('\foo{}',…)` ≡
+Rust `"\\foo {}"`. If an arg reads wrong, check `{}`-vs-named-type in the prototype.
 
 ---
 
 ## 12. normalize_sum_sizes: per-column-index arrays, not flat lists
 
-**Discovery:** Alignment column widths were computed incorrectly — nested
-tabulars and multi-row tables had wrong column dimensions, causing incorrect
-CSS width/height attributes.
-
-**Analysis:** Perl's `normalize_sum_sizes` (Alignment.pm L500-664) uses
-per-column-index arrays: `$colwidths[$j]` collects all width values for
-column j across all rows, then computes `max(@{$colwidths[$j]})`. The Rust
-implementation was using a flat list — one entry per cell across all rows —
-which broke when rows had different column counts or when colspan>1 cells
-needed width distributed across multiple columns.
-
-Additional Perl semantics that were missing in Rust:
-- **vattach height/depth split:** Perl computes per-alignment height/depth
-  based on `vattach` property (top = all depth, bottom = all height,
-  middle = split with math axis approximation). Rust set `cached_depth = 0`.
-- **lspaces/rspaces:** Perl adds left/right space dimensions to cell width
-  and sets `lpadding`/`rpadding` properties. Rust ignored these entirely.
-- **Border padding:** Perl adds `0.4*UNITY` (0.4 * 65536 scaled points) for
-  each border. Rust was missing this.
-- **First/last row strut:** Perl conditionally applies strut height to first
-  row and strut depth to last row only for non-LaTeX alignments. Rust applied
-  strut to all rows.
-- **colspan>1 distribution:** Perl distributes wide cells' excess width
-  equally across spanned columns. Rust didn't handle this.
-
-**Fix:** Complete rewrite of normalize.rs to match Perl Alignment.pm semantics:
-per-column-index arrays, separate rowdepths, vattach split, border padding,
-strut special-casing, colspan distribution, lspaces/rspaces propagation.
-
-**Key insight:** When porting array-accumulation patterns from Perl, verify
-the indexing structure. `$foo[$j]` in a nested loop is per-index accumulation,
-not flat append. A flat `Vec::push` is fundamentally different from
-`Vec<Vec>::push_at_index`.
+Perl `normalize_sum_sizes` (Alignment.pm L500-664) uses per-column-index arrays
+(`$colwidths[$j]` collects column j across all rows, then `max`). Rust used a flat
+one-entry-per-cell list, which broke on ragged column counts and colspan>1. When
+porting Perl array-accumulation, verify the indexing: `$foo[$j]` in a nested loop
+is per-index accumulation (`Vec<Vec>::push_at_index`), NOT flat `Vec::push`. The
+Rust rewrite of normalize.rs also had to add the missing Perl semantics:
+**vattach** height/depth split (top=all depth, bottom=all height, middle=split at
+math axis; Rust had `cached_depth=0`); **lspaces/rspaces** → cell width +
+`lpadding`/`rpadding`; **border padding** `0.4*UNITY` per border; **first/last-row
+strut** only for non-LaTeX alignments; **colspan>1** distributes excess width
+across spanned columns.
 
 ---
 
 ## 13. close_node_with_strictness: walker tracks walker node, not target
 
-**Discovery:** `close_node_with_strictness` (document.rs) was using
-`node.get_type()` for the loop variable `t`, where `node` is the *target*
-node being closed. This should be `n.get_type()` where `n` is the *walker*
-node traversing up the tree.
-
-**Analysis:** The function walks up the DOM tree from `self.node` toward
-`node`, auto-closing intermediate elements. The loop condition
-`t != Some(NodeType::DocumentNode) && &n != node` should track whether the
-*walker* has reached the document root, not whether the *target* is the
-document root (which is invariant across iterations).
-
-Perl (Document.pm L952-970):
-```perl
-my $t;
-while (($t = $n->nodeType) != XML_DOCUMENT_NODE && !$n->isSameNode($node)) {
-  ...
-  $n = $n->parentNode; }
-```
-
-The bug was in both the initialization (`let mut t = node.get_type()`) and
-the loop body update (`t = node.get_type()` instead of `t = n.get_type()`).
-
-**Fix:** Changed both to `n.get_type()`.
-
-**Key insight:** When porting Perl loops with multiple node references
-(`$node` = target, `$n` = walker), be very careful about which variable
-is used in loop conditions. A single-character difference (`node` vs `n`)
-can cause completely wrong loop termination.
+`close_node_with_strictness` (document.rs) walks up from `self.node` toward
+`node`, auto-closing intermediates — the loop condition must test the WALKER `n`,
+not the TARGET `node` (invariant across iterations). Perl (Document.pm L952-970):
+`while (($t = $n->nodeType) != XML_DOCUMENT_NODE && !$n->isSameNode($node)) {… $n
+= $n->parentNode}`. The bug used `node.get_type()` in both init and loop body
+instead of `n.get_type()` — a one-char (`node` vs `n`) difference causing wrong
+termination. **Fix:** both → `n.get_type()`. When porting Perl loops with `$node`
+(target) + `$n` (walker), watch which variable each condition uses.
 
 ---
 
 ## 14. close_to_node ifopen parameter: suppress error when true
 
-**Discovery:** `close_to_node` in document.rs declared `_ifopen: bool`
-(prefixed with underscore = unused). The Perl version uses `$ifopen` to
-suppress the "not open" error when closing a node that isn't actually in
-the current open-element path.
-
-**Analysis:** Perl (Document.pm L910-925):
-```perl
-if (!$ifopen) {
-  Error('malformed', $qname, $self, "Attempt to close $qname, which isn't open"); }
-```
-
-When `$ifopen` is true (the caller says "close this *if* it's open"), reaching
-the document root without finding the node is not an error — it just means
-the node wasn't open. Without this guard, every "close if open" call to a
-non-open node would emit a spurious error.
-
-**Fix:** Renamed `_ifopen` to `ifopen` and added the `if !ifopen` guard
-before the error emission.
-
-**Key insight:** Underscore-prefixed parameters (`_foo`) in Rust suppress
-unused-variable warnings. When porting from Perl, check whether each
-"unused" parameter is *intentionally* unused or *accidentally* not yet
-implemented. The `_` prefix can mask missing functionality.
+`close_to_node` (document.rs) declared `_ifopen` (unused). Perl (Document.pm
+L910-925) uses `$ifopen` to suppress the "not open" error when closing a node
+absent from the open path: `if (!$ifopen) { Error('malformed', …, "…isn't open")
+}`. Without it, every "close if open" call to a non-open node emits a spurious
+error. **Fix:** rename `_ifopen`→`ifopen`, guard the error with `if !ifopen`.
+Lesson: an `_`-prefixed param may be *accidentally* unimplemented, not
+intentionally unused — the `_` masks missing functionality.
 
 ---
 
 ## 15. DefKeyVal machinery: default resolution and setKeysExpansion guard
 
-**Discovery:** Bare keys like `sensitive,` in listings language definitions
-weren't getting their default values applied, despite `DefKeyVal!("LST",
-"sensitive", "", "true")` being correctly called.
-
-**Analysis:** The default resolution happens in TWO places:
-
-1. **During KeyVals parsing** (`add_value` with `use_default=true`):
-   `keyval_get(keyval_qname(prefix, keyset, key), "default")` — uses key
-   `KEYVAL@default@KV@LST@sensitive`. This is the CORRECT path.
-
-2. **During `lstActivate`** (dead fallback, now removed):
-   `LookupValue("KEYVAL@LST@sensitive@default")` — WRONG key pattern
-   (doesn't include KV prefix). This never matched in Perl either but was
-   carried over as dead code.
-
-The actual root cause was `\@lstdefinelanguage` ignoring the base language
-parameters (`_base_dialect`, `_base_language`). In Perl, `$keyvals->setValue
-('language', Tokens(@base))` inserts a `language` key into the keyvals that
-triggers recursive language chain activation. Without this, `[LaTeX]{TeX}
-→ [common]{TeX} → [primitive]{TeX}` never fires, so `sensitive,` from
-`[primitive]{TeX}` never reaches the processing context.
-
-**Related discovery:** `lstClearLanguage` in Perl clears class `'textcs'`
-but texcs words use class `'texcss'` — a Perl typo/quirk that allows texcs
-words to survive the clear across the language chain.
-
-**setKeysExpansion guard:** Rust adds `state::has_meaning(...)` before
-emitting `\qname@default`. Perl unconditionally emits `\qname@default`
-which causes undefined-CS errors for bare keys without registered defaults
-(e.g., `a4paper` via `DeclareOptionX`). The Rust guard falls back to
-`\qname{}`, which is more robust.
-
-**Key insight:** When debugging default-value resolution in keyvals, check:
-(a) that `DefKeyVal`/`define()` stored the default under the correct
-`KEYVAL@default@{qname}` key, (b) that the KeyVals parser (`add_value`)
-successfully retrieves it, (c) that the calling code doesn't introduce a
-different key naming convention.
+Bare keys (`sensitive,`) weren't getting defaults despite a correct
+`DefKeyVal!("LST","sensitive","","true")`. Default resolution happens during
+KeyVals parsing (`add_value` with `use_default=true`) via key
+`KEYVAL@default@KV@LST@sensitive` (correct); a second `lstActivate` path used the
+WRONG key `KEYVAL@LST@sensitive@default` (dead code, removed — never matched in
+Perl either). **Actual root cause:** `\@lstdefinelanguage` ignored the base-language
+params — Perl's `$keyvals->setValue('language', Tokens(@base))` triggers recursive
+language-chain activation (`[LaTeX]{TeX}→[common]{TeX}→[primitive]{TeX}`); without
+it `sensitive,` from `[primitive]{TeX}` never reaches the context. (Related Perl
+quirk: `lstClearLanguage` clears class `'textcs'` but texcs words use `'texcss'` —
+a typo that lets them survive the clear.) **setKeysExpansion guard:** Rust adds
+`state::has_meaning(...)` before emitting `\qname@default`; Perl emits it
+unconditionally → undefined-CS errors for bare keys without defaults (e.g.
+`a4paper` via `DeclareOptionX`). Rust falls back to `\qname{}`.
 
 ---
 
@@ -403,84 +203,71 @@ different key naming convention.
 
 **Date:** 2026-03-15
 
-The `DefMacro!` and `Let!` proc macros enter an infinite loop (OOM kill at
-14GB+) when the control sequence name contains special characters like `*`
-(star) or `{}` (braces). For example:
-
-```rust
-// BROKEN — causes infinite compile loop:
-DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
-Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
-```
-
-The compile-time tokenizer in `latexml_codegen` interprets `*` and `{}`
-as special tokens or parameter spec patterns and gets stuck in an infinite
-matching loop. Both `*` and `{}` are valid in TeX control sequences (e.g.
-`\eqnarray*`, `\begin{foo}`).
-
-**Workaround:** Always use the `T_CS!()` wrapper.
+`DefMacro!`/`Let!` proc macros infinite-loop (OOM 14GB+) when the CS-name string
+contains `*` or `{}` — the compile-time tokenizer (`latexml_codegen`) treats them
+as special/param patterns. Both are valid in TeX CS names (`\eqnarray*`,
+`\begin{foo}`). **Workaround:** wrap the CS in `T_CS!()`, bypassing string
+tokenization:
 
 ```rust
 DefMacro!(T_CS!("\\IEEEeqnarray*"), "{}", T_CS!("\\eqnarray*"));
 Let!(T_CS!("\\endIEEEeqnarray*"), T_CS!("\\endeqnarray*"));
 ```
 
-**Refactoring needed:** `DefMacro!` and `Let!` should accept `T_CS!("\\foo*")`
-as the first argument, bypassing string tokenization entirely. The internal
-tokenizer should also be fixed to handle `*` in CS names without looping.
+(Refactor TODO: fix the internal tokenizer to handle `*` in CS names without
+looping, so the raw string first-arg works.)
 
 ---
 
 ## 17. Sizer inference from reversion: silent incorrect sizing
 
-**Symptom:** All math boxes (`\hbox{$...$}`) return identical size `5.00002pt x 7.5pt + 0.55554pt` regardless of math content.
-
-**Root cause:** `dialect.rs::infer_sizer()` inferred a sizer from the Constructor's reversion tokens when no explicit sizer was specified. For body-capturing constructors like `\lx@begin@inline@math`, the reversion is `$` (T_MATH). The inferred sizer measured the literal string `"$"` with the current font, producing the `$` character's glyph size instead of the math body content size.
-
-**Fix:** `infer_sizer()` now returns `None` when no explicit sizer is set, matching Perl's behavior where sizer is never inferred from reversion. The Whatsit's default `compute_size()` then correctly uses the "body" property.
-
-**Key insight:** In Perl, `Whatsit::computeSize()` has explicit fallback: use body if available, else sum all args, else use reversion. The reversion is only consulted as a last resort. Rust's `infer_sizer` was short-circuiting this cascade.
+All math boxes (`\hbox{$...$}`) returned an identical size regardless of content:
+`dialect.rs::infer_sizer()` inferred a sizer from a Constructor's reversion tokens
+when none was set. For body-capturing constructors (`\lx@begin@inline@math`) the
+reversion is `$`, so it measured the literal `"$"` glyph, not the math body.
+**Fix:** `infer_sizer()` returns `None` when no explicit sizer is set (Perl never
+infers from reversion) — `compute_size()` then uses the "body" property. Perl's
+`Whatsit::computeSize` consults reversion only as a last resort (body → sum args →
+reversion); Rust was short-circuiting that cascade.
 
 ---
 
 ## 18. METRIC_MAP vs STDMETRICS key mismatch: math fonts fall back to cmr
 
-**Symptom:** Math character widths (e.g., italic 'a') don't include italic correction. All math characters use cmr (serif) metrics instead of cmmi (math italic) metrics.
-
-**Root cause:** `METRIC_MAP` mapped `"math_medium_italic"` → `"cmmi"` but `STDMETRICS` used `"cmm"` as the key for cmmi10 data. The `get_metric()` function tried `"cmmi10"` → not found, then `get_metric_for_name("cmmi")` → not found, then fell back to `"cmr"`.
-
-**Fix:** Changed `METRIC_MAP` value from `"cmmi"` to `"cmm"` to match the `STDMETRICS` key. Now `get_metric_for_name("cmm")` finds the correct cmmi metrics.
-
-**Key insight:** The STDMETRICS key naming convention uses the base without the trailing 'i' (cmm, not cmmi), but METRIC_MAP was using the TFM filename convention (cmmi). Always ensure METRIC_MAP values match STDMETRICS keys.
+Math chars used cmr (serif) instead of cmmi metrics (no italic correction):
+`METRIC_MAP` mapped `"math_medium_italic"`→`"cmmi"` but `STDMETRICS` keys cmmi10
+data as `"cmm"`, so `get_metric_for_name("cmmi")` missed and fell back to cmr.
+**Fix:** `METRIC_MAP` value `"cmmi"`→`"cmm"`. STDMETRICS keys drop the trailing
+'i' (cmm, not cmmi) while METRIC_MAP used the TFM-filename convention — ensure
+METRIC_MAP values match STDMETRICS keys.
 
 ---
 
 ## 19. enterHorizontal uses inplace assignment, NOT beginMode
 
-**Context:** Understanding why `\vbox{hop}` should produce width=\hsize (469.75pt) but Rust was producing the natural character width (5.55pt).
-
-**Root cause:** Perl's `enterHorizontal` (Stomach.pm line 418) uses `assignValue(MODE => 'horizontal', 'inplace')` — NOT `beginMode('horizontal')`. The comment says: "SAME frame as BOUND_MODE!" This means BOUND_MODE stays as 'internal_vertical' when MODE changes to 'horizontal'. When `endMode('internal_vertical')` calls `leaveHorizontal_internal`, the condition `MODE eq 'horizontal' AND BOUND_MODE =~ /vertical$/` PASSES because BOUND_MODE was never changed. This triggers `repackHorizontal`, which groups character boxes into a horizontal `List(@para, mode => 'horizontal')`. Perl's `List()` constructor (List.pm line 53-54) sets `width = \hsize` when `mode eq 'horizontal'`.
-
-**Fix:** `predigest_box_contents` now calls `begin_mode`/`end_mode` matching Perl's `readBoxContents` frame scope. After `invoke_token`, checks if MODE was changed to 'horizontal' inplace, and if so, calls `repack_horizontal_in_list` to group character boxes into a horizontal sub-List with width=\hsize. Guard: only repacks when body contains simple TBoxes (not Whatsits like tabular).
-
-**Key insight:** The distinction between `assignValue(MODE, 'inplace')` and `beginMode(mode)` (which calls `pushStackFrame` + `assignValue(MODE, 'local')`) is critical. The former modifies the SAME frame's BOUND_MODE scope; the latter creates a NEW scope that hides the parent's BOUND_MODE.
+`\vbox{hop}` should give width=\hsize (469.75pt) but Rust gave natural char width
+(5.55pt). Perl's `enterHorizontal` (Stomach.pm L418) does `assignValue(MODE =>
+'horizontal', 'inplace')` — NOT `beginMode` — so BOUND_MODE stays
+'internal_vertical' in the SAME frame. `endMode('internal_vertical')` →
+`leaveHorizontal_internal` then passes `MODE eq 'horizontal' AND BOUND_MODE =~
+/vertical$/`, firing `repackHorizontal`, which groups char boxes into
+`List(mode=>'horizontal')`; `List()` (List.pm L53-54) sets `width=\hsize`. The
+distinction is critical: `assignValue(MODE,'inplace')` modifies the SAME frame's
+BOUND_MODE; `beginMode` pushes a NEW frame (`pushStackFrame` + `MODE,'local'`)
+hiding the parent's. **Fix:** `predigest_box_contents` matches Perl's frame scope
+and calls `repack_horizontal_in_list` when MODE went horizontal inplace (guarded
+to simple TBoxes, not Whatsits like tabular).
 
 ## 20. Whatsit::get_arg() is 1-based: get_arg(0) always returns None
 
-**Context:** `\turnbox{90}{hello}` always produced angle=0. Debug output showed `get_arg(0)` returning None. The `\turnbox` constructor used 0-based indexing for arg access.
-
-**Root cause:** `Whatsit::get_arg(n)` (whatsit.rs line 108-116) uses 1-based indexing to match Perl's `$whatsit->getArg(1)` convention:
-```rust
-pub fn get_arg(&self, n: usize) -> Option<&Digested> {
-    if n == 0 { return None; }
-    match self.args.get(n - 1) { ... }
-}
-```
-Code written with 0-based assumption silently gets None for the first arg, triggering `unwrap_or(0.0)` fallbacks.
-
-**Fix:** Changed all `get_arg(0)` to `get_arg(1)`, `get_arg(1)` to `get_arg(2)`, etc. in `\turnbox`, `{turn}`, `{rotate}`, and `\lx@diagheads`. Also confirmed: OptionalKeyVals parameters that are NOT provided do NOT occupy an arg slot (novalue=true), so they don't shift the indices.
-
-**Key insight:** Always use 1-based indexing with `get_arg()`. The pattern `get_arg(0).map(...).unwrap_or(default)` is a silent bug — it always uses the default. To catch these: grep for `get_arg(0)` in the codebase.
+`Whatsit::get_arg(n)` (whatsit.rs L108-116) is 1-based (matches Perl
+`$whatsit->getArg(1)`): `n==0` returns None, else `self.args.get(n-1)`.
+0-based-assuming code silently gets None for the first arg → `unwrap_or(0.0)`
+(e.g. `\turnbox{90}{hello}` always angle=0). The pattern
+`get_arg(0).map(…).unwrap_or(default)` always uses the default. **Fix:**
+`\turnbox`/`{turn}`/`{rotate}`/`\lx@diagheads` shifted to 1-based. (OptionalKeyVals
+params NOT provided don't occupy an arg slot — `novalue=true` — so don't shift
+indices.) Grep `get_arg(0)` to catch these.
 
 ---
 
@@ -556,58 +343,41 @@ expansions for undefined macros.
 
 ## 23. DefConstructor state lookups: digest time vs construction time
 
-**Discovery:** xy-pic SVG constructors produced zero coordinates because register
-values (\X@c, \Y@c, etc.) were read at construction time instead of digest time.
-
-**Analysis:** `DefConstructor` bodies (`sub[document, args, props] { ... }`) run at
-CONSTRUCTION time (when XML is built). But multiple constructors are digested in
-sequence before any are constructed. A register read at construction time sees the
-value from the LAST digested constructor, not the one being constructed.
-
-**Fix pattern:** Use `properties => sub[args] { ... }` to capture register values
-at digest time. The callback returns a `SymHashMap<Stored>` that becomes the
-whatsit's properties. The constructor body reads from `props.get("key")`.
+`DefConstructor` bodies run at CONSTRUCTION time, but constructors are digested in
+sequence before ANY is constructed — so a register read in the body sees the LAST
+digested constructor's value, not this one's (xy-pic SVG constructors read
+`\X@c`/`\Y@c` at construction → all-zero coordinates). **Fix:** capture at digest
+time via `properties => sub[args] {…}` (returns a `SymHashMap<Stored>`), read in
+the body from `props.get("key")`:
 
 ```rust
-// WRONG: reads register at construction time
-DefConstructor!("\\foo", sub[document, _args, _props] {
-    let val = state::lookup_register("\\bar", Vec::new())?; // WRONG
-});
-
-// RIGHT: captures register at digest time
 DefConstructor!("\\foo", sub[document, _args, props] {
-    let val = props.get("bar_val"); // Read from properties
+    let val = props.get("bar_val");                          // read at construction
 }, properties => {
-    let val = state::lookup_register("\\bar", Vec::new())?;
+    let val = state::lookup_register("\\bar", Vec::new())?;  // captured at digest
     stored_map!("bar_val" => format!("{}", val))
 });
 ```
 
-**Scope:** Applied to all 19 xy SVG constructors + `\pic@makebox@`. Audit found
-no other critical instances in the engine codebase.
+Applied to all 19 xy SVG constructors + `\pic@makebox@` (no other critical sites).
 
 ---
 
 ## 24. catcode checks vs defined_as: Perl is inconsistent
 
-**Discovery:** Replacing `get_catcode() == Catcode::BEGIN` with `defined_as(T_BEGIN!())`
-caused regressions because Perl uses DIFFERENT check patterns in different functions.
-
-**Analysis:** Perl's Token has both `$$token[1] == CC_BEGIN` (raw catcode check)
-and `$token->defined_as(T_BEGIN)` (meaning check via `\let` chain resolution).
-Perl uses them inconsistently:
+Replacing `get_catcode() == Catcode::BEGIN` with `defined_as(T_BEGIN!())`
+regressed because Perl uses DIFFERENT checks per function — raw catcode
+(`$$token[1] == CC_BEGIN`) vs meaning (`defined_as`, via `\let`-chain resolution) —
+and mixes them:
 
 | Function | Perl check | Matches `\bgroup`? |
 |----------|-----------|-------------------|
 | readArg | CC_BEGIN catcode | No |
 | readBoxContents | defined_as(T_BEGIN) | Yes |
 | readBalanced (require_open) | CC_BEGIN \|\| Equals(meaning, T_BEGIN) | Yes (dual) |
-| readDelimited | CC_BEGIN catcode | No |
-| readTokensValue | CC_BEGIN catcode | No |
-| readUntilBrace | CC_BEGIN catcode | No |
+| readDelimited / readTokensValue / readUntilBrace | CC_BEGIN catcode | No |
 
-**Fix:** Match each Perl function's exact check pattern. Never assume `defined_as`
-is universally correct — check the Perl source for each specific function.
+**Match each Perl function's exact check** — `defined_as` is not universally correct.
 
 ---
 
@@ -981,61 +751,37 @@ The audit of every site in `latexml_core` / `latexml_post` /
 `latexml_math_parser` is complete (round-17 cycles 51–58); new drops
 should use the guardian by default.
 
-## 38. `\vspace` kept as no-op stub; faithful port triggers moderncv paragraph-break regression
+## 38. `\vspace` is the faithful DefMacro; a "doesn't fire" mode-gated primitive means suspect the UPSTREAM mode-setter
 
-**Context:** Perl `latex_constructs.pool.ltxml` L4692 defines
-`DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');` — a pure
-token-replacement macro. Rust `latex_constructs.rs:7206` instead has
-`DefPrimitive!("\\vspace OptionalMatch:* {}", None)` (empty body,
-silently drops the argument).
+**RESOLVED (2026-08-05).** `\vspace` is the faithful
+`DefMacro!('\\vspace OptionalMatch:* {}', '\\vskip #2\\relax')`
+(`latex_constructs.rs:9241`), matching Perl `latex_constructs.pool.ltxml:4692`.
+An earlier port kept it a no-op `DefPrimitive` stub, fearing a `moderncv/cs_cv.tex`
+paragraph-break regression from `\vskip` auto-`\par` in horizontal mode; that
+diagnosis was WRONG and the feared landmine never fired (the fix doesn't touch
+`\vskip`, so `82_moderncv::cs_cv_test` stays green).
 
-**Why the divergence:** a prior port attempted the faithful DefMacro
-wiring and regressed the `moderncv/cs_cv.tex` test — `\vskip` in Rust
-digested as vertical-mode glue triggered an implicit `\par` when
-encountered in horizontal mode, breaking paragraphs that moderncv
-intended to keep intact. Perl's `\vskip` binding apparently produces
-a Whatsit without the paragraph-break side effect.
+**The real bug (witness arXiv:2302.11635, IEEEtran `figure*` with
+`\hrulefill\vspace*{4pt}` between minipage rows):** the captioned minipages after
+the `\vspace*` came out inside the leader's `<ltx:p>` as schema-invalid
+`<caption>`-in-`<block>` (4 `malformed:` errors) where Perl makes them separate
+`<ltx:figure>`s. Root cause: Rust was `internal_vertical`, not `horizontal`, at
+the `\vskip`, so `leaveHorizontal` *correctly* declined to fire (`hmode+vskip:
+head_for_vmode`, gated on horizontal mode, tex.web L21160). The defect was that
+LaTeXML's `\hrulefill` dropped the kernel's leading `\leavevmode` (latex.ltx
+L643); `\hrule` is vertical-mode, so nothing entered horizontal mode. Perl
+survived because `\hfill`'s `enterHorizontal` (`inplace`) persists past `\leaders`
+(a `bounded` constructor); Rust's `bounded` reverts it. **Fix:** restore the
+kernel definition — `\hrulefill` → `\leavevmode\leaders\hrule\hfill\kern\z@` (and
+`\dotfill` likewise), `plain_constructs.rs`,
+[OXIDIZED_DESIGN #97](OXIDIZED_DESIGN_DIVERGENCES.md). 2302.11635: 4 errors → 0,
+10 `<figure>`/0 `<block>` (Perl-identical). Guard:
+`50_structure::vspace_closes_leader_para_test`.
 
-**Wisdom:** **do NOT** flip `\vspace` to Perl-matching DefMacro as a
-naive Def*-parity fix. The kind swap is load-bearing — it hides a
-deeper asymmetry in Rust's `\vskip` horizontal-mode handling. The
-proper path to parity is:
-1. Port `\vskip` so its horizontal-mode digestion matches Perl (no
-   auto-\par).
-2. Then restore `\vspace` to `DefMacro!('\\vspace OptionalMatch:* {}', '\\vskip #2\\relax')`.
-
-Verify fix against `moderncv/cs_cv.tex` + any other `\vspace`-using
-regression tests before landing. Without step 1, step 2 breaks moderncv.
-
-**Update (2026-08-05):** `\vspace` is now the faithful DefMacro form
-(`latex_constructs.rs:9241`, `'\vskip #2\relax'`).
-
-**RESOLVED (2026-08-05) — the "step 1" diagnosis above was WRONG.** `\vskip`'s
-`leaveHorizontal` binding is *faithful*; the bug was upstream. **Witness: arXiv
-2302.11635** (IEEEtran `figure*`, `\hrulefill\vspace*{4pt}` between minipage
-rows): the captioned minipages after the `\vspace*` came out inside the leader's
-`<ltx:p>` as a schema-invalid `<caption>`-in-`<block>` (4 `malformed:` errors),
-where Perl makes them separate `<ltx:figure>`s (0 errors). Root cause: **Rust
-was `internal_vertical`, not `horizontal`, at the `\vskip`** — so
-`leaveHorizontal` *correctly* declined to fire (`hmode+vskip: head_for_vmode` is
-gated on horizontal mode, tex.web L21160). The real defect was that
-**LaTeXML's `\hrulefill` dropped the LaTeX kernel's leading `\leavevmode`**
-(latex.ltx L643); `\hrule` is a vertical-mode command, so without `\leavevmode`
-nothing enters horizontal mode. Perl survived because `\hfill`'s
-`enterHorizontal` (`inplace`) persists past `\leaders` (a `bounded`
-constructor); Rust's `bounded` reverts it (isolated: bare `\hfill` *does*
-persist; `\leaders`-wrapped does not). Fix: restore the kernel definition —
-`\hrulefill` → `\leavevmode\leaders\hrule\hfill\kern\z@` (and `\dotfill`
-likewise), `plain_constructs.rs`, [OXIDIZED_DESIGN #97](OXIDIZED_DESIGN_DIVERGENCES.md).
-2302.11635: 4 errors → 0, 10 `<figure>`/0 `<block>` (Perl-identical). The old
-note's feared moderncv landmine never fired — the fix doesn't touch `\vskip`, so
-`82_moderncv::cs_cv_test` stays green. Guard:
-`50_structure::vspace_closes_leader_para_test` (`\vspace*` vs `\par` control).
-
-Method takeaway (durable): when a mode-gated primitive "doesn't fire," suspect
-the UPSTREAM mode-setter, not the primitive. And check the **real LaTeX kernel
-definition** (latex.ltx) — LaTeXML's `.pool` macros are sometimes simplified
-(dropped `\leavevmode`/`\kern\z@`), and the port should follow the kernel.
+**Method takeaway:** when a mode-gated primitive "doesn't fire," suspect the
+UPSTREAM mode-setter, not the primitive — and check the **real LaTeX kernel
+definition** (latex.ltx); LaTeXML's `.pool` macros sometimes drop
+`\leavevmode`/`\kern\z@`, and the port should follow the kernel.
 
 ## 40. `\#`/`\&`/`\%`/`\$` Def*-kind mismatch is intentional mode-split
 
@@ -2104,8 +1850,9 @@ genuine active aliased borrow. The `&mut self` receiver is a second layer
 redundant THIRD layer that is simultaneously **over-strict** (false-positives on
 benign clones — what bit the 16 papers) and **under-protective** (it never
 actually prevents the real hazard: once you extract the `*mut xmlNode`, raw C
-calls mutate sibling/parent nodes outside any RefCell). Raising it to 8192
-doesn't fix the theory — it just moves the false-positive threshold higher.
+calls mutate sibling/parent nodes outside any RefCell). Raising it to 8192 only
+moved the false-positive threshold higher — the real fix (below) replaced the
+heuristic outright.
 
 **Bound on the shared-`RefCell` guarantee (don't overclaim):** the identity
 cache is NOT total — `set_unlinked` (on `unlink_node`) and `import_node` call
@@ -2115,34 +1862,22 @@ the same pointer mints an INDEPENDENT `RefCell`, so two such handles to an
 unlinked node are not mutually exclusive. The old `strong_count` heuristic was
 equally blind to this (two independent `Rc`s, each low-count), so `try_borrow_mut`
 neither introduces nor worsens it — it's the same inherent C-wrapping footgun.
-The fix lives in the dginev `libxml` fork (0.3.14): `node_ptr_mut` now uses
-`try_borrow_mut`; `NODE_RC_MAX_GUARD`/`set_node_rc_guard` became deprecated
-no-ops. After latexml-oxide bumps to 0.3.14, drop the `set_node_rc_guard(8192)`
-call in `Document::new`.
-
 **Why no conflict actually occurs:** document construction is single-threaded
 (State is thread-local, one Document per conversion) and the builder mutates one
 node at a time without re-entering a live borrow. The only place a real
-re-entrant mutable borrow can arise is the Rhai constructor trampoline (#248 / SYNC_STATUS §3) — and there, failing LOUDLY is correct.
+re-entrant mutable borrow can arise is the Rhai constructor trampoline (#248 /
+SYNC_STATUS §3) — and there, failing LOUDLY is correct.
 
-**Recommended structural fix (in the dginev `libxml` fork — published 0.3.13, not
-checked out locally, no `[patch]`):** replace the `strong_count` heuristic in
-`node_ptr_mut` with the real invariant —
-```rust
-match self.0.try_borrow_mut() {
-  Ok(b) => Ok(b.node_ptr),           // no active aliased borrow ⇒ safe
-  Err(_) => Err("… node is actively borrowed …".into()),
-}
-```
-This is strictly sounder (catches the genuine re-entrancy, ignores benign clone
-count), eliminates the false-positive class entirely, and makes
-`NODE_RC_MAX_GUARD` / the 8192 band-aid dead code (remove after the fork bump).
-A purely in-repo mitigation (key `idstore` by `xmlNodePtr`/`usize` and re-wrap on
-lookup, so it stops holding a persistent clone) shaves a few counts but CANNOT
-remove the issue "in theory" — the cache-clone + deep-sharing reality always
-exceeds a small guard. **Sequencing:** keep 8192 load-bearing until the fork fix
-lands, then delete the guard plumbing. Do NOT lower the guard while the heuristic
-exists (regresses the 16 papers).
+**RESOLVED (dginev `libxml` fork 0.3.14, landed).** `node_ptr_mut` now uses
+`try_borrow_mut` (catches genuine re-entrancy, ignores benign clone count);
+`NODE_RC_MAX_GUARD`/`set_node_rc_guard` are deprecated no-ops and the
+`set_node_rc_guard(8192)` call in `Document::new` is gone
+(`latexml_core/src/document.rs:258`). An in-repo-only mitigation (key `idstore`
+by `xmlNodePtr` and re-wrap on lookup) could shave counts but never removes the
+issue — the cache-clone + deep-sharing reality always exceeds a small guard, so
+the fork fix was the right layer. Do NOT reintroduce a `strong_count` guard: it
+false-positives on the 16-paper cluster (witnesses 0805.2376 dcpic, 1407.0452
+emulateapj).
 
 ## 41. Frontmatter fallback DOM surgery: three construction-time traps
 
