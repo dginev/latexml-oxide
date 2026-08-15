@@ -6,8 +6,6 @@
 //! ties to the harness machinery — they just construct a minimal
 //! `Core` and tokenize a single inline formula.
 
-use std::rc::Rc;
-
 use latexml_core::{Core, CoreOptions, document::Document, state};
 use latexml_math_parser::node_to_grammar_lexemes;
 use libxml::tree::Node;
@@ -41,7 +39,9 @@ pub fn new_test_engine() -> Core {
   });
   // Shared model loader — see crate::load_latexml_default_model.
   crate::load_latexml_default_model();
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
   state::add_binding_names(latexml_package::binding_names());
   core_engine
 }

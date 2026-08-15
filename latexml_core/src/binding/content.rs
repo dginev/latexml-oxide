@@ -9,7 +9,7 @@ use crate::Digested;
 use crate::{
   binding::def::dialect::def_macro,
   common::{
-    arena,
+    BindingSource, arena,
     arena::SymStr,
     error::{emit_error, *},
     font::{Font, Fontmap},
@@ -478,15 +478,16 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
   // Catch Fatal errors during binding loading (e.g., token limit exceeded during
   // expl3 kernel loading). Convert to non-fatal so document processing continues.
-  let is_binding = if options.noltxml {
-    false
+  // `Some(source)` = a binding was loaded, carrying its on-disk source path
+  // when it is a runtime file binding (`.rhai`) or `None` for a compiled-in one;
+  // outer `None` = no binding loaded. The two `_load_binding` attempts (extra
+  // slot, then the main resolving chain) short-circuit on the first that loads.
+  let loaded = if options.noltxml {
+    None
   } else {
-    match _load_binding(false, &filename, options.reloadable).and_then(|ext| {
-      if ext {
-        Ok(true)
-      } else {
-        _load_binding(true, &filename, options.reloadable)
-      }
+    match _load_binding(false, &filename, options.reloadable).and_then(|ext| match ext {
+      Some(source) => Ok(Some(source)),
+      None => _load_binding(true, &filename, options.reloadable),
     }) {
       Ok(v) => v,
       Err(e) => {
@@ -497,23 +498,31 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         );
         // Mark as loaded even on error to prevent re-loading via raw path
         assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
-        false
+        None
       },
     }
   };
   let mut is_found_raw = false;
-  if is_binding {
+  // Retain the "a binding loaded" fact for the later hook-firing check (`loaded`
+  // is consumed by the announce branch just below).
+  let is_binding = loaded.is_some();
+  if let Some(binding_source) = loaded {
     // A native binding was truly loaded: announce it (Perl loadLTXML
     // "(Loading <path>…)" analog) so CorTeX's `loaded_file` log-parser counts
     // it. Self-contained begin+end note (timing is currently disabled).
-    // Announce under the BINDING's module name — `tcolorbox.sty` →
-    // `tcolorbox_sty.rs`, `aa.cls` → `aa_cls.rs` — mirroring Perl, whose
-    // announcement carries the distinct `.ltxml` path. This keeps the entry
-    // distinguishable from the raw twin's "(Processing definitions <path>…)"
-    // when a binding raw-loads its same-named file, so cortex's loaded_file
-    // stats record two artifacts as two entries instead of double-counting
-    // one file (user, 2026-07-04).
-    let binding_name = if let Some(stem) = filename.strip_suffix(".sty") {
+    // A runtime `.rhai` file binding threads its resolved on-disk path through
+    // the dispatch result (`BindingSource`, converter.rs `rhai_dispatch`), so it
+    // is announced by that real path — more useful, and closer to Perl, whose
+    // note names the actual binding file (#560). A compiled-in binding carries
+    // no source, so it is announced under its module-proxy name — `tcolorbox.sty`
+    // → `tcolorbox_sty.rs`, `aa.cls` → `aa_cls.rs` — mirroring Perl's distinct
+    // `.ltxml` path. This keeps the entry distinguishable from the raw twin's
+    // "(Processing definitions <path>…)" when a binding raw-loads its same-named
+    // file, so cortex's loaded_file stats record two artifacts as two entries
+    // instead of double-counting one file (user, 2026-07-04).
+    let binding_name = if let Some(path) = binding_source {
+      path
+    } else if let Some(stem) = filename.strip_suffix(".sty") {
       s!("{stem}_sty.rs")
     } else if let Some(stem) = filename.strip_suffix(".cls") {
       s!("{stem}_cls.rs")
@@ -880,12 +889,18 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   Ok(())
 }
 
-/// loads a binding from the main binding dispatcher, if available+found
-pub fn load_binding(file: &str) -> Result<bool> { _load_binding(true, file, false) }
+/// loads a binding from the main binding dispatcher, if available+found.
+/// `Ok(Some(source))` on load — `source` is the on-disk path for a runtime
+/// `.rhai` file binding, `None` for a compiled-in one; `Ok(None)` = not loaded.
+pub fn load_binding(file: &str) -> Result<Option<BindingSource>> {
+  _load_binding(true, file, false)
+}
 /// loads a binding from an external binding dispatcher, if available+found
-pub fn load_external_binding(file: &str) -> Result<bool> { _load_binding(false, file, false) }
+pub fn load_external_binding(file: &str) -> Result<Option<BindingSource>> {
+  _load_binding(false, file, false)
+}
 // in the spirit of Perl's Package::loadLTXML
-fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool> {
+fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Option<BindingSource>> {
   // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
   // (e.g. `\inputencoding{cp1251}` re-invokes cp1251.def to re-register
   // DeclareInputText mappings after `set_input_encoding` reset them).
@@ -895,7 +910,10 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   // are independent paths. Mirrors Perl `loadLTXML` (Package.pm L2311).
   let loaded_key = s!("{request}_loaded");
   if !reloadable && lookup_bool(&loaded_key) {
-    return Ok(true);
+    // Already loaded; the source path is not retained across loads, and the
+    // announce site short-circuits on `already_handled` before reaching here,
+    // so reporting an unknown (`None`) source is correct.
+    return Ok(Some(None));
   }
 
   // Re-entrance guard for binding loads: track which bindings are
@@ -922,13 +940,19 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
         request_key
       )
     );
-    return Ok(true);
+    return Ok(Some(None));
   }
 
-  let taken_dispatcher = if internal {
-    get_bindings_dispatch()
+  // Normalize both dispatcher slots to one resolving closure so the shared
+  // unlock / in-progress guards wrap a single call. The main slot already
+  // reports a `BindingSource`; the extra (compiled) slot never has one, so its
+  // success maps to `None`.
+  type Resolver = Box<dyn Fn(&str) -> Option<Result<BindingSource>>>;
+  let taken_dispatcher: Option<Resolver> = if internal {
+    get_bindings_dispatch().map(|d| Box::new(move |r: &str| d(r)) as Resolver)
   } else {
     get_extra_bindings_dispatch()
+      .map(|d| Box::new(move |r: &str| d(r).map(|res| res.map(|()| None))) as Resolver)
   };
   match taken_dispatcher {
     Some(ref dispatcher) => {
@@ -959,15 +983,14 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
           // Mark binding as loaded (raw `<request>_raw_loaded` is tracked
           // separately by load_tex_definitions). Per OXIDIZED_DESIGN #23.
           assign_value(&loaded_key, true, Some(Scope::Global));
-          match result {
-            Ok(()) => Ok(true),
-            Err(e) => Err(e),
-          }
+          // `result` is `Result<BindingSource>`; wrap the success in `Some` to
+          // signal "a binding loaded" (carrying its source path, if any).
+          result.map(Some)
         },
-        None => Ok(false),
+        None => Ok(None),
       }
     },
-    None => Ok(false),
+    None => Ok(None),
   }
 }
 
@@ -1261,7 +1284,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
         } else {
           s!("{}.tex", clean_req)
         };
-        load_binding(&tex_name)? || load_external_binding(&tex_name)?
+        load_binding(&tex_name)?.is_some() || load_external_binding(&tex_name)?.is_some()
       } else if is_binding_extension(ext) {
         // Route through input_definitions for fallback-aware dispatch.
         // The `name` arg expects no extension, so split it off.
@@ -1317,7 +1340,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
       } else {
         s!("{}.tex", clean_req)
       };
-      if load_binding(&tex_name)? {
+      if load_binding(&tex_name)?.is_some() {
         return Ok(());
       }
     }
@@ -1478,7 +1501,7 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
   // TODO: is this `.latexml` variation still relevant in the Rust port?
   let _has_binding = if !pathname::is_literaldata(path) {
     let (_dir, base, _ext) = pathname::split(path);
-    load_external_binding(&base)? || load_binding(&base)?
+    load_external_binding(&base)?.is_some() || load_binding(&base)?.is_some()
   } else {
     false
   };
@@ -2789,10 +2812,10 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
 
   let fallback_filename = format!("{base}.{ext_type}");
   // Check if fallback binding exists
-  if load_binding(&fallback_filename).unwrap_or(false) {
+  if matches!(load_binding(&fallback_filename), Ok(Some(_))) {
     // Binding exists but was loaded by the check — it's OK, the caller will mark loaded
     Some((fallback_filename, kind))
-  } else if load_external_binding(&fallback_filename).unwrap_or(false) {
+  } else if matches!(load_external_binding(&fallback_filename), Ok(Some(_))) {
     Some((fallback_filename, kind))
   } else {
     None
