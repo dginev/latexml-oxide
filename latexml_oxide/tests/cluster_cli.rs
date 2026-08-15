@@ -1946,4 +1946,72 @@ mod title_pubnote_pollution {
       "metadata pubnotes must render as an ltx_pubnotes_meta block after the title;\nhtml=\n{html}"
     );
   }
+
+  /// The HTML `<head><title>` (browser tab / SEO / bookmark text) must carry
+  /// ONLY the title text — never any note content. Notes (`\thanks`, footnotes)
+  /// and publication metadata (conference/DOI) are meant to display visually in
+  /// the body only. This holds by construction: the engine extracts every note
+  /// out of `\title{}` into sibling `<pubnote>` elements, so the core `<title>`
+  /// node — and the navigation title the head `<title>` derives from — are
+  /// clean. This guard locks that in against a regression that let note text
+  /// flow back into the head title (e.g. a template switched to a
+  /// note-including flatten, or notes re-parented under `<title>`).
+  ///
+  /// A `\thanks` INSIDE `\title{}` is the strongest case: it is a note that TeX
+  /// nests within the title group, yet it must still be extracted and kept out
+  /// of the head `<title>`.
+  #[test]
+  fn head_title_excludes_all_note_content() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    // \thanks nested in the title + metadata pubnotes + a plain title footnote.
+    let doc = "\\documentclass{article}\n\
+               \\makeatletter\n\
+               \\lx@add@pubnote[role=conference]{Proc. of Something 2025}\n\
+               \\lx@add@pubnote[role=doi]{10.1/xyz}\n\
+               \\makeatother\n\
+               \\title{My Paper Title\\thanks{Secret Funding Note}}\n\
+               \\author{An Author}\n\
+               \\begin{document}\\maketitle Body.\\end{document}\n";
+    fs::write(root.join("doc.tex"), doc).unwrap();
+    let out = Command::new(bin)
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    // Isolate the HEAD <title>…</title> (not the body <h1 class="ltx_title">).
+    let head_title = html
+      .find("<title>")
+      .and_then(|i| {
+        html[i + 7..]
+          .find("</title>")
+          .map(|j| &html[i + 7..i + 7 + j])
+      })
+      .expect("HTML must have a <head><title>");
+
+    // The title text is present …
+    assert!(
+      head_title.contains("My Paper Title"),
+      "head <title> lost the actual title text;\n<title>={head_title:?}\nstderr=\n{stderr}"
+    );
+    // … and NONE of the note / metadata content leaked into it.
+    for leak in [
+      "Secret Funding Note",
+      "Proc. of Something",
+      "10.1/xyz",
+      "Thanks",
+    ] {
+      assert!(
+        !head_title.contains(leak),
+        "note/metadata {leak:?} leaked into the head <title> \
+         (must be body-visual only);\n<title>={head_title:?}"
+      );
+    }
+  }
 }
