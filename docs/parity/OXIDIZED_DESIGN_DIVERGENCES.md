@@ -3898,3 +3898,49 @@ case.
 (`tests/structure/parskip.{tex,xml}` — `\usepackage{parskip}` + three paragraphs;
 the 2nd and 3rd carry `class="ltx_noindent"`, which the empty-stub binding did
 not emit).
+
+### 107. A natural-size vector figure is sized in font-relative `em`, not fixed pixels
+
+**Perl** sizes `\includegraphics` figures in absolute pixels: `LaTeXML::Post::Graphics`
+asks ImageMagick to raster the image and reports the pixel count, which the XSLT
+emits as `<img width="N" height="N">` (bare = CSS px). For a figure with no author
+size that pixel count is fixed — it ignores the reader's font-size, browser zoom,
+and device density, so on enlarged text the figure shrinks relative to the prose,
+and at the document's intended font it lands ~25% small (a bp value read as px:
+72-vs-96 dpi). Oxide's own vector-SVG path inherited the same fixed-pixel basis.
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15; issue #562, reporter
+xworld21): a figure included at its **natural size** (no `width=`/`height=`/
+`totalheight=`/`scale=`) from a **vector** source is sized in `em` — its true
+typeset size over the local font size — so it reproduces the figure-to-text
+proportion of the source at any reading size (and hits the correct physical size at
+the document's font). The natural size is read directly as a physical length in TeX
+pt — a PDF page box, an EPS/PS `%%BoundingBox`, or an SVG's lengths/viewBox, all
+bp→pt (`latexml_core::util::image::natural_display_size_pt`, which returns `None`
+for raster formats and so gates the em path to vector figures). It is read fresh at
+`<ltx:graphics>` construction rather than reused from `image_graphicx_sizer`'s
+`cached_width`, which runs EPS/raster sizes through a device-DPI round-trip and is
+not a physical length. `em = size_pt / font_pt` against the LOCAL font
+(`graphicx_sty.rs` `after_construct`), emitted as `cssstyle="width:Nem; height:Nem"`
+— copied verbatim into the `<img>`/`<object>` style by `LaTeXML-common.xsl`, where
+CSS overrides the pixel `imagewidth`/`imageheight` fallback (which is retained). No
+XSLT change.
+
+Scope: only **unsized** vector inclusions. Author-sized (`width=`/`scale=`) figures
+keep the pixel path — their size is the author's absolute choice, not the figure's
+intrinsic size — and raster (PNG/JPEG) inclusions are unchanged (a pixel count is
+not a physical size). This is the font-relative direction upstream Perl LaTeXML is
+independently moving toward (relative/`em` SVG sizing), so it converges rather than
+diverges long-term; it commits **no** absolute px factor. The one free parameter —
+the base-font reference (here the local font's pt size) — is the seam to reconcile
+with the upstream scheme.
+
+Known limitation: an SVG *source* whose root carries only a unitless `viewBox` (no
+`pt`/`cm` lengths) is read by `read_svg_size_pt` as px, so its em can be off by
+96/72; PDF/EPS/PS sources and SVGs with absolute lengths are exact. Validated on
+witnesses — em matches the source box: arXiv:2103.00051 (PDF, three natural
+figures), 1601.00046 + 0704.0052 (EPS) — all with 0 graphics errors.
+
+**Guard**: `cluster_cli::em_figure_sizing::natural_vector_figure_is_em_sized_author_sized_stays_pixels`
+(a minimal `/MediaBox`-only PDF sizes to `10.037em/5.019em`; `[width=]`/`[scale=]`
+siblings stay on the pixel path).

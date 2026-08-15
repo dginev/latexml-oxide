@@ -710,6 +710,50 @@ fn natural_size_pt(path: &Path) -> Option<(f64, f64)> {
 /// bp (PostScript big point, 1/72") → TeX pt (1/72.27").
 fn bp_to_pt(bp: f64) -> f64 { bp * 72.27 / 72.0 }
 
+/// The figure's TRUE natural (typeset) size in TeX pt, for the VECTOR formats
+/// whose intrinsic size is a real physical dimension: a PDF page box, an EPS/PS
+/// `%%BoundingBox` (both bp), or an SVG's lengths/viewBox. `None` for raster
+/// formats — a pixel count is not a physical size without a DPI — and when the
+/// geometry can't be recovered.
+///
+/// This is deliberately NOT `image_graphicx_sizer`'s `cached_width`: that runs
+/// EPS/raster dimensions through a device-DPI round-trip (`×72.27/DPI`), which is
+/// right for the box model's device-pixel sizing but wrong as a physical length.
+/// This function is the size a browser should reproduce, used for the
+/// font-relative (`em`) sizing of natural-size figure inclusions (#562).
+/// Extension-gated so each format is read exactly once; pure Rust, no external
+/// tool.
+pub fn natural_display_size_pt(path: &Path) -> Option<(f64, f64)> {
+  let ext = path
+    .extension()
+    .and_then(|e| e.to_str())
+    .map(|e| e.to_ascii_lowercase());
+  match ext.as_deref() {
+    Some("pdf") => read_pdf_page_box(path).map(|(w, h)| (bp_to_pt(w), bp_to_pt(h))),
+    // read_image_dimensions returns an EPS/PS BoundingBox 1:1 in bp.
+    Some("eps" | "ps" | "epsi" | "epsf") => read_image_dimensions(path)
+      .filter(|&(w, h)| w > 0 && h > 0)
+      .map(|(w, h)| (bp_to_pt(w as f64), bp_to_pt(h as f64))),
+    Some("svg" | "svgz") => read_svg_size_pt(path),
+    _ => None,
+  }
+}
+
+/// [`natural_display_size_pt`] over a comma-joined `candidates` string (the
+/// `<ltx:graphics candidates=…>` attribute), resolving each candidate against
+/// `source_dir` and returning the first that yields a size.
+pub fn natural_display_size_pt_of_candidates(
+  candidates: &str,
+  source_dir: &str,
+) -> Option<(f64, f64)> {
+  candidates.split(',').find_map(|c| {
+    let c = c.trim();
+    (!c.is_empty())
+      .then(|| natural_display_size_pt(&resolve_candidate(c, source_dir)))
+      .flatten()
+  })
+}
+
 /// pt (f64) → `Dimension` (scaled points).
 fn pt_to_dim(pt: f64) -> Dimension { Dimension::new((pt * 65536.0).round() as i64) }
 

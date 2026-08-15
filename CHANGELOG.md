@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+  - **Natural-size figures scale with the text (font-relative `em` sizing).** A
+    figure included at its natural size (no `width=`/`scale=`) from a vector source
+    — a PDF page box, an EPS/PS BoundingBox, or an SVG — is now sized in `em` (its
+    true typeset size over the local font) instead of a fixed pixel count, so it
+    keeps the same proportion to the surrounding text at any reading size and
+    reaches the correct physical size at the document's font. Author-sized and
+    raster inclusions are unchanged. Converges with the upstream font-relative
+    sizing direction; commits no absolute px factor (#562).
   - **Search paths are now group-scoped, so a package's addition persists.**
     `SEARCHPATHS` moved from a plain global field to a group-scoped value (like
     `GRAPHICSPATHS`, and like Perl's default-local `AssignValue`). A package that

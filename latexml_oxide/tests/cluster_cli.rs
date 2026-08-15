@@ -1620,3 +1620,66 @@ mod dir_prefixed_package_loading {
     );
   }
 }
+
+mod em_figure_sizing {
+  //! #562: a natural-size VECTOR figure is sized in font-relative `em`
+  //! (`cssstyle="width:Nem; height:Nem"` on `<ltx:graphics>`, copied verbatim
+  //! into the `<img>`/`<object>` style by the XSLT), so it keeps its proportion
+  //! to the surrounding text at any reading size instead of a fixed pixel block.
+  //! The em value is the engine's typeset size (`cached_width`, read from the PDF
+  //! page box as bp→pt, converter-independent) over the local font size.
+  //!
+  //! Scope boundary guarded here: only inclusions with NO author size take the em
+  //! path; `[width=…]`/`[scale=…]` keep the existing pixel path (their size is the
+  //! author's absolute choice, not the figure's intrinsic size).
+  //!
+  //! Deterministic without any external tool: a minimal hand-authored PDF whose
+  //! only content is a `/MediaBox` is read in pure Rust (`read_pdf_page_box`), so
+  //! a 100×50 bp box sizes to 100.375/50.1875 TeX pt → 10.037em/5.019em at the
+  //! 10pt default body font.
+
+  use std::{fs, process::Command};
+
+  /// Minimal PDF whose `/MediaBox` is all `read_pdf_page_box` needs (100×50 bp).
+  const BOX_PDF: &str = "%PDF-1.4\n1 0 obj\n<< /Type /Page /MediaBox [0 0 100 50] >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
+
+  const DOC: &str = "\\documentclass{article}\n\
+                     \\usepackage{graphicx}\n\
+                     \\begin{document}\n\
+                     natural \\includegraphics{box.pdf}\n\n\
+                     scaled \\includegraphics[width=40pt]{box.pdf}\n\n\
+                     scaleopt \\includegraphics[scale=0.5]{box.pdf}\n\
+                     \\end{document}\n";
+
+  #[test]
+  fn natural_vector_figure_is_em_sized_author_sized_stays_pixels() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    fs::write(root.join("box.pdf"), BOX_PDF).unwrap();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+
+    let output = Command::new(bin)
+      .current_dir(root)
+      .arg("--destination=out.xml")
+      .arg("doc.tex")
+      .output()
+      .expect("failed to run latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let xml = fs::read_to_string(root.join("out.xml")).unwrap_or_default();
+
+    // The natural-size include is sized in em, from the true bp box size:
+    //   100 bp → 100.375 TeX pt / 10 pt = 10.037 em ; 50 bp → 5.019 em.
+    assert!(
+      xml.contains("cssstyle=\"width:10.037em; height:5.019em\""),
+      "natural-size vector figure must carry font-relative em sizing;\nxml=\n{xml}\nstderr=\n{stderr}"
+    );
+    // Exactly one figure is em-sized: the `[width=…]` and `[scale=…]` inclusions
+    // keep the pixel path (their size is the author's, not the figure's intrinsic).
+    assert_eq!(
+      xml.matches("em; height:").count(),
+      1,
+      "only the natural-size include should be em-sized;\nxml=\n{xml}"
+    );
+  }
+}

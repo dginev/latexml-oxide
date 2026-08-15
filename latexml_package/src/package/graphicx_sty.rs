@@ -1,6 +1,8 @@
 // Perl: `use LaTeXML::Util::Image;` (graphicx.sty.ltxml L17).
 // image_candidates / image_graphicx_sizer now live in latexml_core::util::image.
-pub use latexml_core::util::image::{image_candidates, image_graphicx_sizer};
+pub use latexml_core::util::image::{
+  image_candidates, image_graphicx_sizer, natural_display_size_pt_of_candidates,
+};
 
 use crate::prelude::*;
 
@@ -206,6 +208,48 @@ LoadDefinitions!({
     // constructor template's shorthand `?#alt(…)` would skip empty
     // strings, so do it explicitly here).
     after_construct => sub[document, whatsit] {
+      // #562: size a NATURAL-size VECTOR figure relative to the font (`em`)
+      // instead of in absolute pixels, so it keeps the same figure-to-text
+      // proportion as the source and scales with the reader's font-size/zoom (no
+      // fixed 72-vs-96 DPI guess). The natural size is read directly as a true
+      // physical length in TeX pt — a PDF page box, an EPS/PS BoundingBox, or an
+      // SVG's lengths/viewBox, all bp→pt (`natural_display_size_pt`), which
+      // returns `None` for raster formats and so gates the em path to vector
+      // figures. CSS `em` is the element's font-size exactly, so `em = size_pt /
+      // font_pt` against the LOCAL font. Emitted as `cssstyle`, copied verbatim
+      // into the `<img>`/`<object>` style by LaTeXML-common.xsl, overriding the
+      // pixel `imagewidth`/`imageheight`. Author-sized (`width=`/`height=`/
+      // `scale=`) inclusions keep the existing pixel path — their size is the
+      // author's absolute choice, not the figure's intrinsic size. Converges with
+      // the upstream font-relative sizing rework rather than committing an
+      // absolute px factor. NB `natural_display_size_pt` is read fresh here rather
+      // than reused from the sizer's `cached_width`, which runs EPS/raster sizes
+      // through a device-DPI round-trip and is not a physical length.
+      let options = whatsit.get_property("options").map(|v| v.to_string()).unwrap_or_default();
+      let is_natural = !options.split(',').any(|o| {
+        matches!(
+          o.split('=').next().unwrap_or("").trim(),
+          "width" | "height" | "totalheight" | "scale"
+        )
+      });
+      if is_natural {
+        let candidates = whatsit
+          .get_property("candidates")
+          .map(|v| v.to_string())
+          .unwrap_or_default();
+        let source_dir = lookup_string("SOURCEDIRECTORY");
+        if let Some((w_pt, h_pt)) =
+          natural_display_size_pt_of_candidates(&candidates, &source_dir)
+        {
+          let font_pt = lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+          if font_pt > 0.0 && w_pt > 0.0 && h_pt > 0.0
+            && let Some(mut node) = document.get_node().get_last_child()
+          {
+            let css = format!("width:{:.3}em; height:{:.3}em", w_pt / font_pt, h_pt / font_pt);
+            document.set_attribute(&mut node, "cssstyle", &css)?;
+          }
+        }
+      }
       // arXiv-fork e2b200fb: description = actualtext // alt // '' (set
       // even when empty); when BOTH actualtext and alt are given, alt goes
       // to aria:description; artifact (any value but "false") hides the
