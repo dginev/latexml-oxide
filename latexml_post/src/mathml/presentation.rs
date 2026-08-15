@@ -1094,11 +1094,10 @@ fn resolve_token_size(mut s: String) -> String {
 /// `_role` unset so the operator atom-types as `Ord` rather than by its infix
 /// role. See `pmml_infix`'s single-argument (prefix) branch and issue #535.
 fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>) -> NodeData {
-  let role = role_override.map(str::to_string).unwrap_or_else(|| {
-    node
-      .get_attribute("role")
-      .unwrap_or_else(|| "UNKNOWN".to_string())
-  });
+  let role = role_override
+    .map(String::from)
+    .or_else(|| node.get_attribute("role"))
+    .unwrap_or_else(|| "UNKNOWN".to_string());
   // Perl stylizeContent L678: token attribute, else the inherited context.
   let font = node.get_attribute("font").or_else(|| ctx_get(&CTX_FONT));
   let mut text = node.get_content();
@@ -1705,13 +1704,11 @@ fn pmml_smaller(doc: &PostDocument, node: &Node) -> NodeData {
 ///
 /// Port of `pmml_infix`.
 fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
-  if args.is_empty() {
-    return pmml(doc, op);
-  }
-  // XMath's `absent` placeholders KEEP their slot here. They exist to satisfy
-  // the content-arm contract (every binary application has 2 operands), and it
-  // is tempting to drop them so no empty box reaches the output — but in
-  // Presentation MathML an operand slot is what makes the operator INFIX.
+  // `args` is matched UNFILTERED — XMath's `absent` placeholders keep their
+  // slot. They exist to satisfy the content-arm contract (every binary
+  // application has 2 operands), and it is tempting to drop them so no empty box
+  // reaches the output — but in Presentation MathML an operand slot is what
+  // makes the operator INFIX.
   //
   // MathML infers an `<mo>`'s form from its position: first child of its
   // `<mrow>` ⇒ prefix, last ⇒ postfix, otherwise infix — and the form selects
@@ -1723,24 +1720,16 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   // native MathML and MathJax.
   //
   // Keeping the slot costs nothing in accessibility, because `pmml_token`
-  // renders an `absent` token as an EMPTY `<m:mrow/>` — presentational grouping
-  // with no semantic claim, zero-width and unannounced. That is a strict
-  // improvement on Perl, which emits an empty `<m:mi/>` here
+  // renders an `absent` token as an EMPTY `<m:mphantom/>` — presentational
+  // grouping with no semantic claim, zero-width and unannounced. That is a
+  // strict improvement on Perl, which emits an empty `<m:mi/>` here
   // (`MathML.pm:1474` `DefMathML("Token:?:absent", …)`): same spacing, but
   // without asserting "here is an identifier" for content that has none.
-  //
-  // NB the genuine unary case is unaffected and must stay: `Apply(-, x)` has
-  // ONE arg and no absent, and still renders prefix via the Perl `pmml_infix`
-  // L632 rule below ("Infix with 1 arg is presumably Prefix").
-  // Task #264 — which proposed suppressing the placeholder; that is what
-  // regressed the spacing, so the item is closed in the other direction.
-  let live_args = args;
-
-  if live_args.is_empty() {
-    return pmml(doc, op);
-  }
-  if live_args.len() == 1 {
-    // Single operand is rendered PREFIX. Port of Perl `pmml_infix` L632-635:
+  // (Task #264 proposed suppressing the placeholder; that is what regressed the
+  // #312 spacing, so the item is closed in the other direction.)
+  match args {
+    [] => pmml(doc, op),
+    // One operand is rendered PREFIX. Port of Perl `pmml_infix` L632-635:
     // "Infix with 1 arg is presumably Prefix! (aka Operator)" — genuine unary
     // operators (`-21`, `+x`). Perl renders the operator via
     // `pmml_mo($op, role => 'OPERATOR')` when `$op` is an `ltx:XMTok`, which
@@ -1751,21 +1740,25 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
     // sees 0.556em of dictionary spacing and zeroes BOTH `=`.rspace and
     // `−`.lspace, collapsing the gap (issue #535). A non-token (embellished)
     // operator renders normally, exactly as Perl's ternary does.
-    let op_prefix = if op.get_name() == "XMTok" {
-      pmml_token_inner(doc, op, Some("OPERATOR"))
-    } else {
-      pmml(doc, op)
-    };
-    let arg_mml = pmml(doc, &live_args[0]);
-    return pmml_row(vec![op_prefix, arg_mml]);
+    [arg] => {
+      let op_prefix = if op.get_name() == "XMTok" {
+        pmml_token_inner(doc, op, Some("OPERATOR"))
+      } else {
+        pmml(doc, op)
+      };
+      pmml_row(vec![op_prefix, pmml(doc, arg)])
+    },
+    // arg1 op arg2 op arg3 …
+    [first, rest @ ..] => {
+      let op_mml = pmml(doc, op);
+      let mut items = vec![pmml(doc, first)];
+      for arg in rest {
+        items.push(op_mml.clone());
+        items.push(pmml(doc, arg));
+      }
+      pmml_row(items)
+    },
   }
-  let op_mml = pmml(doc, op);
-  let mut items = vec![pmml(doc, &live_args[0])];
-  for arg in &live_args[1..] {
-    items.push(op_mml.clone());
-    items.push(pmml(doc, arg));
-  }
-  pmml_row(items)
 }
 
 /// True iff `node` is the XMath placeholder for a structurally-absent
