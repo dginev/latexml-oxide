@@ -3945,7 +3945,39 @@ figures), 1601.00046 + 0704.0052 (EPS) — all with 0 graphics errors.
 (a minimal `/MediaBox`-only PDF sizes to `10.037em/5.019em`; `[width=]`/`[scale=]`
 siblings stay on the pixel path).
 
-### 108. A `\text{…}`-only display equation nowraps its cell (renders on one line)
+### 108. Display math is contained within a width-constrained box, not left to escape
+
+**Perl** LaTeXML.css renders display math as `.ltx_eqn_table { display:table;
+width:100% }` with 50%-wide center-pad cells. Inside a width-constrained box —
+a `p{}` cell / `\parbox` / `minipage` (`.ltx_inline-block`) or a table cell
+(`.ltx_td`) — a wide equation's intrinsic width exceeds the box, and because
+`overflow` is ignored on `display:table`, nothing clips it: the equation
+**escapes the cell** and scatters across the page (issue #533, reporter nasser1
+— a `longtable` `p{}` cell holding an `enumerate` whose items contain
+`\[\begin{aligned}…\end{aligned}\]`). Same-host Perl 0.8.8 renders the identical
+breakage ⇒ SHARED-FAILURE; the lualatex PDF keeps the math in its cell.
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): a bundled-CSS local
+delta re-boxes display math as a **block scroll container** *only under a
+constrained ancestor*, so it stays inside the cell and scrolls horizontally when
+too wide — the same containment `.ltx_listing` (code) already uses:
+`.ltx_inline-block .ltx_eqn_table, .ltx_td .ltx_eqn_table { display:block;
+overflow-x:auto; max-width:100% }`. `display:block` (not `overflow` on the
+table, which browsers ignore) is required to establish the scroll box; the
+`.ltx_eqn_row/cell` children regenerate an anonymous table, so center-pad
+centering and eqno columns still lay out correctly. **Scoped deliberately**:
+normal full-width display math keeps `display:table` untouched (the heavily-
+exercised common path is unchanged; the broader unconditional variant that also
+tackles page-level equation overflow was declined for this ticket). Mirrored in
+`~/git/ar5iv-css` (both stylesheets define `.ltx_eqn_table` identically). CSS
+only — zero core/XML/HTML change, no golden churn.
+
+**Guard**: `latexml_post::xslt::witnessed_css_delta::constrained_equation_overflow_delta_stays_present`
+(asserts the bundled `LaTeXML.css` keeps the `#533` selectors + declaration, so a
+future re-vanilla sweep cannot silently drop it — same shape as the #473/#431
+CSS-delta guards).
+
+### 109. A `\text{…}`-only display equation nowraps its cell (renders on one line)
 
 **Perl** `LaTeXML.css` gives every aligned *table* cell `white-space:nowrap`
 (`.ltx_td.ltx_align_{left,right,center}`, `.ltx_th…`) but NOT the equation cell

@@ -1193,4 +1193,18 @@ mod witnessed_css_delta {
        source lines would reflow side-by-side with their indentation collapsed",
     );
   }
+
+  #[test]
+  fn constrained_equation_overflow_delta_stays_present() {
+    let css = bundled_latexml_css();
+    assert!(
+      css.contains("#533")
+        && css.contains(".ltx_inline-block .ltx_eqn_table")
+        && css.contains(".ltx_td .ltx_eqn_table")
+        && css.contains("display:block; overflow-x:auto; max-width:100%;"),
+      "the constrained-equation containment delta (issue #533) is missing from LaTeXML.css: \
+       display math inside a p{{}} cell / parbox / minipage / table cell would escape its \
+       box and scatter across the page instead of scrolling within the cell",
+    );
+  }
 }

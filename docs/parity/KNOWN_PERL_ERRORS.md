@@ -3289,7 +3289,40 @@ targets unchanged. Issue #526; upstream-fileable against `brucemiller/LaTeXML`.
 Guard: `50_structure::hypertarget_empty_anchor_test`. Witness
 arXiv:2607.16395v1 (revtex4-2, `\linkedfootnotetext`).
 
-## 77. A `\text{…}`-only display equation `\[…\]` stacks one word per line (Perl; Rust surpasses)
+## 77. Default CSS lets display math escape a width-constrained cell (Rust surpasses)
+
+Upstream's default `LaTeXML.css` (v0.8.8 and master) renders display math as
+`.ltx_eqn_table { display:table; width:100% }` with 50%-wide center-pad cells,
+and never constrains it to a containing box. Inside a `p{}` cell / `\parbox` /
+`minipage` (`.ltx_inline-block`) or a table cell (`.ltx_td`), a wide equation's
+intrinsic width exceeds the box; since `overflow` is ignored on `display:table`,
+nothing clips it, so the equation escapes the cell and scatters across the page.
+
+Minimal trigger (issue #533):
+
+```tex
+\documentclass{article}
+\usepackage{amsmath}\usepackage{longtable}\usepackage{enumitem}
+\begin{document}
+\begin{longtable}{|p{1in}|p{2in}|}
+A & \begin{enumerate}[leftmargin=.28cm]
+\item text \[\begin{aligned} a &= b\\ &= c \end{aligned}\]
+\item more \end{enumerate} \\\hline
+\end{longtable}
+\end{document}
+```
+
+Same-host Perl 0.8.8 renders the identical breakage (headless-Chrome
+screenshots match pixel-for-pixel modulo the OXIDIZED_DESIGN #103 caption row) —
+Perl-origin, unreported upstream. The lualatex PDF keeps the math in its cell.
+Rust **surpasses** with a bundled-CSS local delta (OXIDIZED_DESIGN #108):
+`.ltx_inline-block .ltx_eqn_table, .ltx_td .ltx_eqn_table { display:block;
+overflow-x:auto; max-width:100% }` — the equation becomes a block scroll
+container that stays within its cell (scrolling horizontally when too wide),
+mirrored in `ar5iv-css`. Normal full-width display math is untouched. Guard:
+`latexml_post::xslt::witnessed_css_delta::constrained_equation_overflow_delta_stays_present`.
+
+## 78. A `\text{…}`-only display equation `\[…\]` stacks one word per line (Perl; Rust surpasses)
 
 **Trigger:** `\[\text{The solution is not valid}\]`.
 
@@ -3302,6 +3335,6 @@ invisible; but a `\text{}`-only display digests to *wrappable* `ltx_markedasmath
 text, which then collapses to min-content — one word per line. `\begin{align*}`
 is unaffected (its content is a real `ltx_td`, already nowrapped). Same-host Perl
 0.8.8 reproduces the stacking byte-for-byte. Rust surpasses by extending the
-nowrap rule to `.ltx_eqn_cell` ([OXIDIZED_DESIGN #108]). Issue #527;
+nowrap rule to `.ltx_eqn_cell` ([OXIDIZED_DESIGN #109]). Issue #527;
 upstream-fileable against `brucemiller/LaTeXML`. Guard:
 `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`.

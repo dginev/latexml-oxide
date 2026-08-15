@@ -521,6 +521,20 @@ foreignObject {
    margins through the ltx_para wrappers, keeping text<->display and
    display<->display gaps uniform (no doubling next to text). */
 .ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #533): display
+   math is a `.ltx_eqn_table { display:table; width:100% }` whose center-pad
+   cells stretch it to full width. Inside a width-constrained box — a `p{}` cell
+   / \parbox / minipage (.ltx_inline-block) or a table cell (.ltx_td) — the
+   table's intrinsic width exceeds the box, and since `overflow` is ignored on
+   `display:table`, the equation ESCAPES the cell and scatters across the page
+   (lualatex keeps it in the cell). Re-box it as a block scroll container so it
+   stays within the cell and scrolls horizontally when too wide — the same
+   containment `.ltx_listing` already uses for code. Normal full-width display
+   math keeps `display:table` (untouched); this rule fires only under a
+   constrained ancestor. Witness: the issue #533 longtable `p{}` cell with an
+   enumerate whose items hold `\[\begin{aligned}…\end{aligned}\]`. */
+.ltx_inline-block .ltx_eqn_table,
+.ltx_td .ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #431): vanilla's
    `.ltx_verbatim { white-space:nowrap }` (kept above) overrides the UA `pre`
    rule, so a plain {verbatim} <pre> collapses to ONE line, and fancyvrb's
