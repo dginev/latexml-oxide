@@ -1172,70 +1172,91 @@
 <a href=#1172 id=1172 data-nosnippet>1172</a>  <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 <a href=#1173 id=1173 data-nosnippet>1173</a></span>});
 <a href=#1174 id=1174 data-nosnippet>1174</a>
-<a href=#1175 id=1175 data-nosnippet>1175</a><span class="comment">// Perl: hyperref.sty.ltxml `localized_anchor`. DFS walks the current node's
-<a href=#1176 id=1176 data-nosnippet>1176</a>// subtree and wraps the first descendant that ltx:anchor is allowed to
-<a href=#1177 id=1177 data-nosnippet>1177</a>// contain. The traversal mirrors Perl's pop+unshift order: candidates are
-<a href=#1178 id=1178 data-nosnippet>1178</a>// popped from the back and child nodes are unshifted to the front, so we
-<a href=#1179 id=1179 data-nosnippet>1179</a>// visit the rightmost element of each level before descending.
-<a href=#1180 id=1180 data-nosnippet>1180</a></span><span class="kw">fn </span>localized_anchor(document: <span class="kw-2">&amp;mut </span>Document, whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; CoreResult&lt;()&gt; {
-<a href=#1181 id=1181 data-nosnippet>1181</a>  <span class="kw">let </span>id = <span class="kw">match </span>whatsit.get_property(<span class="string">"id"</span>) {
-<a href=#1182 id=1182 data-nosnippet>1182</a>    <span class="prelude-val">Some</span>(v) =&gt; v.to_string(),
-<a href=#1183 id=1183 data-nosnippet>1183</a>    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),
-<a href=#1184 id=1184 data-nosnippet>1184</a>  };
-<a href=#1185 id=1185 data-nosnippet>1185</a>  <span class="kw">let </span><span class="kw-2">mut </span>candidates: Vec&lt;Node&gt; = <span class="macro">vec!</span>[document.get_node().clone()];
-<a href=#1186 id=1186 data-nosnippet>1186</a>  <span class="kw">let </span><span class="kw-2">mut </span>found: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
-<a href=#1187 id=1187 data-nosnippet>1187</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(candidate) = candidates.pop() {
-<a href=#1188 id=1188 data-nosnippet>1188</a>    <span class="kw">match </span>candidate.get_type() {
-<a href=#1189 id=1189 data-nosnippet>1189</a>      <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
-<a href=#1190 id=1190 data-nosnippet>1190</a>        <span class="kw">let </span>qname = get_node_qname(<span class="kw-2">&amp;</span>candidate);
-<a href=#1191 id=1191 data-nosnippet>1191</a>        <span class="kw">if </span>can_contain_qsym(<span class="macro">pin!</span>(<span class="string">"ltx:anchor"</span>), qname) {
-<a href=#1192 id=1192 data-nosnippet>1192</a>          found = <span class="prelude-val">Some</span>(candidate);
-<a href=#1193 id=1193 data-nosnippet>1193</a>          <span class="kw">break</span>;
-<a href=#1194 id=1194 data-nosnippet>1194</a>        }
-<a href=#1195 id=1195 data-nosnippet>1195</a>        <span class="comment">// Perl: unshift(@candidates, $candidate-&gt;childNodes); pushes the child
-<a href=#1196 id=1196 data-nosnippet>1196</a>        // list to the front, so the rightmost child is popped next.
-<a href=#1197 id=1197 data-nosnippet>1197</a>        </span><span class="kw">let </span>children = candidate.get_child_nodes();
-<a href=#1198 id=1198 data-nosnippet>1198</a>        <span class="kw">for </span>child <span class="kw">in </span>children.into_iter().rev() {
-<a href=#1199 id=1199 data-nosnippet>1199</a>          candidates.insert(<span class="number">0</span>, child);
-<a href=#1200 id=1200 data-nosnippet>1200</a>        }
-<a href=#1201 id=1201 data-nosnippet>1201</a>      },
-<a href=#1202 id=1202 data-nosnippet>1202</a>      <span class="comment">// Perl: any non-element node short-circuits; the candidate (text node)
-<a href=#1203 id=1203 data-nosnippet>1203</a>      // is then wrapped, which works because anchor.model = Inline allows text.
-<a href=#1204 id=1204 data-nosnippet>1204</a>      </span><span class="kw">_ </span>=&gt; {
-<a href=#1205 id=1205 data-nosnippet>1205</a>        found = <span class="prelude-val">Some</span>(candidate);
-<a href=#1206 id=1206 data-nosnippet>1206</a>        <span class="kw">break</span>;
-<a href=#1207 id=1207 data-nosnippet>1207</a>      },
-<a href=#1208 id=1208 data-nosnippet>1208</a>    }
-<a href=#1209 id=1209 data-nosnippet>1209</a>  }
-<a href=#1210 id=1210 data-nosnippet>1210</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(target) = found {
-<a href=#1211 id=1211 data-nosnippet>1211</a>    <span class="kw">match </span>document.wrap_nodes(<span class="string">"ltx:anchor"</span>, <span class="macro">vec!</span>[target])<span class="question-mark">? </span>{
-<a href=#1212 id=1212 data-nosnippet>1212</a>      <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>anchor) =&gt; {
-<a href=#1213 id=1213 data-nosnippet>1213</a>        document.set_attribute(<span class="kw-2">&amp;mut </span>anchor, <span class="string">"xml:id"</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
-<a href=#1214 id=1214 data-nosnippet>1214</a>        <span class="kw">if </span>document.is_open(<span class="kw-2">&amp;</span>anchor) {
-<a href=#1215 id=1215 data-nosnippet>1215</a>          document.close_node(<span class="kw-2">&amp;</span>anchor)<span class="question-mark">?</span>;
-<a href=#1216 id=1216 data-nosnippet>1216</a>        }
-<a href=#1217 id=1217 data-nosnippet>1217</a>      },
-<a href=#1218 id=1218 data-nosnippet>1218</a>      <span class="kw">_ </span>=&gt; {
-<a href=#1219 id=1219 data-nosnippet>1219</a>        <span class="macro">Warn!</span>(
-<a href=#1220 id=1220 data-nosnippet>1220</a>          <span class="string">"malformed"</span>,
-<a href=#1221 id=1221 data-nosnippet>1221</a>          <span class="string">"ltx:anchor"</span>,
-<a href=#1222 id=1222 data-nosnippet>1222</a>          <span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#1223 id=1223 data-nosnippet>1223</a>            <span class="string">"No available insertion point for ltx:anchor, failing \\hypertarget to {}"</span>,
-<a href=#1224 id=1224 data-nosnippet>1224</a>            id
-<a href=#1225 id=1225 data-nosnippet>1225</a>          )
-<a href=#1226 id=1226 data-nosnippet>1226</a>        );
-<a href=#1227 id=1227 data-nosnippet>1227</a>      },
-<a href=#1228 id=1228 data-nosnippet>1228</a>    }
-<a href=#1229 id=1229 data-nosnippet>1229</a>  } <span class="kw">else </span>{
-<a href=#1230 id=1230 data-nosnippet>1230</a>    <span class="macro">Warn!</span>(
-<a href=#1231 id=1231 data-nosnippet>1231</a>      <span class="string">"malformed"</span>,
-<a href=#1232 id=1232 data-nosnippet>1232</a>      <span class="string">"ltx:anchor"</span>,
-<a href=#1233 id=1233 data-nosnippet>1233</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#1234 id=1234 data-nosnippet>1234</a>        <span class="string">"No available insertion point for ltx:anchor, failing \\hypertarget to {}"</span>,
-<a href=#1235 id=1235 data-nosnippet>1235</a>        id
-<a href=#1236 id=1236 data-nosnippet>1236</a>      )
-<a href=#1237 id=1237 data-nosnippet>1237</a>    );
-<a href=#1238 id=1238 data-nosnippet>1238</a>  }
-<a href=#1239 id=1239 data-nosnippet>1239</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1240 id=1240 data-nosnippet>1240</a>}
+<a href=#1175 id=1175 data-nosnippet>1175</a><span class="doccomment">/// Emit a bare, self-closed `&lt;ltx:anchor xml:id=id/&gt;` destination at the current
+<a href=#1176 id=1176 data-nosnippet>1176</a>/// insertion point — for a `\hypertarget`/`\hyperdef` with no content to localize
+<a href=#1177 id=1177 data-nosnippet>1177</a>/// onto. See [`localized_anchor`].
+<a href=#1178 id=1178 data-nosnippet>1178</a></span><span class="kw">fn </span>insert_bare_anchor(document: <span class="kw-2">&amp;mut </span>Document, id: <span class="kw-2">&amp;</span>str) -&gt; CoreResult&lt;()&gt; {
+<a href=#1179 id=1179 data-nosnippet>1179</a>  document.insert_element(<span class="string">"ltx:anchor"</span>, <span class="macro">vec!</span>[], <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"xml:id" </span>=&gt; id)))<span class="question-mark">?</span>;
+<a href=#1180 id=1180 data-nosnippet>1180</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1181 id=1181 data-nosnippet>1181</a>}
+<a href=#1182 id=1182 data-nosnippet>1182</a>
+<a href=#1183 id=1183 data-nosnippet>1183</a><span class="comment">// Perl: hyperref.sty.ltxml `localized_anchor`. DFS walks the current node's
+<a href=#1184 id=1184 data-nosnippet>1184</a>// subtree and wraps the first descendant that ltx:anchor is allowed to
+<a href=#1185 id=1185 data-nosnippet>1185</a>// contain. The traversal mirrors Perl's pop+unshift order: candidates are
+<a href=#1186 id=1186 data-nosnippet>1186</a>// popped from the back and child nodes are unshifted to the front, so we
+<a href=#1187 id=1187 data-nosnippet>1187</a>// visit the rightmost element of each level before descending.
+<a href=#1188 id=1188 data-nosnippet>1188</a>//
+<a href=#1189 id=1189 data-nosnippet>1189</a>// Surpass-Perl (OXIDIZED_DESIGN #104, issue #526): the base Perl walk both
+<a href=#1190 id=1190 data-nosnippet>1190</a>// (a) has no content-empty short-circuit and (b) will wrap a still-OPEN node,
+<a href=#1191 id=1191 data-nosnippet>1191</a>// so an empty `\hypertarget{id}{}` at the head of a floating `ltx:note` (the
+<a href=#1192 id=1192 data-nosnippet>1192</a>// "linked footnote" idiom, `\footnotetext{\hypertarget{..}{}..}`) selects and
+<a href=#1193 id=1193 data-nosnippet>1193</a>// prematurely closes the open note, emptying it and orphaning the footnote text
+<a href=#1194 id=1194 data-nosnippet>1194</a>// (`malformed:ltx:anchor`/`malformed:ltx:note`). Perl fails identically. Two
+<a href=#1195 id=1195 data-nosnippet>1195</a>// general guards fix the whole class here — no per-constructor special-case:
+<a href=#1196 id=1196 data-nosnippet>1196</a>//   1. empty localizable content ⇒ a pure destination, emit a bare anchor;
+<a href=#1197 id=1197 data-nosnippet>1197</a>//   2. never wrap an open node; if nothing wrappable is found, emit a bare anchor.
+<a href=#1198 id=1198 data-nosnippet>1198</a></span><span class="kw">fn </span>localized_anchor(document: <span class="kw-2">&amp;mut </span>Document, whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; CoreResult&lt;()&gt; {
+<a href=#1199 id=1199 data-nosnippet>1199</a>  <span class="kw">let </span>id = <span class="kw">match </span>whatsit.get_property(<span class="string">"id"</span>) {
+<a href=#1200 id=1200 data-nosnippet>1200</a>    <span class="prelude-val">Some</span>(v) =&gt; v.to_string(),
+<a href=#1201 id=1201 data-nosnippet>1201</a>    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),
+<a href=#1202 id=1202 data-nosnippet>1202</a>  };
+<a href=#1203 id=1203 data-nosnippet>1203</a>  <span class="comment">// Guard 1. The localizable content is this construct's LAST argument — the
+<a href=#1204 id=1204 data-nosnippet>1204</a>  // `{text}` of both `\hypertarget` and `\hyperdef`. When it is empty the anchor
+<a href=#1205 id=1205 data-nosnippet>1205</a>  // is a pure hyperlink destination with nothing to wrap, so localizing would
+<a href=#1206 id=1206 data-nosnippet>1206</a>  // only capture unrelated surrounding content (or the open note). Emit a bare
+<a href=#1207 id=1207 data-nosnippet>1207</a>  // anchor at the insertion point instead.
+<a href=#1208 id=1208 data-nosnippet>1208</a>  </span><span class="kw">let </span>content_is_empty = <span class="kw">match </span>whatsit.get_args().last() {
+<a href=#1209 id=1209 data-nosnippet>1209</a>    <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(text)) =&gt; text.is_empty()<span class="question-mark">?</span>,
+<a href=#1210 id=1210 data-nosnippet>1210</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">true</span>,
+<a href=#1211 id=1211 data-nosnippet>1211</a>  };
+<a href=#1212 id=1212 data-nosnippet>1212</a>  <span class="kw">if </span>content_is_empty {
+<a href=#1213 id=1213 data-nosnippet>1213</a>    <span class="kw">return </span>insert_bare_anchor(document, <span class="kw-2">&amp;</span>id);
+<a href=#1214 id=1214 data-nosnippet>1214</a>  }
+<a href=#1215 id=1215 data-nosnippet>1215</a>  <span class="kw">let </span><span class="kw-2">mut </span>candidates: Vec&lt;Node&gt; = <span class="macro">vec!</span>[document.get_node().clone()];
+<a href=#1216 id=1216 data-nosnippet>1216</a>  <span class="kw">let </span><span class="kw-2">mut </span>found: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+<a href=#1217 id=1217 data-nosnippet>1217</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(candidate) = candidates.pop() {
+<a href=#1218 id=1218 data-nosnippet>1218</a>    <span class="kw">match </span>candidate.get_type() {
+<a href=#1219 id=1219 data-nosnippet>1219</a>      <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
+<a href=#1220 id=1220 data-nosnippet>1220</a>        <span class="kw">let </span>qname = get_node_qname(<span class="kw-2">&amp;</span>candidate);
+<a href=#1221 id=1221 data-nosnippet>1221</a>        <span class="comment">// Guard 2. Wrap a candidate only when ltx:anchor may legally contain it
+<a href=#1222 id=1222 data-nosnippet>1222</a>        // AND it is not still open. Wrapping an OPEN node (e.g. a floating
+<a href=#1223 id=1223 data-nosnippet>1223</a>        // ltx:note whose body is mid-digestion) would close it prematurely and
+<a href=#1224 id=1224 data-nosnippet>1224</a>        // orphan the rest of its content.
+<a href=#1225 id=1225 data-nosnippet>1225</a>        </span><span class="kw">if </span>can_contain_qsym(<span class="macro">pin!</span>(<span class="string">"ltx:anchor"</span>), qname) &amp;&amp; !document.is_open(<span class="kw-2">&amp;</span>candidate) {
+<a href=#1226 id=1226 data-nosnippet>1226</a>          found = <span class="prelude-val">Some</span>(candidate);
+<a href=#1227 id=1227 data-nosnippet>1227</a>          <span class="kw">break</span>;
+<a href=#1228 id=1228 data-nosnippet>1228</a>        }
+<a href=#1229 id=1229 data-nosnippet>1229</a>        <span class="comment">// Perl: unshift(@candidates, $candidate-&gt;childNodes); pushes the child
+<a href=#1230 id=1230 data-nosnippet>1230</a>        // list to the front, so the rightmost child is popped next.
+<a href=#1231 id=1231 data-nosnippet>1231</a>        </span><span class="kw">let </span>children = candidate.get_child_nodes();
+<a href=#1232 id=1232 data-nosnippet>1232</a>        <span class="kw">for </span>child <span class="kw">in </span>children.into_iter().rev() {
+<a href=#1233 id=1233 data-nosnippet>1233</a>          candidates.insert(<span class="number">0</span>, child);
+<a href=#1234 id=1234 data-nosnippet>1234</a>        }
+<a href=#1235 id=1235 data-nosnippet>1235</a>      },
+<a href=#1236 id=1236 data-nosnippet>1236</a>      <span class="comment">// Perl: any non-element node short-circuits; the candidate (text node)
+<a href=#1237 id=1237 data-nosnippet>1237</a>      // is then wrapped, which works because anchor.model = Inline allows text.
+<a href=#1238 id=1238 data-nosnippet>1238</a>      </span><span class="kw">_ </span>=&gt; {
+<a href=#1239 id=1239 data-nosnippet>1239</a>        found = <span class="prelude-val">Some</span>(candidate);
+<a href=#1240 id=1240 data-nosnippet>1240</a>        <span class="kw">break</span>;
+<a href=#1241 id=1241 data-nosnippet>1241</a>      },
+<a href=#1242 id=1242 data-nosnippet>1242</a>    }
+<a href=#1243 id=1243 data-nosnippet>1243</a>  }
+<a href=#1244 id=1244 data-nosnippet>1244</a>  <span class="comment">// Wrap the located target in an anchor; if the walk found nothing wrappable
+<a href=#1245 id=1245 data-nosnippet>1245</a>  // (or wrap_nodes declines it), drop a bare destination anchor instead — one
+<a href=#1246 id=1246 data-nosnippet>1246</a>  // fallback for both "no target" and "target refused".
+<a href=#1247 id=1247 data-nosnippet>1247</a>  </span><span class="kw">let </span>anchor = <span class="kw">match </span>found {
+<a href=#1248 id=1248 data-nosnippet>1248</a>    <span class="prelude-val">Some</span>(target) =&gt; document.wrap_nodes(<span class="string">"ltx:anchor"</span>, <span class="macro">vec!</span>[target])<span class="question-mark">?</span>,
+<a href=#1249 id=1249 data-nosnippet>1249</a>    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1250 id=1250 data-nosnippet>1250</a>  };
+<a href=#1251 id=1251 data-nosnippet>1251</a>  <span class="kw">match </span>anchor {
+<a href=#1252 id=1252 data-nosnippet>1252</a>    <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>anchor) =&gt; {
+<a href=#1253 id=1253 data-nosnippet>1253</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>anchor, <span class="string">"xml:id"</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
+<a href=#1254 id=1254 data-nosnippet>1254</a>      <span class="kw">if </span>document.is_open(<span class="kw-2">&amp;</span>anchor) {
+<a href=#1255 id=1255 data-nosnippet>1255</a>        document.close_node(<span class="kw-2">&amp;</span>anchor)<span class="question-mark">?</span>;
+<a href=#1256 id=1256 data-nosnippet>1256</a>      }
+<a href=#1257 id=1257 data-nosnippet>1257</a>    },
+<a href=#1258 id=1258 data-nosnippet>1258</a>    <span class="prelude-val">None </span>=&gt; insert_bare_anchor(document, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>,
+<a href=#1259 id=1259 data-nosnippet>1259</a>  }
+<a href=#1260 id=1260 data-nosnippet>1260</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1261 id=1261 data-nosnippet>1261</a>}
 </code></pre></div></section></main></body></html>
