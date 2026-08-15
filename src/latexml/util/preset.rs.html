@@ -6,42 +6,42 @@
 <a href=#6 id=6 data-nosnippet>6</a>//! ties to the harness machinery — they just construct a minimal
 <a href=#7 id=7 data-nosnippet>7</a>//! `Core` and tokenize a single inline formula.
 <a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">use </span>std::rc::Rc;
-<a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>latexml_core::{Core, CoreOptions, document::Document, state};
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>latexml_math_parser::node_to_grammar_lexemes;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>libxml::tree::Node;
+<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">use </span>latexml_core::{Core, CoreOptions, document::Document, state};
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>latexml_math_parser::node_to_grammar_lexemes;
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>libxml::tree::Node;
+<a href=#12 id=12 data-nosnippet>12</a>
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span><span class="kw">crate</span>::core_interface::DigestionAPI;
 <a href=#14 id=14 data-nosnippet>14</a>
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span><span class="kw">crate</span>::core_interface::DigestionAPI;
-<a href=#16 id=16 data-nosnippet>16</a>
-<a href=#17 id=17 data-nosnippet>17</a><span class="doccomment">/// Provide a default `Core` engine preloaded with `article.cls`
-<a href=#18 id=18 data-nosnippet>18</a>/// and `amsmath.sty` — the minimum needed to digest most formulae.
-<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">pub fn </span>new_test_engine() -&gt; Core {
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="kw">let </span>core_engine = Core::new(CoreOptions {
-<a href=#21 id=21 data-nosnippet>21</a>    <span class="comment">// `LaTeX.pool` FIRST — a class preload must not be the thing that drags the
-<a href=#22 id=22 data-nosnippet>22</a>    // pool in. `\@pushfilename` changes meaning when the pool (and the kernel dump
-<a href=#23 id=23 data-nosnippet>23</a>    // behind it) loads: preloading `article.cls` alone pushes the class's filename
-<a href=#24 id=24 data-nosnippet>24</a>    // with the pre-pool `\@pushfilename` (which never touches
-<a href=#25 id=25 data-nosnippet>25</a>    // `\g__hook_name_stack_seq`), then pops it with the real expl3 `\@popfilename`
-<a href=#26 id=26 data-nosnippet>26</a>    // that the pool installed — popping a seq that only ever saw the *inner*
-<a href=#27 id=27 data-nosnippet>27</a>    // packages' pushes. Hence "LaTeX hooks Error: Extra \PopDefaultHookLabel" on
-<a href=#28 id=28 data-nosnippet>28</a>    // every latexmlmath_oxide run. Same order ar5iv's preload list uses.
-<a href=#29 id=29 data-nosnippet>29</a>    // See SYNC_STATUS "`--preload=&lt;cls&gt;` hook-stack imbalance" — the underlying
-<a href=#30 id=30 data-nosnippet>30</a>    // ordering bug is still open; this preset just stops provoking it.
-<a href=#31 id=31 data-nosnippet>31</a>    </span>preload: <span class="prelude-val">Some</span>(
-<a href=#32 id=32 data-nosnippet>32</a>      [<span class="string">"LaTeX.pool"</span>, <span class="string">"article.cls"</span>, <span class="string">"amsmath.sty"</span>]
-<a href=#33 id=33 data-nosnippet>33</a>        .map(|x| x.to_string())
-<a href=#34 id=34 data-nosnippet>34</a>        .to_vec(),
-<a href=#35 id=35 data-nosnippet>35</a>    ),
-<a href=#36 id=36 data-nosnippet>36</a>    verbosity: <span class="prelude-val">Some</span>(-<span class="number">2</span>),
-<a href=#37 id=37 data-nosnippet>37</a>    search_paths: <span class="prelude-val">None</span>,
-<a href=#38 id=38 data-nosnippet>38</a>    nomathparse: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
-<a href=#39 id=39 data-nosnippet>39</a>    include_comments: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
-<a href=#40 id=40 data-nosnippet>40</a>    ..CoreOptions::default()
-<a href=#41 id=41 data-nosnippet>41</a>  });
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="comment">// Shared model loader — see crate::load_latexml_default_model.
-<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="kw">crate</span>::load_latexml_default_model();
-<a href=#44 id=44 data-nosnippet>44</a>  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+<a href=#15 id=15 data-nosnippet>15</a><span class="doccomment">/// Provide a default `Core` engine preloaded with `article.cls`
+<a href=#16 id=16 data-nosnippet>16</a>/// and `amsmath.sty` — the minimum needed to digest most formulae.
+<a href=#17 id=17 data-nosnippet>17</a></span><span class="kw">pub fn </span>new_test_engine() -&gt; Core {
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="kw">let </span>core_engine = Core::new(CoreOptions {
+<a href=#19 id=19 data-nosnippet>19</a>    <span class="comment">// `LaTeX.pool` FIRST — a class preload must not be the thing that drags the
+<a href=#20 id=20 data-nosnippet>20</a>    // pool in. `\@pushfilename` changes meaning when the pool (and the kernel dump
+<a href=#21 id=21 data-nosnippet>21</a>    // behind it) loads: preloading `article.cls` alone pushes the class's filename
+<a href=#22 id=22 data-nosnippet>22</a>    // with the pre-pool `\@pushfilename` (which never touches
+<a href=#23 id=23 data-nosnippet>23</a>    // `\g__hook_name_stack_seq`), then pops it with the real expl3 `\@popfilename`
+<a href=#24 id=24 data-nosnippet>24</a>    // that the pool installed — popping a seq that only ever saw the *inner*
+<a href=#25 id=25 data-nosnippet>25</a>    // packages' pushes. Hence "LaTeX hooks Error: Extra \PopDefaultHookLabel" on
+<a href=#26 id=26 data-nosnippet>26</a>    // every latexmlmath_oxide run. Same order ar5iv's preload list uses.
+<a href=#27 id=27 data-nosnippet>27</a>    // See SYNC_STATUS "`--preload=&lt;cls&gt;` hook-stack imbalance" — the underlying
+<a href=#28 id=28 data-nosnippet>28</a>    // ordering bug is still open; this preset just stops provoking it.
+<a href=#29 id=29 data-nosnippet>29</a>    </span>preload: <span class="prelude-val">Some</span>(
+<a href=#30 id=30 data-nosnippet>30</a>      [<span class="string">"LaTeX.pool"</span>, <span class="string">"article.cls"</span>, <span class="string">"amsmath.sty"</span>]
+<a href=#31 id=31 data-nosnippet>31</a>        .map(|x| x.to_string())
+<a href=#32 id=32 data-nosnippet>32</a>        .to_vec(),
+<a href=#33 id=33 data-nosnippet>33</a>    ),
+<a href=#34 id=34 data-nosnippet>34</a>    verbosity: <span class="prelude-val">Some</span>(-<span class="number">2</span>),
+<a href=#35 id=35 data-nosnippet>35</a>    search_paths: <span class="prelude-val">None</span>,
+<a href=#36 id=36 data-nosnippet>36</a>    nomathparse: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
+<a href=#37 id=37 data-nosnippet>37</a>    include_comments: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
+<a href=#38 id=38 data-nosnippet>38</a>    ..CoreOptions::default()
+<a href=#39 id=39 data-nosnippet>39</a>  });
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// Shared model loader — see crate::load_latexml_default_model.
+<a href=#41 id=41 data-nosnippet>41</a>  </span><span class="kw">crate</span>::load_latexml_default_model();
+<a href=#42 id=42 data-nosnippet>42</a>  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+<a href=#43 id=43 data-nosnippet>43</a>    latexml_package::dispatch,
+<a href=#44 id=44 data-nosnippet>44</a>  ));
 <a href=#45 id=45 data-nosnippet>45</a>  state::add_binding_names(latexml_package::binding_names());
 <a href=#46 id=46 data-nosnippet>46</a>  core_engine
 <a href=#47 id=47 data-nosnippet>47</a>}
