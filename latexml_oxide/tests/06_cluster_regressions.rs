@@ -564,6 +564,27 @@ fn cluster_rdfa_math_subject() {
   }
 }
 
+/// fvextra `backgroundcolor` on a framed `Verbatim` paints the frame box (issue
+/// #525, sub-problem 3). Asserted as a substring rather than an exact golden
+/// because fvextra's own `backgroundcolor` machinery is version-dependent (a
+/// newer host fvextra paints it per line via `\FV@BGColor@List`, which we
+/// neutralize in `fvextra_sty.rs`; the older TL fvextra lacks the key, which we
+/// port there): either way the colour lands as `background:<hex>` on the single
+/// `ltx_framed_verbatim` box (`fancyvrb_sty.rs`), stable across fvextra versions.
+#[test]
+fn cluster_fvextra_backgroundcolor_paints_the_frame_box() {
+  let x = convert_to_xml("tests/cluster_regressions/fancyvrb_bgcolor.tex");
+  assert!(
+    x.contains("ltx_framed_verbatim") && x.contains("background:#FFFF00"),
+    "fvextra backgroundcolor should paint the frame box yellow (issue #525):\n{x}"
+  );
+  // The per-line strip must NOT survive as nested background boxes (version noise).
+  assert!(
+    !x.contains(r##"backgroundcolor="#FFFF00""##),
+    "the per-line fvextra background strip should be neutralized, not captured:\n{x}"
+  );
+}
+
 /// A faked space's glyph run must be sized by the font the skip was DIGESTED
 /// in, not by whatever font happens to be current when the document is BUILT.
 ///

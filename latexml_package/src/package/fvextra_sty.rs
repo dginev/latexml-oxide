@@ -45,4 +45,30 @@ LoadDefinitions!({
   Let!("\\lx@save@FancyVerbFormatLine", "\\FancyVerbFormatLine");
   DefMacro!("\\FancyVerbFormatLine{}",
     "\\lx@add@cssclass{ltx_verbatim}\\lx@save@FancyVerbFormatLine{#1}");
+
+  // Issue #525: define fvextra's `backgroundcolor`/`bgcolor` keys if the host
+  // fvextra predates them (the TL fvextra loaded above may be older — it then
+  // errors `keyval: backgroundcolor undefined` on the reporter's document).
+  // Faithful port of fvextra.sty L2435-2444: store the colour name in
+  // \FancyVerbBackgroundColor, which fancyvrb_sty.rs's `frame` box reads as its
+  // background. Guarded on the key's absence so a newer host fvextra's own
+  // definition (with its per-line \colorbox machinery) is left untouched.
+  RawTeX!(concat!(
+    r"\@ifundefined{KV@FV@backgroundcolor}{",
+    r"\define@key{FV}{backgroundcolor}{\def\FancyVerbBackgroundColor{#1}}",
+    r"\fvset{backgroundcolor=none}",
+    r"\define@key{FV}{bgcolor}{\fvset{backgroundcolor=#1}}",
+    r"}{}",
+  ));
+
+  // A newer host fvextra paints `backgroundcolor` per line via `\FV@BGColor@List`
+  // (`fvextra.sty` L2547: a `\colorbox` `\rlap`+`\hspace{\linewidth}` strip
+  // behind each line, plus over-deep struts to close the vertical seams). LaTeXML
+  // captures that as nested `backgroundcolor` `<ltx:text>` boxes with runs of
+  // padding spaces — version-dependent noise. `fancyvrb_sty.rs`'s `frame` box
+  // already carries the background (reading `\FancyVerbBackgroundColor`), so
+  // neutralize the per-line strip to a pass-through: the background then comes
+  // from the single wrapper on BOTH fvextra versions, keeping the output clean
+  // and stable. Guarded on the macro's presence (the older fvextra has none).
+  RawTeX!(r"\@ifundefined{FV@BGColor@List}{}{\long\def\FV@BGColor@List#1{#1}}");
 });

@@ -3338,3 +3338,30 @@ is unaffected (its content is a real `ltx_td`, already nowrapped). Same-host Per
 nowrap rule to `.ltx_eqn_cell` ([OXIDIZED_DESIGN #109]). Issue #527;
 upstream-fileable against `brucemiller/LaTeXML`. Guard:
 `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`.
+## 79. fancyvrb `frame=single` draws disconnected rules, not a box (Rust surpasses)
+
+LaTeXML (Perl and Rust) raw-loads `fancyvrb.sty` and lets `frame=single` draw the frame with
+raw `\vrule`/`\hrule` (`fancyvrb.sty` `@Single` hooks, L869-968). Those become literal
+`<ltx:rule>` elements that never reconstruct into an HTML box, so the frame renders as
+disconnected horizontal/vertical fragments; the bottom `\FV@SingleFrameSep` box (side vrules,
+no text) also surfaces as a stray empty line, and fvextra's `backgroundcolor` (a per-line
+`\colorbox`) is not captured.
+
+Minimal trigger (issue #525):
+
+```tex
+\documentclass{article}\usepackage{xcolor}\usepackage{fancyvrb}
+\begin{document}
+\begin{Verbatim}[frame=single, framerule=0.5pt, framesep=6pt]
+line 1
+line 2
+\end{Verbatim}
+\end{document}
+```
+
+Same-host Perl 0.8.8 renders the identical broken frame (headless-Chrome screenshots match); the
+lualatex PDF draws a proper rectangle. Perl-origin, unreported upstream. Rust **surpasses**
+(OXIDIZED_DESIGN #110): redefine the `@Single` frame hooks so the frame becomes an
+`ltx_framed_rectangle` box (framesep→padding, framerule→border, fvextra background→background),
+dropping the raw rules and the stray line. Guard:
+`00_tokenize` `tests/tokenize/fancyvrb_frame.{tex,xml}`.
