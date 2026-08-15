@@ -4019,3 +4019,34 @@ text without the fix). Both render on one line with it.
   above is the CI gate); self-skips unless `npm install`ed in `tests/browser` and
   run with `LATEXML_BROWSER_TESTS=1`. Verified red→green: reverting the CSS rule
   fails it at 74px-tall (pure) / 35px-overflow (mixed).
+
+### 110. Publication metadata pubnotes render outside the title `<h1>`, not inside it
+
+**Perl** `LaTeXML-structure-xhtml.xsl` `maketitle` collects **every** `ltx:pubnote`
+into a "footnote-like block" *inside* the title `<h{level}>` (a `†`-collapsed hover
+popup). Class bindings route a lot through `\lx@add@pubnote`: acmart
+(`acmart.cls.ltxml` L59-70) maps `\acmConference`/`\acmDOI`/`\acmISBN`/
+`\acmJournal`/`\acmVolume`/… all to `pubnote`s. So the `<h1 class="ltx_title">`
+ends up containing the conference/DOI/ISBN text (behind a stray `†` on the
+heading) — publication metadata leaking into the title element. Same-host Perl
+0.8.8 produces the identical structure (issue arXiv/html_feedback#6886, witness
+arXiv:2410.20027 — acmart sigconf).
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): split the pubnotes by
+role in `maketitle`. Genuine title **footnotes** — `\thanks`, `\titlenote`/
+`\subtitlenote` (`role='note'`/`'thanks'`) — stay inside the `<h1>`, matching
+author intent (a `\thanks` *is* a title footnote). Publication **metadata**
+(everything else) moves to a **sibling** `<span class="ltx_pubnotes
+ltx_pubnotes_meta">` block after the title, so the `<h1>` holds only the title
+text (and its real footnotes). The `pubnotes` XSLT template is parametrized with
+a `notes` node-set; no core/XML change, and non-pubnote papers are byte-identical.
+For arXiv:2410.20027 the `<h1>` is now just "Agentic Feedback Loop Modeling
+Improves Recommendation and User Simulation" (was …+"Conference: … DOI: …" + a
+stray `†`), verified with headless Chrome under ar5iv.css. The ar5iv stylesheet
+styling of the moved `ltx_pubnotes_meta` block (a visible ACM-reference footer
+rather than a lone collapsed dagger) is a follow-up in `~/git/ar5iv-css`.
+
+**Guard**: `cluster_cli::title_pubnote_pollution::title_h1_excludes_metadata_pubnotes_keeps_footnotes`
+(a `\lx@add@pubnote[role=conference/doi/note]` fixture: metadata not in the `<h1>`,
+the `role=note` footnote kept in it, the metadata in an `ltx_pubnotes_meta`
+sibling after it).
