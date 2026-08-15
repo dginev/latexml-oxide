@@ -239,13 +239,13 @@ fn standalone_child_tikz_survives_the_subfile_group() {
     );
   }
 }
-/// `import.sty`'s search-path save/restore, which the #311 work nearly removed.
-/// Perl's `{…}` wrapper around the input is what scopes `SEARCHPATHS` there;
-/// Rust needs the explicit `\lx@save@paths`/`\lx@restore@paths` stack on top
-/// because `set_search_paths` mutates a global. Without one or the other, the
-/// second sibling `\subimport{Chapter/}{…}` concatenates `Chapter/` onto the
-/// still-mutated lead and searches `Chapter/Chapter/…`. Witnesses:
-/// arXiv:2604.09744, 2603.04457.
+/// `import.sty`'s search-path scoping. `SEARCHPATHS` is now a group-scoped value
+/// (Perl-faithful: default-local `AssignValue`), so the `{…}` wrapper each
+/// `\subimport` opens reverts the path change at `}` — exactly as Perl does, with
+/// no explicit save/restore stack. Without group-local paths, the second sibling
+/// `\subimport{Chapter/}{…}` would concatenate `Chapter/` onto the first call's
+/// still-mutated lead and search `Chapter/Chapter/…`. Witnesses: arXiv:2604.09744,
+/// 2603.04457.
 #[test]
 fn subimport_sibling_calls_do_not_accumulate_search_paths() {
   let xml = convert_to_xml("tests/cluster_regressions/subimport/index_siblings.tex");

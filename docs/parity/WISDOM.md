@@ -2512,8 +2512,8 @@ duplicated class-copy block. Guard: `13_split_css_links`.
 
 **When:** code must ask *"am I inside a bracket LaTeXML itself opened?"* — the
 `standalone` child preamble (`standalone_sty.rs`, after its `bgroup()`),
-`import.sty`'s `\lx@save@paths` `{…}` — so a package loaded there survives the
-pop (OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55, issue #311).
+`import.sty`'s `\lx@activate@subfile@scope` `{…}` — so a package loaded there
+survives the pop (OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55, issue #311).
 
 **Mechanic:** `activate_scope(subfile_scope_here())` marks `StashActive`
 with **`Scope::Local`** (`state.rs`, Perl `State.pm:683`), so the frame that set
@@ -3026,3 +3026,32 @@ bodies. #504's `dimension_to_spaces` was the SOLE instance. Guard:
 `114_streaming_cluster_regressions` over
 `tests/cluster_regressions/streaming_construction_time_spacing.tex` (one fixture
 covering the whole class) + `faked_space_is_sized_by_the_font_it_was_digested_in`.
+
+## #75 A TeX list-value (SEARCHPATHS-like) must live in the group-scoped value table, not a plain State field — TeX grouping then does its save/restore for free
+
+**When:** porting a Perl `AssignValue(FOO => [...])` list — search paths, graphics
+paths, any `@FOO`. Perl's value table is group-scoped and **local-by-default**
+(`State.pm:152,169`), so `}` reverts it and an `\import`-style `{…}` wrapper is
+the ONLY revert mechanism the Perl binding needs.
+
+**Trap:** storing it as a plain `State` field (a bare `VecDeque`) takes it OUT of
+the group stack — `pop_frame` reverts only the ten grouped tables. Two band-aids
+then accrete to fake the scoping: an explicit save/restore stack in the binding
+(`import.sty`'s former `\lx@save@paths`/`\lx@restore@paths`), and a guard around
+package loading that snapshot-restores — which wipes a package's OWN additions
+(#561).
+
+**Fix:** route it through `lookup_value`/`assign_value("FOO", …, scope)` exactly
+as `GRAPHICSPATHS` already does (`get_graphics_paths`, `state.rs`). Reads see the
+current group's value; import writes go **local** (reverted by the `{…}`), a
+package's persistent add goes **global**. Both band-aids disappear. `SEARCHPATHS`
+was the last plain-field holdout; the two are now consistent. Guards:
+`cluster_cli::dir_prefixed_package_loading::*`, `06_cluster_standalone_subfiles::subimport_sibling_calls_do_not_accumulate_search_paths`.
+
+**Corollary — a zero-arg binding loader that drops the directory needs
+`\@currname`, not a search-path guard.** `\usepackage{DIR/pkg}` dispatches to a
+basename-keyed binding (dir stripped) that raw-loads its own basename; resolve it
+by raw-loading the `\@currname` request (`DIR/pkg`) directly — as Perl does (no
+binding → raw-loads the path) — not by injecting `DIR/` into SEARCHPATHS (which
+also grants non-LaTeX auto-sibling resolution the `import` package exists to
+provide). Witness 2510.09534 (`AISTATS/aistats2026`).

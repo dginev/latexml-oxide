@@ -99,7 +99,32 @@ impl Default for InputDefinitionOptions {
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
-  let name = raw_file.trim();
+  let trimmed = raw_file.trim();
+  // A compiled binding keyed by BASENAME raw-loads its own name (`noltxml`), but
+  // the dispatch dropped any directory the user wrote — so `\usepackage{DIR/pkg}`
+  // would raw-load a bare `pkg.sty` and miss the author's bundled `DIR/pkg.sty`.
+  // `\@currname` still holds the full request (`DIR/pkg`) from the OUTER load
+  // (set at `before_input_handle_options`, later than here), so load the file the
+  // user actually asked for — exactly as Perl does (it has no such binding and
+  // raw-loads the dir-prefixed path directly, 0 errors; witness 2510.09534,
+  // `\usepackage[preprint]{AISTATS/aistats2026}`). Scoped to `noltxml` + a bare
+  // basename that matches `\@currname`'s basename, so an unrelated `\input` in the
+  // package is NOT auto-resolved in the subdir (stock LaTeX does not do that —
+  // that is what the `import` package is for). This replaces the former
+  // SearchPathGuard, which injected the subdir into SEARCHPATHS instead.
+  let currname_request: Option<String> = if options.noltxml && !trimmed.contains(['/', '\\']) {
+    do_expand(T_CS!("\\@currname"))
+      .ok()
+      .map(|toks| toks.to_string())
+      .filter(|currname| {
+        currname
+          .rsplit_once(['/', '\\'])
+          .is_some_and(|(dir, base)| base == trimmed && !dir.is_empty())
+      })
+  } else {
+    None
+  };
+  let name: &str = currname_request.as_deref().unwrap_or(trimmed);
 
   // Guard: prevent infinite recursion from circular or runaway package loading.
   // When a binding is missing, raw TeX loading can trigger macro loops.
@@ -129,57 +154,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   }
   let _guard = InputDepthGuard;
 
-  // TeX-faithful subdir search: when a package/class is loaded with a
-  // directory-prefixed name (e.g. `\usepackage{AISTATS/aistats2026}`),
-  // make that directory searchable for the DURATION of this load. TeX's
-  // input stack keeps the loaded file's directory on the search path, so
-  // the file — and any sibling it pulls in — resolves. This matters when a
-  // basename-keyed binding (contrib registry) is matched on the basename
-  // and then raw-loads its own file BY basename (dropping the directory):
-  // without the subdir on the path, that nested raw-load misses a
-  // paper-bundled file living in the subdir. Restored on every exit via the
-  // guard's Drop. Witness: 2510.09534 (`\usepackage{AISTATS/aistats2026}`;
-  // aistats2026.sty lives in an `AISTATS/` subdir; the contrib `aistats2026`
-  // binding does `InputDefinitions!("aistats2026")` → \aistatstitle /
-  // \aistatsauthor / \aistatsaddress undefined without this. Perl has no
-  // such binding and raw-loads the subdir path directly: 0 errors).
-  struct SearchPathGuard(Option<Vec<String>>);
-  impl Drop for SearchPathGuard {
-    fn drop(&mut self) {
-      if let Some(sp) = self.0.take() {
-        set_search_paths(sp);
-      }
-    }
-  }
-  let _sp_guard = {
-    let basename = pathname::file_name(name);
-    let has_dir = !basename.is_empty() && basename != name;
-    let mut restore = None;
-    if has_dir {
-      let ext = options
-        .extension
-        .as_deref()
-        .unwrap_or(if options.as_class { "cls" } else { "sty" })
-        .to_string();
-      if let Some(full) = find_file(
-        name,
-        Some(FindFileOptions {
-          forbid_ltxml:      true,
-          notex:             false,
-          ext_type:          Some(Cow::Owned(ext)),
-          search_paths_only: false,
-        }),
-      ) && let Some(parent) = Path::new(&full).parent()
-      {
-        let pd = parent.to_string_lossy().to_string();
-        if !pd.is_empty() && !get_search_paths().iter().any(|p| p == &pd) {
-          restore = Some(get_search_paths());
-          search_paths_push_front(pd);
-        }
-      }
-    }
-    SearchPathGuard(restore)
-  };
+  // (A directory-prefixed package name — `\usepackage{DIR/pkg}` — that dispatches
+  // to a basename-keyed binding is resolved above by rewriting `name` to the
+  // `\@currname` request, so the binding's own raw-load targets `DIR/pkg`
+  // directly, as Perl does. No SEARCHPATHS injection is needed.)
 
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.

@@ -207,10 +207,10 @@ pub(super) fn make_engine() -> Engine {
   // holds any `Stored`, so `PushValue`/`UnshiftValue` take any Rhai-representable
   // value (string/int/float/bool/`Tokens`/digested handle) and `PopValue`/
   // `ShiftValue` return it with its type preserved (#540). `LookupValue` reads
-  // the whole queue back as a Rhai array. NB `SEARCHPATHS` is NOT such a key in
-  // the Rust port (it is `State.search_paths`, a field) — use `PrependSearchPath`/
-  // `AppendSearchPath` below for input dirs; `GRAPHICSPATHS` IS value-table-backed,
-  // so `PushValue` reaches it.
+  // the whole queue back as a Rhai array. As of #561 `SEARCHPATHS` is itself a
+  // group-scoped value-table list (like `GRAPHICSPATHS`), so `PushValue`/
+  // `UnshiftValue` reach it too; the dedicated `PrependSearchPath`/
+  // `AppendSearchPath` below are the ergonomic front for input dirs.
   engine.register_fn("PushValue", |k: &str, v: Dynamic| {
     // Returns Ok(()) always; the wrong-type BUG path self-reports via Error!.
     let _ = latexml_core::state::push_value(k, dynamic_to_stored(v));
@@ -231,9 +231,10 @@ pub(super) fn make_engine() -> Engine {
     }
   });
   // Input search paths. Perl keeps these in the `SEARCHPATHS` value and prepends
-  // via `UnshiftValue`; the Rust port keeps them in `State.search_paths` (read by
-  // `find_file`), so a script mutates them through these dedicated bindings, not
-  // `PushValue`. Prepend = searched first (Perl's `SEARCHPATHS` semantics).
+  // via `UnshiftValue`; as of #561 the Rust port does the same — `SEARCHPATHS` is
+  // a group-scoped value-table list read by `find_file` — so these dedicated
+  // bindings are a convenience over `PushValue`/`UnshiftValue`. Prepend = searched
+  // first (Perl's `SEARCHPATHS` semantics).
   engine.register_fn("PrependSearchPath", |dir: &str| {
     latexml_core::state::search_paths_push_front(dir.to_string());
   });

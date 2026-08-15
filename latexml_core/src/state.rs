@@ -268,9 +268,11 @@ pub struct State {
   pub input_encoding:          Option<String>,
   // strict: bool,
   // include_comments: bool,
-  /// current paths to search for TeX inputs
+  /// Seed only for the group-scoped `SEARCHPATHS` value-table list (read once at
+  /// construction to seed it); live lookups go through [`get_search_paths`].
   pub search_paths:            VecDeque<String>,
-  /// current paths to search for graphics
+  /// Seed only for the group-scoped `GRAPHICSPATHS` value-table list (read once at
+  /// construction to seed it); live lookups go through [`get_graphics_paths`].
   pub graphics_paths:          VecDeque<String>,
   // include_styles: bool,
   /// flag to disable math parsing
@@ -669,6 +671,25 @@ impl State {
       state.assign_internal(
         TableName::Value,
         arena::pin("GRAPHICSPATHS"),
+        Stored::VecDequeStored(vdq),
+        Some(Scope::Global),
+      );
+    }
+
+    // SEARCHPATHS mirrors GRAPHICSPATHS: a group-scoped value list (Perl
+    // `AssignValue(SEARCHPATHS…)`, local-by-default) rather than a plain field,
+    // so an `\import`/`\subimport` group reverts its change at `}` while a
+    // package's global add persists (#561). Seeded Global from the `search_paths`
+    // field (`.` + the `--path` dirs); `get_search_paths` reads the value table.
+    {
+      let vdq: VecDeque<Stored> = state
+        .search_paths
+        .iter()
+        .map(|p| Stored::String(arena::pin(p)))
+        .collect();
+      state.assign_internal(
+        TableName::Value,
+        arena::pin("SEARCHPATHS"),
         Stored::VecDequeStored(vdq),
         Some(Scope::Global),
       );
@@ -3434,28 +3455,57 @@ pub fn set_label_mapping_hook(hook: LabelMappingHook) {
   state.label_mapping_hook = Some(hook);
 }
 
-pub fn get_search_paths() -> Vec<String> { state!().search_paths.iter().cloned().collect() }
+/// Read SEARCHPATHS from the group-scoped value table (Perl
+/// `LookupValue('SEARCHPATHS')`). Mirrors [`get_graphics_paths`]: the list is a
+/// group-scoped value, not a plain field, so an `\import`/`\subimport` group
+/// reverts its change at `}` and a package's global add persists.
+pub fn get_search_paths() -> Vec<String> {
+  lookup_value("SEARCHPATHS")
+    .map(|v| match v {
+      Stored::Strings(syms) => syms.iter().map(|s| arena::to_string(*s)).collect(),
+      Stored::VecDequeStored(vdq) => vdq
+        .iter()
+        .filter_map(|item| match item {
+          Stored::String(s) => Some(arena::to_string(*s)),
+          _ => None,
+        })
+        .collect(),
+      _ => Vec::new(),
+    })
+    .unwrap_or_default()
+}
 pub fn with_search_paths<R, FnR>(caller: FnR) -> R
-where FnR: FnOnce(&VecDeque<String>) -> R {
-  caller(&state!().search_paths)
+where FnR: FnOnce(&[String]) -> R {
+  caller(&get_search_paths())
 }
+/// Global append (Perl `PushValue(SEARCHPATHS)`) — a persistent search dir.
 pub fn add_search_path(path: String) {
-  let mut state = state_mut!();
-  state.search_paths.push_back(path);
+  let mut paths = get_search_paths();
+  paths.push(path);
+  set_search_paths(paths);
 }
+/// Global prepend (Perl `UnshiftValue(SEARCHPATHS)`) — a persistent search dir.
 pub fn search_paths_push_front(path: String) {
-  let mut state = state_mut!();
-  state.search_paths.push_front(path);
+  let mut paths = get_search_paths();
+  paths.insert(0, path);
+  set_search_paths(paths);
 }
-/// Replace the entire search_paths list (Perl: `AssignValue(SEARCHPATHS => [...])`).
-pub fn set_search_paths(paths: Vec<String>) {
-  let mut state = state_mut!();
-  state.search_paths.clear();
-  for p in paths {
-    state.search_paths.push_back(p);
-  }
+/// Replace SEARCHPATHS GLOBALLY (Perl `AssignValue(SEARCHPATHS => [...], 'global')`).
+/// For the local-by-default `\import` scoping, use [`set_search_paths_local`].
+pub fn set_search_paths(paths: Vec<String>) { assign_search_paths(paths, Scope::Global); }
+/// Replace SEARCHPATHS in the CURRENT group only (Perl `AssignValue(SEARCHPATHS
+/// => [...])` default-local): reverted when the enclosing `\import`/`\subimport`
+/// group closes. This is what makes `import.sty` faithful without an explicit
+/// save/restore stack.
+pub fn set_search_paths_local(paths: Vec<String>) { assign_search_paths(paths, Scope::Local); }
+fn assign_search_paths(paths: Vec<String>, scope: Scope) {
+  let vdq: VecDeque<Stored> = paths
+    .into_iter()
+    .map(|p| Stored::String(arena::pin(&p)))
+    .collect();
+  assign_value("SEARCHPATHS", Stored::VecDequeStored(vdq), Some(scope));
 }
-pub fn has_search_paths() -> bool { !state!().search_paths.is_empty() }
+pub fn has_search_paths() -> bool { !get_search_paths().is_empty() }
 /// Mirror Perl's `LookupValue('GRAPHICSPATHS')` — a list value that all
 /// `\graphicspath`, `\svgpath`, initial source-directory prepends, and
 /// `image_candidates` consult. Always return as `Vec<String>` even if the
