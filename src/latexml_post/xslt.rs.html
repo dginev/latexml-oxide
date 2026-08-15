@@ -1193,5 +1193,19 @@
 <a href=#1193 id=1193 data-nosnippet>1193</a>       source lines would reflow side-by-side with their indentation collapsed"</span>,
 <a href=#1194 id=1194 data-nosnippet>1194</a>    );
 <a href=#1195 id=1195 data-nosnippet>1195</a>  }
-<a href=#1196 id=1196 data-nosnippet>1196</a>}
+<a href=#1196 id=1196 data-nosnippet>1196</a>
+<a href=#1197 id=1197 data-nosnippet>1197</a>  <span class="attr">#[test]
+<a href=#1198 id=1198 data-nosnippet>1198</a>  </span><span class="kw">fn </span>constrained_equation_overflow_delta_stays_present() {
+<a href=#1199 id=1199 data-nosnippet>1199</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1200 id=1200 data-nosnippet>1200</a>    <span class="macro">assert!</span>(
+<a href=#1201 id=1201 data-nosnippet>1201</a>      css.contains(<span class="string">"#533"</span>)
+<a href=#1202 id=1202 data-nosnippet>1202</a>        &amp;&amp; css.contains(<span class="string">".ltx_inline-block .ltx_eqn_table"</span>)
+<a href=#1203 id=1203 data-nosnippet>1203</a>        &amp;&amp; css.contains(<span class="string">".ltx_td .ltx_eqn_table"</span>)
+<a href=#1204 id=1204 data-nosnippet>1204</a>        &amp;&amp; css.contains(<span class="string">"display:block; overflow-x:auto; max-width:100%;"</span>),
+<a href=#1205 id=1205 data-nosnippet>1205</a>      <span class="string">"the constrained-equation containment delta (issue #533) is missing from LaTeXML.css: \
+<a href=#1206 id=1206 data-nosnippet>1206</a>       display math inside a p{{}} cell / parbox / minipage / table cell would escape its \
+<a href=#1207 id=1207 data-nosnippet>1207</a>       box and scatter across the page instead of scrolling within the cell"</span>,
+<a href=#1208 id=1208 data-nosnippet>1208</a>    );
+<a href=#1209 id=1209 data-nosnippet>1209</a>  }
+<a href=#1210 id=1210 data-nosnippet>1210</a>}
 </code></pre></div></section></main></body></html>
