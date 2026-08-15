@@ -99,3 +99,7 @@ LaTeXML
 ar5iv-bindings/
 background/
 .session_state/
+
+# Browser render-test deps (playwright-core; see tests/browser/README-ish package.json)
+latexml_oxide/tests/browser/node_modules/
+latexml_oxide/tests/browser/package-lock.json

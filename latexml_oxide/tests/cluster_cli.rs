@@ -1694,16 +1694,24 @@ mod display_math_text_nowrap {
   //! valid"). SHARED-FAILURE with same-host Perl → surpass-Perl: LaTeXML.css now
   //! gives `ltx_eqn_cell` the same nowrap-with-`ltx_wrap`-optout as a table cell.
   //!
-  //! CI has no browser, so this guards the two pieces the (headless-Chrome-verified)
-  //! fix rests on: the emitted cell structure the rule must target, and the
-  //! stylesheet copied to the destination carrying the rule.
+  //! This is the platform-independent structural guard (no browser needed): both
+  //! display equations put their content in the cell the rule targets, and the
+  //! destination stylesheet carries the rule. The rendered-geometry guarantee —
+  //! that they actually lay out on one line without clipping — is the sibling
+  //! `browser_render_display_math` (Playwright).
 
   use std::{fs, process::Command};
 
+  /// Two display equations exercising BOTH content shapes that land in the
+  /// centering cell: pure `\text{}` (a bare `ltx_markedasmath` run) and mixed
+  /// math+text (a real `<math>` with an embedded `<mtext>`). Both collapse
+  /// without the fix — the first stacks one word per line, the second clips its
+  /// text — and both must render on one line with it.
   const DOC: &str = "\\documentclass[12pt]{article}\n\
                      \\usepackage{amsmath}\n\
                      \\begin{document}\n\
-                     \\[\n\\text{The solution is not valid}\n\\]\n\
+                     \\[\n\\text{The solution is not valid}\n\\]\n\n\
+                     \\[\nx^2 + \\text{the solution is not valid here} = y^2\n\\]\n\
                      \\end{document}\n";
 
   #[test]
@@ -1724,17 +1732,150 @@ mod display_math_text_nowrap {
     let css = fs::read_to_string(root.join("LaTeXML.css")).unwrap_or_default();
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // (1) The display-math content lands in a centered equation cell (no `ltx_td`)
-    // around the markedasmath text — the exact structure the nowrap rule targets.
+    // (1) BOTH display equations put their content in a centered equation cell
+    // (no `ltx_td`) — the pure-`\text{}` (markedasmath) one AND the mixed
+    // math+text one (a `<math>` with `<mtext>`). These are the exact cells the
+    // nowrap rule must target; count both so mixed content is guaranteed too.
+    assert_eq!(
+      html
+        .matches("class=\"ltx_eqn_cell ltx_align_center\"")
+        .count(),
+      2,
+      "both display equations must land in the centered equation cell;\nhtml=\n{html}\nstderr=\n{stderr}"
+    );
     assert!(
-      html.contains("class=\"ltx_eqn_cell ltx_align_center\"") && html.contains("ltx_markedasmath"),
-      "expected a centered equation cell around the markedasmath text;\nhtml=\n{html}\nstderr=\n{stderr}"
+      html.contains("ltx_markedasmath")
+        && html.contains("<mtext>the solution is not valid here</mtext>"),
+      "expected the pure-text (markedasmath) and mixed (math+mtext) contents;\nhtml=\n{html}"
     );
     // (2) The destination stylesheet gives that cell nowrap, so it cannot collapse
-    // between the 50% centering pads. Without it the text wraps one word per line.
+    // between the 50% centering pads (pure text stacks / mixed text clips without it).
     assert!(
       css.contains(".ltx_eqn_cell.ltx_align_center { white-space:nowrap; }"),
       "LaTeXML.css must nowrap the centered equation cell (#527); rule missing"
     );
+  }
+}
+
+mod browser_render_display_math {
+  //! #527, the *rendered* guarantee: a real headless browser must lay out both a
+  //! pure-`\text{}` display and a mixed math+text display on ONE line without
+  //! clipping. The two failure modes need two metrics, so CSS-string matching
+  //! (the sibling test) is not enough: without the fix the pure-text cell STACKS
+  //! (tall `cellHeight`) while the mixed cell CLIPS (`scrollWidth > clientWidth`).
+  //! `tests/browser/measure.js` renders via Playwright (system Chrome) and reports
+  //! the geometry of every `td.ltx_eqn_cell.ltx_align_center`.
+  //!
+  //! Self-skips (visibly) when node / `playwright-core` / a system Chrome is
+  //! absent — BUT if `LATEXML_BROWSER_TESTS` is set (CI sets it), a missing
+  //! toolchain is a hard FAILURE, so the render coverage can never silently
+  //! vanish. Locally: `npm ci` in `latexml_oxide/tests/browser` to enable it.
+
+  use std::{fs, path::PathBuf, process::Command};
+
+  const DOC: &str = "\\documentclass[12pt]{article}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\[\n\\text{The solution is not valid}\n\\]\n\n\
+                     \\[\nx^2 + \\text{the solution is not valid here} = y^2\n\\]\n\
+                     \\end{document}\n";
+
+  fn browser_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/browser") }
+  fn runs(cmd: &str, arg: &str) -> bool {
+    Command::new(cmd)
+      .arg(arg)
+      .output()
+      .map(|o| o.status.success())
+      .unwrap_or(false)
+  }
+  fn have_chrome() -> bool {
+    [
+      "google-chrome",
+      "google-chrome-stable",
+      "chromium",
+      "chromium-browser",
+    ]
+    .iter()
+    .any(|c| runs(c, "--version"))
+  }
+  fn toolchain_ready() -> bool {
+    runs("node", "--version")
+      && have_chrome()
+      && browser_dir().join("node_modules/playwright-core").is_dir()
+  }
+
+  #[test]
+  fn display_math_renders_on_one_line_without_clipping() {
+    if !toolchain_ready() {
+      // CI opts in via LATEXML_BROWSER_TESTS: there a missing toolchain is a
+      // failure (never a silent green), everywhere else it is a visible skip.
+      assert!(
+        std::env::var("LATEXML_BROWSER_TESTS").is_err(),
+        "LATEXML_BROWSER_TESTS is set but node + playwright-core + a system Chrome \
+         are not all available; run `npm ci` in {}",
+        browser_dir().display()
+      );
+      eprintln!(
+        "SKIP browser render (#527): node/playwright-core/chrome unavailable — \
+         `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
+        browser_dir().display()
+      );
+      return;
+    }
+
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+    let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    assert!(
+      root.join("out.html").exists(),
+      "conversion produced no HTML:\n{}",
+      String::from_utf8_lossy(&conv.stderr)
+    );
+
+    let url = format!("file://{}", root.join("out.html").display());
+    let m = Command::new("node")
+      .arg(browser_dir().join("measure.js"))
+      .arg(&url)
+      .output()
+      .expect("run measure.js");
+    let stdout = String::from_utf8_lossy(&m.stdout);
+    assert!(
+      m.status.success(),
+      "measure.js failed: {}\n{stdout}",
+      String::from_utf8_lossy(&m.stderr)
+    );
+
+    // One object per display-equation content cell.
+    let cells: Vec<serde_json::Value> =
+      serde_json::from_str(stdout.trim()).expect("parse measure.js JSON");
+    assert_eq!(
+      cells.len(),
+      2,
+      "expected 2 display-equation cells (pure text + mixed), got {}: {stdout}",
+      cells.len()
+    );
+    for (i, c) in cells.iter().enumerate() {
+      let height = c["cellHeight"].as_f64().unwrap_or(f64::MAX);
+      let overflow = c["overflow"].as_f64().unwrap_or(f64::MAX);
+      // One 12pt line is ~20px; a stacked collapse is 3-4× that.
+      assert!(
+        height < 40.0,
+        "display equation {i} rendered {height}px tall — it stacked into multiple \
+         lines instead of one (#527); cells={stdout}"
+      );
+      // A squeezed cell overflows its content (the mixed case clips its text).
+      assert!(
+        overflow <= 2.0,
+        "display equation {i} overflows its cell by {overflow}px — its content is \
+         clipped, not shown on one line (#527); cells={stdout}"
+      );
+    }
   }
 }

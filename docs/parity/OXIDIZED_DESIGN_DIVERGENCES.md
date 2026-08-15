@@ -3968,10 +3968,21 @@ column. CSS-only: the emitted HTML is byte-identical (zero golden churn); a
 too-wide equation was already the behavior for `align*` and real math. Upstream-
 fileable (`brucemiller/LaTeXML`, not yet filed).
 
-Verified with headless Chrome: `\[\text{…}\]` renders "The solution is not valid"
-on one centered line (was four stacked words).
+Covers both content shapes that reach the centering cell: a pure `\text{}` display
+(a bare `ltx_markedasmath` run — **stacks** one word per line without the fix) and
+mixed math+text `\[x^2+\text{…}=y^2\]` (a `<math>` with `<mtext>` — **clips** its
+text without the fix). Both render on one line with it.
 
-**Guard**: `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`
-(CI has no browser, so it asserts the two pieces the fix rests on: the emitted
-`ltx_eqn_cell ltx_align_center` cell around the `ltx_markedasmath` text, and the
-destination `LaTeXML.css` carrying the `.ltx_eqn_cell.ltx_align_center` nowrap rule).
+**Guards** (two levels):
+- `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css` —
+  platform-independent structural guard: both displays land in the
+  `ltx_eqn_cell ltx_align_center` cell, and the destination `LaTeXML.css` carries
+  the `.ltx_eqn_cell.ltx_align_center` nowrap rule.
+- `cluster_cli::browser_render_display_math::display_math_renders_on_one_line_without_clipping` —
+  the **rendered** guarantee: Playwright (system Chrome, `tests/browser/measure.js`)
+  measures the cell geometry and asserts both displays are one line tall
+  (`cellHeight < 40px` — catches stacking) and un-clipped (`scrollWidth −
+  clientWidth ≤ 2px` — catches the mixed overflow). Runs on Linux CI
+  (`LATEXML_BROWSER_TESTS=1` + node/playwright installed), self-skips where the
+  toolchain is absent. Verified red→green: reverting the CSS rule fails it at
+  74px-tall (pure) / 35px-overflow (mixed).
