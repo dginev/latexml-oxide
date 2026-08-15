@@ -60,67 +60,66 @@ struct Cli {
 
   // === Post-processing flags ===
   /// Enable HTML/MathML post-processing (auto-enabled for HTML/ePub formats).
-  #[arg(long)]
+  #[arg(long, overrides_with = "nopost")]
   post: bool,
 
   /// Skip post-processing, emitting the raw LaTeXML XML even for an
   /// HTML-implying destination.
-  #[arg(long)]
+  #[arg(long, overrides_with = "post")]
   nopost: bool,
 
   /// Generate Presentation MathML (on by default for HTML formats).
-  #[arg(long, alias = "presentationmathml")]
+  #[arg(long, alias = "presentationmathml", overrides_with = "nopmml")]
   pmml: bool,
 
   /// Suppress Presentation MathML even when the format would enable it.
-  #[arg(long, alias = "nopresentationmathml")]
+  #[arg(long, alias = "nopresentationmathml", overrides_with = "pmml")]
   nopmml: bool,
 
   /// Generate Content MathML.
-  #[arg(long, alias = "contentmathml")]
+  #[arg(long, alias = "contentmathml", overrides_with = "nocmml")]
   cmml: bool,
 
   /// Suppress Content MathML.
-  #[arg(long, alias = "nocontentmathml")]
+  #[arg(long, alias = "nocontentmathml", overrides_with = "cmml")]
   nocmml: bool,
 
   /// Keep the intermediate XMath in the output alongside MathML.
-  #[arg(long, alias = "xmath")]
+  #[arg(long, alias = "xmath", overrides_with = "noxmath")]
   #[arg(name = "keepXMath")]
   keep_xmath: bool,
 
   /// Drop the XMath representation from the output.
-  #[arg(long, alias = "nokeepXMath")]
+  #[arg(long, alias = "nokeepXMath", overrides_with = "keepXMath")]
   noxmath: bool,
 
   /// Wrap MathML in a `<semantics>` element with the TeX source as annotation.
-  #[arg(long)]
+  #[arg(long, overrides_with = "nomathtex")]
   mathtex: bool,
 
   /// Suppress the TeX-source annotation on MathML.
-  #[arg(long)]
+  #[arg(long, overrides_with = "mathtex")]
   nomathtex: bool,
 
   /// Replace invisible-times operators (U+2062) with a zero-width space.
-  #[arg(long)]
+  #[arg(long, overrides_with = "invisibletimes")]
   noinvisibletimes: bool,
 
-  /// Keep invisible-times operators (the default). Overrides a package/profile
-  /// that turned them off; --noinvisibletimes wins if both are given.
-  #[arg(long)]
+  /// Keep invisible-times operators (the default). If both are given, the last
+  /// one on the command line wins (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "noinvisibletimes")]
   invisibletimes: bool,
 
   /// Remap styled alphanumerics to Unicode's Plane-1 Mathematical Alphanumeric
-  /// Symbols (the default). Overrides a profile that turned it off, and wins
-  /// over --noplane1 if both are given — as --invisibletimes does over its
-  /// negation.
-  #[arg(long)]
+  /// Symbols (the default). If both --plane1 and --noplane1 are given, the last
+  /// one on the command line wins (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "noplane1")]
   plane1: bool,
 
   /// Keep styled alphanumerics as ASCII and carry the style in a `mathvariant`
   /// attribute instead of remapping to Plane-1 codepoints, whose font coverage
   /// is patchy and which some screen readers announce poorly.
-  #[arg(long)]
+  #[arg(long, overrides_with = "plane1")]
   noplane1: bool,
 
   /// Remap to Plane-1 only for the variants whose doubly-styled blocks are
@@ -131,22 +130,23 @@ struct Cli {
   hackplane1: bool,
 
   /// Suppress the built-in CSS/JS resources.
-  #[arg(long)]
+  #[arg(long, overrides_with = "defaultresources")]
   nodefaultresources: bool,
 
-  /// Include the built-in CSS/JS resources (the default);
-  /// --nodefaultresources wins if both are given.
-  #[arg(long)]
+  /// Include the built-in CSS/JS resources (the default). If both are given,
+  /// the last one on the command line wins (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "nodefaultresources")]
   defaultresources: bool,
 
   /// Omit source comments from the output.
-  #[arg(long)]
+  #[arg(long, overrides_with = "comments")]
   nocomments: bool,
 
   /// Preserve source `%` comments in the output. This Rust port omits them by
-  /// default (Perl keeps them); --nocomments wins if both are given.
+  /// default (Perl keeps them). If both are given, the last one on the command
+  /// line wins (Perl GetOpt::Long).
   // Divergence from Perl's default-on: see OXIDIZED_DESIGN #2.
-  #[arg(long)]
+  #[arg(long, overrides_with = "nocomments")]
   comments: bool,
 
   /// Strict mode: treat selected recoverable conditions as hard errors.
@@ -175,12 +175,13 @@ struct Cli {
   bibtex: bool,
 
   /// Disable math parsing (leave formulae as unparsed token lists).
-  #[arg(long, alias = "noparse")]
+  #[arg(long, alias = "noparse", overrides_with = "mathparse")]
   nomathparse: bool,
 
   /// Enable math parsing (the default). Restores it if a profile/package
-  /// disabled it; --nomathparse wins if both are given.
-  #[arg(long)]
+  /// disabled it. If both are given, the last one on the command line wins
+  /// (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "nomathparse")]
   mathparse: bool,
 
   /// Emit source locators: record each construct's source range as a
@@ -192,12 +193,13 @@ struct Cli {
   source_map: bool,
 
   /// Disable section numbering.
-  #[arg(long, alias = "nosectionnumbers")]
+  #[arg(long, alias = "nosectionnumbers", overrides_with = "numbersections")]
   nonumbersections: bool,
 
   /// Enable section numbering (the default). Restores it if a profile/package
-  /// turned it off; --nonumbersections wins if both are given.
-  #[arg(long)]
+  /// turned it off. If both are given, the last one on the command line wins
+  /// (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "nonumbersections")]
   numbersections: bool,
 
   /// Vector-SVG fast path for PDF graphics. `0` (default) auto-detects: vector
@@ -212,14 +214,14 @@ struct Cli {
   )]
   graphics_svg_threshold_kb: u32,
 
-  /// Convert `\includegraphics` figures to web images (the default);
-  /// --nographicimages overrides.
-  #[arg(long)]
+  /// Convert `\includegraphics` figures to web images (the default). If both
+  /// are given, the last one on the command line wins (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "nographicimages")]
   graphicimages: bool,
 
   /// Skip figure conversion: leave the raw `<ltx:graphics>` references in the
   /// output. Faster, and works on hosts without the image tools installed.
-  #[arg(long)]
+  #[arg(long, overrides_with = "graphicimages")]
   nographicimages: bool,
 
   /// What to emit: `document` (default; the full page), `fragment` (an
@@ -347,12 +349,16 @@ struct Cli {
   inputencoding: Option<String>,
 
   // === Split options ===
-  /// Split the output into multiple linked pages (by section, by default).
-  #[arg(long)]
+  /// Split the output into multiple linked pages (by section, by default). If
+  /// both --split and --nosplit are given, the last one on the command line
+  /// wins (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "nosplit")]
   split: bool,
 
-  /// Force splitting off even when --splitat/--splitpath would enable it.
-  #[arg(long)]
+  /// Force splitting off even when --splitat/--splitpath would enable it. If
+  /// both --split and --nosplit are given, the last one on the command line
+  /// wins (Perl GetOpt::Long).
+  #[arg(long, overrides_with = "split")]
   nosplit: bool,
 
   /// Level to split at: part, chapter, section, subsection, ... (default:
@@ -438,6 +444,48 @@ fn custom_alloc_error_hook(layout: Layout) {
     layout.align()
   );
   process::exit(137);
+}
+
+/// Read back which side of a `--opt`/`--noopt` boolean pair clap kept, or `None`
+/// if neither flag was given.
+///
+/// The rightmost-wins resolution happens *before* this call, in **clap**: each
+/// pair carries a mutual `overrides_with`, so clap discards every occurrence but
+/// the last one on the command line and leaves at most one of the two `bool`s
+/// set. That mirrors Perl `Common/Config.pm`, where each option assigns the same
+/// accumulator scalar and the final assignment wins (`undef` until touched).
+/// This function only takes that already-resolved state as clap decided it and
+/// folds the two `bool`s into a tri-state: `Some(true)` if `pos` was the flag
+/// clap kept, `Some(false)` if `neg` was, `None` if neither appeared — so callers
+/// can fall back to the option's default via `.unwrap_or(default)`.
+///
+/// Because clap has already collapsed the pair, at most one input is ever `true`,
+/// so the body is a plain precedence-disjunction — the `pos`-first ordering never
+/// arbitrates. The `debug_assert!` pins that contract: if a future pair is wired
+/// without its mutual `overrides_with`, both inputs can be `true` and this trips
+/// (loudly, in the `every_negatable_pair_is_last_wins` test) rather than silently
+/// letting `pos` win regardless of command-line order.
+fn chosen_by_clap(pos: bool, neg: bool) -> Option<bool> {
+  debug_assert!(
+    !(pos && neg),
+    "a --opt/--noopt pair reached chosen_by_clap with both set — its clap \
+     `overrides_with` is missing, so rightmost-wins is not enforced"
+  );
+  pos.then_some(true).or(neg.then_some(false))
+}
+
+/// Decide whether output splitting is enabled, faithful to Perl
+/// `Common/Config.pm` L124-130.
+///
+/// `split!` is last-wins (via [`chosen_by_clap`]). The value options
+/// `--splitat`/`--splitpath`/`--splitnaming` each do `split = 1 unless defined
+/// split`, i.e. they turn splitting on **only when neither `--split` nor
+/// `--nosplit` ever appeared** — a split! always overwrites, a split* never
+/// overwrites a decided value. So the only order that matters is among the
+/// split! pair (which clap resolves); a split* merely supplies the default.
+fn resolve_split(cli: &Cli) -> bool {
+  chosen_by_clap(cli.split, cli.nosplit)
+    .unwrap_or(cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some())
 }
 
 /// Resolve the `--max-memory` ceiling in MiB.
@@ -917,26 +965,16 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     preload,
     search_paths,
-    // Perl Core.pm L45: INCLUDE_COMMENTS. `--nocomments` wins over `--comments`;
-    // otherwise leave unset so the Rust default (OFF — OXIDIZED_DESIGN #2) holds.
-    include_comments: if cli.nocomments {
-      Some(false)
-    } else if cli.comments {
-      Some(true)
-    } else {
-      None
-    },
+    // Perl Core.pm L45: INCLUDE_COMMENTS (`comments!`, last-wins). Left unset
+    // when neither is given so the Rust default (OFF — OXIDIZED_DESIGN #2) holds.
+    include_comments: chosen_by_clap(cli.comments, cli.nocomments),
     // Perl Core.pm L43: STRICT; L55-57: INCLUDE_STYLES/INCLUDE_CLASSES.
     strict: if cli.strict { Some(true) } else { None },
     include_styles: if cli.includestyles { Some(true) } else { None },
-    // `--nomathparse` disables; `--mathparse` explicitly enables (the default).
-    nomathparse: if cli.nomathparse {
-      Some(true)
-    } else if cli.mathparse {
-      Some(false)
-    } else {
-      None
-    },
+    // Perl `noparse`/`parse` (mathparse), last-wins. `Some(true)` disables
+    // math parsing, `Some(false)` explicitly enables it (the default), `None`
+    // leaves it unset.
+    nomathparse: chosen_by_clap(cli.nomathparse, cli.mathparse),
     // `--source-map` flag OR `LATEXML_SOURCE_MAP` env enables locator
     // tracking + emission; otherwise leave unset (off). The env reads
     // once here, off the hot path. See `docs/performance/SOURCE_PROVENANCE.md`.
@@ -992,18 +1030,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       Some(latexml_core::state::Scope::Global),
     );
   }
-  if cli.nonumbersections {
+  // Perl `numbersections!` (default on), last-wins between the pair. `Some(true)`
+  // ⇒ number sections (no_number_sections=false); `Some(false)` ⇒ suppress them;
+  // `None` leaves the setting untouched.
+  if let Some(number_sections) = chosen_by_clap(cli.numbersections, cli.nonumbersections) {
     latexml_core::state::assign_value(
       "no_number_sections",
-      true,
-      Some(latexml_core::state::Scope::Global),
-    );
-  } else if cli.numbersections {
-    // Positive complement (Perl `numbersections!`, default on): explicitly
-    // restore section numbering if a profile/package turned it off.
-    latexml_core::state::assign_value(
-      "no_number_sections",
-      false,
+      !number_sections,
       Some(latexml_core::state::Scope::Global),
     );
   }
@@ -1159,28 +1192,22 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // Matches the always-on post-processing behaviour of the now-
       // retired `latexmlpost_oxide` binary.
       let xml_input_mode = is_xml_input(&source_for_post);
-      // `--nopost` (Perl `post!` negated) force-skips post-processing so the
-      // raw LaTeXML XML is emitted even for an HTML-implying destination.
-      let do_post = !cli.nopost
-        && (cli.post
-          || cli.pmml
+      // Build split XPath from --splitat, faithful to Perl `split!` last-wins +
+      // "split* implies split unless already decided" (see `resolve_split`).
+      let split_enabled = resolve_split(&cli);
+      // `--post`/`--nopost` (Perl `post!`) is last-wins; when neither is given,
+      // post-processing is implied by the requested representations/format.
+      let do_post = chosen_by_clap(cli.post, cli.nopost).unwrap_or(
+        cli.pmml
           || cli.cmml
           || effective_stylesheet.is_some()
           || is_html_format
-          || cli.split
-          || cli.splitat.is_some()
+          || split_enabled
           || xml_input_mode
           // Perl Config.pm L454: any non-`document` whatsout forces post.
-          || whatsout_mode.requires_post());
+          || whatsout_mode.requires_post(),
+      );
 
-      // Build split XPath from --splitat
-      // `--nosplit` (Perl `split!` negated) forces splitting off even when a
-      // `--splitat`/`--splitpath`/`--splitnaming` would otherwise enable it.
-      let split_enabled = !cli.nosplit
-        && (cli.split
-          || cli.splitat.is_some()
-          || cli.splitnaming.is_some()
-          || cli.splitpath.is_some());
       let split_xpath = if split_enabled {
         cli.splitpath.clone().or_else(|| {
           let splitat = cli.splitat.as_deref().unwrap_or("section");
@@ -1263,12 +1290,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         let default_pmml_for_xml_input =
           xml_input_mode && !cli.pmml && effective_stylesheet.is_none();
         let post_opts = PostOptions {
-          // The `no*` forms (Perl `removeMathFormat`) suppress a rep that a
-          // format would otherwise default on.
-          pmml: (cli.pmml || cli.post || is_html_format || default_pmml_for_xml_input)
-            && !cli.nopmml,
-          cmml: cli.cmml && !cli.nocmml,
-          keep_xmath: cli.keep_xmath && !cli.noxmath,
+          // The `--pmml`/`--nopmml` pair (Perl add/removeMathFormat) is
+          // last-wins; when neither is given, a rep may be defaulted on by the
+          // format.
+          pmml: chosen_by_clap(cli.pmml, cli.nopmml)
+            .unwrap_or(cli.post || is_html_format || default_pmml_for_xml_input),
+          cmml: chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
+          keep_xmath: chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
           stylesheet: effective_stylesheet.as_deref(),
           destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
@@ -1276,15 +1304,16 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           // destination's directory (document.rs / Perl Config.pm L466-469).
           site_directory: cli.sitedirectory.as_deref(),
           search_paths: &cli.search_paths,
-          nodefaultresources: cli.nodefaultresources && !cli.defaultresources,
+          nodefaultresources: chosen_by_clap(cli.nodefaultresources, cli.defaultresources)
+            .unwrap_or(false),
           css_files: &cli.css_files,
           js_files: &cli.js_files,
-          noinvisibletimes: cli.noinvisibletimes && !cli.invisibletimes,
-          mathtex: cli.mathtex && !cli.nomathtex,
+          noinvisibletimes: chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes)
+            .unwrap_or(false),
+          mathtex: chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
           // Perl `preprocess` L70-71: plane1 defaults ON, and --hackplane1
-          // implies it. `--plane1` is the explicit re-affirmation that wins over
-          // `--noplane1`, mirroring the invisibletimes pair above.
-          plane1: !cli.noplane1 || cli.plane1 || cli.hackplane1,
+          // implies it. `--plane1`/`--noplane1` is otherwise last-wins.
+          plane1: cli.hackplane1 || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
           hackplane1: cli.hackplane1,
           navigationtoc: cli.navigationtoc.as_deref(),
           schemadocs: cli.schemadocs,
@@ -1293,7 +1322,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           split_naming: cli.splitnaming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
-          graphicimages: cli.graphicimages || !cli.nographicimages,
+          graphicimages: chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
           // Perl `if ($timestamp)`: "0" (and empty) means "omit the timestamp".
           timestamp: cli
             .timestamp
@@ -1777,6 +1806,124 @@ mod streaming_activation_tests {
     assert!(
       resolve_streaming(None, 8192, main.to_str().unwrap()).is_none(),
       "a projection comfortably under the fuse must stay eager"
+    );
+  }
+}
+
+/// GetOpt::Long-style last-wins parsing for `--opt`/`--noopt` boolean pairs
+/// (issue #530). Perl reads options left-to-right and lets the rightmost win,
+/// which lets a base flag list be overridden by appending more flags. clap's
+/// mutual `overrides_with` on each pair reproduces that; these tests pin it.
+#[cfg(test)]
+mod boolean_flag_last_wins_tests {
+  use super::*;
+
+  /// Parse a CLI from a flag list, appending a dummy source so parsing succeeds.
+  fn cli(flags: &[&str]) -> Cli {
+    let mut argv = vec!["latexml_oxide"];
+    argv.extend_from_slice(flags);
+    argv.push("src.tex");
+    Cli::parse_from(argv)
+  }
+
+  #[test]
+  fn chosen_by_clap_reads_back_the_resolved_pair() {
+    assert_eq!(chosen_by_clap(true, false), Some(true));
+    assert_eq!(chosen_by_clap(false, true), Some(false));
+    assert_eq!(chosen_by_clap(false, false), None);
+  }
+
+  /// The reporter's core use case: appending the opposite flag overrides the
+  /// earlier one, in either order and repeatedly — clap keeps only the last.
+  #[test]
+  fn split_pair_is_last_wins() {
+    assert!(!resolve_split(&cli(&["--split", "--nosplit"])));
+    assert!(resolve_split(&cli(&["--nosplit", "--split"])));
+    // Appending once more flips it again — "global flags + file-specific flags".
+    assert!(!resolve_split(&cli(&["--nosplit", "--split", "--nosplit"])));
+    assert!(resolve_split(&cli(&["--split", "--nosplit", "--split"])));
+  }
+
+  /// Perl `Common/Config.pm` L124-130: a `--split*` value option turns splitting
+  /// on only when neither `--split` nor `--nosplit` decided it (`unless defined`).
+  #[test]
+  fn split_value_options_imply_split_only_when_undecided() {
+    // Undecided: any split* enables splitting.
+    assert!(resolve_split(&cli(&["--splitat", "section"])));
+    assert!(resolve_split(&cli(&["--splitpath", "//ltx:section"])));
+    assert!(resolve_split(&cli(&["--splitnaming", "id"])));
+    // An explicit --nosplit decides it; split* cannot re-enable, either order.
+    assert!(!resolve_split(&cli(&["--nosplit", "--splitat", "section"])));
+    assert!(!resolve_split(&cli(&["--splitat", "section", "--nosplit"])));
+    // An explicit --split stays on.
+    assert!(resolve_split(&cli(&["--split", "--splitat", "section"])));
+    // Neither split! nor split*: off.
+    assert!(!resolve_split(&cli(&[])));
+  }
+
+  /// Every negatable pair resolves to its rightmost occurrence. Guards each
+  /// `overrides_with` wiring so a dropped one is caught.
+  #[test]
+  fn every_negatable_pair_is_last_wins() {
+    let c = cli(&["--nopost", "--post"]);
+    assert_eq!(chosen_by_clap(c.post, c.nopost), Some(true));
+    let c = cli(&["--post", "--nopost"]);
+    assert_eq!(chosen_by_clap(c.post, c.nopost), Some(false));
+
+    let c = cli(&["--nopmml", "--pmml"]);
+    assert_eq!(chosen_by_clap(c.pmml, c.nopmml), Some(true));
+    let c = cli(&["--pmml", "--nopmml"]);
+    assert_eq!(chosen_by_clap(c.pmml, c.nopmml), Some(false));
+
+    let c = cli(&["--nocmml", "--cmml"]);
+    assert_eq!(chosen_by_clap(c.cmml, c.nocmml), Some(true));
+
+    let c = cli(&["--noxmath", "--keep-xmath"]);
+    assert_eq!(chosen_by_clap(c.keep_xmath, c.noxmath), Some(true));
+
+    let c = cli(&["--nomathtex", "--mathtex"]);
+    assert_eq!(chosen_by_clap(c.mathtex, c.nomathtex), Some(true));
+
+    let c = cli(&["--invisibletimes", "--noinvisibletimes"]);
+    assert_eq!(
+      chosen_by_clap(c.noinvisibletimes, c.invisibletimes),
+      Some(true)
+    );
+
+    let c = cli(&["--plane1", "--noplane1"]);
+    assert_eq!(chosen_by_clap(c.plane1, c.noplane1), Some(false));
+    let c = cli(&["--noplane1", "--plane1"]);
+    assert_eq!(chosen_by_clap(c.plane1, c.noplane1), Some(true));
+
+    let c = cli(&["--defaultresources", "--nodefaultresources"]);
+    assert_eq!(
+      chosen_by_clap(c.nodefaultresources, c.defaultresources),
+      Some(true)
+    );
+
+    let c = cli(&["--comments", "--nocomments"]);
+    assert_eq!(chosen_by_clap(c.comments, c.nocomments), Some(false));
+    let c = cli(&["--nocomments", "--comments"]);
+    assert_eq!(chosen_by_clap(c.comments, c.nocomments), Some(true));
+
+    let c = cli(&["--mathparse", "--nomathparse"]);
+    assert_eq!(chosen_by_clap(c.nomathparse, c.mathparse), Some(true));
+
+    let c = cli(&["--nonumbersections", "--numbersections"]);
+    assert_eq!(
+      chosen_by_clap(c.numbersections, c.nonumbersections),
+      Some(true)
+    );
+
+    let c = cli(&["--graphicimages", "--nographicimages"]);
+    assert_eq!(
+      chosen_by_clap(c.graphicimages, c.nographicimages),
+      Some(false)
+    );
+    let c = cli(&["--nographicimages", "--graphicimages"]);
+    assert_eq!(
+      chosen_by_clap(c.graphicimages, c.nographicimages),
+      Some(true)
     );
   }
 }
