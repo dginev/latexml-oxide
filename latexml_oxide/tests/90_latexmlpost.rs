@@ -123,6 +123,21 @@ fn simplemath_post_test() {
 }
 
 #[test]
+fn unaryminus_post_test() {
+  // Issue #535: a unary minus after a relation (`a = -b`, and the align-style
+  // `= -x` with an absent left operand) must keep the medium space to the RIGHT
+  // of the `=`. The prefix `−` was rendered with INFIX ADDOP dictionary spacing
+  // (lspace 0.278em) instead of PREFIX spacing (lspace 0); the spacewalk then
+  // saw two adjacent operators wanting no TeX space between them (Rel→Bin = 0)
+  // but 0.556em of dictionary spacing, and zeroed BOTH `=`.rspace and `−`.lspace
+  // — collapsing the gap. Perl `pmml_infix` (MathML.pm L632-635) renders a
+  // single-argument infix operator via `pmml_mo($op, role => 'OPERATOR')`, which
+  // selects the PREFIX entry (lspace 0) and records no `_role`, so the golden's
+  // `=`/`−` carry no spacing overrides — byte-identical to same-host Perl.
+  post_test("unaryminus", 0);
+}
+
+#[test]
 fn opdecoration_post_test() {
   // FUNCTION APPLICATION (⁡) over-insertion: an operator whose presentation is an
   // <m:mo> (∇, ∂, ∑, ∫, …) must juxtapose its argument (∇ϕ, ∂f, ∑a, ∫g) — NOT
