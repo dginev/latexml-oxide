@@ -332,6 +332,7 @@ pub mod overpic_sty;
 pub mod palatino_sty;
 pub mod paralist_sty;
 pub mod parskip_sty;
+pub mod pdfcol_sty;
 pub mod pdflscape_sty;
 pub mod pdfpages_sty;
 pub mod pdfsync_sty;

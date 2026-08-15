@@ -257,6 +257,30 @@ fn cluster_defmath_textmode_no_mode_warning() {
 /// shared diagram-macro stubs absorb them. See docs/SYNC_STATUS.md.
 #[test]
 fn cluster_feynmp_fmf() { convert_clean("tests/cluster_regressions/feynmp_fmf.tex"); }
+/// Issue #531: `pdfcol.sty` (a PDF colour-stack manager, pulled in transitively
+/// by tcolorbox's `breakable` library) had no binding, so `\pdfcolInitStack` and
+/// its four siblings raised `undefined` errors and leaked their args as text.
+/// SHARED-FAILURE (same-host Perl errors identically — neither engine shipped a
+/// pdfcol binding). LaTeXML emits no PDF colour stack, so `pdfcol_sty.rs` ports
+/// the package's own "disabled" fallback (all commands no-op; `\pdfcolIfStackExists`
+/// takes the false branch). OXIDIZED_DESIGN #112.
+#[test]
+fn cluster_pdfcol_stub_no_undefined() {
+  let xml = convert_to_xml("tests/cluster_regressions/pdfcol_stub.tex");
+  // No `undefined` ERROR nodes for any pdfcol command (`convert_to_xml` already
+  // gates 0 errors; this pins the shape). The four no-op commands emit nothing
+  // and `\pdfcolIfStackExists{main}{STACK-YES}{STACK-NO}` runs the FALSE branch
+  // (the disabled fallback: a stack is never registered), so the whole body
+  // collapses to exactly `STACK-NO` — no leaked `main`/`STACK-YES` args.
+  assert!(
+    !xml.contains("<ERROR"),
+    "pdfcol commands must no-op, not <ERROR>:\n{xml}"
+  );
+  assert!(
+    xml.contains("<p>STACK-NO</p>") && !xml.contains("STACK-YES"),
+    "\\pdfcolIfStackExists must take the false branch and siblings must no-op:\n{xml}"
+  );
+}
 /// An UNBOUND journal class (`sn-jnl`, `wlpeerj`, `sagej`, Wiley, …) falls back
 /// to the OmniBus class, whose lazy natbib autoload triggers (`\citep`/`\citet`/
 /// `\citeyear`/…) must load natbib EXACTLY ONCE and resolve to natbib's real

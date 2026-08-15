@@ -1,0 +1,13 @@
+% Issue #531: pdfcol.sty (a PDF colour-stack package, loaded transitively by
+% tcolorbox's `breakable` library) had no binding, so \pdfcolInitStack and its
+% siblings raised `undefined` errors. LaTeXML emits no PDF colour stack, so the
+% package's own "disabled" fallback (no-ops) is the faithful HTML semantics.
+\documentclass{article}
+\usepackage{pdfcol}
+\begin{document}
+\pdfcolInitStack{main}%
+\pdfcolSwitchStack{main}%
+\pdfcolSetCurrentColor
+\pdfcolSetCurrent{main}%
+\pdfcolIfStackExists{main}{STACK-YES}{STACK-NO}
+\end{document}

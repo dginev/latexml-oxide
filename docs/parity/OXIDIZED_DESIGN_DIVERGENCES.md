@@ -4103,3 +4103,26 @@ the golden has two `framed="rectangle" class="ltx_framed_verbatim"` boxes with t
 `border-width`/`padding`/`background` cssstyle and **zero** `<ltx:rule>` elements; plus
 `latexml_post::xslt::witnessed_css_delta::framed_verbatim_responsive_delta_stays_present`
 (the `.ltx_framed_verbatim` responsive rule stays in the bundled `LaTeXML.css`).
+
+### 112. `pdfcol.sty` is a no-op stub (PDF colour stacks have no HTML output)
+
+**Perl** LaTeXML ships no `pdfcol.sty.ltxml`. When tcolorbox's `breakable` library
+(`\tcbuselibrary{breakable}`) or a document `\RequirePackage{pdfcol}`s the package, LaTeXML
+finds no binding, and pdfcol's `\pdfcolInitStack` / `\pdfcolIfStackExists` / `\pdfcolSwitchStack`
+/ `\pdfcolSetCurrentColor` / `\pdfcolSetCurrent` are undefined → `Error:undefined:\pdfcolInitStack`
+and the args leak as body text. Issue #531 (reporter nasser1). Same-host Perl (TL2025) errors
+identically (SHARED-FAILURE).
+
+**Divergence** (surpass-Perl, SHARED-FAILURE → clean): `pdfcol_sty.rs` ports `pdfcol.sty`'s own
+`\ifpdfcolAvailable … \else … \fi` **disabled** fallback branch (`pdfcol.sty` L275-291), which
+the real package takes whenever pdfTeX's colour-stack primitives are unavailable — always the
+case for LaTeXML. Every command becomes a no-op; `\pdfcolIfStackExists#1#2#3` expands to `#3`
+(the stack is never registered, so the false branch runs); `\pdfcolErrorNoStacks` is silenced to
+`\relax` (raising a conversion error for a PDF-only capability with no HTML output would defeat
+the fix). A PDF colour stack is a page-model construct with no rendering in HTML/XML, so no
+currently-passing paper changes shape — the divergence is purely the *absence* of the shared
+error. **Upstream**: Perl LaTeXML would benefit from the same no-op binding.
+
+**Guards**: `06_cluster_regressions::cluster_pdfcol_stub_no_undefined`
+(`tests/cluster_regressions/pdfcol_stub.tex`) — the five `\pdfcol…` commands emit no `<ERROR>`
+and the body collapses to exactly `STACK-NO` (the disabled false-branch), no leaked args.
