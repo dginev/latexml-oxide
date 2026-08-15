@@ -2014,4 +2014,76 @@ mod title_pubnote_pollution {
       );
     }
   }
+
+  /// arXiv/html_feedback#6888: a `\thanks` on the author / affiliation line of a
+  /// manually-formatted `\author{}` (no `\and`) becomes a loose `role='thanks'`
+  /// pubnote that the maketitle collects into the title `<h1>`. It must land
+  /// inside a **collapsible** `.ltx_pubnotes_content` block (the bundled CSS
+  /// renders only the dagger MARK and hides the content — guarded in
+  /// `latexml_post::xslt::witnessed_css_delta::title_pubnote_content_stays_collapsed`),
+  /// never as **bare inline text** in the `<h1>`, and never in the head `<title>`.
+  /// Parity: same-host Perl 0.8.8 produces the byte-identical structure. Witness
+  /// arXiv:2312.08128 (Clockwork Diffusion, Qualcomm affiliation `\thanks`).
+  #[test]
+  fn author_block_thanks_collapses_in_title_not_inline() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    let doc = "\\documentclass{article}\n\
+               \\title{Clockwork Diffusion}\n\
+               \\author{Amir Habibian\\thanks{Equal contribution} \\\\\n\
+               {Qualcomm AI Research\\thanks{Qualcomm AI Research is an initiative of \
+               Qualcomm Technologies, Inc}}}\n\
+               \\begin{document}\\maketitle Body.\\end{document}\n";
+    fs::write(root.join("doc.tex"), doc).unwrap();
+    let out = Command::new(bin)
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    let leak = "initiative of Qualcomm";
+    // Head <title> is clean of the footnote text.
+    let head_title = html
+      .find("<title>")
+      .and_then(|i| {
+        html[i + 7..]
+          .find("</title>")
+          .map(|j| &html[i + 7..i + 7 + j])
+      })
+      .expect("HTML must have a <head><title>");
+    assert!(
+      !head_title.contains(leak),
+      "affiliation \\thanks leaked into the head <title> (#6888);\n<title>={head_title:?}"
+    );
+
+    // Isolate the <h1> title block.
+    let h1 = html
+      .find("<h1")
+      .and_then(|i| html[i..].find("</h1>").map(|j| &html[i..i + j]))
+      .expect("HTML must have a title <h1>");
+    // The thanks IS carried in the title (a collapsible pubnotes block) …
+    assert!(
+      h1.contains("ltx_pubnotes_content") && h1.contains(leak),
+      "the title \\thanks should be present as a collapsible pubnotes block;\nh1=\n{h1}\nstderr=\n{stderr}"
+    );
+    // … but NOT as bare inline text: stripping the pubnotes block must remove it.
+    let bare = {
+      // drop everything from the pubnotes span to the end of the h1 (the pubnotes
+      // block is the trailing content of the heading here)
+      match h1.find("<span class=\"ltx_pubnotes") {
+        Some(p) => &h1[..p],
+        None => h1,
+      }
+    };
+    assert!(
+      !bare.contains(leak) && !bare.contains("Thanks"),
+      "the \\thanks text renders inline in the title <h1> outside the collapsible \
+       pubnotes block (#6888) — it must be mark-only;\nbare-h1=\n{bare}"
+    );
+  }
 }

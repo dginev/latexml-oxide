@@ -1221,4 +1221,28 @@ mod witnessed_css_delta {
        its border off-screen and scroll the whole page on a phone",
     );
   }
+
+  #[test]
+  fn title_pubnote_content_stays_collapsed() {
+    // arXiv/html_feedback#6888 (+ #6886): a title footnote (`\thanks`/`\titlenote`,
+    // role=note/thanks) stays in the `<h1>` as a `.ltx_pubnotes` block. The bundled
+    // CSS must render ONLY the dagger MARK and keep the footnote CONTENT hidden by
+    // default, so the title text is the sole rendered language — the reporter saw the
+    // footnote text rendered inline in the title (an older deployed build). Guard both
+    // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
+    let css = bundled_latexml_css();
+    assert!(
+      css.contains(".ltx_pubnotes:before") && css.contains(r#"content:"\002020""#),
+      "the title-footnote MARK rule (.ltx_pubnotes:before dagger) is missing from \
+       LaTeXML.css (arXiv/html_feedback#6888)",
+    );
+    assert!(
+      css.contains(".ltx_pubnotes .ltx_pubnotes_content")
+        && css.contains("visibility:hidden; opacity:0"),
+      "the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
+       {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
+       render inline in the title instead of collapsing to the dagger \
+       (arXiv/html_feedback#6888)",
+    );
+  }
 }
