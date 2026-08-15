@@ -8,98 +8,55 @@ knowledge about how the system works that can prevent future mistakes.
 
 ## 1. DefMacro! double-packing: compile-time vs runtime pack_parameters
 
-**Discovery:** The `Error:misdefined:expansion` warning fired on every document
-for `\displaylines` (an alignment-template macro with `##\hfil` in its body).
-
-**Analysis:** `DefMacro!("\\displaylines{}", r"..##..")` compiles the expansion
-at build time via `compile_expansion!` in `tokenizeable.rs` line 31, which calls
-`pack_parameters()`. This converts `##` → single `#` (PARAM) and `#1` → ARG(1).
-The packed tokens are stored in the compiled binary.
-
-At runtime, `def_macro()` → `Expandable::new()` (line 225 of `expandable.rs`)
-calls `pack_parameters()` **again** unless `nopack_parameters: true` is set.
-The second packing sees `#` (PARAM) followed by `\hfil` (CS) — the `#` is now
-an alignment cell marker, not a parameter — and fires the warning.
-
-**Fix:** All `DefMacro!` branches using `compile_expansion!` must set
-`nopack_parameters: true` in `ExpandableOptions`. This is specific to
-`DefMacro!` — `DefConstructor!` uses `compile_tokenize!` (no packing), and
-`DefPrimitive!` uses closures/strings (no packing).
-
-**Key insight:** Any macro whose expansion is pre-compiled at build time must
-skip runtime packing. Check this whenever adding new compile-time expansion paths.
+A `DefMacro!` whose expansion is pre-compiled via `compile_expansion!`
+(`tokenizeable.rs:31`) packs `##`→`#`(PARAM) / `#1`→ARG at build time; at runtime
+`def_macro()` → `Expandable::new()` (`expandable.rs:225`) packs it **again**
+unless `nopack_parameters: true`, re-reading the packed `#\hfil` as an
+alignment-cell marker → `Error:misdefined:expansion` (witness `\displaylines`).
+**Fix:** every `DefMacro!` branch using `compile_expansion!` sets
+`nopack_parameters: true`. (`DefConstructor!`/`compile_tokenize!` and
+`DefPrimitive!`/closures don't pack — this is `DefMacro!`-specific; check it for
+any new compile-time expansion path.)
 
 ---
 
 ## 2. Font::merge() must NOT call specialize()
 
-**Discovery:** `\font\mybf=cmb10` followed by `\mybf Hello` did not produce
-`<text font="bold">Hello</text>` — the bold series was silently reset to medium.
-
-**Analysis:** `Font::merge()` was calling `specialize(font_name)` with the font
-filename "cmb10". `specialize` examines Unicode properties of its argument text.
-"cmb10" contains digit characters which fall into the "Other Symbol" branch,
-which resets `series` to "medium" and `shape` to "upright".
-
-In Perl, `merge()` has an **optional** `specialize` parameter (passed explicitly,
-e.g. `merge(specialize => $text)`). It is NOT called by default. In Rust, someone
-added `specialize(font_name)` in the merge code path, which was incorrect —
-font filenames are not rendered text.
-
-**Fix:** Remove `specialize()` from `merge()`. `specialize()` should only be
-called at `TBox::new()` time (tbox.rs line 131) with actual rendered text content.
-
-**Key insight:** `specialize()` is a text-classification function, not a font-
-metadata function. Never call it with font names, filenames, or CS names.
+`specialize(text)` classifies Unicode properties of *rendered text*. A Rust
+`merge()` wrongly called `specialize(font_name)` on the filename "cmb10" — its
+digits hit the "Other Symbol" branch, silently resetting `series` bold→medium
+(`\font\mybf=cmb10 \mybf Hello` lost its bold). Perl's `merge()` takes
+`specialize` only as an explicit optional arg, never by default. **Fix:** remove
+`specialize()` from `merge()`; call it only at `TBox::new()` (`tbox.rs:131`) with
+real text. Never pass it a font/file/CS name.
 
 ---
 
 ## 3. Catcode::CS vs Catcode::ESCAPE distinction
 
-**Discovery:** Token matching code using `cc == Catcode::ESCAPE` failed because
-control sequence tokens have `Catcode::CS`, not `Catcode::ESCAPE`.
-
-**Analysis:** `ESCAPE` (catcode 0) is the backslash character itself — it's the
-input character catcode. `CS` is the catcode of a fully-formed control sequence
-token (e.g. `\foo`). When the tokenizer reads `\foo`, it produces a single token
-with catcode `CS`, not a token with catcode `ESCAPE` followed by letter tokens.
-
-**Key insight:** Use `cc.is_active_or_cs()` to test for CS/ACTIVE tokens.
-Never compare `cc == Catcode::ESCAPE` when looking for control sequences.
+`ESCAPE` (catcode 0) is the backslash INPUT character; `CS` is the catcode of a
+formed control-sequence token (`\foo` tokenizes to ONE `CS` token, not `ESCAPE` +
+letters). **Test CS/active tokens with `cc.is_active_or_cs()`, never
+`cc == Catcode::ESCAPE`.**
 
 ---
 
 ## 4. RegisterType::PartialEq trap: Number == CharDef
 
-**Discovery:** `register == RegisterType::Number` matched CharDef registers
-due to custom `PartialEq` implementation.
-
-**Analysis:** The `PartialEq` impl for `RegisterType` treats `CharDef` as equal
-to `Number` (since char defs are numerically-valued). This means `if register !=
-RegisterType::Number` does NOT exclude CharDef.
-
-**Fix:** Use `matches!(register, RegisterType::Number)` pattern matching instead
-of `==`/`!=` operators to distinguish the variants correctly.
+`RegisterType`'s custom `PartialEq` treats `CharDef` as equal to `Number` (char
+defs are numerically valued), so `register != RegisterType::Number` does NOT
+exclude `CharDef`. **Use `matches!(register, RegisterType::Number)`, not `==`/`!=`.**
 
 ---
 
 ## 5. at_letter catcode restore: None vs Some(OTHER)
 
-**Discovery:** `\makeatletter` made `@` a letter, but `\makeatother` didn't
-restore it — `@` stayed as LETTER permanently.
-
-**Analysis:** `at_letter()` saves the old catcode with
-`saved = state::lookup_catcode('@')`. When `@` isn't in the catcode table
-(using default catcode OTHER), `lookup_catcode` returns `None`. The restore
-function then calls `state::assign_catcode('@', saved)` where `saved` is `None`,
-which is a no-op — it doesn't set the catcode back to OTHER.
-
-**Fix:** Use `unwrap_or(Catcode::OTHER)` when restoring — `None` means "was
-using default OTHER catcode", so restore to OTHER explicitly.
-
-**Key insight:** State lookups returning `None` for defaults is a common pattern.
-Always consider what `None` means in context — it might mean "default value"
-rather than "no value".
+`at_letter()` saves `@`'s old catcode via `lookup_catcode('@')`, which returns
+`None` when `@` uses its default catcode OTHER (absent from the table). Restoring
+with `assign_catcode('@', None)` is a no-op, so `\makeatother` left `@` a LETTER
+forever. **Fix:** `unwrap_or(Catcode::OTHER)` on restore. General lesson: a state
+lookup returning `None` often means "default value," not "no value" — decide what
+`None` means in context.
 
 ---
 
@@ -981,61 +938,37 @@ The audit of every site in `latexml_core` / `latexml_post` /
 `latexml_math_parser` is complete (round-17 cycles 51–58); new drops
 should use the guardian by default.
 
-## 38. `\vspace` kept as no-op stub; faithful port triggers moderncv paragraph-break regression
+## 38. `\vspace` is the faithful DefMacro; a "doesn't fire" mode-gated primitive means suspect the UPSTREAM mode-setter
 
-**Context:** Perl `latex_constructs.pool.ltxml` L4692 defines
-`DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');` — a pure
-token-replacement macro. Rust `latex_constructs.rs:7206` instead has
-`DefPrimitive!("\\vspace OptionalMatch:* {}", None)` (empty body,
-silently drops the argument).
+**RESOLVED (2026-08-05).** `\vspace` is the faithful
+`DefMacro!('\\vspace OptionalMatch:* {}', '\\vskip #2\\relax')`
+(`latex_constructs.rs:9241`), matching Perl `latex_constructs.pool.ltxml:4692`.
+An earlier port kept it a no-op `DefPrimitive` stub, fearing a `moderncv/cs_cv.tex`
+paragraph-break regression from `\vskip` auto-`\par` in horizontal mode; that
+diagnosis was WRONG and the feared landmine never fired (the fix doesn't touch
+`\vskip`, so `82_moderncv::cs_cv_test` stays green).
 
-**Why the divergence:** a prior port attempted the faithful DefMacro
-wiring and regressed the `moderncv/cs_cv.tex` test — `\vskip` in Rust
-digested as vertical-mode glue triggered an implicit `\par` when
-encountered in horizontal mode, breaking paragraphs that moderncv
-intended to keep intact. Perl's `\vskip` binding apparently produces
-a Whatsit without the paragraph-break side effect.
+**The real bug (witness arXiv:2302.11635, IEEEtran `figure*` with
+`\hrulefill\vspace*{4pt}` between minipage rows):** the captioned minipages after
+the `\vspace*` came out inside the leader's `<ltx:p>` as schema-invalid
+`<caption>`-in-`<block>` (4 `malformed:` errors) where Perl makes them separate
+`<ltx:figure>`s. Root cause: Rust was `internal_vertical`, not `horizontal`, at
+the `\vskip`, so `leaveHorizontal` *correctly* declined to fire (`hmode+vskip:
+head_for_vmode`, gated on horizontal mode, tex.web L21160). The defect was that
+LaTeXML's `\hrulefill` dropped the kernel's leading `\leavevmode` (latex.ltx
+L643); `\hrule` is vertical-mode, so nothing entered horizontal mode. Perl
+survived because `\hfill`'s `enterHorizontal` (`inplace`) persists past `\leaders`
+(a `bounded` constructor); Rust's `bounded` reverts it. **Fix:** restore the
+kernel definition — `\hrulefill` → `\leavevmode\leaders\hrule\hfill\kern\z@` (and
+`\dotfill` likewise), `plain_constructs.rs`,
+[OXIDIZED_DESIGN #97](OXIDIZED_DESIGN_DIVERGENCES.md). 2302.11635: 4 errors → 0,
+10 `<figure>`/0 `<block>` (Perl-identical). Guard:
+`50_structure::vspace_closes_leader_para_test`.
 
-**Wisdom:** **do NOT** flip `\vspace` to Perl-matching DefMacro as a
-naive Def*-parity fix. The kind swap is load-bearing — it hides a
-deeper asymmetry in Rust's `\vskip` horizontal-mode handling. The
-proper path to parity is:
-1. Port `\vskip` so its horizontal-mode digestion matches Perl (no
-   auto-\par).
-2. Then restore `\vspace` to `DefMacro!('\\vspace OptionalMatch:* {}', '\\vskip #2\\relax')`.
-
-Verify fix against `moderncv/cs_cv.tex` + any other `\vspace`-using
-regression tests before landing. Without step 1, step 2 breaks moderncv.
-
-**Update (2026-08-05):** `\vspace` is now the faithful DefMacro form
-(`latex_constructs.rs:9241`, `'\vskip #2\relax'`).
-
-**RESOLVED (2026-08-05) — the "step 1" diagnosis above was WRONG.** `\vskip`'s
-`leaveHorizontal` binding is *faithful*; the bug was upstream. **Witness: arXiv
-2302.11635** (IEEEtran `figure*`, `\hrulefill\vspace*{4pt}` between minipage
-rows): the captioned minipages after the `\vspace*` came out inside the leader's
-`<ltx:p>` as a schema-invalid `<caption>`-in-`<block>` (4 `malformed:` errors),
-where Perl makes them separate `<ltx:figure>`s (0 errors). Root cause: **Rust
-was `internal_vertical`, not `horizontal`, at the `\vskip`** — so
-`leaveHorizontal` *correctly* declined to fire (`hmode+vskip: head_for_vmode` is
-gated on horizontal mode, tex.web L21160). The real defect was that
-**LaTeXML's `\hrulefill` dropped the LaTeX kernel's leading `\leavevmode`**
-(latex.ltx L643); `\hrule` is a vertical-mode command, so without `\leavevmode`
-nothing enters horizontal mode. Perl survived because `\hfill`'s
-`enterHorizontal` (`inplace`) persists past `\leaders` (a `bounded`
-constructor); Rust's `bounded` reverts it (isolated: bare `\hfill` *does*
-persist; `\leaders`-wrapped does not). Fix: restore the kernel definition —
-`\hrulefill` → `\leavevmode\leaders\hrule\hfill\kern\z@` (and `\dotfill`
-likewise), `plain_constructs.rs`, [OXIDIZED_DESIGN #97](OXIDIZED_DESIGN_DIVERGENCES.md).
-2302.11635: 4 errors → 0, 10 `<figure>`/0 `<block>` (Perl-identical). The old
-note's feared moderncv landmine never fired — the fix doesn't touch `\vskip`, so
-`82_moderncv::cs_cv_test` stays green. Guard:
-`50_structure::vspace_closes_leader_para_test` (`\vspace*` vs `\par` control).
-
-Method takeaway (durable): when a mode-gated primitive "doesn't fire," suspect
-the UPSTREAM mode-setter, not the primitive. And check the **real LaTeX kernel
-definition** (latex.ltx) — LaTeXML's `.pool` macros are sometimes simplified
-(dropped `\leavevmode`/`\kern\z@`), and the port should follow the kernel.
+**Method takeaway:** when a mode-gated primitive "doesn't fire," suspect the
+UPSTREAM mode-setter, not the primitive — and check the **real LaTeX kernel
+definition** (latex.ltx); LaTeXML's `.pool` macros sometimes drop
+`\leavevmode`/`\kern\z@`, and the port should follow the kernel.
 
 ## 40. `\#`/`\&`/`\%`/`\$` Def*-kind mismatch is intentional mode-split
 
@@ -2104,8 +2037,9 @@ genuine active aliased borrow. The `&mut self` receiver is a second layer
 redundant THIRD layer that is simultaneously **over-strict** (false-positives on
 benign clones — what bit the 16 papers) and **under-protective** (it never
 actually prevents the real hazard: once you extract the `*mut xmlNode`, raw C
-calls mutate sibling/parent nodes outside any RefCell). Raising it to 8192
-doesn't fix the theory — it just moves the false-positive threshold higher.
+calls mutate sibling/parent nodes outside any RefCell). Raising it to 8192 only
+moved the false-positive threshold higher — the real fix (below) replaced the
+heuristic outright.
 
 **Bound on the shared-`RefCell` guarantee (don't overclaim):** the identity
 cache is NOT total — `set_unlinked` (on `unlink_node`) and `import_node` call
@@ -2115,34 +2049,22 @@ the same pointer mints an INDEPENDENT `RefCell`, so two such handles to an
 unlinked node are not mutually exclusive. The old `strong_count` heuristic was
 equally blind to this (two independent `Rc`s, each low-count), so `try_borrow_mut`
 neither introduces nor worsens it — it's the same inherent C-wrapping footgun.
-The fix lives in the dginev `libxml` fork (0.3.14): `node_ptr_mut` now uses
-`try_borrow_mut`; `NODE_RC_MAX_GUARD`/`set_node_rc_guard` became deprecated
-no-ops. After latexml-oxide bumps to 0.3.14, drop the `set_node_rc_guard(8192)`
-call in `Document::new`.
-
 **Why no conflict actually occurs:** document construction is single-threaded
 (State is thread-local, one Document per conversion) and the builder mutates one
 node at a time without re-entering a live borrow. The only place a real
-re-entrant mutable borrow can arise is the Rhai constructor trampoline (#248 / SYNC_STATUS §3) — and there, failing LOUDLY is correct.
+re-entrant mutable borrow can arise is the Rhai constructor trampoline (#248 /
+SYNC_STATUS §3) — and there, failing LOUDLY is correct.
 
-**Recommended structural fix (in the dginev `libxml` fork — published 0.3.13, not
-checked out locally, no `[patch]`):** replace the `strong_count` heuristic in
-`node_ptr_mut` with the real invariant —
-```rust
-match self.0.try_borrow_mut() {
-  Ok(b) => Ok(b.node_ptr),           // no active aliased borrow ⇒ safe
-  Err(_) => Err("… node is actively borrowed …".into()),
-}
-```
-This is strictly sounder (catches the genuine re-entrancy, ignores benign clone
-count), eliminates the false-positive class entirely, and makes
-`NODE_RC_MAX_GUARD` / the 8192 band-aid dead code (remove after the fork bump).
-A purely in-repo mitigation (key `idstore` by `xmlNodePtr`/`usize` and re-wrap on
-lookup, so it stops holding a persistent clone) shaves a few counts but CANNOT
-remove the issue "in theory" — the cache-clone + deep-sharing reality always
-exceeds a small guard. **Sequencing:** keep 8192 load-bearing until the fork fix
-lands, then delete the guard plumbing. Do NOT lower the guard while the heuristic
-exists (regresses the 16 papers).
+**RESOLVED (dginev `libxml` fork 0.3.14, landed).** `node_ptr_mut` now uses
+`try_borrow_mut` (catches genuine re-entrancy, ignores benign clone count);
+`NODE_RC_MAX_GUARD`/`set_node_rc_guard` are deprecated no-ops and the
+`set_node_rc_guard(8192)` call in `Document::new` is gone
+(`latexml_core/src/document.rs:258`). An in-repo-only mitigation (key `idstore`
+by `xmlNodePtr` and re-wrap on lookup) could shave counts but never removes the
+issue — the cache-clone + deep-sharing reality always exceeds a small guard, so
+the fork fix was the right layer. Do NOT reintroduce a `strong_count` guard: it
+false-positives on the 16-paper cluster (witnesses 0805.2376 dcpic, 1407.0452
+emulateapj).
 
 ## 41. Frontmatter fallback DOM surgery: three construction-time traps
 
