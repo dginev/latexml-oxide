@@ -126,7 +126,49 @@ fn begin_enum_itemize(
     opts.resume_star = Some(resume_star_toks.to_string());
   }
 
-  begin_itemize(itype, Some(counter_str), opts)
+  let mut props = begin_itemize(itype, Some(counter_str), opts)?;
+  // Surpass-Perl (OXIDIZED_DESIGN #105, issue #559): expose enumitem `leftmargin`
+  // for CSS theming. Perl deliberately ignores every positioning key
+  // (enumitem.sty.ltxml:54 "# IGNORED: Alignment, Positioning, penalties") to
+  // keep the HTML structural; we instead surface `leftmargin` so a theme can act
+  // on it. The flush mode `leftmargin=*` (a boolean-like toggle) becomes a
+  // semantic `class` the stylesheet themes; an explicit `leftmargin=<dim>`
+  // becomes a numeric `--ltx-enum-leftmargin` CSS custom property that the base
+  // `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`
+  // rule consumes (both live in ltx-article/book/report.css).
+  if let Some(lm) = hash.get("leftmargin").and_then(argwrap_to_tokens) {
+    let lm = lm.to_string();
+    let lm = lm.trim();
+    if lm == "*" {
+      props.insert("class", s!("ltx_leftmargin_flush").into());
+    } else if let Some(css) = css_length(lm) {
+      props.insert("cssstyle", s!("--ltx-enum-leftmargin:{css}").into());
+    }
+    // A non-`*`, non-CSS-length value (a macro/`\dimexpr` like `\parindent`) is
+    // dropped rather than leaked into CSS — the list falls back to the default
+    // `--ltx-enum-leftmargin` (1em).
+  }
+  Ok(props)
+}
+
+/// A `leftmargin` value we can safely place verbatim in a CSS length: a number
+/// followed by a unit CSS shares with TeX (`pt`/`em`/`ex`/`cm`/`mm`/`in`, plus
+/// CSS `px`/`rem`/`%`), or a bare `0`. Returns `None` for anything else — a raw
+/// TeX macro / `\dimexpr` is not valid CSS, so it must not reach the stylesheet.
+fn css_length(raw: &str) -> Option<String> {
+  let s = raw.trim();
+  for unit in ["pt", "px", "em", "ex", "rem", "cm", "mm", "in", "%"] {
+    if let Some(num) = s.strip_suffix(unit)
+      && num.parse::<f64>().is_ok()
+    {
+      return Some(s.to_string());
+    }
+  }
+  // A bare number (e.g. `0`) is a valid CSS length only when it is zero.
+  s.parse::<f64>()
+    .ok()
+    .filter(|n| *n == 0.0)
+    .map(|_| s.to_string())
 }
 
 /// Perl: replace_star($tokens, $replacement) — enumitem.sty.ltxml L114-119
@@ -448,7 +490,7 @@ LoadDefinitions!({
 
   if !has_value("enumitem@loadonly") {
     DefEnvironment!("{itemize} OptionalKeyVals:enumitem",
-      "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+      "<ltx:itemize xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:itemize>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("itemize", "@item", kv.as_ref())
@@ -458,7 +500,7 @@ LoadDefinitions!({
       locked => true
     );
     DefEnvironment!("{enumerate} OptionalKeyVals:enumitem",
-      "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+      "<ltx:enumerate xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:enumerate>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("enumerate", "enum", kv.as_ref())
@@ -468,7 +510,7 @@ LoadDefinitions!({
       locked => true
     );
     DefEnvironment!("{description} OptionalKeyVals:enumitem",
-      "<ltx:description xml:id='#id'>#body</ltx:description>",
+      "<ltx:description xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:description>",
       before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
       properties => sub[args] {
         let kv = extract_keyvals(args);
@@ -482,7 +524,7 @@ LoadDefinitions!({
 
   if has_value("enumitem@inline") {
     DefEnvironment!("{itemize*} OptionalKeyVals:enumitem",
-      "<ltx:inline-itemize xml:id='#id'>#body</ltx:inline-itemize>",
+      "<ltx:inline-itemize xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-itemize>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("inline@itemize", "@item", kv.as_ref())
@@ -493,7 +535,7 @@ LoadDefinitions!({
       mode => "inline_internal_vertical"
     );
     DefEnvironment!("{enumerate*} OptionalKeyVals:enumitem",
-      "<ltx:inline-enumerate xml:id='#id'>#body</ltx:inline-enumerate>",
+      "<ltx:inline-enumerate xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-enumerate>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("inline@enumerate", "enum", kv.as_ref())
@@ -503,7 +545,7 @@ LoadDefinitions!({
       mode => "inline_internal_vertical"
     );
     DefEnvironment!("{description*} OptionalKeyVals:enumitem",
-      "<ltx:inline-description xml:id='#id'>#body</ltx:inline-description>",
+      "<ltx:inline-description xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-description>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("inline@description", "@desc", kv.as_ref())
@@ -579,3 +621,33 @@ LoadDefinitions!({
   def_macro_noop("\\SetEnumitemSize{}{}")?;
   def_macro_noop("\\AddEnumerateCounter{}{}{}")?;
 });
+
+#[cfg(test)]
+mod tests {
+  use super::css_length;
+
+  /// The `leftmargin` → CSS-length sanitizer (issue #559): keep number+unit and
+  /// bare `0`, drop everything else (bare non-zero, raw TeX macros/`\dimexpr`) so
+  /// nothing invalid reaches the stylesheet's `--ltx-enum-leftmargin`.
+  #[test]
+  fn css_length_accepts_only_safe_lengths() {
+    for ok in [
+      "2em", "0pt", "3cm", "1.5em", "10px", "50%", "0.25in", "-1em",
+    ] {
+      assert_eq!(css_length(ok), Some(ok.to_string()), "{ok} should pass");
+    }
+    assert_eq!(css_length("0"), Some("0".to_string()));
+    for bad in [
+      "*",
+      "\\parindent",
+      "\\dimexpr 2em",
+      "5",
+      "auto",
+      "",
+      "em",
+      "2 em",
+    ] {
+      assert_eq!(css_length(bad), None, "{bad:?} should be rejected");
+    }
+  }
+}
