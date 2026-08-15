@@ -3793,3 +3793,45 @@ mid-table caption flanked by two `\hline`s correctly coalesces to a double rule
 (`tests/alignment/longtable_caption.{tex,xml}` — four longtables exercising
 caption at start+`\hline`, start without rules, middle, and end; the golden has
 no stray empty caption row in any).
+
+### 104. An empty `\hypertarget`/`\hyperdef` emits a bare anchor, never wraps an open node
+
+**Perl** `hyperref.sty.ltxml`'s `localized_anchor` (`afterConstruct` of
+`\hypertarget`/`\hyperdef`, L238) DFS-walks from the current node and wraps the
+first node `ltx:anchor` may legally contain — with **no** empty-content
+short-circuit and **no** open-node guard. Two failures follow, and same-host
+Perl 0.8.8 exhibits **both byte-for-byte** (so this is SHARED-FAILURE, not a
+Rust-only defect):
+- An **empty** `\hypertarget{id}{}` has nothing of its own to localize onto, so
+  the walk grabs unrelated *surrounding* content. Mid-paragraph
+  (`Before \hypertarget{b}{}after`) Perl wraps the preceding run:
+  `<anchor>Before </anchor>after`.
+- At the **head of a floating `ltx:note`** — the common "linked / back-referenced
+  footnote" idiom `\footnotetext{\hypertarget{id}{}#2}` — the only candidate is
+  the still-**open** note, which `ltx:anchor` *may* contain, so the walk wraps and
+  prematurely **closes** it: the note comes out empty and the footnote text is
+  orphaned into the enclosing `<p>`, with `Error:malformed:ltx:anchor` +
+  `Error:malformed:ltx:note`. Renders in ar5iv as a bare "number + rule" in the
+  margin (issue #526, reporter dginev; witness **arXiv:2607.16395v1**, revtex4-2,
+  whose `\linkedfootnotetext` macro hits this on every call).
+
+**Divergence** (surpass-Perl): two general guards in `localized_anchor`
+(`hyperref_sty.rs`), no per-constructor special-case:
+1. the localizable content is the construct's **last argument** (the `{text}` of
+   both `\hypertarget` and `\hyperdef`); when it `is_empty()`, the anchor is a
+   pure destination — emit a bare self-closed `<ltx:anchor xml:id=id/>` at the
+   insertion point;
+2. never select a candidate the document reports as still **open**
+   (`document.is_open`); when the walk finds no in-content target, emit a bare
+   anchor rather than failing.
+Net: the empty-in-note idiom yields `<note …><anchor xml:id=id/>text…</note>`
+with **0 errors**, the empty-in-paragraph case yields a clean bare
+`<anchor/>` between the surrounding text (Perl wraps the preceding run), and
+non-empty targets are wrapped exactly as before (Perl-identical). Upstream:
+fileable against `brucemiller/LaTeXML` (Perl would benefit from the same two
+guards).
+
+**Guard**: `50_structure::hypertarget_empty_anchor_test`
+(`tests/structure/hypertarget_empty_anchor.{tex,xml}` — non-empty in text, empty
+in text, empty at head of note, non-empty at head of note; the golden is clean
+with 0 errors across all four).

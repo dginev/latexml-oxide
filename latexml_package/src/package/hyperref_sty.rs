@@ -1172,23 +1172,57 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });
 
+/// Emit a bare, self-closed `<ltx:anchor xml:id=id/>` destination at the current
+/// insertion point — for a `\hypertarget`/`\hyperdef` with no content to localize
+/// onto. See [`localized_anchor`].
+fn insert_bare_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
+  document.insert_element("ltx:anchor", vec![], Some(string_map!("xml:id" => id)))?;
+  Ok(())
+}
+
 // Perl: hyperref.sty.ltxml `localized_anchor`. DFS walks the current node's
 // subtree and wraps the first descendant that ltx:anchor is allowed to
 // contain. The traversal mirrors Perl's pop+unshift order: candidates are
 // popped from the back and child nodes are unshifted to the front, so we
 // visit the rightmost element of each level before descending.
+//
+// Surpass-Perl (OXIDIZED_DESIGN #104, issue #526): the base Perl walk both
+// (a) has no content-empty short-circuit and (b) will wrap a still-OPEN node,
+// so an empty `\hypertarget{id}{}` at the head of a floating `ltx:note` (the
+// "linked footnote" idiom, `\footnotetext{\hypertarget{..}{}..}`) selects and
+// prematurely closes the open note, emptying it and orphaning the footnote text
+// (`malformed:ltx:anchor`/`malformed:ltx:note`). Perl fails identically. Two
+// general guards fix the whole class here — no per-constructor special-case:
+//   1. empty localizable content ⇒ a pure destination, emit a bare anchor;
+//   2. never wrap an open node; if nothing wrappable is found, emit a bare anchor.
 fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()> {
   let id = match whatsit.get_property("id") {
     Some(v) => v.to_string(),
     None => return Ok(()),
   };
+  // Guard 1. The localizable content is this construct's LAST argument — the
+  // `{text}` of both `\hypertarget` and `\hyperdef`. When it is empty the anchor
+  // is a pure hyperlink destination with nothing to wrap, so localizing would
+  // only capture unrelated surrounding content (or the open note). Emit a bare
+  // anchor at the insertion point instead.
+  let content_is_empty = match whatsit.get_args().last() {
+    Some(Some(text)) => text.is_empty()?,
+    _ => true,
+  };
+  if content_is_empty {
+    return insert_bare_anchor(document, &id);
+  }
   let mut candidates: Vec<Node> = vec![document.get_node().clone()];
   let mut found: Option<Node> = None;
   while let Some(candidate) = candidates.pop() {
     match candidate.get_type() {
       Some(NodeType::ElementNode) => {
         let qname = get_node_qname(&candidate);
-        if can_contain_qsym(pin!("ltx:anchor"), qname) {
+        // Guard 2. Wrap a candidate only when ltx:anchor may legally contain it
+        // AND it is not still open. Wrapping an OPEN node (e.g. a floating
+        // ltx:note whose body is mid-digestion) would close it prematurely and
+        // orphan the rest of its content.
+        if can_contain_qsym(pin!("ltx:anchor"), qname) && !document.is_open(&candidate) {
           found = Some(candidate);
           break;
         }
@@ -1207,34 +1241,21 @@ fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()
       },
     }
   }
-  if let Some(target) = found {
-    match document.wrap_nodes("ltx:anchor", vec![target])? {
-      Some(mut anchor) => {
-        document.set_attribute(&mut anchor, "xml:id", &id)?;
-        if document.is_open(&anchor) {
-          document.close_node(&anchor)?;
-        }
-      },
-      _ => {
-        Warn!(
-          "malformed",
-          "ltx:anchor",
-          &s!(
-            "No available insertion point for ltx:anchor, failing \\hypertarget to {}",
-            id
-          )
-        );
-      },
-    }
-  } else {
-    Warn!(
-      "malformed",
-      "ltx:anchor",
-      &s!(
-        "No available insertion point for ltx:anchor, failing \\hypertarget to {}",
-        id
-      )
-    );
+  // Wrap the located target in an anchor; if the walk found nothing wrappable
+  // (or wrap_nodes declines it), drop a bare destination anchor instead — one
+  // fallback for both "no target" and "target refused".
+  let anchor = match found {
+    Some(target) => document.wrap_nodes("ltx:anchor", vec![target])?,
+    None => None,
+  };
+  match anchor {
+    Some(mut anchor) => {
+      document.set_attribute(&mut anchor, "xml:id", &id)?;
+      if document.is_open(&anchor) {
+        document.close_node(&anchor)?;
+      }
+    },
+    None => insert_bare_anchor(document, &id)?,
   }
   Ok(())
 }
