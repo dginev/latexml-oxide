@@ -170,11 +170,12 @@ fn pushvalue_family_and_search_paths() {
       let s = ShiftValue("l540");        // "z"  -> ["a","b"]
       assign_global("l540:shift_ok", if s == "z" { "ok" } else { "bad" });
 
-      // Dedicated search-path bindings (SEARCHPATHS is a field, not value-table).
+      // Dedicated search-path bindings. As of #561 SEARCHPATHS is a group-scoped
+      // value-table list (like GRAPHICSPATHS), so these write that list globally.
       PrependSearchPath("/540/prepended");
       AppendSearchPath("/540/appended");
 
-      // GRAPHICSPATHS *is* value-table-backed, so PushValue reaches it (the
+      // GRAPHICSPATHS is value-table-backed, so PushValue reaches it (the
       // recommended pattern where the target really is a value-table list).
       PushValue("GRAPHICSPATHS", "/540/gfx");
     "##,
@@ -211,13 +212,15 @@ fn pushvalue_family_and_search_paths() {
     paths.iter().any(|p| p == "/540/appended"),
     "AppendSearchPath adds the dir, got {paths:?}"
   );
-  // The documented divergence: a value-table `SEARCHPATHS` key stays absent, so
-  // `PushValue("SEARCHPATHS", …)` would never reach file resolution.
+  // #561: SEARCHPATHS is now value-table-backed too (group-scoped, like
+  // GRAPHICSPATHS and like Perl's default-local `AssignValue`), so the dedicated
+  // Prepend/AppendSearchPath bindings — and a `PushValue("SEARCHPATHS", …)` —
+  // reach file resolution through the same list.
   assert!(
-    state::lookup_value("SEARCHPATHS").is_none(),
-    "SEARCHPATHS is not value-table-backed in the Rust port"
+    state::lookup_value("SEARCHPATHS").is_some(),
+    "SEARCHPATHS is a group-scoped value-table list as of #561"
   );
-  // ...but GRAPHICSPATHS is, so PushValue onto it does reach file resolution.
+  // GRAPHICSPATHS is likewise value-table-backed, so PushValue reaches it.
   assert!(
     state::get_graphics_paths().iter().any(|p| p == "/540/gfx"),
     "PushValue reaches the value-table-backed GRAPHICSPATHS, got {:?}",

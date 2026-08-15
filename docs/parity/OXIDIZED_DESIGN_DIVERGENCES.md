@@ -1896,7 +1896,7 @@ so hoisting there would emit *fewer* errors than Perl on an authoring mistake.
 What separates them is *where* the bracket was opened, so the region is named
 `subfile:<frame depth>` — Perl's own `section:4` / `label:foo` convention
 (State.pm L965-975) — and activated by `standalone_sty.rs` right after its
-`bgroup()` and by `import_sty.rs`'s `\lx@save@paths` inside the `{…}`. Activity
+`bgroup()` and by `import_sty.rs`'s `\lx@activate@subfile@scope` inside the `{…}`. Activity
 alone is NOT enough: `StashActive` is `Scope::Local` at the bracket's frame, so a
 plain "am I in a subfile?" test is also true at every *deeper* frame, and an
 author's `{\usepackage{…}}` written **inside** a subfile preamble was hoisted too

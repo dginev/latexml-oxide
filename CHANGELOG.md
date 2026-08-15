@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+  - **Search paths are now group-scoped, so a package's addition persists.**
+    `SEARCHPATHS` moved from a plain global field to a group-scoped value (like
+    `GRAPHICSPATHS`, and like Perl's default-local `AssignValue`). A package that
+    adds a directory — `\lx@append@path`, or the Rhai `AppendSearchPath`/
+    `PrependSearchPath` — now keeps it after loading, while an `\import`/
+    `\subimport` group still reverts its own change at `}`. This retires
+    `import.sty`'s hand-rolled `\lx@save@paths`/`\lx@restore@paths` save/restore
+    stack (Perl relies only on `{…}` grouping) and the `input_definitions`
+    `SearchPathGuard`; a directory-prefixed `\usepackage{DIR/pkg}` whose binding
+    raw-loads its own name now resolves the author's bundled `DIR/pkg` via
+    `\@currname`, exactly as Perl does (#561).
   - **A runtime `.rhai` binding's load note prints its real file path.** Loading
     `mybinding.sty.rhai` now announces `(Loading …/mybinding.sty.rhai… )` instead
     of the synthesized `mybinding_sty.rs` proxy name — more useful, and closer to

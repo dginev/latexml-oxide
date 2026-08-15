@@ -1424,3 +1424,199 @@ mod rhai_loading_path {
     );
   }
 }
+
+#[cfg(feature = "runtime-bindings")]
+mod dir_prefixed_package_loading {
+  //! Search-path scoping (#561) and directory-prefixed package resolution.
+  //!
+  //! #561: a package that modifies the search paths while loading must keep that
+  //! change after the load. SEARCHPATHS is a group-scoped value (Perl-faithful:
+  //! default-local `AssignValue`), and package loading opens no group, so a
+  //! package's path add persists — whether from the Rhai `PrependSearchPath`/
+  //! `AppendSearchPath` (the reporter's use) or the import primitives
+  //! `\lx@set@path`/`\lx@append@path`. (An `\import`'s own `{…}` group still
+  //! reverts its path change — guarded by the subimport sibling test.)
+  //!
+  //! Directory-prefixed load: `\usepackage{DIR/pkg}` where `pkg` has a
+  //! basename-keyed binding must raw-load the author's bundled `DIR/pkg`, not a
+  //! bare `pkg` — resolved via `\@currname` (which carries the full request),
+  //! exactly as Perl does. This replaced the former `SearchPathGuard`. Real
+  //! witness: arXiv 2510.09534 (`AISTATS/aistats2026`).
+
+  use std::{path::Path, process::Command};
+
+  #[test]
+  fn package_search_path_change_survives_the_load() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    std::fs::create_dir_all(root.join("sub")).unwrap();
+    std::fs::create_dir_all(root.join("extra")).unwrap();
+
+    // A dir-prefixed package (`sub/pkg`): the raw `.sty` makes the guard fire
+    // (it finds a subdir'd raw file), the `.sty.rhai` is what actually loads and
+    // prepends a NEW search directory.
+    std::fs::write(root.join("sub/pkg.sty"), "\\ProvidesPackage{pkg}\n").unwrap();
+    let extra_abs = root.join("extra");
+    std::fs::write(
+      root.join("sub/pkg.sty.rhai"),
+      format!("PrependSearchPath({:?});\n", extra_abs.to_string_lossy()),
+    )
+    .unwrap();
+    // Only reachable via the prepended `extra/` dir.
+    std::fs::write(
+      root.join("extra/inc.tex"),
+      "\\newcommand{\\marker}{FOUNDIT}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      root.join("main.tex"),
+      "\\documentclass{article}\n\
+       \\usepackage{sub/pkg}\n\
+       \\begin{document}\\input{inc}\\marker\\end{document}\n",
+    )
+    .unwrap();
+
+    let output = Command::new(bin)
+      .arg("--includestyles")
+      .arg("main.tex")
+      .arg("--dest")
+      .arg("out.html")
+      .current_dir(root)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let html = std::fs::read_to_string(root.join("out.html")).unwrap_or_default();
+
+    assert!(
+      !stderr.contains("missing_file:inc"),
+      "`\\input{{inc}}` could not resolve — the package's prepended search path \
+       was dropped after loading:\n{stderr}"
+    );
+    assert!(
+      html.contains("FOUNDIT"),
+      "expected the prepended search path to survive the package load so \
+       `\\input{{inc}}` resolves; html=\n{html}\nstderr=\n{stderr}"
+    );
+  }
+
+  /// #561, the mechanism the reporter actually named: a package that adds a
+  /// search directory with the import primitive `\lx@set@path` must keep it after
+  /// the load. Distinct from the rhai case above (this is a raw `.sty`, no
+  /// binding), and from `\import` (no wrapping `{…}` group here, so the local add
+  /// persists past the package).
+  #[test]
+  fn import_primitive_search_path_change_survives_the_load() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    std::fs::create_dir_all(root.join("sub")).unwrap();
+    std::fs::create_dir_all(root.join("extra")).unwrap();
+
+    let extra_abs = root.join("extra");
+    std::fs::write(
+      root.join("sub/lpkg.sty"),
+      format!(
+        "\\ProvidesPackage{{lpkg}}\n\\RequirePackage{{import}}\n\\lx@set@path{{{}}}\n",
+        extra_abs.to_string_lossy()
+      ),
+    )
+    .unwrap();
+    std::fs::write(
+      root.join("extra/inc.tex"),
+      "\\newcommand{\\marker}{FOUNDIT}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      root.join("main.tex"),
+      "\\documentclass{article}\n\
+       \\usepackage{sub/lpkg}\n\
+       \\begin{document}\\input{inc}\\marker\\end{document}\n",
+    )
+    .unwrap();
+
+    let output = Command::new(bin)
+      .arg("--includestyles")
+      .arg("main.tex")
+      .arg("--dest")
+      .arg("out.html")
+      .current_dir(root)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let html = std::fs::read_to_string(root.join("out.html")).unwrap_or_default();
+
+    assert!(
+      !stderr.contains("missing_file:inc"),
+      "`\\input{{inc}}` could not resolve — the package's `\\lx@set@path` add was \
+       dropped after loading:\n{stderr}"
+    );
+    assert!(
+      html.contains("FOUNDIT"),
+      "expected the package's `\\lx@set@path` dir to survive the load; html=\n{html}\nstderr=\n{stderr}"
+    );
+  }
+
+  /// The ex-`SearchPathGuard` case (real witness arXiv 2510.09534): a
+  /// directory-prefixed `\usepackage{DIR/pkg}` whose binding raw-loads its own
+  /// basename must find the author's bundled `DIR/pkg.sty`. `\@currname` carries
+  /// the full request, so the raw-load targets `DIR/pkg` directly — as Perl does,
+  /// with no SEARCHPATHS injection. Here a `.sty.rhai` binding does the basename
+  /// raw-load (`InputDefinitions("mypkg", noltxml)`); without the `\@currname`
+  /// rewrite, bare `mypkg.sty` is not on the search path and the macro is lost.
+  #[test]
+  fn dir_prefixed_binding_raw_loads_its_bundled_file() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    std::fs::create_dir_all(root.join("SUB")).unwrap();
+
+    // The binding (found via the full dir-prefixed request) raw-loads its own
+    // basename — the dispatch drops `SUB/`, exactly like the compiled aistats2026
+    // binding on the witness.
+    std::fs::write(
+      root.join("SUB/mypkg.sty.rhai"),
+      "InputDefinitions(\"mypkg\", #{ noltxml: true, type: \"sty\" });\n",
+    )
+    .unwrap();
+    // The author's bundled raw file, reachable only as `SUB/mypkg.sty`.
+    std::fs::write(
+      root.join("SUB/mypkg.sty"),
+      "\\ProvidesPackage{mypkg}\n\\newcommand{\\dirmarker}{DIRLOADED}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      root.join("main.tex"),
+      "\\documentclass{article}\n\
+       \\usepackage{SUB/mypkg}\n\
+       \\begin{document}\\dirmarker\\end{document}\n",
+    )
+    .unwrap();
+
+    let output = Command::new(bin)
+      .arg("--includestyles")
+      .arg("main.tex")
+      .arg("--dest")
+      .arg("out.html")
+      .current_dir(root)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let html = std::fs::read_to_string(root.join("out.html")).unwrap_or_default();
+
+    assert!(
+      !stderr.contains("missing_file:mypkg"),
+      "the binding's basename raw-load did not resolve the bundled `SUB/mypkg.sty`:\n{stderr}"
+    );
+    assert!(
+      html.contains("DIRLOADED"),
+      "expected the bundled `SUB/mypkg.sty` to load (via `\\@currname`); html=\n{html}\nstderr=\n{stderr}"
+    );
+  }
+}
