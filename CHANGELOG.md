@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+  - **A biblatex `\DeclareSourcemap` block no longer breaks the conversion.**
+    Source mapping is a biber pre-processing stage LaTeXML does not run;
+    `\DeclareSourcemap` (and `\DeclareStyleSourcemap`) were undefined, so the
+    nested `\maps`/`\map`/`\step`/`\regexp` ran as undefined control sequences
+    and cascaded into fatal math-mode errors that dropped the whole bibliography.
+    They now gobble the rule argument as a no-op (arXiv/html_feedback#6720).
+
   - **A paper's title no longer absorbs publication metadata.** Class frontmatter
     such as acmart's `\acmConference`/`\acmDOI`/`\acmISBN` was rendered *inside*
     the title `<h1>` (a stray dagger hover on the heading), leaking metadata into

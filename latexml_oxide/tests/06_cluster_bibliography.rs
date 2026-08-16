@@ -2050,3 +2050,20 @@ fn cluster_bib_review_field_cedilla_not_welded() {
      (control-word-terminating space lost in the .bib field path):\n{x}"
   );
 }
+
+/// html_feedback #6720 (arXiv:2607.03177): a biblatex `\DeclareSourcemap`
+/// preamble block (a biber source-mapping stage LaTeXML does not run) must not
+/// break the conversion. `\DeclareSourcemap` was undefined, so its nested
+/// `\maps`/`\map`/`\step`/`\regexp` reached the stomach as undefined control
+/// sequences and cascaded into math-mode/`\fi` fatals. It (and its
+/// `\DeclareStyleSourcemap` sibling) now gobble the rule argument as a no-op;
+/// the 0-error gate below catches any regression of that cascade.
+#[test]
+fn cluster_biblatex_declaresourcemap_is_a_noop() {
+  let x = convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_declaresourcemap.tex");
+  // The document body survives — the citation and its bibresource are intact.
+  assert!(
+    x.contains(r#"bibrefs="beta""#),
+    "the \\cite survived the sourcemap preamble:\n{x}"
+  );
+}

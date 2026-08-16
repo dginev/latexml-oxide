@@ -1,0 +1,19 @@
+% html_feedback #6720 (arXiv:2607.03177): a biblatex `\DeclareSourcemap`
+% preamble block (a biber source-mapping stage LaTeXML does not run) left
+% `\DeclareSourcemap` undefined, so its nested `\maps`/`\map`/`\step`/`\regexp`
+% reached the stomach as undefined control sequences and cascaded into
+% math-mode / `\fi` errors that broke the whole conversion. The command (and its
+% `\DeclareStyleSourcemap` sibling) now gobble the rule argument as a no-op.
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\DeclareSourcemap{
+  \maps[datatype=bibtex]{
+    \map{\step[fieldset=abstract, null]}
+    \map[overwrite]{\step[fieldsource=doi, match=\regexp{^(.+)$}, replace=\regexp{$1}]}
+  }
+}
+\addbibresource{biblatex_declaresourcemap}
+\begin{document}
+Cite \cite{beta}.
+\printbibliography
+\end{document}
