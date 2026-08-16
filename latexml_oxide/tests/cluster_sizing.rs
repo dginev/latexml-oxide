@@ -673,3 +673,99 @@ mod parbox_nested_math {
     );
   }
 }
+
+mod widthof_in_base_dimension_reader {
+  //! html_feedback#6869 "Overlapping numbers in tables". `\makebox[\widthof{X}]`
+  //! / `\rule{\widthof{X}}{h}` read their length with the BASE gullet dimension
+  //! reader, which used to collapse the calc `\widthof` no-op to 0 — so the
+  //! boxed content had zero advance width and overlapped its neighbour. Witness
+  //! arXiv 2603.23669: its siunitx S-column result tables box every bold value
+  //! as `\makebox[\widthof{\tablenum{…}}][r]{…bold…}` and rendered the bold
+  //! number on top of its `± unc`. Both LaTeXML engines produced `width="0.0pt"`
+  //! (Perl even warns "Missing number (Dimension), treated as zero"); real
+  //! pdflatex+calc gives the true width. OXIDIZED_DESIGN #115 makes
+  //! `\widthof`&friends Dimension registers, resolvable in every dimension
+  //! context (matching real LaTeX, surpassing Perl). Guards the FIX: the widths
+  //! are nonzero and agree with the calc-routed reference `\setlength`.
+  use std::process::Command;
+
+  fn convert(body: &str) -> String {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let work = tempfile::tempdir().expect("tempdir");
+    let dir = work.path();
+    let tex = format!(
+      "\\documentclass{{article}}\n\\usepackage{{calc}}\n\\newlength\\reflen\n\
+       \\begin{{document}}\n{body}\n\\end{{document}}\n"
+    );
+    std::fs::write(dir.join("p.tex"), tex).unwrap();
+    let out = Command::new(bin)
+      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
+      .current_dir(dir)
+      .output()
+      .expect("spawn latexml_oxide");
+    std::fs::read_to_string(dir.join("p.xml")).unwrap_or_else(|e| {
+      let stderr = String::from_utf8_lossy(&out.stderr).replace('\u{1b}', "");
+      panic!("no output: {e}\n{stderr}");
+    })
+  }
+
+  /// Parse the `pt` value of the first `width="…pt"` at/after `needle`.
+  fn width_pt_after(xml: &str, needle: &str) -> f64 {
+    let from = xml
+      .find(needle)
+      .unwrap_or_else(|| panic!("`{needle}` missing from:\n{xml}"));
+    let rest = &xml[from..];
+    let wstart = rest
+      .find("width=\"")
+      .unwrap_or_else(|| panic!("no width= after `{needle}` in:\n{xml}"))
+      + "width=\"".len();
+    let val = &rest[wstart..];
+    let end = val.find('"').expect("unterminated width attr");
+    val[..end]
+      .trim_end_matches("pt")
+      .parse::<f64>()
+      .unwrap_or_else(|_| panic!("non-numeric width `{}`", &val[..end]))
+  }
+
+  #[test]
+  fn widthof_resolves_in_makebox_and_rule_length_arguments() {
+    let xml = convert(
+      "\\setlength\\reflen{\\widthof{WWWW}}REF \\the\\reflen\\ ENDREF\n\
+       \\par\\rule{\\widthof{WWWW}}{2pt}\n\
+       \\par X\\makebox[\\widthof{WWWW}][r]{ab}Y",
+    );
+
+    // Reference: the calc-routed \widthof path (\setlength) has always worked.
+    let refw = {
+      let i = xml.find("REF ").expect("REF marker missing") + 4;
+      let rest = &xml[i..];
+      let end = rest.find("pt ENDREF").expect("ENDREF marker missing");
+      rest[..end].parse::<f64>().expect("non-numeric REF width")
+    };
+    assert!(
+      refw > 1.0,
+      "calc-routed \\widthof reference is ~zero: {refw}pt"
+    );
+
+    // The FIX: the base dimension reader now resolves \widthof too. Before
+    // OXIDIZED_DESIGN #115 both of these were width="0.0pt" (overlap).
+    let rule_w = width_pt_after(&xml, "<rule");
+    let makebox_w = width_pt_after(&xml, "<text align=\"right\"");
+    assert!(
+      rule_w > 1.0,
+      "\\rule{{\\widthof{{…}}}} width collapsed to {rule_w}pt"
+    );
+    assert!(
+      makebox_w > 1.0,
+      "\\makebox[\\widthof{{…}}] width collapsed to {makebox_w}pt (overlap bug)"
+    );
+
+    // All three measure \widthof{WWWW}, so the direct-reader widths must agree
+    // with the calc-routed reference (attribute rounding: allow 0.5pt slack).
+    assert!(
+      (rule_w - refw).abs() < 0.5 && (makebox_w - refw).abs() < 0.5,
+      "direct-reader \\widthof disagrees with calc reference: \
+       rule={rule_w}pt makebox={makebox_w}pt ref={refw}pt"
+    );
+  }
+}

@@ -365,6 +365,47 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
 }
 
+/// Which box dimension `\widthof`/`\heightof`/`\depthof`/`\totalheightof` reports.
+#[derive(Clone, Copy)]
+enum BoxDim {
+  Width,
+  Height,
+  Depth,
+  TotalHeight,
+}
+
+/// Digest a `\widthof{…}`-family box argument and return the requested size.
+///
+/// The LaTeXML analogue of calc.sty's `\let\widthof\wd` (calc.sty L124-137):
+/// inside its expression scanner real calc typesets the argument into a box and
+/// takes `\wd`/`\ht`/`\dp` of it. Called from the base dimension reader's
+/// internal-dimension seam (installed below) so `\makebox[\widthof{X}]`,
+/// `\rule{\widthof{X}}{…}`, `\hspace{\widthof{X}}`, … — whose length is read by
+/// the base gullet dimension reader, NOT calc's own `read_value` scanner (which
+/// keeps its inline digest for `\setlength`) — resolve to the real size.
+/// Surpass-perl: OXIDIZED_DESIGN #115.
+fn measure_box_dim(toks: Tokens, kind: BoxDim) -> RegisterValue {
+  let zero = || RegisterValue::Dimension(Dimension::new(0));
+  let box_result = match digest(toks) {
+    Ok(b) => b,
+    Err(_) => return zero(),
+  };
+  match kind {
+    BoxDim::Width => box_result
+      .get_width(None)
+      .ok()
+      .flatten()
+      .unwrap_or_else(zero),
+    BoxDim::Height => box_result.get_height().unwrap_or_else(zero),
+    BoxDim::Depth => box_result.get_depth().unwrap_or_else(zero),
+    BoxDim::TotalHeight => {
+      let h = box_result.get_height().unwrap_or_else(zero);
+      let d = box_result.get_depth().unwrap_or_else(zero);
+      h.add(d)
+    },
+  }
+}
+
 LoadDefinitions!({
   // Stub primitives so they're defined but NOT expandable.
   // The expression parser recognizes these tokens and handles them.
@@ -377,6 +418,34 @@ LoadDefinitions!({
   def_primitive_noop("\\totalheightof")?;
   def_primitive_noop("\\ratio")?;
   def_primitive_noop("\\real")?;
+
+  // Resolve `\widthof`/`\heightof`/`\depthof`/`\totalheightof` to the measured
+  // box size in EVERY dimension context, not only inside a calc expression.
+  // Perl (and our own `read_value`) evaluate them only in calc's expression
+  // parser (`\setlength`), so `\makebox[\widthof{X}][r]{Y}` / `\rule{\widthof{X}}`
+  // — whose length is read by the BASE gullet dimension reader — collapse to 0
+  // (Perl even warns "Missing number (Dimension), treated as zero"), so the
+  // boxed content has no advance width and overlaps its neighbour. Real
+  // LaTeX+calc gives the true width there (calc.sty L124-137 `\let\widthof\wd`).
+  // `\widthof` stays a bare no-op primitive (above) so its digestion/reversion
+  // is unchanged (`\mathmakebox[\widthof{…}]` parity is preserved); the hook
+  // fires ONLY when the dimension reader — not digestion — meets the token.
+  // Surpass-perl: OXIDIZED_DESIGN #115. html_feedback#6869; witness 2603.23669.
+  set_internal_dimension_fn(Rc::new(|tok: &Token| {
+    let kind = if *tok == T_CS!("\\widthof") {
+      BoxDim::Width
+    } else if *tok == T_CS!("\\heightof") {
+      BoxDim::Height
+    } else if *tok == T_CS!("\\depthof") {
+      BoxDim::Depth
+    } else if *tok == T_CS!("\\totalheightof") {
+      BoxDim::TotalHeight
+    } else {
+      return Ok(None);
+    };
+    let toks = read_arg(ExpansionLevel::Off)?;
+    Ok(Some(measure_box_dim(toks, kind)))
+  }));
 
   // \setcounter{<ctr>}{<integer expression>}
   DefPrimitive!("\\setcounter{}{}", sub[(ctr, arg)] {
