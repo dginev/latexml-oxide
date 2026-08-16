@@ -1,0 +1,10 @@
+% REVTeX4 (4.0) uses numeric citations (loads natbib + `\NAT@citenum`); it has
+% no author-year toggle. Oxide surpasses Perl (whose revtex4 binding gives
+% author-year) to match the real class. See revtex4_2_numeric_cite.tex.
+% html_feedback #6609.
+\documentclass[aps,twocolumn]{revtex4}
+\usepackage{natbib}
+\begin{document}
+We cite \cite{beta} and \cite{alpha}.
+\bibliography{revtex4_2_numeric_cite}
+\end{document}

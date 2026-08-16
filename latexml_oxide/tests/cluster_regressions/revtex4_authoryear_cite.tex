@@ -1,0 +1,13 @@
+% The REVTeX4 `author-year` class option (revtex4-1.cls L6001, revtex4-2.cls
+% L6022) flips the family from its `numerical` default to author-year citations.
+% This is exactly the "option set that modifies behavior" the numeric default
+% must respect: `\documentclass[author-year]{revtex4-1}` renders author-year,
+% NOT numeric. Perl ignores this option (stays author-year only because that is
+% *its* default); oxide honors it as a real toggle. See revtex4_2_numeric_cite.tex
+% for the numeric default. html_feedback #6609.
+\documentclass[author-year]{revtex4-1}
+\usepackage{natbib}
+\begin{document}
+We cite \cite{beta} and \cite{alpha}.
+\bibliography{revtex4_2_numeric_cite}
+\end{document}

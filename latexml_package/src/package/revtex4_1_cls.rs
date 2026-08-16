@@ -62,8 +62,30 @@ LoadDefinitions!({
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
   });
+  // REVTeX4-1 declares `author-year` / `numerical`, DEFAULT numerical
+  // (revtex4-1.cls L6001-6003 → `\@booleanfalse\authoryear@sw`): bracketed
+  // numeric citations like the PDF. Perl's revtex4-1 binding and natbib's
+  // default both give author-year, so oxide SURPASSES Perl to match the real
+  // class + PDF; a later `\setcitestyle`/`\bibpunct` still overrides. Sister
+  // logic to revtex4_cls.rs. html_feedback #6609.
+  DeclareOption!("numerical", {
+    assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
+  });
+  DeclareOption!("author-year", {
+    assign_value("revtex_cite_style", pin("authoryear"), Some(Scope::Global));
+  });
+  assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
   LoadClass!("article");
+  // Queue the citation style onto natbib (numbers → numeric `[N]`; author-year →
+  // natbib's default). `\PassOptionsToPackage` on purpose, not a direct
+  // `RequirePackage("natbib", [numbers])`: pre-loading natbib here flips it ahead
+  // of revtex4_support's hyperref and that perturbation trips a latent libxml
+  // heisenbug. Queuing keeps natbib in its original position. Sister logic to
+  // revtex4_cls.rs. html_feedback #6609.
+  if lookup_string("revtex_cite_style") == "numbers" {
+    Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
+  }
   RequirePackage!("revtex4_support");
 
   // Load the AMS packages requested via options BEFORE the `.rty` input.

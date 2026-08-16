@@ -1,0 +1,19 @@
+% REVTeX4-2 with an APS journal option (`pre` = Phys. Rev. E) renders NUMERIC
+% citations, matching the published PDF: bracketed `[2]` inline and a numbered
+% reference list `[1] ...`, NOT author-year `Alpha (2001)`.
+%
+% Perl reaches this because it has no dedicated revtex4-2 binding and version-
+% falls `revtex4-2` -> the generic `revtex.cls`, which preloads natbib with the
+% `numbers` option. Oxide keeps its richer revtex4 routing (revtex4_cls, which
+% -- unlike revtex.cls -- declares the `pre`/`superscriptaddress` options) and
+% preloads natbib[numbers] for revtex4-2 only, so the bibliography refnum is the
+% numeric `[N]` (`ltx_bib_key`) form, not `ltx_bib_author-year`.
+%
+% Witness: arXiv 2606.09494 (html_feedback #6609). revtex4 / revtex4-1 keep
+% natbib's author-year default (Perl parity) -- see revtex4_authoryear_cite.tex.
+\documentclass[pre,twocolumn]{revtex4-2}
+\usepackage{natbib}
+\begin{document}
+First we cite \cite{beta}, then \cite{alpha}, then both \cite{alpha,beta}.
+\bibliography{revtex4_2_numeric_cite}
+\end{document}

@@ -62,8 +62,35 @@ LoadDefinitions!({
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
   });
 
+  // REVTeX4-1/4-2 declare `author-year` / `numerical` and DEFAULT to numerical
+  // (revtex4-2.cls L6022-6024, revtex4-1.cls L6001-6003 → `\@booleanfalse
+  // \authoryear@sw`), i.e. bracketed numeric citations like the PDF. (Bare
+  // revtex4 4.0 has no such toggle and is numeric too.) Neither Perl's revtex4*
+  // bindings nor natbib's own default honor these class options, so oxide
+  // SURPASSES Perl here to match the real class + PDF. The chosen style is
+  // queued onto natbib below; a later `\setcitestyle` / `\bibpunct` still
+  // overrides it, exactly as in Perl. html_feedback #6609, witness arXiv 2606.09494.
+  DeclareOption!("numerical", {
+    assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
+  });
+  DeclareOption!("author-year", {
+    assign_value("revtex_cite_style", pin("authoryear"), Some(Scope::Global));
+  });
+  assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
+  // Queue the citation style onto natbib rather than pre-loading natbib here.
+  // `numbers` gives the numeric `[N]` refnum + square/comma inline; `author-year`
+  // leaves natbib's own author-year (round/semicolon) default. `\PassOptionsToPackage`
+  // is used ON PURPOSE instead of a direct `RequirePackage("natbib", [numbers])`:
+  // pre-loading natbib here loads it BEFORE revtex4_support's hyperref, and that
+  // load-order flip perturbs allocation enough to trip a latent libxml heisenbug
+  // (intermittent SIGSEGV in the multiline_class_options structure test, whose
+  // output is unchanged). Queuing keeps natbib in its original position inside
+  // revtex4_support (after hyperref), so only the option changes. html_feedback #6609.
+  if lookup_string("revtex_cite_style") == "numbers" {
+    Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
+  }
   RequirePackage!("revtex4_support");
 
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.
