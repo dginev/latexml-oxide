@@ -1676,7 +1676,10 @@ impl Processor for MakeBibliography {
           )]);
         }
 
-        // Register ID:{id} with type, location, and number for CrossRef URL generation
+        // Register ID:{id} with type, location, and number for CrossRef URL
+        // generation. The author-year metadata (`authors`/`year`/`refnum`/…) the
+        // fill phase needs is registered by the rescan below, read from the
+        // bibitem's own `<ltx:tag>` children — see the rescan comment.
         let location = doc.site_relative_destination().unwrap_or_default();
         self.db.register(&format!("ID:{}", bibitem_id), vec![
           ("type", crate::object_db::Value::from("ltx:bibitem")),
@@ -1720,17 +1723,36 @@ impl Processor for MakeBibliography {
         continue;
       };
       let key = format!("ID:{}", id);
-      if self.db.lookup(&key).is_some() {
-        continue; // already registered (bibitems, and anything Scan saw)
-      }
       let qname = doc
         .get_qname(&node)
         .unwrap_or_else(|| "ltx:text".to_string());
-      self.db.register(&key, vec![
-        ("type", crate::object_db::Value::from(qname.as_str())),
-        ("location", crate::object_db::Value::from(location.as_str())),
-        ("fragid", crate::object_db::Value::from(id.as_str())),
-      ]);
+      if qname == "ltx:bibitem" {
+        // Faithful to Perl's rescan (MakeBibliography.pm L78 re-runs Scan, whose
+        // `bibitem_handler` reads the bibitem's `<ltx:tag role="…">` children
+        // into the DB): augment this bibitem's already-registered ID entry with
+        // its author-year metadata, read from its OWN generated tags via the
+        // handler oxide's Scan also uses. CrossRef's fill phase (make_bibcite /
+        // `fill_in_bibrefs`) then renders an author-year inline citation matching
+        // the References list; without these values it fell back to the bare
+        // number (`\cite{beta}` → `2` vs the list's `Beta (2002)`).
+        // html_feedback #6276/#6302 (inline-vs-list label mismatch).
+        let props = crate::scan::bibitem_tag_props(&doc, &node);
+        if !props.is_empty() {
+          let entry = self.db.register(&key, vec![]);
+          for (k, v) in props {
+            entry.set_value(&k, v);
+          }
+        }
+      } else if self.db.lookup(&key).is_none() {
+        // A non-bibitem id-bearing node (an ltx:Math in a title, a styled
+        // ltx:text, …) cloned into the generated bibliography: register its
+        // id/fragid so CrossRef can stamp it (Perl's rescan covers these too).
+        self.db.register(&key, vec![
+          ("type", crate::object_db::Value::from(qname.as_str())),
+          ("location", crate::object_db::Value::from(location.as_str())),
+          ("fragid", crate::object_db::Value::from(id.as_str())),
+        ]);
+      }
     }
 
     // Remove any remaining bibentry elements (they've been converted to bibitems)

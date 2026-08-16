@@ -176,6 +176,84 @@ pub struct CrossRef {
   child_pages:    RefCell<HashMap<String, Rc<ChildPages>>>,
 }
 
+/// Render a natbib bibref `show` format into its visible label by interleaving
+/// the resolved `authors`/`year`/`number`/`refnum` values with the bibref's
+/// `<ltx:bibrefphrase>` children (`Phrase1`, `Phrase2`, …) and any literal
+/// characters. `\citet`/`\cite` use `show="Authors Phrase1YearPhrase2"` (phrases
+/// `(` / `)` → "Beta (2002)"); `\citep` uses `show="AuthorsPhrase1Year"` (phrase
+/// `, ` → "Beta, 2002", the surrounding macro adding the outer parens). Mirrors
+/// Perl `CrossRef.pm` `make_bibcite`'s show walk.
+///
+/// Returns `(label, resolved_ay)`: `resolved_ay` is true iff an `Authors`/
+/// `Fullauthors`/`Year` token resolved to a non-empty value, so the caller can
+/// fall back to the bare number for entries that carry no author-year metadata.
+fn render_bibref_show(
+  show: &str,
+  authors: Option<&str>,
+  fullauthors: Option<&str>,
+  year: Option<&str>,
+  number: Option<&str>,
+  refnum: Option<&str>,
+  phrases: &[String],
+) -> (String, bool) {
+  let lower = show.to_ascii_lowercase();
+  let lb = lower.as_bytes();
+  let mut out = String::new();
+  let mut resolved_ay = false;
+  let mut i = 0;
+  while i < show.len() {
+    // Phrase token: "phrase" + digits → the Nth <ltx:bibrefphrase> child.
+    if lb[i..].starts_with(b"phrase") {
+      let ds = i + "phrase".len();
+      let mut j = ds;
+      while j < lb.len() && lb[j].is_ascii_digit() {
+        j += 1;
+      }
+      if j > ds {
+        if let Ok(n) = show[ds..j].parse::<usize>() {
+          if n >= 1 && n <= phrases.len() {
+            out.push_str(&phrases[n - 1]);
+          }
+        }
+        i = j;
+        continue;
+      }
+    }
+    // Value keyword (fullauthors before authors — distinct first letters, so
+    // order is not load-bearing, but keep the longest name first for clarity).
+    let mut matched = false;
+    for (kw, val, is_ay) in [
+      ("fullauthors", fullauthors.or(authors), true),
+      ("authors", authors, true),
+      ("year", year, true),
+      ("number", number, false),
+      ("refnum", refnum, false),
+    ] {
+      if lb[i..].starts_with(kw.as_bytes()) {
+        if let Some(v) = val {
+          if !v.is_empty() {
+            out.push_str(v);
+            if is_ay {
+              resolved_ay = true;
+            }
+          }
+        }
+        i += kw.len();
+        matched = true;
+        break;
+      }
+    }
+    if matched {
+      continue;
+    }
+    // Literal character.
+    let ch = show[i..].chars().next().unwrap();
+    out.push(ch);
+    i += ch.len_utf8();
+  }
+  (out, resolved_ay)
+}
+
 impl CrossRef {
   pub fn new(db: ObjectDB, url_style: UrlStyle, number_sections: bool) -> Self {
     CrossRef {
@@ -1443,49 +1521,60 @@ impl CrossRef {
           // Perl: use 'number' field for numeric citations (bare number without brackets).
           // The 'refnum' field includes brackets like "[13]", causing double brackets [[13]].
           let entry = self.db.lookup(&format!("ID:{}", id));
+          // Pull the entry's citation metadata into owned strings (ends the
+          // `entry` borrow before we touch `doc`/`bibref` below).
+          let get = |k: &str| {
+            entry
+              .and_then(|e| e.get_value(k))
+              .map(|v| v.to_string())
+              .map(|s| s.trim().to_string())
+              .filter(|s| !s.is_empty())
+          };
+          let authors = get("authors");
+          let fullauthors = get("fullauthors");
+          let keytag = get("keytag");
+          let year = get("year");
+          let typetag = get("typetag");
+          let number = get("number");
+          let refnum = get("refnum");
+          let number_or_refnum = || {
+            number
+              .clone()
+              .or_else(|| refnum.clone())
+              .unwrap_or_else(|| key.to_string())
+          };
           let display = if want_authoryear {
-            let authors = entry
-              .and_then(|e| {
-                e.get_value("authors")
-                  .or_else(|| e.get_value("fullauthors"))
-                  .or_else(|| e.get_value("keytag"))
-              })
-              .map(|v| v.to_string())
-              .map(|s| s.trim().to_string())
-              .filter(|s| !s.is_empty());
-            let year = entry
-              .and_then(|e| e.get_value("year").or_else(|| e.get_value("typetag")))
-              .map(|v| v.to_string())
-              .map(|s| s.trim().to_string())
-              .filter(|s| !s.is_empty());
-            match (authors, year) {
-              (Some(a), Some(y)) => {
-                // `Phrase1`/`Phrase2` in the show string mark where
-                // open/close paren or yyseparator usually go in Perl's
-                // bibrefphrase markup. We collapse to a simple
-                // "Authors Year" form: `\citep` (AuthorsPhrase1Year)
-                // becomes "Author Year" inside the surrounding
-                // parens emitted by the citemacro; `\citet`
-                // (Authors Phrase1YearPhrase2) becomes "Author Year"
-                // with the macro adding the year-parens. Good enough
-                // for visual parity with the PDF in the common case.
-                format!("{} {}", a, y)
-              },
-              (Some(a), None) => a,
-              (None, Some(y)) => y,
-              (None, None) => {
-                // No author/year metadata → fall back to refnum.
-                entry
-                  .and_then(|e| e.get_value("number").or_else(|| e.get_value("refnum")))
-                  .map(|v| v.to_string())
-                  .unwrap_or_else(|| key.to_string())
-              },
+            // The `<ltx:bibrefphrase>` children supply Phrase1/Phrase2 (the
+            // `(`/`)` for \citet, the `, ` for \citep). Interleave them with the
+            // authors/year per the `show` format — Perl CrossRef.pm make_bibcite.
+            let phrases: Vec<String> = crate::document::element_children(bibref)
+              .iter()
+              .filter(|c| doc.get_qname(c).as_deref() == Some("ltx:bibrefphrase"))
+              .map(|c| c.get_content())
+              .collect();
+            let a = authors
+              .as_deref()
+              .or(fullauthors.as_deref())
+              .or(keytag.as_deref());
+            let y = year.as_deref().or(typetag.as_deref());
+            let (text, resolved) = render_bibref_show(
+              &show,
+              a,
+              fullauthors.as_deref(),
+              y,
+              number.as_deref(),
+              refnum.as_deref(),
+              &phrases,
+            );
+            // No author/year metadata (e.g. an entry with only a number) → fall
+            // back to the bare number so the inline label still resolves.
+            if resolved && !text.trim().is_empty() {
+              text
+            } else {
+              number_or_refnum()
             }
           } else {
-            entry
-              .and_then(|e| e.get_value("number").or_else(|| e.get_value("refnum")))
-              .map(|v| v.to_string())
-              .unwrap_or_else(|| key.to_string())
+            number_or_refnum()
           };
           refs.push(NodeData::Element {
             tag:        "ltx:ref".to_string(),

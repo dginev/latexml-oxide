@@ -513,26 +513,7 @@ impl Scan {
       props.push(("fragid".to_string(), Value::from(fragid)));
     }
 
-    for role in &[
-      "authors",
-      "fullauthors",
-      "year",
-      "number",
-      "refnum",
-      "title",
-      "key",
-      "bibtype",
-    ] {
-      let xpath = format!("ltx:tags/ltx:tag[@role='{}']", role);
-      if let Some(tagnode) = doc.findnode_at(&xpath, node) {
-        let prop_name = match *role {
-          "key" => "keytag",
-          "bibtype" => "typetag",
-          _ => role,
-        };
-        props.push((prop_name.to_string(), Value::from(tagnode.get_content())));
-      }
-    }
+    props.extend(bibitem_tag_props(doc, node));
 
     let db_key = format!("ID:{}", id);
     let entry = self.db.register(&db_key, vec![]);
@@ -922,6 +903,40 @@ impl Processor for Scan {
 
 // ======================================================================
 // Helpers
+
+/// Read a `<ltx:bibitem>`'s `<ltx:tags>/<ltx:tag role="…">` children into the
+/// ObjectDB props CrossRef's fill phase (`make_bibcite`) reads: `authors`,
+/// `fullauthors`, `year`, `number`, `refnum`, `title`, plus `keytag` (role
+/// `key`) and `typetag` (role `bibtype`). Port of Perl `Scan::bibitem_handler`
+/// (Scan.pm L475-483). Shared by [`Scan::bibitem_handler`] (the initial scan of
+/// authored `\bibitem`s) and `MakeBibliography`'s rescan of the bibitems it
+/// generates from `.bib`/`.bbl` — the same values, from whichever pass first
+/// produced the formatted entry, so an author-year inline citation resolves to
+/// the SAME author-year label the References list shows.
+pub fn bibitem_tag_props(doc: &PostDocument, node: &Node) -> Vec<(String, Value)> {
+  let mut props = Vec::new();
+  for role in &[
+    "authors",
+    "fullauthors",
+    "year",
+    "number",
+    "refnum",
+    "title",
+    "key",
+    "bibtype",
+  ] {
+    let xpath = format!("ltx:tags/ltx:tag[@role='{}']", role);
+    if let Some(tagnode) = doc.findnode_at(&xpath, node) {
+      let prop_name = match *role {
+        "key" => "keytag",
+        "bibtype" => "typetag",
+        _ => *role,
+      };
+      props.push((prop_name.to_string(), Value::from(tagnode.get_content())));
+    }
+  }
+  props
+}
 
 fn collect_element_children(node: &Node) -> Vec<Node> {
   let mut result = Vec::new();

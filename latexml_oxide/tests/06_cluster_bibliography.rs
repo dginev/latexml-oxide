@@ -2050,3 +2050,118 @@ fn cluster_bib_review_field_cedilla_not_welded() {
      (control-word-terminating space lost in the .bib field path):\n{x}"
   );
 }
+
+// ===========================================================================
+// Citation ⇄ reference label CONSISTENCY cluster.
+//
+// BibTeX's core guarantee: the label of an inline citation matches the label
+// printed next to that entry in the References list, in whatever style the
+// bibliography uses (numeric `[N]`, or author-year `Author (Year)`). Perl
+// LaTeXML's CrossRef fill phase (`make_bibcite`) honors this by reading the
+// bibitem's author/year tags from the ObjectDB (populated by Scan's
+// `bibitem_handler`, re-run over the generated bibliography by `rescan`) and
+// interleaving them with the bibref's `<ltx:bibrefphrase>` markup.
+//
+// Minimal reproductions for the class of arXiv html_feedback reports where the
+// inline citation does NOT match the list — e.g. #6276 ("citations are numbered
+// but bibliography is not"), #6302 ("reference to [number] but hard to tell
+// which one"). Expand this cluster with a new fixture per distinct reproducer.
+// ===========================================================================
+
+/// Tag-stripped text of each inline `<ltx:cite>` in post XML.
+fn inline_cite_texts(xml: &str) -> Vec<String> {
+  let mut out = Vec::new();
+  let mut rest = xml;
+  while let Some(s) = rest.find("<cite") {
+    let after = &rest[s..];
+    let Some(e) = after.find("</cite>") else {
+      break;
+    };
+    let seg = &after[..e];
+    let mut txt = String::new();
+    let mut in_tag = false;
+    for c in seg.chars() {
+      match c {
+        '<' => in_tag = true,
+        '>' => in_tag = false,
+        _ if !in_tag => txt.push(c),
+        _ => {},
+      }
+    }
+    out.push(txt.trim().to_string());
+    rest = &after[e + "</cite>".len()..];
+  }
+  out
+}
+
+/// A purely numeric citation label (`2` or `[2]`) — the numeric style. In
+/// author-year mode an inline cite that reduces to this is the bug: it can no
+/// longer be matched to the `Author (Year)` label the References list shows.
+fn numeric_label(s: &str) -> Option<u32> {
+  let t = s
+    .trim()
+    .trim_start_matches('[')
+    .trim_end_matches(']')
+    .trim();
+  if t.is_empty() { None } else { t.parse().ok() }
+}
+
+/// html_feedback #6276/#6302 — natbib AUTHOR-YEAR mode: the inline `\cite`/
+/// `\citet`/`\citep` must render the author-year label the References list
+/// shows, NOT a bare number.
+///
+/// The bug was GENUINE-RUST-ONLY: MakeBibliography registered only the bibitem
+/// `number` into the CrossRef DB — never `authors`/`year` — so
+/// `crossref::fill_in_bibrefs` fell back to the number for a `show="Authors …"`
+/// bibref (inline `2` vs the list's `Beta (2002)`). Perl 0.8.8 renders
+/// `Beta (2002)` inline. Fix: the rescan registers the bibitem's tags via the
+/// shared `bibitem_tag_props`, and `fill_in_bibrefs` interleaves author/year
+/// with the `<ltx:bibrefphrase>` children (`Beta (2002)` for `\citet`,
+/// `(Beta, 2002)` for `\citep`), matching Perl `CrossRef::make_bibcite`.
+#[test]
+fn cluster_cite_authoryear_inline_matches_reference_label() {
+  let x = convert_and_post_clean("tests/cluster_regressions/cite_labels_authoryear.tex");
+  assert!(
+    x.contains("ltx_bib_author-year"),
+    "expected an author-year References list:\n{x}"
+  );
+  let cites = inline_cite_texts(&x);
+  assert!(!cites.is_empty(), "no inline citations were rendered:\n{x}");
+  // Every author-year inline cite carries the AUTHOR NAME (matching the list) —
+  // none collapses to a bare/bracketed number.
+  assert!(
+    cites.iter().all(|c| numeric_label(c).is_none()),
+    "an author-year inline citation rendered as a bare number, mismatching the \
+     References list label: {cites:?}\n{x}"
+  );
+  // \citet{beta} → "Beta (2002)"; \citep{beta} → "(Beta, 2002)".
+  assert!(
+    cites
+      .iter()
+      .any(|c| c.contains("Beta") && c.contains("(2002)")),
+    "\\citet should render \"Beta (2002)\": {cites:?}\n{x}"
+  );
+  assert!(
+    cites.iter().any(|c| c.contains("(Beta, 2002)")),
+    "\\citep should render \"(Beta, 2002)\": {cites:?}\n{x}"
+  );
+}
+
+/// Control + regression guard for the numeric path: numeric natbib mode is
+/// already consistent (inline `[N]` indexes the numbered list), and the
+/// author-year fix must not disturb it.
+#[test]
+fn cluster_cite_numeric_inline_matches_reference_label() {
+  let x = convert_and_post_clean("tests/cluster_regressions/cite_labels_numeric.tex");
+  assert!(
+    !x.contains("ltx_bib_author-year"),
+    "numeric mode must not produce an author-year list:\n{x}"
+  );
+  let cites = inline_cite_texts(&x);
+  assert!(!cites.is_empty(), "no inline citations were rendered:\n{x}");
+  // Each inline numeric cite is the entry number (bracketed) indexing the list.
+  assert!(
+    cites.iter().all(|c| numeric_label(c).is_some()),
+    "numeric inline citations should be numbers indexing the list: {cites:?}\n{x}"
+  );
+}
