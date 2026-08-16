@@ -2140,6 +2140,37 @@ pub fn read_value(value_type: RegisterType) -> Result<RegisterValue> {
   }
 }
 
+/// A package-installed resolver for control sequences that yield an *internal
+/// dimension* by reading their own argument — e.g. calc.sty's `\widthof{box}`.
+/// Given the already-read CS token, it either consumes that CS's argument(s)
+/// from the gullet and returns the measured value (`Ok(Some(_))`), or leaves
+/// the stream untouched and declines (`Ok(None)`), in which case the caller
+/// un-reads the token. Keeps core calc-agnostic: the base dimension reader
+/// consults this seam before giving up with "Missing number", so
+/// `\makebox[\widthof{X}]` / `\rule{\widthof{X}}{…}` resolve like real LaTeX
+/// without `\widthof` having to be a register (which would change its bare
+/// digestion). See `calc_sty.rs` / OXIDIZED_DESIGN #115.
+pub type InternalDimensionFn = std::rc::Rc<dyn Fn(&Token) -> Result<Option<RegisterValue>>>;
+
+thread_local! {
+  static INTERNAL_DIMENSION_FN: RefCell<Option<InternalDimensionFn>> = const { RefCell::new(None) };
+}
+
+/// Install the internal-dimension resolver (calc.sty at load time).
+pub fn set_internal_dimension_fn(f: InternalDimensionFn) {
+  INTERNAL_DIMENSION_FN.with(|c| *c.borrow_mut() = Some(f));
+}
+
+/// Consult the installed resolver for `tok`. `Ok(None)` when none is installed
+/// or it declines; `tok` is left for the caller to un-read in that case.
+fn resolve_internal_dimension(tok: &Token) -> Result<Option<RegisterValue>> {
+  let f = INTERNAL_DIMENSION_FN.with(|c| c.borrow().clone());
+  match f {
+    Some(f) => f(tok),
+    None => Ok(None),
+  }
+}
+
 pub fn read_register_value(value_type: RegisterType) -> Result<Option<RegisterValue>> {
   read_register_value_coerce(value_type, false)
 }
@@ -2186,6 +2217,16 @@ pub fn read_register_value_coerce(
           }
         },
         _ => {
+          // calc.sty seam: `\widthof{box}` &friends yield an internal dimension
+          // by reading their own argument. Only in dimension-like contexts
+          // (calc errors "not expected here" for a Number). On decline the
+          // resolver leaves the stream untouched, so we un-read the token.
+          // OXIDIZED_DESIGN #115.
+          if value_type != RegisterType::Number
+            && let Some(rv) = resolve_internal_dimension(&token)?
+          {
+            return Ok(Some(rv));
+          }
           unread_one(token); // Unread
           Ok(None)
         },

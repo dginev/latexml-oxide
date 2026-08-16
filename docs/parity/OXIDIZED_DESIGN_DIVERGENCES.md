@@ -4186,3 +4186,44 @@ is wrong. **Upstream**: worth filing against `brucemiller/LaTeXML`.
 (`tests/cluster_regressions/siunitx_nothing_unit.tex`, via `convert_and_post_pmml_clean`) — the
 presentation MathML contains no visible `>nothing<`, the empty unit is an `<m:mphantom>`, and the
 quantity still renders.
+
+### 115. `\widthof` &friends resolve as dimensions in every dimension context, not only calc expressions
+
+**Perl** LaTeXML's `calc.sty.ltxml` defines `\widthof`/`\heightof`/`\depthof`/`\totalheightof`
+as no-op stub primitives (`DefPrimitive('\widthof','')`) and only *evaluates* them inside calc's
+own expression scanner (`readValue`, invoked by `\setlength`/`\addtolength`/`\setcounter`). But
+box- and rule-length arguments — `\makebox[⟨len⟩]`, `\rule{⟨w⟩}{⟨h⟩}`, `\hspace{⟨len⟩}`,
+`\parbox{⟨w⟩}…` — are read by the *base* dimension reader, which never routes through that
+scanner. There the non-expandable `\widthof` stops the number scan, so `\makebox[\widthof{X}][r]{Y}`
+comes out `width="0.0pt"` (Perl emits `Warning: Missing number (Dimension), treated as zero`). A
+zero-width box gives its content no advance width, so it overlaps its neighbour. Real
+pdflatex+calc gives the true width there — calc.sty L124-137 does `\let\widthof\wd` and boxes the
+argument, so `\widthof{X}` = `\wd` of a box holding X, valid *everywhere* a `<dimen>` is read.
+latexml-oxide reproduced Perl exactly (SHARED-FAILURE, both diverge from real LaTeX).
+
+**Perl behavior**: `\widthof` etc. → 0 outside a calc expression; boxed content collapses and
+overlaps. **Rust behavior**: `\widthof`/`\heightof`/`\depthof`/`\totalheightof` stay bare no-op
+primitives (so their digestion/reversion is byte-identical to Perl — `\mathmakebox[\widthof{…}]`
+parity is preserved), but the base dimension reader gains a calc-agnostic seam
+(`gullet::set_internal_dimension_fn`, consulted by `read_register_value` before it gives up with
+"Missing number"). calc installs a resolver that, when the *dimension reader* meets one of these
+tokens, digests its `{box}` argument and returns the measured width/height/depth/total-height —
+the LaTeXML analogue of calc's `\let\widthof\wd`. So they resolve in **every** dimension context
+(makebox, framebox, rule, hspace, parbox), matching real LaTeX, while digestion is untouched.
+calc's own `read_value` still intercepts them by token identity for calc expressions, so
+calc-routed widths (`tests/graphics/calc.xml`) are unchanged — only the previously-broken
+base-reader contexts change, from a wrong `0.0pt` to the measured width.
+
+**Why**: a kernel-quality gap, not a TeX-semantics change — real LaTeX+calc already makes
+`\widthof` a valid dimension in these contexts; both LaTeXML engines simply failed to. The fix
+halos across every dimension-reading construct and every calc-using paper.
+
+**Witnesses**: arXiv 2603.23669 (html_feedback#6869) — its siunitx `S`-column result tables box
+every bold value as `\makebox[\widthof{\tablenum{…}}][r]{…}`; the bold number rendered on top of
+its `± unc`. Rust `\widthof{WWWW}` now measures 41.1pt (real LaTeX: 41.1112pt).
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same gap upstream).
+
+**Guards**: `cluster_sizing::widthof_in_base_dimension_reader::widthof_resolves_in_makebox_and_rule_length_arguments`
+— `\makebox[\widthof{WWWW}]` and `\rule{\widthof{WWWW}}{…}` widths are nonzero and agree with the
+calc-routed `\setlength\reflen{\widthof{WWWW}}` reference.
