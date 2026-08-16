@@ -919,15 +919,19 @@ LoadDefinitions!({
               entries.push((AuthorLineKind::Author, line)); // safest to assume author?
             }
           },
-          Some(p) if p < 8 => {
-            // Close to front? assume affiliation
-            entries.push((AuthorLineKind::Affiliation, line));
-          },
-          Some(_) => {
-            // Marker sits far from the front: an author line. Split it into the
-            // individual creators it names (see split_author_line).
-            for author in split_author_line(line) {
-              entries.push((AuthorLineKind::Author, author));
+          Some(p) => {
+            // "\textsuperscript{n}Affil" (the marker LEADS the line) → an
+            // affiliation; "Name\textsuperscript{n}" (a name precedes the
+            // marker) → an author line, split into the individual creators it
+            // names (see split_author_line). The old `p < 8` token-count proxy
+            // misread short author names like "Min Xu" (html_feedback#6614) —
+            // key on name-before-marker, which is length-independent.
+            if name_precedes_marker(&line, p) {
+              for author in split_author_line(line) {
+                entries.push((AuthorLineKind::Author, author));
+              }
+            } else {
+              entries.push((AuthorLineKind::Affiliation, line));
             }
           },
         }
@@ -3842,6 +3846,22 @@ fn affil_splits() -> Vec<SplitDelim> {
   ]
 }
 fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
+
+/// In a superscript-labeled author block, decide whether a line reads
+/// "Name\textsuperscript{n}" (an author — name TEXT precedes the marker) or
+/// "\textsuperscript{n}Affil" (an affiliation — the marker LEADS the line).
+/// Returns true iff a letter token precedes the first marker at `marker_pos`
+/// (1-based, from `position_of`). Replaces an earlier `position < 8`
+/// token-count proxy that misread short author names: "Min Xu" is 7 tokens, so
+/// its trailing `\textsuperscript{1}` fell under the threshold and the author
+/// was reclassified as an affiliation (html_feedback#6614, arXiv:2606.08234).
+/// Keying on "is there a name before the marker" is length-independent.
+/// OXIDIZED_DESIGN #52.
+fn name_precedes_marker(line: &Tokens, marker_pos: usize) -> bool {
+  line.unlist_ref()[..marker_pos.saturating_sub(1)]
+    .iter()
+    .any(|t| t.code == Catcode::LETTER)
+}
 
 /// Drop the optional `*` and `[<len>]` that follow a `\\` line-break token in an
 /// author/affiliation block, before the block is split into lines. The

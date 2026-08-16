@@ -47,6 +47,43 @@ fn frontmatter_acmart_pubnotes_not_in_title() {
     "acmart journal/DOI pubnotes missing from frontmatter:\n{x}"
   );
 }
+/// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
+/// \textsuperscript{n}Affil}` block must keep SHORT author names as authors, not
+/// reclassify them as affiliations. "Min Xu" (7 tokens) tripped the old `p < 8`
+/// superscript-position proxy and was demoted to an `Affiliation:`; the
+/// length-independent name-before-marker rule keeps all four authors while the
+/// marker-led affiliation lines stay affiliations.
+#[test]
+fn frontmatter_acl_quad_authors_short_name() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_acl_quad_authors.tex");
+  // All four authors survive as personnames — including the short "Min Xu".
+  for name in [
+    "Tanush Swaminathan",
+    "Runmin Jiang",
+    "Letian Zhang",
+    "Min Xu",
+  ] {
+    assert!(
+      x.contains(&format!("<personname>{name}")),
+      "author {name} missing as a personname:\n{x}"
+    );
+  }
+  // "Min Xu" must NOT be demoted to an affiliation (the reported canary).
+  assert!(
+    !x.contains("role=\"affiliation\">Min Xu"),
+    "short author Min Xu misclassified as an affiliation:\n{x}"
+  );
+  // The marker-led affiliation lines still render as affiliations.
+  assert!(
+    x.contains("Carnegie Mellon University") && x.contains("Allen Institute"),
+    "affiliations dropped:\n{x}"
+  );
+  // The `\\[5pt]` optional length must not leak as literal text.
+  assert!(
+    !x.contains("[5pt]"),
+    "\\\\[5pt] optional length leaked as text:\n{x}"
+  );
+}
 /// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
 /// block is one creator; the `1\textsuperscript{st}` ordinals must not be
 /// misread as affiliation markers and drop every author. Witness 2602.05517.
