@@ -719,6 +719,26 @@ LoadDefinitions!({
   Info!("bibliography", "biblatex",
     "biblatex.sty is provided by a native binding, not interpreted raw.");
 
+  // Mark biblatex as provided, exactly as the real biblatex.sty's
+  // `\ProvidesPackage{biblatex}[…]` does (latex_constructs `\ProvidesPackage`
+  // → `\ver@biblatex.sty`). Every biber-generated `.bbl` opens with the guard
+  //   \@ifundefined{ver@biblatex.sty}{\@latex@error{Missing 'biblatex' package}
+  //     …\aftergroup\endinput}{}
+  // so without `\ver@biblatex.sty` the `.bbl` `\endinput`s itself and the whole
+  // References list is empty. The normal `\usepackage{biblatex}` path gets this
+  // marker under the requested name from the package machinery, but a biblatex
+  // *variant* (`\usepackage{biblatex-chicago}`, routed here by
+  // `latexml_contrib::dispatch`'s `biblatex-*` fallback) would otherwise only
+  // set `\ver@biblatex-chicago.sty`, leaving the guard's `\ver@biblatex.sty`
+  // undefined. Setting it in the binding itself covers every load path.
+  // Witness arXiv 2605.11180 (html_feedback #6601): biber `.bbl` format 3.3,
+  // empty References before this marker.
+  {
+    let ver_cs = T_CS!("\\ver@biblatex.sty");
+    DefMacro!(ver_cs, None, "2023/03/05 v3.19 Sophisticated Bibliographies (PK/MW)",
+      scope => Some(Scope::Global));
+  }
+
   // Perl option processing: maxbibnames, style/citestyle keyvals, ignore
   // the rest. Perl wires these through DefKeyVal `code` callbacks; here we
   // register the keys for keyset parity and read the raw package-option

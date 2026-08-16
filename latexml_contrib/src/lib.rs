@@ -627,6 +627,29 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
       })
     })
     .map(|(_, _, loader)| loader())
+    // biblatex style/variant packages (`biblatex-chicago`, `biblatex-apa`,
+    // `biblatex-ieee`, `biblatex-nature`, `biblatex-science`, `biblatex-mla`,
+    // `biblatex-phys`, `biblatex-chem`, …) each begin their real `.sty` with
+    // `\RequirePackage{biblatex}` and then only *configure* it; the
+    // configuration commands (`\DeclareFieldFormat`, `\renewbibmacro`, …) run
+    // in the preamble. Without a binding for the variant name, that
+    // `\RequirePackage{biblatex}` never happens, so those commands are
+    // undefined the moment they are used — before the `\addbibresource`
+    // autoload trigger fires — and the whole bibliography collapses (0
+    // bibitems). Route every `biblatex-<style>.sty` to the biblatex binding,
+    // reproducing the `\RequirePackage{biblatex}` the variant would have done.
+    // Perl LaTeXML ships no biblatex binding at all, so this is surpass-Perl,
+    // consistent with the existing biblatex contrib. Witness arXiv 2605.11180
+    // (`\usepackage[authordate,backend=biber]{biblatex-chicago}` via
+    // `biblatex-aer.tex`; html_feedback #6601): `\DeclareFieldFormat`
+    // undefined, empty References, before this fallback.
+    .or_else(|| {
+      let lower = base_only.to_ascii_lowercase();
+      (ext.eq_ignore_ascii_case("sty")
+        && lower.len() > "biblatex-".len()
+        && lower.starts_with("biblatex-"))
+      .then(biblatex_sty::load_definitions)
+    })
 }
 
 /// All registered (name, extension) pairs for this crate's BINDINGS.

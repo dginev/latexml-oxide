@@ -1,0 +1,15 @@
+\documentclass{article}
+% biblatex *variant* package (a whole family: biblatex-chicago / -apa / -ieee /
+% -nature / ...). Each does \RequirePackage{biblatex} then configures it, so its
+% configuration commands (\DeclareFieldFormat, ...) run in the preamble. Without
+% routing the variant name to the biblatex binding these are undefined the
+% moment they are used, and the biber .bbl's \ver@biblatex.sty guard empties the
+% References. html_feedback #6601, witness arXiv 2605.11180.
+\usepackage[authordate,backend=biber]{biblatex-chicago}
+\DeclareFieldFormat{citehyperref}{#1}
+\DeclareFieldAlias{bibhyperref}{noformat}
+\addbibresource{refs.bib}
+\begin{document}
+Cite: \cite{smith2020} and \parencite{jones2019}.
+\printbibliography
+\end{document}

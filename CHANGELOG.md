@@ -19,6 +19,14 @@
     list floated into a paragraph and vanished, every `\cite` left dangling. The
     environment is now bound like `bibdiv`, titled from its optional heading
     (default "References"). Witness arXiv 2405.18501 (arXiv/html_feedback#1393).
+  - **biblatex style packages (`biblatex-chicago`, `-apa`, `-ieee`, …) now render
+    their bibliography.** A `\usepackage{biblatex-chicago}` variant never loaded
+    the biblatex binding, so its preamble `\DeclareFieldFormat`/`\renewbibmacro`
+    customization was undefined and the biber `.bbl` — guarded on
+    `\ver@biblatex.sty` — emptied the whole References list. Variant names now
+    route to the biblatex binding (as each `.sty` really does via
+    `\RequirePackage{biblatex}`), and the binding marks `\ver@biblatex.sty` so the
+    `.bbl` renders. Witness arXiv 2605.11180 (arXiv/html_feedback#6601).
   - **A biblatex `\DeclareSourcemap` block no longer breaks the conversion.**
     Source mapping is a biber pre-processing stage LaTeXML does not run;
     `\DeclareSourcemap` (and `\DeclareStyleSourcemap`) were undefined, so the
