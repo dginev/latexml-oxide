@@ -26,6 +26,27 @@ fn frontmatter_acmart_author_optarg() {
     "acmart `[short]` optarg leaked as a bracket creator:\n{x}"
   );
 }
+/// html_feedback#6885 (arXiv:2608.07766, acmart PACMHCI): the ACM pubnotes
+/// (`\acmJournal`/`\acmVolume`/`\acmDOI`/`\ccsdesc`) must be frontmatter SIBLINGS
+/// of the title, not nested inside it. The reported "journal info appears in
+/// title" was the OLD deployed corpus binary; HEAD matches Perl 0.8.8 exactly —
+/// a clean `<title>` with the pubnotes as document children. Pins that so they
+/// cannot regress back into the title element.
+#[test]
+fn frontmatter_acmart_pubnotes_not_in_title() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_acmart_pubnotes_not_in_title.tex");
+  // The title is self-contained — a nested <pubnote> would break this exact close.
+  assert!(
+    x.contains("<title>The Real Title</title>"),
+    "acmart title must not absorb the journal/DOI/CCS pubnotes:\n{x}"
+  );
+  // …and the pubnotes still render, as siblings of the title.
+  assert!(
+    x.contains("role=\"journal\">PACMHCI</pubnote>")
+      && x.contains("role=\"doi\">10.1145/3710969</pubnote>"),
+    "acmart journal/DOI pubnotes missing from frontmatter:\n{x}"
+  );
+}
 /// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
 /// block is one creator; the `1\textsuperscript{st}` ordinals must not be
 /// misread as affiliation markers and drop every author. Witness 2602.05517.
