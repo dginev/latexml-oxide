@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Scan"]};
+window.SIDEBAR_ITEMS = {"fn":["bibitem_tag_props"],"struct":["Scan"]};
