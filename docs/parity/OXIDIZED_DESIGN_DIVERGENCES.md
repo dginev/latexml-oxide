@@ -4461,3 +4461,42 @@ superconductivity induced by the Su-Schrieffer-Heeger electron-phonon coupling";
 Shared upstream bug recorded as KNOWN_PERL_ERRORS #84.
 
 **Guard**: `06_cluster_regressions::cluster_eqnarray_nonumber_label_ref_is_the_number`.
+
+### 121. Numeric/superscript natbib `.bbl` labels the References with `[N]`, not author-year
+
+**Perl**'s `\NAT@wrout` (`natbib.sty.ltxml` L609-620) formats each `\bibitem`'s
+reference-list `refnum` from `CITE_STYLE`, but its numeric branch is gated on
+`$style eq 'number'` (**singular**) — a value `CITE_STYLE` never holds (it is
+`'numbers'`/`'super'`/`'authoryear'`). The only route to number style is the
+empty-author/year fallback (L612: `$style = 'number' if IsEmpty($authors) ||
+IsEmpty($year)`). So a pre-formatted numeric `.bbl` — the `thebibliography` /
+`\bibitem` path, distinct from the `.bib` / MakeBibliography path in #116 — whose
+`\bibitem[{Name(Year)}]{key}` label carries an author AND a year keeps an
+author-year label (`Shor [1994]`) even though the inline `\cite` correctly shows
+`[N]`. SHARED-FAILURE: Perl 0.8.8 emits the identical `Shor [1994]` (numbers) /
+`Shor 1994` (super), verified same-host.
+
+**Rust behavior**: `\NAT@wrout` (`natbib_sty.rs`) forces number style whenever
+`CITE_STYLE` is `'numbers'` or `'super'` (as well as the empty author/year
+fallback), so every entry's `refnum` is the bracketed entry number `[N]` (the bare
+number in super mode, whose `CITE_OPEN`/`CLOSE` are empty) — consistent with the
+inline `[N]` cites and the published PDF. `authoryear` mode is unchanged: an entry
+with an author+year keeps `Author (Year)`, and only an empty author or year falls
+back to the number.
+
+**Why**: apsrev4-2 / `[numbers]natbib` is a numeric style; pdflatex+bibtex render
+the whole reference list as `[N]`. Matching the PDF beats a partial author-year
+list that contradicts its own inline `[N]` cites, and Perl's singular-`'number'`
+guard is the defect.
+
+**Witness**: arXiv 2410.05202 (html_feedback#4295) — `revtex4-2` / apsrev4-2, 57
+entries. Before, entries with a year (`[1]` Shor(1994), `[4]` Reiher et al.(2017))
+showed an author-year label while genuinely year-less entries (`[3]` Gidney and
+Ekerå, empty `()`) already showed `[3]`; now all 57 are `[1]`…`[57]`, matching the
+PDF.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (the singular-`'number'`
+guard mislabels every numeric-mode `.bbl` with authors+years).
+
+**Guard**: `06_cluster_bibliography::cluster_bib_natbib_bbl_numeric_refnum`
+(numbers + super go numeric; the `authoryear` control keeps `Shor (1994)`).
