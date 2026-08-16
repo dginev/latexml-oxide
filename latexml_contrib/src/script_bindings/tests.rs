@@ -656,12 +656,20 @@ fn lookup_value_on_list_returns_rhai_array() {
 /// #319: the diagnostics surface beyond `Warn`/`Error` — `Info`, the
 /// `Note`/`Progress` family (side-effecting, must load and run cleanly), and
 /// `Fatal` (must abort the script, mirroring Perl `Fatal` which dies).
+///
+/// #593: also guards the log routing. Matching Perl `Common/Error.pm`, `Note`
+/// writes to BOTH the log and stderr, `NoteLog` to the log only, and
+/// `NoteSTDERR` to stderr only — previously `NoteLog`/`NoteSTDERR` reached the
+/// log from neither (both macros wrote stderr and were level-gated off).
 #[test]
 fn diagnostics_surface_info_notes_progress_and_fatal() {
   fresh_state();
+  // Capture the log buffer to prove routing (the log write is not stderr-gated).
+  latexml_core::util::logger::bind_log();
   load_script(
     r#"
     Info("test", "obj", "an info message");
+    Note("a both note");
     NoteSTDERR("a stderr note");
     NoteLog("a log note");
     ProgressSpinup("stage");
@@ -670,6 +678,19 @@ fn diagnostics_surface_info_notes_progress_and_fatal() {
     "#,
   )
   .expect("non-fatal diagnostics must load and run cleanly");
+  let log = latexml_core::util::logger::flush_log();
+  assert!(
+    log.contains("a log note"),
+    "NoteLog did not reach the log:\n{log}"
+  );
+  assert!(
+    log.contains("a both note"),
+    "Note did not reach the log:\n{log}"
+  );
+  assert!(
+    !log.contains("a stderr note"),
+    "NoteSTDERR leaked into the log (it must be stderr only):\n{log}"
+  );
   let fatal = load_script(r#"Fatal("internal", "obj", "boom");"#);
   assert!(fatal.is_err(), "Fatal must abort the script, got {fatal:?}");
   // Clear the run tally so the raised fatal doesn't leak into sibling tests.

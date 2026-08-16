@@ -35,7 +35,7 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-101 functions, 134 calls.
+102 functions, 135 calls.
 
 | call | documentation |
 |---|---|
@@ -95,8 +95,9 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupValue(string) -> ?` | Read a value, whatever type it was stored as. ([`lookup_value`](latexml_core::state::lookup_value)) |
 | `MergeFont(map)` | Merge font attributes into the current font, group-locally. ([`merge_font`](latexml_core::binding::content::merge_font)) |
 | `NewCounter(string)`<br>`NewCounter(string, string)` | Declare a new counter. ([`new_counter`](latexml_core::binding::counter::dialect::new_counter)) |
+| `Note(string)` | Write a progress note to both the conversion log and stderr. |
 | `NoteLog(string)` | Write a progress note to the conversion log only. |
-| `NoteSTDERR(string)` | Write a progress note to stderr as well as the log. |
+| `NoteSTDERR(string)` | Write a progress note to stderr only. |
 | `ParseXML(string) -> array` | Parse a markup chunk into nodes; a bare fragment is fine. ([`parse_fragment`](latexml_core::common::xml::parse_fragment)) |
 | `PassOptions(string, string, array)` | Forward options to a package or class not yet loaded. ([`pass_options`](latexml_core::binding::content::pass_options)) |
 | `PopValue(string) -> ?` | Pop and return the last value of a value-table list, type preserved (`()` if empty). ([`pop_value`](latexml_core::state::pop_value)) |

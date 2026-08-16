@@ -481,12 +481,16 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "Note",
+    Doc::Note("Write a progress note to both the conversion log and stderr."),
+  ),
+  (
     "NoteLog",
     Doc::Note("Write a progress note to the conversion log only."),
   ),
   (
     "NoteSTDERR",
-    Doc::Note("Write a progress note to stderr as well as the log."),
+    Doc::Note("Write a progress note to stderr only."),
   ),
   (
     "ParseXML",
