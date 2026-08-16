@@ -641,6 +641,36 @@ fn cluster_biblatex_authoryear() {
     "numeric doc must not get author-year tags:\n{x}"
   );
 }
+
+/// A biblatex *style/variant* package — `biblatex-chicago` here, but the whole
+/// `biblatex-<style>` family (`-apa`/`-ieee`/`-nature`/`-science`/`-phys`/…) —
+/// must load the biblatex binding, because each such `.sty` in reality does
+/// `\RequirePackage{biblatex}` and then only configures it. Its configuration
+/// commands (`\DeclareFieldFormat`, `\DeclareFieldAlias`) run in the preamble,
+/// so if the variant name is unbound they are undefined at use, and every biber
+/// `.bbl` `\endinput`s itself at its `\@ifundefined{ver@biblatex.sty}` guard —
+/// emptying the References list outright. html_feedback #6601, witness arXiv
+/// 2605.11180 (`\usepackage[authordate,backend=biber]{biblatex-chicago}` via
+/// `biblatex-aer.tex`): 13 errors and 0 bibitems before the fix, 0 errors and a
+/// full bibliography after. Guards both halves: the preamble `\DeclareFieldFormat`
+/// does not leak/error, and the `.bbl` renders its entries.
+#[test]
+fn cluster_bib_biblatex_variant_loads_and_renders() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/chicago.tex");
+  assert!(
+    !x.contains("DeclareFieldFormat"),
+    "preamble \\DeclareFieldFormat leaked raw / errored (biblatex-chicago did not load biblatex):\n{x}"
+  );
+  assert!(
+    x.contains(r#"<bibitem key="smith2020""#),
+    "biblatex-chicago produced no References (biber .bbl guard emptied the list):\n{x}"
+  );
+  assert!(
+    x.contains("Smith"),
+    "biblatex-chicago bibitem missing its author text:\n{x}"
+  );
+}
+
 /// apacite spells its citation pre-note in ANGLE brackets:
 /// `\cite<pre-note>[post-note]{key-list}` (apacite.sty L259-311 dispatch
 /// `\@ifnextchar< {\@cite} {\@cite<>}`, L313-327 `\def\@cite<#1>`). Without that

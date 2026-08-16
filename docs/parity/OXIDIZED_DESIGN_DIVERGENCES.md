@@ -4315,6 +4315,49 @@ arXiv 2602.00643 (html_feedback#5930) — `\documentclass{revtex4-2}` +
 `cluster_bib_natbib_numeric_sorted_stays_alphabetical` +
 `cluster_bib_natbib_authoryear_stays_alphabetical` (the unsorted + numeric gates).
 
+### 117. biblatex style/variant packages load the native biblatex binding
+
+**Perl** LaTeXML ships **no** `biblatex.sty.ltxml` at all — biblatex is
+unsupported upstream. latexml-oxide's `latexml_contrib/src/biblatex_sty.rs` is a
+surpass-Perl native binding (see #62), reached when the document `\usepackage`s
+**`biblatex`** or fires the `\addbibresource`/`\printbibliography` autoload. But
+the biblatex ecosystem ships dozens of **style/variant** packages —
+`biblatex-chicago`, `biblatex-apa`, `biblatex-ieee`, `biblatex-nature`,
+`biblatex-science`, `biblatex-phys`, `biblatex-chem`, … — each of which in
+reality does `\RequirePackage{biblatex}` and then only *configures* it. Their
+configuration commands (`\DeclareFieldFormat`, `\DeclareFieldAlias`,
+`\renewbibmacro`, …) run in the **preamble**, before any `\addbibresource`. With
+no binding for the variant name, those commands were undefined the moment they
+were used, and — separately — every biber-generated `.bbl` opens with the guard
+`\@ifundefined{ver@biblatex.sty}{\@latex@error{Missing 'biblatex' package}…
+\aftergroup\endinput}{}`, so the `.bbl` `\endinput`ed itself and the **entire
+References list came out empty** (0 bibitems, a flood of preamble
+`Error:undefined:`s).
+
+**Rust behavior**: (1) `latexml_contrib::dispatch` routes any `biblatex-<style>.sty`
+name to the biblatex binding — reproducing the `\RequirePackage{biblatex}` the
+variant's real `.sty` performs. (2) The biblatex binding itself now sets
+`\ver@biblatex.sty` (mirroring biblatex.sty's own `\ProvidesPackage{biblatex}`),
+so the biber `.bbl` guard passes no matter how biblatex was loaded — including
+the variant path, where the package machinery would otherwise only set
+`\ver@biblatex-chicago.sty`. The variant's preamble customization commands
+resolve (as the biblatex binding's no-op/gobble stubs), and the `.bbl` renders
+its entries.
+
+**Why**: matching the published PDF, whose bibliography is present, beats an
+empty References list; and the variant packages genuinely reduce to
+`biblatex` + configuration, so routing them there is faithful to what the real
+`.sty` does. Perl produces nothing here, so this is purely additive.
+
+**Witness**: arXiv 2605.11180 (html_feedback #6601) —
+`\usepackage[authordate,backend=biber]{biblatex-chicago}` via a `biblatex-aer.tex`
+helper full of `\DeclareFieldFormat`/`\renewbibmacro`; biber `.bbl` format 3.3.
+Before: 13 errors, 0 bibitems. After: 0 errors, 56 rendered bibitems.
+
+**Guard**: `06_cluster_bibliography::cluster_bib_biblatex_variant_loads_and_renders`
+(`\usepackage{biblatex-chicago}` + preamble `\DeclareFieldFormat` + biber `.bbl`:
+customization does not leak/error and the References populate).
+
 ### 118. amsrefs `{bibsection}` is a bound environment
 
 **Perl** LaTeXML's `amsrefs.sty.ltxml` binds `{bibdiv}` and `{biblist}` but not
