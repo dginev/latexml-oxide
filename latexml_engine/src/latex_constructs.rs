@@ -2445,12 +2445,22 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   if let Some(cs) = lookup_value("CITE_STYLE") {
     whatsit.set_property("citestyle", cs);
   }
+  // NB: Perl's `beginBibliography` does NOT populate `#sort` here (only the
+  // `\bibstyle` DefConstructor sets the `sort` attribute, and only on a
+  // bibliography node that already exists — the bibunits path). We match that:
+  // the main `<ltx:bibliography>` carries `bibstyle`/`citestyle` but no `sort`,
+  // byte-identical to Perl. MakeBibliography derives citation-order numbering
+  // from the `bibstyle` name (html_feedback #6294), so no `sort` attribute is
+  // needed on the core node.
   // And prepare for the likely nonsense that appears within bibliographies
   ResetCounter!("enumiv");
   Ok(())
 }
 
 // Perl: $BIBSTYLES hash — maps bib style names to (citestyle, sort) pairs
+// (latex_constructs.pool.ltxml L3953-3961). `sort => 'false'` is bibtex's own
+// "leave in citation order" flag; MakeBibliography honors it (html_feedback
+// #6294) to number the References the way the `.bst` — and the PDF — do.
 fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
   match style {
     "plain" => Some(("numbers", "true")),
@@ -2461,6 +2471,13 @@ fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
     "unsrtnat" => Some(("numbers", "false")),
     "alphanat" => Some(("AY", "true")),
     "abbrvnat" => Some(("numbers", "true")),
+    // Surpass-Perl: the real `ieeetr.bst`/`IEEEtran.bst` are UNSORTED (number by
+    // first citation). Perl's base table omits them and `IEEEtran.cls.ltxml`
+    // L331 even maps `IEEEtran → sort='true'` — both alphabetize, contradicting
+    // the `.bst` and the published PDF. Map them to citation order to match the
+    // ground-truth PDF (witness arXiv 2510.05438). See OXIDIZED_DESIGN.
+    "ieeetr" => Some(("numbers", "false")),
+    "IEEEtran" => Some(("numbers", "false")),
     _ => None,
   }
 }

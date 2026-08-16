@@ -4227,3 +4227,54 @@ its `± unc`. Rust `\widthof{WWWW}` now measures 41.1pt (real LaTeX: 41.1112pt).
 **Guards**: `cluster_sizing::widthof_in_base_dimension_reader::widthof_resolves_in_makebox_and_rule_length_arguments`
 — `\makebox[\widthof{WWWW}]` and `\rule{\widthof{WWWW}}{…}` widths are nonzero and agree with the
 calc-routed `\setlength\reflen{\widthof{WWWW}}` reference.
+
+### 116. Unsorted bibliography styles number the References in citation order, not alphabetically
+
+**Perl** LaTeXML's `MakeBibliography.pm` **always** `unisort`s the cited entries
+(`getBibEntries` L357, `makeBibliographyList` L398) and assigns `[N]` in that
+alphabetical order (`++$NUMBER`, L418) — regardless of the `\bibliographystyle`.
+It reads the style's `sort` flag into `%STYLE` (L57) but never uses it, and even
+maps `IEEEtran → sort='true'` (`IEEEtran.cls.ltxml` L331). So a paper with
+`\bibliographystyle{unsrt}`/`{ieeetr}`/`{IEEEtran}` — whose `.bst` is UNSORTED —
+gets an alphabetized list, mismatching the published PDF. latexml-oxide
+reproduced this exactly (SHARED-FAILURE: both engines alphabetize where
+pdflatex+bibtex number by first citation).
+
+**Perl behavior**: every `\bibliographystyle` alphabetizes the References; the
+inline `[N]` cites index that alphabetical list. **Rust behavior**: for an
+UNSORTED style (bibtex's `sort='false'`: `unsrt`, `unsrtnat`, `ieeetr`,
+`IEEEtran`) MakeBibliography numbers the entries by **first citation appearance**
+— the document order of the inline `<ltx:bibref>`s (`citation_order`,
+`make_bibliography.rs`), which is exactly bibtex's `\citation`-record order. The
+list is then rendered in that same numbered order (the biblist follows
+`entry.number`, not a second `unisort`). SORTED styles (`plain`, `alpha`, `abbrv`,
+plainnat/…, and any unknown style) are unchanged — still alphabetical, identical
+to Perl. Detection is from the `bibstyle` attribute name (plus an explicit
+`sort='false'`, e.g. the bibunits `\bibstyle` path); the core `<ltx:bibliography>`
+carries no new attribute, so engine output stays byte-identical to Perl. The
+engine's `lookup_bibstyle_params` also gains `ieeetr`/`IEEEtran` → `numbers`,
+`false` (Perl's base table omits them and its class binding alphabetizes IEEEtran)
+so the real IEEE `.bst` behavior is matched.
+
+**Why**: bibtex's own guarantee is that an unsorted `.bst` leaves the References
+in citation order; IEEE figure captions bake in "[2], [3], [4]" that depend on it.
+Matching pdflatex+bibtex is the ground truth (html_feedback #6294 asked for
+exactly this), and Perl's alphabetization is the defect.
+
+**Residual** (shared with Perl, out of scope): `\nocite{key}` is deferred to
+end-of-document in both engines (`\nocite`→`@at@end@document`), so a mid-document
+`\nocite`'d entry lands after the cited ones rather than at bibtex's `\nocite`
+position; and `\nocite{*}` entries (no citation position) fall to the end in
+`unisort` order rather than `.bib`-file order. The reported `\cite`-order case is
+exact.
+
+**Witnesses**: arXiv 2510.05438 (html_feedback#6294) — `\documentclass{IEEEtran}`,
+`\bibliographystyle{IEEEtran}`, `\bibliography{…}`, 17 entries; oxide's numbered
+order now equals the pdflatex+bibtex `.bbl` order key-for-key (Wu2021=[1] … Shi2011=[17]).
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same alphabetize-everything gap).
+
+**Guards**: `06_cluster_bibliography::cluster_bib_unsrt_citation_order`
+(unsrt + IEEEtran number gamma/alpha/beta by citation order),
+`cluster_bib_plain_stays_alphabetical` (sorted styles unchanged),
+`cluster_bib_bibstyle_is_known_numeric` (engine maps IEEEtran → numeric).

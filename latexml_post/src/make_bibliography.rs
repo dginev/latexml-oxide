@@ -872,12 +872,16 @@ impl MakeBibliography {
       format!("{}.L1", bib_id)
     };
 
-    // Perl L398 `$doc->unisort(keys %$entries)`.
-    let mut sorted_keys: Vec<String> = entries.keys().cloned().collect();
-    unisort(&mut sorted_keys);
-    let items: Vec<NodeData> = sorted_keys
+    // Order the rendered list by the number already assigned in `process`. Perl
+    // re-`unisort`s here (L398), but the number was likewise assigned in
+    // `unisort` order, so for a sorted style the result is identical; for a
+    // citation-order style (`sort='false'`, html_feedback #6294) the number
+    // carries the citation order and the list must follow it, not re-alphabetize.
+    // Keying on the number makes "list order == numbering order" an invariant.
+    let mut ordered: Vec<&BibEntryData> = entries.values().collect();
+    ordered.sort_by_key(|e| e.number);
+    let items: Vec<NodeData> = ordered
       .iter()
-      .filter_map(|key| entries.get(key))
       .map(|entry| self.format_bib_entry(doc, bib_id, entry, style))
       .collect();
 
@@ -1586,6 +1590,22 @@ impl Processor for MakeBibliography {
       // the walk it counts.
       let mut number = 0u32;
 
+      // Citation-order numbering for an UNSORTED style: the References are
+      // numbered by first citation, not alphabetically — matching the `.bst` and
+      // the published PDF (html_feedback #6294). Perl always `unisort`s (it reads
+      // the sort flag into `%STYLE` but ignores it), so this is a deliberate
+      // surpass-Perl. Detected from the `bibstyle` NAME — the reliable signal on
+      // the main node (Perl's `beginBibliography` never emits `sort`) — plus an
+      // explicit `sort='false'` for the bibunits `\bibstyle` path / external XML.
+      // Only the non-split walk uses it; `--splitbibliography` is inherently
+      // initial-major (alphabetical) and never combines with it.
+      let citation_ordered = bib.get_attribute("sort").as_deref() == Some("false")
+        || bib
+          .get_attribute("bibstyle")
+          .as_deref()
+          .is_some_and(is_citation_order_style);
+      let cite_order = citation_ordered.then(|| citation_order(&doc));
+
       if self.split {
         // Split by initial letter
         let mut by_initial: HashMap<String, Vec<String>> = HashMap::default();
@@ -1625,8 +1645,7 @@ impl Processor for MakeBibliography {
           doc.add_nodes(&mut bib_mut, &[biblist]);
         }
       } else {
-        let mut sorted_keys: Vec<String> = entries.keys().cloned().collect();
-        unisort(&mut sorted_keys);
+        let sorted_keys = order_entry_keys(&entries, cite_order.as_ref());
         for key in &sorted_keys {
           debug_assert!(entries.contains_key(key), "sorted key {key} left entries");
           if let Some(entry) = entries.get_mut(key) {
@@ -2949,6 +2968,83 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
 /// map.
 fn unisort(keys: &mut [String]) {
   keys.sort_by_cached_key(|k| (collation_primary_key(k), k.clone()));
+}
+
+/// Whether a `\bibliographystyle` produces an UNSORTED (citation-order)
+/// bibliography — bibtex's `sort='false'` styles. Kept in sync with the
+/// engine's `lookup_bibstyle_params` (`latex_constructs.rs`): the two live in
+/// different crates, but both encode the same small, stable bibtex fact.
+/// `unsrt`/`unsrtnat` are the base-table unsorted styles; `ieeetr`/`IEEEtran`
+/// are the surpass-Perl additions matching the real IEEE `.bst` + PDF.
+fn is_citation_order_style(bibstyle: &str) -> bool {
+  matches!(bibstyle, "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran")
+}
+
+/// First-citation order of bib keys (lowercased) → 0-based rank, read from the
+/// document's inline `<ltx:bibref>`s in reading order.
+///
+/// This is bibtex's `\citation`-record order for `\cite`: an UNSORTED `.bst`
+/// (`unsrt`/`unsrtnat`/`ieeetr`/`IEEEtran`) numbers the References by it. bibrefs
+/// INSIDE the bibliography (a `\bibitem` crossref, the "Cited by" back-links)
+/// are excluded via `not(ancestor::ltx:bibliography)` so only real in-text
+/// citations count. Verified key-for-key against pdflatex+bibtex on witness
+/// arXiv 2510.05438.
+///
+/// `\nocite` emits its bibref too, but BOTH engines defer it to end-of-document
+/// (`\nocite`→`@at@end@document`), so a mid-document `\nocite` ranks after the
+/// cited entries rather than at bibtex's `\nocite` position — a documented
+/// shared-Perl residual (OXIDIZED_DESIGN #116), not exact bibtex parity.
+fn citation_order(doc: &PostDocument) -> HashMap<String, usize> {
+  let mut order: HashMap<String, usize> = HashMap::default();
+  let mut next = 0usize;
+  for node in doc.findnodes("//ltx:bibref[not(ancestor::ltx:bibliography)]") {
+    let Some(refs) = node.get_attribute("bibrefs") else {
+      continue;
+    };
+    for key in refs.split(',') {
+      let k = key.trim().to_lowercase();
+      if k.is_empty() {
+        continue;
+      }
+      order.entry(k).or_insert_with(|| {
+        let i = next;
+        next += 1;
+        i
+      });
+    }
+  }
+  order
+}
+
+/// The order to number entries in. With `cite_order = Some(..)` (a `sort='false'`
+/// style) cited entries come first in first-citation order, and any entry not
+/// directly cited — pulled in transitively (a crossref) or via `\nocite{*}` —
+/// falls to the end in the usual `unisort` (alphabetical) order, since it has no
+/// citation position. Otherwise plain `unisort` (Perl's always-alphabetical).
+fn order_entry_keys(
+  entries: &HashMap<String, BibEntryData>,
+  cite_order: Option<&HashMap<String, usize>>,
+) -> Vec<String> {
+  match cite_order {
+    Some(order) => {
+      let mut cited: Vec<(usize, String)> = Vec::new();
+      let mut uncited: Vec<String> = Vec::new();
+      for (sort_key, entry) in entries {
+        match order.get(&entry.bib_key.to_lowercase()) {
+          Some(&idx) => cited.push((idx, sort_key.clone())),
+          None => uncited.push(sort_key.clone()),
+        }
+      }
+      cited.sort_by_key(|(idx, _)| *idx);
+      unisort(&mut uncited);
+      cited.into_iter().map(|(_, k)| k).chain(uncited).collect()
+    },
+    None => {
+      let mut keys: Vec<String> = entries.keys().cloned().collect();
+      unisort(&mut keys);
+      keys
+    },
+  }
 }
 
 /// The primary-level collation weight of a sort-key: NFD, combining marks

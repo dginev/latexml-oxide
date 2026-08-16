@@ -2090,11 +2090,16 @@ fn cluster_biblatex_declaresourcemap_is_a_noop() {
 // into the CrossRef DB. Expand this cluster with a new fixture per distinct
 // reproducer.
 //
+// Reference numbering ORDER for citation-order styles (`unsrt`/`IEEEtran`,
+// #6294/#5930) is a sibling cluster guarded just below
+// (`cluster_bib_*_citation_order`): those styles number by first-citation
+// appearance, not alphabetically — a deliberate surpass-Perl (Perl always
+// alphabetizes, OXIDIZED_DESIGN divergence).
+//
 // NOT this cluster (distinct root causes, separate work): raw citekeys leaking
 // from an un-emulated cite command (#6203/#6355/#6549/#6050), genuine
 // non-resolution `?`/`[undef]` (#6489/#6601/#6222), a missing/empty References
-// list (#6432/#6288/#6179), and reference numbering ORDER (#6294/#5930 — a
-// shared-with-Perl alphabetical-vs-citation-order gap).
+// list (#6432/#6288/#6179).
 // ===========================================================================
 
 /// Tag-stripped text of each inline `<ltx:cite>` in post XML.
@@ -2281,5 +2286,150 @@ fn cluster_bib_revtex4_author_year_option_is_honored() {
   assert!(
     core.contains(r#"citestyle="authoryear""#),
     "\\documentclass[author-year]{{revtex4-1}} must render author-year:\n{core}"
+  );
+}
+
+// ===========================================================================
+// Citation-ORDER numbering for unsorted bibliography styles (html_feedback
+// #6294, IEEE `\bibliographystyle{IEEEtran}`; sibling #5930).
+//
+// bibtex's own guarantee: an UNSORTED `.bst` (`unsrt`, `unsrtnat`, `ieeetr`,
+// `IEEEtran`) numbers the References in the order entries are first cited, NOT
+// alphabetically. LaTeXML's MakeBibliography always `unisort`s — so a paper
+// whose figure captions hard-code "[2], [3], [4]" (baked into the PDF) gets a
+// mismatched, alphabetized list. Both Perl AND oxide alphabetize here, so this
+// is a deliberate surpass-Perl: oxide honors the `sort='false'` flag
+// (OXIDIZED_DESIGN divergence). Perl even maps `IEEEtran`→`sort='true'`
+// (IEEEtran.cls.ltxml L331), itself unfaithful to `IEEEtran.bst`; oxide maps
+// `IEEEtran`/`ieeetr`→`sort='false'` to match the real `.bst` and the PDF.
+//
+// Witness arXiv 2510.05438 (`\documentclass{IEEEtran}`,
+// `\bibliographystyle{IEEEtran}`, `\bibliography{...}`, 17 entries).
+// ===========================================================================
+
+/// `(refnum, key)` of each reference-list `<bibitem>`, in list order, from
+/// post-processed ltx XML — enough to prove WHICH bib key received `[1]`.
+fn reference_list_order(xml: &str) -> Vec<(u32, String)> {
+  let mut out = Vec::new();
+  let mut rest = xml;
+  while let Some(s) = rest.find("<bibitem") {
+    let after = &rest[s..];
+    let end = after.find("</bibitem>").unwrap_or(after.len());
+    let seg = &after[..end];
+    let key = seg
+      .find("key=\"")
+      .map(|i| {
+        let tail = &seg[i + "key=\"".len()..];
+        tail[..tail.find('"').unwrap_or(tail.len())].to_string()
+      })
+      .unwrap_or_default();
+    // Content of the `role="refnum"` tag (the `>` after `role="refnum"` closes
+    // the opening `<tag …>`; attributes never contain `>`, so this is robust to
+    // attribute order).
+    let refnum = seg
+      .find("role=\"refnum\"")
+      .and_then(|i| seg[i..].find('>').map(|j| &seg[i + j + 1..]))
+      .and_then(|tail| tail.find('<').map(|k| &tail[..k]))
+      .and_then(numeric_label);
+    if let Some(n) = refnum {
+      out.push((n, key));
+    }
+    rest = &after[end..];
+  }
+  out
+}
+
+/// html_feedback #6294 — `\bibliographystyle{unsrt}` and `{IEEEtran}` number the
+/// References list by CITATION ORDER, and the inline `[N]` cites index that
+/// order. Body cites in the order gamma, alpha, beta, so the fixed list is
+/// gamma=[1], alpha=[2], beta=[3] (alphabetical would be alpha/beta/gamma).
+#[test]
+fn cluster_bib_unsrt_citation_order() {
+  for tex in ["cite_order_unsrt.tex", "cite_order_ieeetran.tex"] {
+    let x = convert_and_post_clean(&format!("tests/cluster_regressions/{tex}"));
+    // Inline cites in reading order (gamma, alpha, beta) read [1], [2], [3].
+    let nums: Vec<u32> = inline_cite_texts(&x)
+      .iter()
+      .filter_map(|c| numeric_label(c))
+      .collect();
+    assert_eq!(
+      nums,
+      vec![1, 2, 3],
+      "{tex}: inline citations must follow citation order (gamma=1, alpha=2, \
+       beta=3), got {nums:?}\n{x}"
+    );
+    // The References list itself is ordered gamma, alpha, beta — the first-cited
+    // entry (Gamma) is [1] and appears first.
+    let order = reference_list_order(&x);
+    assert_eq!(
+      order.len(),
+      3,
+      "{tex}: expected 3 reference entries, got {order:?}\n{x}"
+    );
+    assert_eq!(
+      order,
+      vec![
+        (1, "gamma".to_string()),
+        (2, "alpha".to_string()),
+        (3, "beta".to_string()),
+      ],
+      "{tex}: the References list must be numbered by citation order \
+       (gamma=[1], alpha=[2], beta=[3]), got {order:?}\n{x}"
+    );
+  }
+}
+
+/// The engine half of the fix: `\bibliographystyle{IEEEtran}` (and `{unsrt}`)
+/// reach the core `<ltx:bibliography>` as `bibstyle="…"` + `citestyle="numbers"`
+/// — the signals the post-processor keys on. `IEEEtran` in particular must be
+/// KNOWN (it maps to numeric+unsorted); before the fix it was an "unknown
+/// bibstyle". Core output carries no `sort` attribute (byte-identical to Perl,
+/// which never emits it on the main node — the post derives order from bibstyle).
+#[test]
+fn cluster_bib_bibstyle_is_known_numeric() {
+  for (tex, bibstyle) in [
+    ("cite_order_unsrt.tex", "unsrt"),
+    ("cite_order_ieeetran.tex", "IEEEtran"),
+    ("cite_order_plain.tex", "plain"),
+  ] {
+    let core = convert_to_xml(&format!("tests/cluster_regressions/{tex}"));
+    assert!(
+      core.contains(&format!(r#"bibstyle="{bibstyle}""#)),
+      "{tex}: expected bibstyle=\"{bibstyle}\" on ltx:bibliography:\n{core}"
+    );
+    assert!(
+      core.contains(r#"citestyle="numbers""#),
+      "{tex}: expected citestyle=\"numbers\":\n{core}"
+    );
+  }
+}
+
+/// Control: a SORTED style (`plain`) must stay ALPHABETICAL — the citation-order
+/// path must not leak into the default. Body cites gamma, alpha, beta, so the
+/// list stays alpha=[1], beta=[2], gamma=[3] and the inline cites read
+/// [3], [1], [2].
+#[test]
+fn cluster_bib_plain_stays_alphabetical() {
+  let x = convert_and_post_clean("tests/cluster_regressions/cite_order_plain.tex");
+  let nums: Vec<u32> = inline_cite_texts(&x)
+    .iter()
+    .filter_map(|c| numeric_label(c))
+    .collect();
+  assert_eq!(
+    nums,
+    vec![3, 1, 2],
+    "plain must stay alphabetical (alpha=1, beta=2, gamma=3), so inline cites \
+     gamma/alpha/beta read [3],[1],[2], got {nums:?}\n{x}"
+  );
+  let order = reference_list_order(&x);
+  assert_eq!(
+    order,
+    vec![
+      (1, "alpha".to_string()),
+      (2, "beta".to_string()),
+      (3, "gamma".to_string()),
+    ],
+    "plain: the References list must stay ALPHABETICAL (alpha=[1], beta=[2], \
+     gamma=[3]), got {order:?}\n{x}"
   );
 }
