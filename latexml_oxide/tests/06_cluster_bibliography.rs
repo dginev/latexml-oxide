@@ -820,6 +820,40 @@ fn amsrefs_bibsection_environment_renders() {
     );
   }
 }
+
+/// apacite's OLD `.bbl` format (pre-2012 apacite.bst) labels each `\bibitem` with
+/// `\BCAY{full}{short}{year}` and formats entries with `\Bem` (emphasis) and
+/// `\BBACOMMA`. The modern format (`\citeauthoryear` + `\APACrefauthors`) already
+/// converts; these old compat macros were undefined, so a `theapa`/apacite `.bbl`
+/// flooded `Error:undefined:\BCAY`/`\Bem`/`\BBACOMMA` and leaked the macro names.
+/// apacite_sty now defines them (`\Bem`=`\emph`, `\BCAY`→author label,
+/// `\BBACOMMA`=","). Perl ships no apacite binding — Rust surpasses. Related
+/// html_feedback#6489 (arXiv 2304.11127, multibib+theapa). The `_clean` helper
+/// gates on 0 post-stage errors — the primary red→green signal.
+#[test]
+fn cluster_apacite_old_bbl_format_renders() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/apacite_old_bbl.tex");
+  // No old-format macro leaks into the rendered bibliography as raw text.
+  for leak in ["BCAY", "\\Bem", "BBACOMMA"] {
+    assert!(
+      !x.contains(leak),
+      "apacite old-format macro `{leak}` leaked into the output:\n{x}"
+    );
+  }
+  // Entries render their real content (authors, title, journal, year).
+  for needle in [
+    "Smith",
+    "Doe",
+    "A study of things",
+    "Journal of Testing",
+    "2020",
+  ] {
+    assert!(
+      x.contains(needle),
+      "apacite bibitem content `{needle}` missing:\n{x}"
+    );
+  }
+}
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —
 /// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
 /// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the

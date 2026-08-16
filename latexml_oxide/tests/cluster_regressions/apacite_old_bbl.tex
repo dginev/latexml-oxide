@@ -1,0 +1,17 @@
+\documentclass{article}
+\usepackage{apacite}
+\bibliographystyle{apacite}
+% Old-format apacite .bbl (pre-2012 apacite.bst): the \bibitem label uses
+% \BCAY{full}{short}{year} and the entries use \Bem (emphasis) + \BBACOMMA. The
+% modern format (\citeauthoryear + \APACrefauthors) already works; this pins the
+% old compat macros. Perl ships no apacite binding — Rust surpasses.
+% Related: html_feedback#6489 / arXiv 2304.11127 (theapa .bbl, \BCAY/\Bem flood).
+\begin{document}
+Full \cite{smith2020}, textual \citeA{aitchison1976}, short \shortcite{smith2020}.
+\begin{thebibliography}{}
+\bibitem[\protect\BCAY{Smith}{Smith}{2020}]{smith2020}
+Smith, J.\BBACOMMA\ \BBA\ Doe, J. \BBOP 2020\BBCP. \BBOQ A study of things\BBCQ. {\Bem Journal of Testing}, {\Bem 12}, 1\BHBI 20.
+\bibitem[\protect\BCAY{Aitchison}{Aitchison}{1976}]{aitchison1976}
+Aitchison, J. \BBOP 1976\BBCP. {\Bem Multivariate analysis}.
+\end{thebibliography}
+\end{document}

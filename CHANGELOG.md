@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+  - **apacite's old `.bbl` format renders.** apacite's pre-2012 bibliography
+    format labels each `\bibitem` with `\BCAY{full}{short}{year}` and formats
+    entries with `\Bem`/`\BBACOMMA` — macros the binding did not define, so a
+    `theapa`/apacite `.bbl` flooded `Error:undefined:` and leaked the macro names
+    into the References. They are now defined (`\Bem`=`\emph`, `\BCAY`→author
+    label, `\BBACOMMA`=","), so old-format apacite bibliographies convert cleanly
+    (the modern `\citeauthoryear` format already worked). Related
+    arXiv/html_feedback#6489.
   - **A `\ref` to a `\nonumber` eqnarray row shows the equation number, not the
     paper title.** A `\label` right after `\begin{eqnarray}` whose first row is
     `\nonumber` bound to that unnumbered row; `\ref` found no number there and fell
