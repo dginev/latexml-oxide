@@ -1,0 +1,17 @@
+% Control for natbib_bbl_numeric_refnum.tex: the SAME `.bbl` entries under
+% `[authoryear]natbib` must KEEP their author-year reference-list labels
+% (`Shor (1994)`). Guards that the numeric surpass-Perl fix in \NAT@wrout is
+% scoped to numeric/super modes and does not flatten author-year mode. The
+% empty-year entry still falls back to a number in both modes.
+\documentclass{article}
+\usepackage[authoryear]{natbib}
+\begin{document}
+Cite: \cite{shor_1994,gidney_2021}.
+\begin{thebibliography}{9}
+\providecommand\citenamefont[1]{#1}
+\bibitem[{\citenamefont{Shor}(1994)}]{shor_1994}
+  P.~Shor, Polynomial-time algorithms.
+\bibitem[{\citenamefont{Gidney}\ and\ \citenamefont{Ekera}()}]{gidney_2021}
+  C.~Gidney and M.~Ekera, How to factor.
+\end{thebibliography}
+\end{document}

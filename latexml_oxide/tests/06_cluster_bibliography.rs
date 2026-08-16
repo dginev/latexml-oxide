@@ -2382,6 +2382,76 @@ fn cluster_bib_revtex4_author_year_option_is_honored() {
   );
 }
 
+/// The `<tag role="refnum">` of the reference-list `<bibitem>` carrying the given
+/// `key`, from core XML.
+fn bbl_refnum(xml: &str, key: &str) -> String {
+  let needle = format!("key=\"{key}\"");
+  for chunk in xml.split("<bibitem").skip(1) {
+    if !chunk[..chunk.find('>').unwrap_or(chunk.len())].contains(&needle) {
+      continue;
+    }
+    let entry = &chunk[..chunk.find("</bibitem>").unwrap_or(chunk.len())];
+    let open = entry
+      .find(r#"<tag role="refnum">"#)
+      .unwrap_or_else(|| panic!("no refnum tag for {key}:\n{entry}"))
+      + r#"<tag role="refnum">"#.len();
+    let close = entry[open..].find("</tag>").unwrap() + open;
+    return entry[open..close].to_string();
+  }
+  panic!("no bibitem with key {key}:\n{xml}");
+}
+
+/// html_feedback#4295 (arXiv:2410.05202, revtex4-2 / apsrev4-2 numeric): a
+/// numeric-mode natbib `.bbl` (the pre-formatted `thebibliography` path, NOT the
+/// `.bib`/MakeBibliography path guarded by `cluster_bib_revtex4_family_numeric_by_default`)
+/// must label its References with the entry NUMBER `[N]` — matching the inline
+/// `[N]` cites and pdflatex+bibtex — even for entries whose `\bibitem[{Name(Year)}]`
+/// label carries an author AND a year.
+///
+/// SURPASS-PERL (OXIDIZED_DESIGN #121): Perl's `\NAT@wrout` (`natbib.sty.ltxml`
+/// L612-613) only forces number style on an EMPTY author/year — its `$style eq
+/// 'number'` guard never matches the plural `CITE_STYLE` `'numbers'`/`'super'` —
+/// so a numeric `.bbl` entry with a year keeps an author-year label. Verified
+/// same-host: Perl 0.8.8 emits `Shor [1994]` (numbers) / `Shor 1994` (super)
+/// identically, so matching the PDF is a deliberate divergence. The empty-year
+/// entry already numbered `[N]` in both engines (KNOWN_PERL_ERRORS #86 neighbour).
+#[test]
+fn cluster_bib_natbib_bbl_numeric_refnum() {
+  // numbers mode: BOTH entries are the bracketed entry number, never author-year.
+  let x = convert_to_xml("tests/cluster_regressions/natbib_bbl_numeric_refnum.tex");
+  assert_eq!(
+    bbl_refnum(&x, "shor_1994"),
+    "[1]",
+    "numbers-mode .bbl refnum must be the entry number, not an author-year label:\n{x}"
+  );
+  assert_eq!(
+    bbl_refnum(&x, "gidney_2021"),
+    "[2]",
+    "empty-year numbers-mode entry stays the entry number:\n{x}"
+  );
+
+  // super mode: bare number (empty CITE_OPEN/CLOSE), never `Shor 1994`.
+  let x = convert_to_xml("tests/cluster_regressions/natbib_bbl_super_refnum.tex");
+  assert_eq!(
+    bbl_refnum(&x, "shor_1994"),
+    "1",
+    "super-mode .bbl refnum must be the bare entry number:\n{x}"
+  );
+
+  // Control: author-year mode KEEPS the author-year label (fix is scoped).
+  let x = convert_to_xml("tests/cluster_regressions/natbib_bbl_authoryear_refnum.tex");
+  assert_eq!(
+    bbl_refnum(&x, "shor_1994"),
+    "Shor (1994)",
+    "author-year mode must keep its author-year label:\n{x}"
+  );
+  assert_eq!(
+    bbl_refnum(&x, "gidney_2021"),
+    "(2)",
+    "author-year mode empty-year entry falls back to the number:\n{x}"
+  );
+}
+
 // ===========================================================================
 // Citation-ORDER numbering for unsorted bibliography styles (html_feedback
 // #6294, IEEE `\bibliographystyle{IEEEtran}`; sibling #5930).

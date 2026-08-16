@@ -1,0 +1,19 @@
+% html_feedback#4295 (arXiv:2410.05202, revtex4-2 / apsrev4-2): a numeric-mode
+% natbib `.bbl` (pre-formatted `thebibliography`, not the `.bib`/MakeBibliography
+% path) whose `\bibitem[{Name(Year)}]{key}` labels carry BOTH author and year.
+% pdflatex+bibtex render the whole numeric reference list as `[N]`; LaTeXML's
+% \NAT@wrout only forced number style on an EMPTY author/year, so an entry WITH a
+% year kept an author-year label — inconsistent with the [N] inline cites and the
+% PDF. `[numbers]natbib` reproduces it without revtex.
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Cite: \cite{shor_1994,gidney_2021}.
+\begin{thebibliography}{9}
+\providecommand\citenamefont[1]{#1}
+\bibitem[{\citenamefont{Shor}(1994)}]{shor_1994}
+  P.~Shor, Polynomial-time algorithms.
+\bibitem[{\citenamefont{Gidney}\ and\ \citenamefont{Ekera}()}]{gidney_2021}
+  C.~Gidney and M.~Ekera, How to factor.
+\end{thebibliography}
+\end{document}
