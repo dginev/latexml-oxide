@@ -1150,6 +1150,23 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
 
   // Handle empty tokens
   if text.is_empty() {
+    // arXiv/html_feedback#970 (paper 2312.06275): a siunitx unit declared with an
+    // empty symbol — `\DeclareSIUnit{\nothing}{\relax}` — reaches here with empty
+    // content but `meaning`=<unit name>. The general fallback below turns that
+    // into a visible `<m:mi>nothing</m:mi>` (Perl renders the same, in red —
+    // SHARED-FAILURE). A unit whose symbol produces nothing must render
+    // INVISIBLY: emit an empty `<m:mphantom>` — the same invisible placeholder
+    // used for `absent` above — never the unit name. OXIDIZED_DESIGN #114.
+    if node
+      .get_attribute("class")
+      .is_some_and(|c| c.split_whitespace().any(|w| w == "ltx_unit"))
+    {
+      return NodeData::Element {
+        tag:        "m:mphantom".to_string(),
+        attributes: None,
+        children:   vec![],
+      };
+    }
     if let Some(default) = default_token_content(&role) {
       text = default.to_string();
     } else {

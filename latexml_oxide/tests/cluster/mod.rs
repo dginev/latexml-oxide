@@ -144,6 +144,50 @@ pub fn convert_and_post_contrib_clean(source: &str) -> String {
   out
 }
 
+/// Like [`convert_and_post_clean`] but with presentation-MathML ENABLED, so a
+/// test can assert on the generated `<m:mi>`/`<m:mo>`/… (the pmml stage the
+/// bibliography-focused `post_with` disables by default). Gates on 0 POST errors.
+pub fn convert_and_post_pmml_clean(source: &str) -> String {
+  let xml = convert_to_xml(source);
+  latexml_core::util::logger::bind_log();
+  let opts = latexml::post::PostOptions {
+    pmml:                      true,
+    cmml:                      false,
+    keep_xmath:                false,
+    stylesheet:                None,
+    destination:               None,
+    source_directory:          Some("tests/cluster_regressions"),
+    site_directory:            None,
+    search_paths:              &[],
+    nodefaultresources:        true,
+    css_files:                 &[],
+    js_files:                  &[],
+    noinvisibletimes:          false,
+    plane1:                    true,
+    hackplane1:                false,
+    mathtex:                   false,
+    navigationtoc:             None,
+    schemadocs:                false,
+    split:                     false,
+    split_xpath:               None,
+    split_naming:              None,
+    xslt_parameters:           &[],
+    graphics_svg_threshold_kb: 0,
+    graphicimages:             false,
+    timestamp:                 None,
+    icon:                      None,
+    whatsout:                  latexml_post::extract::Whatsout::default(),
+  };
+  let out = latexml::post::run_post_processing(&xml, &opts);
+  let log = latexml_core::util::logger::flush_log();
+  let n = latexml::util::test::error_count(&log);
+  assert_eq!(
+    n, 0,
+    "{source}: POST(pmml) stage logged {n} Error:<class>: markers\n{log}"
+  );
+  out
+}
+
 /// the upstream LaTeXML#2316 / arXiv-fork behavior where frontmatter
 /// (abstract/acknowledgements/bibliography) joins the navigation TOC.
 /// Like [`convert_and_post`], but returns the ANSI-free POST-stage log

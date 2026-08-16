@@ -3410,3 +3410,15 @@ Perl-origin (Perl never fires `\everyjob`). Rust **surpasses** (OXIDIZED_DESIGN 
 `\__kernel_sys_everyjob:` at `LoadFormat('latex')` completion, faithfully emulating TeX's
 job-start `\everyjob` (tex.web §1030), so the family is defined with live values before the
 preamble. Guard: `06_cluster_regressions::cluster_everyjob_defines_l3sys_shell`.
+
+## 82. Empty-symbol siunitx unit renders as the word "nothing" (Rust surpasses)
+
+A siunitx unit declared with an empty symbol — `\DeclareSIUnit{\nothing}{\relax}`
+(arXiv/html_feedback#970, paper 2312.06275) — produces a math token with EMPTY content but
+`meaning="nothing"`. Perl `MathML.pm` `stylizeContent` falls back to the `meaning` attribute for
+empty content, so the presentation MathML is a VISIBLE `<m:mi>nothing</m:mi>` (painted red as a
+suspected error) — the literal word "nothing" appears next to every `\SI{…}{\nothing}` number,
+where the author meant no unit at all. Same-host Perl is byte-identical (SHARED-FAILURE),
+Perl-origin, unreported upstream. Rust **surpasses** (OXIDIZED_DESIGN #114): an empty
+`class="ltx_unit"` token renders as an invisible `<m:mphantom>`, never its `meaning`. Guard:
+`06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`.
