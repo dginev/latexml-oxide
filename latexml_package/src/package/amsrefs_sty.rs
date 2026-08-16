@@ -79,6 +79,33 @@ LoadDefinitions!({
       Let!("\\par", "\\relax");
     });
 
+  // {bibsection}[heading] — real amsrefs.sty L1251. amsrefs defines `bibdiv`
+  // AS `bibsection` in article mode (`\newenvironment{bibdiv}{\bibsection}
+  // {\endbibsection}`, L1265): `bibsection` is the section-heading wrapper
+  // around `{biblist}`, its optional arg the heading (default `\refname`).
+  // Perl amsrefs.sty.ltxml binds only `bibdiv`/`biblist`, so a paper that opens
+  // its references with `\begin{bibsection}` directly hit `Environment
+  // {bibsection} is not defined` and lost the whole References list (the
+  // `<ltx:biblist>` then floated in an `<ltx:p>`). Shared gap with Perl; this is
+  // a faithful port of the real `.sty`. Same `<ltx:bibliography>` container and
+  // hooks as `bibdiv`; the optional arg is the title (begin_bibliography_clean
+  // also defaults an absent title to `\refname`, matching `[\refname]`).
+  // html_feedback #1393, witness arXiv 2405.18501 (`\documentclass{amsart}`,
+  // `\usepackage[numeric]{amsrefs}`, 6 `\bib` entries).
+  DefEnvironment!("{bibsection}[Default:\\refname]",
+    "<ltx:bibliography xml:id='#id' \
+     bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+     <ltx:title font='#titlefont' _force_font='true'>#1</ltx:title>\
+     #body\
+     </ltx:bibliography>",
+    before_digest => {
+      engine::latex_constructs::before_digest_bibliography()?;
+    },
+    after_digest_begin => sub[whatsit] {
+      engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+      Let!("\\par", "\\relax");
+    });
+
   // {biblist} environment
   DefEnvironment!("{biblist}", "<ltx:biblist>#body</ltx:biblist>");
 
