@@ -1,0 +1,11 @@
+\documentclass{article}
+\usepackage{calc}
+\newlength\reflen
+\begin{document}
+% Reference: the calc-routed \widthof path (\setlength) has always worked.
+\setlength\reflen{\widthof{WWWW}}REF \the\reflen\ ENDREF
+% The FIX (OXIDIZED_DESIGN #115): \widthof resolves in the BASE dimension reader
+% too, so \rule{\widthof{…}} and \makebox[\widthof{…}] get the true width, not 0.
+\par\rule{\widthof{WWWW}}{2pt}
+\par X\makebox[\widthof{WWWW}][r]{ab}Y
+\end{document}
