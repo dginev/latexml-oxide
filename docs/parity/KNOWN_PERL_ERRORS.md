@@ -3448,3 +3448,28 @@ issue #347 into #354. Rust **surpasses** (OXIDIZED_DESIGN #119): `process_index_
 a `\verb<D>body<D>` run atomically before the `!`/`@`/`|` split can see the delimiter, and emits
 `\@internal@text@verb`, so the body renders as `<verbatim font="typewriter">`. Guard:
 `06_cluster_regressions::cluster_verb_in_index_renders_typewriter`.
+
+## 84. `\ref` to a `\label` on a `\nonumber` eqnarray row renders the document title (Rust surpasses)
+
+A `\label` placed right after `\begin{eqnarray}` whose first row is `\nonumber`:
+
+```latex
+\begin{eqnarray}\label{eqx}
+&& a = b \nonumber\\
+&& c = d
+\end{eqnarray}
+\ref{eqx}   % pdflatex: "1"
+```
+
+pdflatex steps the `equation` counter once at `\begin{eqnarray}`, so `\@currentlabel` is `1`
+before the `\nonumber` row suppresses its display; the `.aux` records `\newlabel{eqx}{{1}{1}…}`
+and `\ref` yields **1**. LaTeXML instead binds the label to the unnumbered first row
+(`<ltx:equation xml:id="S0.Ex1">`, no refnum) while the number lands on a later row
+(`S0.E1`); CrossRef's `generateRef`, finding no refnum, walks parents and falls back to
+`show="title"`, which reaches the document element and returns the **paper title** as the visible
+link text. Same-host Perl 0.8.8 is byte-identical (`title="…paper title…"`, SHARED-FAILURE),
+Perl-origin. Reported as arXiv/html_feedback#94 (witness 2308.06222, an equation ref that renders
+the whole title "High-temperature superconductivity induced by the Su-Schrieffer-Heeger…"). Rust
+**surpasses** (OXIDIZED_DESIGN #120): a labelled equation row with no refnum inherits its group's
+number from a numbered sibling during Scan, so `\ref` renders "1" identically to a normal numbered
+equation. Guard: `06_cluster_regressions::cluster_eqnarray_nonumber_label_ref_is_the_number`.

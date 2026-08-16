@@ -4425,3 +4425,39 @@ errors/loses the phrase.
 **Upstream**: worth filing against `brucemiller/LaTeXML` (same SanitizedVerbatim/`\verb` gap).
 
 **Guards**: `06_cluster_regressions::cluster_verb_in_index_renders_typewriter`.
+
+### 120. A `\label` on a `\nonumber` eqnarray row references the equation number
+
+**Perl** binds a `\label` placed right after `\begin{eqnarray}` (before the first
+`\\`) to the environment's first row. When that row is `\nonumber`, LaTeXML gives
+it an unnumbered id (`<ltx:equation xml:id="S0.Ex1">`) with no refnum, while the
+number lands on a later numbered row (`S0.E1`). CrossRef's `generateRef` then finds
+no refnum on the labelled row, walks its ancestors still empty, retries with
+`show="title"`, and returns the nearest ancestor title — the **document element's**,
+i.e. the paper title — as the visible `\ref` link text. pdflatex disagrees: it
+steps the `equation` counter once at `\begin{eqnarray}`, so `\@currentlabel` is
+already `1` when `\label` runs (before the `\nonumber` retraction), and the `.aux`
+records `\newlabel{eqx}{{1}…}` → `\ref` is **1**. latexml-oxide reproduced Perl's
+title-leak exactly (SHARED-FAILURE, verified same-host on 0.8.8).
+
+**Rust behavior**: during Scan (`collect_common`, `group_sibling_refnum`), a
+labelled `<ltx:equation>` that carries no refnum of its own and sits inside an
+`<ltx:equationgroup>` inherits its refnum from the nearest numbered sibling row —
+following-first (the counter, captured at `\label` time, points at the next number
+to be shown), else preceding. Only the ObjectDB entry gains the number; the
+document row still shows no `<ltx:tag>`, so nothing new is displayed. `\ref` then
+renders "1" as an `ltx_ref_tag`, byte-identical to a normal numbered-equation ref
+(same `title="In <context>"` breadcrumb tooltip both Perl and Rust already emit).
+
+**Why**: matching the published PDF's cross-reference beats leaking the paper title
+into the body; pdflatex's `\ref` value ("1") is the ground truth, and Perl's
+title-fallback is the defect.
+
+**Witness**: arXiv 2308.06222 (html_feedback #94) — a `revtex4-2` PRL whose
+`\Eq{EqDefSSH}` (`\def\Eq#1{Eq.~(\ref{#1})}`) referenced the first `\bea\label{…}`
+`\nonumber` equation and rendered the whole title "High-temperature
+superconductivity induced by the Su-Schrieffer-Heeger electron-phonon coupling";
+94 such refs, now all "1"…"N". pdflatex ground truth: `\newlabel{eqx}{{1}{1}…}`.
+Shared upstream bug recorded as KNOWN_PERL_ERRORS #84.
+
+**Guard**: `06_cluster_regressions::cluster_eqnarray_nonumber_label_ref_is_the_number`.

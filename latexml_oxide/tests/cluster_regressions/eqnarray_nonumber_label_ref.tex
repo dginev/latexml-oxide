@@ -1,0 +1,16 @@
+\documentclass{article}
+\begin{document}
+\title{Distinctive Paper Title Xyzzy}
+\author{A. Author}
+\maketitle
+% A \label right after \begin{eqnarray} whose first row is \nonumber. pdflatex
+% steps the equation counter once at \begin, so \label captures "1" (the number
+% shown on the numbered row). LaTeXML binds the label to the unnumbered first
+% row (no refnum), and \ref then fell through to the document title.
+% html_feedback #94, witness arXiv 2308.06222.
+\begin{eqnarray}\label{eqx}
+&& a = b \nonumber\\
+&& c = d
+\end{eqnarray}
+The reference is \ref{eqx} in the text.
+\end{document}
