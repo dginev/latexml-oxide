@@ -761,6 +761,35 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
      children were flattened to plain text:\n{x}"
   );
 }
+
+/// amsrefs papers commonly open their references with `\begin{bibsection}`
+/// rather than `\begin{bibdiv}` — in real `amsrefs.sty` (L1251/L1265) `bibdiv`
+/// IS `bibsection` in article mode, the section-heading wrapper around
+/// `{biblist}`. Perl (and, before this, the Rust port) bound only `bibdiv`, so
+/// `\begin{bibsection}` was an undefined environment: the `<ltx:biblist>`
+/// floated in an `<ltx:p>` (schema-invalid) and the entire References list was
+/// lost. The environment now renders the same `<ltx:bibliography>` container as
+/// `bibdiv`, titled from its optional arg (default `\refname`). Shared gap with
+/// Perl, faithful port of the real `.sty`. html_feedback #1393, witness arXiv
+/// 2405.18501 (`\documentclass{amsart}`, `\usepackage[numeric]{amsrefs}`).
+#[test]
+fn amsrefs_bibsection_environment_renders() {
+  let x = convert_and_post("tests/cluster_regressions/amsrefs_bibsection.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "\\begin{{bibsection}} produced no References (environment undefined?):\n{x}"
+  );
+  assert!(
+    !x.contains("<bibentry"),
+    "an ltx:bibentry survived unconverted from the bibsection list:\n{x}"
+  );
+  for needle in ["References", "Chakerian", "Gruber", "Convex"] {
+    assert!(
+      x.contains(needle),
+      "bibsection entry content `{needle}` missing:\n{x}"
+    );
+  }
+}
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —
 /// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
 /// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the

@@ -1,0 +1,23 @@
+\documentclass{amsart}
+\usepackage[numeric]{amsrefs}
+\begin{document}
+See \cite{CG} and \cite{G}.
+% amsrefs papers open the references with \begin{bibsection} (= \bibdiv in
+% article mode). Without the environment the biblist floats in an <ltx:p> and
+% the whole References list is lost. html_feedback #1393, witness 2405.18501.
+\begin{bibsection}
+\begin{biblist}
+\bib{CG}{article}{
+  author={Chakerian, G. D.},
+  title={Convex bodies of constant width},
+  journal={J. Math},
+  date={1983},
+}
+\bib{G}{book}{
+  author={Gruber, P. M.},
+  title={Convex and discrete geometry},
+  date={2007},
+}
+\end{biblist}
+\end{bibsection}
+\end{document}

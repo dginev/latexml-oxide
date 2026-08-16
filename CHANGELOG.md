@@ -12,6 +12,13 @@
     `\bibliographystyle` name is recorded before natbib can drop it, so a
     revtex4-2 or `[numbers]natbib` paper with `ieeetr` is numbered by citation
     order too (arXiv/html_feedback#5930, #6095).
+  - **amsrefs papers that open with `\begin{bibsection}` now render their
+    References.** `bibsection` is amsrefs' real section-heading wrapper around
+    `{biblist}` (with `bibdiv` defined as it), but only `bibdiv`/`biblist` were
+    bound, so `\begin{bibsection}` was an undefined environment — the reference
+    list floated into a paragraph and vanished, every `\cite` left dangling. The
+    environment is now bound like `bibdiv`, titled from its optional heading
+    (default "References"). Witness arXiv 2405.18501 (arXiv/html_feedback#1393).
   - **A biblatex `\DeclareSourcemap` block no longer breaks the conversion.**
     Source mapping is a biber pre-processing stage LaTeXML does not run;
     `\DeclareSourcemap` (and `\DeclareStyleSourcemap`) were undefined, so the

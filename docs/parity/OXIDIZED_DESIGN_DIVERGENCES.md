@@ -4314,3 +4314,36 @@ arXiv 2602.00643 (html_feedback#5930) — `\documentclass{revtex4-2}` +
 `cluster_bib_natbib_numeric_citation_order` (the natbib/revtex arm),
 `cluster_bib_natbib_numeric_sorted_stays_alphabetical` +
 `cluster_bib_natbib_authoryear_stays_alphabetical` (the unsorted + numeric gates).
+
+### 118. amsrefs `{bibsection}` is a bound environment
+
+**Perl** LaTeXML's `amsrefs.sty.ltxml` binds `{bibdiv}` and `{biblist}` but not
+`{bibsection}`. In the real `amsrefs.sty` (L1251/L1265) it is the other way round:
+`{bibsection}[⟨heading⟩]` is the primitive section-heading wrapper around
+`{biblist}`, and `{bibdiv}` is *defined as* `{bibsection}` in article mode
+(`\newenvironment{bibdiv}{\bibsection}{\endbibsection}`). So an amsrefs paper that
+opens its references with `\begin{bibsection}` directly — common in AMS templates
+— hit `Environment {bibsection} is not defined`: the `<ltx:biblist>` then floated
+in an `<ltx:p>` (schema-invalid) and the **entire References list was lost**, with
+every `\cite` left dangling. latexml-oxide reproduced this (SHARED gap — Perl
+errors identically).
+
+**Rust behavior**: `latexml_package::amsrefs_sty` binds `{bibsection}[Default:\refname]`
+to the **same** `<ltx:bibliography>` container and digest hooks as `{bibdiv}`, with
+the optional argument as the `<ltx:title>` (default `\refname` → "References",
+which is also `begin_bibliography_clean`'s own fallback, so a no-argument
+`\begin{bibsection}` and `\begin{bibdiv}` render identically). The entries digest
+into `<ltx:bibentry>` and MakeBibliography converts them to `<ltx:bibitem>` exactly
+as the `bibdiv` path already did.
+
+**Why**: matching the published PDF — whose bibliography is present — beats an empty
+References list, and `bibsection` is a real, load-bearing amsrefs environment, so
+binding it is a faithful port of the package Perl's incomplete `.ltxml` omitted.
+
+**Witness**: arXiv 2405.18501 (html_feedback #1393) — `\documentclass{amsart}`,
+`\usepackage[numeric]{amsrefs}`, references in `\begin{bibsection}\begin{biblist}`.
+Before: 2 errors, 0 bibitems. After: 0 errors, 6 rendered bibitems.
+
+**Guard**: `06_cluster_bibliography::amsrefs_bibsection_environment_renders`
+(`\begin{bibsection}` + `{biblist}` + `\bib` entries: References populate, entries
+convert to `<ltx:bibitem>`, no stray `<ltx:bibentry>`).
