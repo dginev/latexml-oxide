@@ -8490,7 +8490,23 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\bibliographystyle Semiverbatim", "\\bibstyle{#1}");
+  // Record the bibliographystyle name globally BEFORE dispatching to \bibstyle,
+  // so it reaches the <ltx:bibliography> node even when a package layer drops the
+  // name at \bibstyle: natbib's `nobibstyle`/`[numbers]` does
+  // `\let\bibstyle\@gobble`, and its author-year \bibstyle has no `\bibstyle@`
+  // preset for a numeric style, so `\bibstyle{ieeetr}` otherwise vanishes.
+  // MakeBibliography reads this name to number an unsorted numeric style
+  // (ieeetr/IEEEtran/unsrt) in citation order (html_feedback #5930/#6095, the
+  // natbib/revtex arm of #6294). CITE_STYLE is deliberately NOT set here —
+  // natbib owns numbers-vs-author-year via its options, and the plain-path
+  // \bibstyle DefConstructor already sets CITE_STYLE/CITE_SORT for known styles.
+  DefPrimitive!("\\lx@record@bibstyle{}", sub[(style)] {
+    assign_value("BIBSTYLE", pin(Expand!(style).to_string()), Some(Scope::Global));
+  });
+  DefMacro!(
+    "\\bibliographystyle Semiverbatim",
+    "\\lx@record@bibstyle{#1}\\bibstyle{#1}"
+  );
 
   DefConditional!("\\if@lx@inbibliography");
   // Should be an environment, but people seem to want to misuse it.

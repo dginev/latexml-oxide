@@ -1599,12 +1599,24 @@ impl Processor for MakeBibliography {
       // explicit `sort='false'` for the bibunits `\bibstyle` path / external XML.
       // Only the non-split walk uses it; `--splitbibliography` is inherently
       // initial-major (alphabetical) and never combines with it.
-      let citation_ordered = bib.get_attribute("sort").as_deref() == Some("false")
+      //
+      // Gated on a NUMERIC list: an author-year bibliography is always ordered
+      // alphabetically by author regardless of the `.bst` sort flag, so a numeric
+      // style is a precondition. This matters for the natbib/revtex arm
+      // (#5930/#6095): natbib now records `bibstyle` even when it stays in
+      // author-year mode (no `[numbers]`), and reordering that list by citation
+      // would be wrong. An absent `citestyle` defaults to numeric (Perl L481).
+      let is_numeric = bib
+        .get_attribute("citestyle")
+        .as_deref()
+        .map(|s| s.is_empty() || s == "numbers")
+        .unwrap_or(true);
+      let unsorted_style = bib.get_attribute("sort").as_deref() == Some("false")
         || bib
           .get_attribute("bibstyle")
           .as_deref()
           .is_some_and(is_citation_order_style);
-      let cite_order = citation_ordered.then(|| citation_order(&doc));
+      let cite_order = (is_numeric && unsorted_style).then(|| citation_order(&doc));
 
       if self.split {
         // Split by initial letter

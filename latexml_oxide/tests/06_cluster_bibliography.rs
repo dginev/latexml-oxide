@@ -2433,3 +2433,88 @@ fn cluster_bib_plain_stays_alphabetical() {
      gamma=[3]), got {order:?}\n{x}"
   );
 }
+
+// ===========================================================================
+// Citation-ORDER numbering reaches the natbib/revtex arm (html_feedback
+// #5930/#6095): revtex4-2 / natbib papers with `\bibliographystyle{ieeetr}`.
+//
+// natbib drops the bibstyle name at `\bibstyle` — its `[numbers]`/`nobibstyle`
+// option does `\let\bibstyle\@gobble`, and its author-year `\bibstyle` has no
+// `\bibstyle@ieeetr` preset — so the #6294 fix (which reads the bibstyle name)
+// saw nothing. The kernel `\bibliographystyle` now records the name BEFORE
+// dispatching, so an unsorted NUMERIC natbib/revtex list is numbered in citation
+// order too. Author-year natbib lists stay alphabetical (the citestyle guard).
+// Witness arXiv 2602.00643 (revtex4-2 + ieeetr; oxide now matches bibtex .bbl
+// key-for-key across all 10 entries).
+// ===========================================================================
+
+/// The bib `key`s of the reference-list `<bibitem>`s in list order (works for
+/// numeric AND author-year lists, unlike `reference_list_order`).
+fn reference_list_keys(xml: &str) -> Vec<String> {
+  let mut out = Vec::new();
+  let mut rest = xml;
+  while let Some(s) = rest.find("<bibitem") {
+    let after = &rest[s..];
+    let end = after.find('>').unwrap_or(after.len());
+    let tag = &after[..end];
+    if let Some(i) = tag.find("key=\"") {
+      let tail = &tag[i + "key=\"".len()..];
+      out.push(tail[..tail.find('"').unwrap_or(tail.len())].to_string());
+    }
+    rest = &after[end..];
+  }
+  out
+}
+
+/// html_feedback #5930/#6095 — `[numbers]natbib` (and revtex4-2) with an unsorted
+/// numeric style numbers the References by citation order. Body cites
+/// gamma/alpha/beta, so the fixed list is gamma=[1], alpha=[2], beta=[3].
+#[test]
+fn cluster_bib_natbib_numeric_citation_order() {
+  let x = convert_and_post_clean("tests/cluster_regressions/natbib_num_ieeetr.tex");
+  let nums: Vec<u32> = inline_cite_texts(&x)
+    .iter()
+    .filter_map(|c| numeric_label(c))
+    .collect();
+  assert_eq!(
+    nums,
+    vec![1, 2, 3],
+    "[numbers]natbib+ieeetr inline cites must follow citation order: {nums:?}\n{x}"
+  );
+  assert_eq!(
+    reference_list_order(&x),
+    vec![
+      (1, "gamma".to_string()),
+      (2, "alpha".to_string()),
+      (3, "beta".to_string()),
+    ],
+    "[numbers]natbib+ieeetr References must be numbered by citation order\n{x}"
+  );
+}
+
+/// Control 1: `[numbers]natbib + plainnat` is numeric but SORTED, so it stays
+/// ALPHABETICAL — the citation-order path is gated on an UNSORTED `.bst`, not on
+/// natbib-numeric alone.
+#[test]
+fn cluster_bib_natbib_numeric_sorted_stays_alphabetical() {
+  let x = convert_and_post_clean("tests/cluster_regressions/natbib_num_plainnat.tex");
+  assert_eq!(
+    reference_list_keys(&x),
+    vec!["alpha", "beta", "gamma"],
+    "[numbers]natbib+plainnat (sorted) must stay alphabetical\n{x}"
+  );
+}
+
+/// Control 2: default natbib (AUTHOR-YEAR) + ieeetr must NOT be reordered — an
+/// author-year list is always alphabetical by author regardless of the `.bst`
+/// sort flag (the `citestyle="numbers"` guard). Guards against the natbib
+/// bibstyle-recording leaking citation-order into author-year mode.
+#[test]
+fn cluster_bib_natbib_authoryear_stays_alphabetical() {
+  let x = convert_and_post_clean("tests/cluster_regressions/natbib_ay_ieeetr.tex");
+  assert_eq!(
+    reference_list_keys(&x),
+    vec!["alpha", "beta", "gamma"],
+    "author-year natbib must stay alphabetical, not citation-ordered\n{x}"
+  );
+}
