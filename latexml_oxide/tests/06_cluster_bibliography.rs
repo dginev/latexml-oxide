@@ -2051,48 +2051,56 @@ fn cluster_bib_review_field_cedilla_not_welded() {
   );
 }
 
-/// html_feedback #6609: REVTeX4-2 with an APS journal option (`pre`, `prl`, …)
-/// must render NUMERIC citations, matching the published PDF (`[1]`, `[2]`,
-/// numbered reference list) — NOT natbib's author-year default.
+/// html_feedback #6609: the whole REVTeX4 family (`revtex4`, `revtex4-1`,
+/// `revtex4-2`) must render NUMERIC citations BY DEFAULT — bracketed `[N]` inline
+/// and a numbered reference list, like the published PDF — NOT natbib's
+/// author-year default.
 ///
-/// Perl has no dedicated revtex4-2 binding: it version-falls `revtex4-2` to the
-/// generic `revtex.cls`, which preloads natbib with the `numbers` option
-/// (`citestyle="numbers"`). Oxide instead routes revtex4-2 through the richer
-/// `revtex4_cls` (which, unlike revtex.cls, declares the `pre`/`superscriptaddress`
-/// options) and preloads natbib[numbers] there for revtex4-2 only. The bug was
-/// GENUINE-RUST-ONLY: on a working repro Perl 0.8.8 gives numeric, oxide gave
-/// `ltx_bib_author-year`. Witness arXiv 2606.09494 (`\bibliography{references/references}`,
-/// 65 cited entries). The `numbers` option's `\ExecuteOptions{square,comma}` also
-/// restores the bracketed `[N]` inline form.
+/// The real classes default to `numerical` (revtex4-2.cls L6024, revtex4-1.cls
+/// L6003 → `\@booleanfalse\authoryear@sw`; revtex4 4.0 is numeric via
+/// `\NAT@citenum`). Perl gives author-year for `revtex4`/`revtex4-1` and only
+/// stumbles onto numeric for `revtex4-2` via a version-fallback to `revtex.cls`
+/// — so this is a deliberate surpass-Perl to match the real class + PDF. Oxide
+/// preloads natbib[numbers] in the class before revtex4_support pulls natbib in.
+/// Witness arXiv 2606.09494 (`\bibliography{references/references}`, 65 cited).
 #[test]
-fn cluster_bib_revtex4_2_numeric_not_authoryear() {
-  // Root cause is the engine-stage citestyle attribute.
-  let core = convert_to_xml("tests/cluster_regressions/revtex4_2_numeric_cite.tex");
-  assert!(
-    core.contains(r#"citestyle="numbers""#),
-    "revtex4-2[pre] must set citestyle=\"numbers\" on <bibliography>:\n{core}"
-  );
-  // Rendered bibliography: numeric refnum (`ltx_bib_key` `[N]`), never author-year.
+fn cluster_bib_revtex4_family_numeric_by_default() {
+  for (tex, class) in [
+    ("revtex4_2_numeric_cite.tex", "revtex4-2"),
+    ("revtex4_1_numeric_cite.tex", "revtex4-1"),
+    ("revtex4_numeric_cite.tex", "revtex4"),
+  ] {
+    let path = format!("tests/cluster_regressions/{tex}");
+    // Root cause is the engine-stage citestyle attribute.
+    let core = convert_to_xml(&path);
+    assert!(
+      core.contains(r#"citestyle="numbers""#),
+      "{class} must default to citestyle=\"numbers\":\n{core}"
+    );
+  }
+  // Full render for the witness class: numeric refnum (`ltx_bib_key` `[N]`),
+  // never author-year.
   let x = convert_and_post_clean("tests/cluster_regressions/revtex4_2_numeric_cite.tex");
   assert!(
     !x.contains("ltx_bib_author-year"),
-    "revtex4-2[pre] rendered an author-year bibliography instead of numeric:\n{x}"
+    "revtex4-2 rendered an author-year bibliography instead of numeric:\n{x}"
   );
   assert!(
     x.contains("ltx_bib_key"),
-    "revtex4-2[pre] bibliography is missing the numeric `[N]` refnum:\n{x}"
+    "revtex4-2 bibliography is missing the numeric `[N]` refnum:\n{x}"
   );
 }
 
-/// Parity lock for the #6609 fix: bare `revtex4` must STAY author-year (Perl
-/// 0.8.8 gives `citestyle="authoryear"` for `revtex4`/`revtex4-1`). Only
-/// `revtex4-2` flips to numeric — the fix must not leak the `numbers` preload to
-/// the rest of the revtex4 family.
+/// The `author-year` class option (revtex4-1.cls L6001, revtex4-2.cls L6022) is
+/// the option set that overrides the numeric default: `\documentclass[author-year]`
+/// must render author-year. Guards that the numeric preload is a DEFAULT the
+/// class option can still flip — not a hardcoded force-numbers. (`\setcitestyle`
+/// / `\bibpunct` overrides are verified against Perl separately.)
 #[test]
-fn cluster_bib_revtex4_base_stays_authoryear() {
+fn cluster_bib_revtex4_author_year_option_is_honored() {
   let core = convert_to_xml("tests/cluster_regressions/revtex4_authoryear_cite.tex");
   assert!(
     core.contains(r#"citestyle="authoryear""#),
-    "bare revtex4 must keep natbib's author-year default (Perl parity):\n{core}"
+    "\\documentclass[author-year]{{revtex4-1}} must render author-year:\n{core}"
   );
 }

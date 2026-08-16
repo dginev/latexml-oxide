@@ -2,14 +2,15 @@
 
 ## [Unreleased]
 
-  - **REVTeX4-2 renders numeric APS citations, matching the PDF.** A `revtex4-2`
-    paper with an APS journal option (`pre`/`prl`/`prb`/…) rendered an author-year
-    bibliography (`Alpha (2001)`) with bare inline numbers, where the PDF — and
-    Perl — render numeric: bracketed `[N]` inline and a numbered reference list.
-    `revtex4-2` now preloads natbib with the `numbers` option (as Perl does by
-    version-falling revtex4-2 to `revtex.cls`), while keeping oxide's richer
-    revtex4 option coverage; `revtex4`/`revtex4-1` stay author-year (Perl parity).
-    Witness arXiv 2606.09494 (arXiv/html_feedback#6609).
+  - **The REVTeX4 family renders numeric APS citations by default, honoring
+    `author-year`/`numerical`.** `revtex4`/`revtex4-1`/`revtex4-2` rendered an
+    author-year bibliography (`Alpha (2001)`) with bare inline numbers, where the
+    PDF and the real classes render numeric — bracketed `[N]` inline and a
+    numbered reference list. The family now defaults to `numerical` (the real
+    classes' default) and honors the `author-year`/`numerical` class options that
+    toggle it; an explicit `\setcitestyle`/`\bibpunct` still overrides. Surpasses
+    Perl, which renders author-year for `revtex4`/`revtex4-1` and ignores those
+    class options. Witness arXiv 2606.09494 (arXiv/html_feedback#6609).
   - **A paper's title no longer absorbs publication metadata.** Class frontmatter
     such as acmart's `\acmConference`/`\acmDOI`/`\acmISBN` was rendered *inside*
     the title `<h1>` (a stray dagger hover on the heading), leaking metadata into
