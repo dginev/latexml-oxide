@@ -8,7 +8,15 @@
     nested `\maps`/`\map`/`\step`/`\regexp` ran as undefined control sequences
     and cascaded into fatal math-mode errors that dropped the whole bibliography.
     They now gobble the rule argument as a no-op (arXiv/html_feedback#6720).
-
+  - **The REVTeX4 family renders numeric APS citations by default, honoring
+    `author-year`/`numerical`.** `revtex4`/`revtex4-1`/`revtex4-2` rendered an
+    author-year bibliography (`Alpha (2001)`) with bare inline numbers, where the
+    PDF and the real classes render numeric — bracketed `[N]` inline and a
+    numbered reference list. The family now defaults to `numerical` (the real
+    classes' default) and honors the `author-year`/`numerical` class options that
+    toggle it; an explicit `\setcitestyle`/`\bibpunct` still overrides. Surpasses
+    Perl, which renders author-year for `revtex4`/`revtex4-1` and ignores those
+    class options. Witness arXiv 2606.09494 (arXiv/html_feedback#6609).
   - **A paper's title no longer absorbs publication metadata.** Class frontmatter
     such as acmart's `\acmConference`/`\acmDOI`/`\acmISBN` was rendered *inside*
     the title `<h1>` (a stray dagger hover on the heading), leaking metadata into
