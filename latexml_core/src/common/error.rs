@@ -857,24 +857,39 @@ macro_rules! generate_message {
   };
 }
 
+/// Progress note to BOTH the log and stderr — Perl `Note` (`_printline`): the LOG
+/// always (if a buffer is bound, ANSI-stripped), STDERR only when the verbosity
+/// admits it (`$USE_STDERR && $VERBOSITY>=0` ≈ `max_level >= Info`).
 #[macro_export]
 macro_rules! Note {
-  ($input:expr_2021) => {
+  ($input:expr_2021) => {{
+    let msg = $input;
+    $crate::util::logger::note_to_log(&msg.to_string());
     if !$crate::common::error::is_log_output_suppressed()
       && log::max_level() >= log::LevelFilter::Info
     {
-      let msg = $input;
       $crate::println_stderr!("{msg}");
       $crate::util::logger::mark_stderr_at_line_start();
     }
-  };
+  }};
 }
 
+/// Progress note to the LOG only — Perl `NoteLog` (`print $LOG … if $LOG`). Always
+/// written to the bound log buffer (the log is the verbose record), never stderr.
 #[macro_export]
 macro_rules! NoteLog {
   ($input:expr_2021) => {
+    $crate::util::logger::note_to_log(&($input).to_string());
+  };
+}
+
+/// Progress note to STDERR only — Perl `NoteSTDERR` (`if $USE_STDERR &&
+/// $VERBOSITY>=0`). Never touches the log.
+#[macro_export]
+macro_rules! NoteSTDERR {
+  ($input:expr_2021) => {
     if !$crate::common::error::is_log_output_suppressed()
-      && log::max_level() >= log::LevelFilter::Debug
+      && log::max_level() >= log::LevelFilter::Info
     {
       let msg = $input;
       $crate::println_stderr!("{msg}");

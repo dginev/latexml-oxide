@@ -453,10 +453,16 @@ pub(super) fn make_engine() -> Engine {
       res.map_err(rhai_err)
     },
   );
-  // Notes + progress reporting (Perl `NoteSTDERR`/`NoteLog`, `ProgressStep`,
-  // `ProgressSpinup`/`ProgressSpindown`).
-  engine.register_fn("NoteSTDERR", |msg: &str| {
+  // Notes + progress reporting (Perl `Note`/`NoteSTDERR`/`NoteLog`, `ProgressStep`,
+  // `ProgressSpinup`/`ProgressSpindown`). Matching Perl `Common/Error.pm`: `Note`
+  // writes to BOTH the log and stderr, `NoteSTDERR` to stderr only, `NoteLog` to
+  // the log only. (#593: NoteLog/NoteSTDERR previously reached neither the log —
+  // both macros only wrote stderr — nor the right stream.)
+  engine.register_fn("Note", |msg: &str| {
     latexml_core::Note!(msg);
+  });
+  engine.register_fn("NoteSTDERR", |msg: &str| {
+    latexml_core::NoteSTDERR!(msg);
   });
   engine.register_fn("NoteLog", |msg: &str| {
     latexml_core::NoteLog!(msg);

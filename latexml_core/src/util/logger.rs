@@ -81,6 +81,32 @@ pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
 /// Flush and return the captured log output, stopping capture (Perl: flush_log).
 pub fn flush_log() -> String { LOG_BUFFER.borrow_mut().take().unwrap_or_default() }
 
+/// Append a progress note to the captured log (`.latexml.log`) only — the LOG
+/// half of Perl `Note`/`NoteLog` (`Common/Error.pm`: `print $LOG _freshline($LOG),
+/// strip_ansi($message), "\n" if $LOG`). ANSI is stripped and the note lands on
+/// its own fresh line with a single trailing newline, so CorTeX's line-anchored
+/// parser and the `.latexml.log` stay clean (mirrors the diagnostic-record
+/// freshline path below). No-op when no buffer is bound or output is suppressed —
+/// unlike a `log::info!` record it is NOT gated on the stderr verbosity, because
+/// the log is the verbose record (Perl writes it regardless of `$VERBOSITY`).
+pub fn note_to_log(msg: &str) {
+  if crate::common::error::is_log_output_suppressed() {
+    return;
+  }
+  if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
+    && let Some(ref mut log) = *buf
+  {
+    let clean = strip_ansi(msg);
+    if !log.is_empty() && !log.ends_with('\n') {
+      log.push('\n');
+    }
+    log.push_str(&clean);
+    if !log.ends_with('\n') {
+      log.push('\n');
+    }
+  }
+}
+
 /// Diagnostics captured from a worker thread by [`capture`], for the main thread
 /// to fold back in via [`replay_captured`]. Carries both the already-formatted
 /// log text AND the `REPORT` count deltas — `LOG_BUFFER` and `REPORT` are BOTH
