@@ -3473,3 +3473,18 @@ the whole title "High-temperature superconductivity induced by the Su-Schrieffer
 **surpasses** (OXIDIZED_DESIGN #120): a labelled equation row with no refnum inherits its group's
 number from a numbered sibling during Scan, so `\ref` renders "1" identically to a normal numbered
 equation. Guard: `06_cluster_regressions::cluster_eqnarray_nonumber_label_ref_is_the_number`.
+
+## 85. `\usepackage{jcappub}` truncates the author list to the last author (Rust surpasses)
+
+jcappub is JCAP's SISSA/IOP publication class — the JCAP sibling of jheppub (JHEP) — with the
+same accumulating `\author[⟨affil⟩]{⟨name⟩}` + `\affiliation[N]{…}` + `\emailAdd{…}` +
+`\keywords`/`\acknowledgments` frontmatter. Perl LaTeXML ships `jheppub.sty.ltxml` but **no**
+jcappub binding, so `\usepackage{jcappub}` reports `missing file[jcappub.sty]`, `\author` falls
+through to article's kernel `\author` (which *overwrites* on each call), and only the LAST
+`\author` survives; `\affiliation`/`\emailAdd`/`\keywords` are undefined. Same-host Perl 0.8.8 is
+byte-identical (SHARED-FAILURE: 1 author, 4 undefined macros), Perl-origin. Reported as
+arXiv/html_feedback#6884 (witness 2404.03569, a 63-author DESI paper collapsing to 1). Rust
+**surpasses**: `latexml_package::BINDINGS` routes `jcappub` to `jheppub_sty::load_definitions` (the
+sibling class's identical author API), so all authors accumulate — the same "route the sibling
+package to its bound binding" move as the biblatex variants (OXIDIZED_DESIGN #117). Guard:
+`06_cluster_regressions::cluster_jcappub_accumulates_authors`.

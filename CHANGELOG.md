@@ -9,6 +9,13 @@
     text. The label now inherits the equation group's number (matching pdflatex's
     `\ref`), so it renders "1". Surpasses Perl, which leaks the title identically.
     Witness arXiv 2308.06222 (arXiv/html_feedback#94).
+  - **jcappub (JCAP) papers now render their full author list.** jcappub is JCAP's
+    SISSA/IOP class — the JCAP sibling of jheppub — with the same accumulating
+    `\author[affil]{name}` + `\affiliation` + `\emailAdd` frontmatter. It was
+    unbound, so each `\author` fell through to article's (which overwrites) and the
+    list collapsed to the last author, with `\affiliation`/`\emailAdd` undefined.
+    jcappub now loads the jheppub binding. Witness arXiv 2404.03569 (63 authors,
+    previously 1; arXiv/html_feedback#6884).
   - **Unsorted bibliography styles number the References in citation order.**
     `\bibliographystyle{unsrt}`/`{ieeetr}`/`{IEEEtran}` alphabetized the reference
     list, mismatching the PDF (whose figure captions bake in "[2], [3], [4]"). The

@@ -228,6 +228,33 @@ fn cluster_floatflt_pctwidth() {
     "floatflt floatingfigure width=\"0%\" — Dimension arg not read (after_digest args=None)"
   );
 }
+/// jcappub (JCAP's SISSA/IOP class) is the JCAP sibling of jheppub with the same
+/// accumulating `\author[affil]{name}` + `\affiliation` + `\emailAdd`. Unbound, its
+/// `\author`s fell through to article's (which overwrites), so only the LAST author
+/// survived and `\affiliation`/`\emailAdd`/`\keywords` were undefined. Routing
+/// jcappub to the jheppub binding accumulates every author. SHARED gap with Perl
+/// (also truncates + `missing file[jcappub.sty]`); surpass-Perl. html_feedback
+/// #6884, witness arXiv 2404.03569 (63 authors rendered, previously 1).
+#[test]
+fn cluster_jcappub_accumulates_authors() {
+  let xml = convert_to_xml("tests/cluster_regressions/jcappub_authors.tex");
+  assert_eq!(
+    xml.matches(r#"role="author""#).count(),
+    3,
+    "jcappub did not accumulate all 3 authors (routed to the jheppub binding):\n{xml}"
+  );
+  for n in ["Alpha Author", "Beta Author", "Gamma Author"] {
+    assert!(xml.contains(n), "jcappub author `{n}` missing:\n{xml}");
+  }
+  assert!(
+    xml.contains("Institute Two"),
+    "\\affiliation was undefined / not rendered:\n{xml}"
+  );
+  assert!(
+    xml.contains("alpha@example.org"),
+    "\\emailAdd was undefined / not rendered:\n{xml}"
+  );
+}
 /// Same fix for the `floatfig` package: a 4cm figure → `width="32%"`.
 #[test]
 fn cluster_floatfig_pctwidth() {
