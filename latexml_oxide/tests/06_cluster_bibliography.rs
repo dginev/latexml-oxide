@@ -2063,9 +2063,21 @@ fn cluster_bib_review_field_cedilla_not_welded() {
 // interleaving them with the bibref's `<ltx:bibrefphrase>` markup.
 //
 // Minimal reproductions for the class of arXiv html_feedback reports where the
-// inline citation does NOT match the list — e.g. #6276 ("citations are numbered
-// but bibliography is not"), #6302 ("reference to [number] but hard to tell
-// which one"). Expand this cluster with a new fixture per distinct reproducer.
+// inline citation does NOT match the list — the "bucket A" inline-vs-list
+// mismatch: #6276 ("citations are numbered but bibliography is not"), #6302
+// ("reference to [number] but hard to tell which one"), #6307 (inline by number,
+// bibliography by author-year), #6534 (inline `[5]`, list "name et al" with no
+// number), #6026 (list "Sensoy et al. [2018]", unclear which in-text cite maps).
+// All are the same root cause: in author-year mode the inline `\cite` fell back
+// to a bare number because the bibitem's author/year tags were never registered
+// into the CrossRef DB. Expand this cluster with a new fixture per distinct
+// reproducer.
+//
+// NOT this cluster (distinct root causes, separate work): raw citekeys leaking
+// from an un-emulated cite command (#6203/#6355/#6549/#6050), genuine
+// non-resolution `?`/`[undef]` (#6489/#6601/#6222), a missing/empty References
+// list (#6432/#6288/#6179), and reference numbering ORDER (#6294/#5930 — a
+// shared-with-Perl alphabetical-vs-citation-order gap).
 // ===========================================================================
 
 /// Tag-stripped text of each inline `<ltx:cite>` in post XML.
@@ -2163,5 +2175,40 @@ fn cluster_cite_numeric_inline_matches_reference_label() {
   assert!(
     cites.iter().all(|c| numeric_label(c).is_some()),
     "numeric inline citations should be numbers indexing the list: {cites:?}\n{x}"
+  );
+}
+
+/// The same consistency guarantee for biblatex author-year (style=apa): the fix
+/// is at the shared CrossRef/Scan layer, so a biblatex `\parencite`/`\textcite`
+/// renders the author-year label the biblatex list shows — not a bare number.
+/// The sibling `cluster_biblatex_authoryear` guards the CORE `<ltx:tag>`s; this
+/// guards the POST inline-cite fill phase. (Reuses the rich biblatex_ay/ay.tex.)
+#[test]
+fn cluster_biblatex_authoryear_inline_matches_reference_label() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/ay.tex");
+  // biblatex's `.bbl`-formatted list carries author-year refnum labels (not the
+  // MakeBibliography `ltx_bib_author-year` class, which this path skips).
+  assert!(
+    x.contains("Smith (2020)") && x.contains("Jones &amp; Brown (2019)"),
+    "expected author-year labels in the biblatex References list:\n{x}"
+  );
+  let cites = inline_cite_texts(&x);
+  // `\parencite{smith2020}` → "(Smith, 2020)"; `\textcite{jones2019}` →
+  // "Jones & Brown (2019)" — the author-year label, matching the list entries
+  // "Smith (2020)" / "Jones & Brown (2019)".
+  assert!(
+    cites.iter().any(|c| c.contains("(Smith, 2020)")),
+    "\\parencite should render author-year \"(Smith, 2020)\": {cites:?}\n{x}"
+  );
+  assert!(
+    cites
+      .iter()
+      .any(|c| c.contains("Jones") && c.contains("(2019)")),
+    "\\textcite should render \"Jones & Brown (2019)\": {cites:?}\n{x}"
+  );
+  // The raw citekeys must never leak into the inline text.
+  assert!(
+    !x.contains(">smith2020<") && !cites.iter().any(|c| c.contains("smith2020")),
+    "a raw biblatex citekey leaked into an inline citation:\n{x}"
   );
 }
