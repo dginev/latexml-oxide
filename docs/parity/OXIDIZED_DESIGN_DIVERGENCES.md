@@ -4162,3 +4162,27 @@ filing against `brucemiller/LaTeXML`.
 probe emits `EVERYJOB-PRESENT` (was `EVERYJOB-MISSING` without the firing), and a body
 `\sys_if_shell:TF` takes the FALSE branch (`SHELL-NO`, LaTeXML has no shell). Full suite 1971/0
 confirms firing `\everyjob` on every latex conversion is output-neutral.
+
+### 114. An empty-symbol unit renders invisibly, not as its `meaning` name
+
+**Perl** LaTeXML renders a math token whose CONTENT is empty by falling back to its `meaning`
+attribute (`MathML.pm` `stylizeContent`). For a siunitx unit declared with an empty symbol —
+`\DeclareSIUnit{\nothing}{\relax}` (arXiv/html_feedback#970, paper 2312.06275) — the core emits
+an empty `<ltx:XMTok class="ltx_unit" meaning="nothing" role="ID"/>`, so the presentation MathML
+becomes a VISIBLE `<m:mi class="ltx_unit">nothing</m:mi>` (Perl even paints it red as a
+suspected error). The author intended `\SI{5}{\nothing}` to render "5" with no unit; instead the
+literal word "nothing" appears next to every number. Same-host Perl is byte-identical
+(SHARED-FAILURE).
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): in `presentation.rs::pmml_token_inner`,
+an empty-content token carrying `class="ltx_unit"` renders as an empty `<m:mphantom>` — the same
+invisible placeholder used for `meaning="absent"` — instead of falling through to the
+`meaning`→`name`→`role` text fallback. Only empty UNIT tokens are affected (a non-empty unit
+keeps its symbol; a non-unit empty token keeps the existing fallback), so no currently-passing
+paper changes shape. A unit whose symbol produces nothing is exactly the case where the fallback
+is wrong. **Upstream**: worth filing against `brucemiller/LaTeXML`.
+
+**Guards**: `06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`
+(`tests/cluster_regressions/siunitx_nothing_unit.tex`, via `convert_and_post_pmml_clean`) — the
+presentation MathML contains no visible `>nothing<`, the empty unit is an `<m:mphantom>`, and the
+quantity still renders.

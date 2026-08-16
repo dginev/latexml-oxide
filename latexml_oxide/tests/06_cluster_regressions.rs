@@ -10,7 +10,8 @@
 
 mod cluster;
 use cluster::{
-  convert_and_post_clean, convert_clean, convert_expecting_errors, convert_log, convert_to_xml,
+  convert_and_post_clean, convert_and_post_pmml_clean, convert_clean, convert_expecting_errors,
+  convert_log, convert_to_xml,
 };
 
 #[test]
@@ -307,6 +308,27 @@ fn cluster_pdfcol_stub_no_undefined() {
   assert!(
     xml.contains("<p>STACK-NO</p>") && !xml.contains("STACK-YES"),
     "\\pdfcolIfStackExists must take the false branch and siblings must no-op:\n{xml}"
+  );
+}
+/// arXiv/html_feedback#970 (paper 2312.06275): a siunitx unit declared with an
+/// empty symbol — `\DeclareSIUnit{\nothing}{\relax}` — must render INVISIBLY, not
+/// as the literal word "nothing". The core emits an empty `<XMTok
+/// class="ltx_unit" meaning="nothing"/>`; the MathML empty-content fallback
+/// (`presentation.rs`) used the `meaning` attribute, producing `<mi
+/// class="ltx_unit">nothing</mi>` (Perl does the same, in red — SHARED-FAILURE).
+/// An empty *unit* now renders as an invisible placeholder. OXIDIZED_DESIGN #114.
+#[test]
+fn cluster_siunitx_empty_unit_renders_invisible() {
+  let post = convert_and_post_pmml_clean("tests/cluster_regressions/siunitx_nothing_unit.tex");
+  // The presentation MathML must NOT render the unit's name as visible text.
+  assert!(
+    !post.contains(">nothing<"),
+    "empty siunitx unit leaked its `meaning` as visible MathML text:\n{post}"
+  );
+  // It renders as an invisible placeholder instead, and the quantity 5 stays.
+  assert!(
+    post.contains("mphantom") && post.contains(">5<"),
+    "empty unit must be an <m:mphantom> and the quantity 5 must still render:\n{post}"
   );
 }
 /// An UNBOUND journal class (`sn-jnl`, `wlpeerj`, `sagej`, Wiley, …) falls back

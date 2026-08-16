@@ -1,0 +1,12 @@
+% arXiv/html_feedback#970 (paper 2312.06275): a siunitx unit declared with an
+% empty symbol — \DeclareSIUnit{\nothing}{\relax} — must render INVISIBLY, not as
+% the literal word "nothing". The core emits an empty <XMTok class="ltx_unit"
+% meaning="nothing"/>; the MathML fallback for empty content used the `meaning`
+% attribute, producing <mi class="ltx_unit">nothing</mi> (Perl does the same, in
+% red). Now empty unit tokens render as an invisible placeholder.
+\documentclass{article}
+\usepackage{siunitx}
+\DeclareSIUnit{\nothing}{\relax}
+\begin{document}
+\SI{5}{\nothing} and \si{\nothing}.
+\end{document}
