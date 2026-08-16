@@ -1,0 +1,11 @@
+\documentclass{llncs}
+\begin{document}
+\title{Affiliation dedup}
+% Two authors in ONE creator (\quad-separated, no \and/\\ split), both citing
+% institution 1. \inst{1} + \inst{2,1} => the creator references affiliation
+% label 1 twice; the deduped affiliation must appear ONCE, not per-citation.
+% Reduced from arXiv 2603.23669 (html_feedback frontmatter report).
+\author{Alice\inst{1} \quad Bob\inst{2,1}}
+\institute{\textsuperscript{1}Mila Institute \quad \textsuperscript{2}Uni Montreal}
+\maketitle
+\end{document}

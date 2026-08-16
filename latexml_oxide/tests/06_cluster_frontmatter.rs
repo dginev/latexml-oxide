@@ -459,3 +459,25 @@ fn frontmatter_sn_jnl_numbered_affil() {
     "sn-jnl numbered affiliation leaked as an orphaned top-level note:\n{x}"
   );
 }
+
+/// A single creator whose authors cite the same institution via different
+/// `\inst` lists (`Alice\inst{1}` + `Bob\inst{2,1}`, both citing institution 1)
+/// must receive that affiliation ONCE, not once per citing author. The dedup
+/// lives in `relocate_annotations` (base_utilities.rs): duplicate labels within
+/// a creator's `_annotations` previously cloned the affiliation contact per
+/// citation. Witness arXiv 2603.23669 (html_feedback frontmatter report): the
+/// two-author creators rendered "Mila … Mila … McGill … McGill".
+#[test]
+fn frontmatter_inst_affiliation_dedup() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_inst_affiliation_dedup.tex");
+  let mila = x.matches(">Mila Institute").count();
+  assert_eq!(
+    mila, 1,
+    "affiliation cited by two authors was not deduped (got {mila}× Mila Institute):\n{x}"
+  );
+  // Both distinct institutions still present, as structured affiliation contacts.
+  assert!(
+    x.contains(">Uni Montreal") && x.contains("role=\"affiliation\""),
+    "the second (distinct) affiliation was dropped:\n{x}"
+  );
+}
