@@ -100,7 +100,7 @@
     <p>Testing <ref labelref="LABEL:array:subfig1"/> and <ref labelref="LABEL:array:subfig2"/> inside <ref labelref="LABEL:array:fig"/>.</p>
     <pagination role="newpage"/>
   </para>
-  <figure align="center" class="ltx_minipage" float="right" framed="top" inlist="loa" placement="H" vattach="middle" width="120.8pt" xml:id="alg1">
+  <figure align="center" class="ltx_float_algorithm ltx_minipage" float="right" framed="top" inlist="loa" placement="H" vattach="middle" width="120.8pt" xml:id="alg1">
     <tags>
       <tag><text font="bold">Algorithm 1</text></tag>
       <tag role="refnum">1</tag>
@@ -454,7 +454,7 @@
     </figure>
     <pagination role="newpage"/>
     <figure placement="tb" xml:id="S0.SS0.SSS0.Px1.fig3">
-      <float class="ltx_figure_panel ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg:main" placement="H" vattach="middle" width="193.2pt" xml:id="alg2">
+      <float class="ltx_figure_panel ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg:main" placement="H" vattach="middle" width="193.2pt" xml:id="alg2">
         <tags>
           <tag><text font="bold">Algorithm 2</text></tag>
           <tag role="refnum">2</tag>

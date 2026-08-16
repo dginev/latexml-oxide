@@ -790,3 +790,63 @@ mod wrapfig_inner_linewidth {
     );
   }
 }
+
+/// html_feedback#6632 (arXiv:2605.03143): code in a figure/minipage lost its
+/// indentation and newlines. When a `lstlisting` (or a `minted` block, which
+/// routes through the same listings display) is the SOLE content of a `minipage`,
+/// `insert_block` (`base_utilities.rs`) absorbs the minipage onto the single child
+/// and set the child's attributes — but `setAttribute("class", …)` OVERWROTE the
+/// child's `ltx_lstlisting` with `ltx_minipage`, so the whitespace-preserving CSS
+/// keyed on `.ltx_lstlisting` stopped applying (leading-space indentation
+/// collapsed). Fix: the `class` key MERGES (`add_class`) like LaTeXML's own
+/// `addClass`, so the listing keeps `ltx_lstlisting` AND gains `ltx_minipage`.
+///
+/// SURPASS-PERL (OXIDIZED_DESIGN #122): Perl's `insertBlock` (`TeX_Box.pool.ltxml`
+/// L492) uses `setAttribute(class => …)`, which overwrites — verified same-host,
+/// Perl 0.8.8 also emits `<listing class="ltx_minipage">` (SHARED-FAILURE). The
+/// merged class matches the PDF's rendered, indented code.
+mod listing_in_minipage_keeps_class {
+  use crate::cluster::convert_to_xml;
+
+  /// The `class` attribute of the `<listing>` element whose base64 `data` starts
+  /// with `data_prefix` (distinguishes the boxed copy from the control — same
+  /// source, same data).
+  fn listing_class(xml: &str, which: usize) -> String {
+    let opens: Vec<&str> = xml
+      .match_indices("<listing ")
+      .map(|(i, _)| {
+        let tag = &xml[i..];
+        &tag[..tag.find('>').unwrap_or(tag.len())]
+      })
+      .collect();
+    let tag = opens
+      .get(which)
+      .unwrap_or_else(|| panic!("fewer than {} <listing> elements:\n{xml}", which + 1));
+    let ci = tag
+      .find("class=\"")
+      .unwrap_or_else(|| panic!("no class on <listing>: {tag}"))
+      + "class=\"".len();
+    tag[ci..][..tag[ci..].find('"').unwrap()].to_string()
+  }
+
+  #[test]
+  fn listing_sole_content_of_minipage_keeps_lstlisting_class() {
+    let xml = convert_to_xml("tests/cluster_regressions/listing_in_minipage_keeps_class.tex");
+
+    // Control: the un-boxed listing has always carried its own class.
+    assert_eq!(
+      listing_class(&xml, 0),
+      "ltx_lstlisting",
+      "control listing lost its class:\n{xml}"
+    );
+
+    // The FIX: the minipage-absorbed listing keeps `ltx_lstlisting` (for the
+    // whitespace CSS) and GAINS `ltx_minipage` (for the sizing) — not one or the
+    // other. `add_class` sorts, so the merged value is `ltx_lstlisting ltx_minipage`.
+    assert_eq!(
+      listing_class(&xml, 1),
+      "ltx_lstlisting ltx_minipage",
+      "listing inside a minipage must keep ltx_lstlisting AND gain ltx_minipage:\n{xml}"
+    );
+  }
+}
