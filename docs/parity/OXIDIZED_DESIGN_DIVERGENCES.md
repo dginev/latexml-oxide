@@ -4250,11 +4250,26 @@ list is then rendered in that same numbered order (the biblist follows
 `entry.number`, not a second `unisort`). SORTED styles (`plain`, `alpha`, `abbrv`,
 plainnat/…, and any unknown style) are unchanged — still alphabetical, identical
 to Perl. Detection is from the `bibstyle` attribute name (plus an explicit
-`sort='false'`, e.g. the bibunits `\bibstyle` path); the core `<ltx:bibliography>`
-carries no new attribute, so engine output stays byte-identical to Perl. The
-engine's `lookup_bibstyle_params` also gains `ieeetr`/`IEEEtran` → `numbers`,
-`false` (Perl's base table omits them and its class binding alphabetizes IEEEtran)
-so the real IEEE `.bst` behavior is matched.
+`sort='false'`, e.g. the bibunits `\bibstyle` path), GATED on a numeric list
+(`citestyle="numbers"`, or absent → numeric): an author-year list is always
+alphabetical by author regardless of the `.bst` sort flag. The engine's
+`lookup_bibstyle_params` also gains `ieeetr`/`IEEEtran` → `numbers`, `false`
+(Perl's base table omits them and its class binding alphabetizes IEEEtran) so the
+real IEEE `.bst` behavior is matched.
+
+**natbib/revtex arm** (html_feedback #5930/#6095): a revtex4-2 or `natbib` paper
+with `\bibliographystyle{ieeetr}` lost the style name before it reached the node —
+natbib's `[numbers]`/`nobibstyle` option does `\let\bibstyle\@gobble`, and its
+author-year `\bibstyle` has no `\bibstyle@ieeetr` preset (Perl natbib.sty.ltxml
+L85-92, which flags the loss as a known FUTURE gap). The kernel
+`\bibliographystyle` now records `BIBSTYLE` (`\lx@record@bibstyle`) BEFORE
+dispatching to the possibly-gobbled `\bibstyle`, so the name reaches the node in
+every path. It records only the name, never `CITE_STYLE` — natbib owns
+numbers-vs-author-year via its options (`plainnat` is numeric in the base table
+but author-year under natbib), and the citestyle guard above keeps author-year
+natbib lists alphabetical. `beginBibliography` still emits no `sort` attribute, so
+the core node is unchanged except for the `bibstyle` name it already ought to
+carry (`thebibliography`-based lists, which read no BIBSTYLE, are untouched).
 
 **Why**: bibtex's own guarantee is that an unsorted `.bst` leaves the References
 in citation order; IEEE figure captions bake in "[2], [3], [4]" that depend on it.
@@ -4271,10 +4286,15 @@ exact.
 **Witnesses**: arXiv 2510.05438 (html_feedback#6294) — `\documentclass{IEEEtran}`,
 `\bibliographystyle{IEEEtran}`, `\bibliography{…}`, 17 entries; oxide's numbered
 order now equals the pdflatex+bibtex `.bbl` order key-for-key (Wu2021=[1] … Shi2011=[17]).
+arXiv 2602.00643 (html_feedback#5930) — `\documentclass{revtex4-2}` +
+`\bibliographystyle{ieeetr}`, 10 entries, likewise key-for-key vs bibtex.
 
 **Upstream**: worth filing against `brucemiller/LaTeXML` (same alphabetize-everything gap).
 
 **Guards**: `06_cluster_bibliography::cluster_bib_unsrt_citation_order`
 (unsrt + IEEEtran number gamma/alpha/beta by citation order),
 `cluster_bib_plain_stays_alphabetical` (sorted styles unchanged),
-`cluster_bib_bibstyle_is_known_numeric` (engine maps IEEEtran → numeric).
+`cluster_bib_bibstyle_is_known_numeric` (engine maps IEEEtran → numeric),
+`cluster_bib_natbib_numeric_citation_order` (the natbib/revtex arm),
+`cluster_bib_natbib_numeric_sorted_stays_alphabetical` +
+`cluster_bib_natbib_authoryear_stays_alphabetical` (the unsorted + numeric gates).

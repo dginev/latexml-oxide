@@ -8,7 +8,10 @@
     References are now numbered by first citation — matching pdflatex+bibtex
     key-for-key — while sorted styles (`plain`/`alpha`/…) stay alphabetical.
     Surpasses Perl, which alphabetizes every style. Witness arXiv 2510.05438
-    (arXiv/html_feedback#6294).
+    (arXiv/html_feedback#6294). Now also reaches natbib/revtex papers: the
+    `\bibliographystyle` name is recorded before natbib can drop it, so a
+    revtex4-2 or `[numbers]natbib` paper with `ieeetr` is numbered by citation
+    order too (arXiv/html_feedback#5930, #6095).
   - **A biblatex `\DeclareSourcemap` block no longer breaks the conversion.**
     Source mapping is a biber pre-processing stage LaTeXML does not run;
     `\DeclareSourcemap` (and `\DeclareStyleSourcemap`) were undefined, so the
