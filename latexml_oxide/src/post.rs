@@ -1654,6 +1654,12 @@ fn convert_picture_children_to_svg(content: &str) -> String {
     LazyLock::new(|| regex::Regex::new(r#"<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap());
   static TEXT_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"(?s)<text([^>]*)>(.*?)</text>"#).unwrap());
+  // Foreign (non-SVG) content that a picture makebox can carry: a math label or
+  // an embedded graphic. Perl's SVG.pm wraps these in <foreignObject>.
+  static MATH_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"(?s)<Math\b[^>]*>.*?</Math>"#).unwrap());
+  static GRAPHICS_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<graphics\b[^>]*/>"#).unwrap());
 
   let mut svg = String::new();
 
@@ -1744,6 +1750,50 @@ fn convert_picture_children_to_svg(content: &str) -> String {
       ));
     }
 
+    // Foreign content (a `<Math>` label or a `<graphics>` image inside a picture
+    // makebox) must survive into the SVG wrapped in a `<foreignObject>`, not be
+    // dropped. Mirrors `SVG.pm::convertNode`
+    // (LaTeXML/lib/LaTeXML/Post/SVG.pm:148-183): a non-SVG child takes its size
+    // from its own width/imagewidth, else the containing `<g>`'s
+    // innerwidth/width (defaults 1pt, non-zero required), and is placed in a
+    // y-flipped `<g><foreignObject overflow="visible">`. html_feedback#74
+    // (arXiv:0810.1673v3 Fig 2 — xfig math labels + `\epsfig` image).
+    //
+    // NOTE: `latexml_post::svg::SVG::convert_foreign` is the *canonical*,
+    // DOM-based faithful port (it already handles this). This string-level
+    // reimplementation exists only because the active SVG path splices serialized
+    // strings post-XSLT to dodge a libxml2 PostDocument-cleanup UAF (see the
+    // `finalize_html5` splice note). When that path can carry a live DOM, this
+    // block and its siblings above are deleted in favor of the `svg.rs` Processor.
+    for node in MATH_RE
+      .find_iter(g_content)
+      .chain(GRAPHICS_RE.find_iter(g_content))
+      .map(|m| m.as_str())
+    {
+      let width = svg_attr(node, "width")
+        .or_else(|| svg_attr(node, "imagewidth"))
+        .or_else(|| svg_attr(g_attrs, "innerwidth"))
+        .or_else(|| svg_attr(g_attrs, "width"))
+        .unwrap_or_else(|| "1pt".to_string());
+      let height = svg_attr(node, "height")
+        .or_else(|| svg_attr(node, "imageheight"))
+        .or_else(|| svg_attr(g_attrs, "innerheight"))
+        .or_else(|| svg_attr(g_attrs, "height"))
+        .unwrap_or_else(|| "1pt".to_string());
+      let depth = svg_attr(node, "depth")
+        .or_else(|| svg_attr(g_attrs, "innerdepth"))
+        .or_else(|| svg_attr(g_attrs, "depth"))
+        .unwrap_or_else(|| "0pt".to_string());
+      let px_w = parse_tex_dim(&width).unwrap_or(1.0);
+      let px_h = parse_tex_dim(&height).unwrap_or(1.0);
+      let px_d = parse_tex_dim(&depth).unwrap_or(0.0);
+      // Perl: y = to_px(height) + to_px(depth); flip so foreign content is upright.
+      let y = px_h + px_d;
+      svg.push_str(&format!(
+        r#"<g transform="translate(0,{y:.2}) scale(1,-1)"><foreignObject width="{px_w:.2}" height="{px_h:.2}" overflow="visible">{node}</foreignObject></g>"#
+      ));
+    }
+
     svg.push_str("</g>");
   }
 
@@ -1768,6 +1818,28 @@ fn convert_picture_children_to_svg(content: &str) -> String {
   }
 
   svg
+}
+
+/// Extract a `name="value"` attribute from a serialized element/attribute
+/// string. Matches `name` only at an attribute boundary (string start,
+/// whitespace, or after `<`), so a query for `width` does NOT match
+/// `innerwidth="…"`. Returns the first such value.
+fn svg_attr(s: &str, name: &str) -> Option<String> {
+  let pat = format!("{name}=\"");
+  let bytes = s.as_bytes();
+  let mut from = 0;
+  while let Some(rel) = s[from..].find(&pat) {
+    let at = from + rel;
+    let boundary = at == 0 || bytes[at - 1].is_ascii_whitespace() || bytes[at - 1] == b'<';
+    if boundary {
+      let vstart = at + pat.len();
+      return s[vstart..]
+        .find('"')
+        .map(|end| s[vstart..vstart + end].to_string());
+    }
+    from = at + pat.len();
+  }
+  None
 }
 
 /// Parse a TeX dimension string (e.g. "100.0pt") to pixels.
@@ -1836,6 +1908,51 @@ mod finalize_html5_splice_tests {
     assert_eq!(
       splice(r#"<span id="p1" class="ltx_picturewide"></span>"#),
       r#"<span id="p1" class="ltx_picturewide"></span>"#
+    );
+  }
+}
+
+#[cfg(test)]
+mod picture_svg_foreign_content_tests {
+  //! html_feedback#74 (arXiv:0810.1673v3 Fig 2): a `<Math>` or `<graphics>`
+  //! inside a `{picture}` `\makebox` must survive into the SVG, wrapped in a
+  //! `<foreignObject>` (as Perl's `SVG.pm` does), not be dropped.
+  //! `convert_picture_children_to_svg` handled the drawing primitives + `<text>`
+  //! but had NO case for foreign content, so xfig/pstricks figures silently lost
+  //! their math labels and `\epsfig` images. Plain text is the baseline; math and
+  //! graphics are the canaries.
+  use super::convert_picture_children_to_svg;
+
+  #[test]
+  fn plain_text_label_still_renders() {
+    // The shape emitted for `\put(50,50){\makebox(0,0){Hello}}` — already worked.
+    let input = r#"<g transform="translate(50,50)"><text>Hello</text></g>"#;
+    let out = convert_picture_children_to_svg(input);
+    assert!(
+      out.contains("Hello"),
+      "plain-text picture label regressed: {out}"
+    );
+  }
+
+  #[test]
+  fn math_label_survives_as_foreignobject() {
+    // The shape emitted for `\put(20,20){\makebox(0,0){$X^{2}$}}`.
+    let input = r#"<g transform="translate(20,20)" innerwidth="13.55pt" innerheight="8.14pt"><Math mode="inline" tex="X^{2}"><XMath><XMTok>X</XMTok></XMath></Math></g>"#;
+    let out = convert_picture_children_to_svg(input);
+    assert!(
+      out.contains("foreignObject") && out.contains("Math"),
+      "math inside a picture makebox was dropped, not wrapped in <foreignObject>: {out}"
+    );
+  }
+
+  #[test]
+  fn embedded_graphic_survives_as_foreignobject() {
+    // The shape emitted for `\epsfig{file=link.ps}` inside a picture.
+    let input = r#"<g transform="translate(0,0)" innerwidth="277pt" innerheight="277pt"><graphics candidates="link.ps" graphic="link.ps"/></g>"#;
+    let out = convert_picture_children_to_svg(input);
+    assert!(
+      out.contains("foreignObject") && out.contains("graphic"),
+      "an embedded picture graphic was dropped, not wrapped in <foreignObject>: {out}"
     );
   }
 }
