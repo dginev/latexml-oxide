@@ -64,6 +64,17 @@ LoadDefinitions!({
 
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
+  // revtex4-2 (reached via revtex4_2_cls, which sets this flag) defaults to
+  // NUMERIC APS citations, like the PDF. Preload natbib WITH the `numbers`
+  // option BEFORE revtex4_support's bare `RequirePackage("natbib")` — natbib
+  // loads once, so this first require wins and the `numbers`-set square/comma
+  // citestyle sticks. Perl reaches the same `citestyle="numbers"` by version-
+  // falling revtex4-2 to revtex.cls (which preloads natbib[numbers]). Bare
+  // revtex4 / revtex4-1 leave the flag unset and keep author-year (Perl
+  // parity). See revtex4_2_cls.rs; html_feedback #6609, witness 2606.09494.
+  if lookup_bool("revtex_cite_numbers") {
+    RequirePackage!("natbib", options => vec![String::from("numbers")]);
+  }
   RequirePackage!("revtex4_support");
 
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.

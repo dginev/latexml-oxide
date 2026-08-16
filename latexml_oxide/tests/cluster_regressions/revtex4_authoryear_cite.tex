@@ -1,0 +1,11 @@
+% Parity lock for the revtex4-2 numeric-citation fix (html_feedback #6609):
+% bare `revtex4` (and `revtex4-1`) must STAY author-year, matching Perl 0.8.8,
+% which gives `citestyle="authoryear"` for these class names. Only `revtex4-2`
+% flips to numeric (see revtex4_2_numeric_cite.tex) -- the fix must not leak the
+% `numbers` preload to the rest of the revtex4 family.
+\documentclass[twocolumn]{revtex4}
+\usepackage{natbib}
+\begin{document}
+We cite \cite{beta} and \cite{alpha}.
+\bibliography{revtex4_2_numeric_cite}
+\end{document}

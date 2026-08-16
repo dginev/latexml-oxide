@@ -127,7 +127,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("remreset", "sty", package::remreset_sty::load_definitions),
   ("report", "cls", package::report_cls::load_definitions),
   ("revtex4", "cls", package::revtex4_cls::load_definitions),
-  ("revtex4-2", "cls", package::revtex4_cls::load_definitions), // version fallback
+  ("revtex4-2", "cls", package::revtex4_2_cls::load_definitions), // numeric APS citations (#6609)
   ("revtex", "sty", package::revtex_sty::load_definitions),
   ("revtex4", "sty", package::revtex4_sty::load_definitions),
   (

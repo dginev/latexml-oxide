@@ -378,6 +378,7 @@ pub mod report_cls;
 pub mod revsymb_sty;
 pub mod revtex3_support_sty;
 pub mod revtex4_1_cls;
+pub mod revtex4_2_cls;
 pub mod revtex4_cls;
 pub mod revtex4_sty;
 pub mod revtex4_support_sty;
