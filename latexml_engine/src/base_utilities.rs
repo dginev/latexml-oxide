@@ -2335,12 +2335,16 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
     if target.get_attribute("role").unwrap_or_default() == "pending" {
       continue;
     }
-    for label in target
-      .get_attribute("_annotations")
-      .unwrap_or_default()
-      .split(',')
-    {
-      if label.is_empty() {
+    // Dedup labels PER TARGET: a creator that cites the same annotation label
+    // from several of its authors (LLNCS `\author{A\inst{1} B\inst{2,1}}` — both
+    // A and B cite institution 1) must receive that affiliation ONCE, not once
+    // per citing author. Each duplicate label would otherwise push `target`
+    // again, and the pending note gets cloned into it per push. Witness arXiv
+    // 2603.23669: two-author creators rendered "Mila … Mila … McGill … McGill".
+    let annotations = target.get_attribute("_annotations").unwrap_or_default();
+    let mut seen: HashSet<&str> = HashSet::default();
+    for label in annotations.split(',') {
+      if label.is_empty() || !seen.insert(label) {
         continue;
       }
       labeltable
