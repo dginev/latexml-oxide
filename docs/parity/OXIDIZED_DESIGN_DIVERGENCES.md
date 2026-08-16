@@ -1380,6 +1380,19 @@ are unchanged; an empty `\\`-leading name list keeps a single empty author so it
 affiliations are not dropped. `author_affil_splits()` already carried the comment
 "NO comma in affiliations!!!"; this extends that discipline to the no-marker arm.
 
+**(c) Short author names in a marker-labeled line.** The marker-labeled arm
+classifies each `\quad`/`\\`-split line as author vs affiliation by where its
+superscript sits. The original proxy — a marker within the first 8 tokens ⇒
+affiliation ("¹CMU") — misread a **short author name** whose trailing mark landed
+under the threshold: "Min Xu" is 7 tokens, so `Min Xu\textsuperscript{1}` was
+demoted to an affiliation and the author lost (witness arXiv:2606.08234,
+html_feedback#6614). Replaced by the length-independent signal
+`name_precedes_marker`: a line reads "Name\textsuperscript{n}" (letter text
+before the marker ⇒ author, split into creators) or "\textsuperscript{n}Affil"
+(the marker leads the line ⇒ affiliation). Here Rust surpasses Perl, which keeps
+the four authors but ALSO emits the affiliation line itself as phantom author
+creators.
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`
