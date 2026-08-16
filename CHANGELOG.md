@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+  - **A `\ref` to a `\nonumber` eqnarray row shows the equation number, not the
+    paper title.** A `\label` right after `\begin{eqnarray}` whose first row is
+    `\nonumber` bound to that unnumbered row; `\ref` found no number there and fell
+    through to the document title, rendering the whole paper title as the link
+    text. The label now inherits the equation group's number (matching pdflatex's
+    `\ref`), so it renders "1". Surpasses Perl, which leaks the title identically.
+    Witness arXiv 2308.06222 (arXiv/html_feedback#94).
   - **Unsorted bibliography styles number the References in citation order.**
     `\bibliographystyle{unsrt}`/`{ieeetr}`/`{IEEEtran}` alphabetized the reference
     list, mismatching the PDF (whose figure captions bake in "[2], [3], [4]"). The

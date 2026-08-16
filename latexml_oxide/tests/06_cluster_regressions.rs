@@ -186,6 +186,31 @@ fn cluster_numcases_arraycolsep_macro_no_register_warning() {
     "spurious expected:register warning on a \\def-ized \\arraycolsep in numcases:\n{log}"
   );
 }
+/// A `\label` placed right after `\begin{eqnarray}` whose first row is
+/// `\nonumber` must make `\ref` render the equation number ("1"), not the
+/// document title. LaTeX steps the `equation` counter once at `\begin`, so
+/// `\label` captures "1" before the `\nonumber` row retracts its display;
+/// LaTeXML binds the label to that unnumbered row (no refnum) and `\ref` fell
+/// through to the document title (SHARED bug with Perl 0.8.8 — verified same
+/// host; surpass-Perl per html_feedback#94). Fixed in Scan: a labelled equation
+/// row with no refnum inherits its group's number from a numbered sibling.
+/// Witness arXiv 2308.06222. pdflatex ground truth: `\newlabel{eqx}{{1}{1}…}`.
+#[test]
+fn cluster_eqnarray_nonumber_label_ref_is_the_number() {
+  let x = convert_and_post_clean("tests/cluster_regressions/eqnarray_nonumber_label_ref.tex");
+  // The in-text \ref renders the number "1" as an ltx_ref_tag (not a title).
+  assert!(
+    x.contains(r#"<text class="ltx_ref_tag">1</text>"#),
+    "eqnarray \\ref did not resolve to the equation number \"1\":\n{x}"
+  );
+  // The distinctive title word must NOT leak into a reference as its text (it may
+  // still appear once in the real <title> element and as the standard breadcrumb
+  // tooltip, exactly as a normal numbered-equation ref does).
+  assert!(
+    !x.contains(r#"ltx_ref_title">Distinctive"#),
+    "the document title leaked into the equation \\ref link text:\n{x}"
+  );
+}
 /// floatflt `floatingfigure` must compute the `width` percentage from its
 /// `{Dimension}` arg (Perl `toPercent`: `int(100*dim/\textwidth)`). The args are
 /// only on the BEGIN whatsit (after_digest_begin); the prior code read them in

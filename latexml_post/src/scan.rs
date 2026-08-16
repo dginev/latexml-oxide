@@ -210,6 +210,7 @@ impl Scan {
     // tag nodes (refnum, typerefnum, etc.)
     // Store as String (not Xml) to avoid dangling node references.
     // Perl uses cloneNode(1) deep copy; our libxml bindings only do ref copies.
+    let mut has_refnum = false;
     for tagnode in child_tag_nodes(node) {
       let key = if let Some(role) = tagnode.get_attribute("role") {
         if role.ends_with("refnum") {
@@ -220,8 +221,28 @@ impl Scan {
       } else {
         "refnum".to_string()
       };
+      if key == "refnum" {
+        has_refnum = true;
+      }
       let text = tagnode.get_content();
       sp.push(&key, Value::from(text));
+    }
+
+    // pdflatex parity (surpass-Perl): a `\label` placed at `\begin{eqnarray}` (or
+    // on a `\nonumber` row) captures the equation counter value at that point.
+    // LaTeX steps `equation` once at `\begin`, so `\@currentlabel` is "1" before
+    // any `\nonumber` retraction, and `\ref` yields "1" — the number the group's
+    // numbered row shows. LaTeXML binds the label to that unnumbered row, which
+    // carries no refnum, so `\ref` fell through to the document title (shared bug
+    // with Perl; witness arXiv 2308.06222 / html_feedback#94). When a *labelled*
+    // equation row inside an `<ltx:equationgroup>` has no refnum of its own,
+    // inherit it from the nearest numbered sibling — following-first (the counter
+    // points at the next number to be shown), else preceding. Only the ObjectDB
+    // entry gains the refnum; the row still shows no number in the document.
+    if tag == "ltx:equation" && !sp.labels.is_empty() && !has_refnum {
+      if let Some(inherited) = group_sibling_refnum(node) {
+        sp.push("refnum", Value::from(inherited));
+      }
     }
 
     sp
@@ -950,6 +971,55 @@ fn collect_element_children(node: &Node) -> Vec<Node> {
     }
   }
   result
+}
+
+/// The plain `refnum` text of an equation row (its `<ltx:tag role="refnum">`),
+/// if it carries one. Used to let a labelled but unnumbered eqnarray row inherit
+/// its group's number (html_feedback#94).
+fn equation_refnum_text(node: &Node) -> Option<String> {
+  for t in child_tag_nodes(node) {
+    if t.get_attribute("role").as_deref() == Some("refnum") {
+      let txt = t.get_content();
+      if !txt.trim().is_empty() {
+        return Some(txt);
+      }
+    }
+  }
+  None
+}
+
+/// For a labelled `<ltx:equation>` with no refnum of its own, find the number it
+/// should reference: the nearest numbered sibling equation in the same
+/// `<ltx:equationgroup>`, scanning following siblings first (the equation
+/// counter, captured at `\label` time, points at the next number to be shown),
+/// then preceding. Returns None when the parent is not an equationgroup or no
+/// sibling is numbered. See `collect_common` (html_feedback#94).
+fn group_sibling_refnum(node: &Node) -> Option<String> {
+  let parent = node.get_parent()?;
+  if parent.get_name() != "equationgroup" {
+    return None;
+  }
+  let is_equation =
+    |n: &Node| n.get_type() == Some(NodeType::ElementNode) && n.get_name() == "equation";
+  let mut fwd = node.get_next_sibling();
+  while let Some(sib) = fwd {
+    if is_equation(&sib) {
+      if let Some(r) = equation_refnum_text(&sib) {
+        return Some(r);
+      }
+    }
+    fwd = sib.get_next_sibling();
+  }
+  let mut back = node.get_prev_sibling();
+  while let Some(sib) = back {
+    if is_equation(&sib) {
+      if let Some(r) = equation_refnum_text(&sib) {
+        return Some(r);
+      }
+    }
+    back = sib.get_prev_sibling();
+  }
+  None
 }
 
 fn child_tag_nodes(node: &Node) -> Vec<Node> {
