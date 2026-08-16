@@ -3385,3 +3385,28 @@ Issue #531 (reporter nasser1). Perl-origin, unreported upstream. Rust **surpasse
 (OXIDIZED_DESIGN #112): `pdfcol_sty.rs` ports pdfcol.sty's own "disabled" fallback (all commands
 no-op, `\pdfcolIfStackExists` takes the false branch) — a PDF colour stack has no HTML output.
 Guard: `06_cluster_regressions::cluster_pdfcol_stub_no_undefined`.
+
+## 81. `\sys_if_shell:TF` undefined on a newer texmf expl3.sty (Perl never fires `\everyjob`)
+
+Neither Perl nor Rust LaTeXML fired TeX's `\everyjob` at job start. l3sys defers its *system*
+constants — `\c_sys_shell_escape_int`, the `\sys_if_shell:*` conditional families, the
+`\c_sys_{minute,…,year}_int` date/time ints — into `\__sys_everyjob:n { … }`
+(`expl3-code.tex` L8131-8217), i.e. into `\g__sys_everyjob_tl`, run by `\__kernel_sys_everyjob:`
+at job start. With `\everyjob` never fired, those constants stay undefined on the
+dump/short-circuit path (where a texmf `expl3.sty` newer than the embedded dump skips
+`\input expl3-code.tex`). A `expl3.sty` dated ≥ 2026-03-20 then USES `\sys_if_shell:TF` in its
+support-file/shell-escape check → `Error:undefined:\sys_if_shell:TF` on a breakable coloured
+`tcolorbox` (issue #531 secondary; reporter's TL2026 dump 2026-01-19 vs texmf 2026-03-20).
+Minimal trigger (needs the version skew, reproduced in `texlive-docker:2026` with l3kernel
+2026-07-20 over a 2026-01-19 dump):
+
+```latex
+\documentclass{article}\usepackage{expl3}
+\ExplSyntaxOn \sys_if_shell:TF{}{} \ExplSyntaxOff
+\begin{document}x\end{document}
+```
+
+Perl-origin (Perl never fires `\everyjob`). Rust **surpasses** (OXIDIZED_DESIGN #113): fire
+`\__kernel_sys_everyjob:` at `LoadFormat('latex')` completion, faithfully emulating TeX's
+job-start `\everyjob` (tex.web §1030), so the family is defined with live values before the
+preamble. Guard: `06_cluster_regressions::cluster_everyjob_defines_l3sys_shell`.

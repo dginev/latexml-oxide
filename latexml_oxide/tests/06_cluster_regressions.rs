@@ -257,6 +257,34 @@ fn cluster_defmath_textmode_no_mode_warning() {
 /// shared diagram-macro stubs absorb them. See docs/SYNC_STATUS.md.
 #[test]
 fn cluster_feynmp_fmf() { convert_clean("tests/cluster_regressions/feynmp_fmf.tex"); }
+/// Issue #531 (secondary): faithful `\everyjob` emulation (beyond Perl). l3sys
+/// defers `\sys_if_shell:*` / `\c_sys_shell_escape_int` / date-time ints into
+/// `\g__sys_everyjob_tl`, which `\__kernel_sys_everyjob:` runs at job start via
+/// `\everyjob`. Perl LaTeXML never fires `\everyjob`, so those constants were
+/// undefined until a package loaded expl3 — and NEVER on the dump/short-circuit
+/// path a texmf expl3.sty newer than the embedded dump takes (it skips `\input
+/// expl3-code.tex`), where the newer expl3.sty USES `\sys_if_shell:TF` in its
+/// support-file check → `Error:undefined:\sys_if_shell:TF` (reporter's TL2026
+/// case; reproduced in the `texlive-docker:2026` container with l3kernel
+/// 2026-07-20 over a 2026-01-19 dump). `latex.rs` now fires
+/// `\__kernel_sys_everyjob:` at `LoadFormat('latex')` completion, so the family
+/// is defined with LIVE values before the preamble. The fixture PROBES
+/// `\sys_if_shell:TF` in the preamble (before any `\usepackage`) — RED
+/// (`EVERYJOB-MISSING`) without the fix, GREEN (`EVERYJOB-PRESENT`) with it —
+/// then uses it (LaTeXML has no shell → FALSE branch). OXIDIZED_DESIGN #113.
+#[test]
+fn cluster_everyjob_defines_l3sys_shell() {
+  let xml = convert_to_xml("tests/cluster_regressions/everyjob_sys_shell.tex");
+  assert!(
+    xml.contains("EVERYJOB-PRESENT") && !xml.contains("EVERYJOB-MISSING"),
+    "\\everyjob must fire at LoadFormat so \\sys_if_shell:TF is defined in the \
+     preamble:\n{xml}"
+  );
+  assert!(
+    xml.contains("SHELL-NO") && !xml.contains("SHELL-YES"),
+    "\\sys_if_shell:TF must take the FALSE branch (LaTeXML has no shell):\n{xml}"
+  );
+}
 /// Issue #531: `pdfcol.sty` (a PDF colour-stack manager, pulled in transitively
 /// by tcolorbox's `breakable` library) had no binding, so `\pdfcolInitStack` and
 /// its four siblings raised `undefined` errors and leaked their args as text.

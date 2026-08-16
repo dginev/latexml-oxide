@@ -161,4 +161,25 @@ LoadDefinitions!({
       s!("deferred aliases: {} applied, {} skipped", applied, skipped)
     );
   }
+
+  // Faithful `\everyjob` emulation (beyond Perl). TeX inserts `\everyjob`'s
+  // token list at `main_control` start — right after the format is loaded
+  // (tex.web §1030). Our LaTeX "format" is this `LoadFormat('latex')` block, so
+  // fire the l3sys job-start hook now, before the document preamble runs. l3sys
+  // defers `\c_sys_shell_escape_int`, `\sys_if_shell:*` and the date/time ints
+  // into `\__sys_everyjob:n { … }` (expl3-code.tex L8197-8217), i.e. into
+  // `\g__sys_everyjob_tl`, which `\__kernel_sys_everyjob:` runs at job start.
+  // Perl LaTeXML never fires `\everyjob`, so on the dump/short-circuit path (a
+  // texmf expl3.sty NEWER than the embedded dump skips `\input expl3-code.tex`)
+  // those constants stay undefined — issue #531 secondary: the newer expl3.sty
+  // USES `\sys_if_shell:TF` in its support-file/shell-escape check →
+  // `Error:undefined:\sys_if_shell:TF` (reporter nasser1, TL2026 dump 2026-01-19
+  // vs texmf 2026-03-20). Firing here gives LIVE values every conversion; the
+  // `INI_MODE` early return above means it does NOT run during dump-build, so
+  // the date/time constants are never frozen into the dump. Guarded on the hook
+  // existing (the latex dump / raw base defines it; a `\csname` fires it whether
+  // or not `:`/`_` are catcode-letters, since the name is built char-by-char).
+  if lookup_meaning(&T_CS!("\\__kernel_sys_everyjob:")).is_some() {
+    let _ = raw_tex(r"\csname __kernel_sys_everyjob:\endcsname");
+  }
 });

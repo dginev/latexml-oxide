@@ -1,0 +1,20 @@
+% Issue #531 (secondary): faithful \everyjob emulation. l3sys defers
+% \sys_if_shell:TF (and the other system constants) into \g__sys_everyjob_tl,
+% run by \__kernel_sys_everyjob: at job start via \everyjob. Perl LaTeXML never
+% fires \everyjob, so \sys_if_shell:TF was undefined in the PREAMBLE (before any
+% package loads expl3) — the exact window a newer texmf expl3.sty uses it in its
+% support-file check on the dump/short-circuit path. We now fire it at
+% LoadFormat('latex'), so the probe below sees it DEFINED. The document then uses
+% it: LaTeXML has no shell, so it takes the FALSE branch.
+\documentclass{article}
+\makeatletter
+\@ifundefined{sys_if_shell:TF}%
+  {\def\everyjobstatus{EVERYJOB-MISSING}}%
+  {\def\everyjobstatus{EVERYJOB-PRESENT}}
+\makeatother
+\begin{document}
+\everyjobstatus
+\ExplSyntaxOn
+\sys_if_shell:TF{ SHELL-YES }{ SHELL-NO }
+\ExplSyntaxOff
+\end{document}
