@@ -3488,3 +3488,36 @@ arXiv/html_feedback#6884 (witness 2404.03569, a 63-author DESI paper collapsing 
 sibling class's identical author API), so all authors accumulate — the same "route the sibling
 package to its bound binding" move as the biblatex variants (OXIDIZED_DESIGN #117). Guard:
 `06_cluster_regressions::cluster_jcappub_accumulates_authors`.
+
+## 86. `\@ifundefined{r@LABEL}` forward-references need LaTeX's multi-pass `.aux` (single-pass LaTeXML cannot)
+
+LaTeXML — Perl and Rust alike — is **single-pass**: `\label{L}` records the label for
+post-processing (`labelref` → CrossRef) but never defines the LaTeX `\r@L` macro that documents
+read back. In pdflatex `\r@L` exists only after a *previous* run wrote `\newlabel{L}{…}` to the
+`.aux`, so a macro gating on `\@ifundefined{r@L}` takes the "undefined" branch on run 1 and
+resolves only after 2+ runs; LaTeXML has no `.aux`/`\r@` mechanism at all, so the gate is
+**always** undefined. Verified same-host: after `\label{foo}`, `\@ifundefined{r@foo}{U}{D}` prints
+`U` on both Perl 0.8.8 and Rust (SHARED-FAILURE, Perl-origin — architectural to LaTeXML's single
+pass). Reported as arXiv/html_feedback#6895 (witness 2608.12272): the paper's `datalabmacros.tex`
+`\HA`/`\HL` cross-linking scheme —
+
+```tex
+\newcommand{\HA@place}[2]{... \phantomsection\label{HA:#1} ...}          % anchor
+\newcommand{\HL@to}[2]{\@ifundefined{r@HA:#1}
+  {\textcolor{red}{[Error: link ``#1'' has no anchor]}}{\hyperref[HA:#1]{#2}}}  % link
+```
+
+renders every `\HL{…}` as the red inline `[Error: link "…" has no anchor]` (the user's "internal
+links show as missing") in **both** engines, because `\r@HA:…` is never defined. Minimal trigger:
+
+```tex
+\documentclass{article}\begin{document}\label{foo}%
+\makeatletter\@ifundefined{r@foo}{UNDEF}{DEF}\makeatother\end{document}
+```
+
+→ `UNDEF` in Perl and Rust; pdflatex prints `DEF` only from its 2nd run. Not fixed: LaTeXML
+resolves references in post-processing by design, not through `.aux`/`\r@`; emulating the two-pass
+`\r@` table would not even rescue this witness — its first `\HL` precedes its `\HA` (a forward
+reference, undefined on pdflatex's run 1 too). The rendering half of #6895 (an oversized inline
+ORCID icon) is unrelated: correct LaTeXML markup, a downstream ar5iv-css over-reach fixed in the
+`ar5iv-css` repo.
