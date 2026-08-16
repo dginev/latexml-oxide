@@ -1,11 +1,14 @@
-# Pinned nightly for the 0.7.5-rc6 release (2026-08-06). Nightlies in the window
-# (2026-07-27, 2026-08-04] regressed fat-LTO rustc RSS to >200 GB and OOM-kill the
-# `maxperf` release build (issue #512); nightly-2026-07-27 is the last-known-good
-# (5.3 GB fat-LTO). CI and the tag-triggered release both resolve their toolchain
-# through this file (the 0.7.0 release used the same dated-pin mechanism), so this
-# freezes every leg on the good nightly. Revert to floating `channel = "nightly"`
-# once a fixed nightly lands and #512 closes. (The project requires nightly —
-# latexml_core uses #![feature(thread_local)]; see CLAUDE.md.)
+# Floating nightly. The project requires nightly — latexml_core uses
+# #![feature(thread_local)] (see CLAUDE.md). CI and the tag-triggered release
+# resolve their toolchain through this file, so every leg tracks the same nightly.
+#
+# History (issue #512): nightlies in the window (2026-07-27, 2026-08-04] regressed
+# fat-LTO rustc RSS to >200 GB and OOM-killed the `maxperf` release build. We pinned
+# to nightly-2026-07-27 (last good, 5.3 GB) to unblock the 0.7.5 release. The
+# regression is fixed upstream by nightly-2026-08-15 (67854e511): a cold fat-LTO
+# build peaks at 3.4-3.6 GB again (latexml_oxide maxperf 3.36 GB, ar5iv-editor-server
+# 3.57 GB) — so we float again. If a future nightly re-regresses fat-LTO RSS, pin to
+# the last good date here and reopen #512.
 [toolchain]
-channel = "nightly-2026-07-27"
+channel = "nightly"
 components = ["rustfmt", "clippy", "rust-src"]
