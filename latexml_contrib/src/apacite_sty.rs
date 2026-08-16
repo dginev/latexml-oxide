@@ -156,6 +156,30 @@ LoadDefinitions!({
   def_macro_noop("\\BDBL")?;
   def_macro_noop("\\BCBT")?;
   def_macro_noop("\\BCBL")?;
+  // Old-format compat macros (pre-2012 apacite.bst): the `\bibitem` label uses
+  // `\BCAY{full}{short}{year}` and entries emphasize with `\Bem` and separate
+  // authors with `\BBACOMMA`. Single binding, both versions (LaTeXML design):
+  // the MODERN `.bbl` (`\citeauthoryear` + `\APACrefauthors`, handled above)
+  // never uses these, and old/modern macro sets are disjoint here, so no
+  // feature-sniffing is needed — the binding just defines the superset.
+  //   * `\Bem`: OLD `.bbl` files invoke it as a font DECLARATION —
+  //     `{\Bem Biometrika}`, `{\Bem 63}` (witness 2304.11127) — so it must be
+  //     `\em`, not `\emph`. (Current apacite.sty L1519 `\let\Bem\emph` is the
+  //     command form, but modern `.bbl`s don't emit `\Bem` at all, so matching
+  //     the old declaration usage is both correct and conflict-free.)
+  //   * `\def\BCAY##1##2##3{\BCA{##1}{##2}}` (apacite.sty L260) and
+  //     `\def\BCA##1##2{{\@BAstyle ##1}}` (L496/854) with `\@BAstyle` empty by
+  //     default (L468/818) — i.e. the label is the full author.
+  //   * `\newcommand{\BBAB}{and}` (L2124); `\BBACOMMA` (older versions) = comma
+  //     before the `\BBA` ampersand ("Smith, J.\BBACOMMA\ \BBA\ Doe").
+  // Perl ships no apacite binding; Rust surpasses. Related html_feedback#6489
+  // (arXiv 2304.11127, multibib + `theapa` `.bbl`: 55×\BCAY / 66×\Bem flood).
+  Let!("\\Bem", "\\em");
+  def_macro_noop("\\@BAstyle")?; // author text-style declaration (empty default)
+  DefMacro!("\\BCA{}{}", "{\\@BAstyle #1}");
+  DefMacro!("\\BCAY{}{}{}", "\\BCA{#1}{#2}");
+  DefMacro!("\\BBACOMMA", ",");
+  DefMacro!("\\BBAB", "and");
   def_macro_identity("\\BCnt{}")?;
   def_macro_identity("\\BPGS{}")?;
   def_macro_identity("\\BVOL{}")?;
