@@ -446,6 +446,29 @@ fn cluster_verb_in_index_renders_typewriter() {
     "the \\verb subentry did not compose with the `!` split; xml=\n{xml}"
   );
 }
+/// aa.cls (Astronomy & Astrophysics) does `\RequirePackage[T1]{fontenc}`
+/// (real aa.cls L154), so a literal text-mode `>`/`<` renders as itself in the
+/// PDF. Both LaTeXML engines' aa binding loaded `fontenc` WITHOUT the `[T1]`
+/// option, so the document stayed OT1 and `>` decoded as ¿ (U+00BF), `<` as ¡
+/// (U+00A1) — the arXiv HTML diverged from the arXiv PDF (html_feedback#84,
+/// arXiv:2308.06236v1 Fig 6 caption `masses > 0.1~M_\oplus`). `aa_support_sty.rs`
+/// now loads `fontenc` with `[T1]` like the real class (and like the
+/// acmart/elsarticle/moderncv bindings). Shared with Perl 0.8.8 (its aa_support
+/// dropped the same option).
+#[test]
+fn cluster_aa_class_t1_fontenc_angle_brackets() {
+  let xml = convert_to_xml("tests/cluster_regressions/aa_class_t1_fontenc.tex");
+  // The canary: no OT1 ¡/¿ decode of `<`/`>` under aa.cls's T1 encoding.
+  assert!(
+    !xml.contains('\u{00BF}') && !xml.contains('\u{00A1}'),
+    "aa.cls forces [T1]{{fontenc}}, so `>`/`<` must not decode as OT1 ¿/¡; xml=\n{xml}"
+  );
+  // …and the greater/less signs survive as themselves.
+  assert!(
+    xml.contains("masses &gt; 0.1") && xml.contains("less &lt; 0.5"),
+    "literal `>`/`<` must render as themselves under aa.cls's T1 encoding; xml=\n{xml}"
+  );
+}
 /// subcaption loaded AFTER subfigure.sty must not clobber subfigure.sty's
 /// self-contained `\subfigure[][]{}` macro with its own `{subfigure}[]{Dimension}`
 /// environment. The two have incompatible contracts: the macro consumes a

@@ -38,7 +38,11 @@ LoadDefinitions!({
   RequirePackage!("inst_support");
   RequirePackage!("calc");
   RequirePackage!("etex");
-  RequirePackage!("fontenc");
+  // Real aa.cls L154 is `\RequirePackage[T1]{fontenc}` — the `[T1]` was dropped
+  // here (and in Perl's aa_support.sty.ltxml), leaving the document in OT1, where
+  // a literal text `<`/`>` decodes to ¡/¿ instead of itself (html_feedback#84,
+  // arXiv:2308.06236). Load T1 like the real class (as acmart/elsarticle/moderncv do).
+  RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("geometry");
   RequirePackage!("setspace");
   RequirePackage!("fancyhdr");
