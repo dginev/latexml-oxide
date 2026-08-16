@@ -67,6 +67,7 @@ const RETURN_OVERRIDES: &[(&str, &str)] = &[
   ("LookupDefinition", "Definition?"),
   ("children", "array"),
   ("findnode", "Node?"),
+  ("floatToElement", "Node?"),
   ("firstChild", "Node?"),
   ("getElement", "Node?"),
   ("getNode", "Node"),
@@ -811,6 +812,14 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "canContain",
+    Doc::Rust(
+      "May an element (a node or a qname) contain a child qname? — the schema \
+       query before opening an element.",
+      "latexml_core::document::can_contain",
+    ),
+  ),
+  (
     "closeElement",
     Doc::Rust(
       "Close the deepest open element of that name.",
@@ -858,6 +867,14 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "The node's first child, or `()`.",
       "libxml::tree::Node::get_first_child",
+    ),
+  ),
+  (
+    "floatToElement",
+    Doc::Rust(
+      "Move the insertion point up to the nearest ancestor that can contain a \
+       qname; returns the previous point to `setNode` back to (or `()`).",
+      "latexml_core::document::Document::float_to_element",
     ),
   ),
   (

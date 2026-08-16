@@ -1344,6 +1344,57 @@ pub(super) fn make_engine() -> Engine {
     with_doc_infallible(|doc| node_or_unit(doc.get_element()))
   });
 
+  // canContain (Perl `canContain`, Document.pm:160) — the schema query a binding
+  // asks before opening an element: may `tag` (a node OR a qname) hold a `child`
+  // qname? The motivating use (#594) is `canContain(node, "#PCDATA")` to decide
+  // whether a text-bearing wrapper (`ltx:p`) must be opened first. Read-only, so
+  // it is `with_doc_infallible` — meaningful only inside a body (where a live
+  // node handle exists); `false` outside one.
+  engine.register_fn(
+    "canContain",
+    |_d: &mut DocProxy, tag: NodeProxy, child: &str| -> bool {
+      with_doc_infallible(|_doc| latexml_core::document::can_contain(&tag.0, child))
+    },
+  );
+  engine.register_fn(
+    "canContain",
+    |_d: &mut DocProxy, tag: &str, child: &str| -> bool {
+      with_doc_infallible(|_doc| latexml_core::document::can_contain_qname(tag, child))
+    },
+  );
+
+  // floatToElement (Perl `floatToElement`, Document.pm:1052) — move the insertion
+  // point up to the nearest ancestor that can contain `qname`, and RETURN the
+  // previous insertion point (a `Node`, or `()` if none can) so the caller can
+  // `setNode(saved)` to restore it after inserting. The 2-arg form passes Perl's
+  // `$closeifpossible`: close the intervening auto-closable nodes instead of just
+  // repositioning. Mutating, so `with_doc`.
+  engine.register_fn(
+    "floatToElement",
+    |_d: &mut DocProxy, qname: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        Ok(node_or_unit(
+          doc.float_to_element(qname, false).map_err(rhai_err)?,
+        ))
+      })
+    },
+  );
+  engine.register_fn(
+    "floatToElement",
+    |_d: &mut DocProxy,
+     qname: &str,
+     closeifpossible: bool|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        Ok(node_or_unit(
+          doc
+            .float_to_element(qname, closeifpossible)
+            .map_err(rhai_err)?,
+        ))
+      })
+    },
+  );
+
   // insertElement (Perl `insertElement`, Document.pm:639) — open, absorb the
   // content, close, and hand back the node. The ELEMENT counterpart that
   // `insertXML` is named after; it was the one missing half of that pairing.

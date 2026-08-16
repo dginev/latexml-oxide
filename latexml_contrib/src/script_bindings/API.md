@@ -145,7 +145,7 @@ Called at the top level of a binding file, or from inside any body.
 
 Reached through the `document` handle a constructor body receives as its first argument — Perl's `$document->method`.
 
-25 functions, 35 calls.
+27 functions, 39 calls.
 
 | call | documentation |
 |---|---|
@@ -154,10 +154,12 @@ Reached through the `document` handle a constructor body receives as its first a
 | `absorbString(string)` | Absorb a plain string at the current insertion point. ([`Document::absorb_string`](latexml_core::document::Document::absorb_string)) |
 | `addClass(Node, string)` | Add CSS classes to a node, keeping those it already has. ([`Document::add_class`](latexml_core::document::Document::add_class)) |
 | `appendClone(Node, array)` | Append COPIES of nodes, with fresh ids. ([`Document::append_clone`](latexml_core::document::Document::append_clone)) |
+| `canContain(Node, string) -> bool`<br>`canContain(string, string) -> bool` | May an element (a node or a qname) contain a child qname? — the schema query before opening an element. ([`can_contain`](latexml_core::document::can_contain)) |
 | `closeElement(string)` | Close the deepest open element of that name. ([`Document::close_element`](latexml_core::document::Document::close_element)) |
 | `closeElementAt(Node)` | Close an element that was opened with `openElementAt`. ([`Document::close_element_at`](latexml_core::document::Document::close_element_at)) |
 | `findnode(string) -> Node?`<br>`findnode(string, Node) -> Node?` | The first node matching an XPath. ([`Document::findnode`](latexml_core::document::Document::findnode)) |
 | `findnodes(string) -> array`<br>`findnodes(string, Node) -> array` | Every node matching an XPath. ([`Document::findnodes`](latexml_core::document::Document::findnodes)) |
+| `floatToElement(string) -> Node?`<br>`floatToElement(string, bool) -> Node?` | Move the insertion point up to the nearest ancestor that can contain a qname; returns the previous point to `setNode` back to (or `()`). ([`Document::float_to_element`](latexml_core::document::Document::float_to_element)) |
 | `generateID(Node, string)` | Give a node an `xml:id`, if it has none. ([`Document::generate_id`](latexml_core::document::Document::generate_id)) |
 | `getElement() -> Node?` | The element at, or containing, the insertion point. ([`Document::get_element`](latexml_core::document::Document::get_element)) |
 | `getNode() -> Node` | The current insertion point. ([`Document::get_node`](latexml_core::document::Document::get_node)) |
