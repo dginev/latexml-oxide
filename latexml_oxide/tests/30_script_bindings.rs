@@ -784,6 +784,28 @@ const XMLAPI_SAMPLE: &str = r##"
       assign_global("xq:orphanmsg", "" + e);
     }
   });
+
+  // canContain / floatToElement (Perl `canContain`/`floatToElement`, #594): the
+  // schema query + insertion-point search a binding uses to place an element
+  // where the model allows (the motivating case: patching \hrule/\vrule).
+  DefConstructor("\\xqmodel", |document| {
+    // qname/qname form — stable schema facts.
+    assign_global("xq:cc_p_text", if document.canContain("ltx:p", "#PCDATA") {"yes"} else {"no"});
+    assign_global("xq:cc_p_sec",  if document.canContain("ltx:p", "ltx:section") {"yes"} else {"no"});
+    // node form (the documented `canContain(node, "#PCDATA")` use) must agree
+    // with the qname form for that same node's tag.
+    let here = document.getNode();
+    let qn = here.qname();
+    assign_global("xq:cc_node_agrees",
+      if document.canContain(here, "#PCDATA") == document.canContain(qn, "#PCDATA") {"yes"} else {"no"});
+    // floatToElement returns the PREVIOUS insertion point to setNode back to.
+    let before = document.getNode().qname();
+    let saved = document.floatToElement("ltx:para");
+    assign_global("xq:float_kind", type_of(saved));
+    if type_of(saved) != "()" { document.setNode(saved); }
+    assign_global("xq:float_restored",
+      if document.getNode().qname() == before {"yes"} else {"no"});
+  });
 "##;
 
 fn xmlapi_dispatch(request: &str) -> Option<Result<()>> {
@@ -820,6 +842,7 @@ fn document_xml_api_matches_the_compile_time_surface() {
     "\\xqbuild{wrap}\\xqbuild{clone}\\xqbuild{replace}\\xqbuild{mover}",
     "\\xqbuild{at}\\xqbuild{orphan}",
     "\\xqfind \\xqmutate \\xqat \\xqforeign \\xqorphan ",
+    "some text \\xqmodel ",
     "\\end{document}"
   );
   let doc = latexml
@@ -939,6 +962,34 @@ fn document_xml_api_matches_the_compile_time_surface() {
     get_status(LogStatus::Fatal) == 0,
     "the XML surface escalated to Fatal: {}",
     latexml_core::common::error::get_status_message()
+  );
+
+  // ── canContain / floatToElement (#594) ──
+  assert_eq!(
+    g("xq:cc_p_text"),
+    "yes",
+    "canContain(qname, #PCDATA): ltx:p must be able to hold text"
+  );
+  assert_eq!(
+    g("xq:cc_p_sec"),
+    "no",
+    "canContain(qname, qname): ltx:p must NOT be able to hold an ltx:section"
+  );
+  assert_eq!(
+    g("xq:cc_node_agrees"),
+    "yes",
+    "canContain(node, ..) must agree with canContain(qname, ..) for that node's tag"
+  );
+  assert_eq!(
+    g("xq:float_kind"),
+    "Node",
+    "floatToElement must return the previous insertion point as a Node, got {:?}",
+    g("xq:float_kind")
+  );
+  assert_eq!(
+    g("xq:float_restored"),
+    "yes",
+    "the Node floatToElement returned must setNode back to the original point"
   );
 
   drop(latexml);
