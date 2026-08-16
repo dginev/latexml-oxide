@@ -100,7 +100,7 @@
     <p>Testing <ref labelref="LABEL:array:subfig1"/> and <ref labelref="LABEL:array:subfig2"/> inside <ref labelref="LABEL:array:fig"/>.</p>
     <pagination role="newpage"/>
   </para>
-  <figure align="center" class="ltx_minipage" float="right" framed="top" inlist="loa" placement="H" vattach="middle" width="345.0pt" xml:id="alg1">
+  <figure align="center" class="ltx_minipage" float="right" framed="top" inlist="loa" placement="H" vattach="middle" width="120.8pt" xml:id="alg1">
     <tags>
       <tag><text font="bold">Algorithm 1</text></tag>
       <tag role="refnum">1</tag>

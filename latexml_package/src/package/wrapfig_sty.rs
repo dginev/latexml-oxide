@@ -83,6 +83,22 @@ fn set_wrap_width(whatsit: &mut Whatsit) {
   if v == 0 {
     return;
   }
+  // Cap the float's INNER line width to the declared wrap width, so a body
+  // `\includegraphics[width=\linewidth]` / `\rule{\linewidth}` / nested box is
+  // sized to the float and not to the full page. Real LaTeX wrapfig does this
+  // (`\hsize<width>` then `\@parboxrestore`'s `\linewidth\hsize`); Perl's
+  // binding discards the width arg entirely, so its wrapfig image renders at the
+  // full page width and overflows the narrow float, colliding with the wrapped
+  // text (SHARED-FAILURE). Witness arXiv 2603.23669 Fig. 3: a 0.296\textwidth
+  // wrapfigure whose 512px tikz image overran the 29% float. `\textwidth` is
+  // left alone (the @width percentage below is relative to the OUTER textwidth,
+  // and wrapfig itself never rescales \textwidth). Runs in after_digest_begin,
+  // before the body digests, so the reduced \linewidth reaches the image.
+  // OXIDIZED_DESIGN #29 (extends the width-emission divergence).
+  let rv: RegisterValue = Dimension::new(v).into();
+  let _ = assign_register("\\hsize", rv.clone(), None, Vec::new());
+  let _ = assign_register("\\columnwidth", rv.clone(), None, Vec::new());
+  let _ = assign_register("\\linewidth", rv, None, Vec::new());
   let Some(tw) = lookup_dimension("\\textwidth") else {
     return;
   };

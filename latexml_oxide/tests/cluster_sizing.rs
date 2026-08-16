@@ -769,3 +769,48 @@ mod widthof_in_base_dimension_reader {
     );
   }
 }
+
+mod wrapfig_inner_linewidth {
+  //! A `wrapfigure`'s inner `\linewidth` must be the declared wrap width, not the
+  //! full page. Witness arXiv 2603.23669 Fig. 3: a `wrapfigure{0.296\textwidth}`
+  //! whose body was `\includegraphics[width=\linewidth]` rendered the image at
+  //! the full page width (479px) inside a 29%-wide right float, so it overran and
+  //! collided with the wrapped text. Real LaTeX wrapfig sets `\hsize`/`\linewidth`
+  //! to the wrap width; Perl discards the width arg (SHARED-FAILURE). The fix
+  //! lives in `wrapfig_sty.rs::set_wrap_width` (OXIDIZED_DESIGN #29).
+  use crate::cluster::convert_to_xml;
+
+  /// Widths (pt) of every `<rule …>` in the core XML, in document order.
+  fn rule_widths(xml: &str) -> Vec<f64> {
+    xml
+      .match_indices("<rule")
+      .filter_map(|(i, _)| {
+        let rest = &xml[i..];
+        let ws = rest.find("width=\"")? + "width=\"".len();
+        let val = &rest[ws..];
+        val[..val.find('"')?]
+          .trim_end_matches("pt")
+          .parse::<f64>()
+          .ok()
+      })
+      .collect()
+  }
+
+  #[test]
+  fn wrapfigure_reduces_inner_linewidth_to_wrap_width() {
+    // One conversion, two `\rule{\linewidth}`s: a full-width control and one
+    // inside a 0.3\textwidth wrapfigure (fixture wrapfig_inner_linewidth.tex).
+    let x = convert_to_xml("tests/cluster_regressions/wrapfig_inner_linewidth.tex");
+    let widths = rule_widths(&x);
+    assert!(
+      widths.len() >= 2,
+      "expected >=2 <rule> widths, got {widths:?}:\n{x}"
+    );
+    let full = widths.iter().cloned().fold(0.0_f64, f64::max);
+    let inner = widths.iter().cloned().fold(f64::INFINITY, f64::min);
+    assert!(
+      inner > 1.0 && inner < full * 0.5,
+      "wrapfigure did not reduce inner \\linewidth: inner={inner}pt full={full}pt"
+    );
+  }
+}
