@@ -687,27 +687,7 @@ mod widthof_in_base_dimension_reader {
   //! `\widthof`&friends Dimension registers, resolvable in every dimension
   //! context (matching real LaTeX, surpassing Perl). Guards the FIX: the widths
   //! are nonzero and agree with the calc-routed reference `\setlength`.
-  use std::process::Command;
-
-  fn convert(body: &str) -> String {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let work = tempfile::tempdir().expect("tempdir");
-    let dir = work.path();
-    let tex = format!(
-      "\\documentclass{{article}}\n\\usepackage{{calc}}\n\\newlength\\reflen\n\
-       \\begin{{document}}\n{body}\n\\end{{document}}\n"
-    );
-    std::fs::write(dir.join("p.tex"), tex).unwrap();
-    let out = Command::new(bin)
-      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
-      .current_dir(dir)
-      .output()
-      .expect("spawn latexml_oxide");
-    std::fs::read_to_string(dir.join("p.xml")).unwrap_or_else(|e| {
-      let stderr = String::from_utf8_lossy(&out.stderr).replace('\u{1b}', "");
-      panic!("no output: {e}\n{stderr}");
-    })
-  }
+  use crate::cluster::convert_to_xml;
 
   /// Parse the `pt` value of the first `width="…pt"` at/after `needle`.
   fn width_pt_after(xml: &str, needle: &str) -> f64 {
@@ -729,11 +709,7 @@ mod widthof_in_base_dimension_reader {
 
   #[test]
   fn widthof_resolves_in_makebox_and_rule_length_arguments() {
-    let xml = convert(
-      "\\setlength\\reflen{\\widthof{WWWW}}REF \\the\\reflen\\ ENDREF\n\
-       \\par\\rule{\\widthof{WWWW}}{2pt}\n\
-       \\par X\\makebox[\\widthof{WWWW}][r]{ab}Y",
-    );
+    let xml = convert_to_xml("tests/cluster_regressions/widthof_base_dimension_reader.tex");
 
     // Reference: the calc-routed \widthof path (\setlength) has always worked.
     let refw = {
