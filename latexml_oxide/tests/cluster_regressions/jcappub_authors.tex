@@ -1,0 +1,20 @@
+\documentclass[a4paper,11pt]{article}
+% jcappub is JCAP's SISSA/IOP class, the JCAP sibling of jheppub: same
+% accumulating \author[affil]{name} + \affiliation + \emailAdd machinery. Unbound,
+% each \author fell through to article's (which overwrites), so only the last
+% author survived and \affiliation/\emailAdd/\keywords were undefined.
+% html_feedback #6884, witness arXiv 2404.03569.
+\usepackage{jcappub}
+\title{A jcappub author-list test}
+\author[1]{Alpha Author,}
+\author[1,2]{Beta Author,}
+\author[2]{Gamma Author}
+\affiliation[1]{Institute One, City, Country}
+\affiliation[2]{Institute Two, City, Country}
+\emailAdd{alpha@example.org}
+\keywords{one, two}
+\abstract{A short abstract for the jcappub test.}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
