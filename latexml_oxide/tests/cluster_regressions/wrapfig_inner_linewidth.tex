@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{wrapfig}
+\begin{document}
+% Control: \rule{\linewidth} outside any float renders at the full page width.
+\rule{\linewidth}{2pt}
+
+% Inside a 0.3\textwidth wrapfigure, \linewidth must be the wrap width, so this
+% rule is ~0.3 of the page. Pre-fix \linewidth stayed at the full page width, so
+% a body \includegraphics[width=\linewidth] / minipage{\linewidth} overflowed
+% the narrow float and collided with the wrapped text (arXiv 2603.23669 Fig. 3).
+\begin{wrapfigure}{r}{0.3\textwidth}\rule{\linewidth}{2pt}\end{wrapfigure}
+Some wrapped text next to the float.
+\end{document}

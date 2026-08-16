@@ -677,6 +677,22 @@ arXiv:2012.00499 Figure 3 (`\begin{wrapfigure}{r}{0.4\textwidth}` around a
 fit the single-line caption; now both image and caption are capped to the wrap
 width.
 
+**Extension — inner `\linewidth`:** the `@width` cap on the figure is not enough
+when the body carries its OWN intrinsic size — a `\includegraphics[width=\linewidth]`
+or `\begin{minipage}{\linewidth}` that read `\linewidth` at the full page width
+render a fixed-size box (e.g. a tikz picture serializes to `<svg width="479">`)
+that overflows the narrow float and collides with the wrapped text (`max-width:100%`
+does not rein a fixed-`width` SVG in). So `set_wrap_width` also reduces the INNER
+`\hsize`/`\columnwidth`/`\linewidth` to the wrap width (in `after_digest_begin`,
+before the body digests), exactly as real LaTeX wrapfig does (`\hsize<width>` +
+`\@parboxrestore`'s `\linewidth\hsize`) and as `{minipage}` already does here.
+`\textwidth` is left alone (the `@width` percentage is relative to the OUTER
+textwidth). Perl discards the width arg entirely, so Perl's wrapfig image renders
+full-width too (SHARED-FAILURE). Witness arXiv 2603.23669 Figure 3
+(`0.296\textwidth` wrapfigure around a 512px tikz image): the picture dropped from
+479px → 141px and the text now wraps cleanly. Guard
+`cluster_sizing::wrapfig_inner_linewidth`.
+
 ---
 
 ### 30. `\href` is `protected` (robust), unlike Perl's
