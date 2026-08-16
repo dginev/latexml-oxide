@@ -521,6 +521,72 @@ fn cluster_aa_class_t1_fontenc_angle_brackets() {
     "literal `>`/`<` must render as themselves under aa.cls's T1 encoding; xml=\n{xml}"
   );
 }
+/// Regression guard for a bug that self-resolved via cumulative digestion fixes.
+/// arXiv:1806.08417's `\DeclarePairedDelimiterXPP\seq` used inside `\genfrac` in
+/// display math once errored (`\delimsize` + `\seq@after` undefined, ~3 errors)
+/// because the constructor's arg-digestion sub-frame dropped the XPP closure's
+/// local `\def`s. `convert_to_xml` gates 0 errors; the asserts prove the paired
+/// delimiter + FRACOP actually rendered (guards against an error-free-but-empty
+/// pass). Was tracked in memory `project_1806_08417_seq_in_body` (now retired).
+#[test]
+fn cluster_seq_paired_delim_in_genfrac_display_math() {
+  let xml = convert_to_xml("tests/cluster_regressions/seq_paired_delim_genfrac.tex");
+  assert!(
+    xml.contains("role=\"FRACOP\""),
+    "genfrac must render a FRACOP; xml=\n{xml}"
+  );
+  assert!(
+    xml.matches("role=\"OPEN\"").count() >= 2 && xml.matches("role=\"CLOSE\"").count() >= 2,
+    "both \\seq paired delimiters must render their big-paren OPEN/CLOSE; xml=\n{xml}"
+  );
+  assert!(
+    !xml.contains("delimsize") && !xml.contains("seq@after"),
+    "no leftover undefined \\delimsize/\\seq@after; xml=\n{xml}"
+  );
+}
+/// Regression guard (self-resolved). `$$\begin{tabular}…$$` — the old astro/aa
+/// display-math centering idiom — under `aa.cls` once produced a
+/// `malformed:ltx:text` close-without-open cascade (3 errors) from the XMText⇄
+/// tabular interplay. `convert_to_xml` gates 0 errors; the asserts prove the
+/// tabular nested cleanly in the equation. Was `project_dollar_dollar_tabular`.
+#[test]
+fn cluster_dollar_dollar_tabular_in_aa_class() {
+  let xml = convert_to_xml("tests/cluster_regressions/dollar_dollar_tabular.tex");
+  assert!(
+    xml.contains("<tabular class=\"ltx_markedasmath\""),
+    "the $$…$$ tabular must render as a math-marked tabular; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains(">A</td>") && xml.contains(">B</td>"),
+    "both tabular cells must render; xml=\n{xml}"
+  );
+  assert!(
+    !xml.contains("malformed"),
+    "no malformed close-cascade; xml=\n{xml}"
+  );
+}
+/// Regression guard (self-resolved). `\[ … \]` (single-CS display math) with a
+/// body constructor, followed by `\begin{equation}`, once leaked
+/// `malformed:ltx:XMApp "isn't allowed in <ltx:text>"` during digestion (a
+/// Rust-only cluster ~50 papers; the second equation came out `ltx_math_unparsed`).
+/// `convert_to_xml` gates 0 errors; the asserts prove BOTH equations math-parse.
+/// Was `project_math_leak_em_in_equation`.
+#[test]
+fn cluster_display_math_then_equation_no_xmapp_leak() {
+  let xml = convert_to_xml("tests/cluster_regressions/display_math_then_equation.tex");
+  assert!(
+    xml.matches("<equation").count() >= 2,
+    "both equations must render; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("role=\"ADDOP\""),
+    "the A+B equation must math-parse to an ADDOP application; xml=\n{xml}"
+  );
+  assert!(
+    !xml.contains("ltx_math_unparsed") && !xml.contains("isn't allowed"),
+    "no math-parse failure / XMApp-into-text leak; xml=\n{xml}"
+  );
+}
 /// subcaption loaded AFTER subfigure.sty must not clobber subfigure.sty's
 /// self-contained `\subfigure[][]{}` macro with its own `{subfigure}[]{Dimension}`
 /// environment. The two have incompatible contracts: the macro consumes a
