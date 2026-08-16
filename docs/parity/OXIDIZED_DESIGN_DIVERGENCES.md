@@ -4126,3 +4126,39 @@ error. **Upstream**: Perl LaTeXML would benefit from the same no-op binding.
 **Guards**: `06_cluster_regressions::cluster_pdfcol_stub_no_undefined`
 (`tests/cluster_regressions/pdfcol_stub.tex`) — the five `\pdfcol…` commands emit no `<ERROR>`
 and the body collapses to exactly `STACK-NO` (the disabled false-branch), no leaked args.
+
+### 113. `\everyjob` is fired at job start (l3sys system constants get defined)
+
+**Perl** LaTeXML never fires TeX's `\everyjob` token list. Real TeX inserts `\everyjob` at
+`main_control` start — right after the format is loaded, before the first token of the main
+input (`tex.web` §1030: `if every_job<>null then begin_token_list(every_job,every_job_text)`).
+LaTeX's `\everyjob` contains `\__kernel_sys_everyjob:`, which runs `\g__sys_everyjob_tl` to
+define the l3sys *system* constants — `\c_sys_shell_escape_int`, the `\sys_if_shell:*` /
+`\sys_if_shell_unrestricted:*` / `\sys_if_shell_restricted:*` conditional families, and the
+`\c_sys_{minute,hour,day,month,year}_int` date/time ints. l3sys defers ALL of these into
+`\__sys_everyjob:n { … }` blocks (`expl3-code.tex` L8131-8217), i.e. into `\g__sys_everyjob_tl`,
+precisely so they are (re)computed at each job start. Because Perl (and, pre-fix, Rust) never
+fires the hook, those constants are undefined on the dump/short-circuit path — a texmf
+`expl3.sty` NEWER than the embedded dump takes the `\ifx\csname tex_let:D\endcsname\relax`-false
+branch and skips `\input expl3-code.tex`, relying on the format to have run everyjob. That newer
+`expl3.sty` then USES `\sys_if_shell:TF` in its support-file/shell-escape check →
+`Error:undefined:\sys_if_shell:TF`. Issue #531 secondary (reporter nasser1; TL2026 dump
+2026-01-19 vs texmf 2026-03-20). Reproduced in `ghcr.io/tkw1536/texlive-docker:2026` with
+l3kernel 2026-07-20 overlaid on the 2026-01-19 dump.
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): fire `\__kernel_sys_everyjob:` at the
+completion of `LoadFormat('latex')` (`latex.rs`) — the faithful equivalent of TeX's job-start
+`\everyjob` insertion, since our LaTeX "format" is exactly that pool block. The constants are
+then defined with LIVE values on every conversion, before the document preamble runs. The
+`INI_MODE` early return in the same block means the firing is SKIPPED during dump-build, so the
+date/time ints are never frozen into the dump (only `\g__sys_everyjob_tl` — the deferred
+*recipe* — is dumped, which is correct). Guarded on `\__kernel_sys_everyjob:` existing (present
+via the latex dump or the raw-base path; absent for plain/math dumps, a clean no-op). This is a
+genuine TeX-semantics improvement Perl LaTeXML would also benefit from. **Upstream**: worth
+filing against `brucemiller/LaTeXML`.
+
+**Guards**: `06_cluster_regressions::cluster_everyjob_defines_l3sys_shell`
+(`tests/cluster_regressions/everyjob_sys_shell.tex`) — a preamble `\@ifundefined{sys_if_shell:TF}`
+probe emits `EVERYJOB-PRESENT` (was `EVERYJOB-MISSING` without the firing), and a body
+`\sys_if_shell:TF` takes the FALSE branch (`SHELL-NO`, LaTeXML has no shell). Full suite 1971/0
+confirms firing `\everyjob` on every latex conversion is output-neutral.
