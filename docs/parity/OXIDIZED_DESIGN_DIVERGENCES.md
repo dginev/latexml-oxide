@@ -4347,3 +4347,38 @@ Before: 2 errors, 0 bibitems. After: 0 errors, 6 rendered bibitems.
 **Guard**: `06_cluster_bibliography::amsrefs_bibsection_environment_renders`
 (`\begin{bibsection}` + `{biblist}` + `\bib` entries: References populate, entries
 convert to `<ltx:bibitem>`, no stray `<ltx:bibentry>`).
+
+### 119. `\verb` inside `\index{…}` renders as typewriter, not an empty `<verbatim/>`
+
+**Perl** LaTeXML reads `\index`'s argument `SanitizedVerbatim` (`latex_constructs.pool.ltxml`
+L4397 `DefMacro('\index SanitizedVerbatim', \&process_index_phrases)`), which re-tokenizes the
+argument string. That collapses a `\verb`'s raw catcode-12 body back into control sequences
+(`\delta`, not `\`,`d`,…) and leaves `\verb` with no mouth to scan its delimiter from, so at
+`process_index_phrases` time `\verb` emits an empty `<verbatim/>` and its body leaks out
+mis-tokenized (`\delta` → math-italic δ). A `|` delimiter additionally collides with the
+makeindex encap separator that `process_index_phrases` splits on, losing everything after the
+first `|` into a bogus `style=` attribute and raising `Error:expected:delimiter Verbatim argument
+lost`. latexml-oxide reproduced Perl 0.8.8 byte-for-byte (SHARED-FAILURE). Real pdflatex passes
+the characters through to the `.idx` and the index typesets `\delta` in typewriter (issue #354).
+
+**Perl behavior**: `\index{\verb|\delta|}` → error + empty `<indexphrase/>` (the `|` eats the
+phrase); `\index{\verb+\delta+}` → empty `<verbatim/>` + leaked math δ. **Rust behavior**:
+`process_index_phrases` (`latex_constructs.rs`) intercepts a `\verb`/`\verb*` token in its scan
+loop, consumes the whole `\verb<D>body<D>` run atomically — BEFORE the `!`/`@`/`|` split can see
+the delimiter — `untex`+`Explode!`s the body back to catcode-OTHER literals (so the digested body
+renders as typewriter text rather than re-expanding), and emits `\@internal@text@verb{star}{D}{body}`.
+Both delimiter forms and `\verb*` now render `<verbatim font="typewriter">…</verbatim>` with no
+error, and the interception composes with the `!` subentry split (`grp!\verb|sub|` → a plain `grp`
+head + a verbatim `sub` subentry).
+
+**Why**: a kernel-quality gap, not a TeX-semantics change — real LaTeX+makeindex typesets the
+`\verb` body in typewriter; both LaTeXML engines simply lost it in the sanitized re-tokenization.
+The fix is one locus (`process_index_phrases`) and halos across every `\verb`-in-`\index` paper.
+
+**Witnesses**: issue #354 (split out of #347). `\index{\verb+\delta+}`, `\index{\verb|\delta|}`,
+`\index{\verb*|a b|}`, `\index{grp!\verb|sub|}` — all render typewriter, 0 errors, where Perl 0.8.8
+errors/loses the phrase.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same SanitizedVerbatim/`\verb` gap).
+
+**Guards**: `06_cluster_regressions::cluster_verb_in_index_renders_typewriter`.
