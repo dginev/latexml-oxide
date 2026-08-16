@@ -2087,3 +2087,61 @@ mod title_pubnote_pollution {
     );
   }
 }
+
+mod math_greek_no_replacement_char {
+  //! arXiv/html_feedback#6622: the deployed v0.5.0 emitted Greek math letters as
+  //! U+FFFD replacement characters (`<mi mathvariant="normal">\u{FFFD}</mi>` —
+  //! 381 of them in arXiv:2509.03592v2). The reporter read the σ-turned-empty-box
+  //! in eq. 28 (`\sigma^2_\phi(\Sa) \equiv \sum …`) as a stray `\hphantom`. The
+  //! current engine emits the real Unicode letters. Guard the final HTML: the
+  //! Greek/relation/operator symbols are present and NO U+FFFD leaks into the
+  //! rendered math (checked in both the core XML and post-processed HTML paths —
+  //! this drives the full pipeline).
+
+  use std::{fs, process::Command};
+
+  #[test]
+  fn greek_math_letters_are_unicode_not_replacement_char() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    // The reporter's eq. 28 verbatim, plus a spread of inline Greek.
+    let doc = "\\documentclass{article}\n\
+               \\begin{document}\n\
+               \\[\\sigma^2_\\phi(S^\\mathrm{acc}) \\equiv \\sum_{s \\in S^\\mathrm{acc}} \
+               \\sigma^2_\\phi(s)\\]\n\
+               Inline Greek: $\\alpha\\beta\\gamma\\sigma\\phi\\mu\\Sigma\\Phi$.\n\
+               \\end{document}\n";
+    fs::write(root.join("doc.tex"), doc).unwrap();
+    let out = Command::new(bin)
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    // No U+FFFD replacement character anywhere — the #6622 symptom.
+    assert!(
+      !html.contains('\u{FFFD}'),
+      "the rendered HTML contains a U+FFFD replacement char — a math letter was \
+       corrupted to invalid output (#6622);\nstderr=\n{stderr}"
+    );
+    // The real Greek / relation / big-op symbols are all present.
+    for (ch, name) in [
+      ('\u{03C3}', "sigma σ"),
+      ('\u{03D5}', "phi ϕ"),
+      ('\u{03B1}', "alpha α"),
+      ('\u{03A3}', "Sigma Σ"),
+      ('\u{2261}', "equiv ≡"),
+      ('\u{2211}', "sum ∑"),
+    ] {
+      assert!(
+        html.contains(ch),
+        "math symbol {name} is missing from the rendered output (#6622);\nstderr=\n{stderr}"
+      );
+    }
+  }
+}
