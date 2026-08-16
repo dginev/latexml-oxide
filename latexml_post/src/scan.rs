@@ -908,7 +908,7 @@ impl Processor for Scan {
 /// ObjectDB props CrossRef's fill phase (`make_bibcite`) reads: `authors`,
 /// `fullauthors`, `year`, `number`, `refnum`, `title`, plus `keytag` (role
 /// `key`) and `typetag` (role `bibtype`). Port of Perl `Scan::bibitem_handler`
-/// (Scan.pm L475-483). Shared by [`Scan::bibitem_handler`] (the initial scan of
+/// (Scan.pm L475-483). Shared by `Scan::bibitem_handler` (the initial scan of
 /// authored `\bibitem`s) and `MakeBibliography`'s rescan of the bibitems it
 /// generates from `.bib`/`.bbl` — the same values, from whichever pass first
 /// produced the formatted entry, so an author-year inline citation resolves to
