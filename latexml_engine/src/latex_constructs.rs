@@ -2561,6 +2561,52 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
     let tok = toks[i];
     let s = tok.with_str(|s| s.to_string());
     i += 1;
+    // #354 surpass (OXIDIZED_DESIGN #119): a `\verb`/`\verb*` inside `\index`.
+    // `\index` reads its argument `SanitizedVerbatim`, which re-tokenizes it —
+    // collapsing `\verb`'s raw body back into control sequences (`\delta`, not
+    // `\`,`d`,…) and leaving `\verb` with no mouth to scan a delimiter from. In
+    // both engines this yielded an empty `<verbatim/>` with the body leaking out
+    // mis-tokenized, and a `|` delimiter additionally collided with the makeindex
+    // encap separator handled below. Consume the whole `\verb<D>body<D>` run HERE
+    // — before the `!`/`@`/`|` split can see the delimiter — and emit
+    // `\@internal@text@verb{star}{D}{body}` so the body renders as typewriter.
+    if tok == T_CS!("\\verb") {
+      let mut starred = false;
+      if i < toks.len() && toks[i] == T_OTHER!("*") {
+        starred = true;
+        i += 1;
+      }
+      if i < toks.len() {
+        let delim = toks[i];
+        let delim_s = delim.with_str(|d| d.to_string());
+        i += 1;
+        let body_start = i;
+        while i < toks.len() && toks[i].with_str(|d| d != delim_s.as_str()) {
+          i += 1;
+        }
+        // The re-tokenized body collapsed `\verb`'s raw chars back into control
+        // sequences; `untex` + `Explode!` restores them to catcode-OTHER literals
+        // so the digested `#3` renders as typewriter text instead of re-expanding
+        // (which is exactly the `\delta`→math-δ leak this fixes).
+        let body_str = Tokens::new(toks[body_start..i].to_vec()).untex();
+        if i < toks.len() {
+          i += 1; // consume the closing delimiter
+        }
+        phrase.push(T_CS!("\\@internal@text@verb"));
+        phrase.push(T_BEGIN!());
+        if starred {
+          phrase.push(T_OTHER!("*"));
+        }
+        phrase.push(T_END!());
+        phrase.push(T_BEGIN!());
+        phrase.push(delim);
+        phrase.push(T_END!());
+        phrase.push(T_BEGIN!());
+        phrase.extend(Explode!(body_str));
+        phrase.push(T_END!());
+      }
+      continue;
+    }
     if s == "\"" && i < toks.len() {
       // Escaped character: take next token literally
       phrase.push(toks[i]);

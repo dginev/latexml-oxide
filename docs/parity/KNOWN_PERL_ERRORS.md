@@ -3422,3 +3422,29 @@ where the author meant no unit at all. Same-host Perl is byte-identical (SHARED-
 Perl-origin, unreported upstream. Rust **surpasses** (OXIDIZED_DESIGN #114): an empty
 `class="ltx_unit"` token renders as an invisible `<m:mphantom>`, never its `meaning`. Guard:
 `06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`.
+
+## 83. `\verb` inside `\index{…}` yields an empty `<verbatim/>` + `Verbatim argument lost` (Rust surpasses)
+
+`\index` is bound `SanitizedVerbatim` (`latex_constructs.pool.ltxml` L4397
+`DefMacro('\index SanitizedVerbatim', \&process_index_phrases)`), which reads the argument as
+literal text and then re-tokenizes it — collapsing a `\verb`'s raw catcode-12 body back into
+control sequences and leaving `\verb` with no mouth to scan a delimiter from. `\verb` emits an
+empty `<verbatim/>` and its body leaks out mis-tokenized (`\delta` → math-italic δ); a `|`
+delimiter additionally collides with the makeindex encap separator `process_index_phrases` splits
+on, losing everything after the first `|` into a bogus `style=` attribute and raising
+`Error:expected:delimiter Verbatim argument lost`. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{makeidx}\makeindex
+\begin{document}
+A\index{\verb+\delta+}. B\index{\verb|\delta|}.
+\end{document}
+```
+
+Measured: pdflatex TL2025 passes the chars through (`.idx` = `\indexentry{\verb|\delta|}{1}`, index
+typesets `\delta` in typewriter). **Same-host Perl LaTeXML 0.8.8 is byte-identical** to Rust
+(SHARED-FAILURE; Perl differs only by a `key=""` on the empty phrase) — Perl-origin, split out of
+issue #347 into #354. Rust **surpasses** (OXIDIZED_DESIGN #119): `process_index_phrases` consumes
+a `\verb<D>body<D>` run atomically before the `!`/`@`/`|` split can see the delimiter, and emits
+`\@internal@text@verb`, so the body renders as `<verbatim font="typewriter">`. Guard:
+`06_cluster_regressions::cluster_verb_in_index_renders_typewriter`.

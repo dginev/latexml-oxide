@@ -398,6 +398,54 @@ fn cluster_mhchem_ce_subscripts() {
 fn cluster_theindex_nested_autoclose() {
   convert_clean("tests/cluster_regressions/theindex_nested_autoclose.tex");
 }
+/// `\verb` inside `\index{…}` must render its body as typewriter verbatim, not
+/// vanish. `\index` reads its argument `SanitizedVerbatim`, which re-tokenizes it —
+/// collapsing `\verb`'s raw body back into control sequences and leaving `\verb`
+/// with no mouth to scan a delimiter from. In BOTH engines this produced an empty
+/// `<verbatim/>` with the body leaking out mis-tokenized (`\delta` → math-italic δ),
+/// and a `|` delimiter additionally collided with makeindex's encap separator
+/// (`Error:expected:delimiter Verbatim argument lost`, phrase lost into a bogus
+/// `style=`). Rust surpasses (OXIDIZED_DESIGN #119): `process_index_phrases`
+/// consumes a `\verb<D>body<D>` run atomically — before the `!`/`@`/`|` split can
+/// see the delimiter — and emits `\@internal@text@verb`, so the body renders as
+/// typewriter. Shared with Perl LaTeXML 0.8.8; issue #354.
+#[test]
+fn cluster_verb_in_index_renders_typewriter() {
+  // convert_to_xml gates on 0 errors — the `|` form used to emit
+  // `Error:expected:delimiter Verbatim argument lost`.
+  let xml = convert_to_xml("tests/cluster_regressions/verb_in_index.tex");
+  // Four `\verb` bodies (`\verb+..+`, `\verb|..|`, `\verb*|..|`, and the
+  // `\verb|sub|` subentry), each a typewriter verbatim; `\index{plain}` and the
+  // `grp` head are plain phrases.
+  assert_eq!(
+    xml.matches(r#"<verbatim font="typewriter""#).count(),
+    4,
+    "each \\verb in \\index must render one typewriter <verbatim>; xml=\n{xml}"
+  );
+  // The body survives as literal typewriter text …
+  assert!(
+    xml.contains(r"\delta"),
+    "the \\verb body did not survive as literal text; xml=\n{xml}"
+  );
+  // … and is NOT leaked out and re-digested as a math-italic δ (U+03B4).
+  assert!(
+    !xml.contains('\u{03B4}'),
+    "the \\verb body leaked out and digested as math δ; xml=\n{xml}"
+  );
+  // The `|` delimiter must not be mistaken for the encap separator.
+  assert!(
+    !xml.contains("style=\"\u{201c}"),
+    "a \\verb `|` delimiter leaked into a bogus indexmark style=; xml=\n{xml}"
+  );
+  // `grp!\verb|sub|` composes with the `!` subentry split: a plain `grp` head and
+  // a verbatim `sub` subentry — the `\verb` `|` delimiters consumed, not split on.
+  assert!(
+    xml.contains(
+      r#"<indexphrase key="sub"><verbatim font="typewriter">sub</verbatim></indexphrase>"#
+    ),
+    "the \\verb subentry did not compose with the `!` split; xml=\n{xml}"
+  );
+}
 /// subcaption loaded AFTER subfigure.sty must not clobber subfigure.sty's
 /// self-contained `\subfigure[][]{}` macro with its own `{subfigure}[]{Dimension}`
 /// environment. The two have incompatible contracts: the macro consumes a
