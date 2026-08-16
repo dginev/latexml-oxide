@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+  - **A biblatex `\DeclareSourcemap` block no longer breaks the conversion.**
+    Source mapping is a biber pre-processing stage LaTeXML does not run;
+    `\DeclareSourcemap` (and `\DeclareStyleSourcemap`) were undefined, so the
+    nested `\maps`/`\map`/`\step`/`\regexp` ran as undefined control sequences
+    and cascaded into fatal math-mode errors that dropped the whole bibliography.
+    They now gobble the rule argument as a no-op (arXiv/html_feedback#6720).
   - **The REVTeX4 family renders numeric APS citations by default, honoring
     `author-year`/`numerical`.** `revtex4`/`revtex4-1`/`revtex4-2` rendered an
     author-year bibliography (`Alpha (2001)`) with bare inline numbers, where the

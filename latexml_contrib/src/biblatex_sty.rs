@@ -1847,6 +1847,16 @@ LoadDefinitions!({
   DefMacro!("\\xref{}", "\\ref{#1}");
   def_macro_noop("\\fakeset{}")?;
 
+  // biblatex source-mapping API (a biber pre-processing stage LaTeXML does not
+  // run): gobble the whole rule argument WITHOUT expanding it, so the nested
+  // `\maps`/`\map`/`\step`/`\regexp` etc. never reach the stomach as undefined
+  // control sequences. Undefined `\DeclareSourcemap` let those inner tokens run
+  // and cascade into math-mode/`\fi` errors, breaking the whole conversion
+  // (arXiv:2607.03177, html_feedback #6720). `\DeclareStyleSourcemap` is the
+  // style-file sibling.
+  def_macro_noop("\\DeclareSourcemap{}")?;
+  def_macro_noop("\\DeclareStyleSourcemap{}")?;
+
   // Perl L429-434: language API (no-ops)
   def_macro_noop("\\DeclareLanguageMapping{}{}")?;
   def_macro_noop("\\DeclareLanguageMappingSuffix{}")?;
