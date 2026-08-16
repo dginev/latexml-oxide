@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+  - **Unsorted bibliography styles number the References in citation order.**
+    `\bibliographystyle{unsrt}`/`{ieeetr}`/`{IEEEtran}` alphabetized the reference
+    list, mismatching the PDF (whose figure captions bake in "[2], [3], [4]"). The
+    References are now numbered by first citation — matching pdflatex+bibtex
+    key-for-key — while sorted styles (`plain`/`alpha`/…) stay alphabetical.
+    Surpasses Perl, which alphabetizes every style. Witness arXiv 2510.05438
+    (arXiv/html_feedback#6294).
   - **A biblatex `\DeclareSourcemap` block no longer breaks the conversion.**
     Source mapping is a biber pre-processing stage LaTeXML does not run;
     `\DeclareSourcemap` (and `\DeclareStyleSourcemap`) were undefined, so the
