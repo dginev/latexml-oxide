@@ -4813,3 +4813,49 @@ KNOWN_PERL_ERRORS #94.
 
 **Guard**: `06_cluster_frontmatter::frontmatter_ieee_author_grid_transpose` (grid
 transposed + a single-row control proven un-reordered).
+
+### 129. Nested inline-math superscript author markers (`$^\text{$...$}$`) no longer desync math mode
+
+**Perl**: in an author/affiliation block using `^`/`\textsuperscript` markers,
+`\lx@add@authors` takes the marker (withsup) branch and `\let`s `^` onto
+`\lx@request@frontmatter@annotation`, whose bare `{}` argument reads a single token.
+For a marker whose operand is a control sequence carrying its own group —
+`^\text{...}`, which real LaTeX math reads as `^{\text{...}}` (`\text` grabbing its
+`{...}`) — the `{}` read grabs only `\text` and orphans the following `{...}`. Inside
+the marker's own inline math that stray `{...}` leaves a brace-group frame on top of
+the digestion stack, so the marker's closing `$` fires `\lx@end@inline@math` against
+the brace group rather than the math: `Error:unexpected:\lx@end@inline@math Attempt to
+end mode math`. Nested markers (`$^\text{$...$}$`, e.g. an icon built from
+`\newcommand`-chained `$^\text{...}$`) cascade the error and merge every creator into
+one garbled `<personname>`. **Same-host Perl LaTeXML 0.8.8 errs identically**
+(SHARED-FAILURE, Perl-origin; KNOWN_PERL_ERRORS #95).
+
+**Rust**: the two `^`-hijack wrappers (`\lx@sup@request@affiliation`,
+`\lx@sup@setlabel@affiliation`) are primitives that read a FULL superscript operand
+(`read_frontmatter_sup_operand`), mirroring `TeX_Math` `scriptHandler`: a braced
+operand is taken whole, and a bare leading control sequence keeps its following
+`{...}` group. So `\text{...}` — and any `$...$` nested inside it, at any depth — is
+captured together and undigested, the surrounding inline math stays balanced, and the
+now-empty `$...$` collapses so the marker links the author to the shared affiliation
+instead of leaving a stray box. Numeric/char markers (`^1`) and already-braced markers
+(`^{...}`, `\textsuperscript{...}`) read exactly as before.
+
+**Why**: nested `$...$`/`\text{}` is a fundamental LaTeX capability authors do use
+(icons-as-markers here); erroring and merging creators is never the right outcome. The
+change is surgical — only a bare `^`-control-sequence-with-argument operand behaves
+differently — and every existing frontmatter marker test is unaffected.
+
+**Witness**: arXiv:2403.11905 (html_feedback#1021) — `\handPointerZ` =
+`$^\text{\mouseOne}$`, `\mouseOne` = `$^\text{\faMousePointer}$` (double-nested icon
+markers). Was 6× "Attempt to end mode math" + one merged personname; now 0 errors.
+
+**Residual (separate, pre-existing)**: an author line whose ONLY marker is delivered
+through a macro (`\handPointerZ`, no literal `^`) is still classified "no marker" and
+merged into the previous `\and`-separated author — `\lx@add@authors` conflates `\and`
+(new author) with `\\` (continuation) and keys classification on a LITERAL `^`. That is
+the F2 author-classification gap (shared with Perl), independent of this math-mode fix,
+and is why arXiv:2403.11905's own creators still merge even though the error cascade is
+gone.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_nested_math_author_marker` (two clean
+creators linked to a shared affiliation via `$^\text{$\star$}$` markers, 0 errors).

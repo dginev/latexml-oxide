@@ -3717,3 +3717,38 @@ Perl-origin, upstream filing pending). Minimal trigger:
 grid to row-major before emitting creators, guarded so single-row `\and` lists and
 `\\` inside `\IEEEauthorblockA` are never reordered. Guard:
 `06_cluster_frontmatter::frontmatter_ieee_author_grid_transpose`.
+---
+
+## 95. Nested inline-math superscript author markers desync math mode (Rust surpasses)
+
+**Perl source:** `LaTeXML/Engine/Base_Utility.pool.ltxml` L687-740 (`\lx@add@authors`,
+`\lx@author@withsup`) + L552 (`\lx@request@frontmatter@annotation`).
+
+**Symptom:**
+```
+Error:unexpected:\lx@end@inline@math Attempt to end mode math
+	current frame is boxing group due to T_BEGIN[{]
+```
+repeated once per marker, with every author collapsed into one garbled creator.
+
+**Root cause:** the author-marker branch `\let`s `^`/`\textsuperscript` onto
+`\lx@request@frontmatter@annotation`, whose `{}` argument reads a single token. A marker
+operand that is a control sequence carrying its own group — `^\text{...}`, which real
+LaTeX math reads as `^{\text{...}}` — has `\text` severed from its `{...}`; inside the
+marker's inline math the orphaned `{...}` leaves a brace-group frame on top, so the
+closing `$` ends math against the brace group. Nested `$^\text{$...$}$` markers cascade.
+
+**Minimal trigger:**
+```latex
+\author{Alice$^\text{$\star$}$ \and Bob$^\text{$\star$}$ \\ $^\text{$\star$}$ Uni}
+\begin{document}\maketitle\end{document}
+```
+
+**Perl status:** present in 0.8.8 (same-host), errs identically. Upstream filing pending.
+
+**Rust status (FIXED, beneficial divergence — OXIDIZED_DESIGN #129):** the `^`-hijack
+wrappers read a FULL superscript operand (`read_frontmatter_sup_operand`,
+`base_utilities.rs`), keeping `\text{...}` with its group and any nested `$...$` whole
+and undigested; the surrounding math stays balanced. Witness arXiv:2403.11905
+(html_feedback#1021): 6 errors → 0. Guard
+`06_cluster_frontmatter::frontmatter_nested_math_author_marker`.

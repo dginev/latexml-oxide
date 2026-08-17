@@ -1032,14 +1032,47 @@ LoadDefinitions!({
   // ("affiliation:N") in relocate_annotations -- avoiding the prefix-stripped
   // fallback that would otherwise conflate them with a creator's own "author:N"
   // sequence label and double-attach.
-  DefMacro!(
-    "\\lx@sup@request@affiliation",
-    "\\lx@request@frontmatter@annotation[affiliation]"
-  );
-  DefMacro!(
-    "\\lx@sup@setlabel@affiliation",
-    "\\lx@set@frontmatter@label[affiliation]"
-  );
+  // OXIDIZED_DESIGN #129 (html_feedback#1021, arXiv:2403.11905): these two are
+  // `\let` onto `^`/`\textsuperscript` inside an author/affiliation line, so they
+  // must consume their operand the way a real math superscript does — grabbing a
+  // FULL nucleus (`\text{...}` kept with its group, any `$...$` nested inside it
+  // captured whole+undigested). The old `[affiliation]{}` read grabbed only the
+  // leading `\text`, orphaning its `{...}`; inside inline math that stray group
+  // left a brace-group frame on top and the closing `$` fired
+  // `\lx@end@inline@math` against it ("Attempt to end mode math"), arbitrarily
+  // deep for `$^\text{$...$}$` markers. Both engines erred (SHARED-FAILURE);
+  // reading the whole operand keeps the surrounding math balanced.
+  DefPrimitive!(T_CS!("\\lx@sup@request@affiliation"), None, {
+    let operand = read_frontmatter_sup_operand()?;
+    let label = clean_frontmatter_labels(&operand.to_string(), "affiliation").join(",");
+    with_pending_entry_attr(move |attr| {
+      let labels = attr.get("_annotations").cloned().unwrap_or_default();
+      let newval = if labels.is_empty() {
+        label.clone()
+      } else {
+        s!("{labels},{label}")
+      };
+      DebugFeature!("frontmatter", "FRONT add annotation label {label}");
+      attr.insert("_annotations".to_string(), newval);
+    });
+    Ok(Vec::new())
+  });
+  DefPrimitive!(T_CS!("\\lx@sup@setlabel@affiliation"), None, {
+    let operand = read_frontmatter_sup_operand()?;
+    let label = clean_frontmatter_labels(&operand.to_string(), "affiliation")
+      .into_iter()
+      .next();
+    with_pending_entry_attr(move |attr| match label {
+      Some(label) => {
+        DebugFeature!("frontmatter", "FRONT set label {label}");
+        attr.insert("_annotations".to_string(), label);
+      },
+      None => {
+        attr.remove("_annotations");
+      },
+    });
+    Ok(Vec::new())
+  });
   DefMacro!(
     "\\lx@author@withsup{}",
     "\\bgroup\\let^\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"
@@ -1816,6 +1849,47 @@ fn unwrap_whole_name_bold(document: &mut Document, node: &Node) -> Result<()> {
     document.unwrap_nodes(bold)?;
   }
   Ok(())
+}
+
+/// Read a full superscript operand as RAW (undigested) tokens for a frontmatter
+/// author/affiliation marker (`^X` / `\textsuperscript{X}`).
+///
+/// A real math superscript digests its nucleus (`TeX_Math` `scriptHandler`
+/// "invoke tokens until you get a box"), so `^\text{x}` binds `\text` to its
+/// `{x}` and reads as one box — i.e. `^\text{x}` == `^{\text{x}}`. The hijacked
+/// marker instead captures the operand as tokens for a matching label; the bare
+/// `{}` read used to grab only the leading control sequence (`\text`), orphaning
+/// its `{...}` argument. In inline math that stray `{...}` left a brace-group
+/// frame on top, so the marker's closing `$` fired `\lx@end@inline@math` against
+/// it — "Attempt to end mode math" — arbitrarily deep for nested
+/// `$^\text{$...$}$` markers (html_feedback#1021, arXiv:2403.11905; both engines
+/// erred, SHARED-FAILURE). Grabbing the control sequence together with its
+/// following group keeps `\text{...}` — and any `$...$` nested inside it — whole
+/// and undigested, so the surrounding math stays balanced. Numeric/char markers
+/// (`^1`) and already-braced markers (`^{...}`, `\textsuperscript{...}`) read
+/// exactly as before. See OXIDIZED_DESIGN #129.
+fn read_frontmatter_sup_operand() -> Result<Tokens> {
+  skip_spaces()?;
+  // `^{...}` / `\textsuperscript{...}`: the whole braced group is the operand.
+  if if_next(T_BEGIN!())? {
+    return read_arg(ExpansionLevel::Off);
+  }
+  let Some(first) = read_token()? else {
+    return Ok(Tokens::new(Vec::new()));
+  };
+  // `^\text{...}` (bare control-sequence operand): keep a following `{...}` group
+  // so the CS is not severed from its argument.
+  if first.get_catcode() == Catcode::CS && if_next(T_BEGIN!())? {
+    let group = read_arg(ExpansionLevel::Off)?;
+    let inner = group.unlist_ref();
+    let mut operand = Vec::with_capacity(inner.len() + 3);
+    operand.push(first);
+    operand.push(T_BEGIN!());
+    operand.extend(inner.iter().copied());
+    operand.push(T_END!());
+    return Ok(Tokens::new(operand));
+  }
+  Ok(Tokens::new(vec![first]))
 }
 
 /// Perl: cleanFrontmatterLabels($labels, $prefix).
