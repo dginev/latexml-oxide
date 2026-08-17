@@ -224,7 +224,10 @@ LoadDefinitions!({
   // Sanitize person names for (obvious) punctuation abuse at start+end
   // (moved here from latex_constructs per PR #2767; the existing Rust
   // punctuation-strip port is carried over).
-  Tag!("ltx:personname", after_close => sub[_document, node] {
+  Tag!("ltx:personname", after_close => sub[document, node] {
+    // Normalize a whole-name bold BEFORE the punctuation strip, so the unwrapped
+    // text is punctuation-cleaned like a plain name (html_feedback#61).
+    unwrap_whole_name_bold(document, node)?;
     if let Some(mut first) = node.get_first_child() {
       if first.get_type() == Some(NodeType::TextNode) {
         let first_text = first.get_content();
@@ -919,15 +922,19 @@ LoadDefinitions!({
               entries.push((AuthorLineKind::Author, line)); // safest to assume author?
             }
           },
-          Some(p) if p < 8 => {
-            // Close to front? assume affiliation
-            entries.push((AuthorLineKind::Affiliation, line));
-          },
-          Some(_) => {
-            // Marker sits far from the front: an author line. Split it into the
-            // individual creators it names (see split_author_line).
-            for author in split_author_line(line) {
-              entries.push((AuthorLineKind::Author, author));
+          Some(p) => {
+            // "\textsuperscript{n}Affil" (the marker LEADS the line) → an
+            // affiliation; "Name\textsuperscript{n}" (a name precedes the
+            // marker) → an author line, split into the individual creators it
+            // names (see split_author_line). The old `p < 8` token-count proxy
+            // misread short author names like "Min Xu" (html_feedback#6614) —
+            // key on name-before-marker, which is length-independent.
+            if name_precedes_marker(&line, p) {
+              for author in split_author_line(line) {
+                entries.push((AuthorLineKind::Author, author));
+              }
+            } else {
+              entries.push((AuthorLineKind::Affiliation, line));
             }
           },
         }
@@ -1724,6 +1731,68 @@ fn clean_trailing_break(document: &mut Document, node: &mut Node) -> Result<()> 
       break;
     }
     document.remove_node(last);
+  }
+  Ok(())
+}
+
+/// Unwrap a `font="bold"` that wraps an ENTIRE personname.
+///
+/// SURPASS-Perl (html_feedback#61, OXIDIZED_DESIGN_DIVERGENCES #122). Some classes
+/// (neurips_2023) bold the whole author block with a block-level `\bf` in their
+/// `\@maketitle`, which LaTeXML does not emulate — it captures semantic creators.
+/// A paper that then `\textbf`s only *some* name lines (relying on the class `\bf`
+/// for the rest) renders incoherently: bold on the `\textbf` lines, plain on the
+/// others. Bolding a whole author name is presentational author-block styling, not
+/// semantic, so a personname whose sole meaningful content is one `<ltx:text
+/// font="bold">` is normalized to plain. Mixed-content names (bold on part of the
+/// name, or bold+other styles) are left untouched — only the whole-name pure-bold
+/// wrapper is stripped. Both Perl and Rust emit the wrapper (SHARED-FAILURE).
+fn unwrap_whole_name_bold(document: &mut Document, node: &Node) -> Result<()> {
+  let mut sole_bold: Option<Node> = None;
+  for child in node.get_child_nodes() {
+    match child.get_type() {
+      Some(NodeType::TextNode) => {
+        // Any non-whitespace text directly under the name means it is not a
+        // single whole-name wrapper — leave it alone.
+        if !child.get_content().chars().all(char::is_whitespace) {
+          return Ok(());
+        }
+      },
+      Some(NodeType::ElementNode) => {
+        // A reference marker (`\footnotemark`/`\thanks` → `<ltx:note>`) or a trailing
+        // `<ltx:break>` from a misused `\\` is not name content — skip it so it does
+        // not block the unwrap of an otherwise whole-name bold. Witness: "Zhou Zhao"
+        // in arXiv 2507.06670, `\textbf{Zhou Zhao} \footnotemark[2]`.
+        if with(document::get_node_qname(&child), |qname| {
+          qname == "ltx:note" || qname == "ltx:break"
+        }) {
+          continue;
+        }
+        // A `<ltx:text>` whose decoded font would serialize as EXACTLY `font="bold"` —
+        // i.e. bold is its only departure from the default text font. Reuse the
+        // serializer's own `font_attribute_string()` rather than hand-matching the
+        // family/series/shape defaults, so this cannot drift from what `font=` emits.
+        // Bold+italic / bold-sans yield "bold italic"/"… bold" ≠ "bold" and are left
+        // untouched (extra intent).
+        let is_pure_bold = with(document::get_node_qname(&child), |qname| {
+          qname == "ltx:text"
+        }) && child.get_attribute("_font").is_some_and(|fid| {
+          document
+            .decode_font(&fid)
+            .is_some_and(|f| f.font_attribute_string() == "bold")
+        });
+        if is_pure_bold && sole_bold.is_none() {
+          sole_bold = Some(child);
+        } else {
+          // A second element, or a non-pure-bold element → not a sole whole-name bold.
+          return Ok(());
+        }
+      },
+      _ => {},
+    }
+  }
+  if let Some(bold) = sole_bold {
+    document.unwrap_nodes(bold)?;
   }
   Ok(())
 }
@@ -3157,7 +3226,7 @@ pub fn insert_block(
       // IF: Single node, allowed in context & accepts attributes
       // THEN: Add attributes and unwrap the single node
       //
-      // SURPASS-PERL (OXIDIZED_DESIGN #122): `class` MERGES, it does not
+      // SURPASS-PERL (OXIDIZED_DESIGN #125): `class` MERGES, it does not
       // overwrite. Perl's insertBlock (`TeX_Box.pool.ltxml` L492) uses
       // `setAttribute(class => …)`, so a wrapper's class (e.g. minipage's
       // `ltx_minipage`) clobbered the single child's own class — a `lstlisting`
@@ -3857,6 +3926,22 @@ fn affil_splits() -> Vec<SplitDelim> {
   ]
 }
 fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
+
+/// In a superscript-labeled author block, decide whether a line reads
+/// "Name\textsuperscript{n}" (an author — name TEXT precedes the marker) or
+/// "\textsuperscript{n}Affil" (an affiliation — the marker LEADS the line).
+/// Returns true iff a letter token precedes the first marker at `marker_pos`
+/// (1-based, from `position_of`). Replaces an earlier `position < 8`
+/// token-count proxy that misread short author names: "Min Xu" is 7 tokens, so
+/// its trailing `\textsuperscript{1}` fell under the threshold and the author
+/// was reclassified as an affiliation (html_feedback#6614, arXiv:2606.08234).
+/// Keying on "is there a name before the marker" is length-independent.
+/// OXIDIZED_DESIGN #52.
+fn name_precedes_marker(line: &Tokens, marker_pos: usize) -> bool {
+  line.unlist_ref()[..marker_pos.saturating_sub(1)]
+    .iter()
+    .any(|t| t.code == Catcode::LETTER)
+}
 
 /// Drop the optional `*` and `[<len>]` that follow a `\\` line-break token in an
 /// author/affiliation block, before the block is split into lines. The

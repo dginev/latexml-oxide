@@ -801,7 +801,7 @@ mod wrapfig_inner_linewidth {
 /// collapsed). Fix: the `class` key MERGES (`add_class`) like LaTeXML's own
 /// `addClass`, so the listing keeps `ltx_lstlisting` AND gains `ltx_minipage`.
 ///
-/// SURPASS-PERL (OXIDIZED_DESIGN #122): Perl's `insertBlock` (`TeX_Box.pool.ltxml`
+/// SURPASS-PERL (OXIDIZED_DESIGN #125): Perl's `insertBlock` (`TeX_Box.pool.ltxml`
 /// L492) uses `setAttribute(class => …)`, which overwrites — verified same-host,
 /// Perl 0.8.8 also emits `<listing class="ltx_minipage">` (SHARED-FAILURE). The
 /// merged class matches the PDF's rendered, indented code.

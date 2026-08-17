@@ -3522,7 +3522,115 @@ reference, undefined on pdflatex's run 1 too). The rendering half of #6895 (an o
 ORCID icon) is unrelated: correct LaTeXML markup, a downstream ar5iv-css over-reach fixed in the
 `ar5iv-css` repo.
 
-## 88. `insertBlock` overwrites a single block child's `class` with the wrapper's, not merges (Rust surpasses)
+## 87. `\centering` in a redefined `\abstractname` leaks as literal text into the abstract heading (Rust surpasses)
+
+`\renewcommand{\abstractname}{\centering {\large Abstract}}` (arXiv/html_feedback#6870, paper
+2312.14226, aistats2024) makes the abstract heading render the literal text `\centeringAbstract`.
+LaTeXML extracts the heading via `getFrontmatterName` → `DigestText(\lx@abstract@name)`, and
+`\lx@abstract@name` is `\format@title@abstract{\abstractname}` with `\format@title@abstract` the
+identity hook `#1` (`latex_constructs.pool.ltxml` L1146-1148). `\centering` is a `DefConstructor`
+(L1237); digesting it into the text-only `name=` attribute serializes its **reversion** back as
+`\centering`. Both engines emit `<ltx:abstract name="\centeringAbstract">` and the XSLT renders
+`<h6 class="ltx_title ltx_title_abstract">\centeringAbstract</h6>`. **Same-host Perl LaTeXML 0.8.8
+is byte-identical** (core XML and post-processed HTML) — SHARED-FAILURE, Perl-origin (upstream
+filing pending, owned by maintainer). Minimal trigger:
+
+```latex
+\documentclass{article}
+\renewcommand{\abstractname}{\centering {\large Abstract}}
+\begin{document}\begin{abstract}Text.\end{abstract}\end{document}
+```
+
+Rust **surpasses** (OXIDIZED_DESIGN #121): the `\format@title@abstract` hook neutralizes alignment
+declarations during name extraction (`{\let\centering\relax\let\raggedright\relax\let\raggedleft\relax#1}`),
+mirroring LaTeXML's own `titlepage` `Let('\centering','\relax')` precedent (L1168), so the name is
+the clean label "Abstract". Font-size/series primitives (`\large`, `\bfseries`) never leaked. Guard:
+`06_cluster_frontmatter::frontmatter_abstract_centering_name`.
+
+## 89. natbib citations of a numeric `.bbl` render the raw key, not the number (Rust surpasses)
+
+natbib loaded in its default author-year mode, cited against a numeric `.bbl` — plain
+`\bibitem{key}` with no `[author(year)]` label, as `\bibliographystyle{unsrt}`/`plain` emit —
+renders every `\cite` as the citation *key*, not the number. Real pdflatex/bibtex handle this
+via natbib's `\NAT@force@numbers`: a numeric `.bbl` writes `\providecommand\NAT@force@numbers{}`
+into the `.aux`, forcing numbers mode *globally* on the next pass, so every citation prints the
+bracketed number `[N]` even when `\bibliographystyle{unsrt}` sits AFTER the `\cite`s. Golden
+pdflatex `.aux`: `\bibcite{foo}{{1}{}{{}}{{}}}` (number=1, author/year empty) →
+`Text citing [1] and also [2] and both [1, 2].`
+
+Single-pass LaTeXML freezes each `\cite`'s author-year `<ltx:bibref show="Authors…">` at digest
+time (natbib is not yet in numbers mode), and post-processing `CrossRef.pm::make_bibcite` L542 —
+`$show = 'refnum' unless … || $keytag;` — keeps the author-year format because its `|| $keytag`
+guard is always satisfied (every `\bibitem` has a key). The numeric `<ltx:bibitem>` has a
+`number`/`refnum` but no author/year, so the citation prints `key ()` (Rust) / `key ` (Perl).
+Verified same-host on 0.8.8 (SHARED-FAILURE, Perl-origin). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{natbib}\begin{document}
+See \cite{alpha}, \cite{beta}, \cite{alpha,beta}.
+\bibliographystyle{unsrt}
+\begin{thebibliography}{10}
+\bibitem{alpha} A. Author. A paper. Journal, 2020.
+\bibitem{beta}  C. Coder.  A paper. Proc, 2021.
+\end{thebibliography}\end{document}
+```
+
+→ Perl `alpha `, pre-fix Rust `alpha ()`; pdflatex `[1]`. Reported as arXiv/html_feedback#62
+(witness 2308.06262, a NeurIPS-2023 paper: 263 `\cite`s all rendered `key ()`). Rust **surpasses**
+(OXIDIZED_DESIGN #123): when a frozen author-year bibref resolves to entries that are all
+numeric-only, `CrossRef::fill_in_bibrefs` collapses to the bracketed number `[N]`/`[N, M]`, matching
+`\NAT@force@numbers`. Guard:
+`06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
+
+## 90. Content injected into `\@maketitle` is discarded with the title machinery (Rust surpasses)
+
+LaTeXML replaces the LaTeX kernel's `\maketitle`→`\@maketitle` typesetting pipeline with its own
+frontmatter model: `\maketitle` deposits the separately-captured title/author/date and then
+`\global\let\@maketitle\relax` (`latex_constructs.pool.ltxml` L1105), the source comment (L1094)
+admitting "In case `\@maketitle` defines these — we can't yet emulate that." So content a document
+appends to `\@maketitle` via `\g@addto@macro` — a teaser figure, an epigraph — is silently dropped,
+and any `\ref` to a `\label` inside it renders the raw internal key `LABEL:fig:teaser`. Real
+pdflatex runs `\@maketitle`, so the figure appears below the title and its `\ref` resolves.
+Same-host Perl 0.8.8 drops it identically (SHARED-FAILURE, Perl-origin). Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{graphicx}\title{T}\author{A}
+\makeatletter
+\g@addto@macro\@maketitle{\begin{figure}\includegraphics{x}\caption{C}\label{fig:t}\end{figure}}
+\makeatother
+\begin{document}\maketitle See \ref{fig:t}.\end{document}
+```
+
+→ both engines drop the figure and render `\ref` as "LABEL:fig:t"; pdflatex shows the figure and
+"1". Reported as arXiv/html_feedback#4281 (witness 2506.23854, an ICCV paper whose teaser
+`\figref{fig:teaser}` rendered "Fig. LABEL:fig:teaser"). Rust **surpasses** (OXIDIZED_DESIGN #124):
+`\@maketitle` is predefined empty (clean `\g@addto@macro` append) and `\maketitle` deposits its
+accumulated content in a title-neutralized group before relaxing it, so the figure renders and the
+reference resolves to "Fig. 1". Guard:
+`06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.
+## 88. Partially-bold author block renders incoherently (Rust surpasses)
+
+`neurips_2023` (and similar classes) bold the *whole* author block with a block-level `\bf` in
+their `\@maketitle` tabular — pure PDF layout LaTeXML does not emulate, since it captures semantic
+creators from `\author`. A paper (arXiv 2308.06262, html_feedback#61) that `\textbf`s only its
+second author line and relies on that class `\bf` for the first then renders incoherently: the
+first line plain, the second bold. **Same-host Perl LaTeXML 0.8.8 is byte-identical** — both emit
+`<ltx:personname><ltx:text font="bold">Name</ltx:text></ltx:personname>` on the `\textbf` lines and
+a bare `<ltx:personname>Name</ltx:personname>` on the rest (SHARED-FAILURE, Perl-origin, upstream
+filing pending, owned by maintainer). Minimal trigger (plain `article`, no neurips needed):
+
+```latex
+\documentclass{article}\title{T}
+\author{Alpha One \\ \textbf{Beta Two}}
+\begin{document}\maketitle\end{document}
+```
+
+Rust **surpasses** (OXIDIZED_DESIGN #122): an `ltx:personname` `afterClose` handler unwraps a
+personname whose sole meaningful child is a *pure* bold `<text>` (series=bold, otherwise default
+upright serif), so all author names render in the same weight; mixed styles (bold-italic, bold-sans)
+are left untouched. Guard: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`.
+
+## 91. `insertBlock` overwrites a single block child's `class` with the wrapper's, not merges (Rust surpasses)
 
 When a box (minipage/parbox) is absorbed onto its content because the content is a single block the
 context can hold directly, `insertBlock` (`TeX_Box.pool.ltxml` L489-493) copies the box's attributes
@@ -3542,4 +3650,4 @@ a
 
 → `<listing class="ltx_minipage" …>` in both engines. Rust **surpasses**: `insert_block` `add_class`es
 the wrapper's class instead of overwriting, so the child keeps `ltx_lstlisting` and gains
-`ltx_minipage`. Full rationale + guard in OXIDIZED_DESIGN #122.
+`ltx_minipage`. Full rationale + guard in OXIDIZED_DESIGN #125.
