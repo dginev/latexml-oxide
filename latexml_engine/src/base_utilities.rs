@@ -986,6 +986,10 @@ LoadDefinitions!({
           }
         }
       }
+      let author_count = entries
+        .iter()
+        .filter(|(k, _)| *k == AuthorLineKind::Author)
+        .count();
       for (kind, line) in entries {
         match kind {
           AuthorLineKind::Author => {
@@ -999,9 +1003,39 @@ LoadDefinitions!({
               Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
           },
           AuthorLineKind::Email => {
-            // Same routing the no-superscript arm uses for a bare email line.
-            calls.extend(
-              Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(line)]).unlist());
+            // A shared email line otherwise attaches to whatever creator is
+            // "current" (the LAST author), bunching every address under one
+            // person. Instead, resolve the individual addresses (`a@x, b@y, c@z`
+            // distributed, or `{a,b,c}@dom` grouped -> expanded) and, when there
+            // are no more than one per author, hand each to `\lx@add@email` with
+            // labelseq=author: address i gets label author:i, which relocates to
+            // the creator's own author:N sequence label. So N addresses distribute
+            // one-per-author, and a single shared address lands on author:1 (the
+            // lead), never a random trailing author. Preserve a whole-line
+            // \texttt/\url wrapper by re-wrapping each address. If there are MORE
+            // addresses than authors (cannot map cleanly), keep the original line
+            // as one contact (the prior behavior). OXIDIZED_DESIGN #52(j).
+            let wrapper = whole_line_cs_wrapper(&line).map(|(cmd, _)| cmd);
+            let addrs = email_addresses(&line).unwrap_or_default();
+            if !addrs.is_empty() && author_count >= 1 && addrs.len() <= author_count {
+              for addr in addrs {
+                let mut toks = mouth::tokenize(TeXString::assembled(addr)).unlist();
+                if let Some(cmd) = wrapper {
+                  let mut wrapped = vec![cmd, T_BEGIN!()];
+                  wrapped.append(&mut toks);
+                  wrapped.push(T_END!());
+                  toks = wrapped;
+                }
+                let opts = mouth::tokenize_internal("labelseq=author");
+                calls.extend(
+                  Invocation!(T_CS!("\\lx@add@email"), vec![Some(opts), Some(Tokens::new(toks))])
+                    .unlist(),
+                );
+              }
+            } else {
+              calls.extend(
+                Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(line)]).unlist());
+            }
           },
         }
       }
@@ -4505,22 +4539,60 @@ fn line_is_email(line: &Tokens) -> bool {
 /// comma authors often leave): every non-empty comma item must itself carry '@'.
 /// A prose affiliation line ("Dept. of Foo, University of Pisa, Italy") has no
 /// '@' and is rejected, so this never misclassifies an address as an email.
-fn line_is_email_list(line: &Tokens) -> bool {
+fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
+
+/// Parse an email line into its individual address strings, or `None` if the line
+/// is not an email list. Two forms are recognized (both after skipping wrapper
+/// commands / braces — only visible letter/other/space chars are read):
+/// - **Distributed** — `a@x, b@y, c@z`: every comma item carries its own `@`.
+/// - **Grouped brace-expansion** — `{a,b,c}@dom` (flattens to `a,b,c@dom`): only
+///   the LAST item carries `@`; the earlier bare local-parts are each expanded
+///   against the shared domain → `a@dom, b@dom, c@dom`. This is the compact form
+///   co-located authors use for one shared address per person.
+///
+/// A prose affiliation line ("Dept. of Foo, University of Pisa, Italy") has no `@`
+/// and is rejected, so an address is never misclassified.
+fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
   let mut visible = String::new();
   for t in line.unlist_ref() {
-    if t.code == Catcode::LETTER || t.code == Catcode::OTHER {
-      t.with_str(|s| visible.push_str(s));
-    } else if t.code == Catcode::SPACE {
-      visible.push(' ');
+    match t.code {
+      Catcode::LETTER | Catcode::OTHER => t.with_str(|s| visible.push_str(s)),
+      Catcode::SPACE => visible.push(' '),
+      _ => {},
     }
   }
   let v = visible.trim();
-  v.contains('@')
-    && v
-      .split(',')
-      .map(str::trim)
-      .filter(|p| !p.is_empty())
-      .all(|p| p.contains('@') && !p.chars().any(char::is_whitespace))
+  if !v.contains('@') {
+    return None;
+  }
+  let parts: Vec<&str> = v
+    .split(',')
+    .map(str::trim)
+    .filter(|p| !p.is_empty())
+    .collect();
+  if parts.is_empty() {
+    return None;
+  }
+  let has_at = |p: &str| p.contains('@') && !p.chars().any(char::is_whitespace);
+  // Distributed: every item is a full address.
+  if parts.iter().all(|p| has_at(p)) {
+    return Some(parts.iter().map(|s| (*s).to_string()).collect());
+  }
+  // Grouped: only the last item carries the domain; earlier items are bare
+  // local-parts expanded against it (`{a,b,c}@dom` → a@dom, b@dom, c@dom).
+  if let Some((last, heads)) = parts.split_last()
+    && has_at(last)
+    && heads
+      .iter()
+      .all(|p| !p.contains('@') && !p.chars().any(char::is_whitespace))
+    && let Some(at) = last.find('@')
+  {
+    let domain = &last[at..];
+    let mut out: Vec<String> = heads.iter().map(|p| format!("{p}{domain}")).collect();
+    out.push((*last).to_string());
+    return Some(out);
+  }
+  None
 }
 
 /// Line role within a superscript-labeled author block (see `\lx@add@authors`).

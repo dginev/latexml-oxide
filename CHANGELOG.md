@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+  - **A shared author-email line distributes across the authors instead of bunching
+    on the last one.** `\email{a@x, b@y, c@z}` (or a single `\email` covering several
+    authors) previously attached every address to whichever creator was open when the
+    line was digested — usually the last — leaving the rest email-less. A distributed
+    list now maps email *i* to author *i*; grouped brace-expansion (`{a,b,c}@dom`)
+    expands then distributes without leaking into an affiliation; and a single shared
+    address lands on the lead (first) author (OXIDIZED_DESIGN #52(j)). Witness
+    arXiv:2605.23553.
   - **Supplementary-Material documents are converted and joined into the output.**
     A submission with several top-level `.tex` files (a main paper + a
     Supplementary-Information document, both `.bbl`-backed — arXiv's canonical

@@ -1502,6 +1502,22 @@ produced byte-identical output, so this is a surpass, not a Rust-only fix.
   the marker branch, where marker-less horizontally-separated co-authors can still append; the
   clean recovery above depends on the note-marks being the *only* superscripts.
 
+**(j) A shared author-email line distributes per author instead of bunching on the last.**
+`\email{a@x, b@y, c@z}` (or a single `\email` covering several authors) attached every address to
+whichever creator was open when the line digested — usually the LAST — leaving the rest
+email-less. The `Email` author-line branch now resolves the individual addresses and, when there
+are no more than one per author, hands each to `\lx@add@email` with `labelseq=author`, so address
+*i* relocates to creator *i*'s own `author:N` label:
+- **Distributed (`a@x, b@y, c@z`)** → email *i* to author *i*, in declaration order.
+- **Grouped brace-expansion (`{a,b,c}@dom`)** → expand to `a@dom, b@dom, c@dom` first, then
+  distribute; the expansion is never glued into an affiliation label.
+- **A single shared address** → `author:1`, the LEAD author, never a trailing one.
+A whole-line `\texttt`/`\url` wrapper is re-applied per address. MORE addresses than authors
+cannot map cleanly, so the original line is kept as one contact (the prior behavior). Witness
+arXiv:2605.23553 (`frontmatter_ieee_linebreak_optarg`). Guard
+`06_cluster_frontmatter::frontmatter_shared_email_distribution` (fixtures
+`frontmatter_email_{distributed,grouped,single_shared}.tex`).
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`
