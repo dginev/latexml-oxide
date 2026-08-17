@@ -5001,3 +5001,46 @@ shared counter, so it yields distinct correct names and needs no workaround — 
 
 **Guards**: `06_cluster_regressions::cleveref_custom_theorem_cref_shows_heading_name`
 (heading fallback) and `::cleveref_explicit_crefname_overrides_heading` (explicit name wins).
+
+### 132. Main-file selection: a matching `.bbl` sibling outranks the pdf-`\includegraphics` heuristic
+
+**Perl**: `Pack.pm::detect_source` orders its multi-candidate tie-breakers
+(L188-213) as: max-likelihood → shallowest depth → **pdf-`\includegraphics`
+(heuristic 2)** → **matching `.bbl` (heuristic 3)** → common name
+(`main`/`ms`/`paper`) → alphabetical. When the true main **delegates all its
+figures** to `\input`-ed section files — so it carries no direct
+`\includegraphics` — but a bundled class **template / how-to / supplement** does
+contain an example `\includegraphics{fig.png}`, heuristic 2 narrows the candidate
+set to the decoy and the decisive `.bbl` tie-break never runs. Perl mis-selects
+the decoy as the top-level file.
+
+**Rust**: run the `.bbl`-sibling heuristic **before** the pdf-`\includegraphics`
+heuristic (`main_tex.rs`). arXiv requires the compiled `<main>.bbl` to be bundled
+(BibTeX is not re-run at conversion time), so a candidate with a **matching
+`.bbl`** is the single strongest fingerprint of the real top-level file. When
+more than one candidate carries a `.bbl` (e.g. 2506.05564, 2401.07129) the set
+survives and the later heuristics (pdf-include, common-name, alphabetical) still
+discriminate exactly as before, so the reorder only fires on the decoy class. A
+133-paper blast-radius sweep (21 open html_feedback autotex issues + 22 closed +
+90 random across 7 categories) showed **0 regressions**: the reorder changed a
+pick only on the 8 witnesses below, always from decoy → real main.
+
+This surpasses Perl on a **SHARED-FAILURE** cluster (Perl and the old Rust port
+both mis-selected). Witnesses (all confirmed against production arXiv HTML titles
+and vendored Perl `detect_source`): 2407.05010 (#1721, `New_IEEEtran_how-to.tex`),
+2409.06957 (#6100, `iclr2025_conference.tex`), 2409.02543 (#5867, `supp.tex`),
+2406.08688 (#5476, `IEEEtran_template.tex`), 2310.02368 (#4156, IEEE template),
+2505.05625 (#4067, `supplementary.tex`), 2410.12672 (#2369, `iclr2025_conference.tex`),
+2410.01562 (#2224, `template.tex`).
+
+The companion **parity** fix — argument-anchoring the pdf-`\includegraphics`
+probe (`has_pdftex_marker`) to Perl's exact regex — is *not* a divergence; it
+restores fidelity where the old loose `contains` check false-positived
+(`KNOWN_PERL_ERRORS.md#97`), recovering 2401.17263 (#442) and 2403.17719 (#859),
+which Perl already selected correctly.
+
+**Upstream**: not yet filed to `brucemiller/LaTeXML` (TODO — the same
+heuristic-2-before-3 reorder would benefit Perl `Pack.pm`).
+
+**Guards**: `main_tex::tests::bbl_sibling_outranks_pdf_include_marker` and
+`::reorder_preserves_common_name_when_multiple_bbl`.

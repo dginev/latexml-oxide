@@ -3783,3 +3783,39 @@ normalize to the `\quad` separator, and footnote-SYMBOL superscripts rewrite to 
 `rewrite_symbol_superscripts`, `base_utilities.rs`). Numeric affiliation marks are untouched.
 Guards `06_cluster_frontmatter::{frontmatter_hspace_author_split,
 frontmatter_symbol_superscript_mark, frontmatter_thanks_literal_mark_mix}`.
+
+---
+
+## 97. Main-file guess: pdf-`\includegraphics` heuristic runs before the `.bbl` tie-break
+
+**Perl source:** `LaTeXML/Util/Pack.pm` `detect_source` L188-213 and
+`heuristic_check_for_pdftex` L222-241.
+
+**Symptom:** For a multi-file arXiv submission whose real top-level file
+**delegates its figures** to `\input`-ed section files (so contains no direct
+`\includegraphics`), Perl selects a bundled class **template / how-to / supplement**
+as the main source whenever that decoy carries an example
+`\includegraphics{fig.png}`. The HTML then renders the template ("How to Use the
+IEEEtran LaTeX Templates", "Formatting Instructions for ICLR 2025", …) instead of
+the paper.
+
+**Root cause:** the multi-candidate tie-break applies the pdf-`\includegraphics`
+heuristic (heuristic 2) **before** the matching-`.bbl` heuristic (heuristic 3).
+The pdf heuristic narrows the set to the decoy, so the `.bbl` signal — which
+uniquely fingerprints the real main (arXiv bundles `<main>.bbl`) — never runs.
+
+**Minimal trigger:** a directory with `main.tex` (`\documentclass … \input{sec1}
+… \begin{document}`, no `\includegraphics`) + `main.bbl`, alongside
+`template.tex` (`\documentclass … \includegraphics[width=1in]{fig.png}`, no
+`.bbl`). Perl → `template.tex`; correct is `main.tex`.
+
+**Impact:** Perl-origin, SHARED with the old Rust port. **Rust status (FIXED,
+surpasses — OXIDIZED_DESIGN #132):** the `.bbl` heuristic runs before the pdf
+heuristic in `main_tex.rs`; 0 regressions across a 133-paper blast-radius sweep.
+Witnesses: html_feedback #1721, #6100, #5867, #5476, #4156, #4067, #2369, #2224.
+
+**Secondary quirk (`heuristic_check_for_pdftex`):** the `$pdfoutput_checks`
+counter (init 5, `$pdfoutput_checks-- if $pdfoutput_checks`) clamps at 0, so the
+`$pdfoutput_checks >= 0` guard on the `\pdfoutput=1` probe is *always* true — the
+intended "first few lines only" cap is a no-op and `\pdfoutput=1` matches on any
+line. The Rust port (`has_pdftex_marker`) mirrors this effective behavior.
