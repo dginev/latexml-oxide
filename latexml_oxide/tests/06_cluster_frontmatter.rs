@@ -105,6 +105,41 @@ fn frontmatter_multi_affil_superscript() {
     "the two superscript affiliations merged into one:\n{x}"
   );
 }
+/// arXiv:2403.16405 (IEEEtran conference): a `\author{}` grid where `\and` starts a
+/// COLUMN and top-level `\\` a ROW within it is linearized column-major (declaration
+/// order), scrambling the row-major reading order shown in the PDF/arXiv metadata.
+/// `Zhao\\Ding \and Chen\\Kong \and Huang\\Zhang` must emit creators row-major: Zhao,
+/// Chen, Huang, Ding, Kong, Zhang. Perl 0.8.8 also mis-orders/drops this grid
+/// (SHARED-FAILURE); Rust surpasses (OXIDIZED_DESIGN #127 / KNOWN_PERL_ERRORS #94).
+/// The single-row control must NOT be reordered (tight-guard proof).
+#[test]
+fn frontmatter_ieee_author_grid_transpose() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_author_grid_transpose.tex");
+  // Creators come out in row-major reading order.
+  let want = ["Zhao", "Chen", "Huang", "Ding", "Kong", "Zhang"];
+  let mut last = 0usize;
+  for name in want {
+    let pos = x
+      .find(&format!("<personname>{name}</personname>"))
+      .unwrap_or_else(|| panic!("author {name} missing:\n{x}"));
+    assert!(
+      pos >= last,
+      "author {name} out of row-major order (column-major not transposed):\n{x}"
+    );
+    last = pos;
+  }
+  // Control: a plain single-row `\and` list keeps its DECLARED order (no transpose).
+  let c = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_author_row_no_transpose.tex");
+  let (a, b, cc) = (
+    c.find("<personname>Alice</personname>"),
+    c.find("<personname>Bob</personname>"),
+    c.find("<personname>Carol</personname>"),
+  );
+  assert!(
+    a.is_some() && a < b && b < cc,
+    "single-row \\and list was wrongly reordered:\n{c}"
+  );
+}
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
 /// \textsuperscript{n}Affil}` block must keep SHORT author names as authors, not
 /// reclassify them as affiliations. "Min Xu" (7 tokens) tripped the old `p < 8`

@@ -4783,3 +4783,33 @@ escapeinside=!!]{python}` with `!$\label{line:world}$!`; before, `\ref{line:worl
 vanished (empty `ltx_missing_label`); now it registers on the line and links.
 
 **Guard**: `06_cluster_regressions::minted_escapeinside_label_registers_on_the_code_line`.
+### 128. IEEEtran multi-row author grid emits creators in row-major (reading) order
+
+**Perl**: an IEEEtran conference `\author{}` can lay authors out as a 2-D grid where
+`\and` starts a new COLUMN and a top-level `\\` a new ROW within a column —
+`\IEEEauthorblockN{Zhao}…\\ \IEEEauthorblockN{Ding}… \and \IEEEauthorblockN{Chen}…\\
+\IEEEauthorblockN{Kong}… \and …` (arXiv:2403.16405, 6 authors in 3 columns × 2 rows).
+Each `\IEEEauthorblockN` emits its creator in token (declaration) order, i.e. down each
+column, so the creator sequence is **column-major** (Zhao, Ding, Chen, Kong, Huang,
+Zhang) — scrambling the **row-major reading order** the PDF and the arXiv
+`citation_author` metadata show (Zhao, Chen, Huang, Ding, Kong, Zhang). Same-host Perl
+LaTeXML 0.8.8 mis-handles the same grid (SHARED-FAILURE, Perl-origin).
+
+**Rust behavior**: the IEEEtran `\author` dispatch (`ieeetran_cls.rs`) transposes a
+genuine grid to row-major before emitting creators (`transpose_ieee_author_grid`). The
+transpose is guarded TIGHTLY: it fires only for a REGULAR grid — ≥2 `\and` columns,
+every column the SAME number of top-level `\\` rows, that count ≥2. A single-row `\and`
+author list (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}`
+(nested, brace-depth > 0) are left in their declared order untouched.
+
+**Why**: the reading/metadata order is the authoritative author sequence (it drives
+citation, attribution, and search indexing); a column-major linearization silently
+reorders authors 2…n−1. The tight regular-grid guard keeps every non-grid IEEE block
+(the common case) byte-identical.
+
+**Witness**: arXiv:2403.16405 (IEEEtran, 6 authors) — was Zhao, Ding, Chen, Kong, Huang,
+Zhang; now Zhao, Chen, Huang, Ding, Kong, Zhang. Shared upstream bug recorded as
+KNOWN_PERL_ERRORS #94.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_ieee_author_grid_transpose` (grid
+transposed + a single-row control proven un-reordered).
