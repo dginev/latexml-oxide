@@ -5133,7 +5133,18 @@ LoadDefinitions!({
     "\\format@title@abstract{\\abstractname}"
   ); // Redefine
   DefMacro!("\\abstractname", "Abstract");
-  def_macro_identity("\\format@title@abstract{}")?;
+  // Perl: `\format@title@abstract{}` -> `#1` (identity). SURPASS (html_feedback#6870,
+  // OXIDIZED_DESIGN_DIVERGENCES #121): this hook is the designated place to format the
+  // abstract heading, whose extracted `name=` is a plain-text label. When users write
+  // `\renewcommand{\abstractname}{\centering {\large Abstract}}`, digesting the name
+  // leaks `\centering`'s constructor reversion as literal text (`\centeringAbstract`);
+  // Perl leaks it identically. Neutralize alignment declarations inside a group during
+  // name extraction, mirroring the `titlepage` `Let('\centering','\relax')` precedent.
+  // Font-size/series primitives (`\large`, `\bfseries`) already produce no text leak.
+  DefMacro!(
+    "\\format@title@abstract{}",
+    "{\\let\\centering\\relax\\let\\raggedright\\relax\\let\\raggedleft\\relax#1}"
+  );
 
   // Hmm, titlepage is likely to be hairy, low-level markup,
   // without even title, author, etc, specified as such!
