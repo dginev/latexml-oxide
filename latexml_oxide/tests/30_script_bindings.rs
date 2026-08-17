@@ -1288,3 +1288,82 @@ fn script_binding_discovered_from_file() {
   );
   latexml_core::reset_thread_engine();
 }
+
+/// issue #627: a `RequiredKeyVals`/`OptionalKeyVals` argument reaches a
+/// *constructor* closure body as a digested `KeyVals` handle (not a string), so
+/// a script needs two things the surface did not yet provide:
+///   1. `GetKeyVals(kv)` must accept that Digested and return a map — `GetKeyVal`
+///      already accepts both, `GetKeyVals` took only a string.
+///   2. `UnTeX(Revert(kv))` must keep the VALUES. `KeyVals::revert` iterated the
+///      raw `value`, which digestion (`be_digested`) has already `take()`n —
+///      leaving only `digested_value` — so it emitted bare keys ("lang,size").
+const KVMAP_SAMPLE: &str = r##"
+  DefKeyVal("KVM", "lang", "");
+  DefKeyVal("KVM", "size", "");
+  DefConstructor("\\kvmap RequiredKeyVals:KVM", |document, kv| {
+    let m = GetKeyVals(kv);
+    document.openElement("ltx:text");
+    document.setAttribute("class", "kvmap");
+    document.absorbString("map.lang=" + m["lang"] + " map.size=" + m["size"]
+      + " rev=" + UnTeX(Revert(kv)));
+    document.closeElement("ltx:text");
+  });
+"##;
+
+fn kvmap_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxkvmaptest" {
+    Some(latexml_contrib::script_bindings::load_script(KVMAP_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+#[test]
+fn getkeyvals_accepts_a_digested_and_revert_keeps_values() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(kvmap_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxkvmaptest}",
+    "\\begin{document}\\kvmap{lang=rust,size=big}\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("conversion with a digested-KeyVals script binding should succeed");
+  let xml = doc.serialize_to_string();
+
+  // GetKeyVals(digested) produced a map whose VALUES are present (bug 1). A
+  // string-only GetKeyVals throws on the Digested, degrading the whole binding —
+  // so the element never appears at all.
+  assert!(
+    xml.contains("map.lang=rust") && xml.contains("map.size=big"),
+    "GetKeyVals did not turn the digested KeyVals into a value-bearing map; xml=\n{xml}"
+  );
+  // Revert(kv) keeps the values, not just the keys (bug 2): post-digestion the
+  // raw value is taken, so revert must fall back to the digested value. The
+  // `{}` around each value is standard keyval reversion (Perl `rebrace` +
+  // `$keytype->revert`); the point is the values are PRESENT, not bare keys.
+  assert!(
+    xml.contains("rev=lang={rust},size={big}"),
+    "UnTeX(Revert(kv)) dropped the values (bare keys only); xml=\n{xml}"
+  );
+  // The binding ran clean — no thrown script body.
+  assert!(
+    get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
+    "the digested-KeyVals binding logged errors: {}",
+    latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}

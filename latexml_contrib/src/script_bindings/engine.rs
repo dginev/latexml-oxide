@@ -648,10 +648,31 @@ pub(super) fn make_engine() -> Engine {
     }
     String::new()
   });
-  engine.register_fn("GetKeyVals", |kv: &str| -> Map {
+  // `GetKeyVals` mirrors `GetKeyVal`: a `RequiredKeyVals`/`OptionalKeyVals`
+  // argument reaches a constructor closure as a digested `KeyVals` handle, and
+  // reaches other contexts as its `k=v,…` source string. Accept both (plus unit
+  // for an omitted optional set) so a script can `GetKeyVals(#1)` uniformly and
+  // turn the arg into a Rhai map (issue #627). Values are the digested value's
+  // string form (falling back to the raw value pre-digestion).
+  engine.register_fn("GetKeyVals", |kv: Dynamic| -> Map {
     let mut m = Map::new();
-    for (k, v) in latexml_core::keyval::split_keyval_source(kv) {
-      m.insert(k.into(), Dynamic::from(v));
+    if let Some(d) = kv.clone().try_cast::<Digested>() {
+      if let latexml_core::digested::DigestedData::KeyVals(keyval) = d.data() {
+        let mut hash = keyval.get_hash_digested();
+        if hash.is_empty() {
+          hash = keyval.get_hash();
+        }
+        for (k, v) in hash {
+          m.insert(k.into(), Dynamic::from(v));
+        }
+      }
+      return m;
+    }
+    if kv.is_string() {
+      let s = kv.into_string().unwrap_or_default();
+      for (k, v) in latexml_core::keyval::split_keyval_source(&s) {
+        m.insert(k.into(), Dynamic::from(v));
+      }
     }
     m
   });
