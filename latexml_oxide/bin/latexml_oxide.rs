@@ -1090,27 +1090,32 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     process::exit(1);
   }
 
-  // Wire state-level options
-  if cli.nobibtex {
-    // Set BIB_CONFIG to ['bbl'] — skip BibTeX, use pre-existing .bbl file
-    latexml_core::state::assign_value(
-      "BIB_CONFIG",
-      latexml_core::common::store::Stored::Strings(Rc::new([latexml_core::common::arena::pin(
-        "bbl",
-      )])),
-      Some(latexml_core::state::Scope::Global),
-    );
+  // Per-document state a fresh converter session resets — factored so the main
+  // document and each joined supplement (see the multi-document branch below)
+  // apply it identically. DOCUMENTID is intentionally excluded: it names the
+  // main document's root, and supplements get their own prefixed id space.
+  fn apply_document_state(nobibtex: bool, number_sections: Option<bool>) {
+    if nobibtex {
+      // BIB_CONFIG = ['bbl'] — skip BibTeX, use the pre-existing `.bbl` file.
+      latexml_core::state::assign_value(
+        "BIB_CONFIG",
+        latexml_core::common::store::Stored::Strings(Rc::new([latexml_core::common::arena::pin(
+          "bbl",
+        )])),
+        Some(latexml_core::state::Scope::Global),
+      );
+    }
+    // Perl `numbersections!` (default on), last-wins: `Some(true)` numbers,
+    // `Some(false)` suppresses, `None` leaves the setting untouched.
+    if let Some(ns) = number_sections {
+      latexml_core::state::assign_value(
+        "no_number_sections",
+        !ns,
+        Some(latexml_core::state::Scope::Global),
+      );
+    }
   }
-  // Perl `numbersections!` (default on), last-wins between the pair. `Some(true)`
-  // ⇒ number sections (no_number_sections=false); `Some(false)` ⇒ suppress them;
-  // `None` leaves the setting untouched.
-  if let Some(number_sections) = resolved.number_sections {
-    latexml_core::state::assign_value(
-      "no_number_sections",
-      !number_sections,
-      Some(latexml_core::state::Scope::Global),
-    );
-  }
+  apply_document_state(cli.nobibtex, resolved.number_sections);
   // Perl Core.pm L48: DOCUMENTID value
   if let Some(ref docid) = cli.documentid {
     latexml_core::state::assign_value(
@@ -1216,25 +1221,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
               );
               continue;
             }
-            // A fresh session reset thread-local state — re-apply the
-            // per-document flags (DOCUMENTID is intentionally NOT re-applied:
-            // supplements get their own prefixed id space).
-            if cli.nobibtex {
-              latexml_core::state::assign_value(
-                "BIB_CONFIG",
-                latexml_core::common::store::Stored::Strings(Rc::new([
-                  latexml_core::common::arena::pin("bbl"),
-                ])),
-                Some(latexml_core::state::Scope::Global),
-              );
-            }
-            if let Some(number_sections) = resolved.number_sections {
-              latexml_core::state::assign_value(
-                "no_number_sections",
-                !number_sections,
-                Some(latexml_core::state::Scope::Global),
-              );
-            }
+            // A fresh session reset thread-local state — re-apply the shared
+            // per-document flags before converting this supplement.
+            apply_document_state(cli.nobibtex, resolved.number_sections);
             let r = sconv.convert(supp.clone());
             status_max = status_max.max(r.status_code);
             match r.result {

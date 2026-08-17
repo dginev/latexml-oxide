@@ -665,39 +665,7 @@ pub fn is_pdf_magic(path: &Path) -> bool {
 /// toplevel source. Perl Pack.pm L68-80: scans `sources[]` for the
 /// entry tagged `usage == "toplevel"`. Minimal hand-rolled JSON
 /// scanner — we don't pull a full JSON dep just for this.
-fn parse_readme_json(dir: &Path) -> Option<String> {
-  let content = std::fs::read_to_string(dir.join("00README.json")).ok()?;
-  let sources_start = content.find("\"sources\"")?;
-  let rest = &content[sources_start..];
-  let arr_start = rest.find('[')?;
-  let arr_end = rest.find(']')?;
-  let arr = &rest[arr_start + 1..arr_end];
-
-  for obj_str in arr.split('}') {
-    if !obj_str.contains("\"toplevel\"") {
-      continue;
-    }
-    if let Some(fn_pos) = obj_str.find("\"filename\"") {
-      let after_key = &obj_str[fn_pos + 10..];
-      let after_key = after_key.trim_start();
-      let after_key = after_key.strip_prefix(':')?;
-      let after_key = after_key.trim_start();
-      let after_key = after_key.strip_prefix('"')?;
-      let mut result = String::new();
-      for ch in after_key.chars() {
-        match ch {
-          '"' => break,
-          '\\' => continue,
-          c => result.push(c),
-        }
-      }
-      if !result.is_empty() {
-        return Some(result);
-      }
-    }
-  }
-  None
-}
+fn parse_readme_json(dir: &Path) -> Option<String> { parse_readme_json_all(dir).into_iter().next() }
 
 // ---------------------------------------------------------------------------
 // Pre-compiled regexes used by `find_main_tex`. Parking these as module-
