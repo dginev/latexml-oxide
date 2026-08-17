@@ -3752,3 +3752,34 @@ wrappers read a FULL superscript operand (`read_frontmatter_sup_operand`,
 and undigested; the surrounding math stays balanced. Witness arXiv:2403.11905
 (html_feedback#1021): 6 errors → 0. Guard
 `06_cluster_frontmatter::frontmatter_nested_math_author_marker`.
+
+## 96. `\hspace`-separated authors bunch, and footnote-symbol marks vanish (Rust surpasses)
+
+**Perl source:** `LaTeXML/Engine/Base_Utility.pool.ltxml` L679-740 (`\lx@add@authors` split
+sets `@authorsplits`/`@authoraffilsplits` know only `\and`/`\quad`/`\qquad`/`\\`;
+`\lx@author@withsup` `\let`s `^`/`\textsuperscript` onto the affiliation-linker).
+
+**Symptom:** no error is raised — the frontmatter is silently mis-structured. Authors laid
+out with `\hspace`/`\hfill` between them collapse into a single `<personname>`, and a
+literal equal-contribution superscript (`$^{*}$`) is consumed into an affiliation label that
+matches nothing and is discarded (the visible mark disappears).
+
+**Minimal trigger:**
+```latex
+\author{Alice \hspace{1cm} Bob$^{*}$ \hspace{1cm} Carol}
+\begin{document}\maketitle\end{document}
+```
+Perl 0.8.8 yields one creator `<personname>Alice     Bob     Carol</personname>` — Bob's
+`$^{*}$` gone. Witness arXiv:2506.06941 (the arXiv production HTML is byte-identical Perl
+0.8.8): six authors welded, "Apple" glued to the last name, Iman Mirzadeh's `$^{*}$` dropped.
+
+**Perl status:** present in 0.8.8 (same-host), same output. Author blocks that avoid `\and`
+(using `\hspace`/`\\` layout) and mark equal contribution with a literal `$^{*}$` are a
+regular arXiv idiom Perl does not structure. Upstream filing pending.
+
+**Rust status (FIXED, beneficial divergence — OXIDIZED_DESIGN #52(i)):** `\hspace`/`\hfill`
+normalize to the `\quad` separator, and footnote-SYMBOL superscripts rewrite to a visible
+`\lx@frontmatter@keepsup` sup before branch selection (`normalize_hspace_separators`,
+`rewrite_symbol_superscripts`, `base_utilities.rs`). Numeric affiliation marks are untouched.
+Guards `06_cluster_frontmatter::{frontmatter_hspace_author_split,
+frontmatter_symbol_superscript_mark, frontmatter_thanks_literal_mark_mix}`.

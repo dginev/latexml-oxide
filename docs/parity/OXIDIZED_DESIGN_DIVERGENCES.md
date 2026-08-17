@@ -1465,6 +1465,43 @@ that is the pre-existing #52 comma tradeoff the default `\author` already makes,
 divergence; the label and single-name (no-comma) authblk paths stay Perl-faithful. Guard:
 `06_cluster_frontmatter::frontmatter_authblk_comma_list`.
 
+**(i) `\hspace` separates co-authors; footnote-symbol marks render instead of vanishing.**
+Two composable normalizations applied to the `\author` argument BEFORE branch selection
+(`normalize_hspace_separators` + `rewrite_symbol_superscripts`), addressing
+html_feedback#6637 (arXiv:2506.06941, "The Illusion of Thinking", plain `article`), where
+the six authors were welded into one `<personname>` with "Apple" glued on and Iman
+Mirzadeh's literal `$^{*}$` silently dropped — Perl 0.8.8 (the arXiv production engine)
+produced byte-identical output, so this is a surpass, not a Rust-only fix.
+- **`\hspace{len}` / `\hspace*{len}` / `\hfill` → `\quad`.** Authors laid out with
+  `A \hspace{1cm} B \hspace{1cm} C` (a regular poor-man's separator) collapsed into one
+  creator, because the splitter only knew `\and`/`\quad`. `\quad` is already a hard
+  separator in every author/affiliation split set, so the rewrite needs no new plumbing;
+  `\hspace`'s optional `*` and mandatory length are consumed so the length cannot leak.
+- **Footnote-SYMBOL superscripts (`$^{*}$`, `${}^{\dagger}$`, `\textsuperscript{\ddagger}`)
+  → a visible `\lx@frontmatter@keepsup` sup.** These are equal-contribution / corresponding
+  notes, NEVER affiliation numbers (the same note-vs-affiliation split already encoded in
+  `starts_with_affiliation_mark`). Rewriting them onto a sentinel the `\lx@author@withsup`
+  hijack does not touch means they (1) render as a real superscript instead of being consumed
+  into an `affiliation:*` label that matches nothing and is discarded, and (2) no longer count
+  as an affiliation-marker trigger, so a block whose ONLY superscript is such a note-mark takes
+  the clean no-marker branch. NUMERIC/lettered affiliation marks (`$^{1}$`) are untouched, and
+  a superscript with a non-empty base (`$x^2$`) is real math, left alone.
+- **Combined effect on the witness:** removing Mirzadeh's `$^{*}$` (its only literal `^`)
+  drops the whole block into the no-marker branch, where the `\quad`s split all six authors,
+  "Apple" becomes the last author's affiliation, and Shojaee keeps his two `\thanks`. Verified
+  by an OLD-vs-NEW full-XML diff over all 57 author-bearing fixtures: exactly the THREE new
+  fixtures changed, zero existing regressions. Guards:
+  `06_cluster_frontmatter::{frontmatter_hspace_author_split, frontmatter_symbol_superscript_mark,
+  frontmatter_thanks_literal_mark_mix}`. (This is also why (g)'s guard fixture now uses a
+  numeric `$^{1}$` marker: a symbol `$^{*}$` there is now a note-mark and would reroute out of
+  the marker branch it is meant to exercise.)
+- **Residual (out of scope):** the *exact* `\fnsymbol` marks the author intended next to
+  Shojaee's name (∗ for footnote 1, † for footnote 2) are not reconstructed — `\thanks`
+  becomes a `role=thanks` contact note, not a numbered superscript. And an author block that
+  mixes marked and UNMARKED authors while still carrying a NUMERIC affiliation mark stays in
+  the marker branch, where marker-less horizontally-separated co-authors can still append; the
+  clean recovery above depends on the note-marks being the *only* superscripts.
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`

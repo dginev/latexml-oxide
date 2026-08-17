@@ -890,6 +890,20 @@ LoadDefinitions!({
     // `<tabular>`-in-`<personname>` output is a presentational artifact we do not
     // want in frontmatter anyway, so there is nothing to preserve by skipping it.
     let stuff = strip_linebreak_options(stuff);
+    // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
+    // BEFORE branch selection so both branches benefit, and so a symbol mark can
+    // no longer spuriously trigger the affiliation-marker branch:
+    //   1. horizontal-space separators (`\hspace{len}` / `\hfill`) → `\quad`, the
+    //      "regular" poor-man's author separator LaTeXML's `\and`/`\quad` splitter
+    //      otherwise misses (witness arXiv:2506.06941, six authors bunched);
+    //   2. footnote-SYMBOL superscripts (`$^{*}$`, `\textsuperscript{\dagger}` —
+    //      equal-contribution / corresponding notes, NEVER affiliation numbers) →
+    //      a visible `\lx@frontmatter@keepsup` sup, so they render instead of
+    //      being consumed into an unmatched `affiliation:*` label and dropped.
+    // For the witness, (2) removes its ONLY `^`, dropping the whole block into the
+    // clean no-marker branch where (1)'s `\quad`s split all six authors.
+    let stuff = normalize_hspace_separators(stuff);
+    let stuff = rewrite_symbol_superscripts(stuff);
     // If too much formatting, fall back to unstructured author content
     let stuff_string = stuff.to_string();
     if stuff_string.contains("{tabular}")
@@ -1101,6 +1115,16 @@ LoadDefinitions!({
     "\\lx@affiliation@withsup{}",
     "\\bgroup\\let^\\lx@sup@setlabel@affiliation\\let\\textsuperscript\\lx@sup@setlabel@affiliation#1\\egroup"
   );
+  // A VISIBLE author superscript mark that must survive the `\lx@author@withsup`
+  // hijack (which `\let`s `^`/`\textsuperscript` onto the affiliation-linker).
+  // `rewrite_symbol_superscripts` rewrites footnote-SYMBOL marks (`$^{*}$`,
+  // `\textsuperscript{\dagger}` — equal-contribution / corresponding-author
+  // notes, never affiliation numbers) onto this sentinel BEFORE author parsing,
+  // so they neither trigger the affiliation-marker branch nor get consumed into
+  // an unmatched `affiliation:*` label and dropped. Renders identically to
+  // `\textsuperscript` but under a name the hijack does not touch.
+  // OXIDIZED_DESIGN #52; witness arXiv:2506.06941 (Mirzadeh's `$^{*}$`).
+  DefConstructor!("\\lx@frontmatter@keepsup{}", "<ltx:sup>#1</ltx:sup>", mode => "text");
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     let mut calls: Vec<Token> = Vec::new();
@@ -4187,6 +4211,208 @@ fn strip_linebreak_options(tokens: Tokens) -> Tokens {
   Tokens::new(out)
 }
 
+/// Rewrite horizontal-space macros into `\quad`, so the author/affiliation
+/// splitter treats them as separators. `\author{A \hspace{1cm} B \hspace{1cm} C}`
+/// (and `\hfill`-separated variants) is a "regular" way to lay out co-authors
+/// that LaTeXML's `\and`/`\quad` splitter otherwise misses, collapsing every name
+/// into one `<personname>`. `\quad` is already a hard separator in every author /
+/// affiliation split set, so rewriting to it needs no new delimiter plumbing.
+/// `\hspace`'s optional `*` and mandatory `{len}` argument are consumed together
+/// so the length cannot leak as literal text. OXIDIZED_DESIGN #52; witness
+/// arXiv:2506.06941 (six authors separated by `\hspace{0.5cm}`).
+fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
+  let src = tokens.unlist();
+  let n = src.len();
+  let mut out: Vec<Token> = Vec::with_capacity(n);
+  let mut i = 0;
+  while i < n {
+    let t = src[i];
+    if t == T_CS!("\\hspace") {
+      let mut j = i + 1;
+      // optional `*` (\hspace*)
+      if j < n && src[j] == T_OTHER!("*") {
+        j += 1;
+      }
+      // mandatory `{len}` group
+      if j < n && src[j] == T_BEGIN!() {
+        let mut depth = 1usize;
+        j += 1;
+        while j < n && depth > 0 {
+          if src[j] == T_BEGIN!() {
+            depth += 1;
+          } else if src[j] == T_END!() {
+            depth -= 1;
+          }
+          j += 1;
+        }
+      }
+      out.push(T_CS!("\\quad"));
+      i = j;
+      continue;
+    }
+    if t == T_CS!("\\hfill") || t == T_CS!("\\hfil") {
+      out.push(T_CS!("\\quad"));
+      i += 1;
+      continue;
+    }
+    out.push(t);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// The footnote-SYMBOL characters (`\fnsymbol`-style) and control sequences that,
+/// as a superscript on an author, mark an equal-contribution / corresponding /
+/// note relation — NEVER an affiliation (which is numbered). Kept deliberately to
+/// pure symbols so a numeric (`1`) or lettered (`a`) affiliation mark is never
+/// misread as a note. Mirrors the note-vs-affiliation split already documented in
+/// `starts_with_affiliation_mark`.
+fn is_footnote_symbol_operand(sym: &[Token]) -> bool {
+  const SYMBOL_CHARS: &[&str] = &[
+    "*", "\u{2217}", "\u{2020}", "\u{2021}", "\u{A7}", "\u{B6}", "\u{22C6}", "\u{2605}",
+    "\u{2022}", "\u{25E6}", "\u{2666}",
+  ];
+  const SYMBOL_CS: &[&str] = &[
+    "\\ast",
+    "\\star",
+    "\\dagger",
+    "\\ddagger",
+    "\\S",
+    "\\P",
+    "\\bullet",
+    "\\diamond",
+    "\\circ",
+    "\\sharp",
+    "\\|",
+    "\\#",
+  ];
+  let mut saw_symbol = false;
+  for t in sym {
+    match t.get_catcode() {
+      Catcode::SPACE => continue,
+      Catcode::CS => {
+        if !t.with_str(|s| SYMBOL_CS.contains(&s)) {
+          return false;
+        }
+        saw_symbol = true;
+      },
+      Catcode::OTHER | Catcode::LETTER => {
+        if !t.with_str(|s| SYMBOL_CHARS.contains(&s)) {
+          return false;
+        }
+        saw_symbol = true;
+      },
+      _ => return false,
+    }
+  }
+  saw_symbol
+}
+
+/// Rewrite footnote-SYMBOL author superscripts — `$^{*}$`, `${}^{\dagger}$`,
+/// `\textsuperscript{\ddagger}`, a bare `^{*}` — onto the visible
+/// `\lx@frontmatter@keepsup` sentinel, BEFORE author-block branch selection.
+///
+/// Two effects, both wanted (OXIDIZED_DESIGN #52; witness arXiv:2506.06941, where
+/// Iman Mirzadeh's literal `$^{*}$` was silently dropped):
+///   * the mark no longer counts as an affiliation superscript, so a block whose
+///     ONLY superscript is such a note-mark takes the clean no-marker author
+///     branch instead of the affiliation-linking one;
+///   * the symbol renders as a real superscript instead of being consumed into an
+///     `affiliation:*` label that matches no affiliation and is discarded.
+///
+/// NUMERIC/lettered affiliation marks (`$^{1}$`, `\textsuperscript{a}`) are left
+/// untouched, so affiliation linking is unaffected. Only the specific
+/// superscript-mark token shapes are matched; a superscript inside real math
+/// (`$x^2$`) is not (its base is not empty), so math content is preserved.
+fn rewrite_symbol_superscripts(tokens: Tokens) -> Tokens {
+  let src = tokens.unlist();
+  let n = src.len();
+  let mut out: Vec<Token> = Vec::with_capacity(n);
+  let mut i = 0;
+  // Read a superscript operand at `src[k]`: a braced `{...}` group, or a single
+  // token. Returns (operand tokens, index past the operand) or None.
+  let read_operand = |k: usize| -> Option<(Vec<Token>, usize)> {
+    if k >= n {
+      return None;
+    }
+    if src[k] == T_BEGIN!() {
+      let mut depth = 1usize;
+      let mut m = k + 1;
+      let mut inner = Vec::new();
+      while m < n && depth > 0 {
+        if src[m] == T_BEGIN!() {
+          depth += 1;
+        } else if src[m] == T_END!() {
+          depth -= 1;
+          if depth == 0 {
+            break;
+          }
+        }
+        inner.push(src[m]);
+        m += 1;
+      }
+      if depth == 0 {
+        Some((inner, m + 1))
+      } else {
+        None
+      }
+    } else {
+      Some((vec![src[k]], k + 1))
+    }
+  };
+  while i < n {
+    let t = src[i];
+    // `\textsuperscript{sym}` — always braced in practice.
+    if t == T_CS!("\\textsuperscript")
+      && src.get(i + 1) == Some(&T_BEGIN!())
+      && let Some((sym, next)) = read_operand(i + 1)
+      && is_footnote_symbol_operand(&sym)
+    {
+      out.extend(keepsup(sym));
+      i = next;
+      continue;
+    }
+    // `$ [ {} ] ^ sym $` — a math span whose whole content is a superscript on an
+    // empty base. Rewrite the entire span (delimiters included) to a text sup.
+    if t == T_MATH!()
+      && let Some(close) = (i + 1..n).find(|&m| src[m] == T_MATH!())
+    {
+      // optional empty base `{}` before the superscript
+      let p = if i + 2 < close && src[i + 1] == T_BEGIN!() && src[i + 2] == T_END!() {
+        i + 3
+      } else {
+        i + 1
+      };
+      if p < close
+        && src[p] == T_SUPER!()
+        && let Some((sym, next)) = read_operand(p + 1)
+        && next == close
+        && is_footnote_symbol_operand(&sym)
+      {
+        out.extend(keepsup(sym));
+        i = close + 1;
+        continue;
+      }
+    }
+    // Only the math-delimited (`$…$`) and `\textsuperscript{…}` spellings are
+    // rewritten — the correct ways to write a text superscript. A bare `^` is NOT
+    // matched here: outside math it is invalid LaTeX, and a `^` reached mid-scan is
+    // the superscript operator of real inline math on a non-empty base (`$a^{*}$`),
+    // which must be left intact.
+    out.push(t);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// `\lx@frontmatter@keepsup{<sym>}` as a token list.
+fn keepsup(sym: Vec<Token>) -> Vec<Token> {
+  let mut v = vec![T_CS!("\\lx@frontmatter@keepsup"), T_BEGIN!()];
+  v.extend(sym);
+  v.push(T_END!());
+  v
+}
+
 /// Does this token list *begin* with a NUMERIC affiliation superscript mark
 /// (`$^{1}…` / `$^1…` / `\textsuperscript{1}…`)? This is the signature of the
 /// arXiv "`\thanks` abuse" idiom (affiliations smuggled into an author
@@ -4825,5 +5051,89 @@ mod author_split_tests {
     setup();
     // Only unwrap when there is actually an inner list to split.
     assert_eq!(split_author_line(tk("\\textbf{Alice}")).len(), 1);
+  }
+
+  // --- html_feedback#6637 helpers (OXIDIZED_DESIGN #52) ---
+
+  #[test]
+  fn normalize_hspace_becomes_quad_separator() {
+    setup();
+    let out = normalize_hspace_separators(tk("A \\hspace{1cm} B \\hspace*{2em} C \\hfill D"));
+    // Every horizontal-space macro became a \quad separator…
+    assert_eq!(position_of(&out, &[T_CS!("\\quad")]), Some(3));
+    assert!(position_of(&out, &[T_CS!("\\hspace")]).is_none());
+    assert!(position_of(&out, &[T_CS!("\\hfill")]).is_none());
+    // …and the length arguments did not leak as text.
+    let s = out.to_string();
+    assert!(
+      !s.contains("1cm") && !s.contains("2em"),
+      "length leaked: {s}"
+    );
+  }
+
+  #[test]
+  fn footnote_symbol_operand_classification() {
+    setup();
+    // Note-marks (symbols) are recognised…
+    for sym in ["*", "**", "\\dagger", "\\ddagger", "\\ast", "\\star", "\\S"] {
+      assert!(
+        is_footnote_symbol_operand(&tk(sym).unlist()),
+        "{sym} should be a footnote symbol"
+      );
+    }
+    // …affiliation marks (numeric/lettered) and non-symbol CS are NOT.
+    for aff in ["1", "12", "a", "\\text", "\\inst"] {
+      assert!(
+        !is_footnote_symbol_operand(&tk(aff).unlist()),
+        "{aff} must NOT be a footnote symbol"
+      );
+    }
+    // An empty operand is not a mark.
+    assert!(!is_footnote_symbol_operand(&[]));
+  }
+
+  #[test]
+  fn rewrite_symbol_superscripts_recovers_marks() {
+    setup();
+    // $^{*}$, ${}^{\dagger}$, \textsuperscript{*}, $^{**}$ → keepsup sentinel, and
+    // the superscript token is gone (no longer an affiliation-marker trigger).
+    for marked in [
+      "X$^{*}$",
+      "X${}^{\\dagger}$",
+      "X\\textsuperscript{*}",
+      "X$^{**}$",
+    ] {
+      let out = rewrite_symbol_superscripts(tk(marked));
+      assert!(
+        position_of(&out, &[T_CS!("\\lx@frontmatter@keepsup")]).is_some(),
+        "{marked} did not rewrite to keepsup: {out}"
+      );
+      assert!(
+        position_of(&out, &[T_SUPER!()]).is_none(),
+        "{marked} left a bare superscript trigger: {out}"
+      );
+    }
+  }
+
+  #[test]
+  fn rewrite_symbol_superscripts_leaves_affiliation_and_math() {
+    setup();
+    // Numeric affiliation marks stay as superscript markers (untouched)…
+    let aff = rewrite_symbol_superscripts(tk("X$^{1}$ \\and Y$^{1}$Institute"));
+    assert!(
+      position_of(&aff, &[T_SUPER!()]).is_some(),
+      "numeric affiliation mark must be preserved: {aff}"
+    );
+    assert!(position_of(&aff, &[T_CS!("\\lx@frontmatter@keepsup")]).is_none());
+    // …and real math (non-empty base) is not rewritten — including a SYMBOL
+    // superscript on a base (`$a^{*}$`), which is genuine math, not a note-mark.
+    for expr in ["$x^2$", "$a^{*}$"] {
+      let math = rewrite_symbol_superscripts(tk(expr));
+      assert!(
+        position_of(&math, &[T_SUPER!()]).is_some(),
+        "real math superscript lost in {expr}: {math}"
+      );
+      assert!(position_of(&math, &[T_CS!("\\lx@frontmatter@keepsup")]).is_none());
+    }
   }
 }

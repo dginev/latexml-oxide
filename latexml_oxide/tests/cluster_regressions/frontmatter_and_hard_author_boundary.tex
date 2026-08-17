@@ -5,7 +5,11 @@
 % `^` on that segment). The marker branch used to flat-split \and/\quad/\\
 % together and append a marker-less segment to the PREVIOUS author, merging
 % \and-separated authors into one <personname>. \and is now a hard boundary.
+% Alice's NUMERIC `$^{1}$` (an affiliation-style mark) keeps the block in the
+% superscript-marker branch — a footnote SYMBOL there (`$^{*}$`) is instead a
+% note-mark that html_feedback#6637 recovers as a visible sup and reroutes out of
+% this branch, so it would no longer exercise the \and-grouping this fixture guards.
 \newcommand{\mk}{$^\text{$\star$}$}
-\author{Alice\mk$^*$ \and Bob\mk \and Carol\mk}
+\author{Alice\mk$^{1}$ \and Bob\mk \and Carol\mk}
 \title{And hard author boundary}
 \begin{document}\maketitle\end{document}

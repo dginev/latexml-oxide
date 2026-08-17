@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+  - **`\hspace`-separated authors split, and equal-contribution superscript marks
+    render.** An `\author` block that lays co-authors out with `\hspace{len}`/
+    `\hfill` instead of `\and` collapsed into one `<personname>`, and a literal
+    footnote-symbol mark (`$^{*}$`, `\textsuperscript{\dagger}` — equal-contribution
+    / corresponding notes) was consumed into an affiliation label that matched
+    nothing and silently dropped. Horizontal-space macros now normalize to the
+    `\quad` author separator, and symbol marks render as a visible superscript
+    (numeric affiliation marks are untouched). For the witness — arXiv 2506.06941,
+    "The Illusion of Thinking", whose arXiv HTML is byte-identical Perl 0.8.8 — the
+    six welded authors now split, Iman Mirzadeh's `$^{*}$` returns, and "Apple"
+    becomes the last author's affiliation. Surpasses Perl (arXiv/html_feedback#6637).
   - **apacite's old `.bbl` format renders.** apacite's pre-2012 bibliography
     format labels each `\bibitem` with `\BCAY{full}{short}{year}` and formats
     entries with `\Bem`/`\BBACOMMA` — macros the binding did not define, so a
