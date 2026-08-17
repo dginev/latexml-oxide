@@ -3581,3 +3581,30 @@ See \cite{alpha}, \cite{beta}, \cite{alpha,beta}.
 numeric-only, `CrossRef::fill_in_bibrefs` collapses to the bracketed number `[N]`/`[N, M]`, matching
 `\NAT@force@numbers`. Guard:
 `06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
+
+## 90. Content injected into `\@maketitle` is discarded with the title machinery (Rust surpasses)
+
+LaTeXML replaces the LaTeX kernel's `\maketitle`→`\@maketitle` typesetting pipeline with its own
+frontmatter model: `\maketitle` deposits the separately-captured title/author/date and then
+`\global\let\@maketitle\relax` (`latex_constructs.pool.ltxml` L1105), the source comment (L1094)
+admitting "In case `\@maketitle` defines these — we can't yet emulate that." So content a document
+appends to `\@maketitle` via `\g@addto@macro` — a teaser figure, an epigraph — is silently dropped,
+and any `\ref` to a `\label` inside it renders the raw internal key `LABEL:fig:teaser`. Real
+pdflatex runs `\@maketitle`, so the figure appears below the title and its `\ref` resolves.
+Same-host Perl 0.8.8 drops it identically (SHARED-FAILURE, Perl-origin). Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{graphicx}\title{T}\author{A}
+\makeatletter
+\g@addto@macro\@maketitle{\begin{figure}\includegraphics{x}\caption{C}\label{fig:t}\end{figure}}
+\makeatother
+\begin{document}\maketitle See \ref{fig:t}.\end{document}
+```
+
+→ both engines drop the figure and render `\ref` as "LABEL:fig:t"; pdflatex shows the figure and
+"1". Reported as arXiv/html_feedback#4281 (witness 2506.23854, an ICCV paper whose teaser
+`\figref{fig:teaser}` rendered "Fig. LABEL:fig:teaser"). Rust **surpasses** (OXIDIZED_DESIGN #124):
+`\@maketitle` is predefined empty (clean `\g@addto@macro` append) and `\maketitle` deposits its
+accumulated content in a title-neutralized group before relaxing it, so the figure renders and the
+reference resolves to "Fig. 1". Guard:
+`06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.

@@ -558,3 +558,37 @@ fn frontmatter_inst_affiliation_dedup() {
     "the second (distinct) affiliation was dropped:\n{x}"
   );
 }
+
+/// A figure injected into the title via `\g@addto@macro\@maketitle{…}` must
+/// survive and register its `\label`.
+///
+/// LaTeXML redefines `\maketitle` to deposit its own captured frontmatter and
+/// then `\global\let\@maketitle\relax` — discarding `\@maketitle` wholesale (the
+/// source even notes "we can't yet emulate that"). So content a document appends
+/// to `\@maketitle` (a teaser figure, an epigraph) was silently dropped, and any
+/// `\ref` to a `\label` inside it rendered the raw internal key
+/// "LABEL:fig:teaser". Both engines shared this blind spot (Perl drops it too).
+///
+/// Fix (surpass-Perl, OXIDIZED_DESIGN #124, KNOWN_PERL_ERRORS #90): `\@maketitle`
+/// is predefined empty (so `\g@addto@macro` appends cleanly) and `\maketitle`
+/// now deposits its accumulated content in a title-neutralized group before
+/// relaxing it. Witness arXiv:2506.23854 (html_feedback#4281).
+#[test]
+fn frontmatter_maketitle_injected_figure_survives() {
+  let x = convert_to_xml("tests/cluster_regressions/maketitle_injected_figure.tex");
+  // The injected figure now exists AND carries its label (before the fix there
+  // was no teaser figure at all, hence no `labels="LABEL:fig:teaser"`).
+  assert!(
+    x.contains(r#"labels="LABEL:fig:teaser""#),
+    "the figure injected into \\@maketitle was dropped (no teaser figure/label):\n{x}"
+  );
+  assert!(
+    x.contains("Teaser caption for the drums scene."),
+    "the injected figure's caption was lost:\n{x}"
+  );
+  // The graphics candidate rode along too.
+  assert!(
+    x.contains("teaser.png"),
+    "the injected figure's graphics were lost:\n{x}"
+  );
+}
