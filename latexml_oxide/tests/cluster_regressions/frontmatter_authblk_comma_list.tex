@@ -1,0 +1,11 @@
+\documentclass{article}
+\usepackage{authblk}
+% html_feedback#6255 (googledeepmind, authblk): a single \author{A, B, C} comma
+% list is authblk's one-author-arg form, so it was kept as ONE
+% <personname>A, B, C</personname>. The default (non-authblk) \author already
+% splits a comma list into separate creators via \lx@add@authors; authblk's
+% \author routes a no-\and list to \lx@add@creator (single) instead. Route a
+% comma list to \lx@add@authors too, matching the default.
+\author{Alice One, Bob Two, Carol Three}
+\title{Authblk comma author list}
+\begin{document}\maketitle\end{document}

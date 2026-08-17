@@ -39,8 +39,18 @@ LoadDefinitions!({
       Ok(Invocation!("\\lx@add@creator[role=author,annotations={#1}]{#2}",
         vec![Some(label), Some(author)]))
     } else if author.unlist_ref().iter().any(|t|
-      t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And")))
+      t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And"))
+      || *t == T_OTHER!(","))
     {
+      // `\and`/`\And` OR a top-level comma → a multi-author list; route to
+      // `\lx@add@authors`, which splits it into separate creators via
+      // `split_author_line` (the same comma / " and " name split the DEFAULT
+      // `\author` already applies). authblk's own no-`\and` branch keeps the
+      // whole comma list as ONE `<personname>A, B, C</personname>`; matching the
+      // default fixes that inconsistency (html_feedback#6255, googledeepmind).
+      // A single name that legitimately contains a comma ("Smith, Jr.") is
+      // mis-split, but that is the pre-existing #52 comma tradeoff the default
+      // `\author` already makes, not a new divergence. OXIDIZED_DESIGN #52(h).
       Ok(Invocation!(T_CS!("\\lx@add@authors"), vec![Some(author)]))
     } else {
       Ok(Invocation!(T_CS!("\\lx@add@creator"), vec![None, Some(author)]))

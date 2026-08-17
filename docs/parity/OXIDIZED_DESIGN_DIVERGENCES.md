@@ -1452,6 +1452,18 @@ name rather than recognized as an affiliation, because classification keys on a 
 marker and does not expand macros. So arXiv:2403.11905's Kate Sanders now separates from
 Kevin Xu but still carries her institution in the name; full attachment needs
 expansion-aware marker detection.)
+**(h) authblk `\author{A, B, C}` comma list splits into separate creators.** authblk's
+`\author` routes a no-`\and` argument to `\lx@add@creator` (a single creator), so a
+comma list `\author{Alice One, Bob Two, Carol Three}` was kept as ONE
+`<personname>Alice One, Bob Two, Carol Three</personname>` (html_feedback#6255,
+googledeepmind). The DEFAULT `\author` already routes to `\lx@add@authors`, which splits
+a comma / " and " list into separate creators via `split_author_line`. authblk's
+`\author` now routes to `\lx@add@authors` too when the argument has a top-level comma (or
+`\and`), so the comma list resolves to individual creators — matching the default and the
+PDF. A single name that legitimately contains a comma ("Smith, Jr.") is mis-split, but
+that is the pre-existing #52 comma tradeoff the default `\author` already makes, not a new
+divergence; the label and single-name (no-comma) authblk paths stay Perl-faithful. Guard:
+`06_cluster_frontmatter::frontmatter_authblk_comma_list`.
 
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
