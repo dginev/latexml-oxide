@@ -347,11 +347,248 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
   )
 }
 
+/// Ordered list of top-level `.tex` files: the main document first, then any
+/// **Supplementary-Material** documents that ship alongside it. `find_main_tex`
+/// returns element 0 of this list; embedders that want to convert the whole
+/// submission (main + supplements, appended in order — arXiv's multi-top-level
+/// model, [`submit_legacy_differences`]) drive off the full list.
+///
+/// Detection is deliberately **precision-first / template-safe**. A supplement
+/// is admitted only when it is a `\documentclass` file that (a) ships its own
+/// matching `.bbl` — arXiv's canonical `ms.tex`+`ms.bbl` / `supplement.tex`+
+/// `supplement.bbl` fingerprint, which bundled class *templates* do not have —
+/// and (b) self-identifies as supplementary by `\title` or filename
+/// (`supplement`/`supporting`/`supplemental`/`appendix`/`SI`/`SM`). Both gates
+/// together keep a messy bundle's template from ever being mistaken for a
+/// second document. An explicit `00README` listing two or more top-level files
+/// overrides the heuristic (author intent), still ordered main-first.
+///
+/// Conservative residual: a supplement bundled *without* its own `.bbl`, or one
+/// that does not self-identify, is not auto-detected.
+///
+/// [`submit_legacy_differences`]: https://info.arxiv.org/help/submit_legacy_differences.html
+pub fn find_top_level_texs(dir: &Path) -> Result<Vec<PathBuf>, String> {
+  // An explicit multi-file 00README designation wins over the heuristic.
+  let explicit = explicit_top_levels(dir);
+  if explicit.len() >= 2 {
+    return Ok(order_main_first(explicit, dir));
+  }
+  let main = find_main_tex(dir)?;
+  // The set of `.bbl`-backed top-level documents at the main's depth — arXiv's
+  // multi-top-level fingerprint. Include `main` even if it ships no `.bbl`
+  // (inline bibliography) so a `.bbl`-backed supplement can still attach to it.
+  let mut set = top_level_bbl_docs(dir, &main);
+  if !set.contains(&main) {
+    set.push(main.clone());
+  }
+  // Split into the single true main (the lone non-supplement) and supplements.
+  // This is done over the whole set rather than trusting `find_main_tex`'s
+  // alphabetical tie-break, which can pick a supplement (e.g. `Appendix.tex`
+  // sorts before `Note.tex`) when two `.bbl` documents are otherwise level.
+  let (mut supps, mains): (Vec<PathBuf>, Vec<PathBuf>) =
+    set.into_iter().partition(|f| is_supplement(f));
+  if mains.len() == 1 && !supps.is_empty() {
+    supps.sort();
+    supps.dedup();
+    let mut tops = mains;
+    tops.extend(supps);
+    return Ok(tops);
+  }
+  // No clean 1-main + supplements split → single-file (unchanged behavior).
+  Ok(vec![main])
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers.
 // ---------------------------------------------------------------------------
 
 fn s(msg: &str) -> String { msg.to_string() }
+
+/// All files a `00README.json`/`00README.XXX` explicitly marks as top-level, in
+/// listed order, restricted to those that exist (main-first ordering applied by
+/// the caller). Empty when there is no explicit designation.
+fn explicit_top_levels(dir: &Path) -> Vec<PathBuf> {
+  let mut out: Vec<PathBuf> = Vec::new();
+  for name in parse_readme_json_all(dir) {
+    let p = dir.join(&name);
+    if p.exists() && !out.contains(&p) {
+      out.push(p);
+    }
+  }
+  let readme_xxx = dir.join("00README.XXX");
+  if let Ok(content) = std::fs::read_to_string(&readme_xxx) {
+    for line in content.lines() {
+      let parts: Vec<&str> = line.split_whitespace().collect();
+      if parts.len() >= 2 && parts[1] == "toplevelfile" {
+        let p = dir.join(parts[0]);
+        if p.exists() && !out.contains(&p) {
+          out.push(p);
+        }
+      }
+    }
+  }
+  out
+}
+
+/// The set of `.bbl`-backed top-level documents at `main`'s depth: `\document`-
+/// class files that carry their own sibling `.bbl` (arXiv's own top-level
+/// fingerprint, which bundled templates lack), excluding `%auto-ignore` and
+/// `00README` `ignore` files. `main` itself is included when it qualifies.
+fn top_level_bbl_docs(dir: &Path, main: &Path) -> Vec<PathBuf> {
+  let main_depth = main.strip_prefix(dir).unwrap_or(main).components().count();
+  let ignored = readme_ignored(dir);
+  let mut tex_files: Vec<PathBuf> = Vec::new();
+  collect_tex_files(dir, &mut tex_files, false);
+  tex_files
+    .into_iter()
+    .filter(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == main_depth)
+    .filter(|f| !ignored.contains(f))
+    .filter(|f| !has_auto_ignore(f))
+    .filter(|f| f.with_extension("bbl").exists())
+    .filter(|f| file_has_documentclass(f))
+    .collect()
+}
+
+/// Files a `00README.XXX` marks `ignore` (Perl `Pack.pm` `unlink`s them; we
+/// exclude by set — see `find_main_tex`).
+fn readme_ignored(dir: &Path) -> rustc_hash::FxHashSet<PathBuf> {
+  let mut ignored = rustc_hash::FxHashSet::default();
+  if let Ok(content) = std::fs::read_to_string(dir.join("00README.XXX")) {
+    for line in content.lines() {
+      let parts: Vec<&str> = line.split_whitespace().collect();
+      if parts.len() >= 2 && parts[1] == "ignore" {
+        ignored.insert(dir.join(parts[0]));
+      }
+    }
+  }
+  ignored
+}
+
+/// Whether one of the file's first 10 lines carries the `%auto-ignore` marker
+/// (arXiv: keep in the bundle, do not process — `submit_legacy_differences`).
+fn has_auto_ignore(path: &Path) -> bool {
+  let Ok(raw) = std::fs::read(path) else {
+    return false;
+  };
+  String::from_utf8_lossy(&raw)
+    .lines()
+    .take(10)
+    .any(|l| RE_AUTOIGNORE.is_match(l))
+}
+
+/// Order a set of top-level files main-first: any file that looks like a
+/// supplement goes last (arXiv-alphanumeric within each group); among the
+/// non-supplements a `main`/`ms`/`paper` common name is promoted to the front.
+fn order_main_first(mut files: Vec<PathBuf>, _dir: &Path) -> Vec<PathBuf> {
+  files.sort();
+  files.dedup();
+  let (supps, mut mains): (Vec<PathBuf>, Vec<PathBuf>) =
+    files.into_iter().partition(|f| is_supplement(f));
+  if let Some(pos) = mains.iter().position(|f| is_common_main_name(f)) {
+    let m = mains.remove(pos);
+    mains.insert(0, m);
+  }
+  mains.extend(supps);
+  mains
+}
+
+/// Whether the file names itself `main.tex` / `ms.tex` / `paper.tex` (the same
+/// common-name set the single-file heuristic prefers).
+fn is_common_main_name(path: &Path) -> bool {
+  path
+    .file_name()
+    .and_then(|n| n.to_str())
+    .is_some_and(|n| n == "main.tex" || n == "ms.tex" || n == "paper.tex")
+}
+
+/// A top-level `.tex` reads as Supplementary Material when its filename or its
+/// `\title` announces it (`supplement`/`supporting`/`supplemental`/`appendix`/
+/// delimited `SI`/`SM`). Used only among *already* `.bbl`-backed sibling
+/// documents, so this classifies main-vs-supplement; it never promotes a
+/// template into a document.
+fn is_supplement(path: &Path) -> bool {
+  if let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+    && RE_SUPP_NAME.is_match(stem)
+  {
+    return true;
+  }
+  if let Some(title) = first_title(path)
+    && RE_SUPP_TITLE.is_match(&title)
+  {
+    return true;
+  }
+  false
+}
+
+/// True when the file defines a `\documentclass`/`\documentstyle` (i.e. is a
+/// top-level document, not an `\input`-ed fragment).
+fn file_has_documentclass(path: &Path) -> bool {
+  let Ok(raw) = std::fs::read(path) else {
+    return false;
+  };
+  let content = String::from_utf8_lossy(&raw);
+  content.lines().any(|l| {
+    let stripped = RE_STRIP_COMMENT.replacen(l, 1, "");
+    RE_DOCCLASS.is_match(&stripped)
+  })
+}
+
+/// The text of the first non-commented `\title{…}` / `\icmltitle{…}` in the
+/// file (up to ~120 chars), for supplement classification.
+fn first_title(path: &Path) -> Option<String> {
+  let raw = std::fs::read(path).ok()?;
+  let content = String::from_utf8_lossy(&raw);
+  // Strip `%`-comments line-by-line so a commented template placeholder title
+  // (`%% \title{Title}`) does not count. Witness 2402.13498 (elsarticle).
+  let stripped: String = content
+    .lines()
+    .map(|l| RE_STRIP_COMMENT.replacen(l, 1, "").into_owned())
+    .collect::<Vec<_>>()
+    .join("\n");
+  RE_TITLE_ARG
+    .captures(&stripped)
+    .map(|c| c[1].chars().take(120).collect())
+}
+
+/// Parse `00README.json` and return the filenames of **every** `usage ==
+/// "toplevel"` source, in document order. `parse_readme_json` returns only the
+/// first; this drives multi-top-level detection.
+fn parse_readme_json_all(dir: &Path) -> Vec<String> {
+  let mut out = Vec::new();
+  let Ok(content) = std::fs::read_to_string(dir.join("00README.json")) else {
+    return out;
+  };
+  let Some(sources_start) = content.find("\"sources\"") else {
+    return out;
+  };
+  let rest = &content[sources_start..];
+  let (Some(arr_start), Some(arr_end)) = (rest.find('['), rest.find(']')) else {
+    return out;
+  };
+  let arr = &rest[arr_start + 1..arr_end];
+  for obj_str in arr.split('}') {
+    if !obj_str.contains("\"toplevel\"") {
+      continue;
+    }
+    if let Some(fn_pos) = obj_str.find("\"filename\"") {
+      let after = obj_str[fn_pos + 10..].trim_start();
+      if let Some(after) = after.strip_prefix(':') {
+        let after = after.trim_start();
+        if let Some(after) = after.strip_prefix('"') {
+          let name: String = after
+            .chars()
+            .take_while(|&c| c != '"')
+            .filter(|&c| c != '\\')
+            .collect();
+          if !name.is_empty() {
+            out.push(name);
+          }
+        }
+      }
+    }
+  }
+  out
+}
 
 // Perl Pack.pm L25 TEX_EXT = qr/\.(?:[tT](:?[eE][xX]|[xX][tT])|ltx|LTX)$/
 // → .tex, .txt, .ltx (case-insensitive). The `fallback` arm matches Perl
@@ -497,6 +734,21 @@ static RE_PDF_INCLUDE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"(?i)^[^%]*\\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap());
 // Perl `\pdfoutput(?:\s+)?=(?:\s+)?1` marker, not behind a `%`.
 static RE_PDFOUTPUT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^%]*\\pdfoutput\s*=\s*1").unwrap());
+// Supplementary-Material detection (find_top_level_texs). Filename tokens
+// (`paper_SI`, `supplement`, `z_SI_renamed`, `Supplemental_Materials`) — the
+// short `si`/`sm` forms only as delimited tokens so they can't match a substring.
+static RE_SUPP_NAME: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(?i)(^|[_-])(supp(lement(ary|al)?)?|supporting|supplemental|appendix|si|sm)([_-]|$)")
+    .unwrap()
+});
+// Supplement `\title` text ("Supplementary Information for …", "SUPPLEMENTAL
+// MATERIALS", "Supporting Information", "Supplemental Materials for:").
+static RE_SUPP_TITLE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(?i)(supplement|supporting\s+information|supplemental|appendix)").unwrap()
+});
+// First braced argument of a `\title`/`\icmltitle` (comments already stripped).
+static RE_TITLE_ARG: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"\\(?:icml)?title\s*(?:\[[^\]]*\])?\s*\{([^}]*)").unwrap());
 // Strip a single `%`-comment, stopping at the next `\r` so bare-`\r`
 // line-ended files (Mac classic) preserve post-comment `\documentclass`.
 static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
@@ -676,5 +928,131 @@ mod tests {
     assert!(has_pdftex_marker(&d.path().join("fig.tex")));
     assert!(has_pdftex_marker(&d.path().join("gif.tex")));
     assert!(has_pdftex_marker(&d.path().join("pdfout.tex")));
+  }
+
+  // Multi-top-level detection (find_top_level_texs). Models the real
+  // main+supplement pattern (2408.13687, 2401.07129, …): both documents carry
+  // their own `.bbl`; the supplement self-identifies by title/filename.
+  #[test]
+  fn top_level_texs_appends_supplement() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\title{Quantum error correction}\n",
+    );
+    write(
+      d.path(),
+      "supplement.tex",
+      "\\documentclass{article}\n\\title{Supplementary Information for Quantum error correction}\n",
+    );
+    write(d.path(), "main.bbl", "");
+    write(d.path(), "supplement.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["main.tex", "supplement.tex"]);
+    // `find_main_tex` stays the first entry.
+    assert_eq!(find_main_tex(d.path()).unwrap(), tops[0]);
+  }
+
+  // Main first even when the supplement sorts alphabetically before it
+  // (2506.05564: `Note.tex` main + `Appendix.tex` supplement).
+  #[test]
+  fn top_level_texs_orders_main_first_despite_alpha() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "Note.tex",
+      "\\documentclass{article}\n\\title{Bayesian Inference of the Landau Parameter}\n",
+    );
+    write(
+      d.path(),
+      "Appendix.tex",
+      "\\documentclass{article}\n\\title{SUPPLEMENTAL MATERIALS}\n",
+    );
+    write(d.path(), "Note.bbl", "");
+    write(d.path(), "Appendix.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["Note.tex", "Appendix.tex"]);
+  }
+
+  // Template safety: a bundled template (no `.bbl`, does not self-identify as a
+  // supplement) is never appended, even when it carries example graphics.
+  #[test]
+  fn top_level_texs_excludes_template_without_bbl() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{IEEEtran}\n\\input{sec}\n\\title{Real Paper}\n",
+    );
+    write(
+      d.path(),
+      "New_IEEEtran_how-to.tex",
+      "\\documentclass{IEEEtran}\n\\includegraphics{fig1.png}\n\\title{How to Use the IEEEtran Templates}\n",
+    );
+    write(d.path(), "main.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["main.tex"]);
+  }
+
+  // Precision: a supplement-titled document WITHOUT its own `.bbl` is not
+  // auto-detected (conservative residual).
+  #[test]
+  fn supplement_without_bbl_is_not_detected() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\title{Real Paper}\n",
+    );
+    write(
+      d.path(),
+      "supp.tex",
+      "\\documentclass{article}\n\\title{Supplementary Information}\n",
+    );
+    write(d.path(), "main.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    assert_eq!(tops.len(), 1);
+    assert_eq!(tops[0].file_name().unwrap(), "main.tex");
+  }
+
+  // Explicit 00README with two toplevelfile lines → both, main-first even when
+  // listed supplement-first.
+  #[test]
+  fn readme_two_toplevelfiles_ordered_main_first() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\title{Paper}\n",
+    );
+    write(
+      d.path(),
+      "si.tex",
+      "\\documentclass{article}\n\\title{Supporting Information}\n",
+    );
+    write(
+      d.path(),
+      "00README.XXX",
+      "si.tex toplevelfile\nmain.tex toplevelfile\n",
+    );
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["main.tex", "si.tex"]);
   }
 }
