@@ -3671,3 +3671,26 @@ a
 → `<listing class="ltx_minipage" …>` in both engines. Rust **surpasses**: `insert_block` `add_class`es
 the wrapper's class instead of overwriting, so the child keeps `ltx_lstlisting` and gains
 `ltx_minipage`. Full rationale + guard in OXIDIZED_DESIGN #125.
+
+## 93. Numeric-mode natbib `.bbl` mislabels authored+dated References with author-year, not `[N]` (Rust surpasses)
+
+natbib's `\NAT@wrout` (`natbib.sty.ltxml` L609-620) chooses each `\bibitem`'s reference-list label
+from `CITE_STYLE`, but its numeric branch is guarded on `$style eq 'number'` (**singular**) — a
+value `CITE_STYLE` never holds (`'numbers'`/`'super'`/`'authoryear'`). Number style is therefore
+reachable only via the empty-author/year fallback (L612). So in numeric/superscript mode, a
+pre-formatted `.bbl` entry (`thebibliography`/`\bibitem`, not the `.bib`/MakeBibliography path)
+whose `\bibitem[{Name(Year)}]{key}` label has an author AND a year keeps an author-year label
+(`Shor [1994]`) while the inline `\cite` correctly shows `[N]` — a list that disagrees with its own
+cites and with pdflatex+bibtex. Verified same-host: Perl 0.8.8 emits the identical `Shor [1994]`
+(numbers) / `Shor 1994` (super) (SHARED-FAILURE, Perl-origin). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage[numbers]{natbib}\begin{document}\cite{s}
+\begin{thebibliography}{9}\bibitem[{Shor(1994)}]{s} P. Shor.\end{thebibliography}\end{document}
+```
+
+→ reference label `Shor [1994]` in Perl and Rust; pdflatex+bibtex (apsrev4-2 / `[numbers]natbib`)
+give `[1]`. Reported as arXiv/html_feedback#4295 (witness 2410.05202, 57 entries). Rust
+**surpasses**: `\NAT@wrout` forces number style for `'numbers'`/`'super'` too, so the whole list is
+`[N]`, matching the PDF — the `authoryear` path is untouched. Full rationale + guard in
+OXIDIZED_DESIGN #126.

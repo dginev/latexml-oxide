@@ -1,0 +1,16 @@
+% Sibling of natbib_bbl_numeric_refnum.tex for `[super]` citation mode (numeric
+% superscript, empty CITE_OPEN/CLOSE): the reference-list label must be the bare
+% entry NUMBER, not `Shor 1994`. Guards that the numeric surpass-Perl fix in
+% \NAT@wrout covers 'super' as well as 'numbers'.
+\documentclass{article}
+\usepackage[super]{natbib}
+\begin{document}
+Cite: \cite{shor_1994,gidney_2021}.
+\begin{thebibliography}{9}
+\providecommand\citenamefont[1]{#1}
+\bibitem[{\citenamefont{Shor}(1994)}]{shor_1994}
+  P.~Shor, Polynomial-time algorithms.
+\bibitem[{\citenamefont{Gidney}\ and\ \citenamefont{Ekera}()}]{gidney_2021}
+  C.~Gidney and M.~Ekera, How to factor.
+\end{thebibliography}
+\end{document}

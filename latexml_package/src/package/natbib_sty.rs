@@ -782,8 +782,20 @@ LoadDefinitions!({
     let open = cite_open();
     let close = cite_close();
 
-    // If authors or year empty, fall back to number style
-    let use_number = !is_some_and_nonempty(&authors) || !is_some_and_nonempty(&year);
+    // If authors or year empty, fall back to number style.
+    //
+    // SURPASS-PERL (OXIDIZED_DESIGN #126): in numeric/superscript citation modes
+    // the reference-list label is the entry NUMBER `[N]`, matching pdflatex+bibtex
+    // (the apsrev4-2 / `[numbers]natbib` PDF) and the inline `[N]` cites. Perl's
+    // `\NAT@wrout` (natbib.sty.ltxml L612-613) only forces number style on an
+    // EMPTY author/year — its `$style eq 'number'` guard never matches the plural
+    // `CITE_STYLE` `'numbers'`/`'super'` — so a numeric `.bbl` entry WITH a year
+    // (e.g. `\bibitem[{Shor(1994)}]{...}`) wrongly kept an author-year label.
+    // Verified same-host: Perl 0.8.8 emits `Shor [1994]` identically, so this is
+    // a deliberate divergence. Witness html_feedback#4295 (arXiv:2410.05202).
+    let use_number = matches!(style.as_str(), "numbers" | "super")
+      || !is_some_and_nonempty(&authors)
+      || !is_some_and_nonempty(&year);
     let style = if use_number { "number" } else { &style };
 
     let refnum = if style == "number" {
