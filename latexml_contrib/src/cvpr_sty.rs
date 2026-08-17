@@ -27,7 +27,20 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("booktabs");
-  RequirePackage!("natbib");
+  // Pre-load natbib WITH [numbers,sort&compress] — cvpr.sty (and every
+  // cvpr20NN / iccv variant this binding serves) does
+  // `\RequirePackage[numbers,sort&compress]{natbib}` (cvpr.sty L37), so the
+  // PDF prints numeric `[N]` citations and a numeric References list. If we
+  // pre-load natbib WITHOUT options, the raw cvpr.sty's `[numbers]` load
+  // becomes a repeat-load option-clash no-op (classic `\DeclareOption`
+  // clash-and-drop) and `CITE_STYLE` stays at the default `authoryear` — so
+  // the inline `\cite`s rendered author-year too — WORSE than Perl, which
+  // (having no cvpr binding) raw-loads cvpr.sty and gets `numbers` from that
+  // first natbib load. Same fix (and reason) as the xcolor pre-load above.
+  // With numbers restored, the numeric References label `[N]` follows from the
+  // existing surpass-Perl path in `\NAT@wrout` (OXIDIZED_DESIGN #126). Witness
+  // html_feedback#6742 (arXiv:2405.05145).
+  RequirePackage!("natbib", options => vec!["numbers".to_string(), "sort&compress".to_string()]);
   RequirePackage!("etoolbox");
   RequirePackage!("hyperref");
   // caption.sty for \captionof — many CVPR templates use this for

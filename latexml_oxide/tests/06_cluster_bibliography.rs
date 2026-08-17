@@ -375,6 +375,37 @@ fn cluster_bib_natbib_late_numeric_style_forces_numbers() {
   );
 }
 
+/// arXiv/html_feedback#6742 — a CVPR paper's References showed author-year labels
+/// ("Mo et al. [2022]") instead of the numeric `[N]` its PDF prints.
+///
+/// `cvpr.sty` does `\RequirePackage[numbers,sort&compress]{natbib}` (cvpr.sty L37),
+/// so pdflatex+bibtex render numeric citations and a numeric References list. Perl
+/// has no cvpr binding, raw-loads cvpr.sty, and gets `numbers` from that first
+/// natbib load. Our contrib cvpr binding eagerly pre-loaded natbib WITHOUT options
+/// (`cvpr_sty.rs` L30) BEFORE the raw cvpr.sty's `[numbers]` load, which then no-ops
+/// as a repeat load (classic `\DeclareOption` clash-and-drop) — leaving `CITE_STYLE`
+/// at the default `authoryear`. The fix mirrors the `xcolor` pre-load right above it
+/// (which already passes `[dvipsnames,table]` for the same reason): pre-load natbib
+/// with the `[numbers,sort&compress]` options cvpr always uses. GENUINE-RUST-ONLY.
+#[test]
+fn cvpr_natbib_numbers_option_forces_numeric_labels() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/cvpr_natbib_numbers.tex");
+  // Bibliography labels are the entry NUMBER `[N]`, not the author-year form.
+  assert!(
+    x.contains(r#"<tag role="refnum">[1]</tag>"#) && x.contains(r#"<tag role="refnum">[2]</tag>"#),
+    "cvpr's [numbers]natbib must label the References [1]/[2], not author-year:\n{x}"
+  );
+  assert!(
+    !x.contains(r#"<tag role="refnum">Mo et al."#),
+    "the author-year refnum label leaked — numbers mode was not applied:\n{x}"
+  );
+  // The inline \cite is in numbers mode too (show="Number"), not author-year.
+  assert!(
+    x.contains(r#"show="Number""#) && !x.contains(r#"show="Authors Phrase1YearPhrase2""#),
+    "inline citations stayed in author-year mode:\n{x}"
+  );
+}
+
 /// A `refcontext` block must not eat the `\printbibliography` inside it, and
 /// `\addbibresource` must accept its optional argument.
 ///
