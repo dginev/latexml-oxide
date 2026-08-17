@@ -3546,3 +3546,38 @@ declarations during name extraction (`{\let\centering\relax\let\raggedright\rela
 mirroring LaTeXML's own `titlepage` `Let('\centering','\relax')` precedent (L1168), so the name is
 the clean label "Abstract". Font-size/series primitives (`\large`, `\bfseries`) never leaked. Guard:
 `06_cluster_frontmatter::frontmatter_abstract_centering_name`.
+
+## 89. natbib citations of a numeric `.bbl` render the raw key, not the number (Rust surpasses)
+
+natbib loaded in its default author-year mode, cited against a numeric `.bbl` — plain
+`\bibitem{key}` with no `[author(year)]` label, as `\bibliographystyle{unsrt}`/`plain` emit —
+renders every `\cite` as the citation *key*, not the number. Real pdflatex/bibtex handle this
+via natbib's `\NAT@force@numbers`: a numeric `.bbl` writes `\providecommand\NAT@force@numbers{}`
+into the `.aux`, forcing numbers mode *globally* on the next pass, so every citation prints the
+bracketed number `[N]` even when `\bibliographystyle{unsrt}` sits AFTER the `\cite`s. Golden
+pdflatex `.aux`: `\bibcite{foo}{{1}{}{{}}{{}}}` (number=1, author/year empty) →
+`Text citing [1] and also [2] and both [1, 2].`
+
+Single-pass LaTeXML freezes each `\cite`'s author-year `<ltx:bibref show="Authors…">` at digest
+time (natbib is not yet in numbers mode), and post-processing `CrossRef.pm::make_bibcite` L542 —
+`$show = 'refnum' unless … || $keytag;` — keeps the author-year format because its `|| $keytag`
+guard is always satisfied (every `\bibitem` has a key). The numeric `<ltx:bibitem>` has a
+`number`/`refnum` but no author/year, so the citation prints `key ()` (Rust) / `key ` (Perl).
+Verified same-host on 0.8.8 (SHARED-FAILURE, Perl-origin). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{natbib}\begin{document}
+See \cite{alpha}, \cite{beta}, \cite{alpha,beta}.
+\bibliographystyle{unsrt}
+\begin{thebibliography}{10}
+\bibitem{alpha} A. Author. A paper. Journal, 2020.
+\bibitem{beta}  C. Coder.  A paper. Proc, 2021.
+\end{thebibliography}\end{document}
+```
+
+→ Perl `alpha `, pre-fix Rust `alpha ()`; pdflatex `[1]`. Reported as arXiv/html_feedback#62
+(witness 2308.06262, a NeurIPS-2023 paper: 263 `\cite`s all rendered `key ()`). Rust **surpasses**
+(OXIDIZED_DESIGN #123): when a frozen author-year bibref resolves to entries that are all
+numeric-only, `CrossRef::fill_in_bibrefs` collapses to the bracketed number `[N]`/`[N, M]`, matching
+`\NAT@force@numbers`. Guard:
+`06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
