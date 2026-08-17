@@ -140,6 +140,42 @@ fn frontmatter_ieee_author_grid_transpose() {
     "single-row \\and list was wrongly reordered:\n{c}"
   );
 }
+/// html_feedback#1021 (arXiv:2403.11905): an author carries a doubly-nested
+/// inline-math superscript (`$^\text{$...$}$`) as an affiliation marker. The
+/// author-marker (withsup) branch `\let`s `^` onto an annotation primitive that
+/// read a bare `{}` operand, grabbing only the leading `\text` and orphaning its
+/// `{...}` argument; inside the marker's own inline math the stray `{...}` left a
+/// brace-group frame on top, so the closing `$` fired `\lx@end@inline@math`
+/// against it — a cascade of "Attempt to end mode math" that garbled every
+/// creator. Both engines erred (SHARED-FAILURE); the Rust marker now reads a FULL
+/// superscript operand, keeping `\text{...}` and its nested `$...$` whole. Reading
+/// the operand undigested also collapses the empty math, so the marker links the
+/// author to the shared affiliation instead of rendering. OXIDIZED_DESIGN #129.
+#[test]
+fn frontmatter_nested_math_author_marker() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_nested_math_author_marker.tex");
+  // Zero-error gate (convert_to_xml) already guards the "Attempt to end mode
+  // math" cascade; assert the markup is clean and the creators did NOT merge.
+  assert!(
+    x.contains("<personname>Alice</personname>") && x.contains("<personname>Bob</personname>"),
+    "both creators must survive as clean, separate personnames:\n{x}"
+  );
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    2,
+    "expected exactly two author creators, not a merged blob:\n{x}"
+  );
+  // The nested-math markers link both authors to the shared affiliation.
+  assert_eq!(
+    x.matches("role=\"affiliation\"").count(),
+    2,
+    "each author should carry the shared affiliation contact:\n{x}"
+  );
+  assert!(
+    x.contains("Shared University"),
+    "the shared affiliation text must survive:\n{x}"
+  );
+}
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
 /// \textsuperscript{n}Affil}` block must keep SHORT author names as authors, not
 /// reclassify them as affiliations. "Min Xu" (7 tokens) tripped the old `p < 8`

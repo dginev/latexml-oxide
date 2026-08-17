@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage{amsmath}
+% html_feedback#1021 (arXiv:2403.11905): authors carry a doubly-nested inline-math
+% superscript ($^\text{$...$}$) as an affiliation marker. A literal `^` forces the
+% author-marker (withsup) branch, whose `\let^` then hijacks the `^` inside the
+% nested $...$, orphaning \text's argument and desyncing math mode. Both engines
+% erred here (SHARED-FAILURE); the Rust marker now reads a full superscript operand.
+\author{Alice$^\text{$\star$}$ \and Bob$^\text{$\star$}$ \\ $^\text{$\star$}$ Shared University}
+\title{Nested math author marker}
+\begin{document}\maketitle\end{document}
