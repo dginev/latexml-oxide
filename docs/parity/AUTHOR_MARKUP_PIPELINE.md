@@ -85,23 +85,80 @@ fix; `?` = judgement call. Baseline re-captured by `tools/author_markup_char.py
 - **shared affiliation across a multi-line list** (2507.06670: "Zhejiang University"
   attaches only to the last author, not all 9) — no fix yet; pipeline stage 4 target.
 
+## Reader-reported evidence — 200 open `front matter` issues
+
+Triaged 2026-08-16 (all ~200 open issues under the `front matter` label,
+newest→oldest). Sources fetched where the report carries a public arXiv id; ~15%
+link only a private `services.arxiv.org/html/submission/…` preview (no fetchable
+source). The reports converge on **eight failure families**, each mapping to a
+pipeline stage. Counts are approximate (many issues span families).
+
+| # | Family | Stage | ~N | Representative witnesses (issue → arXiv) |
+|---|---|---|---|---|
+| F1 | **Multi-line `\author{}` cells joined by `\\` + `\and`/`\And`/`\AND`/`\quad`** — separator leaks literally / eats the next space; names stack one-per-line or one-word-per-line; email/affil lines render inline or as fake authors. The dominant cluster and the redesign's core target. | 1–3 | ~30 | 6687→2406.07811 (arxiv.sty, 9× `\And`), 6298→2409.19467 (acl), 4841→2403.00393 (acl `\And` literal), 5851→2512.24601 (neurips), 6242→2510.02340, 5786→2601.06574, 5262→2505.07453 |
+| F2 | **Superscript/numeric affiliation markers not linked, rendered unraised, or doubled** (`\inst{n}`, `$^{n}$`, `\textsuperscript{\rm n}`) — show as plain "11 22 33", never anchor to the affiliation. | 2,4 | ~12 | 6209→2407.09826 (llncs `\inst`), 4697→2507.01800 (llncs), 5159→2502.21106 (llncs), 4644→2508.14765 (neurips_2025), 5315→2309.15463 (revtex4-2), 6314→2601.07136 |
+| F3 | **`\thanks`/`\footnotemark`/`\IEEEmembership` mis-segmentation** — internal `\\` in a `\thanks` fabricates phantom authors; equal/corresponding markers lost or jammed; membership between commas leaves stray `, ,` + empty creators. | 2,3,4 | ~15 | 4539→2508.00603 (IEEEtran `, ,`), 6295→2512.12923 (IEEE affil-as-author), 5881→2601.17760 (`\thanks` `\\`→phantom), 5874→2511.04594 (wrong corresp.), 6547→2405.09426 |
+| F4 | **Structured/keyed author↔affiliation schemes** (class macros) — key→author mapping lost, so affils go missing / mis-attach / appear as authors. | 2,4 | ~12 | 6366→2506.08134 (ICML `\icmlauthor`+`\icmlaffiliation`), 5761→2601.03547 (elsarticle `\author[n]`+`\address[n]`+`\ead`), 6285→2604.01119 (elsarticle `\affiliation[KEY]organization=`), 6522→2603.01467 (Interspeech `\author[affiliation={n}]{first}{last}`), 5315→2309.15463 (revtex) |
+| F5 | **Contact mis-attachment** — all affiliations → first author; shared affiliation shown only once; emails split into fake authors; addresses on the wrong author. | 4 | ~14 | 4877→2509.22519 (shared affil only under 1st), 5495→2512.07995 (all addrs→1st), 6291→2604.01735 (email→wrong author), 6255→2503.02656 (email line→3 authors), 5761→2601.03547 (addr swapped), 6590→2606.04947 |
+| F6 | **Duplicated frontmatter (SEG)** — title/author block emitted twice (top + after abstract), disproportionately acl.sty. Block-boundary, not name parsing. | 1 | ~13 | 4807→2509.10377 (acl), 4820→2406.14673 (acl), 4932→2509.11625, 4521→2507.23776, 5332→2511.16470 (acl), 6588→2606.01317, 6493→2605.10734 |
+| F7 | **Raw macro / key=value leak** — unsupported class macros surface as visible text: `\And`, `\fnm`/`\sur`, `\name`/`\email`/`\addr`, `\affiliation[KEY]organization=`, `\authormark`, `\WarningFilter`, `nation=…`, acmart journalyear. Mostly a *binding-coverage* gap, adjacent to (not solved by) the pipeline. | — | ~15 | 6231, 5762, 5802, 6200, 4522, 4323, 6010, 6169 |
+| F8 | **Title contamination** — journal/DOI/CCS/"Submitted to…"/"Accepted at…" absorbed into the title. Line-classification at the title boundary. | 2 | ~7 | 6885→2608.07766, 6542→2604.24199, 6333→2604.12543, 6140→2603.04284, 5107→2510.20036 |
+
+**Reading:** F1–F5 are the parser's job and the pipeline's core. F6 (duplicate
+frontmatter) is a separate block-segmentation bug worth its own investigation. F7 is
+binding coverage (per-class macro support), not the parser. F8 is a title-boundary
+classification case. **Reproduce each on HEAD before fixing** — the deployed arxiv.org
+binary lags, and several (e.g. 6870, 6614) are already fixed.
+
+## Reproduction library
+
+Verbatim author blocks from the highest-value witnesses, one+ per family, ready to
+shrink into `frontmatter_*.tex` fixtures as each stage lands. `class` is the real
+`\documentclass`/style.
+
+- **F1 · 6687 · 2406.07811 · arxiv.sty** — 9 authors, each `Name \\ Affil \\ \texttt{email} \\`, `\And`-separated. Desired: 9 creators, each with its affil + email; `\And` never printed.
+- **F1 · 4841 · 2403.00393 · acl** — `\author{A \And B \And C \\ \AND D \And E \\ \AND Microsoft Research India \\ \texttt{…} \\}`: `\And`/`\AND` separate names; the last two `\\` lines are a shared affiliation + shared email.
+- **F3 · 4539 · 2508.00603 · IEEEtran** — `\author{Liang, Mak, \IEEEmembership{Senior Member, IEEE}, and Lee, \IEEEmembership{…} \thanks{…}\thanks{…}}`: 3 authors, membership dropped/noted, `\thanks` → affil+email contacts. **No empty creators, no `, ,`.** (Matches the local `ieee_membership` phantom-empty defect.)
+- **F4 · 6366 · 2506.08134 · ICML** — `\icmlauthor{Name}{key,…}` + `\icmlaffiliation{key}{Inst}` + `\icmlcorrespondingauthor`. Desired: 5 creators, affils resolved by key, one corresponding email.
+- **F4 · 5761 · 2601.03547 · elsarticle** — `\author[1]{K Wang\corref} \ead{…} \author[2]{J Hu} \ead{…} \address[1]{…} \address[2]{…}`: address[n] attaches to author[n] (currently swapped).
+- **F2 · 6209 · 2407.09826 · llncs** — `\author{X\inst{1} \and Y\inst{2}\orcidlink{…} …}` + `\institute{A \and B …}`: `\inst{n}` becomes a raised link to institute n, not literal "1".
+- **F5 · 4877 · 2509.22519 · article** — `\author{A\thanks{Aff-A} \and B\thanks{Aff-B} \and C\thanks{Aff-C} \and D\footnotemark[3]}`: D shares C's affiliation via `\footnotemark[3]`; affil must appear for D too.
+- **F1/F5 · 6255 · 2503.02656 · googledeepmind** — `\author{A*, B, …, Z* \\ \{paulgc, zhedong\}@google.com, Google Inc.}`: the trailing `\\` line is a shared email + org, NOT three authors.
+- **F6 · 4807 · 2509.10377 · acl** — title + author block rendered twice (top + after abstract); one canonical frontmatter only.
+- **F2/F5 · 4644 · 2508.14765 · neurips_2025** — `\textsuperscript{\rm n}` markers, `\textbf{…}` wrapping half the block, `\thanks` with `\&`, affil lines "Merck \& Co."; the `\&`/superscript must not fragment the affiliation.
+
+(Full fetched sources for the deep-dived issues are cached in scratchpad
+`e<N>/`; the census above lists every issue by number for re-fetch.)
+
 ## Confirmed defects the pipeline must fix
 
-1. **Phantom empty creators** — comma-split author lists with interspersed
-   `\IEEEmembership`/`\thanks` emit empty `<personname/>` creators (ieee_membership).
-   Stage 2/4: never emit a creator with no name text.
-2. **Shared trailing affiliation not shared** — attaches only to the last author.
-3. **Leading-`\\` line-2 first author** — lost to affiliation (Ruiqi Li). Free under
-   line-first splitting.
-4. **Marker/ordinal/`*` leak into the name** (`1st …`, `Name*`) — candidates; decide
-   per-idiom whether the mark is semantic (drop to a note) or presentational (strip).
+1. **Phantom empty creators** (F3) — comma-split author lists with interspersed
+   `\IEEEmembership`/`\thanks` emit empty `<personname/>` creators + stray `, ,`
+   (local `ieee_membership`; witness 4539→2508.00603). Never emit a nameless creator.
+2. **Shared trailing affiliation not shared** (F5) — attaches only to the last author
+   (2507.06670; 4877→2509.22519; 5495→2512.07995).
+3. **Leading-`\\` line-2 first author** (F1) — lost to affiliation (Ruiqi Li,
+   2507.06670). Free under line-first splitting.
+4. **Marker/ordinal/`*` leak into the name** (`1st …`, `Name*`) — decision is
+   **per-idiom and evidence-driven** (F2/F3): whether a mark is semantic (→ note) or
+   presentational (→ strip) depends on class + article. Do not decide abstractly;
+   each idiom gets its own witness + red/green fixture.
 
 ## Open rows
 
+Evidence-driven, lowest-risk-first. Every row: minimal repro from a real witness →
+RED test → fix → full-corpus + real-arXiv green.
+
 - **R1** Land the two in-flight patches (#615 bold; #52(d) leading-break) so the
-  corpus baseline includes them, then re-capture.
-- **R2** Build the green-parallel harness (new pipeline behind a cfg/flag; diff emitted
-  calls vs old on the corpus).
-- **R3** Implement stages 1-3 to match the current clean witnesses byte-for-byte.
-- **R4** Stage 4 shared-affiliation (own goldens + divergence entry).
-- **R5** Fix the confirmed defects (phantom empties first — lowest risk, clear win).
+  baseline reflects HEAD; re-capture with `tools/author_markup_char.py`.
+- **R2** Reproduce each F1–F8 representative **on HEAD** (deployed binary lags); drop
+  the already-fixed, keep the live ones as fixtures. This is the red/green seed set.
+- **R3** Green-parallel harness — new pipeline behind a flag; diff emitted calls vs the
+  old two-branch over the whole corpus + a real-arXiv frontmatter sweep. No cutover.
+- **R4** Implement stages 1–3 to match every currently-`✓` witness byte-for-byte
+  (esp. the #52-tuned comma-address / "…and…"-institution cases).
+- **R5** Fix confirmed defects, **phantom empties (F3) first** — lowest risk, clear win,
+  already witnessed (4539); then shared-affiliation (F5, own goldens + divergence entry).
+- **R6** Per-family passes (F2 marker linking, F4 keyed schemes, F6 duplicate
+  frontmatter) — each its own branch + witness set; F7 (raw-macro leak) is binding
+  coverage, tracked separately.
