@@ -1,0 +1,23 @@
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+Single \cite{alpha}, other \cite{beta}, and multi \cite{alpha,beta}.
+
+% A numeric \bibliographystyle placed AFTER the \cite commands, with a numeric
+% .bbl (plain \bibitem{key}, no [author(year)] label): natbib forces numbers,
+% so pdflatex renders every citation as the bracketed number [N] / [N, M].
+\bibliographystyle{unsrt}
+\begin{thebibliography}{10}
+
+\bibitem{alpha}
+Alice Author and Bob Builder.
+\newblock A first paper.
+\newblock {\em Journal of Things}, 2020.
+
+\bibitem{beta}
+Carol Coder.
+\newblock A second paper.
+\newblock {\em Proceedings of Stuff}, 2021.
+
+\end{thebibliography}
+\end{document}
