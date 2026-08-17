@@ -322,6 +322,59 @@ fn etoolbox_pretocmd_assigns_through_cite_lock() {
   );
 }
 
+/// natbib citations of a numeric `.bbl` must render as the bracketed number
+/// `[N]`/`[N, M]`, not the raw citation key.
+///
+/// Witness arXiv:2308.06262 (html_feedback#62): `neurips_2023.sty` loads natbib
+/// in its default author-year mode, `\bibliographystyle{unsrt}` sits AFTER all
+/// the `\cite`s, and the shipped `.bbl` is numeric (plain `\bibitem{key}`, no
+/// `[author(year)]` label). Real pdflatex/bibtex handle this via natbib's
+/// `\NAT@force@numbers`: a numeric `.bbl` forces numbers mode GLOBALLY, so every
+/// `\cite` prints `[N]` regardless of the late `\bibliographystyle`. Golden
+/// pdflatex: `[1]`, `[2]`, `[1, 2]`.
+///
+/// Single-pass LaTeXML freezes the bibref's author-year `show` at `\cite` time,
+/// and Perl `CrossRef.pm:542` keeps it (its `|| $keytag` guard is always
+/// satisfied), so BOTH engines render the raw key (`alpha ()` / `alpha `). This
+/// is the surpass-Perl fix (OXIDIZED_DESIGN #123, KNOWN_PERL_ERRORS #89): when a
+/// frozen author-year bibref resolves to entries that are all numeric-only, we
+/// collapse to natbib's bracketed number.
+#[test]
+fn cluster_bib_natbib_late_numeric_style_forces_numbers() {
+  // Text content of each `<cite>` in document order, inner tags stripped and
+  // whitespace normalized ("[<ref>1</ref>, <ref>2</ref>]" -> "[1, 2]").
+  fn cite_texts(xml: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = xml;
+    while let Some(i) = rest.find("<cite") {
+      let after = &rest[i..];
+      let open_end = after.find('>').map(|e| e + 1).unwrap_or(after.len());
+      let close = after.find("</cite>").unwrap_or(after.len());
+      let inner = &after[open_end..close.max(open_end)];
+      let (mut txt, mut depth) = (String::new(), 0);
+      for c in inner.chars() {
+        match c {
+          '<' => depth += 1,
+          '>' => depth -= 1,
+          _ if depth == 0 => txt.push(c),
+          _ => {},
+        }
+      }
+      out.push(txt.split_whitespace().collect::<Vec<_>>().join(" "));
+      rest = &after[close.min(after.len())..];
+      rest = rest.strip_prefix("</cite>").unwrap_or(rest);
+    }
+    out
+  }
+  let x = convert_and_post("tests/cluster_regressions/natbib_late_numeric_style.tex");
+  assert_eq!(
+    cite_texts(&x),
+    vec!["[1]", "[2]", "[1, 2]"],
+    "numeric .bbl cited before a late \\bibliographystyle{{unsrt}} must render \
+     as the bracketed number, not the raw key:\n{x}"
+  );
+}
+
 /// A `refcontext` block must not eat the `\printbibliography` inside it, and
 /// `\addbibresource` must accept its optional argument.
 ///

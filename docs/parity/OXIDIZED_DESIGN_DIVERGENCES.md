@@ -4474,3 +4474,40 @@ superconductivity induced by the Su-Schrieffer-Heeger electron-phonon coupling";
 Shared upstream bug recorded as KNOWN_PERL_ERRORS #84.
 
 **Guard**: `06_cluster_regressions::cluster_eqnarray_nonumber_label_ref_is_the_number`.
+
+### 123. natbib citations of a numeric `.bbl` render as the bracketed number
+
+**Perl** renders such citations as the raw citation key. When natbib is loaded in
+its default author-year mode but the `.bbl` is numeric — plain `\bibitem{key}`
+with no `[author(year)]` label, as `\bibliographystyle{unsrt}`/`plain` produce —
+each `\cite` freezes an author-year `<ltx:bibref show="Authors Phrase1YearPhrase2">`
+at digest time (natbib's mode isn't yet numeric, especially when the
+`\bibliographystyle` sits AFTER the cites). The numeric `<ltx:bibitem>` carries a
+`number`/`refnum` tag but no author/year metadata, only a `keytag`. Post-processing
+`CrossRef.pm::make_bibcite` L542 keeps the author-year format
+(`$show = 'refnum' unless … || $keytag;` — the `|| $keytag` guard is always
+satisfied), so the citation prints the key (`alpha ()` / `alpha `). latexml-oxide
+reproduced this exactly (SHARED-FAILURE, verified same-host on 0.8.8).
+
+**Rust behavior**: in `CrossRef::fill_in_bibrefs` (`latexml_post/src/crossref.rs`),
+when a bibref's frozen `show` wants author-year yet EVERY cited entry is
+numeric-only (a `number`/`refnum`, no real `authors`/`fullauthors`/`year`), the
+citation collapses to natbib's numeric form: the bracketed number `[N]`, or `[N, M]`
+for a multi-key `\cite` (each number a separate link). The brackets are added only
+when the frozen author-year delimiters lived inside the bibref (`\cite`/`\citet`,
+whose `show` has a Phrase after Year); `\citep`, whose parens are sibling text,
+keeps its own delimiter.
+
+**Why**: this mirrors natbib's own algorithm. On a numeric `.bbl`, real
+pdflatex/bibtex write `\NAT@force@numbers` into the `.aux`, forcing numbers mode
+globally so every `\cite` prints `[N]` regardless of a late `\bibliographystyle`.
+The published PDF is the ground truth (`Text citing [1] and also [2] and both
+[1, 2].`); Perl's raw-key output is the defect.
+
+**Witness**: arXiv 2308.06262 (html_feedback #62) — a NeurIPS-2023 paper
+(`neurips_2023.sty` loads natbib, `\bibliographystyle{unsrt}` after 263 `\cite`s,
+numeric `main.bbl`). Every citation rendered `key ()`; now all render `[N]`/`[N, …]`,
+byte-matching the golden pdflatex `.bbl`+`.aux`. Shared upstream bug recorded as
+KNOWN_PERL_ERRORS #89.
+
+**Guard**: `06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
