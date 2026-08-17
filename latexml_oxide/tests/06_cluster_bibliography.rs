@@ -2089,6 +2089,26 @@ fn alignment_fenced_amp_does_not_split_a_row() {
   );
 }
 
+/// chapterbib's per-unit bibliography `lists` id must be the RAW unit name so it
+/// matches the citation-side `<ltx:bibref inlist=...>`; otherwise MakeBibliography
+/// selects nothing (0 cited) and the References render empty. An `\include`
+/// basename with `_` was the trigger: `\lx@cb@unitname` explodes it to catcode-12
+/// OTHER tokens, but the digested `[unit]` arg then rendered `_` through the active
+/// OT1 font (slot 0x5F = `˙` U+02D9), so `lists="chap˙one"` no longer equalled
+/// `inlist="chap_one"`. Building `lists` from the arg's reverted SOURCE fixes it,
+/// matching Perl (which keeps `_`). Rust-only; witness arXiv:2605.15421 (0 -> 101
+/// bibitems). The `\include`d `chap_one.tex` + `refs.bib` sit in the fixture's own
+/// subdir so the non-recursive `cluster_regressions` streaming sweep skips them.
+#[test]
+fn chapterbib_underscore_unit_lists_matches_inlist() {
+  let x = convert_and_post_clean("tests/cluster_regressions/chapterbib_underscore/main.tex");
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 1,
+    "underscore unit name dropped the cited entry (lists/inlist OT1 mismatch), got {n}\n{x}"
+  );
+}
+
 /// A class we have no binding for must still get biblatex when the document
 /// asks for it.
 ///
