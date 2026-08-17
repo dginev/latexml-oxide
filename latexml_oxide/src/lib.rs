@@ -12,6 +12,7 @@ pub mod core_interface;
 pub mod ini_tex;
 pub mod lsp_server;
 pub mod main_tex;
+pub mod multidoc;
 pub mod post;
 pub mod render_workers;
 pub mod util;
