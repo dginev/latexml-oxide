@@ -5053,6 +5053,28 @@ LoadDefinitions!({
   Let!("\\And", "\\and");
   Let!("\\AND", "\\and");
 
+  // SURPASS-PERL (OXIDIZED_DESIGN #124, KNOWN_PERL_ERRORS #90): recover content
+  // a document injects into the title via `\g@addto@macro\@maketitle{…}`.
+  // LaTeXML redefines `\maketitle` to deposit its own captured frontmatter and
+  // then discards `\@maketitle` wholesale (`\global\let\@maketitle\relax`, with
+  // the source comment "we can't yet emulate that"), so a teaser figure appended
+  // to `\@maketitle` — and its `\label` — were silently dropped by BOTH engines.
+  //
+  // Two pieces: (1) predefine `\@maketitle` EMPTY so `\g@addto@macro` appends
+  // cleanly (LaTeXML never reimplements the title *layout*, so `\@maketitle` is
+  // otherwise undefined and appending to it warns "not expandable" and leaves a
+  // self-reference); (2) `\lx@deposit@maketitle` deposits its accumulated content
+  // in a title-neutralized group (nulling `\@title`/`\@author`/`\@date`/`\@thanks`
+  // so the rare class that stuffs real title-layout into `\@maketitle` does not
+  // double-print the title; the common case holds only the injected content).
+  // The `\ifx…\@empty` guard makes this a no-op for the vast majority of papers.
+  // Witness arXiv:2506.23854 (html_feedback#4281).
+  DefMacro!("\\@maketitle", "");
+  DefMacro!(
+    "\\lx@deposit@maketitle",
+    r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\and\relax\@maketitle}\fi"
+  );
+
   // Doesn't produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
   // Locked: raw TeX packages (e.g., nips_2017.sty) may \renewcommand{\maketitle}, but
@@ -5069,9 +5091,13 @@ LoadDefinitions!({
   // `\@maketitle`-undefined / XMApp-in-empty cascade. Perl builds this body by
   // string concatenation (no `\`+eol), so its `\maketitle` has no control-space
   // and is robust. Keep it single-line here to match.
+  //
+  // `\lx@deposit@maketitle` runs after `\lx@frontmatterhere` (so injected content
+  // lands right after the title) and before `\global\let\@maketitle\relax` (while
+  // `\@maketitle` still holds its content).
   DefMacro!(
     "\\maketitle",
-    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\global\let\author\relax\global\let\date\relax\global\let\and\relax",
+    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\maketitle\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\global\let\author\relax\global\let\date\relax\global\let\and\relax",
     locked => true
   );
   // In case \maketitle isn't used in the document, let's check for it.
