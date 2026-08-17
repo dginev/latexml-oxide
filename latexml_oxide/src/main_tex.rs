@@ -281,23 +281,25 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
-  if candidates.len() > 1 {
-    let pdf_candidates: Vec<PathBuf> = candidates
-      .iter()
-      .filter(|f| {
-        std::fs::read(f).ok().is_some_and(|raw| {
-          let c = String::from_utf8_lossy(&raw);
-          c.contains("\\includegraphics")
-            && (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
-        })
-      })
-      .cloned()
-      .collect();
-    if !pdf_candidates.is_empty() {
-      candidates = pdf_candidates;
-    }
-  }
-
+  // OXIDIZED_DESIGN #132 (surpass-perl): the `.bbl`-sibling heuristic runs
+  // BEFORE the pdf-`\includegraphics` heuristic — Perl (Pack.pm L197-204)
+  // runs them in the opposite order. arXiv requires the compiled `<main>.bbl`
+  // to be bundled (BibTeX is not re-run), so a candidate with a matching
+  // `.bbl` is the single strongest fingerprint of the real top-level file.
+  // Perl's pdf heuristic, run first, silently eliminates a true main that
+  // delegates all its figures to `\input`-ed section files (hence carries no
+  // direct `\includegraphics`) whenever a shipped class template / how-to /
+  // supplement DOES contain an example `\includegraphics{fig.png}`; the `.bbl`
+  // tie-break that would have rescued it never gets to run. Ordering `.bbl`
+  // first fixes that class. Witnesses (all SHARED-FAILURE vs production Perl,
+  // html_feedback autotex issues): 2407.05010 (#1721, IEEEtran how-to),
+  // 2409.06957 (#6100, ICLR template), 2409.02543 (#5867, supp.tex),
+  // 2406.08688 (#5476, IEEEtran template), 2310.02368 (#4156, IEEE template),
+  // 2505.05625 (#4067, supplementary.tex), 2410.12672 (#2369, ICLR template),
+  // 2410.01562 (#2224, ICASSP template), 2401.17263 (#442, ICML example_paper),
+  // 2403.17719 (#859, rebuttal.tex). When >1 candidate carries a `.bbl` (e.g.
+  // 2506.05564, 2401.07129) the set survives and the later heuristics
+  // (pdf-include, common-name, alphabetical) still discriminate as before.
   if candidates.len() > 1 {
     let bbl_candidates: Vec<PathBuf> = candidates
       .iter()
@@ -306,6 +308,17 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
       .collect();
     if !bbl_candidates.is_empty() {
       candidates = bbl_candidates;
+    }
+  }
+
+  if candidates.len() > 1 {
+    let pdf_candidates: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| has_pdftex_marker(f))
+      .cloned()
+      .collect();
+    if !pdf_candidates.is_empty() {
+      candidates = pdf_candidates;
     }
   }
 
@@ -369,6 +382,33 @@ fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>, fallback: bool) {
       }
     }
   }
+}
+
+// Faithful port of Perl `Pack.pm::heuristic_check_for_pdftex` (L222-241):
+// a file counts as a pdf-include candidate only when some line carries
+// `\includegraphics{...ext}` with the raster/pdf extension INSIDE the
+// argument (`\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}`, case-insensitive,
+// not preceded by a `%`), or a `\pdfoutput=1` marker. Perl's `$pdfoutput_checks`
+// counter clamps at 0, so its `>= 0` guard is always true and the `\pdfoutput`
+// probe effectively scans every line — we mirror that (no first-N-lines cap).
+//
+// The earlier Rust port used a loose whole-file
+// `contains("\\includegraphics") && contains(".png"|".pdf"|".jpg")`, which
+// FALSE-POSITIVES on class templates whose `\includegraphics` examples are
+// extensionless (`{icml_numpapers}`) or `.eps` (`{egfigure.eps}`) yet mention
+// a raster extension elsewhere (prose/comments). Because the pdf heuristic runs
+// before the `.bbl` tie-break, that false positive eliminated the true
+// figure-delegating `main.tex`: 2401.17263 (#442, example_paper.tex) and
+// 2403.17719 (#859, rebuttal.tex) were mis-picked by Rust though Perl picks
+// their `main.tex`. Argument-anchoring restores parity.
+fn has_pdftex_marker(path: &Path) -> bool {
+  let Ok(raw) = std::fs::read(path) else {
+    return false;
+  };
+  let content = String::from_utf8_lossy(&raw);
+  content
+    .lines()
+    .any(|line| RE_PDF_INCLUDE.is_match(line) || RE_PDFOUTPUT.is_match(line))
 }
 
 // Skip files whose magic bytes identify them as PDF (e.g. arXiv source
@@ -451,6 +491,12 @@ static RE_UUENCODE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^begin \d{1,4}\s+\S+
 static RE_WITHDRAWN: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
 static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+// Perl `heuristic_check_for_pdftex` pdf-include probe: an `\includegraphics`
+// whose argument names a raster/pdf image (case-insensitive), not behind a `%`.
+static RE_PDF_INCLUDE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"(?i)^[^%]*\\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap());
+// Perl `\pdfoutput(?:\s+)?=(?:\s+)?1` marker, not behind a `%`.
+static RE_PDFOUTPUT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^%]*\\pdfoutput\s*=\s*1").unwrap());
 // Strip a single `%`-comment, stopping at the next `\r` so bare-`\r`
 // line-ended files (Mac classic) preserve post-comment `\documentclass`.
 static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
@@ -534,5 +580,101 @@ mod tests {
     );
     let pick = find_main_tex(d.path()).unwrap();
     assert_eq!(pick.file_name().unwrap(), "paper.tex");
+  }
+
+  // OXIDIZED_DESIGN #132: a matching `.bbl` sibling outranks the pdf-include
+  // heuristic. Models the witness class (2407.05010 #1721 et al.): the true
+  // main delegates its figures (no direct `\includegraphics`) but ships a
+  // `main.bbl`, while a class how-to/template carries an example
+  // `\includegraphics{fig.png}`. Perl's pdf-before-bbl order (and our old port)
+  // picked the template; bbl-first recovers the real main.
+  #[test]
+  fn bbl_sibling_outranks_pdf_include_marker() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{IEEEtran}\n\\input{sections/intro}\n\\begin{document}\\title{Real}\\end{document}",
+    );
+    write(
+      d.path(),
+      "New_IEEEtran_how-to.tex",
+      "\\documentclass{IEEEtran}\n\\includegraphics[width=1in]{fig1.png}\n\\begin{document}How to.\\end{document}",
+    );
+    write(
+      d.path(),
+      "main.bbl",
+      "\\begin{thebibliography}{1}\\end{thebibliography}\n",
+    );
+    let pick = find_main_tex(d.path()).unwrap();
+    assert_eq!(pick.file_name().unwrap(), "main.tex");
+  }
+
+  // Reorder must not swallow the later common-name tie-break: when >1 candidate
+  // carries a `.bbl` (2506.05564, 2401.07129), the `.bbl` set survives and
+  // main/ms/paper still wins over an alphabetically-earlier sibling.
+  #[test]
+  fn reorder_preserves_common_name_when_multiple_bbl() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "aaa.tex",
+      "\\documentclass{article}\n\\includegraphics{x.png}\n",
+    );
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\includegraphics{y.png}\n",
+    );
+    write(d.path(), "aaa.bbl", "");
+    write(d.path(), "main.bbl", "");
+    let pick = find_main_tex(d.path()).unwrap();
+    assert_eq!(pick.file_name().unwrap(), "main.tex");
+  }
+
+  // Parity fix (Perl `heuristic_check_for_pdftex`): the extension must sit
+  // INSIDE the `\includegraphics{…}` argument. The old loose whole-file
+  // `contains` false-positived on templates whose examples are extensionless
+  // (2401.17263 #442 `{icml_numpapers}`) or `.eps` (2403.17719 #859
+  // `{egfigure.eps}`) yet mention a raster extension elsewhere.
+  #[test]
+  fn strict_pdf_marker_rejects_extensionless_eps_and_comments() {
+    let d = tempdir().unwrap();
+    // extensionless arg + an unrelated `.png` mention in prose → not a marker
+    write(
+      d.path(),
+      "example_paper.tex",
+      "\\centerline{\\includegraphics[width=\\columnwidth]{icml_numpapers}}\nResults saved as results.png.\n",
+    );
+    // `.eps` extension is not in the raster/pdf set
+    write(
+      d.path(),
+      "rebuttal.tex",
+      "\\includegraphics[width=0.8\\linewidth]{egfigure.eps}\n",
+    );
+    // commented-out include must not count (behind `%`)
+    write(d.path(), "commented.tex", "%\\includegraphics{fig.png}\n");
+    assert!(!has_pdftex_marker(&d.path().join("example_paper.tex")));
+    assert!(!has_pdftex_marker(&d.path().join("rebuttal.tex")));
+    assert!(!has_pdftex_marker(&d.path().join("commented.tex")));
+  }
+
+  #[test]
+  fn strict_pdf_marker_accepts_arg_extension_and_pdfoutput() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "fig.tex",
+      "\\includegraphics[width=2in]{diagram.pdf}\n",
+    );
+    write(d.path(), "gif.tex", "\\includegraphics{anim.gif}\n"); // Perl includes gif
+    write(
+      d.path(),
+      "pdfout.tex",
+      "\\pdfoutput=1\n\\includegraphics{noext}\n",
+    );
+    assert!(has_pdftex_marker(&d.path().join("fig.tex")));
+    assert!(has_pdftex_marker(&d.path().join("gif.tex")));
+    assert!(has_pdftex_marker(&d.path().join("pdfout.tex")));
   }
 }
