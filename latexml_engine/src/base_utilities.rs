@@ -2255,8 +2255,71 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
       document.expire_box_to_absorb();
     }
   }
+  coalesce_empty_creators(document)?;
   relocate_annotations(document)?;
   Ok(())
+}
+
+/// Remove author creators whose `<ltx:personname>` is empty, moving any contacts they
+/// carry to the preceding real creator (else the first following one).
+///
+/// A flat comma author list with interspersed `\IEEEmembership{…}`/`\thanks{…}` — e.g.
+/// `\author{Alice, \IEEEmembership{…}, and Bob, …\thanks{…}}` (html_feedback#4539,
+/// witness 2508.00603) — comma/" and "-splits into pieces where the membership pieces
+/// digest to nothing, surfacing as empty `<ltx:personname/>` creators; a trailing
+/// `\thanks` then strands its affil/email on a nameless creator. This coalesces those:
+/// contactless empties are dropped; a contact-bearing empty's contacts move to the
+/// preceding real author. `\footnotemark`-note markers keep a personname non-empty
+/// (2507.06670 "Yu Zhang"), so real authors are untouched.
+fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
+  let creators = document.findnodes("//ltx:creator[@role='author']", None);
+  let mut to_remove: Vec<Node> = Vec::new();
+  let mut last_real: Option<Node> = None;
+  // Contacts of leading empties (before any real author) held until the first real one.
+  let mut orphan_contacts: Vec<Node> = Vec::new();
+  for creator in creators {
+    if creator_personname_empty(document, &creator) {
+      let contacts: Vec<Node> = creator
+        .get_child_nodes()
+        .into_iter()
+        .filter(|c| {
+          c.get_type() == Some(NodeType::ElementNode)
+            && with(document::get_node_qname(c), |q| q == "ltx:contact")
+        })
+        .collect();
+      if let Some(ref mut prev) = last_real {
+        if !contacts.is_empty() {
+          document.append_clone(prev, contacts)?;
+        }
+      } else {
+        orphan_contacts.extend(contacts);
+      }
+      to_remove.push(creator);
+    } else {
+      if !orphan_contacts.is_empty() {
+        let mut first = creator.clone();
+        document.append_clone(&mut first, std::mem::take(&mut orphan_contacts))?;
+      }
+      last_real = Some(creator);
+    }
+  }
+  for creator in to_remove {
+    document.remove_node(creator);
+  }
+  Ok(())
+}
+
+/// True if `creator`'s `<ltx:personname>` carries no name — no element child and no
+/// non-whitespace text (a bare `<ltx:personname/>`), or no personname at all. A
+/// personname with a real name (text) or a `<ltx:text>`/`<ltx:note>` child is NOT empty.
+fn creator_personname_empty(document: &mut Document, creator: &Node) -> bool {
+  match document.findnode("ltx:personname", Some(creator)) {
+    None => true,
+    Some(person) => !person.get_child_nodes().iter().any(|c| {
+      c.get_type() == Some(NodeType::ElementNode)
+        || (c.get_type() == Some(NodeType::TextNode) && !c.get_content().trim().is_empty())
+    }),
+  }
 }
 
 /// Streaming: insert frontmatter that arrived AFTER the in-document insertion
