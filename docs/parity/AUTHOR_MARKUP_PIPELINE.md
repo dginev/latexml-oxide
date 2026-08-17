@@ -130,6 +130,29 @@ shrink into `frontmatter_*.tex` fixtures as each stage lands. `class` is the rea
 (Full fetched sources for the deep-dived issues are cached in scratchpad
 `e<N>/`; the census above lists every issue by number for re-fetch.)
 
+## R2 — reproduced on HEAD (2026-08-16)
+
+Each representative re-converted on HEAD (`--nopost`, `tools/author_markup_char.py`)
+to separate LIVE parser defects from deployed-lag (already fixed). **The core idioms
+are largely fixed; the live defects are the *mixed* variants + a few class-specifics.**
+
+| Rep | Class | HEAD result | Verdict |
+|---|---|---|---|
+| 4539 (F3) | IEEEtran | 6 creators, **3 empty `<personname/>`**; `\thanks` affil+email land on an empty creator | **LIVE** — R5 target |
+| 6242 (F1/F3) | article | `\footnotemark[n]` leaks "1 footnote 1" **into the name**; affils merge; email→affil | **LIVE** |
+| 4877 (F5) | article | `\footnotemark[3]` leaks "3 3 footnote 3" into the name; no shared affiliation | **LIVE** |
+| 6255 (F5) | googledeepmind | all authors merged into **one** personname (comma-list not split) | **LIVE** (class-specific) |
+| 6209 (F2) | llncs | `\inst{n}`→affiliation mapping **correct**; the report is the *visible* superscript render (display layer, not parser) | not-parser |
+| 5761 (F4) | elsarticle | `\author[n]`+`\address[n]` maps **correctly** | already-fixed |
+| f1-core (F1) | article | 3× `Name\\Affil\\email\\ \And` → clean creators | already-fixed |
+| 6687 (F1) | arxiv.sty | 9× `\And` → 10 clean creators w/ affil+email | already-fixed |
+
+**Cross-cutting live defect discovered:** `\footnotemark[n]` in an author name leaks
+garbled "N footnote N" text into the `<personname>` (6242, 4877) — distinct from the
+`\footnotemark` *notes* that DO work (Yu Zhang in 2507.06670). Concrete, reproducible,
+spans families. **Seed set (RED fixtures): 4539, 6242, 4877, 6255.** The
+"already-fixed" rows become regression guards, not fixes.
+
 ## Confirmed defects the pipeline must fix
 
 1. **Phantom empty creators** (F3) — comma-split author lists with interspersed
