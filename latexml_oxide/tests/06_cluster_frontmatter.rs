@@ -47,6 +47,33 @@ fn frontmatter_acmart_pubnotes_not_in_title() {
     "acmart journal/DOI pubnotes missing from frontmatter:\n{x}"
   );
 }
+/// html_feedback#4276 (arXiv:2406.15288, article + biblatex): argumentless biblatex
+/// preamble macros — `\renewbibmacro`/`\DeclareNameAlias`/`\addbibresource` — must be
+/// consumed, not rendered as literal text above the title (the reader saw them printed
+/// at the top on the old deployed binary). The native biblatex binding
+/// (`latexml_contrib/src/biblatex_sty.rs`) defines them, so they leave a clean `<title>`
+/// and no macro-name text. Deployed-lag; pins it fixed. (The paper's `\externaldocument`
+/// from xr is dropped here to keep the fixture warning-free — xr is unimplemented and
+/// only warns; it does not leak either.)
+#[test]
+fn frontmatter_biblatex_xr_preamble_no_leak() {
+  // biblatex is a native contrib binding — the real fix — so use the contrib harness,
+  // matching the CLI that arxiv runs. The fixture converts with zero errors/warnings.
+  let x = convert_to_xml_contrib(
+    "tests/cluster_regressions/frontmatter_biblatex_xr_preamble_no_leak.tex",
+  );
+  assert!(
+    x.contains("<title font=\"bold\">The Real Title</title>")
+      || x.contains("<title>The Real Title</title>"),
+    "document title missing/garbled:\n{x}"
+  );
+  for cs in ["renewbibmacro", "DeclareNameAlias", "addbibresource"] {
+    assert!(
+      !x.contains(cs),
+      "preamble macro \\{cs} leaked as text into the document:\n{x}"
+    );
+  }
+}
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
 /// \textsuperscript{n}Affil}` block must keep SHORT author names as authors, not
 /// reclassify them as affiliations. "Min Xu" (7 tokens) tripped the old `p < 8`
