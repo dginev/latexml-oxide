@@ -8,6 +8,10 @@ diff the current two-branch author parser against a future unified pipeline.
 import re, sys
 
 def txt(s):
+    # Drop <note>…</note> subtrees (footnotemark markers + their <tags> refnum/autoref
+    # metadata) before flattening — otherwise a note's tag text ("3", "footnote 3") reads
+    # as though it were part of the personname, falsely flagging a "leak into the name".
+    s = re.sub(r'<note\b.*?</note>', '', s, flags=re.S)
     return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', s)).strip()
 
 def summarize(path):
