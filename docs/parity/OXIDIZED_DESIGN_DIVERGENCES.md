@@ -4475,6 +4475,36 @@ Shared upstream bug recorded as KNOWN_PERL_ERRORS #84.
 
 **Guard**: `06_cluster_regressions::cluster_eqnarray_nonumber_label_ref_is_the_number`.
 
+### 121. Alignment declarations in `\abstractname` are stripped from the abstract's `name`
+
+**Perl** extracts the abstract heading via `getFrontmatterName` → `DigestText(\lx@abstract@name)`,
+and `\lx@abstract@name` is `\format@title@abstract{\abstractname}` with `\format@title@abstract`
+defined as the identity hook `#1` (`latex_constructs.pool.ltxml` L1146-1148). When a document
+redefines `\renewcommand{\abstractname}{\centering {\large Abstract}}`, digesting the name runs
+`\centering` — a `DefConstructor` (L1237) — whose **reversion** serializes back as the literal
+text `\centering` when the digested box is flattened into the text-only `name=` attribute. So both
+engines emit `<ltx:abstract name="\centeringAbstract">`, and the XSLT renders `<h6
+class="ltx_title ltx_title_abstract">\centeringAbstract</h6>` (SHARED-FAILURE, verified same-host
+on Perl 0.8.8: identical core XML and identical post-processed HTML). Font-size/series primitives
+(`\large`, `\bfseries`) already produce no text leak — only the alignment *constructors* do.
+
+**Rust behavior**: the `\format@title@abstract` hook — designed for exactly this ("# Redefine")
+and used only during abstract-name extraction — neutralizes the alignment declarations inside a
+group: `{\let\centering\relax\let\raggedright\relax\let\raggedleft\relax#1}`. The name digests to
+the clean label `<ltx:abstract name="Abstract">`.
+
+**Why**: the `name` is a plain-text label; an alignment declaration has no textual content and
+must not leak its reversion into it. The fix mirrors LaTeXML's own `titlepage` precedent, which
+does `Let('\centering', '\relax')` (L1168) for the same reason — alignment declarations should not
+fire while frontmatter is being captured. It halos across every paper that decorates
+`\abstractname` with `\centering`/`\raggedright`/`\raggedleft`, at one designated hook rather than
+per-paper. Perl would benefit identically (upstream filing pending, owned by maintainer).
+
+**Witness**: arXiv 2312.14226 (html_feedback #6870, aistats2024 class) — abstract heading rendered
+`\centeringAbstract`; now "Abstract". Shared upstream bug recorded as KNOWN_PERL_ERRORS #87.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_abstract_centering_name`.
+
 ### 123. natbib citations of a numeric `.bbl` render as the bracketed number
 
 **Perl** renders such citations as the raw citation key. When natbib is loaded in

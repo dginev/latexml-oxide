@@ -84,6 +84,25 @@ fn frontmatter_acl_quad_authors_short_name() {
     "\\\\[5pt] optional length leaked as text:\n{x}"
   );
 }
+/// html_feedback#6870 (arXiv:2312.14226, aistats2024): `\renewcommand{\abstractname}
+/// {\centering {\large Abstract}}` — the abstract heading must read "Abstract", not
+/// leak the alignment declaration as literal text `\centeringAbstract`. Both Perl and
+/// Rust digested `\centering`'s constructor reversion into the `name=` string; the
+/// designated hook `\format@title@abstract` now neutralizes alignment declarations
+/// during name extraction (mirrors the `titlepage` `Let('\centering','\relax')`
+/// precedent). Surpass-Perl divergence — see OXIDIZED_DESIGN_DIVERGENCES #121.
+#[test]
+fn frontmatter_abstract_centering_name() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_abstract_centering_name.tex");
+  assert!(
+    x.contains("name=\"Abstract\""),
+    "abstract name must be the clean text \"Abstract\":\n{x}"
+  );
+  assert!(
+    !x.contains("\\centering"),
+    "alignment declaration leaked as literal text into the abstract name:\n{x}"
+  );
+}
 /// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
 /// block is one creator; the `1\textsuperscript{st}` ordinals must not be
 /// misread as affiliation markers and drop every author. Witness 2602.05517.

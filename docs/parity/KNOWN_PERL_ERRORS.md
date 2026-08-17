@@ -3522,6 +3522,31 @@ reference, undefined on pdflatex's run 1 too). The rendering half of #6895 (an o
 ORCID icon) is unrelated: correct LaTeXML markup, a downstream ar5iv-css over-reach fixed in the
 `ar5iv-css` repo.
 
+## 87. `\centering` in a redefined `\abstractname` leaks as literal text into the abstract heading (Rust surpasses)
+
+`\renewcommand{\abstractname}{\centering {\large Abstract}}` (arXiv/html_feedback#6870, paper
+2312.14226, aistats2024) makes the abstract heading render the literal text `\centeringAbstract`.
+LaTeXML extracts the heading via `getFrontmatterName` → `DigestText(\lx@abstract@name)`, and
+`\lx@abstract@name` is `\format@title@abstract{\abstractname}` with `\format@title@abstract` the
+identity hook `#1` (`latex_constructs.pool.ltxml` L1146-1148). `\centering` is a `DefConstructor`
+(L1237); digesting it into the text-only `name=` attribute serializes its **reversion** back as
+`\centering`. Both engines emit `<ltx:abstract name="\centeringAbstract">` and the XSLT renders
+`<h6 class="ltx_title ltx_title_abstract">\centeringAbstract</h6>`. **Same-host Perl LaTeXML 0.8.8
+is byte-identical** (core XML and post-processed HTML) — SHARED-FAILURE, Perl-origin (upstream
+filing pending, owned by maintainer). Minimal trigger:
+
+```latex
+\documentclass{article}
+\renewcommand{\abstractname}{\centering {\large Abstract}}
+\begin{document}\begin{abstract}Text.\end{abstract}\end{document}
+```
+
+Rust **surpasses** (OXIDIZED_DESIGN #121): the `\format@title@abstract` hook neutralizes alignment
+declarations during name extraction (`{\let\centering\relax\let\raggedright\relax\let\raggedleft\relax#1}`),
+mirroring LaTeXML's own `titlepage` `Let('\centering','\relax')` precedent (L1168), so the name is
+the clean label "Abstract". Font-size/series primitives (`\large`, `\bfseries`) never leaked. Guard:
+`06_cluster_frontmatter::frontmatter_abstract_centering_name`.
+
 ## 89. natbib citations of a numeric `.bbl` render the raw key, not the number (Rust surpasses)
 
 natbib loaded in its default author-year mode, cited against a numeric `.bbl` — plain
