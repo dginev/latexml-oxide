@@ -219,10 +219,12 @@ LoadDefinitions!({
   // `\IEEEauthorblockN`, else to the standard name-splitter. `\author` is locked
   // in the kernel; re-lock so a user `\renewcommand` can't shadow this.
   DefMacro!("\\author[]{}", sub[(_short, body)] {
-    let target = if body.to_string().contains("authorblockN") {
-      T_CS!("\\lx@IEEE@author@blocks")
+    let (target, body) = if body.to_string().contains("authorblockN") {
+      // Transpose a genuine `\and`×`\\` grid to row-major reading order first
+      // (arXiv:2403.16405); a single-row `\and` list is returned unchanged.
+      (T_CS!("\\lx@IEEE@author@blocks"), transpose_ieee_author_grid(body))
     } else {
-      T_CS!("\\lx@IEEE@author@plain")
+      (T_CS!("\\lx@IEEE@author@plain"), body)
     };
     Ok(Invocation!(target, vec![Some(body)]))
   }, locked => true);
@@ -775,3 +777,67 @@ LoadDefinitions!({
   // dropped on the floor).
   DefMacro!("\\newlineauthors", "\\par");
 });
+
+/// Split `tokens` at each TOP-LEVEL (brace-depth 0) occurrence of `delim`.
+fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
+  let mut parts: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut depth: i32 = 0;
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && t == delim {
+      parts.push(Vec::new());
+    } else {
+      parts.last_mut().unwrap().push(*t);
+    }
+  }
+  parts
+}
+
+/// Transpose a genuine IEEEtran `\and`×`\\` author grid from column-major
+/// (declaration order) to row-major (reading order).
+///
+/// html_feedback#6242-adjacent (arXiv:2403.16405): a conference `\author{}` lays
+/// authors out as a 2-D grid — `\and` starts a new COLUMN, top-level `\\` a new ROW
+/// within a column. Each `\IEEEauthorblockN` emits its creator in token order, so
+/// LaTeXML (and Perl) linearize down each column = column-major, scrambling the
+/// reading (row-major) order shown in the PDF and the arXiv metadata. Transpose so
+/// creators come out row-major. Guarded TIGHTLY: only a REGULAR grid (≥2 columns,
+/// every column the SAME number of rows ≥2) is reordered. A single-row `\and` list
+/// (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}` (nested,
+/// depth>0) are left exactly as declared. Surpass-Perl divergence: OXIDIZED_DESIGN
+/// #128 (shared upstream bug KNOWN_PERL_ERRORS #94).
+fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
+  let toks = body.unlist();
+  let columns = split_top_level(&toks, &T_CS!("\\and"));
+  if columns.len() < 2 {
+    return Tokens::new(toks); // not a multi-column grid
+  }
+  let grid: Vec<Vec<Vec<Token>>> = columns
+    .iter()
+    .map(|c| split_top_level(c, &T_CS!("\\\\")))
+    .collect();
+  let rows = grid[0].len();
+  // Only a REGULAR grid transposes: same row count in every column, and ≥2 rows.
+  if rows < 2 || grid.iter().any(|c| c.len() != rows) {
+    return Tokens::new(toks);
+  }
+  let and = T_CS!("\\and");
+  let mut out: Vec<Token> = Vec::new();
+  for r in 0..rows {
+    for col in &grid {
+      let cell = &col[r];
+      if cell.iter().all(|t| *t == T_SPACE!()) {
+        continue;
+      }
+      if !out.is_empty() {
+        out.push(and);
+      }
+      out.extend(cell.iter().copied());
+    }
+  }
+  Tokens::new(out)
+}

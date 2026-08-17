@@ -3694,3 +3694,26 @@ give `[1]`. Reported as arXiv/html_feedback#4295 (witness 2410.05202, 57 entries
 **surpasses**: `\NAT@wrout` forces number style for `'numbers'`/`'super'` too, so the whole list is
 `[N]`, matching the PDF — the `authoryear` path is untouched. Full rationale + guard in
 OXIDIZED_DESIGN #126.
+
+## 94. IEEEtran multi-row author grid is linearized column-major, scrambling author order (Rust surpasses)
+
+An IEEEtran conference `\author{}` grid — `\and` starts a new COLUMN, a top-level `\\` a
+new ROW within a column (arXiv:2403.16405, 6 authors in 3×2) — has each
+`\IEEEauthorblockN` emit its creator in token order (down each column), so the sequence
+is **column-major** (Zhao, Ding, Chen, Kong, Huang, Zhang) instead of the **row-major
+reading order** the PDF / arXiv `citation_author` metadata show (Zhao, Chen, Huang, Ding,
+Kong, Zhang). **Same-host Perl LaTeXML 0.8.8 mis-handles the same grid** (SHARED-FAILURE,
+Perl-origin, upstream filing pending). Minimal trigger:
+
+```latex
+\documentclass[conference]{IEEEtran}
+\author{\IEEEauthorblockN{A}\\ \IEEEauthorblockN{B}
+\and \IEEEauthorblockN{C}\\ \IEEEauthorblockN{D}}
+\begin{document}\maketitle\end{document}
+```
+
+→ column-major A, B, C, D; reading order is A, C, B, D. Rust **surpasses**
+(OXIDIZED_DESIGN #127): the IEEEtran `\author` dispatch transposes a REGULAR `\and`×`\\`
+grid to row-major before emitting creators, guarded so single-row `\and` lists and
+`\\` inside `\IEEEauthorblockA` are never reordered. Guard:
+`06_cluster_frontmatter::frontmatter_ieee_author_grid_transpose`.
