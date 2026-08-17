@@ -4729,3 +4729,42 @@ guard mislabels every numeric-mode `.bbl` with authors+years).
 
 **Guard**: `06_cluster_bibliography::cluster_bib_natbib_bbl_numeric_refnum`
 (numbers + super go numeric; the `authoryear` control keeps `Shor (1994)`).
+
+### 127. minted honours `escapeinside`, so a `\label` inside code registers on its line
+
+**Perl** ships **no** `minted` binding — it loads the raw `minted.sty`, which
+(without shell-escape/pygmentize) processes the body as ordinary LaTeX. A
+`\label` inside the code runs, but the code is not rendered as a listing and the
+label bubbles to the document root with no line to attach to. latexml-oxide
+instead provides a richer `minted` binding (`latexml_contrib::minted_sty`) routed
+through the `listings` substrate, producing a real `<ltx:listing>` with numbered
+`<ltx:listingline>`s.
+
+**Rust behavior**: that binding used to *drop* minted's `[options]` — it called
+`lst_process_display` without activating them — so `escapeinside=!!` never reached
+the listings tokenizer. An inline `!$\label{line:x}$!` was emitted as literal code
+characters, its `\label` never ran, the line label was never registered, and
+`\ref{line:x}` rendered as an empty `ltx_missing_label` (earlier: the raw key
+`LABEL:line:x`). `\begin{minted}[opts]{lang}` now feeds `opts` through
+`\lstset{…}` — the same activation `\begin{lstlisting}` uses — so minted's
+`escapeinside`/`mathescape` (shared verbatim with listings) take effect and the
+`\label` attaches to its `<ltx:listingline>`; `\ref` resolves and links to the
+code line. Minted-only keys (`linenos`, `fontsize`, …) are stored harmlessly and
+ignored; the `{language}` arg is left unapplied (current language-agnostic
+rendering is preserved).
+
+**Why**: matching the published PDF, where a line label references and links to
+its code line. This completes our Rust-only minted binding rather than diverging
+from a Perl behavior (Perl has none to match).
+
+**Residual (shared with Perl, out of scope)**: the reference shows the line's
+`xml:id`, not its printed line number, because `\@lst@startline` uses
+`RefStepID('lstnumber')` (id only, no refnum) in *both* engines
+(`listings.sty.ltxml:1546`); giving the line a numeric refnum is a separate
+listings-wide change.
+
+**Witness**: arXiv:2308.03276 (html_feedback#1028) — `\begin{minted}[linenos,
+escapeinside=!!]{python}` with `!$\label{line:world}$!`; before, `\ref{line:world}`
+vanished (empty `ltx_missing_label`); now it registers on the line and links.
+
+**Guard**: `06_cluster_regressions::minted_escapeinside_label_registers_on_the_code_line`.

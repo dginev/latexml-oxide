@@ -118,9 +118,21 @@ LoadDefinitions!({
   use latexml_package::package::listings_sty::{listings_read_raw_lines, lst_process_display};
   {
     let cs = T_CS!("\\begin{minted}");
+    // `\begin{minted}[opts]{language}`. Previously the `[opts]` were dropped, so
+    // `escapeinside=!!` never reached the listings tokenizer: an inline
+    // `!$\label{…}$!` was emitted as literal code, its `\label` never ran, and
+    // `\ref` to that line vanished (html_feedback#1028, arXiv:2308.03276;
+    // OXIDIZED_DESIGN #127). We now feed the options through `\lstset{…}` (the
+    // same activation `\begin{lstlisting}` uses), so minted's `escapeinside`/
+    // `mathescape` — shared verbatim with the listings substrate — take effect;
+    // minted-only keys (`linenos`, `fontsize`, …) are stored harmlessly and
+    // ignored. The `{language}` arg is left unapplied (we keep the current
+    // language-agnostic rendering). Scoped to the environment's `bgroup`.
     let params = parse_parameters("[]{}", &cs, true)?;
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |_args: Vec<ArgWrap>| {
+      move |args: Vec<ArgWrap>| {
+        // args[0] = `[opts]` (optional); args[1] = `{language}` (unapplied).
+        let opts = args.into_iter().next().and_then(|a| a.owned_tokens());
         bgroup();
         assign_value(
           "current_environment",
@@ -133,6 +145,17 @@ LoadDefinitions!({
           Tokens!(T_OTHER!("lstlisting")),
           None,
         )?;
+        if let Some(opts) = opts
+          && !opts.unlist_ref().is_empty()
+        {
+          let _ = digest(Tokens::new(
+            vec![T_CS!("\\lstset"), T_BEGIN!()]
+              .into_iter()
+              .chain(opts.unlist().iter().cloned())
+              .chain(std::iter::once(T_END!()))
+              .collect(),
+          ));
+        }
         let text = listings_read_raw_lines("minted");
         let result = lst_process_display(None, &text);
         Ok(Tokens::new(result))

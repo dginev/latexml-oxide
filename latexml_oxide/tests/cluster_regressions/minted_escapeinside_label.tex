@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{minted}
+\begin{document}
+% arXiv:2308.03276 (html_feedback#1028): minted with escapeinside=!! lets a
+% \label attach to a code line; \ref{line:...} must resolve to the line number
+% and link. Our minted binding dropped the [options], so escapeinside was never
+% honored — the \label ran as literal text and the reference vanished.
+\begin{minted}[linenos,mathescape,escapeinside=!!,fontsize=\small]{python}
+world = World()  !$\label{line:world}$!
+road = Road()    !$\label{line:road}$!
+\end{minted}
+Built at line \ref{line:world}; road at line \ref{line:road}.
+\end{document}
