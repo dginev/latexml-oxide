@@ -176,6 +176,33 @@ fn frontmatter_nested_math_author_marker() {
     "the shared affiliation text must survive:\n{x}"
   );
 }
+/// html_feedback#1021 F2 residual (arXiv:2403.11905): `\and` must be a HARD author
+/// boundary in the superscript-marker branch. When a 2nd/3rd author's marker is
+/// delivered by a macro (no literal `^` on that segment), the old flat
+/// `\and`/`\quad`/`\\` split appended the marker-less segment to the PREVIOUS
+/// author, collapsing `Alice\mk$^*$ \and Bob\mk \and Carol\mk` into one merged
+/// `<personname>`. Grouping on `\and` first (append bounded to the group) keeps
+/// them separate. OXIDIZED_DESIGN #52(g).
+#[test]
+fn frontmatter_and_hard_author_boundary() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_and_hard_author_boundary.tex");
+  for name in ["Alice", "Bob", "Carol"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "author {name} must be its own clean creator, not merged:\n{x}"
+    );
+  }
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    3,
+    "expected exactly three separate author creators across the \\and boundaries:\n{x}"
+  );
+  // The reported canary: the three names must not weld into one personname.
+  assert!(
+    !x.contains("AliceBob") && !x.contains("BobCarol"),
+    "\\and-separated authors merged into one personname:\n{x}"
+  );
+}
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
 /// \textsuperscript{n}Affil}` block must keep SHORT author names as authors, not
 /// reclassify them as affiliations. "Min Xu" (7 tokens) tripped the old `p < 8`

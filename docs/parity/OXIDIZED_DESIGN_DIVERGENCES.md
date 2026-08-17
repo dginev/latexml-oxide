@@ -1432,6 +1432,27 @@ idiom at all, so Rust already surpasses; this refines the surpass. Guard:
 a `\texttt{…}` email is glued to the last affil with no `\\`, it still bleeds into that
 affiliation — a distinct email-boundary defect.)
 
+**(g) `\and` is a HARD author boundary in the superscript-marker branch.** The
+marker-branch flat-split `\and`/`\quad`/`\\` into one list, then appended any
+marker-less line to the PREVIOUS entry. When a 2nd/3rd author's superscript is
+macro-delivered — `Alice\mk$^*$ \and Bob\mk \and Carol\mk`, where `\mk` expands to a
+`$^…$` marker so `Bob\mk`/`Carol\mk` carry no *literal* `^` — those segments merged
+back across the `\and` into one `<personname>AliceBobCarol</personname>`
+(html_feedback#1021 F2 residual, arXiv:2403.11905). Now the branch groups on the `\and`
+family FIRST and only appends a marker-less line to an entry created WITHIN the same
+`\and` group, so `\and`-separated authors never merge. Groups carry no `\and`, so the
+intra-group split (reusing `author_affil_splits`) is equivalent to splitting on
+`\quad`/`\\`; the *only* behavior change is that a marker-less first line of a non-first
+`\and` group becomes a new author instead of merging — verified by an OLD-vs-NEW full-XML
+diff over all 30 frontmatter fixtures, exactly ONE (this case) changed. Guard:
+`06_cluster_frontmatter::frontmatter_and_hard_author_boundary`. (Residual, separate —
+deferred as Phase 2: a marker delivered *purely* by macro with no literal `^` anywhere on
+its line, e.g. `\handPointerZ Johns Hopkins University`, is still appended to the author
+name rather than recognized as an affiliation, because classification keys on a literal
+marker and does not expand macros. So arXiv:2403.11905's Kate Sanders now separates from
+Kevin Xu but still carries her institution in the name; full attachment needs
+expansion-aware marker detection.)
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`

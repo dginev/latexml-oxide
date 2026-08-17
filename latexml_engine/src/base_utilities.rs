@@ -898,58 +898,78 @@ LoadDefinitions!({
     {
       calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(stuff)]).unlist());
     } else if position_of(&stuff, &authorsup_markers()).is_some() {
-      let lines = split_tokens(stuff, author_affil_splits());
       let mut entries: Vec<(AuthorLineKind, Tokens)> = Vec::new();
-      for line in lines {
-        if line.is_empty() {
+      // Split on the `\and` family FIRST so an `\and` is a HARD author boundary:
+      // a marker-less line — an author whose only superscript is macro-delivered
+      // (`\handPointerZ`), or a continuation affiliation — never merges into an
+      // author from a PREVIOUS `\and` group. Within a group, `\quad`/`\\` still
+      // separate the name line from its affiliation lines, and a marker-less line
+      // still continues the group's own last entry. Groups carry no `\and`, so
+      // reusing `author_affil_splits` for the intra-group split is equivalent to
+      // splitting on `\quad`/`\qquad`/`\\`. html_feedback#1021 F2 residual:
+      // `Alice\mk$^*$ \and Bob\mk` was one merged creator; now two.
+      // OXIDIZED_DESIGN #52(g).
+      for group in split_tokens(stuff, author_and_splits()) {
+        if group.is_empty() {
           continue;
         }
-        match position_of(&line, &authorsup_markers()) {
-          None => {
-            // A marker-less line that is purely a list of email addresses is a
-            // SHARED email line (\texttt{a@x, b@y}) covering all the authors, not
-            // a continuation of the previous affiliation — give it its own email
-            // contact so it is shown once instead of being welded into an
-            // affiliation's text (KNOWN_PERL_ERRORS #75, witness 2605.23553).
-            if line_is_email_list(&line) {
-              entries.push((AuthorLineKind::Email, line));
-            } else if let Some(last) = entries.last_mut() {
-              // continues previous entry; Append
-              let mut appended = last.1.clone().unlist();
-              appended.extend(line.unlist());
-              last.1 = Tokens::new(appended);
-            } else {
-              entries.push((AuthorLineKind::Author, line)); // safest to assume author?
-            }
-          },
-          Some(p) => {
-            // "\textsuperscript{n}Affil" (the marker LEADS the line) → an
-            // affiliation; "Name\textsuperscript{n}" (a name precedes the
-            // marker) → an author line, split into the individual creators it
-            // names (see split_author_line). The old `p < 8` token-count proxy
-            // misread short author names like "Min Xu" (html_feedback#6614) —
-            // key on name-before-marker, which is length-independent.
-            if name_precedes_marker(&line, p) {
-              for author in split_author_line(line) {
-                entries.push((AuthorLineKind::Author, author));
+        // Marker-less lines may only continue an entry created WITHIN this
+        // `\and` group — never one from a previous group.
+        let group_start = entries.len();
+        for line in split_tokens(group, author_affil_splits()) {
+          if line.is_empty() {
+            continue;
+          }
+          match position_of(&line, &authorsup_markers()) {
+            None => {
+              // A marker-less line that is purely a list of email addresses is a
+              // SHARED email line (\texttt{a@x, b@y}) covering all the authors, not
+              // a continuation of the previous affiliation — give it its own email
+              // contact so it is shown once instead of being welded into an
+              // affiliation's text (KNOWN_PERL_ERRORS #75, witness 2605.23553).
+              if line_is_email_list(&line) {
+                entries.push((AuthorLineKind::Email, line));
+              } else if entries.len() > group_start {
+                // continues an entry from THIS `\and` group; Append
+                let last = entries.last_mut().unwrap();
+                let mut appended = last.1.clone().unlist();
+                appended.extend(line.unlist());
+                last.1 = Tokens::new(appended);
+              } else {
+                // First line of this `\and` group and it has no marker → a NEW
+                // author (never merge back into the previous group).
+                entries.push((AuthorLineKind::Author, line));
               }
-            } else {
-              // A marker-led affiliation line may carry MULTIPLE
-              // `\textsuperscript{n}Affil` institutions on one space-separated line
-              // (html_feedback#6242, arXiv:2510.02340) — `\textsuperscript{1}Univ A
-              // \textsuperscript{2}Univ B`. Split at each whitespace-preceded mark
-              // (reusing the `\thanks`-abuse splitter, which never breaks a
-              // superscript glued INSIDE an institution name) so each numbered
-              // institution becomes its own affiliation and attaches to its authors
-              // by number, instead of merging into one.
-              for seg in split_before_affiliation_marks(line) {
-                if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
-                  continue;
+            },
+            Some(p) => {
+              // "\textsuperscript{n}Affil" (the marker LEADS the line) → an
+              // affiliation; "Name\textsuperscript{n}" (a name precedes the
+              // marker) → an author line, split into the individual creators it
+              // names (see split_author_line). The old `p < 8` token-count proxy
+              // misread short author names like "Min Xu" (html_feedback#6614) —
+              // key on name-before-marker, which is length-independent.
+              if name_precedes_marker(&line, p) {
+                for author in split_author_line(line) {
+                  entries.push((AuthorLineKind::Author, author));
                 }
-                entries.push((AuthorLineKind::Affiliation, seg));
+              } else {
+                // A marker-led affiliation line may carry MULTIPLE
+                // `\textsuperscript{n}Affil` institutions on one space-separated line
+                // (html_feedback#6242, arXiv:2510.02340) — `\textsuperscript{1}Univ A
+                // \textsuperscript{2}Univ B`. Split at each whitespace-preceded mark
+                // (reusing the `\thanks`-abuse splitter, which never breaks a
+                // superscript glued INSIDE an institution name) so each numbered
+                // institution becomes its own affiliation and attaches to its authors
+                // by number, instead of merging into one.
+                for seg in split_before_affiliation_marks(line) {
+                  if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+                    continue;
+                  }
+                  entries.push((AuthorLineKind::Affiliation, seg));
+                }
               }
-            }
-          },
+            },
+          }
         }
       }
       for (kind, line) in entries {
@@ -4045,6 +4065,17 @@ fn author_group_splits() -> Vec<SplitDelim> {
     T_CS!("\\AND").into(),
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
+  ]
+}
+
+/// The `\and` family only — the HARD author boundary the superscript-marker
+/// branch groups on FIRST, so a marker-less line never merges into an author
+/// from a previous `\and` group (html_feedback#1021 F2; OXIDIZED_DESIGN #52(g)).
+fn author_and_splits() -> Vec<SplitDelim> {
+  vec![
+    T_CS!("\\and").into(),
+    T_CS!("\\And").into(),
+    T_CS!("\\AND").into(),
   ]
 }
 // Things to split author & affiliation mix; NO comma in affiliations!!!
