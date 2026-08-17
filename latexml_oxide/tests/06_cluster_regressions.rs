@@ -11,7 +11,7 @@
 mod cluster;
 use cluster::{
   convert_and_post_clean, convert_and_post_pmml_clean, convert_clean, convert_expecting_errors,
-  convert_log, convert_to_xml,
+  convert_log, convert_to_xml, convert_to_xml_contrib,
 };
 
 #[test]
@@ -652,6 +652,36 @@ fn inline_end_lstlisting_does_not_swallow_the_document() {
   assert!(
     x.contains("hello") && x.contains("world"),
     "inline \\end{{lstlisting}}: the listing body was lost:\n{x}"
+  );
+}
+
+/// minted's `escapeinside=!!` must let a `\label` inside the code attach to its
+/// listing line, so `\ref{line:...}` resolves and links.
+///
+/// Witness arXiv:2308.03276 (html_feedback#1028). Our `minted` binding
+/// (`minted_contrib`) parsed `\begin{minted}[opts]{lang}` but *dropped* the
+/// options — calling `lst_process_display` without activating them — so
+/// `escapeinside`/`mathescape` never reached the listings tokenizer. The
+/// `!$\label{line:world}$!` was emitted as literal code, `\label` never ran, the
+/// line label was never registered, and `\ref{line:world}` rendered as an empty
+/// `ltx_missing_label`. The fix forwards the options through `lst_activate` (as
+/// `lstlisting` does). Perl has no minted binding (it processes the body as raw
+/// LaTeX), so this completes our richer binding — surpass-Perl / OXIDIZED_DESIGN
+/// #127.
+#[test]
+fn minted_escapeinside_label_registers_on_the_code_line() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/minted_escapeinside_label.tex");
+  // The escaped `\label` now runs and registers its line label (before the fix
+  // there was no `labels="LABEL:line:world"` anywhere — the label was lost).
+  assert!(
+    x.contains(r#"labels="LABEL:line:world""#) && x.contains(r#"labels="LABEL:line:road""#),
+    "escapeinside \\label did not register on the code line:\n{x}"
+  );
+  // ...and the escape markers / raw `\label` are consumed, not left as literal
+  // code characters in the listing.
+  assert!(
+    !x.contains(r"\label{line:world}"),
+    "the escapeinside `\\label` leaked into the listing as literal text:\n{x}"
   );
 }
 /// `\usepackage{xparse}` (or `expl3`) must not clobber LaTeX's cedilla accent.
