@@ -4877,7 +4877,8 @@ errors and the `\Large` never runs.
 *does* run and the header renders at `\Large` — but the unscoped splice then leaked
 that `\Large` into the entire Supplementary Material section (every heading and
 paragraph `font-size:144%`). We wrap the header in a group with its own `\par`
-(`\ifx.#1.\else\par\noindent{#1\par}\fi\par`), matching the box scope real LaTeX
+(`\ifx.#1.\else\par{\noindent#1\par}\fi\par` — `\noindent` inside the group so the
+header paragraph keeps its non-indent), matching the box scope real LaTeX
 gives `\@topnewpage`: the header keeps its `\Large`, the body returns to normal size.
 This surpasses Perl's simplification. Witness html_feedback#6638 (arXiv:2511.14625v1).
 
