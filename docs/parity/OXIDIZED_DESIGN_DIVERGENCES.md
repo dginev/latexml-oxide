@@ -4639,3 +4639,54 @@ class bold" alternative).
 now unwrapped too. Shared upstream bug recorded as KNOWN_PERL_ERRORS #88.
 
 **Guard**: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`.
+
+### 125. A wrapper box merges its `class` onto a single block child, not overwrites it
+
+**Perl**'s `insertBlock` (`TeX_Box.pool.ltxml` L489-493) absorbs a box (minipage,
+parbox, …) onto its content when that content is a single block the context can
+hold directly: it copies the box's attributes onto the child and unwraps the
+wrapper. For `class` it uses `setAttribute(class => …)`, which **overwrites**.
+LaTeXML has a separate `addClass` (used elsewhere in the same file, L887/892/896)
+that merges the space-separated set — but `insertBlock` doesn't use it. So a
+`lstlisting` (or a `minted` block, which routes through the same listings display)
+that is the **sole** content of a `minipage` becomes `<listing class="ltx_minipage">`,
+**losing `ltx_lstlisting`** — and with it the whitespace-preserving CSS keyed on
+that class, so its indentation collapses. latexml-oxide reproduced this exactly
+(SHARED-FAILURE, verified same-host: Perl 0.8.8 also emits `class="ltx_minipage"`).
+
+**Rust behavior**: `insert_block` (`base_utilities.rs`) treats `class` as the
+space-separated set it is — it `add_class`es the wrapper's class onto the child
+instead of overwriting, so the child keeps its own semantic class and *gains* the
+wrapper's: `<listing class="ltx_lstlisting ltx_minipage" vattach="…" width="…">`.
+Every other absorbed attribute (`width`, `vattach`, …) is still `set_attribute`d as
+before; only `class` merges. This is the same `addClass`-vs-`setAttribute`
+distinction LaTeXML already draws, applied at the one site that forgot it.
+
+**Why**: the child's class carries its rendering contract (`ltx_lstlisting` →
+`white-space` handling for code); a wrapper that borrows the child's element must
+not erase it. pdflatex shows the code indented; keeping `ltx_lstlisting` is what
+preserves that in HTML.
+
+**Scope note**: this is the *single-minipage-in-a-float* path. A float with
+*multiple* side-by-side minipages takes the flex-figure layout, where the minipage
+is a separate `ltx_figure_panel` wrapper and the listing already keeps its class —
+so this fix and that path are independent. (The whitespace loss reported for the
+flex path in html_feedback#6632, arXiv:2605.03143, was a *separate*, CSS-only
+cause: arXiv's deployed `arxiv-html-papers-theme` layer sets a bare
+`.ltx_listingline{white-space:normal}` that overrides ar5iv's `nowrap` by
+cascade-layer order — not an engine issue.)
+
+**Witness**: arXiv:2605.03143 (a single `\begin{minipage}…\begin{minted}` in a
+`figure`); before, `<listing class="ltx_minipage">`, after,
+`<listing class="ltx_lstlisting ltx_minipage">`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (`insertBlock` should
+`addClass`, not `setAttribute`, for the `class` key).
+
+**Connected behavior**: the same merge preserves any absorbed block's own class,
+not just listings — e.g. an algorithm float (`ltx_float_algorithm`) that is a
+minipage panel now keeps `ltx_float_algorithm` alongside `ltx_minipage` instead of
+being clobbered to bare `ltx_minipage` (golden `tests/complex/figure_mixed_content.xml`).
+
+**Guard**: `cluster_sizing::listing_in_minipage_keeps_class::listing_sole_content_of_minipage_keeps_lstlisting_class`;
+the `80_complex::figure_mixed_content_test` golden pins the algorithm-float case.

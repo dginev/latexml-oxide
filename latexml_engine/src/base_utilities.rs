@@ -3296,8 +3296,23 @@ pub fn insert_block(
     {
       // IF: Single node, allowed in context & accepts attributes
       // THEN: Add attributes and unwrap the single node
+      //
+      // SURPASS-PERL (OXIDIZED_DESIGN #125): `class` MERGES, it does not
+      // overwrite. Perl's insertBlock (`TeX_Box.pool.ltxml` L492) uses
+      // `setAttribute(class => …)`, so a wrapper's class (e.g. minipage's
+      // `ltx_minipage`) clobbered the single child's own class — a `lstlisting`
+      // that is the sole content of a `minipage`-in-`figure` became
+      // `class="ltx_minipage"`, losing `ltx_lstlisting` and thus the
+      // whitespace-preserving CSS, so its indentation collapsed
+      // (html_feedback#6632, arXiv:2605.03143). LaTeXML already distinguishes
+      // `addClass` from `setAttribute`; merging the child's class with the
+      // wrapper's keeps both (`ltx_lstlisting ltx_minipage`).
       for (k, v) in block_attr.iter() {
-        document.set_attribute(&mut nodes[0], k, v)?;
+        if k == "class" {
+          document.add_class(&mut nodes[0], v)?;
+        } else {
+          document.set_attribute(&mut nodes[0], k, v)?;
+        }
       }
       document.unwrap_nodes(container)?;
       return Ok(nodes);

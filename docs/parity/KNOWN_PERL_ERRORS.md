@@ -3649,3 +3649,25 @@ Perl-origin, upstream filing pending). Minimal trigger:
 **surpasses** (OXIDIZED_DESIGN #52(d)): empty `\\`-pieces are dropped before choosing the name line,
 so the first NON-empty piece is the names. Guard:
 `06_cluster_frontmatter::frontmatter_multiline_author_leading_break`.
+
+## 92. `insertBlock` overwrites a single block child's `class` with the wrapper's, not merges (Rust surpasses)
+
+When a box (minipage/parbox) is absorbed onto its content because the content is a single block the
+context can hold directly, `insertBlock` (`TeX_Box.pool.ltxml` L489-493) copies the box's attributes
+onto the child via `setAttribute` — and for `class` that **overwrites**. LaTeXML has a separate
+`addClass` (merges the space-separated set; used elsewhere in the same file at L887/892/896) but
+`insertBlock` doesn't use it. So a `lstlisting`/`minted` block that is the sole content of a
+`minipage`-in-a-`figure` becomes `<listing class="ltx_minipage">`, losing `ltx_lstlisting` and thus
+the whitespace-preserving CSS keyed on it. Verified same-host: Perl 0.8.8 emits the identical
+`class="ltx_minipage"` (SHARED-FAILURE, Perl-origin). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{listings}\begin{document}
+\begin{figure}\begin{minipage}{0.3\textwidth}\begin{lstlisting}
+a
+\end{lstlisting}\end{minipage}\end{figure}\end{document}
+```
+
+→ `<listing class="ltx_minipage" …>` in both engines. Rust **surpasses**: `insert_block` `add_class`es
+the wrapper's class instead of overwriting, so the child keeps `ltx_lstlisting` and gains
+`ltx_minipage`. Full rationale + guard in OXIDIZED_DESIGN #125.
