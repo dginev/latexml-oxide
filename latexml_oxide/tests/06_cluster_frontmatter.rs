@@ -103,6 +103,38 @@ fn frontmatter_abstract_centering_name() {
     "alignment declaration leaked as literal text into the abstract name:\n{x}"
   );
 }
+/// html_feedback#61 (arXiv:2308.06262, neurips_2023): the `\author` block bolds
+/// only its second name line (`\textbf{…}`) and relies on the class's block-level
+/// `\bf` to bold the rest — which LaTeXML doesn't emulate, so line 1 rendered plain
+/// and line 2 bold (incoherent). A `font="bold"` that wraps an ENTIRE personname is
+/// presentational author-block styling, not semantic; it is now unwrapped so every
+/// author renders coherently. Surpass-Perl divergence — see
+/// OXIDIZED_DESIGN_DIVERGENCES #122. (Plain `article` reproduces the parse — no
+/// neurips dependency.) `\textbf{Zhou Zhao}\footnotemark[2]` additionally guards that
+/// a trailing reference marker (`<ltx:note>`) does not block the unwrap — witness
+/// "Zhou Zhao" in arXiv 2507.06670.
+#[test]
+fn frontmatter_neurips_author_bold_coherent() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_neurips_author_bold_coherent.tex");
+  // The plain-`\textbf` authors survive as plain personnames…
+  for name in ["Fanqing Meng", "Wenqi Shao", "Kaipeng Zhang", "Yu Qiao"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "author {name} must be a plain personname (whole-name bold unwrapped):\n{x}"
+    );
+  }
+  // …the bold author WITH a trailing footnotemark is also unwrapped (the marker
+  // stays inside the personname, the bold does not).
+  assert!(
+    x.contains("<personname>Zhou Zhao") && x.contains("role=\"footnotemark\""),
+    "bold author with a trailing footnotemark marker was not unwrapped:\n{x}"
+  );
+  // …and none carries a whole-name bold wrapper.
+  assert!(
+    !x.contains("<personname><text font=\"bold\">"),
+    "a whole-personname bold wrapper survived (incoherent with the plain lines):\n{x}"
+  );
+}
 /// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
 /// block is one creator; the `1\textsuperscript{st}` ordinals must not be
 /// misread as affiliation markers and drop every author. Witness 2602.05517.
