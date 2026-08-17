@@ -1380,6 +1380,43 @@ are unchanged; an empty `\\`-leading name list keeps a single empty author so it
 affiliations are not dropped. `author_affil_splits()` already carried the comment
 "NO comma in affiliations!!!"; this extends that discipline to the no-marker arm.
 
+**(c) Short author names in a marker-labeled line.** The marker-labeled arm
+classifies each `\quad`/`\\`-split line as author vs affiliation by where its
+superscript sits. The original proxy — a marker within the first 8 tokens ⇒
+affiliation ("¹CMU") — misread a **short author name** whose trailing mark landed
+under the threshold: "Min Xu" is 7 tokens, so `Min Xu\textsuperscript{1}` was
+demoted to an affiliation and the author lost (witness arXiv:2606.08234,
+html_feedback#6614). Replaced by the length-independent signal
+`name_precedes_marker`: a line reads "Name\textsuperscript{n}" (letter text
+before the marker ⇒ author, split into creators) or "\textsuperscript{n}Affil"
+(the marker leads the line ⇒ affiliation). Here Rust surpasses Perl, which keeps
+the four authors but ALSO emits the affiliation line itself as phantom author
+creators.
+
+**(d) Multi-line author block with a trailing `\quad\\`.** In the no-marker arm,
+author *groups* split on `\quad`/`\and` and each group then splits on `\\` into a
+name line + trailing affiliations. When a line ends with `\quad \\` (a common
+NeurIPS/ACL idiom for wrapping a long author list), the `\\` leaks to the HEAD of
+the next `\quad`-group, so that group's first `\\`-piece is empty and its real
+first author was demoted to an affiliation under an empty `<personname/>`. Fixed by
+dropping empty `\\`-pieces before choosing the name line: the first NON-empty piece
+is the names, the rest affiliations. Witness arXiv:2507.06670 (acl): line 2's first
+author "Ruiqi Li" was an empty personname + a bogus "Ruiqi Li" affiliation; now an
+author. Same-host Perl 0.8.8 mangles it identically (SHARED-FAILURE) — recorded as
+KNOWN_PERL_ERRORS #91.
+**(e) Phantom empty creators from comma-split `\IEEEmembership`/`\thanks`.** A flat
+comma author list with interspersed non-name commands — `\author{Alice,
+\IEEEmembership{…}, and Bob, …\thanks{…}}` (html_feedback#4539, witness 2508.00603) —
+comma/" and "-splits into pieces where the `\IEEEmembership{…}` pieces digest to
+nothing, surfacing as empty `<ltx:personname/>` creators; a trailing `\thanks` then
+strands its affiliation/email on a nameless creator, and the reader sees a stray "`,
+,`" between authors. `insert_frontmatter`'s `coalesce_empty_creators` drops
+name-empty author creators, moving any contacts they carry to the preceding real
+author (a `\footnotemark`-note keeps a personname non-empty, so real authors with a
+marker — 2507.06670 "Yu Zhang" — are untouched). Same-host Perl 0.8.8 emits the same
+empty creators (SHARED-FAILURE); Rust surpasses. Guard:
+`06_cluster_frontmatter::frontmatter_ieee_membership_no_phantom`.
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`
@@ -4462,7 +4499,199 @@ Shared upstream bug recorded as KNOWN_PERL_ERRORS #84.
 
 **Guard**: `06_cluster_regressions::cluster_eqnarray_nonumber_label_ref_is_the_number`.
 
-### 121. Numeric/superscript natbib `.bbl` labels the References with `[N]`, not author-year
+### 121. Alignment declarations in `\abstractname` are stripped from the abstract's `name`
+
+**Perl** extracts the abstract heading via `getFrontmatterName` → `DigestText(\lx@abstract@name)`,
+and `\lx@abstract@name` is `\format@title@abstract{\abstractname}` with `\format@title@abstract`
+defined as the identity hook `#1` (`latex_constructs.pool.ltxml` L1146-1148). When a document
+redefines `\renewcommand{\abstractname}{\centering {\large Abstract}}`, digesting the name runs
+`\centering` — a `DefConstructor` (L1237) — whose **reversion** serializes back as the literal
+text `\centering` when the digested box is flattened into the text-only `name=` attribute. So both
+engines emit `<ltx:abstract name="\centeringAbstract">`, and the XSLT renders `<h6
+class="ltx_title ltx_title_abstract">\centeringAbstract</h6>` (SHARED-FAILURE, verified same-host
+on Perl 0.8.8: identical core XML and identical post-processed HTML). Font-size/series primitives
+(`\large`, `\bfseries`) already produce no text leak — only the alignment *constructors* do.
+
+**Rust behavior**: the `\format@title@abstract` hook — designed for exactly this ("# Redefine")
+and used only during abstract-name extraction — neutralizes the alignment declarations inside a
+group: `{\let\centering\relax\let\raggedright\relax\let\raggedleft\relax#1}`. The name digests to
+the clean label `<ltx:abstract name="Abstract">`.
+
+**Why**: the `name` is a plain-text label; an alignment declaration has no textual content and
+must not leak its reversion into it. The fix mirrors LaTeXML's own `titlepage` precedent, which
+does `Let('\centering', '\relax')` (L1168) for the same reason — alignment declarations should not
+fire while frontmatter is being captured. It halos across every paper that decorates
+`\abstractname` with `\centering`/`\raggedright`/`\raggedleft`, at one designated hook rather than
+per-paper. Perl would benefit identically (upstream filing pending, owned by maintainer).
+
+**Witness**: arXiv 2312.14226 (html_feedback #6870, aistats2024 class) — abstract heading rendered
+`\centeringAbstract`; now "Abstract". Shared upstream bug recorded as KNOWN_PERL_ERRORS #87.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_abstract_centering_name`.
+
+### 123. natbib citations of a numeric `.bbl` render as the bracketed number
+
+**Perl** renders such citations as the raw citation key. When natbib is loaded in
+its default author-year mode but the `.bbl` is numeric — plain `\bibitem{key}`
+with no `[author(year)]` label, as `\bibliographystyle{unsrt}`/`plain` produce —
+each `\cite` freezes an author-year `<ltx:bibref show="Authors Phrase1YearPhrase2">`
+at digest time (natbib's mode isn't yet numeric, especially when the
+`\bibliographystyle` sits AFTER the cites). The numeric `<ltx:bibitem>` carries a
+`number`/`refnum` tag but no author/year metadata, only a `keytag`. Post-processing
+`CrossRef.pm::make_bibcite` L542 keeps the author-year format
+(`$show = 'refnum' unless … || $keytag;` — the `|| $keytag` guard is always
+satisfied), so the citation prints the key (`alpha ()` / `alpha `). latexml-oxide
+reproduced this exactly (SHARED-FAILURE, verified same-host on 0.8.8).
+
+**Rust behavior**: in `CrossRef::fill_in_bibrefs` (`latexml_post/src/crossref.rs`),
+when a bibref's frozen `show` wants author-year yet EVERY cited entry is
+numeric-only (a `number`/`refnum`, no real `authors`/`fullauthors`/`year`), the
+citation collapses to natbib's numeric form: the bracketed number `[N]`, or `[N, M]`
+for a multi-key `\cite` (each number a separate link). The brackets are added only
+when the frozen author-year delimiters lived inside the bibref (`\cite`/`\citet`,
+whose `show` has a Phrase after Year); `\citep`, whose parens are sibling text,
+keeps its own delimiter.
+
+**Why**: this mirrors natbib's own algorithm. On a numeric `.bbl`, real
+pdflatex/bibtex write `\NAT@force@numbers` into the `.aux`, forcing numbers mode
+globally so every `\cite` prints `[N]` regardless of a late `\bibliographystyle`.
+The published PDF is the ground truth (`Text citing [1] and also [2] and both
+[1, 2].`); Perl's raw-key output is the defect.
+
+**Witness**: arXiv 2308.06262 (html_feedback #62) — a NeurIPS-2023 paper
+(`neurips_2023.sty` loads natbib, `\bibliographystyle{unsrt}` after 263 `\cite`s,
+numeric `main.bbl`). Every citation rendered `key ()`; now all render `[N]`/`[N, …]`,
+byte-matching the golden pdflatex `.bbl`+`.aux`. Shared upstream bug recorded as
+KNOWN_PERL_ERRORS #89.
+
+**Guard**: `06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
+
+### 124. Content injected into `\@maketitle` is recovered, not discarded
+
+**Perl** discards `\@maketitle` wholesale. LaTeXML replaces the LaTeX kernel's
+`\maketitle`→`\@maketitle` typesetting pipeline with its own frontmatter model:
+`\maketitle` deposits the separately-captured title/author/date
+(`\lx@frontmatterhere`) and then `\global\let\@maketitle\relax`
+(`latex_constructs.pool.ltxml` L1105), with the source comment (L1094) admitting
+"In case `\@maketitle` defines these — we can't yet emulate that." So content a
+document appends to `\@maketitle` — a teaser figure, an epigraph, a banner — is
+silently dropped, and any `\ref` to a `\label` inside it renders the raw internal
+key ("LABEL:fig:teaser"). latexml-oxide reproduced this exactly (SHARED-FAILURE,
+verified same-host on 0.8.8: both engines drop the figure).
+
+**Rust behavior**: `\@maketitle` is predefined empty (so `\g@addto@macro\@maketitle`
+appends cleanly — LaTeXML never reimplements the title *layout*, so `\@maketitle`
+is otherwise undefined and appending to it warns "not expandable" and leaves a
+self-reference), and `\maketitle` gains a `\lx@deposit@maketitle` step — after
+`\lx@frontmatterhere`, before `\global\let\@maketitle\relax` — that deposits
+`\@maketitle`'s accumulated content in a title-neutralized group
+(`\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty`). An
+`\ifx\@maketitle\@empty` guard makes it a no-op for the vast majority of papers.
+Injected definitions execute LaTeX-scoped (group-local, as real `\maketitle`'s
+`\begingroup` does); injected content deposits.
+
+**Why**: real pdflatex runs `\@maketitle`, so the teaser figure appears right
+below the title and its `\ref` resolves to the figure number. Matching the
+published PDF beats dropping the figure and leaking the internal label key. The
+title-neutralization reuses the same technique as the `\format@title@abstract`
+fix (#121): run the macro with the title-producing pieces neutralized so only the
+injected content survives, rather than fragile token-parsing.
+
+**Witness**: arXiv 2506.23854 (html_feedback #4281) — a teaser figure injected via
+`\g@addto@macro\@maketitle{\begin{figure}…\label{fig:teaser}…\end{figure}}`; the
+figure vanished and `\figref{fig:teaser}` rendered "Fig. LABEL:fig:teaser". Now the
+figure renders (`xml:id="S0.F1"`) and the reference resolves to "Fig. 1". Shared
+upstream bug recorded as KNOWN_PERL_ERRORS #90.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.
+### 122. A `font="bold"` wrapping an entire author name is unwrapped for coherence
+
+**Perl** captures semantic creators from `\author`, not the class's visual title
+layout. Classes like `neurips_2023` bold the whole author block with a block-level
+`\bf` in their `\@maketitle` (`\begin{tabular}[t]{c}\bf…\@author\end{tabular}`),
+which LaTeXML does not emulate. So when a paper `\textbf`s only *some* author name
+lines and relies on that class `\bf` for the rest, LaTeXML renders the block
+incoherently — bold on the `\textbf` lines, plain on the others. Both engines emit
+`<ltx:personname><ltx:text font="bold">Name</ltx:text></ltx:personname>` on the
+explicit-`\textbf` lines and a bare `<ltx:personname>Name</ltx:personname>` on the
+rest (SHARED-FAILURE, byte-identical same-host on Perl 0.8.8).
+
+**Rust behavior**: an `ltx:personname` `afterClose` handler (`unwrap_whole_name_bold`)
+unwraps a personname whose sole meaningful child is a *pure* bold `<ltx:text>` (decoded
+font series=bold, otherwise the default upright serif) — the case that would serialize
+as exactly `font="bold"`. A trailing reference marker (`\footnotemark`/`\thanks` →
+`<ltx:note>`) or a misused-`\\` `<ltx:break>` is skipped, not counted as content, so it
+does not block the unwrap. Mixed styling (bold-italic, bold-sans, bold on only part of
+the name) is left untouched. Every author then renders in the same weight.
+
+**Why**: bolding a whole author name is presentational author-block styling, not
+semantic content; a class that bolds the block does so uniformly, so partial bold is an
+artifact of inconsistent source, never authorial intent (a corresponding/presenting
+author is marked by a superscript, not by name-weight). Normalizing to plain restores
+the coherence the reporter asked for and matches how ar5iv renders author names for the
+overwhelming majority of classes. One general rule at the personname seam, not a
+per-class binding. User-directed 2026-08-16 (chosen over the per-class "emulate the
+class bold" alternative).
+
+**Witness**: arXiv 2308.06262 (html_feedback #61, neurips_2023) — 7 authors rendered as
+3 plain + 4 bold; now all 7 plain. Also arXiv 2507.06670 (acl) "Zhou Zhao", where a
+`\textbf{Zhou Zhao} \footnotemark[2]` bold name kept its footnotemark marker sibling —
+now unwrapped too. Shared upstream bug recorded as KNOWN_PERL_ERRORS #88.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`.
+
+### 125. A wrapper box merges its `class` onto a single block child, not overwrites it
+
+**Perl**'s `insertBlock` (`TeX_Box.pool.ltxml` L489-493) absorbs a box (minipage,
+parbox, …) onto its content when that content is a single block the context can
+hold directly: it copies the box's attributes onto the child and unwraps the
+wrapper. For `class` it uses `setAttribute(class => …)`, which **overwrites**.
+LaTeXML has a separate `addClass` (used elsewhere in the same file, L887/892/896)
+that merges the space-separated set — but `insertBlock` doesn't use it. So a
+`lstlisting` (or a `minted` block, which routes through the same listings display)
+that is the **sole** content of a `minipage` becomes `<listing class="ltx_minipage">`,
+**losing `ltx_lstlisting`** — and with it the whitespace-preserving CSS keyed on
+that class, so its indentation collapses. latexml-oxide reproduced this exactly
+(SHARED-FAILURE, verified same-host: Perl 0.8.8 also emits `class="ltx_minipage"`).
+
+**Rust behavior**: `insert_block` (`base_utilities.rs`) treats `class` as the
+space-separated set it is — it `add_class`es the wrapper's class onto the child
+instead of overwriting, so the child keeps its own semantic class and *gains* the
+wrapper's: `<listing class="ltx_lstlisting ltx_minipage" vattach="…" width="…">`.
+Every other absorbed attribute (`width`, `vattach`, …) is still `set_attribute`d as
+before; only `class` merges. This is the same `addClass`-vs-`setAttribute`
+distinction LaTeXML already draws, applied at the one site that forgot it.
+
+**Why**: the child's class carries its rendering contract (`ltx_lstlisting` →
+`white-space` handling for code); a wrapper that borrows the child's element must
+not erase it. pdflatex shows the code indented; keeping `ltx_lstlisting` is what
+preserves that in HTML.
+
+**Scope note**: this is the *single-minipage-in-a-float* path. A float with
+*multiple* side-by-side minipages takes the flex-figure layout, where the minipage
+is a separate `ltx_figure_panel` wrapper and the listing already keeps its class —
+so this fix and that path are independent. (The whitespace loss reported for the
+flex path in html_feedback#6632, arXiv:2605.03143, was a *separate*, CSS-only
+cause: arXiv's deployed `arxiv-html-papers-theme` layer sets a bare
+`.ltx_listingline{white-space:normal}` that overrides ar5iv's `nowrap` by
+cascade-layer order — not an engine issue.)
+
+**Witness**: arXiv:2605.03143 (a single `\begin{minipage}…\begin{minted}` in a
+`figure`); before, `<listing class="ltx_minipage">`, after,
+`<listing class="ltx_lstlisting ltx_minipage">`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (`insertBlock` should
+`addClass`, not `setAttribute`, for the `class` key).
+
+**Connected behavior**: the same merge preserves any absorbed block's own class,
+not just listings — e.g. an algorithm float (`ltx_float_algorithm`) that is a
+minipage panel now keeps `ltx_float_algorithm` alongside `ltx_minipage` instead of
+being clobbered to bare `ltx_minipage` (golden `tests/complex/figure_mixed_content.xml`).
+
+**Guard**: `cluster_sizing::listing_in_minipage_keeps_class::listing_sole_content_of_minipage_keeps_lstlisting_class`;
+the `80_complex::figure_mixed_content_test` golden pins the algorithm-float case.
+
+### 126. Numeric/superscript natbib `.bbl` labels the References with `[N]`, not author-year
 
 **Perl**'s `\NAT@wrout` (`natbib.sty.ltxml` L609-620) formats each `\bibitem`'s
 reference-list `refnum` from `CITE_STYLE`, but its numeric branch is gated on

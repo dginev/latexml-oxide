@@ -1,0 +1,29 @@
+% html_feedback#4295... no — html_feedback#6632 (arXiv:2605.03143): code in a
+% figure/minipage lost its indentation and newlines. Root cause: when a
+% `lstlisting` (or a `minted` block, which routes through the same listings
+% display) is the SOLE content of a `minipage`, insert_block absorbs the minipage
+% onto the single child and OVERWRITES its `class` — `ltx_lstlisting` becomes
+% `ltx_minipage`, so the whitespace-preserving CSS keyed on `.ltx_lstlisting`
+% stops applying and the leading-space indentation collapses. The listing must
+% keep `ltx_lstlisting` and merely GAIN `ltx_minipage` (+ width/vattach).
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+Control (not boxed):
+\begin{lstlisting}
+let f () =
+  send(x)
+  if a
+\end{lstlisting}
+
+Inside a minipage in a figure (the paper's structure: figure > minipage > code):
+\begin{figure}
+\begin{minipage}{0.3\textwidth}
+\begin{lstlisting}
+let f () =
+  send(x)
+  if a
+\end{lstlisting}
+\end{minipage}
+\end{figure}
+\end{document}

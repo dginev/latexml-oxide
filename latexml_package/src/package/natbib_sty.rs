@@ -784,7 +784,7 @@ LoadDefinitions!({
 
     // If authors or year empty, fall back to number style.
     //
-    // SURPASS-PERL (OXIDIZED_DESIGN #121): in numeric/superscript citation modes
+    // SURPASS-PERL (OXIDIZED_DESIGN #126): in numeric/superscript citation modes
     // the reference-list label is the entry NUMBER `[N]`, matching pdflatex+bibtex
     // (the apsrev4-2 / `[numbers]natbib` PDF) and the inline `[N]` cites. Perl's
     // `\NAT@wrout` (natbib.sty.ltxml L612-613) only forces number style on an

@@ -1464,15 +1464,12 @@ impl CrossRef {
         .unwrap_or_else(|| "refnum".to_string());
       // natbib emits show patterns like:
       //   "AuthorsPhrase1Year"           → \citep{X} → "Author (Year)"
-      //   "Authors Phrase1YearPhrase2"  → \citet{X} → "Author (Year)"
+      //   "Authors Phrase1YearPhrase2"  → \citet{X}/\cite{X} → "Author (Year)"
       //   "refnum"                       → numeric / default
       // Anything containing "Author" or "Year" wants the author-year
       // text built from the bibentry's `authors`/`year` fields; the
       // legacy refnum-only path serves the numeric case.
-      let want_authoryear = show.contains("Author") || show.contains("Year");
-      let sep = bibref
-        .get_attribute("separator")
-        .unwrap_or_else(|| ",".to_string());
+      let show_wants_ay = show.contains("Author") || show.contains("Year");
       // The lists to search, most-specific first. Perl CrossRef.pm L515 reads
       // `inlist || 'bibliography'` — an *exclusive* choice, which strands every
       // citation of a document that loads `bibunits`/`chapterbib` but keeps a
@@ -1492,6 +1489,62 @@ impl CrossRef {
       if !lists.contains(&"bibliography") {
         lists.push("bibliography");
       }
+      // \NAT@force@numbers (natbib): a numeric `.bbl` — plain `\bibitem{key}`
+      // with no `[author(year)]` label — forces numbers mode globally, so every
+      // `\cite` prints the bracketed number `[N]`/`[N, M]` even when a numeric
+      // `\bibliographystyle{unsrt}` sits AFTER the cites (witness arXiv:2308.06262
+      // / html_feedback#62). Single-pass LaTeXML froze this bibref's author-year
+      // `show`; Perl `CrossRef.pm:542` keeps it because its `|| $keytag` guard is
+      // always satisfied, so both engines render the raw key. When the show wants
+      // author-year yet EVERY cited entry is numeric-only (has a number, no real
+      // author/year), collapse to natbib's numeric form. SURPASS-PERL:
+      // OXIDIZED_DESIGN #123, KNOWN_PERL_ERRORS #89.
+      let force_numeric = show_wants_ay && {
+        let keys: Vec<&str> = keys_str.split(',').filter(|k| !k.is_empty()).collect();
+        !keys.is_empty()
+          && keys.iter().all(|key| {
+            let mut id = None;
+            for list in &lists {
+              if let Some(be) = self.db.lookup(&format!("BIBLABEL:{}:{}", list, key)) {
+                id = be.get_string("id").map(String::from);
+                if id.is_some() {
+                  break;
+                }
+              }
+            }
+            let Some(id) = id else { return false };
+            match self.db.lookup(&format!("ID:{}", id)) {
+              Some(e) => {
+                let nonempty = |k: &str| {
+                  e.get_value(k)
+                    .is_some_and(|v| !v.to_string().trim().is_empty())
+                };
+                !nonempty("authors")
+                  && !nonempty("fullauthors")
+                  && !nonempty("year")
+                  && (nonempty("number") || nonempty("refnum"))
+              },
+              None => false,
+            }
+          })
+      };
+      // Do the frozen author-year delimiters sit INSIDE the bibref (a Phrase
+      // after Year — `\cite`/`\citet` carry their own `( )`) or as sibling text
+      // (`\citep`, whose macro adds the parens outside the bibref)? Only bracket
+      // our numeric group in the former case, else `\citep`'s parens double up.
+      let internal_delims = show
+        .find("Year")
+        .is_some_and(|yp| show[yp + "Year".len()..].contains("Phrase"));
+      // Numeric collapse joins with ", " (natbib numbers mode) and drops the
+      // author-year path; otherwise the loop keeps the bibref's own separator.
+      let want_authoryear = show_wants_ay && !force_numeric;
+      let sep = if force_numeric {
+        ",".to_string()
+      } else {
+        bibref
+          .get_attribute("separator")
+          .unwrap_or_else(|| ",".to_string())
+      };
 
       let mut refs: Vec<NodeData> = Vec::new();
       for key in keys_str.split(',').filter(|k| !k.is_empty()) {
@@ -1592,6 +1645,12 @@ impl CrossRef {
             children:   vec![NodeData::Text(key.to_string())],
           });
         }
+      }
+      // Bracket the numeric group as a whole ([1, 2]), matching natbib's numbers
+      // mode; \citep-style external parens (no internal delimiter) are left be.
+      if force_numeric && internal_delims && !refs.is_empty() {
+        refs.insert(0, NodeData::Text("[".to_string()));
+        refs.push(NodeData::Text("]".to_string()));
       }
       if !refs.is_empty() {
         doc.replace_node(bibref, &refs);

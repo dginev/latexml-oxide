@@ -47,6 +47,123 @@ fn frontmatter_acmart_pubnotes_not_in_title() {
     "acmart journal/DOI pubnotes missing from frontmatter:\n{x}"
   );
 }
+/// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
+/// \textsuperscript{n}Affil}` block must keep SHORT author names as authors, not
+/// reclassify them as affiliations. "Min Xu" (7 tokens) tripped the old `p < 8`
+/// superscript-position proxy and was demoted to an `Affiliation:`; the
+/// length-independent name-before-marker rule keeps all four authors while the
+/// marker-led affiliation lines stay affiliations.
+#[test]
+fn frontmatter_acl_quad_authors_short_name() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_acl_quad_authors.tex");
+  // All four authors survive as personnames — including the short "Min Xu".
+  for name in [
+    "Tanush Swaminathan",
+    "Runmin Jiang",
+    "Letian Zhang",
+    "Min Xu",
+  ] {
+    assert!(
+      x.contains(&format!("<personname>{name}")),
+      "author {name} missing as a personname:\n{x}"
+    );
+  }
+  // "Min Xu" must NOT be demoted to an affiliation (the reported canary).
+  assert!(
+    !x.contains("role=\"affiliation\">Min Xu"),
+    "short author Min Xu misclassified as an affiliation:\n{x}"
+  );
+  // The marker-led affiliation lines still render as affiliations.
+  assert!(
+    x.contains("Carnegie Mellon University") && x.contains("Allen Institute"),
+    "affiliations dropped:\n{x}"
+  );
+  // The `\\[5pt]` optional length must not leak as literal text.
+  assert!(
+    !x.contains("[5pt]"),
+    "\\\\[5pt] optional length leaked as text:\n{x}"
+  );
+}
+/// html_feedback#6870 (arXiv:2312.14226, aistats2024): `\renewcommand{\abstractname}
+/// {\centering {\large Abstract}}` — the abstract heading must read "Abstract", not
+/// leak the alignment declaration as literal text `\centeringAbstract`. Both Perl and
+/// Rust digested `\centering`'s constructor reversion into the `name=` string; the
+/// designated hook `\format@title@abstract` now neutralizes alignment declarations
+/// during name extraction (mirrors the `titlepage` `Let('\centering','\relax')`
+/// precedent). Surpass-Perl divergence — see OXIDIZED_DESIGN_DIVERGENCES #121.
+#[test]
+fn frontmatter_abstract_centering_name() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_abstract_centering_name.tex");
+  assert!(
+    x.contains("name=\"Abstract\""),
+    "abstract name must be the clean text \"Abstract\":\n{x}"
+  );
+  assert!(
+    !x.contains("\\centering"),
+    "alignment declaration leaked as literal text into the abstract name:\n{x}"
+  );
+}
+/// html_feedback#61 (arXiv:2308.06262, neurips_2023): the `\author` block bolds
+/// only its second name line (`\textbf{…}`) and relies on the class's block-level
+/// `\bf` to bold the rest — which LaTeXML doesn't emulate, so line 1 rendered plain
+/// and line 2 bold (incoherent). A `font="bold"` that wraps an ENTIRE personname is
+/// presentational author-block styling, not semantic; it is now unwrapped so every
+/// author renders coherently. Surpass-Perl divergence — see
+/// OXIDIZED_DESIGN_DIVERGENCES #122. (Plain `article` reproduces the parse — no
+/// neurips dependency.) `\textbf{Zhou Zhao}\footnotemark[2]` additionally guards that
+/// a trailing reference marker (`<ltx:note>`) does not block the unwrap — witness
+/// "Zhou Zhao" in arXiv 2507.06670.
+#[test]
+fn frontmatter_neurips_author_bold_coherent() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_neurips_author_bold_coherent.tex");
+  // The plain-`\textbf` authors survive as plain personnames…
+  for name in ["Fanqing Meng", "Wenqi Shao", "Kaipeng Zhang", "Yu Qiao"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "author {name} must be a plain personname (whole-name bold unwrapped):\n{x}"
+    );
+  }
+  // …the bold author WITH a trailing footnotemark is also unwrapped (the marker
+  // stays inside the personname, the bold does not).
+  assert!(
+    x.contains("<personname>Zhou Zhao") && x.contains("role=\"footnotemark\""),
+    "bold author with a trailing footnotemark marker was not unwrapped:\n{x}"
+  );
+  // …and none carries a whole-name bold wrapper.
+  assert!(
+    !x.contains("<personname><text font=\"bold\">"),
+    "a whole-personname bold wrapper survived (incoherent with the plain lines):\n{x}"
+  );
+}
+/// A multi-line `\author` block whose first line ends with a trailing `\quad \\`
+/// (arXiv 2507.06670, acl): the leaked `\\` heads the next `\quad`-group, so its
+/// first author ("Carol Three" here; "Ruiqi Li" in the paper) landed on an EMPTY
+/// names_line and was demoted to a bogus affiliation with an empty `<personname/>`.
+/// Dropping empty `\\`-pieces up front keeps every line-2 author an author.
+#[test]
+fn frontmatter_multiline_author_leading_break() {
+  let x =
+    convert_to_xml("tests/cluster_regressions/frontmatter_multiline_author_leading_break.tex");
+  // All four authors — including the first of the second line — are personnames.
+  for name in ["Alice One", "Bob Two", "Carol Three", "Dan Four"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "author {name} missing as a personname:\n{x}"
+    );
+  }
+  // The reported canary: no empty personname, and the line-2 first author is NOT
+  // demoted to an affiliation.
+  assert!(
+    !x.contains("<personname/>") && !x.contains("<personname></personname>"),
+    "a leading `\\\\` produced an empty personname:\n{x}"
+  );
+  assert!(
+    !x.contains("role=\"affiliation\">Carol Three"),
+    "line-2 first author Carol Three misclassified as an affiliation:\n{x}"
+  );
+  // The genuine affiliation still attaches.
+  assert!(x.contains("Some University"), "affiliation dropped:\n{x}");
+}
 /// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
 /// block is one creator; the `1\textsuperscript{st}` ordinals must not be
 /// misread as affiliation markers and drop every author. Witness 2602.05517.
@@ -69,7 +186,10 @@ fn frontmatter_ieee_authorblock() {
 }
 /// IEEEtran `\IEEEmembership{Senior Member, IEEE}` inside a flat comma author
 /// list must not become a phantom "Senior Member, IEEE" creator. Witness
-/// 2508.00603.
+/// 2508.00603 (html_feedback#4539: reader saw a stray "," between authors). The
+/// comma-split leaves EMPTY name pieces where each `\IEEEmembership`/" and " sat;
+/// those must not surface as empty `<personname/>` creators, and a trailing
+/// `\thanks` must attach to the preceding real author, not to a nameless creator.
 #[test]
 fn frontmatter_ieee_membership_no_phantom() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_membership.tex");
@@ -80,6 +200,22 @@ fn frontmatter_ieee_membership_no_phantom() {
   assert!(
     !x.contains("<personname>Senior Member") && !x.contains("<personname>Member, IEEE"),
     "IEEEmembership leaked as a phantom creator:\n{x}"
+  );
+  // No empty personname creators from the comma-split membership/" and " gaps.
+  assert!(
+    !x.contains("<personname/>") && !x.contains("<personname></personname>"),
+    "comma-split left an empty <personname/> creator:\n{x}"
+  );
+  // Exactly the two real authors.
+  assert_eq!(
+    x.matches("<creator role=\"author\"").count() + x.matches("<creator before").count(),
+    2,
+    "expected exactly 2 author creators (Alice, Bob):\n{x}"
+  );
+  // The \thanks note is not stranded on a nameless creator.
+  assert!(
+    !x.contains("<personname/>\n") || !x.contains("Funding note"),
+    "the \\thanks funding note stranded on an empty creator:\n{x}"
   );
 }
 /// IEEEtran lazy single-`\author` block with `\\[1em]` row breaks (witness
@@ -500,5 +636,39 @@ fn frontmatter_inst_affiliation_dedup() {
   assert!(
     x.contains(">Uni Montreal") && x.contains("role=\"affiliation\""),
     "the second (distinct) affiliation was dropped:\n{x}"
+  );
+}
+
+/// A figure injected into the title via `\g@addto@macro\@maketitle{…}` must
+/// survive and register its `\label`.
+///
+/// LaTeXML redefines `\maketitle` to deposit its own captured frontmatter and
+/// then `\global\let\@maketitle\relax` — discarding `\@maketitle` wholesale (the
+/// source even notes "we can't yet emulate that"). So content a document appends
+/// to `\@maketitle` (a teaser figure, an epigraph) was silently dropped, and any
+/// `\ref` to a `\label` inside it rendered the raw internal key
+/// "LABEL:fig:teaser". Both engines shared this blind spot (Perl drops it too).
+///
+/// Fix (surpass-Perl, OXIDIZED_DESIGN #124, KNOWN_PERL_ERRORS #90): `\@maketitle`
+/// is predefined empty (so `\g@addto@macro` appends cleanly) and `\maketitle`
+/// now deposits its accumulated content in a title-neutralized group before
+/// relaxing it. Witness arXiv:2506.23854 (html_feedback#4281).
+#[test]
+fn frontmatter_maketitle_injected_figure_survives() {
+  let x = convert_to_xml("tests/cluster_regressions/maketitle_injected_figure.tex");
+  // The injected figure now exists AND carries its label (before the fix there
+  // was no teaser figure at all, hence no `labels="LABEL:fig:teaser"`).
+  assert!(
+    x.contains(r#"labels="LABEL:fig:teaser""#),
+    "the figure injected into \\@maketitle was dropped (no teaser figure/label):\n{x}"
+  );
+  assert!(
+    x.contains("Teaser caption for the drums scene."),
+    "the injected figure's caption was lost:\n{x}"
+  );
+  // The graphics candidate rode along too.
+  assert!(
+    x.contains("teaser.png"),
+    "the injected figure's graphics were lost:\n{x}"
   );
 }

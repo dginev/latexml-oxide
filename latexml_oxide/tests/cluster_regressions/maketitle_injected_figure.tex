@@ -1,0 +1,27 @@
+\documentclass{article}
+\usepackage{graphicx}
+\title{HiNeuS}
+\author{An Author}
+\makeatletter
+% arXiv 2506.23854 (html_feedback#4281): a teaser figure injected into the
+% title via \g@addto@macro\@maketitle. LaTeXML redefines \maketitle and used to
+% discard \@maketitle wholesale, dropping the figure and its \label — so
+% \ref{fig:teaser} rendered "LABEL:fig:teaser".
+% Also exercise the mixed case: \@maketitle can carry a definition AND content.
+% The definition executes (LaTeX-scoped, like real \maketitle's group) and the
+% caption below consumes it, so the fix must run the injection, not just splice
+% tokens.
+\g@addto@macro\@maketitle{%
+\newcommand\teaserscene{drums scene}%
+\begin{figure}
+\centering
+\includegraphics[width=2cm]{teaser.png}
+\caption{Teaser caption for the \teaserscene.}
+\label{fig:teaser}
+\end{figure}%
+}
+\makeatother
+\begin{document}
+\maketitle
+As shown in \ref{fig:teaser}, the method works.
+\end{document}
