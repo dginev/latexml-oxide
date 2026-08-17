@@ -30,10 +30,12 @@ static GLOBAL: dhat::Alloc = dhat::Alloc;
 #[derive(Parser, Debug)]
 #[command(name = "latexml_oxide", version, about)]
 struct Cli {
-  /// The TeX/LaTeX source file to convert (overridden by --source). A `.bib`,
-  /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected.
+  /// The TeX/LaTeX source file(s) to convert (overridden by --source). A `.bib`,
+  /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected. Several files
+  /// given side-by-side (`main.tex supplement.tex`) are converted independently
+  /// and joined into one document, main first, the rest as appendices.
   #[arg(value_name = "SOURCE")]
-  source_positional: Option<String>,
+  source_positional: Vec<String>,
 
   /// Output file (default: stdout). The extension can imply --format (e.g.
   /// .html → html5, .xml → xml, .zip → archive).
@@ -849,19 +851,24 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     process::exit(0);
   }
 
-  // Determine source: --source > --init > positional
+  // Ordered supplementary top-level sources joined onto the main output
+  // (populated by CLI multi-file input below, or by directory auto-detection).
+  let mut supplement_sources: Vec<String> = Vec::new();
+  // Determine source: --source > --init > positional. Multiple positional files
+  // are an explicit multi-document submission — first is the main, the rest are
+  // appended supplements (no archive/directory auto-detection in that case).
   let source = if let Some(ref init) = cli.init {
     init.clone()
   } else if let Some(ref src) = cli.source {
     src.clone()
+  } else if cli.source_positional.is_empty() {
+    eprintln!("Error: no source file specified. Use: latexml_oxide [OPTIONS] <SOURCE>");
+    process::exit(1);
   } else {
-    match cli.source_positional {
-      Some(ref s) => s.clone(),
-      None => {
-        eprintln!("Error: no source file specified. Use: latexml_oxide [OPTIONS] <SOURCE>");
-        process::exit(1);
-      },
+    if cli.source_positional.len() > 1 {
+      supplement_sources = cli.source_positional[1..].to_vec();
     }
+    cli.source_positional[0].clone()
   };
   let target = cli.dest.clone();
 
@@ -917,9 +924,16 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     } else {
       path_flags.push(source.clone());
     }
-    // Find the main .tex file in the directory, matching Perl's behavior
-    match latexml::main_tex::find_main_tex(dir_path) {
-      Ok(main_tex) => main_tex.to_string_lossy().to_string(),
+    // Find the ordered top-level file(s): the main first, then any detected
+    // Supplementary-Material documents (joined onto the output below).
+    match latexml::main_tex::find_top_level_texs(dir_path) {
+      Ok(mut tops) => {
+        let main_tex = tops.remove(0).to_string_lossy().to_string();
+        for supp in tops {
+          supplement_sources.push(supp.to_string_lossy().to_string());
+        }
+        main_tex
+      },
       Err(e) => {
         eprintln!("Failed to find main .tex file in '{}': {}", source, e);
         process::exit(1);
@@ -1076,27 +1090,32 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     process::exit(1);
   }
 
-  // Wire state-level options
-  if cli.nobibtex {
-    // Set BIB_CONFIG to ['bbl'] — skip BibTeX, use pre-existing .bbl file
-    latexml_core::state::assign_value(
-      "BIB_CONFIG",
-      latexml_core::common::store::Stored::Strings(Rc::new([latexml_core::common::arena::pin(
-        "bbl",
-      )])),
-      Some(latexml_core::state::Scope::Global),
-    );
+  // Per-document state a fresh converter session resets — factored so the main
+  // document and each joined supplement (see the multi-document branch below)
+  // apply it identically. DOCUMENTID is intentionally excluded: it names the
+  // main document's root, and supplements get their own prefixed id space.
+  fn apply_document_state(nobibtex: bool, number_sections: Option<bool>) {
+    if nobibtex {
+      // BIB_CONFIG = ['bbl'] — skip BibTeX, use the pre-existing `.bbl` file.
+      latexml_core::state::assign_value(
+        "BIB_CONFIG",
+        latexml_core::common::store::Stored::Strings(Rc::new([latexml_core::common::arena::pin(
+          "bbl",
+        )])),
+        Some(latexml_core::state::Scope::Global),
+      );
+    }
+    // Perl `numbersections!` (default on), last-wins: `Some(true)` numbers,
+    // `Some(false)` suppresses, `None` leaves the setting untouched.
+    if let Some(ns) = number_sections {
+      latexml_core::state::assign_value(
+        "no_number_sections",
+        !ns,
+        Some(latexml_core::state::Scope::Global),
+      );
+    }
   }
-  // Perl `numbersections!` (default on), last-wins between the pair. `Some(true)`
-  // ⇒ number sections (no_number_sections=false); `Some(false)` ⇒ suppress them;
-  // `None` leaves the setting untouched.
-  if let Some(number_sections) = resolved.number_sections {
-    latexml_core::state::assign_value(
-      "no_number_sections",
-      !number_sections,
-      Some(latexml_core::state::Scope::Global),
-    );
-  }
+  apply_document_state(cli.nobibtex, resolved.number_sections);
   // Perl Core.pm L48: DOCUMENTID value
   if let Some(ref docid) = cli.documentid {
     latexml_core::state::assign_value(
@@ -1179,8 +1198,57 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         status:      String::from("Status:conversion:0"),
         status_code: 0,
       }
-    } else {
+    } else if supplement_sources.is_empty() {
       converter.convert(source)
+    } else {
+      // Multi-document submission (directory with detected supplements, or
+      // several files given on the CLI): convert the main, then each supplement
+      // in its own fresh session, and join them into ONE core document — main
+      // first, each supplement an appendix titled by its own `\title`. In-memory
+      // join (`latexml::multidoc`), which suits the common small
+      // main+supplement case; the whole post pipeline downstream is unchanged.
+      let main_resp = converter.convert(source);
+      match main_resp.result.as_deref() {
+        Some(main_xml) if !main_xml.is_empty() => {
+          let mut supp_xmls: Vec<String> = Vec::new();
+          let mut status_max = main_resp.status_code;
+          for supp in &supplement_sources {
+            let mut sconv = Converter::from_config(opts.clone());
+            if sconv.prepare_session(&opts).is_err() {
+              eprintln!(
+                "Warning: could not prepare a session for supplement '{}'; skipping",
+                supp
+              );
+              continue;
+            }
+            // A fresh session reset thread-local state — re-apply the shared
+            // per-document flags before converting this supplement.
+            apply_document_state(cli.nobibtex, resolved.number_sections);
+            let r = sconv.convert(supp.clone());
+            status_max = status_max.max(r.status_code);
+            match r.result {
+              Some(x) if !x.is_empty() => supp_xmls.push(x),
+              _ => eprintln!(
+                "Warning: supplement '{}' produced no output; skipping",
+                supp
+              ),
+            }
+          }
+          match latexml::multidoc::join_core_documents(main_xml, &supp_xmls) {
+            Ok(joined) => latexml::converter::ConversionResponse {
+              result:      Some(joined),
+              log:         main_resp.log,
+              status:      main_resp.status,
+              status_code: status_max,
+            },
+            Err(e) => {
+              eprintln!("Warning: multi-document join failed: {e}; rendering main only");
+              main_resp
+            },
+          }
+        },
+        _ => main_resp,
+      }
     };
     let _ = &source_for_post; // keep alive for post-processing
     phase_status_max = phase_status_max.max(response.status_code);

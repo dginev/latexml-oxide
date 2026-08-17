@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+  - **Supplementary-Material documents are converted and joined into the output.**
+    A submission with several top-level `.tex` files (a main paper + a
+    Supplementary-Information document, both `.bbl`-backed — arXiv's canonical
+    shape) previously lost everything but the main. The directory front-end now
+    detects the ordered set (`find_top_level_texs`, template-safe) and converts
+    each independently, joining them into one document: the main first, each
+    supplement an appendix titled by its own `\title`, with the supplement's
+    id/label space prefixed so cross-references resolve within each document and
+    never collide. Several files given side-by-side on the CLI
+    (`latexml_oxide main.tex supplement.tex`) are joined the same way. In-memory
+    join (`latexml::multidoc`); streaming-scale submissions remain a follow-up.
   - **Multi-file arXiv submissions select the real paper, not a bundled template.**
     When the true `main.tex` delegates its figures to `\input`-ed sections (no
     direct `\includegraphics`) but a shipped class template / how-to / supplement
