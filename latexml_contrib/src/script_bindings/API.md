@@ -76,7 +76,7 @@ Called at the top level of a binding file, or from inside any body.
 | `ExpandPartially(Tokens) -> Tokens` | Expand tokens only up to the first unexpandable one. ([`do_expand_partially`](latexml_core::gullet::do_expand_partially)) |
 | `Fatal(string, string, string)` | End the conversion with a `Fatal:`. |
 | `GetKeyVal(?, string) -> string` | One value out of a parsed keyval set. |
-| `GetKeyVals(string) -> map` | Parse a whole keyval string into a map. ([`split_keyval_source`](latexml_core::keyval::split_keyval_source)) |
+| `GetKeyVals(?) -> map` | A whole parsed keyval set as a map. Accepts a digested `KeyVals` argument (as `KeyVals`/`OptionalKeyVals` params deliver to a constructor) or its `k=v,…` source string. |
 | `Info(string, string, string)` | Log an `Info:` line. |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
 | `IsDefined(string) -> bool` | Whether a control sequence is defined, and not `\let` to `\relax`. ([`is_defined_token`](latexml_core::binding::def::dialect::is_defined_token)) |

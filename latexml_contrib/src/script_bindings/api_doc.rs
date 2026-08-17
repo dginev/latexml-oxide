@@ -360,9 +360,10 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "GetKeyVals",
-    Doc::Rust(
-      "Parse a whole keyval string into a map.",
-      "latexml_core::keyval::split_keyval_source",
+    Doc::Note(
+      "A whole parsed keyval set as a map. Accepts a digested `KeyVals` argument \
+       (as `KeyVals`/`OptionalKeyVals` params deliver to a constructor) or its \
+       `k=v,…` source string.",
     ),
   ),
   ("Info", Doc::Note("Log an `Info:` line.")),

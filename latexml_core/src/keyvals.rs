@@ -641,13 +641,25 @@ impl KeyVals {
         use_default,
         keysets: _,
         primary_keyset,
-        digested_value: _,
+        digested_value,
       } = tuple;
       if !primary_keyset.is_empty() {
+        // Post-digestion `be_digested` has `take()`n the raw `value`, leaving
+        // the value only in `digested_value`; fall back to reverting that, so a
+        // reverted KeyVals keeps `key=value` instead of collapsing to a bare
+        // `key` (issue #627). Mirrors `rebuild`'s digested-value fallback.
+        // `strip_braces`: the digested value reverts with its own `{…}` wrapper,
+        // but `revert_keyval`/`rebrace` re-add braces only when the value has an
+        // outer comma — so strip one level first to match Perl's
+        // `rebrace(Revert($value))` (no braces for a plain value).
+        let digested_fallback = match (value, digested_value) {
+          (None, Some(dv)) => Some(ArgWrap::Tokens(dv.revert()?.strip_braces())),
+          _ => None,
+        };
         let reverted = self.revert_keyval(
           key,
           primary_keyset,
-          value.as_ref(),
+          value.as_ref().or(digested_fallback.as_ref()),
           *use_default,
           tokens.is_empty(),
         )?;
