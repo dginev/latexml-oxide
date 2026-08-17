@@ -1018,3 +1018,49 @@ fn cleveref_cref_in_math_reverts_tie_as_plain_tilde() {
     "the internal \\lx@tilde CS leaked into the tex= reversion:\n{x}"
   );
 }
+
+/// arXiv/html_feedback#140: a bare `\newtheorem{arch}{Architecture}` (no explicit
+/// `\crefname`) referenced with `\cref` rendered only the number ("1") instead of
+/// "Architecture 1" as in the PDF. Real cleveref auto-names such theorems by their
+/// heading; LaTeXML's native `\newtheorem` bypasses cleveref's `\@ynthm` patches, so
+/// both engines dropped the type name. The creftype formatter now falls back to the
+/// theorem heading `\lx@name@<type>` (surpass-Perl, OXIDIZED_DESIGN #131).
+#[test]
+fn cleveref_custom_theorem_cref_shows_heading_name() {
+  let x = convert_and_post_clean("tests/cluster_regressions/cleveref_newtheorem_crefname.tex");
+  // The \cref now resolves creftype → the theorem heading "Architecture" AND the
+  // refnum "1" — both as ref tags, so the link reads "Architecture 1".
+  assert!(
+    x.contains(r#"<text class="ltx_ref_tag">Architecture</text>"#),
+    "\\cref did not render the custom theorem's type name \"Architecture\":\n{x}"
+  );
+  assert!(
+    x.contains(r#"<text class="ltx_ref_tag">1</text>"#),
+    "\\cref lost the reference number \"1\":\n{x}"
+  );
+  // The type name is surfaced at core time as a creftype tag on the theorem.
+  assert!(
+    x.contains(r#"<tag role="creftype">Architecture</tag>"#),
+    "the theorem is missing its creftype type-tag:\n{x}"
+  );
+}
+
+/// Companion to the above (html_feedback#140): an explicit `\crefname{widget}{gadget}
+/// {gadgets}` must WIN over the theorem-heading fallback — `\cref` renders the explicit
+/// "gadget", not the heading "Widget". `\crefname` is now a real definition (a faithful
+/// port of cleveref's `\@crefname`), not a no-op stub, so it populates `\cref@widget@name`
+/// and the primary branch takes precedence over `\lx@name@widget`.
+#[test]
+fn cleveref_explicit_crefname_overrides_heading() {
+  let x = convert_and_post_clean("tests/cluster_regressions/cleveref_newtheorem_crefname.tex");
+  assert!(
+    x.contains(r#"<text class="ltx_ref_tag">gadget</text>"#),
+    "explicit \\crefname name \"gadget\" did not reach the \\cref link:\n{x}"
+  );
+  // The heading "Widget" must NOT be used as this ref's type name (the explicit
+  // \crefname overrides it). It still appears in the theorem's own <tag>/title.
+  assert!(
+    !x.contains(r#"<text class="ltx_ref_tag">Widget</text>"#),
+    "the heading \"Widget\" leaked past the explicit \\crefname into the ref:\n{x}"
+  );
+}
