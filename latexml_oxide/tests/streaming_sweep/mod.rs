@@ -71,7 +71,18 @@ pub fn convert_with(
 
 pub fn sweep_dir(dir: &str) { sweep_dir_with(dir, latexml_contrib::dispatch) }
 
-pub fn sweep_dir_with(dir: &str, dispatch: DispatchFn) {
+pub fn sweep_dir_with(dir: &str, dispatch: DispatchFn) { sweep_dir_shard_with(dir, 0, 1, dispatch) }
+
+/// As [`sweep_dir`], but sweeps only the fixtures at `index % nshards == shard`
+/// (in sorted order). Splitting an over-large suite across several test BINARIES
+/// keeps each process's cumulative libxml2 residue well under the RSS fuse (see the
+/// module docs). `cluster_regressions` (174 fixtures ≈ 8.3 GB residue) needs this and
+/// is swept in two shards; the smaller suites call [`sweep_dir`] (shard 0 of 1 = all).
+pub fn sweep_dir_shard(dir: &str, shard: usize, nshards: usize) {
+  sweep_dir_shard_with(dir, shard, nshards, latexml_contrib::dispatch)
+}
+
+pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {
   let mut fixtures: Vec<_> = std::fs::read_dir(dir)
     .unwrap_or_else(|e| panic!("cannot read {dir}: {e}"))
     .filter_map(|e| e.ok().map(|e| e.path()))
@@ -83,7 +94,10 @@ pub fn sweep_dir_with(dir: &str, dispatch: DispatchFn) {
     "{dir}: no fixtures found — wrong path?"
   );
   let mut divergent: Vec<String> = Vec::new();
-  for path in fixtures {
+  for (i, path) in fixtures.into_iter().enumerate() {
+    if i % nshards != shard {
+      continue;
+    }
     let src = path.to_string_lossy().into_owned();
     let (eager_xml, eager_errs) = convert_with(&src, None, dispatch);
     let (streamed_xml, streamed_errs) = convert_with(&src, Some(3), dispatch);
