@@ -1,0 +1,19 @@
+% A `\columncolor` in a p/m column, followed by a cell whose content starts with
+% `\lbrack` (a CS \let to `[`), used to make the overhang-arg gobble run forward
+% past the row's `\\` and cascade the paragraph-column mode
+% (`\@end@tabular ... internal_vertical`), truncating the document and losing the
+% bibliography below. `\toprule[1pt]` (a booktabs rule with an optional-width arg)
+% is part of the trigger. Fixed by reading the overhang args with LaTeXML's
+% optional reader (literal `[` only). Witness arXiv:2606.02077.
+\documentclass{article}
+\usepackage{booktabs}\usepackage[table]{xcolor}\usepackage{array}
+\begin{document}
+\begin{tabular}{>{\columncolor{blue}}p{2cm}>{\columncolor{blue}}p{2cm}}
+\toprule[1pt]
+\lbrack3\rbrack & second cell \\
+\bottomrule[1pt]
+\end{tabular}
+\begin{thebibliography}{9}
+\bibitem{a} A cited entry below the table.
+\end{thebibliography}
+\end{document}
