@@ -4541,3 +4541,42 @@ byte-matching the golden pdflatex `.bbl`+`.aux`. Shared upstream bug recorded as
 KNOWN_PERL_ERRORS #89.
 
 **Guard**: `06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
+
+### 124. Content injected into `\@maketitle` is recovered, not discarded
+
+**Perl** discards `\@maketitle` wholesale. LaTeXML replaces the LaTeX kernel's
+`\maketitle`→`\@maketitle` typesetting pipeline with its own frontmatter model:
+`\maketitle` deposits the separately-captured title/author/date
+(`\lx@frontmatterhere`) and then `\global\let\@maketitle\relax`
+(`latex_constructs.pool.ltxml` L1105), with the source comment (L1094) admitting
+"In case `\@maketitle` defines these — we can't yet emulate that." So content a
+document appends to `\@maketitle` — a teaser figure, an epigraph, a banner — is
+silently dropped, and any `\ref` to a `\label` inside it renders the raw internal
+key ("LABEL:fig:teaser"). latexml-oxide reproduced this exactly (SHARED-FAILURE,
+verified same-host on 0.8.8: both engines drop the figure).
+
+**Rust behavior**: `\@maketitle` is predefined empty (so `\g@addto@macro\@maketitle`
+appends cleanly — LaTeXML never reimplements the title *layout*, so `\@maketitle`
+is otherwise undefined and appending to it warns "not expandable" and leaves a
+self-reference), and `\maketitle` gains a `\lx@deposit@maketitle` step — after
+`\lx@frontmatterhere`, before `\global\let\@maketitle\relax` — that deposits
+`\@maketitle`'s accumulated content in a title-neutralized group
+(`\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty`). An
+`\ifx\@maketitle\@empty` guard makes it a no-op for the vast majority of papers.
+Injected definitions execute LaTeX-scoped (group-local, as real `\maketitle`'s
+`\begingroup` does); injected content deposits.
+
+**Why**: real pdflatex runs `\@maketitle`, so the teaser figure appears right
+below the title and its `\ref` resolves to the figure number. Matching the
+published PDF beats dropping the figure and leaking the internal label key. The
+title-neutralization reuses the same technique as the `\format@title@abstract`
+fix (#121): run the macro with the title-producing pieces neutralized so only the
+injected content survives, rather than fragile token-parsing.
+
+**Witness**: arXiv 2506.23854 (html_feedback #4281) — a teaser figure injected via
+`\g@addto@macro\@maketitle{\begin{figure}…\label{fig:teaser}…\end{figure}}`; the
+figure vanished and `\figref{fig:teaser}` rendered "Fig. LABEL:fig:teaser". Now the
+figure renders (`xml:id="S0.F1"`) and the reference resolves to "Fig. 1". Shared
+upstream bug recorded as KNOWN_PERL_ERRORS #90.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.
