@@ -1,0 +1,12 @@
+\documentclass{article}
+% arXiv:2511.14625v1 (html_feedback#6638): the \twocolumn[...] optional argument
+% is a one-column-spanning header; real LaTeX boxes it (\@topnewpage), so a font
+% declaration inside it (\Large) is scoped to the header and must NOT leak into
+% the body. cvpr's \maketitlesupplementary does exactly this
+% (\twocolumn[\centering\Large ... Supplementary Material ...]); before the fix
+% the whole Supplementary section rendered oversized.
+\begin{document}
+\twocolumn[\centering\Large Spanning Header Title\\ Second header line]
+\section{Body Section}
+Ordinary body text after the spanning header must be normal size.
+\end{document}

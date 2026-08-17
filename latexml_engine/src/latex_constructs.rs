@@ -4900,8 +4900,23 @@ LoadDefinitions!({
   def_primitive_noop("\\leftmark")?;
   def_primitive_noop("\\rightmark")?;
   def_primitive_noop("\\pagenumbering{}")?;
-  // Perl: DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par');
-  DefMacro!("\\twocolumn[]", "\\ifx.#1.\\else\\par\\noindent#1\\fi\\par");
+  // Perl: DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par').
+  //
+  // SURPASS-PERL (OXIDIZED_DESIGN): the optional argument is a one-column-
+  // spanning header; real LaTeX typesets it in a box (`\@topnewpage`), so any
+  // font/alignment declaration inside it (`\centering`, `\Large`, …) is scoped
+  // to the header and does NOT leak into the body. Perl's simplified macro
+  // splices `#1` unscoped, so a `\Large` in the header runs on into everything
+  // after — e.g. cvpr's `\maketitlesupplementary` does
+  // `\twocolumn[\centering\Large … Supplementary Material …]`, and the whole
+  // Supplementary section renders oversized. (Perl escapes this only because it
+  // has no cvpr binding and never runs `\maketitlesupplementary` at all.) Wrap
+  // `#1` in a group with its own `\par`, matching the box scope real LaTeX
+  // gives it. Witness html_feedback#6638 (arXiv:2511.14625v1).
+  DefMacro!(
+    "\\twocolumn[]",
+    "\\ifx.#1.\\else\\par{\\noindent#1\\par}\\fi\\par"
+  );
   // Perl: DefMacro('\onecolumn', '\par');
   DefMacro!("\\onecolumn", "\\par");
   DefMacro!("\\@onecolumna", "", locked => true);
