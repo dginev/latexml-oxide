@@ -74,6 +74,37 @@ fn frontmatter_biblatex_xr_preamble_no_leak() {
     );
   }
 }
+/// html_feedback#6242 (arXiv:2510.02340): two `\textsuperscript{n}Affil` institutions
+/// on one space-separated affiliation line — `\textsuperscript{1}University A
+/// \textsuperscript{2}University B` — must split into TWO affiliations so each attaches
+/// to its authors by number, not merge into one under a single author. Reuses the
+/// `\thanks`-abuse splitter (never breaks a superscript glued inside an institution
+/// name). Refines OXIDIZED_DESIGN #52(f); Rust surpasses (Perl emits no structured
+/// creators for this superscript idiom at all).
+#[test]
+fn frontmatter_multi_affil_superscript() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_multi_affil_superscript.tex");
+  // Both authors present…
+  assert!(
+    x.contains("<personname>Alice</personname>") && x.contains("<personname>Bob</personname>"),
+    "authors missing:\n{x}"
+  );
+  // …two SEPARATE affiliations, each a standalone contact…
+  assert_eq!(
+    x.matches("role=\"affiliation\"").count(),
+    2,
+    "expected exactly two split affiliations:\n{x}"
+  );
+  assert!(
+    x.contains(">University A") && x.contains(">University B<"),
+    "the two numbered institutions did not both survive:\n{x}"
+  );
+  // …and NOT merged into one (the reported canary).
+  assert!(
+    !x.contains("University A University B"),
+    "the two superscript affiliations merged into one:\n{x}"
+  );
+}
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
 /// \textsuperscript{n}Affil}` block must keep SHORT author names as authors, not
 /// reclassify them as affiliations. "Min Xu" (7 tokens) tripped the old `p < 8`

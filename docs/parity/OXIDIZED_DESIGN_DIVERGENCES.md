@@ -1417,6 +1417,21 @@ marker — 2507.06670 "Yu Zhang" — are untouched). Same-host Perl 0.8.8 emits 
 empty creators (SHARED-FAILURE); Rust surpasses. Guard:
 `06_cluster_frontmatter::frontmatter_ieee_membership_no_phantom`.
 
+**(f) Multiple `\textsuperscript{n}Affil` on one space-separated affiliation line.** A
+marker-led affiliation line may carry several numbered institutions with only spaces
+between them — `\textsuperscript{1}University A \textsuperscript{2}University B`
+(html_feedback#6242, arXiv:2510.02340). The marker-branch classified the whole line as
+ONE affiliation, merging both (and attaching them to a single author). Now the line is
+split at each whitespace-preceded mark (reusing `split_before_affiliation_marks`, the
+`\thanks`-abuse splitter — which by construction never breaks a superscript glued
+INSIDE an institution name, e.g. "Center for R$^2$ Studies"), so each numbered
+institution becomes its own affiliation and `relocate_annotations` attaches it to the
+authors bearing that number. Perl produces no structured creators for this superscript
+idiom at all, so Rust already surpasses; this refines the surpass. Guard:
+`06_cluster_frontmatter::frontmatter_multi_affil_superscript`. (Residual, separate: when
+a `\texttt{…}` email is glued to the last affil with no `\\`, it still bleeds into that
+affiliation — a distinct email-boundary defect.)
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`
