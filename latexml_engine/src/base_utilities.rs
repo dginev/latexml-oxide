@@ -934,7 +934,20 @@ LoadDefinitions!({
                 entries.push((AuthorLineKind::Author, author));
               }
             } else {
-              entries.push((AuthorLineKind::Affiliation, line));
+              // A marker-led affiliation line may carry MULTIPLE
+              // `\textsuperscript{n}Affil` institutions on one space-separated line
+              // (html_feedback#6242, arXiv:2510.02340) — `\textsuperscript{1}Univ A
+              // \textsuperscript{2}Univ B`. Split at each whitespace-preceded mark
+              // (reusing the `\thanks`-abuse splitter, which never breaks a
+              // superscript glued INSIDE an institution name) so each numbered
+              // institution becomes its own affiliation and attaches to its authors
+              // by number, instead of merging into one.
+              for seg in split_before_affiliation_marks(line) {
+                if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+                  continue;
+                }
+                entries.push((AuthorLineKind::Affiliation, seg));
+              }
             }
           },
         }
