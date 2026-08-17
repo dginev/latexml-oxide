@@ -1404,6 +1404,18 @@ is the names, the rest affiliations. Witness arXiv:2507.06670 (acl): line 2's fi
 author "Ruiqi Li" was an empty personname + a bogus "Ruiqi Li" affiliation; now an
 author. Same-host Perl 0.8.8 mangles it identically (SHARED-FAILURE) — recorded as
 KNOWN_PERL_ERRORS #91.
+**(e) Phantom empty creators from comma-split `\IEEEmembership`/`\thanks`.** A flat
+comma author list with interspersed non-name commands — `\author{Alice,
+\IEEEmembership{…}, and Bob, …\thanks{…}}` (html_feedback#4539, witness 2508.00603) —
+comma/" and "-splits into pieces where the `\IEEEmembership{…}` pieces digest to
+nothing, surfacing as empty `<ltx:personname/>` creators; a trailing `\thanks` then
+strands its affiliation/email on a nameless creator, and the reader sees a stray "`,
+,`" between authors. `insert_frontmatter`'s `coalesce_empty_creators` drops
+name-empty author creators, moving any contacts they carry to the preceding real
+author (a `\footnotemark`-note keeps a personname non-empty, so real authors with a
+marker — 2507.06670 "Yu Zhang" — are untouched). Same-host Perl 0.8.8 emits the same
+empty creators (SHARED-FAILURE); Rust surpasses. Guard:
+`06_cluster_frontmatter::frontmatter_ieee_membership_no_phantom`.
 
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still

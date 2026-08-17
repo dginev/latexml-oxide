@@ -186,7 +186,10 @@ fn frontmatter_ieee_authorblock() {
 }
 /// IEEEtran `\IEEEmembership{Senior Member, IEEE}` inside a flat comma author
 /// list must not become a phantom "Senior Member, IEEE" creator. Witness
-/// 2508.00603.
+/// 2508.00603 (html_feedback#4539: reader saw a stray "," between authors). The
+/// comma-split leaves EMPTY name pieces where each `\IEEEmembership`/" and " sat;
+/// those must not surface as empty `<personname/>` creators, and a trailing
+/// `\thanks` must attach to the preceding real author, not to a nameless creator.
 #[test]
 fn frontmatter_ieee_membership_no_phantom() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_ieee_membership.tex");
@@ -197,6 +200,22 @@ fn frontmatter_ieee_membership_no_phantom() {
   assert!(
     !x.contains("<personname>Senior Member") && !x.contains("<personname>Member, IEEE"),
     "IEEEmembership leaked as a phantom creator:\n{x}"
+  );
+  // No empty personname creators from the comma-split membership/" and " gaps.
+  assert!(
+    !x.contains("<personname/>") && !x.contains("<personname></personname>"),
+    "comma-split left an empty <personname/> creator:\n{x}"
+  );
+  // Exactly the two real authors.
+  assert_eq!(
+    x.matches("<creator role=\"author\"").count() + x.matches("<creator before").count(),
+    2,
+    "expected exactly 2 author creators (Alice, Bob):\n{x}"
+  );
+  // The \thanks note is not stranded on a nameless creator.
+  assert!(
+    !x.contains("<personname/>\n") || !x.contains("Funding note"),
+    "the \\thanks funding note stranded on an empty creator:\n{x}"
   );
 }
 /// IEEEtran lazy single-`\author` block with `\\[1em]` row breaks (witness
