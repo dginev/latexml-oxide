@@ -25,13 +25,22 @@ LoadDefinitions!({
   // cleveref wraps it; eager Let here would clobber the wrong target.
   at_begin_document(TokenizeInternal!(r"\let\label\lx@cleverref@label"))?;
 
-  // Override raw TeX \crefname/\Crefname/\crefalias with safe stubs.
-  // The raw cleveref.sty definitions use complex \expandafter chains and
-  // \toksdef that cause token consumption bugs with many calls + blank lines.
-  // These stubs store the names for reference formatting without the risky
-  // raw TeX expansion chains.
-  def_macro_noop("\\crefname{}{}{}")?;
-  def_macro_noop("\\Crefname{}{}{}")?;
+  // \crefname{type}{singular}{plural} / \Crefname{...}: register the cleveref type
+  // name so \cref/\Cref render "<name> <num>". A faithful reimplementation of raw
+  // cleveref's \@crefname core (see cref_define_name) replacing the former no-op
+  // stubs. The raw macros use \toksdef/\expandafter chains that mis-consumed tokens
+  // here; this clean port avoids them (the same approach thmtools_sty.rs already
+  // uses for \declaretheorem[refname=]). An explicit \crefname now populates
+  // \cref@<type>@name, so it wins over the theorem-heading fallback (OXIDIZED_DESIGN #131).
+  DefPrimitive!("\\crefname{}{}{}", sub[(type_arg, sg, pl)] {
+    cref_define_name("cref", type_arg, sg, pl)?;
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\Crefname{}{}{}", sub[(type_arg, sg, pl)] {
+    cref_define_name("Cref", type_arg, sg, pl)?;
+    Ok(Vec::new())
+  });
+  // \crefalias is defined below as a 2-arg primitive; leave it as-is.
   def_macro_noop("\\crefalias{}{}")?;
 
   // Helper: produces the literal `~` (U+007E) as text — a CS so an active `~`
@@ -119,42 +128,19 @@ LoadDefinitions!({
 
   DefPrimitive!("\\crefalias{}{}", sub[(_counter, _ctype)] { Ok(Vec::new()) });
 
-  // Type formatter macros
+  // Type formatter macros. `theorem_fallback` (the singular creftype/creftypecap
+  // variants) supplies the surpass-Perl auto-naming — see cleverref_type_name.
   DefMacro!("\\lx@cleverrefnum@@{}", sub[args] {
-    let ctype = cref_type(&args[0].to_string());
-    let cs = s!("\\cref@{}@name", ctype);
-    if has_meaning(&T_CS!(&cs)) {
-      Ok(Tokens!(T_CS!(&cs)))
-    } else {
-      Ok(Tokens!())
-    }
+    Ok(cleverref_type_name(&args[0].to_string(), "cref", "name", true))
   });
   DefMacro!("\\lx@cleverrefnumplural@@{}", sub[args] {
-    let ctype = cref_type(&args[0].to_string());
-    let cs = s!("\\cref@{}@name@plural", ctype);
-    if has_meaning(&T_CS!(&cs)) {
-      Ok(Tokens!(T_CS!(&cs)))
-    } else {
-      Ok(Tokens!())
-    }
+    Ok(cleverref_type_name(&args[0].to_string(), "cref", "name@plural", false))
   });
   DefMacro!("\\lx@cleverrefnumcap@@{}", sub[args] {
-    let ctype = cref_type(&args[0].to_string());
-    let cs = s!("\\Cref@{}@name", ctype);
-    if has_meaning(&T_CS!(&cs)) {
-      Ok(Tokens!(T_CS!(&cs)))
-    } else {
-      Ok(Tokens!())
-    }
+    Ok(cleverref_type_name(&args[0].to_string(), "Cref", "name", true))
   });
   DefMacro!("\\lx@cleverrefnumpluralcap@@{}", sub[args] {
-    let ctype = cref_type(&args[0].to_string());
-    let cs = s!("\\Cref@{}@name@plural", ctype);
-    if has_meaning(&T_CS!(&cs)) {
-      Ok(Tokens!(T_CS!(&cs)))
-    } else {
-      Ok(Tokens!())
-    }
+    Ok(cleverref_type_name(&args[0].to_string(), "Cref", "name@plural", false))
   });
 
   // Register type_tag_formatter mappings
@@ -163,6 +149,82 @@ LoadDefinitions!({
   AssignMapping!("type_tag_formatter", "creftypecap" => "\\lx@cleverrefnumcap@@");
   AssignMapping!("type_tag_formatter", "creftypepluralcap" => "\\lx@cleverrefnumpluralcap@@");
 });
+
+/// Port of raw cleveref's `\@crefname` core (`\newcommand\crefname[3]` →
+/// `\@crefname{cref}{type}{sg}{pl}{}`): define `\<prefix>@<type>@name` and
+/// `\<prefix>@<type>@name@plural` from the singular/plural arguments. `prefix` is
+/// `"cref"` (for `\crefname`) or `"Cref"` (for `\Crefname`). The names are stored as
+/// **raw** token bodies (never expanded), so markup such as `\textsc{lemma}` survives,
+/// matching cleveref's `\def`. The raw macro's `\toksdef`/`\expandafter` chains are not
+/// reproduced — the same clean approach `thmtools_sty.rs` uses for
+/// `\declaretheorem[refname=]`. Like that precedent, the cross-variant `\MakeUppercase`
+/// derivation (deriving `\Cref@…` from a lone `\crefname`) is not reproduced; provide
+/// `\Crefname` explicitly for the capitalised form.
+fn cref_define_name(
+  prefix: &str,
+  type_arg: Tokens,
+  singular: Tokens,
+  plural: Tokens,
+) -> Result<()> {
+  let ctype = do_expand(type_arg)?.to_string();
+  let ctype = ctype.trim();
+  def_macro(
+    T_CS!(s!("\\{}@{}@name", prefix, ctype)),
+    None,
+    singular,
+    None,
+  )?;
+  def_macro(
+    T_CS!(s!("\\{}@{}@name@plural", prefix, ctype)),
+    None,
+    plural,
+    None,
+  )?;
+  Ok(())
+}
+
+/// Resolve a cleveref type-name control sequence (`\cref@<type>@name`,
+/// `\Cref@<type>@name@plural`, …) to the tokens the `type_tag_formatter` emits.
+///
+/// When the primary CS is undefined and `theorem_fallback` is set, fall back to the
+/// theorem's stored heading `\lx@name@<type>`. This is a **surpass-Perl** divergence
+/// (OXIDIZED_DESIGN #131): real cleveref patches `\@ynthm`/`\@xnthm`/`\@othm` so that
+/// `\newtheorem{arch}{Architecture}` auto-registers "Architecture" as the cref name,
+/// but LaTeXML's `\newtheorem` (`define_new_theorem`) is a native primitive that never
+/// routes through those patches — so Perl and Rust alike leave `\cref@arch@name`
+/// undefined and `\cref{...}` renders bare "1" instead of "Architecture 1". LaTeXML
+/// already stores the heading as `\lx@name@<type>`, so the singular creftype/creftypecap
+/// formatters reuse it, matching the PDF. Only the *singular* names get the fallback:
+/// cleveref's theorem patches set only `cref@<type>@name@preamble` (never `@plural`).
+/// The heading is emitted verbatim; cleveref's first-letter `capitalize` case transform
+/// is not reproduced, so a lowercase-`\cref` under the default (non-`capitalize`) option
+/// keeps the heading's own case.
+///
+/// `\lx@name@<type>` is also set by `\floatname`/`\newfloat` (`float_sty.rs`), so custom
+/// floats get the same auto-naming — matching real cleveref; standard figure/table/equation
+/// keep their raw-cleveref primary name (fallback stays dormant). An explicit `\crefname`
+/// (now a real definition — see `cref_define_name`) populates the primary CS, so it wins
+/// over this fallback. Witness arXiv 2305.10391 (`\usepackage[capitalize,…]{cleveref}` +
+/// `\newtheorem{arch}{Architecture}`).
+fn cleverref_type_name(
+  type_arg: &str,
+  prefix: &str,
+  suffix: &str,
+  theorem_fallback: bool,
+) -> Tokens {
+  let ctype = cref_type(type_arg);
+  let cs = s!("\\{}@{}@{}", prefix, ctype, suffix);
+  if has_meaning(&T_CS!(&cs)) {
+    return Tokens!(T_CS!(&cs));
+  }
+  if theorem_fallback {
+    let name_cs = s!("\\lx@name@{}", ctype);
+    if has_meaning(&T_CS!(&name_cs)) {
+      return Tokens!(T_CS!(&name_cs));
+    }
+  }
+  Tokens!()
+}
 
 /// Perl: crefType($type) — resolve type alias
 fn cref_type(ctype: &str) -> String {

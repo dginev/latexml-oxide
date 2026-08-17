@@ -1,0 +1,26 @@
+\documentclass{article}
+% arXiv:2305.10391v2 (html_feedback#140): a custom theorem defined with a bare
+% \newtheorem{arch}{Architecture} (no explicit \crefname) is referenced with
+% \cref. Real cleveref auto-names such theorems by their heading, so the PDF
+% renders "Architecture 1"; both LaTeXML engines used to drop the type name and
+% render bare "1". The Rust binding now falls the creftype formatter back to the
+% theorem heading \lx@name@<type> (surpass-Perl, OXIDIZED_DESIGN #131). The real
+% paper loads cleveref with [capitalize]; mirror that so the case is exercised.
+%
+% The `widget` theorem additionally carries an explicit \crefname whose name
+% ("gadget") differs from its heading ("Widget"): the explicit name must WIN over
+% the heading fallback — \crefname is now a real definition, not a no-op stub.
+\usepackage{amsthm}
+\usepackage[capitalize,nameinlink]{cleveref}
+\newtheorem{arch}{Architecture}
+\newtheorem{widget}{Widget}
+\crefname{widget}{gadget}{gadgets}
+\begin{document}
+\begin{arch}\label{myarch}
+A custom theorem.
+\end{arch}
+\begin{widget}\label{mywidget}
+Another custom theorem.
+\end{widget}
+See \cref{myarch} and \cref{mywidget} for details.
+\end{document}

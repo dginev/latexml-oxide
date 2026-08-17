@@ -4904,3 +4904,42 @@ gives `\@topnewpage`: the header keeps its `\Large`, the body returns to normal 
 This surpasses Perl's simplification. Witness html_feedback#6638 (arXiv:2511.14625v1).
 
 **Guard**: `06_cluster_regressions::twocolumn_optional_header_font_does_not_leak_into_body`.
+
+### 131. cleveref `\cref` names custom `\newtheorem` types by their heading
+
+**Perl & Rust (shared limit)**: real cleveref patches LaTeX's `\@ynthm`/`\@xnthm`/`\@othm`
+so that `\newtheorem{arch}{Architecture}` auto-registers "Architecture" as the cleveref
+type name — `\cref{...}` then renders "Architecture 1" (as in the PDF). LaTeXML's
+`\newtheorem` is a native primitive (`define_new_theorem`) that never routes through
+those patches, so `\cref@arch@name` stays undefined. Both engines therefore emit the
+type-tag empty (dropped by `removeEmptyElement`) and `\cref` degrades to a bare
+"1" — the `creftype` component of `show="creftype~refnum"` resolves to nothing.
+
+**Rust (surpass-Perl)**: two changes, in precedence order.
+
+1. `\crefname`/`\Crefname` are now **real definitions** (`cleveref_sty.rs::cref_define_name`,
+   a clean port of raw cleveref's `\@crefname` — the raw macros' `\toksdef`/`\expandafter`
+   chains mis-consumed tokens here, so they had been no-op stubs). An explicit
+   `\crefname{arch}{…}` therefore populates `\cref@arch@name` and takes precedence, exactly
+   as in LaTeX. The cross-variant `\MakeUppercase` derivation (deriving `\Cref@…` from a lone
+   `\crefname`) is not reproduced — provide `\Crefname` for the capitalised form — matching
+   the `thmtools_sty.rs` `\declaretheorem[refname=]` precedent.
+2. When no explicit name is set, the `creftype`/`creftypecap` formatters
+   (`cleveref_sty.rs::cleverref_type_name`) fall back to the theorem heading
+   `\lx@name@<type>` (which `define_new_theorem` already stores), so a bare
+   `\newtheorem{arch}{Architecture}` renders "Architecture 1" — matching the PDF and
+   exceeding Perl. Only the **singular** names get the fallback (cleveref's theorem patches
+   set only `cref@<type>@name@preamble`, never a plural). The heading is emitted verbatim:
+   cleveref's first-letter `capitalize` case transform is not reproduced, so a lowercase
+   `\cref` under the default (non-`capitalize`) option keeps the heading's own case.
+
+`\lx@name@<type>` is also defined by `\floatname`/`\newfloat` (`float_sty.rs`), so the
+fallback additionally auto-names custom floats — matching real cleveref's float auto-naming,
+so it is beneficial, not a leak; standard `figure`/`table`/`equation` keep their raw-cleveref
+primary name (the fallback stays dormant).
+
+Witness html_feedback#140 (arXiv:2305.10391v2 — `\usepackage[capitalize,nameinlink]{cleveref}`
++ `\newtheorem{arch}{Architecture}`).
+
+**Guards**: `06_cluster_regressions::cleveref_custom_theorem_cref_shows_heading_name`
+(heading fallback) and `::cleveref_explicit_crefname_overrides_heading` (explicit name wins).
