@@ -105,6 +105,31 @@ fn frontmatter_multi_affil_superscript() {
     "the two superscript affiliations merged into one:\n{x}"
   );
 }
+/// html_feedback#6255 (googledeepmind, authblk): a single `\author{A, B, C}` comma
+/// list is authblk's one-author-arg form, so it stayed as one merged
+/// `<personname>A, B, C</personname>`. The DEFAULT `\author` already splits a comma
+/// list into separate creators; authblk's `\author` routed a no-`\and` list to
+/// `\lx@add@creator` (single) instead. Routing a comma list to `\lx@add@authors`
+/// too fixes the inconsistency. OXIDIZED_DESIGN #52(h).
+#[test]
+fn frontmatter_authblk_comma_list() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_authblk_comma_list.tex");
+  for name in ["Alice One", "Bob Two", "Carol Three"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "author {name:?} must be its own creator, not merged:\n{x}"
+    );
+  }
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    3,
+    "authblk comma list must split into three separate creators:\n{x}"
+  );
+  assert!(
+    !x.contains("<personname>Alice One, Bob"),
+    "the comma list stayed welded into one personname:\n{x}"
+  );
+}
 /// arXiv:2403.16405 (IEEEtran conference): a `\author{}` grid where `\and` starts a
 /// COLUMN and top-level `\\` a ROW within it is linearized column-major (declaration
 /// order), scrambling the row-major reading order shown in the PDF/arXiv metadata.
