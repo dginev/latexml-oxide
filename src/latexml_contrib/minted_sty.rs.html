@@ -118,30 +118,53 @@
 <a href=#118 id=118 data-nosnippet>118</a>  <span class="kw">use </span>latexml_package::package::listings_sty::{listings_read_raw_lines, lst_process_display};
 <a href=#119 id=119 data-nosnippet>119</a>  {
 <a href=#120 id=120 data-nosnippet>120</a>    <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="string">"\\begin{minted}"</span>);
-<a href=#121 id=121 data-nosnippet>121</a>    <span class="kw">let </span>params = parse_parameters(<span class="string">"[]{}"</span>, <span class="kw-2">&amp;</span>cs, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="kw">let </span>expansion: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
-<a href=#123 id=123 data-nosnippet>123</a>      <span class="kw">move </span>|_args: Vec&lt;ArgWrap&gt;| {
-<a href=#124 id=124 data-nosnippet>124</a>        bgroup();
-<a href=#125 id=125 data-nosnippet>125</a>        assign_value(
-<a href=#126 id=126 data-nosnippet>126</a>          <span class="string">"current_environment"</span>,
-<a href=#127 id=127 data-nosnippet>127</a>          Stored::String(pin(<span class="string">"lstlisting"</span>)),
-<a href=#128 id=128 data-nosnippet>128</a>          <span class="prelude-val">None</span>,
-<a href=#129 id=129 data-nosnippet>129</a>        );
-<a href=#130 id=130 data-nosnippet>130</a>        def_macro(
-<a href=#131 id=131 data-nosnippet>131</a>          <span class="macro">T_CS!</span>(<span class="string">"\\@currenvir"</span>),
-<a href=#132 id=132 data-nosnippet>132</a>          <span class="prelude-val">None</span>,
-<a href=#133 id=133 data-nosnippet>133</a>          <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"lstlisting"</span>)),
-<a href=#134 id=134 data-nosnippet>134</a>          <span class="prelude-val">None</span>,
-<a href=#135 id=135 data-nosnippet>135</a>        )<span class="question-mark">?</span>;
-<a href=#136 id=136 data-nosnippet>136</a>        <span class="kw">let </span>text = listings_read_raw_lines(<span class="string">"minted"</span>);
-<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">let </span>result = lst_process_display(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>text);
-<a href=#138 id=138 data-nosnippet>138</a>        <span class="prelude-val">Ok</span>(Tokens::new(result))
-<a href=#139 id=139 data-nosnippet>139</a>      },
-<a href=#140 id=140 data-nosnippet>140</a>    )));
-<a href=#141 id=141 data-nosnippet>141</a>    def_macro(cs, params, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#142 id=142 data-nosnippet>142</a>  }
-<a href=#143 id=143 data-nosnippet>143</a>  <span class="comment">// No \end{minted}: mintedEnvBody fully consumed it.
-<a href=#144 id=144 data-nosnippet>144</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{listing}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\begin{figure}"</span>);
-<a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{listing}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\end{figure}"</span>);
-<a href=#146 id=146 data-nosnippet>146</a>});
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="comment">// `\begin{minted}[opts]{language}`. Previously the `[opts]` were dropped, so
+<a href=#122 id=122 data-nosnippet>122</a>    // `escapeinside=!!` never reached the listings tokenizer: an inline
+<a href=#123 id=123 data-nosnippet>123</a>    // `!$\label{…}$!` was emitted as literal code, its `\label` never ran, and
+<a href=#124 id=124 data-nosnippet>124</a>    // `\ref` to that line vanished (html_feedback#1028, arXiv:2308.03276;
+<a href=#125 id=125 data-nosnippet>125</a>    // OXIDIZED_DESIGN #127). We now feed the options through `\lstset{…}` (the
+<a href=#126 id=126 data-nosnippet>126</a>    // same activation `\begin{lstlisting}` uses), so minted's `escapeinside`/
+<a href=#127 id=127 data-nosnippet>127</a>    // `mathescape` — shared verbatim with the listings substrate — take effect;
+<a href=#128 id=128 data-nosnippet>128</a>    // minted-only keys (`linenos`, `fontsize`, …) are stored harmlessly and
+<a href=#129 id=129 data-nosnippet>129</a>    // ignored. The `{language}` arg is left unapplied (we keep the current
+<a href=#130 id=130 data-nosnippet>130</a>    // language-agnostic rendering). Scoped to the environment's `bgroup`.
+<a href=#131 id=131 data-nosnippet>131</a>    </span><span class="kw">let </span>params = parse_parameters(<span class="string">"[]{}"</span>, <span class="kw-2">&amp;</span>cs, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">let </span>expansion: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
+<a href=#133 id=133 data-nosnippet>133</a>      <span class="kw">move </span>|args: Vec&lt;ArgWrap&gt;| {
+<a href=#134 id=134 data-nosnippet>134</a>        <span class="comment">// args[0] = `[opts]` (optional); args[1] = `{language}` (unapplied).
+<a href=#135 id=135 data-nosnippet>135</a>        </span><span class="kw">let </span>opts = args.into_iter().next().and_then(|a| a.owned_tokens());
+<a href=#136 id=136 data-nosnippet>136</a>        bgroup();
+<a href=#137 id=137 data-nosnippet>137</a>        assign_value(
+<a href=#138 id=138 data-nosnippet>138</a>          <span class="string">"current_environment"</span>,
+<a href=#139 id=139 data-nosnippet>139</a>          Stored::String(pin(<span class="string">"lstlisting"</span>)),
+<a href=#140 id=140 data-nosnippet>140</a>          <span class="prelude-val">None</span>,
+<a href=#141 id=141 data-nosnippet>141</a>        );
+<a href=#142 id=142 data-nosnippet>142</a>        def_macro(
+<a href=#143 id=143 data-nosnippet>143</a>          <span class="macro">T_CS!</span>(<span class="string">"\\@currenvir"</span>),
+<a href=#144 id=144 data-nosnippet>144</a>          <span class="prelude-val">None</span>,
+<a href=#145 id=145 data-nosnippet>145</a>          <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"lstlisting"</span>)),
+<a href=#146 id=146 data-nosnippet>146</a>          <span class="prelude-val">None</span>,
+<a href=#147 id=147 data-nosnippet>147</a>        )<span class="question-mark">?</span>;
+<a href=#148 id=148 data-nosnippet>148</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(opts) = opts
+<a href=#149 id=149 data-nosnippet>149</a>          &amp;&amp; !opts.unlist_ref().is_empty()
+<a href=#150 id=150 data-nosnippet>150</a>        {
+<a href=#151 id=151 data-nosnippet>151</a>          <span class="kw">let _ </span>= digest(Tokens::new(
+<a href=#152 id=152 data-nosnippet>152</a>            <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lstset"</span>), <span class="macro">T_BEGIN!</span>()]
+<a href=#153 id=153 data-nosnippet>153</a>              .into_iter()
+<a href=#154 id=154 data-nosnippet>154</a>              .chain(opts.unlist().iter().cloned())
+<a href=#155 id=155 data-nosnippet>155</a>              .chain(std::iter::once(<span class="macro">T_END!</span>()))
+<a href=#156 id=156 data-nosnippet>156</a>              .collect(),
+<a href=#157 id=157 data-nosnippet>157</a>          ));
+<a href=#158 id=158 data-nosnippet>158</a>        }
+<a href=#159 id=159 data-nosnippet>159</a>        <span class="kw">let </span>text = listings_read_raw_lines(<span class="string">"minted"</span>);
+<a href=#160 id=160 data-nosnippet>160</a>        <span class="kw">let </span>result = lst_process_display(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>text);
+<a href=#161 id=161 data-nosnippet>161</a>        <span class="prelude-val">Ok</span>(Tokens::new(result))
+<a href=#162 id=162 data-nosnippet>162</a>      },
+<a href=#163 id=163 data-nosnippet>163</a>    )));
+<a href=#164 id=164 data-nosnippet>164</a>    def_macro(cs, params, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#165 id=165 data-nosnippet>165</a>  }
+<a href=#166 id=166 data-nosnippet>166</a>  <span class="comment">// No \end{minted}: mintedEnvBody fully consumed it.
+<a href=#167 id=167 data-nosnippet>167</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{listing}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\begin{figure}"</span>);
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{listing}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\end{figure}"</span>);
+<a href=#169 id=169 data-nosnippet>169</a>});
 </code></pre></div></section></main></body></html>
