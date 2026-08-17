@@ -3629,3 +3629,23 @@ Rust **surpasses** (OXIDIZED_DESIGN #122): an `ltx:personname` `afterClose` hand
 personname whose sole meaningful child is a *pure* bold `<text>` (series=bold, otherwise default
 upright serif), so all author names render in the same weight; mixed styles (bold-italic, bold-sans)
 are left untouched. Guard: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`.
+
+## 91. Multi-line author block with a trailing `\quad\\` loses the second line's first author (Rust surpasses)
+
+A `\author{}` whose first line ends with `\quad \\` — a common NeurIPS/ACL idiom for wrapping a
+long author list (`… Zhiyuan Zhu\quad \\ \textbf{Ruiqi Li}\quad …`, arXiv 2507.06670) — has the
+`\\` leak to the head of the next `\quad`-split group in the no-marker author arm, so that group's
+first `\\`-piece is empty and its real first author is demoted to a bogus affiliation under an empty
+`<personname/>`. **Same-host Perl LaTeXML 0.8.8 mangles it identically** (SHARED-FAILURE,
+Perl-origin, upstream filing pending). Minimal trigger:
+
+```latex
+\documentclass{article}\title{T}
+\author{Alice One\quad Bob Two\quad \\ Carol Three\quad Dan Four \\ Some University \\}
+\begin{document}\maketitle\end{document}
+```
+
+→ Perl/pre-fix Rust: "Carol Three" is an empty `<personname/>` + a "Carol Three" affiliation. Rust
+**surpasses** (OXIDIZED_DESIGN #52(d)): empty `\\`-pieces are dropped before choosing the name line,
+so the first NON-empty piece is the names. Guard:
+`06_cluster_frontmatter::frontmatter_multiline_author_leading_break`.

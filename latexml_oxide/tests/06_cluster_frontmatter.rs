@@ -135,6 +135,35 @@ fn frontmatter_neurips_author_bold_coherent() {
     "a whole-personname bold wrapper survived (incoherent with the plain lines):\n{x}"
   );
 }
+/// A multi-line `\author` block whose first line ends with a trailing `\quad \\`
+/// (arXiv 2507.06670, acl): the leaked `\\` heads the next `\quad`-group, so its
+/// first author ("Carol Three" here; "Ruiqi Li" in the paper) landed on an EMPTY
+/// names_line and was demoted to a bogus affiliation with an empty `<personname/>`.
+/// Dropping empty `\\`-pieces up front keeps every line-2 author an author.
+#[test]
+fn frontmatter_multiline_author_leading_break() {
+  let x =
+    convert_to_xml("tests/cluster_regressions/frontmatter_multiline_author_leading_break.tex");
+  // All four authors — including the first of the second line — are personnames.
+  for name in ["Alice One", "Bob Two", "Carol Three", "Dan Four"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "author {name} missing as a personname:\n{x}"
+    );
+  }
+  // The reported canary: no empty personname, and the line-2 first author is NOT
+  // demoted to an affiliation.
+  assert!(
+    !x.contains("<personname/>") && !x.contains("<personname></personname>"),
+    "a leading `\\\\` produced an empty personname:\n{x}"
+  );
+  assert!(
+    !x.contains("role=\"affiliation\">Carol Three"),
+    "line-2 first author Carol Three misclassified as an affiliation:\n{x}"
+  );
+  // The genuine affiliation still attaches.
+  assert!(x.contains("Some University"), "affiliation dropped:\n{x}");
+}
 /// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…}\and …}`: each
 /// block is one creator; the `1\textsuperscript{st}` ordinals must not be
 /// misread as affiliation markers and drop every author. Witness 2602.05517.
