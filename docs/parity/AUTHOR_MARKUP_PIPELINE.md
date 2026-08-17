@@ -139,19 +139,36 @@ are largely fixed; the live defects are the *mixed* variants + a few class-speci
 | Rep | Class | HEAD result | Verdict |
 |---|---|---|---|
 | 4539 (F3) | IEEEtran | 6 creators, **3 empty `<personname/>`**; `\thanks` affil+email land on an empty creator | **LIVE** — R5 target |
-| 6242 (F1/F3) | article | `\footnotemark[n]` leaks "1 footnote 1" **into the name**; affils merge; email→affil | **LIVE** |
-| 4877 (F5) | article | `\footnotemark[3]` leaks "3 3 footnote 3" into the name; no shared affiliation | **LIVE** |
+| 6242 (F2/F5) | article | names all clean; superscript affiliations MERGE onto one author + `\texttt` email bleeds into the affiliation text | **LIVE** (affiliation attachment) |
+| 4877 (F5) | article | names clean; `D\footnotemark[3]` gets only the marker, not C's shared affiliation | **FAITHFUL** — `\footnotemark` is a reference, not a copy (matches the PDF) |
 | 6255 (F5) | googledeepmind | all authors merged into **one** personname (comma-list not split) | **LIVE** (class-specific) |
 | 6209 (F2) | llncs | `\inst{n}`→affiliation mapping **correct**; the report is the *visible* superscript render (display layer, not parser) | not-parser |
 | 5761 (F4) | elsarticle | `\author[n]`+`\address[n]` maps **correctly** | already-fixed |
 | f1-core (F1) | article | 3× `Name\\Affil\\email\\ \And` → clean creators | already-fixed |
 | 6687 (F1) | arxiv.sty | 9× `\And` → 10 clean creators w/ affil+email | already-fixed |
 
-**Cross-cutting live defect discovered:** `\footnotemark[n]` in an author name leaks
-garbled "N footnote N" text into the `<personname>` (6242, 4877) — distinct from the
-`\footnotemark` *notes* that DO work (Yu Zhang in 2507.06670). Concrete, reproducible,
-spans families. **Seed set (RED fixtures): 4539, 6242, 4877, 6255.** The
-"already-fixed" rows become regression guards, not fixes.
+**Retracted (tool artifact):** an earlier pass flagged `\footnotemark[n]` as "leaking N
+footnote N into the name" (6242, 4877). That was a bug in `tools/author_markup_char.py`
+which flattened a `<note>`'s `<tags>` refnum/autoref metadata into the displayed name.
+The real `<personname>` is clean — `<personname>Name<note role="footnotemark" mark="n">…`
+— so `\footnotemark` handling is correct; the tool now strips `<note>` subtrees before
+extracting name text.
+
+**The genuine remaining live defects (root-caused on HEAD):**
+- **6242 (F2) — multiple `\textsuperscript{n}Affil` on one space-separated line.** The
+  affiliation line `\textsuperscript{1}UC San Diego \textsuperscript{2}SUNY Buffalo` has
+  no `\\`/`\quad` between the two affils, so the marker-branch classifies the whole line
+  as ONE affiliation (merging both) and the trailing `\texttt{…}` email bleeds into it.
+  Fix would split an affiliation line at each interior `\textsuperscript` — heuristic,
+  regression-risky (an affiliation may legitimately contain a superscript).
+- **6255 (F1) — authblk single `\author{A, B, C, …}`.** googledeepmind loads `authblk`;
+  the whole comma list is authblk's single-author-arg form, so LaTeXML keeps it as one
+  `<personname>A, B, C, …</personname>` (faithful to authblk, but should split into
+  creators). Fix is in the authblk `\author` binding — package-specific.
+
+Both are heuristic/package-specific with regression risk; neither is a clean low-risk
+win like R5. They need their own witness-guarded branches (R6), and a steer on which
+first given the frontmatter-heuristic caution.
 
 ## Confirmed defects the pipeline must fix
 
