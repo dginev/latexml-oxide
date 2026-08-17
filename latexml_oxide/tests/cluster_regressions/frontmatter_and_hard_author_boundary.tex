@@ -1,0 +1,11 @@
+\documentclass{article}
+\usepackage{amsmath}
+% html_feedback#1021 F2 residual (arXiv:2403.11905): authors separated by \and
+% where the 2nd author's superscript marker is delivered by a macro (no literal
+% `^` on that segment). The marker branch used to flat-split \and/\quad/\\
+% together and append a marker-less segment to the PREVIOUS author, merging
+% \and-separated authors into one <personname>. \and is now a hard boundary.
+\newcommand{\mk}{$^\text{$\star$}$}
+\author{Alice\mk$^*$ \and Bob\mk \and Carol\mk}
+\title{And hard author boundary}
+\begin{document}\maketitle\end{document}
