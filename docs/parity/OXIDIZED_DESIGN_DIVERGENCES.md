@@ -4580,3 +4580,38 @@ figure renders (`xml:id="S0.F1"`) and the reference resolves to "Fig. 1". Shared
 upstream bug recorded as KNOWN_PERL_ERRORS #90.
 
 **Guard**: `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.
+### 122. A `font="bold"` wrapping an entire author name is unwrapped for coherence
+
+**Perl** captures semantic creators from `\author`, not the class's visual title
+layout. Classes like `neurips_2023` bold the whole author block with a block-level
+`\bf` in their `\@maketitle` (`\begin{tabular}[t]{c}\bf…\@author\end{tabular}`),
+which LaTeXML does not emulate. So when a paper `\textbf`s only *some* author name
+lines and relies on that class `\bf` for the rest, LaTeXML renders the block
+incoherently — bold on the `\textbf` lines, plain on the others. Both engines emit
+`<ltx:personname><ltx:text font="bold">Name</ltx:text></ltx:personname>` on the
+explicit-`\textbf` lines and a bare `<ltx:personname>Name</ltx:personname>` on the
+rest (SHARED-FAILURE, byte-identical same-host on Perl 0.8.8).
+
+**Rust behavior**: an `ltx:personname` `afterClose` handler (`unwrap_whole_name_bold`)
+unwraps a personname whose sole meaningful child is a *pure* bold `<ltx:text>` (decoded
+font series=bold, otherwise the default upright serif) — the case that would serialize
+as exactly `font="bold"`. A trailing reference marker (`\footnotemark`/`\thanks` →
+`<ltx:note>`) or a misused-`\\` `<ltx:break>` is skipped, not counted as content, so it
+does not block the unwrap. Mixed styling (bold-italic, bold-sans, bold on only part of
+the name) is left untouched. Every author then renders in the same weight.
+
+**Why**: bolding a whole author name is presentational author-block styling, not
+semantic content; a class that bolds the block does so uniformly, so partial bold is an
+artifact of inconsistent source, never authorial intent (a corresponding/presenting
+author is marked by a superscript, not by name-weight). Normalizing to plain restores
+the coherence the reporter asked for and matches how ar5iv renders author names for the
+overwhelming majority of classes. One general rule at the personname seam, not a
+per-class binding. User-directed 2026-08-16 (chosen over the per-class "emulate the
+class bold" alternative).
+
+**Witness**: arXiv 2308.06262 (html_feedback #61, neurips_2023) — 7 authors rendered as
+3 plain + 4 bold; now all 7 plain. Also arXiv 2507.06670 (acl) "Zhou Zhao", where a
+`\textbf{Zhou Zhao} \footnotemark[2]` bold name kept its footnotemark marker sibling —
+now unwrapped too. Shared upstream bug recorded as KNOWN_PERL_ERRORS #88.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`.

@@ -3608,3 +3608,24 @@ Same-host Perl 0.8.8 drops it identically (SHARED-FAILURE, Perl-origin). Minimal
 accumulated content in a title-neutralized group before relaxing it, so the figure renders and the
 reference resolves to "Fig. 1". Guard:
 `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.
+## 88. Partially-bold author block renders incoherently (Rust surpasses)
+
+`neurips_2023` (and similar classes) bold the *whole* author block with a block-level `\bf` in
+their `\@maketitle` tabular — pure PDF layout LaTeXML does not emulate, since it captures semantic
+creators from `\author`. A paper (arXiv 2308.06262, html_feedback#61) that `\textbf`s only its
+second author line and relies on that class `\bf` for the first then renders incoherently: the
+first line plain, the second bold. **Same-host Perl LaTeXML 0.8.8 is byte-identical** — both emit
+`<ltx:personname><ltx:text font="bold">Name</ltx:text></ltx:personname>` on the `\textbf` lines and
+a bare `<ltx:personname>Name</ltx:personname>` on the rest (SHARED-FAILURE, Perl-origin, upstream
+filing pending, owned by maintainer). Minimal trigger (plain `article`, no neurips needed):
+
+```latex
+\documentclass{article}\title{T}
+\author{Alpha One \\ \textbf{Beta Two}}
+\begin{document}\maketitle\end{document}
+```
+
+Rust **surpasses** (OXIDIZED_DESIGN #122): an `ltx:personname` `afterClose` handler unwraps a
+personname whose sole meaningful child is a *pure* bold `<text>` (series=bold, otherwise default
+upright serif), so all author names render in the same weight; mixed styles (bold-italic, bold-sans)
+are left untouched. Guard: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`.
