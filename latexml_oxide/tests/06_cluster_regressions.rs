@@ -952,6 +952,29 @@ fn mathversion_switches_the_mathfont_like_boldmath() {
   );
 }
 
+/// arXiv/html_feedback#6638 (arXiv:2511.14625v1): the `\twocolumn[...]` optional
+/// argument is a one-column-spanning header that real LaTeX typesets in a box
+/// (`\@topnewpage`), so a font declaration inside it (`\Large`) is scoped to the
+/// header and must not leak into the body. Perl's simplified `\twocolumn` splices
+/// the argument unscoped and leaks — cvpr's `\maketitlesupplementary` does
+/// `\twocolumn[\centering\Large … Supplementary Material …]`, which made the whole
+/// Supplementary section render oversized. Our `\twocolumn` now groups the header.
+#[test]
+fn twocolumn_optional_header_font_does_not_leak_into_body() {
+  let x = convert_to_xml("tests/cluster_regressions/twocolumn_optarg_font_scope.tex");
+  // The spanning header itself IS \Large (the fix must not swallow that).
+  assert!(
+    x.contains(r#"fontsize="144%""#),
+    "the \\twocolumn spanning header lost its \\Large size:\n{x}"
+  );
+  // But the section heading and body after it must be normal size — no leak.
+  let after = &x[x.find("Body Section").unwrap_or(0)..];
+  assert!(
+    !after.contains("fontsize="),
+    "the header's \\Large leaked past \\twocolumn into the body:\n{x}"
+  );
+}
+
 /// arXiv/html_feedback#6876 (arXiv:2311.15365v3): the `derivative` package's
 /// differential/derivative operators leaked as undefined control sequences.
 /// physics.sty covers the `\dv`/`\pdv`/`\dd` overlap but NOT derivative-only

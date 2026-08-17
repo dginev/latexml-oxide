@@ -4859,3 +4859,26 @@ gone.
 
 **Guard**: `06_cluster_frontmatter::frontmatter_nested_math_author_marker` (two clean
 creators linked to a shared affiliation via `$^\text{$\star$}$` markers, 0 errors).
+
+### 130. `\twocolumn[header]` scopes the spanning-header's font/alignment declarations
+
+**Perl**: `\twocolumn[]` is `\ifx.#1.\else\par\noindent#1\fi\par`
+(`latex_constructs.pool.ltxml` L1015) — the optional argument is spliced into the
+stream **unscoped**. A font or alignment declaration inside the header
+(`\centering`, `\Large`, …) therefore runs on into the body. Real LaTeX does not:
+`\twocolumn[#1]` routes through `\@topnewpage`, which typesets `#1` in a box, so the
+header's declarations are bounded to it. Perl rarely exhibits the leak because it
+tends not to render the headers that trigger it — e.g. cvpr's
+`\maketitlesupplementary` (`\twocolumn[\centering\Large … Supplementary Material …]`)
+is undefined under Perl (no cvpr binding, raw loading off), so `\maketitlesupplementary`
+errors and the `\Large` never runs.
+
+**Rust**: our cvpr binding raw-loads the real `cvpr.sty`, so `\maketitlesupplementary`
+*does* run and the header renders at `\Large` — but the unscoped splice then leaked
+that `\Large` into the entire Supplementary Material section (every heading and
+paragraph `font-size:144%`). We wrap the header in a group with its own `\par`
+(`\ifx.#1.\else\par\noindent{#1\par}\fi\par`), matching the box scope real LaTeX
+gives `\@topnewpage`: the header keeps its `\Large`, the body returns to normal size.
+This surpasses Perl's simplification. Witness html_feedback#6638 (arXiv:2511.14625v1).
+
+**Guard**: `06_cluster_regressions::twocolumn_optional_header_font_does_not_leak_into_body`.
