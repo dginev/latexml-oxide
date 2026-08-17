@@ -205,7 +205,7 @@ fn frontmatter_nested_math_author_marker() {
 /// boundary in the superscript-marker branch. When a 2nd/3rd author's marker is
 /// delivered by a macro (no literal `^` on that segment), the old flat
 /// `\and`/`\quad`/`\\` split appended the marker-less segment to the PREVIOUS
-/// author, collapsing `Alice\mk$^*$ \and Bob\mk \and Carol\mk` into one merged
+/// author, collapsing `Alice\mk$^{1}$ \and Bob\mk \and Carol\mk` into one merged
 /// `<personname>`. Grouping on `\and` first (append bounded to the group) keeps
 /// them separate. OXIDIZED_DESIGN #52(g).
 #[test]
@@ -226,6 +226,118 @@ fn frontmatter_and_hard_author_boundary() {
   assert!(
     !x.contains("AliceBob") && !x.contains("BobCarol"),
     "\\and-separated authors merged into one personname:\n{x}"
+  );
+}
+/// html_feedback#6637 construct 1 (OXIDIZED_DESIGN #52): co-authors separated by
+/// `\hspace{len}` (a "regular" poor-man's separator LaTeXML's `\and`/`\quad`
+/// splitter otherwise misses) must split into distinct creators, not weld into
+/// one `<personname>`. `\hspace`'s length argument must not leak as text.
+#[test]
+fn frontmatter_hspace_author_split() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_hspace_author_split.tex");
+  for name in ["Alice Alpha", "Bob Beta", "Carol Gamma"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "\\hspace-separated author {name} must be its own creator:\n{x}"
+    );
+  }
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    3,
+    "expected three creators split on \\hspace:\n{x}"
+  );
+  // The reported canary: names must not weld, and the length must not leak.
+  assert!(
+    !x.contains("AlphaBob") && !x.contains("BetaCarol") && !x.contains("1cm"),
+    "\\hspace authors merged or the length leaked as text:\n{x}"
+  );
+}
+/// html_feedback#6637 construct 2 (OXIDIZED_DESIGN #52): a footnote-SYMBOL author
+/// superscript (`$^{*}$`, `$^{\dagger}$`, `\textsuperscript{*}` — equal-
+/// contribution / corresponding notes, never affiliation numbers) must render as
+/// a visible `<sup>`, not be consumed into an unmatched `affiliation:*` label and
+/// silently dropped. All three marker spellings are covered; a plain author stays
+/// plain, and every author still splits on `\and`.
+#[test]
+fn frontmatter_symbol_superscript_mark() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_symbol_superscript_mark.tex");
+  // Each marked author keeps a visible superscript symbol…
+  assert!(
+    x.contains("<personname>Dana Delta<sup>*</sup>"),
+    "literal $^{{*}}$ mark dropped from Dana Delta:\n{x}"
+  );
+  assert!(
+    x.contains("<personname>Evan Echo<sup>†</sup>"),
+    "$^{{\\dagger}}$ mark dropped from Evan Echo:\n{x}"
+  );
+  assert!(
+    x.contains("<personname>Fiona Foxtrot<sup>*</sup>"),
+    "\\textsuperscript{{*}} mark dropped from Fiona Foxtrot:\n{x}"
+  );
+  // …the unmarked author stays plain…
+  assert!(
+    x.contains("<personname>Gina Golf</personname>"),
+    "unmarked author Gina Golf must stay plain:\n{x}"
+  );
+  // …all four split, and the mark never became an affiliation.
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    4,
+    "expected four authors:\n{x}"
+  );
+  assert!(
+    !x.contains("role=\"affiliation\""),
+    "a symbol mark was misread as an affiliation:\n{x}"
+  );
+}
+/// html_feedback#6637 combined (arXiv:2506.06941, "The Illusion of Thinking",
+/// plain article): six authors separated by `\hspace{0.5cm}`/`\\`, one lead with
+/// two `\thanks`, a second lead with a literal `$^{*}$`, trailing "Apple"
+/// affiliation. Both engines (Perl 0.8.8 == HEAD before this fix) welded all six
+/// names into one `<personname>` with "Apple" glued on and Mirzadeh's `$^{*}$`
+/// dropped. With `\hspace`→separator + symbol-mark→visible-sup (removing the only
+/// affiliation-marker trigger), the block takes the clean no-marker branch: all
+/// six split, Mirzadeh keeps his `∗`, Shojaee keeps his thanks, and "Apple"
+/// becomes the last author's affiliation. OXIDIZED_DESIGN #52.
+#[test]
+fn frontmatter_thanks_literal_mark_mix() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_thanks_literal_mark_mix.tex");
+  // All six authors are their own creators (was one welded blob).
+  for name in [
+    "Parshin Shojaee",
+    "Keivan Alizadeh",
+    "Maxwell Horton",
+    "Samy Bengio",
+    "Mehrdad Farajtabar",
+  ] {
+    assert!(
+      x.contains(&format!("<personname>{name}")),
+      "author {name} missing as a distinct creator:\n{x}"
+    );
+  }
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    6,
+    "expected six split authors:\n{x}"
+  );
+  // Mirzadeh's literal $^{*}$ survives as a visible superscript.
+  assert!(
+    x.contains("<personname>Iman Mirzadeh<sup>*</sup>"),
+    "Mirzadeh's literal $^{{*}}$ mark was dropped:\n{x}"
+  );
+  // Shojaee's two \thanks attach to HIS creator (not the welded blob).
+  assert!(
+    x.contains("Equal contribution.") && x.contains("Work done during an internship at Apple."),
+    "Shojaee's \\thanks notes were lost:\n{x}"
+  );
+  // "Apple" is the trailing affiliation, not glued into a name.
+  assert!(
+    x.contains("role=\"affiliation\">Apple"),
+    "\"Apple\" must be the last author's affiliation, not welded into a name:\n{x}"
+  );
+  assert!(
+    !x.contains("FarajtabarApple") && !x.contains("[0.5cm]"),
+    "\"Apple\" welded onto a name or the \\\\[0.5cm] length leaked:\n{x}"
   );
 }
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
