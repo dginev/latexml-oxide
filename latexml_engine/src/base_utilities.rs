@@ -972,12 +972,20 @@ LoadDefinitions!({
         if block.is_empty() {
           continue;
         }
-        let mut pieces = split_tokens(block, vec![SplitDelim::Token(T_CS!("\\\\"))]).into_iter();
+        // Drop empty `\\`-pieces up front. A group that BEGINS with `\\` — because
+        // the previous author line ended with a trailing `\quad\\` (or `\and\\`) that
+        // leaked the line-break into this group — would otherwise give an EMPTY
+        // names_line, demoting the group's real first author to an affiliation. The
+        // first NON-empty piece is the name list; the rest are affiliations. Witness
+        // arXiv 2507.06670 (acl): `…Zhiyuan Zhu\quad \\ \textbf{Ruiqi Li}\quad…`
+        // rendered "Ruiqi Li" as an empty `<personname/>` + a bold "Ruiqi Li"
+        // affiliation; now "Ruiqi Li" is an author. (A `\\`-only block still yields a
+        // single empty author below, so its affiliations are not dropped.)
+        let mut pieces = split_tokens(block, vec![SplitDelim::Token(T_CS!("\\\\"))])
+          .into_iter()
+          .filter(|l| !l.is_empty());
         let names_line = pieces.next().unwrap_or_default();
-        let affils: Vec<Tokens> = pieces.filter(|l| !l.is_empty()).collect();
-        // A `\\`-leading block (`\author{\\ MIT}`) has an empty name list; keep a
-        // single (empty) author so its affiliations are still emitted rather than
-        // silently dropped (matches the pre-#52 `unwrap_or_default()` behaviour).
+        let affils: Vec<Tokens> = pieces.collect();
         let mut names = split_author_line(names_line);
         if names.is_empty() {
           names.push(Tokens::default());
