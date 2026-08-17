@@ -88,6 +88,7 @@ pub mod datetime2_sty;
 pub mod datetime_sty;
 pub mod dblfloatfix_sty;
 pub mod deluxe_sty;
+pub mod derivative_sty;
 pub mod diagrams_sty;
 pub mod diagrams_tex;
 pub mod dmtcs_episciences_cls;
@@ -295,6 +296,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
+  ("derivative", "sty", derivative_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
   ("fontawesome", "sty", fontawesome_sty::load_definitions),
   ("fontawesome5", "sty", fontawesome5_sty::load_definitions),

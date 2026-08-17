@@ -1,0 +1,9 @@
+\documentclass{article}
+% html_feedback#6876: \cref inside math \text{} must revert its inter-word tie as
+% a plain ~ in the tex= attribute (matching Perl), not the internal \lx@tilde CS.
+\usepackage{amsmath}
+\usepackage[capitalize,nameinlink]{cleveref}
+\begin{document}
+\begin{equation}\label{eq:one} x=1. \end{equation}
+Then $y \text{ by \cref{eq:one}}$ holds.
+\end{document}

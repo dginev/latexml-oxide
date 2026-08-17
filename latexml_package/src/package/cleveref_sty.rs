@@ -34,9 +34,23 @@ LoadDefinitions!({
   def_macro_noop("\\Crefname{}{}{}")?;
   def_macro_noop("\\crefalias{}{}")?;
 
-  // Helper: produces literal ~ (tilde) as catcode OTHER text.
-  // Needed because {} parameter expands ACTIVE ~ to space.
-  DefPrimitive!("\\lx@tilde", "~");
+  // Helper: produces the literal `~` (U+007E) as text — a CS so an active `~`
+  // can't collapse to a space during tokenization, and a direct Tbox string so
+  // it does NOT go through the font map that would turn a `~` char into the
+  // tilde accent ˜ (U+02DC). The literal `DefPrimitive!(_, "~")` form reverts the
+  // Tbox to its own CS token (`\lx@tilde`), which then leaked into the `tex=`
+  // attribute of a `\cref` inside math, where Perl reverts a plain `~`. Give the
+  // Tbox a `~` reversion instead so `tex=` matches Perl while the `show`
+  // attribute stays U+007E (html_feedback#6876).
+  DefPrimitive!("\\lx@tilde", sub[_args] {
+    Tbox::new(
+      pin_static("~"),
+      None,
+      None,
+      Tokens!(T_OTHER!("~")),
+      SymHashMap::default(),
+    )
+  });
 
   // \lx@cref: the core constructor for cleveref references
   // Perl: DefConstructor('\lx@cref OptionalMatch:* HyperVerbatim Semiverbatim', ...)
