@@ -1,0 +1,10 @@
+\documentclass{article}
+% arXiv:2311.15365v3 (html_feedback#6876): the derivative package's
+% differential/derivative operators must not leak as undefined control
+% sequences. physics.sty covers \dv/\pdv/\dd but NOT derivative-only commands
+% like \mdif (material differential). derivative_sty.rs force-raw-loads the real
+% derivative.sty (texlive-science), which our expl3 support executes.
+\usepackage[italic=true]{derivative}
+\begin{document}
+\[ \mdif{\theta} v \qquad \odif{x} \qquad \odv{f}{x} \qquad \pdv{f}{x} \]
+\end{document}

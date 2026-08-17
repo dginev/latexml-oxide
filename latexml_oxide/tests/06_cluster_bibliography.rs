@@ -406,6 +406,33 @@ fn cvpr_natbib_numbers_option_forces_numeric_labels() {
   );
 }
 
+/// arXiv/html_feedback#6876 (arXiv:2311.15365v3): the witness's biblatex
+/// `\DeclareSourcemap{…\maps{…\map{…\step[…\regexp{…}]}}}` block preceded a
+/// preamble that an older binary dumped literally into the body (the reporter saw
+/// the raw source start exactly at `\DeclareSourcemap\maps`). Guard that the
+/// sourcemap block is consumed and the body after it survives, with none of its
+/// internals (`\regexp`/`\maps`/`\step`) leaking into the document.
+#[test]
+fn biblatex_declaresourcemap_does_not_leak_the_preamble() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_sourcemap.tex");
+  for leak in [
+    "DeclareSourcemap",
+    "regexp",
+    "\\maps",
+    "\\step",
+    "fieldsource",
+  ] {
+    assert!(
+      !x.contains(leak),
+      "the biblatex sourcemap preamble leaked `{leak}` into the document:\n{x}"
+    );
+  }
+  assert!(
+    x.contains("BODYAFTERSOURCEMAP"),
+    "the document body after the \\DeclareSourcemap block was lost:\n{x}"
+  );
+}
+
 /// A `refcontext` block must not eat the `\printbibliography` inside it, and
 /// `\addbibresource` must accept its optional argument.
 ///

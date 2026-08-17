@@ -951,3 +951,47 @@ fn mathversion_switches_the_mathfont_like_boldmath() {
     1,
   );
 }
+
+/// arXiv/html_feedback#6876 (arXiv:2311.15365v3): the `derivative` package's
+/// differential/derivative operators leaked as undefined control sequences.
+/// physics.sty covers the `\dv`/`\pdv`/`\dd` overlap but NOT derivative-only
+/// commands like `\mdif` (material differential, 36 uses on the witness). There
+/// is no Perl binding; the faithful fix force-raw-loads the real `derivative.sty`
+/// (`derivative_sty.rs`, `texlive-science`), which our expl3 support executes.
+///
+/// Red→green signal: with `\mdif` DEFINED it expands during digestion, so the
+/// operators vanish from the output entirely; UNDEFINED they stay as raw `\mdif`
+/// source plus an `Error:undefined`.
+#[test]
+fn derivative_package_defines_its_operators() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/derivative_operators.tex");
+  for leak in [r"\mdif", r"\odif", r"\odv", r"\pdv"] {
+    assert!(
+      !x.contains(leak),
+      "derivative operator leaked as undefined raw CS `{leak}` (binding not loaded?):\n{x}"
+    );
+  }
+  // The operators produced real math structure rather than nothing.
+  assert!(
+    x.contains("<XMApp") && x.contains("<Math"),
+    "derivative operators produced no math content:\n{x}"
+  );
+}
+
+/// arXiv/html_feedback#6876: `\cref` inside math `\text{}` reverted its
+/// inter-word tie to the internal `\lx@tilde` CS in the `tex=` attribute, where
+/// Perl reverts a plain `~`. The `show=` attribute was already `creftype~refnum`
+/// in both engines; only the Semiverbatim `tex=` reversion leaked the CS. Now
+/// byte-matches Perl (`cleveref_sty.rs` emits a catcode-OTHER `~`).
+#[test]
+fn cleveref_cref_in_math_reverts_tie_as_plain_tilde() {
+  let x = convert_to_xml("tests/cluster_regressions/cref_in_math_tilde.tex");
+  assert!(
+    x.contains("creftype~refnum"),
+    "the cref show/reversion tie is missing:\n{x}"
+  );
+  assert!(
+    !x.contains(r"\lx@tilde"),
+    "the internal \\lx@tilde CS leaked into the tex= reversion:\n{x}"
+  );
+}

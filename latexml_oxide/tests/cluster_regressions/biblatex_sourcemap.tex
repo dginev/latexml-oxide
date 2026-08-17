@@ -1,0 +1,19 @@
+\documentclass{article}
+% html_feedback#6876: an older binary dumped the preamble literally starting at
+% this biblatex \DeclareSourcemap block. Guard that the sourcemap (with \regexp)
+% is consumed and the body after it survives, with nothing leaked.
+\usepackage[style=numeric]{biblatex}
+\DeclareSourcemap{
+  \maps[datatype=bibtex]{
+    \map{
+      \step[fieldsource=edition, match=\regexp{^(\d+)\.\s+(ed.|edition)$}, replace=\regexp{$1}]
+    }
+    \map[overwrite]{
+      \step[fieldsource=shortjournal, final]
+      \step[fieldset=journal, origfieldval]
+    }
+  }
+}
+\begin{document}
+BODYAFTERSOURCEMAP
+\end{document}
