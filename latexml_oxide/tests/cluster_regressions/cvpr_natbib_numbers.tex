@@ -1,0 +1,21 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+% arXiv:2405.05145 (html_feedback#6742): cvpr.sty does
+% \RequirePackage[numbers,sort&compress]{natbib} (cvpr.sty L37), so pdflatex
+% prints numeric [N] citations and a numeric References list. Our contrib cvpr
+% binding pre-loaded natbib WITHOUT options, so the raw cvpr.sty's [numbers]
+% load no-op'd as a repeat and CITE_STYLE stayed authoryear — the References
+% showed "Mo et al. (2022)" instead of "[1]".
+\usepackage[pagenumbers]{cvpr}
+\begin{document}
+See \cite{key1} and \cite{key2}.
+\begin{thebibliography}{9}
+\bibitem[Mo et~al.(2022)Mo, Foo, and Bar]{key1}
+Mo, Foo, and Bar.
+\newblock A title.
+\newblock 2022.
+\bibitem[Alecu(2021)]{key2}
+Alecu.
+\newblock Another title.
+\newblock 2021.
+\end{thebibliography}
+\end{document}
