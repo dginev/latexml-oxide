@@ -4941,5 +4941,14 @@ primary name (the fallback stays dormant).
 Witness html_feedback#140 (arXiv:2305.10391v2 — `\usepackage[capitalize,nameinlink]{cleveref}`
 + `\newtheorem{arch}{Architecture}`).
 
+Upstream context: cleveref's `\newtheorem` naming is a long-standing sore spot with newer
+LaTeX. TeX Live 2025 broke it so that *every* `\cref` to a theorem prints the same name
+([arXiv TeX Live FAQ](https://info.arxiv.org/help/faq/texlive.html), "cleveref"); arXiv's
+workaround is `\AddToHook{env/<thm>/begin}{\crefalias{<counter>}{<thm>}}`. LaTeXML is immune
+because it keys `creftype` on each theorem's own type (via `type_tag_formatter`), not on the
+shared counter, so it yields distinct correct names and needs no workaround — standard names
+(`theorem`, `proposition`, …) still come from cleveref's raw defaults; only non-standard names
+(`arch`) use the heading fallback. `\crefalias` remains a harmless no-op here.
+
 **Guards**: `06_cluster_regressions::cleveref_custom_theorem_cref_shows_heading_name`
 (heading fallback) and `::cleveref_explicit_crefname_overrides_heading` (explicit name wins).
