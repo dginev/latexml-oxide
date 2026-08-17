@@ -1393,6 +1393,18 @@ before the marker ⇒ author, split into creators) or "\textsuperscript{n}Affil"
 the four authors but ALSO emits the affiliation line itself as phantom author
 creators.
 
+**(d) Multi-line author block with a trailing `\quad\\`.** In the no-marker arm,
+author *groups* split on `\quad`/`\and` and each group then splits on `\\` into a
+name line + trailing affiliations. When a line ends with `\quad \\` (a common
+NeurIPS/ACL idiom for wrapping a long author list), the `\\` leaks to the HEAD of
+the next `\quad`-group, so that group's first `\\`-piece is empty and its real
+first author was demoted to an affiliation under an empty `<personname/>`. Fixed by
+dropping empty `\\`-pieces before choosing the name line: the first NON-empty piece
+is the names, the rest affiliations. Witness arXiv:2507.06670 (acl): line 2's first
+author "Ruiqi Li" was an empty personname + a bogus "Ruiqi Li" affiliation; now an
+author. Same-host Perl 0.8.8 mangles it identically (SHARED-FAILURE) — recorded as
+KNOWN_PERL_ERRORS #91.
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`
