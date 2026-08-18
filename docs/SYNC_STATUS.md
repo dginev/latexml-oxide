@@ -906,6 +906,44 @@ snapshots the picture BEFORE the pass-B Graphics phase, inverting Perl's
 Graphics-before-SVG order (`LaTeXML.pm` L493 before L502) — hence the splice-time
 re-resolution `#1291` added.
 
+**Picture-nested-graphic rendering — status & follow-ups** (found while landing
+overpic #677 + #675; giant/double LANDED, two roots OPEN):
+- **FIXED (`post.rs` `render_resolved_graphic` / `convert_picture_children_to_svg`):**
+  the resolved `<img>`/`<object>` was double-emitted (once inside the makebox
+  `<text>`, once as the `<foreignObject>`) and the foreignObject copy drew at the
+  raster's *natural* pixel size (giant, spilling the figure+caption). Now the
+  `<graphics>`/`<Math>` is stripped from the `<text>` copy and the foreignObject
+  image is constrained to its box (`object-fit:contain`). Guards
+  `graphic_inside_a_makebox_text_is_not_double_emitted`,
+  `degenerate_picture_svg_leaves_image_unconstrained`. Witness overpic 2510.17772
+  Fig 7 (A/B/C now clean).
+- **OPEN — picture-SVG `\unitlength` sizing (core, high blast radius).** An
+  Inkscape `.pdf_tex` picture (`\setlength\unitlength{458pt}\begin{picture}(1,0.7)…`)
+  gets a DEGENERATE outer `<svg width="1.33" height="0.95">` — the picture's
+  outer dimension is computed at ~1pt/unit, IGNORING `\unitlength` (post.rs:1809
+  reads the `<ltx:picture>` `width`/`height` attrs verbatim; the tiny value comes
+  from the core `{picture}` sizing, not post). Every foreignObject then collapses
+  in the browser, so the picture-nested image can only *overflow-leak* at natural
+  size (giant) — a `100%`/object-fit constraint would zero it, so the giant-fix is
+  **gated** to non-degenerate SVGs (`DEGENERATE_SVG_PX = 4.0`) and this path is
+  left at its prior giant-but-visible behavior. Real fix: apply `\unitlength` to
+  the picture's outer dimensions AND its child coordinates (positions are laid out
+  at the wrong scale too — resizing the SVG alone mispositions). Witness
+  arXiv:2311.14363v2 (18 degenerate picture SVGs). Blast radius: all `{picture}`
+  users (tikz/pgf/pict2e), so validate broadly.
+- **OPEN — graphicx `trim`/`clip` not physically cropped.** Rust recomputes only
+  the width/height for `trim`/`clip` (`latexml_core/src/util/image.rs:433-442`,
+  `apply_graphicx_ops`) and references the ORIGINAL uncropped raster; the browser
+  then scales the whole image into the cropped box (visual mismatch — a colorbar
+  slice renders as a full heatmap). Perl physically crops via
+  `image_internalop($image,'Crop',…)` (`LaTeXML/lib/LaTeXML/Util/Image.pm:414`,
+  `image_graphicx_complex`). Localized fix: a `crop_image_inplace` sibling to
+  `rotate_image_inplace` (`latexml_post/src/graphics.rs:703`, shells out to
+  `convert -crop WxH+X+Y`), 2 call sites (graphics.rs:2464/2501, raster-gated),
+  porting the crop geometry (Image.pm:404-418, incl. the lower-left→upper-left flip
+  + source DPI). No new crate (already shells to ImageMagick `convert`). Witness
+  arXiv:2510.17772 Fig 7 (the `bottleneck_heatmap` matrix/colorbar `trim` split).
+
 ### Other tracks (separate docs)
 - Performance: `PERFORMANCE.md` (P1 math/large-doc open; P2 allocation partial).
 - Release gates: `RELEASE_CRITERIA.md`. Releasing: `RELEASING.md`.

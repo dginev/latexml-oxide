@@ -1580,12 +1580,20 @@ fn escape_attr(s: &str) -> String {
     .replace('"', "&quot;")
 }
 
+/// A self-closing `<graphics …/>` element — the frozen pre-Graphics placeholder
+/// the picture-SVG path carries until splice time. Shared by the two consumers:
+/// `convert_picture_children_to_svg` (strip it from a makebox `<text>` copy /
+/// re-emit it as `<foreignObject>`) and `resolve_fragment_graphics` (rewrite it
+/// to the resolved `<img>`/`<object>`).
+static GRAPHICS_SELF_CLOSE_RE: std::sync::LazyLock<regex::Regex> =
+  std::sync::LazyLock::new(|| regex::Regex::new(r"<graphics\b[^>]*/>").unwrap());
+
 /// Render a resolved graphic as the HTML the XSLT would have produced for the
 /// `<ltx:graphics>` — `<object>` for an `.svg` imagesrc (interactivity), `<img>`
 /// otherwise. Attribute set and order (src/data, id, class, width, height,
 /// alt/aria-label) mirror `LaTeXML-misc-xhtml.xsl` (`add_id` carries the
 /// graphic's `xml:id` onto the element, as Perl's SVG.pm→XSLT chain does).
-fn render_resolved_graphic(id: &str, g: &ResolvedGraphic) -> String {
+fn render_resolved_graphic(id: &str, g: &ResolvedGraphic, constrain: bool) -> String {
   let id = format!(" id=\"{}\"", escape_attr(id));
   let class = match &g.aspect_class {
     Some(c) => format!(" class=\"ltx_graphics {c}\""),
@@ -1603,14 +1611,34 @@ fn render_resolved_graphic(id: &str, g: &ResolvedGraphic) -> String {
     .unwrap_or_default();
   let src = escape_attr(&g.imagesrc);
   let alt = escape_attr(&g.alt);
+  // Constrain the image to the `<foreignObject>` box the SVG already sized. The
+  // enclosing `<foreignObject overflow="visible">` (SVG.pm L148-183 port) takes
+  // its size from the graphic's own width/imagewidth in the picture's scaled
+  // coordinate space; without this the browser instead draws the `<img>` at the
+  // raster's *natural* pixel size (the `width`/`height` px attrs), which spills
+  // out of that box — the giant-image regression (arXiv:2510.17772 Fig 7, every
+  // picture-nested `\includegraphics`, e.g. overpic). `100%` fills the sized box;
+  // `object-fit:contain` preserves the aspect ratio.
+  //
+  // `constrain` is false only for a DEGENERATE picture SVG (sub-pixel outer size,
+  // the `\unitlength`-not-applied core gap — SYNC_STATUS "picture-SVG unitlength
+  // sizing", witness arXiv:2311.14363v2 Inkscape `.pdf_tex`). There the box is
+  // ~0px, so a `100%`/`object-fit` constraint would collapse the image to nothing
+  // (worse than the pre-existing overflow leak); leave it unconstrained until the
+  // core sizing is fixed. `resolve_fragment_graphics` makes the call.
+  let style = if constrain {
+    " style=\"width:100%;height:100%;object-fit:contain\""
+  } else {
+    ""
+  };
   if g.is_svg {
     // The XSLT uses aria-label (not alt) on <object>, and a <p> fallback; the
     // aria-label alone is enough inside the SVG foreignObject.
     format!(
-      "<object type=\"image/svg+xml\" data=\"{src}\"{id}{class}{w}{h} aria-label=\"{alt}\"></object>"
+      "<object type=\"image/svg+xml\" data=\"{src}\"{id}{class}{style}{w}{h} aria-label=\"{alt}\"></object>"
     )
   } else {
-    format!("<img src=\"{src}\"{id}{class}{w}{h} alt=\"{alt}\">")
+    format!("<img src=\"{src}\"{id}{class}{style}{w}{h} alt=\"{alt}\">")
   }
 }
 
@@ -1624,19 +1652,38 @@ fn resolve_fragment_graphics(
   resolved: &rustc_hash::FxHashMap<String, ResolvedGraphic>,
 ) -> String {
   use std::sync::LazyLock;
-  static GRAPHICS_TAG_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"<graphics\b[^>]*/>").unwrap());
   static XMLID_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
+  static SVG_DIM_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"<svg\b[^>]*\bwidth="([0-9.]+)"[^>]*\bheight="([0-9.]+)""#).unwrap()
+  });
   if resolved.is_empty() || !fragment.contains("<graphics") {
     return fragment.to_string();
   }
-  GRAPHICS_TAG_RE
+  // Constrain the resolved images to their `<foreignObject>` boxes (object-fit)
+  // ONLY when the picture's outer `<svg>` has a real coordinate extent. A
+  // sub-pixel outer SVG is the `\unitlength`-not-applied core gap (SYNC_STATUS
+  // "picture-SVG unitlength sizing", arXiv:2311.14363v2): its foreignObjects
+  // collapse in the browser, so a `100%` constraint would zero the image. Below
+  // `DEGENERATE_SVG_PX` we leave images unconstrained (the pre-existing overflow
+  // behavior) rather than hide them. A well-sized picture (overpic, ~186px+) is
+  // far above the floor; a degenerate one is ~1px.
+  const DEGENERATE_SVG_PX: f64 = 4.0;
+  let constrain = SVG_DIM_RE
+    .captures(fragment)
+    .and_then(|c| {
+      let w = c[1].parse::<f64>().ok()?;
+      let h = c[2].parse::<f64>().ok()?;
+      Some(w >= DEGENERATE_SVG_PX && h >= DEGENERATE_SVG_PX)
+    })
+    // No parseable outer <svg> dims → assume a real picture and constrain.
+    .unwrap_or(true);
+  GRAPHICS_SELF_CLOSE_RE
     .replace_all(fragment, |caps: &regex::Captures| {
       let tag = &caps[0];
       match XMLID_RE.captures(tag) {
         Some(c) => match resolved.get(&c[1]) {
-          Some(g) => render_resolved_graphic(&c[1], g),
+          Some(g) => render_resolved_graphic(&c[1], g, constrain),
           None => tag.to_string(),
         },
         None => tag.to_string(),
@@ -1847,11 +1894,11 @@ fn convert_picture_children_to_svg(content: &str) -> String {
   static TEXT_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"(?s)<text([^>]*)>(.*?)</text>"#).unwrap());
   // Foreign (non-SVG) content that a picture makebox can carry: a math label or
-  // an embedded graphic. Perl's SVG.pm wraps these in <foreignObject>.
+  // an embedded graphic. Perl's SVG.pm wraps these in <foreignObject>. The
+  // `<graphics …/>` matcher is the module-level `GRAPHICS_SELF_CLOSE_RE` (shared
+  // with `resolve_fragment_graphics`).
   static MATH_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"(?s)<Math\b[^>]*>.*?</Math>"#).unwrap());
-  static GRAPHICS_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<graphics\b[^>]*/>"#).unwrap());
 
   let mut svg = String::new();
 
@@ -1933,10 +1980,23 @@ fn convert_picture_children_to_svg(content: &str) -> String {
     // <arc .../> — arc segments (rarely used, stub for now)
     // <wedge .../> — filled wedges (rarely used, stub for now)
 
-    // <text>...</text> — wrap in SVG text with y-flip correction
+    // <text>...</text> — wrap in SVG text with y-flip correction. A picture
+    // makebox (e.g. overpic's `\put(0,0){\makebox(0,0)[bl]{\includegraphics}}`)
+    // serializes its graphic/math INSIDE the `<text>`; strip those here — the
+    // foreign-content block below emits each `<graphics>`/`<Math>` once, as a
+    // faithful `<foreignObject>`. Left in, the graphic renders a SECOND time,
+    // unconstrained, inside an SVG `<text>` (the overpic double-image,
+    // arXiv:2510.17772 Fig 7). Plain-text labels are untouched.
     for text_caps in TEXT_RE.captures_iter(g_content) {
       let text_attrs = &text_caps[1];
-      let text_content = &text_caps[2];
+      let text_content = GRAPHICS_SELF_CLOSE_RE.replace_all(&text_caps[2], "");
+      let text_content = MATH_RE.replace_all(&text_content, "");
+      // The overpic BACKGROUND makebox wraps only the graphic, so after the strip
+      // there is no label left — skip the wrapper rather than emit a dead
+      // `<text></text>` (the graphic still renders via the foreign block below).
+      if text_content.trim().is_empty() {
+        continue;
+      }
       svg.push_str(&format!(
         r#"<g transform="scale(1,-1)"><text{text_attrs}>{text_content}</text></g>"#,
       ));
@@ -1959,7 +2019,7 @@ fn convert_picture_children_to_svg(content: &str) -> String {
     // block and its siblings above are deleted in favor of the `svg.rs` Processor.
     for node in MATH_RE
       .find_iter(g_content)
-      .chain(GRAPHICS_RE.find_iter(g_content))
+      .chain(GRAPHICS_SELF_CLOSE_RE.find_iter(g_content))
       .map(|m| m.as_str())
     {
       let width = svg_attr(node, "width")
@@ -2162,12 +2222,12 @@ mod picture_graphics_resolution_tests {
     let out = finalize_html5(span, &[fragment], &map);
     // Both nested graphics are resolved to <img>, each by its own xml:id.
     assert!(
-      out.contains(r#"<img src="bg.png" id="p1.g1" class="ltx_graphics ltx_img_portrait" width="100" height="120" alt="Refer to caption">"#),
-      "page=1 graphic not resolved to <img>:\n{out}"
+      out.contains(r#"<img src="bg.png" id="p1.g1" class="ltx_graphics ltx_img_portrait" style="width:100%;height:100%;object-fit:contain" width="100" height="120" alt="Refer to caption">"#),
+      "page=1 graphic not resolved to <img> (with foreignObject-box constraint):\n{out}"
     );
     assert!(
       out.contains(
-        r#"<img src="bg-2.png" id="p1.g2" class="ltx_graphics" alt="[Uncaptioned image]">"#
+        r#"<img src="bg-2.png" id="p1.g2" class="ltx_graphics" style="width:100%;height:100%;object-fit:contain" alt="[Uncaptioned image]">"#
       ),
       "page=2 graphic not resolved to <img>:\n{out}"
     );
@@ -2191,7 +2251,7 @@ mod picture_graphics_resolution_tests {
     })]);
     let out = finalize_html5(span, &[fragment], &map);
     assert!(
-      out.contains(r#"<object type="image/svg+xml" data="x1.svg" id="p1.g1" class="ltx_graphics ltx_img_square" width="100" height="120" aria-label="Refer to caption"></object>"#),
+      out.contains(r#"<object type="image/svg+xml" data="x1.svg" id="p1.g1" class="ltx_graphics ltx_img_square" style="width:100%;height:100%;object-fit:contain" width="100" height="120" aria-label="Refer to caption"></object>"#),
       "svg graphic not resolved to <object>:\n{out}"
     );
     // p1.g2 has no map entry → its raw <graphics> is left as-is (genuinely
@@ -2208,6 +2268,42 @@ mod picture_graphics_resolution_tests {
     let (span, fragment) = placeholder_and_fragment();
     let out = finalize_html5(span, &[fragment], &FxHashMap::default());
     assert!(out.contains(r#"<graphics graphic="bg.pdf" options="page=1" xml:id="p1.g1"/>"#));
+  }
+
+  #[test]
+  fn degenerate_picture_svg_leaves_image_unconstrained() {
+    // A picture whose outer <svg> is sub-pixel (the `\unitlength`-not-applied
+    // core gap, arXiv:2311.14363v2 Inkscape `.pdf_tex`): its foreignObject boxes
+    // collapse in the browser, so a `100%`/object-fit constraint would zero the
+    // image. The resolved <img> must therefore carry NO size constraint here
+    // (leaving the pre-existing overflow behavior), unlike a well-sized picture.
+    let span = r#"<span id="p1" class="ltx_picture"></span>"#.to_string();
+    let fragment = (
+      "p1".to_string(),
+      concat!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="1.33" height="0.95" overflow="visible">"#,
+        r#"<g><foreignObject width="458.28" height="328.24" overflow="visible">"#,
+        r#"<graphics graphic="x5.pdf" xml:id="p1.g1"/></foreignObject></g></svg>"#,
+      )
+      .to_string(),
+    );
+    let map = resolved(vec![("p1.g1", ResolvedGraphic {
+      imagesrc:     "x5.png".to_string(),
+      imagewidth:   None,
+      imageheight:  None,
+      aspect_class: None,
+      alt:          "Refer to caption".to_string(),
+      is_svg:       false,
+    })]);
+    let out = finalize_html5(span, &[fragment], &map);
+    assert!(
+      out.contains(r#"<img src="x5.png" id="p1.g1" class="ltx_graphics" alt="Refer to caption">"#),
+      "degenerate-SVG image must be resolved but UNCONSTRAINED (no object-fit):\n{out}"
+    );
+    assert!(
+      !out.contains("object-fit"),
+      "a sub-pixel picture SVG must not get an object-fit constraint (would hide the image):\n{out}"
+    );
   }
 }
 
@@ -2252,6 +2348,60 @@ mod picture_svg_foreign_content_tests {
     assert!(
       out.contains("foreignObject") && out.contains("graphic"),
       "an embedded picture graphic was dropped, not wrapped in <foreignObject>: {out}"
+    );
+  }
+
+  #[test]
+  fn graphic_inside_a_makebox_text_is_not_double_emitted() {
+    // overpic's `\put(0,0){\makebox(0,0)[bl]{\includegraphics{img}}}` serializes
+    // the graphic INSIDE a `<text>`. It must render ONCE — as a `<foreignObject>`
+    // — never a second time inside an SVG `<text>` (the giant double-image,
+    // arXiv:2510.17772 Fig 7). The plain "A" label beside it must survive.
+    let input = r#"<g transform="translate(0,0)" innerwidth="277pt" innerheight="277pt"><text>A<graphics graphic="img.png" xml:id="p1.g1"/></text></g>"#;
+    let out = convert_picture_children_to_svg(input);
+    assert_eq!(
+      out.matches("<graphics").count(),
+      1,
+      "picture graphic emitted more than once (double-image): {out}"
+    );
+    assert!(
+      out.contains("foreignObject"),
+      "the single copy must be the faithful <foreignObject>, not inside <text>: {out}"
+    );
+    // The <graphics> must be gone from any <text> node: no `<graphic` between a
+    // <text> and its </text>.
+    let text_seg = out.split("<text").nth(1).unwrap_or("");
+    let text_inner = text_seg.split("</text>").next().unwrap_or("");
+    assert!(
+      !text_inner.contains("<graphic"),
+      "graphic left inside <text> (will double-render): {out}"
+    );
+    assert!(
+      out.contains(">A<") || text_inner.contains('A'),
+      "plain label dropped: {out}"
+    );
+  }
+
+  #[test]
+  fn background_makebox_graphic_only_emits_no_empty_text() {
+    // The overpic BACKGROUND — `\put(0,0){\makebox(0,0)[bl]{\usebox\OVP@box}}` —
+    // wraps ONLY the graphic, so the `<text>` has no sibling label. After the
+    // graphic is stripped from the text copy, the leftover is empty: emit the
+    // graphic once (as `<foreignObject>`) and NO dead `<text></text>` wrapper.
+    let input = r#"<g transform="translate(0,0)" innerwidth="277pt" innerheight="277pt"><text><graphics graphic="bg.png" xml:id="p1.g0"/></text></g>"#;
+    let out = convert_picture_children_to_svg(input);
+    assert_eq!(
+      out.matches("<graphics").count(),
+      1,
+      "background graphic emitted more than once: {out}"
+    );
+    assert!(
+      out.contains("foreignObject"),
+      "the graphic must survive as a <foreignObject>: {out}"
+    );
+    assert!(
+      !out.contains("<text>") && !out.contains("<text "),
+      "an empty <text> wrapper was emitted for a label-less makebox: {out}"
     );
   }
 }
