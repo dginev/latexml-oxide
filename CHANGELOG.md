@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+  - **Supplementary-Material documents are converted and joined into the output.**
+    A submission with several top-level `.tex` files (a main paper + a
+    Supplementary-Information document, both `.bbl`-backed — arXiv's canonical
+    shape) previously lost everything but the main. The directory front-end now
+    detects the ordered set (`find_top_level_texs`, template-safe) and converts
+    each independently, joining them into one document: the main first, each
+    supplement an appendix titled by its own `\title`, with the supplement's
+    id/label space prefixed so cross-references resolve within each document and
+    never collide. Several files given side-by-side on the CLI
+    (`latexml_oxide main.tex supplement.tex`) are joined the same way. In-memory
+    join (`latexml::multidoc`); streaming-scale submissions remain a follow-up.
+  - **Multi-file arXiv submissions select the real paper, not a bundled template.**
+    When the true `main.tex` delegates its figures to `\input`-ed sections (no
+    direct `\includegraphics`) but a shipped class template / how-to / supplement
+    carries an example `\includegraphics{fig.png}`, the top-level-file guess picked
+    the decoy — so the HTML rendered "How to Use the IEEEtran Templates",
+    "Formatting Instructions for ICLR 2025", "Supplementary: …", etc. Two fixes:
+    (a) a **faithful-parity** fix — the pdf-`\includegraphics` probe is now
+    argument-anchored to match Perl exactly (extensionless / `.eps` examples with a
+    stray `.png` mention no longer false-positive), recovering papers Perl already
+    got right (arXiv/html_feedback#442, #859); and (b) a **surpass** — the matching
+    `.bbl` sibling now outranks the pdf heuristic (OXIDIZED_DESIGN #132), recovering
+    8 papers Perl also mis-selects (arXiv/html_feedback#1721, #6100, #5867, #5476,
+    #4156, #4067, #2369, #2224). 0 regressions across a 133-paper blast-radius sweep.
   - **`\hspace`-separated authors split, and equal-contribution superscript marks
     render.** An `\author` block that lays co-authors out with `\hspace{len}`/
     `\hfill` instead of `\and` collapsed into one `<personname>`, and a literal

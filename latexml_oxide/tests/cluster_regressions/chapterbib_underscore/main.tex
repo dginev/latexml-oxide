@@ -1,0 +1,11 @@
+% Guard for chapterbib per-unit `lists` identifier: an \include basename with an
+% underscore must land in <ltx:bibliography lists="chap_one"> RAW, matching the
+% <ltx:bibref inlist="chap_one"> the citation side emits — not OT1-decoded to
+% "chap˙one", which drops every entry (0 cited). Witness arXiv:2605.15421.
+% Paths are subdir-qualified because the test harness resolves relative to
+% tests/cluster_regressions; the \include BASENAME (`chap_one`) is still the unit.
+\documentclass{article}
+\usepackage{chapterbib}
+\begin{document}
+\include{chap_one}
+\end{document}

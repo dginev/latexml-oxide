@@ -281,23 +281,25 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
-  if candidates.len() > 1 {
-    let pdf_candidates: Vec<PathBuf> = candidates
-      .iter()
-      .filter(|f| {
-        std::fs::read(f).ok().is_some_and(|raw| {
-          let c = String::from_utf8_lossy(&raw);
-          c.contains("\\includegraphics")
-            && (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
-        })
-      })
-      .cloned()
-      .collect();
-    if !pdf_candidates.is_empty() {
-      candidates = pdf_candidates;
-    }
-  }
-
+  // OXIDIZED_DESIGN #132 (surpass-perl): the `.bbl`-sibling heuristic runs
+  // BEFORE the pdf-`\includegraphics` heuristic — Perl (Pack.pm L197-204)
+  // runs them in the opposite order. arXiv requires the compiled `<main>.bbl`
+  // to be bundled (BibTeX is not re-run), so a candidate with a matching
+  // `.bbl` is the single strongest fingerprint of the real top-level file.
+  // Perl's pdf heuristic, run first, silently eliminates a true main that
+  // delegates all its figures to `\input`-ed section files (hence carries no
+  // direct `\includegraphics`) whenever a shipped class template / how-to /
+  // supplement DOES contain an example `\includegraphics{fig.png}`; the `.bbl`
+  // tie-break that would have rescued it never gets to run. Ordering `.bbl`
+  // first fixes that class. Witnesses (all SHARED-FAILURE vs production Perl,
+  // html_feedback autotex issues): 2407.05010 (#1721, IEEEtran how-to),
+  // 2409.06957 (#6100, ICLR template), 2409.02543 (#5867, supp.tex),
+  // 2406.08688 (#5476, IEEEtran template), 2310.02368 (#4156, IEEE template),
+  // 2505.05625 (#4067, supplementary.tex), 2410.12672 (#2369, ICLR template),
+  // 2410.01562 (#2224, ICASSP template), 2401.17263 (#442, ICML example_paper),
+  // 2403.17719 (#859, rebuttal.tex). When >1 candidate carries a `.bbl` (e.g.
+  // 2506.05564, 2401.07129) the set survives and the later heuristics
+  // (pdf-include, common-name, alphabetical) still discriminate as before.
   if candidates.len() > 1 {
     let bbl_candidates: Vec<PathBuf> = candidates
       .iter()
@@ -306,6 +308,17 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
       .collect();
     if !bbl_candidates.is_empty() {
       candidates = bbl_candidates;
+    }
+  }
+
+  if candidates.len() > 1 {
+    let pdf_candidates: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| has_pdftex_marker(f))
+      .cloned()
+      .collect();
+    if !pdf_candidates.is_empty() {
+      candidates = pdf_candidates;
     }
   }
 
@@ -334,11 +347,248 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
   )
 }
 
+/// Ordered list of top-level `.tex` files: the main document first, then any
+/// **Supplementary-Material** documents that ship alongside it. `find_main_tex`
+/// returns element 0 of this list; embedders that want to convert the whole
+/// submission (main + supplements, appended in order — arXiv's multi-top-level
+/// model, [`submit_legacy_differences`]) drive off the full list.
+///
+/// Detection is deliberately **precision-first / template-safe**. A supplement
+/// is admitted only when it is a `\documentclass` file that (a) ships its own
+/// matching `.bbl` — arXiv's canonical `ms.tex`+`ms.bbl` / `supplement.tex`+
+/// `supplement.bbl` fingerprint, which bundled class *templates* do not have —
+/// and (b) self-identifies as supplementary by `\title` or filename
+/// (`supplement`/`supporting`/`supplemental`/`appendix`/`SI`/`SM`). Both gates
+/// together keep a messy bundle's template from ever being mistaken for a
+/// second document. An explicit `00README` listing two or more top-level files
+/// overrides the heuristic (author intent), still ordered main-first.
+///
+/// Conservative residual: a supplement bundled *without* its own `.bbl`, or one
+/// that does not self-identify, is not auto-detected.
+///
+/// [`submit_legacy_differences`]: https://info.arxiv.org/help/submit_legacy_differences.html
+pub fn find_top_level_texs(dir: &Path) -> Result<Vec<PathBuf>, String> {
+  // An explicit multi-file 00README designation wins over the heuristic.
+  let explicit = explicit_top_levels(dir);
+  if explicit.len() >= 2 {
+    return Ok(order_main_first(explicit, dir));
+  }
+  let main = find_main_tex(dir)?;
+  // The set of `.bbl`-backed top-level documents at the main's depth — arXiv's
+  // multi-top-level fingerprint. Include `main` even if it ships no `.bbl`
+  // (inline bibliography) so a `.bbl`-backed supplement can still attach to it.
+  let mut set = top_level_bbl_docs(dir, &main);
+  if !set.contains(&main) {
+    set.push(main.clone());
+  }
+  // Split into the single true main (the lone non-supplement) and supplements.
+  // This is done over the whole set rather than trusting `find_main_tex`'s
+  // alphabetical tie-break, which can pick a supplement (e.g. `Appendix.tex`
+  // sorts before `Note.tex`) when two `.bbl` documents are otherwise level.
+  let (mut supps, mains): (Vec<PathBuf>, Vec<PathBuf>) =
+    set.into_iter().partition(|f| is_supplement(f));
+  if mains.len() == 1 && !supps.is_empty() {
+    supps.sort();
+    supps.dedup();
+    let mut tops = mains;
+    tops.extend(supps);
+    return Ok(tops);
+  }
+  // No clean 1-main + supplements split → single-file (unchanged behavior).
+  Ok(vec![main])
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers.
 // ---------------------------------------------------------------------------
 
 fn s(msg: &str) -> String { msg.to_string() }
+
+/// All files a `00README.json`/`00README.XXX` explicitly marks as top-level, in
+/// listed order, restricted to those that exist (main-first ordering applied by
+/// the caller). Empty when there is no explicit designation.
+fn explicit_top_levels(dir: &Path) -> Vec<PathBuf> {
+  let mut out: Vec<PathBuf> = Vec::new();
+  for name in parse_readme_json_all(dir) {
+    let p = dir.join(&name);
+    if p.exists() && !out.contains(&p) {
+      out.push(p);
+    }
+  }
+  let readme_xxx = dir.join("00README.XXX");
+  if let Ok(content) = std::fs::read_to_string(&readme_xxx) {
+    for line in content.lines() {
+      let parts: Vec<&str> = line.split_whitespace().collect();
+      if parts.len() >= 2 && parts[1] == "toplevelfile" {
+        let p = dir.join(parts[0]);
+        if p.exists() && !out.contains(&p) {
+          out.push(p);
+        }
+      }
+    }
+  }
+  out
+}
+
+/// The set of `.bbl`-backed top-level documents at `main`'s depth: `\document`-
+/// class files that carry their own sibling `.bbl` (arXiv's own top-level
+/// fingerprint, which bundled templates lack), excluding `%auto-ignore` and
+/// `00README` `ignore` files. `main` itself is included when it qualifies.
+fn top_level_bbl_docs(dir: &Path, main: &Path) -> Vec<PathBuf> {
+  let main_depth = main.strip_prefix(dir).unwrap_or(main).components().count();
+  let ignored = readme_ignored(dir);
+  let mut tex_files: Vec<PathBuf> = Vec::new();
+  collect_tex_files(dir, &mut tex_files, false);
+  tex_files
+    .into_iter()
+    .filter(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == main_depth)
+    .filter(|f| !ignored.contains(f))
+    .filter(|f| !has_auto_ignore(f))
+    .filter(|f| f.with_extension("bbl").exists())
+    .filter(|f| file_has_documentclass(f))
+    .collect()
+}
+
+/// Files a `00README.XXX` marks `ignore` (Perl `Pack.pm` `unlink`s them; we
+/// exclude by set — see `find_main_tex`).
+fn readme_ignored(dir: &Path) -> rustc_hash::FxHashSet<PathBuf> {
+  let mut ignored = rustc_hash::FxHashSet::default();
+  if let Ok(content) = std::fs::read_to_string(dir.join("00README.XXX")) {
+    for line in content.lines() {
+      let parts: Vec<&str> = line.split_whitespace().collect();
+      if parts.len() >= 2 && parts[1] == "ignore" {
+        ignored.insert(dir.join(parts[0]));
+      }
+    }
+  }
+  ignored
+}
+
+/// Whether one of the file's first 10 lines carries the `%auto-ignore` marker
+/// (arXiv: keep in the bundle, do not process — `submit_legacy_differences`).
+fn has_auto_ignore(path: &Path) -> bool {
+  let Ok(raw) = std::fs::read(path) else {
+    return false;
+  };
+  String::from_utf8_lossy(&raw)
+    .lines()
+    .take(10)
+    .any(|l| RE_AUTOIGNORE.is_match(l))
+}
+
+/// Order a set of top-level files main-first: any file that looks like a
+/// supplement goes last (arXiv-alphanumeric within each group); among the
+/// non-supplements a `main`/`ms`/`paper` common name is promoted to the front.
+fn order_main_first(mut files: Vec<PathBuf>, _dir: &Path) -> Vec<PathBuf> {
+  files.sort();
+  files.dedup();
+  let (supps, mut mains): (Vec<PathBuf>, Vec<PathBuf>) =
+    files.into_iter().partition(|f| is_supplement(f));
+  if let Some(pos) = mains.iter().position(|f| is_common_main_name(f)) {
+    let m = mains.remove(pos);
+    mains.insert(0, m);
+  }
+  mains.extend(supps);
+  mains
+}
+
+/// Whether the file names itself `main.tex` / `ms.tex` / `paper.tex` (the same
+/// common-name set the single-file heuristic prefers).
+fn is_common_main_name(path: &Path) -> bool {
+  path
+    .file_name()
+    .and_then(|n| n.to_str())
+    .is_some_and(|n| n == "main.tex" || n == "ms.tex" || n == "paper.tex")
+}
+
+/// A top-level `.tex` reads as Supplementary Material when its filename or its
+/// `\title` announces it (`supplement`/`supporting`/`supplemental`/`appendix`/
+/// delimited `SI`/`SM`). Used only among *already* `.bbl`-backed sibling
+/// documents, so this classifies main-vs-supplement; it never promotes a
+/// template into a document.
+fn is_supplement(path: &Path) -> bool {
+  if let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+    && RE_SUPP_NAME.is_match(stem)
+  {
+    return true;
+  }
+  if let Some(title) = first_title(path)
+    && RE_SUPP_TITLE.is_match(&title)
+  {
+    return true;
+  }
+  false
+}
+
+/// True when the file defines a `\documentclass`/`\documentstyle` (i.e. is a
+/// top-level document, not an `\input`-ed fragment).
+fn file_has_documentclass(path: &Path) -> bool {
+  let Ok(raw) = std::fs::read(path) else {
+    return false;
+  };
+  let content = String::from_utf8_lossy(&raw);
+  content.lines().any(|l| {
+    let stripped = RE_STRIP_COMMENT.replacen(l, 1, "");
+    RE_DOCCLASS.is_match(&stripped)
+  })
+}
+
+/// The text of the first non-commented `\title{…}` / `\icmltitle{…}` in the
+/// file (up to ~120 chars), for supplement classification.
+fn first_title(path: &Path) -> Option<String> {
+  let raw = std::fs::read(path).ok()?;
+  let content = String::from_utf8_lossy(&raw);
+  // Strip `%`-comments line-by-line so a commented template placeholder title
+  // (`%% \title{Title}`) does not count. Witness 2402.13498 (elsarticle).
+  let stripped: String = content
+    .lines()
+    .map(|l| RE_STRIP_COMMENT.replacen(l, 1, "").into_owned())
+    .collect::<Vec<_>>()
+    .join("\n");
+  RE_TITLE_ARG
+    .captures(&stripped)
+    .map(|c| c[1].chars().take(120).collect())
+}
+
+/// Parse `00README.json` and return the filenames of **every** `usage ==
+/// "toplevel"` source, in document order. `parse_readme_json` returns only the
+/// first; this drives multi-top-level detection.
+fn parse_readme_json_all(dir: &Path) -> Vec<String> {
+  let mut out = Vec::new();
+  let Ok(content) = std::fs::read_to_string(dir.join("00README.json")) else {
+    return out;
+  };
+  let Some(sources_start) = content.find("\"sources\"") else {
+    return out;
+  };
+  let rest = &content[sources_start..];
+  let (Some(arr_start), Some(arr_end)) = (rest.find('['), rest.find(']')) else {
+    return out;
+  };
+  let arr = &rest[arr_start + 1..arr_end];
+  for obj_str in arr.split('}') {
+    if !obj_str.contains("\"toplevel\"") {
+      continue;
+    }
+    if let Some(fn_pos) = obj_str.find("\"filename\"") {
+      let after = obj_str[fn_pos + 10..].trim_start();
+      if let Some(after) = after.strip_prefix(':') {
+        let after = after.trim_start();
+        if let Some(after) = after.strip_prefix('"') {
+          let name: String = after
+            .chars()
+            .take_while(|&c| c != '"')
+            .filter(|&c| c != '\\')
+            .collect();
+          if !name.is_empty() {
+            out.push(name);
+          }
+        }
+      }
+    }
+  }
+  out
+}
 
 // Perl Pack.pm L25 TEX_EXT = qr/\.(?:[tT](:?[eE][xX]|[xX][tT])|ltx|LTX)$/
 // → .tex, .txt, .ltx (case-insensitive). The `fallback` arm matches Perl
@@ -371,6 +621,33 @@ fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>, fallback: bool) {
   }
 }
 
+// Faithful port of Perl `Pack.pm::heuristic_check_for_pdftex` (L222-241):
+// a file counts as a pdf-include candidate only when some line carries
+// `\includegraphics{...ext}` with the raster/pdf extension INSIDE the
+// argument (`\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}`, case-insensitive,
+// not preceded by a `%`), or a `\pdfoutput=1` marker. Perl's `$pdfoutput_checks`
+// counter clamps at 0, so its `>= 0` guard is always true and the `\pdfoutput`
+// probe effectively scans every line — we mirror that (no first-N-lines cap).
+//
+// The earlier Rust port used a loose whole-file
+// `contains("\\includegraphics") && contains(".png"|".pdf"|".jpg")`, which
+// FALSE-POSITIVES on class templates whose `\includegraphics` examples are
+// extensionless (`{icml_numpapers}`) or `.eps` (`{egfigure.eps}`) yet mention
+// a raster extension elsewhere (prose/comments). Because the pdf heuristic runs
+// before the `.bbl` tie-break, that false positive eliminated the true
+// figure-delegating `main.tex`: 2401.17263 (#442, example_paper.tex) and
+// 2403.17719 (#859, rebuttal.tex) were mis-picked by Rust though Perl picks
+// their `main.tex`. Argument-anchoring restores parity.
+fn has_pdftex_marker(path: &Path) -> bool {
+  let Ok(raw) = std::fs::read(path) else {
+    return false;
+  };
+  let content = String::from_utf8_lossy(&raw);
+  content
+    .lines()
+    .any(|line| RE_PDF_INCLUDE.is_match(line) || RE_PDFOUTPUT.is_match(line))
+}
+
 // Skip files whose magic bytes identify them as PDF (e.g. arXiv source
 // archives that contain a PDF mis-named with a `.tex` extension).
 pub fn is_pdf_magic(path: &Path) -> bool {
@@ -388,39 +665,7 @@ pub fn is_pdf_magic(path: &Path) -> bool {
 /// toplevel source. Perl Pack.pm L68-80: scans `sources[]` for the
 /// entry tagged `usage == "toplevel"`. Minimal hand-rolled JSON
 /// scanner — we don't pull a full JSON dep just for this.
-fn parse_readme_json(dir: &Path) -> Option<String> {
-  let content = std::fs::read_to_string(dir.join("00README.json")).ok()?;
-  let sources_start = content.find("\"sources\"")?;
-  let rest = &content[sources_start..];
-  let arr_start = rest.find('[')?;
-  let arr_end = rest.find(']')?;
-  let arr = &rest[arr_start + 1..arr_end];
-
-  for obj_str in arr.split('}') {
-    if !obj_str.contains("\"toplevel\"") {
-      continue;
-    }
-    if let Some(fn_pos) = obj_str.find("\"filename\"") {
-      let after_key = &obj_str[fn_pos + 10..];
-      let after_key = after_key.trim_start();
-      let after_key = after_key.strip_prefix(':')?;
-      let after_key = after_key.trim_start();
-      let after_key = after_key.strip_prefix('"')?;
-      let mut result = String::new();
-      for ch in after_key.chars() {
-        match ch {
-          '"' => break,
-          '\\' => continue,
-          c => result.push(c),
-        }
-      }
-      if !result.is_empty() {
-        return Some(result);
-      }
-    }
-  }
-  None
-}
+fn parse_readme_json(dir: &Path) -> Option<String> { parse_readme_json_all(dir).into_iter().next() }
 
 // ---------------------------------------------------------------------------
 // Pre-compiled regexes used by `find_main_tex`. Parking these as module-
@@ -451,6 +696,27 @@ static RE_UUENCODE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^begin \d{1,4}\s+\S+
 static RE_WITHDRAWN: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
 static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+// Perl `heuristic_check_for_pdftex` pdf-include probe: an `\includegraphics`
+// whose argument names a raster/pdf image (case-insensitive), not behind a `%`.
+static RE_PDF_INCLUDE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"(?i)^[^%]*\\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap());
+// Perl `\pdfoutput(?:\s+)?=(?:\s+)?1` marker, not behind a `%`.
+static RE_PDFOUTPUT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^%]*\\pdfoutput\s*=\s*1").unwrap());
+// Supplementary-Material detection (find_top_level_texs). Filename tokens
+// (`paper_SI`, `supplement`, `z_SI_renamed`, `Supplemental_Materials`) — the
+// short `si`/`sm` forms only as delimited tokens so they can't match a substring.
+static RE_SUPP_NAME: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(?i)(^|[_-])(supp(lement(ary|al)?)?|supporting|supplemental|appendix|si|sm)([_-]|$)")
+    .unwrap()
+});
+// Supplement `\title` text ("Supplementary Information for …", "SUPPLEMENTAL
+// MATERIALS", "Supporting Information", "Supplemental Materials for:").
+static RE_SUPP_TITLE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(?i)(supplement|supporting\s+information|supplemental|appendix)").unwrap()
+});
+// First braced argument of a `\title`/`\icmltitle` (comments already stripped).
+static RE_TITLE_ARG: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"\\(?:icml)?title\s*(?:\[[^\]]*\])?\s*\{([^}]*)").unwrap());
 // Strip a single `%`-comment, stopping at the next `\r` so bare-`\r`
 // line-ended files (Mac classic) preserve post-comment `\documentclass`.
 static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
@@ -534,5 +800,227 @@ mod tests {
     );
     let pick = find_main_tex(d.path()).unwrap();
     assert_eq!(pick.file_name().unwrap(), "paper.tex");
+  }
+
+  // OXIDIZED_DESIGN #132: a matching `.bbl` sibling outranks the pdf-include
+  // heuristic. Models the witness class (2407.05010 #1721 et al.): the true
+  // main delegates its figures (no direct `\includegraphics`) but ships a
+  // `main.bbl`, while a class how-to/template carries an example
+  // `\includegraphics{fig.png}`. Perl's pdf-before-bbl order (and our old port)
+  // picked the template; bbl-first recovers the real main.
+  #[test]
+  fn bbl_sibling_outranks_pdf_include_marker() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{IEEEtran}\n\\input{sections/intro}\n\\begin{document}\\title{Real}\\end{document}",
+    );
+    write(
+      d.path(),
+      "New_IEEEtran_how-to.tex",
+      "\\documentclass{IEEEtran}\n\\includegraphics[width=1in]{fig1.png}\n\\begin{document}How to.\\end{document}",
+    );
+    write(
+      d.path(),
+      "main.bbl",
+      "\\begin{thebibliography}{1}\\end{thebibliography}\n",
+    );
+    let pick = find_main_tex(d.path()).unwrap();
+    assert_eq!(pick.file_name().unwrap(), "main.tex");
+  }
+
+  // Reorder must not swallow the later common-name tie-break: when >1 candidate
+  // carries a `.bbl` (2506.05564, 2401.07129), the `.bbl` set survives and
+  // main/ms/paper still wins over an alphabetically-earlier sibling.
+  #[test]
+  fn reorder_preserves_common_name_when_multiple_bbl() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "aaa.tex",
+      "\\documentclass{article}\n\\includegraphics{x.png}\n",
+    );
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\includegraphics{y.png}\n",
+    );
+    write(d.path(), "aaa.bbl", "");
+    write(d.path(), "main.bbl", "");
+    let pick = find_main_tex(d.path()).unwrap();
+    assert_eq!(pick.file_name().unwrap(), "main.tex");
+  }
+
+  // Parity fix (Perl `heuristic_check_for_pdftex`): the extension must sit
+  // INSIDE the `\includegraphics{…}` argument. The old loose whole-file
+  // `contains` false-positived on templates whose examples are extensionless
+  // (2401.17263 #442 `{icml_numpapers}`) or `.eps` (2403.17719 #859
+  // `{egfigure.eps}`) yet mention a raster extension elsewhere.
+  #[test]
+  fn strict_pdf_marker_rejects_extensionless_eps_and_comments() {
+    let d = tempdir().unwrap();
+    // extensionless arg + an unrelated `.png` mention in prose → not a marker
+    write(
+      d.path(),
+      "example_paper.tex",
+      "\\centerline{\\includegraphics[width=\\columnwidth]{icml_numpapers}}\nResults saved as results.png.\n",
+    );
+    // `.eps` extension is not in the raster/pdf set
+    write(
+      d.path(),
+      "rebuttal.tex",
+      "\\includegraphics[width=0.8\\linewidth]{egfigure.eps}\n",
+    );
+    // commented-out include must not count (behind `%`)
+    write(d.path(), "commented.tex", "%\\includegraphics{fig.png}\n");
+    assert!(!has_pdftex_marker(&d.path().join("example_paper.tex")));
+    assert!(!has_pdftex_marker(&d.path().join("rebuttal.tex")));
+    assert!(!has_pdftex_marker(&d.path().join("commented.tex")));
+  }
+
+  #[test]
+  fn strict_pdf_marker_accepts_arg_extension_and_pdfoutput() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "fig.tex",
+      "\\includegraphics[width=2in]{diagram.pdf}\n",
+    );
+    write(d.path(), "gif.tex", "\\includegraphics{anim.gif}\n"); // Perl includes gif
+    write(
+      d.path(),
+      "pdfout.tex",
+      "\\pdfoutput=1\n\\includegraphics{noext}\n",
+    );
+    assert!(has_pdftex_marker(&d.path().join("fig.tex")));
+    assert!(has_pdftex_marker(&d.path().join("gif.tex")));
+    assert!(has_pdftex_marker(&d.path().join("pdfout.tex")));
+  }
+
+  // Multi-top-level detection (find_top_level_texs). Models the real
+  // main+supplement pattern (2408.13687, 2401.07129, …): both documents carry
+  // their own `.bbl`; the supplement self-identifies by title/filename.
+  #[test]
+  fn top_level_texs_appends_supplement() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\title{Quantum error correction}\n",
+    );
+    write(
+      d.path(),
+      "supplement.tex",
+      "\\documentclass{article}\n\\title{Supplementary Information for Quantum error correction}\n",
+    );
+    write(d.path(), "main.bbl", "");
+    write(d.path(), "supplement.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["main.tex", "supplement.tex"]);
+    // `find_main_tex` stays the first entry.
+    assert_eq!(find_main_tex(d.path()).unwrap(), tops[0]);
+  }
+
+  // Main first even when the supplement sorts alphabetically before it
+  // (2506.05564: `Note.tex` main + `Appendix.tex` supplement).
+  #[test]
+  fn top_level_texs_orders_main_first_despite_alpha() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "Note.tex",
+      "\\documentclass{article}\n\\title{Bayesian Inference of the Landau Parameter}\n",
+    );
+    write(
+      d.path(),
+      "Appendix.tex",
+      "\\documentclass{article}\n\\title{SUPPLEMENTAL MATERIALS}\n",
+    );
+    write(d.path(), "Note.bbl", "");
+    write(d.path(), "Appendix.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["Note.tex", "Appendix.tex"]);
+  }
+
+  // Template safety: a bundled template (no `.bbl`, does not self-identify as a
+  // supplement) is never appended, even when it carries example graphics.
+  #[test]
+  fn top_level_texs_excludes_template_without_bbl() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{IEEEtran}\n\\input{sec}\n\\title{Real Paper}\n",
+    );
+    write(
+      d.path(),
+      "New_IEEEtran_how-to.tex",
+      "\\documentclass{IEEEtran}\n\\includegraphics{fig1.png}\n\\title{How to Use the IEEEtran Templates}\n",
+    );
+    write(d.path(), "main.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["main.tex"]);
+  }
+
+  // Precision: a supplement-titled document WITHOUT its own `.bbl` is not
+  // auto-detected (conservative residual).
+  #[test]
+  fn supplement_without_bbl_is_not_detected() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\title{Real Paper}\n",
+    );
+    write(
+      d.path(),
+      "supp.tex",
+      "\\documentclass{article}\n\\title{Supplementary Information}\n",
+    );
+    write(d.path(), "main.bbl", "");
+    let tops = find_top_level_texs(d.path()).unwrap();
+    assert_eq!(tops.len(), 1);
+    assert_eq!(tops[0].file_name().unwrap(), "main.tex");
+  }
+
+  // Explicit 00README with two toplevelfile lines → both, main-first even when
+  // listed supplement-first.
+  #[test]
+  fn readme_two_toplevelfiles_ordered_main_first() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\title{Paper}\n",
+    );
+    write(
+      d.path(),
+      "si.tex",
+      "\\documentclass{article}\n\\title{Supporting Information}\n",
+    );
+    write(
+      d.path(),
+      "00README.XXX",
+      "si.tex toplevelfile\nmain.tex toplevelfile\n",
+    );
+    let tops = find_top_level_texs(d.path()).unwrap();
+    let names: Vec<_> = tops
+      .iter()
+      .map(|p| p.file_name().unwrap().to_str().unwrap())
+      .collect();
+    assert_eq!(names, vec!["main.tex", "si.tex"]);
   }
 }
