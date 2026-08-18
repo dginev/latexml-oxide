@@ -11,6 +11,17 @@
 mod cluster;
 use cluster::{convert_to_xml, convert_to_xml_contrib, convert_to_xml_contrib_clean};
 
+/// True if the `<creator>` whose `<personname>` is `name` carries an `email`
+/// contact whose text contains `mail`.
+fn creator_has_email(xml: &str, name: &str, mail: &str) -> bool {
+  xml.split("<creator").skip(1).any(|rest| {
+    let block = rest.split("</creator>").next().unwrap_or("");
+    block.contains(&format!("<personname>{name}</personname>"))
+      && block.contains("role=\"email\"")
+      && block.contains(mail)
+  })
+}
+
 /// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
 /// (optional running-head short name + full name). The name must render, and
 /// the `[F. Poli]` optarg must NOT leak as a `[` creator. Witness 2405.08372.
@@ -128,6 +139,56 @@ fn frontmatter_authblk_comma_list() {
   assert!(
     !x.contains("<personname>Alice One, Bob"),
     "the comma list stayed welded into one personname:\n{x}"
+  );
+}
+/// A shared author email line must not bunch every address under the last author.
+/// Distributed (`a@x, b@y, c@z`) → email i to author i; grouped brace-expansion
+/// (`{a,b,c}@dom`) → expand then distribute (and NOT glue into the affiliation);
+/// a single shared address → the lead (first) author. OXIDIZED_DESIGN #52(j).
+#[test]
+fn frontmatter_shared_email_distribution() {
+  // 1. Distributed list, one address per author.
+  let d = convert_to_xml("tests/cluster_regressions/frontmatter_email_distributed.tex");
+  for (name, mail) in [
+    ("Alice", "alice@mit.edu"),
+    ("Bob", "bob@cmu.edu"),
+    ("Carol", "carol@mit.edu"),
+  ] {
+    assert!(
+      creator_has_email(&d, name, mail),
+      "distributed: {name} must carry {mail}:\n{d}"
+    );
+  }
+  // 2. Grouped {a,b,c}@dom expands per author; the affiliation stays clean.
+  let g = convert_to_xml("tests/cluster_regressions/frontmatter_email_grouped.tex");
+  for (name, mail) in [
+    ("Alice", "alice@mit.edu"),
+    ("Bob", "bob@mit.edu"),
+    ("Carol", "carol@mit.edu"),
+  ] {
+    assert!(
+      creator_has_email(&g, name, mail),
+      "grouped: {name} must carry expanded {mail}:\n{g}"
+    );
+  }
+  // The grouped email must NOT be glued into an affiliation (a clean affiliation
+  // carries no '@').
+  for aff in g.split("role=\"affiliation\"").skip(1) {
+    let text = aff.split("</contact>").next().unwrap_or("");
+    assert!(
+      !text.contains('@'),
+      "grouped email leaked into the affiliation text:\n{g}"
+    );
+  }
+  // 3. A single shared address lands on the lead (first) author, not the last.
+  let s = convert_to_xml("tests/cluster_regressions/frontmatter_email_single_shared.tex");
+  assert!(
+    creator_has_email(&s, "Alice", "contact@lab.org"),
+    "single shared: lead author Alice must carry contact@lab.org:\n{s}"
+  );
+  assert!(
+    !creator_has_email(&s, "Bob", "contact@lab.org"),
+    "single shared: must not also land on a trailing author:\n{s}"
   );
 }
 /// arXiv:2403.16405 (IEEEtran conference): a `\author{}` grid where `\and` starts a
