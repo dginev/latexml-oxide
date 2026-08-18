@@ -67,11 +67,19 @@ low-risk/moderate win; Step2 high-effort/high-win.
 > divergence-neutral, off the BP roadmap but worth landing opportunistically:
 > **(1) UTF-8 SIMD fast-path on the `.cls`/`.sty` dep-scan slurp** (`binding/content.rs`
 > — `from_utf8_lossy` walked a 197 KB `ieeeconf.cls` grapheme-aware; ~3% CPU) —
-> **LANDED** on `perf-utf8-slurp-fastpath`, byte-identical. **(2) `state.rs`
-> snapshot-diff compares values via `format!("{:?}") != format!("{:?}")`** (~2% CPU,
-> two heap Debug walks per entry) — candidate, needs a structural-`eq`-vs-dump-diff
-> semantics check first. The **25.5% gullet loop** and **12.7% alloc/memcpy** token
-> churn are architectural, not free wins.
+> **LANDED** on `perf-utf8-slurp-fastpath`, byte-identical. **(2) `state.rs:789`
+> `format!("{:?}") != format!("{:?}")` value compare — SPIKED + REFUTED 2026-08-18,
+> do not chase.** `diff_from_snapshot` runs ONLY at dump *generation*
+> (`ini_tex.rs:214`, `make_formats.sh`/release), NEVER during paper conversion — the
+> LBR-less AMD profile misattributed the 4.3% fmt cluster to it (no call tree). That
+> fmt cluster is actually **eager logging** (`Info!`/`Warn!`/`Debug!` format their
+> args before the level gate + token `{:?}` in messages), wasted only in bare-CLI
+> suppressed runs — a bound log buffer (`--log`/fleet) consumes them, so it's not a
+> production win either. Leave state.rs:789 alone: it feeds the format-dump parity
+> oracle, so a structural-`eq` swap risks changing which entries serialize for zero
+> conversion benefit. **Method lesson:** on the AMD box (no LBR), verify a profile's
+> caller attribution against the actual call graph before acting. The **25.5% gullet
+> loop** and **12.7% alloc/memcpy** token churn are architectural, not free wins.
 
 **BP-3 — Concurrent graphics + parallel MathML structure** (graphics 8.9% +
 mathml_pres 4.5% ≈ 13%). Graphics conversions are independent *subprocesses*
