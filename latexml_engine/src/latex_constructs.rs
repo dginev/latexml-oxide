@@ -8545,7 +8545,7 @@ LoadDefinitions!({
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:index"        => "ltx:section");
 
   DefConstructor!("\\lx@bibliography [] Semiverbatim",
-    "<ltx:bibliography files='#2' xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#1'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title></ltx:bibliography>",
+    "<ltx:bibliography files='#2' xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#lists'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title></ltx:bibliography>",
     after_digest => sub[whatsit] {
       bgroup();
       begin_bibliography(whatsit)?;
@@ -8553,6 +8553,26 @@ LoadDefinitions!({
     },
     before_construct => sub[doc,whatsit] {
       adjust_backmatter_element(doc, whatsit)?;
+    },
+    properties => sub[args] {
+      // The chapterbib/bibunits unit name (`[#1]`) is a LIST IDENTIFIER, matched
+      // against each `<ltx:bibref inlist=...>` to select the entries for this
+      // per-unit bibliography, so `lists` must be the RAW source string. The unit
+      // name is an included file's basename; `\lx@cb@unitname` explodes it to
+      // catcode-12 OTHER tokens (so `_` is not a subscript — 1611.05798). But the
+      // args here are DIGESTED, and a bare `.to_string()` would render that `_`
+      // through the active OT1 font (slot 0x5F = `˙` U+02D9), giving
+      // `lists="main˙paper"` while the citation side keeps `inlist="main_paper"`
+      // (from the CITE_UNIT string) — the mismatch drops every entry (0 cited, empty
+      // References). So `.revert()` to the source tokens FIRST, then `.to_string()`
+      // — do NOT drop the revert. This matches Perl, which builds `lists` from the
+      // arg's ToString (source `_`). Rust-only; witness arXiv 2605.15421 (0 -> 101).
+      unpack_opt_ref!(args => unit_opt);
+      let lists = match unit_opt.as_ref() {
+        Some(u) => u.revert()?.to_string(),
+        None => String::new(),
+      };
+      Ok(stored_map!("lists" => Stored::String(pin(&lists))))
     }
   );
 
