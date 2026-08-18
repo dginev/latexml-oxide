@@ -1348,6 +1348,7 @@ several carry explicit "do NOT start" directives.
 | Content-MathML / math-parser gaps | R8 | [`math/CONTENT_MATHML_GAPS.md`](math/CONTENT_MATHML_GAPS.md) |
 | Deep deferred families (`.bst`, xy-pic, mode-frame, …) | R9 | [`parity/DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md) |
 | Two-pass streaming split | deferred | [`performance/STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) |
+| Multi-document streaming post-join (main+supplements) | queued | [`performance/MULTIDOC_JOIN.md`](performance/MULTIDOC_JOIN.md) |
 
 ## Reference (stable — not active work)
 
