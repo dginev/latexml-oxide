@@ -1749,122 +1749,137 @@
 <a href=#1749 id=1749 data-nosnippet>1749</a>      })
 <a href=#1750 id=1750 data-nosnippet>1750</a>    },
 <a href=#1751 id=1751 data-nosnippet>1751</a>  );
-<a href=#1752 id=1752 data-nosnippet>1752</a>  <span class="comment">// Absorb a whatsit property at the current point — the imperative analog of a
-<a href=#1753 id=1753 data-nosnippet>1753</a>  // template's `#name` hole at content position. The workhorse is
-<a href=#1754 id=1754 data-nosnippet>1754</a>  // `document.absorbProperty("body")` inside an imperative `DefEnvironment`
-<a href=#1755 id=1755 data-nosnippet>1755</a>  // (mirroring natives like `{center}`'s `sub[document, _args, props]` body).
-<a href=#1756 id=1756 data-nosnippet>1756</a>  </span>engine.register_fn(
-<a href=#1757 id=1757 data-nosnippet>1757</a>    <span class="string">"absorbProperty"</span>,
-<a href=#1758 id=1758 data-nosnippet>1758</a>    |_d: <span class="kw-2">&amp;mut </span>DocProxy, name: <span class="kw-2">&amp;</span>str| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
-<a href=#1759 id=1759 data-nosnippet>1759</a>      with_doc(|doc, props| {
-<a href=#1760 id=1760 data-nosnippet>1760</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(stored) = props.get(name) {
-<a href=#1761 id=1761 data-nosnippet>1761</a>          <span class="kw">let </span>dig: <span class="prelude-ty">Option</span>&lt;Digested&gt; = stored.into();
-<a href=#1762 id=1762 data-nosnippet>1762</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>d) = dig {
-<a href=#1763 id=1763 data-nosnippet>1763</a>            doc.absorb(d, <span class="prelude-val">None</span>).map_err(rhai_err)<span class="question-mark">?</span>;
-<a href=#1764 id=1764 data-nosnippet>1764</a>          }
-<a href=#1765 id=1765 data-nosnippet>1765</a>        }
-<a href=#1766 id=1766 data-nosnippet>1766</a>        <span class="prelude-val">Ok</span>(())
-<a href=#1767 id=1767 data-nosnippet>1767</a>      })
-<a href=#1768 id=1768 data-nosnippet>1768</a>    },
-<a href=#1769 id=1769 data-nosnippet>1769</a>  );
-<a href=#1770 id=1770 data-nosnippet>1770</a>
-<a href=#1771 id=1771 data-nosnippet>1771</a>  <span class="comment">// ── whatsit proxy: reached from a hook body via `whatsit()` ──
-<a href=#1772 id=1772 data-nosnippet>1772</a>  </span>engine.register_type_with_name::&lt;WhatsitProxy&gt;(<span class="string">"Whatsit"</span>);
-<a href=#1773 id=1773 data-nosnippet>1773</a>  engine.register_fn(<span class="string">"whatsit"</span>, || WhatsitProxy);
-<a href=#1774 id=1774 data-nosnippet>1774</a>  <span class="comment">// The n-th (1-based) argument as its TeX-source string.
-<a href=#1775 id=1775 data-nosnippet>1775</a>  </span>engine.register_fn(
-<a href=#1776 id=1776 data-nosnippet>1776</a>    <span class="string">"argString"</span>,
-<a href=#1777 id=1777 data-nosnippet>1777</a>    |_w: <span class="kw-2">&amp;mut </span>WhatsitProxy, n: i64| -&gt; std::result::Result&lt;String, Box&lt;EvalAltResult&gt;&gt; {
-<a href=#1778 id=1778 data-nosnippet>1778</a>      <span class="comment">// SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
-<a href=#1779 id=1779 data-nosnippet>1779</a>      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
-<a href=#1780 id=1780 data-nosnippet>1780</a>      // errors out, not UB, when called outside one). The pointer is live for
-<a href=#1781 id=1781 data-nosnippet>1781</a>      // the call and read-only here (`&amp;*`), so no aliasing `&amp;mut` exists.
-<a href=#1782 id=1782 data-nosnippet>1782</a>      </span><span class="kw">let </span>w = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>current_whatsit()<span class="question-mark">? </span>};
-<a href=#1783 id=1783 data-nosnippet>1783</a>      <span class="kw">match </span>w.get_arg(n <span class="kw">as </span>usize) {
-<a href=#1784 id=1784 data-nosnippet>1784</a>        <span class="prelude-val">Some</span>(d) =&gt; d.untex().map_err(rhai_err),
-<a href=#1785 id=1785 data-nosnippet>1785</a>        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(String::new()),
-<a href=#1786 id=1786 data-nosnippet>1786</a>      }
-<a href=#1787 id=1787 data-nosnippet>1787</a>    },
-<a href=#1788 id=1788 data-nosnippet>1788</a>  );
-<a href=#1789 id=1789 data-nosnippet>1789</a>  <span class="comment">// Set a whatsit property from a hook body (Perl `$whatsit-&gt;setProperty(k, v)`,
-<a href=#1790 id=1790 data-nosnippet>1790</a>  // e.g. plain `\footnote`'s afterDigest routing its mark arg to `mark`/`prenote`).
-<a href=#1791 id=1791 data-nosnippet>1791</a>  // The value lands as a string `Stored`, which the template interpreter renders
-<a href=#1792 id=1792 data-nosnippet>1792</a>  // at attribute (`to_attribute`), content (absorb), and truth-test positions.
-<a href=#1793 id=1793 data-nosnippet>1793</a>  </span>engine.register_fn(
-<a href=#1794 id=1794 data-nosnippet>1794</a>    <span class="string">"setProperty"</span>,
-<a href=#1795 id=1795 data-nosnippet>1795</a>    |_w: <span class="kw-2">&amp;mut </span>WhatsitProxy, key: <span class="kw-2">&amp;</span>str, val: <span class="kw-2">&amp;</span>str| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
-<a href=#1796 id=1796 data-nosnippet>1796</a>      <span class="kw">let </span>(ptr, mutable) = current_whatsit_entry()<span class="question-mark">?</span>;
-<a href=#1797 id=1797 data-nosnippet>1797</a>      <span class="kw">if </span>!mutable {
-<a href=#1798 id=1798 data-nosnippet>1798</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(Box::&lt;EvalAltResult&gt;::from(
-<a href=#1799 id=1799 data-nosnippet>1799</a>          <span class="string">"setProperty in a construction hook (whatsit is read-only there)"</span>,
-<a href=#1800 id=1800 data-nosnippet>1800</a>        ));
+<a href=#1752 id=1752 data-nosnippet>1752</a>  <span class="comment">// absorb overload for a `Tokens` value — an `Undigested` constructor arg reaches
+<a href=#1753 id=1753 data-nosnippet>1753</a>  // the body as `Tokens` (#634), and the dominant Perl port idiom is
+<a href=#1754 id=1754 data-nosnippet>1754</a>  // `$document-&gt;absorb($tokens)`. Wrapping as `Digested::from` yields the
+<a href=#1755 id=1755 data-nosnippet>1755</a>  // `Postponed(Tokens)` the core absorbs as text under the active font/mode —
+<a href=#1756 id=1756 data-nosnippet>1756</a>  // identical to how the arg was absorbed before it was unwrapped at the boundary.
+<a href=#1757 id=1757 data-nosnippet>1757</a>  </span>engine.register_fn(
+<a href=#1758 id=1758 data-nosnippet>1758</a>    <span class="string">"absorb"</span>,
+<a href=#1759 id=1759 data-nosnippet>1759</a>    |_d: <span class="kw-2">&amp;mut </span>DocProxy, tokens: Tokens| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
+<a href=#1760 id=1760 data-nosnippet>1760</a>      <span class="kw">let </span>arg = Digested::from(tokens);
+<a href=#1761 id=1761 data-nosnippet>1761</a>      with_doc(|doc, _props| {
+<a href=#1762 id=1762 data-nosnippet>1762</a>        doc.absorb(<span class="kw-2">&amp;</span>arg, <span class="prelude-val">None</span>).map_err(rhai_err)<span class="question-mark">?</span>;
+<a href=#1763 id=1763 data-nosnippet>1763</a>        <span class="prelude-val">Ok</span>(())
+<a href=#1764 id=1764 data-nosnippet>1764</a>      })
+<a href=#1765 id=1765 data-nosnippet>1765</a>    },
+<a href=#1766 id=1766 data-nosnippet>1766</a>  );
+<a href=#1767 id=1767 data-nosnippet>1767</a>  <span class="comment">// Absorb a whatsit property at the current point — the imperative analog of a
+<a href=#1768 id=1768 data-nosnippet>1768</a>  // template's `#name` hole at content position. The workhorse is
+<a href=#1769 id=1769 data-nosnippet>1769</a>  // `document.absorbProperty("body")` inside an imperative `DefEnvironment`
+<a href=#1770 id=1770 data-nosnippet>1770</a>  // (mirroring natives like `{center}`'s `sub[document, _args, props]` body).
+<a href=#1771 id=1771 data-nosnippet>1771</a>  </span>engine.register_fn(
+<a href=#1772 id=1772 data-nosnippet>1772</a>    <span class="string">"absorbProperty"</span>,
+<a href=#1773 id=1773 data-nosnippet>1773</a>    |_d: <span class="kw-2">&amp;mut </span>DocProxy, name: <span class="kw-2">&amp;</span>str| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
+<a href=#1774 id=1774 data-nosnippet>1774</a>      with_doc(|doc, props| {
+<a href=#1775 id=1775 data-nosnippet>1775</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(stored) = props.get(name) {
+<a href=#1776 id=1776 data-nosnippet>1776</a>          <span class="kw">let </span>dig: <span class="prelude-ty">Option</span>&lt;Digested&gt; = stored.into();
+<a href=#1777 id=1777 data-nosnippet>1777</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>d) = dig {
+<a href=#1778 id=1778 data-nosnippet>1778</a>            doc.absorb(d, <span class="prelude-val">None</span>).map_err(rhai_err)<span class="question-mark">?</span>;
+<a href=#1779 id=1779 data-nosnippet>1779</a>          }
+<a href=#1780 id=1780 data-nosnippet>1780</a>        }
+<a href=#1781 id=1781 data-nosnippet>1781</a>        <span class="prelude-val">Ok</span>(())
+<a href=#1782 id=1782 data-nosnippet>1782</a>      })
+<a href=#1783 id=1783 data-nosnippet>1783</a>    },
+<a href=#1784 id=1784 data-nosnippet>1784</a>  );
+<a href=#1785 id=1785 data-nosnippet>1785</a>
+<a href=#1786 id=1786 data-nosnippet>1786</a>  <span class="comment">// ── whatsit proxy: reached from a hook body via `whatsit()` ──
+<a href=#1787 id=1787 data-nosnippet>1787</a>  </span>engine.register_type_with_name::&lt;WhatsitProxy&gt;(<span class="string">"Whatsit"</span>);
+<a href=#1788 id=1788 data-nosnippet>1788</a>  engine.register_fn(<span class="string">"whatsit"</span>, || WhatsitProxy);
+<a href=#1789 id=1789 data-nosnippet>1789</a>  <span class="comment">// The n-th (1-based) argument as its TeX-source string.
+<a href=#1790 id=1790 data-nosnippet>1790</a>  </span>engine.register_fn(
+<a href=#1791 id=1791 data-nosnippet>1791</a>    <span class="string">"argString"</span>,
+<a href=#1792 id=1792 data-nosnippet>1792</a>    |_w: <span class="kw-2">&amp;mut </span>WhatsitProxy, n: i64| -&gt; std::result::Result&lt;String, Box&lt;EvalAltResult&gt;&gt; {
+<a href=#1793 id=1793 data-nosnippet>1793</a>      <span class="comment">// SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
+<a href=#1794 id=1794 data-nosnippet>1794</a>      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
+<a href=#1795 id=1795 data-nosnippet>1795</a>      // errors out, not UB, when called outside one). The pointer is live for
+<a href=#1796 id=1796 data-nosnippet>1796</a>      // the call and read-only here (`&amp;*`), so no aliasing `&amp;mut` exists.
+<a href=#1797 id=1797 data-nosnippet>1797</a>      </span><span class="kw">let </span>w = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>current_whatsit()<span class="question-mark">? </span>};
+<a href=#1798 id=1798 data-nosnippet>1798</a>      <span class="kw">match </span>w.get_arg(n <span class="kw">as </span>usize) {
+<a href=#1799 id=1799 data-nosnippet>1799</a>        <span class="prelude-val">Some</span>(d) =&gt; d.untex().map_err(rhai_err),
+<a href=#1800 id=1800 data-nosnippet>1800</a>        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(String::new()),
 <a href=#1801 id=1801 data-nosnippet>1801</a>      }
-<a href=#1802 id=1802 data-nosnippet>1802</a>      <span class="comment">// SAFETY: `ptr` is the in-flight whatsit the core published onto
-<a href=#1803 id=1803 data-nosnippet>1803</a>      // WHATSIT_CTX for THIS digestion-hook body, and the `mutable` flag (just
-<a href=#1804 id=1804 data-nosnippet>1804</a>      // checked) confirms it was published as writable. It is the sole live
-<a href=#1805 id=1805 data-nosnippet>1805</a>      // `&amp;mut` to this whatsit, so the re-mint is unique and non-aliasing.
-<a href=#1806 id=1806 data-nosnippet>1806</a>      // AUDITED (2026-06-27, sibling of PR #248 B1): the core runs after-digest
-<a href=#1807 id=1807 data-nosnippet>1807</a>      // hooks ONE-PASS and sequentially on a FRESH-LOCAL whatsit
-<a href=#1808 id=1808 data-nosnippet>1808</a>      // (`definition.rs::execute_after_digest`: `for post in … { post(&amp;mut
-<a href=#1809 id=1809 data-nosnippet>1809</a>      // whatsit) }`), never re-entering a hook on the SAME whatsit — so unlike
-<a href=#1810 id=1810 data-nosnippet>1810</a>      // the Document case there is no nested same-object re-mint at all. This is
-<a href=#1811 id=1811 data-nosnippet>1811</a>      // the single-body parked-`&amp;mut` + brief-re-mint pattern proven sound by
-<a href=#1812 id=1812 data-nosnippet>1812</a>      // the Miri model `latexml_core::runtime_bindings_reentrancy_model`
-<a href=#1813 id=1813 data-nosnippet>1813</a>      // (`reentrancy_model_single_body_sound`). (A hook that digests other
-<a href=#1814 id=1814 data-nosnippet>1814</a>      // content builds DIFFERENT whatsits → different `WHATSIT_CTX` entries, not
-<a href=#1815 id=1815 data-nosnippet>1815</a>      // an alias of this one.) The read-only ops above (`&amp;*`) need no such
-<a href=#1816 id=1816 data-nosnippet>1816</a>      // argument — shared refs may alias freely.
-<a href=#1817 id=1817 data-nosnippet>1817</a>      </span><span class="kw">let </span>w = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>ptr };
-<a href=#1818 id=1818 data-nosnippet>1818</a>      w.set_property(key, val.to_string());
-<a href=#1819 id=1819 data-nosnippet>1819</a>      <span class="prelude-val">Ok</span>(())
-<a href=#1820 id=1820 data-nosnippet>1820</a>    },
-<a href=#1821 id=1821 data-nosnippet>1821</a>  );
-<a href=#1822 id=1822 data-nosnippet>1822</a>  <span class="comment">// Read a whatsit property as a string ("" when absent) — Perl `getProperty`.
-<a href=#1823 id=1823 data-nosnippet>1823</a>  </span>engine.register_fn(
-<a href=#1824 id=1824 data-nosnippet>1824</a>    <span class="string">"propertyString"</span>,
-<a href=#1825 id=1825 data-nosnippet>1825</a>    |_w: <span class="kw-2">&amp;mut </span>WhatsitProxy, key: <span class="kw-2">&amp;</span>str| -&gt; std::result::Result&lt;String, Box&lt;EvalAltResult&gt;&gt; {
-<a href=#1826 id=1826 data-nosnippet>1826</a>      <span class="comment">// SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
-<a href=#1827 id=1827 data-nosnippet>1827</a>      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
-<a href=#1828 id=1828 data-nosnippet>1828</a>      // errors out, not UB, when called outside one). The pointer is live for
-<a href=#1829 id=1829 data-nosnippet>1829</a>      // the call and read-only here (`&amp;*`), so no aliasing `&amp;mut` exists.
-<a href=#1830 id=1830 data-nosnippet>1830</a>      </span><span class="kw">let </span>w = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>current_whatsit()<span class="question-mark">? </span>};
-<a href=#1831 id=1831 data-nosnippet>1831</a>      <span class="prelude-val">Ok</span>(w.get_property_string(key))
-<a href=#1832 id=1832 data-nosnippet>1832</a>    },
-<a href=#1833 id=1833 data-nosnippet>1833</a>  );
-<a href=#1834 id=1834 data-nosnippet>1834</a>
-<a href=#1835 id=1835 data-nosnippet>1835</a>  <span class="comment">// ── definition proxy (#321): LookupDefinition(cs) → push/unshift hooks ──
-<a href=#1836 id=1836 data-nosnippet>1836</a>  // Faithful to Perl `LookupDefinition($t)` + BookML's `push(@{ $$def{hook} },
-<a href=#1837 id=1837 data-nosnippet>1837</a>  // sub{…})`: fetch an installed definition and splice a hook onto one of its
-<a href=#1838 id=1838 data-nosnippet>1838</a>  // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
-<a href=#1839 id=1839 data-nosnippet>1839</a>  // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
-<a href=#1840 id=1840 data-nosnippet>1840</a>  </span>engine.register_type_with_name::&lt;DefinitionProxy&gt;(<span class="string">"Definition"</span>);
-<a href=#1841 id=1841 data-nosnippet>1841</a>  engine.register_fn(<span class="string">"LookupDefinition"</span>, |cs: <span class="kw-2">&amp;</span>str| -&gt; Dynamic {
-<a href=#1842 id=1842 data-nosnippet>1842</a>    <span class="kw">match </span>latexml_core::state::lookup_definition_stored(<span class="kw-2">&amp;</span><span class="macro">latexml_core::T_CS!</span>(cs)) {
-<a href=#1843 id=1843 data-nosnippet>1843</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; Dynamic::from(DefinitionProxy { cs: cs.to_string() }),
-<a href=#1844 id=1844 data-nosnippet>1844</a>      <span class="kw">_ </span>=&gt; Dynamic::UNIT,
-<a href=#1845 id=1845 data-nosnippet>1845</a>    }
-<a href=#1846 id=1846 data-nosnippet>1846</a>  });
-<a href=#1847 id=1847 data-nosnippet>1847</a>  <span class="macro">macro_rules!</span> def_hook_method {
-<a href=#1848 id=1848 data-nosnippet>1848</a>    (<span class="macro-nonterminal">$rhai</span>:literal, <span class="macro-nonterminal">$family</span>:expr, <span class="macro-nonterminal">$at_front</span>:expr) =&gt; {
-<a href=#1849 id=1849 data-nosnippet>1849</a>      engine.register_fn(
-<a href=#1850 id=1850 data-nosnippet>1850</a>        <span class="macro-nonterminal">$rhai</span>,
-<a href=#1851 id=1851 data-nosnippet>1851</a>        |d: <span class="kw-2">&amp;mut </span>DefinitionProxy, fp: FnPtr| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
-<a href=#1852 id=1852 data-nosnippet>1852</a>          push_definition_hook(<span class="kw-2">&amp;</span>d.cs, <span class="macro-nonterminal">$family</span>, <span class="macro-nonterminal">$at_front</span>, fp)
-<a href=#1853 id=1853 data-nosnippet>1853</a>        },
-<a href=#1854 id=1854 data-nosnippet>1854</a>      );
-<a href=#1855 id=1855 data-nosnippet>1855</a>    };
-<a href=#1856 id=1856 data-nosnippet>1856</a>  }
-<a href=#1857 id=1857 data-nosnippet>1857</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushBeforeDigest"</span>, HookFamily::BeforeDigest, <span class="bool-val">false</span>);
-<a href=#1858 id=1858 data-nosnippet>1858</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftBeforeDigest"</span>, HookFamily::BeforeDigest, <span class="bool-val">true</span>);
-<a href=#1859 id=1859 data-nosnippet>1859</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterDigest"</span>, HookFamily::AfterDigest, <span class="bool-val">false</span>);
-<a href=#1860 id=1860 data-nosnippet>1860</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterDigest"</span>, HookFamily::AfterDigest, <span class="bool-val">true</span>);
-<a href=#1861 id=1861 data-nosnippet>1861</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushBeforeConstruct"</span>, HookFamily::BeforeConstruct, <span class="bool-val">false</span>);
-<a href=#1862 id=1862 data-nosnippet>1862</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftBeforeConstruct"</span>, HookFamily::BeforeConstruct, <span class="bool-val">true</span>);
-<a href=#1863 id=1863 data-nosnippet>1863</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterConstruct"</span>, HookFamily::AfterConstruct, <span class="bool-val">false</span>);
-<a href=#1864 id=1864 data-nosnippet>1864</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterConstruct"</span>, HookFamily::AfterConstruct, <span class="bool-val">true</span>);
-<a href=#1865 id=1865 data-nosnippet>1865</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterDigestBody"</span>, HookFamily::AfterDigestBody, <span class="bool-val">false</span>);
-<a href=#1866 id=1866 data-nosnippet>1866</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterDigestBody"</span>, HookFamily::AfterDigestBody, <span class="bool-val">true</span>);
-<a href=#1867 id=1867 data-nosnippet>1867</a>
-<a href=#1868 id=1868 data-nosnippet>1868</a>  engine
-<a href=#1869 id=1869 data-nosnippet>1869</a>}
+<a href=#1802 id=1802 data-nosnippet>1802</a>    },
+<a href=#1803 id=1803 data-nosnippet>1803</a>  );
+<a href=#1804 id=1804 data-nosnippet>1804</a>  <span class="comment">// Set a whatsit property from a hook body (Perl `$whatsit-&gt;setProperty(k, v)`,
+<a href=#1805 id=1805 data-nosnippet>1805</a>  // e.g. plain `\footnote`'s afterDigest routing its mark arg to `mark`/`prenote`).
+<a href=#1806 id=1806 data-nosnippet>1806</a>  // The value lands as a string `Stored`, which the template interpreter renders
+<a href=#1807 id=1807 data-nosnippet>1807</a>  // at attribute (`to_attribute`), content (absorb), and truth-test positions.
+<a href=#1808 id=1808 data-nosnippet>1808</a>  </span>engine.register_fn(
+<a href=#1809 id=1809 data-nosnippet>1809</a>    <span class="string">"setProperty"</span>,
+<a href=#1810 id=1810 data-nosnippet>1810</a>    |_w: <span class="kw-2">&amp;mut </span>WhatsitProxy, key: <span class="kw-2">&amp;</span>str, val: <span class="kw-2">&amp;</span>str| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
+<a href=#1811 id=1811 data-nosnippet>1811</a>      <span class="kw">let </span>(ptr, mutable) = current_whatsit_entry()<span class="question-mark">?</span>;
+<a href=#1812 id=1812 data-nosnippet>1812</a>      <span class="kw">if </span>!mutable {
+<a href=#1813 id=1813 data-nosnippet>1813</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(Box::&lt;EvalAltResult&gt;::from(
+<a href=#1814 id=1814 data-nosnippet>1814</a>          <span class="string">"setProperty in a construction hook (whatsit is read-only there)"</span>,
+<a href=#1815 id=1815 data-nosnippet>1815</a>        ));
+<a href=#1816 id=1816 data-nosnippet>1816</a>      }
+<a href=#1817 id=1817 data-nosnippet>1817</a>      <span class="comment">// SAFETY: `ptr` is the in-flight whatsit the core published onto
+<a href=#1818 id=1818 data-nosnippet>1818</a>      // WHATSIT_CTX for THIS digestion-hook body, and the `mutable` flag (just
+<a href=#1819 id=1819 data-nosnippet>1819</a>      // checked) confirms it was published as writable. It is the sole live
+<a href=#1820 id=1820 data-nosnippet>1820</a>      // `&amp;mut` to this whatsit, so the re-mint is unique and non-aliasing.
+<a href=#1821 id=1821 data-nosnippet>1821</a>      // AUDITED (2026-06-27, sibling of PR #248 B1): the core runs after-digest
+<a href=#1822 id=1822 data-nosnippet>1822</a>      // hooks ONE-PASS and sequentially on a FRESH-LOCAL whatsit
+<a href=#1823 id=1823 data-nosnippet>1823</a>      // (`definition.rs::execute_after_digest`: `for post in … { post(&amp;mut
+<a href=#1824 id=1824 data-nosnippet>1824</a>      // whatsit) }`), never re-entering a hook on the SAME whatsit — so unlike
+<a href=#1825 id=1825 data-nosnippet>1825</a>      // the Document case there is no nested same-object re-mint at all. This is
+<a href=#1826 id=1826 data-nosnippet>1826</a>      // the single-body parked-`&amp;mut` + brief-re-mint pattern proven sound by
+<a href=#1827 id=1827 data-nosnippet>1827</a>      // the Miri model `latexml_core::runtime_bindings_reentrancy_model`
+<a href=#1828 id=1828 data-nosnippet>1828</a>      // (`reentrancy_model_single_body_sound`). (A hook that digests other
+<a href=#1829 id=1829 data-nosnippet>1829</a>      // content builds DIFFERENT whatsits → different `WHATSIT_CTX` entries, not
+<a href=#1830 id=1830 data-nosnippet>1830</a>      // an alias of this one.) The read-only ops above (`&amp;*`) need no such
+<a href=#1831 id=1831 data-nosnippet>1831</a>      // argument — shared refs may alias freely.
+<a href=#1832 id=1832 data-nosnippet>1832</a>      </span><span class="kw">let </span>w = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>ptr };
+<a href=#1833 id=1833 data-nosnippet>1833</a>      w.set_property(key, val.to_string());
+<a href=#1834 id=1834 data-nosnippet>1834</a>      <span class="prelude-val">Ok</span>(())
+<a href=#1835 id=1835 data-nosnippet>1835</a>    },
+<a href=#1836 id=1836 data-nosnippet>1836</a>  );
+<a href=#1837 id=1837 data-nosnippet>1837</a>  <span class="comment">// Read a whatsit property as a string ("" when absent) — Perl `getProperty`.
+<a href=#1838 id=1838 data-nosnippet>1838</a>  </span>engine.register_fn(
+<a href=#1839 id=1839 data-nosnippet>1839</a>    <span class="string">"propertyString"</span>,
+<a href=#1840 id=1840 data-nosnippet>1840</a>    |_w: <span class="kw-2">&amp;mut </span>WhatsitProxy, key: <span class="kw-2">&amp;</span>str| -&gt; std::result::Result&lt;String, Box&lt;EvalAltResult&gt;&gt; {
+<a href=#1841 id=1841 data-nosnippet>1841</a>      <span class="comment">// SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
+<a href=#1842 id=1842 data-nosnippet>1842</a>      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
+<a href=#1843 id=1843 data-nosnippet>1843</a>      // errors out, not UB, when called outside one). The pointer is live for
+<a href=#1844 id=1844 data-nosnippet>1844</a>      // the call and read-only here (`&amp;*`), so no aliasing `&amp;mut` exists.
+<a href=#1845 id=1845 data-nosnippet>1845</a>      </span><span class="kw">let </span>w = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>current_whatsit()<span class="question-mark">? </span>};
+<a href=#1846 id=1846 data-nosnippet>1846</a>      <span class="prelude-val">Ok</span>(w.get_property_string(key))
+<a href=#1847 id=1847 data-nosnippet>1847</a>    },
+<a href=#1848 id=1848 data-nosnippet>1848</a>  );
+<a href=#1849 id=1849 data-nosnippet>1849</a>
+<a href=#1850 id=1850 data-nosnippet>1850</a>  <span class="comment">// ── definition proxy (#321): LookupDefinition(cs) → push/unshift hooks ──
+<a href=#1851 id=1851 data-nosnippet>1851</a>  // Faithful to Perl `LookupDefinition($t)` + BookML's `push(@{ $$def{hook} },
+<a href=#1852 id=1852 data-nosnippet>1852</a>  // sub{…})`: fetch an installed definition and splice a hook onto one of its
+<a href=#1853 id=1853 data-nosnippet>1853</a>  // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
+<a href=#1854 id=1854 data-nosnippet>1854</a>  // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
+<a href=#1855 id=1855 data-nosnippet>1855</a>  </span>engine.register_type_with_name::&lt;DefinitionProxy&gt;(<span class="string">"Definition"</span>);
+<a href=#1856 id=1856 data-nosnippet>1856</a>  engine.register_fn(<span class="string">"LookupDefinition"</span>, |cs: <span class="kw-2">&amp;</span>str| -&gt; Dynamic {
+<a href=#1857 id=1857 data-nosnippet>1857</a>    <span class="kw">match </span>latexml_core::state::lookup_definition_stored(<span class="kw-2">&amp;</span><span class="macro">latexml_core::T_CS!</span>(cs)) {
+<a href=#1858 id=1858 data-nosnippet>1858</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; Dynamic::from(DefinitionProxy { cs: cs.to_string() }),
+<a href=#1859 id=1859 data-nosnippet>1859</a>      <span class="kw">_ </span>=&gt; Dynamic::UNIT,
+<a href=#1860 id=1860 data-nosnippet>1860</a>    }
+<a href=#1861 id=1861 data-nosnippet>1861</a>  });
+<a href=#1862 id=1862 data-nosnippet>1862</a>  <span class="macro">macro_rules!</span> def_hook_method {
+<a href=#1863 id=1863 data-nosnippet>1863</a>    (<span class="macro-nonterminal">$rhai</span>:literal, <span class="macro-nonterminal">$family</span>:expr, <span class="macro-nonterminal">$at_front</span>:expr) =&gt; {
+<a href=#1864 id=1864 data-nosnippet>1864</a>      engine.register_fn(
+<a href=#1865 id=1865 data-nosnippet>1865</a>        <span class="macro-nonterminal">$rhai</span>,
+<a href=#1866 id=1866 data-nosnippet>1866</a>        |d: <span class="kw-2">&amp;mut </span>DefinitionProxy, fp: FnPtr| -&gt; std::result::Result&lt;(), Box&lt;EvalAltResult&gt;&gt; {
+<a href=#1867 id=1867 data-nosnippet>1867</a>          push_definition_hook(<span class="kw-2">&amp;</span>d.cs, <span class="macro-nonterminal">$family</span>, <span class="macro-nonterminal">$at_front</span>, fp)
+<a href=#1868 id=1868 data-nosnippet>1868</a>        },
+<a href=#1869 id=1869 data-nosnippet>1869</a>      );
+<a href=#1870 id=1870 data-nosnippet>1870</a>    };
+<a href=#1871 id=1871 data-nosnippet>1871</a>  }
+<a href=#1872 id=1872 data-nosnippet>1872</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushBeforeDigest"</span>, HookFamily::BeforeDigest, <span class="bool-val">false</span>);
+<a href=#1873 id=1873 data-nosnippet>1873</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftBeforeDigest"</span>, HookFamily::BeforeDigest, <span class="bool-val">true</span>);
+<a href=#1874 id=1874 data-nosnippet>1874</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterDigest"</span>, HookFamily::AfterDigest, <span class="bool-val">false</span>);
+<a href=#1875 id=1875 data-nosnippet>1875</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterDigest"</span>, HookFamily::AfterDigest, <span class="bool-val">true</span>);
+<a href=#1876 id=1876 data-nosnippet>1876</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushBeforeConstruct"</span>, HookFamily::BeforeConstruct, <span class="bool-val">false</span>);
+<a href=#1877 id=1877 data-nosnippet>1877</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftBeforeConstruct"</span>, HookFamily::BeforeConstruct, <span class="bool-val">true</span>);
+<a href=#1878 id=1878 data-nosnippet>1878</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterConstruct"</span>, HookFamily::AfterConstruct, <span class="bool-val">false</span>);
+<a href=#1879 id=1879 data-nosnippet>1879</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterConstruct"</span>, HookFamily::AfterConstruct, <span class="bool-val">true</span>);
+<a href=#1880 id=1880 data-nosnippet>1880</a>  <span class="macro">def_hook_method!</span>(<span class="string">"pushAfterDigestBody"</span>, HookFamily::AfterDigestBody, <span class="bool-val">false</span>);
+<a href=#1881 id=1881 data-nosnippet>1881</a>  <span class="macro">def_hook_method!</span>(<span class="string">"unshiftAfterDigestBody"</span>, HookFamily::AfterDigestBody, <span class="bool-val">true</span>);
+<a href=#1882 id=1882 data-nosnippet>1882</a>
+<a href=#1883 id=1883 data-nosnippet>1883</a>  engine
+<a href=#1884 id=1884 data-nosnippet>1884</a>}
 </code></pre></div></section></main></body></html>
