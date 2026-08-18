@@ -366,3 +366,117 @@ Covers the **2026-07-09 … 2026-07-27** window. The 2026-07-29/07-30 and
   `lookupStackedValues`). New regression tests: `tests/structure/atbegindocument_*`.
   See `KNOWN_PERL_ERRORS.md` #43. Candidate to upstream as the #2846 follow-up.
 
+---
+
+## Completed fixes lifted from the live worklist (cleanup 2026-08-18) — window 2026-07-29 … 2026-08-04
+
+Lifted out of `../SYNC_STATUS.md` when the 2026-08-18 cleanup dated them done
+(rule 2). Conclusions only — the durable facts live in the named guards and the
+cited `OXIDIZED_DESIGN.md` / `KNOWN_PERL_ERRORS.md` entries.
+
+- **Streaming (CORE + POST) shipped in 0.7.5.** Bounded-memory fragmented core
+  conversion (`--streaming`, auto-when-doomed), page-major POST rendering, and
+  two-pass streaming split — the 131 MB Nasser witness converts end-to-end in one
+  call on a 31 GB laptop. PRs **#448** (CORE), **#451** (page-major POST),
+  **#477/#478** (streaming split); the `{nowrap}` residual closed as issue **#297**.
+  Design docs kept: `performance/STREAMING_CORE_DESIGN_2026-07-29.md`,
+  `performance/STREAMING_POST_DESIGN_2026-07-06.md`. Guards `113_streaming_core.rs`,
+  `118_streaming_split_parity.rs`, `114_streaming_*`.
+
+- **2026-07-30 — a font selected by FAMILY decoded through OT1** (PR #450).
+  `\selectfont`'s missing middle branch (`LoadFontMap($family)` + `MergeFont`) made
+  `ding_fontmap` dead code, so bbding's `\XSolidBrush`/`\Checkmark` rendered as
+  literal `%`/`!` at **zero errors** (witness 2503.04421, 28 result-table cells
+  inverted). Fixed + Perl's report-once guards. Guards
+  `tests/fonts/ding_family_fontmap.tex`,
+  `cluster_fontmap.rs::ding_family_glyphs_decode_through_the_family_fontmap`; method
+  in `WISDOM.md` §80. Residual (carried to the font-selection audit): `DeclareFontMap`'s
+  `(uppercase|lowercase|digit)_mathstyle` options unported.
+
+- **2026-07-29 — an arg-taking `\fnum@<type>` absorbed the document into an
+  unclosed `<figure>`** (surpass; OXIDIZED_DESIGN #85 / KNOWN_PERL_ERRORS #68). The
+  `Fig. 1:`→`Fig. 1.` hook ate the caption's closing brace because LaTeXML's
+  separator is a tag *attribute*, not a token; the figure never closed and swallowed
+  the bibliography. Fixed by expanding `\csname fnum@#1\endcsname{}` at all three
+  `fnum@` sites. 106/106 targets, zero goldens re-blessed. Guard
+  `06_cluster_regressions::cluster_fnum_arg_hook`.
+
+- **2026-07-29 — `\bibliographystyle{alpha}` wrong label shape + no author-year
+  disambiguation** (R5 item 2, `make_bibliography.rs`; KNOWN_PERL_ERRORS #67,
+  divergence #84). `AY` is the abbreviated `[AS64]` label (Rust had it swapped with
+  `alpha`); disambiguation must key off the SHORT name; `unisort` UCA collation;
+  `NUMBER` assigned in format order. Also fixed a `fragid`-less `<ltx:biblist>`
+  (MakeBibliography now registers the list). Guards
+  `06_cluster_bibliography::{cluster_bib_alpha_style_labels,bib_entry_ids_are_bib_rooted_like_perl}`.
+
+- **2026-08-04 — streaming diverged on a fancyvrb `fontsize=`+`numbers=` Verbatim**
+  (PR #504; OXIDIZED_DESIGN #96 / KNOWN_PERL_ERRORS #74). `tex_glue::dimension_to_spaces`
+  read the live font at CONSTRUCTION time; streaming builds mid-document, so it chose
+  a different space glyph than eager. Fixed by passing the whatsit's digest-time font.
+  Guards `06_cluster_regressions::faked_space_is_sized_by_the_font_it_was_digested_in`,
+  `114_streaming_cluster_regressions`. Repro note: the CLI can't reach the sweep's
+  3-box budget (the RSS fuse trips first); drive `streaming_sweep::convert_with(src, Some(3), …)`.
+
+- **2026-07-29 — a `robust` DefConstructor reverted under its munged cs** (`\ref`).
+  `robust=>true` installs under `\ref␣` (trailing space); Perl sets the pre-munge cs
+  as `alias` and reverts to it (`DefConstructorI` L1480-1481). `dialect.rs::def_constructor`
+  now sets the alias when `options.alias.is_none()`. `get_cs_or_alias()` is the clean
+  accessor; code identifying a whatsit by cs must still accept both `\ref` and `\ref␣`.
+  Guard `06_cluster_regressions::cluster_robust_cs_reverts_unmunged`.
+
+- **2026-08-03 — pooled-worker libxml panic on a dead docref** (PR #491; rc4 fatal
+  cluster `panic:caught`, 3/60k). The math parser's `PENDING_DISCARDS` was drained only
+  after the formula loop; the resource-fatal abort path returned early, so the next
+  paper on that pooled thread walked handles into the freed document. Fixed by draining
+  on the abort path + a wrapper-only stale sweep (`sweep_stale_math_state`). Guard
+  `latexml_math_parser/src/data.rs::stale_handles_from_a_dead_document_are_swept_without_panic`.
+  Same-class residuals recorded in git (ALIGNING_NODE, `Stored::Alignment` cells,
+  `STAGED_SNAPSHOTS`).
+
+- **2026-07-25 — biblatex `.bbl` `TokenLimit` loop** (R4; witness 2605.17646).
+  Self-referential `\let` on `setupPseudoBibitem` re-arm; shared with Perl. Guard
+  `06_cluster_bibliography.rs::cluster_biblatex_two_datalists`. Sibling numeric-format
+  fixes: guards `cluster_thousands_separator_us_default`/`_eu`, `cluster_fenced_bare_operator`,
+  `cluster_leading_relop_comma_list`.
+
+- **2026-07-27 — R9 `mathscinet.sty`** (PRs #415 + #419): `\Dbar` etc. are mathscinet's
+  macros, not any `.bst`'s. Binding `latexml_package/src/package/mathscinet_sty.rs`;
+  guards `bib_mathscinet_{package,author_macro}`.
+
+- **`--format=xml` emits no `ltx:bibitem` for a BibTeX source — NOT A BUG** (triaged
+  2026-08-18). `<ltx:bibitem>` from `\bibliography{}` is a MakeBibliography (*post*)
+  product; `--format=xml` runs no post (`do_post=false`, latexml_oxide.rs:1336-1345),
+  matching Perl `latexmlc --format=xml` byte-for-byte (0 bibitem, placeholder only;
+  `--format=html5` expands it). Explicit `\begin{thebibliography}` emits `<bibitem>` at
+  CORE in both engines (green goldens `tests/structure/{natbib,crazybib}.xml`). Live-doc
+  takeaway retained: an xml-format dump is core-only.
+
+- **2026-07-29/30 — Presentation-MathML F17 CLOSED** (from the archived MathML-post
+  line audit). F17 was a *list*, not a family — 9 items each individually scoped: **4
+  fixed, 3 do-not-port/N-A, 1 blocked, 1 unreachable.** Durable lesson: **run both
+  engines on an item before porting** — reading the audit alone would have added a
+  divergence or dead code.
+  - **FIXED:** `pmml_text_aux` `%attr` threading onto `m:mtext` (+ leading-ws→NBSP,
+    cross-pass `m:math` reuse by namespace URI; deleted the dead second
+    `stylize_content`) — guard `90_latexmlpost::mtextstyle_post_test`; `outerWrapper`
+    altimg + RDFa families, which also needed the missing `CrossRef::fill_in_RDFa_refs`
+    port (resolves `aboutidref`/`labelref`) — guards `mathouter_post_test`,
+    `06_cluster_regressions::cluster_rdfa_math_subject`; `pmml_scriptsize_padded`
+    embellishment padding for primed sums (`\mathop{X'}\limits`) — guard
+    `mathprimed_post_test`; `preprocess` plane1 config + new
+    `--plane1`/`--noplane1`/`--hackplane1` — guard `plane1_modes_match_perl`. Also
+    2026-07-30: braced script-chain fold made unbounded left-recursion (`{x^a}^b` etc.)
+    — guard `06_cluster_math::cluster_script_chain_depth`; an absent `mmultiscripts`
+    slot now emits empty `m:mrow` not `m:none` (Core removed `<none>`; OXIDIZED_DESIGN
+    #86 retracted) — guard `scriptlevels_post_test`.
+  - **DO-NOT-PORT (would create a divergence or dead code; do not re-open without a
+    witness):** `pmml_infix` ADDOP flatten via `pmml_unrow` is dead in Perl too
+    (`associateNode` stamps `_sourced`, so the empty-attr guard never passes — Perl
+    emits the same 5 nested `m:mrow`s); `Apply:?:formulae` phantom op never reaches
+    pMML (XMDual/XMWrap on both sides); `pmml_parenthesize`'s `usemfenced` is never set
+    anywhere in Perl and `m:mfenced` is gone from Core; `nestmath` has no CLI in either
+    engine; Perl's `$emb_left` is dead code.
+  - **BLOCKED:** `combineParallel`'s non-MathML-secondary branches need
+    `--openmath`/`--mathimages`/`--mathsvg` (absent in Rust) — untestable dead code
+    until that larger math-format feature lands.
+
